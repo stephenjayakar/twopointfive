@@ -6,7 +6,8 @@
 //   - the clock: Game.time itself (every stamp in the game is against it, so it comes back as it was — a load an hour into a page puts g.time BACK to the save's;
 //     nothing outside the Game reads g.time), eventSeq, fxSeed, the OCP cooldown, the last half second of hearing events, the HUD's message lines;
 //   - Sam: position / facing / crouch, the kit (slot, canisters, stun cans, the pistol's and the FN2000's chamber / magazine / spares / light / selector / attachment /
-//     rings, 40 mm rounds, the OCP's charge), holstered, night vision, pace, keys, door codes, hits left, the whistle's breath; NOT the wall hold, a body in tow, a man in his arm,
+//     rings, 40 mm rounds, the OCP's charge), holstered, night vision, pace, keys, door codes, hits left, the whistle's breath; under SAVETIMELINE.holds his wall hold and
+//     the close-in mode's held gait (without it NOT the wall hold: a load stands him free of it); NOT a body in tow, a man in his arm,
 //     a lock / pad / leaf / drive under his hands, a wind-up, the launcher's button held on its arc, a reload half done — an autosave never happens mid-action, and a forced save drops them (see canSave);
 //     a man alone with charges of his own (owncharge.ts): the optional `own` — the door tools' count, the wall charges carried, the door charges that stand set (put back on their
 //     doors) and what his hands took from the bag this run; a WALL charge set and not blown is not saved — it is back in the count;
@@ -110,6 +111,8 @@ import { isDaylight, setDaylight, updateTargets } from './lighting';
 import { lampGlass } from './carlamps';
 import { needsSnapshot, needsRestore } from './needs';
 import { gunWallSnapshot, gunWallRestore } from './gunwall';
+import { wallHoldSnapshot, wallHoldRestore, type WallSnap } from './player';
+import { CLOSE, closeModeSnapshot, closeModeRestore } from './close';
 import { calmTorchSnapshot, calmTorchRestore, calmTorchPosed, type CalmTorchSnap } from './calmtorch';
 import { dozeSnapshot, dozeRestore, type DozeSnap } from './doze';
 import { moraleSnapshot, moraleRestore, type MoraleSnap } from './morale';
@@ -171,6 +174,8 @@ export interface PlayerSnap {
   pistol: FirearmSnap & { lightOn: boolean }; rifle: FirearmSnap & { lightOn: boolean; attIdx: number; rings: number; ringCd: number; /** the long gun, when it is not the FN2000 (kit.ts 'shotgun') */ gun?: WeaponId ; /** 40 mm rounds (absent in a file from before them: the issue stands) */ shells?: number; /** sticky cameras left for the tube (stickycam.ts; written only while its switch is on: −1 = none were issued, absent = the file does not say and what the staging put on him stands) */ cams?: number };
   /** his sticky cameras that are out, stuck (stickycam.ts; absent with none) */ cams?: StickySnap[]; /** the last camera id handed out this run (absent = none sent, or a file from before it: the highest id that is out stands) */ camSeq?: number;
   ocpCharge: number; hasRifle: boolean; rifleGone: boolean; ocpHinted: boolean; equipT: number;
+  /** the close-in mode's held gait under his walk (character.ts heldGaitSnap: its clock, weight, pace, and the mode) — written only inside the mode and under SAVETIMELINE.holds; absent = it begins from nothing, as it did */ heldGait?: number[];
+  /** …and the man the mode is held on, by character id (close.ts closeModeSnapshot) */ closeOn?: number;
   ripU?: number; bashAt?: number; bashLean?: number; stagU?: number; hurtAt?: number; dazU?: number; dazAt?: number[]; aw?: number[]; keys: string[]; codes: string[]; hitsLeft: number; nv: boolean; pace: number; lastFireT: number; fireCd: number; noise: number; visibility: number; stepPhase: number; animPhase: number;
   wet: V3;   // coat, beads, rain
   bubble: Bubble | null;
@@ -256,6 +261,9 @@ export interface SaveState {
   glassPen?: GlassPenSnap;
   /** whose gun a wall holds down (character ids) — gunwall.ts; absent with its switch off or nobody at a wall */
   gunWall?: number[][];
+  /** Sam's wall hold as it stands, and the key-less take's clock (player.ts wallHoldSnapshot) — written only under SAVETIMELINE.holds and with something to say;
+   *  absent = a load stands him free of the wall, as every file before it did */
+  wallHold?: WallSnap;
   /** each roster man's calm-patrol torch: dark, the last reading of his place, the dwell's two counts — calmtorch.ts; absent with its switch off or nobody met */
   calmTorch?: CalmTorchSnap;
   /** who sits in which chair, who sleeps, who was woken and by what — doze.ts; absent with its switch off or nobody on a record */
@@ -315,6 +323,10 @@ export const SAVETIMELINE = {
   on: false,
   /** how many saves by hand and how many autosaves are kept — two rings */
   manual: 5, auto: 5,
+  /** a save carries what Sam's body is in the middle of holding: his wall hold with the key-less take's clock (player.ts wallHoldSnapshot), and the close-in
+   *  mode's held gait with the man it is held on (character.ts heldGaitSnap, close.ts closeModeSnapshot) — so the seconds after a load are the seconds after
+   *  the save. false = no file says any of it, and a load stands him free of the wall and begins the gait from nothing, as it was. Its own key, whatever `on` says. */
+  holds: false,
   /** the long side of a save's picture in pixels, and its JPEG quality (the host's numbers: main.ts takes the picture) */
   picPx: 256, picQ: 0.6,
 };
@@ -472,7 +484,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     ...(aimWeightSnapshot(pl) ? { aw: aimWeightSnapshot(pl) } : {}),   // (aimweight.ts: only while his gun is mid-swing onto the cursor)
     ...(pl.doorRipUntil > g.time ? { ripU: pl.doorRipUntil } : {}), ...(sprintDoorTurning(g, pl) ? { bashAt: pl.doorBashAt, bashLean: pl.doorBashLean } : {}),   // (sprintdoor.ts: only while one is running)
     ...(pl.staggerUntil > g.time ? { stagU: pl.staggerUntil } : {}), ...(pl.hurtAt >= 0 ? { hurtAt: pl.hurtAt } : {}), ...(pl.dazzledUntil > g.time ? { dazU: pl.dazzledUntil, dazAt: pl.dazzledAt ? [...pl.dazzledAt] : undefined } : {}),   // (samstun.ts: only while one is running)
-    keys: [...pl.keys], codes: [...pl.codes], hitsLeft: pl.hitsLeft, nv: pl.nv, pace: pl.pace, lastFireT: pl.lastFireT, fireCd: pl.fireCd, noise: pl.noise, visibility: pl.visibility, stepPhase: pl.stepPhase, animPhase: pc.anim.phase,
+    keys: [...pl.keys], codes: [...pl.codes], hitsLeft: pl.hitsLeft, nv: pl.nv, pace: pl.pace, lastFireT: pl.lastFireT, fireCd: pl.fireCd, noise: pl.noise, visibility: pl.visibility, stepPhase: pl.stepPhase, animPhase: pc.anim.phase, ...(SAVETIMELINE.holds && pc.anim.heldGaitSnap() ? { heldGait: pc.anim.heldGaitSnap(), ...(closeModeSnapshot(g) !== undefined ? { closeOn: closeModeSnapshot(g) } : {}) } : {}),
     wet: [pc.wet, pc.beads, pc.wetRain], bubble: pl.bubble ? { ...pl.bubble } : null,
   };
   // ---- the men
@@ -540,7 +552,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     if (LOOK_DECALS.has(d)) D.look = 1;   // (a mark laid only for the picture — lookDecals.ts: it comes back tagged, so the digest's count is the same carrying on and loaded)
     decals.push(D);
   }
-  const bo = g.blackout, gw = gunWallSnapshot(g), ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
+  const bo = g.blackout, gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
   const air = g.airDust?.snapshot();
   const s: SaveState = {
     v: SAVE_VERSION, savedAt: Date.now(), label, kind, level: levelFingerprint(g),
@@ -567,6 +579,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     ...(rk ? { rescueCheck: rk } : null),   // (the rescue's radio check and the man out for a silent post — rescuecheck.ts)
     ...(at ? { attention: at } : null),   // (each man's held attention and his memory of the takings — attention.ts; no key with its switch off)
     ...(pi ? { picture: pi } : null),   // (each man's ideas of his enemies — picture.ts; no key with its switch off)
+    ...(wh ? { wallHold: wh } : null),   // (his back on a wall, and the walk-in take's clock — player.ts; no key with SAVETIMELINE.holds off or nothing to say)
     ...(gw ? { gunWall: gw } : null),   // (whose gun a wall holds down — gunwall.ts; no key with its switch off or nobody at a wall)
     ...(g.dice && diceInUse() === g.dice ? { dice: { s: g.dice.s, n: g.dice.n, seed: g.dice.seed } } : {}),
     ...(hourOf(g) !== 'night' ? { hour: { id: hourOf(g), sun: sunStrength(g), given: sunGiven(g) } } : {}),
@@ -637,7 +650,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   { const P = s.player, pl = g.player, pc = pl.char;
     pl.hasRifle = P.hasRifle !== false;
     pc.pos = c3(P.pos); pl.safe = [P.pos[0], 0, P.pos[2]]; pc.vel = [0, 0, 0]; pc.bodyYaw = fin(P.bodyYaw); pc.aimYaw = fin(P.aimYaw); pc.aimPitch = fin(P.aimPitch);
-    pl.crouch = !!P.crouch; pc.anim.crouchTarget = pl.crouch ? 1 : 0; pc.anim.phase = fin(P.animPhase);
+    pl.crouch = !!P.crouch; pc.anim.crouchTarget = pl.crouch ? 1 : 0; pc.anim.phase = fin(P.animPhase); if (SAVETIMELINE.holds && CLOSE.on) pc.anim.heldGaitBack(P.heldGait);
     pl.holstered = !!P.holstered; pl.slot = (KIT_ORDER as readonly string[]).includes(P.slot) ? P.slot : 'pistol'; if (pl.slot === 'rifle' && !pl.hasRifle) pl.slot = 'pistol';
     pl.throwKind = P.throwKind === 'flash' ? 'flash' : 'smoke'; pl.canisters = Math.max(0, P.canisters | 0); pl.flashbangs = Math.max(0, P.flashbangs | 0); if (typeof P.frags === 'number') pl.frags = Math.max(0, P.frags | 0); if (typeof P.wand === 'boolean') pl.wand = WAND.on && (P.wand || quietWand(g));   /* (…and a file that says none never takes the mission's own off him) */ if (P.bigKit !== undefined) pl.bigKit = BIGSLOT.on && (P.bigKit === 'shotgun' || P.bigKit === 'hammer') ? P.bigKit : 'none'; if (P.kitLoad !== undefined) { const w = P.kitLoad, n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? clamp(x, 0, 1) : null), q = w ? [n(w.mob), n(w.con), n(w.refMob), n(w.refCon)] : []; pl.kitLoad = w && q.every(x => x !== null) ? { mob: q[0]!, con: q[1]!, refMob: q[2]!, refCon: q[3]! } : null; }   /* (kitload.ts: what his card weighed as the file has it, his reference with it — a file that says nothing leaves what the staging put on him) */ ownChargesBack(g, P.own);   // (a file that says: his, while the switch stands; one from before the wand, or made with it off, says nothing and the card just staged stands)
     { const id = P.pistol.id && WEAPONS[P.pistol.id]?.cls === 'pistol' ? P.pistol.id : pl.pistol.def.id; if (pl.pistol.def.id !== id) pl.pistol = new Pistol(WEAPONS[id]); }   // (the sidearm the file was saved with: gunslots.ts — a file from before the slots names the one there was)
@@ -752,6 +765,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   forgetGuardClocks(g); forgetSuppressionClocks(g);   // (floor-wide bark / line clocks keyed by the Game would sit in the abandoned future muting everybody: Game.time has gone back)
   g.messages.length = 0; for (const m of (s.messages ?? []).slice(-5)) g.messages.push({ text: String(m.text), t: fin(m.t) }); g.cues.adopt(g.messages);
   gunWallRestore(g, s.gunWall);
+  if (SAVETIMELINE.holds) { wallHoldRestore(g, s.wallHold); if (CLOSE.on) closeModeRestore(g, s.player.closeOn); }
   needsRestore(g, s.needs); whistleRestore(g, s.whistle); tacticsRestore(g, s.tactics); lanesRestore(g, s.lanes); dialogueRestore(g, s.dialogue);   // (whistle: the blower is keyed by the fresh Player, the men's halves by roster index — both exist by now)
   civiliansRestore(g, s.civilians);   // (after the men — she runs to / tells / was found by one of them by callsign — and after eventSeq: the fresh civilians' ears were stamped off the abandoned future's count; a file without the slice keeps them fresh on their marks, ears set right)
   if (s.weather && g.weather) g.weather.restore(s.weather);
