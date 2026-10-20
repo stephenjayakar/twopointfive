@@ -39,6 +39,9 @@ interface Out { ok: boolean; moved: number[]; movers: number; nearGoals: number;
 /** Sam put down at `at` with no trail, the squad told to fall in, twenty seconds given, then five watched */
 async function stand(scn: string, at: number[], on: boolean, hold = on && !HOLD_BREAK, corner: { door?: number[]; men: [number, number[]][] } | null = null): Promise<Out> {
   const R = await rig(scn, 5), g = R.game, O = R.O;
+  // (teampace.ts held off: with followers at 2.0 m/s for the old 2.2 the men come to the depot's (11.85, 5.95) by another frame's places, and there the rule under
+  //  test leaves two places on one spot with nobody moving — its own to look at, at either pace; every other place of the nineteen reads the same)
+  (await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on = false;
   DOORMANNERS.on = true; ORDERS.fileSpread = on; ORDERS.fileHold = hold; if (corner?.door) DOORSTAY.on = true;   // (after the stand-up: the frozen stand pins them off — and shuts a door behind the men, which the staged corner needs standing open)
   for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   R.gather(at, 20); R.step(600);
