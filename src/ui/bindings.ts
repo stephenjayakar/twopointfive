@@ -920,7 +920,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.toggleBox(gp, 'guard AI', () => game.aiEnabled, v => { game.aiEnabled = v; saveSandbox(game, 'noAi'); });
   panel.toggleBox(gp, 'god mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'guards still see and shoot you, but hits do no damage');
   panel.toggleBox(gp, 'unlimited ammo', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, 'bottomless magazine: rounds still cycle (cadence, reload animation if you press R) but the count never drops; cans, ring airfoils and wall charges do not run out either');
-  panel.buttons(gp, 'encounter', [{ text: 'restart (Shift+Enter)', run: () => game.restartEncounter() }]);
+  panel.buttons(gp, 'encounter', [{ text: 'restart (Shift+Enter)', run: () => game.restart() }]);
   panel.toggleBox(gp, 'show AI debug labels', () => game.showDebug, v => { game.showDebug = v; }, 'state / awareness tags over the guards');
   panel.toggleBox(gp, 'light fixture dots', () => overlay.showLightDots, v => { overlay.showLightDots = v; });
   panel.system(SYS.stealth);
