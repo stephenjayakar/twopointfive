@@ -134,6 +134,15 @@ export const FRAG = {
    *  line, until the one-second 'no ground made' deal came or the fuse ran out first (a matter of a twentieth of a second which). With it Sam's place is in
    *  `stay` for a teammate's deal: no spot within `fleeApartM` of him, no leg within `fleeLaneM`. Where Sam will go is his own business: he is read where he is. */
   fleeSam: false,
+  /** `fleeLook` (the same word once more; 10-20, the depot's four behind Sam, the squad's own grenade out of the file: the thrower, 5 m from where it would
+   *  rest and a mate between him and the nearest cover, was dealt open floor 7.5 m off it and wounded there — with covered floor his legs made on every side
+   *  of that mate): A SECOND LOOK BEFORE A MAN SETTLES FOR OPEN FLOOR. The walk below asks 32 turns on rings at 1.2, 2, 3, 4 m …; with a mate staying beside
+   *  the cover (`fleeApart` bars every leg within `fleeLaneM` of him) the few spots it asked that the burst has no line to were all his, and the gaps
+   *  between the rings and the turns held the rest. When that walk ends on open floor, or on nothing, AND met covered floor that was a mate's, it is
+   *  walked once more on the rings between, each turned half a step — the same tests, the same score, no mate shouldered, and only a spot the burst has
+   *  no line to (or a wall it will take between), or floor past `woundM`, is taken from it. A man the first walk found cover for is dealt exactly as
+   *  before, and so is one with no mate's cover in his reach (the walk is not run for him: its cost is the first walk's again, paid only here). */
+  fleeLook: false,
   /** A WALL THE BURST WILL OPEN IS NO COVER (10-15; the twin of the door rule in `exposedTo`): a man reckoning his cover from a grenade that has not gone off
    *  asks the destruction engine which walls and cover its burst would open (`Destruction.wallsFor`, the blast's own plan, nothing touched) and reads his line
    *  with those open (`withWallsOpen`). So the flee leaves a partition the burst is about to hole and a man behind one is not counted safe. ON in the page
@@ -459,6 +468,8 @@ const openLeaves = (g: Game, p: Vec3, R: number): number[][] => g.doors.list.fil
 const leafDist = (L: number[][], x: number, z: number) => { let m = Infinity; for (const [ax, az, bx, bz] of L) { const ex = bx - ax, ez = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * ex + (z - az) * ez) / (ex * ex + ez * ez))); m = Math.min(m, Math.hypot(x - ax - ex * t, z - az - ez * t)); } return m; };
 /** a straight leg a → b comes within fleeDoorLeaf of one of them, and nearer it than `ref` (how near he began: a man beside a leaf may still walk off it) */
 const legByLeaf = (L: number[][], a: Vec3, b: Vec3, ref: number) => { const r = flat(a, b); for (let t = 0.25; t < r + 0.25; t += 0.25) { const u = r > 1e-3 ? Math.min(1, t / r) : 1, d = leafDist(L, a[0] + (b[0] - a[0]) * u, a[2] + (b[2] - a[2]) * u); if (d < FRAG.fleeDoorLeaf && d < ref - 0.05) return true; } return false; };
+/** FRAG.fleeLook: the rings of the second walk — between the first walk's (1.2, 2, 3, 4, 5.5, 7) */
+const LOOK_RINGS: readonly number[] = [1.6, 2.5, 3.5, 4.5, 5, 6.25];
 /** `wise` (FRAG.fleeWise — `at` is then where it will REST): `path` = the floor it has yet to cross, `keep` = the spot he is already on his way to, `not` = a
  *  spot his legs could not make (a mate in the way): nothing within 0.8 m of it, `apart` = where others of his side are staying and going (FRAG.fleeApart):
  *  no leg that would shoulder a mate who is staying (`shoulders`), and no spot the blast has no line to within it of where a mate is going.
@@ -477,6 +488,7 @@ export function fleeSpot(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, lef
   const d0 = Math.hypot(c.pos[0] - it.pos[0], c.pos[2] - it.pos[2]); const a0 = Math.atan2(c.pos[0] - it.pos[0], c.pos[2] - it.pos[2]);
   let best: Vec3 | null = null, bestS = d0 + 0.7;   // (a spot must beat standing still by a margin)
   let bar: Vec3 | null = null, barS = -Infinity;   // (FRAG.fleeApart: the best of the legs refused for a mate's sake)
+  let mates = false;   // (FRAG.fleeLook: the first walk met floor the burst has no line to that was a mate's)
   const seen = (p: Vec3, r: number) => ask ? PICTURE.fleeCost * (r > reach ? 1 : ask(p)) : 0, seenKept = (p: Vec3) => { const e = ask ? ask(p) : 0; return e >= 0.5 ? PICTURE.fleeCost * e : 0; };
   // FRAG.fleeWise. offPath: how near a point is to the floor it has yet to roll over. A leg holds when no step of it is nearer the rest point than he stands now
   // (0.2 m given: a cornered man's one way out is along the wall, which is square to it or a hair past), nor nearer that floor than he stands now (asked only
@@ -503,25 +515,29 @@ export function fleeSpot(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, lef
     const shaded = !hidden && shade(p);
     if (dp >= d0 - 0.05 && holds(p, true)) { best = plain = p; bestOpen = !hidden && !shaded; plainS = score(hidden, shaded, r, dp) + FRAG.fleeKeep; bestS = plainS - (hidden ? seenKept(p) : 0); } }
   const leaves0 = wise && FRAG.fleeDoor ? openLeaves(g, c.pos, 8) : [], leaves = leaves0.length ? leaves0 : null, leaf0 = leaves ? leafDist(leaves, c.pos[0], c.pos[2]) : 0;
-  for (const r of [1.2, 2, 3, 4, 5.5, 7]) {
-    if (r > reach + 0.4) break;
-    for (let k = 0; k < (wise ? 32 : 16); k++) {   // (wise: the turn walked twice as fine — the long leg along a wall, the gap between a crate and a door frame, found on the first deal)
-      const a = a0 + (k % 2 ? -1 : 1) * Math.ceil(k / 2) * (Math.PI / (wise ? 16 : 8)); const p: Vec3 = [c.pos[0] + Math.sin(a) * r, 0, c.pos[2] + Math.cos(a) * r];
-      if (g.col.nav.isBlocked(p[0], p[2])) continue;
-      if (wise && (!holds(p, true) || (wise.not && Math.hypot(p[0] - wise.not[0], p[2] - wise.not[2]) < 0.8))) continue;   // (the leg itself, before anything dearer is asked of the spot)
-      let barred = !!wise?.apart && wise.apart.stay.some(q => shoulders(g, c.pos, p, q));   // (a mate down behind his cover: the corner is his, and so is the floor a leg would shoulder him off on its way by)
-      if (g.col.solidBlocked([c.pos[0], 0.45, c.pos[2]], [p[0], 0.45, p[2]])) continue;
-      let clear = true; for (let s = 0.4; s < r; s += 0.4) if (g.col.nav.isBlocked(c.pos[0] + Math.sin(a) * s, c.pos[2] + Math.cos(a) * s)) { clear = false; break; }
-      if (!clear || (leaves && legByLeaf(leaves, c.pos, p, leaf0))) continue;   // (FRAG.fleeDoor: nor a leg into a leaf standing open)
-      const hidden = exposedTo(g, from, p, [p[0], 1.15, p[2]]) <= 0;   // (he gets down behind it when he arrives: judged as the blast will judge him, shin to head)
-      const dp = Math.hypot(p[0] - it.pos[0], p[2] - it.pos[2]);
-      const shaded = !hidden && shade(p);
-      if (wise && !hidden && !shaded && dp <= d0 + 0.3) continue;   // (in its line there: farther off than he began, or it is no spot)
-      if (!barred && hidden && wise?.apart && wise.apart.go.some(q => Math.hypot(p[0] - q[0], p[2] - q[2]) < FRAG.fleeApartM && !g.col.solidBlocked([p[0], 0.45, p[2]], [q[0], 0.45, q[2]]))) barred = true;   // (a corner a mate is already running for; open floor farther off is anybody's)
-      const s0 = score(hidden, shaded, r, dp), s = hidden && s0 > bestS ? s0 - seen(p, r) : s0;
-      if (barred) { if (s0 > barS) { barS = s0; bar = p; } continue; }
-      if (mind && s0 > plainS) { plainS = s0; plain = p; }
-      if (s > bestS) { bestS = s; best = p; bestOpen = !hidden && !shaded; }
+  for (let look = 0; look < 2; look++) {   // (FRAG.fleeLook: the second walk, only for a man the first leaves in the open with cover in reach that was a mate's — the rings between, each turned half a step)
+    if (look && !(wise && FRAG.fleeLook && mates && (!best || bestOpen))) break;
+    for (const r of look ? LOOK_RINGS : [1.2, 2, 3, 4, 5.5, 7]) {
+      if (r > reach + 0.4) break;
+      for (let k = 0; k < (wise ? 32 : 16); k++) {   // (wise: the turn walked twice as fine — the long leg along a wall, the gap between a crate and a door frame, found on the first deal)
+        const a = a0 + (look ? Math.PI / 32 : 0) + (k % 2 ? -1 : 1) * Math.ceil(k / 2) * (Math.PI / (wise ? 16 : 8)); const p: Vec3 = [c.pos[0] + Math.sin(a) * r, 0, c.pos[2] + Math.cos(a) * r];
+        if (g.col.nav.isBlocked(p[0], p[2])) continue;
+        if (wise && (!holds(p, true) || (wise.not && Math.hypot(p[0] - wise.not[0], p[2] - wise.not[2]) < 0.8))) continue;   // (the leg itself, before anything dearer is asked of the spot)
+        let barred = !!wise?.apart && wise.apart.stay.some(q => shoulders(g, c.pos, p, q));   // (a mate down behind his cover: the corner is his, and so is the floor a leg would shoulder him off on its way by)
+        if (g.col.solidBlocked([c.pos[0], 0.45, c.pos[2]], [p[0], 0.45, p[2]])) continue;
+        let clear = true; for (let s = 0.4; s < r; s += 0.4) if (g.col.nav.isBlocked(c.pos[0] + Math.sin(a) * s, c.pos[2] + Math.cos(a) * s)) { clear = false; break; }
+        if (!clear || (leaves && legByLeaf(leaves, c.pos, p, leaf0))) continue;   // (FRAG.fleeDoor: nor a leg into a leaf standing open)
+        const hidden = exposedTo(g, from, p, [p[0], 1.15, p[2]]) <= 0;   // (he gets down behind it when he arrives: judged as the blast will judge him, shin to head)
+        const dp = Math.hypot(p[0] - it.pos[0], p[2] - it.pos[2]);
+        const shaded = !hidden && shade(p);
+        if (wise && !hidden && !shaded && dp <= d0 + 0.3) continue;   // (in its line there: farther off than he began, or it is no spot)
+        if (look && !hidden && !shaded && dp <= FRAG.woundM) continue;   // (the second walk is for cover, or floor the burst does not reach: open floor inside it is the first walk's to deal)
+        if (!barred && hidden && wise?.apart && wise.apart.go.some(q => Math.hypot(p[0] - q[0], p[2] - q[2]) < FRAG.fleeApartM && !g.col.solidBlocked([p[0], 0.45, p[2]], [q[0], 0.45, q[2]]))) barred = true;   // (a corner a mate is already running for; open floor farther off is anybody's)
+        const s0 = score(hidden, shaded, r, dp), s = hidden && s0 > bestS ? s0 - seen(p, r) : s0;
+        if (barred) { if (!look) { mates ||= hidden; if (s0 > barS) { barS = s0; bar = p; } } continue; }   // (the second walk hands nobody a leg that shoulders a mate)
+        if (mind && s0 > plainS) { plainS = s0; plain = p; }
+        if (s > bestS) { bestS = s; best = p; bestOpen = !hidden && !shaded; }
+      }
     }
   }
   if (shadeOn && (!best || bestOpen) && shade(c.pos)) return null;   // (behind a wall it will take, and nothing better than open floor to go to: he stays, and gets down)
