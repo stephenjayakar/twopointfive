@@ -3,7 +3,9 @@
 // Under it, small, who the order goes to and what the ring was opened on. Sam's own ring (Space, CMDRING.hands — interact.ts `handRingView`) is the same
 // drawing in his own colour, the thing's name under it.
 // Before the key, with CMDRING.hint, a small glyph beside the cursor and an outline on the floor say what the ring would open on (orders.ts `hintView`).
-// index.html `.cmdring …` and `.cmdhint …` are the look. Nothing is built until there is something to show; an attribute is written only when it changes.
+// Plan mode (game/planmode.ts `planView`): a frame round the view while it is up, a circle at each man's feet (bright: picked), the box being dragged, and
+// each chain as a line from its men through its stops with the word's key drawn where it is still to be pressed.
+// index.html `.cmdring …`, `.cmdhint …` and `.planmode …` are the look. Nothing is built until there is something to show; an attribute is written only when it changes.
 // The layer is zoomed with the page's words (ui/textsize.ts): a place in the view's px is divided by that factor, and the ring is drawn at the game's own
 // (cmdring.ts ringZoom), so the wedge under the cursor is the wedge the game lights.
 import type { Game } from '../game/game';
@@ -11,6 +13,7 @@ import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { CMDRING, type RingHint, type RingView } from '../game/cmdring';
 import { handRingView } from '../game/interact';
+import { planView } from '../game/planmode';
 
 const NS = 'http://www.w3.org/2000/svg';
 const R0 = 17, R1 = 44, RN = 30.5, RT = 53, RC = 86;   // px: the hole, the rim, where a digit sits, where a wedge's words start, how far under the middle the caption sits
@@ -73,6 +76,8 @@ export class CmdRingViz {
   private hintWorld: SVGPathElement | null = null;
   private hintGlyph: SVGPathElement | null = null;
   private hintWas = '';
+  private plan: SVGGElement | null = null;
+  private planWas = '';
   constructor(private svg: SVGSVGElement) { this.orders = new RingDraw(svg); this.hands = new RingDraw(svg); }
   /** the hint of what the ring would open on (orders.ts hintView): the thing's outline on the floor and a glyph beside the cursor — in the ring's middle
    *  once a ring is up */
@@ -95,8 +100,32 @@ export class CmdRingViz {
     const g = this.hint; g.style.display = ''; g.setAttribute('class', `cmdhint k-${H.kind}${H.held ? ' held' : ''}${H.tone && H.tone !== 'gold' ? ` t-${H.tone}` : ''}`);
     this.hintWorld!.setAttribute('d', d); this.hintGlyph!.setAttribute('d', GLYPH[H.kind]); this.hintGlyph!.setAttribute('transform', `translate(${gx.toFixed(1)},${gy.toFixed(1)}) scale(${s.toFixed(3)})`);
   }
+  /** plan mode's picture (planmode.ts planView): rebuilt only when what it shows has changed */
+  private updatePlan(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
+    const bc = document.body.classList, V = CMDRING.plan && !(bc.contains('blinded') || bc.contains('attract')) ? planView(game.orders) : null;
+    if (!V) { if (this.planWas) { this.planWas = ''; if (this.plan) this.plan.style.display = 'none'; } return; }
+    const xy = (p: Vec3): [number, number] | null => { const [x, y, front] = cam.project(p, w, h, Infinity, NEAR_W); return front ? [x, y] : null; };
+    const tone = (t: string | undefined) => t && t !== 'gold' ? ` t-${t}` : '';
+    let s = V.up ? `<rect class="pf" x="3" y="3" width="${(w - 6).toFixed(0)}" height="${(h - 6).toFixed(0)}" rx="4"/><text class="pt" x="${(w / 2).toFixed(0)}" y="${(h - 14).toFixed(0)}">PLAN</text>` : '';
+    for (const m of V.men) { const out: string[] = [];
+      for (let i = 0; i < HINT_N; i++) { const t = i / HINT_N * 2 * Math.PI, q = xy([m.at[0] + Math.cos(t) * CMDRING.hintManM, m.at[1], m.at[2] + Math.sin(t) * CMDRING.hintManM]); if (!q) { out.length = 0; break; } out.push(`${q[0].toFixed(1)},${q[1].toFixed(1)}`); }
+      if (out.length) s += `<path class="pm${tone(m.tone)}${m.picked ? ' picked' : ''}" d="M${out.join('L')}Z"/>`; }
+    for (const C of V.chains) {
+      const pts = [C.from, ...C.stops.map(q => q.at)].map(xy), line = pts.filter((q): q is [number, number] => !!q).map(q => `${q[0].toFixed(1)},${q[1].toFixed(1)}`);
+      s += `<g class="pc${tone(C.tone)}">`; if (line.length > 1) s += `<path class="pl" d="M${line.join('L')}"/>`;
+      C.stops.forEach((q, i) => { const p = pts[i + 1]; if (!p) return; const [x, y] = p;
+        s += q.door ? `<rect class="ps" x="${(x - 5).toFixed(1)}" y="${(y - 5).toFixed(1)}" width="10" height="10"/>` : `<circle class="ps" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5"/>`;
+        for (let k = 0; k < q.keys; k++) { const bx = x + 9 + k * 17, by = y - 19;
+          s += `<g class="pk${q.now && k === 0 ? ' now' : ''}"><rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="14" height="14" rx="2"/><text x="${(bx + 7).toFixed(1)}" y="${(by + 10.5).toFixed(1)}">${V.key}</text></g>`; } });
+      s += '</g>'; }
+    if (V.drag) { const D = V.drag; s += `<rect class="pb" x="${(Math.min(D.x0, D.x1) / tz).toFixed(1)}" y="${(Math.min(D.y0, D.y1) / tz).toFixed(1)}" width="${(Math.abs(D.x1 - D.x0) / tz).toFixed(1)}" height="${(Math.abs(D.y1 - D.y0) / tz).toFixed(1)}"/>`; }
+    if (s === this.planWas) return; this.planWas = s;
+    if (!this.plan) { const g = this.plan = document.createElementNS(NS, 'g') as SVGGElement; g.setAttribute('class', 'planmode'); this.svg.insertBefore(g, this.svg.firstChild); }
+    this.plan.style.display = ''; this.plan.innerHTML = s;
+  }
   /** `w`, `h`: the layer's own size · `tz`: the factor it is zoomed by (ui/textsize.ts) */
   update(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
+    this.updatePlan(game, cam, w, h, tz);
     this.updateHint(game, cam, w, h, tz);
     this.orders.draw(CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, tz);
     this.hands.draw(game.player.sel.ring ? handRingView(game) : null, tz);

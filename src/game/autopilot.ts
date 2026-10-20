@@ -80,10 +80,10 @@ export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[
 
 /** What the quick key does on `t` for the men it would go to. `check`: the entry is the first its row's `valid` takes (a path search per man: the press);
  *  without, the first choice unasked (the HUD's line, every frame: no path search, nothing written). */
-export function autoPick(g: Game, t: OrderTarget, check = true): AutoPick {
+export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): AutoPick {
   const S = g.orders, first = (): AutoPick => ({ id: S.defaultFor(t)?.id ?? null, men: null, word: false, why: 'first', t });
   if (t.kind !== 'door') return first();
-  const DT = g.doorTools, W = DT.waitsOn(S.recipients(t), t.door);
+  const DT = g.doorTools, W = DT.waitsOn(men ?? S.recipients(t), t.door);   // (`men`: planmode.ts asks for a chain's own men)
   if (!W) { const c = DT.chargeOn(t.door); return !c ? first() : DT.wordPending(c) ? { id: null, men: null, word: false, why: 'pending', t } : { id: 'charge', men: null, word: false, why: 'blow', t }; }
   if (W.kind === 'word') {
     if (S.big || DT.thresholdHeld(W.men, t.door).length) return { id: null, men: W.men, word: true, why: 'word', t };
@@ -102,8 +102,8 @@ export function autoQuick(g: Game, t: OrderTarget): boolean {
   const S = g.orders, P = autoPick(g, t), K = AUTOPILOT_STATS, tail = S.log[S.log.length - 1]; K.presses++;
   if (P.why === 'pending') return true;
   let no: string | null;
-  if (P.word) { const p = g.player.char.pos; no = S.big ? S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, S.who, { men: P.men ?? undefined }) : g.doorTools.go(S.who); }
-  else if (P.id) no = S.give(P.id, t, S.who, { men: P.men ?? undefined });
+  if (P.word) { const p = g.player.char.pos; no = S.big ? S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men: P.men ?? undefined }) : g.doorTools.go(S.who); }
+  else if (P.id) no = S.give(P.id, t, undefined, { men: P.men ?? undefined });   // (no `who` named: the standing choice — or the men picked by hand, planmode.ts)
   else return false;
   if (no !== null) { K.refused++; return true; }
   const row = S.log[S.log.length - 1]; if (row && row !== tail) row.auto = true;   // (floorplan.ts draws its men for showSecs)

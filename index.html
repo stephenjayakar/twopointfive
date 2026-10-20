@@ -537,7 +537,17 @@
     .cmdhint.k-door .hw, .cmdhint.k-wall .hw { stroke-width: 2.6; }
     .cmdhint .hg { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; paint-order: stroke; filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)); }
     .cmdhint.held .hw { opacity: 0.9; }
-    body.attract .cmdring, body.blinded .cmdring, body.attract .cmdhint, body.blinded .cmdhint { display: none; }
+    /* … and plan mode (ui/cmdring.ts updatePlan — Shift+Tab): a frame round the view, a circle at each man's feet, the box, the chains with the word's key on them */
+    .planmode { color: #f2cf6b; } .planmode .t-red { color: #ff9a8a; } .planmode .t-blue { color: #9cc8ff; }
+    .planmode .pf { fill: none; stroke: currentColor; stroke-width: 2; opacity: 0.55; }
+    .planmode .pt { font: 700 12px/1 var(--h-mono); letter-spacing: 0.32em; text-anchor: middle; fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.85); stroke-width: 4px; stroke-linejoin: round; }
+    .planmode .pm { fill: none; stroke: currentColor; stroke-width: 1.3; opacity: 0.6; stroke-dasharray: 3 3; } .planmode .pm.picked { stroke-width: 2.4; opacity: 0.95; stroke-dasharray: none; }
+    .planmode .pl { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 7 5; opacity: 0.85; }
+    .planmode .ps { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.6; }
+    .planmode .pk rect { fill: rgba(var(--h-plate),0.9); stroke: currentColor; stroke-width: 1.2; } .planmode .pk text { font: 700 10px/1 var(--h-mono); text-anchor: middle; fill: currentColor; }
+    .planmode .pk.now rect { fill: currentColor; } .planmode .pk.now text { fill: var(--h-base); }
+    .planmode .pb { fill: currentColor; fill-opacity: 0.08; stroke: currentColor; stroke-width: 1; stroke-dasharray: 4 3; }
+    body.attract .cmdring, body.blinded .cmdring, body.attract .cmdhint, body.blinded .cmdhint, body.attract .planmode, body.blinded .planmode { display: none; }
     body.kitview { cursor: none; }
     body.kitview::after { content: ''; position: fixed; left: 0; top: 0; right: 0; height: 15vh; z-index: 100000; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); }   /* the top of the picture held down: a lit wall there is the brightest thing on the start page */
     #traj { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }

@@ -7,6 +7,7 @@ import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
 import type { View } from '../host/hud';   // the view as the game reads it: clientWidth / clientHeight / width / height — the page's canvas, a plain object headless and natively   // the engine as the game sees it: a type, so this layer no longer imports src/engine.ts
 import type { RingState } from './cmdring';
+import { planLate } from './planmode';
 import { Level, PatrolRoute, Chokepoint } from '../scene/level';
 import { StaticCollision } from '../scene/collision';
 import { GltfCharacter } from '../anim/gltf';
@@ -1579,7 +1580,7 @@ export class Game {
     this.director.tick(dt, null, null);   // the level script (director.ts): its drills sequenced, triggers read off last frame's settled world + this frame's events, beats resumed, a showcase's camera pinned — before anybody moves on an order; a return on its first line when no program runs
     this.pair.input(input);        // (pairorders.ts: F is the MARK while the partner waits on it — before anybody else reads it; a return on its first line otherwise)
     this.wallCharge.input(input);   // (a set wall charge nearer Sam than any door's has his F first — wallcharge.ts)
-    this.doorTools.input(input); this.wallCharge.inputAfter(input);   // (a set door charge has Sam's F before the night breach's drill reads it — doortools.ts)
+    this.doorTools.input(input); this.wallCharge.inputAfter(input); planLate(this.orders, input);   // (planmode.ts: the word's key nobody took is kept for a chain's next pause)   // (a set door charge has Sam's F before the night breach's drill reads it — doortools.ts)
     this.nightBreach.tick(dt, input, cam);   // the night breach playtest (nightbreach.ts): Sam's F orders read, its drill sequenced, a restart under it answered by staging again — a return on its first line while it is off
     this.quiet.tick(cam);   // the quiet mission (quiet.ts): the camera put on a dealt start, its partner told to follow on the first tick the orders have him — a return on its first line while it is off
     this.roomClear.tick(dt);                 // the room clear (roomclear.ts): its rooms' cleared state and its two ends — a return on its first line while it is off

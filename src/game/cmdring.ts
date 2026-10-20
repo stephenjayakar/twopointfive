@@ -67,6 +67,14 @@ export const CMDRING = {
    *  the tap it was; a digit or the cursor out of the middle lights another; no quarter second to wait, no list to scroll, no cancel row (a right click or
    *  the back key gives nothing), and his feet are his own while it is up. Off here; the page raises it with the ring (`?nocmdhands` leaves Space as it was) */
   hands: false,
+  /** PLAN MODE (planmode.ts): Shift + the key toggles it; while it is up the left button picks men (a click, Shift click, a drag), the right button gives
+   *  the quick key's order to them — Shift adds it to the end of their chain — and a chain pauses for the word's key at a door's threshold and after a
+   *  room that has something chained after it. Off here; the page raises it with the ring (`?nocmdplan` leaves it off) */
+  plan: false,
+  /** plan mode: a left press that has moved less than this (CSS px, × ringZoom) by the time it is let go is a click, not a box */
+  planDragPx: 8,
+  /** plan mode: seconds the chains are drawn with the mode down after the word's key or an order changed them */
+  planShowSecs: 1.5,
   /** the outline: half the stretch of wall drawn (m), the ring on a spot and the ring at a man's feet (m) */
   hintWallM: 0.6, hintSpotM: 0.3, hintManM: 0.5,
 };

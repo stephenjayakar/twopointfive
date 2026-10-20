@@ -99,7 +99,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Not on it: a row past the fifth (the wheel reaches it; nothing is lit), nothing on open floor. ONE GUARD ON THE CLOCK, both rings (`tapSecs` 0.15 s): the
   cursor lights nothing in the key's first moment, and one already out of the middle by then lights nothing until it has been back, so a tap made with
   the hand sweeping is still the first wedge; a digit counts from the first frame (`ringOpen` / `ringWant` in `cmdring.ts` are the halves both rings
-  share). Shift held with Tab opens nothing (kept for the plan mode, not built). TAB IS ALSO THE BACK KEY (`BACKKEY.tab`): with
+  share). Shift held with Tab opens no ring: that is plan mode's toggle (the next bullet). TAB IS ALSO THE BACK KEY (`BACKKEY.tab`): with
   a menu, a Space list, a running verb or the launcher's arc to back out of, the press is theirs and no ring opens; on the page Esc is the pause, and a ring
   held under the pause card is gone, nothing given, when play comes back (the 'Paused' tick). NOT ON THE RING YET: rows on letters (the
   throw page on G, 'go'), the 'wait for my word' row (a ring's order goes at once), picking several men (one click is one man). B, X and T work beside it;
@@ -120,6 +120,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   left sits under the squad panel. NEVER seen on a GPU, never played by a hand: whether the hold feels right, whether the ring hides what it is opened on,
   and whether Sam's aim swinging with the cursor matters are the maintainer's to judge. No tally was run: with the switch off nothing moves, and the ring
   gives only orders the menu already gave.
+- **Plan mode, a prototype** (`src/game/planmode.ts`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that
+  requires explicitly leaving"; the design: `rebuild/commanding/command-mode.md`). OFF in the module and on BOTH stands (no `FROZEN_HOLDS` row: it is
+  not a shipped-on rule); the page raises it with the ring (`?cmd`), `?nocmdplan` or the debugger's tick 'Tab ▸ the ring ▸ plan mode on Shift+Tab'
+  leaves it off; the journal turns it off for a recording from before the key; it needs the ring's own switch. SHIFT+TAB TOGGLES IT, where Tab is
+  free (with a menu, a Space list, a verb or the launcher's arc to back out of, Tab backs out, Shift or no). WHILE IT IS UP THE MOUSE IS THE SQUAD'S:
+  Sam neither fires nor aims (`planAfter`, at the end of `orders.input`, strips both buttons from the tick's copy), and Shift is not his sprint. LEFT
+  BUTTON PICKS: a click on a man (body, or within `manPx` of his feet), Shift click adds or removes him, a drag (past `planDragPx`) boxes men by
+  their feet, a click on nothing is everyone. Everyone, a whole pair and one man are kept as the who key's own `who`; any other set is
+  `plan.pick` (callsigns), which `recipients()` reads ahead of `who` ONLY when the caller names no `who` (`give(id, t)` and the quick key go to the
+  pick; a scenario's `give(id, t, 'all')` never does); T or the ring's click on a man lets it go. RIGHT BUTTON ORDERS, BY STARCRAFT'S RULES: a plain
+  right click is `SquadOrders.quickFor(men, t)` — the squad's own choice there (`autoPick`, asked whether or not the quick key's switch is on) —
+  and REPLACES the chain those men were on; refused, nothing changes. Shift + right click ADDS the stop to the end of each chain those men are on
+  (men picked out of a bigger chain part from it, keeping its stops; a man on no chain starts one). A CHAIN (`PlanChain`: callsigns, stops written
+  down as planlay.ts writes a place, a phase) is given a stop at a time: `go` → at a door `wait` (stacked: `doorTools.waitsOn(...).set`) → the
+  word's key → `in` (the entry the squad picks) → no door order has its men any more → with a stop after it `held` until the word's key, else done
+  (they hold the room, as ever). An entry given up (a lock: back on their marks) is `wait` again. A stop on the floor is no pause; a thing sent to
+  be worked is one, like a room. THE WORD'S KEY (`DOORTOOLS.blowKey`): a chain of the picked men that WAITS takes it ahead of every other reader;
+  a press with men still walking to a chained door is kept for that threshold (`spent`: the mark comes off the plan, and the plan shows
+  `planShowSecs` with the mode down) only when nothing else could want it (no charge set, nobody stood waiting, no plan laid); a press NOBODY took
+  by the end of the door tools' and wall charges' own reads is kept for the next pause (`planLate`, game.ts). An order given any other way (X, the
+  ring, B) takes its men off their chains — but a way in given on the door a chain waits at, or the word, is that chain's word. STATE:
+  `SquadOrders.plan` (per order book), `planSnapshot` / `planRestore` (savestate.ts files it with the switch on; `restoredT` keeps the chains
+  through the fresh cast a load stands up); `PLAN_STATS` is a tally. PICTURE (ui/cmdring.ts `updatePlan`, index.html `.planmode`): a frame round
+  the view and PLAN under it, a circle at each man's feet in his pair's colour (bright: picked), the box, each chain as a broken line from its men
+  through its stops with the key's cap where it is still to be pressed (lit where they wait now). CHECK: `bun run tools/qa/planmode-check.ts`
+  (`probes.ts planmode`, family squadorders), 17 lines through real keys and buttons on the room clear with four; `PLANMODE_BREAK=1` fails 16 of
+  17 on both stands. LIMITS, as built: a chain's stop is always the first wedge (no other row can be chained); a chained 'fall in' is done at
+  once; the men of a chain are named when it is laid (a man who joins the pick later is not on it); men who part from a chain while it waits at a
+  door go in with the rest on that door's word. SEEN: on the page with the software adapter at 960 × 540, real keys and mouse, no console or GPU
+  errors. Never seen on a GPU, never played, and no tally has been run with it: whether chains beat B is not measured.
 - **Who commands best: the three-hands tally** (`tools/qa/command-tally.ts`; his words 10-14: "we should also make it so micromanaging > autopilot commanding > doing it
   yourself", "so there's incentive to go beyond just mashing b"; record rebuild/commanding/read-first.md 'Balance, measured'). NO GAME SWITCH: a tool only.
   The same floor played three ways by scripted players on the SHIPPED stand with the real keys: `solo` (the squad never told anything), `b` (B and nothing else), `plan`
