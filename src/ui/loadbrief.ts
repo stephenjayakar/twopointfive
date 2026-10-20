@@ -6,8 +6,9 @@
 // Before this a page whose address names a mission booted behind the OLD start card's look-alike (ui/menu.ts bootCard: a grey Start, the notes, the whole
 // controls list and the shader count) and the mission began under it the moment the boot was done: a list of keys up for as long as the machine took, gone
 // before it could be read. Now that page shows THE MISSION: its own words off the mission list (scene/scenarioList.ts: the heading it sits under, its title,
-// the place, the job in one line, the team as deployed, the defenders, the approach) beside its own picture (ui/menuStills.ts: a moment of that mission being
-// played), and ONE block, START, which fills as the boot goes and is live when the level can start. Nothing here is a new sentence: every word is the list's.
+// the place, the job in one line, the team as deployed, the defenders, the approach) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
+// drawMissionMap: the place as a model, a 10 m scale, the way in marked; the maintainer on the first cut, which had the mission's picture there: "let's show
+// the map vs. the (kinda low res) level art"), and ONE block, START, which fills as the boot goes and is live when the level can start. Nothing here is a new sentence: every word is the list's.
 //   · IT STAYS UNTIL IT IS STARTED: a click on the block, Enter or Space. The world is stood up and held still behind it (main.ts: one term of the loop's
 //     `frozen`, as under the pause card), so the run's first tick is the player's.
 //   · IT NEVER ADDS WAIT: a press made while the page still boots is kept (the block sits pressed in) and the level starts the moment it can.
@@ -21,11 +22,11 @@
 import { ALL_MISSIONS, specOfQuery, quitSearch } from '../scene/scenarioList';
 import { MISSION_GROUPS } from '../scene/scenarios';
 import { PICKS_UI, pickOfQuery, pickQuitSearch } from '../scene/picks';
-import { SOLO_NIGHT, missionOf, missionOfQuery, teamWordsOf, leanWords, reopenMissionsAfterLoad, type Mission } from './missions';
-import { stillOf } from './menuStills';
+import { SOLO_NIGHT, missionOf, missionOfQuery, drawMissionMap, teamWordsOf, leanWords, reopenMissionsAfterLoad, type Mission } from './missions';
 import { openOptions, closeOptions, optionsOpen } from './options';
 import { START_PAGE } from './startpage';
 import { menuTheme } from './theme';
+import { textZoom, rectZoom, TEXT_EVENT } from './textsize';
 
 export const LOADBRIEF = { on: false };
 
@@ -64,10 +65,10 @@ export interface LoadBrief {
 const STYLE = 'brief-style';
 const CSS = `
 /* THE LOAD BRIEF (ui/loadbrief.ts): the title screen's own composition — the words and the one block down the left on the menus' ground — with the mission's
-   picture where the title has the floor. Flat, square, no frame round the words; the accent is the rule under the title and the block, nothing else.
+   map where the title has the floor (the model stands on the menus' ground with no frame of its own, as on the mission list's sheet). Flat, square, no frame round the words; the accent is the rule under the title and the block, nothing else.
    A LAYER OF THE GAME'S TEXT SIZE (ui/textsize.ts LAYERS: drawn at the window's factor and the player's step, as the menus are), so by that module's rule
    every viewport unit below is divided by the factor and every @media is a px width or height. */
-#brief { position: absolute; inset: 0; z-index: 30; display: none; grid-template-columns: minmax(340px, 42%) minmax(0, 1fr); background: var(--m-base); color: var(--m-text); font: 13px/1.45 var(--m-font); outline: none; opacity: 1; transition: opacity 0.18s; }
+#brief { position: absolute; inset: 0; z-index: 30; display: none; grid-template-columns: minmax(340px, 42%) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); background: var(--m-base); color: var(--m-text); font: 13px/1.45 var(--m-font); outline: none; opacity: 1; transition: opacity 0.18s; }
 #brief.on { display: grid; }
 #brief.out { opacity: 0; pointer-events: none; }
 #brief .bcol { box-sizing: border-box; min-width: 0; height: 100%; overflow: hidden auto; display: flex; flex-direction: column; padding: clamp(22px, 6vh / var(--tz, 1), 64px) 24px clamp(22px, 6vh / var(--tz, 1), 64px) clamp(24px, 6.5vw / var(--tz, 1), 110px); }
@@ -79,7 +80,7 @@ const CSS = `
 #brief .bfacts { display: flex; flex-wrap: wrap; gap: 10px 34px; margin-top: 24px; }
 #brief .bf b { display: block; font: 600 11px/1 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-dim); }
 #brief .bf span { display: block; margin-top: 6px; font-size: 14px; color: var(--m-text); }
-#brief .bin { margin: auto 0; }   /* (the words and the block as one group, level with the picture; a column taller than the window scrolls from its top) */
+#brief .bin { margin: auto 0; }   /* (the words and the block as one group, level with the map; a column taller than the window scrolls from its top) */
 #brief .bgo { position: relative; overflow: hidden; box-sizing: border-box; width: min(360px, 100%); margin-top: clamp(22px, 5vh / var(--tz, 1), 44px); display: flex; align-items: center; justify-content: space-between; text-align: left; font: 700 34px/1 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; padding: 14px 18px 11px; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.4); border: 0; border-left: 4px solid rgba(var(--m-edge),0.3); border-radius: 0; cursor: progress; transition: padding-left 0.12s, background 0.12s, color 0.12s; }
 #brief .bgo i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(var(--m-accent-rgb),0.3); transition: width 0.2s; }
 #brief .bgo span, #brief .bgo kbd { position: relative; }
@@ -95,15 +96,17 @@ const CSS = `
 #brief .bfoot { display: flex; gap: 26px; margin-top: 10px; }
 #brief .bq { padding: 8px 0 7px; font: 600 12px/1 var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; color: var(--m-dim); background: none; border: 0; border-radius: 0; cursor: pointer; }
 #brief .bq:hover, #brief .bq:focus { color: var(--m-bright); outline: none; }
-#brief .bpic { min-width: 0; display: flex; align-items: center; justify-content: center; padding: clamp(20px, 5vh / var(--tz, 1), 64px) clamp(20px, 4vw / var(--tz, 1), 72px) clamp(20px, 5vh / var(--tz, 1), 64px) 12px; }
-#brief .bpic img { display: block; width: min(100%, 1140px); max-height: 100%; aspect-ratio: 760 / 475; object-fit: cover; border: 1px solid rgba(var(--m-edge),0.14); opacity: 0; transition: opacity 0.25s; }
-#brief .bpic img.in { opacity: 1; }
-/* a narrow window: the picture over the words; a short one: the same column, closer set */
-@media (max-width: 820px) { #brief { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } #brief .bpic { order: -1; padding: 16px 24px 0; justify-content: flex-start; } #brief .bpic img { max-height: calc(32vh / var(--tz, 1)); }
+#brief .bpic { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; padding: clamp(20px, 5vh / var(--tz, 1), 64px) clamp(20px, 4vw / var(--tz, 1), 72px) clamp(20px, 5vh / var(--tz, 1), 64px) 12px; }
+/* the map's box is the sheet's own shape (40 / 28: ui/missions.ts sizes the canvas) at the largest width the column AND the window's height leave it, so
+   the box and what is drawn in it are one size and nothing of the sheet is cut or letterboxed */
+#brief .bpic canvas { display: block; width: min(100%, 1140px, calc((100vh / var(--tz, 1) - 2 * clamp(20px, 5vh / var(--tz, 1), 64px)) * 40 / 28)); aspect-ratio: 40 / 28; object-fit: contain; opacity: 0; transition: opacity 0.25s; }
+#brief .bpic canvas.in { opacity: 1; }
+/* a narrow window: the map over the words; a short one: the same column, closer set */
+@media (max-width: 820px) { #brief { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } #brief .bpic { order: -1; padding: 16px 24px 0; justify-content: flex-start; } #brief .bpic canvas { width: min(100%, calc(32vh / var(--tz, 1) * 40 / 28)); }
   #brief .bcol { padding-left: 24px; } #brief .bin { margin: 0; } }
 @media (max-height: 640px) { #brief .bcol { padding-top: 16px; padding-bottom: 12px; } #brief .bt { margin-top: 10px; font-size: clamp(28px, 3.6vw / var(--tz, 1), 44px); } #brief .bt::after { margin-top: 12px; }
   #brief .bplace { margin-top: 10px; } #brief .bjob { margin-top: 8px; font-size: 15px; } #brief .bfacts { margin-top: 14px; } #brief .bgo { margin-top: 18px; font-size: 26px; padding: 10px 18px 8px; } }
-@media (prefers-reduced-motion: reduce) { #brief, #brief .bgo, #brief .bgo i, #brief .bpic img { transition: none; } }
+@media (prefers-reduced-motion: reduce) { #brief, #brief .bgo, #brief .bgo i, #brief .bpic canvas { transition: none; } }
 `;
 function styles() {
   menuTheme();
@@ -142,15 +145,27 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   host.appendChild(root); root.classList.add('on');
 
   let up = true, live = false, armed = false, onStart: (() => void) | undefined;
-  // the mission's picture, where one was made (none: the one-file build without them, a mission newer than the pictures — the words alone)
-  void stillOf(m.id).then(P => { if (!up || !P) return; const img = el('img') as HTMLImageElement; img.alt = ''; img.decoding = 'async'; img.onload = () => img.classList.add('in'); img.src = P.img.src; pic.appendChild(img); if (img.complete) img.classList.add('in'); }).catch(() => { /* the words alone */ });
+  // THE MAP, drawn at the size the screen shows it (a canvas in a text size layer is drawn in the screen's own pixels, or it is stretched: ui/textsize.ts)
+  // and again when the window or the text size changes; none where the level's file did not come (the words alone).
+  const map = el('canvas') as HTMLCanvasElement; pic.appendChild(map);
+  let mapW = 0;
+  const drawMap = () => {
+    if (!up) return;
+    if (map.style) map.style.display = '';   // (hidden by a draw whose file did not come: shown again to be measured, and asked again)
+    const r = map.getBoundingClientRect?.(), w = Math.max(480, Math.min(2880, Math.round((r?.width || 760) / rectZoom() * textZoom() * (window.devicePixelRatio || 1))));
+    if (w === mapW) return; mapW = w;
+    void drawMissionMap(map, m, search, w).then(ok => { if (!up) return; if (ok) map.classList.add('in'); else if (mapW === w) mapW = 0; }).catch(() => { if (mapW === w) mapW = 0; });
+  };
+  const resized = () => { setTimeout(drawMap, 0); };
+  window.addEventListener('resize', resized); window.addEventListener(TEXT_EVENT, resized);
+  setTimeout(drawMap, 0);
 
-  const gone = () => { up = false; live = false; window.removeEventListener('keydown', onKey, true); };
+  const gone = () => { up = false; live = false; window.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', resized); window.removeEventListener(TEXT_EVENT, resized); };
   const start = () => {
     if (!up) return;
     if (!live) { arm(!armed); return; }   // (pressed while the page still boots: kept — live() starts it; pressed again: taken back)
     const run = onStart; gone(); closeOptions();
-    root.classList.add('out'); setTimeout(() => root.remove(), 220);   // (the run is live from this line: the fade is over the first frames of it)
+    root.classList.add('out'); setTimeout(() => { root.remove(); map.width = map.height = 0; }, 220);   // (the run is live from this line: the fade is over the first frames of it; the map's pixels are not kept for the run)
     try { run?.(); } catch (e) { console.error('load brief: the start threw', e); }   // (the armed start runs inside the page's boot: a throw here must not be the boot's)
   };
   const arm = (on: boolean) => { armed = on; root.classList.toggle('armed', on); go.setAttribute('aria-pressed', String(on)); };
@@ -183,7 +198,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   return {
     status(text: string) { if (!up || live) return; words.textContent = text; const n = /(\d+) \/ (\d+)/.exec(text); if (fill.style) fill.style.width = n && +n[2] > 0 ? `${Math.min(100, Math.round(100 * +n[1] / +n[2]))}%` : /ready|setting up/.test(text) ? '100%' : '0'; },
     live(run?: () => void) { if (!up || live) return; live = true; onStart = run; root.classList.add('live'); go.removeAttribute('aria-busy'); words.textContent = ''; if (armed && !optionsOpen()) start(); else arm(false); },
-    off() { if (!up) return; gone(); closeOptions(); root.remove(); },
+    off() { if (!up) return; gone(); closeOptions(); root.remove(); map.width = map.height = 0; },
     get up() { return up; },
     get held() { return up && live; },
     words: W,

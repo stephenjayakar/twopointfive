@@ -44,6 +44,7 @@ export async function loadbriefCheck(): Promise<boolean> {
   const { missionList, missionHref, teamWordsOf } = await import(`${ROOT}/src/ui/missions.ts`);
   const { MISSION_GROUPS } = await import(`${ROOT}/src/scene/scenarios.ts`);
   const { quitSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+  const { lookLevelFile } = await import(`${ROOT}/src/scene/look.ts`);
   const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const was = LOADBRIEF.on;
 
@@ -121,6 +122,14 @@ export async function loadbriefCheck(): Promise<boolean> {
     const err = console.error; let threw = false, said = 0; console.error = () => { said++; };
     try { B5?.live(() => { throw new Error('no sound'); }); } catch { threw = true; } finally { console.error = err; }
     line(!threw && said === 1 && B5?.up === false && winL.length === 0, 'screen: a start that throws is logged and the brief is still gone — the kept press starts inside the page\'s boot, and must not be its end'); root5?.remove();
+    // (6) the map: the mission list's own sheet of the level, the way in its address asks for marked — and no picture
+    const B6 = loadBrief(Q + '&way=2'), root6 = doc.getElementById('brief'); await new Promise(r => setTimeout(r, 5));
+    const cv6 = root6?.find(e => e.tag === 'CANVAS') ?? null, img6 = root6?.find(e => e.tag === 'IMG') ?? null, mark6 = cv6?.getAttribute('data-mark') ?? '';
+    B6?.off(); const left6 = winL.length;
+    const B7 = loadBrief('?solo'), root7 = doc.getElementById('brief'); await new Promise(r => setTimeout(r, 5)); const cv7 = root7?.find(e => e.tag === 'CANVAS') ?? null; B7?.off();
+    const B8 = loadBrief(Q), root8 = doc.getElementById('brief'); await new Promise(r => setTimeout(r, 5)); const cv8 = root8?.find(e => e.tag === 'CANVAS') ?? null, w8 = (cv8 as any)?.width, h8 = (cv8 as any)?.height; B8?.off();
+    line(!!cv6 && !img6 && cv6.getAttribute('data-level') === lookLevelFile('depot.json') && mark6 === 'roomclear|2' && cv8?.getAttribute('data-mark') === 'roomclear|0' && w8 === 760 && h8 === 532 && (cv8 as any)?.width === 0 && left6 === 0 && cv7?.getAttribute('data-level') === 'office.json' && cv7.getAttribute('data-mark') === 'solo|0',
+      `screen: beside the words is the map of the mission's own level as the page loads it, asked of the mission list's sheet with the way in the address names (${cv6?.getAttribute('data-level')} ${mark6} · ${cv8?.getAttribute('data-mark')} ${w8} x ${h8} · ${cv7?.getAttribute('data-level')} ${cv7?.getAttribute('data-mark')}), in the sheet's own shape, its pixels let go when the brief goes — and no picture`);
   } catch (e: any) { line(false, `screen: threw — ${e?.stack ?? e}`); }
   finally { LOADBRIEF.on = was; for (const k of Object.keys(saved)) { if (saved[k]) Object.defineProperty(G, k, saved[k]!); else delete G[k]; } }
 
