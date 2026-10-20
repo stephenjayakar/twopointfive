@@ -250,7 +250,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   level's fingerprint. Checks: the validator (the door exists, once, the name's length) and `bun run tools/qa/probes.ts words-doornames` (no bearing, no
   two doors of a level called the same, and the list of doors still owed a name — a door named here comes off `DOORS_OWED` in the same change).
 - `kitView` — THE TEAM AT THE DOOR, the start page's Team & kit picture (`src/host/kitView.ts`, `src/ui/kitView.ts`; picture only — no rule of the game reads
-  it, and a level without the block shows the menu's standing man as before): `{ ways[], sets? }`, indexed as the team starts are (`[0]` = the room clear's own
+  it, and a level without the block shows an empty column there: the menu's standing man is `?oldfigure`'s alone): `{ ways[], sets? }`, indexed as the team starts are (`[0]` = the room clear's own
   `team`, `[k]` = its `starts[k − 1]`; never more ways than starts). A way needs only `door` (a door id): the men's slots, the camera and the lamps are worked
   out from that door's frame and the side the team starts on — teammates along the wall 0.7 m off its face and 0.9 m apart from 0.45 m past the jamb away
   from the hinge, Sam across the door, no nearer its middle than 1.8 m (an authored slot for him should keep that too: a door charge's moment goes off beside him
@@ -312,8 +312,8 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   wall writes the first door behind it (`ref`: the side the picture is taken from, when that door is another way's too), or a set with a door in the wall
   the stack stands on (mousehole's `ward`: the wall charge still opens the wall beside the door — `KIT_VIEW_LOOP.wallAt` is measured along the stack's wall).
   ANY KIND of mission may carry a block: a way on a set is always staged as a room clear of the set; a level's own way is staged by the mission's own
-  kind (room clear, rescue, night breach; a quiet mission and the solo night with their own men: Sam alone, or Sam and his partner). Only a level
-  with no block shows the standing man.
+  kind (room clear, rescue, night breach; a quiet mission and the solo night with their own men: Sam alone, or Sam and his partner). A level
+  with no block shows nothing in that column.
   A BESPOKE SET: `sets { <name>: { boxes[], doors?[], lights?[], ref [x, z] } }` in THIS format's own box / door / light records — a small stage of the
   level's own materials (by name: a look file's set wears the look — a set box's `material` may be ALTERNATIVES, `'look|plain'`: the first name the
   file's palette holds, so one block text serves a level's plain file and its look file) that the picture loads INSTEAD of the level's geometry; a set's

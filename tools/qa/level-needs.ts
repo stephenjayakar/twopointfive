@@ -196,7 +196,7 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
   // ---- the Team & kit picture
   if (rows.length && !lesson) {
     const own = name === 'office' ? /KIT_VIEW/.test(readFileSync(resolve(ROOT, 'levels/office.scenarios.ts'), 'utf8')) : S.kitView !== undefined;
-    say('kit picture', own, own ? 'the file carries a kitView block' : 'no scenarios.kitView: Team & kit shows the standing man');
+    say('kit picture', own, own ? 'the file carries a kitView block' : 'no scenarios.kitView: Team & kit shows an empty column where the picture would be');
     if (twin && own) { const same = JSON.stringify(twin.scenarios?.kitView) === JSON.stringify(S.kitView); say('kit picture', same, same ? 'the look twin carries the same block' : 'the look twin\'s kitView block is not the plain file\'s'); }
   }
   // ---- the look twin
