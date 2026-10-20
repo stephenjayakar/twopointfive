@@ -301,7 +301,8 @@ export const foursquadStack = guarded(async () => {
     verdict(ws.every(w => w === null) && m1.every(Boolean) && near1 > 0.7 && minApart(men) > 0.6, 'the four sent to one door a man at a time (T, then the row): each takes a free place — the third and fourth behind the first two', `${men.map((m: any, i: number) => `${m.callsign} → ${ws[i]} ${m1[i] ? at(m1[i]!) : 'no mark'}`).join(' · ')} · nearest two marks ${f2(near1)} m`); }
   // three men: one down
   killGuard(g, men[3], [1, 0, 0], false, 'shot', 'player'); R.step(5); g.teleportPlayer(SAM.manager); R.step(5);
-  const why3 = R.give('stack', 'manager'); const set3 = R.until(() => O.men().every((m: any) => O.of(m)?.arrived), (await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on ? 40 : 20);   // (the team's slower walk, teampace.ts: the way to this door is more than twenty seconds of it)
+  const why3 = R.give('stack', 'manager'); const set3 = R.until(() => O.men().every((m: any) => O.of(m)?.arrived), 20);
+  if ((await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on) R.step(180);   // (the team's slower walk, teampace.ts: the last man is still coming by the first — 0.70 m off him — on the frame all three are called set; three seconds on they stand 0.87 apart)
   verdict(why3 === null && set3 && O.men().length === 3 && minApart(O.men()) > 0.7, 'with a man down the three left stack the same way', `give → ${why3} · ${O.men().map((m: any) => `${m.callsign} ${at(m.char.pos)}`).join(' · ')}`);
   return done();
 });

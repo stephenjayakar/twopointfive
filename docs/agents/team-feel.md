@@ -728,7 +728,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   back from a grenade, seeds 1‥6, 126 a side: 226 of 444 off, 220 on (paired −0.05, standard error 0.14), taken 62 → 71, wiped 38 → 29. Single scenarios
   swing both ways by more than the whole effect (compound-four 15 → 3 of 24, records-pair 2 → 7 of 12 in that pass): six seeds do not settle one scenario.
   WHO IS HEARD: the tally has no count of it; the footfall is what the check reads (a walker's as it was, a runner's the player's sprint). The frozen stand
-  with the rule raised (`TPS_TEAMPACE=1`) was NOT tallied. NEIGHBOURS' CHECKS that stood on the old pace, changed here: `frag-probes.ts` (g) and the
+  with the rule raised (`TPS_TEAMPACE=1`), seeds 1‥3, 63 a side: men up 97 of 222 off, 103 on (paired +0.10, standard error 0.21), taken 29 → 31, wiped 22 → 20,
+  no run written (no grenade rule and no picture on that stand). RESCUES are the one thing that moved the same way in all three passes: rescued 17 → 14,
+  8 → 7 and (frozen) 8 → 5, hostages out 28 → 26, 14 → 13 and 14 → 7 — a rescue has a clock and the walk to it is slower; small counts, one direction. NEIGHBOURS' CHECKS that stood on the old pace, changed here: `frag-probes.ts` (g) and the
   flee-by-door pace line read the flee's run when the rule is on; `lineoffire-probes.ts` passes over a man with a reason to run (`teamRunAgo`); and FIVE
   stagings hold the rule OFF with the reason written beside each, for their owners to re-stage at the new pace: `fireline-check.ts` (arms 6 and 11 stand
   on one nav cell 2 mm from the lane's berth), `roomkeep-check.ts` (compound-four k_p+: the keeper shifts 0.5 m for mates who come by later, the bar is
