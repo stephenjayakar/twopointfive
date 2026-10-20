@@ -1,20 +1,35 @@
-// FINDING YOUR OWN MAN ON THE SCREEN: what the HUD draws for host/findme.ts's one picture setting, and the four rows Options > Game gets for the table.
+// FINDING YOUR OWN MAN ON THE SCREEN: what the page draws for host/findme.ts's two picture settings, and the five rows Options > Game gets for the table.
 //   ring     the gold ring an open order menu puts at his feet (ui/planfloor.ts `py`), drawn here whenever that one is not up
-// PICTURE ONLY: it reads the player's position and writes nothing, and with the setting off update() returns before it has asked anything.
-// SHELVED (2026-10-20), and not here: an outline of him in the dark and his shape through a wall. They were drawn in this overlay from his joints, each limb
-// a stroke, and that is not his silhouette — from a squad level's distance an arm was two pixels wide and the 'outline' a stick figure's. The maintainer:
-// "it should be a proper silhouette". A proper one is the renderer's to draw, from the pixels that are his (the G-buffer's id target holds the owner of every
-// pixel, his kit and gun with him), not this file's.
+//   outline  not drawn here: findMeOutline() fills the renderer's frame for it (render/outline.ts — a rim round the pixels that are his, from the g-buffer's
+//            id target), with how strongly the light meter says to draw it and where he stands
+// PICTURE ONLY: both read the player's position and his light and write nothing of the game's, and with a setting off its half returns before it has asked
+// anything.
+// THE FIGURE THAT WAS HERE (until 2026-10-20): the outline and his shape through a wall were drawn in this overlay from his joints, each limb a stroke, and
+// that is not his silhouette — from a squad level's distance an arm was two pixels wide and the 'outline' a stick figure's. The maintainer: "it should be a
+// proper silhouette". The outline is the renderer's now. His shape through a wall is SHELVED until that one has been seen on a GPU: it needs him drawn a
+// second time without the walls, which is a pass of its own.
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { PLAN } from '../game/floorplan';
-import { FINDME, setFindMe, resetFindMe } from '../host/findme';
+import { FINDME, setFindMe, resetFindMe, outlineWant, OUTLINE_LOOK } from '../host/findme';
+import type { OutlineFrame } from '../render/outline';
 
 /** where the ring would be drawn for the seat's own man (its centre on the floor), null = none: the row off, or he is down */
 export function findMeRing(game: Game): Vec3 | null {
   const pl = game.player; if (pl.down || !FINDME.ring) return null;
   return [pl.char.pos[0], 0, pl.char.pos[2]];
+}
+
+/** the outline's frame for this frame (render/outline.ts), written in place: off unless the row is on, he is up and `shown` (the page says no where no
+ *  mark of his is drawn: a stun's white-out, attract mode, the kit's picture); else whose pixels, where he stands, and how strong — the light meter's
+ *  word, eased over `dt` (a frame with no time in it, the world held under a card, takes the word whole: the row flipped in Options shows at once) */
+export function findMeOutline(F: OutlineFrame, game: Game, dt: number, shown = true) {
+  const pl = game.player;
+  if (!FINDME.outline || pl.down || !shown) { F.on = false; F.strength = 0; return; }
+  const L = OUTLINE_LOOK, want = outlineWant(pl.visibility, pl.nvAmount), p = pl.char.pos;
+  F.on = true; F.owner = pl.char.id; F.strength = dt > 0 ? F.strength + (want - F.strength) * Math.min(1, dt * L.ease) : want;
+  F.at[0] = p[0]; F.at[1] = p[1]; F.at[2] = p[2]; F.reach = L.reachM; F.top = L.topM;
 }
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -52,10 +67,11 @@ export interface RowKit {
   range(parent: HTMLElement, label: string, min: number, max: number, step: number, get: () => number, set: (v: number) => void, fmt: (v: number) => string, describe: string): void;
 }
 const TURNS: { v: 'as' | 'rev'; label: string }[] = [{ v: 'as', label: 'Normal' }, { v: 'rev', label: 'Reversed' }];
-/** the four rows under two headings; returns what Reset does for them */
+/** the five rows under two headings; returns what Reset does for them */
 export function findMeRows(K: RowKit, body: HTMLElement): () => void {
   K.sec(body, 'Finding yourself · trying out');
   K.flip(body, 'Ring at your feet', () => FINDME.ring, v => setFindMe('ring', v), 'The gold ring the orders menu puts at your feet, there all the time.', ['On', 'Off']);
+  K.flip(body, 'Outline in the dark', () => FINDME.outline, v => setFindMe('outline', v), 'A pale rim round you when you stand in the dark.', ['On', 'Off']);
   K.sec(body, 'Camera · trying out');
   K.range(body, 'Aim pan', 0, 100, 10, () => Math.round(FINDME.pan * 100), v => setFindMe('pan', v / 100), v => v ? `${v.toFixed(0)} %` : 'None', 'How far the view leans toward where you aim. At none you stay in the middle of the screen.');
   K.seg(body, 'Turn direction', TURNS, () => FINDME.turn < 0 ? 'rev' : 'as', v => setFindMe('turn', v === 'rev' ? -1 : 1), () => 'Which way the view turns when you hold Ctrl and move the mouse.');

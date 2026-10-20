@@ -160,7 +160,15 @@ but synthetic writes still work.
     slot, then the oldest). An old build's slots read and list as they are (`manual` IS hand slot 0), and with the switch back off every slot written under it still loads.
   · **F5 saves by hand.** Read in `updatePlayer` (`input.hit('F5')` → `Checkpoints.askSave`, written at the end of that update), so a run tape replays it like any press; the
     page keeps a bare F5 from the browser while a run is up (`Input.saveKey`, the page's to say: not on the start page, behind a mission's brief, on a replay,
-    in the kit picture's window or over a broken frame). What a file cannot
+    in the kit picture's window, under a show's key lock (`Input.lockExcept`: no F5 reaches the game there) or over a broken frame). ON THE PAUSE CARD the world is
+    held and no update reads a key, so the page keeps the press (main.ts `savePend`, the loop's hotkeys; only on the card itself, not with the Options or the
+    mission list over it) and hands it over as a press of F5 on every live frame until a tick has moved the clock — the save stays the recording's own input —
+    while the mission and `Game.time` are the ones of the press (a restart or a save loaded with the card up drops it). The card's strip shows a dashed tile
+    where the save will stand (`Menu.saveAsked` lays the strip alone, the keys' place on the card kept; `MenuDeps.saveDue`; `.tile.due`), and none when the
+    save would be refused (`Checkpoints.handNo` asks, writes nothing): the refusal is then said on the feed at that tick as ever. The F5 line of `input.ts`
+    stands BEFORE the typing-target return, so an Options slider that kept the focus does not let a bare F5 reload the page under a run. On the end cards F5
+    stays kept and does nothing: a reload there would throw away the saves the DOWN card is showing, and there is nothing to save. Known: with five saves by
+    hand the tile to come is a sixth until the oldest is replaced. What a file cannot
     hold is refused with its reason on the feed (`not saved: …`; `canSave`: his hands full, a can on its fuse, a body still falling …). A man alerted does NOT refuse
     a save by hand and a save by hand is never marked regretted: it is the player's word, and the strip is how he goes further back than it. The Tab ▸ Checkpoints
     buttons go on as before (`bindings.ts`, straight to `Checkpoints.write`; its slot picker still reaches four).
@@ -194,11 +202,11 @@ but synthetic writes still work.
   seed): the plain night's file 28 KB frozen / 31 KB shipped; Training one's 9 / 11 KB; Training five in memory 5.0 / 6.9 MB (14–19 thousand objects, about 30 ms to
   take here: a hitch of a frame or three at each such save on a real machine is likely and is NOT timed on the page), so ten of those are 50–70 MB of the tab's
   heap; a picture is 256×144 and about 4 KB as stored (the software adapter's frame at 1024×576), so ten files with pictures are near 350 KB of the store. `tools/qa/savetimeline-page.cjs` drives
-  the real page on the software adapter (Chromium, SwiftShader, `verylow`; three jobs, each a boot of several minutes): the plain night — F5 as a real keydown, kept
+  the real page on the software adapter (Chromium, SwiftShader, `verylow`; four jobs, each a boot of several minutes): the plain night — F5 as a real keydown, kept
   from the browser, three times → three tiles in time order with pictures that are not flat, the middle tile loads to its own mission clock, the DOWN card shows
   them; Training five — four saves in memory on the strip with pictures, then a bulb put out AFTER a save and that save loaded from its tile: the bulb glows again
   on the frame after the load (259 nearly white pixels at the save, 0 with it out, 258 after the load), and with `SAVEPUTBACK_BREAK=1` (the host not told) it stays
-  dark there (0) though the game has it lit, so that line fails as it must; `?savetimeline=0` — F5 writes nothing and is the browser's, no strip. No page error.
+  dark there (0) though the game has it lit, so that line fails as it must; `?savetimeline=0` — F5 writes nothing and is the browser's, no strip; `card` (10-20, the page's own loop let go with the pause card up) — F5 is kept, nothing is written and the world does not move while the card is up, the strip shows the tile to come, the card closed writes ONE save by hand with its picture, the button the keys had walked to keeps the focus, a save that would be refused shows no tile, a restart made with the card up drops the press, and under a key lock F5 is the browser's; `SAVECARD_BREAK=1` (the kept press not handed over) writes none and fails as it must. No page error.
   NEVER SEEN ON A GPU, never played. Known and open: smoke hanging at a memory save is gone after its load (the fluid lives on the GPU) and a sound that was playing
   plays out; a load from a card is between steps and cuts the run tape, as a card's load always has; the F10 journal does not know a load; the Tab list shows a memory
   save as 0 KB.
