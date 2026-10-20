@@ -3756,6 +3756,13 @@ export class CharacterAnimator {
     blendPose(pA, pB, 1, m, pA);
     this.tellShown = wUp;
   }
+  /** the held gait for a checkpoint (savestate.ts PlayerSnap.heldGait): the walk's phase is in a file, and under the close-in mode it is these that advance it
+   *  — a load that began the gait again from nothing put his first footfalls frames off the save's. Nothing to say outside the mode. */
+  heldGaitSnap(): number[] | undefined { return this.crT > 0 || this.crW > 0 ? [this.crT, this.crW, this.crPace, this.creep ? 1 : 0] : undefined; }
+  heldGaitBack(a: unknown): void {
+    if (!Array.isArray(a) || a.length !== 4 || !a.every(x => typeof x === 'number' && Number.isFinite(x))) return;
+    this.crT = clamp(a[0], 0, 1); this.crW = clamp(a[1], 0, 1); this.crPace = Math.max(0, a[2]); this.creep = a[3] === 1;
+  }
   /** The held gait's share this frame (update(), creep): a linear clock in over CREEP.gaitIn, out over CREEP.gaitOut, eased — and crV, the speed the ROOT itself
    *  made since the last frame (the controller's pos, as the life layer reads it: a jump of half a metre is a teleport, not travel), which is what the phase
    *  is advanced by under it. */

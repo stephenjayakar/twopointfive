@@ -19,6 +19,9 @@
 //               the same wall further along is taken on the walk up
 //   off         the switch off: none of the above ever holds, and Q still does
 //   recordings  a recording carries the key; one from before it replays with it off; the frozen stand holds it off by name
+//   checkpoint  under SAVETIMELINE.holds (savestate.ts; ?saveholds=0, TPS_SAVEHOLDS=1) a save made on a wall loads ON the wall and what he does next is what he
+//               did, the pistol the hold put away back in his hand off it; the take's latch rides the file too; a slice he could not be in is no hold; with
+//               the saves' switch off a file says nothing of it and a load stands him free, as it was
 // Headless: positions, clocks and the animator's stance are read; how the take LOOKS has never been seen.
 import { ROOT } from './headless.ts';
 import { world } from './wallsnap-probes.ts';
@@ -112,6 +115,27 @@ export async function wallPressCheck(): Promise<boolean> {
     { WALLSNAP.press = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), has = typeof snap.tables?.WALLSNAP?.press === 'boolean'; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.WALLSNAP.press;
       const offOld = await quiet(() => { applyKnobs(g, old); const off = WALLSNAP.press === false; applyKnobs(g, snap); return off && WALLSNAP.press === true; });
       verdict(has && offOld && FROZEN_HOLDS['WALLSNAP.press'] === 'TPS_WALLPRESS=1', 'a recording carries the switch, one from before the key replays with it off, and the frozen stand holds it off by name', `in the file ${has} · off for an old file ${offOld} · FROZEN_HOLDS ${FROZEN_HOLDS['WALLSNAP.press']}`); }
+    // ---- a checkpoint (THE LAST LINE THAT USES THE RIG'S MAN: a load makes a new Player, and world()'s place / run / gap keep the old one)
+    { const SS = await import(`${ROOT}/src/game/savestate.ts`); const holds0 = SS.SAVETIMELINE.holds; SS.SAVETIMELINE.holds = true; const P = () => g.player;
+      const save = (label: string) => quiet(() => SS.saveState(g, { label, kind: 'harness' })), load = async (file: any) => { const yaw = W.cam.yaw; await quiet(() => SS.loadState(g, JSON.parse(JSON.stringify(file)))); W.cam.yaw = yaw; W.cam.rebuild(); };
+      const worstOf = (a: number[], b: number[]) => { let w = 0; for (let i = 0; i < Math.max(a.length, b.length); i++) w = Math.max(w, Math.abs((a[i] ?? 1e9) - (b[i] ?? -1e9))); return w; };
+      const hold = () => { const out: number[] = []; for (let f = 0; f < 60; f++) { S.step(1); out.push(P().wall ? 1 : 0); } return out; };
+      // (every save first, the loads after: once a load has made a new Player the rig's place() is no use)
+      // the take's latch: Q off with the key still into the wall, saved with the key down (empty hands: a save waits for a hand that is changing what it holds)
+      set(true); S.place(21, 11.5, 180); S.keys('KeyW'); S.step(70); S.tap('KeyQ'); S.step(2); const offQ = !pl.wall; const latched = await save('just off the wall'); const la = hold(); S.keys(); S.step(20);
+      // the hold itself, taken with Q, the pistol in hand (the walk-in take off: the file is the saves' business, not the take's)
+      WALLSNAP.press = false; S.place(21, 10.6, 0, 'pistol'); S.tap('KeyQ'); S.step(90); const on = !!pl.wall && pl.wall.settle >= 1 && pl.holstered && pl.wall.drawn;
+      const file = await save('on the wall'), inFile = !!file.wallHold?.hold; SS.SAVETIMELINE.holds = false; const plain = await save('the switch off'); SS.SAVETIMELINE.holds = true;
+      const walk = () => { const out: number[] = []; S.keys('KeyD'); for (let f = 0; f < 90; f++) { S.step(1); out.push(P().char.pos[0], P().char.pos[2], P().wall ? P().wall.u : -1); } S.keys('KeyS'); for (let f = 0; f < 60; f++) { S.step(1); out.push(P().char.pos[0], P().char.pos[2], P().wall ? 1 : 0); } S.keys(); S.step(40); return out; };
+      const a = walk(), gunA = !P().holstered; await load(file); const back = !!P().wall && Math.abs(P().wall.n[2] - 1) < 0.01 && P().wall.settle >= 1; const b = walk(), gunB = !P().holstered, worst = worstOf(a, b);
+      set(true); await load(latched); S.keys('KeyW'); const lb = hold(), retaken = la.includes(1) || lb.includes(1);
+      const cut = JSON.parse(JSON.stringify(latched)); delete cut.wallHold; await load(cut); S.keys('KeyW'); const lc = hold(), cutRetaken = lc.includes(1); S.keys(); S.step(20);
+      // a slice that is not a hold he could be in where he stands is no hold
+      const bad = JSON.parse(JSON.stringify(file)); bad.wallHold.hold.d += 3; await load(bad); const refused = !P().wall;
+      SS.SAVETIMELINE.holds = false; await load(file); const offLoad = !P().wall; SS.SAVETIMELINE.holds = holds0; set(true);
+      verdict(on && inFile && back && worst < 1e-9 && gunA && gunB && offQ && !retaken && (BRK || cutRetaken) && refused && offLoad && plain.wallHold === undefined,
+        'a checkpoint made on a wall loads on the wall and plays on as the save did, the pistol back in his hand off it; the take\'s latch rides the file; a hold he could not be in is none; with the saves\' switch off a file says nothing',
+        `Q, pistol out: on the wall at the save ${on} · the hold in the file ${inFile} · on it after the load ${back} · 2.5 s of sliding and stepping off: the worst difference ${worst < 1e-9 ? 'none' : worst.toExponential(1)} · the pistol in hand after, carried on ${gunA}, loaded ${gunB} · Q off with the key held, saved: off ${offQ}, pulled back on in the next second, carried on or loaded ${retaken}; the file with the slice cut out pulls him back ${cutRetaken} · the plane moved 3 m in the file: no hold ${refused} · SAVETIMELINE.holds off: the load leaves him free ${offLoad}, the file's key ${plain.wallHold === undefined ? 'absent' : 'THERE'}`); }
   } finally { WALLSNAP.on = was.on; WALLSNAP.press = was.press; console.log = log; console.error = err; console.warn = warn; }
   console.log(`=== wallpress: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

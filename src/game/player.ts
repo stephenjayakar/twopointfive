@@ -1001,6 +1001,57 @@ function wallPress(g: Game, dt: number, input: Input, cam: FollowCamera, mx: num
 }
 const PRESS_THINGS: ReadonlySet<string> = new Set(['door', 'switch', 'breaker', 'objective', 'cam', 'body']);
 
+// ---- the hold in a checkpoint (savestate.ts SaveState.wallHold, under SAVETIMELINE.holds). No file held a hold before the wall could be taken by walking: a
+// load stood him free of it, the pistol the hold had put away still away. Now a save finds him on a wall as often as not, and the seconds after a load must be
+// the seconds after the save: the hold as it stands (all but the camera it eases, which the next frame hands it again) and the key-less take's clock and latch.
+// WH names every field of WallHold and how a load reads it: a field added to the hold and not named here does not compile.
+type WhKind = 'vec' | 'num' | 'unit' | 'opt' | 'bool' | 'optbool' | 'sign' | 'sign0' | 'optsign' | 'stack' | 'derived';
+const WH = {
+  n: 'vec', along: 'derived', from: 'vec', d: 'num', lo: 'num', hi: 'num', u: 'num', v: 'num', off: 'num', awayT: 'num', blockT: 'num', settle: 'unit', peek: 'unit',
+  openLo: 'bool', openHi: 'bool', seated: 'bool', drawn: 'bool', crouched: 'bool', side: 'sign', peekDir: 'sign', blockDir: 'sign0', atEdge: 'sign0',
+  takeT: 'opt', yaw0: 'opt', yawD: 'opt', hitT: 'opt', up: 'opt', lean: 'opt', leanDwell: 'opt', leanOutT: 'opt', leanOff: 'opt', flipT: 'opt', sayT: 'opt', rise: 'opt', owed: 'opt', camAlong: 'opt',
+  leanWant: 'optbool', leanDir: 'optsign', kind: 'stack',
+} as const satisfies Record<keyof Omit<WallHold, 'cam'>, WhKind>;
+export type WallSnap = { hold?: Record<string, unknown>; press?: { t: number; at: number; n: number[] | null; dx: number; dz: number; held: boolean; until: number } };
+export function wallHoldSnapshot(g: Game): WallSnap | undefined {
+  const pl = g.player, w = pl.wall, P = wsPress.get(pl), out: WallSnap = {};
+  if (w) { const { cam: _cam, ...rest } = w; out.hold = { ...rest, n: [...w.n], along: [...w.along], from: [...w.from] }; }
+  if (P) out.press = { t: P.t, at: P.at, n: P.n ? [...P.n] : null, dx: P.dx, dz: P.dz, held: P.held, until: P.until };
+  return out.hold || out.press ? out : undefined;
+}
+/** …and back, onto the fresh Player a load has placed. A file that does not say, or a slice that is not a hold he could be in where he stands (a face that is
+ *  not level, a run with no length, a station off it, his body not at that plane): free of the wall, as a load always left him. */
+export function wallHoldRestore(g: Game, raw: unknown): void {
+  if (!raw || typeof raw !== 'object') return;
+  const pl = g.player, p = pl.char.pos, S = raw as WallSnap, num = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x), vec = (x: unknown): x is number[] => Array.isArray(x) && x.length === 3 && x.every(num);
+  const H = S.hold;
+  hold: if (H && typeof H === 'object') {
+    const w: Record<string, unknown> = {};
+    for (const k of Object.keys(WH) as (keyof typeof WH)[]) {
+      const kind: WhKind = WH[k], v = H[k];
+      if (kind === 'vec') { if (!vec(v)) break hold; w[k] = [...v]; }
+      else if (kind === 'num') { if (!num(v)) break hold; w[k] = v; }
+      else if (kind === 'unit') { if (!num(v)) break hold; w[k] = clamp(v, 0, 1); }
+      else if (kind === 'bool') w[k] = !!v;
+      else if (kind === 'sign') { if (v !== 1 && v !== -1) break hold; w[k] = v; }
+      else if (kind === 'sign0') { if (v !== 1 && v !== -1 && v !== 0) break hold; w[k] = v; }
+      else if (kind === 'opt') { if (num(v)) w[k] = v; }
+      else if (kind === 'optbool') { if (typeof v === 'boolean') w[k] = v; }
+      else if (kind === 'optsign') { if (v === 1 || v === -1) w[k] = v; }
+      else if (kind === 'stack') { if (v === 'stack') w[k] = v; }
+    }
+    const n = w.n as Vec3, len = Math.hypot(n[0], n[2]); if (Math.abs(n[1]) > 1e-6 || Math.abs(len - 1) > 1e-3) break hold;
+    w.n = [n[0] / len, 0, n[2] / len]; const N = w.n as Vec3; w.along = [-N[2], 0, N[0]];
+    const d = w.d as number, lo = w.lo as number, hi = w.hi as number, u = w.u as number, off = p[0] * N[0] + p[2] * N[2] - d;
+    if (hi - lo < WALL_MIN_FACE || u < lo - 1e-6 || u > hi + 1e-6 || off < BODY_R - 0.2 || off > BODY_R + WALL_REACH + 0.5) break hold;
+    if (w.takeT !== undefined && !((w.takeT as number) > 0)) break hold;
+    pl.wall = w as unknown as WallHold;
+  }
+  const P = S.press;
+  if (P && typeof P === 'object' && num(P.t) && num(P.at) && num(P.dx) && num(P.dz) && num(P.until) && (P.n === null || vec(P.n)))
+    wsPress.set(pl, { t: Math.max(0, P.t), at: P.at, n: P.n ? [...P.n] as Vec3 : null, dx: P.dx, dz: P.dz, held: !!P.held, until: P.until });
+}
+
 /** Does the rifle, drawn on this hold, stack on it (WALLSNAP.stackDraw; a hold taken under the feel pass: the stack's clocks hang off its take)? */
 function wallStacks(w: WallHold): boolean { return WALLSNAP.on && WALLSNAP.stack && WALLSNAP.stackDraw && w.takeT !== undefined; }
 

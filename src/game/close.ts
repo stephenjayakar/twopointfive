@@ -386,6 +386,10 @@ export function closeSeatTick(g: Game, dt: number) {
   }
 }
 /** everybody up, the frame's memory gone (resetGuards / restartEncounter: the men are new objects) */
+/** the man the mode is held on, for a checkpoint (savestate.ts PlayerSnap.heldGait rides with it, SAVETIMELINE.holds): the mode lets go further out than it takes
+ *  hold (modeOutM over modeM), so between the two a load that forgot him stood Sam out of the mode he was saved in */
+export function closeModeSnapshot(g: Game): number | undefined { return STATE.get(g)?.mode?.char.id; }
+export function closeModeRestore(g: Game, id: unknown): void { if (typeof id !== 'number') return; const gd = g.guards.find(x => x.char.id === id && x.state !== 'dead'); if (gd) stateOf(g).mode = gd; }
 export function closeReset(g: Game) { const S = STATE.get(g); if (!S) return; for (const gd of [...S.seats.keys()]) closeUnseat(g, gd); S.best = null; S.t = -1; S.mode = null; S.modeD = Infinity; }
 export function closeSummary(g: Game): string {
   const S = stateOf(g), T = CLOSE_STATS.takes, G = CLOSE_STATS.grabs; const o = S.t === g.time ? S.best : null;
