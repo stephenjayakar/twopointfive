@@ -32,7 +32,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   };
   const read = (page) => page.evaluate(() => { const out = { tiles: {} }; for (const f of ['rings', 'cams', 'wand']) { const r = document.querySelector(`#loadout .kc[data-member="0"] .kc-row[data-field="${f}"]`);
       out.tiles[f] = r ? { lent: r.classList.contains('lent'), val: r.querySelector('.kc-val')?.textContent || '' } : null; }
-    out.text = document.querySelector('#loadout .kc[data-member="0"]')?.textContent || '';
+    out.anyLent = !!document.querySelector('#loadout .kc-row.lent, .kc-row.lent'); out.text = (document.querySelector('#loadout') || document.body).textContent || '';
     const m = window.__kit.KIT.members[0], c = window.__kit.cost(0); out.card = { rings: m.rings, cams: m.cams, wand: !!m.wand, smoke: m.smoke, bangs: m.bangs, frags: m.frags, shells: m.shells }; out.cost = `${c.used}/${c.total}`; out.fits = c.used <= c.total;
     let st = null; try { st = JSON.parse(localStorage.getItem('twopointsix.kit') || 'null'); } catch { }
     const brief = k => (k ? { rings: k.rings || 0, cams: k.cams || 0, wand: !!k.wand, frags: k.frags || 0 } : null);
@@ -40,7 +40,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     return out; });
   const J = JSON.stringify, say = t => `card ${J(t.card)} · pouches ${t.cost} · tiles ${['rings', 'cams', 'wand'].map(f => `${f} '${t.tiles[f]?.val}'${t.tiles[f]?.lent ? ' lent' : ''}`).join(' · ')} · store: you ${J(t.store.you)} | stealth ${J(t.store.stealth)}`;
   const shot = async (page, name) => { if (OUT) await page.screenshot({ path: path.join(OUT, `${name}.png`), timeout: 120000 }).catch(e => console.log(`    (no still: ${String(e).slice(0, 80)})`)); };
-  const noLent = t => ['rings', 'cams', 'wand'].every(f => t.tiles[f] && !t.tiles[f].lent) && !/mission/i.test(t.text);
+  const noLent = t => ['rings', 'cams', 'wand'].every(f => !t.tiles[f]?.lent) && !t.anyLent && !/mission[’']s/i.test(t.text);   // (the dense card keeps a gun's rows in its pop-up: a tile not on the page is not lent)
 
   // ── own
   { const { page, errors } = await open(`loadout=${MISSION}${BREAK}`, true);
@@ -61,7 +61,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     line(errors.length === 0, 'no page error on the loud screen', errors.join(' | ') || 'none'); await page.close(); }
 
   // ── off
-  { await ctx.clearCookies(); const { page, errors } = await open(`loadout=${MISSION}&nokitstealth`, false);
+  { await ctx.clearCookies(); const { page, errors } = await open(`loadout=${MISSION}&nokitstealth&kitdense=0`, false);
     await page.evaluate(k => { localStorage.setItem('twopointsix.kit', k); }, KIT); await page.reload(); await page.evaluate(async () => { await window.__ready; }); await page.waitForTimeout(500);
     const e = await read(page); await shot(page, 'kitstealth-off');
     line(!!e.tiles.cams?.lent && /mission/i.test(e.tiles.cams.val) && !e.card.rings && !e.card.cams && !e.card.wand && e.card.frags === 1, 'UNDER ?nokitstealth the tiles are the mission\'s again and the card carries none of it (the build before)', say(e));
