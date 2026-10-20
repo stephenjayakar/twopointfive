@@ -91,7 +91,8 @@ export class CmdRingViz {
       if (out.length) d += `M${out.join('L')}Z`; }
     // (the glyph: in the ring's middle once it is up; before, up and right of the cursor — clear of the reticle's own words — and the other way where the view ends)
     const s = H.zoom / tz, off = HINT_OFF * s, cx = H.x / tz, cy = H.y / tz;
-    const gx = H.held ? cx : cx + (cx + 2 * off > w ? -off : off), gy = H.held ? cy : cy + (cy - 2 * off < 0 ? off : -off);
+    const mid = H.held && !H.press;   // (the ring up: the glyph is its middle · the key down and no ring yet: it stays beside the cursor)
+    const gx = mid ? cx : cx + (cx + 2 * off > w ? -off : off), gy = mid ? cy : cy + (cy - 2 * off < 0 ? off : -off);
     const key = `${H.kind}|${H.tone ?? ''}|${H.held}|${gx.toFixed(0)},${gy.toFixed(0)},${s.toFixed(2)}|${d}`;
     if (key === this.hintWas) return; this.hintWas = key;
     if (!this.hint) { const g = this.hint = document.createElementNS(NS, 'g') as SVGGElement; this.svg.appendChild(g);

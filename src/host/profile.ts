@@ -230,6 +230,7 @@ export function pageSwitches(q: URLSearchParams): void {
   // was; ?doorpath=gun = with the gun rule too (a rifle is not carried through a leaf: it ships off)
   DOORPATH.on = !q.has('nodoorpath') && q.get('doorpath') !== '0'; if (q.get('doorpath') === 'gun') DOORPATH.gun = true;
   WALLSNAP.on = !q.has('nowallsnap');   // back to the wall, the feel pass (game/wallsnap.ts): the take on one eased clock with stepping feet and a settle, the way off keeping his momentum, and Q with the rifle in hand STACKS on the wall (low ready; the cursor round an open end steps him out): ON in the page; ?nowallsnap = the hold as it was
+  WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as Q does, Q still working — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
@@ -316,8 +317,8 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.on = q.has('cmd');   // THE ORDERS RING, A PROTOTYPE (game/cmdring.ts): Tab down puts the order menu up as a ring at the cursor, Tab up gives the lit wedge — a tap is B. OFF in the page unless `?cmd` asks (and the debugger's tick), off on both stands: nothing is recorded with it on
   CMDRING.hint = CMDRING.on && !q.has('nocmdhint');   // …and before the key, a glyph beside the cursor and an outline on the floor for what the ring would open on (a picture only; `?nocmdhint` = the ring without it)
   CMDRING.hands = CMDRING.on && !q.has('nocmdhands');   // …and Space the same way for his own hands (interact.ts): down = his rows as a ring at the cursor, up = the lit one, a tap the tap it was (`?nocmdhands` = Space as it was beside the ring)
-  CMDRING.plan = CMDRING.on && !q.has('nocmdplan');   // …and plan mode (game/planmode.ts): Shift+Tab toggles it; the left button picks men, the right button orders them and Shift chains, F at a chain's pauses (`?nocmdplan` = no such mode beside the ring)
-  CMDRING.planRts = CMDRING.on && !q.has('nocmdplan') && !q.has('nocmdrts');   // …that mode as an RTS's: Sam stands, the walk keys move the view, the right button kept down is the ring (`?nocmdrts` = the mode as it was first built)
+  CMDRING.plan = CMDRING.on && q.has('cmdplan') && !q.has('nocmdplan');   // …and plan mode (game/planmode.ts): Shift+Tab toggles it; the left button picks men, the right button orders them and Shift chains, F at a chain's pauses — only when asked for beside the ring (`?cmd&cmdplan`): with it on Shift + the key is its toggle, so a tap made at a sprint orders nothing, and the single key is being got right first (docs/agents/squad.md)
+  CMDRING.planRts = CMDRING.plan && !q.has('nocmdrts');   // …that mode as an RTS's: Sam stands, the walk keys move the view, the right button kept down is the ring (`?nocmdrts` = the mode as it was first built)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
   SQUAD40.on = !q.has('nosquad40');   // a teammate whose card carries 40 mm grenades fires one where he points (game/squad40.ts): X on a spot of floor, G, then 3. ON in the page, ?nosquad40 = no such row; off on the frozen stand (TPS_SQUAD40=1 raises it). Nothing at all while no teammate's card carries a round
@@ -422,6 +423,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'IRLIGHT.meter': 'TPS_IRMETER=1',
   'AIRDUST.on': 'TPS_AIRDUST=1',
   'WALLSNAP.on': 'TPS_WALLSNAP=1',
+  'WALLSNAP.press': 'TPS_WALLPRESS=1',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'REARWATCH.on': 'TPS_REARWATCH=1',
   'STACKLINE.on': 'TPS_STACKLINE=1',

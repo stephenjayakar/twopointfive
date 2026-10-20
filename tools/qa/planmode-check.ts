@@ -94,7 +94,8 @@ export async function planmodeCheck(): Promise<boolean> {
     R.home(false);
     // 2. Shift + the key puts it up and takes it down; the key alone is still the ring
     { R.toggle(); const up = P.up; const spot = floorSpot(R); if (spot) R.aim(spot);
-      R.input.keys.add(CMDRING.key); R.input.pressed.add(CMDRING.key); R.step(3); const ring = !!O.cmdRing; R.press('Escape'); R.input.keys.delete(CMDRING.key); R.step(2);
+      R.input.keys.add(CMDRING.key); R.input.pressed.add(CMDRING.key); R.step(3 + Math.ceil(CMDRING.holdSecs * 60)); const ring = !!O.cmdRing;   // (kept down past the hold, cmdring.ts holdSecs: a tap opens none)
+      R.press('Escape'); R.input.keys.delete(CMDRING.key); R.step(2);
       const still = P.up; R.toggle(); const downAgain = !P.up;
       line(up && ring && still && downAgain, 'Shift+Tab puts the mode up and takes it down; Tab alone is still the ring', `after the first: ${up ? 'up' : 'down'} · Tab: ${ring ? 'a ring' : 'no ring'} · after it: ${still ? 'up' : 'down'} · after the second: ${downAgain ? 'down' : 'up'}`); }
     R.home();

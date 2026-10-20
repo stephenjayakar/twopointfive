@@ -1,5 +1,5 @@
 // PLAN MODE — a PROTOTYPE beside the orders ring (cmdring.ts `plan`; the design: rebuild/commanding/command-mode.md). OFF in the module and on both
-// stands; the page raises it with the ring (`?cmd`; `?nocmdplan` leaves it off). The maintainer's words for it: an RTS's way with a squad, "for advanced
+// stands; the page raises it when asked for beside the ring (`?cmd&cmdplan`). The maintainer's words for it: an RTS's way with a squad, "for advanced
 // players that requires explicitly leaving".
 //
 //   · SHIFT + THE RING'S KEY TOGGLES IT (where that key is free: with a menu, a Space list, a verb or the launcher's arc to back out of, it backs out).

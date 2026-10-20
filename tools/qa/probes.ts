@@ -69,7 +69,7 @@
 //     teams: teams-dark teams-despawn teams-fight teams-identity teams-player teams-table
 //     wall-clip: wall-clip-doors wall-clip-ends wall-clip-moves wall-clip-shove wall-clip-speed
 //     wall-snap: wall-snap-engage wall-snap-release wall-snap-slide wall-snap-sweep
-//     wallsnap: wallsnap-camera wallsnap-kit wallsnap-cover wallsnap-duo wallsnap-landing wallsnap-off wallsnap-off-same wallsnap-reach wallsnap-stack wallsnap-take   (the wall hold's feel pass + the rifle stack, WALLSNAP.on; ~40 s)
+//     wallsnap: wallsnap-camera wallsnap-kit wallsnap-cover wallsnap-duo wallsnap-landing wallsnap-off wallsnap-off-same wallsnap-reach wallsnap-stack wallsnap-take wallpress   (the wall hold's feel pass + the rifle stack, WALLSNAP.on; ~40 s)
 //     kitanim: kitanim-close kitanim-equip kitanim-harness kitanim-joints kitanim-midswap kitanim-nv kitanim-off kitanim-reload kitanim-sling   (Sam's hands carry his kit, the three magazine changes, the close-in carriage by distance — KITANIM.on; ~15 s)
 //     gunhand: gunhand-reload gunhand-throw gunhand-whistle   (a move keeps to the free hand — src/game/gunhand.ts GUNHAND.on: a long gun reloads with a move of its own, a man with a long gun throws with his free hand, a whistle is answered with the torch up in the hand that holds it; ~40 s)
 //     weapons: weapons-identity
@@ -3058,6 +3058,7 @@ if (on('spotted-fire', 'spotted', 'all')) await run('spotted-fire', async () => 
 if (on('spotted-off', 'spotted', 'all')) await run('spotted-off', async () => (await import('./spotted-probes.ts')).spottedOff());
 // ---------------------------------------------------------------- the wall hold's feel pass + the rifle stack (wallsnap-probes.ts; game/wallsnap.ts, WALLSNAP.on)
 for (const n of ['camera', 'kit', 'take', 'landing', 'reach', 'off', 'stack', 'cover', 'off-same', 'duo']) if (on(`wallsnap-${n}`, 'wallsnap', 'all')) await run(`wallsnap-${n}`, async () => (await import('./wallsnap-probes.ts')).wallSnapProbes(`wallsnap-${n}`));
+if (on('wallpress', 'wallsnap', 'wall-snap', 'all')) await run('wallpress', async () => (await import('./wallpress-check.ts')).wallPressCheck());   // a move key held into a wall takes it, no Q (player.ts wallPress, WALLSNAP.press / ?wallpress=0 / TPS_WALLPRESS=1)
 // ---------------------------------------------------------------- Sam handles his kit (kitanim-probes.ts; game/kitanim.ts KITANIM.on, character.ts KIT)
 if (on('kitanim-off', 'kitanim', 'all')) await run('kitanim-off', async () => (await import('./kitanim-probes.ts')).kitOff());   // switch off: nothing dealt, the build's lock-outs and reload rows
 if (on('kitanim-equip', 'kitanim', 'all')) await run('kitanim-equip', async () => (await import('./kitanim-probes.ts')).kitEquip());   // every change of what is in the fist is carried in order; a gun fires only once it is up
