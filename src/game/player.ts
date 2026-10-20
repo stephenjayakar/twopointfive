@@ -377,7 +377,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   // movement input — none while the selector is open (Space held past a tap: he is choosing what to do, feet still; interact.ts)
   const { fwd, right } = cam.planarBasis();
   let mx = 0, mz = 0;
-  if (!pl.sel.open) {
+  if (!pl.listOpen) {   // (… up as a ring, cmdring.ts CMDRING.hands, his feet are his own)
     if (input.down('KeyW')) { mx += fwd[0]; mz += fwd[2]; }
     if (input.down('KeyS')) { mx -= fwd[0]; mz -= fwd[2]; }
     if (input.down('KeyD')) { mx += right[0]; mz += right[2]; }
@@ -1356,7 +1356,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     let mx = 0, mz = 0;
     if (H.phase === 'held') {
       const { fwd, right } = cam.planarBasis();
-      if (!pl.sel.open) {
+      if (!pl.listOpen) {
         if (input.down('KeyW')) { mx += fwd[0]; mz += fwd[2]; } if (input.down('KeyS')) { mx -= fwd[0]; mz -= fwd[2]; }
         if (input.down('KeyD')) { mx += right[0]; mz += right[2]; } if (input.down('KeyA')) { mx -= right[0]; mz -= right[2]; }
       }
@@ -2131,7 +2131,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       rows = hint.length ? [...rest.filter(r => r.verb).slice(0, MAX_NEAR - 1), ...own, ...hint] : [...rest.slice(0, MAX_NEAR), ...own];
     }
   }
-  if (pl.sel.open && rows.some(r => r.verb && !r.running)) rows.push(cancelRow(g));   // the selector is open (Space held past a tap) over something to choose: its way out sits at the foot (interact.ts shuts it if nothing is left to choose)
+  if (pl.listOpen && rows.some(r => r.verb && !r.running)) rows.push(cancelRow(g));   // the selector is open (Space held past a tap) over something to choose: its way out sits at the foot (interact.ts shuts it if nothing is left to choose)
   g.interactables = list;
   // The highlight (Player.nearSel) rides the list by identity: when the rows change (a man walks into reach, a verb ran and the thing now offers others) it stays
   // on the same row if that row is still there, else goes back to the top; ↑ / ↓ and the wheel-while-Space move it (interact.ts), the order never changes under it.
@@ -2207,7 +2207,7 @@ export function cancelActions(g: Game) {
   pl.takedown = null;                                         // (a takedown that has not landed: he was only frozen for the beat — he carries on)
   if (pl.kick || pl.picking || pl.wanding || pl.easing || pl.coding || pl.sel.downT >= 0) pl.fHeld = true;   // a Space still down from what he was doing (or a press half made) is spent: it must come up before it arms again where he arrives (interact.ts clears this the first frame it is up)
   pl.kick = null; pl.picking = null; wandDrop(pl); c.anim.lockpick = false; if (pl.coding) stopCoding(g); samBigDrop(g);   // (bigkit.ts: the big slot's tool, in its beat or on its way back, is on him again)
-  pl.easing = null; handsCancel(g); pl.sel.downT = -1; pl.sel.open = false; pl.sel.moved = false; c.anim.doorPush = null;   // (the door hand: game.ts drops the record itself once he is carried out of the leaf's reach)
+  pl.easing = null; handsCancel(g); pl.sel.downT = -1; pl.sel.open = false; pl.sel.moved = false; pl.sel.ring = null; c.anim.doorPush = null;   // (the door hand: game.ts drops the record itself once he is carried out of the leaf's reach)
   if (pl.pendingThrow) { canBack(pl, pl.pendingThrow.kind); pl.pendingThrow = null; }   // not yet out of the hand: keep it
   pl.throwHeld = false; pl.throwPreview = null;
   pl.sprinting = false; pl.speedSm = 0; c.vel = [0, 0, 0];

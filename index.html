@@ -525,7 +525,7 @@
     /* ?kitview (src/host/kitView.ts): the page as a picture in the start page's iframe — the canvas and nothing else */
     body.kitview > :not(#app), body.kitview #app > :not(#view):not(#fatal) { display: none !important; }
     /* the orders ring at the cursor (ui/cmdring.ts — a prototype, ?cmd): a wedge a digit, the lit one filled, a row that cannot be given greyed */
-    .cmdring { color: #f2cf6b; } .cmdring.t-red { color: #ff9a8a; } .cmdring.t-blue { color: #9cc8ff; }
+    .cmdring { color: #f2cf6b; } .cmdring.t-red { color: #ff9a8a; } .cmdring.t-blue { color: #9cc8ff; } .cmdring.t-hands { color: var(--h-hi); }   /* (his own hands on Space: the HUD's own bright) */
     .cmdring .cw { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; } .cmdring .lit .cw { fill: currentColor; }
     .cmdring .cn { font: 700 12px/1 var(--h-mono); fill: currentColor; text-anchor: middle; } .cmdring .lit .cn { fill: var(--h-base); }
     .cmdring .ct { font: 700 10px/1 var(--h-mono); letter-spacing: 0.06em; text-transform: uppercase; fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }

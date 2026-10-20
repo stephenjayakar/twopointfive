@@ -265,6 +265,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.WORDS as Partial<typeof WORDS> | undefined)?.doors === undefined) WORDS.doors = false;   // (a file from before a level could name its own doors: every door called what it was)
   if (!k.tables.CMDRING) CMDRING.on = false;   // (a file from before the orders ring: its key was nobody's)
   if (typeof (k.tables.CMDRING as { hint?: boolean } | undefined)?.hint !== 'boolean') CMDRING.hint = false;   // (… and one from before its hint: nothing drawn at the cursor before the key)
+  if (typeof (k.tables.CMDRING as { hands?: boolean } | undefined)?.hands !== 'boolean') CMDRING.hands = false;   // (… and from before Space was a ring too: the list as it was)
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
   if (!k.tables.KITANIM) KITANIM.on = false;   // (a file from before the kit animations: its draws were instant and its reloads the row's one beat)

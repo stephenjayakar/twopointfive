@@ -414,7 +414,7 @@ export class Overlay implements HudLike {
     const rows = list.slice(0, cap).map((it, i): InteractRow => { const d = dist(it); return { kind: it.kind, label: it.line1, opts: it.kind === 'cancel' ? [] : parseOpts(it.line2), inReach: it.inReach, off: it.off, dist: it.inReach || it.kind === 'light' || it.kind === 'cancel' ? undefined : d, progress: it.progress, cont: i > 0 && it.kind !== 'cancel' && thing(list[i - 1]) === thing(it) }; });
     rows.push(...sq.status);   // … and otherwise the squad's block under the Space rows: who the orders go to, what each man is doing (nothing without a squad)
     const primary = hv ? list.indexOf(hv) : -1;
-    return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.sel.open };
+    return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.listOpen };   // (up as a ring — cmdring.ts CMDRING.hands — the panel's list is the list at rest)
   }
 
 

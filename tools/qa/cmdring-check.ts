@@ -5,7 +5,9 @@
 // PASS / FAIL each: the room clear on the office with its squad of four, everybody under god mode (the lines are about what is ORDERED, not who wins).
 // The check raises the switch itself (no stand has it on) and the quick key's autopilot with it, so the first wedge has something to choose. The key is
 // HELD the way a hand holds it: in `input.keys` from the frame it goes down to the frame it comes up; a tap is down for one frame.
-// CMDRING_BREAK=1 = the switch left off and the same lines asked: they must fail (the switch-off line and the old keys' line are the ones that hold).
+// Lines 11 on are Sam's own hands on the same ring (CMDRING.hands, src/game/interact.ts): Space at a shut door.
+// CMDRING_BREAK=1 = the switches left off and the same lines asked: they must fail (the ones that hold are those that say 'as it was': the switch-off line,
+// the old keys' line, a tap of Space, and Space's own key off).
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
@@ -13,9 +15,10 @@ const CR: any = await import(`${ROOT}/src/game/cmdring.ts`);
 const AP: any = await import(`${ROOT}/src/game/autopilot.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
+const IA: any = await import(`${ROOT}/src/game/interact.ts`);
 const { CMDRING, CMDRING_STATS } = CR, { AUTOPILOT } = AP;
 
-const DT = 1 / 60;
+const DT = 1 / 60, HOLD = Math.ceil(CMDRING.tapSecs * 60) + 1;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const BREAK = process.env.CMDRING_BREAK === '1';
@@ -26,7 +29,7 @@ async function rig(seed: number, on = !BREAK) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp();
-    CMDRING.on = on; CMDRING.hint = on; AUTOPILOT.on = true;
+    CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; AUTOPILOT.on = true;
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
@@ -38,11 +41,11 @@ async function rig(seed: number, on = !BREAK) {
     /** the cursor on p, as the game's own input reads it */
     aim(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); R.step(2); return O.hover?.() ?? null; },
     /** the ring's key goes down and stays down */
-    down() { input.keys.add(KEY); input.pressed.add(KEY); R.step(); },
+    down() { input.keys.add(KEY); input.pressed.add(KEY); R.step(); R.step(HOLD); },   // (… past the tap guard, CMDRING.tapSecs: the cursor counts from here)
     /** … and comes up: the frame it is read in */
     up() { input.keys.delete(KEY); R.step(); },
     /** a tap: down for one frame */
-    tap() { R.down(); R.up(); },
+    tap() { input.keys.add(KEY); input.pressed.add(KEY); R.step(); R.up(); },
     press(code: string) { input.pressed.add(code); R.step(); },
     tail() { return O.log[O.log.length - 1]; },
     stacked() { return R.team.filter((m: any) => m.state !== 'dead').every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.arrived); },
@@ -75,7 +78,7 @@ const line = (ok: boolean, name: string, detail: string) => { if (!ok) fails++; 
 
 export async function cmdringCheck(): Promise<boolean> {
   fails = 0;
-  const keep = { on: CMDRING.on, hint: CMDRING.hint, ap: AUTOPILOT.on, rnd: Math.random };
+  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, ap: AUTOPILOT.on, rnd: Math.random };
   console.log(`cmdring-check: the orders ring on one key (a prototype)${BREAK ? '  (CMDRING_BREAK: the switch is left off — the lines must fail)' : ''}`);
   try {
     const R = await rig(5), g = R.game, O = R.O, T = g.doorTools, S = CMDRING_STATS;
@@ -251,7 +254,67 @@ export async function cmdringCheck(): Promise<boolean> {
       line(!up && O.log.length === n0, 'the switch off: the key is nobody\'s', `ring or menu ${up ? 'up' : 'not up'} · order book +${O.log.length - n0}`);
       CMDRING.on = was;
     }
-  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
+
+    // 11 to 14. HIS OWN HANDS ON THE SAME RING (CMDRING.hands, interact.ts): Sam at a shut door that offers two rows (push, ease)
+    {
+      const g = R.game, pl = g.player, S = pl.sel, inp = R.input, SP = 'Space';
+      const at = (d: any, k: number) => { const c = d.frameCentre, th = d.def.closedDir; g.teleportPlayer([c[0] - Math.sin(th) * k, 0, c[2] + Math.cos(th) * k]); R.step(4); };
+      const verbs = () => g.nearby.filter((r: any) => r.verb && r.kind !== 'cancel').map((r: any) => r.verb as string);
+      let door: any = null, side = 0.9;
+      for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, pl.char.pos) - dist(b.frameCentre, pl.char.pos))) { if (door) break; if (!d.isClosed()) continue;
+        for (const k of [0.9, -0.9]) { at(d, k); const v = verbs(); if (v[0] === 'push' && v[1] === 'ease') { door = d; side = k; break; } } }
+      const sdown = () => { inp.keys.add(SP); inp.pressed.add(SP); R.step(); }, sup = () => { inp.keys.delete(SP); R.step(); };
+      const rest = () => { inp.keys.delete(SP); inp.keys.delete('KeyW'); R.step(2); if (IA.runningVerb(g)) IA.cancelSustained(g); R.step(2); pl.fHeld = false; };
+      if (!door) line(false, 'his own hands: a shut door with two rows to stand at', 'none found on this floor');
+      else {
+        // 11. Space down: the ring is up at once — his rows its wedges, the highlighted one lit, no cancel row, the panel's list at rest — and his feet are his
+        //     own; a right click, a left click and the window losing the keys each put it away with nothing done (the right click not the launcher's)
+        at(door, side); const p0 = [...pl.char.pos]; sdown();
+        const V = IA.handRingView(g), ringUp = !!S.ring && S.open, noCancel = !g.nearby.some((r: any) => r.kind === 'cancel'), listShut = !pl.listOpen;
+        inp.keys.add('KeyW'); R.step(12); inp.keys.delete('KeyW'); const walked = dist(pl.char.pos, p0), stillUp = !!S.ring;
+        const gives = (what: () => void) => { at(door, side); sdown(); const up0 = !!S.ring; what(); R.step(); const gone = !S.ring && !S.open; sup(); R.step(20); const idle = !IA.runningVerb(g) && door.isClosed(); rest(); return up0 && gone && idle; };
+        inp.keys.delete(SP); R.press('Escape'); rest();
+        const rmb = gives(() => { inp.clicked |= 4; }), noLaunch = !pl.launchHeld, lmb = gives(() => { inp.clicked |= 1; }), blur = gives(() => { inp.keys.delete(SP); inp.pressed.add('Blur'); });
+        line(ringUp && !!V && V.lit === 1 && V.wedges.length === 2 && / it open$/.test(V.wedges[0].text) && noCancel && listShut && walked > 0.08 && stillUp && rmb && noLaunch && lmb && blur, 'Space down: his own rows are up as a ring at once, the first lit, no cancel row; his feet are his own; a right click, a left click and a lost window each give nothing',
+          `ring ${ringUp} on the frame the key went down · wedges ${V ? V.wedges.map((w: any) => `${w.key}:${w.text}`).join(' | ') : 'none'} · lit ${V?.lit} · under it '${V?.caption}' · cancel row ${noCancel ? 'not listed' : 'listed'} · W held 12 frames: ${walked.toFixed(2)} m, ring ${stillUp ? 'still up' : 'gone'} · nothing done on a right click ${rmb} (launcher ${noLaunch ? 'not begun' : 'begun'}), a left click ${lmb}, the window's blur ${blur}`);
+        rest();
+        // 12. a digit, or the cursor out of the ring's middle, lights another wedge — a digit is not his weapon slot, one with no row lights nothing — and
+        //     letting go does the lit one
+        at(door, side); const slot0 = pl.slot; sdown(); R.step(HOLD); const A = S.ring ? { x: S.ring.ax, y: S.ring.ay } : { x: 0, y: 0 };
+        const to = (wedge: number, r: number) => { const a = (wedge - 1) * 2 * Math.PI / CMDRING.wedges; inp.mouseX = A.x + Math.sin(a) * r; inp.mouseY = A.y - Math.cos(a) * r; R.step(); return S.ring?.lit; };
+        const l0 = to(2, CMDRING.flickPx * 0.6), l1 = to(2, CMDRING.flickPx * 1.5); inp.pressed.add('Digit1'); R.step(); const l2 = S.ring?.lit, slot1 = pl.slot;
+        const l3 = to(2, CMDRING.flickPx * 2), l4 = to(1, CMDRING.flickPx * 0.2), l5 = to(2, CMDRING.flickPx * 1.5), l6 = to(4, CMDRING.flickPx * 1.5); inp.pressed.add('Digit5'); R.step(); const l7 = S.ring?.lit; sup();
+        const ran = IA.runningVerb(g); inp.pressed.add(SP); inp.keys.add(SP); R.step(); inp.keys.delete(SP); R.step(2); const stopped = !IA.runningVerb(g);
+        line(l0 === 1 && l1 === 2 && l2 === 1 && slot1 === slot0 && l3 === 1 && l4 === 1 && l5 === 2 && l6 === 2 && l7 === 2 && ran === `ease:${door.def.name}` && stopped, 'held, the cursor out of the middle or a digit lights another row; a digit is not his weapon slot; letting go does the lit row, and Space again stops it as it always did',
+          `toward wedge 2: lit ${l0} inside the middle, ${l1} out of it · the digit 1: lit ${l2}, in his hands ${slot0} then ${slot1} · the cursor moved outside after the digit: ${l3}, back in the middle ${l4}, out again ${l5} · toward a wedge with no row: ${l6}, the digit 5: ${l7} · let go: ${ran || 'nothing running'} · Space again: ${stopped ? 'stopped' : 'still running'}`);
+        rest();
+        // 12b. a tap made with the hand moving is still the first wedge, on both rings; and Space under the squad's held ring opens no second one
+        at(door, side); inp.keys.add(SP); inp.pressed.add(SP); R.step(); const B0 = S.ring ? { x: S.ring.ax, y: S.ring.ay } : { x: 0, y: 0 };
+        inp.mouseX = B0.x + 30; inp.mouseY = B0.y - 12; R.step(); inp.mouseX = B0.x + 60; inp.mouseY = B0.y - 24; R.step(); const sweepLit = S.ring?.lit; sup(); R.step(3);
+        const sweepRan = IA.runningVerb(g); R.until(() => !door.isClosed(), 3); const sweepOpen = !door.isClosed();
+        rest(); at(door, side);
+        const n1 = O.log.length; inp.keys.add(CMDRING.key); inp.pressed.add(CMDRING.key); R.step(); const T0 = O.cmdRing ? { x: O.cmdRing.ax, y: O.cmdRing.ay } : { x: 0, y: 0 };
+        inp.mouseX = T0.x + 40; inp.mouseY = T0.y + 40; R.step(); const tabLit = O.cmdRing?.lit; inp.pressed.add(SP); inp.keys.add(SP); R.step(); const two = !!S.ring; inp.keys.delete(SP); R.step();
+        inp.clicked |= 4; R.step(); R.up(); R.step(2);
+        line(sweepLit === 1 && !sweepRan && sweepOpen && tabLit === 1 && !two && O.log.length === n1, 'a tap made with the hand moving is still the first wedge, on both rings; Space under the squad\'s held ring opens no second ring',
+          `Space, the cursor 65 px out by the third frame: lit ${sweepLit}, ${sweepRan || 'nothing sustained running'}, the door ${sweepOpen ? 'pushed open' : 'still shut'} · the squad's key, the cursor 57 px out on the second frame: lit ${tabLit} · Space under it: his own ring ${two ? 'up as well' : 'not up'}`);
+        rest();
+        // 13. a tap is the tap it was: the highlighted row at once — the door is pushed open
+        const d13 = [...g.doors.list].find((d: any) => d.isClosed() && [0.9, -0.9].some(k => { at(d, k); return verbs()[0] === 'push'; })) ?? door;
+        inp.keys.add(SP); inp.pressed.add(SP); R.step(); sup(); R.until(() => !d13.isClosed(), 3); const opened = !d13.isClosed();
+        line(opened && !S.ring, 'a tap is the tap it was: the door is pushed open', `${d13.def.name}: ${opened ? 'open' : 'still shut'} · ring ${S.ring ? 'still up' : 'gone'}`);
+        rest();
+        // 14. its own key off, the ring's on: Space is the list as it was — nothing opens for a quarter second, then the list with its cancel row, feet still
+        const was = CMDRING.hands; CMDRING.hands = false;
+        const d2 = [...g.doors.list].find((d: any) => d.isClosed() && d !== door && d !== d13 && [0.9, -0.9].some(k => { at(d, k); return verbs().length >= 2; })) ?? null;
+        if (!d2) line(false, 'the list as it was with the ring\'s Space off', 'no second shut door with two rows');
+        else { const q0 = [...pl.char.pos]; sdown(); const early = S.open || !!S.ring; R.step(20); const open = S.open && !S.ring, cancel = g.nearby.some((r: any) => r.kind === 'cancel');
+          inp.keys.add('KeyW'); R.step(20); inp.keys.delete('KeyW'); const still = dist(pl.char.pos, q0); R.press('Escape'); sup();
+          line(!early && open && cancel && still < 0.05, 'Space\'s own key off: the list as it was — a quarter second, then the list with its cancel row, feet still', `on the frame it went down: ${early ? 'open' : 'not open'} · 20 frames on: ${open ? 'the list' : 'no list'}, cancel row ${cancel ? 'listed' : 'not listed'} · W held 20 frames: ${still.toFixed(2)} m`); }
+        CMDRING.hands = was; rest();
+      }
+    }
+  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
   console.log(fails ? `cmdring-check: ${fails} FAIL` : 'cmdring-check: ALL PASS');
   return fails === 0;
 }
