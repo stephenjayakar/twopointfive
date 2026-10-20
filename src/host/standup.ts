@@ -112,6 +112,7 @@ import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
+import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
 import { hostAfterPutBack } from './putback';
@@ -266,6 +267,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_QUICKTHROW')) QUICKTHROW.on = String((globalThis as any).process?.env?.TPS_QUICKTHROW ?? '') !== '0';   // the G quick throw (src/game/quickthrow.ts): ON here — the page plays without it, but the frozen probes and a recorded session press G (the soak does not); `TPS_QUICKTHROW=0` takes it away
     if (pinned('TPS_FRIENDS')) FRIENDS.noSnap = String((globalThis as any).process?.env?.TPS_FRIENDS ?? '') === '1';   // the reticle passes over men of the player's own side (src/game/friends.ts): off, so a scripted cursor near a teammate snaps as every frozen probe and digest saw it; `TPS_FRIENDS=1` = as the page
     if (pinned('TPS_LIGHTSWITCH')) LIGHTSWITCH.on = String((globalThis as any).process?.env?.TPS_LIGHTSWITCH ?? '') === '1';   // a room's wall switch (src/game/lightswitch.ts): off, so no level has a plate, Space has no row for one and no light-out says where a hand was, as every frozen probe and digest saw it; `TPS_LIGHTSWITCH=1` = as the page
+    if (pinned('TPS_CLEANRESTART')) CLEANRESTART.on = String((globalThis as any).process?.env?.TPS_CLEANRESTART ?? '') === '1';   // a restart gives a clean level (src/game/cleanrestart.ts): off, so a restart mends the mains as a hand on the breaker does, keeps the last try's lines and clocks and flies the camera back, as every frozen probe and digest saw it; `TPS_CLEANRESTART=1` = as the page
     if (pinned('TPS_FRIENDLYFIRE')) FRIENDLYFIRE.on = String((globalThis as any).process?.env?.TPS_FRIENDLYFIRE ?? '') === '1';   // a round of Sam's side finds the men of Sam's side (src/game/friendlyfire.ts): off, so a scripted player's round passes a teammate and a teammate's passes him, as every frozen probe and digest saw it; `TPS_FRIENDLYFIRE=1` = as the page
     if (pinned('TPS_SAVETIMELINE')) SAVETIMELINE.on = String((globalThis as any).process?.env?.TPS_SAVETIMELINE ?? '') === '1';   // the saves roll and a team on the floor is saved in memory (src/game/savestate.ts): off, so a frozen run keeps what it always kept
     if (pinned('TPS_FIRELINE')) FIRELINE.on = String((globalThis as any).process?.env?.TPS_FIRELINE ?? '') === '1';   // a teammate on an order waits short of the lane the player is firing down (src/game/fireline.ts): off, so an ordered man walks through a scripted player's fire as every frozen probe, digest and tally saw him; `TPS_FIRELINE=1` = as the page

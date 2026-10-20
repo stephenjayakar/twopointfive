@@ -234,6 +234,16 @@ export function toggleTarget(g: Game, t: LightTarget) { t.on = !t.on; t.broken =
 /** All fixtures repaired, OCP timers cleared, mains back (panel 'repair' + encounter restart). */
 export function repairLights(g: Game) { for (const t of g.targets) { t.broken = false; t.disabledUntil = -1; } if (g.blackout.active) g.endBlackout(); }
 
+/** A RESTART'S LIGHTS (cleanrestart.ts): the level's lights as a level just opened has them, from this tick — every fixture whole, no OCP timer running, the mains
+ *  in with no restrike left to play and no beacon left turning (`restoredAt` and `since` as a new Game has them), nothing said and nothing sounded. The switches
+ *  themselves are resetLevelState's and lightswitch.ts's, as before. Returns whether anything was out. */
+export function freshLights(g: Game): boolean {
+  const bo = g.blackout; let was = bo.active || g.time - bo.restoredAt < 4;   // (4 s: past the last contactor group's restrike)
+  for (const t of g.targets) { if (t.broken || t.disabledUntil > 0) was = true; t.broken = false; t.disabledUntil = -1; }
+  bo.active = false; bo.permanent = false; bo.until = -1; bo.since = -1; bo.restoredAt = -100; g.breakerFixT = 0;   // (no man is on his way to the breaker: the restart has just made fresh ones)
+  return was;
+}
+
 /** 0 while a fixture has no supply, then the fluorescent restrike flicker for 1.2 s after `since`, then 1. */
 export function supply(time: number, darkUntil: number): number {
   if (time < darkUntil) return 0;

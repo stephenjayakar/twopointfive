@@ -120,6 +120,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'DOORSHOT',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
+  // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
+  'CLEANRESTART',
   // the saves roll and one is kept in memory with a team on the floor (savestate.ts SAVETIMELINE): a recording from before it has no such save to go back to
   'SAVETIMELINE'];
 import { GUNWALL } from './gunwall';
@@ -179,6 +181,7 @@ import { FRIENDS } from './friends';
 import { FRIENDLYFIRE } from './friendlyfire';
 import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
+import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
 import { SAMSTUN } from './samstun';
@@ -241,6 +244,7 @@ export function knobRegistry(): Record<string, object> {
     LIGHTSWITCH,
     // a parked vehicle's lamps can be shot out (carlamps.ts): the switch, the broken lens's paint, how a lamp box is told from the level
     CARLAMPS,
+    CLEANRESTART,
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,
     SAVETIMELINE,

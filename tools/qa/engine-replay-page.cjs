@@ -19,6 +19,8 @@
 //   between under 1× the picture is drawn BETWEEN the tape's last two steps (host/tween.ts): at ¼× a step lasts four frames and every frame is further along,
 //           the men the lifted fog shows too; paused it rests on its step; a script's steps, 1× and faster draw the step itself; played so and then to
 //           its end the run is still the recording's
+//   turn    with the viewer's 'Turn direction' row flipped (Options > Game; kept in this browser, read at load) the picture turns the other way under Ctrl —
+//           the mouse moved, a Ctrl drag, a Ctrl + Shift drag — and a right drag keeps its own way (engineplay.ts ctrlTurn)
 //   open    the page with no `paused`, as a person opens it: it stands on the tape's first step, the men drawn, and plays on as recorded
 // exit 0 = all of it with no page error · 1 = otherwise. ONLY=record,play,… runs fewer; FILE=<path to a replay .json[.gz]> walks that file instead of recording
 // one (its drift is REPORTED, not judged: a tape of another build may part).
@@ -568,6 +570,26 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     line(slowOk && !errors.length, 'at ¼× a step lasts four frames and each frame between is drawn further along between the last two steps, the men with it (those the lifted fog shows too); paused it rests on its step; scripted steps and 1× draw the step itself', A.why ? A.why : `150 scripted steps at ½× left no blend: ${A.before ? 'yes' : 'NO'} · ¼×: ${qSteps} steps in ${Q.length} frames, ${posed.length} drawn between two steps (further along on ${rising}, back on ${falls}), ${pictures} different pictures of the men, at least ${menMin} men blended, the step's own proxies changed by ${moved} frames with no step · fog off: ${Bz.filter(r => r.a !== null && r.a < 1).length} of ${Bz.length} between, ${bareMen} men blended against ${fogMen} under it (${A.hid} hidden by the fog then) · ½×: ${hSteps} steps in ${H.length} frames · drawn for real: ${JSON.stringify(A.drawn)} · paused: ${JSON.stringify(A.stood)} · after a script's two steps: ${JSON.stringify(A.ran)} · 1×: ${JSON.stringify(A.one.map(r => [r.stepped, r.a]))}`);
     line(runOk && !errors.length, 'played slow, with the fog on and off, then fast to its end, the run is the recording’s', A.why ? A.why : `${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${s.unjournaled} reads the tape never made · worst ${s.worst ? (+s.worst.metres).toFixed(3) + ' m' : '–'}${A.fatal ? ' · FATAL ' + A.fatal.slice(0, 120) : ''}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await shot(page, 'engine-replay-between');
+    await page.close();
+  }
+
+  // ── turn: the viewer's 'Turn direction' row (host/findme.ts: kept in this browser under twopointsix.findme, read once at load) flipped before the page
+  //    loads. The handlers are pressed for real; the framing is read off `__tape.view` (what the next frame would take), so nothing here is drawn.
+  if (want('turn')) {
+    { const { page } = await open('replay', false); await page.evaluate(() => { localStorage.setItem('twopointsix.findme', JSON.stringify({ turn: -1 })); }); await page.close(); }   // (the map viewer's page: light, the same origin's storage)
+    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);
+    const A = await page.evaluate(() => {
+      const T = window.__tape, cv = document.getElementById('view'); if (!T || !cv) return { why: 'no tape on the page' };
+      const r = cv.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const pe = (type, x, y, o) => cv.dispatchEvent(new PointerEvent(type, { pointerId: 1, isPrimary: true, clientX: x, clientY: y, button: 0, buttons: 1, bubbles: true, cancelable: true, ...(o || {}) }));
+      const drag = (dx, o) => { const y0 = T.view.yaw, p0 = T.view.pitch; pe('pointerdown', cx, cy, o); pe('pointermove', cx + dx / 2, cy, o); pe('pointermove', cx + dx, cy, o); pe('pointerup', cx + dx, cy, { ...o, buttons: 0 }); return { yaw: +(T.view.yaw - y0).toFixed(4), tilt: +(T.view.pitch - p0).toFixed(4) }; };
+      const out = { row: (() => { try { return JSON.parse(localStorage.getItem('twopointsix.findme') || '{}').turn; } catch { return null; } })(), f: T.state.f };
+      { const y0 = T.view.yaw; pe('pointermove', cx + 40, cy, { buttons: 0, movementX: 30, ctrlKey: true }); out.moved = +(T.view.yaw - y0).toFixed(4); }
+      out.drag = drag(50, { ctrlKey: true }); out.both = drag(50, { ctrlKey: true, shiftKey: true }); out.right = drag(50, { button: 2, buttons: 2 }); out.shift = drag(50, { shiftKey: true });
+      out.free = T.state.free; out.f1 = T.state.f; localStorage.removeItem('twopointsix.findme'); return out; });
+    const near = (a, b) => a != null && Math.abs(a - b) <= 1e-3;
+    const ok = !A.why && A.row === -1 && near(A.moved, -0.18) && near(A.drag.yaw, -0.3) && A.drag.tilt === 0 && near(A.both.yaw, -0.3) && near(A.right.yaw, 0.3) && near(A.shift.yaw, 0.3) && A.free === true && A.f1 === A.f;
+    line(ok && !errors.length, 'with Turn direction flipped the picture turns the other way under Ctrl, moved or dragged, with Shift or without; a right or Shift drag keeps its own way', A.why ? A.why : `${JSON.stringify(A)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
 

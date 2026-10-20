@@ -88,7 +88,7 @@ import { samStaggered } from './samstun';
 import { sprintDoorRun, sprintDoorAfter, sprintDoorKick } from './sprintdoor';
 import { recapTick } from './deathrecap';
 import { teamTallyTick } from './teamtally';
-import { updateGuard, lightEstimateAt, longRigOf, inHand, loadBodyLight, bodyLightSummary } from './guards';
+import { updateGuard, lightEstimateAt, longRigOf, inHand, loadBodyLight, bodyLightSummary, groundFresh } from './guards';
 import { SENSE, CpuSmoke, ownSmoke } from './sense';
 import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear, searchSummary, witnessSummary, standoffSummary } from './guards';
 import type { SearchPlan, Pieing, Standoff } from './guards';
@@ -162,7 +162,9 @@ import { spawnCivilians, resetCivilians, updateCivilians, civiliansShown, civili
 import type { Civ } from './civilians';
 import { updateTargets } from './lighting';
 import { carLampTargets, VEHICLE_GROUP } from './carlamps';   // a parked vehicle's lamps are light targets a round breaks (nothing with CARLAMPS down)
-import { setBlackout, endBlackout, lightEvent, ocp, setGroup, toggleTarget, repairLights, lensRecheck } from './lighting';
+import { setBlackout, endBlackout, lightEvent, ocp, setGroup, toggleTarget, repairLights, freshLights, lensRecheck } from './lighting';
+import { gunWallFresh } from './gunwall';   // (called inside cleanSlate only)
+import { CLEANRESTART, CLEANRESTART_STATS } from './cleanrestart';   // a restart gives a clean level (a leaf: the switch and its tally)
 import { stepMat } from './floor';
 import type { FloorMat } from './floor';
 import * as dialogue from './dialogue';
@@ -1455,21 +1457,43 @@ export class Game {
   /** the particle-rain experiment's one line (rainFx.ts; Tab ▸ Weather) */
   rainSummary(): string { return rainSummary(this); }
 
+  /** CLEANRESTART (cleanrestart.ts), restartEncounter's part: the clocks the last try left running, as a new Game has them, and the vents as the hour has them. */
+  private cleanSlate() {
+    this.alarm.raisedAt = -100; this.alarm.pos = [0, 0, 0]; this.torchOnT = -100; this.lastStingT = -100;
+    gunWallFresh(this); groundFresh(this); this.wind?.fresh();
+  }
+  /** set by restart(), taken by the next update(): the camera's cut is put on the host's camera BEFORE that tick's record reads the view */
+  private restartCut = false;
+  /** THE PLAYER'S RESTART — the pause card's and the down card's buttons, the panel's, Shift+Enter, Enter when down. (Not a checkpoint's load, a recording's
+   *  first frame, a show's own restore or a mission's staging: those call restartEncounter and keep their own camera and picture.) With CLEANRESTART up it is
+   *  restartEncounter and, for whoever watches: the camera cut to the fresh man (the seat's cut, cmd.ts takeCut; a show's or
+   *  a spectator's camera is its own) and the host told to start the picture's histories from nothing. `said`: a line about this restart itself (why a
+   *  checkpoint would not load), which outlives it. Off: restartEncounter, the line said first, as it was. */
+  restart(said?: string) {
+    if (!CLEANRESTART.on) { if (said) this.msg(said); this.restartEncounter(); return; }
+    this.restartEncounter();
+    if (said) this.msg(said);   // (after it: restartEncounter takes the old encounter's lines off the HUD)
+    if (!this.touring && !this.director?.showing && this.spectate < 0) { const lens = this.seat.cam, p = this.followPos(); lens.target = v3.copy(p); lens.desired = v3.copy(p); this.restartCut = true; CLEANRESTART_STATS.cuts++; }
+    if (CLEANRESTART.picture && this.engine.restartPicture) { this.engine.restartPicture('level restarted'); CLEANRESTART_STATS.pictures++; }
+  }
   /** Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored. */
   restartEncounter() { useDice(this.dice); this.sensors.ownReset(); this.quiet?.current();
+    const clean = CLEANRESTART.on;   // (cleanrestart.ts: nothing of the try that ended stands, sounds or plays on in this one — off, every line below as it was)
+    if (clean) { CLEANRESTART_STATS.restarts++; CLEANRESTART_STATS.lines += this.messages.length; this.messages.length = 0; }   // (the lines of the encounter that ended go before anything below speaks: a staging's own line is this one's)
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise
     const light = this.player.light;
     this.player = new Player(this.ch, v3.copy(this.level.playerSpawn), this.fn2000); this.player.light = light; kitFresh(this); this.player.char.update(0);   // pose + bones exist before this frame's capsule upload
     this.cues?.reset(); holdFireReset(this);   // (holdfire.ts: a fresh encounter — nothing has started the fight)
     dialogue.ambientRestart(this);   // (the staff's ambient chat: its first-chat clock runs from this restart, not from the page's first frame)
     this.fogOfWar?.reset();   // (fog of war: its memory of who was seen and its turn at the probe belong to the encounter that just ended)
-    this.resetGuards(); this.repairLights(); this.resetLevelState(); lightSwitchReset(this); this.props.reset(); for (const r of this.rolls) r.voice = 0; this.rolls.length = 0; this.events.length = 0; this.useDoor = null; this.calledIn = false; this.stoodDown = false;   // (resetGuards also stands the floor down: escalation 0, no episode, no lockdown duties)
+    this.resetGuards(); if (clean) { if (this.messages[this.messages.length - 1]?.text === 'guards reset') this.messages.pop(); if (freshLights(this)) CLEANRESTART_STATS.relit++; } else this.repairLights(); this.resetLevelState(); lightSwitchReset(this); this.props.reset(); for (const r of this.rolls) r.voice = 0; this.rolls.length = 0; this.events.length = 0; this.useDoor = null; this.calledIn = false; this.stoodDown = false;   // (resetGuards also stands the floor down: escalation 0, no episode, no lockdown duties)
     // anything still in the air or still venting belongs to the encounter that just ended: an armed stun canister landing into the new one would
     // dazzle the fresh guards and alert the floor from a throw the restarted player never made, and a deployed can's 30 s screen would go on
     // degrading their line of sight (its emitter tracks the item and is priority-pinned, so dropping the item alone does not stop it)
     this.clearAftermath(); this.smoke.clearAll?.();
     this.hover = null; this.interactables = []; this.nearby = []; this.act = null;   // (like useDoor above) this frame's cursor state still names the guards / bodies of the encounter that just ended: when the restart
                                                   // came from updatePlayer (Shift+Enter), the Space handlers later in the same update() must not grab, take down or drag any of them
+    if (clean) this.cleanSlate();
     this.devices.reset();                   // cameras forget what they saw, beams their trips (repairLights above has already mended any shot dead)
     this.mission = newMission(this.time);   // a fresh run: stage, clock and stats from zero (resetLevelState above has already relit the rack)
     this.chronicle = new Chronicle();       // …and an empty chronicle to go with it (the debrief's timeline, path and counters)
@@ -1477,7 +1501,8 @@ export class Game {
     this.nightBreach?.onEncounterRestart(); // the night breach playtest, while it is up, stages itself again on the fresh encounter (nightbreach.ts)
     this.rescue?.onEncounterRestart();      // …and so does the hostage rescue (rescue.ts)
     this.quiet?.onEncounterRestart();       // …and the quiet mission faces Sam as its start has him and stages the partner (quiet.ts)
-    this.note('encounter restarted');
+    if (clean) updateTargets(this, 0);   // the lights painted as they now stand: what the next tick reads before its own paint — the reticle's rows, the men's eyes — is the fresh level, not the last try's last frame
+    if (!clean) this.note('encounter restarted');   // (clean: a level just opened says nothing of how it came to be — nor of its guards, above)
   }
 
   setGroup(group: string, on: boolean) { return setGroup(this, group, on); }
@@ -1495,6 +1520,8 @@ export class Game {
   update(dt: number, input: Input, cam: FollowCamera, canvas: View) {
     useDice(this.dice);   // this Game's die is the one simRandom() draws for the length of its frame (null: Math.random) — with two Games in one process each rolls its own
     this.quiet.current();   // … and the module switches a quiet mission's partner run holds are THIS Game's for the frame (quiet.ts: a compare with one Game, as on the page)
+    if (this.restartCut) { this.restartCut = false; const cut = this.seat.takeCut();   // a restart from outside a tick (a card's button) cut the seat's camera: taken HERE, before this tick's record reads the view, so the fresh man's first tick is aimed through the camera that is on him
+      if (cut && !cam.pin) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); cam.rebuild(); } }
     this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
     this.director?.attach({ cam, input });   // (a showcase locks the HOST's keys and pins the HOST's camera: the director keeps those two, the step hands it neither)
