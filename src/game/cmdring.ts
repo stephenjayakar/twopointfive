@@ -11,6 +11,16 @@
 // been back there since the ring last changed under it, so the hand coming back from a page's wedge or a man picks nothing on the way. A left click
 // anywhere else is Sam's trigger, as it is with the menu up: the ring goes and he fires.
 //
+// BEFORE THE KEY (the maintainer, 10-20: "we should some visual indication of what type of menu will open when you hit tab on the cursor. this could be a
+// door icon, a wall icon, etc on the cursor"): with the switch on, wherever the key would open a ring now (orders.ts ringFree: no menu up, Shift not down,
+// nothing the key backs out of instead), a small glyph rides beside the cursor for what the ring would open on — a door, a wall a charge can go on, a man,
+// a thing to work, the floor, or the squad itself where the cursor is on nothing an order goes to — and that thing is outlined on the floor, in the colour
+// the ring would open in (`hint`; orders.ts hintView). With the ring up the glyph sits in its middle. Words are not put on the cursor: the panel's line
+// has them.
+//
+// THE RING'S SIZE FOLLOWS THE WINDOW (`ref`, ringZoom): its px — the flick, the edge it stands in from, a click near a man's feet — and its picture grow
+// together in a window larger than 1920 × 1080, as the page's words do, so the wedge under the cursor is the wedge the game lights.
+//
 // THE KEY IS ALSO THE BACK KEY (backkey.ts, BACKKEY.tab): with an order menu up, a Space list open, a verb running or the launcher's arc held, the press
 // backs out of that and no ring opens; with nothing to back out of it is the ring's.
 //
@@ -36,11 +46,25 @@ export const CMDRING = {
   edgeX: 150, edgeY: 100,
   /** a left click within this many CSS px of a man's feet on the screen is a click on him */
   manPx: 24,
+  /** the window the ring's px are for: a larger one makes every px above — and the ring as drawn — larger by the same ratio, never smaller (the page's
+   *  words grow the same way, ui/textsize.ts; this is the window alone, so what the cursor does on the ring is the same wherever a recording is played) */
+  ref: [1920, 1080] as [number, number],
+  /** before the key: a small glyph beside the cursor for the kind of thing the ring would open on, and that thing outlined on the floor (the glyph sits in
+   *  the ring's middle once it is up). A picture only. Off here; the page raises it with the ring (`?nocmdhint` leaves it off) */
+  hint: false,
+  /** the outline: half the stretch of wall drawn (m), the ring on a spot and the ring at a man's feet (m) */
+  hintWallM: 0.6, hintSpotM: 0.3, hintManM: 0.5,
 };
 export const CMDRING_STATS = { opened: 0, quick: 0, given: 0, pages: 0, cancelled: 0, who: 0, fired: 0 };
 
-/** `ax, ay`: its middle (CSS px of the view) · `lit`: the lit wedge's digit (0: none) · `armed`: the cursor may light a wedge (it has been in the middle) */
-export interface RingState { ax: number; ay: number; lit: number; armed: boolean }
+/** `ax, ay`: its middle (CSS px of the view) · `z`: how much larger than its px it stands (ringZoom, as it was opened) · `lit`: the lit wedge's digit
+ *  (0: none) · `armed`: the cursor may light a wedge (it has been in the middle) */
+export interface RingState { ax: number; ay: number; z: number; lit: number; armed: boolean }
+/** how much larger than CMDRING's px a ring stands in a view this size (1 up to `ref`) */
+export function ringZoom(w: number, h: number): number { return Math.max(1, Math.min(w / CMDRING.ref[0], h / CMDRING.ref[1])); }
+
+/** what a ring would open on, as the hint names it (orders.ts hintView) */
+export type RingHint = 'door' | 'wall' | 'man' | 'floor' | 'thing' | 'foe' | 'squad';
 
 /** the wedge a direction points at: 1 at the top, clockwise, `n` of them */
 export function wedgeAt(dx: number, dy: number, n: number): number {

@@ -79,7 +79,7 @@ import { roomKept } from './rearwatch';
 import { gunFileCost, gunFileRanks } from './gunroles';   // (called inside pair only)
 import { pairUp } from './pairup';
 import { spottedFeet } from './spotted';
-import { wallTarget, wallRows } from './wallcharge';
+import { wallTarget, wallRows, wallPt } from './wallcharge';
 import type { WallSpot } from './wallcharge';
 import { workNear, workOn, workRows } from './workthings';
 import type { WorkThing } from './workthings';
@@ -98,7 +98,7 @@ import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewO
 import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { silentOnMan } from './silent';   // (called inside tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint } from './autopilot';   // (read inside input(), hud() and show() only)
-import { CMDRING, CMDRING_STATS, wedgeAt, type RingState } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { CMDRING, CMDRING_STATS, wedgeAt, ringZoom, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { backableInteract } from './interact';   // (read inside ringInput only: what the back key would back out of)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
@@ -481,6 +481,7 @@ export class SquadOrders {
   private trail: Vec3[] = [];
   private back: Vec3 = [0, 0, -1];   // which way 'behind Sam' lies past the trail's end: fixed when the trail is seeded, never his live facing (he turns with the reticle)
   private view: { input: Input | null; cam: FollowCamera | null; canvas: View | null } = { input: null, cam: null, canvas: null };
+  private hovCam: number[] = [];   // the camera hover()'s kept answer was asked under (hintView: asked again when it has moved)
   private hov: { x: number; y: number; t: number; v: OrderTarget } | null = null;   // hover()'s last answer, while the cursor rests   // this frame's cursor and camera, kept for the HUD's own look at what the cursor is on (hud() — never read by the simulation)
   private escUsed = false;  // Esc closed the menu since the last frame (Game.escape, from the page's key handler): that press is not the selector's as well
   private ours = new SideSet<Guard>();   // men whose Guard.pinned this module set (the fight seam): unpinned when their order goes
@@ -968,14 +969,14 @@ export class SquadOrders {
     if (!R) {
       // (Shift with it is the plan mode's, not built yet: nobody's · the key is also the back key, backkey.ts: with a Space list, a running verb or the
       //  launcher's arc to back out of, the press is theirs, as it is the menu's with a menu up)
-      if (this.menu || !input.hit(C.key) || input.down('ShiftLeft') || input.down('ShiftRight') || !!g.player.launchHeld || backableInteract(g)) return false;
+      if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
       if (!this.open(this.targetUnder(input, cam, canvas))) return false;
       this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
       // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
-      const cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v;
-      const ax = cl(input.mouseX, C.edgeX, canvas.clientWidth), ay = cl(input.mouseY, C.edgeY, canvas.clientHeight);
-      this.cmdRing = { ax, ay, lit: 1, armed: Math.hypot(input.mouseX - ax, input.mouseY - ay) < C.flickPx }; this.ringSel(); CMDRING_STATS.opened++;
+      const cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v, z = ringZoom(canvas.clientWidth, canvas.clientHeight);
+      const ax = cl(input.mouseX, C.edgeX * z, canvas.clientWidth), ay = cl(input.mouseY, C.edgeY * z, canvas.clientHeight);
+      this.cmdRing = { ax, ay, z, lit: 1, armed: Math.hypot(input.mouseX - ax, input.mouseY - ay) < C.flickPx * z }; this.ringSel(); CMDRING_STATS.opened++;
       return true;
     }
     const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
@@ -1001,7 +1002,7 @@ export class SquadOrders {
     } else if (wheel) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
     // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
     // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
-    const dx = input.mouseX - R.ax, dy = input.mouseY - R.ay, out = Math.hypot(dx, dy) >= C.flickPx;
+    const dx = input.mouseX - R.ax, dy = input.mouseY - R.ay, out = Math.hypot(dx, dy) >= C.flickPx * R.z;
     if (!out) R.armed = true;
     const want = digit ? (digit <= C.wedges ? digit : 0) : out && R.armed ? wedgeAt(dx, dy, C.wedges) : 0;
     if (digit) R.armed = false;
@@ -1020,6 +1021,34 @@ export class SquadOrders {
     else { this.menu = null; CMDRING_STATS.cancelled++; }
     return true;
   }
+  /** the ring's key would open a ring now: no menu up, Shift not down (the plan mode's, not built yet: nobody's), and nothing the key backs out of instead
+   *  (backkey.ts: a Space list, a running verb, the launcher's arc) */
+  private ringFree(input: Input): boolean { return !this.menu && !input.down('ShiftLeft') && !input.down('ShiftRight') && !this.g.player.launchHeld && !backableInteract(this.g); }
+  /** What Tab would open on, for a hint drawn before the key is pressed (null: the switch off, no squad, or the key would open no ring now — ringFree): the
+   *  kind of thing, where the glyph goes — beside the cursor, or in the middle of a ring that is up, whose target it then is — how much larger than its px it
+   *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
+   *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
+  hintView(): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null } | null {
+    const v = this.view; if (!CMDRING.on || !CMDRING.hint || !this.active || !v.input || !v.cam || !v.canvas) return null;
+    const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
+    if (!R && !this.ringFree(v.input)) return null;
+    // (before the key the outline is drawn every frame under a view that moves: hover()'s answer, kept while the cursor rests, is asked again when it has)
+    if (!R) { const c = v.cam, k = this.hovCam; if (k[0] !== c.pos[0] || k[1] !== c.pos[1] || k[2] !== c.pos[2] || k[3] !== c.yaw || k[4] !== c.pitch) { k[0] = c.pos[0]; k[1] = c.pos[1]; k[2] = c.pos[2]; k[3] = c.yaw; k[4] = c.pitch; this.hov = null; } }
+    const t = R ? M!.target : this.hover(); if (!t) return null;
+    const kind: RingHint = t.kind === 'door' ? 'door' : t.kind === 'foe' ? 'foe' : t.kind === 'floor' ? (t.thing ? 'thing' : t.wall ? 'wall' : 'floor') : t.man ? 'man' : 'squad';
+    let seg: [Vec3, Vec3] | null = null, ring: { at: Vec3; r: number } | null = null; const Y = 0.03, C = CMDRING;
+    const at = (p: Vec3, r: number) => ({ at: [p[0], Y, p[2]] as Vec3, r });
+    switch (kind) {
+      case 'door': { const d = (t as OrderTarget & { kind: 'door' }).door.def, ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir); seg = [[d.hinge[0], Y, d.hinge[1]], [d.hinge[0] + ux * d.width, Y, d.hinge[1] + uz * d.width]]; break; }
+      case 'wall': { const f = t as OrderTarget & { kind: 'floor' }, W = f.wall!, b = W.box, c = W.alongX ? b.c[0] : b.c[2], hl = W.alongX ? b.h[0] : b.h[2];   // (its stretch, never past the wall's own ends)
+        seg = [wallPt(W, Math.max(-C.hintWallM, c - hl - W.u), 0.02, Y), wallPt(W, Math.min(C.hintWallM, c + hl - W.u), 0.02, Y)]; ring = at(f.at, C.hintSpotM); break; }
+      case 'foe': ring = at((t as OrderTarget & { kind: 'foe' }).foe.char.pos, C.hintManM); break;
+      case 'man': ring = at((t as OrderTarget & { kind: 'none' }).man!.char.pos, C.hintManM); break;
+      case 'floor': case 'thing': ring = at((t as OrderTarget & { kind: 'floor' }).at, C.hintSpotM); break;
+      case 'squad': break;
+    }
+    return { kind, x: R ? R.ax : v.input.mouseX, y: R ? R.ay : v.input.mouseY, zoom: R ? R.z : ringZoom(v.canvas.clientWidth, v.canvas.clientHeight), held: !!R, tone: this.toneOf(R ? M!.men : this.recipients(t)), seg, ring };
+  }
   /** the menu's own highlight follows the lit wedge (what reads the highlighted row — a throw's arc on the floor — reads the ring's) */
   private ringSel() { const M = this.menu, R = this.cmdRing; if (!M || !R || !R.lit) return; const i = M.rows.findIndex(r => r.key === R.lit); if (i >= 0) M.sel = i; }
   /** the quick key's own order on `t`, given by hand: on a door the men wait on, the entry they pick (autopilot.ts); else the target's first row */
@@ -1031,14 +1060,14 @@ export class SquadOrders {
   private manAt(input: Input, cam: FollowCamera, canvas: View): number {
     const S = this.squad(), t = this.targetUnder(input, cam, canvas);
     if (t.kind === 'none' && t.man) { const k = S.indexOf(t.man); if (k >= 0 && t.man.state !== 'dead') return k; }
-    const w = canvas.clientWidth, h = canvas.clientHeight; let best = -1, bd = CMDRING.manPx;
+    const w = canvas.clientWidth, h = canvas.clientHeight; let best = -1, bd = CMDRING.manPx * ringZoom(w, h);
     S.forEach((gd, k) => { if (gd.state === 'dead') return; const [sx, sy, front] = cam.project(gd.char.pos, w, h); if (!front) return;
       const d = Math.hypot(sx - input.mouseX, sy - input.mouseY); if (d < bd) { bd = d; best = k; } });
     return best;
   }
   /** What the ring shows this frame (null: no ring): where it is, the lit wedge, whose colour it wears, and the wedge on each digit — the first page's
    *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it. */
-  ringView(): { x: number; y: number; lit: number; tone: Tone | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] } | null {
+  ringView(): { x: number; y: number; zoom: number; lit: number; tone: Tone | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] } | null {
     const R = this.cmdRing, M = this.menu; if (!R || !M) return null;
     const mt = this.menuTarget()!, wedges: { key: number; text: string; off: boolean; opens: boolean }[] = [];
     for (let d = 1; d <= CMDRING.wedges; d++) {
@@ -1047,7 +1076,7 @@ export class SquadOrders {
       else if (row) wedges.push({ key: d, text: this.labelOf(row, mt), off: !!M.why[i], opens: !!row.opens });
     }
     const t = M.target, what = t.kind === 'none' ? (t.man ? t.man.callsign : '') : this.hoverWords(t), who = this.whoTag().tag;   // (who it goes to, and what it was opened on: the menu's own mark's words)
-    return { x: R.ax, y: R.ay, lit: R.lit, tone: this.toneOf(M.men), caption: what && what !== who ? `${who} → ${what}` : who, wedges };
+    return { x: R.ax, y: R.ay, zoom: R.z, lit: R.lit, tone: this.toneOf(M.men), caption: what && what !== who ? `${who} → ${what}` : who, wedges };
   }
 
   // ------------------------------------------------------------ the men
