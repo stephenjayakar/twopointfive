@@ -46,6 +46,8 @@ export const PLANLAY_STATS = { laid: 0, replaced: 0, sent: 0, refused: 0, droppe
 /** an order written down for the word: the row's id, the men's callsigns, and what it is on — a door by its place on the level's list (`door`), a spot
  *  (`at`; `found`: the spot is a wall's or a thing's to work, looked up again by `pick`), a teammate (`man`), or nothing */
 export interface LaidOrder { id: string; who: string[]; kind: 'door' | 'floor' | 'none'; at: Vec3; door?: number; man?: string; found?: 'wall' | 'thing'; /** the point the wall or the thing is found again by: on the wall's face, on the thing's */ pick?: Vec3; /** game time it was laid */ t: number }
+/** where a laid order is, alone (planmode.ts writes a chain's stops down the same way) */
+export type LaidWhere = Pick<LaidOrder, 'kind' | 'at' | 'door' | 'man' | 'found' | 'pick'>;
 /** `kept`: the first plan sent in this try, for the next one (`keptFor`: the start it was laid from — `tryKey` as the try began: the scenario, the cast,
  *  the mark Sam was stood on) · `started`: a plan has been sent this try (one sent after it is not kept over it) · `sending`: the plan is being given now ·
  *  `restoredT`: a checkpoint put the plan back at that game time — the fresh cast it stands up in that same step leaves it be */
@@ -80,7 +82,7 @@ export function layPoint(g: Game, o: LaidOrder): Vec3 | null {
   return o.kind === 'floor' ? [o.at[0], 0, o.at[2]] : null;
 }
 /** a laid order's target as the menu would hand it to give() now (null: its door or its man is gone) */
-function targetOf(g: Game, o: LaidOrder): OrderTarget | null {
+function targetOf(g: Game, o: LaidWhere): OrderTarget | null {
   const S = g.orders, at: Vec3 = [o.at[0], 0, o.at[2]];
   if (o.kind === 'door') { const d = g.doors.list[o.door ?? -1]; return d ? { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side: sideOf(d, g.player.char.pos) } : null; }
   if (o.kind === 'none') { if (!o.man) return { kind: 'none', at }; const m = S.squad().find(x => x.callsign === o.man && x.state !== 'dead'); return m ? { kind: 'none', at: [m.char.pos[0], 0, m.char.pos[2]], man: m } : null; }
@@ -89,6 +91,7 @@ function targetOf(g: Game, o: LaidOrder): OrderTarget | null {
   if (o.found === 'thing' && o.pick) { const w = workNear(g, o.pick); return w && w.target.kind === 'floor' && w.target.thing ? w.target : null; }
   return { kind: 'floor', at };
 }
+export function layTarget(g: Game, o: LaidWhere): OrderTarget | null { return targetOf(g, o); }
 /** those callsigns taken off every laid order (one with nobody left on it is gone) */
 function strike(L: LayState, names: Set<string>): number {
   let n = 0;
