@@ -2,7 +2,7 @@
 // four-man room clear staged, the defenders kept calm by hand.
 //   PORT=5243 node tools/qa/teampace-page.cjs        (a dev server on that port: PORT=5243 bun run tools/serve.ts)
 //   on     the page opens with the switch on (the bundle's own module, booted by the page): four men sent across the floor walk under the player's own
-//          walk, and fallen in behind a player who sprints (the real keys held) they run with him
+//          walk, and fallen in behind a player who sprints (the real keys held) all four run with him
 //   off    the same page with ?teampace=0: the switch is off, the same order walks them at the orders' old pace and nobody runs behind his sprint
 // exit 0 = both, with no page error · 1 = otherwise. Nothing here looks at a picture: it reads the game the page runs.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -31,9 +31,10 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
     const step = (n = 1, keys = [], each = () => { }) => { e.render = () => { e.world.upload(); }; try { for (let i = 0; i < n; i++) { calm(); window.__runFrames(1, 1 / 60, keys); each(); } } finally { e.render = real; } };
     // the order: all four across the floor, the player standing
     g.teleportPlayer(SAM); ops.forEach((o, i) => put(o, [11 + i * 0.9, 0, 22.4])); step(30);
-    const why = O.give('move', O.targetAt(TO), 'all'); let walkTop = 0; step(5 * 60, [], () => { for (const o of ops) walkTop = Math.max(walkTop, v(o)); });
+    const why = O.give('move', O.targetAt(TO), 'all'); let walkTop = 0; step(90);   // (a second and a half for a man who was closing on the player to come down to the walk)
+    step(4 * 60, [], () => { for (const o of ops) walkTop = Math.max(walkTop, v(o)); });
     // fallen in, the player sprints (the real keys): the way his legs get furthest of the four the keys give
-    const whyIn = O.give('fallIn', O.targetAt(SAM), 'all'); step(6 * 60);
+    const whyIn = O.give('fallIn', O.targetAt(SAM), undefined, { men: ops }); step(8 * 60);   // (the four by name: a man standing by the point would take the order alone)
     let best = { ran: 0, tops: [], key: '', sprinted: 0 };
     for (const key of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) {
       g.teleportPlayer(SAM); step(4 * 60);
@@ -47,8 +48,8 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&r
   const tell = (r, E) => `TEAMPACE.on ${r.on} · ordered: fastest ${r.walkTop} m/s (the player walks ${r.walk}) · behind his sprint (${r.key}, ${r.sprinted} frames, ${r.ran} m): followers' tops ${r.tops.join(' / ')} m/s · ${r.up} up${r.why ? ` · move refused: ${r.why}` : ''}${r.whyIn ? ` · fall in refused: ${r.whyIn}` : ''} · errors ${JSON.stringify(E.slice(0, 3))}`;
   const A = await open('');
   const a = await A.page.evaluate(stage);
-  line(a.on === true && !a.why && !a.whyIn && a.walkTop > 0.8 && a.walkTop <= a.walk * a.k * 1.15 + 0.05 && a.ran > 4 && Math.max(...a.tops) >= 3.5 && !A.errors.length,
-    'the page opens with the switch on: the ordered four walk under the player\'s own walk, and behind his sprint a follower runs', tell(a, A.errors));
+  line(a.on === true && !a.why && !a.whyIn && a.walkTop > 0.8 && a.walkTop <= a.walk * a.k * 1.15 + 0.05 && a.ran > 4 && Math.min(...a.tops) >= 3 && !A.errors.length,
+    'the page opens with the switch on: the ordered four walk under the player\'s own walk, and behind his sprint all four run', tell(a, A.errors));
   await A.page.close();
   const B = await open('&teampace=0');
   const b = await B.page.evaluate(stage);

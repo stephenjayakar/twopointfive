@@ -713,12 +713,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   OFF in the module and on the frozen stand (`TPS_TEAMPACE=1`; `FROZEN_HOLDS`, `STAND_ENV`); in the registry and the journal (a recording from before the key
   replays with it off). Tab rows under Movement & doorways: the switch, walk ×, follower ×, run with you, run for a reason; the old `PACE.on` row is now
   "team ▸ pace cap". State: four named side tables. CHECK `bun run tools/qa/teampace-check.ts` (also `probes.ts teampace`, under `squadorders`), the room clear's
-  four: CHECK_LINES. MEASURED_TEXT NEIGHBOURS' CHECKS that stood on the old pace, changed here: `frag-probes.ts` (g) and the
+  four: 12 lines on both stands, `TEAMPACE_BREAK=1` fails nine on either (the silent squad, the journal and the grenade with `own` off hold either way). On the
+  page's stand it reads: an ordered walk tops at 1.24 m/s (off 2.00); the player setting off five seconds behind an ordered four gains 0.25 m/s on its last
+  man (off: the team pulls away at 0.40); following a walking player nobody is over 2.01 and the last man is 4.7 m off when he stops (off the same); behind
+  his sprint the four top at 4.2‥4.7 (off 2.2), gun low on every running frame, walking 0.3 s after he stops; a grenade among them is left at 3.40 (off
+  2.20); a sprinter's footfall is the player's own sprint's, 1.25 × a walker's. `PORT=… node tools/qa/teampace-page.cjs` is the real page (software adapter)
+  with `?teampace=0` beside it: no page error; on, an ordered four walk at 1.24 to the player's 1.55 and all four run at about 4.2 behind his sprint; off,
+  2.0 and nobody over 2.2. MEASURED: off = the build this was cut from by run digest, 21 of 21 play-throughs (every scenario, seed 1) on the frozen stand
+  and 21 of 21 on the page's with `TPS_TEAMPACE=0` (taken before the last two numbers moved and before the build head was merged in; nothing off the switch
+  changed after). Play-throughs on the page's stand, hard, 21 scenarios (`playthrough.ts`; its player never sprints), on against `TPS_TEAMPACE=0`: FINAL numbers,
+  seeds 1‥3, 63 runs a side — men up at the end 116 of 222 off, 107 on (paired −0.14 a run, standard error 0.18: no difference shown); ends taken 33 / wiped
+  17 / rescued 8 / lost 4 / stalled 1 off, 33 / 18 / 7 / 5 / 0 on; defenders left 87 of 441 off, 113 on; a run 6 s shorter; teammate runs written 21 blast,
+  13 cover, 2 follow, 33 s of running in 63 runs; one man reported stuck on a stack (block-four seed 1). An earlier pass with the follower at 1.0 and no way
+  back from a grenade, seeds 1‥6, 126 a side: 226 of 444 off, 220 on (paired −0.05, standard error 0.14), taken 62 → 71, wiped 38 → 29. Single scenarios
+  swing both ways by more than the whole effect (compound-four 15 → 3 of 24, records-pair 2 → 7 of 12 in that pass): six seeds do not settle one scenario.
+  WHO IS HEARD: the tally has no count of it; the footfall is what the check reads (a walker's as it was, a runner's the player's sprint). The frozen stand
+  with the rule raised (`TPS_TEAMPACE=1`) was NOT tallied. NEIGHBOURS' CHECKS that stood on the old pace, changed here: `frag-probes.ts` (g) and the
   flee-by-door pace line read the flee's run when the rule is on; `lineoffire-probes.ts` passes over a man with a reason to run (`teamRunAgo`); and FIVE
   stagings hold the rule OFF with the reason written beside each, for their owners to re-stage at the new pace: `fireline-check.ts` (arms 6 and 11 stand
   on one nav cell 2 mm from the lane's berth), `roomkeep-check.ts` (compound-four k_p+: the keeper shifts 0.5 m for mates who come by later, the bar is
   0.4), `flashweight-probes.ts` pace (it IS the old cap's check), `doorgrenade-probes.ts` THE FAULT arm (men are off the grenade sooner, the fault shows at
-  one door of two), `frag-probes.ts` (b5) (the recorded depot throw: at the new follow pace Blue One, 0.83 s after Sam moves, is dealt the corner (0.0, 11.8),
+  one door of two), `frag-probes.ts` (b5) (the recorded depot throw: with the follower then at 1.0 × the player's walk Blue One, 0.83 s after Sam moves, is dealt the corner (0.0, 11.8),
   gets down there and is wounded — the flee's deal, the same with `own` off; a claim for that rule's owner). NOT SEEN, NOT PLAYED: nothing of this on a GPU —
   a teammate's sprint with his kit on has never been looked at, nor the gun going low into it; nobody has played it; 0.8, the follower's 1.3, the six
   seconds back from a grenade and the cover run's numbers are first numbers; the play-through tool's player never sprints, so the tallies show no follower's
