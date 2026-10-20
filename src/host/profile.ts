@@ -229,6 +229,7 @@ export function pageSwitches(q: URLSearchParams): void {
   // was; ?doorpath=gun = with the gun rule too (a rifle is not carried through a leaf: it ships off)
   DOORPATH.on = !q.has('nodoorpath') && q.get('doorpath') !== '0'; if (q.get('doorpath') === 'gun') DOORPATH.gun = true;
   WALLSNAP.on = !q.has('nowallsnap');   // back to the wall, the feel pass (game/wallsnap.ts): the take on one eased clock with stepping feet and a settle, the way off keeping his momentum, and Q with the rifle in hand STACKS on the wall (low ready; the cursor round an open end steps him out): ON in the page; ?nowallsnap = the hold as it was
+  WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as Q does, Q still working — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
   AIMWEIGHT.on = !q.has('noaimweight');   // the player's aim has weight (game/aimweight.ts): his gun turns at a limited rate and the aiming circle trails the cursor, shots going where the circle is — ON in the page; ?noaimweight = the gun eased onto the cursor as it was
@@ -420,6 +421,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'IRLIGHT.meter': 'TPS_IRMETER=1',
   'AIRDUST.on': 'TPS_AIRDUST=1',
   'WALLSNAP.on': 'TPS_WALLSNAP=1',
+  'WALLSNAP.press': 'TPS_WALLPRESS=1',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'REARWATCH.on': 'TPS_REARWATCH=1',
   'STACKLINE.on': 'TPS_STACKLINE=1',
