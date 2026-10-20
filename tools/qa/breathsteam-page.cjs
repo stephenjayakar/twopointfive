@@ -43,10 +43,11 @@ async function one(browser, name) {
     const bearings = [yaw - Math.PI / 2, yaw + Math.PI / 2, yaw + Math.PI * 0.75, yaw - Math.PI * 0.75, yaw + Math.PI / 4, yaw - Math.PI / 4, yaw + Math.PI], camYaw = bearings.find(clear);
     const r = window.__stage({ look, yaw: camYaw ?? bearings[0], pitch: p, dist }, { player: { pos: [at[0], 0, at[1]], yaw, holstered: true } });
     const css = document.createElement('style'); css.textContent = 'body *:not(#view):not(:has(#view)) { visibility: hidden !important; }'; document.head.appendChild(css);
+    window.__mouse(window.innerWidth - 10, window.innerHeight - 10);   // (he looks where the cursor is: the picture's lower right is the ground ahead of him as staged, so he keeps facing across the view)
     window.__runFrames(2, 1 / 30); const c = g.player.char, h = c.bones.head;
     return { pipes: window.__boot.pipelines, steamOn: !!window.__knobs.registry().SNOW_LOOK?.steam, pin: r.pin, clearView: camYaw !== undefined, eye: window.__cam.pos.map(v => +v.toFixed(2)), head: h.map(v => +v.toFixed(2)), underRoof: !!g.weather.underRoof(h[0], h[2]), drawing: window.__smoke.drawing(), lamps: g.targets.filter(t => (t.light || t.areaLights) && Math.hypot(t.pos[0] - at[0], t.pos[2] - at[1]) < 6).map(t => `${t.name}@${t.pos.map(x => x.toFixed(1))}`) };
   }, { every: EVERY, dist: DIST, pitch: PITCH, at: AT, yaw: YAW });
-  log(`${name}: booted`, JSON.stringify(boot)); await page.screenshot({ path: path.join(OUT, `breath_${name}_000.png`), timeout: 240000 });
+  log(`${name}: booted`, JSON.stringify(boot));
   const rows = [];
   for (let k = 8; k <= STEPS; k += 8) {
     const r = await page.evaluate(async () => {

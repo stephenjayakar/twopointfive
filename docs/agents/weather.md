@@ -878,3 +878,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   little of it), and 15 mm is small from the game's camera — the steam is what reads. With the rule on, four rows of the scene panel's SNOWBREATH table (`everyHard`, `hardK`, `effortUp`, `effortDown`) and the workbench's two winded
   sliders (`LIFE.breathRateRun` / `breathAmpRun`) are read by nothing (the panel dims its four while the rule is on and lists the rule's eight steam numbers in their place: `probes.ts scenetweak`, verdict `breath`); HARDBREATH's switch has no panel row, and the workbench does not raise the switch (it
   shows the old chest). NOT SEEN: anything of it in a picture, here or on a GPU; no tally over seeds (a tour or soak was not run).
+- **A man's breath is real steam** (the maintainer, 10-20: "the smoke from the gun muzzle is fine so maybe breath should just work like that"). On a snow
+  level each breath of a man in the open is ONE source in the smoke solver, on the fine lattice the gun's gas is on (`snowBreath.ts BREATHSTEAM`, a
+  `SmokeEmitter` of kind `breath`). It rides his mouth for as long as he breathes out (`track`), leaves at his head's facing and pitch plus a share of
+  his own walk (`trackVel`: track()'s `dir` is the gas's velocity in m/s, not a heading), and from there it is the solver's: it shadows itself and
+  takes a lamp's shafts as any smoke does (the volumetric pass draws it; no shader changed), and a man walking through it parts it (`Game.smokeWake`
+  at hips and chest as for any smoke, plus a shove at the head of a moving man near the view — `wake`, `SmokePush.lattice: 'fine'`, so it never
+  moves a smoke screen). Who breathes, the rhythm, the mouth and the sprint rule are the puffs' own code path, shared line for line: a blown man
+  (`character.ts HARDBREATH`) breathes sooner, through a wider mouth (× √size), denser and warmer (× size), thrown harder (× jet). Only what a breath
+  is MADE OF changed. **Falls back to the puffs**, breath by breath: no solver drawing (smoke off or frozen, a preset without the smoke frame flag:
+  `SmokeSystem.drawing()`), `density` 0, or a man past `reach` (16 m) from where the view looks. A man who steps out from under a roof mid-breath
+  steams for what is left of it. **Look only**: the source carries `look` — `sense.ts CpuSmoke` takes nothing of it, `budget()` does not count it,
+  and a step with more sources than the solver holds cuts a look source first (before prio 0), so a shot or a grenade never loses its place to a
+  breath. **Switch**: `SNOW_LOOK.steam` — ON in the page (`?breathsteam=0` = the puffs as they were), OFF in the module and on the frozen stand
+  (`TPS_BREATHSTEAM=1`); a `FROZEN_HOLDS` row; the journal carries `SNOW_LOOK`, and a recording from before the key replays with it off. The numbers
+  are `BREATHSTEAM` (authored data like `SNOWBREATH`, not player switches: `__snow.steam` on the console, twelve rows on the debugger's Breath layer).
+  **Check**: `bun run tools/qa/probes.ts breathsteam` (families `snow`, `weather`), 9 lines on both stands; `BREATHSTEAM_BREAK=1` (the switch never
+  raised) fails 7 on both. Its `digest` line: 300 frames of the pass's room clear stepped by the game with the sources handed over and with none,
+  one run digest, and the same with the senses on the CPU. @@MEASURED@@
