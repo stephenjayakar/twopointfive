@@ -198,11 +198,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and hostage-rescue on the shipped stand with `TPS_CPUSENSE=1`, every line PASS. One seed only; other seeds and longer runs were not run.
   AT BUILD STEP 730 (the first build that calls it in play) the shipped stand's check was RED twice and nobody had run it: room-clear-four threw (the rain's spent
   generator, above) and mousehole-four's 'same game' parted at an autosave (below). With the three mends (the light meter's GPU side the host's, the drip walk plain data, the
-  check putting the saves' shelf back): the whole check on the shipped stand, the default eight scenarios on seed 1 with autosaves on, is 100 moments, every line PASS, and `ROLLBACK_BREAK=1` on the
-  frozen stand's night-breach FAILS the host's-own, same-game, ring and fresh-game lines, as it must. MEASURED BEFORE the meter's split was narrowed to its GPU
-  side, and owed again on the tree as it is: the frozen stand's whole check; the ten play-throughs' run digests on the shipped stand are the build's
-  from before; the drip lines found in shares are the build's point for point and end on the same step (room-clear-four 973 lines at step 82, compound-four 721 at
-  59); `blast-pace-check.ts` prints the build's lines; `savetimeline-check.ts` passes on both stands.
+  check putting the saves' shelf back): the whole check, the default eight scenarios on seed 1 with autosaves on, is 109 moments on the frozen stand and 100 on the shipped one, every line PASS,
+  and `ROLLBACK_BREAK=1` on night-breach and room-clear-four FAILS the host's-own, same-game, ring and fresh-game lines on both stands, as it must; the
+  play-throughs' run digests are the build's from before, ten on the shipped stand and eight on the frozen one (the last state's word is not: the rain's job
+  and the meter are other shapes in it); the drip lines found in shares are the build's point for point and end on the same step (room-clear-four 973 lines at step 82, compound-four 721 at
+  59); `blast-pace-check.ts` prints the build's lines; `savetimeline-check.ts` passes on both stands. One seed; nothing longer than 45 s a scenario.
   KNOWN LIMITS, said plainly: module state is PER PROCESS, not per Game — the registered variables and containers (`guards.unitSerial`, `savestate.runSerial`,
   the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
   process, so a snapshot is sound while ONE game ticks between its take and its restore (the check restores the first game before it steps the other); a server
@@ -223,7 +223,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that hold a GPU object, listed on the page: the box world, the light set, the decals, the light meter, the mesh shadows, the character renderer.
   ON A PAGE: one load of a save in memory, Training five with a pair on the floor, headless Chromium on the software adapter, the load asked for inside a step with
   the frame before it still out on its readback — the build refused the whole next frame ("used in submit while pending map"); with the mend the load went through (the clock back from 2.62 s to
-  0.57 s, the answers still out dropped, a second readback buffer made, none left mapped); the browser said nothing on the mend's first form, and the count of what it says on the tree as it is is owed. That one
+  0.57 s, the answers still out dropped, a second readback buffer made, none left mapped) and the browser said nothing, no GPU error and no page error. That one
   case; the rain's walk was not on that page. Never on a real GPU.
 - **The game's own maths** (`src/math/exact.ts`, switch `EXACT.on`; ON in the page, `?noexact` = the engine's own functions as before; OFF on the frozen stand,
   `TPS_EXACT=1` raises it; the shipped stand has it on, `TPS_EXACT=0` there = `?noexact`; engine groundwork, nothing networked): the language leaves the
