@@ -1041,7 +1041,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   whose, a sponge round a pouch each. CHECK: `bun run tools/qa/probes.ts kitstealth` on BOTH stands (12 lines: off to the count, the card, a reload, the follow, the
   store, As issued, the Quiet kit, four staged runs, the journal); `KITSTEALTH_BREAK=1` fails 6 on each. The real page: `PORT=<port> node
   tools/qa/kitstealth-page.cjs` (`STEALTH_BREAK=1` must fail). Probes written against the hand-overs run with the key held off by the runner
-  (`STEALTH_AS_IT_WAS` in `probes.ts`). A run tape carries the kept stealth card beside the cards (`kit.stealth`). Never seen on a GPU; nobody has played
+  (`STEALTH_AS_IT_WAS` in `probes.ts`; `kitanim-midswap` beside it, whose night alone throws a frag). A run tape carries the kept stealth card beside the cards (`kit.stealth`). Never seen on a GPU; nobody has played
   it; whether five rounds, two cameras and a wand is the right kit to start a quiet night with is the maintainer's to say.
 
 - **A suppressed gun is drawn and named as one on the kit card** (2026-10-17; the maintainer on the Team & kit screen of a quiet mission: "quiet missions
