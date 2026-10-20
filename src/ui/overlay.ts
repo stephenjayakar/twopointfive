@@ -100,7 +100,7 @@ export class Overlay implements HudLike {
   readonly windViz = new WindViz(this.root);
   /** the squad's plan on the floor (ui/planfloor.ts ← game/floorplan.ts): ways, marks, fans, who an open menu goes to */
   readonly plan = new PlanFloor(this.traj);
-  /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet, a rim in the dark, his shape through a wall — nothing unless his Options ask */
+  /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
   /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
   setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null, onPick: (k: number) => void) {

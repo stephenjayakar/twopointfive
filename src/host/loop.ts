@@ -35,7 +35,7 @@ import type { Vec3 } from '../math/vec';
 import type { RenderSettings } from '../settings';
 import type { HudLike, BubblesLike, View, Chapters } from './hud';
 import { TWEEN, type Tween } from './tween';
-import { FINDME, ctrlTurn, behindYaw, behindStep } from './findme';
+import { FINDME, ctrlTurn, behindYaw, behindStep, aimCarry, carryStep, CARRY_KEYS, type AimCarry } from './findme';
 
 /** the showcase tour (game/demo.ts Demo) as the loop sees it */
 export interface DemoLike { readonly active: boolean; caption: string; sub: string; fade: number; update(dt: number): Vec3 | null; chapters(): Chapters; goto(k: number): void; }
@@ -60,6 +60,8 @@ export interface LoopCtx {
   ctrlTwice?(): boolean;
   /** stepFrame's own: the yaw the view is coming round to after that double tap (host/findme.ts `behind`), null or absent = none */
   behind?: number | null;
+  /** stepFrame's own: his aim carried round with that view until the hand takes the mouse up again (host/findme.ts AimCarry), null or absent = none */
+  carry?: AimCarry | null;
   /** between two ticks of ONE drawn frame (the fixed step, a display under the tick rate or a hitch): what the host's draw does that the next tick reads — main.ts: the world's
    *  boxes packed into the grid its rays walk (engine.render does it once a frame; a second tick would otherwise trace the boxes of two ticks ago), and the HUD's one write
    *  to the game (an expired speech bubble nulled: a replay makes it after EVERY update) */
@@ -154,10 +156,20 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   const viewFree = () => game.spectate < 0 && !game.director.showing && !ctx.demo?.active && !ctx.attract?.active && !cam.pin;
   { const twice = ctx.ctrlTwice?.() ?? false;   // (asked every frame: a double tap under a card is not kept for the moment it lifts)
     if (frozen || !viewFree()) ctx.behind = null;
-    else if (twice && FINDME.behind) ctx.behind = behindYaw(game.player.char.aimYaw);
+    else if (twice && FINDME.behind) { const c = game.player.char; ctx.behind = behindYaw(c.aimYaw); const was = ctx.carry; ctx.carry = aimCarry(c.aimYaw, c.pos, game.aimPoint, was ? was.realX : input.mouseX, was ? was.realY : input.mouseY); if (was) { ctx.carry.putX = was.putX; ctx.carry.putY = was.putY; } }   // (a second double tap under a carry: the mouse is where the first one's knows it to be, not where the game's cursor was put)
     else if (orbit) ctx.behind = null; }
   const comeRound = (cdt: number) => { if (ctx.behind == null) return; if (!viewFree()) { ctx.behind = null; return; } const s = behindStep(cam.yaw, ctx.behind, cdt); cam.rotate(s.turn); if (s.done) ctx.behind = null; };
   if (!fixed) comeRound(dt);
+  // …and his aim with it (host/findme.ts AimCarry): right before each tick samples its input, the game's cursor is put where the point he faced at the tap stands
+  // in the view that tick will aim through — or, the moment the hand uses the mouse or a key that may read the cursor, back where the mouse really is
+  const carryAim = () => {
+    const c = ctx.carry; if (!c) return;
+    let used = frozen || !FINDME.behind || !viewFree() || !!input.clicked;   // (a button pressed NOW, not one held since before: a burst under way goes on to where it was going)
+    if (!used) for (const k of input.pressed) if (!CARRY_KEYS.has(k)) { used = true; break; }
+    const s = carryStep(c, input.mouseX, input.mouseY, used, game.player.char.pos, (x, y, z) => cam.project([x, y, z], view.clientWidth, view.clientHeight, Infinity, 1e-3));
+    input.mouseX = s.x; input.mouseY = s.y; if (!s.held) ctx.carry = null;
+  };
+  if (frozen || !(view.clientWidth > 0 && view.clientHeight > 0)) carryAim();   // (no tick this frame will ask: a card up, or no view, gives the mouse back at once)
   if (frozenKeys) { for (const k of frozenKeys) input.pressed.add(k); ctx.hotkeys?.(true); input.pressed.clear(); }   // frozen: the frame's presses were put away first (afterFreeze's still takes a zero-length game step with the hands off) and are handed back for this one look — F9 / F10 start a recording from the pause card
   else ctx.hotkeys?.(frozen);
 
@@ -184,6 +196,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       const showingBefore = !frozen && D.showing;   // a level-script showcase (the breach) has the frame: its drill, beats and camera run INSIDE the game step (director.tick) — attract stays out of it
       attractPos = demoPos || showingBefore || frozen || !attract ? null : attract.update(dt);   // attract mode's look-at when no scripted programme has the frame (it keys yaw / distance itself, as the tour does)
       if (!frozen) ctx.beforeTick?.(dt);   // (outside the update's own timing: a hands-off player's thinking is not the game's)
+      if (!frozen) carryAim();
       { const tU = performance.now(); if (!frozen) game.update(dt, input, cam, view); ctx.updateMs = performance.now() - tU; }
     } else {   // THE FIXED STEP: whole ticks of 1 / hz, each the old order's demo → attract → game with the same dt, the lights aged with the game (its men read them)
       const fx = ctx.fixed ??= { acc: 0, drift: 0, demoPos: null, attractPos: null, owed: null, orbit: 0 };
@@ -202,6 +215,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         fx.demoPos = demo ? demo.update(tdt) : null;
         fx.attractPos = fx.demoPos || D.showing || !attract ? null : attract.update(tdt);
         if (ctx.beforeTick) { const b0 = performance.now(); ctx.beforeTick(tdt); bt += performance.now() - b0; }
+        carryAim();
         game.update(tdt, input, cam, view);
         ctx.host.lights.update(tdt, ctx.time);
         camStep(tdt, demo?.active ? fx.demoPos : null, attract?.active && !(demo?.active && fx.demoPos) && !D.showing ? fx.attractPos : null, true);   // (after the tick, as a frame's follow comes after its update: the next tick's record reads it)

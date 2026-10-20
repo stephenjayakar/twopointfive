@@ -79,8 +79,8 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/digin.ts DIGIN_SHUT': 'TALLY · counted in digin.ts; no read in src/game, src/scene or src/anim',
   'src/game/digin.ts DIGIN_STATS': 'TALLY · counted in digin.ts (795 takes it to count into); zeroed by the reset (906); read only by digInSummary (912-913)',
   'src/game/doorblast.ts DOORBLAST_LOG': 'TALLY · counted in doorblast.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
-  'src/game/doorblast.ts DOORBLAST_STATS': 'TALLY · counted in doorblast.ts (163 picks it or a throwaway to count into); read by its summary (412) and main.ts',
-  'src/game/doorblast.ts DOORSHOT_STATS': 'TALLY · counted in doorblast.ts (leafRound 255, splinter 291-304); read by the log line it writes (305) and by tools/qa/doorshot-check.ts',
+  'src/game/doorblast.ts DOORBLAST_STATS': 'TALLY · counted in doorblast.ts (168 picks it or a throwaway to count into); read by its summary (417) and main.ts',
+  'src/game/doorblast.ts DOORSHOT_STATS': 'TALLY · counted in doorblast.ts (leafRound 260, splinter 296-309); read by the log line it writes (310) and by tools/qa/doorshot-check.ts',
   'src/game/doorway.ts DOORMANNERS_STATS': 'TALLY · counted in doorway.ts; orders.ts:1398/1443-1449/1466 copies and puts back the counts round a trial ask; shown by main.ts — no rule reads a value',
   'src/game/doorway.ts STACK_OWN': 'TALLY · counted in orders.ts (1076/1499/1621/1756); orders.ts:1398-1466 only copies the counts and puts them back round a trial ask (1449 compares two counts of one call to write a count) — no rule reads a value',
   'src/game/doze.ts DOZE_STATS': 'TALLY · counted in doze.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
@@ -272,4 +272,9 @@ export const RAW_WEAK_OK: Record<string, string> = {
   'src/scene/levelData.ts KIT_ADD_LAID': 'kit additions already laid into a level\'s data, at load',
   'src/anim/gltf.ts nvgBits': 'a memo over the character file (static: never written)',
   'src/anim/gltf.ts suitBits': 'a memo over the character file (static: never written)',
+};
+
+/** generators that may be KEPT in the simulation's folders: `file field` → why a snapshot that cannot hold its place does no harm */
+export const GENERATOR_OK: Record<string, string> = {
+  'src/game/director.ts it': 'a showcase beat where it stopped (the Director\'s scripts are generators by design): a show is staged, not a fight — no save is taken with a program mid-way (savestate.ts runNo: `director.blocksSave()`) or put back with a show up (memNo), and a rollback across a running beat is a listed limit (docs/agents/replays.md)',
 };

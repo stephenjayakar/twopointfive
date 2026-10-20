@@ -109,8 +109,11 @@ export const RAIN_FX = {
 };
 
 interface DripPoint { pos: Vec3; fall: number; box: number; }
-/** the drip lines being found again in shares (BLAST_PACE): the walk where it stopped, the statics it is over, the samples left of this frame's share */
-interface DripJob { walk: Generator<void, DripPoint[]>; boxes: number; serial: number; left: number; hold: number; }
+/** the drip lines being found again in shares (BLAST_PACE): the walk where it stopped — the box, its edge and the sample along it, `paid` when that sample's share
+ *  was already taken, and the lines found so far —, the statics it is over, the samples left of this frame's share. PLAIN DATA, not a generator: a walk half done
+ *  is in a rollback snapshot (rollback.ts) and goes on from where the snapshot saw it, which a generator's own place in its code cannot */
+interface DripJob { boxes: number; serial: number; left: number; hold: number; bi: number; ei: number; k: number; paid: boolean; out: DripPoint[]; }
+const dripJob = (boxes: number, serial: number, left: number, hold: number): DripJob => ({ boxes, serial, left, hold, bi: 0, ei: 0, k: 0, paid: false, out: [] });
 interface RainState {
   seed: number; birthAcc: number; dripAcc: number; wasActive: boolean; edges: DripPoint[] | null; edgeBoxes: number; job: DripJob | null; kind?: string | null;
   stats: RainStatsCpu; serial: number;
@@ -261,8 +264,8 @@ const num = (v: unknown, d: number) => typeof v === 'number' && Number.isFinite(
  *  (a solid at least edgeMinFall below the point just outside the edge) — sampled every edgeStep along each edge, 3.5 cm proud of the face and a hair under the top.
  *  Roof rims (the NoPrimary slab included: invisible, but where the water comes off), car roofs / bonnets, the van, the dumpster's lid, the AC units, the lamp heads. */
 function buildDripEdges(g: Game, st: RainState) {
-  const walk = dripWalk(g, { left: Infinity }); let r = walk.next(); while (!r.done) r = walk.next();
-  setDripEdges(st, r.value, g.engine.world.statics.length);
+  const job = dripJob(0, 0, Infinity, 0); dripWalk(g, job);   // (a share with no end: one call is the whole walk)
+  setDripEdges(st, job.out, g.engine.world.statics.length);
 }
 function setDripEdges(st: RainState, out: DripPoint[], boxes: number) {
   st.edges = out; st.edgeBoxes = boxes; st.job = null;
@@ -274,18 +277,19 @@ function setDripEdges(st: RainState, out: DripPoint[], boxes: number) {
 function paceDripEdges(g: Game, st: RainState, now: boolean) {
   const n = g.engine.world.statics.length;
   const serial = g.engine.world.geomSerial;   // (a wall rebuilt in its own slots mid-walk: the count stands, the serial moves — the walk starts over)
-  if (!st.job || st.job.boxes !== n || st.job.serial !== serial) { const job: DripJob = { walk: null!, boxes: n, serial, left: 0, hold: st.edges ? BLAST_PACE.dripHold : 0 }; job.walk = dripWalk(g, job); st.job = job; }
+  if (!st.job || st.job.boxes !== n || st.job.serial !== serial) st.job = dripJob(n, serial, 0, st.edges ? BLAST_PACE.dripHold : 0);
   const job = st.job; if (!now && job.hold-- > 0) return;
   job.left = now ? Infinity : BLAST_PACE.dripSamples;
-  const r = job.walk.next(); if (r.done) setDripEdges(st, r.value, n);
+  if (dripWalk(g, job)) setDripEdges(st, job.out, n);
 }
-/** the walk itself: it stops (yields) whenever `share.left` samples are used up — a sample that gets as far as its ray tests is one, sixteen turned away before them another */
-function* dripWalk(g: Game, share: { left: number }): Generator<void, DripPoint[]> {
+/** the walk itself, from where `job` stands: it stops (false) whenever `job.left` samples are used up — a sample that gets as far as its ray tests is one, sixteen
+ *  turned away before them another — and the next call goes on with that same sample; true = over, `job.out` is every line */
+function dripWalk(g: Game, job: DripJob): boolean {
   roofW = g.weather?.levelRoofs ? g.weather : null;
   const statics = g.engine.world.statics; const col = g.col;
-  const out: DripPoint[] = []; const cand = new Int32Array(24);
+  const out = job.out; const cand = new Int32Array(24);
   const F = RAIN_FX;
-  for (let bi = 0; bi < statics.length; bi++) { const b = statics[bi];
+  for (; job.bi < statics.length; job.bi++, job.ei = 0, job.k = 0, job.paid = false) { const bi = job.bi, b = statics[bi];   // (`paid` let go with the box: one turned away on the way back — its flags written in place since the walk stopped on it — must not leave its share to the next)
     if (b.flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) continue;
     if (b.rot) continue;                                                  // (fully rotated dressing — the bike's tubes: no ledge worth a drip)
     const top = b.c[1] + b.h[1];
@@ -296,15 +300,15 @@ function* dripWalk(g: Game, share: { left: number }): Generator<void, DripPoint[
     const edges: [number, number, number, number, number][] = [   // [alongIsX(1|0), fixed, nX, nZ, halfLen]
       [1, b.h[2], 0, 1, b.h[0]], [1, -b.h[2], 0, -1, b.h[0]], [0, b.h[0], 1, 0, b.h[2]], [0, -b.h[0], -1, 0, b.h[2]],
     ];
-    for (const [alongX, fixed, nx, nz, half] of edges) {
+    for (; job.ei < edges.length; job.ei++, job.k = 0, job.paid = false) { const [alongX, fixed, nx, nz, half] = edges[job.ei];
       const len = 2 * half; const n = Math.max(1, Math.round(len / F.edgeStep));
-      for (let k = 0; k < n; k++) {
+      for (; job.k < n; job.k++) { const k = job.k;
         const u = -half + (k + 0.5) * len / n;
         const lx = alongX ? u : fixed, lz = alongX ? fixed : u;
         const [qx, qz] = toWorld(lx + nx * 0.035, lz + nz * 0.035);          // just outside the edge …
         const [ix, iz] = toWorld(lx - nx * 0.06, lz - nz * 0.06);            // … and just inside it, on the top face
         const out0 = outdoors(qx, qz);
-        if ((share.left -= out0 ? 1 : 1 / 16) < 0) yield;
+        if (job.paid) job.paid = false; else if ((job.left -= out0 ? 1 : 1 / 16) < 0) { job.paid = true; return false; }   // (it stops INSIDE the sample, its share taken: the next call does this one's tests)
         if (!out0) continue;
         // nothing solid AT the drip point (a ledge tucked into a bigger box: no)
         let inside = false;
@@ -320,7 +324,7 @@ function* dripWalk(g: Game, share: { left: number }): Generator<void, DripPoint[
       }
     }
   }
-  return out;
+  return true;
 }
 
 /** the drip points (QA / a debug draw) */
