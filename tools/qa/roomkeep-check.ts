@@ -25,7 +25,7 @@ const { stackRoomProbe } = await import(`${ROOT}/src/game/stackroom.ts`);
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
-const { TEAMPACE } = await import(`${ROOT}/src/game/teampace.ts`);
+const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 
 type V = [number, number, number];
 const WALKED = process.env.RK_JUMP ? 0 : 30;   // frames Sam's leaving reads as a walk; RK_JUMP=1 = set down outside, as the check first had it
@@ -39,16 +39,13 @@ const levelOfFile = (file: string): any => { const data = parseLevelData(readFil
 const hush = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const shut = (d: any) => { d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; d.quietT = 10; d.locked = false; d.place(); };
 
-interface Res { door: string; kept: string; who: string; on: number; n: number; lon: number; ln: number; kon: number; kn: number; moved: number; freed: number | null; why: string; last: boolean; back: boolean; far: number; vmax: number }
+interface Res { door: string; kept: string; who: string; on: number; n: number; lon: number; ln: number; kon: number; kn: number; moved: number; shoved: number; freed: number | null; why: string; last: boolean; back: boolean; far: number; vmax: number }
 const fails: string[] = [];
 
 /** one case, one arm, on a level stood up afresh (what the squad has been beyond is remembered per game): null = not a case */
 async function play(E: any, di: number, side: 1 | -1, on: boolean): Promise<Res | null> {
   Math.random = seeded(0xba46 + 7919);
   const W: any = await standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) }); const g = W.game;
-  // (the team's slower walk, teampace.ts, is held off: with it the men falling in come by the keeper later in Sam's three seconds, and the 0.4 m he may
-  //  shift for them is the bar — compound-four k_p+ reads 0.5. The keep itself is the same rule at either pace; the pace is teampace-check.ts's)
-  TEAMPACE.on = false;
   g.godMode = true; g.playerInvisible = true;
   const { why: no } = startFromQuery(g, new URLSearchParams(scenarioQuery(E) as string)); if (no) throw new Error(`${E.id}: start refused — ${no}`);
   const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } };
@@ -76,9 +73,9 @@ async function play(E: any, di: number, side: 1 | -1, on: boolean): Promise<Res 
   const near = keepers.find(k => g.fight.roomAt(k[0].char.pos) === room && flat(k[0].char.pos, inside) <= REARWATCH.roomM - 1); if (!near) return null; [m, kd] = near;
   g.teleportPlayer([inside[0], 0, inside[2]]); step(2);
   O.give('fallIn', O.targetAt(g.player.char.pos), 'all');
-  const p0: V = [...m.char.pos] as V, kc = kd.frameCentre as V; let onN = 0, n = 0, moved = 0, vmax = 0;
+  const p0: V = [...m.char.pos] as V, kc = kd.frameCentre as V; let onN = 0, n = 0, moved = 0, vmax = 0, shoved = 0; const s0: V = [...g.player.char.pos] as V;
   const dbg = (tag: string) => { if (VERBOSE) console.log(`    ${on ? 'on' : 'off'} ${tag} ${m.callsign} at (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)}) door (${kc[0].toFixed(1)}, ${kc[2].toFixed(1)}) sam (${g.player.char.pos[0].toFixed(1)}, ${g.player.char.pos[2].toFixed(1)}) · kept ${roomKept(g, m)} · cover ${g.cover.of(m)?.o.id ?? '-'}${g.cover.of(m)?.off ? ' (off)' : ''} · gun ${(wrap(Math.atan2(kc[0] - m.char.pos[0], kc[2] - m.char.pos[2]) - m.char.aimYaw) * 57.3).toFixed(0)}° off it · body ${(wrap(Math.atan2(kc[0] - m.char.pos[0], kc[2] - m.char.pos[2]) - m.char.bodyYaw) * 57.3).toFixed(0)}° · aimAt ${m.script?.aimAt ? `(${m.script.aimAt[0].toFixed(1)}, ${m.script.aimAt[2].toFixed(1)})` : '-'} goal ${m.script?.goal ? 'y' : '-'} speed ${(m.speed ?? 0).toFixed(1)} · ${O.of(m)?.going ?? '-'}${m.muzzleDown ? ' · MUZZLE DOWN' : ''}`); };
-  for (let i = 0; i < STAY * 60; i++) { step(); if (i % 45 === 0) dbg(`stay ${(i / 60).toFixed(1)}`); if (m.state === 'dead') return null; n++; moved = Math.max(moved, flat(m.char.pos, p0));
+  for (let i = 0; i < STAY * 60; i++) { step(); if (i % 45 === 0) dbg(`stay ${(i / 60).toFixed(1)}`); if (m.state === 'dead') return null; n++; moved = Math.max(moved, flat(m.char.pos, p0)); shoved = Math.max(shoved, flat(g.player.char.pos, s0));
     if (Math.abs(wrap(Math.atan2(kc[0] - m.char.pos[0], kc[2] - m.char.pos[2]) - m.char.aimYaw)) < AIM) onN++; for (const x of men) vmax = Math.max(vmax, x.speed ?? 0); }
   g.teleportPlayer([out[0], 0, out[2]]);
   const onDoor = () => Math.abs(wrap(Math.atan2(kc[0] - m.char.pos[0], kc[2] - m.char.pos[2]) - m.char.aimYaw)) < AIM; let lon = 0, ln = 0, kon = 0, kn = 0;
@@ -98,7 +95,7 @@ async function play(E: any, di: number, side: 1 | -1, on: boolean): Promise<Res 
   const far = Math.max(...men.map(x => flat(x.char.pos, g.player.char.pos)));
   const log = (rearWatchLog(g) as string[]).filter(s => s.includes(m.callsign)).slice(-1)[0] ?? '';
   if (VERBOSE) { console.log(`    ${on ? 'on' : 'off'}: rear log ${(rearWatchLog(g) as string[]).slice(-4).join(' / ')}`); console.log(`    out of the room at: ${men.map(x => `${x.callsign} ${exit.has(x) ? exit.get(x)!.toFixed(1) : 'never'} (${flat(x.char.pos, g.player.char.pos).toFixed(1)} m from Sam, ${O.of(x)?.going ?? '-'})`).join(' · ')}`); }
-  return { door: d.def.name, kept: kd.def.name, who: m.callsign, on: onN, n, lon, ln, kon, kn, moved, freed, why: log.replace(/^.*· /, ''), last, back, far, vmax };
+  return { door: d.def.name, kept: kd.def.name, who: m.callsign, on: onN, n, lon, ln, kon, kn, moved, shoved, freed, why: log.replace(/^.*· /, ''), last, back, far, vmax };
 }
 
 async function level(E: any): Promise<void> {
@@ -109,7 +106,12 @@ async function level(E: any): Promise<void> {
     if (!A) continue; judged++; onF += A.on; onN += A.n; lOn += A.lon; lN += A.ln; if (B) { offF += B.on; offN += B.n; lOff += B.lon; lOffN += B.ln; }
     const tag = `${E.id} in by ${A.door}${side > 0 ? '+' : '-'}, ${A.who} on ${A.kept}`, bad: string[] = [];
     if (A.on < NEED * A.n) bad.push(`his gun was on it ${pc(A.on, A.n)} of the three seconds Sam stood in the room`);
-    if (A.moved > 0.4) bad.push(`he walked ${A.moved.toFixed(1)} m off while Sam stood in the room`);
+    // (the bar is for a Sam who STOOD. One a man falling in walked into and shoved is, to the game, a Sam walking — and a keeper in the line of that step gets
+    //  out of his way before he keeps anything (orders.ts aside(): stepping out of Sam's way comes first). Seen with the team's slower walk on, teampace.ts:
+    //  compound-four k_p+, Sam shoved 0.23 m by the man closing on him, the keeper 0.54 m off his spot with his gun still on the door. Then the bar is that
+    //  ONE step: ORDERS.asideOff, the furthest off Sam's line the rule stands a man — a keeper further off his spot than that has walked off, shoved Sam or not)
+    const shove = A.shoved > 0.1 ? ` · Sam was shoved ${A.shoved.toFixed(2)} m by a man falling in, and the keeper stepped ${A.moved.toFixed(2)} m out of his way (one step is ${ORDERS.asideOff} m at most)` : '';
+    if (A.moved > (shove ? ORDERS.asideOff + 0.05 : 0.4)) bad.push(shove ? `he walked ${A.moved.toFixed(2)} m off, more than the one step out of a shoved Sam's way (${ORDERS.asideOff} m)` : `he walked ${A.moved.toFixed(1)} m off while Sam stood in the room`);
     if (A.kn >= 20 && A.kon < NEED * A.kn) bad.push(`with Sam gone and mates still in the room, his gun was on it ${pc(A.kon, A.kn)} of the time he was kept`);
     if (A.freed === null) bad.push(`still kept ${LEAVE} s after Sam left`);
     if (!A.back && A.far > Math.max(NEAR, (B?.far ?? 0) + 1)) bad.push(`the squad was not back with Sam ${LEAVE} s after he left (the furthest man ${A.far.toFixed(1)} m off${B ? `, ${B.far.toFixed(1)} m with the switch off` : ''})`);
@@ -120,7 +122,7 @@ async function level(E: any): Promise<void> {
     if (!A.last && !farOff) bad.push('he was not the last man out of the room');
     if (A.vmax > PACE.max + 0.05) bad.push(`a man's legs reached ${A.vmax.toFixed(2)} m/s (the team's pace is ${PACE.max})`);
     for (const b of bad) { fails.push(`${tag}: ${b}`); console.log(`  FAIL ${tag}: ${b}`); }
-    if (!bad.length || VERBOSE) console.log(`  ${bad.length ? '    ' : 'PASS'} ${tag}: Sam in the room: gun on it ${pc(A.on, A.n)}${B ? ` (switch off ${pc(B.on, B.n)})` : ''} · Sam gone, mates still in it: ${pc(A.lon, A.ln)}${B ? ` (switch off ${pc(B.lon, B.ln)})` : ''} · let go ${A.freed === null ? 'never' : A.freed.toFixed(1) + ' s after Sam left'} (${A.why}), ${farOff ? 'in at the back of the file' : 'last out'}, back with Sam`);
+    if (!bad.length || VERBOSE) console.log(`  ${bad.length ? '    ' : 'PASS'} ${tag}: Sam in the room: gun on it ${pc(A.on, A.n)}${B ? ` (switch off ${pc(B.on, B.n)})` : ''} · Sam gone, mates still in it: ${pc(A.lon, A.ln)}${B ? ` (switch off ${pc(B.lon, B.ln)})` : ''} · let go ${A.freed === null ? 'never' : A.freed.toFixed(1) + ' s after Sam left'} (${A.why}), ${farOff ? 'in at the back of the file' : 'last out'}, back with Sam${shove}`);
   }
   console.log(`${E.id}: ${judged} rooms with another door held, of ${tried} door faces tried · gun on the kept door while Sam stood in the room ${pc(onF, onN)}${OFF ? ' (SWITCH OFF)' : ` (switch off ${pc(offF, offN)})`} · after Sam left, while a mate was still in the room (${WINDOW} s at most) ${pc(lOn, lN)}${OFF ? '' : ` (switch off ${pc(lOff, lOffN)})`}`);
   if (!judged) { fails.push(`${E.id}: no case`); console.log(`  FAIL ${E.id}: no room with another door held was found`); }
