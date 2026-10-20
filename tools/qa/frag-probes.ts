@@ -187,7 +187,9 @@ export const fragReact = guarded(async () => {
   // a defender's grenade came through the door they were stacked on, landed behind the four and rolled two metres on) and two more rolls past the same stack. The rule is set here on
   // either stand (FLEEWISE_BREAK=1 leaves it off: the lines are asked all the same and must fail).
   { const BREAK = process.env.FLEEWISE_BREAK === '1';
-    const BT: any = await import('./bang-tally.ts'); const { killGuard } = await import(`${ROOT}/src/game/combat.ts`); const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
+    const BT: any = await import('./bang-tally.ts'); const { killGuard } = await import(`${ROOT}/src/game/combat.ts`); const { PACE } = await import(`${ROOT}/src/game/guards.ts`); const { TEAMPACE } = await import(`${ROOT}/src/game/teampace.ts`);
+    /** the pace a teammate gets off a grenade at: the squad's cap — or, with teampace.ts on, the flee's own run */
+    const fleeTop = () => (TEAMPACE.on && TEAMPACE.own ? Math.max(PACE.max, FRAG.runSpeed) : PACE.max);
     const hush = async <T>(fn: () => T | Promise<T>): Promise<T> => { const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
     /** THE STAGING IS READ OFF THE LEVEL, never written here (the depot's floor is being rebuilt; the tape's own door, `cc`, is not on the new one): the first
      *  held-room door of DOORS the floor has, the stack on the marks the game deals for it, and every roll laid out from the door's own centre, its face (ACROSS:
@@ -263,13 +265,13 @@ export const fragReact = guarded(async () => {
         const ahead = (i: number) => { let m = 1.5; for (let j = i; j < gren.length; j++) m = Math.min(m, dist(t.trail[i], gren[j])); return m; };
         let legFrom = -1, legNear = 0; for (let i = 0; i < t.trail.length; i++) if (t.leg[i]) { const a = ahead(i); if (legFrom < 0) legFrom = a; legNear = Math.min(legNear, a - legFrom); }
         const was = t.trail[Math.max(0, t.trail.length - 61)] ?? t.start, still = dist(was, end) < 0.25, open = d1 < FRAG.lethalM && still ? legOpen(end, T.filter(o => o !== t).map(o => o.trail[o.trail.length - 1] ?? o.start)) : null;
-        if (d1 < d0 - 0.15) nearer++; if (near < d0 - 0.5 || legNear < -0.5) passed++; const back = t.goals.some((q, i) => i > 0 && dist(q, rest) < dist(t.goals[i - 1], rest) - 0.3); if (t.mid > 1 || back || t.goals.length - t.mid > 3) redealt++; mostMid = Math.max(mostMid, t.mid); if (open) stood++; if (t.fast > PACE.max + 0.25) sprint++;
+        if (d1 < d0 - 0.15) nearer++; if (near < d0 - 0.5 || legNear < -0.5) passed++; const back = t.goals.some((q, i) => i > 0 && dist(q, rest) < dist(t.goals[i - 1], rest) - 0.3); if (t.mid > 1 || back || t.goals.length - t.mid > 3) redealt++; mostMid = Math.max(mostMid, t.mid); if (open) stood++; if (t.fast > fleeTop() + 0.25) sprint++;
         worstEnd = Math.min(worstEnd, d1 - d0); worstPass = Math.min(worstPass, near - d0, legNear); mostGoals = Math.max(mostGoals, t.goals.length);
         rows.push(`${t.m.callsign} ${f1(d0)} → ${f1(d1)} m (nearest ${f1(near)}, ${t.goals.length} goal${t.goals.length === 1 ? '' : 's'}${process.env.FLEE_GOALS === '1' ? ' ' + t.goals.map(q => at(q) + ' ' + f1(dist(q, rest))).join(' > ') : ''}${open ? `, STOOD at ${at(end)} with a leg open to ${at(open)}` : ''})`); }
       out.push(`${name} (door ${door.def.name} at ${at(c)}, the stack ${side > 0 ? 'before' : 'behind'} its face, thrown from ${at(from)}): rolled ${f1(touch ? dist(touch, rest) : 0)} m to ${at(rest)} · ${rows.join(' · ')}`);
     }
     const detail = out.join('\n    ');
-    F.verdict(staged === ROLLS.length && fled >= 2 * staged && rolled >= 0.6 && sprint === 0, `(g) CONTROL (the staging and the pace, not the rule: holds under FLEEWISE_BREAK too) — the depot's stack of four, a grenade that rolls on behind it: men get off it at the squad's pace${BREAK ? ' (FLEEWISE_BREAK: the rule left off)' : ''}`, `${staged}/${ROLLS.length} staged · ${fled} men dealt legs · shortest roll after its first touch ${f1(rolled)} m · ${sprint} over PACE.max ${PACE.max}\n    ${detail}`);
+    F.verdict(staged === ROLLS.length && fled >= 2 * staged && rolled >= 0.6 && sprint === 0, `(g) CONTROL (the staging and the pace, not the rule: holds under FLEEWISE_BREAK too) — the depot's stack of four, a grenade that rolls on behind it: men get off it at the squad's pace${BREAK ? ' (FLEEWISE_BREAK: the rule left off)' : ''}`, `${staged}/${ROLLS.length} staged · ${fled} men dealt legs · shortest roll after its first touch ${f1(rolled)} m · ${sprint} over the pace ${fleeTop()}\n    ${detail}`);
     F.verdict(staged > 0 && nearer === 0, '(h) CONTROL (it held in these stagings before the rule: holds under FLEEWISE_BREAK too; (i) is the line that asks about the WAY) — nobody ends nearer where it rests than he began', `${nearer} did (worst end − start ${f2(worstEnd)} m; 0.15 m of slack)`);
     F.verdict(staged > 0 && passed === 0, '(i) no leg passes nearer the rest point than he started, nor nearer the floor it has yet to roll over', `${passed} did (worst ${f2(worstPass)} m against his own start; 0.5 m of slack: a body's width and the steering round a mate)`);
     F.verdict(staged > 0 && redealt === 0, '(j) nobody is turned about: at most one new goal while he is on a leg, every goal farther from where it rests than his last', `${redealt} were (most goals ${mostGoals}, most dealt mid-leg ${mostMid}; a goal past his second is one dealt on ARRIVAL at the last with the fuse still running — a straight leg at a time round a corner, three at most)`);
@@ -391,7 +393,9 @@ export const fragMates = guarded(async () => {
     // the depot, a frag ordered at (7.5, 14.5) with the team coming after Sam: a man ducked to a corner 0.82 m from a mate who was down behind cover on fall in; the mate's own order walked him off his spot and into its line
     if (P.harnessProfile() !== 'shipped') F.verdict(true, '(b5) the depot throw: NOT ASKED on this stand (the team does not come after Sam from the start here, and nobody is moved either way)', 'asked under TPS_PROFILE=shipped');
     else { let bad = 0; const rows: string[] = [];
-      for (const wait of [50, 60]) { const r = await fly('depot-four', (g, S, ours) => { g.teleportPlayer([3.5, 0, 10.5]); S.step(wait); return ours.find((x: any) => x.callsign === 'Blue One'); }, [2.71, 1.14, 15.40], [7.37, -0.20, -1.38]); bad += r.rep ? r.bad.length : 1; rows.push(`${f2(wait / 60)} s after Sam moved: ${r.text}`); }
+      // (the two moments are places on the walk the claim's run recorded — the orders' own pace; teampace.ts's slower walk is held off for them)
+      const { TEAMPACE } = await import(`${ROOT}/src/game/teampace.ts`); const pace0 = TEAMPACE.on;
+      for (const wait of [50, 60]) { const r = await fly('depot-four', (g, S, ours) => { TEAMPACE.on = false; g.teleportPlayer([3.5, 0, 10.5]); S.step(wait); return ours.find((x: any) => x.callsign === 'Blue One'); }, [2.71, 1.14, 15.40], [7.37, -0.20, -1.38]); TEAMPACE.on = pace0; bad += r.rep ? r.bad.length : 1; rows.push(`${f2(wait / 60)} s after Sam moved: ${r.text}`); }
       F.verdict(bad === 0, '(b5) the depot throw, at two moments of the team\'s walk: nobody of ours is killed or wounded (their god mode off)', rows.join('\n    ')); }
   }
   // ───────────── (c) a recording from before the keys replays with them off ─────────────
@@ -712,7 +716,7 @@ export const fragFleeDoor = guarded(async () => {
   const BREAK = process.env.FLEEDOOR_BREAK === '1';
   const F = family(`frag-fleedoor: caught by a grenade with no cover, a man leaves by a doorway that already stands open${BREAK ? ' (FLEEDOOR_BREAK: the rule left off)' : ''}`);
   const FR: any = await import(`${ROOT}/src/game/frag.ts`); const J: any = await import(`${ROOT}/src/game/journal.ts`); const BT: any = await import('./bang-tally.ts');
-  const { killGuard } = await import(`${ROOT}/src/game/combat.ts`); const { PACE } = await import(`${ROOT}/src/game/guards.ts`); const { fragFlee, fleeSpot, fleeByDoor } = FR;
+  const { killGuard } = await import(`${ROOT}/src/game/combat.ts`); const { PACE } = await import(`${ROOT}/src/game/guards.ts`); const { TEAMPACE } = await import(`${ROOT}/src/game/teampace.ts`); const { fragFlee, fleeSpot, fleeByDoor } = FR;
   const hush = async <T>(fn: () => T | Promise<T>): Promise<T> => { const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
   const { ROOMFIGHT } = await import(`${ROOT}/src/game/roomfight.ts`); const rally0 = ROOMFIGHT.rally;   // (the staging helper puts the rally off: put back at the end)
   try {
@@ -724,7 +728,8 @@ export const fragFleeDoor = guarded(async () => {
   const open = (d: any, side: number) => { d.latched = false; d.locked = false; d.angle = 1.5 * side; d.vel = 0; d.quietT = -30; };   // (swung to the grenade's side where the leaf is free to: the harder room to leave)
   const shut = (d: any) => { d.angle = 0; d.vel = 0; d.latched = true; };
   const put = (x: any, p: number[]) => { x.char.pos = [p[0], 0, p[2]]; x.char.vel = [0, 0, 0]; x.path = []; x.pathGoal = null; x.speed = 0; x.lastPos = [p[0], 0, p[2]]; };
-  const legOf = () => (PACE.on ? Math.min(FRAG.runSpeed, PACE.max) : FRAG.runSpeed), accOf = () => (PACE.on ? PACE.accel : Infinity);
+  const legOf = () => (PACE.on && !(TEAMPACE.on && TEAMPACE.own) ? Math.min(FRAG.runSpeed, PACE.max) : FRAG.runSpeed),   // (teampace.ts on: a teammate runs from a blast)
+    accOf = () => (PACE.on ? PACE.accel : Infinity);
   const lineTo = (g: any, G: number[], p: number[]) => exposedTo(g, [G[0], G[1] + FRAG.lift, G[2]], p, [p[0], 1.15, p[2]]);
   /** the scenario stood up, its defenders out of it but the farthest (the grenade is his), the four where the game put them */
   const up = async () => { const S: any = await hush(() => BT.stage('floodlit-four', 5)); const g = S.g;

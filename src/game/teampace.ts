@@ -76,6 +76,8 @@ const leave = new SideMap<Guard, Leave>('teampace.leave');
 const ran = new SideMap<Guard, { t: number; why: RunWhy }>('teampace.ran');
 /** a run to cover as last asked: when, for which mark, the answer */
 const dash = new SideMap<Guard, { t: number; x: number; z: number; yes: boolean }>('teampace.dash');
+/** the last moment a man had a reason to run, whatever his legs were doing (the checks' question: was that speed a run for a reason) */
+const reasonT = new SideMap<Guard, number>('teampace.reasonT');
 /** a leave given for 'this frame' lasts this long (s): past the next step at any frame rate the page runs */
 const FRAME = 0.1;
 
@@ -113,13 +115,17 @@ export function teamCap(g: Game, gd: Guard): number {
 function runWhy(g: Game, gd: Guard): RunWhy | null { if (fragRunning(g, gd)) return blastRun(g, gd) ? 'blast' : null; const L = live(g, gd); return L && isRun(L.why) ? L.why : null; }
 /** ONCE A FRAME A MAN, after his legs have moved (squad.ts): a run under a reason is written down — once a run, and its seconds */
 export function teamRan(g: Game, gd: Guard): void {
-  if (!teamSlow(g, gd) || gd.speed < TEAMPACE.runAt) return;
+  if (!teamSlow(g, gd)) return;
   const why = runWhy(g, gd); if (!why) return;
+  reasonT.set(gd, g.time);
+  if (gd.speed < TEAMPACE.runAt) return;
   const was = ran.get(gd), t = g.time;
   if (!was || t - was.t > TEAMPACE.gap) { TEAMPACE_STATS[why]++; TEAMPACE_DEBUG.log?.(`${t.toFixed(2)} ${gd.callsign} runs: ${why} (${gd.speed.toFixed(1)} m/s)`); }
   else if (t > was.t) TEAMPACE_STATS.secs += t - was.t;
   ran.set(gd, { t, why });
 }
+/** seconds since he last had a reason to run (Infinity: never, or the rule is off) — a check that holds the team to its pace asks it of a man going faster */
+export function teamRunAgo(g: Game, gd: Guard): number { const t = reasonT.get(gd); return t === undefined || t > g.time ? Infinity : g.time - t; }
 /** × his card for a leg asked at `speed` (guards.ts teamLegs): at a run a card weighs as it does on the player's sprint — part of it. Null = as it was */
 export function teamRunLegs(g: Game, gd: Guard, speed: number): number | null {
   if (speed < TEAMPACE.runAt || !teamSlow(g, gd)) return null;

@@ -39,6 +39,9 @@
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { spawnUnit, PACE } = await import(`${ROOT}/src/game/guards.ts`);
+const { teamRunAgo } = await import(`${ROOT}/src/game/teampace.ts`);
+/** a man with a reason to run (teampace.ts: a grenade, cover, the player's own sprint), or just out of one, is not held to the walking pace */
+const running = (g: any, gd: any) => teamRunAgo(g, gd) < 1.5;
 const { ROOMFIGHT } = await import(`${ROOT}/src/game/roomfight.ts`);
 const CLM: any = await import(`${ROOT}/src/game/clearline.ts`);
 const CLEARLINE = CLM.CLEARLINE;
@@ -113,7 +116,7 @@ async function meet(o: Setup) {
       const inNow = [c.muzzle, sh].some(f => g.fight.friendInLine(f, to, men[0].gd) === 'player'), inStill = [c.muzzle, sh].some(f => g.fight.friendInLine(f, to, men[0].gd, true) === 'player');
       if (inNow) { samOff = [Math.min(samOff[0], off), Math.max(samOff[1], off)]; if (inStill) lane.body++; else lane.edge++; } }
     if (foe.state === 'dead' && foeDown < 0) foeDown = g.time - t0;
-    for (const m of men) { const c = m.gd.char, v = Math.hypot(c.vel[0], c.vel[2]); m.maxV = Math.max(m.maxV, v); m.walked += flat(c.pos, m.last); m.last = [c.pos[0], 0, c.pos[2]];
+    for (const m of men) { const c = m.gd.char, v = Math.hypot(c.vel[0], c.vel[2]); if (!running(g, m.gd)) m.maxV = Math.max(m.maxV, v); m.walked += flat(c.pos, m.last); m.last = [c.pos[0], 0, c.pos[2]];
       // stood upright and still with his gun down in the living man's plain sight, a friend masking him: the thing the rule is there to end
       if (foe.state !== 'dead' && g.time - t0 > 1 && v < 0.3 && m.gd.muzzleDown && !(c.anim.crouchTarget > 0.5) && !g.col.segmentBlocked(foe.char.bones.head ?? [foe.char.pos[0], 1.6, foe.char.pos[2]], [c.pos[0], 1.1, c.pos[2]])) m.idle += DT; }
   } };
@@ -135,7 +138,7 @@ async function meet(o: Setup) {
 /** the two things every on-case owes: no round inside a friend's lane, nobody over the team's pace */
 function safe(verdict: Verdict, runs: Awaited<ReturnType<typeof meet>>[]) {
   let pass = Infinity, who = '', v = 0, rounds = 0; for (const R of runs) { if (R.pass < pass) { pass = R.pass; who = R.passWho; } for (const m of R.men) { v = Math.max(v, m.maxV); rounds += m.rounds; } }
-  verdict(pass > 0 && v <= PACE.max + 0.05, `no teammate's round inside a friend's lane, and nobody faster than the team's walking pace (${PACE.max} m/s)`,
+  verdict(pass > 0 && v <= PACE.max + 0.05, `no teammate's round inside a friend's lane, and nobody faster than the team's walking pace (${PACE.max} m/s) without a reason to run`,
     `${rounds} team rounds over ${runs.length} runs · nearest to a lane: ${Number.isFinite(pass) ? `${f2(pass)} m to spare (${who})` : 'no friend in front of any round'} · fastest ${f2(v)} m/s`);
 }
 // the floor: the break room's open east half (a 6 m line across it), and the corridor (standing room about 1.1 m wide between its walls)
@@ -282,7 +285,7 @@ async function entry(o: { seed?: number; knobs?: Record<string, unknown>; sam: n
     if (live && !(op.phase in at)) at[op.phase] = t;
     if (op && !live && !('end' in at)) at.end = t;
     if (live && !foe && op.phase === o.foeAt) { foe = spawn('hostile', o.foe, men[0].char.pos, 'Tango 1'); foe.god = true; foe.state = 'alert'; foe.awareness = 1; foe.lastKnown = [men[0].char.pos[0], 0, men[0].char.pos[2]]; g.fight.hotT = g.time; at.foe = t; }
-    for (const m of men) { maxV = Math.max(maxV, Math.hypot(m.char.vel[0], m.char.vel[2]));
+    for (const m of men) { if (!running(g, m)) maxV = Math.max(maxV, Math.hypot(m.char.vel[0], m.char.vel[2]));
       if (!live) continue;
       if (op.crossed.has(m) && !crossed.has(m)) crossed.set(m, t);
       // on his point: the door tools say so — or (set and taken back inside one tick: sent straight on) his entry assignment has been replaced
@@ -317,7 +320,7 @@ export const lineoffireEntry = guarded(async () => {
     const P1 = [], P0: any[] = []; for (const seed of SEEDS) { P1.push(await meet({ seed, on: true, T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe })); P0.push(await meet({ seed, on: true, T: [ROOM.T], sam: ROOM.sam, foe: ROOM.foe, knobs: { inEntry: false } })); }
     F.verdict(P1.every((R, i) => R.cueAt() >= 0 && Math.abs(R.cueAt() - P0[i].cueAt()) < 1e-6 && Math.abs(R.foeDown - P0[i].foeDown) < 1e-6 && R.stats.steps === P0[i].stats.steps), 'a man planted on a hold order with Sam in his line: the same word, the same step, the man down at the same moment either way', `said at ${P1.map(R => f2(R.cueAt())).join(' ')} / ${P0.map(R => f2(R.cueAt())).join(' ')} s (shipped / inEntry off) · man down ${P1.map(R => f2(R.foeDown)).join(' ')} / ${P0.map(R => f2(R.foeDown)).join(' ')} s`);
     const v = Math.max(...[...ON, ...OFF, ...S1, ...S0].map(R => R.maxV));
-    F.verdict(v <= PACE.max + 0.05, `nobody faster than the team's walking pace (${PACE.max} m/s) in any of it`, `fastest ${f2(v)} m/s over ${ON.length + OFF.length + S1.length + S0.length} staged entries`);
+    F.verdict(v <= PACE.max + 0.05, `nobody faster than the team's walking pace (${PACE.max} m/s) in any of it without a reason to run`, `fastest ${f2(v)} m/s over ${ON.length + OFF.length + S1.length + S0.length} staged entries`);
     safe(F.verdict, [...P1, ...P0]);
   } catch (err) { F.verdict(false, 'the probe ran', err instanceof Error ? (err.stack ?? err.message) : String(err)); }
   return F.done();
