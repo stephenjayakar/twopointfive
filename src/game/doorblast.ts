@@ -65,11 +65,14 @@ export const DOORBLAST_STATS = { blasts: 0, torn: 0, landed: 0, back: 0, nudged:
 export const DOORBLAST_LOG: string[] = [];
 const note = (g: Game, s: string) => { DOORBLAST_LOG.push(`${g.time.toFixed(2)}s ${s}`); if (DOORBLAST_LOG.length > 200) DOORBLAST_LOG.shift(); };
 
-/** GUNFIRE SPLINTERS A WOODEN LEAF APART (the maintainer, 10-19: 'doors should splinter apart on sustained gunfire (at least no slower than drywall)').
+/** GUNFIRE SPLINTERS A WOODEN LEAF APART (the maintainer, 10-19: 'doors should splinter apart on sustained gunfire (at least no slower than drywall)';
+ *  10-20, having played it with the destruction scale at its top, where a leaf went in three rounds: 'it should take like 2x the rounds', then, shown
+ *  that the scale the page opens on already asks six: 'let's just go back to 6 then, 12 seems like too much' — so `toll` below is 1, drywall's own count).
  *  THE COUNT is the wall engine's own: wallbreak.ts WallBreak.round hands every round that met a leaf to `leafRound` with the weight a wall's cell would
  *  have taken for it (a rifle round 1 at chaos 0.5, a pistol round WALLS.pistolK of that; of a shotgun's pellets the ones the walls are handed), and the
- *  leaf stands `leafTough()` of it — plasterboard's own number, or wood's if that were ever less — ONE count for the whole leaf, wherever on it and on
- *  whichever face the rounds land, so a door never asks for more rounds than the same aim at drywall, and gives whole where drywall keeps its sill. A
+ *  leaf stands `leafTough()` of it — `toll` times plasterboard's own number (or wood's if that were ever less) — ONE count for the whole leaf, wherever
+ *  on it and on whichever face the rounds land, and it gives whole where drywall keeps its sill. The count rides the destruction scale as a wall's does
+ *  (the Tab 'chaos' slider: at its top every round weighs double, on a door and on drywall alike). A
  *  round that goes on through (wallpen.ts) counts as one that stops; so does one fired with the gun pressed through the leaf (combat.ts wallAcrossArm).
  *  Past half its toll the leaf sheds splinters with every round. Then it goes IN PIECES, by the destruction's own gradient: strips along the grain cut
  *  to uneven lengths and thrown the way the round was going as rigid debris (the pool's own cap: what it refuses goes as splinters), each TAGGED WOOD and
@@ -82,6 +85,9 @@ const note = (g: Game, s: string) => { DOORBLAST_LOG.push(`${g.time.toFixed(2)}s
 export const DOORSHOT = {
   /** THE SWITCH (Tab ▸ Player & weapons ▸ Player, doors & props; ?doorshot=0): off = no round ever does more than mark a leaf, as it was */
   on: false,
+  /** how many times plasterboard's toll a wooden leaf stands (1 = drywall's own: six rifle rounds, twelve pistol, at the destruction scale the page
+   *  opens on, and what a recording from before this key replays with; 2 = twelve and twenty-four, tried for a quarter of an hour 10-20 and taken back) */
+  toll: 1,
   /** the pieces: strips across the leaf × lengths up it, how uneven the cuts are (0‥1), and how many go as rigid pieces (past it, splinters) */
   strips: 4, lengths: 3, uneven: 0.6, chunks: 11,
   /** m/s a piece leaves at along the round's way (lo, hi) · across it (±) · up (lo, hi) · its tumble (rad/s) */
@@ -243,8 +249,8 @@ export function tearOff(g: Game, d: Door, from: Vec3, who: number, k = 1): boole
   return true;
 }
 
-/** the rounds' work a leaf stands, in the wall engine's unit (WALLS.tough: rifle rounds into one cell at chaos 0.5): never more than plasterboard's */
-export function leafTough(): number { return Math.min(WALLS.tough.drywall ?? 6, WALLS.tough.wood ?? 9); }
+/** the rounds' work a leaf stands, in the wall engine's unit (WALLS.tough: rifle rounds into one cell at chaos 0.5): DOORSHOT.toll times plasterboard's */
+export function leafTough(): number { return Math.min(WALLS.tough.drywall ?? 6, WALLS.tough.wood ?? 9) * Math.max(0.1, DOORSHOT.toll); }
 
 /** A ROUND MET A LEAF (DOORSHOT): dynamic box `index − 1e6`, at `hitP`, going `dir`, worth `w` of a wall cell's toll — WallBreak.round calls it for every
  *  round that stopped in, or went on through, a door leaf. Nothing with the switch off, for a steel door, for one off its hinges (its box is the rail). */

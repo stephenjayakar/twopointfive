@@ -1,7 +1,7 @@
 // THE ROLLBACK SNAPSHOT: the whole simulation as it stands at a tick, taken in memory and put back — into the same Game (what rollback netcode does every time a
 // prediction was wrong) or into another Game stood up on the same level (a fresh one). Beside the checkpoint (savestate.ts), not instead of it: a checkpoint is a
 // FILE a player keeps (a schema, refused in squad play and mid-action, a restart under it); this is every bit the next tick reads, in any mode, at any moment — men
-// moving, rounds in the air, a leaf swinging, a fuse burning — and nothing a player ever sees. Nothing in the game calls it yet: unused, the build is as it was.
+// moving, rounds in the air, a leaf swinging, a fuse burning. ONE CALLER IN PLAY: a save kept in memory with a team on the floor (savestate.ts SAVETIMELINE).
 //   takeSnapshot(g)            walk everything the Game reaches (and the side tables, module variables and module containers registered in math/side.ts) and keep
 //                              a shallow copy of each array, object, Map, Set and typed array it meets. No schema: a new field on a Guard is in the next snapshot.
 //   takeSnapshot(g, since)     the same, a tick or a few later: only what changed since that snapshot is copied, the rest is shared with it (what a rollback ring
@@ -13,11 +13,12 @@
 //   stateHash(g) / stateDiff(a, b)   every value of the state in one fixed order, to the raw bit, folded into a word / compared with the paths that differ:
 //                              what tools/qa/rollback-check.ts holds 'play goes on exactly as the unbroken run' with.
 // WHAT IS NOT IN IT (and must not be reached for on the way back): the host — `Game.engine` but for its CPU box world and light set, the mixer, the smoke solver
-// (its fields live on the GPU), the session journal — and the character file every man's clips are read from (STATIC: never written; `stateHash(g, true)` walks it
+// (its fields live on the GPU), the session journal, and inside a game object whatever is a `HostOwned` (the GPU light meter's buffers; its last answers and this
+// frame's asks ARE in it) — and the character file every man's clips are read from (STATIC: never written; `stateHash(g, true)` walks it
 // too, so a check can hold that). A function is kept as it is: what a closure has captured cannot be seen from here, so state belongs on objects and in side
 // tables, never in a closure (the check's static pass names the module variables that are not registered).
 // (src/game is one import cycle: nothing below runs at the top level but type imports and math/side.ts, which is outside it.)
-import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys } from '../math/side';
+import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys, HostOwned } from '../math/side';
 import type { Game } from './game';
 
 type Rec = Record<string, unknown>;
@@ -31,7 +32,7 @@ function protoKind(o: object): number {
   const p = Object.getPrototypeOf(o) as object | null;
   let k = PROTO_KIND.get(p);
   if (k === undefined) {
-    k = p === null || p === Object.prototype ? K_OBJ : o instanceof SideMap ? K_SIDEMAP : o instanceof SideSet ? K_SIDESET : o instanceof Map ? K_MAP : o instanceof Set ? K_SET
+    k = p === null || p === Object.prototype ? K_OBJ : o instanceof HostOwned ? K_ATOM : o instanceof SideMap ? K_SIDEMAP : o instanceof SideSet ? K_SIDESET : o instanceof Map ? K_MAP : o instanceof Set ? K_SET
       : o instanceof ArrayBuffer ? K_BUF : o instanceof WeakMap || o instanceof WeakSet ? K_RAWWEAK : Object.prototype.toString.call(o) === '[object Object]' ? K_OBJ : K_ATOM;
     PROTO_KIND.set(p, k);
   }
@@ -40,7 +41,9 @@ function protoKind(o: object): number {
 const isTyped = (o: object): o is Typed => ArrayBuffer.isView(o) && (o as { BYTES_PER_ELEMENT?: number }).BYTES_PER_ELEMENT !== undefined;
 const isObj = (v: unknown): v is object => typeof v === 'object' && v !== null;
 
-/** the Game's fields that are the host's (left exactly as they are, in either game) and the ones that are never written (the character file) */
+/** the Game's fields that are the host's (left exactly as they are, in either game) and the ones that are never written (the character file). The host's own
+ *  INSIDE a game object is a `HostOwned` (math/side.ts): the GPU light meter's buffers and what it last sent (render/probe.ts `Plumbing`) — walked and put back
+ *  like the rest of the meter, a page's next frame copied into a buffer still being mapped and the browser refused the whole frame. */
 const HOST_FIELDS = ['engine', 'audio', 'smoke', 'journal'] as const;
 const STATIC_FIELDS = ['ch'] as const;
 /** where a walk starts: the Game, and the two CPU pieces of the host the simulation reads and writes (the box world its rays are cast in, the light set) */

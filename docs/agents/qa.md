@@ -176,7 +176,7 @@ but synthetic writes still work.
     `Checkpoints.onPutBack` — `src/host/putback.ts`: the books of "what was last sent to the GPU" roll back with the Game while the GPU's buffers do not, so the host
     forgets them (`BoxWorld.forgetSent`, `LightSet.forgetSent`, `CharacterRenderer.forgetSent`, the marks, and `Game.rehand()` for the snow, the wind's map and the dust grid,
     smoke and particles cleared, the TAA history cut, the world cache dropped) — A HAND-KEPT LIST: a new "sent only when changed" book inside the Game's reach needs
-    its line there. (`putback.ts` imports game modules as TYPES only, and `player.ts` imports nothing of `savestate.ts` — `askSave` reads the switch: a value
+    its line there, or is a `HostOwned` no snapshot touches (the GPU light meter's buffers and count book are: `render/probe.ts` `Plumbing`, `docs/agents/replays.md`; its line here only drops the answers still out, `IrradianceProbe.putBack`). (`putback.ts` imports game modules as TYPES only, and `player.ts` imports nothing of `savestate.ts` — `askSave` reads the switch: a value
     import in either was one more door into the game's import cycle and broke a tool whose first import was `digest.ts`.) The page adds the camera cut and drops held keys. Enter once down goes through `loadInStep` (a memory save is put back at the END of that update,
     never under the modules still running; one that will not load is refused in the step and the restart happens, as with a file).
   · **A picture per save**, taken by the page, never by the game: `Checkpoints.picture(info)` is a seam the page fills (main.ts: after the next PRESENTED frame, the canvas

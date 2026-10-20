@@ -1220,42 +1220,54 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the wall charge'. That is a row's data and words only (no tally, no digest: a digest holds a row's kind and time), and a Training lesson's
   'downed how: takedown' step no longer counts a charge's knock. A checkpoint saved before keeps its 'takedown' rows. Check
   `bun run tools/qa/probes.ts debrief-charge` (family `debrief`; the rows' own words, the same on both stands). Text only; nobody has played to it.
-- **Finding your own man, and the camera under the hand: six rows on trial in Options > Game (10-19; `src/host/findme.ts` the table, `src/ui/findme.ts`
-  the HUD's drawing and the rows).** From a play test: a new player kept losing his own man on the screen, in the dark and behind walls, and reached
-  for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new default, so
-  THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, shape: false, turn: 1, behind: false }`
-  on the page and on both stands, and at those starts the build is the build as it was (measured: the same game digest and the same view matrix as
-  the commit before it over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
-  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all six back. THE ROWS: `Aim pan` (a slider, none to today's: it
-  scales the follow camera's own `aimLead` as built and writes it only when the row moves, so the debugger's aim lead slider still works and the
-  later hand wins; at none the look-at is the man himself), `Ring at your feet` (the order menu's gold ring, `planfloor.ts` `py`, drawn at all times; ours stands down while that one is
-  up: `PlanFloor.youOn`), `Outline in the dark` (a rim round his figure, full at a light number of 0.12 and under, gone at 0.3), `Shape through walls` (his figure
-  faint and rimmed through whatever stands between the eye and him, as strong as the share of four points of him the eye cannot see: glass and the
-  `NoPrimary` ceilings do not count), `Turn direction` (Ctrl + mouse turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn, `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl`
-  (two short presses, answered as the second comes up, bring the view round over about a quarter of a second to look where he looked at the tap;
-  a hand's orbit, a pin, a show or a spectated man drops it; `TapTwice`: a press held is never a tap, nor one with another key, a button, the wheel or more than 12 px of orbit in
-  it). THE FIGURE IS THE HUD'S, NOT THE RENDERER'S: his joints (`character.ts bones`) joined by round-ended strokes as wide as the limb in the
-  overlay's SVG, the rim that shape grown 1.5 px with the shape cut out (one SVG filter over a box round him). No shader, no pass, no pipeline, the
-  same on every quality tier; it follows his pose, not his kit or his clothes, and stands a tick behind a picture drawn between ticks. ONE MODEL
-  HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording replays
-  the view it was made with; ring, outline and shape read his position, joints and light number and four sight lines, and write nothing (a run with
-  the three on and asked every frame is the run with them off, digest for digest). Checks: `bun run tools/qa/probes.ts findme` (family `ui`;
-  `FINDME_BREAK=1` = the rows moved and the table not: pan, turn, behind and the picture must fail), the same on both stands;
-  `PORT=… node tools/qa/findme-page.cjs` (the real page on the software adapter: the rows exist, move live, are kept over a reload and reset; a real
-  Ctrl drag, a real held press and a real double tap). THE DOUBLE TAP IS NOT 'THE CAMERA BEHIND HIM' as a third-person game means it, and cannot be while the system cursor is the aim: he faces the
-  cursor's point in the world and the cursor stays where it is on the screen, so as the view turns he turns with it (the check prints it: cursor 5 m
-  to his side, the view lands on where he looked and he has swung 130 degrees). What he was facing ends at the top of the screen; only with the
-  cursor already ahead of him does nothing else move. Truly behind needs the game to own the reticle (the system cursor hidden, ours moved), which
-  is the camera key's own work. NOT DONE: the Controls tab has no line for the double tap. Ctrl is still the camera key, and a double tap is two more presses of it: on Windows Ctrl then W
-  still closes the tab. NEVER SEEN ON A GPU, and nobody has played with any of the six: how faint the rim should be, whether the shape reads as him,
-  how fast the view should come round and whether 250 / 300 ms is the right tap are all first guesses in `FINDME_LOOK`, `BEHIND` and `TAPTWICE`.
+- **Finding your own man, and the camera under the hand: four rows on trial in Options > Game (10-19, cut from six 10-20; `src/host/findme.ts` the
+  table, `src/ui/findme.ts` the ring and the rows).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
+  walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
+  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, turn: 1, behind: false }` on the page and on
+  both stands, and at those starts the build is the build as it was (measured against the build head each time: the same game digest and the same
+  view matrix over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
+  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all four back. THE ROWS: `Aim pan` (a slider, none to today's: it
+  scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
+  menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (Ctrl + mouse
+  turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
+  `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl` (two short presses, answered as the second comes up, bring the view round over about a quarter
+  of a second to look where he looked at the tap; a hand's orbit, a pin, a show or a spectated man drops it; `TapTwice`: a press held is never a tap,
+  nor one with another key, a button, the wheel or more than 12 px of orbit in it). The maintainer played them 10-20: "aim pan zero and turn
+  direction reversed feel good"; whether those become the starts is his to say.
+  THE DOUBLE TAP AND HIS AIM (10-20, from that play: "the mouse's position probably wasn't at 12 oclock, so the player rotates again after the
+  camera rotates"): he faces the cursor's point in the world and the system cursor stays where it is on the screen, so left to that he turned AGAIN
+  as the view came round. Now his aim is CARRIED with the view (`host/findme.ts AimCarry`, `carryStep`; the loop's `carryAim`, right before each tick
+  samples its input): the game's cursor (`Input.mouseX / mouseY`: the aim ray, the reticle, the input record) is put where the point he faced at the
+  tap stands on the screen, the same way out from his feet as he walks, until the hand takes the mouse up again: moved more than `CARRY.letGoPx`
+  (10 px; less is a tremor), a button pressed, or any key off `CARRY_KEYS` (walking, pace, stance, light, goggles, reload and Ctrl hold it; any other
+  key may read the cursor, so it gives the cursor back first). Then the cursor is the real mouse to the pixel before the tick reads it, and he turns
+  to it. A button held since before the tap does not let go (a burst goes on to where it was going). It is input as data: the carried cursor is what
+  the tick's record holds. WHAT THE PLAYER SEES THAT IS NEW: while the carry holds, the system's own pointer is not where he aims (it cannot be
+  moved without pointer lock); the reticle is. Behind the same row, nothing with the row off. Truly owning the reticle (the system cursor hidden,
+  ours moved from 12 o'clock on) is still the camera key's own work.
+  SHELVED 10-20, OUT OF THE BUILD: `Outline in the dark` and `Shape through walls`. They were drawn in the overlay's SVG from his joints, each limb a
+  stroke as wide as a bare limb with a filter's rim round the lot, and were only ever looked at close in on the office level. From a squad level's
+  distance an arm was two pixels wide and the outline was a stick figure's (the loop of his arms a box, his legs a zigzag); the maintainer's shots,
+  and his word: "it should be a proper silhouette. if it's not really possible given our rendering pipeline we can just shelve the idea". The rows,
+  the two keys and the drawing are gone (a kept line that names the keys reads without them). A PROPER ONE IS THE RENDERER'S: the G-buffer's id
+  target (`gbuffer.wgsl`: `owner << 20`, on his skinned mesh and on every box emitted for him) says whose each pixel is, so an outline is the edge of
+  his own pixels in a pass over the composite that exists only while its row is on (`render/fogofwar.ts` is the model), and a shape through walls is
+  him drawn once more, depth test off, into a mask. Not built here.
+  ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording
+  replays the view it was made with; the ring reads his position and writes nothing (a run with it on and asked every frame is the run with it off,
+  digest for digest). Checks: `bun run tools/qa/probes.ts findme` (family `ui`; `FINDME_BREAK=1` = the rows moved and the table not: pan, turn,
+  behind, the carry and the ring must fail), the same on both stands; `PORT=… node tools/qa/findme-page.cjs` (the real page on the software adapter:
+  the rows exist, move live, are kept over a reload and reset; a real Ctrl drag, a real held press, a real double tap with the mouse to one side
+  and a real move of the mouse after it). NOT DONE: the Controls tab has no line for the double tap. Ctrl is still the camera key, and a double tap
+  is two more presses of it: on Windows Ctrl then W still closes the tab. NEVER SEEN ON A GPU by anyone here; how fast the view should come round,
+  whether 250 / 300 ms is the right tap and 10 px the right let-go are first guesses in `BEHIND`, `TAPTWICE` and `CARRY`.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
   notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the
   old start card's look-alike (`ui/menu.ts bootCard`: a grey Start, the notes, the whole controls list, the shader count) and the mission began under
   it the moment the boot was done. NOW that page shows the mission, in a layer of its own (`#brief`, z 30: over the menu and the list, under the
   options and the fatal card): the heading it is listed under, its title, place and one line, the sheet's three cells (Team AS DEPLOYED, Defenders,
-  Approach), its picture (`ui/menuStills.ts`; none came = the words alone), and ONE block, START, which fills by the boot's own status line and is
+  Approach), THE MAP of its level (below; the file did not come = the words alone), and ONE block, START, which fills by the boot's own status line and is
   live when the boot is done. Every word is the mission list's (`briefOfQuery`: the row its address boots; deployed at a size no row has, the row of
   that kind on that level; `?solo` alone = the solo night; NONE for an address that picks its level by `?level=` — the editor's own level plays the
   moment it loads, under no other level's words); the only words that are the screen's own are Start, Enter, Controls and Back. IT STAYS
@@ -1291,6 +1303,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOBODY HAS SEEN IT ON A GPU OR PLAYED IT: the brief itself is plain DOM and was looked at as Chromium lays it out at 960 x 540, 1280 x 720, 1920 x
   1080, 2560 x 1440, 3440 x 1440, 3840 x 2160 and a 700 px wide window; how long the hold feels, the fade into the first frames, and the sound that
   starts on the press are unjudged.
+  THE MAP, NOT THE PICTURE (10-20; the maintainer on the first cut, seen on his own machine: "better but let's show the map vs. the (kinda low res)
+  level art"): beside the words is the mission list's own map sheet of the level (`ui/missions.ts drawMissionMap` → `drawPlan` / `ui/planArt.ts
+  drawSheet`: the place as a model, a 10 m scale, the way in the address asks for marked as the list marks it — `wayOfLink`, one fold for the list
+  and the brief), chosen over the flat plan and the maps of play because it is the one that shows the ground and where the team starts before a run
+  exists. It is the level AS THE PAGE LOADS IT (`scene/look.ts lookLevelFile`: the dressed file under the default look, the plain one under
+  `?look=plain`; the list's own sheet still draws the plain file), so the furniture on the map is the furniture of the run, and the file is the one
+  the boot fetches anyway. It is drawn in the screen's own pixels (the canvas is its shown width × the text size factor × the device's pixel ratio,
+  480 to 2880, redrawn on a resize or a text size step), so it is sharp on a dense screen where the 760 px picture was not; its box is the sheet's
+  40 : 28 at the largest width the column and the window's height leave, so nothing of it is cut in a short window or letterboxed in a narrow one;
+  a file that did not come is asked for again at the next resize; the canvas's pixels are let go when the brief goes. The mission pictures
+  (`ui/menuStills.ts`) are no longer shown here; the cards keep them. KNOWN: a window dragged to a screen of another pixel density with no resize
+  keeps the old density until one; the parsed level stays in the list's plan cache for the page's life, as it does after a visit to the list.
+  CHECKED 10-20: the probe's map line on both stands (the level's file by the stand's look, the way in exact, the sheet's shape, its pixels let
+  go); laid out in a real browser page (no GPU boot) at 1300 x 780 at 2 device pixels, 1920 x 1080 (dressed and `?look=plain`), 3840 x 2160, the
+  largest text step, 1920 x 700, 1400 x 480, 700 x 900, 820 x 600, and with the level's first fetch failed then a resize — the canvas is the shown
+  size in device pixels (or its 480 floor) each time, inked, inside the window, nothing scrolls; `loadbrief-page.cjs` holds the same on the booted
+  page (software adapter, 1024 x 576: night breach, the depot room clear, the counting house and Training 1 PASS with the map of their own level
+  drawn at the shown size; the registry rescue, started early, PASS). The map on the brief has not been seen on a GPU page or by the maintainer yet.
 - **The game has its own text size, and the page no longer zooms** (`src/ui/textsize.ts`, `TEXTSIZE.on`, 10-19; a play test on a 3840 × 2160 screen:
   the words were too small to read, the browser's zoom keys grew the page until the layout broke, and the mission select's names were cut). ONE FACTOR,
   `--tz` on the root (which wears the class `tsz` while the switch is on), drawn as CSS `zoom` on every layer of the page that carries words (`LAYERS`:
