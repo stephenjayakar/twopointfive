@@ -238,15 +238,22 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the tea room's outer wall, the debugger's direct / specular / indirect views: "i think there's some leak on direct and specular and indirect with the wall here", and
   "also happens on this side too". WHAT IT WAS: the radiance cache (`diceIrradiance`, a 1 m lattice) is read a probe spacing along a face's normal — sound for a wall,
   and for a man stood by a wall the room behind it. (1) Indirect: a gather ray that HIT a man read the room off his side that faces the wall; a ray that LEFT a man (or
-  the lip of a boot print: any shading normal that is not a box face's own) for the wall was bounded by `diceIrradianceFrom` as if the plane it left were a wall, and
-  "the cell centre is behind it: step to the cell on its side" stepped the read into the room. (2) Specular: a wet coat's sheen (`composite.wgsl wetCoatSpec`) mirrored
+  the lip of a boot print: a shading normal well off a box face's own) for the wall was bounded by `diceIrradianceFrom` as if the plane it left were a wall, and
+  "the cell centre is behind it: step to the cell on its side" stepped the read into the room. (2) Specular: a coat's sheen (`composite.wgsl wetCoatSpec`) mirrored
   the cache a spacing along the man's normal: the room's lamps on his rims. (3) Direct: nothing found — the reach masks drop the room's lights from the cells outside
   (dumped for the pass: level 0 in every cell beyond the walls), what his direct view shows is the moon; the few warm specks on the men's rims there are NOT explained.
-  THE RULE: `lighting_common.wgsl diceWalledPoint(Ph, n)` — the read point a spacing along n, stopped 5 cm short of the first BOX on that line (men are not asked), then
-  a box ray to the centre of each of its four plan cells and the read keeps all four, else the one column / row / cell it sees. Asked where the hit is a man
-  (`hit.idx == CAPSULE_HIT`: the gather's rays, the gloss / pane / ray-traced reflections' hit shading, the cache's own probes in `hitRadiance`), where the surface a
-  gather ray left is no wall (`bounceLeftNoWall`: a man's pixel; within 2 m, any normal that is not axis-aligned), and for the sheen. Everything else reads as before.
-  The cache's probes take it, so on a GPU the light meter's bounce share by a man at a lit room's wall loses what leaked (a recording carries its readings).
-  CHECK: `bun run tools/qa/probes.ts bouncewalls` (family `render`; `BOUNCEWALLS_BREAK=1` fails 3 of its 5 lines): the shader's rule and every site held by their text,
-  and a TypeScript copy weighed for men stood 0.33 to 0.9 m off every ceiling-high wall of all 50 levels — reads that blend a cell beyond a wall 42.9 % → 0.03 % of
-  1.08 M (the pass's tea room: 44.5 % of skin points and 40.5 % of rays to the wall → 0; a print's lip at the wall's foot 130 of 400 → 0). No shader runs there.
+  THE RULE: `lighting_common.wgsl diceWalledPoint(Ph, n, skip)` — the read point a spacing along n, stopped 5 cm short of the NEAREST box on that line (`occludedTBoxes`
+  answers the first box it meets, the ground before a wall: it is asked again short of each answer; men's proxies are not asked, and `skip` names up to two men whose
+  carried boxes are not either — his own gun must not hide the air from him), then a box ray to the centre of each of its four plan cells: the read keeps all four,
+  else the one column / row / cell it sees, and where it sees none there is NO read (dark, never the room). Asked where the hit is a man or a box he carries
+  (`bounceHitMan`: the gather's rays, the gloss / pane / ray-traced reflections' hit shading, the cache's own probes in `hitRadiance`), where the surface a gather ray
+  left is no wall (`bounceLeftNoWall`: a man's pixel; within 2 m, a normal more than a dozen degrees off every axis), and for the sheen. Everything else reads as before.
+  NOT MENDED: the light meter (`probe.wgsl`) reads the cache AT the man, blended over the cells around him — by a lit room's wall some are the room's (the meter's
+  owner's; untouched here). The firefly cap of the reflections (`Eref`) still reads the old point. COST: five to eight short box rays per asked read — every pixel of a
+  man for the sheen, his gather rays, and near rays off steep snow or yawed boxes; never timed on a GPU.
+  CHECK: `bun run tools/qa/probes.ts bouncewalls` (family `render`; `BOUNCEWALLS_BREAK=1` fails 3 of its 5 lines; both stands): the shader's rule and every site held by
+  their text, and a TypeScript copy (its ray is the nearest box, as the shader's ask-again loop) weighed for men stood 0.33 to 0.9 m off every ceiling-high wall of all
+  50 levels, a shin's down-turned skin among the points — reads that blend a cell beyond a wall 42.8 % → 14 of 1.46 M (the pass's tea room: 44.5 % of skin points and
+  40.5 % of rays to the wall → 0; a print's lip at the wall's foot 165 of 500 → 0, the 100 that lean 0.15 clean either way and not asked). No shader runs there.
+  PAGE: the final text compiled on the software adapter (the pass, squad of four, hard, medium quality: 119 of 119 pipelines, no GPU error on the console). Never seen on a GPU: the picture, the cost, and whether a man's
+  dark side now reads too dark where the walled point sees one cell.

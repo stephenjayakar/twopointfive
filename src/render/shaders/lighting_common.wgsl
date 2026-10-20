@@ -58,37 +58,48 @@ fn diceIrradianceFrom(Ph: vec3f, n: vec3f, P0: vec3f, N0: vec3f) -> vec3f {
 // wall; the plane of his own skin has open ground behind it, so diceIrradianceFrom's "the cell centre is behind the wall: step to the cell on P0's side" stepped a ray
 // that left him for the wall THROUGH the wall. Men standing in the snow at the foot of a lit room's outer wall took the room's bounce on the side that faces the
 // wall, threw it on the snow between them, and a wet coat's sheen (composite.wgsl wetCoatSpec) drew the room's lamps on their rims (playtest 10-20, the pass).
-// The read point for a face (Ph, n) about which nothing is assumed: a spacing along n as ever, stopped a hand's width short of the first BOX on that line (men are not
-// asked: he must not hide the air from himself), and then the trilinear footprint is held to what that point can see — a box ray from it to the centre of each
-// of its four plan cells, and the read keeps all four, else the one column or row, else the one cell, whose centres it sees (a centre inside a wall is not
-// seen: a probe there is dark). Five short box rays; asked only where a man is the face read for or the surface the ray left is no wall (the callers' `hit.idx == CAPSULE_HIT`, bounceLeftNoWall below), which is a few pixels' rays.
-fn diceWalledPoint(Ph: vec3f, n: vec3f) -> vec3f {
+// The read point for a face (Ph, n) about which nothing is assumed: a spacing along n as ever, stopped a hand's width short of the NEAREST box on that line (men's
+// proxies are not asked, and `skip` names up to two men whose carried things are not either: his own gun must not hide the air from him — a man a ray merely hit
+// is not known by number, and his kit may then hold the read by his skin), and then the trilinear footprint is held to what that point can see — a box ray from
+// it to the centre of each of its four plan cells, and the read keeps all four, else the one column or row, else the one cell, whose centres it sees (a centre
+// inside a wall is not seen: a probe there is dark). .w = 0: it sees none of them (the point is inside a box — a proxy through a wall, a door leaf): no read,
+// which is dark, never the room. Five to eight short box rays; asked only where a man is the face read for or the surface the ray left is no wall (bounceHitMan,
+// bounceLeftNoWall below) and for a wet coat's sheen — never for a ray from a wall or a floor to a wall or a floor.
+fn diceWalledPoint(Ph: vec3f, n: vec3f, skip: u32) -> vec4f {
   let sp = c0Spacing();
   let off = n * sp; let len = max(length(off), 1e-3); let d = off / len;
   let Po = Ph + n * 0.02;
   var Q = Ph + off;
-  let t = occludedTBoxes(Po, d, len, 0u, -1.0);
+  var t = occludedTBoxes(Po, d, len, skip, -1.0);   // (near-first, not nearest — the ground under the room is a global, found before the wall: ask again short of each answer)
+  for (var i = 0; i < 3 && t > 1e-3; i++) { let u = occludedTBoxes(Po, d, t - 1e-3, skip, -1.0); if (u < 0.0) { break; } t = u; }
   if (t >= 0.0) { Q = Po + d * max(t - 0.05, 0.0); }
   let home = (floor((Q - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN;
   let nb = home + select(vec3f(-1.0), vec3f(1.0), Q >= home) * sp;
   var seen = 0u;   // bit k = the footprint's plan cell k has a clear line from Q to its centre: 0 its own, 1 the one beside it on x, 2 on z, 3 the diagonal one
   for (var k = 0u; k < 4u; k++) {
     let v = vec3f(select(home.x, nb.x, (k & 1u) != 0u), Q.y, select(home.z, nb.z, (k & 2u) != 0u)) - Q; let l = length(v);
-    if (l < 1e-3 || occludedTBoxes(Q, v / l, l, 0u, -1.0) < 0.0) { seen |= 1u << k; }
+    if (l < 1e-3 || occludedTBoxes(Q, v / l, l, skip, -1.0) < 0.0) { seen |= 1u << k; }
   }
-  var m = 1u;      // the cells the read keeps: all four, else one column, one row, one cell — the first whose cells are all seen (none seen: its own)
+  if (seen == 0u) { return vec4f(Q, 0.0); }
+  var m = 8u;      // the cells the read keeps: all four, else one column, one row, one cell — the first whose cells are all seen
   if (seen == 15u) { m = 15u; } else if ((seen & 5u) == 5u) { m = 5u; } else if ((seen & 3u) == 3u) { m = 3u; } else if ((seen & 10u) == 10u) { m = 10u; } else if ((seen & 12u) == 12u) { m = 12u; }
-  else if ((seen & 1u) != 0u) { m = 1u; } else if ((seen & 2u) != 0u) { m = 2u; } else if ((seen & 4u) != 0u) { m = 4u; } else if ((seen & 8u) != 0u) { m = 8u; }
+  else if ((seen & 1u) != 0u) { m = 1u; } else if ((seen & 2u) != 0u) { m = 2u; } else if ((seen & 4u) != 0u) { m = 4u; }
   if ((m & 10u) == 0u) { Q.x = home.x; } else if ((m & 5u) == 0u) { Q.x = nb.x; }
   if ((m & 12u) == 0u) { Q.z = home.z; } else if ((m & 3u) == 0u) { Q.z = nb.z; }
-  return Q;
+  return vec4f(Q, 1.0);
 }
-fn diceIrradianceWalled(Ph: vec3f, n: vec3f) -> vec3f { return diceIrradiance(diceWalledPoint(Ph, n), n); }
+fn diceIrradianceWalled(Ph: vec3f, n: vec3f, skip: u32) -> vec3f { let q = diceWalledPoint(Ph, n, skip); if (q.w == 0.0) { return vec3f(0.0); } return diceIrradiance(q.xyz, n); }
+/** is the thing a ray hit a man — his proxy, or a box he carries (his gun, his kit: boxes with an owner byte)? */
+fn bounceHitMan(hit: Hit) -> bool { if (hit.idx == CAPSULE_HIT) { return true; } return hit.idx >= 0 && boxOwner(boxGeo[u32(hit.idx)]) != 0u; }
+/** … and whose, where it says (a carried box; a proxy hit does not: 0) — the `skip` for the read off it */
+fn bounceHitOwner(hit: Hit) -> u32 { if (hit.idx == CAPSULE_HIT || hit.idx < 0) { return 0u; } return boxOwner(boxGeo[u32(hit.idx)]); }
 /** Is the surface a gather ray LEFT (shading normal N0; owner != 0: a man's or a thing he carries) one whose plane diceIrradianceFrom must NOT take for a wall?
- *  A man's skin always. And, for a hit within 2 m (farther off that read is the plain one), any normal that is not a box face's own: a yawed box, and ground the
- *  snow's surface has tilted — the lip of a boot print a hand's width from a wall leans at the wall, and "behind its plane" was the open snow, so the read
- *  stepped a cell toward the wall and into the room. Such a ray's read is diceWalledPoint's. */
-fn bounceLeftNoWall(N0: vec3f, owner: u32, t: f32) -> bool { return owner != 0u || (t < 2.0 && max(abs(N0.x), max(abs(N0.y), abs(N0.z))) < 0.999); }
+ *  A man's skin always. And, for a hit within 2 m (the stepping needs the read point within 0.6 m of that plane: near hits, bar a far one the plane happens to
+ *  graze), any normal that is not a box face's own: a yawed box, a dent a decal made, and ground the snow's surface has tilted — the lip of a boot print a hand's
+ *  width from a wall leans at the wall, "behind its plane" was the open snow, and the read stepped a cell toward the wall and into the room. Such a ray's read is
+ *  diceWalledPoint's. 0.98: a normal within a dozen degrees of an axis keeps the old read (weighed: a lip leaning 0.15 at the wall read no cell beyond it, one
+ *  leaning 0.3 did), so the snow's fine grain does not ask the box rays of every pixel near a wall. */
+fn bounceLeftNoWall(N0: vec3f, owner: u32, t: f32) -> bool { return owner != 0u || (t < 2.0 && max(abs(N0.x), max(abs(N0.y), abs(N0.z))) < 0.98); }
 
 // The same mean radiance for a point in SMOKE, refusing to interpolate through a wall: the dice cells are ~1 m and a plume 30 cm on the dark side of a 12 cm
 // wall would otherwise blend straight into the lit cell beyond it (the corridor smoke glowing an exit sign's green from the store room — playtest 08-09).
@@ -124,7 +135,7 @@ fn hitRadiance(hit: Hit, P: vec3f) -> vec3f {
   if ((frame.flags & FLAG_DIRECT) != 0u) { E += directIrradiance(P, hit.n, 0u, frame.secMinE, false); }   // steady lights only (this feeds the cascades / dice); dimmer ones get unshadowed half credit
   if ((frame.flags & FLAG_BOUNCE) != 0u) {
     // sample a full probe spacing off the surface: the trilinear footprint then lies entirely on this side of a thin wall
-    if (BOUNCE_WALLS && hit.idx == CAPSULE_HIT) { E += diceIrradianceWalled(P, hit.n); }   // BOUNCE WALLS: a man's side is no wall (above)
+    if (BOUNCE_WALLS && bounceHitMan(hit)) { E += diceIrradianceWalled(P, hit.n, bounceHitOwner(hit)); }   // BOUNCE WALLS: a man's side is no wall (above; its own lattice spacing on y where the line below takes x's)
     else { E += diceIrradiance(P + hit.n * c0Spacing().x, hit.n); }
   }
   L += albedo * E * (1.0 / 3.14159265);

@@ -287,11 +287,11 @@ export const rainWallsConfig = { on: true };
 /** THE BOUNCE NEVER READ THROUGH A WALL OFF A MAN (shaders/lighting_common.wgsl diceWalledPoint; the maintainer, 10-20, the pass at night, the squad in the snow
  *  against a lit room's outer wall: "i think there's some leak on direct and specular and indirect with the wall here"). The radiance cache is read a probe
  *  spacing along a face's normal, which is sound for a wall and wrong for a man standing by one: the read point is the room behind the wall. The scene prelude's
- *  `const BOUNCE_WALLS`: where a man is the face read for, or the surface a gather ray left, the read point is found by short box rays (stopped short of the
- *  first box along the normal, its footprint held to the cells it can see) — the gather, the gloss / pane / ray-traced reflections' hit shading, the cache's own
- *  probes and a wet coat's sheen. On by default; main.ts lowers it at BOOT for ?nobouncewalls = every read as it was. No game table: nothing in the
- *  update reads it. The cache's own probes take the rule (lighting_common hitRadiance), so on a GPU the light meter's BOUNCE share (probe.wgsl reads the cache)
- *  near a man by a lit room's wall loses what leaked; a recording carries its sensor readings and replays the same. */
+ *  `const BOUNCE_WALLS`: where a man (or a box he carries) is the face read for, or the surface a gather ray left is no wall, the read point is found by short box
+ *  rays (stopped short of the nearest box along the normal, its footprint held to the cells it can see, no read where it sees none) — the gather, the gloss /
+ *  pane / ray-traced reflections' hit shading, the cache's own probes and a coat's sheen. On by default; main.ts lowers it at BOOT for ?nobouncewalls = every
+ *  read as it was. No game table: nothing in the update reads it. NOT mended by it: the light meter (shaders/probe.wgsl) reads the cache AT the man, blended
+ *  over the cells around him, and by a lit room's wall some of those cells are the room's. Its cost was never timed on a GPU. */
 export const bounceWallsConfig = { on: true };
 /** the prelude's consts for it: the switch, and where the air grid (scene/airGrid.ts) sits in boxMat's tail — after the marking and glass tables and BEFORE the cut
  *  table, so this text is the same with the cut switch on or off (the cut swap's boot programs are the ?nocutboxes text character for character: probes.ts cutboxes-pack) */
