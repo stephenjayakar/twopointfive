@@ -65,7 +65,9 @@ export interface BenchStep {
   /** not measured, and why */
   skipped?: string;
 }
-export interface BenchBoot { toCard: number; beforeScript: number; shaders: number; pipelines: [number, number, number]; longestTask: number; longestGap: number; firstFrameCpu: number; firstFrameGpu: number }
+export interface BenchBoot { toCard: number; beforeScript: number; shaders: number; pipelines: [number, number, number]; longestTask: number; longestGap: number; firstFrameCpu: number; firstFrameGpu: number;
+  /** the load's shader text in KB, as compiled and whole (gpu/wgslTrim.ts) · its slowest pipelines [label, ms] · ms the Game took to build — absent in a record from before they were kept */
+  text?: [number, number]; slow?: [string, number][]; game?: number }
 /** one heavy feature flipped alone on the held picture (a row of the F8 sweep): what the flip GIVES BACK a frame, ms — the GPU's time (null = no GPU timings) and the frame's.
  *  Negative = the flip costs. One round: a few tenths either way is noise (the take's own sweep events, read by tools/qa/perf-report.ts, say the same with the spread) */
 export interface BenchFeature { id: string; label: string; gpu: number | null; ms: number }
@@ -113,7 +115,8 @@ export function benchBoot(b: BootSummary | null | undefined): BenchBoot | null {
   if (!b || !b.marks) return null;
   const m = b.marks, s = b.spans ?? {}, n = (v: number | undefined) => typeof v === 'number' && isFinite(v) ? Math.round(v) : 0;
   return { toCard: n(m.interactive), beforeScript: n(s.beforeScript), shaders: n(s.pipelines), pipelines: [b.pipelines?.done ?? 0, b.pipelines?.total ?? 0, b.pipelines?.failed ?? 0],
-    longestTask: n(b.maxLongTask), longestGap: n(b.maxRafGap), firstFrameCpu: n(s.firstFrameCpu), firstFrameGpu: n(s.firstFrameGpu) };
+    longestTask: n(b.maxLongTask), longestGap: n(b.maxRafGap), firstFrameCpu: n(s.firstFrameCpu), firstFrameGpu: n(s.firstFrameGpu),
+    ...(b.shaderText ? { text: [n(b.shaderText.after / 1024), n(b.shaderText.before / 1024)] as [number, number] } : {}), ...(b.slowest?.length ? { slow: b.slowest.slice(0, 3).map(t => [t.label, n(t.ms)] as [string, number]) } : {}), game: n(s.gameCtor) };
 }
 
 /** THE TEXT a friend sends back: plain lines, no markup, under forty of them */
@@ -134,7 +137,11 @@ export function benchReport(r: BenchResult): string {
     if (M.power) bits.push(M.power);
     if (bits.length) row('machine', bits.join(' · ')); }
   if (r.boot) { const b = r.boot;
-    row('load', `${secs(b.toCard)} to the start card · shaders ${secs(b.shaders)} (${b.pipelines[0]} of ${b.pipelines[1]}${b.pipelines[2] ? `, ${b.pipelines[2]} FAILED` : ''}) · longest freeze ${secs(Math.max(b.longestTask, b.longestGap))} · first frame ${secs(b.firstFrameCpu + b.firstFrameGpu)}`); }
+    row('load', `${secs(b.toCard)} to the start card · shaders ${secs(b.shaders)} (${b.pipelines[0]} of ${b.pipelines[1]}${b.pipelines[2] ? `, ${b.pipelines[2]} FAILED` : ''}) · longest freeze ${secs(Math.max(b.longestTask, b.longestGap))} · first frame ${secs(b.firstFrameCpu + b.firstFrameGpu)}`);
+    // what the shader seconds are made of, for a machine nobody here can sit at: the text handed to the compiler, the pipelines that came back last, the Game's own build
+    if (b.text || b.slow) row('', [b.text ? `shader text ${(b.text[0] / 1024).toFixed(1)} MB${b.text[1] > b.text[0] ? ` (${(b.text[1] / 1024).toFixed(1)} whole)` : ''}` : '', b.slow?.length ? `last ready: ${b.slow.map(([l, ms]) => `${l} ${secs(ms)}`).join(', ')}` : '', b.game ? `game built in ${secs(b.game)}` : ''].filter(Boolean).join(' · '));
+    // every scene is a load of the page: the first compiles cold, the later ones show what the browser kept
+    { const later = (r.scenes ?? []).filter(s => s.boot); if (later.length > 1) row('loads', later.map(s => `${s.id} ${secs(s.boot!.toCard)} (shaders ${secs(s.boot!.shaders)})`).join(' · ')); } }
   L.push('');
   const cols = (a: string, q: string, b: string, c: string, d: string, e: string, f: string) => `${a.padEnd(22)}${q.padEnd(22)}${b.padEnd(11)}${c.padStart(5)}  ${d.padEnd(18)}${e.padEnd(8)}${f}`.trimEnd();
   L.push(cols('', 'quality', 'drawn at', 'fps', 'frame ms (95 %)', 'GPU ms', 'page ms'));

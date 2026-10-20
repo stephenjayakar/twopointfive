@@ -56,7 +56,7 @@ import { Input } from '../game/input';
 import type { Game } from '../game/game';
 import type { LoopCtx } from '../host/loop';
 import type { Tween, TweenCam } from '../host/tween';
-import { FINDME } from '../host/findme';
+import { ctrlTurn as playTurn } from '../host/findme';
 import * as J from '../game/journal';
 import * as K from '../game/knobs';
 import * as Kt from '../game/kit';
@@ -96,9 +96,9 @@ export function paceFrame(owed: number, wall: number, speed: number, f: number, 
  *  on from where the frame before left it and never jumps ahead: it reaches a step as the next one runs, whatever the two steps' lengths (on a tape of uneven
  *  steps — one from before the fixed step — a step's movement is so shown over the NEXT step's length: unbroken, a little off the pace). */
 export function slowBlend(owed: number, next: number): number { const a = next > 0 && !SLOMO_BREAK ? owed / next : 1; return a >= 1 ? 1 - 1e-6 : a > 0 ? a : 0; }
-/** THE VIEW'S TURN FOR `dx` PIXELS OF THE MOUSE UNDER CTRL (rad): what the same hand does in play — host/loop.ts's 0.006 a pixel, and the way round the viewer
- *  picked in Options > Game, 'Turn direction' (host/findme.ts FINDME.turn). The viewer's own setting, not the recording's: a tape's view is the tape's. */
-export function ctrlTurn(dx: number): number { return dx * 0.006 * (TURN_BREAK ? 1 : FINDME.turn); }
+/** THE VIEW'S TURN FOR `dx` PIXELS OF THE MOUSE UNDER CTRL (rad): what the same hand does in play, by the same function (host/findme.ts ctrlTurn: 0.006 a pixel, the way round the viewer
+ *  picked in Options > Game, 'Turn direction'). The viewer's own setting, not the recording's: a tape's view is the tape's. */
+export function ctrlTurn(dx: number): number { return TURN_BREAK ? dx * 0.006 : playTurn(dx); }
 /** a check's break word, said as `NAME=1` in front of a headless tool (never on a page: there is no process there) */
 const said = (name: string): boolean => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name] ?? '') === '1'; } catch { return false; } };
 /** `REPLAYTURN_BREAK=1` (tools/qa/replayturn-check.ts's): the replay's Ctrl turn does not ask the row */

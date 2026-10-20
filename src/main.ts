@@ -13,7 +13,7 @@ import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI 
 import { START_PAGE, startPage, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, pipelineProgress } from './gpu/device';
+import { initGpu, showFatal, pipelineProgress, gpuStory } from './gpu/device';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
 import { rigDebugTrace } from './render/rigDebug';
@@ -62,7 +62,7 @@ import { Overlay } from './ui/overlay';
 import { Bubbles } from './ui/bubbles';
 import { SmokeSystem } from './smoke/smoke';
 import { Panel } from './ui/panel';
-import { AudioEngine, SFX_TABLE } from './audio/audio';
+import { AudioEngine, SFX_TABLE, SFX_WARM, warmSfx, warmState } from './audio/audio';
 import { setlistOfQuery, setlistOf, setlistLevel } from './audio/setlist';
 import { MUSIC } from './audio/pieces';
 import { Demo } from './game/demo';
@@ -211,7 +211,8 @@ async function main() {
   const tick = () => document.hidden ? Promise.resolve() : new Promise<void>(r => setTimeout(r, 0));   // (a hidden pane / background tab services timers about once a second and paints nothing anyway: no yield there)
   await tick();
   const tGpu = performance.now();
-  const gpu = await initGpu(canvas);
+  const rigPage = q.has('bench') || q.has(BENCH_RUN_KEY) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
+  const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
   if (kitViewOn) void gpu.device.lost.then(() => kitViewFatal());   // (?kitview: the device's own card — gpu/device.ts — is seen by nobody in there: the start page is told there is no picture)
   boot.span('gpu', tGpu); boot.mark('gpu');
   // GPU errors during the boot: every uncaptured error still prints its own console line (gpu/device.ts); this only COLLECTS them until the pipelines are in, so the boot line
@@ -227,12 +228,15 @@ async function main() {
   // any tier; otherwise they would compile synchronously inside the first frame that wants them).
   const tPipe = performance.now();
   const noSharp = q.has('nosharp') || q.has('noiq') || q.has('notaau');
-  const status = () => card.status(pipelineProgress.total ? `compiling shaders ${pipelineProgress.done} / ${pipelineProgress.total} …` : 'compiling shaders …');
+  const status = () => { gpuStory.stage = `while compiling shaders, ${pipelineProgress.done} of ${pipelineProgress.total}`; card.status(pipelineProgress.total ? `compiling shaders ${pipelineProgress.done} / ${pipelineProgress.total} …` : 'compiling shaders …'); };
   pipelineProgress.onChange = status; status();
   const group = (name: string) => boot.span('pipelines_' + name, tPipe);   // per-group marks: when each module's last pipeline resolved, from the moment the first was requested
   const timed = <T,>(name: string, p: Promise<T> | undefined) => p?.then(v => { group(name); return v; });
   const engineInit = engine.init({ sharp: !noSharp, gbaa: !noSharp || q.has('gbaa'), onGroup: group });
   engineInit.catch(() => { /* awaited below */ });
+  sfxSwitches(); (window as any).__sfxWarm = warmState;   // (the table's own switches first: the warm-up makes the table they name)
+  if (q.has('bench') || q.has(BENCH_RUN_KEY)) SFX_WARM.on = false;   // (a benchmark's frames are measured: its table is made whole at its click, as it was)
+  if (!pageMuted() && !kitViewOn) warmSfx();   // the sounds, a voice at a time in idle moments from here (audio/audio.ts SFX_WARM): the first click no longer makes the whole table
   const tGl = performance.now();   // the mannequin's glTF: fetched + parsed alongside the compiles and the level (it used to wait for both)
   const chP = loadCharacterSet(new URL('assets/ual/AnimationLibrary_Godot_Standard.gltf', document.baseURI).href, castUrlFor(location.search, document.baseURI)).then(c => { boot.span('gltf', tGl); boot.mark('gltf'); return c; });
   chP.catch(() => { /* awaited below */ });
@@ -272,7 +276,7 @@ async function main() {
   await tick(); status();
   await Promise.all([engineInit, smokeInit, timed('meshShadows', game.meshShadows.init()), timed('particles', engine.particles?.init()), timed('probe', probe.init()), timed('skin', engine.gbuffer.prepareSkin(game.chars.jointsFormat))]);
   boot.span('pipelines', tPipe); boot.mark('pipelines');
-  pipelineProgress.onChange = null; boot.freezePipelines();
+  pipelineProgress.onChange = null; boot.freezePipelines(); gpuStory.stage = 'while setting up';
   void cutSwap.build();   // CUT BOXES (render/cutSwap.ts): the second set of the tracing pipelines — the ones with the cut rule — compiled in the background from here, AFTER the boot's count is frozen (they are not the boot's); nothing waits on it, and a calm frame never dispatches it
   card.status(`${pipelineProgress.done} shaders ready — setting up`);
   gpu.device.queue.onSubmittedWorkDone().then(() => gpu.device.removeEventListener('uncapturederror', gpuErr)).catch(() => { /* device lost: its own card */ });   // (errors from work queued so far still arrive; later ones are the frame's, not the boot's)
@@ -819,7 +823,7 @@ async function main() {
     if (START_PAGE.on) { if (openMissionsIfAsked() && !startPage()) openStartPage(); }   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
     else if (missionsBusy() || !loadoutFromQuery(q)) openMissionsIfAsked(); } else if (brief && briefGo) brief.live(() => { audio.start(); input.focusGame(); }); else card.off();   // (?loadout=<mission id>: that mission's loadout screen over the card — ui/loadout.ts; else the mission list if the page was left on it. A screen the visitor opened off the boot card meanwhile stays the one that is up)
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
-  boot.mark('interactive'); boot.span('toInteractive', 0, performance.now());
+  boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
   setTimeout(() => bootLine(), 5000);   // (the line prints at 'GPU ready'; a paused / hidden page that renders nothing still gets it, first-frame columns blank)
   readyResolve();
   boot.stopRafProbe();
@@ -903,14 +907,18 @@ function weatherHourHooks(game: Game, smoke: SmokeSystem) {
   window.__smoke = smoke;
 }
 
+/** the sound table's own switches, from the address: `?oldsounds` · `?newsounds` (audio.ts SFX_TABLE) */
+function sfxSwitches() { const q = new URLSearchParams(location.search); SFX_TABLE.was = q.has('oldsounds'); SFX_TABLE.redone = q.has('newsounds'); }
+/** this page is kept silent: `?mute`, or the automation profile's localStorage twopointsix.testMute=1 */
+function pageMuted(): boolean { return new URLSearchParams(location.search).has('mute') || (() => { try { return localStorage.getItem('twopointsix.testMute') === '1'; } catch { return false; } })(); }
 /** the audio engine, the test-rig mute, and the gesture that starts it */
 function pageAudio(game: Game) {
   const audio = new AudioEngine(game.col); game.audio = audio;   // col includes the door leaves as dynamic occluders
   audio.scoreSet = setlistOfQuery(location.search);   // the level's own music (audio/setlist.ts): which pieces of the score this page's level plays, in their order (as the URL names it; the frame loop says it again from the running game at every new mission)
-  { const q = new URLSearchParams(location.search); SFX_TABLE.was = q.has('oldsounds'); SFX_TABLE.redone = q.has('newsounds'); }   // every sound as it was before they were redone · every redone one, the ones he picked the old of too (audio.ts SFX_TABLE; the mixer only: no rule reads it)
+  sfxSwitches();   // every sound as it was before they were redone · every redone one, the ones he picked the old of too (audio.ts SFX_TABLE; the mixer only: no rule reads it)
   // test-rig mute: '?mute' or localStorage twopointsix.testMute=1 (set once in the automation browser's profile) keeps this page silent —
   // master pinned at 0 and the context never started — so headless runs never come out of the maintainer's speakers
-  const testMute = new URLSearchParams(location.search).has('mute') || (() => { try { return localStorage.getItem('twopointsix.testMute') === '1'; } catch { return false; } })();
+  const testMute = pageMuted();
   if (testMute) { audio.volume.master = 0; const sv = audio.setVolumes.bind(audio); audio.setVolumes = () => { audio.volume.master = 0; sv(); }; audio.start = () => {}; }
   // audio needs a user gesture: any click / key starts it (the start card's button is usually the first)
   window.addEventListener('pointerdown', () => audio.start(), { once: false }); window.addEventListener('keydown', () => audio.start(), { capture: true });   // (capture: Input claims game keys at window-capture and stops them there)

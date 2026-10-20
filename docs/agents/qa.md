@@ -299,3 +299,19 @@ but synthetic writes still work.
   boot's end, and a hook that drives the game (`__runFrames`, `__mouse`, `__click`, a save or a load, `__session.start`) drops it at the loop's next
   step. A tool that loads a mission with none of those and only watches or shoots the page (`__shot`, `__png`, `__demo.start`) is looking at a held
   world under the brief: it presses Enter, or loads the page with `?loadbrief=0`.
+
+- **A lost GPU device: quiet when the page is leaving, one fresh load for a real loss, then a card that says what was lost (2026-10-19, a play test: the game did not come up on an
+  AMD machine; its notes hold "GPU device lost: A valid external Instance reference no longer exists.").** `src/gpu/device.ts GPU_LOST` (ON; `?gpuretry=0` = the red card at once
+  for any loss, as it was). That message is the one Chrome gives a device whose page is going — a load to another address, a closed tab, the Team & kit picture's window dropped
+  (reason `destroyed`) — and it used to put the card up on the page being left and print an error for every kit picture closed: now it is one `console.info`. A real loss on the
+  game page loads the page again (twice a tab at most, never twice inside a minute; never on a benchmark page, a driven page (`navigator.webdriver`) or the kit picture's window),
+  and the card that follows carries the adapter, the browser's reason and where the boot stood (`gpuStory`: "while compiling shaders, 37 of 119"). `tools/qa/gpulost-check.ts`
+  (the rule as a table; `GPULOST_BREAK=1` must fail) and `tools/qa/shaderwait-page.cjs` (the real page, on `?paused` pages that draw nothing: once the browser has TOLD the loss,
+  `device.destroy()` puts no card up and prints no error; under `?gpuretry=0` the old one-line card. On the software adapter the loss is told by the browser's GPU side, minutes
+  late behind a drawn frame: a check that waits a second for it passes "no card" without the loss ever having arrived). NOT FOUND: why the AMD machine failed. Nothing here has been run on one; the other line in its notes ("invalid: resource doesn't exist")
+  is not a string of the page. What would find it: the card's new second line from that machine, its `chrome://gpu` text, and whether the title drew before the card.
+- **How much a page compiles: `node tools/qa/shader-count-page.cjs [--port] [--settle S] [--json f] [address …]`** (2026-10-19). Wraps `createShaderModule`, the four pipeline
+  makers and `setPipeline` before the page's script runs and prints, per page of a walk (default: the title, a mission's kit picture, the mission, a second mission): modules,
+  distinct texts and their size; pipelines asynchronous and synchronous, before and after ready; how many texts and pipelines an EARLIER page of the walk had made character for
+  character (the most a browser's shader cache can hand back); which boot pipelines a pass took after ready; the boot line. Exit 1 on a page that did not come ready or printed a
+  GPU error. The counts are the page's; no time it prints is a price on a real machine (a page is three to seven minutes on the software adapter).
