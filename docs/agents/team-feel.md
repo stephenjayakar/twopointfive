@@ -742,7 +742,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `< 0.6`, nobody moving and the men 0.60 m apart; the bar has the 2 cm its two neighbours have. `roomkeep-check.ts` — compound-four k_p+: a man falling
   in walks into Sam and shoves him 0.2 m AT EITHER PACE (0.20 m at the old one, 0.23 m at the new), the game reads a shoved Sam as a walking one, and a
   keeper in the line of that step gets out of his way before he keeps anything (`aside()` comes first): 0.19 m at the old pace, 0.54 m at the new, his gun
-  on the door throughout; the 0.4 m bar is for a Sam who stood, so a shoved one is said and not judged. A man falling in who walks into the player is
+  on the door throughout; the 0.4 m bar is for a Sam who stood, and with a shoved one the bar is the one step out of his way (`ORDERS.asideOff`, 0.95 m). A man falling in who walks into the player is
   the fall-in's own to look at, at either pace. `fireline-check.ts` — every arm reads the same with the rule on, on the page's stand; only a FROZEN stand
   with the walk raised by hand is held off (arms 6 and 11 stand on one nav cell 2 mm from the lane's berth there). NOT SEEN, NOT PLAYED: nothing of this on a GPU —
   a teammate's sprint with his kit on has never been looked at, nor the gun going low into it; nobody has played it; 0.8, the follower's 1.3, the six
