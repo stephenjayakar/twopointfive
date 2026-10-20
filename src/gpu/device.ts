@@ -1,4 +1,5 @@
 // WebGPU device bootstrap + small helpers.
+import { shaderText } from './wgslTrim';
 export interface Gpu {
   device: GPUDevice;
   adapterInfo: string;
@@ -11,7 +12,46 @@ export interface Gpu {
   linearSampler: GPUSampler;
 }
 
-export async function initGpu(canvas: HTMLCanvasElement): Promise<Gpu> {
+// ---- A LOST DEVICE. The browser takes a page's device away in two very different ways. One is the page's own end: a load to another address, a closed tab, the
+// Team & kit picture's window dropped — the device is 'destroyed' (Chrome: 'A valid external Instance reference no longer exists.') and nothing is wrong. The other is
+// a real loss: the driver fell over, the GPU was reset or switched, the GPU process died. The first used to put the red card up on a page that was already leaving
+// (and print an error for every kit picture closed); the second put the same card up and left it there, though a fresh load of the page is all it takes. Now: the
+// first says nothing; the second loads the page again ONCE, and the card goes up — with the adapter, the browser's reason and how far the boot had got on it, so a
+// report of it can be read — for a second loss inside a minute, or for a third in this tab however far apart (a machine that loses the device every load must reach
+// the card, not load for ever). `?gpuretry=0` = the card at once for either, as it was.
+export const GPU_LOST = { on: true, /** a second loss this soon after a retry is the card's */ windowMs: 60_000, /** retries a tab gets before every loss is the card's */ tries: 2, key: 'twopointsix.gpuLost' };
+try { if (new URLSearchParams(location.search).get('gpuretry') === '0') GPU_LOST.on = false; } catch { /* no page (the harness) */ }
+/** what the card says beside the browser's message: the adapter (initGpu), and where the boot stood (main.ts keeps `stage` up to date; '' once the game is up) */
+export const gpuStory = { adapter: '', stage: '' };
+let leaving = false;
+try { addEventListener('pagehide', () => { leaving = true; }); addEventListener('beforeunload', () => { leaving = true; }); addEventListener('pageshow', () => { leaving = false; }); } catch { /* no page */ }   // (pageshow: a page handed back as it was, or a leave that was called off, is not leaving)
+export type LostAct = 'quiet' | 'reload' | 'card';
+/** what a lost device asks for: `reason` as the browser gave it, `leaving` = the page is on its way out, `last` = when this tab last retried (ms, null = never),
+ *  `tries` = how many retries this tab has made */
+export function lostAct(reason: string | undefined, leaving: boolean, last: number | null, now: number, retry: boolean, on = GPU_LOST.on, tries = last === null ? 0 : 1): LostAct {
+  if (!on) return 'card';
+  if (leaving || reason === 'destroyed') return 'quiet';
+  return retry && tries < GPU_LOST.tries && (last === null || now - last >= GPU_LOST.windowMs) ? 'reload' : 'card';
+}
+/** the card's words for a loss: the browser's message, then one line of what this page knows (`retried` = retries this tab made before it) */
+export function lostWords(message: string, reason: string | undefined, retried: number | boolean): string {
+  const n = Number(retried);
+  const more = [gpuStory.adapter, reason ? `reason: ${reason}` : '', gpuStory.stage, n > 1 ? `the page was loaded again ${n} times already` : n ? 'the page was loaded again once already' : ''].filter(Boolean).join(' · ');
+  return `GPU device lost: ${message}${more ? `\n${more}` : ''}`;
+}
+function onLost(info: GPUDeviceLostInfo, retry: boolean) {
+  // the tab's retries so far: 'count:when'
+  let last: number | null = null, tries = 0;
+  try { const [n, t] = (sessionStorage.getItem(GPU_LOST.key) ?? '').split(':').map(Number); if (n > 0 && t > 0) { tries = n; last = t; } } catch { /* no store: no retry is remembered, so none is made */ retry = false; }
+  const act = lostAct(info.reason, leaving, last, Date.now(), retry, GPU_LOST.on, tries);
+  if (act === 'quiet') { console.info(`WebGPU device gone (${info.reason ?? 'no reason given'}): ${info.message}`); return; }
+  console.error('WebGPU device lost:', info.message);
+  if (act === 'reload') { try { sessionStorage.setItem(GPU_LOST.key, `${tries + 1}:${Date.now()}`); location.reload(); return; } catch { /* the card instead */ } }
+  showFatal(GPU_LOST.on ? lostWords(info.message, info.reason, retry ? tries : 0) : 'GPU device lost: ' + info.message);
+}
+
+/** `retry`: a real loss of the device loads the page again once before the card goes up (the game page asks for it; a tool page with work in it does not) */
+export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean } = {}): Promise<Gpu> {
   if (!('gpu' in navigator)) throw new Error('WebGPU not available (navigator.gpu missing). Use a current Chrome/Edge/Safari.');
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) throw new Error('No WebGPU adapter available.');
@@ -31,15 +71,16 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<Gpu> {
       maxColorAttachmentBytesPerSample: lim.maxColorAttachmentBytesPerSample,
     },
   });
-  device.lost.then(info => { console.error('WebGPU device lost:', info.message); showFatal('GPU device lost: ' + info.message); });
+  device.lost.then(info => onLost(info, !!opts.retry));
   device.addEventListener('uncapturederror', (ev) => { console.error('WebGPU error:', (ev as GPUUncapturedErrorEvent).error.message); });
   const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
   const format = navigator.gpu.getPreferredCanvasFormat();
   ctx.configure({ device, format, alphaMode: 'opaque' });
   const info = adapter.info;
+  gpuStory.adapter = `${info.vendor} ${info.architecture} ${info.description}`.trim();
   return {
     device, canvas, ctx, format,
-    adapterInfo: `${info.vendor} ${info.architecture} ${info.description}`.trim(),
+    adapterInfo: gpuStory.adapter,
     adapterFallback: (info as { isFallbackAdapter?: boolean }).isFallbackAdapter === true,
     hasTimestamps: feats.includes('timestamp-query'),
     linearSampler: device.createSampler({ magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'nearest', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge', addressModeW: 'clamp-to-edge' }),
@@ -79,13 +120,15 @@ export function writeWordsIfChanged(device: GPUDevice, buf: GPUBuffer, offset: n
 /** counts pipelines requested / resolved through the helpers below since the last reset — the start card's 'compiling shaders k / N' line and window.__boot read it */
 export const pipelineProgress = {
   total: 0, done: 0, failed: 0,
+  /** per pipeline, ms from the request to the pipeline being ready (all are in flight at once: a time includes the wait behind the others) — the boot line's and the benchmark's 'slowest' */
+  times: [] as { label: string; ms: number }[],
   /** called after every resolution (main.ts repaints the boot card's status line off it) */
   onChange: null as null | ((done: number, total: number, label: string) => void),
-  reset() { this.total = 0; this.done = 0; this.failed = 0; },
+  reset() { this.total = 0; this.done = 0; this.failed = 0; this.times.length = 0; },
 };
 function track<T>(label: string, p: Promise<T>): Promise<T> {
-  const P = pipelineProgress; P.total++;
-  return p.then(v => { P.done++; P.onChange?.(P.done, P.total, label); return v; });
+  const P = pipelineProgress; P.total++; const t = typeof performance !== 'undefined' ? performance.now() : 0;
+  return p.then(v => { P.done++; if (P.times.length < 512 && typeof performance !== 'undefined') P.times.push({ label, ms: performance.now() - t }); P.onChange?.(P.done, P.total, label); return v; });
 }
 /** createComputePipelineAsync with progress accounting; on rejection logs and returns the synchronous (invalid-but-usable-as-before) pipeline. (Promise.resolve round the call: the QA
  *  harness's Proxy device answers with a non-thenable stand-in, which then simply resolves.) */
@@ -104,7 +147,8 @@ export function renderPipelineOrNull(device: GPUDevice, desc: GPURenderPipelineD
 }
 
 /** Compile a WGSL module; logs compile messages with line context. */
-export function makeShader(device: GPUDevice, code: string, label: string): GPUShaderModule {
+export function makeShader(device: GPUDevice, source: string, label: string): GPUShaderModule {
+  const code = shaderText(source);   // (cut to what its entry points reach — gpu/wgslTrim.ts; a message's line is a line of THIS text, printed below it)
   const mod = device.createShaderModule({ code, label });
   mod.getCompilationInfo().then(info => {
     for (const m of info.messages) {

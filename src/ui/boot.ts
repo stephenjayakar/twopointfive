@@ -3,6 +3,7 @@
 // booting (what a person feels as 'the tab froze'), and the GPU's first-frame latency — summarised on window.__boot and in ONE console line when the card goes live.
 // main.ts calls mark() at each phase boundary; nothing here touches the renderer.
 import { pipelineProgress } from '../gpu/device';
+import { trimForget, trimTotals } from '../gpu/wgslTrim';
 
 export interface BootSummary {
   /** ms since navigation start, per mark (script, gpu, engine, level, world, gltf, pipelines, game, hooks, firstSubmit, gpuReady, interactive …) */
@@ -10,6 +11,10 @@ export interface BootSummary {
   /** durations of the phases that have a beginning and an end (levelParse, gltf, gameCtor, pipelines, firstFrameCpu, firstFrameGpu …) */
   spans: Record<string, number>;
   pipelines: { total: number; done: number; failed: number };
+  /** the boot's shader text: modules made, characters before and after the cut to what each uses (gpu/wgslTrim.ts), and the ms the page spent cutting */
+  shaderText: { modules: number; before: number; after: number; ms: number };
+  /** the boot pipelines that took longest from request to ready, slowest first (all are in flight at once: each time includes its wait behind the others) */
+  slowest: { label: string; ms: number }[];
   longTasks: { start: number; dur: number }[]; maxLongTask: number;
   /** the longest interval between two animation-frame callbacks between script start and the app's own loop taking over (a compositor stalled by the GPU process shows here even when no JS task is long) */
   maxRafGap: number; rafGapAt: number;
@@ -53,17 +58,19 @@ spans.beforeScript = +t0.toFixed(1);   // navigation start → this module evalu
 
 /** the boot's pipeline count, frozen by main.ts when the last boot pipeline resolved (hot swaps / lazy variants made later through the same helpers do not count as boot) */
 let frozenPl: { total: number; done: number; failed: number } | null = null;
-export function freezePipelines() { const P = pipelineProgress; frozenPl = { total: P.total, done: P.done, failed: P.failed }; }
+let frozenText: BootSummary['shaderText'] | null = null, frozenSlow: BootSummary['slowest'] | null = null;
+const slowestNow = () => [...pipelineProgress.times].sort((a, b) => b.ms - a.ms).slice(0, 6).map(t => ({ label: t.label, ms: Math.round(t.ms) }));
+export function freezePipelines() { const P = pipelineProgress; frozenPl = { total: P.total, done: P.done, failed: P.failed }; frozenText = { ...trimTotals, ms: Math.round(trimTotals.ms) }; frozenSlow = slowestNow(); trimForget(); }
 export function summary(): BootSummary {
   if (po) takeLong(po.takeRecords());   // (entries the observer has queued but not yet delivered — its callback runs at low priority, after the line would have printed)
   const P = frozenPl ?? pipelineProgress;
-  return { marks: { ...marks }, spans: { ...spans }, pipelines: { total: P.total, done: P.done, failed: P.failed }, longTasks: [...longTasks], maxLongTask: longTasks.reduce((m, e) => Math.max(m, e.dur), 0),
+  return { marks: { ...marks }, spans: { ...spans }, pipelines: { total: P.total, done: P.done, failed: P.failed }, shaderText: frozenText ?? { ...trimTotals, ms: Math.round(trimTotals.ms) }, slowest: frozenSlow ?? slowestNow(), longTasks: [...longTasks], maxLongTask: longTasks.reduce((m, e) => Math.max(m, e.dur), 0),
     maxRafGap: +maxRafGap.toFixed(1), rafGapAt: +rafGapAt.toFixed(1), userAgent: navigator.userAgent };
 }
 /** the one console line: 'boot 2140 ms to interactive · gpu 180 · level 95 · gltf 310 · game 420 · 97 pipelines in 1250 · first frame cpu 38 / gpu 210 · longest task 160 · longest frame gap 240' */
 export function line(): string {
   const s = summary(), m = s.marks, sp = s.spans; const f = (v: number | undefined) => v === undefined ? '—' : String(Math.round(v));
-  return `boot ${f(m.interactive)} ms to interactive (script at ${f(sp.beforeScript)}) · adapter+device ${f(sp.gpu)} · level ${f(sp.level)} · glTF ${f(sp.gltf)} · game ctor ${f(sp.gameCtor)} · ${s.pipelines.done}/${s.pipelines.total} pipelines in ${f(sp.pipelines)}${s.pipelines.failed ? ` (${s.pipelines.failed} FAILED)` : ''} · first frame cpu ${f(sp.firstFrameCpu)} / gpu ${f(sp.firstFrameGpu)} · longest main-thread task ${f(s.maxLongTask)} · longest frame gap ${f(s.maxRafGap)}`;
+  return `boot ${f(m.interactive)} ms to interactive (script at ${f(sp.beforeScript)}) · adapter+device ${f(sp.gpu)} · level ${f(sp.level)} · glTF ${f(sp.gltf)} · game ctor ${f(sp.gameCtor)} · ${s.pipelines.done}/${s.pipelines.total} pipelines in ${f(sp.pipelines)}${s.pipelines.failed ? ` (${s.pipelines.failed} FAILED)` : ''} · first frame cpu ${f(sp.firstFrameCpu)} / gpu ${f(sp.firstFrameGpu)} · longest main-thread task ${f(s.maxLongTask)} · longest frame gap ${f(s.maxRafGap)} · shader text ${Math.round(s.shaderText.after / 1024)} KB (${Math.round(s.shaderText.before / 1024)} KB whole) · slowest ${s.slowest.slice(0, 3).map(t => `${t.label} ${t.ms}`).join(', ') || '—'}`;
 }
 /** window.__boot: the live view (summary() re-read on every access) + the line */
 export function expose() {

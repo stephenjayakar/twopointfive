@@ -238,3 +238,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A lane's light scales with the playback speed (2026-10-19).** `src/replay/soundlanes.ts ring(dur)` = `max(0.15, dur) × tape.speed`: the light is timed on the tape's clock and the sound
   plays at wall speed, so a 1 s sound is lit 4 tape seconds at 4× and a quarter at ¼× (before, it went out early at 2× / 4× and would have hung on at ¼× / ½×). A speed changed while a
   sound rings is not followed. Check: `tools/qa/soundlanes-page.cjs` ("a lane stays lit as long as its sound is heard at any playback speed"). Headless only, never seen on a GPU.
+
+- **The sound table is made before the first click, a voice at a time (2026-10-19, a play test: "a hitch in the audio right when it gets started").** `src/audio/audio.ts SFX_WARM`
+  (ON; `?sfxwarm=0` = the whole table inside the first click, as it was — a switch of the page: no knob, no stand row; a benchmark page and a muted or kit-picture page do not warm).
+  The mixer cannot start before a click, and it synthesised all 81 voices inside it (0.8‥0.95 s in bun on the cloud machine). Now `main.ts` calls `warmSfx()` as soon as the engine
+  is asked for: `sfx.ts buildSfxLater` builds the table with every row the CALL that renders it (`lazy`; each voice has its own seed, so one rendered alone is the same samples),
+  `gameSfxLater` lays the old voices over it as `gameSfx` does (a `WAS_IN_GAME` name's redone voice is no longer made at all), and one voice is rendered per idle moment
+  (`requestIdleCallback`, only in a moment long enough for the usual voice; half a second without one is one anyway). `AudioEngine.start()` hands the mixer what is made and takes
+  the rest as it comes; a voice asked for before its turn is made on the spot (`play`, `again`). The rate: a page cannot ask its output's rate before the click, so it warms at the
+  rate the mixer last started at in this browser (`localStorage twopointsix.sfxRate`), 48000 on a first visit; a wrong guess drops what was made at the click and makes the table
+  at the device's rate the same way. Only the first mixer on a page is fed. `window.__sfxWarm()` = `{left, waiting, slices, longest, rate, live}`.
+  Checks: `tools/qa/sfxwarm-check.ts` (bun: one at a time and out of order = the whole table sample for sample at 48000 and 44100, both tables; the hand-over, a second mixer, a
+  wrong guess, a voice asked early; `SFXWARM_BREAK=1` must fail) and `tools/qa/shaderwait-page.cjs` (the real page: every sound made before any click, the mixer's start under a
+  third of `?sfxwarm=0`'s, the buffers there — measured there, three browsers sharing the cloud machine: 678 ms against 2918 ms). What is still inside the click: the mixer's own
+  set-up (`webaudio.ts`'s reverb impulse, the ambience loops, the score's backend) — about a quarter of what the click was. Nobody has HEARD it: the samples are equal by the
+  check, the start's timing on a real output is not measured.
