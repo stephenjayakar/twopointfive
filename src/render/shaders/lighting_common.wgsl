@@ -69,16 +69,28 @@ fn diceWalledPoint(Ph: vec3f, n: vec3f, skip: u32) -> vec4f {
   let sp = c0Spacing();
   let off = n * sp; let len = max(length(off), 1e-3); let d = off / len;
   let Po = Ph + n * 0.02;
-  var Q = Ph + off;
-  var t = occludedTBoxes(Po, d, len, skip, -1.0);   // (near-first, not nearest — the ground under the room is a global, found before the wall: ask again short of each answer)
-  for (var i = 0; i < 3 && t > 1e-3; i++) { let u = occludedTBoxes(Po, d, t - 1e-3, skip, -1.0); if (u < 0.0) { break; } t = u; }
-  if (t >= 0.0) { Q = Po + d * max(t - 0.05, 0.0); }
-  let home = (floor((Q - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN;
-  let nb = home + select(vec3f(-1.0), vec3f(1.0), Q >= home) * sp;
+  var Q = Ph + off; var home = Q; var nb = Q;
+  var t = -1.0; var again = true;
   var seen = 0u;   // bit k = the footprint's plan cell k has a clear line from Q to its centre: 0 its own, 1 the one beside it on x, 2 on z, 3 the diagonal one
-  for (var k = 0u; k < 4u; k++) {
-    let v = vec3f(select(home.x, nb.x, (k & 1u) != 0u), Q.y, select(home.z, nb.z, (k & 2u) != 0u)) - Q; let l = length(v);
-    if (l < 1e-3 || occludedTBoxes(Q, v / l, l, skip, -1.0) < 0.0) { seen |= 1u << k; }
+  // ONE box walk in the text, asked up to eight times (a software adapter builds a copy of the walk for every place it is written, and three here was a pass too big for it).
+  // Asks 0‥3: the line along n — once, then again short of each answer while a nearer box turns up (near-first, not nearest: the ground under the room is a global,
+  // found before the wall). Asks 4‥7: from the point that leaves, a line to the centre of each of its four plan cells.
+  for (var i = 0u; i < 8u; i++) {
+    var ro = Po; var rd = d; var l = len;
+    if (i >= 1u && i < 4u) { if (!again || t <= 1e-3) { continue; } l = t - 1e-3; }
+    if (i == 4u) {
+      if (t >= 0.0) { Q = Po + d * max(t - 0.05, 0.0); }
+      home = (floor((Q - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN;
+      nb = home + select(vec3f(-1.0), vec3f(1.0), Q >= home) * sp;
+    }
+    if (i >= 4u) {
+      let k = i - 4u;
+      let v = vec3f(select(home.x, nb.x, (k & 1u) != 0u), Q.y, select(home.z, nb.z, (k & 2u) != 0u)) - Q; l = length(v);
+      if (l < 1e-3) { seen |= 1u << k; continue; }
+      ro = Q; rd = v / l;
+    }
+    let u = occludedTBoxes(ro, rd, l, skip, -1.0);
+    if (i == 0u) { t = u; } else if (i < 4u) { if (u < 0.0) { again = false; } else { t = u; } } else if (u < 0.0) { seen |= 1u << (i - 4u); }
   }
   if (seen == 0u) { return vec4f(Q, 0.0); }
   var m = 8u;      // the cells the read keeps: all four, else one column, one row, one cell — the first whose cells are all seen
