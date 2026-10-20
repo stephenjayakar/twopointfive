@@ -49,6 +49,7 @@ import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING }
 import { TapeWalk } from './tapewalk';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
 import { viewerUrl, VISIT_FLAGS } from '../ui/replaykey';
+import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
 import { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { clamp, DEG } from '../math/vec';
@@ -556,7 +557,7 @@ export class TapePlay {
 #tapemapbig canvas{border:1px solid rgb(72,73,70);border-radius:3px;background:var(--h-base,#0c0b09);cursor:crosshair}
 #tapebar .say{min-width:0;white-space:nowrap;opacity:.8}
 #tapebar .say:empty,#tapebar .say.ok{display:none}
-body:has(#panel:not(.hidden)) #tapemap{right:calc(372px * var(--tz, 1) + 20px)}
+body:has(#panel:not(.hidden)) #tapemap{right:calc(380px * var(--tz, 1) + 12px)}
 body.taping #equip{bottom:calc(86px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
 body.taping #meters{bottom:calc(16px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
 body.tapetight #equip,body.tapetight #meters{visibility:hidden}
@@ -564,10 +565,10 @@ body.taping #log{bottom:calc(44px + (var(--tape-h,44px) + var(--sndl-h,0px)) / v
 body.taping #checkpoint,body.taping #journal{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))}
 body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1)) !important}
 #tapebar .say.off{color:#ffb35c;opacity:1}
-#tapebig{position:fixed;left:0;right:0;top:0;bottom:calc(var(--tape-h,44px) + var(--sndl-h,0px));z-index:69;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#e9e2d6;font:14px var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+#tapebig{position:fixed;left:0;right:0;top:0;bottom:calc((var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1));z-index:69;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#e9e2d6;font:14px var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 #tapebig b{display:grid;place-items:center;width:84px;height:84px;border:2px solid var(--m-accent,#e8833a);border-radius:50%;font-size:34px;color:var(--m-accent,#e8833a);padding-left:6px;box-sizing:border-box;background:var(--h-field,rgb(21,19,16))}
 #tapebig span{padding:5px 12px;border-radius:3px;background:var(--h-field,rgb(21,19,16))}
-#tapenote{position:fixed;left:50%;bottom:calc(var(--tape-h,44px) + var(--sndl-h,0px) + 10px);transform:translateX(-50%);z-index:71;width:min(560px,calc(100vw - 32px))}
+#tapenote{position:fixed;left:50%;bottom:calc((var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1) + 10px);transform:translateX(-50%);z-index:71;width:min(560px,calc(100vw / var(--tz, 1) - 32px))}
 #tapenote input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--m-accent,#e8833a);border-radius:3px;background:var(--h-field,rgb(21,19,16));color:#e9e2d6;font:14px system-ui,sans-serif;outline:none}`;
     document.head.append(css);
     const el = <K2 extends keyof HTMLElementTagNameMap>(tag: K2, cls = '', text = ''): HTMLElementTagNameMap[K2] => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
@@ -606,7 +607,8 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
     modal.onclick = e => { if (e.target === large) { const L = this.floors.get(large), r = large.getBoundingClientRect(); if (L) { const [x, z] = mapToWorld(L.fit, e.clientX - r.left - large.clientLeft, e.clientY - r.top - large.clientTop); this.camSet({ look: [x, this.view().look[1], z] }); } } this.mapOpen(false); };
     for (const c of F.cast) this.names.set(c.id, c.kind === 'player' ? PLAYER_NAME : c.name);
     document.body.append(bar, big, box, mini, modal); document.body.classList.add('taping');   // (the game's own kit, meters and radio lines stand clear of the bar while a tape has the page)
-    window.addEventListener('resize', () => this.lay()); if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => this.lay()); ro.observe(bar); ro.observe(line); }
+    window.addEventListener('resize', () => this.lay()); window.addEventListener(TEXT_EVENT, () => this.lay());   // (the text size stepped under a replay: the bar is taller or shorter in the window)
+    if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(() => this.lay()); ro.observe(bar); ro.observe(line); }
     for (const e of [bar, big, box, mini, modal]) for (const ev of ['mousedown', 'pointerdown', 'contextmenu', 'wheel']) e.addEventListener(ev, x => x.stopPropagation());
     // a click on the picture = a note at that spot of the floor
     const h = this.host!; this.mouse(h.canvas);
@@ -627,7 +629,7 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
   /** the line's marks: what the trace says happened when (the 2D viewer's timeline, on this bar) */
   private lineDraw(): void {
     const u = this.ui, F = this.F, T = this.tape; if (!u || !F || !T) return; const W = u.line.clientWidth, H = u.line.clientHeight; if (!W || !H) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1), end = this.tAt[T.ticks] || 1, at = (r: number): number => clamp(this.tapeT(r) / end, 0, 1), M: LineMark[] = [];
+    const dpr = Math.min(2, window.devicePixelRatio || 1) * textZoom(), end = this.tAt[T.ticks] || 1, at = (r: number): number => clamp(this.tapeT(r) / end, 0, 1), M: LineMark[] = [];   // (a canvas drawn inside a zoomed layer: ui/textsize.ts)
     for (const e of F.events) M.push({ at: at(e.r), kind: e.k === 'bang' || e.k === 'frag' ? 'blast' : e.k === 'shot' ? 'shot' : e.k === 'guardShot' ? 'guardShot' : 'other' });
     for (const l of F.lines) { if (l.k === 'order') M.push({ at: at(l.r), kind: 'order' }); else if (l.k === 'mark') M.push({ at: at(l.r), kind: isErrorMark(l) ? 'error' : 'mark' }); }
     // (the trace holds the file's last minutes only: the stretch of the tape it covers is drawn solid, the rest hatched — a run walked with no marks to show)
@@ -641,7 +643,10 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
   }
   /** what hangs on the window's size: the bar's height is told to the page (the HUD and the note box stand on it), the large map fills what is left, the line's marks are redrawn; the small map is in the top corner, clear of the bar and of whatever stands on it */
   private lay(): void {
-    const u = this.ui, F = this.F; if (!u || !F) return; const bh = u.bar.offsetHeight || 44;
+    // (THE BAR IS ONE OF THE TEXT SIZE'S LAYERS — ui/textsize.ts — and what the page is told of it is in the WINDOW's pixels: the HUD's rules, the large map
+    //  and the sound lanes' dock all read `--tape-h` that way. A rectangle measured off a zoomed element is the window's on an engine that answers so, the
+    //  layer's own on one that does not: either way × textZoom() / rectZoom() is the window's.)
+    const u = this.ui, F = this.F; if (!u || !F) return; const bh = Math.round(u.bar.getBoundingClientRect().height * textZoom() / rectZoom()) || 44;
     document.documentElement.style.setProperty('--tape-h', `${bh}px`); u.modal.style.bottom = `${bh}px`;
     if (!u.modal.hidden) { const [w, h] = mapSize(F.map.bounds, window.innerWidth * 0.92, (window.innerHeight - bh) * 0.92, 26); u.large.style.width = `${w}px`; u.large.style.height = `${h}px`; }
     this.lineDraw();
@@ -696,7 +701,7 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
   }
   private refusal(): void {
     if (typeof document === 'undefined') return;
-    const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:80;max-width:min(640px,calc(100vw - 32px));padding:12px 16px;background:var(--h-field,rgb(21,19,16));color:#e9e2d6;border:1px solid #e8833a;border-radius:3px;font:14px/1.4 system-ui,sans-serif';
+    const d = document.createElement('div'); d.id = 'taperefuse'; d.style.cssText = 'position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:80;max-width:min(640px,calc(100vw / var(--tz, 1) - 32px));padding:12px 16px;background:var(--h-field,rgb(21,19,16));color:#e9e2d6;border:1px solid #e8833a;border-radius:3px;font:14px/1.4 system-ui,sans-serif';
     d.textContent = this.refuse + ' ';
     if (this.id !== null && !document.querySelector('meta[name="tps-one-page"]')) { const a = document.createElement('a'); a.textContent = 'Open the map'; a.href = viewerUrl(this.id); a.style.color = '#e8833a'; d.append(a); }
     const put2 = () => document.body.append(d); if (document.body) put2(); else window.addEventListener('DOMContentLoaded', put2);
