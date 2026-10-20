@@ -22,6 +22,7 @@ import type { SfxNameWas } from '../audio/sfxWas';
 import { WAS_IN_GAME, wasOnly } from '../audio/sfxWas';
 import { altPicked, altTake, altTakes } from '../audio/sfxAlt';
 import type { TapePlay } from './engineplay';
+import { rectZoom, textZoom } from '../ui/textsize';
 import { SoundFilm } from './soundfilm';
 import { BELL_DB, BELL_HI, BELL_LO, HP_HI, HP_LO, Q_HI, Q_LO, SEED_MAX, dBOf, layerSays, madeOf, paramsOf, pulledOf, renderTune, said, shown, spectrum, tuneEmpty, tuneOf, tuneText, typed, type SoundTune, type Unit } from './soundtune';
 
@@ -834,10 +835,13 @@ export class SoundLanes {
     this.sync();
     const n = this.names.length, flags = this.flagN, W = Math.max(1, (this.body.clientWidth || innerWidth) - GUT), dpr = Math.min(2, devicePixelRatio || 1);
     if (this.root.classList.contains('shut') === this.open) { this.root.classList.toggle('shut', !this.open); this.geo = ''; }   // (before anything is measured: the lanes' width hangs on it)
-    const geo = `${W},${bar.offsetHeight},${n},${this.open},${this.cardOf},${this.cpN},${this.head.offsetHeight}`;
+    // (THE BAR IS ONE OF THE TEXT SIZE'S LAYERS and the dock is not: the bar's height is read in the WINDOW's pixels, as engineplay.ts lay() reads it. It is part of
+    //  the key, so a text size step lays the dock again on the next frame.)
+    const barH = Math.round(bar.getBoundingClientRect().height * textZoom() / rectZoom());
+    const geo = `${W},${barH},${n},${this.open},${this.cardOf},${this.cpN},${this.head.offsetHeight}`;
     if (geo !== this.geo) {
       this.geo = geo; this.dirty = true; this.drawn = '';
-      this.root.style.bottom = `${bar.offsetHeight}px`; this.caret.textContent = this.open ? '▾' : '▸';
+      this.root.style.bottom = `${barH}px`; this.caret.textContent = this.open ? '▾' : '▸';
       // THE DOCK IS AS TALL AS WHAT IS IN IT: its head, the ruler and the lanes it has (DOCK_MIN … DOCK, the lanes scroll past that); with the card up, DOCK. Folded: its head.
       { const hgt = !this.open ? '' : `${this.cardOf ? DOCK : Math.max(DOCK_MIN, Math.min(DOCK, this.head.offsetHeight + RULE + n * ROW + 2))}px`; if (this.root.style.height !== hgt) this.root.style.height = hgt; }
       while (this.labels.length < n) { const i = this.labels.length, lb = el('div', 'lb', this.names[i]); lb.style.top = `${i * ROW}px`; lb.onclick = this.safe(() => this.show(this.names[i])); this.rows.insertBefore(lb, this.cv); this.labels.push(lb); }
