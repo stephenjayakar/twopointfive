@@ -9,7 +9,9 @@
 //        verylow) · AT (where he stands, default 19.2,22 — in the gateway, in lamp_gate's cone) · YAW (which way he faces, degrees, default 90: into the lamp,
 //        the camera then looking in through the open gate past his shoulder line) · REST (default 0: that many
 //        more steps at the game's own rhythm and from the game's own camera, the solver's fine-lattice bricks read every 30 — what the breath of the men
-//        in view holds of the pool once the frequent breaths have gone)
+//        in view holds of the pool once the frequent breaths have gone) · STEAM (a JSON object laid over the page's BREATHSTEAM before the first breath,
+//        e.g. '{"density":2}': a look at other numbers without a rebuild) · BEARING (degrees: where the close camera stands, 0 = outside the gate looking
+//        in, 180 = in the yard looking out at the dark road; default the first clear one)
 // Headless Chromium on the SOFTWARE adapter: about three minutes to boot and ten seconds a frame. What it can say: the page boots with the switch either way
 // and no pipeline fails, the solver takes the sources (its own counts, read back), what a line through a breath loses, and what a breath looks like at this
 // adapter's quality. What it cannot: a GPU's picture, anything moving, a frame's cost.
@@ -20,6 +22,7 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), os = require('os'), path = require('path');
 const PORT = process.env.PORT || 5199, OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'breathsteam-page-'));
 const STEPS = +(process.env.STEPS || 32), REST = +(process.env.REST || 0), EVERY = +(process.env.EVERY || 0.7), DIST = +(process.env.DIST || 2.4), PITCH = +(process.env.PITCH || 18), QUALITY = process.env.QUALITY || 'verylow';
+const STEAM = process.env.STEAM ? JSON.parse(process.env.STEAM) : null, BEARING = process.env.BEARING === undefined ? null : +process.env.BEARING * Math.PI / 180;
 const AT = (process.env.AT || '19.2,22').split(',').map(Number), YAW = +(process.env.YAW || 90) * Math.PI / 180;
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
@@ -32,21 +35,22 @@ async function one(browser, name) {
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if ((m.type() === 'error' && !/Failed to load resource/.test(m.text())) || /error:|Invalid/.test(m.text())) errs.push(m.text().slice(0, 300)); });
   const url = `http://localhost:${PORT}/?levelFile=pass.json&roomclear&squad4&nofow&paused&quality=${QUALITY}&mute${name === 'puffs' ? '&breathsteam=0' : ''}`;
   log(`${name}: ${url}`); await page.goto(url);
-  const boot = await page.evaluate(async ({ every, dist, pitch, at, yaw }) => {
+  const boot = await page.evaluate(async ({ every, dist, pitch, at, yaw, steam, bearing }) => {
     await window.__ready; window.__testVisible = true; const g = window.__game;
+    if (steam) Object.assign(window.__snow.steam, steam);
     window.__everyWas = window.__snow.breath.every; window.__snow.breath.every = every;   // (frequent breaths: a still wants one in the air)
     // the camera is pinned close on his face from whichever side has clear air between it and him (the first of the bearings below with nothing in the way: square
     // to where he faces first, so the breath crosses the picture), and everything of the page but the game's view is hidden
     const look = [at[0] + Math.sin(yaw) * 0.25, 1.45, at[1] + Math.cos(yaw) * 0.25], p = pitch * Math.PI / 180;
     const eyeOf = b => [look[0] + Math.sin(b) * Math.cos(p) * dist, look[1] + Math.sin(p) * dist, look[2] + Math.cos(b) * Math.cos(p) * dist];
     const clear = b => { const e = eyeOf(b), d = [look[0] - e[0], look[1] - e[1], look[2] - e[2]], L = Math.hypot(d[0], d[1], d[2]); const u = [d[0] / L, d[1] / L, d[2] / L]; return !window.__engine.world.raycast(e, u, L - 0.4) && !window.__engine.world.raycast([look[0] - u[0] * 0.4, look[1] - u[1] * 0.4, look[2] - u[2] * 0.4], [-u[0], -u[1], -u[2]], L + 0.6); };   // (both ways: an eye inside a box sees no wall from within)
-    const bearings = [yaw - Math.PI / 2, yaw + Math.PI / 2, yaw + Math.PI * 0.75, yaw - Math.PI * 0.75, yaw + Math.PI / 4, yaw - Math.PI / 4, yaw + Math.PI], camYaw = bearings.find(clear);
+    const bearings = [yaw - Math.PI / 2, yaw + Math.PI / 2, yaw + Math.PI * 0.75, yaw - Math.PI * 0.75, yaw + Math.PI / 4, yaw - Math.PI / 4, yaw + Math.PI], camYaw = bearing ?? bearings.find(clear);
     const r = window.__stage({ look, yaw: camYaw ?? bearings[0], pitch: p, dist }, { player: { pos: [at[0], 0, at[1]], yaw, holstered: true } });
     const css = document.createElement('style'); css.textContent = 'body *:not(#view):not(:has(#view)) { visibility: hidden !important; }'; document.head.appendChild(css);
     window.__mouse(window.innerWidth - 10, window.innerHeight - 10);   // (he looks where the cursor is: the picture's lower right is the ground ahead of him as staged, so he keeps facing across the view)
     window.__runFrames(2, 1 / 30); const c = g.player.char, h = c.bones.head;
     return { pipes: window.__boot.pipelines, steamOn: !!window.__knobs.registry().SNOW_LOOK?.steam, pin: r.pin, clearView: camYaw !== undefined, eye: window.__cam.pos.map(v => +v.toFixed(2)), head: h.map(v => +v.toFixed(2)), underRoof: !!g.weather.underRoof(h[0], h[2]), drawing: window.__smoke.drawing(), lamps: g.targets.filter(t => (t.light || t.areaLights) && Math.hypot(t.pos[0] - at[0], t.pos[2] - at[1]) < 6).map(t => `${t.name}@${t.pos.map(x => x.toFixed(1))}`) };
-  }, { every: EVERY, dist: DIST, pitch: PITCH, at: AT, yaw: YAW });
+  }, { every: EVERY, dist: DIST, pitch: PITCH, at: AT, yaw: YAW, steam: STEAM, bearing: BEARING });
   log(`${name}: booted`, JSON.stringify(boot));
   const rows = [];
   for (let k = 8; k <= STEPS; k += 8) {
@@ -68,6 +72,10 @@ async function one(browser, name) {
     const file = path.join(OUT, `breath_${name}_${String(k).padStart(3, '0')}.png`); await page.screenshot({ path: file, timeout: 240000 });
     rows.push(r); log(`${name}: step ${k}`, JSON.stringify(r), '→', file);
   }
+  // from 8 m up, the game's own angle (nearer than the game's zoom, 21 m: about what a breath is at a wide screen's size), then the close pin again
+  const near = { look: [AT[0], 1.2, AT[1]], yaw: -0.38, pitch: 0.96, dist: 8 }, tiny = async pin => page.evaluate(async pin => { const yieldM = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
+    window.__stage(pin); window.__runFrames(1, 1 / 600); await window.__engine.device.queue.onSubmittedWorkDone(); await yieldM(); await yieldM(); }, pin);
+  await tiny(near); const nfile = path.join(OUT, `breath_${name}_near.png`); await page.screenshot({ path: nfile, timeout: 240000 }); log(`${name}: from 8 m →`, nfile); await tiny(boot.pin);
   // the air alone (debug view 5: the volumetric pass), one short frame on
   await page.evaluate(async () => { const yieldM = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
     window.__engine.settings.debugView = 5; window.__runFrames(1, 1 / 600); await window.__engine.device.queue.onSubmittedWorkDone(); await yieldM(); await yieldM(); });
