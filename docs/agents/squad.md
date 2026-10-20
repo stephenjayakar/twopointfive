@@ -60,6 +60,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   threshold F with the floor's menu up, or with the held door's own first page up (its fifth row reads 'F: go'), flipped the row and was not the word. Now `orders.ts`
   asks `DoorTools.wordKeyHeld()` first (input()'s own test, nothing given): a held threshold's word outranks the row, the key is left alone, and the HUD does not show F
   on the 'wait' row then. Inside `PLANLAY.on` only. Seen by `probes.ts calls-held` on shipped (2 FAIL before, 7/0 after; frozen with `TPS_PLANLAY=1` the same).
+- **The orders ring on Tab, a PROTOTYPE to play before it is committed to** (`src/game/cmdring.ts`, `CMDRING.on`, drawn by `src/ui/cmdring.ts`; the maintainer, 10-20:
+  "want to play with it in game a bit before we commit to it", and of the one key "yeah I like that!"; the design and what he agreed, with his words:
+  rebuild/commanding/command-mode.md). SWITCH: OFF in the module, OFF in the page, OFF on BOTH stands (no `FROZEN_HOLDS` row: the stands do
+  not differ); `?cmd` on the address or the debugger's tick 'Tab ▸ the orders ring (to try)' puts it on; the table is in the knob registry and the journal
+  (a recording from before the key replays with it off). Off = the build as it was: Tab is nobody's, and the only shared code moved is the quick key's give and
+  its HUD words, now `SquadOrders.quickGive` / `quickWords` (after it the squadorders, checkpoints and calls families are all green on the frozen stand; on
+  shipped all green but orders-cover, orders-stack, checkpoint-autosave, checkpoint-civilians and calls-rally, each red the same way on the untouched build
+  head of that day). WHAT IT IS: Tab DOWN puts the order
+  menu up as a ring at the cursor (the menu itself: `open` / `turn` / `pick`, so every row, refusal and reason is the menu's; `SquadOrders.cmdRing` beside it
+  holds the ring's middle and the lit wedge; `ringInput` runs ahead of the menu's input; the panel lists no menu while a ring is up, and the menu's own mark
+  in the world is not drawn: its words, who → what, sit under the ring); Tab UP gives the lit wedge. The first page's first wedge is the QUICK KEY'S order, so a tap is B exactly. Held: a digit 1 to 5, or the cursor out of the ring's middle
+  (`flickPx`), lights that wedge; a wedge that opens a page turns the ring to it and lights nothing; the wheel steps who; a left click on a man (his body as T
+  reads it, or his feet inside `manPx`) makes the orders his and starts the ring again, first wedge lit; Esc, or a right click on the first page, gives
+  nothing; a left click on nobody is Sam's trigger and the ring goes. The cursor counts from the ring's middle and only once it has been back there since the
+  ring last changed under it (a page, a digit, a man, a ring opened at the view's edge and stood in by `edgeX` / `edgeY`), so the hand coming back picks
+  nothing on the way. Nothing is on a timer. Shift held with Tab opens nothing (kept for the plan mode, not built). TAB IS ALSO THE BACK KEY (`BACKKEY.tab`): with
+  a menu, a Space list, a running verb or the launcher's arc to back out of, the press is theirs and no ring opens; on the page Esc is the pause, and a ring
+  held under the pause card is gone, nothing given, when play comes back (the 'Paused' tick). NOT ON THE RING YET: rows on letters (the
+  throw page on G, 'go'), the 'wait for my word' row (a ring's order goes at once), picking several men (one click is one man). B, X and T work beside it;
+  with the ring on, Tab is not the debug tools' key (`main.ts`; `TABKEY.does` is 'off' in the page anyway). A load, or the tick put off, puts a held ring away
+  (`ringRestore`). CHECK: `bun run tools/qa/cmdring-check.ts` (`probes.ts cmdring`, family squadorders), 11 lines through the game's own input on the office
+  room clear, the check raising the switch itself; `CMDRING_BREAK=1` (the switch left off) fails 9 of the 11 on both stands. SEEN: the 11 lines on both
+  stands, one seed; the page on the software adapter with `?cmd` through real key and mouse events (the ring draws at the cursor and whole at the view's
+  edge, the lit wedge fills, a tap stacks, a digit and the cursor each light a wedge and the key up gives it, a page turns and lights nothing, a click on a
+  man tints the ring his pair's colour and fires nothing, no console or GPU error) and without it (Tab opens nothing). NOT seen on the page: Esc, which
+  there is the pause — a ring held under the pause card going away on the 'Paused' tick is in the check, by the tick alone. A ring opened near the view's top
+  left sits under the squad panel. NEVER seen on a GPU, never played by a hand: whether the hold feels right, whether the ring hides what it is opened on,
+  and whether Sam's aim swinging with the cursor matters are the maintainer's to judge. No tally was run: with the switch off nothing moves, and the ring
+  gives only orders the menu already gave.
 - **Who commands best: the three-hands tally** (`tools/qa/command-tally.ts`; his words 10-14: "we should also make it so micromanaging > autopilot commanding > doing it
   yourself", "so there's incentive to go beyond just mashing b"; record rebuild/commanding/read-first.md 'Balance, measured'). NO GAME SWITCH: a tool only.
   The same floor played three ways by scripted players on the SHIPPED stand with the real keys: `solo` (the squad never told anything), `b` (B and nothing else), `plan`

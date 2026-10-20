@@ -61,6 +61,7 @@ import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
 import { WAND } from '../game/wand';
 import { PEEKSIGHT } from '../game/peeksight';
+import { CMDRING } from '../game/cmdring';
 import { STICKY } from '../game/stickycam';
 import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
@@ -309,6 +310,7 @@ export function pageSwitches(q: URLSearchParams): void {
   GUNLOOK.shells = !q.has('nogunshells');   // (…and of 10-19: a tube gun is fed a shell at a time in time and in the books — the M1014 and the pump gun take a lead, so long a shell and a tail, each shell in the gun as it is heard; ?nogunshells = the row's one length and the tube booked at its end)
   GUNROLES.on = !q.has('nogunroles');   // a gun is used for what it is for (game/gunroles.ts): a cast of defenders is dealt an AKMS, one belt-fed PKM for a lane or a big cast and a few pistols off the squad's table, and a teammate's place in the stack, his turn at the door, the opening he covers and his trigger follow the gun in his hands. ?nogunroles = every defender the short carbine and every teammate as with the issue carbine
   PLANLAY.on = !q.has('noplanlay');   // X is where the plan is laid (game/planlay.ts): 'wait for my word' is under every order menu, an order picked with it on is laid — nobody moves — and F sends the plan; Enter puts it back. ON in the page, ?noplanlay = the row is the four's door tools' alone and the men walk to the door at once, as it was; off on the frozen stand (TPS_PLANLAY=1 raises it)
+  CMDRING.on = q.has('cmd');   // THE ORDERS RING, A PROTOTYPE (game/cmdring.ts): Tab down puts the order menu up as a ring at the cursor, Tab up gives the lit wedge — a tap is B. OFF in the page unless `?cmd` asks (and the debugger's tick), off on both stands: nothing is recorded with it on
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
   SQUAD40.on = !q.has('nosquad40');   // a teammate whose card carries 40 mm grenades fires one where he points (game/squad40.ts): X on a spot of floor, G, then 3. ON in the page, ?nosquad40 = no such row; off on the frozen stand (TPS_SQUAD40=1 raises it). Nothing at all while no teammate's card carries a round
