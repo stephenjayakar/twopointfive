@@ -1,5 +1,5 @@
 // THE SAVE TIMELINE ON THE REAL PAGE (src/game/savestate.ts SAVETIMELINE): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's recipe).
-//   PORT=5199 node tools/qa/savetimeline-page.cjs [outDir]     (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=on,lesson,off picks jobs)
+//   PORT=5199 node tools/qa/savetimeline-page.cjs [outDir]     (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=on,lesson,off,card picks jobs)
 //   on      the plain night as the page opens it: F5 (a real keydown, kept from the browser) three times a few seconds apart, each on a drawn frame; the pause card's strip shows three tiles in time
 //           order, each with a picture that is not one flat colour; a click on the middle one closes the card with the mission clock at that save's; the
 //           down card shows the strip too; no page error
@@ -7,12 +7,16 @@
 //           save loaded from its tile — the frame drawn after the load is lit as the frame at the save was, not as the dark one (the GPU's buffers were told:
 //           host/putback.ts); SAVEPUTBACK_BREAK=1 takes that telling away and this line must FAIL
 //   off     ?savetimeline=0: F5 writes nothing and the pause card has no strip
+//   card    the page's own loop let go with the pause card up (the world held): F5 is kept from the browser, writes nothing yet and the card's strip shows a
+//           tile to come; the card closed, the first live tick writes ONE save by hand, with its picture; under a show's key lock F5 is the browser's.
+//           The card is not laid again under the keys; a save that would be refused shows no tile; a restart made with the card up drops the press.
+//           SAVECARD_BREAK=1 takes the hand-over of the kept press away and this job must FAIL
 // exit 0 = every job asked for, with no page error · 1 = otherwise. Game logic and the DOM decide; the one judgment of a picture is a count of nearly white pixels (the bulb's
 // glow), three frames against each other. With an outDir it keeps the stills and a screenshot of each card for a person to look at.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '', BREAK = process.env.SAVEPUTBACK_BREAK === '1';
-const JOBS = (process.env.JOBS || 'on,lesson,off').split(',');
+const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '', BREAK = process.env.SAVEPUTBACK_BREAK === '1', CARDBREAK = process.env.SAVECARD_BREAK === '1';
+const JOBS = (process.env.JOBS || 'on,lesson,off,card').split(',');
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
@@ -59,9 +63,50 @@ const PIN = () => { const t = window.__lamp; window.__stage({ look: [t.pos[0], 0
 const OUT = () => { const t = window.__lamp; t.broken = true; return t.broken; };
 const LAMPSTATE = () => { const t = window.__lamp; return { broken: t.broken, on: t.on }; };
 
+// in the page (card): F5 under a key lock, then on the pause card with the page's own loop running (frozen frames): kept from the browser, nothing written, a tile to come
+const CARD1 = async () => {
+  const g = window.__game, inp = window.__input, out = {};
+  const wait = window.__wait = (ok, ms) => new Promise(res => { const t0 = Date.now(), id = setInterval(() => { const v = ok(); if (v || Date.now() - t0 > ms) { clearInterval(id); res(!!v); } }, 100); });
+  const key = window.__f5 = () => { const ev = new KeyboardEvent('keydown', { code: 'F5', key: 'F5', bubbles: true, cancelable: true }); window.dispatchEvent(ev); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'F5', key: 'F5', bubbles: true })); return ev.defaultPrevented; };
+  inp.lockExcept = new Set(); out.lockKey = !!inp.saveKey(); out.lockKept = key(); inp.lockExcept = null; inp.pressed.clear();
+  window.__n0 = g.saves.stats.manual; window.__t0 = g.time;
+  window.__menu.open('pause'); await new Promise(r => setTimeout(r, 50)); const walked = [...document.querySelectorAll('#menu .actions .btn')].find(b => /^Restart/.test(b.textContent)); if (walked) walked.focus();
+  window.__pauseLoop = false;
+  out.kept = key(); out.due = await wait(() => document.querySelector('#menu .saves .tile.due'), 900000);
+  window.__pauseLoop = true; await new Promise(r => setTimeout(r, 500));   // (held for the still of the card: a screenshot waits on a frame, and the software adapter's take minutes)
+  out.focusKept = !!walked && document.activeElement === walked;   // (the card was not laid again under the keys)
+  out.early = g.saves.stats.manual - window.__n0; out.moved = +(g.time - window.__t0).toFixed(3);
+  return out;
+};
+// in the page (card): the card closed — the first live tick writes the save, the frame after it gives it its picture; then the loop is held again.
+// brk (SAVECARD_BREAK): the press the page kept is not let onto the input — the hand-over itself is what is taken away
+const CARD2 = async (brk) => {
+  const g = window.__game, inp = window.__input, wait = window.__wait, out = {};
+  if (brk) { const add = inp.pressed.add.bind(inp.pressed); inp.pressed.add = k => k === 'F5' ? inp.pressed : add(k); }
+  window.__menu.close(); window.__pauseLoop = false; out.ticked = await wait(() => g.time > window.__t0 + 0.01, 900000);
+  out.wrote = g.saves.stats.manual - window.__n0; const line = g.saves.timeline();
+  out.pic = line.length ? await wait(() => g.saves.pictureOf(g.saves.timeline()[0]), 600000) : false;
+  window.__pauseLoop = true; await new Promise(r => setTimeout(r, 500));
+  out.line = line.map(x => ({ slot: x.slot, t: +x.missionT.toFixed(2) })); out.msg = (g.messages[g.messages.length - 1] || {}).text || '';
+  window.__menu.open('pause'); await new Promise(r => setTimeout(r, 50)); out.dueLeft = !!document.querySelector('#menu .saves .tile.due'); window.__menu.close();
+  return out;
+};
+// in the page (card): a save that would be refused shows no tile; and a press kept on the card is dropped by a restart made while the card is up
+const CARD3 = async () => {
+  const g = window.__game, inp = window.__input, wait = window.__wait, key = window.__f5, out = {};
+  const real = g.saves.handNo; g.saves.handNo = () => 'held for the check';
+  window.__menu.open('pause'); window.__pauseLoop = false; key(); out.read = await wait(() => !inp.pressed.has('F5'), 900000);   // (a frozen frame has had its look at the key)
+  out.refusedTile = !!document.querySelector('#menu .saves .tile.due'); g.saves.handNo = real;
+  const by = () => g.saves.timeline().filter(x => x.slot === 'manual').length;
+  g.restart(); window.__menu.close(); out.ticked = await wait(() => g.mission.stats.elapsed > 0.01, 900000);
+  await wait(() => g.mission.stats.elapsed > 0.1, 300000); window.__pauseLoop = true; await new Promise(r => setTimeout(r, 500));
+  out.afterRestart = by(); out.msg = (g.messages[g.messages.length - 1] || {}).text || '';
+  return out;
+};
+
 (async () => {
   let red = 0;
-  const defs = { on: '', lesson: 'levelFile=train-orders.json&roomclear=1&', off: 'savetimeline=0&' };
+  const defs = { on: '', lesson: 'levelFile=train-orders.json&roomclear=1&', off: 'savetimeline=0&', card: '' };
   for (const name of JOBS) {
     const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });   // (a browser per job: one that dies under the software adapter costs its own job only)
     const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
@@ -73,7 +118,23 @@ const LAMPSTATE = () => { const t = window.__lamp; return { broken: t.broken, on
     try {
       await page.goto(url); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 30);
       r.set = await page.evaluate(SET); log(`${name}: up`, JSON.stringify(r.set));
-      if (name === 'off') {
+      if (name === 'card') {
+        await page.evaluate(STEP, 120); await page.evaluate(FRAME);
+        r.card1 = await page.evaluate(CARD1); log('card: F5 on the pause card', JSON.stringify(r.card1)); await shot('pause-card-a-save-to-come');
+        r.card2 = await page.evaluate(CARD2, CARDBREAK); log('card: the card closed', JSON.stringify(r.card2));
+        r.card3 = await page.evaluate(CARD3); log('card: a refusal, then a restart under a kept press', JSON.stringify(r.card3));
+        if (r.card1.lockKey || r.card1.lockKept) fails.push('under a key lock F5 is kept from the browser');
+        if (!r.card1.kept) fails.push('on the pause card F5 is not kept from the browser');
+        if (!r.card1.due) fails.push('the pause card shows no tile to come');
+        if (r.card1.early !== 0 || r.card1.moved !== 0) fails.push(`with the card up: ${r.card1.early} saves written, the world moved ${r.card1.moved} s (want 0, 0)`);
+        if (!r.card2.ticked) fails.push('no live tick after the card closed');
+        if (r.card2.wrote !== 1) fails.push(`the card closed: ${r.card2.wrote} saves written (want 1) — ${r.card2.msg}`);
+        else if (!r.card2.pic) fails.push('the save has no picture');
+        if (r.card2.dueLeft) fails.push('the tile to come is still on the card after the save');
+        if (!r.card1.focusKept) fails.push('the card lost where the keys had walked when the tile was added');
+        if (!r.card3.read || r.card3.refusedTile) fails.push('a save that would be refused shows a tile to come');
+        if (!r.card3.ticked || r.card3.afterRestart !== 0) fails.push(`a restart with the card up: ${r.card3.afterRestart} saves by hand in the new run (want 0) — ${r.card3.msg}`);
+      } else if (name === 'off') {
         await page.evaluate(STEP, 60); r.f5 = await page.evaluate(F5); r.strip = await page.evaluate(STRIP, 'pause');
         if (r.f5.wrote !== 0) fails.push(`F5 wrote ${r.f5.wrote} saves with the switch off`); if (r.strip.strip) fails.push('the pause card has a strip with the switch off'); if (r.set.saveKey || r.f5.kept) fails.push('F5 is kept from the browser with the switch off');
       } else {
@@ -129,8 +190,9 @@ const LAMPSTATE = () => { const t = window.__lamp; return { broken: t.broken, on
     const ok = !fails.length; if (!ok) red++;
     const said = { on: 'the page as it opens: three F5 saves a few seconds apart; the pause card shows three tiles in time order, each a picture; the middle one loads to its own mission clock; the down card shows them too',
       lesson: `Training five, a pair on the floor: saves kept in memory show on the strip with pictures; a light put out after a save is lit again on the frame after its load${BREAK ? ' (SAVEPUTBACK_BREAK: the host is not told)' : ''}`,
-      off: 'under ?savetimeline=0: F5 writes nothing, the pause card has no strip' }[name];
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${said}\n    ${JSON.stringify({ set: r.set, saves: (r.saves || []).map(s => +s.t.toFixed(1)), tiles: r.strip ? r.strip.tiles.map(t => `${t.w}x${t.h} ${(t.bytes / 1024).toFixed(1)}KB range ${t.range} '${t.age}'`) : null, pick: r.pick, lum: r.lum, lamp: r.lamp })}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+      off: 'under ?savetimeline=0: F5 writes nothing, the pause card has no strip',
+      card: `F5 on the pause card is kept, shows a tile to come and saves once as play goes on; under a key lock it is the browser's${CARDBREAK ? ' (SAVECARD_BREAK: the kept press is not handed over)' : ''}` }[name];
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${said}\n    ${JSON.stringify({ set: r.set, saves: (r.saves || []).map(s => +s.t.toFixed(1)), tiles: r.strip ? r.strip.tiles.map(t => `${t.w}x${t.h} ${(t.bytes / 1024).toFixed(1)}KB range ${t.range} '${t.age}'`) : null, pick: r.pick, lum: r.lum, lamp: r.lamp, card1: r.card1, card2: r.card2, card3: r.card3 })}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== savetimeline-page: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
   process.exit(red ? 1 : 0);
