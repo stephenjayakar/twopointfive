@@ -132,6 +132,7 @@ import { FRIENDLYFIRE } from './friendlyfire';
 import { LIGHTSWITCH } from './lightswitch';
 import { CARLAMPS } from './carlamps';
 import { FIRELINE } from './fireline';
+import { SAVETIMELINE } from './savestate';
 import { WALLREACT } from './wallreact';
 import { COVERFIRE } from './coverfire';
 import { DOORWAY, DOORSTAY } from './doors';
@@ -343,6 +344,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.QUICKTHROW) QUICKTHROW.on = true;   // (a file from before the G quick throw left the page: its G presses threw)
   if (!k.tables.LIGHTSWITCH) LIGHTSWITCH.on = false;   // (a file from before a room's lights had a switch on the wall: no plates, no row, nobody at one)
   if (!k.tables.CARLAMPS) CARLAMPS.on = false;   // (a file from before a vehicle's lamps were light targets: its floor has none)
+  if (!k.tables.SAVETIMELINE) SAVETIMELINE.on = false;   // (a file from before the saves rolled: three autosaves, and none with a team on the floor — its Enter once down found what that build kept)
   if (!k.tables.FIRELINE) FIRELINE.on = false;   // (a file from before a teammate waited short of the lane the player was firing down: its men walked their orders through it)
   if (!k.tables.FRIENDLYFIRE) FRIENDLYFIRE.on = false;   // (a file from before a round of his side found the men of his side)
   if (!k.tables.FRIENDS) { FRIENDS.noSnap = false; FRIENDS.lowReady = false; }   // (a file from before the reticle passed over his own side and his gun came down off a teammate)

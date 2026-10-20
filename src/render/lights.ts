@@ -105,6 +105,8 @@ export class LightSet {
   private reachData = new Uint32Array(MAX_LIGHTS * REACH_ROW_WORDS);
   /** the reach buffer's rows as last written, word for word (upload writes the live rows only when they differ from this) */
   private reachSent = new Uint32Array(MAX_LIGHTS * REACH_ROW_WORDS).fill(0xffffffff);
+  /** the reach rows are written whole next frame (a rollback snapshot put back: this book went back with the lights, the buffer did not — scene/boxes.ts forgetSent) */
+  forgetSent() { this.reachSent.fill(0xffffffff); }
   private reachDataI = new Int32Array(this.reachData.buffer); private reachSentI = new Int32Array(this.reachSent.buffer);   // the same words read signed, for the compare alone (sameWords)
   private data = new ArrayBuffer(MAX_LIGHTS * 64);
   private f32 = new Float32Array(this.data); private u32 = new Uint32Array(this.data);

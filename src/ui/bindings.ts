@@ -73,7 +73,7 @@ import { WET, WET_DEFAULTS, saveWet, resetWet, soak as wetSoak, dryAll as wetDry
 import { PRAIN, PRAIN_DEFAULTS, PRAIN_V1_LOOK, savePrain, resetPrain, setPrain } from '../game/rainFx';
 import { WIND, WIND_DEFAULTS, saveWind, resetWindKnobs } from '../game/wind';
 import { MOTHS } from '../game/moths';
-import { canSave, CKPT } from '../game/savestate';
+import { canSave, CKPT, SAVETIMELINE } from '../game/savestate';
 import { NIGHTBREACH } from '../game/nightbreach';
 import { ROOMCLEAR } from '../game/roomclear';
 import { FOG } from '../game/fogofwar';
@@ -2236,7 +2236,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   // newest / a chosen slot, export the newest to a .json download, import a .json into the manual slot, wipe the store, autosave on / off, the controller's line
   panel.system(SYS.ckpt);
   const CK = game.saves; let ckPick = 0;
-  const ckS = panel.section('Checkpoints', { open: true, summary: () => `${game.guards.some(x => x.unit && x.team === 'operative') ? 'no saves in a squad run · ' : ''}${CK.summary(game)}` });
+  const ckS = panel.section('Checkpoints', { open: true, summary: () => `${game.guards.some(x => x.unit && x.team === 'operative') ? (SAVETIMELINE.on ? 'a squad run saves in memory (this run only) · ' : 'no saves in a squad run · ') : ''}${CK.summary(game)}` });
   const ckLoad = (key: string | undefined) => { if (!key) { game.msg('checkpoint: nothing stored'); return; } const load = W_.__save?.load; const why = load ? load(key) : CK.load(game, key); if (why) game.msg(`checkpoint: ${why}`); };   // (main.ts's loader stops a show and cuts the camera; the bare controller otherwise)
   panel.toggleBox(ckS, 'autosave', () => CK.enabled, v => CK.setEnabled(v), `Solo runs only: any run with teammates or scenario defenders on the floor (rescue, room clear, night breach, the pair) refuses every save, forced or not. Written by itself on: the mission stage advancing, the first entry into a room region, a hauled body let go of ≥ ${CKPT.bodyHideM} m away, every ${CKPT.quietSecs} s of undetected play — never while anybody is alert / searching / over awareness ${CKPT.awareMax}, never mid-action, ${CKPT.debounceSecs} s debounce, ≥ ${CKPT.minGapSecs} s apart, a request unmet for ${CKPT.pendingSecs} s lapses; ${CKPT.autoSlots} rotating slots in localStorage (kept per machine with this switch)`);
   panel.buttons(ckS, 'save', [

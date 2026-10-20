@@ -699,6 +699,8 @@ export class Game {
   /** … and the prints boots have pressed into it (snowTracks.ts; SNOW_LOOK.tracks) — picture only too; null without the field or with its switch off */
   snowTracks: SnowTracks | null = null;
   private snowLookWas = -1;
+  /** the snow's field and tracks are handed to the g-buffer whole again on the next frame (host/putback.ts: the GPU's copy is another moment's) */
+  snowRehand() { this.snowLookWas = -1; }
   /** the field and the prints follow their switches (at the level's start, and again on any frame a switch has moved: a recording's knobs are applied to a game
    *  already built): baked / made the first time they are wanted, handed to the g-buffer, taken back when the switch goes off */
   private syncSnowLook() {

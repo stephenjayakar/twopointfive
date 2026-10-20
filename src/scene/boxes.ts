@@ -351,6 +351,10 @@ export class BoxWorld {
     const sec = secondaryAlbedo(ent.base, ent.h, ent.marks.slice(0, n), this.markingTexel); ent.sec[0] = sec[0]; ent.sec[1] = sec[1]; ent.sec[2] = sec[2]; ent.anyEmit = anyEmit;
     this.markDirty = true;
   }
+  /** THE BUFFERS ARE NOT WHAT THE BOOKS SAY: a rollback snapshot put back (game/rollback.ts) writes these books back with the boxes — what was sent, how many,
+   *  which grid stands — while the GPU's buffers are as the abandoned moment left them. The next upload packs and writes every static, the visible list, the
+   *  glass table, the marking table and both grids whole. Reads nothing of the simulation and changes none of it. */
+  forgetSent() { this.packEpoch++; this.visibleSent.fill(0xffffffff); this.gbSent.fill(0xffffffff); this.gbLive = true; this.markDirty = true; this.gridLiveN = -1; this.rowsStatN = -1; }
   /** repack every registered list at a new base texel (engine.settings.markingTexel moved) or after AREA_LIT_MARKS changed (game.ts registers the lights after the first upload) */
   repackMarkings(texel = this.markingTexel) { this.markingTexel = texel; for (const ent of this.markByKey.values()) if (ent.slot) this.packList(ent); this.packEpoch++; }   // (every static repacks: the secondary albedos may have moved)
   /** how full the append-only marking table is: rows taken / MARK_TABLE_ROWS (the editor compacts past two thirds; its lint warns on a level that alone nears it) */

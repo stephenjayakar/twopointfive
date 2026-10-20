@@ -17,6 +17,7 @@ import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
 import { TABKEY, tabChoices, setTabKey, tabDoes } from './tabkey';
 import { BACKKEY } from '../game/backkey';
+import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
 import type { QualityName } from './quality';
@@ -76,6 +77,7 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   ] },
   { group: 'Game', rows: [
     [['Esc'], 'Pause'],
+    [['F5'], 'Save'],
     [['Enter'], 'Once down: back to the last checkpoint'],
     [['Shift', 'Enter'], 'Restart the mission'],
     [['F7'], 'Keep a replay of the last five minutes'],
@@ -310,6 +312,7 @@ function controls(body: HTMLElement) {
     const back: typeof g.rows = BACKKEY.tab && g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
     const rows = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
     for (const [caps, what, small] of rows) {
+      if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
       caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(el('kbd', '', k)); });
       const w = el('div', 'op-what', gearText(what)); if (small) w.appendChild(el('small', '', gearText(small)));

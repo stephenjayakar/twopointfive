@@ -353,6 +353,16 @@
     #missions .mgo { align-self: flex-start; margin-top: 4px; padding: 10px 24px; font-size: 13px; text-decoration: none; position: sticky; bottom: 0; z-index: 1; box-shadow: 0 0 0 8px rgba(var(--m-panel-rgb),0.95); }   /* (stays in sight at the sheet's foot when the rows above run long: Hard's words, a lever moved, a short window) */
     #missions .mfoot { padding: 9px 22px; border-top: 1px solid rgba(var(--m-edge),0.22); font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); letter-spacing: 0.06em; }
     @media (max-width: 720px) { #missions .mbody { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(110px, 26%) minmax(0, 1fr); } #missions .mlist { border-right: none; border-bottom: 1px solid rgba(var(--m-edge),0.22); } #missions .mfacts { grid-template-columns: repeat(2, minmax(0, 1fr)); } #missions .mplan { display: none !important; } #missions .mhour .dn, #missions .mwx .dn, #missions .mway .dn, #missions .mlever .dn { display: none; } }   /* (a narrow window: the plan and the hour's and the weather's lines of words go, and the list gives up rows, so the start button stays on the sheet) */
+    /* THE STRIP OF SAVES (menu.ts saveStrip): this run's saves in time, a tile each — its picture, its age, a diamond on the ones made by hand */
+    #menu .saves { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0 0 4px; }
+    #menu .db-actions .saves { flex: 0 0 100%; grid-template-columns: repeat(auto-fill, 96px); }
+    #menu .saves .tile { position: relative; aspect-ratio: 16 / 9; padding: 0; background: rgba(var(--m-btn-rgb),0.8) center / cover no-repeat; border: 1px solid rgba(var(--m-edge),0.3); border-radius: 2px; cursor: pointer; overflow: hidden; }
+    #menu .saves .tile:hover, #menu .saves .tile:focus { outline: none; border-color: var(--m-accent); }
+    #menu .saves .tile:focus { box-shadow: 0 0 0 1px var(--m-accent); }
+    #menu .saves .tile .age { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 4px 3px; font: 600 10px/1 var(--m-head); letter-spacing: 0.06em; text-align: right; color: var(--m-bright); background: linear-gradient(transparent, rgba(0,0,0,0.78)); white-space: nowrap; }
+    #menu .saves .tile i { position: absolute; left: 5px; top: 5px; width: 5px; height: 5px; transform: rotate(45deg); background: var(--m-accent); box-shadow: 0 0 0 1px rgba(0,0,0,0.6); }
+    #menu .saves .tile.regret { opacity: 0.45; }
+    #menu .saves .tile.ahead .age { color: var(--m-dim); }
     #menu .btn.quit { border-color: rgba(240,196,110,0.55); color: #f3d79a; }
     #menu .body { margin-top: 10px; }
     #menu .controls .row { display: flex; gap: 14px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
