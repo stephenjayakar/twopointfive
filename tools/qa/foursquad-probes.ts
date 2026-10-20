@@ -283,7 +283,8 @@ export const foursquadStack = guarded(async () => {
   // move there: two ranks of two — the line abreast, which is what the order is with roomfit.ts's switch off (on: marks dealt from the room — roomfit-walk)
   ROOMFIT.on = false;
   g.teleportPlayer([12, 0, 17.6]); R.step(5);
-  const whyM = O.give('move', R.floor([19, 0, 17.6])); const arrived = R.until(() => men.every((m: any) => O.of(m)?.arrived), 20); R.step(60);
+  const whyM = O.give('move', R.floor([19, 0, 17.6])); const arrived = R.until(() => men.every((m: any) => O.of(m)?.arrived), 20);
+  R.step((await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on ? 240 : 60);   // (at the team's slower walk, teampace.ts, a man called arrived 0.3 m short takes two seconds more onto his mark)
   const spots = men.map((m: any) => m.char.pos), xs = spots.map((p: number[]) => p[0]).sort((a: number, b: number) => a - b);
   const rr = Math.abs(spots[0][0] - spots[1][0]) < 0.4 && Math.abs(spots[2][0] - spots[3][0]) < 0.4;
   verdict(whyM === null && arrived && minApart(men) > 0.7 && xs[3] - xs[0] < 1.6 && xs[3] - xs[0] > 0.5 && rr, 'move there (ROOMFIT off): two ranks of two across the way they were sent, a pair a rank', `give → ${whyM} · ${men.map((m: any) => `${m.callsign} ${at(m.char.pos)}`).join(' · ')} · nearest two ${f2(minApart(men))} m`);

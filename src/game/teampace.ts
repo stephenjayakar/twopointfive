@@ -42,8 +42,8 @@ export const TEAMPACE = {
   on: false,
   /** a teammate's walk, × the player's (tune.playerWalk) */
   k: 0.8,
-  /** a follower off his place closes at up to this × the player's walk */
-  followK: 1,
+  /** a follower off his place closes at up to this × the player's walk (at 1 a file strings out behind a walking player: nobody closes on a man at his own pace) */
+  followK: 1.3,
   /** followers run while the player sprints; `behindM`: how far off his place a man starts to */
   follow: true, behindM: 1.0,
   /** a man who lost his man this long ago still moves at the fight's pace (s) */

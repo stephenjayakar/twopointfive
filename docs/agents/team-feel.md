@@ -11,7 +11,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a watched door was owed is mostly lost), half of both (`concussK`) for a man with no line inside `concussM` of sound path, the thrower's side touched only inside
   `ownM`, Sam's own can cooked (`fuse` 0.7 s after it lands); on a booted door the second man's can goes in on the boot. `guards.ts PACE` = a teammate's legs stop
   at `max` 2.2 m/s whoever asks, gained at `accel` 2.6 m/s² (`ORDERS.run / brisk / onto / entry` sit under it; Sam walks at 1.55, so they keep up with a walk and
-  are left by a sprint). `fogofwar.ts FOG.doors` (a leaf that moves unseen is drawn where the team last saw it) / `FOG.lasers` (an enemy's beam drawn only along
+  are left by a sprint; with `teampace.ts` on — the page — this cap is what a FIGHT move keeps, and a walk is slower: the last bullet of this file). `fogofwar.ts FOG.doors` (a leaf that moves unseen is drawn where the team last saw it) / `FOG.lasers` (an enemy's beam drawn only along
   the stretch the team has a line to, never for a lingering man). `guards.ts LIGHTS` + `teamLit` = weapon lights of men under Sam's orders: dark in file behind
   him, stacked, holding; ON walking somewhere on their own (a mark more than `onM` off, or back to Sam from past `aloneM` — a teammate sees only what a light is
   on), through an entry and its search, fighting / hot, and `stepSecs` after an enemy's footfall. `DOORTOOLS.corners` (near corner, deep corner, then the sweep)
@@ -692,3 +692,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   played it; the numbers are first numbers; a door order past its stack, a wall charge, a doorway, and the gun swung onto a waiting man
   are read in the module and not staged; an opening with no door in it has no frame for him to wait short of; the wait is at the order layer, so a man no order poses (a drill, the fight's own legs) is not
   held.
+
+- **Teammates are slower than the player, and run only for a reason** (`src/game/teampace.ts`, table `TEAMPACE {on, k 0.8, followK 1.3, follow, behindM 1,
+  fightSecs 2, backSecs 6, own, dashM 2.5, dashSeen 0.5, dashEvery 0.25, dashHot 6, runAt 2.7, accel 6, step 1, gap 1}`). REPLACES "teammates never sprint".
+  The play note: the player at 1×, a teammate at 0.8×, so a man sent somewhere can always be caught up; followers sprint when the player sprints; a sprint
+  of their own is rare and has a reason, because sprinting is risky. BEFORE: every teammate's legs were capped at `PACE.max` 2.2 m/s and orders asked 2.0,
+  the player walks at 1.55 — an ordered team out-walked him to every door. THE RULE (`guards.ts teamPace` asks `teamCap`): THE WALK — on an order or on his
+  own a teammate is asked for no more than `k` × `tune.playerWalk` (1.24 m/s; his card, a hurt man's cap and the silent squad's still under it). FOLLOWING —
+  a man falling in closes at up to `followK` × the player's walk (2.0; at 1.0 the four-man follow check had the last man 9 m back: nobody closes on a walking man at his own pace), and while the PLAYER SPRINTS a follower `behindM` off his place with nobody to fight
+  runs at the player's own sprint until the player stops (`teamFollow`). THE FIGHT keeps the pace it had (`PACE.max`): a man with somebody in his sights or
+  lost `fightSecs` ago, the leg through an ordered door (`teamFight` in `orders.ts`: the stun's seconds are counted on it), a step the room fight orders
+  (`roomfight.ts stepTo`), the breach drill from the boot on, and a man a grenade took off his place for `backSecs` after (a door order waits for its men and
+  counts the seconds). A REASON, on his own (`own`): `blast` — off a live grenade at the flee's own run (`frag.ts runSpeed` 3.4, `teamBlastPace`); `cover` —
+  loud reached him in the last `dashHot` s, nobody in his sights, the floor he stands on in a known man's line (`picture.ts exposedAt`), his mark out of it
+  and in plain sight `dashM` or more off on the same floor: he runs that leg (`teamDash`; never round a corner, through a doorway, or falling in). NEVER a run:
+  the silent squad, a squad nobody has found, a man sneaking with the player (a grenade apart), a hurt man. THE COST of a run (`runAt`, the sprint clip's
+  threshold): gun low and nothing fired (`teamSprinting`: `squad.ts`, `roomfight.ts`), a sprinter's boots to whoever hears (`teamTread`), a card weighs on it
+  as on the player's sprint (`teamRunLegs`), and a leaf met at a run is shouldered as a runner's is. Each run is written (`TEAMPACE_STATS {follow, blast,
+  cover, secs}`, `TEAMPACE_DEBUG.log`; the play-through's JSON carries `teampace`). SWITCH `TEAMPACE.on`: ON in the page (`?teampace=0` / `?noteampace`),
+  OFF in the module and on the frozen stand (`TPS_TEAMPACE=1`; `FROZEN_HOLDS`, `STAND_ENV`); in the registry and the journal (a recording from before the key
+  replays with it off). Tab rows under Movement & doorways: the switch, walk ×, follower ×, run with you, run for a reason; the old `PACE.on` row is now
+  "team ▸ pace cap". State: four named side tables. CHECK `bun run tools/qa/teampace-check.ts` (also `probes.ts teampace`, under `squadorders`), the room clear's
+  four: CHECK_LINES. MEASURED_TEXT NEIGHBOURS' CHECKS that stood on the old pace, changed here: `frag-probes.ts` (g) and the
+  flee-by-door pace line read the flee's run when the rule is on; `lineoffire-probes.ts` passes over a man with a reason to run (`teamRunAgo`); and FIVE
+  stagings hold the rule OFF with the reason written beside each, for their owners to re-stage at the new pace: `fireline-check.ts` (arms 6 and 11 stand
+  on one nav cell 2 mm from the lane's berth), `roomkeep-check.ts` (compound-four k_p+: the keeper shifts 0.5 m for mates who come by later, the bar is
+  0.4), `flashweight-probes.ts` pace (it IS the old cap's check), `doorgrenade-probes.ts` THE FAULT arm (men are off the grenade sooner, the fault shows at
+  one door of two), `frag-probes.ts` (b5) (the recorded depot throw: at the new follow pace Blue One, 0.83 s after Sam moves, is dealt the corner (0.0, 11.8),
+  gets down there and is wounded — the flee's deal, the same with `own` off; a claim for that rule's owner). NOT SEEN, NOT PLAYED: nothing of this on a GPU —
+  a teammate's sprint with his kit on has never been looked at, nor the gun going low into it; nobody has played it; 0.8, the follower's 1.3, the six
+  seconds back from a grenade and the cover run's numbers are first numbers; the play-through tool's player never sprints, so the tallies show no follower's
+  run (the staged check does); the cover run fired 20 times in 126 runs and nobody has watched one.
