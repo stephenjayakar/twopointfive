@@ -11,7 +11,7 @@
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '', MISSION = process.env.MISSION || 'bazaar-quiet', LOUD = process.env.LOUD || 'room-clear-pair';
-const BREAK = process.env.STEALTH_BREAK === '1' ? '&nokitstealth' : '';
+const BREAK = process.env.STEALTH_BREAK === '1' ? '&nokitstealth' : '', ONLY = (process.env.ONLY || '').split(',').filter(Boolean), part = name => !ONLY.length || ONLY.includes(name);   // (ONLY=own,loud,off: the parts to run — `loud` alone does not ask for the kept stealth card)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const KIT = JSON.stringify({ v: 2, members: [{ weapon: 'rifle', smoke: 1, bangs: 1, frags: 1, shells: 1, wand: false, cams: 0 }] });
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
@@ -43,7 +43,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   const noLent = t => ['rings', 'cams', 'wand'].every(f => !t.tiles[f]?.lent) && !t.anyLent && !/mission[’']s/i.test(t.text);   // (the dense card keeps a gun's rows in its pop-up: a tile not on the page is not lent)
 
   // ── own
-  { const { page, errors } = await open(`loadout=${MISSION}${BREAK}`, true);
+  if (part('own')) { const { page, errors } = await open(`loadout=${MISSION}${BREAK}`, true);
     const a = await read(page); await shot(page, 'kitstealth-own');
     line(noLent(a) && a.card.rings === 5 && a.card.cams >= 1 && a.card.wand && !a.card.frags && !a.card.shells && a.fits && a.store.you?.frags === 1 && !a.store.you?.rings && !a.store.you?.wand && !a.store.stealth,
       'A QUIET MISSION\'S TEAM & KIT SCREEN, as the page opens it: your card there carries the mission\'s sponge rounds, cameras and wand as its own rows, within its pouches; no tile is the mission\'s; the store\'s card is the loud one, untouched', say(a));
@@ -51,18 +51,17 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const set = await page.evaluate(() => window.__kit.set(0, 'cams', 1)); const b = await read(page);
     line(set === true && b.card.cams === 1 && b.store.stealth?.cams === 1 && b.store.stealth?.rings === 5 && b.store.you?.frags === 1 && !b.store.you?.cams, 'ONE CAMERA PUT BACK BY HAND: the store keeps a stealth card beside the loud one, which did not move', say(b));
     line(errors.length === 0, 'no page error on that screen', errors.join(' | ') || 'none'); await page.close(); }
-  { const { page, errors } = await open(`loadout=${MISSION}${BREAK}`, false);
+  if (part('own')) { const { page, errors } = await open(`loadout=${MISSION}${BREAK}`, false);
     const c = await read(page);
     line(c.card.cams === 1 && c.card.rings === 5 && noLent(c), 'THE PAGE OPENED AGAIN: the stealth card as it was left', say(c));
     line(errors.length === 0, 'no page error opened again', errors.join(' | ') || 'none'); await page.close(); }
-  { const { page, errors } = await open(`loadout=${LOUD}${BREAK}`, false);
+  if (part('loud')) { const { page, errors } = await open(`loadout=${LOUD}${BREAK}&oldfigure`, !part('own'));   // (&oldfigure: no second game for the door picture — on the software adapter it is minutes more a page)
     const d = await read(page); await shot(page, 'kitstealth-loud');
-    line(d.card.frags === 1 && d.card.smoke === 1 && !d.card.rings && !d.card.cams && !d.card.wand && d.store.stealth?.cams === 1, 'A LOUD MISSION\'S SCREEN ON THE SAME STORE: the loud card, and the stealth one still kept', say(d));
+    line(d.card.frags === 1 && d.card.smoke === 1 && !d.card.rings && !d.card.cams && !d.card.wand && (!part('own') || d.store.stealth?.cams === 1), 'A LOUD MISSION\'S SCREEN ON THE SAME STORE: the loud card, and the stealth one still kept', say(d));
     line(errors.length === 0, 'no page error on the loud screen', errors.join(' | ') || 'none'); await page.close(); }
 
   // ── off
-  { await ctx.clearCookies(); const { page, errors } = await open(`loadout=${MISSION}&nokitstealth&kitdense=0`, false);
-    await page.evaluate(k => { localStorage.setItem('twopointsix.kit', k); }, KIT); await page.reload(); await page.evaluate(async () => { await window.__ready; }); await page.waitForTimeout(500);
+  if (part('off')) { await ctx.clearCookies(); const { page, errors } = await open(`loadout=${MISSION}&nokitstealth&kitdense=0`, true);   // (the store's loud card is as it was planted: nothing above wrote it)
     const e = await read(page); await shot(page, 'kitstealth-off');
     line(!!e.tiles.cams?.lent && /mission/i.test(e.tiles.cams.val) && !e.card.rings && !e.card.cams && !e.card.wand && e.card.frags === 1, 'UNDER ?nokitstealth the tiles are the mission\'s again and the card carries none of it (the build before)', say(e));
     line(errors.length === 0, 'no page error under ?nokitstealth', errors.join(' | ') || 'none'); await page.close(); }
