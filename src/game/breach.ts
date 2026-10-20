@@ -8,6 +8,7 @@
 // breach scenario runs LIVE on Sam's orders (game/nightbreach.ts, BreachLive) and a level script may still drive as a Director drill (game/director.ts D.drill).
 // Its men are spawned UNITS (guards.ts spawnUnit: an operative's round finds a hostile through the ordinary fireWeapon and he goes down to the hit; the drill only
 // aims and pulls the trigger on cue, and drops a man itself only if both rounds of his pair found furniture — `guaranteeDowns`, logged when it fires).
+import { teamFight } from './teampace';   // (read inside tick only)
 import { Vec3, v3, quat, damp, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { BreachPlan, BreachFlow } from '../scene/level';
@@ -162,6 +163,7 @@ export class BreachDrill {
     const g = this.g, P = this.plan, a = this.a, b = this.b, d = this.door;
     this.t += dt; const t = this.t;
     if (!d) return;
+    if (this.phase !== 'wait' && this.phase !== 'approach' && this.phase !== 'stack' && this.phase !== 'done') { teamFight(g, a); teamFight(g, b); }   // (teampace.ts: from the boot on the drill's legs are the fight's, at the pace they had; the walk up to the stack is a walk — nothing with its switch off)
     if (this.live) { if (this.casualties(t)) return; }
     else if (a.state === 'dead' || b.state === 'dead') { if (this.phase !== 'done') { this.phase = 'done'; this.tDone = t; this.beat('abort'); } return; }   // (a live exchange, one day: a man down ends the show where it stands)
     if (this.phase === 'done') return;   // done is done: the Director's loud half walks these two men past the restack's marks, and advance() below would take a man within reach of a leftover waypoint back in hand

@@ -44,7 +44,7 @@ import { Vec3, v3, clamp, lerp, damp, wrapAngle, approachAngle, DEG } from '../m
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
-import { teamLeave, teamSprinting } from './teampace';   // (read inside methods only)
+import { teamFight, teamSprinting } from './teampace';   // (read inside methods only)
 import { canSee, canSeeChar, sightGain, sightGainOn, hearingCheck, clearShot, doorCells, frameOf, bodyVisibility, BODY_LIGHT, LIGHTS, onLitMan } from './guards';
 import { order, endGuardScript } from './squad';
 import { fireWeapon } from './combat';
@@ -1103,7 +1103,7 @@ export class RoomFight {
     const s = O.gd.script!;
     if (O.step && s.goal === O.step.mine) { O.step.mine = p; O.step.door = O.step.door || door; }
     else O.step = { mine: p, goal: s.goal, speed: s.speed, strafe: s.strafe, face: s.face, door };
-    order(O.gd, { ...patch, goal: p });
+    order(O.gd, { ...patch, goal: p }); teamFight(this.g, O.gd, 2);   // (teampace.ts: the fight's own step keeps its pace)
   }
   /** …and handed back: the order as it stood before the step, if nobody has ordered him since */
   private handBack(O: Op) {
@@ -1137,7 +1137,7 @@ export class RoomFight {
     for (const side of [sgn, -sgn]) for (const lat of [F.W + 0.65, -0.65]) {
       const p: Vec3 = [F.hx + F.ux * lat + F.nx * side * 1.05, 0, F.hz + F.uz * lat + F.nz * side * 1.05];
       if (!this.spotFree(p, gd)) continue;
-      this.stepTo(O, p, true, { speed: 2.6, strafe: false }); teamLeave(g, gd, 'lane', 2.6, 1.5); O.stepUntil = g.time + 1.5; O.funnelT = 0; this.stats.stepped++; this.note(gd, `steps off ${d.def.name}'s opening`);
+      this.stepTo(O, p, true, { speed: 2.6, strafe: false }); O.stepUntil = g.time + 1.5; O.funnelT = 0; this.stats.stepped++; this.note(gd, `steps off ${d.def.name}'s opening`);
       return;
     }
     O.stepUntil = g.time + 0.5;

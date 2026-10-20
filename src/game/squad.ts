@@ -14,7 +14,7 @@ import type { RoomClearPlan } from '../scene/level';
 import { KICK_IMPACT } from './character';
 import { tread } from './floor';
 import { loadGait, loadHeard } from './kitload';
-import { teamStep, teamSprinting } from './teampace';
+import { teamTread, teamSprinting, teamRan } from './teampace';
 import { kickDustFx } from './particleFx';
 import { goTo, followPath, teamPace, teamLegs, teamLean, teamTurn, teamPaced, PACE, lightRuled, attachFlashlight, hearingCheck, canSee, sightGain, bodyInView, escalationOf, doorTamper, nearKnownBody, muzzleCheck, aimAhead } from './guards';
 import { gunWallCheck, gunWallPose } from './gunwall';
@@ -121,7 +121,8 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
   attachFlashlight(g, gd);
   if (s.light === false && !lightRuled(g, gd)) gd.flashlight.enabled = false;   // (after attachFlashlight, which decides the light for a live man and would switch it straight back on)
   const prevPhase = gd.stepPhase; gd.stepPhase = c.anim.phase;
-  if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) tread(g, c.pos, (teamStep(g, gd, moveSpeed) ?? (loadGait(g, gd, moveSpeed) > 2 ? 0.8 : silentStep(g, gd) ?? 0.45)) * loadHeard(g, gd), false);   // (presentation only, on the floor he is on — floor.ts, as the AI's own tread)
+  if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) tread(g, c.pos, teamTread(g, gd, moveSpeed, 0.45), false);   // (presentation only, on the floor he is on — floor.ts, as the AI's own tread)
+  teamRan(g, gd);   // (teampace.ts: a run under a reason is written down — nothing with its switch off)
   s.arrived = arrived;
 }
 

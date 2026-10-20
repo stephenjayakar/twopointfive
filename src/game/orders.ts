@@ -103,7 +103,7 @@ import { backableInteract } from './interact';   // (read inside ringInput only:
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
 import { planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
-import { teamFollow, teamDash, teamEntry } from './teampace';   // (read inside update only)
+import { teamFollow, teamDash, teamFight } from './teampace';   // (read inside update only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
 const NOWHERE: Vec3 = [1e7, 0, 1e7];
@@ -1195,7 +1195,6 @@ export class SquadOrders {
         d = flat(p, A.goal);
         if (A.via.length && !st && !near && !aside) { let q = A.via[0]; for (let i = 1; i < A.via.length; i++) { d += flat(q, A.via[i]); q = A.via[i]; } d += flat(q, slot); }   // (on a way round: his pace and 'in place' are by the whole walk left, not by the next corner)
         speed = aside ? K.brisk : st ? K.onto : teamFollow(g, gd, this.samV, d, K.gain) ?? Math.max(K.walk, Math.min(K.run, this.samV + K.gain * (d - 0.3)));   // (teampace.ts: closing at the player's walk, running while he runs — null with its switch off)
-        if (!aside && !keep) speed = teamDash(g, gd, A.goal, d) ?? speed;   // (… and a run to cover across floor a known man has a line on)
         const sn = aside ? null : sneakFollow(g, gd, backM, this.samV, stopped, speed);   // (sneak.ts: the silent squad's follower, low in Sam's own steps, waiting short of a lit stretch somebody is looking at — null with its switch off)
         if (sn) { must = !!sn.must; speed = sn.speed; low = sn.crouch; if (sn.goal) { sGoal = sn.goal; d = flat(p, sn.goal); } }
         else { const un = aside ? null : unseenFollow(g, gd, this.samV, d, K.walk, speed);   // (unseen.ts: a squad nobody has found, Sam sneaking — low with him, at his pace plus what closes the gap; null with its switch off)
@@ -1222,7 +1221,7 @@ export class SquadOrders {
         if (plain && flat(A.goal, mark) > 0.05) { A.goal = [mark[0], 0, mark[2]]; A.markT = A.movedT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }
         if (A.via.length) { if (flat(p, A.via[0]) < 0.9) A.via.shift(); A.goal = A.via[0] ?? v3.copy(A.post); }   // (the way round a locked door, a waypoint at a time)
         d = flat(p, mark); speed = A.pace ?? (d > K.briskIn ? K.brisk : stackLinePace(g, gd, A, d, K.brisk) ?? K.onto);
-        if (A.pace !== undefined) teamEntry(g, gd); else if (!A.thru) speed = teamDash(g, gd, mark, d) ?? speed;   // (teampace.ts: the entry's own pace; a run to cover across floor a known man has a line on — nothing with its switch off)
+        if (A.pace !== undefined) teamFight(g, gd); else if (!A.thru && !A.via.length) speed = teamDash(g, gd, mark, d) ?? speed;   // (teampace.ts: an entry keeps its pace; a run to cover straight across floor a known man has a line on — nothing with its switch off)
         { const sp = sneakPost(g, gd, A.order) ?? unseenPost(g, gd, A.order); if (sp !== null) { low = true; speed = Math.min(speed, sp); } }   // (sneak.ts: sent to a mark while the silent squad sneaks, he goes there low with Sam — nothing with its switch off)
         const short = g.fight.short(gd);   // (LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — his walk waits, and so do the clocks that would call a standing man stuck)
         if (short) { speed = 0; A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }

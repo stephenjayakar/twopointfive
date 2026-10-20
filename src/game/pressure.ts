@@ -58,7 +58,7 @@ import { giveStuns, stunsOf, markDanger, dangerAt, dangerDoors } from './tactics
 import { hearPath } from './weather';
 import { WORDS } from './words';
 import { laneExposed, laneHolds, laneWarns } from './lanes';
-import { teamStep } from './teampace';
+import { teamTread } from './teampace';
 import { loadGait, loadHeard } from './kitload';   // (a teammate's card in the defenders' ears: his footfall as the mixer has it)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
@@ -585,7 +585,7 @@ function teamBoots(g: Game, F: RoomFight, gd: Guard): Vec3 | null {
   for (const O of F.ops) {
     const o = O.gd; if (o.state === 'dead' || o.speed < 0.5 || v3.dist(o.char.pos, gd.char.pos) > 9) continue;
     const pr = hearPath(g, v3.add(o.char.pos, [0, 1, 0]), ear);
-    const l = (teamStep(g, o, o.speed) ?? (loadGait(g, o, o.speed) > 2 ? 0.8 : silentStep(g, o) ?? 0.4)) * loadHeard(g, o) * clamp(1 - pr.pathLen / 9, 0, 1) * pr.carry;   // (guards.ts hearingCheck's own line for a step)
+    const l = teamTread(g, o, o.speed, 0.4) * clamp(1 - pr.pathLen / 9, 0, 1) * pr.carry;   // (guards.ts hearingCheck's own line for a step)
     if (l > bl) { bl = l; best = pr.via; }   // where it comes to him FROM: the doorway it spills through, the man himself only with nothing between
   }
   return best;

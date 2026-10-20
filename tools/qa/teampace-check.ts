@@ -10,8 +10,8 @@
 //   3. FOLLOWING AT A SPRINT: he sprints it — every follower is at a run with him (off: nobody over PACE.max), gun low while he runs, down to a walk inside
 //      a second and a half of his stopping, never into the player's back, in place soon after; each run written down as 'follow';
 //   3b. … and not the silent squad: the same sprint under the silent posture, nobody runs;
-//   4. A GRENADE: one put down among them — the men who run from it run (off: at the old cap), written down as 'blast';
-//   5. THE LEAVE ITSELF: a step off a doorway's opening has its own pace for its own second and a half and no longer; none with `own` off;
+//   4. A GRENADE: one put down among them — the men who run from it run (off: at the old cap), written down as 'blast'; with `own` off, at the old cap;
+//   5. THE FIGHT'S OWN MOVES: a step the room fight orders keeps the pace it had (PACE.max) for its second and a half and no longer;
 //   6. COVER (the picture raised for the line): a man the fight is hot for, on floor in the line of a man he knows of, a mark out of that line in plain sight
 //      across the same floor — he is given the run; not with the fight cold, not to a mark in the line too, not for a short step, not with `own` off, not
 //      the silent squad;
@@ -21,7 +21,7 @@
 import { ROOT } from './headless.ts';
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { rig } = (await import('./outerwall-probes.ts')) as any;
-const { TEAMPACE, TEAMPACE_STATS, TEAMPACE_DEBUG, teamLeave, teamCap, teamDashNow, teamStep, teamWalk } = await import(`${ROOT}/src/game/teampace.ts`);
+const { TEAMPACE, TEAMPACE_STATS, TEAMPACE_DEBUG, teamFight, teamCap, teamDashNow, teamTread, teamWalk } = await import(`${ROOT}/src/game/teampace.ts`);
 const { PACE, teamPaced } = await import(`${ROOT}/src/game/guards.ts`);
 const { loadPaceOn } = await import(`${ROOT}/src/game/kitload.ts`);
 const { setSilent, SILENT } = await import(`${ROOT}/src/game/silent.ts`);
@@ -95,13 +95,15 @@ async function following(on: boolean) {
   return { wTop, wOver, wRuns, wBehind, tops, runF, lowF, far, samTop, down, near, inPlace, runs, sTop, sRuns, log, n: men.length };
 }
 
-/** line 4: a grenade among them */
-async function grenade(on: boolean) {
-  const S = await stand(on), { R, g } = S, men = S.men(), thrower = R.team.length ? g.guards.find((x: any) => x.team !== 'operative' && x.team !== 'civilian') : null;
+/** line 4: a grenade among them (`own` false: the rule on, a run not allowed) */
+async function grenade(on: boolean, own = true) {
+  const S = await stand(on), { R, g } = S, men = S.men(), thrower = g.guards.find((x: any) => x.team !== 'operative' && x.team !== 'civilian');
+  TEAMPACE.own = own; { const why = R.O.give('hold', R.O.targetAt([...men[0].char.pos]), 'all'); if (why) throw new Error(`teampace: 'hold' refused — ${why}`); R.step(120); }   // (on posts: no follower's pace under the flee)
   const c = men.reduce((a, m) => [a[0] + m.char.pos[0] / men.length, 0, a[2] + m.char.pos[2] / men.length], [0, 0, 0]);
   g.items.spawn('frag', [c[0], 0.05, c[2]], [0, 0, 0], { fuse: 3.2, who: thrower?.char.id ?? 0 });
   let top = 0; for (let f = 0; f < 200; f++) { R.step(); for (const m of men) top = Math.max(top, m.speed); }
-  return { top, blast: TEAMPACE_STATS.blast as number };
+  TEAMPACE.own = true;
+  return { top, blast: TEAMPACE_STATS.blast as number, up: S.men().length };
 }
 
 export const teampaceCheck = guarded(async () => {
@@ -127,16 +129,17 @@ export const teampaceCheck = guarded(async () => {
         `on: ${a.lowF} of ${a.runF} running frames gun low · walking ${f2(a.down)} s after he stops · nearest ${f2(a.near)} m · in place ${a.inPlace} · runs written: follow ${a.runs} · off: ${b.runs}`);
       F.verdict(a.sRuns === 0 && a.sTop < TEAMPACE.runAt, 'the silent squad does not run behind him', `on: top ${f2(a.sTop)} m/s under the silent posture, runs written ${a.sRuns}`); }
     // ---- 4
-    { const a = await grenade(true), b = await grenade(false);
-      F.verdict(a.top > TEAMPACE.runAt && a.blast >= 1 && b.top <= PACE.max * 1.25 + 0.05 && b.blast === 0, 'a grenade among them: the men who run from it run, written down as blast (off: at the old cap)',
-        `on: top ${f2(a.top)} m/s, blast ${a.blast} · off: top ${f2(b.top)}, blast ${b.blast}`); }
+    { const a = await grenade(true), b = await grenade(false), c = await grenade(true, false);
+      F.verdict(a.top > TEAMPACE.runAt && a.blast >= 1 && b.top <= PACE.max * 1.25 + 0.05 && b.top > 1.9 && b.blast === 0, 'a grenade among them: the men who run from it run, written down as blast (off: at the old cap)',
+        `on: top ${f2(a.top)} m/s, blast ${a.blast}, ${a.up} up after · off: top ${f2(b.top)}, blast ${b.blast}, ${b.up} up`);
+      F.verdict(c.top > 1.9 && c.top <= PACE.max * 1.25 + 0.05 && c.blast === 0, '… and with a run not allowed him (`own` off) he leaves it at the old cap, the pace the flee was planned for — never the walk',
+        `own off: top ${f2(c.top)} m/s, blast ${c.blast}, ${c.up} up after`); }
     // ---- 5, 6, 7
     { const S = await stand(true), { R, g } = S, m = S.men()[0], walk = teamWalk(g) as number;
       { const why = R.O.give('hold', R.O.targetAt([...m.char.pos]), 'all'); if (why) throw new Error(`teampace: 'hold' refused — ${why}`); R.step(120); }   // (holding: nobody is closing on a place in a file)
-      const cap0 = teamCap(g, m), ok = teamLeave(g, m, 'lane', 2.6, 1.5), cap1 = teamCap(g, m); R.step(60); const cap2 = teamCap(g, m); R.step(45); const cap3 = teamCap(g, m);
-      TEAMPACE.own = false; const no = teamLeave(g, m, 'lane', 2.6, 1.5); TEAMPACE.own = true;
-      F.verdict(Math.abs(cap0 - walk) < 1e-9 && ok && cap1 === 2.6 && cap2 === 2.6 && Math.abs(cap3 - walk) < 1e-9 && !no, 'a step off a doorway\'s opening has its own pace for its second and a half and no longer; none with `own` off',
-        `cap ${f2(cap0)} → ${f2(cap1)} with leave → ${f2(cap2)} a second on → ${f2(cap3)} after · leave given ${ok}, with own off ${no}`);
+      const cap0 = teamCap(g, m); teamFight(g, m, 1.5); const cap1 = teamCap(g, m); R.step(60); const cap2 = teamCap(g, m); R.step(45); const cap3 = teamCap(g, m);
+      F.verdict(Math.abs(cap0 - walk) < 1e-9 && cap1 === PACE.max && cap2 === PACE.max && Math.abs(cap3 - walk) < 1e-9, 'a step the fight orders keeps the pace it had for its second and a half, and no longer',
+        `cap ${f2(cap0)} → ${f2(cap1)} with the fight's leave → ${f2(cap2)} a second on → ${f2(cap3)} after`);
       // 6. cover: a place found on this floor where a man told of an enemy is in his line and a mark across the same floor is not
       PICTURE.on = true; const H = R.hostiles[0], p = [...m.char.pos], open = (a: number[], b: number[]) => !g.col.solidBlocked([a[0], 0.45, a[2]], [b[0], 0.45, b[2]]);
       let found: { E: number[]; to: number[] } | null = null;
@@ -161,7 +164,8 @@ export const teampaceCheck = guarded(async () => {
           `run ${run} · cold ${cold} · mark in the line ${inLine} · a metre's step ${short} · own off ${off} · silent ${sil} · ${f2(d)} m, exposure here ${f2(exposedAt(g, m, p))}, at the mark ${f2(exposedAt(g, m, to))}`);
         console.log(`    (printed, not judged — the order deals each man his own spot: sent there hot, top ${f2(wHot.top)} m/s, cover runs written ${wHot.n}${wHot.why ? `, refused: ${wHot.why}` : ''} · cold, top ${f2(wCold.top)} m/s, written ${wCold.n})`); }
       // 7. boots
-      F.verdict(teamStep(g, m, 4.7) === TEAMPACE.step && teamStep(g, m, TEAMPACE.runAt - 0.01) === null, 'a sprinter\'s boots: at a run the footfall is the player\'s own sprint\'s level; under it, as it was', `at 4.7: ${teamStep(g, m, 4.7)} · just under a run: ${teamStep(g, m, TEAMPACE.runAt - 0.01)}`); }
+      { const run = teamTread(g, m, 4.7, 0.45) as number, jog = teamTread(g, m, 2.3, 0.45) as number, at = teamTread(g, m, TEAMPACE.runAt - 0.01, 0.45) as number;
+        F.verdict(Math.abs(run / jog - TEAMPACE.step / 0.8) < 1e-9 && at === jog, 'a sprinter\'s boots: at a run the footfall is the player\'s own sprint\'s level; under it, as it was', `at 4.7: ${f2(run)} · at 2.3: ${f2(jog)} · just under a run: ${f2(at)}`); } }
     // ---- 8. the journal
     { const J = await import(`${ROOT}/src/game/journal.ts`), R = await rig(SCN, 5), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(R.game)));
       TEAMPACE.on = true; const old = snap(); delete old.tables.TEAMPACE; J.applyKnobs(R.game, old); const a = TEAMPACE.on;
