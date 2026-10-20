@@ -85,6 +85,11 @@ const CLOCKED = new WeakMap<object, readonly string[]>();
 export function wallClock<T extends object>(o: T, ...keys: (keyof T & string)[]): T { CLOCKED.set(o, keys); return o; }
 export function wallClockKeys(o: object): readonly string[] | undefined { return CLOCKED.get(o); }
 
+/** WHAT IS THE HOST'S INSIDE A GAME OBJECT: the GPU's own state a GPU object of the game's keeps beside what the simulation reads — buffers out on a readback, the
+ *  ones free, what was last sent. A snapshot holds such an object as it is: never copied, never put back, never compared, and a restore into another game leaves
+ *  that game its own. It is a class that extends this one (render/probe.ts `Plumbing`), so the snapshot knows it by its make and pays nothing per object. */
+export class HostOwned {}
+
 /** everything registered, for game/rollback.ts: the named tables (but the memos), the variables and the roots, each in the order of its NAME (the same on every machine, whatever order the modules ran in) */
 export function sideRegistry(): { tables: readonly Table[]; vars: readonly SideVar[]; roots: readonly { name: string; obj: object }[] } {
   if (sorted !== NAMES.size || sortedMemos !== memos) {

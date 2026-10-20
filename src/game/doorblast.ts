@@ -66,7 +66,8 @@ export const DOORBLAST_LOG: string[] = [];
 const note = (g: Game, s: string) => { DOORBLAST_LOG.push(`${g.time.toFixed(2)}s ${s}`); if (DOORBLAST_LOG.length > 200) DOORBLAST_LOG.shift(); };
 
 /** GUNFIRE SPLINTERS A WOODEN LEAF APART (the maintainer, 10-19: 'doors should splinter apart on sustained gunfire (at least no slower than drywall)';
- *  10-20, having played it: 'it should take like 2x the rounds' — the newer word, so a door now stands LONGER than drywall: `toll` below).
+ *  10-20, having played it with the destruction scale at its top, where a leaf went in three rounds: 'it should take like 2x the rounds', then, shown
+ *  that the scale the page opens on already asks six: 'let's just go back to 6 then, 12 seems like too much' — so `toll` below is 1, drywall's own count).
  *  THE COUNT is the wall engine's own: wallbreak.ts WallBreak.round hands every round that met a leaf to `leafRound` with the weight a wall's cell would
  *  have taken for it (a rifle round 1 at chaos 0.5, a pistol round WALLS.pistolK of that; of a shotgun's pellets the ones the walls are handed), and the
  *  leaf stands `leafTough()` of it — `toll` times plasterboard's own number (or wood's if that were ever less) — ONE count for the whole leaf, wherever
@@ -84,9 +85,9 @@ const note = (g: Game, s: string) => { DOORBLAST_LOG.push(`${g.time.toFixed(2)}s
 export const DOORSHOT = {
   /** THE SWITCH (Tab ▸ Player & weapons ▸ Player, doors & props; ?doorshot=0): off = no round ever does more than mark a leaf, as it was */
   on: false,
-  /** how many times plasterboard's toll a wooden leaf stands (2 = twelve rifle rounds, twenty-four pistol, at the destruction scale the page opens on;
-   *  1 = drywall's own six, as first built, and what a recording from before this key replays with) */
-  toll: 2,
+  /** how many times plasterboard's toll a wooden leaf stands (1 = drywall's own: six rifle rounds, twelve pistol, at the destruction scale the page
+   *  opens on, and what a recording from before this key replays with; 2 = twelve and twenty-four, tried for a quarter of an hour 10-20 and taken back) */
+  toll: 1,
   /** the pieces: strips across the leaf × lengths up it, how uneven the cuts are (0‥1), and how many go as rigid pieces (past it, splinters) */
   strips: 4, lengths: 3, uneven: 0.6, chunks: 11,
   /** m/s a piece leaves at along the round's way (lo, hi) · across it (±) · up (lo, hi) · its tumble (rad/s) */

@@ -10,6 +10,8 @@
 //   · at five window widths (1000 to 1512) the weight bars stay clear of the sets' row and each gun's name and every tile under a gun is whole.
 //   node tools/qa/kittree-page.cjs [outDir]      env: PORT (the dev server's, default 5199) · KITTREE_BREAK=1 (the page with ?nokittree: must FAIL)
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. Software adapter: nothing here has been seen on a GPU.
+// The tree as THIS card lays it out: the dense card (src/ui/kitDense.ts, the page's own since 10-20) puts a gun's things in its pop-up, so every page here
+// is opened with `kitdense=0`; the dense lay-out of the same tree is tools/qa/kitdense-page.cjs's.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs');
 const path = require('path');
@@ -44,7 +46,7 @@ const read = () => {
       addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); });
     const page = await ctx.newPage();
     page.on('pageerror', e => { if (/WebGPU|adapter/i.test(String(e))) return; errors.push(String(e).slice(0, 200)); });
-    await page.goto(`http://localhost:${PORT}/?loadout=${mission}&paused&mute${BREAK ? '&nokittree' : ''}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+    await page.goto(`http://localhost:${PORT}/?loadout=${mission}&paused&mute&kitdense=0${BREAK ? '&nokittree' : ''}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
     await page.waitForSelector(`#missions.one.on #loadout .lo-kit .kc`, { timeout: 60000 }); await page.waitForTimeout(600);
     return { ctx, page };
   };

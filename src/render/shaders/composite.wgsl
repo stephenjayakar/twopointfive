@@ -393,7 +393,7 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
   let uv1 = 1.0 - NdotV; let Fv = WET_F0 + (1.0 - WET_F0) * uv1 * uv1 * uv1 * uv1 * uv1;
   let R = reflect(-V, Ns);
   var env = Ei;
-  if ((frame.flags & FLAG_BOUNCE) != 0u) { env = diceIrradiance(P + N * c0Spacing(), R); }
+  if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS) { let q = diceWalledPoint(P, N, (id >> 20u) & 0xffu); if (q.w > 0.0) { env = diceIrradiance(q.xyz, R); } } else { env = diceIrradiance(P + N * c0Spacing(), R); } }   // (BOUNCE WALLS, lighting_common.wgsl: a man by a wall never mirrors the room behind it)
   env = mix(vec3f(luminance(env)), env, 0.5);   // half the chroma: the cache is a metre coarse and a wet coat's mirror is blurry — the brightness is the cue, a cell-wide colour cast (a green cabinet glazing a black suit teal) is not
   let sheen = env * ((1.0 / 3.14159265) * Fv * WET_SHEEN * (1.0 - 0.5 * rough));
   L += sheen;

@@ -95,7 +95,7 @@ fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32) -> vec3f {
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && bounceHitMan(hit)) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
     L += albedo * Eh * (1.0 / PI);
   } else { segT = 0.0; }
   if (glassCount() > 0u) {                                                // panes on the reflected segment: tint what lies beyond, add what the nearest mirrors
