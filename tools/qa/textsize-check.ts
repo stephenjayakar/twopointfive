@@ -51,7 +51,9 @@ export async function textsizeCheck(): Promise<boolean> {
     // 4. the page's rules
     const src = readFileSync(`${ROOT}/src/ui/textsize.ts`, 'utf8'), layers: string[] = (/const LAYERS = \[([^\]]+)\]/.exec(src)?.[1] ?? '').split(',').map(s => s.trim().replace(/'/g, '')).filter(Boolean);
     const page = readFileSync(`${ROOT}/index.html`, 'utf8'), ui = readdirSync(`${ROOT}/src/ui`).filter(f => f.endsWith('.ts')).map(f => [`src/ui/${f}`, readFileSync(`${ROOT}/src/ui/${f}`, 'utf8')] as [string, string]);
-    const files: [string, string][] = [['index.html', page], ...ui];
+    // (the replay played in the game page — src/replay/engineplay.ts — makes layers of its own: its bar, the note field, the play mark, the no-tape note)
+    const replay = readdirSync(`${ROOT}/src/replay`).filter(f => f.endsWith('.ts')).map(f => [`src/replay/${f}`, readFileSync(`${ROOT}/src/replay/${f}`, 'utf8')] as [string, string]);
+    const files: [string, string][] = [['index.html', page], ...ui, ...replay];
     // (not in a layer: the benchmark's own report, the Team & kit picture's own window)
     const EXEMPT = (file: string, line: string) => file === 'src/ui/bench.ts' || /body\.kitview::after/.test(line) || /^\s*(\/\/|\/?\*)/.test(line) && !/[{;]\s*$/.test(line);
     const bare: string[] = [];
@@ -60,7 +62,7 @@ export async function textsizeCheck(): Promise<boolean> {
     const odd: string[] = [];
     for (const [f, text] of files) if (f !== 'src/ui/textsize.ts') for (const m of text.matchAll(/@media\s*(\([^{]+)\{/g)) { const cond = m[1].trim(); if (/prefers-/.test(cond)) continue; if (scaledQuery(cond, 2) === cond || /\d(em|rem|vw|vh)\b/.test(cond)) odd.push(`${f}: ${cond}`); }
     check(odd.length === 0, 'every @media on the game page is a px width or height (what the factor can scale)', odd.join(' · ') || 'all of them');
-    const made = (id: string) => page.includes(`id="${id}"`) || ui.some(([, t]) => t.includes(`id = '${id}'`));
+    const made = (id: string) => page.includes(`id="${id}"`) || [...ui, ...replay].some(([, t]) => t.includes(`id = '${id}'`));
     const lost = layers.filter(l => !made(l.slice(1)));
     check(layers.length >= 15 && lost.length === 0 && !layers.includes('#view'), 'every layer the factor is put on is in the page or made by a module, and the picture\'s canvas is not one', lost.length ? `not found: ${lost.join(' ')}` : `${layers.length} layers`);
     check(/export const TEXTSIZE = \{[^}]*?\bon: false,/s.test(src), 'the switch is OFF in the module (the page\'s boot raises it; ?textsize=0 leaves it)', '');
