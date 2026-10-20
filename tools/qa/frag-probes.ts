@@ -284,13 +284,14 @@ export const fragReact = guarded(async () => {
 
 // ---------------------------------------------------------------- frag-mates: the rest guess flies off loose furniture, and no leg ends in a mate's corner
 // (FRAG.restProps / FRAG.fleeApart: they act only with FRAG.fleeWise; all three are raised here on either stand). FRAGMATES_BREAK=1 = the two left off and the
-// same lines asked: (a), (b), (b2), (b4) and, on the page's stand, (b5) must fail. The stagings are read off the level: the furniture a rolling grenade meets, and the corner the flee itself deals.
+// same lines asked: (a), (b), (b2), (b4) and, on the page's stand, (b5) must fail. FLEELOOK_BREAK=1 = FRAG.fleeLook alone left off: (b7) must fail, and on the page's stand (b8). The stagings are read off the level: the furniture a rolling grenade meets, and the corner the flee itself deals.
 export const fragMates = guarded(async () => {
   const BREAK = process.env.FRAGMATES_BREAK === '1';
-  const F = family(`frag-mates: where it will rest counts the furniture, and a mate's corner is his${BREAK ? ' (FRAGMATES_BREAK: both rules left off)' : ''}`);
+  const F = family(`frag-mates: where it will rest counts the furniture, and a mate's corner is his${BREAK ? ' (FRAGMATES_BREAK: both rules left off)' : ''}${process.env.FLEELOOK_BREAK === '1' ? ' (FLEELOOK_BREAK: the second look left off)' : ''}`);
   const FR: any = await import(`${ROOT}/src/game/frag.ts`); const J: any = await import(`${ROOT}/src/game/journal.ts`);
   const { fragRestGuess, fleeSpot, fragFlee } = FR;
-  const set = () => { FRAG.fleeWise = true; FRAG.restProps = !BREAK; FRAG.fleeApart = !BREAK; FRAG.fleeOnto = !BREAK; };
+  const LOOK_BREAK = process.env.FLEELOOK_BREAK === '1';   // (FRAG.fleeLook left off: (b7) and (b8) must fail)
+  const set = () => { FRAG.fleeWise = true; FRAG.restProps = !BREAK; FRAG.fleeApart = !BREAK; FRAG.fleeOnto = !BREAK; FRAG.fleeLook = !BREAK && !LOOK_BREAK; };
   // ───────────── (a) a grenade a chair stops is reckoned to rest where it does ─────────────
   { const R = await rig(41), g = R.game; set(); g.godMode = true; g.aiEnabled = false; g.teleportPlayer([2, 0, 2]);
     const rows: string[] = []; let n = 0, worst = 0, tried = 0;
@@ -397,6 +398,28 @@ export const fragMates = guarded(async () => {
       const { TEAMPACE } = await import(`${ROOT}/src/game/teampace.ts`); const pace0 = TEAMPACE.on;
       for (const wait of [50, 60]) { const r = await fly('depot-four', (g, S, ours) => { TEAMPACE.on = false; g.teleportPlayer([3.5, 0, 10.5]); S.step(wait); return ours.find((x: any) => x.callsign === 'Blue One'); }, [2.71, 1.14, 15.40], [7.37, -0.20, -1.38]); TEAMPACE.on = pace0; bad += r.rep ? r.bad.length : 1; rows.push(`${f2(wait / 60)} s after Sam moved: ${r.text}`); }
       F.verdict(bad === 0, '(b5) the depot throw, at two moments of the team\'s walk: nobody of ours is killed or wounded (their god mode off)', rows.join('\n    ')); }
+    // (b7) (b8) FRAG.fleeLook — A SECOND LOOK BEFORE A MAN SETTLES FOR OPEN FLOOR. The same throw, found by sweeping it over the walk: the thrower 5 m from where
+    //      it would rest, a mate staying between him and the nearest cover, every covered spot the ring walk asked that mate's — dealt open floor 7.5 m off it
+    //      and wounded there. (b7), either stand: the four and Sam stood by hand where that deal found them, and the deal asked with the key off and on.
+    //      (b8), the page's stand: the throw at ten moments of the walk at the page's pace, counted. FLEELOOK_BREAK=1 = the key left off: both must fail.
+    { const { PACE } = await import(`${ROOT}/src/game/guards.ts`); const S: any = await hush(() => BT.stage('depot-four', 1)); const g = S.g; set(); const sam0 = FRAG.fleeSam; FRAG.fleeSam = true; g.aiEnabled = false;
+      const ours: any[] = g.guards.filter((x: any) => x.team === 'operative'), PUT: Record<string, number[]> = { 'Red One': [2.20, 0, 11.80], 'Red Two': [2.20, 0, 10.60], 'Blue One': [2.40, 0, 15.31], 'Blue Two': [2.29, 0, 16.52] };
+      const place = () => { for (const x of ours) { const p = PUT[x.callsign]; if (!p) continue; x.char.pos = [...p]; x.char.vel = [0, 0, 0]; x.path = []; x.pathGoal = null; x.speed = 0; x.lastPos = [...p]; } };
+      await hush(() => { g.teleportPlayer([3.46, 0, 10.50]); place(); S.step(2); place(); });
+      const A = ours.find((x: any) => x.callsign === 'Blue One'), G = [7.40, 0.05, 14.52], from = [G[0], G[1] + FRAG.lift, G[2]], ap = FR.fleeMates(g, A, G);
+      const ask = (on: boolean) => { FRAG.fleeLook = on; return fleeSpot(g, { pos: [...A.char.pos] }, G, FRAG.runSpeed, 2.3, PACE.accel, { path: [], keep: null, apart: ap }, A); };
+      const off = ask(false), on = ask(!LOOK_BREAK), open = (p: number[] | null) => !p || exposedTo(g, from, p, [p[0], 1.15, p[2]]) > 0;
+      const segD = (a: number[], b: number[], q: number[]) => { const dx = b[0] - a[0], dz = b[2] - a[2], L = dx * dx + dz * dz, t = L > 1e-6 ? Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[2] - a[2]) * dz) / L)) : 0; return Math.hypot(a[0] + dx * t - q[0], a[2] + dz * t - q[2]); };
+      const near = on ? Math.min(...(ap?.stay ?? []).map((q: number[]) => Math.min(dist(q, on), segD(A.char.pos, on, q)))) : 0;
+      FRAG.fleeSam = sam0; set();
+      F.verdict(open(off) && !!on && !open(on) && near >= FRAG.fleeLaneM, '(b7) the thrower with a mate between him and the cover, stood by hand: the ring walk alone deals him open floor (or none); with the second look he is dealt floor the burst has no line to, and no nearer a staying mate than a leg may pass',
+        `key off → ${off ? `${at(off)} ${open(off) ? 'in its line' : 'covered'}, ${f2(dist(off, G))} m off it` : 'no spot'} · key on → ${on ? `${at(on)} ${open(on) ? 'in its line' : 'covered'}, ${f2(near)} m from the nearest staying mate` : 'no spot'} · staying: ${(ap?.stay ?? []).map(at).join(' ')}`); }
+    if (P.harnessProfile() !== 'shipped') F.verdict(true, '(b8) the depot throw at ten moments of the walk: NOT ASKED on this stand (as (b5))', 'asked under TPS_PROFILE=shipped');
+    else { let hurt = 0; const rows: string[] = [], MOST = 1;
+      for (let wait = 20; wait <= 155; wait += 15) { const r = await fly('depot-four', (g, S, ours) => { g.teleportPlayer([3.5, 0, 10.5]); S.step(wait); return ours.find((x: any) => x.callsign === 'Blue One'); }, [2.71, 1.14, 15.40], [7.37, -0.20, -1.38]); const n = r.rep ? r.bad.length : 1; if (n) { hurt++; rows.push(`${f2(wait / 60)} s after Sam moved: ${r.text}`); } }
+      F.verdict(hurt <= MOST, `(b8) the depot throw at ten moments of the walk, the team at the page\'s pace: one of ours killed or wounded at no more than ${MOST} of them (4 of the ten with the key off)`, `${hurt} of 10${rows.length ? `\n    ${rows.join('\n    ')}` : ''}`); }
+    { const g = (await rig(63)).game, was = FRAG.fleeLook; FRAG.fleeLook = true; const old = J.knobsSnapshot(g), own = J.knobsSnapshot(g); delete old.tables.FRAG.fleeLook; J.applyKnobs(g, old); const without = FRAG.fleeLook; FRAG.fleeLook = false; J.applyKnobs(g, own); const withIt = FRAG.fleeLook; FRAG.fleeLook = was;
+      F.verdict(without === false && withIt === true && P.FROZEN_HOLDS['FRAG.fleeLook'] === 'TPS_FLEEMATES=1', '(b8) … a recording from before the key replays with it off, one that carries it on plays with it on; FROZEN_HOLDS carries its row under the flee mends\' word', `applyKnobs with no key → ${without} · with it on → ${withIt} · row ${P.FROZEN_HOLDS['FRAG.fleeLook']}`); }
   }
   // ───────────── (c) a recording from before the keys replays with them off ─────────────
   { const R = await rig(61), g = R.game; FRAG.restProps = true; FRAG.fleeApart = true; FRAG.fleeOnto = true;
@@ -406,8 +429,8 @@ export const fragMates = guarded(async () => {
   }
   // ───────────── (d) the two stands ─────────────
   { await rig(95); const P: any = await import(`${ROOT}/src/host/profile.ts`), word = process.env.TPS_FLEEMATES, shipped = P.harnessProfile() === 'shipped', want = word !== undefined ? word === '1' : shipped;
-    F.verdict(FRAG.restProps === want && FRAG.fleeApart === want && FRAG.fleeOnto === want && P.FROZEN_HOLDS['FRAG.fleeOnto'] === 'TPS_FLEEMATES=1' && P.FROZEN_HOLDS['FRAG.restProps'] === 'TPS_FLEEMATES=1' && P.FROZEN_HOLDS['FRAG.fleeApart'] === 'TPS_FLEEMATES=1' && P.STAND_ENV.includes('TPS_FLEEMATES'),
-      `(d) the stand: ${want ? 'all three on, as the page opens' : 'all three held off, as every frozen digest was recorded'}; the two stands' list carries their word`, `restProps ${FRAG.restProps} · fleeApart ${FRAG.fleeApart} · fleeOnto ${FRAG.fleeOnto} · word ${word ?? 'none'} · ${shipped ? 'shipped' : 'frozen'}`);
+    F.verdict(FRAG.restProps === want && FRAG.fleeApart === want && FRAG.fleeOnto === want && FRAG.fleeLook === want && P.FROZEN_HOLDS['FRAG.fleeOnto'] === 'TPS_FLEEMATES=1' && P.FROZEN_HOLDS['FRAG.restProps'] === 'TPS_FLEEMATES=1' && P.FROZEN_HOLDS['FRAG.fleeApart'] === 'TPS_FLEEMATES=1' && P.STAND_ENV.includes('TPS_FLEEMATES'),
+      `(d) the stand: ${want ? 'all on, as the page opens' : 'all held off, as every frozen digest was recorded'}; the two stands' list carries their word`, `restProps ${FRAG.restProps} · fleeApart ${FRAG.fleeApart} · fleeOnto ${FRAG.fleeOnto} · fleeLook ${FRAG.fleeLook} · word ${word ?? 'none'} · ${shipped ? 'shipped' : 'frozen'}`);
   }
   return F.done();
 });
