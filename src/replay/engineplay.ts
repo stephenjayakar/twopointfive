@@ -56,6 +56,7 @@ import { Input } from '../game/input';
 import type { Game } from '../game/game';
 import type { LoopCtx } from '../host/loop';
 import type { Tween, TweenCam } from '../host/tween';
+import { FINDME } from '../host/findme';
 import * as J from '../game/journal';
 import * as K from '../game/knobs';
 import * as Kt from '../game/kit';
@@ -95,6 +96,11 @@ export function paceFrame(owed: number, wall: number, speed: number, f: number, 
  *  on from where the frame before left it and never jumps ahead: it reaches a step as the next one runs, whatever the two steps' lengths (on a tape of uneven
  *  steps — one from before the fixed step — a step's movement is so shown over the NEXT step's length: unbroken, a little off the pace). */
 export function slowBlend(owed: number, next: number): number { const a = next > 0 && !SLOMO_BREAK ? owed / next : 1; return a >= 1 ? 1 - 1e-6 : a > 0 ? a : 0; }
+/** THE VIEW'S TURN FOR `dx` PIXELS OF THE MOUSE UNDER CTRL (rad): what the same hand does in play — host/loop.ts's 0.006 a pixel, and the way round the viewer
+ *  picked in Options > Game, 'Turn direction' (host/findme.ts FINDME.turn). The viewer's own setting, not the recording's: a tape's view is the tape's. */
+export function ctrlTurn(dx: number): number { return dx * 0.006 * (TURN_BREAK ? 1 : FINDME.turn); }
+/** `REPLAYTURN_BREAK=1` (tools/qa/replayturn-check.ts's): the replay's Ctrl turn does not ask the row */
+const TURN_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.REPLAYTURN_BREAK ?? '') === '1'; } catch { return false; } })();
 /** `SLOMO_BREAK=1` (tools/qa/slomo-check.ts's): a slow frame stands on the last step, as every frame did before the picture was drawn between them */
 const SLOMO_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SLOMO_BREAK ?? '') === '1'; } catch { return false; } })();
 /** the free camera: the keys that slide it · its tilt and zoom limits · metres it may be taken from the recorded look-at point · pixels a press may travel and still be a click · where a seek backwards keeps it */
@@ -400,12 +406,12 @@ export class TapePlay {
       this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, u, v, turn: e.button !== 0 || e.shiftKey || e.ctrlKey, level: e.ctrlKey && !e.shiftKey, left: e.button === 0, moved: false, from: this.view(), grab: null }; });
     const up = (e: PointerEvent): void => { const D = this.drag; if (!D || e.pointerId !== D.id) return; this.drag = null; if (D.moved) { this.dragged = D.left; try { cv.releasePointerCapture(D.id); } catch { /* */ } cv.style.cursor = ''; } };
     cv.addEventListener('pointermove', e => { const D = this.drag;
-      if (!D) { if (e.ctrlKey && !e.buttons && e.movementX && this.tape && !this.noting) this.take().yaw += e.movementX * 0.006; return; }   // (Ctrl + the mouse with no button turns the view, as it orbits the camera in play: game/input.ts orbitDX × host/loop.ts's 0.006)
+      if (!D) { if (e.ctrlKey && !e.buttons && e.movementX && this.tape && !this.noting) this.take().yaw += ctrlTurn(e.movementX); return; }   // (Ctrl + the mouse with no button turns the view, as it orbits the camera in play: game/input.ts orbitDX × host/loop.ts's 0.006, the way round his 'Turn direction' row says)
       if (e.pointerId !== D.id) return; if (!e.buttons) { up(e); return; }   // (no button down: the press ended somewhere this canvas did not hear of)
       const dx = e.clientX - D.x, dy = e.clientY - D.y;
       if (!D.moved) { if (Math.hypot(dx, dy) < DRAG_PX) return; D.moved = true; D.from = this.view(); D.grab = D.turn ? null : this.floorAt(D.from, D.u, D.v); try { cv.setPointerCapture(D.id); } catch { /* */ } cv.style.cursor = 'grabbing'; }
       const F = this.take();
-      if (D.turn) { F.yaw = D.from.yaw + dx * 0.006; if (!D.level) F.pitch = clamp(D.from.pitch + dy * 0.005, PITCH_MIN, PITCH_MAX); }
+      if (D.turn) { F.yaw = D.from.yaw + (D.level ? ctrlTurn(dx) : dx * 0.006); if (!D.level) F.pitch = clamp(D.from.pitch + dy * 0.005, PITCH_MIN, PITCH_MAX); }
       else { const [u, v] = uv(e), q = D.grab && this.floorAt(D.from, u, v); if (D.grab && q) F.look = this.near([D.from.look[0] + D.grab[0] - q[0], D.from.look[1], D.from.look[2] + D.grab[2] - q[2]]); } });
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('wheel', e => { if (!this.tape || this.noting || !e.deltaY) return; const px = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);   // (a wheel that counts lines or pages, as pixels)
