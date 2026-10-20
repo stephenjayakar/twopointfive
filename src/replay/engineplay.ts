@@ -548,13 +548,13 @@ export class TapePlay {
 #tapemapbig canvas{border:1px solid rgb(72,73,70);border-radius:3px;background:var(--h-base,#0c0b09);cursor:crosshair}
 #tapebar .say{min-width:0;white-space:nowrap;opacity:.8}
 #tapebar .say:empty,#tapebar .say.ok{display:none}
-body:has(#panel:not(.hidden)) #tapemap{right:392px}
-body.taping #equip{bottom:calc(86px + var(--tape-h,44px) + var(--sndl-h,0px))}
-body.taping #meters{bottom:calc(16px + var(--tape-h,44px) + var(--sndl-h,0px))}
+body:has(#panel:not(.hidden)) #tapemap{right:calc(372px * var(--tz, 1) + 20px)}
+body.taping #equip{bottom:calc(86px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
+body.taping #meters{bottom:calc(16px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
 body.tapetight #equip,body.tapetight #meters{visibility:hidden}
-body.taping #log{bottom:calc(44px + var(--tape-h,44px) + var(--sndl-h,0px))}
-body.taping #checkpoint,body.taping #journal{right:calc(var(--tape-map,236px) + 26px)}
-body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
+body.taping #log{bottom:calc(44px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
+body.taping #checkpoint,body.taping #journal{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))}
+body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1)) !important}
 #tapebar .say.off{color:#ffb35c;opacity:1}
 #tapebig{position:fixed;left:0;right:0;top:0;bottom:calc(var(--tape-h,44px) + var(--sndl-h,0px));z-index:69;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#e9e2d6;font:14px var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 #tapebig b{display:grid;place-items:center;width:84px;height:84px;border:2px solid var(--m-accent,#e8833a);border-radius:50%;font-size:34px;color:var(--m-accent,#e8833a);padding-left:6px;box-sizing:border-box;background:var(--h-field,rgb(21,19,16))}

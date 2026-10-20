@@ -1267,3 +1267,45 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOBODY HAS SEEN IT ON A GPU OR PLAYED IT: the brief itself is plain DOM and was looked at as Chromium lays it out at 960 x 540, 1280 x 720, 1920 x
   1080, 2560 x 1440, 3440 x 1440, 3840 x 2160 and a 700 px wide window; how long the hold feels, the fade into the first frames, and the sound that
   starts on the press are unjudged.
+- **The game has its own text size, and the page no longer zooms** (`src/ui/textsize.ts`, `TEXTSIZE.on`, 10-19; a play test on a 3840 × 2160 screen:
+  the words were too small to read, the browser's zoom keys grew the page until the layout broke, and the mission select's names were cut). ONE FACTOR,
+  `--tz` on the root (which wears the class `tsz` while the switch is on), drawn as CSS `zoom` on every layer of the page that carries words (`LAYERS`:
+  the menu, the Play page, the options, the fight screen's read-outs, the marks over the picture, the debugger; never the picture's canvas). WITH NOTHING
+  CHOSEN it is the window over 1920 × 1080, never under 1 and never over 3: 3840 × 2160 draws at 2, 2560 × 1440 at 1.33, 1920 × 1080 and anything
+  smaller as it always did. A page zoomed from the browser's own menu is a smaller window, so the words stay the size they were. THE SETTING is Options ▸
+  Graphics ▸ Display ▸ Text size: five steps drawn as the letter at each size (0.85, 1, 1.15, 1.3, 1.5 times the window's), live while the page boots,
+  kept per machine (localStorage `twopointsix.textsize`, the step's index; nothing kept = the window's; Graphics ▸ Reset forgets it). A step never
+  takes the layout under 1200 × 675 of its own pixels (the smallest window the screens hold whole at, measured with the page check on the build before):
+  where the largest step asks for more room than there is, the larger steps share what there is (1366 × 768: 1.04, 1.08, 1.14; 1280 × 720: up to
+  1.07), and on a window of 1200 × 675 or less they do nothing. THE KEYS: Ctrl or ⌘ with + and − step it from anywhere, with 0 it is the window's
+  again; those chords, Ctrl + wheel and a pinch are taken from the browser (Ctrl + wheel over the picture is still the camera's).
+  FOUR THINGS A ZOOMED LAYER DOES NOT DO BY ITSELF, and a new screen has to: a viewport unit in a layer is written `calc(25vw / var(--tz, 1))` (the
+  check is red on a bare one in `index.html` or `src/ui`); an `@media` width or height is rewritten by the module to ask for px × factor (also when a
+  style sheet joins later, one microtask after it joins), and a script asks `uiMatch('(max-width: 720px)')` in place of `matchMedia`; a rectangle a
+  script measures off a zoomed element is in window pixels and one it writes into a layer is in the layer's, so divide by `rectZoom()` (the speech
+  bubbles' blockers, the debugger's tooltip, the kit picture's width), and a size read off the window or the picture's canvas by `textZoom()` (the
+  overlay's marks, `uiSize()`); a 2D canvas inside a layer multiplies its device pixels by `textZoom()` or it is stretched (the kit figure, the
+  debrief's map, the wind graph do). A new layer of the page joins `LAYERS`. The replay player's own bar, map and sound lanes are NOT layers (they
+  stay the size they were); its rules that move the fight screen's read-outs clear of them divide the bar's window pixels by the factor.
+  THE MISSION SELECT'S CUT NAMES (the play test's other note) had a cause of their own: the grid of cards has a fixed height and its lines shared it,
+  so on a tall window with few lines the picture (16:9 of a wide card) took the whole line and the name and tags hung out under the next line's picture;
+  at 3840 × 2160 no name could be read, at 1920 × 1080 the tags were cut. With the switch on a card's line is `minmax(0, 1fr) auto auto` with a floor of
+  the picture cropped to 2:1 plus its captions: the picture gives way before the words do, then the grid scrolls. The screen's look at 1920 × 1080 and
+  under is otherwise as it was; with the switch off it is the build before to the rectangle.
+  SWITCH: ON in the page, `?textsize=0` off (no factor, no class, no row, the browser's own zoom keys, every rule as written; `var(--tz, 1)` is 1), OFF
+  in the module, never in the Team & kit picture's own window. It is a look of the page, not a rule of the game: nothing under `src/game` reads it, it
+  is in no knob registry, journal or digest, the headless harness never boots it, so there is no stand word and no run can move. Hook `window.__textsize`
+  (`on`, `zoom`, `step`, `set(i | null)`, `layers`, `table`, `want(w, h, i)`, `media()`). CHECKS: `bun run tools/qa/probes.ts textsize` (family `ui`:
+  the factor's table, the browser-zoom invariance, the floor and the shared room, the media rewrite, the keys, the lints; `TEXTSIZE_BREAK=1` fails,
+  the same on both stands) and the real page, `PORT=<dev server> node tools/qa/textsize-page.cjs [outDir]` (`WAS=<port of a server of the build
+  before>` holds `?textsize=0` to it; `GPU=1` adds the pause card and the fight screen on the software adapter; `TEXTSIZE_BREAK=1` fails).
+  MEASURED 10-19 in headless Chromium with no adapter: at 3840 × 2160, 2560 × 1440, 1280 × 720, 2560 × 1440 at 1.5 device pixels and 1920 × 1080 at
+  2, and at the largest and smallest step, no text cut or covered on the title, the six groups of the mission select (33 cards), Team & kit or the
+  options, and every `@media` rule asked at its px × factor; the row, the keys, the wheel, the kept step across a load; `?textsize=0` at 3840 × 2160
+  equal to the build before in 588 text rectangles. On the SOFTWARE ADAPTER, one boot of the solo night at the three sizes: the kit, the meters and the
+  objective inside the window at the window's factor, the aim ring over the same point of the picture at the largest step as at none, the options
+  over the pause card whole (the pause card's run tally already ends three long labels in an ellipsis at 1280 × 720 on the build before; the check
+  holds the card to that). NEVER SEEN ON A GPU, and nobody has played it: not the sharpness of the words or of the three canvases, not the kit
+  picture's window inside the zoomed Play page (no adapter here draws it), not a real pinch or a real Ctrl + wheel. Chromium only: Safari was never
+  run (the boot asks the engine which pixels it measures a zoomed element in, and that answer has only ever been Chromium's). The replay player was
+  not run with a tape after its six rules changed.

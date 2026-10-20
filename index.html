@@ -25,7 +25,7 @@
     /* left column, top: the debug read-out (#hud — main.ts fills it every 10 frames, empties it while the tour runs) and the interaction panel, which sits to the
        right of that block while it has text and at the screen edge when it is empty (:empty drops it out of the row). The read-out is clipped short of the kit stack. */
     #lcol { position: absolute; left: 10px; top: 8px; display: flex; align-items: flex-start; gap: 16px; pointer-events: none; }
-    #hud { font: 11px/1.35 var(--h-mono); white-space: pre; color: var(--h-ink); text-shadow: var(--h-shadow); max-height: calc(100vh - 240px); overflow: hidden; }   /* controls live in the pause / start card now */
+    #hud { font: 11px/1.35 var(--h-mono); white-space: pre; color: var(--h-ink); text-shadow: var(--h-shadow); max-height: calc(100vh / var(--tz, 1) - 240px); overflow: hidden; }   /* controls live in the pause / start card now */
     #hud:empty { display: none; }
     #hud:not(:empty) { min-width: 330px; }   /* a steady left edge for the panel beside it while the numbers change */
     /* interaction panel (overlay.ts setInteractions): what Space can do round here — one block per VERB (a shut door is 'push it open' and 'ease it open';
@@ -72,8 +72,8 @@
     #interact .it.k-door .prog b { background: #bfe6ff; }
     #interact .more { padding: 0 10px; font-size: 9px; letter-spacing: 0.14em; color: var(--h-dim); }
     /* the tour empties #hud, so the panel is at the edge: start it under the letterbox bar; on a window too narrow for it to sit beside the centred caption card, under that too */
-    body.touring #interact { margin-top: calc(7.5vh + 4px); }
-    @media (max-width: 1340px) { body.touring #interact { margin-top: calc(7.5vh + 190px); } }
+    body.touring #interact { margin-top: calc(7.5vh / var(--tz, 1) + 4px); }
+    @media (max-width: 1340px) { body.touring #interact { margin-top: calc(7.5vh / var(--tz, 1) + 190px); } }
     /* THE TWEAK PANEL (Tab; ui/panel.ts + bindings.ts): a two-level tool — SYSTEMS down a left rail, collapsible SECTIONS on the selected system's page — in the HUD's own
        thin sand mono. Header: a status strip (preset · resolution · fps · gpu ∪, so it is worth having up with the read-out off), the search box (every system at once;
        hover the panel and type, ← / → or [ / ] walk the rail) and the 'all knobs' switch that reveals the A/B rows (.row.adv) and the rarely-touched sections (.advsec). */
@@ -194,7 +194,7 @@
     #meters.hot .m.light .fill { background: var(--h-acc); }
     /* radio traffic (overlay.ts): only what goes over a net — the guards' channel you are listening in on, and (later) your own side. Everything else the old
        message log printed is carried by the interaction panel, the kit column and the world itself. */
-    #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(620px, 70vw); font: italic 12px/1.45 var(--h-font); color: var(--h-ink); text-align: center; text-shadow: var(--h-shadow); white-space: pre-wrap; pointer-events: none; letter-spacing: 0.02em; }
+    #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(620px, 70vw / var(--tz, 1)); font: italic 12px/1.45 var(--h-font); color: var(--h-ink); text-align: center; text-shadow: var(--h-shadow); white-space: pre-wrap; pointer-events: none; letter-spacing: 0.02em; }
     #log .rx { display: block; opacity: 0.92; } #log .rx b { font: 700 11px/1 var(--h-head); color: var(--h-hi); letter-spacing: 0.12em; margin-right: 6px; } #log .rx.old { opacity: 0.5; }
     /* mission: one objective line top-centre and a small diamond on (or, clamped to the screen edge, toward) the current objective — the same caps as the meters; the objective is one of the things the orange is for (overlay.ts) */
     #objective { position: absolute; left: 50%; top: 5px; padding: 5px 12px 4px; background: rgba(var(--h-plate),0.5); border-radius: 2px; transform: translateX(-50%); font: 12px/1 var(--h-font); letter-spacing: 0.02em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0.95; }
@@ -254,11 +254,11 @@
     /* THE TITLE SCREEN (#menu.title: the start card while the one starting page is the way in): the wordmark and the main menu down the left, the floor — and the attract reel — showing through on the right */
     #menu.title { align-items: stretch; justify-content: flex-start; background: linear-gradient(90deg, rgba(var(--m-base-rgb),0.97) 0, rgba(var(--m-base-rgb),0.9) 24%, rgba(var(--m-base-rgb),0.4) 56%, rgba(var(--m-base-rgb),0.06) 100%); }
     body.attract #menu.title { background: linear-gradient(90deg, rgba(var(--m-base-rgb),0.95) 0, rgba(var(--m-base-rgb),0.84) 22%, rgba(var(--m-base-rgb),0.2) 52%, rgba(var(--m-base-rgb),0) 100%); }
-    #menu.title .card { width: min(920px, 100%); height: 100%; max-height: none; overflow: hidden auto; display: flex; flex-direction: column; padding: clamp(28px, 10vh, 110px) 24px 22px clamp(24px, 6.5vw, 110px); background: none; border: 0; box-shadow: none; border-radius: 0; }
-    #menu.title .t1 { font-size: clamp(40px, 6.6vw, 100px); line-height: 0.9; letter-spacing: 0; white-space: nowrap; text-shadow: 0 2px 30px rgba(0,0,0,0.6); }
+    #menu.title .card { width: min(920px, 100%); height: 100%; max-height: none; overflow: hidden auto; display: flex; flex-direction: column; padding: clamp(28px, 10vh / var(--tz, 1), 110px) 24px 22px clamp(24px, 6.5vw / var(--tz, 1), 110px); background: none; border: 0; box-shadow: none; border-radius: 0; }
+    #menu.title .t1 { font-size: clamp(40px, 6.6vw / var(--tz, 1), 100px); line-height: 0.9; letter-spacing: 0; white-space: nowrap; text-shadow: 0 2px 30px rgba(0,0,0,0.6); }
     #menu.title .t2 { margin-top: 16px; max-width: 36ch; font-size: 14px; line-height: 1.4; letter-spacing: 0.04em; }
     #menu.title .head::after { content: ''; display: block; width: 72px; height: 4px; margin-top: 22px; background: var(--m-accent); }
-    #menu.title .actions { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 4px; margin: clamp(20px, 6vh, 60px) 0 0; }
+    #menu.title .actions { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 4px; margin: clamp(20px, 6vh / var(--tz, 1), 60px) 0 0; }
     #menu.title .actions .btn { box-sizing: border-box; width: min(360px, 100%); text-align: left; font-size: 24px; letter-spacing: 0.12em; padding: 13px 18px 11px; background: rgba(var(--m-btn-rgb),0.4); border: 0; border-left: 4px solid rgba(var(--m-edge),0.3); border-radius: 0; transition: padding-left 0.12s, background 0.12s; }
     #menu.title .actions .btn:hover, #menu.title .actions .btn:focus { padding-left: 28px; background: rgba(var(--m-hover-rgb),0.7); border-left-color: var(--m-accent); }
     #menu.title .actions .btn.primary { font-size: 34px; padding: 14px 18px 11px; margin-bottom: 8px; background: var(--m-accent); border-left-color: var(--m-accent-hi); }
@@ -325,8 +325,8 @@
     #missions .mlean { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; align-self: center; }   /* the row's lean: blue quiet, red loud, both = the player's choice */
     #missions .mlean.quiet { background: #6fb7ff; } #missions .mlean.loud { background: #ff9c84; } #missions .mlean.either { background: linear-gradient(90deg, #6fb7ff 50%, #ff9c84 50%); }
     #missions .msheet { overflow: auto; padding: 18px 24px 16px; display: flex; flex-direction: column; gap: 10px; }
-    #missions .mplan { display: block; flex: 0 0 auto; height: clamp(72px, calc(min(780px, 100vh - 40px) - 603px), 300px); max-width: 100%; aspect-ratio: 40 / 28; align-self: center; background: rgba(var(--m-base-rgb),0.5); border: 1px solid rgba(var(--m-edge),0.18); border-radius: 3px; }
-    #missions .msheet:has(.mway:not(.na)) .mplan { height: clamp(72px, calc(min(780px, 100vh - 40px) - 661px), 300px); }   /* a mission with a Way in row: the plan gives up that row's two lines + the gap (48 + 10 px) */
+    #missions .mplan { display: block; flex: 0 0 auto; height: clamp(72px, calc(min(780px, 100vh / var(--tz, 1) - 40px) - 603px), 300px); max-width: 100%; aspect-ratio: 40 / 28; align-self: center; background: rgba(var(--m-base-rgb),0.5); border: 1px solid rgba(var(--m-edge),0.18); border-radius: 3px; }
+    #missions .msheet:has(.mway:not(.na)) .mplan { height: clamp(72px, calc(min(780px, 100vh / var(--tz, 1) - 40px) - 661px), 300px); }   /* a mission with a Way in row: the plan gives up that row's two lines + the gap (48 + 10 px) */
     @media (max-height: 772px) { #missions .msheet:has(.mway:not(.na)) .mplan { display: none; } }   /* (…and where that would take it under its 72 px floor, the plan goes) */
     #missions .mtop { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
     #missions .mst { font: 300 28px/1.1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.06em; color: var(--m-bright); }
@@ -389,7 +389,7 @@
     #menu .db-badges .chip { padding: 2px 7px 3px; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; border: 1px solid rgba(var(--m-edge),0.28); border-radius: 10px; color: var(--m-faint); cursor: help; }
     #menu .db-badges .chip.on { color: var(--m-bright); border-color: rgba(var(--m-accent-rgb),0.7); background: rgba(var(--m-sel-rgb),0.35); box-shadow: 0 0 8px rgba(var(--m-accent-rgb),0.25); text-shadow: 0 0 5px rgba(var(--m-accent-rgb),0.5); }
     #menu .db-tlhead { margin: 14px 0 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(var(--m-edge),0.2); font: 600 12px/1 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-accent); }
-    #menu .db-timeline { max-height: min(30vh, 260px); overflow: auto; padding: 2px 4px 2px 0; border-top: 1px solid rgba(var(--m-edge),0.18); border-bottom: 1px solid rgba(var(--m-edge),0.18); }
+    #menu .db-timeline { max-height: min(30vh / var(--tz, 1), 260px); overflow: auto; padding: 2px 4px 2px 0; border-top: 1px solid rgba(var(--m-edge),0.18); border-bottom: 1px solid rgba(var(--m-edge),0.18); }
     #menu .db-timeline .ev { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04); align-items: baseline; }
     #menu .db-timeline .ev i { flex: 0 0 38px; font-style: normal; color: var(--m-accent); letter-spacing: 0.06em; }
     #menu .db-timeline .ev u { flex: 0 0 104px; text-decoration: none; color: var(--m-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.04em; }
@@ -482,7 +482,7 @@
     #missions .mrow > .vpips .vico { width: 11px; height: 11px; }
     #missions .mrow > .vpips .vmarks { height: 4px; gap: 1px; } #missions .mrow > .vpips .v1 { font-size: 6px; line-height: 4px; } #missions .mrow > .vpips .vall { width: 6px; height: 1px; }
     #missions .mrow > .vpips.none { opacity: 0.6; }
-    #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(var(--h-plate),0.62), rgba(var(--h-plate),0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(var(--h-edge),0.2); }
+    #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw / var(--tz, 1)); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(var(--h-plate),0.62), rgba(var(--h-plate),0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(var(--h-edge),0.2); }
     #caption.on { opacity: 1; }
     /* tour timeline: chapters along the bottom while the tour runs; segment width ∝ stop duration, the live one fills; clickable, ←/→ step too. 900 px centred when
        there is room; on a narrower window it keeps its left end clear of the meters + kit column and runs on into the (now empty) right corner — short of the knob panel when that is open */
