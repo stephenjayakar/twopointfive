@@ -65,14 +65,14 @@ const STYLE = 'brief-style';
 const CSS = `
 /* THE LOAD BRIEF (ui/loadbrief.ts): the title screen's own composition — the words and the one block down the left on the menus' ground — with the mission's
    picture where the title has the floor. Flat, square, no frame round the words; the accent is the rule under the title and the block, nothing else.
-   IT GROWS WITH A BIG WINDOW: every length below is written in px as the other menus' are and laid out in --u (styles(): 1 px up to a 1920 x 1080 window,
-   2 px at 3840 x 2160), so the page a 4K screen at no scaling shows is the 1080p page, twice the size. (PX = a length that is not scaled: the unit itself, the breakpoints.) */
-#brief { --u: clamp(1PX, min(0.0521vw, 0.0926vh), 2PX); position: absolute; inset: 0; z-index: 30; display: none; grid-template-columns: minmax(340px, 42%) minmax(0, 1fr); background: var(--m-base); color: var(--m-text); font: 13px/1.45 var(--m-font); outline: none; opacity: 1; transition: opacity 0.18s; }
+   A LAYER OF THE GAME'S TEXT SIZE (ui/textsize.ts LAYERS: drawn at the window's factor and the player's step, as the menus are), so by that module's rule
+   every viewport unit below is divided by the factor and every @media is a px width or height. */
+#brief { position: absolute; inset: 0; z-index: 30; display: none; grid-template-columns: minmax(340px, 42%) minmax(0, 1fr); background: var(--m-base); color: var(--m-text); font: 13px/1.45 var(--m-font); outline: none; opacity: 1; transition: opacity 0.18s; }
 #brief.on { display: grid; }
 #brief.out { opacity: 0; pointer-events: none; }
-#brief .bcol { box-sizing: border-box; min-width: 0; height: 100%; overflow: hidden auto; display: flex; flex-direction: column; padding: clamp(22px, 6vh, 64px) 24px clamp(22px, 6vh, 64px) clamp(24px, 6.5vw, 110px); }
+#brief .bcol { box-sizing: border-box; min-width: 0; height: 100%; overflow: hidden auto; display: flex; flex-direction: column; padding: clamp(22px, 6vh / var(--tz, 1), 64px) 24px clamp(22px, 6vh / var(--tz, 1), 64px) clamp(24px, 6.5vw / var(--tz, 1), 110px); }
 #brief .bk { font: 600 12px/1 var(--m-head); letter-spacing: 0.3em; text-transform: uppercase; color: var(--m-dim); min-height: 12px; }
-#brief .bt { margin: 14px 0 0; font: 700 clamp(34px, 4.2vw, 64px)/0.95 var(--m-head); letter-spacing: 0.01em; text-transform: uppercase; color: var(--m-bright); overflow-wrap: break-word; }
+#brief .bt { margin: 14px 0 0; font: 700 clamp(34px, 4.2vw / var(--tz, 1), 64px)/0.95 var(--m-head); letter-spacing: 0.01em; text-transform: uppercase; color: var(--m-bright); overflow-wrap: break-word; }
 #brief .bt::after { content: ''; display: block; width: 72px; height: 4px; margin-top: 20px; background: var(--m-accent); }
 #brief .bplace { margin-top: 18px; max-width: 40ch; font-size: 14px; line-height: 1.4; letter-spacing: 0.04em; color: var(--m-soft); }
 #brief .bjob { margin-top: 14px; max-width: 40ch; font-size: 17px; line-height: 1.45; color: var(--m-bright); }
@@ -80,7 +80,7 @@ const CSS = `
 #brief .bf b { display: block; font: 600 11px/1 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-dim); }
 #brief .bf span { display: block; margin-top: 6px; font-size: 14px; color: var(--m-text); }
 #brief .bin { margin: auto 0; }   /* (the words and the block as one group, level with the picture; a column taller than the window scrolls from its top) */
-#brief .bgo { position: relative; overflow: hidden; box-sizing: border-box; width: min(360px, 100%); margin-top: clamp(22px, 5vh, 44px); display: flex; align-items: center; justify-content: space-between; text-align: left; font: 700 34px/1 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; padding: 14px 18px 11px; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.4); border: 0; border-left: 4px solid rgba(var(--m-edge),0.3); border-radius: 0; cursor: progress; transition: padding-left 0.12s, background 0.12s, color 0.12s; }
+#brief .bgo { position: relative; overflow: hidden; box-sizing: border-box; width: min(360px, 100%); margin-top: clamp(22px, 5vh / var(--tz, 1), 44px); display: flex; align-items: center; justify-content: space-between; text-align: left; font: 700 34px/1 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; padding: 14px 18px 11px; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.4); border: 0; border-left: 4px solid rgba(var(--m-edge),0.3); border-radius: 0; cursor: progress; transition: padding-left 0.12s, background 0.12s, color 0.12s; }
 #brief .bgo i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(var(--m-accent-rgb),0.3); transition: width 0.2s; }
 #brief .bgo span, #brief .bgo kbd { position: relative; }
 #brief .bgo kbd { font: 600 11px/1 var(--m-head); letter-spacing: 0.2em; opacity: 0; transition: opacity 0.12s; }
@@ -95,20 +95,20 @@ const CSS = `
 #brief .bfoot { display: flex; gap: 26px; margin-top: 10px; }
 #brief .bq { padding: 8px 0 7px; font: 600 12px/1 var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; color: var(--m-dim); background: none; border: 0; border-radius: 0; cursor: pointer; }
 #brief .bq:hover, #brief .bq:focus { color: var(--m-bright); outline: none; }
-#brief .bpic { min-width: 0; display: flex; align-items: center; justify-content: center; padding: clamp(20px, 5vh, 64px) clamp(20px, 4vw, 72px) clamp(20px, 5vh, 64px) 12px; }
+#brief .bpic { min-width: 0; display: flex; align-items: center; justify-content: center; padding: clamp(20px, 5vh / var(--tz, 1), 64px) clamp(20px, 4vw / var(--tz, 1), 72px) clamp(20px, 5vh / var(--tz, 1), 64px) 12px; }
 #brief .bpic img { display: block; width: min(100%, 1140px); max-height: 100%; aspect-ratio: 760 / 475; object-fit: cover; border: 1px solid rgba(var(--m-edge),0.14); opacity: 0; transition: opacity 0.25s; }
 #brief .bpic img.in { opacity: 1; }
 /* a narrow window: the picture over the words; a short one: the same column, closer set */
-@media (max-width: 820PX) { #brief { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } #brief .bpic { order: -1; padding: 16px 24px 0; justify-content: flex-start; } #brief .bpic img { max-height: 32vh; }
+@media (max-width: 820px) { #brief { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } #brief .bpic { order: -1; padding: 16px 24px 0; justify-content: flex-start; } #brief .bpic img { max-height: calc(32vh / var(--tz, 1)); }
   #brief .bcol { padding-left: 24px; } #brief .bin { margin: 0; } }
-@media (max-height: 640PX) { #brief .bcol { padding-top: 16px; padding-bottom: 12px; } #brief .bt { margin-top: 10px; font-size: clamp(28px, 3.6vw, 44px); } #brief .bt::after { margin-top: 12px; }
+@media (max-height: 640px) { #brief .bcol { padding-top: 16px; padding-bottom: 12px; } #brief .bt { margin-top: 10px; font-size: clamp(28px, 3.6vw / var(--tz, 1), 44px); } #brief .bt::after { margin-top: 12px; }
   #brief .bplace { margin-top: 10px; } #brief .bjob { margin-top: 8px; font-size: 15px; } #brief .bfacts { margin-top: 14px; } #brief .bgo { margin-top: 18px; font-size: 26px; padding: 10px 18px 8px; } }
 @media (prefers-reduced-motion: reduce) { #brief, #brief .bgo, #brief .bgo i, #brief .bpic img { transition: none; } }
 `;
 function styles() {
   menuTheme();
   if (document.getElementById?.(STYLE)) return;
-  const s = document.createElement('style'); s.id = STYLE; s.textContent = CSS.replace(/(\d+(?:\.\d+)?)px/g, (px, n) => +n <= 1 ? px : `calc(var(--u) * ${n})`); document.head?.appendChild?.(s);   // (hairlines stay hairlines)
+  const s = document.createElement('style'); s.id = STYLE; s.textContent = CSS; document.head?.appendChild?.(s);
 }
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
