@@ -46,6 +46,7 @@ import type { Box } from '../scene/boxes';
 import { cutSwap, ProgramSet, type CutSwappable } from './cutSwap';   // CUT BOXES: the tracing pipelines exist twice under the switch — the boot's (no cut rule) and a second set behind it, swapped per frame
 import { tuned } from './shaderTune';   // the scene tweak panel's constant overrides (empty map = compositeSrc itself)
 import { FogPass, type FogFrame } from './fogofwar';   // FOG OF WAR (game/fogofwar.ts): one in-place pass over the composite while its switch is on — nothing while off
+import { OutlinePass, type OutlineFrame } from './outline';   // THE OUTLINE IN THE DARK (host/findme.ts): one scissored blend onto the composite while its Options row is on — nothing while off
 
 const CS = GPUShaderStage.COMPUTE, FS = GPUShaderStage.FRAGMENT;
 
@@ -118,6 +119,8 @@ export class LightingPasses implements CutSwappable {
    *  (hdr is a storage texture that can be copied from then, as under GBAA). Off = no texture, no pass, hdr as it was. */
   fogOn = false; fogFrame: FogFrame | null = null; private fogPass: FogPass | null = null;
   setFog(on: boolean) { if (on !== this.fogOn) { const was = this.hdrUsage(); this.fogOn = on; if (this.hdrUsage() !== was) this.compStale = true; if (!on) this.fogPass?.release(); } }   // (the composite's set is re-made only when the fog changes what hdr must be: with GBAA on — every tier's default — hdr is already a storage texture that can be copied from, and re-making the set made a second hdr / hdrCopy / sharpE pair of the same description, 53 MB at high, beside the first one parked for a minute and a half)
+  /** the outline in the dark (render/outline.ts; the engine mirrors its frame each render, null under a debug view): its pass is made the first frame the row is on */
+  outline: OutlineFrame | null = null; private outlinePass: OutlinePass | null = null;
   /** what the composite's hdr target must be able to do, by the switches that read or rewrite it (reallocComp makes it so; a switch that does not change this needs no new target) */
   private hdrUsage(): GPUTextureUsageFlags { const copyOn = this.gbaaOn || this.sceneCopyOn; return RT() | (this.sharpOn || this.gbaaOn || this.fogOn ? GPUTextureUsage.STORAGE_BINDING : 0) | (copyOn || this.fogOn ? GPUTextureUsage.COPY_SRC : 0); }
   /** GBAA (gbaa.wgsl; engine mirrors settings.gbaa before resize — setGbaa): after the composite (+ the particles' splat) and before the resolve, every composite pixel an analytic box edge crosses is
@@ -1597,6 +1600,7 @@ export class LightingPasses implements CutSwappable {
       const p = enc.beginComputePass({ label: 'gbaa', timestampWrites: ts('gbaa') }); p.setPipeline(this.pGbaa!); p.setBindGroup(0, this.sharpOn && this.sceneBGOut ? this.sceneBGOut : sceneBG); p.setBindGroup(1, this.bgGbaa); p.dispatchWorkgroups(Math.ceil(this.cw / 8), Math.ceil(this.ch / 8)); p.end();
     }
     if (this.fogOn && this.fogFrame) (this.fogPass ??= new FogPass(this.device, this.sceneLayout)).encode(enc, this.fogFrame, this.sharpOn && this.sceneBGOut ? this.sceneBGOut : sceneBG, this.hdr, this.hdrView, this.cw, this.ch, g.depthOView, g.normalOView, g.albedoOView, () => ts('fogofwar'));   // FOG OF WAR: hdr → its copy, then every pixel no eye of the team sees pushed down in place (fogofwar.wgsl) — only while the game's switch is on
+    if (this.outline?.on) (this.outlinePass ??= new OutlinePass(this.device)).encode(enc, this.outline, this.hdrView, g.idOView, g.depthOView, this.cw, this.ch); else this.outlinePass?.release();   // THE OUTLINE IN THE DARK: the player's own pixels rimmed, over the fog and under the resolve (outline.wgsl) — only while his Options row is on
     let src = 0;   // which bloom-down0 / post bind group: the history parity under TAAU, the lone hdr group without it
     if (this.taauOn) {   // the TAAU resolve: hdr (internal, jittered) + depth + last output → this frame's output = taaHist[p] at the OUTPUT size; everything below reads that
       this.taaParity ^= 1; src = this.taaParity; this.taaStats.frames++;

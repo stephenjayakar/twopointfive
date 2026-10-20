@@ -21,6 +21,7 @@ import { Vec3, m4, v3 } from './math/vec';
 
 import { RenderSettings, defaultSettings } from './settings';
 import { FogSight, FOG_SIGHT_BYTES, type FogFrame } from './render/fogofwar';
+import { outlineBox, type OutlineFrame } from './render/outline';
 export type { RenderSettings } from './settings';
 export { defaultSettings } from './settings';
 
@@ -53,6 +54,9 @@ export class Engine {
   sharpOn = false; frameBufOut: GPUBuffer; frameDataOut = new ArrayBuffer(FRAME_BYTES); sceneBGOut: GPUBindGroup | null = null;
   /** FOG OF WAR (game/fogofwar.ts fills it every frame; main.ts hands the game's object over once): null / `on` false = no pass, the frame as it was */
   fogFrame: FogFrame | null = null;
+  /** the outline in the dark (render/outline.ts): the host's frame for it, null = never asked. Written by the host once a frame (ui/findme.ts findMeOutline);
+   *  render() adds the box on the picture its own camera gives and the exposure */
+  outline: OutlineFrame | null = null;
   /** … its SIGHT TABLE (render/fogofwar.ts FogSight — the scene group's binding 11; dispatched at the head of a frame only while the game asks for the full
    *  picture under the fog), the 1 × 1 stand-in the table's own pass is bound with, and that pass's scene group (every resource sceneBG's but binding 11) */
   fogSight: FogSight; private fogSightStand: GPUBuffer; private sceneBGPlain: GPUBindGroup | null = null;
@@ -379,6 +383,8 @@ export class Engine {
   render(cam: FollowCamera, time: number, dt: number, present = true) {
     if (!this.ready) throw new Error('Engine.render() before init() resolved — await engine.init() / Engine.create() first');   // (a readable line instead of setPipeline(undefined) deep in a pass)
     this.lastDt = dt; this.viewFocus = cam.focus;
+    if (this.outline) { this.outline.exposure = this.settings.exposure; if (this.outline.on) outlineBox(this.outline, p => cam.project(p, 1, 1)); }   // THE OUTLINE IN THE DARK (host/findme.ts → render/outline.ts): the box round him on THIS camera's picture
+    this.passes.outline = this.settings.debugView === 0 ? this.outline : null;   // (never under a debug view, as the fog)
     this.passes.dustLook = !!this.smoke.dusty;   // (look only: destruction dust alive in the bound smoke system → render/dustLookVol.ts)
     this.passes.smokeDiffuseBilinear = this.settings.smokeDiffuseWeight === 'bilinear'; this.passes.smokeDiffuseTau0 = this.settings.smokeDiffuseStart ?? 0.35;   // (smoke battery experiment, post.wgsl diffuseMode)
     this.gbuffer.keepTargets = this.passes.keepHistories = this.settings.keepHistories;   // (the switch for everything a change of size does — texpool.ts; mirrored before either can happen below)

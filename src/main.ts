@@ -33,6 +33,8 @@ import { LOOK, LOOK_DOORS, lookLevelFile, placeOfQuery, setLookPlace, setSuitAs 
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps } from './host/findme';
+import { findMeOutline } from './ui/findme';
+import { makeOutlineFrame } from './render/outline';
 import { TWEEN, Tween } from './host/tween';
 import { v3, Vec3, quat } from './math/vec';
 import { loadCharacterSet, castUrlFor } from './anim/gltf';
@@ -721,6 +723,7 @@ async function main() {
       if (viewHidden() || (leanBurst && !lastOfBurstNow)) { if (leanBurst) engine.world.upload(true); behind.skipped++; perfrec.cpuRender = 0; return; }   // (an undrawn step of a lean burst still packs the world its tick left, as a draw would have: the cursor's ray reads that pack)
       behind.drawn++;
       const firstRender = !rendered;
+      { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, dt, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
       const tR = performance.now(); engine.render(camR, t, dt, present); perfrec.cpuRender = performance.now() - tR;
       if (picsDue.length && present) takeSavePictures();
       if (firstRender) {   // the boot timeline's last two marks: the first frame encoded + submitted (its CPU side, incl. every target's allocation), and the GPU through with it ('GPU ready')
