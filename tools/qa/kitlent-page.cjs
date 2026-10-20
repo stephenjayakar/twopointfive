@@ -5,6 +5,7 @@
 //           the store's card was never written
 //   nofog   the same screen with the fog choice kept on its bottom rung (the store's twopointsix.quietfog = off): both are empty tiles
 //   off     the same screen under ?nokitlent: both tiles read the card alone
+// Every page here is opened under ?nokitstealth: with a stealth mission's kit your card's own (kit.ts KITDEAL.stealth, tools/qa/kitstealth-page.cjs) nothing is lent.
 // exit 0 = all of it, with no page error · 1 = otherwise. Stills (the whole page) are written to outDir when one is given. Software adapter: not a GPU's picture.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
@@ -34,20 +35,20 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   const shot = async (page, name) => { if (OUT) await page.screenshot({ path: path.join(OUT, `${name}.png`), timeout: 120000 }).catch(e => console.log(`    (no still: ${String(e).slice(0, 80)})`)); };
 
   // ── lent
-  { const { page, errors } = await open(`loadout=${MISSION}`);
+  { const { page, errors } = await open(`loadout=${MISSION}&nokitstealth`);
     const a = await tiles(page); await shot(page, 'kitlent-lent');
     line(!!a.cams && !!a.wand && a.cams.lent && /mission/.test(a.cams.val) && a.wand.lent && /mission/.test(a.wand.val) && !!a.cams.title && !/none/i.test(a.wand.note) && !a.card?.wand && !a.card?.cams,
       'A QUIET MISSION\'S TEAM & KIT SCREEN, as the page opens it: the cameras tile and the wand tile read the mission\'s word and are marked lent; the card in the store carries neither', `${say(a)} · the wand's line '${a.wand?.note}'`);
     line(errors.length === 0, 'no page error on that screen', errors.join(' | ') || 'none'); await page.close(); }
 
   // ── nofog
-  { const { page, errors } = await open(`loadout=${MISSION}`, 'off');
+  { const { page, errors } = await open(`loadout=${MISSION}&nokitstealth`, 'off');
     const b = await tiles(page);
     line(!!b.cams && !b.cams.lent && !b.wand.lent && !/mission/.test(b.cams.val + b.wand.val) && !b.card?.wand && !b.card?.cams, 'THE FOG KEPT ON ITS BOTTOM RUNG: the same screen shows both as empty tiles, the card untouched', say(b));
     line(errors.length === 0, 'no page error with the fog off', errors.join(' | ') || 'none'); await page.close(); }
 
   // ── off
-  { const { page, errors } = await open(`loadout=${MISSION}&nokitlent`);
+  { const { page, errors } = await open(`loadout=${MISSION}&nokitstealth&nokitlent`);
     const c = await tiles(page);
     line(!!c.cams && !c.cams.lent && !c.wand.lent && !/mission/.test(c.cams.val + c.wand.val), 'UNDER ?nokitlent the same screen reads the card alone', say(c));
     line(errors.length === 0, 'no page error under ?nokitlent', errors.join(' | ') || 'none'); await page.close(); }
