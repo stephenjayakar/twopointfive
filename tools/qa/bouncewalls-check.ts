@@ -29,16 +29,25 @@ export async function bounceWallsCheck(): Promise<boolean> {
     const WANT = flat(`let sp = c0Spacing();
       let off = n * sp; let len = max(length(off), 1e-3); let d = off / len;
       let Po = Ph + n * 0.02;
-      var Q = Ph + off;
-      var t = occludedTBoxes(Po, d, len, skip, -1.0);
-      for (var i = 0; i < 3 && t > 1e-3; i++) { let u = occludedTBoxes(Po, d, t - 1e-3, skip, -1.0); if (u < 0.0) { break; } t = u; }
-      if (t >= 0.0) { Q = Po + d * max(t - 0.05, 0.0); }
-      let home = (floor((Q - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN;
-      let nb = home + select(vec3f(-1.0), vec3f(1.0), Q >= home) * sp;
+      var Q = Ph + off; var home = Q; var nb = Q;
+      var t = -1.0; var again = true;
       var seen = 0u;
-      for (var k = 0u; k < 4u; k++) {
-        let v = vec3f(select(home.x, nb.x, (k & 1u) != 0u), Q.y, select(home.z, nb.z, (k & 2u) != 0u)) - Q; let l = length(v);
-        if (l < 1e-3 || occludedTBoxes(Q, v / l, l, skip, -1.0) < 0.0) { seen |= 1u << k; }
+      for (var i = 0u; i < 8u; i++) {
+        var ro = Po; var rd = d; var l = len;
+        if (i >= 1u && i < 4u) { if (!again || t <= 1e-3) { continue; } l = t - 1e-3; }
+        if (i == 4u) {
+          if (t >= 0.0) { Q = Po + d * max(t - 0.05, 0.0); }
+          home = (floor((Q - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN;
+          nb = home + select(vec3f(-1.0), vec3f(1.0), Q >= home) * sp;
+        }
+        if (i >= 4u) {
+          let k = i - 4u;
+          let v = vec3f(select(home.x, nb.x, (k & 1u) != 0u), Q.y, select(home.z, nb.z, (k & 2u) != 0u)) - Q; l = length(v);
+          if (l < 1e-3) { seen |= 1u << k; continue; }
+          ro = Q; rd = v / l;
+        }
+        let u = occludedTBoxes(ro, rd, l, skip, -1.0);
+        if (i == 0u) { t = u; } else if (i < 4u) { if (u < 0.0) { again = false; } else { t = u; } } else if (u < 0.0) { seen |= 1u << (i - 4u); }
       }
       if (seen == 0u) { return vec4f(Q, 0.0); }
       var m = 8u;
@@ -53,12 +62,13 @@ export async function bounceWallsCheck(): Promise<boolean> {
     const isMan = /fn bounceHitMan\(hit: Hit\) -> bool \{ if \(hit\.idx == CAPSULE_HIT\) \{ return true; \} return hit\.idx >= 0 && boxOwner\(boxGeo\[u32\(hit\.idx\)\]\) != 0u; \}/.test(lc) && /fn diceIrradianceWalled\(Ph: vec3f, n: vec3f, skip: u32\) -> vec3f \{ let q = diceWalledPoint\(Ph, n, skip\); if \(q\.w == 0\.0\) \{ return vec3f\(0\.0\); \} return diceIrradiance\(q\.xyz, n\); \}/.test(lc);
     const noWall = /fn bounceLeftNoWall\(N0: vec3f, owner: u32, t: f32\) -> bool \{ return owner != 0u \|\| \(t < 2\.0 && max\(abs\(N0\.x\), max\(abs\(N0\.y\), abs\(N0\.z\)\)\) < 0\.98\); \}/.test(lc);
     const sites = { cache: n(lc, man), gloss: n(fg, man), gather: n(fg, left), refl: n(rf, man), refl5: n(r5, man), coat: n(comp, /if \(BOUNCE_WALLS\) \{ let q = diceWalledPoint\(P, N, \(id >> 20u\) & 0xffu\); if \(q\.w > 0\.0\) \{ env = diceIrradiance\(q\.xyz, R\); \} \}/g) };
+    const kept = n(fg, /\{ Eh \+= diceIrradiance\(Ph \+ hit\.n \* c0Spacing\(\), hit\.n\); \}   \/\/ \(no walled read here/g), walks = (body.match(/occludedTBoxes\(/g) ?? []).length;   // (the software adapter's room: the walk written once, and the gather's program asks the read in three places — its two gloss / pane reads keep the old one)
     const bare = n(fg, /diceIrradianceFrom\(/g) + n(fg + rf + r5, /\{ (?:h\.)?Eh \+= diceIrradiance\(Ph \+ hit\.n \* c0Spacing\(\), hit\.n\); \}/g);   // every one of the old reads must now sit in the else of a site above
     const pre = /const BOUNCE_WALLS: bool = \$\{bounceWallsConfig\.on \? 'true' : 'false'\};/.test(readFileSync(resolve(ROOT, 'src/render/frame.ts'), 'utf8'));
     const flag = /if \(q\.has\('nobouncewalls'\)\) bounceWallsConfig\.on = false;/.test(readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8'));
-    verdict(body === WANT && sites.cache === 1 && sites.gloss === 2 && sites.gather === 3 && sites.refl === 1 && sites.refl5 === 2 && sites.coat === 1 && bare === 8 && noWall && isMan && pre && flag,
+    verdict(body === WANT && sites.cache === 1 && sites.gloss === 0 && kept === 2 && walks === 1 && sites.gather === 3 && sites.refl === 1 && sites.refl5 === 2 && sites.coat === 1 && bare === 8 && noWall && isMan && pre && flag,
       'the shader\'s rule is the one weighed below, every read off a man asks it, and the prelude and the page\'s flag carry the switch',
-      `diceWalledPoint ${body === WANT ? 'matches' : 'DIFFERS'} · asked by: the cache's probes ${sites.cache}/1, the gloss and pane rays ${sites.gloss}/2, the gather's rays ${sites.gather}/3, the reflections ${sites.refl}/1 + ${sites.refl5}/2, a wet coat's sheen ${sites.coat}/1 · old reads left, each in a site's else ${bare}/8 · bounceLeftNoWall ${noWall ? 'as weighed' : 'DIFFERS'} · a carried box is the man, and no cell seen is no read: ${isMan} · prelude const ${pre} · ?nobouncewalls ${flag}`); }
+      `diceWalledPoint ${body === WANT ? 'matches' : 'DIFFERS'} · asked by: the cache's probes ${sites.cache}/1, the gather's rays ${sites.gather}/3 (its gloss and pane rays keep the old read: ${kept}/2 marked, ${sites.gloss} walled), the box walk written ${walks} time(s) in the read, the reflections ${sites.refl}/1 + ${sites.refl5}/2, a wet coat's sheen ${sites.coat}/1 · old reads left, each in a site's else ${bare}/8 · bounceLeftNoWall ${noWall ? 'as weighed' : 'DIFFERS'} · a carried box is the man, and no cell seen is no read: ${isMan} · prelude const ${pre} · ?nobouncewalls ${flag}`); }
 
   // ---- the copy ----
   type V = number[]; type Bx = { c: V; h: V; flags: number; yaw?: number; rot?: unknown };
