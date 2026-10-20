@@ -953,6 +953,8 @@ export class Checkpoints {
     return this.put(KEY_PIC(info.key), `${info.savedAt}|${url}`);
   }
   /** F5 (player.ts, inside a step): a save by hand at the end of this update — the keys are the recording's, so a run played again saves where this one did */
+  /** would a save by hand be refused at this moment — the reason write() would give? Asks only: nothing is written, counted or noted (the pause card, where the world is held and the answer cannot change) */
+  handNo(g: Game): string | null { return SAVETIMELINE.on && squadUp(g) ? canSnap(g) : canSave(g); }
   askSave() { if (SAVETIMELINE.on) this.hand = true; }   // (the switch is read HERE: player.ts imports nothing of this module — an import there loads this file early from that door and the cycle then meets wind.ts before weather.ts)
   /** a load asked for INSIDE a step (player.ts: the bare Enter once down): a file is poured in at once, as ever; a save in memory is put back at the end of
    *  this update, where it was taken — never under the feet of the frame that is running */

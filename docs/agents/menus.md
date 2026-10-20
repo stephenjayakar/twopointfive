@@ -126,10 +126,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as it was — the word menu-art-page and menu-idle-page already open him with), and `show()` answers true for every case the column is the picture's:
   shown (`#missions.kv-on`), WAITED FOR — the level's ways not yet fetched, or the child not yet `ready` (its own word, 12 drawn frames in), however long
   that takes: `#missions[data-kv-wait]`, the column empty and its hairline off so nothing shows and goes — or NONE TO BE HAD, for the page's life on that
-  query: the child said `none` (before `ready` or AFTER it), its load errored, 10 s passed without `ready` (`?kitwait=N` for a slow adapter), the level has
-  no block or the way in is dealt: `#missions[data-kv-none]`, the column empty. `show()` is false only with the switch off or under 720 px. CHECK:
-  kitview-page's outer half (the rows 'a slow child', 'a child that says nothing', 'says `none`', 'no kitView block'; `STANDIN_BREAK=1` opens the slow
-  child's row `?oldfigure` and must fail; `GRACE_BREAK` is gone with the grace). Headless Chromium with a stub child, and one run of the real page with the
+  query: the child said `none` (before `ready` or AFTER it), its load errored, the level has
+  no block or the way in is dealt: `#missions[data-kv-none]`, the column empty. THE WAIT HAS NO CLOCK (10-20): a child was given 10 s to say `ready`
+  (`KIT_VIEW.wait`, `?kitwait`: both gone) and then called none for the page's life — the standing man's cue while he stood in; with nobody standing in, a
+  second game slower than that (a cold shader cache, a slow adapter) left the column blank for good. Every fatal card in the child says `none`
+  (`main.ts kitViewFatal`), so a child that says nothing is one still coming up. `show()` is false only with the switch off or under 720 px. CHECK:
+  kitview-page's outer half (the rows 'a slow child' — 12 s of nothing and still waited for, then shown on its `ready`: red on the build with the clock — 'says `none`', 'no
+  kitView block'; `STANDIN_BREAK=1` puts a canvas in the column while the slow child is waited for and that row must fail on the canvas alone — it used to
+  open the row `?oldfigure`, where no iframe is made, and failed on the iframe count; `GRACE_BREAK` is gone with the grace). Headless Chromium with a stub child, and one run of the real page with the
   real child on the software adapter; never seen on a GPU. STILL IN THE REPO: `kitFigure.ts` and `figureTrace.ts`, reached only by `?oldfigure` and their own
   sheets and checks — deleting them is the kit figure's owner's call. THE SECOND GAME LIVES ONLY WHILE IT CAN SHOW: dropped on `none` / a failed
   boot / a mission with no block / a dealt way / a window gone under 720 px (the ResizeObserver repaints across the line) / Deploy / the page closing;
@@ -1254,13 +1258,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the wall charge'. That is a row's data and words only (no tally, no digest: a digest holds a row's kind and time), and a Training lesson's
   'downed how: takedown' step no longer counts a charge's knock. A checkpoint saved before keeps its 'takedown' rows. Check
   `bun run tools/qa/probes.ts debrief-charge` (family `debrief`; the rows' own words, the same on both stands). Text only; nobody has played to it.
-- **Finding your own man, and the camera under the hand: four rows on trial in Options > Game (10-19, cut from six 10-20; `src/host/findme.ts` the
-  table, `src/ui/findme.ts` the ring and the rows).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
+- **Finding your own man, and the camera under the hand: five rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20;
+  `src/host/findme.ts` the table, `src/ui/findme.ts` the ring, the rows and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
   walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
-  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, turn: 1, behind: false }` on the page and on
+  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, turn: 1, behind: false }` on the page and on
   both stands, and at those starts the build is the build as it was (measured against the build head each time: the same game digest and the same
   view matrix over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
-  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all four back. THE ROWS: `Aim pan` (a slider, none to today's: it
+  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all five back. THE ROWS: `Aim pan` (a slider, none to today's: it
   scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
   menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (Ctrl + mouse
   turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
@@ -1279,19 +1283,38 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the tick's record holds. WHAT THE PLAYER SEES THAT IS NEW: while the carry holds, the system's own pointer is not where he aims (it cannot be
   moved without pointer lock); the reticle is. Behind the same row, nothing with the row off. Truly owning the reticle (the system cursor hidden,
   ours moved from 12 o'clock on) is still the camera key's own work.
-  SHELVED 10-20, OUT OF THE BUILD: `Outline in the dark` and `Shape through walls`. They were drawn in the overlay's SVG from his joints, each limb a
-  stroke as wide as a bare limb with a filter's rim round the lot, and were only ever looked at close in on the office level. From a squad level's
-  distance an arm was two pixels wide and the outline was a stick figure's (the loop of his arms a box, his legs a zigzag); the maintainer's shots,
-  and his word: "it should be a proper silhouette. if it's not really possible given our rendering pipeline we can just shelve the idea". The rows,
-  the two keys and the drawing are gone (a kept line that names the keys reads without them). A PROPER ONE IS THE RENDERER'S: the G-buffer's id
-  target (`gbuffer.wgsl`: `owner << 20`, on his skinned mesh and on every box emitted for him) says whose each pixel is, so an outline is the edge of
-  his own pixels in a pass over the composite that exists only while its row is on (`render/fogofwar.ts` is the model), and a shape through walls is
-  him drawn once more, depth test off, into a mask. Not built here.
+  THE OUTLINE IN THE DARK IS THE RENDERER'S (10-20). The first one, and a `Shape through walls` beside it, were drawn in the overlay's SVG from his
+  joints, each limb a stroke as wide as a bare limb with a filter's rim round the lot, and were only ever looked at close in on the office level. From
+  a squad level's distance an arm was two pixels wide and the outline was a stick figure's (the loop of his arms a box, his legs a zigzag); the
+  maintainer's shots, and his word: "it should be a proper silhouette. if it's not really possible given our rendering pipeline we can just shelve the
+  idea". It is possible: the G-buffer's id target (`gbuffer.wgsl`: `owner << 20`, on his skinned mesh and on every box emitted for him) says whose
+  each pixel is. So `Outline in the dark` (off at its start) is now ONE PASS over the composite, after the fog of war and before the resolve
+  (`render/outline.ts OutlinePass`, `shaders/outline.wgsl`; the one call in `render/passes.ts`): a blended triangle inside a scissor round him, in which
+  a pixel that is not his takes a pale ink by how near the nearest of his pixels is (`OUTLINE`: 1.5 to 3 pixels of the composite by its height, the
+  outer pixel fading) and only from one of his that stands in front of it by the G-buffer's depth, so a wall top, a table or a teammate between him
+  and the camera is not drawn on. His body, kit and gun are in it because they carry his owner byte; so do a round of his for the frame it leaves the
+  muzzle and a charge while his hands set it, and they take the rim too. HOW STRONG is the light meter's word (`host/findme.ts outlineWant`: full at
+  `Player.visibility` 0.12 and under, none at 0.3 and over, none under the goggles), eased at 6 a second, taken whole on a frame with no time in it
+  (the row flipped under the pause card shows at once). The page fills the frame once a frame (`ui/findme.ts findMeOutline`: off with the row off,
+  the man down, and where the HUD's own marks of him stand down: a stun's white-out, attract mode, the kit's picture); `Engine.render` adds the box
+  on the picture from the camera it draws with (`outlineBox`; he behind the lens = no pass), so a still or a card's settled frame has its own. WHAT
+  IT COSTS: with the row off, nothing: the pass object is not made and `encode` is not called. First frame on: one bind group layout, 32 bytes of
+  uniform, one small module compiled off the frame; until that is in, and for good if it fails (said once), nothing is drawn. On and he is in the
+  dark: one render pass on the composite (load and store), a scissor of about a tenth of the picture close in and a fiftieth from a squad level's
+  distance, up to 49 id reads a pixel inside it. No scene group, no storage buffer, no copy of the composite, no timer row (a render pass's stamp
+  is left off here as the particles' draw's is). On and he is lit: no pass. A kept line from the stick figure's days that says `outline: true`
+  turns this one on. UNDER THE RESOLVE: the rim is drawn before it, so it is anti-aliased with the picture, and the pixel next to him rides his
+  motion vector; the outer pixel has the floor's and may trail him by a few frames as he moves. Nobody has seen that on a GPU.
+  SHELVED STILL: `Shape through walls` (no row, no key; a kept line that names it reads without it). A proper one is him drawn once more with the
+  depth test off into a mask and filled where a wall hides him: a pass of its own, to be built only once the outline has been seen on a GPU.
   ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording
-  replays the view it was made with; the ring reads his position and writes nothing (a run with it on and asked every frame is the run with it off,
-  digest for digest). Checks: `bun run tools/qa/probes.ts findme` (family `ui`; `FINDME_BREAK=1` = the rows moved and the table not: pan, turn,
-  behind, the carry and the ring must fail), the same on both stands; `PORT=… node tools/qa/findme-page.cjs` (the real page on the software adapter:
-  the rows exist, move live, are kept over a reload and reset; a real Ctrl drag, a real held press, a real double tap with the mouse to one side
+  replays the view it was made with; the ring and the outline read his position and his light and write nothing of the game's (a run with both on
+  and asked every frame is the run with them off, digest for digest: the picture's own, as the fog of war's pass is; no sense and no meter reads
+  the composite after it). Checks: `bun run tools/qa/probes.ts findme` (family `ui`; `FINDME_BREAK=1` = the rows moved and the table not: pan,
+  turn, behind, the carry, the ring and the outline must fail), the same on both stands: its line (10) runs the outline's pass on a stand-in device
+  that writes down what it is asked (nothing while off, one program, no draw until it is in, a scissored draw, never after a failed program);
+  `PORT=… node tools/qa/findme-page.cjs` (the real page on the software adapter: the rows exist, move live, are kept over a reload and reset; the
+  outline's program compiles there and draws with no GPU error; a real Ctrl drag, a real held press, a real double tap with the mouse to one side
   and a real move of the mouse after it). NOT DONE: the Controls tab has no line for the double tap. Ctrl is still the camera key, and a double tap
   is two more presses of it: on Windows Ctrl then W still closes the tab. NEVER SEEN ON A GPU by anyone here; how fast the view should come round,
   whether 250 / 300 ms is the right tap and 10 px the right let-go are first guesses in `BEHIND`, `TAPTWICE` and `CARRY`.
