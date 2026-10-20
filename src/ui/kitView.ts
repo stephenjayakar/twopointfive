@@ -35,6 +35,7 @@
 // words, no colours of its own.
 import { KIT, kitRows, kitWorn } from '../game/kit';
 import { kitViewWays } from './missions';
+import { rectZoom, uiMatch } from './textsize';
 import { kitViewQuietKind } from '../host/kitViewSet';   // (pure: the mission's kind, read off its link — the quiet picture's)
 
 /** the switch (UI only: nothing in the game reads it) · the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · seconds a child is given to say `ready` (`?kitwait=N`: a slow adapter's) · ms after a kit message in which further changes are folded into ONE more */
@@ -67,7 +68,7 @@ const FADE = 'linear-gradient(to right, #000 0, #000 var(--kv-clear, 35%), rgba(
 const FADE_QUIET = 'linear-gradient(to right, #000 0, #000 var(--kv-clear, 35%), transparent var(--kv-end, 40%))';   // (the quiet picture: whole to the column's edge, gone by the tiles — no stop under them, no pool of picture below them)
 const CSS = `
 #missions .mbody:has(> iframe.kv) { position: relative; }
-#missions .mbody > iframe.kv { display: block; position: absolute; left: 0; top: 0; z-index: 0; width: var(--kv-w, min(100%, 56vw)); max-width: 100%; height: 100%; border: 0; pointer-events: none; background: var(--m-base); opacity: 0; transition: opacity 0.6s ease;
+#missions .mbody > iframe.kv { display: block; position: absolute; left: 0; top: 0; z-index: 0; width: var(--kv-w, min(100%, 56vw / var(--tz, 1))); max-width: 100%; height: 100%; border: 0; pointer-events: none; background: var(--m-base); opacity: 0; transition: opacity 0.6s ease;
   -webkit-mask-image: ${FADE}; mask-image: ${FADE}; }
 #missions.kv-quiet .mbody > iframe.kv { -webkit-mask-image: ${FADE_QUIET}; mask-image: ${FADE_QUIET}; }
 #missions.kv-on .mbody > iframe.kv { opacity: 1; }
@@ -100,7 +101,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   let sel = '', selSent = '', paused = false, pauseSent = false, bornT = 0, graceT: ReturnType<typeof setTimeout> | 0 = 0;   // (bornT / graceT: when this element was made, and the paint owed when its grace runs out)   // (the open card and tile as asked / as the child has them · off the step, as asked / as told)
   const ways = new Map<string, boolean[] | null>();   // per level file: the ways with a picture (null: asked, not yet answered)
   const failed = new Set<string>();                   // the queries whose instance had nothing to stage, or never came up: the standing man for this page's life
-  const narrow = () => { try { return window.matchMedia('(max-width: 720px)').matches; } catch { return false; } };
+  const narrow = () => uiMatch('(max-width: 720px)');   // (the page's own pixels: ui/textsize.ts)
   // a page opened from disk has no origin to name: a message goes anywhere and arrives as 'null' (host/kitView.ts kitViewOnDisk, the child's half)
   const onDisk = () => location.protocol === 'file:' || location.origin === 'null', postTo = () => (onDisk() ? '*' : location.origin);
   const from = (origin: string) => origin === location.origin || (onDisk() && origin === 'null');
@@ -117,7 +118,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   const place = () => {
     if (!frame) return;
     const P = KIT_VIEW_PLACE, c = column.getBoundingClientRect(); if (!(c.width > 0 && c.height > 0)) return;
-    root.style.setProperty('--kv-w', `${Math.round(c.width * P.wide)}px`);
+    root.style.setProperty('--kv-w', `${Math.round(c.width * P.wide / rectZoom())}px`);   // (measured in the window's pixels, written in the page's: ui/textsize.ts)
     const f = frame.getBoundingClientRect(); if (!(f.width > 0 && f.height > 0)) return;
     const share = (x: number) => Math.min(100, Math.max(5, (x - f.left) / f.width * 100)), pct = (x: number) => `${Math.round(share(x))}%`;
     const tiles = body.querySelector?.('#loadout .lo-kit')?.getBoundingClientRect?.(), low = tiles && tiles.height > 0 ? (f.bottom - tiles.bottom) / f.height : 0.4;   // the room under the last row of tiles
