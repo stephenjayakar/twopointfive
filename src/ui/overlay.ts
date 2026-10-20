@@ -27,6 +27,7 @@ import { QUICKTHROW } from '../game/quickthrow';
 import { samBlind } from '../game/samstun';
 import { closeMarks } from '../game/close';
 import { PlanFloor } from './planfloor';
+import { FindMeViz } from './findme';
 import type { SlotKind } from '../game/game';
 import type { Firearm } from '../game/weapons';
 import { WindViz } from './windviz';
@@ -98,6 +99,8 @@ export class Overlay implements HudLike {
   readonly windViz = new WindViz(this.root);
   /** the squad's plan on the floor (ui/planfloor.ts ← game/floorplan.ts): ways, marks, fans, who an open menu goes to */
   readonly plan = new PlanFloor(this.traj);
+  /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet, a rim in the dark, his shape through a wall — nothing unless his Options ask */
+  readonly findme = new FindMeViz(this.traj);
   /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
   setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null, onPick: (k: number) => void) {
     this.tlOnPick = onPick;
@@ -361,6 +364,7 @@ export class Overlay implements HudLike {
     } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; }
     this.drawClose(game, cam, w, h);
     this.plan.update(game, cam, w, h);
+    this.findme.update(game, cam, w, h, this.plan.youOn);
     // equipment
     this.updateEquip(game);
     // the wind field's debug view (nothing drawn, nothing sampled unless a switch of it is on)
