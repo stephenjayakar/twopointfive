@@ -61,7 +61,7 @@ const counted = m => J({ ...kitOf(m), big: '' });
     if (!more) P.shot = async () => {};
     const a = await P.read(); await P.shot('paste-0-open');
     const N = a.tree ? 1 : 3;   // (the card laid out as a tree — src/game/kittree.ts KITTREE, on in the page — has the one reset where the three sets stood: the named kits are the screen's row)
-    chk(!!a.copy && !!a.paste && a.sets.length === N && a.sets3 === N && a.copy.top === a.sets[0].top && a.paste.top === a.sets[0].top && a.copy.left > a.sets[N - 1].right && a.paste.left >= a.copy.right && (!a.head || a.paste.right <= a.head.left + 1),
+    chk(!!a.copy && !!a.paste && a.sets.length === N && a.sets3 === N && a.copy.top === a.sets[0].top && a.paste.top === a.sets[0].top && a.copy.left > a.sets[N - 1].right && a.paste.left >= a.copy.right && (!a.head || a.paste.right <= a.head.left + 1 || (await P.page.evaluate(() => !!document.querySelector('#loadout .lo-kit .kc.kc-dense')) && Math.abs(a.head.top - a.copy.top) > 30) /* (the dense card — ui/kitDense.ts: the pouches are a line of their own over the tiles) */),
       'the card has Copy and Paste at the end of the sets\' line, on that one line, clear of the pouches', `${N} set${N === 1 ? '' : 's'} · sets ${J(a.sets)} · copy ${J(a.copy)} · paste ${J(a.paste)} · pouches ${J(a.head)}`);
     chk(!!a.paste && a.paste.off && !a.copy.on && a.marks.length === 0, 'nothing copied yet: Paste is dim, Copy is not lit, nobody on the roster is marked', `paste off ${a.paste?.off} · copy on ${a.copy?.on} · marks ${J(a.marks)}`);
     chk(/C copy/.test(a.legend) && /V paste/.test(a.legend), 'the key line names the two keys', a.legend);

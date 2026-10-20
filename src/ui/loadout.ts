@@ -45,6 +45,7 @@ import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterO
 import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitPool, kitRingsLent, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CAN, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
+import { KITDENSE } from './kitDense';
 import { gunIcon, kitIcon } from './kitIcons';
 import { WEAPONS, type WeaponId } from '../game/weapons';
 /** the roster card's silhouette for the gun a man's card puts in his hands (kit.ts kitGun: a sidearm, the shotgun, else the rifle) */
@@ -267,7 +268,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
     if (!cardsOn()) return;
     try {
       fogWas = lookSig();
-      kitCard = loadoutHooks.memberCard!(kitHost, member, { name: nameOf(member), idle: f => FOG_KIT.includes(f) && noFog(), lent: lentNow,
+      kitCard = loadoutHooks.memberCard!(kitHost, member, { name: nameOf(member), idle: f => FOG_KIT.includes(f) && noFog(), lent: lentNow, dense: KITDENSE.on && !!opts.embedded, floor: () => btnRow.getBoundingClientRect?.().top ?? 0,   // (the dense card — ui/kitDense.ts — is the one starting page's: the older screen of its own keeps its list; its pop-ups end over this screen's foot)
         onChange: () => { fogWas = lookSig(); drawSlots(); S.paint(); },   // (the card has just drawn itself with what the change moved — his gun, say, and with it the cameras he is handed: no second draw for it)
         onCopy: () => drawSlots(),   // (the roster's marks move to whoever wears the copied kit; no card changed, so nothing is painted or told on)
         onSelect: () => opts.onPaint?.(S),   // (ui/kitView.ts: the picture plays the highlighted tile's thing — told of a move, which changes no value)

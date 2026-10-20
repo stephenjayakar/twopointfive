@@ -2,6 +2,7 @@
 //   bun run tools/qa/rollback-check.ts                       the rule's static pass, then every run of the default set; exit 0 = all pass, 1 = something failed (named)
 //   TPS_PROFILE=shipped bun run tools/qa/rollback-check.ts   the same on the shipped stand (the page as it opens); the plain call is the frozen stand
 //   ROLLBACK_BREAK=1 bun run tools/qa/rollback-check.ts      the red path: after every restore the lowest bit of one moving man's position is flipped — 'plays on exactly' must then FAIL
+//                                                            (and the light meter's GPU side is made a plain object the snapshot walks: 'the host's own' must FAIL)
 //   --scn id,id   --seeds 1,2   --cap 90   --every 4   --ticks 120   --jobs 3   --static (the static pass alone)   --times scn:seed:frame (the times and bytes at one frame of one run, alone on the box)
 // WHAT A RUN HOLDS (a scripted play-through of a scenario — tools/qa/playthrough.ts's commander, on the floor with his team — with the game on its own die, as the page):
 //   moments        every `--every` seconds of the run, and besides the first few frames that find a round in the air, a leaf swinging, a can or a charge on its fuse or
@@ -10,6 +11,8 @@
 //                  does them), the whole state folded to a word after every tick (stateHash: every number by its raw bits)
 //   same game      the snapshot is put back into the SAME game: the state is the word it was at the moment (statics and all), and the same ticks give the same word
 //                  after every one
+//   the host's own what the host keeps on a GPU object the game holds is NOT put back: a mark left among the light meter's free buffers after the snapshot is still
+//                  there after the restore (render/probe.ts: put back, a page's meter would hand the GPU a buffer that is still out on a readback)
 //   the ring       a snapshot is taken after every one of those ticks, each SINCE the one before (what did not change is shared, not copied); the one eight ticks
 //                  from the end is put back: the word of that tick, and the eight ticks after it again, to the bit
 //   fresh game     the snapshot is put into ANOTHER game stood up on the same scenario and seed and stepped once (the first moment; the same one again afterwards,
@@ -23,27 +26,38 @@
 // A FAIL names the moment, the first tick that differs and (re-run with --why scn:seed:frame) the paths of the values that differ there.
 // RB_LAST_DUMP=<file> (with RB_LAST_DEPTH, RB_LAST_PRE) on a --one run writes the last state's word per part: two arms' files side by side say where their
 // last states part.
-// NOT HELD HERE: the page (no GPU in the cloud: the smoke solver's fields and the GPU light meter's readings in flight are the host's and are not in a snapshot), a snapshot
+// NOT HELD HERE: the page (no GPU in the cloud: the smoke solver's fields and the GPU light meter's buffers and readings in flight are the host's and are not in a snapshot; one load of a save in memory was driven on a page under the software adapter, docs/agents/replays.md), a snapshot
 // sent to another process (it holds references, not bytes), and the commander's own orders inside the ticks compared (they are stepped off one held record).
 import { resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { readFileSync, writeFileSync, rmSync, readdirSync } from 'node:fs';
 import { ROOT } from './headless.ts';
 import { play, entryOf } from './playthrough.ts';
-import { ROLLBACK_EXEMPT, RAW_WEAK_OK } from './rollback-exempt.ts';
+import { ROLLBACK_EXEMPT, RAW_WEAK_OK, GENERATOR_OK } from './rollback-exempt.ts';
 const { Game } = await import(`${ROOT}/src/game/game.ts`);
-const { takeSnapshot, restoreSnapshot, stateHash, stateFlat, flatDiff, stateAlike, stateRawWeak, snapshotBytes, stateFunctions } = await import(`${ROOT}/src/game/rollback.ts`) as typeof import('../../src/game/rollback.ts');
+const { takeSnapshot: take0, restoreSnapshot: restore0, stateHash, stateFlat, flatDiff, stateAlike, stateRawWeak, snapshotBytes, stateFunctions } = await import(`${ROOT}/src/game/rollback.ts`) as typeof import('../../src/game/rollback.ts');
 const { cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
+// THE SAVES' SHELF IS THE HOST'S (savestate.ts memShelf: the saves kept in memory stand behind closures, in no snapshot, so that a load does not take the later saves
+// away). Whoever rolls a game back has to put the shelf back with it: played again, an autosave inside the window lands in the NEXT slot, and the slot's name is in
+// the state — 'same game' parted there on the shipped stand, one autosave inside one moment's ticks. So the check, as the host: every snapshot it takes remembers
+// the shelf beside it, and a put back (into either game) puts that shelf back too. (The field renamed or gone: nothing is remembered and that line is red again.)
+const SHELF = new WeakMap<object, unknown[]>();
+const shelfOf = (g: any): { all(): any[]; clear(): void; set(k: string, e: unknown): void } | null => { const sh = g?.saves?.shelf; return sh && typeof sh.all === 'function' ? sh : null; };
+const takeSnapshot = (g: any, since?: any): any => { const S = take0(g, since); const sh = shelfOf(g); if (sh) SHELF.set(S, sh.all()); return S; };
+const restoreSnapshot = (S: any, other?: any): void => { if (other) restore0(S, other); else restore0(S); const sh = shelfOf(other ?? S.game), kept = SHELF.get(S) as any[] | undefined; if (sh && kept) { sh.clear(); for (const e of kept) sh.set(e.info.key, e); } };
 
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const KNOWN = ['--scn', '--seeds', '--cap', '--every', '--ticks', '--jobs', '--static', '--times', '--one', '--out', '--why', '--arm'];
 for (const a of argv) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} — ${KNOWN.join(' ')}`); process.exit(2); }
 const BREAK = process.env.ROLLBACK_BREAK === '1';
+/** the break word, for 'the host's own': the meter's GPU side is made a plain object before the first snapshot, so the snapshot walks it and puts it back as it did
+ *  before it was the host's — the mark must then be gone */
+const unhost = (g: any): void => { const pl = g.probe?.plumbing; if (pl) Object.setPrototypeOf(pl, Object.prototype); };
 const DT = 1 / 60, CAP = Number(flag('--cap') ?? 45), EVERY = Number(flag('--every') ?? 6), TICKS = Number(flag('--ticks') ?? 60);
 /** the default set: a solo night, a pair, the four in two pairs, a rescue, a compound, charges on a clock, two squads, walls to blow */
 const DEFAULT = ['night-breach', 'room-clear-pair', 'room-clear-four', 'hostage-rescue', 'compound-four', 'defuse-four', 'block-squads', 'mousehole-four'];
 
-interface Moment { frame: number; t: number; why: string; same: number; fresh: number; /** the tick the other game's strict word parted at though it stayed alike value for value (−1 = it never parted) */ alias: number; /** the other game's ticks changed this game's own state: the two share something live */ leak: boolean; ring: number; back: boolean; backFull: boolean; freshAt: boolean; takeMs: number; tickTakeMs: number; restoreMs: number; freshMs: number; stepMs: number; bytes: number; own: number; objects: number }
+interface Moment { frame: number; t: number; why: string; same: number; fresh: number; /** the tick the other game's strict word parted at though it stayed alike value for value (−1 = it never parted) */ alias: number; /** the other game's ticks changed this game's own state: the two share something live */ leak: boolean; ring: number; back: boolean; backFull: boolean; /** what the host keeps on a GPU object of the game's (the light meter's buffers) is as it was left, not as the snapshot saw it */ host: boolean; freshAt: boolean; takeMs: number; tickTakeMs: number; restoreMs: number; freshMs: number; stepMs: number; bytes: number; own: number; objects: number }
 interface Out { scn: string; seed: number; arm: string; end: string; t: number; digest: string; last: string; frames: number; moments: Moment[]; rawWeak: string[]; why: string[]; fns: Record<string, number>; error?: string }
 
 /** what is in the air at this tick: the kinds of moment worth taking besides the clock's (each kind a few times a run) */
@@ -81,7 +95,12 @@ async function run(scn: string, seed: number, arm: 'plain' | 'moments', why: num
     let ringBad = -1, restoreMs = 0;
     if (TICKS >= 10) { const k = TICKS - 9; t0 = performance.now(); restoreSnapshot(ring[k]); restoreMs = performance.now() - t0;
       if (stateHash(g) !== ref[k]) ringBad = 0; else { if (BREAK) flip(g); for (let j = k + 1; j < TICKS; j++) { tick(g, cmd); if (stateHash(g) !== ref[j]) { ringBad = j - k; break; } } } }
+    // the host's own: the light meter is a GPU object the Game holds, and its GPU side (render/probe.ts Plumbing: the buffers out on a readback, the ones free, what
+    // it last sent) is a HostOwned — a mark left among its free buffers after the snapshot must still be there once the snapshot is back (a page's meter put back
+    // handed the GPU a buffer still mapped). No meter, or none with that side: the line FAILS — it would be holding nothing.
+    const pool: unknown[] | null = Array.isArray(g.probe?.plumbing?.readbacks) ? g.probe.plumbing.readbacks : null, mark = {}; pool?.push(mark);
     restoreSnapshot(S);
+    const host = !!pool && g.probe.plumbing.readbacks === pool && pool.includes(mark); if (pool && pool.includes(mark)) pool.splice(pool.indexOf(mark), 1);
     const back = stateHash(g) === h0, backFull = stateHash(g, true) === f0;
     if (BREAK) flip(g);
     g.replayTap = null; g.audio = silent;
@@ -119,11 +138,11 @@ async function run(scn: string, seed: number, arm: 'plain' | 'moments', why: num
     restoreSnapshot(S); g.replayTap = tap;
     for (const [k, n] of stateFunctions(g)) out.fns[k] = Math.max(out.fns[k] ?? 0, n);
     const mid = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1] ?? 0;
-    out.moments.push({ frame, t: +g.time.toFixed(2), why: reason, same, fresh, alias, leak, ring: ringBad, back, backFull, freshAt, takeMs: +takeMs.toFixed(2), tickTakeMs: +mid(tickTake).toFixed(2), restoreMs: +restoreMs.toFixed(2), freshMs: +freshMs.toFixed(2), stepMs: +mid(steps).toFixed(2), bytes: size.bytes, own: mid(own), objects: size.objects });
+    out.moments.push({ frame, t: +g.time.toFixed(2), why: reason, same, fresh, alias, leak, ring: ringBad, back, backFull, host, freshAt, takeMs: +takeMs.toFixed(2), tickTakeMs: +mid(tickTake).toFixed(2), restoreMs: +restoreMs.toFixed(2), freshMs: +freshMs.toFixed(2), stepMs: +mid(steps).toFixed(2), bytes: size.bytes, own: mid(own), objects: size.objects });
   };
   Game.prototype.update = function (this: any, ...a: unknown[]) {
     if (mode === 'grab') { if (other === this) throw new Stop(); other = this; return (update as (...x: unknown[]) => unknown).apply(this, a); }   // (the other game takes ONE step and is stopped at its second: what a game hangs on its host at its first step — its own closures, which no snapshot carries — is then its own)
-    if (main === null) { main = this; frame = 0; }
+    if (main === null) { main = this; frame = 0; if (BREAK) unhost(this); }
     if (this === main) {
       if (arm === 'moments' && this.cmdBuf && frame > 30) {
         const kinds = airborne(this).filter(k => (seenKinds.get(k) ?? 0) < 3 && frame - (lastOf.get(k) ?? -1e9) > 90);
@@ -271,7 +290,7 @@ console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'th
   const badReg: string[] = [];
   for (const [file, src] of text) { const set = new Set<string>(); registered.set(file, set);
     for (const m of src.matchAll(/rollback(?:Var|Root)(?:<[^>(]*>)?\(\s*'([^']+)'/g)) { if (file === 'src/math/side.ts') continue; const [b, v] = m[1].split('.'); if (b !== base(file) || !decls.some(d => d.file === file && d.name === v)) badReg.push(`${file}: '${m[1]}'`); else set.add(v); } }
-  const used = new Set<string>(), needLet: string[] = [], needRoot: string[] = [], rawWeak: string[] = [], badTable: string[] = [];
+  const used = new Set<string>(), needLet: string[] = [], needRoot: string[] = [], rawWeak: string[] = [], badTable: string[] = [], heldGen: string[] = [];
   let lets = 0, letReg = 0, conts = 0, contReg = 0, contKnob = 0, named = 0;
   const wordIn = new Map<string, Set<string>>(); const wordsOf = (f: string): Set<string> => { let w = wordIn.get(f); if (!w) wordIn.set(f, w = new Set(text.get(f)!.match(/[A-Za-z_$][\w$]*/g) ?? [])); return w; };
   for (const d of decls) {
@@ -291,14 +310,21 @@ console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'th
   }
   // a plain weak table, or a named one, anywhere but in a top-level declaration
   for (const [file, src] of text) { const lines = src.split('\n');
-    for (let i = 0; i < lines.length; i++) { const ln = lines[i]; if (/^\s*(\/\/|\*|\/\*)/.test(ln)) continue; const code = ln.replace(/\/\/.*$/, '');
+    for (let i = 0; i < lines.length; i++) { const ln = lines[i];
+      // a generator or an iterator KEPT (a field, a variable or a parameter typed as one — `it: Generator<…>`, `walk?: null | Iterator<…>` — not a function that returns
+      // one): where it stopped in its own code is in no snapshot. Every such name on the line, a doc comment in front of it or not. NOT SEEN: one typed through an
+      // alias (`type Script = Generator<…>`), by `ReturnType<…>`, or not typed at all (`{ walk: dripWalk(g) }`)
+      if (!/^\s*(\/\/|\*)/.test(ln)) for (const m of ln.replace(/\/\*.*?\*\//g, '').replace(/\/\/.*$/, '').matchAll(/\b([A-Za-z_]\w*)\??:\s*(?:(?:null|undefined)\s*\|\s*)?(?:Async)?(?:Generator|Iterator|IterableIterator)\b/g)) { const key = `${file} ${m[1]}`; if (key in GENERATOR_OK) used.add(key); else heldGen.push(`${file}:${i + 1} ${m[1]}`); }
+      if (/^\s*(\/\/|\*|\/\*)/.test(ln)) continue; const code = ln.replace(/\/\/.*$/, '');
       const top = /^(export )?(let|const) /.test(ln);
       if (/new Weak(Map|Set)\b/.test(code) && file !== 'src/math/side.ts' && !top) rawWeak.push(`${file}:${i + 1} (inside a function or a class)`);
-      if (!top && /new Side(Map|Set)(<[^(]*>)?\(\s*'/.test(code)) badTable.push(`${file}:${i + 1}: a table made inside a function or a class takes no name`); } }
-  const stale = [...Object.keys(ROLLBACK_EXEMPT), ...Object.keys(RAW_WEAK_OK)].filter(k => !used.has(k));
+      if (!top && /new Side(Map|Set)(<[^(]*>)?\(\s*'/.test(code)) badTable.push(`${file}:${i + 1}: a table made inside a function or a class takes no name`);
+      } }
+  const stale = [...Object.keys(ROLLBACK_EXEMPT), ...Object.keys(RAW_WEAK_OK), ...Object.keys(GENERATOR_OK)].filter(k => !used.has(k));
   const ALL = process.env.ROLLBACK_ALL === '1', some = (a: string[]) => a.length ? `${a.length}: ${a.slice(0, ALL ? 999 : 8).join(' · ')}${a.length > 8 && !ALL ? ' … (ROLLBACK_ALL=1 lists them all)' : ''}` : 'none';
   console.log(`  the static pass · ${files.length} files of ${SIM.join(', ')} and ${SIM_FILES.join(', ')}`);
   verdict(rawWeak.length === 0, 'no plain WeakMap / WeakSet in the simulation\'s folders (a snapshot cannot list one)', `${some(rawWeak)} · ${Object.keys(RAW_WEAK_OK).length} allowed, each with its reason`);
+  verdict(heldGen.length === 0, 'no generator is kept in the simulation\'s folders (where one stopped in its own code is in no snapshot: a job half done is plain data)', `${some(heldGen)} · ${Object.keys(GENERATOR_OK).length} allowed, each with its reason`);
   verdict(badTable.length === 0 && named > 100, 'every side table at the top of a module carries its module\'s and its variable\'s name; none made inside a function does', `${named} named · ${some(badTable)}`);
   verdict(needLet.length === 0, 'every module `let` is registered (rollbackVar) or listed with the reason it need not be (tools/qa/rollback-exempt.ts)', `${lets} lets: ${letReg} registered · unlisted ${some(needLet)}`);
   verdict(needRoot.length === 0, 'every module-level Map / Set / array / object the code writes to is registered (rollbackRoot), a knob table, or listed with its reason', `${conts} written: ${contReg} registered, ${contKnob} knob tables · unlisted ${some(needRoot)}`);
@@ -322,6 +348,7 @@ if (!argv.includes('--static')) {
     const al = m.moments.filter(x => x.alias >= 0);
     const first = (f: (x: Moment) => boolean, say: (x: Moment) => string): string => { const bad = m.moments.filter(f); return bad.length ? `${bad.length} of ${n} — the first at frame ${bad[0].frame} (${bad[0].t} s, ${bad[0].why}): ${say(bad[0])} · --why ${id}:${bad[0].frame}` : `all ${n}`; };
     verdict(n > 0 && m.moments.every(x => x.back && x.backFull), `${id} put back: the state is the word it was at the moment`, `${first(x => !x.back || !x.backFull, x => x.back ? 'the statics differ' : 'the state differs')} (${[...kinds].map(([k, c]) => `${k} ${c}`).join(', ')})`);
+    verdict(n > 0 && m.moments.every(x => x.host), `${id} the host's own: the light meter's buffers are as the host left them, not as the snapshot saw them`, first(x => !x.host, () => 'the meter\'s free buffers went back with the game, or the game holds no meter with a GPU side to mark'));
     verdict(n > 0 && m.moments.every(x => x.same < 0), `${id} same game: ${TICKS} ticks on from the snapshot are the unbroken run's, every tick to the bit`, first(x => x.same >= 0, x => `tick ${x.same} differs`));
     verdict(n > 0 && m.moments.every(x => x.ring < 0), `${id} the ring: a snapshot after every tick, each taken since the one before; the one eight ticks back put back plays the eight again, to the bit`, first(x => x.ring >= 0, x => x.ring === 0 ? 'the state put back is not that tick\'s' : `tick ${x.ring} of the eight differs`));
     verdict(n > 0 && m.moments.every(x => x.fresh < 0 && x.freshAt), `${id} fresh game: the snapshot in another game plays the same ${TICKS} ticks, every tick to the bit`, first(x => x.fresh >= 0 || !x.freshAt, x => x.freshAt ? `tick ${x.fresh} differs` : 'the state differs at the moment')
