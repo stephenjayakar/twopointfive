@@ -164,13 +164,15 @@ export function teamFollow(g: Game, gd: Guard, samV: number, d: number, gain: nu
  *  than this frame */
 export function teamFight(g: Game, gd: Guard, secs = 0): void { if (TEAMPACE.on) teamLeave(g, gd, 'fight', PACE.max, secs); }
 /** A RUN TO COVER, the question itself: loud has reached him in the last `dashHot` seconds, he has nobody in his sights (a man who has fights), the floor he
- *  is on is in a known man's line, his mark `to` (`d` off, in plain sight on the same floor; `least`: the shortest leg worth it) is out of it */
-export function teamDashNow(g: Game, gd: Guard, to: Vec3, d: number, least = TEAMPACE.dashM): boolean {
+ *  is on is in a known man's line, his mark `to` (`d` off, in plain sight on the same floor; `least`: the shortest leg worth it) is out of it. `running` =
+ *  asked of a man already on the leg: what STARTED him — the loud, the line on the floor under him — is not asked again (a leg begun is run out: the floor
+ *  he crosses leaves the line before he is behind anything); what would stop any man still is — a man in his sights, a mark the line has found, a wall */
+export function teamDashNow(g: Game, gd: Guard, to: Vec3, d: number, least = TEAMPACE.dashM, running = false): boolean {
   const T = TEAMPACE; if (!T.own || !teamSlow(g, gd)) return false;
   const p = gd.char.pos;
-  return d >= least && g.time - g.fight.hotOf(gd) < T.dashHot && !g.fight.engaged(gd) && !quiet(g, gd) && !isHurt(g, gd)
+  return d >= least && (running || g.time - g.fight.hotOf(gd) < T.dashHot) && !g.fight.engaged(gd) && !quiet(g, gd) && !isHurt(g, gd)
     && g.fight.roomAt(p) === g.fight.roomAt(to) && !g.col.solidBlocked([p[0], 0.45, p[2]], [to[0], 0.45, to[2]])
-    && exposedAt(g, gd, p) >= T.dashSeen && exposedAt(g, gd, to) <= 0;
+    && (running || exposedAt(g, gd, p) >= T.dashSeen) && exposedAt(g, gd, to) <= 0;
 }
 /** … and the pace to run the leg at, or null (orders.ts, of a man walking to the mark an order gave him): asked every `dashEvery` seconds a man and whenever
  *  his mark has moved, kept between; once running he runs the leg out */
@@ -179,7 +181,7 @@ export function teamDash(g: Game, gd: Guard, to: Vec3, d: number): number | null
   const was = dash.get(gd), t = g.time, run = g.tune.playerSprint, same = !!was && Math.hypot(was.x - to[0], was.z - to[2]) < 0.5;
   let yes: boolean;
   if (was && same && t - was.t < T.dashEvery) yes = was.yes && d > 0.6;
-  else { yes = teamDashNow(g, gd, to, d, was && same && was.yes ? 0.6 : T.dashM); dash.set(gd, { t, x: to[0], z: to[2], yes }); }
+  else { const on = !!was && same && was.yes; yes = teamDashNow(g, gd, to, d, on ? 0.6 : T.dashM, on); dash.set(gd, { t, x: to[0], z: to[2], yes }); }
   return yes && teamLeave(g, gd, 'cover', run) ? run : null;
 }
 /** the pace a teammate leaves a grenade at (frag.ts, squadthrow.ts — what teamCap gives a man fragRunning): the flee's own with the rule on and a run

@@ -154,6 +154,12 @@ export const teampaceCheck = guarded(async () => {
         const run = ask(); g.fight.hotT = -1e9; const cold = teamDashNow(g, m, to, d);
         const inLine = ask(d, [p[0] + (E[0] - p[0]) * 0.3, 0, p[2] + (E[2] - p[2]) * 0.3]), short = ask(1.0);
         TEAMPACE.own = false; const off = ask(); TEAMPACE.own = true;
+        // … and a leg BEGUN is run out: asked of a man already running it, from floor on the leg the line has left and with the loud gone cold, the answer
+        // is still yes (asked afresh there it is no: that was the walk in the middle of a leg) — and still no to a mark in the line or a step from it
+        let mid: number[] | null = null; for (let k = 0.9; k >= 0.2 && !mid; k -= 0.1) { const q = [p[0] + (to[0] - p[0]) * k, 0, p[2] + (to[2] - p[2]) * k]; if (flat(q, to) > 0.8 && exposedAt(g, m, q) < TEAMPACE.dashSeen) mid = q; }
+        let legOn = false, legFresh = true, legLine = true, legEnd = true, legLeft = 0;
+        if (mid) { R.put(m, mid); legLeft = flat(mid, to); g.fight.hotT = -1e9; legOn = teamDashNow(g, m, to, legLeft, 0.6, true); legFresh = teamDashNow(g, m, to, legLeft, 0.6);
+          legLine = teamDashNow(g, m, [p[0] + (E[0] - p[0]) * 0.3, 0, p[2] + (E[2] - p[2]) * 0.3], legLeft, 0.6, true); legEnd = teamDashNow(g, m, to, 0.5, 0.6, true); R.put(m, p); }
         // … and walked: sent there with the fight hot, he runs the leg and it is written down (the fight cold: he walks it)
         const walked = (hot: boolean) => { R.put(m, p); R.step(30); const n0 = TEAMPACE_STATS.cover; const why = R.O.give('move', R.O.targetAt(to), 'all'); let top = 0;
           for (let f = 0; f < 240; f++) { g.fight.hotT = hot ? g.time : -1e9; R.step(); top = Math.max(top, m.speed); } return { top, n: TEAMPACE_STATS.cover - n0, why }; };
@@ -162,6 +168,8 @@ export const teampaceCheck = guarded(async () => {
         F.verdict(run && !cold && !inLine && !short && !off && !sil,
           'cover: hot, on floor in a known man\'s line, his mark out of it in plain sight across the same floor — he runs; not cold, not to a mark in the line, not a short step, not with `own` off, not the silent squad',
           `run ${run} · cold ${cold} · mark in the line ${inLine} · a metre's step ${short} · own off ${off} · silent ${sil} · ${f2(d)} m, exposure here ${f2(exposedAt(g, m, p))}, at the mark ${f2(exposedAt(g, m, to))}`);
+        F.verdict(!!mid && legOn && !legFresh && !legLine && !legEnd, 'cover: a leg begun is run out — on floor the line has left, the loud gone cold, a man already running keeps the run; not to a mark in the line, not the last half metre',
+          mid ? `${f2(legLeft)} m short of the mark, exposure there ${f2(exposedAt(g, m, mid))} (the bar to start is ${TEAMPACE.dashSeen}): running ${legOn} · asked afresh ${legFresh} · mark in the line ${legLine} · half a metre left ${legEnd}` : 'no floor on the leg where the line has let go of him short of the mark');
         console.log(`    (printed, not judged — the order deals each man his own spot: sent there hot, top ${f2(wHot.top)} m/s, cover runs written ${wHot.n}${wHot.why ? `, refused: ${wHot.why}` : ''} · cold, top ${f2(wCold.top)} m/s, written ${wCold.n})`); }
       // 7. boots
       { const run = teamTread(g, m, 4.7, 0.45) as number, jog = teamTread(g, m, 2.3, 0.45) as number, at = teamTread(g, m, TEAMPACE.runAt - 0.01, 0.45) as number;
