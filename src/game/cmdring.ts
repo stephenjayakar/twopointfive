@@ -50,7 +50,12 @@ export const CMDRING = {
   /** the ring's middle: the cursor this far (CSS px) out of it lights the wedge it is out toward — once it has been back inside since the ring last changed
    *  under it (a page turned, a digit, a man clicked, or a ring opened at the view's edge with the cursor out of its middle) */
   flickPx: 24,
-  /** a TAP IS THE FIRST WEDGE HOWEVER THE HAND IS MOVING: the cursor lights nothing until the key has been down this long (s), and one already out of the
+  /** A TAP IS THE QUICK KEY'S ORDER AND NO RING (the maintainer, 10-20, after playing it: "we shouldn't open the radial menu on just a single tab press,
+   *  only after some (very short) delay"): the key let go inside this long (s) gives what the quick key gives on what the cursor was on when it went
+   *  down — no menu was ever up, so nothing is drawn and no other key or button of those moments is the menu's — and the key still down after it puts
+   *  the ring up for that thing, at the cursor. 0 = the ring the moment the key goes down, as it was first built (`tapSecs` then guards the tap) */
+  holdSecs: 0.2,
+  /** (with `holdSecs` 0) a TAP IS THE FIRST WEDGE HOWEVER THE HAND IS MOVING: the cursor lights nothing until the key has been down this long (s), and one already out of the
    *  middle by then lights nothing until it has been back. A digit counts from the first frame. 0 = the cursor counts at once */
   tapSecs: 0.15,
   /** a ring opened nearer the view's sides (edgeX) or its top and bottom (edgeY) than this stands this far in, whole (CSS px) */
@@ -69,7 +74,7 @@ export const CMDRING = {
   hands: false,
   /** PLAN MODE (planmode.ts): Shift + the key toggles it; while it is up the left button picks men (a click, Shift click, a drag), the right button gives
    *  the quick key's order to them — Shift adds it to the end of their chain — and a chain pauses for the word's key at a door's threshold and after a
-   *  room that has something chained after it. Off here; the page raises it with the ring (`?nocmdplan` leaves it off) */
+   *  room that has something chained after it. Off here; the page raises it when asked for beside the ring (`?cmd&cmdplan`) */
   plan: false,
   /** plan mode: a left press that has moved less than this (CSS px, × ringZoom) by the time it is let go is a click, not a box */
   planDragPx: 8,
@@ -125,6 +130,7 @@ export function wedgeAt(dx: number, dy: number, n: number): number {
 
 /** a file holds no ring (a held key is not state): a load, or the switch put off, finds the key up — savestate.ts, ui/bindings.ts */
 export function ringRestore(g: Game): void {
+  g.orders.cmdPress = null;
   if (g.orders.cmdRing) { g.orders.cmdRing = null; g.orders.close(); }
   const S = g.player.sel; if (S.ring) { S.ring = null; S.open = false; S.downT = -1; S.moved = false; g.player.fHeld = true; }   // (his own ring: the press is spent, as a teleport spends it)
 }

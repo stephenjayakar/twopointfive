@@ -18,7 +18,7 @@ const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const IA: any = await import(`${ROOT}/src/game/interact.ts`);
 const { CMDRING, CMDRING_STATS } = CR, { AUTOPILOT } = AP;
 
-const DT = 1 / 60, HOLD = Math.ceil(CMDRING.tapSecs * 60) + 1;
+const DT = 1 / 60, HOLD = Math.ceil(CMDRING.tapSecs * 60) + 1, HOLD_SECS = 0.2;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const BREAK = process.env.CMDRING_BREAK === '1';
@@ -29,7 +29,7 @@ async function rig(seed: number, on = !BREAK) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp();
-    CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; AUTOPILOT.on = true;
+    CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.holdSecs = HOLD_SECS; AUTOPILOT.on = true;
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
@@ -41,7 +41,7 @@ async function rig(seed: number, on = !BREAK) {
     /** the cursor on p, as the game's own input reads it */
     aim(p: number[]) { W.cursorAt([p[0], p[1], p[2]]); R.step(2); return O.hover?.() ?? null; },
     /** the ring's key goes down and stays down */
-    down() { input.keys.add(KEY); input.pressed.add(KEY); R.step(); R.step(HOLD); },   // (… past the tap guard, CMDRING.tapSecs: the cursor counts from here)
+    down() { input.keys.add(KEY); input.pressed.add(KEY); R.step(); R.step(Math.ceil(CMDRING.holdSecs * 60) + HOLD); },   // (… past the hold that puts the ring up, CMDRING.holdSecs, and its tap guard, CMDRING.tapSecs: the cursor counts from here)
     /** … and comes up: the frame it is read in */
     up() { input.keys.delete(KEY); R.step(); },
     /** a tap: down for one frame */
@@ -78,7 +78,7 @@ const line = (ok: boolean, name: string, detail: string) => { if (!ok) fails++; 
 
 export async function cmdringCheck(): Promise<boolean> {
   fails = 0;
-  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, ap: AUTOPILOT.on, rnd: Math.random };
+  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, rts: CMDRING.planRts, hold: CMDRING.holdSecs, ap: AUTOPILOT.on, rnd: Math.random };
   console.log(`cmdring-check: the orders ring on one key (a prototype)${BREAK ? '  (CMDRING_BREAK: the switch is left off — the lines must fail)' : ''}`);
   try {
     const R = await rig(5), g = R.game, O = R.O, T = g.doorTools, S = CMDRING_STATS;
@@ -227,13 +227,14 @@ export async function cmdringCheck(): Promise<boolean> {
       let wall: any = null, hw: any = null; for (let gy = 100; gy <= 900 && !wall; gy += 100) for (let gx = 100; gx <= 1500 && !wall; gx += 100) { R.input.mouseX = gx; R.input.mouseY = gy; R.step(2); const h = O.hover(); if (h?.kind === 'floor' && h.wall && !h.thing) { wall = h.wall; hw = O.hintView(); } }
       const wlen = wall ? 2 * (wall.alongX ? wall.box.h[0] : wall.box.h[2]) : 0, slen = hw?.seg ? dist(hw.seg[0], hw.seg[1]) : -1;
       const okWall = !wall || (!!hw && hw.kind === 'wall' && !!hw.seg && !!hw.ring && slen > 0.3 && slen <= Math.min(2 * CMDRING.hintWallM, wlen) + 0.01);
-      // (where the key would open no ring — Shift down — no hint; on Sam himself, the squad's own menu: a glyph and no outline)
-      R.aim(spot); R.input.keys.add('ShiftLeft'); R.step(1); const hs = O.hintView(); R.input.keys.delete('ShiftLeft'); R.step(1);
+      // (where the key would open no ring — Shift down with plan mode on, whose toggle Shift + the key then is — no hint; that mode off, Shift is only his
+      //  sprint and the hint stays; on Sam himself, the squad's own menu: a glyph and no outline)
+      R.aim(spot); R.input.keys.add('ShiftLeft'); R.step(1); const hrun = O.hintView(); CMDRING.plan = true; const hs = O.hintView(); CMDRING.plan = false; R.input.keys.delete('ShiftLeft'); R.step(1);
       const sp = R.game.player.char.pos, hq = (R.aim([sp[0], sp[1] + 1.0, sp[2]]), O.hintView()), tq = O.hover();
       const okSquad = tq?.kind === 'none' && !tq.man ? (!!hq && hq.kind === 'squad' && !hq.seg && !hq.ring) : true;
       R.aim(spot); R.press(ORDERS.key); const hx = O.hintView(), menuUp = !!O.menu; R.press(ORDERS.key);
       const was = CMDRING.hint; CMDRING.hint = false; R.aim(spot); const hk = O.hintView(); CMDRING.hint = was;
-      line(okFloor && okDoor && okHeld && okMan && okWall && okSquad && hs === null && menuUp && hx === null && hk === null, 'before the key the hint names what the ring would open on and outlines it; with the ring up it is the ring\'s own, in its middle',
+      line(okFloor && okDoor && okHeld && okMan && okWall && okSquad && hs === null && hrun?.kind === 'floor' && menuUp && hx === null && hk === null, 'before the key the hint names what the ring would open on and outlines it; with the ring up it is the ring\'s own, in its middle',
         `floor: ${hf?.kind}${hf?.ring ? ' ring' : ''} at the cursor ${okFloor} · door: ${hd?.kind}, its line ${mid ? dist(mid, D.frameCentre).toFixed(2) : '?'} m off the doorway's middle ${okDoor} · held on the door, cursor moved off: ${hh?.kind}, held ${hh?.held}, in the ring's middle ${okHeld} · ${man?.callsign ?? 'nobody'}: ${hm?.kind}, ${hm?.tone} as the ring's ${toneUp} ${okMan} · a wall: ${wall ? `${hw?.kind}, ${slen.toFixed(2)} m of a ${wlen.toFixed(2)} m wall ${okWall}` : 'none to charge on this stand'} · Shift down: ${hs ? hs.kind : 'none'} · on Sam: ${hq ? hq.kind : 'none'} (${tq?.kind}) ${okSquad} · order menu up: ${hx ? hx.kind : 'none'} · knob off: ${hk ? hk.kind : 'none'}`);
       R.home();
     }
@@ -253,6 +254,59 @@ export async function cmdringCheck(): Promise<boolean> {
       R.aim(spot); const n0 = O.log.length; R.down(); const up = !!O.cmdRing || !!O.menu; R.step(10); R.up(); R.step(3);
       line(!up && O.log.length === n0, 'the switch off: the key is nobody\'s', `ring or menu ${up ? 'up' : 'not up'} · order book +${O.log.length - n0}`);
       CMDRING.on = was;
+    }
+
+    // 15 to 20. A TAP OPENS NO RING (CMDRING.holdSecs): the key let go inside the hold is the quick key's order and no menu was ever up; the ring is the
+    //            key kept down
+    {
+      const inp = R.input, KEY = CMDRING.key, N = Math.ceil(CMDRING.holdSecs * 60);
+      const keyDown = () => { inp.keys.add(KEY); inp.pressed.add(KEY); R.step(); };
+      const floorOf = (t: any) => `floor:${t.at[0].toFixed(1)},${t.at[2].toFixed(1)}`;
+      // 15. a tap that lasts most of the hold: no ring, no menu, nothing listed — only the hint, brighter, on what the key went down on — and let go, the order
+      {
+        R.home(); R.aim(spot); const n0 = O.log.length, q0 = S.quick, o0 = S.opened; keyDown();
+        let never = true, press = true;
+        for (let i = 0; i < N - 3; i++) { const h = O.hintView(); never &&= !O.cmdRing && !O.menu && O.ringView() === null && O.hud().menu === null; press &&= !!h && h.press === true && h.held && h.kind === 'floor' && Math.abs(h.x - inp.mouseX) < 1 && Math.abs(h.y - inp.mouseY) < 1; R.step(); }
+        const mid = O.log.length - n0; R.up(); const row = R.tail(), hAfter = O.hintView();
+        line(never && press && mid === 0 && O.log.length === n0 + 1 && row?.order === 'move' && S.quick === q0 + 1 && S.opened === o0 && !O.cmdRing && !O.menu && hAfter?.press === false,
+          'a tap opens no ring: the key down most of the hold shows no menu, only the hint brighter on the spot; let go, the squad moves there', `${N - 2} frames down of a ${N}-frame hold: ring or menu ${never ? 'never up' : 'UP'}, the hint ${press ? 'pressed, at the cursor' : 'not as a press'} · order book while down +${mid} · on the key up: ${row?.order} (+${O.log.length - n0}), rings opened +${S.opened - o0}`);
+      }
+      // 16. the hand moving, his trigger pulled and the menu's key pressed inside the tap: the order still goes, to where the cursor was as the key went down
+      {
+        R.home(); R.aim(spot); const tgt = O.hover(), n0 = O.log.length, x0 = inp.mouseX, y0 = inp.mouseY; keyDown();
+        inp.mouseX = x0 + 150; inp.mouseY = y0 + 70; R.step(); inp.clicked |= 1; R.step(); inp.mouseX = x0 + 300; inp.mouseY = y0 + 140; R.step(); const ringUp = !!O.cmdRing;
+        R.up(); const row = R.tail(), k = O.log.length - n0;
+        R.home(); R.aim(spot); const n1 = O.log.length; keyDown(); R.press(ORDERS.key); const menuUp = !!O.menu && !O.cmdRing; R.up(); const k2 = O.log.length - n1, row2 = R.tail(); O.close(); R.step(N + 4); const late = !!O.cmdRing;
+        line(!ringUp && k === 1 && row?.order === 'move' && tgt?.kind === 'floor' && row.target === floorOf(tgt) && menuUp && k2 === 1 && row2?.order === 'move' && !late,
+          'a tap is never lost: the cursor swept away, a left click and the menu\'s key inside it, and the order still goes to where the key went down', `swept 330 px with a left click: ${row?.order} to ${row?.target} (the key went down on ${tgt?.kind === 'floor' ? floorOf(tgt) : tgt?.kind}), +${k}, ring ${ringUp ? 'up' : 'never up'} · the menu's key inside the tap: the menu ${menuUp ? 'listed' : 'not listed'}, on the key up ${row2?.order} (+${k2}) · a ring afterwards: ${late ? 'UP' : 'none'}`);
+      }
+      // 17. kept down: nothing until the hold is over, then the ring — for what the key went down on, where the cursor now is — and nothing given until it is
+      //     let go; out toward wedge 2 and let go, wedge 2's order
+      {
+        R.home(); R.aim(spot); const tgt = O.hover(), n0 = O.log.length, sx = inp.mouseX, sy = inp.mouseY; keyDown(); R.step(N - 2); const early = !!O.cmdRing || !!O.menu;
+        inp.mouseX = sx + (sx > 800 ? -160 : 160); inp.mouseY = sy + (sy > 500 ? -90 : 90); R.step(4);   // (well inside the view: at its edge the ring would stand off the cursor, line 8b)
+        const V = O.ringView(), t = O.menu?.target, lit0 = O.cmdRing?.lit, held = O.log.length - n0, moved = Math.hypot(inp.mouseX - sx, inp.mouseY - sy);
+        const r2 = O.menu?.rows.find((r: any) => r.key === 2), a = (-90 + 72) * Math.PI / 180, x0 = O.cmdRing?.ax ?? 0, y0 = O.cmdRing?.ay ?? 0, here = Math.abs(x0 - inp.mouseX) < 1 && Math.abs(y0 - inp.mouseY) < 1;
+        inp.mouseX = x0 + Math.cos(a) * (CMDRING.flickPx + 14); inp.mouseY = y0 + Math.sin(a) * (CMDRING.flickPx + 14); R.step(); const lit1 = O.cmdRing?.lit;
+        R.up(); const row = R.tail();
+        line(!early && !!V && t?.kind === 'floor' && tgt?.kind === 'floor' && moved > 150 && here && lit0 === 1 && held === 0 && !!r2 && lit1 === 2 && O.log.length === n0 + 1 && row?.order === r2.id && row.target === floorOf(tgt),
+          'kept down, the ring comes up when the hold is over: for the spot the key went down on, at the cursor; out toward wedge 2 and let go, its order', `${N - 1} frames down: ${early ? 'UP ALREADY' : 'nothing up'} · then the ring ${V ? 'up' : 'NOT up'} on the ${t?.kind} with the cursor moved ${moved.toFixed(0)} px on, ${here ? 'at the cursor' : 'NOT at the cursor'}, lit ${lit0}, order book +${held} · toward wedge 2 ('${r2?.id}'): lit ${lit1} · on the key up: ${row?.order} at ${row?.target} (the key went down on ${tgt?.kind === 'floor' ? floorOf(tgt) : tgt?.kind})`);
+      }
+      // 18. Shift is only his sprint with plan mode off: a tap with it down orders; with that mode on, Shift + the key is its toggle and no order
+      {
+        R.home(); R.aim(spot); const n0 = O.log.length; inp.keys.add('ShiftLeft'); R.step(); keyDown(); R.step(2); R.up(); const run = O.log.length - n0, row = R.tail();
+        CMDRING.plan = true; R.home(); R.aim(spot); const n1 = O.log.length; inp.keys.add('ShiftLeft'); R.step(); keyDown(); R.step(2); R.up(); const planUp = O.plan.up, k = O.log.length - n1;
+        if (O.plan.up) { keyDown(); R.up(); } const planDown = !O.plan.up; inp.keys.delete('ShiftLeft'); R.step(); CMDRING.plan = false;
+        line(run === 1 && row?.order === 'move' && planUp && k === 0 && planDown, 'Shift down is only his sprint: the tap still orders — and with plan mode on, Shift and the key toggle that mode and order nothing', `plan mode off, Shift down: ${row?.order} (+${run}) · plan mode on: the mode ${planUp ? 'up' : 'NOT up'}, order book +${k}, then ${planDown ? 'down again' : 'STILL UP'}`);
+      }
+      // 19. the hold at 0 is the ring as first built: up on the frame the key goes down — and a recording from before the hold replays so
+      {
+        R.home(); R.aim(spot); const n0 = O.log.length; CMDRING.holdSecs = 0; keyDown(); const atOnce = !!O.cmdRing && !!O.menu; R.step(HOLD); R.up(); const k = O.log.length - n0; CMDRING.holdSecs = HOLD_SECS;
+        const J: any = await import(`${ROOT}/src/game/journal.ts`), snap = J.knobsSnapshot(g), old = JSON.parse(JSON.stringify(snap));
+        delete old.tables.CMDRING.holdSecs; J.applyKnobs(g, old); const oldHold = CMDRING.holdSecs; J.applyKnobs(g, snap); const back = CMDRING.holdSecs;
+        line(atOnce && k === 1 && oldHold === 0 && back === HOLD_SECS, 'the hold at 0 is the ring as first built, and a recording from before the hold replays with it at 0', `holdSecs 0: the ring ${atOnce ? 'up on the frame the key went down' : 'NOT up at once'}, on the key up +${k} · a recording with no holdSecs: ${oldHold} · one with it: ${back}`);
+      }
+      R.home();
     }
 
     // 11 to 14. HIS OWN HANDS ON THE SAME RING (CMDRING.hands, interact.ts): Sam at a shut door that offers two rows (push, ease)
@@ -293,9 +347,10 @@ export async function cmdringCheck(): Promise<boolean> {
         inp.mouseX = B0.x + 30; inp.mouseY = B0.y - 12; R.step(); inp.mouseX = B0.x + 60; inp.mouseY = B0.y - 24; R.step(); const sweepLit = S.ring?.lit; sup(); R.step(3);
         const sweepRan = IA.runningVerb(g); R.until(() => !door.isClosed(), 3); const sweepOpen = !door.isClosed();
         rest(); at(door, side);
+        CMDRING.holdSecs = 0;   // (the ring the moment the key goes down, as first built: its tap guard is what is asked here — with the hold a tap has no ring at all, lines 15 on)
         const n1 = O.log.length; inp.keys.add(CMDRING.key); inp.pressed.add(CMDRING.key); R.step(); const T0 = O.cmdRing ? { x: O.cmdRing.ax, y: O.cmdRing.ay } : { x: 0, y: 0 };
         inp.mouseX = T0.x + 40; inp.mouseY = T0.y + 40; R.step(); const tabLit = O.cmdRing?.lit; inp.pressed.add(SP); inp.keys.add(SP); R.step(); const two = !!S.ring; inp.keys.delete(SP); R.step();
-        inp.clicked |= 4; R.step(); R.up(); R.step(2);
+        inp.clicked |= 4; R.step(); R.up(); R.step(2); CMDRING.holdSecs = HOLD_SECS;
         line(sweepLit === 1 && !sweepRan && sweepOpen && tabLit === 1 && !two && O.log.length === n1, 'a tap made with the hand moving is still the first wedge, on both rings; Space under the squad\'s held ring opens no second ring',
           `Space, the cursor 65 px out by the third frame: lit ${sweepLit}, ${sweepRan || 'nothing sustained running'}, the door ${sweepOpen ? 'pushed open' : 'still shut'} · the squad's key, the cursor 57 px out on the second frame: lit ${tabLit} · Space under it: his own ring ${two ? 'up as well' : 'not up'}`);
         rest();
@@ -314,7 +369,7 @@ export async function cmdringCheck(): Promise<boolean> {
         CMDRING.hands = was; rest();
       }
     }
-  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
+  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; CMDRING.planRts = keep.rts; CMDRING.holdSecs = keep.hold; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
   console.log(fails ? `cmdring-check: ${fails} FAIL` : 'cmdring-check: ALL PASS');
   return fails === 0;
 }
