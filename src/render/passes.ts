@@ -1,6 +1,7 @@
 // Screen-space lighting passes: direct (full res), indirect gather (half — a third with the lossy option), volumetrics (half — a quarter likewise), composite, then EITHER the TAAU resolve
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
 import { makeBuffer, makeShader, computePipelineAsync, renderPipelineAsync, writeWordsIfChanged } from '../gpu/device';
+import { shaderText } from '../gpu/wgslTrim';
 import { FrameFlags, scenePrelude, MAX_CARDS } from './frame';
 import { Mat4 } from '../math/vec';
 import taauSrc from './shaders/taau.wgsl' with { type: 'text' };
@@ -732,7 +733,7 @@ export class LightingPasses implements CutSwappable {
    *  error) when the march no longer has the statements the twin swaps or the twin does not compile; never an invalid pipeline */
   private async dustTwin(vol: string, pre: string = scenePrelude()): Promise<GPUComputePipeline | null> {
     const twin = DUST_DRAW.on ? dustLookVol(vol) : null; if (!twin) return null;
-    const mod = this.device.createShaderModule({ code: pre + lightingCommon + volCommon + dustLookSrc + twin, label: 'volumetricsDust' });
+    const mod = this.device.createShaderModule({ code: shaderText(pre + lightingCommon + volCommon + dustLookSrc + twin), label: 'volumetricsDust' });
     const info = await mod.getCompilationInfo();
     if (info.messages.some(m => m.type === 'error')) { console.error('dust look: the volumetric dust twin does not compile — dust is drawn as plain smoke', info.messages.filter(m => m.type === 'error').slice(0, 3).map(m => `${m.lineNum}:${m.linePos} ${m.message}`)); return null; }
     try { return await this.device.createComputePipelineAsync({ label: 'volDust', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } }); }
