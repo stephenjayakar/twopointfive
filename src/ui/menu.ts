@@ -176,6 +176,8 @@ export interface MenuDeps { engine: Engine; game: Game; quality: Quality; audio:
   startBench?: () => void;
   /** checkpoints (game/savestate.ts): load the stored slot `key` into the game — main.ts stops any show first and snaps the camera after; returns why not, or null */
   loadCheckpoint?: (key: string) => string | null;
+  /** F5 came on the pause card and the save will be written as play goes on (main.ts: the press is kept, the world is held) — the strip shows its tile to come */
+  saveDue?: () => boolean;
   /** the scenario that is up right now (game/scenarioRun.ts — null: the plain night) in the picker's words, and the way out of it back to the start card's
    *  picker (main.ts: the scenario stopped, its flags off the URL). Absent: no scenario rows on the pause / down cards. */
   scenario?: { current: () => { title: string; team: string; saves?: boolean; entry?: { id: string } | null } | null; quit: () => void; refused?: () => string | null };
@@ -205,6 +207,14 @@ export class Menu {
   close() { closeOptions(); MISSIONS.startSolo = null; closeMissions(); if (this.mode === 'start') this.d.onStart(); this.mode = 'closed'; this.run = false; this.root.classList.remove('on'); this.d.focusGame?.(); }   // keys go to the game, not the (now hidden) button that had focus
   /** the pause card with 'Run so far' open beside it (Tab, while that is what Tab is trying out: ui/tabkey.ts) */
   openRun() { this.run = true; this.open('pause'); }
+  private stripAt: HTMLElement | null = null;   // (the pause card's node the strip of saves sits before)
+  /** F5 came on the pause card (main.ts `saveDue`): the strip alone is laid again, with the tile to come — the card and where the keys had walked on it stay */
+  saveAsked() {
+    if (this.mode !== 'pause') return; const strip = this.saveStrip(), old = this.root.querySelector('.saves'); if (!strip) return;
+    const held = !!old && old.contains(document.activeElement);
+    if (old) old.replaceWith(strip); else if (this.stripAt?.parentNode) this.stripAt.parentNode.insertBefore(strip, this.stripAt); else return;
+    if (held) (strip.querySelector('.tile[tabindex="0"]') as HTMLElement | null)?.focus();
+  }
   get runOpen() { return this.mode === 'pause' && this.run; }
   toggle() { if (this.titled) return; if (this.isOpen) this.close(); else this.open('pause'); }   // (Esc: on the title screen there is nothing to back out of — the solo night is a row of the starting page)
 
@@ -265,7 +275,7 @@ export class Menu {
     const resume = button('Resume', () => this.close(), 'primary');
     actions.appendChild(resume);
     { const ck = this.checkpointButton(); if (ck) actions.appendChild(ck); const strip = this.saveStrip(); if (strip) actions.appendChild(strip); }   // 'Restart from checkpoint (40 s ago)' when one is stored (game/savestate.ts) — under Resume here; on the down card it is THE default
-    actions.appendChild(button(scn ? 'Restart scenario' : 'Restart encounter', () => { this.d.stopTour?.(); this.d.game.restart(); this.close(); }));   // (a running tour or level-script program ends first: its beat must not keep puppeting the fresh encounter; under a scenario the restart stages it again)
+    actions.appendChild(this.stripAt = button(scn ? 'Restart scenario' : 'Restart encounter', () => { this.d.stopTour?.(); this.d.game.restart(); this.close(); }));   // (a running tour or level-script program ends first: its beat must not keep puppeting the fresh encounter; under a scenario the restart stages it again)
     gap();
     actions.appendChild(button('Options', () => openOptions()));
     actions.appendChild(button('Run so far', () => { this.run = !this.run; this.render(); }, this.run ? 'on' : ''));
@@ -332,10 +342,11 @@ export class Menu {
   }   // (savestate.ts offer: an earlier run's slot only if this game would load it)
   /** THE STRIP (savestate.ts SAVETIMELINE): this run's saves in the order they were made, each a tile — its picture, how long ago, a mark on the ones made by
    *  hand, a regretted autosave dimmed. A click, or Enter on the tile the arrows (A D too) have walked to, goes back to it. Null with the switch off, no loader,
-   *  or fewer than two saves (one save is the button above it). */
+   *  or fewer than two saves (one save is the button above it) unless one is asked for on this card. */
   private saveStrip(armed: () => boolean = () => true): HTMLElement | null {
     const g = this.d.game, load = this.d.loadCheckpoint; if (!SAVETIMELINE.on || !load) return null;
-    const line = g.saves.timeline(); if (line.length < 2) return null;
+    const due = this.mode === 'pause' && !!this.d.saveDue?.();   // (a save asked for on this card: its tile stands where the save will, empty until play goes on and writes it)
+    const line = g.saves.timeline(); if (line.length < 2 && !due) return null;
     const now = g.mission.stats.elapsed, offered = this.checkpointInfo();
     const strip = el('div', 'saves'); strip.setAttribute('role', 'group'); strip.setAttribute('aria-label', 'saves of this run');
     const tiles = line.map(info => {
@@ -348,6 +359,8 @@ export class Menu {
       t.onclick = () => { if (!armed()) return; const why = load(info.key); if (why) { g.msg(`checkpoint: ${why}`); this.render(); return; } this.close(); };
       strip.appendChild(t); return t;
     });
+    if (due) { const t = el('div', 'tile hand due'); t.appendChild(el('i')); t.setAttribute('aria-label', 'a save by hand, written as play goes on'); strip.insertBefore(t, tiles[line.findIndex(x => x.missionT > now + 0.5)] ?? null); }   // (before the saves a load has left ahead of this moment)
+    if (!tiles.length) return strip;
     let cur = Math.max(0, offered ? line.findIndex(x => x.key === offered.key) : line.length - 1); tiles[cur].tabIndex = 0;   // (one stop for W S and Tab: the tile the button above would load)
     strip.addEventListener('keydown', e => {
       const d = e.code === 'ArrowLeft' || e.code === 'KeyA' ? -1 : e.code === 'ArrowRight' || e.code === 'KeyD' ? 1 : 0; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
