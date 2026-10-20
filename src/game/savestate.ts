@@ -821,7 +821,7 @@ export class Checkpoints {
   log: { t: number; what: string }[] = [];
   stats = { requests: 0, autosaves: 0, manual: 0, harness: 0, loads: 0, dropped: 0, refused: 0, deferredFrames: 0, regretted: 0 };
   /** QA hook: every state written (autosave or not) is also handed here — the soak keeps them to reload from */
-  onSaved: ((s: SaveState, info: SlotInfo | null) => void) | null = null;
+  onSaved: ((s: SaveState | null, info: SlotInfo | null) => void) | null = null;   // (s null: a save kept in memory has no file)
   private missionRef: object | null = null; private stageRef: MissionStage = 'infiltrate'; private roomRef = ''; private dragRef: object | null = null;
   /** the last autosave written, while it can still be regretted (key + game time) */
   private lastAuto: { key: string; t: number } | null = null;
@@ -969,7 +969,7 @@ export class Checkpoints {
     this.shelf.set(key, { info, snap: takeSnapshot(g), pic: null });
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key, t: g.time }; } else { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; }
     this.note(g, `${slot} → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
-    this.picture?.(info);
+    this.picture?.(info); this.onSaved?.(null, info);
     return { ok: true, info, bytes: 0 };
   }
   /** …and put back: every object of the game written as it stood (identities stand, the host is left as it is NOW — `onPutBack` is its turn). What the

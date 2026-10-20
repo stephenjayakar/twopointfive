@@ -174,7 +174,7 @@ export async function checkpointAutosave() {
   Math.random = seeded(515);
   const W = await standUp(); const { game } = W; const S = game.saves; const store = S.store;
   game.player.visibility = 0.02; game.godMode = true; game.playerInvisible = true;   // (unseen, unheard: this is about the controller, not the senses)
-  const written: any[] = []; S.onSaved = (s: any, info: any) => written.push({ label: s.label, key: info?.key, t: game.time, why: S.log[S.log.length - 1]?.what });
+  const written: any[] = []; S.onSaved = (s: any, info: any) => written.push({ label: s?.label ?? info?.label, key: info?.key, t: game.time, why: S.log[S.log.length - 1]?.what });
   game.guards.forEach((gd: any, i: number) => { gd.heardUpTo = 1e12; place(gd, [8 + i * 3, 0, 1.6], Math.PI); gd.hold = true; gd.flashlight.enabled = false; });   // parked on the north verge, held
   for (const cv of game.civilians ?? []) cv.heardUpTo = 1e12;   // (the cleaner / the late worker deaf too: a stun can going off in the cubicles sends her to the phone, and a civilian on the phone to security rightly holds the gate — review G3.4 — which is the senses' business, not the controller's)
   rollcallState(game).nextAt = 1e9;
