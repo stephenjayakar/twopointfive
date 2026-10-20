@@ -643,8 +643,8 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
   }
   /** what hangs on the window's size: the bar's height is told to the page (the HUD and the note box stand on it), the large map fills what is left, the line's marks are redrawn; the small map is in the top corner, clear of the bar and of whatever stands on it */
   private lay(): void {
-    // (THE BAR IS ONE OF THE TEXT SIZE'S LAYERS — ui/textsize.ts — and what the page is told of it is in the WINDOW's pixels: the HUD's rules, the large map
-    //  and the sound lanes' dock all read `--tape-h` that way. A rectangle measured off a zoomed element is the window's on an engine that answers so, the
+    // (THE BAR IS ONE OF THE TEXT SIZE'S LAYERS — ui/textsize.ts — and what the page is told of it is in the WINDOW's pixels: the HUD's rules and the large map
+    //  read `--tape-h` that way, and the sound lanes' dock, which is no layer, measures the bar the same way itself (soundlanes.ts paint()). A rectangle measured off a zoomed element is the window's on an engine that answers so, the
     //  layer's own on one that does not: either way × textZoom() / rectZoom() is the window's.)
     const u = this.ui, F = this.F; if (!u || !F) return; const bh = Math.round(u.bar.getBoundingClientRect().height * textZoom() / rectZoom()) || 44;
     document.documentElement.style.setProperty('--tape-h', `${bh}px`); u.modal.style.bottom = `${bh}px`;

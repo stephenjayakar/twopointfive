@@ -453,7 +453,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`#taperefuse`) are in `LAYERS`. NOT layers, on purpose: the two maps (`#tapemap`, `#tapemapbig`: canvases, no words), the sound lanes' dock (`#sndl`,
   a debug mode with its own file), and `replay.html`, which never boots the factor (its own page, as it was). What the page is TOLD of the bar stays in
   the window's pixels: `lay()` reads the bar's rectangle (× `textZoom()` / `rectZoom()`, right on an engine that answers either way) into `--tape-h`,
-  and the HUD's rules, the large map and the lanes' dock read it as before; the two rules inside the new layers divide it back by `--tz`. The line's
+  and the HUD's rules and the large map read it as before; the two rules inside the new layers divide it back by `--tz`. The lanes' dock does NOT read
+  `--tape-h`: `soundlanes.ts paint()` measures the bar itself, the same way (it read `offsetHeight`, the bar's own pixels, so at a factor of 2 the dock's
+  foot stood behind the bar by a bar's height and a step did not lay it again: mended 10-20); the height is in its layout key, so a step lays it again. The line's
   marks multiply their device pixels by the factor; `lay()` runs again on `TEXT_EVENT`. No switch of its own: `?textsize=0` is the text size's.
   CHECK: `probes.ts textsize` reads `src/replay/*.ts` too (the layers exist, no bare viewport unit); on the page, a headless look at 3840 × 2160 and
   1280 × 720 (the bar's height against `--tape-h`, the kit and meters on it, the note field, the large map, a step from the keys). Never seen on a GPU.
