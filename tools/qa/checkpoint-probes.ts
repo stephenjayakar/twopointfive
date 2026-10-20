@@ -18,6 +18,7 @@ import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const SS = await import(`${ROOT}/src/game/savestate.ts`);
 const { saveState, loadState, canSave, canLoad, CKPT, levelFingerprint } = SS;
+const ringSize = (): number => SS.SAVETIMELINE.on ? SS.SAVETIMELINE.auto : CKPT.autoSlots;   // how many autosaves the stand keeps
 const { killGuard, fireWeapon, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { startGrab, startKick, startPicking, toggleDrag } = await import(`${ROOT}/src/game/player.ts`);
 const { requestQrf, resetQrf } = await import(`${ROOT}/src/game/qrf.ts`);
@@ -173,7 +174,7 @@ export async function checkpointAutosave() {
   Math.random = seeded(515);
   const W = await standUp(); const { game } = W; const S = game.saves; const store = S.store;
   game.player.visibility = 0.02; game.godMode = true; game.playerInvisible = true;   // (unseen, unheard: this is about the controller, not the senses)
-  const written: any[] = []; S.onSaved = (s: any, info: any) => written.push({ label: s.label, key: info?.key, t: game.time, why: S.log[S.log.length - 1]?.what });
+  const written: any[] = []; S.onSaved = (s: any, info: any) => written.push({ label: s?.label ?? info?.label, key: info?.key, t: game.time, why: S.log[S.log.length - 1]?.what });
   game.guards.forEach((gd: any, i: number) => { gd.heardUpTo = 1e12; place(gd, [8 + i * 3, 0, 1.6], Math.PI); gd.hold = true; gd.flashlight.enabled = false; });   // parked on the north verge, held
   for (const cv of game.civilians ?? []) cv.heardUpTo = 1e12;   // (the cleaner / the late worker deaf too: a stun can going off in the cubicles sends her to the phone, and a civilian on the phone to security rightly holds the gate — review G3.4 — which is the senses' business, not the controller's)
   rollcallState(game).nextAt = 1e9;
@@ -249,9 +250,9 @@ export async function checkpointAutosave() {
       if (!info?.regret) fails.push(`the slot written 2 s before ${A.callsign} went alert carries no regret (${JSON.stringify(info)})`); else if (nw?.key === last.key && S.slots().filter((x: any) => x.runId === S.runId && !x.regret).length) fails.push('newest() still offers the regretted slot with a sound one stored'); else notes.push(`regret: '${info.regret}' → the cards offer '${nw?.label}' instead (was '${before?.label}')`);
       A.state = 'patrol'; A.awareness = 0; A.lastKnown = null; A.pinned = false; A.hold = true; game.alarm.episode = false; game.escalation = 0; game.escalationT = -1; steps(W, 1); } }
   // every write: never with a man alert / searching / over the line at that frame (the onSaved hook stamped the gate's world)
-  // slots: only auto.0‥2 (+ index) in the store, the index names ≤ 3, the newest is the last written
-  { const keys = [...store.map.keys()].filter((k: string) => k !== 'twopointsix.save.index').sort(); if (keys.some((k: string) => !/auto\.[012]$/.test(k))) fails.push(`store keys ${keys.join(',')}`);
-    const slots = S.slots(); if (slots.length > 3 || (written.length >= 3 && slots.length !== 3)) fails.push(`${slots.length} slots indexed after ${written.length} autosaves`);
+  // slots: only the ring's autosaves (+ index) in the store — auto.0‥2, or five of them under SAVETIMELINE — the index names no more, the newest is the last written
+  { const N = ringSize(); const keys = [...store.map.keys()].filter((k: string) => k !== 'twopointsix.save.index' && !k.includes('.save.pic.')).sort(); if (keys.some((k: string) => { const m = /auto\.(\d)$/.exec(k); return !m || +m[1] >= N; })) fails.push(`store keys ${keys.join(',')}`);
+    const slots = S.slots(); if (slots.length > N || (written.length >= N && slots.length !== N)) fails.push(`${slots.length} slots indexed after ${written.length} autosaves`);
     if (slots[0]?.label !== written[written.length - 1]?.label) fails.push(`newest slot '${slots[0]?.label}' ≠ last written '${written[written.length - 1]?.label}'`);
     notes.push(`${written.length} autosaves → slots [${slots.map((x: any) => x.key.replace('twopointsix.save.', '') + ':' + x.label).join(', ')}]`); }
   // the tag and the row
@@ -311,12 +312,13 @@ export async function checkpointSlots() {
   const W = await standUp(); const { game } = W; const S = game.saves; game.player.visibility = 0.02; game.godMode = true; for (const gd of game.guards) gd.heardUpTo = 1e12; rollcallState(game).nextAt = 1e9;
   steps(W, 0.5);
   const labels: string[] = [];
-  for (let i = 0; i < 4; i++) { const r = S.write(game, 'auto', `auto #${i}`); if (!r.ok) fails.push(`auto #${i}: ${r.why}`); labels.push(r.info?.key.replace('twopointsix.save.', '')); steps(W, 1); }
+  const N = ringSize();   // three, or five under SAVETIMELINE (whose own check holds the two rings apart: savetimeline-check.ts)
+  for (let i = 0; i < N + 1; i++) { const r = S.write(game, 'auto', `auto #${i}`); if (!r.ok) fails.push(`auto #${i}: ${r.why}`); labels.push(r.info?.key.replace('twopointsix.save.', '')); steps(W, 1); }
   const m = S.write(game, 'manual', 'by hand'); if (!m.ok) fails.push(`manual: ${m.why}`);
   const slots = S.slots();
-  if (labels.join(',') !== 'auto.0,auto.1,auto.2,auto.0') fails.push(`rotation ${labels.join(',')} (want auto.0,1,2,0)`);
-  if (slots.length !== 4) fails.push(`${slots.length} slots (want 3 auto + manual)`);
-  { const a0 = slots.find((x: any) => x.key.endsWith('auto.0')); if (a0?.label !== 'auto #3') fails.push(`auto.0 holds '${a0?.label}' (want the 4th, 'auto #3')`); }
+  { const want = [...Array.from({ length: N }, (_, i) => `auto.${i}`), 'auto.0'].join(','); if (labels.join(',') !== want) fails.push(`rotation ${labels.join(',')} (want ${want})`); }
+  if (slots.length !== N + 1) fails.push(`${slots.length} slots (want ${N} auto + manual)`);
+  { const a0 = slots.find((x: any) => x.key.endsWith('auto.0')); if (a0?.label !== `auto #${N}`) fails.push(`auto.0 holds '${a0?.label}' (want the one past the ring, 'auto #${N}')`); }
   if (S.newest()?.label !== 'by hand') fails.push(`newest '${S.newest()?.label}' (want the manual, written last)`);
   notes.push(`slots: ${slots.map((x: any) => `${x.key.replace('twopointsix.save.', '')}='${x.label}' ${(x.bytes / 1024).toFixed(0)}K`).join(', ')}`);
   // export (the manual slot's text) → a fresh game imports it → manual slot there → load → digest ≡ loading the object directly

@@ -370,7 +370,26 @@ async function main() {
   for (const ev of ['pointerdown', 'keydown', 'touchstart'] as const) window.addEventListener(ev, () => { gestured = true; }, { capture: true, passive: true });
   // checkpoints (game/savestate.ts): loading a stored slot from a card / the panel / the console — any show stopped first (its beat must not puppet the loaded
   // encounter), attract put back in its box, then the load, the camera cut onto Sam where the file has him (the follow cam's cut rule drops the TAA history)
-  const loadCheckpoint = (key: string): string | null => { attract.poke(); if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); const why = game.saves.load(game, key); if (!why) { cam.target = v3.copy(game.followPos()); cam.pin = null; input.keys.clear(); input.buttons = 0; } return why; };
+  const cutToHim = () => { cam.target = v3.copy(game.followPos()); cam.pin = null; input.keys.clear(); input.buttons = 0; };
+  const loadCheckpoint = (key: string): string | null => { attract.poke(); if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); const why = game.saves.load(game, key); if (!why) cutToHim(); return why; };
+  // THE SAVE TIMELINE (game/savestate.ts SAVETIMELINE): F5 is the game's; every save written asks for a picture, taken off the canvas straight after the next
+  // frame that is drawn (the frame of the save: the update that wrote it is the one that frame shows) and handed back small — the simulation never sees a canvas,
+  // and a picture that cannot be taken or kept is simply not there; a save kept in memory put back cuts the camera onto the man, as a file's load does
+  input.saveKey = () => saveMod.SAVETIMELINE.on && menu.mode !== 'start' && !brief?.up && document.getElementById('fatal')?.style.display !== 'flex';   // (a run is up, or its pause / end card: on the start page, behind a mission's brief and over a broken frame F5 is the browser's reload)
+  const picsDue: saveMod.SlotInfo[] = []; let picCanvas: HTMLCanvasElement | null = null;
+  game.saves.picture = info => { picsDue.push(info); if (picsDue.length > 4) picsDue.shift(); };
+  const takeSavePictures = () => {
+    const due = picsDue.splice(0);
+    try {
+      const W = Math.max(16, Math.round(saveMod.SAVETIMELINE.picPx)), H = Math.max(9, Math.round(W * canvas.height / Math.max(1, canvas.width)));
+      picCanvas ??= document.createElement('canvas'); picCanvas.width = W; picCanvas.height = H;
+      const cx = picCanvas.getContext('2d'); if (!cx) return;
+      cx.drawImage(canvas, 0, 0, W, H);
+      const url = picCanvas.toDataURL('image/jpeg', saveMod.SAVETIMELINE.picQ);
+      for (const info of due) game.saves.setPicture(info, url);
+    } catch { /* no picture: the save stands without one */ }
+  };
+  { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
   loadSandbox(game);   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it
   try { const v = localStorage.getItem('twopointsix.ocpNotice'); if (v === 'glance' || v === 'investigate') game.tune.ocpNotice = v; } catch { /* */ }   // the OCP'd-light rule (Tab ▸ Sandbox ▸ Detection) as this machine last left it
   let viewReplay: (() => void) | null = null;   // (the end card's Replay button: set once the replay key is made, below)
@@ -703,6 +722,7 @@ async function main() {
       behind.drawn++;
       const firstRender = !rendered;
       const tR = performance.now(); engine.render(camR, t, dt, present); perfrec.cpuRender = performance.now() - tR;
+      if (picsDue.length && present) takeSavePictures();
       if (firstRender) {   // the boot timeline's last two marks: the first frame encoded + submitted (its CPU side, incl. every target's allocation), and the GPU through with it ('GPU ready')
         rendered = true; boot.span('firstFrameCpu', tR); boot.mark('firstSubmit');
         gpu.device.queue.onSubmittedWorkDone().then(() => { boot.span('firstFrameGpu', tR); boot.mark('gpuReady'); bootLine(); }).catch(() => { /* device lost */ });

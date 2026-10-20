@@ -26,6 +26,8 @@ export class CharacterRenderer implements SkinnedDrawable {
   jointsFormat: GPUVertexFormat;
   private instData = new Float32Array(MAX_CHARS * INST_F32); private instU32 = new Uint32Array(this.instData.buffer);
   private jointStaging = new Float32Array(MAX_CHARS * JOINT_STRIDE * 16);
+  /** every man's material rows and instance words are written whole next frame (a rollback snapshot put back: these books went back with the men, the buffers did not — scene/boxes.ts forgetSent) */
+  forgetSent() { this.matDirty = true; this.instSent.fill(0xffffffff); }
   private instSent = new Uint32Array(MAX_CHARS * INST_F32);   // charInsts as last written (gpu/device.ts writeWordsIfChanged)
 
   constructor(private device: GPUDevice, public ch: GltfCharacter) {

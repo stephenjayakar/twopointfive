@@ -75,6 +75,7 @@
 // does — in the FILE, never in the running game: saving is read-only).
 import { SideMap, rollbackVar, wallClock } from '../math/side';
 import { loadSandbox } from './sandbox';
+import { hostileTo } from './teams';
 import { Vec3, v3, quat, clamp } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
 import { WAND } from './wand';
@@ -146,6 +147,7 @@ import { LOOK_DECALS, lookDecal } from './lookDecals';
 import { diceInUse } from '../math/dice';
 import { sprintDoorTurning } from './sprintdoor';
 import { seenReset } from './seenwalk';
+import { takeSnapshot, restoreSnapshot, type Snapshot } from './rollback';   // (called inside Checkpoints only)
 
 // ================================================================================================================================ the schema
 export const SAVE_VERSION = 1;
@@ -295,8 +297,26 @@ export const CKPT = {
   /** an autosave followed inside this many seconds by a man going alert / an alarm episode is REGRETTED: kept, but the cards and the Enter path offer the one before it (a checkpoint written a stride before he was seen is a death loop, not a checkpoint) */
   regretSecs: 8,
 };
+/** THE SAVE TIMELINE (after a play test: one checkpoint to go back to is awkward, most of all in a lesson that has got away from its player). OFF here and on
+ *  the frozen stand (`TPS_SAVETIMELINE=1` raises it), ON in the page (`?savetimeline=0` puts it off). Off = three rotating autosaves, one slot by hand, nothing
+ *  kept with a team on the floor: the build as it was. On:
+ *    - the saves ROLL in two rings, `auto` autosaves and `manual` saves by hand (F5 in play — player.ts asks, the end of that update writes): neither kind pushes
+ *      out the other, and the slots an older build wrote are read, listed and loaded as they are (same keys, same index; the one old manual slot is the ring's first);
+ *    - every save keeps a small PICTURE of its moment, taken by the host (`Checkpoints.picture`: the simulation never sees a canvas) and stored beside the slot
+ *      (`…pic.<slot>`); a picture that does not fit is dropped, and a save that does not fit has every picture thrown out for it before it is given up;
+ *    - WITH A TEAM ON THE FLOOR, where no file can be written (a unit has no slice), the save is the whole game kept in memory (rollback.ts takeSnapshot) and
+ *      put back in place: this run's only, gone with the page or the run — the cards list both kinds on one strip (`timeline`), in the mission clock's order. */
+export const SAVETIMELINE = {
+  on: false,
+  /** how many saves by hand and how many autosaves are kept — two rings */
+  manual: 5, auto: 5,
+  /** the long side of a save's picture in pixels, and its JPEG quality (the host's numbers: main.ts takes the picture) */
+  picPx: 256, picQ: 0.6,
+};
 const KEY_PREFIX = 'twopointsix.save.';
 const KEY_INDEX = KEY_PREFIX + 'index', KEY_MANUAL = KEY_PREFIX + 'manual', KEY_AUTO = (i: number) => `${KEY_PREFIX}auto.${i}`, KEY_AUTOSAVE_ON = 'twopointsix.autosave';
+/** SAVETIMELINE: the ring of saves by hand (its first is the one slot the build always had), a slot's picture, a save kept in memory */
+const KEY_HAND = (i: number) => i === 0 ? KEY_MANUAL : `${KEY_MANUAL}.${i}`, KEY_PIC = (key: string) => `${KEY_PREFIX}pic.${key.slice(KEY_PREFIX.length)}`, KEY_MEM = (slot: 'auto' | 'manual', i: number) => `${KEY_PREFIX}mem.${slot}.${i}`;
 
 // ================================================================================================================================ small helpers
 const c3 = (p: ArrayLike<number>): V3 => [p[0], p[1], p[2]];
@@ -334,16 +354,23 @@ function firearmApply(w: Firearm, s: FirearmSnap) {
 function rosterWanted(g: Game): number { return g.quiet?.active ? g.quiet.patrol.length : g.level.routes.length; }
 
 // ================================================================================================================================ can we save
+/** What no save of either kind can stand for: a show or a level script puppeting the floor, a man already down, a run that is over, the response team's set
+ *  piece. `mem` = the save is kept in memory (canSnap): daylight is in it, and a run the verdict has closed with the stage still live is over too. */
+function runNo(g: Game, mem: boolean): string | null {
+  if (g.touring || g.quietUtility || g.puppet) return 'a show is running (tour / attract / breach)';
+  { const why = g.director?.blocksSave(); if (why) return why; }   // the level script mid-program (director.ts): its cursor — fired triggers, live beats, units — has no save slice until M3
+  if (!mem && isDaylight(g)) return 'daylight is in (the breach variant)';
+  if (g.player.down) return 'the player is down';
+  if (g.mission.stage === 'failed' || g.mission.stage === 'done') return `the run is over (${g.mission.stage}) — nothing to come back to`;   // (a civilian killed under tune.civilianKillFails fails the run with Sam on his feet: that file would have loaded as a live one — review G3.2)
+  if (mem && g.verdict?.result) return 'the run is over — nothing to come back to';
+  if (g.qrf && g.qrf.state !== 'idle') return `the response team is ${g.qrf.state} — no checkpoint inside the response`;
+  if (g.qrf && g.qrf.silentAt >= 0 && !g.qrf.silentSpent) return 'control is calling a net gone silent — no checkpoint inside the response';   // (qrf.ts silentNet's fourteen seconds are not in the file: a load would start them, and the radio check, afresh; never true with tune.qrfSilent off)
+  return null;
+}
 /** Why a checkpoint cannot be written right now (null = it can). `force` (the harness / the dev row) accepts what a plain save refuses of Sam's hands and the
  *  guards' scripts — the file then lets go of them (see the head); the shows, daylight, units and a downed Sam are refused regardless. */
 export function canSave(g: Game, force = false): string | null {
-  if (g.touring || g.quietUtility || g.puppet) return 'a show is running (tour / attract / breach)';
-  { const why = g.director?.blocksSave(); if (why) return why; }   // the level script mid-program (director.ts): its cursor — fired triggers, live beats, units — has no save slice until M3
-  if (isDaylight(g)) return 'daylight is in (the breach variant)';
-  if (g.player.down) return 'the player is down';
-  if (g.mission.stage === 'failed' || g.mission.stage === 'done') return `the run is over (${g.mission.stage}) — nothing to come back to`;   // (a civilian killed under tune.civilianKillFails fails the run with Sam on his feet: that file would have loaded as a live one — review G3.2)
-  if (g.qrf && g.qrf.state !== 'idle') return `the response team is ${g.qrf.state} — no checkpoint inside the response`;
-  if (g.qrf && g.qrf.silentAt >= 0 && !g.qrf.silentSpent) return 'control is calling a net gone silent — no checkpoint inside the response';   // (qrf.ts silentNet's fourteen seconds are not in the file: a load would start them, and the radio check, afresh; never true with tune.qrfSilent off)
+  { const why = runNo(g, false); if (why) return why; }
   if (g.guards.some(x => x.unit)) return 'a spawned unit is on the floor';
   if (g.guards.length !== rosterWanted(g)) return 'the roster is not the level\'s';
   if (!force) {
@@ -361,6 +388,12 @@ export function canSave(g: Game, force = false): string | null {
   }
   return null;
 }
+
+/** a unit is on the floor (a teammate, a response team): no FILE can hold him — under SAVETIMELINE the save is kept in memory instead */
+export function squadUp(g: Game): boolean { return g.guards.some(x => !!x.unit); }
+/** Why the game cannot be kept IN MEMORY right now (null = it can): what a snapshot (rollback.ts) cannot stand for is a show or a level script puppeting the
+ *  floor, a man already down, a run that is over, the response team's set piece. Anything else — hands full, a round in the air, a body falling — is in it. */
+export function canSnap(g: Game): string | null { return runNo(g, true); }
 
 type OwnCharges = { charges: number; walls: number | null; doors?: [number, 1 | -1][]; spent?: number };
 /** his own charges, alone (PlayerSnap.own): the counts as a load must find them, and the door charges that stand set */
@@ -754,7 +787,14 @@ export const localStore: SaveStore = {
 };
 /** the headless harness's store: a Map (nothing on disk) */
 export function memoryStore(): SaveStore & { map: Map<string, string> } { const map = new Map<string, string>(); return { map, get: k => map.get(k) ?? null, set: (k, v) => { map.set(k, v); return true; }, remove: k => { map.delete(k); } }; }
-export interface SlotInfo { key: string; slot: 'manual' | 'auto'; n: number; label: string; kind: SaveState['kind']; savedAt: number; missionT: number; stage: string; runId: string; bytes: number; /** an autosave the floor came down on inside CKPT.regretSecs (why): offered only when nothing better is stored */ regret?: string; }
+export interface SlotInfo { key: string; slot: 'manual' | 'auto'; n: number; label: string; kind: SaveState['kind']; savedAt: number; missionT: number; stage: string; runId: string; bytes: number; /** an autosave the floor came down on inside CKPT.regretSecs (why): offered only when nothing better is stored */ regret?: string; /** kept in memory, not in the store (SAVETIMELINE with a team on the floor): this run's, gone with the page */ mem?: true; }
+/** a save kept in memory: the whole game as rollback.ts took it, and its picture */
+interface MemSave { info: SlotInfo; snap: Snapshot; pic: string | null; }
+/** WHERE THE SAVES IN MEMORY STAND: behind closures, on purpose. A snapshot walks everything the Game reaches and a restore writes it all back — a table of
+ *  snapshots the Game could reach would be copied into the next one and rolled back by the last. This is the host's shelf, not the simulation's state: no
+ *  snapshot holds it, no state word reads it. */
+interface MemShelf { get(key: string): MemSave | null; set(key: string, e: MemSave): void; remove(key: string): void; all(): MemSave[]; clear(): void; }
+function memShelf(): MemShelf { const m = new Map<string, MemSave>(); return { get: k => m.get(k) ?? null, set: (k, e) => { m.set(k, e); }, remove: k => { m.delete(k); }, all: () => [...m.values()], clear: () => { m.clear(); } }; }
 interface SlotIndex { v: number; next: number; slots: Record<string, SlotInfo>; }
 export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?: number; state?: SaveState; }
 
@@ -762,8 +802,8 @@ export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?
 let runSerial = 0;
 rollbackVar('savestate.runSerial', () => runSerial, v => { runSerial = v; });
 /** the room region a floor point is in, for the autosave's 'first time in a room' trigger and its label: on a quiet mission the LEVEL's own places (chronicle.ts
- *  roomOf with the level: a bazaar has no 'lobby'); on the plain night the table it always read */
-function roomHere(g: Game, p: Vec3): string { return roomOf(p, g.quiet?.active ? g.level : undefined); }
+ *  roomOf with the level: a bazaar has no 'lobby'); on the plain night the table it always read; under SAVETIMELINE the level's own on every level */
+function roomHere(g: Game, p: Vec3): string { return roomOf(p, g.quiet?.active || SAVETIMELINE.on ? g.level : undefined); }   // (SAVETIMELINE: autosaves now land on every level — a lesson, a squad's mission — and each gets its OWN rooms; roomOf keeps the table for the office)
 
 export class Checkpoints {
   store: SaveStore;
@@ -781,15 +821,24 @@ export class Checkpoints {
   log: { t: number; what: string }[] = [];
   stats = { requests: 0, autosaves: 0, manual: 0, harness: 0, loads: 0, dropped: 0, refused: 0, deferredFrames: 0, regretted: 0 };
   /** QA hook: every state written (autosave or not) is also handed here — the soak keeps them to reload from */
-  onSaved: ((s: SaveState, info: SlotInfo | null) => void) | null = null;
+  onSaved: ((s: SaveState | null, info: SlotInfo | null) => void) | null = null;   // (s null: a save kept in memory has no file)
   private missionRef: object | null = null; private stageRef: MissionStage = 'infiltrate'; private roomRef = ''; private dragRef: object | null = null;
   /** the last autosave written, while it can still be regretted (key + game time) */
   private lastAuto: { key: string; t: number } | null = null;
+  /** SAVETIMELINE — the saves kept in memory (a team on the floor); the HOST's hook for a picture of the save just written (it hands one back through
+   *  `setPicture` a frame later, or never) and its hook after a save in memory was put back (what it draws and plays from is the abandoned moment's);
+   *  what the player's keys asked for this step (player.ts), done at the end of it: a save by hand, a save in memory to go back to */
+  private shelf: MemShelf = memShelf();
+  picture: ((info: SlotInfo) => void) | null = null;
+  onPutBack: ((info: SlotInfo) => void) | null = null;
+  private hand = false; private due: string | null = null;
   constructor(store?: SaveStore) { wallClock(this, 'runId');   // (a run's name is made of the clock and a serial: never compared between two plays)
     this.store = store ?? (typeof localStorage !== 'undefined' ? localStore : memoryStore());
     try { if (typeof localStorage !== 'undefined' && localStorage.getItem(KEY_AUTOSAVE_ON) === '0') this.enabled = false; } catch { /* */ }
   }
   setEnabled(on: boolean) { this.enabled = !!on; try { if (typeof localStorage !== 'undefined') localStorage.setItem(KEY_AUTOSAVE_ON, on ? '1' : '0'); } catch { /* */ } }
+  /** into the store — false when it would not take it, or threw (a store of the host's own may: the game goes on without the save) */
+  private put(key: string, val: string): boolean { try { return this.store.set(key, val); } catch { return false; } }
   private note(g: Game, what: string) { this.log.push({ t: g.time, what }); if (this.log.length > 40) this.log.splice(0, this.log.length - 40); }
   /** a loaded file's controller memory becomes ours (loadState) */
   adopt(a: AutosaveSnap | undefined, g: Game) {
@@ -808,7 +857,7 @@ export class Checkpoints {
   gate(g: Game): string | null {
     if (!missionLive(g)) return 'not a live run';
     if (!g.aiEnabled) return 'AI off';
-    const hard = canSave(g, false); if (hard) return hard;
+    const hard = SAVETIMELINE.on && squadUp(g) ? canSnap(g) : canSave(g, false); if (hard) return hard;   // (a team on the floor: the save is kept in memory, and what a file refuses of hands and the air is in it)
     for (const x of g.guards) { if (x.state === 'dead') continue; if (x.state === 'alert' || x.state === 'search') return `${x.callsign} is ${x.state}`; if (x.awareness > CKPT.awareMax) return `${x.callsign} at awareness ${x.awareness.toFixed(2)}`; }
     return civilianCompromise(g);   // (the cleaner running for a guard is the floor going up in ten seconds' time: no checkpoint a stride ahead of it — civilians.ts, review G3.4)
   }
@@ -816,12 +865,15 @@ export class Checkpoints {
   tick(g: Game, dt: number) {
     const pl = g.player, m = g.mission;
     // a fresh run (boot, restartEncounter): fresh memory, a fresh id
-    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; }
+    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it)
+    // what the keys asked for inside this step, now that the frame is whole: F5's save, and a bare Enter once down onto a save in memory
+    if (this.due) { const key = this.due; this.due = null; this.hand = false; const why = this.loadMem(g, key); if (why) g.msg(`checkpoint: ${why}`); return; }
+    if (this.hand) { this.hand = false; const r = this.write(g, 'manual', 'by hand'); if (!r.ok) g.msg(`not saved: ${r.why}`); }
     // regret: the floor came down on him within regretSecs of the last autosave — that slot is marked, and the cards offer the one before it (checked ahead of the
     // live gate: the frame he drops is not live, and is exactly when it matters)
     if (this.lastAuto) {
       if (g.time - this.lastAuto.t > CKPT.regretSecs || g.time < this.lastAuto.t) this.lastAuto = null;
-      else { const al = g.guards.find(x => x.state === 'alert' && !x.unit); const why = al ? `${al.callsign} alert ${(g.time - this.lastAuto.t).toFixed(0)} s after` : g.alarm.episode ? 'an alarm straight after' : pl.down ? 'down straight after' : null;
+      else { const al = g.guards.find(x => x.state === 'alert' && (SAVETIMELINE.on ? hostileTo(x, 'player') : !x.unit)); const why = al ? `${al.callsign} alert ${(g.time - this.lastAuto.t).toFixed(0)} s after` : g.alarm.episode ? 'an alarm straight after' : pl.down ? 'down straight after' : null;   // (a mission's defenders are units too: under SAVETIMELINE the man who counts is one against him, not one who is no unit)
         if (why && (al || g.alarm.episode)) { this.markRegret(g, this.lastAuto.key, why); this.lastAuto = null; } }
     }
     if (!missionLive(g)) { this.pending = null; return; }
@@ -849,16 +901,21 @@ export class Checkpoints {
   write(g: Game, slot: 'auto' | 'manual' | 'harness', label = '', force = false): SaveResult {
     let s: SaveState;
     this.runId ||= newRunId();   // (a save before the first tick still belongs to a run the cards and the Enter path can match)
+    if (SAVETIMELINE.on && slot !== 'harness' && squadUp(g)) return this.writeMem(g, slot, label);
     try { s = saveState(g, { label, kind: slot, force, runId: this.runId }); }
     catch (e) { const why = (e as Error).message.replace(/^checkpoint refused: /, ''); this.stats.refused++; this.note(g, `refused ${slot}: ${why}`); return { ok: false, why }; }
     if (slot !== 'harness') { this.lastSaveT = g.time; this.quietT = 0; }   // (a harness snapshot leaves the run's autosave cadence alone)
     const json = JSON.stringify(s); const bytes = json.length;
     let info: SlotInfo | null = null;
     if (slot !== 'harness') {
-      const idx = this.index(); const n = slot === 'auto' ? idx.next % CKPT.autoSlots : 0; const key = slot === 'auto' ? KEY_AUTO(n) : KEY_MANUAL;
+      const idx = this.index(); const ring = SAVETIMELINE.on ? SAVETIMELINE.auto : CKPT.autoSlots; const n = slot === 'auto' ? idx.next % ring : SAVETIMELINE.on ? this.handSlot(idx) : 0; const key = slot === 'auto' ? KEY_AUTO(n) : KEY_HAND(n);
       info = { key, slot, n, label, kind: s.kind, savedAt: s.savedAt, missionT: s.missionT, stage: s.stage, runId: s.runId, bytes };
-      if (!this.store.set(key, json)) { this.stats.refused++; this.note(g, `refused ${slot}: the store would not take ${(bytes / 1024).toFixed(0)} KB (${key.replace(KEY_PREFIX, '')})`); return { ok: false, why: 'the browser would not store it (quota / private window)', bytes, state: s }; }   // (nothing stored: no index entry pointing at a stale slot, no CHECKPOINT tag)
-      idx.slots[key] = info; if (slot === 'auto') idx.next = (n + 1) % CKPT.autoSlots; this.store.set(KEY_INDEX, JSON.stringify(idx));
+      if (SAVETIMELINE.on) this.store.remove(KEY_PIC(key));   // (the picture was the save's that stood here)
+      let stored = this.put(key, json);
+      if (!stored && SAVETIMELINE.on) { for (const k of Object.keys(idx.slots)) this.store.remove(KEY_PIC(k)); stored = this.put(key, json); }   // (a full store: a picture never costs a save — every one goes, and the save is tried again)
+      if (!stored) { this.stats.refused++; this.note(g, `refused ${slot}: the store would not take ${(bytes / 1024).toFixed(0)} KB (${key.replace(KEY_PREFIX, '')})`); return { ok: false, why: 'the browser would not store it (quota / private window)', bytes, state: s }; }   // (nothing stored: no index entry pointing at a stale slot, no CHECKPOINT tag)
+      idx.slots[key] = info; if (slot === 'auto') idx.next = (n + 1) % ring; this.put(KEY_INDEX, JSON.stringify(idx));
+      if (SAVETIMELINE.on) this.picture?.(info);
     }
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key: info!.key, t: g.time }; } else if (slot === 'manual') { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; } else this.stats.harness++;
     this.note(g, `${slot}${info ? ' → ' + info.key.replace(KEY_PREFIX, '') : ''}: ${label || '—'} (${(bytes / 1024).toFixed(1)} KB${s.forced.length ? '; let go of ' + s.forced.join(', ') : ''})`);
@@ -866,7 +923,9 @@ export class Checkpoints {
     return { ok: true, info: info ?? undefined, bytes, state: s };
   }
   /** mark a stored autosave regretted (see CKPT.regretSecs): it stays in the store and the list, the cards pass over it while anything else is there */
-  markRegret(g: Game, key: string, why: string) { const idx = this.index(); const info = idx.slots[key]; if (!info || info.regret) return; info.regret = why; this.store.set(KEY_INDEX, JSON.stringify(idx)); this.stats.regretted++; this.note(g, `regretted ${key.replace(KEY_PREFIX, '')} '${info.label}': ${why}`); }
+  markRegret(g: Game, key: string, why: string) {
+    { const e = this.shelf.get(key); if (e) { if (!e.info.regret) { e.info.regret = why; this.stats.regretted++; this.note(g, `regretted ${key.replace(KEY_PREFIX, '')} '${e.info.label}': ${why}`); } return; } }
+    const idx = this.index(); const info = idx.slots[key]; if (!info || info.regret) return; info.regret = why; this.put(KEY_INDEX, JSON.stringify(idx)); this.stats.regretted++; this.note(g, `regretted ${key.replace(KEY_PREFIX, '')} '${info.label}': ${why}`); }
   /** the slot index (repaired against what the store really holds) */
   index(): SlotIndex {
     let idx: SlotIndex | null = null;
@@ -876,7 +935,64 @@ export class Checkpoints {
     return idx;
   }
   /** every stored checkpoint, newest first */
-  slots(): SlotInfo[] { return Object.values(this.index().slots).sort((a, b) => b.savedAt - a.savedAt); }
+  slots(): SlotInfo[] { return Object.values(this.index().slots).concat(this.shelf.all().map(e => e.info)).sort((a, b) => b.savedAt - a.savedAt); }
+  /** SAVETIMELINE — THIS RUN's saves in the mission clock's order, oldest first: the strip the pause and down cards lay out (files and saves in memory alike) */
+  timeline(): SlotInfo[] { return this.slots().filter(x => x.runId === this.runId).sort((a, b) => a.missionT - b.missionT || a.savedAt - b.savedAt); }
+  /** which of the ring by hand the next save takes: the first that stands empty, else the oldest */
+  private handSlot(idx: SlotIndex): number { let n = 0, at = Infinity; for (let i = 0; i < SAVETIMELINE.manual; i++) { const x = idx.slots[KEY_HAND(i)]; if (!x) return i; if (x.savedAt < at) { at = x.savedAt; n = i; } } return n; }
+  /** the picture kept with a slot (a data URL), or null: none was taken, it did not fit, or it was another save's */
+  pictureOf(info: SlotInfo): string | null {
+    const e = this.shelf.get(info.key); if (e) return e.pic;
+    const raw = this.store.get(KEY_PIC(info.key)); if (!raw) return null; const cut = raw.indexOf('|'); return cut > 0 && raw.slice(0, cut) === String(info.savedAt) ? raw.slice(cut + 1) : null;
+  }
+  /** the host hands a save's picture in (see `picture`): kept if the slot still holds THAT save and the store will have it — false, and nothing else, otherwise */
+  setPicture(info: SlotInfo, url: string): boolean {
+    const e = this.shelf.get(info.key); if (e) { if (e.info.savedAt !== info.savedAt) return false; e.pic = url; return true; }
+    if (this.index().slots[info.key]?.savedAt !== info.savedAt) return false;
+    return this.put(KEY_PIC(info.key), `${info.savedAt}|${url}`);
+  }
+  /** F5 (player.ts, inside a step): a save by hand at the end of this update — the keys are the recording's, so a run played again saves where this one did */
+  askSave() { this.hand = true; }
+  /** a load asked for INSIDE a step (player.ts: the bare Enter once down): a file is poured in at once, as ever; a save in memory is put back at the end of
+   *  this update, where it was taken — never under the feet of the frame that is running */
+  loadInStep(g: Game, key: string): string | null { const e = this.shelf.get(key); if (!e) return this.load(g, key); const why = this.memNo(g, e); if (why) return why; this.due = key; return null; }   // (refused NOW, where the caller can still fall back on a restart)
+  private memNo(g: Game, e: MemSave): string | null { return e.snap.game !== g || e.info.runId !== this.runId ? 'made in another run' : g.touring || g.puppet ? 'a show is running — stop it first' : null; }
+  /** SAVETIMELINE with a team on the floor: the game as it stands kept in memory, in its own two rings (this run's only) */
+  private writeMem(g: Game, slot: 'auto' | 'manual', label: string): SaveResult {
+    const why = canSnap(g); if (why) { this.stats.refused++; this.note(g, `refused ${slot}: ${why}`); return { ok: false, why }; }
+    chronCheckpoint(g, 'save', label);
+    this.lastSaveT = g.time; this.quietT = 0;
+    const ring = slot === 'auto' ? SAVETIMELINE.auto : SAVETIMELINE.manual; let n = 0, at = Infinity;
+    for (let i = 0; i < ring; i++) { const e = this.shelf.get(KEY_MEM(slot, i)); if (!e) { n = i; break; } if (e.info.savedAt < at) { at = e.info.savedAt; n = i; } }
+    const key = KEY_MEM(slot, n);
+    const info: SlotInfo = { key, slot, n, label, kind: slot, savedAt: Date.now(), missionT: g.mission.stats.elapsed, stage: g.mission.stage, runId: this.runId, bytes: 0, mem: true };
+    this.shelf.set(key, { info, snap: takeSnapshot(g), pic: null });
+    if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key, t: g.time }; } else { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; }
+    this.note(g, `${slot} → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
+    this.picture?.(info); this.onSaved?.(null, info);
+    return { ok: true, info, bytes: 0 };
+  }
+  /** …and put back: every object of the game written as it stood (identities stand, the host is left as it is NOW — `onPutBack` is its turn). What the
+   *  abandoned future knew and the save cannot is carried over as a file's load carries it: this run's counts of saves and loads, the controller's own books. */
+  private loadMem(g: Game, key: string): string | null {
+    const e = this.shelf.get(key); if (!e) return 'that checkpoint is gone';
+    { const why = this.memNo(g, e); if (why) { this.note(g, `load refused: ${why}`); return why; } }
+    // what is NOT the saved moment's to take back: the run's counts, the controller's books, and what the host and this machine set on the game since —
+    // the autosave switch, the three hooks, the sandbox row, the tune rows (a file's load leaves all of these as they are NOW)
+    const C = g.chronicle.counts, loads = C.loads, saves = C.saves, stats = { ...this.stats }, log = this.log.slice();
+    const host = { enabled: this.enabled, picture: this.picture, onPutBack: this.onPutBack, onSaved: this.onSaved }, tune = { ...g.tune }, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo };
+    const st = this.store as { map?: Map<string, string> }, kept = st.map instanceof Map ? [...st.map] : null;   // (the harness's store is a Map the game reaches: the files written since are not the snapshot's to take back)
+    restoreSnapshot(e.snap);
+    if (kept && st.map) { st.map.clear(); for (const [k, v] of kept) st.map.set(k, v); }
+    Object.assign(this.stats, stats); this.log.length = 0; this.log.push(...log);
+    Object.assign(this, host); Object.assign(g.tune, tune); Object.assign(g, flags); loadSandbox(g, false);
+    g.chronicle.counts.loads = loads; g.chronicle.counts.saves = saves;
+    this.pending = null; this.lastAuto = null; this.hand = false; this.due = null; this.lastSaveT = g.time;   // (a load counts as a save for the gap, as a file's does)
+    chronCheckpoint(g, 'load', e.info.label); g.messages.push({ text: `checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`, t: g.time }); if (g.messages.length > 5) g.messages.shift();
+    this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${key.replace(KEY_PREFIX, '')}: ${e.info.label || '—'} (from memory)`);
+    this.onPutBack?.(e.info);
+    return null;
+  }
   /** The newest stored checkpoint, or null: with `preferRun`, this run's newest written at or before `beforeT` on the mission clock (after an older slot was loaded
    *  by hand, the abandoned future's slots are not 'the last checkpoint'), else this run's newest at all, else any run's newest. */
   newest(preferRun = true, beforeT = Infinity): SlotInfo | null {
@@ -898,6 +1014,7 @@ export class Checkpoints {
   read(key: string): SaveState | null { try { const raw = this.store.get(key); return raw ? JSON.parse(raw) as SaveState : null; } catch { return null; } }
   /** Load a stored slot (or a given state) into the game. Returns why not, or null on success. */
   load(g: Game, from: string | SaveState): string | null {
+    if (typeof from === 'string' && this.shelf.get(from)) return this.loadMem(g, from);
     const s = typeof from === 'string' ? this.read(from) : from; if (!s) return 'that checkpoint is gone';
     const why = canLoad(g, s); if (why) { this.note(g, `load refused: ${why}`); return why; }
     try { loadState(g, s); } catch (e) { const w = (e as Error).message; this.note(g, `load failed: ${w}`); return w; }
@@ -905,7 +1022,7 @@ export class Checkpoints {
     return null;
   }
   /** wipe every stored slot */
-  clear() { const idx = this.index(); for (const k of Object.keys(idx.slots)) this.store.remove(k); for (let i = 0; i < CKPT.autoSlots; i++) this.store.remove(KEY_AUTO(i)); this.store.remove(KEY_MANUAL); this.store.remove(KEY_INDEX); }
+  clear() { const idx = this.index(); for (const k of Object.keys(idx.slots)) { this.store.remove(k); this.store.remove(KEY_PIC(k)); } for (let i = 0; i < Math.max(CKPT.autoSlots, SAVETIMELINE.auto); i++) { this.store.remove(KEY_AUTO(i)); this.store.remove(KEY_PIC(KEY_AUTO(i))); } for (let i = 0; i < Math.max(1, SAVETIMELINE.manual); i++) { this.store.remove(KEY_HAND(i)); this.store.remove(KEY_PIC(KEY_HAND(i))); } this.store.remove(KEY_INDEX); this.shelf.clear(); }   // (both rings at their full size whatever the switch says now, with or without an index that names them)
   /** the words for the cards: 'N s ago' off the mission clock for a checkpoint of this run, wall-clock age otherwise */
   ageWords(g: Game, info: SlotInfo): string {
     if (info.runId === this.runId && g.mission === this.missionRef) { const d = Math.max(0, Math.round(g.mission.stats.elapsed - info.missionT)); return d < 90 ? `${d} s ago` : `${Math.round(d / 60)} min ago`; }
@@ -915,9 +1032,10 @@ export class Checkpoints {
   importText(g: Game, text: string): SlotInfo | string {
     let s: SaveState; try { s = JSON.parse(text); } catch { return 'not JSON'; }
     const why = canLoad(g, s); if (why && !/show is running/.test(why)) return why;
-    const idx = this.index(); const info: SlotInfo = { key: KEY_MANUAL, slot: 'manual', n: 0, label: s.label || 'imported', kind: s.kind, savedAt: Date.now(), missionT: s.missionT, stage: s.stage, runId: s.runId, bytes: text.length };   // (savedAt = the import: 'newest' — the panel's load / export default — is then this file, as its message says)
-    if (!this.store.set(KEY_MANUAL, text)) return 'the browser would not store it (quota / private window)';
-    idx.slots[KEY_MANUAL] = info; this.store.set(KEY_INDEX, JSON.stringify(idx)); this.note(g, `imported → manual: ${info.label} (${(text.length / 1024).toFixed(1)} KB)`);
+    const idx = this.index(); const n = SAVETIMELINE.on ? this.handSlot(idx) : 0, key = KEY_HAND(n); if (SAVETIMELINE.on) this.store.remove(KEY_PIC(key));
+    const info: SlotInfo = { key, slot: 'manual', n, label: s.label || 'imported', kind: s.kind, savedAt: Date.now(), missionT: s.missionT, stage: s.stage, runId: s.runId, bytes: text.length };   // (savedAt = the import: 'newest' — the panel's load / export default — is then this file, as its message says)
+    if (!this.put(key, text)) return 'the browser would not store it (quota / private window)';
+    idx.slots[key] = info; this.put(KEY_INDEX, JSON.stringify(idx)); this.note(g, `imported → manual: ${info.label} (${(text.length / 1024).toFixed(1)} KB)`);
     return info;
   }
   /** one line for the panel */

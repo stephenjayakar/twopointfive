@@ -152,6 +152,54 @@ but synthetic writes still work.
   checkpoints` (identity — civilians in the digest — / autosave / death / slots / refuse / civilians), `probes.ts review-b` (the deep review's game-systems fixes: run-over
   refusal, tactics reset, the civilians' gate term, laser cut by a civilian, whistle not re-answered, score counters past the timeline cap, rain bed in the annex, glass
   reset), `soak.ts --checkpoint-at MIN` (+ the always-on autosave invariants and the `checkpoints` smell line).
+- **Saves keep a timeline** (`SAVETIMELINE`, `src/game/savestate.ts`, 10-19; the maintainer, from a play test: one quick save is awkward, "especially in the tutorial";
+  "a rolling buffer"; "maybe we have a screenshot"; "let those have a timeline"). ON in the page (`?savetimeline=0` puts it off), OFF in the module and on the frozen
+  stand; the word `TPS_SAVETIMELINE=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal (a recording from before the key replays with it off). OFF = the build
+  as it was: three autosaves and the one manual slot, no F5, no strip, no pictures. ON:
+  · **Two rings that never push each other out**: the newest FIVE autosaves (`auto.0‥4`, was three) and the newest FIVE made by hand (`manual`, `manual.1‥4`: the first empty
+    slot, then the oldest). An old build's slots read and list as they are (`manual` IS hand slot 0), and with the switch back off every slot written under it still loads.
+  · **F5 saves by hand.** Read in `updatePlayer` (`input.hit('F5')` → `Checkpoints.askSave`, written at the end of that update), so a run tape replays it like any press; the
+    page keeps a bare F5 from the browser while a run is up (`Input.saveKey`, the page's to say: not on the start page, not over a broken frame). What a file cannot
+    hold is refused with its reason on the feed (`not saved: …`; `canSave`: his hands full, a can on its fuse, a body still falling …). A man alerted does NOT refuse
+    a save by hand and a save by hand is never marked regretted: it is the player's word, and the strip is how he goes further back than it. The Tab ▸ Checkpoints
+    buttons go on as before (`bindings.ts`, straight to `Checkpoints.write`; its slot picker still reaches four).
+  · **A team on the floor saves in memory.** A file holds no unit (`canSave` refuses), so Training five to seven and every squad mission never had a checkpoint. With the
+    switch on a save made with a unit up is a rollback snapshot (`rollback.ts takeSnapshot`, kept behind a closure on the `Checkpoints` so no snapshot walks into another):
+    its own two rings of five, `SlotInfo.mem`, key `twopointsix.save.mem.<slot>.<i>`, nothing in the store. It lasts THIS RUN ON THIS PAGE: a restart, another mission or a
+    reload of the tab drops it. Its gate is `canSnap` (no show or puppet, the Director not blocking, Sam up, the run not over, the response not out) and the soft autosave
+    gates as ever; the REGRET rule under the switch counts any man against him going alert (a mission's defenders are units too: `!x.unit` never saw them), and the
+    rooms an autosave is asked at and named for are the level's own on every level (`roomHere`: the office's table named a lesson's street 'cubicles'). Loading one
+    restores the Game in place (`loadMem`). NOT taken back, as a file's load leaves them: the run's save and load counts, the controller's log and stats, the autosave
+    switch, the three hooks, the sandbox row, the tune rows; any OTHER setting kept on the Game goes back with the save. The page's run books start over (main.ts
+    `vRun = null`: the Mission is the same object, and a load is another try). Then it calls
+    `Checkpoints.onPutBack` — `src/host/putback.ts`: the books of "what was last sent to the GPU" roll back with the Game while the GPU's buffers do not, so the host
+    forgets them (`BoxWorld.forgetSent`, `LightSet.forgetSent`, `CharacterRenderer.forgetSent`, the marks, the wind's map `airResend`, the dust grid `AirDust.resend`,
+    smoke and particles cleared, the TAA history cut, the world cache dropped) — A HAND-KEPT LIST: a new "sent only when changed" book inside the Game's reach needs
+    its line there. The page adds the camera cut and drops held keys. Enter once down goes through `loadInStep` (a memory save is put back at the END of that update,
+    never under the modules still running; one that will not load is refused in the step and the restart happens, as with a file).
+  · **A picture per save**, taken by the page, never by the game: `Checkpoints.picture(info)` is a seam the page fills (main.ts: after the next PRESENTED frame, the canvas
+    drawn 256 px wide into a JPEG, `setPicture`). A file save's picture is one more store key (`twopointsix.save.pic.<slot>`, stamped with its save's time so a stale one is
+    never shown); a memory save's stays in memory. Every store write is in a `try` (`put`): a full store drops the pictures and writes the save again, a store that throws
+    leaves the game running with the save refused. No picture (the harness, a hidden tab) = a plain tile.
+  · **The strip** (`menu.ts saveStrip`, `#menu .saves` in index.html): on the pause card and the DOWN card, this run's saves in time order — picture, age, a small diamond
+    on one made by hand, a regretted autosave dimmed, one that is ahead of the mission clock marked. One stop for the keys (Left / Right or A / D walk it, Enter loads),
+    or a click. Fewer than two saves = no strip. `Restart from checkpoint`, Enter once down and `newest()` are as they were: the newest sound one.
+  Check: `probes.ts savetimeline` (families `checkpoints`, `all`; `SAVETIMELINE_BREAK=1` fails; green on BOTH stands): the rings roll at five and five and neither kind
+  pushes out the other; every file entry loads and the next 10 s digest as the run that simply went on (the camera put back and MOVES / TURN off for the comparison: the
+  camera is the host's and the animator's momentum is in no file, as the head of savestate.ts says); an old build's slots list and load, on and back off; a store that
+  refuses, throws or is full; Training five with its pair: memory saves, each loads and plays on to the same digest with the animator as the stand has it, the store
+  untouched, F5, Enter once down, a restart drops them. `checkpoint-slots` / `checkpoint-autosave` read the ring's size from the stand. ONE SAVE WEIGHS (headless, one
+  seed): the plain night's file 28 KB frozen / 31 KB shipped; Training one's 9 / 11 KB; Training five in memory 5.0 / 6.9 MB (14–19 thousand objects, about 30 ms to
+  take here: a hitch of a frame or three at each such save on a real machine is likely and is NOT timed on the page), so ten of those are 50–70 MB of the tab's
+  heap; a picture is 256×144 and about 4 KB as stored (the software adapter's frame at 1024×576), so ten files with pictures are near 350 KB of the store. `tools/qa/savetimeline-page.cjs` drives
+  the real page on the software adapter (Chromium, SwiftShader, `verylow`; three jobs, each a boot of several minutes): the plain night — F5 as a real keydown, kept
+  from the browser, three times → three tiles in time order with pictures that are not flat, the middle tile loads to its own mission clock, the DOWN card shows
+  them; Training five — four saves in memory on the strip with pictures, then a bulb put out AFTER a save and that save loaded from its tile: the bulb glows again
+  on the frame after the load (259 nearly white pixels at the save, 0 with it out, 258 after the load), and with `SAVEPUTBACK_BREAK=1` (the host not told) it stays
+  dark there (0) though the game has it lit, so that line fails as it must; `?savetimeline=0` — F5 writes nothing and is the browser's, no strip. No page error.
+  NEVER SEEN ON A GPU, never played. Known and open: smoke hanging at a memory save is gone after its load (the fluid lives on the GPU) and a sound that was playing
+  plays out; a load from a card is between steps and cuts the run tape, as a card's load always has; the F10 journal does not know a load; the Tab list shows a memory
+  save as 0 KB.
 - **A stand-up sets every held rule again from its word** (10-13, the switches owner's line, after a check's pin was found undone). `src/host/standup.ts standGame` writes each
   held table on EVERY stand-up — `if (pinned('TPS_X')) X.on = <the word TPS_X is '1'>` — so on the frozen stand a check that sets `X.on = true` and THEN stands a game up gets it
   put back off, silently. A check's own pin goes AFTER each stand-up (each one: a second stand-up in the same process undoes it again), or the run uses the word (`TPS_X=1`),
