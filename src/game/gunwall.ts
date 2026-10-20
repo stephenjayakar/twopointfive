@@ -266,6 +266,8 @@ export function gunWallSnapshot(g: Game): number[][] | undefined {
   const F = FIGHT.get(g); if (F && F.until > g.time) rows.push([-1, F.until - g.time]);   // (the floor's fight, still remembered: a row of its own under an id nobody has)
   return rows.length ? rows : undefined;
 }
+/** a restart (cleanrestart.ts): the fight the floor remembered was the last try's */
+export function gunWallFresh(g: Game): void { FIGHT.delete(g); }
 export function gunWallRestore(g: Game, rows: number[][] | undefined): void {
   if (!GUNWALL.on) return;
   const fr = rows?.find(x => x[0] === -1); FIGHT.set(g, { t: -1, until: fr ? g.time + fr[1] : -1 });

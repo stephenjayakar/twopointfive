@@ -304,8 +304,9 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   const launchWas = pl.launchHeld; pl.launchHeld = null;   // the launcher's button was down last frame (below, with the rifle's fire): handed on only by the frame that still has the rifle up and free — any other state (down, a grab, a kick, the sling, a sprint) lets go of it unsent
   if (input.hit('Enter') && (pl.down || g.mission.stage === 'failed' || input.down('ShiftLeft') || input.down('ShiftRight'))) {   // (failed on his feet — a civilian dead by his hand with tune.civilianKillFails — restarts too)   // Shift+Enter restarts the encounter any time; a bare Enter once down goes back to this run's newest CHECKPOINT if one is stored (game/savestate.ts — the down card's default too), else restarts
     const shift = input.down('ShiftLeft') || input.down('ShiftRight'); const ck = !shift && pl.down ? g.saves.newest(true, g.mission.stats.elapsed) : null;
-    if (ck && g.saves.isThisRun(ck)) { const why = g.saves.load(g, ck.key); if (!why) return; g.msg(`checkpoint: ${why}`); }
-    g.restartEncounter(); return;
+    let said: string | undefined;
+    if (ck && g.saves.isThisRun(ck)) { const why = g.saves.load(g, ck.key); if (!why) return; said = `checkpoint: ${why}`; }
+    g.restart(said); return;
   }
   if (STEALTHPOSE.on || c.anim.stealth) stealthFeed(g);
   samBigTailTick(g, dt);   // (bigkit.ts, BIGSLOT.moves: the tool going back onto him after its beat, his legs his own — or dropped at once when anything else has his hands)

@@ -14,7 +14,7 @@
 // it was made with whatever these say today, and no rule of the game reads this table. ring, outline and shape are the HUD's alone: nobody's senses, no light
 // meter and no digest can tell them on from off.
 // KEPT PER MACHINE (localStorage `twopointsix.findme`), read once as this module loads; a harness has no store and gets the starts. No imports, on purpose:
-// the loop (host/loop.ts) reads the table and nothing of the game or the page comes with it.
+// the loop (host/loop.ts) and the engine replay's own view (replay/engineplay.ts, its Ctrl turn) read the table and nothing of the game or the page comes with it.
 
 export interface FindMe { pan: number; ring: boolean; outline: boolean; shape: boolean; turn: 1 | -1; behind: boolean }
 export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, outline: false, shape: false, turn: 1, behind: false };
@@ -41,6 +41,11 @@ export function resetFindMe() { let any = false; for (const k of Object.keys(FIN
 function put<K extends keyof FindMe>(k: K, v: FindMe[K]): boolean { if (FINDME[k] === v) return false; FINDME[k] = v; if (k === 'pan' && seat) seat.aimLead = lead * FINDME.pan; return true; }
 function keep() { try { globalThis.localStorage?.setItem(LS, JSON.stringify(FINDME)); } catch { /* no store */ } }
 try { Object.assign(FINDME, findMeRead(globalThis.localStorage?.getItem(LS))); } catch { /* no store */ }
+
+// ---- Ctrl + the mouse
+/** the view's turn for `dx` pixels of the mouse under Ctrl (rad), the way round the `turn` row says: the one place the rate and the sign are written (the
+ *  loop's orbit in play, the engine replay's own view) */
+export function ctrlTurn(dx: number): number { return dx * 0.006 * FINDME.turn; }
 
 // ---- Ctrl tapped twice
 /** what counts as a tap of the camera key, and as two of them: down no longer than `tapMs`, the second down within `gapMs` of the first coming up, the mouse

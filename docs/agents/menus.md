@@ -1207,7 +1207,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   later hand wins; at none the look-at is the man himself), `Ring at your feet` (the order menu's gold ring, `planfloor.ts` `py`, drawn at all times; ours stands down while that one is
   up: `PlanFloor.youOn`), `Outline in the dark` (a rim round his figure, full at a light number of 0.12 and under, gone at 0.3), `Shape through walls` (his figure
   faint and rimmed through whatever stands between the eye and him, as strong as the share of four points of him the eye cannot see: glass and the
-  `NoPrimary` ceilings do not count), `Turn direction` (Ctrl + mouse turns the view the other way: the sign in `host/loop.ts`, and in the engine replay's own Ctrl turn, `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl`
+  `NoPrimary` ceilings do not count), `Turn direction` (Ctrl + mouse turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn, `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl`
   (two short presses, answered as the second comes up, bring the view round over about a quarter of a second to look where he looked at the tap;
   a hand's orbit, a pin, a show or a spectated man drops it; `TapTwice`: a press held is never a tap, nor one with another key, a button, the wheel or more than 12 px of orbit in
   it). THE FIGURE IS THE HUD'S, NOT THE RENDERER'S: his joints (`character.ts bones`) joined by round-ended strokes as wide as the limb in the
@@ -1242,8 +1242,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   run starts the moment it can: the brief never adds wait. A second press takes it back, and so does opening Controls: the run never starts under a
   page the player is reading. The keys are the brief's while it is up (its listener is first at the window: no game key
   and no pause-card Esc is read under it); CONTROLS opens Options ▸ Controls over it (where the keys are from every other screen; shut, the focus is START's), BACK / Esc is a
-  page load of the address a quit of that mission leaves, onto the list. It grows with a big window (`--u`: 1 px up to 1920 x 1080, 2 px at 3840 x
-  2160). NOT FOR A PAGE NOBODY SITS AT: none is made under `?paused`, a replay's tape, `?kitview`'s window or a benchmark's scene; one that is up is
+  page load of the address a quit of that mission leaves, onto the list. It is a layer of the game's text size (`#brief` in `ui/textsize.ts LAYERS`:
+  drawn at the window's factor and the player's step like the menus; its viewport units are divided by the factor and its `@media` are px, by that
+  module's rule — it had a scale of its own for a day, `--u`, which is gone). NOT FOR A PAGE NOBODY SITS AT: none is made under `?paused`, a replay's tape, `?kitview`'s window or a benchmark's scene; one that is up is
   dropped unstarted at the boot's end on a muted test rig (`?mute`), for a show, for a mission whose start was refused (the start card says why), and
   at the loop's next step once a hook that drives the game is called (`__runFrames`, `__mouse`, `__click`, a save or load; NOT one that only
   shoots the page: `docs/agents/qa.md`); the headless harness never comes through `main.ts`. A restart, a

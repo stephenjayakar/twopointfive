@@ -42,7 +42,7 @@ const LS = 'twopointsix.textsize', ID = 'textsize-css';
 /** sent on the window when the step changes (a screen that draws the choice repaints) */
 export const TEXT_EVENT = 'tps-textsize';
 /** every layer of the page that carries words: the fight screen's, the cards', the screens laid over them */
-const LAYERS = ['#overlay', '#equip', '#lcol', '#meters', '#log', '#objective', '#alarm', '#checkpoint', '#journal', '#caption', '#timeline', '#panel', '#ptip', '#loading', '#menu', '#missions', '#options', '#replaytag', '#fatal', '#kit-preview', '#tapebar', '#tapenote', '#tapebig', '#taperefuse'];
+const LAYERS = ['#overlay', '#equip', '#lcol', '#meters', '#log', '#objective', '#alarm', '#checkpoint', '#journal', '#caption', '#timeline', '#panel', '#ptip', '#loading', '#menu', '#missions', '#brief', '#options', '#replaytag', '#fatal', '#kit-preview', '#tapebar', '#tapenote', '#tapebig', '#taperefuse'];
 const CSS = `
 html.tsz :is(${LAYERS.join(', ')}) { zoom: var(--tz, 1); }
 html.tsz { touch-action: pan-x pan-y; }

@@ -60,7 +60,9 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
   lightswitch.ts (a room's lights have a switch on the wall by its door: the plates found from the level, Sam's row, a defender who puts a room back —
   `docs/agents/stealth.md`, 'Wall switches') ·
   carlamps.ts (a parked vehicle's head and tail lamps found in the level's boxes and made light targets a round breaks, lit or not —
-  `docs/agents/stealth.md`, 'A parked vehicle's lamps').
+  `docs/agents/stealth.md`, 'A parked vehicle's lamps') ·
+  cleanrestart.ts (the switch and tally of the clean restart: what `Game.restartEncounter` and the player's `Game.restart` do with it up —
+  `docs/agents/player.md`, 'A restart gives a clean level').
 
 <!-- was CLAUDE.md lines 507–619 -->
 ## Architecture map

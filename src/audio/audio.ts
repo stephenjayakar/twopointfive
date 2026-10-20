@@ -8,12 +8,13 @@ import { Vec3, v3 } from '../math/vec';
 import { StaticCollision } from '../scene/collision';
 import { GameAudioLike } from '../game/audio_iface';
 import { FLOOR, FloorMat, floorAt } from '../game/floor';
-import { buildSfx, ROLL_LOOP, SfxName } from './sfx';
-import { buildSfxWas, wasInGame } from './sfxWas';
+import { buildSfx, buildSfxLater, ROLL_LOOP, SfxName } from './sfx';
+import { buildSfxWas, wasInGame, wasOnly, WAS_IN_GAME } from './sfxWas';
 import { Music, WebAudioMusicBackend } from './music';
 import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die, never the simulation's seeded one under a session recording (math/dice.ts)
 import type { AudioBackend, BackendVoice, SfxBuffer, SfxContext } from './backend';
 import { WebAudioBackend, noiseBuffer } from './webaudio';
+import { sfxContext } from './backend';
 import { AMBIENCE_DISTANCE, AMBIENCE_OFFICE, AmbienceKind, HISS, ambienceLoop } from './loops';
 import { MAX_DIST, REF_DIST, ROLLOFF, VOLUME_DEFAULTS, cutoffOf, distanceGain, hrtfFor, occludedGain, sendOf } from './mixlaw';
 
@@ -52,6 +53,54 @@ export function gameSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
   const t = buildSfx(ctx);
   return SFX_TABLE.was ? { ...t, ...buildSfxWas(ctx) } : SFX_TABLE.redone ? t : { ...t, ...wasInGame(ctx) };
 }
+
+/** THE SOUNDS ARE MADE BEFORE THE FIRST CLICK, ONE AT A TIME. The mixer may not start until the visitor clicks or presses a key, and it used to synthesise its
+ *  whole table inside that first click: eighty voices, most of a second with the page stopped — heard as a hitch just as the sound comes in (a play test,
+ *  10-19: "a hitch in the audio right when it gets started"). Now the page asks for the table as soon as it is up (`warmSfx`), a voice at a time in the browser's
+ *  idle moments while the shaders compile; the first click then only hands the mixer what is made. A voice asked for before its turn is made on the spot, the
+ *  rest carry on in idle moments. The samples are the same ones (each voice has its own seed: sfx.ts `lazy`), and the voices the old table gives the game
+ *  (sfxWas.ts WAS_IN_GAME) are no longer made twice. `?sfxwarm=0` = the whole table inside the first click, as it was.
+ *  THE RATE: a page cannot ask what its output runs at before the click, so the warm-up makes the table at the rate the mixer last started at in this browser
+ *  (`rateKey`, written at every start), `rate` on a first visit. Where the guess is wrong, what was made is dropped at the click and the table is made at the
+ *  device's rate the same way, a voice at a time — that page's first sounds each pay for their own making, and the next page guesses right.
+ *  ONE MIXER: the warm-up feeds the first mixer that starts; another on the same page makes its own table whole, as it was. */
+export const SFX_WARM = { on: true, rate: 48000, rateKey: 'twopointsix.sfxRate' };
+try { if (new URLSearchParams(location.search).get('sfxwarm') === '0') SFX_WARM.on = false; } catch { /* no page (the harness) */ }
+/** gameSfx's table, no voice rendered: name → the call that renders it (the same samples; a WAS_IN_GAME voice is the old table's and the redone one is never made) */
+export function gameSfxLater(ctx: SfxContext): Map<string, () => SfxBuffer> {
+  const t: Map<string, () => SfxBuffer> = buildSfxLater(ctx);
+  if (!SFX_TABLE.redone) for (const n of WAS_IN_GAME) { const redone = t.get(n); let b: SfxBuffer | null = null; t.set(n, () => b ??= (wasOnly(ctx, [n])[n] as SfxBuffer | undefined) ?? redone!()); }
+  return t;
+}
+/** when the page has a moment: the browser's idle callback where there is one (a slice between frames, or all of a quiet stretch — `left` = the ms it has, and
+ *  half a second gone by with no such moment is one anyway), a short timer where not */
+type Idle = { didTimeout: boolean; timeRemaining(): number };
+const whenIdle = (fn: (left: number) => void) => { const ric = (globalThis as { requestIdleCallback?: (f: (d: Idle) => void, o?: { timeout: number }) => number }).requestIdleCallback; if (ric) ric(d => fn(d.didTimeout ? Infinity : d.timeRemaining()), { timeout: 500 }); else setTimeout(() => fn(Infinity), 16); };
+/** the warm-up's state: the calls still to make (null = not begun), the voices made and not yet handed over, the mixer's loader once one has started */
+const warm = { rate: 0, later: null as Map<string, () => SfxBuffer> | null, made: new Map<string, SfxBuffer>(), sink: null as ((name: string, buf: SfxBuffer) => void) | null, pumping: false, slices: 0, longest: 0, total: 0 };
+function warmOne(name: string): void {
+  const job = warm.later?.get(name); if (!job) return;
+  warm.later!.delete(name);
+  const t = performance.now(); const buf = job(); const ms = performance.now() - t; warm.longest = Math.max(warm.longest, ms); warm.total += ms; warm.slices++;
+  if (warm.sink) warm.sink(name, buf); else warm.made.set(name, buf);
+}
+function warmPump(): void {
+  if (warm.pumping || !warm.later?.size) return;
+  warm.pumping = true;
+  // one voice a moment, and only in a moment long enough for the usual one (a frame's few spare ms pass it by: the picture is not made to wait for a sound)
+  whenIdle(left => { warm.pumping = false; const next = warm.later?.keys().next(); if (next && !next.done && left >= Math.min(12, warm.slices ? warm.total / warm.slices : 4)) warmOne(next.value); warmPump(); });
+}
+/** the page, once, as soon as it is up: start making the table (nothing under ?sfxwarm=0, or once a mixer has started) */
+export function warmSfx(rate = lastRate()): void {
+  if (!SFX_WARM.on || SFX_TABLE.was || warm.later || warm.sink) return;
+  warm.rate = rate; warm.later = gameSfxLater(sfxContext(rate)); warmPump();
+}
+/** the rate the mixer last started at in this browser, SFX_WARM.rate where none is kept */
+function lastRate(): number { try { const v = Number(localStorage.getItem(SFX_WARM.rateKey)); if (v >= 8000 && v <= 384000) return v; } catch { /* no store */ } return SFX_WARM.rate; }
+/** a check's: the warm-up as on a page just opened (a mixer it fed keeps what it has and gets no more) */
+export function warmReset(): void { warm.rate = 0; warm.later = null; warm.made.clear(); warm.sink = null; warm.slices = 0; warm.longest = 0; warm.total = 0; }
+/** how the warm-up stands (the page check reads it): voices still to make, made and waiting, slices run, the longest one in ms */
+export const warmState = () => ({ left: warm.later?.size ?? 0, waiting: warm.made.size, slices: warm.slices, longest: warm.longest, rate: warm.rate, live: !!warm.sink });
 
 /** one sound as the game asked the mixer for it: `dur` = seconds as played (the buffer's length over its rate), `heard` 2 = played, 1 = asked and culled (inaudible, or under a full
  *  budget), 0 = the mixer was off (a muted page, a replay's undrawn seek) */
@@ -100,8 +149,16 @@ export class AudioEngine implements GameAudioLike {
     this.backend = b; this.started = true;
     // a hidden tab draws no frame, so nobody would turn a followed voice down as its thing comes to rest: it is silent until the page is back
     if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.hidden) for (const v of this.voices) if (v.follow && !v.dying) b.setVoice(v.v, { gain: 0 }, 0.05); });
-    const sfx = gameSfx(b.sfxContext);
-    for (const n of Object.keys(sfx) as SfxName[]) b.loadBuffer(n, sfx[n]);
+    try { localStorage.setItem(SFX_WARM.rateKey, String(b.sfxContext.sampleRate)); } catch { /* no store: the next page guesses SFX_WARM.rate */ }
+    if (SFX_WARM.on && !SFX_TABLE.was && !warm.sink) {   // the table a voice at a time (SFX_WARM): what is made already goes in now, the rest as it is made or asked for
+      if (warm.later && warm.rate !== b.sfxContext.sampleRate) { warm.later = null; warm.made.clear(); }   // (made for another rate than this device's: not what it would play)
+      if (!warm.later && !warm.made.size) { warm.rate = b.sfxContext.sampleRate; warm.later = gameSfxLater(b.sfxContext); }
+      for (const [n, buf] of warm.made) b.loadBuffer(n, buf);
+      warm.made.clear(); warm.sink = (n, buf) => b.loadBuffer(n, buf); warmPump();
+    } else {
+      const sfx = gameSfx(b.sfxContext);
+      for (const n of Object.keys(sfx) as SfxName[]) b.loadBuffer(n, sfx[n]);
+    }
     { const mb = b.webAudio ? new WebAudioMusicBackend(b.webAudio.ctx, b.webAudio.master) : b.music?.() ?? null; if (mb) { this.music = new Music(mb); this.music.menu = this.menuUp; this.music.setlist = this.levelSet; this.music.setVolume(this.volume.music); } }   // the score: its sequencer over the page's Web Audio voices, or the backend's own MusicBackend (the native synth) — silent on a host with neither
     this.setupAmbience();
   }
@@ -119,6 +176,7 @@ export class AudioEngine implements GameAudioLike {
 
   play(name: string, pos: Vec3 | null, gain = 1, opts: Record<string, unknown> = {}) {
     const b = this.backend, tap = this.tap;
+    if (b && (this.enabled || tap)) warmOne(name);   // (SFX_WARM: a voice asked for before its turn is made now — where it will be played, or its length told)
     if (!b || !this.enabled) {   // (the mixer is off: the lanes are still told what was asked for — of a name the table holds, where there is a table to ask, as below)
       if (tap) { const dur = name === 'smokeHiss' ? (opts.duration as number) ?? 15 : b ? b.duration(name) : 0; if (!b || dur) tap({ name, gain, dur, heard: 0 }); }
       return;
@@ -178,6 +236,7 @@ export class AudioEngine implements GameAudioLike {
    *  takes no place in the positional budget, and plays whether the mixer is switched on or not (`enabled`). False = nothing was played. */
   again(name: string, m: SoundMix): boolean {
     const b = this.backend; if (!b) return false;
+    warmOne(name);
     const trim = this.trims.get(name);
     const buffer = trim?.take && b.duration(trim.take) ? trim.take : name;
     const dur = b.duration(buffer); if (!dur) return false;

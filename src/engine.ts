@@ -229,6 +229,10 @@ export class Engine {
    *  day grid swapped in at night: seven frames of the wrong bounce and the wrong light-meter reading — review R10.1). Not for screen events — resize / scale / checkerboard /
    *  divisor flips leave the world cache valid and must not call this. */
   invalidateWorldCache() { this.rc.invalidateWorld(); for (const parked of this.rcPark.values()) parked.invalidateWorld(); }
+  /** The LEVEL was put back to its start under the picture (game/cleanrestart.ts: a restart — lamps that were out burn, holed walls stand, the eye is somewhere else): the
+   *  screen histories, the reservoirs, the haze volume's history and the radiance cache all still hold the level as it stood, 'wrong wholesale'. Each starts from
+   *  nothing, as on a boot's first frame, so the fresh level is not blended in over the frames after. */
+  restartPicture(why = 'level restarted') { this.passes.restartHistories(why); this.passes.froxels.restartHistory(); this.invalidateWorldCache(); }   // (restartHistories clears the resolve's history and the reservoirs with the rest)
 
   /** the scene group's resources over one frame block (binding 0): the one list ensureSceneBG and its output-size twin both build from */
   private sceneGroup(frame: GPUBuffer, fogSight: GPUBuffer = this.fogSight.buf): GPUBindGroup {
