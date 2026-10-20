@@ -41,6 +41,7 @@ import { gpuFx, bangFx } from './particleFx';
 import { teamOfId, type Team } from './teams';
 import { fightLive } from './roomfight';
 import { loadPace, loadPaceOn } from './kitload';
+import { teamBlastPace } from './teampace';   // (read inside fragTick only)
 import { PACE, canSee, canSeeChar, crossesDoor, frameOf } from './guards';   // (crossesDoor: asked inside fleeByDoor only)
 import type { Door } from './doors';
 import { lanePenalty } from './lanes';       // (asked inside fleeByDoor only)
@@ -675,7 +676,7 @@ export function fragTick(g: Game, _dt: number) {
         if (!gd.script && !gd.hold && !gd.pinned && flat(c.pos, dz) <= F.lethalM + 2) /* (a man planted on a post goes nowhere anyway: he fights on from behind it) */ { L.flee.set(gd, { goal: null, upper: 'none', crouch: true }); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); gd.path = []; gd.pathGoal = null; }
         continue;
       }
-      const speed = conditionPace(g, gd, gd.team === 'operative' && PACE.on ? Math.min(F.runSpeed, PACE.max) : F.runSpeed);   // (a teammate never sprints: the spot is one HIS legs make)
+      const speed = conditionPace(g, gd, teamBlastPace(g, gd, F.runSpeed));   // (a teammate never sprints: the spot is one HIS legs make)
       const acc = gd.team === 'operative' && PACE.on && gd.speed < speed * 0.6 ? PACE.accel : Infinity, W = wise ? { path: wise.path, keep: keep?.goal ?? null, not, apart: F.fleeApart ? takenBy(g, L, gd, dz) : undefined } : undefined;
       const legs = loadPace(g, gd, speed), pick = acc * loadPaceOn(g, gd);   // (kitload.ts: the spot is one the legs his CARD leaves him make — the leg itself is asked for at `speed`, and the path scales it)
       let spot = fleeSpot(g, c, dz, legs, it.fuse, pick, W, gd); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); L.via?.delete(gd);

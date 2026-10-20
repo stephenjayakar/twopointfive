@@ -123,7 +123,9 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
   'CLEANRESTART',
   // the saves roll and one is kept in memory with a team on the floor (savestate.ts SAVETIMELINE): a recording from before it has no such save to go back to
-  'SAVETIMELINE'];
+  'SAVETIMELINE',
+  // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
+  'TEAMPACE'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -190,6 +192,7 @@ import { RECAP } from './deathrecap';
 import { TEAMTALLY } from './teamtally';
 import { AIMWEIGHT } from './aimweight';
 import { SPRINTDOOR } from './sprintdoor';
+import { TEAMPACE } from './teampace';
 import { AIMCOST } from './aimcost';
 import { HANDWORK } from './handwork';
 import { TAKEDOWN } from './takedown';
@@ -251,6 +254,8 @@ export function knobRegistry(): Record<string, object> {
     SAVETIMELINE,
     // a sprint into a door has weight (sprintdoor.ts): the switch, what a shoulder through it keeps of his run, how the leaf leaves him, the boot (or the handle) at the face it opens toward — where the player is a second later reads them
     SPRINTDOOR,
+    // teammates are slower than the player and run only for a reason (teampace.ts): the switch, the walk's share of the player's, a follower's closing pace and his run, the reasons — where every teammate is a second later reads them
+    TEAMPACE,
     // quiet missions under the fog of war (quietfog.ts): whether a quiet mission's query is read for a rung of the fog lever — a run tape's start reads it
     QUIETFOG,
     // the dialogue pass (words.ts): which words every mouth has — a bubble's time is its length, and who is still talking gates the calm floor's small talk

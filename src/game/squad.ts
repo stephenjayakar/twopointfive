@@ -14,6 +14,7 @@ import type { RoomClearPlan } from '../scene/level';
 import { KICK_IMPACT } from './character';
 import { tread } from './floor';
 import { loadGait, loadHeard } from './kitload';
+import { teamStep, teamSprinting } from './teampace';
 import { kickDustFx } from './particleFx';
 import { goTo, followPath, teamPace, teamLegs, teamLean, teamTurn, teamPaced, PACE, lightRuled, attachFlashlight, hearingCheck, canSee, sightGain, bodyInView, escalationOf, doorTamper, nearKnownBody, muzzleCheck, aimAhead } from './guards';
 import { gunWallCheck, gunWallPose } from './gunwall';
@@ -112,14 +113,15 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
   const up = upper === 'aim' || stance === 'highReady' || stance === 'stack';
   muzzleCheck(g, gd, up && !s.hot ? (aim ?? aimAhead(c)) : null, dt);   // (hot: weapons free on the men in front of him — the breach's operatives on the room they take, until the guards have sides: game.ts GuardScript.hot)
   gunWallCheck(g, gd, upper === 'aim' ? 'aim' : up ? 'port' : null, aim ?? null, dt, !!s.over);   // …and so does a wall, a jamb or a leaf inside the raised gun's reach (gunwall.ts; weapons free or not, and with a man in his sights — `over` — only a gun that is IN it; nothing with its switch off)
-  c.anim.speed = moveSpeed; c.anim.upper = gd.muzzleDown ? 'none' : upper; c.anim.crouchTarget = s.crouch ? 1 : 0; c.anim.lean = s.lean ?? 0;
-  c.anim.stance = gd.muzzleDown ? 'lowReady' : stance; c.anim.stackSide = s.stackSide ?? 1; c.anim.lookYawExtra = 0;   // (the AI's leader-glance / wait-sweep neck twist must not freeze on him for the length of the script)
+  const low = gd.muzzleDown || teamSprinting(g, gd);   // (teampace.ts: a teammate at a run carries his gun low — false with its switch off)
+  c.anim.speed = moveSpeed; c.anim.upper = low ? 'none' : upper; c.anim.crouchTarget = s.crouch ? 1 : 0; c.anim.lean = s.lean ?? 0;
+  c.anim.stance = low ? 'lowReady' : stance; c.anim.stackSide = s.stackSide ?? 1; c.anim.lookYawExtra = 0;   // (the AI's leader-glance / wait-sweep neck twist must not freeze on him for the length of the script)
   gunWallPose(g, c);
   c.update(dt);
   attachFlashlight(g, gd);
   if (s.light === false && !lightRuled(g, gd)) gd.flashlight.enabled = false;   // (after attachFlashlight, which decides the light for a live man and would switch it straight back on)
   const prevPhase = gd.stepPhase; gd.stepPhase = c.anim.phase;
-  if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) tread(g, c.pos, (loadGait(g, gd, moveSpeed) > 2 ? 0.8 : silentStep(g, gd) ?? 0.45) * loadHeard(g, gd), false);   // (presentation only, on the floor he is on — floor.ts, as the AI's own tread)
+  if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) tread(g, c.pos, (teamStep(g, gd, moveSpeed) ?? (loadGait(g, gd, moveSpeed) > 2 ? 0.8 : silentStep(g, gd) ?? 0.45)) * loadHeard(g, gd), false);   // (presentation only, on the floor he is on — floor.ts, as the AI's own tread)
   s.arrived = arrived;
 }
 
