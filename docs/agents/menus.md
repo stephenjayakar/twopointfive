@@ -1207,7 +1207,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   later hand wins; at none the look-at is the man himself), `Ring at your feet` (the order menu's gold ring, `planfloor.ts` `py`, drawn at all times; ours stands down while that one is
   up: `PlanFloor.youOn`), `Outline in the dark` (a rim round his figure, full at a light number of 0.12 and under, gone at 0.3), `Shape through walls` (his figure
   faint and rimmed through whatever stands between the eye and him, as strong as the share of four points of him the eye cannot see: glass and the
-  `NoPrimary` ceilings do not count), `Turn direction` (Ctrl + mouse turns the view the other way: the sign in `host/loop.ts`), `Double tap Ctrl`
+  `NoPrimary` ceilings do not count), `Turn direction` (Ctrl + mouse turns the view the other way: the sign in `host/loop.ts`, and in the engine replay's own Ctrl turn, `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl`
   (two short presses, answered as the second comes up, bring the view round over about a quarter of a second to look where he looked at the tap;
   a hand's orbit, a pin, a show or a spectated man drops it; `TapTwice`: a press held is never a tap, nor one with another key, a button, the wheel or more than 12 px of orbit in
   it). THE FIGURE IS THE HUD'S, NOT THE RENDERER'S: his joints (`character.ts bones`) joined by round-ended strokes as wide as the limb in the
@@ -1222,7 +1222,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   cursor's point in the world and the cursor stays where it is on the screen, so as the view turns he turns with it (the check prints it: cursor 5 m
   to his side, the view lands on where he looked and he has swung 130 degrees). What he was facing ends at the top of the screen; only with the
   cursor already ahead of him does nothing else move. Truly behind needs the game to own the reticle (the system cursor hidden, ours moved), which
-  is the camera key's own work. NOT DONE: the replay viewer's own Ctrl turn (`replay/engineplay.ts`) does not read `turn`;
-  the Controls tab has no line for the double tap. Ctrl is still the camera key, and a double tap is two more presses of it: on Windows Ctrl then W
+  is the camera key's own work. NOT DONE: the Controls tab has no line for the double tap. Ctrl is still the camera key, and a double tap is two more presses of it: on Windows Ctrl then W
   still closes the tab. NEVER SEEN ON A GPU, and nobody has played with any of the six: how faint the rim should be, whether the shape reads as him,
   how fast the view should come round and whether 250 / 300 ms is the right tap are all first guesses in `FINDME_LOOK`, `BEHIND` and `TAPTWICE`.
