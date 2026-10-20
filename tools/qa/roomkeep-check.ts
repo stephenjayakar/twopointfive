@@ -25,6 +25,7 @@ const { stackRoomProbe } = await import(`${ROOT}/src/game/stackroom.ts`);
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
+const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 
 type V = [number, number, number];
 const WALKED = process.env.RK_JUMP ? 0 : 30;   // frames Sam's leaving reads as a walk; RK_JUMP=1 = set down outside, as the check first had it
@@ -107,9 +108,10 @@ async function level(E: any): Promise<void> {
     if (A.on < NEED * A.n) bad.push(`his gun was on it ${pc(A.on, A.n)} of the three seconds Sam stood in the room`);
     // (the bar is for a Sam who STOOD. One a man falling in walked into and shoved is, to the game, a Sam walking — and a keeper in the line of that step gets
     //  out of his way before he keeps anything (orders.ts aside(): stepping out of Sam's way comes first). Seen with the team's slower walk on, teampace.ts:
-    //  compound-four k_p+, Sam shoved 0.23 m by the man closing on him, the keeper 0.54 m off his spot with his gun still on the door. Said, not judged)
-    const shove = A.shoved > 0.1 ? ` · Sam was shoved ${A.shoved.toFixed(2)} m by a man falling in, and the keeper stepped ${A.moved.toFixed(2)} m out of his way` : '';
-    if (A.moved > 0.4 && !shove) bad.push(`he walked ${A.moved.toFixed(1)} m off while Sam stood in the room`);
+    //  compound-four k_p+, Sam shoved 0.23 m by the man closing on him, the keeper 0.54 m off his spot with his gun still on the door. Then the bar is that
+    //  ONE step: ORDERS.asideOff, the furthest off Sam's line the rule stands a man — a keeper further off his spot than that has walked off, shoved Sam or not)
+    const shove = A.shoved > 0.1 ? ` · Sam was shoved ${A.shoved.toFixed(2)} m by a man falling in, and the keeper stepped ${A.moved.toFixed(2)} m out of his way (one step is ${ORDERS.asideOff} m at most)` : '';
+    if (A.moved > (shove ? ORDERS.asideOff + 0.05 : 0.4)) bad.push(shove ? `he walked ${A.moved.toFixed(2)} m off, more than the one step out of a shoved Sam's way (${ORDERS.asideOff} m)` : `he walked ${A.moved.toFixed(1)} m off while Sam stood in the room`);
     if (A.kn >= 20 && A.kon < NEED * A.kn) bad.push(`with Sam gone and mates still in the room, his gun was on it ${pc(A.kon, A.kn)} of the time he was kept`);
     if (A.freed === null) bad.push(`still kept ${LEAVE} s after Sam left`);
     if (!A.back && A.far > Math.max(NEAR, (B?.far ?? 0) + 1)) bad.push(`the squad was not back with Sam ${LEAVE} s after he left (the furthest man ${A.far.toFixed(1)} m off${B ? `, ${B.far.toFixed(1)} m with the switch off` : ''})`);
