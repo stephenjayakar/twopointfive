@@ -14,5 +14,6 @@ export function hostAfterPutBack(game: Game) {
   game.smoke?.clearAll?.();   // (the solver's fields are the GPU's: a cloud of the abandoned moment is nobody's — a can that was venting at the save lies there without its smoke, as after a file's load)
   engine.particles?.clear();
   game.rehand();   // (lying snow, the wind's map of what stands, the dust under the roofs: each handed over only when it changed, and it changed BACK)
+  (game.probe as { putBack?: () => void }).putBack?.();   // (the light meter: answers still out are the abandoned moment's and are dropped as they land. Its buffers and what it last sent never went back — render/probe.ts Plumbing is the host's inside a game object, math/side.ts HostOwned — so there is nothing to forget)
   engine.resetTaa('a save put back'); engine.invalidateWorldCache();
 }
