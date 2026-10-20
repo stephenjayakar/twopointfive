@@ -732,13 +732,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   no run written (no grenade rule and no picture on that stand). RESCUES are the one thing that moved the same way in all three passes: rescued 17 → 14,
   8 → 7 and (frozen) 8 → 5, hostages out 28 → 26, 14 → 13 and 14 → 7 — a rescue has a clock and the walk to it is slower; small counts, one direction. NEIGHBOURS' CHECKS that stood on the old pace, changed here: `frag-probes.ts` (g) and the
   flee-by-door pace line read the flee's run when the rule is on; `lineoffire-probes.ts` passes over a man with a reason to run (`teamRunAgo`); three fixed waits are longer
-  when the rule is on (`foursquad-probes.ts`: a walker onto his mark, the three-man stack; `orders-probes.ts` g4: 16 s for 12 to give a mark up); and SIX
-  stagings hold the rule OFF with the reason written beside each, for their owners to re-stage at the new pace: `fireline-check.ts` (arms 6 and 11 stand
-  on one nav cell 2 mm from the lane's berth), `roomkeep-check.ts` (compound-four k_p+: the keeper shifts 0.5 m for mates who come by later, the bar is
-  0.4), `flashweight-probes.ts` pace (it IS the old cap's check), `doorgrenade-probes.ts` THE FAULT arm (men are off the grenade sooner, the fault shows at
-  one door of two), `frag-probes.ts` (b5) (the recorded depot throw: with the follower then at 1.0 × the player's walk Blue One, 0.83 s after Sam moves, is dealt the corner (0.0, 11.8),
-  gets down there and is wounded — the flee's deal, the same with `own` off; a claim for that rule's owner), `filespread-check.ts` (followers at 2.0 for
-  2.2: at the depot's (11.85, 5.95) the file rule leaves two places on one spot with nobody moving; a claim for that rule's owner). NOT SEEN, NOT PLAYED: nothing of this on a GPU —
+  when the rule is on (`foursquad-probes.ts`: a walker onto his mark, the three-man stack; `orders-probes.ts` g4: 16 s for 12 to give a mark up); THREE
+  stagings hold the rule OFF with the reason written beside each, for their owners to re-stage at the new pace: `flashweight-probes.ts` pace (it IS the
+  old cap's check), `doorgrenade-probes.ts` THE FAULT arm (men are off the grenade sooner, the fault shows at one door of two), `frag-probes.ts` (b5) (the
+  recorded depot throw: with the follower then at 1.0 × the player's walk Blue One, 0.83 s after Sam moves, is dealt the corner (0.0, 11.8), gets down
+  there and is wounded — the flee's deal, the same with `own` off; a claim for that rule's owner). THREE MORE were held off at first and now read the rule
+  as the stand has it, on on the page's stand (all three green on both stands, their break paths red on both): `filespread-check.ts` — the red at the
+  depot's (11.85, 5.95) was the check's own bar: `fileHold` steps a man out 5 cm at a time, the place it put at 0.60 m read 0.5999… against a bare
+  `< 0.6`, nobody moving and the men 0.60 m apart; the bar has the 2 cm its two neighbours have. `roomkeep-check.ts` — compound-four k_p+: a man falling
+  in walks into Sam and shoves him 0.2 m AT EITHER PACE (0.20 m at the old one, 0.23 m at the new), the game reads a shoved Sam as a walking one, and a
+  keeper in the line of that step gets out of his way before he keeps anything (`aside()` comes first): 0.19 m at the old pace, 0.54 m at the new, his gun
+  on the door throughout; the 0.4 m bar is for a Sam who stood, so a shoved one is said and not judged. A man falling in who walks into the player is
+  the fall-in's own to look at, at either pace. `fireline-check.ts` — every arm reads the same with the rule on, on the page's stand; only a FROZEN stand
+  with the walk raised by hand is held off (arms 6 and 11 stand on one nav cell 2 mm from the lane's berth there). NOT SEEN, NOT PLAYED: nothing of this on a GPU —
   a teammate's sprint with his kit on has never been looked at, nor the gun going low into it; nobody has played it; 0.8, the follower's 1.3, the six
   seconds back from a grenade and the cover run's numbers are first numbers; the play-through tool's player never sprints, so the tallies show no follower's
   run (the staged check does); the cover run fired 20 times in 126 runs and nobody has watched one.
