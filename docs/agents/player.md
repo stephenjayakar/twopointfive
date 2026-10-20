@@ -352,7 +352,9 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   slots"): slots.json's `maxPerSquad` is deleted — data, NOT switched, so on both stands — and the pouches are the only limit (two each, two a man). `scenarios.roomClear.wallCharges` still
   RAISES the squad's count (issue.ts), never lowers it. QA: `bun run tools/qa/owncharge-check.ts [kit|door|squad|save|off]` (`probes.ts owncharge`; `owncharge-kit` also under `kit`,
   `-door` / `-squad` under `doortools`; in all-quick; both stands; `OWNCHARGE_BREAK=1` must fail), `PORT=<dev server> node tools/qa/owncharge-page.cjs [outDir]` (the real page on the software adapter: the card's two rows, a shut door's row, set by hand, F; `?noowncharge`). The Sam-alone lines of wallcharge-probes.ts / outerwall-probes.ts hold the switch off (they
-  were written on the old bag). Page: rebuild/player-charges/read-first.md. Never seen on a GPU or played by anybody; the stand-off numbers are the squad's, untuned for a hand.
+  were written on the old bag). ON A STEALTH MISSION (`kit.ts KITDEAL.stealth`, on in the page; the night alone is one) your charges are the STEALTH
+  card's: none as issued, its pouches full of the mission's kit, so a pouch is given up to carry one, and the loud card's are not that run's.
+  `owncharge-check` puts its charges on the card the run wears and has one line on the card as issued. Page: rebuild/player-charges/read-first.md. Never seen on a GPU or played by anybody; the stand-off numbers are the squad's, untuned for a hand.
 - **One big slot a man, and small pouches** (`src/game/kit.ts BIGSLOT`, `src/game/bigkit.ts`, slots.json v9; ONE switch `BIGSLOT.on`: ON in the page — `?nobigslot` = the cards
   as they were — OFF in the module and on the frozen stand, `TPS_BIGSLOT=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table
   replays with it off — an F10 journal carries the switch and no kit cards; an F7 run tape carries the cards whole (`runtape.ts kitNow`), `big` among them; Tab ▸ 'Big slot (breaching shotgun, hammer)': the switch, what is on you now, blows / beat / wind-up / draw). The

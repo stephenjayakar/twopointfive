@@ -41,13 +41,13 @@ export class Input {
     // Capture phase on window = first in line: a game key is claimed here (stopPropagation) before any document-level shortcut handler the
     // embedding page may have installed sees it. Escape and anything with Cmd/Ctrl held stay shared (menus, browser and host shortcuts).
     window.addEventListener('keydown', e => {
+      if (e.code === 'F5' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && this.saveKey?.()) e.preventDefault();   // (F5 is the save by hand while the page says so — main.ts: a bare press must not reload the page under the run, a slider of the Options that kept the focus included; with a modifier, on the start page or over a broken frame it is the browser's reload as ever)
       if (typingTarget(e)) return;
       if (this.keyVeto?.(e)) { e.stopPropagation(); return; }   // (a UI surface — the tweak panel — took it: not a game key this time)
       const inMenu = e.target instanceof HTMLElement && !!e.target.closest('#menu, #missions');   // (#missions: the mission list — ui/missions.ts — is a card like the menu's)
       const modifier = ['Meta', 'Control', 'Shift', 'Alt'].includes(e.key);
       const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: held, it is the camera's orbit / zoom modifier — host/loop.ts; no game key reads it, crouch is C; F-keys stay the browser's)
       if (ours) { e.stopPropagation(); const typing = e.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(e.key); if ((e.target === this.sink && typing) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault(); }
-      if (e.code === 'F5' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && this.saveKey?.()) e.preventDefault();   // (F5 is the save by hand while the page says so — main.ts: a bare press must not reload the page under the run; with a modifier, on the start page or over a broken frame it is the browser's reload as ever)
       if (this.lockExcept && !this.lockExcept.has(e.code)) { if (!inMenu && !e.repeat && e.code !== 'Escape' && !modifier && !e.metaKey && !e.ctrlKey) this.onLockedInput?.(); return; }   // hands off during the tour (menu keyboard nav still works)
       if (e.repeat) return;   // OS auto-repeat is never a fresh press (holding P must not strobe the tour on and off)
       if (!this.keys.has(e.code)) this.pressed.add(e.code);

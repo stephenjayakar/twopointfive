@@ -437,6 +437,19 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
     line(moved.top === 0 && moved.row && !moved.out.length && /^\+1200 ¢$/.test(moved.vals[0]) && /^[-−]23\.5 dB$/.test(moved.vals[1]) && moved.vals[2] === '12000 Hz' && still && moved.ch.every(Boolean), 'and with all three moved: each number whole in its box, the boxes where they stood, each dial marked changed', `${moved.vals.join(' · ')} · number boxes ${moved.at.map(a => `${a[1]} px at +${a[0]}`).join(', ')} (at rest ${rest.at.map(a => `+${a[0]}`).join(', ')}) · changed ${moved.ch.join()}${moved.out.length ? ` · out of sight or cut: ${moved.out.join(', ')}` : ''}`);
     await page.evaluate(toy => { window.__sndlanes.pick(toy, { rate: 1, gain: 1, tone: 20000 }); }, toy);
   }
+  // 4c. THE TEXT SIZE (ui/textsize.ts): the replay's bar is one of its layers and the dock is not. On a larger step the bar is taller in the window's pixels and the
+  //     dock must be laid again ON it (it once read the bar's own pixels: its foot stood behind the bar by the difference, and a step did not lay it again).
+  //     1440×900 has room for a larger step. The bar's box is read against the window's foot, so the line holds on an engine that answers in either pixels.
+  { const dockOn = () => page.evaluate(() => { const T = window.__textsize; window.__sndlanes.paint(); const b = document.getElementById('tapebar').getBoundingClientRect(), d = document.getElementById('sndl').getBoundingClientRect(), k = innerHeight / b.bottom;
+      return { on: !!T && T.on, z: T ? T.zoom : 1, bar: +(b.height * k).toFixed(1), top: +(b.top * k).toFixed(1), foot: +d.bottom.toFixed(1), h: document.documentElement.style.getPropertyValue('--sndl-h'), tall: +d.height.toFixed(1) }; });
+    const sits = m => Math.abs(m.foot - m.top) < 1.5 && Math.abs(parseFloat(m.h) - m.tall) < 1.5, was = await dockOn();
+    if (!was.on) console.log('- NOTE — the text size is off on this page: the dock on a larger step was not held');
+    else {
+      await page.evaluate(() => { const T = window.__textsize; T.set(T.table.steps.length - 1); }); const up = await dockOn();
+      await page.evaluate(() => { window.__textsize.set(null); }); const back = await dockOn();
+      line(up.z > was.z && up.bar > was.bar + 2 && sits(was) && sits(up) && sits(back) && Math.abs(back.bar - was.bar) < 1, 'on a larger text size the dock is laid again on the taller bar, and back', `factor ${was.z}: bar ${was.bar} px, dock foot ${was.foot} on bar top ${was.top} · factor ${up.z}: bar ${up.bar} px, dock foot ${up.foot} on bar top ${up.top} · back at ${back.z}: ${back.foot} on ${back.top}`);
+    }
+  }
   await page.setViewportSize({ width: 1280, height: 720 });
 
   // 5. what the browser kept may be anything (another build's, a hand edit): the page comes up all the same, with what could be read of it

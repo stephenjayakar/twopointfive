@@ -135,7 +135,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the walk keys' basis, on-screen-or-not for a line (`viewProj` → bubble vs log row: guards.ts say, civilians, the weather's stroke filter), the thunder's pan, the rain's near
   field, `mPerPx`, a blast's kick. The session journal's format is untouched (it files the raw camera and input before the sample).
 - **The rollback snapshot: any tick taken and put back, to the bit** (`src/game/rollback.ts`, `src/math/side.ts`; groundwork for server authority then rollback, nothing
-  networked, NOTHING IN THE GAME CALLS IT: unused, the build is as it was — the 21 scripted play-throughs' digests on both stands are the ones from before it). Beside the
+  networked; when it went in nothing called it, and the 21 scripted play-throughs' digests on both stands were the ones from before it. ONE CALLER IN PLAY SINCE: a save
+  kept in memory with a team on the floor, `savestate.ts` under `SAVETIMELINE`, `docs/agents/qa.md`). Beside the
   checkpoint (`savestate.ts`: a file with a schema a player keeps, refused in squad play and mid-action), not instead of it. `takeSnapshot(g)` walks everything the Game
   reaches plus what `math/side.ts` lists, and keeps a shallow copy of each array, object, Map, Set and typed array: no schema, a new field on a Guard is in the next
   snapshot. `takeSnapshot(g, since)` a tick later copies only what changed and shares the rest (a rollback ring's snapshot a tick). `restoreSnapshot(s)` writes the copies
@@ -143,13 +144,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   level, walked side by side: an object the two games share (a module's constant row) stands for itself and is not written, a function is the other game's own closure
   of the same code where one stands in the same slot (one function of the snapshot's is one function there), a field that is COMPUTED (a getter) is left to compute.
   `stateHash` / `stateDiff` / `stateAlike` fold or compare every value by its raw bits in one fixed order. NOT IN A SNAPSHOT: the host (`Game.engine` but for its CPU
-  box world and light set, the mixer, the smoke solver's GPU fields, the GPU light meter's readings in flight, the session journal), the character file, what a closure
+  box world and light set, the mixer, the smoke solver's GPU fields, the GPU light meter's buffers and its readings in flight, the session journal), the character file, what a closure
   captured, a MEMO table, and it is references, not bytes (it cannot be sent to another process as it is).
+  THE HOST'S OWN INSIDE A GAME OBJECT IS A `HostOwned` (`math/side.ts`; a class that extends it is held as it is: never copied, never put back, never compared, and
+  another game keeps its own). One today: `render/probe.ts` `Plumbing`, the GPU side of the light meter the Game holds — the readback buffers that are free, the ones
+  still out, the bind group, the packed table, the count last sent. It was walked and put back like the rest of the meter until a save in memory was first loaded
+  on a real page. Found there, on the software adapter: with a readback still out (one always is at a page's frame rate), the load put that buffer back among the
+  free ones, the next frame copied into it, and the browser refused the WHOLE frame ("used in submit while pending map"); the count book went back too, so a frame
+  asking as many as the save's last frame skipped the write and the GPU kept the abandoned moment's count. What the simulation reads of the meter — `results`, this
+  frame's asks, whose turn it is — is still in a snapshot and goes back with the game; the answers still out when a save is put back are the abandoned moment's and
+  are dropped as they land (`IrradianceProbe.putBack`, called from `src/host/putback.ts`). A POOL, A LIST OF WHAT IS OUT OR A BOOK OF WHAT WAS LAST SENT that a new
+  GPU object of the game's keeps is the host's in the same way: a `HostOwned`, or its forget line in `putback.ts` — nothing headless can see a miss (the page run
+  below lists every game object that holds a GPU object, for a person to go through).
   THE RULE FOR NEW GAME CODE (the static pass is red otherwise): no `new WeakMap` / `new WeakSet` in `src/game`, `src/scene`, `src/anim`, `src/math` — `SideMap` / `SideSet`
   (the same calls, and listable), a table at the top of a module NAMED `'<file>.<variable>'`, one made inside a function unnamed; a module `let` the simulation writes is
   `rollbackVar('<file>.<name>', get, set)`; a module-level Map / Set / array (typed ones too) / object it writes is `rollbackRoot('<file>.<name>', it)` (or a knob
   table); anything else gets a row in `tools/qa/rollback-exempt.ts` with its class and why (TALLY a counter nothing reads back · CONFIG set at a scenario's start ·
-  SCRATCH dead by the end of the call · CACHE rebuilt from what it is keyed on · CONST). State never lives in a closure: A DIE KEPT IN STATE IS A `Die`
+  SCRATCH dead by the end of the call · CACHE rebuilt from what it is keyed on · CONST). State never lives in a closure OR A GENERATOR: a job done a share a frame
+  keeps where it stands as plain numbers on its record, never a `function*` held between ticks, whose place in its own code no snapshot can reach (the rain's drip
+  lines found again in shares, `rainFx.ts` `DripJob`, were one: a save put back after the walk had ended called the spent generator, got nothing, and the update
+  threw — the shipped stand's check was red on it at build step 730; it is a box, an edge and a sample index now, the same lines on the same frames, but for a box
+  whose flags or yaw are written in place while the walk stands on it: the generator went on with the box as it had read it, the record reads it again). The static
+  pass refuses a field, variable or parameter typed `Generator` / `Iterator` / `IterableIterator` (one listed, `GENERATOR_OK`: a showcase beat of the Director's,
+  which no save is taken beside); it does not see one typed through an alias or not typed at all. A DIE KEPT IN STATE IS A `Die`
   (`math/dice.ts`: `dieOf(seed)`, `roll(die)`, or a `rnd: rollOn` method beside a `dice` field — the same numbers as `mulberry32(seed)`), never a `mulberry32`
   closure, whose word no snapshot can reach (civilians, the Director's run, the radio checks and the last stand were changed to it: same sequences). A named table that
   is a pure function of its key — what a miss would compute, whichever game filled it — says so in the statement after it, `table.asMemo()` (two today:
@@ -157,9 +174,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `wallClock(obj, 'ms')` (the props', the reach masks' and the rig fit's timers, the checkpoints' `runId`): kept and put back, never compared. `math/side.ts` imports
   nothing, so a top-level `new SideMap(...)` is safe in the import cycle.
   THE CHECK: `bun run tools/qa/rollback-check.ts` (the frozen stand) and `TPS_PROFILE=shipped bun run tools/qa/rollback-check.ts`; `ROLLBACK_BREAK=1` flips the lowest bit
-  of one moving man's position after every restore and the three 'plays on' lines must FAIL. It runs the static pass, then scripted solo and squad play-throughs
+  of one moving man's position after every restore and the three 'plays on' lines must FAIL (and 'the host's own'). It runs the static pass, then scripted solo and squad play-throughs
   (`--scn`, default eight; `--seeds`), and at a moment every few seconds — and at the first frames that find a round in the air, a leaf swinging, a fuse burning, a man
-  falling — takes the game and holds, by the state word after every tick: put back = the word it was; the SAME game plays the next ticks as the unbroken run; THE RING (a
+  falling — takes the game and holds, by the state word after every tick: put back = the word it was; THE HOST'S OWN = a mark left among the light meter's free buffers
+  after the take is still there after the restore (no meter with a GPU side to mark: FAIL; the break word makes that side a plain object the snapshot walks, and the
+  line fails); the SAME game plays the next ticks as the unbroken run; THE RING (a
   snapshot after every tick, each since the one before; the one eight ticks back put back) plays the eight again; a FRESH game (stood up on the same scenario and seed and stepped ONCE, so that what a game hangs on its host at its first step is its own) given the
   snapshot plays the same ticks
   (where the strict word parts, the two are gone through value for value, `stateAlike`: every number to the bit, but not WHICH object stands where — the first game
@@ -177,6 +196,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the line says how many); `ROLLBACK_BREAK=1` on night-breach and room-clear-four FAILS the same-game, ring and fresh-game lines on both stands, as it must. On the
   merge with the build that carries the game's own maths and the CPU senses: night-breach, room-clear-four and mousehole-four on both stands, and room-clear-four
   and hostage-rescue on the shipped stand with `TPS_CPUSENSE=1`, every line PASS. One seed only; other seeds and longer runs were not run.
+  AT BUILD STEP 730 (the first build that calls it in play) the shipped stand's check was RED twice and nobody had run it: room-clear-four threw (the rain's spent
+  generator, above) and mousehole-four's 'same game' parted at an autosave (below). With the three mends (the light meter's GPU side the host's, the drip walk plain data, the
+  check putting the saves' shelf back): the whole check, the default eight scenarios on seed 1 with autosaves on, is 109 moments on the frozen stand and 100 on the shipped one, every line PASS,
+  and `ROLLBACK_BREAK=1` on night-breach and room-clear-four FAILS the host's-own, same-game, ring and fresh-game lines on both stands, as it must; the
+  play-throughs' run digests are the build's from before, ten on the shipped stand and eight on the frozen one (the last state's word is not: the rain's job
+  and the meter are other shapes in it); the drip lines found in shares are the build's point for point and end on the same step (room-clear-four 973 lines at step 82, compound-four 721 at
+  59); `blast-pace-check.ts` prints the build's lines; `savetimeline-check.ts` passes on both stands. One seed; nothing longer than 45 s a scenario.
   KNOWN LIMITS, said plainly: module state is PER PROCESS, not per Game — the registered variables and containers (`guards.unitSerial`, `savestate.runSerial`,
   the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
   process, so a snapshot is sound while ONE game ticks between its take and its restore (the check restores the first game before it steps the other); a server
@@ -187,7 +213,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   taken by its code: `Throwable.onBounce` still captures a can's
   own `quiet` and kind, weather's dice and a few unsubscribe hooks are closures (the check prints every function in the state by where it hangs). `newRunId()` reads
   the wall clock inside the tick (marked, never compared; a server would name the run). The static pass does not see a class instance at the top of a module, an
-  out-parameter, a class's `static` field. Never run on a GPU, and the page does not call any of it.
+  out-parameter, a class's `static` field. A SAVE IS A SIDE EFFECT OUTSIDE THE SNAPSHOT: the controller's shelf of saves in memory is deliberately not in one
+  (`savestate.ts memShelf`: a load must not take the later saves away), so the same ticks played again after a put back write an autosave a second time, into the
+  next slot, and the slot's name is in the state — whoever rolls a game back puts the shelf back with it: the check does (every snapshot it takes remembers the
+  shelf beside it), a rollback ring will have to. A
+  showcase beat of the Director's is a generator: a snapshot across a running show cannot be put back (no save is taken beside one).
+  A GPU BUFFER MADE ANEW between a save and its load goes back as the old, destroyed one (a field that holds a GPU object is put back like any field): one can be,
+  `BoxWorld.itemBuf`, when the grid's list passes 32,768 entries — compound-four and block-squads use about 4,500, so it does not happen today. The game objects
+  that hold a GPU object, listed on the page: the box world, the light set, the decals, the light meter, the mesh shadows, the character renderer.
+  ON A PAGE: one load of a save in memory, Training five with a pair on the floor, headless Chromium on the software adapter, the load asked for inside a step with
+  the frame before it still out on its readback — the build refused the whole next frame ("used in submit while pending map"); with the mend the load went through (the clock back from 2.62 s to
+  0.57 s, the answers still out dropped, a second readback buffer made, none left mapped) and the browser said nothing, no GPU error and no page error. That one
+  case; the rain's walk was not on that page. Never on a real GPU.
 - **The game's own maths** (`src/math/exact.ts`, switch `EXACT.on`; ON in the page, `?noexact` = the engine's own functions as before; OFF on the frozen stand,
   `TPS_EXACT=1` raises it; the shipped stand has it on, `TPS_EXACT=0` there = `?noexact`; engine groundwork, nothing networked): the language leaves the
   rounding of sin, cos, tan, asin, acos, atan, atan2, exp, log, log2, log10, pow, tanh and hypot to each engine, and they differ in the last place
@@ -277,7 +314,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   carries a RUN TAPE (`src/game/runtape.ts`: the die, the page's query, knobs, then per step dt / input / camera pose / every `Game.sensors` read, + restarts and sandbox
   switches made from outside a step; ≤ 30 min from the game's first step, else the tape says why it ended; a tape that says `sens.f32` writes each sensor value in the session journal's own encoding — a 32-bit float at nine digits, read back with Math.fround, any other number whole as [x] — so read a sensor value with format.ts `tapeNum(e, tape.sens.f32)`; a build from before it re-running such a tape serves values a billionth off): `replay-at.ts <file> --note N --rerun [--run S] [--eval probe.ts]`
   (`tools/qa/rerun.ts rerun()`) walks a headless game through the same run to the note and FIRST says how closely it matched the trace (exit 4 = it parted from the page, 3 =
-  refused: no tape / another level, naming the commit). The tape names the STAND it was made on (the page, or a tool's shipped / frozen stand and its stand words) and carries every registered knob table and the kit cards; the re-run stands its game the same way whatever stand its own process is on (a page tape = `shippedBoot` + `pageSwitches` for its query, then the tape's tables), one re-run a process, which is left on the tape's tables; a replay from before that is re-run on the page's rules for its address, with a NOTE. A tape OLDER than this build's knobs — a key added to a table or to `Game.tune` since it was saved — plays that key at this build's value (only the keys a tape has are written; `journal.ts applyKnobs` knows the older value of some keys of a recording's tables, nobody of the rest): the report NAMES those keys (stand switches first), the ones applyKnobs gave their older value, the keys of the tape this build does not play (gone, renamed, another kind of value), and the commit that walks the tape as recorded. Not the F10 journal (which needs a checkpoint and refuses a squad on the floor). Off: `?noreplay` / localStorage
+  refused: no tape / another level, naming the commit). The tape names the STAND it was made on (the page, or a tool's shipped / frozen stand and its stand words) and carries every registered knob table and the kit cards — with them the STEALTH card its run wore where one was kept (`kit.ts KITDEAL.stealth`: `kit.stealth`; absent = as the mission issues it), which rerun.ts `kitOf` and the page's player both put back, never the walking process's own (without it a night alone with the sponge rounds taken off the card was walked with five in the launcher and parted from its trace; replaybuf-probes `stand` holds it, with the card taken off the tape as its control) —; the re-run stands its game the same way whatever stand its own process is on (a page tape = `shippedBoot` + `pageSwitches` for its query, then the tape's tables), one re-run a process, which is left on the tape's tables; a replay from before that is re-run on the page's rules for its address, with a NOTE. A tape OLDER than this build's knobs — a key added to a table or to `Game.tune` since it was saved — plays that key at this build's value (only the keys a tape has are written; `journal.ts applyKnobs` knows the older value of some keys of a recording's tables, nobody of the rest): the report NAMES those keys (stand switches first), the ones applyKnobs gave their older value, the keys of the tape this build does not play (gone, renamed, another kind of value), and the commit that walks the tape as recorded. Not the F10 journal (which needs a checkpoint and refuses a squad on the floor). Off: `?noreplay` / localStorage
   `twopointsix.replay` = '0' (the tap stays null). `__replay`. A page error saves one by itself (`ReplayKey.crashed`: one file a minute, three a page load; a download where the browser keeps no shelf). The one-file build (tools/artifact-page.py: no `replay.html` beside it) has no viewer to open a shelf with: F7 there hands the file over as a download, Shift+F7 opens no tab, and a page error downloads nothing by itself (it says F7 will). The error itself is a line in the ring at its moment of play (`ReplayBuffer.pageError`; format.ts `errorMarks`), so every file made while the ring still holds that moment carries it, whatever saved the file: F7's note, the viewer and replay-at's head line say so. The tape looks at the knob tables a table or so a step, each once every `RUNTAPE.tablesEvery` steps (all of them on one step was most of a millisecond) — and at all of them on the step one is found changed and on a restart's step, ahead of its row. QA: `bun run tools/qa/replaybuf-probes.ts` (identity / ring / content / notes / tape / load / stand / crash).
 - **A replay played in the real engine, with sound** (`src/replay/engineplay.ts`; `?playtape=<shelf id | path or url of a replay file>` + `&at=<step>`; `__tape {play, pause, run(n, draw),
   seek(f), speed(x), note(text), cam(pose | null), view, state, file, notes}`): the game page walks ITS OWN game through a replay file's run tape (the F7 bullet's `rerun`) — the real renderer and the real mixer — in a
@@ -416,7 +453,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`#taperefuse`) are in `LAYERS`. NOT layers, on purpose: the two maps (`#tapemap`, `#tapemapbig`: canvases, no words), the sound lanes' dock (`#sndl`,
   a debug mode with its own file), and `replay.html`, which never boots the factor (its own page, as it was). What the page is TOLD of the bar stays in
   the window's pixels: `lay()` reads the bar's rectangle (× `textZoom()` / `rectZoom()`, right on an engine that answers either way) into `--tape-h`,
-  and the HUD's rules, the large map and the lanes' dock read it as before; the two rules inside the new layers divide it back by `--tz`. The line's
+  and the HUD's rules and the large map read it as before; the two rules inside the new layers divide it back by `--tz`. The lanes' dock does NOT read
+  `--tape-h`: `soundlanes.ts paint()` measures the bar itself, the same way (it read `offsetHeight`, the bar's own pixels, so at a factor of 2 the dock's
+  foot stood behind the bar by a bar's height and a step did not lay it again: mended 10-20); the height is in its layout key, so a step lays it again. The line's
   marks multiply their device pixels by the factor; `lay()` runs again on `TEXT_EVENT`. No switch of its own: `?textsize=0` is the text size's.
   CHECK: `probes.ts textsize` reads `src/replay/*.ts` too (the layers exist, no bare viewport unit); on the page, a headless look at 3840 × 2160 and
   1280 × 720 (the bar's height against `--tape-h`, the kit and meters on it, the note field, the large map, a step from the keys). Never seen on a GPU.

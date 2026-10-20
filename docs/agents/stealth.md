@@ -196,7 +196,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stands' row and an old recording; `PEEKSIGHT_BREAK=1` exits 1. Measured on one level, one doorway, one seed, both stands. Not asserted: an outside corner,
   a leaf across the end, the cones off, the ease mid-way. Never seen on a GPU and never played: `out`, `off` and `turnDeg` are first guesses, and how the
   mask's sweep reads as the peek eases is unjudged.
-- **Interaction = rows + one Space grammar** (`player.ts buildInteractables` → `Game.nearby` / `hover`; `interact.ts`): every verb is
+- **Interaction = rows + one Space grammar** (`player.ts buildInteractables` → `Game.nearby` / `hover`; `interact.ts`; a PROTOTYPE draws the same rows as a
+  ring at the cursor with no hold and no cancel row, `CMDRING.hands`, off unless `?cmd` asks: squad.md 'The orders ring on Tab'): every verb is
   its own row (`Interactable.verb`: a shut door = `push` + `ease`, a lock = `pick` (+ `rattle` crouched) + `kick`, keyed = `unlock` +
   `ease`, guard behind = `grab`, held arm = `question` + `choke`, held gun = `whip`, body `drag`/`drop`, rack `drive`, breaker), top
   `MAX_NEAR` (3) by `interactOrder`; TAP Space = the highlighted row, HOLD ≥ `TAP_SECS` opens the list (`Player.sel.open`, a `cancel`

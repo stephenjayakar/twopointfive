@@ -25,8 +25,10 @@
 // NOBODY STANDS IN FOR THE PICTURE (the maintainer, 10-20: "we show the original gear screen before the new one fades in. let's just remove the old one with
 // the figure?"): the standing man used to be drawn while the child booted past a short grace, and wherever there was no picture. With the switch on he is
 // not on the page at all (ui/startpage.ts mounts him only under `?oldfigure`): the column WAITS EMPTY until the child's first `ready` (`data-kv-wait` on
-// #missions), and is EMPTY for good (`data-kv-none`) — the element dropped, the query marked for this page's life — when the child says `none`, its load
-// errors, or no `ready` comes within KIT_VIEW.wait seconds (a refused device, a failed fetch, a fatal card nobody can see in there). The second game lives
+// #missions), and is EMPTY for good (`data-kv-none`) — the element dropped, the query marked for this page's life — when the child says `none` (a refused
+// device, a failed fetch, a moment that threw: every fatal card in there says it, main.ts kitViewFatal) or its load errors. THE WAIT HAS NO CLOCK: a second
+// game that takes long to come up (a cold shader cache, a slow adapter) is waited for however long that is. It was given 10 s and then called none for the
+// page's life — the standing man's cue while he stood in; with nobody standing in it only left the column blank for good on a slow start. The second game lives
 // only while it can show: it is dropped too when the mission picked has no block, the way in is dealt (the child's die would deal another door than
 // Deploy's: the query carries no seed), or the window goes under 720 px; it is kept across the Mission step. show() answers false only with the switch off
 // or under 720 px (where the column is not laid out at all).
@@ -42,9 +44,9 @@ import { kitViewWays } from './missions';
 import { rectZoom, uiMatch } from './textsize';
 import { kitViewQuietKind } from '../host/kitViewSet';   // (pure: the mission's kind, read off its link — the quiet picture's)
 
-/** the switch (UI only: nothing in the game reads it) · the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · seconds a child is given to say `ready` (`?kitwait=N`: a slow adapter's) · ms after a kit message in which further changes are folded into ONE more */
-export const KIT_VIEW = { on: true, acts: true, wait: 10, kitMs: 150, quiet: true };
-try { const q = new URLSearchParams(location.search); if (q.has('oldfigure')) KIT_VIEW.on = false; if (q.has('stillkit')) KIT_VIEW.acts = false; if (q.has('kitloud')) KIT_VIEW.quiet = false; const w = Number(q.get('kitwait')); if (w > 0) KIT_VIEW.wait = w; } catch { /* no page (the harness) */ }
+/** the switch (UI only: nothing in the game reads it) · the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · ms after a kit message in which further changes are folded into ONE more */
+export const KIT_VIEW = { on: true, acts: true, kitMs: 150, quiet: true };
+try { const q = new URLSearchParams(location.search); if (q.has('oldfigure')) KIT_VIEW.on = false; if (q.has('stillkit')) KIT_VIEW.acts = false; if (q.has('kitloud')) KIT_VIEW.quiet = false; } catch { /* no page (the harness) */ }
 /** where things sit, in the figure column's own widths and heights (the page's 330 px column: the picture is hung on the DOOR — its line about six tenths
  *  of the way across, the first metre of the room behind it clear to the column's right edge, where a can thrown through the door comes to rest — and the
  *  five places left of it with 16 px of margin) */
@@ -101,7 +103,7 @@ function keyOf(q: URLSearchParams): string { const k = new URLSearchParams(q); k
 /** `root` = #missions, `body` = its .mbody (the iframe's parent), `column` = the figure's column (.onefig); `again` = paint the figure again (an answer came) */
 export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLElement, again: () => void): KitViewFrame {
   let frame: HTMLIFrameElement | null = null, key = '', live = false, shown = false, was = false, up = false, born = '';   // (up: the child's listener is — a message before its `boot` is lost; born: the kit its query stood for)
-  let sent = '', want = '', due: ReturnType<typeof setTimeout> | 0 = 0, patience: ReturnType<typeof setTimeout> | 0 = 0, squadNow = 0;
+  let sent = '', want = '', due: ReturnType<typeof setTimeout> | 0 = 0, squadNow = 0;
   let sel = '', selSent = '', paused = false, pauseSent = false;   // (the open card and tile as asked / as the child has them · off the step, as asked / as told)
   const ways = new Map<string, boolean[] | null>();   // per level file: the ways with a picture (null: asked, not yet answered)
   const failed = new Set<string>();                   // the queries whose instance had nothing to stage, or never came up: an empty column for this page's life
@@ -138,7 +140,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — host/kitView.ts KIT_VIEW_QUIET.frame)
   };
   const hide = () => { if (shown) { shown = false; root.classList.remove(ROOT_CLASS); } };
-  const drop = () => { if (due) clearTimeout(due); if (patience) clearTimeout(patience); due = patience = 0; want = ''; if (!frame) return; frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
+  const drop = () => { if (due) clearTimeout(due); due = 0; want = ''; if (!frame) return; frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
   /** this query's instance is no picture: gone, and not tried again on this page */
   const fail = (k: string) => { if (!k || k !== key) return; failed.add(k); hide(); drop(); again(); };
   const onMsg = (e: MessageEvent) => {
@@ -148,7 +150,6 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
     if (kv === 'boot') { up = true; sent = born; selSent = ''; pauseSent = false; place(); if (kitNow(squadNow) !== sent) kit(); says(); return; }   // (its listener is up — on every load of its page: the frame, the kit where the tiles moved since its query, the open card, the pause)
     if (kv === 'dip' || kv === 'undip') return;   // (an older child's: the picture is never faded out — its restage is its own dissolve now)
     if (kv !== 'ready' && kv !== 'held') return;
-    if (patience) { clearTimeout(patience); patience = 0; }
     if (!live) { live = true; again(); }
   };
   window.addEventListener('message', onMsg);
@@ -185,7 +186,6 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
         f.addEventListener('error', () => { if (frame === f) fail(k); });
         f.src = `${location.pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${KIT_VIEW.quiet || q.has('kitloud') ? '' : '&kitloud'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
         body.appendChild(f); place();
-        patience = setTimeout(() => { patience = 0; if (frame === f && !live) fail(k); }, KIT_VIEW.wait * 1000);
       } else { const now = kitNow(ask.squad);   // (the LEADING edge: the first change goes now; what follows inside kitMs is one more message at its end)
         if (now !== sent && now !== want) { if (due) want = now; else { kit(); due = setTimeout(() => { due = 0; if (want) kit(); }, KIT_VIEW.kitMs); } } }
       says();

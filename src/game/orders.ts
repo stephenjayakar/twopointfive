@@ -79,7 +79,7 @@ import { roomKept } from './rearwatch';
 import { gunFileCost, gunFileRanks } from './gunroles';   // (called inside pair only)
 import { pairUp } from './pairup';
 import { spottedFeet } from './spotted';
-import { wallTarget, wallRows } from './wallcharge';
+import { wallTarget, wallRows, wallPt } from './wallcharge';
 import type { WallSpot } from './wallcharge';
 import { workNear, workOn, workRows } from './workthings';
 import type { WorkThing } from './workthings';
@@ -97,9 +97,12 @@ import { propGap } from './roomclear';   // (used inside workedMarks only: nothi
 import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewOpen, STACKROOM, STACKROOM_STATS } from './stackroom';
 import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { silentOnMan } from './silent';   // (called inside tick only)
-import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint } from './autopilot';   // (read inside input(), hud() and show() only)
+import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint, autoPick } from './autopilot';   // (read inside input(), hud() and show() only)
+import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { backableInteract } from './interact';   // (read inside ringInput only: what the back key would back out of)
 import type { LayState } from './planlay';
-import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
+import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
+import { planNew, planMen, planInput, planAfter, planGiven, planFresh, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
 const NOWHERE: Vec3 = [1e7, 0, 1e7];
@@ -462,10 +465,14 @@ export class SquadOrders {
   people: { near(at: Vec3): { gd: Guard; d: number } | null; ray(ro: Vec3, rd: Vec3, max: number): Guard | null } | null = null;
   who: Who = 'all';
   menu: Menu | null = null;
+  /** cmdring.ts: the menu is up as a ring on a held key — where it was opened and the lit wedge (null: no ring; never set with CMDRING.on false) */
+  cmdRing: RingState | null = null;
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
   /** the plan laid for the word, and the one kept for the next try (planlay.ts — nothing is ever in it with that switch off) */
   readonly lay: LayState = { laid: [], kept: null, keptFor: '', tryKey: '', started: false, sending: false, restoredT: -1 };
+  /** plan mode: the men picked by hand and the chains they are on (planmode.ts — nothing is ever in it with that switch off) */
+  readonly plan: PlanState = planNew();
   /** the order being given is the SEAT's own, at once (the menu's pick, the quick key) — not a scenario's, a tool's or the plan's (planlay.ts strikes its men off a laid plan) */
   private byHand = false;
   /** the squad's own changes of plan, newest last: who, when (autopilot.ts AUTOPILOT.replan — PICTURE ONLY: floorplan.ts draws these men for a moment as it
@@ -477,6 +484,7 @@ export class SquadOrders {
   private trail: Vec3[] = [];
   private back: Vec3 = [0, 0, -1];   // which way 'behind Sam' lies past the trail's end: fixed when the trail is seeded, never his live facing (he turns with the reticle)
   private view: { input: Input | null; cam: FollowCamera | null; canvas: View | null } = { input: null, cam: null, canvas: null };
+  private hovCam: number[] = [];   // the camera hover()'s kept answer was asked under (hintView: asked again when it has moved)
   private hov: { x: number; y: number; t: number; v: OrderTarget } | null = null;   // hover()'s last answer, while the cursor rests   // this frame's cursor and camera, kept for the HUD's own look at what the cursor is on (hud() — never read by the simulation)
   private escUsed = false;  // Esc closed the menu since the last frame (Game.escape, from the page's key handler): that press is not the selector's as well
   private ours = new SideSet<Guard>();   // men whose Guard.pinned this module set (the fight seam): unpinned when their order goes
@@ -489,7 +497,7 @@ export class SquadOrders {
    *  behind him — and, for the door tools' charge, where they stand off. Whoever stages a scenario on such a door adds them and takes them away again
    *  (rescue.ts: the side door from the server room, its racks at both jambs); empty otherwise, and never read where the geometry has an answer */
   readonly doorMarks: { door: Door; side: 1 | -1; stack: Vec3[]; standoff: Vec3[] }[] = [];
-  constructor(private g: Game, private cast: OtherCast | null = null) {
+  constructor(readonly g: Game, private cast: OtherCast | null = null) {
     const low = LOW;
     this.defs.push(
       { id: 'move', key: 1, label: 'move there', targets: ['floor'], ack: ['moving.', 'on it.'], can: (S, gd, t) => S.walkTry(gd, t.at) ? true : S.reach(gd, t.at) ?? true,
@@ -571,9 +579,10 @@ export class SquadOrders {
   /** the keys a locked door is tried with for them: Sam's ring and the codes he has learned */
   ring(): ReadonlySet<string> { if (this.cast) return this.cast.ring; const P = this.g.player; return P.codes.size ? new Set([...P.keys, ...P.codes]) : P.keys; }
   /** the living men an order would go to: the teammate under the reticle, else `who` */
-  recipients(t?: OrderTarget | null, who: Who = this.who): Guard[] {
+  recipients(t?: OrderTarget | null, who?: Who): Guard[] {
     if (t?.kind === 'none' && t.man) return t.man.state !== 'dead' && this.squad().includes(t.man) ? [t.man] : [];
-    return this.men(who);
+    if (who === undefined && this.plan.pick) return planMen(this)!;   // (planmode.ts: a set of men picked by hand stands in for the who key's choice — never for a `who` a caller names — until that key is pressed)
+    return this.men(who ?? this.who);
   }
   /** THE ONE PLACE TO ASK FOR MEN: the squad ('all'), a pair ('red' / 'blue'), or a man (his place on the roster, or the Guard himself) → the list, in roster
    *  order. The living by default; `down: true` counts the men down too (a roster for a HUD). Everything that addresses an order — give(), recipients(), the
@@ -744,7 +753,7 @@ export class SquadOrders {
   /** Issue an order by id (the menu's release, the console, a probe): to `who` (default: the standing choice), on `t` (default: what Game.aimPoint is on now —
    *  the auto-aim's snap included; the menu itself uses targetUnder). Returns null when given, else why not. An order that cannot be carried out there must say
    *  so in `valid`, not from `issue`: by the time issue runs, a drill that owned the men has already let go of them. */
-  give(id: string, t: OrderTarget = this.targetAt(this.g.aimPoint), who: Who = this.who, opts?: GiveOpts): string | null {
+  give(id: string, t: OrderTarget = this.targetAt(this.g.aimPoint), who?: Who, opts?: GiveOpts): string | null {
     const g = this.g; if (!this.active) return 'no squad';
     const def = this.defs.find(d => d.id === id); if (!def) return `no such order '${id}'`;
     if (def.opens) return `'${id}' is a page of the menu, not an order`;
@@ -767,6 +776,7 @@ export class SquadOrders {
     if (flipped) g.cleared.stats.face++;
     const label = this.labelOf(def, t);
     if (!def.free) this.log.push({ t: g.time, order: id, who: men.map(gd => gd.callsign), target: t.kind === 'door' ? `door:${t.door.def.name}` : t.kind === 'floor' ? (t.thing ? `thing:${t.thing.kind}` : `floor:${t.at[0].toFixed(1)},${t.at[2].toFixed(1)}`) : t.kind === 'foe' ? `foe:${t.foe.callsign}` : 'none' }); if (this.log.length > 200) this.log.splice(0, 50);
+    if (!def.free && this.byHand) planGiven(this, men, id);   // (planmode.ts: … and off their chains — but for the entry on the door a chain waits at; a return on its first line with nothing chained)
     if (!def.free && this.byHand) layGiven(g, men);   // (planlay.ts: an order the player gives at once takes its men off a laid plan — never a scenario's own 'fall in'; a return on its first line with the switch off)
     // (Sam's own words, not the menu row's: he does not read out the stock count, the mark is HIS, and a door with no name of its own is not named)
     const said = WORDS.on ? label.replace(/ · (\d+ left|uses .+)$/, '').replace('on your mark', 'on my mark') : label;
@@ -801,7 +811,8 @@ export class SquadOrders {
   }
 
   /** Esc (Game.escape, ahead of the pause menu): the menu, if it is up, steps back a page — from its first page it is dismissed. True = the press was used here. */
-  escape(): boolean { if (!this.menu) return false; if (!this.pageBack()) this.menu = null; this.escUsed = true; return true; }
+  escape(): boolean { if (!this.menu) return false; if (this.cmdRing) { this.menu = null; this.cmdRing = null; CMDRING_STATS.cancelled++; }   // (cmdring.ts: Esc gives nothing, whatever page the ring is on)
+    else if (!this.pageBack()) this.menu = null; this.escUsed = true; return true; }
   /** the page's Esc went to the pause (backkey.ts: Esc is only the pause): that press is nobody's in the tick */
 
   /** Open the menu on a target (X / the middle button over the cursor's; the console, a probe): it stays up until pick() or close(). False: no squad to order. */
@@ -822,7 +833,8 @@ export class SquadOrders {
     // (stepped back: the highlight on the row that opened the page it came from — or, that row gone with what it stood in for, on the row now on its digit)
     const opener = from !== null ? this.defs.find(d => d.opens === from) : undefined;
     let sel = M.rows.findIndex(d => !!d.opens && d.opens === from); if (sel < 0 && opener?.key !== undefined) sel = M.rows.findIndex(d => d.key === opener.key && (d.page ?? null) === (opener.page ?? null));
-    M.sel = Math.max(0, sel); M.wheelAcc = 0; this.refresh();
+    M.sel = Math.max(0, sel); M.wheelAcc = 0; if (this.cmdRing) { this.cmdRing.lit = 0; this.cmdRing.armed = false; }   // (cmdring.ts: a page turned lights nothing — a tool is chosen, never fallen into)
+    this.refresh();
   }
   /** a page of the open menu → the page it was opened from: the first, or — a page behind a row of another page ('door tools ▸', then 'work it from the
    *  threshold ▸') — that one (false: there is no menu, or it is on its first page already) */
@@ -896,7 +908,7 @@ export class SquadOrders {
   }
   /** who the next order goes to is stepped (T; the wheel under ORDERS.wheelElement) — and a menu that is up is theirs from here on */
   private stepWho(dir: 1 | -1, point: OrderTarget | null) {
-    this.who = this.whoAfterT(point, dir);
+    this.who = this.whoAfterT(point, dir); this.plan.pick = null;
     const M = this.menu; if (M) { if (M.target.kind === 'none' && M.target.man) M.target = { kind: 'none', at: M.target.at }; this.refresh(); }
   }
 
@@ -906,20 +918,23 @@ export class SquadOrders {
    *  and fires (ORDERS.clickGives: it gives the highlighted row instead, and fires nothing). */
   /** after a tick (Game.update): whoever asks between ticks what the cursor is on — the HUD, a tool — is answered off the host's live input and camera, not the tick's record */
   hostView(input: Input, cam: FollowCamera, canvas: View): void { const v = this.view; if (v.input) { v.input = input; v.cam = cam; v.canvas = canvas; } }
-  input(_dt: number, input: Input, cam: FollowCamera, canvas: View) {
+  input(dt: number, input: Input, cam: FollowCamera, canvas: View) { this.readInput(dt, input, cam, canvas); planAfter(this, input); }   // (planmode.ts: with the mode up, what is left of the mouse is not Sam's)
+  private readInput(_dt: number, input: Input, cam: FollowCamera, canvas: View) {
     const K = ORDERS;
     this.sync();
     if (this.escUsed) { this.escUsed = false; input.pressed.delete('Escape'); }
     const g = this.g, v = this.view;
-    if (!this.active || g.player.down) { this.menu = null; v.input = v.cam = v.canvas = null; return; }
+    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.plan.drag = null; this.plan.up = false; v.input = v.cam = v.canvas = null; return; }
     v.input = input; v.cam = cam; v.canvas = canvas;
     if (this.lay.laid.length) layPrune(g);   // (planlay.ts: a man who is down is off the plan)
     if (input.hit(K.whoKey)) this.stepWho(1, this.targetUnder(input, cam, canvas));   // who: the man under the cursor, else the next element
+    planInput(this, input, cam, canvas);   // (planmode.ts: the chains move on; Shift + the ring's key, the word's key at a chain's pause, and — the mode up — the mouse; a return on its first line with the switch off)
+    if ((CMDRING.on || this.cmdRing) && this.ringInput(input, cam, canvas)) return;   // (cmdring.ts: the ring's key — this frame's order input is the ring's)
     const key = input.hit(K.key), mid = K.mouseOpens && input.mmbHit();
     const M = this.menu;
     if (!M) {   // no menu at the top of the frame: the quick key, or the press that puts it up — and nothing else in this frame is the menu's
       if (PLANLAY.on && this.lay.laid.length && !!layKey() && input.pressed.delete(layKey())) laySend(g);   // (planlay.ts: the word's key, a plan laid — sent, and the press is nobody else's)
-      else if (input.hit(K.quickKey)) { const t = this.targetUnder(input, cam, canvas); this.byHand = true; try { if (!(AUTOPILOT.on && autoQuick(g, t))) { const d = this.defaultFor(t); if (d) this.give(d.id, t); } } finally { this.byHand = false; } }   // the target's own order, at once (autopilot.ts: on a door they wait on, they go in — by the entry they pick)
+      else if (input.hit(K.quickKey)) this.quickGive(this.targetUnder(input, cam, canvas));   // the target's own order, at once (autopilot.ts: on a door they wait on, they go in — by the entry they pick)
       else if ((key || mid) && g.player.sel.downT < 0) this.open(this.targetUnder(input, cam, canvas));   // (never over a Space press in hand: one list at a time)
       return;
     }
@@ -950,13 +965,142 @@ export class SquadOrders {
     if (space || mid || lmb) this.pick(M.sel);   // Space, the middle button again, or (clickGives) the left click: the highlighted row
   }
 
+  // ------------------------------------------------------------ the ring (cmdring.ts — a prototype)
+  /** The ring's input, ahead of the menu's own (CMDRING.on). The key down with no menu up: the menu is opened on what the cursor is on and is a ring from
+   *  here, the first wedge lit. While it is up everything it answers to is taken out of the frame — Esc, the digits, the wheel, a right click, a left click
+   *  on a man — and the key coming up gives the lit wedge. True: the frame's order input was the ring's. */
+  private ringInput(input: Input, cam: FollowCamera, canvas: View): boolean {
+    const g = this.g, C = CMDRING;
+    if (this.cmdRing && !this.menu) this.cmdRing = null;   // (the menu went with the men it was for)
+    const R = this.cmdRing;
+    if (!R) {
+      // (Shift with it is plan mode's toggle, planmode.ts: read ahead of this · the key is also the back key, backkey.ts: with a Space list, a running verb or the
+      //  launcher's arc to back out of, the press is theirs, as it is the menu's with a menu up)
+      if (!input.hit(C.key) || !this.ringFree(input)) return false;
+      input.pressed.delete(C.key);
+      if (!this.open(this.targetUnder(input, cam, canvas))) return false;
+      this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
+      // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
+      this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, g.time); this.ringSel(); CMDRING_STATS.opened++;
+      return true;
+    }
+    const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
+    input.pressed.delete(INTERACT_KEY);   // (Sam's own ring is not opened under this one: interact.ts)
+    const esc = input.pressed.delete('Escape'), blur = input.pressed.has('Blur') || input.pressed.has('Paused');   // ('Paused', backkey.ts: the key let go under the pause card gives nothing on the tick play comes back)
+    const rmb = input.rmbHit(); if (rmb) input.clicked &= ~4;
+    const lmb = input.lmbHit();
+    let digit = 0; for (let d = 1; d <= 9; d++) if (input.pressed.delete(`Digit${d}`) && !digit) digit = d;
+    let wheel = 0; if (input.wheel) { M.wheelAcc = Math.max(-2 * WHEEL_STEP, Math.min(2 * WHEEL_STEP, M.wheelAcc + input.wheel)); input.wheel = 0;
+      if (Math.abs(M.wheelAcc) >= WHEEL_STEP) { wheel = Math.sign(M.wheelAcc); M.wheelAcc -= wheel * WHEEL_STEP; } }
+    if (g.time - M.readT >= ORDERS.refreshSecs || this.due(M)) { this.refresh(); if (!this.menu) { this.cmdRing = null; return true; } }
+    if (blur || esc) { away(); CMDRING_STATS.cancelled++; return true; }
+    if (rmb) { if (!this.pageBack()) { away(); CMDRING_STATS.cancelled++; } return true; }   // (turn(): a page turned lights nothing)
+    if (lmb) {   // on a man: the orders are his (again: everyone's), and the ring starts again for him · anywhere else it is Sam's trigger, and the ring goes
+      const k = this.manAt(input, cam, canvas);
+      if (k < 0) { if (this.plan.up || (CLOSE.heldClicks && g.player.holding?.variant === 'arm')) input.clicked &= ~1;   // (close.ts: with a man in the arm the click is the knife — the click that puts the ring away is not that click as well)
+        away(); CMDRING_STATS.fired++; return true; }
+      input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1);
+      this.who = this.who === k ? 'all' : k; this.plan.pick = null; CMDRING_STATS.who++;
+      if (M.target.kind === 'none' && M.target.man) M.target = { kind: 'none', at: M.target.at };   // (opened on a man it was his: now it is whose the click says)
+      if (M.page !== null) this.turn(null); else this.refresh();
+      if (!this.menu) { this.cmdRing = null; return true; }
+      R.lit = 1; R.armed = false; this.ringSel();   // (the cursor is out on him: it lights nothing until it has come back to the ring's middle)
+    } else if (wheel) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
+    // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
+    // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
+    const want = ringWant(R, input, digit, g.time);
+    if (want && want !== R.lit) {
+      const rows = this.menu!.rows, i = rows.findIndex(r => r.key === want), first = this.menu!.page === null;
+      if (first && want === 1) R.lit = 1;
+      else if (i >= 0 && rows[i].opens) { this.turn(rows[i].opens!); CMDRING_STATS.pages++; if (!this.menu) { this.cmdRing = null; return true; } }
+      else if (i >= 0) R.lit = want;
+      this.ringSel();
+    }
+    if (input.down(C.key)) return true;
+    // the key let go: the lit wedge is given — the first page's first wedge is the quick key's own order (autopilot.ts), every other one its row's
+    const N = this.menu!, lit = R.lit, i = N.rows.findIndex(r => r.key === lit); this.cmdRing = null;
+    if (N.page === null && lit === 1) { const t = N.target; this.menu = null; CMDRING_STATS.quick++; this.quickGive(t); }
+    else if (lit && i >= 0) { this.pick(i); this.menu = null; CMDRING_STATS.given++; }
+    else { this.menu = null; CMDRING_STATS.cancelled++; }
+    return true;
+  }
+  /** the ring's key would open a ring now: Shift not down (that is plan mode's toggle, planmode.ts) and the key free */
+  private ringFree(input: Input): boolean { return !input.down('ShiftLeft') && !input.down('ShiftRight') && this.backFree(); }
+  /** the ring's key is free: no menu up and nothing the key backs out of instead (backkey.ts: a Space list, a running verb, the launcher's arc) */
+  backFree(): boolean { return !this.menu && !this.g.player.launchHeld && !backableInteract(this.g); }
+  /** What Tab would open on, for a hint drawn before the key is pressed (null: the switch off, no squad, or the key would open no ring now — ringFree): the
+   *  kind of thing, where the glyph goes — beside the cursor, or in the middle of a ring that is up, whose target it then is — how much larger than its px it
+   *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
+   *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
+  hintView(): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null } | null {
+    const v = this.view; if (!CMDRING.on || !CMDRING.hint || !this.active || !v.input || !v.cam || !v.canvas) return null;
+    const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
+    if (!R && !this.ringFree(v.input)) return null;
+    // (before the key the outline is drawn every frame under a view that moves: hover()'s answer, kept while the cursor rests, is asked again when it has)
+    if (!R) { const c = v.cam, k = this.hovCam; if (k[0] !== c.pos[0] || k[1] !== c.pos[1] || k[2] !== c.pos[2] || k[3] !== c.yaw || k[4] !== c.pitch) { k[0] = c.pos[0]; k[1] = c.pos[1]; k[2] = c.pos[2]; k[3] = c.yaw; k[4] = c.pitch; this.hov = null; } }
+    const t = R ? M!.target : this.hover(); if (!t) return null;
+    const kind: RingHint = t.kind === 'door' ? 'door' : t.kind === 'foe' ? 'foe' : t.kind === 'floor' ? (t.thing ? 'thing' : t.wall ? 'wall' : 'floor') : t.man ? 'man' : 'squad';
+    let seg: [Vec3, Vec3] | null = null, ring: { at: Vec3; r: number } | null = null; const Y = 0.03, C = CMDRING;
+    const at = (p: Vec3, r: number) => ({ at: [p[0], Y, p[2]] as Vec3, r });
+    switch (kind) {
+      case 'door': { const d = (t as OrderTarget & { kind: 'door' }).door.def, ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir); seg = [[d.hinge[0], Y, d.hinge[1]], [d.hinge[0] + ux * d.width, Y, d.hinge[1] + uz * d.width]]; break; }
+      case 'wall': { const f = t as OrderTarget & { kind: 'floor' }, W = f.wall!, b = W.box, c = W.alongX ? b.c[0] : b.c[2], hl = W.alongX ? b.h[0] : b.h[2];   // (its stretch, never past the wall's own ends)
+        seg = [wallPt(W, Math.max(-C.hintWallM, c - hl - W.u), 0.02, Y), wallPt(W, Math.min(C.hintWallM, c + hl - W.u), 0.02, Y)]; ring = at(f.at, C.hintSpotM); break; }
+      case 'foe': ring = at((t as OrderTarget & { kind: 'foe' }).foe.char.pos, C.hintManM); break;
+      case 'man': ring = at((t as OrderTarget & { kind: 'none' }).man!.char.pos, C.hintManM); break;
+      case 'floor': case 'thing': ring = at((t as OrderTarget & { kind: 'floor' }).at, C.hintSpotM); break;
+      case 'squad': break;
+    }
+    return { kind, x: R ? R.ax : v.input.mouseX, y: R ? R.ay : v.input.mouseY, zoom: R ? R.z : ringZoom(v.canvas.clientWidth, v.canvas.clientHeight), held: !!R, tone: this.toneOf(R ? M!.men : this.recipients(t)), seg, ring };
+  }
+  /** the menu's own highlight follows the lit wedge (what reads the highlighted row — a throw's arc on the floor — reads the ring's) */
+  private ringSel() { const M = this.menu, R = this.cmdRing; if (!M || !R || !R.lit) return; const i = M.rows.findIndex(r => r.key === R.lit); if (i >= 0) M.sel = i; }
+  /** the quick key's own order on `t`, given by hand: on a door the men wait on, the entry they pick (autopilot.ts); else the target's first row */
+  private quickGive(t: OrderTarget) { this.byHand = true; try { if (!(AUTOPILOT.on && autoQuick(this.g, t))) { const d = this.defaultFor(t); if (d) this.give(d.id, t); } } finally { this.byHand = false; } }
+  /** The quick key's order on `t` for exactly these men (planmode.ts: a chain's step, its turn come) — the squad's own choice there (autopilot.ts autoPick)
+   *  whether or not the quick key's switch is on. 'entry': it was the way in through a door they stand on, or the word · 'first': the target's first row ·
+   *  null: nothing was given (refused — a man has said why — or a charge left alone on its word). */
+  quickFor(men: Guard[], t: OrderTarget): 'first' | 'entry' | null {
+    const P = this.plan, n = this.group, tail = this.log[this.log.length - 1], A = autoPick(this.g, t, true, men); if (A.why === 'pending') return null;
+    const to = A.men ?? men, p = this.g.player.char.pos;
+    P.giving = true; this.byHand = true;
+    try { if (A.word) this.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men: to }); else if (A.id) this.give(A.id, t, undefined, { men: to }); } finally { P.giving = false; this.byHand = false; }
+    const row = this.log[this.log.length - 1]; if (row && row !== tail) row.auto = true;   // (floorplan.ts draws its men as it does the quick key's)
+    return this.group === n ? null : A.why === 'first' ? 'first' : 'entry';
+  }
+  /** … and its words for the HUD and the ring's first wedge (null: it would give nothing worth a line) */
+  private quickWords(t: OrderTarget): string | null { if (AUTOPILOT.on) return autoHint(this.g, t); const d = this.defaultFor(t); return d ? this.labelOf(d, t) : null; }
+  /** the man of the squad the cursor is on — his drawn body, as the who key reads it (targetUnder) — or whose feet are nearest it on the screen inside
+   *  CMDRING.manPx (his place on the roster; −1: nobody) */
+  manAt(input: Input, cam: FollowCamera, canvas: View): number {
+    const S = this.squad(), t = this.targetUnder(input, cam, canvas);
+    if (t.kind === 'none' && t.man) { const k = S.indexOf(t.man); if (k >= 0 && t.man.state !== 'dead') return k; }
+    const w = canvas.clientWidth, h = canvas.clientHeight; let best = -1, bd = CMDRING.manPx * ringZoom(w, h);
+    S.forEach((gd, k) => { if (gd.state === 'dead') return; const [sx, sy, front] = cam.project(gd.char.pos, w, h); if (!front) return;
+      const d = Math.hypot(sx - input.mouseX, sy - input.mouseY); if (d < bd) { bd = d; best = k; } });
+    return best;
+  }
+  /** What the ring shows this frame (null: no ring): where it is, the lit wedge, whose colour it wears, and the wedge on each digit — the first page's
+   *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it. */
+  ringView(): RingView | null {
+    const R = this.cmdRing, M = this.menu; if (!R || !M) return null;
+    const mt = this.menuTarget()!, wedges: { key: number; text: string; off: boolean; opens: boolean }[] = [];
+    for (let d = 1; d <= CMDRING.wedges; d++) {
+      const i = M.rows.findIndex(r => r.key === d), row = i >= 0 ? M.rows[i] : null;
+      if (M.page === null && d === 1) { const text = this.quickWords(M.target); if (text) wedges.push({ key: 1, text, off: false, opens: false }); }   // (no words: the quick key would give nothing here, and no wedge is drawn)
+      else if (row) wedges.push({ key: d, text: this.labelOf(row, mt), off: !!M.why[i], opens: !!row.opens });
+    }
+    const t = M.target, what = t.kind === 'none' ? (t.man ? t.man.callsign : '') : this.hoverWords(t), who = this.whoTag().tag;   // (who it goes to, and what it was opened on: the menu's own mark's words)
+    return { x: R.ax, y: R.ay, zoom: R.z, lit: R.lit, tone: this.toneOf(M.men), caption: what && what !== who ? `${who} → ${what}` : who, wedges };
+  }
+
   // ------------------------------------------------------------ the men
   /** The roster as it stands. A new cast (a staging, a restart, a despawn) starts clean: nothing of the old one's — the choice of man, an open menu, the trail,
    *  the orders of men no longer on it — carries over. */
   private sync(): Guard[] {
     const R = this.roster; let i = 0, same = true;
     for (const gd of this.g.guards) if (this.mine(gd) && R[i++] !== gd) same = false;
-    if (!same || i !== R.length) { const S = this.roster = this.squad(); this.who = 'all'; this.menu = null; this.trail.length = 0; for (const gd of [...this.asg.keys()]) if (!S.includes(gd)) this.drop(gd); layFresh(this.g); }   // (planlay.ts: nothing laid — or, a restart, the plan kept from the last try)
+    if (!same || i !== R.length) { const S = this.roster = this.squad(); this.who = 'all'; this.menu = null; this.trail.length = 0; for (const gd of [...this.asg.keys()]) if (!S.includes(gd)) this.drop(gd); layFresh(this.g); planFresh(this); }   // (planlay.ts: nothing laid — or, a restart, the plan kept from the last try)
     if (typeof this.who === 'number' ? this.roster[this.who]?.state !== 'dead' : this.who === 'all' || this.men(this.who).length > 0) return this.roster;
     this.who = 'all'; this.menu = null;   // (the man — the pair — the orders went to is down: and a menu that was theirs goes with them, never on to everybody else)
     return this.roster;
@@ -2040,6 +2184,7 @@ export class SquadOrders {
   private whoTag(): { tag: string; one: boolean } {
     const t = this.menu?.target, man = t?.kind === 'none' && t.man ? t.man : typeof this.who === 'number' ? this.squad()[this.who] : null;
     if (man) return { tag: man.callsign, one: true };
+    const picked = planMen(this); if (picked) return { tag: this.whoWords(picked), one: true };   // (planmode.ts: a set picked by hand — T goes back to everyone)
     return { tag: this.who === 'all' ? (this.paired ? 'GOLD' : 'all') : String(this.who).toUpperCase(), one: false };
   }
   /** the panel's line for T: its choices in the order it steps them, the standing one in brackets — '[GOLD] · red · blue'; with one man of a squad in pairs
@@ -2059,7 +2204,7 @@ export class SquadOrders {
    *  Nothing without a squad. */
   hud(): { menu: OrderHudMenu | null; status: OrderHudRow[] } {
     if (!this.active) return { menu: null, status: [] };
-    const M = this.menu, key = keyName(ORDERS.key), whoKey = keyName(ORDERS.whoKey);
+    const M = this.cmdRing ? null : this.menu, key = keyName(ORDERS.key), whoKey = keyName(ORDERS.whoKey);   // (cmdring.ts: a menu up as a ring is drawn at the cursor, not listed in the panel)
     if (M) {
       const kind = M.target.kind === 'door' ? 'door' : 'objective', men = M.men, tone = this.toneOf(men), n = men.length;
       const whoRow: OrderHudRow = { kind: 'objective', label: `orders to ${this.whoTag().tag}${this.paired && n > 1 ? ` · ${n} men` : ''}`, opts: [{ key: whoKey, text: this.whoStrip(), tone }], inReach: n > 0, off: false, tone };
@@ -2082,7 +2227,7 @@ export class SquadOrders {
     const hov = this.hover(), onMan = hov?.kind === 'none' && hov.man ? hov.man : null;
     const next = onMan ? this.whoAfterT(hov) : null;   // (what T would do with the cursor on a teammate: him — or, already him, back to everyone)
     const posture = this.posture?.word() ?? null;   // (silent.ts: which of the two the squad is in, at a glance)
-    const def = hov && !AUTOPILOT.on ? this.defaultFor(hov) : null, words = hov && AUTOPILOT.on ? autoHint(this.g, hov) : hov && def ? this.labelOf(def, hov) : null;   // (autopilot.ts: the squad's first choice on a door it waits on)
+    const words = hov ? this.quickWords(hov) : null;   // (autopilot.ts: the squad's first choice on a door it waits on)
     const quick = hov && words ? `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}` : null;   // (what the quick key would give on what the cursor is on)
     return { menu: null, status: [{ kind: 'objective', label: `squad · ${posture ? `${posture} · ` : ''}orders to ${this.whoTag().tag}`, inReach: true, off: false, tone,
       opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x), ...layNote(this.g, keyName(layKey())),   // (planlay.ts: the key's line while a plan waits on it)
@@ -2091,7 +2236,7 @@ export class SquadOrders {
   /** Where the menu that is up is frozen, for a mark in the world (the page's overlay rings it — Sam may have walked on and be aiming elsewhere): the point, a
    *  word for it, the addressed element's colour. Null: no menu, or one opened on nothing (himself, nowhere). */
   mark(): { at: Vec3; text: string; tone?: Tone } | null {
-    const M = this.menu; if (!M) return null; const t = M.target;
+    const M = this.menu; if (!M || this.cmdRing) return null; const t = M.target;   // (cmdring.ts: a ring stands on the place itself and carries the words — ringView's caption)
     if (t.kind === 'none') return t.man ? { at: [t.man.char.pos[0], 1.0, t.man.char.pos[2]], text: t.man.callsign, tone: this.toneOf(M.men) } : null;
     if (t.kind === 'foe') return { at: [t.foe.char.pos[0], 1.0, t.foe.char.pos[2]], text: `${this.whoTag().tag} → ${this.hoverWords(t)}`, tone: this.toneOf(M.men) };   // (the ring rides the man)
     return { at: [t.at[0], t.kind === 'door' ? 1.0 : 0.03, t.at[2]], text: `${this.whoTag().tag} → ${this.hoverWords(t)}`, tone: this.toneOf(M.men) };

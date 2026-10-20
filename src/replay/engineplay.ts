@@ -215,8 +215,9 @@ export class TapePlay {
     this.kitOf(rc.kit);
   }
   private kitOf(k: unknown): void {
-    const c = k as { on?: boolean; members?: unknown[]; own?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
-    Kt.kitOwn(c.own === true); Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, c.members![i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards);
+    const c = k as { on?: boolean; members?: unknown[]; own?: unknown; stealth?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
+    Kt.kitMission(null);   // (kit.ts KITDEAL.stealth: FIRST — a stealth card standing first in the table goes back to its own place before the tape's cards are written, or this machine's loud card would land over the tape's)
+    Kt.kitOwn(c.own === true); Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, c.members![i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards); Kt.kitStealthSet(c.stealth);   // (…and the stealth card the tape's run wore, or none — never this machine's)
   }
   /** what the simulation reads off the ENGINE, as the recording's engine had it (journal.ts EnvSnap) — before the game is built, and again every step (a quality preset rewrites the debris cap) */
   env(settings: Record<string, unknown>): void { const e = this.tape?.recipe.env; if (e) J.applyEnvSettings(settings as never, e as never); }
@@ -643,8 +644,8 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
   }
   /** what hangs on the window's size: the bar's height is told to the page (the HUD and the note box stand on it), the large map fills what is left, the line's marks are redrawn; the small map is in the top corner, clear of the bar and of whatever stands on it */
   private lay(): void {
-    // (THE BAR IS ONE OF THE TEXT SIZE'S LAYERS — ui/textsize.ts — and what the page is told of it is in the WINDOW's pixels: the HUD's rules, the large map
-    //  and the sound lanes' dock all read `--tape-h` that way. A rectangle measured off a zoomed element is the window's on an engine that answers so, the
+    // (THE BAR IS ONE OF THE TEXT SIZE'S LAYERS — ui/textsize.ts — and what the page is told of it is in the WINDOW's pixels: the HUD's rules and the large map
+    //  read `--tape-h` that way, and the sound lanes' dock, which is no layer, measures the bar the same way itself (soundlanes.ts paint()). A rectangle measured off a zoomed element is the window's on an engine that answers so, the
     //  layer's own on one that does not: either way × textZoom() / rectZoom() is the window's.)
     const u = this.ui, F = this.F; if (!u || !F) return; const bh = Math.round(u.bar.getBoundingClientRect().height * textZoom() / rectZoom()) || 44;
     document.documentElement.style.setProperty('--tape-h', `${bh}px`); u.modal.style.bottom = `${bh}px`;

@@ -34,7 +34,7 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
   const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const FX = await import(`${ROOT}/src/game/snowFx.ts`);
   const { SNOWTRACKS } = await import(`${ROOT}/src/game/snowTracks.ts`);
-  const { SNOWBREATH, updateSnowBreath, seedBreath } = await import(`${ROOT}/src/game/snowBreath.ts`);
+  const { SNOWBREATH, BREATHSTEAM, updateSnowBreath, seedBreath } = await import(`${ROOT}/src/game/snowBreath.ts`);
   const { HARDBREATH } = await import(`${ROOT}/src/game/character.ts`);
   const { SNOWBLAST, snowBlastStats } = await import(`${ROOT}/src/game/snowBlast.ts`);
   const { SNOWMARKS } = await import(`${ROOT}/src/game/snowMarks.ts`);
@@ -47,9 +47,9 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
   const quiet = async <R>(fn: () => R | Promise<R>): Promise<R> => { if (o.verbose) return await fn(); const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
   let fails = 0, checks = 0;
   const verdict = (ok: boolean, label: string, detail: string) => { checks++; if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  const ENV = ['TPS_SNOW', 'TPS_SNOWLOOK', 'TPS_SNOWWISPS', 'TPS_SNOWTRACKS', 'TPS_SNOWGLOW', 'TPS_SNOWSPARKLE', 'TPS_SNOWBREATH', 'TPS_SNOWGRAINS', 'TPS_SNOWBLAST', 'TPS_SNOWAIR', 'TPS_SNOWMARKS', 'TPS_AIR'] as const;
+  const ENV = ['TPS_SNOW', 'TPS_SNOWLOOK', 'TPS_SNOWWISPS', 'TPS_SNOWTRACKS', 'TPS_SNOWGLOW', 'TPS_SNOWSPARKLE', 'TPS_SNOWBREATH', 'TPS_BREATHSTEAM', 'TPS_SNOWGRAINS', 'TPS_SNOWBLAST', 'TPS_SNOWAIR', 'TPS_SNOWMARKS', 'TPS_AIR'] as const;
   const was = { snow: SNOW.on, look: { ...SNOW_LOOK }, air: AIR_SIM.on, env: ENV.map(k => process.env[k]) };
-  const TABLES: Record<string, Record<string, unknown>> = { SNOWFX: FX.SNOWFX, SNOWWISPS: FX.SNOWWISPS, SNOWGRAINS: FX.SNOWGRAINS, SNOWTRACKS, SNOWBLAST, SNOWMARKS, SNOWBREATH, SNOW_SURF, AIR };
+  const TABLES: Record<string, Record<string, unknown>> = { SNOWFX: FX.SNOWFX, SNOWWISPS: FX.SNOWWISPS, SNOWGRAINS: FX.SNOWGRAINS, SNOWTRACKS, SNOWBLAST, SNOWMARKS, SNOWBREATH, BREATHSTEAM, SNOW_SURF, AIR };
   const snap = () => JSON.stringify({ ...TABLES, HARDBREATH });   // (the hard breath rule's table rides the snapshot; only its steam numbers are rows — its chest numbers move bones)
   const shader = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8');
 

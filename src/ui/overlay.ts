@@ -25,6 +25,7 @@ import { fragMarks } from '../game/frag';
 import { RECAP, lostLive, lostArrowsShown, type LostMan } from '../game/deathrecap';
 import { QUICKTHROW } from '../game/quickthrow';
 import { samBlind } from '../game/samstun';
+import { CmdRingViz } from './cmdring';
 import { closeMarks } from '../game/close';
 import { PlanFloor } from './planfloor';
 import { FindMeViz } from './findme';
@@ -94,13 +95,15 @@ export class Overlay implements HudLike {
   private lostMarks: HTMLElement[] = [];   // (deathrecap.ts lostLive: the way the round came in at a squad man lost)
   private camMarks: HTMLElement[] = [];    // (stickycam.ts stickyMarks: a small lens on each of his own stuck sticky cameras while the fog of war is live — STICKY.mark)
   private seenMarks: HTMLElement[] = [];   // (fogofwar.ts lastSeen: a fading '?' where an enemy was last seen — FOG.lastSeen, 0 = none)
+  /** the orders ring at the cursor (ui/cmdring.ts ← game/cmdring.ts — a prototype: nothing unless CMDRING.on — the ring while its key is down, and before it the hint of what it would open on) */
+  readonly cmdRing = new CmdRingViz(this.traj);
   private dots: HTMLElement[] = [];
   showLightDots = true;
   /** the wind field's debug view (Tab ▸ Weather & wind ▸ Wind — field view): a canvas of its own in #overlay, drawn only while one of its switches is on */
   readonly windViz = new WindViz(this.root);
   /** the squad's plan on the floor (ui/planfloor.ts ← game/floorplan.ts): ways, marks, fans, who an open menu goes to */
   readonly plan = new PlanFloor(this.traj);
-  /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet, a rim in the dark, his shape through a wall — nothing unless his Options ask */
+  /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet — nothing unless his Options ask */
   readonly findme = new FindMeViz(this.traj);
   /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
   setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null, onPick: (k: number) => void) {
@@ -348,6 +351,7 @@ export class Overlay implements HudLike {
       (el.lastChild as HTMLElement).textContent = `${Math.round(od)}m`;
     }
     // the squad's order menu: a ring on the door / spot / man it was opened on, in the addressed element's colour (it stays there while Sam walks and aims on)
+    this.cmdRing.update(game, cam, w, h, tz);
     { const om = game.orders.mark(), el = this.orderMark; let shown = false;
       if (om) { const [ox, oy, ov] = cam.project(om.at, w, h, EDGE); if (ov) { shown = true; el.className = om.tone ? `ordermark t-${om.tone}` : 'ordermark'; el.style.left = `${ox.toFixed(1)}px`; el.style.top = `${oy.toFixed(1)}px`; const sp = el.lastChild as HTMLElement; if (sp.textContent !== om.text) sp.textContent = om.text; } }
       el.style.display = shown ? 'block' : 'none'; }
@@ -410,7 +414,7 @@ export class Overlay implements HudLike {
     const rows = list.slice(0, cap).map((it, i): InteractRow => { const d = dist(it); return { kind: it.kind, label: it.line1, opts: it.kind === 'cancel' ? [] : parseOpts(it.line2), inReach: it.inReach, off: it.off, dist: it.inReach || it.kind === 'light' || it.kind === 'cancel' ? undefined : d, progress: it.progress, cont: i > 0 && it.kind !== 'cancel' && thing(list[i - 1]) === thing(it) }; });
     rows.push(...sq.status);   // … and otherwise the squad's block under the Space rows: who the orders go to, what each man is doing (nothing without a squad)
     const primary = hv ? list.indexOf(hv) : -1;
-    return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.sel.open };
+    return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.listOpen };   // (up as a ring — cmdring.ts CMDRING.hands — the panel's list is the list at rest)
   }
 
 

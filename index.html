@@ -362,6 +362,7 @@
     #menu .saves .tile .age { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 4px 3px; font: 600 10px/1 var(--m-head); letter-spacing: 0.06em; text-align: right; color: var(--m-bright); background: linear-gradient(transparent, rgba(0,0,0,0.78)); white-space: nowrap; }
     #menu .saves .tile i { position: absolute; left: 5px; top: 5px; width: 5px; height: 5px; transform: rotate(45deg); background: var(--m-accent); box-shadow: 0 0 0 1px rgba(0,0,0,0.6); }
     #menu .saves .tile.regret { opacity: 0.45; }
+    #menu .saves .tile.due, #menu .saves .tile.due:hover { cursor: default; border-style: dashed; border-color: rgba(var(--m-edge),0.55); background-color: transparent; }
     #menu .saves .tile.ahead .age { color: var(--m-dim); }
     #menu .btn.quit { border-color: rgba(240,196,110,0.55); color: #f3d79a; }
     #menu .body { margin-top: 10px; }
@@ -523,6 +524,30 @@
     #caption .sub { margin-top: 8px; font: 13px/1.45 var(--h-font); color: var(--h-ink); text-shadow: 0 1px 6px #000, 0 0 2px #000; }
     /* ?kitview (src/host/kitView.ts): the page as a picture in the start page's iframe — the canvas and nothing else */
     body.kitview > :not(#app), body.kitview #app > :not(#view):not(#fatal) { display: none !important; }
+    /* the orders ring at the cursor (ui/cmdring.ts — a prototype, ?cmd): a wedge a digit, the lit one filled, a row that cannot be given greyed */
+    .cmdring { color: #f2cf6b; } .cmdring.t-red { color: #ff9a8a; } .cmdring.t-blue { color: #9cc8ff; } .cmdring.t-hands { color: var(--h-hi); }   /* (his own hands on Space: the HUD's own bright) */
+    .cmdring .cw { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.4; stroke-linejoin: round; } .cmdring .lit .cw { fill: currentColor; }
+    .cmdring .cn { font: 700 12px/1 var(--h-mono); fill: currentColor; text-anchor: middle; } .cmdring .lit .cn { fill: var(--h-base); }
+    .cmdring .ct { font: 700 10px/1 var(--h-mono); letter-spacing: 0.06em; text-transform: uppercase; fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }
+    .cmdring .off { opacity: 0.38; } .cmdring .lit .ct { fill: #fff; }
+    .cmdring .cc { font: 600 9.5px/1 var(--h-mono); letter-spacing: 0.08em; text-transform: uppercase; text-anchor: middle; fill: currentColor; opacity: 0.8; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }
+    /* … and the hint before the key (ui/cmdring.ts updateHint): the thing the ring would open on outlined on the floor, a glyph for its kind beside the cursor */
+    .cmdhint { color: #f2cf6b; } .cmdhint.t-red { color: #ff9a8a; } .cmdhint.t-blue { color: #9cc8ff; } .cmdhint.k-foe { color: #ff7a6a; }
+    .cmdhint .hw { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; opacity: 0.7; }
+    .cmdhint.k-door .hw, .cmdhint.k-wall .hw { stroke-width: 2.6; }
+    .cmdhint .hg { fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linejoin: round; stroke-linecap: round; paint-order: stroke; filter: drop-shadow(0 0 2px rgba(0,0,0,0.9)); }
+    .cmdhint.held .hw { opacity: 0.9; }
+    /* … and plan mode (ui/cmdring.ts updatePlan — Shift+Tab): a frame round the view, a circle at each man's feet, the box, the chains with the word's key on them */
+    .planmode { color: #f2cf6b; } .planmode .t-red { color: #ff9a8a; } .planmode .t-blue { color: #9cc8ff; }
+    .planmode .pf { fill: none; stroke: currentColor; stroke-width: 2; opacity: 0.55; }
+    .planmode .pt { font: 700 12px/1 var(--h-mono); letter-spacing: 0.32em; text-anchor: middle; fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.85); stroke-width: 4px; stroke-linejoin: round; }
+    .planmode .pm { fill: none; stroke: currentColor; stroke-width: 1.3; opacity: 0.6; stroke-dasharray: 3 3; } .planmode .pm.picked { stroke-width: 2.4; opacity: 0.95; stroke-dasharray: none; }
+    .planmode .pl { fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 7 5; opacity: 0.85; }
+    .planmode .ps { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.6; }
+    .planmode .pk rect { fill: rgba(var(--h-plate),0.9); stroke: currentColor; stroke-width: 1.2; } .planmode .pk text { font: 700 10px/1 var(--h-mono); text-anchor: middle; fill: currentColor; }
+    .planmode .pk.now rect { fill: currentColor; } .planmode .pk.now text { fill: var(--h-base); }
+    .planmode .pb { fill: currentColor; fill-opacity: 0.08; stroke: currentColor; stroke-width: 1; stroke-dasharray: 4 3; }
+    body.attract .cmdring, body.blinded .cmdring, body.attract .cmdhint, body.blinded .cmdhint, body.attract .planmode, body.blinded .planmode { display: none; }
     body.kitview { cursor: none; }
     body.kitview::after { content: ''; position: fixed; left: 0; top: 0; right: 0; height: 15vh; z-index: 100000; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); }   /* the top of the picture held down: a lit wall there is the brightest thing on the start page */
     #traj { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }

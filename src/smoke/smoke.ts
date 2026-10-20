@@ -3,7 +3,7 @@
 // needs. Exposes a SmokeBinding for the renderer. (Until 2026-10 this file was eight 64³ boxes placed by the CPU: git history has them.)
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import { Vec3, v3 } from '../math/vec';
-import { Engine, SmokeBinding } from '../engine';
+import { Engine, SmokeBinding, FrameFlags } from '../engine';
 import { wgslWorldConsts } from '../scene/world';
 import { Box, BoxFlag, BoxWorld } from '../scene/boxes';
 import { SmokeEmitter, SmokePush, SmokeSystemLike, WIND_GPU_MAX } from './types';
@@ -47,7 +47,7 @@ const LEGACY_PUSH = 25, DT_MAX = 1 / 30, DT_CAP_WAIT = 1 / 12 /* the most one st
 const CS = GPUShaderStage.COMPUTE;
 
 interface SealPose { cx: number; cz: number; yaw: number; ex: number; ez: number; y0: number; y1: number }
-type Packed = { pos: Vec3; dir: Vec3; speed: number; radius: number; level: number; density?: number; temperature?: number; kind?: string; age?: number; ttl?: number; mode?: string; push?: number; expand?: number; attack?: number; jitter?: number; prio?: number; tint?: Vec3 };
+type Packed = { pos: Vec3; dir: Vec3; speed: number; radius: number; level: number; density?: number; temperature?: number; kind?: string; age?: number; ttl?: number; mode?: string; push?: number; expand?: number; attack?: number; jitter?: number; prio?: number; tint?: Vec3; look?: boolean };
 
 export class SmokeSystem implements SmokeSystemLike {
   params: SmokeParams = defaultSmokeParams();
@@ -182,18 +182,20 @@ export class SmokeSystem implements SmokeSystemLike {
     const level = this.levelOf(e), voxel = this.grid.levels[level].voxel;
     const radius = e.minVoxels ? Math.max(e.radius, e.minVoxels * voxel) : e.radius;
     this.emitters.push({ ...e, radius, pos: v3.copy(e.pos), dir: v3.normalize(e.dir), level });
-    if (this.emitters.length > 2 * MAX_EMITTERS) { const drop = this.emitters.findIndex(x => (x.prio ?? 1) === 0); this.emitters.splice(drop >= 0 ? drop : 0, 1); }
+    if (this.emitters.length > 2 * MAX_EMITTERS) { let drop = this.emitters.findIndex(x => x.look); if (drop < 0) drop = this.emitters.findIndex(x => (x.prio ?? 1) === 0); this.emitters.splice(drop >= 0 ? drop : 0, 1); }
     this.quiet = 0; this.emitStep = this.stepNo;
   }
   push(p: SmokePush) {
     if (!this.params.enabled || this.params.frozen || this.pushes.length >= 20) return;
     let seen = 0;   // (a shove stirs whichever lattices have smoke there, once each: a level's bounds may overlap)
-    for (const b of this.boxes) if (!(seen >> b.level & 1) && this.inBox(b, p.pos)) { seen |= 1 << b.level; this.pushes.push({ ...p, pos: v3.copy(p.pos), level: b.level }); }
+    const only = p.lattice ? this.levelOf(p) : -1;
+    for (const b of this.boxes) if ((only < 0 || b.level === only) && !(seen >> b.level & 1) && this.inBox(b, p.pos)) { seen |= 1 << b.level; this.pushes.push({ ...p, pos: v3.copy(p.pos), level: b.level }); }
   }
   private inBox(b: { lo: Vec3; hi: Vec3 }, p: Vec3) { return p[0] >= b.lo[0] && p[0] <= b.hi[0] && p[1] >= b.lo[1] && p[1] <= b.hi[1] && p[2] >= b.lo[2] && p[2] <= b.hi[2]; }
   /** is p somewhere smoke is being simulated? (the bounds as last read back: a frame or two old, and loose — what its two callers ask is 'is it worth stirring / thickening here') */
   inSmokeDomain(p: Vec3): boolean { for (const b of this.boxes) if (this.inBox(b, p)) return true; return false; }
-  budget(): number { return Math.max(0, MAX_EMITTERS - 12 - this.emitters.length); }
+  budget(): number { let n = 0; for (const e of this.emitters) if (!e.look) n++; return Math.max(0, MAX_EMITTERS - 12 - n); }   // (a `look` source is never counted: types.ts)
+  drawing(): boolean { return this.params.enabled && !this.params.frozen && (this.engine.settings.flags & FrameFlags.Smoke) !== 0; }
   spawnCanister(pos: Vec3, duration?: number) {
     const P = this.params;
     this.emit({ pos: v3.add(pos, [0, 0.12, 0]), dir: [0, 1, 0], speed: P.canisterSpeed, radius: P.canisterRadius, density: P.canisterDensity, temperature: P.canisterTemp, ttl: duration ?? P.canisterDuration, age: 0, kind: 'canister' });
@@ -231,7 +233,7 @@ export class SmokeSystem implements SmokeSystemLike {
       if (e.age >= e.ttl) { this.emitters.splice(i, 1); continue; }
       if (e.track) {
         const t = e.track();
-        if (t) { e.pos = v3.copy(t.pos); if (e.kind === 'wisp') e.dir = v3.normalize(v3.add([0, 1, 0], v3.scale(t.dir, 0.3))); }
+        if (t) { e.pos = v3.copy(t.pos); if (e.kind === 'wisp') e.dir = v3.normalize(v3.add([0, 1, 0], v3.scale(t.dir, 0.3))); else if (e.trackVel) { e.speed = v3.len(t.dir); e.dir = v3.normalize(t.dir); } }
         else if (e.confined) { this.emitters.splice(i, 1); continue; }
       }
     }
@@ -275,7 +277,7 @@ export class SmokeSystem implements SmokeSystemLike {
     const f = this.spF, u = this.spU, P = this.params, X = this.sparse, g = this.grid;
     const room = MAX_EMITTERS - Math.min(this.pushes.length, 12);
     let ems: Packed[] = this.emitters;
-    const prioOf = (e: Packed) => e.prio ?? (e.kind === 'canister' ? 2 : 1);
+    const prioOf = (e: Packed) => e.look ? -1 : e.prio ?? (e.kind === 'canister' ? 2 : 1);
     if (ems.length > room) ems = ems.map((e, i) => ({ e, i })).sort((a, b) => (prioOf(b.e) - prioOf(a.e)) || (b.i - a.i)).slice(0, room).map(x => x.e);
     const all: Packed[] = [...ems, ...this.pushes.slice(0, MAX_EMITTERS - ems.length)];
     const expands = (e: Packed) => P.expansion && (e.expand ?? 0) > 0;

@@ -2,7 +2,7 @@
 // src/ui/kitView.ts, the picture's src/host/kitView.ts `kitViewOnDisk` / `kitViewPostTo` / `kitViewFrom`). The picture is a second instance of the page in a
 // frame and the two talk by postMessage. On a file: address Chromium reads `location.origin` as 'file://', drops a message posted to that target (a console
 // warning, no throw) and gives a message that does arrive the origin 'null': posted by `location.origin` nothing is said either way, and the page takes the
-// frame down only at the end of its wait (ui/kitView.ts KIT_VIEW.wait, 10 s). In headless Chromium with NO WebGPU adapter and no server at all, title → Play →
+// frame down never (it once did at the end of a 10 s wait; the wait has no clock now: ui/kitView.ts). In headless Chromium with NO WebGPU adapter and no server at all, title → Play →
 // Team & kit:
 //   - the frame is made and the picture's document loads from disk with its flags;
 //   - THE PAGE HEARS THE PICTURE: a `{ kv: … }` message from the frame's own window, well inside the wait (the origin word it carried is printed);
@@ -22,7 +22,7 @@ const path = require('path');
 const root = path.resolve(__dirname, '../..');
 const FILE = path.resolve(root, process.env.ONEFILE || 'dist/one/twopointsix.html');
 const BREAK = process.env.KITDISK_BREAK === '1';
-const WAIT = 10, SOON = 5;   // (the page's wait for a `ready`, ui/kitView.ts KIT_VIEW.wait · "well inside it")
+const WAIT = 10, SOON = 5;   // (how long this check looks for the frame to go · "well inside it")
 let fails = 0; const errors = [];
 const check = (ok, label, detail) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 const J = JSON.stringify;

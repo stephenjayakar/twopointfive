@@ -61,6 +61,7 @@ import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
 import { WAND } from '../game/wand';
 import { PEEKSIGHT } from '../game/peeksight';
+import { CMDRING } from '../game/cmdring';
 import { STICKY } from '../game/stickycam';
 import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
@@ -218,9 +219,10 @@ export function pageSwitches(q: URLSearchParams): void {
   SNOW_LOOK.under = q.get('snowunder') !== '0';   // a flake is hidden from what is under the roofs, whichever slab, and from a partition's top inside (weatherKinds.ts SNOW_LOOK.under; picture only): ?snowunder=0 = each roof's rectangle by itself and every top at the ceiling open, as it was
   SNOW_LOOK.past = q.get('snowpast') !== '0';   // … and its snow goes on falling past the level's rim, so a view by the edge is snowed across (game/snowFx.ts flakeOpen; picture only): ON in the page; ?snowpast=0 = no flake past the world's rectangle
   SNOW_LOOK.blast = q.get('snowblast') !== '0';   // … and a blast over lying snow craters it, throws the loose snow and shoves the simulated wind (game/snowBlast.ts; picture only): ON in the page; ?snowblast=0 = a blast leaves the snow as it lay
+  SNOW_LOOK.steam = q.get('breathsteam') !== '0';   // … and that breath is real steam: gas in the smoke solver, off each man's mouth, as the gun's is off its muzzle (game/snowBreath.ts BREATHSTEAM; picture only): ON in the page; ?breathsteam=0 = the puffs of sprite it was
   SNOW_LOOK.breath = q.get('snowbreath') !== '0';   // … and the men's breath steams in its cold (game/snowBreath.ts; picture only): ON in the page; ?snowbreath=0 = no breath shows
   GLASS.bothFaces = q.get('glassears') !== '0';   // a pane's crash is heard from BOTH its faces (game/glass.ts glassEvent, guards.ts glassHeard: a window shot out from the yard reached the men in the room behind it only round by the front door): ON in the page; ?glassears=0 = heard only from the point the round met it, as it was
-  DOORSHOT.on = q.get('doorshot') !== '0';   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall (game/doorblast.ts DOORSHOT): ON in the page; ?doorshot=0 = a round only marks a leaf, as it did
+  DOORSHOT.on = q.get('doorshot') !== '0';   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall times its `toll`, 1 (game/doorblast.ts DOORSHOT): ON in the page; ?doorshot=0 = a round only marks a leaf, as it did
   WALLPEN.on = q.get('wallpen') !== '0';   // a round carries on through thin walls and wooden door leaves with the energy it has left (game/wallpen.ts: plasterboard partitions, fabric and wood screens, a leaf that is not steel — by the glass rule's energy, a toll by stuff and the length of its path through): ON in the page; ?wallpen=0 = a round stops in the first built thing it meets, as it did
   WALLCHARGE.on = !q.has('nowallcharge'); if (q.get('wallmenu') === 'direct') WALLCHARGE.menu = 'direct';   // the wall charge's own switch (game/wallcharge.ts; it also needs the destruction's) · ?wallmenu=direct: X, 5 instead of X, 5, 3
   // each man of a room entry walks a real path through the door (doorpath.ts) — clear of the leaf, one tight file: ON in the page; ?nodoorpath = the entry as it
@@ -309,6 +311,10 @@ export function pageSwitches(q: URLSearchParams): void {
   GUNLOOK.shells = !q.has('nogunshells');   // (…and of 10-19: a tube gun is fed a shell at a time in time and in the books — the M1014 and the pump gun take a lead, so long a shell and a tail, each shell in the gun as it is heard; ?nogunshells = the row's one length and the tube booked at its end)
   GUNROLES.on = !q.has('nogunroles');   // a gun is used for what it is for (game/gunroles.ts): a cast of defenders is dealt an AKMS, one belt-fed PKM for a lane or a big cast and a few pistols off the squad's table, and a teammate's place in the stack, his turn at the door, the opening he covers and his trigger follow the gun in his hands. ?nogunroles = every defender the short carbine and every teammate as with the issue carbine
   PLANLAY.on = !q.has('noplanlay');   // X is where the plan is laid (game/planlay.ts): 'wait for my word' is under every order menu, an order picked with it on is laid — nobody moves — and F sends the plan; Enter puts it back. ON in the page, ?noplanlay = the row is the four's door tools' alone and the men walk to the door at once, as it was; off on the frozen stand (TPS_PLANLAY=1 raises it)
+  CMDRING.on = q.has('cmd');   // THE ORDERS RING, A PROTOTYPE (game/cmdring.ts): Tab down puts the order menu up as a ring at the cursor, Tab up gives the lit wedge — a tap is B. OFF in the page unless `?cmd` asks (and the debugger's tick), off on both stands: nothing is recorded with it on
+  CMDRING.hint = CMDRING.on && !q.has('nocmdhint');   // …and before the key, a glyph beside the cursor and an outline on the floor for what the ring would open on (a picture only; `?nocmdhint` = the ring without it)
+  CMDRING.hands = CMDRING.on && !q.has('nocmdhands');   // …and Space the same way for his own hands (interact.ts): down = his rows as a ring at the cursor, up = the lit one, a tap the tap it was (`?nocmdhands` = Space as it was beside the ring)
+  CMDRING.plan = CMDRING.on && !q.has('nocmdplan');   // …and plan mode (game/planmode.ts): Shift+Tab toggles it; the left button picks men, the right button orders them and Shift chains, F at a chain's pauses (`?nocmdplan` = no such mode beside the ring)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
   SQUAD40.on = !q.has('nosquad40');   // a teammate whose card carries 40 mm grenades fires one where he points (game/squad40.ts): X on a spot of floor, G, then 3. ON in the page, ?nosquad40 = no such row; off on the frozen stand (TPS_SQUAD40=1 raises it). Nothing at all while no teammate's card carries a round
@@ -322,6 +328,7 @@ export function pageSwitches(q: URLSearchParams): void {
   BIGSLOT.on = !q.has('nobigslot');   // the big slot (game/kit.ts BIGSLOT, game/bigkit.ts): every card has ONE big slot beside its pouches — the wall charge, the breaching shotgun (kit now, not a gun: the man keeps his rifle) or the dynamic hammer — and the last two take a lock from either face, yours on a locked door's row, a teammate's on a door order. ON in the page, ?nobigslot = the cards and the weapon row as they were; off on the frozen stand (TPS_BIGSLOT=1). Before the kit is read from the store: a stored shotgun-as-gun card is read as rifle + shotgun in the big slot.
   KITDEAL.on = !q.has('nokitdeal');   // the squad's kit dealt over the men who come (game/kit.ts KITDEAL): with three or four teammates the issued kit and every named squad kit are shared out among them — a charge and a stun to each pair — where the first two carried it all and the others showed empty pouches. The squad's count is the same at every size (but for the one canister of its key `more`, below), so a run is the run it was. ?nokitdeal = the cards as they were
   KITDEAL.more = !q.has('nokitmore');   // (…and of 10-18, the maintainer's pick "a tool each pair": three or four as issued are lent the breaching shotgun on Red Two and, of four, the hammer on Blue Two — each pair's second man, so its first goes in with a gun up — in big slots that stood empty, and a man a kit leaves with nothing counted is handed a stun canister — the Quiet kit's fourth man; ?nokitmore = big slots empty as issued, that man with his pistol alone)
+  KITDEAL.stealth = !q.has('nokitstealth');   // (…and of 10-20, the maintainer's "that should just be defaults": a stealth mission's sponge rounds, cameras and wand are what your stealth card is issued as — rows you change, priced like any other, the sponge rounds five to a pouch — and nothing is handed over a card or written on a tile as the mission's)
   BIGSLOT.moves = !q.has('nobigmoves');   // (…and of 10-15 evening: the hammer rides on a man's back, his gun is put away for it, it is wound up and swung as one move, and you take the row from where a stack stands and WALK to a free place beside either jamb — ?nobigmoves = the tools as they stood that morning)
   BIGSLOT.snug = !q.has('nobigsnug');   // (…and with the moves: his gun and the tool each stay in a hand while they are off him — the gun let go as his hands leave it, the tool changing between his back and his fist while the fist is there; ?nobigsnug = the first-pass shares, the tool drawn part way between the two. Looks, and how long your own gun and its light are away: about a sixth of a second more)
   BIGSLOT.weight = !q.has('nobigweight');   // (…and of 10-18: the tool changes hands with the weight of a gun swap — your gun carried to its place by hand before the hand goes for the tool, the tool out and back in the times a long gun takes; ?nobigweight = the gun let go at once, 0.6 s out and 0.45 s back)
@@ -529,6 +536,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SNOW_LOOK.glow': 'TPS_SNOWGLOW=1 (shows only on a snow level with its surface: TPS_SNOW=1 TPS_SNOWLOOK=1)',
   'SNOW_LOOK.sparkle': 'TPS_SNOWSPARKLE=1 (shows only on a snow level with its surface: TPS_SNOW=1 TPS_SNOWLOOK=1)',
   'SNOW_LOOK.breath': 'TPS_SNOWBREATH=1 (shows only on a snow level: with TPS_SNOW=1)',
+  'SNOW_LOOK.steam': 'TPS_BREATHSTEAM=1 (the breath as gas in the smoke solver: with TPS_SNOWBREATH=1 on a snow level, and only where a solver draws — the harness has none)',
   'SNOW_LOOK.grains': 'TPS_SNOWGRAINS=1 (shows only on a snow level: with TPS_SNOW=1; they fly only where the air field runs: TPS_AIR=1 on a page with a GPU)',
   'SNOW_LOOK.oneAir': 'TPS_SNOWAIR=1 (shows only on a snow level: with TPS_SNOW=1; it wants the air field: TPS_AIR=1 on a page with a GPU; with it the grains stand down)',
   'SNOWBOG.on': 'TPS_SNOWBOG=1 (acts only on a snow level: with TPS_SNOW=1)',
@@ -557,6 +565,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'BIGSLOT.on': 'TPS_BIGSLOT=1',
   'KITDEAL.on': 'TPS_KITDEAL=1 (reads only with the pouches rule on: SLOTS=on)',
   'KITDEAL.more': 'TPS_KITMORE=1 (reads only with the deal and the big slot on: TPS_KITDEAL=1, TPS_BIGSLOT=1)',
+  'KITDEAL.stealth': 'TPS_KITSTEALTH=1 (reads only under the card as a tree: TPS_KITTREE=1 and what it needs)',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',
   'SQUAD40.on': 'TPS_SQUAD40=1',
   'AUTOPILOT.on': 'TPS_AUTOPILOT=1',

@@ -42,6 +42,8 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/airSim.ts offStats': 'CACHE · one blank \'switched off\' stats object made on first ask (airSim.ts:69) and only read (snowFx.ts reads .speed/.calm, the page\'s panel)',
   'src/game/attention.ts ATTENTION_STATS': 'TALLY · counted in attention.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/attention.ts:326)',
   'src/game/autopilot.ts AUTOPILOT_STATS': 'TALLY · counted in autopilot.ts:102 and orders.ts:472; read only by the page\'s __autopilot hook (main.ts:1032)',
+  'src/game/planmode.ts PLAN_STATS': 'TALLY · counted in planmode.ts; no read in src/game, src/scene or src/anim; read by tools/qa/planmode-check.ts',
+  'src/game/cmdring.ts CMDRING_STATS': 'TALLY · counted in orders.ts ringInput and escape(); no read in src/game, src/scene or src/anim; read by tools/qa/cmdring-check.ts',
   'src/game/gunslots.ts GUNSLOTS_STATS': 'TALLY · counted in gunslots.ts; no read in src/game, src/scene or src/anim; read by tools/qa/gunslots-check.ts',
   'src/game/gunroles.ts GUNROLES_STATS': 'TALLY · counted in gunroles.ts; no read in src/game, src/scene or src/anim; read by tools/qa/gunroles-check.ts',
   'src/game/bigkit.ts BIG_STATS': 'TALLY · counted in bigkit.ts; no read in src/game, src/scene or src/anim; shown by ui/bindings.ts',
@@ -79,8 +81,8 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/digin.ts DIGIN_SHUT': 'TALLY · counted in digin.ts; no read in src/game, src/scene or src/anim',
   'src/game/digin.ts DIGIN_STATS': 'TALLY · counted in digin.ts (795 takes it to count into); zeroed by the reset (906); read only by digInSummary (912-913)',
   'src/game/doorblast.ts DOORBLAST_LOG': 'TALLY · counted in doorblast.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
-  'src/game/doorblast.ts DOORBLAST_STATS': 'TALLY · counted in doorblast.ts (163 picks it or a throwaway to count into); read by its summary (412) and main.ts',
-  'src/game/doorblast.ts DOORSHOT_STATS': 'TALLY · counted in doorblast.ts (leafRound 255, splinter 291-304); read by the log line it writes (305) and by tools/qa/doorshot-check.ts',
+  'src/game/doorblast.ts DOORBLAST_STATS': 'TALLY · counted in doorblast.ts (169 picks it or a throwaway to count into); read by its summary (418) and main.ts',
+  'src/game/doorblast.ts DOORSHOT_STATS': 'TALLY · counted in doorblast.ts (leafRound 261, splinter 297-310); read by the log line it writes (311) and by tools/qa/doorshot-check.ts',
   'src/game/doorway.ts DOORMANNERS_STATS': 'TALLY · counted in doorway.ts; orders.ts:1398/1443-1449/1466 copies and puts back the counts round a trial ask; shown by main.ts — no rule reads a value',
   'src/game/doorway.ts STACK_OWN': 'TALLY · counted in orders.ts (1076/1499/1621/1756); orders.ts:1398-1466 only copies the counts and puts them back round a trial ask (1449 compares two counts of one call to write a count) — no rule reads a value',
   'src/game/doze.ts DOZE_STATS': 'TALLY · counted in doze.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
@@ -123,6 +125,10 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/kit.ts dealOwn': 'CONFIG · the stored cards are the player\'s own layout (a counted thing changed by hand on a team of three or four): written by the kit screen\'s edits, kitLoad, kitReset and a squad kit put on by name; read where the cards are worn (kitWorn) — the kit screen and a staging, never a tick',
   'src/game/kit.ts issuedPage': 'CONFIG · written by kitIssuedPage only (kit.ts:805: a lesson\'s page says so at its start)',
   'src/game/kit.ts issuing': 'SCRATCH · true only for the length of one asIssued call (kit.ts:825-827, dropped in its finally)',
+  'src/game/kit.ts hand': 'CONFIG · the mission the table\'s first card is for (KITDEAL.stealth): written by the kit screen (kitMission) and kitLoad; a staging sets it for the length of its own call and puts it back (forRun), never a tick',
+  'src/game/kit.ts staged': 'TRANSIENT · up for the length of one staging call (forRun) and down again in its finally: never read across a tick',
+  'src/game/kit.ts loudYou': 'CONFIG · the loud card parked while the stealth card stands first in the table: kitMission, kitLoad, kitSave, kitReset — the kit screen, and a staging for the length of its own call',
+  'src/game/kit.ts stealthYou': 'CONFIG · the stored stealth card: kitLoad, kitSave, kitReset, kitMission — the kit screen and the store, never a tick',
   'src/game/kit.ts kept0': 'CONFIG · (its type holds a `;`). The stored card\'s two charge counts kept off the card: kitLoad / kitSave / kitReset (the kit screen and the store)',
   'src/game/kit.ts keptWand': 'CONFIG · the stored card\'s wand bits: kitLoad (786-789), kitSave (844), kitReset (846) — the kit screen and the store, never a tick',
   'src/game/kit.ts rowCache': 'CACHE · kitRows\' memo keyed by the switches that shape the rows (kit.ts:611), cleared where a table or switch changes (273, 436); asked by the kit screens',
@@ -272,4 +278,9 @@ export const RAW_WEAK_OK: Record<string, string> = {
   'src/scene/levelData.ts KIT_ADD_LAID': 'kit additions already laid into a level\'s data, at load',
   'src/anim/gltf.ts nvgBits': 'a memo over the character file (static: never written)',
   'src/anim/gltf.ts suitBits': 'a memo over the character file (static: never written)',
+};
+
+/** generators that may be KEPT in the simulation's folders: `file field` → why a snapshot that cannot hold its place does no harm */
+export const GENERATOR_OK: Record<string, string> = {
+  'src/game/director.ts it': 'a showcase beat where it stopped (the Director\'s scripts are generators by design): a show is staged, not a fight — no save is taken with a program mid-way (savestate.ts runNo: `director.blocksSave()`) or put back with a show up (memNo), and a rollback across a running beat is a listed limit (docs/agents/replays.md)',
 };

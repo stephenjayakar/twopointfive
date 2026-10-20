@@ -2,6 +2,7 @@
 import { cutSwap, ProgramSet } from './cutSwap';
 import { makeBuffer, makeShader, computePipelineAsync, writeWordsIfChanged } from '../gpu/device';
 import { Vec3 } from '../math/vec';
+import { HostOwned } from '../math/side';
 import { scenePrelude } from './frame';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
 import probeSrc from './shaders/probe.wgsl' with { type: 'text' };
@@ -15,12 +16,28 @@ export const MAX_QUERIES = 64;
 const LAST_RANK = 3;
 type Ask = { key: string; pos: Vec3; skipOwner: number; b?: Vec3; rank: number };
 
+/** THE GPU'S SIDE OF THE METER, which is the host's and not the game's (math/side.ts HostOwned): the readback buffers that are free and the ones still out, the bind
+ *  group, the table as it is packed for the upload, the count last sent. The Game holds the meter, so a rollback snapshot walks it (game/rollback.ts) — and a save
+ *  in memory put back with all of this in it handed the next frame a buffer still being mapped ("used in submit while pending map": the whole frame refused), and
+ *  a count book that no longer said what the GPU held. What the simulation reads — `results`, this frame's asks, whose turn it is — stays on the meter and goes
+ *  back with the game; this object is left as it is. */
+class Plumbing extends HostOwned {
+  bg: GPUBindGroup | null = null; bgDice: GPUTextureView | null = null;
+  readbacks: GPUBuffer[] = []; inflight: { buf: GPUBuffer; keys: string[]; gen: number }[] = [];
+  qData = new Float32Array(MAX_QUERIES * 8); qU32 = new Uint32Array(this.qData.buffer);
+  countSent = new Uint32Array(4);
+  countData = new Uint32Array(4);   // (the count uniform, rewritten in place — review R1.4)
+  /** how many times the game was put back under the meter (putBack): an answer asked for before the last one is of a moment that is gone */
+  gen = 0;
+}
+
 export class IrradianceProbe {
-  private pipe!: GPUComputePipeline; private layout: GPUBindGroupLayout; private bg: GPUBindGroup | null = null; private bgDice: GPUTextureView | null = null;
+  private pipe!: GPUComputePipeline; private layout: GPUBindGroupLayout;
   private mod: GPUShaderModule; private pipeLayout: GPUPipelineLayout;
   private queryBuf: GPUBuffer; private resultBuf: GPUBuffer; private paramBuf: GPUBuffer;
-  private readbacks: GPUBuffer[] = []; private inflight: { buf: GPUBuffer; keys: string[] }[] = [];
-  private qData = new Float32Array(MAX_QUERIES * 8); private qU32 = new Uint32Array(this.qData.buffer);
+  private gpu = new Plumbing();
+  /** QA (tools/qa/rollback-check.ts): the GPU's side, which no snapshot may put back */
+  get plumbing(): { readonly readbacks: unknown[] } { return this.gpu; }
   private pending: Ask[] = [];
   /** only ever written on a frame the table was full: the encode (by its serial) each key last had a place in — who has waited longest, for put()'s turns */
   private answered = new Map<string, number>(); private serial = 0; private tight = false;
@@ -82,37 +99,41 @@ export class IrradianceProbe {
   }
 
   get hasPending() { return this.pending.length > 0; }
-  private countSent = new Uint32Array(4);
-  private countData = new Uint32Array(4);   // (the count uniform, rewritten in place — review R1.4)
+  /** THE GAME WAS PUT BACK to an earlier moment (host/putback.ts, after a save in memory is loaded): the answers still out were asked of the moment that is gone —
+   *  they are dropped as they land (their buffers come back to the free ones as ever) instead of standing over the saved moment's `results` under the same keys */
+  putBack() { this.gpu.gen++; }
 
   encode(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, diceView: GPUTextureView, ts?: GPUComputePassTimestampWrites) {
     const n = this.pending.length; if (n === 0) return;
-    if (!this.bg || this.bgDice !== diceView) {
-      this.bg = this.device.createBindGroup({ layout: this.layout, entries: [
+    const G = this.gpu, qData = G.qData, qU32 = G.qU32;
+    if (!G.bg || G.bgDice !== diceView) {
+      G.bg = this.device.createBindGroup({ layout: this.layout, entries: [
         { binding: 0, resource: { buffer: this.queryBuf } }, { binding: 1, resource: { buffer: this.resultBuf } }, { binding: 2, resource: diceView }, { binding: 3, resource: { buffer: this.paramBuf } },
       ] });
-      this.bgDice = diceView;
+      G.bgDice = diceView;
     }
-    for (let i = 0; i < n; i++) { const q = this.pending[i]; const o = i * 8; this.qData[o] = q.pos[0]; this.qData[o + 1] = q.pos[1]; this.qData[o + 2] = q.pos[2]; this.qU32[o + 3] = q.skipOwner >>> 0; const b = q.b ?? q.pos; this.qData[o + 4] = b[0]; this.qData[o + 5] = b[1]; this.qData[o + 6] = b[2]; this.qU32[o + 7] = q.b ? 1 : 0; }
-    this.device.queue.writeBuffer(this.queryBuf, 0, this.qData.buffer, 0, n * 32);
-    this.countData[0] = n; writeWordsIfChanged(this.device, this.paramBuf, 0, this.countData, this.countSent);
+    for (let i = 0; i < n; i++) { const q = this.pending[i]; const o = i * 8; qData[o] = q.pos[0]; qData[o + 1] = q.pos[1]; qData[o + 2] = q.pos[2]; qU32[o + 3] = q.skipOwner >>> 0; const b = q.b ?? q.pos; qData[o + 4] = b[0]; qData[o + 5] = b[1]; qData[o + 6] = b[2]; qU32[o + 7] = q.b ? 1 : 0; }
+    this.device.queue.writeBuffer(this.queryBuf, 0, qData.buffer, 0, n * 32);
+    G.countData[0] = n; writeWordsIfChanged(this.device, this.paramBuf, 0, G.countData, G.countSent);
     const pass = enc.beginComputePass({ label: 'probe', timestampWrites: ts });
-    pass.setPipeline(this.pipe); pass.setBindGroup(0, sceneBG); pass.setBindGroup(1, this.bg);
+    pass.setPipeline(this.pipe); pass.setBindGroup(0, sceneBG); pass.setBindGroup(1, G.bg);
     pass.dispatchWorkgroups(Math.ceil(n / 32)); pass.end();
-    let rb = this.readbacks.pop();
+    let rb = G.readbacks.pop();
     if (!rb) rb = this.device.createBuffer({ size: MAX_QUERIES * 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
     enc.copyBufferToBuffer(this.resultBuf, 0, rb, 0, n * 16);
-    this.inflight.push({ buf: rb, keys: this.pending.map(p => p.key) });
+    G.inflight.push({ buf: rb, keys: this.pending.map(p => p.key), gen: G.gen });
     if (this.tight) { if (this.answered.size > 1024) this.answered.clear(); this.serial++; for (const p of this.pending) this.answered.set(p.key, this.serial); this.tight = false; }
     this.pending.length = 0;
   }
 
   /** Call after queue.submit. */
   afterSubmit() {
-    while (this.inflight.length > 3) { const x = this.inflight.shift()!; this.readbacks.push(x.buf); }
-    const job = this.inflight.shift(); if (!job) return;
+    const G = this.gpu;
+    while (G.inflight.length > 3) { const x = G.inflight.shift()!; G.readbacks.push(x.buf); }
+    const job = G.inflight.shift(); if (!job) return;
     job.buf.mapAsync(GPUMapMode.READ).then(() => {
-      const f = new Float32Array(job.buf.getMappedRange().slice(0)); job.buf.unmap(); this.readbacks.push(job.buf);
+      const f = new Float32Array(job.buf.getMappedRange().slice(0)); job.buf.unmap(); G.readbacks.push(job.buf);
+      if (job.gen !== G.gen) return;   // (asked before the game was put back: putBack)
       job.keys.forEach((k, i) => this.results.set(k, [f[i * 4], f[i * 4 + 1], f[i * 4 + 2]]));
     }).catch(() => { /* lost */ });
   }
