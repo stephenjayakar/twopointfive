@@ -35,6 +35,7 @@ import type { Vec3 } from '../math/vec';
 import type { RenderSettings } from '../settings';
 import type { HudLike, BubblesLike, View, Chapters } from './hud';
 import { TWEEN, type Tween } from './tween';
+import { FINDME, behindYaw, behindStep } from './findme';
 
 /** the showcase tour (game/demo.ts Demo) as the loop sees it */
 export interface DemoLike { readonly active: boolean; caption: string; sub: string; fade: number; update(dt: number): Vec3 | null; chapters(): Chapters; goto(k: number): void; }
@@ -55,6 +56,10 @@ export interface LoopCtx {
   fixedStep?(): boolean;
   /** the fixed step's own state, made by stepFrame on first use: time owed to the next tick, the last tick's scripted look-ats, the edges a tickless frame left */
   fixed?: { acc: number; drift: number; demoPos: Vec3 | null; attractPos: Vec3 | null; owed: { pressed: string[]; clicked: number; wheel: number } | null; orbit: number };
+  /** the camera key was tapped twice since this was last asked (host/findme.ts watchCtrlTaps; main.ts hands it over). Absent = never */
+  ctrlTwice?(): boolean;
+  /** stepFrame's own: the yaw the view is coming round to after that double tap (host/findme.ts `behind`), null or absent = none */
+  behind?: number | null;
   /** between two ticks of ONE drawn frame (the fixed step, a display under the tick rate or a hitch): what the host's draw does that the next tick reads — main.ts: the world's
    *  boxes packed into the grid its rays walk (engine.render does it once a frame; a second tick would otherwise trace the boxes of two ticks ago), and the HUD's one write
    *  to the game (an expired speech bubble nulled: a replay makes it after EVERY update) */
@@ -141,8 +146,18 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   ctx.afterFreeze?.(frozen);
   if (!frozen && input.wheelCtrl) cam.zoom(input.wheelCtrl);                 // Ctrl + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
   const fixed = !frozen && FIXEDSTEP.on && !!ctx.fixedStep?.() && view.clientWidth > 0 && view.clientHeight > 0;
-  const orbit = !frozen && input.orbitDX ? input.orbitDX * 0.006 : 0;       // hold Ctrl and move the mouse to orbit (Q / E are the wall hold and the holster now)
+  const orbit = !frozen && input.orbitDX ? input.orbitDX * 0.006 * FINDME.turn : 0;       // hold Ctrl and move the mouse to orbit (Q / E are the wall hold and the holster now)
   if (orbit && !fixed) cam.rotate(orbit);                                  // (the fixed step turns the camera in the frame's first TICK, below: a turn on a frame with no tick would reach the next tick's record through the frame's own rebuild, and two displays would be two games)
+  // Ctrl tapped twice (host/findme.ts `behind`, off unless the player's Options say so): the view comes round to look where his man looked at that moment — a step
+  // with each camera step below (a frame's on the free step, a tick's on the fixed one, as the orbit is). The tap's own frame may carry a pixel of orbit (a hand's
+  // tremor on the key): the tap wins it. After that a hand's turn drops it, and so does anything else that takes the view (a pin, a show, the tour, a spectated man)
+  const viewFree = () => game.spectate < 0 && !game.director.showing && !ctx.demo?.active && !ctx.attract?.active && !cam.pin;
+  { const twice = ctx.ctrlTwice?.() ?? false;   // (asked every frame: a double tap under a card is not kept for the moment it lifts)
+    if (frozen || !viewFree()) ctx.behind = null;
+    else if (twice && FINDME.behind) ctx.behind = behindYaw(game.player.char.aimYaw);
+    else if (orbit) ctx.behind = null; }
+  const comeRound = (cdt: number) => { if (ctx.behind == null) return; if (!viewFree()) { ctx.behind = null; return; } const s = behindStep(cam.yaw, ctx.behind, cdt); cam.rotate(s.turn); if (s.done) ctx.behind = null; };
+  if (!fixed) comeRound(dt);
   if (frozenKeys) { for (const k of frozenKeys) input.pressed.add(k); ctx.hotkeys?.(true); input.pressed.clear(); }   // frozen: the frame's presses were put away first (afterFreeze's still takes a zero-length game step with the hands off) and are handed back for this one look — F9 / F10 start a recording from the pause card
   else ctx.hotkeys?.(frozen);
 
@@ -183,6 +198,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       for (let i = 0; i < plan.ticks; i++) {
         if (i) { input.endTick(); ctx.betweenTicks?.(); }   // a press, a click, the wheel: the first tick's alone; the host packs the world the last tick left (what a draw would have done)
         else if (fx.orbit) { cam.rotate(fx.orbit); fx.orbit = 0; }   // the hand's turn of the camera since the last tick (a frame with no tick owes it to the next frame's first)
+        comeRound(tdt);
         fx.demoPos = demo ? demo.update(tdt) : null;
         fx.attractPos = fx.demoPos || D.showing || !attract ? null : attract.update(tdt);
         if (ctx.beforeTick) { const b0 = performance.now(); ctx.beforeTick(tdt); bt += performance.now() - b0; }
