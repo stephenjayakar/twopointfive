@@ -59,9 +59,10 @@ const OUT = () => { const t = window.__lamp; t.broken = true; return t.broken; }
 const LAMPSTATE = () => { const t = window.__lamp; return { broken: t.broken, on: t.on }; };
 
 (async () => {
-  let red = 0; const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
+  let red = 0;
   const defs = { on: '', lesson: 'levelFile=train-orders.json&roomclear=1&', off: 'savetimeline=0&' };
   for (const name of JOBS) {
+    const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });   // (a browser per job: one that dies under the software adapter costs its own job only)
     const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
     const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
     const url = `http://localhost:${PORT}/?${defs[name]}paused&quality=${QUALITY}&mute`; log(`${name}: ${url}`);
@@ -122,7 +123,7 @@ const LAMPSTATE = () => { const t = window.__lamp; return { broken: t.broken, on
         if (!r.set.saveKey || r.saves.some(s => !s.kept)) fails.push('F5 is not kept from the browser');
       }
     } catch (e) { fails.push(String(e).slice(0, 300)); }
-    await page.close();
+    await page.close().catch(() => { }); await browser.close().catch(() => { });
     if (errs.length) fails.push(`page errors: ${errs.slice(0, 3).join(' | ')}`);
     const ok = !fails.length; if (!ok) red++;
     const said = { on: 'the page as it opens: three F5 saves a few seconds apart; the pause card shows three tiles in time order, each a picture; the middle one loads to its own mission clock; the down card shows them too',
@@ -130,7 +131,6 @@ const LAMPSTATE = () => { const t = window.__lamp; return { broken: t.broken, on
       off: 'under ?savetimeline=0: F5 writes nothing, the pause card has no strip' }[name];
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${said}\n    ${JSON.stringify({ set: r.set, saves: (r.saves || []).map(s => +s.t.toFixed(1)), tiles: r.strip ? r.strip.tiles.map(t => `${t.w}x${t.h} ${(t.bytes / 1024).toFixed(1)}KB range ${t.range} '${t.age}'`) : null, pick: r.pick, lum: r.lum, lamp: r.lamp })}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
-  await browser.close();
   console.log(`=== savetimeline-page: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);
   process.exit(red ? 1 : 0);
 })();
