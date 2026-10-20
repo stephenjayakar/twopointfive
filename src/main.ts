@@ -375,7 +375,7 @@ async function main() {
   // THE SAVE TIMELINE (game/savestate.ts SAVETIMELINE): F5 is the game's; every save written asks for a picture, taken off the canvas straight after the next
   // frame that is drawn (the frame of the save: the update that wrote it is the one that frame shows) and handed back small — the simulation never sees a canvas,
   // and a picture that cannot be taken or kept is simply not there; a save kept in memory put back cuts the camera onto the man, as a file's load does
-  input.saveKey = () => saveMod.SAVETIMELINE.on && menu.mode !== 'start' && !brief?.up && document.getElementById('fatal')?.style.display !== 'flex';   // (a run is up, or its pause / end card: on the start page, behind a mission's brief and over a broken frame F5 is the browser's reload)
+  input.saveKey = () => saveMod.SAVETIMELINE.on && !tape && !kitViewOn && menu.mode !== 'start' && !brief?.up && document.getElementById('fatal')?.style.display !== 'flex';   // (a run the player is playing is up, or its pause / end card: on the start page, behind a mission's brief, over a broken frame, on a replay — its keys are the tape's, nothing reads a watcher's F5 — and in the kit picture's own window F5 is the browser's reload)
   const picsDue: saveMod.SlotInfo[] = []; let picCanvas: HTMLCanvasElement | null = null;
   game.saves.picture = info => { picsDue.push(info); if (picsDue.length > 4) picsDue.shift(); };
   const takeSavePictures = () => {

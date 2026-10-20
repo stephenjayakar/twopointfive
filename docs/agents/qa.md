@@ -159,7 +159,8 @@ but synthetic writes still work.
   · **Two rings that never push each other out**: the newest FIVE autosaves (`auto.0‥4`, was three) and the newest FIVE made by hand (`manual`, `manual.1‥4`: the first empty
     slot, then the oldest). An old build's slots read and list as they are (`manual` IS hand slot 0), and with the switch back off every slot written under it still loads.
   · **F5 saves by hand.** Read in `updatePlayer` (`input.hit('F5')` → `Checkpoints.askSave`, written at the end of that update), so a run tape replays it like any press; the
-    page keeps a bare F5 from the browser while a run is up (`Input.saveKey`, the page's to say: not on the start page, not over a broken frame). What a file cannot
+    page keeps a bare F5 from the browser while a run is up (`Input.saveKey`, the page's to say: not on the start page, behind a mission's brief, on a replay,
+    in the kit picture's window or over a broken frame). What a file cannot
     hold is refused with its reason on the feed (`not saved: …`; `canSave`: his hands full, a can on its fuse, a body still falling …). A man alerted does NOT refuse
     a save by hand and a save by hand is never marked regretted: it is the player's word, and the strip is how he goes further back than it. The Tab ▸ Checkpoints
     buttons go on as before (`bindings.ts`, straight to `Checkpoints.write`; its slot picker still reaches four).
@@ -173,9 +174,10 @@ but synthetic writes still work.
     switch, the three hooks, the sandbox row, the tune rows; any OTHER setting kept on the Game goes back with the save. The page's run books start over (main.ts
     `vRun = null`: the Mission is the same object, and a load is another try). Then it calls
     `Checkpoints.onPutBack` — `src/host/putback.ts`: the books of "what was last sent to the GPU" roll back with the Game while the GPU's buffers do not, so the host
-    forgets them (`BoxWorld.forgetSent`, `LightSet.forgetSent`, `CharacterRenderer.forgetSent`, the marks, the wind's map `airResend`, the dust grid `AirDust.resend`,
+    forgets them (`BoxWorld.forgetSent`, `LightSet.forgetSent`, `CharacterRenderer.forgetSent`, the marks, and `Game.rehand()` for the snow, the wind's map and the dust grid,
     smoke and particles cleared, the TAA history cut, the world cache dropped) — A HAND-KEPT LIST: a new "sent only when changed" book inside the Game's reach needs
-    its line there, or is a `HostOwned` no snapshot touches (the GPU light meter's buffers and count book are: `render/probe.ts` `Plumbing`, `docs/agents/replays.md`; its line here only drops the answers still out, `IrradianceProbe.putBack`). The page adds the camera cut and drops held keys. Enter once down goes through `loadInStep` (a memory save is put back at the END of that update,
+    its line there, or is a `HostOwned` no snapshot touches (the GPU light meter's buffers and count book are: `render/probe.ts` `Plumbing`, `docs/agents/replays.md`; its line here only drops the answers still out, `IrradianceProbe.putBack`). (`putback.ts` imports game modules as TYPES only, and `player.ts` imports nothing of `savestate.ts` — `askSave` reads the switch: a value
+    import in either was one more door into the game's import cycle and broke a tool whose first import was `digest.ts`.) The page adds the camera cut and drops held keys. Enter once down goes through `loadInStep` (a memory save is put back at the END of that update,
     never under the modules still running; one that will not load is refused in the step and the restart happens, as with a file).
   · **A picture per save**, taken by the page, never by the game: `Checkpoints.picture(info)` is a seam the page fills (main.ts: after the next PRESENTED frame, the canvas
     drawn 256 px wide into a JPEG, `setPicture`). A file save's picture is one more store key (`twopointsix.save.pic.<slot>`, stamped with its save's time so a stale one is

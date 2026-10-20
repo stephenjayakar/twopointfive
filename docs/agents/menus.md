@@ -101,8 +101,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   1440 × 900 with no picture behind it, looked at twice by a reviewer. NOT SEEN BY ANYONE: the panel over the real night picture, on a GPU, in a Mac's
   condensed face, with a pair (a teammate's card), in a window under 1180 px wide.
 - **Team & kit shows the team at the mission's way-in door** (2026-10-13, the owner's pick; `src/ui/kitView.ts` + `src/host/kitView.ts`). SWITCHES, BOTH UI-ONLY:
-  `KIT_VIEW.on` / `?oldfigure` (off = the standing man, `kitFigure.ts`, everywhere, as before) and `KIT_VIEW.acts` / `?stillkit` (THE LOOP, 2026-10-14; off = the still picture: staged, warm, held, every
-  kit change a plain restage, nothing played — the parent opens the child `&stillkit`, which is what the child reads), both on in the page, both in the UI module's table (with `wait` 10 s, `kitMs` 150 and `grace` 2.5 s). No `src/game` code reads either, so
+  `KIT_VIEW.on` / `?oldfigure` (off = the standing man, `kitFigure.ts`, everywhere, as before; ON = he is not on the page at all, 10-20: below) and `KIT_VIEW.acts` / `?stillkit` (THE LOOP, 2026-10-14; off = the still picture: staged, warm, held, every
+  kit change a plain restage, nothing played — the parent opens the child `&stillkit`, which is what the child reads), both on in the page, both in the UI module's table (with `wait` 10 s and `kitMs` 150). No `src/game` code reads either, so
   neither has a knobs-registry row, a journal key or a `FROZEN_HOLDS` row (`knobs-check` scans only `src/game`), and neither exists on a headless stand. The staging numbers are the HOST module's `KIT_VIEW_STAGE`, the light
   `KIT_VIEW_LIGHT`, the page layout `KIT_VIEW_PLACE` (ui): three names, three things. THE SEAM (10-15): the child holds NO geometry of its own — `place()` asks
   `src/host/kitViewPlan.ts` (on the game's own nav grid, the hidden boxes sunk and the grid rebaked first) for the anchor, the five places, the wall's face
@@ -119,12 +119,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   current element's own window. The child says `boot` (its listener is up; on every load of its page the parent answers with
   `{kv:'frame', cx, cy, h, w, man, door, left, right, keep}` off the `.onefig` column's rectangle and, where the tiles moved since its query, the kit), `ready`, `none`, and — still mode only — `held` (`dip` / `undip` are gone, 10-14: the child dissolves inside itself, below; the parent ignores the two words from an older child). A kit
   tile or the size is `{kv:'kit', members: KIT.members, squad}` at once on the first change (the LEADING edge; `kitMs` 150 only folds the clicks that follow into one more), and nothing else: the CHILD works out what moved. The loop's two more: `{kv:'sel', who, field}` (the open card's member and the highlighted tile's field, null on the sets;
-  said when either changes and again at every `boot`) and `{kv:'pause', on}` (on = the step is not showing: `show(null)`). THE PARENT'S HOOKS, all there are: `MemberCardOpts.onSelect(i, field)` (kitCard.ts, told from `draw()` when the highlighted row is another: a move changes no value, so `onChange` never said it), `loadout.ts` routes it to its `onPaint`, `startpage.ts paintFigure` passes `member: s.member, row: s.card?.at()` to `show()`. THE STANDING MAN STAYS until the first `ready`
-  (the child's own word, 12 drawn frames in), and for the page's life on that query when the child says `none` (before `ready` or AFTER it: a picture already shown is dropped the same way), its load
-  errors, or 10 s pass without `ready` (`?kitwait=N` for a slow adapter). WHILE IT BOOTS THE COLUMN IS EMPTY, not the standing man (his play 10-14: "the old character
-  flashes ... before we open up the gear screen"): `KIT_VIEW.grace` 2.5 s (`?kitgrace=N`; 0 = he is drawn at once, as it was), `show()` true for it, and he
-  stands in only for a child slower than that; the level's ways not yet fetched waits empty the same way (kitview-page's two rows; `GRACE_BREAK=1` reds
-  one). THE SECOND GAME LIVES ONLY WHILE IT CAN SHOW: dropped on `none` / a failed
+  said when either changes and again at every `boot`) and `{kv:'pause', on}` (on = the step is not showing: `show(null)`). THE PARENT'S HOOKS, all there are: `MemberCardOpts.onSelect(i, field)` (kitCard.ts, told from `draw()` when the highlighted row is another: a move changes no value, so `onChange` never said it), `loadout.ts` routes it to its `onPaint`, `startpage.ts paintFigure` passes `member: s.member, row: s.card?.at()` to `show()`. NOBODY STANDS IN FOR THE PICTURE (10-20; the maintainer: "we show the original gear screen before the new one fades in. let's just remove the old one with
+  the figure?"). The standing man (`ui/kitFigure.ts`) used to be drawn while the child booted past a 2.5 s grace (`KIT_VIEW.grace`, `?kitgrace`: both gone) and
+  wherever there was no picture; a second game slower than the grace therefore showed him for a moment and then faded the picture in over him. With the
+  switch on he is NOT ON THE PAGE: `startpage.ts` mounts him only when `KIT_VIEW.on` is off (`?oldfigure` = no picture, the standing man everywhere, the page
+  as it was — the word menu-art-page and menu-idle-page already open him with), and `show()` answers true for every case the column is the picture's:
+  shown (`#missions.kv-on`), WAITED FOR — the level's ways not yet fetched, or the child not yet `ready` (its own word, 12 drawn frames in), however long
+  that takes: `#missions[data-kv-wait]`, the column empty and its hairline off so nothing shows and goes — or NONE TO BE HAD, for the page's life on that
+  query: the child said `none` (before `ready` or AFTER it), its load errored, 10 s passed without `ready` (`?kitwait=N` for a slow adapter), the level has
+  no block or the way in is dealt: `#missions[data-kv-none]`, the column empty. `show()` is false only with the switch off or under 720 px. CHECK:
+  kitview-page's outer half (the rows 'a slow child', 'a child that says nothing', 'says `none`', 'no kitView block'; `STANDIN_BREAK=1` opens the slow
+  child's row `?oldfigure` and must fail; `GRACE_BREAK` is gone with the grace). Headless Chromium with a stub child, and one run of the real page with the
+  real child on the software adapter; never seen on a GPU. STILL IN THE REPO: `kitFigure.ts` and `figureTrace.ts`, reached only by `?oldfigure` and their own
+  sheets and checks — deleting them is the kit figure's owner's call. THE SECOND GAME LIVES ONLY WHILE IT CAN SHOW: dropped on `none` / a failed
   boot / a mission with no block / a dealt way / a window gone under 720 px (the ResizeObserver repaints across the line) / Deploy / the page closing;
   kept across the Mission step — the OLD instance stays alive while another row is picked there, until Team & kit opens again and decides. LAYOUT: one CSS block; ONE root
   class `#missions.kv-on`, on only while the picture is shown (the iframe's own rules stand without it — it must be laid out, at opacity 0, for its page
@@ -236,7 +243,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NEVER SEEN ON A GPU: every picture named above as changed (mousehole's door in the ward's wall and its lintel, the four re-anchored ways), the
   teammate's wand row, the goggles' turn. Stills were drawn on the software adapter only.
 - **The standing man holds his gun as the mission's man does** (2026-10-18; `src/ui/kitFigure.ts`, the picked man the start page draws by itself: under
-  `?oldfigure` and wherever the live picture is not up). He was laid out without IN HAND (`src/game/inhand.ts INHAND`, docs/agents/player.md): the figure
+  `?oldfigure` only since 10-20 — he no longer stands in where the live picture is not up). He was laid out without IN HAND (`src/game/inhand.ts INHAND`, docs/agents/player.md): the figure
   poses a `Character` of its own and never said the drawer's word, so a teammate's rifle or carbine had its pistol grip 4.2 cm short of the palm and his
   9 mm stood 4.7 cm off the fist. NOW, with `INHAND.on` (no switch of its own; `?inhand=0` = the figure as it was), the bake says the word the game's
   drawer would, row for row (combat.ts `handPropsRaw` for you, `guardKit` for a teammate): a long gun stays put and the trigger hand goes onto its grip

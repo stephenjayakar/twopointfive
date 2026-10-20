@@ -2,7 +2,6 @@
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
 import { SideMap } from '../math/side';
-import { SAVETIMELINE } from './savestate';   // (read inside updatePlayer only)
 import type { View } from '../host/hud';
 import { backHit } from './backkey';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG, smoothstep } from '../math/vec';
@@ -309,7 +308,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (ck && g.saves.isThisRun(ck)) { const why = g.saves.loadInStep(g, ck.key); if (!why) return; said = `checkpoint: ${why}`; }
     g.restart(said); return;
   }
-  if (SAVETIMELINE.on && input.hit('F5')) g.saves.askSave();   // a save by hand (savestate.ts): asked for by the key — the recording's own input — and written at the end of this update, or refused there with its reason on the message line
+  if (input.hit('F5')) g.saves.askSave();   // a save by hand (savestate.ts): asked for by the key — the recording's own input — and written at the end of this update, or refused there with its reason on the message line
   if (STEALTHPOSE.on || c.anim.stealth) stealthFeed(g);
   samBigTailTick(g, dt);   // (bigkit.ts, BIGSLOT.moves: the tool going back onto him after its beat, his legs his own — or dropped at once when anything else has his hands)
   if (pl.down) { if (pl.wanding) wandDrop(pl); if (pl.kitWas !== undefined || c.anim.kitBusy) kitTick(g); releaseWall(g); if (pl.holding) freeHeld(g, 'shot'); c.vel = [0, 0, 0]; pl.light.enabled = false; pl.throwPreview = null; c.anim.lockpick = false; c.anim.longGun = false; c.update(dt); g.bodyThud(c); return; }   // (down with a man in his arm — god mode off, hitPlayer has normally let go already: he goes free; the rifle, in the hands or not, is no longer held: it left them or lies under him on its sling)
