@@ -161,7 +161,12 @@ let ruleOn = true;
 /** the big slot's switch (BIGSLOT.on below reads and writes it) */
 let bigOn = false;
 /** what member i is issued as the rule stands: the table above — and you, with the rule off, what a Player is built with */
-const issuedCard = (i: number): MemberKit => (i === 0 && !ruleOn ? { ...ISSUED[0], ...BUILT } : ISSUED[i]);
+const issuedCard = (i: number): MemberKit => (i === 0 && hand ? stealthIssue(hand) : i === 0 && !ruleOn ? { ...ISSUED[0], ...BUILT } : ISSUED[i]);
+/** A STEALTH MISSION'S KIT (KITDEAL.stealth below): the sponge rounds, the sticky cameras and the optical wand a quiet mission or a night alone is played
+ *  with, as the mission would deploy now. `hand` is the mission the table's first card is FOR: null = a loud one (the card you always had), else that card is
+ *  your STEALTH card and what you are issued is the mission's kit (stealthIssue). Declared here: issuedCard is asked as this module loads. */
+export interface KitHand { rings: number; cams: number; wand: boolean }
+let hand: KitHand | null = null;
 export function kitDefault(i: number): MemberKit { return { ...issuedCard(i) }; }
 
 /** The table. `on` false (?nokit, or by hand) = every man as issued whatever the cards say. */
@@ -232,7 +237,7 @@ const gunsHome = (m: MemberKit): MemberKit => { const long = gunPicks('primary')
 /** One priced thing as this file runs it, keyed in the table by the CARD'S field ('shotgun' = the weapon row on the M870): what
  *  ONE costs in pouches (whole; 0 = not a pouch at all), the most member i may carry (`max[i]`: the table's, never over the row's own most; 0 = not his to carry), and
  *  the most the teammates may carry between them (`squadMax`). */
-export interface SlotItem { id: string; pouches: number; max: number[]; squadMax?: number; /** a big thing: with BIGSLOT on it rides in the big slot and costs no pouch */ big?: boolean }
+export interface SlotItem { id: string; pouches: number; max: number[]; squadMax?: number; /** a big thing: with BIGSLOT on it rides in the big slot and costs no pouch */ big?: boolean; /** how many of it ride in ONE of its pouches (the sponge rounds: five) — read while KITDEAL.stealth is up, else one */ holds?: number }
 /** A named loadout of the table, all five cards: per member the counts by card field (a field not named = none of it) and the other rows it sets (raw: read
  *  through the rows, like a stored card). `missing`: its tools this build has no row for (it cannot be put on here). */
 export interface SlotLoadout { id: string; name: string; counts: Record<string, number>[]; cards: Record<string, unknown>[]; missing: string[] }
@@ -319,6 +324,8 @@ function bigHome(m: MemberKit, i: number): MemberKit {
 export const bigOf = (m: MemberKit): BigPick => (m.walls ? 'wall' : m.big ?? 'none');   // (a card from a hand that knew no big slot: empty)
 /** the pouches ONE of an item fills as the rule stands: a big thing none while it rides in the big slot */
 const priceOf = (it: SlotItem | undefined): number => (!it || (bigOn && it.big) ? 0 : it.pouches);
+/** the pouches `n` of an item fill: one's price each — but a thing that rides several to a pouch (slots.json `holds`) fills one pouch a pack */
+const pouchesOf = (it: SlotItem | undefined, n: number): number => { const p = priceOf(it); return !p || n <= 0 ? 0 : p * (it!.holds && stealthOn() ? Math.ceil(n / it!.holds) : n); };
 /** how many big things a card carries (0 with the big slot off: there they are pouches) */
 function bigUsed(m: MemberKit, t: SlotTable): number { if (!bigOn) return 0; let n = 0; for (const k of Object.keys(SLOT_AMOUNT)) if (t.items[k]?.big) n += SLOT_AMOUNT[k](m); return n; }
 const int = (x: unknown, lo: number): x is number => typeof x === 'number' && Number.isInteger(x) && x >= lo;
@@ -338,7 +345,7 @@ const mateShells = (): boolean => treeUp() && squad40Here();
 const homeCans = (m: MemberKit): MemberKit => { if ((!m.suppressed || !m.sideCan) && treeUp()) { if (m.weapon === 'pistol' || !canChoice(m.primary)) m.suppressed = true; if (!canChoice(m.secondary)) m.sideCan = true; } return m; };
 const homeShells = (m: MemberKit): MemberKit => { homeCans(m); if (!tubed(m)) { m.shells = 0; if (m.rings && treeUp()) m.rings = 0;   /* (KITTREE: the sponge rounds too — an issued card carries none, so the switch is never asked as this module loads) */ if (m.cams && STICKY.on) m.cams = 0; /* (the cameras go by the same tube; with their switch off the count is inert and kept — and an issued card carries none, so the switch is never asked as this module loads: slotsCheck below runs then) */ } return m; };
 /** the pouches a card fills */
-function costOf(m: MemberKit, t: SlotTable): number { let used = 0; for (const k of Object.keys(SLOT_AMOUNT)) used += SLOT_AMOUNT[k](m) * priceOf(t.items[k]); return used; }
+function costOf(m: MemberKit, t: SlotTable): number { let used = 0; for (const k of Object.keys(SLOT_AMOUNT)) used += pouchesOf(t.items[k], SLOT_AMOUNT[k](m)); return used; }
 /** HOW MANY TEAMMATES COME (members 1..team): the men the squad's pouches are counted over — the table's rule. Four until somebody says otherwise (the
  *  loadout screen, as its size is stepped: kitTeam); a read of the store is always held to all four, so a stored kit is legal at any size. */
 let team = KIT_MEMBERS - 1;
@@ -365,7 +372,7 @@ const coming = (cards: MemberKit[], n: number) => cards.slice(1, 1 + n);
  *  is lent one (each says what its men carry), and cards made the player's own out of such a kit keep its empty slots (the same mark).
  *  And NOBODY COMES WITH A GUN ALONE: a man the deal leaves with nothing counted is handed one stun canister more (the Quiet kit of four: its three
  *  canisters left Blue Two his pistol) — THE ONE THING THAT MOVES THE SQUAD'S COUNT: kitPool reads the cards as worn, and holds it. */
-export const KITDEAL = { on: false, more: false };
+export const KITDEAL = { on: false, more: false, stealth: false };
 /** a word of the checks' in the environment (`<NAME>_BREAK=1`: the rule's broken path, which its check must fail on) */
 const envIs = (name: string): boolean => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name] ?? '') === '1'; } catch { return false; } };
 /** `KITMORE_BREAK=1` (the check's): nobody is lent a tool and nobody is handed the canister */
@@ -373,6 +380,68 @@ const MORE_BREAK = envIs('KITMORE_BREAK');
 /** who is lent which big tool, of the men who come */
 const DEAL_TOOL: [number, 'shotgun' | 'hammer'][] = [[2, 'shotgun'], [4, 'hammer']];
 const moreOn = (): boolean => KITDEAL.more && !MORE_BREAK;
+/** A STEALTH MISSION'S KIT IS WHAT YOUR CARD STARTS AT THERE (`KITDEAL.stealth`; ?nokitstealth, TPS_KITSTEALTH=1; reads only under the card as a tree. The
+ *  maintainer, 10-20, of the tiles that read "mission's": "not sure it makes sense to have "mission's" for equipment. that should just be defaults. and if we
+ *  want to have required equipment, that should just be a constraint on the stuff you pick."). The build before HANDED a quiet mission's sponge rounds, sticky
+ *  cameras and optical wand to you over your card at the staging, for no pouch, and the loadout screen wrote them on your tiles as the mission's: a second
+ *  kind of gear that no row could change. Up: NOTHING IS HANDED OVER A CARD. On a stealth mission (a quiet mission; the night alone) you wear a STEALTH CARD of
+ *  your own, kept apart from the loud one, and what it is ISSUED as is the mission's kit (stealthIssue): the rounds, the cameras the link carries, the wand,
+ *  and a canister where a pouch is left. Every row of it is yours to change and is priced like any other (the sponge rounds five to a pouch: slots.json
+ *  `holds`); 'As issued' puts the mission's kit back; and the loud card is not touched by any of it. The stealth card as issued is not stored: it follows the
+ *  mission (the fog lever moved, another link's cameras) until a row of it is changed by hand.
+ *  THE TABLE'S FIRST CARD IS THE ONE WORN: kitMission puts the stealth card there while a stealth mission's screen is up, and for the length of a stealth
+ *  run's staging call (forRun), and the loud one back. The store keeps the loud card where it always was and the stealth one beside it (`stealth`: the card, or `true` where the first card
+ *  written IS the stealth one — a run tape, the door picture's child).
+ *  NOT COVERED: a mission's own issue and a lesson's page (kitIssue, kitIssuedPage) wear the issue cards with the hand-overs as they were: those kits are
+ *  nobody's card. REQUIRED EQUIPMENT: no mission requires a thing today; one that did would be a refusal with its reason (kitRowCan), never a second kind of gear.
+ *  Off (and KITSTEALTH_BREAK=1, the check's) = the build before: the hand-overs, the tiles that say whose, a sponge round a pouch each. */
+const STEALTH_BREAK = envIs('KITSTEALTH_BREAK');
+const stealthOn = (): boolean => KITDEAL.stealth && !STEALTH_BREAK && treeUp();
+export const kitStealthOn = (): boolean => stealthOn();
+/** a run tape's stealth card put back for its replay (null: as the mission issues it) */
+export function kitStealthSet(raw: unknown) { stealthYou = raw && typeof raw === 'object' ? kitSanitize(0, raw) : null; }
+/** your stealth card as kept, for a run tape to carry beside the cards (null: as the mission issues it, or the switch off) */
+export const kitStealthCard = (): MemberKit | null => (!stealthOn() ? null : !hand ? stealthYou : sameKit(KIT.members[0], stealthIssue(hand)) ? null : KIT.members[0]);
+/** the loud card as issued, whatever mission the table is for */
+const loudIssue = (): MemberKit => (ruleOn ? { ...ISSUED[0] } : { ...ISSUED[0], ...BUILT });
+/** WHAT A STEALTH MISSION ISSUES YOU: the issue card with nothing loud on it, the mission's kit, then a smoke and a stun canister in turn while a pouch is
+ *  free. The cameras give way first where the pouches cannot hold it all, then the wand. */
+function stealthIssue(h: KitHand): MemberKit {
+  if (!SLOTS.on) return { ...loudIssue(), rings: Math.min(RINGS_MAX, Math.max(0, h.rings)), cams: camRow() ? Math.min(CAMS_MAX, Math.max(0, h.cams)) : 0, wand: h.wand && wandRow() };   // (no pouches rule: every row is free, so nothing gives way — the loud issue with the mission's kit on it)
+  const m: MemberKit = { ...ISSUED[0], smoke: 0, bangs: 0, frags: 0, shells: 0 }, t = SLOTS.table, it = t.items, fits = () => costOf(m, t) <= (t.pouches[0] ?? 0);
+  m.rings = Math.min(RINGS_MAX, Math.max(0, h.rings), it.rings?.max[0] ?? 0); m.wand = h.wand && wandRow();
+  for (m.cams = camRow() ? Math.min(CAMS_MAX, Math.max(0, h.cams), it.cams?.max[0] ?? 0) : 0; m.cams > 0 && !fits(); m.cams--) { /* one fewer */ }
+  if (!fits()) m.wand = false;
+  for (const k of ['smoke', 'bangs', 'smoke', 'bangs'] as const) { if (m[k] >= (it[k]?.max[0] ?? 0)) continue; m[k]++; if (!fits()) m[k]--; }
+  return m;
+}
+/** two cards alike, the two colours aside (a look is the man's, not a kit's) */
+const sameKit = (a: MemberKit, b: MemberKit): boolean => JSON.stringify({ ...a, suit: '', trim: '' }) === JSON.stringify({ ...a, ...b, suit: '', trim: '' });
+/** your loud card, parked while the stealth one stands first in the table · your stealth card as kept (null: as the mission issues it) */
+let loudYou: MemberKit | null = null, stealthYou: MemberKit | null = null;
+/** the stealth card for a mission: the kept one while it is a legal fill here, else the mission's kit */
+const stealthCard = (h: KitHand): MemberKit => (stealthYou && (!SLOTS.on || costOf(stealthYou, SLOTS.table) <= (SLOTS.table.pouches[0] ?? 0)) ? { ...stealthYou } : stealthIssue(h));
+/** the stealth card as the store keeps it: read off the table while it stands there (as issued = nothing kept) */
+function stealthKept(): { stealth?: MemberKit } { if (hand) { const m = KIT.members[0]; stealthYou = sameKit(m, stealthIssue(hand)) ? null : { ...m }; } return stealthYou ? { stealth: stealthYou } : {}; }
+/** THE MISSION THE CARDS ARE FOR (the loadout screen as it opens and as its fog lever moves; kitPlayer at a staging): `h` = a stealth mission's kit, null =
+ *  a loud mission. The stealth card stands first in the table for the one, the loud card for the other; the two colours go with you across. A stealth card
+ *  that is still as issued follows the mission to its new kit. Nothing is written to the store here. With the switch off: nothing at all. */
+export function kitMission(h: KitHand | null) {
+  const to = h && stealthOn() ? h : null, look = (c: MemberKit): MemberKit => ({ ...c, suit: KIT.members[0].suit, trim: KIT.members[0].trim });
+  if (!to) { if (hand && loudYou) { stealthKept(); KIT.members[0] = look(loudYou); } hand = null; loudYou = null; return; }
+  if (!hand) { const loud = KIT.members[0]; KIT.members[0] = look(stealthCard(to)); loudYou = loud; hand = to; return; }
+  if (hand.rings === to.rings && hand.cams === to.cams && hand.wand === to.wand) return;
+  const follows = sameKit(KIT.members[0], stealthIssue(hand)); hand = to; if (follows) KIT.members[0] = look(stealthIssue(to));
+}
+/** a stealth mission's kit as the loadout screen reads it off the mission's link: the launcher's five, the link's cameras, the wand that goes with them */
+export const kitStealthHand = (cams: number, wand: boolean): KitHand => ({ rings: KITTREE.lend, cams, wand });
+/** A STAGING READS THE CARD ITS RUN WEARS, AND LEAVES THE TABLE AS IT FOUND IT: the stealth card stands first for the length of the staging call alone (a
+ *  stealth run), or the loud one (a loud run staged while a stealth mission's screen is up), and whatever stood there before is back after — also when the
+ *  staging throws. So nothing read off the table between stagings changes with the last run played. */
+let staged = false;
+function forRun(g: Game, f: () => void) { const was = hand; try { staged = true; kitMission(handOf(g)); f(); } finally { staged = false; kitMission(was); } }
+/** the kit a run's stealth mission is played with, as the staging before handed it over the card (null: a loud run) */
+function handOf(g: Game): KitHand | null { const rings = stealthRun(g) ? KITTREE.lend : 0, cams = camRow() ? stickyVisit(g) : 0, wand = WAND.on && quietWand(g); return rings || cams || wand ? { rings, cams, wand } : null; }
 /** `KITDEAL_BREAK=1` (the check's): the deal hands every thing back to the men the table names */
 const DEAL_BREAK = envIs('KITDEAL_BREAK');
 /** what is dealt, in the order it is handed out · who is handed to, in turn (Red One, Blue One, Red Two, Blue Two) */
@@ -493,7 +562,7 @@ function setCard(i: number, p: KitPreset, t: SlotTable | null): MemberKit {
 }
 /** … in the pair's layout (what the table says; KITDEAL shares it out over a bigger team) */
 function setCardBase(i: number, p: KitPreset, t: SlotTable | null): MemberKit {
-  const d = kitDefault(i);
+  const d = i === 0 ? loudIssue() : kitDefault(i);   // (the loud issue, whatever mission the table's first card is for: a preset is a loud layout)
   if (p === 'quiet') Object.assign(d, i === 0 ? { weapon: 'pistol', smoke: CAN_MIXES.smoke.smoke, bangs: CAN_MIXES.smoke.stun, suit: 'black', trim: 'black' } : { weapon: 'pistol', suppressed: true, light: false, nvg: true, suit: 'black', trim: 'black' });
   if (p === 'loud') Object.assign(d, i === 0 ? { weapon: 'rifle', smoke: CAN_MIXES.stun.smoke, bangs: CAN_MIXES.stun.stun, suit: 'olive', trim: 'amber' } : { weapon: 'rifle', suppressed: false, light: true, nvg: true, bangs: Math.min(BANGS_MAX, d.bangs + 1), suit: 'olive', trim: 'amber' });
   if (!t || p === 'issued') return d;
@@ -514,13 +583,13 @@ function slotsCheck(raw: unknown): { table: SlotTable } | { why: string } {
   const sq = r.squad?.pouches; if (sq !== undefined && sq !== null && !int(sq, 0)) return { why: '"squad.pouches" is a whole number, or null for no squad limit' };
   if (!Array.isArray(r.tools)) return { why: '"tools" is missing' };
   const items: Record<string, SlotItem> = {}, unknown: string[] = [];
-  for (const t of r.tools as { id?: unknown; pouches?: unknown; who?: unknown; maxPerMan?: Record<string, unknown>; maxPerSquad?: unknown; inBuild?: unknown; big?: unknown }[]) {
+  for (const t of r.tools as { id?: unknown; pouches?: unknown; who?: unknown; maxPerMan?: Record<string, unknown>; maxPerSquad?: unknown; inBuild?: unknown; big?: unknown; holds?: unknown }[]) {
     if (!t || typeof t.id !== 'string' || !int(t.pouches, 0)) return { why: 'every tool has an "id" and "pouches", a whole number each' };
     const f = SLOT_FIELD[t.id]; if (!f || (t.inBuild === false && f !== 'walls')) { unknown.push(t.id); continue; }   // (the wall charge: the BUILD says whether it is here — wallHere — not the file)
     const who = Array.isArray(t.who) ? t.who : ['you', 'mate'], mx = t.maxPerMan ?? {};
     for (const k of ['you', 'mate']) if (mx[k] !== undefined && !int(mx[k], 0)) return { why: `tool "${t.id}": "maxPerMan.${k}" is a whole number` };
     if (t.maxPerSquad !== undefined && !int(t.maxPerSquad, 0)) return { why: `tool "${t.id}": "maxPerSquad" is a whole number` };
-    items[f] = { id: t.id, pouches: t.pouches, max: Array.from({ length: KIT_MEMBERS }, (_x, i) => { const own = OWN_MAX[f][i ? 1 : 0], most = mx[kindOf(i)] as number | undefined; return who.includes(kindOf(i)) ? Math.min(own, most ?? own) : 0; }), ...(t.maxPerSquad !== undefined ? { squadMax: t.maxPerSquad } : {}), ...(t.big === true ? { big: true } : {}) };
+    items[f] = { id: t.id, pouches: t.pouches, max: Array.from({ length: KIT_MEMBERS }, (_x, i) => { const own = OWN_MAX[f][i ? 1 : 0], most = mx[kindOf(i)] as number | undefined; return who.includes(kindOf(i)) ? Math.min(own, most ?? own) : 0; }), ...(t.maxPerSquad !== undefined ? { squadMax: t.maxPerSquad } : {}), ...(t.big === true ? { big: true } : {}), ...(int(t.holds, 2) ? { holds: t.holds } : {}) };
   }
   if (!(r.tools as { big?: unknown }[]).some(t => t.big !== undefined)) for (const f of BIG_TRIM) if (items[f]) items[f].big = true;   // (a table from before the big slot marks nothing big: the four things the slot is for are)
   const absent = Object.keys(SLOT_FIELD).filter(id => !items[SLOT_FIELD[id]] && id !== 'wallCharge' && id !== 'wand' && id !== 'stickyCam' && id !== 'hammer' && id !== 'sponge'); /* (a table from before the wall charge, the optical wand, the sticky cameras, the hammer or the sponge rounds prices none: no row) */ if (absent.length) return { why: `"tools" does not price ${absent.join(', ')}: every tool this build carries has a price (0 = not a pouch)` };
@@ -546,7 +615,7 @@ function slotsCheck(raw: unknown): { table: SlotTable } | { why: string } {
   return { table };
 }
 /** the pouches `n` of one item fill (0 for an item the table does not price) */
-export function slotCost(item: string, n: number, t: SlotTable = SLOTS.table): number { return Math.max(0, n) * priceOf(t.items[item]); }
+export function slotCost(item: string, n: number, t: SlotTable = SLOTS.table): number { return pouchesOf(t.items[item], n); }
 /** Member i's pouches: used of total, and what fills them, a line per thing carried. */
 export function kitCost(i: number, m: MemberKit = kitShown(i)): { used: number; total: number; free: number; lines: { item: string; n: number; pouches: number }[]; /** his big slot (BIGSLOT): filled of how many — null with the switch off */ big: { used: number; total: number } | null } {
   const lines: { item: string; n: number; pouches: number }[] = [];
@@ -639,8 +708,11 @@ function loadoutCards(id: string, looks?: MemberKit[]): MemberKit[] | string {
   const L = SLOTS.table.loadouts.find(l => l.id === id); if (!L) return `no loadout "${id}" in the table (${SLOTS.table.loadouts.map(l => l.id).join(', ') || 'it names none'})`;
   const missing = loadoutMissing(L); if (missing.length) return `loadout "${id}" carries ${missing.join(', ')}, which this build has no row for`;
   const cards = ISSUED.map((_m, i) => { const c = kitSanitize(i, L.cards[i]); for (const k of Object.keys(SLOT_AMOUNT)) SLOT_PUT[k](c, L.counts[i][k] ?? 0, ISSUED[i]); return wear(c, i); });
+  if (id === 'quiet' && stealthOn()) cards[0] = wear(stealthIssue(hand ?? QUIET_HAND()), 0);   // (KITDEAL.stealth: the Quiet kit's card for YOU is a stealth mission's kit — the table's, a pistol alone with three smoke and a frag, was written before you had sponge rounds, cameras or a wand to go quietly with)
   return illegal(cards, SLOTS.table) ?? cards;
 }
+/** the stealth kit where no mission says: the launcher's five, two cameras, the wand */
+const QUIET_HAND = (): KitHand => ({ rings: KITTREE.lend, cams: 2, wand: WAND.on });
 /** Put one of the table's named loadouts on all five cards — or 'issued', the issued kit — keeping each man's colours (the tallies; the loadout screen's
  *  squad kit row): null = done and kept, else why not — no such loadout, a tool of it this build has no row for, or (a table edited by hand) not a legal fill. */
 export function kitLoadout(id: string, only?: number): string | null {
@@ -851,7 +923,7 @@ export function kitRows(i: number): KitRow[] { const key = `${i}:${SLOTS.on}:${w
  *  that is not a pouch (a light, a colour; a shotgun while the table prices it at nothing), and for every row while the rule is off. */
 export function kitRowCost(i: number, r: KitRow, m: MemberKit = kitShown(i)): { pouches: number; rate: string } | null {
   const it = r.item ? SLOTS.table.items[r.item] : undefined; if (!SLOTS.on || !r.item || !it || !priceOf(it)) return null;
-  const p = it.pouches, rate = r.item === 'wand' ? `the wand takes ${pouchWords(p)}` : r.item === 'shotgun' ? `the shotgun's shells take ${pouchWords(p)}` : p === 1 ? 'a pouch each' : `${p} pouches each`;
+  const p = it.pouches, rate = it.holds && stealthOn() ? `${it.holds} to a pouch` : r.item === 'wand' ? `the wand takes ${pouchWords(p)}` : r.item === 'shotgun' ? `the shotgun's shells take ${pouchWords(p)}` : p === 1 ? 'a pouch each' : `${p} pouches each`;
   return { pouches: slotCost(r.item, SLOT_AMOUNT[r.item](m)), rate };
 }
 /** who the card is for: 'You', or the callsigns the man in that place answers to (the four's, and the pair's where he is one of it) */
@@ -1050,11 +1122,13 @@ export function kitSanitize(i: number, raw: unknown): MemberKit {
  *  pouches, and no row of the rule-off card makes one smoke and one stun. Any other card of yours loads as you left it. */
 export function kitLoad(s: Store | null, search = '') {
   const q = new URLSearchParams(search);
+  hand = null; loudYou = null; stealthYou = null;   // (first: every card read below is the loud table's, whatever mission a screen had it for)
   store = s; KIT.on = !q.has('nokit'); SLOTS.on = SLOTS.ok && !q.has('noslots'); team = KIT_MEMBERS - 1;
   for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; }
   kept0 = null; keptWand = []; dealOwn = false;
-  try { const raw = s?.getItem(KIT_LS); if (raw) { const j = JSON.parse(raw) as { members?: unknown[]; own?: unknown }; dealOwn = j.own === true; for (let i = 0; i < KIT_MEMBERS; i++) KIT.members[i] = kitSanitize(i, j.members?.[i]);
+  try { const raw = s?.getItem(KIT_LS); if (raw) { const j = JSON.parse(raw) as { members?: unknown[]; own?: unknown; stealth?: unknown }; dealOwn = j.own === true; for (let i = 0; i < KIT_MEMBERS; i++) KIT.members[i] = kitSanitize(i, j.members?.[i]);
       kept0 = keptOf(j.members?.[0]);
+      { const st = j.stealth === true ? j.members?.[0] : j.stealth; if (st && typeof st === 'object') stealthYou = kitSanitize(0, st); }   // (KITDEAL.stealth: your stealth card — inert until a stealth mission asks for it)
       keptWand = (j.members ?? []).map((r, i) => i > 0 && !!r && typeof r === 'object' && (r as { wand?: unknown }).wand === true);
       { const m = KIT.members[0], other: Record<typeof COUNTS0[number], number> = ruleOn ? BUILT : ISSUED[0], now = issuedCard(0); if (COUNTS0.every(k => m[k] === other[k])) for (const k of COUNTS0) m[k] = now[k]; }   // (as issued the other way the rule stands = as issued)
       if (SLOTS.on) kitFitAll(KIT.members).forEach((left, i) => { if (left.length) KIT_NOTE[i] = i === 0 && KIT.members[0].weapon !== 'rifle' && left.length === 1 && left[0].includes(SLOT_WORD.shells) ? `No FN2000 in your saved kit: ${left[0]} left behind.` : `Your saved kit was over the ${bigOn && !/canister|frag|grenade|door charge|camera|wand|sponge/.test(left.join()) ? 'big slot' : 'pouches'}: ${left.join(', ')} left behind.`; }); } }
@@ -1083,10 +1157,10 @@ function kitIssue(g: Game, f: () => void): boolean {
   return true;
 }
 function asIssued(f: () => void) {
-  const cards = KIT.members.slice(), notes = KIT_NOTE.slice(), s = store, t = team, own = dealOwn;
-  issuing = true; store = null; dealOwn = false;   // (the issue is nobody's own layout: it is dealt as the screen shows it, whatever the player's stored cards are)
+  const cards = KIT.members.slice(), notes = KIT_NOTE.slice(), s = store, t = team, own = dealOwn, h = hand;
+  issuing = true; store = null; dealOwn = false; hand = null;   // (…and the issue is the loud one's: a stealth mission's kit is handed over it there, as it was)   // (the issue is nobody's own layout: it is dealt as the screen shows it, whatever the player's stored cards are)
   for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; }
-  try { f(); } finally { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = cards[i]; KIT_NOTE[i] = notes[i]; } store = s; team = t; dealOwn = own; issuing = false; }
+  try { f(); } finally { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = cards[i]; KIT_NOTE[i] = notes[i]; } store = s; team = t; dealOwn = own; hand = h; issuing = false; }
 }
 /** YOUR OWN CHARGES ON A VISIT WITH THEIR ROWS OFF (?noowncharge, or a build without the wall charge): the stored card's door and wall charges are not read
  *  onto your card (no row: nothing of them is carried, priced or worded), and are kept here so the next change of any row does not write the store without
@@ -1103,9 +1177,9 @@ function keptOf(raw: unknown): typeof kept0 {
 let keptWand: boolean[] = [];
 function keptNow(): { charges?: number; walls?: number } { const k: { charges?: number; walls?: number } = {}; if (kept0?.charges && !chargeRow(0)) k.charges = kept0.charges; if (kept0?.walls && !wallRow(0)) k.walls = kept0.walls; return k; }
 /** (your card also carries `cans` — the split of six its two counts are, where they are one — for a build from before the pouches rule reading this store) */
-export function kitSave() { try { store?.setItem(KIT_LS, JSON.stringify({ v: 2, ...(dealOwn ? { own: true } : {}), members: KIT.members.map((m, i) => (i === 0 ? { ...m, ...keptNow(), cans: mixOf(m) ?? 'issued' } : wandRow(i) ? (keptWand[i] = m.wand, m) : keptWand[i] ? { ...m, wand: true } : m)) })); } catch { /* a full or forbidden store: the table still holds for this visit */ } }
+export function kitSave() { try { store?.setItem(KIT_LS, JSON.stringify({ v: 2, ...(dealOwn ? { own: true } : {}), ...stealthKept(), members: KIT.members.map((c, i) => { const m = i === 0 && hand && loudYou ? (loudYou = { ...loudYou, suit: c.suit, trim: c.trim }) : c; return (i === 0 ? { ...m, ...keptNow(), cans: mixOf(m) ?? 'issued' } : wandRow(i) ? (keptWand[i] = m.wand, m) : keptWand[i] ? { ...m, wand: true } : m); }) })); } catch { /* a full or forbidden store: the table still holds for this visit */ } }
 /** every card back as issued (and the store's copy) */
-export function kitReset() { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; } kept0 = null; keptWand = []; dealOwn = false; kitSave(); }
+export function kitReset() { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; } kept0 = null; keptWand = []; dealOwn = false; stealthYou = null; if (hand && loudYou) loudYou = loudIssue(); kitSave(); }
 // slots.json, checked once as this module loads (after the issued table above, which the check reads; nothing of another game module is touched)
 { const c = slotsCheck(slotsData); if ('table' in c) SLOTS.table = c.table; else { SLOTS.ok = SLOTS.on = false; SLOTS.why = c.why; console.error(`kit: slots.json refused — ${c.why}. The pouches rule is off: every row is free.`); } }
 
@@ -1137,7 +1211,7 @@ export const kitYouNvg = (pl: object): boolean => !youBare.get(pl)?.nvg;
 /** KITTREE: a run that is played quietly — a quiet mission, or the plain night alone off the loadout screen: the mission hands you its sponge rounds */
 const stealthRun = (g: Game): boolean => !!g.quiet?.active || (KIT_SOLO.on && !g.guards.some(gd => !!gd.unit && gd.team === 'operative'));
 /** the sponge rounds a mission of this kind hands you over your card (the loadout screen's tile shows them as the mission's) */
-export const kitRingsLent = (stealth: boolean, m?: MemberKit): number => (treeUp() && stealth && (!m || tubed(m)) ? KITTREE.lend : 0);
+export const kitRingsLent = (stealth: boolean, m?: MemberKit): number => (treeUp() && !stealthOn() && stealth && (!m || tubed(m)) ? KITTREE.lend : 0);   // (KITDEAL.stealth: nothing is handed over a card — they are the stealth card's own)
 /** the card is the tree (ui/loadout.ts: the squad's row of kits is then the one list of named kits, at every team size) */
 export const kitTreeOn = (): boolean => treeUp();
 /** YOUR card onto the fresh Player (a scenario's staging calls kitStage, which calls this; a plain night's start may call it by itself): the rifle left at
@@ -1149,6 +1223,7 @@ export function kitPlayer(g: Game) {
   if (!KIT.on) return;
   if (issuedPage && !issuing) return asIssued(() => kitPlayer(g));   // (a lesson's page: the issue card, whatever the table holds — kitIssuedPage)
   if (kitIssue(g, () => kitPlayer(g))) return;   // (a mission that issues its own kit: kitIssue)
+  const own = stealthOn() && !issuing; if (own && !staged) return forRun(g, () => kitPlayer(g));   // (KITDEAL.stealth: a stealth run wears your stealth card, a loud one the loud card — and nothing is handed over either)
   const m = KIT.members[0], pl = g.player;
   if (!issuedPlayer.has(pl)) issuedPlayer.set(pl, { rifle: pl.hasRifle, gun: pl.rifle, side: pl.pistol, slot: pl.slot, smoke: pl.canisters, stun: pl.flashbangs, frags: pl.frags, shells: pl.rifle.shells, rings: pl.rifle.rings, wand: pl.wand, big: pl.bigKit, cams: pl.rifle.attachments.includes('cam') ? pl.rifle.cams : -1, tint: [...pl.char.tint] as Vec3, tint2: [...pl.char.tint2] as Vec3 });
   const counts = !(issuedPage && issuing);   // (a lesson's page: his counts stay the Player's own — kitIssuedPage; a mission's own issue writes them like any card)
@@ -1164,15 +1239,15 @@ export function kitPlayer(g: Game) {
   if (counts && (m.smoke !== BUILT.smoke || m.bangs !== BUILT.bangs)) { pl.canisters = m.smoke; pl.flashbangs = m.bangs; if ((pl.slot === 'smoke' && !pl.canisters) || (pl.slot === 'flash' && !pl.flashbangs)) pl.slot = 'pistol'; }   // (the split of six he is built with — the card as issued with the rule off — nothing is written)
   if (counts && m.frags !== BUILT.frags) { pl.frags = m.frags; if (pl.slot === 'frag' && !pl.frags) pl.slot = 'pistol'; }
   if (counts && m.shells !== BUILT.shells && pl.rifle.attachments.includes('he40')) pl.rifle.shells = Math.min(m.shells, SHELLS_MAX);   // (what the rifle was built with — its own LAUNCHER40.rounds — not written; the shotgun in the rifle's slot has no launcher and takes none)
-  if (counts && camRow() && pl.hasRifle) stickyIssue(pl, tubed(m) ? Math.max(m.cams, stickyVisit(g)) : 0);   // (sticky cameras: the launcher's third load, on his rifle only when the card carries one or the mission hands some — stickyVisit; a card as issued carries none, so nothing changes on him)
+  if (counts && camRow() && pl.hasRifle) stickyIssue(pl, tubed(m) ? Math.max(m.cams, own ? 0 : stickyVisit(g)) : 0);   // (sticky cameras: the launcher's third load, on his rifle only when the card carries one or the mission hands some — stickyVisit; a card as issued carries none, so nothing changes on him)
   if (treeUp()) {   // (kittree.ts: the sponge rounds are your card's — none as issued — and a stealth mission hands you its own over the card; your light and goggles are rows)
-    if (counts && pl.rifle.attachments.includes('ring')) { const rf = pl.rifle; rf.rings = Math.min(RINGS_MAX, Math.max(m.rings, stealthRun(g) ? KITTREE.lend : 0));
+    if (counts && pl.rifle.attachments.includes('ring')) { const rf = pl.rifle; rf.rings = Math.min(RINGS_MAX, Math.max(m.rings, !own && stealthRun(g) ? KITTREE.lend : 0));
       if (!rf.rings && rf.attachment === 'ring') { const k = rf.attachments.findIndex(a => (a === 'he40' ? rf.shells > 0 : a === 'cam' ? rf.cams > 0 : false)); if (k >= 0) rf.attIdx = k; } }   // (nothing for the tube's first load: the right button is on the first one he does carry)
     youBare.set(pl, { light: !m.light, nvg: !m.nvg });
     if (!m.light) { pl.rifle.lightOn = false; pl.pistol.lightOn = false; }
     if (!m.nvg) pl.nv = false;
   }
-  pl.wand = (m.wand && wandRow()) || (WAND.on && quietWand(g));   // (the optical wand in a pouch: wand.ts — a card as issued carries none, so nothing changes on him; quietfog.ts: a quiet mission under the fog that hands out cameras hands him one too — even on a card whose gun has no launcher for them)
+  pl.wand = (m.wand && wandRow()) || (!own && WAND.on && quietWand(g));   // (the optical wand in a pouch: wand.ts — a card as issued carries none, so nothing changes on him; quietfog.ts: a quiet mission under the fog that hands out cameras hands him one too — even on a card whose gun has no launcher for them)
   if (m.suit !== 'issued') pl.char.tint = [...SUITS[m.suit].tint] as Vec3;
   if (m.trim !== 'issued') pl.char.tint2 = [...TRIMS[m.trim].tint] as Vec3;
   loadWear(g, issuing ? null : m);   // (kitload.ts: what this card weighs — not where the staging chose his kit itself: a lesson's page, a mission's own issue)
@@ -1220,6 +1295,7 @@ export function kitShow(g: Game) {
 export function kitStage(g: Game, ops: Guard[]) {
   if (issuedPage && !issuing) return asIssued(() => kitStage(g, ops));   // (a lesson's page: every man staged with the issue cards — kitIssuedPage)
   if (kitIssue(g, () => kitStage(g, ops))) return;   // (a mission that issues its own kit: kitIssue)
+  if (stealthOn() && !issuing && !staged) return forRun(g, () => kitStage(g, ops));   // (KITDEAL.stealth: the whole staging reads the card this run wears)
   KIT_STAGED.n++; KIT_STAGED.ops = ops.slice(0, KIT_MEMBERS - 1);
   if (!KIT.on) { squadSmokeStage(g, 0); squad40Stage(g, []); return; }   // (squadsmoke.ts: the squad's smoke is set on EVERY staging — none with the table off; squad40.ts: the teammates' 40 mm rounds likewise)
   if (SLOTS.on) kitTeam(Math.min(ops.length, KIT_MEMBERS - 1));   // (the rule is held for the men who CAME: cards made legal for a smaller team on the loadout screen and then staged on a bigger one give up what does not fit — nothing while they are legal, as the issued kit always is)
