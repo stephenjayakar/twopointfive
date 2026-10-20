@@ -70,6 +70,8 @@ const tap = (page, sel) => page.locator(sel).first().evaluate(e => e.click());
     check(noPlan.length === 0, "every mission's sheet draws its level's floor plan (fetched off /levels/)", noPlan.length ? `blank: ${noPlan.join(' · ')}` : `${s.ids.length} of ${s.ids.length} drawn`);
     await tap(page, `#missions .mrow[data-mission="${s.ids[0]}"]`);
     await page.keyboard.press('KeyS'); const a = (await page.evaluate(STATE)).sel; await page.keyboard.press('ArrowDown'); const b = (await page.evaluate(STATE)).sel; await page.keyboard.press('KeyW'); const c = (await page.evaluate(STATE)).sel;
+    // (the list leads with Training, whose rows take no difficulty: D and A are pressed on a row that does)
+    await tap(page, '#missions .mrow[data-mission="warehouse-four"]');
     await page.keyboard.press('KeyD'); const hard = await page.evaluate(STATE); await page.keyboard.press('KeyA'); const std = await page.evaluate(STATE);
     check(a === 1 && b === 2 && c === 1 && hard.hard && /difficulty=hard/.test(hard.href) && !std.hard && !/difficulty=hard/.test(std.href), 'real keys: S and ↓ move down, W up; D puts the defenders on hard (on the link too), A back', `highlight ${a} ${b} ${c} · ${hard.href} · ${std.href}`);
     const still = await page.evaluate(() => ({ t: window.__game.time, x: window.__game.player.char.pos[0], z: window.__game.player.char.pos[2] }));
@@ -77,7 +79,7 @@ const tap = (page, sel) => page.locator(sel).first().evaluate(e => e.click());
     check(narrow.fits && narrow.go, 'at a 640 px window the card still fits (the list stacks over the sheet, the plan goes) and the Start button is whole on the sheet', `fits ${narrow.fits} · start button whole: ${narrow.go}`);
     const tabs = []; for (let i = 0; i < 6; i++) { await page.keyboard.press('Tab'); tabs.push(await page.evaluate(() => { const a = document.activeElement; return a?.closest('#missions') ? (a.textContent || '').trim().toLowerCase() : a?.closest('#menu') ? `MENU:${a.textContent}` : a === document.body ? 'page' : a?.tagName ?? 'none'; })); }
     await page.focus('#missions .mback'); await page.keyboard.press('Enter'); await page.waitForTimeout(150); const viaBack = await page.evaluate(() => ({ list: document.getElementById('missions').classList.contains('on'), mode: window.__menu.mode, search: location.search }));
-    check(tabs.some(t => /back/.test(t)) && tabs.some(t => t === 'hard') && tabs.every(t => /back|standard|hard|dawn|midday|grey day|dusk|night|as it is|clear|overcast|rain|downpour|fog|dust|start mission|loadout/.test(t)) && !viaBack.list && viaBack.mode === 'start', "Tab walks the list's own buttons round and round, never the card's under it nor out to the page; Enter on Back presses THAT button — back to the card, nothing started", `Tab ×6: ${tabs.join(' → ')} · ${JSON.stringify(viaBack)}`);
+    check(tabs.some(t => /back/.test(t)) && tabs.some(t => t === 'hard') && tabs.every(t => !/^MENU:|^page$|^none$|^[A-Z]+$/.test(t)) && !viaBack.list && viaBack.mode === 'start', "Tab walks the list's own buttons round and round, never the card's under it nor out to the page; Enter on Back presses THAT button — back to the card, nothing started", `Tab ×6: ${tabs.join(' → ')} · ${JSON.stringify(viaBack)}`);
     await tap(page, '#menu button:has-text("Missions")'); await page.waitForSelector('#missions.on');
     await page.keyboard.press('Escape'); await page.waitForTimeout(150);
     const afterEsc = await page.evaluate(() => ({ list: document.getElementById('missions').classList.contains('on'), mode: window.__menu.mode }));
