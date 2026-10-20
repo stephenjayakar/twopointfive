@@ -1,11 +1,12 @@
-// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts and src/ui/findme.ts (four settings in Options > Game, every one
+// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts, src/ui/findme.ts and src/render/outline.ts (five settings in Options > Game, every one
 // starting where the game stood before it had them; no switch of the game's, no row the two stands differ in).
 //   bun run tools/qa/findme-check.ts        (also `probes.ts findme`; the same on both stands)
-// Headless: the whole Game under stepFrame, the loop the page runs, with nothing drawn; where the HUD would draw the ring is asked of findMeRing itself.
+// Headless: the whole Game under stepFrame, the loop the page runs, with nothing drawn; where the HUD would draw the ring is asked of findMeRing itself, and
+// the outline's pass is run on a stand-in device that writes down what it was asked for (what the rim LOOKS like is the page's to show: findme-page.cjs).
 //   table    (1) a harness has no store: the table is the starts; a kept line that is missing, broken or out of range reads as the starts, a good one as itself;
 //   as was   (2) with the table at its starts the follow camera is not written (its lead is the lead it was built with, to the bit) and a hand's orbit turns
 //                the view by exactly what it always did, on the free step and the fixed one;
-//            (3) the ring ON, and asked every frame, against it off: one seed, one scripted hand — the same game digest for digest and
+//            (3) the ring and the outline ON, and asked every frame, against both off: one seed, one scripted hand — the same game digest for digest and
 //                the same view to the bit (picture only: nothing a man senses, nothing the light meter reads);
 //   pan      (4) at none the camera's look-at is the man himself with the cursor six metres off; at half it leans half of what it did; back at full, as built;
 //   turn     (5) reversed, the same hand turns the view the other way by the same angle (free step and fixed);
@@ -17,9 +18,14 @@
 //                put off or the pause card gives the game's cursor back to the mouse, to the pixel, before the tick reads it;
 //            (7) what is a double tap: two short presses, and only that — never one held press however long it repeats, never a tap and a hold, a press with
 //                another key or an orbit in it, or two taps far apart; three quick taps are one;
-//   picture  (8) the ring is at his feet, gone when he is down and nothing with its row off; the two shelved settings (an outline, a shape) are not in the
-//                table and a kept line that names them reads without them.
-// FINDME_BREAK=1 = the rows are moved and the table is not (the settings do nothing): (4), (5), (6), (8) and (9) must fail.   exit 0 = all hold · 1 = one does not
+//   picture  (8) the ring is at his feet, gone when he is down and nothing with its row off; the shelved setting (his shape through a wall) is not in the
+//                table and a kept line that names it reads without it;
+//            (10) the outline: its frame is off with the row off, the man down or the page saying his marks are hidden; on, it names his owner byte,
+//                a box on the picture he stands inside and that is a small part of it (empty when he is behind the lens), and a strength that comes up
+//                in the dark, goes in the light and under the goggles, and is the meter's word at once on a frame with no time in it; the pass asks the device
+//                for NOTHING while the frame is off, builds one program the first frame it is on and draws nothing until that program is there, then one
+//                scissored draw inside the box; nothing at no strength or with him off the picture; a program that fails is never drawn or asked again.
+// FINDME_BREAK=1 = the rows are moved and the table is not (the settings do nothing): (4), (5), (6), (8), (9) and (10) must fail.   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
 export async function findmeCheck(): Promise<boolean> {
@@ -27,13 +33,15 @@ export async function findmeCheck(): Promise<boolean> {
   const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const { mulberry32: seeded } = await import(`${ROOT}/src/math/dice.ts`);
   const F = await import(`${ROOT}/src/host/findme.ts`) as typeof import('../../src/host/findme.ts');
-  const { findMeRing } = await import(`${ROOT}/src/ui/findme.ts`) as typeof import('../../src/ui/findme.ts');
+  const { OutlinePass, makeOutlineFrame, outlineBox, OUTLINE } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
+  const { outlineWant, OUTLINE_LOOK } = F;
+  const { findMeRing, findMeOutline } = await import(`${ROOT}/src/ui/findme.ts`) as typeof import('../../src/ui/findme.ts');
   const { FINDME, FINDME_START, findMeRead, TapTwice, TAPTWICE, behindYaw } = F;
   const BREAK = process.env.FINDME_BREAK === '1';
   const set: typeof F.setFindMe = BREAK ? () => {} : F.setFindMe;
   let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
-  console.log('\n=== findme: four settings to find your own man and turn the view; at their starts the game as it was ===');
+  console.log('\n=== findme: five settings to find your own man and turn the view; at their starts the game as it was ===');
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   const fixedWas = FIXEDSTEP.on, startWas = { ...FINDME };
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
@@ -45,7 +53,7 @@ export async function findmeCheck(): Promise<boolean> {
     { const start = same(startWas, FINDME_START);
       const bad = [null, '', 'no', '[]', '{"pan":"x","ring":1,"turn":2,"behind":"yes"}', '{"pan":NaN}'].every(t => same(findMeRead(t), FINDME_START));
       const good = findMeRead('{"pan":0.4,"ring":true,"outline":true,"shape":true,"turn":-1,"behind":true}')   /* (a line kept by the build that had six) */, clamp = findMeRead('{"pan":7}').pan === 1 && findMeRead('{"pan":-3}').pan === 0;
-      line(start && bad && clamp && same(good, { pan: 0.4, ring: true, turn: -1, behind: true }), 'the table is the starts on a harness; a kept line that is broken reads as the starts, a good one as itself',
+      line(start && bad && clamp && same(good, { pan: 0.4, ring: true, outline: true, turn: -1, behind: true }), 'the table is the starts on a harness; a kept line that is broken reads as the starts, a good one as itself',
         `as loaded ${JSON.stringify(startWas)} · broken lines ${bad ? 'all the starts' : 'NOT the starts'} · pan 7 / -3 read ${findMeRead('{"pan":7}').pan} / ${findMeRead('{"pan":-3}').pan}`); }
 
     // (2) as it was: the lead untouched, the orbit's turn to the bit
@@ -61,19 +69,19 @@ export async function findmeCheck(): Promise<boolean> {
       }
       line(ok, 'at the starts the camera\'s lead is the one it was built with and an orbit turns the view exactly as it did', rows.join(' · ')); }
 
-    // (3) picture only: the ring on and asked every frame = the ring off
+    // (3) picture only: the ring and the outline on and asked every frame = both off
     { const run = async (on: boolean) => {
-        const W = await stand(7), ctx = ctxOf(W); FIXEDSTEP.on = true; FINDME.ring = on; let asked = 0;
+        const W = await stand(7), ctx = ctxOf(W); FIXEDSTEP.on = true; FINDME.ring = FINDME.outline = on; let asked = 0; const OF = makeOutlineFrame();
         for (let i = 0; i < 480; i++) {
           if (i === 20) W.input.keys.add('KeyW'); if (i === 200) { W.input.keys.delete('KeyW'); W.input.keys.add('KeyD'); } if (i === 320) W.input.keys.delete('KeyD');
           W.input.mouseX = 800 + 300 * Math.sin(i / 40); W.input.mouseY = 500 + 200 * Math.cos(i / 55); if (i % 50 === 10) W.input.orbitDX = 40; if (i === 260) W.input.clicked |= 1;
-          stepFrame(ctx, DT); if (on && findMeRing(W.game)) asked++;
+          stepFrame(ctx, DT); findMeOutline(OF, W.game, DT); outlineBox(OF, p => W.cam.project(p, 1, 1)); if (on && findMeRing(W.game) && OF.on) asked++;
         }
-        FINDME.ring = false;
+        FINDME.ring = FINDME.outline = false;
         return { d: digestGame(W.game), view: [...W.cam.viewProj], asked, moved: Math.hypot(W.game.player.char.pos[0] - 5.1, W.game.player.char.pos[2] - 15.2) };
       };
       const A = await run(false), B = await run(true), diff = diffDigest(A.d, B.d);
-      line(!diff.length && same(A.view, B.view) && B.asked === 480 && A.moved > 1, 'the ring on and asked every frame: the same game digest for digest, the same view to the bit',
+      line(!diff.length && same(A.view, B.view) && B.asked === 480 && A.moved > 1, 'the ring and the outline on and asked every frame: the same game digest for digest, the same view to the bit',
         `eight seconds, a walk, an orbit, a shot · he moved ${A.moved.toFixed(1)} m · asked ${B.asked} times · ${diff.length ? `digests differ: ${diff.slice(0, 3).join('; ')}` : 'digests equal'} · view ${same(A.view, B.view) ? 'equal' : 'DIFFERS'}`); }
 
     // (4) the pan
@@ -183,9 +191,53 @@ export async function findmeCheck(): Promise<boolean> {
     { const W = await stand(5), ctx = ctxOf(W); FIXEDSTEP.on = true; for (let i = 0; i < 30; i++) stepFrame(ctx, DT);
       const g = W.game, pl = g.player, p = pl.char.pos;
       const off = findMeRing(g); set('ring', true); const r = findMeRing(g); const wasDown = pl.down; pl.down = true; const rDown = findMeRing(g); pl.down = wasDown; set('ring', false);
-      const ringOk = !off && !!r && r[0] === p[0] && r[2] === p[2] && !rDown, shelved = !('outline' in FINDME) && !('shape' in FINDME) && !('outline' in FINDME_START) && !('shape' in FINDME_START);
-      line(ringOk && shelved, 'the ring at his feet, gone when he is down, nothing with its row off; the outline and the shape are not in the table',
+      const ringOk = !off && !!r && r[0] === p[0] && r[2] === p[2] && !rDown, shelved = !('shape' in FINDME) && !('shape' in FINDME_START);
+      line(ringOk && shelved, 'the ring at his feet, gone when he is down, nothing with its row off; his shape through a wall is not in the table',
         `ring ${r ? `at ${r[0].toFixed(1)}, ${r[2].toFixed(1)}` : 'none'}${ringOk ? '' : ' ✗'} (down: ${rDown ? 'drawn ✗' : 'none'} · row off: ${off ? 'drawn ✗' : 'none'}) · the table's keys: ${Object.keys(FINDME).join(', ')}`); }
+
+    // (10) the outline in the dark: the frame the host fills, and what the pass asks the device for
+    { const W = await stand(5), ctx = ctxOf(W); FIXEDSTEP.on = true; for (let i = 0; i < 30; i++) stepFrame(ctx, DT);
+      const g = W.game, pl = g.player, cam = W.cam, Fm = makeOutlineFrame(), was = { vis: pl.visibility, nv: pl.nvAmount, down: pl.down }, proj = (p: [number, number, number]) => cam.project(p, 1, 1);
+      const fill = (n: number, dt = DT, shown = true) => { for (let i = 0; i < n; i++) findMeOutline(Fm, g, dt, shown); outlineBox(Fm, proj); return Fm.strength; };
+      fill(1); const offRow = !Fm.on;
+      set('outline', true); pl.nvAmount = 0; pl.visibility = 0.04; const s1 = fill(1), dark = fill(120);
+      const [hx, hy] = proj([pl.char.pos[0], pl.char.pos[1] + 1, pl.char.pos[2]]), r = [...Fm.rect];
+      const inBox = hx > r[0] && hx < r[2] && hy > r[1] && hy < r[3], share = Math.max(0, Math.min(1, r[2]) - Math.max(0, r[0])) * Math.max(0, Math.min(1, r[3]) - Math.max(0, r[1]));
+      const frameOk = Fm.on && Fm.owner === pl.char.id && Fm.owner > 0 && s1 > 0 && s1 < 0.5 && dark > 0.99 && inBox && share > 0 && share < 0.2;
+      pl.visibility = 0.9; const lit = fill(120); pl.visibility = 0.04; pl.nvAmount = 1; const nv = fill(120); pl.nvAmount = 0; fill(120);
+      pl.down = true; fill(1); const offDown = !Fm.on && Fm.strength === 0; pl.down = was.down; fill(1, DT, false); const offHidden = !Fm.on; const held = fill(1, 0) === 1;   // (a frame with no time in it takes the meter's word whole)
+      const back = { ...Fm, at: [...Fm.at] as [number, number, number], rect: [9, 9, 9, 9] as [number, number, number, number] }; { const f = cam.planarBasis().fwd; back.at[0] -= f[0] * 400; back.at[2] -= f[2] * 400; outlineBox(back, proj); }
+      const behindLens = back.rect.every(v => v === 0);
+      const edges = outlineWant(OUTLINE_LOOK.full) === 1 && outlineWant(OUTLINE_LOOK.none) === 0 && outlineWant(0) === 1 && outlineWant(1) === 0 && outlineWant(0, 1) === 0;
+      // the pass, on a device that writes down what it is asked
+      const rig = () => { const calls: string[] = []; const st: any = { calls, desc: null, u: null, sc: null, drawn: 0, pass: null, res: null, rej: null };
+        const device: any = { createBindGroupLayout: () => { calls.push('layout'); return {}; }, createBuffer: () => { calls.push('buffer'); return {}; }, createPipelineLayout: () => ({}), createBindGroup: () => { calls.push('group'); return {}; },
+          createShaderModule: (d: { code: string }) => { calls.push('module'); st.code = d.code; return { getCompilationInfo: async () => ({ messages: [] }) }; },
+          createRenderPipelineAsync: (d: unknown) => { calls.push('pipeline'); st.desc = d; return new Promise((res, rej) => { st.res = res; st.rej = rej; }); },
+          queue: { writeBuffer: (_b: unknown, _o: number, data: ArrayBuffer) => { st.u = data.slice(0); } } };
+        const enc: any = { beginRenderPass: (d: unknown) => { calls.push('pass'); st.pass = d; return { setPipeline() {}, setBindGroup() {}, setScissorRect: (x: number, y: number, w: number, h: number) => { st.sc = [x, y, w, h]; }, draw: (n: number) => { st.drawn = n; }, end() {} }; } };
+        return { st, device, enc, P: new OutlinePass(device) }; };
+      const n = (st: any, k: string) => st.calls.filter((c: string) => c === k).length, tick = () => new Promise(r => setTimeout(r, 0));
+      const A = rig(), CW = 1280, CH = 720, hdr = {} as any, id = {} as any, dep = {} as any, off = makeOutlineFrame();
+      A.P.encode(A.enc, off, hdr, id, dep, CW, CH); A.P.encode(A.enc, off, hdr, id, dep, CW, CH); const quiet = A.st.calls.length === 0;
+      A.P.encode(A.enc, Fm, hdr, id, dep, CW, CH); A.P.encode(A.enc, Fm, hdr, id, dep, CW, CH); const built = n(A.st, 'module') === 1 && n(A.st, 'pipeline') === 1 && n(A.st, 'pass') === 0;
+      A.st.res?.({}); await tick(); A.P.encode(A.enc, Fm, hdr, id, dep, CW, CH); A.P.encode(A.enc, Fm, hdr, id, dep, CW, CH);
+      const sc = A.st.sc as number[] | null, u = A.st.u ? { f: new Float32Array(A.st.u), w: new Uint32Array(A.st.u) } : null;
+      const inside = !!sc && sc[0] >= Math.floor(r[0] * CW) - 1 && sc[1] >= Math.floor(r[1] * CH) - 1 && sc[0] + sc[2] <= Math.min(CW, Math.ceil(r[2] * CW)) && sc[1] + sc[3] <= Math.min(CH, Math.ceil(r[3] * CH)) && sc[2] > 0 && sc[3] > 0 && sc[0] >= 0 && sc[1] >= 0;
+      const tgt = (A.st.desc as any)?.fragment?.targets?.[0], att = (A.st.pass as any)?.colorAttachments?.[0];
+      const drew = n(A.st, 'pass') === 2 && n(A.st, 'pipeline') === 1 && n(A.st, 'group') === 1 && A.st.drawn === 3 && A.P.drawn === 2 && inside && !!tgt?.blend && tgt.format === 'rgba16float' && att?.loadOp === 'load' && att.view === hdr
+        && !!u && u.w[4] === pl.char.id && Math.abs(u.f[3] - OUTLINE.alpha) < 1e-3 && u.f[5] >= OUTLINE.minPx && u.f[5] <= OUTLINE.maxPx && !/\bstorage\b|var<storage/.test(A.st.code ?? 'storage');
+      const none = { ...Fm, rect: [...Fm.rect] as [number, number, number, number], strength: 0 }, away = { ...Fm, rect: [1.2, 0.2, 1.4, 0.5] as [number, number, number, number] };
+      A.P.encode(A.enc, none, hdr, id, dep, CW, CH); A.P.encode(A.enc, away, hdr, id, dep, CW, CH); A.P.encode(A.enc, back, hdr, id, dep, CW, CH); A.P.encode(A.enc, off, hdr, id, dep, CW, CH); const skipped = n(A.st, 'pass') === 2;
+      const B = rig(), err = console.error; let said = 0; console.error = () => { said++; };
+      try { B.P.encode(B.enc, Fm, hdr, id, dep, CW, CH); B.st.rej?.(new Error("no")); await tick(); await tick(); for (let i = 0; i < 3; i++) B.P.encode(B.enc, Fm, hdr, id, dep, CW, CH); } finally { console.error = err; }
+      const failed = n(B.st, 'pipeline') === 1 && n(B.st, 'pass') === 0 && said === 1;
+      set('outline', false); pl.visibility = was.vis; pl.nvAmount = was.nv; fill(1);   // (and the frame is off again)
+      const src = await Bun.file(`${ROOT}/src/render/passes.ts`).text(), site = (src.match(/new OutlinePass\(/g) ?? []).length === 1 && src.includes('if (this.outline?.on) (this.outlinePass ??= new OutlinePass(');
+      line(offRow && frameOk && lit < 0.01 && nv < 0.01 && offDown && offHidden && held && behindLens && edges && quiet && built && drew && skipped && failed && site && !Fm.on,
+        'the outline: off with its row off, the man down or his marks hidden; on, his owner, a small box he stands in, strong in the dark only; the pass asks nothing while off, draws once its one program is there, never after a failed one',
+        `row off: ${offRow ? 'frame off' : 'frame ON ✗'} · on: owner ${Fm.owner}, box ${(share * 100).toFixed(1)} % of the picture${inBox ? '' : ' (he is OUTSIDE it ✗)'}, strength ${s1.toFixed(2)} after a frame, ${dark.toFixed(2)} in the dark, ${lit.toFixed(2)} in the light, ${nv.toFixed(2)} under the goggles${frameOk ? '' : ' ✗'} · down: ${offDown ? 'off' : 'ON ✗'} · marks hidden: ${offHidden ? 'off' : 'ON ✗'} · under a card (no time): ${held ? 'the meter\'s word at once' : 'NOT at once ✗'} · behind the lens: ${behindLens ? 'an empty box' : `a box ${back.rect.map(v => v.toFixed(2)).join(' ')} ✗`} · the rule's ends ${edges ? 'hold' : '✗'}`
+        + `\n    the pass: frame off ${quiet ? 'no call to the device' : `${A.st.calls.join(' ')} ✗`} · first frames on ${built ? 'one module, one pipeline, no draw' : '✗'} · program in: ${n(A.st, 'pass')} passes over 2 + 3 frames (2 wanted), scissor ${sc ? sc.join(' ') : 'none'} of ${CW} × ${CH}${inside ? '' : ' ✗'}, draw(${A.st.drawn}), blended ${tgt?.blend ? 'yes' : 'NO ✗'}, radius ${u ? u.f[5].toFixed(2) : '?'} px${drew ? '' : ' ✗'} · no strength / off the picture / behind the lens / off: ${skipped ? 'no pass' : 'a pass ✗'} · a program that fails: ${failed ? 'said once, never drawn, never asked again' : '✗'} · passes.ts makes it in one place, under the frame\'s on: ${site ? 'yes' : 'NO ✗'}`); }
   } finally { Object.assign(FINDME, startWas); FIXEDSTEP.on = fixedWas; }
   console.log(all ? '\nfindme: ALL PASS' : '\nfindme: FAIL');
   return all;
