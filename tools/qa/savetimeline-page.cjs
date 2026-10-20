@@ -114,7 +114,7 @@ const CARD3 = async () => {
     const url = `http://localhost:${PORT}/?${defs[name]}paused&quality=${QUALITY}&mute`; log(`${name}: ${url}`);
     const r = {}, fails = [];
     const keep = async (tag, o) => { if (outDir && o && o.url) fs.writeFileSync(path.join(outDir, `savetimeline-${name}-${tag}.png`), Buffer.from(o.url.split(',')[1], 'base64')); };
-    const shot = async (tag) => { if (outDir) await page.screenshot({ path: path.join(outDir, `savetimeline-${name}-${tag}.png`) }).catch(() => { }); };
+    const shot = async (tag) => { if (outDir) await page.screenshot({ path: path.join(outDir, `savetimeline-${name}-${tag}.png`), timeout: 300000 }).catch(e => log(`${name}: no still of ${tag}: ${String(e).slice(0, 120)}`)); };   // (the card job's still follows frames of the page's own loop: the software adapter may still be minutes in one)
     try {
       await page.goto(url); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 30);
       r.set = await page.evaluate(SET); log(`${name}: up`, JSON.stringify(r.set));
