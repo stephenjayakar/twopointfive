@@ -35,7 +35,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     return { page, errors };
   };
   const cardOf = (page) => page.evaluate(() => { const rows = [...document.querySelectorAll('.kc-row')].map(r => ({ f: r.getAttribute('data-field'), text: (r.textContent || '').replace(/\s+/g, ' ').trim() }));
-    const pips = document.querySelector('.kc-pips'); return { fields: rows.map(r => r.f), big: rows.filter(r => r.f === 'big').map(r => r.text), last: rows.at(-1)?.f, wide: pips ? [...pips.querySelectorAll('i.big')].map(i => i.classList.contains('on')) : null, knob: window.__knobs?.registry?.().BIGSLOT?.on }; });
+    const pips = document.querySelector('.kc-pips'); return { fields: rows.map(r => r.f), big: rows.filter(r => r.f === 'big').map(r => r.text), last: rows.filter(r => r.f !== 'suit' && r.f !== 'trim').at(-1)?.f /* (the last of the KIT's rows: the dense card — ui/kitDense.ts — lays the two colours in a strip after them) */, wide: pips ? [...pips.querySelectorAll('i.big')].map(i => i.classList.contains('on')) : null, knob: window.__knobs?.registry?.().BIGSLOT?.on }; });
   const still = async (page, name) => { if (!OUT) return; await page.evaluate(() => { const v = document.getElementById('view'); if (v) v.style.visibility = 'hidden'; const e = window.__engine; if (e) e.render = () => { }; });
     const row = await page.$('.kc-row[data-field="big"]') ?? await page.$('.kc-row'); if (!row) return; const box = await row.evaluateHandle(e => e.parentElement);
     await box.asElement().screenshot({ path: path.join(OUT, `${name}.png`), timeout: 90000 }).catch(e => console.log(`    (no still ${name}: ${String(e).slice(0, 120)})`)); };

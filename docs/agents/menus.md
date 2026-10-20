@@ -1154,27 +1154,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `MemberCardOpts.dense`; the maintainer on Team & kit beside a loadout card of Door Kickers 2: "this menu is pretty unwieldy, door kickers is a lot
   better. we shouldn't copy it but maybe we have a popup menu per gun, more information density, etc."). The picked man's card on the one starting page
   is the SAME card (the tree's rows, values, refusals, lent and idle tiles, copy and paste: nothing of the kit's rules moved) in another lay-out:
-  one line of pouches and the two weight bars; THE TWO GUNS as tiles side by side (`.kc-guns`), each its drawing large, its name, the four bars, and
+  one line of pouches and the two weight bars; THE TWO GUNS as tiles side by side (`.kc-guns`), each its drawing large, its name, the four bars, the
+  mark that the tile opens beside the slot's name (`.kc-label::after`: the gun's own line is the sound mark's on a quiet mission), and
   what rides on it as CHIPS in the tile's corner (`.kc-chips`: lit where fitted or carried, a count on a round, faint where not, `lent` where the
   mission hands it); THE REST OF THE KIT as one line of small tiles (`.kc-gear`: the thing drawn, how many, its name; the arrows stand either side of the
   drawing on the tile the mouse or the keys are on); the colours and Reset · Copy · Paste a strip under it (`.kc-look`). A GUN'S TILE OPENS ITS OWN
   POP-UP (`.kc-pop[data-pop]`, under both tiles, over the kit): the guns the row offers side by side (`.kc-pick`), each with its drawing, name and the
   same four bars under one another, the one on the card lit, one the pouches have no room for dimmed with the reason as its tooltip; under them the
-  gun's fittings and rounds, the tree's own tiles (`.kc-kids`). A press on a gun puts it on the card at once through `kit.ts kitPaste` (so it is fitted
-  and refused as a paste is, and never steps through the guns between). SHUT BY: a press anywhere off it, Esc, Enter on the gun, the keys leaving the
-  card. THE KEYS are the card's (W S move, A D change): shut, W S walk the tiles as they lie (guns, kit, colours, sets) and A D on a gun's tile is the
+  gun's fittings and rounds, the tree's own tiles (`.kc-kids`; a tile with words beside its count, `lent` or `idle`, is two tiles wide). A press on a gun puts it on the card at once through `kit.ts kitPaste` (so it is fitted
+  and refused as a paste is, and never steps through the guns between). SHUT BY: a press anywhere off it (a `pointerdown`: the kit figure eats the mouse event), Esc, Enter on the gun, the keys leaving the
+  card. IT NEVER COVERS THE FOOT: `MemberCardOpts.floor` is the top of the host's foot (the loadout's buttons), and a pop-up that would pass it is
+  drawn that much higher, over the foot of the guns' tiles (`kitCard.ts fit`, again on a window resize) — the maintainer's own window is about
+  1000 x 673, where a Mk 18's five things are two lines. THE KEYS are the card's (W S move, A D change): shut, W S walk the tiles as they lie (guns, kit, colours, sets) and A D on a gun's tile is the
   next gun; Enter on a gun's tile opens its pop-up, where W S walk the gun and its things and stop at the ends, A D change. A gun's refusal is said on
-  the card's own line, or in the pop-up while it is open (`.kc-pop-note`). The whole screen fits with nothing scrolled from 1200 x 675 up; a short
+  the card's own line, or in the pop-up while it is open (`.kc-pop-note`, which also takes a set's or a paste's refusal: the pop-up lies over the
+  card's line). The chips and the tiles ask ONE rule what the mission makes of a row (`kitCard.ts given`: idle, handed, lent). A QUIET mission's
+  wider cursor (`startpage.ts QUIET_CSS`) is drawn inside a dense tile, so no tile moves under the keys. The whole screen fits with nothing scrolled from 1200 x 675 up; a short
   window lowers the guns' tiles, one with room to spare (900 px tall and 1500 wide) draws everything larger. `MemberCard.pop()` / `.open(slot)` for a
   host or a check. NOT the older screen of its own (`?cards`), and not a card with the tree off (`?nokittree`): both keep the list. SWITCH: UI only,
   `KITDENSE.on`, on in the module; `?kitdense=0` on the address = the card as it was (the tree laid out in full). Nothing in the game reads it, it is in
-  no recording and no knob table, and the headless stands never make a dense card (only the start page asks for one). CHECK: the real page,
-  `PORT=<port> node tools/qa/kitdense-page.cjs [outDir]` (18 lines: the lay-out, the chips, the pop-up by the mouse and by the keys alone, a gun put on
-  and kept, the walk to Deploy, four window sizes for you and a teammate, a quiet mission's lent rounds, the largest text size; `KITDENSE_BREAK=1` =
-  the page with `kitdense=0`, fails 9). `kittree-page.cjs` reads the tree's own lay-out, so it opens every page with `kitdense=0`;
-  `kitpaste-page.cjs` takes the pouches on a line of their own as clear of Copy and Paste. LEFT, the maintainer's calls: W S walk a line of tiles
+  no recording and no knob table; like `KIT_LENT` it is on in the module, so a headless tool that opens the start page's loadout builds a dense card on
+  its stand-in page on both stands (the rows and what they say are the tree's own, which is all those tools read). CHECK: the real page,
+  `PORT=<port> node tools/qa/kitdense-page.cjs [outDir]` (20 lines: the lay-out, the chips, the pop-up by the mouse and by the keys alone, a gun put on
+  and kept, the walk to Deploy, four window sizes for you and a teammate, a quiet mission's lent rounds, a quiet mission at 1000 x 673 and
+  1200 x 675 — no tile moves under the keys, the pop-up ends over the foot —, the largest text size; `KITDENSE_BREAK=1` = the page with
+  `kitdense=0`, fails 19). `kittree-page.cjs` reads the tree's own lay-out, so it opens every page with `kitdense=0`;
+  `kitpaste-page.cjs` takes the pouches on a line of their own as clear of Copy and Paste; `bigslot-page.cjs` reads the big slot as the last of the
+  KIT's rows (the colours' strip follows it); `kitview-page.cjs` opens a gun's pop-up before it clicks a row inside one. LEFT, the maintainer's calls: W S walk a line of tiles
   that lies left to right (the card's standing keys; a walk by the four directions would be a change of the screen's keys); a count's tile has no
-  pop-up, only its arrows; a quiet mission's gun name wears its sound mark where a loud one's wears the mark that the tile opens. Seen only in
+  pop-up, only its arrows; in a short window the pop-up lies over the lower part of the guns' tiles. Seen only in
   headless Chromium on the software adapter: never on a GPU, nobody has played it.
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
