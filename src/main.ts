@@ -734,7 +734,7 @@ async function main() {
   // has stood its team, then live (the open card's man uses his kit at the door) or, `&stillkit`, frozen, drawn for a warm window and held; it takes the
   // loop's `frozen`, `render` and two seams over and is read-only on storage
   const kitView: KitView | null = kitViewOn ? kitViewStart({ game, engine, cam, input, view: canvas, loop, audio, team: () => teamOf(game), doorSide: sideOf, file: () => levelFileOf.get(game.level) ?? null, lampsOut: () => { const h = hourOf(game); return h !== 'night' && !HOURS[h].lamps; }, glowBox: (c, h, yaw, glow) => makeBox({ c, h, yaw, albedo: [0.04, 0.04, 0.04], emissive: glow, flags: BoxFlag.Emissive | BoxFlag.AreaLit }),   // (dark under its glow: at 0.9 a weapon light crossing it lit a hard white box on the wall — the owner's recording, 10-14; a guess at what that was, never seen on a GPU)
-    kitCards: members => kitLoad({ getItem: () => JSON.stringify({ v: 2, own: true, members }), setItem: () => { /* nothing kept */ } }, location.search),
+    kitCards: members => kitLoad({ getItem: () => JSON.stringify({ v: 2, own: true, stealth: true, members }), setItem: () => { /* nothing kept */ } }, location.search),
     kit: () => KIT.members, tiles: i => kitRows(i).map(r => r.field), smoke: n => squadSmokeStage(game, n),
     gun: i => kitGun(KIT.members[i]), tints: i => { const m = KIT.members[i]; return { suit: m.suit === 'issued' ? null : SUITS[m.suit].tint, trim: m.trim === 'issued' ? null : TRIMS[m.trim].tint }; },   // (written on the live men: a card changed under the picture's eye)
     samCard: () => { kitShow(game); kitPlayer(game); }, turn: spec => { setTurn(spec); },

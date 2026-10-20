@@ -42,7 +42,7 @@ import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
 import { weatherOfSearch } from '../game/weatherKinds';
 import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
-import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitPool, kitRingsLent, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
+import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CAN, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
 import { gunIcon, kitIcon } from './kitIcons';
@@ -161,15 +161,18 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // wand with them — quietWand). Your card's tile shows it
   // (ui/kitCard.ts `lent`), where it read 'none' beside a thing you were about to be handed, and so does the kit you are drawn in (worn()). Asked live: the
   // fog lever and the Cameras row are on this screen — read once for a link and a gun, not once a tile.
-  let lentKey = '', lentIs = { fog: false, cams: 0, wand: 0 };
+  let lentKey = '', lentIs = { fog: false, n: 0, cams: 0, wand: 0 };
   const lentOf = () => { const href = quietFogHref(base, quietRow), gun = KIT.members[0]?.weapon, key = `${href}|${gun}|${STICKY.on}|${WAND.on}|${QUIETFOG.wand}`;
     if (key !== lentKey) { lentKey = key; const q = new URLSearchParams(href.replace(/^[^?]*\?/, '')), fog = fogOfQuery(q), n = fog && STICKY.on ? quietCamsOfLink(q) : 0;
-      lentIs = { fog, cams: gun === 'rifle' ? n : 0, wand: n > 0 && WAND.on && QUIETFOG.wand ? 1 : 0 }; }
+      lentIs = { fog, n, cams: gun === 'rifle' ? n : 0, wand: n > 0 && WAND.on && QUIETFOG.wand ? 1 : 0 }; }
     return lentIs; };
   // (… and under the card as a tree — game/kittree.ts — its sponge rounds: a quiet mission and the solo night hand you the launcher's five over a card that carries none)
   const stealthKind = entry.kind === 'quiet' || entry.kind === 'solo';
-  const lentNow = (f: string): number => (member !== 0 ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
-  const lookSig = () => `${noFog()}|${lentNow('cams')}|${lentNow('wand')}|${lentNow('rings')}`;
+  // (game/kit.ts KITDEAL.stealth: nothing is handed over a card — a stealth mission's kit is what your stealth card is issued as, so no tile is the mission's; the
+  // screen tells the kit which mission the cards are for, as it opens and as the fog lever moves: syncHand)
+  const syncHand = () => kitMission(stealthKind && kitStealthOn() ? kitStealthHand(lentOf().n, lentOf().wand > 0) : null);
+  const lentNow = (f: string): number => (member !== 0 || kitStealthOn() ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
+  const lookSig = () => `${noFog()}|${lentNow('cams')}|${lentNow('wand')}|${lentNow('rings')}|${stealthKind && kitStealthOn() ? `${lentOf().n}|${lentOf().wand}` : ''}`;
   let fogWas = '';   // (set where the first card is mounted: `member` is not there yet)
   const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' ? quietRow || fogOfQuery(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : entry.kind !== 'quiet' && entry.kind !== 'solo'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)
     leverNote.textContent = entry.kind === 'quiet' || entry.kind === 'solo' ? '' : quietFogAside(() => leversMixed() ? `Your own mix, kept on this machine: ${leversLine()}.` : ''); };   // (the kept mix is the squad levers': none of it acts on a quiet mission or the solo night, and its fog word would read against the quiet fog's row just above)
@@ -266,7 +269,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
     const at = keep ? kitCard?.at() ?? 0 : 0; kitCard?.destroy(); kitCard = null; kitHost.innerHTML = ''; kitHost.setAttribute('data-member', String(member));
     if (!cardsOn()) return;
     try {
-      fogWas = lookSig();
+      syncHand(); fogWas = lookSig();
       kitCard = loadoutHooks.memberCard!(kitHost, member, { name: nameOf(member), idle: f => FOG_KIT.includes(f) && noFog(), lent: lentNow,
         onChange: () => { fogWas = lookSig(); drawSlots(); S.paint(); },   // (the card has just drawn itself with what the change moved — his gun, say, and with it the cameras he is handed: no second draw for it)
         onCopy: () => drawSlots(),   // (the roster's marks move to whoever wears the copied kit; no card changed, so nothing is painted or told on)
@@ -320,7 +323,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       if (kitBtns.length > 1) { const now = kitLoadoutOf(alone()), mine = alone() === undefined ? null : new Set(kitLoadouts(0).map(l => l.id)); if (mine && !mine.has(kitBtns[kitPick].id)) kitPick = 0;
         kitBtns.forEach((k, n) => { k.b.style.display = mine && !mine.has(k.id) ? 'none' : ''; k.b.classList.toggle('on', k.id === now); k.b.classList.toggle('pick', n === kitPick && (squad > 0 || oneList)); k.b.setAttribute('aria-pressed', k.id === now ? 'true' : 'false'); k.b.disabled = !squad && !oneList; }); kitsOwn.textContent = !squad && !oneList ? 'you go alone: no squad to kit' : now ? '' : 'a mix of your own'; }
       paintLevers();
-      { const nf = lookSig(); if (nf !== fogWas) { fogWas = nf; kitCard?.refresh(); } }   // (the optical wand and the sticky cameras look into the fog of war: on a mission without one a tile that carries one says 'no use here' — the card's own `idle` — and it can still be carried; the fog lever moved = the card drawn again)
+      { const nf = lookSig(); if (nf !== fogWas) { fogWas = nf; syncHand(); kitCard?.refresh(); } }   // (the optical wand and the sticky cameras look into the fog of war: on a mission without one a tile that carries one says 'no use here' — the card's own `idle` — and it can still be carried; the fog lever moved = the card drawn again)
       S.rows.forEach((r, i) => r.el.classList.toggle('sel', i === S.sel));
       if (keyed) { if (S.sel === 0) (card as unknown as { scrollTop: number }).scrollTop = 0; (S.rows[S.sel]?.el as unknown as { scrollIntoView?: (o: unknown) => void } | undefined)?.scrollIntoView?.({ block: 'nearest' }); }   // (a short window scrolls the rows: the highlighted row is kept in sight, the first row with the mission's head over it — by the KEYS only: a click's focus that scrolled the rows moved the button from under the cursor and lost the click)
       if (kitCard) { if (S.rows[S.sel]?.el === kitHost) kitCard.focus(); else kitCard.blur(); }   // (the card's own highlight shows only while the keys are in it)
@@ -368,7 +371,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   less.onclick = () => { S.sel = 0; S.step(-1); }; more.onclick = () => { S.sel = 0; S.step(1); };
   backBtn.onclick = () => S.back(); goBtn.onclick = () => S.deploy();
   function close() {
-    if (!open) return; open = false; if (current === S) current = null; kitCard?.destroy(); kitCard = null;
+    if (!open) return; open = false; if (current === S) current = null; kitCard?.destroy(); kitCard = null; kitMission(null);   // (…and the table's first card is the loud one again: a staging asks for itself)
     leversBack(!!levers?.touched);   // (a screen opened on a link's own level and closed with no lever pressed leaves this machine's level as it found it)
     const p = root.parentElement as any; if (p?.removeChild) p.removeChild(root); else if (p?.children) { const k = p.children.indexOf(root); if (k >= 0) p.children.splice(k, 1); }
     under?.removeAttribute?.('inert'); if (!opts.embedded) try { had?.focus?.(); } catch { /* gone */ }   // (the focus goes back where it was — the card's Missions button — BEFORE Back reopens the list, which remembers it in turn)
