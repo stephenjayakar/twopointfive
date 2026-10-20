@@ -1,23 +1,25 @@
-// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand: four settings to play with (Options > Game; ui/findme.ts draws the one that is
-// picture and builds the rows). Every one starts where the game stood before it had them, on the page and on both of the harness's stands: nothing here is a
-// new default, and with all four as they start the build is the build as it was. (Two more are SHELVED, 2026-10-20: an outline of him in the dark and his
-// shape through a wall. A kept line that still names them reads as if it did not: ui/findme.ts says why.)
+// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand: five settings to play with (Options > Game; ui/findme.ts draws the ring, hands
+// the renderer the outline's frame and builds the rows). Every one starts where the game stood before it had them, on the page and on both of the harness's
+// stands: nothing here is a new default, and with all five as they start the build is the build as it was. (One more is SHELVED, 2026-10-20: his shape
+// through a wall. A kept line that still names it reads as if it did not: ui/findme.ts says why.)
 //   pan      how far the view leans from the man toward the aim point, as a share of the follow camera's own lead (FollowCamera.aimLead as it was built):
 //            1 = as it was · 0 = he is the middle of the screen wherever the mouse goes
 //   ring     the gold ring at his feet (the one an open order menu draws: ui/planfloor.ts) on at all times
+//   outline  a pale rim round him while the light meter says he is in the dark — his true silhouette, drawn by the renderer from the pixels that are his
+//            (render/outline.ts). A kept line from the days it was a figure drawn over the picture (before 2026-10-20) turns this one on
 //   turn     which way the view turns under Ctrl + the mouse: 1 = as it was · -1 = the other way
 //   behind   Ctrl tapped twice brings the view round to look where he was looking at the tap. NOT 'the camera behind him' in a third-person game's sense, and
 //            it cannot be while the system cursor is the aim: he faces the cursor's point in the world, the cursor stays where it is on the screen, so as
 //            the view turns he would turn with it. So his aim is CARRIED round with the view (AimCarry, below): he goes on facing what he faced, now at
 //            the top of the screen, until the hand uses the mouse or a key that reads the cursor; then the cursor is the aim again
 // pan, turn and behind change the seat's VIEW, and the view is the player's input (game/cmd.ts carries it as data, tick by tick): a recording replays the view
-// it was made with whatever these say today, and no rule of the game reads this table. ring is the HUD's alone: nobody's senses, no light
-// meter and no digest can tell it on from off.
+// it was made with whatever these say today, and no rule of the game reads this table. ring is the HUD's alone and outline the picture's: nobody's senses,
+// no light meter and no digest can tell either on from off.
 // KEPT PER MACHINE (localStorage `twopointsix.findme`), read once as this module loads; a harness has no store and gets the starts. No imports, on purpose:
 // the loop (host/loop.ts) and the engine replay's own view (replay/engineplay.ts, its Ctrl turn) read the table and nothing of the game or the page comes with it.
 
-export interface FindMe { pan: number; ring: boolean; turn: 1 | -1; behind: boolean }
-export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, turn: 1, behind: false };
+export interface FindMe { pan: number; ring: boolean; outline: boolean; turn: 1 | -1; behind: boolean }
+export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, outline: false, turn: 1, behind: false };
 export const FINDME: FindMe = { ...FINDME_START };
 const LS = 'twopointsix.findme';
 
@@ -25,10 +27,19 @@ const LS = 'twopointsix.findme';
 export function findMeRead(text: string | null | undefined): FindMe {
   let v: Record<string, unknown> = {};
   try { const j = JSON.parse(text ?? 'null'); if (j && typeof j === 'object') v = j; } catch { /* not ours */ }
-  const flag = (k: 'ring' | 'behind') => typeof v[k] === 'boolean' ? v[k] as boolean : FINDME_START[k];
+  const flag = (k: 'ring' | 'outline' | 'behind') => typeof v[k] === 'boolean' ? v[k] as boolean : FINDME_START[k];
   const pan = typeof v.pan === 'number' && isFinite(v.pan) ? Math.max(0, Math.min(1, v.pan)) : FINDME_START.pan;
-  return { pan, ring: flag('ring'), turn: v.turn === -1 ? -1 : 1, behind: flag('behind') };
+  return { pan, ring: flag('ring'), outline: flag('outline'), turn: v.turn === -1 ? -1 : 1, behind: flag('behind') };
 }
+/** THE OUTLINE'S STRENGTH from the light meter (Player.visibility, 0 dark … 1 lit): full at `full` and under, none at `none` and over; `nv` (the goggles'
+ *  amount, 0 … 1) takes it out as they come on — they light him already. `ease` = how fast the drawn strength follows, per second; the box the rim is looked
+ *  for in reaches `reachM` round him and `topM` up */
+export const OUTLINE_LOOK = { full: 0.12, none: 0.3, ease: 6, reachM: 1.4, topM: 2.3 };
+export function outlineWant(visibility: number, nv = 0): number {
+  const t = (OUTLINE_LOOK.none - visibility) / (OUTLINE_LOOK.none - OUTLINE_LOOK.full);
+  return Math.max(0, Math.min(1, t)) * Math.max(0, Math.min(1, 1 - nv));
+}
+
 /** the camera whose lead `pan` scales, and that lead as it was built (bindFindMe) */
 let seat: { aimLead: number } | null = null, lead = 0;
 /** the page hands over its follow camera once (main.ts): a kept pan under 1 is put on it; at 1 the camera is not written at all. After that the camera's lead is
@@ -36,7 +47,7 @@ let seat: { aimLead: number } | null = null, lead = 0;
 export function bindFindMe(cam: { aimLead: number }) { seat = cam; lead = cam.aimLead; if (FINDME.pan !== 1) cam.aimLead = lead * FINDME.pan; }
 /** one setting changed by the player: on the table, on the camera if it is the pan, and kept */
 export function setFindMe<K extends keyof FindMe>(k: K, v: FindMe[K]) { if (put(k, v)) keep(); }
-/** all four back to their starts (Options' Reset): only what had been moved is written */
+/** every row back to its start (Options' Reset): only what had been moved is written */
 export function resetFindMe() { let any = false; for (const k of Object.keys(FINDME_START) as (keyof FindMe)[]) any = put(k, FINDME_START[k]) || any; if (any) keep(); }
 function put<K extends keyof FindMe>(k: K, v: FindMe[K]): boolean { if (FINDME[k] === v) return false; FINDME[k] = v; if (k === 'pan' && seat) seat.aimLead = lead * FINDME.pan; return true; }
 function keep() { try { globalThis.localStorage?.setItem(LS, JSON.stringify(FINDME)); } catch { /* no store */ } }
