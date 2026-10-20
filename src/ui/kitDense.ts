@@ -19,9 +19,10 @@ export const KITDENSE = { on: true };
 try { if (new URLSearchParams(location.search).get('kitdense') === '0') KITDENSE.on = false; } catch { /* no page (the harness) */ }
 
 const STYLE_ID = 'kc-dense-style';
-const P = '#missions.one #loadout .lo-kit .kc.kc-dense', PL = '#missions.one.pane-loadout #loadout .lo-kit .kc.kc-dense';
+// (`.kc.kc-tree.kc-dense`: one class more than any rule of the start page's for the tree's tiles, so none of these wins by the order of the two sheets)
+const P = '#missions.one #loadout .lo-kit .kc.kc-tree.kc-dense', PL = '#missions.one.pane-loadout #loadout .lo-kit .kc.kc-tree.kc-dense';
 /** a quiet mission's gear screen (ui/startpage.ts QUIET_CSS), the row the keys are on */
-const QS = '#missions.one.quiet.pane-loadout #loadout .lo-kit .kc.kc-dense.focus';
+const QS = '#missions.one.quiet.pane-loadout #loadout .lo-kit .kc.kc-tree.kc-dense.focus';
 export const DENSE_CSS = `
 ${P} { display: grid; grid-template-columns: minmax(0, 1fr) !important; row-gap: 6px; padding: 0 0 24px; }
 /* the pouches and the two weight bars: one line over the tiles */
@@ -108,7 +109,7 @@ ${P} .kc-look .kc-label { flex: 0 0 auto; margin-right: 4px; }
 ${P} .kc-look .kc-val { flex: 0 1 auto; order: 3; min-width: 0; font-size: 12px; text-align: center; white-space: nowrap; }
 ${P} .kc-look .kc-line button:nth-of-type(1) { order: 2; }
 ${P} .kc-look .kc-line button:nth-of-type(2) { order: 4; }
-${P} .kc-look .kc-sets { margin: 0 0 0 auto; align-self: center; }
+${P} .kc-look .kc-sets { order: 0; margin: 0 0 0 auto; align-self: center; }   /* (after the colours in a narrow window too: the keys walk them in that order) */
 ${P} .kc-look .kc-clip[data-clip="copy"] { margin-left: 10px; }
 /* a quiet mission's cursor is a wider bar (QUIET_CSS: 4 px of border, the row's padding taken in to 9): here the bar is drawn inside the tile, so no tile's lay-out moves under the keys */
 ${QS} .kc-row.sel { border-left-width: 3px; box-shadow: inset 1px 0 0 var(--m-bright); }

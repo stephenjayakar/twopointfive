@@ -1164,7 +1164,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   gun's fittings and rounds, the tree's own tiles (`.kc-kids`; a tile with words beside its count, `lent` or `idle`, is two tiles wide). A press on a gun puts it on the card at once through `kit.ts kitPaste` (so it is fitted
   and refused as a paste is, and never steps through the guns between). SHUT BY: a press anywhere off it (a `pointerdown`: the kit figure eats the mouse event), Esc, Enter on the gun, the keys leaving the
   card. IT NEVER COVERS THE FOOT: `MemberCardOpts.floor` is the top of the host's foot (the loadout's buttons), and a pop-up that would pass it is
-  drawn that much higher, over the foot of the guns' tiles (`kitCard.ts fit`, again on a window resize) — the maintainer's own window is about
+  drawn that much higher, over the foot of the guns' tiles (`kitCard.ts fit`, again when the window is sized or the page scrolls) — the maintainer's own window is about
   1000 x 673, where a Mk 18's five things are two lines. THE KEYS are the card's (W S move, A D change): shut, W S walk the tiles as they lie (guns, kit, colours, sets) and A D on a gun's tile is the
   next gun; Enter on a gun's tile opens its pop-up, where W S walk the gun and its things and stop at the ends, A D change. A gun's refusal is said on
   the card's own line, or in the pop-up while it is open (`.kc-pop-note`, which also takes a set's or a paste's refusal: the pop-up lies over the
@@ -1178,9 +1178,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `PORT=<port> node tools/qa/kitdense-page.cjs [outDir]` (20 lines: the lay-out, the chips, the pop-up by the mouse and by the keys alone, a gun put on
   and kept, the walk to Deploy, four window sizes for you and a teammate, a quiet mission's lent rounds, a quiet mission at 1000 x 673 and
   1200 x 675 — no tile moves under the keys, the pop-up ends over the foot —, the largest text size; `KITDENSE_BREAK=1` = the page with
-  `kitdense=0`, fails 19). `kittree-page.cjs` reads the tree's own lay-out, so it opens every page with `kitdense=0`;
+  `kitdense=0`, fails 18 of the 20). `kittree-page.cjs` reads the tree's own lay-out, so it opens every page with `kitdense=0`;
   `kitpaste-page.cjs` takes the pouches on a line of their own as clear of Copy and Paste; `bigslot-page.cjs` reads the big slot as the last of the
-  KIT's rows (the colours' strip follows it); `kitview-page.cjs` opens a gun's pop-up before it clicks a row inside one. LEFT, the maintainer's calls: W S walk a line of tiles
+  KIT's rows on a dense card (the colours' strip follows it); `kitview-page.cjs` opens a gun's pop-up before it clicks a row inside one. LEFT, the maintainer's calls: W S walk a line of tiles
   that lies left to right (the card's standing keys; a walk by the four directions would be a change of the screen's keys); a count's tile has no
   pop-up, only its arrows; in a short window the pop-up lies over the lower part of the guns' tiles. Seen only in
   headless Chromium on the software adapter: never on a GPU, nobody has played it.

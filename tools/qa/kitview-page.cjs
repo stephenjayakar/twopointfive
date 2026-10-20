@@ -1228,7 +1228,8 @@ async function outer(browser) {
   }
   // a selection MOVE (a click on another row: no value changes): a `sel`, and no kit message
   // (the dense card — ui/kitDense.ts: a gun's fittings and rounds are tiles inside that gun's pop-up, so a row of them is clicked with its pop-up open: a press on the gun's tile, which is itself a move and no kit message)
-  const bare = f => page.evaluate(x => { const pop = document.querySelector(`#missions .kc .kc-row[data-field="${x}"]`)?.closest('.kc-pop'); if (pop && !pop.classList.contains('open')) pop.parentElement.querySelector(':scope > .kc-row')?.click(); }, f).then(() => page.waitForTimeout(200));
+  const bare = async f => { const slot = await page.evaluate(x => { const pop = document.querySelector(`#missions .kc .kc-row[data-field="${x}"]`)?.closest('.kc-pop'); return pop && !pop.classList.contains('open') ? pop.getAttribute('data-pop') : null; }, f);
+    if (slot) { await page.click(`#missions .kc .kc-gun[data-gun="${slot}"] > .kc-row .kc-label`, { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(200); } };   // (a real press: it takes the screen's highlight onto the card, as a player's does)
   { await page.click('#missions .lo-slot[data-slot="3"]', { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(300); const k0 = await state(), kits0 = (k0.got || []).filter(m => m.kv === 'kit').length;
     await bare('light'); await page.click('#missions .kc .kc-row[data-field="light"] .kc-label', { timeout: 5000 }).catch(() => {}); await page.waitForTimeout(500);
     const k = await state(), kits = (k.got || []).filter(m => m.kv === 'kit').length, sels = (k.got || []).filter(m => m.kv === 'sel'), S = sels.length ? sels[sels.length - 1] : null, S0 = (k0.got || []).filter(m => m.kv === 'sel').pop();

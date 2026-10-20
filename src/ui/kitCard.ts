@@ -290,7 +290,8 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     if (slot) { const k = rows.findIndex(r => r.field === slot); if (k < 0 || !rowHas(rows[k], def())) return; cur = k; }
     else if (cur < rows.length && rows[cur].under !== undefined) cur = Math.max(0, rows.findIndex(r => r.field === popAt));   // (the highlight comes out with it: onto its gun)
     popAt = slot; said = null; const W = D?.defaultView;
-    if (slot) { D?.addEventListener?.('pointerdown', shut, true); W?.addEventListener?.('resize', refit); } else { D?.removeEventListener?.('pointerdown', shut, true); W?.removeEventListener?.('resize', refit); } draw(); };
+    if (slot) { D?.addEventListener?.('pointerdown', shut, true); D?.addEventListener?.('scroll', refit, true); W?.addEventListener?.('resize', refit); }
+    else { D?.removeEventListener?.('pointerdown', shut, true); D?.removeEventListener?.('scroll', refit, true); W?.removeEventListener?.('resize', refit); } draw(); };   // (the page scrolled or the window sized under an open pop-up: fitted over the foot again)
   const refit = () => { const p = popAt && guns[popAt]?.pop; if (p) fit(p); };
   /** a set pressed: taken, or refused with the reason under the rows (the squad has no room for it as the other cards stand) */
   const press = (k: number) => { cur = rows.length; pick = k; const r = kitPreset(i, presets[k].id); if (r.ok) changed(); else { said = { k: rows.length, why: `${presets[k].label}: ${r.why}` }; draw(); } };
@@ -479,7 +480,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     pop: () => popAt, open: setPop,
     refresh() { said = null; const p = presets.findIndex(x => x.id === kitPresetOf(i)); if (p >= 0) pick = p; draw(); },   // (the picked set follows a card that was made a set elsewhere)
     copy, paste,
-    destroy() { const D = root.ownerDocument as Document | undefined; D?.removeEventListener?.('pointerdown', shut, true); D?.defaultView?.removeEventListener?.('resize', refit); liveCards.delete(me); host.innerHTML = ''; },
+    destroy() { const D = root.ownerDocument as Document | undefined; D?.removeEventListener?.('pointerdown', shut, true); D?.removeEventListener?.('scroll', refit, true); D?.defaultView?.removeEventListener?.('resize', refit); liveCards.delete(me); host.innerHTML = ''; },
   };
   return card;
 }
