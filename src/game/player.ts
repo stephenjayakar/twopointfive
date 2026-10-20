@@ -400,6 +400,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (rooted) { /* folded: no reaching for a wall, no pushing off one */ }
   else if (input.hit('KeyQ')) { if (pl.wall) wallStepOff(g, mx, mz, ml, 'q'); else if (!wantSprint) { const why = { blocked: false }; if (!wallSnap(g, cam, why) && !wallSnapLater(g, ml, why)) g.msg(pl.dragging ? 'hands full' : why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); } }   // (at a run there is no taking hold: Shift is one of the ways off it; blocked: a face in reach but furniture standing against it where he would go)
   else if (WALLSNAP.on) wallSnapPending(g, dt, cam, wantSprint);   // (Q a moment before the face came into reach: taken as it does)
+  if (WALLSNAP.on && WALLSNAP.press && !rooted) wallPress(g, dt, input, cam, mx, mz, ml, wantSprint);   // (…and with no Q at all: a move key held into the wall he is up against)
   if (pl.wall && wantSprint) wallStepOff(g, mx, mz, ml, 'run');
   const onWall = !!pl.wall && moveOnWall(g, dt, cam, mx, mz, ml);   // false: free (or let go this very frame — then he walks on from where he stands, below)
   if (!onWall) {
@@ -835,7 +836,7 @@ function clearOfProps(g: Game, q: Vec3, r: number): boolean {
  *  AND of the furniture standing there — and nothing between him and that spot. u = the station he would take; [lo, hi] the whole run (`quick`: only traced
  *  a metre either side — the answer, not the run, is wanted). null = nothing to press against; `why.blocked` then says a face WAS in reach but furniture
  *  keeps him off it (the words differ). */
-function findWall(g: Game, quick = false, why?: { blocked: boolean }): { n: Vec3; t: Vec3; d: number; lo: number; hi: number; u: number } | null {
+function findWall(g: Game, quick = false, why?: { blocked: boolean }, only?: Vec3): { n: Vec3; t: Vec3; d: number; lo: number; hi: number; u: number } | null {
   const pl = g.player, p = pl.char.pos, col = g.col; const f = pl.char.forward();
   const sp = Math.hypot(pl.char.vel[0], pl.char.vel[2]), far = WALLSNAP.on && sp > 0.5;   // WALLSNAP: a face he is walking AT is in reach from further off, and outranks a nearer one he is merely passing
   const reach = far ? Math.max(WALL_REACH, WALLSNAP.reachMoving) : WALL_REACH;
@@ -845,6 +846,7 @@ function findWall(g: Game, quick = false, why?: { blocked: boolean }): { n: Vec3
     const hit = col.raycast([p[0], KNEE_Y, p[2]], dir, BODY_R + reach);
     if (!hit || hit.index >= 1e6 || Math.abs(hit.n[1]) > 0.2) continue;                       // nothing there, or a door leaf
     const n = v3.normalize([hit.n[0], 0, hit.n[2]]);
+    if (only && n[0] * only[0] + n[2] * only[2] < 0.99) continue;                              // (wallPress: the face he is pushing into, no other)
     if (n[0] * dir[0] + n[2] * dir[2] > -0.35) continue;                                       // a face only glanced side-on: the ray square to it finds it if it faces him at all
     const d = (p[0] + dir[0] * hit.t) * n[0] + (p[2] + dir[2] * hit.t) * n[2];
     const dist = p[0] * n[0] + p[2] * n[2] - d;                                                 // how far his centre stands off that plane
@@ -885,11 +887,12 @@ export function canWallSnap(g: Game): boolean {
 /** Q: take hold of the wall findWall offers. The hold is set up here; moveOnWall eases him onto it over the next few frames (through his own collision sweep,
  *  like any move of his) and turns his back to it. Which shoulder leads (WallHold.side) comes from the way he was moving, else the way he was facing, else the
  *  camera's right. Crouched or standing as he was. Whatever was in his hand goes away (the pistol drawn on the thigh like any holstered state, remembered in
- *  WallHold.drawn for releaseWall to hand back): on the wall his palms are on the plaster. false = nothing in reach (or his hands / feet are busy). */
-export function wallSnap(g: Game, cam: FollowCamera, why?: { blocked: boolean }): boolean {
+ *  WallHold.drawn for releaseWall to hand back): on the wall his palms are on the plaster. false = nothing in reach (or his hands / feet are busy).
+ *  `only`: the one face to take, by its normal (wallPress: the wall he is pushing into, not a nearer one beside him). */
+export function wallSnap(g: Game, cam: FollowCamera, why?: { blocked: boolean }, only?: Vec3): boolean {
   const pl = g.player, c = pl.char;
   if (pl.wall || pl.down || pl.dragging || pl.takedown || pl.holding || pl.kick || pl.picking || pl.wanding) return false;
-  const f = findWall(g, false, why); if (!f) return false;
+  const f = findWall(g, false, why, only); if (!f) return false;
   const { n, t } = f;
   const vt = c.vel[0] * t[0] + c.vel[2] * t[2], ft = Math.sin(c.bodyYaw) * t[0] + Math.cos(c.bodyYaw) * t[2], rt = cam.planarBasis().right;
   const side: -1 | 1 = Math.abs(vt) > 0.3 ? (vt > 0 ? 1 : -1) : Math.abs(ft) > 0.4 ? (ft > 0 ? 1 : -1) : rt[0] * t[0] + rt[2] * t[2] >= 0 ? 1 : -1;
@@ -950,6 +953,53 @@ function wallSnapPending(g: Game, dt: number, cam: FollowCamera, wantSprint: boo
   if (wallSnap(g, cam, why)) return;
   if ((P.t -= dt) <= 0) { wsPend.delete(pl); g.msg(P.blocked || why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); }
 }
+
+/** WALLSNAP.press: the wall taken WITHOUT the key. A move key held INTO a face (pressFace: the stick within pressDeg of square to it, the face within pressNear
+ *  of his body) for pressSecs takes it exactly as Q would — wallSnap, kept to that face: the same faces, the same refusals, and nothing said where there is
+ *  none. The clock runs on the walk up, so a man who walks squarely at a wall has it from pressFlow short of touching and his back comes round as he arrives;
+ *  one who turns into a wall he stands against waits the whole of it there. NEVER at a run, with his hands on anything, a list or an order menu up, a mouse
+ *  button held (he is shooting, or about to), the gun in his hand reloading or still coming out, or inside pressAfterShot of a round of his own. With a
+ *  sidearm or a can in the hand, which the hold puts away, only while no enemy is alert (pressCalm: in a fight the pistol stays up; the rifle stacks in his
+ *  hands either way). Where the face he walks into has a thing to use on it or beside it (pressThingAt: a door, a switch, the breaker, the mission's thing,
+ *  a body) the wait is pressThing and all of it against the face: he walked up to use it.
+ *  THE LATCH (`n`, `dx dz`, `until`): when a hold ends, or the wall refuses a take, the stick as it then stands is remembered with that wall. Until the stick
+ *  rests or turns (pressTurn), a wall facing as that one does is not taken at all — Q, Shift or a step away is not undone by the key still held, and a
+ *  refusal is not asked again every frame — and any other wall not for pressAgain: stepping off does not throw him onto the far side of a narrow passage,
+ *  while a walk straight across a corridor has the far wall as he arrives. */
+const wsPress = new SideMap<Player, { t: number; at: number; n: Vec3 | null; dx: number; dz: number; held: boolean; until: number }>('player.wsPress');
+/** the face a ray from his knee along the stick meets: its level normal, where the ray meets it, and what is left between his body and it (the measure
+ *  findWall takes of a face: BODY_R off the plane is touching) — null on open floor, a door's leaf, or a face the stick is more along than at */
+function pressFace(g: Game, mx: number, mz: number): { n: Vec3; at: Vec3; off: number } | null {
+  const W = WALLSNAP, p = g.player.char.pos, cosMin = Math.cos(W.pressDeg * DEG);
+  const hit = g.col.raycast([p[0], KNEE_Y, p[2]], [mx, 0, mz], (BODY_R + W.pressNear) / cosMin);
+  if (!hit || hit.index >= 1e6 || Math.abs(hit.n[1]) > 0.2) return null;
+  const n = v3.normalize([hit.n[0], 0, hit.n[2]]), into = -(mx * n[0] + mz * n[2]);
+  if (into <= cosMin) return null;
+  const off = hit.t * into - BODY_R;
+  return off > W.pressNear ? null : { n, at: [p[0] + mx * hit.t, KNEE_Y, p[2] + mz * hit.t], off };
+}
+function wallPress(g: Game, dt: number, input: Input, cam: FollowCamera, mx: number, mz: number, ml: number, wantSprint: boolean) {
+  const pl = g.player, W = WALLSNAP; let P = wsPress.get(pl);
+  if (!P) wsPress.set(pl, P = { t: 0, at: g.time, n: null, dx: 0, dz: 0, held: false, until: 0 });
+  if (g.time - P.at > dt * 1.5) P.t = 0;                                    // frames his feet were not his own (a blast, a beat): the wait starts again
+  P.at = g.time;
+  if (pl.wall) { P.t = 0; P.n = [pl.wall.n[0], 0, pl.wall.n[2]]; P.held = false; return; }
+  if (P.n && !P.held) { P.held = true; P.dx = mx; P.dz = mz; P.until = g.time + W.pressAgain; }   // the hold has just ended: the stick as it stands
+  if (P.n && (ml <= 0 || mx * P.dx + mz * P.dz < Math.cos(W.pressTurn * DEG))) P.n = null;         // the stick has rested or turned: the latch is gone
+  const face = ml > 0 && !wantSprint && !g.puppet && !g.touring ? pressFace(g, mx, mz) : null;
+  if (!face || (P.n && (face.n[0] * P.n[0] + face.n[2] * P.n[2] > 0.9 || g.time < P.until))) { P.t = 0; return; }
+  const inHand = pl.holstered ? null : pl.rifleUp ? pl.rifle : pl.pistol, gunAway = !pl.holstered && !(W.stack && pl.rifleUp);   // (gunAway: what the back hold takes out of his hand)
+  const busy = pl.dragging || !!pl.haul || !!pl.doorMove || !!pl.easing || !!pl.charging || pl.sel.open || pl.sel.downT >= 0 || pl.throwHeld || !!g.orders.menu
+    || input.lmb() || input.rmb() || !!inHand?.reloading || pl.equipT > 0 || g.time - pl.lastFireT < W.pressAfterShot;
+  if (busy || (W.pressCalm && gunAway && g.guards.some(h => h.state === 'alert' && h.team !== 'operative' && h.team !== 'civilian'))) { P.t = 0; return; }
+  const thing = g.nearby.some(it => it.inReach && PRESS_THINGS.has(it.kind) && Math.min(v3.distXZ(it.pos, face.at), it.door ? v3.distXZ(it.door.frameCentre, face.at) : Infinity) < W.pressThingAt);
+  if (thing && face.off > W.pressTouch) { P.t = 0; return; }
+  P.t += dt;
+  if (P.t < (thing ? W.pressThing : W.pressSecs) - 1e-6 || face.off > (thing ? W.pressTouch : Math.max(W.pressTouch, W.pressFlow))) return;
+  P.t = 0;
+  if (!wallSnap(g, cam, undefined, face.n)) { P.n = face.n; P.held = true; P.dx = mx; P.dz = mz; P.until = g.time + W.pressAgain; }
+}
+const PRESS_THINGS: ReadonlySet<string> = new Set(['door', 'switch', 'breaker', 'objective', 'cam', 'body']);
 
 /** Does the rifle, drawn on this hold, stack on it (WALLSNAP.stackDraw; a hold taken under the feel pass: the stack's clocks hang off its take)? */
 function wallStacks(w: WallHold): boolean { return WALLSNAP.on && WALLSNAP.stack && WALLSNAP.stackDraw && w.takeT !== undefined; }

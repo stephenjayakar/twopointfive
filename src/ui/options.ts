@@ -17,6 +17,7 @@ import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
 import { TABKEY, tabChoices, setTabKey, tabDoes } from './tabkey';
 import { BACKKEY } from '../game/backkey';
+import { WALLSNAP } from '../game/wallsnap';
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
@@ -150,10 +151,12 @@ let deps: OptionsDeps | null = null, open: Screen | null = null;
 let turned = 1, wrote: number | null = null;
 
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; tab?: string } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
+function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; tab?: string; wallpress?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
 /** a page held silent (`?mute`, or the automation profile's kept flag: main.ts pins the master bus at 0 there): that 0 is the rig's, never the player's level */
 function muted(): boolean { try { return new URLSearchParams(globalThis.location?.search ?? '').has('mute') || globalThis.localStorage?.getItem('twopointsix.testMute') === '1'; } catch { return false; } }
-function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.overlay.showLightDots, ...(TABKEY.kept !== 'off' ? { tab: TABKEY.kept } : {}) })); } catch { /* no store */ } }
+function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.overlay.showLightDots, ...(TABKEY.kept !== 'off' ? { tab: TABKEY.kept } : {}), ...(pressKept !== null ? { wallpress: pressKept } : {}) })); } catch { /* no store */ } }
+/** the wall taken without Q (game/wallsnap.ts `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
+let pressKept: boolean | null = null, pressUrl = false;
 
 /** ui/menu.ts hands the live objects over when its Menu is made (the boot is over): what this machine kept is put on them, and a screen that is up fills in */
 export function setOptionsDeps(d: OptionsDeps | null) {
@@ -163,6 +166,8 @@ export function setOptionsDeps(d: OptionsDeps | null) {
   if (k.vol && vol) for (const b of ['master', 'sfx', 'ambience', 'music'] as const) { if (b === 'master' && muted()) continue; const x = k.vol[b]; if (typeof x === 'number' && isFinite(x) && x >= 0 && x <= 1 && vol[b] !== x) { vol[b] = x; moved = true; } }
   if (moved) d.audio.setVolumes();
   if (typeof k.hints === 'boolean') d.overlay.showLightDots = k.hints;
+  pressKept = typeof k.wallpress === 'boolean' ? k.wallpress : null; try { pressUrl = new URLSearchParams(globalThis.location?.search ?? '').has('wallpress'); } catch { pressUrl = false; }
+  if (pressKept !== null && !pressUrl) WALLSNAP.press = pressKept;   // (a `?wallpress=` visit holds its own, and is never written as this machine's choice)
   TABKEY.kept = tabDoes(k.tab) ?? 'off'; if (!TABKEY.url) setTabKey(TABKEY.kept);   // (what Tab does, on trial: ui/tabkey.ts — a `?tab=` visit holds its own)
   if (open) render(open);
 }
@@ -279,6 +284,7 @@ function render(S: Screen) {
     flip(body, 'Autosave checkpoints', () => game.saves.enabled, v => { game.saves.setEnabled(v); },
       'A checkpoint is written by itself when the mission moves on, when you first enter a room, when you hide a body and every minute and a half of quiet play. Never while anyone is on to you. Enter on the down card loads the newest.');
     flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, 'The faint dots marking what Space and the right button can act on: lights, doors, bodies.');
+    if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, 'Keep a move key held into a wall and your back goes to it. Q does the same either way.');
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key (trying out)', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — six rows on trial, kept by host/findme.ts)
@@ -286,7 +292,7 @@ function render(S: Screen) {
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'They still see you and shoot you; hits do nothing. Remembered on this machine.', ['On', 'Off']);
     flip(body, 'Enemies do not think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stands where he is: nobody patrols, hears or sees. Remembered on this machine.', ['On', 'Off']);
     flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. Remembered on this machine.'), ['On', 'Off']);
-    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; setTabKey('off'); TABKEY.kept = 'off'; TABKEY.url = false; keep(); findReset();
+    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; setTabKey('off'); TABKEY.kept = 'off'; TABKEY.url = false; keep(); findReset();
       if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
   }
   if (reset) { const run = reset, b = el('button', 'op-btn', 'Reset to defaults') as HTMLButtonElement; b.dataset.act = 'reset'; b.onclick = () => { run(); S.paint(); }; foot.appendChild(b); }

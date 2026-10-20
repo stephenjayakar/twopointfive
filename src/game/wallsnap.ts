@@ -13,6 +13,8 @@
 //   corner hides steps him out past the end with the rifle in the shoulder, and the cursor coming back steps him in again; the camera holds still through
 //   the step, so the point under the reticle does not swim. No key is held for any of it.
 //
+//   WITHOUT THE KEY (`press`, a switch of its own under `on`): a move key held into a wall he is up against takes it, quiet or loud as above. Q still does.
+//
 // This file is the table and its arithmetic only (nothing of the game is imported: src/game is one import cycle); the hold's code is where the hold is.
 
 const clamp01 = (x: number) => x < 0 ? 0 : x > 1 ? 1 : x;
@@ -66,6 +68,19 @@ export const WALLSNAP = {
   leanClearM: 1.4,
   /** the cursor must have stayed there this long before he steps out / back (s); once out he stays at least minOut, and afterShot after any round (s) */
   dwellOut: 0.06, dwellBack: 0.15, minOut: 0.35, afterShot: 0.4,
+  // ---- the wall taken WITHOUT the key (its own switch; acts only with `on`; false = Q alone takes a wall, as it was)
+  /** a move key held INTO a wall takes it as Q would: the stick within pressDeg of square to the face, for pressSecs, counted from pressNear (m) out — so a
+   *  man who walks squarely up to a wall has it from pressFlow (m) short of touching, his back coming round as he arrives, and one who turns into a wall he
+   *  stands against waits the whole of it there. Where the face has something to use within pressThingAt (m) of the spot he walks into (a door, a switch, the
+   *  breaker, the mission's thing, a body) the wait is pressThing, all of it within pressTouch (m) of the face: he walked up to use it. */
+  press: false, pressSecs: 0.18, pressFlow: 0.2, pressNear: 0.6, pressDeg: 35, pressTouch: 0.08, pressThing: 0.5, pressThingAt: 0.9,
+  /** the latch a hold's end (or a refusal) leaves on the stick as it then stands: gone when the stick rests or turns by this (deg); till then a wall facing as
+   *  the one he left is not taken, nor any other within this (s) */
+  pressTurn: 50, pressAgain: 0.6,
+  /** …and not with a mouse button held, nor within this (s) of a round of his own: a man shooting who backs into a wall keeps his gun up (the stack carries the rifle at the low ready) */
+  pressAfterShot: 1.0,
+  /** with a sidearm or a can in the hand (the hold puts it away) the key-less take waits until nobody is alert; false = whenever. The rifle stacks either way. */
+  pressCalm: true,
 };
 
 /** seconds the take runs for a glide of `dist` metres and a turn of `turn` radians */
