@@ -50,7 +50,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   literal green or a typeface by name. CHECK: `bun run tools/qa/hud-look-check.ts` (reads files only, so there is no stand to run it on: no green-to-teal literal,
   pale mints included, and no green or blue near-black in any rule of the sheet bar the named things that ARE green, a can's paint and two keys of the debrief's
   map; each `--h-` fallback equal to theme.ts's value; every `font` in the fight screen's rules a token; no green in overlay.ts); `HUDLOOK_BREAK=1` adds one rule in
-  the old look and 'no green' and 'type' must both fail. SEEN, all on the software adapter in headless Chromium at 1440 × 900, never on a GPU and never on a Mac:
+  the old look and 'no green' and 'type' must both fail ('tally' too: the next bullet). SEEN, all on the software adapter in headless Chromium at 1440 × 900, never on a GPU and never on a Mac:
   the real page on `?roomclear&squad4` (deployed, the order menu on a door, after a stack order, the debugger open) and the solo night at a door, each beside the
   same DOM under the old sheet, with no console error; the alarm line, CHECKPOINT, REC, radio rows, speech, head marks, both reticles and the order mark only as
   static markup under the real sheet. NOT SEEN BY ANYONE: the labels in the condensed face they were sized for, any of it over a sunlit floor at play speed, a lit
@@ -59,6 +59,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`ui/sceneTweak.ts`, `ui/perfsweep.ts`), the debug floor views (`windviz`, `pictureviz`). TWO OVERLAPS REPORTED ON THIS SCREEN ARE NOT MENDED and were not seen
   in any of the pictures above: a long order menu reaching the kit column in a window under about 640 px tall (it reached it before; the menu is now 13 px
   shorter), and the objective's diamond drawn over the squad block when the objective lies up and to the left.
+- **The run tally cuts no label** (10-20, a look and one word, no switch: `index.html` `#menu .db-stats`, `#menu .db-grid`; `src/ui/debrief.ts`). The tally on the pause
+  card's *Run so far* and on the debrief ended three labels in an ellipsis at every window and text size ('bodies found' and 'doors kicked' 2 px over a tile's
+  83, 'called in by security' 55 over). Now a label too long for its tile takes a second line and the tile holds its number at its foot, so a row's numbers stay
+  on one line; a tile's side padding is 6 px (it was 8), which puts every label of the plain night on one line on the pause card at its full width (on the debrief, 12 px narrower, or with a scroll bar drawn, the two 85 px ones take two); the long one reads
+  'called in' (its hover line still says a camera or a tripwire radioed you in; the summary line's words, chronicle.ts, are as they were). THE TALLY AND ITS MAP
+  wrap by the CARD's width, not the window's: side by side while the card holds 360 + 18 + 420 px, and under that the map goes below the tally and takes the
+  row's whole width, as the old one-column sheet gave it (the tally grows 999 parts to the map's 1, so beside it the map stays 420 px). It was a window rule at
+  820 px: on the pause card the tally's column ran from nothing just over 820 px to its full width near 1260 px (136 px at a 1000 px window, every label cut).
+  The 360 is chosen for SCROLL BARS: the debrief card holds 842 px and the pause card 854, so the pair stays side by side with a bar of 15 to 17 px drawn, as
+  it did before (a first cut at 400 dropped the map under the timeline whenever a drawn bar appeared). In the narrowest band a few more labels take two lines,
+  and a single word too long for its tile breaks, never spills. CHECK: two lines of `tools/qa/hud-look-check.ts`, both red under `HUDLOOK_BREAK=1`: 'tally' (no
+  rule of the tally holds an ellipsis, `nowrap` or a line clamp; a tile is a column with its number at the foot) and 'tally pair' (the pair wraps, and its
+  least widths fit the debrief card less a 17 px bar). SEEN: measured on the real pause card of the solo night, booted on the software adapter, before the
+  change (the three cut, tile 101 px); after it only as markup laid out again under the new sheet, never a booted game: the pause card's own markup at 700 to
+  1920 px wide with the five rarer long labels added (nothing cut; scroll bars hidden, as the headless browser has them), and a made-up debrief and pause card
+  with 15 px scroll bars drawn at 400 to 1920 px wide (side by side wherever the old sheet was, nothing spilt). NOT SEEN BY ANYONE: on a GPU, on a Mac, on
+  Windows, at a text size other than the first, on the debrief of a finished squad mission, or the squad-down card's replay picture where the pair wraps.
 - **A quiet mission's gear screen** (2026-10-17; the maintainer: "quiet missions should have different gear screen stuff i think. be creative!", with
   show, not tell). The PANEL side of Team & kit; the picture beside it is the kit figure's. WHEN: the mission's kind is quiet or it is the solo night
   (`ui/kitNoise.ts quietGear`), on the Team & kit step only: the root wears `quiet` (`ui/startpage.ts`, where `nokit` is set). `kitloud` on the address = the
