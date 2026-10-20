@@ -23,7 +23,7 @@ import { SNOWFX, SNOWWISPS, SNOWGRAINS, snowStats, wispStats, grainStats, oneAir
 import { SNOWBLAST, snowBlastAt, snowBlastStats } from '../game/snowBlast';
 import { SNOWTRACKS, TRACK_RES } from '../game/snowTracks';
 import { SNOWMARKS } from '../game/snowMarks';
-import { SNOWBREATH, breathStats } from '../game/snowBreath';
+import { SNOWBREATH, BREATHSTEAM, breathStats, steamOn } from '../game/snowBreath';
 import { HARDBREATH } from '../game/character';   // (read inside a row's own closure only)
 import { AIR_SIM, airSimStats } from '../game/airSim';
 import { SNOW_LOOK, snowLevel } from '../game/weatherKinds';
@@ -52,6 +52,8 @@ function mk(id: string, label: string, src: string, get: () => number, set: (v: 
  *  numbers that are read in their place while it is on (character.ts HARDBREATH; its chest numbers move bones and are no row here). */
 export const BREATH_SOFT = ['everyHard', 'hardK', 'effortUp', 'effortDown'] as const;
 export const BREATH_HARD = ['every', 'puffs', 'count', 'jet', 'size', 'carry', 'up', 'down'] as const;
+/** the puffs' own look (snowBreath.ts SNOWBREATH): read by no breath that is steam through the smoke solver (SNOW_LOOK.steam) */
+export const BREATH_PUFF = ['puffs', 'count', 'speed', 'spread', 'life', 'lifeJit', 'size', 'sizeJit', 'opacity', 'color[0]', 'color[1]', 'color[2]'] as const;
 /** hover text for the numbers whose table carries no comment of their own (ui/sceneNotes.ts has the rest, generated from the tables) */
 const HAND: Record<string, string> = {
   'HARDBREATH.every': 's between breaths when blown',
@@ -103,7 +105,7 @@ const ABOUT: Record<string, string> = {
   oneair: 'One snow in one air: the flakes fall through the wind sim among the walls, a wisp is snow that wind lifts where it is fast enough, and there are no grains of their own. Off: flakes on the open wind, wisps in gusts, grains near the view.',
   wisps: 'Long low streaks of snow the wind lifts off the ground and carries along it.',
   grains: 'Fine snow picked up off the ground near the view and carried on the air around walls and men. Not drawn while the snow is one snow in one air.',
-  breath: 'Steam off each man\'s breath in the cold: more and faster when he has been running. A blown man breathes by the `blown` rows while the hard breath rule is on (the page as it opens), and by everyHard, hardK, effortUp and effortDown with ?hardbreath=0: the rows nothing reads are dimmed.',
+  breath: 'Steam off each man\'s breath in the cold: more and faster when he has been running. A blown man breathes by the `blown` rows while the hard breath rule is on (the page as it opens), and by everyHard, hardK, effortUp and effortDown with ?hardbreath=0: the rows nothing reads are dimmed. With the breath as real steam (the page as it opens; ?breathsteam=0 = puffs) a breath is gas in the smoke solver, off the mouth as the gun\'s is off the muzzle: the `steam` rows are what it is made of, and the rhythm, the mouth and the pitch rows above still hold.',
   air: 'The moving air the grains and smoke ride: a small wind simulation around the buildings.',
   storm: 'The weather\'s wind: its direction, strength and gusting. Flakes, blown snow and smoke outdoors ride it.',
   fog: 'How the parts of the level your team cannot see are shaded: how dark, how grey.',
@@ -247,7 +249,13 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
       vars.push(...table('HARDBREATH', HARDBREATH, 'src/game/character.ts', { only: BREATH_HARD, when: 'next', rows: { every: { label: 'blown every', max: 3, step: 0.01 }, puffs: { label: 'blown puffs', step: 1, max: 8 }, count: { label: 'blown count', step: 1, max: 20 },
         jet: { label: 'blown jet', max: 10, step: 0.05 }, size: { label: 'blown size', max: 5, step: 0.05 }, carry: { label: 'blown carry', max: 1, step: 0.01 }, up: { label: 'blown in', max: 10, step: 0.1 }, down: { label: 'wind back in', max: 60, step: 0.5 } } }));
       readWhen(vars, BREATH_SOFT.map(k => `SNOWBREATH.${k}`), () => !HARDBREATH.on); readWhen(vars, BREATH_HARD.map(k => `HARDBREATH.${k}`), () => HARDBREATH.on);
-      layers.push({ id: 'breath', name: 'Breath', group: 'Air', vars, on: muting(vars, ['SNOWBREATH.opacity']), stat: () => { const s = breathStats(game); return s.active ? `${s.shown} of ${s.men} men steaming` : s.why; } }); }
+      // (the breath as gas in the smoke solver: its own rows, and the puffs' rows that nothing reads while a man steams are dimmed — past `reach` he still breathes puffs, so with a reach set they stay lit)
+      if (SNOW_LOOK.steam) { vars.push(...table('BREATHSTEAM', BREATHSTEAM, 'src/game/snowBreath.ts', { when: 'next', rows: { radius: { label: 'steam radius', max: 0.15, step: 0.001 }, cells: { label: 'steam cells', max: 4, step: 0.1 }, density: { label: 'steam density', max: 30, step: 0.5 }, temp: { label: 'steam heat', max: 40, step: 0.5 },
+        speed: { label: 'steam speed', max: 4, step: 0.05 }, push: { label: 'steam push', max: 90, step: 1 }, expand: { label: 'steam opens', max: 24, step: 0.5 }, attack: { label: 'steam attack', max: 0.5, step: 0.01 }, jitter: { label: 'steam jitter', max: 1, step: 0.01 }, carryK: { label: 'steam carry', max: 2, step: 0.05 },
+        wake: { label: 'head wake', max: 0.5, step: 0.01 }, reach: { label: 'steam reach', max: 60, step: 1 } } }));
+        readWhen(vars, BREATH_PUFF.map(k => `SNOWBREATH.${k}`), () => !(steamOn(game) && BREATHSTEAM.reach <= 0)); readWhen(vars, ['HARDBREATH.puffs', 'HARDBREATH.count'], () => HARDBREATH.on && !(steamOn(game) && BREATHSTEAM.reach <= 0));
+        readWhen(vars, Object.keys(BREATHSTEAM).map(k => `BREATHSTEAM.${k}`), () => steamOn(game)); }
+      layers.push({ id: 'breath', name: 'Breath', group: 'Air', vars, on: muting(vars, SNOW_LOOK.steam ? ['SNOWBREATH.opacity', 'BREATHSTEAM.density'] : ['SNOWBREATH.opacity']), stat: () => { const s = breathStats(game); return s.active ? `${s.shown} of ${s.men} men steaming` : s.why; } }); }
   }
   if (AIR_SIM.on) layers.push({ id: 'air', name: 'Wind sim', group: 'Air', on: { mode: true, get: () => S.airSim, set: on => { S.airSim = on; } },
     vars: [...table('AIR', AIR, 'src/render/airField.ts', { rows: { iterations: { min: 1, max: 40, step: 1 }, sor: { min: 1, max: 1.95, step: 0.01 }, follow: { max: 1, step: 0.01 }, seed: { min: 1, max: 20, step: 1 } } }),

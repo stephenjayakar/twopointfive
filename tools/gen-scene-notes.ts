@@ -22,6 +22,7 @@ const TABLES: [name: string, file: string][] = [
   ['SNOWBLAST', 'src/game/snowBlast.ts'],
   ['SNOWMARKS', 'src/game/snowMarks.ts'],
   ['SNOWBREATH', 'src/game/snowBreath.ts'],
+  ['BREATHSTEAM', 'src/game/snowBreath.ts'],
   ['SNOW_SURF', 'src/render/snowField.ts'],
   ['AIR_SIM', 'src/game/airSim.ts'],
   ['AIR', 'src/render/airField.ts'],

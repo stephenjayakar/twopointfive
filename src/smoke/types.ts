@@ -12,7 +12,7 @@ export interface SmokeEmitter {
   ttl: number; age: number;
   /** moving source; returning null parks it (or kills it when `confined`) */
   track?: () => { pos: Vec3; dir: Vec3 } | null;
-  kind: 'flash' | 'wisp' | 'canister' | 'burst' | 'cloud' | 'jet' | 'trail' | 'vent' | 'puff';   // puff: the destruction lane's impact DUST — a short cold cloud knocked out of plaster / a dropped ceiling tile (game/destruction.ts dustPuff): density the guards' sight lines and the froxels light like any smoke
+  kind: 'flash' | 'wisp' | 'canister' | 'burst' | 'cloud' | 'jet' | 'trail' | 'vent' | 'puff' | 'breath';   // breath: a man's breath in the cold (game/snowBreath.ts BREATHSTEAM): a `look` source that rides his mouth by `trackVel` · puff: the destruction lane's impact DUST — a short cold cloud knocked out of plaster / a dropped ceiling tile (game/destruction.ts dustPuff): density the guards' sight lines and the froxels light like any smoke
   mode?: 'jet' | 'burst';   // burst = velocity points radially away from pos
   push?: number;        // drag RATE (1/s) toward dir·speed at the core; blend per step = clamp(push·g·dt). Default 25 = the old hard-coded constant
   expand?: number;      // divergence source (1/s) at the core: the pressure solve is asked to LEAVE div v = expand·g in the field, so the puff genuinely
@@ -24,12 +24,15 @@ export interface SmokeEmitter {
   prio?: number;        // when more emitters are live than the solver packs per step: 2 = keep (screens), 1 = default, 0 = first to go (spark trails)
   anchor?: Vec3;        // (nothing in the page reads it: where the old box solver centred a fresh box)
   minVoxels?: number;   // floor the radius at this many voxels of whatever lattice it lands on (a splat under one cell deposits ~nothing, and flickers)
+  look?: boolean;       // LOOK ONLY, and nobody's to count: never against `budget` (what a blast may still hang off its sparks is not such a source's to change), nothing to the game's
+                        // own smoke (game/sense.ts CpuSmoke), and the first cut when a step holds more emitters than it packs — under every `prio`
+  trackVel?: boolean;   // its track()'s `dir` is the gas's VELOCITY (m/s), taken turn by turn, heading and speed both: a source on a mouth that turns and walks
   tint?: Vec3;          // LOOK ONLY (game/dustLook.ts): the scattering colour of what this emitter raises — it rides with the smoke per cell, which is drawn tinted toward it and with the dust
                         // shape (render/shaders/dust_look.wgsl); the solver, the shadow rays and the light probe's sight lines never see it
 }
 
 /** One-frame velocity impulse (no density): characters wading through smoke, bullets. */
-export interface SmokePush { pos: Vec3; dir: Vec3; speed: number; radius: number; }
+export interface SmokePush { pos: Vec3; dir: Vec3; speed: number; radius: number; /** stir this lattice alone (absent = every lattice with smoke there) */ lattice?: 'fine' | 'coarse'; }
 
 /** One live WIND source this frame, in the shape both GPU consumers take it (game/wind.ts builds ≤ WIND_GPU_MAX of them; render/particles.ts packs them behind the
  *  impulses as ImpulseRec records in 'wind' mode, smoke.ts into its own small uniform for the forces step; render/shaders/wind_field.wgsl is the field both then
@@ -56,6 +59,9 @@ export interface SmokeSystemLike {
   inSmokeDomain(p: Vec3): boolean;
   /** how many more emitters would still be packed for the solver this step (an effect sizing its spark-trail count charges against this) */
   budget?(): number;
+  /** is smoke handed over now stepped AND drawn (a solver switched off or frozen, or its rendering switched off, is not; absent = no: the harness's null one)? What a
+   *  look-only source asks before it trades another picture for gas in here */
+  drawing?(): boolean;
   /** drop every emitter and all the smoke (encounter restart: a 30 s canister must not keep venting into the next one) */
   clearAll?(): void;
   /** something solid within r of c stopped being solid (or came back): the bricks there re-bake their obstacle field — the destruction lane hiding a static it knocked off */
