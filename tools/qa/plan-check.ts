@@ -192,8 +192,12 @@ async function planLines(): Promise<boolean> {
     const c1: any[] = floorPlan(g).doors; O.who = 'red'; const c2: any[] = floorPlan(g).doors; O.who = who0;
     g.player.down = true; const c3: any[] = floorPlan(g).doors; g.player.down = false;
     const cok = !!cd && setOk && c1.length === 1 && c1[0].door === cd && c1[0].why === 'charge' && c1[0].key === 'F' && c1[0].now && c1[0].tone === 'blue' && c2[0]?.now && c3.length === 1 && !c3[0].now;
-    R.W.input.pressed.add('KeyF'); R.step(2); const blown = R.until(() => T.set.length === 0, 4);
-    line(cok && blown, 'a set charge: its door carries the key, and the key blows it', cd ? `${c1.map(d => `${d.why} · ${d.tone} · now ${d.now}`).join(' | ')} · orders to red: now ${c2[0]?.now} · Sam down: now ${c3[0]?.now} · F: ${T.set.length} set after` : `refused everywhere: ${cw}`);
+    // (the key is pressed while the bar says it is live — the pair still walking to their stand-off marks — and the word is kept: the charge goes once
+    //  both are stood off. That walk is the men's pace, not the key's, so it is waited out apart from the bang, which must follow the stand-off at once)
+    const cop = () => T.ops.find((o: any) => o.kind === 'charge' && o.door === cd);
+    R.W.input.pressed.add('KeyF'); R.step(2); const worded = !!cop()?.word || T.set.length === 0, t0 = g.time;
+    const stood = R.until(() => T.set.length === 0 || !cop() || cop().phase === 'armed', 25), walk = g.time - t0, blown = R.until(() => T.set.length === 0, 4);
+    line(cok && worded && stood && blown, 'a set charge: its door carries the key, and the key blows it', cd ? `${c1.map(d => `${d.why} · ${d.tone} · now ${d.now}`).join(' | ')} · orders to red: now ${c2[0]?.now} · Sam down: now ${c3[0]?.now} · F: the word ${worded ? 'kept' : 'NOT kept'}, stood off ${walk.toFixed(1)} s on, then ${(g.time - t0 - walk).toFixed(1)} s to the bang · ${T.set.length} set after` : `refused everywhere: ${cw}`);
     R.step(120);
     O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.step(30);
   }
