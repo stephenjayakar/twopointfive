@@ -39,9 +39,6 @@ interface Out { ok: boolean; moved: number[]; movers: number; nearGoals: number;
 /** Sam put down at `at` with no trail, the squad told to fall in, twenty seconds given, then five watched */
 async function stand(scn: string, at: number[], on: boolean, hold = on && !HOLD_BREAK, corner: { door?: number[]; men: [number, number[]][] } | null = null): Promise<Out> {
   const R = await rig(scn, 5), g = R.game, O = R.O;
-  // (teampace.ts held off: with followers at 2.0 m/s for the old 2.2 the men come to the depot's (11.85, 5.95) by another frame's places, and there the rule under
-  //  test leaves two places on one spot with nobody moving — its own to look at, at either pace; every other place of the nineteen reads the same)
-  (await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on = false;
   DOORMANNERS.on = true; ORDERS.fileSpread = on; ORDERS.fileHold = hold; if (corner?.door) DOORSTAY.on = true;   // (after the stand-up: the frozen stand pins them off — and shuts a door behind the men, which the staged corner needs standing open)
   for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   R.gather(at, 20); R.step(600);
@@ -53,7 +50,7 @@ async function stand(scn: string, at: number[], on: boolean, hold = on && !HOLD_
   const goals = men.map(m => [...(O.of(m)?.goal ?? m.char.pos)]), pos = men.map(m => [...m.char.pos]);
   let nearGoals = 0, tight = 0, bare = 0, nearMen = 0;   // (nearGoals: on one spot · tight: inside the manners' 'standing on a mate', the bar a man is sent on to his exact place by)
   for (let i = 0; i < men.length; i++) for (let j = i + 1; j < men.length; j++) {
-    if (flat(goals[i], goals[j]) < 0.6 && open(goals[i], goals[j])) nearGoals++;
+    if (flat(goals[i], goals[j]) < 0.6 - 0.02 && open(goals[i], goals[j])) nearGoals++;   // (the same 2 cm the two bars below are given: the hold steps a man out 5 cm at a time, and a place it puts at 0.60 m reads 0.5999…)
     if (flat(goals[i], goals[j]) < DOORMANNERS.apart - 0.02 && open(goals[i], goals[j])) tight++;
     if (flat(goals[i], goals[j]) < ORDERS.fileTight - 0.02 && open(goals[i], goals[j])) bare++;   // (bare: nearer than the rule's own last bar, a bare body's width — what it asks where the floor has no `fileApart`, and what a held man is stepped out to)
     if (flat(pos[i], pos[j]) < 0.6 && open(pos[i], pos[j])) nearMen++; }
