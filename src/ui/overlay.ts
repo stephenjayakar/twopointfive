@@ -95,7 +95,7 @@ export class Overlay implements HudLike {
   private lostMarks: HTMLElement[] = [];   // (deathrecap.ts lostLive: the way the round came in at a squad man lost)
   private camMarks: HTMLElement[] = [];    // (stickycam.ts stickyMarks: a small lens on each of his own stuck sticky cameras while the fog of war is live — STICKY.mark)
   private seenMarks: HTMLElement[] = [];   // (fogofwar.ts lastSeen: a fading '?' where an enemy was last seen — FOG.lastSeen, 0 = none)
-  /** the orders ring at the cursor (ui/cmdring.ts ← game/cmdring.ts — a prototype: nothing unless CMDRING.on and its key is down) */
+  /** the orders ring at the cursor (ui/cmdring.ts ← game/cmdring.ts — a prototype: nothing unless CMDRING.on — the ring while its key is down, and before it the hint of what it would open on) */
   readonly cmdRing = new CmdRingViz(this.traj);
   private dots: HTMLElement[] = [];
   showLightDots = true;
@@ -351,7 +351,7 @@ export class Overlay implements HudLike {
       (el.lastChild as HTMLElement).textContent = `${Math.round(od)}m`;
     }
     // the squad's order menu: a ring on the door / spot / man it was opened on, in the addressed element's colour (it stays there while Sam walks and aims on)
-    this.cmdRing.update(game);
+    this.cmdRing.update(game, cam, w, h, tz);
     { const om = game.orders.mark(), el = this.orderMark; let shown = false;
       if (om) { const [ox, oy, ov] = cam.project(om.at, w, h, EDGE); if (ov) { shown = true; el.className = om.tone ? `ordermark t-${om.tone}` : 'ordermark'; el.style.left = `${ox.toFixed(1)}px`; el.style.top = `${oy.toFixed(1)}px`; const sp = el.lastChild as HTMLElement; if (sp.textContent !== om.text) sp.textContent = om.text; } }
       el.style.display = shown ? 'block' : 'none'; }

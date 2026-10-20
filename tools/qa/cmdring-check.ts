@@ -26,7 +26,7 @@ async function rig(seed: number, on = !BREAK) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp();
-    CMDRING.on = on; AUTOPILOT.on = true;
+    CMDRING.on = on; CMDRING.hint = on; AUTOPILOT.on = true;
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
@@ -75,7 +75,7 @@ const line = (ok: boolean, name: string, detail: string) => { if (!ok) fails++; 
 
 export async function cmdringCheck(): Promise<boolean> {
   fails = 0;
-  const keep = { on: CMDRING.on, ap: AUTOPILOT.on, rnd: Math.random };
+  const keep = { on: CMDRING.on, hint: CMDRING.hint, ap: AUTOPILOT.on, rnd: Math.random };
   console.log(`cmdring-check: the orders ring on one key (a prototype)${BREAK ? '  (CMDRING_BREAK: the switch is left off — the lines must fail)' : ''}`);
   try {
     const R = await rig(5), g = R.game, O = R.O, T = g.doorTools, S = CMDRING_STATS;
@@ -202,7 +202,36 @@ export async function cmdringCheck(): Promise<boolean> {
       const V = O.ringView(), lit0 = O.cmdRing?.lit; R.input.mouseX = 40; R.input.mouseY = 30; R.step(2); const lit1 = O.cmdRing?.lit;
       R.input.mouseX = CMDRING.edgeX; R.input.mouseY = CMDRING.edgeY; R.step(); R.input.mouseX = CMDRING.edgeX + Math.cos(-18 * Math.PI / 180) * 40; R.input.mouseY = CMDRING.edgeY + Math.sin(-18 * Math.PI / 180) * 40; R.step(); const lit2 = O.cmdRing?.lit;
       R.press('Escape'); R.up();
-      line(!!V && V.x === CMDRING.edgeX && V.y === CMDRING.edgeY && lit0 === 1 && lit1 === 1 && lit2 === 2 && O.log.length === n0, 'opened at the view\'s edge the ring stands whole inside it, and the cursor lights nothing until it has been to its middle', `cursor at 6,6: ring at ${V?.x},${V?.y} · lit ${lit0}, ${lit1} with the cursor moved outside the middle, ${lit2} once out of the middle toward wedge 2`);
+      const zs: number[] = [CR.ringZoom(1600, 1000), CR.ringZoom(2560, 1440), CR.ringZoom(3840, 2160), CR.ringZoom(960, 540)];
+      line(!!V && V.x === CMDRING.edgeX && V.y === CMDRING.edgeY && V.zoom === 1 && lit0 === 1 && lit1 === 1 && lit2 === 2 && O.log.length === n0 && zs[0] === 1 && Math.abs(zs[1] - 4 / 3) < 1e-9 && zs[2] === 2 && zs[3] === 1, 'opened at the view\'s edge the ring stands whole inside it, and the cursor lights nothing until it has been to its middle; a window larger than its px are for stands it larger, never smaller', `the ring's zoom at 1600 × 1000, 2560 × 1440, 3840 × 2160, 960 × 540: ${zs.map(z => z.toFixed(2)).join(', ')} · cursor at 6,6: ring at ${V?.x},${V?.y} · lit ${lit0}, ${lit1} with the cursor moved outside the middle, ${lit2} once out of the middle toward wedge 2`);
+      R.home();
+    }
+
+    // 8c. before the key: the hint names what the ring would open on and outlines it — a door by its doorway's line, a man by a ring at his feet, the floor
+    //     by a ring on the spot — beside the cursor; with the ring up it is the ring's own target, in its middle; with the order menu up, or its knob off, none
+    {
+      R.aim(spot); const hf = O.hintView(), cx = R.input.mouseX, cy = R.input.mouseY, tf = O.hover();
+      const okFloor = !!hf && hf.kind === 'floor' && !hf.held && !!hf.ring && !hf.seg && Math.abs(hf.x - cx) < 1 && Math.abs(hf.y - cy) < 1 && tf?.kind === 'floor' && dist(hf.ring.at, tf.at) < 0.01;
+      onDoor(); const hd = O.hintView(), mid = hd?.seg ? [(hd.seg[0][0] + hd.seg[1][0]) / 2, 0, (hd.seg[0][2] + hd.seg[1][2]) / 2] : null;
+      const okDoor = !!hd && hd.kind === 'door' && !!mid && dist(mid, D.frameCentre) < 0.05 && Math.abs(dist(hd.seg![0], hd.seg![1]) - D.def.width) < 0.01;
+      R.down(); R.aim(spot); const hh = O.hintView(), rv = O.ringView();
+      const okHeld = !!hh && hh.kind === 'door' && hh.held && !!rv && hh.x === rv.x && hh.y === rv.y; R.press('Escape'); R.up();
+      let man: any = null, hm: any = null; for (const c of R.team) { if (man) break; for (const y of [1.2, 0.9, 0.5]) { const h = R.aim([c.char.pos[0], c.char.pos[1] + y, c.char.pos[2]]); if (h?.kind === 'none' && h.man === c) { man = c; hm = O.hintView(); break; } } }
+      // (… in the colour the ring then opens in: the man's own element, not the standing one)
+      let toneUp: any; if (man) { R.down(); toneUp = O.ringView()?.tone; R.press('Escape'); R.up(); }
+      const okMan = !!hm && hm.kind === 'man' && !!hm.ring && dist(hm.ring.at, man.char.pos) < 0.05 && hm.tone === toneUp && toneUp !== undefined;
+      // (a wall a charge can go on, where this stand has them: its own stretch drawn, never past the wall's ends, and the spot)
+      let wall: any = null, hw: any = null; for (let gy = 100; gy <= 900 && !wall; gy += 100) for (let gx = 100; gx <= 1500 && !wall; gx += 100) { R.input.mouseX = gx; R.input.mouseY = gy; R.step(2); const h = O.hover(); if (h?.kind === 'floor' && h.wall && !h.thing) { wall = h.wall; hw = O.hintView(); } }
+      const wlen = wall ? 2 * (wall.alongX ? wall.box.h[0] : wall.box.h[2]) : 0, slen = hw?.seg ? dist(hw.seg[0], hw.seg[1]) : -1;
+      const okWall = !wall || (!!hw && hw.kind === 'wall' && !!hw.seg && !!hw.ring && slen > 0.3 && slen <= Math.min(2 * CMDRING.hintWallM, wlen) + 0.01);
+      // (where the key would open no ring — Shift down — no hint; on Sam himself, the squad's own menu: a glyph and no outline)
+      R.aim(spot); R.input.keys.add('ShiftLeft'); R.step(1); const hs = O.hintView(); R.input.keys.delete('ShiftLeft'); R.step(1);
+      const sp = R.game.player.char.pos, hq = (R.aim([sp[0], sp[1] + 1.0, sp[2]]), O.hintView()), tq = O.hover();
+      const okSquad = tq?.kind === 'none' && !tq.man ? (!!hq && hq.kind === 'squad' && !hq.seg && !hq.ring) : true;
+      R.aim(spot); R.press(ORDERS.key); const hx = O.hintView(), menuUp = !!O.menu; R.press(ORDERS.key);
+      const was = CMDRING.hint; CMDRING.hint = false; R.aim(spot); const hk = O.hintView(); CMDRING.hint = was;
+      line(okFloor && okDoor && okHeld && okMan && okWall && okSquad && hs === null && menuUp && hx === null && hk === null, 'before the key the hint names what the ring would open on and outlines it; with the ring up it is the ring\'s own, in its middle',
+        `floor: ${hf?.kind}${hf?.ring ? ' ring' : ''} at the cursor ${okFloor} · door: ${hd?.kind}, its line ${mid ? dist(mid, D.frameCentre).toFixed(2) : '?'} m off the doorway's middle ${okDoor} · held on the door, cursor moved off: ${hh?.kind}, held ${hh?.held}, in the ring's middle ${okHeld} · ${man?.callsign ?? 'nobody'}: ${hm?.kind}, ${hm?.tone} as the ring's ${toneUp} ${okMan} · a wall: ${wall ? `${hw?.kind}, ${slen.toFixed(2)} m of a ${wlen.toFixed(2)} m wall ${okWall}` : 'none to charge on this stand'} · Shift down: ${hs ? hs.kind : 'none'} · on Sam: ${hq ? hq.kind : 'none'} (${tq?.kind}) ${okSquad} · order menu up: ${hx ? hx.kind : 'none'} · knob off: ${hk ? hk.kind : 'none'}`);
       R.home();
     }
 
@@ -222,7 +251,7 @@ export async function cmdringCheck(): Promise<boolean> {
       line(!up && O.log.length === n0, 'the switch off: the key is nobody\'s', `ring or menu ${up ? 'up' : 'not up'} · order book +${O.log.length - n0}`);
       CMDRING.on = was;
     }
-  } finally { CMDRING.on = keep.on; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
+  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
   console.log(fails ? `cmdring-check: ${fails} FAIL` : 'cmdring-check: ALL PASS');
   return fails === 0;
 }

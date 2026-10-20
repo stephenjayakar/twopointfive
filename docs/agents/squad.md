@@ -75,13 +75,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   reads it, or his feet inside `manPx`) makes the orders his and starts the ring again, first wedge lit; Esc, or a right click on the first page, gives
   nothing; a left click on nobody is Sam's trigger and the ring goes. The cursor counts from the ring's middle and only once it has been back there since the
   ring last changed under it (a page, a digit, a man, a ring opened at the view's edge and stood in by `edgeX` / `edgeY`), so the hand coming back picks
-  nothing on the way. Nothing is on a timer. Shift held with Tab opens nothing (kept for the plan mode, not built). TAB IS ALSO THE BACK KEY (`BACKKEY.tab`): with
+  nothing on the way. BEFORE THE KEY (`CMDRING.hint`, on with the ring; the maintainer, 10-20: "we should some visual indication of what type of menu will open
+  when you hit tab on the cursor. this could be a door icon, a wall icon, etc on the cursor"): `SquadOrders.hintView` names what the cursor is on as the ring
+  would take it (door, wall, man, floor, thing, foe) and `ui/cmdring.ts updateHint` draws a glyph for it beside the cursor and the thing's outline on the
+  floor (a doorway's line, a stretch of wall, a ring at a man's feet or on the spot); with the ring up the glyph sits in its middle and is the ring's own
+  target; with the X menu up there is none. No words are put on the cursor (the panel's line has them). Nothing is on a timer. Shift held with Tab opens nothing (kept for the plan mode, not built). TAB IS ALSO THE BACK KEY (`BACKKEY.tab`): with
   a menu, a Space list, a running verb or the launcher's arc to back out of, the press is theirs and no ring opens; on the page Esc is the pause, and a ring
   held under the pause card is gone, nothing given, when play comes back (the 'Paused' tick). NOT ON THE RING YET: rows on letters (the
   throw page on G, 'go'), the 'wait for my word' row (a ring's order goes at once), picking several men (one click is one man). B, X and T work beside it;
   with the ring on, Tab is not the debug tools' key (`main.ts`; `TABKEY.does` is 'off' in the page anyway). A load, or the tick put off, puts a held ring away
-  (`ringRestore`). CHECK: `bun run tools/qa/cmdring-check.ts` (`probes.ts cmdring`, family squadorders), 11 lines through the game's own input on the office
-  room clear, the check raising the switch itself; `CMDRING_BREAK=1` (the switch left off) fails 9 of the 11 on both stands. SEEN: the 11 lines on both
+  (`ringRestore`). CHECK: `bun run tools/qa/cmdring-check.ts` (`probes.ts cmdring`, family squadorders), 12 lines through the game's own input on the office
+  room clear, the check raising the switch itself; `CMDRING_BREAK=1` (the switch left off) fails 10 of the 12 on both stands. SEEN: the 12 lines on both
   stands, one seed; the page on the software adapter with `?cmd` through real key and mouse events (the ring draws at the cursor and whole at the view's
   edge, the lit wedge fills, a tap stacks, a digit and the cursor each light a wedge and the key up gives it, a page turns and lights nothing, a click on a
   man tints the ring his pair's colour and fires nothing, no console or GPU error) and without it (Tab opens nothing). NOT seen on the page: Esc, which
