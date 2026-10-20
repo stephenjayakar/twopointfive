@@ -125,13 +125,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not a shipped-on rule); the page raises it with the ring (`?cmd`), `?nocmdplan` or the debugger's tick 'Tab ▸ the ring ▸ plan mode on Shift+Tab'
   leaves it off; the journal turns it off for a recording from before the key; it needs the ring's own switch. SHIFT+TAB TOGGLES IT, where Tab is
   free (with a menu, a Space list, a verb or the launcher's arc to back out of, Tab backs out, Shift or no). WHILE IT IS UP THE MOUSE IS THE SQUAD'S:
-  Sam neither fires nor aims (`planAfter`, at the end of `orders.input`, strips both buttons from the tick's copy), and Shift is not his sprint. LEFT
+  Sam neither fires nor aims (`planAfter`, at the end of `orders.input`, strips both buttons from the tick's copy), and Shift is not his sprint. SAM
+  STANDS AND THE VIEW IS THE HAND'S (the maintainer, 10-20: "your player character is stuck, wasd moves the camera around … it should feel like you're
+  switching into an RTS mode temporarily"): the walk keys are stripped from the tick's copy too and move `plan.look` instead (`planPanMps`, the
+  camera's own basis, no further than `planPanReachM` outside the box he and the men stand in); `Game.followPos()` hands the follow camera that point
+  in his place (`planLook`), with no aim lean (host/loop.ts, tools/qa/headless.ts); his aim point is held as it was when the mode went up
+  (`plan.aim`, written back over `Game.aimPoint` by `planAfter`), so he goes on facing what he faced; the mode put down, the camera eases back to
+  him; a restart or a fresh cast with the mode up starts the view on him again (`planHome`). Every other key is still his. ALL OF THAT, AND THE RIGHT
+  BUTTON'S HOLD BELOW, IS `CMDRING.planRts`: off in the module and on both stands, raised by the page with the mode (`?nocmdrts` = the mode as it
+  was first built: he walks with it up, the view is on him, a right click orders as it goes down), off for a recording from before the key. LEFT
   BUTTON PICKS: a click on a man (body, or within `manPx` of his feet), Shift click adds or removes him, a drag (past `planDragPx`) boxes men by
   their feet, a click on nothing is everyone. Everyone, a whole pair and one man are kept as the who key's own `who`; any other set is
   `plan.pick` (callsigns), which `recipients()` reads ahead of `who` ONLY when the caller names no `who` (`give(id, t)` and the quick key go to the
   pick; a scenario's `give(id, t, 'all')` never does); T or the ring's click on a man lets it go. RIGHT BUTTON ORDERS, BY STARCRAFT'S RULES: a plain
   right click is `SquadOrders.quickFor(men, t)` — the squad's own choice there (`autoPick`, asked whether or not the quick key's switch is on) —
-  and REPLACES the chain those men were on; refused, nothing changes. Shift + right click ADDS the stop to the end of each chain those men are on
+  and REPLACES the chain those men were on; refused, nothing changes. THE BUTTON IS READ WHEN IT COMES UP (`plan.rmbT`), because KEPT DOWN
+  `planHoldSecs` IT IS THE RING ("long right click opens the radial menu"): `SquadOrders.ringByButton` puts the order menu up as the ring at the
+  cursor for the picked men (`RingState.rmb`: kept up by that button, no tap guard), the button let go gives the lit wedge — the first is the
+  click's own order with its chain (`planOrder`), any other an order by hand — and a left click puts it away. With Shift down the button never
+  opens it. Shift + right click ADDS the stop to the end of each chain those men are on
   (men picked out of a bigger chain part from it, keeping its stops; a man on no chain starts one). A CHAIN (`PlanChain`: callsigns, stops written
   down as planlay.ts writes a place, a phase) is given a stop at a time: `go` → at a door `wait` (stacked: `doorTools.waitsOn(...).set`) → the
   word's key → `in` (the entry the squad picks) → no door order has its men any more → with a stop after it `held` until the word's key, else done
@@ -144,12 +156,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `SquadOrders.plan` (per order book), `planSnapshot` / `planRestore` (savestate.ts files it with the switch on; `restoredT` keeps the chains
   through the fresh cast a load stands up); `PLAN_STATS` is a tally. PICTURE (ui/cmdring.ts `updatePlan`, index.html `.planmode`): a frame round
   the view and PLAN under it, a circle at each man's feet in his pair's colour (bright: picked), the box, each chain as a broken line from its men
-  through its stops with the key's cap where it is still to be pressed (lit where they wait now). CHECK: `bun run tools/qa/planmode-check.ts`
-  (`probes.ts planmode`, family squadorders), 18 lines through real keys and buttons on the room clear with four (the last: two rooms chained for one pair);
-  `PLANMODE_BREAK=1` fails 17 of 18 on both stands. LIMITS, as built: a chain's stop is always the first wedge (no other row can be chained); a chained 'fall in' is done at
+  through its stops with the key's cap where it is still to be pressed (lit where they wait now); with the view the hand's, Sam's own ring at
+  his feet (solid, gold) and, once the view has left him, a head at the view's edge pointing the way back (`.pself`, `.pe`). CHECK: `bun run tools/qa/planmode-check.ts`
+  (`probes.ts planmode`, family squadorders), 28 lines through real keys and buttons on the room clear with four (18: two rooms chained for one pair; 19 to 27: Sam stands and the view
+  pans, he faces what he faced, the reach, the right button read as it comes up, kept down the ring, its first wedge the click's own order, Shift
+  never opens it, a left click puts it away, the file keeps the view, a restart starts it on him; 28: `planRts` off is the mode as first built);
+  `PLANMODE_BREAK=1` fails 27 of 28 on both stands. LIMITS, as built: a chain's stop is always the first wedge (no other row can be chained); a chained 'fall in' is done at
   once; the men of a chain are named when it is laid (a man who joins the pick later is not on it); men who part from a chain while it waits at a
-  door go in with the rest on that door's word. SEEN: on the page with the software adapter at 960 × 540, real keys and mouse, no console or GPU
-  errors. Never seen on a GPU, never played, and no tally has been run with it: whether chains beat B is not measured.
+  door go in with the rest on that door's word. With `planRts`: Shift + the button kept down never opens the ring (a chained stop is the first
+  wedge's); Sam cannot fire, walk or turn while the mode is up and time is not slowed, so the mode is a risk taken (slowed time on easier modes is
+  the maintainer's open call); a throw key pressed with the mode up throws at the aim he held. SEEN: on the page with the software adapter at
+  960 × 540, real keys and mouse, no console or GPU errors — the first build's keys, and on 10-20 the RTS's: D and A moved the view and Sam stood
+  (his mark went to the view's edge and came back), the cursor swept the view and he did not turn, a right click ordered as the button came up, the
+  button kept down put the ring up and its second wedge gave 'cover', the view was walked to a door off his screen with W and A and the ring let go
+  there laid the stack as a chain with its key's cap, the mode down brought the view back and he walked. Never seen on a GPU, never played, and no
+  tally has been run with it: whether chains beat B is not measured.
 - **Who commands best: the three-hands tally** (`tools/qa/command-tally.ts`; his words 10-14: "we should also make it so micromanaging > autopilot commanding > doing it
   yourself", "so there's incentive to go beyond just mashing b"; record rebuild/commanding/read-first.md 'Balance, measured'). NO GAME SWITCH: a tool only.
   The same floor played three ways by scripted players on the SHIPPED stand with the real keys: `solo` (the squad never told anything), `b` (B and nothing else), `plan`

@@ -102,7 +102,7 @@ import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, type RingView, ty
 import { backableInteract } from './interact';   // (read inside ringInput only: what the back key would back out of)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
-import { planNew, planMen, planInput, planAfter, planGiven, planFresh, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
+import { planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
 const NOWHERE: Vec3 = [1e7, 0, 1e7];
@@ -919,7 +919,7 @@ export class SquadOrders {
   /** after a tick (Game.update): whoever asks between ticks what the cursor is on — the HUD, a tool — is answered off the host's live input and camera, not the tick's record */
   hostView(input: Input, cam: FollowCamera, canvas: View): void { const v = this.view; if (v.input) { v.input = input; v.cam = cam; v.canvas = canvas; } }
   input(dt: number, input: Input, cam: FollowCamera, canvas: View) { this.readInput(dt, input, cam, canvas); planAfter(this, input); }   // (planmode.ts: with the mode up, what is left of the mouse is not Sam's)
-  private readInput(_dt: number, input: Input, cam: FollowCamera, canvas: View) {
+  private readInput(dt: number, input: Input, cam: FollowCamera, canvas: View) {
     const K = ORDERS;
     this.sync();
     if (this.escUsed) { this.escUsed = false; input.pressed.delete('Escape'); }
@@ -928,7 +928,7 @@ export class SquadOrders {
     v.input = input; v.cam = cam; v.canvas = canvas;
     if (this.lay.laid.length) layPrune(g);   // (planlay.ts: a man who is down is off the plan)
     if (input.hit(K.whoKey)) this.stepWho(1, this.targetUnder(input, cam, canvas));   // who: the man under the cursor, else the next element
-    planInput(this, input, cam, canvas);   // (planmode.ts: the chains move on; Shift + the ring's key, the word's key at a chain's pause, and — the mode up — the mouse; a return on its first line with the switch off)
+    planInput(this, input, cam, canvas, dt);   // (planmode.ts: the chains move on; Shift + the ring's key, the word's key at a chain's pause, and — the mode up — the mouse; a return on its first line with the switch off)
     if ((CMDRING.on || this.cmdRing) && this.ringInput(input, cam, canvas)) return;   // (cmdring.ts: the ring's key — this frame's order input is the ring's)
     const key = input.hit(K.key), mid = K.mouseOpens && input.mmbHit();
     const M = this.menu;
@@ -978,11 +978,7 @@ export class SquadOrders {
       //  launcher's arc to back out of, the press is theirs, as it is the menu's with a menu up)
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
-      if (!this.open(this.targetUnder(input, cam, canvas))) return false;
-      this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
-      // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
-      this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, g.time); this.ringSel(); CMDRING_STATS.opened++;
-      return true;
+      return this.ringUp(input, cam, canvas, g.time);
     }
     const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
     input.pressed.delete(INTERACT_KEY);   // (Sam's own ring is not opened under this one: interact.ts)
@@ -1016,13 +1012,28 @@ export class SquadOrders {
       else if (i >= 0) R.lit = want;
       this.ringSel();
     }
-    if (input.down(C.key)) return true;
+    if (R.rmb ? (input.buttons & 4) !== 0 : input.down(C.key)) return true;
     // the key let go: the lit wedge is given — the first page's first wedge is the quick key's own order (autopilot.ts), every other one its row's
+    // (… the right button let go, plan mode's ring: that first wedge is the right click's own order — planmode.ts planOrder, which keeps the chain's books)
     const N = this.menu!, lit = R.lit, i = N.rows.findIndex(r => r.key === lit); this.cmdRing = null;
-    if (N.page === null && lit === 1) { const t = N.target; this.menu = null; CMDRING_STATS.quick++; this.quickGive(t); }
+    if (N.page === null && lit === 1) { const t = N.target; this.menu = null; CMDRING_STATS.quick++; if (R.rmb) planOrder(this, t, false); else this.quickGive(t); }
     else if (lit && i >= 0) { this.pick(i); this.menu = null; CMDRING_STATS.given++; }
     else { this.menu = null; CMDRING_STATS.cancelled++; }
     return true;
+  }
+  /** the order menu put up as a ring on what the cursor is on (false: no menu opened there). `t0`: the clock its tap guard counts from */
+  private ringUp(input: Input, cam: FollowCamera, canvas: View, t0: number): boolean {
+    if (!this.open(this.targetUnder(input, cam, canvas))) return false;
+    this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
+    // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
+    this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, t0); this.ringSel(); CMDRING_STATS.opened++;
+    return true;
+  }
+  /** PLAN MODE'S RING (planmode.ts: the right button kept down): the same ring, kept up by that button and given when it is let go. The hold was the
+   *  wait, so the cursor counts at once (no tap to guard) */
+  ringByButton(input: Input, cam: FollowCamera, canvas: View): boolean {
+    if (!this.backFree() || !this.ringUp(input, cam, canvas, this.g.time - CMDRING.tapSecs)) return false;
+    this.cmdRing!.rmb = true; return true;
   }
   /** the ring's key would open a ring now: Shift not down (that is plan mode's toggle, planmode.ts) and the key free */
   private ringFree(input: Input): boolean { return !input.down('ShiftLeft') && !input.down('ShiftRight') && this.backFree(); }

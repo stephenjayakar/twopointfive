@@ -110,6 +110,14 @@ export class CmdRingViz {
     for (const m of V.men) { const out: string[] = [];
       for (let i = 0; i < HINT_N; i++) { const t = i / HINT_N * 2 * Math.PI, q = xy([m.at[0] + Math.cos(t) * CMDRING.hintManM, m.at[1], m.at[2] + Math.sin(t) * CMDRING.hintManM]); if (!q) { out.length = 0; break; } out.push(`${q[0].toFixed(1)},${q[1].toFixed(1)}`); }
       if (out.length) s += `<path class="pm${tone(m.tone)}${m.picked ? ' picked' : ''}" d="M${out.join('L')}Z"/>`; }
+    if (V.sam) {   // Sam's own mark: a ring at his feet — or, the view gone from him, a head at its edge pointing the way back
+      const q = xy(V.sam), m = 34;
+      if (q && q[0] >= m && q[0] <= w - m && q[1] >= m && q[1] <= h - m) { const out: string[] = [];
+        for (let i = 0; i < HINT_N; i++) { const t = i / HINT_N * 2 * Math.PI, e = xy([V.sam[0] + Math.cos(t) * CMDRING.hintManM, V.sam[1], V.sam[2] + Math.sin(t) * CMDRING.hintManM]); if (!e) { out.length = 0; break; } out.push(`${e[0].toFixed(1)},${e[1].toFixed(1)}`); }
+        if (out.length) s += `<path class="pself" d="M${out.join('L')}Z"/>`;
+      } else if (q) { const dx = q[0] - w / 2, dy = q[1] - h / 2, k = Math.min((w / 2 - m) / Math.max(1e-6, Math.abs(dx)), (h / 2 - m) / Math.max(1e-6, Math.abs(dy)));
+        s += `<path class="pe" d="M0,-15L11,11L0,5L-11,11Z" transform="translate(${(w / 2 + dx * k).toFixed(1)},${(h / 2 + dy * k).toFixed(1)}) rotate(${(Math.atan2(dx, -dy) * 180 / Math.PI).toFixed(0)})"/>`; }
+    }
     for (const C of V.chains) {
       const pts = [C.from, ...C.stops.map(q => q.at)].map(xy), line = pts.filter((q): q is [number, number] => !!q).map(q => `${q[0].toFixed(1)},${q[1].toFixed(1)}`);
       s += `<g class="pc${tone(C.tone)}">`; if (line.length > 1) s += `<path class="pl" d="M${line.join('L')}"/>`;
