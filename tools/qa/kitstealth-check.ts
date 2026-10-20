@@ -52,6 +52,8 @@ export async function kitStealth(): Promise<boolean> {
       K.kitMission(BARE); const b = you(); K.kitMission({ rings: 5, cams: 3, wand: true }); const t = you(); K.kitMission(null);
       verdict(b.rings === 5 && !b.cams && !b.wand && b.smoke + b.bangs === 3 && K.kitCost(0, b).used === 4 && t.cams === 2 && t.wand && K.kitCost(0, t).used === 4, 'with no fog (no cameras, no wand) the free pouches carry canisters; three cameras and a wand are held to what four pouches carry', `no fog: ${words(b)} (${cost(b)}) · three cameras: ${words(t)} (${cost(t)})`); }
 
+    { const loud = J(you()); K.kitMission(FULL); K.kitLoad(null, ''); const after = J(you()); K.kitMission(null);
+      verdict(after === loud && J(you()) === loud, 'the table loaded afresh while a stealth mission\'s screen is up reads the LOUD cards', `${words(JSON.parse(after))}`); }
     // ── on: it follows the mission until a row is changed; the store keeps the two apart
     { const st = memStore(); K.kitLoad(st, ''); const loud = J(you());
       K.kitMission(BARE); K.kitMission(FULL); const followed = you();

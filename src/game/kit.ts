@@ -398,6 +398,8 @@ const moreOn = (): boolean => KITDEAL.more && !MORE_BREAK;
 const STEALTH_BREAK = envIs('KITSTEALTH_BREAK');
 const stealthOn = (): boolean => KITDEAL.stealth && !STEALTH_BREAK && treeUp();
 export const kitStealthOn = (): boolean => stealthOn();
+/** a run tape's stealth card put back for its replay (null: as the mission issues it) */
+export function kitStealthSet(raw: unknown) { stealthYou = raw && typeof raw === 'object' ? kitSanitize(0, raw) : null; }
 /** your stealth card as kept, for a run tape to carry beside the cards (null: as the mission issues it, or the switch off) */
 export const kitStealthCard = (): MemberKit | null => (!stealthOn() ? null : !hand ? stealthYou : sameKit(KIT.members[0], stealthIssue(hand)) ? null : KIT.members[0]);
 /** the loud card as issued, whatever mission the table is for */
@@ -437,7 +439,7 @@ export const kitStealthHand = (cams: number, wand: boolean): KitHand => ({ rings
  *  stealth run), or the loud one (a loud run staged while a stealth mission's screen is up), and whatever stood there before is back after — also when the
  *  staging throws. So nothing read off the table between stagings changes with the last run played. */
 let staged = false;
-function forRun(g: Game, f: () => void) { const was = hand; staged = true; kitMission(handOf(g)); try { f(); } finally { staged = false; kitMission(was); } }
+function forRun(g: Game, f: () => void) { const was = hand; try { staged = true; kitMission(handOf(g)); f(); } finally { staged = false; kitMission(was); } }
 /** the kit a run's stealth mission is played with, as the staging before handed it over the card (null: a loud run) */
 function handOf(g: Game): KitHand | null { const rings = stealthRun(g) ? KITTREE.lend : 0, cams = camRow() ? stickyVisit(g) : 0, wand = WAND.on && quietWand(g); return rings || cams || wand ? { rings, cams, wand } : null; }
 /** `KITDEAL_BREAK=1` (the check's): the deal hands every thing back to the men the table names */
@@ -560,7 +562,7 @@ function setCard(i: number, p: KitPreset, t: SlotTable | null): MemberKit {
 }
 /** … in the pair's layout (what the table says; KITDEAL shares it out over a bigger team) */
 function setCardBase(i: number, p: KitPreset, t: SlotTable | null): MemberKit {
-  const d = kitDefault(i);
+  const d = i === 0 ? loudIssue() : kitDefault(i);   // (the loud issue, whatever mission the table's first card is for: a preset is a loud layout)
   if (p === 'quiet') Object.assign(d, i === 0 ? { weapon: 'pistol', smoke: CAN_MIXES.smoke.smoke, bangs: CAN_MIXES.smoke.stun, suit: 'black', trim: 'black' } : { weapon: 'pistol', suppressed: true, light: false, nvg: true, suit: 'black', trim: 'black' });
   if (p === 'loud') Object.assign(d, i === 0 ? { weapon: 'rifle', smoke: CAN_MIXES.stun.smoke, bangs: CAN_MIXES.stun.stun, suit: 'olive', trim: 'amber' } : { weapon: 'rifle', suppressed: false, light: true, nvg: true, bangs: Math.min(BANGS_MAX, d.bangs + 1), suit: 'olive', trim: 'amber' });
   if (!t || p === 'issued') return d;
@@ -1120,9 +1122,10 @@ export function kitSanitize(i: number, raw: unknown): MemberKit {
  *  pouches, and no row of the rule-off card makes one smoke and one stun. Any other card of yours loads as you left it. */
 export function kitLoad(s: Store | null, search = '') {
   const q = new URLSearchParams(search);
+  hand = null; loudYou = null; stealthYou = null;   // (first: every card read below is the loud table's, whatever mission a screen had it for)
   store = s; KIT.on = !q.has('nokit'); SLOTS.on = SLOTS.ok && !q.has('noslots'); team = KIT_MEMBERS - 1;
   for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; }
-  kept0 = null; keptWand = []; dealOwn = false; hand = null; loudYou = null; stealthYou = null;
+  kept0 = null; keptWand = []; dealOwn = false;
   try { const raw = s?.getItem(KIT_LS); if (raw) { const j = JSON.parse(raw) as { members?: unknown[]; own?: unknown; stealth?: unknown }; dealOwn = j.own === true; for (let i = 0; i < KIT_MEMBERS; i++) KIT.members[i] = kitSanitize(i, j.members?.[i]);
       kept0 = keptOf(j.members?.[0]);
       { const st = j.stealth === true ? j.members?.[0] : j.stealth; if (st && typeof st === 'object') stealthYou = kitSanitize(0, st); }   // (KITDEAL.stealth: your stealth card — inert until a stealth mission asks for it)

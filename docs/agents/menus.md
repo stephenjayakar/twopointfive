@@ -1034,7 +1034,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one that did would be a refusal with its reason (`kitRowCan`), never a second kind of gear. SWITCH: `KITDEAL.stealth` (a key of the registered table,
   journaled; a recording from before the key replays with it off), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row, `TPS_KITSTEALTH=1`; reads
   only under the card as a tree), ON in the page (`?nokitstealth`; a box in the debugger). Off = the build before: the hand-overs, the tiles that say
-  whose, a sponge round a pouch each. CHECK: `bun run tools/qa/probes.ts kitstealth` on BOTH stands (11 lines: off to the count, the card, the follow, the
+  whose, a sponge round a pouch each. CHECK: `bun run tools/qa/probes.ts kitstealth` on BOTH stands (12 lines: off to the count, the card, a reload, the follow, the
   store, As issued, the Quiet kit, four staged runs, the journal); `KITSTEALTH_BREAK=1` fails 6 on each. The real page: `PORT=<port> node
   tools/qa/kitstealth-page.cjs` (`STEALTH_BREAK=1` must fail). Probes written against the hand-overs run with the key held off by the runner
   (`STEALTH_AS_IT_WAS` in `probes.ts`). A run tape carries the kept stealth card beside the cards (`kit.stealth`). Never seen on a GPU; nobody has played

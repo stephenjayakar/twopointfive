@@ -171,7 +171,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // (game/kit.ts KITDEAL.stealth: nothing is handed over a card — a stealth mission's kit is what your stealth card is issued as, so no tile is the mission's; the
   // screen tells the kit which mission the cards are for, as it opens and as the fog lever moves: syncHand)
   const syncHand = () => kitMission(stealthKind && kitStealthOn() ? kitStealthHand(lentOf().n, lentOf().wand > 0) : null);
-  const lentNow = (f: string): number => (member !== 0 || kitStealthOn() ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
+  const lentNow = (f: string): number => (member !== 0 || (kitStealthOn() && cardsOn()) ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
   const lookSig = () => `${noFog()}|${lentNow('cams')}|${lentNow('wand')}|${lentNow('rings')}|${stealthKind && kitStealthOn() ? `${lentOf().n}|${lentOf().wand}` : ''}`;
   let fogWas = '';   // (set where the first card is mounted: `member` is not there yet)
   const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' ? quietRow || fogOfQuery(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : entry.kind !== 'quiet' && entry.kind !== 'solo'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)
@@ -267,7 +267,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   /** the picked member's card, made afresh (his name is the size's: 'Blue One' of a pair is 'Red One' of a four); the highlighted row is kept */
   const mountCard = (keep = false) => {   // (`keep`: the same man's card made again — its highlighted row stays; another man's card opens on its first row: the two kinds of card have different rows)
     const at = keep ? kitCard?.at() ?? 0 : 0; kitCard?.destroy(); kitCard = null; kitHost.innerHTML = ''; kitHost.setAttribute('data-member', String(member));
-    if (!cardsOn()) return;
+    if (!cardsOn()) { kitMission(null); return; }   // (no card to change: the staging wears the issue with the mission's kit handed over it, as it was)
     try {
       syncHand(); fogWas = lookSig();
       kitCard = loadoutHooks.memberCard!(kitHost, member, { name: nameOf(member), idle: f => FOG_KIT.includes(f) && noFog(), lent: lentNow,
@@ -323,7 +323,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       if (kitBtns.length > 1) { const now = kitLoadoutOf(alone()), mine = alone() === undefined ? null : new Set(kitLoadouts(0).map(l => l.id)); if (mine && !mine.has(kitBtns[kitPick].id)) kitPick = 0;
         kitBtns.forEach((k, n) => { k.b.style.display = mine && !mine.has(k.id) ? 'none' : ''; k.b.classList.toggle('on', k.id === now); k.b.classList.toggle('pick', n === kitPick && (squad > 0 || oneList)); k.b.setAttribute('aria-pressed', k.id === now ? 'true' : 'false'); k.b.disabled = !squad && !oneList; }); kitsOwn.textContent = !squad && !oneList ? 'you go alone: no squad to kit' : now ? '' : 'a mix of your own'; }
       paintLevers();
-      { const nf = lookSig(); if (nf !== fogWas) { fogWas = nf; syncHand(); kitCard?.refresh(); } }   // (the optical wand and the sticky cameras look into the fog of war: on a mission without one a tile that carries one says 'no use here' — the card's own `idle` — and it can still be carried; the fog lever moved = the card drawn again)
+      { const nf = lookSig(); if (nf !== fogWas) { fogWas = nf; if (cardsOn()) { syncHand(); drawSlots(); } kitCard?.refresh(); } }   // (the optical wand and the sticky cameras look into the fog of war: on a mission without one a tile that carries one says 'no use here' — the card's own `idle` — and it can still be carried; the fog lever moved = the card drawn again)
       S.rows.forEach((r, i) => r.el.classList.toggle('sel', i === S.sel));
       if (keyed) { if (S.sel === 0) (card as unknown as { scrollTop: number }).scrollTop = 0; (S.rows[S.sel]?.el as unknown as { scrollIntoView?: (o: unknown) => void } | undefined)?.scrollIntoView?.({ block: 'nearest' }); }   // (a short window scrolls the rows: the highlighted row is kept in sight, the first row with the mission's head over it — by the KEYS only: a click's focus that scrolled the rows moved the button from under the cursor and lost the click)
       if (kitCard) { if (S.rows[S.sel]?.el === kitHost) kitCard.focus(); else kitCard.blur(); }   // (the card's own highlight shows only while the keys are in it)
