@@ -163,7 +163,7 @@ export async function standUp(opts: { uploadEvery?: number; env?: any; level?: a
     get audioLog() { return audioLog; }, set audioLog(v: AudioCall[] | null) { audioLog = v; },
     step(dt: number, follow: Vec3 | null = null) {
       game.update(dt, input, cam, canvas);
-      cam.update(dt, follow ?? game.followPos(), follow || game.spectate >= 0 ? null : game.aimPoint);   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
+      cam.update(dt, follow ?? game.followPos(), follow || game.spectate >= 0 || (game.orders.plan.up && game.orders.plan.look) ? null : game.aimPoint);   // (main.ts: demoPos ?? followPos, and no aim lead while the tour frames the shot)
       engine.lights.update(dt, game.time);
       engine.world.dynamics = game.dynBoxes;
       if (frame++ % uploadEvery === 0) engine.world.upload();   // CPU pack + grid (what the cursor's raycast and the lasers read); the GPU writes go nowhere

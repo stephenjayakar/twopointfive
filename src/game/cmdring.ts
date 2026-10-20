@@ -75,6 +75,15 @@ export const CMDRING = {
   planDragPx: 8,
   /** plan mode: seconds the chains are drawn with the mode down after the word's key or an order changed them */
   planShowSecs: 1.5,
+  /** PLAN MODE AS AN RTS's (planmode.ts; the maintainer, 10-20: "your player character is stuck, wasd moves the camera around, and then right click
+   *  moves people, long right click opens the radial menu"): with the mode up Sam stands and goes on facing what he faced, the walk keys move the view,
+   *  and the right button is read as it comes up — kept down, it is the ring. false: the mode as it was first built (he walks, the view is on him, a
+   *  right click orders as it goes down). Off here; the page raises it with the mode (`?nocmdrts` leaves it off) */
+  planRts: false,
+  /** plan mode: the right button kept down this long (s) is the ring at the cursor; let go sooner it is a click, the first wedge's order */
+  planHoldSecs: 0.25,
+  /** plan mode: the walk keys move the view this fast over the floor (m/s), no further than this (m) outside the box Sam and the men stand in */
+  planPanMps: 14, planPanReachM: 25,
   /** the outline: half the stretch of wall drawn (m), the ring on a spot and the ring at a man's feet (m) */
   hintWallM: 0.6, hintSpotM: 0.3, hintManM: 0.5,
 };
@@ -82,7 +91,7 @@ export const CMDRING_STATS = { opened: 0, quick: 0, given: 0, pages: 0, cancelle
 
 /** `ax, ay`: its middle (CSS px of the view) · `z`: how much larger than its px it stands (ringZoom, as it was opened) · `t0`: the game's clock when its
  *  key went down · `lit`: the lit wedge's digit (0: none) · `armed`: the cursor may light a wedge (it has been in the middle) */
-export interface RingState { ax: number; ay: number; z: number; t0: number; lit: number; armed: boolean }
+export interface RingState { ax: number; ay: number; z: number; t0: number; lit: number; armed: boolean; /** kept up by the right button, not the key (plan mode's: orders.ts ringByButton) */ rmb?: boolean }
 /** what a ring shows (orders.ts ringView, interact.ts handRingView → ui/cmdring.ts): where, how much larger than its px, the lit wedge, whose colour, the
  *  words under it, and the wedge on each digit */
 export interface RingView { x: number; y: number; zoom: number; lit: number; tone: string | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] }

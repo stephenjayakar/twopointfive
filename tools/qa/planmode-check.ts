@@ -3,7 +3,7 @@
 //   bun run tools/qa/planmode-check.ts            (also `probes.ts planmode`, in family squadorders)
 //   TPS_PROFILE=shipped bun run tools/qa/planmode-check.ts      — the same lines on the page's stand
 // PASS / FAIL each: the room clear on the office with its squad of four, everybody under god mode (the lines are about what is ORDERED, not who wins).
-// The check raises the ring's switch and the mode's itself (no stand has them on), and the quick key's autopilot for the line that presses that key. A click is a button down for a frame; a drag is held across frames.
+// The check raises the ring's switch and the mode's itself (no stand has them on), and the quick key's autopilot for the line that presses that key. A click is a button down for a frame (the right button's order goes on the frame it comes up); a drag is held across frames.
 // PLANMODE_BREAK=1 = the mode's switch left off and the same lines asked: they must fail (the one that holds says 'as it was': the switch-off line).
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
@@ -27,7 +27,7 @@ async function rig(seed: number, plan = !BREAK) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp();
-    CMDRING.on = true; CMDRING.hint = true; CMDRING.hands = true; CMDRING.plan = plan; AUTOPILOT.on = true;
+    CMDRING.on = true; CMDRING.hint = true; CMDRING.hands = true; CMDRING.plan = plan; CMDRING.planRts = plan; AUTOPILOT.on = true;
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
@@ -81,7 +81,7 @@ function floorSpot(R: any, skip: number[][] = []): number[] | null {
 export async function planmodeCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
-  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, ap: AUTOPILOT.on, rnd: Math.random };
+  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, rts: CMDRING.planRts, ap: AUTOPILOT.on, rnd: Math.random };
   console.log(`plan mode (src/game/planmode.ts)${BREAK ? ' — PLANMODE_BREAK=1: the switch left off, the lines below must fail' : ''}`);
   try {
     // 1. the switch off (the ring's own on): Shift and the key are nobody's, the mouse is Sam's, the file has no plan in it
@@ -120,7 +120,7 @@ export async function planmodeCheck(): Promise<boolean> {
       const row = O.log.length > n ? R.tail() : null, went = row ? [...row.who].sort().join() : '';
       line(!!spot && row?.order === 'move' && went === [a.callsign, b.callsign].sort().join() && P.chains.length === 1, 'a right click moves the picked men, and nobody else', spot ? `${row?.order ?? 'nothing given'} to ${went || 'nobody'} · ${P.chains.length} chain` : 'no open floor found'); }
     R.home();
-    const doors = doorsNear(R).filter(x => !!aimOf(R, x.d)), A = doors[0], B = doors.find(x => x !== A && x.d !== A?.d);
+    const doors = doorsNear(R).filter(x => !!aimOf(R, x.d)), A = doors[0], other = doors.filter(x => x.d !== A?.d), B = other.find(x => !x.d.def.steel) ?? other[0];   // (a second door a pair can be sent THROUGH: a steel one is refused from its locked side)
     if (!A) line(false, 'a door to plan on', 'none the cursor can be put on');
     else {
       const entries = ['bangClear', 'openClear', 'charge'], isEntry = () => entries.includes(R.tail()?.order);
@@ -201,8 +201,66 @@ export async function planmodeCheck(): Promise<boolean> {
         R.until(() => C?.phase === 'wait', 40); const wait2 = C?.phase === 'wait'; R.word(); const in2 = isEntry() && C?.phase === 'in';
         R.until(() => P.chains.length === 0, 60); const rows = O.log.slice(n0), mine = rows.every((r: any) => [...r.who].sort().join() === names), still = blue.every((m: any) => O.of(m)?.order === 'fallIn');
         line(keys === '2+1' && in1 && held && on && wait2 && in2 && P.chains.length === 0 && mine && still, 'two rooms chained for one pair: F in, F on to the next door, stacked there until F, in — the other pair never ordered', `keys ${keys} · first door: ${in1 ? 'in' : 'not in'}, ${held ? 'held' : `chain ${C?.phase}`} · F: ${on ? 'to the next door' : R.tail()?.order} · there: ${wait2 ? 'waiting' : `chain ${C?.phase}`}, ${in2 ? 'in' : 'not in'} · ${P.chains.length ? 'chain still up' : 'chain done'} · ${rows.length} orders, ${mine ? 'all red\'s' : 'not all red\'s'} · blue ${still ? 'with Sam' : 'moved'}`); }
+      R.home();
+      // 19. Sam stands and the walk keys move the view; the mode put down, the view is his again and so are his feet
+      { const cam = R.W.cam, p0 = [...pl.char.pos], c0 = [...cam.target]; R.input.keys.add('KeyD'); R.step(60); R.input.keys.delete('KeyD'); R.step();
+        const stood = dist(pl.char.pos, p0), look = P.look ? dist(P.look, p0) : 0, follows = !!P.look && dist(g.followPos(), P.look) < 1e-6, went = dist(cam.target, c0);
+        R.toggle(); const back = !P.look && dist(g.followPos(), pl.char.pos) < 1e-6; let walked = 0;
+        for (const k of ['KeyD', 'KeyA', 'KeyW', 'KeyS']) { if (walked > 0.5) break; R.input.keys.add(k); R.step(30); R.input.keys.delete(k); R.step(); walked = dist(pl.char.pos, p0); }
+        R.toggle();
+        line(P.up && stood < 0.05 && look > 10 && follows && went > 5 && back && walked > 0.5, 'the mode up, the walk keys move the view and Sam stands; the mode down, the view is his again and he walks', `mode up, D for a second: he moved ${stood.toFixed(2)} m, the view's point ${look.toFixed(1)} m, the camera ${went.toFixed(1)} m${follows ? '' : ' (the camera is not given the point)'} · mode down: the view ${back ? 'on him' : 'not on him'}, he walked ${walked.toFixed(2)} m`); }
+      R.home();
+      // 20. he goes on facing what he faced, wherever the cursor goes
+      { R.step(30); const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a)), yaw0 = pl.char.bodyYaw, a0 = [...g.aimPoint], q = pl.char.pos;
+        R.W.cursorAt([2 * q[0] - a0[0], 0.04, 2 * q[2] - a0[2]]); R.step(45); const turned = Math.abs(wrap(pl.char.bodyYaw - yaw0)), held = !!P.aim && dist(g.aimPoint, a0) < 1e-6;
+        line(P.up && held && turned < 0.02, 'the cursor taken behind him, he goes on facing what he faced', `he turned ${turned.toFixed(3)} rad · his aim point ${held ? 'held' : `moved ${dist(g.aimPoint, a0).toFixed(2)} m`}`); }
+      R.home();
+      // 21. the view goes no further than its reach from the box he and the men stand in
+      { R.input.keys.add('KeyW'); R.step(300); R.input.keys.delete('KeyW'); R.step(); const L = P.look ?? pl.char.pos, pts = [pl.char.pos, ...T().map((m: any) => m.char.pos)];
+        const out = (k: number) => Math.max(0, Math.min(...pts.map((q: any) => q[k])) - L[k], L[k] - Math.max(...pts.map((q: any) => q[k]))), far = Math.max(out(0), out(2));
+        line(P.up && far <= CMDRING.planPanReachM + 1e-6 && far >= CMDRING.planPanReachM - 0.01, 'W held five seconds: the view stops at its reach from the men', `${far.toFixed(2)} m outside the box they stand in (the reach: ${CMDRING.planPanReachM})`); R.toggle(); R.toggle(); }
+      R.home();
+      // 22. the right button is read when it comes up: let go inside the hold it is a click, and the order goes then
+      { const spot = floorSpot(R), n = O.log.length; let early = -1, ring = true;
+        if (spot) { R.aim(spot); R.input.clicked |= 4; R.input.buttons |= 4; R.step(6); early = O.log.length - n; ring = !!O.cmdRing; R.input.buttons &= ~4; R.step(2); }
+        line(!!spot && P.up && early === 0 && !ring && O.log.length === n + 1 && R.tail()?.order === 'move' && P.chains.length === 1, 'the right button let go inside the hold is a click: the order goes as it comes up', spot ? `down a tenth of a second: ${early} orders, ${ring ? 'a ring' : 'no ring'} · up: ${O.log.length - n} order (${R.tail()?.order}), ${P.chains.length} chain` : 'no open floor found'); }
+      R.home();
+      // 23. kept down, it is the ring at the cursor: nothing is given until it comes up, and then the lit wedge — its second, an order by hand
+      { const spot = floorSpot(R), n = O.log.length; let ring = false, quiet = false, lit = 0, want = '';
+        if (spot) { R.aim(spot); R.input.clicked |= 4; R.input.buttons |= 4; R.step(20); const G = O.cmdRing; ring = !!G?.rmb && !!O.menu; quiet = O.log.length === n;
+          if (G) { const a = 2 * Math.PI / CMDRING.wedges, r = (CMDRING.flickPx + 30) * G.z; R.input.mouseX = G.ax + Math.sin(a) * r; R.input.mouseY = G.ay - Math.cos(a) * r; R.step(3); lit = O.cmdRing?.lit ?? 0; want = O.menu?.rows.find((x: any) => x.key === 2)?.id ?? ''; }
+          R.input.buttons &= ~4; R.step(2); }
+        line(ring && quiet && lit === 2 && !!want && O.log.length === n + 1 && R.tail()?.order === want && !O.cmdRing && !O.menu && P.up && P.chains.length === 0, 'the right button kept down is the ring; let go on its second wedge, that order is given', spot ? `kept down a third of a second: ${ring ? 'the ring' : 'no ring'}, ${quiet ? 'nothing given yet' : 'an order already'} · the cursor out to wedge 2: ${lit} lit (${want || 'no row'}) · let go: ${O.log.length - n} order (${R.tail()?.order}), mode ${P.up ? 'up' : 'down'}, ${P.chains.length} chains` : 'no open floor found'); }
+      R.home();
+      // 24. … let go on its first wedge, it is the right click's own order with its chain; Shift + the button, however long, adds a stop and opens no ring
+      { R.aim(aimOf(R, A.d)!); const n = O.log.length; R.input.clicked |= 4; R.input.buttons |= 4; R.step(20); const ring = !!O.cmdRing?.rmb; R.input.buttons &= ~4; R.step(2);
+        const C = P.chains[0], first = O.log.length === n + 1 && R.tail()?.order === 'stack' && C?.steps.length === 1 && C.steps[0].kind === 'door';
+        const spot = floorSpot(R); let ring2 = true; if (spot) { R.aim(spot); R.input.keys.add('ShiftLeft'); R.input.clicked |= 4; R.input.buttons |= 4; R.step(30); ring2 = !!O.cmdRing; R.input.buttons &= ~4; R.step(2); R.input.keys.delete('ShiftLeft'); R.step(); }
+        line(ring && first && !!spot && !ring2 && P.chains.length === 1 && P.chains[0]?.steps.length === 2 && O.log.length === n + 1, 'the ring let go on its first wedge is the click\'s order, chain and all; Shift + the button kept down adds a stop and opens no ring', `on the door: ${ring ? 'the ring' : 'no ring'}, ${first ? 'stack, a chain of one stop' : `${R.tail()?.order}, ${P.chains.length} chains`} · Shift, half a second: ${ring2 ? 'a ring' : 'no ring'}, ${P.chains[0]?.steps.length ?? 0} stops, ${O.log.length - n} orders given`); }
+      R.home();
+      // 25. a left click with the button's ring up puts it away: nothing is given, no round goes, the mode stays
+      { const spot = floorSpot(R), n = O.log.length, t0 = pl.lastFireT; let ring = false;
+        if (spot) { R.aim(spot); R.input.clicked |= 4; R.input.buttons |= 4; R.step(20); ring = !!O.cmdRing; R.input.clicked |= 1; R.step(); R.input.buttons &= ~4; R.step(2); }
+        line(ring && !O.cmdRing && !O.menu && O.log.length === n && P.up && pl.lastFireT === t0, 'a left click with that ring up puts it away: nothing given, nothing fired', `${ring ? 'the ring was up' : 'no ring'} · after the click: ${O.cmdRing ? 'still up' : 'gone'}, ${O.log.length - n} orders, ${pl.lastFireT === t0 ? 'no round' : 'a round'}, mode ${P.up ? 'up' : 'down'}`); }
+      R.home();
+      // 26. a file keeps where the view was and what he faced
+      { R.input.keys.add('KeyA'); R.step(20); R.input.keys.delete('KeyA'); R.step(); const L0 = P.look ? [...P.look] : null, snap = PM.planSnapshot(O); R.toggle(); const down = !P.look; PM.planRestore(O, snap);
+        line(!!L0 && down && P.up && !!P.look && dist(P.look, L0) < 1e-6 && dist(L0, pl.char.pos) > 2 && !!P.aim, 'a file keeps where the view was and what he faced', `${L0 ? `the view ${dist(L0, pl.char.pos).toFixed(1)} m from him` : 'no view of its own'} · restored: ${P.look && L0 ? `${dist(P.look, L0).toFixed(2)} m off` : 'none'}, ${P.aim ? 'his aim kept' : 'no aim'}`); }
+      R.home();
+      // 27. a restart with the mode up: the view starts on him again
+      const sam = () => g.player.char.pos;   // (a restart stands up a new Sam: `pl` is the old one from here on)
+      { R.input.keys.add('KeyA'); R.step(30); R.input.keys.delete('KeyA'); R.step(); const off = P.look ? dist(P.look, pl.char.pos) : 0;  g.restart(); R.step(3);
+        const on = P.look ? dist(P.look, sam()) : -1, cam = dist(g.followPos(), sam());
+        line(P.up && off > 3 && on >= 0 && on < 1e-6 && cam < 1e-6, 'a restart with the mode up: the view starts on him again', `the view ${off.toFixed(1)} m from him · after the restart: ${on < 0 ? 'no view of its own' : `${on.toFixed(2)} m`}, the camera's point ${cam.toFixed(2)} m from him`); }
+      // 28. its own word left off (cmdring.ts planRts): the mode as it was first built — he walks with it up, the view is on him, a right click orders as it goes down
+      { for (const m of T()) m.god = true; R.step(30);  R.home(false); CMDRING.planRts = false; R.toggle(); const p0 = [...sam()]; let walked = 0;
+        for (const k of ['KeyD', 'KeyA', 'KeyW', 'KeyS']) { if (walked > 0.5) break; R.input.keys.add(k); R.step(30); R.input.keys.delete(k); R.step(); walked = dist(sam(), p0); }
+        const onHim = !P.look && dist(g.followPos(), sam()) < 1e-6, spot = floorSpot(R), n = O.log.length; let atOnce = 0;
+        if (spot) { R.aim(spot); R.input.clicked |= 4; R.input.buttons |= 4; R.step(); atOnce = O.log.length - n; R.step(25); } const ring = !!O.cmdRing; R.input.buttons &= ~4; R.step(2);
+        CMDRING.planRts = !BREAK; R.toggle();
+        line(!BREAK && walked > 0.5 && onHim && !!spot && atOnce === 1 && !ring, 'that word off: he walks with the mode up, the view is on him, and a right click orders as it goes down', `he walked ${walked.toFixed(2)} m · the view ${onHim ? 'on him' : 'not on him'} · the button down: ${atOnce} order at once, ${ring ? 'a ring' : 'no ring'} after half a second`); }
     }
-  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
+  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; CMDRING.planRts = keep.rts; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
   console.log(fails ? `planmode-check: ${fails} FAIL` : 'planmode-check: ALL PASS');
   return fails === 0;
 }

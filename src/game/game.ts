@@ -7,7 +7,7 @@ import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
 import type { View } from '../host/hud';   // the view as the game reads it: clientWidth / clientHeight / width / height — the page's canvas, a plain object headless and natively   // the engine as the game sees it: a type, so this layer no longer imports src/engine.ts
 import type { RingState } from './cmdring';
-import { planLate } from './planmode';
+import { planLate, planLook, planHome } from './planmode';
 import { Level, PatrolRoute, Chokepoint } from '../scene/level';
 import { StaticCollision } from '../scene/collision';
 import { GltfCharacter } from '../anim/gltf';
@@ -1416,7 +1416,7 @@ export class Game {
   clearQueueSummary(): string { return clearQueueSummary(this); }
   clearNearestRoom() { forceClear(this); }
   /** Camera follow position (player or spectated guard). */
-  followPos(): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.player.char.pos; }
+  followPos(): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : (this.orders && planLook(this.orders)) ?? this.player.char.pos; }   // (planmode.ts: with plan mode up the view follows its own point, not Sam)
   teleportPlayer(p: Vec3) { return teleportPlayer(this, p); }
   /** HUD / panel: what the player's feet are on as the hearing model has it (floor.ts — lino everywhere with tune.floorMaterials off) */
   get floorUnderPlayer(): FloorMat { return stepMat(this, this.player.char.pos); }
@@ -1481,6 +1481,7 @@ export class Game {
     if (!CLEANRESTART.on) { if (said) this.msg(said); this.restartEncounter(); return; }
     this.restartEncounter();
     if (said) this.msg(said);   // (after it: restartEncounter takes the old encounter's lines off the HUD)
+    planHome(this.orders);   // (planmode.ts: plan mode's own view starts on him again)
     if (!this.touring && !this.director?.showing && this.spectate < 0) { const lens = this.seat.cam, p = this.followPos(); lens.target = v3.copy(p); lens.desired = v3.copy(p); this.restartCut = true; CLEANRESTART_STATS.cuts++; }
     if (CLEANRESTART.picture && this.engine.restartPicture) { this.engine.restartPicture('level restarted'); CLEANRESTART_STATS.pictures++; }
   }
