@@ -152,7 +152,7 @@ fn glossReflection(P: vec3f, owner: u32) -> vec3f {
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }   // (no card exclusion: a mirror SHOWS the torch spot on the wall — the cards only stand in for diffuse bounce)
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && bounceHitMan(hit)) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }   // (no walled read here — lighting_common.wgsl BOUNCE WALLS: this program has room for three, and a man mirrored in a floor or a pane is the least of them)
     L += albedo * Eh * (1.0 / 3.14159265);
   }
   let lum = luminance(L);
@@ -255,7 +255,7 @@ fn glassShade(Pg: vec3f, n: vec3f, V: vec3f) -> vec3f {
       }
       var Eh = vec3f(0.0);
       if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }   // (no card exclusion, as the gloss ray: a pane's mirror image SHOWS the torch spot on the wall)
-      if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && bounceHitMan(hit)) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
+      if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }   // (no walled read here — lighting_common.wgsl BOUNCE WALLS: this program has room for three, and a man mirrored in a floor or a pane is the least of them)
       L += albedo * Eh * (1.0 / 3.14159265);
     }
     let lum = luminance(L);
