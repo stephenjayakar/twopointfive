@@ -250,6 +250,8 @@ const MOTION_SPRINT = 1.6, MOTION_SPRINT_MS = 3.5, MOTION_NEAR_M = 2.5, MOTION_N
 /** Sam's velocity over the ground this frame, as anybody watching sees it: the displacement of his root since the frame before (not the pace he is asking of his
  *  legs — held against a desk or a leaf he 'sprints' on the spot; a teleport reads as one capped spike). Worked out once a frame, whoever asks first. */
 const groundTrack = new SideMap<Game, { pos: Vec3; t: number; vel: Vec3 }>('guards.groundTrack');
+/** a restart (cleanrestart.ts): the fresh man has not moved yet — his start is not a step from where the last one fell */
+export function groundFresh(g: Game): void { groundTrack.delete(g); }
 export function playerGroundVel(g: Game): Vec3 {
   const p = g.player.char.pos; let P = groundTrack.get(g);
   if (!P) { P = { pos: v3.copy(p), t: g.time, vel: [0, 0, 0] }; groundTrack.set(g, P); return P.vel; }

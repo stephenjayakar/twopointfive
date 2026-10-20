@@ -122,6 +122,11 @@ export function vnoise(seed: number, x: number): number {
 // ------------------------------------------------------------------ sources
 export type WindWhy = 'vent' | 'storm' | 'door' | 'glass';   // (glass: the gust through a shot-out EXTERIOR pane — game/glassbreak.ts pushes the record onto Wind.all and writes its `base` off the storm × the open share each frame)
 /** One live source (extends the GPU record with what the CPU keeps about it): `base` = its authored / derived full speed, `on` = the vent's spin 0‥1, `gust` = this frame's ×, `speed` = the product × the master */
+/** whether a vent's own cycle has it blowing at game time `t` (on for `duty` of each `period` from `phase`; no period: always) */
+function ventDue(v: VentDef, t: number): boolean {
+  if (!(v.period && v.period > 0)) return true;
+  const duty = v.duty ?? VENT_DEFAULTS.duty; const ph = (((t - (v.phase ?? 0)) / v.period) % 1 + 1) % 1; return !(ph > duty);
+}
 export interface WindSource extends WindGpuSource { why: WindWhy; base: number; on: number; gust: number; seed: number; vent?: VentDef; door?: Door; }
 /** counters for the probes / panel */
 export const WIND_STATS = { frames: 0, active: 0, toParticles: 0, toSmoke: 0, doorGusts: 0, stormFrames: 0, atCalls: 0 };
@@ -230,7 +235,7 @@ export class Wind {
       if (s.why === 'vent') {
         const v = s.vent!;
         base = WIND.vents ? v.speed * WIND.ventK : 0;
-        if (v.period && v.period > 0) { const duty = v.duty ?? VENT_DEFAULTS.duty; const ph = (((t - (v.phase ?? 0)) / v.period) % 1 + 1) % 1; if (ph > duty) target = 0; }   // cycling: on for `duty` of each period from `phase`
+        if (!ventDue(v, t)) target = 0;   // cycling: on for `duty` of each period from `phase`
         if ((v.mains ?? VENT_DEFAULTS.mains) && g.blackout.active) target = 0;                                                                                     // the air handler is on the breaker
         const rate = target > s.on ? 1 / Math.max(0.1, WIND.rampUp) : 1 / Math.max(0.1, WIND.rampDown);
         s.on += Math.max(-rate * dt, Math.min(rate * dt, target - s.on));
@@ -281,6 +286,9 @@ export class Wind {
   }
   /** the source called `name` (a vent's id, 'storm', 'door:<door>') */
   byName(name: string): WindSource | undefined { return this.all.find(s => s.name === name); }
+  /** a restart (cleanrestart.ts): every vent at once where its own cycle has it with the mains in — one a blackout had stopped does not spin back up in front of
+   *  the fresh try, one at rest in its cycle stays at rest */
+  fresh(): void { const t = this.g.time; for (const s of this.all) if (s.why === 'vent') s.on = ventDue(s.vent!, t) ? 1 : 0; }
   /** one line per source for the panel / probes */
   describe(): string[] { return this.all.map(s => `${s.name.padEnd(18)} ${s.speed > 0 ? 'ON ' : 'off'} speed ${s.speed.toFixed(2)} (base ${s.base.toFixed(2)} × on ${s.on.toFixed(2)} × gust ${s.gust.toFixed(2)})`); }
   summary(): string {

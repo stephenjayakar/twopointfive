@@ -49,6 +49,9 @@ export interface HostApi {
   viewFocus?: Vec3;
   /** the light rig swapped wholesale (day ↔ night): the radiance cache re-primes (game/lighting.ts calls it `?.()`) */
   invalidateWorldCache?(): void;
+  /** the level was put back to its start under the picture (game/cleanrestart.ts): every temporal history and the radiance cache start from nothing, as on a boot's
+   *  first frame — nothing of the level as it stood is blended into the fresh one. Picture only; absent on a stand-in */
+  restartPicture?(why: string): void;
   // ---- boot-time attach points (game.ts constructor)
   /** the skinned characters' drawable — `engine.skin = this.chars` */
   skin: SkinnedDrawable | null;

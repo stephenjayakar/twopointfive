@@ -263,7 +263,7 @@ export class Menu {
     const resume = button('Resume', () => this.close(), 'primary');
     actions.appendChild(resume);
     if (!scn || scn.saves) { const ck = this.checkpointButton(); if (ck) actions.appendChild(ck); }   // 'Restart from checkpoint (40 s ago)' when one is stored (game/savestate.ts) — under Resume here; on the down card it is THE default
-    actions.appendChild(button(scn ? 'Restart scenario' : 'Restart encounter', () => { this.d.stopTour?.(); this.d.game.restartEncounter(); this.close(); }));   // (a running tour or level-script program ends first: its beat must not keep puppeting the fresh encounter; under a scenario the restart stages it again)
+    actions.appendChild(button(scn ? 'Restart scenario' : 'Restart encounter', () => { this.d.stopTour?.(); this.d.game.restart(); this.close(); }));   // (a running tour or level-script program ends first: its beat must not keep puppeting the fresh encounter; under a scenario the restart stages it again)
     gap();
     actions.appendChild(button('Options', () => openOptions()));
     actions.appendChild(button('Run so far', () => { this.run = !this.run; this.render(); }, this.run ? 'on' : ''));
@@ -285,7 +285,7 @@ export class Menu {
   private debrief(card: HTMLElement) {
     const g = this.d.game; const V = g.verdict?.result ?? null; const down = V ? !V.won || g.player.down : g.mission.stage !== 'done';   // (won or lost is the run's verdict where there is one — a squad's mission never reaches the stealth game's 'done' — game/verdict.ts)
     const shown = performance.now();
-    const restart = () => { if (performance.now() - shown < 500) return; this.d.stopTour?.(); g.restartEncounter(); this.close(); };   // (armed after half a second: the card appears mid-stride, often a Space-tap after the fire door — that tap must not restart the run unseen)
+    const restart = () => { if (performance.now() - shown < 500) return; this.d.stopTour?.(); g.restart(); this.close(); };   // (armed after half a second: the card appears mid-stride, often a Space-tap after the fire door — that tap must not restart the run unseen)
     const info = down ? this.checkpointInfo() : null; const mine = !!info && g.saves.isThisRun(info);   // DOWN with a checkpoint of THIS run stored: 'Restart from checkpoint (N s ago)' is the default (focused, Enter — the bare key does the same before the card is up); an earlier run's is offered but never the default
     const cur = this.d.scenario?.current() ?? null, scn = !!cur;   // down under a scenario: the restart stages it again, and the picker is one press away (no checkpoint button: none is written with a team on the floor, and a solo run's is refused there — but a scenario that SAVES, a quiet mission alone, offers its own)
     const ck = info && (!cur || cur.saves) ? this.checkpointButton(mine ? 'primary' : '', () => performance.now() - shown >= 500) : null;

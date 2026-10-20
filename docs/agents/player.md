@@ -769,3 +769,40 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   lives on his gun, and a gun put away mid-beat keeps it until his next beat begins (every beat begins clean); the HUD's spare count for a tube gun is the
   row's "magazines", now shrinking a shell at a time. MEASURED: the check's own lines; the tour, three runs a stand. NEVER SEEN ON A GPU, NEVER HEARD, NEVER
   PLAYED: whether 0.36 s a shell reads right, and whether the trigger breaking off is wanted, are the maintainer's.
+- **A restart gives a clean level** (`CLEANRESTART`, `src/game/cleanrestart.ts`, 10-19; the maintainer, from a play test: "after resetting a level …
+  the lights kind of flicker on in engine. Like, we should reset the level to a clean state"). ONE switch: ON in the page (`?cleanrestart=0` = the
+  restart as it was; OFF in the kit picture's own window, `?kitview`, which restages on every kit message under its own dissolve), OFF in the module and
+  on the frozen stand (`TPS_CLEANRESTART=1`); a `FROZEN_HOLDS` row; in the knob registry and the journal (a recording from before the table replays its
+  restarts as they were). WHAT THE FLICKER WAS: `restartEncounter` put a blacked-out level's mains back through `endBlackout`, the breaker's own road —
+  `restoredAt = now`, so every fitting on the supply played its restrike for 1.2 s, each contactor group a beat after the last, the beacons turned for
+  another second, 'mains restored' was said and `powerUp` sounded. TWO LAYERS. (1) `Game.restartEncounter` (every caller: the keys and cards, a mission's
+  staging, a show's restore, a checkpoint's load under its file, a recording's first frame), with the switch up: `lighting.ts freshLights` (every target
+  whole, no OCP timer, the blackout's fields as a new Game has them — `restoredAt -100`, `since -1` — nothing said or sounded), the lights PAINTED as
+  the restart ends (`updateTargets(g, 0)`: the first tick's reticle rows and the men's eyes read the fresh level, not the last frame of the old one), the
+  old encounter's HUD lines gone and the restart's own two ('guards reset', 'encounter restarted') not written, the clocks a new Game has at rest
+  (`alarm.raisedAt`, `alarm.pos`, the torch on him, the last sting, `gunwall.ts gunWallFresh`, `guards.ts groundFresh`), every vent where its own duty
+  cycle has it with the mains in (`wind.ts Wind.fresh`). (2) `Game.restart(said?)` — THE PLAYER'S RESTART, what the pause card's and the down card's
+  buttons, the panel's button, Shift+Enter and Enter-when-down now call (`ui/menu.ts`, `ui/bindings.ts`, `player.ts`): `restartEncounter`, then the
+  camera CUT to the fresh man (the seat's cut, `cmd.ts takeCut`, put on the host's camera at the top of the next `update` so that tick's record reads
+  the view that is on him; a show's, a spectator's or a pinned camera is left alone) and the host told the level restarted (`HostApi.restartPicture` →
+  `engine.restartPicture`: the screen histories and reservoirs, the haze volume's history and the radiance cache start from nothing, as `restartHistories`
+  already did when the goggles came off infrared light; `CLEANRESTART.picture = false` = the game side only). `said` = a line about the restart itself
+  (why a checkpoint would not load), which outlives it. A LOAD IS NOT A RESTART: `loadState`, the journal's first frame and a tape's restart row call
+  `restartEncounter` and keep their own camera and picture; the file's mains, broken fittings and lines are the file's. Off: `restart` is
+  `restartEncounter` with the line said first, every line of both as it was. `window.__cleanrestart` on the page (knobs, stats: restarts, relit,
+  lines, cuts, pictures). Check: `probes.ts cleanrestart` (family `player`; `CLEANRESTART_BREAK=1` fails six of its nine lines), both stands — the
+  office on die 1 WRECKED (41 of 73 fixtures shot out, the eight vehicle lamps among them, three wall switches thrown, the OCP tripped, six doors blown
+  off and four opened, three men dead, 512 decals, the mains pulled by hand and then the breaker shot) beside an untouched TWIN stepped the same ticks,
+  both restarted, against the twin and a Game just stood up: every target's painted factor, switch, glass and timer (0 off either), nothing said or
+  sounded; all 783 statics' place and paint; decals, thrown things, smoke, lights, moving boxes, doors, the camera (0.000 m off a fresh boot's, 27.7 m
+  before), the host told once; the whole state by `rollback.ts stateAlike` one tick and ten seconds on (about a thousand differences, every one on the
+  check's own list of counters, logs, caches and first-use table entries, each with its reason) and the run by digest every second for ten (less the
+  event serial, which counts on through a restart); each way in; a checkpoint saved in the dark 21 m from the start (loads dark, the camera on its man,
+  no cut, the host not told); the switch off (27 of 73 factors off a fresh boot's at the first tick, five beacons turning, the line and the sound).
+  `tools/qa/cleanrestart-page.cjs` does it on the real page on the software adapter (Shift+Enter; five frames of factors against the boot's five, the
+  dying tubes apart — their dropouts follow the absolute clock; three frames drawn). KNOWN: a flickering tube, the weather and the wind's gusts run on
+  the game clock, which a restart does not wind back, so those are where the clock has them, not where a boot at 0 s has them; which idle chatter has
+  been heard is kept on purpose (`dialogue.ts`); a mission's restage through `restartEncounter` (the console's `restage()`, the room clear's seed
+  slider) is clean in the game but keeps its own cut and does not restart the picture. NEVER SEEN ON A GPU: the first frames after a restart — whether
+  starting the picture's histories from nothing reads cleaner than the old blend is the maintainer's to judge (`__cleanrestart.knobs.picture = false`
+  in the console is the other way, live).
