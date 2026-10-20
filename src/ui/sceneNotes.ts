@@ -204,7 +204,7 @@ export const SCENE_NOTES: Record<string, string> = {
   'BREATHSTEAM.jitter': 'how much its heading and speed wander frame to frame: what keeps two breaths from being one shape',
   'BREATHSTEAM.carryK': '× the share of his own velocity the puffs leave with (`carry`): in air that does not stop it, a runner\'s breath is left behind him, not thrown ahead',
   'BREATHSTEAM.wake': 'm: a walking man\'s head shoves the smoke it passes through, this wide (the solver\'s push; 0 = his hips and chest alone, as any smoke)',
-  'BREATHSTEAM.reach': 'm from where the view looks: a man further off breathes puffs (the pool thins what is far from the view first; 0 = every man steams)',
+  'BREATHSTEAM.reach': 'm from where the view looks: a man further off breathes puffs (the frame\'s far corners are 11 m from it at the game\'s own zoom, and a breath holds some ninety bricks of the fine lattice for two seconds: the men nobody can see should not;…',
   'SNOW_SURF.fresh': 'what fresh snow sends back, in the PICTURE (the paint the simulation and the bounce read stays SNOW_PALETTE.snow)',
   'SNOW_SURF.packed': 'trodden snow: greyer, denser',
   'SNOW_SURF.old': 'old snow, slush',

@@ -78,7 +78,8 @@ export const BREATHSTEAM = {
   jitter: 0.3,         // how much its heading and speed wander frame to frame: what keeps two breaths from being one shape
   carryK: 0.5,         // × the share of his own velocity the puffs leave with (`carry`): in air that does not stop it, a runner's breath is left behind him, not thrown ahead
   wake: 0.16,          // m: a walking man's head shoves the smoke it passes through, this wide (the solver's push; 0 = his hips and chest alone, as any smoke)
-  reach: 16,           // m from where the view looks: a man further off breathes puffs (the pool thins what is far from the view first; 0 = every man steams)
+  reach: 12,           // m from where the view looks: a man further off breathes puffs (the frame's far corners are 11 m from it at the game's own zoom, and a breath
+                       // holds some ninety bricks of the fine lattice for two seconds: the men nobody can see should not; 0 = every man steams)
 };
 
 export interface BreathStats { active: boolean; why: string; men: number; shown: number; breaths: number; records: number; births: number; frames: number; /** records filed per man (Character.id) */ by: Record<number, number>; /** breaths handed to the smoke solver as steam (SNOW_LOOK.steam), and the men shown steaming so this frame */ steam: number; steaming: number; }
