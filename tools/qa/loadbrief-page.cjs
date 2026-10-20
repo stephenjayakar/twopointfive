@@ -2,7 +2,7 @@
 // address loaded as a visitor loads it — no ?paused, no ?mute — once for each kind of mission, each started another way.
 //   PORT=5199 node tools/qa/loadbrief-page.cjs [outDir]      (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=a,b = only those jobs)
 //   night breach · room clear · rescue · quiet · training · solo night
-//            from the first tick the page shows that mission's brief (its id, its title, a place and a job in words, its picture) and no controls list; when
+//            from the first tick the page shows that mission's brief (its id, its title, a place and a job in words, the map of its level) and no controls list; when
 //            the boot is done the block is live and the world behind it holds still (the game's clock does not move over drawn frames); then it is started —
 //            Enter · a click · a click made WHILE IT BOOTS (kept: the run starts by itself the moment it can) · Space · Controls opened and shut first (the
 //            options layer over it, Esc back to the brief and no pause card) · a script taking the page over (the brief goes, unstarted, and the frames it
@@ -24,12 +24,12 @@ const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
 
 const JOBS = [
-  { name: 'night breach', query: 'nightbreach', id: 'night-breach', title: 'Night breach', how: 'enter' },
-  { name: 'room clear', query: 'levelFile=depot.json&roomclear&squad4', id: 'depot-four', title: 'The depot', how: 'click' },
+  { name: 'night breach', query: 'nightbreach', id: 'night-breach', title: 'Night breach', map: 'office.json', how: 'enter' },
+  { name: 'room clear', query: 'levelFile=depot.json&roomclear&squad4', id: 'depot-four', title: 'The depot', map: 'depot.json', how: 'click' },
   { name: 'rescue', query: 'levelFile=registry.json&rescue', id: 'rescue-registry', title: 'The registry', how: 'early' },
-  { name: 'quiet', query: 'levelFile=vault.json&quiet', id: 'vault-quiet', title: 'The counting house', how: 'space' },
-  { name: 'training', query: 'levelFile=train-move.json&quiet', id: 'train-move', title: '1 · Moving unseen', how: 'controls' },
-  { name: 'solo night', query: 'solo', id: 'solo-night', title: 'Solo night', how: 'script' },
+  { name: 'quiet', query: 'levelFile=vault.json&quiet', id: 'vault-quiet', title: 'The counting house', map: 'vault.json', how: 'space' },
+  { name: 'training', query: 'levelFile=train-move.json&quiet', id: 'train-move', title: '1 · Moving unseen', map: 'train-move.json', how: 'controls' },
+  { name: 'solo night', query: 'solo', id: 'solo-night', title: 'Solo night', map: 'office.json', how: 'script' },
   { name: 'off', query: 'loadbrief=0&levelFile=depot.json&roomclear&squad4', off: true },
   { name: 'paused', query: 'paused&mute&nightbreach', paused: true },
 ].filter(j => !ONLY.length || ONLY.includes(j.name));
@@ -38,7 +38,10 @@ if (!JOBS.length) { console.log(`- FAIL — no job is named ${ONLY.join(', ')}`)
 // in the page: what is on the screen
 const SEEN = () => { const b = document.getElementById('brief'), t = (s) => (b && b.querySelector(s) ? b.querySelector(s).textContent : '') || '';
   return { brief: !!b && b.classList.contains('on'), cls: b ? b.className : '', id: b ? b.getAttribute('data-mission') : null, title: t('.bt'), place: t('.bplace'), job: t('.bjob'), facts: b ? [...b.querySelectorAll('.bf')].map(f => f.textContent) : [],
-    picture: !!(b && b.querySelector('.bpic img')), start: t('.bgo span'), status: t('.bstatus'),
+    picture: (() => { const c = b && b.querySelector('.bpic canvas'); if (!c || c.style.display === 'none' || b.querySelector('.bpic img')) return false;   // (the map: a canvas with the level drawn on it, as many pixels wide as the screen shows it — or the 480 floor — and the sheet's shape)
+      const cr = c.getBoundingClientRect(), want = Math.max(480, Math.round(cr.width * devicePixelRatio)); if (Math.abs(c.width - want) > 2 || Math.abs(cr.height / cr.width - 0.7) > 0.01 || cr.bottom > innerHeight + 1) return false;
+      try { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4 * 101) if (d[i] > 40) n++; return n > 200; } catch (e) { return false; } })(),
+    level: b && b.querySelector('.bpic canvas') ? b.querySelector('.bpic canvas').getAttribute('data-level') : null, start: t('.bgo span'), status: t('.bstatus'),
     menu: document.getElementById('menu').classList.contains('on'), controlsList: document.querySelectorAll('#menu .controls .row').length, options: !!(document.getElementById('options') && document.getElementById('options').classList.contains('on')),
     fatal: (document.getElementById('fatal') || {}).textContent || '' }; };
 // in the page: the game's clock after two drawn frames (so a clock that did not move is a held world, not a page that drew nothing)
@@ -92,11 +95,11 @@ const runs = async (page, from, secs = 300) => { for (const end = Date.now() + s
       const gone = !r.after.brief && !r.after.menu && !!r.clock && r.clock.held.length === 0;
       let mid = true;
       if (job.how === 'early') mid = /live/.test(r.early.was) || (/armed/.test(r.early.cls) && r.early.brief);   // (pressed while it boots: kept, and nothing more is asked of the player; on a machine that booted before the press could be made, the press was an ordinary start)
-      else mid = /live/.test(r.ready.cls) && r.heldFor[0] === r.heldFor[1] && r.still.brief && r.still.picture;
+      else mid = /live/.test(r.ready.cls) && r.heldFor[0] === r.heldFor[1] && r.still.brief && r.still.picture && (r.still.level || '').replace(/-gwot(?=\.json$)/, '') === job.map;   // (the level's file as the page loads it: its dressed one under the default look)
       if (job.how === 'controls') mid = mid && r.keysUp.options && r.keysWords.length > 200 && /sprint/i.test(r.keysWords) && !r.keysShut.options && r.keysShut.brief && !r.keysShut.menu && r.keysClock === r.heldFor[1] && /bgo/.test(r.keysFocus);
       if (job.how === 'script') mid = mid && Math.abs(r.script - 3 / 60) < 1e-6;
       ok = words && mid && gone;
-      why = JSON.stringify({ words, id: r.boot.id, title: r.boot.title, picture: r.still ? r.still.picture : undefined, live: r.ready.cls, held: r.heldFor, mid, gone, after: { brief: r.after.brief, menu: r.after.menu }, clock: r.clock && +r.clock.t.toFixed(3), keys: r.clock && r.clock.held });
+      why = JSON.stringify({ words, id: r.boot.id, title: r.boot.title, map: r.still ? (r.still.picture ? r.still.level : 'NONE') : undefined, live: r.ready.cls, held: r.heldFor, mid, gone, after: { brief: r.after.brief, menu: r.after.menu }, clock: r.clock && +r.clock.t.toFixed(3), keys: r.clock && r.clock.held });
     }
     if (!ok) red++;
     const says = job.off ? 'under ?loadbrief=0: no brief, the old card and its controls list while it boots, the run under way with nothing pressed'
