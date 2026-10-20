@@ -705,7 +705,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`roomfight.ts stepTo`), the breach drill from the boot on, and a man a grenade took off his place for `backSecs` after (a door order waits for its men and
   counts the seconds). A REASON, on his own (`own`): `blast` — off a live grenade at the flee's own run (`frag.ts runSpeed` 3.4, `teamBlastPace`); `cover` —
   loud reached him in the last `dashHot` s, nobody in his sights, the floor he stands on in a known man's line (`picture.ts exposedAt`), his mark out of it
-  and in plain sight `dashM` or more off on the same floor: he runs that leg (`teamDash`; never round a corner, through a doorway, or falling in). NEVER a run:
+  and in plain sight `dashM` or more off on the same floor: he runs that leg (`teamDash`; never round a corner, through a doorway, or falling in), and a leg begun is run OUT: what started him — the loud, the
+  line on the floor under him — is not asked again on the way (it was, at first, and a man dropped to a walk the last stride or two short of the mark, where
+  the line had let go of him); a man in his sights, a mark the line has found or a wall still stops him. NEVER a run:
   the silent squad, a squad nobody has found, a man sneaking with the player (a grenade apart), a hurt man. THE COST of a run (`runAt`, the sprint clip's
   threshold): gun low and nothing fired (`teamSprinting`: `squad.ts`, `roomfight.ts`), a sprinter's boots to whoever hears (`teamTread`), a card weighs on it
   as on the player's sprint (`teamRunLegs`), and a leaf met at a run is shouldered as a runner's is. Each run is written (`TEAMPACE_STATS {follow, blast,

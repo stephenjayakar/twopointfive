@@ -190,7 +190,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/spotted.ts SPOTTED_STATS': 'TALLY · counted in spotted.ts; no read in src/game, src/scene or src/anim',
   'src/game/sprintdoor.ts SPRINTDOOR_STATS': 'TALLY · counted in sprintdoor.ts:103/109 and player.ts:1775; no read in src/game, src/scene or src/anim',
   'src/game/squad40.ts SQUAD40_STATS': 'TALLY · counted in squad40.ts; read in the simulation\'s folders only by its own summary; shown by main.ts',
-  'src/game/teampace.ts TEAMPACE_STATS': 'TALLY · counted in teampace.ts teamCap; no read in src/game, src/scene or src/anim',
+  'src/game/teampace.ts TEAMPACE_STATS': 'TALLY · counted in teampace.ts teamRan; no read in src/game, src/scene or src/anim',
   'src/game/squadsmoke.ts SQUADSMOKE_STATS': 'TALLY · counted in squadsmoke.ts; no read in src/game, src/scene or src/anim',
   'src/game/squadthrow.ts SQUADTHROW_STATS': 'TALLY · counted in squadthrow.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/squadthrow.ts:566); shown by main.ts',
   'src/game/stackline.ts STACKLINE_STATS': 'TALLY · counted in stackline.ts; no read in src/game, src/scene or src/anim',
