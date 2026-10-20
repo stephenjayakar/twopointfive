@@ -11,6 +11,8 @@
 //              and nowhere else.
 //   tokens     each `--h-x: var(--m-y, literal)` carries the literal theme.ts gives `--m-y`: the fallback is what the page shows before the first script has run
 //   type       outside the token block every `font` / `font-family` in the fight screen's part of the sheet is a token (`var(--…)`) or `inherit`
+//   tally      the run tally on the pause card and the debrief (`#menu .db-stats`, ui/debrief.ts) cuts no label: its rule holds no ellipsis and no `nowrap` (a long
+//              label takes a second line) and a tile holds its number at its foot, so the numbers of a row stay on one line
 //   overlay    src/ui/overlay.ts, which colours a few marks from code, holds no green either (the only file of code read: a tool's or a debug view's own
 //              colours, `ui/panel.ts`, `ui/replaykey.ts`, `ui/windviz.ts` …, are not this check's)
 import { readFileSync } from 'node:fs';
@@ -64,6 +66,13 @@ const rules = [...sheet.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => ({ sel: m[1]
   const own = rules.filter((r, i) => r.sel !== ':root' && (i < first || i > last) && !r.sel.startsWith('.vpip'));
   const bad = own.filter(r => [...r.body.matchAll(/(?:^|[;\s])font(?:-family)?:\s*([^;]+)/g)].some(m => !/var\(--|^inherit\b/.test(m[1].trim())));
   verdict(first > 0 && bad.length === 0, 'type', bad.length ? bad.map(r => `index.html:${r.line} ${r.sel.slice(0, 70)}`).join('\n    ') : `${own.length} of the fight screen's rules, every typeface a token`);
+}
+{
+  // (the red path cuts the labels the way the sheet did: read here alone, so the rule does not move where the fight screen's part of the sheet ends)
+  const read = sheet + (process.env.HUDLOOK_BREAK === '1' ? '\n    #menu .db-stats .st i { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n' : '');
+  const of = (sel: RegExp) => [...read.matchAll(sel)].map(m => m[1]), label = of(/#menu \.db-stats \.st i\s*\{([^}]*)\}/g), tile = of(/#menu \.db-stats \.st\s*\{([^}]*)\}/g);
+  const cut = label.filter(b => /ellipsis|nowrap/.test(b)).length, held = tile.some(b => /flex-direction:\s*column/.test(b) && /space-between/.test(b));
+  verdict(label.length > 0 && cut === 0 && held, 'tally', cut ? `${cut} rule(s) of the tally's labels cut a word (an ellipsis or nowrap)` : !held ? 'a tile no longer holds its number at the foot: a label on two lines would push it off its row\'s line' : 'a label too long for its tile takes a second line; the numbers of a row stay on one line');
 }
 {
   const src = readFileSync(join(ROOT, 'src/ui/overlay.ts'), 'utf8'), lines = src.split('\n');
