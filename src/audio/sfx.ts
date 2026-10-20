@@ -15,8 +15,23 @@ export type SfxName =
 
 type Gen = (t: number, i: number, sr: number, rnd: () => number, state: Float32Array) => number;
 
+// A VOICE NOT RENDERED YET (buildSfxLater, below). While `later` is up, a row of the table is not its samples but the call that makes them: every voice has a seed
+// of its own and reads nothing of another's, so made in any order, at any time, each is sample for sample what buildSfx makes (tools/qa/sfxwarm-check.ts).
+const LATER = Symbol('later');
+let later = false;
+function lazy(fn: () => SfxBuffer): SfxBuffer {
+  if (!later) return fn();
+  let b: SfxBuffer | null = null;
+  const real = () => { if (!b) { const was = later; later = false; try { b = fn(); } finally { later = was; } } return b; };   // (rendered with `later` down: a voice built from another renders that one now)
+  // (a row built FROM this one reads it like any buffer, and so renders it there and then: correct, only not left for later)
+  return { get sampleRate() { return real().sampleRate; }, get length() { return real().length; }, get duration() { return real().duration; }, get numberOfChannels() { return real().numberOfChannels; },
+    getChannelData: (c: number) => real().getChannelData(c), [LATER]: real } as unknown as SfxBuffer;
+}
 function render(ctx: SfxContext, dur: number, gen: Gen, seed = 1): SfxBuffer {
   if (only) return ctx.createBuffer(1, 1, ctx.sampleRate);
+  return lazy(() => renderNow(ctx, dur, gen, seed));
+}
+function renderNow(ctx: SfxContext, dur: number, gen: Gen, seed: number): SfxBuffer {
   const sr = ctx.sampleRate; const n = Math.max(1, Math.floor(dur * sr));
   const buf = ctx.createBuffer(1, n, sr); const d = buf.getChannelData(0);
   let s = seed >>> 0 || 1; const rnd = () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return ((s >>> 0) / 4294967296) * 2 - 1; };
@@ -56,7 +71,7 @@ export const HEARD: Partial<Record<SfxName, number>> = {
 function make(ctx: SfxContext, name: SfxName, dur: number, seed: number, fn: (v: Voice) => void): SfxBuffer {
   const as = HEARD[name]; if (as === undefined) throw new Error(`sfx: ${name} has no HEARD level`);
   if (only) { if (only !== name) return ctx.createBuffer(1, 1, ctx.sampleRate); hit = true; }
-  return voiced(ctx, as, dur, seed, fn);
+  return lazy(() => voiced(ctx, as, dur, seed, fn));
 }
 // ONE VOICE OF THE TABLE BY ITSELF, AND A VOICE MADE ANOTHER WAY (the replay page's sound lanes; nothing in the game calls either). `only` set = every other row of the
 // table is an empty buffer; never set while the game's own table is built.
@@ -707,14 +722,14 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
     }),
     // a chair coasting on its castors over a hard floor: the wheels' low rumble breathing a little, the tyres' band, grit, the bearings' small uneven ticks and now and
     // then the stem rattling in its socket. STEADY from end to end (the bands' fall is two hundred seconds): `rollLoop` cuts it to the loop.
-    chairRoll: rollLoop(ctx, make(ctx, 'chairRoll', 2.6, 211, v => {
+    chairRoll: lazy(() => rollLoop(ctx, make(ctx, 'chairRoll', 2.6, 211, v => {
       const r = v.layer(); v.hiss(0, 60, 340, 0.03, 200, 1.0, r);
       for (let i = 0; i < r.length; i++) { const t = i / v.sr; r[i] *= 1 + 0.2 * Math.sin(19.5 * t) + 0.12 * Math.sin(48.4 * t + 1.3); }
       v.add(r);
       v.hiss(0, 380, 1500, 0.03, 200, 0.3); v.hiss(0, 1800, 5200, 0.03, 200, 0.06);
       for (let t = 0.01; t < 2.58; t += 0.022 + 0.05 * v.u()) knock(v, t, 900, 3200, 0.0015 + 0.0015 * v.u(), 0.035 + 0.05 * v.u());
       for (let t = 0.15; t < 2.5; t += 0.28 + 0.3 * v.u()) knock(v, t, 500, 1500, 0.006, 0.07 + 0.07 * v.u());
-    })),
+    }))),
     // ---- the hold (player.ts startGrab → the questions → chokeOut / whipOut; freeHeld when a round takes Sam down under him): close, quiet body sounds a metre from
     //      the listener — cloth, breath, a throat, one hard knock. The voiced bits of the three KEPT ones (grabScuffle, chokeLimp, shove) are a glottal pulse train (phase-accumulated in st[3],
     //      jittered) rounded off by the low-pass and gating a band of breath noise; chokeStrain, murmur and heldProtest are synth.ts's throat. No words: a stand-in for
@@ -832,4 +847,12 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       return Math.tanh((thump + rumble * 1.5) * 1.2) * 0.95;
     }, 409),
   };
+}
+/** THE TABLE WITH NO VOICE RENDERED: per name, the call that renders it — the samples buildSfx makes, whenever and in whatever order they are asked for (`lazy`,
+ *  above). The mixer renders them a voice at a time while the page waits on other things (audio.ts SFX_WARM) instead of all at once inside the first click. */
+export function buildSfxLater(ctx: SfxContext): Map<SfxName, () => SfxBuffer> {
+  const was = later; later = true; let t: Record<SfxName, SfxBuffer>; try { t = buildSfx(ctx); } finally { later = was; }
+  const out = new Map<SfxName, () => SfxBuffer>();
+  for (const n of Object.keys(t) as SfxName[]) { const b = t[n], real = (b as unknown as { [LATER]?: () => SfxBuffer })[LATER]; out.set(n, real ?? (() => b)); }   // (a row made another way is already its samples)
+  return out;
 }

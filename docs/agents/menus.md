@@ -1224,7 +1224,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   later hand wins; at none the look-at is the man himself), `Ring at your feet` (the order menu's gold ring, `planfloor.ts` `py`, drawn at all times; ours stands down while that one is
   up: `PlanFloor.youOn`), `Outline in the dark` (a rim round his figure, full at a light number of 0.12 and under, gone at 0.3), `Shape through walls` (his figure
   faint and rimmed through whatever stands between the eye and him, as strong as the share of four points of him the eye cannot see: glass and the
-  `NoPrimary` ceilings do not count), `Turn direction` (Ctrl + mouse turns the view the other way: the sign in `host/loop.ts`, and in the engine replay's own Ctrl turn, `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl`
+  `NoPrimary` ceilings do not count), `Turn direction` (Ctrl + mouse turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn, `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl`
   (two short presses, answered as the second comes up, bring the view round over about a quarter of a second to look where he looked at the tap;
   a hand's orbit, a pin, a show or a spectated man drops it; `TapTwice`: a press held is never a tap, nor one with another key, a button, the wheel or more than 12 px of orbit in
   it). THE FIGURE IS THE HUD'S, NOT THE RENDERER'S: his joints (`character.ts bones`) joined by round-ended strokes as wide as the limb in the

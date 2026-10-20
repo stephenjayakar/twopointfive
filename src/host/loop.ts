@@ -35,7 +35,7 @@ import type { Vec3 } from '../math/vec';
 import type { RenderSettings } from '../settings';
 import type { HudLike, BubblesLike, View, Chapters } from './hud';
 import { TWEEN, type Tween } from './tween';
-import { FINDME, behindYaw, behindStep } from './findme';
+import { FINDME, ctrlTurn, behindYaw, behindStep } from './findme';
 
 /** the showcase tour (game/demo.ts Demo) as the loop sees it */
 export interface DemoLike { readonly active: boolean; caption: string; sub: string; fade: number; update(dt: number): Vec3 | null; chapters(): Chapters; goto(k: number): void; }
@@ -146,7 +146,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   ctx.afterFreeze?.(frozen);
   if (!frozen && input.wheelCtrl) cam.zoom(input.wheelCtrl);                 // Ctrl + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
   const fixed = !frozen && FIXEDSTEP.on && !!ctx.fixedStep?.() && view.clientWidth > 0 && view.clientHeight > 0;
-  const orbit = !frozen && input.orbitDX ? input.orbitDX * 0.006 * FINDME.turn : 0;       // hold Ctrl and move the mouse to orbit (Q / E are the wall hold and the holster now)
+  const orbit = !frozen && input.orbitDX ? ctrlTurn(input.orbitDX) : 0;       // hold Ctrl and move the mouse to orbit (Q / E are the wall hold and the holster now)
   if (orbit && !fixed) cam.rotate(orbit);                                  // (the fixed step turns the camera in the frame's first TICK, below: a turn on a frame with no tick would reach the next tick's record through the frame's own rebuild, and two displays would be two games)
   // Ctrl tapped twice (host/findme.ts `behind`, off unless the player's Options say so): the view comes round to look where his man looked at that moment — a step
   // with each camera step below (a frame's on the free step, a tick's on the fixed one, as the orbit is). The tap's own frame may carry a pixel of orbit (a hand's
