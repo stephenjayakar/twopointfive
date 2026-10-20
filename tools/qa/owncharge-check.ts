@@ -8,7 +8,8 @@
 //           THE KIT'S ONE BIG SLOT (kit.ts BIGSLOT) both cards are asked: a row a thing (those lines, the big slot held off — the page under ?nobigslot),
 //           then the big slot on (the page as it opens): your wall charge is the 'Big slot' row's 'wall charge', offered only with the switch, as a
 //           teammate's is, it fills no pouch, counts in the squad's bag, and nothing caps the squad
-//   door    alone in the office: the count is your card's (none carried = no row), the row sets one in the squad's own setSecs, a plain save waits, a step
+//   door    alone in the office: the count is your card's — the STEALTH card's where a night alone wears one (kit.ts KITDEAL.stealth: none as issued, the
+//           loud card's are not that run's; the lines below put theirs on the card the run wears) — (none carried = no row), the row sets one in the squad's own setSecs, a plain save waits, a step
 //           breaks it off with nothing spent, a door that comes open hands it back, F blows it, a restart puts the card's count back with nothing left set;
 //           on a locked door the row is one more row, none of the lock's rows gives way
 //   squad   the room clear: a charge set by hand comes out of the squad's bag, and what it does when it goes is what a teammate's does on the same door (the
@@ -48,6 +49,16 @@ const isOpen = (d: any) => !d.latched && Math.abs(d.angle) >= 0.6;
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
   const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, own = OWNCHARGE.on, big = BIG?.on, solo = { ...K.KIT_SOLO }, rnd = Math.random;
   try { return await fn(); } finally { K.kitLoad(null, ''); if (BIG) BIG.on = !!big; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; OWNCHARGE.on = own; Object.assign(K.KIT_SOLO, solo); Math.random = rnd; }
+}
+/** YOUR CARD FOR A NIGHT ALONE, AS THE BUILD STAGES IT. Where a stealth mission wears a card of its own (kit.ts KITDEAL.stealth, on in the page: the night
+ *  alone is one) the charges go on THAT card, the way the loadout screen would have them there: as issued its pouches are full of the mission's kit, so what
+ *  fills them besides the launcher's rounds is given up for the charges (kitMission stands the stealth card first, and keeps it as it is put back). The loud
+ *  card gets the same counts, which is all there is where no stealth card exists or the run is a loud one. Then the staging a man alone gets. */
+function soloWith(g: any, counts: { charges?: number; walls?: number }) {
+  Object.assign(K.KIT.members[0], counts);
+  if ((K as any).kitStealthOn?.()) { K.kitMission(K.kitStealthHand(0, false)); const m: any = K.KIT.members[0];
+    for (const f of ['smoke', 'bangs', 'frags', 'shells', 'cams']) m[f] = 0; m.wand = false; Object.assign(m, counts); K.kitMission(null); }
+  K.kitSolo(g);
 }
 const fields = (i: number) => K.kitRows(i).map((r: any) => r.field as string);
 /** a member's pouches emptied (the cans, the grenades, the charges): room for what a check puts on him */
@@ -133,9 +144,11 @@ export async function ownchargeDoor(): Promise<boolean> {
   await kept(async () => {
     const R: any = await hushed(() => rig(11, { stage: false })); const { game: g, D } = R; raise();
     K.KIT.on = true; const d = R.door('breakroom_w'), side = faceToward(d, [20, 0, 18.9]); shut(d);
-    K.KIT.members[0].charges = 0; K.kitSolo(g); const none = standAt(R, d, side);
+    if ((K as any).kitStealthOn?.()) { K.KIT.members[0].charges = 2; (K as any).kitStealthSet(null); K.kitSolo(g);   // (kit.ts KITDEAL.stealth: the night alone is a stealth mission)
+      F.verdict(D.charges === 0, 'a night alone wears the stealth card: as issued it carries no charge, and two on the loud card are not this run\'s', `count ${D.charges} · the loud card's ${K.KIT.members[0].charges}`); }
+    soloWith(g, { charges: 0 }); const none = standAt(R, d, side);
     F.verdict(D.charges === 0 && !none.some((r: any) => r.verb === 'charge') && none.length > 0, 'none on your card: none in the count, and no door offers one', `count ${D.charges} · the door's rows: ${none.map((r: any) => r.verb).join(' ')}`);
-    K.KIT.members[0].charges = 2; K.kitSolo(g); const rows = standAt(R, d, side), row = rows.find((r: any) => r.verb === 'charge');
+    soloWith(g, { charges: 2 }); const rows = standAt(R, d, side), row = rows.find((r: any) => r.verb === 'charge');
     F.verdict(D.charges === 2 && !!row && /set a charge · 2 left/.test(row.line2) && /F  blows it once set/.test(row.line2), 'two on your card: two in the count, and the shut door\'s rows have "set a charge · 2 left"', `count ${D.charges} · rows: ${rows.map((r: any) => `${r.verb} "${r.line2}"`).join(' | ')}`);
     { const pl: any = g.player, face = () => (D as any).samFace(d), free = face(), h0 = pl.holding, d0 = pl.dragging; pl.holding = {}; const held = face(); pl.holding = h0; pl.dragging = {}; const tow = face(); pl.dragging = d0;
       F.verdict(free !== null && held === null && tow === null, 'not with a man in his arm or a body in tow: his hands are full', `hands free: face ${free} · a man held: ${held} · a body in tow: ${tow}`); }
@@ -167,7 +180,7 @@ export async function ownchargeDoor(): Promise<boolean> {
       K.KIT.on = false; shut(st); R.step(2); const n0 = D.charges, s4 = setByHand(R, st, ss), mid = { n: D.charges, set: D.set.length, spent: D.samSpent }; await hushed(() => g.restartEncounter()); R.step(5); K.KIT.on = true;
       F.verdict(s4 > 0 && mid.n === n0 - 1 && mid.set === 1 && mid.spent === 1 && D.charges === n0 && D.set.length === 0 && D.samSpent === 0, 'the same with the kit rule off: the charge left set is gone and its one is back in the bag', `before: ${n0} · set: ${J(mid)} · after the restart: count ${D.charges}, set ${D.set.length}, spent ${D.samSpent}`); K.kitSolo(g); }
     if (K.wallHere()) {
-      K.SLOTS.on = true; K.KIT.members[0].walls = 1; K.kitSolo(g); const w1 = g.wallCharge.carried, can1 = g.wallCharge.affordable; K.KIT.members[0].walls = 0; K.kitSolo(g); const w0 = g.wallCharge.carried, can0 = g.wallCharge.affordable;
+      K.SLOTS.on = true; soloWith(g, { walls: 1 }); const w1 = g.wallCharge.carried, can1 = g.wallCharge.affordable; soloWith(g, { walls: 0 }); const w0 = g.wallCharge.carried, can0 = g.wallCharge.affordable;
       F.verdict(w1 === 1 && can1 && w0 === 0 && !can0, 'wall charges alone are your card\'s too: one carried = one to set by hand, none = none (door charges do not pay for a wall)', `card 1: carried ${w1}, can set ${can1} · card 0: carried ${w0}, can set ${can0} (door charges in the count: ${D.charges})`);
     }
   });
@@ -235,7 +248,7 @@ export async function ownchargeSave(): Promise<boolean> {
   const F = family('owncharge-save: alone, a checkpoint carries your counts and a charge left set on a door');
   await kept(async () => {
     const R: any = await hushed(() => rig(13, { stage: false })); const { game: g, D } = R; raise();
-    K.KIT.on = true; K.KIT.members[0].charges = 2; K.kitSolo(g); const d = R.door('breakroom_w'), side = faceToward(d, [20, 0, 18.9]); shut(d);
+    K.KIT.on = true; soloWith(g, { charges: 2 }); const d = R.door('breakroom_w'), side = faceToward(d, [20, 0, 18.9]); shut(d);
     setByHand(R, d, side); g.teleportPlayer([25.0, 0, 18.9]); R.step(20);
     const s1 = SAVE.saveState(g, { kind: 'harness', force: true });
     R.press('KeyF'); R.step(30); const s2 = SAVE.saveState(g, { kind: 'harness', force: true }), after = { n: D.charges, set: D.set.length };
@@ -264,7 +277,7 @@ export async function ownchargeOff(): Promise<boolean> {
     //  both runs here, after the stand has written it, so this asks of the row alone.)
     const weighs = KITLOAD.on;
     const run = async (on: boolean, n = on ? 2 : 0, weigh = false) => {
-      const R: any = await hushed(() => rig(17, { stage: false })); OWNCHARGE.on = on; KITLOAD.on = weigh && weighs; const g = R.game; g.godMode = false; K.KIT.on = true; K.KIT.members[0].charges = n; K.kitSolo(g);
+      const R: any = await hushed(() => rig(17, { stage: false })); OWNCHARGE.on = on; KITLOAD.on = weigh && weighs; const g = R.game; g.godMode = false; K.KIT.on = true; soloWith(g, { charges: n });
       const a = R.door('breakroom_w'), b = R.door('manager'); shut(a); shut(b); const seen = new Set<string>(); const hashes: string[] = [];
       for (let i = 0; i < 900; i++) {   // a stand at each of two shut doors (one of them locked), a walk off between: the rows are read, nothing is picked
         if (i === 0) g.teleportPlayer(doorPt(a, a.def.width / 2, 0.75, faceToward(a, [20, 0, 18.9]))); if (i === 450) g.teleportPlayer(doorPt(b, b.def.width / 2, 0.75, 1));
