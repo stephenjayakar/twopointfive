@@ -15,12 +15,12 @@ const R0 = 17, R1 = 44, RN = 30.5, RT = 53, RC = 86;   // px: the hole, the rim,
 const GAP = 3;   // degrees left open each side of a wedge
 
 const HINT_OFF = 15, HINT_N = 28, NEAR_W = 0.5;   // px: how far up and right of the cursor the glyph rides (the other way at the view's edge) · points on a floor ring · a point this near the camera's plane is not drawn
-/** a glyph a kind, drawn in a 16 px box about 0,0: a leaf with its knob · courses of brick · head and shoulders · a spot · a thing to work · a man who is not ours · the squad itself */
+/** a glyph a kind, drawn in a 16 px box about 0,0: a leaf with its knob · courses of brick · head and shoulders · a pin on a spot · a thing to work · a man who is not ours · the squad itself */
 const GLYPH: Record<RingHint, string> = {
   door: 'M-4,-6.5h8v13h-8z M1.6,0.4a0.9,0.9 0 1 0 1.8,0a0.9,0.9 0 1 0 -1.8,0',
   wall: 'M-7,-5h14v10h-14z M-7,0h14 M-1,-5v5 M3,0v5 M-4,0v5',
   man: 'M-2.6,-3.6a2.6,2.6 0 1 0 5.2,0a2.6,2.6 0 1 0 -5.2,0 M-5.5,6a5.5,5.5 0 0 1 11,0',
-  floor: 'M-1.6,0a1.6,1.6 0 1 0 3.2,0a1.6,1.6 0 1 0 -3.2,0 M-6,0a6,3.4 0 1 0 12,0a6,3.4 0 1 0 -12,0',
+  floor: 'M0,6.5C-5.4,0.6 -5.2,-6 0,-6C5.2,-6 5.4,0.6 0,6.5Z M-1.7,-1.6a1.7,1.7 0 1 0 3.4,0a1.7,1.7 0 1 0 -3.4,0',
   thing: 'M0,-6l6,6l-6,6l-6,-6z M-2,0h4',
   foe: 'M0,-6l6,11h-12z',
   squad: 'M-6.4,2a1.9,1.9 0 1 0 3.8,0a1.9,1.9 0 1 0 -3.8,0 M2.6,2a1.9,1.9 0 1 0 3.8,0a1.9,1.9 0 1 0 -3.8,0 M-1.9,-3a1.9,1.9 0 1 0 3.8,0a1.9,1.9 0 1 0 -3.8,0',
