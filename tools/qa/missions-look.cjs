@@ -1,6 +1,6 @@
 // MISSIONS LOOK: the mission list (ui/missions.ts) on the REAL page in headless Chromium on the software WebGPU adapter (SwiftShader — no GPU needed): what the
 // fake-DOM probes (tools/qa/missions-probes.ts) cannot see — the screen as laid out and drawn, real key events against main.ts's own listeners, a real page load.
-//   node tools/qa/missions-look.cjs <outDir>          env: PORT (the dev server's, default 5199) · SIZE (default 1280x720) · QUALITY (default verylow) · ONLY=card,solo,quit (default all)
+//   node tools/qa/missions-look.cjs <outDir>          env: PORT (the dev server's, default 5199) · SIZE (default 1280x720) · QUALITY (default verylow) · ONLY=card,solo,quit (default all) · STILLS=0 (no stills)
 // Four pages, one at a time (about eight minutes in all), PASS / FAIL lines, stills beside a report.json, exit 1 on a FAIL or a page error:
 //   card   the list opened off the BOOT card (the renderer still compiling) and still up once the real start card is behind it; a still per mission and one at a
 //          narrow window; the floor plans fetched; S / ↓ / W move, D / A set the defenders; Esc closes the LIST and leaves the card (main.ts's own Esc handler
@@ -42,7 +42,10 @@ const STATE = () => { const r = document.getElementById('missions'), rows = [...
     fits: (() => { const c = r.querySelector('.mcard'); if (!c) return false; const b = c.getBoundingClientRect(); return b.left >= 0 && b.top >= 0 && b.right <= innerWidth && b.bottom <= innerHeight; })(),
     go: (() => { const b = r.querySelector('.mgo')?.getBoundingClientRect(), f = r.querySelector('.mfoot')?.getBoundingClientRect(), sh = r.querySelector('.msheet'); return !!b && !!f && b.height > 0 && b.bottom <= f.top + 0.5 && sh.scrollHeight <= sh.clientHeight + 1; })(),
     clipped: rows.filter(a => a.querySelector('.mtitle').scrollWidth > a.querySelector('.mtitle').clientWidth + 1).map(a => a.dataset.mission) }; };
-const shot = (page, name) => page.screenshot({ path: path.join(outDir, `${name}.png`) });
+// (a still needs a drawn frame, and a pointer click two of them, the row 'stable': on a slow software adapter neither comes inside the wait. STILLS=0 takes no still,
+//  and every press of a row or a button is the element's own click, which waits on no frame: the list's layout and keys are what is checked, not the pointer)
+const shot = (page, name) => process.env.STILLS === '0' ? null : page.screenshot({ path: path.join(outDir, `${name}.png`) });
+const tap = (page, sel) => page.locator(sel).first().evaluate(e => e.click());
 
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
@@ -62,10 +65,10 @@ const shot = (page, name) => page.screenshot({ path: path.join(outDir, `${name}.
     check(s.fits && s.clipped.length === 0, 'the card sits inside the window and no row title is cut', `fits ${s.fits} · cut titles: ${s.clipped.join(', ') || 'none'}`);
     await page.waitForFunction(() => { const c = document.querySelector('#missions .mplan'); return c && c.style.display !== 'none'; }, null, { timeout: 8000 }).catch(() => {});
     const noPlan = [], noGo = [];
-    for (const id of s.ids) { await page.click(`#missions .mrow[data-mission="${id}"]`); await page.waitForTimeout(450); const t = await page.evaluate(STATE); await shot(page, `list-${String(t.sel + 1).padStart(2, '0')}-${id}`); if (!(t.ink > 500)) noPlan.push(`${id} (${t.plan}, ${t.ink} px)`); if (!t.go) noGo.push(id); }
+    for (const id of s.ids) { await tap(page, `#missions .mrow[data-mission="${id}"]`); await page.waitForTimeout(450); const t = await page.evaluate(STATE); await shot(page, `list-${String(t.sel + 1).padStart(2, '0')}-${id}`); if (!(t.ink > 500)) noPlan.push(`${id} (${t.plan}, ${t.ink} px)`); if (!t.go) noGo.push(id); }
     check(noGo.length === 0, 'on every mission the Start button is whole on the sheet with nothing to scroll', noGo.length ? `cut or scrolled: ${noGo.join(', ')}` : `${s.ids.length} of ${s.ids.length} at ${W}×${H}`);
     check(noPlan.length === 0, "every mission's sheet draws its level's floor plan (fetched off /levels/)", noPlan.length ? `blank: ${noPlan.join(' · ')}` : `${s.ids.length} of ${s.ids.length} drawn`);
-    await page.click(`#missions .mrow[data-mission="${s.ids[0]}"]`);
+    await tap(page, `#missions .mrow[data-mission="${s.ids[0]}"]`);
     await page.keyboard.press('KeyS'); const a = (await page.evaluate(STATE)).sel; await page.keyboard.press('ArrowDown'); const b = (await page.evaluate(STATE)).sel; await page.keyboard.press('KeyW'); const c = (await page.evaluate(STATE)).sel;
     await page.keyboard.press('KeyD'); const hard = await page.evaluate(STATE); await page.keyboard.press('KeyA'); const std = await page.evaluate(STATE);
     check(a === 1 && b === 2 && c === 1 && hard.hard && /difficulty=hard/.test(hard.href) && !std.hard && !/difficulty=hard/.test(std.href), 'real keys: S and ↓ move down, W up; D puts the defenders on hard (on the link too), A back', `highlight ${a} ${b} ${c} · ${hard.href} · ${std.href}`);
@@ -75,15 +78,15 @@ const shot = (page, name) => page.screenshot({ path: path.join(outDir, `${name}.
     const tabs = []; for (let i = 0; i < 6; i++) { await page.keyboard.press('Tab'); tabs.push(await page.evaluate(() => { const a = document.activeElement; return a?.closest('#missions') ? (a.textContent || '').trim().toLowerCase() : a?.closest('#menu') ? `MENU:${a.textContent}` : a === document.body ? 'page' : a?.tagName ?? 'none'; })); }
     await page.focus('#missions .mback'); await page.keyboard.press('Enter'); await page.waitForTimeout(150); const viaBack = await page.evaluate(() => ({ list: document.getElementById('missions').classList.contains('on'), mode: window.__menu.mode, search: location.search }));
     check(tabs.some(t => /back/.test(t)) && tabs.some(t => t === 'hard') && tabs.every(t => /back|standard|hard|dawn|midday|grey day|dusk|night|as it is|clear|overcast|rain|downpour|fog|dust|start mission|loadout/.test(t)) && !viaBack.list && viaBack.mode === 'start', "Tab walks the list's own buttons round and round, never the card's under it nor out to the page; Enter on Back presses THAT button — back to the card, nothing started", `Tab ×6: ${tabs.join(' → ')} · ${JSON.stringify(viaBack)}`);
-    await page.click('#menu button:has-text("Missions")'); await page.waitForSelector('#missions.on');
+    await tap(page, '#menu button:has-text("Missions")'); await page.waitForSelector('#missions.on');
     await page.keyboard.press('Escape'); await page.waitForTimeout(150);
     const afterEsc = await page.evaluate(() => ({ list: document.getElementById('missions').classList.contains('on'), mode: window.__menu.mode }));
     check(!afterEsc.list && afterEsc.mode === 'start', "Esc closes the LIST and the start card stays (main.ts's own Esc handler did not start the game under it)", JSON.stringify(afterEsc));
     await shot(page, 'start-card');
     const btns = await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].map(b => `${b.textContent}${b.disabled ? ' (disabled)' : ''}${b.classList.contains('primary') ? ' [primary]' : ''}`));
     check(btns[0] === 'Missions' && btns.includes('Start') && await page.evaluate(() => document.querySelectorAll('#menu .picks .prow').length > 0), 'the real start card: the short list\'s rows lead it (tools/qa/picks-look.cjs), Missions first among the buttons and not the primary one, Start beside it', btns.join(' · '));
-    await page.click('#menu button:has-text("Missions")'); await page.waitForSelector('#missions.on');
-    await page.click('#missions .mrow[data-mission="warehouse-four"]'); await page.waitForTimeout(450); await shot(page, 'list-over-start-card');
+    await tap(page, '#menu button:has-text("Missions")'); await page.waitForSelector('#missions.on');
+    await tap(page, '#missions .mrow[data-mission="warehouse-four"]'); await page.waitForTimeout(450); await shot(page, 'list-over-start-card');
     const want = (await page.evaluate(STATE)).href;
     // (the loadout screen stands between the list and the load — ui/loadout.ts wireMissions: Space opens it, Enter there deploys the mission's own team = the row's own URL)
     await page.keyboard.press('Space'); await page.waitForSelector('#loadout', { timeout: 5000 });
