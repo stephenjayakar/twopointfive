@@ -887,7 +887,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   moves a smoke screen). Who breathes, the rhythm, the mouth and the sprint rule are the puffs' own code path, shared line for line: a blown man
   (`character.ts HARDBREATH`) breathes sooner, through a wider mouth (× √size), denser and warmer (× size), thrown harder (× jet). Only what a breath
   is MADE OF changed. **Falls back to the puffs**, breath by breath: no solver drawing (smoke off or frozen, a preset without the smoke frame flag:
-  `SmokeSystem.drawing()`), `density` 0, or a man past `reach` (16 m) from where the view looks. A man who steps out from under a roof mid-breath
+  `SmokeSystem.drawing()`), `density` 0, or a man past `reach` (12 m) from where the view looks (the frame's far corners are 11 m from it at the game's own zoom). A man who steps out from under a roof mid-breath
   steams for what is left of it. **Look only**: the source carries `look` — `sense.ts CpuSmoke` takes nothing of it, `budget()` does not count it,
   and a step with more sources than the solver holds cuts a look source first (before prio 0), so a shot or a grenade never loses its place to a
   breath. **Switch**: `SNOW_LOOK.steam` — ON in the page (`?breathsteam=0` = the puffs as they were), OFF in the module and on the frozen stand
@@ -895,4 +895,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are `BREATHSTEAM` (authored data like `SNOWBREATH`, not player switches: `__snow.steam` on the console, twelve rows on the debugger's Breath layer).
   **Check**: `bun run tools/qa/probes.ts breathsteam` (families `snow`, `weather`), 9 lines on both stands; `BREATHSTEAM_BREAK=1` (the switch never
   raised) fails 7 on both. Its `digest` line: 300 frames of the pass's room clear stepped by the game with the sources handed over and with none,
-  one run digest, and the same with the senses on the CPU. @@MEASURED@@
+  one run digest, and the same with the senses on the CPU. **MEASURED in the page on the software adapter**
+  (`node tools/qa/breathsteam-page.cjs`: the pass's room clear, verylow, 640 wide, the player in the gateway under `lamp_gate`, five men steaming,
+  breaths made five times as frequent as in play for the stills; `REST=90` then runs the game's own rhythm): 119 of 119 pipelines, none failed, no
+  console error; the solver took every breath (27, 150, 372, 579 fine-lattice bricks at steps 8 to 32, none refused, none held back) and no puff was
+  filed. SIGHT LINES, asked of the game's own sensors through his breath (the probe the guards' lines go through; its stride is 0.11 m, about a
+  breath's width, so many lines never sample one), the least light kept over four runs: across it a hand from his lips 0.848, a forearm out 1.0, down
+  through it 1.0, his eye to a chest three metres ahead 0.984, down its own length from his lips 0.715 (two of the frequent breaths in one line).
+  Nothing in the game reads smoke until a line keeps under 0.8, so a calm breath is read by nothing; a line down the length of two breaths, or through
+  a blown man's (twice the gas, not measured), dips under it for an instant (0.715 is a tenth off that one sight point). `density` 9 is set AT that
+  edge: more shows better and costs sight, like any smoke — the maintainer's call. AT THE GAME'S RHYTHM, five men: 744, 464, 171 fine-lattice
+  bricks one, two and three seconds after the frequent breaths stopped — about 170 of the pool's 4,096 held by five men at rest. The fine lattice's
+  share of the pool is the gun gas's too; past 0.7 of it the solver refuses the thinnest gas first, and that is the breath. SEEN (the same tool's
+  stills): in the volumetric pass alone (debug view 5) each breath is a lit puff the size of his face at his lips with the one before it a forearm
+  out; in the full picture, against the lit lorry and snow behind him, it is a faint pale haze close in (in blocks at verylow's volumetric
+  resolution) and not to be picked out from 8 m, where the PUFFS from the same page (the switch put off live) read plainly as white clouds. Lit gas
+  this thin is far dimmer than a lit surface or a sprite drawn as one: it wants a dark background and a lamp, which that staging is not.
+  TRIED AND PUT BACK: a wide thin cloud the puffs' own size and no thicker along a sight line (`radius` 0.09, `density` 1.4, `temp` 2.5; lines kept
+  0.866 or more): one lit cloud a little larger than his head in the volumetric pass, no plainer in the full picture, and it held the pool 613 then
+  963 bricks for the same five men at the game's rhythm, still rising — three to five times the wisp, on every frame of a snow level. The numbers
+  are rows on the Breath layer for whoever wants it on a GPU. **WHAT IT COSTS**: with the puffs the solver slept on a snow level until a shot or a grenade; with the steam it holds bricks whenever a man
+  in view breathes, so the solver's step and the smoke march run on nearly every frame of a snow level. NEVER TIMED (no GPU here); `?breathsteam=0`
+  is the way back, `reach` the lever (and `radius`: bricks go with the cloud's size). NOT SEEN: on a GPU, against a dark background, moving, a man walking through another's breath (the head's shove is checked by what it
+  asks of the solver, not by a picture), a blown man's breath, a quality above verylow, a level other than the pass. No tally over seeds: the game
+  cannot tell by digest, so none was run.

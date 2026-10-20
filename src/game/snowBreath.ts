@@ -67,11 +67,12 @@ export const SNOWBREATH = {
  *  HOW THICK: a guard's sight line starts at his eye, a hand above his own mouth, and nothing in the game reads smoke until a line has lost a fifth of its light
  *  (guards.ts: (T − 0.3) / 0.5, held to 0‥1), so `density` is kept where a line through the thick of a breath loses less than that. */
 export const BREATHSTEAM = {
-  radius: 0.09,        // m: the gaussian it is let out through (× √size when blown): the puffs' own size, a soft cloud a forearm across and not a jet off the lips.
-                       // What shows is how much of the picture a breath covers; what costs sight is how thick it is along one line. So: wide and thin
+  radius: 0.034,       // m: the gaussian the mouth lets it out through (× √size when blown): a wisp like the barrel's. TRIED AND PUT BACK: 0.09 with `density` 1.4
+                       // and `temp` 2.5, a wide thin cloud the puffs' own size and no thicker along a sight line — it held the pool three to five times
+                       // the bricks (963 for five men, still rising, where this holds about 170) and showed no better in a software still
   cells: 1.5,          // … never under this many cells of the fine lattice (a splat under a cell lays down next to nothing, and flickers)
-  density: 1.4,        // what the mouth lets out a second at its core (× size when blown; the solver's unit: 6 /m of extinction each)
-  temp: 2.5,           // heat a second at its core: what lifts it (the solver: +1.6 m/s² a unit, gone in under a second on the fine lattice)
+  density: 9,          // what the mouth lets out a second at its core (× size when blown; the solver's unit: 6 /m of extinction each)
+  temp: 4,             // heat a second at its core: what lifts it (the solver: +1.6 m/s² a unit, gone in under a second on the fine lattice)
   speed: 0.8,          // m/s out of the mouth at rest (× the jet when blown). The solver's air has next to no drag: this is how far the plume reaches
   push: 12,            // 1/s: how hard the air at the mouth is taken up to that speed
   expand: 2,           // 1/s: how fast the breath opens as it leaves

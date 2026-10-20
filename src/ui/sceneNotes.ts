@@ -193,7 +193,7 @@ export const SCENE_NOTES: Record<string, string> = {
   'SNOWBREATH.runHi': 'm/s: at this he is working as hard as he can',
   'SNOWBREATH.effortUp': 's of running until he is blown',
   'SNOWBREATH.effortDown': 's to get his wind back',
-  'BREATHSTEAM.radius': 'm: the gaussian it is let out through (× √size when blown): the puffs\' own size, a soft cloud a forearm across and not a jet off the lips. What shows is how much of the picture a breath covers; what costs sight is how thick it is along…',
+  'BREATHSTEAM.radius': 'm: the gaussian the mouth lets it out through (× √size when blown): a wisp like the barrel\'s. TRIED AND PUT BACK: 0.09 with `density` 1.4 and `temp` 2.5, a wide thin cloud the puffs\' own size and no thicker along a sight line — it held…',
   'BREATHSTEAM.cells': 'never under this many cells of the fine lattice (a splat under a cell lays down next to nothing, and flickers)',
   'BREATHSTEAM.density': 'what the mouth lets out a second at its core (× size when blown; the solver\'s unit: 6 /m of extinction each)',
   'BREATHSTEAM.temp': 'heat a second at its core: what lifts it (the solver: +1.6 m/s² a unit, gone in under a second on the fine lattice)',
