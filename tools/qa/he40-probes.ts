@@ -25,7 +25,8 @@ const { RING, ringSolve, arcSolve } = await import(`${ROOT}/src/game/launcher.ts
 const { gearText, ringTag, shellTag } = await import(`${ROOT}/src/game/gear.ts`);   // (the kit's words as issued: the old kit's on the frozen stand, the issue kit's under TPS_GEAR=1)
 const { FRAG, FRAG_LOG, fragStatsReset } = await import(`${ROOT}/src/game/frag.ts`);
 const { LAUNCHER, LAUNCHER40 } = await import(`${ROOT}/src/game/weapons.ts`);
-const { KIT, SLOTS, kitRows, kitSet, kitPlayer, kitShow, kitReset } = await import(`${ROOT}/src/game/kit.ts`);
+const { KIT, SLOTS, kitRows, kitSet, kitPlayer, kitShow, kitReset, kitTreeOn } = await import(`${ROOT}/src/game/kit.ts`);
+const { squad40Here } = await import(`${ROOT}/src/game/squad40.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { canSave } = await import(`${ROOT}/src/game/savestate.ts`);
 const { aimGunOn } = await import(`${ROOT}/src/game/aimweight.ts`);   // (the player's aim has weight on the shipped stand: a tap waits for the gun to be on the cursor)
@@ -131,7 +132,9 @@ export async function he40Keys() {
     // the card's issue: the rifle's own three — or, under the pouch rule (the page), what the issued card has room for; a card that is not the rifle's three is WRITTEN at every staging
     const issue = KIT.members[0].shells, asIssued = issue, other = issue === 1 ? 0 : 1;
     if (!row || row.values.join(',') !== '0,1,2,3,4' || (SLOTS.on ? issue < 1 || issue > LAUNCHER40.rounds : issue !== LAUNCHER40.rounds)) fails.push(`your card's row: ${row ? row.values.join(',') : 'missing'}, issued ${issue}`);
-    if (kitRows(1).some((r: any) => r.field === 'shells')) fails.push('a teammate\'s card has the row');
+    // (a teammate's card has the row only where his round can be fired on your order — the card as a tree and squad40.ts in the build; kittree-check.ts holds it)
+    { const his = kitRows(1).find((r: any) => r.field === 'shells'), may = kitTreeOn() && squad40Here();
+      if (!!his !== may || (his && his.values.join(',') !== '0,1')) fails.push(`a teammate's card ${his ? `has the row (${his.values.join(',')})` : 'has no row'} where his round ${may ? 'can' : 'cannot'} be fired on your order`); }
     const pl3 = game.player; pl3.rifle.shells = LAUNCHER40.rounds;
     kitPlayer(game); if (pl3.rifle.shells !== asIssued) fails.push(`as issued wrote ${pl3.rifle.shells}`);
     const took = kitSet(0, 'shells', other); kitPlayer(game); const got = pl3.rifle.shells; kitShow(game); const back = pl3.rifle.shells;
@@ -141,7 +144,7 @@ export async function he40Keys() {
     if (KIT.members[0].shells !== issue || (!SLOTS.on && issue !== LAUNCHER40.rounds)) fails.push(`the card's issue is ${KIT.members[0].shells} (it was ${issue}), the rifle's ${LAUNCHER40.rounds}`);   // (kit.ts writes the number as a literal: the import cycle)
     if (!String(row.note(KIT.members[0])).includes(`${HE40.armM} m`)) fails.push(`the row's note does not say the ${HE40.armM} m it arms at`);
     if (HE40.armM < FRAG.woundM) fails.push(`it arms at ${HE40.armM} m, inside the blast's ${FRAG.woundM} m`);
-    F.verdict(!fails.length, '(d) your kit card has a "40 mm grenades" row, 0 to 4, issued the rifle\'s three (under the pouch rule, what the issued card has room for): the card as issued leaves the rifle\'s three alone, another count is put in the tube, the card coming off gives the rifle\'s own back; teammates have no such row', fails.join('; ') || `issued ${issue} · row "${row.label}" · note "${row.note(KIT.members[0])}"`); }
+    F.verdict(!fails.length, '(d) your kit card has a "40 mm grenades" row, 0 to 4, issued the rifle\'s three (under the pouch rule, what the issued card has room for): the card as issued leaves the rifle\'s three alone, another count is put in the tube, the card coming off gives the rifle\'s own back; a teammate has the row only where his one round can be fired on your order', fails.join('; ') || `issued ${issue} · row "${row.label}" · note "${row.note(KIT.members[0])}"`); }
   game.msg = origMsg;
   return F.done();
 }

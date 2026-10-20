@@ -822,3 +822,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   before. Check line 12 of `wallkill` (the ward's four: 0.53 m as it goes on, his word 1.15 s later at 1.50 m, blown on the word nobody lost;
   `WALLKILL_BREAK=1` now fails 7). The squad never blows a wall charge itself: `blow()` is called by the player's trigger, by the order's row released
   again on a set charge, and by a plan's clock (which does not ask this rule).
+- **A second look before a man settles for open floor** (`frag.ts FRAG.fleeLook`, the same word as the flee's other mends: ON in the page,
+  `?nofleemates`; off in the module and on the frozen stand, `TPS_FLEEMATES=1`; the panel's 'frag ▸ furniture and a mate's corner' box; in the
+  journal's FRAG table, a recording from before the key replays with it off). FOUND 10-20 on the depot throw of `frag-mates` (b5), swept over the
+  moment of the team's walk behind Sam (the check held two moments, both clean at either pace): at 27 of 57 moments (every 3 frames, the page's
+  pace) the thrower, 5 m from where the squad's own grenade would rest and with a mate staying between him and the nearest cover, was dealt OPEN
+  floor 7.3 to 7.8 m off it (inside `woundM`) and wounded there. Not the walk's pace (the old pace: 7 of 14 moments): `fleeSpot` asks 32 turns on
+  rings at 1.2, 2, 3, 4 m, `fleeApart` bars every leg within `fleeLaneM` of a staying mate, the 20-odd covered spots the walk asked were all that
+  mate's, and the covered floor between the rings and the turns was never asked. With the key, a walk that ends on open floor or on nothing AND
+  met covered floor that was a mate's is walked once more on the rings between (`LOOK_RINGS`), each turned half a step: the same tests and score;
+  only cover, or floor past `woundM`, is taken from it; it hands nobody a leg that shoulders a mate (the `bar` fallback is the first walk's alone).
+  A man the first walk finds cover for, and a man with no mate's cover in reach, is dealt exactly as before — the second walk is not run for him.
+  It runs for either side's men (a defender beside a mate's cover too) and under the squad's duck forecast, which asks `fleeSpot` as the deal does
+  (`squad.md`). COST: the deal of the man it runs for is about twice the first walk's (a review's measure on the office before the walk was
+  narrowed to a mate's cover: 0.19 → 0.38 ms a call); nobody else pays. CHECK: `frag-mates` (b7), either stand: the four and Sam stood by hand
+  where that deal found them — key off, open floor 7.6 m off it; key on, covered floor, no nearer a staying mate than a leg may pass. (b8), the
+  page's stand: the throw at ten moments of the walk, one of ours hurt at no more than 1 (0 measured; 4 with the key off), and the journal and
+  `FROZEN_HOLDS` row. `FLEELOOK_BREAK=1` = the key left off: (b7) fails on both stands, (b8) on the page's. MEASURED headless only, ONE staging
+  (the depot's four, seed 1): 27 of 57 moments → 4 of 57 at the page's pace; at the old pace, with the walk not yet narrowed, 7 of 14 → 4 of 14.
+  `frag`, `squadthrow` and `picture` hold on both stands. The soak on the page's stand (seeds 1, 2, 3, 12 minutes) prints the
+  same lines with the change and without it (it is red there either way, as the tour is). NOT MEASURED: defenders getting off the player's
+  grenades, any tally over seeds or levels. WHAT IS LEFT (the 4): one deal where the second walk finds nothing either; two where a man dealt cover is dealt again
+  onto floor in its line; one who gets down on a covered spot with half of him still in its line (the same with the key off). The lattice is
+  still a lattice: cover between both walks is missed, and a search of the floor round a mate's cover would be the better rule. Never seen on a
+  GPU, nobody has played it.
+- **The player's grenade and 40 mm checks run on the loud card** (`frag-player`, `he40-*`, `burst-breaks`; no game code). A night alone on the page
+  wears your STEALTH card (`kit.ts KITDEAL.stealth`), which issues no frag and no HE round, so on the shipped stand these stood a Sam with nothing
+  to throw or fire and were red from the step that brought that card. They ask the grenade and the round, which only the loud card issues: they
+  are on the probe runner's hold for checks written against one card (`probes.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
+  stealth run is issued is `kitstealth-check.ts`'s. `he40-keys` (d) also said 'teammates have no such row': a teammate's card has the row where
+  his one round can be fired on your order (the card as a tree and `squad40.ts`; `kittree-check.ts` holds it), and the line now asks exactly that.
