@@ -467,6 +467,8 @@ export class SquadOrders {
   menu: Menu | null = null;
   /** cmdring.ts: the menu is up as a ring on a held key — where it was opened and the lit wedge (null: no ring; never set with CMDRING.on false) */
   cmdRing: RingState | null = null;
+  /** the ring's key is down and its ring not yet up (cmdring.ts holdSecs): the game's clock when it went down, and what the cursor was on */
+  cmdPress: { t0: number; t: OrderTarget } | null = null;
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
   /** the plan laid for the word, and the one kept for the next try (planlay.ts — nothing is ever in it with that switch off) */
@@ -924,12 +926,12 @@ export class SquadOrders {
     this.sync();
     if (this.escUsed) { this.escUsed = false; input.pressed.delete('Escape'); }
     const g = this.g, v = this.view;
-    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.plan.drag = null; this.plan.up = false; v.input = v.cam = v.canvas = null; return; }
+    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; this.plan.drag = null; this.plan.up = false; v.input = v.cam = v.canvas = null; return; }
     v.input = input; v.cam = cam; v.canvas = canvas;
     if (this.lay.laid.length) layPrune(g);   // (planlay.ts: a man who is down is off the plan)
     if (input.hit(K.whoKey)) this.stepWho(1, this.targetUnder(input, cam, canvas));   // who: the man under the cursor, else the next element
     planInput(this, input, cam, canvas, dt);   // (planmode.ts: the chains move on; Shift + the ring's key, the word's key at a chain's pause, and — the mode up — the mouse; a return on its first line with the switch off)
-    if ((CMDRING.on || this.cmdRing) && this.ringInput(input, cam, canvas)) return;   // (cmdring.ts: the ring's key — this frame's order input is the ring's)
+    if ((CMDRING.on || this.cmdRing || this.cmdPress) && this.ringInput(input, cam, canvas)) return;   // (cmdring.ts: the ring's key — this frame's order input is the ring's)
     const key = input.hit(K.key), mid = K.mouseOpens && input.mmbHit();
     const M = this.menu;
     if (!M) {   // no menu at the top of the frame: the quick key, or the press that puts it up — and nothing else in this frame is the menu's
@@ -976,9 +978,21 @@ export class SquadOrders {
     if (!R) {
       // (Shift with it is plan mode's toggle, planmode.ts: read ahead of this · the key is also the back key, backkey.ts: with a Space list, a running verb or the
       //  launcher's arc to back out of, the press is theirs, as it is the menu's with a menu up)
+      // THE KEY DOWN AND NO RING YET (holdSecs): let go, it was a tap — the quick key's own order on what the cursor was on, and no menu was ever up;
+      // still down when the hold is over, the ring goes up for that thing. Until then nothing of the frame is the ring's: his trigger, his digits, the
+      // quick key and the menu's key are all as they are with no key down. A tap is never lost to another key going down inside it (the next key of a
+      // quick hand: Space, the menu's key) — only the RING is: with a menu, a list or a verb up when the hold is over, none opens
+      const P = this.cmdPress;
+      if (P) {
+        if (!C.on || input.pressed.has('Blur') || input.pressed.has('Paused')) { this.cmdPress = null; return false; }
+        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.quickGive(P.t); return true; }
+        if (g.time - P.t0 < C.holdSecs - 1e-6) return false;
+        this.cmdPress = null; return this.backFree() && this.ringUp(P.t, input, canvas, g.time - C.tapSecs);   // (the hold was the wait: the cursor counts at once)
+      }
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
-      return this.ringUp(input, cam, canvas, g.time);
+      if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas) }; return true; }
+      return this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, g.time);
     }
     const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
     input.pressed.delete(INTERACT_KEY);   // (Sam's own ring is not opened under this one: interact.ts)
@@ -1021,9 +1035,9 @@ export class SquadOrders {
     else { this.menu = null; CMDRING_STATS.cancelled++; }
     return true;
   }
-  /** the order menu put up as a ring on what the cursor is on (false: no menu opened there). `t0`: the clock its tap guard counts from */
-  private ringUp(input: Input, cam: FollowCamera, canvas: View, t0: number): boolean {
-    if (!this.open(this.targetUnder(input, cam, canvas))) return false;
+  /** the order menu put up on `t` as a ring at the cursor (false: no menu opened there). `t0`: the clock its tap guard counts from */
+  private ringUp(t: OrderTarget, input: Input, canvas: View, t0: number): boolean {
+    if (!this.open(t)) return false;
     this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
     // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
     this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, t0); this.ringSel(); CMDRING_STATS.opened++;
@@ -1032,24 +1046,26 @@ export class SquadOrders {
   /** PLAN MODE'S RING (planmode.ts: the right button kept down): the same ring, kept up by that button and given when it is let go. The hold was the
    *  wait, so the cursor counts at once (no tap to guard) */
   ringByButton(input: Input, cam: FollowCamera, canvas: View): boolean {
-    if (!this.backFree() || !this.ringUp(input, cam, canvas, this.g.time - CMDRING.tapSecs)) return false;
+    if (!this.backFree() || !this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, this.g.time - CMDRING.tapSecs)) return false;
     this.cmdRing!.rmb = true; return true;
   }
-  /** the ring's key would open a ring now: Shift not down (that is plan mode's toggle, planmode.ts) and the key free */
-  private ringFree(input: Input): boolean { return !input.down('ShiftLeft') && !input.down('ShiftRight') && this.backFree(); }
+  /** the ring's key would open a ring now: the key free, and — with plan mode on (planmode.ts: Shift + the key is its toggle) — Shift not down. With that
+   *  mode off Shift is only his sprint, and the key orders as it does at a walk */
+  private ringFree(input: Input): boolean { return !(CMDRING.plan && (input.down('ShiftLeft') || input.down('ShiftRight'))) && this.backFree(); }
   /** the ring's key is free: no menu up and nothing the key backs out of instead (backkey.ts: a Space list, a running verb, the launcher's arc) */
   backFree(): boolean { return !this.menu && !this.g.player.launchHeld && !backableInteract(this.g); }
   /** What Tab would open on, for a hint drawn before the key is pressed (null: the switch off, no squad, or the key would open no ring now — ringFree): the
    *  kind of thing, where the glyph goes — beside the cursor, or in the middle of a ring that is up, whose target it then is — how much larger than its px it
    *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
    *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
-  hintView(): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null } | null {
+  hintView(): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null } | null {
     const v = this.view; if (!CMDRING.on || !CMDRING.hint || !this.active || !v.input || !v.cam || !v.canvas) return null;
     const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
-    if (!R && !this.ringFree(v.input)) return null;
+    if (!R && !this.cmdPress && !this.ringFree(v.input)) return null;
     // (before the key the outline is drawn every frame under a view that moves: hover()'s answer, kept while the cursor rests, is asked again when it has)
     if (!R) { const c = v.cam, k = this.hovCam; if (k[0] !== c.pos[0] || k[1] !== c.pos[1] || k[2] !== c.pos[2] || k[3] !== c.yaw || k[4] !== c.pitch) { k[0] = c.pos[0]; k[1] = c.pos[1]; k[2] = c.pos[2]; k[3] = c.yaw; k[4] = c.pitch; this.hov = null; } }
-    const t = R ? M!.target : this.hover(); if (!t) return null;
+    const P = R ? null : this.cmdPress;   // (the key down, the ring not yet up: the thing it went down on, its outline as bright as the ring's — the press is seen to land)
+    const t = R ? M!.target : P ? P.t : this.hover(); if (!t) return null;
     const kind: RingHint = t.kind === 'door' ? 'door' : t.kind === 'foe' ? 'foe' : t.kind === 'floor' ? (t.thing ? 'thing' : t.wall ? 'wall' : 'floor') : t.man ? 'man' : 'squad';
     let seg: [Vec3, Vec3] | null = null, ring: { at: Vec3; r: number } | null = null; const Y = 0.03, C = CMDRING;
     const at = (p: Vec3, r: number) => ({ at: [p[0], Y, p[2]] as Vec3, r });
@@ -1062,7 +1078,7 @@ export class SquadOrders {
       case 'floor': case 'thing': ring = at((t as OrderTarget & { kind: 'floor' }).at, C.hintSpotM); break;
       case 'squad': break;
     }
-    return { kind, x: R ? R.ax : v.input.mouseX, y: R ? R.ay : v.input.mouseY, zoom: R ? R.z : ringZoom(v.canvas.clientWidth, v.canvas.clientHeight), held: !!R, tone: this.toneOf(R ? M!.men : this.recipients(t)), seg, ring };
+    return { kind, x: R ? R.ax : v.input.mouseX, y: R ? R.ay : v.input.mouseY, zoom: R ? R.z : ringZoom(v.canvas.clientWidth, v.canvas.clientHeight), held: !!R || !!P, press: !!P, tone: this.toneOf(R ? M!.men : this.recipients(t)), seg, ring };
   }
   /** the menu's own highlight follows the lit wedge (what reads the highlighted row — a throw's arc on the floor — reads the ring's) */
   private ringSel() { const M = this.menu, R = this.cmdRing; if (!M || !R || !R.lit) return; const i = M.rows.findIndex(r => r.key === R.lit); if (i >= 0) M.sel = i; }

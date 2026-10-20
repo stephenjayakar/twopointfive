@@ -105,7 +105,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   throw page on G, 'go'), the 'wait for my word' row (a ring's order goes at once), picking several men (one click is one man). B, X and T work beside it;
   with the ring on, Tab is not the debug tools' key (`main.ts`; `TABKEY.does` is 'off' in the page anyway). A load, or the tick put off, puts a held ring away
   (`ringRestore`). CHECK: `bun run tools/qa/cmdring-check.ts` (`probes.ts cmdring`, family squadorders), 17 lines through the game's own input on the office
-  room clear, the check raising the switch itself; `CMDRING_BREAK=1` (the switch left off) fails 13 of the 17 on both stands (the four that hold are the ones that say 'as it was'). SEEN: the 17 lines on both
+  room clear, the check raising the switch itself (22 lines since the tap's own rule, the next bullet); `CMDRING_BREAK=1` (the switch left off) fails 18 of the 22 on both stands (the four that hold are the ones that say 'as it was'). SEEN: the first 17 lines on both
   stands, one seed; the page on the software adapter with `?cmd` through real key and mouse events (the ring draws at the cursor and whole at the view's
   edge, the lit wedge fills, a tap stacks, a digit and the cursor each light a wedge and the key up gives it, a page turns and lights nothing, a click on a
   man tints the ring his pair's colour and fires nothing, no console or GPU error) and without it (Tab opens nothing). The hint on the same page, at 960 ×
@@ -120,10 +120,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   left sits under the squad panel. NEVER seen on a GPU, never played by a hand: whether the hold feels right, whether the ring hides what it is opened on,
   and whether Sam's aim swinging with the cursor matters are the maintainer's to judge. No tally was run: with the switch off nothing moves, and the ring
   gives only orders the menu already gave.
+- **A tap of the ring's key opens no ring** (`CMDRING.holdSecs`, 0.2 s, `SquadOrders.cmdPress` in `orders.ts ringInput`; the maintainer after playing
+  the ring, 10-20: "let's focus on just single tab for now (the reworked B equivalent)", "it does feel like a bit of a regression from B on a single
+  playthrough", "we shouldn't open the radial menu on just a single tab press, only after some (very short) delay"). THE RULE: the key going down opens
+  nothing. It remembers what the cursor was on (`cmdPress.t`) and the cursor hint's outline goes as bright as the ring's, so the press is seen to land
+  (`hintView().press`; the glyph stays beside the cursor). Let go inside `holdSecs`, the quick key's own order is given on that thing (`quickGive`:
+  B's order, word for word, the autopilot's pick included) and no menu was ever up. Still down when the hold is over, the ring goes up for that thing,
+  at the cursor where it now is, and the cursor counts at once (the hold was the wait; `tapSecs` guards a tap only with the hold at 0). WHAT THE TAP
+  NO LONGER LOSES, each a way the first build's tap could differ from B: a ring was opened and shut for it (a flash, and a tap slower than `tapSecs`
+  with the hand moving lit another wedge and gave THAT order); a left click inside it put the ring away and gave nothing (now it is his trigger, and
+  the order still goes); a menu that would not open on the thing gave nothing; Shift down refused the key (his sprint: now only when plan mode is on,
+  whose toggle Shift + the key is, `ringFree`). Another key going down inside the tap never loses it either (Space, the menu's key); only the RING is
+  not put up over a menu, a list or a running verb when the hold ends. SWITCH: the knob is in the ring's own table, so it rides the ring's switch
+  (`?cmd`; both stands off). `holdSecs` 0 = the ring the frame the key goes down, as first built; `journal.ts applyKnobs` sets 0 for a recording whose
+  table has no `holdSecs`, and `ringRestore` clears a press a load finds. WHAT `?cmd` RAISES NOW: the Tab key, its hint and Space's ring, as before;
+  NOT plan mode, which is `?cmd&cmdplan` (with it on, Shift + Tab is the toggle, so a tap made at a sprint orders nothing: the reason it left the
+  default while the single key is being got right). CHECK: `cmdring-check.ts` lines 15 to 19 through the game's own input (a tap held 10 of the 12
+  frames shows no ring, no menu and nothing listed, the hint pressed, and gives 'move' on the key up with no ring ever opened · the cursor swept 330 px
+  with a left click inside the tap, and the menu's key inside another: the order goes to where the key went down · kept down: nothing at 11 frames,
+  then the ring for the spot the key went down on, at the cursor 184 px on, wedge 2 lit by the flick and given on the key up · Shift down orders with
+  plan mode off and toggles that mode with it on · the hold at 0 is the ring at once, and a recording with no `holdSecs` applies 0); `planmode-check`
+  line 2 keeps the key down past the hold. SEEN: 22 of 22 on both stands, one seed; `CMDRING_BREAK=1` fails 18 of 22 on both. NEVER seen on a GPU and
+  never played: whether 0.2 s is the right hold, and whether an order on the key coming UP (not going down, as B's is) is quick enough to feel like B,
+  are the maintainer's to say. No tally run: the switch is off on both stands.
 - **Plan mode, a prototype** (`src/game/planmode.ts`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that
   requires explicitly leaving"; the design: `rebuild/commanding/command-mode.md`). OFF in the module and on BOTH stands (no `FROZEN_HOLDS` row: it is
-  not a shipped-on rule); the page raises it with the ring (`?cmd`), `?nocmdplan` or the debugger's tick 'Tab ▸ the ring ▸ plan mode on Shift+Tab'
-  leaves it off; the journal turns it off for a recording from before the key; it needs the ring's own switch. SHIFT+TAB TOGGLES IT, where Tab is
+  not a shipped-on rule); the page raises it only when asked beside the ring (`?cmd&cmdplan`, or the debugger's tick 'Tab ▸ the ring ▸ plan mode on
+  Shift+Tab'; `?cmd` alone was enough until the maintainer's 10-20 word to get the single key right first, the bullet above); the journal turns it off for a recording from before the key; it needs the ring's own switch. SHIFT+TAB TOGGLES IT, where Tab is
   free (with a menu, a Space list, a verb or the launcher's arc to back out of, Tab backs out, Shift or no). WHILE IT IS UP THE MOUSE IS THE SQUAD'S:
   Sam neither fires nor aims (`planAfter`, at the end of `orders.input`, strips both buttons from the tick's copy), and Shift is not his sprint. SAM
   STANDS AND THE VIEW IS THE HAND'S (the maintainer, 10-20: "your player character is stuck, wasd moves the camera around … it should feel like you're
