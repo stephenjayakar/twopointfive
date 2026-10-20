@@ -50,7 +50,7 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
 - **One model for presentation and AI.** What the AI senses is what the picture shows (light, smoke, sound paths). A GPU value reaches
   game code only through a named `Game.sensors` query with a headless stand-in.
 - **Player-facing rules.** Show, not tell. No digit above 5 on a menu. No compass words on the HUD or in a door's name. Never harder
-  by hit points. Teammates never sprint. Level and effects numbers tuned in the viewer are authored data.
+  by hit points. Teammates walk slower than the player and run only for a reason (`teampace.ts`). Level and effects numbers tuned in the viewer are authored data.
 - **Git.** Work on your own branch; never push to `main` (it moves only by a PR the maintainer merges); no force-push; never
   `git stash`; never `cd` into `.worktrees/*` (`git -C`). Unsigned commits are fine (`git -c commit.gpgsign=false commit`). Human-style
   messages only: no attribution lines, no tool trailers, no model names anywhere in the repo. This repo is PUBLIC: nothing from

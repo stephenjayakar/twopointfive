@@ -176,7 +176,7 @@ export const ORDERS = {
   followBack: [1.3, 2.4], crumb: 0.4, trailM: 10,
   /** fall in's pace: Sam's own speed plus `gain` × how far the man is off his place, between the walk and `run` — which is no run: the most a teammate's legs
    *  are asked for (guards.ts PACE.max), so a Sam who sprints (4.7) leaves his file behind and it closes up at its own pace when he stops (it was 4.7: the file
-   *  sprinted with him) — no gear changes in view */
+   *  sprinted with him) — no gear changes in view. With teampace.ts on the pace is teamFollow's: a share of his walk, and a run while he runs */
   run: 2.2, walk: 1.5, gain: 1.5,
   /** Sam stopped: a follower already between `nearM` and his file distance + `bandM` of him, with nothing between them, stays where he is — he does not walk
    *  round Sam to an exact place (Sam leans out past a corner and back: nobody follows the lean into the open) */

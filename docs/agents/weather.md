@@ -363,8 +363,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     3.3 is about two fifths; a sprint's 4.7 is 1), × `runMess` (0‥1, the run's master: 0 = a sprinter's print is a walker's). With it: the print itself up to
     `runLen` longer (the boot slides), the heel's scuff (1 + `runDrag`) × and the toe's (1 + `runToe`) × as long and `runDeep` deeper, the bank's throw
     (1 + `runKick`) ×, the lip's break (1 + `runCrumble`) ×, (1 + `runClods`) × the clods landing (1 + `runFar`) × as far, and a SPRAY of up to `spray` more
-    thrown out BEHIND the print, the way the foot came from, up to `sprayFar` m in a fan `sprayFan` rad either side. Teammates never sprint: it shows in the
-    player's trail and a defender's who runs. `probes.ts snowtracks` line `sprint` (the fixed footfalls at 1.4, 3.3 and 4.7 m/s: 1,602 / 2,127 / 2,759 texels
+    thrown out BEHIND the print, the way the foot came from, up to `sprayFar` m in a fan `sprayFan` rad either side. It shows in the
+    player's trail, a defender's who runs and a teammate's where he runs (team-feel.md, `TEAMPACE`). `probes.ts snowtracks` line `sprint` (the fixed footfalls at 1.4, 3.3 and 4.7 m/s: 1,602 / 2,127 / 2,759 texels
     marked; the sprint twice the same bytes; runMess 0 = the walk's bytes), both stands; under `SNOWTRACKS_BREAK=1` the sprinter is handed over as a walker and
     the line fails. Never seen on a GPU.
     THE SHADER'S SHARE (`snowPrint`, `snowShade`): where the byte is above 0, world-anchored `detailNoise` (6 cm, and 2.7 cm while a pixel can hold it) makes
@@ -867,7 +867,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the open): effort rises in `up` 2.5 s of running (was 4) and falls over `down` 14 s (12); blown, a breath comes every `every` 0.95 s (1.3), is `puffs`
   4 records long (3) of `count` 9 puffs (5), thrown at `jet` 3.2 × the calm speed (1.3 ×), `size` 2.0 × as big (1.5 ×), and carries `carry` 0.85 of the
   runner's own speed (0.6) so it trails behind him. **Chest** (anywhere): `chestAmp` 4.2 (2.6) at `chestRate` 0.9 Hz (0.62), up in `chestUp` 2.5 s (4),
-  down over `chestDown` 12 s (8). At rest or at a walk, nothing changes. Teammates never sprint, so this is the player and whoever runs (a defender
+  down over `chestDown` 12 s (8). At rest or at a walk, nothing changes. This is the player and whoever runs (a teammate where team-feel.md's `TEAMPACE` has him run, a defender
   running to a post steams the same); a teammate at his fastest walk (2.2 m/s) is a seventh of the way to blown in steam, his chest at rest. **Switch**: `HARDBREATH.on` — ON in the page (`?hardbreath=0`), OFF in the module and on the frozen stand
   (`TPS_HARDBREATH=1`; shipped pins it off with `TPS_HARDBREATH=0`); registry + `JOURNAL_KNOBS`, a recording from before the key replays with it off.
   The chest moves bones, so it is a sim change behind the switch; the steam is picture only. **Check**: `bun run tools/qa/probes.ts hardbreath`

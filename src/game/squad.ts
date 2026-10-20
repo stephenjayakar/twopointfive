@@ -57,7 +57,7 @@ function strafeAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean
 
 export function runGuardScript(g: Game, gd: Guard, dt: number) {
   const s = gd.script!; const c = gd.char;
-  const speed = teamPace(g, gd, s.speed ?? g.tune.guardWalk);   // (a teammate's legs: guards.ts PACE — never more than a purposeful walk, whatever the order or the drill asks)
+  const speed = teamPace(g, gd, s.speed ?? g.tune.guardWalk);   // (a teammate's legs: guards.ts PACE — never more than a purposeful walk, whatever the order or the drill asks; teampace.ts on: a share of the player's walk, and a run only for a reason)
   const legs = teamLegs(g, gd, speed);   // (… × his card, for the legs walked HERE — the strafe and the settle; followPath weighs its own: kitload.ts)
   let fightFace = s.over && s.over.walk && s.over.face !== null ? s.over.face : null;
   if (fightFace !== null) { const w = walkWatch.get(gd), t = g.time;

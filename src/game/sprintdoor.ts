@@ -3,7 +3,7 @@
 //
 // What a run at an unlocked door was: the leaf flung at 7.5 rad/s with the loud 'bash' and not a centimetre a second off his run — from EITHER face: the one it
 // opens toward was hauled round through his own body at the same speed for the same nothing. A door weighed nothing and had no front or back to a runner.
-// Now, for the player at a sprint (a teammate never sprints; a guard at a run is as he was):
+// Now, for the player at a sprint (a teammate at a run — teampace.ts — and a guard at one are as a running man always was):
 //   · THE FACE IT OPENS AWAY FROM — a shoulder through it (`bashed`): the leaf leaves his shoulder at `bashVel` (faster than he runs: it leads him), he keeps
 //     `keep` of his speed square on (a glancing shoulder costs less: the share is taken off the part of his run that went INTO the leaf) and has it back by the
 //     sprint's own acceleration, about a quarter of a second; his body turns the shoulder nearer the latch into it for `leanSecs`, his head staying on the run.

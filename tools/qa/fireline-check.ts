@@ -42,10 +42,14 @@ async function arm(o: Arm) {
   const { FRIENDS } = await import(`${ROOT}/src/game/friends.ts`);
   const { hostileTo } = await import(`${ROOT}/src/game/teams.ts`);
   const { PICTURE } = await import(`${ROOT}/src/game/picture.ts`);
+  const { TEAMPACE } = await import(`${ROOT}/src/game/teampace.ts`);
   const log = console.log, warn = console.warn; if (!VERBOSE) console.log = console.warn = () => { };
   try {
     const R: any = await rig(5101, { stage: 'rc' }); const { W, game, input } = R, pl = game.player, O = game.orders; if (stood === null) stood = !!FIRELINE.on;
     FIRELINE.on = o.rule && !BREAK; Object.assign(FIRELINE, o.knobs ?? {}); FRIENDLYFIRE.on = true; FRIENDS.lowReady = false; FRIENDS.noSnap = true;
+    // the team's slower walk (teampace.ts) is held off here: arms (6) and (11) stand Sam where one cell of floor behind him is 2 mm outside the lane's berth
+    // at the moment a man walking at the orders' own pace looks for his way round, and inside it a half second later. The pace is teampace-check.ts's.
+    TEAMPACE.on = false;
     for (const k of Object.keys(ST)) (ST as any)[k] = 0; const hit0 = FF.samOnMate;
     const mate = R.ops[0], other = R.ops[1], foes = R.hostiles.filter((h: any) => h.state !== 'dead'), foe = o.foe ? foes[0] : null; if (foe) foe.god = true;   // (he is there to have a line, not to be shot)
     const put = (gd: any, p: number[]) => { gd.char.pos[0] = p[0]; gd.char.pos[2] = p[2]; gd.char.vel[0] = gd.char.vel[2] = 0; gd.path = []; gd.pathGoal = null; };
