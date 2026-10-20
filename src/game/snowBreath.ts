@@ -11,6 +11,13 @@
 //             mouth along where the head faces, a little down, with a share of his own walk. The puff's drag stops it inside a hand's length. Two things tell it from
 //             dust, both carried by ONE byte of the record's colour word (render/particles.ts EmitOpts.steam; shaders `steamIs` / `steamOf`): its share of the puff's
 //             opacity, and that it rises where dust settles.
+//   REAL STEAM (SNOW_LOOK.steam, the table BREATHSTEAM below; the maintainer, 10-20: 'the smoke from the gun muzzle is fine so maybe breath should just work like
+//             that'): with the switch on a breath is not sprites at all. It is ONE source handed to the smoke solver for as long as he breathes out — the fine
+//             lattice the gun's gas lives on, a source that rides his mouth and takes its velocity from where his head faces and how he walks, turn by turn — so
+//             what is in the air is the solver's own gas: lit and shadowed by the volumetric pass as gun gas is (its own shadow, a lamp's shafts), carried by the
+//             wind the solver takes, stirred by a man who walks through it (Game.smokeWake's shoves, and one more at head height from here), thinned and given
+//             back by the fine lattice's own rule. Who breathes, when and how hard are the lines above, unchanged; off (or with no solver drawing, or past
+//             `reach` from where the view looks) the breath is the puffs it was.
 //   NOBODY    reads any of it: no eye, ear or foot, no step of the game. Its dice are its own (never Math.random, never the game's die), its clock is the frames'
 //             dt, and it files with its own seeds so that no other effect's births are dealt differently for it. tools/qa/snowbreath-check.ts.
 import { SideMap } from '../math/side';
@@ -54,14 +61,37 @@ export const SNOWBREATH = {
   effortDown: 12,      // s to get his wind back
 };
 
-export interface BreathStats { active: boolean; why: string; men: number; shown: number; breaths: number; records: number; births: number; frames: number; /** records filed per man (Character.id) */ by: Record<number, number>; }
-interface Man { ph: number; pace: number; effort: number; n: number; left: number; /** records this breath is filed as */ of: number; gap: number; step: number; shows: boolean; }
-interface BreathState { seed: number; men: WeakMap<Character, Man>; stats: BreathStats; }
+/** THE STEAM'S NUMBERS (SNOW_LOOK.steam: the breath through the smoke solver). Set from the solver's arithmetic and from software-rendered stills, NEVER SEEN ON A
+ *  GPU and never timed — the maintainer's to move (`__snow.steam` on the console, live with the next breath). Authored data, not player switches. The rhythm, the
+ *  mouth, the pitch and how much of his walk it leaves with are SNOWBREATH's (and the hard breath rule's) as for the puffs: only what the gas is made of is here.
+ *  HOW THICK: a guard's sight line starts at his eye, a hand above his own mouth, and nothing in the game reads smoke until a line has lost a fifth of its light
+ *  (guards.ts: (T − 0.3) / 0.5, held to 0‥1), so `density` is kept where a line through the thick of a breath loses less than that. */
+export const BREATHSTEAM = {
+  radius: 0.034,       // m: the gaussian the mouth lets it out through (× √size when blown): a wisp like the barrel's. TRIED AND PUT BACK: 0.09 with `density` 1.4
+                       // and `temp` 2.5, a wide thin cloud the puffs' own size and no thicker along a sight line — it held the pool three to five times
+                       // the bricks (963 for five men, still rising, where this holds about 170) and showed no better in a software still
+  cells: 1.5,          // … never under this many cells of the fine lattice (a splat under a cell lays down next to nothing, and flickers)
+  density: 9,          // what the mouth lets out a second at its core (× size when blown; the solver's unit: 6 /m of extinction each)
+  temp: 4,             // heat a second at its core: what lifts it (the solver: +1.6 m/s² a unit, gone in under a second on the fine lattice)
+  speed: 0.8,          // m/s out of the mouth at rest (× the jet when blown). The solver's air has next to no drag: this is how far the plume reaches
+  push: 12,            // 1/s: how hard the air at the mouth is taken up to that speed
+  expand: 2,           // 1/s: how fast the breath opens as it leaves
+  attack: 0.08,        // s for a breath to come up (it tails off over its last quarter)
+  jitter: 0.3,         // how much its heading and speed wander frame to frame: what keeps two breaths from being one shape
+  carryK: 0.5,         // × the share of his own velocity the puffs leave with (`carry`): in air that does not stop it, a runner's breath is left behind him, not thrown ahead
+  wake: 0.16,          // m: a walking man's head shoves the smoke it passes through, this wide (the solver's push; 0 = his hips and chest alone, as any smoke)
+  reach: 12,           // m from where the view looks: a man further off breathes puffs (the frame's far corners are 11 m from it at the game's own zoom, and a breath
+                       // holds some ninety bricks of the fine lattice for two seconds: the men nobody can see should not; 0 = every man steams)
+};
+
+export interface BreathStats { active: boolean; why: string; men: number; shown: number; breaths: number; records: number; births: number; frames: number; /** records filed per man (Character.id) */ by: Record<number, number>; /** breaths handed to the smoke solver as steam (SNOW_LOOK.steam), and the men shown steaming so this frame */ steam: number; steaming: number; }
+interface Man { ph: number; pace: number; effort: number; n: number; left: number; /** records this breath is filed as */ of: number; gap: number; step: number; shows: boolean; /** this breath is steam through the solver */ steam: boolean; /** the breath (its `n`) whose source rides his mouth now, −1 = none */ src: number; /** the frame he was last asked on (a source's track lets go of a man nobody asks about any more) */ at: number; }
+interface BreathState { seed: number; men: WeakMap<Character, Man>; stats: BreathStats; /** frames run, never reset */ tick: number; }
 const states = new SideMap<Game, BreathState>('snowBreath.states');
-const fresh = (): BreathStats => ({ active: false, why: 'never run', men: 0, shown: 0, breaths: 0, records: 0, births: 0, frames: 0, by: {} });
+const fresh = (): BreathStats => ({ active: false, why: 'never run', men: 0, shown: 0, breaths: 0, records: 0, births: 0, frames: 0, by: {}, steam: 0, steaming: 0 });
 function stateOf(g: Game): BreathState {
   let s = states.get(g);
-  if (!s) { s = { seed: 0x0b7ea7b5, men: new SideMap(), stats: fresh() }; states.set(g, s); }
+  if (!s) { s = { seed: 0x0b7ea7b5, men: new SideMap(), stats: fresh(), tick: 0 }; states.set(g, s); }
   return s;
 }
 const mix = (x: number): number => { x = (x ^ 61) ^ (x >>> 16); x = (x + (x << 3)) >>> 0; x ^= x >>> 4; x = Math.imul(x, 0x27d4eb2d) >>> 0; x ^= x >>> 15; return x >>> 0; };
@@ -77,7 +107,7 @@ export function breathOn(g: Game): boolean { return SNOW_LOOK.breath && snowLeve
 
 function manOf(s: BreathState, c: Character): Man {
   let m = s.men.get(c);
-  if (!m) { m = { ph: h01(s.seed, c.id, 1), pace: 1 + SNOWBREATH.everyJit * (2 * h01(s.seed, c.id, 2) - 1), effort: 0, n: 0, left: 0, of: Math.max(1, Math.round(SNOWBREATH.puffs)), gap: 0, step: 0, shows: false }; s.men.set(c, m); }
+  if (!m) { m = { ph: h01(s.seed, c.id, 1), pace: 1 + SNOWBREATH.everyJit * (2 * h01(s.seed, c.id, 2) - 1), effort: 0, n: 0, left: 0, of: Math.max(1, Math.round(SNOWBREATH.puffs)), gap: 0, step: 0, shows: false, steam: false, src: -1, at: 0 }; s.men.set(c, m); }
   return m;
 }
 /** is this man's breath to be seen: alive, his head up off the ground, the open sky over it? (the fog of war and the dead are the caller's: they are asked of the Guard) */
@@ -88,6 +118,19 @@ function shows(g: Game, c: Character): boolean {
   return !g.weather?.underRoof(h[0], h[2]);
 }
 
+/** is the breath steam through the smoke solver here: the switch, some steam to let out, and a solver that steps and draws what it is handed (the harness's null
+ *  one, one switched off or frozen, smoke rendering off: the puffs, as ever — a breath never just vanishes)? */
+export function steamOn(g: Game): boolean { return SNOW_LOOK.steam && BREATHSTEAM.density > 0 && g.smoke.drawing?.() === true; }
+/** his mouth, and where his breath leaves it (unit): the head's heading (his body's if he looks straight down), its pitch held inside `pitch`, a share of straight
+ *  down — a man bowed over his gun breathes out ahead of him, not into his collar */
+function mouthOf(c: Character): { pos: Vec3; dir: Vec3 } {
+  const K = SNOWBREATH; const hd = c.headDir(); const head = c.bones.head!; const hl = Math.hypot(hd[0], hd[2]);
+  const fx = hl > 0.2 ? hd[0] / hl : Math.sin(c.bodyYaw), fz = hl > 0.2 ? hd[2] / hl : Math.cos(c.bodyYaw);
+  const py = clamp(hd[1], K.pitch[0], K.pitch[1]); const ph = Math.sqrt(Math.max(0, 1 - py * py));
+  const f: Vec3 = [fx * ph, py, fz * ph]; const dl = Math.hypot(f[0], f[1] - K.down, f[2]) || 1;
+  return { pos: [head[0] + fx * K.mouthAhead, head[1] - K.mouthDown, head[2] + fz * K.mouthAhead], dir: [f[0] / dl, (f[1] - K.down) / dl, f[2] / dl] };
+}
+
 /** Once a frame, after the characters and the wind (game.ts, beside the rain / snow recycler). Picture only. */
 export function updateSnowBreath(g: Game, dt: number) {
   const st = stateOf(g); const S = st.stats; const K = SNOWBREATH;
@@ -95,43 +138,58 @@ export function updateSnowBreath(g: Game, dt: number) {
   const why = !SNOW_LOOK.breath ? 'the switch is off' : !snowLevel(levelNameOf(g.level)) ? 'not a snow level' : '';
   if (why) { S.active = false; S.why = why; S.men = 0; S.shown = 0; return; }
   if (!(dt > 0)) return;
-  S.active = true; S.why = P ? 'breathing' : 'breathing, nothing filed (no GPU particles)'; S.frames++;   // (with no pool the rhythm still runs — a headless played run walks every read this makes of the game — and files nothing)
-  let men = 0, shown = 0; const HB = HARDBREATH.on ? HARDBREATH : null;   // (character.ts: blown, a man's breath is thrown harder, bigger and more often — off = this table's own numbers)
+  const steam = steamOn(g), B = BREATHSTEAM; st.tick++;
+  S.active = true; S.why = steam ? 'breathing (steam through the smoke solver)' : P ? 'breathing' : 'breathing, nothing filed (no GPU particles)'; S.frames++;   // (with no pool the rhythm still runs — a headless played run walks every read this makes of the game — and files nothing)
+  let men = 0, shown = 0, steaming = 0; const HB = HARDBREATH.on ? HARDBREATH : null;   // (character.ts: blown, a man's breath is thrown harder, bigger and more often — off = this table's own numbers)
+  const focus = steam && B.reach > 0 ? (g.engine as { viewFocus?: Vec3 }).viewFocus : undefined;   // (picture only: which men are worth the solver's bricks)
   const one = (c: Character, seen: boolean) => {
-    const m = manOf(st, c); men++;
+    const m = manOf(st, c); men++; m.at = st.tick;
     // his wind: up while he runs, back slowly once he stops
-    const want = clamp((Math.hypot(c.vel[0], c.vel[2]) - K.runLo) / Math.max(0.01, K.runHi - K.runLo), 0, 1);
+    const sp = Math.hypot(c.vel[0], c.vel[2]);
+    const want = clamp((sp - K.runLo) / Math.max(0.01, K.runHi - K.runLo), 0, 1);
     m.effort = want > m.effort ? Math.min(want, m.effort + dt / Math.max(0.1, HB ? HB.up : K.effortUp)) : Math.max(want, m.effort - dt / Math.max(0.1, HB ? HB.down : K.effortDown));
     const every = Math.max(0.3, (K.every + ((HB ? HB.every : K.everyHard) - K.every) * m.effort) * m.pace * (0.9 + 0.2 * h01(st.seed, c.id, 16 + m.n)));
     m.shows = seen && shows(g, c); if (m.shows) shown++;
+    const inReach = steam && (!focus || Math.hypot(c.pos[0] - focus[0], c.pos[2] - focus[2]) <= B.reach), near = inReach && m.shows;
+    if (near) { steaming++; if (B.wake > 0 && sp >= 0.25) g.smoke.push({ pos: c.bones.head!, dir: [c.vel[0] / sp, 0.05, c.vel[2] / sp], speed: sp * 1.1, radius: B.wake, lattice: 'fine' }); }   // (a man walking through steam that hangs at head height stirs it: his hips and chest are Game.smokeWake's. The fine lattice alone — breath and gun gas: a canister's screen, which sight lines read, is shoved as it always was)
     // the rhythm runs whether or not it shows (a man who steps out from under a roof is in mid breath, not at the start of one)
     m.ph += dt / every;
-    if (m.ph >= 1) { m.ph = m.ph >= 2 ? 0 : m.ph - 1; m.n++; m.of = m.left = Math.max(1, Math.round(K.puffs + (HB ? (HB.puffs - K.puffs) * m.effort : 0))); m.gap = 0; m.step = Math.min(K.out, every * 0.4) / m.left; if (m.shows) S.breaths++; }
+    if (m.ph >= 1) { m.ph = m.ph >= 2 ? 0 : m.ph - 1; m.n++; m.of = m.left = Math.max(1, Math.round(K.puffs + (HB ? (HB.puffs - K.puffs) * m.effort : 0))); m.gap = 0; m.step = Math.min(K.out, every * 0.4) / m.left; m.steam = inReach; if (m.shows) S.breaths++; }
     if (m.left <= 0) return;
     m.gap -= dt; if (m.gap > 0) return;
     m.gap += m.step; m.left--;
-    if (!m.shows || !P) return;
-    const hard = 1 + ((HB ? HB.size : K.hardK) - 1) * m.effort, carry = HB ? K.carry + (HB.carry - K.carry) * m.effort : K.carry;
-    // where the head faces, as a heading and a pitch: the heading the skull's own (his body's if he looks straight down), the pitch held inside `pitch` — a man bowed
-    // over his gun breathes out ahead of him, not into his collar
-    const hd = c.headDir(); const head = c.bones.head!; const hl = Math.hypot(hd[0], hd[2]);
-    const fx = hl > 0.2 ? hd[0] / hl : Math.sin(c.bodyYaw), fz = hl > 0.2 ? hd[2] / hl : Math.cos(c.bodyYaw);
-    const py = clamp(hd[1], K.pitch[0], K.pitch[1]); const ph = Math.sqrt(Math.max(0, 1 - py * py));
-    const f: Vec3 = [fx * ph, py, fz * ph];
+    if (!m.shows) return;
+    const hard = 1 + ((HB ? HB.size : K.hardK) - 1) * m.effort, carry = HB ? K.carry + (HB.carry - K.carry) * m.effort : K.carry, jet = 1 + (HB ? HB.jet - 1 : 0.3) * m.effort;
+    if (m.steam) {
+      // REAL STEAM: the whole breath is one source on the solver's fine lattice, let go when a record of it would be filed and none of this breath's rides his
+      // mouth — the first as a rule; a later one for a man who stepped out from under a roof in mid breath, or whose source was dropped for a frame. It rides his
+      // mouth for what is left of the breath and is dropped the frame he dies, lies down, or goes under a roof or into the fog
+      if (!steam || m.src === m.n) return;
+      const born = m.n, v = B.speed * jet, cv = carry * B.carryK;
+      const at = (): { pos: Vec3; dir: Vec3 } | null => {
+        if (!c.alive || !m.shows || m.n !== born || st.tick - m.at > 1 || states.get(g) !== st || !SNOW_LOOK.steam) { if (m.src === born) m.src = -1; return null; }
+        const a = mouthOf(c); return { pos: a.pos, dir: [a.dir[0] * v + c.vel[0] * cv, a.dir[1] * v, a.dir[2] * v + c.vel[2] * cv] };
+      };
+      const a0 = at(); if (!a0) return;
+      g.smoke.emit({ pos: a0.pos, dir: a0.dir, speed: Math.hypot(a0.dir[0], a0.dir[1], a0.dir[2]), radius: B.radius * Math.sqrt(hard), minVoxels: B.cells, density: B.density * hard, temperature: B.temp * hard,
+        ttl: m.step * (m.left + 1), age: 0, kind: 'breath', push: B.push, expand: B.expand, attack: B.attack, jitter: B.jitter, lattice: 'fine', confined: true, look: true, trackVel: true, track: at });
+      m.src = born; S.steam++; return;
+    }
+    if (!P) return;
+    const a = mouthOf(c);
     const tail = 1 - 0.3 * (1 - (m.left + 1) / (HB ? m.of : Math.max(1, Math.round(K.puffs))));   // (the last of a breath leaves slower than the first)
-    const dl = Math.hypot(f[0], f[1] - K.down, f[2]) || 1;
-    const n = P.emit('dust', [head[0] + fx * K.mouthAhead, head[1] - K.mouthDown, head[2] + fz * K.mouthAhead], [f[0] / dl, (f[1] - K.down) / dl, f[2] / dl], Math.max(1, Math.round(K.count + (HB ? (HB.count - K.count) * m.effort : 0))), {
-      shape: 'cone', speed: K.speed * tail * (1 + (HB ? HB.jet - 1 : 0.3) * m.effort), speedJit: 0.35, spread: K.spread, life: K.life, lifeJit: K.lifeJit, size: K.size * hard, sizeJit: K.sizeJit, posJit: 0.012,
+    const n = P.emit('dust', a.pos, a.dir, Math.max(1, Math.round(K.count + (HB ? (HB.count - K.count) * m.effort : 0))), {
+      shape: 'cone', speed: K.speed * tail * jet, speedJit: 0.35, spread: K.spread, life: K.life, lifeJit: K.lifeJit, size: K.size * hard, sizeJit: K.sizeJit, posJit: 0.012,
       vadd: [c.vel[0] * carry, 0, c.vel[2] * carry], owner: c.id, color: K.color, steam: clamp(K.opacity * hard, 0, 1), seed: recSeed(st, c.id, m.n, m.left) });
     if (n > 0) { S.records++; S.births += n; S.by[c.id] = (S.by[c.id] ?? 0) + 1; }
   };
   one(g.player.char, true);
   for (const gd of g.guards as Guard[]) if (gd.state !== 'dead') one(gd.char, !g.fogOfWar.hidden(gd));
   for (const cv of civiliansShown(g)) if (cv.state !== 'dead') one(cv.char, !g.fogOfWar.hidden(cv));
-  S.men = men; S.shown = shown;
+  S.men = men; S.shown = shown; S.steaming = steaming;
 }
 /** one line for the panel / the probes */
 export function breathSummary(g: Game): string {
   const S = stateOf(g).stats;
-  return S.active ? `breath ▸ ${S.shown} of ${S.men} men steaming · ${S.breaths} breaths, ${S.records} records, ${S.births} puffs filed` : `breath: ${S.why}`;
+  return S.active ? `breath ▸ ${S.shown} of ${S.men} men steaming · ${S.breaths} breaths, ${S.records} records, ${S.births} puffs filed${S.steam ? ` · ${S.steam} breaths through the smoke solver (${S.steaming} men now)` : ''}` : `breath: ${S.why}`;
 }

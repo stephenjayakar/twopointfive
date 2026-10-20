@@ -219,6 +219,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SNOW_LOOK.under = q.get('snowunder') !== '0';   // a flake is hidden from what is under the roofs, whichever slab, and from a partition's top inside (weatherKinds.ts SNOW_LOOK.under; picture only): ?snowunder=0 = each roof's rectangle by itself and every top at the ceiling open, as it was
   SNOW_LOOK.past = q.get('snowpast') !== '0';   // … and its snow goes on falling past the level's rim, so a view by the edge is snowed across (game/snowFx.ts flakeOpen; picture only): ON in the page; ?snowpast=0 = no flake past the world's rectangle
   SNOW_LOOK.blast = q.get('snowblast') !== '0';   // … and a blast over lying snow craters it, throws the loose snow and shoves the simulated wind (game/snowBlast.ts; picture only): ON in the page; ?snowblast=0 = a blast leaves the snow as it lay
+  SNOW_LOOK.steam = q.get('breathsteam') !== '0';   // … and that breath is real steam: gas in the smoke solver, off each man's mouth, as the gun's is off its muzzle (game/snowBreath.ts BREATHSTEAM; picture only): ON in the page; ?breathsteam=0 = the puffs of sprite it was
   SNOW_LOOK.breath = q.get('snowbreath') !== '0';   // … and the men's breath steams in its cold (game/snowBreath.ts; picture only): ON in the page; ?snowbreath=0 = no breath shows
   GLASS.bothFaces = q.get('glassears') !== '0';   // a pane's crash is heard from BOTH its faces (game/glass.ts glassEvent, guards.ts glassHeard: a window shot out from the yard reached the men in the room behind it only round by the front door): ON in the page; ?glassears=0 = heard only from the point the round met it, as it was
   DOORSHOT.on = q.get('doorshot') !== '0';   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall times its `toll`, 1 (game/doorblast.ts DOORSHOT): ON in the page; ?doorshot=0 = a round only marks a leaf, as it did
@@ -534,6 +535,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SNOW_LOOK.glow': 'TPS_SNOWGLOW=1 (shows only on a snow level with its surface: TPS_SNOW=1 TPS_SNOWLOOK=1)',
   'SNOW_LOOK.sparkle': 'TPS_SNOWSPARKLE=1 (shows only on a snow level with its surface: TPS_SNOW=1 TPS_SNOWLOOK=1)',
   'SNOW_LOOK.breath': 'TPS_SNOWBREATH=1 (shows only on a snow level: with TPS_SNOW=1)',
+  'SNOW_LOOK.steam': 'TPS_BREATHSTEAM=1 (the breath as gas in the smoke solver: with TPS_SNOWBREATH=1 on a snow level, and only where a solver draws — the harness has none)',
   'SNOW_LOOK.grains': 'TPS_SNOWGRAINS=1 (shows only on a snow level: with TPS_SNOW=1; they fly only where the air field runs: TPS_AIR=1 on a page with a GPU)',
   'SNOW_LOOK.oneAir': 'TPS_SNOWAIR=1 (shows only on a snow level: with TPS_SNOW=1; it wants the air field: TPS_AIR=1 on a page with a GPU; with it the grains stand down)',
   'SNOWBOG.on': 'TPS_SNOWBOG=1 (acts only on a snow level: with TPS_SNOW=1)',

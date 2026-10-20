@@ -67,6 +67,9 @@ export const SNOW = { on: false };
 // Picture only, only where `on` draws the surface.
 // `breath` (10-14, his "we should have steam from breaths in the cold levels too"): every living man standing under the open sky breathes out a small puff of steam
 // on his own rhythm (game/snowBreath.ts; ?snowbreath=0, TPS_SNOWBREATH=1). Picture only; it needs a snow level and nothing else (not `on`: no surface is read).
+// `steam` (10-20, his "the smoke from the gun muzzle is fine so maybe breath should just work like that"): that breath is real gas in the smoke solver — a source on
+// each breathing man's mouth, on the fine lattice the gun's gas lives on — in place of the puffs, so it is lit, shadowed, blown and stirred as smoke is
+// (game/snowBreath.ts BREATHSTEAM; ?breathsteam=0 = the puffs, TPS_BREATHSTEAM=1). Picture only; it needs `breath`, a snow level and a solver that is drawing.
 // `grains` (10-14, on his GPU look at the wisps: "it should really feel like snow blowing around, which I think is much smaller/high frequency (maybe GPU
 // particles would be the right fit?) and I love the way the snow dances around with stuff that feels like chaotic fluid dynamics, not just a single static
 // pattern that lines up with the wind ... fancier snow close to the character and less fancy (like the current state) outside a radius"; "the nice thing of
@@ -96,7 +99,7 @@ export const SNOW = { on: false };
 // of one building meet was open to snow in the doorways on it, and it opened EVERY wall's top, the partitions' inside a building too. With this on a surface is
 // under the roofs when it is a wall's thickness inside them on every side, whichever slab, and a top takes the snow only near the roofs' edge: the outer walls'
 // (particles_common.wgsl flakeHidden, the prelude's SNOW_UNDER; ?snowunder=0, TPS_SNOWUNDER=1). Picture only.
-export const SNOW_LOOK = { on: false, wisps: false, tracks: false, glow: false, sparkle: false, breath: false, grains: false, blast: false, oneAir: false, marks: false, past: false, under: false };
+export const SNOW_LOOK = { on: false, wisps: false, tracks: false, glow: false, sparkle: false, breath: false, steam: false, grains: false, blast: false, oneAir: false, marks: false, past: false, under: false };
 export const SNOW_LEVELS: readonly string[] = ['pass'];
 /** is the level called `name` (LevelData.name; a file's name without '.json') one built for snow — and the switch on? */
 export function snowLevel(name: string | null | undefined): boolean { return SNOW.on && !!name && SNOW_LEVELS.includes(name); }

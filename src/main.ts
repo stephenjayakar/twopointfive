@@ -1359,7 +1359,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
   // __air: the air as one simulated field (game/airSim.ts, render/airField.ts) — the game's numbers and what it handed over, the solver's numbers (live), the map, the field read back
   (window as any).__air = { get sim() { return airMod.AIR_SIM; }, get stats() { return airMod.airSimStats(game); }, get solver() { return AIR; }, get field() { return engine.air; }, mask: () => airMod.airMask(game),
     readBack: () => (engine.air as unknown as { readBack?: () => Promise<Float32Array> } | null)?.readBack?.() ?? null };
-  Object.defineProperties((window as any).__snow, { breath: { get: () => breathMod.SNOWBREATH }, breathStats: { get: () => breathMod.breathStats(game) }, breathSummary: { value: () => breathMod.breathSummary(game) } });   // … and the men's breath in its cold (game/snowBreath.ts): the numbers live with the next breath
+  Object.defineProperties((window as any).__snow, { breath: { get: () => breathMod.SNOWBREATH }, steam: { get: () => breathMod.BREATHSTEAM }, breathStats: { get: () => breathMod.breathStats(game) }, breathSummary: { value: () => breathMod.breathSummary(game) } });   // … and the men's breath in its cold (game/snowBreath.ts): the numbers live with the next breath; `steam` = that breath as gas in the smoke solver, BREATHSTEAM
 }
 
 /** __taa, __dn, ?noglass / ?norefract (after the preset, as they were), __rigTrace, __meshTrace */

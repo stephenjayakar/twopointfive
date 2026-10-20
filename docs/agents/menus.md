@@ -1247,7 +1247,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     `dropK`, the blast's `flakes` / `flakeUp` / `flakeLife`. A BLOWN MAN'S BREATH (10-19): while the hard breath rule is on (`character.ts HARDBREATH`,
     `?hardbreath=0`) the steam reads the rule's numbers, so the Breath layer lists both sets and dims the one nothing reads — the breath table's
     `everyHard` / `hardK` / `effortUp` / `effortDown` with the rule on, the rule's eight steam numbers (`blown every` … `wind back in`: `HARDBREATH.every`,
-    `puffs`, `count`, `jet`, `size`, `carry`, `up`, `down`; lists `BREATH_SOFT` / `BREATH_HARD` in sceneLayers.ts) with it off. The rule's switch and its
+    `puffs`, `count`, `jet`, `size`, `carry`, `up`, `down`; lists `BREATH_SOFT` / `BREATH_HARD` in sceneLayers.ts) with it off. REAL STEAM (10-20): while the breath is gas in the smoke solver
+    (`SNOW_LOOK.steam`, `?breathsteam=0`) the layer also lists `snowBreath.ts BREATHSTEAM`'s twelve numbers (`steam radius` … `steam reach`); it dims them
+    when no solver is drawing (every breath is puffs then), and dims the puffs' own twelve (`BREATH_PUFF`: count, speed, spread, life, size, opacity,
+    colour) when every man steams (`reach` 0). The layer's mute zeroes the steam's `density` with the puffs' `opacity`. The rule's switch and its
     four chest numbers are no rows: they move bones. The check's `breath` verdict runs the steam's emitter against a recording stand-in for the pool,
     rule on and off: a dimmed set moved files the same records, a lit one does not; the page check flips the rule in the page's own table
     (`window.__knobs`) and reads the rows both ways. The blast's `dig` / `digS` rows are held to 3 × and 5 s (the dig is asked again every frame for
