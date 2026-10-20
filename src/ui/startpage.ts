@@ -39,7 +39,7 @@ import { WEATHER_PRESETS, snowLevel } from '../game/weatherKinds';
 import { squadOfQuery, sizeWords, kitAsIssued, type SquadSize } from '../game/loadout';
 import { menuTheme } from './theme';
 import { mountKitFigure, type KitFigure } from './kitFigure';
-import { mountKitView, type KitViewFrame } from './kitView';
+import { KIT_VIEW, mountKitView, type KitViewFrame } from './kitView';
 import { KIT_CLIP } from './kitCard';
 import { LOOK, placeOfQuery } from '../scene/look';
 
@@ -405,10 +405,13 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   let lastId: string | null = null, lastHour: HourId | null = null, settling = false;
   let playerHour: HourId | null = null;   // (the hour the page stood at before a short-list row put its own on — null: the hour on the row IS the player's)
   const host = el('div', 'onehost'), tip = el('div', 'mtip');
-  // THE PICKED MAN, drawn (ui/kitFigure.ts): on the Team & kit step he stands where the mission list was, wearing what the card beside him says
+  // THE COLUMN WHERE THE MISSION LIST WAS, on the Team & kit step: the team at the mission's own door, the real renderer's picture (ui/kitView.ts) — and nothing
+  // else. The standing man (ui/kitFigure.ts) is not on the page any more (the maintainer, 10-20: "we show the original gear screen before the new one fades
+  // in. let's just remove the old one with the figure?" — he stood in while the picture booted, and wherever a level stages none): the column waits EMPTY
+  // for the picture and stays empty where there is none. He is mounted, and drawn, only under `?oldfigure` (KIT_VIEW.on off: no picture, the page as it was).
   const figHost = el('div', 'onefig'); let fig: KitFigure | null = null, kview: KitViewFrame | null = null;
-  const paintFigure = (s: LoadoutScreen) => { if (shut || !fig) return; if (pane !== 'loadout' || s !== L) { kview?.show(null); fig.show(null); return; }
-    if (kview?.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, row: s.card?.at() ?? -1 })) { fig.show(null); return; }   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts; `?oldfigure` = the standing man everywhere)
+  const paintFigure = (s: LoadoutScreen) => { if (shut || !kview) return; if (pane !== 'loadout' || s !== L) { kview.show(null); fig?.show(null); return; }
+    if (kview.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, row: s.card?.at() ?? -1 }) || !fig) { fig?.show(null); return; }   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts; `?oldfigure` = the standing man everywhere)
     const k = s.entry.kind; fig.show({ member: s.member, squad: s.squad, suit: LOOK.on && LOOK.suit && (k === 'quiet' || k === 'solo'), look: LOOK.on && placeOfQuery(new URLSearchParams(s.search().replace(/^[^?]*\?/, ''))), card: s.worn(), hour: ready ? M.hourNow : undefined, cloud: !ready ? 0 : snowLevel(s.entry.level?.replace(/\.json$/, '')) ? WEATHER_PRESETS.snow.cloud : M.weather ? WEATHER_PRESETS[M.weather].cloud : 0 }); };   // (he stands in the light of the hour the mission is set for, under the cloud of its weather: a snow level's own, whatever the hidden pick remembers)
 
   /** the short list's settings are what the page shows for `m`: its pick, else null */
@@ -515,7 +518,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   // the rail down the right (Setup, the team, the readout), the loadout across the foot. The list's setting rows are parked in a store nobody sees.
   if (sheet) {
     sheetEl = sheet;
-    if (sheet.parentElement) { sheet.parentElement.insertBefore(figHost, sheet); fig = mountKitFigure(figHost); kview = mountKitView(root, sheet.parentElement, figHost, () => { if (L) paintFigure(L); }); }
+    if (sheet.parentElement) { sheet.parentElement.insertBefore(figHost, sheet); fig = KIT_VIEW.on ? null : mountKitFigure(figHost); kview = mountKitView(root, sheet.parentElement, figHost, () => { if (L) paintFigure(L); }); }
     const brief = el('div', 'mbrief'), map = el('div', 'mmap'), rail = el('div', 'mrail'), store = el('div', 'mstore');
     const top = q('.mtop'), facts = q('.mfacts'), place = q('.mplace');
     if (top) brief.append(top, csum); if (facts) brief.appendChild(facts);
