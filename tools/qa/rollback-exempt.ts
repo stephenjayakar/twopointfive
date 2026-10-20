@@ -273,3 +273,8 @@ export const RAW_WEAK_OK: Record<string, string> = {
   'src/anim/gltf.ts nvgBits': 'a memo over the character file (static: never written)',
   'src/anim/gltf.ts suitBits': 'a memo over the character file (static: never written)',
 };
+
+/** generators that may be KEPT in the simulation's folders: `file field` → why a snapshot that cannot hold its place does no harm */
+export const GENERATOR_OK: Record<string, string> = {
+  'src/game/director.ts it': 'a showcase beat where it stopped (the Director\'s scripts are generators by design): a show is staged, not a fight — no save is taken with a program mid-way (savestate.ts runNo: `director.blocksSave()`) or put back with a show up (memNo), and a rollback across a running beat is a listed limit (docs/agents/replays.md)',
+};
