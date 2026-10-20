@@ -258,9 +258,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the key still held; a refusal is not asked again every frame) and any other wall not for `pressAgain` 0.6 s (stepping off does not throw him across a
   narrow passage; a walk straight across the office corridor has the far wall as he arrives, 0.8 s after letting go: ONE HELD KEY CROSSES A CORRIDOR FROM
   WALL TO WALL, which is meant, and is the first thing to ask him about). A frame his feet were not his own (a blast, a beat) starts the wait again.
-  Letting go is the feel pass's own (the stick held away 0.10 s, Q, Shift). State: `wsPress` (a `SideMap`). The Controls list and the key list do not
+  Letting go is the feel pass's own (the stick held away 0.10 s, Q, Shift). State: `wsPress` (a `SideMap`). IN A CHECKPOINT (10-20, after `probes.ts savetimeline`
+  went red on the page's stand: with walls taken by walking a save finds him on one as often as not, and no file had ever held a hold, so a load stood him
+  free of the wall, the pistol the hold had put away still away, and the seconds after parted from the save's): `SAVETIMELINE.holds` (savestate.ts; ON in
+  the page, `?saveholds=0`; OFF in the module and on the frozen stand, `TPS_SAVEHOLDS=1`; a `FROZEN_HOLDS` row; the journal carries it and a recording from
+  before the key replays with it off). With it on a save carries the hold as it stands, however it was taken, and the take's clock and latch
+  (`SaveState.wallHold`, player.ts `wallHoldSnapshot / wallHoldRestore`: the table `WH` names every field of `WallHold` and how a load reads it, so a new
+  field does not compile until it is named; a slice that is not a hold he could be in where he stands is no hold; the camera the hold eases is handed back
+  by the next frame). The same red line had a second cause that the new routes walked into and that is not the wall's: the close-in mode's held gait
+  (character.ts `crT / crW / crPace`) was begun again from nothing by a load, which put his first footfalls three frames off; under the same key a save
+  made inside the mode carries it and the man the mode is held on (`PlayerSnap.heldGait / closeOn`, `heldGaitSnap / heldGaitBack`, close.ts
+  `closeModeSnapshot / closeModeRestore`). NOT in a file still: the animator's wall stance, so for about a fifth of a second after a load on a wall his
+  body leans back onto it from a free stand (his feet and the hold are right from the first frame). Its break: `TPS_PROFILE=shipped TPS_SAVEHOLDS=0
+  probes.ts savetimeline` is red on line (2). In the real page (the software adapter, one boot, never seen on a GPU): a save made a
+  few frames after walking onto the corridor wall holds the slice, its load stands a new player on the same wall at the same place, the same file with the
+  slice cut out leaves him free, no console error. The Controls list and the key list do not
   mention it (show, not tell; they would be wrong with the row off). CHECK: `probes.ts wallpress` (`tools/qa/wallpress-check.ts`, families `wallsnap` /
-  `wall-snap`) 9 of 9 on both stands, `WALLPRESS_BREAK=1` fails 6 of 9 on both; its camera line asks 192 key-and-camera combinations stood against the wall
+  `wall-snap`) 10 of 10 on both stands, `WALLPRESS_BREAK=1` fails 7 of 10 on both (the tenth line, the checkpoint's, raises `SAVETIMELINE.holds` itself; its latch case walks into its wall, so the break takes it too); its camera line asks 192 key-and-camera combinations stood against the wall
   (40 take it, none wrong). Measured headless on the office corridor, one seed: from 1 m the hold begins at 0.70 s with 0.18 m to go and his back is on the
   wall 0.18 s later, no frame of the take longer than his walking stride. A review of the first cut found, and the check now holds: stepping off flipping
   him to the far wall at once, a Shift tap undoing Q, one latch for every wall (a corner's second wall refused), a pistol reload thrown away, a door's rows

@@ -210,6 +210,9 @@ but synthetic writes still work.
   NEVER SEEN ON A GPU, never played. Known and open: smoke hanging at a memory save is gone after its load (the fluid lives on the GPU) and a sound that was playing
   plays out; a load from a card is between steps and cuts the run tape, as a card's load always has; the F10 journal does not know a load; the Tab list shows a memory
   save as 0 KB.
+- **A save carries what his body is holding** (`SAVETIMELINE.holds`, 10-20; `?saveholds=0`, `TPS_SAVEHOLDS=1`; its own key, whatever `SAVETIMELINE.on` says): Sam's
+  wall hold with the walk-in take's clock, and the close-in mode's held gait with the man it is held on. The rule, the cause (`savetimeline` (2) red on the
+  page's stand once walls were taken by walking) and the checks: `docs/agents/stealth.md`, the wall taken without the key.
 - **A stand-up sets every held rule again from its word** (10-13, the switches owner's line, after a check's pin was found undone). `src/host/standup.ts standGame` writes each
   held table on EVERY stand-up — `if (pinned('TPS_X')) X.on = <the word TPS_X is '1'>` — so on the frozen stand a check that sets `X.on = true` and THEN stands a game up gets it
   put back off, silently. A check's own pin goes AFTER each stand-up (each one: a second stand-up in the same process undoes it again), or the run uses the word (`TPS_X=1`),
