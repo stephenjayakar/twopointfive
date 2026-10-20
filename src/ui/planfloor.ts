@@ -25,6 +25,8 @@ export class PlanFloor {
   private men: ManEls[] = []; private menShown = 0;
   private who: SVGPolygonElement[] = []; private whoShown = 0;
   private you: SVGPolygonElement | null = null;
+  /** the gold ring at the seat's own man is drawn this frame (ui/findme.ts stands its always-on ring down under it) */
+  youOn = false;
   private doors: DoorEls[] = []; private doorsShown = 0;
   private throws: ThrowEls[] = []; private throwsShown = 0;
   private laid: LaidEls[] = []; private laidShown = 0;
@@ -196,5 +198,6 @@ export class PlanFloor {
     for (let i = k; i < this.whoShown; i++) this.show(this.who[i], false);
     this.doorsShown = nd; this.throwsShown = nt; this.menShown = n; this.whoShown = k;
     if (this.you) this.show(this.you, you);
+    this.youOn = you;
   }
 }
