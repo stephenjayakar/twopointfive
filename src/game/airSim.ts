@@ -73,6 +73,8 @@ export function airMask(g: Game): { mask: Uint8Array; w: number; h: number } { c
  *  without which the field is not stepped, and a reader must fall back on the wind as a formula rather than ride air that stands still */
 export function airLive(g: Game): boolean { const E = g.engine as unknown as { air?: unknown; settings?: { airSim?: boolean } }; return AIR_SIM.on && !!E.air && E.settings?.airSim !== false; }
 /** a READER asks for the air this frame (once a frame, every frame it reads the field): the frame after, the map is drawn and the field stepped */
+/** the map as it stands goes to the field again (host/putback.ts: a save put back in memory took this book back, not the field) */
+export function airResend(g: Game): void { const s = states.get(g); if (s) s.sent = false; }
 export function airWant(g: Game): void { if (AIR_SIM.on) stateOf(g).want = true; }
 /** A PUFF: the air at (x, z) is driven OUTWARD for `secs` — `out` m/s at one `sigma` from its middle, running down to nothing over that time (a blast's shove:
  *  snowBlast.ts). A local source like a vent's, among the sixteen nearest the view; what it does to the field after that is the solver's — a ring that spreads,

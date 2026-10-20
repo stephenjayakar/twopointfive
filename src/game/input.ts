@@ -12,6 +12,8 @@ export class Input {
   /** when set, real keyboard / mouse input is ignored except these key codes (the showcase tour drives the player itself; P still stops it).
    *  Synthetic input (pressed.add / clicked |= / mouseX =) is unaffected. */
   lockExcept: Set<string> | null = null;
+  /** is F5 the game's right now (the save by hand — savestate.ts SAVETIMELINE; the page's to say: a run is up)? Then its bare press is kept from the browser, whose reload it is */
+  saveKey: (() => boolean) | null = null;
   /** called (rate-limited by the owner) when a real key / click is swallowed by the lock — lets the page tell the viewer why nothing happened */
   onLockedInput: (() => void) | null = null;
   /** asked about every real key before the game reads it: true = a UI surface took it (main.ts hands the tweak panel's onKey — ← / → over the panel walk its
@@ -45,6 +47,7 @@ export class Input {
       const modifier = ['Meta', 'Control', 'Shift', 'Alt'].includes(e.key);
       const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: held, it is the camera's orbit / zoom modifier — host/loop.ts; no game key reads it, crouch is C; F-keys stay the browser's)
       if (ours) { e.stopPropagation(); const typing = e.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(e.key); if ((e.target === this.sink && typing) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault(); }
+      if (e.code === 'F5' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && this.saveKey?.()) e.preventDefault();   // (F5 is the save by hand while the page says so — main.ts: a bare press must not reload the page under the run; with a modifier, on the start page or over a broken frame it is the browser's reload as ever)
       if (this.lockExcept && !this.lockExcept.has(e.code)) { if (!inMenu && !e.repeat && e.code !== 'Escape' && !modifier && !e.metaKey && !e.ctrlKey) this.onLockedInput?.(); return; }   // hands off during the tour (menu keyboard nav still works)
       if (e.repeat) return;   // OS auto-repeat is never a fresh press (holding P must not strobe the tour on and off)
       if (!this.keys.has(e.code)) this.pressed.add(e.code);

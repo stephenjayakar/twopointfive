@@ -131,7 +131,6 @@ export interface WindSource extends WindGpuSource { why: WindWhy; base: number; 
 /** counters for the probes / panel */
 export const WIND_STATS = { frames: 0, active: 0, toParticles: 0, toSmoke: 0, doorGusts: 0, stormFrames: 0, atCalls: 0 };
 const DEG = Math.PI / 180;
-const cx = (INTERIOR[0] + INTERIOR[2]) / 2, cz = (INTERIOR[1] + INTERIOR[3]) / 2;
 
 export class Wind {
   /** every source the level can have (vents, one storm, one per exterior door), built once; `active` = the ones blowing this frame (speed > 0), rebuilt in place each update */
@@ -147,6 +146,7 @@ export class Wind {
       const bc: Vec3 = v3.mad(v.pos, dir, dMax / 2); const br = Math.hypot(dMax / 2, r0 + dMax * tanSpread) * 1.05 + 0.3;   // a sphere round the cone's support (+ the wall jet's skirt)
       this.all.push({ kind: 'jet', why: 'vent', name: v.name, vent: v, pos: v3.copy(v.pos), dir, speed: 0, base: v.speed, on: 1, gust: 1, reach: v.reach, tanSpread, r0, dMax, floorY: 0, bound: { c: bc, r: br }, seed: hashStr(v.name) });   // TODO(G2): floorY = the vent's floor's y once floors carry more than one
     }
+    const cx = (INTERIOR[0] + INTERIOR[2]) / 2, cz = (INTERIOR[1] + INTERIOR[3]) / 2;   // (read HERE, not at the module's top: weather.ts is in the game's import cycle, and a top-level read broke every tool whose first import met this file before that one)
     this.storm = { kind: 'storm', why: 'storm', name: 'storm', pos: [0, 0, 0], dir: [1, 0, 0], speed: 0, base: 0, on: 1, gust: 1, reach: 0, tanSpread: 0, r0: 0, dMax: 0, interior: [...INTERIOR], annex: [...ANNEX], bound: { c: [cx, 1, cz], r: 1e6 }, seed: hashStr('storm') };
     this.all.push(this.storm);
     for (const d of g.doors.list) {

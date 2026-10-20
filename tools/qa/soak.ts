@@ -310,8 +310,8 @@ async function runSeed(seed: number): Promise<SeedReport> {
   // -------- ongoing behaviours
   let qrfHoldOff = -1; let loudDone = LOUD_AT < 0;   // (lane qrf: the resets hold off while the response plays out; the loud burst is dealt once)
   // checkpoints: every state the game writes (autosaves included) lands here — the invariants below judge the frame it was written on; --checkpoint-at keeps its file to load twice
-  let ckDone = CHECKPOINT_AT < 0, ckJson: string | null = null, ckReloadAt = -1, ckRetryAt = -1; let autoWritten = 0, ckLoads = 0; const savedThisFrame: { kind: string; slot: string | null }[] = [];
-  if (saveMod2 && game.saves) game.saves.onSaved = (st: any, info: any) => { savedThisFrame.push({ kind: st.kind, slot: info?.slot ?? null }); if (info?.slot === 'auto') autoWritten++; };
+  let ckDone = CHECKPOINT_AT < 0, ckJson: string | null = null, ckReloadAt = -1, ckRetryAt = -1; let autoWritten = 0, ckLoads = 0; const savedThisFrame: { kind: string; slot: string | null; mem: boolean }[] = [];
+  if (saveMod2 && game.saves) game.saves.onSaved = (st: any, info: any) => { savedThisFrame.push({ kind: st?.kind ?? info?.slot, slot: info?.slot ?? null, mem: !!info?.mem }); if (info?.slot === 'auto') autoWritten++; };   // (st null: a save kept in memory — savestate.ts SAVETIMELINE, a unit on the floor)
   /** after a load (any path): the harness's own handles onto the old encounter let go of, the run's trackers re-based, and the loaded world's basic sanity */
   const afterLoad = (how: string) => {
     releaseKeys(); cursorDoor = null; rackJob = null; holdF = null; gunSpaceUntil = -1; if (grabJob) { grabEnds['cut by a load'] = (grabEnds['cut by a load'] ?? 0) + 1; grabJob = null; } rifleJob = null; missionRef = game.mission; stageIdx = STAGE_ORDER[game.mission.stage] ?? 0; teleportedThisFrame = true; ckLoads++;
@@ -793,7 +793,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
 
   function invariants() {
     // ---- checkpoints (game/savestate.ts): an AUTOSAVE written this frame was written on a frame its own rules allow — a live run, the AI on, nobody alert /
-    //      searching / over the line, Sam up and free-handed, nothing on a fuse, no unit, the QRF idle, nobody scripted; the counts agree; the store holds ≤ 3 + 1
+    //      searching / over the line, Sam up and free-handed, nothing on a fuse, no unit, the QRF idle, nobody scripted; the counts agree; the store holds ≤ 3 + 1 (under SAVETIMELINE five and five, and as many again in memory)
     if (saveMod2 && game.saves) {
       const S = game.saves;
       for (const w of savedThisFrame) if (w.slot === 'auto') {
@@ -801,13 +801,13 @@ async function runSeed(seed: number): Promise<SeedReport> {
         const st = game.mission.stage; if (game.quietUtility || game.puppet || game.touring || st === 'done' || st === 'failed') bad.push(`not live (quiet ${game.quietUtility} touring ${game.touring} stage ${st})`);
         if (!game.aiEnabled) bad.push('AI off');
         for (const x of game.guards) { if (x.state === 'dead') continue; if (x.state === 'alert' || x.state === 'search') bad.push(`${routeName(x)} ${x.state}`); else if (x.awareness > saveMod2.CKPT.awareMax + 1e-9) bad.push(`${routeName(x)} aw ${x.awareness.toFixed(2)}`); if (x.script) bad.push(`${routeName(x)} scripted`); if (x.unit) bad.push('a unit'); }
-        const busy = saveMod2.playerBusy(game); if (busy) bad.push(`Sam ${busy}`); if (game.player.down) bad.push('Sam down');
-        if (game.qrf && game.qrf.state !== 'idle') bad.push(`qrf ${game.qrf.state}`); if (game.clearing) bad.push('clearing');
-        if (game.items.items.some((it: any) => !it.settled || ((it.kind === 'smoke' || it.kind === 'flash') && !it.fired)) || game.rings.length || game.shells.length) bad.push('a thing in the air / on its fuse');
+        const busy = w.mem ? null : saveMod2.playerBusy(game); if (busy) bad.push(`Sam ${busy}`); if (game.player.down) bad.push('Sam down');   // (a save kept in memory holds his hands and the air as they are: only a FILE lets go of them)
+        if (game.qrf && game.qrf.state !== 'idle') bad.push(`qrf ${game.qrf.state}`); if (game.clearing && !w.mem) bad.push('clearing');
+        if (!w.mem && (game.items.items.some((it: any) => !it.settled || ((it.kind === 'smoke' || it.kind === 'flash') && !it.fired)) || game.rings.length || game.shells.length)) bad.push('a thing in the air / on its fuse');
         if (bad.length) violate('autosave-while-compromised', bad[0], `an autosave was written with: ${bad.join(' · ')}`);
       }
       if (S.stats.autosaves !== autoWritten) violate('autosave-count', 'stats', `stats.autosaves ${S.stats.autosaves} ≠ ${autoWritten} handed to onSaved`);
-      const nSlots = S.slots().length; if (nSlots > saveMod2.CKPT.autoSlots + 1) violate('checkpoint-slots', String(nSlots), `${nSlots} slots stored (want ≤ ${saveMod2.CKPT.autoSlots} auto + 1 manual)`);
+      const nSlots = S.slots().length, TL = saveMod2.SAVETIMELINE, cap = TL.on ? 2 * (TL.auto + TL.manual) : saveMod2.CKPT.autoSlots + 1; if (nSlots > cap) violate('checkpoint-slots', String(nSlots), `${nSlots} slots stored (want ≤ ${TL.on ? `${TL.auto} auto + ${TL.manual} by hand, in the store and again in memory` : `${saveMod2.CKPT.autoSlots} auto + 1 manual`})`);
       if (S.pending && !S.enabled) violate('autosave-pending-off', 'pending', 'a request is pending with autosave off');
     }
     const t = game.time;

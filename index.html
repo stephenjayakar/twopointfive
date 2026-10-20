@@ -353,6 +353,16 @@
     #missions .mgo { align-self: flex-start; margin-top: 4px; padding: 10px 24px; font-size: 13px; text-decoration: none; position: sticky; bottom: 0; z-index: 1; box-shadow: 0 0 0 8px rgba(var(--m-panel-rgb),0.95); }   /* (stays in sight at the sheet's foot when the rows above run long: Hard's words, a lever moved, a short window) */
     #missions .mfoot { padding: 9px 22px; border-top: 1px solid rgba(var(--m-edge),0.22); font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); letter-spacing: 0.06em; }
     @media (max-width: 720px) { #missions .mbody { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(110px, 26%) minmax(0, 1fr); } #missions .mlist { border-right: none; border-bottom: 1px solid rgba(var(--m-edge),0.22); } #missions .mfacts { grid-template-columns: repeat(2, minmax(0, 1fr)); } #missions .mplan { display: none !important; } #missions .mhour .dn, #missions .mwx .dn, #missions .mway .dn, #missions .mlever .dn { display: none; } }   /* (a narrow window: the plan and the hour's and the weather's lines of words go, and the list gives up rows, so the start button stays on the sheet) */
+    /* THE STRIP OF SAVES (menu.ts saveStrip): this run's saves in time, a tile each — its picture, its age, a diamond on the ones made by hand */
+    #menu .saves { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; margin: 0 0 4px; }
+    #menu .db-actions .saves { flex: 0 0 100%; grid-template-columns: repeat(auto-fill, 96px); }
+    #menu .saves .tile { position: relative; aspect-ratio: 16 / 9; padding: 0; background: rgba(var(--m-btn-rgb),0.8) center / cover no-repeat; border: 1px solid rgba(var(--m-edge),0.3); border-radius: 2px; cursor: pointer; overflow: hidden; }
+    #menu .saves .tile:hover, #menu .saves .tile:focus { outline: none; border-color: var(--m-accent); }
+    #menu .saves .tile:focus { box-shadow: 0 0 0 1px var(--m-accent); }
+    #menu .saves .tile .age { position: absolute; left: 0; right: 0; bottom: 0; padding: 7px 4px 3px; font: 600 10px/1 var(--m-head); letter-spacing: 0.06em; text-align: right; color: var(--m-bright); background: linear-gradient(transparent, rgba(0,0,0,0.78)); white-space: nowrap; }
+    #menu .saves .tile i { position: absolute; left: 5px; top: 5px; width: 5px; height: 5px; transform: rotate(45deg); background: var(--m-accent); box-shadow: 0 0 0 1px rgba(0,0,0,0.6); }
+    #menu .saves .tile.regret { opacity: 0.45; }
+    #menu .saves .tile.ahead .age { color: var(--m-dim); }
     #menu .btn.quit { border-color: rgba(240,196,110,0.55); color: #f3d79a; }
     #menu .body { margin-top: 10px; }
     #menu .controls .row { display: flex; gap: 14px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
@@ -378,11 +388,14 @@
     #menu .db-actions { margin: 14px 0 4px; }
     #menu .db-copytext { display: none; margin: 2px 0 6px; padding: 5px 8px; font-size: 10px; color: var(--m-bright); background: rgba(var(--m-base-rgb),0.5); border: 1px dashed rgba(var(--m-edge),0.4); user-select: all; word-break: break-word; }
     #menu .db-copytext.show { display: block; }
-    #menu .db-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 18px; margin-top: 10px; }
-    @media (max-width: 820px) { #menu .db-grid { grid-template-columns: minmax(0, 1fr); } }
+    /* (the tally beside its map while the card holds both, and the map under it, the row's whole width, when it does not: by the card's own width, whatever the window or the
+       text size. The tally's least width is 360 px, so a card of 800 px or more keeps the pair side by side with a scroll bar of any make taking its share) */
+    #menu .db-grid { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 10px; }
+    #menu .db-left { flex: 999 1 360px; min-width: 0; } #menu .db-right { flex: 1 1 420px; min-width: 0; }
     #menu .db-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
-    #menu .db-stats .st { padding: 5px 8px 6px; background: rgba(var(--m-panel2-rgb),0.85); border: 1px solid rgba(var(--m-edge),0.16); border-top: 2px solid rgba(var(--m-edge),0.35); min-width: 0; }
-    #menu .db-stats .st i { display: block; font: 600 10px/1.2 var(--m-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #menu .db-stats .st { display: flex; flex-direction: column; justify-content: space-between; padding: 5px 6px 6px; background: rgba(var(--m-panel2-rgb),0.85); border: 1px solid rgba(var(--m-edge),0.16); border-top: 2px solid rgba(var(--m-edge),0.35); min-width: 0; }
+    /* (a label is never cut: one too long for its tile takes a second line and the numbers of the row stay on one line) */
+    #menu .db-stats .st i { display: block; overflow-wrap: break-word; font: 600 10px/1.2 var(--m-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-dim); }
     #menu .db-stats .st b { display: block; margin-top: 2px; font: 700 17px/1.1 var(--m-head); color: var(--m-bright); letter-spacing: 0.04em; }
     #menu .db-stats .st.good b { color: var(--m-accent-hi); } #menu .db-stats .st.warn b { color: #f3d78a; } #menu .db-stats .st.bad b { color: #ff9c84; }
     #menu .db-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 2px; }

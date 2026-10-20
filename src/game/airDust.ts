@@ -182,6 +182,8 @@ export class AirDust {
     this.stats.steps++; this.stats.open = open;
     return moved;
   }
+  /** the field as it stands, written again (host/putback.ts: a save put back in memory took the field back, not the GPU's copy of it); no book of this module moves */
+  resend() { if (!this.on) return; const s = this.s, o = this.gpu; for (let i = 0; i < N; i++) o[i] = s[i]; this.g.engine.world.setAirGrid(o); }
   private send() {
     const s = this.s, o = this.gpu; for (let i = 0; i < N; i++) o[i] = s[i];
     this.g.engine.world.setAirGrid(o); this.stats.sends++; this.drift = 0;

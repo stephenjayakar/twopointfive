@@ -114,6 +114,8 @@ import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
 import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
+import { SAVETIMELINE } from '../game/savestate';
+import { hostAfterPutBack } from './putback';
 import { kitSoloStand } from '../game/kit';
 import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
@@ -208,6 +210,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
   const game = new Game(host, level, ch, smoke); game.dice = dice;
   if (opts.audio) game.audio = opts.audio;
+  if (!opts.harness) game.saves.onPutBack = () => hostAfterPutBack(game);   // (a save kept in memory put back — savestate.ts SAVETIMELINE: the GPU's buffers are told so; host/putback.ts)
   if (opts.harness) {
     if (pinned('TPS_QRFSILENT')) game.tune.qrfSilent = String((globalThis as any).process?.env?.TPS_QRFSILENT ?? '') === '1';   // THE SILENT NET (src/game/qrf.ts silentNet): off, so the response team's trigger is the one every frozen probe, tally and session fixture was written against — `TPS_QRFSILENT=1` turns it on for any harness tool (the shipped default is ON)
     if (pinned('TPS_QRFSQUAD')) game.tune.qrfSquad = String((globalThis as any).process?.env?.TPS_QRFSQUAD ?? '') === '1';   // THE RESPONSE TEAM ON THE SQUAD'S DOOR AND ROOM CODE (src/game/qrf.ts startDrill, squadcast.ts): off, so the element takes a room by its own drill on the level's marks, as every frozen probe, tally and session fixture was recorded — `TPS_QRFSQUAD=1` turns it on for any harness tool (the shipped default is ON)
@@ -266,6 +269,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_LIGHTSWITCH')) LIGHTSWITCH.on = String((globalThis as any).process?.env?.TPS_LIGHTSWITCH ?? '') === '1';   // a room's wall switch (src/game/lightswitch.ts): off, so no level has a plate, Space has no row for one and no light-out says where a hand was, as every frozen probe and digest saw it; `TPS_LIGHTSWITCH=1` = as the page
     if (pinned('TPS_CLEANRESTART')) CLEANRESTART.on = String((globalThis as any).process?.env?.TPS_CLEANRESTART ?? '') === '1';   // a restart gives a clean level (src/game/cleanrestart.ts): off, so a restart mends the mains as a hand on the breaker does, keeps the last try's lines and clocks and flies the camera back, as every frozen probe and digest saw it; `TPS_CLEANRESTART=1` = as the page
     if (pinned('TPS_FRIENDLYFIRE')) FRIENDLYFIRE.on = String((globalThis as any).process?.env?.TPS_FRIENDLYFIRE ?? '') === '1';   // a round of Sam's side finds the men of Sam's side (src/game/friendlyfire.ts): off, so a scripted player's round passes a teammate and a teammate's passes him, as every frozen probe and digest saw it; `TPS_FRIENDLYFIRE=1` = as the page
+    if (pinned('TPS_SAVETIMELINE')) SAVETIMELINE.on = String((globalThis as any).process?.env?.TPS_SAVETIMELINE ?? '') === '1';   // the saves roll and a team on the floor is saved in memory (src/game/savestate.ts): off, so a frozen run keeps what it always kept
     if (pinned('TPS_FIRELINE')) FIRELINE.on = String((globalThis as any).process?.env?.TPS_FIRELINE ?? '') === '1';   // a teammate on an order waits short of the lane the player is firing down (src/game/fireline.ts): off, so an ordered man walks through a scripted player's fire as every frozen probe, digest and tally saw him; `TPS_FIRELINE=1` = as the page
     if (pinned('TPS_MUZZLE')) FRIENDS.lowReady = String((globalThis as any).process?.env?.TPS_MUZZLE ?? '') === '1';   // Sam's gun down for a teammate in its line out of a fight (src/game/friends.ts): off, so a scripted player's click fires whoever stands ahead of him, as it did; `TPS_MUZZLE=1` = as the page
     if (pinned('TPS_QUIETFOG')) QUIETFOG.on = String((globalThis as any).process?.env?.TPS_QUIETFOG ?? '') === '1';   // quiet missions under the fog of war (src/game/quietfog.ts): off, so a quiet mission's query reads no rung of the fog lever, as every frozen run was made

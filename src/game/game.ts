@@ -183,7 +183,7 @@ import { Destruction, loadChaos } from './destruction';
 import { fixtureBreakBoxes } from './fixtureBreak';   // the look of a fixture breaking and hanging broken (picture only)
 import { coverfireTick, coverfireReset } from './coverfire';
 import { Wind, loadWind } from './wind';
-import { updateAirSim, attachAir } from './airSim';
+import { updateAirSim, attachAir, airResend } from './airSim';
 import { AirDust } from './airDust';
 import { Moths } from './moths';
 import { GlassBreak, loadGlassBreak } from './glassbreak';
@@ -701,6 +701,10 @@ export class Game {
   /** … and the prints boots have pressed into it (snowTracks.ts; SNOW_LOOK.tracks) — picture only too; null without the field or with its switch off */
   snowTracks: SnowTracks | null = null;
   private snowLookWas = -1;
+  /** what the simulation hands the GPU only when it changed is handed over whole again (host/putback.ts: the GPU's copy is another moment's): the snow's field
+   *  and tracks on the next frame, the wind's map of what stands, the dust under the roofs. Here and not in the host file: a host module that imported a game
+   *  module by VALUE would be one more way into the game's import cycle, and that cycle does not load from every door. */
+  rehand() { this.snowLookWas = -1; airResend(this); this.airDust.resend(); }
   /** the field and the prints follow their switches (at the level's start, and again on any frame a switch has moved: a recording's knobs are applied to a game
    *  already built): baked / made the first time they are wanted, handed to the g-buffer, taken back when the switch goes off */
   private syncSnowLook() {
