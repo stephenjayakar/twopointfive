@@ -1307,7 +1307,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   go); laid out in a real browser page (no GPU boot) at 1300 x 780 at 2 device pixels, 1920 x 1080 (dressed and `?look=plain`), 3840 x 2160, the
   largest text step, 1920 x 700, 1400 x 480, 700 x 900, 820 x 600, and with the level's first fetch failed then a resize — the canvas is the shown
   size in device pixels (or its 480 floor) each time, inked, inside the window, nothing scrolls; `loadbrief-page.cjs` holds the same on the booted
-  page (PAGE_MAP_RESULTS). The map on the brief has not been seen on a GPU page or by the maintainer yet.
+  page (software adapter, 1024 x 576: night breach, the depot room clear, the counting house and Training 1 PASS with the map of their own level
+  drawn at the shown size; the registry rescue, started early, PASS). The map on the brief has not been seen on a GPU page or by the maintainer yet.
 - **The game has its own text size, and the page no longer zooms** (`src/ui/textsize.ts`, `TEXTSIZE.on`, 10-19; a play test on a 3840 × 2160 screen:
   the words were too small to read, the browser's zoom keys grew the page until the layout broke, and the mission select's names were cut). ONE FACTOR,
   `--tz` on the root (which wears the class `tsz` while the switch is on), drawn as CSS `zoom` on every layer of the page that carries words (`LAYERS`:
