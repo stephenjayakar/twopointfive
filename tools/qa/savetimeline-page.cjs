@@ -7,8 +7,8 @@
 //           save loaded from its tile — the frame drawn after the load is lit as the frame at the save was, not as the dark one (the GPU's buffers were told:
 //           host/putback.ts); SAVEPUTBACK_BREAK=1 takes that telling away and this line must FAIL
 //   off     ?savetimeline=0: F5 writes nothing and the pause card has no strip
-// exit 0 = every job asked for, with no page error · 1 = otherwise. Game logic and the DOM decide; the one judgment of a picture is a mean brightness, three
-// frames against each other. With an outDir it keeps the stills and a screenshot of each card for a person to look at.
+// exit 0 = every job asked for, with no page error · 1 = otherwise. Game logic and the DOM decide; the one judgment of a picture is a count of nearly white pixels (the bulb's
+// glow), three frames against each other. With an outDir it keeps the stills and a screenshot of each card for a person to look at.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '', BREAK = process.env.SAVEPUTBACK_BREAK === '1';
@@ -21,15 +21,16 @@ if (outDir) fs.mkdirSync(outDir, { recursive: true });
 const STEP = (n) => { const e = window.__engine, real = e.render; e.render = () => { e.world.upload(); }; try { for (let i = 0; i < n; i++) window.__runFrames(1, 1 / 60); } finally { e.render = real; } };
 // in the page: one step with its frame DRAWN and presented (a save's picture is taken off the canvas after such a frame), the GPU through with it
 const FRAME = async () => { window.__runFrames(1, 1 / 60); await window.__engine.device.queue.onSubmittedWorkDone(); };
-// in the page: draw n frames one at a time, read the last one back: its mean brightness, and (with `keep`) a PNG data URL (page-look.cjs DRAW)
+// in the page: draw n frames one at a time, read the last one back: how many of its pixels are nearly white (a burning bulb's own glow: the room it lights
+// barely dims in a few frames), and (with `keep`) a PNG data URL (page-look.cjs DRAW)
 const DRAW = async ([n, keep]) => {
   const dev = window.__engine.device;
   const yieldMacro = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
   for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 600); await dev.queue.onSubmittedWorkDone(); await yieldMacro(); }
   window.__engine.render(window.__cam, window.__game.time, 1 / 60, false); const fr = await window.__engine.readbackFrame(); if (!fr) return null;
   if (fr.bgra) for (let i = 0; i < fr.data.length; i += 4) { const b = fr.data[i]; fr.data[i] = fr.data[i + 2]; fr.data[i + 2] = b; }
-  let sum = 0; for (let i = 0; i < fr.data.length; i += 4) { fr.data[i + 3] = 255; sum += fr.data[i] * 0.3 + fr.data[i + 1] * 0.59 + fr.data[i + 2] * 0.11; }
-  const out = { lum: sum / (fr.data.length / 4), url: null };
+  let hot = 0; for (let i = 0; i < fr.data.length; i += 4) { fr.data[i + 3] = 255; if (fr.data[i] * 0.3 + fr.data[i + 1] * 0.59 + fr.data[i + 2] * 0.11 > 235) hot++; }
+  const out = { hot, url: null };
   if (keep) { const c2 = document.createElement('canvas'); c2.width = fr.w; c2.height = fr.h; c2.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(fr.data.buffer), fr.w, fr.h), 0, 0); out.url = c2.toDataURL('image/png'); }
   return out;
 };
@@ -93,10 +94,10 @@ const LAMPSTATE = () => { const t = window.__lamp; return { broken: t.broken, on
             const last = r.strip.tiles.length - 1; r.pick = await page.evaluate(PICK, last); r.lampAfter = await page.evaluate(LAMPSTATE);
             await page.evaluate(PIN); await page.evaluate(STEP, 2);
             const C = await page.evaluate(DRAW, [3, !!outDir]); await keep('after-load', C);
-            r.lum = { A: +A.lum.toFixed(2), B: +B.lum.toFixed(2), C: +C.lum.toFixed(2) }; log(`${name}: brightness`, JSON.stringify(r.lum));
+            r.lum = { A: A.hot, B: B.hot, C: C.hot }; log(`${name}: the bulb's bright pixels`, JSON.stringify(r.lum));
             if (r.lampAfter.broken) fails.push('the light is still broken in the game after the load');
-            if (!(A.lum - B.lum > 0.5)) fails.push(`putting the light out did not darken the frame (${r.lum.A} → ${r.lum.B}): the check cannot tell`);
-            else if (!(Math.abs(C.lum - A.lum) < 0.35 * (A.lum - B.lum))) fails.push(`the frame after the load is not lit as the save's was: at the save ${r.lum.A}, light out ${r.lum.B}, after the load ${r.lum.C}`);
+            if (!(A.hot - B.hot > 20)) fails.push(`putting the light out did not take its glow off the frame (${r.lum.A} → ${r.lum.B} bright pixels): the check cannot tell`);
+            else if (!(Math.abs(C.hot - A.hot) < 0.35 * (A.hot - B.hot))) fails.push(`the bulb on the frame after the load is not lit as the save's was: bright pixels at the save ${r.lum.A}, light out ${r.lum.B}, after the load ${r.lum.C}`);
             if (r.pick.err || r.pick.open || r.pick.fatal) fails.push(`the tile's click: ${JSON.stringify(r.pick)}`);
             if (r.strip.tiles.length !== 4 || !r.strip.line.every(x => x.mem)) fails.push(`the strip: ${r.strip.tiles.length} tiles, in memory ${r.strip.line.map(x => x.mem).join(',')} (want 4, all in memory)`);
             if (r.strip.tiles.some(t => !(t.range > 12 && t.w > 0))) fails.push(`a tile's picture is missing or flat: ${r.strip.tiles.map(t => `${t.w}x${t.h} range ${t.range}`).join(' · ')}`);

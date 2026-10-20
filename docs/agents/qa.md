@@ -191,7 +191,12 @@ but synthetic writes still work.
   untouched, F5, Enter once down, a restart drops them. `checkpoint-slots` / `checkpoint-autosave` read the ring's size from the stand. ONE SAVE WEIGHS (headless, one
   seed): the plain night's file 28 KB frozen / 31 KB shipped; Training one's 9 / 11 KB; Training five in memory 5.0 / 6.9 MB (14–19 thousand objects, about 30 ms to
   take here: a hitch of a frame or three at each such save on a real machine is likely and is NOT timed on the page), so ten of those are 50–70 MB of the tab's
-  heap; a picture is 256×144 and about 4 KB as stored (the software adapter's frame at 1024×576), so ten files with pictures are near 350 KB of the store. `tools/qa/savetimeline-page.cjs` drives the real page on the software adapter: PAGE_RESULT.
+  heap; a picture is 256×144 and about 4 KB as stored (the software adapter's frame at 1024×576), so ten files with pictures are near 350 KB of the store. `tools/qa/savetimeline-page.cjs` drives
+  the real page on the software adapter (Chromium, SwiftShader, `verylow`; three jobs, each a boot of several minutes): the plain night — F5 as a real keydown, kept
+  from the browser, three times → three tiles in time order with pictures that are not flat, the middle tile loads to its own mission clock, the DOWN card shows
+  them; Training five — four saves in memory on the strip with pictures, then a bulb put out AFTER a save and that save loaded from its tile: the bulb glows again
+  on the frame after the load (259 nearly white pixels at the save, 0 with it out, 258 after the load), and with `SAVEPUTBACK_BREAK=1` (the host not told) it stays
+  dark there (0) though the game has it lit, so that line fails as it must; `?savetimeline=0` — F5 writes nothing and is the browser's, no strip. No page error.
   NEVER SEEN ON A GPU, never played. Known and open: smoke hanging at a memory save is gone after its load (the fluid lives on the GPU) and a sound that was playing
   plays out; a load from a card is between steps and cuts the run tape, as a card's load always has; the F10 journal does not know a load; the Tab list shows a memory
   save as 0 KB.
