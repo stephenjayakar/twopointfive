@@ -18,6 +18,7 @@ import type { RecapTake, RecapFrame, RecapMan, DeathRecap } from '../game/deathr
 import { mapOf } from '../game/replaybuf';
 import type { ReplayMap } from '../replay/format';
 import { gearText } from '../game/gear';
+import { textZoom } from './textsize';
 
 // the menu theme's tokens (ui/theme.ts), as literals: a canvas cannot read a CSS variable
 const BASE = '#0c0b09', BRIGHT = '#f0e9d9', SOFT = '#a0977f', DIM = '#938b76', ACCENT_RGB = '240,145,46', ACCENT = `rgb(${ACCENT_RGB})`, EDGE = '214,200,170';
@@ -198,7 +199,7 @@ export function mountRecap(host: HTMLElement, game: Game): RecapUi | null {
   const cv = el('canvas', 'db-recap-cv') as HTMLCanvasElement; root.appendChild(cv);
   let ctx: CanvasRenderingContext2D | null = null;
   try { ctx = typeof cv.getContext === 'function' ? cv.getContext('2d') : null; } catch { ctx = null; }
-  const dpr = Math.max(1, Math.min(2, G.devicePixelRatio || 1));
+  const dpr = Math.max(1, Math.min(2, (G.devicePixelRatio || 1) * textZoom()));   // (drawn inside a zoomed layer: ui/textsize.ts)
   cv.width = Math.round(VIEW_W * dpr); cv.height = Math.round(VIEW_H * dpr);
   // the floor is drawn once a take, onto a canvas of its own, and laid under every moment
   let floor: HTMLCanvasElement | null = null, fctx: CanvasRenderingContext2D | null = null;

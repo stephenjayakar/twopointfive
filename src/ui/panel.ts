@@ -7,6 +7,7 @@
 // Rows built while `panel.advanced` is true (or inside an advanced section) are A/B knobs: hidden until 'all knobs' is ticked or a search finds them.
 // The game panel shows ONE hover tip of its own (#ptip) in place of the browser's: whatever a row / button / header carried as its `title`, and the full text of
 // anything the 372 px column cut short with an ellipsis (the status strip, a page's subtitle, a section's live summary, a long label) — at once, wrapped, readable.
+import { rectZoom, uiSize } from './textsize';
 type Getter<T> = () => T; type Setter<T> = (v: T) => void;
 type Rf = (() => void) & { el?: HTMLElement; page?: HTMLElement | null };
 /** localStorage behind try/catch (a private window, a disabled store, a full quota: the panel builds and works, nothing persists) and JSON that must be what we
@@ -151,9 +152,9 @@ export class Panel {
   private showTip(el: HTMLElement, text: string) {
     const tip = this.tip; this.tipPending = null; if (!tip || !this.visible || !el.isConnected || el.getClientRects().length === 0) return;   // (gone, or filtered / paged out of sight since the hover began)
     tip.style.left = '0px'; tip.style.top = '0px'; tip.textContent = text; tip.style.display = 'block'; this.tipFor = el;   // (measured from the corner: the wrap width, hence the height, is the final one)
-    const r = el.getBoundingClientRect(); const w = tip.offsetWidth, h = tip.offsetHeight;
-    const x = Math.max(6, Math.min(r.left, innerWidth - w - 6));
-    let y = r.bottom + 5; if (y + h > innerHeight - 6) y = Math.max(6, r.top - h - 5);   // under the thing, or over it at the foot of the screen
+    const tz = rectZoom(), b = el.getBoundingClientRect(), r = { left: b.left / tz, top: b.top / tz, bottom: b.bottom / tz }, [vw, vh] = uiSize(); const w = tip.offsetWidth, h = tip.offsetHeight;   // (measured in the window's pixels, placed in the tip's own: ui/textsize.ts)
+    const x = Math.max(6, Math.min(r.left, vw - w - 6));
+    let y = r.bottom + 5; if (y + h > vh - 6) y = Math.max(6, r.top - h - 5);   // under the thing, or over it at the foot of the screen
     tip.style.left = `${Math.round(x)}px`; tip.style.top = `${Math.round(y)}px`;
   }
   /** drop the tip (shown or pending); a tip that WAS showing leaves a short warm spell so the next thing hovered answers at once (the 1 px between two rows is not a cold start) */

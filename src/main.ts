@@ -2,6 +2,7 @@ import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } f
 import { Menu, loadSandbox, bootCard } from './ui/menu';
 import { optionsOpen, openOptions } from './ui/options';
 import { TABKEY, tabFromQuery } from './ui/tabkey';
+import { bootTextSize } from './ui/textsize';
 import { BACKKEY } from './game/backkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitIssuedPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
@@ -159,6 +160,7 @@ boot.expose();
 
 async function main() {
   const q = new URLSearchParams(location.search);
+  bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
   // the row's own URL before anything boots (that URL names its mission, so it is never answered twice). Off under ?nopicks.
   { const to = PICKS_UI.on ? pickRedirect(location.search) : null; if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }

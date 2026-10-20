@@ -6,6 +6,7 @@
 // records wind.ts packed for the GPU particles this frame drawn bright and tagged, the rest greyed; (d) the PROBE — wind.at(the aim point) live in the
 // section header. Nothing here touches the renderer or the game's state (WIND_STATS.atCalls ticks, a counter): the frame is byte for byte what it was, on or off.
 import { Vec3, v3 } from '../math/vec';
+import { textZoom } from './textsize';
 import type { FollowCamera } from '../game/camera';
 import type { Game } from '../game/game';
 import type { WindSource } from '../game/wind';
@@ -56,7 +57,7 @@ export class WindViz {
     if (!this.host) return null;
     if (!this.canvas) { const cv = document.createElement('canvas'); cv.className = 'windviz'; cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;'; this.host.appendChild(cv); this.canvas = cv; this.ctx = cv.getContext('2d'); }
     const cv = this.canvas, c = this.ctx; if (!c) return null;
-    const dpr = Math.min(2, window.devicePixelRatio || 1); const W = Math.round(w * dpr), H = Math.round(h * dpr);
+    const dpr = Math.min(2, (window.devicePixelRatio || 1) * textZoom()); const W = Math.round(w * dpr), H = Math.round(h * dpr);
     if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
     cv.style.display = ''; c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h); return c;
   }

@@ -34,6 +34,7 @@ import { SquadThrowViz } from './squadthrowviz';
 import { AttentionViz } from './attentionviz';
 import { PictureViz } from './pictureviz';
 import { menuTheme } from './theme';
+import { textZoom } from './textsize';
 
 const EDGE = 1.1;   // markers / dots / the throw arc stay drawn until they are 10 % of the view past its edge (FollowCamera.project margin)
 /** The way off a lost man to where the round came from, as it lies on the screen: the turn, in degrees, of one right-pointing arrow ('' = the squad does not
@@ -173,7 +174,7 @@ export class Overlay implements HudLike {
     this.closeShown = n;
   }
   update(game: Game, cam: FollowCamera, canvas: HTMLCanvasElement) {
-    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const tz = textZoom(), w = canvas.clientWidth / tz, h = canvas.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
     // guards
     while (this.markers.length < game.guards.length) { const el = document.createElement('div'); el.className = 'marker'; this.root.appendChild(el); this.markers.push(el); }
     game.guards.forEach((g, i) => {

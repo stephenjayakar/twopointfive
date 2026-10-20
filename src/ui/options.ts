@@ -17,6 +17,7 @@ import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
 import { TABKEY, tabChoices, setTabKey, tabDoes } from './tabkey';
 import { BACKKEY } from '../game/backkey';
+import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
 import type { QualityName } from './quality';
@@ -86,9 +87,9 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
 const CSS = `
 #options { position: fixed; inset: 0; z-index: 39; display: none; flex-direction: column; align-items: center; outline: none; background: var(--m-base); color: var(--m-text); font: 13px/1.45 var(--m-font); }
 #options.on { display: flex; }
-#options .op-in { box-sizing: border-box; width: min(1180px, 100%); height: 100%; display: flex; flex-direction: column; padding: clamp(14px, 4vh, 44px) clamp(16px, 4vw, 48px) 16px; }
-#options .op-title { flex: 0 0 auto; font: 700 clamp(34px, 5vw, 56px)/0.9 var(--m-head); letter-spacing: 0.04em; text-transform: uppercase; color: var(--m-bright); }
-#options .op-tabs { flex: 0 0 auto; display: flex; gap: 2px; margin-top: clamp(10px, 2.4vh, 22px); border-bottom: 2px solid rgba(var(--m-edge),0.22); }
+#options .op-in { box-sizing: border-box; width: min(1180px, 100%); height: 100%; display: flex; flex-direction: column; padding: clamp(14px, 4vh / var(--tz, 1), 44px) clamp(16px, 4vw / var(--tz, 1), 48px) 16px; }
+#options .op-title { flex: 0 0 auto; font: 700 clamp(34px, 5vw / var(--tz, 1), 56px)/0.9 var(--m-head); letter-spacing: 0.04em; text-transform: uppercase; color: var(--m-bright); }
+#options .op-tabs { flex: 0 0 auto; display: flex; gap: 2px; margin-top: clamp(10px, 2.4vh / var(--tz, 1), 22px); border-bottom: 2px solid rgba(var(--m-edge),0.22); }
 #options button { font: inherit; cursor: pointer; }
 #options .op-tab { position: relative; top: 2px; padding: 11px 22px 9px; font: 600 16px/1 var(--m-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-dim); background: none; border: 0; border-bottom: 2px solid transparent; }
 #options .op-tab i { font: 10px var(--m-mono); font-style: normal; margin-right: 8px; color: var(--m-faint); letter-spacing: 0; vertical-align: 2px; }
@@ -211,9 +212,9 @@ function render(S: Screen) {
     e.addEventListener?.('mousedown', () => { if (S.sel !== i) { S.sel = i; S.paint(); } });
     parent.appendChild(e); return R;
   };
-  const seg = <T extends string>(parent: HTMLElement, label: string, opts: { v: T; label: string; line?: string }[], get: () => T, set: (v: T) => void, describe: () => string) => {
+  const seg = <T extends string>(parent: HTMLElement, label: string, opts: { v: T; label: string; line?: string; px?: number }[], get: () => T, set: (v: T) => void, describe: () => string) => {
     const R = row(parent, label, describe), box = el('div', 'op-seg'); R.el.appendChild(box); R.el.appendChild(el('div', 'op-val'));
-    const btns = opts.map(o => { const b = el('button', 'op-opt', o.label) as HTMLButtonElement; b.tabIndex = -1; if (o.line) b.title = o.line; b.onclick = () => { set(o.v); S.paint(); }; box.appendChild(b); return b; });
+    const btns = opts.map(o => { const b = el('button', 'op-opt', o.label) as HTMLButtonElement; b.tabIndex = -1; if (o.line) b.title = o.line; if (o.px) { b.style.fontSize = `${o.px}px`; b.style.lineHeight = '13px'; } b.onclick = () => { set(o.v); S.paint(); }; box.appendChild(b); return b; });   // (px: a choice drawn at a size of its own, the row no taller for it)
     const step = (d: number) => { const i = opts.findIndex(o => o.v === get()), j = Math.max(0, Math.min(opts.length - 1, (i < 0 ? 0 : i) + d)); if (j !== i) { set(opts[j].v); S.paint(); } };
     R.left = () => step(-1); R.right = () => step(1);
     paints.push(() => { const v = get(); btns.forEach((b, i) => b.classList.toggle('on', opts[i].v === v)); });
@@ -236,8 +237,12 @@ function render(S: Screen) {
   const sec = (parent: HTMLElement, text: string) => parent.appendChild(el('div', 'op-sec', text));
   let reset: (() => void) | null = null;
 
+  // TEXT SIZE (ui/textsize.ts): its steps as the letter at each size, nothing chosen = the window's own. It needs no renderer: the row is live while the page boots
+  const textRow = () => { if (TEXTSIZE.on) seg(body, 'Text size', TEXTSIZE.steps.map((m, i) => ({ v: String(i), label: 'A', px: Math.round(13 * m) })), () => String(textStep()), v => setTextStep(+v === TEXTSIZE.base ? null : +v),
+    () => 'Every word on the screen, from the menus to the marks over the picture. Until you choose, it follows the size of the window. Ctrl or ⌘ with + and − step it from anywhere; with 0 it is the window\'s again.'); };
   if (S.tab === 'controls') controls(body);
-  else if (!deps) { const w = el('div', 'op-wait'); w.appendChild(el('b', '', 'Still starting up')); w.appendChild(document.createTextNode('The renderer is compiling its shaders. These settings open the moment it is ready; the controls are on the last tab meanwhile.')); body.appendChild(w); }
+  else if (!deps) { if (S.tab === 'graphics' && TEXTSIZE.on) { sec(body, 'Display'); textRow(); }
+    const w = el('div', 'op-wait'); w.appendChild(el('b', '', 'Still starting up')); w.appendChild(document.createTextNode('The renderer is compiling its shaders. These settings open the moment it is ready; the controls are on the last tab meanwhile.')); body.appendChild(w); }
   else if (S.tab === 'graphics') {
     const { engine, quality } = deps, G = engine.settings;
     const cur = (): 'auto' | QualityName => quality.auto ? 'auto' : quality.current;
@@ -251,10 +256,11 @@ function render(S: Screen) {
     sec(body, 'Display');
     range(body, 'Brightness', 0.5, 2.5, 0.05, () => G.exposure, v => { if (wrote !== G.exposure) turned = 1; if (G.exposure > 0) turned *= v / G.exposure; G.exposure = wrote = v; }, v => v.toFixed(2),
       'Exposure before the tone map. Raise it if your display crushes the dark rooms, lower it if the lamps blow out. A mission sets its own for its hour, so this is for the mission you are in.');
+    textRow();
     const ro = (globalThis as unknown as { __readout?: { on: boolean; set(v: boolean): void } }).__readout;
     if (ro) flip(body, 'Show frame rate', () => ro.on, v => ro.set(v), 'The read-out in the top-left corner: frame rate, the GPU\'s milliseconds per pass, the counts, your light meter and each man\'s state.');
     const pinned = (() => { try { const q = new URLSearchParams(globalThis.location?.search ?? '').get('quality'); return TIERS.find(t => t.v === q && t.v !== 'auto')?.v as QualityName | undefined; } catch { return undefined; } })();   // (`?quality=` pins this visit's tier: Reset puts THAT back)
-    reset = () => { quality.adaptive = true; if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (pinned) { quality.auto = false; quality.apply(pinned); } else quality.setAuto(); };   // (apply, not pin: a URL's tier is this visit's, never written as this machine's choice)
+    reset = () => { if (TEXTSIZE.on) setTextStep(null); quality.adaptive = true; if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (pinned) { quality.auto = false; quality.apply(pinned); } else quality.setAuto(); };   // (apply, not pin: a URL's tier is this visit's, never written as this machine's choice)
   } else if (S.tab === 'audio') {
     const { audio } = deps, V = audio.volume, pct = (v: number) => `${Math.round(v * 100)} %`;
     const bus = (k: keyof typeof VOLUME_DEFAULTS, label: string, d: string) => range(body, label, 0, 1, 0.05, () => V[k], v => { V[k] = v; audio.setVolumes(); keep(); }, pct, d);
@@ -332,6 +338,7 @@ export function displayNote(): string {
 export function refreshOptions() { open?.paint(); }
 
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener(TEXT_EVENT, () => open?.paint());   // (the size stepped by its keys under an open screen: the row follows)
   // registered at module load = ahead of every listener main.ts adds at boot (its Esc handler, the Input class): a key the screen takes stops here
   window.addEventListener('keydown', e => {
     const S = open; if (!S || e.ctrlKey || e.metaKey || e.altKey) return;

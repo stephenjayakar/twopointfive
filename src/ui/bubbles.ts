@@ -8,6 +8,7 @@ import type { Vec3 } from '../math/vec';
 import { hudExpireBubbles } from '../game/journal';
 import type { BubblesLike } from '../host/hud';
 import { HEADMARK_QA } from './headmark';
+import { rectZoom, textZoom } from './textsize';
 
 /** The tone of a man's bubble (its CSS class). A civilian by his own state; anybody else calm, the wary yellow ('sus') while he is searching or suspicious, the
  *  red of a fight while alert. The wary yellow is the stealth game's read of a man who may find you out (headmark.ts, WHOSE MARKS): a man of the player's own
@@ -46,17 +47,17 @@ export class Bubbles implements BubblesLike {
     const now = performance.now();
     if (key === this.blockKey && now - this.blockAt < BLOCKER_RECHECK_MS) return this.blockers;
     this.blockKey = key; this.blockAt = now;
-    const cr = canvas.getBoundingClientRect(); const out: DOMRect[] = [];
+    const cr = canvas.getBoundingClientRect(), tz = rectZoom(); const out: DOMRect[] = [];
     this.blockEls.forEach((e, i) => {
       if (!e) return;
       if (i < BLOCKER_IDS_ON.length && !e.classList.contains('on')) return;   // (the caption / the interaction panel: only while up)
-      const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0) out.push(new DOMRect(r.left - cr.left, r.top - cr.top, r.width, r.height));
+      const r = e.getBoundingClientRect(); if (r.width > 0 && r.height > 0) out.push(new DOMRect((r.left - cr.left) / tz, (r.top - cr.top) / tz, r.width / tz, r.height / tz));
     });
     return this.blockers = out;
   }
 
   update(game: Game, cam: FollowCamera, canvas: HTMLCanvasElement) {
-    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const tz = textZoom(), w = canvas.clientWidth / tz, h = canvas.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
     // screen rects the bubbles must dodge this frame (canvas-relative): the tour caption while it is up, the interaction panel while it lists something, the kit column, the meters, the objective line, the radio strip
     const blockers = this.blockerRects(canvas, w, h);
     /** draw `el` as bubble `b` over `head` in the tone class `tone`; false = off screen this frame (the caller hides it) */
