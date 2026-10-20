@@ -7,7 +7,7 @@
 //   tape       a run taped from its first step is walked again by a fresh game (tools/qa/rerun.ts) to the same places and the same digest; refusals are in words
 //   load       a checkpoint loaded between two steps ends the tape as a load and is marked one in the trace whatever its clock says; a restart is a restart; a load
 //              made inside a step leaves the tape alive; an F10 recording starting is neither
-//   stand      a tape made on the page's rules is walked on them by a process that stands frozen (the tape names its stand and carries every knob table and the kit)
+//   stand      a tape made on the page's rules is walked on them by a process that stands frozen (the tape names its stand and carries every knob table and the kit — the stealth card its run wore with it)
 //   crash      the page's own save on an error (ui/replaykey.ts) makes one file a minute and three a page load, in a browser that keeps no shelf (where the file is a download);
 //              the error itself is a line in the ring at its moment of PLAY, in every file made while the ring holds it
 // --write: the content probe's file is written there (what the viewer page is developed against); --scenario / --level: that file is of a scenario on a level file
@@ -23,6 +23,19 @@ const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
 const argv = process.argv.slice(2); const val = (k: string) => { const i = argv.indexOf(`--${k}`); return i >= 0 ? argv[i + 1] : undefined; };
 let fails = 0;
 
+// (the `stand` section's second child: the night alone played with a stealth card changed by hand — kit.ts KITDEAL.stealth: the sponge rounds taken off it — taped
+// on whatever stand this process was started on, written to the file named; then nothing else runs)
+if (val('stealth-tape-to')) {
+  const Kt = await import(`${ROOT}/src/game/kit.ts`);
+  Kt.kitMission({ rings: 5, cams: 2, wand: true }); Kt.kitSet(0, 'rings', 0); Kt.kitMission(null);
+  Math.random = mulberry32(0xbeef);
+  const W: any = await standUp({ seed: 21 }); W.game.godMode = true;
+  const buf = new ReplayBuffer(); buf.tape.born(W.game);
+  W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(W.game, dt, cmd); else buf.tick(W.game, dt, W.cam); };
+  for (let f = 0; f < 300; f++) { const I = W.input, s = f / 60; I.keys.clear(); if (s > 1) I.keys.add('KeyW'); I.mouseX = 800 + 300 * Math.sin(s * 0.7); I.mouseY = 420; W.step(1 / 60); }
+  writeFileSync(val('stealth-tape-to')!, JSON.stringify({ ...buf.file(W.game, 'probe', { url: '', fp: levelFingerprint(W.game) }), probeDigest: hashDigest(digestGame(W.game, true)), probeRule: Kt.kitStealthOn(), probeRings: W.game.player.rifle.rings }));
+  process.exit(0);
+}
 // (the `stand` section's child: a room clear with the four taped on whatever stand this process was started on, written to the file named — then nothing else runs)
 if (val('tape-to')) {
   const K = await import(`${ROOT}/src/game/knobs.ts`), Kt = await import(`${ROOT}/src/game/kit.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -256,7 +269,7 @@ console.log('\n=== replay buffer ===');
 { const { rerun } = await import('./rerun.ts'), K = await import(`${ROOT}/src/game/knobs.ts`), Kt = await import(`${ROOT}/src/game/kit.ts`), J = await import(`${ROOT}/src/game/journal.ts`);
   const { tmpdir } = await import('node:os'), { readFileSync, rmSync } = await import('node:fs');
   const at = `${tmpdir()}/replaybuf-stand-${process.pid}.json`, keptTables = K.knobsCopy(), keptKit = JSON.stringify(Kt.KIT.members), word = process.env.TPS_PROFILE;
-  const back = () => { K.knobsBack(keptTables); Kt.KIT.members.length = 0; Kt.KIT.members.push(...JSON.parse(keptKit)); };
+  const back = () => { K.knobsBack(keptTables); Kt.kitMission(null); Kt.KIT.members.length = 0; Kt.KIT.members.push(...JSON.parse(keptKit)); Kt.kitStealthSet(null); };
   try {
     const child = Bun.spawnSync([process.execPath, 'run', import.meta.path, '--tape-to', at], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'ignore', stderr: 'pipe', timeout: 180000 });
     check(child.exitCode === 0, `stand: a room clear with the four taped on the shipped stand${child.exitCode !== 0 ? ` — the child failed (${child.exitCode}): ${child.stderr.toString().slice(-300)}` : ''}`);
@@ -277,6 +290,21 @@ console.log('\n=== replay buffer ===');
         check(!!R0.report?.drift, `stand: read as a tape with no stand named it parts from its trace (at step ${R0.report?.drift?.n}: the frozen stand's rules)`); }
       else console.log('  (this process stands shipped itself: the frozen-stand control is not asked)');
     }
+    // the stealth card a run wore (kit.ts KITDEAL.stealth) rides in the tape beside the loud cards: a re-run in a process that never kept one wears the tape's
+    { back(); const child2 = Bun.spawnSync([process.execPath, 'run', import.meta.path, '--stealth-tape-to', at], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'ignore', stderr: 'pipe', timeout: 180000 });
+      check(child2.exitCode === 0, `stand: the night alone with a stealth card changed by hand taped on the shipped stand${child2.exitCode !== 0 ? ` — the child failed (${child2.exitCode}): ${child2.stderr.toString().slice(-300)}` : ''}`);
+      if (child2.exitCode === 0) {
+        const file = JSON.parse(readFileSync(at, 'utf8')), card = file.rerun?.recipe?.kit?.stealth;
+        if (!file.probeRule) console.log('  (the shipped stand has the stealth card rule off: its tape carries no such card, nothing to judge)');
+        else {
+          check(!!card && card.rings === 0 && file.probeRings === 0, `stand: the tape carries the stealth card its run wore (sponge rounds on the card ${card?.rings}, in his launcher ${file.probeRings})`);
+          const wore = (R: any) => R.W?.game.player.rifle.rings, same = (R: any) => !R.refuse && !!R.report && !R.report.drift && hashDigest(digestGame(R.W.game, true)) === file.probeDigest;
+          const R = await rerun(file, { toN: 300 });
+          check(same(R) && wore(R) === 0, `stand: walked here, where no stealth card was ever kept, it wears the tape's and is the same run to the digest (${wore(R)} sponge rounds; ${R.report?.drift ? `parted at step ${R.report.drift.n}` : `${R.report?.compared} samples`})`);
+          back(); const f0 = JSON.parse(JSON.stringify(file)); delete f0.rerun.recipe.kit.stealth; const R0 = await rerun(f0, { toN: 300 });
+          check(!same(R0) && wore(R0) > 0, `stand: with the card taken off the tape it wears the mission's kit and is another run (${wore(R0)} sponge rounds; ${R0.report?.drift ? `parted at step ${R0.report.drift.n}` : 'the digest differs'})`);
+        }
+      } }
   } finally { back(); try { rmSync(at); } catch { /* never written */ } } }
 
 // ---- crash: an error that repeats makes ONE file a minute and three a page load, in a browser that keeps no shelf (bun has no IndexedDB: the shelf's own branch
