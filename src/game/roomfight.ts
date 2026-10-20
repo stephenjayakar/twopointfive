@@ -44,6 +44,7 @@ import { Vec3, v3, clamp, lerp, damp, wrapAngle, approachAngle, DEG } from '../m
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
+import { teamFight, teamSprinting } from './teampace';   // (read inside methods only)
 import { canSee, canSeeChar, sightGain, sightGainOn, hearingCheck, clearShot, doorCells, frameOf, bodyVisibility, BODY_LIGHT, LIGHTS, onLitMan } from './guards';
 import { order, endGuardScript } from './squad';
 import { fireWeapon } from './combat';
@@ -1001,7 +1002,7 @@ export class RoomFight {
     this.doorway(O, dt, speed);
     // ---- the track (aim.ts's law, this side's K) and the pair
     const P = AIM.guard; const facingErr = Math.abs(wrapAngle(brg - c.aimYaw));
-    const onMan = g.time >= O.readyAt && facingErr < P.onDeg * DEG + Math.atan2(0.35, Math.max(dist, 0.3)) && v3.dist(O.aim, chest) < 0.3, on = onMan && !gd.muzzleDown;
+    const onMan = g.time >= O.readyAt && facingErr < P.onDeg * DEG + Math.atan2(0.35, Math.max(dist, 0.3)) && v3.dist(O.aim, chest) < 0.3, on = onMan && !gd.muzzleDown && !teamSprinting(g, gd);   // (teampace.ts: nothing is fired at a run)
     const settle = Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1) * S.settleK;
     if (on && O.pre) { O.track = Math.max(O.track, S.preaim); O.pre = false; }
     O.track = on ? Math.min(1, O.track + dt / settle) : Math.max(0, O.track - P.loseRate * dt);
@@ -1102,7 +1103,7 @@ export class RoomFight {
     const s = O.gd.script!;
     if (O.step && s.goal === O.step.mine) { O.step.mine = p; O.step.door = O.step.door || door; }
     else O.step = { mine: p, goal: s.goal, speed: s.speed, strafe: s.strafe, face: s.face, door };
-    order(O.gd, { ...patch, goal: p });
+    order(O.gd, { ...patch, goal: p }); teamFight(this.g, O.gd, 2);   // (teampace.ts: the fight's own step keeps its pace)
   }
   /** …and handed back: the order as it stood before the step, if nobody has ordered him since */
   private handBack(O: Op) {

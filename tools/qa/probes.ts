@@ -2626,6 +2626,8 @@ if (on('orders-seams', 'squadorders', 'all')) await run('orders-seams', async ()
 if (on('orders-edges', 'squadorders', 'all')) await run('orders-edges', async () => (await import('./orders-probes.ts')).ordersEdges());
 // fall in, Sam stopped: no two places of the file on one spot (orders.ts ORDERS.fileSpread; filespread-check.ts; FILESPREAD_BREAK=1 must fail)
 if (on('filespread', 'squadorders', 'all')) await run('filespread', async () => (await import('./filespread-check.ts')).filespreadCheck());
+// teammates are slower than the player, and run only for a reason (teampace.ts TEAMPACE.on / ?teampace=0 / TPS_TEAMPACE=1; teampace-check.ts; TEAMPACE_BREAK=1 must fail)
+if (on('teampace', 'squadorders', 'all')) await run('teampace', async () => (await import('./teampace-check.ts')).teampaceCheck());
 // a rear man with no door behind him watches a way in, not a wall (cover.ts COVER.rearRead; rearread-check.ts; REARREAD_BREAK=1 must fail)
 if (on('rearread', 'cover', 'wallcharge', 'all')) await run('rearread', async () => (await import('./rearread-check.ts')).rearreadCheck());
 // a man walking backwards on the door behind, let go of, keeps his way while he turns (cover.ts COVER.backTurn; backturn-check.ts; BACKTURN_BREAK=1 must fail)

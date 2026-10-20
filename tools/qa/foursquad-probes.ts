@@ -283,7 +283,8 @@ export const foursquadStack = guarded(async () => {
   // move there: two ranks of two — the line abreast, which is what the order is with roomfit.ts's switch off (on: marks dealt from the room — roomfit-walk)
   ROOMFIT.on = false;
   g.teleportPlayer([12, 0, 17.6]); R.step(5);
-  const whyM = O.give('move', R.floor([19, 0, 17.6])); const arrived = R.until(() => men.every((m: any) => O.of(m)?.arrived), 20); R.step(60);
+  const whyM = O.give('move', R.floor([19, 0, 17.6])); const arrived = R.until(() => men.every((m: any) => O.of(m)?.arrived), 20);
+  R.step((await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on ? 240 : 60);   // (at the team's slower walk, teampace.ts, a man called arrived 0.3 m short takes two seconds more onto his mark)
   const spots = men.map((m: any) => m.char.pos), xs = spots.map((p: number[]) => p[0]).sort((a: number, b: number) => a - b);
   const rr = Math.abs(spots[0][0] - spots[1][0]) < 0.4 && Math.abs(spots[2][0] - spots[3][0]) < 0.4;
   verdict(whyM === null && arrived && minApart(men) > 0.7 && xs[3] - xs[0] < 1.6 && xs[3] - xs[0] > 0.5 && rr, 'move there (ROOMFIT off): two ranks of two across the way they were sent, a pair a rank', `give → ${whyM} · ${men.map((m: any) => `${m.callsign} ${at(m.char.pos)}`).join(' · ')} · nearest two ${f2(minApart(men))} m`);
@@ -301,6 +302,7 @@ export const foursquadStack = guarded(async () => {
   // three men: one down
   killGuard(g, men[3], [1, 0, 0], false, 'shot', 'player'); R.step(5); g.teleportPlayer(SAM.manager); R.step(5);
   const why3 = R.give('stack', 'manager'); const set3 = R.until(() => O.men().every((m: any) => O.of(m)?.arrived), 20);
+  if ((await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on) R.step(180);   // (the team's slower walk, teampace.ts: the last man is still coming by the first — 0.70 m off him — on the frame all three are called set; three seconds on they stand 0.87 apart)
   verdict(why3 === null && set3 && O.men().length === 3 && minApart(O.men()) > 0.7, 'with a man down the three left stack the same way', `give → ${why3} · ${O.men().map((m: any) => `${m.callsign} ${at(m.char.pos)}`).join(' · ')}`);
   return done();
 });

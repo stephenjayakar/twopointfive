@@ -41,6 +41,7 @@ import { gpuFx, bangFx } from './particleFx';
 import { teamOfId, type Team } from './teams';
 import { fightLive } from './roomfight';
 import { loadPace, loadPaceOn } from './kitload';
+import { teamBlastPace } from './teampace';   // (read inside fragTick only)
 import { PACE, canSee, canSeeChar, crossesDoor, frameOf } from './guards';   // (crossesDoor: asked inside fleeByDoor only)
 import type { Door } from './doors';
 import { lanePenalty } from './lanes';       // (asked inside fleeByDoor only)
@@ -64,7 +65,7 @@ import type { Box } from '../scene/boxes';
  *  stagger: seconds folded, [nearest, farthest]. lift: how far over the resting grenade the burst is judged from (a casing on the floor throws its fragments up
  *  and out — a 5 cm door sill is no cover). Reaction: seeM / hearM = how far off a man can notice it (a line of sight to it / its clatter by the sound's own
  *  path); react = seconds before he acts on it [trained, not], + up to reactJit; shoutM = how far his 'grenade!' carries to his own side; fleeM = men in its line
- *  inside this move; runSpeed = a defender's legs (teammates keep their own cap: they never sprint). on = the item exists at all (false: digit 5 says so). */
+ *  inside this move; runSpeed = a defender's legs (teammates keep their own cap — unless teampace.ts lets a man run from a blast). on = the item exists at all (false: digit 5 says so). */
 export const FRAG = {
   on: true, issue: 2, fuse: 3.0, orderFuse: 2.4,
   /** the squad's: how many it carries per run (doortools.ts counts them like its bangs), the key of the door tools' 'frag and clear' row (no digit: the
@@ -675,7 +676,7 @@ export function fragTick(g: Game, _dt: number) {
         if (!gd.script && !gd.hold && !gd.pinned && flat(c.pos, dz) <= F.lethalM + 2) /* (a man planted on a post goes nowhere anyway: he fights on from behind it) */ { L.flee.set(gd, { goal: null, upper: 'none', crouch: true }); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); gd.path = []; gd.pathGoal = null; }
         continue;
       }
-      const speed = conditionPace(g, gd, gd.team === 'operative' && PACE.on ? Math.min(F.runSpeed, PACE.max) : F.runSpeed);   // (a teammate never sprints: the spot is one HIS legs make)
+      const speed = conditionPace(g, gd, teamBlastPace(g, gd, F.runSpeed));   // (the spot is one HIS legs make: a teammate's under his own cap — or, with teampace.ts on, at the flee's run)
       const acc = gd.team === 'operative' && PACE.on && gd.speed < speed * 0.6 ? PACE.accel : Infinity, W = wise ? { path: wise.path, keep: keep?.goal ?? null, not, apart: F.fleeApart ? takenBy(g, L, gd, dz) : undefined } : undefined;
       const legs = loadPace(g, gd, speed), pick = acc * loadPaceOn(g, gd);   // (kitload.ts: the spot is one the legs his CARD leaves him make — the leg itself is asked for at `speed`, and the path scales it)
       let spot = fleeSpot(g, c, dz, legs, it.fuse, pick, W, gd); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); L.via?.delete(gd);

@@ -64,7 +64,7 @@ export const SNOWTRACKS = {
   dragDeep: 0.3,      // how deep a scuff is cut at the boot's end, of the way from the outline to the floor (in the byte: 0.5 + dragDeep × 0.45); it runs out to nothing
   // ---- a RUN tears the snow up (the maintainer, 10-15: "sprinting should leave messier trails"). How fast the man is going when the foot lands = `run` 0‥1
   // (0 at runLo and under: a walk's print is the print above, byte for byte; 1 at runHi: a flat sprint, 4.7 m/s; a jog's 3.3 m/s is about two fifths). Every
-  // number below is × run × runMess × mess. Teammates never sprint: this is the player's trail and a defender's who runs.
+  // number below is × run × runMess × mess. The player's trail, a defender's who runs, and a teammate's where teampace.ts has him run.
   runMess: 1,         // 0‥1: all of it at once (0 = a sprinter's print is a walker's)
   runLo: 2.4,         // m/s
   runHi: 4.4,         // m/s

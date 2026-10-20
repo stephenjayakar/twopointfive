@@ -63,6 +63,7 @@ import { SAMSTUN } from './samstun';
 import { WORDS } from './words';
 import { squadArcTo, squadHandFree } from './squadsmoke';
 import { workHand } from './workthings';
+import { teamBlastPace } from './teampace';
 import { bodyPos, PACE } from './guards';
 import { loadPace, loadPaceOn } from './kitload';
 import { conditionPace } from './condition';
@@ -179,7 +180,7 @@ rollbackVar('squadthrow.duckMates', () => duckMates, v => { duckMates = v; });  
 function fragClears(g: Game, gd: Guard, p: Vec3, pts: Vec3[], late = 0, taken?: Vec3[]): boolean {
   const K = SQUADTHROW; if (!K.lob || !K.duck || !FRAG.fleeWise || gd.held || g.time < gd.staggerUntil || g.time < gd.dazzledUntil) return false;   // (the flee it counts on is the one that runs from where the thing will REST: frag.ts FRAG.fleeWise — without that rule nobody is counted on to duck)
   if (pts.some(L => flat(p, L) < K.duckMinM)) return false;   // (inside what it kills at nobody is asked to duck: a leg that fails there is a man dead, not a man hurt)
-  const speed = conditionPace(g, gd, PACE.on ? Math.min(FRAG.runSpeed, PACE.max) : FRAG.runSpeed), L = pts[0]; SQUADTHROW_STATS.ducks++;
+  const speed = conditionPace(g, gd, PACE.on ? teamBlastPace(g, gd, FRAG.runSpeed) : FRAG.runSpeed), L = pts[0]; SQUADTHROW_STATS.ducks++;
   // Asked as the deal asks it (frag.ts fragTick) when FRAG.fleeApart is on: of the man himself, so what he knows of the enemy weighs on the corner, and
   // with the deal's own list of the floor his mates have a claim to (`fleeMates`, the same for every cell asked of one throw: kept). The corners forecast
   // for the men asked before him are NOT handed over as legs already run: the deal tells men in the order they hear it, not in this one, so two men

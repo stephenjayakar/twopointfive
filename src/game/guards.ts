@@ -64,6 +64,7 @@ import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called 
 import { hourLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
+import { teamCap, teamRunLegs, teamAccel, teamTread } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
 import { loadPace, loadPaceOn, loadSprintOn, loadGait, loadSeen, loadHeard } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
@@ -1568,11 +1569,11 @@ export function teamLit(g: Game, gd: Guard): boolean {
 /** is this man one of the team whose pace PACE governs right now */
 export function teamPaced(g: Game, gd: Guard): boolean { return PACE.on && gd.team === 'operative' && !!gd.unit && fightLive(g); }
 /** the speed his legs may be asked for (PACE.max for the team; anybody else: as asked) */
-export function teamPace(g: Game, gd: Guard, speed: number): number { return conditionPace(g, gd, silentPace(g, gd, teamPaced(g, gd) ? Math.min(speed, PACE.max) : speed)); }   // (… and a SILENT squad's walk under that: silent.ts)
+export function teamPace(g: Game, gd: Guard, speed: number): number { return conditionPace(g, gd, silentPace(g, gd, teamPaced(g, gd) ? Math.min(speed, teamCap(g, gd)) : speed)); }   // (… and a SILENT squad's walk under that: silent.ts)
 /** the speed his legs GET for a leg asked at `speed` (already teamPace's): × what his card weighs (kitload.ts) — on top of the caps, which so scale with the
  *  man (a light man is the quieter one too). teamPace is a cap and may be asked twice; this is a factor — ONE call a leg, where the leg is walked
  *  (followPath, stepAlongPath, a scripted man's strafe and settle). As asked for a man with nothing weighed on him */
-export function teamLegs(g: Game, gd: Guard, speed: number): number { return loadPace(g, gd, speed); }
+export function teamLegs(g: Game, gd: Guard, speed: number): number { return teamRunLegs(g, gd, speed) ?? loadPace(g, gd, speed); }   // (teampace.ts: at a run a card weighs as it does on the player's sprint — null with its switch off)
 /** where his muzzle is this frame, wanting yaw `to`: the team's comes round at PACE.turn, and round his FRONT (eased against the body's own yaw, inside the
  *  runner's twist limit: the short way to a point behind him lies across his back, where the limit would hold the gun on the wrong shoulder); anybody else's is on it */
 export function teamTurn(g: Game, gd: Guard, to: number, dt: number): number {
@@ -1581,7 +1582,7 @@ export function teamTurn(g: Game, gd: Guard, to: number, dt: number): number {
   return c.bodyYaw + (Math.abs(want - rel) <= step ? want : rel + Math.sign(want - rel) * step);
 }
 /** his speed this frame, having been `was` last frame: the team picks pace up at PACE.accel at most */
-export function teamLean(g: Game, gd: Guard, was: number, dt: number) { if (gd.speed > was && teamPaced(g, gd)) gd.speed = Math.min(gd.speed, was + PACE.accel * loadPaceOn(g, gd) * dt); }   // (kitload.ts: … and by what he carries)
+export function teamLean(g: Game, gd: Guard, was: number, dt: number) { if (gd.speed > was && teamPaced(g, gd)) gd.speed = Math.min(gd.speed, was + teamAccel(g, gd) * loadPaceOn(g, gd) * dt); }   // (kitload.ts: … and by what he carries)
 
 export function followPath(g: Game, gd: Guard, dt: number, speed: number): boolean { // returns true when arrived
   const c = gd.char; speed = teamLegs(g, gd, teamPace(g, gd, speed));   // (… × his card: kitload.ts, here and nowhere above — a caller hands in the pace it asks for)
@@ -2402,7 +2403,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   attachFlashlight(g, gd, dt);
   const prevPhase = gd.stepPhase; gd.stepPhase = c.anim.phase;
   if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) {
-    const loud = tread(g, c.pos, (loadGait(g, gd, moveSpeed) > 2 ? 0.8 : silentStep(g, gd) ?? 0.33) * loadHeard(g, gd), false);   // (kitload.ts: a teammate's card — the gait he was asked for, × what he rattles)   // (walking steps carry the walk clip's retime — 1.06 m/s natural, ~1.4x the steps per metre — at the old per-second loudness: 0.45 x 0.73; the run's cadence is unchanged; × the floor he is on, floor.ts — presentation only, nobody hears a guard)
+    const loud = tread(g, c.pos, teamTread(g, gd, moveSpeed, 0.33), false);   // (kitload.ts: a teammate's card — the gait he was asked for, × what he rattles)   // (walking steps carry the walk clip's retime — 1.06 m/s natural, ~1.4x the steps per metre — at the old per-second loudness: 0.45 x 0.73; the run's cadence is unchanged; × the floor he is on, floor.ts — presentation only, nobody hears a guard)
     if (!staff) g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud, who: c.id });   // …but a UNIT's footfall is a sound in the world for the side that hunts him (teams: hearingCheck stepIsThreat) — the staff's stay presentation, as ever
   }
 }

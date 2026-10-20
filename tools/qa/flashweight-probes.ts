@@ -71,6 +71,9 @@ interface PaceRun { asked: number; rise: number; covered: number; men: number; m
 /** the script: fall in behind a sprinting Sam, then stack on the nearest held room's door, then through it */
 async function paceRun(scn: string): Promise<PaceRun> {
   const S: any = await quiet(() => stage(scn, 1)); const { g, step } = S; const O = g.orders, nav = g.col.nav;
+  // This is the check of the CAP (guards.ts PACE) — what a teammate's legs do with teampace.ts off, and the floor that rule stands on. With it on the team
+  // walks under the cap and runs for a reason (with a sprinting Sam, from a grenade, to cover): that is teampace-check.ts's, and it is held off here.
+  (await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on = false;
   const team: any[] = O.squad().filter((x: any) => x.state !== 'dead');
   const out: PaceRun = { asked: 0, rise: 0, covered: 0, men: team.length, moved: false };
   const was = new Map<any, number>(team.map(x => [x, x.speed])); const trail = new Map<any, number[][]>(team.map(x => [x, []]));

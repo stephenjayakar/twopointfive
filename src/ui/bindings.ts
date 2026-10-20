@@ -100,6 +100,7 @@ import { SAMSTUN } from '../game/samstun';
 import { RECAP } from '../game/deathrecap';
 import { AIMWEIGHT } from '../game/aimweight';
 import { SPRINTDOOR } from '../game/sprintdoor';
+import { TEAMPACE } from '../game/teampace';
 import { AIMCOST } from '../game/aimcost';
 import { HANDLE, HANDLE_STATS } from '../game/handleside';
 import { PRESSURE, PRESSURE_DEFAULTS, resetPressure, pressureSummary } from '../game/pressure';
@@ -1332,12 +1333,17 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     ]);
     tf = TF.move;
     feelRows('PACE', [
-      { k: 'on', label: 'teammates ▸ never run', title: 'a teammate\'s legs stop at the top pace below whoever asks — the fight AI\'s chase, a drill, an order — and he comes up to speed gradually. Off = no cap and no lean (an order\'s own legs still ask for the three \'pace ▸ …\' rows further down this section: raise those too for the old sprinting file)' },
+      { k: 'on', label: 'team ▸ pace cap', title: 'a teammate\'s legs stop at the top pace below whoever asks — the fight AI\'s chase, a drill, an order — and he comes up to speed gradually. Off = no cap and no lean (an order\'s own legs still ask for the three \'pace ▸ …\' rows further down this section: raise those too for the old sprinting file)' },
       { k: 'max', label: 'team ▸ top pace', title: 'top pace (m/s) — you walk at 1.55 and sprint at 4.7; 2.2 keeps up with a walk and is left by a sprint. An order asks for at most its own pace (the three \'pace ▸ …\' rows further down this section), so above those this only frees the fight AI\'s chase' },
       { k: 'accel', label: 'team ▸ pick-up', title: 'gathering pace (m/s²) — how quickly a teammate comes up to speed — the weight in a start' },
       { k: 'turn', label: 'team ▸ gun swing', title: 'a gun comes round at (rad/s) — the most a teammate\'s muzzle (and his weapon light) turns in a second onto a point an order or his cover gives it: 8 is a quarter turn in a fifth of a second. Onto a man he has seen it is as quick as ever. 0 = on its new point the frame it is given one, as it was' },
       { k: 'swing', label: 'team ▸ gun flip', title: 'the fastest a teammate\'s gun crosses from one shoulder to the other when the man he is on passes behind his back (rad/s): 30 is a half turn in a tenth of a second, swung through his front. 0 = it flips sides in one frame, as it was' },
     ]);
+    panel.toggleBox(TF.move, 'teammates ▸ slower than you, run for a reason', () => TEAMPACE.on, v => { TEAMPACE.on = v; }, 'THE switch (also ?teampace=0 on the address for off). On: a teammate walks at a share of your walk (the row below), so you can always catch a team you have sent; a follower closes on his place at your walk and runs with you while you sprint; on his own he runs only from a grenade or to cover across floor an enemy has a line on. What a fight asks of his legs (an entry through the ordered door, a step off a doorway, a man in his sights) keeps the top pace above. At a run his gun is low and he fires nothing. Off = the top pace above for every leg, and nobody runs');
+    panel.slider(TF.move, 'teammates ▸ walk × yours', 0.5, 1.4, 0.05, () => TEAMPACE.k, v => { TEAMPACE.k = v; }, 'a teammate\'s walk as a share of yours (you walk at 1.55 m/s): 0.8 = you gain a metre on him every three seconds or so');
+    panel.slider(TF.move, 'teammates ▸ follower closes × yours', 0.8, 1.4, 0.05, () => TEAMPACE.followK, v => { TEAMPACE.followK = v; }, 'a man falling in who is off his place walks at up to this share of your walk: 1 = he holds a gap you open while you walk and closes it when you stop');
+    panel.toggleBox(TF.move, 'teammates ▸ run with you', () => TEAMPACE.follow, v => { TEAMPACE.follow = v; }, 'a follower who is off his place runs while you sprint, at your own sprint, and drops to a walk when you do. Off = he closes at a walk');
+    panel.toggleBox(TF.move, 'teammates ▸ run for a reason', () => TEAMPACE.own, v => { TEAMPACE.own = v; }, 'on his own a teammate runs from a grenade, and to cover across floor an enemy has a line on. Off = he leaves a grenade at the top pace above and walks to cover');
     tf = TF.lights;
     feelRows('LIGHTS', [
       { k: 'on', label: 'weapon lights ▸ discipline', title: 'a teammate under your orders burns his weapon light only while it helps: walking somewhere on his own, through an entry and its search, in a fight, after an enemy\'s footstep. Dark in file behind you, stacked, holding. Off = lights as each scenario\'s own switch has them' },

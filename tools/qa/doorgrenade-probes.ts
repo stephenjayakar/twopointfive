@@ -45,12 +45,13 @@ const levelOfFile = (file: string): any => { const data = parseLevelData(readFil
 const offOf = (d: any, p: number[], side: number) => { const th = d.def.closedDir; return (Math.cos(th) * (p[2] - d.def.hinge[1]) - Math.sin(th) * (p[0] - d.def.hinge[0])) * side; };
 
 /** the rule and its cap as the runs staged from here have them — written after each stand-up (a stand that names the rule's word writes it again every time) */
-interface Knobs { rule: boolean; cap?: number }
+interface Knobs { rule: boolean; cap?: number; /** false = the team's slower walk and its runs (teampace.ts) held off for this run */ pace?: boolean }
 async function stage(scn: string, seed: number, K: Knobs) {
   const E = SCENARIOS.find((e: any) => e.id === scn); if (!E) throw new Error(`no scenario '${scn}'`);
   Math.random = seeded(0x51c3 + seed * 7919);
   const W: any = await quiet(() => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); const g = W.game;
   DOORTOOLS.fragHold = K.rule; if (K.cap !== undefined) DOORTOOLS.fragHoldCap = K.cap; FR.FRAG.on = true;
+  if (K.pace === false) (await import(`${ROOT}/src/game/teampace.ts`)).TEAMPACE.on = false;
   g.godMode = true; g.tune.chaos = 0.5;
   let q = scenarioQuery(E) as string; if (E.kind === 'roomclear') q = q.replace(/roomclear(=\d+)?/, `roomclear=${seed}`);
   const { why } = await quiet(() => startFromQuery(g, new URLSearchParams(q))); if (why) throw new Error(`${scn}: start refused — ${why}`);
@@ -181,7 +182,9 @@ export const doorGrenade = guarded(async () => {
   // ---- a stack on the word
   const wOff: Run[] = [], wOn: Run[] = [], nOff: Run[] = [], nOn: Run[] = [], late: Run[] = [], again: Run[] = [];
   for (const [scn, door] of DOORS) {
-    wOff.push(await doorRun(scn, door, 'openClear', 'word', off)); wOn.push(await doorRun(scn, door, 'openClear', 'word', on));
+    // (THE FAULT is staged at the pace it was found at: with teampace.ts on a man is off a grenade sooner and the lead is not back at the leaf when the word
+    //  comes, so the door is not opened on running men at every one of these doors — the lines under it run at the page's pace)
+    wOff.push(await doorRun(scn, door, 'openClear', 'word', { ...off, pace: false })); wOn.push(await doorRun(scn, door, 'openClear', 'word', on));
     nOff.push(await doorRun(scn, door, 'openClear', 'word-none', off)); nOn.push(await doorRun(scn, door, 'openClear', 'word-none', on));
     again.push(await doorRun(scn, door, 'openClear', 'word2', on));
     late.push(await doorRun(scn, door, 'openClear', 'word', { rule: !BRK, cap: 0.3 })); K.fragHoldCap = cap0; }

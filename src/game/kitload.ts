@@ -6,7 +6,7 @@
 // and the scores change the run (the floor functions below, each a plain `×1` while the switch is off):
 //   pace          the speed his legs are asked for is × loadPaceK, ONCE a leg: you (player.ts: walk, crouch-walk, the drag, the hold; your sprint keeps
 //                 `sprint` of it) and a teammate (guards.ts teamLegs — followPath, stepAlongPath, a scripted man's strafe and settle; on top of the
-//                 caps the squad's legs already have, which so scale with the man; never past `paceTop`: teammates never sprint). A teammate's muzzle
+//                 caps the squad's legs already have, which so scale with the man; never past `paceTop`: a teammate's walk is never a run — teampace.ts weighs a run its own way). A teammate's muzzle
 //                 comes round and his legs pick pace up by the same factor (guards.ts teamTurn, teamLean): in a room a heavy man is the slower gun.
 //                 The search that reckons how far you can have run (guards.ts floodFrom) and the sneak's price of a crossing (sneak.ts) read it too
 //   seen          the notice a visible man builds in an eye is × loadSeenK (guards.ts sightGain and the hold's pairSightRate for you, sightGainOn for a

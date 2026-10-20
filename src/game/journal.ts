@@ -126,6 +126,7 @@ import { SEENWALK } from './seenwalk';
 import { TEAMTALLY } from './teamtally';
 import { AIMWEIGHT } from './aimweight';
 import { SPRINTDOOR } from './sprintdoor';
+import { TEAMPACE } from './teampace';
 import { AIMCOST } from './aimcost';
 import { QUICKTHROW } from './quickthrow';
 import { FRIENDS } from './friends';
@@ -345,6 +346,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.SEENWALK) SEENWALK.on = false;   // (a file from before an ordered walk weighed lit floor in view of an uncleared room: the walks as they were)
   if (!k.tables.SAMSTUN) SAMSTUN.on = false; else if ((k.tables.SAMSTUN as Partial<typeof SAMSTUN>).ownSeen === undefined) SAMSTUN.ownSeen = false;   // (a file from before a blast folded or blinded the player: his feet and his picture were his own through every one — and one from before a watched can of his own side counted in full)
   if (!k.tables.SPRINTDOOR) SPRINTDOOR.on = false;
+  if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
   if (!k.tables.AIMWEIGHT) AIMWEIGHT.on = false; else if ((k.tables.AIMWEIGHT as Partial<typeof AIMWEIGHT>).launchWait === undefined) AIMWEIGHT.launchWait = 0;   // (a file from before the player's aim had weight: its clicks were aimed with the gun eased straight onto the cursor — and one from before a launcher's load waited on the swing: it left the frame the button came up)
   if (!k.tables.AIMCOST) { AIMCOST.lamp = false; AIMCOST.move = false; }   // (a file from before a lamp needed a real hit and moving feet cost the shot: its rounds broke the lamps they passed, and its cones were the old ones)
