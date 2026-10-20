@@ -1248,7 +1248,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   old start card's look-alike (`ui/menu.ts bootCard`: a grey Start, the notes, the whole controls list, the shader count) and the mission began under
   it the moment the boot was done. NOW that page shows the mission, in a layer of its own (`#brief`, z 30: over the menu and the list, under the
   options and the fatal card): the heading it is listed under, its title, place and one line, the sheet's three cells (Team AS DEPLOYED, Defenders,
-  Approach), its picture (`ui/menuStills.ts`; none came = the words alone), and ONE block, START, which fills by the boot's own status line and is
+  Approach), THE MAP of its level (below; the file did not come = the words alone), and ONE block, START, which fills by the boot's own status line and is
   live when the boot is done. Every word is the mission list's (`briefOfQuery`: the row its address boots; deployed at a size no row has, the row of
   that kind on that level; `?solo` alone = the solo night; NONE for an address that picks its level by `?level=` — the editor's own level plays the
   moment it loads, under no other level's words); the only words that are the screen's own are Start, Enter, Controls and Back. IT STAYS
@@ -1284,6 +1284,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOBODY HAS SEEN IT ON A GPU OR PLAYED IT: the brief itself is plain DOM and was looked at as Chromium lays it out at 960 x 540, 1280 x 720, 1920 x
   1080, 2560 x 1440, 3440 x 1440, 3840 x 2160 and a 700 px wide window; how long the hold feels, the fade into the first frames, and the sound that
   starts on the press are unjudged.
+  THE MAP, NOT THE PICTURE (10-20; the maintainer on the first cut, seen on his own machine: "better but let's show the map vs. the (kinda low res)
+  level art"): beside the words is the mission list's own map sheet of the level (`ui/missions.ts drawMissionMap` → `drawPlan` / `ui/planArt.ts
+  drawSheet`: the place as a model, a 10 m scale, the way in the address asks for marked as the list marks it — `wayOfLink`, one fold for the list
+  and the brief), chosen over the flat plan and the maps of play because it is the one that shows the ground and where the team starts before a run
+  exists. It is the level AS THE PAGE LOADS IT (`scene/look.ts lookLevelFile`: the dressed file under the default look, the plain one under
+  `?look=plain`; the list's own sheet still draws the plain file), so the furniture on the map is the furniture of the run, and the file is the one
+  the boot fetches anyway. It is drawn in the screen's own pixels (the canvas is its shown width × the text size factor × the device's pixel ratio,
+  480 to 2880, redrawn on a resize or a text size step), so it is sharp on a dense screen where the 760 px picture was not; its box is the sheet's
+  40 : 28 at the largest width the column and the window's height leave, so nothing of it is cut in a short window or letterboxed in a narrow one;
+  a file that did not come is asked for again at the next resize; the canvas's pixels are let go when the brief goes. The mission pictures
+  (`ui/menuStills.ts`) are no longer shown here; the cards keep them. KNOWN: a window dragged to a screen of another pixel density with no resize
+  keeps the old density until one; the parsed level stays in the list's plan cache for the page's life, as it does after a visit to the list.
+  CHECKED 10-20: the probe's map line on both stands (the level's file by the stand's look, the way in exact, the sheet's shape, its pixels let
+  go); laid out in a real browser page (no GPU boot) at 1300 x 780 at 2 device pixels, 1920 x 1080 (dressed and `?look=plain`), 3840 x 2160, the
+  largest text step, 1920 x 700, 1400 x 480, 700 x 900, 820 x 600, and with the level's first fetch failed then a resize — the canvas is the shown
+  size in device pixels (or its 480 floor) each time, inked, inside the window, nothing scrolls; `loadbrief-page.cjs` holds the same on the booted
+  page (PAGE_MAP_RESULTS). The map on the brief has not been seen on a GPU page or by the maintainer yet.
 - **The game has its own text size, and the page no longer zooms** (`src/ui/textsize.ts`, `TEXTSIZE.on`, 10-19; a play test on a 3840 × 2160 screen:
   the words were too small to read, the browser's zoom keys grew the page until the layout broke, and the mission select's names were cut). ONE FACTOR,
   `--tz` on the root (which wears the class `tsz` while the switch is on), drawn as CSS `zoom` on every layer of the page that carries words (`LAYERS`:

@@ -20,6 +20,7 @@ import { PICKS_UI, pickLeaveSearch, onShortList } from '../scene/picks';
 import { SAMESTART } from '../game/samestart';   // (a leaf: every mission starts the same way on every try)
 import { MISSION_GROUPS, type MissionGroup, type ScenarioEntry } from '../scene/scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, levelWords, teamWords, teamTag } from '../scene/scenarioList';
+import { lookLevelFile } from '../scene/look';   // (a leaf: which file of a level the page loads)
 import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficultyHref, structureOfLevel, squadsHeld, type Difficulty } from '../game/difficulty';
 import { leverRows, leversSig } from './levers';
 import { fogOfQuery, sameFog } from '../game/scenarioRun';
@@ -296,7 +297,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
   let hourSel: HourId = opts.hour ?? (hourPick && hourPick.search === search ? hourPick.id : hourIdOf(new URLSearchParams(search).get('hour'))), hourShown: HourId | null = null;
   let wx: WeatherKind | null = wxPick && wxPick.search === search ? wxPick.kind : weatherOfSearch(search), wxShown: WeatherKind | null | undefined;   // (the pick made on this page's list earlier — Back from the loadout reopens the list — else the URL's)
   { const m0 = missionOfQuery(search, list), w = new URLSearchParams(search).get('way');   // (the page's own way in is its mission's pick until another is made)
-    if (m0?.scenario?.ways && !(m0.id in wayPick) && w) wayPick[m0.id] = w === 'any' ? -1 : /^\d+$/.test(w) && +w >= 2 ? Math.min(+w, m0.scenario.ways.length) : 0; }
+    if (m0?.scenario?.ways && !(m0.id in wayPick) && w) wayPick[m0.id] = wayOfLink(m0, search); }
   const wayOf = (m: Mission) => { const w = m.scenario?.ways ? wayPick[m.id] ?? 0 : 0; return w < 0 && SAMESTART.on ? 0 : w; }; let wayVer = 0, wayShown = -1;   // (wayOf: a link that came in with way=any while every mission starts the same way = the level's own)
   /** a level BUILT FOR SNOW (game/weatherKinds.ts SNOW_LEVELS) has its own weather: no Weather row is drawn for it, and its link carries none */
   const ownWx = (m: Mission) => snowLevel(m.scenario?.level?.replace(/\.json$/, ''));
@@ -506,6 +507,19 @@ function drawCard(cv: HTMLCanvasElement, m: Mission, key: string, mark?: PlanMar
     if (!mine()) return; if (!pic) return drawn();
     cv.setAttribute('data-still', m.id); cv.setAttribute('data-level', file); drawStill(g, cv.width, cv.height, pic);
   });
+}
+/** the way in a link asks for, as this list keeps it: 0 = the level's own (and every mission with one way), k = its k-th, −1 = dealt */
+function wayOfLink(m: Mission, search: string): number {
+  const w = new URLSearchParams(search).get('way'), n = m.scenario?.ways?.length ?? 0;
+  return !n || !w ? 0 : w === 'any' ? -1 : /^\d+$/.test(w) && +w >= 2 ? Math.min(+w, n) : 0;
+}
+/** THE MAP SHEET of a mission on a canvas of the caller's, `width` px wide (the sheet's own proportions) — the model of its place AS THE PAGE WILL LOAD IT
+ *  (scene/look.ts lookLevelFile: the level's file in the look that is on), with the way in its address asks for marked as this list marks it (dealt = a
+ *  ring at each): the load brief's map (ui/loadbrief.ts). Resolves true when it was drawn; the canvas is hidden where the level's file did not come. */
+export function drawMissionMap(cv: HTMLCanvasElement, m: Mission, search: string, width: number): Promise<boolean> {
+  const w = wayOfLink(m, search), file = lookLevelFile(m.scenario?.level ?? OFFICE);
+  cv.width = width; cv.height = Math.round(width * PLAN_D / PLAN_W);
+  return drawPlan(cv, file, false, true, { kind: m.scenario ? m.scenario.kind : 'solo', way: w < 0 && SAMESTART.on ? 0 : w }).then(() => cv.style?.display !== 'none' && !!cv.getContext?.('2d'));
 }
 function drawPlan(cv: HTMLCanvasElement, file: string, thumb = false, map = false, mark?: PlanMark, small = thumb): Promise<void> {
   cv.setAttribute('data-level', file); cv.setAttribute('data-mark', mark ? `${mark.kind}|${mark.way}` : '');
