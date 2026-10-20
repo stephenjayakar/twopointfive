@@ -378,13 +378,14 @@
     #menu .db-actions { margin: 14px 0 4px; }
     #menu .db-copytext { display: none; margin: 2px 0 6px; padding: 5px 8px; font-size: 10px; color: var(--m-bright); background: rgba(var(--m-base-rgb),0.5); border: 1px dashed rgba(var(--m-edge),0.4); user-select: all; word-break: break-word; }
     #menu .db-copytext.show { display: block; }
-    /* (the tally beside its map while the card holds both — 400 + 18 + 420 — and the map under it when it does not: by the card's own width, whatever the window or the text size) */
+    /* (the tally beside its map while the card holds both, and the map under it, the row's whole width, when it does not: by the card's own width, whatever the window or the
+       text size. The tally's least width is 360 px, so a card of 800 px or more keeps the pair side by side with a scroll bar of any make taking its share) */
     #menu .db-grid { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 10px; }
-    #menu .db-left { flex: 1 1 400px; min-width: 0; } #menu .db-right { flex: 0 1 420px; min-width: 0; }
+    #menu .db-left { flex: 999 1 360px; min-width: 0; } #menu .db-right { flex: 1 1 420px; min-width: 0; }
     #menu .db-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
     #menu .db-stats .st { display: flex; flex-direction: column; justify-content: space-between; padding: 5px 6px 6px; background: rgba(var(--m-panel2-rgb),0.85); border: 1px solid rgba(var(--m-edge),0.16); border-top: 2px solid rgba(var(--m-edge),0.35); min-width: 0; }
     /* (a label is never cut: one too long for its tile takes a second line and the numbers of the row stay on one line) */
-    #menu .db-stats .st i { display: block; font: 600 10px/1.2 var(--m-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-dim); }
+    #menu .db-stats .st i { display: block; overflow-wrap: break-word; font: 600 10px/1.2 var(--m-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-dim); }
     #menu .db-stats .st b { display: block; margin-top: 2px; font: 700 17px/1.1 var(--m-head); color: var(--m-bright); letter-spacing: 0.04em; }
     #menu .db-stats .st.good b { color: var(--m-accent-hi); } #menu .db-stats .st.warn b { color: #f3d78a; } #menu .db-stats .st.bad b { color: #ff9c84; }
     #menu .db-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 2px; }
