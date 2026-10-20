@@ -152,7 +152,7 @@ fn glossReflection(P: vec3f, owner: u32) -> vec3f {
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }   // (no card exclusion: a mirror SHOWS the torch spot on the wall — the cards only stand in for diffuse bounce)
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && hit.idx == CAPSULE_HIT) { Eh += diceIrradianceWalled(Ph, hit.n); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
     L += albedo * Eh * (1.0 / 3.14159265);
   }
   let lum = luminance(L);
@@ -255,7 +255,7 @@ fn glassShade(Pg: vec3f, n: vec3f, V: vec3f) -> vec3f {
       }
       var Eh = vec3f(0.0);
       if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }   // (no card exclusion, as the gloss ray: a pane's mirror image SHOWS the torch spot on the wall)
-      if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }
+      if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && hit.idx == CAPSULE_HIT) { Eh += diceIrradianceWalled(Ph, hit.n); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
       L += albedo * Eh * (1.0 / 3.14159265);
     }
     let lum = luminance(L);
@@ -341,7 +341,7 @@ fn youngRay(Po: vec3f, N: vec3f, owner: u32, Lcap: f32, kx: u32, Kx: u32) -> vec
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, ex); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradianceFrom(Ph, hit.n, Po, N); }   // (the main loop's read, bounded the same way)
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && (hit.idx == CAPSULE_HIT || bounceLeftNoWall(N, owner, hit.t))) { Eh += diceIrradianceWalled(Ph, hit.n); } else { Eh += diceIrradianceFrom(Ph, hit.n, Po, N); } }   // (the main loop's read, bounded the same way)
     L += albedo * Eh * (1.0 / 3.14159265);
   }
   let lum = luminance(L);
@@ -428,7 +428,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
       }
       var Eh = vec3f(0.0);
       if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, ex); }
-      if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradianceFrom(Ph, hit.n, Po, N); }   // one probe spacing off the hit face (per axis) like every other dice read — sampling closer pulls light through off-lattice walls — but never past the plane of the surface this ray LEFT, and no trilinear neighbour from behind it (lighting_common diceIrradianceFrom: the back of a shelf against the wall being shaded read the lit room next door)
+      if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && (hit.idx == CAPSULE_HIT || bounceLeftNoWall(N, owner, hit.t))) { Eh += diceIrradianceWalled(Ph, hit.n); } else { Eh += diceIrradianceFrom(Ph, hit.n, Po, N); } }   // one probe spacing off the hit face (per axis) like every other dice read — sampling closer pulls light through off-lattice walls — but never past the plane of the surface this ray LEFT, and no trilinear neighbour from behind it (lighting_common diceIrradianceFrom: the back of a shelf against the wall being shaded read the lit room next door)
       L += albedo * Eh * (1.0 / 3.14159265);
     }
     // firefly guard: one ray in K finding a small intensely lit patch is an outlier the filters would smear into a blotch
@@ -525,7 +525,7 @@ fn giTraceShade(Po: vec3f, N0: vec3f, dir: vec3f, owner: u32, cap: f32) -> GiRay
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, ex); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { let Eb = diceIrradianceFrom(Ph, hit.n, Po, N0); Eh += Eb; if (!r.cap) { Lb = albedo * Eb * (1.0 / 3.14159265); } }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { var Eb: vec3f; if (BOUNCE_WALLS && (hit.idx == CAPSULE_HIT || bounceLeftNoWall(N0, owner, hit.t))) { Eb = diceIrradianceWalled(Ph, hit.n); } else { Eb = diceIrradianceFrom(Ph, hit.n, Po, N0); } Eh += Eb; if (!r.cap) { Lb = albedo * Eb * (1.0 / 3.14159265); } }
     L += albedo * Eh * (1.0 / 3.14159265);
   }
   let lum = luminance(L);
