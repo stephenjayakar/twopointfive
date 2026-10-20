@@ -14,7 +14,7 @@ import type { TapePiece } from '../replay/kept';
 import { envSnapshot, knobsSnapshot } from './journal';
 import { activeScenario } from './scenarioRun';
 import { knobRegistry, NOT_KNOBS } from './knobs';
-import { KIT, kitOwn } from './kit';
+import { KIT, kitOwn, kitStealthCard } from './kit';
 import { STAND_ENV } from '../host/standEnv';
 import { FollowCamera } from './camera';
 
@@ -38,7 +38,7 @@ export type Outside = 'load' | 'rec' | null;
 export const loadsOf = (g: Game): number => (g.saves as { stats?: { loads?: number } } | undefined)?.stats?.loads ?? 0;
 /** the F10 recorder: running, and the last file it made (a new object each stop: a recording stopped and started again between two looks is seen by it) */
 export const recOf = (g: Game): { on: boolean; last: object | null } => { const J = g.journal as { recording?: boolean; last?: object | null } | undefined; return { on: !!J?.recording, last: J?.last ?? null }; };
-const kitNow = (): string => JSON.stringify({ on: KIT.on, members: KIT.members, ...(kitOwn() ? { own: true } : {}) });   // (`own`: the cards are the player's own layout, worn as written — kit.ts KITDEAL; absent = a tape from before, or cards a team of three or four wears dealt)
+const kitNow = (): string => JSON.stringify({ on: KIT.on, members: KIT.members, ...(kitOwn() ? { own: true } : {}), ...(kitStealthCard() ? { stealth: kitStealthCard() } : {}) });   // (`own`: the cards are the player's own layout, worn as written — kit.ts KITDEAL; absent = a tape from before, or cards a team of three or four wears dealt)
 
 /** `minutes`: a tape longer than this since the page's game began is dropped (the replay stays a trace). `tuneEvery` / `tablesEvery`: steps between looks at the
  *  game's tune / the knob tables for a change made from the panel. */

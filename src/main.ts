@@ -2,6 +2,7 @@ import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } f
 import { Menu, loadSandbox, bootCard } from './ui/menu';
 import { optionsOpen, openOptions } from './ui/options';
 import { LOADBRIEF, loadBrief } from './ui/loadbrief';
+import { CMDRING } from './game/cmdring';   // (a prototype: with the orders ring on, Tab is its key and nothing else's)
 import { TABKEY, tabFromQuery } from './ui/tabkey';
 import { bootTextSize } from './ui/textsize';
 import { BACKKEY } from './game/backkey';
@@ -709,7 +710,7 @@ async function main() {
       if (bench.active) return;   // (hands off: P would quit its scene, F9 its recording)
       if (!frozen && input.hit('BracketLeft')) engine.settings.exposure /= 1.25;
       if (!frozen && input.hit('BracketRight')) engine.settings.exposure *= 1.25;
-      if (TABKEY.does !== 'off' && input.hit('Tab') && !(BACKKEY.tab && !frozen && game.backable())) {   // (…unless Tab is backing out of something this frame: game/backkey.ts)
+      if (TABKEY.does !== 'off' && !CMDRING.on && input.hit('Tab') && !(BACKKEY.tab && !frozen && game.backable())) {   // (…unless Tab is backing out of something this frame: game/backkey.ts)
         if (TABKEY.does === 'who') { if (!frozen) input.pressed.add(game.orders.knobs.whoKey); } else tabKey(frozen); }   // (what Tab does, on trial: ui/tabkey.ts — 'who' = a press of the orders' own key, handed to this frame's tick)
       if (!frozen && input.hit('Backquote')) panel.toggle();   // the debugger (the tweak panel) is on backtick; Tab is left to the game, and the debug views are a row on its Frame page (no key steps them)
       if (frozen) { if (menu.mode === 'pause' && !missionsBusy() && !optionsOpen() && input.hit('F5') && input.saveKey?.()) { savePend = { m: game.mission, time: game.time }; menu.saveAsked(); } }   // (F5 on the pause card itself, no screen over it: the save by hand is written as play goes on — it is the recording's own input, so it goes through a tick like any press; a refusal is said on the feed there as ever)
@@ -742,7 +743,7 @@ async function main() {
   // has stood its team, then live (the open card's man uses his kit at the door) or, `&stillkit`, frozen, drawn for a warm window and held; it takes the
   // loop's `frozen`, `render` and two seams over and is read-only on storage
   const kitView: KitView | null = kitViewOn ? kitViewStart({ game, engine, cam, input, view: canvas, loop, audio, team: () => teamOf(game), doorSide: sideOf, file: () => levelFileOf.get(game.level) ?? null, lampsOut: () => { const h = hourOf(game); return h !== 'night' && !HOURS[h].lamps; }, glowBox: (c, h, yaw, glow) => makeBox({ c, h, yaw, albedo: [0.04, 0.04, 0.04], emissive: glow, flags: BoxFlag.Emissive | BoxFlag.AreaLit }),   // (dark under its glow: at 0.9 a weapon light crossing it lit a hard white box on the wall — the owner's recording, 10-14; a guess at what that was, never seen on a GPU)
-    kitCards: members => kitLoad({ getItem: () => JSON.stringify({ v: 2, own: true, members }), setItem: () => { /* nothing kept */ } }, location.search),
+    kitCards: members => kitLoad({ getItem: () => JSON.stringify({ v: 2, own: true, stealth: true, members }), setItem: () => { /* nothing kept */ } }, location.search),
     kit: () => KIT.members, tiles: i => kitRows(i).map(r => r.field), smoke: n => squadSmokeStage(game, n),
     gun: i => kitGun(KIT.members[i]), tints: i => { const m = KIT.members[i]; return { suit: m.suit === 'issued' ? null : SUITS[m.suit].tint, trim: m.trim === 'issued' ? null : TRIMS[m.trim].tint }; },   // (written on the live men: a card changed under the picture's eye)
     samCard: () => { kitShow(game); kitPlayer(game); }, turn: spec => { setTurn(spec); },

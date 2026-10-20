@@ -126,10 +126,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as it was — the word menu-art-page and menu-idle-page already open him with), and `show()` answers true for every case the column is the picture's:
   shown (`#missions.kv-on`), WAITED FOR — the level's ways not yet fetched, or the child not yet `ready` (its own word, 12 drawn frames in), however long
   that takes: `#missions[data-kv-wait]`, the column empty and its hairline off so nothing shows and goes — or NONE TO BE HAD, for the page's life on that
-  query: the child said `none` (before `ready` or AFTER it), its load errored, 10 s passed without `ready` (`?kitwait=N` for a slow adapter), the level has
-  no block or the way in is dealt: `#missions[data-kv-none]`, the column empty. `show()` is false only with the switch off or under 720 px. CHECK:
-  kitview-page's outer half (the rows 'a slow child', 'a child that says nothing', 'says `none`', 'no kitView block'; `STANDIN_BREAK=1` opens the slow
-  child's row `?oldfigure` and must fail; `GRACE_BREAK` is gone with the grace). Headless Chromium with a stub child, and one run of the real page with the
+  query: the child said `none` (before `ready` or AFTER it), its load errored, the level has
+  no block or the way in is dealt: `#missions[data-kv-none]`, the column empty. THE WAIT HAS NO CLOCK (10-20): a child was given 10 s to say `ready`
+  (`KIT_VIEW.wait`, `?kitwait`: both gone) and then called none for the page's life — the standing man's cue while he stood in; with nobody standing in, a
+  second game slower than that (a cold shader cache, a slow adapter) left the column blank for good. Every fatal card in the child says `none`
+  (`main.ts kitViewFatal`), so a child that says nothing is one still coming up. `show()` is false only with the switch off or under 720 px. CHECK:
+  kitview-page's outer half (the rows 'a slow child' — 12 s of nothing and still waited for, then shown on its `ready`: red on the build with the clock — 'says `none`', 'no
+  kitView block'; `STANDIN_BREAK=1` puts a canvas in the column while the slow child is waited for and that row must fail on the canvas alone — it used to
+  open the row `?oldfigure`, where no iframe is made, and failed on the iframe count; `GRACE_BREAK` is gone with the grace). Headless Chromium with a stub child, and one run of the real page with the
   real child on the software adapter; never seen on a GPU. STILL IN THE REPO: `kitFigure.ts` and `figureTrace.ts`, reached only by `?oldfigure` and their own
   sheets and checks — deleting them is the kit figure's owner's call. THE SECOND GAME LIVES ONLY WHILE IT CAN SHOW: dropped on `none` / a failed
   boot / a mission with no block / a dealt way / a window gone under 720 px (the ResizeObserver repaints across the line) / Deploy / the page closing;
@@ -1013,6 +1017,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   started in a headless game, the cameras (and the wand) the tiles promised are what is on him. The real page: `PORT=<port> node tools/qa/kitlent-page.cjs` (the
   software adapter, about four minutes a page: the screen as it opens, the fog kept off, `?nokitlent`). Not on the roster's chips or the one-line card. Never seen
   on a GPU; nobody has played it.
+
+- **A stealth mission's kit is what your card starts at there** (2026-10-20; the maintainer on Team & kit of the solo night: "not sure it makes sense to
+  have "mission's" for equipment. that should just be defaults. and if we want to have required equipment, that should just be a constraint on the stuff
+  you pick." and "quiet default also looks jank"). The build before HANDED a quiet mission's sponge rounds, sticky cameras and optical wand to you over
+  your card at the staging, for no pouch, and the tiles above read 'mission's': a second kind of gear no row could change. Now NOTHING IS HANDED OVER A
+  CARD. On a stealth mission (a quiet mission; the night alone) you wear a STEALTH CARD of your own, kept apart from the loud one, and what it is issued as
+  is the mission's kit (`kit.ts stealthIssue`): the launcher's five sponge rounds, the cameras the link carries, the wand, nothing loud (no frag, no HE),
+  and a smoke / stun canister in turn where a pouch is left (no fog: five rounds, two smoke, one stun). Every row is yours to change and is priced like any
+  other; the sponge rounds ride FIVE TO A POUCH (`slots.json` sponge `holds: 5`, read only under the switch), so the kit as issued fills the four pouches:
+  1 + 2 cameras + the wand. 'As issued' on that screen puts the mission's kit back. A stealth card still as issued is not stored and FOLLOWS the mission
+  (the fog lever moved on the screen, another link's cameras); one changed by hand is kept (`twopointsix.kit` gains `stealth`, the card; `members[0]` stays
+  the loud card) and is worn on every stealth mission while it is a legal fill. `kitMission(hand)` says which mission the table's first card is for: the
+  loadout screen as its card is mounted and as the fog lever moves (`loadout.ts syncHand`), null as it closes; a staging puts the run's card first for the
+  length of its own call and puts the table back (`forRun`), so nothing read off the table between stagings moves with the last run played. THE QUIET KIT'S
+  CARD FOR YOU is that same kit under the switch (the table's, a pistol alone with three smoke and a frag, predates the rounds, the cameras and the wand),
+  so on a stealth mission the row of kits does not list Quiet beside the same card as issued; the teammates' Quiet cards are the table's. NOT COVERED: a
+  mission's own issue and a lesson's page wear the issue cards with the hand-overs as they were (nobody's card); the tile seam (`lent`, `LENT_WORD`,
+  `KIT_LENT`) is kept and inert under the switch, and is the page as it was under `?nokitstealth`. REQUIRED EQUIPMENT: no mission requires a thing today;
+  one that did would be a refusal with its reason (`kitRowCan`), never a second kind of gear. SWITCH: `KITDEAL.stealth` (a key of the registered table,
+  journaled; a recording from before the key replays with it off), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row, `TPS_KITSTEALTH=1`; reads
+  only under the card as a tree), ON in the page (`?nokitstealth`; a box in the debugger). Off = the build before: the hand-overs, the tiles that say
+  whose, a sponge round a pouch each. CHECK: `bun run tools/qa/probes.ts kitstealth` on BOTH stands (12 lines: off to the count, the card, a reload, the follow, the
+  store, As issued, the Quiet kit, four staged runs, the journal); `KITSTEALTH_BREAK=1` fails 6 on each. The real page: `PORT=<port> node
+  tools/qa/kitstealth-page.cjs` (`STEALTH_BREAK=1` must fail). Probes written against the hand-overs run with the key held off by the runner
+  (`STEALTH_AS_IT_WAS` in `probes.ts`). A run tape carries the kept stealth card beside the cards (`kit.stealth`). Never seen on a GPU; nobody has played
+  it; whether five rounds, two cameras and a wand is the right kit to start a quiet night with is the maintainer's to say.
 
 - **A suppressed gun is drawn and named as one on the kit card** (2026-10-17; the maintainer on the Team & kit screen of a quiet mission: "quiet missions
   should have different gear screen stuff i think. be creative!"; his shot showed the quiet set's guns tile reading 'GLOCK 19 ONLY' beside a bare pistol).
