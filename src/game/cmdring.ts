@@ -43,8 +43,10 @@ import type { Input } from './input';
 export const CMDRING = {
   /** the ring's key puts the order menu up as a ring at the cursor and, let go, gives the lit wedge (false: the key is nobody's, as it was) */
   on: false,
-  /** the key */
-  key: 'Tab',
+  /** the key: the squad's command key — the quick order's own code (orders.ts ORDERS.quickKey), which the page's board has on Q (host/keymap.ts; the
+   *  maintainer, 10-21: "let's move the squad command button to Q then too", "from tab"). It was Tab until then: a recording carries its own table, so
+   *  one made on Tab replays on Tab. Tab itself is the page's again — the way back (backkey.ts) and what ui/tabkey.ts has it do */
+  key: 'KeyB',
   /** wedges on the ring, clockwise from the top: the digits 1 … this (never above ORDER_DIGITS) */
   wedges: 5,
   /** the ring's middle: the cursor this far (CSS px) out of it lights the wedge it is out toward — once it has been back inside since the ring last changed
@@ -66,7 +68,10 @@ export const CMDRING = {
    *  words grow the same way, by the page's own rule; this is the window alone, so what the cursor does on the ring is the same wherever a recording is played) */
   ref: [1920, 1080] as [number, number],
   /** before the key: a small glyph beside the cursor for the kind of thing the ring would open on, and that thing outlined on the floor (the glyph sits in
-   *  the ring's middle once it is up). A picture only. Off here; the page raises it with the ring (`?nocmdhint` leaves it off) */
+   *  the ring's middle once it is up). A picture only. Off here and in the page unless chosen: a game setting (Options ▸ Game, kept on that machine; `?cmdhint` for a
+   *  visit), with the ring or without (the maintainer, 10-21, of the mark that was always at the cursor: "I don't really like the always on icon", "we
+   *  can make the always on icon a game setting"). With it off the outline and glyph are drawn only while the key is
+   *  down — the press seen to land — and in the ring's middle */
   hint: false,
   /** SAM'S OWN HANDS ON THE SAME RING (interact.ts): Space DOWN puts his rows up as a ring at the cursor at once and Space UP does the lit one — a tap is
    *  the tap it was; a digit or the cursor out of the middle lights another; no quarter second to wait, no list to scroll, no cancel row (a right click or

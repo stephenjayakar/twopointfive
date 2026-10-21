@@ -241,18 +241,22 @@ export async function cmdringCheck(): Promise<boolean> {
 
     // 9. the old keys beside it: the quick key gives, the menu's key lists the menu in the panel, the who key steps
     {
-      R.aim(spot); const n0 = O.log.length; R.press(ORDERS.quickKey); const b = R.tail()?.order, kb = O.log.length - n0; R.home();
+      // (where the quick key IS the ring's key, as in the page, the ring's tap is the quick order: line 15 asks that, and this line asks the other two keys)
+      const own = ORDERS.quickKey !== CMDRING.key;
+      R.aim(spot); const n0 = O.log.length; if (own) R.press(ORDERS.quickKey); const b = own ? R.tail()?.order : 'move', kb = own ? O.log.length - n0 : 1; R.home();
       R.aim(spot); R.press(ORDERS.key); const listed = !!O.hud().menu && !O.cmdRing; R.press(ORDERS.key); const shut = !O.menu;
       R.aim(spot); R.press(ORDERS.whoKey); const w = O.who; O.who = 'all';
-      line(kb === 1 && b === 'move' && listed && shut && w !== 'all', 'the old keys work beside it: B gives, X lists the menu in the panel, T steps who', `B: ${b} (+${kb}) · X: ${listed ? 'listed, no ring' : 'not listed'} then ${shut ? 'shut' : 'still up'} · T: ${w}`);
+      line(kb === 1 && b === 'move' && listed && shut && w !== 'all', 'the old keys work beside it: the quick key gives, X lists the menu in the panel, T steps who', `the quick key: ${own ? `${b} (+${kb})` : 'the ring\'s own key here'} · X: ${listed ? 'listed, no ring' : 'not listed'} then ${shut ? 'shut' : 'still up'} · T: ${w}`);
       R.home();
     }
 
-    // 10. the switch off: the key is nobody's — no ring, no menu, nothing given
+    // 10. the switch off: the key is nobody's — no ring, no menu, nothing given (where it is the quick key too, as in the page, it is that and no more: one order,
+    //     on the press)
     {
       const was = CMDRING.on; CMDRING.on = false;
       R.aim(spot); const n0 = O.log.length; R.down(); const up = !!O.cmdRing || !!O.menu; R.step(10); R.up(); R.step(3);
-      line(!up && O.log.length === n0, 'the switch off: the key is nobody\'s', `ring or menu ${up ? 'up' : 'not up'} · order book +${O.log.length - n0}`);
+      const quick = ORDERS.quickKey === CMDRING.key ? 1 : 0;
+      line(!up && O.log.length === n0 + quick, quick ? 'the switch off: the key is the quick key and no more' : 'the switch off: the key is nobody\'s', `ring or menu ${up ? 'up' : 'not up'} · order book +${O.log.length - n0}${quick ? ' (the quick order)' : ''}`);
       CMDRING.on = was;
     }
 
@@ -264,12 +268,13 @@ export async function cmdringCheck(): Promise<boolean> {
       const floorOf = (t: any) => `floor:${t.at[0].toFixed(1)},${t.at[2].toFixed(1)}`;
       // 15. a tap that lasts most of the hold: no ring, no menu, nothing listed — only the hint, brighter, on what the key went down on — and let go, the order
       {
-        R.home(); R.aim(spot); const n0 = O.log.length, q0 = S.quick, o0 = S.opened; keyDown();
+        // (the hint before the key NOT asked for, as the page has it: nothing at the cursor until the key is down, and then the press is seen to land)
+        R.home(); CMDRING.hint = false; R.aim(spot); const idle = O.hintView(); const n0 = O.log.length, q0 = S.quick, o0 = S.opened; keyDown();
         let never = true, press = true;
         for (let i = 0; i < N - 3; i++) { const h = O.hintView(); never &&= !O.cmdRing && !O.menu && O.ringView() === null && O.hud().menu === null; press &&= !!h && h.press === true && h.held && h.kind === 'floor' && Math.abs(h.x - inp.mouseX) < 1 && Math.abs(h.y - inp.mouseY) < 1; R.step(); }
-        const mid = O.log.length - n0; R.up(); const row = R.tail(), hAfter = O.hintView();
-        line(never && press && mid === 0 && O.log.length === n0 + 1 && row?.order === 'move' && S.quick === q0 + 1 && S.opened === o0 && !O.cmdRing && !O.menu && hAfter?.press === false,
-          'a tap opens no ring: the key down most of the hold shows no menu, only the hint brighter on the spot; let go, the squad moves there', `${N - 2} frames down of a ${N}-frame hold: ring or menu ${never ? 'never up' : 'UP'}, the hint ${press ? 'pressed, at the cursor' : 'not as a press'} · order book while down +${mid} · on the key up: ${row?.order} (+${O.log.length - n0}), rings opened +${S.opened - o0}`);
+        const mid = O.log.length - n0; R.up(); const row = R.tail(), gone = O.hintView(); CMDRING.hint = true; const hAfter = O.hintView();
+        line(idle === null && gone === null && never && press && mid === 0 && O.log.length === n0 + 1 && row?.order === 'move' && S.quick === q0 + 1 && S.opened === o0 && !O.cmdRing && !O.menu && hAfter?.press === false,
+          'a tap opens no ring: the key down most of the hold shows no menu, only the hint brighter on the spot; let go, the squad moves there', `before the key, the hint not asked for: ${idle ? 'DRAWN' : 'nothing at the cursor'} · ${N - 2} frames down of a ${N}-frame hold: ring or menu ${never ? 'never up' : 'UP'}, the hint ${press ? 'pressed, at the cursor' : 'not as a press'} · after: ${gone ? 'STILL DRAWN' : 'gone'} · order book while down +${mid} · on the key up: ${row?.order} (+${O.log.length - n0}), rings opened +${S.opened - o0}`);
       }
       // 16. the hand moving, his trigger pulled and the menu's key pressed inside the tap: the order still goes, to where the cursor was as the key went down
       {
@@ -305,6 +310,29 @@ export async function cmdringCheck(): Promise<boolean> {
         const J: any = await import(`${ROOT}/src/game/journal.ts`), snap = J.knobsSnapshot(g), old = JSON.parse(JSON.stringify(snap));
         delete old.tables.CMDRING.holdSecs; J.applyKnobs(g, old); const oldHold = CMDRING.holdSecs; J.applyKnobs(g, snap); const back = CMDRING.holdSecs;
         line(atOnce && k === 1 && oldHold === 0 && back === HOLD_SECS, 'the hold at 0 is the ring as first built, and a recording from before the hold replays with it at 0', `holdSecs 0: the ring ${atOnce ? 'up on the frame the key went down' : 'NOT up at once'}, on the key up +${k} · a recording with no holdSecs: ${oldHold} · one with it: ${back}`);
+      }
+      // 21. the plan a quick order shows stays as long after a tap as after the quick key (autopilot.ts showSecs: the same stamped row)
+      {
+        const FP: any = await import(`${ROOT}/src/game/floorplan.ts`), keepP = { on: FP.PLAN.on, menuOnly: FP.PLAN.menuOnly }; FP.PLAN.on = true; FP.PLAN.menuOnly = true;
+        const shown = () => (FP.floorPlan(g).men as any[]).length > 0, clear = () => { R.home(); R.until(() => !shown(), 20); R.aim(spot); };
+        const count = () => { let f = 0; while (shown() && f < 900) { R.step(); f++; } return f; };
+        clear(); const nb = O.log.length, ringWas = CMDRING.on; CMDRING.on = false; R.press(ORDERS.quickKey); CMDRING.on = ringWas; const bGave = O.log.length - nb, bShown = shown(), bFrames = count();
+        clear(); const nt = O.log.length; keyDown(); R.step(2); R.up(); const tGave = O.log.length - nt, tShown = shown(), tFrames = count();
+        FP.PLAN.on = keepP.on; FP.PLAN.menuOnly = keepP.menuOnly;
+        line(bGave === 1 && tGave === 1 && bShown && tShown && Math.abs(bFrames - tFrames) <= 2 && Math.abs(bFrames / 60 - AP.AUTOPILOT.showSecs) < 0.5, 'the plan a quick order shows stays as long after a tap as after the quick key', `after the quick key: ${(bFrames / 60).toFixed(2)} s · after a tap: ${(tFrames / 60).toFixed(2)} s (from the key coming up) · the rule: ${AP.AUTOPILOT.showSecs} s`);
+      }
+      // 22. the mark at the cursor is a setting of its own (Options ▸ Game): drawn with the ring off too, and with neither nothing
+      {
+        R.home(); const was = { on: CMDRING.on, hint: CMDRING.hint }; R.aim(spot);
+        CMDRING.on = false; CMDRING.hint = true; R.step(2); const alone = O.hintView();
+        CMDRING.hint = false; R.step(2); const neither = O.hintView();
+        CMDRING.on = was.on; CMDRING.hint = was.hint;
+        line(alone?.kind === 'floor' && alone.press === false && neither === null, 'the mark at the cursor is a setting of its own: drawn with the ring off, and with neither nothing', `the ring off, the mark on: ${alone ? `${alone.kind}, ${alone.press ? 'AS A PRESS' : 'no press'}` : 'NOTHING'} · both off: ${neither ? 'DRAWN' : 'nothing'}`);
+      }
+      // 20. the key is the squad's command key (the quick order's own code; the board has it on Q: host/keymap.ts, qkey-check.ts): Tab is nobody's here
+      {
+        R.home(); R.aim(spot); const n0 = O.log.length; inp.keys.add('Tab'); inp.pressed.add('Tab'); R.step(); R.step(N + 4); const tabUp = !!O.cmdRing || !!O.menu || !!O.cmdPress; inp.keys.delete('Tab'); R.step(2); const tabGave = O.log.length - n0;
+        line(CMDRING.key === ORDERS.quickKey && !tabUp && tabGave === 0, 'the ring\'s key is the squad\'s command key: Tab opens and gives nothing', `the ring's key: ${CMDRING.key} · the quick order's: ${ORDERS.quickKey} · Tab kept down past the hold: ${tabUp ? 'SOMETHING UP' : 'nothing up'}, order book +${tabGave}`);
       }
       R.home();
     }

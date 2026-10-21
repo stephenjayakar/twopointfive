@@ -32,7 +32,7 @@ Pick a mission, pick who comes and what they carry, deploy. Every key is also li
 | `E` | holster or draw |
 | a wall | walk into it and your back goes to it · a step away lets go |
 | `R` · `L` · `N` · `V` · `Z` | reload · weapon light · night vision · whistle · semi or auto |
-| `X` · `B` · `T` · `F` | squad: order menu · the usual order · who takes it · give the word |
+| `X` · `Q` · `T` · `F` | squad: order menu · the usual order · who takes it · give the word |
 | `Ctrl` + mouse | orbit the camera · `Ctrl` + wheel zooms |
 | `Esc` · `` ` `` | pause and settings · the debugger, with every knob |
 

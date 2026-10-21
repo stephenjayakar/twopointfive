@@ -65,7 +65,7 @@ async function screen(browser) {
   { await page.goto(url(), { waitUntil: 'domcontentloaded' }); await openControls(page); await page.click('#options [data-act="reset"]'); await page.waitForTimeout(80);
     const caps = await page.evaluate(CAPS), off = Object.entries(caps).filter(([, v]) => v.c.replace('sel', '').trim()).map(([k]) => k), kept = await page.evaluate(KEPT);
     check(caps.KeyC.t === 'C' && caps.KeyQ.t === 'Q' && caps.KeyR.t === 'R' && caps.Digit2.t === '2' && !off.length && kept === null, 'Reset: every cap is the build\'s again, none marked, and nothing is kept', `C Q R 2: ${caps.KeyC.t} ${caps.KeyQ.t} ${caps.KeyR.t} ${caps.Digit2.t} · still marked: ${off.join(' ') || 'none'} · kept ${kept}`); }
-  { await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);
+  { await page.goto(url('bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (the wall hold's rule by itself, the squad's command left on B: with it on Q, as the page opens, Q given to the wall is a swap — tools/qa/qkey-check.ts)
     const row = () => page.evaluate(() => { const b = document.querySelector('#options button.op-key[data-key="KeyQ"]'), r = b?.closest('.op-krow'); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim(), what: r?.querySelector('.op-what')?.firstChild?.textContent ?? '', small: r?.querySelector('small')?.textContent ?? '' }; });
     const a = await row(), kept0 = await page.evaluate(KEPT);
     await page.evaluate(() => document.querySelector('#options button.op-key[data-key="KeyQ"]').click()); await page.waitForTimeout(80); await key('q'); const b = await row(), kept = await page.evaluate(KEPT);
@@ -74,10 +74,10 @@ async function screen(browser) {
       && b.t === 'Q' && /moved/.test(b.c) && /Q or a step away/.test(b.small) && kept === '{"KeyQ":"KeyQ"}' && c.t === '—' && !/moved/.test(c.c) && kept2 === null,
       'the page\'s own board: the wall hold\'s cap is a dashed —, not marked as moved, its words say walk into it; a click and Q puts it on Q (marked, kept); Reset is — again and nothing kept',
       `as it opens '${a.t}' [${a.c}] '${a.what}' '${a.small}' kept ${kept0} · after Q '${b.t}' [${b.c}] '${b.small}' kept ${kept} · after Reset '${c.t}' [${c.c}] kept ${kept2}`); await still(page, 'controls-no-wall-key.png'); }
-  { await page.goto(url('wallpress=0', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);
+  { await page.goto(url('wallpress=0&bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);
     const r = await page.evaluate(() => { const b = document.querySelector('#options button.op-key[data-key="KeyQ"]'), row = b?.closest('.op-krow'); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim(), small: row?.querySelector('small')?.textContent ?? '' }; });
     check(r.t === 'Q' && !r.c && /Q or a step away/.test(r.small), 'the page\'s own board with the walk-in switched off (?wallpress=0): the wall hold is on Q again, its cap and its words as they were', `'${r.t}' [${r.c}] '${r.small}'`); }
-  { await page.goto(url('keybinds=0', ''), { waitUntil: 'domcontentloaded' }); await openControls(page); const S = await page.evaluate(SCREEN), n = Object.keys(await page.evaluate(CAPS)).length;
+  { await page.goto(url('keybinds=0&bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page); const S = await page.evaluate(SCREEN), n = Object.keys(await page.evaluate(CAPS)).length;
     check(n === 0 && S.plain.includes('—') && !S.plain.includes('Q') && S.plain.includes('C'), 'the page\'s own board under ?keybinds=0: the plain list, the wall hold\'s cap a plain — and no Q in it', `caps to click ${n} · plain caps: ${S.plain.join(' ')}`); }
   await ctx.close();
 }

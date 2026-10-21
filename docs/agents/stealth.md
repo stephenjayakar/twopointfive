@@ -313,6 +313,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   first cut, before the walk-in rule above): real keys, Q held 40 frames beside a wall files nothing and takes nothing, W held takes the wall in
   17 frames, S lets go in 6, no error but the usual favicon 404; the start card's list was not reached. NOBODY HAS PLAYED IT, never on a GPU. OPEN,
   his: what Q does next is the Commanding goal's (the command key, from Tab); whether a pistol out in a fight should take a wall by walking in.
+  SINCE THEN Q IS THE SQUAD'S COMMAND KEY (`KEYMAP.qCmd`, `docs/agents/squad.md`): while it is, the wall hold does not come back to Q with the
+  walk-in switched off; it has no key until given one. `?bkey` is this bullet's board by itself.
 - **The wall hold, heard and unhurried** (`WALLSNAP.voice`, `WALLSNAP.slow`, wallsnap.ts; the maintainer, 10-21, from his play: "we should have some audio
   feedback for when you snap/unsnap from a wall. the transition animation is also too fast, should probably be 2x slower"). Two switches, each acting only
   with the feel pass (`WALLSNAP.on`), for Q's take and the walk-in take alike, back hold and stack alike. Each ON in the page (`?wallvoice=0`, `?wallslow=0`),

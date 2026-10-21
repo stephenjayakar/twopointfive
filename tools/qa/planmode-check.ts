@@ -148,9 +148,10 @@ export async function planmodeCheck(): Promise<boolean> {
         line(hidden && gone && early && spent === 1 && keys === 0 && shown && inNow, 'F early: the mark comes off the plan (shown a moment, the mode down) and they go in at the threshold without another press', `pressed while ${early ? 'walking' : C?.phase} · kept ${spent} · the stop shows ${keys} keys · plan ${shown ? 'shown' : 'not shown'} · then ${R.tail()?.order}`); }
       R.home();
       // 10. an order given another way takes the men off the chain — but the quick key on the door they wait at is the chain's own word
-      { const spot = floorSpot(R); R.aim(aimOf(R, A.d)!); R.click(4); if (spot) { R.aim(spot); R.click(4, true); } const C = P.chains[0]; R.until(() => C?.phase === 'wait', 25);
-        R.aim(aimOf(R, A.d)!); R.press(ORDERS.quickKey); const own = C?.phase === 'in' && P.chains.includes(C) && isEntry();
-        R.until(() => C?.phase === 'held', 45); if (spot) { R.aim(spot); R.press(ORDERS.quickKey); } const off = P.chains.length === 0 && R.tail()?.order === 'move';
+      { const quick = () => { R.press(ORDERS.quickKey); if (ORDERS.quickKey === CMDRING.key) R.step(2); };   // (the quick key the ring's own key, as in the page: the order is given as the key comes up)
+        const spot = floorSpot(R); R.aim(aimOf(R, A.d)!); R.click(4); if (spot) { R.aim(spot); R.click(4, true); } const C = P.chains[0]; R.until(() => C?.phase === 'wait', 25);
+        R.aim(aimOf(R, A.d)!); quick(); const own = C?.phase === 'in' && P.chains.includes(C) && isEntry();
+        R.until(() => C?.phase === 'held', 45); if (spot) { R.aim(spot); quick(); } const off = P.chains.length === 0 && R.tail()?.order === 'move';
         line(!!spot && own && off, 'B on the door they wait at is the chain\'s word; B somewhere else takes them off the chain', `B on the door: ${own ? 'in, chain kept' : `chain ${P.chains.includes(C) ? C?.phase : 'gone'}`} · B on the floor: ${off ? 'moving, chain gone' : `${P.chains.length} chain`}`); }
       R.home();
       // 11. a plain right click replaces the chain

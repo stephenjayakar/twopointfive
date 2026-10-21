@@ -121,9 +121,9 @@ export async function keybindsCheck(): Promise<boolean> {
         `I and K down: '${a}' · W, R, E down and W, R up after: nothing more, nothing let go ${dead} · K let go after Reload moved on: R up ${let1} · I let go after Reset: nothing held ${let2}`); }
 
     // ---- the page's board gives the wall hold no key (KEYMAP.qFree): Q files nothing until the player puts the row on a key
-    { const FB = process.env.QFREE_BREAK === '1'; const boot = (q: string) => { K.keysBoot(new URLSearchParams(q)); if (FB) K.KEYMAP.qFree = false; };
+    { const FB = process.env.QFREE_BREAK === '1'; const boot = (q: string) => { K.keysBoot(new URLSearchParams(q ? `${q}&bkey` : 'bkey')); if (FB) K.KEYMAP.qFree = false; };   // (these lines ask the wall hold's rule by itself, the squad's command left on B — `?bkey`; with the command on Q, as the page has it: qkey-check.ts)
       store.clear(); K.setKeys({}); let walk = true; K.KEYMAP.freeWhen = () => walk;
-      K.keysBoot(new URLSearchParams('paused')); const bootOn = K.KEYMAP.qFree === true; K.keysBoot(new URLSearchParams('qfree=0')); const bootOff = K.KEYMAP.qFree === false && K.gameCode('KeyQ') === 'KeyQ' && K.capNow('KeyQ') === 'Q';
+      K.keysBoot(new URLSearchParams('paused&bkey')); const bootOn = K.KEYMAP.qFree === true; K.keysBoot(new URLSearchParams('qfree=0')); const bootOff = K.KEYMAP.qFree === false && K.gameCode('KeyQ') === 'KeyQ' && K.capNow('KeyQ') === 'Q';
       boot('keybinds=0'); const plain = K.KEYMAP.on === false && K.gameCode('KeyQ') === '' && K.capNow('KeyQ') === K.NONE && K.keyCap('Q') === K.NONE;   // (the rebinding off for a visit: the build's own board, and that has no wall key)
       boot('');
       const rest = BOARD.filter(c => c !== 'KeyQ' && K.gameCode(c) !== c), said = WORDS.filter(s => K.keyText(s, true) !== s);
@@ -174,7 +174,7 @@ export async function keybindsCheck(): Promise<boolean> {
             try { g.godMode = true; g.teleportPlayer([...at]); for (let i = 0; i < 20; i++) W.step(DT); W.input.keys.add(key); let took = -1; for (let i = 0; i < 120 && took < 0; i++) { W.step(DT); if (pl.wall) took = i; } W.input.keys.delete(key); return { took, in: inside(pl.char.pos as number[]) }; } finally { WALLSNAP.on = was.on; WALLSNAP.press = was.press; } });
           ok &&= has && r.took >= 0 && r.in; rows.push(`${file}: the line ${has ? 'names no key' : 'IS NOT AS WRITTEN HERE'}, ${key} held ${r.took < 0 ? 'took no wall' : `had the wall in ${r.took + 1} frames`}${r.in ? ', where the step asks' : ', NOT where the step asks'}`); }
         verdict(ok, 'no wall key, the lessons: the two Training lines that named Q name no key, and each step is done as its line says, by a move key held into the wall where the step asks', rows.join(' · ')); }
-      K.KEYMAP.freeWhen = null; K.KEYMAP.qFree = false; K.KEYMAP.on = true; K.setKeys({}); }
+      K.KEYMAP.freeWhen = null; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.on = true; K.setKeys({}); }
 
     // ---- the game, on this stand: one script of hands, three ways in
     const HANDS: [number, 'd' | 'u', string][] = [[2, 'd', 'KeyW'], [40, 'd', 'KeyD'], [70, 'u', 'KeyW'], [80, 'd', 'KeyC'], [81, 'u', 'KeyC'], [100, 'u', 'KeyD'], [104, 'd', 'Digit2'], [105, 'u', 'Digit2'], [130, 'd', 'KeyS'], [150, 'd', 'ShiftLeft'], [175, 'u', 'ShiftLeft'], [176, 'u', 'KeyS'],
@@ -195,7 +195,7 @@ export async function keybindsCheck(): Promise<boolean> {
       const ha = hashDigest(a.d), hb = hashDigest(b.d), hc = hashDigest(c.d);
       verdict(ha === hb && ha === hc && a.went > 1 && c.table >= 10, `the game (${process.env.TPS_PROFILE === 'shipped' ? 'the page\'s stand' : 'the frozen stand'}): the codes written straight in, the same keys through the keyboard with nothing rebound, and a rebound board's keys through the keyboard end in one digest`,
         `330 ticks, he went ${a.went.toFixed(2)} m · straight in ${ha} · the keyboard, as built ${hb}${ha === hb ? '' : ` (${diffDigest(a.d, b.d, 3).join('; ')})`} · ${c.table} rows moved ${hc}${ha === hc ? '' : ` (${diffDigest(a.d, c.d, 3).join('; ')})`}`); }
-  } finally { K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.freeWhen = null; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
+  } finally { K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.freeWhen = null; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
   console.log(`=== keybinds: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

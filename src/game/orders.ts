@@ -128,7 +128,10 @@ export const ORDERS = {
   clickGives: false,
   /** press: who the orders go to — gold → red → blue for a squad in pairs (all → each man for the one pair) · on a teammate under the cursor: that man */
   whoKey: 'KeyT',
-  /** press: the target's own first order at once, no menu (RoN's 'issue default command') — move there on floor, stack up on a door, fall in on nothing */
+  /** press: the target's own first order at once, no menu (RoN's 'issue default command') — move there on floor, stack up on a door, fall in on nothing.
+   *  THE CODE the game asks for, as every recording and tape holds it. The KEY that gives it on the page's board is Q (host/keymap.ts `qCmd`; the
+   *  maintainer, 10-21, once the wall hold had left Q: "let's move the squad command button to Q then too", "let's unmap B too then", "so it's just Q, and
+   *  the quick tap should be exactly the same as B"): the board moved, this read did not */
   quickKey: 'KeyB',
   /** the wheel over the open menu: false = it moves the highlight (the middle button then gives that row: the whole order off the mouse); true = RoN's own — it steps
    *  the element, gold / red / blue, and the rows are picked by their digits (↑ ↓ still move the highlight) */
@@ -1061,7 +1064,8 @@ export class SquadOrders {
    *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
    *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
   hintView(): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null } | null {
-    const v = this.view; if (!CMDRING.on || !CMDRING.hint || !this.active || !v.input || !v.cam || !v.canvas) return null;
+    const v = this.view; if ((!CMDRING.on && !CMDRING.hint) || !this.active || !v.input || !v.cam || !v.canvas) return null;   // (`hint` is a setting of its own: the mark is drawn with the ring off too)
+    if (!CMDRING.hint && !this.cmdRing && !this.cmdPress) return null;   // (before the key it is drawn only when asked for — `hint`; with the key down it is the press seen to land, and the ring's own middle)
     const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
     if (!R && !this.cmdPress && !this.ringFree(v.input)) return null;
     // (before the key the outline is drawn every frame under a view that moves: hover()'s answer, kept while the cursor rests, is asked again when it has)
