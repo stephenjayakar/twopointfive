@@ -1487,5 +1487,5 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   written straight in, the keyboard as built, a board with 12 rows moved — ending in ONE digest on each stand. `KEYBINDS_BREAK=1` (a stray
   kept table while the 'nothing rebound' lines are asked) fails on both. ON A PAGE `PORT=<port> node tools/qa/keybinds-page.cjs [outDir]`
   (headless Chromium, real key presses; the screen needs no adapter, `GPU=1` adds the game on the software adapter, two boots,
-  about ten minutes; `ONLY=game` leaves the screen out). NEVER SEEN
+  about twenty minutes; `ONLY=game` leaves the screen out). NEVER SEEN
   ON A GPU, and nobody has played it: not the feel of any moved key, not a Mac's keys (Cmd chords, a trackpad), not Safari or Firefox.
