@@ -13,7 +13,7 @@
 //   corner hides steps him out past the end with the rifle in the shoulder, and the cursor coming back steps him in again; the camera holds still through
 //   the step, so the point under the reticle does not swim. No key is held for any of it.
 //
-//   WITHOUT THE KEY (`press`, a switch of its own under `on`): a move key held into a wall he is up against takes it, quiet or loud as above. Q still does.
+//   WITHOUT THE KEY (`press`, a switch of its own under `on`): a move key held into a wall he is up against takes it, quiet or loud as above. Its key still does, where the row has one: the page's board gives it none (host/keymap.ts qFree).
 //
 //   HEARD AND UNHURRIED (`voice`, `slow`, each a switch of its own under `on`): the landing and the step off have a sound each; the take runs twice as long.
 //

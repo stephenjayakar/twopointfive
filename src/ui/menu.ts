@@ -26,7 +26,8 @@ import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
 import { TABKEY } from './tabkey';
-import { keyText } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
+import { keyText, keysOf } from '../host/keymap';
+import { WALLSNAP } from '../game/wallsnap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions } from './options';
 
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
@@ -47,6 +48,10 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   ['Ctrl + mouse / wheel', 'orbit the camera / zoom (or pinch)'],
   ['Esc · `', 'pause & settings · the debugger (every knob)'],
 ];
+/** the list as the board is: the wall hold's row with no key (host/keymap.ts qFree: walking into a wall takes it) is the row of doing that; with the
+ *  walk-in switched off as well there is no row to show until the player gives the hold a key (Options ▸ Controls) */
+const WALL_ROW: [string, string] = ['Wall', 'walk into one and your back goes to it — slide, peek at its end; away / Shift lets go'];
+const controlRows = (): [string, string][] => CONTROLS.flatMap(r => r[0] !== 'Q' || keysOf('KeyQ').length ? [r] : WALLSNAP.on && WALLSNAP.press ? [WALL_ROW] : []);
 
 const TAGLINE = 'a ray-traced stealth sandbox — every light, shadow and wisp of smoke is live';
 /** the title screen's line under the wordmark */
@@ -90,7 +95,7 @@ export function bootCard(): { status(text: string): void; off(): void } {
     for (const t of picks ? PICKS_NOTES : START_NOTES) { const n = el('div', 'note'); n.textContent = t; card.appendChild(n); }
     const body = el('div', 'body'); card.appendChild(body);
     const list = el('div', 'controls');
-    for (const [k, v] of CONTROLS) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     body.appendChild(list);
     const foot = el('div', 'foot'); foot.textContent = keyText('Esc pauses · ` opens the debugger (every knob)'); card.appendChild(foot);
   }
@@ -373,7 +378,7 @@ export class Menu {
 
   private controls() {
     const list = el('div', 'controls');
-    for (const [k, v] of CONTROLS) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     this.body.appendChild(list);
   }
 

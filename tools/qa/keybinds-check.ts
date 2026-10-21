@@ -1,6 +1,7 @@
 // THE PLAYER'S OWN KEYS — the check behind host/keymap.ts (Options ▸ Controls rebinds a key; kept per machine; `?keybinds=0` = the build's own for a visit).
 //   bun run tools/qa/probes.ts keybinds                        (family `player`; run it on BOTH stands: TPS_PROFILE=shipped in front for the page's)
 //   KEYBINDS_BREAK=1 = a stray kept table (W moved to I) is on the machine while the 'nothing rebound' lines are asked: must FAIL
+//   QFREE_BREAK=1 = the board as it was (the wall hold on Q) while the 'no wall key' lines are asked: must FAIL
 // WHAT IT HOLDS:
 //   the table      off in the module (a tool, the editor, the viewer: the build's keys whatever is kept); the page's boot turns it on · nothing rebound = every key is itself and every line of words comes back the same string · a row put on a key: that key gives the row's
 //                  own code, the key it left gives nothing, the names follow · a key another row has is a swap, and after 4,000 moves by a die no key has
@@ -13,6 +14,12 @@
 //                  game each — the codes written straight in as every tool writes them · the same keys through the listener with nothing rebound · the keys
 //                  of a rebound board through the listener — ends in ONE digest. That is 'the build as it was' and 'a recording plays the same whatever is
 //                  rebound': the game, its journal and a tape see the codes, never the board.
+//   no wall key    (`KEYMAP.qFree`, the page's board) the boot turns it on, `?qfree=0` off, and `?keybinds=0` leaves it on · Q files nothing and every other key is
+//                  itself; the row reads —, as built, nothing to reset; the one line of words that names Q loses its brackets · the row put on Q is a rebind
+//                  like any other (kept, read back, Reset takes it off); on another key, that key · Q given to another row is that row's, and the wall's row
+//                  asking for it back is a swap · a table kept on the board as it was is read as it was meant · the keyboard files nothing for Q · and the
+//                  game on this stand: Q through the keyboard beside a wall takes nothing, the code written straight in (a recording, a probe) takes it as
+//                  it did, and so does the key the row was put on
 // NOT HERE: the screen itself (the caps, the wait, the shake) and the HUD's words on a page — tools/qa/keybinds-page.cjs drives those in a browser.
 import { standUp, ROOT } from './headless.ts';
 const DT = 1 / 60;
@@ -39,6 +46,7 @@ export async function keybindsCheck(): Promise<boolean> {
       K.resetKeys(); const keptStill = Object.keys(K.keysKept()).length === 2;
       const q = (s: string) => { K.keysBoot(new URLSearchParams(s)); return K.KEYMAP.on; }; store.set('twopointsix.keys', '{"KeyC":"KeyK"}');
       const zero = q('keybinds=0') === false && K.gameCode('KeyK') === 'KeyK', page = q('paused&quality=low') === true && K.gameCode('KeyK') === 'KeyC'; store.clear();
+      K.KEYMAP.qFree = false;   // (the boot turned the page's board on: every line down to 'no wall key' is asked on the board as it was, the wall hold on Q)
       verdict(off && keptStill && zero && page, 'off in the module: with a table kept, every key is itself, nothing can be moved or reset; the page\'s boot turns it on and reads the kept table, and ?keybinds=0 leaves it off',
         `module: on ${!off ? 'or moved' : 'false, as built'} · Reset while off left the table ${keptStill} · ?keybinds=0: off ${zero} · the page: on, K is crouch ${page}`); K.KEYMAP.on = true; }
     { asBuilt();
@@ -110,6 +118,41 @@ export async function keybindsCheck(): Promise<boolean> {
       verdict(a === 'KeyR+KeyW|KeyR+KeyW' && dead && let1 && let2, 'the keyboard, rows moved: the new keys file the game\'s own codes, the keys the rows left file nothing and let go of nothing, and a key rebound (or reset) while it is down lets go of what its press put down',
         `I and K down: '${a}' · W, R, E down and W, R up after: nothing more, nothing let go ${dead} · K let go after Reload moved on: R up ${let1} · I let go after Reset: nothing held ${let2}`); }
 
+    // ---- the page's board gives the wall hold no key (KEYMAP.qFree): Q files nothing until the player puts the row on a key
+    { const FB = process.env.QFREE_BREAK === '1'; const boot = (q: string) => { K.keysBoot(new URLSearchParams(q)); if (FB) K.KEYMAP.qFree = false; };
+      store.clear(); K.setKeys({});
+      K.keysBoot(new URLSearchParams('paused')); const bootOn = K.KEYMAP.qFree === true; K.keysBoot(new URLSearchParams('qfree=0')); const bootOff = K.KEYMAP.qFree === false && K.gameCode('KeyQ') === 'KeyQ' && K.capNow('KeyQ') === 'Q';
+      boot('keybinds=0'); const plain = K.KEYMAP.on === false && K.gameCode('KeyQ') === '' && K.capNow('KeyQ') === K.NONE && K.keyCap('Q') === K.NONE;   // (the rebinding off for a visit: the build's own board, and that has no wall key)
+      boot('');
+      const rest = BOARD.filter(c => c !== 'KeyQ' && K.gameCode(c) !== c), said = WORDS.filter(s => K.keyText(s, true) !== s);
+      const asb = K.gameCode('KeyQ') === '' && !K.keysOf('KeyQ').length && K.capNow('KeyQ') === K.NONE && K.keyBuilt('KeyQ') && !K.keysChanged() && !Object.keys(K.keysKept()).length && !rest.length;
+      const words = said.length === 1 && K.keyText(said[0]) === 'the wall is in the way — step out past its end, or off it' && K.keyText('Q / away / Shift lets go') === `${K.NONE} / away / Shift lets go`;
+      verdict(bootOn && bootOff && plain && asb && words, 'no wall key: the page\'s boot gives the wall hold\'s row none (?qfree=0 puts it on Q; ?keybinds=0 does not); Q files nothing, every other key is itself, the row reads —, as built with nothing to reset, and the line that names Q in brackets loses them',
+        `boot ${bootOn}, ?qfree=0 ${bootOff}, ?keybinds=0 ${plain} · Q gives '${K.gameCode('KeyQ')}', the row ${K.capNow('KeyQ')}, as built ${K.keyBuilt('KeyQ')}, changed ${K.keysChanged()}, ${rest.length} other keys moved · words changed: ${said.length}${said.length ? ` ('${K.keyText(said[0])}')` : ''}`);
+      const r1 = K.bindKey('KeyQ', 'KeyQ'), onQ = r1.ok && !r1.swapped && K.gameCode('KeyQ') === 'KeyQ' && K.capNow('KeyQ') === 'Q' && K.keysChanged() && !K.keyBuilt('KeyQ') && WORDS.every(s => K.keyText(s, true) === s);
+      const kept = store.get('twopointsix.keys') ?? ''; K.setKeys({}); boot(''); const back = K.gameCode('KeyQ') === 'KeyQ' && kept === '{"KeyQ":"KeyQ"}';
+      K.resetKeys(); const reset = K.gameCode('KeyQ') === '' && !store.has('twopointsix.keys');
+      K.bindKey('KeyQ', 'KeyK'); const onK = K.gameCode('KeyK') === 'KeyQ' && K.gameCode('KeyQ') === '' && K.keyCap('Q') === 'K' && K.keyText('off it (Q)') === 'off it (K)'; K.unbindKey('KeyQ'); const none = !K.keysChanged() && K.gameCode('KeyK') === 'KeyK' && K.gameCode('KeyQ') === '';
+      const r2 = K.bindKey('KeyR', 'KeyQ'), took = r2.ok && !r2.swapped && K.gameCode('KeyQ') === 'KeyR' && K.gameCode('KeyR') === '' && !K.keysOf('KeyQ').length && K.keyText('empty — press R') === 'empty — press Q';
+      const r3 = K.bindKey('KeyQ', 'KeyQ'), swap = r3.swapped === 'KeyR' && !K.keysOf('KeyR').length && K.gameCode('KeyQ') === 'KeyQ'; K.resetKeys();
+      K.setKeys({ KeyR: 'KeyQ', KeyQ: 'KeyR' }); const old1 = K.gameCode('KeyQ') === 'KeyR' && K.gameCode('KeyR') === 'KeyQ';   // kept on the board as it was: Reload and the wall swapped
+      K.setKeys({ KeyQ: null }); const old2 = !K.keysChanged() && K.gameCode('KeyQ') === '';                                      // …the wall's row left with no key there: the build's own now
+      K.setKeys({ KeyC: 'KeyQ' }); const old3 = K.gameCode('KeyQ') === 'KeyC' && !K.keysOf('KeyQ').length; K.setKeys({});          // …a table that cannot have been kept then (Q given away, the wall not named): Q is that row's
+      verdict(onQ && back && reset && onK && none && took && swap && old1 && old2 && old3, 'no wall key: the row put on Q is a rebind like any other (written, read back on the next load, Reset takes it off); on another key, that key, and with none again it is as built; Q given to another row is that row\'s, and the wall\'s row asking for it back is a swap; a table kept on the board as it was reads as it was meant',
+        `on Q ${onQ} · kept '${kept}', read back ${back} · Reset ${reset} · on K ${onK}, none again ${none} · Reload takes Q ${took} · the wall takes it back: Reload has ${K.keysOf('KeyR').length ? 'a key' : 'none'} ${swap} · old tables ${old1} ${old2} ${old3}`);
+      // the keyboard, and the game on this stand
+      const g3 = await quiet(async () => { const B = board(), W: any = await standUp({ seed: 95 }), g = W.game, pl = g.player; g.godMode = true;
+        const feed = () => { W.input.keys.clear(); for (const k of B.I.keys) W.input.keys.add(k); for (const k of B.I.pressed) W.input.pressed.add(k); B.I.endFrame(); };
+        const stage = () => { if (pl.wall) { W.input.pressed.add('KeyQ'); W.step(DT); } for (let i = 0; i < 40; i++) W.step(DT); g.teleportPlayer([20, 0, 10.7]); pl.char.bodyYaw = pl.char.aimYaw = Math.PI; for (let i = 0; i < 10; i++) W.step(DT); };
+        const tap = (key: string) => { B.down(key); const filed = [...B.I.pressed].join('+'); feed(); W.step(DT); B.up(key); feed(); for (let i = 0; i < 50; i++) W.step(DT); return filed; };
+        stage(); const f1 = tap('KeyQ'), w1 = !!pl.wall;
+        stage(); W.input.pressed.add('KeyQ'); for (let i = 0; i < 50; i++) W.step(DT); const w2 = !!pl.wall;
+        stage(); K.bindKey('KeyQ', 'KeyK'); const f3 = tap('KeyK'), w3 = !!pl.wall; K.setKeys({});
+        return { f1, w1, w2, f3, w3 }; });
+      verdict(g3.f1 === '' && !g3.w1 && g3.w2 && g3.f3 === 'KeyQ' && g3.w3, `no wall key, the game (${process.env.TPS_PROFILE === 'shipped' ? 'the page\'s stand' : 'the frozen stand'}): Q through the keyboard beside a wall files nothing and takes nothing; the code written straight in (a recording, a probe) takes the wall as it did; the key the row was put on takes it through the keyboard`,
+        `Q on the board: filed '${g3.f1}', on a wall ${g3.w1} · 'KeyQ' written in: on a wall ${g3.w2} · the row on K, K on the board: filed '${g3.f3}', on a wall ${g3.w3}`);
+      K.KEYMAP.qFree = false; K.KEYMAP.on = true; K.setKeys({}); }
+
     // ---- the game, on this stand: one script of hands, three ways in
     const HANDS: [number, 'd' | 'u', string][] = [[2, 'd', 'KeyW'], [40, 'd', 'KeyD'], [70, 'u', 'KeyW'], [80, 'd', 'KeyC'], [81, 'u', 'KeyC'], [100, 'u', 'KeyD'], [104, 'd', 'Digit2'], [105, 'u', 'Digit2'], [130, 'd', 'KeyS'], [150, 'd', 'ShiftLeft'], [175, 'u', 'ShiftLeft'], [176, 'u', 'KeyS'],
       [180, 'd', 'KeyR'], [181, 'u', 'KeyR'], [200, 'd', 'KeyA'], [230, 'd', 'KeyQ'], [231, 'u', 'KeyQ'], [260, 'u', 'KeyA'], [262, 'd', 'KeyE'], [263, 'u', 'KeyE'], [270, 'd', 'Space'], [272, 'u', 'Space'], [280, 'd', 'KeyC'], [281, 'u', 'KeyC'], [282, 'd', 'KeyW'], [320, 'u', 'KeyW']];
@@ -129,7 +172,7 @@ export async function keybindsCheck(): Promise<boolean> {
       const ha = hashDigest(a.d), hb = hashDigest(b.d), hc = hashDigest(c.d);
       verdict(ha === hb && ha === hc && a.went > 1 && c.table >= 10, `the game (${process.env.TPS_PROFILE === 'shipped' ? 'the page\'s stand' : 'the frozen stand'}): the codes written straight in, the same keys through the keyboard with nothing rebound, and a rebound board's keys through the keyboard end in one digest`,
         `330 ticks, he went ${a.went.toFixed(2)} m · straight in ${ha} · the keyboard, as built ${hb}${ha === hb ? '' : ` (${diffDigest(a.d, b.d, 3).join('; ')})`} · ${c.table} rows moved ${hc}${ha === hc ? '' : ` (${diffDigest(a.d, c.d, 3).join('; ')})`}`); }
-  } finally { K.setKeys({}); K.KEYMAP.on = false; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
+  } finally { K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
   console.log(`=== keybinds: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }
