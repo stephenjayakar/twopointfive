@@ -90,8 +90,11 @@ export const steps: Record<string, (B: Bot) => void> = {
   wall: B => {
     const E = man(B, 'east'), n0 = seen(B);
     B.crouch(true); B.go([20.6, 0, 17.2], 20); B.go([23.45, 0, 19.4], 15, { near: 0.15 });
-    B.aim([23.45, 1.2, 19.9]); B.press('KeyQ', 20);
-    if (!B.g.player.wall) B.fail('Q took no wall in the corner beside the gap');
+    // the page's way first: a move key held into the wall takes it (the walk into the corner may already have, and a press of the hold's key would then
+    // step him OFF it: that was this step's red on the page's stand). Where walking in is switched off (the frozen stand) the hold's own key, as it was
+    if (!B.g.player.wall) B.nudge([23.45, 0, 19.9], 1.5, () => !!B.g.player.wall);
+    if (!B.g.player.wall) { B.aim([23.45, 1.2, 19.9]); B.press('KeyQ', 20); }
+    if (!B.g.player.wall) B.fail('no wall taken in the corner beside the gap, by walking into it or by its key');
     B.say(`  on the wall at ${B.pos()[0].toFixed(2)}, ${B.pos()[2].toFixed(2)}, lit ${B.g.player.visibility.toFixed(2)}; ${E.callsign} ${E.state}, aware ${E.awareness.toFixed(2)}`);
     if (E.state !== 'patrol' || seen(B) > n0) B.fail(`${E.callsign} noticed the player on his way to the corner (${E.state})`);
   },
