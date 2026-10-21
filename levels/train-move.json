@@ -603,7 +603,7 @@
         { "id": "crouch", "line": "Lit and loud. C crouches: slower, quieter, harder to see", "done": { "is": "flag", "flag": "crouch" } },
         { "id": "pace", "line": "Roll the mouse wheel down: you creep. Up: faster", "done": { "is": "pace", "below": 0.9 } },
         { "id": "dark", "line": "Follow the mark into the dark. Watch the light meter", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "in", "area": { "x0": 16.6, "x1": 18.9, "z0": 20.4, "z1": 21.8 } }, { "is": "meter", "which": "light", "below": 0.3 }] }, { "is": "near", "at": [17.8, 0, 21.1], "r": 0.8 }] }, "hold": 0.4, "at": [17.8, 1, 21.1] },
-        { "id": "wall", "line": "Q, facing the container: your back goes to it", "done": { "is": "all", "of": [{ "is": "flag", "flag": "wall" }, { "is": "in", "area": { "x0": 13.2, "x1": 19.7, "z0": 20.2, "z1": 21 } }] }, "at": [18.4, 1, 20.3] },
+        { "id": "wall", "line": "Walk into the container and keep walking: your back goes to it", "done": { "is": "all", "of": [{ "is": "flag", "flag": "wall" }, { "is": "in", "area": { "x0": 13.2, "x1": 19.7, "z0": 20.2, "z1": 21 } }] }, "at": [18.4, 1, 20.3] },
         { "id": "peek", "line": "Slide to the marked corner, keep pushing: you lean out", "done": { "is": "flag", "flag": "peek" }, "at": [19.1, 1, 20.3] },
         { "id": "nv", "line": "N is night vision. Find the guard through the broken wall", "done": { "is": "flag", "flag": "nv" } },
         { "id": "reach", "line": "When the guard walks away, go to the hut's door", "done": { "is": "stage", "stage": "drive" }, "at": [23, 1, 9.6] },

@@ -1489,3 +1489,5 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (headless Chromium, real key presses; the screen needs no adapter, `GPU=1` adds the game on the software adapter, two boots,
   about twenty minutes; `ONLY=game` leaves the screen out). NEVER SEEN
   ON A GPU, and nobody has played it: not the feel of any moved key, not a Mac's keys (Cmd chords, a trackpad), not Safari or Firefox.
+  A ROW THE BUILD GIVES NO KEY (`KEYMAP.qFree`, the wall hold's, 10-21): `home(a)` is a row's keys in the build, and 'as built', the swap, the kept
+  table and Reset all measure against that, not against the row's code. The bullet is in `stealth.md` ('Q is free').

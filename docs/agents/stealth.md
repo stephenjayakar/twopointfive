@@ -280,6 +280,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   him to the far wall at once, a Shift tap undoing Q, one latch for every wall (a corner's second wall refused), a pistol reload thrown away, a door's rows
   not counted as a thing, his own side's alert counted as the enemy's. NOBODY HAS PLAYED IT and it has never been seen on a GPU: how often a wall is taken
   that was not wanted in real play is unmeasured, since no recorded human session is in the repo and the tour's man is a puppet the rule leaves alone.
+- **Q is free: the wall hold has no key on the page's board** (`KEYMAP.qFree`, `src/host/keymap.ts`; the maintainer, 10-21, from play:
+  "snapping feels good, we can remove Q"). Walking into a wall takes it (`WALLSNAP.press`) and a step away or a run lets go, so the hold's own key
+  is spare. NO RULE OF THE GAME CHANGED: player.ts still asks `input.hit('KeyQ')` and means the wall hold by it, so every probe, tape and journal
+  that holds 'KeyQ' plays as it did and there is no knob, no `FROZEN_HOLDS` row and no journal key (one message lost its '(Q)': 'the wall is in the
+  way — step out past its end, or off it'). What changed is the BOARD, at the keyboard (`gameCode`): the wall hold's row is built with no key
+  (`FREED` in keymap.ts), Q pressed files nothing, and the code is given only where the player has put the row on a key in Options ▸ Controls (Q
+  itself if he wants it back: a rebind like any other, kept, Reset takes it off). ON in the page (`keysBoot`), `?qfree=0` = Q takes the wall as it
+  did; OFF in the module, so a tool, the editor and both headless stands never meet it. It does not wait on `KEYMAP.on`: `?keybinds=0` is the build's
+  own board, and that has no wall key. ONLY WHILE WALKING IN WORKS (`KEYMAP.freeWhen`, set by main.ts to `WALLSNAP.on && walkInNow()`): with the
+  walk-in switched off (Options ▸ Game, a kept choice, `?wallpress=0`) the row is on Q again there and then, so no board is without a way onto a
+  wall unless the player took the key off himself; `walkInNow` (ui/options.ts) reads the kept choice before the Menu has put it on the table, so
+  the boot card and the keyboard agree with the page that follows. KEPT AS HE SET IT: a freed row's entry in the kept table is never folded into
+  'as built' (what is built moves with the two switches): Q put on the row by hand stays through a `?qfree=0` visit or a spell with the walk-in
+  off. THE LETTER IS NOT THE ROW'S while it is freed and unbound: `keyText` rewrites no line for it. WHAT FOLLOWS, all through one helper
+  (`wallWay()` in ui/options.ts: 'key' | 'walk' | 'none'): the Controls list keeps the row, its cap a dashed — that is not marked as moved, its
+  words 'Back to a wall: walk into it' ('none' = he unbound it AND switched the walk-in off: 'no key: click the cap to give it one'); the start
+  card's and the boot card's list show a 'Wall' row for the 'Q' one (`controlRows`, ui/menu.ts; no row for 'none'); Options ▸ Game's walk-in row
+  says 'Off, Q takes it instead'; two lesson lines no longer name Q (train-move 'Walk into the container and keep walking: your back goes to it',
+  train-hands 'Back to the wall in the dark corner beside it'); the README's Play table. WHAT ONLY THE KEY DID, gone from the page's board unless
+  he binds one: taking a wall with a pistol out while anyone is alert (`pressCalm` keeps the walk-in from putting his gun away in a fight; the
+  rifle's stack is still taken), letting go without moving, Q's longer reach from a walk and Q a moment early, and a wall beside a door or a thing
+  to use is slower to take (`pressThing`). KNOWN, NOT MENDED: a player who has the walk-in switched off reads the two lesson lines' 'walk into'
+  and has to know Q; the wall's row taking a key another row has leaves that row with none (the rebinding's own 'none to give' rule, now the
+  common case for this row); the day a second row takes the cap 'Q' the wall hold's row wants another name for its cap (keymap.ts header). THE
+  LESSON BOTS (tools/qa/lessons) and every wall probe still write 'KeyQ' straight in: that is the game's code, not the board's key; a bot that
+  walks in instead went down later in train-move for a reason not found, so they were left. CHECK `probes.ts keybinds` (family `player`): four 'no
+  wall key' lines (the table and the walk-in off; rebinds, old kept tables and 4,000 moves by a die with the walk-in flipping; the game beside a
+  wall, three ways in; both lessons' wall steps done by a held move key where the step asks, the walk-in forced on), 13 of 13 on both stands,
+  `QFREE_BREAK=1` (the board as it was, and no walk-in in the lessons) fails those four; `tools/qa/keybinds-page.cjs` runs its older lines under
+  `?qfree=0` and three new ones on the page's board (12 of 12 in headless Chromium, no adapter). ONE BROWSER RUN on the software adapter (the
+  first cut, before the walk-in rule above): real keys, Q held 40 frames beside a wall files nothing and takes nothing, W held takes the wall in
+  17 frames, S lets go in 6, no error but the usual favicon 404; the start card's list was not reached. NOBODY HAS PLAYED IT, never on a GPU. OPEN,
+  his: what Q does next is the Commanding goal's (the command key, from Tab); whether a pistol out in a fight should take a wall by walking in.
 - **The wall hold, heard and unhurried** (`WALLSNAP.voice`, `WALLSNAP.slow`, wallsnap.ts; the maintainer, 10-21, from his play: "we should have some audio
   feedback for when you snap/unsnap from a wall. the transition animation is also too fast, should probably be 2x slower"). Two switches, each acting only
   with the feel pass (`WALLSNAP.on`), for Q's take and the walk-in take alike, back hold and stack alike. Each ON in the page (`?wallvoice=0`, `?wallslow=0`),
