@@ -1,4 +1,5 @@
 // Keyboard + mouse state.
+import { gameCode } from '../host/keymap';
 export class Input {
   keys = new Set<string>();
   pressed = new Set<string>();     // edge-triggered this frame
@@ -24,6 +25,9 @@ export class Input {
    *  host pages usually leave keystrokes aimed at an editable element alone, so their single-letter shortcuts stop eating ours. Every game
    *  key is preventDefault-ed, so nothing is ever typed into it (and macOS never shows its press-and-hold accent picker over the game). */
   private sink: HTMLTextAreaElement | null = null;
+  /** the keys down on the board → the code each was filed under (host/keymap.ts: the player's own keys): a key let go lets go of what its press put down,
+   *  whatever was rebound while it was held */
+  private heldAs = new Map<string, string>();
 
   /** an Input with EVERY field initialised and NO listeners — the headless harness's, the session replayer's and a native host's: they write keys / pressed / mouse /
    *  buttons themselves (tools/qa/headless.ts used to Object.create(Input.prototype) and forgot orbitDX / wheelCtrl / keyVeto). `el` is null: focusGame() is a no-op. */
@@ -47,14 +51,16 @@ export class Input {
       const inMenu = e.target instanceof HTMLElement && !!e.target.closest('#menu, #missions');   // (#missions: the mission list — ui/missions.ts — is a card like the menu's)
       const modifier = ['Meta', 'Control', 'Shift', 'Alt'].includes(e.key);
       const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: held, it is the camera's orbit / zoom modifier — host/loop.ts; no game key reads it, crouch is C; F-keys stay the browser's)
-      if (ours) { e.stopPropagation(); const typing = e.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(e.key); if ((e.target === this.sink && typing) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault(); }
-      if (this.lockExcept && !this.lockExcept.has(e.code)) { if (!inMenu && !e.repeat && e.code !== 'Escape' && !modifier && !e.metaKey && !e.ctrlKey) this.onLockedInput?.(); return; }   // hands off during the tour (menu keyboard nav still works)
+      const code = gameCode(e.code);   // (the key as the game knows it — host/keymap.ts: itself unless the player moved a key in Options ▸ Controls; '' = a key whose row he moved away)
+      if (ours) { e.stopPropagation(); const typing = e.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(e.key); if ((e.target === this.sink && typing) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) || (code && code !== e.code)) e.preventDefault(); }   // (a key he gave a row is the game's whole: Backspace goes back a page nowhere, ' and / open no find bar)
+      if (!code) { this.heldAs.set(e.code, ''); return; }   // (…and let go, it lets go of nothing: the key his row moved TO may be down)
+      if (this.lockExcept && !this.lockExcept.has(code)) { if (!inMenu && !e.repeat && e.code !== 'Escape' && !modifier && !e.metaKey && !e.ctrlKey) this.onLockedInput?.(); return; }   // hands off during the tour (menu keyboard nav still works)
       if (e.repeat) return;   // OS auto-repeat is never a fresh press (holding P must not strobe the tour on and off)
-      if (!this.keys.has(e.code)) this.pressed.add(e.code);
-      this.keys.add(e.code);
+      if (!this.keys.has(code)) this.pressed.add(code);
+      this.keys.add(code); this.heldAs.set(e.code, code);
     }, { capture: true });
-    window.addEventListener('keyup', e => { this.keys.delete(e.code); if (!typingTarget(e) && e.code !== 'Escape' && !e.metaKey) e.stopPropagation(); if (this.sink && e.target === this.sink) this.sink.value = ''; }, { capture: true });
-    window.addEventListener('blur', () => { this.keys.clear(); this.buttons = 0; this.pressed.add('Blur'); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
+    window.addEventListener('keyup', e => { { const as = this.heldAs.get(e.code) ?? gameCode(e.code); this.heldAs.delete(e.code); if (as) this.keys.delete(as); } if (!typingTarget(e) && e.code !== 'Escape' && !e.metaKey) e.stopPropagation(); if (this.sink && e.target === this.sink) this.sink.value = ''; }, { capture: true });
+    window.addEventListener('blur', () => { this.keys.clear(); this.heldAs.clear(); this.buttons = 0; this.pressed.add('Blur'); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
     el.addEventListener('mousemove', e => { const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if (e.ctrlKey && !this.lockExcept) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock — the tour writes its own aim over it every frame it has one — so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
     el.addEventListener('mousedown', e => { e.preventDefault(); this.focusGame(); if (this.lockExcept) { this.onLockedInput?.(); return; } if (this.suppressClick) { this.suppressClick = false; return; } this.buttons |= 1 << e.button; this.clicked |= 1 << e.button; });
     window.addEventListener('mouseup', e => { if (this.lockExcept) return; this.buttons &= ~(1 << e.button); });

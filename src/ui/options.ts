@@ -21,6 +21,8 @@ import { WALLSNAP } from '../game/wallsnap';
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
+import { KEYMAP, keyText, resetKeys } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
+import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
 import type { QualityName } from './quality';
@@ -77,6 +79,8 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['B'], 'The usual order for that spot, at once'],
     [['T'], 'Who takes the next order', 'everyone, red, blue or one man'],
     [['F'], 'Go', 'the word for an order that waits on you, and the trigger of a set charge'],
+    [['H'], 'With the orders up: the big tool on a door, smoke on the floor'],
+    [['G'], 'With the orders up: frag and clear'],
   ] },
   { group: 'Game', rows: [
     [['Esc'], 'Pause'],
@@ -173,7 +177,7 @@ export function setOptionsDeps(d: OptionsDeps | null) {
 }
 export function optionsOpen() { return !!open; }
 export function closeOptions() {
-  const S = open; if (!S) return; open = null;
+  const S = open; if (!S) return; open = null; keyStop();
   S.root.classList.remove('on'); S.root.innerHTML = '';
   if (!document.getElementById('missions')?.classList.contains('on')) document.getElementById('menu')?.removeAttribute?.('inert');   // (a list opened meanwhile holds the card under it itself)
   S.onClose?.();
@@ -248,7 +252,8 @@ function render(S: Screen) {
   // TEXT SIZE (ui/textsize.ts): its steps as the letter at each size, nothing chosen = the window's own. It needs no renderer: the row is live while the page boots
   const textRow = () => { if (TEXTSIZE.on) seg(body, 'Text size', TEXTSIZE.steps.map((m, i) => ({ v: String(i), label: 'A', px: Math.round(13 * m) })), () => String(textStep()), v => setTextStep(+v === TEXTSIZE.base ? null : +v),
     () => 'Every word on the screen, from the menus to the marks over the picture. Until you choose, it follows the size of the window. Ctrl or ⌘ with + and − step it from anywhere; with 0 it is the window\'s again.'); };
-  if (S.tab === 'controls') controls(body);
+  if (S.tab !== 'controls') keyStop();   // (a cap waiting for its key is let go by another tab; the Controls list drawn again under it keeps it waiting)
+  if (S.tab === 'controls') { controls(body, { rows: S.rows, paints, select: i => { S.sel = i; S.paint(); }, paint: () => S.paint() }); if (KEYMAP.on) reset = () => { keyStop(); resetKeys(); }; }
   else if (!deps) { if (S.tab === 'graphics' && TEXTSIZE.on) { sec(body, 'Display'); textRow(); }
     const w = el('div', 'op-wait'); w.appendChild(el('b', '', 'Still starting up')); w.appendChild(document.createTextNode('The renderer is compiling its shaders. These settings open the moment it is ready; the controls are on the last tab meanwhile.')); body.appendChild(w); }
   else if (S.tab === 'graphics') {
@@ -296,7 +301,7 @@ function render(S: Screen) {
       if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
   }
   if (reset) { const run = reset, b = el('button', 'op-btn', 'Reset to defaults') as HTMLButtonElement; b.dataset.act = 'reset'; b.onclick = () => { run(); S.paint(); }; foot.appendChild(b); }
-  foot.appendChild(el('div', 'op-hint', S.rows.length ? '1 2 3 4 tabs · W S rows · A D change · Esc back' : '1 2 3 4 tabs · W S scroll · Esc back'));
+  foot.appendChild(el('div', 'op-hint', S.tab === 'controls' && S.rows.length ? '1 2 3 4 tabs · W S keys · Enter a new key · Esc back' : S.rows.length ? '1 2 3 4 tabs · W S rows · A D change · Esc back' : '1 2 3 4 tabs · W S scroll · Esc back'));
   S.sel = Math.max(0, Math.min(S.rows.length - 1, S.sel));
   S.paint = () => {
     for (const p of paints) p();
@@ -318,8 +323,11 @@ function tabRow(): { group: string; after?: string; row: [string[], string, stri
     default: return null;
   }
 }
-function controls(body: HTMLElement) {
+function controls(body: HTMLElement, host: KeyHost) {
   const cols = el('div', 'op-keys'); body.appendChild(cols);
+  // (ui/keybinds.ts: a cap of a key the player may move is its button, the words beside it name the keys as they are bound; a click off a waiting cap lets it go)
+  const seen = new Set<string>(); if (KEYMAP.on) cols.classList.add('rebind');
+  body.addEventListener?.('mousedown', (e: Event) => { if (keyWaiting() && !(e.target as HTMLElement | null)?.closest?.('.op-key')) { keyStop(); host.paint(); } });
   const tab = tabRow();
   for (const g of KEYS) {
     const box = el('div', 'op-kgroup'); box.appendChild(el('div', 'op-sec', g.group));
@@ -328,8 +336,9 @@ function controls(body: HTMLElement) {
     for (const [caps, what, small] of rows) {
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
-      caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(el('kbd', '', k)); });
-      const w = el('div', 'op-what', gearText(what)); if (small) w.appendChild(el('small', '', gearText(small)));
+      caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(keyCapEl(k, gearText(what), host, seen)); });
+      const w = el('div', 'op-what', gearText(what)), wt = w.firstChild, sm = small ? el('small', '', gearText(small)) : null; if (sm) w.appendChild(sm);
+      host.paints.push(() => { const t = keyText(gearText(what)); if (wt && wt.textContent !== t) wt.textContent = t; if (sm) { const u = keyText(gearText(small!)); if (sm.textContent !== u) sm.textContent = u; } });
       r.appendChild(c); r.appendChild(w); box.appendChild(r);
     }
     cols.appendChild(box);
@@ -354,6 +363,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   window.addEventListener('keydown', e => {
     const S = open; if (!S || e.ctrlKey || e.metaKey || e.altKey) return;
     const eat = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+    if (S.tab === 'controls' && keyCapture(e)) { eat(); S.paint(); return; }   // (ui/keybinds.ts: a cap is waiting for its key — this one is it, whatever it does on the screen otherwise)
     const onBtn = e.target instanceof HTMLElement && (e.target.classList.contains('op-btn') || e.target.classList.contains('op-tab')) && S.root.contains(e.target);
     const move = (d: number) => { if (!S.rows.length) { (S.root.querySelector('.op-body') as HTMLElement | null)?.scrollBy?.({ top: d * 96 }); return; }   // (CONTROLS has no row to walk: the keys scroll its list)
       S.sel = (S.sel + d + S.rows.length) % S.rows.length; S.paint(); S.rows[S.sel].el.scrollIntoView?.({ block: 'nearest' }); };

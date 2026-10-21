@@ -6,6 +6,7 @@ import { FollowCamera } from '../game/camera';
 import { Game, Player, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
 import { backName } from '../game/backkey';
+import { KEYMAP, keyCap, keyText } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
 import { FLOOR_KEY } from '../game/doors';
 import { playerAim } from '../game/aim';
 import { AIMCOST } from '../game/aimcost';
@@ -119,10 +120,10 @@ export class Overlay implements HudLike {
     if (this.tlFill) this.tlFill.style.width = `${(ch.frac * 100).toFixed(1)}%`;
   }
   setCaption(text: string, sub: string) {
-    const key = text + '|' + sub + (GEAR.on ? '|g' : ''); if (key === this.captionKey) return; this.captionKey = key;
+    const key = text + '|' + sub + (GEAR.on ? '|g' : '') + (KEYMAP.rev ? `|k${KEYMAP.rev}` : ''); if (key === this.captionKey) return; this.captionKey = key;
     text = gearText(text); sub = gearText(sub);   // (a showcase's caption names the kit as issued)
     this.captionEl.className = text ? 'on' : '';
-    if (text) this.captionEl.innerHTML = `<div class="cap">${text}</div>${sub ? `<div class="sub">${sub}</div>` : ''}`;
+    if (text) this.captionEl.innerHTML = `<div class="cap">${keyText(text)}</div>${sub ? `<div class="sub">${keyText(sub)}</div>` : ''}`;
   }
   private wish: HTMLElement; private wishKey = '';   // aimweight.ts: the dot on what the reticle snapped to while the circle (where the gun points) is still swinging onto it
   private reticle: HTMLElement; private ring: HTMLElement; private ringKey = -1;   // the ring on the marker F acts on; ring: progress round it (Interactable.progress — a lock being picked, the drive coming out)
@@ -292,6 +293,7 @@ export class Overlay implements HudLike {
       }
     } else { this.reticle.style.display = 'none'; rmb = ''; }
     if (wishKey !== this.wishKey) { this.wishKey = wishKey; this.wish.style.display = wishKey ? 'block' : 'none'; this.wish.className = 'aimwish' + (wishKey === 'g' ? ' k-guard' : wishKey === 'c' ? ' gun' : ''); }
+    rmb = keyText(rmb);
     if (rmb !== this.hintKey) { this.hintKey = rmb; this.hint.textContent = rmb; this.hint.style.display = rmb ? 'block' : 'none'; }
     if (styled !== this.aimStyled) { this.aimStyled = styled; if (!styled) { const st = this.reticle.style; st.width = st.height = st.opacity = st.borderWidth = ''; this.aimPx = 16; } }   // (the class rules again for the interaction ring / the model off)
     // interaction panel (top-left): the rows Space can do, the highlighted one lit; open (Space held) it says so and grows its cancel row
@@ -318,7 +320,7 @@ export class Overlay implements HudLike {
         return `<span class="rx${heard ? ' heard old' : game.time - m.t > 5 ? ' old' : ''}"><b>${heard ? 'HEARD' : '·)) RADIO'}</b>${m.text.slice(7).replace(/[<>&]/g, c => c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;')}</span>`; }).join(''); } }
     // mission: the objective line, and a diamond + distance on the objective — clamped to the screen edge in its direction when it is off screen (the
     // usual case from this camera), faded out within a couple of metres so it never fights the F reticle / door marker that takes over there
-    const ot = game.objectiveText();
+    const ot = keyText(game.objectiveText());
     if (ot !== this.objKey) { this.objKey = ot; const W = 'objective ▸', cut = ot.indexOf(W);   // the line's own word is set apart as its label (a par clock in front of it is not part of it); the text read back is unchanged
       if (cut < 0) this.objEl.textContent = ot; else this.objEl.innerHTML = `${esc(ot.slice(0, cut))}<b>${W}</b>${esc(ot.slice(cut + W.length))}`;
       this.objEl.className = game.mission.stage; }
@@ -353,7 +355,7 @@ export class Overlay implements HudLike {
     // the squad's order menu: a ring on the door / spot / man it was opened on, in the addressed element's colour (it stays there while Sam walks and aims on)
     this.cmdRing.update(game, cam, w, h, tz);
     { const om = game.orders.mark(), el = this.orderMark; let shown = false;
-      if (om) { const [ox, oy, ov] = cam.project(om.at, w, h, EDGE); if (ov) { shown = true; el.className = om.tone ? `ordermark t-${om.tone}` : 'ordermark'; el.style.left = `${ox.toFixed(1)}px`; el.style.top = `${oy.toFixed(1)}px`; const sp = el.lastChild as HTMLElement; if (sp.textContent !== om.text) sp.textContent = om.text; } }
+      if (om) { const [ox, oy, ov] = cam.project(om.at, w, h, EDGE); if (ov) { shown = true; el.className = om.tone ? `ordermark t-${om.tone}` : 'ordermark'; el.style.left = `${ox.toFixed(1)}px`; el.style.top = `${oy.toFixed(1)}px`; const sp = el.lastChild as HTMLElement; const t = keyText(om.text); if (sp.textContent !== t) sp.textContent = t; } }
       el.style.display = shown ? 'block' : 'none'; }
     this.squadThrow.update(game, cam, w, h, EDGE);
     this.attention.update(game, cam, w, h, EDGE);
@@ -382,13 +384,13 @@ export class Overlay implements HudLike {
    *  place every frame. Hidden when there is nothing to list or a menu card is up. update() feeds it from the game's rows (deriveInteractions). */
   setInteractions(rows: InteractRow[], primary = -1, more = 0, open = false, hint = `let go to do it · wheel / ↑↓ chooses · ${backName()} backs out`, cancel = 'cancel — let go, do nothing') {
     if (!rows.length || this.menuEl.classList.contains('on')) { if (this.iaKey) { this.iaKey = ''; this.iaEl.className = ''; this.iaEl.textContent = ''; this.iaLive = []; } return; }
-    const key = rows.map(r => `${r.kind}|${r.label}|${r.cont ? 1 : 0}|${r.tone ?? ''}|${r.opts.map(o => `${o.key}>${o.text}>${o.tone ?? ''}${o.mark !== undefined ? `~${o.mark}` : ''}`).join('/')}|${r.inReach ? 1 : 0}${r.off ? 1 : 0}${r.dist !== undefined ? 1 : 0}${r.progress !== undefined ? 1 : 0}`).join('\n') + `#${primary}#${more}#${open ? `1${hint}` : 0}#${cancel}`;
+    const key = rows.map(r => `${r.kind}|${r.label}|${r.cont ? 1 : 0}|${r.tone ?? ''}|${r.opts.map(o => `${o.key}>${o.text}>${o.tone ?? ''}${o.mark !== undefined ? `~${o.mark}` : ''}`).join('/')}|${r.inReach ? 1 : 0}${r.off ? 1 : 0}${r.dist !== undefined ? 1 : 0}${r.progress !== undefined ? 1 : 0}`).join('\n') + `#${primary}#${more}#${open ? `1${hint}` : 0}#${cancel}#${KEYMAP.rev}`;
     if (key !== this.iaKey) {
       this.iaKey = key;
-      this.iaEl.innerHTML = (open ? `<div class="selhint">${esc(hint)}</div>` : '') + rows.map((r, i) =>
-        r.kind === 'cancel' ? `<div class="it k-cancel${i === primary ? ' primary' : ''}"><div class="opt"><kbd>×</kbd>${esc(cancel)}</div></div>`
+      this.iaEl.innerHTML = (open ? `<div class="selhint">${esc(keyText(hint))}</div>` : '') + rows.map((r, i) =>
+        r.kind === 'cancel' ? `<div class="it k-cancel${i === primary ? ' primary' : ''}"><div class="opt"><kbd>×</kbd>${esc(keyText(cancel))}</div></div>`
         : `<div class="it k-${r.kind}${i === primary ? ' primary' : ''}${r.inReach ? '' : ' far'}${r.off ? ' off' : ''}${r.cont ? ' cont' : ''}${r.tone ? ` t-${r.tone}` : ''}">${r.cont ? '<div class="what"><em></em></div>' : `<div class="what"><span>${esc(r.label)}</span><em></em></div>`}`
-        + r.opts.map((o, j) => o.key ? `<div class="opt${j === 0 && /^space$/i.test(o.key) ? ' verb' : ''}${o.tone ? ` t-${o.tone}` : ''}"><kbd>${esc(o.key.toUpperCase())}</kbd>${esc(o.text)}</div>` : o.mark !== undefined ? `<div class="hint lost${o.tone ? ` t-${o.tone}` : ''}"><s>${esc(o.text)}</s>${o.mark ? `<b${o.mark.endsWith(' n') ? ' class="n"' : ''} style="transform:rotate(${parseInt(o.mark, 10)}deg)">→</b>` : ''}</div>` : `<div class="hint${o.tone ? ` t-${o.tone}` : ''}">${esc(o.text)}</div>`).join('')   // (.verb: the row's own Space verb — lit only on the highlighted row; the hint keys under it, LMB / E, are always live and never dimmed)
+        + r.opts.map((o, j) => o.key ? `<div class="opt${j === 0 && /^space$/i.test(o.key) ? ' verb' : ''}${o.tone ? ` t-${o.tone}` : ''}"><kbd>${esc(keyCap(o.key).toUpperCase())}</kbd>${esc(keyText(o.text))}</div>` : o.mark !== undefined ? `<div class="hint lost${o.tone ? ` t-${o.tone}` : ''}"><s>${esc(keyText(o.text))}</s>${o.mark ? `<b${o.mark.endsWith(' n') ? ' class="n"' : ''} style="transform:rotate(${parseInt(o.mark, 10)}deg)">→</b>` : ''}</div>` : `<div class="hint${o.tone ? ` t-${o.tone}` : ''}">${esc(keyText(o.text))}</div>`).join('')   // (.verb: the row's own Space verb — lit only on the highlighted row; the hint keys under it, LMB / E, are always live and never dimmed)
         + (r.progress !== undefined ? '<div class="prog"><b></b></div>' : '') + '</div>').join('') + (more > 0 ? `<div class="more">+${more} more</div>` : '');
       this.iaEl.className = open ? 'on open' : 'on';
       const blocks = [...this.iaEl.querySelectorAll('.it')] as HTMLElement[];
@@ -426,10 +428,10 @@ export class Overlay implements HudLike {
     const paceShow = game.time - pl.paceShownT < 2.5 || pl.pace < 0.99;   // pace ticks: shown for a moment after a wheel step, and kept while below full pace
     const rifleKey = pl.hasRifle ? [rf.chamber, rf.mag, rf.spare.join(','), rf.reloading ? 1 : 0, rf.mode, rf.attIdx, rf.rings, rf.shells, rf.attachments.length, rf.cams, rf.lightOn ? 1 : 0].join('/') : '-';   // (the rifle's row: rounds, the beat, SEMI / AUTO, the selected attachment and its rings, its light)
     const big = BIGSLOT.on && !game.touring ? pl.bigKit : 'none', bigAt = big === 'none' ? '' : big + (game.nearby.some(r => r.kind === 'door' && (r.verb === 'breach' || r.verb === 'hammer')) ? '!' : '') + (BIGSLOT.shut ? 's' : '');   // (the big slot's row: what he carries, and whether a door in reach offers it now)
-    const key = [pl.slot, gun.chamber, gun.mag, gun.spare.join(','), gun.reloading ? 1 : 0, pl.canisters, pl.flashbangs, pl.frags, pl.throwKind, gun.lightOn ? 1 : 0, pl.nv ? 1 : 0, (Math.round(pl.ocp.charge * 20) + (pl.ocp.ready() ? 100 : 0)), pl.hitsLeft, pl.down ? 1 : 0, game.godMode ? 1 : 0, pl.holstered ? 1 : 0, paceShow ? Math.round(pl.pace * 100) : -1, [...pl.keys].join(','), rifleKey, GEAR.on ? 1 : 0, bigAt].join('|');   // (…and which kit's words the rows are in)
+    const key = [pl.slot, gun.chamber, gun.mag, gun.spare.join(','), gun.reloading ? 1 : 0, pl.canisters, pl.flashbangs, pl.frags, pl.throwKind, gun.lightOn ? 1 : 0, pl.nv ? 1 : 0, (Math.round(pl.ocp.charge * 20) + (pl.ocp.ready() ? 100 : 0)), pl.hitsLeft, pl.down ? 1 : 0, game.godMode ? 1 : 0, pl.holstered ? 1 : 0, paceShow ? Math.round(pl.pace * 100) : -1, [...pl.keys].join(','), rifleKey, GEAR.on ? 1 : 0, bigAt, KEYMAP.rev].join('|');   // (…and which kit's words the rows are in)
     if (key === this.equipKey) return; this.equipKey = key;
     const el = this.equip; el.textContent = '';
-    const mk = (tag: string, cls?: string, text?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
+    const mk = (tag: string, cls?: string, text?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = cls === 'key' ? keyCap(text) : keyText(text); return e; };   // (.key: a slot's own cap)
     const selCls = (k: SlotKind) => pl.slot === k ? (pl.holstered ? ' sel holstered' : ' sel') : '';   // the selected row lit; put away (E) it is lit-dashed with 'holstered · E' ('slung · E' on the rifle's row)
     // key strip: the selected gun's light and night vision. The right button's business is on the rows themselves — the OCP's charge closes the pistol's, the RING
     // tag lights on the rifle's while the launcher is selected (nothing is worded beside the reticle any more but the 40 mm's too-close warning)

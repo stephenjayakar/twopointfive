@@ -1,0 +1,102 @@
+// THE PLAYER'S OWN KEYS ON THE REAL PAGE (src/host/keymap.ts, src/ui/keybinds.ts, Options ▸ Controls): headless Chromium against a dev server, the keys
+// pressed for real.
+//   PORT=5199 node tools/qa/keybinds-page.cjs [outDir]        (a dev server on that port: PORT=5199 bun run tools/serve.ts)
+//   env: GPU=1 adds the game itself (the software WebGPU adapter under the page: two boots, about four minutes each) · ONLY=game skips the screen
+// THE SCREEN (no adapter: the boot stops at 'No WebGPU adapter', and the options are plain DOM that is live from the first tick):
+//   every key that can move is a cap you can click, the page's own keys are plain caps · a click and a key: the cap is that key, and the machine keeps it ·
+//   by the keys alone (W S to a cap, Enter, the key): a key another row has swaps the two and shows the other · one of the page's own keys is shaken off and
+//   the cap goes on waiting · Esc lets it go and leaves the screen up · Backspace leaves a row with no key, marked · a digit pressed for a waiting cap is its
+//   key, never the screen's tab · the words beside a cap name the keys as bound · a page load later the caps are as they were left ·
+//   Reset is the build's keys and nothing kept · ?keybinds=0: the plain list, the kept table untouched.
+// GPU=1, THE GAME: crouch put on K on the screen, over the start card: K crouches him at once, C does nothing; the kit column names the light's new key; a
+//   door's Space row names Space's new key; a page load later K still crouches; no page error, no GPU error.
+// exit 0 = every line PASS with no page error · 1 = otherwise. Nothing here has been seen on a GPU, and nobody has played it.
+const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const fs = require('fs'), path = require('path');
+const PORT = process.env.PORT || 5199, GPU = process.env.GPU === '1', QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '';
+const GPU_FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
+const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage|No WebGPU adapter|WebGPU is not available|Failed to load resource/;
+const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
+if (outDir) fs.mkdirSync(outDir, { recursive: true });
+const checks = [], errors = [];
+const check = (ok, label, detail = '') => { checks.push(!!ok); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
+const watch = (page, name, gpu) => { page.on('pageerror', e => errors.push(`${name}: ${e.message}`)); page.on('console', m => { if (m.type() === 'error' && !(NOISE.test(m.text())) && (gpu || !/GPU|adapter|WebGPU/i.test(m.text()))) errors.push(`${name}: ${m.text().slice(0, 200)}`); }); };
+const still = async (page, name) => { if (!outDir) return; const ok = await page.screenshot({ path: path.join(outDir, name), timeout: 180000 }).then(() => true, () => false); if (!ok) log(`no picture ${name}: the screenshot did not come`); };   // (a picture for a person: one that will not come is said, never a red)
+const url = (more = '') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute${more ? '&' + more : ''}`;
+const openControls = async page => { await page.waitForSelector('#menu .actions button', { timeout: 60000 });
+  await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].find(b => /^Options/.test(b.textContent))?.click()); await page.waitForSelector('#options.on', { timeout: 10000 });
+  await page.evaluate(() => document.querySelector('#options .op-tab[data-tab="controls"]').click()); await page.waitForTimeout(150); };   // (a click by the page's own hand: under the software adapter the frame is seconds late and a pointer waits for it)
+// ── in the page ──
+const CAPS = () => Object.fromEntries([...document.querySelectorAll('#options button.op-key')].map(b => [b.dataset.key, { t: b.textContent, c: b.className.replace('op-key', '').trim() }]));
+const KEPT = () => localStorage.getItem('twopointsix.keys');
+const SCREEN = () => ({ up: !!document.querySelector('#options.on'), tab: document.querySelector('#options .op-tab.on')?.dataset.tab, desc: document.querySelector('#options .op-desc')?.textContent ?? '', plain: [...document.querySelectorAll('#options .op-caps kbd')].map(k => k.textContent) });
+
+async function screen(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }), page = await ctx.newPage(); watch(page, 'screen', false);
+  await page.goto(url(), { waitUntil: 'domcontentloaded' }); await openControls(page);
+  const key = async k => { await page.keyboard.press(k); await page.waitForTimeout(60); };
+  { const caps = await page.evaluate(CAPS), S = await page.evaluate(SCREEN), want = { KeyW: 'W', KeyA: 'A', KeyS: 'S', KeyD: 'D', ShiftLeft: 'Shift', KeyC: 'C', KeyQ: 'Q', Space: 'Space', KeyV: 'V', KeyN: 'N', KeyR: 'R', KeyZ: 'Z', KeyL: 'L', KeyE: 'E', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', KeyX: 'X', KeyB: 'B', KeyT: 'T', KeyF: 'F', KeyG: 'G', KeyH: 'H', Backquote: '`' };
+    const off = Object.keys(want).filter(k => caps[k]?.t !== want[k] || caps[k].c.replace('sel', '').trim()), fixed = ['Ctrl', 'Mouse', 'Wheel', 'LMB', 'RMB', 'Esc', 'Enter', 'F7'].filter(k => !S.plain.includes(k));
+    check(!off.length && Object.keys(caps).length === Object.keys(want).length && !fixed.length && await page.evaluate(KEPT) === null, 'Options ▸ Controls: every key that can move is a cap to click, reading the build\'s key and unmarked; the mouse, the camera\'s Ctrl and the page\'s own keys are plain caps',
+      `${Object.keys(caps).length} caps to click${off.length ? `, wrong: ${off.join(' ')}` : ''} · plain caps missing: ${fixed.join(' ') || 'none'}`); await still(page, 'controls-as-built.png'); }
+  { await page.click('#options button.op-key[data-key="KeyC"]'); await page.waitForTimeout(80); const w = (await page.evaluate(CAPS)).KeyC, d = (await page.evaluate(SCREEN)).desc; await still(page, 'controls-waiting.png');
+    await key('k'); const c = (await page.evaluate(CAPS)).KeyC, kept = await page.evaluate(KEPT), S = await page.evaluate(SCREEN);
+    check(w.t === '…' && /wait/.test(w.c) && /Press its new key/.test(d) && c.t === 'K' && /moved/.test(c.c) && !/wait/.test(c.c) && kept === '{"KeyC":"KeyK"}' && S.up && S.tab === 'controls',
+      'a click on Crouch\'s cap and it waits; K pressed and the cap is K, marked as moved, and the machine has kept it', `waiting: '${w.t}' [${w.c}] '${d.slice(0, 60)}' · after K: '${c.t}' [${c.c}] · kept ${kept}`); }
+  { await key('s'); await key('Enter'); const sel = await page.evaluate(() => document.querySelector('#options button.op-key.wait')?.dataset.key); await key('k');   // (W S walk the caps: the next one down is Q's)
+    const caps = await page.evaluate(CAPS), kept = JSON.parse(await page.evaluate(KEPT) || '{}');
+    check(sel === 'KeyQ' && caps.KeyQ.t === 'K' && caps.KeyC.t === 'Q' && /swap/.test(caps.KeyC.c) && kept.KeyQ === 'KeyK' && kept.KeyC === 'KeyQ', 'by the keys alone (S to the next cap, Enter, K): the wall\'s key takes K, which Crouch had, and Crouch takes Q in exchange and shows it',
+      `the cap that waited: ${sel} · wall '${caps.KeyQ.t}', crouch '${caps.KeyC.t}' [${caps.KeyC.c}] · kept ${JSON.stringify(kept)}`); await still(page, 'controls-swapped.png'); }
+  { await key('Enter'); await key('Tab'); const a = (await page.evaluate(CAPS)).KeyQ, d = (await page.evaluate(SCREEN)).desc; await key('ArrowUp'); const a2 = (await page.evaluate(CAPS)).KeyQ; await key('Escape'); const b = (await page.evaluate(CAPS)).KeyQ, S = await page.evaluate(SCREEN);
+    check(/wait/.test(a.c) && /no/.test(a.c) && /page's own/.test(d) && /wait/.test(a2.c) && b.t === 'K' && !/wait/.test(b.c) && S.up, 'a page\'s own key (Tab, an arrow) is shaken off and the cap goes on waiting; Esc lets it go with nothing changed and the screen stays up',
+      `after Tab: [${a.c}] '${d.slice(0, 50)}' · after ↑: [${a2.c}] · after Esc: '${b.t}' [${b.c}], screen up ${S.up}`); }
+  { await key('Enter'); await key('Backspace'); const q = (await page.evaluate(CAPS)).KeyQ, small = await page.evaluate(() => [...document.querySelectorAll('#options .op-krow')].find(r => r.querySelector('[data-key="KeyQ"]'))?.querySelector('small')?.textContent ?? '');
+    await page.click('#options button.op-key[data-key="KeyR"]'); await key('2'); const caps = await page.evaluate(CAPS), S = await page.evaluate(SCREEN);
+    check(q.t === '—' && /none/.test(q.c) && /; — or a step away/.test(small) && caps.KeyR.t === '2' && caps.Digit2.t === 'R' && S.tab === 'controls', 'Backspace leaves the wall with no key, marked, and the words beside it say so; a digit pressed for a waiting cap is its key (the rifle\'s row takes R in exchange), never the screen\'s tab',
+      `wall '${q.t}' [${q.c}] · '${small}' · reload '${caps.KeyR.t}', rifle '${caps.Digit2.t}', tab ${S.tab}`); await still(page, 'controls-moved.png'); }
+  { const before = await page.evaluate(CAPS); await page.reload({ waitUntil: 'domcontentloaded' });
+    await openControls(page); const after = await page.evaluate(CAPS), diff = Object.keys(before).filter(k => before[k].t !== after[k]?.t);
+    check(!diff.length && after.KeyQ.t === '—' && after.KeyR.t === '2' && after.KeyC.t === 'Q', 'a page load later every cap is as it was left', `caps that differ: ${diff.join(' ') || 'none'} · wall '${after.KeyQ.t}', reload '${after.KeyR.t}', crouch '${after.KeyC.t}'`); await still(page, 'controls-after-load.png'); }
+  { await page.goto(url('keybinds=0'), { waitUntil: 'domcontentloaded' }); await openControls(page); const n = Object.keys(await page.evaluate(CAPS)).length, S = await page.evaluate(SCREEN), kept = await page.evaluate(KEPT), reset = await page.evaluate(() => !!document.querySelector('#options [data-act="reset"]'));
+    check(n === 0 && S.plain.includes('C') && S.plain.includes('Q') && S.plain.includes('R') && !reset && /KeyQ/.test(kept || ''), '?keybinds=0: the plain list of the build\'s keys, nothing to click and no Reset, and the kept table left as it was', `caps to click ${n} · C Q R plain: ${['C', 'Q', 'R'].map(k => S.plain.includes(k))} · Reset ${reset} · kept ${kept}`); }
+  { await page.goto(url(), { waitUntil: 'domcontentloaded' }); await openControls(page); await page.click('#options [data-act="reset"]'); await page.waitForTimeout(80);
+    const caps = await page.evaluate(CAPS), off = Object.entries(caps).filter(([, v]) => v.c.replace('sel', '').trim()).map(([k]) => k), kept = await page.evaluate(KEPT);
+    check(caps.KeyC.t === 'C' && caps.KeyQ.t === 'Q' && caps.KeyR.t === 'R' && caps.Digit2.t === '2' && !off.length && kept === null, 'Reset: every cap is the build\'s again, none marked, and nothing is kept', `C Q R 2: ${caps.KeyC.t} ${caps.KeyQ.t} ${caps.KeyR.t} ${caps.Digit2.t} · still marked: ${off.join(' ') || 'none'} · kept ${kept}`); }
+  await ctx.close();
+}
+
+async function game(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); let page = await ctx.newPage(); watch(page, 'game', true);
+  const boot = async () => { const fatal = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return document.getElementById('fatal')?.textContent || ''; }).catch(e => String(e)); log(`booted${fatal ? `: ${fatal}` : ''}`); return fatal; };
+  const key = async k => { await page.keyboard.press(k); await page.waitForTimeout(60); };
+  /** a real key down, some frames, the key up: what he is doing after */
+  const tap = async (k, n = 6) => { await page.keyboard.down(k); const r = await page.evaluate(n => { const filed = [...window.__input.keys].join('+'); window.__runFrames(n); const pl = window.__game.player; return { filed, crouch: !!pl.crouch }; }, n); await page.keyboard.up(k); await page.evaluate(() => window.__runFrames(2)); return r; };
+  await page.goto(url(), { waitUntil: 'domcontentloaded', timeout: 180000 }); const fatal = await boot();
+  await openControls(page);
+  const cap = id => page.evaluate(id => document.querySelector(`#options button.op-key[data-key="${id}"]`).click(), id);
+  await cap('KeyC'); await key('k'); await cap('KeyL'); await key('o'); await cap('Space'); await key('m'); await key('Escape');
+  await page.evaluate(() => { window.__menu.close(); window.__game.godMode = true; window.__game.aiEnabled = false; window.__runFrames(20); });
+  { const c0 = await page.evaluate(() => !!window.__game.player.crouch), k = await tap('k'), c = await tap('c'), k2 = await tap('k');
+    check(!fatal && !c0 && k.filed === 'KeyC' && k.crouch && c.filed === '' && c.crouch && !k2.crouch, 'in play, at once: K is filed as the game\'s crouch key and he crouches; C, which crouch left, files nothing and does nothing; K again and he stands',
+      `standing ${!c0} · K: filed '${k.filed}', crouched ${k.crouch} · C: filed '${c.filed}', crouched ${c.crouch} · K: crouched ${k2.crouch}`); }
+  { const hud = await page.evaluate(() => { const g = window.__game; g.teleportPlayer([30.6, 0, 11.45]); g.player.char.bodyYaw = 0; window.__runFrames(12);
+      return { gad: [...document.querySelectorAll('#equip .gadgets .g')].map(e => e.textContent), ia: [...document.querySelectorAll('#interact kbd')].map(e => e.textContent), keys: [...document.querySelectorAll('#equip .slot .key')].map(e => e.textContent) }; });
+    check(hud.gad.includes('O LIGHT') && !hud.gad.includes('L LIGHT') && hud.ia.includes('M') && !hud.ia.includes('SPACE') && hud.keys[0] === '1', 'the HUD names the keys as bound: the kit column\'s light is on O, a door\'s row is on M where it said Space, a key not moved reads as ever',
+      `kit column: ${hud.gad.join(' · ')} · the door's caps: ${hud.ia.join(' ')} · slots: ${hud.keys.join(' ')}`); }   // (no still of the play: a screenshot of the game does not come on the software adapter)
+  // the page load: a fresh page of the same machine (the same store). The one that played is shut without waiting for it: under the software adapter it answers a reload late
+  { const was = page; page = await ctx.newPage(); watch(page, 'game, loaded again', true); was.close().catch(() => { }); await page.goto(url(), { waitUntil: 'domcontentloaded', timeout: 180000 }); }
+  const fatal2 = await boot();
+  { await page.evaluate(() => { window.__menu.close(); window.__game.godMode = true; window.__game.aiEnabled = false; window.__runFrames(20); }); const k = await tap('k'), c = await tap('c');
+    check(!fatal2 && k.crouch && c.crouch && c.filed === '', 'a page load later, nothing touched: K still crouches him and C still does nothing', `K: filed '${k.filed}', crouched ${k.crouch} · C: filed '${c.filed}', crouched ${c.crouch}`); }
+  await late(ctx.close());   // (the context is this run's own: its kept table goes with it)
+}
+
+// a page under the software adapter can be minutes shutting: the run does not wait on it past half a minute
+const late = p => Promise.race([p.catch(() => { }), new Promise(r => setTimeout(r, 30000))]);
+
+(async () => {
+  if (process.env.ONLY !== 'game') { const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] }); try { await screen(browser); } finally { await browser.close(); } }
+  if (GPU) { const browser = await chromium.launch({ headless: true, channel: 'chromium', args: GPU_FLAGS }); try { await game(browser); } finally { await late(browser.close()); } }
+  check(!errors.length, 'no page error', errors.slice(0, 6).join(' · ') || 'none');
+  const ok = checks.every(Boolean); console.log(`=== keybinds-page: ${ok ? 'ALL PASS' : 'FAILURES above'}${GPU ? '' : ' (the screen only: GPU=1 adds the game)'} ===`); process.exit(ok ? 0 : 1);
+})().catch(e => { console.error(e); process.exit(1); });
