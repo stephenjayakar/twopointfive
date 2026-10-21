@@ -4,6 +4,7 @@
 // a pane is not a shot line: the alert man goes round for a real one, the lone man takes no corner behind glass) — staged on the real game stood up
 // headless (headless.ts), PASS / FAIL each with the numbers.
 import { standUp, ROOT } from './headless.ts';
+import { floatPartition } from './office-pane.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { BoxFlag, BoxWorld, MAX_GLASS } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { bitsToFlags, flagsToBits, validateLevelData, AUTHORED_FLAGS } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -44,7 +45,7 @@ async function held<T>(what: 'pen' | 'base', fn: () => Promise<T>): Promise<T> {
 }
 async function floor(seed: number, sam: Vec3) {
   Math.random = seeded(seed);
-  const W = await standUp(); const { game } = W;
+  const W = await standUp(); const { game } = W; floatPartition(game);
   if (PARTS_OFF) { GLASSPEN.on = false; if (PARTS_OFF === 'base') { game.tune.glassBreak = false; game.tune.glassShards = false; } }
   game.godMode = true; game.aiEnabled = true; game.playerInvisible = false; game.infiniteAmmo = true;
   game.teleportPlayer(v3.copy(sam)); game.player.visibility = 0; game.player.crouch = false;

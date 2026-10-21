@@ -19,3 +19,14 @@ export const LOBBY_PANES = [officePane(4, 17.75), officePane(4, 19.25), officePa
 export const TUNE_PANE = { annealed: CONF_PANE, tempered: LOBBY_PANES[0], laminated: officePane(26.475, 10) };
 /** the partition's last sheet, c (12.95, 1.5, 10): the probes' second pane, clear of the first one's fallout */
 export const CONF_FAR = officePane(12.95, 10);
+/** every sheet of the conference partition (z 10, x under 14), west to east */
+export const CONF_ALL = (office as { boxes: { c: number[]; flags?: string[] }[] }).boxes.map((b, i) => ({ b, i })).filter(({ b }) => !!b.flags?.includes('Glass') && Math.abs(b.c[2] - 10) < 0.05 && b.c[0] < 14).sort((a, b) => a.b.c[0] - b.b.c[0]).map(x => x.i);
+/** THE PARTITION AS FLOAT. The glass probes written before a pane's kind came from where it sits (glassbreak.ts GLASSREAL.place) stage a KIND of glass in a frame
+ *  they know by heart: plain float in the conference partition — how it stars, runs to daggers, holds a hole, is raked, what a blast and a boot do to it. By place
+ *  that partition is toughened (it reaches the floor) and no float sheet in the office stands in a frame like it, so a probe about float glass says so: its stage
+ *  makes the partition's sheets float with the game's own word for one pane (setType — which these probes already use to make the same sheet toughened or
+ *  laminated). Everything else runs as the stand has it: every other pane by the rule, toughened glass dropping at once. Where the level puts which kind is asked
+ *  by glassreal-check.ts lines 6 to 9, not here. With the placement off (the frozen stand) the partition is float already: the
+ *  override is there (reset() keeps it) and no pane breaks differently for it. A stand-up in these six files that leaves it out passes on the frozen stand and fails
+ *  on the page's. */
+export function floatPartition(game: { glassBreak?: { setType?(bi: number, type: 'annealed'): void } | null }) { for (const bi of CONF_ALL) game.glassBreak?.setType?.(bi, 'annealed'); }

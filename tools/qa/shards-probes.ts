@@ -15,7 +15,7 @@
 //                         debris — to the same game with this model's seams pulled out (the debris pool's glass door null, a stub where game.ts / floor.ts call it); and with glass
 //                         breaking off (the shipped default) the model counts nothing at all. (The cross-BUILD digest against 25e5e7c is on rebuild/glass/shards.md.)
 import { standUp, ROOT, fake } from './headless.ts';
-import { CONF_PANE } from './office-pane.ts';
+import { CONF_PANE, CONF_FAR, floatPartition } from './office-pane.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
@@ -53,7 +53,7 @@ const OPEN: Vec3 = [20, 1.4, 14.6];   // open floor in the middle aisle (the han
 
 async function stage(seed: number, opts: { breakOn?: boolean; shardsOn?: boolean; chaos?: number } = {}) {
   Math.random = seeded(seed);
-  const W = await standUp(); const { game, engine } = W;
+  const W = await standUp(); const { game, engine } = W; floatPartition(game);
   engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   game.godMode = true; game.player.visibility = 0.02; game.tune.chaos = opts.chaos ?? 0.5; game.tune.glassBreak = opts.breakOn ?? true; game.tune.glassShards = opts.shardsOn ?? true; resetStats();
   for (let i = 0; i < 5; i++) W.step(DT);
@@ -152,7 +152,7 @@ export async function shardsRelease() {
   if (hooked) F.verdict(SHARD_STATS.fragments > 0, 'the cause of a break comes with the fragment (the fracture part\'s release hook names it): nothing to infer', `${SHARD_STATS.fragments} fragments through the hook`);
   else F.verdict(firstHit && SHARD_STATS.fragments > b0 && lateHit > 0 && t1.every((l: string) => !/ blast /.test(l)), 'a cell rounds knocked out is read as a HIT (first break and a later round into the holed pane alike); never as a blast', `first: ${t1[0]?.replace(/^\S+ /, '')}; two seconds on, four more rounds: ${late.length} takes — ${lateHit} hit, ${lateSup} support`);
   // ---- a TEMPERED pane dicing: the whole face pours as dice, no plate
-  { const st0 = { ...SHARD_STATS }; const tb = [...game.engine.world.glassStatics].find((bi: number) => gb.typeOf(game.engine.world.statics[bi]) === 'tempered');
+  { const st0 = { ...SHARD_STATS }; const tb = [...game.engine.world.glassStatics].find((bi: number) => gb.typeOfPane(bi) === 'tempered');   // (as it will BREAK: the stage has made the partition float by hand)
     if (tb === undefined) F.verdict(true, 'no tempered pane on this level (the dice path is covered by hand below)', 'skipped');
     else { const b = game.engine.world.statics[tb]; const thin = b.h[0] < b.h[2] ? 0 : 2; const nrm: Vec3 = thin === 0 ? [Math.cos(b.yaw), 0, -Math.sin(b.yaw)] : [Math.sin(b.yaw), 0, Math.cos(b.yaw)]; const face = 4 * b.h[2 - thin] * b.h[1];
       const near = () => D.list.filter((c: any) => c.glass && Math.hypot(c.box.c[0] - b.c[0], c.box.c[2] - b.c[2]) < 2.5).length; const p0 = near(); const dice: any[] = [];
@@ -301,13 +301,15 @@ export async function shardsUnderfoot() {
 
 // ================================================================ the seeded volley (determinism + off)
 const VOLLEY: Vec3[] = [[7.4, 1.3, 10], [7.42, 1.31, 10], [6.3, 1.0, 10], [7.9, 0.7, 10], [8.8, 1.5, 10], [6.6, 1.6, 10], [7.1, 0.5, 10], [8.9, 1.52, 10], [9.3, 0.9, 10], [7.6, 1.9, 10]];
-async function recordVolley(seed: number, opts: { breakOn: boolean; shardsOn: boolean; cut?: boolean; walk?: boolean }) {
+async function recordVolley(seed: number, opts: { breakOn: boolean; shardsOn: boolean; cut?: boolean; walk?: boolean; dice?: boolean }) {
   const S = await stage(seed, opts); const { W, game, flush } = S;
+  if (opts.dice) game.glassBreak.setType(CONF_FAR, 'tempered');   // (the determinism volley: one toughened sheet struck below, so a sheet pouring as dice — by the wave, or dropped at once — is inside what is compared)
   if (opts.cut) { game.destr.debris.glass = null; game.shards = { update() {}, reset() {}, step(_p: Vec3, l: number) { return l; }, release() { return false; }, litter: new Map(), log: [], live: 0, plateCount: 0, summary() { return 'cut'; } } as any; }   // the model OUT: the pool's glass door null, a stub where game.ts / floor.ts call it
   W.audioLog = [];
   const rounds: string[] = [], events: string[] = [], emits: string[] = []; const seen = new WeakSet<any>();
   for (let f = 0; f < 60 * 10; f++) {
     if (f < 300 && f % 10 === 0) { const p = VOLLEY[(f / 10) % VOLLEY.length]; const r = fireWeapon(game, game.player.char, p, true, { weapon: WEAPONS.fn2000 }); rounds.push(`${f}:${r?.hit ?? ''}`); }
+    if (opts.dice && f === 150) { const c = game.level.boxes[CONF_FAR].c as Vec3; game.glassBreak.hit(CONF_FAR, [c[0], c[1], c[2]], [0, 0, -1], 1); }
     if (f === 330) game.events.push({ kind: 'bang', pos: [10.2, 0.4, 10.9], time: game.time, loud: true, who: 0 });
     if (opts.walk && f >= 400 && f % 20 === 0) events.push(`tread@${f}:${tread(game, [7.5 + ((f / 20) % 5) * 0.4 - 0.8, 0, 9.6], 0.3, true).toFixed(4)}`);   // somebody walks the far side of the glazing, over whatever came down
     W.step(DT);
@@ -326,9 +328,10 @@ const KEYS = ['rounds', 'events', 'audio', 'emits', 'debris', 'digest'];
 
 export async function shardsDeterminism() {
   const F = family('shards-determinism: the seeded volley through the glazing twice — identical to the last record');
-  const a = await recordVolley(9205, { breakOn: true, shardsOn: true, walk: true }), b = await recordVolley(9205, { breakOn: true, shardsOn: true, walk: true });
+  const a = await recordVolley(9205, { breakOn: true, shardsOn: true, walk: true, dice: true }), b = await recordVolley(9205, { breakOn: true, shardsOn: true, walk: true, dice: true });
   const fails: string[] = []; diffLists(a, b, KEYS, fails);
   if (JSON.stringify(a.stats) !== JSON.stringify(b.stats)) fails.push(`counters differ: ${JSON.stringify(a.stats)} | ${JSON.stringify(b.stats)}`);
+  if (a.gb.diced < 1) fails.push(`staging: no sheet diced inside the volley (diced ${a.gb.diced})`);
   F.verdict(!fails.length && a.stats.fragments > 0 && a.stats.born > 0, `two runs: ${a.rounds.length} rounds, ${a.events.length} events, ${a.audio.length} audio calls, ${a.emits.length} particle records, ${a.debris.length} chunks, the run digest and the model's counters identical`, fails.join('; ') || `identical — ${a.summary}`);
   const c = await recordVolley(9206, { breakOn: true, shardsOn: true, walk: true });
   F.verdict(c.stats.fragments > 0, 'another seed also breaks glass (the volley is not seed-lucky)', c.summary);
