@@ -99,7 +99,7 @@ export async function glassrealCheck(): Promise<boolean> {
       const stood = before.length > 2 && before.every(s => s.n === r.first && s.open > 0 && s.open < 0.2), gone = gi >= 0 && goneT >= hang - DT - 1e-9 && goneT <= hang + 2 * DT && !!r.st?.gone && !!r.st?.walkable;
       const late = frags.slice(r.first), oneStep = late.length > 0 && new Set(late.map((f: any) => f.t.toFixed(6))).size === 1 && r.steps[r.steps.length - 1].n === frags.length;
       const sum = frags.reduce((a: number, f: any) => a + f.area, 0);
-      verdict(r.answer.diced && r.openAtBlow && r.cornerShut && stood && gone && oneStep && late.length <= GLASSREAL.blocks && Math.abs(sum - r.area) < 0.03 * r.area && late.every((f: any) => f.kind === 'clump' && f.cause === 'dice' && f.grain === GLASSBREAK.diceGrain),
+      verdict(r.answer.diced && r.openAtBlow && r.cornerShut && stood && gone && oneStep && late.length <= GLASSREAL.blocks && Math.abs(sum - r.area) < 0.01 * r.area && late.every((f: any) => f.kind === 'clump' && f.cause === 'dice' && f.grain === GLASSBREAK.diceGrain),
         '2 drop on: open under the round at once, the sheet stands white, then the WHOLE pane goes on one step',
         `open at the blow ${r.openAtBlow}, far corner in ${r.cornerShut}; ${before.length} steps standing with ${r.first} fragment(s) out; gone at ${gi < 0 ? '—' : goneT.toFixed(3)} s (hang ${hang}); ${late.length} fragments on ${new Set(late.map((f: any) => f.t.toFixed(6))).size} step(s), at most ${GLASSREAL.blocks}; ${sum.toFixed(3)} m² of a ${r.area.toFixed(3)} m² sheet`);
       const across = Math.max(0, ...late.map((f: any) => Math.abs(v3.dot(f.velocity, r.fr.tan)))), down = late.every((f: any) => f.velocity[1] < -0.25), out = late.every((f: any) => v3.dot(f.velocity, r.dir) > 0);

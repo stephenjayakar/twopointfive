@@ -12,7 +12,7 @@
 //   cutglass-off           THE SWITCH OFF = THE RECTANGLES: no plate carries a record, the cut counters stay at zero — and, when CUTGLASS_BASE names a checkout of the base
 //                          build, the same seeded volley there is identical: run digest, rounds, events, audio, particle records, debris
 import { standUp, ROOT, fake } from './headless.ts';
-import { CONF_PANE } from './office-pane.ts';
+import { CONF_PANE, floatPartition } from './office-pane.ts';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const PM = await import(`${ROOT}/src/render/particles.ts`);
 const { Particles } = PM;
@@ -46,7 +46,7 @@ const SHOTS: [number, number][] = [[0.1, 0.1], [0.11, 0.1], [0.12, 0.11], [-0.5,
 
 async function stage(seed: number) {
   Math.random = seeded(seed);
-  const W = await standUp(); const { game, engine } = W;
+  const W = await standUp(); const { game, engine } = W; floatPartition(game);
   engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   game.godMode = true; game.player.visibility = 0.02; game.tune.chaos = 0.5; game.tune.glassBreak = true; game.tune.glassShards = true; resetStats();
   for (let i = 0; i < 5; i++) W.step(DT);
@@ -225,7 +225,7 @@ export async function volley(root: string, seed: number, cut: boolean) {
   const was = C ? C.cutConfig.on : false; const unpin = pinEnv(cut); if (C) C.cutConfig.on = cut;
   try {
     Math.random = seeded(seed);
-    const W = await H.standUp(); const { game, engine } = W;
+    const W = await H.standUp(); const { game, engine } = W; floatPartition(game);
     engine.particles = new PMr.Particles(H.fake('device'), H.fake('sceneLayout')); engine.settings.gpuParticles = true;
     game.godMode = true; game.player.visibility = 0.02; game.tune.chaos = 0.5; game.tune.glassBreak = true; game.tune.glassShards = true;
     for (let i = 0; i < 5; i++) W.step(DT);

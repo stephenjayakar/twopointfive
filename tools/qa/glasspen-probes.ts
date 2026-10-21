@@ -4,6 +4,7 @@
 // the same toll, so a man shoots through a window exactly when his round would get through it; the switch off is the game as it was. Staged on the real game stood
 // up headless (headless.ts — which stands the switch at OFF: each probe raises it and puts it back), PASS / FAIL each with the numbers.
 import { standUp, ROOT } from './headless.ts';
+import { floatPartition } from './office-pane.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { lineBox } = await import(`${ROOT}/src/scene/collision.ts`);
@@ -45,7 +46,7 @@ function armAlert(gd: any, game: any, fix: Vec3) {
 }
 async function floor(seed: number, sam: Vec3) {
   Math.random = seeded(seed);
-  const W = await standUp(); const { game } = W; if (WANT !== null) GLASSPEN.on = WANT;
+  const W = await standUp(); const { game } = W; floatPartition(game); if (WANT !== null) GLASSPEN.on = WANT;
   game.godMode = true; game.aiEnabled = true; game.playerInvisible = false; game.infiniteAmmo = true;
   game.teleportPlayer(v3.copy(sam)); game.player.visibility = 0; game.player.crouch = false;
   for (let i = 0; i < 10; i++) W.step(DT);
@@ -337,7 +338,7 @@ export async function glasspenOff(): Promise<boolean> {
   // a seeded minute with rounds at the glazing: the switch off vs the collision hook removed altogether (= the base's shotBlocked statement)
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const minute = async (strip: boolean) => {
-    Math.random = seeded(8200); const W = await standUp(); const { game } = W; if (WANT !== null) GLASSPEN.on = WANT; game.aiEnabled = true; game.godMode = true; game.infiniteAmmo = true;
+    Math.random = seeded(8200); const W = await standUp(); const { game } = W; floatPartition(game); if (WANT !== null) GLASSPEN.on = WANT; game.aiEnabled = true; game.godMode = true; game.infiniteAmmo = true;
     if (strip) game.col.glassPen = null;
     game.teleportPlayer([9, 0, 11.4]); const pl = game.player; pl.slot = 'pistol'; pl.holstered = false;
     for (let f = 0; f < 60 * 60; f++) { W.step(DT); if (f > 60 && f % 45 === 0) fireWeapon(game, pl.char, [6.5 + (f % 7), 1.2, 5.0], true); }
