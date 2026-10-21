@@ -8,7 +8,7 @@
 // Every probe switches on what it needs itself (the harness stands the glass parts OFF and at chaos 0: src/host/standup.ts) and puts every table it touched back,
 // on a throw too. No Math.random of its own: the stand-up's dice are seeded as the other glass probes seed them, and put back.
 import { standUp, ROOT, fake } from './headless.ts';
-import { TUNE_PANE } from './office-pane.ts';
+import { TUNE_PANE, floatPartition } from './office-pane.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
@@ -75,7 +75,7 @@ const stunSpot = (P: Pane): Vec3 => v3.mad([P.b.c[0], 0.4, P.b.c[2]], P.out, 1.2
 
 async function stage(parts: Parts = {}) {
   Math.random = seeded(4242);
-  const W = await standUp(); const { game, engine } = W as any;
+  const W = await standUp(); const { game, engine } = W as any; floatPartition(game);
   engine.particles = new PM.Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   // (the stand-up has just put the three parts off and chaos at 0: what this probe needs goes on here, by name)
   GLASSFX.on = parts.fx ?? true; GLASSPEN.on = parts.pen ?? true; game.tune.glassBreak = parts.brk ?? true; game.tune.glassShards = parts.shards ?? true; game.tune.chaos = 0.5;

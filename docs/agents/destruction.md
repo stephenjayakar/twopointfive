@@ -553,8 +553,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`GLASSPEN.cost` by kind) and stacks dealt behind glass follow the kind. THE CHECK: `tools/qa/glassreal-check.ts` (`probes.ts glassreal`, also under `glass`
   and `all`), 9 lines, each arm setting the switches itself; `GLASSREAL_BREAK=1` fails 2 to 9; run on both stands. Line 9 is every level's panes by kind against
   a table, on and off: a new level with glass adds its row. The glass probes written before this (`glass`, `glassbreak`, `glasspen`, `glasstune`, `shards`,
-  `cutglass`) name panes by the wall's typing and time the wave, so the runner holds both rules off round them (`probes.ts GLASS_AS_IT_WAS`, as it holds the plan
-  lay) unless the caller says `TPS_GLASSDROP=1` / `TPS_GLASSPLACE=1`; `glass-tune.ts` now sets its scene's pane to the kind the scene names. The page:
+  `cutglass`) run with BOTH rules as the stand has them (no hold in the runner: one stood here until the build after this rule's, and on the page's stand it left
+  those families asking nothing of the glass the page ships). They stage a KIND of glass in a frame they know, plain float in the conference partition, which by
+  place is toughened now: so each one's stage makes the partition's sheets float with `setType` (`tools/qa/office-pane.ts floatPartition`; a no-op with the
+  placement off), every other pane is by the rule, and toughened glass drops at once under them. Three of their lines were about the wave and say the drop's own thing
+  when it is on (`glassbreak-pattern`: what leaves at the blow, then everything on one step `hang` later in at most `blocks` blocks; `glassbreak-open`: the sheet
+  caught standing crazed, not mid-wave; `glassbreak-caps`: at most `blocks` fragments a frame from a dropping pane). The determinism volleys of `glassbreak` and
+  `shards` strike one sheet made toughened, so a sheet dicing (the wave, or the drop) is inside what is compared run to run on either stand; `cutglass`'s volley
+  does not. A stand-up added to those six files without `floatPartition` passes on the frozen stand and fails on the page's. Red on the page's stand since
+  before this rule and not from it, same lines on the build before: `glassbreak-off`, `shards-off`, `cutglass-shape`, `cutglass-gone`, `cutglass-off`. A new line about float glass in the office stages it the same way; `glass-tune.ts` sets its scene's pane to the kind the scene
+  names. The page:
   `node tools/qa/glassreal-page.cjs <outDir>` (a server of the checkout on PORT) boots it on the software adapter plain and with both flags at 0, reads the two
   switches and two panes' kinds, breaks one toughened sheet and reads it standing at step 3 and gone by step 11 (off: the wave), no console error. HEARD: `hang`
   stays under `GLASSBREAK.crackGap` 0.25, so a dropped sheet is one crack and one hearing event (the wave filed one for each 0.25 s it ran: inferred from `emit`, not counted on a big
