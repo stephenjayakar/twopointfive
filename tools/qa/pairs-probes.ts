@@ -113,8 +113,10 @@ async function rig(seed: number, sam: number[], o: { squad?: 2 | 4; quiet?: bool
 export const pairsOff = guarded(async () => {
   const { verdict, done } = family('pairs-off: the pair build is as it was; the four get the word');
   { const R = await rig(5, CUBICLES, { squad: 2, quiet: true }); const { O } = R; const men = R.men('all');
-    const noGo = !O.defs.some((d: any) => d.id === 'go'), why = O.give('go', R.here(), 'all');
-    verdict(men.length === 2 && !O.big && noGo && typeof why === 'string', 'two men: not a big squad, no \'go\' order on the list, giving it is refused', `${men.length} men · big ${O.big} · rows ${O.defs.map((d: any) => d.id).join(' ')} · give('go') → ${why}`);
+    const goDef = O.defs.find((d: any) => d.id === 'go'), noGo = !goDef, why = O.give('go', R.here(), 'all');
+    // (the small squad's word, DOORTOOLS.wordSmall, on in the page: 'go' is registered for the pair too, on no menu row, and is refused while nobody is stacked — `probes.ts wordsmall`)
+    if (DOORTOOLS.wordSmall) verdict(men.length === 2 && !O.big && !!goDef && (goDef.listed ?? []).length === 0 && why === 'nobody waiting.', 'two men, DOORTOOLS.wordSmall on: not a big squad; \'go\' is on the list for the key alone (on no menu row) and giving it with nobody stacked is refused', `${men.length} men · big ${O.big} · go listed [${(goDef?.listed ?? []).join(' ')}] · give('go') → ${why}`);
+    else verdict(men.length === 2 && !O.big && noGo && typeof why === 'string', 'two men: not a big squad, no \'go\' order on the list, giving it is refused', `${men.length} men · big ${O.big} · rows ${O.defs.map((d: any) => d.id).join(' ')} · give('go') → ${why}`);
     const t = R.target('breakroom_n'), t2 = O.forMen(t, men);
     verdict(t2.side === t.side && t.side === sideOf(R.door('breakroom_n'), R.game.player.char.pos), 'two men: a door order keeps Sam\'s side of the door (he is in the cubicles: the INSIDE of the north door), as before', `Sam's side ${t.side} · the men's ${t2.side}`);
     R.game.teleportPlayer(CORRIDOR); R.step(5);
