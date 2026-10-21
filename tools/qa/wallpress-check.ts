@@ -37,7 +37,7 @@ export async function wallPressCheck(): Promise<boolean> {
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
   try {
-    const S = await quiet(() => world(true, 95, false)); const { pl, c, g, W } = S as any; const set = (rule: boolean) => { WALLSNAP.on = true; WALLSNAP.press = rule && !BRK; }; set(true);
+    const S = await quiet(() => world(true)); const { pl, c, g, W } = S as any; const set = (rule: boolean) => { WALLSNAP.on = true; WALLSNAP.press = rule && !BRK; }; set(true);
     const gap = () => c.pos[2] - WZ - R;   // what is left between his body and the north wall
     /** hold `ks` from (x 21, z, yaw) for `frames`: the frame a hold began, the gap then, the frame his back was on it, the longest stride of the take, what was said */
     const run = (z: number, yaw: number, ks: string[], kit: 'empty' | 'pistol' | 'rifle' = 'empty', frames = 120, each?: (f: number) => void) => {
