@@ -80,6 +80,11 @@ export const AIM = {
     /** 1 = with nothing under the reticle (no man, no fixture) his gun, its light and his rounds are LEVEL along the cursor's heading at the height he carries it
      *  (player.ts levelOn / freeAim); 0 = on the world point under the cursor, floor included, as it was (two metres out: the muzzle and his trunk pitched at the ground) */
     level: 1,
+    /** 1 = a man under the reticle who is LOW (head down under fire, on a knee, doubled over a flash on top of either) is aimed at where he is — the round and
+     *  the gun's pitch go to his posed chest (player.ts manAim); 0 = at a standing man's chest over his feet whatever his pose, as it was (the gun level on a
+     *  crouched man and every round over his head). A man on his feet is aimed at the same either way. Written by the page's boot (host/profile.ts pageSwitches:
+     *  ?noaimlow = 0) and by the harness's frozen stand (0); never kept per machine. */
+    low: 1,
   },
 };
 export type AimKnobs = typeof AIM;
@@ -320,7 +325,7 @@ export function samAim(g: Game): number {
 const LS_KEY = 'twopointsix.aim';
 const KEPT: { guard: (keyof AimKnobs['guard'])[]; player: (keyof AimKnobs['player'])[] } = {
   guard: ['settleSecs', 'acquireMin', 'unsettledK', 'targetMoveK', 'shooterMoveK', 'stopToShoot'],
-  player: ['settleSecs', 'unsettledK', 'targetMoveK', 'shooterMoveK', 'lightSnapPx', 'level'],
+  player: ['settleSecs', 'unsettledK', 'targetMoveK', 'shooterMoveK', 'lightSnapPx', 'level'],   // (`low` is not kept: the page's boot writes it — host/profile.ts pageSwitches, ?noaimlow)
 };
 /** write the kept knobs to localStorage (the panel calls it on every change) */
 export function saveAim() {
