@@ -125,6 +125,7 @@ import { SAMSTUN } from './samstun';
 import { SEENWALK } from './seenwalk';
 import { TEAMTALLY } from './teamtally';
 import { AIMWEIGHT } from './aimweight';
+import { AIM } from './aim';   // (used inside applyKnobs only: src/game is one import cycle)
 import { SPRINTDOOR } from './sprintdoor';
 import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
@@ -350,6 +351,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
+  if (typeof (k.tables.AIM as { player?: { low?: number } } | undefined)?.player?.low !== 'number') AIM.player.low = 0;   // (a file from before a low man was aimed at where he is — its AIM row has no such key: its rounds at a man with his head down went to a standing chest, over him)
   if (!k.tables.AIMWEIGHT) AIMWEIGHT.on = false; else if ((k.tables.AIMWEIGHT as Partial<typeof AIMWEIGHT>).launchWait === undefined) AIMWEIGHT.launchWait = 0;   // (a file from before the player's aim had weight: its clicks were aimed with the gun eased straight onto the cursor — and one from before a launcher's load waited on the swing: it left the frame the button came up)
   if (!k.tables.AIMCOST) { AIMCOST.lamp = false; AIMCOST.move = false; }   // (a file from before a lamp needed a real hit and moving feet cost the shot: its rounds broke the lamps they passed, and its cones were the old ones)
   if ((k.tables.AIMCOST as Partial<typeof AIMCOST> | undefined)?.flankAt === undefined) AIMCOST.flankAt = 1e9;   // (…and one from before the standoff's flank round waited for still feet: it went the frame the line was his)

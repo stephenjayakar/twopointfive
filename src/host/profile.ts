@@ -111,6 +111,7 @@ import { FRAG } from '../game/frag';
 import { RECAP } from '../game/deathrecap';
 import { TEAMTALLY } from '../game/teamtally';
 import { AIMWEIGHT } from '../game/aimweight';
+import { AIM } from '../game/aim';
 import { SPRINTDOOR } from '../game/sprintdoor';
 import { TEAMPACE } from '../game/teampace';
 import { NOSHOVE } from '../game/noshove';
@@ -237,6 +238,7 @@ export function pageSwitches(q: URLSearchParams): void {
   NOSHOVE.on = q.get('noshove') !== '0';   // teammates falling in never shove the player (game/noshove.ts): a follower whose way lies through him goes round or stops short, and a shove from anybody is not read as his walking — ON in the page; ?noshove=0 = shouldered aside by his own file, as it was
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
   AIMWEIGHT.on = !q.has('noaimweight');   // the player's aim has weight (game/aimweight.ts): his gun turns at a limited rate and the aiming circle trails the cursor, shots going where the circle is — ON in the page; ?noaimweight = the gun eased onto the cursor as it was
+  AIM.player.low = q.has('noaimlow') ? 0 : 1;   // a man under the reticle who is low — head down, on a knee, ducked from a blast, doubled over a flash — is aimed at where he is (game/player.ts manAim): ON in the page; ?noaimlow = at a standing chest over his feet, the gun level on him and the rounds over his head, as it was
   FRAG.fleeWise = !q.has('nofleewise');   // nobody runs onto a live grenade (game/frag.ts FRAG.fleeWise): judged from where it will rest, no leg nearer it than he stands, the leg he has kept, no staying put inside its lethal reach — ON in the page; ?nofleewise = the flee as it was
   FRAG.restProps = FRAG.fleeApart = FRAG.fleeOnto = FRAG.fleeSam = FRAG.fleeLook = !q.has('nofleemates');   // the mends to that flee (game/frag.ts): the rest guess counts the loose furniture the grenade will stop at, no leg shoulders a mate (or Sam) out of the corner he is staying in or running for, a man a stride short of his corner comes onto it, and a man left open floor beside a mate's cover looks once more for his own — ON in the page; ?nofleemates = all off, the flee as it was
   FRAG.fleeDoor = !q.has('nofleedoor');   // caught by a grenade with no cover to get behind, a man leaves by a doorway that already stands open (game/frag.ts fleeByDoor; ?nofleedoor = the one straight leg inside the room)
@@ -396,6 +398,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'tune.chaos': "the tool's own (playthrough.ts plays 0.5, soak.ts --chaos K)",
   'AIM.player.lightSnapPx': 'none: probes.ts aim-snap sets it',
   'AIM.player.level': 'none: probes.ts aimlevel sets it',
+  'AIM.player.low': 'none: probes.ts aimlow sets it',
   'MOVES.on': 'TPS_MOVES=1',
   'TURN.on': 'TPS_TURN=1',
   'DOORPATH.on': 'TPS_DOORPATH=1',
