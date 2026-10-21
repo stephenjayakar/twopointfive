@@ -295,6 +295,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   SPENDS NO CAN (`WORDNOCAN_BREAK=1` fails it; the same doors with the rule off must throw), both stands; the stand, journal and boot lines are in
   `probes.ts bangs`. EVERY OTHER staging in `tools/qa/threshold-probes.ts` holds the rule off on both stands: those lines ask what the word's can does
   (the kit, the pockets, Sam behind the door). Nobody has played it.
+- **The word sends a small squad in from its stack** (`DOORTOOLS.wordSmall`: ON in the page, `?wordsmall=0`; off in the module and on the frozen
+  stand, `TPS_WORDSMALL=1`; debugger row 'the word sends a small squad in from its stack'; journal: off when the key is absent). The maintainer, 10-21,
+  off his own play: "Q on a door stacks but doesn't have the F command for entering?". The word after a plain 'stack up' was built for the squad of four
+  only (`waiting4`, `wordNote` and floorplan.ts `waitsOnKey` all asked `orders.big`): with one or two teammates the panel had no line and the key did
+  nothing for the stack (in the room clear it fell through to the drill's own 'stack up'). With the rule, one or two teammates standing on a plain
+  stack (`stackWaits`) wait on the key as the four do: the panel reads 'F go · … waiting', the door carries the key's mark (`why: 'stack'`), and the
+  key files `go` and makes the same open-and-clear from the marks they stand on (`fromStack`). Its own rules: a stack on a door with a charge SET on
+  it is left out (the key is that charge's trigger first, the word's after); a free set charge elsewhere goes with the word, as with the pair's word
+  at a held threshold; the word again, outside `wordTap`, pushes a word held for men who ran from a grenade; with a menu up that the key reaches, the
+  word goes to the men that menu is for; while the men the word sent in are on their door the room clear's drill does not take the key (the four's
+  guard, widened). NOT changed: the pair's menus (the `go` order is registered on no menu: with plan laying on, a menu that is up keeps the key for
+  'wait for my word'), the word from code (`DoorTools.go()` does nothing for a pair on a plain stack, as `pairs-go` pins it), the quick key on the
+  stacked door (the squad's own pick of entry), and everything of the four's (same order book and digest, on and off). Check: `probes.ts wordsmall`
+  (tools/qa/wordsmall-check.ts, families doortools and squadorders; 10 lines; `WORDSMALL_BREAK=1` fails 5), both stands. Measured: six missions
+  (night-breach, room-clear-pair, hostage-rescue, records-pair, rescue-registry, room-clear-four), seeds 1 to 3: the switch off is the build before it
+  by 18 of 18 run digests on each stand (`TPS_WORDSMALL=0` on the page's); ON gives the same 18 digests too, because the play-through's commander never
+  gives the word to a small squad's stack — so no tally says what the rule costs or buys in a fight. The open-and-clear the word makes is the four's
+  own from a stack: no bang, the door opened by hand. Never seen on a GPU; nobody has played it.
 - **A bang or frag order on a door that stands open walks nobody across it** (`DOORTOOLS.openHand`, on; Team feel 'bang ▸ nobody crosses an open door', kept per machine; off = the deal as
   it was; pinned off in threshold-probes.ts's identity and the nvg digests; a recording from before the key replays with it off; the maintainer's replay, 10-12: "after being ordered to frag
   after externally clearing, blue one crosses across a dangerous threshold"). A pair holding an open door from outside has a man on each jamb; 'frag and clear' / 'bang and clear' is a fresh

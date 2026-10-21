@@ -387,6 +387,14 @@ export const DOORTOOLS = {
    *  off his own tape (the word given at a held door, a can nobody ordered into an empty room): "when externally clearing a room, the men shouldn't
    *  throw a bang unless i tell them to. i can do that by doing x 5 2 again". */
   wordNoCan: false,
+  /** THE WORD SENDS A SMALL SQUAD IN FROM ITS STACK (false = as it was: with one or two teammates the word's key does nothing for men standing on a
+   *  plain 'stack up', and no line of the panel offers it — only the squad of four had it). One or two teammates stacked on a door by a plain 'stack
+   *  up' (the quick key on a door, or the menu's row) wait on the word as the four do: the panel reads 'F go · … waiting', the door carries the key's
+   *  mark, and the key opens the door and they go in from the marks they stand on — the same open-and-clear the four's word makes of a stack (fromStack).
+   *  A stack on a door that has a charge set on it is left out: there the key is the trigger's first, as it was, and the word's after. A free set
+   *  charge elsewhere goes with the word, as with the pair's word at a held threshold. The quick key on the stacked door is untouched (the squad's own
+   *  pick of entry), and so are the pair's menus and the word from code (`go()`): the rule is the key's, with no menu up. The maintainer, 10-21, off his own play: "Q on a door stacks but doesn't have the F command for entering?" */
+  wordSmall: false,
   /** A BANG AND CLEAR'S CAN IS THROWN INTO THE ROOM (false = as it was: the can appears in the door frame at the thrower's end of the opening, up to two
    *  metres from him, and goes off in the air `airIn` 1.6 m past the frame a third of a second later, on every door). Two things, the maintainer's
    *  ("with bang and clear for a door, they often don't really throw the flash bang into the room", 10-16, with a tape of it):
@@ -843,7 +851,14 @@ export class DoorTools {
     // put on him, then writes the card's count over it)
     if (this.samOf !== g.player) { const first = !this.samOf; this.samOf = g.player; if (!first && OWNCHARGE.on && !this.roster.length) { this.set = []; this.charges += this.samSpent; } if (!first) this.samSpent = 0; }
     const goKey = this.roster.length > 2 ? (DOORTOOLS.wordOnKey ? DOORTOOLS.blowKey : '') : null;
-    if (goKey !== this.goKey) { this.goKey = goKey;   // (a new cast — or the word's key knob flipped: the row is dealt its key when it is registered)
+    // … and under DOORTOOLS.wordSmall one or two teammates have the word too, for a plain stack only: the same order id, on the word's key, on no menu
+    // (their menus are as they were: with no menu up the key gives it — input() below)
+    const small = DOORTOOLS.wordSmall && this.roster.length > 0 && this.roster.length <= 2, goSig = small ? 'small' : goKey;
+    if (small && goSig !== this.goKey) { this.goKey = goSig;
+      g.orders.register({ id: 'go', head: WORD_HEAD, hotKey: DOORTOOLS.blowKey, label: t => { const w = this.stackWords(g.orders.recipients(t)); return w ? `go · ${w}` : 'go'; }, targets: ['floor', 'door', 'none'], listed: [], ack: ['going.', 'moving.'],
+        only: (_S, men) => { const on = new Set<Guard>(); for (const x of this.stackWaits(men)) for (const m of x.men) on.add(m); const h = this.fragHeld(men); return men.filter(m => on.has(m) || h.some(o => o.men.includes(m))); },
+        valid: (_S, _t, men) => this.stackWaits(men).length > 0 || this.fragHeld(men).length > 0 || 'nobody waiting.', issue: (_S, men) => this.goMen(men, this.stackWaits(men)) ?? undefined }); }
+    else if (!small && goKey !== this.goKey) { this.goKey = goKey;   // (a new cast — or the word's key knob flipped: the row is dealt its key when it is registered)
       // THE WORD is an order of its own for the squad of four (the pair alone has no second door to wait on: its menu is as it was)
       // (the word is not about what the menu was opened on: its row sits under a header of its own and names who would take it. Its key is Sam's own — input()
       // below gives it, menu or no menu — so the row shows that key and has no digit; it is not LISTED on a door's menu, where that key is 'wait for my word')
@@ -1695,12 +1710,22 @@ export class DoorTools {
   private waiting4(men: Guard[]): (DoorOp | { stack: Door; men: Guard[] })[] {
     const S = this.g.orders, out: (DoorOp | { stack: Door; men: Guard[] })[] = [];
     for (const op of this.ops) if (op.men.some(m => men.includes(m)) && !op.word && (op.onWord || op.phase === 'held' || op.phase === 'armed' || op.phase === 'standoff' || op.phase === 'place')) out.push(op);   // (a charge still being set is waited for like a pair still walking to its stack)
+    for (const x of this.stacksOf(men)) out.push(x);
+    return out;
+  }
+  /** the men among `men` standing on a plain 'stack up', a door at a time */
+  private stacksOf(men: Guard[]): { stack: Door; men: Guard[] }[] {
+    const S = this.g.orders, out: { stack: Door; men: Guard[] }[] = [];
     const by = new Map<Door, Guard[][]>();   // per door, the men stacked on each face of it ([0]: Sam's face)
     for (const gd of men) { const A = S.of(gd); if (gd.state !== 'dead' && A && A.order === 'stack' && A.door && A.post && A.there.startsWith('stacked')) {
       const l = by.get(A.door) ?? [[], []]; l[sideOf(A.door, A.post) === sideOf(A.door, this.g.player.char.pos) ? 0 : 1].push(gd); by.set(A.door, l); } }
     for (const [stack, [near, far]] of by) out.push({ stack, men: near.length ? near : far });   // (pairs stacked on BOTH faces of one door: the word takes the men on Sam's face of it — the others keep their stack)
     return out;
   }
+  /** THE SMALL SQUAD'S WORD (DOORTOOLS.wordSmall): what of one or two teammates' waits on it — their plain stacks, but for one on a door with a charge
+   *  set on it (the key is that charge's trigger first). Nothing with the switch off, and nothing for the squad of four (its word is waitingAny's) */
+  stackWaits(men: Guard[]): { stack: Door; men: Guard[] }[] { return DOORTOOLS.wordSmall && !this.g.orders.big ? this.stacksOf(men).filter(x => !this.chargeOn(x.stack)) : []; }
+  private stackWords(men: Guard[]): string { const S = this.g.orders; return [...new Set(this.stackWaits(men).map(x => S.whoWords(x.men)))].join(' + '); }
   /** the men among `men` with something waiting on the word */
   private waitingMen(men: Guard[]): Guard[] { const on = new Set<Guard>(); for (const x of this.waitingAny(men)) for (const m of x.men) on.add(m); return men.filter(m => on.has(m)); }
   /** … with the rooms being worked from the threshold: the word sends those in too (the pockets, then the step in) */
@@ -1775,12 +1800,12 @@ export class DoorTools {
     if (!this.wordOnHold(men)) return false;
     this.wordKeyT = this.g.time; for (const c of this.set.filter(c => !this.onPendingWord(c))) this.trigger(c); return true;
   }
-  private goMen(men: Guard[]): string | null {
+  private goMen(men: Guard[], only?: { stack: Door; men: Guard[] }[]): string | null {
     const g = this.g;
     if (DOORTOOLS.fragHold) {   // (THE WORD AGAIN while it is held for men who ran from a grenade: Sam's call — it waits for nobody)
       const held = this.fragHeld(men);
-      if (held.length) { for (const o of held) { this.beat(o, 'the word again'); this.fragOn(o); } this.wordTick(); if (!this.waitingAny(men).length) return null; } }   // (others of these men still waiting for their FIRST word: it is given below)
-    const list = this.waitingAny(men); if (!list.length) return 'nobody is waiting on your word.';
+      if (held.length) { for (const o of held) { this.beat(o, 'the word again'); this.fragOn(o); } this.wordTick(); if (!(only ?? this.waitingAny(men)).length) return null; } }   // (others of these men still waiting for their FIRST word: it is given below)
+    const list = only ?? this.waitingAny(men); if (!list.length) return 'nobody is waiting on your word.';   // (`only`: the small squad's word — its plain stacks, nothing else)
     holdFireOrder(g, 'go');   // (holdfire.ts: the word, by whatever road it came — what waited on it lifted nothing until now)
     const w: Word = { t0: g.time, go1: NaN }; this.words.push(w); this.stats.words++;
     for (const x of list) { const op = 'stack' in x ? this.fromStack(x.men, x.stack) : x; if (!op) continue;
@@ -1976,6 +2001,12 @@ export class DoorTools {
       if (g.time - this.wordKeyT < K.wordTap) { input.pressed.delete(key); return; }   // (a second tap is not the drill's 'stack up', nor a trigger: stamped only by the word)
       const own = !!S.menu && this.heldOn(S.menu.target, S.menu.men).length > 0;   // (the held door's OWN menu words its fifth row 'F: go': the key is the word there whatever the switch says)
       if ((K.thrMenuWord || !S.menu || own) && this.pairWord(S.recipients())) { input.pressed.delete(key); S.close(); return; }   // (with no menu, or any other: a menu that is up goes away, as it does for the four's word)
+      // … and the men standing on a plain stack (wordSmall): the word sends them in, a free set charge goes with it — the pair's word again. To the men a
+      // menu that is up is for (one opened on a teammate: him), and AGAIN — outside `wordTap` of the first — for a word held for men who ran from a grenade
+      if (K.wordSmall) { const men = S.menu ? S.recipients(S.menu.target) : S.recipients();
+        if (this.stackWaits(men).length || (K.fragHold && g.time - this.wordKeyT >= K.wordTap && this.fragHeld(men).length > 0)) { input.pressed.delete(key); const p = g.player.char.pos; S.close();
+          if (S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men }) === null) { this.wordKeyT = g.time; for (const c of this.set.filter(c => !this.onPendingWord(c))) this.trigger(c); }
+          return; } }
     }
     const men = four ? S.recipients(row >= 0 ? M!.target : null) : [];
     const again = four && K.fragHold && g.time - this.wordKeyT >= K.wordTap && this.fragHeld(men).length > 0;   // (the word AGAIN, on a word held for men who ran from a grenade; a second tap inside `wordTap` of the first is not it)
@@ -1993,7 +2024,8 @@ export class DoorTools {
       const sam = g.player.char.pos; this.trigger(free.sort((a, b) => flat(a.door.frameCentre, sam) - flat(b.door.frameCentre, sam))[0]);
       return;
     }
-    if (four && NB.state === 'staged' && (g.time - this.wordKeyT < K.wordTap || NB.drillOps.some(m => this.ops.some(o => o.men.includes(m))))) input.pressed.delete(key);
+    // (wordSmall: one or two teammates the word sent in are not the drill's to pull back out with a second press, any more than the four's are)
+    if ((four || (K.wordSmall && !S.big)) && NB.state === 'staged' && (g.time - this.wordKeyT < K.wordTap || NB.drillOps.some(m => this.ops.some(o => o.men.includes(m))))) input.pressed.delete(key);
   }
   /** a set charge whose order is on a word that has not gone yet (it is waiting for the others to reach their doors) */
   private onPendingWord(c: SetCharge): boolean { return this.ops.some(o => o.kind === 'charge' && o.door === c.door && !!o.word && isNaN(o.word.go1)); }
@@ -3660,7 +3692,11 @@ export class DoorTools {
   /** … and the word, while somebody is waiting on it: the key that gives it, to whom — or, with the orders going to somebody else, who to turn to (a set
    *  charge is left out of that: it has its own line, and its own key) */
   wordNote(): OrderNote[] {
-    const S = this.g.orders; if (!S.big) return [];
+    const S = this.g.orders;
+    if (!S.big) {   // (the small squad's: its plain stacks, under wordSmall — the key is always the word's there)
+      const F = DOORTOOLS.blowKey.replace('Key', ''), T = S.knobs.whoKey.replace('Key', ''), mine = this.stackWords(S.recipients()); if (mine) return [{ key: F, text: `go · ${mine} waiting` }];
+      const rest = this.stackWords(S.men()); return rest ? [`${rest} waiting · ${T}, then ${F}`] : [];
+    }
     const F = DOORTOOLS.blowKey.replace('Key', ''), T = S.knobs.whoKey.replace('Key', ''), key = DOORTOOLS.wordOnKey;
     const mine = this.waitingWords(S.recipients()); if (mine) return [key ? { key: F, text: `go · ${mine} waiting` } : `${mine} waiting on your word`];
     const rest = [...new Set(this.waitingAny(S.men()).filter(x => 'stack' in x || !this.chargeOn(x.door)).map(x => S.whoWords(x.men.filter(m => m.state !== 'dead'))))].join(' + ');

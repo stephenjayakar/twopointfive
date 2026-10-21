@@ -178,6 +178,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   book on that frame, no mark at the cursor, the HUD's cap reads Q · `?cmd`, Q down shows the pressed mark and gives nothing, Q up gives 'move', Q kept
   down opens the ring and gives the lit wedge · `?cmdhint`, the mark is at the cursor with no ring. NOT DONE: nobody has played it; never seen on a
   GPU; the Options row was not clicked in a browser.
+- **Q on a door, then F, with one or two teammates** (`DOORTOOLS.wordSmall`, `?wordsmall=0`): the word's key sends a small squad in from a plain
+  stack as it does the four — the rule, its edges and its check are the door tools' bullet "The word sends a small squad in from its stack"
+  (`docs/agents/door-tools.md`). Q on the stacked door again is still the squad's own pick of entry.
 - **Plan mode, a prototype** (`src/game/planmode.ts`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that
   requires explicitly leaving"; the design: `rebuild/commanding/command-mode.md`). OFF in the module and on BOTH stands (no `FROZEN_HOLDS` row: it is
   not a shipped-on rule); the page raises it only when asked beside the ring (`?cmd&cmdplan`, or the debugger's tick 'Tab ▸ the ring ▸ plan mode on
