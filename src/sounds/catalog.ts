@@ -104,6 +104,8 @@ export const SOUNDS: Record<SfxName, Sound> = {
   chokeLimp: { group: 'hands', what: 'he goes limp', gain: 0.35 },
   whipThud: { group: 'hands', what: 'the pistol whip', gain: 0.7 },
   shove: { group: 'hands', what: 'letting a held man go', gain: 0.3 },
+  wallOn: { group: 'hands', what: 'his back onto a wall', gain: 0.35 },
+  wallOff: { group: 'hands', what: 'stepping off a wall', gain: 0.5 },
 
   // ---- lights, furniture, devices ----
   lightBreak: { group: 'things', what: 'a light shot out', gain: 1 },

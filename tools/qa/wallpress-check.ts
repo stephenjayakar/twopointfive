@@ -37,7 +37,7 @@ export async function wallPressCheck(): Promise<boolean> {
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
   try {
-    const S = await quiet(() => world(true)); const { pl, c, g, W } = S as any; const set = (rule: boolean) => { WALLSNAP.on = true; WALLSNAP.press = rule && !BRK; }; set(true);
+    const S = await quiet(() => world(true, 95, false)); const { pl, c, g, W } = S as any; const set = (rule: boolean) => { WALLSNAP.on = true; WALLSNAP.press = rule && !BRK; }; set(true);
     const gap = () => c.pos[2] - WZ - R;   // what is left between his body and the north wall
     /** hold `ks` from (x 21, z, yaw) for `frames`: the frame a hold began, the gap then, the frame his back was on it, the longest stride of the take, what was said */
     const run = (z: number, yaw: number, ks: string[], kit: 'empty' | 'pistol' | 'rifle' = 'empty', frames = 120, each?: (f: number) => void) => {
@@ -49,7 +49,7 @@ export async function wallPressCheck(): Promise<boolean> {
 
     // ---- walk up
     { const r = run(11.5, 180, ['KeyW']); const w = pl.wall, off = gap() + R, yaw = w ? Math.abs(Math.atan2(Math.sin(c.bodyYaw - Math.atan2(w.n[0], w.n[2])), Math.cos(c.bodyYaw - Math.atan2(w.n[0], w.n[2])))) / DEG : NaN;
-      const ok = r.took >= 0 && r.gapAt > 0.03 && r.gapAt <= WALLSNAP.pressFlow + 0.03 && r.seated >= 0 && (r.seated - r.took) * DT <= 0.3 && r.stride <= r.walk * 1.5 + 1e-4 && Math.abs(off - 0.45) <= 0.012 && yaw <= 3 && c.anim.stance === 'wall' && !r.said.length;
+      const ok = r.took >= 0 && r.gapAt > 0.03 && r.gapAt <= WALLSNAP.pressFlow + 0.03 && r.seated >= 0 && (r.seated - r.took) * DT <= 0.3 * (WALLSNAP.slow ? WALLSNAP.slowTake : 1) && r.stride <= r.walk * 1.5 + 1e-4 && Math.abs(off - 0.45) <= 0.012 && yaw <= 3 && c.anim.stance === 'wall' && !r.said.length;
       verdict(ok, 'a walk straight at the wall has it before he touches it, at his walking pace, and ends as Q\'s hold does',
         `hold at ${r.took < 0 ? 'never' : f2(r.took * DT) + ' s'} with ${f2(r.gapAt)} m to go (pressFlow ${WALLSNAP.pressFlow}) · back on the wall ${r.seated < 0 ? 'never' : f2((r.seated - r.took) * DT) + ' s later'} · longest stride of the take ${f3(r.stride)} m against his walk's ${f3(r.walk)} · ${f3(off)} m off the face, back ${f2(yaw)}° off square, stance '${c.anim.stance}' · said: ${r.said.join(' | ') || 'nothing'}`); rest(); }
     // ---- turn in
