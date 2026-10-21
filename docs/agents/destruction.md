@@ -473,7 +473,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `src/game/glassPattern.ts` — keep it and `common.wgsl gp*/gb*` + `composite.wgsl gbCracks` in step, `probes.ts glassbreak-open` compares the rule over the uploaded rows):** a blow
   leaves a SITE (≤ 8 a pane): 9‥12 hashed RADIAL cracks + straight CHORDS between neighbouring radials (partial concentric rings) → a crater (band 0), ring pieces (bands 1, 2)
   and, once the pane has RUN, forked DAGGERS to the frame, most snapped across once (bands 3‥6; fid = site × 84 + band × 12 + sector; territories = a power diagram). BY TYPE
-  (`typeOfPane`: OUTSIDE glass tempered — a pane with open sky over exactly ONE face, found from the level's own geometry on every level (`skySide`, cached, also the gust's inward direction; the office comes out
+  (`typeOfPane` — on the page the kind now comes from where the pane SITS, the *Glass as buildings have it* bullet; what follows is the first rule, the frozen stand's: OUTSIDE glass tempered — a pane with open sky over exactly ONE face, found from the level's own geometry on every level (`skySide`, cached, also the gust's inward direction; the office comes out
   as its facade rectangle had it) — interior partitions annealed, narrow sidelights / clerestory laminated; `setType` = the per-pane override, nothing authored in the level file): annealed = a round punches the crater, a round on a piece
   knocks that piece out, at `breakE.annealed` 3 (or one blow of `runSingleE`) the cracks run, the blow's own star breaks out (`runStar`) and the SUPPORT rule (`heldSet`: stands
   on the sill / a held piece below with its centre over the footing, or hangs within `hangArea` per metre of grip) drops the rest a beat later, staggered; tempered = DICES whole
@@ -530,6 +530,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it on a GPU.
 
 <!-- added 2026-10-13, after the cut -->
+- **Glass as buildings have it: toughened glass drops at once, and a pane's glass comes from where it sits** (2026-10-21; `src/game/glassbreak.ts GLASSREAL`,
+  two rules, each ON in the page and off in the module and on the frozen stand; `FROZEN_HOLDS` rows `GLASSREAL.drop` → `TPS_GLASSDROP=1`, `GLASSREAL.place` →
+  `TPS_GLASSPLACE=1` (both act only with the glass up, `GLASSFX=on`); the table is in the knob registry and the session journal, a recording from before it replays
+  with both off; Tab ▸ Destruction ▸ Glass breaking, two rows). The maintainer, of a toughened window: "it seems like there are two types of glass breaking -- one
+  where a shot "propagates" out a ripple and one where it breaks the glass into shards", then "let's fix toughened glass ripples to be realistic (no visible wave,
+  just instant and drop) and then apply your principle for float vs. toughened glass architecturally". **DROP** (`?glassdrop=0` = the wave): a toughened sheet's
+  stored stress crazes all of it in a millisecond, so nothing travels across it an eye could follow. The blow opens its own clump as before, the sheet stands
+  crazed white `hang` 0.1 s, and on the step the clock passes it EVERY clump leaves (`stepDice` → `dropAll`); the renderer's one threshold on the dice key jumps
+  to the end, so no shader changed. The sheet is handed on in square blocks of clumps, at most `blocks` 48 (a fragment a clump was several hundred emit records on
+  one step from a facade sheet; falling glass sends 24 a step and holds 96): they fall, out along the round a little and most near it, nothing across the pane.
+  A blast that dices a pane drops it the same way. What moves with it: the pane is open to rounds, sight and feet 0.1 s after the blow instead of over half a
+  second, and its falling is heard once. **PLACE** (`?glassplace=0` = outside toughened, inside float): `typeOf` reads the pane, not the wall: a foot under
+  `lowM` 0.7 m (it reaches the floor) or a panel of a door (within `doorM` 0.3 m of a door's opening on the plan, foot under `doorFootM` 1.5: glass beside a door within a body's reach, not a light over it) = TOUGHENED; a
+  window from a sill = FLOAT; the laminated two as they were (a narrow inside sidelight, a high outside strip). Nothing is authored in a level file; `setType`
+  still overrides a pane. WHAT CHANGED KIND, level by level (the -gwot looks, the relief and the squads block as their base): office, 9 outside windows float and
+  the conference partition's 6 sheets toughened (the frontage's 4, the 2 strips and the manager's sidelight as they were); glasshouse, its 4 inside partitions
+  toughened, so every pane there is; registry and consulate, the reading room's / the visa hall's partition toughened and 4 / 5 outside windows float; records, 5
+  windows float (its two door sidelights reach the floor: toughened still); mousehole, 2 windows float; warehouse 3, test-rooms 1, defuse 2, block 4, bazaar 3,
+  barracks 12 and the pass 8: every window float; killhouse and hall unchanged (their glass starts 0.15 m up). No pane today is toughened by the door clause
+  alone. So on the page most outside windows no longer open with one round (a hole, then daggers at about three), and office-style partitions do. Rounds through
+  (`GLASSPEN.cost` by kind) and stacks dealt behind glass follow the kind. THE CHECK: `tools/qa/glassreal-check.ts` (`probes.ts glassreal`, also under `glass`
+  and `all`), 9 lines, each arm setting the switches itself; `GLASSREAL_BREAK=1` fails 2 to 9; run on both stands. Line 9 is every level's panes by kind against
+  a table, on and off: a new level with glass adds its row. The glass probes written before this (`glass`, `glassbreak`, `glasspen`, `glasstune`, `shards`,
+  `cutglass`) name panes by the wall's typing and time the wave, so the runner holds both rules off round them (`probes.ts GLASS_AS_IT_WAS`, as it holds the plan
+  lay) unless the caller says `TPS_GLASSDROP=1` / `TPS_GLASSPLACE=1`; `glass-tune.ts` now sets its scene's pane to the kind the scene names. The page:
+  `node tools/qa/glassreal-page.cjs <outDir>` (a server of the checkout on PORT) boots it on the software adapter plain and with both flags at 0, reads the two
+  switches and two panes' kinds, breaks one toughened sheet and reads it standing at step 3 and gone by step 11 (off: the wave), no console error. HEARD: `hang`
+  stays under `GLASSBREAK.crackGap` 0.25, so a dropped sheet is one crack and one hearing event (the wave filed one for each 0.25 s it ran: inferred from `emit`, not counted on a big
+  sheet); nobody has listened to it. MEASURED: headless only, one seed, no tour, soak or play-through tally run with the rules on against off. One round into the 1 m partition sheet: gone 0.117 s after it, 36 fragments on one
+  step. The 4 m window made toughened, falling glass attached: 3576 grains born against the wave's 3764, 637 trimmed against 1087, the last record out two steps
+  after the drop. NOBODY HAS SEEN any of it on a GPU or played it: the white sheet standing a tenth of a second, the fall, the look of big blocks pouring as
+  dice, and how the levels play with their windows float. OPEN, the maintainer's: laminated frontage for a secure building (a level's own word on a pane) is not
+  built; the manager's sidelight is laminated still, where the rule for a door's panel would make it toughened.
 - **Stunned, not killed, behind a wall the burst itself broke** (`frag.ts FRAG.wallStun`, on; false = the game as it was, and a recording from before the key replays with it off —
   journal.ts; the maintainer's tap on the card, 10-13: "Stun, like doors"; an after-close step of the gear goal, commits 2efdff94 (the rule) and 578a922d (glass probes), in the build since efccd497;
   its page is rebuild/gear-and-glass/wall-stun.md; the module's own line is the frag.ts line in overview.md):

@@ -71,7 +71,8 @@ async function runScene(id: string, secs: number) {
   const gb = game.glassBreak;
   // the pane: the conference partition's second sheet (annealed), the first full-height facade sheet (tempered), the manager's sidelight (laminated)
   const bi = TUNE_PANE[paneKind], b = game.level.boxes[bi];   // (by where it stands, office-pane.ts: a box index moves with every level export)
-  if (gb.typeOfPane(bi) !== paneKind) throw new Error(`the office's ${paneKind} pane (box ${bi}) breaks as ${gb.typeOfPane(bi) ?? 'no sheet'}: the type rule or the level has moved`);
+  if (gb.typeOfPane(bi) === null) throw new Error(`the office's ${paneKind} pane (box ${bi}) is no sheet of glass: the level has moved`);
+  if (gb.typeOfPane(bi) !== paneKind) gb.setType(bi, paneKind);   // (a scene is a KIND of glass in a known frame; which pane is which kind is the type rule's, and moves with GLASSREAL.place)
   const wide = b.h[0] >= b.h[2] ? 0 : 2; const cs = Math.cos(b.yaw ?? 0), sn = Math.sin(b.yaw ?? 0);
   const nrm: Vec3 = wide === 0 ? [sn, 0, cs] : [cs, 0, -sn]; const tan: Vec3 = wide === 0 ? [cs, 0, -sn] : [-sn, 0, cs];
   // the shooter stands on the side with floor under him 1.7 m out (inside the building for the facade; the corridor side of the partitions)
