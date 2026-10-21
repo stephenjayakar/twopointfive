@@ -306,8 +306,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   switches off, being written against the take's own seconds, the one scuff and the pose's quick way out; the other seven and `wallpress` run with
   whatever the stand has, the walk-in's landing bound following `slowTake`. Measured headless on the office corridor's north wall, one seed: Q a step off with his back to it 9 → 19
   frames (0.16 → 0.33 s), Q nose to it 14 → 28 (0.24 → 0.48 s), the key held into it 11 → 22 (0.18 → 0.37 s), the fastest frame of each about half what
-  it was, each ending on the same spot and facing. NOBODY HAS HEARD EITHER SOUND (written by numbers: there is no audio in the cloud) and nobody has seen
-  the slower take; never on a GPU. Whether twice is the right slowness, and whether the landing reads as a back on plaster, are his to say by ear and eye.
+  it was, each ending on the same spot and facing. In the real page (the software adapter, one boot): both switches read on, Q's take ran 26 frames on a
+  0.44 s clock, the mixer was asked for `wallOn` once at the landing and `wallOff` once on Q off, no console error. NOBODY HAS HEARD EITHER SOUND (written
+  by numbers: there is no audio in the cloud) and nobody has seen the slower take; never on a GPU. Whether twice is the right slowness, and whether the landing reads as a back on plaster, are his to say by ear and eye.
 - **Whistle** (`whistle.ts`, V — player.ts calls `whistleKey` right after the meter's decay, so it works anywhere but down): `tryWhistle` pushes
   GameEvent `'whistle'` (level `WHISTLE.level` 0.35, at Sam's feet, `who` PLAYER_ID) once per `cooldown` (2 s), ticks `player.noise`, plays sfx
   `'whistle'` (two notes 1.1 → 0.9 kHz, 0.36 s) at his head; no HUD line. guards.ts `hearingCheck` hands the kind to `hearWhistle` inside `WHISTLE.horizon`
