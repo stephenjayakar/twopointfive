@@ -280,6 +280,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   him to the far wall at once, a Shift tap undoing Q, one latch for every wall (a corner's second wall refused), a pistol reload thrown away, a door's rows
   not counted as a thing, his own side's alert counted as the enemy's. NOBODY HAS PLAYED IT and it has never been seen on a GPU: how often a wall is taken
   that was not wanted in real play is unmeasured, since no recorded human session is in the repo and the tour's man is a puppet the rule leaves alone.
+- **The wall hold, heard and unhurried** (`WALLSNAP.voice`, `WALLSNAP.slow`, wallsnap.ts; the maintainer, 10-21, from his play: "we should have some audio
+  feedback for when you snap/unsnap from a wall. the transition animation is also too fast, should probably be 2x slower"). Two switches, each acting only
+  with the feel pass (`WALLSNAP.on`), for Q's take and the walk-in take alike, back hold and stack alike. Each ON in the page (`?wallvoice=0`, `?wallslow=0`),
+  OFF in the module and on the frozen stand (`TPS_WALLVOICE=1`, `TPS_WALLSLOW=1`), a `FROZEN_HOLDS` row each, in the journal's knobs (a recording from before
+  the keys replays with both off). HEARD (player.ts `wallVoice`): sfx `wallOn` as his back lands (the frame the old scuff played on, which it replaces: that
+  was a footstep's voice at 0.3, about 5 dB UNDER one of his own steps, and nothing at all on the way off) and `wallOff` for each of his own ways off (Q, the
+  stick held away, breaking into a run) and when he is pushed off a wall he was seated on, never off a take let go of before his back landed; a takedown, a kick, a pick, a teleport, going down have their own
+  sounds or none. The player's ears only: no event is filed, no noise is raised, nobody in the level hears it. Gains `voiceOn` 0.35, `voiceOff` 0.5 (by the
+  offline render's loudest 50 ms: the landing about 2 dB over one of his own footsteps, the step off about level with one; first written at 0.6 and 0.6,
+  brought down because a sound well over a footstep that no guard hears parts what is presented from what is sensed. HIS CALL, open: louder, or a wall
+  taken beside a guard heard by him). UNHURRIED: `wsTakeSecs` × `slowTake`
+  (2: a short step 0.24 s, a long reach and a half turn 0.6 s; the glide, the turn and the feet's steps share that clock), the pose's weight comes on at
+  `slowIn` 11 instead of 22, the stack's at 6.5 instead of the stance's 13 (character.ts `anim.stanceIn`, set while he holds a wall, at rest off it) and lets go on his own way off at `slowOut` 12
+  instead of `outRate` 24. Off = the take as it was, by the check's frames. A STALL IT SHOWED, mended at its cause under the same switch: with a key held ALONG the
+  wall through the take the station runs on ahead of the glide, the body landed a hand short of it, and moveOnWall's firm read-back took that for a man
+  holding him back and shut that way for half a second. During the take the body now rides the station's own advance, so the glide closes on a place that
+  holds still for it (the sidle through a slow take is then the sidle through a quick one, frame for frame). With the switch off the old arithmetic stands,
+  and a 0.30 s take with a key held is close to the same stall (about 1.9 cm a frame against the cap's 2 cm hair): not mended there, the digests being
+  what they are. ON THE STACK a click that fell inside the take was always dropped (stackUp holds the trigger while he comes onto the wall); the longer take
+  makes that window matter, so under `slow` the click is kept (`w.owed`) and brings the rifle up as he lands: one click, one round. What
+  the slowness costs is its own length: the peek and the stack's lean and first round all wait for the landing, 0.1 to 0.3 s later, and the first frame of the take covers 6 to 9 % of the way where it covered 10 % or more (the feel pass's 'moves on the frame of the key'). Debugger rows (the wall snap's group): two toggles, 'sound: onto the wall',
+  'sound: off the wall', 'take: times as long'. CHECK: `probes.ts wallfelt` (`tools/qa/wallfelt-check.ts`, families `wallsnap` / `wall-snap`) 9 of 9 on both
+  stands, `WALLFELT_BREAK=1` fails 4 of 9 on both; three of the feel pass's older probes (`wallsnap-take`, `-landing`, `-off`: `world(true, 95, true)`) hold both
+  switches off, being written against the take's own seconds, the one scuff and the pose's quick way out; the other seven and `wallpress` run with
+  whatever the stand has, the walk-in's landing bound following `slowTake`. Measured headless on the office corridor's north wall, one seed: Q a step off with his back to it 9 → 19
+  frames (0.16 → 0.33 s), Q nose to it 14 → 28 (0.24 → 0.48 s), the key held into it 11 → 22 (0.18 → 0.37 s), the fastest frame of each about half what
+  it was, each ending on the same spot and facing. NOBODY HAS HEARD EITHER SOUND (written by numbers: there is no audio in the cloud) and nobody has seen
+  the slower take; never on a GPU. Whether twice is the right slowness, and whether the landing reads as a back on plaster, are his to say by ear and eye.
 - **Whistle** (`whistle.ts`, V — player.ts calls `whistleKey` right after the meter's decay, so it works anywhere but down): `tryWhistle` pushes
   GameEvent `'whistle'` (level `WHISTLE.level` 0.35, at Sam's feet, `who` PLAYER_ID) once per `cooldown` (2 s), ticks `player.noise`, plays sfx
   `'whistle'` (two notes 1.1 → 0.9 kHz, 0.36 s) at his head; no HUD line. guards.ts `hearingCheck` hands the kind to `hearWhistle` inside `WHISTLE.horizon`

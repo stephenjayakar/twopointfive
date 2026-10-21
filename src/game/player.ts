@@ -537,7 +537,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   gunWallStance(c, walled && !rifleAim);
   // --- slot actions
   if (pl.wall && WALLSNAP.on) wallSnapPose(g, dt, aiming);   // (the take's feet, the landing, the stack's stance and carriage: wallsnap.ts)
-  else if (pl.wall && pl.wall.takeT !== undefined) { c.anim.wallTake = -1; c.anim.wallHit = 0; c.anim.stackPress = 0; }   // (the switch thrown off under a hold it took: its channels to rest, the hold goes on as the old one)
+  else if (pl.wall && pl.wall.takeT !== undefined) { c.anim.wallTake = -1; c.anim.wallHit = 0; c.anim.stackPress = 0; c.anim.stanceIn = 0; }   // (the switch thrown off under a hold it took: its channels to rest, the hold goes on as the old one)
   pl.fireCd -= dt;
   if (gun.def.auto) gun.autoIdle(dt, gunUp && input.lmb());   // (a sidearm with an automatic sear — gunslots.ts, the Glock 18: its held string lapses as the rifle's does; nothing to count on a row without one)
   if (gunUp && !pl.sprinting && !pl.dragging) {
@@ -929,7 +929,7 @@ export function wallSnap(g: Game, cam: FollowCamera, why?: { blocked: boolean },
 export function releaseWall(g: Game) {
   const pl = g.player, w = pl.wall; if (!w) return;
   pl.wall = null; pl.char.anim.stance = 'none'; pl.char.anim.lookYawExtra = 0; pl.char.vel = [0, 0, 0];
-  pl.char.anim.wallTake = -1; pl.char.anim.wallHit = 0; pl.char.anim.stackPress = 0;   // (WALLSNAP's channels at rest: where they stand anyway with the switch off)
+  pl.char.anim.wallTake = -1; pl.char.anim.wallHit = 0; pl.char.anim.stackPress = 0; pl.char.anim.stanceIn = 0;   // (WALLSNAP's channels at rest: where they stand anyway with the switch off)
   if (w.cam) w.cam.peekOffset = null;   // (…and the look-at it eased into the room: a takedown, a kick, a teleport lets go after this frame's camera line has run)
   if (w.drawn && !pl.down) setHolstered(g, false);
 }
@@ -942,9 +942,18 @@ export function releaseWall(g: Game) {
 function wallStepOff(g: Game, mx: number, mz: number, ml: number, how: 'q' | 'run' | 'away') {
   const pl = g.player, w = pl.wall; releaseWall(g);
   if (!w || !WALLSNAP.on || pl.down) return;
-  const c = pl.char, T = g.tune; c.anim.stanceOut = WALLSNAP.outRate;
+  const c = pl.char, T = g.tune; c.anim.stanceOut = WALLSNAP.slow ? WALLSNAP.slowOut : WALLSNAP.outRate;
+  wallVoice(g, w, false);
   if (ml > 0) { if (-(mx * w.n[0] + mz * w.n[2]) < 0.5) pl.speedSm = Math.max(Math.abs(w.v), 0.8 * (pl.crouch ? T.playerCrouch : T.playerWalk) * pl.pace * (g.puppet?.walk ?? 1)); }
   else if (how === 'q') c.vel = [w.n[0] * WALLSNAP.offPush, 0, w.n[2] * WALLSNAP.offPush];
+}
+
+/** WALLSNAP.voice: the hold's own two sounds, the player's ears only (no event is filed: nobody hears his jacket on the plaster). `on` = his back has just
+ *  landed; else he has stepped off by his own choice (Q, a run, the stick held away) or been pushed off. A hold taken with the feel pass off has neither. */
+function wallVoice(g: Game, w: WallHold, on: boolean) {
+  const W = WALLSNAP; if (!W.on || !W.voice || w.takeT === undefined) return;
+  if (!on && !((w.hitT ?? 0) > 0)) return;   // (a take let go of before his back landed: there was no plaster to peel off)
+  const gain = on ? W.voiceOn : W.voiceOff; if (gain > 0) g.audio.play(on ? 'wallOn' : 'wallOff', g.player.char.pos, gain, { rate: w.kind === 'stack' ? 0.92 : 1 });
 }
 
 /** Q pressed with no face in reach while he is on the move: remembered for WALLSNAP.buffer seconds (the words wait with it). `at` = the game clock the last
@@ -1080,11 +1089,11 @@ export function launchCancel(g: Game): boolean { const pl = g.player; if (!pl.la
 function stackUp(g: Game, dt: number, input: Input): boolean {
   const pl = g.player, c = pl.char, w = pl.wall!, W = WALLSNAP;
   const hold = () => { pl.equipT = Math.max(pl.equipT, 1e-3); };
-  if (w.settle < 1) { w.up = 0; hold(); return false; }   // still coming onto the wall
+  if (w.settle < 1) { w.up = 0; if (W.slow) w.owed = (w.owed ?? 0) | (input.clicked & 5); hold(); return false; }   // still coming onto the wall (WALLSNAP.slow: the take is long enough for a click to fall inside it — kept, and it brings the rifle up as he lands)
   if (samStaggered(g)) { w.up = 0; w.rise = 0; w.owed = 0; hold(); return false; }   // folded by a blast (samstun.ts): the rifle stays at the low ready, and a click made meanwhile is not owed a round
   const ap = g.aimPoint, dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
   const hit = d > 0.25 ? g.col.raycast([c.pos[0], pl.crouch ? 0.85 : 1.3, c.pos[2]], [dx / d, 0, dz / d], W.bore) : null;
-  const pull = input.lmb() || input.lmbHit() || (pl.rifle.attachment !== null && (input.rmb() || input.rmbHit()));
+  const pull = input.lmb() || input.lmbHit() || (pl.rifle.attachment !== null && (input.rmb() || input.rmbHit())) || (W.slow && !!w.owed && !(w.up! > 0));   // (…or a click kept from the take)
   if (hit && hit.index < 1e6) {
     w.up = 0; w.rise = 0; w.owed = 0; hold();
     if (input.lmbHit() && g.time - (w.sayT ?? -10) > 1.5) { w.sayT = g.time; g.msg('the wall is in the way — step out past its end, or off it (Q)'); }
@@ -1140,7 +1149,8 @@ function wallSnapPose(g: Game, dt: number, aiming: boolean) {
   const pl = g.player, c = pl.char, w = pl.wall!, an = c.anim, W = WALLSNAP;
   if (w.takeT === undefined) return;   // (taken with the switch off: the hold as it was)
   an.wallTake = w.settle < 1 ? w.settle : -1;
-  if (w.settle >= 1 && w.seated) { if (w.hitT === 0 && W.scuff > 0) g.audio.play('footSoft', c.pos, W.scuff, { rate: 0.7 }); w.hitT! += dt; }
+  an.stanceIn = W.slow ? (w.kind === 'stack' ? W.slowIn * 13 / 22 : W.slowIn) : 0;   // (the stack's pose comes on at the stance's own 13, the back hold's at 22: each at its share)
+  if (w.settle >= 1 && w.seated) { if (w.hitT === 0) { if (W.voice) wallVoice(g, w, true); else if (W.scuff > 0) g.audio.play('footSoft', c.pos, W.scuff, { rate: 0.7 }); } w.hitT! += dt; }
   an.wallHit = w.settle >= 1 && w.seated ? wsHit(w.hitT!) : 0;
   if (w.kind === 'stack') {
     an.stance = 'stack'; an.stackSide = w.side;
@@ -1200,7 +1210,7 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
    *  for a beat (else he would tread on the spot pressing into the man's back); not firm (furniture): just take the station — a bin he keeps pushing along, as a walk does */
   const take = (firm: boolean): boolean => {
     const uReal = c.pos[0] * t[0] + c.pos[2] * t[2] - (w.leanOff ?? 0), offReal = c.pos[0] * n[0] + c.pos[2] * n[2] - base;
-    if (uReal < uLo - 0.25 || uReal > uHi + 0.25 || offReal > WALL_SHOVE_OFF) { g.msg(w.seated ? 'pushed off the wall' : "can't get to the wall here"); releaseWall(g); return false; }
+    if (uReal < uLo - 0.25 || uReal > uHi + 0.25 || offReal > WALL_SHOVE_OFF) { g.msg(w.seated ? 'pushed off the wall' : "can't get to the wall here"); if (w.seated) wallVoice(g, w, false); releaseWall(g); return false; }
     w.seated = true;
     if (Math.abs(uReal - w.u) > 0.003) {
       if (firm) { if (dir && (uReal - w.u) * dir < 0) { w.v = 0; w.blockDir = dir; w.blockT = 0; } else if ((uReal - w.u) * w.v < 0) w.v = 0; }
@@ -1232,7 +1242,7 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
     if (kept / adv < 0.3 || w.off + out > 0.12) { u = w.u; w.v = 0; if (dir) { w.blockDir = dir; w.blockT = 0; } }
     else { u = clamp(w.u + kept, uLo, uHi); if (out > 0) { w.off += out; stand = base + w.off; } }
   }
-  w.u = u;
+  const uWas = w.u; w.u = u;
   // onto the plane at that station, then his own collision and the guards have their say. Taking hold, he is eased in over WALL_SETTLE (smoothstep, ease in
   // and out) — from where he actually IS each frame, by the share of the remaining way the curve covers this frame, and never by more than the curve's own
   // stride from where Q found him: over open floor that is the same glide to the millimetre, but a carton stack, a chair, a leaf or a man standing between him
@@ -1243,6 +1253,9 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
   const lo = WALLSNAP.on ? stackLean(g, dt, cam, w, dir) : 0;   // (stepped out round the end on the stack: metres past his station)
   const tx = t[0] * (u + lo) + n[0] * stand, tz = t[2] * (u + lo) + n[2] * stand;
   if (ePrev < 1) {
+    // (WALLSNAP.slow: a key held along the wall moves the station under the take. The body rides it — the glide then closes on a place that holds still
+    //  for it, instead of trailing a hand behind one that runs on and landing short of it, which the read-back below took for a man in his way)
+    if (WALLSNAP.on && WALLSNAP.slow && u !== uWas) c.pos = [c.pos[0] + t[0] * (u - uWas), c.pos[1], c.pos[2] + t[2] * (u - uWas)];
     const e0 = ease(w.settle);
     const k = e0 < 1 ? (e0 - ePrev) / (1 - ePrev) : 1;                             // the curve's share of what is LEFT this frame (all of it on the last)
     let sx = (tx - c.pos[0]) * k, sz = (tz - c.pos[2]) * k; const sl = Math.hypot(sx, sz);
