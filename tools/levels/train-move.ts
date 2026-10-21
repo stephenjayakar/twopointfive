@@ -193,7 +193,7 @@ export function build() {
       { id: 'crouch', line: 'Lit and loud. C crouches: slower, quieter, harder to see', done: { is: 'flag', flag: 'crouch' } },
       { id: 'pace', line: 'Roll the mouse wheel down: you creep. Up: faster', done: { is: 'pace', below: 0.9 } },
       { id: 'dark', line: 'Follow the mark into the dark. Watch the light meter', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: { ...LANE_END } }, { is: 'meter', which: 'light', below: 0.3 }] }, { is: 'near', at: [17.8, 0, 21.1], r: 0.8 }] }, hold: 0.4, at: [17.8, 1, 21.1] },   // (the `near` arm: the page's meter has bounce in it and may never read under 0.3 — standing on the mark is enough)
-      { id: 'wall', line: 'Q, facing the container: your back goes to it', done: { is: 'all', of: [{ is: 'flag', flag: 'wall' }, { is: 'in', area: { ...FACE } }] }, at: [18.4, 1, 20.3] },
+      { id: 'wall', line: 'Walk into the container and keep walking: your back goes to it', done: { is: 'all', of: [{ is: 'flag', flag: 'wall' }, { is: 'in', area: { ...FACE } }] }, at: [18.4, 1, 20.3] },
       { id: 'peek', line: 'Slide to the marked corner, keep pushing: you lean out', done: { is: 'flag', flag: 'peek' }, at: [19.1, 1, 20.3] },
       { id: 'nv', line: 'N is night vision. Find the guard through the broken wall', done: { is: 'flag', flag: 'nv' } },
       { id: 'reach', line: 'When the guard walks away, go to the hut\'s door', done: { is: 'stage', stage: 'drive' }, at: [23, 1, 9.6] },

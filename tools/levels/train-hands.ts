@@ -179,7 +179,7 @@ export function build() {
       { id: 'hide', line: 'Get him into the wood store, out of sight. Space lets him go', done: { is: 'body', area: { ...DARK } }, at: [11.8, 1, 8.0] },
       { id: 'knockout', line: 'At the tandoor: Right button at his back knocks him out', done: down(2), at: [OVEN[0] - 2.0, 1, OVEN[1]] },
       // the last man faces the only way in: he is brought through it. The wall hold is a wall of the dark corner (the marker stands in it)
-      { id: 'wall', line: 'The last man watches the gap. Q in the dark corner beside it', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'flag', flag: 'wall' }, { is: 'near', at: NOOK, r: 1.0 }] }, down(3)] }, at: [NOOK[0], 1, NOOK[2]] },
+      { id: 'wall', line: 'The last man watches the gap. Back to the wall in the dark corner beside it', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'flag', flag: 'wall' }, { is: 'near', at: NOOK, r: 1.0 }] }, down(3)] }, at: [NOOK[0], 1, NOOK[2]] },
       { id: 'lure', line: 'V whistles him over. Keep still: let him come through', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'did', what: 'event:whistle' }, { is: 'near', at: GAP, r: 2.6 }] }, down(3)] } },
       { id: 'knife', line: 'As he comes through, step in: Left button. The knife kills', done: down(3) },
       { id: 'unlock', line: 'The store is locked. Space at its door', done: { is: 'any', of: [{ is: 'did', what: 'act:unlock' }, { is: 'door', door: 'hut', state: 'open' }] }, at: [23.0, 1, 9.6] },
