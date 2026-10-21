@@ -8,8 +8,8 @@
 //   the cap goes on waiting · Esc lets it go and leaves the screen up · Backspace leaves a row with no key, marked · a digit pressed for a waiting cap is its
 //   key, never the screen's tab · the words beside a cap name the keys as bound · a page load later the caps are as they were left ·
 //   Reset is the build's keys and nothing kept · ?keybinds=0: the plain list, the kept table untouched.
-//   THE PAGE'S OWN BOARD (host/keymap.ts qFree, the last two lines; all the above run under ?qfree=0): the wall hold's cap is a dashed —, unmarked, its words
-//   say walk into it · a click and Q: the cap is Q, marked, kept; Reset is — again · ?keybinds=0: a plain —.
+//   THE PAGE'S OWN BOARD (host/keymap.ts qFree, the last three lines; all the above run under ?qfree=0): the wall hold's cap is a dashed —, unmarked, its words
+//   say walk into it · a click and Q: the cap is Q, marked, kept; Reset is — again · ?wallpress=0: Q again · ?keybinds=0: a plain —.
 // GPU=1, THE GAME: crouch put on K on the screen, over the start card: K crouches him at once, C does nothing; the kit column names the light's new key; a
 //   door's Space row names Space's new key; a page load later K still crouches; no page error, no GPU error.
 // exit 0 = every line PASS with no page error · 1 = otherwise. Nothing here has been seen on a GPU, and nobody has played it.
@@ -24,7 +24,7 @@ const checks = [], errors = [];
 const check = (ok, label, detail = '') => { checks.push(!!ok); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
 const watch = (page, name, gpu) => { page.on('pageerror', e => errors.push(`${name}: ${e.message}`)); page.on('console', m => { if (m.type() === 'error' && !(NOISE.test(m.text())) && (gpu || !/GPU|adapter|WebGPU/i.test(m.text()))) errors.push(`${name}: ${m.text().slice(0, 200)}`); }); };
 const still = async (page, name) => { if (!outDir) return; const ok = await page.screenshot({ path: path.join(outDir, name), timeout: 180000 }).then(() => true, () => false); if (!ok) log(`no picture ${name}: the screenshot did not come`); };   // (a picture for a person: one that will not come is said, never a red)
-// (`board`: every line but the last two is asked on the board as it was, the wall hold on Q — ?qfree=0; the page's own board gives that row no key)
+// (`board`: every line but the last three is asked on the board as it was, the wall hold on Q — ?qfree=0; the page's own board gives that row no key)
 const url = (more = '', board = '&qfree=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute${board}${more ? '&' + more : ''}`;
 const openControls = async page => { await page.waitForSelector('#menu .actions button', { timeout: 60000 });
   await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].find(b => /^Options/.test(b.textContent))?.click()); await page.waitForSelector('#options.on', { timeout: 10000 });
@@ -74,6 +74,9 @@ async function screen(browser) {
       && b.t === 'Q' && /moved/.test(b.c) && /Q or a step away/.test(b.small) && kept === '{"KeyQ":"KeyQ"}' && c.t === '—' && !/moved/.test(c.c) && kept2 === null,
       'the page\'s own board: the wall hold\'s cap is a dashed —, not marked as moved, its words say walk into it; a click and Q puts it on Q (marked, kept); Reset is — again and nothing kept',
       `as it opens '${a.t}' [${a.c}] '${a.what}' '${a.small}' kept ${kept0} · after Q '${b.t}' [${b.c}] '${b.small}' kept ${kept} · after Reset '${c.t}' [${c.c}] kept ${kept2}`); await still(page, 'controls-no-wall-key.png'); }
+  { await page.goto(url('wallpress=0', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);
+    const r = await page.evaluate(() => { const b = document.querySelector('#options button.op-key[data-key="KeyQ"]'), row = b?.closest('.op-krow'); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim(), small: row?.querySelector('small')?.textContent ?? '' }; });
+    check(r.t === 'Q' && !r.c && /Q or a step away/.test(r.small), 'the page\'s own board with the walk-in switched off (?wallpress=0): the wall hold is on Q again, its cap and its words as they were', `'${r.t}' [${r.c}] '${r.small}'`); }
   { await page.goto(url('keybinds=0', ''), { waitUntil: 'domcontentloaded' }); await openControls(page); const S = await page.evaluate(SCREEN), n = Object.keys(await page.evaluate(CAPS)).length;
     check(n === 0 && S.plain.includes('—') && !S.plain.includes('Q') && S.plain.includes('C'), 'the page\'s own board under ?keybinds=0: the plain list, the wall hold\'s cap a plain — and no Q in it', `caps to click ${n} · plain caps: ${S.plain.join(' ')}`); }
   await ctx.close();

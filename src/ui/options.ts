@@ -43,13 +43,14 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
 
 /** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print]. The flat list other readers take is ui/menu.ts CONTROLS: a key
  *  that changes is changed in both. */
+const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it, look round its end; Q or a step away lets go';
 const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
     [['Shift'], 'Sprint'],
     [['C'], 'Crouch'],
     [['Wheel'], 'Walking pace', 'slower is quieter'],
-    [['Q'], 'Back to the wall beside you', 'slide along it, look round its end; Q or a step away lets go'],   // (WALL_FREE below: its words while the row has no key)
+    [['Q'], WALL_WHAT, WALL_SMALL],   // (wallLine below: its words while the row has no key)
     [['Ctrl', 'Mouse'], 'Orbit the camera'],
     [['Ctrl', 'Wheel'], 'Zoom'],
   ] },
@@ -289,7 +290,7 @@ function render(S: Screen) {
     flip(body, 'Autosave checkpoints', () => game.saves.enabled, v => { game.saves.setEnabled(v); },
       'A checkpoint is written by itself when the mission moves on, when you first enter a room, when you hide a body and every minute and a half of quiet play. Never while anyone is on to you. Enter on the down card loads the newest.');
     flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, 'The faint dots marking what Space and the right button can act on: lights, doors, bodies.');
-    if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, keysOf('KeyQ').length ? keyText('Keep a move key held into a wall and your back goes to it. Q does the same either way.') : 'Keep a move key held into a wall and your back goes to it. Off, a wall is taken only with a key you give it under Controls.');
+    if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep a move key held into a wall and your back goes to it. Q does the same either way.') : 'Keep a move key held into a wall and your back goes to it. Off, Q takes it instead.');
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key (trying out)', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — six rows on trial, kept by host/findme.ts)
@@ -323,13 +324,17 @@ function tabRow(): { group: string; after?: string; row: [string[], string, stri
     default: return null;
   }
 }
-/** THE WALL HOLD'S ROW WITH NO KEY (host/keymap.ts qFree: the build gives it none, walking into a wall takes it — game/wallsnap.ts `press`): the row stays in
- *  the list, its cap the dashed — a click puts on a key, and its words say how it is done without one. With the walk-in switched off as well (Play, above) the
- *  hold has no way in but a key: the line says that. A key on the row: the words as they were, the cap following. */
-const WALL_FREE: Record<string, [string, string]> = {
-  'Back to the wall beside you': ['Back to a wall: walk into it', 'Back to the wall beside you'],
-  'slide along it, look round its end; Q or a step away lets go': ['slide along it, look round its end; a step away lets go', 'no key: click the cap to give it one'] };
-const wallLine = (s: string) => { const f = WALL_FREE[s]; return !f || keysOf('KeyQ').length ? s : f[WALLSNAP.on && WALLSNAP.press ? 0 : 1]; };
+/** the walk-in as it will stand once the boot is over (game/wallsnap.ts `press`): before the Menu is made this machine's kept choice is not on the table yet
+ *  (setOptionsDeps), and the boot card and the keyboard both ask before that */
+export function walkInNow(): boolean {
+  if (!deps) try { const k = kept().wallpress; if (typeof k === 'boolean' && !new URLSearchParams(globalThis.location?.search ?? '').has('wallpress')) return k; } catch { /* no store */ }
+  return WALLSNAP.press;
+}
+/** HOW A WALL IS TAKEN ON THIS BOARD: 'key' = the hold's row has one · 'walk' = it has none and walking into a wall takes it (host/keymap.ts qFree: the
+ *  build's own board) · 'none' = neither: he took its key off and switched the walk-in off. The Controls list keeps the row whichever it is, its cap the
+ *  dashed — a click puts on a key, and writes the row's words to suit; the start card's list does the same (ui/menu.ts controlRows) */
+export function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
+const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Back to a wall: walk into it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it, look round its end; a step away lets go' : 'no key: click the cap to give it one') : s; };
 function controls(body: HTMLElement, host: KeyHost) {
   const cols = el('div', 'op-keys'); body.appendChild(cols);
   // (ui/keybinds.ts: a cap of a key the player may move is its button, the words beside it name the keys as they are bound; a click off a waiting cap lets it go)
@@ -343,7 +348,7 @@ function controls(body: HTMLElement, host: KeyHost) {
     for (const [caps, what, small] of rows) {
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
-      caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(keyCapEl(k, gearText(what), host, seen)); });
+      caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(keyCapEl(k, gearText(wallLine(what)), host, seen)); });
       const w = el('div', 'op-what', gearText(wallLine(what))), wt = w.firstChild, sm = small ? el('small', '', gearText(wallLine(small))) : null; if (sm) w.appendChild(sm);
       host.paints.push(() => { const t = keyText(gearText(wallLine(what))); if (wt && wt.textContent !== t) wt.textContent = t; if (sm) { const u = keyText(gearText(wallLine(small!))); if (sm.textContent !== u) sm.textContent = u; } });
       r.appendChild(c); r.appendChild(w); box.appendChild(r);
