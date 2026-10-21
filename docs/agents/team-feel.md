@@ -707,7 +707,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   loud reached him in the last `dashHot` s, nobody in his sights, the floor he stands on in a known man's line (`picture.ts exposedAt`), his mark out of it
   and in plain sight `dashM` or more off on the same floor: he runs that leg (`teamDash`; never round a corner, through a doorway, or falling in), and a leg begun is run OUT: what started him — the loud, the
   line on the floor under him — is not asked again on the way (it was, at first, and a man dropped to a walk the last stride or two short of the mark, where
-  the line had let go of him); a man in his sights, a mark the line has found or a wall still stops him. NEVER a run:
+  the line had let go of him); a man in his sights, a mark the line has found or a wall still stops him. A leg he LEFT is not one he is on: an answer two asks old
+  (half a second) is dropped, so a run begun and then abandoned — fallen in, sent elsewhere — is asked afresh when he is next sent to that spot (it was not, at
+  first: the stale yes skipped the two starting tests and he ran there with the fight cold). NEVER a run:
   the silent squad, a squad nobody has found, a man sneaking with the player (a grenade apart), a hurt man. THE COST of a run (`runAt`, the sprint clip's
   threshold): gun low and nothing fired (`teamSprinting`: `squad.ts`, `roomfight.ts`), a sprinter's boots to whoever hears (`teamTread`), a card weighs on it
   as on the player's sprint (`teamRunLegs`), and a leaf met at a run is shouldered as a runner's is. Each run is written (`TEAMPACE_STATS {follow, blast,
