@@ -27,8 +27,9 @@ import { openList, openStartPage, startPageWanted, startPageFromQuery } from './
 import { menuTheme } from './theme';
 import { TABKEY } from './tabkey';
 import { keyText } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
-import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions } from './options';
+import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 
+const Q_ROW: [string, string] = ['Q', 'back to the wall beside you — slide, peek at its end; Q / away / Shift lets go'];
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
   ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'],
   ['Mouse', 'aim; the ring snaps to a man near the cursor, or a light under it'],
@@ -36,7 +37,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   ['RMB', 'pistol: OCP the light under the ring · FN2000: fire its launcher (hold to see the arc first)'],
   ['Space', 'do the highlighted action (top-left) · hold to pick another (wheel / ↑↓, let go) · long actions run on their own; move or tap again to stop'],
   ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'],
-  ['Q', 'back to the wall beside you — slide, peek at its end; Q / away / Shift lets go'],
+  Q_ROW,
   ['1 2 3 4 5', 'Five-seveN · FN2000 (2 again: flip its launcher, RING / 40 mm) · smoke · stun · frag'],
   ['Z · R', 'FN2000 semi / auto · reload'],
   ['L · N · V', 'weapon light · night vision · whistle (the nearest man comes to look)'],
@@ -47,6 +48,9 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   ['Ctrl + mouse / wheel', 'orbit the camera / zoom (or pinch)'],
   ['Esc · `', 'pause & settings · the debugger (every knob)'],
 ];
+/** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
+const WALL_ROW: [string, string] = ['Wall', 'walk into one and your back goes to it — slide, peek at its end; away / Shift lets go'];
+const controlRows = (): [string, string][] => CONTROLS.flatMap(r => { if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
 
 const TAGLINE = 'a ray-traced stealth sandbox — every light, shadow and wisp of smoke is live';
 /** the title screen's line under the wordmark */
@@ -90,7 +94,7 @@ export function bootCard(): { status(text: string): void; off(): void } {
     for (const t of picks ? PICKS_NOTES : START_NOTES) { const n = el('div', 'note'); n.textContent = t; card.appendChild(n); }
     const body = el('div', 'body'); card.appendChild(body);
     const list = el('div', 'controls');
-    for (const [k, v] of CONTROLS) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     body.appendChild(list);
     const foot = el('div', 'foot'); foot.textContent = keyText('Esc pauses · ` opens the debugger (every knob)'); card.appendChild(foot);
   }
@@ -373,7 +377,7 @@ export class Menu {
 
   private controls() {
     const list = el('div', 'controls');
-    for (const [k, v] of CONTROLS) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     this.body.appendChild(list);
   }
 
