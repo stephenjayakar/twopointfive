@@ -21,7 +21,7 @@
 import { ROOT } from './headless.ts';
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { rig } = (await import('./outerwall-probes.ts')) as any;
-const { TEAMPACE, TEAMPACE_STATS, TEAMPACE_DEBUG, teamFight, teamCap, teamDashNow, teamTread, teamWalk } = await import(`${ROOT}/src/game/teampace.ts`);
+const { TEAMPACE, TEAMPACE_STATS, TEAMPACE_DEBUG, teamFight, teamCap, teamDash, teamDashNow, teamTread, teamWalk } = await import(`${ROOT}/src/game/teampace.ts`);
 const { PACE, teamPaced } = await import(`${ROOT}/src/game/guards.ts`);
 const { loadPaceOn } = await import(`${ROOT}/src/game/kitload.ts`);
 const { setSilent, SILENT } = await import(`${ROOT}/src/game/silent.ts`);
@@ -170,6 +170,13 @@ export const teampaceCheck = guarded(async () => {
           `run ${run} · cold ${cold} · mark in the line ${inLine} · a metre's step ${short} · own off ${off} · silent ${sil} · ${f2(d)} m, exposure here ${f2(exposedAt(g, m, p))}, at the mark ${f2(exposedAt(g, m, to))}`);
         F.verdict(!!mid && legOn && !legFresh && !legLine && !legEnd, 'cover: a leg begun is run out — on floor the line has left, the loud gone cold, a man already running keeps the run; not to a mark in the line, not the last half metre',
           mid ? `${f2(legLeft)} m short of the mark, exposure there ${f2(exposedAt(g, m, mid))} (the bar to start is ${TEAMPACE.dashSeen}): running ${legOn} · asked afresh ${legFresh} · mark in the line ${legLine} · half a metre left ${legEnd}` : 'no floor on the leg where the line has let go of him short of the mark');
+        // … but a leg he LEFT is not one he is on: started for the mark, then fallen in (nobody asks of the mark for a second and a half), the fight cold, and
+        // sent to the same mark again — he walks. (Within the quarter second between asks the answer is kept, and at the next ask the leg is still his)
+        { const why = R.O.give('fallIn', R.O.targetAt([...g.player.char.pos]), 'all'); if (why) throw new Error(`teampace: 'fall in' refused — ${why}`); R.step(2); R.put(m, p);
+          const on = () => teamDash(g, m, to, d) !== null, later = (n: number) => { R.step(n); R.put(m, p); g.fight.hotT = -1e9; return on(); };
+          pictureTell(g, m, H, E); g.fight.hotT = g.time; const began = on(), kept = later(8), stillHis = later(12), left = later(90); R.step(20); R.put(m, p); pictureTell(g, m, H, E); g.fight.hotT = g.time; const afresh = on();   // (told of the man again: what he knows of him fades by the second — and a third of a second on: an answer stands a quarter)
+          F.verdict(began && kept && stillHis && !left && afresh, 'cover: a leg he left is not run again for nothing — begun, then fallen in for a second and a half, the fight cold, sent to the same mark: he walks; loud again, he runs',
+            `begun ${began} · 0.13 s on, cold: ${kept} (the answer kept) · 0.33 s on, cold: ${stillHis} (the leg still his) · 1.8 s on, cold: ${left} · loud again a third of a second later: ${afresh}`); }
         console.log(`    (printed, not judged — the order deals each man his own spot: sent there hot, top ${f2(wHot.top)} m/s, cover runs written ${wHot.n}${wHot.why ? `, refused: ${wHot.why}` : ''} · cold, top ${f2(wCold.top)} m/s, written ${wCold.n})`); }
       // 7. boots
       { const run = teamTread(g, m, 4.7, 0.45) as number, jog = teamTread(g, m, 2.3, 0.45) as number, at = teamTread(g, m, TEAMPACE.runAt - 0.01, 0.45) as number;
