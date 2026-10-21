@@ -21,7 +21,7 @@
 //                   row on one man's menu names him; the squad block says 'F blows it' of a set charge only while F would, and a charge on a word that
 //                   is still waiting for the other pair is not blown by a second F; F with a door menu up is the wait row's second key (from the door's first page it
 //                   turns to the tools with the row on)
-//   squadplay-off   the pair build (two teammates) has none of it: no 'go' row, no 'wait' row, the digits past 5 (and 0) do nothing, F is not the word; and with four,
+//   squadplay-off   the pair build (two teammates) has none of it: no 'go' row, no 'wait' row, the digits past 5 (and 0) do nothing, F is not the word (unless the small squad's word, DOORTOOLS.wordSmall, is on: then it is, from a plain stack); and with four,
 //                   DOORTOOLS.wordOnKey false leaves F as it was
 import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -362,8 +362,11 @@ export const squadplayOff = guarded(async () => {
     verdict(R.ops.length === 2 && rows.length === 5 && rows.every((r, i) => r.key === String(i + 1)) && rows[4].text === 'door tools ▸' && heads.size === 1 && !/far side/.test([...heads][0]) && pageOk && tools.length === 5 && tools.slice(0, 4).every((r, i) => r.key === String(i + 1)) && !/^\d$/.test(String(tools[4].key ?? '')) /* (the frag row at the foot: on G, no digit) */ && !tools.some(r => r.head === WORD_HEAD || /wait for my word|^go\b/.test(r.text)),
       'two teammates: the door menu is its five rows under the one header and, behind 5, the four door tools on 1 to 4 with the frag row on G under them — no \'go\', no \'wait for my word\', no key past 5', `${fmtRows(rows)} ▸ ${fmtRows(tools)}`);
     verdict(up && n1 === n0 && up9 && n2 === n0 && backOk && l?.order === 'stack', '0 and 9 with the menu up do nothing (it stays, no order); Esc on the tools page steps back to the first; 1 then stacks the pair', `after 0: menu up ${up}, orders ${n1 - n0} · after 9: menu up ${up9}, orders ${n2 - n0} · back on the first page ${backOk} · ${line(l)}`);
-    const st0 = NB.state; R.press(F); R.step(30); const note = R.notes().filter(s => /waiting/.test(s));
-    verdict(D.stats.words === 0 && O.log.every((x: any) => x.order !== 'go') && note.length === 0 && NB.state !== st0, 'F with the pair stacked is not the word: it is the breach drill\'s key as before, and the block offers no \'go\'', `words ${D.stats.words} · drill '${st0}' → '${NB.state}' · waiting lines ${note.length}`); }
+    const st0 = NB.state, pre = R.notes().filter(s => /waiting/.test(s)); R.press(F); R.step(30); const note = R.notes().filter(s => /waiting/.test(s)), go = O.log.filter((x: any) => x.order === 'go').length;
+    // (the small squad's word, DOORTOOLS.wordSmall, on in the page: there the stacked pair DOES wait on F — `probes.ts wordsmall` owns that rule; this line says which of the two a stand has)
+    if (DOORTOOLS.wordSmall) verdict(pre.length === 1 && /^\[F\] go\b/.test(pre[0]) && D.stats.words === 1 && go === 1 && R.last()?.order === 'go' && NB.state === st0 && note.length === 0,
+      'DOORTOOLS.wordSmall on: F with the pair stacked IS the word — the block offered it on F, one \'go\' is filed, the breach drill is not touched and nobody is left waiting', `"${pre.join(' ; ')}" · words ${D.stats.words} · go ${go} · ${line(R.last())} · drill '${st0}' → '${NB.state}' · waiting lines ${note.length}`);
+    else verdict(D.stats.words === 0 && go === 0 && pre.length === 0 && note.length === 0 && NB.state !== st0, 'F with the pair stacked is not the word: it is the breach drill\'s key as before, and the block offers no \'go\'', `words ${D.stats.words} · drill '${st0}' → '${NB.state}' · waiting lines ${note.length}`); }
   { const R = await rig(9, CORRIDOR, { knobs: () => { DOORTOOLS.wordOnKey = false; } }); const { O, D, NB } = R;
     const stacked = stackBoth(R); R.who('all'); const note = R.notes().filter(s => /waiting/.test(s)).join(' ; '), st0 = NB.state;
     R.press(F); R.step(30); const w0 = D.stats.words, st1 = NB.state;
