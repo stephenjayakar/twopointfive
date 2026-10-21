@@ -203,7 +203,6 @@ export class GlassBreak {
   onRelease: ((f: GlassFragment) => void) | null = null;
   private types = new Map<number, GlassType>();
   private ext = new Map<number, number>();
-  private gap = new Map<number, number>();
   private blasted: { t: number; at: Vec3; k: Map<number, number> }[] = [];
   private releasedThisFrame = 0;
   constructor(private g: Game) {
@@ -247,17 +246,17 @@ export class GlassBreak {
     if (outside ? b.h[1] < 0.4 : Math.max(b.h[0], b.h[2]) < 0.35) return 'laminated';   // clerestory strips hold, and a narrow sidelight: under either rule
     if (!GLASSREAL.place) return outside ? 'tempered' : 'annealed';   // the first rule, by the wall: the frontage and the windows are safety glass, an interior partition plain float
     const foot = b.c[1] - b.h[1];   // GLASSREAL.place, by where the pane sits
-    return foot < GLASSREAL.lowM || (foot < GLASSREAL.doorFootM && this.doorGap(b, bi) <= GLASSREAL.doorM) ? 'tempered' : 'annealed';
+    return foot < GLASSREAL.lowM || (foot < GLASSREAL.doorFootM && this.doorGap(b) <= GLASSREAL.doorM) ? 'tempered' : 'annealed';
   }
-  /** metres on the floor plan from pane b to the nearest door's opening (the closed leaf's line, hinge to latch) — Infinity on a level with no door. Cached per pane:
-   *  neither statics nor hinges move. */
-  private doorGap(b: Box, bi: number): number {
-    let d = bi >= 0 ? this.gap.get(bi) : undefined; if (d !== undefined) return d;
+  /** metres on the floor plan from pane b to the nearest door's opening (the closed leaf's line, hinge to latch) — Infinity on a level with no door. Worked out each time
+   *  it is asked, kept nowhere: it is asked only of a pane that starts above lowM and under doorFootM, a handful of sill windows against the level's doors, and a
+   *  table of answers was game state a restarted level did not share with a fresh one (cleanrestart). */
+  private doorGap(b: Box): number {
     const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), wide = b.h[0] >= b.h[2], hu = Math.max(b.h[0], b.h[2]); const ax = wide ? cs : sn, az = wide ? -sn : cs;
     const a: Vec3 = [b.c[0] - ax * hu, 0, b.c[2] - az * hu], c: Vec3 = [b.c[0] + ax * hu, 0, b.c[2] + az * hu];
-    d = Infinity;
+    let d = Infinity;
     for (const door of this.g.doors?.list ?? []) { const D = door.def; d = Math.min(d, segSegClosest(a, c, [D.hinge[0], 0, D.hinge[1]], [D.hinge[0] + Math.cos(D.closedDir) * D.width, 0, D.hinge[1] + Math.sin(D.closedDir) * D.width]).dist); }
-    if (bi >= 0) this.gap.set(bi, d); return d;
+    return d;
   }
   /** the type of pane bi as it will break (an override from setType, else typeOf) — null for anything that is not a sheet of glass */
   typeOfPane(bi: number): GlassType | null { const b = this.g.level.boxes[bi]; if (!b || !(b.flags & BoxFlag.Glass) || Math.min(b.h[0], b.h[2]) > 0.05) return null; return this.types.get(bi) ?? this.typeOf(b, bi); }
