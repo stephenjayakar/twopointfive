@@ -1113,7 +1113,7 @@ function stackUp(g: Game, dt: number, input: Input): boolean {
   const pull = input.lmb() || input.lmbHit() || (pl.rifle.attachment !== null && (input.rmb() || input.rmbHit())) || (W.slow && !!w.owed && !(w.up! > 0));   // (…or a click kept from the take)
   if (hit && hit.index < 1e6) {
     w.up = 0; w.rise = 0; w.owed = 0; hold();
-    if (input.lmbHit() && g.time - (w.sayT ?? -10) > 1.5) { w.sayT = g.time; g.msg('the wall is in the way — step out past its end, or off it (Q)'); }
+    if (input.lmbHit() && g.time - (w.sayT ?? -10) > 1.5) { w.sayT = g.time; g.msg('the wall is in the way — step out past its end, or off it'); }
     return false;
   }
   const was = w.up! > 0;

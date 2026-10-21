@@ -20,7 +20,7 @@ export const UPPERS: { name: string; mode: UpperMode; autoFire: boolean }[] = [
 export const STANCES: Stance[] = ['none', 'highReady', 'lowReady', 'stack', 'wall'];
 /** Sam's FN2000 in the viewer (ViewerState.rifle): the game's 4 / X / E as three positions */
 export const RIFLE_NAMES = ['0 · not carried', '1 · slung across the back', '2 · in both hands'];
-export const STANCE_NAMES = ['none', 'high ready (pieing / covering)', 'low ready (moving)', 'stack (on a door)', 'wall (back to the wall: Q)'];
+export const STANCE_NAMES = ['none', 'high ready (pieing / covering)', 'low ready (moving)', 'stack (on a door)', 'wall (back to the wall)'];
 /** the game's sidle along a wall (player.ts WALL_TURN): the legs turn this far toward the direction of travel and the animator is told the wall is that far round
  *  (anim.wallYaw) — emulated here whenever the 'wall' stance is walked, so the torso staying square to a wall behind the treadmill can be judged */
 export const WALL_TURN = 55 * DEG, WALL_PEEK_LOOK = 30 * DEG;
