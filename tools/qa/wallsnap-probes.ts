@@ -33,11 +33,10 @@ const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok
 const WALL = { z: 10.06, station: 10.51, xLo: 18.2, xHi: 25 };
 const BONES = ['hips', 'spine2', 'chest', 'neck', 'head', 'upperArmL', 'upperArmR', 'forearmL', 'forearmR', 'handL', 'handR', 'thighL', 'thighR', 'shinL', 'shinR', 'footL', 'footR', 'toeL', 'toeR'];
 
-export async function world(on: boolean, seed = 95, pin = false) {
+export async function world(on: boolean, seed = 95) {
   Math.random = mulberry32(seed);
   const W: any = await standUp(); const g = W.game, input = W.input;
   WALLSNAP.on = on; AIM.player.level = on ? 1 : 0;   // (with the switch on the gun is carried LEVEL along the cursor's heading, as the page ships it; off = the frozen stand as every older probe has it)
-  if (pin) WALLSNAP.slow = WALLSNAP.voice = false;   // (`pin`: take / landing / off-it below are written against the take's own seconds, the one scuff and the pose's quick way out; wallfelt-check.ts holds the two newer rules in their place, and probes.ts puts every table back after each probe. Every other probe here runs the hold as the stand has it)
   g.playerInvisible = true; g.godMode = true; g.aiEnabled = false; W.cam.yaw = 0; W.cam.rebuild();
   for (let i = 0; i < 5; i++) W.step(DT);
   g.guards.forEach((gd: any, i: number) => { gd.hold = true; gd.char.pos = [38.5, 0, 1.5 + i * 1.2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.update(0); });
@@ -61,7 +60,7 @@ export async function world(on: boolean, seed = 95, pin = false) {
 
 async function take() {
   console.log('\n=== wallsnap-take ===');
-  const S = await world(true, 95, true); const { pl, c, g } = S;
+  const S = await world(true); const { pl, c, g } = S;
   // (start z, start yaw°): 0° faces +z = away from the north wall (back already to it), 180° = nose to it
   const cases: [number, number][] = [[10.6, 0], [10.8, 90], [11.0, 180], [11.15, 200], [10.9, -60]];
   const fails: string[] = []; const rows: string[] = []; let through = Infinity, throughAt = '';
@@ -93,10 +92,11 @@ async function take() {
     }
     if (!pl.wall) continue;
     const want = wsTakeSecs(Math.abs(p0[2] - WALL.station), pl.wall.yawD);
-    if (Math.abs(T.t - want) > 1e-9 || T.t < 0.12 - 1e-9 || T.t > 0.30 + 1e-9) fails.push(`from z ${z} yaw ${yaw}: take clock ${f3(T.t)} s (want ${f3(want)}, within 0.12‥0.30)`);
+    const k = WALLSNAP.slow ? Math.max(0.25, WALLSNAP.slowTake) : 1;   // (the unhurried take: the same clock, times as long)
+    if (Math.abs(T.t - want) > 1e-9 || T.t < 0.12 * k - 1e-9 || T.t > 0.30 * k + 1e-9) fails.push(`from z ${z} yaw ${yaw}: take clock ${f3(T.t)} s (want ${f3(want)}, within ${f2(0.12 * k)}‥${f2(0.30 * k)})`);
     if (Math.abs(frames - Math.ceil(T.t / DT - 1e-6)) > 1) fails.push(`from z ${z} yaw ${yaw}: landed after ${frames} frames, the clock is ${f3(T.t)} s`);
     const dist = Math.abs(p0[2] - WALL.station);
-    if (dist > 0.05 && first < 0.1 * dist) fails.push(`from z ${z} yaw ${yaw}: ${f3(first)} m on the key's frame of ${f2(dist)} (want ≥ 10 %: it must move at once)`);
+    if (dist > 0.05 && first < 0.1 / k * dist) fails.push(`from z ${z} yaw ${yaw}: ${f3(first)} m on the key's frame of ${f2(dist)} (want ≥ ${(10 / k).toFixed(0)} %: it must move at once)`);
     if (dist > 0.05 && Math.abs(pl.wall.yawD) > 0.3 && yawMid < posMid + 0.03) fails.push(`from z ${z} yaw ${yaw}: at half time the turn is ${f2(yawMid)} done, the glide ${f2(posMid)} (the turn must lead)`);
     if (back) fails.push(`from z ${z} yaw ${yaw}: he moved back out from the wall during the take`);
     if (dist > 0.2 && Math.max(firstMoveL < 0 ? 9 : firstMoveL, firstMoveR < 0 ? 9 : firstMoveR) < 0.15) fails.push(`from z ${z} yaw ${yaw}: both feet had left their spots by ${f2(Math.max(firstMoveL, firstMoveR))} of the take (one goes at once, the other stays planted until its turn)`);
@@ -112,7 +112,7 @@ async function take() {
 
 async function landing() {
   console.log('\n=== wallsnap-landing ===');
-  const S = await world(true, 95, true); const { pl, c, g, W } = S; const fails: string[] = [];
+  const S = await world(true); const { pl, c, g, W } = S; const fails: string[] = [];
   S.place(21, 11.0, 180, 'pistol');
   W.audioLog = []; const ev0 = g.events.length; const noise0 = pl.noise;
   S.tap('KeyQ'); let landed = -1, dipMin = Infinity; const hips: number[] = [];
@@ -122,8 +122,10 @@ async function landing() {
   const dip = rest - dipMin, back = Math.abs(hips[landed + 30] - rest);
   if (!(dip >= 0.02 && dip <= 0.06)) fails.push(`the pelvis dipped ${f3(dip)} m in the sixth of a second after the back landed (want 0.02‥0.06)`);
   if (back > 0.006) fails.push(`still ${f3(back)} m off its rest height half a second after landing`);
-  const scuffs = (W.audioLog as any[]).filter(a => a.name === 'footSoft').length;
+  const lands = WALLSNAP.voice ? 'wallOn' : 'footSoft';   // (heard: the wall's own sound stands in for the scuff, never beside it)
+  const scuffs = (W.audioLog as any[]).filter(a => a.name === lands).length, both = WALLSNAP.voice ? (W.audioLog as any[]).filter(a => a.name === 'footSoft').length : 0;
   if (scuffs !== 1) fails.push(`${scuffs} scuffs played for one take (want exactly 1)`);
+  if (both) fails.push(`${both} old scuff(s) played beside the wall's own sound`);
   const steps = g.events.slice(ev0).filter((e: any) => e.kind === 'step' || e.kind === 'prop' || e.kind === 'shot');
   if (steps.length) fails.push(`${steps.length} hearing event(s) filed by the take (${steps.map((e: any) => e.kind).join(', ')}): it must be silent to everybody but the player`);
   if (pl.noise > noise0 + 1e-6) fails.push(`the take raised his noise meter (${f3(noise0)} → ${f3(pl.noise)})`);
@@ -191,16 +193,17 @@ async function reach() {
 
 async function offIt() {
   console.log('\n=== wallsnap-off ===');
-  const S = await world(true, 95, true); const { pl, c } = S; const fails: string[] = []; const rows: string[] = [];
+  const S = await world(true); const { pl, c } = S; const fails: string[] = []; const rows: string[] = [];
   let nHold = 0; const hold = (kit: 'pistol' | 'empty' = 'pistol') => { nHold++; S.place(21, 10.9, 180, kit); S.tap('KeyQ'); S.step(50); if (!pl.wall) fails.push(`(staging) hold ${nHold} was not taken`); return !!pl.wall; };
   const stW = () => (c.anim as any).st.w.x as number;
+  const wOut = WALLSNAP.slow ? 0.45 : 0.2;   // (the unhurried way out leaves at slowOut, not outRate: 0.41 of the pose is left ten frames on, where the quick way leaves 0.09. Later than that the pistol's own lowered carry has him, so the bar stays at frame ten)
   // Q, nothing held
   if (hold()) {
     const p0 = v3.copy(c.pos); S.tap('KeyQ'); let w9 = 1; S.step(40, f => { if (f === 9) w9 = c.anim.stance === 'none' ? stW() : 0; });   // (a stance another rule put him in meanwhile — the pistol lowered at the wall he turned to — is that rule's weight, not the wall pose's)
     const d = v3.distXZ(c.pos, p0), dz = c.pos[2] - p0[2];
     if (pl.wall) fails.push('Q did not let go');
     if (!(d >= 0.02 && d <= 0.07 && dz > 0)) fails.push(`Q with nothing held moved him ${f3(d)} m (want 0.02‥0.07 off the plaster: he chose that shadow)`);
-    if (w9 > 0.2) fails.push(`the pose still at ${f2(w9)} ten frames after Q (want < 0.2)`);
+    if (w9 > wOut) fails.push(`the pose still at ${f2(w9)} ten frames after Q (want < ${wOut})`);
     if (pl.holstered) fails.push('the pistol he had when he took the wall is not back in his hand');
     if (c.anim.stanceOut !== 0) fails.push(`the quick way out is still armed (${c.anim.stanceOut}/s) once the pose has gone: the next stance he leaves would snap off`);
     rows.push(`Q, nothing held: ${f3(d)} m off the plaster, pose ${f2(w9)} at frame 10, pistol back in hand`);
