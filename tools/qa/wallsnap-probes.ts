@@ -33,10 +33,11 @@ const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok
 const WALL = { z: 10.06, station: 10.51, xLo: 18.2, xHi: 25 };
 const BONES = ['hips', 'spine2', 'chest', 'neck', 'head', 'upperArmL', 'upperArmR', 'forearmL', 'forearmR', 'handL', 'handR', 'thighL', 'thighR', 'shinL', 'shinR', 'footL', 'footR', 'toeL', 'toeR'];
 
-export async function world(on: boolean, seed = 95) {
+export async function world(on: boolean, seed = 95, pin = false) {
   Math.random = mulberry32(seed);
   const W: any = await standUp(); const g = W.game, input = W.input;
   WALLSNAP.on = on; AIM.player.level = on ? 1 : 0;   // (with the switch on the gun is carried LEVEL along the cursor's heading, as the page ships it; off = the frozen stand as every older probe has it)
+  if (pin) WALLSNAP.slow = WALLSNAP.voice = false;   // (`pin`: take / landing / off-it below are written against the take's own seconds, the one scuff and the pose's quick way out; wallfelt-check.ts holds the two newer rules in their place, and probes.ts puts every table back after each probe. Every other probe here runs the hold as the stand has it)
   g.playerInvisible = true; g.godMode = true; g.aiEnabled = false; W.cam.yaw = 0; W.cam.rebuild();
   for (let i = 0; i < 5; i++) W.step(DT);
   g.guards.forEach((gd: any, i: number) => { gd.hold = true; gd.char.pos = [38.5, 0, 1.5 + i * 1.2]; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.char.update(0); });
@@ -60,7 +61,7 @@ export async function world(on: boolean, seed = 95) {
 
 async function take() {
   console.log('\n=== wallsnap-take ===');
-  const S = await world(true); const { pl, c, g } = S;
+  const S = await world(true, 95, true); const { pl, c, g } = S;
   // (start z, start yaw°): 0° faces +z = away from the north wall (back already to it), 180° = nose to it
   const cases: [number, number][] = [[10.6, 0], [10.8, 90], [11.0, 180], [11.15, 200], [10.9, -60]];
   const fails: string[] = []; const rows: string[] = []; let through = Infinity, throughAt = '';
@@ -111,7 +112,7 @@ async function take() {
 
 async function landing() {
   console.log('\n=== wallsnap-landing ===');
-  const S = await world(true); const { pl, c, g, W } = S; const fails: string[] = [];
+  const S = await world(true, 95, true); const { pl, c, g, W } = S; const fails: string[] = [];
   S.place(21, 11.0, 180, 'pistol');
   W.audioLog = []; const ev0 = g.events.length; const noise0 = pl.noise;
   S.tap('KeyQ'); let landed = -1, dipMin = Infinity; const hips: number[] = [];
@@ -190,7 +191,7 @@ async function reach() {
 
 async function offIt() {
   console.log('\n=== wallsnap-off ===');
-  const S = await world(true); const { pl, c } = S; const fails: string[] = []; const rows: string[] = [];
+  const S = await world(true, 95, true); const { pl, c } = S; const fails: string[] = []; const rows: string[] = [];
   let nHold = 0; const hold = (kit: 'pistol' | 'empty' = 'pistol') => { nHold++; S.place(21, 10.9, 180, kit); S.tap('KeyQ'); S.step(50); if (!pl.wall) fails.push(`(staging) hold ${nHold} was not taken`); return !!pl.wall; };
   const stW = () => (c.anim as any).st.w.x as number;
   // Q, nothing held

@@ -233,6 +233,8 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORPATH.on = !q.has('nodoorpath') && q.get('doorpath') !== '0'; if (q.get('doorpath') === 'gun') DOORPATH.gun = true;
   WALLSNAP.on = !q.has('nowallsnap');   // back to the wall, the feel pass (game/wallsnap.ts): the take on one eased clock with stepping feet and a settle, the way off keeping his momentum, and Q with the rifle in hand STACKS on the wall (low ready; the cursor round an open end steps him out): ON in the page; ?nowallsnap = the hold as it was
   WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as Q does, Q still working — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
+  WALLSNAP.voice = q.get('wallvoice') !== '0';   // …heard (wallsnap.ts `voice`): his back landing on a wall and his stepping off it each have a sound, the player's ears only; ?wallvoice=0 = the faint scuff alone, as it was
+  WALLSNAP.slow = q.get('wallslow') !== '0';   // …and unhurried (wallsnap.ts `slow`): the take runs twice its seconds and the pose comes on and lets go at half its rate; ?wallslow=0 = the take as it was
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
   GLASSREAL.drop = q.get('glassdrop') !== '0'; GLASSREAL.place = q.get('glassplace') !== '0';   // glass as buildings have it (game/glassbreak.ts GLASSREAL): a toughened sheet goes white and drops at once, no wave across it; and a pane is toughened where it reaches the floor or is a door's panel, float where it starts at a sill — ON in the page; ?glassdrop=0 = the wave, ?glassplace=0 = outside toughened and inside float, as they were
@@ -430,6 +432,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AIRDUST.on': 'TPS_AIRDUST=1',
   'WALLSNAP.on': 'TPS_WALLSNAP=1',
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
+  'WALLSNAP.voice': 'TPS_WALLVOICE=1',
+  'WALLSNAP.slow': 'TPS_WALLSLOW=1',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'REARWATCH.on': 'TPS_REARWATCH=1',
   'STACKLINE.on': 'TPS_STACKLINE=1',
