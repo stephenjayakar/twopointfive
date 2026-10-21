@@ -8,14 +8,15 @@
 //     hashed radii — the concentric cracks, partial arcs (a share of the sectors has no middle chord). Round the site that cuts a CRATER (band 0), small PIECES round it
 //     (bands 1, 2) and, once the pane has RUN, long narrow DAGGERS out to the frame — every sector forks once past the rings, and most daggers are snapped across once on
 //     the way (bands 3‥6). A later blow's ring zone is fitted into the room the earlier ones left and territories are a power diagram, so no piece is ever re-cut.
-//   • TYPE decides what a blow does (typeOf: the facade's glazing is tempered, interior partitions annealed, narrow sidelights and clerestory strips laminated; setType
-//     overrides one pane):
+//   • TYPE decides what a blow does (typeOf: the facade's glazing is tempered, interior partitions annealed, narrow sidelights and clerestory strips laminated — or,
+//     under GLASSREAL.place, on in the page, by where the pane sits: to the floor or a door's panel tempered, from a sill annealed; setType overrides one pane):
 //       annealed  — a round (energy ≥ punchE) punches the CRATER out and leaves the star standing: radials part of the way into the sheet, two rings of pieces wedged round
 //                   the hole. A round landing on a piece knocks THAT piece out (the hole grows). When the pane has taken breakE.annealed of energy (or one blow of
 //                   runSingleE) the radials RUN to the frame: the sheet is daggers now, the blow that ran it breaks its own star's rings out (runStar), and the SUPPORT
 //                   rule drops what that leaves unheld — a beat later, staggered.
 //       tempered  — holds to breakE.tempered (one round), then DICES: the whole sheet lets go as a ragged wave outward from the blow over a fraction of a second, in
 //                   irregular CLUMPS of dice.
+//                   (GLASSREAL.drop, on in the page: no wave — the crazed sheet stands a tenth of a second and every clump leaves on one step.)
 //       laminated — a tight web round each blow (short radials, an outer ring, a sub-chord in every band) that never opens; only a blast close enough blows the whole
 //                   crazed SHEET out of its frame.
 //   • SUPPORT (heldSet / supportPass): a piece is HELD if the uncut sheet grips it, if it STANDS — on the sill or on a held piece below it across a crack flatter than
@@ -42,8 +43,9 @@ import { PLAYER_ID } from './consts';
 import { chaosOf } from './destruction';
 import { gpuFx } from './particleFx';
 import { WIND, WIND_FIELD, type WindSource } from './wind';
+import { segSegClosest } from './devices';
 import { GP_MAX_SITES, GP_FRAGS_PER_SITE, GP_MAX_SECTORS, GP_BANDS, GP_REMAINDER, GP_RHO_LO, GP_RHO_SPAN, type GpSite, type GpFrag, type GpDice, type Pt,
-  gpClassify, gpNearest, gpFragments, gpChordPt, gpHull, gpClipRect, gpPolyArea, gpUnfid, gpDiceClump, gpDiceKey, gpDicePoly } from './glassPattern';
+  gpClassify, gpNearest, gpFragments, gpChordPt, gpHull, gpClipRect, gpPolyArea, gpUnfid, gpDiceClump, gpDiceKey, gpDicePoly, gpDiceCentre } from './glassPattern';
 
 export type GlassType = 'annealed' | 'tempered' | 'laminated';
 /** the knobs (Tab ▸ Destruction ▸ Glass edits breakE / hangArea / blastM live; kept per machine by saveGlassBreak) */
@@ -95,6 +97,22 @@ export const GLASSBREAK = {
   gustSpeedK: 0.6,
   /** a pane is walked through once every piece reaching below this height (m above the floor) has fallen */
   walkClearH: 1.9,
+};
+/** GLASS AS BUILDINGS HAVE IT (two rules, each ON in the page — `?glassdrop=0`, `?glassplace=0` — and off here and on the frozen stand, `TPS_GLASSDROP=1`,
+ *  `TPS_GLASSPLACE=1`; Tab ▸ Destruction ▸ Glass breaking). Off = the build as it was: the wave below and typeOf's first rule.
+ *    drop  — toughened glass lets go ALL AT ONCE. Its stored stress crazes the whole sheet in a millisecond; nothing travels across it that an eye could follow. So
+ *            the sheet stands white for `hang` seconds and then every clump leaves on the one step (stepDice → dropAll), handed on as at most `blocks` fragments
+ *            that fall: out along the blow a little, no push across the pane. (The wave was the same release spread over half a second at diceSpeed.)
+ *            HEARD ONCE: `hang` is kept under GLASSBREAK.crackGap, so the sheet's breaking is the one crack and the one hearing event the blow's own clump files
+ *            (emit); its fall files no second, and the landings are falling glass's own sounds. A hang past crackGap would file a second of each.
+ *    place — which glass a pane is comes from WHERE IT SITS, as a glazier would have it: glass a body could fall into is safety glass. A pane whose foot is under
+ *            `lowM` above the floor (it reaches the floor: a partition, a shopfront, frontage on a kick wall) or that is a panel of a door (within `doorM` of a
+ *            door's opening on the plan and its foot under `doorFootM`: glass beside a door within a body's reach, not a light over it) is TOUGHENED; a window that starts at a sill is plain FLOAT glass, outside wall or not. Narrow inside
+ *            sidelights and high outside strips stay laminated, as they were. (The first rule read the wall instead: outside = toughened, inside = float.) */
+export const GLASSREAL = {
+  drop: false, place: false,
+  hang: 0.1, blocks: 48,
+  lowM: 0.7, doorM: 0.3, doorFootM: 1.5,
 };
 export const GLASSBREAK_DEFAULTS = { breakE: { ...GLASSBREAK.breakE }, hangArea: GLASSBREAK.hangArea, blastM: GLASSBREAK.blastM, blastRunK: GLASSBREAK.blastRunK, blastDiceK: GLASSBREAK.blastDiceK, blastSheetK: GLASSBREAK.blastSheetK, rakeOpen: GLASSBREAK.rakeOpen };
 /** the tuning rounds' knobs the panel keeps beside the first four (each 0‥1) */
@@ -185,6 +203,7 @@ export class GlassBreak {
   onRelease: ((f: GlassFragment) => void) | null = null;
   private types = new Map<number, GlassType>();
   private ext = new Map<number, number>();
+  private gap = new Map<number, number>();
   private blasted: { t: number; at: Vec3; k: Map<number, number> }[] = [];
   private releasedThisFrame = 0;
   constructor(private g: Game) {
@@ -221,10 +240,24 @@ export class GlassBreak {
   }
   private exteriorOf(bi: number): boolean { return this.skySide(bi) !== 0; }
   /** the type a pane breaks as when nobody has said (setType): outside walls are safety glass — tempered, a low clerestory strip laminated; inside, a narrow sidelight
-   *  is laminated and a partition plain float (annealed). The same rule on every level; which pane is which glass wants authoring (fracture.md, a call left open). */
+   *  is laminated and a partition plain float (annealed). The same rule on every level; which pane is which glass wants authoring (fracture.md, a call left open).
+   *  Under GLASSREAL.place the pane's own place decides between toughened and float (the table's note); the laminated two are the same either way. */
   typeOf(b: Box, bi = this.g.level.boxes.indexOf(b)): GlassType {
-    if (bi >= 0 && this.exteriorOf(bi)) return b.h[1] < 0.4 ? 'laminated' : 'tempered';   // clerestory strips hold; the frontage and the windows are safety glass
-    return Math.max(b.h[0], b.h[2]) < 0.35 ? 'laminated' : 'annealed';   // a narrow sidelight holds; an interior partition is plain float glass
+    const outside = bi >= 0 && this.exteriorOf(bi);
+    if (outside ? b.h[1] < 0.4 : Math.max(b.h[0], b.h[2]) < 0.35) return 'laminated';   // clerestory strips hold, and a narrow sidelight: under either rule
+    if (!GLASSREAL.place) return outside ? 'tempered' : 'annealed';   // the first rule, by the wall: the frontage and the windows are safety glass, an interior partition plain float
+    const foot = b.c[1] - b.h[1];   // GLASSREAL.place, by where the pane sits
+    return foot < GLASSREAL.lowM || (foot < GLASSREAL.doorFootM && this.doorGap(b, bi) <= GLASSREAL.doorM) ? 'tempered' : 'annealed';
+  }
+  /** metres on the floor plan from pane b to the nearest door's opening (the closed leaf's line, hinge to latch) — Infinity on a level with no door. Cached per pane:
+   *  neither statics nor hinges move. */
+  private doorGap(b: Box, bi: number): number {
+    let d = bi >= 0 ? this.gap.get(bi) : undefined; if (d !== undefined) return d;
+    const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), wide = b.h[0] >= b.h[2], hu = Math.max(b.h[0], b.h[2]); const ax = wide ? cs : sn, az = wide ? -sn : cs;
+    const a: Vec3 = [b.c[0] - ax * hu, 0, b.c[2] - az * hu], c: Vec3 = [b.c[0] + ax * hu, 0, b.c[2] + az * hu];
+    d = Infinity;
+    for (const door of this.g.doors?.list ?? []) { const D = door.def; d = Math.min(d, segSegClosest(a, c, [D.hinge[0], 0, D.hinge[1]], [D.hinge[0] + Math.cos(D.closedDir) * D.width, 0, D.hinge[1] + Math.sin(D.closedDir) * D.width]).dist); }
+    if (bi >= 0) this.gap.set(bi, d); return d;
   }
   /** the type of pane bi as it will break (an override from setType, else typeOf) — null for anything that is not a sheet of glass */
   typeOfPane(bi: number): GlassType | null { const b = this.g.level.boxes[bi]; if (!b || !(b.flags & BoxFlag.Glass) || Math.min(b.h[0], b.h[2]) > 0.05) return null; return this.types.get(bi) ?? this.typeOf(b, bi); }
@@ -465,6 +498,7 @@ export class GlassBreak {
   }
   private diceDone(st: PaneState) { st.gone = true; st.walkable = true; if (st.exterior) this.gustDirty = true; }
   private stepDice(st: PaneState) {
+    if (GLASSREAL.drop) { if (this.g.time - st.dice!.t0 >= GLASSREAL.hang) this.dropAll(st, st.dice!); else st.walkable = false; return; }
     const D = st.dice!; const R = (this.g.time - D.t0 - GLASSBREAK.diceHang) * GLASSBREAK.diceSpeed; let n = 0;
     // (clumps with the same key go together whatever the budget: the renderer opens by ONE threshold on the key — fill() hands it the midpoint between the last clump out and the next in)
     while (D.next < D.clumps.length && (D.clumps[D.next].key <= D.clumps[D.next - 1].key + DICE_TIE || (D.clumps[D.next].key <= R && n < GLASSBREAK.clumpsPerFrame))) { this.releaseClump(st, D, D.clumps[D.next]); D.next++; n++; }
@@ -481,6 +515,28 @@ export class GlassBreak {
     const velocity = v3.add(v3.add(v3.scale(N, GLASSBREAK.out * (0.3 + 0.9 * h1)), v3.scale(spread, 0.5 * h2)), [0, -0.3 - 0.5 * h3, 0]);
     this.emit(st, { pane: st.bi, type: st.type, kind: 'clump', outline: this.outline(st, pts, outSign), centre: this.toWorld(st, cen[0], cen[1]), normal: N, thickness: 2 * st.ht, area,
       velocity, spin: [(h1 - 0.5) * GLASSBREAK.spin, (h2 - 0.5) * 2, (h3 - 0.5) * GLASSBREAK.spin], tint: v3.copy(st.box.albedo), grain: GLASSBREAK.diceGrain, cause: 'dice', who: st.lastWho, seed: (D.seed ^ Math.imul(c.k + 1, 0x9E3779B1)) >>> 0 }, c.k);
+  }
+  /** GLASSREAL.drop: every clump still standing leaves on this step. The sheet is handed on in square BLOCKS of clumps, at most GLASSREAL.blocks of them (one
+   *  fragment a clump would be several hundred emit records in a frame from one facade sheet): a block is the rectangle of its lattice cells, its area theirs, its
+   *  centre the mean of its clumps'. They fall — out along the blow a little, most near it, and down; nothing across the pane. */
+  private dropAll(st: PaneState, D: Dice) {
+    const left = D.clumps.length - D.next; let m = 1; while (Math.ceil(D.cols / m) * Math.ceil(D.rows / m) > Math.max(1, GLASSREAL.blocks)) m++;
+    const du = 2 * D.hu / D.cols, dv = 2 * D.hv / D.rows; const bc = Math.ceil(D.cols / m), br = Math.ceil(D.rows / m);
+    const n = new Uint16Array(bc * br), su = new Float64Array(bc * br), sv = new Float64Array(bc * br);
+    for (; D.next < D.clumps.length; D.next++) {
+      const c = D.clumps[D.next]; D.out[c.k] = 1; GB_STATS.clumps++; GB_STATS.dropped++;
+      const b = Math.floor(c.r / m) * bc + Math.floor(c.c / m); const p = gpDiceCentre(D, c.c, c.r); n[b]++; su[b] += p[0]; sv[b] += p[1];
+    }
+    const nrm = this.normalOf(st); const outSign = v3.dot(nrm, st.lastDir) >= 0 ? 1 : -1; const N = v3.scale(nrm, outSign);
+    for (let b = 0; b < n.length; b++) {
+      if (!n[b]) continue; const c0 = (b % bc) * m, r0 = Math.floor(b / bc) * m;
+      const u0 = -D.hu + c0 * du, u1 = Math.min(D.hu, u0 + m * du), v0 = -D.hv + r0 * dv, v1 = Math.min(D.hv, v0 + m * dv); const cu = su[b] / n[b], cv = sv[b] / n[b];
+      const h1 = hash01(st.bi * 7919 + b * 131), h3 = hash01(b * 7 + st.bi); const near = Math.max(0, 1 - Math.hypot(cu - D.u, cv - D.v) / 0.6);
+      this.emit(st, { pane: st.bi, type: st.type, kind: 'clump', outline: this.outline(st, [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], outSign), centre: this.toWorld(st, cu, cv), normal: N, thickness: 2 * st.ht, area: n[b] * du * dv,
+        velocity: v3.add(v3.scale(N, GLASSBREAK.out * (0.1 + 0.25 * h1 + 0.8 * near)), [0, -0.3 - 0.5 * h3, 0]), spin: [(h1 - 0.5) * GLASSBREAK.spin, 0, (h3 - 0.5) * GLASSBREAK.spin], tint: v3.copy(st.box.albedo), grain: GLASSBREAK.diceGrain, cause: 'dice', who: st.lastWho, seed: (D.seed ^ Math.imul(b + 1, 0x9E3779B1)) >>> 0 }, b);
+    }
+    this.plog(st, `drops: ${left} clumps as blocks of ${m} × ${m}`);
+    this.diceDone(st);
   }
   private releaseSheet(st: PaneState, away: Vec3, k: number) {
     if (st.gone) return;
