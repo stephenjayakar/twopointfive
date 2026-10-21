@@ -162,7 +162,7 @@ const ROWS_BEFORE_THE_TREE = /^(wand-kit|wand-tile)$/;
 // takes — and that is kitdeal-check.ts's and bigslot-check.ts's to hold. The same for the probes that read a door's tools page row for row against the
 // pair's: with a tool in the squad the page has the big slot's row on its own key, and the walk that reads that page as the page opens it, in every
 // scenario, is orderkeys-walk. Held off on every stand, word and table, unless whoever runs the tool set the word.
-const MORE_AS_IT_WAS = /^(frameholds-tools|doortest|doormenu-rows|thresholdmenu-rows|shutdoor-menu|silent-pick|silent-tools|silent-boot|pressorders-squad4|pressorders-nightbreach4)$|^kitpaste(-|$)/;   // (kitpaste: its squads' big slots are the table's; a paste over a lent tool is kitdeal-more's line)
+const MORE_AS_IT_WAS = /^(frameholds-tools|doortest|doormenu-rows|thresholdmenu-rows|shutdoor-menu|silent-pick|silent-tools|silent-boot|pressorders-squad4|pressorders-nightbreach4|squadplay-wait|squadplay-side)$|^kitpaste(-|$)/;   // (kitpaste: its squads' big slots are the table's; a paste over a lent tool is kitdeal-more's line. squadplay-wait, -side: a four's door tools page is read row for row, and the lent shotgun adds 'H shotgun and clear')
 /** PROBES WRITTEN AGAINST ONE CARD FOR EVERY MISSION (kit.ts KITDEAL.stealth, 10-20): on the shipped stand a stealth run wears your STEALTH card, issued as the
  *  mission's kit, and a sponge round rides five to a pouch — so a probe that changes the loud card and stages a quiet run alone, or prices sponge rounds a pouch
  *  each, runs with the key held off (TPS_KITSTEALTH set by hand wins). The rule's own lines are kitstealth's. */
