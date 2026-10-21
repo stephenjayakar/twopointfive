@@ -143,6 +143,40 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line 2 keeps the key down past the hold. SEEN: 22 of 22 on both stands, one seed; `CMDRING_BREAK=1` fails 18 of 22 on both. NEVER seen on a GPU and
   never played: whether 0.2 s is the right hold, and whether an order on the key coming UP (not going down, as B's is) is quick enough to feel like B,
   are the maintainer's to say. No tally run: the switch is off on both stands.
+- **Q is the squad's command key; B gives nothing; Tab is the page's again** (`KEYMAP.qCmd`, `MOVED`, `cmdOnQ()` in `src/host/keymap.ts`; the
+  maintainer, 10-21, once walking into a wall had made the wall hold's key spare: "snapping feels good, we can remove Q", "let's move the squad command
+  button to Q then too", "from tab", "let's unmap B too then", "so it's just Q, and the quick tap should be exactly the same as B, right?"). WHERE IT
+  SITS: on the BOARD, nowhere in the game. `ORDERS.quickKey` is still the code 'KeyB', which every recording, tape and tool writes; the board gives that
+  code off the Q key and gives nothing off the B key (the quick order's row, id `KeyB`, has `['KeyQ']` for its keys in the build). So a tap of Q IS the
+  press B was, by the one read the game has for it: no knob table, no `FROZEN_HOLDS` row, no journal key, and both stands (whose Input has no keyboard)
+  are as they were. The row keeps its id, so a table kept before with the command on another key means what it meant, and its cap in the build's words
+  stays 'B': `keyText` / `keyCap` turn 'B on the blue door', the key card's 'X · B · T · F' and the HUD's cap into the key it is on. No row was added
+  and the wall hold's cap is still 'Q'. ONLY WITH `qFree`: `?qfree=0` (Q the wall's) leaves the command on B. `?bkey` = the command on B for a visit.
+  `?keybinds=0` leaves it on Q (the build's own board). Q NEVER MEANS TWO THINGS: while the command has Q the wall hold does not fall back to Q when
+  walking in is switched off (`freeNow()` ignores `freeWhen`); it then has no key until the player gives it one in Options ▸ Controls, and the walk-in
+  row's line says so. The wall hold put on Q by hand is a swap: the command is left with no key, and says so. The command put back on B by hand is kept
+  as he set it, like a freed row, and Reset is Q again. THE RING'S KEY (`CMDRING.key`) is the command's own code and no longer Tab: under `?cmd` a tap
+  of Q gives the order as the key comes up (inside `holdSecs`, the one way it differs from the plain key, which gives it as the key goes down), Q kept
+  down opens the ring, and plan mode's toggle (`?cmd&cmdplan`) is Shift + Q. Where the bullets above say Tab for the ring's key, read the command key;
+  `main.ts` gives Tab back to `ui/tabkey.ts` and the back key. THE MARK AT THE CURSOR IS A GAME SETTING (`CMDRING.hint`; the maintainer of the glyph
+  and outline that were always there with the ring on: "I don't really like the always on icon", "we can make the always on icon a game setting"): OFF
+  unless chosen, a row in Options ▸ Game ('Order mark at the cursor') kept on the machine (`twopointsix.options`, `cmdhint`), `?cmdhint` for a visit,
+  with the ring or without (`hintView` no longer waits on `CMDRING.on`). Off, the outline and glyph show only while the ring's key is down and in the
+  ring's middle. HIS QUESTION, whether overlays stay longer after a tap: the plan a quick order draws is the same stamped row either way
+  (`AUTOPILOT.showSecs`, `floorplan.ts showSecsOf`), 4.0 s after the quick key and 4.0 s after a tap by `cmdring-check.ts` line 21; what stayed was
+  that always-on mark under a resting cursor. CHECKS: `tools/qa/qkey-check.ts` (`probes.ts qkey`, families squadorders and player; `QKEY_BREAK=1` =
+  the board as it was, every line fails), 5 of 5 on both stands: the boot and its three words · Q gives 'KeyB', B gives '', no other key moved, the
+  wall hold keyless with the walk-in on or off · the words · his own keys (back on B and kept, Reset, an old table, the wall given Q, 2,563 moves by a
+  die with no key on two rows) · THE GAME on this stand, the room clear with four: the floor, a door, the door again once stacked, the floor, once
+  with the code written straight in and once off the Q key through `game/input.ts`'s own listeners, leave the same four rows to the millisecond
+  (move, stack, bangClear, move) and one run digest, and the B key files nothing. `cmdring-check.ts` 25 of 25 on both stands (lines 20 to 22 are
+  new: Tab gives nothing, the plan's time, the mark with the ring off; `CMDRING_BREAK=1` fails 17) and `planmode-check.ts` 28 of 28 on both.
+  `keybinds-check.ts` asks the wall hold's rule by itself, the command left on B (its boots add `bkey`), 13 of 13 on both stands; the last three
+  lines of `keybinds-page.cjs` were given `bkey` the same way and that page tool was NOT rerun. ON THE PAGE, real keys, headless Chromium on the
+  software adapter, three loads of the four-man room clear with no console or GPU error: plain, Tab and B give nothing, Q down is 'move' in the order
+  book on that frame, no mark at the cursor, the HUD's cap reads Q · `?cmd`, Q down shows the pressed mark and gives nothing, Q up gives 'move', Q kept
+  down opens the ring and gives the lit wedge · `?cmdhint`, the mark is at the cursor with no ring. NOT DONE: nobody has played it; never seen on a
+  GPU; the Options row was not clicked in a browser; a machine whose kept table already has another row on Q opens with the command on no key.
 - **Plan mode, a prototype** (`src/game/planmode.ts`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that
   requires explicitly leaving"; the design: `rebuild/commanding/command-mode.md`). OFF in the module and on BOTH stands (no `FROZEN_HOLDS` row: it is
   not a shipped-on rule); the page raises it only when asked beside the ring (`?cmd&cmdplan`, or the debugger's tick 'Tab ▸ the ring ▸ plan mode on
