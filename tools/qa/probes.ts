@@ -3210,6 +3210,7 @@ if (on('autopilot', 'squadorders', 'all')) await run('autopilot', async () => (a
 if (on('cmdring', 'squadorders', 'all')) await run('cmdring', async () => (await import('./cmdring-check.ts')).cmdringCheck());
 // the squad's command key is Q: the board gives the quick order's own code off the Q key, B gives nothing, and the game is as it was (qkey-check.ts; host/keymap.ts qCmd)
 if (on('qkey', 'squadorders', 'player', 'all')) await run('qkey', async () => (await import('./qkey-check.ts')).qkeyCheck());
+if (on('wordsmall', 'doortools', 'squadorders', 'all')) await run('wordsmall', async () => (await import('./wordsmall-check.ts')).wordsmallCheck());   // the word (F) sends one or two teammates in from a plain stack (DOORTOOLS.wordSmall); WORDSMALL_BREAK=1 fails it
 // plan mode, a prototype beside the ring: Shift + the key, men picked with the left button, orders chained with the right, the word's key at a chain's pauses (planmode-check.ts; CMDRING.plan)
 if (on('planmode', 'squadorders', 'all')) await run('planmode', async () => (await import('./planmode-check.ts')).planmodeCheck());
 // X is where the plan is laid: an order picked with 'wait for my word' on is laid — nobody moves — F sends the plan, a restart puts it back (planlay-check.ts; PLANLAY.on)

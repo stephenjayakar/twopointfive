@@ -173,6 +173,8 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
     if (held || (big && (op.onWord || op.phase === 'held' || op.phase === 'armed' || op.phase === 'standoff' || op.phase === 'place'))) { const men = op.men.filter(alive); put(op.door, men, held ? 'thr' : op.kind === 'charge' ? 'charge' : 'tool', men.some(m => addr.has(m))); }
   }
   if (big) for (const gd of S.squad()) { const A = S.of(gd); if (alive(gd) && A && A.order === 'stack' && A.door && A.post && A.there.startsWith('stacked')) put(A.door, [gd], 'stack', addr.has(gd)); }
+  else { for (const x of T.stackWaits(S.squad())) for (const gd of x.men) put(x.stack, [gd], 'stack', false);   // (DOORTOOLS.wordSmall: one or two teammates on a plain stack wait on the key too —
+    for (const x of T.stackWaits([...addr])) for (const gd of x.men) put(x.stack, [gd], 'stack', true); }   // the key's own list, asked as the key asks it: the addressed men's)
   for (const c of T.set) put(c.door, S.squad().filter(m => alive(m) && m.callsign === c.by), 'charge', false).set = c;
   if (NB.state === 'set') { const d = NB.drill?.door; if (d) put(d, NB.drillOps.filter(alive), 'drill', false).drill = true; }   // (the room clear's own drill, stacked: its second F)
   // the rescue's entry on the hostage room, stacking or stacked and held for the second word (rescue.ts orderDoor: its own reading of the key, the LAST of them)
