@@ -544,7 +544,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   second, and its falling is heard once. **PLACE** (`?glassplace=0` = outside toughened, inside float): `typeOf` reads the pane, not the wall: a foot under
   `lowM` 0.7 m (it reaches the floor) or a panel of a door (within `doorM` 0.3 m of a door's opening on the plan, foot under `doorFootM` 1.5: glass beside a door within a body's reach, not a light over it) = TOUGHENED; a
   window from a sill = FLOAT; the laminated two as they were (a narrow inside sidelight, a high outside strip). Nothing is authored in a level file; `setType`
-  still overrides a pane. WHAT CHANGED KIND, level by level (the -gwot looks, the relief and the squads block as their base): office, 9 outside windows float and
+  still overrides a pane. The distance to a door is worked out each time and kept nowhere: a table of answers was game state a restarted level did not share with
+  a fresh one (`probes.ts cleanrestart` line 5 on the page's stand went red on it; run that after adding any field to `GlassBreak`). WHAT CHANGED KIND, level by level (the -gwot looks, the relief and the squads block as their base): office, 9 outside windows float and
   the conference partition's 6 sheets toughened (the frontage's 4, the 2 strips and the manager's sidelight as they were); glasshouse, its 4 inside partitions
   toughened, so every pane there is; registry and consulate, the reading room's / the visa hall's partition toughened and 4 / 5 outside windows float; records, 5
   windows float (its two door sidelights reach the floor: toughened still); mousehole, 2 windows float; warehouse 3, test-rooms 1, defuse 2, block 4, bazaar 3,

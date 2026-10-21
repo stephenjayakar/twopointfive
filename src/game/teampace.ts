@@ -178,7 +178,8 @@ export function teamDashNow(g: Game, gd: Guard, to: Vec3, d: number, least = TEA
  *  his mark has moved, kept between; once running he runs the leg out */
 export function teamDash(g: Game, gd: Guard, to: Vec3, d: number): number | null {
   const T = TEAMPACE; if (!T.own || !teamSlow(g, gd)) return null;
-  const was = dash.get(gd), t = g.time, run = g.tune.playerSprint, same = !!was && Math.hypot(was.x - to[0], was.z - to[2]) < 0.5;
+  const t = g.time, run = g.tune.playerSprint, old = dash.get(gd), was = old && t >= old.t && t - old.t < T.dashEvery * 2 ? old : undefined;   // (an answer two asks old is a leg he LEFT — sent elsewhere, fallen in — not one he is on: asked again later of a mark by the old one, he is asked afresh)
+  const same = !!was && Math.hypot(was.x - to[0], was.z - to[2]) < 0.5;
   let yes: boolean;
   if (was && same && t - was.t < T.dashEvery) yes = was.yes && d > 0.6;
   else { const on = !!was && same && was.yes; yes = teamDashNow(g, gd, to, d, on ? 0.6 : T.dashM, on); dash.set(gd, { t, x: to[0], z: to[2], yes }); }
