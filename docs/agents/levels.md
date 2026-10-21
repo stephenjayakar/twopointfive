@@ -319,3 +319,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   switches*): no file places a plate, so what a level owes is plain wall beside its doors and lighting groups that are its circuits; check `probes.ts
   lightswitch`. The snatch level's response block came with the van, and its line left the command's table of levels where nobody comes in the same
   step (not by this one). On build 9f632e9, both stands: 513 PASS, no FAIL, 67 NOTE; both red paths red. Nothing of either was seen on a GPU or played here.
+- **A pane's glass comes from where the level puts it** (2026-10-21; a rule in `src/game/glassbreak.ts`, `GLASSREAL.place`, on in the page and off on the frozen
+  stand: `destruction.md`, *Glass as buildings have it*; no level file touched). Foot under 0.7 m, or a panel of a door = toughened (one round, the sheet drops, the
+  opening is walked); from a sill = float (a hole, then daggers); a narrow inside sidelight or a high outside strip = laminated. The level skill's section 3 has
+  the rule as a need; `probes.ts glassreal` line 9 holds every level's count of panes by kind, on and off, and a level with new glass adds its row there.
