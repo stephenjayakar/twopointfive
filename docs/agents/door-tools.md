@@ -308,7 +308,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   guard, widened). NOT changed: the pair's menus (the `go` order is registered on no menu: with plan laying on, a menu that is up keeps the key for
   'wait for my word'), the word from code (`DoorTools.go()` does nothing for a pair on a plain stack, as `pairs-go` pins it), the quick key on the
   stacked door (the squad's own pick of entry), and everything of the four's (same order book and digest, on and off). Check: `probes.ts wordsmall`
-  (tools/qa/wordsmall-check.ts, families doortools and squadorders; 10 lines; `WORDSMALL_BREAK=1` fails 5), both stands. Measured: six missions
+  (tools/qa/wordsmall-check.ts, families doortools and squadorders; 10 lines; `WORDSMALL_BREAK=1` fails 5), both stands. `squadplay-off`'s pair line
+  reads the switch (10-21, it was written as 'F with the pair stacked is not the word' and went red on the page's stand with this rule): on, F is
+  the word and the drill is not touched; off, the drill takes the key as before. The squadplay family was not run before the rule went in. Measured: six missions
   (night-breach, room-clear-pair, hostage-rescue, records-pair, rescue-registry, room-clear-four), seeds 1 to 3: the switch off is the build before it
   by 18 of 18 run digests on each stand (`TPS_WORDSMALL=0` on the page's); ON gives the same 18 digests too, because the play-through's commander never
   gives the word to a small squad's stack — so no tally says what the rule costs or buys in a fight. The open-and-clear the word makes is the four's
