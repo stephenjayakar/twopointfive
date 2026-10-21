@@ -808,3 +808,34 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   slider) is clean in the game but keeps its own cut and does not restart the picture. NEVER SEEN ON A GPU: the first frames after a restart — whether
   starting the picture's histories from nothing reads cleaner than the old blend is the maintainer's to judge (`__cleanrestart.knobs.picture = false`
   in the console is the other way, live).
+- **A man who is low is aimed at where he is (`player.ts manAim`, `AIM.player.low`).** The maintainer, off the build: "weird issue where if an enemy
+  is bent over from a flash, I can't shoot them even if i'm directly clicking on them -- gun is forced to be level". CAUSE: the reticle takes a man by
+  his POSED chest bone, but the round and the gun's pitch went to a standing man's chest — 1.25 m over his feet (1.2 for the pitch) — whatever he was
+  doing. A man with his head down (`guards.ts` writes `crouchTarget` 1: under fire, a drill's knee, `morale.ts`'s duck from a blast; a flash on top
+  of it folds him further) has his crown at 0.8 to 1.1 m: the gun sat level on him and every round passed over (`character.ts rayHit` is a column
+  about the hips up to the posed crown, and one about the trunk). A flash ALONE does not do it (a blinded man on his feet has his crown at 1.6 m and
+  was hit as ever): it takes the duck or the head-down as well — a door charge does both to the men behind the door (`doortools.ts` blow: its own
+  dazzle and stagger, then `moraleBlast`). RULE, knob on: a man whose crown does not clear a standing chest by 0.25 m (a crown under 1.5 m) is LOW,
+  and the point comes down to 0.15 m under his crown — as high on him as a round still finds him, so a counter a higher line cleared is still
+  cleared — over the chest bone the ring is drawn on, or over the hips column's axis where a ray from Sam's gun to that point would miss the body
+  (the fallback is there for a pose that carries the chest out of both columns; no staging in the check reaches it). A man on his feet — upright,
+  hunched by a flash, folded — is aimed at by the same numbers as before (the check holds them equal, and holds that the stamps did bend him). All
+  of his sites: the pistol's and the rifle's click, the gun's pitch, and the same two with a man in his arm (those two are read, not run). SWITCH:
+  `AIM.player.low`, written 1 by the page's boot (`profile.ts pageSwitches`; `?noaimlow` = 0) and so 1 on the page's stand
+  (`TPS_PROFILE=shipped`), 0 on the frozen stand (`standup.ts`, `FROZEN_HOLDS` row; no env word: the check sets it); the Tab panel's row
+  "aim ▸ you: at a low man" moves it for the visit — unlike the other aim rows it is NOT kept per machine (a kept 0 would outlive the flag that
+  wrote it); a session file from before the key replays with it off (`journal.ts applyKnobs`). CHECK: `tools/qa/aimlow-check.ts` (`probes.ts
+  aimlow`, families aim / weapons / player; `AIMLOW_BREAK=1` must fail) — 31 lines on each stand: a man with his head down at 3, 6 and 10 m with
+  each gun, with his side and his back to Sam, and with Sam crouched (knob 1: one click; knob 0: three clicks over his crown, he lives), the same
+  doubled over a flash, the three standing poses equal either way, a room fight's own can and blast (a blinded, ducked man of the room), the
+  stand's value and the journal. `tools/qa/aimlow-page.cjs` is the same click on the real page on the software adapter, with and without
+  `?noaimlow`. MEASURED, one staging each, no seeds: nothing here is a tally. ALSO CHECKED by hand, not in the check: a SEATED man (`close.ts
+  closeSeat`, crown 1.38 m) seen side-on took three clicks and lived at knob 0, one click at knob 1 (run on the first cut of the rule, which aimed
+  at the chest bone's own height; not run again on this one). NOT CHANGED: a WOUNDED man down (his own older rule sends the round to his chest
+  bone), a civilian or a hostage on the floor (never taken by the reticle under `FRIENDS.noSnap`), the launchers (posed bones already: the ring
+  gun his head, the 40 mm his chest), a show's scripted target (`puppet.target`: feet + 1.25 m, as authored). KNOWN: the reticle's own line test
+  is from 1.3 m over Sam's feet to the man's chest, not from the muzzle, so a low man behind cover can be ringed from a crouch and the round still
+  go into the cover — older than this change. And not this change's: an AI man firing at a foe who is crouched aims 0.8 m over his feet
+  (`guards.ts`, `foeCrouched`), which is at or over the crown of a man who is ducked AND blinded (0.78 to 0.87 m measured here) — read from the
+  code, not run. On the page's stand `aim-unit`, `aim-player` and `aimlevel` are red at the build head this was cut from, the same lines with and
+  without this change. NEVER SEEN ON A GPU: how the gun coming down onto a low man looks, and whether the laser and the ring agree, is unseen.

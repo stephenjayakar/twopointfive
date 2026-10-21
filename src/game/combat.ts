@@ -397,7 +397,7 @@ export function hitPlayer(g: Game, fromDir: Vec3) {
     if (pl.dragging) g.toggleDrag();                     // lets go of the ankles (unpins them)
     if (pl.holding) g.freeHeld('shot');                  // the man in his arm staggers free — and turns on him knowing everything (player.ts handBack)
     pl.down = true; pl.sprinting = false; pl.crouch = false; pl.char.vel = [0, 0, 0];
-    if (pl.wall) { pl.wall = null; pl.char.anim.stance = 'none'; pl.char.anim.lookYawExtra = 0; pl.char.anim.wallTake = -1; pl.char.anim.wallHit = 0; pl.char.anim.stackPress = 0; }   // off the wall the moment he drops (updatePlayer's down branch would only let go next frame)
+    if (pl.wall) { pl.wall = null; pl.char.anim.stance = 'none'; pl.char.anim.lookYawExtra = 0; pl.char.anim.wallTake = -1; pl.char.anim.wallHit = 0; pl.char.anim.stackPress = 0; pl.char.anim.stanceIn = 0; }   // off the wall the moment he drops (updatePlayer's down branch would only let go next frame)
     pl.pistol.cancelReload(); pl.rifle.cancelReload(); pl.char.anim.cancelReload(); pl.throwHeld = false; pl.pendingThrow = null;
     if (inHand) { dropFromHand(g, pl.char, inHand.def.drop, pl.char.gunDir, fromDir, inHand.def.suppressed); if (inHand === pl.rifle) pl.rifleGone = true; }   // what was in the hand leaves it — the Five-seveN can and all, or the whole FN2000 (its own item body: 'rifle' fill 1); a holstered pistol stays on the thigh, a slung rifle on his back
     pl.char.ragdollize(g.col, fromDir, false);            // thrown along the round, like the guards; the thud plays when the trunk lands (updatePlayer)

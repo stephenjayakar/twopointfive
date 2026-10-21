@@ -111,6 +111,7 @@ import { FRAG } from '../game/frag';
 import { RECAP } from '../game/deathrecap';
 import { TEAMTALLY } from '../game/teamtally';
 import { AIMWEIGHT } from '../game/aimweight';
+import { AIM } from '../game/aim';
 import { SPRINTDOOR } from '../game/sprintdoor';
 import { TEAMPACE } from '../game/teampace';
 import { NOSHOVE } from '../game/noshove';
@@ -233,12 +234,15 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORPATH.on = !q.has('nodoorpath') && q.get('doorpath') !== '0'; if (q.get('doorpath') === 'gun') DOORPATH.gun = true;
   WALLSNAP.on = !q.has('nowallsnap');   // back to the wall, the feel pass (game/wallsnap.ts): the take on one eased clock with stepping feet and a settle, the way off keeping his momentum, and Q with the rifle in hand STACKS on the wall (low ready; the cursor round an open end steps him out): ON in the page; ?nowallsnap = the hold as it was
   WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as Q does, Q still working — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
+  WALLSNAP.voice = q.get('wallvoice') !== '0';   // …heard (wallsnap.ts `voice`): his back landing on a wall and his stepping off it each have a sound, the player's ears only; ?wallvoice=0 = the faint scuff alone, as it was
+  WALLSNAP.slow = q.get('wallslow') !== '0';   // …and unhurried (wallsnap.ts `slow`): the take runs twice its seconds and the pose comes on and lets go at half its rate; ?wallslow=0 = the take as it was
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
   GLASSREAL.drop = q.get('glassdrop') !== '0'; GLASSREAL.place = q.get('glassplace') !== '0';   // glass as buildings have it (game/glassbreak.ts GLASSREAL): a toughened sheet goes white and drops at once, no wave across it; and a pane is toughened where it reaches the floor or is a door's panel, float where it starts at a sill — ON in the page; ?glassdrop=0 = the wave, ?glassplace=0 = outside toughened and inside float, as they were
   NOSHOVE.on = q.get('noshove') !== '0';   // teammates falling in never shove the player (game/noshove.ts): a follower whose way lies through him goes round or stops short, and a shove from anybody is not read as his walking — ON in the page; ?noshove=0 = shouldered aside by his own file, as it was
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
   AIMWEIGHT.on = !q.has('noaimweight');   // the player's aim has weight (game/aimweight.ts): his gun turns at a limited rate and the aiming circle trails the cursor, shots going where the circle is — ON in the page; ?noaimweight = the gun eased onto the cursor as it was
+  AIM.player.low = q.has('noaimlow') ? 0 : 1;   // a man under the reticle who is low — head down, on a knee, ducked from a blast, doubled over a flash — is aimed at where he is (game/player.ts manAim): ON in the page; ?noaimlow = at a standing chest over his feet, the gun level on him and the rounds over his head, as it was
   FRAG.fleeWise = !q.has('nofleewise');   // nobody runs onto a live grenade (game/frag.ts FRAG.fleeWise): judged from where it will rest, no leg nearer it than he stands, the leg he has kept, no staying put inside its lethal reach — ON in the page; ?nofleewise = the flee as it was
   FRAG.restProps = FRAG.fleeApart = FRAG.fleeOnto = FRAG.fleeSam = FRAG.fleeLook = !q.has('nofleemates');   // the mends to that flee (game/frag.ts): the rest guess counts the loose furniture the grenade will stop at, no leg shoulders a mate (or Sam) out of the corner he is staying in or running for, a man a stride short of his corner comes onto it, and a man left open floor beside a mate's cover looks once more for his own — ON in the page; ?nofleemates = all off, the flee as it was
   FRAG.fleeDoor = !q.has('nofleedoor');   // caught by a grenade with no cover to get behind, a man leaves by a doorway that already stands open (game/frag.ts fleeByDoor; ?nofleedoor = the one straight leg inside the room)
@@ -398,6 +402,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'tune.chaos': "the tool's own (playthrough.ts plays 0.5, soak.ts --chaos K)",
   'AIM.player.lightSnapPx': 'none: probes.ts aim-snap sets it',
   'AIM.player.level': 'none: probes.ts aimlevel sets it',
+  'AIM.player.low': 'none: probes.ts aimlow sets it',
   'MOVES.on': 'TPS_MOVES=1',
   'TURN.on': 'TPS_TURN=1',
   'DOORPATH.on': 'TPS_DOORPATH=1',
@@ -430,6 +435,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AIRDUST.on': 'TPS_AIRDUST=1',
   'WALLSNAP.on': 'TPS_WALLSNAP=1',
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
+  'WALLSNAP.voice': 'TPS_WALLVOICE=1',
+  'WALLSNAP.slow': 'TPS_WALLSLOW=1',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'REARWATCH.on': 'TPS_REARWATCH=1',
   'STACKLINE.on': 'TPS_STACKLINE=1',

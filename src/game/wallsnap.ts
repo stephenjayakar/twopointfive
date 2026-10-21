@@ -15,6 +15,8 @@
 //
 //   WITHOUT THE KEY (`press`, a switch of its own under `on`): a move key held into a wall he is up against takes it, quiet or loud as above. Q still does.
 //
+//   HEARD AND UNHURRIED (`voice`, `slow`, each a switch of its own under `on`): the landing and the step off have a sound each; the take runs twice as long.
+//
 // This file is the table and its arithmetic only (nothing of the game is imported: src/game is one import cycle); the hold's code is where the hold is.
 
 const clamp01 = (x: number) => x < 0 ? 0 : x > 1 ? 1 : x;
@@ -81,12 +83,19 @@ export const WALLSNAP = {
   pressAfterShot: 1.0,
   /** with a sidearm or a can in the hand (the hold puts it away) the key-less take waits until nobody is alert; false = whenever. The rifle stacks either way. */
   pressCalm: true,
+  // ---- heard, and unhurried (two switches of their own, each acting only with `on`; false = the hold as it was)
+  /** HEARD: his back landing on the plaster and his stepping off it each have a voice of their own (sfx 'wallOn' / 'wallOff', the player's ears only: no event is
+   *  filed, nobody hears it), at these gains; the landing's replaces the scuff above. false = the scuff alone, and nothing on the way off */
+  voice: false, voiceOn: 0.35, voiceOff: 0.5,
+  /** UNHURRIED: the take runs slowTake times its seconds (the glide, the turn and the feet's steps share that clock), and the pose comes on at slowIn (the stack's at 13/22 of it) and lets go
+   *  at slowOut (1/s; 22 and outRate without). A click that falls inside the stack's take is kept and brings the rifle up as he lands. false = the take as it was */
+  slow: false, slowTake: 2, slowIn: 11, slowOut: 12,
 };
 
 /** seconds the take runs for a glide of `dist` metres and a turn of `turn` radians */
 export function wsTakeSecs(dist: number, turn: number): number {
   const W = WALLSNAP; const t = W.takeBase + W.takePerM * dist + W.takePerTurn * Math.abs(turn) / Math.PI;
-  return Math.min(W.takeMax, Math.max(W.takeMin, t));
+  return Math.min(W.takeMax, Math.max(W.takeMin, t)) * (W.slow ? Math.max(0.25, W.slowTake) : 1);
 }
 /** ease-out by power p: 0 → 0, 1 → 1, fastest at the start */
 export function wsEase(s: number, p: number): number { return 1 - Math.pow(1 - clamp01(s), p); }

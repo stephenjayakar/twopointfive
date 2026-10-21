@@ -253,3 +253,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   third of `?sfxwarm=0`'s, the buffers there — measured there, three browsers sharing the cloud machine: 678 ms against 2918 ms). What is still inside the click: the mixer's own
   set-up (`webaudio.ts`'s reverb impulse, the ambience loops, the score's backend) — about a quarter of what the click was. Nobody has HEARD it: the samples are equal by the
   check, the start's timing on a real output is not measured.
+- **The wall hold's two voices (2026-10-21)** (`src/audio/sfx.ts` rows `wallOn`, `wallOff`; played by player.ts `wallVoice` under `WALLSNAP.voice`, see
+  `stealth.md`, 'The wall hold, heard and unhurried'). `wallOn` 0.42 s: a soft knock with its weight between 100 and 500 Hz (a laptop's speakers carry it;
+  54 % of its energy under 500 Hz), two brushes of cloth, two ticks of webbing. `wallOff` 0.34 s: cloth swelling in with a little stick-slip, then a sole
+  turning on the floor at 0.13 s (25 % under 500 Hz). Plain `render` rows, not levelled to a `HEARD` number (no voice before them to keep a level from);
+  both on the listening page under 'hands'; the old table (`sfxWas.ts`) has neither, so `?oldsounds` plays these. Graded by `tools/qa/audio-render.ts --all`
+  and held by `probes.ts wallfelt`'s table line. Played at `WALLSNAP.voiceOn` 0.35 and `voiceOff` 0.5. Written blind: nobody has heard them.

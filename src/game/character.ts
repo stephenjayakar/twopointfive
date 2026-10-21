@@ -1255,8 +1255,9 @@ export class CharacterAnimator {
    *  0‥1 while he is being eased onto the wall (−1 = none) — the feet stay where they stood in the world and STEP onto the hold's spots one after the other instead
    *  of sliding there under the blend; `wallHit` = the landing's settle 0‥1 (the pelvis dips, the head tips back toward the plaster); `stanceOut` = the rate the
    *  stance weight leaves at (0 = the stance's own); `stackPress` = 'stack' only, SIGNED metres the whole figure stands toward the wall (+ = the wall on his
-   *  stackSide +1 hand; its shoulder to the plaster: the body's circle keeps the root further out than a shoulder is wide), eased here. */
-  wallTake = -1; wallHit = 0; stanceOut = 0; stackPress = 0;
+   *  stackSide +1 hand; its shoulder to the plaster: the body's circle keeps the root further out than a shoulder is wide), eased here. `stanceIn` = the rate
+   *  the hold's pose comes on at while he holds a wall (WALLSNAP.slow; 0 = its own: 22 on the back hold, the stance's 13 on the stack). */
+  wallTake = -1; wallHit = 0; stanceOut = 0; stackPress = 0; stanceIn = 0;
   private stackPressSm = 0; private wallGait = WALL_GAIT_REST; private wtkHold = false;   // (the press as shown: eased toward stackPress · the feet kept on the hold's spots from the end of a take until the pose's weight has caught up)
   /** …and where his soles stood, in the world, the frame the take began (the controller's: the joints as last drawn) — null = wherever this frame's pose has them */
   wallTakeFeet: { L: { p: Vec3; yaw: number }; R: { p: Vec3; yaw: number } } | null = null;
@@ -2009,7 +2010,7 @@ export class CharacterAnimator {
     const held: Stance = kt >= 0 && kt < 0.55 ? 'highReady' : this.stance;   // the kick pulls whatever carry is up into the compressed high ready (an extended low ready would meet the knee), handing back for the plant
     const shape = held !== 'none' ? STANCES[held] : null; const side = this.stackSide;
     const wWas = Math.max(clamp(st.w.x, 0, 1), wKslow);   // the weight the last frame showed (read before stepping: one 60 Hz step from nothing already carries the master past the snap threshold below)
-    const wSt = clamp(st.w.step(this.stance !== 'none' ? 1 : 0, this.stance === 'none' && this.stanceOut > 0 ? this.stanceOut : this.stance === 'wall' || this.stanceSeen === 'wall' ? 22 : SW, dt), 0, 1);   // the master weight follows the stance itself (a kick from no stance shows the carry through wKslow); on and off the wall in ~0.2 s
+    const wSt = clamp(st.w.step(this.stance !== 'none' ? 1 : 0, this.stance === 'none' && this.stanceOut > 0 ? this.stanceOut : this.stanceIn > 0 && this.stance !== 'none' ? this.stanceIn : this.stance === 'wall' || this.stanceSeen === 'wall' ? 22 : SW, dt), 0, 1);   // the master weight follows the stance itself (a kick from no stance shows the carry through wKslow); on and off the wall in ~0.2 s
     if (this.stanceOut > 0 && (this.stance !== 'none' || wSt < 0.02)) this.stanceOut = 0;   // (the wall's quick way out is for THAT exit: gone once the pose is, or once another stance is asked for)
     if (this.stackPress !== this.stackPressSm) this.stackPressSm += clamp(this.stackPress - this.stackPressSm, -0.9 * dt, 0.9 * dt);   // (WALLSNAP: the press walks across at 0.9 m/s — a turn-about is a quarter second of it, never a frame)
     const armed = this.upper === 'relaxed' || this.upper === 'aim' || this.shootT >= 0;   // the pistol is in the hand (the door hand must then be the left)
@@ -2025,7 +2026,7 @@ export class CharacterAnimator {
       st.fwd.step(gw ? lerp(shape.fwd, TP.fwd, gw) - gwo : shape.fwd, SW, dt); st.up.step(gw ? lerp(shape.up, TP.up, gw) : shape.up, SW, dt); st.side.step(shape.side - 0.02 * side * (shape.blade / 22), SW, dt); st.pitch.step(gw ? lerp(shape.pitch, TP.pitch, gw) : shape.pitch, SW, dt);
       st.lean.step(shape.lean, SW, dt); st.headPitch.step(shape.headPitch, SW, dt); st.tuck.step(gw ? lerp(shape.tuck, TP.tuck, gw) : shape.tuck, SW, dt);
       st.blade.step(-side * shape.blade, SW * 0.8, dt); st.headYaw.step(-side * shape.headYaw, SW, dt); st.squat.step(shape.squat, SW * 0.8, dt);   // (yaw + = to the figure's left; side + = wall on its right)
-      ws.wl.step(held === 'wall' ? 1 : 0, 22, dt); ws.side.step(side, SW, dt); ws.peek.step(clamp(this.wallPeek, 0, 1), 20, dt);   // (wl at the wall's own brisker rate; the peek is already ramped by the controller)
+      ws.wl.step(held === 'wall' ? 1 : 0, this.stanceIn > 0 && held === 'wall' ? this.stanceIn : 22, dt); ws.side.step(side, SW, dt); ws.peek.step(clamp(this.wallPeek, 0, 1), 20, dt);   // (wl at the wall's own brisker rate; the peek is already ramped by the controller)
       ws.park.step(parkNow, parkNow < ws.park.x ? 30 : 12, dt);   // off the spots briskly when he sets off (the feet must be the cycle's within a stride), back onto them over ~0.3 s when he stops — a shuffle into place, not a skate
     }
     const wCarry = Math.max(wSt, wKslow);   // the kick pulls the gun into the compressed carry whatever the stance

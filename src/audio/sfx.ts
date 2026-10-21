@@ -9,6 +9,7 @@ export type SfxName =
   | 'stairDoor' | 'stairBoots' | 'casingTink' | 'thunderNear' | 'thunderFar' | 'glassCrack' | 'glassTinkle' | 'glassShatter' | 'glassCrunch'
   | 'padBeep' | 'padOpen' | 'alarmChirp'   // devices (game/devices.ts): a keypad key, the pad accepting the code, a tripwire's emitter chirping as it reports
   | 'wallCrack' | 'wallThump' | 'wallDebris'   // a wall charge going off (game/blastFeel.ts)
+  | 'wallOn' | 'wallOff'   // the player's back landing on a wall and his stepping off it (game/wallsnap.ts `voice`)
   | 'mk12Suppressed' | 'mp7Suppressed' | 'mk46Report' | 'm1014Report' | 'm870Report' | 'hk45Suppressed' | 'g18Report'   // the guns a card's two slots offer, each its own report (game/gunlook.ts), and the pump gun's
   | 'beltCoverUp' | 'beltBoxOff' | 'beltBoxOn' | 'beltLay' | 'beltCoverDown' | 'chargeLmg' | 'shellIn' | 'boltDrop'   // how they are fed: a belt under a feed cover, shells one at a time (game/gunreload.ts)
   | 'chairRoll';   // a chair coasting on its castors (game/props.ts CASTOR): looped between ROLL_LOOP's two marks for as long as it rolls
@@ -777,6 +778,25 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       }
       return palms + cloth + scuff;
     }, 193),
+    // his back onto the plaster (game/wallsnap.ts `voice`, the player's ears only): the shoulder blades and the pack meet the wall (a soft knock, its weight between
+    // 100 and 500 Hz so a laptop's speakers carry it), the jacket presses flat and then settles as he sinks a little (two brushes of cloth), and the webbing ticks twice
+    wallOn: render(ctx, 0.42, (t, _i, sr, rnd, st) => {
+      const n = rnd(); st[6] += (95 + 45 * Math.exp(-t / 0.03)) / sr;
+      const knock = (lp(rnd(), st, 0, 0.07) * 1.6 + Math.sin(TAU * st[6]) * 0.3) * env(t, 0.008, 0.05);
+      const t2 = t - 0.09;
+      const cloth = (lp(n, st, 1, 0.3) - lp(n, st, 2, 0.05)) * (env(t, 0.01, 0.05) * 0.5 + (t2 > 0 ? env(t2, 0.03, 0.09) * 0.45 : 0));
+      const m = rnd(), hi = m - lp(m, st, 3, 0.5), t3 = t - 0.035, t4 = t - 0.062;
+      const kit = hi * ((t3 > 0 ? env(t3, 0.001, 0.008) * 0.12 : 0) + (t4 > 0 ? env(t4, 0.001, 0.006) * 0.07 : 0));
+      return knock + cloth + kit;
+    }, 211),
+    // …and off it: the jacket drags and peels away (cloth swelling in rather than struck, a little stick-slip in its first tenth of a second) and a sole turns on the floor
+    wallOff: render(ctx, 0.34, (t, _i, _sr, rnd, st) => {
+      const n = rnd(); const chat = t < 0.1 ? 0.7 + 0.3 * (Math.sin(t * 150) > 0 ? 1 : -1) : 1;
+      const peel = (lp(n, st, 0, 0.3) - lp(n, st, 1, 0.05)) * env(t, 0.06, 0.07) * chat * 0.75;
+      const ts = t - 0.13; const m = rnd();
+      const sole = ts > 0 ? (lp(m, st, 2, 0.05) * 1.3 + (lp(m, st, 3, 0.3) - lp(m, st, 4, 0.08)) * 0.3) * env(ts, 0.005, 0.045) : 0;
+      return peel + sole;
+    }, 227),
     // Sam's low whistle (V, game/whistle.ts): two short lip-whistled notes, the second a shade over a minor third down (1.1 kHz for 140 ms, a 40 ms breath, 0.9 kHz
     // for 170 ms), each scooped into from a touch flat the way a mouth finds a pitch and rounded off rather than cut, a whisper of second harmonic, and the breath
     // that makes it round the note (band noise about the pitch, loudest on the attacks) — phase-accumulated so the glide is exact at any rate. Quiet by design
