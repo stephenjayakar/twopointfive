@@ -32,7 +32,7 @@ import { SHOTGUN } from './shotgun';
 import { FRAG } from './frag';
 import { LAUNCHER, LAUNCHER40 } from './weapons';
 import { GLASS, GLASSFX } from './glass';
-import { GLASSBREAK } from './glassbreak';
+import { GLASSBREAK, GLASSREAL } from './glassbreak';
 import { GLASSPEN } from './glasspen';
 import { SHARDS } from './shards';
 import { TALK_TUNE } from './dialogue';
@@ -127,7 +127,9 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
-  'NOSHOVE'];
+  'NOSHOVE',
+  // glass as buildings have it (glassbreak.ts GLASSREAL): a recording made with it on replays its toughened sheets dropping at once and its panes typed by where they sit, one from before with the wave and the wall's typing
+  'GLASSREAL'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -261,6 +263,8 @@ export function knobRegistry(): Record<string, object> {
     TEAMPACE,
     // teammates falling in never shove the player (noshove.ts): the switch, its two halves, the squeeze past, the ring a man keeps and his step back out — where every follower and the player are a second later reads them
     NOSHOVE,
+    // glass as buildings have it (glassbreak.ts): toughened glass drops at once, and which glass a pane is comes from where it sits — which panes a round opens, and when
+    GLASSREAL,
     // quiet missions under the fog of war (quietfog.ts): whether a quiet mission's query is read for a rung of the fog lever — a run tape's start reads it
     QUIETFOG,
     // the dialogue pass (words.ts): which words every mouth has — a bubble's time is its length, and who is still talking gates the calm floor's small talk

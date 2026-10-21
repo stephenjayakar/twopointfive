@@ -128,6 +128,7 @@ import { AIMWEIGHT } from './aimweight';
 import { SPRINTDOOR } from './sprintdoor';
 import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
+import { GLASSREAL } from './glassbreak';
 import { AIMCOST } from './aimcost';
 import { QUICKTHROW } from './quickthrow';
 import { FRIENDS } from './friends';
@@ -347,6 +348,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.SEENWALK) SEENWALK.on = false;   // (a file from before an ordered walk weighed lit floor in view of an uncleared room: the walks as they were)
   if (!k.tables.SAMSTUN) SAMSTUN.on = false; else if ((k.tables.SAMSTUN as Partial<typeof SAMSTUN>).ownSeen === undefined) SAMSTUN.ownSeen = false;   // (a file from before a blast folded or blinded the player: his feet and his picture were his own through every one — and one from before a watched can of his own side counted in full)
   if (!k.tables.SPRINTDOOR) SPRINTDOOR.on = false;
+  if (!k.tables.GLASSREAL) { GLASSREAL.drop = false; GLASSREAL.place = false; }   // (a file from before glass was typed by where it sits and toughened glass dropped at once: its panes are the wall's kinds and dice in the wave)
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)

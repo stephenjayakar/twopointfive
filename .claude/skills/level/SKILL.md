@@ -72,6 +72,16 @@ did not.
 
 - **Every door is real size** (0.9 by 2.05 m doorway, leaf 0.86), its middle on a walk-grid cell; a window's head stays
   under 1.9 m or it reads as a doorway. **check** `bun run tools/qa/door-size.ts <name>`.
+- **Glass is typed by where you put it, so place it as a glazier would.** Nothing in the file names a kind
+  (`glassbreak.ts typeOf`, `GLASSREAL.place`): the pane's foot decides. Foot under 0.7 m (it reaches the floor: a
+  partition, a shopfront, frontage on a kick wall), or a panel of a door (within 0.3 m of the opening, foot under 1.5 m):
+  TOUGHENED, one round and the whole sheet goes white and drops, and the opening can be walked. A window that starts
+  at a sill (0.8 m and up): plain FLOAT glass, a round holes it and about three run it to daggers. A narrow inside
+  sidelight (under 0.7 m wide) or a high outside strip (under 0.8 m tall): laminated, it webs and never opens. So choose
+  the foot on purpose: glass to the floor is a second door for the price of a round, a sill window is a slit that opens
+  slowly. **seen** "it seems like there are two types of glass breaking ... what's the situation?": every outside
+  window was toughened and every partition float, whatever its height. **check** `probes.ts glassreal` (line 9 counts
+  every level's panes by kind against a table: a new level with glass adds its row; `--verbose` prints them).
 - **Every room they can shut has another way in.** The maintainer: "maybe we just need to design levels so there's always
   another route in?" A door hung to open OUT (`swing`), a walk-through window, or issued wall charges. **seen** barricaded
   rooms that could only be opened with a charge or a 40 mm. **check** `bun run tools/qa/second-way-check.ts <name>.json`

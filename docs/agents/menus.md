@@ -1452,3 +1452,40 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   picture's window inside the zoomed Play page (no adapter here draws it), not a real pinch or a real Ctrl + wheel. Chromium only: Safari was never
   run (the boot asks the engine which pixels it measures a zoomed element in, and that answer has only ever been Chromium's). The replay player was
   not run with a tape after its six rules changed.
+- **Options ▸ Controls rebinds the keys (10-21; `src/host/keymap.ts` the table, `src/ui/keybinds.ts` the caps, the remap itself in
+  `src/game/input.ts`'s keyboard listener).** The maintainer: "could you add key remapping (plus reset) to settings? that way i could tweak
+  settings without a rebuild". WHERE IT SITS: at the keyboard and nowhere else. The listener asks `gameCode()` what a key IS before it files it,
+  so the game still asks for the codes it always did and the tick's record, the session journal, a run's tape and a replay hold those codes:
+  a recording made on a rebound board plays the same on any machine. It is no rule of the game: no knob table, no `FROZEN_HOLDS` row (the
+  harness's Input has no keyboard), and OFF in the module, so a headless tool, the level editor, the viewer and the workbench keep the
+  build's keys whatever the machine has kept; the game page turns it on in `main.ts`'s first line (`keysBoot`). OFF ON THE PAGE:
+  `?keybinds=0` (the build's keys and the plain list for the visit, the kept table left alone). KEPT in localStorage `twopointsix.keys`
+  (only rows not as built; cleaned row by row as it is read). PAGE HOOK `__keys` (the module: `bindKey(id, code)`, `resetKeys()`,
+  `keysKept()`, `setKeys()`). WHAT MOVES: the 26 rows of `KEY_ACTS` (W A S D, Shift, C, Q, Space, V, N, R, Z, L, E, 1 to 5, X, B, T, F, G, H,
+  the backtick). It is the KEY that moves, not the verb: E still puts away and swaps a hold, V still whistles and is the order menu's wand
+  row, the digits are the kit and the menu's rows. H and G (rows of the order menu on letters) got rows on the list so that a key given to
+  another row is never theirs unseen. WHAT STAYS: the mouse and the wheel, the camera's Ctrl, and the page's own keys, which no row can take
+  (Esc, Enter, Tab, the arrows, the F row, Ctrl / Alt / Cmd, P [ ], Caps Lock). THE SCREEN: a movable cap is a button (the fixed ones are
+  drawn hollow); a click, or Enter on it (W S walk the caps), and it waits for the next key. A key another row has SWAPS the two and the
+  other cap flashes (a row with two keys in the build, Shift, keeps its other one); with no key to give back the other row is left with
+  none and reads — , dashed. Backspace or Delete = no key. Esc or a click elsewhere = nothing changed. A page's own key shakes the cap,
+  which goes on waiting; the F row passes through. Reset to defaults (that tab's button) = every row as built, nothing kept. THE NAMES
+  FOLLOW: `keyCap` for a cap the HUD is handed (the Space rows and the order menu's keys, the kit column's slot numbers), `keyText` for keys
+  named in words (the rows' hints, the order menu's hint, the objective line and so Training's steps, the kit column's L and N tags, the
+  order mark, captions, the pause and down cards' foot lines, the old start card's list). `keyText` reads finished words and that is a
+  guess: a moved cap standing alone is the key unless the words round it make it a place's letter ('room B', 'Vault B', 'B wing',
+  'T-junction'); a digit only where the words say key ('then 3', '2 again'); W A S D only in a list of keys. KNOWN TO BE LEFT AS BUILT:
+  '1 to 5 picks an order', the tour's 'WASD and mouse', speech bubbles, the debugger's own tooltips, a thing's name on the Space rows, and
+  the Tab trial's 'as T' follows only on the Options list. Lines that handed the HUD a code instead of a letter would need no guessing;
+  they are written all over the game and that is a pass of its own. NOT THE KEY'S LETTER ON ANOTHER LAYOUT: a cap is named by where the
+  key sits on a US board, as the build's own list always was. CHECK `bun run tools/qa/probes.ts keybinds` (family `player`), on BOTH stands
+  (`TPS_PROFILE=shipped` in front for the page's): the table (off in the module, the boot and `?keybinds=0`, a swap, 4,000 moves by a
+  die leave no key with two rows, the page's keys refused, no key, Reset, the store written and read back, a bad kept table cleaned, the
+  words); the keyboard listener on a window that is a list of listeners (nothing rebound = exactly the codes the build filed; rows moved
+  = the same codes off the new keys; a dead key lets go of nothing; a key rebound while down lets go of what it put down); and one script
+  of hands (330 ticks: walk, crouch, sprint, the rifle, a reload, the wall, holster, Space) played three ways into a fresh game — codes
+  written straight in, the keyboard as built, a board with 12 rows moved — ending in ONE digest on each stand. `KEYBINDS_BREAK=1` (a stray
+  kept table while the 'nothing rebound' lines are asked) fails on both. ON A PAGE `PORT=<port> node tools/qa/keybinds-page.cjs [outDir]`
+  (headless Chromium, real key presses; the screen needs no adapter, `GPU=1` adds the game on the software adapter, two boots,
+  about twenty minutes; `ONLY=game` leaves the screen out). NEVER SEEN
+  ON A GPU, and nobody has played it: not the feel of any moved key, not a Mac's keys (Cmd chords, a trackpad), not Safari or Firefox.

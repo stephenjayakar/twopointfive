@@ -108,6 +108,7 @@ import { AIMWEIGHT } from '../game/aimweight';
 import { SPRINTDOOR } from '../game/sprintdoor';
 import { TEAMPACE } from '../game/teampace';
 import { NOSHOVE } from '../game/noshove';
+import { GLASSREAL } from '../game/glassbreak';
 import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
@@ -264,6 +265,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_KITANIM')) KITANIM.on = String((globalThis as any).process?.env?.TPS_KITANIM ?? '') === '1';   // kit animations (src/game/kitanim.ts): off, so every draw, reload beat, lock-out and pose is what every frozen probe and digest read; `TPS_KITANIM=1` turns them on (the shipped default)
     if (pinned('TPS_THROWBY')) THROW_BY.on = String((globalThis as any).process?.env?.TPS_THROWBY ?? '') === '1';   // a throw reads its distance (src/game/character.ts THROW_BY): off, so every throw is the one overhand every frozen pose, strip and digest was read on; `TPS_THROWBY=1` turns it on (the shipped default)
     if (pinned('TPS_TEAMPACE')) TEAMPACE.on = String((globalThis as any).process?.env?.TPS_TEAMPACE ?? '') === '1';   // teammates slower than the player, running only for a reason (src/game/teampace.ts): off, so the team walks every leg at the pace every frozen probe, digest and tape has it
+    if (pinned('TPS_GLASSDROP')) GLASSREAL.drop = String((globalThis as any).process?.env?.TPS_GLASSDROP ?? '') === '1';   // toughened glass drops at once (src/game/glassbreak.ts GLASSREAL): off, so a diced sheet lets go in the wave every frozen glass probe, tally and tape timed
+    if (pinned('TPS_GLASSPLACE')) GLASSREAL.place = String((globalThis as any).process?.env?.TPS_GLASSPLACE ?? '') === '1';   // a pane's glass by where it sits (the same table): off, so outside glass is toughened and inside float, the kinds every frozen glass probe and stack mark was dealt on
     if (pinned('TPS_NOSHOVE')) NOSHOVE.on = String((globalThis as any).process?.env?.TPS_NOSHOVE ?? '') === '1';   // teammates falling in never shove the player (src/game/noshove.ts): off, so a follower walks into him and the squad reads the shove as his walking, as every frozen probe, digest and tape has it
     if (pinned('TPS_SPRINTDOOR')) SPRINTDOOR.on = String((globalThis as any).process?.env?.TPS_SPRINTDOOR ?? '') === '1';   // a sprint into a door has weight (src/game/sprintdoor.ts): off, so a scripted player who runs through a door is where every frozen probe, digest and tape has him a second later
     if (pinned('TPS_AIMWEIGHT')) AIMWEIGHT.on = String((globalThis as any).process?.env?.TPS_AIMWEIGHT ?? '') === '1';   // the player's gun turns at a limited rate and trails the cursor (src/game/aimweight.ts): off, so a scripted player who puts the cursor on a man and clicks on the same frame hits him as every frozen probe, digest and tally expects; `TPS_AIMWEIGHT=1` turns it on
