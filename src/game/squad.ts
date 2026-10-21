@@ -15,6 +15,7 @@ import { KICK_IMPACT } from './character';
 import { tread } from './floor';
 import { loadGait, loadHeard } from './kitload';
 import { teamTread, teamSprinting, teamRan } from './teampace';
+import { noShoveKeep } from './noshove';
 import { kickDustFx } from './particleFx';
 import { goTo, followPath, teamPace, teamLegs, teamLean, teamTurn, teamPaced, PACE, lightRuled, attachFlashlight, hearingCheck, canSee, sightGain, bodyInView, escalationOf, doorTamper, nearKnownBody, muzzleCheck, aimAhead } from './guards';
 import { gunWallCheck, gunWallPose } from './gunwall';
@@ -57,6 +58,7 @@ function strafeAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean
 
 export function runGuardScript(g: Game, gd: Guard, dt: number) {
   const s = gd.script!; const c = gd.char;
+  const x0 = c.pos[0], z0 = c.pos[2];   // (where this frame's step starts: noshove.ts)
   const speed = teamPace(g, gd, s.speed ?? g.tune.guardWalk);   // (a teammate's legs: guards.ts PACE — never more than a purposeful walk, whatever the order or the drill asks; teampace.ts on: a share of the player's walk, and a run only for a reason)
   const legs = teamLegs(g, gd, speed);   // (… × his card, for the legs walked HERE — the strafe and the settle; followPath weighs its own: kitload.ts)
   let fightFace = s.over && s.over.walk && s.over.face !== null ? s.over.face : null;
@@ -106,6 +108,7 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
   // collisions exactly as the AI does them
   g.col.collideCircle(c.pos, c.radius, 0.2, 1.5);
   for (const o of g.guards) { if (o === gd || o.state === 'dead') continue; const d = v3.sub(c.pos, o.char.pos); d[1] = 0; const l = v3.len(d); if (l < 0.6 && l > 1e-4) c.pos = v3.mad(c.pos, d, (0.6 - l) / l * 0.5); }
+  if (noShoveKeep(g, gd, x0, z0, dt)) moveSpeed = 0;   // (noshove.ts: a man falling in goes round the player or stops short of him — held short, he stands — and never moves him; nothing with its switch off)
   // muzzle discipline, as the AI keeps it (guards.ts muzzleCheck): whatever the orders, a pistol that is up in any fashion — the aim, the high ready, the stack's
   // compressed carry — with a living colleague in the line it is held along (the ordered aim point, else straight ahead) goes to the low ready until he is out
   // of it: the no. 2 tucked in behind his no. 1 on the door, either of them as the other crosses his sector inside. Ordered low already, there is nothing to lower.

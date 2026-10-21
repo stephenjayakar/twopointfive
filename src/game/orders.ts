@@ -104,6 +104,7 @@ import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
 import { planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
 import { teamFollow, teamDash, teamFight } from './teampace';   // (read inside update only)
+import { noShoveOwn } from './noshove';   // (read inside update only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
 const NOWHERE: Vec3 = [1e7, 0, 1e7];
@@ -1153,8 +1154,11 @@ export class SquadOrders {
     if (followers.length) {
       this.crumb(sam.pos, followers);
       const step = this.samT >= 0 ? flat(sam.pos, this.samP) : 0, el = g.time - this.samT;
-      if (this.samT >= 0 && el > 1e-6 && step < 1) { this.samV += (step / el - this.samV) * 0.25;   // (a jump of a metre is a teleport, not a pace)
-        if (step > 1e-3) { this.samDir[0] = (sam.pos[0] - this.samP[0]) / step; this.samDir[2] = (sam.pos[2] - this.samP[2]) / step; } }
+      const own = this.samT >= 0 ? noShoveOwn(g, sam.pos[0] - this.samP[0], sam.pos[2] - this.samP[2]) : null;   // (noshove.ts: the step his own legs took — a shove is not his walking; null with its switch off)
+      if (this.samT >= 0 && el > 1e-6 && step < 1) {   // (a jump of a metre is a teleport, not a pace)
+        const ox = own ? own[0] : sam.pos[0] - this.samP[0], oz = own ? own[1] : sam.pos[2] - this.samP[2], st = own ? Math.hypot(ox, oz) : step;
+        this.samV += (st / el - this.samV) * 0.25;
+        if (st > 1e-3) { this.samDir[0] = ox / st; this.samDir[2] = oz / st; } }
       this.samP[0] = sam.pos[0]; this.samP[2] = sam.pos[2]; this.samT = g.time;
     } else { this.trail.length = 0; this.samT = -1; this.samV = 0; }
     for (const [gd, A] of this.asg) {

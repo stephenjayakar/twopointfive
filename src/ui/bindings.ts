@@ -101,6 +101,7 @@ import { RECAP } from '../game/deathrecap';
 import { AIMWEIGHT } from '../game/aimweight';
 import { SPRINTDOOR } from '../game/sprintdoor';
 import { TEAMPACE } from '../game/teampace';
+import { NOSHOVE } from '../game/noshove';
 import { AIMCOST } from '../game/aimcost';
 import { HANDLE, HANDLE_STATS } from '../game/handleside';
 import { PRESSURE, PRESSURE_DEFAULTS, resetPressure, pressureSummary } from '../game/pressure';
@@ -1344,6 +1345,10 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.slider(TF.move, 'teammates ▸ follower closes × yours', 0.8, 1.4, 0.05, () => TEAMPACE.followK, v => { TEAMPACE.followK = v; }, 'a man falling in who is off his place walks at up to this share of your walk: 1 = he holds a gap you open while you walk and closes it when you stop');
     panel.toggleBox(TF.move, 'teammates ▸ run with you', () => TEAMPACE.follow, v => { TEAMPACE.follow = v; }, 'a follower who is off his place runs while you sprint, at your own sprint, and drops to a walk when you do. Off = he closes at a walk');
     panel.toggleBox(TF.move, 'teammates ▸ run for a reason', () => TEAMPACE.own, v => { TEAMPACE.own = v; }, 'on his own a teammate runs from a grenade, and to cover across floor an enemy has a line on. Off = he leaves a grenade at the top pace above and walks to cover');
+    panel.toggleBox(TF.move, 'teammates ▸ never shove you falling in', () => NOSHOVE.on, v => { NOSHOVE.on = v; }, 'THE switch (also ?noshove=0 on the address for off). On: a man walking to his place behind you goes round you, or stops short, and never moves you; and being pushed by anybody is not read as you walking. Off = a follower whose way lies through you shoulders you aside, and the file re-forms on the shove, as it was. Enemies are as solid either way');
+    panel.toggleBox(TF.move, 'teammates ▸ … go round you', () => NOSHOVE.round, v => { NOSHOVE.round = v; }, 'the first half: the follower is the one who yields. Off = he walks into you as before (the second half still keeps the shove out of your pace)');
+    panel.toggleBox(TF.move, 'teammates ▸ … a shove is not you walking', () => NOSHOVE.own, v => { NOSHOVE.own = v; }, 'the second half: what men move you by is taken out of the pace the squad reads off you, so a man keeping a door does not step out of the way of a push. Off = a shoved player is a walking one, as before');
+    panel.toggleBox(TF.move, 'teammates ▸ … squeeze past in a tight place', () => NOSHOVE.through, v => { NOSHOVE.through = v; }, 'no room to go round you (a passage, a doorway): on, he squeezes past and you are not moved, as a man in a narrow doorway always did; off, he stops short and waits for you to move');
     tf = TF.lights;
     feelRows('LIGHTS', [
       { k: 'on', label: 'weapon lights ▸ discipline', title: 'a teammate under your orders burns his weapon light only while it helps: walking somewhere on his own, through an entry and its search, in a fight, after an enemy\'s footstep. Dark in file behind you, stacked, holding. Off = lights as each scenario\'s own switch has them' },
