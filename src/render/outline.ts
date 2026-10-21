@@ -17,11 +17,13 @@ export interface OutlineFrame {
   strength: number;
   /** where he stands (his feet), and the box round that the rim is looked for in: `reach` metres each way in plan, `top` metres up */
   at: [number, number, number]; reach: number; top: number;
+  /** the rim's width as a share of its own (the player's row, host/findme.ts FINDME.width): 1 = OUTLINE's width */
+  wide: number;
   /** the renderer's own (the engine writes both each render, the host never): that box on the picture THIS render's camera draws, as fractions of it
    *  (x0, y0, x1, y1; y down; all 0 = he is behind the lens) — the pass draws inside it alone — and the exposure the tone map will put on the composite */
   rect: [number, number, number, number]; exposure: number;
 }
-export function makeOutlineFrame(): OutlineFrame { return { on: false, owner: 0, strength: 0, at: [0, 0, 0], reach: 1.4, top: 2.3, rect: [0, 0, 0, 0], exposure: 1 }; }
+export function makeOutlineFrame(): OutlineFrame { return { on: false, owner: 0, strength: 0, at: [0, 0, 0], reach: 1.4, top: 2.3, wide: 1, rect: [0, 0, 0, 0], exposure: 1 }; }
 
 /** `F.rect` from the camera a render draws with (`project`: a world point to fractions of the picture + whether it is in front of the lens — FollowCamera
  *  .project(p, 1, 1)): the box's eight corners, padded. He behind the lens = an empty box, nothing drawn; a corner behind it with him in front (the lens
@@ -39,8 +41,13 @@ export function outlineBox(F: OutlineFrame, project: (p: [number, number, number
 }
 
 /** the rim's look: its colour as displayed (before the tone map), its opacity at full strength, and its width — a fraction of the composite's height, held
- *  between two pixel counts */
-export const OUTLINE = { ink: [0.42, 0.5, 0.55], alpha: 0.6, width: 1 / 420, minPx: 1.5, maxPx: 3 };
+ *  between two pixel counts; the player's own share of that (OutlineFrame.wide) comes after, and `floorPx` is the least it is ever drawn at (the shader
+ *  fades the outer pixel, so under a pixel and a half 'thinner' is the one pixel next to him going fainter, and under the floor it is hardly there).
+ *  THE WIDTH IS THREE QUARTERS OF WHAT IT WAS FIRST BUILT WITH (1 / 420, 1.5 to 3 pixels): the maintainer, having seen that on a GPU, "it's just a touch
+ *  too fat". The quarter is a guess at 'a touch', and it is here, not in the player's row: a kept row at 1 follows this number when it is tuned again */
+export const OUTLINE = { ink: [0.42, 0.5, 0.55], alpha: 0.6, width: 1 / 560, minPx: 1.125, maxPx: 2.25, floorPx: 0.9 };
+/** the rim's width on a composite `h` pixels high, the player's share `wide` of it taken (pixels; the shader fades the outer one) */
+export function outlineRadius(h: number, wide = 1): number { return Math.max(OUTLINE.floorPx, Math.max(OUTLINE.minPx, Math.min(OUTLINE.maxPx, h * OUTLINE.width)) * wide); }
 
 export class OutlinePass {
   private pipe: GPURenderPipeline | null = null; private building = false; private bad = false;
@@ -81,7 +88,7 @@ export class OutlinePass {
     if (!(x1 > x0 && y1 > y0)) return;   // (he is off the picture, or behind the lens)
     const k = 1 / Math.max(F.exposure, 1e-4);
     this.uf[0] = OUTLINE.ink[0] * k; this.uf[1] = OUTLINE.ink[1] * k; this.uf[2] = OUTLINE.ink[2] * k; this.uf[3] = OUTLINE.alpha * Math.min(1, F.strength);
-    this.uu[4] = F.owner & 0xff; this.uf[5] = Math.max(OUTLINE.minPx, Math.min(OUTLINE.maxPx, h * OUTLINE.width));
+    this.uu[4] = F.owner & 0xff; this.uf[5] = outlineRadius(h, F.wide);
     this.device.queue.writeBuffer(this.ubuf!, 0, this.udata);
     if (this.bgView !== idView || this.bgDepth !== depthView) { this.bgView = idView; this.bgDepth = depthView; this.bg = this.device.createBindGroup({ label: 'outline', layout: this.layout!, entries: [{ binding: 0, resource: idView }, { binding: 1, resource: depthView }, { binding: 2, resource: { buffer: this.ubuf! } }] }); }
     const p = enc.beginRenderPass({ label: 'outline', colorAttachments: [{ view: hdrView, loadOp: 'load', storeOp: 'store' }] });

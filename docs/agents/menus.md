@@ -1290,13 +1290,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Options ▸ Game ▸ 'Walk into a wall to take it'** (10-20; `ui/options.ts`, shown only with the wall hold's feel pass on): flips `WALLSNAP.press`, kept in
   `twopointsix.options` as `wallpress`, a `?wallpress` in the URL wins over the kept value, Reset puts it back on. The rule: `docs/agents/stealth.md`, the
   wall taken without the key. The Controls list and the Options key list do not mention it.
-- **Finding your own man, and the camera under the hand: five rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20;
+- **Finding your own man, and the camera under the hand: six rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21;
   `src/host/findme.ts` the table, `src/ui/findme.ts` the ring, the rows and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
   walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
-  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, turn: 1, behind: false }` on the page and on
+  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, turn: 1, behind: false }` on the page and on
   both stands, and at those starts the build is the build as it was (measured against the build head each time: the same game digest and the same
   view matrix over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
-  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all five back. THE ROWS: `Aim pan` (a slider, none to today's: it
+  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all six back. THE ROWS: `Aim pan` (a slider, none to today's: it
   scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
   menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (Ctrl + mouse
   turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
@@ -1322,7 +1322,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   idea". It is possible: the G-buffer's id target (`gbuffer.wgsl`: `owner << 20`, on his skinned mesh and on every box emitted for him) says whose
   each pixel is. So `Outline in the dark` (off at its start) is now ONE PASS over the composite, after the fog of war and before the resolve
   (`render/outline.ts OutlinePass`, `shaders/outline.wgsl`; the one call in `render/passes.ts`): a blended triangle inside a scissor round him, in which
-  a pixel that is not his takes a pale ink by how near the nearest of his pixels is (`OUTLINE`: 1.5 to 3 pixels of the composite by its height, the
+  a pixel that is not his takes a pale ink by how near the nearest of his pixels is (`OUTLINE`: 1.125 to 2.25 pixels of the composite by its height since 10-21, the
   outer pixel fading) and only from one of his that stands in front of it by the G-buffer's depth, so a wall top, a table or a teammate between him
   and the camera is not drawn on. His body, kit and gun are in it because they carry his owner byte; so do a round of his for the frame it leaves the
   muzzle and a charge while his hands set it, and they take the rim too. HOW STRONG is the light meter's word (`host/findme.ts outlineWant`: full at
@@ -1333,10 +1333,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   IT COSTS: with the row off, nothing: the pass object is not made and `encode` is not called. First frame on: one bind group layout, 32 bytes of
   uniform, one small module compiled off the frame; until that is in, and for good if it fails (said once), nothing is drawn. On and he is in the
   dark: one render pass on the composite (load and store), a scissor of about a tenth of the picture close in and a fiftieth from a squad level's
-  distance, up to 49 id reads a pixel inside it. No scene group, no storage buffer, no copy of the composite, no timer row (a render pass's stamp
+  distance, up to 49 id reads a pixel inside it (81 with the width row at its most). No scene group, no storage buffer, no copy of the composite, no timer row (a render pass's stamp
   is left off here as the particles' draw's is). On and he is lit: no pass. A kept line from the stick figure's days that says `outline: true`
   turns this one on. UNDER THE RESOLVE: the rim is drawn before it, so it is anti-aliased with the picture, and the pixel next to him rides his
   motion vector; the outer pixel has the floor's and may trail him by a few frames as he moves. Nobody has seen that on a GPU.
+  ITS WIDTH (10-21). The maintainer, having seen the rim on his GPU: "outline in the dark is good but can you add a slider to the options for the
+  width? it's just a touch too fat". Two things. THE RIM ITSELF IS A QUARTER THINNER: `OUTLINE` is now 1.125 to 2.25 pixels by the composite's
+  height (it was 1.5 to 3); the quarter is a guess at "a touch", and it is in the rule, not in the row, so a kept row follows it when it is tuned
+  again. Under a pixel and a half the shader's fading outer pixel makes 'thinner' the one pixel next to him going fainter, so on a composite
+  under 840 rows the new rim is a softer line more than a narrower one. AND `Outline width` IS A ROW (a slider under the outline's row, 50 % to
+  150 % in steps of 5; `FINDME.width`, a share of the rim's own width, starts at 1, kept with the rest): `outlineRadius(h, wide)` = the rule
+  times the row, never under `OUTLINE.floorPx` 0.9 (so on a short composite the low end of the slider stops at the floor: a line cannot be
+  thinner than its pixel) and at most 3.4 pixels, which is up to 81 id reads a pixel inside the scissor where the built rim had 49. Nothing
+  reads the row with the outline off; the page reads it every frame, so it moves live under Options. A machine that kept the outline on gets
+  the thinner rim at once. Line (10) of the check holds the rim's own width inside its two pixel counts and the radius at 100 %, 50 %, both ends
+  and the floor; the page check moves the slider and reads the frame's width (its kept picture is at 150 %). Nobody has seen the thinner rim or
+  the slider on a GPU.
   SHELVED STILL: `Shape through walls` (no row, no key; a kept line that names it reads without it). A proper one is him drawn once more with the
   depth test off into a mask and filled where a wall hides him: a pass of its own, to be built only once the outline has been seen on a GPU.
   ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording

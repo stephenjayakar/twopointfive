@@ -1,12 +1,14 @@
-// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand: five settings to play with (Options > Game; ui/findme.ts draws the ring, hands
+// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand: six settings to play with (Options > Game; ui/findme.ts draws the ring, hands
 // the renderer the outline's frame and builds the rows). Every one starts where the game stood before it had them, on the page and on both of the harness's
-// stands: nothing here is a new default, and with all five as they start the build is the build as it was. (One more is SHELVED, 2026-10-20: his shape
+// stands: nothing here is a new default, and with all six as they start the build is the build as it was. (One more is SHELVED, 2026-10-20: his shape
 // through a wall. A kept line that still names it reads as if it did not: ui/findme.ts says why.)
 //   pan      how far the view leans from the man toward the aim point, as a share of the follow camera's own lead (FollowCamera.aimLead as it was built):
 //            1 = as it was · 0 = he is the middle of the screen wherever the mouse goes
 //   ring     the gold ring at his feet (the one an open order menu draws: ui/planfloor.ts) on at all times
 //   outline  a pale rim round him while the light meter says he is in the dark — his true silhouette, drawn by the renderer from the pixels that are his
 //            (render/outline.ts). A kept line from the days it was a figure drawn over the picture (before 2026-10-20) turns this one on
+//   width    how wide that rim is, as a share of the rim's own width (render/outline.ts OUTLINE, outlineRadius): 1 = that width. Nothing reads it while
+//            `outline` is off
 //   turn     which way the view turns under Ctrl + the mouse: 1 = as it was · -1 = the other way
 //   behind   Ctrl tapped twice brings the view round to look where he was looking at the tap. NOT 'the camera behind him' in a third-person game's sense, and
 //            it cannot be while the system cursor is the aim: he faces the cursor's point in the world, the cursor stays where it is on the screen, so as
@@ -18,8 +20,10 @@
 // KEPT PER MACHINE (localStorage `twopointsix.findme`), read once as this module loads; a harness has no store and gets the starts. No imports, on purpose:
 // the loop (host/loop.ts) and the engine replay's own view (replay/engineplay.ts, its Ctrl turn) read the table and nothing of the game or the page comes with it.
 
-export interface FindMe { pan: number; ring: boolean; outline: boolean; turn: 1 | -1; behind: boolean }
-export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, outline: false, turn: 1, behind: false };
+export interface FindMe { pan: number; ring: boolean; outline: boolean; width: number; turn: 1 | -1; behind: boolean }
+export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, outline: false, width: 1, turn: 1, behind: false };
+/** the width row's ends (shares of the rim's own width) */
+export const FINDME_WIDTH = { min: 0.5, max: 1.5 };
 export const FINDME: FindMe = { ...FINDME_START };
 const LS = 'twopointsix.findme';
 
@@ -29,7 +33,8 @@ export function findMeRead(text: string | null | undefined): FindMe {
   try { const j = JSON.parse(text ?? 'null'); if (j && typeof j === 'object') v = j; } catch { /* not ours */ }
   const flag = (k: 'ring' | 'outline' | 'behind') => typeof v[k] === 'boolean' ? v[k] as boolean : FINDME_START[k];
   const pan = typeof v.pan === 'number' && isFinite(v.pan) ? Math.max(0, Math.min(1, v.pan)) : FINDME_START.pan;
-  return { pan, ring: flag('ring'), outline: flag('outline'), turn: v.turn === -1 ? -1 : 1, behind: flag('behind') };
+  const width = typeof v.width === 'number' && isFinite(v.width) ? Math.max(FINDME_WIDTH.min, Math.min(FINDME_WIDTH.max, v.width)) : FINDME_START.width;
+  return { pan, ring: flag('ring'), outline: flag('outline'), width, turn: v.turn === -1 ? -1 : 1, behind: flag('behind') };
 }
 /** THE OUTLINE'S STRENGTH from the light meter (Player.visibility, 0 dark … 1 lit): full at `full` and under, none at `none` and over; `nv` (the goggles'
  *  amount, 0 … 1) takes it out as they come on — they light him already. `ease` = how fast the drawn strength follows, per second; the box the rim is looked
