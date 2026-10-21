@@ -26,6 +26,7 @@ import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
 import { TABKEY } from './tabkey';
+import { keyText } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions } from './options';
 
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
@@ -40,6 +41,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   ['Z · R', 'FN2000 semi / auto · reload'],
   ['L · N · V', 'weapon light · night vision · whistle (the nearest man comes to look)'],
   ['X · B · T · F', 'with a team — X (or middle click) orders · B the usual order · T who it goes to · F drill, word, charge'],
+  ['H · G', 'with the orders up — the big tool on a door, smoke on the floor · frag and clear'],
   ['F5', 'save'],
   ['Enter', 'once down: back to the last checkpoint · Shift+Enter restarts the run any time'],
   ['Ctrl + mouse / wheel', 'orbit the camera / zoom (or pinch)'],
@@ -75,7 +77,7 @@ export function bootCard(): { status(text: string): void; off(): void } {
     { const ta = titleActions(); card.appendChild(ta.actions); setTimeout(() => { if (!missionsBusy() && !optionsOpen() && (document.activeElement ?? document.body) === document.body) ta.play.focus(); }, 0); }   // (PLAY, OPTIONS and CONTROLS are live from the first tick: a deploy is a page load, and the controls need nothing of the renderer; Play has the focus from that tick too, as on the live title, so Enter is Play while the kernels still compile)
     card.appendChild(el('div', 'tfill'));
     card.appendChild(status);
-    const foot = el('div', 'foot'); foot.textContent = TITLE_FOOT; card.appendChild(foot);
+    const foot = el('div', 'foot'); foot.textContent = keyText(TITLE_FOOT); card.appendChild(foot);
   } else {
     root.classList.remove('title'); root.classList.remove('paused');
     const head = el('div', 'head'); head.innerHTML = `<div class="t1">two<b>point</b>six</div><div class="t2">${TAGLINE}</div>`; card.appendChild(head);
@@ -88,9 +90,9 @@ export function bootCard(): { status(text: string): void; off(): void } {
     for (const t of picks ? PICKS_NOTES : START_NOTES) { const n = el('div', 'note'); n.textContent = t; card.appendChild(n); }
     const body = el('div', 'body'); card.appendChild(body);
     const list = el('div', 'controls');
-    for (const [k, v] of CONTROLS) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = k; const vv = el('div', 'v'); vv.textContent = gearText(v); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of CONTROLS) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     body.appendChild(list);
-    const foot = el('div', 'foot'); foot.textContent = 'Esc pauses · ` opens the debugger (every knob)'; card.appendChild(foot);
+    const foot = el('div', 'foot'); foot.textContent = keyText('Esc pauses · ` opens the debugger (every knob)'); card.appendChild(foot);
   }
   root.classList.add('on');
   // A FRESH VISIT OPENS ON THE TITLE. The starting page is up by itself only where the address or the last page asked for it: `?loadout=<id>` names a mission,
@@ -244,7 +246,7 @@ export class Menu {
     this.sandboxRow(card);   // (no loadout choice: the FN2000 is always in the kit — playtest 08-09)
     this.body = el('div', 'body'); card.appendChild(this.body);
     this.controls();
-    const foot = el('div', 'foot'); foot.textContent = 'Esc pauses · ` opens the debugger (every knob)'; card.appendChild(foot);
+    const foot = el('div', 'foot'); foot.textContent = keyText('Esc pauses · ` opens the debugger (every knob)'); card.appendChild(foot);
     setTimeout(() => { if (!missionsBusy() && !optionsOpen()) primary.focus(); }, 0);   // (the mission list opened off the boot card is still up over this card: the focus stays its own)
   }
 
@@ -260,7 +262,7 @@ export class Menu {
     card.appendChild(actions);
     card.appendChild(el('div', 'tfill'));
     if (was) { const c = button(`Cheats on: ${was}`, () => openOptions({ tab: 'game', onClose: again })); c.className = 'cheats'; c.title = 'Options ▸ Game switches them'; card.appendChild(c); }
-    const foot = el('div', 'foot'); foot.textContent = TITLE_FOOT; card.appendChild(foot);
+    const foot = el('div', 'foot'); foot.textContent = keyText(TITLE_FOOT); card.appendChild(foot);
     setTimeout(() => { if (!missionsBusy() && !optionsOpen()) ta.play.focus(); }, 0);   // (the starting page opened off the boot card is still up over this screen: the focus stays its own)
   }
 
@@ -313,7 +315,7 @@ export class Menu {
     { const view = this.d.replay?.() ?? null; if (view) { const b = button('Replay', () => { if (performance.now() - shown >= 500) view(); }, 'replay'); b.title = 'this run played again in the game'; actions.push(b); } }   // (the maintainer: "would be nice to be able to open the replay immediately here")
     this.body = el('div', 'body'); card.appendChild(this.body);
     renderDebrief(this.body, g, actions);
-    const foot = el('div', 'foot'); foot.textContent = down ? (ck && mine ? 'Enter goes back to the checkpoint · Shift+Enter restarts the encounter · Esc closes this' : 'Esc closes this · Enter or Shift+Enter restarts') : 'Esc keeps playing · Shift+Enter restarts any time · Esc ▸ Run so far shows this for a run in progress'; card.appendChild(foot);
+    const foot = el('div', 'foot'); foot.textContent = keyText(down ? (ck && mine ? 'Enter goes back to the checkpoint · Shift+Enter restarts the encounter · Esc closes this' : 'Esc closes this · Enter or Shift+Enter restarts') : 'Esc keeps playing · Shift+Enter restarts any time · Esc ▸ Run so far shows this for a run in progress'); card.appendChild(foot);
     setTimeout(() => (lead ?? (ck && mine ? ck : primary)).focus(), 0);
   }
   /** 'Restart from checkpoint (40 s ago)' for the newest stored checkpoint (this run's for choice), or null when there is none / no loader is wired: loads it
@@ -371,7 +373,7 @@ export class Menu {
 
   private controls() {
     const list = el('div', 'controls');
-    for (const [k, v] of CONTROLS) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = k; const vv = el('div', 'v'); vv.textContent = gearText(v); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of CONTROLS) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     this.body.appendChild(list);
   }
 
