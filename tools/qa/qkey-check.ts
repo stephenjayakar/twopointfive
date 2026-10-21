@@ -10,7 +10,8 @@
 //                  has no key — and with walking in switched off it still has none: Q never means two things (under `?bkey` it is the wall's again there)
 //   the words      a line written with the old cap names Q ('B on the blue door', the key card's 'X · B · T · F'); a place's letter is left alone
 //   his own keys   the command put back on B by hand stays on B, kept and read back, and Reset is Q again; a table kept before, the command on another
-//                  key, means what it meant; the wall hold given Q by hand takes it from the command, which then has no key; after 3,000 moves by a die,
+//                  key, means what it meant; Q given to another row (the wall hold by hand, Reload in a table kept while Q was spare) leaves the
+//                  command on B, and on no key only when B is held too; after 3,000 moves by a die,
 //                  the walk-in going off and on, no key has two rows
 //   the game       on the stand this run is on, the room clear with its squad of four: the same hand — the floor, a door, the door again once they are
 //                  stacked on it, the floor — once with the code written straight in (what B was, and what every tool and recording writes) and once
@@ -112,15 +113,19 @@ export async function qkeyCheck(): Promise<boolean> {
       K.setKeys(K.keysKept()); const back = cmd() === 'KeyB'; boot(''); const again = cmd() === 'KeyB';   // (read back, and a page load later)
       K.resetKeys(); const reset = cmd() === 'KeyQ' && !K.keysChanged() && store.get('twopointsix.keys') === undefined;
       K.setKeys({ [code]: 'KeyG' }); const old = cmd() === 'KeyG' && K.gameCode('KeyQ') === '' && K.gameCode('KeyB') === ''; K.setKeys({});
-      const r2 = K.bindKey('KeyQ', 'KeyQ'), wallQ = K.gameCode('KeyQ') === 'KeyQ' && cmd() === 'no key' && K.capNow(code) === K.NONE; K.resetKeys(); const reset2 = cmd() === 'KeyQ' && K.keysOf('KeyQ').length === 0;
+      const r2 = K.bindKey('KeyQ', 'KeyQ'), wallQ = K.gameCode('KeyQ') === 'KeyQ' && cmd() === 'KeyB' && K.capNow(code) === 'B' && !('KeyB' in K.keysKept()); K.resetKeys(); const reset2 = cmd() === 'KeyQ' && K.keysOf('KeyQ').length === 0;
+      // Q already his (a table kept while Q was spare): the command is on B, as before the move — and back on Q when that row moves away; on no key only with both held
+      K.setKeys({ KeyR: 'KeyQ' }); const rQ = cmd() === 'KeyB' && K.gameCode('KeyQ') === 'KeyR'; K.bindKey('KeyR', 'KeyR'); const rBack = cmd() === 'KeyQ';
+      K.setKeys({ KeyQ: 'KeyQ' }); const wQ = cmd() === 'KeyB' && K.gameCode('KeyQ') === 'KeyQ';
+      K.setKeys({ KeyR: 'KeyQ', KeyG: 'KeyB' }); const both = cmd() === 'no key' && K.capNow(code) === K.NONE; K.setKeys({});
       // a die on the board, the walk-in going off and on: no key with two rows
       const rnd = seeded(7), ids: string[] = K.KEY_ACTS.map((x: any) => x.id), keys = BOARD; let two = 0, moves = 0;
       for (let i = 0; i < 3000; i++) { const r = rnd(); if (r < 0.04) walk = !walk; else if (r < 0.08) K.resetKeys(); else if (r < 0.14) K.unbindKey(ids[Math.floor(rnd() * ids.length)]); else { K.bindKey(ids[Math.floor(rnd() * ids.length)], keys[Math.floor(rnd() * keys.length)]); moves++; }
         if (i % 25 === 0) for (const k of keys) if (ids.filter(id => K.keysOf(id).includes(k)).length > 1) two++; }
       walk = true; K.setKeys({}); store.clear();
-      line(r1.ok && onB && kept === `{"${code}":"KeyB"}` && back && again && reset && old && r2.ok && r2.swapped === code && wallQ && reset2 && two === 0,
-        'the command put back on B by hand stays on B and Reset is Q again; an old kept table means what it meant; the wall hold given Q takes it from the command; a die leaves no key with two rows',
-        `on B by hand: ${onB}, kept ${kept}, read back ${back}, a load later ${again} · Reset: ${reset} · a table kept with the command on G: ${old} · the wall hold given Q: swapped with ${r2.swapped ?? 'nobody'}, the command then ${wallQ ? 'has no key' : `on ${cmd()}`} · Reset: ${reset2} · ${moves} moves by a die: ${two} keys with two rows`);
+      line(r1.ok && onB && kept === `{"${code}":"KeyB"}` && back && again && reset && old && r2.ok && r2.swapped === code && wallQ && reset2 && rQ && rBack && wQ && both && two === 0,
+        'the command put back on B by hand stays on B and Reset is Q again; an old kept table means what it meant; Q given to another row leaves the command on B, never on no key while B is free; a die leaves no key with two rows',
+        `on B by hand: ${onB}, kept ${kept}, read back ${back}, a load later ${again} · Reset: ${reset} · a table kept with the command on G: ${old} · the wall hold given Q: swapped with ${r2.swapped ?? 'nobody'}, the command then on B ${wallQ} · Reset: ${reset2} · a table kept with Reload on Q: the command on B ${rQ}, on Q again when Reload moves away ${rBack} · kept with the wall hold on Q: on B ${wQ} · Q and B both held: no key ${both} · ${moves} moves by a die: ${two} keys with two rows`);
     }
     // 5. the game on this stand: the code written straight in (what B was) and the Q key through the keyboard leave the same order book and the same game
     {
