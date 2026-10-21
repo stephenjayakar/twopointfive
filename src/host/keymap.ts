@@ -35,6 +35,9 @@
 // so no two rows share a cap and the wall hold's is still 'Q'. ONLY WITH `qFree`: under `?qfree=0` Q is the wall's and the command is on B, as it was.
 // And while it has Q the wall hold never falls back to Q: with walking in switched off the hold has no key until the player gives it one. Kept as he
 // set it, like a freed row: the command put back on B by hand stays on B. `?bkey` = the command on B for the visit (Q then as the lines above say).
+// Q ALREADY HIS: a table kept with another row on Q (Reload put there while Q was spare, the wall hold given Q back by hand) leaves the command on B,
+// its own code's key, as it was before the move; it is on no key only when both are held. Nothing is kept for that: the row he put on Q moved away,
+// the command is on Q again.
 // Imports nothing.
 
 export interface KeyAct { /** the code the game asks for (the first of `codes`) */ id: string; /** every code of the row in the build: Shift is both of its keys */ codes: string[]; /** its cap in the build */ cap: string }
@@ -91,7 +94,7 @@ function adopt(v: Record<string, unknown>) {
   bound.clear(); const taken = new Set<string>();
   for (const a of KEY_ACTS) { const k = v[a.id]; if (k === null) bound.set(a.id, null); else if (typeof k === 'string' && CODE.test(k) && !FIXED.test(k) && !taken.has(k) && (special(a.id) || !(a.codes.length === 1 && k === a.id))) { bound.set(a.id, k); taken.add(k); } }   // (a freed or moved row's own key is kept as he set it: the header's note)
   // a row still as built whose key a kept row took is left without that key: with another of its own it keeps that one, else it has none
-  for (const a of KEY_ACTS) { if (bound.has(a.id) || FREED[a.id]) continue; const h = home(a), free = h.filter(c => !taken.has(c)); if (free.length < h.length) { bound.set(a.id, free[0] ?? null); if (free[0]) taken.add(free[0]); } }   // (a freed row is given no entry it was not kept with: keysNow leaves it without a key another row holds)
+  for (const a of KEY_ACTS) { if (bound.has(a.id) || special(a.id)) continue; const h = home(a), free = h.filter(c => !taken.has(c)); if (free.length < h.length) { bound.set(a.id, free[0] ?? null); if (free[0]) taken.add(free[0]); } }   // (a freed row is given no entry it was not kept with: keysNow leaves it without a key another row holds)
   tidy(); rebuild();
 }
 function keep() { try { const o: Record<string, string | null> = {}; for (const [id, k] of bound) o[id] = k; const S = (globalThis as any).localStorage; if (bound.size) S?.setItem(LS, JSON.stringify(o)); else S?.removeItem(LS); } catch { /* no store */ } }
@@ -151,7 +154,9 @@ export function keyLabel(code: string): string {
 export function gameCode(code: string): string { fresh(); if (!map) return code; const to = map.get(code); return to === undefined ? code : to; }
 /** a row's keys now: the player's while his table is live and holds the row, else the build's */
 function keysNow(a: KeyAct): string[] { if (!KEYMAP.on) return home(a); if (bound.has(a.id)) { const k = bound.get(a.id); return k ? [k] : []; }
-  return special(a.id) && bound.size ? home(a).filter(c => ![...bound.values()].includes(c)) : home(a); }   // (a freed row back on its old key because walking in was switched off, and that key given to another row meanwhile: it has none)
+  if (!(special(a.id) && bound.size)) return home(a);
+  const held = [...bound.values()], h = home(a).filter(c => !held.includes(c));
+  return h.length || !MOVED[a.id] ? h : a.codes.filter(c => !held.includes(c)); }   // (the command's Q held by a row he put there: it is on its own code's key, B, if that is free — never on no key while one of the two is)   // (a freed row back on its old key because walking in was switched off, and that key given to another row meanwhile: it has none)
 function fresh() { if (builtOn !== KEYMAP.on || builtFree !== freeNow() || builtCmd !== cmdOnQ()) rebuild(); }
 /** is a row on the keys the build gives it (what a cap marks as moved when it is not) */
 export function keyBuilt(id: string): boolean { const a = byId.get(id); return !a || same(keysNow(a), home(a)); }
@@ -187,7 +192,8 @@ export function bindKey(id: string, code: string): { ok: boolean; why?: 'fixed' 
   const mine = keysOf(id); if (mine.length === 1 && mine[0] === code) return { ok: true };
   const other = holder(code, id); let swapped: string | undefined;
   if (other) { const theirs = keysOf(other.id).filter(c => c !== code);   // (a row with two keys in the build that loses one keeps the other: Right Shift taken leaves Shift on the left)
-    settle(other, theirs.length ? theirs[0] : mine.find(c => c !== code) ?? null); swapped = other.id; }
+    const give = theirs.length ? theirs[0] : mine.find(c => c !== code) ?? null;
+    if (give === null && MOVED[other.id]) bound.delete(other.id); else settle(other, give); swapped = other.id; }   // (the command with nothing handed back keeps no entry: keysNow puts it on B while B is free)
   settle(a, code); tidy(); rebuild(); keep(); return { ok: true, swapped };
 }
 /** leave a row with no key */
