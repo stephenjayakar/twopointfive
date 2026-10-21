@@ -17,7 +17,12 @@ export const steps: Record<string, (B: Bot) => void> = {
   pace: B => { B.wheel(1); },
   // out of the pool and round the container's west end into the lane behind it (the pace back up, as the line says: a long creep proves nothing more)
   dark: B => { B.wheel(-1); B.go([12.2, 0, 20.9], 30); B.go([17.8, 0, 21.1], 30); },
-  wall: B => { B.go([18.3, 0, 20.75], 10); B.aim([18.3, 1.2, 19.0]); B.press('KeyQ', 20); },
+  // walk into the container, as the line says and as the page takes a wall; the hold's own key only where walking in is switched off (the frozen stand)
+  wall: B => {
+    B.go([18.3, 0, 20.75], 10);
+    if (!B.g.player.wall) B.nudge([18.3, 0, 20.0], 1.5, () => !!B.g.player.wall);
+    if (!B.g.player.wall) { B.aim([18.3, 1.2, 19.0]); B.press('KeyQ', 20); }
+  },
   // sidle east to the container's end and keep pushing: the lean comes in at an open end
   peek: B => { B.nudge([19.6, 0, 20.6], 6, () => (B.g.player.wall?.peek ?? 0) > 0.5); },
   nv: B => { B.press('KeyN'); },
