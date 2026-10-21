@@ -42,6 +42,7 @@ import { ocpable, lensClear } from './lighting';
 import { deadLamp } from './carlamps';
 import { breachAim, gunWalled, gunWallPose, gunWallStance } from './gunwall';
 import { friendNoSnap, friendOnRay, samOffFriend } from './friends';
+import { noShoveBegin, noShoveMan, noShoveBack, noShoveNote } from './noshove';
 import { samStaggered, samRooted, samBlind, samStunPose } from './samstun';
 import { SPRINTDOOR, SPRINTDOOR_STATS, sprintDoorPace, sprintDoorLean, sprintDoorHead } from './sprintdoor';
 import { tearOff } from './doorblast';
@@ -80,7 +81,7 @@ import { takeBegin, takeFall, takeLower, takeKill, takeBeats, TAKEDOWN } from '.
 /** the player's movement circle: wider than the body so arms / gun don't clip into walls */
 const BODY_R = 0.42;
 /** living guards are solid to you out to this (centre to centre) */
-const KEEP_OFF = 0.55;
+export const KEEP_OFF = 0.55;
 
 // ------------------------------------------------------------ the grab / hold (docs/internal/grab-interrogate-design.md §1: slice 1 the arm variant, slice 4 the gun variant)
 //                                                              the 'grab him' row on a living guard from behind (game.ts updateDoors acts on it) — the silent takedown
@@ -301,6 +302,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   const pl = g.player; const c = pl.char; const T = g.tune; const gun = pl.pistol;
   cam.peekOffset = null;   // (set again below for the one case that wants it: peeking round the end of a wall)
   aimWeighBegin(pl);   // (aimweight.ts: nothing has weighed his aim this frame yet — only the plain aim branch below does)
+  noShoveBegin(g);   // (noshove.ts: nobody has moved him yet this frame, and his own legs start from here — nothing with its switch off)
   const launchWas = pl.launchHeld; pl.launchHeld = null;   // the launcher's button was down last frame (below, with the rifle's fire): handed on only by the frame that still has the rifle up and free — any other state (down, a grab, a kick, the sling, a sprint) lets go of it unsent
   if (input.hit('Enter') && (pl.down || g.mission.stage === 'failed' || input.down('ShiftLeft') || input.down('ShiftRight'))) {   // (failed on his feet — a civilian dead by his hand with tune.civilianKillFails — restarts too)   // Shift+Enter restarts the encounter any time; a bare Enter once down goes back to this run's newest CHECKPOINT if one is stored (game/savestate.ts — the down card's default too), else restarts
     const shift = input.down('ShiftLeft') || input.down('ShiftRight'); const ck = !shift && pl.down ? g.saves.newest(true, g.mission.stats.elapsed) : null;
@@ -689,6 +691,11 @@ function keepOffGuards(g: Game, dt: number, y1: number) {
     if (gd.state === 'dead' || gd.held) continue;   // (the man in his arm is placed off him, not kept off him: updateHold)
     const dx = p[0] - gd.char.pos[0], dz = p[2] - gd.char.pos[2]; const l = Math.hypot(dx, dz);
     if (l >= KEEP_OFF) continue;
+    if (noShoveMan(g, gd)) {   // (noshove.ts: a man of his own falling in is the one who yields — only what his own legs closed on the man is taken back)
+      const back = l > 1e-4 ? noShoveBack(g, gd.char.pos[0], gd.char.pos[2], l) : 0;
+      if (back > 0) { const bx = p[0], bz = p[2]; p[0] += dx / l * back; p[2] += dz / l * back; collidePlayer(g, y1); noShoveNote(g, p[0] - bx, p[2] - bz); }
+      continue;
+    }
     const gv = gd.char.vel; const gs = Math.hypot(gv[0], gv[2]); const walking = gs > 0.2;
     let nx: number, nz: number;   // straight away from him (dead on his centre: to the right of wherever he is heading)
     if (l > 1e-4) { nx = dx / l; nz = dz / l; } else if (gs > 1e-3) { nx = gv[2] / gs; nz = -gv[0] / gs; } else { nx = 1; nz = 0; }
@@ -710,6 +717,7 @@ function keepOffGuards(g: Game, dt: number, y1: number) {
     if (ahead > 0) { const his = ahead * Math.min(push, gs * dt * ahead); p[0] -= fx * his; p[2] -= fz * his; }   // (the forward share of a straight shove that is only his stride closing on you this frame is not yours to travel: half beside him you would still ride along)
     collidePlayer(g, y1);
     if (walking && (p[0] - bx) * nx + (p[2] - bz) * nz < 0.5 * push) { p[0] = bx; p[2] = bz; const s = g.player.safe; if (s) { s[0] = bx; s[2] = bz; } }   // the statics ate it: pinned — stay put (bx, bz is already a settled spot) and let him brush through
+    noShoveNote(g, p[0] - bx, p[2] - bz);   // (noshove.ts: what a man moved him by is not his walking — nothing with its switch off)
   }
 }
 
@@ -1618,8 +1626,10 @@ function keepHeldOffGuards(g: Game, dt: number) {
     if (o === H.g || o.state === 'dead' || o.held) continue;
     const dx = hx - o.char.pos[0], dz = hz - o.char.pos[2]; const l = Math.hypot(dx, dz);
     if (l >= KEEP_OFF || l < 1e-4) continue;
+    if (noShoveMan(g, o)) continue;   // (noshove.ts: a man of his own falling in does not move the pair either)
+    const bx = c.pos[0], bz = c.pos[2];
     const push = Math.min(KEEP_OFF - l, 6 * dt); c.pos[0] += dx / l * push; c.pos[2] += dz / l * push;
-    collidePlayer(g, 1.7);
+    collidePlayer(g, 1.7); noShoveNote(g, c.pos[0] - bx, c.pos[2] - bz);
   }
 }
 /** Where the exchange with the man in his arm stands: `asking` — Sam's own line is up and the answer is on its way (H.ask: a tap does nothing); `samUp` — a line

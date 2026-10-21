@@ -252,6 +252,53 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   floor' returns changed. Measured there: 2 moving, places 0.40 m apart → 0 moving, places 0.70 m and bodies 0.66 m apart. `probes.ts filespread`, both stands,
   `FILEHOLD_BREAK=1` (the corner is STAGED for the frozen stand, whose men never walk into it: doors stay, the storage door stood open, the two put in the
   pocket; and line 3's 19 places). One level, one corner, no seeds (the stand is fixed). Never seen on a GPU, never played.
+- **Teammates falling in never shove you** (`src/game/noshove.ts`, `NOSHOVE.on`: ON in the page — `?noshove=0` — OFF in the module and on the frozen stand,
+  `TPS_NOSHOVE=1`, a `FROZEN_HOLDS` row, in the knob registry and a journal's tables: a recording from before the key replays with it off; off = the build as
+  it was; the maintainer's yes of 10-21 to a card from the team pace work). THE FLAW, reproduced before anything was changed: a man walking to his place
+  under 'fall in' was as solid to the player as an enemy (player.ts `keepOffGuards`: "you are the one who yields"), so one whose place lay on the player's far
+  side walked into him and shouldered him aside — 0.22 to 0.81 m staged on room-clear-four, 0.23 m on the compound (room taken through k_p, 'fall in' with the
+  player stood inside) — and orders.ts, which reads the player's pace off the ground he covers, took the shove for a WALK: the file's places moved (stopped /
+  not stopped flips `clearBack`), and the man keeping the room's other door walked 0.54 m out of "his way" (`aside()` comes before the keep).
+  TWO HALVES, each with its own key under the switch. `round`: a man of the player's own under 'fall in', on his order's legs (`noShoveMan`: `post === null`
+  and a script — the fight's own moves, a man on any other order, a man running from a live grenade (`fragRunning`: that leg is run through the same
+  walker under a borrowed script) and every enemy are as they were), is the one who yields, in squad.ts `runGuardScript` after
+  his step (`noShoveKeep`): his own step never takes him nearer the player than `ring` 0.6 (or than he already stood) — where a ray from the player's shin to
+  the side finds `ring` + his radius of floor he walks ROUND, the side his way already lies on (square on: his right), else the other; his order's place
+  itself inside the ring: he STOPS SHORT at it; no room either side (a passage, a doorway): `through` on, he squeezes past as a man in a narrow doorway always
+  did and the player is not moved, `through` off he stops short and waits; left standing inside the player's keep-off (a restart, a load, an enemy who shoved
+  the player onto him) he steps back out at `back` 1.2 m/s; a corner of his way that lies under the player is skipped for the next (or for his place) where
+  that is a straight walk, and one he cannot cut he waits for. HELD SHORT HE STANDS: `noShoveKeep` answers true and the walker zeroes his pace, so his legs
+  do not cycle on the spot and followPath's stuck side-step is not woken (the review of 10-21 found him walking on the spot at 2.2 m/s). The player's side
+  (`keepOffGuards`, and `keepHeldOffGuards` for the pair with a man in his arm): such a man never moves him — only what his OWN legs closed on the man this
+  update is taken back (`noShoveBack`, measured from where he would stand had his legs not moved: a walk past a follower's shoulder stays AT the keep-off and
+  the man is not made to step back), so he still cannot walk through a follower. `own`: every push `keepOffGuards` gives him, from anybody, is written down for the frame
+  (`Player.shoved` / `shovedT` / `shovedFrom`, set and read inside one update: no save holds them), and orders.ts `tick` reads his pace and heading off
+  `noShoveOwn`: a frame nobody moved him in reads as it always did (a harness that walks him by small teleports still reads as a walk); one a man did reads
+  the step his own legs took inside that update, less what the men took back of it (the part of their shove that runs against his step, no more than
+  they gave) — a standing player shoved reads 0, a walk into a man who stands reads 0, sliding round one reads the ground covered, and what a door leaf did to him since the last tick is not his walking either (the compound's case: the leaf pushed him back each frame
+  and the first cut read THAT as 1.8 m/s). Not touched: the trail's crumbs, the sneak's and the unseen squad's own reads of him, `playerGroundVel` (what a
+  watcher sees of him is still the ground he covers). Tab ▸ Team feel: 'teammates ▸ never shove you falling in', '… go round you', '… a shove is not you
+  walking', '… squeeze past in a tight place'. CHECK `tools/qa/noshove-check.ts` (`probes.ts noshove`, family `squadorders`; 12 lines, each rule line
+  played off AND on, green on both stands; `NOSHOVE_BREAK=1` fails 11 of the 12 on both, the journal line apart): the found case staged small (off 0.22 m and
+  a pace read of 1.7 m/s → on 0.000 m and 0.00, the man round him); the walk from 2.5 m square on and a foot off his line with `ORDERS.nearM` held off
+  (off 0.25 / 0.81 m → on 0.000, round him and in his place); a 1.2 m passage (squeezes past, 0.000 m; `through` off: held at the ring for the whole
+  take, his legs at 0.00 m/s and the stuck side-step woken 0 times); his place under the player (the mover asked directly: at the ring); set down on top
+  of each other (he steps out, the player stays); the player walked at a follower (no nearer than 0.55 m) and past one's shoulder (0.550 m, the man made
+  to step back on 0 frames; off 0.52); a teammate on a 'move' order through the standing player (still shouldered 0.44 m — he is not falling in —
+  pace read 0.00 against 2.0 to 2.6 off, the follower in the line of the shove still against 0.84 m off); the arithmetic; THE COMPOUND'S KEEPER, which is
+  the shipped stand's case (the frozen entry walks nobody across him, said so by the line): off 0.23 m and the keeper 0.54 m off his spot on his own legs,
+  `own` alone the player shoved and the keeper's legs still, on 0.003 m and nobody's legs. `roomkeep-check.ts`'s wider bar for a shoved player
+  (`ORDERS.asideOff`) is no longer reached with the rule on. THE PAGE: `tools/qa/noshove-page.cjs` (the real bundle in headless Chromium on the software adapter, `PORT=… node tools/qa/noshove-page.cjs` against a dev server: the page opens with the
+  switch on, the standing player moved 0 m and the man went round him no nearer than 0.58 m; `?noshove=0`: off, 0.227 m; no page error).
+  MEASURED 10-21: switch off = the build as it was, 21 of 21 run digests equal on EACH stand (`PT_DIGEST=1 playthrough.ts --seeds 1`, the page's stand with
+  `TPS_NOSHOVE=0`). On against off on the page's stand, 21 scenarios x seeds 1 and 2 (the tool's own player; its JSON carries `noshove`): 31 of the 42 runs
+  are the same run (the rule never fired), 11 differ; men up 64 of 148 on, 66 off; ends the same (21 taken, 13 wiped, 5 lost, 3 rescued); smells 147 on,
+  141 off (twitch 114 / 111, unaware 24 / 23, block 3 / 1 — one of the new blocks names a man on his fall-in mark 0.87 m from a stopped player, one a man on
+  a door order: two seeds do not say whether that is the rule); a follower was turned round the player on 198 frames, a shove kept out of his pace on 724,
+  never held short or squeezed past. The tour and the soak were NOT run. NOT SEEN, NOT PLAYED: nothing of this on a GPU; nobody has watched a man walk round the player
+  (his body still faces his next corner while his feet go round: a side-step that may read stiff) or squeeze through him in a passage; `ring`, `back` and
+  the squeeze-or-wait call are first numbers. STILL AS IT WAS, for whoever takes it up: a teammate walking to a mark on ANY OTHER order shoulders the player
+  (only his pace is no longer read off it), and a teammate the fight has moving.
 - **The file's further back off a doorway ends with the floor** (`ORDERS.backEnd`, 10-13: ON in the page — `?backend=0` — OFF in the module and on the frozen
   stand, `TPS_BACKEND=1`; a `FROZEN_HOLDS` row, the pin lists; journal: a recording whose ORDERS row has no such key replays with it off). Found by
   `ordereddoor-round` on the shipped stand ("the four fall in round by the corridor, and are with Sam": Blue One stood at the server door, 8.9 m off, marked

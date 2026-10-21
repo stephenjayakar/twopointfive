@@ -279,6 +279,7 @@ export class Player {
   char: Character;
   crouch = false; aimHeld = false; lastFireT = -10; fireCd = 0; backpedal = false; sprinting = false;
   friendLow = false; friendT = -10;   // friends.ts: his raised gun is down for a teammate in its line (FRIENDS.lowReady), and how long that line has been clear
+  shoved: [number, number] = [0, 0]; shovedT = -1; shovedFrom: [number, number] = [0, 0];   // noshove.ts: what the men he met moved him by in this update (x, z), the clock of that update, and where the update found him — written and read inside one frame
   haul: Haul | null = null; doorMove: DoorMove | null = null;   // hands.ts: the pick-up of the body in `dragging` (which end, which beat) · the door he is working by hand (HANDS, its switch; both null with it off)
   dragging: Guard | null = null; dragYaw = 0; dragNoiseT = 0; dragStuckT = 0;   // the body being dragged (F): crouched, facing it, its ankles in your hands (ragdoll pins), the rest trailing along the floor
   noise = 0;                                                    // HUD sound meter: the loudest thing you did lately (hearing-model level, decays)

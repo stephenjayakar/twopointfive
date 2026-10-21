@@ -2628,6 +2628,8 @@ if (on('orders-edges', 'squadorders', 'all')) await run('orders-edges', async ()
 if (on('filespread', 'squadorders', 'all')) await run('filespread', async () => (await import('./filespread-check.ts')).filespreadCheck());
 // teammates are slower than the player, and run only for a reason (teampace.ts TEAMPACE.on / ?teampace=0 / TPS_TEAMPACE=1; teampace-check.ts; TEAMPACE_BREAK=1 must fail)
 if (on('teampace', 'squadorders', 'all')) await run('teampace', async () => (await import('./teampace-check.ts')).teampaceCheck());
+// teammates falling in never shove the player (noshove.ts NOSHOVE.on / ?noshove=0 / TPS_NOSHOVE=1; noshove-check.ts; NOSHOVE_BREAK=1 must fail)
+if (on('noshove', 'squadorders', 'all')) await run('noshove', async () => (await import('./noshove-check.ts')).noshoveCheck());
 // a rear man with no door behind him watches a way in, not a wall (cover.ts COVER.rearRead; rearread-check.ts; REARREAD_BREAK=1 must fail)
 if (on('rearread', 'cover', 'wallcharge', 'all')) await run('rearread', async () => (await import('./rearread-check.ts')).rearreadCheck());
 // a man walking backwards on the door behind, let go of, keeps his way while he turns (cover.ts COVER.backTurn; backturn-check.ts; BACKTURN_BREAK=1 must fail)
