@@ -203,6 +203,23 @@ function setHolstered(g: Game, on: boolean, quiet = false) {
 }
 /** every gun's reload in hand abandoned (the takedown, the grab, the lock, the kick: the hands are wanted) */
 function cancelReloads(pl: Player) { pl.pistol.cancelReload(); pl.rifle.cancelReload(); pl.char.anim.cancelReload(); }
+/** A MAN WHO IS LOW (AIM.player.low, on in the page; 0 = as it was). The reticle takes a man by his POSED chest, but the round and the gun's pitch went to
+ *  where a standing man's chest is — `h` over his feet — whatever he was doing. A man with his head down (under fire, on a drill's knee, ducked from a blast,
+ *  doubled over a flash on top of any of them) has his crown under that line: the gun sat level on him and every round went over ("if an enemy is bent over from
+ *  a flash, I can't shoot them even if i'm directly clicking on them -- gun is forced to be level"). With the knob on, a man whose crown does not clear a
+ *  standing chest (LOW_AT over his feet) by LOW_UNDER is LOW, and the point is brought down to LOW_TOP under his crown — as high on him as a round still finds
+ *  him, so what a higher line cleared (a counter he is behind) it still clears — over the chest the ring is drawn on; or, where a ray from Sam's gun to that
+ *  point would miss the body rounds are tested against (character.ts rayHit: columns about the hips and the trunk), over the hips column's own axis. A man on
+ *  his feet — upright, hunched by a flash, folded — is aimed at exactly as before. */
+const LOW_AT = 1.25, LOW_UNDER = 0.25, LOW_TOP = 0.15;
+function manAim(g: Game, gd: Guard, h: number): Vec3 {
+  const m = gd.char, p: Vec3 = [m.pos[0], m.pos[1] + h, m.pos[2]]; if (!(AIM.player.low > 0)) return p;
+  const top = m.bones.headTop?.[1], chest = m.bones.chest; if (top === undefined || !chest || m.pos[1] + LOW_AT <= top - LOW_UNDER) return p;
+  const y = Math.max(m.pos[1] + 0.15, Math.min(p[1], top - LOW_TOP)), at: Vec3 = [chest[0], y, chest[2]];
+  const from = g.player.char.muzzle, d = v3.sub(at, from), L = v3.len(d);
+  if (L > 1e-3 && m.rayHit(from, v3.scale(d, 1 / L), L + 1) >= 0) return at;
+  const hips = m.bones.hips; return [hips?.[0] ?? m.pos[0], y, hips?.[2] ?? m.pos[2]];
+}
 /** LEVEL AIM (AIM.player.level, the shipped default; 0 = the gun on the world point under the cursor, floor included, as it was): with NOTHING under the reticle —
  *  no fixture, no man — Sam's gun is not on the patch of floor the cursor's ray happens to end on (two metres out that was the muzzle, the rail light and his whole
  *  trunk pitched 35° at the ground, and the round into the lino at his feet): it is LEVEL along the cursor's heading, at the height he carries it — a standing man's
@@ -435,7 +452,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   const cursorPitch = () => {   // gun pitch onto what the reticle has — a fixture, a man — else LEVEL along the cursor's heading (levelOn; with the knob off / a scripted aim: AT the world point under the cursor, floor included)
     let targetY = ap[1] + 0.03;
     if (g.aimTarget) targetY = clamp(g.aimTarget.pos[1], 0.3, 2.95);
-    else if (g.aimGuard) targetY = g.aimGuard.wound && g.aimSnap ? g.aimSnap[1] : g.aimGuard.char.pos[1] + 1.2;
+    else if (g.aimGuard) targetY = g.aimGuard.wound && g.aimSnap ? g.aimSnap[1] : manAim(g, g.aimGuard, 1.2)[1];   // (manAim: a man who is low is aimed at where he is)
     else if (levelOn(g)) return 0;
     const gunY = c.pos[1] + (pl.crouch ? 0.95 : 1.4);
     return clamp(Math.atan2(targetY - gunY, Math.max(aimDist, 0.5)), -60 * DEG, 70 * DEG);
@@ -546,7 +563,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
       if (gun.fire()) {
         pl.fireCd = gun.automatic ? gun.def.auto!.interval : gun.def.cd; pl.lastFireT = g.time; if (gun.def.auto) gun.autoFired();   // the row's cadence (the Five-seveN's 0.22 s; no jitter in Sam's hands)
         const pt = g.puppet?.target && g.puppet.target.state !== 'dead' ? g.puppet.target : null;
-        const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? (g.aimGuard.wound && g.aimSnap ? v3.copy(g.aimSnap) : v3.add(g.aimGuard.char.pos, [0, 1.25, 0])) : freeAim(g);   // a fixture under the reticle IS the target (that is what 'click: shoot' promises); else a guard under the cursor; else level along the cursor's heading (freeAim — the same line the gun / rail light are held on)
+        const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? (g.aimGuard.wound && g.aimSnap ? v3.copy(g.aimSnap) : manAim(g, g.aimGuard, 1.25)) : freeAim(g);   // a fixture under the reticle IS the target (that is what 'click: shoot' promises); else a guard under the cursor; else level along the cursor's heading (freeAim — the same line the gun / rail light are held on)
         fireWeapon(g, c, aimWeighShot(g, tgt), true, { spread: grow + samSpread(g) + samAim(g) });   // dead-on — unless rounds are going past his own head: then it opens up with his suppression (suppression.ts samSpread: 0 at rest, 0 with the flag off, 0 for the tour's scripted double-taps) — and by the aim model's cone (aim.ts samAim: unsettled, a man crossing, his own feet; 0 with tune.aimModel off / under the puppet)
         if (gun.roundsReady === 0 && !autoReloads(g, gun)) g.msg('empty — press R');   // (autoreload.ts: with a magazine left the reload starts itself a beat on and says 'reloading')
       } else if (input.lmbHit()) { pl.fireCd = 0.25; g.audio.play('dryFire', c.muzzle, 0.7); if (!gun.reloading) g.msg(gun.roundsReady === 0 ? autoReloads(g, gun) ? 'click — empty' : 'click — empty (R to reload)' : 'reloading…'); }   // (the PRESS clicks dry: a trigger held on an empty automatic is silence, as the rifle's)
@@ -571,7 +588,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
       else if (rifle.fire()) {
         pl.fireCd = rifle.automatic ? rifle.def.auto!.interval : rifle.def.cd; pl.lastFireT = g.time; rifle.autoFired();
         const pt = g.puppet?.target && g.puppet.target.state !== 'dead' ? g.puppet.target : null;
-        const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? (g.aimGuard.wound && g.aimSnap ? v3.copy(g.aimSnap) : v3.add(g.aimGuard.char.pos, [0, 1.25, 0])) : freeAim(g);   // as the pistol's: the fixture, the man, or level along the cursor's heading
+        const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? (g.aimGuard.wound && g.aimSnap ? v3.copy(g.aimSnap) : manAim(g, g.aimGuard, 1.25)) : freeAim(g);   // as the pistol's: the fixture, the man, or level along the cursor's heading
         fireWeapon(g, c, aimWeighShot(g, tgt), true, { weapon: rifle.def, spread: rifleSpread(g, speed) + grow + samSpread(g) + samAim(g) });   // his hands on it (still / moving / crouched, braced), the string's growth, and rounds past his own head — and every one of them feeds everybody else's suppression inside fireWeapon like a pistol round
         if (rifle.roundsReady === 0 && !autoReloads(g, rifle)) g.msg(`${rifle.def.short} empty — press R`);
       } else if (input.lmbHit()) { pl.fireCd = 0.25; g.audio.play('dryFire', c.muzzle, 0.7); if (!rifle.reloading) g.msg(rifle.roundsReady === 0 ? autoReloads(g, rifle) ? `click — the ${rifle.def.short} is empty` : `click — the ${rifle.def.short} is empty (R)` : 'reloading…'); }   // (the PRESS clicks dry once; a trigger HELD on auto over an empty or reloading gun is silence, not a metronome — review 08-10 #17)
@@ -1461,7 +1478,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
         if (pl.pistol.fire()) {
           pl.fireCd = HOLD_FIRE_CD; pl.lastFireT = g.time; H.shotT = g.time;
           const ag = g.aimGuard && g.aimGuard !== gd && g.aimGuard.state !== 'dead' ? g.aimGuard : null;
-          const tgt: Vec3 = g.aimTarget ? v3.copy(g.aimTarget.pos) : ag ? v3.add(ag.char.pos, [0, 1.25, 0]) : freeAim(g, 0.6);   // (0.6: the pair only comes round to a cursor farther off than that — below)
+          const tgt: Vec3 = g.aimTarget ? v3.copy(g.aimTarget.pos) : ag ? manAim(g, ag, 1.25) : freeAim(g, 0.6);   // (0.6: the pair only comes round to a cursor farther off than that — below)
           fireWeapon(g, c, tgt, true, { spread: HOLD_SPREAD + samSpread(g) + samAim(g) });   // (one-handed past the man's jaw — and wider again under fire, suppression.ts, and by the aim model's cone, aim.ts samAim: 0 with it off)
           if (pl.pistol.roundsReady === 0) g.msg('empty — and no hand free to reload');
         }
@@ -1472,7 +1489,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     const ap = g.aimPoint; const tx = ap[0] - c.pos[0], tz = ap[2] - c.pos[2]; const ad = Math.hypot(tx, tz);
     if (ad > 0.6) c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(tx, tz), HOLD_TURN * dt);
     c.aimYaw = c.bodyYaw;
-    if (gun) { const ty = g.aimTarget ? clamp(g.aimTarget.pos[1], 0.3, 2.95) : g.aimGuard && g.aimGuard !== gd ? (g.aimGuard.wound && g.aimSnap ? g.aimSnap[1] : g.aimGuard.char.pos[1] + 1.2) : levelOn(g) ? c.pos[1] + 1.5 : ap[1] + 0.03; c.aimPitch = damp(c.aimPitch, clamp(Math.atan2(ty - (c.pos[1] + 1.5), Math.max(ad, 0.5)), -45 * DEG, 45 * DEG) * H.gunOut, 12, dt); }   // (nothing under the reticle: presented level — levelOn)
+    if (gun) { const ty = g.aimTarget ? clamp(g.aimTarget.pos[1], 0.3, 2.95) : g.aimGuard && g.aimGuard !== gd ? (g.aimGuard.wound && g.aimSnap ? g.aimSnap[1] : manAim(g, g.aimGuard, 1.2)[1]) : levelOn(g) ? c.pos[1] + 1.5 : ap[1] + 0.03; c.aimPitch = damp(c.aimPitch, clamp(Math.atan2(ty - (c.pos[1] + 1.5), Math.max(ad, 0.5)), -45 * DEG, 45 * DEG) * H.gunOut, 12, dt); }   // (nothing under the reticle: presented level — levelOn)
     else c.aimPitch = damp(c.aimPitch, -0.05, 8, dt);
     // ---- the pair's movement (rooted while the choke / the whip is on: you plant to finish it — a step then is what stops it, interact.ts; feet still while the selector is open)
     let mx = 0, mz = 0;
