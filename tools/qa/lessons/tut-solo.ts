@@ -14,7 +14,7 @@ export const query = '?quiet';
 /** the level's fights are its script's, which the tutorial frame starts: on a stand without the frame this lesson cannot be played */
 export const needs = 'rails';
 /** THE LESSONS CAN BE FAILED THE WAY THEIR LINES SAY (each of these runs must end with the player down; tools/qa/tut-solo-check.ts asks it):
- *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Three more words are mistakes that must cost
+ *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Four more words are mistakes that must cost
  *  nothing: `east` stands on the road east of the van in the sentry's line, `piers` stands at each pier of the arch under the last two's fire, `dud` fires the
  *  first grenade from too close, `sponge` holds the right button on the two before the grenade is loaded, which must fire nothing (it asks something only where he carries sponge rounds) */
 const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : (globalThis as { __TUT_SOLO_ARM?: string }).__TUT_SOLO_ARM) ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
@@ -24,9 +24,9 @@ const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO
 export const raises = { TPS_OWNCHARGE: '1' };
 /** the last men may already be down when 'Shoot the rest' comes up (the grenade took both) */
 /** …and where the gun has no setup (the switch off: the frozen stand) the two lines that open and shut it have nothing to ask and go by */
-export const idleOk = ['last', 'setup', 'tab', 'load'];   // ('load': his own card dealt whole comes with the grenade on the launcher, and the line goes by)
-/** the run wears what the mission's page deals him (lesson-run.ts): his own card, whole on the page's stand (the grenade up, no load row in the setup), the
- *  ring first on the frozen one. Without it every way below was played with a kit the page never deals */
+export const idleOk = ['last', 'setup', 'tab', 'load'];   // ('load': the load's row is his from the launcher's card on, and a man who left the grenade up then has done the line)
+/** the run wears what the mission's page deals him (lesson-run.ts): his own card, whole on the page's stand (two sponge rounds and the launcher on them, three grenades behind), the
+ *  lent five sponge rounds over it on the frozen one. Without it every way below was played with a kit the page never deals */
 export const pageKit = true;
 
 /** the right button pressed, held on a world point for `secs` (the arc is up) and let go: Input's bits are 1 left · 2 middle · 4 right */
@@ -130,7 +130,9 @@ export const steps: Record<string, (B: Bot) => void> = {
   // Where the gun has no setup (the switch off) both lines go by with nothing asked
   setup: B => { once.add('setup'); if (!setupOn()) return; B.press('Digit2', 12); if (!B.g.player.setup) B.fail('the rifle\'s key pressed again did not open its setup'); },
   tab: B => { once.add('tab'); if (!setupOn()) return;
-    const rf = B.g.player.rifle, was = `${rf.mode} ${rf.attachment}`; B.press('Digit1', 8); B.press('Digit2', 8);   // (the rifle's own key too: a row where he carries another load, the setup's way shut where he does not)
+    const rf = B.g.player.rifle, was = `${rf.mode} ${rf.attachment}`; B.press('Digit1', 8); B.press('Digit2', 8);   // (the rifle's own key too: the load's row)
+    // (…and what else puts a setup away: the trigger and the reload. With either the line went by and Tab was never pressed)
+    B.click(1, [B.pos()[0] + 2, 1.2, B.pos()[2]]); B.step(8); B.press('KeyR', 8); if (!B.g.player.setup) B.fail('the setup was put away by the trigger or the reload on the line that teaches Tab');
     if (!B.g.player.setup || `${rf.mode} ${rf.attachment}` !== was) B.fail(`a row's digit was taken on the line that only opens the setup (${was} → ${rf.mode} ${rf.attachment}, the setup ${B.g.player.setup ? 'up' : 'shut'})`);
     B.press('Tab', 12); if (B.g.player.setup) B.fail('Tab did not close the rifle\'s setup'); },
   auto: B => {
@@ -221,7 +223,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (men.length < 2 || off.length) B.fail(`the shot is asked for before the two stand in the doorway (${men.length} up, ${off.length} still on the way)`);
   },
   // 2 with the rifle up steps what is on the right button (the setup's load row where the setup is a mode); a kit that came loaded has nothing to do
-  load: B => { if (B.g.player.rifle.attachment === 'he40') return;
+  load: B => { if (B.g.player.rifle.attachment === 'he40') { if (brk() === 'sponge') B.fail('sponge: the launcher came up on the grenade, so this way asked nothing'); return; }
     // (he carries two loads on the page and the launcher is on the sponge round: the right button stays shut until the grenade is on, so a round he did not
     //  mean cannot go at the two in the doorway. The maintainer, of his first play: "i first accidentally sponged the guys")
     if (brk() === 'sponge') { const x = B.g.guards.slice(5).find(up); if (!x) B.fail('sponge: nobody stands in the doorway on the line that loads the grenade'); const had = B.g.player.rifle.rings; rightHold(B, chest(x)); B.wait(1);

@@ -235,7 +235,8 @@ export class Rails {
     if (planOn && (planUp || (!walking && (input.pressed.has('KeyB') || input.keys.has('KeyB'))))) { keys.add('ShiftLeft'); keys.add('ShiftRight'); if (shift) keys.add('KeyB'); }
     // THE SETUP OF THE GUN IN HIS HANDS, up (slotsetup.ts): a row's digit is the row's there, whatever slot that digit is anywhere else, so it is let through
     // by what the ROW does and never by the slot: the selector with `mode`, the lamp with `light`, the launcher's load with `alt` (the right button fires
-    // what that row loads: a lesson that opens the setup before it has taught the launcher keeps the row shut). Not on the setup's last ticks: a digit let through as a row the tick the setup shuts by
+    // what that row loads: a lesson that opens the setup before it has taught the launcher keeps the row shut) or with `load`, the row alone, for a lesson that has him swap
+    // loads before the button is his. Not on the setup's last ticks: a digit let through as a row the tick the setup shuts by
     // its clock would be the locked slot's key after all
     const setup = slotSetupLeft(g) > 0.03 ? g.player.setup : null, rows = setup ? setupRows(g.player, setup.gun) : [];
     // (a row's digit with the setup up is the ROW's, whatever else that digit is: the rifle's own key is also its load's row)

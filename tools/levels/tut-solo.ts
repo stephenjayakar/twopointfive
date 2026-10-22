@@ -46,7 +46,7 @@ export const AXIS = 14.25;
 const DOORWAY = { a: AXIS - 0.6, b: AXIS + 0.6 }, HINGE = AXIS - 0.58;
 const ARCH_X = 16, FRONT_X = 25, PART_X = 30.5, ROOM_Z0 = 10.5, ROOM_Z1 = 17.5;
 /** the gravel a truck drives on: the drive through the gate and the arch, and the apron it turns on before the shop */
-const DRIVE = { z0: AXIS - 1.7, z1: AXIS + 1.7 }, APRON = { x0: 19.2, z0: 10.6, z1: 18.4 };
+const DRIVE = { z0: AXIS - 1.7, z1: AXIS + 1.7 }, APRON = { x0: 19.2, z0: 10.6, z1: 18.4 }, TRUCK_GATE_X = 12.6;
 
 // ---- the marks the level, its script and its scripted player all read ----
 /** where he starts: on the road at the van's open back doors, in the light of its load bay, facing up the van to the forecourt. Well inside the world's edge
@@ -105,11 +105,11 @@ export const EXIT = { name: 'the road', door: 'gate_w', x: 8.2, z: AXIS, out: [-
  *  building is his). */
 export const FRAME: Record<string, { allow?: string[]; deny?: string[]; cue?: string; checkpoint?: string }> = {
   move: { cue: 'road' }, ready: { allow: ['slot:rifle'] }, sprint: { allow: ['sprint'] }, wall: { allow: ['wall'], cue: 'cease' }, peek: { allow: ['aim'] }, fire: { allow: ['fire'] },
-  reload: { allow: ['reload'], checkpoint: 'the gate' }, tab: { deny: ['slot:rifle'] }, auto: { allow: ['mode', 'slot:rifle'] }, arch: { cue: 'gun' }, crouch: { allow: ['crouch'], cue: 'bags' },
+  reload: { allow: ['reload'], checkpoint: 'the gate' }, tab: { deny: ['slot:rifle', 'fire', 'reload'] }, auto: { allow: ['mode', 'slot:rifle', 'fire', 'reload'] }, arch: { cue: 'gun' }, crouch: { allow: ['crouch'], cue: 'bags' },
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
   pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
-  take: { checkpoint: 'the store' }, behind: { cue: 'trucks' }, load: { allow: ['load'] }, launch: { allow: ['alt'] }, last: { cue: 'loose' },
+  take: { checkpoint: 'the store' }, leave: { allow: ['load'] }, behind: { cue: 'trucks' }, launch: { allow: ['alt'] }, last: { cue: 'loose' },
 };
 
 const SHOP: Rect = { x0: FRONT_X, x1: PART_X, z0: ROOM_Z0, z1: ROOM_Z1 }, STORE: Rect = { x0: PART_X, x1: YARD.x1, z0: ROOM_Z0, z1: ROOM_Z1 };
@@ -126,14 +126,15 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the ground: the plain, the road, the forecourt, the drive ----
   // THE GROUND IS LAID AS THE PLACE IS USED (the maintainer, of the gun court: "ground looks pretty flat here"). The yard is the plain's own dust inside its
-  // walls; the road's gravel goes on through the gate and the arch as a drive a truck wide and opens into a turning apron before the shop; where wheels,
+  // walls; a gravel drive a truck wide comes in by the trucks' gate in the south wall, turns through the arch and opens into a turning apron before the shop; where wheels,
   // feet and stores have been the earth is darker (`ground.marks`, below, with the stones that line the drive). The apron reaches past where he stands for
   // the shop's door, so the ground he is asked to hide on is no paler than it was
   grp('ground');
   slab(0, -0.25, 0, 40, 0, 28, P.dust, { rough: 1 });
   G.ground(0, 12.3, YARD.x0, 15.7, 'gravel');                       // the road, up to the gate
   G.ground(1.6, 7.6, 8.2, 12.2, 'slab');                            // the forecourt under the pumps
-  G.ground(YARD.x0, DRIVE.z0, APRON.x0, DRIVE.z1, 'gravel');        // the drive: through the truck court and the arch
+  G.ground(TRUCK_GATE_X - 1.7, DRIVE.z1, TRUCK_GATE_X + 1.7, YARD.z1, 'gravel');   // the drive: in by the trucks' gate…
+  G.ground(TRUCK_GATE_X - 1.7, DRIVE.z0, APRON.x0, DRIVE.z1, 'gravel');            // …round the corner and through the arch
   G.ground(APRON.x0, APRON.z0, FRONT_X, APRON.z1, 'gravel');        // the turning apron before the shop
   G.ground(FRONT_X, YARD.z0, YARD.x1, ROOM_Z0, 'dirt'); G.ground(FRONT_X, ROOM_Z1, YARD.x1, YARD.z1, 'dirt');   // the two back lots
   G.ground(YARD.x1, 12.4, 40, 16.1, 'dirt');                        // the lane behind the halt, at the store's back door: it runs off the map
@@ -148,6 +149,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   doors.push({ name: 'gate_w', hinge: [YARD.x0, AXIS + 0.58], closedDir: -HALF, width: 1.16, exterior: true, angle: -1.45, closer: false });
   // the lane's two walls, off the map's edge: nobody walks round the halt from the back door, and nobody comes to it but by the lane
   G.yardWallX(12.4, YARD.x1 + 0.12, 40); G.yardWallX(16.1, YARD.x1 + 0.12, 40);
+  // the trucks' own gate, in the truck court's south wall: two steel leaves, shut, on each face of the wall (the wall stands behind them: nobody walks, sees
+  // or shoots through). The gate on the road is a man's width; this is where the white truck and every wheel track in the yard came in
+  grp('walls.truckgate');
+  G.gate(TRUCK_GATE_X, YARD.z1 + 0.15, 'x', 3.2, 1, 'paintBlue', 0); G.gate(TRUCK_GATE_X, YARD.z1 - 0.15, 'x', 3.2, -1, 'paintBlue', 0);
   grp('walls.arch');
   G.yardWallZ(ARCH_X, YARD.z0, AXIS - 1.6, 'mudLight'); G.yardWallZ(ARCH_X, AXIS + 1.6, YARD.z1, 'mudLight');   // the arch: a truck's width, no leaf
   G.pier(ARCH_X, AXIS - 1.6); G.pier(ARCH_X, AXIS + 1.6);
@@ -223,32 +228,35 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const stain = (x: number, z: number, w: number, d: number, yaw = 0, mat: GwotMat = 'damp') => G.patch(x, z, w, d, mat, yaw, 0.026);
     let nth = 0;
     /** a whitewashed stone at the drive's edge, as a checkpoint lines its way in */
-    const stone = (x: number, z: number) => { const k = nth++, hy = 0.04 + (k % 3) * 0.008; add({ c: [x + ((k * 7) % 5 - 2) * 0.06, hy, z + ((k * 3) % 5 - 2) * 0.03], h: [0.13 + (k % 3) * 0.025, hy, 0.07 + (k % 2) * 0.02], yaw: ((k * 37) % 11 - 5) * 0.11, ...(k % 4 === 3 ? M.block : k % 4 === 1 ? M.mudLight : M.whitewash) }); };
+    const stone = (x: number, z: number, turn = 0) => { const k = nth++, hy = 0.04 + (k % 3) * 0.008; add({ c: [x + ((k * 7) % 5 - 2) * (turn ? 0.03 : 0.06), hy, z + ((k * 3) % 5 - 2) * (turn ? 0.06 : 0.03)], h: [0.13 + (k % 3) * 0.025, hy, 0.07 + (k % 2) * 0.02], yaw: turn + ((k * 37) % 11 - 5) * 0.11, ...(k % 4 === 3 ? M.block : k % 4 === 1 ? M.mudLight : M.whitewash) }); };
     const stones = (z: number, xs: number[]) => xs.forEach(x => stone(x, z));
-    // the road and where he starts: the tracks every truck has left to the gate, the verge the van pulled onto, the forecourt's kerb
-    G.ruts(0.3, AXIS + 0.04, 3.3, AXIS, 'damp'); G.ruts(5.9, AXIS, 8.9, AXIS - 0.03, 'damp');
+    // the road and where he starts: the tracks every truck has left, which turn off the road before the man's gate and go round the corner to the
+    // trucks' own; the verge the van pulled onto; the forecourt's kerb; a foot path in from the man's gate
+    G.ruts(0.3, AXIS + 0.04, 3.3, AXIS, 'damp'); G.ruts(5.9, AXIS, 6.6, AXIS + 0.25, 'damp');
+    G.ruts(6.5, 15.9, 6.25, 18.0); G.ruts(6.25, 18.2, 6.2, 22.6); G.ruts(6.3, 22.9, 7.6, 24.5); G.ruts(7.9, 24.7, 11.7, 24.75); G.ruts(TRUCK_GATE_X, 24.9, TRUCK_GATE_X, 23.5);
     worn(4.5, 17.1, 8.4, 2.3, 0.02); worn(3.4, 18.7, 4.2, 1.5, -0.07);
-    stones(DRIVE.z0 - 0.3, [0.9, 1.9, 2.9, 3.9, 4.9, 5.9, 6.9]); stones(15.85, [0.8, 1.8, 2.8, 6.5, 7.4]);
+    stones(DRIVE.z0 - 0.3, [0.9, 1.9, 2.9, 3.9, 4.9, 5.9, 6.9]); stones(15.85, [0.8, 1.8, 2.8]);
     G.rubble(1.3, 20.9, 0.6, 5); G.rubble(7.7, 21.4, 0.5, 4);
-    // the truck court: the drive, the turn the white truck made off it, the earth under the stores, the sentry's fire
-    G.ruts(9.3, AXIS - 0.03, 11.8, AXIS, 'damp'); G.ruts(13.2, AXIS, 15.8, AXIS + 0.04, 'damp'); G.ruts(10.0, 15.1, 11.5, 17.0); G.ruts(11.5, 17.0, 12.2, 18.6);
-    worn(12.7, 19.3, 5.0, 3.7, 0.25); stain(13.0, 18.5, 1.2, 0.8, 0.5);
-    worn(12.4, 6.8, 5.8, 2.3, -0.03); stain(11.2, 6.8, 1.4, 0.9, 0.2); worn(10.4, 21.4, 2.2, 1.7, 0.1);
-    worn(12.0, 12.2, 5.4, 0.8, 0.02); worn(11.2, 16.3, 3.6, 0.9, 0.08);
+    // the truck court: the drive in from the trucks' gate and round to the arch (the white truck stands on it, as it came in), a foot path from the
+    // man's gate, the earth under the stores, the sentry's fire
+    G.ruts(TRUCK_GATE_X, 22.7, TRUCK_GATE_X, 21.3, 'damp'); G.ruts(TRUCK_GATE_X, 17.2, TRUCK_GATE_X + 0.15, 16.0, 'damp'); G.ruts(12.85, 15.8, 13.7, 14.6, 'damp'); G.ruts(13.9, AXIS + 0.02, 15.8, AXIS + 0.04, 'damp');
+    stain(13.0, 18.5, 1.2, 0.8, 0.5); worn(10.0, AXIS, 1.9, 1.2, 0.03);
+    worn(12.4, 6.8, 5.8, 2.3, -0.03); stain(11.2, 6.8, 1.4, 0.9, 0.2); worn(10.0, 21.4, 1.5, 1.7, 0.1); worn(12.6, 12.2, 4.2, 0.8, 0.02);
     worn(11.3, 10.2, 1.5, 1.3, 0.4, 'damp'); for (let k = 0; k < 7; k++) { const a = k * 0.9 + 0.2; add({ c: [11.3 + Math.cos(a) * 0.62, 0.05, 10.2 + Math.sin(a) * 0.55], h: [0.1, 0.05 + (k % 2) * 0.02, 0.08], yaw: a, ...(k % 3 ? M.mudDark : M.block) }); }
-    stones(DRIVE.z0 - 0.13, [9.9, 10.9, 11.9, 12.9, 13.9]); stones(DRIVE.z1 + 0.13, [9.9, 10.9, 11.9, 12.9, 13.9, 14.9]);
-    G.rubble(9.6, 8.9, 0.5, 5); G.rubble(15.4, 17.6, 0.5, 5); G.rubble(13.6, 21.2, 0.5, 4);
+    stones(DRIVE.z0 - 0.13, [11.2, 12.2, 13.2, 14.0]); stones(DRIVE.z1 + 0.13, [14.9]); stone(TRUCK_GATE_X - 1.83, 13.0, HALF);
+    for (const z of [16.7, 17.9, 19.1, 20.3, 21.5]) stone(TRUCK_GATE_X - 1.83, z, HALF); for (const z of [16.9, 18.1, 19.3, 20.5]) stone(TRUCK_GATE_X + 1.83, z, HALF);
+    G.rubble(9.6, 8.9, 0.5, 5); G.rubble(15.4, 17.6, 0.5, 5);
     // the gun court: the tracks up to the shop's door and the arc a truck backs round on, the oil where it stands, the earth under the nest and the wood
     G.ruts(16.2, AXIS + 0.04, 18.9, AXIS, 'damp'); G.ruts(19.5, AXIS, 22.6, AXIS - 0.04, 'damp'); G.ruts(21.5, 15.1, 20.8, 16.7, 'damp'); G.ruts(20.75, 16.8, 20.25, 18.3, 'damp'); G.ruts(20.2, 18.6, 19.95, 20.7);
     G.patch(22.2, 14.4, 2.6, 1.1, 'oil', 0.06, 0.019); G.patch(22.6, 14.1, 1.3, 1.6, 'oil', -0.2, 0.0198); stain(22.7, 14.2, 0.9, 0.6, 0.4);
     worn(22.2, 7.6, 4.6, 3.2, 0.03); worn(17.7, 6.7, 3.0, 1.9, -0.05); worn(19.1, 21.0, 5.2, 2.7, -0.08); worn(17.9, 17.3, 2.4, 1.8, 0.15); worn(24.1, 21.4, 1.9, 1.7, 0.1, 'damp');
     stones(DRIVE.z1 + 0.13, [16.6, 17.6, 18.6]); stones(APRON.z1 + 0.13, [19.6, 20.6, 21.6, 22.6, 23.6]); stones(APRON.z0 - 0.13, [19.5, 20.4]);
-    stone(APRON.x0 - 0.13, 16.7); stone(APRON.x0 - 0.13, 17.6);
+    stone(APRON.x0 - 0.13, 16.7, HALF); stone(APRON.x0 - 0.13, 17.6, HALF);
     G.rubble(16.6, 9.4, 0.6, 6); G.rubble(24.3, 19.7, 0.5, 5); G.rubble(16.9, 19.5, 0.5, 4);
     // the plain round the halt: a foot track along the south wall, stones, the scrub nobody clears
-    worn(22.5, 25.3, 27, 1.1, 0.012); worn(12.0, 26.3, 8.5, 0.9, -0.05); worn(21.0, 2.6, 30, 1.0, -0.01);
+    worn(25.3, 25.3, 21.4, 1.1, 0.012); worn(21.0, 2.6, 30, 1.0, -0.01);
     G.rubble(14.5, 24.4, 0.7, 6); G.rubble(30.2, 25.7, 0.7, 6); G.rubble(27.0, 3.6, 0.7, 5);
-    G.bush(11.2, 24.6, 0.9); G.bush(18.6, 26.9, 1.1); G.bush(26.4, 24.5, 0.8); G.bush(33.2, 26.5, 1.0); G.bush(1.6, 23.2, 0.9); G.bush(7.2, 25.4, 0.8); G.bush(13.5, 2.2, 1.0); G.bush(31.0, 1.9, 0.9);
+    G.bush(10.2, 26.5, 0.9); G.bush(18.6, 26.9, 1.1); G.bush(26.4, 24.5, 0.8); G.bush(33.2, 26.5, 1.0); G.bush(1.6, 23.2, 0.9); G.bush(5.6, 26.3, 0.8); G.bush(13.5, 2.2, 1.0); G.bush(31.0, 1.9, 0.9);
   }
 
   // ---- the shop and the store behind it: one building against the yard's far wall ----
@@ -284,7 +292,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   //  furniture as built, on both stands, like the table and the crates above: not the lived-in pass (src/scene/lived.ts), which furnishes levels that
   //  were recorded bare ----
   grp('dress.road');     // the roadside: a melon stall by the forecourt, scrub along the verge
-  G.stall(1.9, 21.8, 0.12, 2.2, 'tarpBlue'); G.bush(1.1, 17.4); G.bush(0.9, 24.4, 0.8); G.bush(7.4, 23.6, 0.9); G.tyres(7.2, 19.8, 2);
+  G.stall(1.9, 21.8, 0.12, 2.2, 'tarpBlue'); G.bush(1.1, 17.4); G.bush(0.9, 24.4, 0.8); G.bush(8.2, 22.2, 0.9); G.tyres(7.6, 19.8, 2);
   grp('dress.truck');    // the truck court's north corner: where the gate's men sit out a watch
   G.charpoy(10.7, 8.6, 0.12); G.lowTable(11.9, 9.5, 0.3); G.plasticChair(12.4, 10.4, 2.6); G.jerryCan(13.6, 8.4, 0.2);
   grp('dress.shop');     // the shop is the room they live in: a stove, a floor mattress and tea, a rug under the table, a hanging on the wall
@@ -356,8 +364,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'reload', line: 'Press [R] to reload', done: { is: 'reload' } },
       // (the gun's own setup, met early and in a quiet moment)
       // (the maintainer: "the timer is bad. we should just have it switch a mode. and we should teach earlier that tab exits out of menus": the setup is
-      //  opened and shut before anything is picked in it; its rows stay locked until the next line, and the rifle's own key is
-      //  taken back for the Tab line alone (with no load row that key is no row and would put the setup away as it opened it), so Tab is the way out here)
+      //  opened and shut before anything is picked in it; its rows stay locked until the next line, and for the Tab line alone the rifle's own key,
+      //  the trigger and the reload are taken back (each of them puts the setup away too, and the line would pass with Tab never pressed), so Tab is
+      //  the one way out here. The sentry is down and nobody else is on the floor yet: nothing is lost with the trigger for one line)
       { id: 'setup', line: 'Press [2] again to open the rifle\'s setup', done: { is: 'flag', flag: 'setup' },
         explain: { title: 'Setting up your gun', text: 'Press your gun\'s key again while you\'re holding it to open its setup above the kit strip. You can switch between single shots and full auto, turn on its light, and swap loads if it has more than one. It\'ll stay open until you pick a row or close it.' } },
       { id: 'tab', line: 'Press [Tab] to close it, like any other menu', done: { is: 'flag', flag: 'setupShut' } },
@@ -386,14 +395,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'rifle', line: 'Press [2] to switch back to your rifle', done: { is: 'slot', slot: 'rifle', drawn: true } },
       // (the maintainer: "for 2 we probably need to explain secondary attachments for the rifle in a modal" "and where to see it in the UI, swap between
       //  secondaries, etc.": said here, with the rifle back in his hands and its load on the kit strip, in the quiet before the two it is for come out.
-      //  THE SWAP IS DONE, not only said, on the load's line below wherever his kit carries two loads; his own card carries the grenade alone until a
-      //  level's card can deal sponge rounds — scene/levelData.ts IssueCard has no key for them)
+      //  THE SWAP IS DONE, not only said: his card names two sponge rounds (`rings`), the launcher comes up on them, and the load's row is his from this
+      //  card on (`leave: allow load`), so "press 2 twice" works the moment he has read it. The right button itself stays shut until the line that fires)
       { id: 'leave', line: 'Go back to the blue gate', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH,
         explain: { title: 'Using the rifle\'s launcher', text: 'Your rifle\'s launcher fires sponge rounds that stun or HE grenades that kill. Look next to your ammo at the bottom left to see which is loaded. Press [2] twice to swap them. Hold the right mouse button to aim, then let go to fire. HE won\'t go off up close.' } },
       // (the maintainer: "weird that we're told to load the grenade long before being told to do anything about it": the two it is for come out first, on a
       //  line that only asks him to look (the frame draws a line with no key and a cue for its end as something to watch); the script ends that line
-      //  once they stand in the doorway, so the shot is asked for with men in it. THE LOAD'S LINE is for a kit that deals the ring first: his own card
-      //  dealt whole comes with the grenade on the launcher, the line is true as it comes up and goes by unread, and the setup has no load row for him)
+      //  once they stand in the doorway, so the shot is asked for with men in it. THE LOAD'S LINE is the swap from the sponge round to the grenade; it is
+      //  already true, and goes by, for a man who tried the swap when the card told him how and left the grenade up)
       { id: 'behind', line: 'Turn around and watch the shop doorway for two more enemies', done: { is: 'cue', name: 'trucks' } },
       { id: 'load', line: 'Press [2] again to load the grenade', setupLine: 'Press [2] twice to load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
       { id: 'launch', line: 'Hold the right mouse button, aim at the doorway, and let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
