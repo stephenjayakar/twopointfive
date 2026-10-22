@@ -1,4 +1,4 @@
-// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts, src/ui/findme.ts and src/render/outline.ts (nine settings in Options > Game, every one
+// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts, src/ui/findme.ts and src/render/outline.ts (eleven settings in Options > Game, every one
 // starting where the game stood before it had them; no switch of the game's, no row the two stands differ in).
 //   bun run tools/qa/findme-check.ts        (also `probes.ts findme`; the same on both stands)
 // Headless: the whole Game under stepFrame, the loop the page runs, with nothing drawn; where the HUD would draw the ring is asked of findMeRing itself, and
@@ -29,7 +29,12 @@
 //                what the rim covers is its own (OUTLINE) times the width row, read each frame: less at every step down the row on a tall composite
 //                and a short one, nothing at all at none (the frame off), never over four pixels; the strength row is the rim's opacity (none = the
 //                frame off); the two light rows are the ends the strength fades between, by the light.
-// FINDME_BREAK=1 = the rows are moved and the table is not (the settings do nothing): (4), (5), (6), (8), (9) and (10) must fail.   exit 0 = all hold · 1 = one does not
+//            (11) his teammates: every living man of his squad has a rim of his own — by his own light, in his pair's colour (the colour row from
+//                the pale ink to yellow, red and blue), covering the teammates' row's share of what the player's covers (none = no teammate; never over
+//                the cap) — a man dead gives his place up; one render pass, a scissored draw a man from his own slot and under his own box, the
+//                player's last, his place kept in a crowd; a box across the lens off to the side is empty; the game's digest is not moved by any of
+//                it, and a squad stepped with the outline on and filled every frame ends digest for digest where the same squad ends with it off.
+// FINDME_BREAK=1 = the rows are moved and the table is not (the settings do nothing): (4), (5), (6), (8), (9), (10) and (11) must fail.   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
 export async function findmeCheck(): Promise<boolean> {
@@ -37,7 +42,7 @@ export async function findmeCheck(): Promise<boolean> {
   const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const { mulberry32: seeded } = await import(`${ROOT}/src/math/dice.ts`);
   const F = await import(`${ROOT}/src/host/findme.ts`) as typeof import('../../src/host/findme.ts');
-  const { OutlinePass, makeOutlineFrame, outlineBox, outlineRadius, OUTLINE } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
+  const { OutlinePass, makeOutlineFrame, makeOutlineMan, outlineBox, outlineBoxes, outlineRadius, OUTLINE, OUTLINE_MEN } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
   const { outlineWant } = F;
   const { findMeRing, findMeOutline } = await import(`${ROOT}/src/ui/findme.ts`) as typeof import('../../src/ui/findme.ts');
   const { FINDME, FINDME_START, findMeRead, TapTwice, TAPTWICE, behindYaw } = F;
@@ -45,7 +50,7 @@ export async function findmeCheck(): Promise<boolean> {
   const set: typeof F.setFindMe = BREAK ? () => {} : F.setFindMe;
   let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
-  console.log('\n=== findme: nine settings to find your own man and turn the view; at their starts the game as it was ===');
+  console.log('\n=== findme: eleven settings to find your own man and turn the view; at their starts the game as it was ===');
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   const fixedWas = FIXEDSTEP.on, startWas = { ...FINDME };
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
@@ -227,12 +232,12 @@ export async function findmeCheck(): Promise<boolean> {
       set('dark', 0); set('lit', 0); const never = outlineWant(0); F.resetFindMe(); if (!BREAK) { set('outline', true); }   // (Reset writes both whole, whatever order they stand in; the outline's row back on for what follows)
       const lights = Math.abs(cal[2] - 0.5) < 1e-9 && same([cal[0], cal[1], cal[3], cal[4]], [0, 0, 1, 1]) && same(crossed, [0, 0, 1, 1]) && stopD === 0.5 && stopL === 0.5 && never === 0 && FINDME.lit === FINDME_START.lit && FINDME.dark === FINDME_START.dark;
       // the pass, on a device that writes down what it is asked
-      const rig = () => { const calls: string[] = []; const st: any = { calls, desc: null, u: null, sc: null, drawn: 0, pass: null, res: null, rej: null };
-        const device: any = { createBindGroupLayout: () => { calls.push('layout'); return {}; }, createBuffer: () => { calls.push('buffer'); return {}; }, createPipelineLayout: () => ({}), createBindGroup: () => { calls.push('group'); return {}; },
+      const rig = () => { const calls: string[] = []; const st: any = { calls, desc: null, u: null, us: [], sc: null, scs: [], offs: [], drawn: 0, draws: 0, pass: null, res: null, rej: null };
+        const device: any = { createBindGroupLayout: (d: unknown) => { calls.push('layout'); st.layout = d; return {}; }, createBuffer: (d: unknown) => { calls.push('buffer'); st.buf = d; return {}; }, createPipelineLayout: () => ({}), createBindGroup: (d: unknown) => { calls.push('group'); st.group = d; return {}; },
           createShaderModule: (d: { code: string }) => { calls.push('module'); st.code = d.code; return { getCompilationInfo: async () => ({ messages: [] }) }; },
           createRenderPipelineAsync: (d: unknown) => { calls.push('pipeline'); st.desc = d; return new Promise((res, rej) => { st.res = res; st.rej = rej; }); },
-          queue: { writeBuffer: (_b: unknown, _o: number, data: ArrayBuffer) => { st.u = data.slice(0); } } };
-        const enc: any = { beginRenderPass: (d: unknown) => { calls.push('pass'); st.pass = d; return { setPipeline() {}, setBindGroup() {}, setScissorRect: (x: number, y: number, w: number, h: number) => { st.sc = [x, y, w, h]; }, draw: (n: number) => { st.drawn = n; }, end() {} }; } };
+          queue: { writeBuffer: (_b: unknown, o: number, data: ArrayBuffer) => { st.u = data.slice(0); st.us.push({ o, f: new Float32Array(data.slice(0)), w: new Uint32Array(data.slice(0)) }); } } };
+        const enc: any = { beginRenderPass: (d: unknown) => { calls.push('pass'); st.pass = d; return { setPipeline() {}, setBindGroup: (_i: number, _g: unknown, offs?: Uint32Array, at = 0) => { st.offs.push(offs ? offs[at] : -1); }, setScissorRect: (x: number, y: number, w: number, h: number) => { st.sc = [x, y, w, h]; st.scs.push([x, y, w, h].join(' ')); }, draw: (n: number) => { st.drawn = n; st.draws++; }, end() {} }; } };
         return { st, device, enc, P: new OutlinePass(device) }; };
       const n = (st: any, k: string) => st.calls.filter((c: string) => c === k).length, tick = () => new Promise(r => setTimeout(r, 0));
       const A = rig(), CW = 1280, CH = 720, hdr = {} as any, id = {} as any, dep = {} as any, off = makeOutlineFrame();
@@ -265,6 +270,48 @@ export async function findmeCheck(): Promise<boolean> {
       const strong = Math.abs(inks[0] - 1) < 1e-3 && Math.abs(inks[1] - 0.25) < 1e-3 && inkOff && n(C.st, 'pass') === p1; set('opacity', FINDME_START.opacity); fill(1);
       set('outline', false); pl.visibility = was.vis; pl.nvAmount = was.nv; fill(1);   // (and the frame is off again)
       const src = await Bun.file(`${ROOT}/src/render/passes.ts`).text(), site = (src.match(/new OutlinePass\(/g) ?? []).length === 1 && src.includes('if (this.outline?.on) (this.outlinePass ??= new OutlinePass(');
+      // (11) his teammates: a squad of four stood up, every man in the dark
+      { const W2 = await stand(5), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), hush = console.log; console.log = () => {}; try { await startFromQuery(W2.game, '?squad4'); } finally { console.log = hush; }
+        const ctx2 = ctxOf(W2), LIVE = 120; for (let i = 0; i < LIVE; i++) stepFrame(ctx2, DT);
+        const g2 = W2.game, p2 = g2.player, men = g2.orders.men() as any[], M = makeOutlineFrame(), proj2 = (p: [number, number, number]) => W2.cam.project(p, 1, 1), INK = F.OUTLINE_INK;
+        // the same squad, the same seed, the same frames, with the outline on and its frame filled and boxed every one of them: the game cannot tell
+        const W3 = await stand(5); console.log = () => {}; try { await startFromQuery(W3.game, '?squad4'); } finally { console.log = hush; }
+        set('outline', true); const ctx3 = ctxOf(W3), M3 = makeOutlineFrame(); let filled = 0;
+        for (let i = 0; i < LIVE; i++) { stepFrame(ctx3, DT); findMeOutline(M3, W3.game, DT); outlineBoxes(M3, p => W3.cam.project(p, 1, 1)); if (M3.on && M3.mates.filter(m => m.on).length === 4) filled++; }
+        set('outline', false); const liveDiff = diffDigest(digestGame(g2), digestGame(W3.game)), stepped = filled === LIVE && !liveDiff.length;
+        const dark = () => { p2.visibility = 0.04; p2.nvAmount = 0; for (const gd of men) gd.visibility = 0.04; }, fillM = (dt = 0) => { findMeOutline(M, g2, dt); outlineBoxes(M, proj2); return M.mates.filter(m => m.on); };
+        const mix = (hue: 'you' | 'red' | 'blue', s: number) => INK.pale.map((v: number, i: number) => v + (INK[hue][i] - v) * s), inkIs = (m: { ink: number[] }, hue: 'you' | 'red' | 'blue', s: number) => m.ink.every((v, i) => Math.abs(v - mix(hue, s)[i]) < 1e-9);
+        const d0 = JSON.stringify(digestGame(g2)); set('outline', true); dark(); const on = fillM(), pairOf = (id: number) => g2.orders.pairOf(men.find(gd => gd.char.id === id));
+        const each = men.length === 4 && on.length === 4 && on.every(m => m.owner !== p2.char.id && m.strength === 1 && m.wide === FINDME.width && m.times === FINDME.mates && m.alpha === FINDME.opacity && men.some(gd => gd.char.id === m.owner && gd.char.pos[0] === m.at[0] && gd.char.pos[2] === m.at[2])) && new Set(on.map(m => m.owner)).size === 4;
+        const hues = g2.orders.paired && inkIs(M, 'you', FINDME.colour) && on.filter(m => pairOf(m.owner) === 'red').length === 2 && on.every(m => inkIs(m, pairOf(m.owner) === 'red' ? 'red' : 'blue', FINDME.colour));
+        set('colour', 0); fillM(); const pale = [M, ...M.mates].every(m => inkIs(m, 'you', 0)); set('colour', 1); fillM(); const full = inkIs(M, 'you', 1) && M.mates.every(m => inkIs(m, pairOf(m.owner) === 'red' ? 'red' : 'blue', 1)); set('colour', FINDME_START.colour); fillM();
+        men[0].visibility = 0.9; const oneLit = fillM().filter(m => m.strength === 0).map(m => m.owner), ownLight = oneLit.length === 1 && oneLit[0] === men[0].char.id; dark();   // (each man by his own light)
+        const cover = (h: number, w: number, t = 1) => outlineRadius(h, w, t) - 0.5, shareOk = [300, 720, 2160].every(h => [0.25, 0.5, 1].every(w => Math.abs(cover(h, w, 0.5) - cover(h, w) / 2) < 1e-9 && Math.abs(cover(h, w, 2) - Math.min(OUTLINE.capPx - 0.5, cover(h, w) * 2)) < 1e-9));   // (a true share of what HIS rim covers, at any width row)
+        set('mates', 2); const twice = shareOk && fillM().every(m => m.times === 2 && m.wide === FINDME.width); set('mates', 0); const noMates = fillM().length === 0 && M.on; set('mates', 1); fillM();
+        const st1 = men[1].state; men[1].state = 'dead'; const three = fillM(), gone = three.length === 3 && !three.some(m => m.owner === men[1].char.id); men[1].state = st1; const backIn = fillM().length === 4;
+        // the pass: a scissored triangle a man, each with his own slot
+        const D = rig(); D.P.encode(D.enc, M, hdr, id, dep, CW, CH); D.st.res?.({}); await tick(); D.st.us.length = 0; D.P.encode(D.enc, M, hdr, id, dep, CW, CH);
+        const boxOf = (m: { rect: number[] }) => { const x0 = Math.max(0, Math.floor(m.rect[0] * CW)), y0 = Math.max(0, Math.floor(m.rect[1] * CH)), x1 = Math.min(CW, Math.ceil(m.rect[2] * CW)), y1 = Math.min(CH, Math.ceil(m.rect[3] * CH)); return [x0, y0, x1 - x0, y1 - y0].join(' '); };
+        const vis = [...M.mates, M].filter(m => { const x0 = Math.max(0, Math.floor(m.rect[0] * CW)), y0 = Math.max(0, Math.floor(m.rect[1] * CH)), x1 = Math.min(CW, Math.ceil(m.rect[2] * CW)), y1 = Math.min(CH, Math.ceil(m.rect[3] * CH)); return m.on && x1 > x0 && y1 > y0; });
+        const slots = [...D.st.us] as { o: number; f: Float32Array; w: Uint32Array }[], drawsOk = vis.length >= 2 && n(D.st, 'pass') === 1 && D.st.draws === vis.length && slots.length === vis.length && slots.every((u, i) => u.o === i * 256 && u.w[4] === vis[i].owner && Math.abs(u.f[0] - vis[i].ink[0]) < 1e-6)
+          && same(D.st.offs, vis.map((_m, i) => i * 256)) && (D.st.desc as any) && n(D.st, 'buffer') === 1 && n(D.st, 'group') === 1
+          && vis[vis.length - 1] === M && same(D.st.scs.slice(-vis.length), vis.map(boxOf)) && new Set(D.st.scs.slice(-vis.length)).size > 1   // (his own last, over theirs; each man's draw under his own box)
+          && D.st.layout?.entries?.[2]?.buffer?.hasDynamicOffset === true && D.st.layout.entries[2].buffer.minBindingSize === 32 && D.st.buf?.size === OUTLINE_MEN * 256 && D.st.group?.entries?.[2]?.resource?.size === 32 && !D.st.group.entries[2].resource.offset;
+        // the teammates' row on the device: half the cover of his, from the radius each slot was written with
+        set('mates', 0.5); set('width', 0.5); fillM(); D.st.us.length = 0; D.P.encode(D.enc, M, hdr, id, dep, CW, CH); const rs = (D.st.us as { f: Float32Array; w: Uint32Array }[]), mine = rs.find(u => u.w[4] === p2.char.id), theirs = rs.filter(u => u.w[4] !== p2.char.id);
+        const halfDrawn = !!mine && theirs.length === vis.length - 1 && theirs.every(u => Math.abs((u.f[5] - 0.5) - (mine.f[5] - 0.5) / 2) < 1e-6); set('mates', 1); set('width', FINDME_START.width); fillM();
+        // more men than the pass has places: his own is still drawn, the last
+        const crowd = { ...M, mates: Array.from({ length: OUTLINE_MEN + 3 }, (_v, i) => ({ ...makeOutlineMan(), on: true, owner: 40 + i, strength: 1, rect: [0.1, 0.1, 0.2, 0.2] as [number, number, number, number] })) }; D.st.us.length = 0; const dr0 = D.st.draws; D.P.encode(D.enc, crowd, hdr, id, dep, CW, CH);
+        const crowded = D.st.draws - dr0 === OUTLINE_MEN && D.st.us.length === OUTLINE_MEN && D.st.us[OUTLINE_MEN - 1].w[4] === p2.char.id && D.st.us[OUTLINE_MEN - 1].o === (OUTLINE_MEN - 1) * 256;
+        // a man off to the side with his box across the lens's plane is not looked for over the whole picture; one in the middle of it is
+        const lens = (cx: number) => { const m = makeOutlineMan(); let k = 0; outlineBox(m, () => (k++ === 0 ? [cx, 0.5, true] : [0.5, 0.5, false])); return m.rect.join(' '); }, aside = lens(3) === '0 0 0 0' && lens(0.5) === '0 0 1 1';
+        p2.visibility = 0.9; fillM(); const before = D.st.draws; D.st.us.length = 0; D.P.encode(D.enc, M, hdr, id, dep, CW, CH); const matesOnly = D.st.draws - before === vis.length - 1 && D.st.us[0]?.o === 0 && D.st.us.every((u: { w: Uint32Array }) => u.w[4] !== p2.char.id); dark();   // (he lit, they dark: theirs alone, from the first slot)
+        const cap = outlineRadius(2160, FINDME_START.width, F.FINDME_MATES.max) <= OUTLINE.capPx && outlineRadius(2160, F.FINDME_WIDTH.max, F.FINDME_MATES.max) === OUTLINE.capPx && OUTLINE.capPx >= outlineRadius(2160, F.FINDME_WIDTH.max);
+        for (let i = 0; i < 200; i++) fillM(DT); const pure = JSON.stringify(digestGame(g2)) === d0;
+        set('outline', false); const offAll = fillM().length === 0 && !M.on && M.mates.every(m => !m.owner);
+        line(each && hues && pale && full && ownLight && twice && noMates && gone && backIn && drawsOk && halfDrawn && crowded && aside && matesOnly && cap && pure && stepped && offAll,
+          'his teammates: each living man of his squad rimmed by his own light, in his pair\'s colour, his rim the teammates\' row\'s share of what the player\'s covers; one pass, a draw a man under his own box, the player\'s last; nothing of the game\'s written',
+          `men ${men.length}, rimmed ${on.length}${each ? '' : ' ✗'} · inks at the start: yellow for him, two red, two blue ${hues ? 'yes' : 'NO ✗'}; colour row at none all pale ${pale ? 'yes' : 'NO ✗'}, at full ${full ? 'yes' : 'NO ✗'} · one man lit: ${ownLight ? 'his alone goes' : '✗'} · teammates\' row at 200 %: ${twice ? 'twice what his covers' : '✗'}, at 50 % with his width at 50 %: ${halfDrawn ? 'half, on the device' : '✗'}; at none: ${noMates ? 'no teammate, his own stays' : '✗'} · a man dead: ${gone ? 'his place given up' : '✗'}${backIn ? '' : ' (not taken back ✗)'} · the pass: ${before} draws for ${vis.length} men on the picture, slots ${slots.map(u => u.o).join(' ')}, his own last, a box each${drawsOk ? '' : ' ✗'}; ${OUTLINE_MEN + 3} teammates: ${crowded ? `${OUTLINE_MEN} draws, his the last` : '✗'}; a box across the lens off to the side: ${aside ? 'empty' : '✗'}; he lit: ${matesOnly ? 'theirs alone' : '✗'} · never over ${OUTLINE.capPx} px: ${cap ? 'yes' : 'NO ✗'} · the game\'s digest after 200 fills of it: ${pure ? 'the same' : 'MOVED ✗'}; ${LIVE} frames of the squad stepped with it on and filled every frame (${filled} with four rimmed) against the same with it off: ${liveDiff.length ? `digests differ: ${liveDiff.slice(0, 3).join('; ')} ✗` : 'digests equal'} · row off: ${offAll ? 'all off' : '✗'}`); }
       line(offRow && frameOk && lit < 0.01 && nv < 0.01 && offDown && offHidden && held && behindLens && edges && quiet && built && drew && skipped && failed && widths && strong && lights && site && !Fm.on,
         'the outline: off with its row off, the man down or his marks hidden; on, his owner, a small box he stands in, strong in the dark only; the pass asks nothing while off, draws once its one program is there, never after a failed one; its width, its strength and the light it fades by are the rows\'',
         `row off: ${offRow ? 'frame off' : 'frame ON ✗'} · on: owner ${Fm.owner}, box ${(share * 100).toFixed(1)} % of the picture${inBox ? '' : ' (he is OUTSIDE it ✗)'}, strength ${s1.toFixed(2)} after a frame, ${dark.toFixed(2)} in the dark, ${lit.toFixed(2)} in the light, ${nv.toFixed(2)} under the goggles${frameOk ? '' : ' ✗'} · down: ${offDown ? 'off' : 'ON ✗'} · marks hidden: ${offHidden ? 'off' : 'ON ✗'} · under a card (no time): ${held ? 'the meter\'s word at once' : 'NOT at once ✗'} · behind the lens: ${behindLens ? 'an empty box' : `a box ${back.rect.map(v => v.toFixed(2)).join(' ')} ✗`} · the rule's ends ${edges ? 'hold' : '✗'}`
