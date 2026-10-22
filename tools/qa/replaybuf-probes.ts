@@ -254,6 +254,25 @@ console.log('\n=== replay buffer ===');
     check(inStep, `load: Sam went down and a bare Enter loaded this run's checkpoint inside a step (down ${byHand ? 'by hand' : `after ${n} steps`}; wrote ${JSON.stringify(wrote)?.slice(0, 60)})`);
     check(!r.dead && r.loads === 1 && !r.restarts && kept === 1, `load: a load made inside a step leaves the tape alive, is marked once, and the step after it loses nothing (tape: ${r.dead || 'alive'}; ${r.loads} marks; the next step's event filed ${kept}×)`);
     W.game.replayTap = null; }
+  // …and a save kept IN MEMORY (a team on the floor: savestate.ts loadMem puts the whole game back, the Sensors object with it) loaded inside a step. All of it is
+  // on the tape — F5's save, his own frag that puts him down, the bare Enter — so the tape lives and its re-run is the first run again, to the digest.
+  { const SS = await import(`${ROOT}/src/game/savestate.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { rerun } = await import('./rerun.ts'), Q = '?roomclear&squad4&freshstart=0&seed=7', was = SS.SAVETIMELINE.on;
+    try {
+      Math.random = mulberry32(0xa18); const W: any = await standUp({ seed: 7 }), g = W.game; startFromQuery(g, Q); SS.SAVETIMELINE.on = true; g.godMode = true;
+      const buf = new ReplayBuffer(); buf.tape.born(g); g.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(g, dt, cmd); else buf.tick(g, dt, W.cam); };
+      let f = 0, still = false; const go = (n: number, pre?: () => void) => { for (let i = 0; i < n; i++, f++) { const I = W.input; I.keys.clear(); I.buttons = 0; I.mouseX = 800; I.mouseY = 520; if (!still && f % 240 < 150) I.keys.add('KeyW'); pre?.(); W.step(1 / 60); } };
+      go(240); go(1, () => W.input.pressed.add('F5')); go(42); const mem = (g.saves.timeline() as any[]).filter(x => x.mem).length;
+      g.godMode = false; still = true; go(30); go(1, () => W.input.pressed.add('Digit5')); go(30);   // (the flag is a row of the tape; the frag lands at his own feet)
+      for (let k = 0; k < 3 && !g.player.down; k++) { go(1, () => { W.input.clicked |= 1; W.input.buttons |= 1; }); go(62, () => { if (f % 62 < 2) W.input.buttons |= 1; }); }
+      let n = 0; while (!g.player.down && n < 900) { go(1); n++; } still = false; go(20);
+      const loads0 = g.saves.stats.loads, down = g.player.down; go(1, () => W.input.pressed.add('Enter')); const inStep = down && g.saves.stats.loads === loads0 + 1 && !g.player.down;
+      g.godMode = true; go(240); const N = f, dEnd = hashDigest(digestGame(g, true)), file = JSON.parse(JSON.stringify(buf.file(g, 'probe', { url: Q, fp: levelFingerprint(g) }))), marks = (JSON.stringify(file).match(/a checkpoint loaded/g) ?? []).length;
+      check(mem === 1 && inStep, `load: with a team on the floor F5 kept a save in memory, and a bare Enter once down loaded it inside a step (saves in memory ${mem}; down ${down}; loads ${loads0} → ${g.saves.stats.loads})`);
+      check(!buf.tape.dead && file.rerun?.ticks === N && marks === 1, `load: the tape lives across it, holds every step, and the load is marked once (tape: ${buf.tape.dead || 'alive'}; ${file.rerun?.ticks} of ${N} steps; ${marks} marks)`);
+      const R = await rerun(file, { toN: N }), same = !!R.W && hashDigest(digestGame(R.W.game, true)) === dEnd;
+      check(!R.refuse && !!R.report && R.report.compared > 50 && !R.report.drift && same, `load: its re-run is the first run again, to the digest at step ${N}${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? 'YES' : 'none'}, digest ${same ? 'equal' : 'DIFFERS'})`}`);
+      g.replayTap = null;
+    } finally { SS.SAVETIMELINE.on = was; } }
   { const { W, buf, go } = await stand(0xa17, 120, true, true), J = W.game.journal, random = Math.random, until = () => { let n = 0; while (!J.recording && n < 300) { go(1); n++; } return J.recording; };
     try {
       J.request({ seed: 5 }); const on = until(); go(30); const a = read(W, buf);

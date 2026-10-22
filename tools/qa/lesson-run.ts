@@ -26,6 +26,8 @@
 //   finish?(B: Bot): void                      after the last step: on to the mission's end
 //   ended?(g): boolean                         the run is over (default g.mission.stage === 'done')
 //   idleOk?: string[]                          step ids that may already be true when they come up (said why in the script)
+//   fightOk?: string[]                         step ids a fight on the floor may finish before the player does (a line inside a live fight: the room can fall
+//                                              while it is up, or before it comes up; said why in the script). Such a step is logged as gone by with the fight
 //   mode?: { unseen?: boolean; god?: boolean; moon?: boolean }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god)
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -200,16 +202,19 @@ export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<Le
     fail: (why) => { throw new Stop(why); },
   };
 
-  const idleOk = new Set<string>(script.idleOk ?? []);
+  const idleOk = new Set<string>(script.idleOk ?? []), fightOk = new Set<string>(script.fightOk ?? []);
   try {
     step(20);   // the start's first frames (poses, the deal's lines)
     for (let i = 0; i < L.steps.length; i++) {
       const T = L.steps[i];
+      const byFight = () => { say(`step ${i + 1}/${L.steps.length} '${T.id}' went by with the fight`); out.steps.push({ id: T.id, t: Number(t.toFixed(2)) }); };
+      if (lessonOn && g.lesson.i > i && fightOk.has(T.id)) { byFight(); continue; }
       // (a step whose honest alternative an earlier deed already made true may have GONE BY when its turn comes — `idleOk`: its half second, its reader's pause and
       //  its script are run all the same, frame for frame as the arm with no lesson runs them)
       const gone = lessonOn && g.lesson.i > i && idleOk.has(T.id);
       if (lessonOn && !gone && g.lesson.i !== i) throw new Stop(`step ${i + 1} '${T.id}' is not the step that is up (the lesson is on ${g.lesson.i + 1}: ${g.lesson.summary()})`);
       step(30);   // half a second of nothing: the line must not move on by itself
+      if (lessonOn && g.lesson.i !== i && fightOk.has(T.id)) { byFight(); continue; }
       if (lessonOn && g.lesson.i !== i && !idleOk.has(T.id)) throw new Stop(`step ${i + 1} '${T.id}' went by with nothing done (its test was already true when it came up)`);
       if (PACE > 0) step(Math.round(PACE * 60));   // --pace: a reader's seconds on the line (a step that only WAITS for the floor may well go by while he reads: its script then finds its wait already over)
       say(`step ${i + 1}/${L.steps.length} '${T.id}': ${g.lesson.objective()?.text.split(' ▸ ')[1] ?? T.line}${gone ? ' (it had already gone by: idleOk)' : ''}`);   // (the line as the row reads it: a step may carry another for the keys as they stand)
