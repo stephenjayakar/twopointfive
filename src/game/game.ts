@@ -1555,6 +1555,7 @@ export class Game {
     cam.peekOffset = this.seat.cam.peekOffset; cam.kick = this.seat.cam.kick;
     { const cut = this.seat.takeCut(); if (cut) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); } }   // (a scenario's opening cut: the look-at snapped to its man, not flown)
     this.viewProj = cam.viewProj;   // (between ticks `viewProj` is the host's live matrix again, as it always was for whoever asks on-screen-or-not from outside a tick)
+    this.rails.hostView(cam);   // (a tutorial mission staged again opens on its first view: a return on its first line off a rails level)
     this.orders.hostView(input, cam, canvas);   // (between ticks the HUD and the tools ask the menu what the LIVE cursor is on, as they always did)
   }
   /** every seat's record for one tick, in seat order — one seat today, so this is `step(dt, cmds[0])`; a list of another length is refused before anything runs */

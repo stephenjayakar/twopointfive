@@ -50,7 +50,8 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
   const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${name}.json&paused&quality=${QUALITY}&mute`;
   log(url);
   if (!held) await page.goto(url, { timeout: 600000 });
-  await page.evaluate(async () => { await window.__ready; window.__testVisible = true; window.__runFrames(3, 1 / 60, [], 'none'); });
+  await page.evaluate(async held => { await window.__ready; window.__testVisible = true; if (held && window.__game.lesson.i > 0) window.__game.restartEncounter();   // (a page played before: the mission again, as Shift+Enter gives it)
+    window.__runFrames(3, 1 / 60, [], 'none'); }, !!held);
   let R = await read(page);
   log('booted', JSON.stringify(R));
   check(!R.fatal && R.rails.live && R.up && R.i === 0 && R.sky && !R.equip && !R.meters, 'the page boots the mission on rails: one big line up, the sky seat, no kit or meter rows',
@@ -70,7 +71,7 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     turn: async () => { await page.keyboard.down('ControlLeft'); for (let x = 400; x <= 900; x += 50) { await page.mouse.move(x, 320); await run(page, 3); } await page.keyboard.up('ControlLeft'); },
     zoom: async () => { await page.keyboard.down('ControlLeft'); for (let k = 0; k < 8; k++) { await page.mouse.wheel(0, 120); await run(page, 4); } await page.keyboard.up('ControlLeft'); },
     pan: async () => { await page.keyboard.down('KeyD'); await run(page, 70); await page.keyboard.up('KeyD'); },
-    move: async s => { await point(s.at); await tap('KeyQ'); await run(page, 240); },
+    move: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 25; k++) { await run(page, 120); if ((await read(page)).id !== 'move') break; } },
     gate: async () => { for (let k = 0; k < 40; k++) { await run(page, 120); if ((await read(page)).id !== 'gate') break; } },
     stack: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'stack') break; } },
     go: async () => { await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'go') break; } },

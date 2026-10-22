@@ -108,16 +108,16 @@ export async function railsCheck(): Promise<boolean> {
       verdict(a === false && b === true && c === false, 'the journal: a recording from before the key replays with the frame off, one made with it on replays on, one made with it off replays off', `old → ${a} · recorded on → ${b} · recorded off → ${c}`); }
     // ---- 10: the mission again, and the mission left
     { const { quitScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-      const R = await rig(true), g = R.g, I = R.I; R.run(0.5); R.turn(1.2); R.run(0.6); R.zoom(); R.run(1.2); const was = g.lesson.i;
+      const R = await rig(true), g = R.g, I = R.I; R.run(0.5); const d0 = g.seat.cam.distance; R.turn(1.2); R.run(0.6); R.zoom(); R.run(1.2); const was = g.lesson.i, d1 = g.seat.cam.distance;
       I.keys.add('ShiftLeft'); I.keys.add('Enter'); I.pressed.add('Enter'); g.rails.gate(I, R.W.cam, DT); const shift = I.keys.has('ShiftLeft'), enter = I.pressed.has('Enter'); I.keys.delete('ShiftLeft'); I.keys.delete('Enter'); I.pressed.delete('Enter');
       I.keys.add('ShiftLeft'); g.rails.gate(I, R.W.cam, DT); const sprint = I.keys.has('ShiftLeft'); I.keys.delete('ShiftLeft');
       const cheat = g.verdict.cheat, started = g.verdict.started;
       g.restartEncounter(); const A0 = g.rails.allowed(), sum0 = g.rails.summary(); R.run(3 / 60);
-      const end = g.roomClear.end, i1 = g.lesson.i, A1 = g.rails.allowed(), unseen = g.playerInvisible;
+      const end = g.roomClear.end, i1 = g.lesson.i, A1 = g.rails.allowed(), unseen = g.playerInvisible, d2 = g.seat.cam.distance;
       R.W.game.rails.tick(DT); quitScenario(g); R.run(3 / 60); const after = g.playerInvisible;
-      verdict(was === 2 && shift && enter && !sprint && started && !cheat && A0.size === 1 && A0.has('camera') && !end && i1 === 0 && A1.size === 1 && unseen && !after,
-        'the mission again: Shift rides with Enter through the gate (and alone does not), the run is no cheat\'s, a restart from the third step is on the first step with only its action open before a tick has passed and does not end, and the mission left leaves the player seen again',
-        `was on step ${was + 1} · Shift+Enter through ${shift && enter}, Shift alone ${sprint} · verdict started ${started}, cheat ${cheat} · before a tick: ${sum0} · after: step ${i1 + 1}, end ${end ?? 'none'}, open ${[...A1].join(' ')} · unseen in the seat ${unseen}, after quitting ${after}`); }
+      verdict(was === 2 && shift && enter && !sprint && started && !cheat && A0.size === 1 && A0.has('camera') && !end && i1 === 0 && A1.size === 1 && unseen && !after && Math.abs(d1 - d0) > 1 && Math.abs(d2 - d0) < 0.01,
+        'the mission again: Shift rides with Enter through the gate (and alone does not), the run is no cheat\'s, a restart from the third step is on the first step with only its action open before a tick has passed, on the view the first run opened on, and does not end, and the mission left leaves the player seen again',
+        `was on step ${was + 1} · Shift+Enter through ${shift && enter}, Shift alone ${sprint} · verdict started ${started}, cheat ${cheat} · before a tick: ${sum0} · after: step ${i1 + 1}, end ${end ?? 'none'}, open ${[...A1].join(' ')} · unseen in the seat ${unseen}, after quitting ${after} · view ${d0.toFixed(1)} → ${d1.toFixed(1)} → ${d2.toFixed(1)}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

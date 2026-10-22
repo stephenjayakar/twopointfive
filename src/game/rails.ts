@@ -79,7 +79,7 @@ export class Rails {
   /** how many rows of the orders' log have been passed to the level's program (each as the signal `order:<id>`) */
   private ordersSeen = 0;
   /** the sky seat: the view's own shift about the squad, the eased point it rides, and whether the player has been parked for this run */
-  private sky = { off: [0, 0, 0] as Vec3, mid: null as Vec3 | null, midT: -1, parked: false, was: null as { invisible: boolean } | null };
+  private sky = { off: [0, 0, 0] as Vec3, mid: null as Vec3 | null, midT: -1, parked: false, was: null as { invisible: boolean } | null, view: null as { yaw: number; pitch: number; dist: number } | null, again: false };
   /** teammates spared a down: the game's clock each is back on his feet at, by character id */
   spared = new Map<number, number>();
   log: string[] = [];
@@ -127,11 +127,22 @@ export class Rails {
     RAILS_STATS.dropped += dropped;
   }
 
+  /** between ticks, with the HOST's camera (game.ts update): the mission again opens on the view the first run opened on. A view left zoomed all the way out
+   *  could not do the step that asks for a zoom. The view is the host's, so it is set there and reaches the game in the next tick's record like any turn of it */
+  /** ticks left of a run's opening, in which the view may be set back under the step (lesson.ts: a view test starts from the view after them) */
+  fresh = 0;
+  hostView(cam: FollowCamera) {
+    if (!this.skyOn || !this.sky.parked) return;
+    const V = this.sky.view; if (!V) this.sky.view = { yaw: cam.yaw, pitch: cam.pitch, dist: cam.desiredDistance }; else if (this.sky.again) { cam.yaw = V.yaw; cam.pitch = V.pitch; cam.distance = cam.desiredDistance = V.dist; }
+    this.sky.again = false;
+  }
+
   /** once a tick (game.ts, right after lesson.tick): the run's start, the step that came up answered, the spared men stood up */
   tick(dt: number) {
     const S = this.lesson(), g = this.g;
     if (!S) { if (this.sky.parked) this.unpark(); return; }
-    if (this.run !== g.mission) { this.run = g.mission; this.answered = -1; this.back = false; this.spared.clear(); if (this.sky.parked) this.unpark(); this.sky.off = [0, 0, 0]; this.sky.mid = null; this.sky.midT = -1; this.log.length = 0; this.ordersSeen = g.orders?.log.length ?? 0; this.startProgram('start'); }
+    if (this.run !== g.mission) { this.run = g.mission; this.answered = -1; this.back = false; this.spared.clear(); if (this.sky.parked) this.unpark(); this.sky.again = true; this.fresh = 3; this.sky.off = [0, 0, 0]; this.sky.mid = null; this.sky.midT = -1; this.log.length = 0; this.ordersSeen = g.orders?.log.length ?? 0; this.startProgram('start'); }
+    else if (this.fresh > 0) this.fresh--;
     if (this.back) { this.back = false; this.startProgram('checkpoint'); this.answered = -1; this.answer(S, true); }
     if (this.skyOn && !this.sky.parked) this.park(S.L.rails!);
     if (this.answered !== S.i) this.answer(S, false);

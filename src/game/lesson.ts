@@ -257,6 +257,7 @@ export class Lesson {
   /** this frame's deeds into the step's counts */
   private count(S: StepSeen) {
     const g = this.g, add = (k: string) => S.n.set(k, (S.n.get(k) ?? 0) + 1);
+    if (g.rails?.fresh) { S.yaw0 = S.yawLast = g.seat.cam.yaw; S.dist0 = g.seat.cam.distance; S.turned = 0; }   // (a tutorial mission staged again: its view is set back in the run's first ticks, and that is no turn of the hand's)
     { const y = g.seat.cam.yaw; let d = y - S.yawLast; d = Math.atan2(Math.sin(d), Math.cos(d)); S.turned += Math.abs(d); S.yawLast = y; }   // (the rails' `view`: read off the tick's record, like every other deed)
     if (g.act?.verb && !who(g).down) add(`act:${g.act.verb}`);
     for (const e of g.events) { if (e.who !== PLAYER_ID || e.time <= S.t0 || S.heard.has(e)) continue; S.heard.add(e); add(`event:${e.kind}`); }

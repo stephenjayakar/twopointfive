@@ -69,7 +69,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (6) a held man: 'Right button chokes him out' (close.ts `CLOSE.heldClicks`, on in the page); the step counts the deed (`downed how: 'choke'`), not the row.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
-  `RAILS.on`, on in the page (`?rails=0` = the level as a plain lesson), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
+  `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
   row, in the knob registry and the journal). The seven Training levels carry no `rails` record and are untouched. WHAT IT ADDS to a level's `scenarios.lesson`:
   a `rails` record (`allow` = the actions that work from the first step, `respawn` seconds for a teammate who went down, `fog`, `sky` = nobody on the floor is
   the player: he is parked unseen, the view rides the squad's middle, the walk keys shift it) and step keys `allow` / `deny` / `cue` / `checkpoint` / `fog`;
@@ -80,17 +80,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and in the sky seat the kit and meter rows are hidden. THE LEVEL'S SCRIPT: `levels/<name>.script.ts` (a `LevelScriptFn`), registered by level name in
   `scene/levelScripts.ts` and attached by `levelLoad.ts`; one play program `tutorial`, started with the mission; a step's `cue` reaches it as the signal
   `lesson:<cue>`, each order the player gives as `order:<id>`, and it answers `done:<name>` for the `cue` test. A running play program does not switch the
-  room fight off on a rails level, and the Director's spawn budget is lifted to 5 + the structure's `maxMen`. CHECKPOINTS ARE AUTHORED: on a rails level the
+  room fight off on a rails level, and the Director's spawn budget is 16 there (`liftedBudget`). THE SKY SEAT'S SQUAD holds where the mission stood it until its first order (an unordered man would fall in on the parked player), and the squad panel shows no key no step has taught (`Rails.locks` in `orders.ts`). THE MISSION AGAIN opens on the view the first run opened on (`Rails.hostView`, between ticks on the host's camera; `Rails.fresh` keeps that from counting as the hand's turn). CHECKPOINTS ARE AUTHORED: on a rails level the
   every-step save and the floor's own triggers are off; a step's `checkpoint` writes an in-memory save the tick it comes up (the program is stopped for the
   snapshot and started again next tick with the step's cue; a load does the same), so a beat must start fresh from its cue. A room clear on rails ends with the
-  last step, not with the rooms. CHECK: `bun run tools/qa/rails-check.ts` (probe `rails`, family `missions`; nine lines: the block whole, switch off = a plain
-  lesson, the first step parked and locked, one action a step, done by the deed, nobody lost, the room fight beside the program and no early end, a checkpoint
-  put back, the journal) passes on both stands and `RAILS_BREAK=1` (the gate passes everything) fails on both. THE FIRST MISSION `tut-sky` ('The halt, from
+  last step, not with the rooms. CHECK: `bun run tools/qa/rails-check.ts` (probe `rails`, family `missions`; ten lines: the block whole, switch off = the mission alone with
+  no lesson, the first step parked and locked, one action a step, done by the deed, nobody lost, the room fight beside the program and no early end, a checkpoint
+  put back, the journal, the mission again) passes on both stands and `RAILS_BREAK=1` (the gate passes everything) fails on both. THE FIRST MISSION `tut-sky` ('The halt, from
   above', `tools/levels/tut-sky.ts` on the pass's own geometry under snow — `tools/levels/pass.ts build(extra)` — with a roadblock and a gun truck with lit
   lamps on the road, shutters on the windows; `levels/tut-sky.script.ts`): the squad pinned behind its trucks, the view turned, zoomed and shifted; the first
   order under the squad's own smoke; a fight for the gate; stack and the word on two doors. Checkpoints: the road, the yard, the tea room. MEASURED: the
   scripted player (`TPS_RAILS=1 bun run tools/qa/lesson-run.ts tut-sky --seed N`) ends it on 8 seeds of 8 on the frozen stand and 4 of 4 on the shipped stand,
-  55 to 70 s of play; `PORT=<port> node tools/qa/tut-page.cjs` plays it on the real page with real key and mouse events (software adapter). NOBODY HAS: seen it
+  55 to 70 s of play; `PORT=<port> node tools/qa/tut-page.cjs` plays it on the real page with real key and mouse events (software adapter: it steps with `__runFrames(n, dt, keys, 'none')`, which draws nothing, and takes a picture by reading one drawn frame back; on that adapter the first four steps were played so, the squad moving on the hand's own order under fire). NOBODY HAS: seen it
   on a GPU, felt it with a hand, or seen what the smoke does to the road fight (the harness has no smoke sight lines). FOUND: a teammate who has seen an enemy
   through glass he cannot shoot through stays rooted in 'alert' under an order (hence the shutters); a man a script holds runs no AI.
 - **A par clock on a room clear** (`src/game/par.ts`, `Game.par`; block `scenarios.par { gold, silver, bronze, lossSecs }`, docs/level-format.md *Scenarios*;
