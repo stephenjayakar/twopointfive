@@ -116,7 +116,7 @@ export class Verdict {
       const p = g.player.char.pos, moved = Math.hypot(p[0] - this.origin[0], p[2] - this.origin[2]) > PAR_START_M;
       if (moved || this.fired() !== this.fired0 || tail !== this.order0) this.t0 = g.time;
     }
-    if (this.started && (g.godMode || !g.aiEnabled || g.infiniteAmmo || g.playerInvisible)) this.cheat = true;
+    if (this.started && (g.godMode || !g.aiEnabled || g.infiniteAmmo || (g.playerInvisible && !g.rails?.skyOn))) this.cheat = true;   // (rails.ts: the seat with nobody on the floor parks him unseen — the mission's own staging, not a sandbox tick)
     this.watch();
     const end = this.ended();
     if (end) this.close(end);

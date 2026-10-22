@@ -11,11 +11,12 @@ import { standUp } from './headless';
 const ROOT = resolve(import.meta.dir, '../..');
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { TRAINING_MISSIONS, ALL_MISSIONS, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+const { TRAINING_MISSIONS, LESSON_MISSIONS, ALL_MISSIONS, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { LESSON, checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
+const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
 const names = process.argv.slice(2).filter(a => !a.startsWith('--')).map(a => a.replace(/\.json$/, ''));
 const list: string[] = names.length ? names : [...new Set((TRAINING_MISSIONS as any[]).map(e => String(e.level).replace(/\.json$/, '')))];
 let fails = 0, checks = 0;
@@ -30,10 +31,11 @@ for (const name of list) {
   const L = data.scenarios?.lesson;
   verdict(!errs.length && !!L, `the file validates and carries a lesson${L ? `: '${L.title}', ${L.steps.length} steps` : ''}`, errs.slice(0, 3).join(' · '));
   if (!L) continue;
-  const stand = async () => { const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(file, 'utf8'))), seed: 1 })); return W; };
-  const rows = (TRAINING_MISSIONS as any[]).filter(e => e.level === `${name}.json`);
-  verdict(rows.length > 0 && rows.every(e => e.group === 'training'), `the missions list has it under Training (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
-  verdict(rows.every(e => kitAsIssued(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'training')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued), and no other row is');
+  const stand = async () => { const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(file, 'utf8'))), seed: 1 })); if (L.rails) RAILS.on = true; return W; };   // (a tutorial mission's lesson is live only on its frame — rails.ts —, which the frozen stand holds off: raised here, after the stand-up put it down)
+  const line0 = String(L.steps[0].line).replace(/\[([^\]]+)\]/g, '$1');   // (the small row reads a line without the brackets a rails line puts round its keys)
+  const rows = (LESSON_MISSIONS as any[]).filter(e => e.level === `${name}.json`);   // (Training's rows and the tutorial's: scenarioList.ts)
+  verdict(rows.length > 0 && rows.every(e => e.group === (L.rails ? 'tutorial' : 'training')), `the missions list has it under ${L.rails ? 'Tutorial' : 'Training'} (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
+  verdict(rows.every(e => kitAsIssued(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'training' && e.group !== 'tutorial')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued), and no other row is');
   { const W = await stand(), faults: string[] = checkLesson(W.game); verdict(!faults.length, 'the block against the built floor: every test names a kind, a door, a light and an area this floor has', faults.join(' · ')); }
   for (const e of rows) {
     const q: string = scenarioQuery(e);
@@ -41,7 +43,7 @@ for (const name of list) {
     LESSON.on = true;
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
       const o = g.lesson.objective(), line = g.objectiveText();
-      verdict(!r.why && !!r.spec && !!o && g.lesson.i === 0 && line === o.text && line.includes(L.steps[0].line), `'${e.title}': starts, and the objective row is the lesson's first step`, r.why ?? line);
+      verdict(!r.why && !!r.spec && !!o && g.lesson.i === 0 && line === o.text && line.includes(line0), `'${e.title}': starts, and the objective row is the lesson's first step`, r.why ?? line);
       if (e.squad === 0 && e.kind === 'quiet') {   // (a quiet run alone saves checkpoints: the lesson's place among its steps rides in the file)
         const k = Math.min(2, L.steps.length - 1); g.lesson.i = k;   // (the check's own hand on the step counter: the scripted run is lesson-run's)
         let why = ''; try { const snap = W.snapshot('lesson-check', true); g.lesson.i = 0; await quiet(() => { W.restore(snap); for (let i = 0; i < 3; i++) W.step(1 / 60); }); } catch (x) { why = String((x as Error).message); }
@@ -49,9 +51,9 @@ for (const name of list) {
       g.lesson.i = Math.min(1, L.steps.length - 1);   // (the check's own hand again: every row is restarted from a step that is NOT the first)
       // a restart BETWEEN FRAMES: before the lesson's next tick the step it still holds is the last run's — neither a checkpoint nor the row may carry it
       { let snapI = -1, row = ''; await quiet(() => { g.restartEncounter(); if (!g.lesson.data) startFromQuery(g, q); snapI = g.lesson.data ? g.lesson.snapshot().i : -2; row = g.lesson.objective()?.text ?? ''; });
-        verdict(snapI === 0 && row.includes(L.steps[0].line) && !g.lesson.finished, `'${e.title}': straight after a restart, before any frame, a checkpoint would file step 1 and the row reads step 1 (not the last run's step)`, `snapshot step ${snapI + 1} · row "${row}"`); }
+        verdict(snapI === 0 && row.includes(line0) && !g.lesson.finished, `'${e.title}': straight after a restart, before any frame, a checkpoint would file step 1 and the row reads step 1 (not the last run's step)`, `snapshot step ${snapI + 1} · row "${row}"`); }
       await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
-      verdict(g.lesson.i === 0 && !!g.lesson.objective()?.text.includes(L.steps[0].line), `'${e.title}': a restart puts the lesson back on its first step`, g.lesson.summary()); }
+      verdict(g.lesson.i === 0 && !!g.lesson.objective()?.text.includes(line0), `'${e.title}': a restart puts the lesson back on its first step`, g.lesson.summary()); }
     LESSON.on = false;
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
       const line = g.objectiveText();
@@ -67,7 +69,7 @@ if (!names.length || names.includes('train-move')) { console.log('\n=== lesson-c
   const K = await import(`${ROOT}/src/game/kit.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
   const m = new Map<string, string>(), st = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } };
   const kept = (i = 0) => JSON.parse(m.get(K.KIT_LS) ?? '{}').members?.[i] ?? {};
-  const rowOf = (id: string) => (TRAINING_MISSIONS as any[]).find(e => e.id === id), other = (ALL_MISSIONS as any[]).find(e => e.group !== 'training' && e.kind !== 'solo' && e.kind !== 'quiet');
+  const rowOf = (id: string) => (TRAINING_MISSIONS as any[]).find(e => e.id === id), other = (ALL_MISSIONS as any[]).find(e => e.group !== 'training' && e.group !== 'tutorial' && e.kind !== 'solo' && e.kind !== 'quiet');
   const standRow = async (e: any) => { const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', e.level), 'utf8'))), seed: 1 })); const r = await quiet(() => startFromQuery(W.game, scenarioQuery(e))); if (e.kind === 'quiet' && !e.squad) K.kitSolo(W.game);   // (main.ts: a mission played alone wears Sam's card through kitSolo, and every fresh Player after a restart through kitFresh)
     return { W, g: W.game, why: r.why as string | undefined }; };
   const team = (g: any) => g.guards.filter((x: any) => x.unit && x.team === 'operative');
