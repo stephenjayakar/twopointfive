@@ -32,6 +32,7 @@ import type { Input } from './input';
 import type { FogEye } from './fogofwar';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
+import { stepLine } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 
 export const RAILS = { on: false,
   /** the sky seat: metres a second the walk keys shift the view at the default zoom, and how far from the squad it may go */
@@ -78,6 +79,7 @@ export function railsFaults(L: LessonData): string[] {
   const cues = new Set<string>();
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
+  if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.length > 0 && R.rows.every(v => typeof v === 'string' && !!v))) out.push('rails.rows: a list of verbs, at least one (absent: every row)');
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
   if (R.orders !== undefined && !(Array.isArray(R.orders) && R.orders.length > 0 && R.orders.every(x => typeof x === 'string'))) out.push('rails.orders: a list of order ids (at least one)');
   if (R.sky?.eye && !(Array.isArray(R.sky.eye.at) && R.sky.eye.at.length === 3 && typeof R.sky.eye.yaw === 'number' && (R.sky.eye.fov === undefined || (R.sky.eye.fov > 0 && R.sky.eye.fov <= 360)))) out.push('rails.sky.eye: { at: a Vec3, yaw: radians, fov?: degrees up to 360 }');
@@ -115,6 +117,11 @@ export class Rails {
   }
   /** is this action locked right now (the host asks for `camera` and `zoom`, which it turns itself — host/loop.ts) */
   locks(action: string): boolean { const A = this.allowed(); return !!A && !A.has(action); }
+
+  /** does Space offer a row of this verb here (player.ts buildInteractables): the keys are locked by action, and Space is ONE key over every row in
+   *  reach — so a level names the verbs its steps teach (`rails.rows`) and a thing nobody taught has no row at all. On such a level
+   *  there is no row either while Space itself is locked: a prompt for a key that does nothing is a lie in the corner of the screen */
+  offers(verb: string): boolean { const R = this.data?.rows; return !R || BREAK || (R.includes(verb) && !this.locks('use')); }
 
   /** THE GATE (Game.step, right after the tick's record is loaded into the seat's input): whatever the step has not unlocked is taken out of the tick */
   gate(input: Input, cam: FollowCamera, dt: number) {
@@ -219,7 +226,7 @@ export class Rails {
     const S = this.lesson(); if (!S || S.i >= S.L.steps.length) return null;
     if (!this.g.lesson.objective()) return null;
     const T = S.L.steps[S.i];
-    return { line: T.line, n: S.i + 1, of: S.L.steps.length };
+    return { line: stepLine(T), n: S.i + 1, of: S.L.steps.length };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 
   // ---------------------------------------------------------------- nobody is lost

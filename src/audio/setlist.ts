@@ -32,6 +32,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'glasshouse': ['Glass Rain', 'Wire Act'],                // rooms walled in glass
   'pass': ['Undertow', 'Glass Rain'],                      // a teahouse under snow: bells, then the dulcimer
   'tut-sky': ['Undertow', 'Glass Rain'],                   // the same halt on the pass, the first tutorial mission: the pass's own list
+  'tut-quiet': ['Night Shift', 'Glass Rain'],              // the tutorial's quiet house: the quiet missions' own piece, then the dulcimer
   // ---- on the clock
   'registry': ['Cold Storage', 'Wire Act'],
   'consulate': ['Wire Act', 'Cold Storage'],               // four rooms and no time to clear them: the quick twelve-eight, then the break

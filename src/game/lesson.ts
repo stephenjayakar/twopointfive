@@ -315,8 +315,11 @@ export class Lesson {
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 80) this.log.splice(0, 40); }
 }
 
-/** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys */
-const lineOf = (T: LessonStep): string => SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
+/** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys; his own
+ *  actions a ring (handring.ts) takes the whistle off its key */
+const lineOf = (T: LessonStep): string => HANDRING.on && T.ringLine ? T.ringLine : SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
+/** …and as the page says it: a tutorial mission's one big line (rails.ts prompt) is the same words as the row's */
+export const stepLine = (T: LessonStep): string => lessonLine(lineOf(T));
 
 // ---------------------------------------------------------------- the checker (tools/qa/lesson-check.ts; the probes): the block against the BUILT floor
 /** Everything the level file's validator cannot say (scene/levelData.ts checks shapes): each test's kind and fields, its doors / lights / areas on this floor,

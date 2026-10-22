@@ -741,3 +741,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the team's van (`snatchout.ts`, above) it says 'to take alive and walk out to your van', so the sheet sets up the walk out the maintainer expected when he
   played it. 152 characters (the list's rule is 160). With `?nosnatchout` the old end is back and the card still names the van: it stands at the gate either
   way. Checked: `probes.ts missions-list` and `missions-screen` on both stands, the src typecheck. Nobody has read it on a page.
+- **The tutorial's quiet mission, the ledger (`tut-quiet`)** (2026-10-22; row `tut-quiet` in `TUTORIAL_MISSIONS`, `kind: 'quiet'`, alone; no switch of its
+  own: it is on rails, so `RAILS.on` is its switch, `?rails=0` in the page = the house as a plain quiet mission with no lesson, `TPS_RAILS=1` in front of a
+  frozen run). `tools/levels/tut-quiet.ts` writes `levels/tut-quiet.json` on the training yard: a money changer's house at night, one way through, three men
+  with one beat each, a lesson of 18 steps (`tools/qa/lessons/tut-quiet.ts` plays it by input alone; the generator's header says what each beat is and why
+  it is built so); `levels/tut-quiet.script.ts` is three exchanges of a few words on the cues `lane` and `store` (nobody is held, moved or spawned). THE
+  BEATS: out of the porch lamp into the house's shadow; a whistle at a mark, then behind a head-high wall: the back court's man comes the long way round to
+  where the sound was and is grabbed from behind, asked twice for the strongroom's code, then put out or knifed; the back door picked; from the dark store
+  the hall's man stands a stride inside the lit doorway with his back turned (the knife, on a knee); a chest beam passed on a knee; night vision; the mains
+  box, then into a niche: the clerk has the longest walk, round a counter the length of the room, and is taken at the box; the code, the safe, out by the front door and the gate (the last line stays up to the mission's own end: with the lesson done in the forecourt the page fell back to the small objective row at the top). THE FRAME'S
+  KEYS HERE: from the first step the walk, the view and the aim; `crouch`, `whistle` + `use`, `fire` + `alt`, `nvg` each come on with the step that teaches
+  them; checkpoints `the lane` (the whistle's line), `the back court`, `the store`, `the hall`, `the counting room`, one before each timed beat and none inside
+  one. TWO THINGS THE FRAME GAINED FOR IT: (1) `lesson.rails.rows`, a list of verbs: with it Space offers only rows of those verbs (`Rails.offers`, asked
+  once in `player.ts buildInteractables`; absent = every row, so `tut-sky` is as it was). The locks are by key and Space is one key: on the page a tap beside
+  the mains box set a wall charge and a tap beside the keypad worked a light plate. On a level that names its rows there is no row at all while `use`
+  is still locked (the page drew "E pull it open" for the yard gate beside the start, a prompt for a key that did nothing). (2) his own actions' ring
+  (`handring.ts`) is worked with its own keys through the gate: while it or the list is up and `use` is open, the digits 1 to 5 and both buttons pass
+  (the frame's own line now). THE ONE LOCK THAT PICKS is the back door's: the front door and the far gate are `steel` (once Space was open the front door
+  offered its pick from the forecourt, a short way into the counting room past every beat; from inside it opens with a push, the way out). A STEP'S `ringLine` (`LessonStep`, `lesson.ts lineOf`; the
+  sibling of `setupLine`) is its line while `HANDRING.on`: the whistle has no key on the page, so that step reads 'Hold [Space], then [5]: whistle. Then
+  hide' there and '[V]: whistle here. Then hide behind the wall' where V still whistles; `Rails.prompt()` now gives `lesson.ts stepLine(T)` (the line as the
+  keys stand), not the raw line. LEVEL DATA: `breaker.fumble` (seconds a man sent to the tripped panel works at it before the mains come back; absent = 2.2
+  as on every level before it; 7 at most, since a room fight's lever party gives a panel up at 8; `lighting.ts updateTargets`, both directions in
+  `levelLoad.ts`, `docs/level-format.md`; `breakerAt(x, z, out, fumble?)` in `train-ground.ts` writes it, the Training files export unchanged). This box
+  takes 7. WHAT THE RUNS TAUGHT, each from a failed run or a picture: a man answering a whistle carries a torch on the place and a glimpse moves his goal, so
+  the hide is behind a wall, never beside his path; a beat with a clock has its whole instruction in the line that is up before the clock starts, and the
+  mark on the place that line means NOW (his own feet for the whistle; the hide the moment it sounds: a mark on the hide first sends a new player there to
+  whistle); a scripted player that picks a row by name hides what a tap does, so this one taps and fails when the lit row is not the line's (`tap()`); ON
+  THE PAGE a man who comes with a light finds a body, and a player, that the headless run leaves dark, and inside 3.5 m he sees 100 degrees to either side:
+  the hall has a screen wall (hides its back half, the body, from the doorway and the box) and a niche by the doorway (the clerk walks past its end and
+  stops with his back to it); no line asks for C while he is already low. CHECKS: `bun run tools/qa/rails-check.ts` line 11 (the rows, no row under a locked key, and the ring's digit;
+  both stands; `RAILS_BREAK=1` fails it on both), `lesson-run tut-quiet` (`TPS_RAILS=1` in front on the frozen stand), `lesson-check`, `level-lint`,
+  `door-size`, `quiet-check`, `second-way-check`, `floor-order-check`, `level-names-check`, `carlamps-check` (its row), both typechecks. MEASURED, headless,
+  after the last change: the scripted player waits a person's beat before each timed move; with that beat at 0, 0.6, 1.5 and 2.5 s it finishes on both
+  stands (seed 1); seeds 3 and 4 finish on both; with every line read for 6 s it finishes on the shipped stand on seeds 1 and 2 and on the frozen one on
+  seed 1; at a 4 s beat the clerk has the mains back in before he is down. ON THE REAL PAGE (headless Chromium, the software adapter,
+  real key and mouse events, the page's own meter, 640 by 360 at the lowest quality): see the notes for what was played and what the pictures showed.
+  RED BY DESIGN: `quiet-light` on three lines (three men where a free-roam night wants four to six; the start beside the way out; no dark way with the
+  lamps on, the lit hall being the point). A SKETCH: the script's few words, the store (four strides of dark), no lived-in rooms, a composed menu picture
+  (`tools/menu-art.ts` PIN). KNOWN: a man put out through the list before he is asked leaves no way to learn the code (the pad then says so). Never seen on
+  a GPU, never played by a hand: the timings are a script's, and whether the dark lane reads on a real screen with the outline off is the maintainer's call.

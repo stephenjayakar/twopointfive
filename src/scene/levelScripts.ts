@@ -5,5 +5,6 @@
 import type { LevelScriptFn } from '../game/director';
 import tutSky from '../../levels/tut-sky.script';
 import tutSquad from '../../levels/tut-squad.script';
+import tutQuiet from '../../levels/tut-quiet.script';
 
-export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-sky': tutSky, 'tut-squad': tutSquad };
+export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-sky': tutSky, 'tut-squad': tutSquad, 'tut-quiet': tutQuiet };
