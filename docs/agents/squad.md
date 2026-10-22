@@ -202,10 +202,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   = no plan mode; `?cmd` now only raises Space's own ring (`CMDRING.hands`) beside it. OFF in the module and on the frozen stand: `FROZEN_HOLDS` rows
   `CMDRING.on` / `tapNow` (`TPS_QRING=1`), `stay` (`TPS_QSTAY=1`), `plan` / `planRts` / `planRun` (`TPS_QPLAN=1`; the last two words need the first). The
   journal carries the table: a recording with no `stay` / `tapNow` / `planRun` key replays with them off. Debugger: Team feel ▸ 'Tab ▸ the orders ring',
-  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 13 lines; `QRING_BREAK=1`
+  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 14 lines; `QRING_BREAK=1`
   fails 10 on the page's stand and 9 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
   Shift always the mode's (25 and 28 lines, both stands); `qkey`'s game line reads the stand (the order on the tick the key is seen up, with the ring
-  on). DRAWN: the status column (`#interact`) goes faint while the ring's words lie over it (`ui/cmdring.ts clear`, `body.ringover`; no switch: a ring
+  on). A LOADED MEMORY SAVE (a squad on the floor: `savestate.ts loadMem`) puts a ring that stood in it away and plan mode down, he on his feet
+  (`orders.ts loaded`, `planmode.ts planLoaded`; the men's chains go on as saved): brought back, the ring took the next click for a wedge. Line 10b of
+  `qring`, both stands; `QLOAD_BREAK=1` fails it. DRAWN: the status column (`#interact`) goes faint while the ring's words lie over it (`ui/cmdring.ts clear`, `body.ringover`; no switch: a ring
   put up on a door near that corner was read through the column's plates). DRIVEN ON THE PAGE (headless Chromium, the software adapter, real key and
   pointer presses, a four, a duo and every new switch off; no console or GPU error): the floor's ring and its throws, the door's ring, its tools and
   'more', each right click back a ring, plan mode's knee, pan, right drag, a hold and a door's wait off and on, an early word not kept, the word, Tab

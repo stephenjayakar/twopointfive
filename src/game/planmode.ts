@@ -300,6 +300,9 @@ function down(S: SquadOrders, input: Input | null): void {
   P.up = false; P.drag = null; P.pick = null; P.showT = g.time; P.look = null; P.aim = null; P.rmbT = -1; P.rdown = null;
   if (input) { input.clicked &= ~5; input.buttons &= ~5; if (input === g.seat.input) g.seat.swallow(5); }
 }
+/** a memory save put back with the mode up in it (savestate.ts loadMem): the mode is not the saved moment's to bring back — it is put down as the
+ *  key would, and the view is on him at once (nothing to ease back from: the picture has just changed whole). The men's chains go on as saved. */
+export function planLoaded(S: SquadOrders): void { down(S, null); S.plan.back = null; }
 /** … and put up: the view's point starts on Sam, and what he is facing is what he goes on facing */
 function up(S: SquadOrders): void {
   const P = S.plan, g = S.g, p = g.player.char.pos;

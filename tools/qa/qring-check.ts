@@ -19,6 +19,7 @@
 //   (10) Shift + the key puts plan mode up and takes it down; out of a sprint (a walk key down) it is the key's own order; the mode up, it is left whatever is down;
 //   (11) a recording from before the keys replays with them off; the page's flags.
 // QRING_BREAK=1 = `stay`, `tapNow` and `planRun` left off and the same lines asked: the lines that say what those rules do must fail.
+// QLOAD_BREAK=1 = a loaded memory save puts nothing away (orders.ts `loaded` left out): line 10b must fail.
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
@@ -29,6 +30,7 @@ const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const PROFILE = await import(`${ROOT}/src/host/profile.ts`), { FROZEN_HOLDS } = PROFILE;
 const JOURNAL = await import(`${ROOT}/src/game/journal.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
+const { SAVETIMELINE } = await import(`${ROOT}/src/game/savestate.ts`);
 
 const DT = 1 / 60, BREAK = process.env.QRING_BREAK === '1';
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -164,6 +166,19 @@ export async function qringCheck(): Promise<boolean> {
       line(up && k0 === 0 && down && ran && k1 === 1 && row?.order === 'move' && up2 && left, 'Shift + the key puts plan mode up and takes it down, ordering nothing; with a walk key down (a sprint) it is the key\'s own order and the mode stays down; the mode up, Shift + the key leaves it whatever else is down',
         `standing: ${up ? 'up' : 'NOT up'}, order book +${k0}, again ${down ? 'down' : 'STILL up'} · running: the mode ${ran ? 'down' : 'UP'}, +${k1} ${k1 ? row?.order : ''} · up again ${up2}, Shift + W + the key: ${left ? 'down' : 'STILL up'}`);
       void k2; R.home(); }
+
+    // (10b) a save kept in memory (a squad on the floor) made with the ring left up, or with plan mode up, and put back: neither comes back with it
+    { const st0 = SAVETIMELINE.on, P = O.plan, real = O.loaded, LB = process.env.QLOAD_BREAK === '1'; SAVETIMELINE.on = true; if (LB) O.loaded = () => { };
+      try {
+        const open = R.open(spot), s1 = g.saves.write(g, 'manual', 'the ring up'); O.escape(); R.step(4); const away = !O.cmdRing && !O.menu;
+        const why1 = s1.info ? g.saves.load(g, s1.info.key) : (s1.why ?? 'no save'), ring = !!O.cmdRing || !!O.menu; R.step(4); O.escape(); R.home();
+        const shift = () => { I.keys.add('ShiftLeft'); R.step(2); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.delete(CMDRING.key); R.step(); I.keys.delete('ShiftLeft'); R.step(2); };
+        const stood = !pl.crouch; shift(); R.step(20); const up = P.up, s2 = g.saves.write(g, 'manual', 'the mode up'); shift(); R.step(20); const down = !P.up;
+        const why2 = s2.info ? g.saves.load(g, s2.info.key) : (s2.why ?? 'no save'), mode = P.up, knee = pl.crouch; R.step(4); if (P.up) shift(); R.home();
+        line(open && !!s1.ok && away && why1 === null && !ring && up && !!s2.ok && down && why2 === null && !mode && (!stood || !knee),
+          'a save kept in memory with the ring left up, or with plan mode up, put back: the ring is not up and the mode is down, he is on his feet',
+          `the ring left up ${open}, saved ${s1.ok}, put away ${away} · loaded (${why1 ?? 'taken'}): the ring ${ring ? 'IS BACK' : 'is not up'} · plan mode up ${up}, saved ${s2.ok}, put down ${down} · loaded (${why2 ?? 'taken'}): the mode ${mode ? 'IS BACK UP' : 'down'}, he ${knee && stood ? 'KNEELS' : 'stands as before'}`);
+      } finally { SAVETIMELINE.on = st0; O.loaded = real; } }
 
     // (11) the journal and the page's flags
     { const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
