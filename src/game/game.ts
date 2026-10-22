@@ -71,6 +71,7 @@ import { charLookFrame, charSides } from './charLook';
 import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
+import { updateSmokeBreak } from './smokebreak';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
@@ -127,7 +128,7 @@ import { wallReactTick, wallReactReset } from './wallreact';
 import { BLAST_PACE } from './destructionSwitch';
 import { loadTeamFeel } from './teamfeel';
 import { nvgTick } from './nvg';
-import { irLightTick } from './irlight';
+import { irLightTick, irFlags } from './irlight';
 import { silentTick, silentEase } from './silent';
 import { holdFireReset } from './holdfire';
 import { spottedTick } from './spotted';
@@ -463,6 +464,9 @@ export interface GuardScript { goal: Vec3 | null; speed?: number; face?: number 
   /** his walk to `goal` is the script's own way: the short one, not priced by the lanes his side knows are covered (lanes.ts lanePenalty). A staged advance
    *  down a road the other side has guns on: without it he goes round, as a man left to himself would (director.ts OrderPatch). */
   direct?: boolean;
+  /** he is having a smoke where he stands (smokebreak.ts: the left hand to his mouth and back, the lit end, real smoke — a level script's order, director.ts
+   *  OrderPatch.smoke; nothing with that file's switch off) */
+  smoke?: boolean;
   /** his muzzle taken off the order by his own read of the fight (roomfight.ts): while set the runner aims at `aimAt` with the gun up — whatever aimAt / upper /
    *  stance the order holds, which are left exactly as ordered and take over again the frame this is cleared — and, `face` given, squares him up to it where he stands */
   over?: { aimAt: Vec3; face: number | null; walk?: boolean } | null; }
@@ -1109,7 +1113,7 @@ export class Game {
     try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
     loadQrfTune(this);   // …and so are the response team's knobs (qrf.ts: on/off, ETA, size, the perimeter tier's)
     loadTactics(this.tune);   // the pursuit tactics' four knobs, kept per machine like the aim rows (tactics.ts)
-    leversFog(loadTeamFeel); fogFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
+    leversFog(loadTeamFeel); fogFlags(); irFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
     loadNeeds(this.tune);     // …and the needs' switch + fairness knobs (needs.ts)
     loadChaos(this.tune);     // …and the destruction lane's chaos knob (destruction.ts)
     loadWind(this.tune);      // …and the wind's master + rows (wind.ts; the moths' switch rides with it)
@@ -1689,6 +1693,7 @@ export class Game {
     this.smokeWake(all);
     this.drawCharacters(all, statured);
     updateSnowBreath(this, dt);         // BREATH (snowBreath.ts): on a snow level the men's breath steams — picture only (here, after the fog of war has said who is hidden this frame), a return with SNOW_LOOK.breath off or on any other level
+    updateSmokeBreak(this, dt);         // A SMOKE (smokebreak.ts): a man a level's script told to have one — his hand, the lit end, the smoke; nothing where nobody was told, or with its switch off
     this.stepSnowTracks(dt);   // boots press the snow (snowTracks.ts): everybody is posed — picture only
     this.lightMeter(dt);
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt * 3);

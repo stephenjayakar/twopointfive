@@ -31,7 +31,7 @@ const KEPT: Record<FeelName, Record<string, [number, number, number] | null>> = 
   LIGHTS: { on: null, litOff: null, litAt: [0.05, 0.9, 0.05], lookDark: null, afterSecs: [0, 10, 0.5], hotSecs: [0, 15, 0.5], stepSecs: [0, 15, 0.5], onM: [0.2, 5, 0.1], aloneM: [2, 20, 0.5] },
   NVG: { on: null, lead: null, own: null, quietSecs: [0, 90, 5], darkAt: [0.05, 0.9, 0.05], blackAt: [0, 0.6, 0.05] },
   IR: { on: null, sam: null, carry: null, teamOff: null },
-  IRLIGHT: { on: null, team: null, auto: null, meter: null, show: [0.02, 0.4, 0.01], power: [1, 100, 1], cone: [30, 85, 5], reach: [8, 30, 1] },   // the infrared light on the goggles (irlight.ts)
+  IRLIGHT: { on: null, team: null, auto: null, meter: null, near: null, nearM: [1, 12, 0.5], show: [0.02, 0.4, 0.01], power: [1, 100, 1], cone: [30, 85, 5], reach: [8, 30, 1] },   // the infrared light on the goggles (irlight.ts)
   FOG: { own: null, calls: null, doors: null, lasers: null },
   LASER: { enemy: null },
   FRAG: {},
@@ -42,7 +42,7 @@ const KEPT: Record<FeelName, Record<string, [number, number, number] | null>> = 
   COVER: { on: null, stacked: null, rearWalkM: [0, 30, 0.5], inRoom: null, edge: null, laneWalk: null },
   ENTRY: { offOpenings: null, watch: null, nearM: [0, 6, 0.5], gaps: null },
   REAR: { settle: null, secs: [0, 3, 0.25], file: null },
-  PAIR: { on: null, markOnHands: null, watched: null, quietFirst: null, stageM: [1.2, 4, 0.1], secs: [0.2, 2, 0.1], pace: [0.6, 2.2, 0.1], goPace: [0.6, 2.2, 0.1], coneM: [0, 16, 1], crouch: null, darkVis: [0.05, 0.9, 0.05], darkM: [0, 3, 0.5], darkRefuse: null, darkCrouch: null },   // quiet orders for one partner (pairorders.ts)
+  PAIR: { on: null, steady: null, markOnHands: null, watched: null, quietFirst: null, stageM: [1.2, 4, 0.1], secs: [0.2, 2, 0.1], pace: [0.6, 2.2, 0.1], goPace: [0.6, 2.2, 0.1], coneM: [0, 16, 1], crouch: null, darkVis: [0.05, 0.9, 0.05], darkM: [0, 3, 0.5], darkRefuse: null, darkCrouch: null },   // quiet orders for one partner (pairorders.ts)
   DOORMANNERS: { on: null, pass: null, stand: null, swing: null, lane: null, laneMove: null, laneLeaf: null, laneWalk: null, watch: null, fight: null, gap: [0.8, 2, 0.05], patience: [0.5, 1.2, 0.1] },   // doorway manners, both sides (doorway.ts): its one switch, and the rules under it for an A/B
 };
 // (the rescue-with-goggles rows, added down here so the tables above stay line for line what the other parts of the build merge against)
@@ -172,4 +172,4 @@ Object.assign(KEPT.DOORTOOLS, { openHand: null });
 // several doors on one signal: the hand door's man is on its handle before the boot beside him goes in (doortools.ts DOORTOOLS.gateHand)
 Object.assign(KEPT.DOORTOOLS, { gateHand: null });
 // a door an enemy's hand opens is looked at by every free teammate with a line to its doorway (roomfight.ts ROOMFIGHT.doorEars)
-Object.assign(KEPT.ROOMFIGHT, { doorEars: null, doorLookSecs: [1, 8, 0.5] });
+Object.assign(KEPT.ROOMFIGHT, { coverKeep: null, doorEars: null, doorLookSecs: [1, 8, 0.5] });

@@ -81,7 +81,7 @@ import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
 import { STEALTHPOSE } from './stealthpose';
 import { stealthFeed } from './stealthfeed';   // Sam's hands-empty crouch poses (stealthpose.ts): what the animator is told each frame
 import { planKnee } from './planmode';   // (called inside the update only)
-import { takeBegin, takeFall, takeLower, takeKill, takeBeats, TAKEDOWN } from './takedown';   // a takedown's own move and the fall it leaves (takedown.ts): poses only
+import { takeBegin, takeFall, takeLower, takeKill, takeBeats, takeHaul, TAKEDOWN } from './takedown';   // a takedown's own move and the fall it leaves (takedown.ts): poses only
 
 /** the player's movement circle: wider than the body so arms / gun don't clip into walls */
 const BODY_R = 0.42;
@@ -1569,12 +1569,12 @@ function holdTail(g: Game, dt: number, speed: number) {
   const pl = g.player, c = pl.char, H = pl.holding;
   c.anim.speed = speed; c.anim.crouchTarget = 0; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.lookYawExtra = 0;
   const low = H ? takeLower(g) : 0;   // (the choke's lowering: both poses or neither)
-  const kill = H ? takeKill(g) : false, beats = H ? takeBeats(g) : false;   // (takedown.ts TAKEDOWN.kill / chokeBeats, fed with the pose as `low` is: the animator reads this frame's, not its module's one-frame-late fallback)
-  c.anim.holdPose = H ? { phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats } : null;
+  const kill = H ? takeKill(g) : false, beats = H ? takeBeats(g) : false, haul = H ? takeHaul(g) : false;   // (takedown.ts TAKEDOWN.kill / chokeBeats, fed with the pose as `low` is: the animator reads this frame's, not its module's one-frame-late fallback)
+  c.anim.holdPose = H ? { phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats, haul } : null;
   if (H) {
     const gd = H.g, hc = gd.char, an = hc.anim;
     an.speed = speed; an.reverse = pl.backpedal; an.crouchTarget = 0; an.upper = 'none'; an.stance = 'none'; an.lookYawExtra = 0; an.deliberate = 0;
-    an.heldPose = { phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon', low, kill, beats };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
+    an.heldPose = { phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon', low, kill, beats, haul };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
     if (gd.held) gd.held.phase = H.phase;
     // where his torch points: nowhere useful — up over Sam's arm at the ceiling, wandering with the struggle (torchCarryDir reads his aim yaw / pitch; the pistol, if
     // that is what he has out, just rides the raised hand). The yaw share stays small and eased — it is also his chest's twist, and his neck must stay on the arm.
