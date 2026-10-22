@@ -1,5 +1,5 @@
 // CLAUDE.md IS AN INDEX: it is loaded into every agent session, so it must stay small; what it used to hold lives in docs/agents/<area>.md.
-//   bun run tools/qa/claude-md-check.ts                 CLAUDE.md is at most 12 KB and 150 lines, and names every docs/agents file; exit 0 / 1
+//   bun run tools/qa/claude-md-check.ts                 CLAUDE.md is at most 14 KB and 150 lines, and names every docs/agents file; exit 0 / 1
 //   bun run tools/qa/claude-md-check.ts --base <rev>    also: every non-empty line of <rev>:CLAUDE.md is in today's CLAUDE.md or docs/agents —
 //                                                       as often as it was, and a line the old file had once (and the index does not keep)
 //                                                       is in exactly one area file. <rev> for the cut of 2026-10-13: 72a1c0ad
@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const MAX_BYTES = 12_000, MAX_LINES = 150;
+const MAX_BYTES = 14_000, MAX_LINES = 150;   // (12 KB until the writing guide, which the maintainer asked to be in this file, came in)
 let fails = 0;
 const line = (ok: boolean, text: string) => { if (!ok) fails++; console.log(`  - ${ok ? 'PASS' : 'FAIL'} — ${text}`); };
 const linesOf = (text: string) => text.split('\n').map(l => l.trimEnd()).filter(l => l !== '');
