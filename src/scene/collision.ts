@@ -518,6 +518,12 @@ export class NavGrid {
   cellBlockers(wx: number, wz: number, out: Int32Array): number { const x = Math.floor(wx / this.cell), z = Math.floor(wz / this.cell); if (x < 0 || z < 0 || x >= this.W || z >= this.H) return 0; return this.col.circleTouches((Math.floor(wx / this.cell) + 0.5) * this.cell, (Math.floor(wz / this.cell) + 0.5) * this.cell, 0.34, 0.25, 1.5, out); }
   isBlocked(wx: number, wz: number) { const x = Math.floor(wx / this.cell), z = Math.floor(wz / this.cell); if (x < 0 || z < 0 || x >= this.W || z >= this.H) return true; return this.blocked[this.idx(x, z)] === 1; }
 
+  /** findPath for a PICTURE's question (game/attention.ts attentionWay, asked by an overlay): the same search on the ASKER'S tables (`own.s`, made at its first
+   *  search and kept by it), the grid's own left as they were — so a game that is drawn and the same game not drawn hold the same state, word for word. */
+  findPathAside(own: { s?: object }, a: Vec3, b: Vec3, maxIter = 6000): Vec3[] | null {
+    const mine = this.scratch; this.scratch = (own.s as NavScratch | undefined) ?? null;
+    try { return this.findPath(a, b, maxIter); } finally { own.s = this.scratch ?? undefined; this.scratch = mine; }
+  }
   /** A* from a to b (world coords). Returns world-space waypoints (cell centers), smoothed by greedy line-of-walk.
    *  `penalty` (optional): a cost MULTIPLIER for stepping INTO cell (ix, iz) — 1 = plain floor, 6 = six times dearer to walk through, 20 = all but a wall
    *  (values under 1 are read as 1, so the straight-line heuristic stays admissible). It bends the route round places a man has reason to avoid without

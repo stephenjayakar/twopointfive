@@ -119,7 +119,7 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
     blurb: 'A manifest across a lit road. Two sentries watch each other past a seized container: partner behind one, you behind the other. He goes when your hands do.' },
   { id: 'quiet-relay-two', title: 'The relay station, as two', kind: 'quiet', squad: 1, level: 'quiet-relay.json', untuned: true,
     place: 'A hilltop radio relay: mast, comms hut, ops room', lean: 'quiet', defenders: 6,
-    blurb: 'A crypto drive in the comms hut. Its door is floodlit, locked and on camera; a picket watches it from the dark behind the mast. Send your partner behind him.' },
+    blurb: 'A crypto drive in the comms hut. Its door is floodlit, locked and on camera; a guard watches it from the dark behind the mast. Send your partner behind him.' },
   // (tools/levels/lights-out.ts: a quiet level built for two — the breaker and the door it darkens are a courtyard apart, and the dark lasts as long as one man's walk to the panel;
   //  the man at the hall's window is the one the game sends to the panel; tools/qa/lights-out-run.ts plays it as a pair, alone, with the partner left behind and
   //  with the panel shot dead (low, at a sprint, and with the sentry choked out first), probe `lights-out`)
@@ -189,14 +189,14 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     //  the photocell puts out by day — and measured dry and still)
     hour: 'night', weather: 'clear',
     place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Four men down one street: two easy rooms, then a doorway a man holds, a gun, a locked hall, and a picket by two gates.',
+    blurb: 'Four men down one street: two easy rooms, then a doorway a man holds, a gun, a locked hall, and more enemies coming in through two gates.',
     scene: 'The code book names a post one street long. This time you walk in with the four, and the men in it know how to hold a street.',
     teaches: ['Doors, with the squad behind you', 'A doorway a man holds: go round', 'A gun on the street: make it duck, then move', 'Clear a room through its window', 'Turn the squad to cover your back'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
-    place: 'A money changer\'s shop, a night of snow', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
-    blurb: 'Alone, and nobody knows you came. Through the dark to the strongroom, and out the way you went in.',
-    scene: 'The post was paid through one house in town, and its ledger says by whom. It is in the strongroom. Nobody is to know you were there.',
-    teaches: ['Stay low and out of the light', 'A whistle puts a guard where you want him', 'Take a man from behind', 'Locks, the fuse box, night vision', 'Out the way you came in'] },
+    place: 'A money changer\'s shop on a snowy night', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
+    blurb: 'You go in alone. Slip through the dark to the strongroom, then leave the way you came in.',
+    scene: 'The post was paid through a money changer\'s shop in town, and his ledger shows who paid. The ledger is in the strongroom. Nobody can know you were there.',
+    teaches: ['Stay low and out of the light', 'A whistle puts a guard where you want him', 'Take a man from behind', 'Locks, the fuse box, night vision', 'Leave the way you came in'] },
   // quiet, as two (tools/levels/tut-pair.ts): one partner under the pair rules, and each stretch of a truck park is one thing a second man makes possible
   { id: 'tut-pair', title: 'The truck park, as two', kind: 'quiet', squad: 1, level: 'tut-pair.json', group: 'tutorial',
     place: 'A walled truck park, at night', lean: 'quiet', defenders: 4,

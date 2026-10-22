@@ -70,6 +70,14 @@ export const PAIR = {
   keepWay: true,
   /** where a man MOSTLY faces is read from when he last stopped walking (off: one six-second average, his walk to the post in it) */
   habitStood: true,
+  /** HE DOES NOT TURN ABOUT ON HIS WAY (the maintainer, 10-22, the pair lesson: "partner seems to be very paranoid about always turning around to check the
+   *  other guy"). Two things turned him (the lesson's scripted run, sampled): the way to a man's back handed out with a corner he had already passed first —
+   *  the way he is kept on picks its nearest CORNER, and with that a pace behind him he turned right round to walk back to it and round again the next time
+   *  the way was read; and each time the way read watched he parked and at once squared to the man, sixty to a hundred degrees, and squared back to walk a
+   *  third of a second later. So: on the kept way a corner he is already past along its own leg is dropped, where the way on from the next is as plain and
+   *  as cheap a walk from where he stands (priced as any kept way is); and parked on a watched way he keeps the heading he has for `steadyFaceSecs` — only a wait that lasts turns him to watch
+   *  his man. The page: on (`?pairsteady=0`); false here and on the frozen harness stand (`TPS_PAIRSTEADY=1`; a FROZEN_HOLDS row). false = as it was */
+  steady: false, steadyFaceSecs: 1.2,
   /** floor inside this (m) of a defender, in front of him and in his sight, is not walked (just past GUARD_EYE.nearM: inside that an eye has ±100°, and at
    *  2.6 two of 37 un-staged takes on The block and the depot walked the partner into it and were seen) */
   frontM: 3.6,
@@ -98,6 +106,7 @@ export const PAIR = {
   /** … and once there he says so when the place has been lit this long (s), not more often than every `litEvery` s */
   litSecs: 2, litEvery: 20,
 };
+const STEADY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PAIRSTEADY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
 export const PAIR_STATS = { given: 0, marks: 0, taken: 0, blown: 0, called: 0, cancelled: 0, held: 0, dark: 0, lit: 0, watched: 0, anyway: 0 };
 /** what happened when (the probes read it; capped): 'mark:<man> on <foe>', 'now:…', 'set:…', 'go:<by>', 'watched:<foe> by <who>', 'clear:…', 'anyway:…', 'hands:…', 'down:…', 'blown:…', 'off:<why>', 'cancel:…', 'dark:…', 'lit:…' */
 export const PAIR_LOG: { t: number; what: string }[] = [];
@@ -449,7 +458,8 @@ export class PairOrders {
     const way = this.stalk(gd, spot, J.going ? PAIR.goPace : PAIR.pace);
     if ((way.exposed && !J.force) || !this.backOpen(foe, spot)) {   // (told to go whoever is looking — a second mark, Sam's own hands: eyes on the way no longer stop him)
       if (J.waitT < 0) J.waitT = g.time;
-      J.set = false; A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = !way.exposed || J.force ? `waiting · no room at ${name}'s back` : !way.by ? `waiting · no way to ${name} unseen` : way.by === foe ? `waiting · ${name} is facing this way` : `waiting · ${nameOf(way.by)} is looking across the way to ${name}`;
+      J.set = false; A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = PAIR.steady && !STEADY_BREAK && g.time - J.waitT < PAIR.steadyFaceSecs ? null : yawTo(p, fc.pos);   // (PAIR.steady: a short wait does not turn him)
+      A.going = A.there = !way.exposed || J.force ? `waiting · no room at ${name}'s back` : !way.by ? `waiting · no way to ${name} unseen` : way.by === foe ? `waiting · ${name} is facing this way` : `waiting · ${nameOf(way.by)} is looking across the way to ${name}`;
       if (g.time - J.waitT > PAIR.stalkWait) { PAIR_STATS.called++; off('noway', !way.exposed || J.force ? 'no room at his back.' : 'no way to his back unseen.', false); }
       return;
     }
@@ -471,7 +481,8 @@ export class PairOrders {
     }
     if (A.post && flat(A.post, here) < 0.05) A.movedT = A.markT = g.time;   // (he was parked here — set, or waiting on a way: a short step off it is a fresh walk, not a man stuck beside his mark; orders.ts would bring the mark to him)
     A.pace = J.going ? PAIR.goPace : PAIR.pace; A.crouch = PAIR.crouch; A.face = null;
-    A.post = spot; A.arrived = false; A.via.length = 0; for (const q of way.path.slice(0, -1)) A.via.push(q); A.goal = v3.copy(A.via[0] ?? spot);
+    const path = way.path;
+    A.post = spot; A.arrived = false; A.via.length = 0; for (const q of path.slice(0, -1)) A.via.push(q); A.goal = v3.copy(A.via[0] ?? spot);
   }
   /** nothing solid between two points a pace apart, at knee height */
   private clearOf(a: Vec3, b: Vec3): boolean { return !this.g.col.solidBlocked([a[0], 0.45, a[2]], [b[0], 0.45, b[2]]); }
@@ -514,11 +525,19 @@ export class PairOrders {
       if (was && g.time >= was.t && (keep || g.time - was.t < 1.5) && flat(was.to, to) < (keep ? 0.6 : 0.3)) {
         let i = 0, bd = Infinity; for (let k = 0; k < was.path.length; k++) { const d = flat(from, was.path[k]); if (d < bd) { bd = d; i = k; } }
         if (bd < 0.9 && i < was.path.length - 1) i++;
-        const r = was.path.slice(i);
-        if (keep && r.length) r[r.length - 1] = [to[0], 0, to[2]];
-        if (r.length && nav.walkable(from, r[0]) && (!keep || r.length < 2 || nav.walkable(r[r.length - 2], r[r.length - 1])) && W.cost([from, ...r], pace, to) <= SNEAK.budget) {
-          if (g.time - was.t < (keep ? 6 : 1.5)) { PAIRUP_STATS.waysKept++; return { path: r, exposed: false, by: null }; }
-          rest = r;
+        // (PAIR.steady: … and a corner he is already past — he stands along its leg to the next — is not his to walk back to: the kept way picked its
+        //  NEAREST corner, and for the first metres of a long leg that is the one behind him)
+        //  — tried first, and the nearest corner itself where that way on is no plain, cheap walk from here: at a turn back round a wall's end he stands
+        //  "along" the next leg before he has reached the corner)
+        let past = false;
+        if (!(bd < 0.9) && PAIR.steady && !STEADY_BREAK && i < was.path.length - 1) { const a = was.path[i], b = was.path[i + 1]; past = (from[0] - a[0]) * (b[0] - a[0]) + (from[2] - a[2]) * (b[2] - a[2]) > 0; }
+        for (const k of past ? [i + 1, i] : [i]) {
+          const r = was.path.slice(k);
+          if (keep && r.length) r[r.length - 1] = [to[0], 0, to[2]];
+          if (r.length && nav.walkable(from, r[0]) && (!keep || r.length < 2 || nav.walkable(r[r.length - 2], r[r.length - 1])) && W.cost([from, ...r], pace, to) <= SNEAK.budget) {
+            if (g.time - was.t < (keep ? 6 : 1.5)) { PAIRUP_STATS.waysKept++; return { path: r, exposed: false, by: null }; }
+            rest = r; break;
+          }
         }
       }
       const path = nav.findPath(from, to, 6000, (ix, iz) => { const x = (ix + 0.5) * c, z = (iz + 0.5) * c; return W.watched(x, z, true) || ringAt(x, z) ? 14 : 1; }) ?? nav.findPath(from, to);

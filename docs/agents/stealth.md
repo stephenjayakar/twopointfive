@@ -869,3 +869,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   scene as a contact sheet with numpy and Pillow alone (a small z-buffer rasteriser: from the side, the game camera's pitch from behind and from in front,
   from above); it reads `pose-mesh.ts` / `ready-pose-probes.ts` PLYs too. `pose-mesh-render.py` (Blender) is the better picture where there is one. No light,
   no cloth, no camera framing: it is the mesh the page skins at the poses the game reaches.
+- **The attention thread runs the way he will walk** (`ATTENTION.way`, attention.ts `attentionWay`, drawn by ui/attentionviz.ts `threadPoints`; the maintainer,
+  10-22, off the stealth tutorial mission, of a thread drawn from a man in a hut straight through its wall: "weird that the line here is a straight line, not a
+  pathed one. i'd expected pathed from squad commands"). For a man WALKING to the place (`AttentionMark.walking`: a `go` hold not yet at the thing) the dotted
+  thread is his feet, every corner of his way, the place: his own nav path from where he is on it when it is the walk to this place, else the nav grid's answer
+  kept `wayReask` 0.5 s (the first frames, before he has a path). A man who only LOOKS (a turned head, a lent hold, a man standing at the thing) and a place the
+  floor has no way to keep the straight thread. PICTURE ONLY, so it is ON in the module and on BOTH stands, no `FROZEN_HOLDS` row: nothing in the update reads
+  it, and it WRITES NOTHING OF THE GAME'S: the kept answer and the tables the grid is searched on are the ASKER'S (the overlay's own in ui/attentionviz.ts,
+  handed in as `kept`; `NavGrid.findPathAside` searches on them and leaves the grid's own as they were), so a run that asks for every way each frame digests
+  AND hashes (`stateHash`, statics too) as the run that never asks. A first cut kept the answer in a named side table of the game and searched on the grid's
+  own tables: the digest was equal, the state hash was not (`game.col.nav.scratch.open`), which is how a picture gets into a snapshot. Off: `?straightthread` on the address, Tab ▸ the attention group ▸ 'the thread runs the way he will walk'. CHECK `probes.ts
+  attentionway` (tools/qa/attentionway-check.ts; `ATTENTIONWAY_BREAK=1` fails `way`), both stands: on tut-quiet, the office and lights-out a knock 5 m off
+  behind a wall is 13.3 / 5.5‥6.3 / 14.1 m of walk; the thread starts at his feet, ends at the place, no step on blocked floor; he then walks within 0.23 m of
+  the thread he set off with. One seed, one man a level. A TRAP MET ON THE WAY: a kept answer must not be started 'from the corner nearest him' (a way that
+  doubles back passes near him again further on, and the thread then cuts the wall) — floorplan.ts `wayOf` still starts its kept leg that way. NOT SEEN: the
+  overlay itself (no page was driven, nothing on a GPU): the dots at a corner, the thread across a door's leaf, a thread half out of the view.
+- **The choke hauls him up and back** (`TAKEDOWN.haul`, character.ts `HOLD.haul`, fed by player.ts `holdTail` as `haul` on both poses; the maintainer, 10-22,
+  off the stealth tutorial mission: "the choking animation needs to be more intense. in chaos theory sam has him in a chokehold and then lifts him up and back
+  out of the air a bit when choking"). The choke was posed standing: the elbow closed, Sam leaned back four degrees, the man sagged on his own two feet until
+  he was lowered. Now, a third of a second in, Sam leans 26° further back over planted feet with the arm going up and back with the man's neck, and the man is
+  tipped back onto him, hips ahead of his shoulders, both feet off the floor and kicking; he is set back on his feet as his hands come off the arm (done by half
+  way), before the lowering takes him down, so the lowering, the fall and the frame he goes out on are as they were. THE REFERENCE: the Chaos Theory clips the
+  takedown work was read from (the notes and beat tables under rebuild/takedowns-like-chaos-theory): Sam straightens a tenth of a second in and hauls him up,
+  the man's head forced back, and leans back through the squeeze. The man's FEET ARE OUT OF FRAME in every frame of them: 'off his feet' is the maintainer's
+  word, not something the clips show. SWITCH: its own key, ON in the page (`?nohaul` on the address, Tab ▸ Takedowns ▸ 'the choke hauls him up and back'), OFF
+  in the module and on the frozen stand (`TPS_HAUL=1`, with `TPS_TAKEDOWN=1`), a `FROZEN_HOLDS` row, rides a recording's tables, a recording from before the key
+  replays with it off; off is the build as it was (every changed expression is behind `hauled`; the hold scene's meshes byte for byte). POSE ONLY, no rule: the
+  roots do not move and he is out on the same frame, but both men's head and chest bones move (Sam's head some 15 cm back for a second), and sight lines and
+  the light meter read Sam's. CHECK `probes.ts haul` (tools/qa/haul-check.ts, families takedown and close; `HAUL_BREAK=1` fails `haul`), both stands, against
+  the same choke with the key down: his feet 11‥12 cm up, his head 8 cm up, Sam's neck 13.5 cm further back, the choking wrist where it was against his neck
+  to 1 cm and his hands against that wrist to 0.5 cm; the two heads never closer than with the key down (18.5 cm at the least, 26‥31 at its height); feet down
+  by 1.5 s and every joint the key down's from 1.6 s; no joint over 5 cm in a frame (4.8, a finger of his as his hands come off); the key put down mid-haul
+  brings his feet down at 1.2 cm a frame; the hold broken mid-haul and a man grabbed again a quarter of a second on moves nothing further than with the key
+  down. One seed, one man, the lobby's open floor. TRAPS MET: (1) lifted 11 cm with Sam's hips pushed forward under the lean, the man's cap went through Sam's
+  head (15.6 cm between the head bones where the key down has 18): Sam's head has to go back FURTHER than the man's. (2) Sam's knees must not go through the
+  lowering's pinned-feet branch for the haul: switching it snapped his knee 3.4 cm in a frame, twice a choke. (3) The haul kept from a hold broken mid-haul
+  came back whole on the next hold's first frame (13 cm): it is folded into the layer's weight on a fresh hold, as the lowering is. HELD OFF THE HAUL: the
+  older choke lines of takedown-check.ts (`chokeRun`) and hold-pose-probes.ts hold-struggle (b), whose windows the haul's own motion falls in; the haul's frames
+  are haul-check's. Pictures: `close-stills.ts --scene choke` (before: `--set '{"TAKEDOWN":{"haul":false}}'`). NOT SEEN: anything on a GPU or in the page; how
+  it reads from the game's camera at play size; the two men's clothes and the cap through each other (bones are read, not meshes); no tally was run.

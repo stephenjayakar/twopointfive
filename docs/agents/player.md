@@ -939,6 +939,30 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   mission the frame's gate (`rails.ts`) drops a row's digit whose slot is still locked, and a click or R it has locked does not shut the setup:
   the solo mission's thread is letting `slotSetupTakes` keys through the gate. (3) The words on the box clip without a mark if a wide fallback
   font is all the machine has; LIGHT is the last of them.
+  A DOUBLE TAP OFF ANOTHER SLOT IS THE DRAW AND THE SETUP (`SLOTSETUP.draw`, 10-22, the maintainer playing step 872: "when on pistol, double
+  tapping 2 quickly switches but doesn't open the menu"). The first build dropped a gun's digit pressed again inside the gun's first `settle`
+  seconds in his hands or while his hands were held (`equipT`), on purpose — "a double-tapped digit draws the gun and no more" — and that was
+  the press he lost; the tutorial's frame was not in it (`rails.ts` lets the rifle's own digit through). With `draw` on the second press opens
+  the setup at once, mid-draw, and a row's digit after it is the row: 2 2 1 from the pistol is the rifle on the selector's other position.
+  Nothing is set by the open itself. ONLY HIS OWN DRAW: the hook notes a gun's digit pressed while that gun is not in his hands
+  (`Player.setupKey`), and a gun that came to his hands on that press carries the time that draw is over (`setupHand.own`: the swap that press
+  started, or `settle`, and no longer); every other time
+  `equipT` holds his hands (the wand stowed, the big tool's tail, a throw's swing, a gun the game handed him as the last can left) the press
+  is dropped as before. A ROUND THAT GOES SHUTS THE SETUP, with `draw` on (`lastFireT` against the opening's stamp): the kit swap keeps a
+  click for its end (`KITANIM.clickKeep`) and that round would leave the panel standing; a trigger held when it opens shuts it at the next
+  round, and the gun's own digit on the frame it shuts is nothing (not the load's old key in player.ts). With `draw` off a round shuts
+  nothing, as before: only the click's edge does. ON in the page (`?setupdraw=0` = the draw and no more), OFF in the
+  module and on the frozen stand, raised there by a word of its own, `TPS_SETUPDRAW=1` (`FROZEN_HOLDS['SLOTSETUP.draw']`, pinned in
+  `host/standup.ts`; it acts only with the rule up, `TPS_SLOTSETUP=1`); in the table a recording carries, one from before the key replaying
+  with it off; the debugger's 'setup ▸ a double tap off another slot opens it'. CHECKS: `slotsetup-check.ts`, fifteen lines, all pass on both
+  stands and with both words raised on the frozen one — its double tap line (2 2 from the sling mid-draw: up, the load not moved, then 1 is the
+  selector; `draw` off: the draw and no more), its pistol line (1 1 off a can), a line for his own case (2 2 off the pistol; 2, a kept click, 2:
+  the round goes and the setup is shut — asked in full only where the swap keeps a click, the shipped stand; the trigger held on auto, then
+  2: shut at the next round on either stand, 2 again on that frame leaves the load alone, and with `draw` off it stays up; the last smoke
+  thrown, or a later lock on his hands inside his own draw, and ONE press of 1: no setup) and a line for the page's words ('' / `?setupdraw=0` / `?setuppop=0` / `?slotsetup=0`, each its own row and no other);
+  `SLOTSETUP_BREAK=1` fails 12 of the 15 on each stand. `slotsetup-page.cjs` has a seventh line, his own case by real key presses (the pistol up, 2 2 two
+  frames apart, then 1). KNOWN: a key mashed twice by a hand that only wanted the gun now leaves the panel standing, and the next 1, 2 or 3 is
+  its row. NOBODY HAS PLAYED IT; the swap's picture under an open panel has never been seen on a GPU.
   SEEN ON A GPU: the FIRST build's box, in the maintainer's own shots from the solo tutorial mission (what the notes above answer). NEVER SEEN ON
   A GPU: the one-line box and the panel — looked at as stills of the real page's own markup and styles, and used by real key presses on the
   software adapter with the picture not drawn; nobody has played them.
