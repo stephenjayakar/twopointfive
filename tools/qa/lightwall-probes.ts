@@ -136,7 +136,8 @@ async function wallSlant() {
     for (let z = NEAR - 0.95; z < NEAR - keep - 0.005; z += 0.001)   // (the shoulder itself never nearer the face than the light is kept: his body does not get there)
       { const from: Vec3 = [X, 1.4, z], lens = v3.mad(from, dir, reach) as Vec3, at = lensClear(g, from, lens, r) as Vec3; n++;
       if (at !== lens) pulled++; if (prev) jump = Math.max(jump, v3.len(v3.sub(at, prev))); prev = at; deep = Math.max(deep, at[2] - (NEAR - keep)); }
-    const good = pulled > 0 && jump < 0.012 && deep < 0.005;   // (5 mm: under the slant floor — 17° — the centre is kept a few millimetres less than radius + gap off the face, still clear of it) ok &&= good;
+    const good = pulled > 0 && jump < 0.012 && deep < 0.005;   // (5 mm: under the slant floor — 17° — the centre is kept a few millimetres less than radius + gap off the face, still clear of it)
+    ok &&= good;
     rows.push(`${deg}°: ${pulled} of ${n} steps pulled back · largest move in one step ${(jump * 1000).toFixed(1)} mm · the light's centre at most ${(deep * 1000).toFixed(1)} mm past ${f2(keep)} m short of the face${good ? '' : '  <<<'}`);
   }
   verdict(ok, 'at 90°, 60°, 30° and 17° to the wall: the pull-back starts from nothing and grows; the centre stays radius + gap short of the face (to 5 mm)', rows.join('\n    '));

@@ -28,6 +28,7 @@ import type { Firearm, GunModelId, WeaponDef, WeaponId } from './weapons';
 import { WEAPONS } from './weapons';   // (read inside functions only: the game's one import cycle)
 import { gunOwn, gunLookOn, gunShellsOn } from './gunlook';   // (the same)
 import { magBoxL } from './rigProps';   // (the same)
+import { RELOAD } from './autoreload';   // (the same: the last-magazine rule's count)
 
 export type FeedKind = 'mag' | 'belt' | 'shells';
 /** a beat as the support hand has it (character.ts rlB): seconds on the weapon's clock; `pull` = nothing was chambered, the handle is run at `rack` */
@@ -149,7 +150,7 @@ export const feedLive = (): boolean => gunLookOn();
 export function feedPlan(gun: Firearm, row: WeaponDef['reload'], shells?: { n: number; pull: boolean }): { cues: FeedCue[] | null; times: number[]; drop: number | null } | null {
   const F = feedOf(gun.def); if (!F) return null;
   // (what startReload is about to book — the same sums: the fullest spare, as much of it as the gun may hold, less what is in it; `shells`: shellPlan's own count)
-  const best = () => Math.min(gun.spare.length ? Math.max(...gun.spare) : gun.def.magCapacity, gun.magRoom), n = shells ? shells.n : Math.max(0, best() - (gun.mag ?? 0)), port = gun.chamber === 0 && !gun.mag;
+  const best = () => Math.min(gun.spare.length ? Math.max(...gun.spare) : gun.bottomless || !RELOAD.lastMag ? gun.def.magCapacity : gun.mag ?? 0, gun.magRoom), n = shells ? shells.n : Math.max(0, best() - (gun.mag ?? 0)), port = gun.chamber === 0 && !gun.mag;
   const cues = feedCues(gun.def, beatOf(row, shells ? shells.pull : gun.chamber === 0), n, port);
   return { cues, times: cues ? cues.map(c => c.t) : [], drop: F.drop };
 }

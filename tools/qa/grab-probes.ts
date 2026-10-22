@@ -30,6 +30,7 @@ const DT = 1 / 60;
 /** the game stood up with Sam's pistol holstered (E), so a grab is the ARM variant (player.ts grabVariant: drawn → 'gun', holstered / canister → 'arm') */
 async function armStandUp() {
   const W = await standUp(); W.game.player.holstered = true;
+  HANDRING.on = false;   // (handring.ts: these lines read the list on a held Space as it was built — the ring that stays has its own check, probes.ts handring)
   if (oneButton && CLOSE.on) { CLOSE.on = false; if (!heldOff) console.log('  (the close-in mode is held OFF for this probe: it reads the one-button rows — the mode\'s own are family close)'); heldOff = true; }
   return W;
 }
@@ -38,6 +39,7 @@ async function armStandUp() {
  *  the shipped stand that is the `?noclose` page, which has to stay the build as it was. The mode's own rows and takes are family `close`. armStandUp lays
  *  the hold after the stand's own switches (every stand-up lays those afresh), says so once, and the mode is put back on when the probe is done. */
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
 let oneButton = false, heldOff = false;
 async function oneButtonRows(probe: () => Promise<boolean>): Promise<boolean> {
   oneButton = true; heldOff = false;

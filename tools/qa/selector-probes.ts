@@ -13,6 +13,7 @@ const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const playerMod = await import(`${ROOT}/src/game/player.ts`);
 const { EASE_RATE, EASE_MAX, MAX_NEAR, PACE_STEP } = playerMod;
 const { TAP_SECS } = await import(`${ROOT}/src/game/interact.ts`);
+const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { DRIVE_SECS, PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
@@ -69,7 +70,8 @@ const OLD_EVENTS = {
 };
 
 /** the level up, Sam immortal and dark, everybody parked (or A staged), a couple of settled frames */
-async function world(seed: number) { Math.random = seeded(seed); const W = await standUp(); W.game.godMode = true; W.game.player.visibility = 0.02; for (let i = 0; i < 5; i++) W.step(DT); return W; }
+async function world(seed: number) { Math.random = seeded(seed); const W = await standUp(); HANDRING.on = false;   // (handring.ts: these lines read the list on a held Space as it was built — the ring that stays has its own check, probes.ts handring)
+  W.game.godMode = true; W.game.player.visibility = 0.02; for (let i = 0; i < 5; i++) W.step(DT); return W; }
 /** Sam standing on the corridor face of the (shut, unlocked) break-room north door, square to it, in reach */
 async function atShutDoor(seed: number, crouch = false) {
   const W = await world(seed); const { game } = W; game.guards.forEach((o: any, i: number) => park(o, i));
