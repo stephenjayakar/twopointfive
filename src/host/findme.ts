@@ -134,17 +134,19 @@ export function watchCtrlTaps(win: Window, idle: () => boolean, key: () => strin
   const T = new TapTwice(); let twice = false;
   const field = (e: Event) => { const t = e.target as { tagName?: string; isContentEditable?: boolean } | null; return !!t && (/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName ?? '') && (t as { getAttribute?(k: string): string | null }).getAttribute?.('aria-label') !== 'game input' || !!t.isContentEditable); };
   const mine = (e: KeyboardEvent) => { const k = key(); return k ? e.code === k : e.key === 'Control'; };   // (`key`: the camera's key where it is not Ctrl — the page hands it host/keymap.ts camKey — as a code on the board; null = Ctrl)
+  let held: string | null = null;   // (the key the tap under way went down as — 'Control' or a code: the camera's key may change hands while it is down, and the tap is let go as what it was)
+  const lifts = (e: KeyboardEvent) => held !== null && (held === 'Control' ? e.key === 'Control' : e.code === held);
   win.addEventListener('keydown', e => {
     if (!mine(e)) { if (!e.repeat) T.other(); return; }   // (a held W repeating is not a new thing the hand did)
     if (e.repeat) return;
-    if (field(e) || e.altKey || e.metaKey || e.shiftKey) { T.reset(); return; }
-    T.down(e.timeStamp);
+    if (field(e) || e.altKey || e.metaKey || (e.shiftKey && !key())) { T.reset(); return; }   // (Shift with Ctrl is a chord of the browser's; with the camera on a key of its own Shift is only his sprint, and a tap under it is a tap)
+    held = key() ? e.code : 'Control'; T.down(e.timeStamp);
   }, { capture: true });
-  win.addEventListener('keyup', e => { if (!mine(e)) return; if (T.up(e.timeStamp) && !idle()) twice = true; }, { capture: true });
+  win.addEventListener('keyup', e => { if (!lifts(e)) return; held = null; if (T.up(e.timeStamp) && !idle()) twice = true; }, { capture: true });
   win.addEventListener('mousedown', () => T.other(), { capture: true });
   win.addEventListener('wheel', () => T.other(), { capture: true, passive: true });
-  win.addEventListener('mousemove', e => { if (e.ctrlKey || key()) T.moved(Math.abs(e.movementX) + Math.abs(e.movementY)); }, { capture: true, passive: true });   // (it counts only with the key down)
-  win.addEventListener('blur', () => T.reset());
+  win.addEventListener('mousemove', e => T.moved(Math.abs(e.movementX) + Math.abs(e.movementY)), { capture: true, passive: true });   // (it counts only with the key down: TapTwice.moved)
+  win.addEventListener('blur', () => { held = null; T.reset(); });
   return () => { const v = twice; twice = false; return v; };
 }
 

@@ -24,7 +24,7 @@ import { SLOTSETUP } from '../game/slotsetup';   // (read when the Controls list
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
-import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
+import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
@@ -302,7 +302,7 @@ function render(S: Screen) {
     sec(body, 'Play');
     flip(body, 'Autosave checkpoints', () => game.saves.enabled, v => { game.saves.setEnabled(v); },
       'A checkpoint is written by itself when the mission moves on, when you first enter a room, when you hide a body and every minute and a half of quiet play. Never while anyone is on to you. Enter on the down card loads the newest.');
-    flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, 'The faint dots marking what Space and the right button can act on: lights, doors, bodies.');
+    flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `The faint dots marking what ${capNow('Space')} and the right button can act on: lights, doors, bodies.`);
     if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep a move key held into a wall and your back goes to it. Q does the same either way.') : cmdOnQ() ? 'Keep a move key held into a wall and your back goes to it. Off, the wall hold needs a key from Controls.' : 'Keep a move key held into a wall and your back goes to it. Off, Q takes it instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
     flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText('A small mark beside the cursor, and an outline on the floor, for what B would order there.'));
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
@@ -323,7 +323,7 @@ function render(S: Screen) {
     S.rows.forEach((R, i) => R.el.classList.toggle('sel', i === S.sel));
     const R = S.rows[S.sel]; desc.innerHTML = '';
     if (R) { desc.appendChild(el('b', '', R.label)); desc.appendChild(document.createTextNode(R.desc())); }
-    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? gearText('Nothing here needs holding down but Space, to choose between actions, and the rifle\'s launcher, to see its arc.') : ''));
+    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? gearText(HANDRING.on ? `Nothing here needs holding down for long: ${capNow('Space')} a moment for the ring of your actions, ${camCap()} to turn the view, and the rifle's launcher to see its arc.` : `Nothing here needs holding down but ${capNow('Space')}, to choose between actions, and the rifle's launcher, to see its arc.`) : ''));
   };
   S.paint();
 }

@@ -118,6 +118,7 @@ import { dozeSnapshot, dozeRestore, type DozeSnap } from './doze';
 import { moraleSnapshot, moraleRestore, type MoraleSnap } from './morale';
 import { runnerSnapshot, runnerRestore, type RunnerSnap } from './runner';
 import { darkDoorSnapshot, darkDoorRestore, type DarkDoorSnap } from './darkdoor';
+import { startleSnapshot, startleRestore, type StartleSnap } from './startle';
 import { netQuietSnapshot, netQuietRestore, type NetQuietSnap } from './netquiet';
 import { powerOutSnapshot, powerOutRestore, type PowerOutSnap } from './powerout';
 import { rescueCheckSnapshot, rescueCheckRestore, type RescueCheckSnap } from './rescuecheck';
@@ -272,6 +273,8 @@ export interface SaveState {
   morale?: MoraleSnap;
   /** each roster man's run — the shout's beat, the weapon gone, where he is going — runner.ts; absent with its switch off or nobody has run */
   runner?: RunnerSnap;
+  /** each roster man's start at a first sight — when he last stood calm, the beat he is in — startle.ts; absent while no man has a record */
+  startle?: StartleSnap;
   /** each roster man's part in a balk at a dark doorway — stopped, called, going in — and the doors that will not stop him again yet — darkdoor.ts; absent with its switch off or nobody met */
   darkdoor?: DarkDoorSnap;
   /** each roster man's count of mates gone quiet, the line he owes, his whip and the last man's act — netquiet.ts; absent with its switch off or nobody met */
@@ -553,7 +556,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     if (LOOK_DECALS.has(d)) D.look = 1;   // (a mark laid only for the picture — lookDecals.ts: it comes back tagged, so the digest's count is the same carrying on and loaded)
     decals.push(D);
   }
-  const bo = g.blackout, gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
+  const bo = g.blackout, gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), sl = startleSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
   const air = g.airDust?.snapshot();
   const s: SaveState = {
     v: SAVE_VERSION, savedAt: Date.now(), label, kind, level: levelFingerprint(g),
@@ -574,6 +577,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     ...(ct ? { calmTorch: ct } : null),   // (which calm patrol torches are dark, and their dwell — calmtorch.ts; no key with its switch off)
     ...(mo ? { morale: mo } : null),   // (each man's dread and where his sequence stands — morale.ts; no key with its switch off)
     ...(ru ? { runner: ru } : null),   // (each man who dropped it and ran, and where his run stands — runner.ts; no key with its switch off)
+    ...(sl ? { startle: sl } : null),   // (each man's start at a first sight — startle.ts; no key while no man has a record)
     ...(dd ? { darkdoor: dd } : null),   // (who is stopped at which dark doorway, who is coming — darkdoor.ts; no key with its switch off)
     ...(nq ? { netQuiet: nq } : null),   // (each man's quiet count, owed line, whip and last-man act — netquiet.ts; no key with its switch off)
     ...(po ? { powerOut: po } : null),   // (the men out for the breaker and what their side has said about the dark — powerout.ts; no key with its switch off or before a first blackout)
@@ -721,6 +725,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   calmTorchRestore(g, s.calmTorch);   // (before the lights are posed, and no dwell counted while they are: a calm man's torch is dark or burning as the file had it — calmtorch.ts)
   moraleRestore(g, s.morale);   // (each man's dread, rung and sequence as the file had them — morale.ts; a file without the slice: every man met afresh)
   runnerRestore(g, s.runner);   // (who had dropped it and run, as the file had them — runner.ts; a file without the slice: nobody has)
+  startleRestore(g, s.startle);   // (who was in his start, who has had his — startle.ts; a file without the slice: nobody has)
   darkDoorRestore(g, s.darkdoor);   // (each man's balk as the file had it — darkdoor.ts; a file without the slice: nobody stopped, every door open to him)
   netQuietRestore(g, s.netQuiet);   // (…and what the quiet net has done to each of them — netquiet.ts; a file without it: every man met afresh)
   powerOutRestore(g, s.powerOut);   // (…and the walk to the breaker — powerout.ts; a file without it: nobody is out and the next blackout is their first)
@@ -1013,12 +1018,14 @@ export class Checkpoints {
   private loadMem(g: Game, key: string): string | null {
     const e = this.shelf.get(key); if (!e) return 'that checkpoint is gone';
     { const why = this.memNo(g, e); if (why) { this.note(g, `load refused: ${why}`); return why; } }
+    g.journal.cut('a checkpoint was loaded');   // (as a file's load, below: between frames it is on no tape)
     // what is NOT the saved moment's to take back: the run's counts, the controller's books, and what the host and this machine set on the game since —
     // the autosave switch, the three hooks, the sandbox row, the tune rows (a file's load leaves all of these as they are NOW)
     const C = g.chronicle.counts, loads = C.loads, saves = C.saves, stats = { ...this.stats }, log = this.log.slice();
     const host = { enabled: this.enabled, picture: this.picture, onPutBack: this.onPutBack, onSaved: this.onSaved }, tune = { ...g.tune }, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo };
     const st = this.store as { map?: Map<string, string> }, kept = st.map instanceof Map ? [...st.map] : null;   // (the harness's store is a Map the game reaches: the files written since are not the snapshot's to take back)
     restoreSnapshot(e.snap);
+    if (!g.journal.recording && g.sensors.mode === 'record') g.sensors.live();   // (the snapshot holds the sensors as they stood at the save — recording, if a tape ran then — and no recorder is behind them now: the cut above ended it)
     { const pl = g.player, S = pl.sel; if (S.ring?.free) { S.open = false; S.ring = null; S.downT = -1; S.moved = false; pl.nearSel = 0; } }   // (handring.ts: a ring that merely stood at the save is nothing of the saved moment — a file's load finds none either, and his first click after a load is his trigger, not a wedge)
     g.player.setup = null;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load — its digits are his slots again)
     if (kept && st.map) { st.map.clear(); for (const [k, v] of kept) st.map.set(k, v); }
@@ -1056,6 +1063,7 @@ export class Checkpoints {
     if (typeof from === 'string' && this.shelf.get(from)) return this.loadMem(g, from);
     const s = typeof from === 'string' ? this.read(from) : from; if (!s) return 'that checkpoint is gone';
     const why = canLoad(g, s); if (why) { this.note(g, `load refused: ${why}`); return why; }
+    g.journal.cut('a checkpoint was loaded');   // (a load off a card or the panel is between frames and on no tape: an F10 recording ends whole before it and a new one is asked for — journal.ts cut; Enter once down is inside an update and on the tape)
     try { loadState(g, s); } catch (e) { const w = (e as Error).message; this.note(g, `load failed: ${w}`); return w; }
     this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${typeof from === 'string' ? from.replace(KEY_PREFIX, '') : 'a state'}: ${s.label || '—'}`);
     return null;
