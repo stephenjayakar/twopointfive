@@ -660,7 +660,7 @@ export function validateLevelData(d: LevelData): string[] {
         else {
           known(w, L, ['title', 'steps', 'rails']);
           if (!isStr(L.title)) err(`${w}.title`, 'a non-empty string');
-          if (L.rails !== undefined) { const R = L.rails as any; if (!isObj(R)) err(`${w}.rails`, 'must be an object'); else { known(`${w}.rails`, R, ['allow', 'respawn', 'fog', 'sky']); if (!Array.isArray(R.allow)) err(`${w}.rails.allow`, 'a list of actions'); if (R.respawn !== undefined && !(isNum(R.respawn) && R.respawn >= 0)) err(`${w}.rails.respawn`, 'seconds ≥ 0'); if (R.sky !== undefined && !(isObj(R.sky) && isVec(R.sky.park))) err(`${w}.rails.sky`, '{ park: Vec3, reach? }'); } }   // (game/rails.ts: the action names are checked against the built floor by checkLesson)
+          if (L.rails !== undefined) { const R = L.rails as any; if (!isObj(R)) err(`${w}.rails`, 'must be an object'); else { known(`${w}.rails`, R, ['allow', 'respawn', 'fog', 'sky', 'orders']); if (!Array.isArray(R.allow)) err(`${w}.rails.allow`, 'a list of actions'); if (R.respawn !== undefined && !(isNum(R.respawn) && R.respawn >= 0)) err(`${w}.rails.respawn`, 'seconds ≥ 0'); if (R.sky !== undefined && !(isObj(R.sky) && isVec(R.sky.park))) err(`${w}.rails.sky`, '{ park: Vec3, reach? }'); } }   // (game/rails.ts: the action names are checked against the built floor by checkLesson)
           const steps = recs(`${w}.steps`, L.steps); if (!steps.length) err(w, 'steps: at least one');
           const ids = new Set<unknown>();
           steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'setupLine', 'done', 'hold', 'at', 'allow', 'deny', 'cue', 'checkpoint', 'fog']);
