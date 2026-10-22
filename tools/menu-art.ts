@@ -77,6 +77,7 @@ const PIN: Record<string, Pin> = {
   'solo-night': { lead: 0.2, flip: true },
   'vault-quiet': { at: [27.55, 0, 12.1], aim: [24.4, 14.6], look: [26, 1, 13], yaw: -35, pitch: 50, dist: 9.5, rim: 5 },   // the court's beam at the shin, between him and the back door
   'tut-quiet': { at: [26.1, 0, 14.15], aim: [24.0, 12.7], guards: [[24.0, 12.7, 20.5, 12.7]], look: [25.0, 1, 13.4], pitch: 36, dist: 8.5, lamps: 'own', keyK: 0.4, skyK: 0.7, lampK: 1.5, haze: 1.0, tint: [0.035, 0.05, 0.11], tintK: 0.6 },   // the tutorial's quiet house: low in the store's dark corner, the lit hall and a man's back through the doorway (the deep night of the quiet missions)
+  'tut-pair': { at: [19.6, 0, 17.75], ops: [[25.0, 0, 19.0]], aim: [20.8, 17.6], guards: [[20.8, 17.6, 23.0, 17.6], [25.4, 17.6, 26.4, 16.6]], look: [22.6, 1, 17.8], yaw: 165, pitch: 40, dist: 12, lamps: 'own', keyK: 0.4, skyK: 0.7, lampK: 1.5, haze: 1.0, tint: [0.035, 0.05, 0.11], tintK: 0.6 },   // the tutorial's truck park: two men at one lantern, the player at the near one's back and the partner behind the far one
   'quiet-yard-alone': { at: [21.2, 0, 16.9], aim: [27, 13.5], guards: [[27.5, 12.6, 20, 13]], pitch: 34, rim: 7 },   // the lamp's pool, a man in it, from the dark corner
   'quiet-yard-two': { at: [17.8, 0, 19.4], ops: [[19.2, 0, 19.7]], aim: [20, 14], guards: [[20.5, 13.8, 12, 13.8]], pitch: 28 },
   'lights-out-two': { at: [19, 0, 18.5], ops: [[18, 0, 19.3]], aim: [21, 16.2], ajar: { front: 0.9 }, pitch: 40 },   // the hall's four beams through its open door

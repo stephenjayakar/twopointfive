@@ -877,3 +877,50 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lamps on, the lit hall being the point). A SKETCH: the script's few words, the store (four strides of dark), no lived-in rooms, a composed menu picture
   (`tools/menu-art.ts` PIN). KNOWN: a man put out through the list before he is asked leaves no way to learn the code (the pad then says so). Never seen on
   a GPU, never played by a hand: the timings are a script's, and whether the dark lane reads on a real screen with the outline off is the maintainer's call.
+- **The tutorial's pair mission, the truck park (`tut-pair`)** (2026-10-22; row `tut-pair` in `TUTORIAL_MISSIONS`, `kind: 'quiet'`, `squad: 1`; no switch
+  of its own: it is on rails, so `RAILS.on` is its switch, `?rails=0` in the page = the yard as a plain quiet mission for two with no lesson, `TPS_RAILS=1`
+  in front of a frozen run). The old Training lesson for the quiet pair, rebuilt on the frame: no new rule, the pair's own (`pairorders.ts`, `workthings.ts`,
+  `sneak.ts`). `tools/levels/tut-pair.ts` writes `levels/tut-pair.json` on ITS OWN GROUND (it shares the kit's pieces with other levels and nothing else: a
+  tutorial mission is not built on the training yard or on another mission's floor): a haulier's yard at night, 33 by 23 m, which is what the 40 by 28 m
+  world leaves with a road either side; a truck gate chained shut, a fallen stretch of wall the two come in by from the road where their own pickup stands,
+  two shipping containers end to end across the yard with a gap between them, the watch's camp round a lantern, an office court with a fuel point. Four
+  men on posts, a lesson of 21 steps (`tools/qa/lessons/tut-pair.ts` plays it by input alone; the generator's header has the map and why each piece stands
+  where it does); `levels/tut-pair.script.ts` is a few words between the men on the cues `gate`, `park` and `yard` (nobody is held, moved or spawned). THE
+  BEATS: get low and lead the partner round the end of a low wall; the squad's key on the man at the pickup, the partner creeps to his back and says "set",
+  the word (F) drops him; the squad's key on the ground brings the partner back; in the gap between the containers, two men who watch each other: the
+  squad's key on the far one, the player to the near one's back, and the player's own grab is the partner's signal (both down on one beat), then the right
+  button; round the court wall to the man who watches the far gate: held and asked, he gives the office door's code; with him still in the arm, the squad's
+  key on the fuse box: the partner throws the mains, every lamp in the yard and the office camera die, four beacons turn red; night vision, the pad, the
+  manifest from the office trunk, out by the far gate together. THE FRAME'S KEYS HERE: from the first step the walk, the view and the aim; `crouch`,
+  `order`, `word`, `use`, `alt`, `nvg` each come on with the step that teaches them; `rails.orders` is `pairMark`, `work`, `fallIn` (a tap of the squad's
+  key on a man, on the fuse box, anywhere else) and `rails.rows` has no row for the fuse box, so the box is the partner's work; `alt` is denied from the
+  walk to the last man until the lamps are out, so he cannot be put out before he has been asked. Three steps open on a card (the partner, the double, a
+  thing he works). Checkpoints `the gate yard`, `the truck park`, `the dark`. WHAT THE RUNS TAUGHT, each from a failed run: (1) `opening.ts` moves on any
+  man whose post is inside ten metres of the spawn by walking, and a man moved on walks back to his post and stands facing the way he came: the near man of
+  the double then faced the player and the far one turned to talk to him. The start is further than that from every man. (2) Two calm men inside 4.5 m of
+  each other turn and talk (`dialogue.ts AMBIENT.pairM`): the double's two stand 4.6 m apart. (3) A man's post on the edge of a nav cell turns him as he
+  steps onto the cell: posts whose facing matters are on a cell's middle (x and z ending .25 or .75). (4) THE PARTNER WILL NOT STAND WHERE IT IS LIT AND A
+  MAN HAS A LINE TO IT, and open ground under a moon reads lit (the rule's line is 0.1; the meter in the open reads 0.45 under this moon of 0.5, and 0.29
+  under the training yard's 0.22): with the first marks in the open he stopped five metres short and the step that wants him close never passed. Every
+  mark the player is led to is in a moon shadow (the low wall's, the containers', the south wall's). (5) ON THE PAGE THE PARTNER ALSO READS THE LIGHT ON
+  HIMSELF (`SNEAK.stalkAmbient`, on in the page): sent to a man's back from a place in the moon he takes the whole way for lit, says who is looking across
+  it, and gives up. The headless partner has no moon on him, so only the page showed it: the first page run stopped at the double with every headless seed
+  green. The moon is low in the south-west so that shadows fall across the yard, and his way round to the far man is dark from end to end (east of the
+  south container, along the south wall, up the far side of the old wall); a pickup shuts the open ground he would otherwise cut across. With it the page
+  plays the double: he waits for the near man's look to pass and is set about half a minute after the order. (6) The way to a man's back must have room
+  to pass the men who are not his, and a vehicle moved to throw a shadow can close the nav between two parts of the yard (the scripted player then walked
+  round outside the wall): look at the path after moving one. (7) A look-at point inside a parked truck is a lint warning; a mark for the pad is 0.75 m
+  off the door, not a metre. THE PAGE PLAY, `tools/qa/tut-pair-page.cjs` (Playwright on the software adapter against a dev server; `PORT`, `OUT`, `PICS`,
+  `STEPS`, `SETTLE`): it boots the row, checks the frame is up and the untaught keys do nothing, then does every step with real keys and the mouse, a
+  picture where asked. Two things it had to learn: a hand walks by the game's own path finder, not in straight lines (a real-size door leaves a hand's
+  width either side of a man); and stepped frames are never drawn there, so THE PAGE'S LIGHT METER DOES NOT MOVE unless a frame is drawn: it draws a few
+  before each order (`settle`), or the partner reads the light of wherever the last picture was taken. CHECKS: `lesson-gate tut-pair` (the file is its
+  generator's, `level-lint`, `lesson-check`, the scripted player on the frozen stand with the frame raised, and on the shipped stand on four dice, two of
+  them reading every line for 6 s), `quiet-check`, `carlamps-check` (its row), `level-needs tut-pair --run`, `rails-check` (the frame's own), both
+  typechecks, the page play. MEASURED, headless: the scripted player finishes all 21 steps on the shipped stand on seeds 1 to 4; "set" comes 5 to 8 s
+  after the first order and 17 to 21 s after the second. KNOWN: a man put out before he is asked leaves no way to learn the code (the frame keeps the
+  right button shut until then, a knife or a shot is not shut); the partner holds where his job ended until he is called (that is the pair's rule, and the
+  lesson's two "bring him" lines are what it costs); the last man is 14 m from the office door, so the dark is walked, not stood in; the two at the start
+  are dark figures on a dark road. A SKETCH: the script's few words, the office (one room), no lived-in rooms, a composed menu picture
+  (`tools/menu-art.ts` PIN). Never seen on a GPU, never played by a person: the moon shadows, the red of the beacons over the whole yard and whether the
+  lamps going out reads as the moment it is meant to be are the maintainer's to judge.
