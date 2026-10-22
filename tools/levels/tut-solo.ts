@@ -27,6 +27,7 @@ import type { LevelScenarios, LessonData, LessonStep, QuietData, Rect, IssueData
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { GwotMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { findCarLamps } from '../../src/game/carlamps';
@@ -44,6 +45,8 @@ export const YARD: Rect = { x0: 9, x1: 36, z0: 5, z1: 23 };
 export const AXIS = 14.25;
 const DOORWAY = { a: AXIS - 0.6, b: AXIS + 0.6 }, HINGE = AXIS - 0.58;
 const ARCH_X = 16, FRONT_X = 25, PART_X = 30.5, ROOM_Z0 = 10.5, ROOM_Z1 = 17.5;
+/** the gravel a truck drives on: the drive through the gate and the arch, and the apron it turns on before the shop */
+const DRIVE = { z0: AXIS - 1.7, z1: AXIS + 1.7 }, APRON = { x0: 19.2, z0: 10.6, z1: 18.4 };
 
 // ---- the marks the level, its script and its scripted player all read ----
 /** where he starts: on the road at the van's open back doors, in the light of its load bay, facing up the van to the forecourt. Well inside the world's edge
@@ -121,16 +124,19 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const doors: LevelDoorDef[] = [];
   const zones: SurfacesData['zones'] = [];
 
-  // ---- the ground: the plain, the road, the forecourt, the yard's three floors ----
+  // ---- the ground: the plain, the road, the forecourt, the drive ----
+  // THE GROUND IS LAID AS THE PLACE IS USED (the maintainer, of the gun court: "ground looks pretty flat here"). The yard is the plain's own dust inside its
+  // walls; the road's gravel goes on through the gate and the arch as a drive a truck wide and opens into a turning apron before the shop; where wheels,
+  // feet and stores have been the earth is darker (`ground.marks`, below, with the stones that line the drive). The apron reaches past where he stands for
+  // the shop's door, so the ground he is asked to hide on is no paler than it was
   grp('ground');
   slab(0, -0.25, 0, 40, 0, 28, P.dust, { rough: 1 });
   G.ground(0, 12.3, YARD.x0, 15.7, 'gravel');                       // the road, up to the gate
   G.ground(1.6, 7.6, 8.2, 12.2, 'slab');                            // the forecourt under the pumps
-  G.ground(YARD.x0, YARD.z0, ARCH_X, YARD.z1, 'dirt');              // the truck court
-  G.ground(ARCH_X, YARD.z0, FRONT_X, YARD.z1, 'gravel');            // the gun court
+  G.ground(YARD.x0, DRIVE.z0, APRON.x0, DRIVE.z1, 'gravel');        // the drive: through the truck court and the arch
+  G.ground(APRON.x0, APRON.z0, FRONT_X, APRON.z1, 'gravel');        // the turning apron before the shop
   G.ground(FRONT_X, YARD.z0, YARD.x1, ROOM_Z0, 'dirt'); G.ground(FRONT_X, ROOM_Z1, YARD.x1, YARD.z1, 'dirt');   // the two back lots
   G.ground(YARD.x1, 12.4, 40, 16.1, 'dirt');                        // the lane behind the halt, at the store's back door: it runs off the map
-  G.ruts(9.6, 13.2, 15.6, 14.8); G.ruts(0.4, 13.2, 8.6, 14.8, 'gravel');
 
   // ---- the yard wall, the gate in it, the two cross walls ----
   grp('walls.yard');
@@ -207,6 +213,42 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...M.plasticBlack });
     const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
     lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.8, 0.5], intensity: 120, range: 10, innerDeg: 34, outerDeg: 58, name: 'lamp_gun', group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.1, mains: false });
+  }
+
+  // ---- the ground's marks: wheel tracks, worn earth, stains, the stones along the drive ----
+  // Flat things are in three layers a millimetre and more apart (worn earth under the wheel tracks under a stain), each darker than what it lies on and none
+  // under a third of it (STYLE.md). The low things are under 0.19 m: feet, wheels and the walk grid go over them, and they take the lamps and throw a shadow
+  grp('ground.marks');
+  { const worn = (x: number, z: number, w: number, d: number, yaw = 0, mat: GwotMat = 'dirt') => G.patch(x, z, w, d, mat, yaw, 0.0085);
+    const stain = (x: number, z: number, w: number, d: number, yaw = 0, mat: GwotMat = 'damp') => G.patch(x, z, w, d, mat, yaw, 0.026);
+    let nth = 0;
+    /** a whitewashed stone at the drive's edge, as a checkpoint lines its way in */
+    const stone = (x: number, z: number) => { const k = nth++, hy = 0.04 + (k % 3) * 0.008; add({ c: [x + ((k * 7) % 5 - 2) * 0.06, hy, z + ((k * 3) % 5 - 2) * 0.03], h: [0.13 + (k % 3) * 0.025, hy, 0.07 + (k % 2) * 0.02], yaw: ((k * 37) % 11 - 5) * 0.11, ...(k % 4 === 3 ? M.block : k % 4 === 1 ? M.mudLight : M.whitewash) }); };
+    const stones = (z: number, xs: number[]) => xs.forEach(x => stone(x, z));
+    // the road and where he starts: the tracks every truck has left to the gate, the verge the van pulled onto, the forecourt's kerb
+    G.ruts(0.3, AXIS + 0.04, 3.3, AXIS, 'damp'); G.ruts(5.9, AXIS, 8.9, AXIS - 0.03, 'damp');
+    worn(4.5, 17.1, 8.4, 2.3, 0.02); worn(3.4, 18.7, 4.2, 1.5, -0.07);
+    stones(DRIVE.z0 - 0.3, [0.9, 1.9, 2.9, 3.9, 4.9, 5.9, 6.9]); stones(15.85, [0.8, 1.8, 2.8, 6.5, 7.4]);
+    G.rubble(1.3, 20.9, 0.6, 5); G.rubble(7.7, 21.4, 0.5, 4);
+    // the truck court: the drive, the turn the white truck made off it, the earth under the stores, the sentry's fire
+    G.ruts(9.3, AXIS - 0.03, 11.8, AXIS, 'damp'); G.ruts(13.2, AXIS, 15.8, AXIS + 0.04, 'damp'); G.ruts(10.0, 15.1, 11.5, 17.0); G.ruts(11.5, 17.0, 12.2, 18.6);
+    worn(12.7, 19.3, 5.0, 3.7, 0.25); stain(13.0, 18.5, 1.2, 0.8, 0.5);
+    worn(12.4, 6.8, 5.8, 2.3, -0.03); stain(11.2, 6.8, 1.4, 0.9, 0.2); worn(10.4, 21.4, 2.2, 1.7, 0.1);
+    worn(12.0, 12.2, 5.4, 0.8, 0.02); worn(11.2, 16.3, 3.6, 0.9, 0.08);
+    worn(11.3, 10.2, 1.5, 1.3, 0.4, 'damp'); for (let k = 0; k < 7; k++) { const a = k * 0.9 + 0.2; add({ c: [11.3 + Math.cos(a) * 0.62, 0.05, 10.2 + Math.sin(a) * 0.55], h: [0.1, 0.05 + (k % 2) * 0.02, 0.08], yaw: a, ...(k % 3 ? M.mudDark : M.block) }); }
+    stones(DRIVE.z0 - 0.13, [9.9, 10.9, 11.9, 12.9, 13.9]); stones(DRIVE.z1 + 0.13, [9.9, 10.9, 11.9, 12.9, 13.9, 14.9]);
+    G.rubble(9.6, 8.9, 0.5, 5); G.rubble(15.4, 17.6, 0.5, 5); G.rubble(13.6, 21.2, 0.5, 4);
+    // the gun court: the tracks up to the shop's door and the arc a truck backs round on, the oil where it stands, the earth under the nest and the wood
+    G.ruts(16.2, AXIS + 0.04, 18.9, AXIS, 'damp'); G.ruts(19.5, AXIS, 22.6, AXIS - 0.04, 'damp'); G.ruts(21.5, 15.1, 20.8, 16.7, 'damp'); G.ruts(20.75, 16.8, 20.25, 18.3, 'damp'); G.ruts(20.2, 18.6, 19.95, 20.7);
+    G.patch(22.2, 14.4, 2.6, 1.1, 'oil', 0.06, 0.019); G.patch(22.6, 14.1, 1.3, 1.6, 'oil', -0.2, 0.0198); stain(22.7, 14.2, 0.9, 0.6, 0.4);
+    worn(22.2, 7.6, 4.6, 3.2, 0.03); worn(17.7, 6.7, 3.0, 1.9, -0.05); worn(19.1, 21.0, 5.2, 2.7, -0.08); worn(17.9, 17.3, 2.4, 1.8, 0.15); worn(24.1, 21.4, 1.9, 1.7, 0.1, 'damp');
+    stones(DRIVE.z1 + 0.13, [16.6, 17.6, 18.6]); stones(APRON.z1 + 0.13, [19.6, 20.6, 21.6, 22.6, 23.6]); stones(APRON.z0 - 0.13, [19.5, 20.4]);
+    stone(APRON.x0 - 0.13, 16.7); stone(APRON.x0 - 0.13, 17.6);
+    G.rubble(16.6, 9.4, 0.6, 6); G.rubble(24.3, 19.7, 0.5, 5); G.rubble(16.9, 19.5, 0.5, 4);
+    // the plain round the halt: a foot track along the south wall, stones, the scrub nobody clears
+    worn(22.5, 25.3, 27, 1.1, 0.012); worn(12.0, 26.3, 8.5, 0.9, -0.05); worn(21.0, 2.6, 30, 1.0, -0.01);
+    G.rubble(14.5, 24.4, 0.7, 6); G.rubble(30.2, 25.7, 0.7, 6); G.rubble(27.0, 3.6, 0.7, 5);
+    G.bush(11.2, 24.6, 0.9); G.bush(18.6, 26.9, 1.1); G.bush(26.4, 24.5, 0.8); G.bush(33.2, 26.5, 1.0); G.bush(1.6, 23.2, 0.9); G.bush(7.2, 25.4, 0.8); G.bush(13.5, 2.2, 1.0); G.bush(31.0, 1.9, 0.9);
   }
 
   // ---- the shop and the store behind it: one building against the yard's far wall ----
