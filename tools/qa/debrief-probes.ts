@@ -368,12 +368,20 @@ export async function debriefLoud() {
       { const W = await standUp(); if (rowFile(W.game) !== null) off.push(`the bundled office reads back as ${rowFile(W.game)} (want none)`); }
       if (off.length) fails.push(`level files that do not read back as their row's file: ${off.join(' · ')}`); notes.push(`${files.length} row files + ${looks} look files read back`);
       const loud = (ALL_MISSIONS as any[]).filter(e => e.kind === 'quiet' && e.lean === 'loud').map(e => e.id); notes.push(`rows on the stealth game's card that lean loud: ${loud.join(', ') || 'none'}`); if (!loud.includes('tut-solo')) fails.push('the solo tutorial no longer leans loud on the list'); }
+    // ---- a recording carries the key, and one from before it replays with the key off (journal.ts applyKnobs)
+    { const KN = await import(`${ROOT}/src/game/knobs.ts`), JN = await import(`${ROOT}/src/game/journal.ts`), W = await standUp(), c = KN.knobsCopy(); let hadKey = false, without: unknown, withOn: unknown, noTable: unknown;
+      try { const snap = JN.knobsSnapshot(W.game); hadKey = typeof snap.tables.VERDICT?.loudCard === 'boolean';
+        const old = JSON.parse(JSON.stringify(snap)); delete old.tables.VERDICT.loudCard; VERDICT.loudCard = true; JN.applyKnobs(W.game, old); without = VERDICT.loudCard;
+        const older = JSON.parse(JSON.stringify(snap)); delete older.tables.VERDICT; VERDICT.loudCard = true; JN.applyKnobs(W.game, older); noTable = VERDICT.loudCard;
+        const neu = JSON.parse(JSON.stringify(snap)); neu.tables.VERDICT.loudCard = true; VERDICT.loudCard = false; JN.applyKnobs(W.game, neu); withOn = VERDICT.loudCard; }
+      finally { KN.knobsBack(c); }
+      if (!hadKey || without !== false || noTable !== false || withOn !== true || !KN.JOURNAL_KNOBS.includes('VERDICT')) fails.push(`a recording and the key: carried ${hadKey}, a file without the key → ${without}, without the table → ${noTable}, with it true → ${withOn} (want true, false, false, true)`); }
     // ---- the mission's own end lines name the grade through Debrief.grade ('' when not scored), never the rating itself (the 'exfiltrated' line is said on the frame he walks out: not played here)
     { const ms = readFileSync(`${ROOT}/src/game/mission.ts`, 'utf8'); if (/D\.rating|D\.score\b/.test(ms) || (ms.match(/D\.grade/g) ?? []).length < 2) fails.push('mission.ts names the rating or the score itself, or no longer reads Debrief.grade in its two end lines'); }
   } catch (e: any) { fails.push(`threw: ${e?.stack ?? e}`); }
   finally { VERDICT.loudCard = was; }
   const ok = fails.length === 0;
-  verdictLine(ok, "(c4) on a stealth-kind row that leans loud the debrief is not scored: no rating or badge on the copied line, the clock alone on the line over the card; the key down, a row that leans quiet, the plain night and a room clear on a loud row are graded as they were; every row's level file and its look's file read back as the row's file", notes.join(' · '), fails);
+  verdictLine(ok, "(c4) on a stealth-kind row that leans loud the debrief is not scored: no rating or badge on the copied line, the clock alone on the line over the card; the key down, a row that leans quiet, the plain night and a room clear on a loud row are graded as they were; every row's level file and its look's file read back as the row's file; a recording carries the key, and one from before it replays with it off", notes.join(' · '), fails);
   console.log(`=== debrief-loud: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
   return ok;
 }
