@@ -19,6 +19,7 @@ import { WORDS } from './words';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { PICTURE, PICTURE_STATS, ideasOf, exposedAt } from './picture';
 import { wallMenLive, thinLine, topEnergy, WALLPEN_STATS } from './wallpen';
+import { flinchRound, flinchScale } from './flinch';
 
 /** Every number of the model and of the guards' reactions, in one place (panel-tunable; the QA probes read them rather than copy them). */
 export const SUPPRESSION = {
@@ -115,7 +116,7 @@ export function noteRound(g: Game, shooter: Character, from: Vec3, to: Vec3, hit
   const S = SUPPRESSION; const seg = v3.sub(to, from); const tHit = v3.len(seg); if (tHit < 1e-3) return;   // (into the panel at the muzzle: nobody)
   const dir = v3.scale(seg, 1 / tHit); const dbg = SUPPRESSION_DEBUG.log;
   const shooterTeam = teamOfChar(g, shooter);   // (teams: whose side's round — a round of a side NOT hostile to yours going past rattles at friendlyK; an enemy's pins at full weight, as Sam's always did)
-  const each = (c: Character, sup: Sup, held: boolean, team: Team) => {
+  const each = (c: Character, sup: Sup, held: boolean, team: Team, gd: Guard | null) => {
     if (c === shooter || c === hit || !c.alive || held) return;
     const C = c.bones.chest ?? v3.add(c.pos, [0, 1.1, 0]);
     const s = clamp(v3.dot(v3.sub(C, from), dir), 0, tHit);          // closest approach along the round's actual travel (tHit when it stopped short, in the cover in front of him)
@@ -124,6 +125,7 @@ export function noteRound(g: Game, shooter: Character, from: Vec3, to: Vec3, hit
     let add = S.wNear * Math.max(0, 1 - dNear / S.nearR) + S.wHit * Math.max(0, 1 - dHit / S.hitR);
     if (c === g.player.char && SUPPRESSION_FX.onSamPass && dNear < SUPPRESSION_FX.fxRange) SUPPRESSION_FX.onSamPass(g, { from, to, closest, travelled: s, dNear, dHit, add: Math.max(0, add), shooterId: shooter.id });   // (R4's crack / whizz: the round went past him, whatever it adds)
     if (add <= 0) return;
+    flinchRound(g, c, gd, add, from, isHostile(shooterTeam, team));   // (flinch.ts: the duck at a close round, anybody's — the picture; off, nothing)
     if (sup.downT > 0 || sup.latched || sup.cover) add *= S.downAccrual;   // already down (or shifting): diminishing returns
     if (!isHostile(shooterTeam, team)) add *= S.friendlyK;   // a colleague's round past a guard: rattles, does not pin (a guard's past a guard — and, teams, any round of a side that is not this man's enemy)
     add *= keenOf(g, c);
@@ -131,8 +133,8 @@ export function noteRound(g: Game, shooter: Character, from: Vec3, to: Vec3, hit
     sup.src = v3.copy(from); sup.srcId = shooter.id; sup.srcT = g.time;
     dbg?.(`round by #${shooter.id}: #${c.id} s* ${s.toFixed(2)} of ${tHit.toFixed(2)} m, passed ${dNear.toFixed(2)} m, struck ${dHit.toFixed(2)} m off → +${add.toFixed(3)} = ${sup.v.toFixed(3)}`);
   };
-  each(g.player.char, g.player.sup, false, 'player');
-  for (const gd of g.guards) if (gd.state !== 'dead') each(gd.char, gd.sup, !!gd.held, gd.team);
+  each(g.player.char, g.player.sup, false, 'player', null);
+  for (const gd of g.guards) if (gd.state !== 'dead') each(gd.char, gd.sup, !!gd.held, gd.team, gd);
 }
 
 /** the floor's 'he's got us pinned' clock, and each man's last line (never the same twice running) */
@@ -188,11 +190,11 @@ export function updateSuppression(g: Game, dt: number) {
     // his band, with hysteresis (pinned holds down to `release`, flinch to a hair under its line): a scalar hovering about a line under a steady volley is ONE
     // episode — one start, one line — not an edge every other round
     const v = sup.v; const band = v >= S.pinned || (sup.band === 2 && v >= S.release) ? 2 : v >= S.flinch || (sup.band >= 1 && v >= S.flinch - 0.05) ? 1 : 0;
-    if (band > sup.band && sup.band < 1 && !reacts(g, gd) && gd.script?.flinch && g.tune.suppression) gd.char.anim.flinchFrom(sup.src ? v3.sub(sup.src, gd.char.pos) : null);   // a CHOREOGRAPHED man ordered to (GuardScript.flinch — the day showcase's firefight): the start alone on the rising edge, none of the AI's reactions below; nothing for any other scripted man, as ever
+    if (band > sup.band && sup.band < 1 && !reacts(g, gd) && gd.script?.flinch && g.tune.suppression) gd.char.anim.flinchFrom(sup.src ? v3.sub(sup.src, gd.char.pos) : null, flinchScale(g, gd));   // a CHOREOGRAPHED man ordered to (GuardScript.flinch — the day showcase's firefight): the start alone on the rising edge, none of the AI's reactions below; nothing for any other scripted man, as ever
     if (band > sup.band && reacts(g, gd)) {
       const friendly = sup.srcId !== PLAYER_ID && sup.srcId >= 0 && !isHostile(gd.team, teamOfId(g, sup.srcId));   // a colleague's rounds past his head: he says so to HIM, not 'taking fire' (teams: an enemy unit's rounds are fire taken, whatever his id)
       if (sup.band < 1) {   // over the flinch line: the start, the next round a beat late, a word (unless the head is going down this same frame: that line instead)
-        sup.flinchAt = g.time; gd.char.anim.flinchFrom(sup.src ? v3.sub(sup.src, gd.char.pos) : null); gd.fireCd = Math.max(gd.fireCd, S.flinchDelay);
+        sup.flinchAt = g.time; gd.char.anim.flinchFrom(sup.src ? v3.sub(sup.src, gd.char.pos) : null, flinchScale(g, gd)); gd.fireCd = Math.max(gd.fireCd, S.flinchDelay);
         if (band < 2) supBark(g, gd, friendly ? 'friendly' : 'flinch');
         SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} FLINCH at ${sup.v.toFixed(2)} (${friendly ? 'a colleague\'s round' : 'the player\'s'})`);
       }

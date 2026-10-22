@@ -1400,7 +1400,7 @@ export class CharacterAnimator {
   dazzle: { from: Vec3; k: number } | null = null;
   /** MOVES state: recoil (decaying sums the rounds add to), the flinch / hit / toss clocks with their directions (model space), the dazzle's eased weight */
   private mvs = { back: 0, climb: 0, yaw: 0, rock: 0, sho: 0, head: 0, n: 0,
-    flT: -1, flD: [0, 0, 1] as Vec3, stT: -1, stD: [0, 0, 1] as Vec3, htT: -1, htD: [0, 0, -1] as Vec3, htSide: 1, tsT: -1, tsRel: TOSS_RELEASE, armL: 0,
+    flT: -1, flK: 1, flD: [0, 0, 1] as Vec3, stT: -1, stD: [0, 0, 1] as Vec3, htT: -1, htD: [0, 0, -1] as Vec3, htSide: 1, tsT: -1, tsRel: TOSS_RELEASE, armL: 0,
     dz: new Spring(), dzD: [0, 0, 1] as Vec3, dzT: 0, dzSd: 0, glide: new Spring(), hipY: NaN, cf: new Spring(), cfT: 0, hu: new Spring(), huT: 0, sk: new Spring() };
   /** a MOVES reaction has the trunk and head this frame (the life layer, the tells and the gaze stabiliser stand aside as they do for the old one-shots) */
   private get mvBusy() { const m = this.mvs; return m.flT >= 0 || m.stT >= 0 || m.htT >= 0 || m.dz.x > 0 || m.cf.x > 0; }
@@ -1695,14 +1695,17 @@ export class CharacterAnimator {
   /** MOVES: rounds going past — a DUCK away from where they come from (`toward`: world direction from him to the source; null = his front): head down and turned
    *  off it, trunk folded over the gun, knees soft; both hands stay on the weapon. Big and slow for an untrained man, a dip of the head for a trained one.
    *  With the pass off this is the old flinch (the Hit_Chest twitch). */
-  flinchFrom(toward: Vec3 | null) {
+  flinchFrom(toward: Vec3 | null, k = 1) {
     if (!mvOn('flinch')) { this.hitT = 0; return; }
     const m = this.mvs, D = lerp(MV.flinch.dur[0], MV.flinch.dur[1], clamp(this.trained, 0, 1));
+    if (m.flT >= 0) m.flK = Math.max(m.flK, k);   // (`k`: how much of the duck this round is worth — game/flinch.ts; a nearer round while one shows deepens it, a farther one does not lift him)
     if (m.flT >= 0 && m.flT < 0.34 * D) return;   // (already down: a burst is one duck)
     // re-startled on the way back up: straight back down from where he is — the clock goes to the point on the way DOWN that shows what he shows now, and the side he ducked to stays his
     if (m.flT >= 0) { m.flT = 0.14 * D * clamp(curve(m.flT / D, MV_FLINCH_ENV), 0, 1); return; }
-    m.flD = toward ? this.flatModel(toward, [0, 0, 1]) : [0, 0, 1]; m.flT = 0;
+    m.flD = toward ? this.flatModel(toward, [0, 0, 1]) : [0, 0, 1]; m.flT = 0; m.flK = k;
   }
+  /** the duck at a round is showing (0 = not, else how much of the whole untrained duck: its envelope × his training's share × what the round was worth) */
+  get flinchShown(): number { const m = this.mvs, T = clamp(this.trained, 0, 1); return m.flT >= 0 ? clamp(curve(m.flT / lerp(MV.flinch.dur[0], MV.flinch.dur[1], T), MV_FLINCH_ENV), 0, 1) * lerp(MV.flinch.amp[0], MV.flinch.amp[1], T) * m.flK : 0; }
   /** MOVES: the START of a man who has just seen what he did not expect (`toward`: world direction from him to it; null = his front) — the jolt back off it,
    *  the head snapped round to it, the arms flung out from his sides (MV_STARTLE). One at a time: a second call while the first still shows is the same start.
    *  With the pass off this is the old flinch (the Hit_Chest twitch). Presentation only: what it buys the man who caused it is the caller's (game/startle.ts). */
@@ -2658,7 +2661,7 @@ export class CharacterAnimator {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, m = this.mvs, T = clamp(this.trained, 0, 1), k = (p: readonly [number, number]) => lerp(p[0], p[1], T);
     let pitch = 0, yaw = 0, roll = 0, hp = 0, hy = 0, drop = 0, sx = 0, sz = 0;
     if (m.flT >= 0) {
-      const F = MV.flinch, D = k(F.dur), e = curve(m.flT / D, MV_FLINCH_ENV) * k(F.amp) * gate;
+      const F = MV.flinch, D = k(F.dur), e = curve(m.flT / D, MV_FLINCH_ENV) * k(F.amp) * m.flK * gate;
       const sd = m.flD[0] >= 0 ? 1 : -1, lat = Math.min(1, Math.abs(m.flD[0]) * 1.6);
       pitch += F.pitch * e * (0.65 + 0.35 * Math.max(0, m.flD[2])); yaw -= sd * F.away * e * lat; roll += sd * 3 * e * lat;
       hp += F.head * e; hy -= sd * F.away * e * lat; drop += F.drop * e; sx -= m.flD[0] * F.side * e; sz -= m.flD[2] * F.side * e;

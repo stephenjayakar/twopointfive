@@ -122,6 +122,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'DOORTHROW',
   // enemies startle when they first see you (startle.ts): a recording made with it on replays its men's beat before the gun, and who ran; one from before has every man go for his gun at once
   'STARTLE',
+  // a man flinches when fire comes close (flinch.ts): a recording made with it on replays its men's ducks and the green man who broke under fire; one from before has nobody duck but on the suppression model's own edge
+  'FLINCH',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
@@ -181,6 +183,7 @@ import { TWEEN } from '../host/tween';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { STARTLE } from './startle';
+import { FLINCH } from './flinch';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
 import { POWEROUT } from './powerout';
@@ -347,6 +350,8 @@ export function knobRegistry(): Record<string, object> {
     RUNNER,
     // enemies startle when they first see you (startle.ts): how long a calm man's start holds his gun down, and who runs after it — reads these
     STARTLE,
+    // a man flinches when fire comes close (flinch.ts): how close a round ducks him, how much by training, and how long under fire breaks a green man alone — reads these
+    FLINCH,
     // not in there alone (darkdoor.ts): who stops at the doorway of a dark room, how dark is dark, how long he waits for a mate and when he goes in anyway
     DARKDOOR,
     // an enemy on alert does not sit blind in the dark (darkfoe.ts): whose weapon light burns and who leaves his post read these — the meter reads the lamps
