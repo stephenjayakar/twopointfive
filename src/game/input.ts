@@ -51,6 +51,7 @@ export class Input {
       if (e.code === 'F5' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && this.saveKey?.()) e.preventDefault();   // (F5 is the save by hand while the page says so — main.ts: a bare press must not reload the page under the run, a slider of the Options that kept the focus included; with a modifier, on the start page or over a broken frame it is the browser's reload as ever)
       if (typingTarget(e)) return;
       if (this.keyVeto?.(e)) { e.stopPropagation(); return; }   // (a UI surface — the tweak panel — took it: not a game key this time)
+      this.modsUp(e);
       const inMenu = e.target instanceof HTMLElement && !!e.target.closest('#menu, #missions');   // (#missions: the mission list — ui/missions.ts — is a card like the menu's)
       const modifier = ['Meta', 'Control', 'Shift', 'Alt'].includes(e.key);
       const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: held, it is the camera's orbit / zoom modifier — host/loop.ts; no game key reads it, crouch is C; F-keys stay the browser's)
@@ -60,18 +61,27 @@ export class Input {
       if (!code) { this.heldAs.set(e.code, ''); return; }   // (…and let go, it lets go of nothing: the key his row moved TO may be down)
       if (this.lockExcept && !this.lockExcept.has(code)) { if (!inMenu && !e.repeat && e.code !== 'Escape' && !modifier && !e.metaKey && !e.ctrlKey) this.onLockedInput?.(); return; }   // hands off during the tour (menu keyboard nav still works)
       if (e.repeat) return;   // OS auto-repeat is never a fresh press (holding P must not strobe the tour on and off)
-      if (!this.keys.has(code)) this.pressed.add(code);
+      if (!this.keys.has(code) || this.heldAs.has(e.code)) this.pressed.add(code);   // (…a key that goes down again with no repeat in it came up unseen — a system shortcut, a menu of the system's took its key-up: a fresh press, not a key dead until the window is left)
       this.keys.add(code); this.heldAs.set(e.code, code);
     }, { capture: true });
     window.addEventListener('keyup', e => { if (e.code === this.camHeld) this.camHeld = ''; { const as = this.heldAs.get(e.code) ?? gameCode(e.code); this.heldAs.delete(e.code); if (as) this.keys.delete(as); } if (!typingTarget(e) && e.code !== 'Escape' && !e.metaKey) e.stopPropagation(); if (this.sink && e.target === this.sink) this.sink.value = ''; }, { capture: true });
     window.addEventListener('blur', () => { this.keys.clear(); this.heldAs.clear(); this.camHeld = ''; this.buttons = 0; this.pressed.add('Blur'); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
-    el.addEventListener('mousemove', e => { const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if (!this.lockExcept && (this.camHeld ? !!camKey() || e.ctrlKey : e.ctrlKey && !camKey())) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock — the tour writes its own aim over it every frame it has one — so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
+    el.addEventListener('mousemove', e => { this.modsUp(e); const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if (!this.lockExcept && (this.camHeld ? !!camKey() || e.ctrlKey : e.ctrlKey && !camKey())) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock — the tour writes its own aim over it every frame it has one — so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
     el.addEventListener('mousedown', e => { e.preventDefault(); this.focusGame(); if (this.lockExcept) { this.onLockedInput?.(); return; } if (this.suppressClick) { this.suppressClick = false; return; } this.buttons |= 1 << e.button; this.clicked |= 1 << e.button; });
     window.addEventListener('mouseup', e => { if (this.lockExcept) return; this.buttons &= ~(1 << e.button); });
     el.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('contextmenu', () => { this.camHeld = ''; }, { capture: true });   // (a browser menu opened off the canvas swallows the key's coming up: the camera is let go of there, not left turning with every move of the mouse)
     el.addEventListener('wheel', e => { e.preventDefault(); if (this.lockExcept) return; if (e.ctrlKey || (this.camHeld && camKey())) this.wheelCtrl += e.deltaY; else this.wheel += e.deltaY; }, { passive: false });   // (a trackpad pinch also arrives as ctrl+wheel: it zooms, which is what a pinch should do — whichever key the camera is on)
   }
+  /** A MODIFIER THE SYSTEM SAYS IS UP IS LET GO. A key-up the page never saw leaves its key held for good: a screenshot shortcut, the system's own menus
+   *  and switchers take a modifier's key-up with them and the window is never blurred. Every key and mouse event carries the modifiers as they ARE, so a
+   *  Shift / Control / Alt / Cmd this page holds that the event says is up goes — whatever it was held AS (host/keymap.ts: sprint on Shift, wherever he moved it) */
+  private modsUp(e: { shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean }) {
+    if (!this.heldAs.size) return;
+    if (!e.shiftKey) { this.modUp('ShiftLeft'); this.modUp('ShiftRight'); } if (!e.ctrlKey) { this.modUp('ControlLeft'); this.modUp('ControlRight'); }
+    if (!e.altKey) { this.modUp('AltLeft'); this.modUp('AltRight'); } if (!e.metaKey) { this.modUp('MetaLeft'); this.modUp('MetaRight'); }
+  }
+  private modUp(phys: string) { const as = this.heldAs.get(phys); if (as === undefined) return; this.heldAs.delete(phys); if (as) this.keys.delete(as); if (this.camHeld === phys) this.camHeld = ''; }
   /** Give keyboard focus back to the game (the sink when embedded, else just drop focus from whatever button / field had it). */
   focusGame() { if (!this.el) return; if (this.sink) { if (document.activeElement !== this.sink) this.sink.focus({ preventScroll: true }); } else if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body && !document.activeElement.closest('#panel')) document.activeElement.blur(); }
   down(code: string) { return this.keys.has(code); }

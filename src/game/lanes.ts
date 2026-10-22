@@ -864,7 +864,8 @@ function priceOf(g: Game, m: Uint8Array | null, base: ((ix: number, iz: number) 
 }
 /** guards.ts goTo: the price of a walk for this man — `base` (the pursuit tactics', or none) with the floor of every lane his side knows made dear */
 export function lanePenalty(g: Game, gd: Guard, base: ((ix: number, iz: number) => number) | undefined): ((ix: number, iz: number) => number) | undefined {
-  if (!LANES.on) return base; const st = states.get(g); if (!st || !st.lanes.length || !live(g) || !mine(g, gd) || pushing(g, st, gd)) return base;
+  if (!LANES.on || gd.script?.direct) return base;   // (…a walk a level's script sent the short way, GuardScript.direct: a staged advance down a road the other side has guns on)
+  const st = states.get(g); if (!st || !st.lanes.length || !live(g) || !mine(g, gd) || pushing(g, st, gd)) return base;
   return priceOf(g, maskOf(g, st, gd), base);
 }
 /** guards.ts followPath: true = this rule has his feet this frame — his way lies down a lane his side knows is covered, and he has been stopped short of it */
