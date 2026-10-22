@@ -206,7 +206,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the ring away, the back key (Tab on the page; only a ring that stays: one that goes with its key hears Esc alone, as it was built) puts it away,
   and so do Esc where it reaches the game, the pause and a lost window. Kept down,
   taken out to a wedge and let go, the key still gives that wedge (`ringLatch`: one rule a second ring can read; Space's own ring is not latched by
-  this change). Plan mode's ring on the right button is not latched. `tapNow`: a press already up in its own tick (down and up inside one tick, and
+  this change). Plan mode's ring on the right button is not latched. A DIGIT INSIDE THE PRESS (`stayDigit`, on with `stay`, off with it; a read from
+  the squad lessons: for the 0.3 s of the hold a quick "Q, 2" was the rifle's slot and opened its setup): a digit 1 to 5 going down while the key is
+  still down inside its hold puts the ring up at once and gives that digit's wedge; it is never the gun's slot. A tap let go before the digit is
+  still a tap and the digit after it is the gun's; where no ring can go up the digit stays the gun's. `FROZEN_HOLDS` row `CMDRING.stayDigit`
+  (`TPS_QSTAY=1`); a recording with no such key replays with it off; line 8b of `qring`. `tapNow`: a press already up in its own tick (down and up inside one tick, and
   every one-frame press a headless line makes) is given on that tick, so lines that press the quick key for one frame read as they did. SHIFT + Q
   toggles plan mode (as `?cmd&cmdplan` had it, Sam parked and the view on the walk keys) EXCEPT out of a sprint (`planRun`): Shift with a walk key down
   and the mode down is his run, and Q there is the quick order as at a walk; with the mode up Shift + Q leaves it whatever else is down, and so does
@@ -216,8 +220,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   = no plan mode; `?cmd` now only raises Space's own ring (`CMDRING.hands`) beside it. OFF in the module and on the frozen stand: `FROZEN_HOLDS` rows
   `CMDRING.on` / `tapNow` (`TPS_QRING=1`), `stay` (`TPS_QSTAY=1`), `plan` / `planRts` / `planRun` (`TPS_QPLAN=1`; the last two words need the first). The
   journal carries the table: a recording with no `stay` / `tapNow` / `planRun` key replays with them off. Debugger: Team feel ▸ 'Tab ▸ the orders ring',
-  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 14 lines; `QRING_BREAK=1`
-  fails 10 on the page's stand and 9 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
+  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 15 lines; `QRING_BREAK=1`
+  fails 12 on the page's stand and 11 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
   Shift always the mode's (25 and 28 lines, both stands); `qkey`'s game line reads the stand (the order on the tick the key is seen up, with the ring
   on). A LOADED MEMORY SAVE (a squad on the floor: `savestate.ts loadMem`) puts a ring that stood in it away and plan mode down, he on his feet
   (`orders.ts loaded`, `planmode.ts planLoaded`; the men's chains go on as saved): brought back, the ring took the next click for a wedge. Line 10b of

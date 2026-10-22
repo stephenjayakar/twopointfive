@@ -343,6 +343,7 @@ export function pageSwitches(q: URLSearchParams): void {
   PLANLAY.on = !q.has('noplanlay');   // X is where the plan is laid (game/planlay.ts): 'wait for my word' is under every order menu, an order picked with it on is laid — nobody moves — and F sends the plan; Enter puts it back. ON in the page, ?noplanlay = the row is the four's door tools' alone and the men walk to the door at once, as it was; off on the frozen stand (TPS_PLANLAY=1 raises it)
   CMDRING.on = q.get('qring') !== '0';   // THE ORDERS RING (game/cmdring.ts): the squad's command key (Q on the board) let go at once is the quick order, as it was, and kept down a moment puts the order menu up as a ring at the cursor. ON in the page since 10-22 (the maintainer: "longer press for Q opens up squad, doesn't require holding it"); `?qring=0` = the key as it was, its order as it goes down and no ring. Held off on the frozen stand
   CMDRING.stay = CMDRING.on && q.get('qstay') !== '0';   // …and the ring stays up when the key comes up: a digit, a click or the key again gives a wedge, a right click puts it away (`?qstay=0` = the ring only while the key is down, given as it comes up)
+  CMDRING.stayDigit = CMDRING.stay;   // …and a digit pressed inside that press, the key still down, puts the ring up at once and gives its wedge: it is not the gun's slot
   CMDRING.tapNow = CMDRING.on;   // …and a press already up in its own tick is a tap given on that tick
   CMDRING.hint = q.has('cmdhint') && !q.has('nocmdhint');   // …and the mark at the cursor before the key — a glyph beside it and an outline on the floor for what the key would order there (a picture only). A GAME SETTING, off unless chosen: Options ▸ Game keeps it on this machine (ui/options.ts); `?cmdhint` = on for this visit, with the ring or without
   CMDRING.hands = CMDRING.on && q.has('cmd') && !q.has('nocmdhands');   // …and Space the same way for his own hands (interact.ts): down = his rows as a ring at the cursor, up = the lit one, a tap the tap it was — still only when asked for (`?cmd`; `?nocmdhands` = Space as it was beside the ring)
@@ -574,6 +575,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.on': 'TPS_QRING=1',
   'CMDRING.tapNow': 'TPS_QRING=1 (with the ring)',
   'CMDRING.stay': 'TPS_QSTAY=1 (needs TPS_QRING=1)',
+  'CMDRING.stayDigit': 'TPS_QSTAY=1 (with the ring that stays)',
   'CMDRING.plan': 'TPS_QPLAN=1 (needs TPS_QRING=1)',
   'CMDRING.planRts': 'TPS_QPLAN=1 (with the mode)',
   'CMDRING.planRun': 'TPS_QPLAN=1 (with the mode)',
