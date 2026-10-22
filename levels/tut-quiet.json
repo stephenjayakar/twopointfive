@@ -404,8 +404,8 @@
   ],
   "doors": [
     { "id": "gate_w", "hinge": [8, 13.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true },
-    { "id": "gate_e", "hinge": [32, 13.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true, "locked": true },
-    { "id": "front", "hinge": [12.5, 14.82], "closedDir": 1.5707963267948966, "width": 0.86, "locked": true, "keySide": 1 },
+    { "id": "gate_e", "hinge": [32, 13.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true, "locked": true, "steel": true },
+    { "id": "front", "hinge": [12.5, 14.82], "closedDir": 1.5707963267948966, "width": 0.86, "locked": true, "keySide": 1, "steel": true },
     { "id": "back", "hinge": [27.32, 16.5], "closedDir": 0, "width": 0.86, "locked": true },
     { "id": "strong", "hinge": [16.5, 9.82], "closedDir": 1.5707963267948966, "width": 0.86, "locked": true, "lock": "pad_strong", "keySide": -1 }
   ],

@@ -104,8 +104,9 @@ export class Rails {
   locks(action: string): boolean { const A = this.allowed(); return !!A && !A.has(action); }
 
   /** does Space offer a row of this verb here (player.ts buildInteractables): the keys are locked by action, and Space is ONE key over every row in
-   *  reach — so a level names the verbs its steps teach (`rails.rows`) and a thing nobody taught has no row at all */
-  offers(verb: string): boolean { const R = this.data?.rows; return !R || BREAK || R.includes(verb); }
+   *  reach — so a level names the verbs its steps teach (`rails.rows`) and a thing nobody taught has no row at all. On such a level
+   *  there is no row either while Space itself is locked: a prompt for a key that does nothing is a lie in the corner of the screen */
+  offers(verb: string): boolean { const R = this.data?.rows; return !R || BREAK || (R.includes(verb) && !this.locks('use')); }
 
   /** THE GATE (Game.step, right after the tick's record is loaded into the seat's input): whatever the step has not unlocked is taken out of the tick */
   gate(input: Input, cam: FollowCamera, dt: number) {

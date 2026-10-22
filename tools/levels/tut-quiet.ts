@@ -81,8 +81,8 @@ export function build() {
 
   // ---- the house: strongroom and counting room (west), the hall, the store (east) ----
   const HOUSE = T.hut({ x0: 12.5, z0: 8.5, x1: 30.5, z1: 16.5, kind: 'render', floor: 'slab', doors: [
-    // the front door: on the latch against the forecourt, free from the counting room (the way out)
-    { name: 'front', side: 'w', at: 14.5, extra: { locked: true, keySide: 1 } },
+    // the front door: steel, on the latch against the forecourt (no pick, no boot: the short way in is not a way), free from the counting room (the way out)
+    { name: 'front', side: 'w', at: 14.5, extra: { locked: true, keySide: 1, steel: true } },
     // the back door, in the back court: a cylinder (it picks)
     { name: 'back', side: 's', at: 27.3, extra: { locked: true } },
   ] });
@@ -228,7 +228,7 @@ export function build() {
       { id: 'out', line: 'Out by the front door', done: any({ is: 'in', area: { x0: 8.12, x1: 12.3, z0: 11.0, z1: 18.0 } }, { is: 'stage', stage: 'done' }), at: [11.4, 1, 15.1] },
     ],
   };
-  T.doors.find(d => d.name === 'gate_e')!.locked = true;   // the far gate is no part of this night
+  { const far = T.doors.find(d => d.name === 'gate_e')!; far.locked = true; far.steel = true; }   // the far gate is no part of this night: locked, and steel so that it offers no pick
   const out = T.finish({
     spawn: TQ.start, routes,
     mission: { serverRoom: { ...STRONG }, entryDoor: 'strong', rack: { index: 0, front, halfW: 0.35 }, exfilDoor: 'gate_w', exfilX: EXIT_W.x, exfilZ: EXIT_W.z, exfilOut: EXIT_W.out },
