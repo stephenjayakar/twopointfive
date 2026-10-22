@@ -104,8 +104,9 @@ export const fragPlayer = guarded(async () => {
   for (const x of g.guards) R.put(x, [60, 0, 60]);
   g.teleportPlayer([12, 0, 17.6]); pl.char.bodyYaw = Math.PI / 2; pl.char.aimYaw = Math.PI / 2; R.step(5);
   F.verdict(KIT_ORDER.length === 5 && KIT_ORDER[4] === 'frag', '(a) the kit is five rows, the frag on 5: no digit above 5', KIT_ORDER.join(' · '));
-  const s0 = pl.slot; for (const k of ['Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0']) { input.pressed.add(k); R.step(); }
+  const s0 = pl.slot, h0 = pl.holstered; for (const k of ['Digit6', 'Digit7', 'Digit8', 'Digit9', 'Digit0']) { input.pressed.add(k); R.step(); }
   F.verdict(pl.slot === s0, '(b) 6‥0 select nothing', `slot ${pl.slot}`);
+  if (pl.holstered !== h0) { input.pressed.add('Digit1'); R.step(40); }   // (0 is the empty hands' slot where that rule is live, game/handslot.ts: the pistol back up for the lines below)
   // G with the pistol up: a smoke can, never a frag
   { const n0 = pl.frags, c0 = pl.canisters; R.W.cursorAt([18, 0.1, 17.6]); input.keys.add('KeyG'); input.pressed.add('KeyG'); R.step(4); input.keys.delete('KeyG'); R.step(40);
     F.verdict(pl.frags === n0 && pl.canisters === c0 - (QUICKTHROW.on ? 1 : 0), QUICKTHROW.on ? '(c) G quick-throws a smoke can, the frags untouched' : '(c) the G quick throw is off (quickthrow.ts): G throws nothing, the frags untouched', `frags ${n0}→${pl.frags} · smoke ${c0}→${pl.canisters}`); g.items.items.length = 0; }

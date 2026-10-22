@@ -26,21 +26,33 @@ import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
 import { TABKEY } from './tabkey';
-import { keyText } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
+import { SLOTSETUP } from '../game/slotsetup';
+import { keyText, keysOf, slotNow } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 
+const E_ROW: [string, string] = ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'];
+/** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
+const SLOT_ROW: [string, string] = ['0', 'empty hands: what is in them goes away · a digit draws'];
 const Q_ROW: [string, string] = ['Q', 'back to the wall beside you — slide, peek at its end; Q / away / Shift lets go'];
+const KIT_ROW: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 (2 again: flip its launcher, RING / 40 mm) · smoke · stun · frag'];
+const ZR_ROW: [string, string] = ['Z · R', 'FN2000 semi / auto · reload'];
+const LNV_ROW: [string, string] = ['L · N · V', 'weapon light · night vision · whistle (the nearest man comes to look)'];
+/** the same three rows with the gun's setup on (game/slotsetup.ts): a gun's key again is its setup, and the selector and the light are rows of it (a key
+ *  the player gave either one back keeps its old row) */
+const KIT_SET: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 · smoke · stun · frag — a gun\'s key again: its setup (key 1 semi / auto · key 2 its launcher · key 3 its light)'];
+const R_ROW: [string, string] = ['R', 'reload'];
+const NV_ROW: [string, string] = ['N · V', 'night vision · whistle (the nearest man comes to look)'];
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
   ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'],
   ['Mouse', 'aim; the ring snaps to a man near the cursor, or a light under it'],
   ['LMB', 'fire what is in hand · throw a canister · hands empty behind a man: silent takedown'],
   ['RMB', 'pistol: OCP the light under the ring · FN2000: fire its launcher (hold to see the arc first)'],
   ['Space', 'do the highlighted action (top-left) · hold to pick another (wheel / ↑↓, let go) · long actions run on their own; move or tap again to stop'],
-  ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'],
+  E_ROW,
   Q_ROW,
-  ['1 2 3 4 5', 'Five-seveN · FN2000 (2 again: flip its launcher, RING / 40 mm) · smoke · stun · frag'],
-  ['Z · R', 'FN2000 semi / auto · reload'],
-  ['L · N · V', 'weapon light · night vision · whistle (the nearest man comes to look)'],
+  KIT_ROW,
+  ZR_ROW,
+  LNV_ROW,
   ['X · B · T · F', 'with a team — X (or middle click) orders · B the usual order · T who it goes to · F drill, word, charge'],
   ['H · G', 'with the orders up — the big tool on a door, smoke on the floor · frag and clear'],
   ['F5', 'save'],
@@ -50,7 +62,9 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 ];
 /** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
 const WALL_ROW: [string, string] = ['Wall', 'walk into one and your back goes to it — slide, peek at its end; away / Shift lets go'];
-const controlRows = (): [string, string][] => CONTROLS.flatMap(r => { if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
+const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
+  if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW]; if (SLOTSETUP.on && r === LNV_ROW && !keysOf('KeyL').length) return [NV_ROW];
+  if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
 
 const TAGLINE = 'a ray-traced stealth sandbox — every light, shadow and wisp of smoke is live';
 /** the title screen's line under the wordmark */

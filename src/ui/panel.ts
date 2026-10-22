@@ -108,7 +108,7 @@ export class Panel {
       this.root.addEventListener('mouseenter', () => { this.hovered = true; }); this.root.addEventListener('mouseleave', () => { this.hovered = false; this.hideTip(); });
       // backtick opens and shuts the panel (main.ts's hotkey). A FIELD of the panel holding the keyboard (the search box, a slider just dragged, a list, a number) keeps its keys from
       // Input, so the hotkey never sees the press: shut it from here, before the field types the character. Anywhere else the press reaches Input once and the hotkey toggles.
-      this.root.addEventListener('keydown', e => { if (e.code !== 'Backquote' || gameCode(e.code) !== 'Backquote' || e.metaKey || e.ctrlKey || e.altKey || !isField(e.target)) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && this.visible) this.toggle(); }, { capture: true });
+      this.root.addEventListener('keydown', e => { if (gameCode(e.code) !== 'Backquote' || (e.code !== 'Backquote' && e.code !== 'Backslash') || e.metaKey || e.ctrlKey || e.altKey || !isField(e.target)) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && this.visible) this.toggle(); }, { capture: true });
       this.installTips();
     } else this.root.appendChild(this.body);
     setInterval(() => { if (this.visible) this.refresh(); }, opts.refreshMs ?? 400);

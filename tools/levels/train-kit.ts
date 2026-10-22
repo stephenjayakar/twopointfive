@@ -166,8 +166,8 @@ export function build() {
       { id: 'draw', line: '1 draws the pistol', done: { is: 'slot', slot: 'pistol', drawn: true } },
       { id: 'fire', line: 'Left button fires at the cursor. Shoot out the lamp', done: { is: 'all', of: [{ is: 'target', name: 'lamp_range', on: false }, { is: 'any', of: [{ is: 'did', what: 'chron:lightShot' }, { is: 'did', what: 'chron:shot' }] }] }, at: LAMP },   // (shot out before the step came up: one more round at it lets him on. The OCP's spell alone does not: the lamp would come back)
       { id: 'reload', line: 'R reloads', done: { is: 'reload' } },
-      { id: 'light', line: 'L is the weapon light. It shows you to them too', done: { is: 'flag', flag: 'light' } },
-      { id: 'dark', line: 'L again: off. The dark you made is your cover', done: { is: 'flag', flag: 'light', value: false } },
+      { id: 'light', line: 'L is the weapon light. It shows you to them too', setupLine: 'The weapon light: press 1, then 3. It shows you to them too', done: { is: 'flag', flag: 'light' } },
+      { id: 'dark', line: 'L again: off. The dark you made is your cover', setupLine: 'Off again: press 1, then 3. The dark you made is your cover', done: { is: 'flag', flag: 'light', value: false } },
       { id: 'holster', line: 'E puts it away', done: { is: 'flag', flag: 'holstered' } },
       { id: 'smoke', line: '3 is smoke. Left button throws it: into the pit', done: { is: 'any', of: [{ is: 'threw', kind: 'smoke' }, BOTH, ON] }, at: PIT },
       // the two loud cans are NAMED here, in the fist, and kept: thrown, either one brings the men (a bang is heard through the whole compound)
@@ -175,8 +175,8 @@ export function build() {
       { id: 'frag', line: '5 is the frag: it kills, you too. Not yet', done: { is: 'any', of: [{ is: 'slot', slot: 'frag' }, BOTH] } },
       { id: 'rifle', line: '2 brings the rifle round', done: { is: 'any', of: [{ is: 'slot', slot: 'rifle', drawn: true }, BOTH] } },
       { id: 'ring', line: 'Right button fires its launcher. A head hit knocks a man out', done: { is: 'any', of: [{ is: 'launcher', on: 'ring', fired: true }, { is: 'flag', flag: 'ringsOut' }, BOTH] }, at: TARGET },   // (the launcher is on the right button from the draw; no ring left: the honest way past)
-      { id: 'grenade', line: '2 again flips the launcher to its grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, { is: 'flag', flag: 'shellsOut' }, BOTH] } },
-      { id: 'auto', line: 'Stay behind the sandbags. Z sets the rifle to auto', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: POINT }, { is: 'flag', flag: 'auto' }] }, BOTH] }, at: FIRE },
+      { id: 'grenade', line: '2 again flips the launcher to its grenade', setupLine: 'The launcher\'s grenade: press 2, then 2', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, { is: 'flag', flag: 'shellsOut' }, BOTH] } },
+      { id: 'auto', line: 'Stay behind the sandbags. Z sets the rifle to auto', setupLine: 'Stay behind the sandbags. For auto, press 2, then 1', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: POINT }, { is: 'flag', flag: 'auto' }] }, BOTH] }, at: FIRE },
       // the loud ones, last, in rising order. The first says what it does before he presses it. (A burst passes it too: out of grenades, the rifle is the noise.)
       { id: 'he40', line: 'Right button: the grenade, on the far wall. Loud: they hear it', done: { is: 'any', of: [{ is: 'threw', kind: 'he40' }, { is: 'burst', n: 3 }, BOTH] }, at: FAR },
       // ONE line for the burst and the fight: the grenade puts the two men on their guard where they stand, and it is his first rifle round that brings them through
