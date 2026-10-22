@@ -298,6 +298,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HOLDFIRE.on = !q.has('noholdfire');   // a squad nobody has found never fires first (game/holdfire.ts): a teammate's round at a man who has not noticed anybody is held until the player's own shot or an order of his that means fire, walking or sneaking — ON in the page; ?noholdfire = they shoot on sight unless silent or sneaking, as they did
   SILENT.stackSet = !q.has('nosilentset');   // a silent man told to stack, on his mark with his round held on a man, counts as stacked (game/silent.ts silentOnMan): 'set.' is said and his row reads 'stacked' with his gun still on the man, and no hand goes to the handle while it is. ON in the page; ?nosilentset = he is 'stacking' until his gun is the door's, as it was
   START.fallIn = !q.has('nofallin');   // the team starts a mission fallen in (game/startfile.ts): the night breach and a room clear stage the men on the menu's own 'fall in', unspoken (the rescue's men fall in when its clock starts, as they always have) — ON in the page; ?nofallin = they start with no order, as they did
+  { const w = q.get('torchwall'); TORCH.wallLow = w !== '0' && w !== 'dark'; TORCH.wallDark = w === 'dark'; }   // a hand torch whose beam would end on the wall at his hand hangs, its beam on the floor at his feet (game/guards.ts torchLow; the maintainer, 10-22: "another example of character shining flashlight at a small point in front of them"): ON in the page; ?torchwall=0 = the carry as it was; ?torchwall=dark = the other answer, the torch put out instead of tipped
   TORCH.calmOff = q.get('calmtorch') !== '0' && !q.has('nocalmtorch');   // a calm patrol's hand torch burns only where his place is dark (game/calmtorch.ts): ON in the page; ?calmtorch=0 = every patrol torch burns wherever he walks, as it did
   GUARD_EYE.far = !q.has('nofarsight');   // a man standing in light is seen from past the eye's 16 m (game/guards.ts eyeReach: out to 26 m in full light, the notice building slower out there; the dark hides him as before) — ON in the page; ?nofarsight = every eye stops at 16 m whatever the light, as it was
   GUARD_EYE.farCalm = !q.has('nofarcalm');   // …and a glimpse from past those 16 m is no place to walk to until it is what has him looking (game/guards.ts farFaint: a calm man's fix lands the frame the sight tips him) — ON in the page; ?nofarcalm = every far glimpse writes his fix at once, as the far reach first shipped
@@ -513,6 +514,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'QUIETFOG.wand': 'TPS_QUIETWAND=1',
   'QUIETFOG.solo': 'TPS_SOLOFOG=1',
   'TORCH.calmOff': 'TPS_CALMTORCH=1',
+  'TORCH.wallLow': 'TPS_TORCHWALL=1',
   'MORALE.on': 'TPS_MORALE=1',
   'RUNNER.on': 'TPS_RUNNER=1',
   'STARTLE.on': 'TPS_STARTLE=1',
