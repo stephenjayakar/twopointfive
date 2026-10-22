@@ -48,11 +48,13 @@ const ROOT = resolve(import.meta.dir, '../..');
 // d13650f85: the plan mission's barrier post moved and two drums put in a corner (levels/tut-plan.json alone; a sibling of the join above).
 // 3046a115e: a join's base again. c069ca16f and d13650f85 are siblings (the first holds the reworded levels/tut-quiet.json and not the plan mission's moved
 //   post, the second the other way round); this join is the first commit that holds both. No level's own part moved in the join itself.
+// 636e5eaef: a join's base once more. Its two parents are siblings: one glazed the hall's street window in levels/tut-squad.json (a box), reworded a card
+//   there and gave a step a cue; the other is 3046a115e's line. This join is the first commit that holds both. No level's own part moved in the join itself.
 // THIS LIST IS CLOSED (10-22): nothing more goes in front of it. One base for all meant that a level changed on purpose moved EVERY level's bar, and that two
 // levels changed side by side on two branches left two newest bases that are siblings: on their join the one taken does not carry the other's change, and
 // that level was red whatever the order. It is the base of every level with no row of its own below, and only that. (It is still a list, read newest first,
 // because branches cut before the rows came still put a commit in front of it, and those lines must join without a hand; once they have it is one commit.)
-const BASE_REVS = ['3046a115e', 'c069ca16f', 'd13650f85', '0d3a18078', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
+const BASE_REVS = ['636e5eaef', '3046a115e', 'c069ca16f', 'd13650f85', '0d3a18078', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
 /** A LEVEL'S OWN BASE: the commit that level's own part (everything but its lived things) was last changed in ON PURPOSE. A level changed on purpose in its own
  *  part (a box, a door, a mark, a route, a held key of its lesson, a lesson re-cut) moves ITS row to the commit that carries the change — a commit of the
  *  checkout's own history whose file is the level as meant — and says over the row what changed; no other level's bar moves. A row is its note, its line and
