@@ -268,8 +268,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ON in the page (`?sameway=0`), OFF in the module and on the frozen stand (`TPS_SAMEWAY=1`, `FROZEN_HOLDS`, the pin lists in threshold-probes,
   nvg-probes and irlaser-probes); journal: a recording from before the key replays with it off. `probes.ts same-way` (family `ordereddoor`), both
   stands, 9 of 9; `SAMEWAY_BREAK=1` fails 3 on both. Measured there (the lesson's level as its start deals it: the four, and its eight enemies at their posts): the pair stood at 30 spots along the
-  hall's front, the two ways over 6 m apart at 10 → 0 (the widest 9.1 → 2.0 m); the most a man walks more than his own way 3.3 m; walked from the
-  worst spot the two got 9.5 m apart → 2.0 m and both stand on their marks (15 s → 16 s on the page's stand). KNOWN: two men more than 5 m apart
+  hall's front, the two ways over 6 m apart at 8 → 0 (the widest 8.8 → 3.4 m; 10 → 0 and 9.1 → 2.0 m on the level as it was before its yard was reworked the same day); the most a man walks more than his own way 3.3 m; walked from the
+  worst spot the two got 9.6 m apart → 2.0 m and both stand on their marks (16 s either way on the page's stand; 9.7 → 1.4 m frozen). KNOWN: two men more than 5 m apart
   when told are left alone; the lock, own-door and uncleared-room bounds have no staging in the check (the walk cap and the 5 m have). No tally of
   fights was run. Never seen on a GPU, nobody has played it.
 - **A teammate's light is dark into the wall at his muzzle** (`LIGHTS.wallOff`, `src/game/guards.ts wallDark`; 10-22, the maintainer off the first
