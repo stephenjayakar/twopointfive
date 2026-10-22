@@ -19,7 +19,7 @@
 //     carbine: carbine-fire carbine-rig
 //     charmats: charmats-cast charmats-off charmats-shader charmats-slots charmats-tables
 //     civilians: civilians-comply civilians-determinism civilians-hearing civilians-identity civilians-phone civilians-scoring civilians-sight civilians-spots
-//     debrief: debrief-charge debrief-dom debrief-doorname debrief-rooms debrief-run debrief-score
+//     debrief: debrief-charge debrief-dom debrief-doorname debrief-loud debrief-rooms debrief-run debrief-score
 //     decals: decals-follow decals-identity decals-off decals-ring decals-sites
 //     destruction: destruction-bounds destruction-caps destruction-determinism destruction-dust destruction-hearing destruction-identity destruction-impulses destruction-reset destruction-screen destruction-sheet
 //     devices: devices-camera devices-editor devices-keypad devices-laser devices-vision
@@ -2606,6 +2606,7 @@ if (on('debrief-run', 'debrief', 'all')) await run('debrief-run', async () => (a
 if (on('debrief-rooms', 'debrief', 'all')) await run('debrief-rooms', async () => (await import('./debrief-probes.ts')).debriefRooms());
 if (on('debrief-doorname', 'debrief', 'words', 'all')) await run('debrief-doorname', async () => (await import('./debrief-probes.ts')).debriefDoorName());   // a kicked or picked door is called on the card what its level calls it (WORDS.doors)
 if (on('debrief-charge', 'debrief', 'all')) await run('debrief-charge', async () => (await import('./debrief-probes.ts')).debriefCharge());   // the rows a wall charge makes are worded as a charge's
+if (on('debrief-loud', 'debrief', 'all')) await run('debrief-loud', async () => (await import('./debrief-probes.ts')).debriefLoud());   // a row that leans loud is not graded as a sneak (verdict.ts VERDICT.loudCard; LOUDCARD_BREAK=1 must fail)
 if (on('debrief-score', 'debrief', 'all')) await run('debrief-score', async () => (await import('./debrief-probes.ts')).debriefScore());
 if (on('debrief-dom', 'debrief', 'all')) await run('debrief-dom', async () => (await import('./debrief-probes.ts')).debriefDom());
 // ---------------------------------------------------------------- 'breach' = the family (breach-probes.ts): what stays of the removed daytime breach showcase's checks — the daylight variant's round trip (here) and clear-doctrine (below)
