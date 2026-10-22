@@ -179,7 +179,7 @@ export const PASS_SCENARIOS: LevelScenarios = { roomClear: PASS_STRUCTURE, kitVi
     { name: 'the road', bounds: { x0: 0, x1: 40, z0: 22.2, z1: 28 } }, { name: 'the back', bounds: { x0: 0, x1: 40, z0: 0, z1: 4.8 } },
   ] } };
 
-/** what a level built ON the halt adds (tools/levels/tut-sky.ts): `kept` runs after the halt's own kept things and before the lived-in tail, with the kit in
+/** what a level built ON the halt adds (the first tutorial mission was one until it got a floor of its own; nothing is today): `kept` runs after the halt's own kept things and before the lived-in tail, with the kit in
  *  hand; `scenarios` and `spawn` stand in for the halt's own. With none of them given the file is the halt, byte for byte. */
 export interface PassExtra { kept?: (X: { K: ReturnType<typeof officeKit>; G: ReturnType<typeof gwotKit>; cap: (x: number, z: number, w: number, d: number, y: number, yaw?: number, t?: number) => void }) => void; scenarios?: LevelScenarios; spawn?: Vec3 }
 export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {

@@ -95,6 +95,8 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     blow: async () => { await run(page, 60); await tap('KeyF'); await until('blow', 30); },
     breaker: async s => { await point(s.at); await tap('KeyQ'); await until('breaker', 40); },
     nv: async () => { await tap('KeyN'); await run(page, 20); },
+    // (nothing to press: the two who come out with torches are the squad's, and the step is done by the script's own word)
+    torches: async () => { await until('torches', 25); },
     bunk: async s => { for (let n = 0; n < 2 && (await read(page)).id === 'bunk'; n++) { await point(s.at); await tap('KeyQ'); await run(page, 1200); await tap('KeyF'); await until('bunk', 20); } },
     out: async s => { const nv0 = await page.evaluate(() => window.__game.player.nv); await point(s.at); await tap('KeyQ'); await run(page, 240);
       const V = await page.evaluate(() => ({ nv: window.__game.player.nv, off: window.__game.rails.panned() }));
