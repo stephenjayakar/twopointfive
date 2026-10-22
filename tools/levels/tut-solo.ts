@@ -94,7 +94,7 @@ export const FRAME: Record<string, { allow?: string[]; cue?: string; checkpoint?
   move: { cue: 'road' }, sprint: { allow: ['sprint'] }, ready: { allow: ['slot:rifle'] }, wall: { allow: ['wall'], cue: 'cease' }, fire: { allow: ['aim', 'fire'] },
   reload: { allow: ['reload'], checkpoint: 'the gate' }, crouch: { allow: ['crouch'], cue: 'gun' }, low: { cue: 'bags' },
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
-  pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use', 'ring'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
+  pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
   take: { checkpoint: 'the store' }, launch: { allow: ['alt'], cue: 'trucks' }, last: { cue: 'loose' },
 };
