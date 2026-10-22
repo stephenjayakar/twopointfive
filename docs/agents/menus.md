@@ -848,7 +848,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   → counts + `stealthScore` (100 minus SCORE's price list — every term only subtracts; probes hold monotonicity) + `ratingOf` (BANDS: GHOST ≥ 90 · SHADOW ≥ 70 ·
   OPERATIVE ≥ 40 · ASSAULT) + `badgesOf` (BADGE knobs) + the summary line; `fmtEvent` words a row. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
   (menu.ts: mode 'debrief' on `mission.debrief` — raised on exfil AND `DOWN_CARD_SECS` after Sam drops — plus the pause card's *Run so far* tab; CSS `#menu .db-*`);
-  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / charge / score / dom), soak's 'leak chronicle' invariant.
+  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / charge / loud / score / dom), soak's 'leak chronicle' invariant.
 
 <!-- was CLAUDE.md lines 1735–1757 -->
 - **The start card's sandbox row** (ui/menu.ts `sandboxRow`, `SANDBOX_LS` = localStorage `twopointsix.sandbox`, applied by main.ts `loadSandbox` at boot): god mode ·
@@ -1596,3 +1596,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the debugger's on backslash, E's row with no key and its letter in a line read as the slot's key. The bullet is in `player.md`.
   A ROW THE BUILD GIVES NO KEY (`KEYMAP.qFree`, the wall hold's, 10-21): `home(a)` is a row's keys in the build, and 'as built', the swap, the kept
   table and Reset all measure against that, not against the row's code. The bullet is in `stealth.md` ('Q is free').
+- **A mission that leans loud is not graded as a sneak (10-22, `VERDICT.loudCard`).** The maintainer, off the solo tutorial's end card ('ASSAULT 14'
+  on a won fight): 'weird that we show a score (and a low one) for loud missions'. The stealth game's rating prices every man shot and every time
+  he was seen; a row of the list whose `lean` is `'loud'` but whose kind is the stealth game's (`tut-solo`, `train-kit` today) ended on that card.
+  `game/verdict.ts loudRow(g)` = the key up, a quiet mission up, and its row leans loud. The game is not told the page's `levelFile`, so the row
+  is found off the level's own name (`rowFile`: `<name>.json`, or the file whose look that is — `scene/look.ts LOOK_LEVELS`). `chronicle.ts
+  debriefOf` carries it as `Debrief.scored` and `Debrief.grade` ('GHOST 94', '' when not scored). Not scored: the card (`ui/debrief.ts`, class
+  `db-loud`, which nothing styles) builds no rating word, no score, no line of what was docked, no badges, and the sneak's cells (seen, alarms,
+  floor up, bodies found, kills, doors kicked, called in, checkpoint loads, the civilians' saw / told) stand untoned — a hit taken and a civilian
+  hurt keep their red; the copied line opens on the clock; `mission.ts`'s two end lines ('exfiltrated', 'mission complete') read `grade` and stop
+  at the clock. The numbers, the timeline and the map stay. A row that leans quiet or either way, the plain night, and every squad kind (its end
+  card never showed the rating; its 'run so far' and its card under `?noverdict` still do) are as they were. Reads only: no run's digest differs.
+  ON in the page (`?loudcard=0` = the rating on every card it stood on); off in the module and on the frozen stand (`TPS_LOUDCARD=1`); a
+  `FROZEN_HOLDS` row; a recording carries it (`VERDICT` is the last name of `JOURNAL_KNOBS`: `mission.ts`'s two end lines are worded by it), and
+  one from before the key, or the table, replays with it off (`journal.ts applyKnobs`). CHECK `probes.ts debrief-loud` (the
+  rule, the key down, a quiet row, the plain night, a room clear on a loud row, every row's level file and its look's file read back as the row's
+  file, a recording with and without the key, mission.ts's two lines) and a block of `debrief-dom` (the card on a fake DOM, key up and down, counts that would tone every cell);
+  `LOUDCARD_BREAK=1` fails both on both stands. NEVER SEEN ON A GPU; nobody has played to the card since. Left as it was: the stealth game's
+  cells and timeline still stand on a loud row's card (a loud card of its own would be new work).

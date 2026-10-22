@@ -15,6 +15,7 @@ import { PLAYER_ID } from './consts';
 import { BUILDING } from './floor';   // (a leaf: the office building's footprint — everything outside it is the grounds: the car park south and east, the verge north and west)
 import { gearText, plainShort } from './gear';   // (a leaf: the kit's names as issued, where a row is worded)
 import { missionLive } from './mission';
+import { loudRow } from './verdict';   // (asked inside debriefOf only: is this run graded as a sneak at all)
 import { doorWrittenName } from './doornames';   // (a leaf: the name a level wrote for a door — one name on one card)
 import type { Level } from '../scene/level';
 import { isOffice, levelRects, ownPlace } from './dialogue';
@@ -421,18 +422,22 @@ export function badgesOf(c: RunCounts): Badge[] {
 export function fmtMMSS(sec: number): string { const s = Math.max(0, Math.floor(sec)); return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`; }
 
 /** The whole debrief in one record: what ui/debrief.ts renders and the probes assert on. */
-export interface Debrief { counts: RunCounts; score: number; lines: ScoreLine[]; rating: string; blurb: string; badges: Badge[]; summary: string; state: 'done' | 'down' | 'sofar'; }
+export interface Debrief { counts: RunCounts; score: number; lines: ScoreLine[]; rating: string; blurb: string; badges: Badge[]; summary: string; state: 'done' | 'down' | 'sofar';
+  /** the run is graded as a sneak: false on a row that leans loud (verdict.ts loudRow) — the rating, the score, what was docked and the badges are still
+   *  worked out, and no reader shows them. `grade`: the rating as a line says it ('GHOST 94'), '' when not scored — what a line that names the grade reads */
+  scored: boolean; grade: string; }
 export function debriefOf(g: Game): Debrief {
   const counts = runCounts(g); const { score, lines } = stealthScore(counts); const r = ratingOf(score); const badges = badgesOf(counts);
-  const state: Debrief['state'] = counts.done ? 'done' : counts.failed || counts.down ? 'down' : 'sofar';
-  return { counts, score, lines, rating: r.word, blurb: r.blurb, badges, summary: summaryLine(counts, score, r.word, badges, state), state };
+  const state: Debrief['state'] = counts.done ? 'done' : counts.failed || counts.down ? 'down' : 'sofar', scored = !loudRow(g);
+  return { counts, score, lines, rating: r.word, blurb: r.blurb, badges, summary: summaryLine(counts, score, r.word, badges, state, scored), state, scored, grade: scored ? `${r.word} ${score}` : '' };
 }
-/** the one line the 'copy summary' button puts on the clipboard: 'GHOST 94 · 11:32 · seen 0 · alarms 0 · KOs 3 · kills 0 · …' */
-export function summaryLine(c: RunCounts, score: number, word: string, badges: Badge[], state: 'done' | 'down' | 'sofar'): string {
-  const parts = [`${word} ${score}`, fmtMMSS(c.elapsed), `seen ${c.seen}`, `alarms ${c.alarms}`, `bodies found ${c.bodies}`, `KOs ${c.kos}`, `kills ${c.kills}`, `shots ${c.shots}`];
+/** the one line the 'copy summary' button puts on the clipboard: 'GHOST 94 · 11:32 · seen 0 · alarms 0 · KOs 3 · kills 0 · …' (`scored` false, a row that
+ *  leans loud: the same line without the rating and the badges) */
+export function summaryLine(c: RunCounts, score: number, word: string, badges: Badge[], state: 'done' | 'down' | 'sofar', scored = true): string {
+  const parts = [...(scored ? [`${word} ${score}`] : []), fmtMMSS(c.elapsed), `seen ${c.seen}`, `alarms ${c.alarms}`, `bodies found ${c.bodies}`, `KOs ${c.kos}`, `kills ${c.kills}`, `shots ${c.shots}`];
   if (c.civSeen || c.civReported || c.civKO || c.civKilled) parts.push(`civilians: saw you ${c.civSeen} · told them ${c.civReported}${c.civKO ? ` · KO ${c.civKO}` : ''}${c.civKilled ? ` · KILLED ${c.civKilled}` : ''}`);
   if (c.ocps) parts.push(`OCP ${c.ocps}`); if (c.kicked || c.picked) parts.push(`doors kicked ${c.kicked} / picked ${c.picked}`); if (c.keys) parts.push(`keys ${c.keys}`); if (c.intel) parts.push(`intel ${c.intel}`); if (c.loads) parts.push(`loads ${c.loads}`);
-  const on = badges.filter(b => b.on).map(b => b.name); if (on.length) parts.push(on.join(', '));
+  const on = scored ? badges.filter(b => b.on).map(b => b.name) : []; if (on.length) parts.push(on.join(', '));
   if (state !== 'done') parts.push(state === 'down' ? 'went down' : 'run so far'); if (c.sandbox) parts.push('sandbox flags on');
   return `twopointsix — ${parts.join(' · ')}`;
 }
