@@ -1241,7 +1241,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   calm man who hears it goes suspicious); 0.9 s later the script takes him. He comes round the long wall's far end as before, stops in the back strip a
   stride short of the gap in the cross wall (26.4, 17.75), puts his torch through the gap and over where the whistle was (5.2 m off in the scripted run,
   his beam within 6 degrees of the mark) for 3.6 s, says "nothing. wind", walks back up the strip past the back door to his chair at its far end
-  (30.3, 17.7), and smokes there for 50 s with his back to the gap; then the script lets him go and he walks back to his fire, the game's own man. The
+  (30.3, 17.7), brings the torch down to his side (the smoke order is `upper: 'none'`: a whistled man keeps his torch in the hand, `guards.ts handCarry`, and with no upper layer it hangs as a calm man carries it), and smokes there for 50 s with his back to the gap; then the script lets him go and he walks back to his fire, the game's own man. The
   player comes round the long wall's near end, up the walk, through the gap and along the strip to his back: seven metres with the man's back to him.
   A MAN A SCRIPT WALKS IS BLIND AND DEAF (`squad.ts runGuardScript`), so the script is his eyes and ears while it has him, and each of these hands him
   back to the game `alert`: the player on the walk or in the strip while he comes down it; the player there or in the lane (`tq_beam`: all of it but the
@@ -1252,13 +1252,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Space at the lock DRAG him; the `door` step's reach is 0.8 m so it does not pass from where he was taken. WORDS: the grab line is "When he lights a
   smoke, sneak up behind him and press [Space] to grab him"; the card keeps the maintainer's sentence ("He'll check out the sound and then stop for a
   smoke, with his back to you."). CHECKS: `lesson-run tut-quiet` on both stands (`TPS_RAILS=1` in front on the frozen one; `--pace 6` on the shipped)
-  finishes 19 of 19 and prints where he looked from and how far his light was off the mark (it fails under 4 m or past 16 degrees); its BREAK PATHS,
+  finishes 19 of 19 and prints where he looked from and how far his light was off the mark (it fails under 4 m or past 16 degrees), and that his torch is still in his hand, lit, and under his shoulder at his smoke (0.48 m under; it fails above 0.2); its BREAK PATHS,
   each of which must fail the run: `TQSMOKE_BREAK=front` (the player stands on the walk), `=beam` (he stays on the whistle's mark), `=upright` (he
   walks up behind the smoking man on his feet). All three fail on the frozen stand, seed 1. `lesson-gate`, `level-needs --run` on both stands,
   `rails-check` on both, `second-way-check`, `ownroofs-check`, `rowset-check`: green. `quiet-light`: its three red lines by design, no fourth.
   THE LEVEL'S FINGERPRINT MOVED (three volumes, a chair and a gas bottle moved, a tin added): checkpoints and recordings of this level from before are
-  refused. `lived-check` wants a base that carries this change; none is added here (the per-level base is the tutorial goal's). SEEN: on the real page
-  on the software adapter only (the notes page has the pictures). NEVER SEEN ON A GPU, never played by a hand: how long 50 s feels, whether a man in a
+  refused. `lived-check` wants a base that carries this change; none is added here (the per-level base is the tutorial goal's). ON THE REAL PAGE (headless Chromium, the software adapter, real keys; with the torch still held up, before it was lowered): he came, looked from
+  (26.7, 17.8) 10.4 s after the whistle, was at his smoke at 17.7 s, and the grab took with a tap of Space at 30.4 s; no page error from the game.
+  The pictures are too small and dark to judge him by. The lowered torch: headless and on the pose sheet only. NEVER SEEN ON A GPU, never played by a hand: how long 50 s feels, whether a man in a
   dark strip reads from the gap, and whether the look through the gap is long enough to be noticed are the maintainer's.
   A SMALL FLAW IT TURNED UP, not this change's and not mended: creeping up behind the hall's man the scripted player's footfall was filed on seven
   frames running (0.1 s) at 1.1 m, and seven crouched steps on stone at that range take a calm man to suspicious; the same approach six seconds
@@ -1283,8 +1284,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off the head joint on the frozen / shipped stand to 0.21 m, the right moving under 0.1 m), smoke (one thread, a breath a draw, every source
   look-only, fine, confined; the thread dropped the frame he is let go), puffs, who, off, old: 8 of 8 on both stands; `SMOKEBREAK_BREAK=1` fails six.
   NOT DONE: no cigarette is drawn in the hand (at the game's zoom it is two pixels: the light is what shows), no sound of the lighter, no ash, and the
-  arm's numbers are first-pass. Its lights add to the frame's 64 while he smokes (one, two for the 0.9 s of the flame). SEEN: on the real page on the
-  software adapter only. NEVER SEEN ON A GPU.
+  arm's numbers are first-pass. Its lights add to the frame's 64 while he smokes (one, two for the 0.9 s of the flame). THE POSE WITH NO GPU: `bun run tools/qa/pose-mesh.ts defender_1 smoke-up --inhand --gunhand` (and `smoke-rest`), then
+  `python3 -I tools/qa/pose-mesh-raster.py <the PLYs> --out sheet.png`: the hand is at his mouth with the elbow down, the torch low in the other.
+  ON THE REAL PAGE (the software adapter, the ledger played with real keys): he lit up and took a draw before he was grabbed, with no page error from the game; at
+  640 by 360 the orange light on him at a draw is what shows, and neither the arm nor the smoke can be judged from those pictures. NEVER SEEN ON A GPU.
 - **A mission row can name its own hour and weather** (2026-10-22; `src/game/rowset.ts`, `ROWSET.on` — ON in the page, `?rowset=0` = the link's hour and
   weather as ever; OFF in the module and on the frozen stand, `TPS_ROWSET=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables. NO ROW
   NAMES ONE YET, so on or off is the build as it was). A tutorial mission's level is built for one hour and one sky, and its row used to open at the

@@ -6,6 +6,7 @@ import type { Bot } from '../lesson-run';
 import { CLOSE } from '../../../src/game/close';
 import { HANDRING } from '../../../src/game/handring';
 import { TQ } from '../../levels/tut-quiet';
+import { handCarry } from '../../../src/game/guards';
 
 export const query = '?quiet';
 // the moon on his meter (lesson-run's --moon): the CPU's light estimate leaves it out, and the lane is lit by nothing else
@@ -102,6 +103,10 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.wait(REACT);
     B.go([22.75, 0, 19.0], 8, { near: 0.25 }); B.go([23.6, 0, 17.8], 8, { near: 0.25 });
     B.say(`  on the walk: ${A.callsign} at ${at(A.char.pos)}, facing ${A.char.bodyYaw.toFixed(2)}, ${A.state}, ${flat(B.pos(), A.char.pos).toFixed(1)} m off; lit ${lit(B)}`);
+    // his torch has come down for the smoke: still the hand's, still lit, and under his shoulder (the look through the gap carries it up at his head)
+    const low = A.char.bones.upperArmR ? A.char.bones.upperArmR[1] - A.flashlight.pos[1] : -1;
+    B.say(`  his torch: ${handCarry(A)} in the hand, ${A.flashlight.enabled ? 'lit' : 'out'}, ${low.toFixed(2)} m under his shoulder`);
+    if (A.script && (handCarry(A) !== 'torch' || !A.flashlight.enabled || low < 0.2)) B.fail(`${A.callsign} does not smoke with his torch lit and low (${handCarry(A)}, ${A.flashlight.enabled ? 'lit' : 'out'}, ${low.toFixed(2)} m under the shoulder)`);
     if (WRONG === 'upright') { B.crouch(false); B.go(behind(A, 1.2), 20, { near: 0.25, stop: () => A.state === 'alert' || !A.script }); B.say(`  upright behind him: ${A.callsign} ${A.state}${A.script ? ', still at his smoke' : ', his own man'}, ${flat(B.pos(), A.char.pos).toFixed(1)} m off`); B.crouch(true); }
     if (!closeIn(B, A, [25.5, 0, 17.75])) B.fail(`could not get behind the first man (${flat(B.pos(), A.char.pos).toFixed(2)} m off, he stands at ${at(A.char.pos)}, ${A.state})`);
     unseen(B, n0, A, 'coming up behind him');

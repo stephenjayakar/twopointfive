@@ -76,7 +76,7 @@ const script: LevelScriptFn = D => {
         if (r.index === 1) { c.release(u, 'alert'); return; }
         c.say(u, 'nothing. wind');
         // his back to the gap, and a smoke
-        c.order(u, { goal: SMOKE, face: Math.PI / 2, aimAt: null, upper: 'torch', light: true, smoke: true });   // (smokebreak.ts: his left hand, the lit end and the smoke are that file's, once he stands there)
+        c.order(u, { goal: SMOKE, face: Math.PI / 2, aimAt: null, upper: 'none', light: true, smoke: true });   // (the torch comes down to his side, as a calm man carries it; smokebreak.ts: his left hand, the lit end and the smoke are that file's, once he stands there)
         const heard = (e: { level: number; near(p: Vec3, within: number): boolean }) => { const p = c.query.pos(u);
           return (e.level >= RUN.level && e.near(p, RUN.within)) || (e.level >= WALK.level && e.near(p, WALK.within)); };
         r = yield c.any(c.wait(SMOKE_SECS), c.until(q => q.inside(past, 'sam'), 'the player is past him'), gone(), c.on('step', heard), c.on('whistle'));
