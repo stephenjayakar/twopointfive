@@ -452,7 +452,7 @@ export function playerBusy(g: Game): string | null {
   if (pl.char.anim.bigTool) return 'putting his tool back';   // (bigkit.ts, BIGSLOT.moves: the hammer or the shotgun on its way back onto him is the animator's too — never set with the switch off)
   if (pl.char.anim.kitBusy) return 'changing what is in his hands';   // (kitanim.ts: a swap is the animator's, not the file's — never true with the switch off)
   if (g.mission.driveT >= 0) return 'pulling the drive';
-  if (pl.sel.open || pl.sel.downT >= 0) return 'choosing an action';
+  if ((pl.sel.open && !pl.sel.ring?.free) || pl.sel.downT >= 0) return 'choosing an action';   // (a ring that merely stands — handring.ts — is nothing in hand: nothing of it is filed, and a load finds no ring)
   return null;
 }
 
@@ -1019,6 +1019,8 @@ export class Checkpoints {
     const host = { enabled: this.enabled, picture: this.picture, onPutBack: this.onPutBack, onSaved: this.onSaved }, tune = { ...g.tune }, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo };
     const st = this.store as { map?: Map<string, string> }, kept = st.map instanceof Map ? [...st.map] : null;   // (the harness's store is a Map the game reaches: the files written since are not the snapshot's to take back)
     restoreSnapshot(e.snap);
+    { const pl = g.player, S = pl.sel; if (S.ring?.free) { S.open = false; S.ring = null; S.downT = -1; S.moved = false; pl.nearSel = 0; } }   // (handring.ts: a ring that merely stood at the save is nothing of the saved moment — a file's load finds none either, and his first click after a load is his trigger, not a wedge)
+    g.player.setup = null;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load — its digits are his slots again)
     if (kept && st.map) { st.map.clear(); for (const [k, v] of kept) st.map.set(k, v); }
     Object.assign(this.stats, stats); this.log.length = 0; this.log.push(...log);
     Object.assign(this, host); Object.assign(g.tune, tune); Object.assign(g, flags); loadSandbox(g, false);

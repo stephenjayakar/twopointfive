@@ -98,10 +98,10 @@ const read = () => {
     check(!m.hit, `${W} px wide: the weight bars and the pouches do not run into the sets' row`, `sets end at ${m.sets.toFixed(0)}, the head starts at ${m.head.toFixed(0)}`);
     check(m.guns.length === 2 && m.guns.every(g => g.in && !g.cut) && m.over <= 0 && m.cut.length === 0, `${W} px wide: each gun's name and every tile under a gun is whole, and the page does not scroll sideways`, `${m.guns.map(g => `${g.in ? 'in' : 'OUT'}${g.cut ? ' CUT' : ''}`).join(' · ')} · cut under a gun: ${m.cut.join(', ') || 'none'} · ${m.over} px over`);
     await ctx.close(); }
-  // a quiet mission: the mission hands you the launcher's five
+  // a quiet mission: your card there starts at the launcher's five
   { const { ctx, page } = await open('vault-quiet');
     const q = await page.evaluate(read); await shot(page, 'kittree-quiet');
-    check(!!q?.sponge?.shown && q.sponge.lent && /5/.test(q.sponge.val), 'a quiet mission: the Sponge rounds tile shows the five the mission hands you', q?.sponge ? `'${q.sponge.val}'${q.sponge.lent ? ' (lent)' : ''}` : 'no tile');
+    check(!!q?.sponge?.shown && !q.sponge.lent && /5/.test(q.sponge.val), 'a quiet mission: the Sponge rounds tile shows five, and they are your card\'s own there, not the mission\'s (kit.ts KITDEAL.stealth: a stealth mission\'s kit is what your card starts at; the tile lent under ?nokitstealth is tools/qa/kitstealth-page.cjs\'s off part)', q?.sponge ? `'${q.sponge.val}'${q.sponge.lent ? ' (lent)' : ''}` : 'no tile');
     await ctx.close(); }
   await browser.close();
   check(errors.length === 0, 'no page error', errors.join(' | ') || 'none');

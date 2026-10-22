@@ -128,20 +128,22 @@ export class TapTwice {
 }
 /** The page's listener for it (main.ts, once): returns the loop's `ctrlTwice` — true once for each double tap, taken as it is asked. A tap in a text field
  *  is not the game's; `idle()` true (the tour has the hands) = none is. It claims no key and prevents nothing: the browser's own Ctrl chords are as they were.
+ *  The taps are of the camera's key: Ctrl, or the key `key` names while it names one.
  *  (`field`: the test game/input.ts makes of a key's target, its embed sink told by the label that file gives it.) */
-export function watchCtrlTaps(win: Window, idle: () => boolean): () => boolean {
+export function watchCtrlTaps(win: Window, idle: () => boolean, key: () => string | null = () => null): () => boolean {
   const T = new TapTwice(); let twice = false;
   const field = (e: Event) => { const t = e.target as { tagName?: string; isContentEditable?: boolean } | null; return !!t && (/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName ?? '') && (t as { getAttribute?(k: string): string | null }).getAttribute?.('aria-label') !== 'game input' || !!t.isContentEditable); };
+  const mine = (e: KeyboardEvent) => { const k = key(); return k ? e.code === k : e.key === 'Control'; };   // (`key`: the camera's key where it is not Ctrl — the page hands it host/keymap.ts camKey — as a code on the board; null = Ctrl)
   win.addEventListener('keydown', e => {
-    if (e.key !== 'Control') { if (!e.repeat) T.other(); return; }   // (a held W repeating is not a new thing the hand did)
+    if (!mine(e)) { if (!e.repeat) T.other(); return; }   // (a held W repeating is not a new thing the hand did)
     if (e.repeat) return;
     if (field(e) || e.altKey || e.metaKey || e.shiftKey) { T.reset(); return; }
     T.down(e.timeStamp);
   }, { capture: true });
-  win.addEventListener('keyup', e => { if (e.key !== 'Control') return; if (T.up(e.timeStamp) && !idle()) twice = true; }, { capture: true });
+  win.addEventListener('keyup', e => { if (!mine(e)) return; if (T.up(e.timeStamp) && !idle()) twice = true; }, { capture: true });
   win.addEventListener('mousedown', () => T.other(), { capture: true });
   win.addEventListener('wheel', () => T.other(), { capture: true, passive: true });
-  win.addEventListener('mousemove', e => { if (e.ctrlKey) T.moved(Math.abs(e.movementX) + Math.abs(e.movementY)); }, { capture: true, passive: true });
+  win.addEventListener('mousemove', e => { if (e.ctrlKey || key()) T.moved(Math.abs(e.movementX) + Math.abs(e.movementY)); }, { capture: true, passive: true });   // (it counts only with the key down)
   win.addEventListener('blur', () => T.reset());
   return () => { const v = twice; twice = false; return v; };
 }
