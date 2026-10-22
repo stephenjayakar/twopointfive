@@ -13,6 +13,7 @@
 import type { Vec3 } from '../math/vec';
 import type { MuzzleFxKey } from './effects';
 import { GEAR, GEAR_NAMES, GEAR_MAG } from './gear';   // (a leaf: the issue kit's switch — read only inside the getters of Sam's two rows below, never as this module loads)
+import { RELOAD } from './autoreload';   // (a leaf: one switch table, read only inside startReload — never as this module loads)
 
 export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18' | 'pkm' | 'mk18bare' | 'g19bare';
 export type FireMode = 'semi' | 'auto' | 'burst';
@@ -430,7 +431,7 @@ export class Firearm {
       this.reloadT = 0; this.stage = 2; this.ev = ev; this.beat = beat ?? null; this.cues = cues && cues.length ? cues : null; this.cueI = 0;
       this.planShells(shells.times, shells.port); return true;
     }
-    if (this.spare.length === 0 && !this.bottomless) return false;
+    if (this.spare.length === 0 && !this.bottomless && !(RELOAD.lastMag && this.chamber === 0 && (this.mag ?? 0) > 0)) return false;   // (…but the last magazine seated under an empty chamber — a reload broken off before the rack — is one: it comes out, goes back in and is racked. autoreload.ts RELOAD.lastMag)
     const best = Math.min(this.spare.length ? Math.max(...this.spare) : this.def.magCapacity, this.magRoom);
     if (this.mag !== null && this.mag >= best && this.chamber === 1) return false;   // nothing to gain
     this.reloadT = 0; this.stage = 0; this.ev = ev; this.beat = beat ?? null; this.cues = cues && cues.length ? cues : null; this.cueI = 0;
