@@ -899,7 +899,7 @@ export class Checkpoints {
       if (this.authored) { const label = this.authored; this.authored = null;
         // (the level's program is stopped for the take and started again by the frame on the next tick, with this step's cue: a beat is a function half run, which
         //  no snapshot holds — so what is kept is the floor with no program, exactly what putting it back starts from)
-        const D = g.director; if (D?.run && !D.run.ended) { D.stop(false); g.rails.restart(); }
+        const D = g.director; if (D?.run && !D.run.ended) { D.stop(false); g.rails.resume(); }
         this.writeMem(g, 'auto', label, true); }
       return; }
     this.authored = null;

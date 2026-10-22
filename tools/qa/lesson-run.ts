@@ -78,12 +78,19 @@ export interface Bot {
 
 if (import.meta.main) {
   const name = argv.find((a, i) => !a.startsWith('--') && argv[i - 1] !== '--seed' && argv[i - 1] !== '--cap' && argv[i - 1] !== '--pace' && argv[i - 1] !== '--floor');
+  if (name && process.env.TPS_PROFILE !== 'shipped' && tutorial(resolve(ROOT, 'levels', `${name.replace(/\.json$/, '')}.json`))) {   // (a tutorial mission: the same run, as the page stands it)
+    console.log(`${name}: a tutorial mission, run as the page opens it (the shipped stand)`);
+    const r = Bun.spawnSync(['bun', 'run', import.meta.path, ...argv], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'inherit', stderr: 'inherit' }); process.exit(r.exitCode ?? 1);
+  }
   if (!name) { console.error('usage: bun run tools/qa/lesson-run.ts <name> [--seed N] [--cap SECS] [--plain] [--unseen] [--god] [--verbose] [--digest] [--nolesson]'); process.exit(2); }
   const r = await runLesson(name.replace(/\.json$/, ''), { seed: Number(flag('--seed') ?? 1), unseen: has('--unseen'), god: has('--god'), plain: has('--plain'), verbose: has('--verbose'), digest: has('--digest'), lesson: !has('--nolesson'), moon: has('--moon'), hard: has('--hard'), floor: Number(flag('--floor') ?? 0) || 0 });
   for (const l of r.lines) console.log(l);
   console.log(r.code === 0 ? `\n=== lesson-run ${name}: ALL PASS ===` : r.code === 2 ? `\n=== lesson-run ${name}: NO VERDICT (${r.why}) ===` : `\n=== lesson-run ${name}: FAIL — ${r.why} ===`);
   process.exit(r.code);
 }
+
+/** a level whose lesson carries a `rails` record */
+function tutorial(file: string): boolean { try { return /"rails"\s*:/.test(readFileSync(file, 'utf8')); } catch { return false; } }
 
 export interface LessonRunOpts { seed?: number; unseen?: boolean; god?: boolean; plain?: boolean; verbose?: boolean; digest?: boolean; lesson?: boolean; moon?: boolean; hard?: boolean; floor?: number }
 export interface LessonRunOut { code: 0 | 1 | 2; why: string; lines: string[]; digest?: string; steps: { id: string; t: number }[]; secs: number }
@@ -98,6 +105,10 @@ export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<Le
   if (script.mode?.moon) o = { ...o, moon: true };
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+  // A TUTORIAL MISSION IS THE PAGE'S (a lesson with a `rails` record — src/game/rails.ts): it teaches the rules the page opens with, the frame among them, and
+  // with the frame off its level has no lesson at all. The stand is set as this process starts, so the command line runs such a level again on the shipped
+  // stand (the entry above) and a caller that asks for one on the frozen stand is told to.
+  if (tutorial(file) && process.env.TPS_PROFILE !== 'shipped') return { ...out, code: 2, why: 'a tutorial mission is the page\'s: run it under TPS_PROFILE=shipped' };
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
