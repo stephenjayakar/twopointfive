@@ -1,9 +1,10 @@
-// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts, src/ui/findme.ts and src/render/outline.ts (six settings in Options > Game, every one
+// FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND — the check behind src/host/findme.ts, src/ui/findme.ts and src/render/outline.ts (nine settings in Options > Game, every one
 // starting where the game stood before it had them; no switch of the game's, no row the two stands differ in).
 //   bun run tools/qa/findme-check.ts        (also `probes.ts findme`; the same on both stands)
 // Headless: the whole Game under stepFrame, the loop the page runs, with nothing drawn; where the HUD would draw the ring is asked of findMeRing itself, and
 // the outline's pass is run on a stand-in device that writes down what it was asked for (what the rim LOOKS like is the page's to show: findme-page.cjs).
 //   table    (1) a harness has no store: the table is the starts; a kept line that is missing, broken or out of range reads as the starts, a good one as itself;
+//                a row moved is kept alone (the rows still at their starts are not written, so a start tuned later reaches them), and moved back, nothing is;
 //   as was   (2) with the table at its starts the follow camera is not written (its lead is the lead it was built with, to the bit) and a hand's orbit turns
 //                the view by exactly what it always did, on the free step and the fixed one;
 //            (3) the ring and the outline ON, and asked every frame, against both off: one seed, one scripted hand — the same game digest for digest and
@@ -25,7 +26,9 @@
 //                in the dark, goes in the light and under the goggles, and is the meter's word at once on a frame with no time in it; the pass asks the device
 //                for NOTHING while the frame is off, builds one program the first frame it is on and draws nothing until that program is there, then one
 //                scissored draw inside the box; nothing at no strength or with him off the picture; a program that fails is never drawn or asked again;
-//                the rim's width is its own (OUTLINE) times the width row, never under the floor nor over four pixels, read each frame.
+//                what the rim covers is its own (OUTLINE) times the width row, read each frame: less at every step down the row on a tall composite
+//                and a short one, nothing at all at none (the frame off), never over four pixels; the strength row is the rim's opacity (none = the
+//                frame off); the two light rows are the ends the strength fades between, by the light.
 // FINDME_BREAK=1 = the rows are moved and the table is not (the settings do nothing): (4), (5), (6), (8), (9) and (10) must fail.   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
@@ -35,14 +38,14 @@ export async function findmeCheck(): Promise<boolean> {
   const { mulberry32: seeded } = await import(`${ROOT}/src/math/dice.ts`);
   const F = await import(`${ROOT}/src/host/findme.ts`) as typeof import('../../src/host/findme.ts');
   const { OutlinePass, makeOutlineFrame, outlineBox, outlineRadius, OUTLINE } = await import(`${ROOT}/src/render/outline.ts`) as typeof import('../../src/render/outline.ts');
-  const { outlineWant, OUTLINE_LOOK } = F;
+  const { outlineWant } = F;
   const { findMeRing, findMeOutline } = await import(`${ROOT}/src/ui/findme.ts`) as typeof import('../../src/ui/findme.ts');
   const { FINDME, FINDME_START, findMeRead, TapTwice, TAPTWICE, behindYaw } = F;
   const BREAK = process.env.FINDME_BREAK === '1';
   const set: typeof F.setFindMe = BREAK ? () => {} : F.setFindMe;
   let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
-  console.log('\n=== findme: six settings to find your own man and turn the view; at their starts the game as it was ===');
+  console.log('\n=== findme: nine settings to find your own man and turn the view; at their starts the game as it was ===');
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
   const fixedWas = FIXEDSTEP.on, startWas = { ...FINDME };
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
@@ -55,8 +58,15 @@ export async function findmeCheck(): Promise<boolean> {
       const bad = [null, '', 'no', '[]', '{"pan":"x","ring":1,"turn":2,"behind":"yes"}', '{"pan":NaN}'].every(t => same(findMeRead(t), FINDME_START));
       const good = findMeRead('{"pan":0.4,"ring":true,"outline":true,"shape":true,"turn":-1,"behind":true}')   /* (a line kept by the build that had six) */, clamp = findMeRead('{"pan":7}').pan === 1 && findMeRead('{"pan":-3}').pan === 0;
       const wide = [findMeRead('{"width":0.5}').width, findMeRead('{"width":9}').width, findMeRead('{"width":0}').width, findMeRead('{"width":"x"}').width], wideOk = same(wide, [0.5, F.FINDME_WIDTH.max, F.FINDME_WIDTH.min, FINDME_START.width]) && FINDME_START.width === 1;
-      line(start && bad && clamp && wideOk && same(good, { pan: 0.4, ring: true, outline: true, width: FINDME_START.width, turn: -1, behind: true }), 'the table is the starts on a harness; a kept line that is broken reads as the starts, a good one as itself',
-        `as loaded ${JSON.stringify(startWas)} · broken lines ${bad ? 'all the starts' : 'NOT the starts'} · pan 7 / -3 read ${findMeRead('{"pan":7}').pan} / ${findMeRead('{"pan":-3}').pan} · width 0.5 / 9 / 0 / not a number read ${wide.join(' / ')}${wideOk ? '' : ' ✗'}`); }
+      const look = findMeRead('{"opacity":2,"lit":-1,"dark":0.5}'), lookOk = look.opacity === 1 && look.lit === 0 && look.dark === 0.5 && same([FINDME_START.opacity, FINDME_START.lit, FINDME_START.dark], [0.6, 0.3, 0.12]);
+      // what is kept: only the rows that are not at their starts (a store stood in for the page's; F.setFindMe itself, whatever FINDME_BREAK says)
+      const kept: string[] = [], had = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+      Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: () => null, setItem: (_k: string, v: string) => { kept.push(v); } } });
+      try { F.setFindMe('ring', true); F.setFindMe('dark', 0.2); F.setFindMe('dark', FINDME_START.dark); F.setFindMe('ring', true); F.resetFindMe(); F.resetFindMe(); }
+      finally { if (had) Object.defineProperty(globalThis, 'localStorage', had); else delete (globalThis as any).localStorage; }
+      const keptOk = same(kept, ['{"ring":true}', '{"ring":true,"dark":0.2}', '{"ring":true}', '{}']) && same(findMeRead(kept[1]), { ...FINDME_START, ring: true, dark: 0.2 }) && same(FINDME, FINDME_START);
+      line(start && bad && clamp && wideOk && lookOk && keptOk && same(good, { ...FINDME_START, pan: 0.4, ring: true, outline: true, turn: -1, behind: true }), 'the table is the starts on a harness; a kept line that is broken reads as the starts, a good one as itself',
+        `as loaded ${JSON.stringify(startWas)} · broken lines ${bad ? 'all the starts' : 'NOT the starts'} · pan 7 / -3 read ${findMeRead('{"pan":7}').pan} / ${findMeRead('{"pan":-3}').pan} · width 0.5 / 9 / 0 / not a number read ${wide.join(' / ')}${wideOk ? '' : ' ✗'} · opacity 2, lit -1, dark 0.5 read ${look.opacity}, ${look.lit}, ${look.dark}${lookOk ? '' : ' ✗'} · kept after ring on, dark moved, dark back, reset: ${kept.join(' ')}${keptOk ? '' : ' ✗'}`); }
 
     // (2) as it was: the lead untouched, the orbit's turn to the bit
     { const rows: string[] = []; let ok = true;
@@ -210,7 +220,12 @@ export async function findmeCheck(): Promise<boolean> {
       pl.down = true; fill(1); const offDown = !Fm.on && Fm.strength === 0; pl.down = was.down; fill(1, DT, false); const offHidden = !Fm.on; const held = fill(1, 0) === 1;   // (a frame with no time in it takes the meter's word whole)
       const back = { ...Fm, at: [...Fm.at] as [number, number, number], rect: [9, 9, 9, 9] as [number, number, number, number] }; { const f = cam.planarBasis().fwd; back.at[0] -= f[0] * 400; back.at[2] -= f[2] * 400; outlineBox(back, proj); }
       const behindLens = back.rect.every(v => v === 0);
-      const edges = outlineWant(OUTLINE_LOOK.full) === 1 && outlineWant(OUTLINE_LOOK.none) === 0 && outlineWant(0) === 1 && outlineWant(1) === 0 && outlineWant(0, 1) === 0;
+      const edges = outlineWant(FINDME_START.dark) === 1 && outlineWant(FINDME_START.lit) === 0 && outlineWant(0) === 1 && outlineWant(1) === 0 && outlineWant(0, 1) === 0 && Math.abs(outlineWant(0.21) - 0.5) < 1e-9;
+      // the two light rows move those ends: a fade between them by the light; `dark` set over `lit` = no fade, there under `lit` and gone at it
+      set('lit', 0.8); set('dark', 0.4); const cal = [outlineWant(0.9), outlineWant(0.8), outlineWant(0.6), outlineWant(0.4), outlineWant(0.1)];
+      set('lit', 0.5); set('dark', 0.9); const stopD = FINDME.dark, crossed = [outlineWant(0.6), outlineWant(0.5), outlineWant(0.49), outlineWant(0)]; set('lit', 0.1); const stopL = FINDME.lit;   // (neither row crosses the other: each stops at it)
+      set('dark', 0); set('lit', 0); const never = outlineWant(0); F.resetFindMe(); if (!BREAK) { set('outline', true); }   // (Reset writes both whole, whatever order they stand in; the outline's row back on for what follows)
+      const lights = Math.abs(cal[2] - 0.5) < 1e-9 && same([cal[0], cal[1], cal[3], cal[4]], [0, 0, 1, 1]) && same(crossed, [0, 0, 1, 1]) && stopD === 0.5 && stopL === 0.5 && never === 0 && FINDME.lit === FINDME_START.lit && FINDME.dark === FINDME_START.dark;
       // the pass, on a device that writes down what it is asked
       const rig = () => { const calls: string[] = []; const st: any = { calls, desc: null, u: null, sc: null, drawn: 0, pass: null, res: null, rej: null };
         const device: any = { createBindGroupLayout: () => { calls.push('layout'); return {}; }, createBuffer: () => { calls.push('buffer'); return {}; }, createPipelineLayout: () => ({}), createBindGroup: () => { calls.push('group'); return {}; },
@@ -228,25 +243,32 @@ export async function findmeCheck(): Promise<boolean> {
       const inside = !!sc && sc[0] >= Math.floor(r[0] * CW) - 1 && sc[1] >= Math.floor(r[1] * CH) - 1 && sc[0] + sc[2] <= Math.min(CW, Math.ceil(r[2] * CW)) && sc[1] + sc[3] <= Math.min(CH, Math.ceil(r[3] * CH)) && sc[2] > 0 && sc[3] > 0 && sc[0] >= 0 && sc[1] >= 0;
       const tgt = (A.st.desc as any)?.fragment?.targets?.[0], att = (A.st.pass as any)?.colorAttachments?.[0];
       const drew = n(A.st, 'pass') === 2 && n(A.st, 'pipeline') === 1 && n(A.st, 'group') === 1 && A.st.drawn === 3 && A.P.drawn === 2 && inside && !!tgt?.blend && tgt.format === 'rgba16float' && att?.loadOp === 'load' && att.view === hdr
-        && !!u && u.w[4] === pl.char.id && Math.abs(u.f[3] - OUTLINE.alpha) < 1e-3 && Fm.wide === 1 && u.f[5] >= OUTLINE.minPx && u.f[5] <= OUTLINE.maxPx && OUTLINE.minPx > 1 && u.f[5] === Math.fround(outlineRadius(CH)) && !/\bstorage\b|var<storage/.test(A.st.code ?? 'storage');
+        && !!u && u.w[4] === pl.char.id && Math.abs(u.f[3] - FINDME_START.opacity) < 1e-3 && Fm.alpha === FINDME_START.opacity && Fm.wide === 1 && u.f[5] >= OUTLINE.minPx && u.f[5] <= OUTLINE.maxPx && OUTLINE.minPx > 1 && u.f[5] === Math.fround(outlineRadius(CH)) && !/\bstorage\b|var<storage/.test(A.st.code ?? 'storage');
       const none = { ...Fm, rect: [...Fm.rect] as [number, number, number, number], strength: 0 }, away = { ...Fm, rect: [1.2, 0.2, 1.4, 0.5] as [number, number, number, number] };
       A.P.encode(A.enc, none, hdr, id, dep, CW, CH); A.P.encode(A.enc, away, hdr, id, dep, CW, CH); A.P.encode(A.enc, back, hdr, id, dep, CW, CH); A.P.encode(A.enc, off, hdr, id, dep, CW, CH); const skipped = n(A.st, 'pass') === 2;
       const B = rig(), err = console.error; let said = 0; console.error = () => { said++; };
       try { B.P.encode(B.enc, Fm, hdr, id, dep, CW, CH); B.st.rej?.(new Error("no")); await tick(); await tick(); for (let i = 0; i < 3; i++) B.P.encode(B.enc, Fm, hdr, id, dep, CW, CH); } finally { console.error = err; }
       const failed = n(B.st, 'pipeline') === 1 && n(B.st, 'pass') === 0 && said === 1;
-      // the width row: the rim's own width times the row, read each frame, never under the floor (and the floor is a pixel a man can see: over 0.85)
+      // the width row: what the rim covers (its radius less the half pixel the shader's fade takes) is its own times the row, read each frame; every step of the row is a different rim, down to none, where the frame is off
       const C = rig(); C.P.encode(C.enc, Fm, hdr, id, dep, CW, CH); C.st.res?.({}); await tick();
       const rad = (k: number, h = CH) => { set('width', k); fill(1); C.P.encode(C.enc, Fm, hdr, id, dep, CW, h); return C.st.u ? new Float32Array(C.st.u)[5] : NaN; };
       const asBuilt = (h: number) => Math.max(OUTLINE.minPx, Math.min(OUTLINE.maxPx, h * OUTLINE.width)), near = (a: number, b: number) => Math.abs(a - b) < 1e-4;
-      const rw = { one: rad(1), half: rad(0.5, 2160), most: rad(F.FINDME_WIDTH.max, 2160), least: rad(F.FINDME_WIDTH.min), low: rad(1, 300) };
-      const widths = near(rw.one, asBuilt(CH)) && near(rw.half, asBuilt(2160) / 2) && near(rw.most, OUTLINE.maxPx * F.FINDME_WIDTH.max) && rw.most <= 4 && near(rw.least, OUTLINE.floorPx) && OUTLINE.floorPx > 0.85 && near(rw.low, OUTLINE.minPx);
+      const rw = { one: rad(1), half: rad(0.5, 2160), most: rad(F.FINDME_WIDTH.max, 2160), low: rad(1, 300) };
+      const steps = (h: number) => { const r: number[] = []; for (let v = 5; v <= 150; v += 5) r.push(rad(v / 100, h)); return r.every((x, i) => x > 0.5 && (i === 0 || x - r[i - 1] > 1e-3)); }, noDead = steps(CH) && steps(300) && steps(2160);
+      const notWider = [300, 720, 1080, 2160].every(h => { for (let v = 5; v < 100; v += 5) if (outlineRadius(h, v / 100) > Math.max(0.9, asBuilt(h) * v / 100) + 1e-9) return false; return true; });   // (no kept row under 100 % is drawn wider than the rule before this one drew it: its radius times the row, floored at 0.9)
+      const p0 = n(C.st, 'pass'); set('width', 0); fill(1); const offNone = !Fm.on; C.P.encode(C.enc, { ...Fm, on: true, strength: 1, wide: 0 }, hdr, id, dep, CW, CH); const noneOk = F.FINDME_WIDTH.min === 0 && offNone && n(C.st, 'pass') === p0 && near(outlineRadius(CH, 0), 0.5);
+      const widths = near(rw.one, asBuilt(CH)) && near(rw.half - 0.5, (asBuilt(2160) - 0.5) / 4) && near(rw.most, OUTLINE.maxPx * F.FINDME_WIDTH.max) && rw.most <= 4 && notWider && near(rw.low, OUTLINE.minPx) && noDead && noneOk;
       set('width', FINDME_START.width);
+      // the strength row: the rim's opacity where the light says full; at none the frame is off
+      const ink = (k: number) => { set('opacity', k); fill(1, 0); C.P.encode(C.enc, Fm, hdr, id, dep, CW, CH); return C.st.u ? new Float32Array(C.st.u)[3] : NaN; };
+      const inks = [ink(1), ink(0.25)], p1 = n(C.st, 'pass'); set('opacity', 0); fill(1); const inkOff = !Fm.on; C.P.encode(C.enc, { ...Fm, on: true, strength: 1, alpha: 0 }, hdr, id, dep, CW, CH);
+      const strong = Math.abs(inks[0] - 1) < 1e-3 && Math.abs(inks[1] - 0.25) < 1e-3 && inkOff && n(C.st, 'pass') === p1; set('opacity', FINDME_START.opacity); fill(1);
       set('outline', false); pl.visibility = was.vis; pl.nvAmount = was.nv; fill(1);   // (and the frame is off again)
       const src = await Bun.file(`${ROOT}/src/render/passes.ts`).text(), site = (src.match(/new OutlinePass\(/g) ?? []).length === 1 && src.includes('if (this.outline?.on) (this.outlinePass ??= new OutlinePass(');
-      line(offRow && frameOk && lit < 0.01 && nv < 0.01 && offDown && offHidden && held && behindLens && edges && quiet && built && drew && skipped && failed && widths && site && !Fm.on,
-        'the outline: off with its row off, the man down or his marks hidden; on, his owner, a small box he stands in, strong in the dark only; the pass asks nothing while off, draws once its one program is there, never after a failed one; its width is the width row\'s',
+      line(offRow && frameOk && lit < 0.01 && nv < 0.01 && offDown && offHidden && held && behindLens && edges && quiet && built && drew && skipped && failed && widths && strong && lights && site && !Fm.on,
+        'the outline: off with its row off, the man down or his marks hidden; on, his owner, a small box he stands in, strong in the dark only; the pass asks nothing while off, draws once its one program is there, never after a failed one; its width, its strength and the light it fades by are the rows\'',
         `row off: ${offRow ? 'frame off' : 'frame ON ✗'} · on: owner ${Fm.owner}, box ${(share * 100).toFixed(1)} % of the picture${inBox ? '' : ' (he is OUTSIDE it ✗)'}, strength ${s1.toFixed(2)} after a frame, ${dark.toFixed(2)} in the dark, ${lit.toFixed(2)} in the light, ${nv.toFixed(2)} under the goggles${frameOk ? '' : ' ✗'} · down: ${offDown ? 'off' : 'ON ✗'} · marks hidden: ${offHidden ? 'off' : 'ON ✗'} · under a card (no time): ${held ? 'the meter\'s word at once' : 'NOT at once ✗'} · behind the lens: ${behindLens ? 'an empty box' : `a box ${back.rect.map(v => v.toFixed(2)).join(' ')} ✗`} · the rule's ends ${edges ? 'hold' : '✗'}`
-        + `\n    the pass: frame off ${quiet ? 'no call to the device' : `${A.st.calls.join(' ')} ✗`} · first frames on ${built ? 'one module, one pipeline, no draw' : '✗'} · program in: ${n(A.st, 'pass')} passes over 2 + 3 frames (2 wanted), scissor ${sc ? sc.join(' ') : 'none'} of ${CW} × ${CH}${inside ? '' : ' ✗'}, draw(${A.st.drawn}), blended ${tgt?.blend ? 'yes' : 'NO ✗'}, radius ${u ? u.f[5].toFixed(2) : '?'} px${drew ? '' : ' ✗'} · no strength / off the picture / behind the lens / off: ${skipped ? 'no pass' : 'a pass ✗'} · a program that fails: ${failed ? 'said once, never drawn, never asked again' : '✗'} · width row at 100 % / 50 % (2160 high) / most (2160 high) / least / 100 % on 300 high: ${[rw.one, rw.half, rw.most, rw.least, rw.low].map(v => v.toFixed(2)).join(' / ')} px${widths ? '' : ' ✗'} · passes.ts makes it in one place, under the frame\'s on: ${site ? 'yes' : 'NO ✗'}`); }
+        + `\n    the pass: frame off ${quiet ? 'no call to the device' : `${A.st.calls.join(' ')} ✗`} · first frames on ${built ? 'one module, one pipeline, no draw' : '✗'} · program in: ${n(A.st, 'pass')} passes over 2 + 3 frames (2 wanted), scissor ${sc ? sc.join(' ') : 'none'} of ${CW} × ${CH}${inside ? '' : ' ✗'}, draw(${A.st.drawn}), blended ${tgt?.blend ? 'yes' : 'NO ✗'}, radius ${u ? u.f[5].toFixed(2) : '?'} px${drew ? '' : ' ✗'} · no strength / off the picture / behind the lens / off: ${skipped ? 'no pass' : 'a pass ✗'} · a program that fails: ${failed ? 'said once, never drawn, never asked again' : '✗'} · width row at 100 % / 50 % (2160 high) / most (2160 high) / 100 % on 300 high: radius ${[rw.one, rw.half, rw.most, rw.low].map(v => v.toFixed(2)).join(' / ')} px · every step of the row a different rim on 300, 720 and 2160 rows: ${noDead ? 'yes' : 'NO ✗'}, none under 100 % wider than the old rule's: ${notWider ? 'yes' : 'NO ✗'} · at none: ${noneOk ? 'the frame off, no pass' : '✗'}${widths ? '' : ' ✗'} · strength row at 100 % / 25 %: opacity ${inks.map(v => v.toFixed(2)).join(' / ')}, at none ${inkOff ? 'the frame off' : 'ON ✗'}${strong ? '' : ' ✗'} · light rows at 80 / 40: ${cal.map(v => v.toFixed(2)).join(' ')} at light 0.9 0.8 0.6 0.4 0.1; full dragged over shows stops at it (${stopD}), shows dragged under full stops at it (${stopL}): ${crossed.join(' ')} at 0.6 0.5 0.49 0${lights ? '' : ' ✗'} · passes.ts makes it in one place, under the frame\'s on: ${site ? 'yes' : 'NO ✗'}`); }
   } finally { Object.assign(FINDME, startWas); FIXEDSTEP.on = fixedWas; }
   console.log(all ? '\nfindme: ALL PASS' : '\nfindme: FAIL');
   return all;
