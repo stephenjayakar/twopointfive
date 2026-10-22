@@ -163,7 +163,8 @@ export async function qonlyCheck(): Promise<boolean> {
       line(!has(on, x) && !has(on, t) && has(off, x) && has(off, t), 'the squad panel lists no key for the menu and none for who; with the switch off it lists both', `keys on the panel: ${on || '(none)'} · off: ${off}`); }
 
     // (9) the board
-    { const boot = (q: string) => { K.keysBoot(new URLSearchParams(q)); if (BREAK) KM.qOnly = false; }, read = () => `${K.gameCode('KeyX') || '∅'}/${K.gameCode('KeyT') || '∅'} ${K.capNow('KeyX')}/${K.capNow('KeyT')}`;
+    { const boot = (q: string) => { K.keysBoot(new URLSearchParams(q ? `${q}&slotsetup=0` : 'slotsetup=0')); if (BREAK) KM.qOnly = false; },   // (the selector's row and the light's left on Z and L: the rows the gun's setup frees are slotsetup-check.ts's)
+      read = () => `${K.gameCode('KeyX') || '∅'}/${K.gameCode('KeyT') || '∅'} ${K.capNow('KeyX')}/${K.capNow('KeyT')}`;
       boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyX', 'KeyT', 'KeyQ', 'KeyB'].includes(c) && K.gameCode(c) !== c).length, f = K.gameCode('KeyF');
       boot('qonly=0'); const b = read(); boot('qring=0'); const c = read();
       boot(''); const w1 = K.keyText('X on the ground, then 5: he goes loud'), w2 = K.keyText('Stack up. X on the door, then 1'), w3 = K.keyText('T again, off the men: BLUE'), cmd = K.capNow('KeyB');
