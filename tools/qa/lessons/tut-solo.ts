@@ -63,7 +63,10 @@ const once = new Set<string>();
 const stepIs = (B: Bot, id: string) => B.g.lesson.step?.id === id;
 /** play these lines again, each when it is the one that is up */
 const SETUP = () => setupOn() ? ['setup', 'tab'] : [];
-const replay = (B: Bot, ids: string[]) => { for (const id of ids) { if (!B.until(() => stepIs(B, id), 4)) B.fail(`again: '${id}' did not come up after the checkpoint (the lesson is on '${B.g.lesson.step?.id}')`); B.step(30); steps[id](B); B.step(30); } };
+const replay = (B: Bot, ids: string[]) => { for (const id of ids) {
+  // (a line that may be true as it comes up — `idleOk` — has gone by when the lesson is already past it)
+  const gone = () => idleOk.includes(id) && B.g.lesson.i > B.g.level.scenarios.lesson.steps.findIndex((T: { id: string }) => T.id === id);
+  if (!B.until(() => stepIs(B, id) || gone(), 4)) B.fail(`again: '${id}' did not come up after the checkpoint (the lesson is on '${B.g.lesson.step?.id}')`); if (gone()) continue; B.step(30); steps[id](B); B.step(30); } };
 /** down as the line warns, then Enter */
 const downAndBack = (B: Bot, how: () => void, to: string) => {
   how(); if (!B.until(() => B.g.player.down, 4)) B.fail(`again: he was not hit (${to})`);
