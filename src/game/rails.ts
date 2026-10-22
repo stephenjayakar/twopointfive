@@ -21,6 +21,9 @@
 //   · FOG BY THE STEP. `rails.fog` / a step's `fog`: the fog of war as the newest step that says so has it.
 //   · THE SKY SEAT (`rails.sky`): nobody on the floor is the player. He is parked out of the picture and out of every sense, the view rides the squad
 //     and the walk keys (action `pan`) shift it about them; the seat's own rows on the HUD are the page's to hide (Rails.skyOn).
+//   · THE HOLD IS ITS OWN LINE (a step's `noTap`, `menuLine`): while a step teaches the command key held, a tap of it gives no order and a few words come up
+//     under the line; with the ring up the line is what to press in it. A step's `eye` is one more lookout for the fog while it is up (the squad's own charge
+//     on a wall, which its men stand with their backs to); a step's `onWay` hands the view back to the squad once its order is given.
 // THE PROMPT: `prompt()` is the one line the page draws big (ui/overlay.ts) in place of the small objective row.
 // The switch `RAILS.on`: ON in the page (`?rails=0` = a rails level is its mission alone: no lesson, nothing locked, no cues — lesson.ts `data`), OFF here and
 // on the frozen stand (`TPS_RAILS=1`). No shipped level but the tutorial group's carries the record, so no other run moves either way.
@@ -32,7 +35,7 @@ import type { Input } from './input';
 import type { FogEye } from './fogofwar';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
-import { stepLine } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
+import { stepLine, lessonLine } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 
 export const RAILS = { on: false,
   /** the sky seat: metres a second the walk keys shift the view at the default zoom, and how far from the squad it may go */
@@ -45,6 +48,8 @@ export const RAILS = { on: false,
    *  down the screen, with its middle `keepUp` of the reach up the screen from the view's own (the step's line sits low in the middle: a ring behind it,
    *  or behind the panel, is a ring nobody sees) */
   keep: 0.21, keepSpeed: 9, keepDeep: 0.79, keepUp: 0.39,
+  /** a step's `onWay`: a man of the squad under an order whose mark is within this many metres of the step's own is on his way to it (0: never) */
+  wayM: 6,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
 export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
@@ -66,14 +71,19 @@ const ACTS: Record<string, Act> = {
 };
 /** never locked: the page's own (the pause, the back key, a restart, the one-tick codes the host hands the tick) */
 /** the lookout's id among the fog's eyes: no character's, and under the sticky cameras' (stickycam.ts EYE_ID, which its count starts at) */
-const LOOKOUT_ID = 199;
+const LOOKOUT_ID = 199, STEP_EYE_ID = 198;
+/** seconds a refused tap's words stay up under the line */
+const NOTE_SECS = 2.6;
+/** metres from the step's mark the squad's ring may be opened and still be the step's ring (its `menuLine`) */
+const MENU_M = 6;
+function lookoutEye(id: number, e: { at: Vec3; yaw: number; fov?: number }): FogEye { return { id, pos: e.at, look: [Math.sin(e.yaw), 0, Math.cos(e.yaw)], at: e.at, fov: e.fov ?? 120, near: 0 }; }
 const FREE = /^(Escape|Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|BracketRight)$/;
 const DIGIT = /^Digit[1-5]$/;
 export const RAILS_ACTIONS: readonly string[] = Object.keys(ACTS);
 
 /** what is wrong with a lesson block's rails keys (lesson.ts checkLesson adds these to its own) */
 export function railsFaults(L: LessonData): string[] {
-  const out: string[] = [], R = L.rails; if (!R) { L.steps.forEach((T, i) => { if (T.allow || T.deny || T.cue || T.checkpoint || T.fog !== undefined) out.push(`steps[${i}] '${T.id}' carries rails keys and the lesson has no rails record`); }); return out; }
+  const out: string[] = [], R = L.rails; if (!R) { L.steps.forEach((T, i) => { if (T.allow || T.deny || T.cue || T.checkpoint || T.fog !== undefined || T.noTap || T.eye || T.onWay) out.push(`steps[${i}] '${T.id}' carries rails keys and the lesson has no rails record`); }); return out; }
   const bad = (w: string, a: unknown) => { if (a === undefined) return; if (!Array.isArray(a)) { out.push(`${w}: a list of actions`); return; } for (const x of a) if (!ACTS[x as string]) out.push(`${w}: no action '${String(x)}' (${RAILS_ACTIONS.join(', ')})`); };
   bad('rails.allow', R.allow);
   const cues = new Set<string>();
@@ -99,6 +109,12 @@ export class Rails {
   private sky = { off: [0, 0, 0] as Vec3, mid: null as Vec3 | null, midT: -1, parked: false, was: null as { invisible: boolean } | null, view: null as { yaw: number; pitch: number; dist: number } | null, again: false };
   /** teammates spared a down: the game's clock each is back on his feet at, by character id */
   spared = new Map<number, number>();
+  /** the game's clock at the last tap of the command key a step refused (noTap): its words are up for NOTE_SECS after it — the page's, nothing reads it back */
+  private tapT = -1e9;
+  /** has an order moved the squad off the spot the seat parked it on, this run (the knee behind the trucks is kept until one has) */
+  private moved = false;
+  /** the step whose `onWay` has put night vision up, once (the key is the player's again after it) */
+  private wayNv = -1;
   log: string[] = [];
   constructor(private g: Game) {}
 
@@ -120,6 +136,20 @@ export class Rails {
   /** A MISSION THAT TEACHES THE WALL (a step of it allows `wall`) keeps a walk into one from taking it until that line. The walk has no key for the gate to
    *  drop (player.ts wallPress asks here); a mission that never names the wall leaves it as the page has it. */
   locksWall(): boolean { if (BREAK) return false; const A = this.allowed(), S = this.lesson(); return !!A && !!S && !A.has('wall') && S.L.steps.some(T => T.allow?.includes('wall')); }
+
+  /** no teammate shows an aiming laser on this level (irlaser.ts laserOn asks) */
+  noLasers(): boolean { return !BREAK && this.data?.lasers === false; }
+  /** THE STEP TEACHES THE HOLD (its `noTap`): a tap of the command key gives nothing (orders.ts quickGive asks, and the tap is noted for the page) */
+  tapOff(): boolean { if (!this.teachesHold()) return false; this.tapT = this.g.time; RAILS_STATS.dropped++; return true; }
+  /** the step that is up teaches the hold (the squad panel's row for the tap is not offered: orders.ts) */
+  teachesHold(): boolean { const S = this.lesson(); return !BREAK && !!S?.L.steps[S.i]?.noTap; }
+  /** a run begun, or a checkpoint put back: what the frame keeps for the page and for one step is as at a start */
+  private clean() { this.tapT = -1e9; this.wayNv = -1; this.stepLook = null; }
+  /** is a man of the squad under an order to the step's mark (the step's `onWay`: its order has been given and they are walking it) */
+  private onWay(S: { L: LessonData; i: number } | null): boolean {
+    const T = S?.L.steps[S.i], at = T?.at; if (BREAK || !T?.onWay || !at || !(RAILS.wayM > 0)) return false;
+    const O = this.g.orders; return !!O && this.squad().some(gd => { const P = O.of(gd)?.post; return !!P && Math.hypot(P[0] - at[0], P[2] - at[2]) < RAILS.wayM; });
+  }
 
   /** does Space offer a row of this verb here (player.ts buildInteractables): the keys are locked by action, and Space is ONE key over every row in
    *  reach — so a level names the verbs its steps teach (`rails.rows`) and a thing nobody taught has no row at all. On such a level
@@ -166,9 +196,16 @@ export class Rails {
   /** the sky seat's lookout (fogofwar.ts update: one more of the team's eyes): null without one */
   eye(): FogEye | null {
     const e = this.data?.sky?.eye; if (!e) return null;
-    return this.lookout ??= { id: LOOKOUT_ID, pos: e.at, look: [Math.sin(e.yaw), 0, Math.cos(e.yaw)], at: e.at, fov: e.fov ?? 120, near: 0 };
+    return this.lookout ??= lookoutEye(LOOKOUT_ID, e);
   }
   private lookout: FogEye | null = null;
+  /** the step's own lookout (its `eye`), for as long as the step is up: null without one */
+  stepEye(): FogEye | null {
+    const S = this.lesson(), e = S?.L.steps[S.i]?.eye; if (!e || BREAK) return null;
+    if (this.stepLook?.i !== S!.i) this.stepLook = { i: S!.i, eye: lookoutEye(STEP_EYE_ID, e) };
+    return this.stepLook.eye;
+  }
+  private stepLook: { i: number; eye: FogEye } | null = null;
 
   /** between ticks, with the HOST's camera (game.ts update): the mission again opens on the view the first run opened on. A view left zoomed all the way out
    *  could not do the step that asks for a zoom. The view is the host's, so it is set there and reaches the game in the next tick's record like any turn of it */
@@ -184,15 +221,17 @@ export class Rails {
   tick(dt: number) {
     const S = this.lesson(), g = this.g;
     if (!S) { if (this.sky.parked) this.unpark(); return; }
-    if (this.run !== g.mission) { this.run = g.mission; this.answered = -1; this.back = false; this.spared.clear(); if (this.sky.parked) this.unpark(); this.sky.again = true; this.fresh = 3; this.lookout = null; this.sky.off = [0, 0, 0]; this.sky.mid = null; this.sky.midT = -1; this.log.length = 0; this.ordersSeen = g.orders?.log.length ?? 0; this.startProgram('start'); }
+    if (this.run !== g.mission) { this.run = g.mission; this.answered = -1; this.back = false; this.spared.clear(); if (this.sky.parked) this.unpark(); this.sky.again = true; this.fresh = 3; this.lookout = null; this.sky.off = [0, 0, 0]; this.sky.mid = null; this.sky.midT = -1; this.log.length = 0; this.ordersSeen = g.orders?.log.length ?? 0; this.moved = false; this.clean(); this.startProgram('start'); }
     else if (this.fresh > 0) this.fresh--;
-    if (this.back) { this.back = false; this.startProgram('checkpoint'); this.answered = -1; this.answer(S, true); }
+    if (this.back) { this.back = false; this.clean(); this.moved = S.i > S.L.steps.findIndex(T => T.allow?.includes('order'));   // (put back past the step that taught the order: one has been given)
+      this.startProgram('checkpoint'); this.answered = -1; this.answer(S, true); }
     if (this.skyOn && !this.sky.parked) this.park(S.L.rails!);
     if (this.answered !== S.i) this.answer(S, false);
     // every order the player gives is told to the level's program (a beat waits on it: c.on('signal', 'order:move'))
-    { const L = g.orders?.log; if (L) { if (L.length < this.ordersSeen) this.ordersSeen = L.length; for (; this.ordersSeen < L.length; this.ordersSeen++) { const o = L[this.ordersSeen].order; if (!(this.skyOn && o === 'fallIn')) g.director?.signal(`order:${o}`); } } }
+    { const L = g.orders?.log; if (L) { if (L.length < this.ordersSeen) this.ordersSeen = L.length; for (; this.ordersSeen < L.length; this.ordersSeen++) { const o = L[this.ordersSeen].order; if (!(this.skyOn && o === 'fallIn')) { this.moved = true; g.director?.signal(`order:${o}`); } } } }
     // (the sky seat: there is nobody to fall in on — the command key on nothing, or on a man, would walk the squad off to the parked player. Such a man holds where he is)
-    if (this.skyOn && g.orders) for (const gd of this.squad()) if (g.orders.of(gd)?.order === 'fallIn') this.holdHere(gd);
+    if (this.skyOn && g.orders) for (const gd of this.squad()) if (g.orders.of(gd)?.order === 'fallIn') this.holdHere(gd, !!S.L.rails!.sky!.low && !this.moved);   // (still on its knee behind the trucks if no order has moved it yet)
+    if (S.L.steps[S.i]?.onWay?.nv === false && this.wayNv !== S.i && this.onWay(S)) { this.wayNv = S.i; if (g.player.nv) { g.player.nv = false; this.note('on the way out: night vision up'); } }   // (once: the key is his again after it)
     for (const [id, t] of this.spared) if (g.time >= t) { this.spared.delete(id); const gd = g.guards.find(x => x.char.id === id); if (gd && gd.state !== 'dead') this.note(`${gd.callsign} is up again`); }
     void dt;
   }
@@ -225,13 +264,17 @@ export class Rails {
 
   // ---------------------------------------------------------------- the prompt
   /** the one line on screen (null: no rails, every step done, the run over) */
-  prompt(): { line: string; n: number; of: number } | null {
+  prompt(): { line: string; n: number; of: number; note?: string } | null {
     const S = this.lesson(), of = S?.L.steps.length ?? 0; if (!S || !of) return null;
     // (every step done and the mission not yet over — the last metre to an exit, the last man of a fight: the last line stays up until the mission's own
     //  end. The small row it would fall back to is the one a tutorial mission never shows)
     if (S.i >= of ? BREAK || this.g.lesson.over() : !this.g.lesson.objective()) return null;
     const i = Math.min(S.i, of - 1);
-    return { line: stepLine(S.L.steps[i]), n: i + 1, of };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
+    // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it — on its first page `menuLine`, on a page under it `pageLine`)
+    const T = S.L.steps[i], M = S.i < of ? this.g.orders?.menu : null, on = !!M && (!T.at || Math.hypot(M.target.at[0] - T.at[0], M.target.at[2] - T.at[2]) < MENU_M);
+    const ring = on ? (M!.page === null ? T.menuLine : T.pageLine ?? T.menuLine) : undefined;
+    const d = this.g.time - this.tapT, note = S.i < of && T.noTap && !M && d >= 0 && d < NOTE_SECS ? lessonLine(T.noTap) : undefined;
+    return { line: ring ? lessonLine(ring) : stepLine(T), n: i + 1, of, ...(note ? { note } : null) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 
   // ---------------------------------------------------------------- nobody is lost
@@ -254,10 +297,10 @@ export class Rails {
     const g = this.g; this.sky.parked = true; this.sky.was = { invisible: g.playerInvisible };
     g.playerInvisible = true; g.teleportPlayer(R.sky!.park);
     // (a squad with no order falls in on Sam: on the parked man, out of the picture. In this seat it holds where the mission stood it until its first order)
-    for (const gd of this.squad()) this.holdHere(gd);
+    for (const gd of this.squad()) this.holdHere(gd, !!R.sky!.low);
     this.note(`sky seat: the player parked at (${R.sky!.park[0]}, ${R.sky!.park[2]})`);
   }
-  private holdHere(gd: Guard) { const p = gd.char.pos; this.g.orders?.assign(gd, { order: 'hold', post: [p[0], 0, p[2]], face: gd.char.bodyYaw, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding' }); }
+  private holdHere(gd: Guard, low = false) { const p = gd.char.pos; this.g.orders?.assign(gd, { order: 'hold', post: [p[0], 0, p[2]], face: gd.char.bodyYaw, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding', ...(low ? { crouch: true } : null) }); }
   private unpark() { const g = this.g; this.sky.parked = false; if (this.sky.was) { g.playerInvisible = this.sky.was.invisible; this.sky.was = null; } }
   /** the walk keys shift the view about the squad, by the way the seat looks */
   private pan(input: Input, cam: FollowCamera, dt: number) {
@@ -271,6 +314,8 @@ export class Rails {
   private keep(input: Input, cam: FollowCamera, dt: number) {
     if (BREAK || !RAILS.keep || ACTS.move.keys!.some(k => input.keys.has(k))) return;
     const S = this.lesson(), at = S?.L.steps[S.i]?.at, v = at ? this.look() : null; if (!at || !v) return;
+    if (this.onWay(S)) {   // (the step's order is given: the view goes back to the squad, which it rides to the mark)
+      const o = this.sky.off, d = Math.hypot(o[0], o[2]); if (d < 1e-3) return; const k = Math.max(0, 1 - RAILS.keepSpeed * (cam.distance / 21) * dt / d); o[0] *= k; o[2] *= k; return; }
     const B = cam.planarBasis(), Rx = RAILS.keep * cam.distance, Rf = Rx * RAILS.keepDeep, dx = at[0] - v[0], dz = at[2] - v[2];
     const r = dx * B.right[0] + dz * B.right[2], f = dx * B.fwd[0] + dz * B.fwd[2] - Rx * RAILS.keepUp, e = Math.hypot(r / Rx, f / Rf); if (e <= 1) return;
     // (the shift that brings the mark to the oval's edge, along the line from the oval's middle to it)
