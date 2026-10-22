@@ -39,10 +39,13 @@ const ROOT = resolve(import.meta.dir, '../..');
 // 0d3a18078: the ledger's lines and cards reworded and the rows Space offers there (words and a list in levels/tut-quiet.json alone; no box, door, mark or route moved).
 // c069ca16f: a join's base. The two before it are siblings (one took the fog of war out of levels/tut-sky.json, the other reworded levels/tut-quiet.json and
 //   lengthened its rows list), so neither holds both; this join is the first commit that does. No level's own part moved in the join itself.
+// d13650f85: the plan mission's barrier post moved and two drums put in a corner (levels/tut-plan.json alone; a sibling of the join above).
+// 3046a115e: a join's base again. c069ca16f and d13650f85 are siblings (the first holds the reworded levels/tut-quiet.json and not the plan mission's moved
+//   post, the second the other way round); this join is the first commit that holds both. No level's own part moved in the join itself.
 // 493643cab: the join of the solo tutorial's halt (dressed as the level's own furniture, two posts renamed, its last beat re-cut, its cards and the stun's mark:
 //   levels/tut-solo.json alone) with the base before it, f3ef62b01: it holds both, 429 lines green against it.
 // 483deaee9: a join's base again: the solo tutorial's halt (493643cab) and the ledger's words (c069ca16f) are siblings, and this join is the first commit that holds both.
-const BASE_REVS = ['483deaee9', '493643cab', 'c069ca16f', '0d3a18078', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
+const BASE_REVS = ['483deaee9', '3046a115e', '493643cab', 'c069ca16f', 'd13650f85', '0d3a18078', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
 /** a lesson step's keys that are words on the objective row: read from today's file, never held to the base */
 const STEP_WORDS = ['line', 'setupLine', 'ringLine'];
 const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
