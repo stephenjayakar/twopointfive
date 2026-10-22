@@ -9,8 +9,9 @@
 //       write, the file says so (meta.between) and replays; the same file with that word struck does NOT (the scene is the one the word exists for). An
 //       immediate stop between frames says the word too
 //   (d) inside an update nothing is cut (what changes the game there is the frame's own input), and with nothing changed a recording runs to its own stop
-//   (e) a save kept IN MEMORY (a unit on the floor), written while the tape ran, loaded between frames: the recording is cut there, and the sensors the
-//       snapshot put back in their recording state are live again (no recorder is behind them)
+//   (e) a save kept IN MEMORY (a unit on the floor), written while the tape ran, loaded between frames: the recording is cut there, and the sensors are
+//       live (their stream is the host's — sensors.ts SensorStream — and no snapshot puts it back)
+// A load INSIDE an update is the other half: tools/qa/journalload-check.ts.
 // The break word makes cut() do nothing: the tape runs on across the change, and (a) (b) (c) (e) must fail.
 import { standUp, ROOT } from './headless.ts';
 import { replaySession } from './replay.ts';
@@ -79,8 +80,8 @@ export async function journalCutCheck(): Promise<boolean> {
     try {
       const S = await scene(7105, false, 100); const { game, got, step } = S; SS.SAVETIMELINE.on = true;   // (a save in memory is the timeline's: on for this part on the stand that holds it off — after the stand-up, which sets the stand's own)
       spawnUnit(game, { team: 'guard', pos: [6, 0, 11], yaw: 0, weapon: 'guard9mm', name: 'Probe' });   // (between frames, off the tape: this part replays nothing)
-      step(20); const wr = game.saves.write(game, 'manual', 'by hand'); const mem = (game.saves.timeline() as any[]).find(x => x.mem); step(40); const at = S.n();   // (written between two frames: the snapshot holds the sensors recording)
-      const why = mem ? game.saves.load(game, mem.key) : `no save in memory was written (${wr.ok ? `a file was: ${wr.info?.key}` : wr.why} · units ${game.guards.filter((x: any) => x.unit).length})`; const state: string = game.journal.state, mode: string = game.sensors.mode;
+      step(20); S.W.input.pressed.add('F5'); step(1); const mem = (game.saves.timeline() as any[]).find(x => x.mem); step(39); const at = S.n();   // (F5, inside an update: a save written between two frames would itself end the recording — Checkpoints.write)
+      const why = mem ? game.saves.load(game, mem.key) : `no save in memory was written (units ${game.guards.filter((x: any) => x.unit).length})`; const state: string = game.journal.state, mode: string = game.sensors.mode;
       const ok = !why && got.length === 1 && got[0].why === 'a checkpoint was loaded' && got[0].f?.frames === at && state === 'pending' && mode === 'live';
       verdict(ok, '(e) a save in memory written while the tape ran, loaded between frames: the recording is cut there and the sensors are live again',
         `${at} frames, a unit on the floor, the load (${why ?? 'done'}): ${got.length} file handed over${got[0] ? `, stopped '${got[0].why}', ${got[0].f?.frames} frames` : ''} · recorder ${state} · sensors ${mode}`);

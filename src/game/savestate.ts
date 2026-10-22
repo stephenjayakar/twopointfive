@@ -815,7 +815,9 @@ export const localStore: SaveStore = {
 export function memoryStore(): SaveStore & { map: Map<string, string> } { const map = new Map<string, string>(); return { map, get: k => map.get(k) ?? null, set: (k, v) => { map.set(k, v); return true; }, remove: k => { map.delete(k); } }; }
 export interface SlotInfo { key: string; slot: 'manual' | 'auto'; n: number; label: string; kind: SaveState['kind']; savedAt: number; missionT: number; stage: string; runId: string; bytes: number; /** an autosave the floor came down on inside CKPT.regretSecs (why): offered only when nothing better is stored */ regret?: string; /** kept in memory, not in the store (SAVETIMELINE with a team on the floor): this run's, gone with the page */ mem?: true; }
 /** a save kept in memory: the whole game as rollback.ts took it, and its picture */
-interface MemSave { info: SlotInfo; snap: Snapshot; pic: string | null; }
+interface MemSave { info: SlotInfo; snap: Snapshot; pic: string | null; /** the F10 recording it was made under (journal.ts `take`; 0 = none) */ take: number; }
+/** what a recording takes of the checkpoint store at its frame 0 and a replay's store is given (Checkpoints.tapeBegin / tapeSeed) */
+export interface TapeSlots { index: string | null; lastAuto: { key: string; t: number } | null; }
 /** WHERE THE SAVES IN MEMORY STAND: behind closures, on purpose. A snapshot walks everything the Game reaches and a restore writes it all back — a table of
  *  snapshots the Game could reach would be copied into the next one and rolled back by the last. This is the host's shelf, not the simulation's state: no
  *  snapshot holds it, no state word reads it. */
@@ -936,6 +938,7 @@ export class Checkpoints {
   write(g: Game, slot: 'auto' | 'manual' | 'harness', label = '', force = false): SaveResult {
     let s: SaveState;
     this.runId ||= newRunId();   // (a save before the first tick still belongs to a run the cards and the Enter path can match)
+    if (slot !== 'harness') g.journal.cut('a checkpoint was saved between frames');   // (off the panel, between two frames: on no tape, and the store is part of what an F10 recording replays on — journal.ts slotRead; inside an update, where every save of play is made, this does nothing)
     if (SAVETIMELINE.on && slot !== 'harness' && squadUp(g)) return this.writeMem(g, slot, label);
     try { s = saveState(g, { label, kind: slot, force, runId: this.runId }); }
     catch (e) { const why = (e as Error).message.replace(/^checkpoint refused: /, ''); this.stats.refused++; this.note(g, `refused ${slot}: ${why}`); return { ok: false, why }; }
@@ -949,7 +952,7 @@ export class Checkpoints {
       let stored = this.put(key, json);
       if (!stored && SAVETIMELINE.on) { for (const k of Object.keys(idx.slots)) this.store.remove(KEY_PIC(k)); stored = this.put(key, json); }   // (a full store: a picture never costs a save — every one goes, and the save is tried again)
       if (!stored) { this.stats.refused++; this.note(g, `refused ${slot}: the store would not take ${(bytes / 1024).toFixed(0)} KB (${key.replace(KEY_PREFIX, '')})`); return { ok: false, why: 'the browser would not store it (quota / private window)', bytes, state: s }; }   // (nothing stored: no index entry pointing at a stale slot, no CHECKPOINT tag)
-      idx.slots[key] = info; if (slot === 'auto') idx.next = (n + 1) % ring; this.put(KEY_INDEX, JSON.stringify(idx));
+      idx.slots[key] = info; if (slot === 'auto') idx.next = (n + 1) % ring; this.put(KEY_INDEX, JSON.stringify(idx)); g.journal.slotWrote(key);
       if (SAVETIMELINE.on) this.picture?.(info);
     }
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key: info!.key, t: g.time }; } else if (slot === 'manual') { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; } else this.stats.harness++;
@@ -1007,7 +1010,7 @@ export class Checkpoints {
     for (let i = 0; i < ring; i++) { const e = this.shelf.get(KEY_MEM(slot, i)); if (!e) { n = i; break; } if (e.info.savedAt < at) { at = e.info.savedAt; n = i; } }
     const key = KEY_MEM(slot, n);
     const info: SlotInfo = { key, slot, n, label, kind: slot, savedAt: Date.now(), missionT: g.mission.stats.elapsed, stage: g.mission.stage, runId: this.runId, bytes: 0, mem: true };
-    this.shelf.set(key, { info, snap: takeSnapshot(g), pic: null });
+    this.shelf.set(key, { info, snap: takeSnapshot(g), pic: null, take: g.journal.take });
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key, t: g.time }; } else { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; }
     this.note(g, `${slot} → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
     this.picture?.(info); this.onSaved?.(null, info);
@@ -1019,13 +1022,15 @@ export class Checkpoints {
     const e = this.shelf.get(key); if (!e) return 'that checkpoint is gone';
     { const why = this.memNo(g, e); if (why) { this.note(g, `load refused: ${why}`); return why; } }
     g.journal.cut('a checkpoint was loaded');   // (as a file's load, below: between frames it is on no tape)
+    // (inside an update — Enter once down — the load is that frame's own input and the recording runs on: the sensors' stream is the host's, sensors.ts, and
+    //  a replay puts back its own save of the same frame. A save from BEFORE the recording is in no replay's memory: the tape ends with this frame)
+    if (g.journal.recording && e.take !== g.journal.take) g.journal.cut('a save in memory from before the recording was loaded', true);
     // what is NOT the saved moment's to take back: the run's counts, the controller's books, and what the host and this machine set on the game since —
     // the autosave switch, the three hooks, the sandbox row, the tune rows (a file's load leaves all of these as they are NOW)
     const C = g.chronicle.counts, loads = C.loads, saves = C.saves, stats = { ...this.stats }, log = this.log.slice();
     const host = { enabled: this.enabled, picture: this.picture, onPutBack: this.onPutBack, onSaved: this.onSaved }, tune = { ...g.tune }, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo };
     const st = this.store as { map?: Map<string, string> }, kept = st.map instanceof Map ? [...st.map] : null;   // (the harness's store is a Map the game reaches: the files written since are not the snapshot's to take back)
     restoreSnapshot(e.snap);
-    if (!g.journal.recording && g.sensors.mode === 'record') g.sensors.live();   // (the snapshot holds the sensors as they stood at the save — recording, if a tape ran then — and no recorder is behind them now: the cut above ended it)
     { const pl = g.player, S = pl.sel; if (S.ring?.free) { S.open = false; S.ring = null; S.downT = -1; S.moved = false; pl.nearSel = 0; } }   // (handring.ts: a ring that merely stood at the save is nothing of the saved moment — a file's load finds none either, and his first click after a load is his trigger, not a wedge)
     g.player.setup = null;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load — its digits are his slots again)
     if (kept && st.map) { st.map.clear(); for (const [k, v] of kept) st.map.set(k, v); }
@@ -1056,12 +1061,26 @@ export class Checkpoints {
   }
   /** is this slot one of THIS run's (the cards word an earlier run's differently and never make it the default) */
   isThisRun(info: SlotInfo): boolean { return !!info && info.runId === this.runId; }
+  /** WHAT A RECORDING TAKES OF THE STORE at its frame 0 (journal.ts begin): the index as it stands (every row, any run's) and the autosave still inside its
+   *  regret window. The Enter once down reads both (`newest`, the regret mark) and the ring's next slot is the index's: a replay that began on an empty
+   *  store chose another checkpoint, or restarted, where the recording went back to one made before it. null rows = nothing stored. */
+  tapeBegin(): TapeSlots { const idx = this.index(); return { index: Object.keys(idx.slots).length || idx.next ? JSON.stringify(idx) : null, lastAuto: this.lastAuto ? { ...this.lastAuto } : null }; }
+  /** …and a replay's game is given, after its checkpoint is loaded (tools/qa/replay.ts): the rows, each over an EMPTY text (a row with nothing behind it is
+   *  dropped by `index`; an empty text reads as 'gone', which is what a slot nobody loaded is to the replay). The text of a slot the recording did load
+   *  comes with its frame (`tapeText`). */
+  tapeSeed(t: TapeSlots): void {
+    let idx: SlotIndex | null = null; try { idx = typeof t.index === 'string' ? JSON.parse(t.index) as SlotIndex : null; } catch { idx = null; }
+    if (idx && idx.slots && typeof idx.slots === 'object') { for (const k of Object.keys(idx.slots)) { if (!k.startsWith(KEY_PREFIX)) delete idx.slots[k]; else if (this.store.get(k) === null) this.store.set(k, ''); } this.store.set(KEY_INDEX, JSON.stringify(idx)); }
+    this.lastAuto = t.lastAuto && typeof t.lastAuto.key === 'string' && typeof t.lastAuto.t === 'number' ? { key: t.lastAuto.key, t: t.lastAuto.t } : null;
+  }
+  tapeText(key: string, text: string): void { if (key.startsWith(KEY_PREFIX) && key !== KEY_INDEX) this.store.set(key, text); }
   /** parse a stored slot (null: gone / corrupt) */
   read(key: string): SaveState | null { try { const raw = this.store.get(key); return raw ? JSON.parse(raw) as SaveState : null; } catch { return null; } }
   /** Load a stored slot (or a given state) into the game. Returns why not, or null on success. */
   load(g: Game, from: string | SaveState): string | null {
     if (typeof from === 'string' && this.shelf.get(from)) return this.loadMem(g, from);
     const s = typeof from === 'string' ? this.read(from) : from; if (!s) return 'that checkpoint is gone';
+    if (typeof from === 'string') g.journal.slotRead(from, () => this.store.get(from));   // (inside an update, a slot the recording did not write itself: its text goes on the tape)
     const why = canLoad(g, s); if (why) { this.note(g, `load refused: ${why}`); return why; }
     g.journal.cut('a checkpoint was loaded');   // (a load off a card or the panel is between frames and on no tape: an F10 recording ends whole before it and a new one is asked for — journal.ts cut; Enter once down is inside an update and on the tape)
     try { loadState(g, s); } catch (e) { const w = (e as Error).message; this.note(g, `load failed: ${w}`); return w; }
@@ -1079,6 +1098,7 @@ export class Checkpoints {
   importText(g: Game, text: string): SlotInfo | string {
     let s: SaveState; try { s = JSON.parse(text); } catch { return 'not JSON'; }
     const why = canLoad(g, s); if (why && !/show is running/.test(why)) return why;
+    g.journal.cut('a checkpoint was imported');   // (as a save off the panel: write)
     const idx = this.index(); const n = SAVETIMELINE.on ? this.handSlot(idx) : 0, key = KEY_HAND(n); if (SAVETIMELINE.on) this.store.remove(KEY_PIC(key));
     const info: SlotInfo = { key, slot: 'manual', n, label: s.label || 'imported', kind: s.kind, savedAt: Date.now(), missionT: s.missionT, stage: s.stage, runId: s.runId, bytes: text.length };   // (savedAt = the import: 'newest' — the panel's load / export default — is then this file, as its message says)
     if (!this.put(key, text)) return 'the browser would not store it (quota / private window)';
