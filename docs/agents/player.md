@@ -25,6 +25,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   latched: a reload a sprint / holster took away starts again); R is still his for a part-spent magazine; AI men always reloaded by themselves. Tab ▸ Sandbox ▸ Weapons & rifles ▸ 'reload by itself when dry' + 'auto reload delay s'. (3) THE G QUICK THROW IS GONE FROM THE PAGE
   (`src/game/quickthrow.ts QUICKTHROW.on`: off in the page, `?quickthrow`; the one row the FROZEN stand has ON — its probes and a recorded session press G (the soak does not) — `TPS_QUICKTHROW=0`): a
   can is thrown from its slot (3 / 4 / 5) with a click; the order menu's own G row (`FRAG.orderKey`) stays. Tab ▸ Sandbox ▸ Player, doors & props ▸ 'G quick throw'. Training 4 lost its quick-throw step.
+- **THE LAST MAGAZINE, SEATED AND NOT RACKED, IS STILL A RELOAD** (`src/game/autoreload.ts RELOAD.lastMag`: on in the page, `?nolastmag`; frozen off, `TPS_LASTMAG=1`; a
+  `FROZEN_HOLDS` row, in `RELOAD`'s registered table, and a journal from before the key replays with it off). The flaw: a reload of the last magazine broken off between
+  'magazine in' and the rack (a sprint, a holster, a takedown: a half-second window on the plain row) left a full magazine under an empty chamber with nothing spare;
+  `Firearm.startReload` refused it for want of a spare ('no spare magazines' over a full gun), the dry-gun rule skipped it for the same reason, and the gun never fired
+  again. On: `startReload` takes that one state (the magazine comes out to the spares, goes back in, the handle is racked: mag 29, a round up), and `autoReloadDue` counts it
+  as a reload to come (with the dry-gun rule off, a click there still says 'reloading…' until R is pressed: player.ts's own line, not touched). Any Firearm, so an AI man's gun in that state too; no man was found who reaches it. Check: `tools/qa/autoreload-check.ts`
+  lines (5c) and (5d) (`probes.ts autoreload`), `LASTMAG_BREAK=1` must fail (5c); run on both stands. No Tab row. Measured: nothing; the state was made by the check's
+  own sprint. Nobody has played it, and it has never been seen on a GPU.
 - **The player and his own side** (`src/game/friends.ts FRIENDS {noSnap, lowReady, reachM 8, pastM, clearM, upSecs 0.25, quietS 5}`; two `FROZEN_HOLDS` rows, in the knob registry and a
   journal's tables; `probes.ts friends` = tools/qa/friends-check.ts, also under `player`, passes on both stands, `FRIENDS_BREAK=1` must fail). (1) NO RETICLE ON A FRIEND (`noSnap`: on in the page,
   `?friendsnap`; frozen stand off, `TPS_FRIENDS=1`; Tab ▸ Player, doors & props ▸ 'no aim ring on teammates'): player.ts `updateAim`'s three loops pass over a man not hostile to the player

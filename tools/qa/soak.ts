@@ -788,7 +788,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
   const supAstray = new Map<any, number>(), supDisplaces = new WeakMap<any, number>();   // suppression (lane R3): frames a man has carried head-down clocks he should not; shifts already counted per Guard object
   let leaderBad = 0, heldRole = 0; let exceptions = 0; let consecutiveExc = 0; let overdueFrames = 0;
   let ammoPl: any = null, ammoTotal = 0;   // the Player object whose rounds were counted last frame, and the count: within one life it may only fall (nothing on the floor tops him up — a dead man's 9 mm magazines do not fit the Five-seveN)
-  const INTERACT_KINDS = new Set(['light', 'door', 'body', 'guard', 'objective', 'held', 'breaker', 'wall', 'cancel']);   // ('breaker': the mains panel by hand — player.ts buildInteractables; 'wall': a partition a charge can go on, wallcharge.ts samRows; 'cancel': the selector's bottom row while the list is open)
+  const INTERACT_KINDS = new Set(['light', 'door', 'body', 'guard', 'objective', 'held', 'breaker', 'wall', 'cancel', 'switch', 'cam']);   // ('breaker': the mains panel by hand — player.ts buildInteractables; 'wall': a partition a charge can go on, wallcharge.ts samRows; 'cancel': the selector's bottom row while the list is open)
   const finiteChar = (c: any) => Number.isFinite(c.pos[0]) && Number.isFinite(c.pos[1]) && Number.isFinite(c.pos[2]) && Number.isFinite(c.bodyYaw) && Number.isFinite(c.aimYaw) && Number.isFinite(c.aimPitch) && Number.isFinite(c.vel[0]) && Number.isFinite(c.vel[2]);
 
   function invariants() {

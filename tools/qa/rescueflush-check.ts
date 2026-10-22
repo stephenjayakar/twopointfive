@@ -23,7 +23,7 @@
 //       the side door instead, logged 'flush:lane' once.
 // RESCUEFLUSH_BREAK=lanes = RESCUEFLUSH.lanesChoose off, the build before the mend: (g) and (h) alone must fail.
 // NOT ASKED HERE: what a man sent does at a corridor the team's guns hold — his walk is the fight AI's, priced and gated by the lanes like any other
-// (`probes.ts lanes` / `corridor` hold the lanes' own rules; this floor has no team to hold one).
+// (`probes.ts corridor` holds the lanes' own rules; this floor has no team to hold one).
 // RESCUEFLUSH_BREAK=1 = the rule left OFF for (a)–(e) and ON for (f): the check must fail.
 // exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: a word on the net is a string, a line to a hostage is the collision's segment test. Nobody has seen or heard any of this in play.

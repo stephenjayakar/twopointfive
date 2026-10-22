@@ -183,7 +183,7 @@ export class Doc {
   }
 
   undo(): string | null {
-    if (this.depth > 0) this.rollbackAll();
+    if (this.depth > 0) { const label = this.open!.label; this.rollbackAll(); return label; }   // (pressed mid-gesture: the gesture going IS the undo — the finished command under it stays)
     const cmd = this.undoStack.pop(); if (!cmd) return null;
     const changed = new Set<string>();
     for (let i = cmd.ops.length - 1; i >= 0; i--) this.applyOp(this.inverse(cmd.ops[i]), changed);
