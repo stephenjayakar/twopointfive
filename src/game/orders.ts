@@ -951,7 +951,7 @@ export class SquadOrders {
     const M = this.menu;
     if (!M) {   // no menu at the top of the frame: the quick key, or the press that puts it up — and nothing else in this frame is the menu's
       if (PLANLAY.on && this.lay.laid.length && !!layKey() && input.pressed.delete(layKey())) laySend(g);   // (planlay.ts: the word's key, a plan laid — sent, and the press is nobody else's)
-      else if (input.hit(K.quickKey)) this.quickGive(this.targetUnder(input, cam, canvas));   // the target's own order, at once (autopilot.ts: on a door they wait on, they go in — by the entry they pick)
+      else if (input.hit(K.quickKey)) this.tapGive(this.targetUnder(input, cam, canvas));   // the target's own order, at once (autopilot.ts: on a door they wait on, they go in — by the entry they pick)
       else if ((key || mid) && g.player.sel.downT < 0) this.open(this.targetUnder(input, cam, canvas));   // (never over a Space press in hand: one list at a time)
       return;
     }
@@ -1000,7 +1000,7 @@ export class SquadOrders {
       const P = this.cmdPress;
       if (P) {
         if (!C.on || input.pressed.has('Blur') || input.pressed.has('Paused')) { this.cmdPress = null; return false; }
-        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.quickGive(P.t); return true; }
+        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.tapGive(P.t); return true; }
         const digit = C.stay && C.stayDigit && this.ringDigit(input);   // (a digit inside the press: the ring's wedge, so the ring is up now — CMDRING.stayDigit)
         if (!digit && g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
         this.cmdPress = null; if (!this.backFree() || !this.ringUp(P.t, input, canvas, g.time - C.tapSecs, cam)) return false;   // (the hold was the wait: the cursor counts at once)
@@ -1008,7 +1008,7 @@ export class SquadOrders {
       }
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
-      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.quickGive(this.targetUnder(input, cam, canvas)); return true; }   // (down and up inside one tick: a tap, given on its own tick)
+      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.tapGive(this.targetUnder(input, cam, canvas)); return true; }   // (down and up inside one tick: a tap, given on its own tick)
       if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas) };
         return C.stay && C.stayDigit && this.ringDigit(input) ? this.ringInput(input, cam, canvas) || true : true; }   // (the key and a digit in one tick: the same)
       return this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, g.time, cam);
@@ -1135,6 +1135,9 @@ export class SquadOrders {
     const s = ringSeats(M.rows, M.target.kind !== 'none', ORDERS.waitAlt, M.page === null); if (!R?.more) return s;
     const row = new Array<number>(CMDRING.wedges + 1).fill(-1); s.over.forEach((i, n) => { row[n + 1] = i; }); return { row, more: 0, over: s.over };
   }
+  /** a TAP's order on `t` (the quick key, the ring's key let go inside its hold) — nothing where a tutorial step teaches the key HELD and the hold is there
+   *  to be had (rails.ts tapOff: the step says so under its line). A wedge of the ring that gives the same order is not a tap: it goes to quickGive itself */
+  private tapGive(t: OrderTarget) { if (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.tapOff()) return; this.quickGive(t); }
   /** the quick key's own order on `t`, given by hand: on a door the men wait on, the entry they pick (autopilot.ts); else the target's first row */
   private quickGive(t: OrderTarget) { this.byHand = true; try { if (!(AUTOPILOT.on && autoQuick(this.g, t))) { const d = this.defaultFor(t); if (d) this.give(d.id, t); } } finally { this.byHand = false; } }
   /** The quick key's order on `t` for exactly these men (planmode.ts: a chain's step, its turn come) — the squad's own choice there (autopilot.ts autoPick)
@@ -2325,7 +2328,7 @@ export class SquadOrders {
     const lk = (act: string) => !!this.g.rails?.locks(act);   // (rails.ts, a tutorial mission: a key the mission has not taught yet is not named on the panel either)
     return { menu: null, status: [{ kind: 'objective', label: lk('who') ? 'squad' : `squad · ${posture ? `${posture} · ` : ''}orders to ${this.whoTag().tag}`, inReach: true, off: false, tone,
       opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...(lk('menu') ? [] : [...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x), ...layNote(this.g, keyName(layKey()))]),   // (planlay.ts: the key's line while a plan waits on it)
-        ...(quick && !lk('order') ? [{ key: keyName(ORDERS.quickKey), text: quick }] : []), ...(lk('menu') || CMDRING.only ? [] : [{ key, text: hov ? `orders · ${this.hoverWords(hov)}` : 'orders' }]), ...(lk('who') || CMDRING.only ? [] : [{ key: whoKey, text: onMan && next === S.indexOf(onMan) ? `who · ${onMan.callsign} (under the cursor)` : onMan && next === 'all' ? `who · back to ${this.paired ? 'gold' : 'all'}` : `who · ${this.whoStrip()}` }]) ] }] };   // (cmdring.ts `only`: the orders key and the who key have no key — the ring is the menu, and who is its wheel or a click on a man)
+        ...(quick && !lk('order') && !(CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.teachesHold()) ? [{ key: keyName(ORDERS.quickKey), text: quick }] : []), ...(lk('menu') || CMDRING.only ? [] : [{ key, text: hov ? `orders · ${this.hoverWords(hov)}` : 'orders' }]), ...(lk('who') || CMDRING.only ? [] : [{ key: whoKey, text: onMan && next === S.indexOf(onMan) ? `who · ${onMan.callsign} (under the cursor)` : onMan && next === 'all' ? `who · back to ${this.paired ? 'gold' : 'all'}` : `who · ${this.whoStrip()}` }]) ] }] };   // (cmdring.ts `only`: the orders key and the who key have no key — the ring is the menu, and who is its wheel or a click on a man)
   }
   /** Where the menu that is up is frozen, for a mark in the world (the page's overlay rings it — Sam may have walked on and be aiming elsewhere): the point, a
    *  word for it, the addressed element's colour. Null: no menu, or one opened on nothing (himself, nowhere). */
