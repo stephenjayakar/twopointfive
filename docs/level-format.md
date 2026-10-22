@@ -59,7 +59,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView?, response?, doorNames? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
 | `connectors[]` | stair / ladder `{ from{floor,c,h}, to{…}, cost?, mat? }` | **TODO(G2)** — typed stub, empty |
 | `mission` | `{ playerSpawn, objectives[] }` | objectives `reach{area,door}` / `drive{rackIndex,front,halfW}` / `exfil{door,x,z}` — v1 wants exactly one of each (the fixed stage machine in `game/mission.ts`) |
-| `breaker` | `{ pos, panel, led }` | box ids |
+| `breaker` | `{ pos, panel, led, fumble? }` | box ids; `fumble` = seconds a man sent to the tripped panel works at it before the mains come back (absent 2.2; 7 at most: a room fight's lever party gives the panel up at 8) |
 | `beacons[]` | `{ id, pos, box }` | `box` = the dome, which MUST be a switchable's box (game.ts slaves the beam to it) |
 | `sky`, `daylight?` | `{ zenith, horizon }`; `{ sun(light), sky, groupsOn, groupsOff, lightsOff, haze, exposure }` | the level's daytime variant (`lighting.ts setDaylight`, `__daylight`; the editor's 'day' view) |
 | `plans` | `{ roomClear[], breach? }` | `RoomClearPlan` / `BreachPlan` verbatim (see `scene/level.ts`) + `id`; `door` by id |

@@ -670,3 +670,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the team's van (`snatchout.ts`, above) it says 'to take alive and walk out to your van', so the sheet sets up the walk out the maintainer expected when he
   played it. 152 characters (the list's rule is 160). With `?nosnatchout` the old end is back and the card still names the van: it stands at the gate either
   way. Checked: `probes.ts missions-list` and `missions-screen` on both stands, the src typecheck. Nobody has read it on a page.
+- **The tutorial's quiet mission, the ledger (`tut-quiet`)** (2026-10-22; a level, its scripted player and one key of level data; no switch; NO ROW YET: the
+  `tutorial` group it belongs to is not in this tree, so nothing plays it from a menu and `lesson-check` is red on that one line). `tools/levels/tut-quiet.ts`
+  writes `levels/tut-quiet.json` on the training yard: a money changer's house at night, alone, one way through, three men with one beat each, a lesson of 17
+  steps (`tools/qa/lessons/tut-quiet.ts` plays it by input alone; its header says what each beat is and why it is built so). The beats: out of the porch lamp
+  into the house's shadow; a whistle at a mark and the player steps behind a head-high wall, the back court's man comes the long way round to where the sound was
+  and is grabbed from behind, asked twice for the strongroom's code, then put out or knifed; the back door picked; from the dark store the hall's man stands a
+  stride inside the lit doorway with his back turned (the knife, on a knee); a chest beam passed on a knee; night vision, the mains box: the clerk is the nearest
+  man by the straight line and has the longest walk, round a counter the length of the room, and is taken at the box; the code, the safe, out. WHAT THE RUNS
+  TAUGHT, each from a failed run: a man answering a whistle carries a torch on the place and a glimpse of the player moves his goal, so the hide is behind a
+  wall, never beside his path; a line is read before it is obeyed, so a beat with a clock has its whole instruction in the line that is up before the clock
+  starts and the man's walk is long enough to read the next (at six seconds a line the first build failed both timed beats); a whistle answered from beside a
+  doorway is a race against his torch's sweep on the frozen stand (the look-at rule is held off there) and went either way with the timing before it, so the
+  second whistle became a man with his back turned; a man seven metres from the box through an open doorway hears the takedown and his weapon light finds the
+  player, so the house has three men. LEVEL DATA: `breaker.fumble` (seconds a man sent to the tripped panel works at it before the mains come back; absent =
+  2.2 as on every level before it; 7 at most, since a room fight's lever party gives a panel up at 8; `lighting.ts updateTargets`, both directions in
+  `levelLoad.ts`, `docs/level-format.md`). This level's box takes 6: at 2.2 a hand a second and a half slow found the mains back in before it reached
+  his back. `breakerAt(x, z, out, fumble?)` in `train-ground.ts` writes it; the Training files export unchanged. MEASURED, headless: the
+  scripted player waits a person's beat before each timed move; with that beat at 0, 0.6, 1.5 and 2.5 s it finishes on both stands (eight runs, seed 1); with
+  every line read for 6 s it finishes on the shipped stand on seeds 1 and 2; the run's digest is the same word with the lesson on and off (frozen). At a 4 s
+  beat the whistle's man has gone home before the player is round the wall. Checks: `level-lint`, `door-size`, `quiet-check`, `second-way-check`,
+  `floor-order-check`, `level-names-check`, `carlamps-check` (its row added), the `level`, `handwork` and `lights-out` families, both typechecks. RED BY
+  DESIGN: `quiet-light` on three lines (three men where a free-roam night wants four to six; the start beside the way out, which that tool takes for an exit
+  to the east; no dark way with the lamps on, the lit hall being the point). NOT DONE: the row, the locked actions, authored checkpoints and a level script
+  (they wait on the tutorial's frame); lived-in rooms, music, a picture. Never seen on a GPU, never played by a hand: the timings above are a script's.
