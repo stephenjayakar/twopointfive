@@ -894,3 +894,35 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   things set on one gun are four presses. @RUNS@
   NEVER SEEN ON A GPU: the box was looked at as stills of the real page's own markup and styles, and used by real key presses on the software
   adapter with the picture not drawn; nobody has played it.
+- **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
+  maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
+  equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is
+  nonlethal"). ON in the page (`?handslot=0` = E puts away and draws, as it was; the debugger's Player tick "empty hands are a slot"), OFF in the
+  module and on the frozen stand (`FROZEN_HOLDS`, `TPS_HANDSLOT=1`, pinned in `host/standup.ts`: `TPS_HANDSLOT=0` puts it off on the shipped
+  stand); in the knob registry and carried by a recording (one from before it replays with it off).
+  THE RULE (player.ts `updatePlayer`, `updateHold`): the slot's own code, `HANDSLOT_KEY` = `'Digit0'`, a code no key gave the game before, puts
+  away whatever is up and does nothing when the hands are empty; it never draws. A digit draws, as it always did. On a wall it chooses empty hands
+  for the step off (`WallHold.drawn = false`, never back to true). With a man held it is the arm (only from the pistol), and `Digit1` is the pistol
+  at his head (only from the arm). It is not read under an open Space list. The two takedown clicks are untouched.
+  E'S OWN CODE (`'KeyE'`: put away OR draw, and the swap of a hold) means what it meant, rule on or off: about ninety lines of checks press it.
+  THE BOARD (`src/host/keymap.ts KEYMAP.slotWhen`, the page hands it `() => HANDSLOT.on`; `SLOT`, `ALIAS`, `SLOT_ACT`, `keyRows()`): while the rule
+  is on, the backtick key gives `'Digit0'`, the backslash key gives the debugger's `'Backquote'` (main.ts and ui/panel.ts go on asking for that
+  code), and nothing gives `'KeyE'`: the E key and the 0 key file nothing. It follows the rule live, so a recording from before the rule plays in
+  the page on the old board. The slot's row is no row at all while the rule is off (`keyRows()` leaves it out: the 0 key is nobody's, a kept
+  table's line for it waits). A machine that kept backtick on another row keeps it there, and the slot then sits on the 0 key until it is given
+  one; E's row kept on a key of the player's choosing stays a row and is listed.
+  THE WORDS: lines all over the game and three lessons say "E puts it away" / "E holsters it". They are not rewritten: while the slot is on and
+  E's row has no key, the letter E in a line is read as the slot's key (`ALIAS`), so they follow, and follow a rebind of the slot's row. The lines
+  that named E for the way TO the pistol (the hold's "E puts the gun to his head", its row hints) say 1 with the rule on. The kit box's holstered
+  slot says "holstered" / "slung" with no key (`body.handslot`, overlay.ts). Options, Controls: the row "Empty hands" heads the Kit group (cap
+  `'0'` in the source, shown as the key it is on) and E's row is gone unless it holds a key; the start card's list has the same row; the
+  debugger's row shows backslash. README's table follows.
+  CHECK: `bun run tools/qa/probes.ts handslot` (family `player`), 7 lines, both stands; `HANDSLOT_BREAK=1` fails 6 (the seventh is E's old code,
+  which must pass either way). Read: the hands after the key once and five times from the pistol and the rifle, the digits, the wall's waiting
+  item, the hold's variant, the board's answers and words, the kept table (backtick held by another row, E kept on a key), a recording with and
+  without the key. On the page (`tools/qa/keybinds-page.cjs`, its last line; `tools/qa/panel-keys.cjs` on backslash): the Controls tab on the
+  page's own board, and the debugger's key.
+  SEEN ON THE REAL PAGE (software adapter, real key presses, 10-22): backslash opens and shuts the debugger, 1 files `Digit1` and draws, backtick
+  files `Digit0` and empties the hands, backtick again leaves them empty, the E key files nothing.
+  NOT DONE HERE: nothing is on E yet (his own actions go there next); the HUD's kit box still shows no row for the empty slot.
+  Nobody has played it; never seen on a GPU.

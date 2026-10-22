@@ -49,6 +49,7 @@ import { tearOff } from './doorblast';
 import { aimWeighBegin, aimWeighTurn, aimWeighShot, aimWeighLaunch, aimWeighLaunchKeep } from './aimweight';
 import { THROW_RELEASE, HOLD } from './character';
 import { WALLSNAP, wsTakeSecs, wsEase, wsHit, wsCornerAngle, wsSeenDeg } from './wallsnap';
+import { HANDSLOT, HANDSLOT_KEY } from './handslot';
 import type { HoldPhase, HoldVariant, LongStance } from './character';
 import type { StaticCollision } from '../scene/collision';
 import type { Game, Guard, Player, ThrowKind, Interactable, Verb } from './game';
@@ -377,7 +378,11 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
       }
     } else { pl.slot = 'rifle'; draw(rifleName(pl)); }
   }
-  if (input.hit('KeyE') && !pl.dragging && !pl.takedown) { if (pl.wall && pl.wall.kind !== 'stack' && !(pl.rifleSel && wallStacks(pl.wall))) { pl.wall.drawn = !pl.wall.drawn; g.msg(pl.wall.drawn ? `${itemName(pl)} — in hand once off the wall` : `${pl.rifleSel ? 'slung' : 'holstered'} — and staying so off the wall`); } else setHolstered(g, !pl.holstered); }   // E: put it away / draw it (whatever the slot is; the rifle 'away' is on his back)
+  { const eKey = input.hit('KeyE'), away = !eKey && HANDSLOT.on && !pl.sel.open && input.hit(HANDSLOT_KEY);   // E: put it away / draw it (whatever the slot is; the rifle 'away' is on his back) · the empty hands' own slot (handslot.ts): away only, never the way back, and not a key of his kit while a list of rows is up
+    if ((eKey || away) && !pl.dragging && !pl.takedown) {
+      if (pl.wall && pl.wall.kind !== 'stack' && !(pl.rifleSel && wallStacks(pl.wall))) { const to = eKey ? !pl.wall.drawn : false; if (to !== pl.wall.drawn) { pl.wall.drawn = to; g.msg(to ? `${itemName(pl)} — in hand once off the wall` : `${pl.rifleSel ? 'slung' : 'holstered'} — and staying so off the wall`); } }
+      else setHolstered(g, eKey ? !pl.holstered : true);
+    } }
   // (the wheel — walking pace down / up — is read in interact.ts wheelPace: while Space is down it scrolls the selector instead)
   if (input.hit('Digit3')) { if (pl.canisters > 0) { pl.slot = 'smoke'; pl.throwKind = 'smoke'; draw(`smoke canister ×${pl.canisters}`); } else g.msg('no smoke canisters left'); }
   if (input.hit('Digit5')) { if (!FRAG.on) g.msg('no fragmentation grenades in this kit'); else if (pl.frags > 0) { pl.slot = 'frag'; draw(`frag grenade ×${pl.frags} — click throws it; it goes off ${FRAG.fuse}s after it leaves your hand`); } else g.msg('no frag grenades left'); }   // 5: the fragmentation grenade (frag.ts) — in the fist like a can; G's quick-throw (where it is on) stays smoke / stun
@@ -1439,11 +1444,11 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
       setPhase(g, 'held'); H.since = g.time; if (gd.held) gd.held.since = g.time; gd.talk.heldSince = g.time; c.bodyYaw = c.aimYaw = hc.bodyYaw;   // (the dialogue's held clock and the hold's are one)
       g.audio.play('heldProtest', v3.add(hc.pos, [0, 1.5, 0]), 0.18);   // his first sound in the arm, muffled under it (the buffer carries its own 0.3 s: it lands as the hold settles)
       if (gd.civ) g.msg(gun ? `got ${gd.callsign} — the ${gd.civ.label}. Space: tell ${gd.civ.her} to stay down and quiet (lets ${gd.civ.her} go) · hold Space for the pistol-whip · E holsters to question ${gd.civ.her}` : `got ${gd.callsign} — the ${gd.civ.label}. Space asks what ${gd.civ.she} knows · hold Space: 'stay down, stay quiet' or the choke · a civilian on the floor costs you`);
-      else g.msg(gun ? `got ${gd.callsign}, the pistol at his head — click fires past him, Space pistol-whips him, E holsters it to question him` : `got ${gd.callsign} — Space makes him talk; hold Space for the choke's row; E puts the gun to his head`);
+      else g.msg(gun ? `got ${gd.callsign}, the pistol at his head — click fires past him, Space pistol-whips him, E holsters it to question him` : `got ${gd.callsign} — Space makes him talk; hold Space for the choke's row; ${HANDSLOT.on ? '1' : 'E'} puts the gun to his head`);
     }
   } else {
     // ---- E: the other hold — draw the pistol to his head / holster it and the knife is back (held only, and not while the hand is still between tools from the last)
-    if (H.phase === 'held' && H.swapT >= K.swap && input.hit('KeyE') && !pl.sel.open && pl.sel.downT < 0) { swapHold(g); gun = H.variant === 'gun'; }   // (not while the Space list is open or a press is down: the swap re-opened the list on the gun's rows and the SAME release then chose the pistol-whip — review 08-10 #16)
+    if (H.phase === 'held' && H.swapT >= K.swap && (input.hit('KeyE') || (HANDSLOT.on && input.hit(gun ? HANDSLOT_KEY : 'Digit1'))) && !pl.sel.open && pl.sel.downT < 0) { swapHold(g); gun = H.variant === 'gun'; }   // (not while the Space list is open or a press is down: the swap re-opened the list on the gun's rows and the SAME release then chose the pistol-whip — review 08-10 #16)
     const swapping = H.swapT < K.swap;   // the draw / the holstering under way: none of the rows may start (no round, no question; a choke / whip chosen now waits for the hand)
     // ---- his rows, performed this frame (interact.ts → Game.act): the question (arm), the choke (arm) / the whip (gun) — chosen, then run on their own clock.
     //      (No letting him go: once the arm is on, it ends with him on the floor. The tour taps these rows like a player.)
@@ -2102,14 +2107,14 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       const ask = tk.asking ? `you're asking — ${cv.she} answers in a beat` : tk.samUp ? 'once you have had your say' : !tk.ready ? `${cv.she}'s answering — tap to cut it short` : dry ? `${cv.she}'s told you everything — ask anyway` : gd.talk.stage === 0 ? `ask what ${cv.she} knows — quietly` : `press ${cv.her} — what else`;
       rows.push(row(base, 'question', ask));
       rows.push(row(base, 'comply', `“stay down, stay quiet” — lets ${cv.her} go, cowering; ${cv.she} tells nobody`));
-      rows.push(row(base, 'choke', `choke ${cv.her} out — quiet. a CIVILIAN: −10 on the card`, `E  draw — gun to ${WORDS.on && cv.she === 'he' ? 'his' : 'her'} head`));   // (Civ.her is the object's 'him': whose head wants 'his')
+      rows.push(row(base, 'choke', `choke ${cv.her} out — quiet. a CIVILIAN: −10 on the card`, `${HANDSLOT.on ? '1' : 'E'}  draw — gun to ${WORDS.on && cv.she === 'he' ? 'his' : 'her'} head`));   // (Civ.her is the object's 'him': whose head wants 'his')
     }
     else if (gun) rows.push(row(base, 'whip', 'pistol-whip him — quick, a thud', `LMB  ${pl.pistol.roundsReady > 0 ? 'fire past him' : 'fire past him (empty)'}  ·  E  holster — to question him`));
     else {
       const q = promptFor(g, gd), tk = heldTalk(g, H); const verb = q.spent ? "he's said his piece — ask anyway" : `“${q.text}”`;
       const ask = tk.asking ? "you're asking — he answers in a beat" : tk.samUp ? `${verb} — once you've had your say` : !tk.ready ? "he's answering — tap to cut it short" : `${verb}${tk.settled ? '' : ' — cuts in'}`;   // (samUp without asking: a remark of Sam's is in the air — his word on the key he has just pocketed — and he is never cut)
       rows.push(row(base, 'question', ask));
-      rows.push(row(base, 'choke', 'choke him out — quiet', `${CLOSE.heldClicks && !g.touring ? 'LMB  knife — lethal  ·  RMB  choke him out  ·  ' : ''}E  draw — gun to his head`));   // (the two buttons in the arm, close.ts CLOSE.heldClicks: the marks worded as the standing blow's are)
+      rows.push(row(base, 'choke', 'choke him out — quiet', `${CLOSE.heldClicks && !g.touring ? 'LMB  knife — lethal  ·  RMB  choke him out  ·  ' : ''}${HANDSLOT.on ? '1' : 'E'}  draw — gun to his head`));   // (the two buttons in the arm, close.ts CLOSE.heldClicks: the marks worded as the standing blow's are)
     }
     list.push({ ...base, line2: rows.map(r => r.line2).join('  ·  '), progress: rows[0]?.progress });   // the marker (the ring sits on it; its text = the rows')
     for (const d of g.doors.list) {

@@ -27,9 +27,12 @@ import { openList, openStartPage, startPageWanted, startPageFromQuery } from './
 import { menuTheme } from './theme';
 import { TABKEY } from './tabkey';
 import { SLOTSETUP } from '../game/slotsetup';
-import { keyText, keysOf } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
+import { keyText, keysOf, slotNow } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 
+const E_ROW: [string, string] = ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'];
+/** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
+const SLOT_ROW: [string, string] = ['0', 'empty hands: what is in them goes away · a digit draws'];
 const Q_ROW: [string, string] = ['Q', 'back to the wall beside you — slide, peek at its end; Q / away / Shift lets go'];
 const KIT_ROW: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 (2 again: flip its launcher, RING / 40 mm) · smoke · stun · frag'];
 const ZR_ROW: [string, string] = ['Z · R', 'FN2000 semi / auto · reload'];
@@ -45,7 +48,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   ['LMB', 'fire what is in hand · throw a canister · hands empty behind a man: silent takedown'],
   ['RMB', 'pistol: OCP the light under the ring · FN2000: fire its launcher (hold to see the arc first)'],
   ['Space', 'do the highlighted action (top-left) · hold to pick another (wheel / ↑↓, let go) · long actions run on their own; move or tap again to stop'],
-  ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'],
+  E_ROW,
   Q_ROW,
   KIT_ROW,
   ZR_ROW,
@@ -61,7 +64,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 const WALL_ROW: [string, string] = ['Wall', 'walk into one and your back goes to it — slide, peek at its end; away / Shift lets go'];
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
   if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW]; if (SLOTSETUP.on && r === LNV_ROW && !keysOf('KeyL').length) return [NV_ROW];
-  if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
+  if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
 
 const TAGLINE = 'a ray-traced stealth sandbox — every light, shadow and wisp of smoke is live';
 /** the title screen's line under the wordmark */
