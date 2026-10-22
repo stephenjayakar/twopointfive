@@ -9,7 +9,7 @@
 // WHAT IT IS IN PLAY. At a SHUT door in reach, with fog of war up (the squad missions and a quiet mission with a fog rung: elsewhere the picture already shows
 // every room, there is nothing to look for and the row is not offered), the door's rows carry 'look under it'. It is a sustained verb like the lock pick
 // (player.ts startWand / updateWanding / stopWand; interact.ts stops it on a step, Space or Esc): he kneels at the middle of the leaf, both hands on it, gun
-// away, and after `feedSecs` the lens is LIVE. From then, in fogofwar.ts, HIS OWN EYE IS THE LENS (`wandEye` stands in his eye's place among the fog's eyes —
+// away, and after `feedSecs` (`quick`, the page: as he gets there) the lens is LIVE. From then, in fogofwar.ts, HIS OWN EYE IS THE LENS (`wandEye` stands in his eye's place among the fog's eyes —
 // tunnel vision: his own eyes are in the scope, the teammates' still count): a point `pastM` beyond the leaf at `eyeY` off the floor, a wedge of `fovDeg`
 // turned by the CURSOR (the aim point, an input) at `panRate`, never nearer than `blindDeg` to the wall the door is in — the hard corners beside the door are
 // not his to see. Everything else is the fog's own model, picture and CPU alike: a level line at the lens's height, so anything standing on the floor hides
@@ -30,6 +30,7 @@ import type { Door } from './doors';
 import type { Vec3 } from '../math/vec';
 import type { FogEye } from './fogofwar';
 import { FOG, fieldDeg } from './fogofwar';
+import { STEALTHPOSE } from './stealthpose';   // (read inside a function only)
 
 export const WAND = {
   /** the switch (page on, ?nowand; frozen stand off, TPS_WAND=1) */
@@ -64,18 +65,39 @@ export const WAND = {
   orderKey: 'KeyV',
   /** seconds for a teammate's lens to sweep from one end of its arc to the other and back (nobody aims it for him) */
   sweepSecs: 5,
+  /** THE QUICK SET-UP (the maintainer: "setting up the optical wand should be faster. pretty much just the time for the animation and none of the waiting
+   *  time with the spinner (which we can probably just remove)"): the lens is through as soon as he is down on his knee with his hands on it and the
+   *  animation's time has passed since he started down (wandFeedSecs) — nothing after it — instead of `feedSecs` on his knee; a teammate's FIRST look
+   *  the same from his mark at the door (fed again after a fight or a flash took him off it, it is the old `feedSecs`: a lull is not a set-up); the
+   *  row that says a look is under way draws no ring and no bar, and the log says one line, not two. ON in the page (`?nowandquick` = the 1.5 s feed and its ring, as it was), OFF here and on the frozen stand (`TPS_WANDQUICK=1`).
+   *  Acts only with `on`. A recording from before the key replays with it off. */
+  quick: false,
+  /** s from the start of the look (a teammate: from on his mark at the door) to the lens through, with `quick`, where the squat at the door is not drawn
+   *  (a teammate, the stealth poses off): the kneel's own time. Where it IS drawn the wait is the squat's own `cableIn` (stealthpose.ts) — wandFeedSecs.
+   *  Never before he is down on his knee (`quickDown`), and for Sam never before both hands are on it, however long putting the gun away takes */
+  quickSecs: 0.4,
+  /** how far down the kneel must be (the animator's crouch, 0‥1) before a quick lens is through */
+  quickDown: 0.9,
 };
 export const WAND_STATS = { looks: 0, live: 0, marked: 0 };
 
 /** a look under way (Player.wanding): the door, the face he kneels on (Doors.side's sign), seconds on his knee there, the lens's turn off square (rad, + =
  *  counter-clockwise seen from above in the game's yaw sense), whether the lens is through, and how long he has been kept off his spot */
-export interface Wanding { door: Door; side: 1 | -1; t: number; pan: number; live: boolean; /** seconds running he has been off his spot (shoved, or never got there) */ off: number }
+export interface Wanding { door: Door; side: 1 | -1; t: number; pan: number; live: boolean; /** seconds running he has been off his spot (shoved, or never got there) */ off: number; /** seconds since the look began (WAND.quick counts these, not `t`) */ age: number }
 
 /** a door the wand goes under: shut HOME (a leaf standing ajar is a gap to look through, not a door to feed a cable under — and a leaf somebody starts to
  *  open ends the look within a frame or two, not a quarter radian later), on its hinges, not the steel fire door */
 export function wandFits(d: Door): boolean { return !d.off && Math.abs(d.angle) < WAND.shutRad && !d.def.steel; }
 /** is 'look under it' on this door's rows for this player: the switch, the wand on him, a fog to look through, a door it fits */
 export function wandOffered(g: Game, pl: Player, d: Door): boolean { return WAND.on && pl.wand && g.fogOfWar.active && wandFits(d); }
+
+/** the wait before the lens is through, as the keys stand: `feedSecs` on his knee, or with `quick` the animation's time from the start of the look —
+ *  `squat`: the squat at the door is what is drawn (Sam with the stealth poses on), whose own blend in is the time; else the kneel's `quickSecs` */
+export function wandFeedSecs(squat = false): number { return !WAND.quick ? WAND.feedSecs : squat && STEALTHPOSE.on && STEALTHPOSE.cable ? STEALTHPOSE.cableIn : WAND.quickSecs; }
+/** is the lens through this step, for a man the caller has found planted: `t` s on his knee, `age` s since the look began, `crouch` the animator's kneel */
+export function wandThrough(t: number, age: number, crouch: number, squat = false): boolean {
+  return WAND.quick ? age >= wandFeedSecs(squat) - 1e-6 && crouch >= WAND.quickDown : t >= WAND.feedSecs;   // (1e-6: `age` is a sum of steps — 24 sixtieths are a hair under 0.4)
+}
 
 /** the wedge in force, degrees */
 export function wandFov(): number { return Math.min(170, Math.max(20, FOG.cone ? fieldDeg() : WAND.fovDeg)); }

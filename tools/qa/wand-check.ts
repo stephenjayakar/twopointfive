@@ -218,13 +218,13 @@ export async function wandLook(): Promise<boolean> {
 
     const before = fog.hidden(T);
     const started = begin(W);
-    let hidFeed = true; const half = Math.floor(WAND.feedSecs / DT * 0.5);
+    let hidFeed = true; const FEED = WD.wandFeedSecs(true), half = Math.floor(FEED / DT * 0.5);   // (the wait as the keys stand: the 1.5 s on his knee, or with `quick` — the page — the animation's time from the start of the look)
     steps(W, half, () => { W.cursorAt(T.char.pos); }); hidFeed &&= fog.hidden(T) && !fog.eyes[0]?.wand;
-    const n = feed(W, T.char.pos), took = pl.wanding ? pl.wanding.t : -1, crouched = pl.crouch, hands = pl.char.anim.lockpick;
+    const n = feed(W, T.char.pos), took = !pl.wanding ? -1 : WAND.quick ? (half + n) * DT : pl.wanding.t, crouched = pl.crouch, hands = pl.char.anim.lockpick;
     steps(W, 60, () => { W.cursorAt(T.char.pos); });
     const seen = !fog.hidden(T), eye = fog.eyes[0];
-    F.verdict(before && started && hidFeed && n > 0 && took >= WAND.feedSecs && took < WAND.feedSecs + 0.6 && crouched && hands && seen,
-      'the man behind the door is hidden before and all through the feed, and in the picture once the lens is through and on him', `hidden before ${before} · started ${started} · hidden half way ${hidFeed} · live after ${took.toFixed(2)} s on his knee (feed ${WAND.feedSecs}) · crouched ${crouched}, both hands ${hands} · seen ${seen}`);
+    F.verdict(before && started && hidFeed && n > 0 && took >= FEED && took < FEED + 0.6 && crouched && hands && seen,
+      'the man behind the door is hidden before and all through the feed, and in the picture once the lens is through and on him', `hidden before ${before} · started ${started} · hidden half way ${hidFeed} · live after ${took.toFixed(2)} s ${WAND.quick ? 'from the start of the look' : 'on his knee'} (the wait ${FEED}) · crouched ${crouched}, both hands ${hands} · seen ${seen}`);
 
     const fr = fog.frame, cos0 = fr?.looks?.[2], near0 = fr?.looks?.[3], y0 = fr?.eyes?.[1];
     F.verdict(!!eye?.wand && eye.id === pl.char.id && fog.eyes.length === eyes0 && Math.abs(eye.pos[1] - WAND.eyeY) < 1e-6 && eye.near === 0 && eye.fov === wandFov() && wandFov() === WAND.fovDeg,
@@ -585,9 +585,61 @@ export async function wandOff(): Promise<boolean> {
   return F.done();
 }
 
+// ───────────────────────────────────────────────────────────── quick
+/** WAND.quick (the maintainer: "setting up the optical wand should be faster. pretty much just the time for the animation and none of the waiting time with
+ *  the spinner (which we can probably just remove)"). WANDQUICK_BREAK=1: the key is left off where a line asks for it on — the lines must FAIL. */
+export async function wandQuick(): Promise<boolean> {
+  const F = family('wand-quick: with the quick set-up the lens is through as he gets onto his knee — no feed to wait out, no ring on the row; off, the feed and its ring as they were');
+  const onWas = WAND.on, quickWas = WAND.quick, mateWas = WAND.mate, ownWas = FOG.own, lsWas = FOG.lastSeen, rnd = Math.random, QBREAK = process.env.WANDQUICK_BREAK === '1';
+  try {
+    // Sam: Space on the row, to the lens through
+    const sam = async (quick: boolean) => {
+      raise(); const { W, g, pl, T } = await atDoor(3); raise(); WAND.quick = quick && !QBREAK; pl.wand = true; W.step(DT);
+      const fog = g.fogOfWar, row = () => g.nearby.find((x: any) => x.verb === 'wand' && x.running);
+      const said0 = g.time as number, started = begin(W); let n = 0, down = -1, ring = 0, rows = 0;
+      while (n < 600 && pl.wanding && !pl.wanding.live) { W.cursorAt(T.char.pos); W.step(DT); n++; if (down < 0 && pl.wanding && pl.wanding.t > 0) down = n - 1; const r = row(); if (r) { rows++; if (r.progress !== undefined) ring++; } }
+      const live = !!pl.wanding?.live, knee = pl.wanding ? pl.wanding.t : -1, crouch = pl.char.anim.crouch as number, said = g.messages.filter((m: any) => m.t >= said0 && /wand/.test(m.text)).length;
+      steps(W, 30, () => { W.cursorAt(T.char.pos); }); const r1 = row(), liveRing = !!r1 && r1.progress !== undefined, seen = !fog.hidden(T), line = r1?.line2 ?? '';
+      return { started, live, total: n * DT, anim: Math.max(0, down) * DT, knee, ring, rows, liveRing, lit: !!r1, seen, line, down: crouch, said };
+    };
+    const off = await sam(false), on = await sam(true);
+    F.verdict(off.started && off.live && off.seen && off.knee >= WAND.feedSecs && off.knee < WAND.feedSecs + 0.05 && off.rows > 0 && off.ring === off.rows && off.liveRing,
+      'the key off: the lens is through after the feed on his knee, and the row counts it with its ring, as it was', `live ${off.live} after ${off.total.toFixed(2)} s (${off.anim.toFixed(2)} s getting down, ${off.knee.toFixed(2)} s on his knee; feed ${WAND.feedSecs}) · ring on ${off.ring} of ${off.rows} frames of the row, and while he looks ${off.liveRing} · the man behind the door seen ${off.seen}`);
+    const QW = WD.wandFeedSecs(true);
+    F.verdict(on.started && on.live && on.seen && Math.abs(on.anim - off.anim) < 0.05 && on.total >= QW - 1e-6 && on.total < Math.max(QW, on.anim) + 0.05 && on.total < off.total - 1 && on.down >= WAND.quickDown && on.said === 1 && off.said === 2,
+      'the key on: the lens is through as he gets onto his knee with his hands on it — the animation is the wait (the squat\'s own time, or putting the gun away where that is longer), the same animation as before — and the log says one line where it said two', `live ${on.live} after ${on.total.toFixed(2)} s (${on.anim.toFixed(2)} s to hands on it, ${on.knee.toFixed(2)} s on his knee, the kneel ${on.down.toFixed(2)} down; the wait ${QW}) · it was ${off.total.toFixed(2)} s · log lines ${on.said} (off: ${off.said}) · the man behind the door seen ${on.seen}`);
+    F.verdict(on.lit && on.rows > 0 && on.ring === 0 && !on.liveRing && /looking under it/.test(on.line),
+      'the key on: the row of the look under way is still there with its words, and draws no ring and no bar, feeding or looking', `frames of the row ${on.rows}, with a ring ${on.ring} · while he looks: row ${on.lit}, ring ${on.liveRing} · '${on.line}'`);
+
+    // a teammate on your order: from on his mark at the door to his lens among the fog's eyes
+    const mate = async (quick: boolean) => {
+      const W = await stand(5), g = W.game; raise(); WAND.mate = true; WAND.quick = quick && !QBREAK; FOG.own = false; FOG.lastSeen = 0;
+      if (!K.kitSet(1, 'wand', true)) { K.kitSet(1, 'bangs', Math.max(0, K.KIT.members[1].bangs - 1)); K.kitSet(1, 'wand', true); }
+      await hushed(() => startFromQuery(g, 'roomclear&squad4')); await hushed(() => steps(W, 30));
+      const S = g.orders, d = g.doors.list.find((x: any) => x.def.name === 'server'); if (!d || !g.fogOfWar.active) throw new Error(`no stage: door ${!!d} fog ${g.fogOfWar.active}`);
+      g.aiEnabled = false; const c = d.frameCentre; S.open(S.targetAt([c[0], 0, c[2]])); W.input.pressed.add(WAND.orderKey); W.step(DT);
+      const job = () => WO.wandOrderJobs(g)[0]; let n = 0, k = 0; await hushed(() => { while (n < 1800 && !job()?.live) { W.step(DT); n++; if (job()?.knelt) k++; } });
+      const J = job(); return { live: !!J?.live, knee: J?.live ? k * DT : -1, eyes: g.fogOfWar.eyes.filter((e: any) => e.wand).length };
+    };
+    const mOff = await keepKit(() => mate(false)), mOn = await keepKit(() => mate(true));   // (his card is written for the stage: put back for whatever runs next)
+    F.verdict(mOff.live && mOn.live && mOff.eyes === 1 && mOn.eyes === 1 && mOff.knee >= WAND.feedSecs - 0.02 && mOff.knee < WAND.feedSecs + 0.05 && mOn.knee >= WAND.quickSecs - 0.02 && mOn.knee < WAND.quickSecs + 0.1,
+      'a teammate on your order: his lens is through as he kneels with the key on, after the feed with it off', `off: live ${mOff.live}, ${mOff.knee.toFixed(2)} s from on his mark (feed ${WAND.feedSecs}), lens eyes ${mOff.eyes} · on: live ${mOn.live}, ${mOn.knee.toFixed(2)} s (quick ${WAND.quickSecs}), lens eyes ${mOn.eyes}`);
+
+    // the two stands' row, the word, and a recording from before the key
+    const P = await import(`${ROOT}/src/host/profile.ts`), s = (await import(`${ROOT}/src/host/standEnv.ts`)).STAND_ENV as string[], JR = await import(`${ROOT}/src/game/journal.ts`);
+    const W2 = await stand(7), snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W2.game))), had = 'quick' in snap.tables.WAND;
+    WAND.quick = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W2.game))); WAND.quick = false; JR.applyKnobs(W2.game, snapUp); const kept = WAND.quick;
+    delete snap.tables.WAND.quick; WAND.quick = true; JR.applyKnobs(W2.game, snap); const old = WAND.quick;
+    F.verdict(s.includes('TPS_WANDQUICK') && P.FROZEN_HOLDS['WAND.quick'] === 'TPS_WANDQUICK=1' && had && old === false && kept === true,
+      'the key is a row of the two stands\' list with its word, rides a recording\'s tables, and a recording from before the key replays with it off', `STAND_ENV ${s.includes('TPS_WANDQUICK')} · FROZEN_HOLDS ${P.FROZEN_HOLDS['WAND.quick']} · in the tables ${had} · an old recording: quick ${old} · one recorded with it on: quick ${kept}`);
+  } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
+  finally { WAND.on = onWas; WAND.quick = quickWas; WAND.mate = mateWas; FOG.own = ownWas; FOG.lastSeen = lsWas; Math.random = rnd; }
+  return F.done();
+}
+
 export async function wandCheck(only?: string): Promise<boolean> {
   let ok = true;
-  const parts: [string, () => Promise<boolean>][] = [['kit', wandKit], ['tile', wandTile], ['look', wandLook], ['costs', wandCosts], ['doors', wandDoors], ['mate', wandMate], ['off', wandOff]];
+  const parts: [string, () => Promise<boolean>][] = [['kit', wandKit], ['tile', wandTile], ['look', wandLook], ['costs', wandCosts], ['doors', wandDoors], ['mate', wandMate], ['quick', wandQuick], ['off', wandOff]];
   for (const [name, fn] of parts) if (!only || only === name) ok = (await fn()) && ok;
   return ok;
 }
