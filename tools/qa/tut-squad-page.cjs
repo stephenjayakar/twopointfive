@@ -3,6 +3,7 @@
 // What the headless lesson run cannot see: that the bundle boots the level and its script on the frame (game/rails.ts), that the one big line is up with the
 // player's own key on a key cap, that what the mission has not taught yet is locked against a real key, that a hand gets through the two easy rooms and to the
 // workshop door, and that the authored checkpoint written there comes back on its step with the level's script running again.
+// Then its two menu steps, each put up by hand: the line's caps, the squad's key kept down (the ring), and the digit that gives the order.
 //   PORT=5231 node tools/qa/tut-squad-page.cjs        (a dev server on that port: PORT=5231 bun run tools/serve.ts)
 //   env: QUALITY (default verylow) · OUT (a folder for the pictures; default a temp folder) · SHOTS=0 (no pictures: each is about a minute here)
 // exit 0 = every line passes · 1 = a FAIL or a page error
@@ -93,6 +94,29 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     const why = await page.evaluate(k => window.__game.saves.load(window.__game, k), mine.key); await run(30); R = await read();
     check(!why && R.id === 'stack-shop' && R.script && R.men === 8, 'put back: the same step, the script running again, eight defenders', `was step ${before.i + 1} '${before.id}' at ${before.at} → step ${R.i + 1} '${R.id}' at ${R.at} · script ${R.script} · ${R.men} defenders${why ? ' · refused: ' + JSON.stringify(why) : ''}`);
   }
+  // ---- the two menu steps, each put up BY HAND (lesson.i set from here: nothing walked or fought to them): where the squad's keys are the command key and
+  //      the word's (the orders ring on: the page as it opens) the menu's own key gives nothing and the line says "Hold" with the command key's cap
+  { const more = () => page.evaluate(() => { const g = window.__game, l = g.orders.log; return { n: l.length, last: l.length ? l[l.length - 1].order : null, menu: !!g.orders.menu, kind: g.orders.menu?.target?.kind ?? null }; });
+    const setStep = async i => { await page.evaluate(i => { const L = window.__game.lesson; L.i = i; L.seen = null; }, i); await run(4); return read(); };
+    const holdQ = async () => { await page.keyboard.down('KeyQ'); await run(30); await page.keyboard.up('KeyQ'); await run(3); };
+    R = await setStep(7); let M = await more();
+    check(R.id === 'wall' && /^Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,3' && !/—/.test(R.line), "step 8's line reads Hold Q, 3, both on key caps", `"${R.line}" keys [${R.keys}]`);
+    // (the key kept down with the cursor on a spot whose ring is the squad's own or a place's — never a man's or a door's: tried round him until one is)
+    const ring = async kinds => { const s0 = await read(); let A = null;
+      for (const [dx, dz] of [[2, 0], [0, 2], [-2, 0], [0, -2], [3, 1], [1, 3], [1.5, 1.5], [-1.5, 1.5]]) {
+        await point([s0.at[0] + dx, 0.05, s0.at[1] + dz]); await holdQ(); A = await more(); if (A.menu && kinds.includes(A.kind)) return A;
+        if (A.menu) { await page.mouse.down({ button: 'right' }); await run(3); await page.mouse.up({ button: 'right' }); await run(3); if ((await more()).menu) await tap('KeyQ'); } }
+      return { ...A, menu: false }; };
+    let A = await ring(['none', 'floor']); M = await more();
+    check(A.menu, "the squad's key kept down: the menu is up as a ring and stays", JSON.stringify(A));
+    await tap('Digit3'); let Z = await more();
+    check(Z.n === M.n + 1 && Z.last === 'fallIn' && !Z.menu, '3: fall in is given and the ring is away', `${JSON.stringify(M)} → ${JSON.stringify(Z)}`);
+    R = await setStep(17); M = await more();
+    check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,2' && !/—/.test(R.line), "step 18's line reads Hold Q … then 2, both on key caps", `"${R.line}" keys [${R.keys}]`);
+    A = await ring(['floor']); M = await more();
+    check(A.menu, 'the key kept down with the cursor on the ground: the ring is up on that place', JSON.stringify(A));
+    await tap('Digit2'); Z = await more();
+    check(Z.n === M.n + 1 && Z.last === 'cover', '2: cover is given', `${JSON.stringify(M)} → ${JSON.stringify(Z)}`); }
   check(!errors.length, 'no page error and no console error', errors.length ? errors.slice(0, 6).join('\n    ') : 'none');
   console.log(`pictures: ${OUT}`);
   await browser.close();
