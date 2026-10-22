@@ -77,7 +77,7 @@ export class Tools {
   update(p: Pointer, dt: number) {
     const view = this.view; void dt;
     { const d = this.drag as { kind: string; ref?: string; refs?: string[]; tool?: string; id?: string | null } | null;   // (a drag whose thing went from under it — an undo or a delete by the menu or the API — is dropped where it is: moving a thing that is gone threw, and a throw here stops the page's loop)
-      if (d && ((d.ref !== undefined && !this.ed.exists(d.ref)) || d.refs?.some(r => !this.ed.exists(r)) || (d.kind === 'footprint' && d.id && !this.ed.doc.get(d.tool === 'box' ? 'boxes' : 'volumes', d.id)))) { this.drag = null; this.downAt = null; } }
+      if (d && ((d.ref !== undefined && !this.ed.exists(d.ref)) || d.refs?.some(r => !this.ed.exists(r)) || (d.kind === 'footprint' && d.id && !this.ed.doc.get(d.tool === 'box' ? 'boxes' : 'volumes', d.id)))) { if (d.kind === 'footprint') this.ed.doc.rollback(); this.drag = null; this.downAt = null; } }   // (a footprint's own open command goes with it: nothing if an undo already rolled it back)
     const mx = p.mouseX, my = p.mouseY; const dmx = mx - this.lastMX, dmy = my - this.lastMY; this.lastMX = mx; this.lastMY = my;
     const lmb = (p.buttons & 1) !== 0, mmb = (p.buttons & 2) !== 0, rmb = (p.buttons & 4) !== 0;
     const lHit = (p.clicked & 1) !== 0; const released = this.wasDown && !lmb; this.wasDown = lmb;

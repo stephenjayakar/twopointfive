@@ -328,7 +328,7 @@ export class Editor {
     if (!/^[A-Za-z0-9_.-]{1,64}$/.test(newId)) throw new Error('ids: letters, digits, _ . - (1–64)');
     if (newId === r.id) return; if (this.doc.indexOf(coll, newId) >= 0) throw new Error(`${coll}: '${newId}' exists`);
     const d = this.data; const doc = this.doc;
-    const was = this.sel.has(ref) ? [...this.sel] : null;   // (taken BEFORE the edit: every doc apply prunes the selection of refs that are gone, the old id among them)
+    const was = [...this.sel].some(x => x === ref || x.startsWith(`${ref}#`)) ? [...this.sel] : null;   // (taken BEFORE the edit: every doc apply prunes the selection of refs that are gone, the old id among them)
     doc.transact(`rename ${ref} → ${newId}`, () => {
       doc.update<any>(coll, r.id, { id: newId });
       if (r.kind === 'box') {
@@ -355,7 +355,7 @@ export class Editor {
         if (this.floorId === r.id) this.floorId = newId;
       }
     });
-    if (was) this.setSelection(was.map(x => x === ref ? refStr({ ...r, id: newId }) : x));
+    if (was) { const to = refStr({ ...r, id: newId }); this.setSelection(was.map(x => x === ref ? to : x.startsWith(`${ref}#`) ? to + x.slice(ref.length) : x)); }   // (a route picked by one of its points is 'route:<id>#<n>')
   }
 
   // ---------------------------------------------------------------- boxes
@@ -634,7 +634,7 @@ export class Editor {
       this.doc.transact(opts.label ?? `keypad ${id}: door ${cur.door} → ${next.door}`, () => {
         this.doc.update<DoorData>('doors', cur.door, o => { const y = { ...o }; delete y.lock; return y; });   // (the old door keeps its bolt but goes back on the floor key — the same as deleting the pad)
         this.doc.update<DoorData>('doors', next.door, o => ({ ...o, locked: true, lock: id }));
-        this.doc.update<DeviceData>('devices', id, next);
+        this.doc.update<DeviceData>('devices', id, typeof patch === 'function' ? () => next : next);
       });
       return;
     }
