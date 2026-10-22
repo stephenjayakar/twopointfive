@@ -845,3 +845,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   GPU, and nobody has played it. Not measured: a blast or a defender's round breaking a lens (read, not run). Not built: the GWOT vehicles'
   lamps do not glow (authored dead), so shooting one changes paint only; exit signs added in level scripts, lit door plates, the generator's
   running lamp, the mast light and the radio dial are still nothing to a round.
+- **Crouched behind a standing man, the grab's reach goes UP for his neck (`CLOSE.reachUp` → `anim.readyUp`, character.ts `READY_UP`).** The maintainer, off
+  the stealth tutorial mission with a still of Sam crouched behind a sentry: "the closer than ever animations are still a bit wonky". Drawn on the worn mesh
+  (below), the tell's free hand, which `READY.grab` measures off Sam's OWN shoulder, went at the crouch to the small of the man's back (0.87 m up; his neck is
+  at 1.44) and Sam's face to his seat. With the key up and the point more than `over` above the left shoulder: the trunk comes up out of the crouch's bow
+  (`rise` 38° over spine1‥3, the head let back half of it), the hand may go `dy` over the shoulder (1.18 m up at every gap from 1.0 to 0.7 m, 0.34 ‥ 0.61 m
+  short of his spine), the fingers tip up, and the hand's clocks are slowed (`slow`, `rate`) so the longer way is no faster a wrist (9.8 cm a frame at most
+  against 8.2 on the frozen stand; 9.3 against 14.4 on the page's). `anim.crouch`, which the men's detect rate and the fog's eye height read, does not move;
+  BUT HIS HEAD BONE IS 0.19 m HIGHER (0.72 → 0.91) and his chest 0.04 while the tell is up, and the men's sight lines (`guards.ts eyeContact`, chest then
+  head) and the light meter read those: a second man across cover 0.75 ‥ 0.9 m high could now have a line to his head. No tally was run for it. The grab's
+  tell only: standing behind him the pose is the same to the bit, with the pistol up (`grabGun`: the gun keeps its aim) the same to the bit, `seat` is
+  untouched, `strike` carries the reach's tail for a few frames while crossing over from a grab; a move that takes the arms (the grab itself) fades the tell
+  on the clocks it had. Tab ▸ 'Closer than ever' ▸ 'crouched ▸ the reach goes up for his neck'. ON in the page (`?noreachup`); OFF in the module and on the
+  frozen stand (`TPS_REACHUP=1`); `FROZEN_HOLDS` row, `STAND_ENV` word, in the journal's `CLOSE` table. Check: `tools/qa/reachup-check.ts` (`probes.ts reachup`,
+  families close / player; `REACHUP_BREAK=1` fails `up`), both stands. With the key down the three staged scenes below print the numbers they printed before
+  the change. One staging, no seeds. NOT MENDED, the maintainer's eye: stopping in the mode keeps the stride he was in (the held gait, by design), which at
+  the crouch is the rear knee on the floor and the rear foot half a metre back, and standing can be a foot held off the floor; and the grab takes him from
+  that crouch to upright against the man's back in about 0.12 s. NOBODY HAS SEEN IT ON A GPU OR IN THE PAGE.
+- **The close-in poses as pictures with no Blender: `tools/qa/close-stills.ts` + `tools/qa/pose-mesh-raster.py`.** `close-stills.ts [--scene approach-crouch |
+  approach-stand | stops-crouch | stops-stand | hold] [--out dir] [--set '{"CLOSE":{"reachUp":false}}']` stages the real game headless (the page's stand unless
+  `TPS_PROFILE` says otherwise), runs the game's own entry points, and at each moment skins BOTH men's worn meshes on the CPU into one PLY in the taken man's
+  first frame, with a line of numbers a moment (gap, hands, knees, feet). `python3 -I tools/qa/pose-mesh-raster.py dir/<scene>.json [--tile 300]` draws the
+  scene as a contact sheet with numpy and Pillow alone (a small z-buffer rasteriser: from the side, the game camera's pitch from behind and from in front,
+  from above); it reads `pose-mesh.ts` / `ready-pose-probes.ts` PLYs too. `pose-mesh-render.py` (Blender) is the better picture where there is one. No light,
+  no cloth, no camera framing: it is the mesh the page skins at the poses the game reaches.
