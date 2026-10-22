@@ -140,6 +140,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   scripted player (`bun run tools/qa/lesson-run.ts tut-sky --seed N`) ends all fourteen steps on seeds 1, 2, 3, 4, 7, 9 and 10 in 130 to 144 s of play on the page's stand; `PORT=<port> node tools/qa/tut-page.cjs` plays it on the real page with real key and mouse events (software adapter: it steps with `__runFrames(n, dt, keys, 'none')`, which draws nothing, and takes a picture by reading one drawn frame back; on that adapter a hand's own keys played all fourteen steps to the mission's end on the tree with the squad's keys on Q and F alone, the ring for the wall charge among them: sixteen lines, none red, the squad back at its trucks at 140 s). NOBODY HAS: seen it
   on a GPU, felt it with a hand, or seen what the smoke does to the road fight (the harness has no smoke sight lines). FOUND: a teammate who has seen an enemy
   through glass he cannot shoot through stays rooted in 'alert' under an order (hence the shutters); a man a script holds runs no AI.
+  - **The first play's notes on 'The halt, from above'** (10-22; the maintainer played it on a GPU, the first sighting of it there, and sent ten notes; two of them,
+    the word's cap on a door and the ring staying on its point, are the orders code's own switches). No new switch: all of it is the frame's, under `RAILS.on`
+    (`?rails=0`, `TPS_RAILS=1`), and data in the level. WHAT CHANGED: (1) THE ROAD READS AS DANGER. `rails.sky.low: true` puts the parked squad on a knee behind its
+    trucks (the hold the seat gives carries `crouch`; a Director order's crouch on a TEAMMATE is overwritten every tick by the orders' own hold, so it has to be
+    the hold's) until an order has moved it this run; the roadblock's rounds are aimed two times in three at the snow beside the files and the air over the
+    trucks' tails (`AT_NEAR`), in longer strings with shorter gaps, so the men flinch (twelve flinches in 25 s on seed 1, nobody hit), and one of them shouts
+    every six seconds or so. (2) SMOKE BEFORE ANYONE MOVES: the smoke's cue is on the step BEFORE the first order (`pan`), two cans from two men's hands, thrown
+    again every 27 s (a can burns about 32) until the order is given; the roadblock then fires blind at the smoke until the squad is through the gate. (3) 'WATCH
+    IT' IS GONE: the gate's line is 'No order needed: they hold the gate', and Red One says so on the radio. (4) NO TEAMMATE'S LASER: `rails.lasers: false`
+    (`Rails.noLasers`, one clause in `irlaser.ts laserOn`); the lasers anywhere else are untouched. (5) THE HOLD IS ITS OWN LINE. Step keys `noTap` (a tap of the
+    command key gives no order while the step is up and these words come up under the line for 2.6 s, the line shaken once; only on a stand where the hold puts
+    a ring up; the ring's first wedge still gives its order; the squad panel's row for the tap is not offered), `menuLine` (the line while the squad's ring is up
+    on the step's mark) and `pageLine` (… and a page under its first is showing): 'Hold Q on the wall', then '5, then 3: a charge', then '3: a charge'. The hook
+    is `orders.ts tapGive`, at the tap's three call sites. (6) THE WALL IS SEEN GOING: the men stand off with their backs to their own charge
+    (`wallcharge.ts standOff`, `brace`), so the fog hid the blast; step key `eye` is a lookout for the fog while the step is up (`Rails.stepEye`, pushed beside
+    the seat's own in `fogofwar.ts`), on the charge's and the word's steps. (7) THE WAY OUT: step key `onWay` (`{ nv: false }`): once a man is under an order to
+    within `RAILS.wayM` (6 m; absent in an old recording = never) of the step's mark the view eases back to the squad and the night vision is put up, once (the
+    key is the player's again). CHECK: `rails-check.ts`, the line 'the first play's notes hold', seventeen lines green on both stands and `RAILS_BREAK=1` red on
+    eleven on both; the scripted player ends all fourteen steps on seeds 1 to 4 on the page's stand. `tut-page.cjs` taps, holds and reads the lines on the real
+    page (software adapter). NOBODY HAS seen any of this on a GPU or felt it with a hand: whether the road now feels dangerous is a thing only a play can say.
 - **The tutorial's squad mission, 'A harder fight'** (row `tut-squad`, `scenarioList.ts TUTORIAL_MISSIONS`, group `tutorial`; `tools/levels/tut-squad.ts` → `levels/tut-squad.json`, its staged
   moments `levels/tut-squad.script.ts`, its scripted player `tools/qa/lessons/tut-squad.ts`, its page run `tools/qa/tut-squad-page.cjs`). A PROTOTYPE: one street through a walled post, the four,
   eleven defenders in six rooms each its own squad (`mayLeave: false`, nobody digs in), nineteen steps. Two easy rooms on the squad's key, then four staged fights that each show ONE thing the
