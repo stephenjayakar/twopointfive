@@ -145,7 +145,18 @@ export class CmdRingViz {
   update(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
     this.updatePlan(game, cam, w, h, tz);
     this.updateHint(game, cam, w, h, tz);
-    this.orders.draw(CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, tz);
+    const V = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null;
+    this.orders.draw(V, tz); this.clear(V, tz);
     this.hands.draw(game.player.sel.ring ? handRingView(game) : null, tz);
+  }
+  private overKey = '';
+  /** the status column goes faint while the ring's words lie over it (a ring put up on a door near that corner was read through the column's plates) */
+  private clear(V: RingView | null, tz: number) {
+    const key = V ? `${V.x.toFixed(0)},${V.y.toFixed(0)},${V.zoom.toFixed(2)}` : ''; if (key === this.overKey) return; this.overKey = key;
+    let over = false;
+    if (V) { const b = document.getElementById('interact')?.getBoundingClientRect(), s = this.svg.getBoundingClientRect();
+      const cx = s.left + V.x / tz, cy = s.top + V.y / tz, rx = 190 * V.zoom / tz, ry = 80 * V.zoom / tz;   // (the words reach further to the sides than up and down)
+      over = !!b && b.width > 0 && b.height > 0 && cx - rx < b.right && cx + rx > b.left && cy - ry < b.bottom && cy + ry > b.top; }
+    document.body.classList.toggle('ringover', over);
   }
 }
