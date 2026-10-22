@@ -1509,7 +1509,7 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
   /** NOT INTO THE WALL AT HIS MUZZLE (wallDark, below, has the rule): `wallOff` the switch — off here, on in the page (host/profile.ts; ?walllight=0 puts it
    *  off) · `wallM` how near the whole beam must end for the light to go dark, `wallBackM` how far any ray must run clear for it to burn again, `wallSecs`
    *  how long the beam must have ended that near before it goes dark */
-  wallOff: false, wallM: 1.1, wallBackM: 1.4, wallSecs: 0.3 };
+  wallOff: false, wallM: 1.5, wallBackM: 1.9, wallSecs: 0.3 };
 const litSeen = new SideMap<Guard, { t: number; lit: boolean; A: unknown; tgt: unknown }>('guards.litSeen');
 /** is where he stands, what his gun is on, the man he has and the mark he is nearly at lit by the place itself (LIGHTS.litOff; asked twice a second per man,
  *  and again at once on a new order or a new man) */
@@ -1557,12 +1557,15 @@ function beamFan(d: Vec3): Vec3[] {
  *  rays across the cone must ALL end inside `wallM` — a jamb met edge-on with the room open beyond it to part of the cone is not a wall, and that light
  *  burns. It goes dark once that has held `wallSecs` (a muzzle swept past a corner does not blink) and burns again the frame any ray runs clear to
  *  `wallBackM` (the door opens: the room is lit at once). The other rules still decide whether he wants a light at all; this one only says it would be
- *  wasted. Whoever is not one of Sam's team is never asked. Off: the light as those rules have it, as it was. */
+ *  wasted — and with anybody who is not of his side standing in the beam this side of the wall it is not: that light burns. Whoever is not one of Sam's
+ *  team is never asked. Off: the light as those rules have it, as it was. */
 function wallDark(g: Game, gd: Guard, held: Vec3 | undefined): boolean {
   if (!LIGHTS.wallOff || WALL_BREAK || gd.team !== 'operative' || !gd.unit || gd.state === 'dead' || !held) return false;
   const p = gd.flashlight.pos, d = gd.flashlight.dir, t = g.time;
   const o = g.col.segmentBlocked(held, p) ? lensClear(g, held, p, g.engine.settings.flashlightRadius) : p, fan = beamFan(d);   // (a lens carried through the wall he stands at lights from this side of it — attachFlashlight, lighting.ts: asked from where it will burn)
-  const ends = (m: number) => fan.every(r => g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m]));
+  const hl = Math.hypot(d[0], d[2]) || 1, manIn = (m: number) => g.guards.some(x => { if (x === gd || x.state === 'dead' || x.team === 'operative') return false;   // (somebody not of his side in the beam, this side of what it ends on: a light with a man in it is not wasted — the walls are asked of the statics only)
+    const vx = x.char.pos[0] - o[0], vz = x.char.pos[2] - o[2], l = Math.hypot(vx, vz); return l < m + 0.5 && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > 0.9); });
+  const ends = (m: number) => fan.every(r => g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m])) && !manIn(m);
   const was = wallSeen.get(gd), s = was && t >= was.t && t - was.t <= 0.25 ? was : { t, since: t - LIGHTS.wallSecs, dark: false };   // (no reading a moment ago — a fresh man, a clock put back: this frame's reading stands at once)
   const near = ends(s.dark ? LIGHTS.wallBackM : LIGHTS.wallM), since = near ? s.since : t, dark = near && (s.dark || t - since >= LIGHTS.wallSecs - 1e-9);
   wallSeen.set(gd, { t, since, dark }); return dark;

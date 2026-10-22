@@ -255,6 +255,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sits beside it in `laserOn` and is not this switch. `ir-draw` was red before this change and is as red after it (block-four, block-squads,
   warehouse-four, and snatch-four on the page's stand: the same lines on the untouched build). Never seen on a GPU; nobody has played it. Open with
   the maintainer: whether Sam's own line should go too.
+- **A teammate's light is dark into the wall at his muzzle** (`LIGHTS.wallOff`, `src/game/guards.ts wallDark`; 10-22, the maintainer off the first
+  tutorial mission: "weird that they are shining the flashlight on the wall immediately in front of them"). The other light rules decide whether a
+  teammate WANTS a light (walking to a mark, searching, a shot just heard); the light points where the gun points, so a man walking up to a stack along
+  a wall, or on a knee behind a truck, burned it into something a step away: a small blown-out patch, the brightest thing in the picture. Now a
+  teammate's light is off while its WHOLE beam (the axis and six rays across the 19 degree cone, two of them tipped up and down, from where the lens
+  will burn) ends on something solid within `wallM` 1.5 m; it goes dark after `wallSecs` 0.3 s of that and burns again the frame any ray runs clear to
+  `wallBackM` 1.9 m (a door opens: the room is lit at once). With anybody who is not of his side standing in the beam this side of the wall it burns
+  (the walls are asked of the statics only). Only Sam's team is asked. SWITCH: on in the page (`?walllight=0` off, the Team feel row
+  "light ▸ dark into a wall at the muzzle"), off in the module and on the frozen stand (`TPS_WALLLIGHT=1`); a recording carries it (the LIGHTS table
+  now rides the journal; one from before the key replays with it off). CHECK: `probes.ts light-wall` (family litman), 9 of 9 on both stands;
+  `WALLLIGHT_BREAK=1` fails it on both. It plays fall in, stack, open and clear with every light forced on: man-frames lit into a wall 177 → 0 on the
+  page's stand, 32 → 0 on the frozen one, never dark with a ray clear, never dark on a man in the beam. MEASURED (page's stand, the scripted player): the first tutorial mission's
+  opening, men lit into something under a metre 42 of 56 samples → 0 of 14, and its stack 110 → 3; the tutorial's scripted
+  run still plays through; registry rescue seeds 1 to 24 and night breach seeds 1 to 16, on against off: no seed differs in its end, the men standing
+  or the enemies down (the mean run is a tenth of a second shorter). It moves no fight there because a light on a wall at arm's length lights nothing
+  else by the CPU estimate. KNOWN: in a dim place a man whose light is off takes his goggles down (nvg.ts, as with every other reason his light is
+  off) and raises them 0.7 s after it burns again; a checkpoint does not keep the 0.3 s clock (as with the other light clocks). A man facing a mate's
+  back at arm's length is not a wall and stays lit. NEVER SEEN ON A GPU; nobody has played it.
 - **An IR light on the goggles** (`src/game/irlight.ts`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
   model IR lights on the nvg so even totally dark rooms are visible. and we can assume enemies never have nvg"). SWITCH `IRLIGHT.on`: ON in the page
   (`?noirlight` puts it off), OFF in the module and on the frozen stand (`TPS_IRLIGHT=1` raises it; `FROZEN_HOLDS`, standup pin, standEnv); registered in

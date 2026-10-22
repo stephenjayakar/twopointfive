@@ -37,16 +37,20 @@ const fanOf = (d: number[]): number[][] => { const out: number[][] = []; for (co
 const ends = (g: any, x: any, m: number): boolean => { const held = x.char.bones.upperArmR, p = x.flashlight.pos, d = x.flashlight.dir; if (!held) return false;
   const o = g.col.segmentBlocked(held, p) ? LTM.lensClear(g, held, p, g.engine.settings.flashlightRadius) : p;   // (a lens through the wall he stands at burns from this side of it)
   return fanOf(d).every(r => g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m])); };
+/** somebody who is not of his side stands in his beam inside `m` (+ `slack`): the rule's exemption, read by the probe at a margin either way */
+const manIn = (g: any, x: any, m: number, cos: number): boolean => { const o = x.flashlight.pos, d = x.flashlight.dir, hl = Math.hypot(d[0], d[2]) || 1;
+  return g.guards.some((y: any) => { if (y === x || y.state === 'dead' || y.team === 'operative') return false; const vx = y.char.pos[0] - o[0], vz = y.char.pos[2] - o[2], l = Math.hypot(vx, vz); return l < m && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > cos); }); };
 
-interface Tally { litNear: number; lit: number; dark: number; darkClear: number; foeDark: number; foeNear: number; hash: string; frames: number }
+interface Tally { darkOnMan: number; manNear: number; litNear: number; lit: number; dark: number; darkClear: number; foeDark: number; foeNear: number; hash: string; frames: number }
 /** one scripted stretch: fall in, stack on the nearest door, open and clear — the team bare-eyed and the discipline rule off, so the lights burn */
 async function play(id: string, on: boolean, stood = false): Promise<Tally> {
   const S: any = await quiet(() => stage(id, 1)); const { g, step } = S, O = g.orders; LIGHTS.wallOff = on; if (!stood) { LIGHTS.on = false; if (NVM?.NVG) NVM.NVG.on = false; g.player.nv = false; }   // (stood: the light discipline rule and the goggles as the stand has them — a dark light in a dim place takes his goggles down, nvg.ts)
-  const T: Tally = { litNear: 0, lit: 0, dark: 0, darkClear: 0, foeDark: 0, foeNear: 0, hash: '', frames: 0 }, H = fnv(), near = new Map<any, number>();
+  const T: Tally = { darkOnMan: 0, manNear: 0, litNear: 0, lit: 0, dark: 0, darkClear: 0, foeDark: 0, foeNear: 0, hash: '', frames: 0 }, H = fnv(), near = new Map<any, number>();
   const frame = () => { step(); T.frames++; H.eat(JSON.stringify(digestGame(g, true)));
     for (const x of g.guards) { if (x.state === 'dead' || !x.flashlight) continue; const mate = x.team === 'operative' && !!x.unit; H.eat(`${x.flashlight.enabled ? 1 : 0}`);
       if (!mate) { if (GDM.wallDarkSeen(g, x)) T.foeDark++; if (x.flashlight.enabled && ends(g, x, LIGHTS.wallM - MARGIN)) T.foeNear++; continue; }
-      const n = ends(g, x, LIGHTS.wallM - MARGIN) ? (near.get(x) ?? 0) + 1 : 0; near.set(x, n);
+      const n = ends(g, x, LIGHTS.wallM - MARGIN) && !manIn(g, x, LIGHTS.wallM + 1, 0.8) ? (near.get(x) ?? 0) + 1 : 0; near.set(x, n);   // (nobody anywhere near his beam: the frames the rule owes dark)
+      if (ends(g, x, LIGHTS.wallM - MARGIN) && manIn(g, x, LIGHTS.wallM - MARGIN, 0.95)) { T.manNear++; if (GDM.wallDarkSeen(g, x)) T.darkOnMan++; }   // (a man plainly in a beam that ends at arm's length: the frames it must burn)
       if (x.flashlight.enabled) { T.lit++; if (n > (LIGHTS.wallSecs + 0.2) * 60) T.litNear++; }
       if (GDM.wallDarkSeen(g, x)) { T.dark++; if (!ends(g, x, LIGHTS.wallBackM + MARGIN)) T.darkClear++; } } };
   const sam = g.player.char.pos; await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all')); for (let f = 0; f < 120; f++) frame();
@@ -66,6 +70,7 @@ export async function lightWall(): Promise<boolean> {
     F.verdict(sum(off, 'litNear') > 0, 'with the switch off the flaw is there: a light burns on with its whole beam ended at arm\'s length', `man-frames lit, the beam ended inside ${(LIGHTS.wallM - MARGIN).toFixed(2)} m for over ${(LIGHTS.wallSecs + 0.2).toFixed(1)} s: ${sum(off, 'litNear')} of ${sum(off, 'lit')} lit, over ${ids.length} scenarios (${per('litNear')})`);
     F.verdict(sum(on, 'litNear') === 0 && sum(on, 'dark') > 0, 'with it on there is no such frame, and the rule held lights dark', `man-frames lit into the wall ${sum(off, 'litNear')} → ${sum(on, 'litNear')} (want 0) · man-frames the rule had dark: ${sum(on, 'dark')} (${per('dark')})`);
     F.verdict(sum(onStood, 'litNear') === 0 && sum(onStood, 'darkClear') === 0, '… and the same with the light discipline rule and the goggles as the stand has them', `man-frames lit into the wall ${sum(offStood, 'litNear')} → ${sum(onStood, 'litNear')} (want 0) · lit at all ${sum(offStood, 'lit')} → ${sum(onStood, 'lit')} · the rule had dark ${sum(onStood, 'dark')}, with a ray clear ${sum(onStood, 'darkClear')} (want 0)`);
+    F.verdict(sum(on, 'darkOnMan') + sum(onStood, 'darkOnMan') === 0, 'never dark on a man: with somebody who is not of his side plainly in the beam it burns, wall or no wall', `man-frames with a man in a beam that ends at arm's length: ${sum(on, 'manNear') + sum(onStood, 'manNear')} · of those the rule had dark: ${sum(on, 'darkOnMan') + sum(onStood, 'darkOnMan')} (want 0)`);
     F.verdict(sum(on, 'darkClear') === 0, 'it burns again at once: never dark with a ray running clear past the far distance', `man-frames the rule had dark with a ray clear to ${(LIGHTS.wallBackM + MARGIN).toFixed(2)} m: ${sum(on, 'darkClear')} (want 0)`);
     F.verdict(sum(on, 'foeDark') === 0 && sum(off, 'foeDark') === 0 && sum(onStood, 'foeDark') === 0, 'no reading is kept for a man who is not Sam\'s (the rule is one line: his team and his unit)', `readings dark on such a man: ${sum(on, 'foeDark') + sum(onStood, 'foeDark')} · their own lights burning into something at arm's length, left as they are: ${sum(on, 'foeNear')} man-frames`);
     { LIGHTS.wallM = 5; LIGHTS.wallBackM = 6; LIGHTS.wallSecs = 0; const moved = await play(ids[0], false); back();
