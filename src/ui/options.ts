@@ -19,6 +19,7 @@ import { TABKEY, tabChoices, setTabKey, tabDoes } from './tabkey';
 import { BACKKEY } from '../game/backkey';
 import { WALLSNAP } from '../game/wallsnap';
 import { CMDRING } from '../game/cmdring';
+import { HANDRING } from '../game/handring';
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
@@ -48,6 +49,9 @@ const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it, l
 const E_WHAT = 'Holster or draw';
 /** the empty hands' own slot (game/handslot.ts; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
 const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'what is in them goes away; a digit draws'];
+/** the action key's row and the whistle's while his own actions are a ring that stays (game/handring.ts): the list's wheel is gone, the whistle is a wedge */
+const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
+const RING_SMALL = 'keep it down a moment for everything you can do here, as a ring: 1 to 5 or a click', WHISTLE_SMALL = 'the nearest man comes to look; it is on the ring';
 const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
@@ -59,8 +63,8 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['Ctrl', 'Wheel'], 'Zoom'],
   ] },
   { group: 'Hands', rows: [
-    [['Space'], 'Do the highlighted action', 'hold to pick another with the wheel, let go to do it'],
-    [['V'], 'Whistle', 'the nearest man comes to look'],
+    [['Space'], ACT_WHAT, 'hold to pick another with the wheel, let go to do it'],
+    [['V'], WHISTLE_WHAT, 'the nearest man comes to look'],
     [['N'], 'Night vision'],
   ] },
   { group: 'Weapons', rows: [
@@ -355,7 +359,8 @@ function controls(body: HTMLElement, host: KeyHost) {
     const back: typeof g.rows = BACKKEY.tab && g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
     const tabbed = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
     const rows = !slotNow() ? tabbed : g.group === 'Kit' ? [SLOT_ROW, ...tabbed] : tabbed.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
-    for (const [caps, what, small] of rows) {
+    for (const [caps, what, small0] of rows) {
+      const small = !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
       caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(keyCapEl(k, gearText(wallLine(what)), host, seen)); });

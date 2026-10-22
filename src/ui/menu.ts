@@ -10,6 +10,7 @@
 import { dumpNow, keptNow, keptWords } from '../replay/dumpui';
 import { saveSandbox } from '../game/sandbox';
 import { SAVETIMELINE, type SlotInfo } from '../game/savestate';
+import { HANDRING } from '../game/handring';
 import { gearText } from '../game/gear';   // (the controls list names the kit: shown in the kit's words as issued)
 export { loadSandbox, saveSandbox, SANDBOX_LS } from '../game/sandbox';
 import { Engine } from '../engine';
@@ -32,18 +33,23 @@ import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions,
 const E_ROW: [string, string] = ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'];
 /** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
 const SLOT_ROW: [string, string] = ['0', 'empty hands: what is in them goes away · a digit draws'];
+/** the action key and the whistle's key, and those two rows while his own actions are a ring that stays (game/handring.ts) */
+const SPACE_ROW: [string, string] = ['Space', 'do the highlighted action (top-left) · hold to pick another (wheel / ↑↓, let go) · long actions run on their own; move or tap again to stop'];
+const LNV_ROW: [string, string] = ['L · N · V', 'weapon light · night vision · whistle (the nearest man comes to look)'];
+const RING_ROW: [string, string] = ['Space', 'do the action shown top-left · keep it down a moment: everything you can do here, as a ring (1 to 5 or a click; the whistle is on it) · long actions run on their own; move or tap again to stop'];
+const LN_ROW: [string, string] = ['L · N', 'weapon light · night vision'];
 const Q_ROW: [string, string] = ['Q', 'back to the wall beside you — slide, peek at its end; Q / away / Shift lets go'];
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
   ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'],
   ['Mouse', 'aim; the ring snaps to a man near the cursor, or a light under it'],
   ['LMB', 'fire what is in hand · throw a canister · hands empty behind a man: silent takedown'],
   ['RMB', 'pistol: OCP the light under the ring · FN2000: fire its launcher (hold to see the arc first)'],
-  ['Space', 'do the highlighted action (top-left) · hold to pick another (wheel / ↑↓, let go) · long actions run on their own; move or tap again to stop'],
+  SPACE_ROW,
   E_ROW,
   Q_ROW,
   ['1 2 3 4 5', 'Five-seveN · FN2000 (2 again: flip its launcher, RING / 40 mm) · smoke · stun · frag'],
   ['Z · R', 'FN2000 semi / auto · reload'],
-  ['L · N · V', 'weapon light · night vision · whistle (the nearest man comes to look)'],
+  LNV_ROW,
   ['X · B · T · F', 'with a team — X (or middle click) orders · B the usual order · T who it goes to · F drill, word, charge'],
   ['H · G', 'with the orders up — the big tool on a door, smoke on the floor · frag and clear'],
   ['F5', 'save'],
@@ -53,7 +59,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 ];
 /** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
 const WALL_ROW: [string, string] = ['Wall', 'walk into one and your back goes to it — slide, peek at its end; away / Shift lets go'];
-const controlRows = (): [string, string][] => CONTROLS.flatMap(r => { if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
+const controlRows = (): [string, string][] => CONTROLS.flatMap(r => { if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (HANDRING.on && r === LNV_ROW) return [LN_ROW]; if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
 
 const TAGLINE = 'a ray-traced stealth sandbox — every light, shadow and wisp of smoke is live';
 /** the title screen's line under the wordmark */

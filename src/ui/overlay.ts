@@ -14,6 +14,7 @@ import { aimGunPoint, aimGunOn } from '../game/aimweight';
 import { previewTooClose } from '../game/he40';
 import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 import { HANDSLOT } from '../game/handslot';
+import { HANDRING } from '../game/handring';
 /** the reticle's ONE word: the 40 mm's arc is too short to arm (the plain 'RMB  OCP' / 'RMB  RING' / 'RMB  40 MM' words went on the 10-11 play note: "we can remove
  *  the RMB overlay on the cursor" — what the right button holds is read on the kit column's rows) */
 const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
@@ -411,7 +412,10 @@ export class Overlay implements HudLike {
     const sq = game.orders.hud(); if (sq.menu) return sq.menu;   // the squad's command menu, while it is open, IS the panel (orders.ts)
     const hv = game.hover, p = game.player.char.pos;
     const dist = (it: Interactable) => { let d = v3.distXZ(it.pos, p); if (it.door) d = Math.min(d, v3.distXZ(it.door.frameCentre, p)); return d; };   // doors: leaf or doorway centre, as the reach test measures it
-    const list: Interactable[] = game.nearby;
+    // (handring.ts: the corner shows ONE line, what the key would do now — the highlighted row, or a running verb's own; none while the ring's lit wedge
+    // is the whistle — and nothing where it does nothing; the rest of what is on offer is the ring's. A line no key gives stays under it)
+    const hint = (): Interactable[] => game.nearby.filter(r => !r.verb && r !== hv).slice(0, 1);   // (a line no key gives: the status of a committed move, or what the two clicks do to the man in reach — close.ts)
+    const list: Interactable[] = !HANDRING.on || game.puppet ? game.nearby : hv && hv.kind !== 'cancel' && (hv.verb || hv.running) && !game.player.sel.ring?.whistle ? [hv, ...hint()] : hint();
     const thing = (it: Interactable) => `${it.kind}:${it.door?.def.name ?? it.guard?.callsign ?? ''}`;
     const cap = MAX_ROWS + (list.some(it => it.kind === 'cam') ? 1 : 0);   // (stickycam.ts: a stuck camera's 'take it back' is one row past every row the list had before it — it is always drawn)
     const rows = list.slice(0, cap).map((it, i): InteractRow => { const d = dist(it); return { kind: it.kind, label: it.line1, opts: it.kind === 'cancel' ? [] : parseOpts(it.line2), inReach: it.inReach, off: it.off, dist: it.inReach || it.kind === 'light' || it.kind === 'cancel' ? undefined : d, progress: it.progress, cont: i > 0 && it.kind !== 'cancel' && thing(list[i - 1]) === thing(it) }; });

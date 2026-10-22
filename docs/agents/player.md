@@ -869,5 +869,57 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   page's own board, and the debugger's key.
   SEEN ON THE REAL PAGE (software adapter, real key presses, 10-22): backslash opens and shuts the debugger, 1 files `Digit1` and draws, backtick
   files `Digit0` and empties the hands, backtick again leaves them empty, the E key files nothing.
-  NOT DONE HERE: nothing is on E yet (his own actions go there next); the HUD's kit box still shows no row for the empty slot.
+  NOT DONE HERE: the HUD's kit box still shows no row for the empty slot.
+  Nobody has played it; never seen on a GPU.
+- **His own actions are a ring that stays, on E; the whistle is its last wedge; the corner shows one line** (`src/game/handring.ts HANDRING {on,
+  holdSecs}`, 10-22; the maintainer: "radial menu for our own actions, remove existing menu in top left and awkward scrolling thing", "move whistle
+  to our actions and remove v binding", "move our actions to E", "i think same would go for our actions (1-5 with the ring open)", "we can make our
+  actions and squad actions symmetric … what the default action might be … in the top left, which might be fine", "tab could be that for us").
+  ON in the page (`?handring=0` = the list on a held Space with its wheel and cancel row, the corner list, V for the whistle; the debugger's Player
+  tick "your own actions are a ring that stays"), OFF in the module and on the frozen stand (`FROZEN_HOLDS`, `TPS_HANDRING=1`, pinned in
+  `host/standup.ts`); in the knob registry and carried by a recording (one from before it replays with it off).
+  THE RULE (interact.ts `updateInteract`, `ringStays`): a TAP of the interaction key does the highlighted row, as it always did. The key kept down
+  `holdSecs` (0.3, the squad ring's number for a ring that stays) puts his rows up as a ring at the cursor (the ring `CMDRING.hands` drew as a
+  prototype, now standing without the squad's switch; rows 1 to 5 are wedges 1 to 5). Let go with the cursor out on a wedge: that wedge is done.
+  Let go in the middle: the ring STAYS (`Player.sel.ring.free`), his feet his own. Standing: a digit does its wedge at once (and is no weapon
+  slot), a left click does the lit wedge and is swallowed (he does not fire; the held button stays taken, as under the squad's ring), the key
+  again does the lit wedge, a right click or the back key (Tab, Esc where it reaches the game) puts it away with nothing done, and so do a blur,
+  the pause, going down, and the squad's menu or ring coming up. A wedge that cannot be done NOW (out of reach, or the whistle before the breath
+  is back) is lit by its digit or a click and the ring stays: only a thing done, or a put-away, takes it down. A ring put away leaves the
+  highlight on the top row. The ring opens already armed (the hold was the wait: a flick the moment it is up counts). The held list and its
+  cancel row do not exist under the rule; the wheel is his pace, also under a standing ring, unless the key is down. A STANDING RING IS NOT
+  "HANDS BUSY": `Player.choosing` (the selector up and not standing free) is what the slot key, the wall press and the hold swap ask,
+  `interact.ts handsBusy` what the squad's key asks (`orders.backFree`), and a quick save is allowed under it (savestate.ts). This is the press rule agreed with the squad ring's owner (`CMDRING.stay`, `ringLatch` in cmdring.ts when that lands: this file
+  holds its own copy of the same rule until then, and should read the shared one after).
+  THE WHISTLE (`whistleWedge`): the ring's LAST wedge, always the same one, wherever fewer rows than wedges are on offer (`CMDRING.wedges`); greyed while the breath
+  is not back; not there where the rows fill every wedge, while a verb runs, or with him down. It is NO ROW of the list: `Game.nearby` and `Game.hover` are as they were, so nothing that reads them meets it, and a tap never
+  whistles. On open floor the ring is that one wedge, lit. `whistle.ts whistleKey` still answers `'KeyV'`: every recording and check that presses
+  it is as it was; the page's board takes the key off the row.
+  THE CORNER (ui/overlay.ts `deriveInteractions`): one line, what a tap would do now (the highlighted row with its hints, or a running verb's own
+  row, or a status line) with at most one no-key hint line under it (a locked door's "needs a key"), and no action line while the whistle is the
+  lit wedge. Nothing where a tap does nothing. The squad's block under it is untouched.
+  THE BOARD (`src/host/keymap.ts KEYMAP.handWhen`, `HAND`, `HAND_SLOT`, `handNow()`; main.ts hands it `() => HANDRING.on`): the whistle's row has
+  no key (the player may give it one in Options, Controls; the letter V in a line of words is left alone, as a freed row's is). Over the slot's
+  layer (which is what leaves E spare) the E key gives the interaction's code `'Space'` and the Space key gives the game nothing. Words follow:
+  "Space  open" reads "E  open", and "E puts it away" still reads as the slot's key. With `?handslot=0` the ring is on Space. THE ORDER MENU'S
+  ROW ON V (the wand under a door) has no key on the page while the rule is on: it is the squad owner's to seat on a wedge.
+  THE WORDS: Options, Controls and the start card reword the action key's row and the whistle's under the rule (ui/options.ts `RING_SMALL`,
+  ui/menu.ts `RING_ROW`). A lesson's line that says "V whistles" (Training 2 has two) is shown as "Space held, then 5, whistles" while the rule is
+  on, and "Hold Space, wheel to kick, let go" (the lights lesson's gate) as "Hold Space, then 2 kicks it" (`lesson.ts lessonLine`; the page's
+  words put the key in): the level's own text is not edited. A lesson that gains a line naming V or the held list's wheel needs a row there.
+  PAGE DRIVERS: `tools/qa/keybinds-page.cjs` holds the rule off on its older lines (`&handring=0`) and reads the page's own board in its last
+  (the action on E with the ring's words, no V on the whistle); `tools/qa/tapes/page-bot.ts verb()` presses the wedge's digit when the ring is
+  up.
+  OLDER CHECKS: selector-probes, grab-probes, tabback-check and cmdring-check read the list as it was built and hold the rule off after standing
+  up (their note says so), as grab-probes already holds the close-in mode off.
+  CHECK: `bun run tools/qa/probes.ts handring` (family `player`), 12 lines, both stands; `HANDRING_BREAK=1` fails 11 (the tap's line passes either
+  way: a tap is the tap it was). Read: the leaf after a tap, the ring's view before and after the hold, standing after a walk, a digit, the
+  whistle's digit and a click before the breath is back, a click with the rounds counted, the cursor out the moment the ring is up and the key
+  let go, the key again, right click, Tab, the list and highlight unchanged, off, the board, the lesson's line, a recording, and under a standing ring the wheel as his
+  pace, the squad's key free and a save allowed.
+  SEEN ON THE REAL PAGE (software adapter, real keys and pointer, the draw stubbed, 10-22): the corner reads one line ("DOOR · SHUT / E / pull it
+  open"); a tap of E files `Space` and the leaf opens; E kept down half a second draws the ring ("1 push it shut · 5 whistle", 1 lit); let go, it
+  stands; Tab puts it away; ring then 1 shuts the leaf; ring then a click opens it; on open floor the ring is "5 whistle" and 5 raises his noise;
+  the V key and the Space key file nothing. No picture was taken: a screenshot does not come back on that adapter.
+  NOT DONE HERE: the camera is still on Ctrl (Space is spare for it); the shared latch helper.
   Nobody has played it; never seen on a GPU.

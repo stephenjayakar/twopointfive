@@ -16,6 +16,7 @@ const AP: any = await import(`${ROOT}/src/game/autopilot.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const IA: any = await import(`${ROOT}/src/game/interact.ts`);
+const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
 const { CMDRING, CMDRING_STATS } = CR, { AUTOPILOT } = AP;
 
 const DT = 1 / 60, HOLD = Math.ceil(CMDRING.tapSecs * 60) + 1, HOLD_SECS = 0.2;
@@ -28,7 +29,7 @@ async function rig(seed: number, on = !BREAK) {
   try {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
-    W = await standUp();
+    W = await standUp(); HANDRING.on = false;   // (handring.ts: lines 11 on read Sam's own ring as the prototype has it, up the moment the key goes down — the ring that stays has its own check, probes.ts handring)
     CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.holdSecs = HOLD_SECS; AUTOPILOT.on = true;
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);

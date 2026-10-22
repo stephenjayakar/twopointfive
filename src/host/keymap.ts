@@ -43,7 +43,10 @@
 // draw, the swap of a hold) has no key: E is spare. Nothing kept is rewritten; a row he moved stays where he put it. IN WORDS the letter E is still the
 // way a line names putting it away ('E puts it away', written all over the game and its lessons): while the slot is on that letter is read as the
 // slot's key (`ALIAS`), so those lines follow without being rewritten, and follow a rebind of the slot. OFF IN THE MODULE (`slotWhen` null).
-// Only while E's row has no key: put on a key by hand it is that key again, in caps and in words, and its row is back on the Controls list. The slot's
+// HIS OWN ACTIONS ARE A RING (`KEYMAP.handWhen`, `HAND`, `HAND_SLOT`; the rule is game/handring.ts): while the page says so the whistle's row has no key
+// (it is the ring's last wedge; its letter in a line of words is left alone, as a freed row's is), and over the slot's layer the interaction's row is on
+// E, the Space key giving the game nothing: 'Space  open' reads 'E  open'. OFF IN THE MODULE (`handWhen` null).
+// (E's letter is the slot's) Only while E's row has no key: put on a key by hand it is that key again, in caps and in words, and its row is back on the Controls list. The slot's
 // row with the slot OFF is no row: it is on no list and holds no key against another row. Backtick already given to another row by hand: the slot is
 // on the 0 key, its own code's; backslash given away: the debugger has no key until he gives it one.
 // Imports nothing.
@@ -67,7 +70,7 @@ export const KEYMAP = { /** false = the build's own keys, whatever is kept: the 
   /** the wall hold's row has no key in the build (the header's note). false = it is on Q: the module's own stand, and the page's under `?qfree=0` */ qFree: false,
   /** the squad's command (the quick order's row, code 'KeyB') has Q for its key in the build and B gives nothing: only with `qFree`. false = it is on B: the module's own stand, and the page's under `?bkey` */ qCmd: false,
   /** …only while this says so (the page hands it the walk-in switch; null = always) */ freeWhen: null as (() => boolean) | null,
-  /** empty hands are a slot on backtick while this says so (the page hands it game/handslot.ts's switch; null = never: the module's own stand) */ slotWhen: null as (() => boolean) | null, /** steps on every change: what a drawn surface keys its cache on */ rev: 0 };
+  /** empty hands are a slot on backtick while this says so (the page hands it game/handslot.ts's switch; null = never: the module's own stand) */ slotWhen: null as (() => boolean) | null, /** his own actions are a ring while this says so (game/handring.ts; null = never): the whistle's row has no key and, with the slot on, the interaction's row is on the key E left */ handWhen: null as (() => boolean) | null, /** steps on every change: what a drawn surface keys its cache on */ rev: 0 };
 const LS = 'twopointsix.keys';
 /** the rows whose keys in the build are not their own codes, while `qFree` is on: row id → its keys ([] = none) */
 const FREED: Record<string, string[]> = { KeyQ: [] };
@@ -77,19 +80,25 @@ const MOVED: Record<string, string[]> = { KeyB: ['KeyQ'] };
 const SLOT: Record<string, string[]> = { KeyE: [], Digit0: ['Backquote'], Backquote: ['Backslash'] };
 /** …and the row a line of words means by another row's letter then */
 const ALIAS: Record<string, string> = { KeyE: 'Digit0' };
+/** HIS OWN ACTIONS ARE A RING (game/handring.ts): the whistle's row has no key (it is a wedge of that ring; the player may give it one) — and, over the
+ *  slot's layer, which is what leaves E spare, the interaction's row is on E and the Space key gives the game nothing */
+const HAND: Record<string, string[]> = { KeyV: [] }, HAND_SLOT: Record<string, string[]> = { Space: ['KeyE'] };
 const SLOT_ID = SLOT_ACT.id;
 const dormant = (id: string) => id === SLOT_ID && !slotNow();
 /** the rows there are right now */
 export const keyRows = (): KeyAct[] => slotNow() ? WITH_SLOT : KEY_ACTS;
 /** are empty hands a slot in the build right now */
 export const slotNow = () => !!KEYMAP.slotWhen && KEYMAP.slotWhen();
+export const handNow = () => !!KEYMAP.handWhen && KEYMAP.handWhen();
+/** a row's keys under the ring's layer and the slot's (undefined: not theirs) */
+const slotOf = (id: string): string[] | undefined => (handNow() ? HAND[id] ?? (slotNow() ? HAND_SLOT[id] : undefined) : undefined) ?? (slotNow() ? SLOT[id] : undefined);
 /** is Q the squad's command key in the build right now */
 export const cmdOnQ = () => KEYMAP.qCmd && KEYMAP.qFree;
 /** a row whose keys in the build move with the switches: its kept entry is never folded into 'as built' */
-const special = (id: string) => !!FREED[id] || !!MOVED[id] || !!SLOT[id];
+const special = (id: string) => !!FREED[id] || !!MOVED[id] || !!SLOT[id] || !!HAND[id] || !!HAND_SLOT[id];
 /** a row's keys in the build, now (the wall hold never falls back to Q while Q is the command's) */
 const freeNow = () => KEYMAP.qFree && (KEYMAP.qCmd || (KEYMAP.freeWhen ? KEYMAP.freeWhen() : true));
-const home = (a: KeyAct): string[] => (cmdOnQ() ? MOVED[a.id] : undefined) ?? (slotNow() ? SLOT[a.id] : undefined) ?? (freeNow() ? FREED[a.id] : undefined) ?? a.codes;
+const home = (a: KeyAct): string[] => (cmdOnQ() ? MOVED[a.id] : undefined) ?? slotOf(a.id) ?? (freeNow() ? FREED[a.id] : undefined) ?? a.codes;
 const same = (x: string[], y: string[]) => x.length === y.length && x.every((c, i) => c === y[i]);
 
 /** row id → its key now (null = none). Only rows that are NOT as built are in it */
@@ -97,7 +106,7 @@ const bound = new Map<string, string | null>();
 /** key on the board → the code the game is given ('' = a key whose row moved away). null = nothing rebound: every key is itself */
 let map: Map<string, string> | null = null;
 /** the switches `map` and the words were built under: a reader that finds them moved builds again */
-let builtOn = false, builtFree = false, builtCmd = false, builtSlot = false;
+let builtOn = false, builtFree = false, builtCmd = false, builtSlot = false, builtHand = false;
 type Words = { re: RegExp; to: Map<string, string> } | null;
 let text: Words = null, textAll: Words = null;
 const byId = new Map<string, KeyAct>(), byCap = new Map<string, KeyAct>();
@@ -128,7 +137,7 @@ function tidy() {
     const others = a.codes.filter(c => c !== k); if (others.every(c => ![...bound].some(([o, ok]) => o !== id && ok === c))) bound.delete(id); }
 }
 function rebuild() {
-  KEYMAP.rev++; map = null; text = textAll = null; builtOn = KEYMAP.on; builtFree = freeNow(); builtCmd = cmdOnQ(); builtSlot = slotNow();
+  KEYMAP.rev++; map = null; text = textAll = null; builtOn = KEYMAP.on; builtFree = freeNow(); builtCmd = cmdOnQ(); builtSlot = slotNow(); builtHand = handNow();
   // every row that is not on the keys its code names: the player's own (while `on`), and the rows the build itself moved (`FREED`)
   const moved: [string, string | null][] = [];
   for (const a of keyRows()) { const ks = keysNow(a); if (!same(ks, a.codes)) moved.push([a.id, ks[0] ?? null]); }   // (the slot's row with the slot off is no row: the 0 key is itself, or the row's it was given to)
@@ -142,7 +151,7 @@ function rebuild() {
   const L = `(?<![A-Za-z0-9\\-])(?<!\\b(?:${place}) )(?<!\\b(?!(?:Press|Hold|Tap|Hit|Then|Or|And|With|On|Use)\\b)[A-Z][a-z]+ )`, R = `(?![A-Za-z0-9'’\\-])(?! (?:${place})\\b)`;
   const mk = (all: boolean): Words => {
     const to = new Map<string, string>(), alts: string[] = [];
-    for (const [id, k] of moved) { if (!k && FREED[id] && freeNow()) continue;   // (freed and unbound: the letter is not the row's — the header's note)
+    for (const [id, k] of moved) { if (!k && ((FREED[id] && freeNow()) || (HAND[id] && handNow()))) continue;   // (freed and unbound: the letter is not the row's — the header's note)
       if (id === SLOT_ID && !all) continue;   // (the slot's cap in the build, '0', is a count in a line of words, never a key: only a list of keys names it)
       const as = slotNow() && !k ? ALIAS[id] : undefined;   // (…or it is another row's while empty hands are a slot and E's row has no key of its own: that row's key now)
       const a = byId.get(id)!, now = as ? capNow(as) : k ? keyLabel(k) : NONE, c = esc(a.cap), low = a.cap.toLowerCase(); if (now === a.cap) continue;
@@ -179,9 +188,9 @@ export function gameCode(code: string): string { fresh(); if (!map) return code;
 function keysNow(a: KeyAct): string[] { if (!KEYMAP.on) return home(a); if (bound.has(a.id)) { const k = bound.get(a.id); return k ? [k] : []; }
   if (!(special(a.id) && bound.size)) return home(a);
   const held = [...bound.values()], h0 = home(a), h = h0.filter(c => !held.includes(c));
-  if (h.length || !h0.length || !(MOVED[a.id] || (slotNow() && SLOT[a.id]))) return h;   // (a row the build gives no key has none to lose)
+  if (h.length || !h0.length || !(MOVED[a.id] || slotOf(a.id))) return h;   // (a row the build gives no key has none to lose)
   return a.codes.filter(c => !held.includes(c) && !keyRows().some(o => o !== a && home(o).includes(c))); }   // (…and a row the slot moved, its key in the build given to another row by hand: its own code's key, while that is no other row's in the build — the slot on 0; the debugger then has none, backtick being the slot's)   // (the command's Q held by a row he put there: it is on its own code's key, B, if that is free — never on no key while one of the two is)   // (a freed row back on its old key because walking in was switched off, and that key given to another row meanwhile: it has none)
-function fresh() { if (builtOn !== KEYMAP.on || builtFree !== freeNow() || builtCmd !== cmdOnQ() || builtSlot !== slotNow()) rebuild(); }
+function fresh() { if (builtOn !== KEYMAP.on || builtFree !== freeNow() || builtCmd !== cmdOnQ() || builtSlot !== slotNow() || builtHand !== handNow()) rebuild(); }
 /** is a row on the keys the build gives it (what a cap marks as moved when it is not) */
 export function keyBuilt(id: string): boolean { const a = byId.get(id); return !a || same(keysNow(a), home(a)); }
 /** the keys of a row now: as built, its one key, or none */
@@ -207,7 +216,7 @@ export function keysChanged(): boolean { return KEYMAP.on && bound.size > 0 && k
 function holder(code: string, but: string): KeyAct | null { for (const a of keyRows()) if (a.id !== but && keysOf(a.id).includes(code)) return a; return null; }
 /** may a row be put on this key at all */
 export function keyFree(code: string): boolean { return !FIXED.test(code); }
-function settle(a: KeyAct, k: string | null) { if (!(KEYMAP.qFree && FREED[a.id]) && !(cmdOnQ() && MOVED[a.id]) && !(slotNow() && SLOT[a.id]) && k !== null && a.codes.length === 1 && k === a.id) bound.delete(a.id); else bound.set(a.id, k); }   // (as built again: no entry. A freed or moved row is kept as he set it)
+function settle(a: KeyAct, k: string | null) { if (!(KEYMAP.qFree && FREED[a.id]) && !(cmdOnQ() && MOVED[a.id]) && !slotOf(a.id) && k !== null && a.codes.length === 1 && k === a.id) bound.delete(a.id); else bound.set(a.id, k); }   // (as built again: no entry. A freed or moved row is kept as he set it)
 /** PUT A ROW ON A KEY. 'fixed' = the page's own key, nothing changed; else the row has it, and `swapped` names the row that had it and took this one's
  *  old key in exchange (none to give: it is left with no key) */
 export function bindKey(id: string, code: string): { ok: boolean; why?: 'fixed' | 'off'; swapped?: string } {
