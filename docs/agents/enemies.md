@@ -1314,7 +1314,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `hearingCheck` and the alert branch), `coverfire.ts` (`lane` exported as `coverLane`), `digin.ts` (`digInSetOn`, the question `digInBraced` asks with
   nothing counted), `game.ts` (tick and reset). KNOWN: the trigger in `doorForce` is `coverBlind`'s, copied — one helper for both is that file's to make.
   A locked door of theirs booted by one of them reads as 'forced' to `doorTamper`.
-  CHECK `tools/qa/doorforce-check.ts` (`probes.ts doorforce`, family `doors`; 16 lines green on both stands, `DOORFORCE_BREAK=1` fails 8 on both): on the
+  CHECK `tools/qa/doorforce-check.ts` (`probes.ts doorforce`, family `doors`; 15 lines green on both stands, `DOORFORCE_BREAK=1` fails 8 on both): on the
   office, a posted man hears walked footfalls behind a shut wooden door, becomes sure at 1.83 s, fires at 2.17 s, 7 rounds in 8 s all across the leaf,
   0.00 m off his post, no boot; the same sounds to a calm man, an alert man with nothing known, and a crouched tread: nothing; a free man stands, puts 4
   through, walks 1.9 m up and boots it 5.95 s after he began (the keep torn, the leaf flung; his fix 0.12 m from the player; the boot heard as an
@@ -1324,3 +1324,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the door in the line: no round, 252 frames held; with `DOORSHOT` on and the boot put off the 12th pistol round takes the leaf apart and none follows;
   off: nothing kept; the journal. THE PAGE: `tools/qa/doorforce-page.cjs` (the real bundle in headless Chromium on the software adapter,
   `PORT=… node tools/qa/doorforce-page.cjs` against a dev server).
+  MEASURED 10-22: switch off = the build as it was, 21 of 21 run digests equal on EACH stand (`PT_DIGEST=1 playthrough.ts --seeds 1`; the page's stand with
+  `TPS_DOORFORCE=0`). On against off on the page's stand, all 21 scenarios x seeds 1, 2, 3 (the tool's own player; its JSON carries `doorforce`): 47 of
+  the 63 runs are the same run digest for digest (the rule never fired in them); it fired in 16 — 29 doors taken on, 30 rounds through a leaf in 7 runs,
+  194 frames a round was held for a friend (one stand on block-squads), 2 boots thrown and both doors gave (the compound), 4 left to the handle. Ends
+  38 won of 63 off, 37 on; men up 107 of 222 off, 100 on; teammates killed 113 off, 120 on, of them by a round through an opening 24 off, 30 on. The
+  compound moved most on those three seeds (8 of 12 up off, 2 on), so the four maps where it fires — compound, depot, barracks, block-squads — were played
+  on seeds 4 to 9 as well: 14 of 24 won off, 13 on; men up 29 of 96 off, 35 on (compound 10 off, 12 on), 12 doors taken on, 15 rounds and 2 boots on
+  the compound. Over all nine seeds of those four: won 21 off, 17 on; men up 45 of 144 off, 42 on. No difference is shown at that size; a run that
+  parts from its twin parts for good, so single seeds swing. `tour.ts` and `soak.ts` were NOT run (the frozen stand they play on is this build with
+  the rule off, digest for digest). UNTUNED: every number above is a first number. Headless only: nobody has played it and nothing of it has been
+  seen on a GPU — whether rounds through a door at a stack READ as fair, and whether four seconds to the boot is right, are questions for play.
