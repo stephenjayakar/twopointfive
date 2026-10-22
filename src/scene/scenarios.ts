@@ -233,10 +233,16 @@ export interface LessonStep {
   /** the line while his own actions are a ring (game/handring.ts HANDRING.on), where the step's keys are others then: the whistle has no key of its own
    *  there, it is the ring's last wedge (absent: `line`) */
   ringLine?: string;
+  /** the line while a charge his own hands set goes off from his own actions (game/ownblow.ts OWNBLOW.on), where the step names the squad's key for
+   *  it (absent: `line`) */
+  blowLine?: string;
   /** the line while the SQUAD's ring or menu is up (game/orders.ts): the hold is one line, what to press in the ring the next (absent: `line`) */
   menuLine?: string;
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
+  /** the line while plan mode is DOWN on a step that is done in the mode (a checkpoint put back, the mode put away by hand: what puts it up again —
+   *  absent: `line`) */
+  planLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;

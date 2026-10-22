@@ -56,6 +56,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'train-orders': ['Dead Freight', 'Wire Act'],
   'train-pairs': ['Cold Storage', 'Wire Act'],
   'tut-squad': ['Dead Freight', 'Wire Act'],
+  'tut-plan': ['Wire Act', 'Undertow'],                    // the plan mode mission: led from the gate, the squad mission's second piece first
   'train-silent': ['Night Shift', 'Wire Act'],
 };
 /** a level with no row of its own */

@@ -153,17 +153,26 @@ export class CmdRingViz {
     this.updatePlan(game, cam, w, h, tz);
     this.updateHint(game, cam, w, h, tz);
     const V0 = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, P = V0 ? this.pinned(game, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
-    this.orders.draw(V, tz); this.clear(V, tz);
-    this.hands.draw(game.player.sel.ring ? handRingView(game) : null, tz);
+    const H = game.player.sel.ring ? handRingView(game) : null;
+    this.orders.draw(V, tz); this.hands.draw(H, tz); this.clear(V, H, tz);
   }
   private overKey = '';
-  /** the status column goes faint while the ring's words lie over it (a ring put up on a door near that corner was read through the column's plates) */
-  private clear(V: RingView | null, tz: number) {
-    const key = V ? `${V.x.toFixed(0)},${V.y.toFixed(0)},${V.zoom.toFixed(2)}` : ''; if (key === this.overKey) return; this.overKey = key;
-    let over = false;
-    if (V) { const b = document.getElementById('interact')?.getBoundingClientRect(), s = this.svg.getBoundingClientRect();
-      const cx = s.left + V.x / tz, cy = s.top + V.y / tz, rx = 190 * V.zoom / tz, ry = 80 * V.zoom / tz;   // (the words reach further to the sides than up and down)
-      over = !!b && b.width > 0 && b.height > 0 && cx - rx < b.right && cx + rx > b.left && cy - ry < b.bottom && cy + ry > b.top; }
-    document.body.classList.toggle('ringover', over);
+  private railShift = 0;
+  /** the status column goes faint while the squad ring's words lie over it (a ring put up on a door near that corner was read through the column's plates);
+   *  and the tutorial's big line steps out from under either ring (it lies over the ring's layer: with the cursor low in the middle, a ring's lower wedge
+   *  and its caption were under the line's plate) — down if the view has the room, else up over the ring (index.html `--railshift`) */
+  private clear(V: RingView | null, H: RingView | null, tz: number) {
+    const rail = V || H ? document.getElementById('railprompt') : null, k = (R: RingView | null) => R ? `${R.x.toFixed(0)},${R.y.toFixed(0)},${R.zoom.toFixed(2)}` : '';
+    const key = V || H ? `${k(V)}|${k(H)}|${rail?.classList.contains('on') ? rail.textContent?.length : ''}|${innerHeight}` : ''; if (key === this.overKey) return; this.overKey = key;
+    const s = key ? this.svg.getBoundingClientRect() : null;
+    /** a ring's words as a box of the window: wider than tall, and down to under its caption when `cap` */
+    const box = (R: RingView, cap: boolean) => { const cx = s!.left + R.x / tz, cy = s!.top + R.y / tz, z = R.zoom / tz; return { l: cx - 190 * z, r: cx + 190 * z, t: cy - 80 * z, b: cy + (cap ? RC + 14 : 80) * z }; };
+    const col = V ? document.getElementById('interact')?.getBoundingClientRect() : null, v = V && col && col.width > 0 && col.height > 0 ? box(V, false) : null;
+    document.body.classList.toggle('ringover', !!v && v.l < col!.right && v.r > col!.left && v.t < col!.bottom && v.b > col!.top);
+    let shift = 0;
+    if (rail?.classList.contains('on')) { const b = rail.getBoundingClientRect(), cur = new DOMMatrixReadOnly(getComputedStyle(rail).transform).m42 * tz, top = b.top - cur, bottom = b.bottom - cur;   // (where the line is at rest: measured less the step it is on now — it may be part way there)
+      for (const R of [V, H]) { if (!R) continue; const q = box(R, true); if (!(b.width > 0 && q.l < b.right && q.r > b.left && q.t < bottom && q.b > top)) continue;
+        const down = q.b + 8 - top, up = q.t - 8 - bottom; shift = bottom + down <= innerHeight - 8 ? down : up; break; } }
+    if (shift !== this.railShift) { this.railShift = shift; const el = document.getElementById('railprompt'); if (el) el.style.setProperty('--railshift', `${(shift / tz).toFixed(1)}px`); }
   }
 }
