@@ -1038,14 +1038,15 @@ function wallPress(g: Game, dt: number, input: Input, cam: FollowCamera, mx: num
   const busy = pl.dragging || !!pl.haul || !!pl.doorMove || !!pl.easing || !!pl.charging || pl.choosing || pl.sel.downT >= 0 || pl.throwHeld || !!g.orders.menu
     || input.lmb() || input.rmb() || !!inHand?.reloading || pl.equipT > 0 || g.time - pl.lastFireT < W.pressAfterShot;
   if (busy || (W.pressCalm && gunAway && g.guards.some(h => h.state === 'alert' && h.team !== 'operative' && h.team !== 'civilian'))) { P.t = 0; return; }
-  const thing = g.nearby.some(it => it.inReach && PRESS_THINGS.has(it.kind) && Math.min(v3.distXZ(it.pos, face.at), it.door ? v3.distXZ(it.door.frameCentre, face.at) : Infinity) < W.pressThingAt);
+  const thing = g.nearby.some(it => it.inReach && PRESS_THINGS.has(it.kind) && thingDist(it, face.at) < W.pressThingAt);
   if (thing && face.off > W.pressTouch) { P.t = 0; return; }
   P.t += dt;
   if (P.t < (thing ? W.pressThing : W.pressSecs) - 1e-6 || face.off > (thing ? W.pressTouch : Math.max(W.pressTouch, W.pressFlow))) return;
   P.t = 0;
   if (!wallSnap(g, cam, undefined, face.n)) { P.n = face.n; P.held = true; P.dx = mx; P.dz = mz; P.until = g.time + W.pressAgain; }
 }
-const PRESS_THINGS: ReadonlySet<string> = new Set(['door', 'switch', 'breaker', 'objective', 'cam', 'body']);
+/** the things that stand where they are and are worked by hand (the wall press's touch; interact.ts emptyThing: what an empty tap can be beside) */
+export const PRESS_THINGS: ReadonlySet<string> = new Set(['door', 'switch', 'breaker', 'objective', 'cam', 'body']);
 
 // ---- the hold in a checkpoint (savestate.ts SaveState.wallHold, under SAVETIMELINE.holds). No file held a hold before the wall could be taken by walking: a
 // load stood him free of it, the pistol the hold had put away still away. Now a save finds him on a wall as often as not, and the seconds after a load must be
@@ -2300,7 +2301,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     else if (g.wallCharge?.setting) rows = [g.wallCharge.runningRow(running)];
     else if (g.defuse?.working) rows = [g.defuse.runningRow(running)];
     else if (!pl.takedown) {
-      things.sort((a, b) => interactOrder(p)(a.it, b.it)); const flat0 = things.flatMap(t => t.verbs).filter(r => !r.verb || g.rails.offers(r.verb));   // (rails.ts: a tutorial mission offers only the rows its steps teach)
+      things.sort((a, b) => interactOrder(p)(a.it, b.it)); const flat0 = things.flatMap(t => { const v = t.verbs.filter(r => !r.verb || g.rails.offers(r.verb)); if (!v.length) t.it.framed = true; return v; });   // (rails.ts: a tutorial mission offers only the rows its steps teach — and a thing left with none is marked: interact.ts emptyWord)
       // (wand.ts: the look under a door is the one row that GIVES WAY — it is listed after every other thing's rows, so it never takes one of the MAX_NEAR from a
       // body, a wall charge or a second door that had it before the wand existed; alone at a door it is that door's third row)
       const flat = flat0.some(r => r.verb === 'wand') ? [...flat0.filter(r => r.verb !== 'wand'), ...flat0.filter(r => r.verb === 'wand')] : flat0;
@@ -2346,8 +2347,10 @@ export function cancelRow(g: Game): Interactable { const p = g.player.char.pos; 
  *  Lower = higher up the list. Within one thing its verbs keep the order buildInteractables gave them; MAX_NEAR rows in all, so a man to grab beside a shut
  *  door reads [grab · push · ease] and the door's third verb (if it had one) would be the row that falls off. */
 export const INTERACT_PRIORITY: Record<Interactable['kind'], number> = { guard: 0, held: 0, body: 1, objective: 2, door: 3, light: 9, breaker: 2.5, switch: 3.2, charge: 9.4, wall: 9.5, cam: 9.6, cancel: 10 };   // (wall: a partition's 'breach with a charge' row ranks last — it never takes one of the MAX_NEAR rows from a door, a body or a switch · charge: ownblow.ts's row is put after the capped rows by hand and is never ordered by this — its rank is only the table's)
+/** how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer */
+export function thingDist(it: Interactable, p: Vec3): number { const d = v3.distXZ(it.pos, p); return it.door ? Math.min(d, v3.distXZ(it.door.frameCentre, p)) : d; }
 export function interactOrder(p: Vec3): (a: Interactable, b: Interactable) => number {
-  const dd = (it: Interactable) => { let d = v3.distXZ(it.pos, p); if (it.door) d = Math.min(d, v3.distXZ(it.door.frameCentre, p)); return d; };
+  const dd = (it: Interactable) => thingDist(it, p);
   return (a, b) => (a.inReach !== b.inReach ? (a.inReach ? -1 : 1) : (INTERACT_PRIORITY[a.kind] - INTERACT_PRIORITY[b.kind]) || dd(a) - dd(b));
 }
 /** how far off an interaction's marker is still built (its dot, the held pair's door hints) before it is in reach */
