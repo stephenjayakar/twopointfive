@@ -1,13 +1,15 @@
 // FINDING YOUR OWN MAN, AND THE CAMERA UNDER THE HAND, ON THE REAL PAGE (src/host/findme.ts, src/ui/findme.ts, src/render/outline.ts): headless Chromium on the software WebGPU
 // adapter (tools/qa/page-look.cjs's recipe), the page as it opens, its own Options screen clicked and its own keyboard and mouse events sent.
 //   PORT=5241 node tools/qa/findme-page.cjs [outDir]     (a dev server on that port: PORT=5241 bun run tools/serve.ts)
-//   rows     Options > Game has the eleven rows under their two headings, all at their starts on a fresh machine (nothing kept, the camera's lead as built)
+//   rows     Options > Game has the twelve rows under their two headings, all at their starts on a fresh machine (nothing kept, the camera's lead as built)
+//   pairs    the two light rows show the picture's own two ends by the picture and the meter's by the meter, each pair keeping its numbers
 //   live     each row moved by its own control: the table is kept in the page's store at once and the camera's lead follows the pan
-//   picture  with the rows on, the overlay draws the ring at his feet, and the renderer has the outline's frame for the player's own man, its one program
+//   picture  with the rows on (the outline put on the light meter, as it was first built: by the picture is findme-squad-page.cjs's), the overlay draws
+//            the ring at his feet, and the renderer has the outline's frame for the player's own man, its one program
 //            compiled on this adapter and the rim drawn with no GPU error (at the light meter's strength, then at full for the picture kept)
 //   hand     a real Ctrl + mouse drag turns the view the reversed way by the same angle; a real double tap of Ctrl brings the view round to his facing, and
 //            with the mouse off to one side he still faces what he faced, until a real move of the mouse; a real press held for most of a second does nothing
-//   kept     after a reload the rows and the camera's lead are as they were left; Reset to defaults puts all eleven back (the store then keeps nothing)
+//   kept     after a reload the rows and the camera's lead are as they were left; Reset to defaults puts all twelve back (the store then keeps nothing)
 //   exit 0 = all of it with no page error · 1 = otherwise. The verdict is the page's DOM and the game's numbers: nothing here judges a picture. With an
 //   outDir it also keeps two pictures (the ring; the outline at full strength) (the software adapter's frame with the page's own overlay laid on it) for a person to look at, never for the verdict.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -16,7 +18,7 @@ const PORT = process.env.PORT || 5241, QUALITY = process.env.QUALITY || 'verylow
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
-const LS = 'twopointsix.findme', LABELS = ['Ring at your feet', 'Outline in the dark', 'Outline width', 'Outline strength', 'Outline shows under light', 'Outline full under light', 'Teammate outline width', 'Outline colour', 'Aim pan', 'Turn direction', 'Double tap Ctrl'];
+const LS = 'twopointsix.findme', LABELS = ['Ring at your feet', 'Outline in the dark', 'Outline width', 'Outline strength', 'Outline fades by', 'Outline shows under light', 'Outline full under light', 'Teammate outline width', 'Outline colour', 'Aim pan', 'Turn direction', 'Double tap Ctrl'];
 
 // in the page: n frames with the HUD laid over them, the last one drawn
 const STEP = (n) => window.__runFrames(n, 1 / 60, [], false);
@@ -69,13 +71,17 @@ const DOT = (a) => { const f = window.__cam.planarBasis().fwd; return f[0] * Mat
     log(url); await boot(false); log('booted');
     // rows
     let e = await page.evaluate(OPEN); if (e) throw new Error(e);
-    const a = await page.evaluate(ROWS), startRows = { 'Ring at your feet': 'Off', 'Outline in the dark': 'Off', 'Outline width': '100 %', 'Outline strength': '60 %', 'Outline shows under light': '30 %', 'Outline full under light': '12 %', 'Teammate outline width': '100 %', 'Outline colour': '60 %', 'Aim pan': '100 %', 'Turn direction': 'Normal', 'Double tap Ctrl': 'Off' };
+    const a = await page.evaluate(ROWS), startRows = { 'Ring at your feet': 'Off', 'Outline in the dark': 'Off', 'Outline width': '100 %', 'Outline strength': '60 %', 'Outline fades by': 'Picture', 'Outline shows under light': '30 %', 'Outline full under light': '12 %', 'Teammate outline width': '100 %', 'Outline colour': '60 %', 'Aim pan': '100 %', 'Turn direction': 'Normal', 'Double tap Ctrl': 'Off' };
     const atStart = r => LABELS.every(l => r.rows[l] === startRows[l]);
-    check(LABELS.every(l => l in a.rows) && !('Shape through walls' in a.rows) && a.heads.some(h => /^Finding yourself/.test(h)) && a.heads.some(h => /^Camera/.test(h)) && atStart(a) && a.kept === null && a.lead === 0.18, 'Options > Game has the eleven rows (the shape through walls is shelved: no row), all at their starts, nothing kept, the camera\'s lead as built',
+    check(LABELS.every(l => l in a.rows) && !('Shape through walls' in a.rows) && a.heads.some(h => /^Finding yourself/.test(h)) && a.heads.some(h => /^Camera/.test(h)) && atStart(a) && a.kept === null && a.lead === 0.18, 'Options > Game has the twelve rows (the shape through walls is shelved: no row), all at their starts, nothing kept, the camera\'s lead as built',
       `${LABELS.map(l => `${l}: ${a.rows[l]}`).join(' · ')} · kept ${a.kept} · lead ${a.lead}`);
+    // the two light rows show and move the pair of whichever 'Outline fades by' says: the picture's own two ends, then the meter's, each keeping its numbers
+    for (const m of [['Outline shows under light', 60], ['Outline full under light', 20], ['Outline fades by', 'Light meter']]) { e = await page.evaluate(MOVE, m); if (e) throw new Error(e); }
+    const f0 = await page.evaluate(ROWS); e = await page.evaluate(MOVE, ['Outline fades by', 'Picture']); if (e) throw new Error(e); const f1 = await page.evaluate(ROWS), two = r => `${r.rows['Outline shows under light']} / ${r.rows['Outline full under light']}`;
+    check(two(f0) === '30 % / 12 %' && two(f1) === '60 % / 20 %' && f1.kept === JSON.stringify({ picLit: 0.6, picDark: 0.2 }), 'the two light rows are the picture\'s own pair by the picture and the meter\'s by the meter, each kept apart', `moved to 60 / 20 by the picture · on the meter they read ${two(f0)} · back by the picture ${two(f1)} · kept ${f1.kept}`);
     // live
-    for (const m of [['Ring at your feet', 'flip'], ['Outline in the dark', 'flip'], ['Outline width', 150], ['Outline strength', 100], ['Outline shows under light', 80], ['Outline full under light', 40], ['Teammate outline width', 200], ['Outline colour', 100], ['Aim pan', 0], ['Turn direction', 'Reversed'], ['Double tap Ctrl', 'flip']]) { e = await page.evaluate(MOVE, m); if (e) throw new Error(e); }
-    const b = await page.evaluate(ROWS), want = { pan: 0, ring: true, outline: true, width: 1.5, opacity: 1, lit: 0.8, dark: 0.4, mates: 2, colour: 1, turn: -1, behind: true }, movedRows = { 'Ring at your feet': 'On', 'Outline in the dark': 'On', 'Outline width': '150 %', 'Outline strength': '100 %', 'Outline shows under light': '80 %', 'Outline full under light': '40 %', 'Teammate outline width': '200 %', 'Outline colour': '100 %', 'Aim pan': 'None', 'Turn direction': 'Reversed', 'Double tap Ctrl': 'On' };
+    for (const m of [['Ring at your feet', 'flip'], ['Outline in the dark', 'flip'], ['Outline width', 150], ['Outline strength', 100], ['Outline fades by', 'Light meter'], ['Outline shows under light', 80], ['Outline full under light', 40], ['Teammate outline width', 200], ['Outline colour', 100], ['Aim pan', 0], ['Turn direction', 'Reversed'], ['Double tap Ctrl', 'flip']]) { e = await page.evaluate(MOVE, m); if (e) throw new Error(e); }
+    const b = await page.evaluate(ROWS), want = { pan: 0, ring: true, outline: true, width: 1.5, opacity: 1, picture: false, lit: 0.8, dark: 0.4, picLit: 0.6, picDark: 0.2, mates: 2, colour: 1, turn: -1, behind: true }, movedRows = { 'Ring at your feet': 'On', 'Outline in the dark': 'On', 'Outline width': '150 %', 'Outline strength': '100 %', 'Outline fades by': 'Light meter', 'Outline shows under light': '80 %', 'Outline full under light': '40 %', 'Teammate outline width': '200 %', 'Outline colour': '100 %', 'Aim pan': 'None', 'Turn direction': 'Reversed', 'Double tap Ctrl': 'On' };
     const keptOk = r => { try { return JSON.stringify(JSON.parse(r.kept)) === JSON.stringify(want); } catch { return false; } }, moved = r => LABELS.every(l => r.rows[l] === movedRows[l]);
     check(moved(b) && keptOk(b) && b.lead === 0, 'each row moved by its own control: shown, kept in the page\'s store at once, the camera\'s lead following the pan', `${LABELS.map(l => `${l}: ${b.rows[l]}`).join(' · ')} · kept ${b.kept} · lead ${b.lead}`);
     // the two rows that go to none, on the real sliders: shown as None, kept as 0, and back
@@ -123,8 +129,8 @@ const DOT = (a) => { const f = window.__cam.planarBasis().fwd; return f[0] * Mat
     await boot(true); log('reloaded'); const k0 = await page.evaluate(() => window.__cam.aimLead);
     e = await page.evaluate(OPEN); if (e) throw new Error(e); const c = await page.evaluate(ROWS);
     e = await page.evaluate(RESET); if (e) throw new Error(e); const r = await page.evaluate(ROWS), startKept = {};
-    check(k0 === 0 && moved(c) && keptOk(c), 'after a reload the eleven rows and the camera\'s lead are as they were left', `${LABELS.map(l => `${l}: ${c.rows[l]}`).join(' · ')} · lead at boot ${k0}`);
-    check(atStart(r) && r.lead === 0.18 && JSON.stringify(JSON.parse(r.kept)) === JSON.stringify(startKept), 'Reset to defaults puts all eleven back, the store keeping nothing, and the camera\'s lead with them', `${LABELS.map(l => `${l}: ${r.rows[l]}`).join(' · ')} · kept ${r.kept} · lead ${r.lead}`);
+    check(k0 === 0 && moved(c) && keptOk(c), 'after a reload the twelve rows and the camera\'s lead are as they were left', `${LABELS.map(l => `${l}: ${c.rows[l]}`).join(' · ')} · lead at boot ${k0}`);
+    check(atStart(r) && r.lead === 0.18 && JSON.stringify(JSON.parse(r.kept)) === JSON.stringify(startKept), 'Reset to defaults puts all twelve back, the store keeping nothing, and the camera\'s lead with them', `${LABELS.map(l => `${l}: ${r.rows[l]}`).join(' · ')} · kept ${r.kept} · lead ${r.lead}`);
   } catch (err) { red++; console.log(`- FAIL — the run stopped: ${String(err).slice(0, 400)}`); }
   check(!errs.length, 'no page error', errs.slice(0, 4).join(' | '));
   await browser.close();

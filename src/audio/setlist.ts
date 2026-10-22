@@ -31,6 +31,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'mousehole': ['Paper Walls', 'Undertow'],                // the walls are the way in
   'glasshouse': ['Glass Rain', 'Wire Act'],                // rooms walled in glass
   'pass': ['Undertow', 'Glass Rain'],                      // a teahouse under snow: bells, then the dulcimer
+  'tut-sky': ['Undertow', 'Glass Rain'],                   // the same halt on the pass, the first tutorial mission: the pass's own list
   // ---- on the clock
   'registry': ['Cold Storage', 'Wire Act'],
   'consulate': ['Wire Act', 'Cold Storage'],               // four rooms and no time to clear them: the quick twelve-eight, then the break

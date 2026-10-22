@@ -182,7 +182,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   worked example). A level that carries only this block passes `map:check`'s structure section with a note (the room clear's sections have nothing to hold).
 
 - `lesson` — a TRAINING LESSON over this level's mission (`game/lesson.ts`; rows in `scenarioList.ts TRAINING_MISSIONS`, `group: 'training'`): `{ title,
-  steps[{ id, line, done, hold?, at? }] }`. A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
+  steps[{ id, line, setupLine?, done, hold?, at? }] }` (`setupLine`: the line while a gun's key again opens its setup, where the step's keys are others then). A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
   characters), `at` the marker, and it moves on when `done` — a test record `{ is: '<kind>', … }` read off the game — is true (for `hold` seconds). Never on a
   clock. Kinds (`lesson.ts LESSON_TESTS`; a new kind is one row there with its `ok` and its `check`): STATE `in {area}` · `near {at, r?}` · `flag {flag,
   value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent …) · `slot {slot, drawn?}` ·

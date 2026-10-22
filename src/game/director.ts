@@ -1,6 +1,8 @@
 // The DIRECTOR: a level's bespoke scripting, run on the game clock (docs/design/level-scripting.md — milestone M1; the notebook is docs/internal/director.md).
-// NO SHIPPED LEVEL HAS A SCRIPT TODAY: the office's (levels/office.script.ts — the night and day showcases, its programs 'night' and 'breach') was removed with the two
-// showcases, so on every level the Director has no manifest and idles (tick() returns on its first line); the engine stays as level scripting, and the checks stage scripts of their own (tools/qa/director-probes.ts).
+// ONE LEVEL HAS A SCRIPT TODAY: the first tutorial mission's (levels/tut-sky.script.ts, attached by scene/levelLoad.ts off scene/levelScripts.ts; its one play
+// program 'tutorial' is started by game/rails.ts, and only with that switch on). The office's (the night and day showcases, its programs 'night' and 'breach')
+// was removed with the two showcases, so on every other level the Director has no manifest and idles (tick() returns on its first line); the checks stage
+// scripts of their own (tools/qa/director-probes.ts).
 // A level's script is a plain function `(D: DirectorApi) => void` that imports NOTHING from src/ at run time (`import type` only —
 // the API is injected), so the same file can be transpile-served and hot-swapped later (M3) and its define pass runs under bun with no Game (the lint below).
 // What it can say:
@@ -248,6 +250,9 @@ export interface DirectorApi {
   /** small pure helpers so a script needs no runtime import for arithmetic on places */
   util: { yawTo(from: Vec3, to: Vec3): number; distXZ(a: Vec3, b: Vec3): number; lerp(a: Vec3, b: Vec3, t: number): Vec3; add(a: Vec3, b: Vec3): Vec3; ahead(p: Vec3, yaw: number, dist: number, y?: number): Vec3 };
 }
+/** the character budget a script's spawn is held to on a tutorial mission (rails.ts): every character the engine skins — Sam, the four and eleven more —
+ *  since a beat's men come on top of the men the staging dealt. Anywhere else: none (spawnUnit's own eight) */
+function liftedBudget(g: Game): number | undefined { return g.rails?.live ? 16 : undefined; }
 /** the module shape of a level script: levels/<name>.script.ts `const script: LevelScriptFn = D => { … }; export default script;` */
 export type LevelScriptFn = (D: DirectorApi) => void;
 
@@ -445,6 +450,10 @@ export class Director {
   /** why a checkpoint cannot be written (savestate.ts canSave): M1 refuses throughout a program — its cursor (fired triggers, flags, live beats, units) has no save slice until M3 */
   blocksSave(): string | null { const R = this.run; return R && !R.ended ? `the level script's program '${R.name}' is running` : null; }
   get objective(): { text: string; pos: Vec3 | null } | null { return this.run && !this.run.ended ? this.run.objective : null; }
+  /** a signal from OUTSIDE a beat (rails.ts: a lesson step's cue, 'lesson:<cue>'): the running program's onSignal triggers and c.on('signal', name) meet it on its next tick. Nothing with no program running. */
+  signal(name: string, data?: Json) { const R = this.run; if (!R || R.ended) return; R.signals.push({ name, t: R.t, data }); this.push({ beat: '', kind: 'note', what: `signal:${name}`, ...(data !== undefined ? { data } : {}) }); }
+  /** has the running program raised, or been sent, this signal (rails.ts: a beat's 'done:<name>') */
+  signalled(name: string): boolean { const R = this.run; return !!R && !R.ended && R.signals.some(s => s.name === name); }
   chapters(): { list: { title: string; dur: number }[]; i: number; frac: number } | null {
     const R = this.run, S = R?.show; if (!R || !S || !S.chapters.length || S.handedOver) return null;
     const cur = S.chapters[S.shotI]; return { list: S.chapters, i: S.shotI, frac: cur && S.shot ? Math.min(1, (R.t - S.chapterT0) / cur.dur) : 0 };   // (a chapter's clock runs from the shot that ENTERED it: several set-ups inside one chapter do not restart its bar)
@@ -861,7 +870,7 @@ export class Director {
       spawn: (L, at, o = {}) => {
         const spec = this.manifest!.loadouts.get(L.id); if (!spec) throw new BeatFailure(`no loadout '${L.id}'`);
         const p = this.placeOf(at);
-        const gd = spawnUnit(g, { team: spec.team, pos: [p[0], 0, p[2]], yaw: o.yaw ?? (Array.isArray(at) ? 0 : this.manifest!.marks.get(at.id)?.yaw ?? 0), weapon: spec.weapon, tint: spec.tint, tint2: spec.tint2, name: o.callsign, light: o.light ?? spec.light });
+        const gd = spawnUnit(g, { team: spec.team, pos: [p[0], 0, p[2]], yaw: o.yaw ?? (Array.isArray(at) ? 0 : this.manifest!.marks.get(at.id)?.yaw ?? 0), weapon: spec.weapon, tint: spec.tint, tint2: spec.tint2, name: o.callsign, light: o.light ?? spec.light, budget: liftedBudget(g) });
         if ((o.light ?? spec.light) === false) gd.flashlight.enabled = false;   // dark from the first frame (attachFlashlight would leave a fresh unit's light on until his script says otherwise)
         if (spec.trained) gd.trained = true; if (spec.god && R.show) gd.god = true;   // (structural besides the lint: only a SHOWCASE run's cast can carry the net — a play program's spawn of the same loadout is mortal)
         const ref = unitRefOf(gd); R.units.set(ref.id, { ref, gd, loadout: L.id, by: b.name }); touch(ref);

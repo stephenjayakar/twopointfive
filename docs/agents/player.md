@@ -839,3 +839,96 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   (`guards.ts`, `foeCrouched`), which is at or over the crown of a man who is ducked AND blinded (0.78 to 0.87 m measured here) — read from the
   code, not run. On the page's stand `aim-unit`, `aim-player` and `aimlevel` are red at the build head this was cut from, the same lines with and
   without this change. NEVER SEEN ON A GPU: how the gun coming down onto a low man looks, and whether the laser and the ring agree, is unseen.
+- **A gun's key again opens its setup; the kit column is one box** (`src/game/slotsetup.ts`, table `SLOTSETUP {on, secs 1.5, stay false, settle 0.35}`;
+  `src/ui/handbox.ts`; `src/host/keymap.ts KEYMAP.setFree`; 10-22. The maintainer: "repeating the current selection open up a menu for configuring
+  the current one", "can allow us to pick between auto/semi (get rid of z)", "also lets us pick attachments better", "for L can we move that to the
+  pistol/gun's equipment menu?", and of the box "scct had a really compact current equipment screen, probably too compact for us but we can aspire
+  to it"). THE RULE: with a gun IN HIS HANDS (`Player.gunInHand`: not holstered, not slung; and not with a man in his arm, where the hold has the
+  keys) its own digit opens that gun's setup — 1 the pistol's, 2 the long gun's; not in the gun's first `settle` seconds in his hands nor while the rifle is still coming off
+  its sling (a double-tapped digit draws the gun and no more), and a can's digit again is as it was. THE ROWS are on the same digits on every gun: **1** the selector (a gun with two
+  positions), **2** the launcher's load (the next one round the tube that he has any of: one he is out of is stepped over, and with nothing else to
+  put up the row has no digit), **3** the light (a kit that carries one). A row's digit steps it AND SHUTS the setup, so the two presses are always
+  the same two: 2 1, 2 2 (the old '2 again', one press on), 2 3, 1 3. It also shuts on the back key (`backkey.ts`; `Game.backable()` counts it, and
+  `Game.escape()` shuts it where the back key's rule is off), on the trigger, the right button or R (none of them taken: the round goes), on a digit
+  that is no row (the gun's own shuts it and no more; another is the slot it always was: 4 is the stun can), when the gun leaves his hands, when the
+  order menu or the Space list comes up, and by itself `secs` after it opened (1.5: the gap between two presses, not reading time — the box shows
+  the presses while it is shut). Nothing is held and nothing is frozen: his feet, aim and trigger are his own while it is up. State: `Player.setup` and
+  `Player.setupHand` (the gun the hook last found in his hands and since when; both null on a fresh player, never saved). The page does not let
+  the aim it carries through a turn of the view go for the setup's own digits (`host/loop.ts`, `slotSetupTakes`). THE TWO KEYS IT REPLACES: on the page's board the selector's row and the light's have NO KEY
+  (`KEYMAP.setFree`, as the wall hold's row has none under `qFree`; only while the game's switch is on — `KEYMAP.setWhen`, the page's — so a
+  recording that plays with the setup off has Z and L back); the GAME still asks for 'KeyZ' and 'KeyL' and means what it meant, so a recording from
+  before plays and every headless tool that writes those codes into the input works; a player who wants either back puts its row on a key in
+  Options ▸ Controls (the box then reads `<key> LIGHT`). THE BOX (`handbox.ts`, drawn by `overlay.ts updateEquip` while the switch is on; the old
+  column is drawn with it off): a strip of the five slots, each in its own place whatever is selected (a gun's name and rounds ready, the cans
+  themselves), the selected one a tab over ONE box of two lines. Line one: the magazine as pips, the pistol's OCP, the rounds in the gun and in
+  reserve as two numbers (the spare magazines are that number now, not boxes). Line two: the gun's own key and an arrow, then a place each for the
+  selector, the loads and the light, the one that is up a filled plate and the rest dim words (a load he is out of dimmer; three loads: the count
+  only on the one that is up), an EMPTY key cap before each row that can be set — the presses are drawn only while that key again WOULD open it (not holstered, not
+  slung, no man in his arm: then the line shows what is set and no keys). That key again: the caps fill with their digits, the box's edge
+  lights, the slots whose digits are rows for now go dim in the strip, and a line along the box's foot runs down the seconds (a width set each frame,
+  `handBoxTick`: the column is not built again for it). Nothing moves when it
+  opens, no line of words explains it, and the warm colour is the open setup's alone. Where empty hands are a slot of their own (`handslot.ts HANDSLOT`), they have the first place in
+  the strip under that slot's key: with everything put away it is the tab and the box under it is empty and dashed. (With that rule off a gun
+  put away keeps its tab and its box is dashed and dim; no 'holstered · E' words either way.) Every slot is still a `.slot` with its `.key` in the kit's order. WORDS THAT FOLLOW: the Controls lists (`ui/menu.ts controlRows`,
+  `ui/options.ts setupSmall`); the lines that named '2 again' (`slotsetup.ts loadKeys`: `player.ts`'s three messages, two kit card notes in
+  `kit.ts`, the launcher's debugger summary) read 'press 2, then 2'; the kit card's light ('on L': `lightKeys`, in `kit.ts`'s row note and `ui/kitCard.ts`'s
+  line) reads 'its gun's key again, then 3'; and Training 4's four lines that named Z, L or '2 again' — a lesson step may carry `setupLine`, the
+  line shown while the switch is on (`scenarios.ts LessonStep`, `lesson.ts lineOf`; `line` is the build before, so the frozen stand's lessons
+  read as they did). Every such line puts 'press', 'then' or 'key' before a digit, which is what `host/keymap.ts`'s text rule needs to name the
+  key a rebound slot is on. The kit screen's preview hands its rifle the load it shows (`host/kitView.ts tube`), where it pressed 2 until it came. ONE SWITCH for all of it: ON in the page (`?slotsetup=0` = 2 again steps the load, Z and L are keys, the
+  column as it was), OFF in the module and on the frozen stand (`TPS_SLOTSETUP=1`), `FROZEN_HOLDS['SLOTSETUP.on']`; a registered knob table, in
+  `JOURNAL_KNOBS` (a recording from before the table replays with it off); Tab ▸ 'Gun setup (its key again)': the switch, 'seconds it stays up
+  unused', 'stays up after a pick'. CHECKS: `tools/qa/slotsetup-check.ts` (`probes.ts slotsetup`, family `kit`; `SLOTSETUP_BREAK=1` must fail) —
+  opens, the three rows, `stay`, every way it shuts, the empty load and the Space list, Esc, the words and the keys the carried aim keeps, what
+  does not open it, the pistol and the double tap, the box off the real overlay code on the probes' stand-in page, off = the build before, the
+  journal and the stands' row, the board: 12 lines pass on both stands, the break is red on 9 on each.
+  `tools/qa/slotsetup-page.cjs` — the real page on the software adapter by real key presses, as it opens and with `?slotsetup=0`: all five lines pass.
+  The lesson bot for Training 4 (`tools/qa/lessons/train-kit.ts`) plays the new presses when the rule is on, read off the page's own table when
+  it drives a page. OLDER PROBES that step the launcher with 2 again, or read the kit column against recorded words, run with the switch held
+  off on every stand (`probes.ts GUN_KEYS_AS_THEY_WERE`: `rifle-reload`, `kit-slots`, `he40-*`, `sticky-*`, `weapons-identity`; `pouch-table`
+  too, for a card's note), `sticky-look.cjs` opens with `&slotsetup=0`, and the two key board checks ask their own rules with Z and L as they
+  were (`keybinds-check.ts`, `qkey-check.ts`; `keybinds-page.cjs` opens with `&slotsetup=0`). KNOWN, and the maintainer's to call: (1) with the
+  setup up a 1, 2 or 3 is a ROW for `secs`, so a 2 pressed out of habit with the rifle already up and then, inside a second and a half, a 3 for
+  smoke turns the light on instead (the old build flipped the launcher's load on that same habit press); the trigger, R, Tab, 4 and 5 all shut
+  it. (2) The light has no key where the gun is not in his hands: holstered or slung (a wall hold that put it away included), and with a man in
+  his arm (`updateHold` reads 'KeyL', which the board no longer gives; the old L worked in each). (3) A pick shuts the setup (`stay` off): two
+  things set on one gun are four presses. RUN on the join with the build that has empty hands as a slot: the check and its break on both stands; `keybinds`, `qkey`,
+  `tabback`, `handslot` on both; `fn2000`, `he40`, `sticky`, `kitanim`, `shotgun`, `fog`, `frag`, `bigslot` on the page's stand, `fn2000` and
+  `weapons-identity` on the frozen one; `lesson-run train-kit` on both; the page check; a pass through whole situations on the real page by key
+  presses (the habit press, the lapse, a double tap off a can, the trigger with it up, three loads, empty hands and back). NOT RUN: the tour, a
+  soak, the solo night, `all-quick`, the other page checks (`keybinds-page.cjs`, `textsize-page.cjs`, `bigslot-page.cjs`, `panel-keys.cjs`,
+  `lesson-page.cjs`).
+  NEVER SEEN ON A GPU: the box was looked at as stills of the real page's own markup and styles, and used by real key presses on the software
+  adapter with the picture not drawn; nobody has played it.
+- **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
+  maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
+  equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is
+  nonlethal"). ON in the page (`?handslot=0` = E puts away and draws, as it was; the debugger's Player tick "empty hands are a slot"), OFF in the
+  module and on the frozen stand (`FROZEN_HOLDS`, `TPS_HANDSLOT=1`, pinned in `host/standup.ts`: `TPS_HANDSLOT=0` puts it off on the shipped
+  stand); in the knob registry and carried by a recording (one from before it replays with it off).
+  THE RULE (player.ts `updatePlayer`, `updateHold`): the slot's own code, `HANDSLOT_KEY` = `'Digit0'`, a code no key gave the game before, puts
+  away whatever is up and does nothing when the hands are empty; it never draws. A digit draws, as it always did. On a wall it chooses empty hands
+  for the step off (`WallHold.drawn = false`, never back to true). With a man held it is the arm (only from the pistol), and `Digit1` is the pistol
+  at his head (only from the arm). It is not read under an open Space list. The two takedown clicks are untouched.
+  E'S OWN CODE (`'KeyE'`: put away OR draw, and the swap of a hold) means what it meant, rule on or off: about ninety lines of checks press it.
+  THE BOARD (`src/host/keymap.ts KEYMAP.slotWhen`, the page hands it `() => HANDSLOT.on`; `SLOT`, `ALIAS`, `SLOT_ACT`, `keyRows()`): while the rule
+  is on, the backtick key gives `'Digit0'`, the backslash key gives the debugger's `'Backquote'` (main.ts and ui/panel.ts go on asking for that
+  code), and nothing gives `'KeyE'`: the E key and the 0 key file nothing. It follows the rule live, so a recording from before the rule plays in
+  the page on the old board. The slot's row is no row at all while the rule is off (`keyRows()` leaves it out: the 0 key is nobody's, a kept
+  table's line for it waits). A machine that kept backtick on another row keeps it there, and the slot then sits on the 0 key until it is given
+  one; E's row kept on a key of the player's choosing stays a row and is listed.
+  THE WORDS: lines all over the game and three lessons say "E puts it away" / "E holsters it". They are not rewritten: while the slot is on and
+  E's row has no key, the letter E in a line is read as the slot's key (`ALIAS`), so they follow, and follow a rebind of the slot's row. The lines
+  that named E for the way TO the pistol (the hold's "E puts the gun to his head", its row hints) say 1 with the rule on. The kit box's holstered
+  slot says "holstered" / "slung" with no key (`body.handslot`, overlay.ts). Options, Controls: the row "Empty hands" heads the Kit group (cap
+  `'0'` in the source, shown as the key it is on) and E's row is gone unless it holds a key; the start card's list has the same row; the
+  debugger's row shows backslash. README's table follows.
+  CHECK: `bun run tools/qa/probes.ts handslot` (family `player`), 7 lines, both stands; `HANDSLOT_BREAK=1` fails 6 (the seventh is E's old code,
+  which must pass either way). Read: the hands after the key once and five times from the pistol and the rifle, the digits, the wall's waiting
+  item, the hold's variant, the board's answers and words, the kept table (backtick held by another row, E kept on a key), a recording with and
+  without the key. On the page (`tools/qa/keybinds-page.cjs`, its last line; `tools/qa/panel-keys.cjs` on backslash): the Controls tab on the
+  page's own board, and the debugger's key.
+  SEEN ON THE REAL PAGE (software adapter, real key presses, 10-22): backslash opens and shuts the debugger, 1 files `Digit1` and draws, backtick
+  files `Digit0` and empties the hands, backtick again leaves them empty, the E key files nothing.
+  NOT DONE HERE: nothing is on E yet (his own actions go there next); the HUD's kit box still shows no row for the empty slot.
+  Nobody has played it; never seen on a GPU.
