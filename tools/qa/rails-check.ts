@@ -159,11 +159,13 @@ export async function railsCheck(): Promise<boolean> {
         `no step names it: taken ${plain} (locked ${free0}) · on the last step: locked ${locked}, taken ${taught} · open from the start: locked ${open}, taken ${after}`); }
     // ---- the first play's notes (tut-sky): the squad on a knee until its first order; no teammate's laser; the hold is its own line and a tap gives nothing
     //      on it; the wall has a lookout while its charge is up; the last order hands the view back to the squad and puts the night vision up
-    { const R = await rig(true), g = R.g, I = R.I, L = g.level.scenarios.lesson, { laserOn } = await import(`${ROOT}/src/game/irlaser.ts`);
+    { const R = await rig(true), g = R.g, I = R.I, L = g.level.scenarios.lesson, { laserOn, IR } = await import(`${ROOT}/src/game/irlaser.ts`);
       const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), ringOn = !!CMDRING.on && CMDRING.holdSecs > 0;   // (the ring on the command key held is a switch of its own: held off on the frozen stand)
       R.run(1.0); const men = R.squad(), low = men.filter((m: any) => m.script?.crouch === true).length;
       // (a laser: a teammate in the hunt, muzzle up — on with the level's key taken away, off with it)
-      const m0 = men[0], st = m0.state, md = m0.muzzleDown; m0.state = 'alert'; m0.muzzleDown = false; const lasOff = laserOn(g, m0); delete L.rails.lasers; const lasOn = laserOn(g, m0); L.rails.lasers = false; m0.state = st; m0.muzzleDown = md;
+      // (the page now shows no teammate's laser anywhere, IR.teamOff: the level's own key is asked with that switch held off, as `?teamlasers` would have it —
+      //  the mission keeps its word whichever way the page's switch stands)
+      const m0 = men[0], st = m0.state, md = m0.muzzleDown, tOff = IR.teamOff; IR.teamOff = false; m0.state = 'alert'; m0.muzzleDown = false; const lasOff = laserOn(g, m0); delete L.rails.lasers; const lasOn = laserOn(g, m0); L.rails.lasers = false; m0.state = st; m0.muzzleDown = md; IR.teamOff = tOff;
       // the hold's step: a tap on the wall's ring gives no order and its words come up; held, the ring is up and the line is the ring's
       const k = L.steps.findIndex((T: any) => T.id === 'charge'), T = L.steps[k], WALL = T.at as number[]; g.lesson.i = k; R.run(0.2);
       const line0 = g.rails.prompt(), n0 = g.orders.log.length, eye = g.rails.stepEye();
@@ -231,14 +233,17 @@ export async function railsCheck(): Promise<boolean> {
       R.run(14); g.decals.add = add;
       const bins = new Map<string, number>(); for (const m of marks) { const k = `${Math.round(m[0])},${Math.round(m[1])}`; bins.set(k, (bins.get(k) ?? 0) + 1); }
       const top = Math.max(0, ...bins.values()), men = R.squad(); let near = 99; for (const m of marks) for (const o of men) near = Math.min(near, flat([m[0], 0, m[1]], o.char.pos));
-      const spread = marks.length >= 30 && top / marks.length <= 0.3 && bins.size >= 12 && near >= 1.5 && men.length === 4;
+      const spread = marks.length >= 30 && top / marks.length <= 0.3 && bins.size >= 10 && near >= 1.5 && men.length === 4;   // (before: 12 metres marked in thirty seconds, 58% in one — ten in fourteen is far from that and a bin clear of this script's dice)
       // the stack's step: Shift down and the command key on the door — nothing with the rule off (the build as it was), the order with it
       const k = L.steps.findIndex((T: any) => T.id === 'stack'), T = L.steps[k], DOOR = T.at as number[]; g.lesson.i = k; R.run(0.3);
       const ask = g.rails.prompt();
+      // (an order pointed somewhere else is not the step being done: its line stays the ask. And a step's own line with no key in it is an ask, not a line to watch)
+      R.command([8, 0, 25.6]); R.run(0.3); const wrong = g.rails.prompt(), wrongGiven = g.orders.log.length > 0;
+      const was = T.line; T.line = 'Get up to the door'; const plain = g.rails.prompt(); T.line = was;
       const shifted = (on: boolean) => { RAILS.shiftTap = on; const n = g.orders.log.length; R.W.cursorAt(DOOR); R.run(3 / 60, ['ShiftLeft']); R.W.cursorAt(DOOR); I.pressed.add('KeyB'); R.run(3 / 60, ['ShiftLeft', 'KeyB']); R.run(0.2, ['ShiftLeft']); return g.orders.log.slice(n).map((o: any) => o.order); };
-      const off = shifted(false), on = shifted(true); RAILS.shiftTap = true;
+      const tap0 = RAILS.shiftTap; let off: string[] = [], on: string[] = []; try { off = shifted(false); on = shifted(true); } finally { RAILS.shiftTap = tap0; }
       // …and its line: the ask before, what the men are doing after — and the ask again once that has stood too long with the step not done
-      const aft = g.rails.prompt(), max = RAILS.afterMax; RAILS.afterMax = 1.5; R.run(2.0); const again = g.rails.prompt(); RAILS.afterMax = max;
+      const aft = g.rails.prompt(), max = RAILS.afterMax; let again: ReturnType<typeof g.rails.prompt> = null; try { RAILS.afterMax = 1.5; R.run(2.0); again = g.rails.prompt(); } finally { RAILS.afterMax = max; }
       const kg = L.steps.findIndex((T: any) => T.id === 'gate'); g.lesson.i = kg; const gate = g.rails.prompt();   // (read as it comes up: its cue is long past on this floor and the step is done on its first tick)
       // the page's input (game/input.ts), on a made-up window: a Shift whose key-up never came goes with the next event that says it is up; a key that goes down again unrepeated is a fresh press
       const { Input } = await import(`${ROOT}/src/game/input.ts`); const G: any = globalThis, had: Record<string, unknown> = {}, names = ['window', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement'];
@@ -257,9 +262,9 @@ export async function railsCheck(): Promise<boolean> {
         fire('keydown', { code: 'KeyW', key: 'w' }); const fresh = inp.pressed.has('KeyW');                               // (down again with no repeat in it: its key-up was lost)
         keysOk = held && kept && gone && mouse && rep && fresh; keysWhy = `held ${held} · kept while down ${kept} · let go by the next key ${gone} · by the mouse ${mouse} · a repeat is no press ${rep} · a key down again is one ${fresh}`;
       } catch (e) { keysWhy = `threw: ${String(e).slice(0, 120)}`; } finally { for (const n of names) { if (had[n] === undefined) delete G[n]; else G[n] = had[n]; } }
-      verdict(spread && off.length === 0 && on.includes('stack') && !!ask && !ask.watch && /stack/.test(ask.line) && !!aft?.watch && aft.line === 'They stack up on the door' && !!again && !again.watch && again.line === ask.line && !!gate?.watch && /hold the gate/.test(gate.line) && keysOk,
+      verdict(spread && off.length === 0 && on.includes('stack') && !!ask && !ask.watch && /stack/.test(ask.line) && wrongGiven && wrong?.line === ask.line && !wrong?.watch && !!plain && !plain.watch && !!aft?.watch && aft.line === 'They stack up on the door' && !!again && !again.watch && again.line === ask.line && !!gate?.watch && /hold the gate/.test(gate.line) && keysOk,
         'the second play\'s notes hold: the roadblock\'s rounds land over many places and none by a man; Shift down with the command key on the door gives the stack order (and nothing with the rule off, as it was); the line then says what the men are doing, and asks again when nothing has come of it; the gate\'s line is one to watch; the page lets go of a Shift the system says is up',
-        `the fire: ${marks.length} marks in 14 s over ${bins.size} metres, the busiest ${(100 * top / Math.max(1, marks.length)).toFixed(0)}% of them, the nearest to a man ${near.toFixed(1)} m · Shift + the key: rule off [${off.join(' ')}], on [${on.join(' ')}] · the line: "${ask?.line}" → "${aft?.line}"${aft?.watch ? ' (to watch)' : ''} → "${again?.line}" · the gate: "${gate?.line}"${gate?.watch ? ' (to watch)' : ''} · the keys: ${keysWhy}`); }
+        `the fire: ${marks.length} marks in 14 s over ${bins.size} metres, the busiest ${(100 * top / Math.max(1, marks.length)).toFixed(0)}% of them, the nearest to a man ${near.toFixed(1)} m · an order to the road on the door's step: the line "${wrong?.line}"${wrong?.watch ? ' (to watch)' : ''} · a keyless ask is ${plain?.watch ? 'a line to watch' : 'an ask'} · Shift + the key: rule off [${off.join(' ')}], on [${on.join(' ')}] · the line: "${ask?.line}" → "${aft?.line}"${aft?.watch ? ' (to watch)' : ''} → "${again?.line}" · the gate: "${gate?.line}"${gate?.watch ? ' (to watch)' : ''} · the keys: ${keysWhy}`); }
     // ---- the gate's beat is short (tut-sky): once the squad sets in the yard the roadblock's men come DOWN THE ROAD for the gate (the script's `direct`
     //      walk, through the gap in their own sandbags) and the fight is over in seconds. Left to the covered-lane price they go round the whole halt, which
     //      is what the maintainer sat through ("this beat is too long, unclear what to do"): the second run takes the word off them and must be long
@@ -269,10 +274,10 @@ export async function railsCheck(): Promise<boolean> {
         for (let i = 0; i < 60 * 60 && t1 < 0; i++) {
           if (plain) for (const gd of g.guards as any[]) if (/^Tango [678]$/.test(gd.callsign ?? '') && gd.script?.direct) { gd.script.direct = false; if (!seen.has(gd)) { seen.add(gd); gd.path = []; gd.pathGoal = null; } }
           R.run(1 / 60); if (t0 < 0 && g.lesson.i === kg) t0 = g.time; if (t0 >= 0 && g.lesson.i > kg) t1 = g.time; }
-        return { secs: t0 < 0 ? -1 : t1 < 0 ? 99 : t1 - t0, up: R.squad().length }; };
+        return { secs: t0 < 0 ? -1 : t1 < 0 ? 99 : t1 - t0, up: R.squad().length, nav: g.col.nav }; };
       const { LANES } = await import(`${ROOT}/src/game/lanes.ts`);   // (covered lanes are a newer rule: where the stand holds them off there is no price to take the word off)
       const A = await beat(false), B = await beat(true);
-      const way = (await rig(true)).g.col.nav.findPath([30, 0, 23.6], [19.6, 0, 21.2], 6000) as number[][] | null; let m = 0; if (way) { let q = [30, 0, 23.6]; for (const w of way) { m += flat(q, w); q = w; } }
+      const way = A.nav.findPath([30, 0, 23.6], [19.6, 0, 21.2], 6000) as number[][] | null; let m = 0; if (way) { let q = [30, 0, 23.6]; for (const w of way) { m += flat(q, w); q = w; } }
       verdict(A.secs >= 0 && A.secs <= 8 && A.up === 4 && (B.secs > 12 || !LANES.on) && !!way && m < 20,
         'the gate\'s beat is short: the squad set in the yard, the roadblock comes down the road and the line that only watches is gone within eight seconds, all four on their feet (and is long with the script\'s direct walk taken off its men)',
         `the gate's line stood ${A.secs.toFixed(1)} s, ${A.up} of the squad up · with the direct walk off ${B.secs.toFixed(1)} s${LANES.on ? '' : ' (covered lanes are off on this stand: no contrast)'} · the road from the roadblock to the gate ${way ? m.toFixed(1) + ' m' : 'has no path'}`); }

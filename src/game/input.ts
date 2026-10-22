@@ -78,11 +78,10 @@ export class Input {
    *  Shift / Control / Alt / Cmd this page holds that the event says is up goes — whatever it was held AS (host/keymap.ts: sprint on Shift, wherever he moved it) */
   private modsUp(e: { shiftKey: boolean; ctrlKey: boolean; altKey: boolean; metaKey: boolean }) {
     if (!this.heldAs.size) return;
-    for (const [down, a, b] of [[e.shiftKey, 'ShiftLeft', 'ShiftRight'], [e.ctrlKey, 'ControlLeft', 'ControlRight'], [e.altKey, 'AltLeft', 'AltRight'], [e.metaKey, 'MetaLeft', 'MetaRight']] as const) {
-      if (down) continue;
-      for (const phys of [a, b]) { const as = this.heldAs.get(phys); if (as === undefined) continue; this.heldAs.delete(phys); if (as) this.keys.delete(as); if (this.camHeld === phys) this.camHeld = ''; }
-    }
+    if (!e.shiftKey) { this.modUp('ShiftLeft'); this.modUp('ShiftRight'); } if (!e.ctrlKey) { this.modUp('ControlLeft'); this.modUp('ControlRight'); }
+    if (!e.altKey) { this.modUp('AltLeft'); this.modUp('AltRight'); } if (!e.metaKey) { this.modUp('MetaLeft'); this.modUp('MetaRight'); }
   }
+  private modUp(phys: string) { const as = this.heldAs.get(phys); if (as === undefined) return; this.heldAs.delete(phys); if (as) this.keys.delete(as); if (this.camHeld === phys) this.camHeld = ''; }
   /** Give keyboard focus back to the game (the sink when embedded, else just drop focus from whatever button / field had it). */
   focusGame() { if (!this.el) return; if (this.sink) { if (document.activeElement !== this.sink) this.sink.focus({ preventScroll: true }); } else if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body && !document.activeElement.closest('#panel')) document.activeElement.blur(); }
   down(code: string) { return this.keys.has(code); }

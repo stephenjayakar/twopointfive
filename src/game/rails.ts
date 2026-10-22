@@ -35,6 +35,7 @@ import type { Input } from './input';
 import type { FogEye } from './fogofwar';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
+import { CMDRING } from './cmdring';   // (read inside gate() only: src/game is one import cycle)
 import { stepLine, lessonLine } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 
 export const RAILS = { on: false,
@@ -170,8 +171,12 @@ export class Rails {
   private noteGiven(o: string) {
     const S = this.lesson(), A = S?.L.steps[S.i]?.after; if (!S || !A) return;
     if (this.gaveStep !== S.i) { this.gaveStep = S.i; this.gave = 0; }
-    if (o === 'go') { if (A.word) { this.gave = 2; this.gaveT = this.gave0 = this.g.time; } }
-    else if (A.line && (!A.on || A.on.includes(o))) { if (this.gave < 2) this.gave = 1; this.gaveT = this.gave0 = this.g.time; }
+    if (o === 'go') { if (A.word) { this.gave = 2; this.gaveT = this.gave0 = this.g.time; } return; }
+    if (!A.line || (A.on && !A.on.includes(o))) return;
+    // (…and it was pointed at the step's place: an order to somewhere else is not the step being done, and its line and ring stay)
+    const at = S.L.steps[S.i].at, O = this.g.orders;
+    if (at && RAILS.wayM > 0 && !(O && this.squad().some(gd => { const P = O.of(gd)?.post; return !!P && Math.hypot(P[0] - at[0], P[2] - at[2]) < RAILS.wayM; }))) return;
+    this.gave = 1; this.gaveT = this.gave0 = this.g.time;
   }
   /** is a man of the squad under an order to the step's mark (the step's `onWay`: its order has been given and they are walking it) */
   private onWay(S: { L: LessonData; i: number } | null): boolean {
@@ -204,8 +209,10 @@ export class Rails {
     if (keys.has('KeyB')) {
       if (shift && !A.has('plan')) {
         // (the plan is not unlocked: Shift with the key is the key — Shift is out of the tick while the key is in it, so nothing reads the pair as the plan's)
-        if (RAILS.shiftTap) { if (input.pressed.has('KeyB') || input.keys.has('KeyB')) { input.keys.delete('ShiftLeft'); input.keys.delete('ShiftRight'); } }
-        else { if (input.pressed.delete('KeyB')) dropped++; input.keys.delete('KeyB'); }
+        // …unless the Shift is his sprint's (a walk key down on a step that lets him run): then the pair is no plan anyway (planmode.ts planShift, `planRun`)
+        const running = A.has('sprint') && ACTS.move.keys!.some(k => input.keys.has(k));
+        if (RAILS.shiftTap && !running) { if (input.pressed.has('KeyB') || input.keys.has('KeyB')) { input.keys.delete('ShiftLeft'); input.keys.delete('ShiftRight'); } }
+        else if (!RAILS.shiftTap || !CMDRING.planRun) { if (input.pressed.delete('KeyB')) dropped++; input.keys.delete('KeyB'); }
       }
       if (!A.has('ring') && !input.pressed.has('KeyB')) input.keys.delete('KeyB');   // (a press is a tap: the key is let go the tick after it went down)
     }
@@ -213,6 +220,8 @@ export class Rails {
     input.buttons &= buttons; input.clicked &= buttons;
     if (!wheel && !menuUp && !handUp) input.wheel = 0;
     RAILS_STATS.dropped += dropped;
+    // (a word that sends nobody — the charge on the wall goes at once and no order is logged for it — is still the step's word given)
+    if (input.pressed.has('KeyF')) { const S = this.lesson(), W = S?.L.steps[S.i]?.after; if (W?.word && !W.line) this.noteGiven('go'); }
   }
 
   /** the step's mark under the cursor (orders.ts targetUnder): the place itself, so an order pointed at the ring on the screen is an order on the door, the
@@ -262,7 +271,7 @@ export class Rails {
     // every order the player gives is told to the level's program (a beat waits on it: c.on('signal', 'order:move'))
     { const L = g.orders?.log; if (L) { if (L.length < this.ordersSeen) this.ordersSeen = L.length; for (; this.ordersSeen < L.length; this.ordersSeen++) { const o = L[this.ordersSeen].order; if (!(this.skyOn && o === 'fallIn')) { this.moved = true; this.noteGiven(o); g.director?.signal(`order:${o}`); } } } }
     // (…and while a man is still on his way under it, the step's `after` line stays: its seconds count from the last of them standing where he was sent)
-    if (this.gave === 1 && this.gaveStep === S.i && g.orders && this.squad().some(gd => { const o = g.orders!.of(gd); return !!o && o.order !== 'hold' && o.order !== 'fallIn' && !o.arrived; })) this.gaveT = g.time;
+    if (this.gave && this.gaveStep === S.i && g.orders && this.squad().some(gd => { const o = g.orders!.of(gd); return !!o && o.order !== 'hold' && o.order !== 'fallIn' && !o.arrived; })) this.gaveT = g.time;
     // (the sky seat: there is nobody to fall in on — the command key on nothing, or on a man, would walk the squad off to the parked player. Such a man holds where he is)
     if (this.skyOn && g.orders) for (const gd of this.squad()) if (g.orders.of(gd)?.order === 'fallIn') this.holdHere(gd, !!S.L.rails!.sky!.low && !this.moved);   // (still on its knee behind the trucks if no order has moved it yet)
     if (S.L.steps[S.i]?.onWay?.nv === false && this.wayNv !== S.i && this.onWay(S)) { this.wayNv = S.i; if (g.player.nv) { g.player.nv = false; this.note('on the way out: night vision up'); } }   // (once: the key is his again after it)
@@ -312,8 +321,10 @@ export class Rails {
     const since = this.g.time - this.gaveT, A = S.i < of && !BREAK && this.gaveStep === S.i && this.gave && RAILS.afterSecs > 0 && since >= 0 && since < RAILS.afterSecs && this.g.time - this.gave0 < RAILS.afterMax ? T.after : undefined;
     const aft = A ? (this.gave === 2 ? A.word ?? A.line : A.line) : undefined;
     const line = ring ? lessonLine(ring) : aft ? lessonLine(aft) : stepLine(T);
-    // (a line with no key in it asks for nothing: the page draws it as something to watch, and no ring on its place)
-    return { line, n: i + 1, of, ...(note ? { note } : null), ...(/\[[^\]]+\]/.test(line) ? null : { watch: true }) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
+    // (a line that asks for nothing — what the men are doing, or a step that only waits for the level's script — is drawn as something to watch, with no
+    //  ring on its place. Never a step's own line that merely names no key: 'Get out of the light' is an ask, and its mark is where to go)
+    const watch = !ring && (!!aft || (S.i < of && T.done?.is === 'cue')) && !/\[[^\]]+\]/.test(line);
+    return { line, n: i + 1, of, ...(note ? { note } : null), ...(watch ? { watch: true } : null) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 
   // ---------------------------------------------------------------- nobody is lost
