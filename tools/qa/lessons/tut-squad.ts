@@ -78,7 +78,9 @@ function reload(B: Bot) { const r = B.g.player.rifle; if (r && r.mag === 0 && !r
  *  is read off the room's own list, as eyes would) */
 function shootMen(B: Bot, room: string, secs: number) {
   const R = rooms(B).find(r => r.def.id === room) as unknown as { defenders: { state: string; char: { pos: number[] } }[] } | undefined, t0 = B.t();
-  while (!cleared(B, room) && B.t() - t0 < secs) { const m = R?.defenders.find(x => x.state !== 'dead'); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, [m.char.pos[0], 1.25, m.char.pos[2]]); B.wait(0.2); }
+  // (the nearest of them: a hand shoots the man in front of it, not the first on the roster, who may be two walls off)
+  const near = () => { const me = B.pos(); return R?.defenders.filter(x => x.state !== 'dead').sort((a, b) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0]; };
+  while (!cleared(B, room) && B.t() - t0 < secs) { const m = near(); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, [m.char.pos[0], 1.25, m.char.pos[2]]); B.wait(0.2); }
 }
 const STORE_IN = [10.6, 0, 18.8], SHOP_STREET = [17.0, 0, 13.4], ALLEY = [23.6, 0, 8.6], END = [22.5, 0, 17.5], BLOCKS = [26.6, 0, 16.1], NEST = [32.0, 1.0, 13.8];
 const HALL_SIDE = [34.3, 0, 19.75], HALL_LEAF = [32.4, 1.0, 19.75], WINDOW = [30.9, 0, 16.2], BAGS = [30.2, 0, 13.8], MOUTH = [25.0, 0, 11.6];
@@ -141,7 +143,11 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.go(BAGS, 60);
   },
   front: B => { checkpoints(B); B.until(() => !!B.g.director.signalled('done:flank') || cleared(B, 'road'), 30); },
-  back: B => { menu(B, { ground: MOUTH }, 2); if (!gave(B, 'cover')) B.fail(`the menu's 2 gave ${last(B)?.order}`); },
+  // (THE TWO WHO WENT ROUND WAIT FOR THIS ORDER, outside the wall: one of them inside the back gate before it is given is a reader shot in the back)
+  back: B => {
+    menu(B, { ground: MOUTH }, 2); if (!gave(B, 'cover')) B.fail(`the menu's 2 gave ${last(B)?.order}`);
+    for (const x of B.g.guards as (Man & { callsign: string; state: string })[]) if ((x.callsign === 'Tango 10' || x.callsign === 'Tango 11') && x.state !== 'dead' && x.char.pos[2] > 5.6) B.fail(`${x.callsign} was inside the back gate (z ${x.char.pos[2].toFixed(1)}) before the cover order was given`);
+  },
   // (from the bags while they come; a man who holds where the bags cannot see him — round the road gate's jamb, up the alley — is walked up on, as a player would)
   hold: B => {
     shootMen(B, 'road', 12);
@@ -153,8 +159,10 @@ export const steps: Record<string, (B: Bot) => void> = {
     }
   },
 };
-/** lines inside a live fight: the squad's rifles can end the room while the line is up, or before it comes up (each such test also passes on the room taken) */
-export const fightOk = ['go-store', 'side', 'shop', 'gun', 'blocks', 'frag', 'nest', 'window', 'front', 'back', 'hold'];
+/** lines inside a live fight: the squad's rifles can end the room while the line is up, or before it comes up (each such test also passes on the room taken).
+ *  'lock' is among them for ONE reason: the hall's last man, his mate shot through the window, can drop his rifle and run by the game's own rule
+ *  (runner.ts), and he opens his own locked door on the way out, so the door's line goes by with nobody shooting it (seen on one die of twelve) */
+export const fightOk = ['go-store', 'side', 'shop', 'gun', 'blocks', 'frag', 'nest', 'window', 'lock', 'front', 'back', 'hold'];
 /** a room clear's own end: every defender down ('structure taken') */
 export const ended = (g: { roomClear: { end: string } }) => g.roomClear.end === 'taken';
 export function finish(B: Bot) { if (!B.until(() => ended(B.g), 30)) B.fail(`the mission did not end (${B.g.roomClear.end || 'still running'})`); }

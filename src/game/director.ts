@@ -10,7 +10,7 @@
 //                at load — a miss is a lint error and the script is not armed, the game stays playable), D.program(name, P => …, { showcase }), D.expect, D.systems
 //   per program  triggers  P.onStart / after / onEvent / onSignal / onEnter / when  → start named BEATS  P.beat(name, function* (c) { … yield c.wait(2) … })
 //   in a beat    yield c.wait / until / on / done / all / any / frames — flow c.start / cancel / signal / flag / note / finish — reads c.query / c.rand — actors
-//                c.spawn / despawn / unit / order / arrived / release / drill.breach|clear|hold|exchange / say / radio / control — world c.lights.* / doors.* /
+//                c.spawn / despawn / unit / order / arrived / release / rout / drill.breach|clear|hold|exchange / say / radio / control — world c.lights.* / doors.* /
 //                stimulus.charge|burst / objective / chronicle — and, ONLY in programs declared showcase: true, c.stage / puppet / press / click / camera.* / caption /
 //                chapters / fade / variant / shift (they throw elsewhere, and scanShowcaseVerbs finds them statically).
 // How it runs: Game.director.tick(dt, input, cam) inside Game.update immediately before tacticsTick — orders issued this frame move men this frame; triggers read last
@@ -70,7 +70,7 @@ import { fireWeapon } from './combat';
 import { learnCode as devicesLearnCode } from './devices';
 import { chronicle, chronRadio, chronObjective, roomOf } from './chronicle';
 import { radioHand } from './handwork';
-import { runnerFled } from './runner';   // (asked inside the drill's ending check only: false with its switch off)
+import { runnerBreak, runnerFled, runnerOwns } from './runner';   // (asked inside the drill's ending check and a beat's `rout` / `routed` only: false with its switch off)
 
 // ================================================================================================================================ types a script sees
 export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
@@ -128,6 +128,10 @@ export interface Query {
   /** the authored plan data behind a handle (marks, doors, lines) — data, not AI state */
   plan(p: PlanRef<'breach'>): Readonly<BreachPlan>; plan(p: PlanRef<'roomClear'>): Readonly<RoomClearPlan>; plan(p: PlanRef): Readonly<BreachPlan | RoomClearPlan>;
   flag(name: string): Json | undefined;
+  /** has this run been sent the signal (a lesson's cue `lesson:<name>`, a beat's own `done:<name>`) — what a beat that was busy when it came asks afterwards */
+  signalled(name: string): boolean;
+  /** runner.ts has him: from his shout on he has dropped it and is running (false with that rule off). Alive, and nobody's to fight */
+  routed(u: UnitRef): boolean;
 }
 /** A running drill, as the beat that started it sees it. `beat` is the pseudo-beat name c.done() takes; since(what) = seconds on the DRILL's clock since it first logged `what` (NaN before). */
 export interface DrillRef { readonly kind: 'drill'; readonly name: string; readonly beat: string; readonly phase: string; readonly t: number; readonly done: boolean; readonly aborted: boolean; readonly cleared: boolean;
@@ -152,6 +156,12 @@ export interface BeatCtx {
   spawn(loadout: LoadoutRef, at: Place, opts?: { callsign?: string; yaw?: number; light?: boolean }): UnitRef;
   despawn(u: UnitRef): void; unit(callsign: string): UnitRef | null;
   order(u: UnitRef, o: OrderPatch): void; arrived(u: UnitRef): boolean; release(u: UnitRef, state?: 'patrol' | 'search' | 'alert'): void;
+  /** HE DROPS IT AND RUNS: runner.ts's own sequence started on this man now (his shout, the beat, the weapon on the floor, the run — the seam that file
+   *  keeps for it, runnerBreak), out of this beat's hands from here. True too when that file has him already. False, and NOTHING done to him — he is
+   *  still this beat's, as he was — where that rule would not take him: its switch or morale's off (the frozen stand, `?norunner`), a man in Sam's arm,
+   *  one of the response team's, a show on the floor; and for a man this program SPAWNED (his way out of the level would leave the program's record of
+   *  him behind: the level's own men only). A play program may call it: it is the game's own rule, not a showcase verb. */
+  rout(u: UnitRef): boolean;
   /** a drill this program has begun, by the plan / name it was begun on (null before) — how one beat frames what another set going */
   drillOf(what: PlanRef | string): DrillRef | null;
   drill: {
@@ -826,6 +836,8 @@ export class Director {
       inside: (v, who) => self.insideVolume(R, v.id, who),
       plan: ((p: PlanRef) => self.planOf(p)) as Query['plan'],
       flag: n => R.flags[n],
+      signalled: n => R.signals.some(s => s.name === n),
+      routed: u => { try { return runnerOwns(self.guardOf(R, u)); } catch { return false; } },
     };
   }
 
@@ -890,6 +902,14 @@ export class Director {
       order: orderNow,
       drillOf: what => { const name = typeof what === 'string' ? what : what.id; for (let i = R.drills.length - 1; i >= 0; i--) if (R.drills[i].ref.name === name) return R.drills[i].ref; return null; },
       arrived: u => !!this.guardOf(R, u).script?.arrived,
+      rout: u => {
+        if (R.units.has(u.id)) return false;
+        const gd = this.guardOf(R, u); if (gd.state === 'dead') return false;
+        if (runnerOwns(gd)) return true;
+        if (!runnerBreak(g, gd)) return false;   // (asked while he is still in this beat's hand: refused, he is exactly as he was)
+        if (gd.script) endGuardScript(gd, 'alert'); gd.hold = false; b.touched.delete(u.id);
+        this.push({ beat: b.name, kind: 'note', what: `rout ${u.callsign}` }); return true;
+      },
       release: (u, state = 'search') => { const gd = this.guardOf(R, u); if (gd.script) endGuardScript(gd, state); gd.hold = false; b.touched.delete(u.id); this.push({ beat: b.name, kind: 'note', what: `release ${u.callsign}`, data: { state } }); },
       drill: {
         breach: (plan, ops, o) => {

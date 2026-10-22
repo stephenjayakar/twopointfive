@@ -116,13 +116,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   eleven defenders in six rooms each its own squad (`mayLeave: false`, nobody digs in), nineteen steps. Two easy rooms on the squad's key, then four staged fights that each show ONE thing the
   other side does: the workshop's man puts rounds through the door he heard the stack at (the answer is the side door), a gun behind chest-high bags covers the street (shoot back, move to the
   blocks, a frag over the bags), two men wait in the dead ground either side of the hall's locked door (shot through the sill window, then the leaf is shot down), and a picket of three comes by
-  two gates (one shows in the road gate while two walk round to the back gate and down the alley: the cover order turns half the squad; the last line is 'Finish the picket'. A picket man still up twelve seconds into that fight has gone to ground where the bags cannot see him: the script
-  walks him out into the street and lets him go there, so nobody is left to be hunted). What is SCRIPTED is only what must be seen at a known moment (the bursts through the leaf, the gun's first burst on the wall, the
+  two gates (one shows in the road gate while two walk round to the back gate, down the alley and out into the street in front of the rifles the cover order turned; the last line is
+  'Finish the picket', and the picket's last man drops his rifle and runs: the sub-bullet on the two harsh places below). What is SCRIPTED is only what must be seen at a known moment (the bursts through the leaf, the gun's first burst on the wall, the
   picket's walk); every man is the room clear's own and is released to the game's AI the moment his show is over.
   - **It is played on the tutorial's frame** (`game/rails.ts`, the bullet above: `RAILS.on`, `TPS_RAILS=1` on the frozen stand; with the switch off the level is its mission alone). Its
     `rails.allow` is what the three missions before it taught (his feet, hands and rifle, the view, the squad's key and the word); the orders menu comes on with the step that asks for it
     ('wall', `allow: ['menu', 'ring']`: its two menu lines name `[X]`, which the frame draws as "Hold" and the squad's key while that key kept down is the only way to the menu, and
-    without `ring` the frame cuts a held command key to a tap; the scripted player opens the menu that way when the ring is on and stays, by X when not) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun` and `picket`; its checkpoints 'the street', 'the wall', 'the hall'
+    without `ring` the frame cuts a held command key to a tap; the scripted player opens the menu that way when the ring is on and stays, by X when not) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun`, `ducks` (on the step after 'gun': he has shot back), `fragged` (on 'nest', the step after the frag's), `picket` and `covered` (on the last step: the cover order is given); a beat that was busy when a cue came asks `q.signalled('lesson:<cue>')`; its checkpoints 'the street', 'the wall', 'the hall'
     and 'the bags' each sit at the start of a staged fight, before the cue of the beat that follows, and every beat starts clean from its cue (the picket's beat starts with the program, holds
     the three in their camp and the yard's gates shut, and waits for its cue: so a checkpoint put back finds them held again).
   - **A man the mission's script has in hand stays the room fight's man** (`roomfight.ts tickDef`, `Def.staged`; `Director.lessonRuns`): on a floor whose defenders are the room clear's own
@@ -148,15 +148,45 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     adapter), the big line with Q on a key cap, the frag and a tool locked at the first step, its first five steps by real keys, and the checkpoint 'the street' put back, and its two menu
     steps put up by hand (`lesson.i` set from the check, nothing walked to them): each line's caps, the menu's own key giving nothing, the squad's key kept down as a ring on no man, the
     digit that gives the order, and the same key kept down at step 1 putting no ring up.
-  - **How forgiving** (2026-10-22, the page's stand, the scripted player with NO protection, `--plain --seed 1..8`): every step and the end on FIVE dice of eight, on the build with the squad's keys on the command key and the word's alone.
-    The three that end with the player down: one at 'gun' (he steps past the wall's end to shoot back and the nest's gun, by then the game's own, hits him) and two in the last step (he walks up
-    on the picket's last man in the lit street). An earlier line here said four of four: that was dice 1 to 4 before those keys, and the same dice on that tree gave six of seven (die 8 down
-    in the last step there too, die 7 not run), so four was too few to say it. It was two of four with the workshop's man 0.9 s late to the side door (the player, who goes down to one hit,
-    was shot stepping through it: he is 2.0 s late now). The scripted player stands where the lines send him, walks up on a live rifle and does nothing clever; a person is slower. Nobody has
-    played it. Each of the three is put back by the checkpoint before it ('the wall', 'the bags').
+  - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
+    still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
+    not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.
+    - *The nest ('gun', 'blocks', 'frag', 'nest').* The gun is the SCRIPT's until the frag has been thrown. Every burst is laid on the wall's face in the lane (a real round on a line,
+      never aimed at him): one every 1.3 s while nobody answers; shot back at (the step passing raises `ducks`) the gunner goes down behind his bags, and from then he comes up every
+      `DOWN_SECS` (5 s) for one burst down the same lane and goes down again, so there is a gap to run in and the middle of the street stays a place to be shot in. Both men are let
+      go `FRAG_SECS` (3.5 s) after the frag leaves the hand (`fragged`). A man the frag leaves ALONE (a man's legs take him off a grenade he knows of whoever holds him, and on the
+      fast dice the gunner lives through it) gets up DAZED, rifle down, still the script's for `SHOCK_SECS` (40 s): he cannot be hit from the blocks, he is taken from the nest's
+      open side. Before: the gunner was the game's own from his first burst and shot the man who stepped past the wall's end to answer him; a first mend let the nest go a second
+      after the player reached the blocks and it shot a slow reader there on one die of two.
+    - *The last fight ('front', 'back', 'hold').* The two who go round WAIT outside the wall, unseen, until the cover order the line asks for is given (`covered`; `COVER_SECS` 40 s at
+      the longest), then stay the script's down the alley and OUT into the street (marks `picket.out0/1`, in plain sight of the bags): the squad's cover men have them first, for
+      `STREET_SECS` (4 s) before they are the game's own. Men still up twelve seconds later are walked out again, kept `OPEN_SECS` (6 s) and let go in the open. THE LAST MAN OF THE
+      PICKET DROPS HIS RIFLE AND RUNS (`lastMan` in the script: `c.rout(unit)` starts `runner.ts`'s own sequence on him the moment two of the three are down, whoever's hands he is
+      in); a man who has dropped it is nobody left to take (roomclear counts him out), so the mission ends without anyone walking up on a rifle. Where that rule will not take him
+      (the frozen stand, `?norunner`, a man in the player's arm) the beat goes on as it was written before the rule: the last man is staged and let go like any other.
+      THE NEST'S LAST MAN IS NOT ROUTED: tried, he ran to his mates in the hall and opened its locked door on the way, and the door's lesson went by.
+    - *The Director's additions* (`director.ts`, a claim in the showcases' file; none has a switch of its own): `c.rout(u)` asks `runnerBreak` while the man is still in the beat's hand
+      and only then lets him go: true = that rule has him (also when it had him already); false = nothing done to him (its switch or morale's off, a man in Sam's arm, the response
+      team's, a show on the floor, or a man the program SPAWNED, whose way out of the level would leave the program's record of him behind). `q.routed(u)`: runner.ts has him.
+      `q.signalled(name)`: the run has been sent that signal.
+    - *Things that broke the staging and are mended*: the back gate's leaf swung into a held man took him out of the script's hand (doorthrow.ts ends a script on a man a door is
+      opened into: the gate now stands open before they are near it, and their first marks are clear of the leaf); the follower could not pass the leader in a lane a metre wide and
+      went back round by the road gate (the man nearer the corner leads and takes the farther mark); and THE DEFENDERS' RADIO CHECK SENT A HELD MAN TO LOOK when the front man went
+      quiet (`enemysquads.ts home()`: a man with a script on a floor where `Director.lessonRuns` is not at home, the same test roomfight.ts and lanes.ts make; only a tutorial's
+      script reaches it).
+    - *What the gate holds of it*: the scripted player fails the run if either of the two who went round is inside the back gate before the cover order is given. Nothing asserts the
+      duck, the pop-up bursts, the dazed man or the rout: they are read from the runs' logs. No break word.
+  - **How forgiving** (2026-10-22, the page's stand, the scripted player with NO protection): `--plain --seed 1..12` finishes TWELVE of twelve, and `--plain --pace 6 --seed 1..4` (six
+    seconds reading each line) FOUR of four. Before the re-staging: five of eight fast (down once at 'gun', twice in the last step), and a slow reader was never measured unprotected.
+    On all sixteen the last fight ends with two of the picket shot (the second at the alley's mouth) and the third run off, the player still at the bags. On the twelve fast dice
+    the frag kills one of the nest and the dazed gunner is shot from the open side about thirteen seconds later; on the four slow ones the frag kills both. ON ONE FAST DIE the
+    hall's last man, his mate shot through the window, dropped his rifle and ran by the game's own rule and opened his own locked door: 'Locked. Shoot the door down' went by with
+    nobody shooting it (the scripted player lets that step go by with a fight for this reason: `fightOk` has 'lock', a bar loosened by one step). The scripted player stands where
+    the lines send him and does nothing clever; nobody has played it. On the frozen stand (no runner rule) the gate's protected run passes and two unprotected runs of die 1 finished (one fast,
+    one slow reader), the picket's three all shot; its forgiveness there is not measured further.
   - **Not done / not seen**: its menu picture is a stand-in (the first tutorial mission's own stand-in, copied: none can be made without a GPU); the alley and the road are bare (`lived`
     NOTE); the one locked door is meant to be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot
-    carry them. Never seen on a GPU, never played by a hand. Nobody has seen whether the gunner visibly ducks under the player's fire.
+    carry them. Never seen on a GPU, never played by a hand. Nobody has seen the gunner go down behind his bags when he is shot at and come up again, a dazed man on his feet in the nest, or the last man throw his rifle down and run: all are read from the runs' logs. A call for the maintainer: whether the hall's last man may run and open the locked door (the door's lesson skipped), and whether a dazed man standing up to forty seconds reads right.
 - **A par clock on a room clear** (`src/game/par.ts`, `Game.par`; block `scenarios.par { gold, silver, bronze, lossSecs }`, docs/level-format.md *Scenarios*;
   today `levels/killhouse.json` alone, row `killhouse-four` 'The kill house' in the list's 'On the clock' group, `untuned`): while that level's room clear is up the run
   is timed from the first order, Sam's first stride off his start mark (`PAR_START_M` 1 m) or his first round or throw, to roomclear's 'taken'; every teammate
