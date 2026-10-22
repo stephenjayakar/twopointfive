@@ -898,7 +898,9 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   it drives a page. OLDER PROBES that step the launcher with 2 again, or read the kit column against recorded words, run with the switch held
   off on every stand (`probes.ts GUN_KEYS_AS_THEY_WERE`: `rifle-reload`, `kit-slots`, `he40-*`, `sticky-*`, `weapons-identity`; `pouch-table`
   too, for a card's note), `sticky-look.cjs` opens with `&slotsetup=0`, and the two key board checks ask their own rules with Z and L as they
-  were (`keybinds-check.ts`, `qkey-check.ts`; `keybinds-page.cjs` opens with `&slotsetup=0`). KNOWN, and the maintainer's to call: (1) with the
+  were (`keybinds-check.ts`, `qkey-check.ts`; `keybinds-page.cjs` opens with `&slotsetup=0`). One older line was MOVED to the rule, not held:
+  `wallsnap-kit`'s "2 on the stack, the rifle up" asks, with the setup on, that the first 2 opens the setup and changes nothing and the second is
+  the launcher's load, stacked throughout (a grenade is staged for the tube, as the page's kit brings none there); off, the single press as before. KNOWN, and the maintainer's to call: (1) with the
   setup up a 1, 2 or 3 is a ROW for `secs`, so a 2 pressed out of habit with the rifle already up and then, inside a second and a half, a 3 for
   smoke turns the light on instead (the old build flipped the launcher's load on that same habit press); the trigger, R, Tab, 4 and 5 all shut
   it. (2) The light has no key where the gun is not in his hands: holstered or slung (a wall hold that put it away included), and with a man in
