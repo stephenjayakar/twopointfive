@@ -9,7 +9,7 @@ import { Character, HOLD } from './character';
 import type { UpperMode } from './character';
 import { BoxFlag, rayBox } from '../scene/boxes';
 import { Door } from './doors';
-import { rigLightPose, rigTorchPos, torchCarryDir, torchLightDef, RIG, sc20kLightPose } from './rigProps';
+import { rigLightPose, rigTorchPos, torchCarryDir, torchCarryWant, torchLightDef, RIG, sc20kLightPose } from './rigProps';
 import { PLAYER_ID } from './consts';
 import { leverStand, radioHand, swapHeld } from './handwork';
 import { tread } from './floor';
@@ -42,7 +42,7 @@ import { pairGripped, pairGripBody } from './pairorders';
 import { PICTURE, PICTURE_STATS, ideaOf, pictureTell } from './picture';   // (asked inside colleagueFirePos only: src/game is one import cycle)
 import { MAX_LIGHTS } from '../render/lights';
 import { closeNearK } from './close';
-import { calmTorchDark } from './calmtorch';
+import { calmTorchDark, TORCH } from './calmtorch';
 import { darkFoeLit } from './darkfoe';
 import { powerOutLit } from './powerout';
 import { hearWhistle, whistleSoft, whistlePatrolTick, glanceToward, WHISTLE, WHISTLE_SOFT_UPPER } from './whistle';
@@ -1505,7 +1505,11 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
    *  second and a half: the blink roomfight.ts keeps his aim through — the walk is held only with the man in his eyes); the light is the other
    *  rules' again the frame he has no such man, the walk within a quarter of a second. The estimate is the CPU's direct light with no bounce and no moon: it errs toward calling HIM dark. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
    *  past Sam at a man under a lamp, his light came up with the word and he walked at him with his gun down (the night breach's last hunt) */
-  litMan: true };
+  litMan: true,
+  /** NOT INTO THE WALL AT HIS MUZZLE (wallDark, below, has the rule): `wallOff` the switch — off here, on in the page (host/profile.ts; ?walllight=0 puts it
+   *  off) · `wallM` how near the whole beam must end for the light to go dark, `wallBackM` how far any ray must run clear for it to burn again, `wallSecs`
+   *  how long the beam must have ended that near before it goes dark */
+  wallOff: false, wallM: 1.5, wallBackM: 1.9, wallSecs: 0.3 };
 const litSeen = new SideMap<Guard, { t: number; lit: boolean; A: unknown; tgt: unknown }>('guards.litSeen');
 /** is where he stands, what his gun is on, the man he has and the mark he is nearly at lit by the place itself (LIGHTS.litOff; asked twice a second per man,
  *  and again at once on a new order or a new man) */
@@ -1539,6 +1543,52 @@ function looksIntoDark(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>):
 /** what the rule itself last made of his place, while that reading is fresh (QA: the probes judge a dark light by it) */
 export function placeLitSeen(g: Game, gd: Guard): boolean { const s = litSeen.get(gd); return LIGHTS.litOff && !!s && g.time - s.t >= 0 && g.time - s.t < 0.5 + 1e-6 && s.lit; }
 const litUntil = new SideMap<Guard, number>('guards.litUntil');
+const WALL_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WALLLIGHT_BREAK === '1';   // (QA: the rule's own check must fail with this set)
+const wallSeen = new SideMap<Guard, { t: number; since: number; dark: boolean }>('guards.wallSeen');
+/** seven directions across a beam about `d` (game.ts tune.flashOuter is 19 degrees): its axis, four turned about the vertical, one tipped up and one down */
+function beamFan(d: Vec3): Vec3[] {
+  const out: Vec3[] = []; for (const a of [0, -0.17, 0.17, -0.33, 0.33]) { const c = Math.cos(a), k = Math.sin(a); out.push([d[0] * c + d[2] * k, d[1], d[2] * c - d[0] * k]); }
+  for (const e of [-0.3, 0.3]) out.push(v3.normalize([d[0], d[1] + e, d[2]])); return out;
+}
+/** LIGHTS.wallOff (the maintainer, 10-22, off the first tutorial mission: "weird that they are shining the flashlight on the wall immediately in front of
+ *  them"): a teammate's weapon light is dark while its WHOLE beam ends on something solid within `wallM` of the lens — the wall he walks up to a stack along,
+ *  the truck he kneels behind, the dirt at his knee. Such a light shows him nothing and is the brightest thing in the picture. Asked of the beam as posed
+ *  this frame (the lens — where it will burn: this side of a wall it is pressed through — and where the gun points): the axis and six
+ *  rays across the cone must ALL end inside `wallM` — a jamb met edge-on with the room open beyond it to part of the cone is not a wall, and that light
+ *  burns. It goes dark once that has held `wallSecs` (a muzzle swept past a corner does not blink) and burns again the frame any ray runs clear to
+ *  `wallBackM` (the door opens: the room is lit at once). The other rules still decide whether he wants a light at all; this one only says it would be
+ *  wasted — and with anybody who is not of his side standing in the beam this side of the wall it is not: that light burns. Whoever is not one of Sam's
+ *  team is never asked. Off: the light as those rules have it, as it was. */
+function wallDark(g: Game, gd: Guard, held: Vec3 | undefined): boolean {
+  if (!LIGHTS.wallOff || WALL_BREAK || gd.team !== 'operative' || !gd.unit || gd.state === 'dead' || !held) return false;
+  const p = gd.flashlight.pos, d = gd.flashlight.dir, t = g.time;
+  const o = g.col.segmentBlocked(held, p) ? lensClear(g, held, p, g.engine.settings.flashlightRadius) : p, fan = beamFan(d);   // (a lens carried through the wall he stands at lights from this side of it — attachFlashlight, lighting.ts: asked from where it will burn)
+  const hl = Math.hypot(d[0], d[2]) || 1, manIn = (m: number) => g.guards.some(x => { if (x === gd || x.state === 'dead' || x.team === 'operative') return false;   // (somebody not of his side in the beam, this side of what it ends on: a light with a man in it is not wasted — the walls are asked of the statics only)
+    const vx = x.char.pos[0] - o[0], vz = x.char.pos[2] - o[2], l = Math.hypot(vx, vz); return l < m + 0.5 && (l < 0.3 || (vx * d[0] + vz * d[2]) / (l * hl) > 0.9); });
+  const ends = (m: number) => fan.every(r => g.col.segmentBlocked(o, [o[0] + r[0] * m, o[1] + r[1] * m, o[2] + r[2] * m])) && !manIn(m);
+  const was = wallSeen.get(gd), s = was && t >= was.t && t - was.t <= 0.25 ? was : { t, since: t - LIGHTS.wallSecs, dark: false };   // (no reading a moment ago — a fresh man, a clock put back: this frame's reading stands at once)
+  const near = ends(s.dark ? LIGHTS.wallBackM : LIGHTS.wallM), since = near ? s.since : t, dark = near && (s.dark || t - since >= LIGHTS.wallSecs - 1e-9);
+  wallSeen.set(gd, { t, since, dark }); return dark;
+}
+const TORCH_WALL_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TORCHWALL_BREAK === '1';   // (QA: the rule's own check must fail with this set)
+const torchLowSeen = new SideMap<Guard, { t: number; low: boolean }>('guards.torchLowSeen');
+/** TORCH.wallLow (calmtorch.ts; the maintainer, 10-22, off the stealth tutorial: "another example of character shining flashlight at a small point in front
+ *  of them. feels a bit weird but i'm not sure what the natural thing is here"): a man carrying a HAND torch — a patrol, a man gone to look — whose beam, as
+ *  the relaxed carry would point it (his heading and chest, his aim's pitch), would end whole on something solid within `wallM` of his hand has nothing in
+ *  front of him to light: he lets the torch hang, its beam on the floor at his feet, until the carry runs clear to `wallBackM` again (he has turned, or
+ *  walked on). Asked of the carry's own direction, never of the tipped beam (which always ends on the floor), so the answer does not chase itself. A weapon
+ *  light is not a hand torch and is never asked: it points where the gun points. Off: the carry as it was. */
+function torchLow(g: Game, gd: Guard): boolean {
+  if (!(TORCH.wallLow || TORCH.wallDark) || TORCH_WALL_BREAK) return false;
+  const c = gd.char, hand = c.bones.handR, t = g.time; if (!hand) return false;
+  const d = torchCarryWant(c), was = torchLowSeen.get(gd), low0 = !!was && t >= was.t && t - was.t <= 0.25 && was.low, m = low0 ? TORCH.wallBackM : TORCH.wallM;
+  const low = beamFan(d).every(r => g.col.segmentBlocked(hand, [hand[0] + r[0] * m, hand[1] + r[1] * m, hand[2] + r[2] * m]));
+  torchLowSeen.set(gd, { t, low }); return low;
+}
+/** what TORCH.wallLow last made of his carry, while that reading is fresh (QA) */
+export function torchLowSeenOf(g: Game, gd: Guard): boolean { const s = torchLowSeen.get(gd); return !!s && g.time - s.t >= 0 && g.time - s.t <= 0.25 && s.low; }
+/** what LIGHTS.wallOff last made of his beam, while that reading is fresh (QA: the probe judges the rule by it) */
+export function wallDarkSeen(g: Game, gd: Guard): boolean { const s = wallSeen.get(gd); return LIGHTS.wallOff && !!s && g.time - s.t >= 0 && g.time - s.t <= 0.25 && s.dark; }
 /** is this man's weapon light this rule's to decide */
 export function lightRuled(g: Game, gd: Guard): boolean { return LIGHTS.on && gd.team === 'operative' && !!gd.unit && fightLive(g) && !!g.orders.of(gd); }
 const litManSeen = new SideMap<Guard, { t: number; tgt: Guard; v: boolean }>('guards.litManSeen');
@@ -2718,7 +2768,8 @@ function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
   let dir = c.gunDir;
   const rk = rigOf(gd); const carbine = rk === 'carbine';
   const torch = handCarry(gd) === 'torch';   // the hand torch on a calm patrol; the weapon light whenever the pistol is out (drawn on an alarmed floor, or any other state) — or on the carbine, always (handCarry never says torch for a rifleman)
-  if (torch && c.alive) { gd.beamDir = torchCarryDir(c, gd.beamDir, dt); dir = gd.beamDir; }   // relaxed carry: beam follows the chest/aim heading, smoothed so the arm swing only bobs the origin
+  const hangs = torch && c.alive && torchLow(g, gd);   // (TORCH.wallLow / wallDark: the wall is at his hand — false for everybody with both off)
+  if (torch && c.alive) { gd.beamDir = torchCarryDir(c, gd.beamDir, dt, hangs && TORCH.wallLow ? { tan: TORCH.lowTan, rate: TORCH.lowRate } : undefined); dir = gd.beamDir; }   // relaxed carry: beam follows the chest/aim heading, smoothed so the arm swing only bobs the origin
   else { gd.beamDir = v3.copy(dir); }
   fl.pos = rk === 'sc20k' ? sc20kLightPose(c).pos : kitPistol(gd) && gd.weapon.def.rig === 'pistol' ? rigLightPose(c).pos : rigTorchPos(c, dir, torch ? swapHeld(gd, 'torch') === 'torch' : swapHeld(gd, 'weapon') === 'torch', RIG, carbine ? 'carbine' : 'pistol'); fl.dir = dir;   // at the torch lens on patrol, at the weapon-light slot when drawn, at the lens on the carbine's handguard (or the bullpup's fore-end): the light is where the muzzle points
   if (runnerFled(gd)) { fl.enabled = false; return c.bones.upperArmR; }   // (runner.ts, false with its switch off: his light went with the gun he dropped — dark in Sam's arm, off a grenade, and on the floor after him)
@@ -2740,6 +2791,8 @@ function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
   if (g.time < gd.lightDeadUntil) { fl.enabled = false; }
   else if (gd.lightDeadUntil > 0 && g.time < gd.lightDeadUntil + 1.0) { fl.enabled = Math.sin(g.time * 50) > 0.2; }   // sputters back
   else fl.enabled = (!gd.unit || ((gd.unit.light || darkFoeLit(g, gd) || powerOutLit(g, gd)) && (!lightRuled(g, gd) || teamLit(g, gd)) && !nvgDark(g, gd) && !silentDark(g, gd))) && !(torch && calmTorchDark(g, gd, dt));   // (a unit spawned with its weapon light off — a daylight room — keeps it off: teams, spawnUnit; a teammate under Sam's orders burns his only while it helps: LIGHTS above — and not at all while the team is dark on its goggles: nvg.ts · a calm staff man's hand torch burns only where his place is dark: calmtorch.ts, nothing with its switch off · an enemy unit dealt a dark light burns it once he knows and is blind: darkfoe.ts, false with its switch off)
+  if (hangs && TORCH.wallDark && !TORCH.wallLow) fl.enabled = false;   // (the other answer to the same reading, only where asked for: put out instead of tipped)
+  if (wallDark(g, gd, held) && fl.enabled) fl.enabled = false;   // (LIGHTS.wallOff: a teammate's beam that would end on the wall or the truck at his muzzle — asked every frame so its clock runs whether or not the light burns; false for everybody with the switch off)
   if (fl.enabled && dozeDark(gd)) fl.enabled = false;   // (doze.ts: a man sat down to doze has put his torch out — false with its switch off)
   fl.peakIntensity = T.flashIntensity; fl.intensity = T.flashIntensity; fl.innerDeg = T.flashInner; fl.outerDeg = T.flashOuter; fl.radius = g.engine.settings.flashlightRadius;
   return held;

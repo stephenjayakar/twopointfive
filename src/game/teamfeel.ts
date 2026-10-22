@@ -73,7 +73,7 @@ Object.assign(KEPT.ROOMFIGHT, { rallyK: [0, 1, 0.05] });
 Object.assign(KEPT.ROOMFIGHT, { fallBackIn: null });
 Object.assign(KEPT.FOG, { lastSeen: [0, 10, 0.5] });
 // (the night breach's last hunt — from the dark, dark on a man who stands lit — again as its own statement)
-Object.assign(KEPT.LIGHTS, { litMan: null });
+Object.assign(KEPT.LIGHTS, { litMan: null, wallOff: null });
 Object.assign(KEPT.PAIR, { grip: null, gripBody: null });
 const LS_KEY = 'twopointsix.teamfeel';
 /** null = a switch · [min, max, step] = a number's row · undefined = not a key this file keeps */
