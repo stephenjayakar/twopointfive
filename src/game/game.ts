@@ -1501,7 +1501,8 @@ export class Game {
     if (CLEANRESTART.picture && this.engine.restartPicture) { this.engine.restartPicture('level restarted'); CLEANRESTART_STATS.pictures++; }
   }
   /** Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored. */
-  restartEncounter() { useDice(this.dice); this.sensors.ownReset(); this.quiet?.current();
+  restartEncounter() { this.journal.cut('the encounter was staged again');   // (between frames — a card's restart, a show, a mission's quit — this is on no tape: an F10 recording ends whole before it and a new one is asked for; inside an update, or under a request still pending, it does nothing: journal.ts cut)
+    useDice(this.dice); this.sensors.ownReset(); this.quiet?.current();
     const clean = CLEANRESTART.on;   // (cleanrestart.ts: nothing of the try that ended stands, sounds or plays on in this one — off, every line below as it was)
     if (clean) { CLEANRESTART_STATS.restarts++; CLEANRESTART_STATS.lines += this.messages.length; this.messages.length = 0; }   // (the lines of the encounter that ended go before anything below speaks: a staging's own line is this one's)
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise

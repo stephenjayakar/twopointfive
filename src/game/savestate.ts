@@ -999,12 +999,14 @@ export class Checkpoints {
   private loadMem(g: Game, key: string): string | null {
     const e = this.shelf.get(key); if (!e) return 'that checkpoint is gone';
     { const why = this.memNo(g, e); if (why) { this.note(g, `load refused: ${why}`); return why; } }
+    g.journal.cut('a checkpoint was loaded');   // (as a file's load, below: between frames it is on no tape)
     // what is NOT the saved moment's to take back: the run's counts, the controller's books, and what the host and this machine set on the game since —
     // the autosave switch, the three hooks, the sandbox row, the tune rows (a file's load leaves all of these as they are NOW)
     const C = g.chronicle.counts, loads = C.loads, saves = C.saves, stats = { ...this.stats }, log = this.log.slice();
     const host = { enabled: this.enabled, picture: this.picture, onPutBack: this.onPutBack, onSaved: this.onSaved }, tune = { ...g.tune }, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo };
     const st = this.store as { map?: Map<string, string> }, kept = st.map instanceof Map ? [...st.map] : null;   // (the harness's store is a Map the game reaches: the files written since are not the snapshot's to take back)
     restoreSnapshot(e.snap);
+    if (!g.journal.recording && g.sensors.mode === 'record') g.sensors.live();   // (the snapshot holds the sensors as they stood at the save — recording, if a tape ran then — and no recorder is behind them now: the cut above ended it)
     { const pl = g.player, S = pl.sel; if (S.ring?.free) { S.open = false; S.ring = null; S.downT = -1; S.moved = false; pl.nearSel = 0; } }   // (handring.ts: a ring that merely stood at the save is nothing of the saved moment — a file's load finds none either, and his first click after a load is his trigger, not a wedge)
     if (kept && st.map) { st.map.clear(); for (const [k, v] of kept) st.map.set(k, v); }
     Object.assign(this.stats, stats); this.log.length = 0; this.log.push(...log);
@@ -1040,6 +1042,7 @@ export class Checkpoints {
     if (typeof from === 'string' && this.shelf.get(from)) return this.loadMem(g, from);
     const s = typeof from === 'string' ? this.read(from) : from; if (!s) return 'that checkpoint is gone';
     const why = canLoad(g, s); if (why) { this.note(g, `load refused: ${why}`); return why; }
+    g.journal.cut('a checkpoint was loaded');   // (a load off a card or the panel is between frames and on no tape: an F10 recording ends whole before it and a new one is asked for — journal.ts cut; Enter once down is inside an update and on the tape)
     try { loadState(g, s); } catch (e) { const w = (e as Error).message; this.note(g, `load failed: ${w}`); return w; }
     this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${typeof from === 'string' ? from.replace(KEY_PREFIX, '') : 'a state'}: ${s.label || '—'}`);
     return null;
