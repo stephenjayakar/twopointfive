@@ -11,14 +11,14 @@ const FP: any = await import(`${ROOT}/src/game/floorplan.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
-const { PLAN, floorPlan, planTag } = FP;
+const { PLAN, floorPlan, planTag, capOf } = FP;
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f1 = (x: number) => (Number.isFinite(x) ? x.toFixed(1) : '—');
 const len = (p: number[][]) => { let s = 0; for (let i = 1; i < p.length; i++) s += dist(p[i - 1], p[i]); return s; };
-const BREAK = process.env.PLAN_BREAK === '1';
+const BREAK = process.env.PLAN_BREAK === '1', LITBREAK = process.env.KEYLIT_BREAK === '1';   // (KEYLIT_BREAK=1 = PLAN.keyLit left off: line 6b' must fail)
 
 async function rig(seed: number, ask: boolean, squad = 4) {
   const squad0 = NIGHTBREACH.squad; Object.assign(NIGHTBREACH, { squad });
@@ -163,6 +163,14 @@ async function planLines(): Promise<boolean> {
     const jamb = one ? dist(one.a, one.b) : 0, mid = one ? [(one.a[0] + one.b[0]) / 2, 0, (one.a[2] + one.b[2]) / 2] : [0, 0, 0];
     line(d0.length === 1 && d1.length === 1 && one.why === 'stack' && one.key === 'F' && one.now && one.tone === 'gold' && Math.abs(jamb - one.door.def.width) < 1e-6 && dist(mid, one.door.frameCentre) < 0.01,
       'a stacked door waits on the word: one bar, the key on it', d1.length ? `${d1.length} door · ${one.why} · key ${one.key} · ${one.tone} · bar ${f1(jamb)} m across its doorway` : 'no door listed');
+    // 6b'. the key's cap says whether it is live (PLAN.keyLit): dark while the men still walk to the stack, lit once every one stands on it; dark again for
+    // a press that would not send them (Sam down)
+    { const kl = PLAN.keyLit; PLAN.keyLit = !LITBREAK; R.until(() => !!floorPlan(g).doors[0]?.ready, 10); const one = floorPlan(g).doors[0]; const walk = d0[0] ? capOf(d0[0]) : 'no door', stood = one ? capOf(one) : 'no door';
+      g.player.down = true; const dn = floorPlan(g).doors[0], downCap = dn ? capOf(dn) : 'no door'; g.player.down = false;
+      PLAN.keyLit = false; const offWalk = d0[0] ? capOf(d0[0]) : 'no door', offStood = one ? capOf(one) : 'no door'; PLAN.keyLit = kl;
+      line(walk === 'dark' && d0[0]?.ready === false && stood === 'lit' && one?.ready === true && downCap === 'dark' && offWalk === 'plate' && offStood === 'plate',
+        'the key on the door: dark while they walk to it, lit once they all stand on it, dark for a press that would send nobody; with the switch off, the plate either way',
+        `walking: ${walk} · stood: ${stood} · Sam down: ${downCap} · the switch off: ${offWalk} / ${offStood}`); }
     const kw = PLAN.word; PLAN.word = false; const none = floorPlan(g).doors.length; PLAN.word = kw;
     const went = T.go('all'); R.step(3);
     const d2: any[] = floorPlan(g).doors;

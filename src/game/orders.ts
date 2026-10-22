@@ -99,7 +99,7 @@ import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewO
 import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { silentOnMan } from './silent';   // (called inside tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint, autoPick } from './autopilot';   // (read inside input(), hud() and show() only)
-import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringHoldSecs, ringLatch, ringSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringPin, ringHoldSecs, ringLatch, ringSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
@@ -1003,7 +1003,7 @@ export class SquadOrders {
         if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.quickGive(P.t); return true; }
         const digit = C.stay && C.stayDigit && this.ringDigit(input);   // (a digit inside the press: the ring's wedge, so the ring is up now — CMDRING.stayDigit)
         if (!digit && g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
-        this.cmdPress = null; if (!this.backFree() || !this.ringUp(P.t, input, canvas, g.time - C.tapSecs)) return false;   // (the hold was the wait: the cursor counts at once)
+        this.cmdPress = null; if (!this.backFree() || !this.ringUp(P.t, input, canvas, g.time - C.tapSecs, cam)) return false;   // (the hold was the wait: the cursor counts at once)
         return digit ? this.ringInput(input, cam, canvas) : true;   // (… and the digit is read by the ring it put up, in this frame)
       }
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
@@ -1011,9 +1011,13 @@ export class SquadOrders {
       if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.quickGive(this.targetUnder(input, cam, canvas)); return true; }   // (down and up inside one tick: a tap, given on its own tick)
       if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas) };
         return C.stay && C.stayDigit && this.ringDigit(input) ? this.ringInput(input, cam, canvas) || true : true; }   // (the key and a digit in one tick: the same)
-      return this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, g.time);
+      return this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, g.time, cam);
     }
     const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
+    // (CMDRING.pin) it stays on its point: its middle is put back over the place it was opened on, and a cursor the hand has not moved lights no other wedge
+    let still = false;
+    if (C.pin && R.at) { const [sx, sy, front] = cam.project(R.at, canvas.clientWidth, canvas.clientHeight); if (front) ringPin(R, sx, sy, canvas.clientWidth, canvas.clientHeight);
+      still = R.mx === input.mouseX && R.my === input.mouseY; R.mx = input.mouseX; R.my = input.mouseY; }
     const stay = C.stay && !R.rmb;   // (the ring stays up without its key — never plan mode's, which is its button's)
     input.pressed.delete(INTERACT_KEY);   // (Sam's own ring is not opened under this one: interact.ts)
     const esc = C.stay && C.key !== 'Tab' ? backTake(input) : input.pressed.delete('Escape'), blur = input.pressed.has('Blur') || input.pressed.has('Paused');   // (a ring that stays: the back key, backkey.ts — Esc, and Tab where Tab backs out, never a ring that is on Tab itself; else Esc, as it was built · 'Paused': the key let go under the pause card gives nothing on the tick play comes back)
@@ -1044,7 +1048,7 @@ export class SquadOrders {
     } else if (wheel) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
     // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
     // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
-    const want = ringWant(R, input, digit, g.time); let turned = false;
+    const want0 = ringWant(R, input, digit, g.time), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
     if (want && want !== R.lit) {
       const rows = this.menu!.rows, seat = this.seats(this.menu!, R), i = seat.row[want] ?? -1, first = this.menu!.page === null && !R.more;
       if (first && want === 1) R.lit = 1;
@@ -1073,17 +1077,19 @@ export class SquadOrders {
   /** a digit a ring carries went down this frame (CMDRING.stayDigit: inside the press that would put the ring up) */
   private ringDigit(input: Input): boolean { for (let d = 1; d <= CMDRING.wedges; d++) if (input.pressed.has(`Digit${d}`)) return true; return false; }
   /** the order menu put up on `t` as a ring at the cursor (false: no menu opened there). `t0`: the clock its tap guard counts from */
-  private ringUp(t: OrderTarget, input: Input, canvas: View, t0: number): boolean {
+  private ringUp(t: OrderTarget, input: Input, canvas: View, t0: number, cam?: FollowCamera): boolean {
     if (!this.open(t)) return false;
     this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
     // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
-    this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, t0); this.ringSel(); CMDRING_STATS.opened++;
+    const R = this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, t0); this.ringSel(); CMDRING_STATS.opened++;
+    if (CMDRING.pin && cam) { const [sx, sy, front] = cam.project(t.at, canvas.clientWidth, canvas.clientHeight);   // (it stays on its point: the place, and where its middle stands from it)
+      if (front) { R.at = v3.copy(t.at); R.ox = R.ax - sx; R.oy = R.ay - sy; R.mx = input.mouseX; R.my = input.mouseY; } }
     return true;
   }
   /** PLAN MODE'S RING (planmode.ts: the right button kept down): the same ring, kept up by that button and given when it is let go. The hold was the
    *  wait, so the cursor counts at once (no tap to guard) */
   ringByButton(input: Input, cam: FollowCamera, canvas: View): boolean {
-    if (!this.backFree() || !this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, this.g.time - CMDRING.tapSecs)) return false;
+    if (!this.backFree() || !this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, this.g.time - CMDRING.tapSecs, cam)) return false;
     this.cmdRing!.rmb = true; return true;
   }
   /** the ring's key would open a ring now: the key free, and — with plan mode on (planmode.ts: Shift + the key is its toggle) — Shift not the mode's
