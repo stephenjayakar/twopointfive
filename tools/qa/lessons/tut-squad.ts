@@ -56,12 +56,12 @@ function goIn(B: Bot, door: string, room: string) {
 const raised = (B: Bot, name: string): boolean => !!B.g.director.signalled(name);
 const man = (B: Bot, callsign: string) => B.g.guards.find((x: { callsign: string }) => x.callsign === callsign) as { state: string; script: unknown } | undefined;
 
-/** the orders menu on a door or on the ground, then its digits. Where the squad's key kept down is the menu (game/cmdring.ts: the ring, the page's way —
- *  the step's line says "hold") it is opened that way; where there is no ring, by the menu's own key (X) */
+/** the orders menu on a door or on the ground, then its digits. Where the squad's key kept down is a ring that stays (game/cmdring.ts: the page's way — the
+ *  line's [X] is drawn "Hold" and that key there) it is opened that way; where there is no such ring, by the menu's own key (X) */
 function menu(B: Bot, on: { door?: string; ground?: number[] }, ...digits: number[]) {
   if (on.door) onDoor(B, on.door); else onGround(B, on.ground);
   B.step(2);
-  const ring = CMDRING.on;
+  const ring = CMDRING.on && CMDRING.stay;   // (a ring that goes with its key gives a wedge as the key comes up: the digits would be late)
   if (ring) { B.I.pressed.add(CMDRING.key); B.hold([CMDRING.key], 1.5, () => !!O(B).menu); B.step(2); } else B.press('KeyX', 2);
   B.say(`  the menu by ${ring ? "the squad's key kept down (the ring)" : 'its own key (X)'}`);
   if (!O(B).menu) B.fail(`${ring ? 'B kept down' : 'X'} opened no menu ${on.door ? `on the door '${on.door}'` : 'on the ground'}`);

@@ -73,7 +73,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   // ---- locked: what this mission has not asked for yet does nothing under a real key (the orders menu, the frag's slot)
   { const b = await read(); await page.mouse.move(640, 300);
     for (const k of ['KeyX', 'Digit5', 'KeyG', 'KeyT']) await tap(k);
-    const a = await read(); check(a.orders === b.orders && !a.menu && a.i === 0 && a.slot === b.slot, 'before its step, the orders menu, the frag, a tool and the roster key do nothing', `orders ${b.orders} → ${a.orders} · menu up ${a.menu} · slot ${b.slot} → ${a.slot} · ${a.sum}`); }
+    const a = await read(); check(a.orders === b.orders && !a.menu && a.i === 0 && a.slot === b.slot, 'before their steps the frag and a tool do nothing (the menu and the roster keys have no key on this page; the ring: the last line)', `orders ${b.orders} → ${a.orders} · menu up ${a.menu} · slot ${b.slot} → ${a.slot} · ${a.sum}`); }
 
   // ---- steps 1 to 5 by hand: the squad's key (Q on the page) on two doors, in behind them, and on the workshop door
   await walk(STREET, 20);
@@ -94,29 +94,38 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     const why = await page.evaluate(k => window.__game.saves.load(window.__game, k), mine.key); await run(30); R = await read();
     check(!why && R.id === 'stack-shop' && R.script && R.men === 8, 'put back: the same step, the script running again, eight defenders', `was step ${before.i + 1} '${before.id}' at ${before.at} → step ${R.i + 1} '${R.id}' at ${R.at} · script ${R.script} · ${R.men} defenders${why ? ' · refused: ' + JSON.stringify(why) : ''}`);
   }
-  // ---- the two menu steps, each put up BY HAND (lesson.i set from here: nothing walked or fought to them): where the squad's keys are the command key and
-  //      the word's (the orders ring on: the page as it opens) the menu's own key gives nothing and the line says "Hold" with the command key's cap
-  { const more = () => page.evaluate(() => { const g = window.__game, l = g.orders.log; return { n: l.length, last: l.length ? l[l.length - 1].order : null, menu: !!g.orders.menu, kind: g.orders.menu?.target?.kind ?? null }; });
+  // ---- the two menu steps, each put up BY HAND (lesson.i set from here: nothing walked or fought to them, and the frame answers the step as it would a
+  //      real one — its checkpoint written from this floor, the level's program started over — so nothing after this block reads a checkpoint). Where the
+  //      squad's keys are the command key and the word's (the page as it opens) the menu's own key gives nothing, the line's [X] is drawn "Hold" and the
+  //      command key's cap, and that key kept down is the menu as a ring
+  { const more = () => page.evaluate(() => { const g = window.__game, l = g.orders.log, m = g.orders.menu; return { n: l.length, last: l.length ? l[l.length - 1].order : null, menu: !!m, ring: !!g.orders.cmdRing, kind: m?.target?.kind ?? null, man: !!m?.target?.man }; });
     const setStep = async i => { await page.evaluate(i => { const L = window.__game.lesson; L.i = i; L.seen = null; }, i); await run(4); return read(); };
     const holdQ = async () => { await page.keyboard.down('KeyQ'); await run(30); await page.keyboard.up('KeyQ'); await run(3); };
-    R = await setStep(7); let M = await more();
-    check(R.id === 'wall' && /^Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,3' && !/—/.test(R.line), "step 8's line reads Hold Q, 3, both on key caps", `"${R.line}" keys [${R.keys}]`);
-    // (the key kept down with the cursor on a spot whose ring is the squad's own or a place's — never a man's or a door's: tried round him until one is)
-    const ring = async kinds => { const s0 = await read(); let A = null;
-      for (const [dx, dz] of [[2, 0], [0, 2], [-2, 0], [0, -2], [3, 1], [1, 3], [1.5, 1.5], [-1.5, 1.5]]) {
-        await point([s0.at[0] + dx, 0.05, s0.at[1] + dz]); await holdQ(); A = await more(); if (A.menu && kinds.includes(A.kind)) return A;
-        if (A.menu) { await page.mouse.down({ button: 'right' }); await run(3); await page.mouse.up({ button: 'right' }); await run(3); if ((await more()).menu) await tap('KeyQ'); } }
-      return { ...A, menu: false }; };
-    let A = await ring(['none', 'floor']); M = await more();
-    check(A.menu, "the squad's key kept down: the menu is up as a ring and stays", JSON.stringify(A));
+    // (the cursor on a spot the game's own pick calls bare floor — no man, no door — asked before the key goes down)
+    const onFloor = async () => { const s0 = await read();
+      for (const [dx, dz] of [[2, 0], [0, 2], [-2, 0], [0, -2], [3, 1], [1, 3], [1.5, 1.5], [-1.5, 1.5], [3, -1], [-1, 3]]) {
+        await point([s0.at[0] + dx, 0.05, s0.at[1] + dz]);
+        const t = await page.evaluate(() => { const t = window.__game.orders.targetUnder(window.__input, window.__cam, document.getElementById('view')); return { kind: t.kind, man: !!t.man }; });
+        if (t.kind === 'floor' && !t.man) return true; }
+      return false; };
+    R = await setStep(7);
+    check(R.id === 'wall' && /^Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,3' && !/—/.test(R.line), "step 8's line reads Hold Q, 3, both on key caps", `"${R.line}" keys [${R.keys}] · ${R.sum}`);
+    let floor = await onFloor(), M = await more(); await tap('KeyX'); let A = await more();
+    check(floor && !A.menu && A.n === M.n, "the menu's own key gives nothing on this page", `floor under the cursor ${floor} · ${JSON.stringify(A)}`);
+    await holdQ(); A = await more();
+    check(A.menu && A.ring && !A.man, "the squad's key kept down: the menu is up as a ring, on no man, and stays", JSON.stringify(A));
     await tap('Digit3'); let Z = await more();
     check(Z.n === M.n + 1 && Z.last === 'fallIn' && !Z.menu, '3: fall in is given and the ring is away', `${JSON.stringify(M)} → ${JSON.stringify(Z)}`);
-    R = await setStep(17); M = await more();
+    R = await setStep(17);
     check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,2' && !/—/.test(R.line), "step 18's line reads Hold Q … then 2, both on key caps", `"${R.line}" keys [${R.keys}]`);
-    A = await ring(['floor']); M = await more();
-    check(A.menu, 'the key kept down with the cursor on the ground: the ring is up on that place', JSON.stringify(A));
+    floor = await onFloor(); M = await more(); await holdQ(); A = await more();
+    check(floor && A.menu && A.ring && A.kind === 'floor' && !A.man, 'the key kept down with the cursor on the ground: the ring is up on that place', JSON.stringify(A));
     await tap('Digit2'); Z = await more();
-    check(Z.n === M.n + 1 && Z.last === 'cover', '2: cover is given', `${JSON.stringify(M)} → ${JSON.stringify(Z)}`); }
+    check(Z.n === M.n + 1 && Z.last === 'cover' && !Z.menu, '2: cover is given', `${JSON.stringify(M)} → ${JSON.stringify(Z)}`);
+    // …and before the menu's step the same key kept down is a tap: no ring comes up (the lesson set back by hand: the steps this floor has already done go
+    //  by at once, and the one left up is before 'wall', the ring not among what is unlocked)
+    R = await setStep(0); floor = await onFloor(); await holdQ(); A = await more();
+    check(R.i < 7 && !/\bring\b/.test(R.sum) && floor && !A.menu && !A.ring, "before the menu's step the squad's key kept down puts no ring up", `step ${R.i + 1} '${R.id}' · floor under the cursor ${floor} · ${JSON.stringify(A)} · ${R.sum}`); }
   check(!errors.length, 'no page error and no console error', errors.length ? errors.slice(0, 6).join('\n    ') : 'none');
   console.log(`pictures: ${OUT}`);
   await browser.close();
