@@ -9,9 +9,14 @@ export const ended = (g: any) => g.lesson.finished;
 /** `TUTPLAN_ALONE=1`: the wrong plan, played on purpose — all four on the hall's front door and the word. The steps still end (the room taken is every
  *  step's other way), and the line printed says what it cost: the men the gun put on a knee. It takes the hall on the step before the one that asks for the word */
 const ALONE = process.env.TUTPLAN_ALONE === '1';
+/** `TUTPLAN_STRICT=1`: what a player's tape showed of two stacks on one word (10-22: one pair was in and done before the other opened its door, and the late
+ *  pair's can went off on the first) FAILS the run — the first men of two stacks more than a second apart into the room, or a teammate dazzled by the team's own can. Without it the line is
+ *  only said: both are the squad's own entry rules, and the word is for the build that has them.
+ *  `TUTPLAN_POSTB=x,z`: the barrier's order is clicked there instead of on its mark (a hand does not land on the mark: where it may land is swept with this) */
+const STRICT = process.env.TUTPLAN_STRICT === '1', POSTB = process.env.TUTPLAN_POSTB ? ((a: number[]) => [a[0], 0, a[1]])(process.env.TUTPLAN_POSTB.split(',').map(Number)) : null;
 export const idleOk = ALONE ? ['all2', 'word2'] : [];
 
-const WALL = [13.9, 0, 9.25], POST_A = [29.25, 0, 10.25], POST_B = [23.25, 0, 10.75], GATE_E = [35.0, 0, 10.0], GATE_N = [22.0, 0, 5.0];
+const WALL = [13.9, 0, 9.25], POST_A = [29.25, 0, 10.25], POST_B = [24.0, 0, 10.3], GATE_E = [35.0, 0, 10.0], GATE_N = [22.0, 0, 5.0];
 const O = (B: Bot) => B.g.orders, P = (B: Bot) => B.g.orders.plan;
 const squad = (B: Bot): any[] => O(B).men('all');
 const px = (B: Bot, p: number[]): number[] => { const [x, y] = B.W.cam.project([p[0], p[1] ?? 0, p[2]], B.W.canvas.clientWidth, B.W.canvas.clientHeight); return [x, y]; };
@@ -104,10 +109,20 @@ function word(B: Bot, doors: string[], room: string) {
   if (cleared(B, room)) return;
   // ONE press: every chain that waited on the word is through its door after it (the wrong plan has one chain, and may press again)
   B.wait(0.4); const waited = P(B).chains.filter((c: any) => c.phase === 'wait').length;
+  const stacks: Record<string, any[]> = {}; for (const d of doors) stacks[d] = squad(B).filter(m => stackedOn(B, m) === d);
   B.press('KeyF', 3); B.step(6);
   const still = P(B).chains.filter((c: any) => c.phase === 'wait').length;
   if (!ALONE && (waited < doors.length || still)) B.fail(`one word did not send every stack: ${waited} chains waited on it (${doors.length} doors), ${still} still wait after it`);
-  B.until(() => cleared(B, room), 40);
+  // what the word did, said (a player's tape, 10-22: one stack was in and done before the other opened its door, and the late stack's can went off on the first):
+  // when the first man of each stack was inside the room, and the teammates a can dazzled after the word
+  const t0 = B.t(), inAt: Record<string, number> = {}, daz0 = new Map(squad(B).map(m => [m, m.dazzledUntil as number])), hit = new Set<string>();
+  const R = B.g.roomClear.rooms.find((r: any) => r.def.id === room)?.def.bounds, inside = (m: any) => !!R && m.char.pos[0] > R.x0 + 0.2 && m.char.pos[0] < R.x1 - 0.2 && m.char.pos[2] > R.z0 + 0.2 && m.char.pos[2] < R.z1 - 0.2;
+  const watch = () => { for (const d of doors) if (!(d in inAt) && (stacks[d] ?? []).some(inside)) inAt[d] = B.t() - t0; for (const [m, u] of daz0) if (m.dazzledUntil > u + 1e-6) hit.add(m.callsign); return false; };
+  B.until(() => watch() || cleared(B, room), 40); for (let i = 0; i < 180; i++) { watch(); B.step(); }
+  const ts = doors.map(d => inAt[d]), apart = doors.length > 1 && ts.every(t => t !== undefined) ? Math.max(...ts) - Math.min(...ts) : 0;
+  const said = `the word at ${room}: ${doors.map((d, i) => `${d} ${ts[i] === undefined ? 'nobody in' : `first man in at ${ts[i].toFixed(1)} s`}`).join(' · ')}${doors.length > 1 ? ` · ${apart.toFixed(1)} s apart` : ''} · teammates their own can dazzled: ${hit.size}${hit.size ? ` (${[...hit].join(', ')})` : ''}`;
+  if (STRICT && !ALONE && (apart > 1 || ts.some(t => t === undefined) || hit.size)) B.fail(said);
+  B.say(`  ${said}`);
   for (let k = 0; k < 2 && !cleared(B, room); k++) { B.wait(0.6); B.press('KeyF', 3); B.until(() => cleared(B, room), 40); }
 }
 /** a left click on bare ground in the yard's middle: everyone is picked again */
@@ -116,6 +131,14 @@ function allAgain(B: Bot) {
   if (O(B).recipients().length !== squad(B).length) B.fail(`a left click on bare ground picked ${O(B).recipients().length} of ${squad(B).length}`);
 }
 let pairA: any[] = [];
+/** a place and a way to face, given: EVERY man of the pair took the way to face (the same tape: one of the two was put behind a corner where the order had
+ *  no line for him, and he stood looking at a wall). On the mark that is the level's to keep (`must`); off it, it is said */
+function facing(B: Bot, men: any[], where: string, must: boolean) {
+  const has = () => men.every(m => O(B).of(m)?.order === 'cover'); if (!has()) B.until(has, 6);
+  const told = men.map(m => `${m.callsign} (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)}) ${O(B).of(m)?.order === 'cover' ? 'faces that way' : `does not: ${O(B).of(m)?.order ?? 'no order'}`}`).join(' · ');
+  if (!has() && must) B.fail(`${where}: a man sent there with a way to face did not take it — ${told}`);
+  B.say(`  ${where}: ${told}`);
+}
 /** what the hall cost, said: the script's own notes for it and the teammates the frame spared a down */
 function told(B: Bot, n0: number) {
   const notes = (B.g.director.log as { kind: string; what: string }[]).filter(r => r.kind === 'note' && /hall|stack|plan|gun/.test(r.what) && !r.what.startsWith('signal:lesson')).map(r => r.what);
@@ -155,8 +178,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   all2: B => allAgain(B),
   word2: B => { const n0 = B.g.rails.log.length; word(B, ['hall', 'hall_back'], 'hall'); told(B, n0); B.wait(1.5); },
   gates: B => { putBack(B); panTo(B, [27.0, 0, 9.5]); for (let i = 0; i < 300 && B.g.lesson.step?.id === 'gates'; i++) { const L = P(B).look, k = [L[0] < 26.6 ? 'KeyD' : L[0] > 27.4 ? 'KeyA' : '', L[2] < 9.1 ? 'KeyS' : L[2] > 9.9 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); } },
-  faceA: B => { pairA = twoOf(B, POST_A); boxMen(B, pairA); rdrag(B, POST_A, GATE_E); B.until(() => B.g.lesson.step?.id !== 'faceA', 60); },
-  faceB: B => { boxMen(B, squad(B).filter(m => !pairA.includes(m))); rdrag(B, POST_B, GATE_N); B.until(() => B.g.lesson.step?.id !== 'faceB', 60); },
+  faceA: B => { pairA = twoOf(B, POST_A); boxMen(B, pairA); rdrag(B, POST_A, GATE_E); B.until(() => B.g.lesson.step?.id !== 'faceA', 60); facing(B, pairA, 'the bags', true); },
+  faceB: B => { const men = squad(B).filter(m => !pairA.includes(m)); boxMen(B, men); rdrag(B, POSTB ?? POST_B, GATE_N); B.until(() => B.g.lesson.step?.id !== 'faceB', 60); facing(B, men, 'the barrier', !POSTB); },
   hold: B => { B.until(() => cleared(B, 'road') && cleared(B, 'lane'), 120); B.wait(1); },
   'back-in': B => { checkpoints(B); modeUp(B); boxPx(B, [3, 3], [5, 5]); const s = B.g.player.char.pos; rclick(B, [s[0], 1.0, s[2]]); B.until(() => B.g.lesson.finished, 30); },
 };

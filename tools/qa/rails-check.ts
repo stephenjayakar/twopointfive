@@ -29,7 +29,7 @@
 //  THE BIG LINE AND YOUR OWN MEN (ui/railclear.ts, Rails.lineMen, RAILS.lineClear): the line has two places, where it lies and the bottom edge, and is at
 //      the edge while a man of yours is under where it lies; the frame lists the squad, and the player when he is on the floor. And a deed can name the
 //      man an order was given on. RAILS_BREAK=1 reaches this line through the list alone (nobody on it); the rule on boxes and the deed have no break.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's and the big line's must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's, the big line's and the step's eye's must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -316,6 +316,18 @@ export async function railsCheck(): Promise<boolean> {
         && !!cs && !!other && named === 0 && thing === 0 && plainDeed === 0 && noMan > 0 && door > 0 && bad > 0 && trail > 0 && i1 === i0 && i2 === i0 + 1,
         'the big line stays clear of your own men: it lies where it lies with nobody under it, goes to the bottom edge from over a man, does not move again while he drifts, comes home only when he is well clear, lies where it lies with both places taken, and moves twice and never up while a man walks the whole picture; the frame lists the squad for it, and the player on the floor (nobody with the knob off); and a deed can name the man an order was given on, and only that order counts',
         `nobody ${none} · men elsewhere ${far} · a man under it ${under} px (the edge is ${low}) · moves in 240 frames of drift ${drift} · just above it ${near}, well clear ${gone} · both places taken ${both} · no room under it ${short} · a walk down ${dn.n} moves, up ${up.n}, highest top ${Math.min(dn.top, up.top)} (it lies at ${rest.t}) · the frame's men ${men.length} of a squad of ${squad}, on the floor ${floor.length}, knob off ${off} · faults: named man ${named}, thing ${thing}, plain ${plainDeed}, no such man ${noMan}, a door after @ ${door}, no kind ${bad}, a space at the end ${trail} · the step: ${i0 + 1}, after an order on ${other} ${i1 + 1}, after the order on ${cs} ${i2 + 1}`); }
+    // ---- a step's own eye has a place among the fog's (fogofwar.ts update, RAILS.eyeFirst): the fog takes five, and with four men up and the seat's
+    //      lookout in, the step's eye was the one dropped — the squad's own wall charge went off in the fog, twice, in the maintainer's play. The mission's
+    //      own fog word is the level's to choose, so this rig puts the fog on itself
+    { const R = await rig(true), g = R.g, L = g.level.scenarios.lesson; L.rails.fog = true; for (const T of L.steps) delete T.fog; R.run(0.5);
+      const lk = g.rails.eye(), lookIn = !!lk && !g.rails.stepEye() && g.fogOfWar.eyes.includes(lk), lookAt = L.rails.sky.eye.at as number[], lookSees = g.fogOfWar.spotSeen(lookAt[0], lookAt[2]);   // (a step with no eye of its own: the seat's lookout is one of the fog's)
+      const k = L.steps.findIndex((T: any) => T.id === 'charge'), T = L.steps[k]; g.lesson.i = k; R.run(0.4);
+      const s = g.rails.stepEye(), at = (T.eye?.at ?? T.at) as number[], look = !!g.rails.eye(), men = R.squad().length, on = g.fogOfWar.on;
+      const eyes1 = g.fogOfWar.eyes.length, in1 = !!s && g.fogOfWar.eyes.includes(s), seen1 = g.fogOfWar.spotSeen(at[0], at[2]);
+      RAILS.eyeFirst = false; R.run(0.4); const in0 = !!s && g.fogOfWar.eyes.includes(s), seen0 = g.fogOfWar.spotSeen(at[0], at[2]); RAILS.eyeFirst = true;
+      verdict(on && men === 4 && look && lookIn && lookSees && !!s && eyes1 === 5 && in1 && !in0 && seen1 && !seen0,
+        'a step\'s own eye has a place among the fog\'s five: on a step with none the seat\'s lookout is one of them and its own ground is seen; with four men up, on the wall\'s step, the step\'s eye is one of them and where it looks is seen (and it is the one dropped, and the place in the fog, with the rule off, as it was)',
+        `fog ${on ? 'on' : 'OFF'} · ${men} men up, the lookout ${look ? 'named' : 'absent'}, on the first step among the fog's eyes ${lookIn}, its ground ${lookSees ? 'seen' : 'not seen'} · the step's eye ${s ? 'named' : 'none'} · the fog's eyes ${eyes1}, the step's among them ${in1} (rule off: ${in0}) · where it looks ${seen1 ? 'seen' : 'not seen'} (rule off: ${seen0 ? 'seen' : 'not seen'})`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
       const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };
