@@ -95,7 +95,7 @@ export class SnatchOut {
     const g = this.g, K = SNATCHOUT, pl = who(g), gd = this.S.man!, C = gd.civ!, hp = gd.char.pos, d = flat(p, hp);
     if (d > K.markerM || g.fogOfWar.hidden(gd)) return;
     const near = d < K.reachM && !g.col.solidBlocked([p[0], 1.0, p[2]], [hp[0], 1.0, hp[2]]), can = near && !pl.sprinting;
-    const it: Interactable = { kind: 'guard', pos: v3.add(hp, [0, 1.35, 0]), line1: `${C.name} · ${C.label}`, line2: can ? '' : near ? 'stop sprinting' : 'get closer', inReach: can, off: false, guard: gd };
+    const it: Interactable = { kind: 'guard', pos: v3.add(hp, [0, 1.35, 0]), line1: `${C.name} · the ${C.label}`, line2: can ? '' : near ? 'stop sprinting' : 'get closer', inReach: can, off: false, guard: gd };
     offer(it, can && !busy ? [this.lead ? row(it, 'stay', 'stay here') : row(it, 'lead', 'on your feet — with me')] : []);
   }
   /** the word, for a caller that is not the key (a script, the console): he follows `by`, or (null) stays where he stands. False = refused */

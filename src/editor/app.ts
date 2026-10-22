@@ -154,6 +154,8 @@ export async function createEditorApp(H: EditorAppHost): Promise<EditorApp> {
     const t = e.target; if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || (t instanceof HTMLTextAreaElement && t.getAttribute('aria-label') !== 'game input')) return;   // (Input's off-screen sink when the page is framed is not a typing target)
     const mod = e.metaKey || e.ctrlKey; if (!mod) return;
     const k = e.key.toLowerCase();
+    if ((k === 'z' || k === 'y') && tools.drag && /^(move|face|ring|aim|doorEnd|camAim|laserEnd|footprint)$/.test(tools.drag.kind)) {   // (a drag that holds a thing of the document ends first: the undo would take that thing from under it, and its next frame threw)
+      const drawn = tools.drag.kind === 'footprint'; tools.cancel(); if (drawn) { e.preventDefault(); e.stopPropagation(); ed.msg('cancelled'); return; } }   // (a box being drawn: giving it up IS the undo. A move, a turn, an aim: sealed where it is, then undone or redone below as asked)
     if (k === 'z') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) ed.redo(); else ed.undo(); }
     else if (k === 'y') { e.preventDefault(); e.stopPropagation(); ed.redo(); }
     else if (k === 'd') { e.preventDefault(); e.stopPropagation(); if (ed.sel.size) ed.duplicate(ed.selection()); }

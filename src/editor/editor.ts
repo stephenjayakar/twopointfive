@@ -328,6 +328,7 @@ export class Editor {
     if (!/^[A-Za-z0-9_.-]{1,64}$/.test(newId)) throw new Error('ids: letters, digits, _ . - (1–64)');
     if (newId === r.id) return; if (this.doc.indexOf(coll, newId) >= 0) throw new Error(`${coll}: '${newId}' exists`);
     const d = this.data; const doc = this.doc;
+    const was = [...this.sel].some(x => x === ref || x.startsWith(`${ref}#`)) ? [...this.sel] : null;   // (taken BEFORE the edit: every doc apply prunes the selection of refs that are gone, the old id among them)
     doc.transact(`rename ${ref} → ${newId}`, () => {
       doc.update<any>(coll, r.id, { id: newId });
       if (r.kind === 'box') {
@@ -354,7 +355,7 @@ export class Editor {
         if (this.floorId === r.id) this.floorId = newId;
       }
     });
-    if (this.sel.has(ref)) { const s = [...this.sel].map(x => x === ref ? refStr({ ...r, id: newId }) : x); this.setSelection(s); }
+    if (was) { const to = refStr({ ...r, id: newId }); this.setSelection(was.map(x => x === ref ? to : x.startsWith(`${ref}#`) ? to + x.slice(ref.length) : x)); }   // (a route picked by one of its points is 'route:<id>#<n>')
   }
 
   // ---------------------------------------------------------------- boxes
@@ -633,11 +634,11 @@ export class Editor {
       this.doc.transact(opts.label ?? `keypad ${id}: door ${cur.door} → ${next.door}`, () => {
         this.doc.update<DoorData>('doors', cur.door, o => { const y = { ...o }; delete y.lock; return y; });   // (the old door keeps its bolt but goes back on the floor key — the same as deleting the pad)
         this.doc.update<DoorData>('doors', next.door, o => ({ ...o, locked: true, lock: id }));
-        this.doc.update<DeviceData>('devices', id, next);
+        this.doc.update<DeviceData>('devices', id, typeof patch === 'function' ? () => next : next);
       });
       return;
     }
-    this.doc.update<DeviceData>('devices', id, next, opts);
+    this.doc.update<DeviceData>('devices', id, typeof patch === 'function' ? () => next : next, opts);   // (a function patch REPLACES: as a merge, a key it deleted — a camera's sweep unticked — stayed)
   }
   /** point a camera at a world position (yaw + pitch off pos → target; the sweep, if any, re-centred on the new yaw) */
   aimCamera(id: string, target: Vec3, opts: { coalesce?: string } = {}) {

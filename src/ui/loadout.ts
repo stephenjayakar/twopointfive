@@ -415,9 +415,9 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     if (chord && clip) { const t = e.target as { tagName?: string; isContentEditable?: boolean } | null;   // (… the chord only while it is not the browser's own: no text field has the keys, no text on the page is selected)
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName ?? '') || t?.isContentEditable || String(window.getSelection?.() ?? '')) return; }
     else if (e.ctrlKey || e.metaKey || e.altKey) return;   // (the browser's own: reload, devtools)
+    if (/^F\d+$/.test(e.code)) return;   // (the recorders' keys and the browser's stay theirs, and BEFORE the stop below: F7 to F10 never reached their listeners behind this one)
     e.stopImmediatePropagation(); if (!chord) eaten.add(e.code);   // (a chord's release is not waited for: macOS sends no keyup for a key let go under Cmd, and one left here would eat the game's next release of that key)
     (window as unknown as { __attract?: { poke?: () => void } }).__attract?.poke?.();   // (main.ts's own idle listener is behind this one: somebody is here)
-    if (/^F\d+$/.test(e.code)) return;
     e.preventDefault();
     S.key(clip === 'copy' ? 'KeyC' : clip === 'paste' ? 'KeyV' : e.code === 'KeyC' || e.code === 'KeyV' ? '' : e.code, e.repeat);   // (a held Enter or Esc acts once, and nothing in a kit card repeats: key() and the card see to it; copy and paste by their letter, so the two places are nothing on a layout that types another letter there)
   }, { capture: true });

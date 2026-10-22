@@ -2,12 +2,16 @@
 // hinge and latch jambs, over the sill), for the sun of each hour and for every lamp in range: a ray from inside the room through a point of that band to the
 // light, against the statics and the door leaves as the renderer's rays meet them (no shrink). Exit 1 if the sun of any hour crosses a shut EXTERIOR door.
 //   bun run tools/qa/door-light-check.ts [--level office.json] [--step 0.004] [--all]      (--all lists every door, not only the ones that leak)
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 const HR: any = await import(`${ROOT}/src/game/hours.ts`);
+const { loadLevel }: any = await import(`${ROOT}/src/scene/levelLoad.ts`), { parseLevelData }: any = await import(`${ROOT}/src/scene/levelData.ts`), { withOfficeScript, isOfficeFamily }: any = await import(`${ROOT}/src/scene/level.ts`);
+const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };   // (as bang-tally.ts stands a level file)
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : d; };
 const STEP = +arg('--step', '0.004'), ALL = process.argv.includes('--all'), LEVEL = arg('--level', '');
 const log = console.log; console.log = () => {}; console.warn = () => {};
-const W: any = await standUp(LEVEL ? { level: LEVEL } : {});
+const W: any = await standUp(LEVEL ? { level: levelOfFile(LEVEL) } : {});   // (a loaded Level, not its file name: standUp walked the string's boxes and threw)
 const g = W.game;
 HR.applyHour(g, 'dusk');                       // (the outside lamps burn at dusk: the lamps' rows below are a dusk's)
 for (let i = 0; i < 5; i++) W.step(1 / 60);

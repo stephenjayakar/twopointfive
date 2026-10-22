@@ -72,6 +72,10 @@ if (!names.length || names.includes('train-move')) { console.log('\n=== lesson-c
     return { W, g: W.game, why: r.why as string | undefined }; };
   const team = (g: any) => g.guards.filter((x: any) => x.unit && x.team === 'operative');
   const lessonOn = LESSON.on; LESSON.on = true;
+  // ONE CARD FOR EVERY MISSION, for this block (kit.ts KITDEAL.stealth): 'the same start off a lesson's page' is a quiet run alone, which on the page's stand wears
+  // your STEALTH card, not the kept card this block sets by hand. The lines here are about the lesson's page wearing the issue kit; the stealth card on such a page
+  // is tools/qa/kitstealth-check.ts's line. Held as the probe runner holds it (the word for a game stood up, the table for now); a word set by hand wins.
+  const stealthHeld = process.env.TPS_KITSTEALTH === undefined, stealthWas = K.KITDEAL.stealth; if (stealthHeld) { process.env.TPS_KITSTEALTH = '0'; K.KITDEAL.stealth = false; }
   try {
     await withDom('', async () => {
       K.kitLoad(st, ''); const set = K.kitSet(0, 'weapon', 'pistol') && K.kitSet(1, 'light', false); const st0 = m.get(K.KIT_LS);   // (this machine keeps a card with no rifle — the card that left a lesson's 'press 2' unpassable — and a teammate with no weapon light)
@@ -107,7 +111,7 @@ if (!names.length || names.includes('train-move')) { console.log('\n=== lesson-c
       const after = K.KIT.members[0].weapon, stored2 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim; const B = await standRow(alone);
       verdict(threw && after === 'pistol' && stored2 && B.g.player.hasRifle === true, 'a staging that throws leaves the kept table and its store in place, and the next lesson start is still the issue kit', `threw ${threw} · table '${after}' · a change written ${stored2} · next start's rifle ${B.g.player.hasRifle}`);
     });
-  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.KIT_SOLO.on = false; K.kitLoad(null, ''); LESSON.on = lessonOn; }
+  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.KIT_SOLO.on = false; K.kitLoad(null, ''); LESSON.on = lessonOn; if (stealthHeld) { delete process.env.TPS_KITSTEALTH; K.KITDEAL.stealth = stealthWas; } }
 }
 console.log(fails ? `\n=== lesson-check: ${fails} FAIL of ${checks} ===` : `\n=== lesson-check: ALL PASS (${checks} checks) ===`);
 process.exit(fails ? 1 : 0);

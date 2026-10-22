@@ -130,6 +130,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'SAVETIMELINE',
   // empty hands are a slot (handslot.ts HANDSLOT): a recording made with it on replays its key as the slot, one from before reads no such key
   'HANDSLOT',
+  // his own actions are a ring that stays (handring.ts HANDRING): a recording made with it on replays its presses as that ring's, one from before as the list's
+  'HANDRING',
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
@@ -203,6 +205,7 @@ import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
 import { HANDSLOT } from './handslot';
+import { HANDRING } from './handring';
 import { SAMSTUN } from './samstun';
 import { RECAP } from './deathrecap';
 import { TEAMTALLY } from './teamtally';
@@ -273,6 +276,8 @@ export function knobRegistry(): Record<string, object> {
     SAVETIMELINE,
     // empty hands are a slot (handslot.ts): the switch and the code the game asks for it by
     HANDSLOT,
+    // his own actions are a ring that stays (handring.ts): the switch and the press that opens it
+    HANDRING,
     // a sprint into a door has weight (sprintdoor.ts): the switch, what a shoulder through it keeps of his run, how the leaf leaves him, the boot (or the handle) at the face it opens toward — where the player is a second later reads them
     SPRINTDOOR,
     // teammates are slower than the player and run only for a reason (teampace.ts): the switch, the walk's share of the player's, a follower's closing pace and his run, the reasons — where every teammate is a second later reads them
