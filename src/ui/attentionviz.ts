@@ -5,14 +5,18 @@
 // brief; an attention another file holds (a man at a lit screen) a steady dim one. Amber, the HUD's colour for a wary man (STYLE.md). Drawn into the overlay's
 // #traj SVG under the squad's marks. Reads only; no state but its nodes. Never seen on a GPU: the weights and the colour are guesses.
 import type { Vec3 } from '../math/vec';
-import type { Game } from '../game/game';
+import type { Game, Guard } from '../game/game';
 import type { FollowCamera } from '../game/camera';
-import { ATTENTION, attentionMarks, attentionWay } from '../game/attention';
+import { ATTENTION, attentionMarks, attentionWay, type AttentionWayKept, type AttentionWayStore } from '../game/attention';
 
 const NS = 'http://www.w3.org/2000/svg';
 const SEG = 28, FLOOR = 0.05, AMBER = '#ffd866';
 type Part = 'thread' | 'track' | 'arc';
 interface Els { g: SVGGElement; p: Record<Part, SVGPathElement>; d: Record<Part, string>; op: string }
+/** each man's kept way and the tables the grid is searched on (attention.ts attentionWay): the PICTURE'S own — a game drawn and the same game not drawn hold
+ *  the same state */
+const keptWays = new WeakMap<Guard, AttentionWayKept>();
+const ways: AttentionWayStore = { get: gd => keptWays.get(gd), set: (gd, w) => keptWays.set(gd, w), nav: {} };
 
 /** the thread along `way` (game/attention.ts attentionWay: straight for a man who only looks, the way he will walk for one going over), from `head` m along
  *  it to `tail` m short of its end, in half-metre pieces — so the part of it in the view is drawn when an end is out of it. Empty for a man all but at the ring. */
@@ -65,7 +69,7 @@ export class AttentionViz {
       const op = M.mode === 'lent' ? '0.55' : M.ending ? (Math.floor(game.time * 10) % 2 ? '0.35' : '1') : '0.95';   // (the last beat flickers: he has said he is done)
       if (E.op !== op) { E.op = op; E.g.setAttribute('opacity', op); }
       // the thread starts off his feet and stops at the ring's edge, not its middle
-      set(E, 'thread', thread(attentionWay(game, M), 0.35, r));
+      set(E, 'thread', thread(attentionWay(game, M, ways), 0.35, r));
       set(E, 'track', ring(M.at, r, 1)); set(E, 'arc', ring(M.at, r, M.left));
     }
     for (let i = marks.length; i < this.shown; i++) this.els[i].g.style.display = 'none';

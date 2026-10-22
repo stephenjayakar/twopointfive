@@ -20,7 +20,10 @@
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 
-const { ATTENTION, attentionMarks, attentionWay, attentionOf } = await import(`${ROOT}/src/game/attention.ts`);
+const { ATTENTION, attentionMarks, attentionWay: wayWith, attentionOf } = await import(`${ROOT}/src/game/attention.ts`);
+const { stateHash, stateDiff } = await import(`${ROOT}/src/game/rollback.ts`);
+/** the kept answers, held as the overlay holds them: on the asker's side, never in the game */
+const keptWays = new Map<object, unknown>(), kept = { get: (k: object) => keptWays.get(k), set: (k: object, v: unknown) => keptWays.set(k, v), nav: {} }, attentionWay = (g: any, m: any) => wayWith(g, m, kept);
 const { threadPoints } = await import(`${ROOT}/src/ui/attentionviz.ts`);
 const { RING } = await import(`${ROOT}/src/game/launcher.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -54,7 +57,7 @@ async function world(file: string | null) {
 /** a calm man and a place 5‥9 m from him that a walk reaches and the straight line does not; a knock there; on to the first frame his attention is walking
  *  him to it. `ask` = the run asks for every thread's way each frame (and the nav grid's answer for it, his own path set aside); `frames` > 0 = run on that
  *  many frames more, a digest every thirty. */
-async function taken(file: string | null, ask = false, frames = 0): Promise<{ g: any; step: (n?: number) => void; A: any; at: P; M: any; d: string } | null> {
+async function taken(file: string | null, ask = false, frames = 0): Promise<{ g: any; step: (n?: number) => void; A: any; at: P; M: any; d: string; h: string } | null> {
   const probe = await world(file), nav = probe.g.col.nav, cands: { i: number; at: P }[] = [];
   probe.g.guards.forEach((A: any, i: number) => {
     if (A.state === 'dead' || A.awareness > 0.2) return; const p = A.char.pos; let n = 0;
@@ -73,7 +76,7 @@ async function taken(file: string | null, ask = false, frames = 0): Promise<{ g:
       s.step(); if (ask) asked(g);
       const M = attentionMarks(g).find((m: any) => m.gd === A); if (!M || !M.walking || flat(M.at, c.at) > 0.6 || flat(M.from, M.at) < 3) continue;
       let d = ''; for (let k = 0; k < frames; k++) { s.step(); if (ask) asked(g); if (k % 30 === 29) d += hashDigest(digestGame(g, true)) + ' '; }
-      return { g, step: s.step, A, at: c.at, M, d };
+      return { g, step: s.step, A, at: c.at, M, d, h: frames ? stateHash(g, true, true) as string : '' };
     }
   }
   return null;
@@ -129,9 +132,9 @@ async function picture() {
   console.log('\n=== picture: asking changes nothing; on on both stands ===');
   ATTENTION.way = true; const a = await taken(null, true, 240), b = await taken(null, false, 240);
   const read = (q: string) => { ATTENTION.way = !ATTENTION.way; PR.pageSwitches(new URLSearchParams(q)); return ATTENTION.way; }, plain = read(''), off = read('straightthread'); read('');
-  verdict(!!a && !!b && a.d === b.d && a.d.length > 8 && found === true && plain === true && off === false,
-    'a run that asks for every thread\'s way each frame digests as the run that never asks; the card found the key on; the page\'s boot writes it on for a plain address and off for ?straightthread',
-    `digests ${a && b ? (a.d === b.d ? 'equal' : 'DIFFER') : 'no run'} (${a?.d.trim() ?? '-'}) · found ${found} · plain ${plain} · ?straightthread ${off}`);
+  verdict(!!a && !!b && a.d === b.d && a.d.length > 8 && a.h === b.h && a.h.length > 8 && found === true && plain === true && off === false,
+    'a run that asks for every thread\'s way each frame digests as the run that never asks, and its whole state hashes the same (the kept answer is the asker\'s, not the game\'s); the card found the key on; the page\'s boot writes it on for a plain address and off for ?straightthread',
+    `digests ${a && b ? (a.d === b.d ? 'equal' : 'DIFFER') : 'no run'} (${a?.d.trim() ?? '-'}) · state ${a && b ? (a.h === b.h ? 'equal' : `DIFFERS: ${stateDiff(a.g, b.g, 3, true).join(' · ')}`) : '-'} (${a?.h ?? '-'}) · found ${found} · plain ${plain} · ?straightthread ${off}`);
 }
 
 /** the whole card (probes.ts 'attentionway'): true = every check passed. The knobs are put back as they were found. */
