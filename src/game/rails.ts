@@ -49,7 +49,9 @@ const ACTS: Record<string, Act> = {
   sprint: { keys: ['ShiftLeft', 'ShiftRight'] }, crouch: { keys: ['KeyC'] }, wall: { keys: ['KeyQ'] }, pace: { wheel: true },
   aim: {}, fire: { buttons: 1 }, alt: { buttons: 4 }, reload: { keys: ['KeyR'] }, mode: { keys: ['KeyZ'] },
   'slot:pistol': { keys: ['Digit1'] }, 'slot:rifle': { keys: ['Digit2'] }, 'slot:smoke': { keys: ['Digit3'] }, 'slot:flash': { keys: ['Digit4'] }, 'slot:frag': { keys: ['Digit5'] },
-  hands: { keys: ['KeyE', 'Backquote'] }, use: { keys: ['Space', 'ArrowUp', 'ArrowDown'] }, whistle: { keys: ['KeyV'] }, light: { keys: ['KeyL'] }, nvg: { keys: ['KeyN'] },
+  // (codes, as everywhere here: the hands' own slot is 'Digit0' whatever key the board gives it — handslot.ts; the whistle's code has no key on the page
+  //  while the player's own ring is on — handring.ts: there it is the ring's last wedge, and the ring is `use`'s, worked with its digits and a click)
+  hands: { keys: ['KeyE', 'Digit0'] }, use: { keys: ['Space', 'ArrowUp', 'ArrowDown'] }, whistle: { keys: ['KeyV'] }, light: { keys: ['KeyL'] }, nvg: { keys: ['KeyN'] },
   order: { keys: ['KeyB'] }, ring: {}, menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] }, plan: {},
   camera: {}, zoom: {},
 };
@@ -116,10 +118,8 @@ export class Rails {
     const g = this.g, menuUp = !!g.orders?.menu && (A.has('menu') || A.has('ring'));
     const shift = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
     const enter = input.keys.has('Enter') || input.pressed.has('Enter') || input.keys.has('NumpadEnter') || input.pressed.has('NumpadEnter');   // (Shift+Enter stages the mission again: Shift rides with it)
-    // (handring.ts: his own actions' ring, up under the interaction key, is worked the same way — a digit does its wedge, a left click the lit one — and
-    // those are no slot and no trigger while it is up: they pass with `use`, whatever else is locked)
-    const handUp = A.has('use') && !!g.player?.sel?.open && !!g.player.sel.ring;
-    if (menuUp || handUp) buttons |= 1;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
+    const handUp = A.has('use') && !!g.player.sel?.open;   // (the player's own ring or list, up: its digits and its clicks are its own)
+    if (menuUp || handUp) buttons |= 1; if (handUp) buttons |= 4;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
     const ok = (code: string) => FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || (handUp && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight'));
     let dropped = 0;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
@@ -133,7 +133,7 @@ export class Rails {
     }
     if (input.clicked & ~buttons) dropped++;
     input.buttons &= buttons; input.clicked &= buttons;
-    if (!wheel && !menuUp) input.wheel = 0;
+    if (!wheel && !menuUp && !handUp) input.wheel = 0;
     RAILS_STATS.dropped += dropped;
   }
 
