@@ -1321,3 +1321,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are dark figures on a dark road. A SKETCH: the script's few words, the office (one room), no lived-in rooms, a composed menu picture
   (`tools/menu-art.ts` PIN). Never seen on a GPU, never played by a person: the moon shadows, the red of the beacons over the whole yard and whether the
   lamps going out reads as the moment it is meant to be are the maintainer's to judge.
+- **The frame's eyes are the player's view, not the squad's knowledge** (2026-10-22; `RAILS.eyeView`, a knob of the frame's table: on with the frame, off for
+  a recording from before the key, `journal.ts applyKnobs`; no word of its own, `RAILS_BREAK=1` is its break path). A MEND OF THE STEP BEFORE IT (`eyeFirst`):
+  the seat's lookout (`rails.sky.eye`) and a step's `eye` were one more of the TEAM's eyes, so a man in one was in the fog's `seen()`, which the squad's own
+  choices read. On the plan mission a step's lookout stood inside the hall; once `eyeFirst` gave it a place with the list full, the hall's gunner was "the
+  team's contact", and the stack at the front door (`autopilot.ts contactBehind`) threw its last can and re-formed three seconds while the pair at the back
+  went in alone. NOW (`fogofwar.ts update`): the picture's list (`pic`: the mask, the doors, the loose things, `spotSeen`) carries the frame's eyes; the team's
+  own list, which every man's `seen()` and `sighting()` are answered from, does not, and is the list a level with no frame would have — the teammate a step's
+  eye takes the picture's last place from still answers for the team. A man only a frame's eye has a line to is DRAWN, NOT SEEN (`Rec.framed`), as a man the
+  squad is shooting at is (`FOG.squadFire`): in the picture, under the cursor, with his markers; no last-seen mark, no linger when the eye leaves him; a body
+  seen through one stays in the picture. His line is walls and leaves only: no plume is asked along a frame eye's line. WHAT STILL READS HIM, by `hidden()` /
+  `drawn()` as for any man in the picture: the cursor and rings, the 40 mm's list of who is near a round, a pair order on a man pointed at, the shut-door rule.
+  THIS CHANGES RUNS of every tutorial mission played with the fog on and a lookout or a step's eye that had a place before (the squad mission, the pair): a
+  man the lookout alone has is no longer the squad's contact. CHECKED, both stands: `rails-check` 24 lines (the new one: on mission 1's wall step, fog put on
+  by the rig, a man of the other side stood 1.5 m down the step's eye in room 3 is on lit floor, drawn, not hidden, not seen, with no sighting, and the entry
+  on his room's door with one can left is open and clear; with the knob off he is seen and the entry is bang and clear, "contact": the regression as it was);
+  `RAILS_BREAK=1` 16 red on both. NOT CHECKED: a teammate's eye displaced from the picture by a step's eye still answering `seen()` (mission 1 in the sky
+  seat has four eyes and room for the step's); smoke between a frame's eye and a man; anything on a GPU.
