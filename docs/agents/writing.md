@@ -121,6 +121,16 @@ No compass words on the HUD or in a door's name. No digit above 5 on a menu. A k
 the page draws the player's own key. A character cap is there for layout: when a natural sentence doesn't fit one, say less, or
 raise the cap in the open and say that you did. Never squeeze the sentence.
 
+## The check
+
+`bun run tools/qa/writing-check.ts` (`probes.ts writing`, in the quick set; `--list` prints every fault). It reads what is data: every level's lesson
+block (the big line and its other lines, the after lines, the cards) and every mission row (blurb, opening scene, the "You will learn" rows). It is red on
+a key cap followed by a colon, a sentence that opens on a key cap, a colon in a lesson's line or card, a line that opens on a bare "In." / "To the …" /
+"Out by …" / "Where …" or on a participle, a verbless phrase after a comma, the British and stiff words of rule 5, "a man" / "men" for an enemy in a
+lesson, and a pronoun with its verb left uncontracted. It also reads the sentences this guide was written from and must catch every one of them and pass
+their rewrites; `WRITING_BREAK=1` reads the old sentences as a level's and must fail. It cannot read text built in code (menus, HUD rows, spoken lines):
+those rest on the review below.
+
 ## Review
 
 Whoever writes or changes player text reads every changed line aloud, and a second reader who did not write it does the same

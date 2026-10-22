@@ -255,41 +255,41 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     rails: { allow: ['move', 'camera', 'zoom', 'aim'], orders: ['pairMark', 'work', 'fallIn'], rows: ['grab', 'question', 'choke', 'push', 'code', 'nocode', 'drive'] },
     steps: [
       // ---- the gate yard: he follows; a man on the word ----
-      { id: 'crouch', line: '[C]: get low. Your partner copies you', allow: ['crouch'], done: any(flag('crouch'), down(1)) },
+      { id: 'crouch', line: 'Press [C] to crouch. Your partner will copy you', allow: ['crouch'], done: any(flag('crouch'), down(1)) },
       { id: 'lead', line: 'Lead him to the mark', cue: 'gate', done: any(all(near(TP.first, 1.0), { is: 'mate', by: 5 }), down(1)), hold: 0.3, at: mark(TP.first) },
       // (an order step's `after` is the line while the partner is on his way: it never asks twice, and it is drawn as a thing to watch. The step is done by
       //  what the order was FOR: "set", the dark. KNOWN: a `did` deed cannot say WHICH man an order was on (lesson.ts counts 'order:<id>@<target>' and its
       //  check refuses the '@'), so 'far' passes on his key on either man of the two; the ring rides on the far one and the card says which)
-      { id: 'mark', line: '[B] on that man: your partner takes him', after: { line: 'He works round to the man\'s back', on: ['pairMark'] }, allow: ['order'], at: chest(TP.A), atMan: 'pickup',
+      { id: 'mark', line: 'Press [B] on that guard to send your partner after him', after: { line: 'He\'s working his way around behind the guard', on: ['pairMark'] }, allow: ['order'], at: chest(TP.A), atMan: 'pickup',
         done: any(pair('set'), pair('go'), down(1)),
-        explain: { title: 'Two of you', text: 'Your partner follows you, and stays as quiet as you do.\n[B] on a man sends him round to that man\'s back. He says "set" when he is there, and waits for your word.' } },
-      { id: 'word', line: '[F]: your word. He strikes', after: { word: 'He strikes, and comes back to you' }, allow: ['word'], at: chest(TP.A), atMan: 'pickup', done: down(1) },
+        explain: { title: 'Two of you', text: 'Your partner follows you and stays as quiet as you do.\nPress [B] on a guard to send your partner around behind him. He\'ll say "set" when he\'s there, and then he\'ll wait for you to say go.' } },
+      { id: 'word', line: 'Press [F] to say go, and he\'ll take the guard down', after: { word: 'He\'s taking the guard down, then he\'ll come back to you' }, allow: ['word'], at: chest(TP.A), atMan: 'pickup', done: down(1) },
       // ---- the truck park: two men on one beat ----
       // (he falls in again by himself when his man is down — pairup.ts `rejoin` — so no line asks for it)
       { id: 'gap', line: 'Lead him to the gap between the containers', cue: 'park', checkpoint: 'the gate yard', done: any(all(near(TP.gap, 1.0), { is: 'mate', by: 5 }), down(2)), hold: 0.3, at: mark(TP.gap) },
-      { id: 'far', line: '[B] on the far man: your partner takes him', at: chest(TP.C), atMan: 'far', done: any(did('order:pairMark'), down(2)),
-        explain: { title: 'Two men, one beat', text: 'These two see each other: drop one alone and the other shouts.\nGive your partner the far one. Then get behind the near one yourself. Your grab is his signal.' } },
-      { id: 'near', line: 'Get behind the near man. Wait for "set"', allow: ['use'], at: mark(TP.behindB), done: any(pair('set'), pair('go'), flag('holding'), down(2)) },
-      { id: 'hands', line: '[Space] at his back: your grab is the signal', at: chest(TP.B), atMan: 'near', done: any(all(flag('holding'), down(2)), down(3)) },
+      { id: 'far', line: 'Press [B] on the far guard to send your partner after him', at: chest(TP.C), atMan: 'far', done: any(did('order:pairMark'), down(2)),
+        explain: { title: 'Two guards at once', text: 'These two can see each other, so if you take down just one, the other will shout.\nGive your partner the far one, then get behind the near one yourself. When you grab yours, he\'ll take his.' } },
+      { id: 'near', line: 'Get behind the near guard and wait for "set"', allow: ['use'], at: mark(TP.behindB), done: any(pair('set'), pair('go'), flag('holding'), down(2)) },
+      { id: 'hands', line: 'Press [Space] behind him to grab him, and your partner will take his', at: chest(TP.B), atMan: 'near', done: any(all(flag('holding'), down(2)), down(3)) },
       // (the interaction key is shut while the line is the right button: a tap of it in the hold is a question, and ANY held man gives the office code —
       //  learnt here, the last man would have nothing left to say and his step no way to pass)
-      { id: 'sleep', line: 'Right button: out cold', allow: ['alt'], deny: ['use'], done: down(3) },
+      { id: 'sleep', line: 'Right-click to knock him out', allow: ['alt'], deny: ['use'], done: down(3) },
       // ---- the office yard: a man held and asked while the partner throws the mains ----
       // (the last man is the only way to the code: until he has given it the right button is shut, and so are the squad's key and the word — a taught "[B]
       //  on the man, then [F]" would put him out through the partner. The squad's key comes back for the fuse box, and is shut again while the dark is
       //  walked: a second order on the box would put the mains back on)
-      { id: 'past', line: 'On, past the wall', cue: 'yard', deny: ['alt', 'order', 'word'], checkpoint: 'the truck park', done: any(all(near(TP.past, 1.4), { is: 'mate', by: 4.5 }), flag('holding'), down(4)), hold: 0.3, at: mark(TP.past) },
-      { id: 'hold', line: 'He knows the door code. [Space] at his back', allow: ['use'], at: chest(TP.D), atMan: 'gate', done: any(flag('holding'), did('chron:codeLearned'), down(4)) },
-      { id: 'ask', line: '[Space]: ask him the code', done: any(did('chron:codeLearned'), down(4)) },
-      { id: 'box', line: 'Your hands are full. [B] on the fuse box', after: { line: 'He goes for the fuse box. Watch the lamps', on: ['work'] }, allow: ['order'], at: [TP.box[0], 1.35, TP.box[2]], done: flag('dark'),
-        explain: { title: 'He works things too', text: '[B] on a thing you could work yourself sends your partner to do it.\nThe lamp and the camera over the office door both run on this box.' } },
-      { id: 'drop', line: 'Right button: out cold', allow: ['alt'], deny: ['order'], done: down(4) },
+      { id: 'past', line: 'Keep going past the wall', cue: 'yard', deny: ['alt', 'order', 'word'], checkpoint: 'the truck park', done: any(all(near(TP.past, 1.4), { is: 'mate', by: 4.5 }), flag('holding'), down(4)), hold: 0.3, at: mark(TP.past) },
+      { id: 'hold', line: 'He knows the door code. Press [Space] behind him to grab him', allow: ['use'], at: chest(TP.D), atMan: 'gate', done: any(flag('holding'), did('chron:codeLearned'), down(4)) },
+      { id: 'ask', line: 'Press [Space] to ask him for the code', done: any(did('chron:codeLearned'), down(4)) },
+      { id: 'box', line: 'Your hands are full. Press [B] on the breaker box', after: { line: 'He\'s going for the breaker box. Watch the lights', on: ['work'] }, allow: ['order'], at: [TP.box[0], 1.35, TP.box[2]], done: flag('dark'),
+        explain: { title: 'Your partner can use things too', text: 'Press [B] on anything you could use yourself, and your partner will go use it.\nThe light and the camera over the office door both run off this breaker box.' } },
+      { id: 'drop', line: 'Right-click to knock him out', allow: ['alt'], deny: ['order'], done: down(4) },
       // ---- the dark ----
-      { id: 'nv', line: '[N]: night vision', allow: ['nvg'], checkpoint: 'the dark', done: flag('nv') },
-      { id: 'code', line: '[Space] at the pad: his code', at: [TP.pad[0], 1.3, TP.pad[2] + 0.2], done: any(did('chron:codeEntered'), ...opened('office')) },
-      { id: 'take', line: '[Space] at the trunk: the manifest', at: front, done: { is: 'stage', stage: 'exfil' } },
+      { id: 'nv', line: 'Press [N] to turn on night vision', allow: ['nvg'], checkpoint: 'the dark', done: flag('nv') },
+      { id: 'code', line: 'Press [Space] at the keypad to enter his code', at: [TP.pad[0], 1.3, TP.pad[2] + 0.2], done: any(did('chron:codeEntered'), ...opened('office')) },
+      { id: 'take', line: 'Press [Space] at the trunk to take the manifest', at: front, done: { is: 'stage', stage: 'exfil' } },
       // (the partner stood where his work ended, at the box: here the squad's key on the ground is a call he has not already answered)
-      { id: 'out', line: '[B] on the ground: bring him. Out by the far gate', allow: ['order'], done: any(all({ is: 'in', area: TP.out }, { is: 'mate', by: 6 }), { is: 'stage', stage: 'done' }), at: [37.6, 1, EXIT.z] },
+      { id: 'out', line: 'Press [B] on the ground to call your partner, then leave through the far gate', allow: ['order'], done: any(all({ is: 'in', area: TP.out }, { is: 'mate', by: 6 }), { is: 'stage', stage: 'done' }), at: [37.6, 1, EXIT.z] },
     ],
   };
   for (const d of doors) doorFrame(d);

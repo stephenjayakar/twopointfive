@@ -1298,3 +1298,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are dark figures on a dark road. A SKETCH: the script's few words, the office (one room), no lived-in rooms, a composed menu picture
   (`tools/menu-art.ts` PIN). Never seen on a GPU, never played by a person: the moon shadows, the red of the beacons over the whole yard and whether the
   lamps going out reads as the moment it is meant to be are the maintainer's to judge.
+
+<!-- added 2026-10-22 -->
+- **The tutorial's words were rewritten on 2026-10-22** (the writing guide: `docs/agents/writing.md`). A line, a card or a list row quoted in a bullet above
+  is the text as it was when that bullet was written; the level files and `scenarioList.ts` hold today's. Only words moved: no step id, deed, mark, key,
+  `allow` / `deny` or order of steps. Tools that matched the old words were moved with them: `rails-check` (the stack's after line, the gate's line),
+  `tut-sky-check` (the light card says flashlights), `tut-squad-page.cjs` (the after line and the side door card's heading, now "A covered doorway").
+  A level file's fingerprint moves with its words, so a checkpoint saved on an older build of a tutorial mission is refused. `tools/qa/writing-check.ts`
+  (`probes.ts writing`) holds every lesson's text and every mission row to the guide's patterns; `WRITING_BREAK=1` must fail. Read on the page by nobody
+  yet; never seen on a GPU.

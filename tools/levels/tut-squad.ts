@@ -218,13 +218,13 @@ export function build() {
   // cannot already be true as it comes up (the maintainer, playing the first cut: "i think this needs more explanation for the systems. maybe even a
   // modal that pauses the game and explains it", and the window's card is his own sentence)
   const CARDS = {
-  entry: { title: 'Two ways in', text: 'Stacked on a door, they wait for your word.\n[B] again: they choose how. A flashbang goes in first if the room is held or unknown and they have one to spare.\n[F]: straight in from where they stand, and never a flashbang.' },
-    side: { title: 'A doorway he holds', text: 'A man who holds a doorway shoots whoever shows in it.\nMost rooms have another door. Send the squad to the one at his back.' },
-    follow: { title: "The squad's ring", text: 'A tap of [B] gives the plain order for whatever you point at.\nKept down, the same key opens a ring with the rest of them.' },
-    gun: { title: 'Suppression', text: 'A man under fire keeps his head down, and a man with his head down is not shooting.\nPut rounds on the gun, then move while it is down.' },
-    frag: { title: 'Grenades', text: 'Sandbags stop a rifle. A grenade goes over them.\nIt does to you what it does to them: throw it from cover, and not close.' },
-    window: { title: 'From outside', text: 'Two men wait either side of that door for whoever walks in.\nYou can shoot through a window. It is often safer to clear a room from outside than to go in.' },
-    back: { title: 'Flanked', text: 'While one man holds your eyes, the others walk round behind you.\nDo not turn everybody: send part of the squad to cover the other way.' },
+  entry: { title: 'Two ways in', text: 'Once they\'re stacked on a door, they\'ll wait until you say go.\nPress [B] again and they\'ll pick how to go in. They\'ll throw a flashbang first if they have one to spare and there might be enemies inside.\nPress [F] to send them straight in with no flashbang.' },
+    side: { title: 'An enemy watching a doorway', text: 'An enemy who\'s watching a doorway will shoot anyone who steps into it.\nMost rooms have another door, so send the squad to the one behind him.' },
+    follow: { title: "The squad's ring", text: 'Tap [B] to give the usual order for whatever you\'re pointing at.\nHold the same key down to open a ring with the rest of the orders.' },
+    gun: { title: 'Suppression', text: 'An enemy who\'s being shot at will keep his head down, and then he can\'t shoot back.\nShoot at the gunner, then move while he\'s down.' },
+    frag: { title: 'Grenades', text: 'Sandbags will stop rifle rounds, but a grenade goes over them.\nA grenade hurts you as much as it hurts them, so throw it from cover and not too close.' },
+    window: { title: 'From outside', text: 'Two enemies are waiting on either side of that door for whoever walks in.\nYou can shoot through a window, and it\'s often safer to clear a room from outside than to go in.' },
+    back: { title: 'Flanked', text: 'While one enemy keeps your attention, the others will walk around behind you.\nDon\'t turn everybody around. Send part of the squad to cover the other way.' },
   };
   // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = the frame keeps one as it
   // comes up (the start of a fight, never the middle of one). A key is written by the game's own code letter in brackets: the page draws the player's key.
@@ -235,10 +235,10 @@ export function build() {
     rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'slot:rifle', 'slot:pistol', 'use', 'order', 'word', 'camera', 'zoom'], respawn: 5 },
     steps: [
       // 1 · two easy rooms: the squad's key on a door, twice
-      { id: 'stack-hut', line: '[B] on the guard hut door', after: { line: 'They stack up on the door', on: ['stack'] }, done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
-      { id: 'go-hut', line: '[B] again: they choose how, and go in', after: { line: 'They go in', on: ENTRY, word: 'They go straight in' }, explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
-      { id: 'stack-store', line: '[B] on the store door', after: { line: 'They stack up on the store', on: ['stack'] }, done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
-      { id: 'go-store', line: '[B] again: they go in', after: { line: 'They go in', on: ENTRY, word: 'They go straight in' }, done: taken('store'), at: [10.85, 1, 16.5] },
+      { id: 'stack-hut', line: 'Press [B] on the guard hut door', after: { line: 'They\'re stacking up on the door', on: ['stack'] }, done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
+      { id: 'go-hut', line: 'Press [B] again to send them in their own way', after: { line: 'They\'re going in', on: ENTRY, word: 'They\'re going straight in' }, explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
+      { id: 'stack-store', line: 'Press [B] on the store door', after: { line: 'They\'re stacking up on the store door', on: ['stack'] }, done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
+      { id: 'go-store', line: 'Press [B] again to send them in', after: { line: 'They\'re going in', on: ENTRY, word: 'They\'re going straight in' }, done: taken('store'), at: [10.85, 1, 16.5] },
       // (its own step: a line the men's order has gone out on is drawn as something to watch, with no ring, and this one is an ask with a place)
       { id: 'in-store', line: 'Follow them in', done: { is: 'in', area: { ...STORE } }, at: [10.85, 1, 18.6] },
       // 2 · A DOORWAY HE HOLDS: as the store falls the workshop's man is on his open lane doorway, in the picture through the fog, his rounds on the
@@ -246,33 +246,33 @@ export function build() {
       //     cross are seen too. The player is walked out to the street in front of the workshop (from inside the store none of it is on his screen):
       //     from there the room is above him and BOTH its doors are on the screen. The answer is the other door: the squad sent to it from where he
       //     stands (the ring is the door: an order pointed at the ring is an order on it), the walk round after them, and in at the man's back
-      { id: 'out', line: 'Shots outside. Out to the street', done: or(near(SHOP_VIEW, 1.5), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street', eye: SHOP_EYE },
-      { id: 'side', line: 'He has that doorway. [B] on the side door', explain: CARDS.side, done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
-      { id: 'round', line: 'Go round with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
-      { id: 'shop', line: '[B] again: in behind him', after: { line: 'They go in behind him', on: ENTRY, word: 'They go in behind him' }, done: taken('workshop'), at: D_SIDE },
+      { id: 'out', line: 'Those shots came from outside. Get out to the street', done: or(near(SHOP_VIEW, 1.5), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street', eye: SHOP_EYE },
+      { id: 'side', line: 'He\'s watching that doorway. Press [B] on the side door', explain: CARDS.side, done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
+      { id: 'round', line: 'Go around with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
+      { id: 'shop', line: 'Press [B] again to send them in behind him', after: { line: 'They\'re going in behind him', on: ENTRY, word: 'They\'re going in behind him' }, done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
       // (the held key is its own step, and a TAP of the squad's key gives nothing while it is up — the frame's `noTap`: tapped at the old one line, the
       //  key sent the four to the ring at the wall's end and the menu was never met)
-      { id: 'follow', line: '[X], [3]: they follow', explain: CARDS.follow, noTap: 'Keep [B] held down', done: or({ is: 'following' }, gave('fallIn'), taken('nest')), checkpoint: 'the wall', allow: ['menu', 'ring'] },
-      { id: 'wall', line: "To the wall's end", done: or(near(END, 1.6), taken('nest')), at: END },
+      { id: 'follow', line: '[X], then press [3] to have them follow you', explain: CARDS.follow, noTap: 'Keep [B] held down', done: or({ is: 'following' }, gave('fallIn'), taken('nest')), checkpoint: 'the wall', allow: ['menu', 'ring'] },
+      { id: 'wall', line: 'Go to the end of the wall', done: or(near(END, 1.6), taken('nest')), at: END },
       // (no ring on the nest while the line says shoot: a ring is where to GO. The gunner is in the picture through the fog, and his rounds say where he is)
-      { id: 'gun', line: 'A gun. Shoot back: it ducks', explain: CARDS.gun, done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), cue: 'gun' },
-      { id: 'blocks', line: 'While it is down: run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS, cue: 'ducks' },
-      { id: 'frag', line: '[5], left button: a frag over the bags', explain: CARDS.frag, done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },
-      { id: 'nest', line: 'Take the nest', done: taken('nest'), at: [32.0, 1, 13.8], cue: 'fragged' },
+      { id: 'gun', line: 'There\'s a gunner ahead. Shoot back to make him duck', explain: CARDS.gun, done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), cue: 'gun' },
+      { id: 'blocks', line: 'While he\'s down, run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS, cue: 'ducks' },
+      { id: 'frag', line: 'Press [5], then left-click to throw a frag over the sandbags', explain: CARDS.frag, done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },
+      { id: 'nest', line: 'Take the gun nest', done: taken('nest'), at: [32.0, 1, 13.8], cue: 'fragged' },
       // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A LOCK IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
       //     leaf is kicked in, and it is the way in
-      { id: 'window', line: 'Two wait inside. Shoot through the window', explain: CARDS.window, done: taken('hall'), at: [31.1, 1.4, 16.9], checkpoint: 'the hall' },
+      { id: 'window', line: 'Two enemies are waiting inside. Shoot them through the window', explain: CARDS.window, done: taken('hall'), at: [31.1, 1.4, 16.9], checkpoint: 'the hall' },
       //     (the walk to the door is a step of its own: from the window the leaf is edge on, and a player told to open it tried from there. And the first
       //      way through a lock anybody is shown is the boot: rounds through a door are for a door nobody can walk up to)
-      { id: 'door', line: 'The door is locked. Go round to it', done: or(near(HALL_FRONT, 1.7), HALL_OPEN), at: [HALL_FRONT[0], 1, HALL_FRONT[2]] },
-      { id: 'lock', line: 'Hold [Space] on the door: kick it in', done: HALL_OPEN, at: [32.6, 1, 19.75] },
+      { id: 'door', line: 'The door is locked. Go around to it', done: or(near(HALL_FRONT, 1.7), HALL_OPEN), at: [HALL_FRONT[0], 1, HALL_FRONT[2]] },
+      { id: 'lock', line: 'Hold [Space] on the door and choose to kick it in', done: HALL_OPEN, at: [32.6, 1, 19.75] },
       { id: 'hall', line: 'Walk in', done: { is: 'in', area: { ...HALL } }, at: [31.0, 1, 19.75] },
       // 5 · MORE COME, AND NOT ALL BY ONE WAY: one man at the road gate holds your eyes while two walk round to the back gate
-      { id: 'bags', line: 'More are coming. Behind the bags', done: or(near(BAGS, 1.6), taken('road')), at: BAGS, checkpoint: 'the bags' },
+      { id: 'bags', line: 'More are coming. Get behind the sandbags', done: or(near(BAGS, 1.6), taken('road')), at: BAGS, checkpoint: 'the bags' },
       { id: 'front', line: 'Hold the road gate', done: or({ is: 'cue', name: 'flank' }, taken('road')), at: [35.0, 1, 14.0], cue: 'picket' },
-      { id: 'back', line: 'Behind you! [X] on the alley, then [2]', explain: CARDS.back, noTap: 'Keep [B] held down', done: or(gave('cover'), taken('road')), at: MOUTH },
-      { id: 'hold', line: 'Finish the picket', done: taken('road'), at: [35.0, 1, 14.0], cue: 'covered' },
+      { id: 'back', line: 'They\'re behind you! [X] on the alley, then press [2]', explain: CARDS.back, noTap: 'Keep [B] held down', done: or(gave('cover'), taken('road')), at: MOUTH },
+      { id: 'hold', line: 'Finish off the last of them', done: taken('road'), at: [35.0, 1, 14.0], cue: 'covered' },
     ],
   } as LessonData;
 

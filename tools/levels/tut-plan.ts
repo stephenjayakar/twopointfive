@@ -193,45 +193,45 @@ export function build() {
     rails: { allow: ['camera', 'zoom'], respawn: 5, lasers: false },
     steps: [
       // 1 · THE MODE, AND ONE PLAN: the view is the hand's, a right click is an order, a box picks men, one word sends every stack that waits on it
-      { id: 'mode', line: 'Hold [Shift], tap [B]: plan mode', explain: { title: 'Plan mode', text: 'You lead this one from the gate, on the radio.\nIn plan mode you lay out what each pair will do. Nobody goes through a door until you give the word.' },
+      { id: 'mode', line: 'Hold [Shift] and tap [B] to open plan mode', explain: { title: 'Plan mode', text: 'You\'re leading this one over the radio from the gate.\nIn plan mode you lay out what each pair will do. Nobody goes through a door until you say go.' },
         done: flag('plan'), allow: ['plan'], checkpoint: 'the gate' },
-      { id: 'view', line: '[W] [A] [S] [D] move the view. Find the guardroom', done: or({ is: 'planView', at: GUARD_VIEW, r: 4.5 }, taken('guardroom')), at: [18.0, 1, 8.75] },
-      { id: 'send', line: 'Right click by its wall: all four go', done: or({ is: 'squad', area: { x0: 12.2, x1: 14.9, z0: 6.0, z1: 12.6 }, n: 3 }, stacks(['guard']), stacks(['guard_side']), taken('guardroom')), at: WALL },
-      { id: 'pick', line: 'Left button: drag a box round two men', explain: { title: 'Two doors', text: 'The guardroom has two doors, and its men cannot watch both.\nPick two men and give them one door. Then give the other two the other door.' },
+      { id: 'view', line: 'Use [W] [A] [S] [D] to move the view and find the guardroom', done: or({ is: 'planView', at: GUARD_VIEW, r: 4.5 }, taken('guardroom')), at: [18.0, 1, 8.75] },
+      { id: 'send', line: 'Right-click by the guardroom wall to send all four there', done: or({ is: 'squad', area: { x0: 12.2, x1: 14.9, z0: 6.0, z1: 12.6 }, n: 3 }, stacks(['guard']), stacks(['guard_side']), taken('guardroom')), at: WALL },
+      { id: 'pick', line: 'Left-click and drag a box around two teammates', explain: { title: 'Two doors', text: 'The guardroom has two doors, and the enemies inside can\'t watch both.\nPick two teammates and give them one door, then give the other two the other door.' },
         done: or({ is: 'picked', n: 2 }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
-      { id: 'door1', line: 'Right click the door: those two stack on it', done: or(stacks(['guard']), taken('guardroom')), at: D_GUARD },
-      { id: 'pick2', line: 'Now drag a box round the other two', done: or({ is: 'picked', n: 2, free: true }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
-      { id: 'door2', line: 'Right click the side door', done: or(stacks(['guard', 'guard_side'], true), taken('guardroom')), at: D_SIDE },
+      { id: 'door1', line: 'Right-click the door to stack those two up on it', done: or(stacks(['guard']), taken('guardroom')), at: D_GUARD },
+      { id: 'pick2', line: 'Now drag a box around the other two', done: or({ is: 'picked', n: 2, free: true }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
+      { id: 'door2', line: 'Right-click the side door', done: or(stacks(['guard', 'guard_side'], true), taken('guardroom')), at: D_SIDE },
       // (the word's key sends the stacks of the men who are PICKED — planmode.ts chainsOf — and the last box picked two: a click on bare ground is everyone again)
-      { id: 'all', line: 'Left click bare ground: all four are yours again', done: or({ is: 'picked', n: 4 }, taken('guardroom')) },
-      { id: 'word', line: '[F]: one word, both doors', done: taken('guardroom'), at: [18.0, 1, 8.75], allow: ['word'] },
+      { id: 'all', line: 'Left-click empty ground to pick all four again', done: or({ is: 'picked', n: 4 }, taken('guardroom')) },
+      { id: 'word', line: 'Press [F] to send both stacks in at once', done: taken('guardroom'), at: [18.0, 1, 8.75], allow: ['word'] },
       // 2 · THE ROOM ONE STACK LOSES: the gun looks down the hall at the front door. A pair on each door, and it is turned to the wrong one
-      { id: 'hall', line: 'Move the view to the hall', explain: { title: 'A gun on the door', text: 'A gun at the far end of the hall is laid on its front door. Men who go in there alone walk into it.\nThe back door is behind the gunner.' },
+      { id: 'hall', line: 'Move the view to the hall', explain: { title: 'A gunner watching the door', text: 'There\'s a gunner at the far end of the hall, aiming at the front door. If your squad only goes in that way, they\'ll walk right into his fire.\nThe back door is behind him.' },
         done: or({ is: 'planView', at: HALL_VIEW, r: 3.5 }, taken('hall')), at: [28.4, 1, 16.0], eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 }, checkpoint: 'the hall' },
-      { id: 'front', line: 'Two men: right click the front door', done: or(stacks(['hall']), taken('hall')), at: D_HALL, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
-      { id: 'back', line: 'The other two: right click the back door', done: or(stacks(['hall', 'hall_back'], true), taken('hall')), at: D_BACK, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
+      { id: 'front', line: 'Pick two teammates and right-click the front door', done: or(stacks(['hall']), taken('hall')), at: D_HALL, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
+      { id: 'back', line: 'Pick the other two and right-click the back door', done: or(stacks(['hall', 'hall_back'], true), taken('hall')), at: D_BACK, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
       // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — levels/tut-plan.script.ts)
-      { id: 'all2', line: 'Left click bare ground again: all four', done: or({ is: 'picked', n: 4 }, taken('hall')), eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 }, cue: 'breach' },
-      { id: 'word2', line: '[F]: both doors at once', done: taken('hall'), at: [28.4, 1, 16.0], eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },   // (the lookout stays: he SEES the gun on the wrong door)
+      { id: 'all2', line: 'Left-click empty ground again to pick all four', done: or({ is: 'picked', n: 4 }, taken('hall')), eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 }, cue: 'breach' },
+      { id: 'word2', line: 'Press [F] to send them in through both doors at once', done: taken('hall'), at: [28.4, 1, 16.0], eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },   // (the lookout stays: he SEES the gun on the wrong door)
       // 3 · WHICH WAY THEY FACE: more come by two gates at once. A right click dragged is a place and a way to look
-      { id: 'gates', line: 'Move the view to the two gates', explain: { title: 'Two gates', text: 'More men are coming, by the road gate and the back gate at once.\nA right click that you drag sends men to a place and sets the way they face there.' },
+      { id: 'gates', line: 'Move the view to the two gates', explain: { title: 'Two gates', text: 'More enemies are coming through the road gate and the back gate at the same time.\nRight-click and drag to send teammates to a spot and set which way they\'ll face.' },
         done: or({ is: 'planView', at: GATES_VIEW, r: 2.5 }, taken('road'), taken('lane')), at: [27.0, 1, 9.5], checkpoint: 'the gates' },
-      { id: 'faceA', line: 'Two men: right drag from the bags to the road gate', done: or(and({ is: 'squad', area: area(POST_A, 1.8), n: 1 }, { is: 'did', what: 'order:cover' }), taken('road')), at: POST_A, toward: GATE_E },
-      { id: 'faceB', line: 'The other two: right drag, barrier to back gate', done: or(and({ is: 'squad', area: area(POST_B, 1.8), n: 1 }, { is: 'squad', area: area(POST_A, 1.8), n: 1 }, { is: 'did', what: 'order:cover' }), taken('lane')), at: POST_B, toward: GATE_N },
-      { id: 'hold', line: 'They come. Your men have both gates', done: and(taken('road'), taken('lane')), at: [27.0, 1, 9.5], cue: 'gates' },
+      { id: 'faceA', line: 'Pick two, then right-drag from the sandbags toward the road gate', done: or(and({ is: 'squad', area: area(POST_A, 1.8), n: 1 }, { is: 'did', what: 'order:cover' }), taken('road')), at: POST_A, toward: GATE_E },
+      { id: 'faceB', line: 'Pick the other two, then right-drag from the barrier toward the back gate', done: or(and({ is: 'squad', area: area(POST_B, 1.8), n: 1 }, { is: 'squad', area: area(POST_A, 1.8), n: 1 }, { is: 'did', what: 'order:cover' }), taken('lane')), at: POST_B, toward: GATE_N },
+      { id: 'hold', line: 'Here they come. Your squad has both gates covered', done: and(taken('road'), taken('lane')), at: [27.0, 1, 9.5], cue: 'gates' },
       // 4 · and back: a right click on himself is 'on me'
-      { id: 'back-in', line: 'Right click yourself: they come back', done: or({ is: 'following' }, { is: 'did', what: 'order:fallIn' }, { is: 'squad', area: area(SAM, 5), n: 3 }), at: [SAM[0], 1, SAM[2]] },
+      { id: 'back-in', line: 'Right-click yourself to call them back', done: or({ is: 'following' }, { is: 'did', what: 'order:fallIn' }, { is: 'squad', area: area(SAM, 5), n: 3 }), at: [SAM[0], 1, SAM[2]] },
     ],
   } as LessonData;
   // (every step that is done IN the mode says what puts the mode up while it is down — a checkpoint put back, the mode put away by hand)
   const IN_MODE = new Set(['view', 'send', 'pick', 'door1', 'pick2', 'door2', 'all', 'hall', 'front', 'back', 'all2', 'gates', 'faceA', 'faceB', 'back-in']);
-  for (const t of lesson.steps) if (IN_MODE.has(t.id)) t.planLine = 'Hold [Shift], tap [B]: plan mode again';
+  for (const t of lesson.steps) if (IN_MODE.has(t.id)) t.planLine = 'Hold [Shift] and tap [B] to go back to plan mode';
   // (an order that is out: the line is what the men are doing, not the ask again — rails.ts `after`; the word's steps carry only the line after the word)
   const AFTER: Record<string, { line?: string; word?: string }> = {
-    send: { line: 'All four are on their way' }, door1: { line: 'Those two stack on the door' }, door2: { line: 'They stack. Nobody goes in until your word' },
-    word: { word: 'Both doors, together' }, front: { line: 'They stack on the front door' }, back: { line: 'They go round to the back door' },
-    word2: { word: 'The gun is on the front door. They come in behind it' }, faceA: { line: 'They go to the bags and watch the road gate' },
-    faceB: { line: 'They go to the barrier and watch the back gate' }, 'back-in': { line: 'They come back to you' },
+    send: { line: 'All four are on their way' }, door1: { line: 'Those two are stacking up on the door' }, door2: { line: 'They\'re stacking up. Nobody will go in until you say go' },
+    word: { word: 'They\'re going in through both doors together' }, front: { line: 'They\'re stacking up on the front door' }, back: { line: 'They\'re going around to the back door' },
+    word2: { word: 'They\'re coming in behind the gunner' }, faceA: { line: 'They\'re going to the sandbags to watch the road gate' },
+    faceB: { line: 'They\'re going to the barrier to watch the back gate' }, 'back-in': { line: 'They\'re coming back to you' },
   };
   for (const t of lesson.steps) if (AFTER[t.id]) t.after = AFTER[t.id];
 
