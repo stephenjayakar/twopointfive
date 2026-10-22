@@ -70,10 +70,13 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
 - Pistol up (key `1`, `E` unholsters) + RMB with the reticle snapped on a fixture (the ring is on the light; no word is drawn beside it any more) → the light goes dark, restrikes
   after `tune.ocpDuration`; RMB on a guard's lit torch works too; nothing lit under the reticle → nothing happens.
 - Stand in a guard's flashlight (`__game.guards[i]`, put the player 3–4 m along its `bodyYaw`) → suspicious → alert → guards fire.
-- Key `3` (smoke) / `4` (stun) + LMB, or `G` quick-throw → billowing plume within ~3 s (debug view 5 shows volumetrics only).
-  `5` + LMB throws a frag (it kills Sam too; `G` never throws one). Debug / sandbox actions are buttons in the debugger (the tweak panel, on backtick; Tab is the game's key and opens nothing).
-  `X`, `T`, `B` and `F` ARE keys again, with a squad on the floor (`src/game/orders.ts`): `X` (or the middle mouse button)
-  opens the orders menu on what the cursor is on, `T` steps who takes the order, `B` gives the target's first row with no menu,
+- Key `3` (smoke) / `4` (stun) + LMB → billowing plume within ~3 s (debug view 5 shows volumetrics only). `G` throws nothing in the page
+  (`?quickthrow` = the old quick throw for the visit). `5` + LMB throws a frag (it kills Sam too). Debug / sandbox actions are buttons in the debugger (the tweak panel, on backtick; Tab is the game's key and opens nothing).
+  `X`, `T`, `Q` and `F` ARE keys again, with a squad on the floor (`src/game/orders.ts`): `X` (or the middle mouse button)
+  opens the orders menu on what the cursor is on, `T` steps who takes the order, `Q` is the squad's command: the target's first row with no menu,
+  or, on a door the men stand at or wait on, in they go by the entry they pick (`?noautopilot` = the first row always). The `B` KEY gives nothing
+  in the page (`src/host/keymap.ts`; `?bkey` = the command on B for the visit), but the command's CODE is still `'KeyB'`: a real key press is Q,
+  a scripted frame is `__runFrames(..., ['KeyB'])`.
   `F` is the go word for an order that waits on Sam's mark. With no operative on the floor X / T / the middle button do nothing.
 - The debugger (backtick; `__panel.toggle()`): "rebuild cache" with other presets must not throw; debug views 0–17 are the
   'debug view' list on its Frame page (`__engine.settings.debugView = n`) — no key steps them. Its keys pressed for real:
