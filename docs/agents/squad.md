@@ -205,7 +205,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 13 lines; `QRING_BREAK=1`
   fails 10 on the page's stand and 9 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
   Shift always the mode's (25 and 28 lines, both stands); `qkey`'s game line reads the stand (the order on the tick the key is seen up, with the ring
-  on). NOT measured: no tally (the play-through's commander presses no key); nobody has played it; never seen on a GPU.
+  on). DRAWN: the status column (`#interact`) goes faint while the ring's words lie over it (`ui/cmdring.ts clear`, `body.ringover`; no switch: a ring
+  put up on a door near that corner was read through the column's plates). DRIVEN ON THE PAGE (headless Chromium, the software adapter, real key and
+  pointer presses, a four, a duo and every new switch off; no console or GPU error): the floor's ring and its throws, the door's ring, its tools and
+  'more', each right click back a ring, plan mode's knee, pan, right drag, a hold and a door's wait off and on, an early word not kept, the word, Tab
+  and the view's ease back. NOT measured: no tally (the play-through's commander presses no key); nobody has played it; never seen on a GPU.
 - **Q and F are the squad's only keys; the ring carries every order: ON IN THE PAGE since 10-22** (`CMDRING.only`, `ringSeats` in
   `src/game/cmdring.ts`; `orders.ts seats`, `ringInput`, `ringView`; `KEYMAP.qOnly`, `DROPPED` in `src/host/keymap.ts`; the maintainer, 10-22: "squad is
   now just q and f. everything is through the radial menu (which is 1-5? is that sufficient) so we don't need all the other keys"). IS 1 TO 5 ENOUGH:
