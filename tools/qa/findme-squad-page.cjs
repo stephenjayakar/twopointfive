@@ -5,15 +5,20 @@
 //   frame    the renderer's frame has the player's own man and four teammates on, each with an owner of his own, the player's ink yellow, two red, two blue
 //   device   the pass's one program compiled on this adapter, and frames drawn with it: several men in one pass, each from his own slot of the uniform
 //            buffer, with no GPU error and no console error
-//   exit 0 = all of it · 1 = otherwise. The verdict is the game's numbers and the page's console: nothing here judges a picture. With an outDir it keeps two
-//   pictures (the squad as the page frames it, whole and cut to the men) for a person to look at, never for the verdict.
+//   picture  the rims go BY THE PICTURE (the row 'Outline fades by' as it starts; GBAA's copy of the composite is there to read): with both light rows at
+//            their most the rim is whole round every man; with both at none (no part of a man is darker than black) the same frames have next to none of
+//            its ink left; the rows at their starts are somewhere between; and with GBAA put off (as render resolution at 100 % has it) the outline
+//            keeps a copy of the composite for itself and the rims are whole again. Counted: pixels in the men's boxes that are strongly coloured, the three inks
+//            at full colour over a dark room — a count, not a judgement of the look
+//   exit 0 = all of it · 1 = otherwise. With an outDir it keeps the pictures (the squad as the page frames it, whole and cut to the men, at each of
+//   the three settings) for a person to look at, never for the verdict.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 5241, QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
-const LS = 'twopointsix.findme', KEPT = { outline: true, lit: 1, dark: 1, opacity: 1, colour: 1 };   // (shows under any light, at its full: the rims whatever the light on the men)
+const LS = 'twopointsix.findme', KEPT = { outline: true, picLit: 1, picDark: 1, opacity: 1, colour: 1 };   // (by the picture, as the row starts, its two ends at their most: the whole rim beside any part of a man that is darker than white)
 
 const STEP = (n) => window.__runFrames(n, 1 / 60, [], false);
 // in the page: draw n frames one at a time, read the last one back as PNG data URLs — the whole frame, and the box round every man rimmed, enlarged
@@ -30,10 +35,12 @@ const DRAW = async (n) => {
   const r = all.length ? [Math.min(...all.map(q => q[0])), Math.min(...all.map(q => q[1])), Math.max(...all.map(q => q[2])), Math.max(...all.map(q => q[3]))] : [0.3, 0.3, 0.7, 0.7];
   const x0 = Math.max(0, Math.floor(r[0] * fr.w)), y0 = Math.max(0, Math.floor(r[1] * fr.h)), w = Math.min(fr.w, Math.ceil(r[2] * fr.w)) - x0, h = Math.min(fr.h, Math.ceil(r[3] * fr.h)) - y0;
   let crop = null; if (w > 0 && h > 0) { const k = Math.max(1, Math.floor(1400 / Math.max(w, h))), c3 = document.createElement('canvas'); c3.width = w * k; c3.height = h * k; const x = c3.getContext('2d'); x.imageSmoothingEnabled = false; x.drawImage(c2, x0, y0, w, h, 0, 0, w * k, h * k); crop = c3.toDataURL('image/png'); }
-  return { full: c2.toDataURL('image/png'), crop };
+  // the rims' ink in the men's boxes: pixels with a strong colour of their own (the inks at full colour; the room and the men in it are dark and grey)
+  let ink = 0; const d = fr.data; for (let y = y0; y < y0 + h; y++) for (let x = x0; x < x0 + w; x++) { const i = (y * fr.w + x) * 4, hi = Math.max(d[i], d[i + 1], d[i + 2]), lo = Math.min(d[i], d[i + 1], d[i + 2]); if (hi > 70 && hi - lo > hi * 0.45) ink++; }
+  return { full: c2.toDataURL('image/png'), crop, ink };
 };
 const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E.outline, man = m => ({ on: m.on, owner: m.owner, strength: +m.strength.toFixed(2), ink: m.ink.map(v => +v.toFixed(2)), wide: m.wide, times: m.times, boxed: m.rect[2] > m.rect[0] });
-  return { you: F ? man(F) : null, mates: F ? F.mates.map(man) : [], pass: P ? { pipe: !!P.pipe, bad: !!P.bad, drawn: P.drawn } : null, fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
+  return { picture: !!(F && F.picture), ends: F ? [F.lit, F.dark] : null, gbaa: !!E.passes.gbaaOn, copy: !!E.passes.hdrCopy, you: F ? man(F) : null, mates: F ? F.mates.map(man) : [], pass: P ? { pipe: !!P.pipe, bad: !!P.bad, drawn: P.drawn } : null, fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
 
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
@@ -42,6 +49,7 @@ const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E
   const page = await ctx.newPage(); page.setDefaultNavigationTimeout(900000); page.setDefaultTimeout(1800000);
   const errs = [], warns = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300)));   // (a GPU validation error is the page's own console.error: gpu/device.ts)
   page.on('console', m => { if (/Failed to load resource/.test(m.text())) return; if (m.type() === 'error') errs.push(m.text().slice(0, 300)); else if (m.type() === 'warning') warns.push(m.text().slice(0, 200)); });
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   let fails = 0; const line = (ok, what, detail) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   const keep = (name, u) => { if (outDir && u) { fs.writeFileSync(path.join(outDir, name), Buffer.from(u.split(',')[1], 'base64')); log(`kept ${name}`); } };
   try {
@@ -57,6 +65,16 @@ const STATE = () => { const E = window.__engine, P = E.passes.outlinePass, F = E
     let s1 = s0; for (let i = 0; i < 40 && !(s1.pass && (s1.pass.pipe || s1.pass.bad)); i++) { await page.evaluate(DRAW, 1); await new Promise(r => setTimeout(r, 1000)); s1 = await page.evaluate(STATE); }
     const d0 = s1.pass ? s1.pass.drawn : 0, pic = await page.evaluate(DRAW, 6), s2 = await page.evaluate(STATE);
     if (pic) { keep('findme-squad.png', pic.full); keep('findme-squad-men.png', pic.crop); }
+    // by the picture: the same men, the rows at none, then at their starts
+    const ends = async (lit, dark, n) => { await page.evaluate(([l, k]) => { const f = window.__findme; f.set('picDark', 0); f.set('picLit', l); f.set('picDark', k); }, [lit, dark]); return await page.evaluate(DRAW, n); };
+    const none = await ends(0, 0, 10); if (none) { keep('findme-squad-none.png', none.full); keep('findme-squad-none-men.png', none.crop); }
+    const mid = await ends(0.3, 0.12, 8), s3 = await page.evaluate(STATE); if (mid) { keep('findme-squad-starts.png', mid.full); keep('findme-squad-starts-men.png', mid.crop); }
+    line(s2.picture && s2.gbaa && !!pic && !!none && !!mid && pic.ink > 200 && none.ink < pic.ink * 0.25 && mid.ink > none.ink && mid.ink <= pic.ink * 1.1 && same(s3.ends, [0.3, 0.12]),
+      'by the picture: the rims whole with the light rows at their most, next to none of their ink with the rows at none, the starts between (men stood in a dark room)', `by the picture ${s2.picture ? 'yes' : 'NO'} · GBAA's copy of the composite to read ${s2.gbaa ? 'yes' : 'NO'} · strongly coloured pixels in the men's boxes: rows at most ${pic ? pic.ink : '?'}, at none ${none ? none.ink : '?'}, at their starts ${mid ? mid.ink : '?'}`);
+    // the same with GBAA off (render resolution at 100 % has it so): the composite's set is made again with a copy kept for the outline alone, filled before its pass
+    await page.evaluate(() => { window.__engine.settings.gbaa = false; }); const bare = await ends(1, 1, 8), s4 = await page.evaluate(STATE); if (bare) { keep('findme-squad-no-gbaa.png', bare.full); keep('findme-squad-no-gbaa-men.png', bare.crop); }
+    line(!s4.gbaa && s4.copy && s4.picture && !!bare && bare.ink > 200 && bare.ink > none.ink * 2 && !!s4.pass && !s4.pass.bad,
+      'with GBAA off the outline keeps a copy of the composite for itself, and the rims are whole by the picture again', `GBAA ${s4.gbaa ? 'STILL ON' : 'off'} · a copy kept ${s4.copy ? 'yes' : 'NO'} · strongly coloured pixels with the rows at most ${bare ? bare.ink : '?'} (${pic ? pic.ink : '?'} with GBAA on, ${none ? none.ink : '?'} with the rows at none)`);
     const boxed = [s2.you, ...s2.mates.filter(m => m.on)].filter(m => m && m.boxed).length;
     line(!!s2.pass && s2.pass.pipe && !s2.pass.bad && s2.pass.drawn - d0 >= 6 && boxed >= 2 && !s2.fatal,
       'the pass\'s program compiled on this adapter and frames were drawn with it, several men in the one pass', `program ${s2.pass && s2.pass.pipe ? 'in' : 'NOT in'}${s2.pass && s2.pass.bad ? ' (failed)' : ''} · frames drawn with it ${s2.pass ? s2.pass.drawn - d0 : 0} · men with a box on the picture ${boxed}${s2.fatal ? ` · the page's fatal line: ${s2.fatal.slice(0, 200)}` : ''}`);
