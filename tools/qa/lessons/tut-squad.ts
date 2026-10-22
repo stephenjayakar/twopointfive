@@ -90,7 +90,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   'stack-hut': B => { B.go([8.6, 0, 13.4], 20); stack(B, 'guardhut'); B.until(() => set(B), 30); },
   'go-hut': B => { goIn(B, 'guardhut', 'guardhut'); },
   'stack-store': B => { B.wait(1); stack(B, 'store'); B.until(() => set(B), 40); },
-  'go-store': B => { goIn(B, 'store', 'store'); B.go(STORE_IN, 20); },
+  'go-store': B => { goIn(B, 'store', 'store'); },
+  'in-store': B => { B.go(STORE_IN, 20); },
   // the workshop: its man on his open lane doorway, in the picture and firing out of it; out to the street in front of the workshop to look; the squad
   // sent to the side door from there (the cursor on the step's ring), the walk round after them, and in at his back
   // (the staged moment itself is held to have happened: a round of his out of the doorway, the man in the script's hand, standing in the line the level

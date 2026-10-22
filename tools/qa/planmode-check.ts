@@ -217,8 +217,9 @@ export async function planmodeCheck(): Promise<boolean> {
         R.W.cursorAt([2 * q[0] - a0[0], 0.04, 2 * q[2] - a0[2]]); R.step(45); const turned = Math.abs(wrap(pl.char.bodyYaw - yaw0)), held = !!P.aim && dist(g.aimPoint, a0) < 1e-6;
         line(P.up && held && turned < 0.02, 'the cursor taken behind him, he goes on facing what he faced', `he turned ${turned.toFixed(3)} rad · his aim point ${held ? 'held' : `moved ${dist(g.aimPoint, a0).toFixed(2)} m`}`); }
       R.home();
-      // 21. the view goes no further than its reach from the box he and the men stand in
-      { R.input.keys.add('KeyW'); R.step(300); R.input.keys.delete('KeyW'); R.step(); const L = P.look ?? pl.char.pos, pts = [pl.char.pos, ...T().map((m: any) => m.char.pos)];
+      // 21. the view goes no further than its reach from the box he and the men stand in — the box as the tick that held the view found it: the view is held
+      //     before that tick walks the men, so men on the move (the page's stand has had them step off five seconds in) are a step on by the time it is over
+      { R.input.keys.add('KeyW'); R.step(299); const pts = [pl.char.pos, ...T().map((m: any) => m.char.pos)].map((q: any) => [...q]); R.step(); R.input.keys.delete('KeyW'); const L = P.look ?? pl.char.pos;
         const out = (k: number) => Math.max(0, Math.min(...pts.map((q: any) => q[k])) - L[k], L[k] - Math.max(...pts.map((q: any) => q[k]))), far = Math.max(out(0), out(2));
         line(P.up && far <= CMDRING.planPanReachM + 1e-6 && far >= CMDRING.planPanReachM - 0.01, 'W held five seconds: the view stops at its reach from the men', `${far.toFixed(2)} m outside the box they stand in (the reach: ${CMDRING.planPanReachM})`); R.toggle(); R.toggle(); }
       R.home();
