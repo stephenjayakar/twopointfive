@@ -80,12 +80,25 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     kitchen: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 10; k++) { await run(page, 120); if (k >= 3) break; }
       await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'kitchen') break; } },
     // the orders' menu on the wall's ring: its fifth row is the wall's page, the third there the charge; then the word once a man has set it
-    charge: async s => { await point(s.at); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3); await tap('Digit5'); await tap('Digit3'); await until('charge', 40); },   // (the command key held is the squad's menu, a ring that stays: its wall page, then the charge)
+    charge: async s => {
+      // (the step teaches the key HELD: a tap gives no order and says so under the line; held, the ring is up and the line is what to press in it)
+      await point(s.at); const o0 = await page.evaluate(() => window.__game.orders.log.length); await tap('KeyQ'); await run(page, 6);
+      const T = await page.evaluate(() => ({ o: window.__game.orders.log.length, note: document.querySelector('#railprompt .note')?.textContent || '', line: document.querySelector('#railprompt .line')?.textContent || '' }));
+      check(T.o === o0 && !!T.note, 'on the hold\'s step a tap of the command key gives no order and words come up under the line', `orders ${o0} → ${T.o} · line "${T.line}" · under it "${T.note}"`);
+      log('picture', await shot('91-tap'));
+      await point(s.at); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3);
+      const U = await page.evaluate(() => ({ menu: !!window.__orders.menu, line: document.querySelector('#railprompt .line')?.textContent || '' }));
+      check(U.menu && /5/.test(U.line) && /3/.test(U.line), 'held, the ring is up and stays with the key let go, and the line names the two digits', `ring ${U.menu} · line "${U.line}"`);
+      log('picture', await shot('92-ring'));
+      await tap('Digit5'); await tap('Digit3'); await until('charge', 40); },   // (the command key held is the squad's menu, a ring that stays: its wall page, then the charge)
     blow: async () => { await run(page, 60); await tap('KeyF'); await until('blow', 30); },
     breaker: async s => { await point(s.at); await tap('KeyQ'); await until('breaker', 40); },
     nv: async () => { await tap('KeyN'); await run(page, 20); },
     bunk: async s => { for (let n = 0; n < 2 && (await read(page)).id === 'bunk'; n++) { await point(s.at); await tap('KeyQ'); await run(page, 1200); await tap('KeyF'); await until('bunk', 20); } },
-    out: async s => { await point(s.at); await tap('KeyQ'); await until('out', 40); },
+    out: async s => { const nv0 = await page.evaluate(() => window.__game.player.nv); await point(s.at); await tap('KeyQ'); await run(page, 240);
+      const V = await page.evaluate(() => ({ nv: window.__game.player.nv, off: window.__game.rails.panned() }));
+      check(nv0 && !V.nv && V.off < 1, 'the last order given, the night vision comes up and the view is back on the squad', `night vision ${nv0} → ${V.nv} · the view's shift off the squad ${V.off.toFixed(1)} m`);
+      log('picture', await shot('93-way')); await until('out', 40); },
   };
   /** step the page until another step is up (at most `n` two-second waits) */
   const until = async (id, n) => { for (let k = 0; k < n; k++) { await run(page, 120); if ((await read(page)).id !== id) break; } };

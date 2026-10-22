@@ -2,6 +2,7 @@
 // walks to the marks the level shows, the cursor on a door or on the ground, one-frame presses of the squad's keys, his own trigger and his own throw. Game
 // state is READ to time a press (the men on their marks, a room clear), never the lesson's.
 import type { Bot } from '../lesson-run';
+import { CMDRING } from '../../../src/game/cmdring';
 
 export const query = '?roomclear=1&squad4';
 /** the nest's gun and the hall's two can drop a man who walks the street as a script does: the run is about the steps, so rounds do not drop him */
@@ -55,11 +56,15 @@ function goIn(B: Bot, door: string, room: string) {
 const raised = (B: Bot, name: string): boolean => !!B.g.director.signalled(name);
 const man = (B: Bot, callsign: string) => B.g.guards.find((x: { callsign: string }) => x.callsign === callsign) as { state: string; script: unknown } | undefined;
 
-/** the orders menu (X) on a door or on the ground, then its digits */
+/** the orders menu on a door or on the ground, then its digits. Where the squad's key kept down is a ring that stays (game/cmdring.ts: the page's way — the
+ *  line's [X] is drawn "Hold" and that key there) it is opened that way; where there is no such ring, by the menu's own key (X) */
 function menu(B: Bot, on: { door?: string; ground?: number[] }, ...digits: number[]) {
   if (on.door) onDoor(B, on.door); else onGround(B, on.ground);
-  B.step(2); B.press('KeyX', 2);
-  if (!O(B).menu) B.fail(`X opened no menu ${on.door ? `on the door '${on.door}'` : 'on the ground'}`);
+  B.step(2);
+  const ring = CMDRING.on && CMDRING.stay;   // (a ring that goes with its key gives a wedge as the key comes up: the digits would be late)
+  if (ring) { B.I.pressed.add(CMDRING.key); B.hold([CMDRING.key], 1.5, () => !!O(B).menu); B.step(2); } else B.press('KeyX', 2);
+  B.say(`  the menu by ${ring ? "the squad's key kept down (the ring)" : 'its own key (X)'}`);
+  if (!O(B).menu) B.fail(`${ring ? 'B kept down' : 'X'} opened no menu ${on.door ? `on the door '${on.door}'` : 'on the ground'}`);
   for (const d of digits) B.press(`Digit${d}`, 2);
 }
 const gave = (B: Bot, order: string) => last(B)?.order === order;
@@ -73,7 +78,9 @@ function reload(B: Bot) { const r = B.g.player.rifle; if (r && r.mag === 0 && !r
  *  is read off the room's own list, as eyes would) */
 function shootMen(B: Bot, room: string, secs: number) {
   const R = rooms(B).find(r => r.def.id === room) as unknown as { defenders: { state: string; char: { pos: number[] } }[] } | undefined, t0 = B.t();
-  while (!cleared(B, room) && B.t() - t0 < secs) { const m = R?.defenders.find(x => x.state !== 'dead'); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, [m.char.pos[0], 1.25, m.char.pos[2]]); B.wait(0.2); }
+  // (the nearest of them: a hand shoots the man in front of it, not the first on the roster, who may be two walls off)
+  const near = () => { const me = B.pos(); return R?.defenders.filter(x => x.state !== 'dead').sort((a, b) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0]; };
+  while (!cleared(B, room) && B.t() - t0 < secs) { const m = near(); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, [m.char.pos[0], 1.25, m.char.pos[2]]); B.wait(0.2); }
 }
 const STORE_IN = [10.6, 0, 18.8], SHOP_STREET = [17.0, 0, 13.4], ALLEY = [23.6, 0, 8.6], END = [22.5, 0, 17.5], BLOCKS = [26.6, 0, 16.1], NEST = [32.0, 1.0, 13.8];
 const HALL_SIDE = [34.3, 0, 19.75], HALL_LEAF = [32.4, 1.0, 19.75], WINDOW = [30.9, 0, 16.2], BAGS = [30.2, 0, 13.8], MOUTH = [25.0, 0, 11.6];
@@ -102,7 +109,7 @@ export const steps: Record<string, (B: Bot) => void> = {
       B.fail(`the workshop was not cleared: Tango 4 ${m?.state} at ${m?.char.pos.map((v: number) => v.toFixed(1))}, side door angle ${d.angle.toFixed(2)}, player at ${B.pos().map(v => v.toFixed(1))}, mag ${B.g.player.rifle.mag}, slot ${B.g.player.slot} up ${B.g.player.rifleUp}, last round ${sh ? JSON.stringify([sh.from, sh.to].map((v: any) => v?.map((x: number) => +x.toFixed(1)))) : 'none'}`); }
   },
   // the nest: the squad called in, the wall's end, rounds at the gun, the blocks, a grenade over the bags
-  wall: B => { menu(B, { ground: B.pos() }, 3); if (!gave(B, 'fallIn')) B.fail(`X, 3 gave ${last(B)?.order}`); B.go(END, 60); },
+  wall: B => { menu(B, { ground: B.pos() }, 3); if (!gave(B, 'fallIn')) B.fail(`the menu's 3 gave ${last(B)?.order}`); B.go(END, 60); },
   gun: B => { if (!B.until(() => raised(B, 'done:gun') || cleared(B, 'nest'), 8)) B.fail("the gun's first burst never came (no 'done:gun')"); B.go([24.3, 0, 16.6], 10); shootAt(B, NEST, () => cleared(B, 'nest'), 6); },
   blocks: B => { B.go(BLOCKS, 20, { sprint: true }); },
   frag: B => { if (B.g.player.frags < 1) B.fail('no frag to throw'); B.press('Digit5', 10); B.click(1, NEST); B.wait(3.5); B.press('Digit2', 10); },
@@ -136,7 +143,11 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.go(BAGS, 60);
   },
   front: B => { checkpoints(B); B.until(() => !!B.g.director.signalled('done:flank') || cleared(B, 'road'), 30); },
-  back: B => { menu(B, { ground: MOUTH }, 2); if (!gave(B, 'cover')) B.fail(`X, 2 gave ${last(B)?.order}`); },
+  // (THE TWO WHO WENT ROUND WAIT FOR THIS ORDER, outside the wall: one of them inside the back gate before it is given is a reader shot in the back)
+  back: B => {
+    menu(B, { ground: MOUTH }, 2); if (!gave(B, 'cover')) B.fail(`the menu's 2 gave ${last(B)?.order}`);
+    for (const x of B.g.guards as (Man & { callsign: string; state: string })[]) if ((x.callsign === 'Tango 10' || x.callsign === 'Tango 11') && x.state !== 'dead' && x.char.pos[2] > 5.6) B.fail(`${x.callsign} was inside the back gate (z ${x.char.pos[2].toFixed(1)}) before the cover order was given`);
+  },
   // (from the bags while they come; a man who holds where the bags cannot see him — round the road gate's jamb, up the alley — is walked up on, as a player would)
   hold: B => {
     shootMen(B, 'road', 12);
@@ -148,8 +159,10 @@ export const steps: Record<string, (B: Bot) => void> = {
     }
   },
 };
-/** lines inside a live fight: the squad's rifles can end the room while the line is up, or before it comes up (each such test also passes on the room taken) */
-export const fightOk = ['go-store', 'side', 'shop', 'gun', 'blocks', 'frag', 'nest', 'window', 'front', 'back', 'hold'];
+/** lines inside a live fight: the squad's rifles can end the room while the line is up, or before it comes up (each such test also passes on the room taken).
+ *  'lock' is among them for ONE reason: the hall's last man, his mate shot through the window, can drop his rifle and run by the game's own rule
+ *  (runner.ts), and he opens his own locked door on the way out, so the door's line goes by with nobody shooting it (seen on one die of twelve) */
+export const fightOk = ['go-store', 'side', 'shop', 'gun', 'blocks', 'frag', 'nest', 'window', 'lock', 'front', 'back', 'hold'];
 /** a room clear's own end: every defender down ('structure taken') */
 export const ended = (g: { roomClear: { end: string } }) => g.roomClear.end === 'taken';
 export function finish(B: Bot) { if (!B.until(() => ended(B.g), 30)) B.fail(`the mission did not end (${B.g.roomClear.end || 'still running'})`); }

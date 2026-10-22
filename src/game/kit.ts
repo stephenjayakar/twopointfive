@@ -1144,17 +1144,18 @@ export function kitLoad(s: Store | null, search = '') {
  *  YOUR FOUR COUNTS ARE NOT THE ISSUE CARD'S ON SUCH A PAGE: a lesson is taught with what a Player is built with (BUILT: 4 smoke, 2 stun, 2 frags, 3 rounds),
  *  since levels/train-kit.json has you throw a smoke can, a stun can and a frag with nothing to spare for a miss under the one of each the pouches rule issues. kitPlayer
  *  writes no count while `issuing` on such a page (a mission's own issue below, kitIssue, writes them as any card's). */
-let issuedPage = false, issuing = false;
+let issuedPage = false, issuing: boolean | 'own' = false;   // ('own': under a mission's own issue — kitIssue)
 export function kitIssuedPage(on = true) { issuedPage = on; }
 /** A MISSION'S OWN ISSUE (the level file's `scenarios.issue`, scene/scenarios.ts IssueData): on a level that carries the block every staging puts the ISSUE
  *  cards on the men, as a lesson's page does, with the block's fields written over them (the long hall: the plain issue for every man). The table and its store
  *  stay the machine's (asIssued puts them back), so nothing kept is worn or written. `ISSUE.on` false (?noissue), or a level without the block = the staging
- *  as it was. True = `f` (the staging itself, asked again) has run under the mission's cards. A Training level's page speaks first: a lesson's level that
- *  also carried the block would be played with the plain issue cards, the block unread. */
+ *  as it was. True = `f` (the staging itself, asked again) has run under the mission's cards. A LESSON'S LEVEL THAT CARRIES THE BLOCK wears it on its page
+ *  too, counts and all (the tutorial's solo mission: what its lines have him throw, and the one door charge its door asks for): the block speaks before the
+ *  lesson page's plain issue, which is every other lesson's. */
 export const ISSUE = { on: true };
 function kitIssue(g: Game, f: () => void): boolean {
   const D = ISSUE.on && !issuing ? g.level.scenarios?.issue : undefined; if (!D) return false;
-  asIssued(() => { for (const [k, c] of Object.entries(D.members)) if (KIT.members[+k]) Object.assign(KIT.members[+k], c); f(); });
+  asIssued(() => { issuing = 'own'; for (const [k, c] of Object.entries(D.members)) if (KIT.members[+k]) Object.assign(KIT.members[+k], c); f(); });
   return true;
 }
 function asIssued(f: () => void) {
@@ -1222,12 +1223,12 @@ export const kitTreeOn = (): boolean => treeUp();
  *  him; kitShow puts back what he had. */
 export function kitPlayer(g: Game) {
   if (!KIT.on) return;
+  if (kitIssue(g, () => kitPlayer(g))) return;   // (a mission that issues its own kit: kitIssue — a lesson's level that does, too)
   if (issuedPage && !issuing) return asIssued(() => kitPlayer(g));   // (a lesson's page: the issue card, whatever the table holds — kitIssuedPage)
-  if (kitIssue(g, () => kitPlayer(g))) return;   // (a mission that issues its own kit: kitIssue)
   const own = stealthOn() && !issuing; if (own && !staged) return forRun(g, () => kitPlayer(g));   // (KITDEAL.stealth: a stealth run wears your stealth card, a loud one the loud card — and nothing is handed over either)
   const m = KIT.members[0], pl = g.player;
   if (!issuedPlayer.has(pl)) issuedPlayer.set(pl, { rifle: pl.hasRifle, gun: pl.rifle, side: pl.pistol, slot: pl.slot, smoke: pl.canisters, stun: pl.flashbangs, frags: pl.frags, shells: pl.rifle.shells, rings: pl.rifle.rings, wand: pl.wand, big: pl.bigKit, cams: pl.rifle.attachments.includes('cam') ? pl.rifle.cams : -1, tint: [...pl.char.tint] as Vec3, tint2: [...pl.char.tint2] as Vec3 });
-  const counts = !(issuedPage && issuing);   // (a lesson's page: his counts stay the Player's own — kitIssuedPage; a mission's own issue writes them like any card)
+  const counts = !(issuedPage && issuing === true);   // (a lesson's page: his counts stay the Player's own — kitIssuedPage; a mission's own issue writes them like any card)
   if (bigOn) bigHome(m, 0);   // (BIGSLOT: the shotgun is never your gun — a card set by hand, a mission's issue)
   pl.bigKit = bigOn && !m.walls ? m.big : 'none';   // (the breaching shotgun or the hammer in your big slot: bigkit.ts — a card as issued carries neither, so nothing changes on him)
   if (m.weapon === 'pistol' && pl.hasRifle) { pl.hasRifle = false; if (pl.slot === 'rifle') pl.slot = 'pistol'; }   // (this Player only: Game.fn2000 — what the next plain night's Player is built with — is not ours)
@@ -1294,8 +1295,8 @@ export function kitShow(g: Game) {
  *  and so calls again. With every card as issued nothing is written on a teammate (but the count, when one man comes alone: kitPool) — and on you only
  *  under the pouches rule, your four counts: kitPlayer. */
 export function kitStage(g: Game, ops: Guard[]) {
-  if (issuedPage && !issuing) return asIssued(() => kitStage(g, ops));   // (a lesson's page: every man staged with the issue cards — kitIssuedPage)
   if (kitIssue(g, () => kitStage(g, ops))) return;   // (a mission that issues its own kit: kitIssue)
+  if (issuedPage && !issuing) return asIssued(() => kitStage(g, ops));   // (a lesson's page: every man staged with the issue cards — kitIssuedPage)
   if (stealthOn() && !issuing && !staged) return forRun(g, () => kitStage(g, ops));   // (KITDEAL.stealth: the whole staging reads the card this run wears)
   KIT_STAGED.n++; KIT_STAGED.ops = ops.slice(0, KIT_MEMBERS - 1);
   if (!KIT.on) { squadSmokeStage(g, 0); squad40Stage(g, []); return; }   // (squadsmoke.ts: the squad's smoke is set on EVERY staging — none with the table off; squad40.ts: the teammates' 40 mm rounds likewise)

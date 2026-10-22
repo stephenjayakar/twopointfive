@@ -30,12 +30,12 @@ import { Vec3, v3, clamp, lerp } from '../math/vec';
 import * as fx from './effects';
 import { PLAYER_ID } from './consts';
 import type { Game, Guard, GuardScript } from './game';
-import { GRAVITY, bogBounce, bogSlide, bogStick, type Item } from './throwables';
+import { GRAVITY, bogBounce, bogSlide, bogStick, CAN_ITEM, FRAG_ITEM, type Item } from './throwables';
 import { snowBogAt } from './snowBog';
 import type { WallOpening } from './wallbreak';
 import { chronHit } from './chronicle';
 import { civiliansShown } from './civilians';
-import { killGuard, hitPlayer } from './combat';
+import { killGuard, hitPlayer, flashFuse } from './combat';
 import { bangScorch } from './marks';
 import { gpuFx, bangFx } from './particleFx';
 import { teamOfId, type Team } from './teams';
@@ -419,13 +419,13 @@ export function comeDown(g: Game, it: Item): Vec3 {
  *  FRAG.restProps, the loose furniture the pool's own ray meets (only when some stands within its reach; a struck chair is NOT pushed here, the pool hands it
  *  a little momentum); the reckoning is made again ten times a second, so what a chair did to it is in the next one. What a man who can see it roll can judge; nobody is told anything else by it. */
 interface Rest { t: number; still: boolean; at: Vec3; path: Vec3[]; }
-function rollOn(g: Game, it: Item): { at: Vec3; path: Vec3[] } {
+function rollOn(g: Game, it: Item, touchFuse?: number, props = FRAG.restProps, high = false): { at: Vec3; path: Vec3[] } {   // (touchFuse / props / high: restOfThrow's, below — left out, every line is what it was)
   let p: Vec3 = v3.copy(it.pos), v: Vec3 = v3.copy(it.vel); const h = 1 / 120, path: Vec3[] = []; let touched = it.bounces > 0, last: Vec3 | null = null;
   let bog = 0;   // (lying snow under its last touch: snowBog.ts — 0 with SNOWBOG off, and every line below is what it was)
   const slow = () => Math.abs(v[1]) < 0.5 && Math.hypot(v[0], v[2]) < 0.35 + (bog > 0 ? bogStick(bog) : 0);
-  const span = Math.min(14, Math.hypot(v[0], v[2]) * Math.max(0, it.fuse)) + 1, furn = FRAG.restProps && g.props.props.some(P => Math.hypot(P.x - p[0], P.z - p[2]) < span + P.radius);   // (furniture it could reach at all)
+  const span = Math.min(14, Math.hypot(v[0], v[2]) * Math.max(0, it.fuse)) + 1, furn = props && g.props.props.some(P => Math.hypot(P.x - p[0], P.z - p[2]) < span + P.radius);   // (furniture it could reach at all)
   for (let i = Math.min(720, Math.ceil(Math.max(0, it.fuse) / h)); i > 0; i--) {
-    v[1] -= GRAVITY * h; let done = false;
+    v[1] -= GRAVITY * h; let done = false; const air = !touched;
     const move = v3.scale(v, h), len = v3.len(move); if (len < 1e-6) continue;
     const dir = v3.scale(move, 1 / len), tmax = len + it.radius * 3.5; let hit: { t: number; n: Vec3 } | null = g.col.raycast(p, dir, tmax), back = 0;
     if (furn) hit = g.props.raycast(p, dir, hit ? hit.t : tmax) ?? hit;   // (the pool's own ray: throwables.ts — statics and door leaves, then loose furniture nearer than those)
@@ -439,10 +439,21 @@ function rollOn(g: Game, it: Item): { at: Vec3; path: Vec3[] } {
       p = v3.mad(p, n, 0.002);
     } else p = v3.add(p, move);
     if (p[1] < it.radius) { bog = snowBogAt(g, p[0], 0, p[2]); p[1] = it.radius; if (v[1] < 0) { v[1] *= -it.restitution; v[0] *= 0.7; v[2] *= 0.7; if (bog > 0) { v[1] *= bogBounce(bog); v[0] *= bogSlide(bog); v[2] *= bogSlide(bog); } touched = true; } if (slow()) done = true; }
-    if (touched && (!last || flat(last, p) > 0.25)) { last = [p[0], 0, p[2]]; path.push(last); }
+    if (touched && (!last || flat(last, p) > 0.25)) { last = [p[0], high ? p[1] - it.radius : 0, p[2]]; path.push(last); }
+    if (air && touched && touchFuse !== undefined) i = Math.ceil(touchFuse / h) + 1;   // (a fuse that runs from its first touch, and alone decides once it has: a stun canister's — combat.ts updateItems)
     if (done) break;
   }
-  return { at: [p[0], restY(p[1]), p[2]], path };
+  return { at: [p[0], props ? Math.max(0.05, p[1]) : restY(p[1]), p[2]], path };
+}
+/** WHERE A CAN THROWN FROM `from` AT `v0` WILL BE WHEN IT IS DONE MOVING — or when its fuse finds it, if that is sooner (player.ts throwRest: the throw
+ *  preview's rest mark): rollOn on a body that was never spawned. A frag: its fuse from the hand. A stun canister: its fuse from its first touch (combat.ts
+ *  updateItems), and never more than bang.maxAir in the air. A smoke: until it lies still. Loose furniture is in it as it stands (a chair it strikes is
+ *  not pushed here). `path`: what it crosses from its first touch to there, at the height it lies. Nothing of the simulation's is written and nothing
+ *  is drawn from the die (the rays fill the caches any ray fills). */
+export function restOfThrow(g: Game, kind: 'smoke' | 'flash' | 'frag', from: Vec3, v0: Vec3): { at: Vec3; path: Vec3[] } {
+  const B = kind === 'frag' ? FRAG_ITEM : CAN_ITEM, stun = kind === 'flash' ? flashFuse(g) : undefined;
+  const it = { pos: from, vel: v0, radius: B.radius, restitution: B.restitution, friction: B.friction, bounces: 0, fuse: kind === 'frag' ? FRAG.fuse : stun !== undefined ? fx.bang.maxAir : 6 } as Item;
+  return rollOn(g, it, stun, true, true);
 }
 /** the height a grenade lying (or caught by its fuse) at y is judged from, less the lift: the floor's 0.05 as it was; with FRAG.restProps what it lies ON */
 const restY = (y: number) => FRAG.restProps ? Math.max(0.05, y) : 0.05;

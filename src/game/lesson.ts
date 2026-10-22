@@ -126,8 +126,8 @@ export const LESSON_TESTS: Record<string, TestKind> = {
 
   // -- the world
   stage: { ok: (g, t) => STAGES.indexOf(g.mission.stage) >= STAGES.indexOf(t.stage as string) && g.mission.stage !== 'failed', check: (_g, t) => STAGES.includes(t.stage as string) && t.stage !== 'infiltrate' ? null : 'stage: drive (the place reached), exfil (the thing taken) or done' },
-  door: { ok: (g, t) => { const d = g.doors.byName(t.door as string); if (!d) return false; const s = t.state; return s === 'open' ? !d.isClosed() : s === 'shut' ? d.isClosed() : s === 'unlocked' ? !d.locked || d.lockBroken : d.lockBroken; },
-    check: (g, t) => !g.doors.byName(t.door as string) ? `door: no door named '${String(t.door)}'` : ['open', 'shut', 'unlocked', 'broken'].includes(t.state as string) ? null : 'state: open, shut, unlocked or broken' },
+  door: { ok: (g, t) => { const d = g.doors.byName(t.door as string); if (!d) return false; const s = t.state; return s === 'open' ? !d.isClosed() : s === 'shut' ? d.isClosed() : s === 'unlocked' ? !d.locked || d.lockBroken : s === 'charged' ? !!g.doorTools?.chargeOn(d) : d.lockBroken; },   // (charged: a door charge stands SET on it, whoever's hands set it — doortools.ts)
+    check: (g, t) => !g.doors.byName(t.door as string) ? `door: no door named '${String(t.door)}'` : ['open', 'shut', 'unlocked', 'broken', 'charged'].includes(t.state as string) ? null : 'state: open, shut, unlocked, broken or charged' },
   target: { ok: (g, t) => { const x = g.targets.find(y => y.name === t.name); return !!x && (x.on && !x.broken && x.factor > 0.05) === t.on; },   // a fixture / a device as the eye has it: lit, or dark (switched off, shot out, under the OCP's spell, the mains down)
     check: (g, t) => !g.targets.some(y => y.name === t.name) ? `name: no light or device named '${String(t.name)}'` : typeof t.on !== 'boolean' ? 'on: true or false' : null },
   men: { ok: (g, t) => g.guards.filter(x => hostileTo(x, 'player') && downed(x)).length >= ((t.down as number) ?? 1), check: (_g, t) => t.down === undefined || (num(t.down) && t.down >= 1) ? null : 'down: how many, ≥ 1' },
@@ -162,11 +162,21 @@ export const LESSON_TESTS: Record<string, TestKind> = {
   // burst: a string of n rounds (default 3) under one held trigger with the rifle's selector on AUTO — true while the string is still running
   burst: { ok: (g, t) => { const p = who(g); return p.rifleUp && p.rifle.automatic && p.rifle.autoIdx >= ((t.n as number) ?? 3); }, check: (_g, t) => t.n === undefined || (num(t.n) && t.n >= 2) ? null : 'n: how many rounds in the one string, ≥ 2' },
   // threw: a thing has left his hand since the step came up (the chronicle's 'thrown' row): `kind` 'smoke' | 'flash' (the stun can) | 'frag' | 'he40' (the launcher's
-  // grenade) says which; `quick` = by G's quick-throw (G seen held with a can to throw, then a can gone)
+  // grenade) says which; `quick` = by G's quick-throw (G seen held with a can to throw, then a can gone); `area` = …and one of that kind has gone off lying inside the rect
   threw: { ok: (g, t, S) => { const ev = g.chronicle.events, from = t.quick ? S.heldAt : S.chron0; if (from < 0) return false;
-      for (let i = Math.min(from, ev.length); i < ev.length; i++) if (ev[i].kind === 'thrown' && (t.kind === undefined || ev[i].data.kind === t.kind)) return true;
+      const A = t.area as Rect | undefined, key = A ? `threw:${String(t.kind)}:${A.x0},${A.z0},${A.x1},${A.z1}` : '';
+      if (A && S.n.get(key)) return true;   // (seen once is seen: a frag or a stun can is off the floor the frame after it goes off, and a `hold` must still run)
+      for (let i = Math.min(from, ev.length); i < ev.length; i++) if (ev[i].kind === 'thrown' && (t.kind === undefined || ev[i].data.kind === t.kind)) {
+        if (!A) return true;
+        // `area`: …and it has gone off in there — one thrown the wrong way does not pass. A smoke can lies venting where it went off: THAT can (his, on the
+        // floor no longer than since it left his hand: never an older one). A stun can and a frag are gone with their bang: the bang this frame, by where it was.
+        const me = who(g).char.id, since = g.mission.stats.elapsed - ev[i].t + 0.5, k = t.kind;   // (the chronicle's clock is the mission's own)
+        const lying = k !== 'flash' && k !== 'frag' && g.items.items.some(x => x.kind === 'smoke' && x.fired && x.who === me && x.age <= since && inside(A, x.pos));
+        const bang = k !== 'smoke' && g.events.some(e => e.kind === 'bang' && !e.charge && (k === undefined || (k === 'frag') === !!e.frag) && inside(A, e.pos));
+        if (lying || bang) { S.n.set(key, 1); return true; }
+      }
       return false; },
-    check: (_g, t) => t.kind !== undefined && !['smoke', 'flash', 'frag', 'he40'].includes(t.kind as string) ? "kind: 'smoke', 'flash', 'frag' or 'he40'" : t.quick !== undefined && typeof t.quick !== 'boolean' ? 'quick: true or false' : t.quick && (t.kind === 'frag' || t.kind === 'he40') ? 'quick: G throws only smoke and the stun can' : null },
+    check: (_g, t) => t.area !== undefined && !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : t.area !== undefined && (t.quick || t.kind === 'he40') ? 'area: a thrown can or frag (not the quick throw, not the 40 mm)' : t.kind !== undefined && !['smoke', 'flash', 'frag', 'he40'].includes(t.kind as string) ? "kind: 'smoke', 'flash', 'frag' or 'he40'" : t.quick !== undefined && typeof t.quick !== 'boolean' ? 'quick: true or false' : t.quick && (t.kind === 'frag' || t.kind === 'he40') ? 'quick: G throws only smoke and the stun can' : null },
 
   // -- (the squad's rows: orders, door tools, two pairs): who the orders go to, a pair stacked on a door, the word, a room of the structure taken, the squad falling in
   orderTo: { ok: (g, t) => !!g.orders?.active && g.orders.who === t.who, check: (_g, t) => t.who === 'all' || t.who === 'red' || t.who === 'blue' ? null : "who: 'all', 'red' or 'blue'" },
@@ -299,7 +309,7 @@ export class Lesson {
   }
 
   /** the run is over, whichever scenario it was: the quiet mission's stage, the player down, a room clear taken or the team wiped (roomclear.ts `end`) */
-  private over(): boolean { const g = this.g; return g.mission.stage === 'failed' || g.mission.stage === 'done' || who(g).down || (!!g.roomClear?.active && !!g.roomClear.end); }
+  over(): boolean { const g = this.g; return g.mission.stage === 'failed' || g.mission.stage === 'done' || who(g).down || (!!g.roomClear?.active && !!g.roomClear.end); }
   /** The HUD's objective while a step is up (mission.ts objectiveText / objectivePos; null = the scenario's own: no lesson, or every step done) */
   objective(): { text: string; pos: Vec3 | null } | null {
     const L = this.data, i = this.at; if (!L || i >= L.steps.length) return null;
@@ -315,8 +325,11 @@ export class Lesson {
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 80) this.log.splice(0, 40); }
 }
 
-/** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys */
-const lineOf = (T: LessonStep): string => SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
+/** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys; his own
+ *  actions a ring (handring.ts) takes the whistle off its key */
+const lineOf = (T: LessonStep): string => HANDRING.on && T.ringLine ? T.ringLine : SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
+/** …and as the page says it: a tutorial mission's one big line (rails.ts prompt) is the same words as the row's */
+export const stepLine = (T: LessonStep): string => lessonLine(lineOf(T));
 
 // ---------------------------------------------------------------- the checker (tools/qa/lesson-check.ts; the probes): the block against the BUILT floor
 /** Everything the level file's validator cannot say (scene/levelData.ts checks shapes): each test's kind and fields, its doors / lights / areas on this floor,

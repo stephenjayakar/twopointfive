@@ -44,6 +44,7 @@
 // STATE: `cmdRing` is a key held down or a ring left up — nothing of it is filed, so there is no snapshot; `ringRestore` is the other half (a load finds the key up: no ring, no menu).
 import type { Game } from './game';
 import type { Input } from './input';
+import type { Vec3 } from '../math/vec';
 
 export const CMDRING = {
   /** the ring's key puts the order menu up as a ring at the cursor and, let go, gives the lit wedge (false: the key is nobody's, as it was) */
@@ -70,6 +71,16 @@ export const CMDRING = {
   stay: false,
   /** … and how long that press is (s), in place of `holdSecs`: a ring that stays costs a press to put away, so it asks for a plainer hold than one that goes with the key */
   stayHoldSecs: 0.3,
+  /** … and A DIGIT INSIDE THAT PRESS IS THE RING'S (a quick hand: the key, then 2 before the hold is over, the key still down): the ring goes up at
+   *  once and that digit gives its wedge — it is not his gun's slot. Only the digits a ring carries (1 to `wedges`), only with the key still down, and
+   *  only where a ring can go up; a tap let go before the digit is still a tap, and the digit after it the gun's. false: until the hold is over a
+   *  digit is the gun's, as it was. Off here and on the frozen stand; the page raises it with `stay` (`?qstay=0` leaves both off) */
+  stayDigit: false,
+  /** THE RING STAYS ON ITS POINT (the maintainer, 10-22: "radial menu should stick on the point for the action, not move with the camera"): it keeps
+   *  its place over the thing it was opened on as the view moves — he walks on, the view pans — still standing whole inside the view's edge. The
+   *  cursor lights a wedge only as the HAND moves it: a ring sliding under a cursor at rest changes nothing. false: it stays where it was opened on
+   *  the screen. Off here and on the frozen stand; the page raises it (`?ringpin=0` leaves it off) */
+  pin: false,
   /** A PRESS ALREADY UP IN ITS OWN FRAME IS A TAP, GIVEN IN THAT FRAME (the key in `pressed` and not down: a press and its release inside one tick,
    *  which is also every one-frame press a script makes): nothing is waited for, so the order is filed on the tick it was on with the ring off. false:
    *  it is filed on the next tick, where the key is first seen up, as it was built. Off here; the page raises it with the ring */
@@ -166,7 +177,9 @@ export const CMDRING_STATS = { opened: 0, quick: 0, given: 0, pages: 0, cancelle
  *  key went down · `lit`: the lit wedge's digit (0: none) · `armed`: the cursor may light a wedge (it has been in the middle) */
 export interface RingState { ax: number; ay: number; z: number; t0: number; lit: number; armed: boolean; /** kept up by the right button, not the key (plan mode's: orders.ts ringByButton) */ rmb?: boolean;
   /** (CMDRING.stay) the press that opened it has come up and it stands by itself: ringLatch */ free?: boolean;
-  /** (CMDRING.only) it shows the rows its page has no wedge for: ringSeats `over` */ more?: boolean }
+  /** (CMDRING.only) it shows the rows its page has no wedge for: ringSeats `over` */ more?: boolean;
+  /** (CMDRING.pin) the place it was opened on, and how far from that place's own px its middle stood (CSS px) · the cursor as the ring last read it */
+  at?: Vec3; ox?: number; oy?: number; mx?: number; my?: number }
 /** what a ring shows (orders.ts ringView, interact.ts handRingView → ui/cmdring.ts): where, how much larger than its px, the lit wedge, whose colour, the
  *  words under it, and the wedge on each digit */
 export interface RingView { x: number; y: number; zoom: number; lit: number; tone: string | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] }
@@ -179,6 +192,11 @@ export function ringOpen(input: Input, w: number, h: number, time: number, lit =
   const C = CMDRING, z = w && h ? ringZoom(w, h) : 1, cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v;
   const ax = cl(input.mouseX, C.edgeX * z, w), ay = cl(input.mouseY, C.edgeY * z, h);
   return { ax, ay, z, t0: time, lit, armed: Math.hypot(input.mouseX - ax, input.mouseY - ay) < C.flickPx * z };
+}
+/** (CMDRING.pin) the ring put back over its place — `sx, sy`: where that place is in the view now — whole inside the view's edge, as it was opened */
+export function ringPin(R: RingState, sx: number, sy: number, w: number, h: number): void {
+  const C = CMDRING, cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v;
+  R.ax = cl(sx + (R.ox ?? 0), C.edgeX * R.z, w); R.ay = cl(sy + (R.oy ?? 0), C.edgeY * R.z, h);
 }
 /** The wedge this frame asks for (0: none): a digit's own — which disarms the cursor — else the one the cursor is out of the ring's middle toward, once
  *  the key has been down `tapSecs` and the cursor has been in the middle since the ring last changed under it (a page, a digit, a man, new rows) */

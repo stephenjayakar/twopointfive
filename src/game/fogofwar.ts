@@ -392,7 +392,7 @@ export class FogOfWar {
     if (!FOG.own || g.rails?.skyOn) for (const gd of g.guards) { if (eyes.length >= FOG_EYES) break; if (!this.onTeam(gd) || gd.state === 'dead' || g.time < gd.dazzledUntil) continue; eyes.push(mateWandEye(g, gd) ?? eyeOf(gd.char)); }   // (a teammate ordered to look under a door: his lens in his own eye's place — wandorder.ts)
     else for (const e of mateWandEyes(g)) { if (eyes.length >= FOG_EYES) break; eyes.push(e); }   // (only my own eyes: an ordered lens is a device feed, as a sticky camera's is)
     for (const e of stickyEyes(g)) { if (eyes.length >= FOG_EYES) { STICKY_STATS.blind++; break; } eyes.push(e); }   // (his sticky cameras, newest first, in the places the frame has left: stickycam.ts — nothing with none out)
-    { const e = g.rails?.eye(); if (e && eyes.length < FOG_EYES) eyes.push(e); }   // (a tutorial mission's lookout in the seat with nobody on the floor: rails.ts — null off such a level)
+    { const e = g.rails?.eye(); if (e && eyes.length < FOG_EYES) eyes.push(e); const s = g.rails?.stepEye(); if (s && eyes.length < FOG_EYES) eyes.push(s); }   // (a tutorial mission's lookout in the seat with nobody on the floor: rails.ts — null off such a level)
     this.eyes = eyes; S.eyes = eyes.length;
     // (the squad's own men for the doors' rule, FOG.squadDoors: every living teammate who is not blinded, whoever's eyes lift the fog)
     this.mates.length = 0; if (FOG.squadDoors && FOG.doors) for (const gd of g.guards) if (this.onTeam(gd) && gd.state !== 'dead' && g.time >= gd.dazzledUntil) this.mates.push(gd.char);

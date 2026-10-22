@@ -206,7 +206,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the ring away, the back key (Tab on the page; only a ring that stays: one that goes with its key hears Esc alone, as it was built) puts it away,
   and so do Esc where it reaches the game, the pause and a lost window. Kept down,
   taken out to a wedge and let go, the key still gives that wedge (`ringLatch`: one rule a second ring can read; Space's own ring is not latched by
-  this change). Plan mode's ring on the right button is not latched. `tapNow`: a press already up in its own tick (down and up inside one tick, and
+  this change). Plan mode's ring on the right button is not latched. A DIGIT INSIDE THE PRESS (`stayDigit`, on with `stay`, off with it; a read from
+  the squad lessons: for the 0.3 s of the hold a quick "Q, 2" was the rifle's slot and opened its setup): a digit 1 to 5 going down while the key is
+  still down inside its hold puts the ring up at once and gives that digit's wedge; it is never the gun's slot. A tap let go before the digit is
+  still a tap and the digit after it is the gun's; where no ring can go up the digit stays the gun's. `FROZEN_HOLDS` row `CMDRING.stayDigit`
+  (`TPS_QSTAY=1`); a recording with no such key replays with it off; line 8b of `qring`. `tapNow`: a press already up in its own tick (down and up inside one tick, and
   every one-frame press a headless line makes) is given on that tick, so lines that press the quick key for one frame read as they did. SHIFT + Q
   toggles plan mode (as `?cmd&cmdplan` had it, Sam parked and the view on the walk keys) EXCEPT out of a sprint (`planRun`): Shift with a walk key down
   and the mode down is his run, and Q there is the quick order as at a walk; with the mode up Shift + Q leaves it whatever else is down, and so does
@@ -216,8 +220,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   = no plan mode; `?cmd` now only raises Space's own ring (`CMDRING.hands`) beside it. OFF in the module and on the frozen stand: `FROZEN_HOLDS` rows
   `CMDRING.on` / `tapNow` (`TPS_QRING=1`), `stay` (`TPS_QSTAY=1`), `plan` / `planRts` / `planRun` (`TPS_QPLAN=1`; the last two words need the first). The
   journal carries the table: a recording with no `stay` / `tapNow` / `planRun` key replays with them off. Debugger: Team feel ▸ 'Tab ▸ the orders ring',
-  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 14 lines; `QRING_BREAK=1`
-  fails 10 on the page's stand and 9 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
+  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 15 lines; `QRING_BREAK=1`
+  fails 12 on the page's stand and 11 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
   Shift always the mode's (25 and 28 lines, both stands); `qkey`'s game line reads the stand (the order on the tick the key is seen up, with the ring
   on). A LOADED MEMORY SAVE (a squad on the floor: `savestate.ts loadMem`) puts a ring that stood in it away and plan mode down, he on his feet
   (`orders.ts loaded`, `planmode.ts planLoaded`; the men's chains go on as saved): brought back, the ring took the next click for a wedge. Line 10b of
@@ -226,6 +230,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pointer presses, a four, a duo and every new switch off; no console or GPU error): the floor's ring and its throws, the door's ring, its tools and
   'more', each right click back a ring, plan mode's knee, pan, right drag, a hold and a door's wait off and on, an early word not kept, the word, Tab
   and the view's ease back. NOT measured: no tally (the play-through's commander presses no key); nobody has played it; never seen on a GPU.
+- **The ring stays on its point; the key on a door is dark until it is live (10-22, from the maintainer's play of the first tutorial mission).**
+  THE RING (`CMDRING.pin`, `cmdring.ts ringPin`, `orders.ts ringUp` / `ringInput`; "radial menu should stick on the point for the action, not move
+  with the camera"): a ring keeps its place over the thing it was opened on (the target's `at`, and where the ring's middle stood from it) as the
+  view moves, still whole inside the view's edge; a cursor the hand has not moved lights no other wedge, so a ring sliding under a cursor at rest
+  changes nothing. ON in the page, `?ringpin=0` = it stays where it was opened on the screen; OFF in the module and on the frozen stand
+  (`FROZEN_HOLDS` `CMDRING.pin`, `TPS_RINGPIN=1`, needs `TPS_QRING=1`); a recording with no `pin` key replays with it off; debugger: Team feel ▸
+  'Tab ▸ the ring ▸ stays on its point'. Line 8c of `probes.ts qring` (he walks with the ring up: it stands within 2 px of its place, lit wedge
+  unchanged, nothing told, a digit still gives), `RINGPIN_BREAK=1` fails it, both stands. Plan mode's ring on the right button is pinned the same
+  way; the ring on E (handring.ts) is not. Its place from its point is the CURSOR's when it came up (not where the view's edge stood it: the edge
+  is asked again every tick, so a ring opened in a corner stays whole in the corner). The game works the place out before the tick's camera step,
+  so the page draws it from the picture's own camera (`ui/cmdring.ts pinned`; the game's `ax` / `ay`, a tick old, still decide the wedge under the
+  cursor). `probes.ts cmdring` asked "at the cursor" some ticks after the key: on the page's stand its lines 1 and 17 now ask that it stands on its
+  point's place (`astray`), and say how far that is from the cursor. Known: the view leads toward the cursor (`camera.ts aimLead`), so the ring
+  shifts a little as the cursor goes out to a wedge; a ring put up right after a fast sweep of the cursor ends some px off it as the view
+  finishes easing (25 px after the check's instant jump; a cursor at rest lights nothing); and it can slide under the weapon panel as he walks. Driven on the real page (headless
+  Chromium, the software adapter): he walked with the ring up and it moved 45 px with the floor, a digit then gave its wedge; never seen on a GPU.
+  THE KEY'S CAP (`PLAN.keyLit`, `floorplan.ts capOf`, `PlanDoor.ready`, `ui/planfloor.ts`, `.plan .lit` in index.html; "need some indicator on the
+  F on the door when it's queued vs live. maybe black background to lighting up to yellow background"): a stack waits on the word from the moment
+  it is ordered, so the cap was on the door at once and looked the same walking or stood. Now every door that waits on the key carries its cap:
+  DARK while its men are still on their way (their feet not on their places, or a fight has them) or while the press would not send it, LIT in
+  their colour once they stand there and the press sends them. A picture only, on on both stands like the rest of `PLAN`; `?keylit=0` = the cap
+  only on the door the key would send now, on its plate; debugger: 'plan ▸ the key on a door is dark until it is live'. Line 6b' of `probes.ts
+  plan`, `KEYLIT_BREAK=1` fails it, both stands. Driven on the real page (the same drive): the cap read near black with a dim F while the four
+  walked to a door, and their colour with a dark F once all four stood. NOT measured; nobody has played either; never seen on a GPU.
 - **Q and F are the squad's only keys; the ring carries every order: ON IN THE PAGE since 10-22** (`CMDRING.only`, `ringSeats` in
   `src/game/cmdring.ts`; `orders.ts seats`, `ringInput`, `ringView`; `KEYMAP.qOnly`, `DROPPED` in `src/host/keymap.ts`; the maintainer, 10-22: "squad is
   now just q and f. everything is through the radial menu (which is 1-5? is that sufficient) so we don't need all the other keys"). IS 1 TO 5 ENOUGH:
@@ -254,7 +282,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the Controls list still says 'or the middle mouse button' on a row that reads as no key; THE WORD FREES WHOEVER WAITS (`doortools.ts wordMen`; the maintainer: "pressing F only releases the people blocked on it"): with the orders going to
   men who are not waiting on it, F goes to the men who are, and the squad block offers the key for them ('F go · blue waiting' where it read 'blue
   waiting · T, then F'; `squadplay-go` reads the stand: red in, the orders still red's, F sends blue). A press while the chosen men still walk and
-  another pair waits therefore sends the pair that waits. The
+  another pair waits therefore sends the pair that waits. THE PLAN'S KEY MARK FOLLOWS (`floorplan.ts waitsOnKey` asks `wordMen`, not the orders' own
+  men: the door's mark said no key while the key sent them; `probes.ts plan` lines 6c read the stand, red on the page's stand until this). The
   ring on Sam shows 'fall in' twice (the quick order's wedge and its own); with the quick throw's own switch on (off in the page) G held under a ring
   still starts Sam's own throw. The older menu's probes (`orders-probes`, `orderui-probes`, `pressorders-probes`) pin `only` off in their rigs. NOT measured: no tally; nobody has played it; never
   seen on a GPU.

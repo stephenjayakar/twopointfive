@@ -33,7 +33,7 @@ export function journalFailures(): number { return familyFails; }
 /** A stand-in for the GPU that ANSWERS (the 'page' variant): every key asked one frame is answered the next with a value off its own die — an irradiance for a point
  *  query (skewed dark, the odd bright one), a transmittance for a segment — as f32s, the way the probe's readback hands them over; `results` is the table forget()
  *  deletes from. Nothing of it exists in a replay: the journal must carry every value the game took. */
-function answeringProbe(seed: number) {
+export function answeringProbe(seed: number) {
   const rnd = mulberry32(seed); const asked = new Map<string, boolean>(); const results = new Map<string, [number, number, number]>();
   const probe = { query(k: string) { asked.set(k, false); }, querySegment(k: string) { asked.set(k, true); }, get(k: string) { return results.get(k); }, results, hasPending: false, encode() { /* no GPU */ }, afterSubmit() { /* no GPU */ } };
   const tick = () => { for (const [k, seg] of asked) { const r = rnd(); results.set(k, [Math.fround(seg ? (r < 0.15 ? 0.05 + r : 0.75 + 0.25 * r) : (r < 0.9 ? r * r * 0.08 : 0.4 + 3 * rnd())), 0, 0]); } asked.clear(); };

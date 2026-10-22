@@ -11,7 +11,7 @@
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
-import { CMDRING, type RingHint, type RingView } from '../game/cmdring';
+import { CMDRING, ringPin, type RingHint, type RingView } from '../game/cmdring';
 import { handRingView } from '../game/interact';
 import { planView } from '../game/planmode';
 
@@ -97,8 +97,8 @@ export class CmdRingViz {
     if (H.ring) { const out: string[] = []; for (let i = 0; i < HINT_N; i++) { const t = i / HINT_N * 2 * Math.PI, q = pt([H.ring.at[0] + Math.cos(t) * H.ring.r, H.ring.at[1], H.ring.at[2] + Math.sin(t) * H.ring.r]); if (!q) { out.length = 0; break; } out.push(q); }
       if (out.length) d += `M${out.join('L')}Z`; }
     // (the glyph: in the ring's middle once it is up; before, up and right of the cursor — clear of the reticle's own words — and the other way where the view ends)
-    const s = H.zoom / tz, off = HINT_OFF * s, cx = H.x / tz, cy = H.y / tz;
     const mid = H.held && !H.press;   // (the ring up: the glyph is its middle · the key down and no ring yet: it stays beside the cursor)
+    const P = mid ? this.pinned(game, cam, w, h, tz) : null, s = H.zoom / tz, off = HINT_OFF * s, cx = (P ? P[0] : H.x) / tz, cy = (P ? P[1] : H.y) / tz;
     const gx = mid ? cx : cx + (cx + 2 * off > w ? -off : off), gy = mid ? cy : cy + (cy - 2 * off < 0 ? off : -off);
     const key = `${H.kind}|${H.tone ?? ''}|${H.held}|${gx.toFixed(0)},${gy.toFixed(0)},${s.toFixed(2)}|${d}`;
     if (key === this.hintWas) return; this.hintWas = key;
@@ -141,11 +141,18 @@ export class CmdRingViz {
     if (!this.plan) { const g = this.plan = document.createElementNS(NS, 'g') as SVGGElement; g.setAttribute('class', 'planmode'); this.svg.insertBefore(g, this.svg.firstChild); }
     this.plan.style.display = ''; this.plan.innerHTML = s;
   }
+  /** A ring that stays on its point (CMDRING.pin), where THIS picture's camera puts it, in the view's px: the game's own place for it (RingState.ax / ay) was
+   *  worked out before the tick's camera step, and a ring drawn there swims a few px against the floor while the view moves. null = the game's place stands */
+  private pinned(game: Game, cam: FollowCamera, w: number, h: number, tz: number): [number, number] | null {
+    const R = game.orders.cmdRing; if (!CMDRING.pin || !R?.at) return null;
+    const [sx, sy, front] = cam.project(R.at, w * tz, h * tz); if (!front) return null;
+    const c = { ...R }; ringPin(c, sx, sy, w * tz, h * tz); return [c.ax, c.ay];
+  }
   /** `w`, `h`: the layer's own size · `tz`: the factor it is zoomed by (ui/textsize.ts) */
   update(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
     this.updatePlan(game, cam, w, h, tz);
     this.updateHint(game, cam, w, h, tz);
-    const V = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null;
+    const V0 = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, P = V0 ? this.pinned(game, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
     this.orders.draw(V, tz); this.clear(V, tz);
     this.hands.draw(game.player.sel.ring ? handRingView(game) : null, tz);
   }

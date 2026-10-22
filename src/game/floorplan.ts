@@ -59,6 +59,12 @@ export const PLAN = {
    *  normal gameplay they shouldn't show up'. Outside it stay: an order just GIVEN (the order book's own log, not a module's re-assign), fading out inside
    *  `freshSecs`; whatever waits on the key; a teammate's ordered throw until it leaves his hand. false = all of it for as long as the orders stand, as before */
   menuOnly: true,
+  /** THE KEY ON A DOOR SAYS WHETHER IT IS LIVE (the maintainer, 10-22: "need some indicator on the F on the door when it's queued vs live. maybe black
+   *  background to lighting up to yellow background"): the key's cap is drawn on every door that waits on it — DARK while its men are still on their
+   *  way to it (queued: the press is kept, or sends men who are not set) or while the press would not send it, LIT in their colour once every man of
+   *  it stands on his place and the press sends them now (PlanDoor.ready). false: the cap only on the door the key would send now, on its plate,
+   *  the same whether or not its men are there. Picture only */
+  keyLit: true,
   /** seconds an order just given is drawn at full strength — its men ringed, its ways bright */
   freshSecs: 2.5,
   /** how strong a way is drawn after that, while he still walks it · a mark and a fan under a man who stands */
@@ -96,7 +102,7 @@ export interface PlanMan {
 export interface PlanWho { gd: Guard; at: Vec3; tone: Tone | null }
 /** something waiting on the player's key: a doorway's two jambs on the floor (a wall charge: a stretch of its wall's foot), whose it is, the key that sends
  *  it (null: no key does — the word is a menu row), and whether that key pressed NOW would send THIS one */
-export interface PlanDoor { door: Door | null; a: Vec3; b: Vec3; tone: Tone | null; key: string | null; now: boolean; why: 'stack' | 'tool' | 'charge' | 'thr' | 'drill' | 'wall' | 'pair' }
+export interface PlanDoor { door: Door | null; a: Vec3; b: Vec3; tone: Tone | null; key: string | null; now: boolean; /** every man of it stands on his place (PLAN.keyLit: the key's cap is lit only then) */ ready: boolean; why: 'stack' | 'tool' | 'charge' | 'thr' | 'drill' | 'wall' | 'pair' }
 /** a teammate's throw, ordered or (the throw page up) only offered: who, the floor he throws from, his way there where no `men` entry already carries it,
  *  the arc in the air and on along the floor to where the thing comes to rest (one line, ending in that ring), and the radius to draw round that (a frag's lethal reach; 0: none) */
 export interface PlanThrow { gd: Guard; tag: string; tone: Tone | null; kind: 'frag' | 'stun'; preview: boolean; from: Vec3; walk: Vec3[]; arc: Vec3[]; land: Vec3; reach: number }
@@ -105,6 +111,13 @@ export interface PlanThrow { gd: Guard; tag: string; tone: Tone | null; kind: 'f
  *  key that sends the plan, and how strongly to draw it (1 in the order mode; with the menu down, an order just laid, going out with its age) */
 export interface PlanLaid { tone: Tone | null; feet: Vec3[]; ways: Vec3[][]; at: Vec3 | null; a: Vec3 | null; b: Vec3 | null; key: string; k: number }
 export interface FloorPlan { men: PlanMan[]; who: PlanWho[]; you: Vec3 | null; doors: PlanDoor[]; throws: PlanThrow[]; laid: PlanLaid[]; /** the SEAT is reading the plan (its order menu is up, or `PLAN.menuOnly` is off): false = `men` holds only orders just given, to be faded out with their age */ mode: boolean }
+/** HOW A DOOR'S KEY CAP IS DRAWN (ui/planfloor.ts): 'none' no cap · 'plate' on its plate (PLAN.keyLit off: only the door the key would send now) ·
+ *  'dark' it waits on the key, and its men are still on their way or the press would not send it · 'lit' they stand there and the press sends them */
+export function capOf(dr: PlanDoor): 'none' | 'plate' | 'dark' | 'lit' {
+  if (!dr.key) return 'none';
+  if (!PLAN.keyLit) return dr.now ? 'plate' : 'none';
+  return dr.now && dr.ready ? 'lit' : 'dark';
+}
 /** this module draws the squad's throws (so the neighbour's stopgap picture does not) */
 export function planDrawsThrows(): boolean { return PLAN.on && PLAN.throws; }
 
@@ -157,7 +170,7 @@ const angDiff = (a: number, b: number) => { let d = (a - b) % (Math.PI * 2); if 
  *  doortools.ts `input`: the word to whatever of the addressed men's is waiting, else the nearest free set charge; the pair's word takes its set charges too). */
 function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null) {
   const S = g.orders, T = g.doorTools, WC = g.wallCharge, NB = g.nightBreach, RS = g.rescue, big = S.big, alive = (m: Guard) => m.state !== 'dead';
-  const sam = g.player.char.pos, up = !g.player.down, addr = new Set(S.recipients());   // (the SEAT's: see the head)
+  const sam = g.player.char.pos, up = !g.player.down, addr = new Set(T.wordMen());   // (the SEAT's: see the head · the men the word's key reads, doortools.ts wordMen: the orders' own, and — the squad's only keys, cmdring.ts — whoever waits when none of those do)
   const F = keyCap(DOORTOOLS.blowKey), wordKey = !big || DOORTOOLS.wordOnKey;
   type Why = PlanDoor['why'];
   const RANK: Record<Why, number> = { stack: 0, pair: 0, tool: 1, thr: 2, drill: 2, charge: 3, wall: 3 };
@@ -185,7 +198,7 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
   const marked = g.pair.waiting(), pairFirst = up && marked.length > 0;
   for (const [gd] of marked) {
     const p = gd.char.pos, y = gd.char.aimYaw, fx = Math.sin(y), fz = Math.cos(y), cx = p[0] + fx * PLAN.pairBarM, cz = p[2] + fz * PLAN.pairBarM;
-    out.doors.push({ door: null, a: [cx - fz * 0.3, 0, cz + fx * 0.3], b: [cx + fz * 0.3, 0, cz - fx * 0.3], tone: toneOf(gd), key: 'F', now: pairFirst, why: 'pair' });
+    out.doors.push({ door: null, a: [cx - fz * 0.3, 0, cz + fx * 0.3], b: [cx + fz * 0.3, 0, cz - fx * 0.3], tone: toneOf(gd), key: 'F', now: pairFirst, ready: true, why: 'pair' });
   }
   if (!by.size && !WC.set.length) return;
   const free = T.set.filter(c => !T.ops.some(o => o.kind === 'charge' && o.door === c.door && !!o.word && isNaN(o.word.go1)));   // (not on a word already given)
@@ -198,6 +211,7 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
   const early = big && T.ops.some(op => (op.thr?.first === 'can' || op.thr?.first === 'burst') && op.men.some(m => addr.has(m)));   // (doortools.ts wordEarly has the press)
   const last = reaches && !anyWord && !early && !rowKey && !S.menu?.wordRow && !T.set.length && !WC.set.length;   // … and past them all, to the rescue
   const tone = (men: Guard[]): Tone | null => toneFor(g, men, toneOf);
+  const set = (men: Guard[]) => men.every(m => { const A = S.of(m); return !alive(m) || !A || (A.yieldT < 0 && (A.arrived || !A.post || flat(m.char.pos, A.post) < 0.5)); });   // (every man of it on his place — his feet there: a gun still coming round does not put the cap out — none taken off it by a fight)
   const drillNow = anyWord ? NB.drillOps.some(m => addr.has(m)) : !T.set.length && !WC.set.length;   // (the drill reads the key after them: a word to its own men leaves it the press; a set charge, or a word to others, does not)
   for (const [door, e] of by) {
     const [ja, jb] = jambs(door);
@@ -206,9 +220,9 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
       if ((e.word && wordKey) || (e.gate && last) || (e.drill && drillNow)) now = true;
       else if (e.set && free.includes(e.set)) now = big ? !anyWord && e.set === nearSet : anyWord || e.set === nearSet;
     }
-    out.doors.push({ door, a: ja, b: jb, tone: tone([...e.men]), key: wordKey || e.set || e.drill || e.gate ? F : null, now, why: e.why });
+    out.doors.push({ door, a: ja, b: jb, tone: tone([...e.men]), key: wordKey || e.set || e.drill || e.gate ? F : null, now, ready: set([...e.men]), why: e.why });
   }
-  for (const c of WC.set) out.doors.push({ door: null, a: wallPt(c.wall, -0.4, 0.03), b: wallPt(c.wall, 0.4, 0.03), tone: tone(S.squad().filter(m => alive(m) && m.callsign === c.by)), key: F, now: up && !pairFirst && !rowKey && wallFirst && c === wall, why: 'wall' });
+  for (const c of WC.set) out.doors.push({ door: null, a: wallPt(c.wall, -0.4, 0.03), b: wallPt(c.wall, 0.4, 0.03), tone: tone(S.squad().filter(m => alive(m) && m.callsign === c.by)), key: F, now: up && !pairFirst && !rowKey && wallFirst && c === wall, ready: true, why: 'wall' });
 }
 
 /** The squad's plan as it stands this frame, for the overlay. Empty with the switch off, with no squad on the floor, and under any show. */

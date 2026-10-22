@@ -59,7 +59,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView?, response?, doorNames? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
 | `connectors[]` | stair / ladder `{ from{floor,c,h}, to{…}, cost?, mat? }` | **TODO(G2)** — typed stub, empty |
 | `mission` | `{ playerSpawn, objectives[] }` | objectives `reach{area,door}` / `drive{rackIndex,front,halfW}` / `exfil{door,x,z}` — v1 wants exactly one of each (the fixed stage machine in `game/mission.ts`) |
-| `breaker` | `{ pos, panel, led }` | box ids |
+| `breaker` | `{ pos, panel, led, fumble? }` | box ids; `fumble` = seconds a man sent to the tripped panel works at it before the mains come back (absent 2.2; 7 at most: a room fight's lever party gives the panel up at 8) |
 | `beacons[]` | `{ id, pos, box }` | `box` = the dome, which MUST be a switchable's box (game.ts slaves the beam to it) |
 | `sky`, `daylight?` | `{ zenith, horizon }`; `{ sun(light), sky, groupsOn, groupsOff, lightsOff, haze, exposure }` | the level's daytime variant (`lighting.ts setDaylight`, `__daylight`; the editor's 'day' view) |
 | `plans` | `{ roomClear[], breach? }` | `RoomClearPlan` / `BreachPlan` verbatim (see `scene/level.ts`) + `id`; `door` by id |
@@ -182,15 +182,15 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   worked example). A level that carries only this block passes `map:check`'s structure section with a note (the room clear's sections have nothing to hold).
 
 - `lesson` — a TRAINING LESSON over this level's mission (`game/lesson.ts`; rows in `scenarioList.ts TRAINING_MISSIONS`, `group: 'training'`): `{ title,
-  steps[{ id, line, setupLine?, done, hold?, at? }] }` (`setupLine`: the line while a gun's key again opens its setup, where the step's keys are others then). A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
+  steps[{ id, line, setupLine?, ringLine?, done, hold?, at? }] }` (`setupLine`: the line while a gun's key again opens its setup, where the step's keys are others then; `ringLine`: the line while his own actions are a ring, where the whistle has no key of its own). A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
   characters), `at` the marker, and it moves on when `done` — a test record `{ is: '<kind>', … }` read off the game — is true (for `hold` seconds). Never on a
   clock. Kinds (`lesson.ts LESSON_TESTS`; a new kind is one row there with its `ok` and its `check`): STATE `in {area}` · `near {at, r?}` · `flag {flag,
   value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent dark chargeSet chargeClear wallBlown …) · `slot {slot, drawn?}` ·
-  `pace {below?, above?}` · `meter {which: 'light'|'noise', below?, above?}` · `stage {stage}` · `door {door, state: open|shut|unlocked|broken}` · `target
+  `pace {below?, above?}` · `meter {which: 'light'|'noise', below?, above?}` · `stage {stage}` · `door {door, state: open|shut|unlocked|broken|charged}` (`charged`: a charge hangs on it) · `target
   {name, on}` (a light or a device by name) · `men {down}` · `all {of}` / `any {of}`; DEEDS counted from the moment the step came up: `did {what: 'act:<the
   Space row's verb>' | 'event:<hearing event of the player's>' | 'chron:<chronicle kind>' | 'order:<orders.log id>', n?, on?: '<door name>'}` (`on`: that order given on that door). By family — hands: `downed {how: takedown|choke|whip|ring|knife,
   n?}`, `body {area}` (a man down lies there, let go of); kit: `reload`, `launcher {on: ring|he40|none, fired?}`, `burst {n?}`, `threw {kind?:
-  smoke|flash|frag|he40, quick?}`; squad: `orderTo {who: all|red|blue}`, `stackOn {who?, door, set?}`, `pairsOn {doors?}`, `word {doors?}`
+  smoke|flash|frag|he40, quick?, area?}` (`area`: …and one of that kind has gone off lying inside the rect); squad: `orderTo {who: all|red|blue}`, `stackOn {who?, door, set?}`, `pairsOn {doors?}`, `word {doors?}`
   (F, over how many doors), `taken {room}` (a room of `roomClear` stands cleared), `following`; the quiet partner: `mate {area?, at?, r?, by?, away?}`, `pair
   {what: mark|now|set|go|go:F|go:hands|down, n?}`. A step must never be able to become impossible while the mission can go on (a can or a charge can run
   out, a door can come open another way): give such a step an `any` with the honest alternative. The lesson only READS the game: the
@@ -202,7 +202,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   floor and the list), `tools/qa/lesson-run.ts <name>` (a scripted player — `tools/qa/lessons/<name>.ts`, input only — through every step to the debrief; a
   step that moves on with nothing done is a FAIL), `tools/qa/lesson-gate.ts [name …]` (per Training level: the file is its generator's, level-lint, lesson-check, the scripted run, and the on / off digests equal),
   `tools/qa/light-map.ts <name>` (how lit a man is across the floor).
-  A TUTORIAL mission (rows in `TUTORIAL_MISSIONS`, `group: 'tutorial'`) carries `lesson.rails` and the frame's own step keys (`allow`, `deny`, `cue`, `checkpoint`, `fog`) and tests
+  A TUTORIAL mission (rows in `TUTORIAL_MISSIONS`, `group: 'tutorial'`) carries `lesson.rails` (`allow`, `respawn`, `fog`, `orders?`, `rows?`, `lasers?`, `sky { park, reach?, eye?, low? }`) and the frame's own step keys (`allow`, `deny`, `cue`, `checkpoint`, `fog`; `noTap`, `menuLine`, `pageLine`: the command key held is its own line; `eye { at, yaw, fov? }`: a fog lookout while the step is up; `onWay { nv? }`: the view back to the squad once its order is given) and tests
   (`cue`, `squad`, `view`): `game/rails.ts` and `docs/agents/missions.md` say what each does. Its script is `levels/<name>.script.ts`, registered by the level's name in
   `src/scene/levelScripts.ts`, with one play program named `tutorial`.
 - `par` — a PAR CLOCK over this level's room clear (`game/par.ts`; needs a `roomClear` block): `{ gold, silver, bronze, lossSecs }`, seconds, with
@@ -225,7 +225,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   against the whole squad to one charge then the other, by the wings or by the workshops' back doors, and the player's own hands on one).
 - `issue` — a KIT ISSUED BY THE LEVEL (`game/kit.ts kitIssue`): `{ members: { '<place>': { …card fields } } }`, place `'0'` = the player, `'1'`‥`'4'` the
   teammates in roster order; each entry lists only the fields that differ from the issue card (`weapon` rifle | pistol | shotgun, `suppressed`, `light`,
-  `nvg`, and the counts `bangs charges smoke frags walls shells`, whole numbers 0‥9; `charges walls` are a teammate's alone and `shells`
+  `nvg`, and the counts `bangs charges smoke frags walls shells`, whole numbers 0‥9; `charges walls` on your own card (`'0'`) are read only where your own charges are switched on, `shells` is
   the player's alone — the validator refuses them elsewhere; with the pouches rule off nothing trims a count; a card that still says `shield` is refused in words — the ballistic shield left the game on 10-18). Every staging on that level wears the issue card with those
   fields over it, whatever kit the machine keeps, and the kept kit is not written; `?noissue` (`ISSUE.on` false) = the kept kit as on any level. Today:
   `levels/hall.json`, whose block is empty since the shield went (`members: {}`: every man on the plain issue, no visit to the loadout screen).
