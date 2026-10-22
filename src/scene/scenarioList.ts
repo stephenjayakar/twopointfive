@@ -189,13 +189,13 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     //  the photocell puts out by day — and measured dry and still)
     hour: 'night', weather: 'clear',
     place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Take your squad down one street. There are two easy rooms, then a doorway an enemy is watching, a gunner, a locked hall and a last fight at two gates.',
+    blurb: 'Take your squad down one street. There are two easy rooms, then a doorway an enemy is watching, a gunner, a locked hall, and more enemies at two gates.',
     scene: 'The code book points to an outpost that\'s one street long. This time you\'re walking in with your squad, and the enemies there know how to hold a street.',
     teaches: ['Go through doors with the squad behind you', 'Go around a doorway an enemy is watching', 'Make a gunner duck, then move', 'Clear a room through its window', 'Send part of the squad to cover your back'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
-    place: 'A money changer\'s shop, a night of snow', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
-    blurb: 'You\'re alone, and nobody can know you were here. Sneak through the dark to the strongroom, then leave the way you came in.',
-    scene: 'The outpost was paid through one house in town, and its ledger says who paid. The ledger is in the strongroom, and nobody can know you were there.',
+    place: 'A money changer\'s shop on a snowy night', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
+    blurb: 'You go in alone. Slip through the dark to the strongroom, then leave the way you came in.',
+    scene: 'The post was paid through a money changer\'s shop in town, and his ledger shows who paid. The ledger is in the strongroom. Nobody can know you were there.',
     teaches: ['Stay low and out of the light', 'Whistle to lure a guard', 'Grab a guard from behind', 'Locks, the breaker box and night vision', 'Leave the way you came in'] },
   // quiet, as two (tools/levels/tut-pair.ts): one partner under the pair rules, and each stretch of a truck park is one thing a second man makes possible
   { id: 'tut-pair', title: 'The truck park, as two', kind: 'quiet', squad: 1, level: 'tut-pair.json', group: 'tutorial',

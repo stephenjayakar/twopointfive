@@ -473,7 +473,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // THE FRAME (game/rails.ts). From the first step: the walk, the view, the aim. Each tool is switched on by the step that teaches it and stays on.
     // `rows` = the verbs Space offers here: nothing a step did not teach has a row (a wall charge at the box, the light plate beside the strongroom's
     // door, a body to drag), so a tap is always the thing the line means.
-    rails: { allow: ['move', 'camera', 'zoom', 'aim'], rows: ['grab', 'question', 'choke', 'pick', 'push', 'code', 'nocode', 'breakerOff', 'drive'] },
+    // (the rows: what the steps teach, AND the plain quiet acts a player tries unasked — shutting a door behind him, easing one open, moving a body out of the
+    //  light. The first play on the new level: "nothing in reach to close the door?", at the back door he had just picked. What stays off is what would break
+    //  the night: the boot, the hammer, a rattled handle, the mains put back on.)
+    rails: { allow: ['move', 'camera', 'zoom', 'aim'], rows: ['grab', 'question', 'choke', 'pick', 'push', 'pull', 'ease', 'drag', 'drop', 'code', 'nocode', 'breakerOff', 'drive'] },
     steps: [
       // ---- the lane: light ----
       { id: 'crouch', line: 'Press [C] to crouch', allow: ['crouch'], done: any({ is: 'flag', flag: 'crouch' }, down(1)) },
@@ -488,12 +491,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // feet for the whistle; the moment it sounds the next line is up with the mark on the hide. A mark on the hide first sent a new player there to whistle.)
       // (the whistle has two ways in: its own key where it has one, and on the page the last wedge of the ring his interaction key puts up when it is kept
       // down — `ringLine`; `use` comes on here for that ring, a step before the grab needs it)
-      { id: 'whistle', line: 'Press [V] to whistle here, then hide behind the wall', ringLine: 'Hold [Space] and press [5] to whistle, then hide', allow: ['whistle', 'use'], checkpoint: 'the lane', done: any(did('event:whistle'), ...held, down(1)), at: mark(TQ.whistle) },
+      { id: 'whistle', line: 'Press [V] to whistle here, then hide behind the wall', ringLine: 'Hold [Space] and press [5] to whistle, then hide behind the wall', allow: ['whistle', 'use'], checkpoint: 'the lane', done: any(did('event:whistle'), ...held, down(1)), at: mark(TQ.whistle) },
       // (the first play of it on a GPU, with no card and the line "Hide. When he stops: round the wall, [Space]": "not sure what this means". He had hidden,
       //  off the whistle's own line; he could not tell when "stops" is or what the key would do. So the frame's card says the whole beat the moment the
       //  whistle has gone, with the world held while it is read — he looks for about four seconds, which is no time to read in; the line names the deed;
       //  and the mark rides on the man, so where he is and that he has stopped can be seen from behind the wall)
-      { id: 'grab', line: 'When he stops, sneak up behind him and press [Space] to grab him', explain: { title: 'Whistle to lure a guard', text: 'He heard that, and he\'s coming to take a look. Stay behind the wall and out of his light.\nHe\'ll check out the sound and then stop, with his back to you. Go around the wall, come up behind him, and press [Space] to grab him.' },
+      { id: 'grab', line: 'When he stops, sneak up behind him and press [Space] to grab him', explain: { title: 'Whistle to lure a guard', text: 'He heard that, and he\'s coming to look. Stay behind the wall, out of his light.\nHe\'ll check out the sound and then stop, with his back to you. Go around the wall, come up behind him, and press [Space] to grab him.' },
         done: any(...held, down(1)), atMan: 'court' },
       { id: 'ask', line: 'Press [Space] to ask him for the code', done: any(did('chron:codeLearned'), down(1)) },
       { id: 'drop', line: 'Right-click to knock him out, or left-click to use the knife', allow: ['fire', 'alt'], done: down(1) },
@@ -504,20 +507,20 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       //  its own line; AT the door — the first work that takes time — the frame's card says this lock is his to pick, that such work takes seconds and
       //  what stops it; and no line says 'keep still' again)
       { id: 'door', line: 'Go to the back door', checkpoint: 'the back court', done: any(near(TQ.backDoor, 1.3), { is: 'flag', flag: 'picking' }, PICKED), at: mark(TQ.backDoor) },
-      { id: 'pick', line: 'Press [Space] at the lock to pick it', explain: { title: 'Picking a lock', text: 'This door is locked. Press [Space] at the lock to pick it.\nPicking a lock, using a keypad or opening a safe takes a few seconds. You\'ll stop if you move or press [Space] again.\nThe lock clicks while you pick it, and a guard nearby can hear it.' },
+      { id: 'pick', line: 'Press [Space] at the lock to pick it', explain: { title: 'Picking a lock', text: 'This door is locked. Stand at the lock and press [Space] to pick it.\nPicking a lock, entering a code or opening a safe takes a few seconds. If you move or press [Space] again, you stop.\nThe lock clicks while you work on it, and a guard close by can hear it.' },
         done: PICKED, at: mark(TQ.backDoor) },
       // ---- the store: a man in the light, the player in the dark ----
-      { id: 'nook', line: 'Go in and stay in the dark', cue: 'store', done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
-      { id: 'strike', line: 'Stay low so he doesn\'t hear you, then left-click to take him down', checkpoint: 'the store', done: down(2), at: [24.9, 1, 12.6] },
+      { id: 'nook', line: 'Go inside and stay in the dark', cue: 'store', done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
+      { id: 'strike', line: 'Stay low so he doesn\'t hear you, then left-click to knife him', checkpoint: 'the store', done: down(2), at: [24.9, 1, 12.6] },
       // ---- the hall: two beams and the mains ----
-      { id: 'under', line: 'Stay low and go under the beam', done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
+      { id: 'under', line: 'Stay low and go under the laser beam', done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
       // ---- the set piece: the mains ----
       { id: 'nv', line: 'Press [N] to turn on night vision', allow: ['nvg'], checkpoint: 'the hall', done: any({ is: 'flag', flag: 'nv' }, down(3)) },
       { id: 'box', line: 'Press [Space] at the breaker box, then hide behind the wall', done: any(did('act:breakerOff'), down(3)), at: mark(TQ.boxAt) },
-      { id: 'boxman', line: 'Hide, then take him down while he\'s busy at the breaker box', done: down(3), at: mark(TQ.wait) },
+      { id: 'boxman', line: 'Stay hidden until he\'s working at the breaker box, then take him from behind', done: down(3), at: mark(TQ.wait) },
       { id: 'code', line: 'Press [Space] at the keypad to enter his code', checkpoint: 'the counting room', done: any(did('chron:codeEntered'), { is: 'door', door: 'strong', state: 'open' }, { is: 'door', door: 'strong', state: 'broken' }), at: [17.3, 1, 10.6] },
       { id: 'safe', line: 'Press [Space] at the safe to take the ledger', done: { is: 'stage', stage: 'exfil' }, at: front },
-      { id: 'out', line: 'Leave through the front door', done: any({ is: 'in', area: { x0: 8.12, x1: 12.3, z0: 11.0, z1: 18.0 } }, { is: 'stage', stage: 'done' }), at: [11.4, 1, 15.1] },
+      { id: 'out', line: 'Leave by the front door', done: any({ is: 'in', area: { x0: 8.12, x1: 12.3, z0: 11.0, z1: 18.0 } }, { is: 'stage', stage: 'done' }), at: [11.4, 1, 15.1] },
       // (the line stays up to the mission's own end: with the last step done in the forecourt the page fell back to the small objective row at the top)
       { id: 'gate', line: 'Leave through the gate', done: any({ is: 'in', area: { x0: 7.25, x1: 7.9, z0: 13.2, z1: 14.8 } }, { is: 'stage', stage: 'done' }), at: [8.3, 1, 14.0] },
     ],

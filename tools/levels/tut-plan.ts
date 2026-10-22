@@ -5,8 +5,8 @@
 //        x 5     9  11    15        21 22  24.5              32.5  35
 //   z 5  ┌────────────────────── back gate ───────────────────────┐
 //        │               ┌─────────┐  ╎                           │
-//        │               │guardroom│side   ▬barrier      blocks▮  road
-//        │               │  (2)    │door       B ↑        A →     gate
+//        │               │guardroom│side    ▬barrier     blocks▮  road
+//        │               │  (2)    │door        B ↑       A →     gate
 //   z 11 │               └──door───┘  ╎                           │
 //  track │  SAM ▮blocks                    ┌─front──────────────┐ │   the lane (2)
 //  gate  │      the four                   │  the hall    ▮gun  │ │   comes by the back gate,
@@ -127,8 +127,14 @@ export function build() {
   // ---- the ground the two gates open onto: the bags that face the road gate, the barrier that faces the back gate ----
   grp('yard.cover');
   G.sandbags(30.4, 10.25, 2.4, HALF, 5);                            // A: chest-high bags (a rifle goes over them): a pair behind them (west of them) looks east at the road gate
-  G.jersey(23.25, 9.6, 2, 0);                                       // B: a pair behind it (south of it) looks north at the back gate
+  // B: a pair behind it (south of it) looks north at the back gate. WHERE IT STANDS (a player's tape, 10-22: his click fell 1.25 m west of the mark, the move put
+  // the second man in the corner south of the guardroom, the way to face had no line for him there and he stood looking at a wall): a move's places are the
+  // squad's own (roomfit.ts: a few steps round the click, a wall at the back), so the post is where a hand that lands a metre and a half off still gets two men
+  // who see the gate — clear of that corner to the west (the drums below fill it) and of the hall's front door to the east, whose picture stands over the
+  // ground north of it and takes a right click there (clicks swept with `TUTPLAN_POSTB`: docs/agents/missions.md)
+  G.jersey(24.0, 9.3, 2, 0);
   grp('yard');
+  G.drums(20.7, 11.65, 2);                                          // in the corner south of the guardroom: a man put there by a move to the barrier had the guardroom between him and the back gate
   G.drums(33.6, 6.4, 3); G.tyres(26.6, 6.2, 3); G.woodPile(13.0, 6.2, 0, 1.6); G.waterTank(13.4, 20.6); G.pump(14.9, 20.4, 0); G.blocks(21.4, 20.8, 0.2, 2);
   G.tyres(33.6, 21.6, 4); G.handcart(18.2, 18.6, 0.4, 'sacks'); G.ruts(8, 12.2, 22, 16, 'dirt'); G.patch(13.6, 19.8, 2.6, 1.8, 'damp', 0.2);
   G.bush(6.2, 6.4); G.bush(6.4, 21.6, 1.2); G.bush(33.8, 14.6); G.bush(23.2, 22.2, 1.1);
@@ -147,7 +153,7 @@ export function build() {
   // ---- what the room clear takes from this level ----
   const SAM: Vec3 = [8.75, 0, 14.25];
   const WALL: Vec3 = [13.9, 0, 9.25];                                 // the guardroom's blank west wall: where the four wait while the first plan is laid
-  const POST_A: Vec3 = [29.25, 0, 10.25], POST_B: Vec3 = [23.25, 0, 10.75];
+  const POST_A: Vec3 = [29.25, 0, 10.25], POST_B: Vec3 = [24.0, 0, 10.3];
   const GATE_E: Vec3 = [35.0, 0, 10.0], GATE_N: Vec3 = [22.0, 0, 5.0];
   const ROAD: Rect = { x0: 35.3, x1: 39.7, z0: 5.4, z1: 13.4 }, LANE: Rect = { x0: 17.4, x1: 27.4, z0: 0.4, z1: 4.7 };
   const IN_FRONT: Vec3 = [26.0, 1.1, 13.6];
@@ -212,12 +218,12 @@ export function build() {
       { id: 'back', line: 'Pick the other two and right-click the back door', done: or(stacks(['hall', 'hall_back'], true), taken('hall')), at: D_BACK, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
       // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — levels/tut-plan.script.ts)
       { id: 'all2', line: 'Left-click empty ground again to pick all four', done: or({ is: 'picked', n: 4 }, taken('hall')), eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 }, cue: 'breach' },
-      { id: 'word2', line: 'Press [F] to send them in through both doors at once', done: taken('hall'), at: [28.4, 1, 16.0], eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },   // (the lookout stays: he SEES the gun on the wrong door)
+      { id: 'word2', line: 'Press [F] to send them in through both doors at once', done: taken('hall'), at: [28.4, 1, 16.0] },   // (NO lookout on the word's own step: the squad picks its entry by what the fog shows of the room (autopilot.ts contactBehind), a step's eye is in the fog, and with the gunner seen through it the stack given the word first took the last can — a bang and clear beside an open and clear, three seconds behind it. He sees the gun through his men's eyes as the doors give)
       // 3 · WHICH WAY THEY FACE: more come by two gates at once. A right click dragged is a place and a way to look
       { id: 'gates', line: 'Move the view to the two gates', explain: { title: 'Two gates', text: 'More enemies are coming through the road gate and the back gate at the same time.\nRight-click and drag to send teammates to a spot and set which way they\'ll face.' },
         done: or({ is: 'planView', at: GATES_VIEW, r: 2.5 }, taken('road'), taken('lane')), at: [27.0, 1, 9.5], checkpoint: 'the gates' },
-      { id: 'faceA', line: 'Pick two, then right-drag from the sandbags toward the road gate', done: or(and({ is: 'squad', area: area(POST_A, 1.8), n: 1 }, { is: 'did', what: 'order:cover' }), taken('road')), at: POST_A, toward: GATE_E },
-      { id: 'faceB', line: 'Pick the other two, then right-drag from the barrier toward the back gate', done: or(and({ is: 'squad', area: area(POST_B, 1.8), n: 1 }, { is: 'squad', area: area(POST_A, 1.8), n: 1 }, { is: 'did', what: 'order:cover' }), taken('lane')), at: POST_B, toward: GATE_N },
+      { id: 'faceA', line: 'Pick two, then right-drag from the sandbags toward the road gate', done: or(and({ is: 'squad', area: area(POST_A, 2.6), n: 1 }, { is: 'did', what: 'order:cover' }), taken('road')), at: POST_A, toward: GATE_E },
+      { id: 'faceB', line: 'Pick the other two, then right-drag from the barrier toward the back gate', done: or(and({ is: 'squad', area: area(POST_B, 2.6), n: 1 }, { is: 'squad', area: area(POST_A, 2.6), n: 1 }, { is: 'did', what: 'order:cover' }), taken('lane')), at: POST_B, toward: GATE_N },
       { id: 'hold', line: 'Here they come. Your squad has both gates covered', done: and(taken('road'), taken('lane')), at: [27.0, 1, 9.5], cue: 'gates' },
       // 4 · and back: a right click on himself is 'on me'
       { id: 'back-in', line: 'Right-click yourself to call them back', done: or({ is: 'following' }, { is: 'did', what: 'order:fallIn' }, { is: 'squad', area: area(SAM, 5), n: 3 }), at: [SAM[0], 1, SAM[2]] },

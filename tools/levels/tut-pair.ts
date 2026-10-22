@@ -246,6 +246,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const flag = (f: string) => ({ is: 'flag', flag: f });
   const pair = (what: string) => ({ is: 'pair', what });
   const mark = (p: P3): P3 => [p[0], 1, p[2]], chest = (p: P3): P3 => [p[0], 1.2, p[2]];
+  // (the far man's name on the net: the roster's third, as the routes are written — game.ts CALLSIGNS. lesson-check refuses a name nobody on the floor has)
+  const FAR_MAN = 'Reyes';
   const opened = (door: string) => [{ is: 'door', door, state: 'open' }, { is: 'door', door, state: 'broken' }];
   const lesson: LessonData = {
     title: 'As two',
@@ -258,8 +260,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'crouch', line: 'Press [C] to crouch. Your partner will copy you', allow: ['crouch'], done: any(flag('crouch'), down(1)) },
       { id: 'lead', line: 'Lead him to the mark', cue: 'gate', done: any(all(near(TP.first, 1.0), { is: 'mate', by: 5 }), down(1)), hold: 0.3, at: mark(TP.first) },
       // (an order step's `after` is the line while the partner is on his way: it never asks twice, and it is drawn as a thing to watch. The step is done by
-      //  what the order was FOR: "set", the dark. KNOWN: a `did` deed cannot say WHICH man an order was on (lesson.ts counts 'order:<id>@<target>' and its
-      //  check refuses the '@'), so 'far' passes on his key on either man of the two; the ring rides on the far one and the card says which)
+      //  what the order was FOR: "set", the dark. The double's order names its man (a deed's '@foe:<callsign>'): his key on the NEAR man of the two leaves
+      //  the ask up, for the partner behind the near man is the take the card has just said shouts)
       { id: 'mark', line: 'Press [B] on that guard to send your partner after him', after: { line: 'He\'s working his way around behind the guard', on: ['pairMark'] }, allow: ['order'], at: chest(TP.A), atMan: 'pickup',
         done: any(pair('set'), pair('go'), down(1)),
         explain: { title: 'Two of you', text: 'Your partner follows you and stays as quiet as you do.\nPress [B] on a guard to send your partner around behind him. He\'ll say "set" when he\'s there, and then he\'ll wait for you to say go.' } },
@@ -267,7 +269,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // ---- the truck park: two men on one beat ----
       // (he falls in again by himself when his man is down — pairup.ts `rejoin` — so no line asks for it)
       { id: 'gap', line: 'Lead him to the gap between the containers', cue: 'park', checkpoint: 'the gate yard', done: any(all(near(TP.gap, 1.0), { is: 'mate', by: 5 }), down(2)), hold: 0.3, at: mark(TP.gap) },
-      { id: 'far', line: 'Press [B] on the far guard to send your partner after him', at: chest(TP.C), atMan: 'far', done: any(did('order:pairMark'), down(2)),
+      { id: 'far', line: 'Press [B] on the far guard to send your partner after him', at: chest(TP.C), atMan: 'far', done: any(did(`order:pairMark@foe:${FAR_MAN}`), down(2)),
         explain: { title: 'Two guards at once', text: 'These two can see each other, so if you take down just one, the other will shout.\nGive your partner the far one, then get behind the near one yourself. When you grab yours, he\'ll take his.' } },
       { id: 'near', line: 'Get behind the near guard and wait for "set"', allow: ['use'], at: mark(TP.behindB), done: any(pair('set'), pair('go'), flag('holding'), down(2)) },
       { id: 'hands', line: 'Press [Space] behind him to grab him, and your partner will take his', at: chest(TP.B), atMan: 'near', done: any(all(flag('holding'), down(2)), down(3)) },

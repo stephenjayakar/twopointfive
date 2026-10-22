@@ -95,9 +95,9 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   await point(HUT); await tap('KeyQ');
   // (the order given: the line stops asking for it, and says what the men are doing — the step's `after`)
   { const a = await until(x => x.i >= 1 || /stacking/.test(x.line), 3); check(a.i === 0 && /^\s*They're stacking up on the door\s*$/.test(a.line) && !a.keys.length, 'the order given: the line no longer asks for the key, it says they stack up', `step ${a.i + 1} · "${a.line}" keys [${a.keys}]`); }
-  R = await until(x => x.i >= 1, 60); check(R.i >= 1, "the squad's key on the hut door: they stack", `step ${R.i + 1} '${R.id}' at ${R.t} s · "${R.line}"`);
+  R = await until(x => x.i >= 1, 60); check(R.i >= 1 && (R.i > 1 || /on the door again/.test(R.line)), "the squad's key on the hut door: they stack, and the next line says where the key goes again (on the door)", `step ${R.i + 1} '${R.id}' at ${R.t} s · "${R.line}"`);
   await point(HUT); await tap('KeyQ');
-  { const a = await until(x => x.i >= 2 || /They go/.test(x.line), 3); check(a.i >= 2 || (/^\s*They go in\s*$/.test(a.line) && !a.keys.length), 'the key again: while they go in the line says so, with no key on it', `step ${a.i + 1} · "${a.line}" keys [${a.keys}]`); }
+  { const a = await until(x => x.i >= 2 || /going in/.test(x.line), 3); check(a.i >= 2 || (/^\s*They're going in\s*$/.test(a.line) && !a.keys.length), 'the key again: while they go in the line says so, with no key on it', `step ${a.i + 1} · "${a.line}" keys [${a.keys}]`); }
   R = await until(x => x.i >= 2, 40); if (R.i < 2) { await tap('KeyF'); R = await until(x => x.i >= 2, 40); } check(R.i >= 2 && R.men <= 10, 'the key again: they go in and the hut is taken', `${R.men} defenders left at ${R.t} s · step ${R.i + 1} '${R.id}'`);
   await point(STORE); await tap('KeyQ'); R = await until(x => x.i >= 3, 80); check(R.i >= 3, 'the key on the store door: they stack', `step ${R.i + 1} '${R.id}' at ${R.t} s`);
   await point(STORE); await tap('KeyQ'); R = await until(x => x.men <= 8, 40); if (R.men > 8) { await tap('KeyF'); R = await until(x => x.men <= 8, 40); } check(R.men <= 8, 'the key again: the store is taken', `${R.men} defenders left at ${R.t} s`);

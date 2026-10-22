@@ -318,7 +318,7 @@ export interface FogEye {
 }
 /** the picture's eye heights over the feet: standing, crouched (also a man down) */
 const EYE_STAND = 1.55, EYE_CROUCH = 0.95;
-interface Rec { seen: boolean; t: number; /** where he stood at that sighting (FOG.lastSeen) */ at?: Vec3; /** the last time the wand's lens itself had a line to him (wand.ts: his mark then stays WAND.markSecs) */ wandT?: number; body: boolean; /** the last smoke verdict the probe's answers decided, and the frame of it */ smoked: boolean; smokeF: number; }
+interface Rec { seen: boolean; /** in the picture through a frame's eye alone this frame (rails.ts RAILS.eyeView): drawn, not seen */ framed?: boolean; t: number; /** where he stood at that sighting (FOG.lastSeen) */ at?: Vec3; /** the last time the wand's lens itself had a line to him (wand.ts: his mark then stays WAND.markSecs) */ wandT?: number; body: boolean; /** the last smoke verdict the probe's answers decided, and the frame of it */ smoked: boolean; smokeF: number; }
 /** smoke segments asked of the probe a frame (its table holds 32 for everybody: sensors.ts), and how many of a man's nearest clear-lined eyes are asked about */
 const SMOKE_ASKS = 6, SMOKE_EYES = 2;
 /** frames an un-asked pair's last answer still counts (the readback's latency is one or two), and a man's last smoke verdict while none of his pairs has an answer */
@@ -390,14 +390,23 @@ export class FogOfWar {
     const F = this.frame;
     if (!this.active) { if (F.on) { F.on = false; F.count = 0; this.eyes = []; this.hiddenChars.clear(); this.pending.length = 0; this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.fireClock = 0; this.lampRecs.clear(); F.lit = 0; F.lightCount = 0; F.full = false; this.fullClear(); } return; }
     const g = this.g; const S = this.stats; S.frames++; const frame = ++this.frameNo;
-    // ---- the eyes: Sam, then the living operatives in list order (the renderer takes the first FOG_EYES; the CPU answer uses the same ones — one model)
+    // ---- the eyes: Sam, then the living operatives in list order (the renderer takes the first FOG_EYES; the CPU answer uses the same ones — one model; a
+    //      tutorial's frame adds eyes that are the picture's alone, below)
     const eyes: FogEye[] = []; const eyeOf = (c: Character): FogEye => this.eyeOf(c);
     if (!g.rails?.skyOn) { const own = eyeOf(g.player.char); eyes.push(wandEye(g) ?? peekEye(g, own) ?? own); }   // (rails.ts, the seat with nobody on the floor: the parked player is nobody's eye)   // (looking under a door his eyes are in the scope: the lens stands in his own eye's place — wand.ts; peeking round the end of a wall they are where a head leaned round it would be — peeksight.ts, null with its switch down)
     if (!FOG.own || g.rails?.skyOn) for (const gd of g.guards) { if (eyes.length >= FOG_EYES) break; if (!this.onTeam(gd) || gd.state === 'dead' || g.time < gd.dazzledUntil) continue; eyes.push(mateWandEye(g, gd) ?? eyeOf(gd.char)); }   // (a teammate ordered to look under a door: his lens in his own eye's place — wandorder.ts)
     else for (const e of mateWandEyes(g)) { if (eyes.length >= FOG_EYES) break; eyes.push(e); }   // (only my own eyes: an ordered lens is a device feed, as a sticky camera's is)
     for (const e of stickyEyes(g)) { if (eyes.length >= FOG_EYES) { STICKY_STATS.blind++; break; } eyes.push(e); }   // (his sticky cameras, newest first, in the places the frame has left: stickycam.ts — nothing with none out)
-    { const e = g.rails?.eye(); if (e && eyes.length < FOG_EYES) eyes.push(e); const s = g.rails?.stepEye(); if (s && eyes.length < FOG_EYES) eyes.push(s); }   // (a tutorial mission's lookout in the seat with nobody on the floor: rails.ts — null off such a level)
-    this.eyes = eyes; S.eyes = eyes.length;
+    // (THE FRAME'S EYES — rails.ts: the seat's lookout, a step's eye. With RAILS.eyeView they are the PICTURE's alone: `pic` is the list the mask, the doors
+    //  and the loose things read, and `eyes` stays the team's own — the list every man's seen() is answered from, the same as with no frame's eye at all, the
+    //  man a step's eye takes the picture's last place from included. A man only a frame's eye has a line to is drawn, not seen: `framed`, in the verdicts)
+    let pic = eyes, view: FogEye[] | null = null;
+    { const e = g.rails?.eye(), s = g.rails?.stepEye(), first = !!s && !!g.rails?.eyeFirst, own = !!(e || s) && !!g.rails?.eyeView;
+      if (own) { pic = eyes.slice(); view = []; }
+      if (s && first) { if (pic.length >= FOG_EYES) pic.length = FOG_EYES - 1; pic.push(s); view?.push(s); }   // (the step's own eye is what the step is about: with the places full it takes the last one — with four men up and the lookout in, it was the one dropped)
+      if (e && pic.length < FOG_EYES) { pic.push(e); view?.push(e); }   // (a tutorial mission's lookout in the seat with nobody on the floor: rails.ts — null off such a level)
+      if (s && !first && pic.length < FOG_EYES) { pic.push(s); view?.push(s); } }
+    this.eyes = pic; S.eyes = pic.length;
     // (the squad's own men for the doors' rule, FOG.squadDoors: every living teammate who is not blinded, whoever's eyes lift the fog)
     this.mates.length = 0; if (FOG.squadDoors && FOG.doors) for (const gd of g.guards) if (this.onTeam(gd) && gd.state !== 'dead' && g.time >= gd.dazzledUntil) this.mates.push(gd.char);
     // (the men the squad is shooting at, FOG.squadFire: a teammate's count of aimed rounds went up since the last update — the man he is on is stamped)
@@ -462,7 +471,8 @@ export class FogOfWar {
       const seen = lines.get(gd) === true;
       const since = g.time - r.t;   // (a record outlives nothing but its Guard object; a clock put back by a checkpoint load meets fresh men — and a stamp from an abandoned future is no sighting)
       const fired = !seen && this.firedOn(gd);
-      if (dead && (seen || fired || this.shown.has(gd) || (since >= 0 && since < Math.max(FOG.linger, 0.5)))) r.body = true;   // seen lying there — or seen going down (under the squad's rounds too: FOG.squadFire)
+      const framed = r.framed = !seen && !!view && view.some(e => dead ? this.eyeOnBody(e, gd) : this.lineToMan(e, gd, gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.1, 0])));   // (walls and leaves only: no plume is asked along a frame eye's line)
+      if (dead && (seen || fired || framed || this.shown.has(gd) || (since >= 0 && since < Math.max(FOG.linger, 0.5)))) r.body = true;   // seen lying there — or seen going down (under the squad's rounds too: FOG.squadFire)
       r.seen = seen; if (seen) { r.t = g.time; if (!dead) { const a = r.at ?? (r.at = [0, 0, 0]), p = gd.char.pos; a[0] = p[0]; a[1] = p[1]; a[2] = p[2]; } }   // (where he stood, kept in place whatever the knob says: a mark asked for later is never at an older spot than its time)
       if (seen) S.seen++;
       if (!this.drawn(gd)) { this.hiddenChars.add(gd.char); S.hidden++; }
@@ -482,7 +492,7 @@ export class FogOfWar {
     } else if (this.doorRecs.size) this.doorRecs.clear();
     // ---- the renderer's block
     if (this.lookFrames > 0) { this.lookFrames--; FOG.desat = FOG_PAGE.desat; FOG.edge = FOG_PAGE.edge; }
-    F.on = true; F.count = eyes.length; F.dim = FOG.dim; F.desat = FOG.desat; F.topPad = FOG.topPad; F.edge = Math.max(0, FOG.edge);
+    F.on = true; F.count = pic.length; F.dim = FOG.dim; F.desat = FOG.desat; F.topPad = FOG.topPad; F.edge = Math.max(0, FOG.edge);
     const fov = fieldDeg(), near = fieldNear();
     const full = fov >= 360; const cosHalf = full ? -2 : Math.cos(Math.max(1, fov) * 0.5 * DEG);
     // (the picture's soft edges are the cone's alone: a plain fovDeg wedge keeps its hard line — the block's three rows 0 = the kernel's old answer, bit for bit)
@@ -491,7 +501,7 @@ export class FogOfWar {
     F.softIn = soft > 0 ? Math.cos(Math.max(0, fov * 0.5 - soft * 0.5) * DEG) : 0; F.softOut = soft > 0 ? Math.cos(Math.min(180, fov * 0.5 + soft * 0.5) * DEG) : 0;
     F.nearSoft = FOG.cone && !full ? Math.max(0, FOG.coneNearSoftM) : 0;
     for (let k = 0; k < FOG_EYES; k++) {
-      const e = eyes[k], o = k * 4;
+      const e = pic[k], o = k * 4;
       if (!e) { F.eyes.fill(0, o, o + 4); F.looks.fill(0, o, o + 4); continue; }
       F.eyes[o] = e.at[0]; F.eyes[o + 1] = e.at[1]; F.eyes[o + 2] = e.at[2]; F.eyes[o + 3] = e.id;
       const L = Math.hypot(e.look[0], e.look[2]) || 1;
@@ -854,7 +864,7 @@ export class FogOfWar {
     if (!this.active || this.onTeam(gd)) return true;
     const r = this.recs.get(gd); if (!r) return false;
     if (r.seen || (gd.state === 'dead' && r.body)) return true;
-    const since = this.g.time - r.t; return (since >= 0 && since < FOG.linger) || this.firedOn(gd) || this.shown.has(gd);
+    const since = this.g.time - r.t; return (since >= 0 && since < FOG.linger) || this.firedOn(gd) || this.shown.has(gd) || !!r.framed;
   }
   /** is the squad shooting at him: a teammate's aimed round went at him inside FOG.squadFireSecs (false while the rule is off) */
   firedOn(gd: Guard): boolean { if (!FOG.squadFire) return false; const t = this.firedAt.get(gd); return t !== undefined && this.fireClock - t < FOG.squadFireSecs; }

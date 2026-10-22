@@ -53,7 +53,7 @@ const HALF = Math.PI / 2;
 const YARD: Rect = { x0: 5, x1: 35, z0: 5, z1: 23 };
 type Side = 'n' | 's' | 'e' | 'w';
 interface HutDoor { name: string; side: Side; at: number; extra?: Partial<LevelDoorDef> }
-interface HutSpec { x0: number; z0: number; x1: number; z1: number; kind?: 'mud' | 'mudLight' | 'render' | 'block'; doors: HutDoor[]; windows?: { side: Side; at: number; w?: number }[]; floor?: 'mudFloor' | 'slab' }
+interface HutSpec { x0: number; z0: number; x1: number; z1: number; kind?: 'mud' | 'mudLight' | 'render' | 'block'; doors: HutDoor[]; windows?: { side: Side; at: number; w?: number; glass?: boolean }[]; floor?: 'mudFloor' | 'slab' }
 
 export function build() {
   const trace: GeneratorTrace = { groups: [] };
@@ -97,7 +97,7 @@ export function build() {
     grp(`hut${n}.walls`);
     const holes = (side: Side) => [
       ...h.doors.filter(d => d.side === side).map(d => ({ a: d.at, b: d.at + 1.2 })),
-      ...(h.windows ?? []).filter(w => w.side === side).map(w => ({ a: w.at, b: w.at + (w.w ?? 0.8), y0: 1.0, y1: 1.85 })),
+      ...(h.windows ?? []).filter(w => w.side === side).map(w => ({ a: w.at, b: w.at + (w.w ?? 0.8), y0: 1.0, y1: 1.85, ...(w.glass ? { glass: 'whole' as const } : {}) })),
     ];
     G.wallX(h.z0, h.x0 - t, h.x1 + t, kind, holes('n')); G.wallX(h.z1, h.x0 - t, h.x1 + t, kind, holes('s'));
     G.wallZ(h.x0, h.z0 + t, h.z1 - t, kind, holes('w')); G.wallZ(h.x1, h.z0 + t, h.z1 - t, kind, holes('e'));
@@ -150,7 +150,7 @@ export function build() {
 
   // ---- the hall: a locked door on its far face, in the passage past the nest; a street window that looks at both its men ----
   const HALL = hut({ x0: 25.5, z0: 17, x1: 32.4, z1: 22.2, kind: 'render', floor: 'slab', doors: [{ name: 'hall', side: 'e', at: 18.9, extra: { locked: true, keySide: -1 } }],   // (the lock is on the passage's face)
-    windows: [{ side: 'n', at: 30.6, w: 1.0 }] });   // (one window, at the door end: it looks at both corners, and from inside it shows only the nest's own ground)
+    windows: [{ side: 'n', at: 30.6, w: 1.0, glass: true }] });   // (one window, at the door end: it looks at both corners, and from inside it shows only the nest's own ground)
   grp('hall.room');
   G.rug(29.6, 19.6, 3.0, 2.2, 'afghan'); G.table(28.6, 21.4, 2.0, 0.8, 0, 'ply'); G.plasticChair(28.1, 20.7, 0); G.plasticChair(29.1, 20.7, 0);
   G.toshak(27.0, 19.4, 1.9, HALF, 'rugGreen'); G.trunk(26.2, 17.5, 0, 'paintBlue'); G.tube(29.5, 19.6, true, 'hall');
@@ -204,7 +204,7 @@ export function build() {
       { id: 'shop', name: 'Charlie', rooms: ['workshop'], mayLeave: false, barricade: [] },
       { id: 'nest', name: 'Delta', rooms: ['nest'], mayLeave: false, barricade: [] },
       { id: 'hall', name: 'Echo', rooms: ['hall'], mayLeave: false, barricade: [] },
-      { id: 'picket', name: 'Picket', rooms: ['road'], mayLeave: false, barricade: [] },
+      { id: 'picket', name: 'Roadblock', rooms: ['road'], mayLeave: false, barricade: [] },
     ],
   };
 
@@ -218,7 +218,7 @@ export function build() {
   // cannot already be true as it comes up (the maintainer, playing the first cut: "i think this needs more explanation for the systems. maybe even a
   // modal that pauses the game and explains it", and the window's card is his own sentence)
   const CARDS = {
-  entry: { title: 'Two ways in', text: 'Once they\'re stacked on a door, they\'ll wait until you say go.\nPress [B] again and they\'ll pick how to go in. They\'ll throw a flashbang first if they have one to spare and there might be enemies inside.\nPress [F] to send them straight in with no flashbang.' },
+  entry: { title: 'Two ways in', text: "Once they're stacked on a door, they'll wait until you say go.\nPress [B] on that door again and they'll choose how to go in, with a flashbang first if they have one to spare.\nPress [F] to send them straight in with no flashbang." },
     side: { title: 'An enemy watching a doorway', text: 'An enemy who\'s watching a doorway will shoot anyone who steps into it.\nMost rooms have another door, so send the squad to the one behind him.' },
     follow: { title: "The squad's ring", text: 'Tap [B] to give the usual order for whatever you\'re pointing at.\nHold the same key down to open a ring with the rest of the orders.' },
     gun: { title: 'Suppression', text: 'An enemy who\'s being shot at will keep his head down, and then he can\'t shoot back.\nShoot at the gunner, then move while he\'s down.' },
@@ -236,9 +236,9 @@ export function build() {
     steps: [
       // 1 · two easy rooms: the squad's key on a door, twice
       { id: 'stack-hut', line: 'Press [B] on the guard hut door', after: { line: 'They\'re stacking up on the door', on: ['stack'] }, done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
-      { id: 'go-hut', line: 'Press [B] again to send them in their own way', after: { line: 'They\'re going in', on: ENTRY, word: 'They\'re going straight in' }, explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
+      { id: 'go-hut', line: 'Press [B] on the door again to send them in', after: { line: 'They\'re going in', on: ENTRY, word: 'They\'re going straight in' }, explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
       { id: 'stack-store', line: 'Press [B] on the store door', after: { line: 'They\'re stacking up on the store door', on: ['stack'] }, done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
-      { id: 'go-store', line: 'Press [B] again to send them in', after: { line: 'They\'re going in', on: ENTRY, word: 'They\'re going straight in' }, done: taken('store'), at: [10.85, 1, 16.5] },
+      { id: 'go-store', line: 'Press [B] on the door again to send them in', after: { line: 'They\'re going in', on: ENTRY, word: 'They\'re going straight in' }, done: taken('store'), at: [10.85, 1, 16.5] },
       // (its own step: a line the men's order has gone out on is drawn as something to watch, with no ring, and this one is an ask with a place)
       { id: 'in-store', line: 'Follow them in', done: { is: 'in', area: { ...STORE } }, at: [10.85, 1, 18.6] },
       // 2 · A DOORWAY HE HOLDS: as the store falls the workshop's man is on his open lane doorway, in the picture through the fog, his rounds on the
@@ -249,7 +249,7 @@ export function build() {
       { id: 'out', line: 'Those shots came from outside. Get out to the street', done: or(near(SHOP_VIEW, 1.5), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street', eye: SHOP_EYE },
       { id: 'side', line: 'He\'s watching that doorway. Press [B] on the side door', explain: CARDS.side, done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
       { id: 'round', line: 'Go around with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
-      { id: 'shop', line: 'Press [B] again to send them in behind him', after: { line: 'They\'re going in behind him', on: ENTRY, word: 'They\'re going in behind him' }, done: taken('workshop'), at: D_SIDE },
+      { id: 'shop', line: 'Press [B] on the door again to go in behind him', after: { line: 'They\'re going in behind him', on: ENTRY, word: 'They\'re going in behind him' }, done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
       // (the held key is its own step, and a TAP of the squad's key gives nothing while it is up — the frame's `noTap`: tapped at the old one line, the
       //  key sent the four to the ring at the wall's end and the menu was never met)
@@ -258,7 +258,7 @@ export function build() {
       // (no ring on the nest while the line says shoot: a ring is where to GO. The gunner is in the picture through the fog, and his rounds say where he is)
       { id: 'gun', line: 'There\'s a gunner ahead. Shoot back to make him duck', explain: CARDS.gun, done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), cue: 'gun' },
       { id: 'blocks', line: 'While he\'s down, run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS, cue: 'ducks' },
-      { id: 'frag', line: 'Press [5], then left-click to throw a frag over the sandbags', explain: CARDS.frag, done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },
+      { id: 'frag', line: 'Press [5], then left-click to throw a frag over the sandbags', explain: CARDS.frag, done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'], cue: 'atblocks' },
       { id: 'nest', line: 'Take the gun nest', done: taken('nest'), at: [32.0, 1, 13.8], cue: 'fragged' },
       // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A LOCK IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
       //     leaf is kicked in, and it is the way in
@@ -272,7 +272,7 @@ export function build() {
       { id: 'bags', line: 'More are coming. Get behind the sandbags', done: or(near(BAGS, 1.6), taken('road')), at: BAGS, checkpoint: 'the bags' },
       { id: 'front', line: 'Hold the road gate', done: or({ is: 'cue', name: 'flank' }, taken('road')), at: [35.0, 1, 14.0], cue: 'picket' },
       { id: 'back', line: 'They\'re behind you! [X] on the alley, then press [2]', explain: CARDS.back, noTap: 'Keep [B] held down', done: or(gave('cover'), taken('road')), at: MOUTH },
-      { id: 'hold', line: 'Finish off the last of them', done: taken('road'), at: [35.0, 1, 14.0], cue: 'covered' },
+      { id: 'hold', line: 'Finish off the rest of them', done: taken('road'), at: [35.0, 1, 14.0], cue: 'covered' },
     ],
   } as LessonData;
 
@@ -337,6 +337,13 @@ export function build() {
     gateLamp(25.0, 5.36, 'lived.alley.lamp_gate', 25.0, 5.0);
     room('mast');
     G.jerryCan(29.9, 9.4, 0.4, 'jerryYellow'); G.patch(28.7, 9.9, 1.2, 0.8, 'oil', 0.2);
+    room('nest');
+    // THE GROUND ROUND THE GUN IS USED GROUND (from the bags to the hall's wall it was one flat sheet of dirt, the biggest on the level): sand that has run
+    // out of the bags along their foot, oil under the can, the wet where the pot is emptied, the gravel that gathers under a wall's drip line, a drift in
+    // the corner by the gate wall, the trodden way round the bags' end, a few field stones behind the crates. All decals but the stones, which are
+    // stepped over: this is the ground the nest is taken across and the hall's window is shot through
+    G.patch(31.3, 14.6, 2.6, 0.9, 'dust', 0.1); G.patch(32.6, 12.9, 1.6, 0.7, 'dust', -0.2); G.patch(33.3, 15.5, 1.0, 0.8, 'oil', 0.3); G.patch(33.0, 13.9, 1.8, 1.3, 'damp', 0.5);
+    G.patch(31.6, 16.55, 4.6, 0.7, 'gravel', 0); G.patch(34.2, 16.0, 0.9, 2.0, 'dust', 0.1); G.patch(29.4, 15.6, 1.6, 1.1, 'dirt', -0.4); G.rubble(34.3, 12.0, 0.5, 5);
     room('road');
     G.crates(39.4, 8.9, 0.3, 1, 'olive'); G.jerryCan(39.5, 11.9, 0.3); G.lantern(39.3, 10.9, 'lived.road.lantern', 'exterior');   // the picket's camp: a box, its water, its lantern (on the photocell's group with the lamps: nobody burns one at midday)
     gateLamp(36.3, 14.22, 'lived.road.lamp_gate', 36.3, 14.6);                  // on the road's blast wall, outside the gate: whoever comes through the gate comes through its light

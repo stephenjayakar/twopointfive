@@ -29,7 +29,10 @@
 //  THE BIG LINE AND YOUR OWN MEN (ui/railclear.ts, Rails.lineMen, RAILS.lineClear): the line has two places, where it lies and the bottom edge, and is at
 //      the edge while a man of yours is under where it lies; the frame lists the squad, and the player when he is on the floor. And a deed can name the
 //      man an order was given on. RAILS_BREAK=1 reaches this line through the list alone (nobody on it); the rule on boxes and the deed have no break.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's and the big line's must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
+//  THE FRAME'S EYES ARE THE PLAYER'S VIEW (fogofwar.ts update, RAILS.eyeFirst, RAILS.eyeView): a step's eye has a place among the fog's five, and a man
+//      only a frame's eye has is drawn, not seen: the squad's entry on his room's door is the one it would take with no eye there. RAILS_BREAK=1 reaches
+//      both lines through the step's eye (none is named under it).
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's, the big line's and the two of the step's eye must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -130,14 +133,14 @@ export async function railsCheck(): Promise<boolean> {
       verdict(was === 2 && shift && enter && !sprint && started && !cheat && A0.size === 1 && A0.has('camera') && !end && i1 === 0 && A1.size === 1 && unseen && !after && Math.abs(d1 - d0) > 1 && Math.abs(d2 - d0) < 0.01,
         'the mission again: Shift rides with Enter through the gate (and alone does not), the run is no cheat\'s, a restart from the third step is on the first step with only its action open before a tick has passed, on the view the first run opened on, and does not end, and the mission left leaves the player seen again',
         `was on step ${was + 1} · Shift+Enter through ${shift && enter}, Shift alone ${sprint} · verdict started ${started}, cheat ${cheat} · before a tick: ${sum0} · after: step ${i1 + 1}, end ${end ?? 'none'}, open ${[...A1].join(' ')} · unseen in the seat ${unseen}, after quitting ${after} · view ${d0.toFixed(1)} → ${d1.toFixed(1)} → ${d2.toFixed(1)}`); }
-    // ---- 11: the ring on the screen is the place it marks; the lookout sees the road and no room
+    // ---- 11: the ring on the screen is the place it marks; the mission has no fog of war (the level's `rails.fog: false`): every man on the floor is in the picture
     { const R = await rig(true), g = R.g, I = R.I; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step: its mark is on the yard)
       const at = g.lesson.step?.at as [number, number, number] | undefined, cv = R.W.canvas, cam = R.W.cam; const [sx, sy] = at ? cam.project(at, cv.clientWidth, cv.clientHeight) : [0, 0];
       I.mouseX = sx + 12; I.mouseY = sy - 9; const on = g.rails.markUnder(I, cam, cv); I.mouseX = sx + 140; const off = g.rails.markUnder(I, cam, cv);
       const foes = g.guards.filter((x: any) => x.team !== 'operative' && x.state !== 'dead'), road = foes.filter((x: any) => x.char.pos[2] > 22), house = foes.filter((x: any) => x.char.pos[2] < 18);
       const seenRoad = road.filter((x: any) => g.fogOfWar.drawn(x)).length, seenHouse = house.filter((x: any) => g.fogOfWar.drawn(x)).length;
-      verdict(!!at && on === at && off === null && g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === 0,
-        'the ring on the screen is the place it marks (the cursor on it is on that place, off it is not), and with the fog of war on from the first step the lookout has the men on the road in the picture and nobody in a room',
+      verdict(!!at && on === at && off === null && !g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === house.length,
+        'the ring on the screen is the place it marks (the cursor on it is on that place, off it is not), and the mission is played with no fog of war: the men on the road and the men in the rooms are all in the picture',
         `step '${g.lesson.step?.id}' mark ${at ? at.join(',') : 'none'} · cursor on the ring → ${on ? 'the place' : 'nothing'}, 140 px off → ${off ? 'the place' : 'nothing'} · fog ${g.fogOfWar.active ? 'on' : 'off'} · on the road ${seenRoad}/${road.length} drawn · in the house ${seenHouse}/${house.length} drawn`); }
     // ---- the last line stays up until the mission's own end
     { const R = await rig(true), g = R.g; R.run(0.5); const L = g.level.scenarios.lesson, n = L.steps.length, first = g.rails.prompt();
@@ -316,6 +319,40 @@ export async function railsCheck(): Promise<boolean> {
         && !!cs && !!other && named === 0 && thing === 0 && plainDeed === 0 && noMan > 0 && door > 0 && bad > 0 && trail > 0 && i1 === i0 && i2 === i0 + 1,
         'the big line stays clear of your own men: it lies where it lies with nobody under it, goes to the bottom edge from over a man, does not move again while he drifts, comes home only when he is well clear, lies where it lies with both places taken, and moves twice and never up while a man walks the whole picture; the frame lists the squad for it, and the player on the floor (nobody with the knob off); and a deed can name the man an order was given on, and only that order counts',
         `nobody ${none} · men elsewhere ${far} · a man under it ${under} px (the edge is ${low}) · moves in 240 frames of drift ${drift} · just above it ${near}, well clear ${gone} · both places taken ${both} · no room under it ${short} · a walk down ${dn.n} moves, up ${up.n}, highest top ${Math.min(dn.top, up.top)} (it lies at ${rest.t}) · the frame's men ${men.length} of a squad of ${squad}, on the floor ${floor.length}, knob off ${off} · faults: named man ${named}, thing ${thing}, plain ${plainDeed}, no such man ${noMan}, a door after @ ${door}, no kind ${bad}, a space at the end ${trail} · the step: ${i0 + 1}, after an order on ${other} ${i1 + 1}, after the order on ${cs} ${i2 + 1}`); }
+    // ---- a step's own eye has a place among the fog's (fogofwar.ts update, RAILS.eyeFirst): the fog takes five, and with four men up and the seat's
+    //      lookout in, the step's eye was the one dropped — the squad's own wall charge went off in the fog, twice, in the maintainer's play. The mission's
+    //      own fog word is the level's to choose, so this rig puts the fog on itself
+    { const R = await rig(true), g = R.g, L = g.level.scenarios.lesson; L.rails.fog = true; for (const T of L.steps) delete T.fog; R.run(0.5);
+      const lk = g.rails.eye(), lookIn = !!lk && !g.rails.stepEye() && g.fogOfWar.eyes.includes(lk), lookAt = L.rails.sky.eye.at as number[], lookSees = g.fogOfWar.spotSeen(lookAt[0], lookAt[2]);   // (a step with no eye of its own: the seat's lookout is one of the fog's)
+      const k = L.steps.findIndex((T: any) => T.id === 'charge'), T = L.steps[k]; g.lesson.i = k; R.run(0.4);
+      const s = g.rails.stepEye(), at = (T.eye?.at ?? T.at) as number[], look = !!g.rails.eye(), men = R.squad().length, on = g.fogOfWar.on;
+      const eyes1 = g.fogOfWar.eyes.length, in1 = !!s && g.fogOfWar.eyes.includes(s), seen1 = g.fogOfWar.spotSeen(at[0], at[2]);
+      RAILS.eyeFirst = false; R.run(0.4); const in0 = !!s && g.fogOfWar.eyes.includes(s), seen0 = g.fogOfWar.spotSeen(at[0], at[2]); RAILS.eyeFirst = true;
+      verdict(on && men === 4 && look && lookIn && lookSees && !!s && eyes1 === 5 && in1 && !in0 && seen1 && !seen0,
+        'a step\'s own eye has a place among the fog\'s five: on a step with none the seat\'s lookout is one of them and its own ground is seen; with four men up, on the wall\'s step, the step\'s eye is one of them and where it looks is seen (and it is the one dropped, and the place in the fog, with the rule off, as it was)',
+        `fog ${on ? 'on' : 'OFF'} · ${men} men up, the lookout ${look ? 'named' : 'absent'}, on the first step among the fog's eyes ${lookIn}, its ground ${lookSees ? 'seen' : 'not seen'} · the step's eye ${s ? 'named' : 'none'} · the fog's eyes ${eyes1}, the step's among them ${in1} (rule off: ${in0}) · where it looks ${seen1 ? 'seen' : 'not seen'} (rule off: ${seen0 ? 'seen' : 'not seen'})`); }
+    // ---- the frame's eyes are the player's VIEW, not the squad's KNOWLEDGE (fogofwar.ts update, RAILS.eyeView): a step's lookout in a hall the squad then
+    //      entered put the hall's gunner in the fog's seen(), which the squad's own entry pick reads (autopilot.ts contactBehind) — the stack at the front door
+    //      threw its last can at a man nobody of the team had seen and went in three seconds behind the pair at the back. Here: a man of the other side stood
+    //      in the step's eye, in a room behind a door, with one can left
+    { const { autoEntries } = await import(`${ROOT}/src/game/autopilot.ts`);
+      const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, F = g.fogOfWar; L.rails.fog = true; for (const T of L.steps) delete T.fog; R.run(0.5);
+      g.lesson.i = L.steps.findIndex((T: any) => T.id === 'charge'); R.run(0.4);
+      const s = g.rails.stepEye(), foe = g.guards.find((h: any) => h.team !== 'operative' && h.state !== 'dead' && !h.script && !h.civ);
+      // (the first place down the eye's own line that is a room's floor with nothing between)
+      const at = (m: number): [number, number, number] => [s.pos[0] + s.look[0] * m, 0, s.pos[2] + s.look[2] * m];
+      const m = s ? [1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5].find(d => g.cleared.roomAt(at(d)) > 0 && !g.col.nav.isBlocked(at(d)[0], at(d)[2]) && !g.col.segmentBlocked(s.pos, [at(d)[0], 1.1, at(d)[2]])) : undefined;
+      const stand = (n: number) => { for (let i = 0; i < n; i++) { if (m && foe) { foe.char.pos[0] = at(m)[0]; foe.char.pos[2] = at(m)[2]; } R.run(1 / 60); } };
+      stand(8); g.doorTools.bangs = 1;
+      const room = foe ? g.cleared.roomAt(foe.char.pos) : 0, sides = [1, -1] as const;
+      const way = g.doors.list.flatMap((d: any) => sides.map(side => ({ d, side }))).find((w: any) => g.cleared.roomBy(w.d, w.side > 0 ? -1 : 1) === room && g.cleared.isKnown(g.cleared.roomBy(w.d, w.side)));
+      const read = () => ({ seen: !!foe && F.seen(foe), drawn: !!foe && F.drawn(foe), hidden: !foe || F.hidden(foe), known: !!foe && !!F.sighting(foe), lit: !!foe && F.spotSeen(foe.char.pos[0], foe.char.pos[2]),
+        pick: way ? autoEntries(g, { kind: 'door', at: way.d.frameCentre, door: way.d, side: way.side }) : { ids: [] as string[], why: 'no door' } });
+      const on = read(); RAILS.eyeView = false; stand(8); const off = read(); RAILS.eyeView = true;
+      const word = (r: ReturnType<typeof read>) => `seen ${r.seen}, a sighting ${r.known}, drawn ${r.drawn}, hidden ${r.hidden}, his floor lit ${r.lit}, the entry ${r.pick.ids.join(' then ') || 'none'} (${r.pick.why})`;
+      verdict(!!s && !!foe && !!m && !!way && room > 0 && on.lit && on.drawn && !on.hidden && !on.seen && !on.known && on.pick.why !== 'contact' && on.pick.ids[0] === 'openClear' && off.seen && off.pick.why === 'contact' && off.pick.ids[0] === 'bangClear',
+        'the frame\'s eyes are the player\'s view, not the squad\'s knowledge: a man of the other side in a step\'s eye stands on lit floor and is in the picture, the team has not seen him and has no sighting of him, and the squad\'s entry on his room\'s door with one can left is the one it would take with no eye there (with the rule off he is seen, and the stack throws its last can: as it was)',
+        `the step's eye ${s ? 'named' : 'none'} · a man stood in it ${foe && m ? `${m} m down its line, in room ${room}` : 'none'} · a door into his room from a known one ${way ? 'found' : 'none'} · ${word(on)} · rule off: ${word(off)}`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
       const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };
