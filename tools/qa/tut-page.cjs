@@ -75,7 +75,8 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     pan: async () => { await page.keyboard.down('KeyD'); await run(page, 70); await page.keyboard.up('KeyD'); },
     move: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 25; k++) { await run(page, 120); if ((await read(page)).id !== 'move') break; } },
     gate: async () => { for (let k = 0; k < 40; k++) { await run(page, 120); if ((await read(page)).id !== 'gate') break; } },
-    stack: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'stack') break; } },
+    // (the stack's tap is made WITH SHIFT DOWN: plan mode is locked on this step and the pair is then the plain key — the second play's 'Q doesn't do anything here')
+    stack: async s => { await point(s.at); await page.keyboard.down('ShiftLeft'); await run(page, 3); await tap('KeyQ'); await page.keyboard.up('ShiftLeft'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'stack') break; } },
     go: async () => { await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'go') break; } },
     kitchen: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 10; k++) { await run(page, 120); if (k >= 3) break; }
       await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'kitchen') break; } },

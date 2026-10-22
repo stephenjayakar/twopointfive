@@ -19,8 +19,14 @@
 //      a restart from a later step is on the first step, only its action open, before a tick has passed, and does not end; the mission left, he is seen again.
 //  14. THE ROWS (`rails.rows`, on levels/tut-quiet.json): Space offers only the verbs the mission names — at a locked door the pick and no boot; without
 //      the list, every row the door has anywhere; and no row at all while Space itself is locked (the gate beside the start). And his own actions' ring (handring.ts) is worked with its own digit while it is up: on the whistle's
-//      step the digit alone does nothing, the key kept down and then the digit whistles.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes' and the card's must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
+//      step the digit alone does nothing, the key kept down and then the digit whistles. A digit pressed inside the hold, before the ring is up,
+//      whistles too and is no slot's.
+//  THE SECOND PLAY'S NOTES (tut-sky): the roadblock's fire lands over many places and none by a man; Shift down with the command key gives the order while
+//      the plan is locked (RAILS.shiftTap); a line says what the men are doing once its order is out and asks again when nothing comes of it (a step's
+//      `after`, RAILS.afterSecs / afterMax); a line with no key in it is one to watch; the page's input lets go of a modifier the system says is up.
+//  THE GATE'S BEAT: the squad set in the yard, the roadblock comes down the road (the script's `direct` walk) and the line is gone within eight seconds;
+//      with that word taken off its men, and covered lanes on (the page's stand), it is long. No break of its own: the second run is its proof.
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's and the card's must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -154,11 +160,13 @@ export async function railsCheck(): Promise<boolean> {
         `no step names it: taken ${plain} (locked ${free0}) · on the last step: locked ${locked}, taken ${taught} · open from the start: locked ${open}, taken ${after}`); }
     // ---- the first play's notes (tut-sky): the squad on a knee until its first order; no teammate's laser; the hold is its own line and a tap gives nothing
     //      on it; the wall has a lookout while its charge is up; the last order hands the view back to the squad and puts the night vision up
-    { const R = await rig(true), g = R.g, I = R.I, L = g.level.scenarios.lesson, { laserOn } = await import(`${ROOT}/src/game/irlaser.ts`);
+    { const R = await rig(true), g = R.g, I = R.I, L = g.level.scenarios.lesson, { laserOn, IR } = await import(`${ROOT}/src/game/irlaser.ts`);
       const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), ringOn = !!CMDRING.on && CMDRING.holdSecs > 0;   // (the ring on the command key held is a switch of its own: held off on the frozen stand)
       R.run(1.0); const men = R.squad(), low = men.filter((m: any) => m.script?.crouch === true).length;
       // (a laser: a teammate in the hunt, muzzle up — on with the level's key taken away, off with it)
-      const m0 = men[0], st = m0.state, md = m0.muzzleDown; m0.state = 'alert'; m0.muzzleDown = false; const lasOff = laserOn(g, m0); delete L.rails.lasers; const lasOn = laserOn(g, m0); L.rails.lasers = false; m0.state = st; m0.muzzleDown = md;
+      // (the page now shows no teammate's laser anywhere, IR.teamOff: the level's own key is asked with that switch held off, as `?teamlasers` would have it —
+      //  the mission keeps its word whichever way the page's switch stands)
+      const m0 = men[0], st = m0.state, md = m0.muzzleDown, tOff = IR.teamOff; IR.teamOff = false; m0.state = 'alert'; m0.muzzleDown = false; const lasOff = laserOn(g, m0); delete L.rails.lasers; const lasOn = laserOn(g, m0); L.rails.lasers = false; m0.state = st; m0.muzzleDown = md; IR.teamOff = tOff;
       // the hold's step: a tap on the wall's ring gives no order and its words come up; held, the ring is up and the line is the ring's
       const k = L.steps.findIndex((T: any) => T.id === 'charge'), T = L.steps[k], WALL = T.at as number[]; g.lesson.i = k; R.run(0.2);
       const line0 = g.rails.prompt(), n0 = g.orders.log.length, eye = g.rails.stepEye();
@@ -218,6 +226,65 @@ export async function railsCheck(): Promise<boolean> {
       verdict(!bad.length && drawn && TUTORIAL_MISSIONS.length >= 4,
         'the opening card: every tutorial mission\'s row carries a scene (a sentence or two) and what it teaches (three to five short lines, things and not keys, no digit above 5), and the load brief draws both (read as text: tools/qa/loadbrief-check.ts holds the screen)',
         bad.length ? bad.join(' · ') : `${TUTORIAL_MISSIONS.length} rows: ${(TUTORIAL_MISSIONS as any[]).map(e => `${e.id} ${e.teaches?.length}`).join(' · ')} · drawn ${drawn}`); }
+    // ---- the second play's notes (tut-sky): the roadblock's fire is walked over many places and none near a man; Shift with the command key is the command
+    //      key while the plan is locked (before, the press was thrown away with its row still on the panel); a line stops asking once its order is out and
+    //      asks again when nothing comes of it; a line with no key in it is one to watch; the page's input lets go of a modifier the system says is up
+    { const R = await rig(true), g = R.g, I = R.I, L = g.level.scenarios.lesson;
+      const marks: number[][] = [], add = g.decals.add.bind(g.decals); g.decals.add = (k: any, p: number[], ...r: any[]) => { marks.push([p[0], p[2]]); return add(k, p, ...r); };
+      R.run(14); g.decals.add = add;
+      const bins = new Map<string, number>(); for (const m of marks) { const k = `${Math.round(m[0])},${Math.round(m[1])}`; bins.set(k, (bins.get(k) ?? 0) + 1); }
+      const top = Math.max(0, ...bins.values()), men = R.squad(); let near = 99; for (const m of marks) for (const o of men) near = Math.min(near, flat([m[0], 0, m[1]], o.char.pos));
+      const spread = marks.length >= 30 && top / marks.length <= 0.3 && bins.size >= 10 && near >= 1.5 && men.length === 4;   // (before: 12 metres marked in thirty seconds, 58% in one — ten in fourteen is far from that and a bin clear of this script's dice)
+      // the stack's step: Shift down and the command key on the door — nothing with the rule off (the build as it was), the order with it
+      const k = L.steps.findIndex((T: any) => T.id === 'stack'), T = L.steps[k], DOOR = T.at as number[]; g.lesson.i = k; R.run(0.3);
+      const ask = g.rails.prompt();
+      // (an order pointed somewhere else is not the step being done: its line stays the ask. And a step's own line with no key in it is an ask, not a line to watch)
+      R.command([13.5, 0, 23.4]); R.run(0.3); const wrong = g.rails.prompt(), wrongGiven = g.orders.log.length > 0;
+      const was = T.line; T.line = 'Get up to the door'; const plain = g.rails.prompt(); T.line = was;
+      const shifted = (on: boolean) => { RAILS.shiftTap = on; const n = g.orders.log.length; R.W.cursorAt(DOOR); R.run(3 / 60, ['ShiftLeft']); R.W.cursorAt(DOOR); I.pressed.add('KeyB'); R.run(3 / 60, ['ShiftLeft', 'KeyB']); R.run(0.2, ['ShiftLeft']); return g.orders.log.slice(n).map((o: any) => o.order); };
+      const tap0 = RAILS.shiftTap; let off: string[] = [], on: string[] = []; try { off = shifted(false); on = shifted(true); } finally { RAILS.shiftTap = tap0; }
+      // …and its line: the ask before, what the men are doing after — and the ask again once that has stood too long with the step not done
+      const aft = g.rails.prompt(), max = RAILS.afterMax; let again: ReturnType<typeof g.rails.prompt> = null; try { RAILS.afterMax = 1.5; R.run(2.0); again = g.rails.prompt(); } finally { RAILS.afterMax = max; }
+      const kg = L.steps.findIndex((T: any) => T.id === 'gate'); g.lesson.i = kg; const gate = g.rails.prompt();   // (read as it comes up: its cue is long past on this floor and the step is done on its first tick)
+      // the page's input (game/input.ts), on a made-up window: a Shift whose key-up never came goes with the next event that says it is up; a key that goes down again unrepeated is a fresh press
+      const { Input } = await import(`${ROOT}/src/game/input.ts`); const G: any = globalThis, had: Record<string, unknown> = {}, names = ['window', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement'];
+      for (const n of names) had[n] = G[n];
+      const ls = new Map<string, ((e: any) => void)[]>(), hear = (t: string, f: (e: any) => void) => { ls.set(t, [...(ls.get(t) ?? []), f]); };
+      const fire = (t: string, e: Record<string, unknown>) => { for (const f of ls.get(t) ?? []) f({ preventDefault() { }, stopPropagation() { }, target: null, repeat: false, shiftKey: false, ctrlKey: false, altKey: false, metaKey: false, clientX: 0, clientY: 0, movementX: 0, movementY: 0, ...e }); };
+      let keysOk = false, keysWhy = '';
+      try { const win: any = { addEventListener: hear }; win.top = win.self = win; G.window = win; for (const n of names.slice(1)) G[n] ??= class { };
+        const inp: any = new Input({ addEventListener: hear, getBoundingClientRect: () => ({ left: 0, top: 0 }) } as any);
+        fire('keydown', { code: 'ShiftLeft', key: 'Shift', shiftKey: true }); const held = inp.keys.has('ShiftLeft');
+        fire('keydown', { code: 'KeyW', key: 'w', shiftKey: true }); const kept = inp.keys.has('ShiftLeft');            // (really down: it stays)
+        fire('keyup', { code: 'KeyW', key: 'w', shiftKey: true });
+        fire('keydown', { code: 'KeyW', key: 'w' }); const gone = !inp.keys.has('ShiftLeft') && inp.keys.has('KeyW');     // (its key-up never came, and the next key says it is up)
+        fire('keydown', { code: 'ShiftLeft', key: 'Shift', shiftKey: true }); fire('mousemove', {}); const mouse = !inp.keys.has('ShiftLeft');
+        inp.endFrame(); fire('keydown', { code: 'KeyW', key: 'w', repeat: true }); const rep = !inp.pressed.has('KeyW');   // (a held key repeating is no press)
+        fire('keydown', { code: 'KeyW', key: 'w' }); const fresh = inp.pressed.has('KeyW');                               // (down again with no repeat in it: its key-up was lost)
+        keysOk = held && kept && gone && mouse && rep && fresh; keysWhy = `held ${held} · kept while down ${kept} · let go by the next key ${gone} · by the mouse ${mouse} · a repeat is no press ${rep} · a key down again is one ${fresh}`;
+      } catch (e) { keysWhy = `threw: ${String(e).slice(0, 120)}`; } finally { for (const n of names) { if (had[n] === undefined) delete G[n]; else G[n] = had[n]; } }
+      verdict(spread && off.length === 0 && on.includes('stack') && !!ask && !ask.watch && /stack/.test(ask.line) && wrongGiven && wrong?.line === ask.line && !wrong?.watch && !!plain && !plain.watch && !!aft?.watch && aft.line === 'They stack up on the door' && !!again && !again.watch && again.line === ask.line && !!gate?.watch && /hold the gate/.test(gate.line) && keysOk,
+        'the second play\'s notes hold: the roadblock\'s rounds land over many places and none by a man; Shift down with the command key on the door gives the stack order (and nothing with the rule off, as it was); the line then says what the men are doing, and asks again when nothing has come of it; the gate\'s line is one to watch; the page lets go of a Shift the system says is up',
+        `the fire: ${marks.length} marks in 14 s over ${bins.size} metres, the busiest ${(100 * top / Math.max(1, marks.length)).toFixed(0)}% of them, the nearest to a man ${near.toFixed(1)} m · an order to the road on the door's step: the line "${wrong?.line}"${wrong?.watch ? ' (to watch)' : ''} · a keyless ask is ${plain?.watch ? 'a line to watch' : 'an ask'} · Shift + the key: rule off [${off.join(' ')}], on [${on.join(' ')}] · the line: "${ask?.line}" → "${aft?.line}"${aft?.watch ? ' (to watch)' : ''} → "${again?.line}" · the gate: "${gate?.line}"${gate?.watch ? ' (to watch)' : ''} · the keys: ${keysWhy}`); }
+    // ---- the gate's beat is short (tut-sky): once the squad sets in the yard the roadblock's men come DOWN THE ROAD for the gate (the script's `direct`
+    //      walk, through the gap in their own sandbags) and the fight is over in seconds. Left to the covered-lane price they go round the whole halt, which
+    //      is what the maintainer sat through ("this beat is too long, unclear what to do"). On the floor the mission has now the road is the one way from the
+    //      roadblock to the gate, so the walk with the word taken off is the same road and is only told; the run that must be long is the third, where the
+    //      script's men are kept at their sandbags: the line is gone because they came, not because the step lets go of it
+    { const beat = async (how: 'direct' | 'plain' | 'kept') => { const plain = how === 'plain'; const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, km = L.steps.findIndex((T: any) => T.id === 'move'), kg = L.steps.findIndex((T: any) => T.id === 'gate');
+        R.run(6); g.lesson.i = km; R.run(0.5); R.command(L.steps[km].at as V);
+        const seen = new Set<unknown>(), home = new Map<unknown, number[]>(); let t0 = -1, t1 = -1;
+        for (let i = 0; i < 60 * 60 && t1 < 0; i++) {
+          if (plain) for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '') && gd.script?.direct) { gd.script.direct = false; if (!seen.has(gd)) { seen.add(gd); gd.path = []; gd.pathGoal = null; } }
+          if (how === 'kept') for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '')) { const at = home.get(gd) ?? [gd.char.pos[0], gd.char.pos[2]]; home.set(gd, at); gd.char.pos[0] = at[0]; gd.char.pos[2] = at[1]; }   // (alive, armed, and where they stood)
+          R.run(1 / 60); if (t0 < 0 && g.lesson.i === kg) t0 = g.time; if (t0 >= 0 && g.lesson.i > kg) t1 = g.time; }
+        return { secs: t0 < 0 ? -1 : t1 < 0 ? 99 : t1 - t0, up: R.squad().length, nav: g.col.nav }; };
+      const { LANES } = await import(`${ROOT}/src/game/lanes.ts`);   // (covered lanes are a newer rule: where the stand holds them off there is no price to take the word off)
+      const A = await beat('direct'), B = await beat('plain'), C = await beat('kept');
+      const way = A.nav.findPath([30, 0, 23.6], [14.6, 0, 19.2], 6000) as number[][] | null; let m = 0; if (way) { let q = [30, 0, 23.6]; for (const w of way) { m += flat(q, w); q = w; } }
+      verdict(A.secs >= 0 && A.secs <= 8 && A.up === 4 && B.secs >= 0 && B.secs <= 8 && C.secs > 12 && !!way && m < 20,
+        'the gate\'s beat is short: the squad set in the yard, the roadblock comes down the road and the line that only watches is gone within eight seconds, all four on their feet (as short with the script\'s direct walk taken off its men: the road is the one way there; and long with them kept at their sandbags)',
+        `the gate's line stood ${A.secs.toFixed(1)} s, ${A.up} of the squad up · with the direct walk off ${B.secs.toFixed(1)} s${LANES.on ? '' : ' (covered lanes are off on this stand)'} · with its men kept at their sandbags ${C.secs.toFixed(1)} s · the road from the roadblock to the gate ${way ? m.toFixed(1) + ' m' : 'has no path'}`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
       const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };
@@ -256,10 +323,16 @@ export async function railsCheck(): Promise<boolean> {
       const extra = all0.filter(v => !named.includes(v)), pick = g.rails.offers('pick'), boot = g.rails.offers(extra[0] ?? 'pick'); g.teleportPlayer([21.5, 0, 17.5]); run(20);
       tap(digit); run(10); const early = L.steps[g.lesson.i]?.id;   // (no ring up: the digit is a slot's, and locked)
       I.pressed.add('Space'); I.keys.add('Space'); run(Math.ceil((HANDRING.holdSecs + 0.1) * 60)); I.keys.delete('Space'); const up = !!g.player.sel.ring; run(2); tap(digit); run(10);
-      const after = L.steps[g.lesson.i]?.id; HANDRING.on = ring0;
-      verdict(named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && pick && !boot && shut.length === 0 && shut0.length > 0 && at === 'whistle' && early === 'whistle' && up && after === 'grab',
-        'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere; and while Space itself is locked a thing in reach has no row at all. His own ring is worked with its own digit: the key kept down, then the last wedge, whistles',
-        `the list: ${named.join(' ')} · on the first step at the gate: ${shut.join(' ') || 'no row'} (without the list: ${shut0.join(' ') || 'no row'}) · at the back door with it: ${on.join(' ') || 'no row'} · without it: ${all0.join(' ') || 'no row'} · the ring: on step '${at}', the digit alone leaves '${early}', the key held puts the ring ${up ? 'up' : 'NOT up'}, then the digit: '${after}'`); }
+      const after = L.steps[g.lesson.i]?.id;
+      // …and a digit pressed INSIDE the hold, before the ring is up (handring.ts `early`: what a hand does with "Hold E, then 5"), is the wedge too: the gate
+      // lets it through to the ring and it is no slot's
+      const early0 = HANDRING.early; HANDRING.early = true; g.restartEncounter(); run(30); tap('KeyC'); run(20); for (const p of [[13.6, 0, 17.5], [21.5, 0, 17.5]]) { g.teleportPlayer(p); run(90); }
+      const at2 = L.steps[g.lesson.i]?.id, slot0 = `${g.player.slot}${g.player.holstered ? ' away' : ''}`;
+      I.pressed.add('Space'); I.keys.add('Space'); run(4); const notYet = !g.player.sel.ring; I.pressed.add(digit); I.keys.add(digit); W.step(DT); I.keys.delete(digit); run(2); I.keys.delete('Space'); run(10);
+      const quick = L.steps[g.lesson.i]?.id, slot1 = `${g.player.slot}${g.player.holstered ? ' away' : ''}`; HANDRING.on = ring0; HANDRING.early = early0;
+      verdict(at2 === 'whistle' && notYet && quick === 'grab' && slot1 === slot0 && named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && pick && !boot && shut.length === 0 && shut0.length > 0 && at === 'whistle' && early === 'whistle' && up && after === 'grab',
+        'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere; and while Space itself is locked a thing in reach has no row at all. His own ring is worked with its own digit: the key kept down, then the last wedge, whistles; and the digit pressed inside the hold, before the ring is up, whistles too and draws nothing',
+        `the list: ${named.join(' ')} · on the first step at the gate: ${shut.join(' ') || 'no row'} (without the list: ${shut0.join(' ') || 'no row'}) · at the back door with it: ${on.join(' ') || 'no row'} · without it: ${all0.join(' ') || 'no row'} · the ring: on step '${at}', the digit alone leaves '${early}', the key held puts the ring ${up ? 'up' : 'NOT up'}, then the digit: '${after}' · the digit 0.07 s into the hold (ring ${notYet ? 'not yet up' : 'UP'}): '${at2}' → '${quick}', in his hand ${slot0} → ${slot1}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

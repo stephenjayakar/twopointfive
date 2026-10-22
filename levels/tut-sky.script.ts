@@ -1,21 +1,31 @@
 // THE FIRST TUTORIAL MISSION'S SCRIPT (levels/tut-sky.json; game/director.ts): what the road does while the player learns the view and the command key.
 // One play program, 'tutorial' (game/rails.ts starts it with the mission, after a restart and after a checkpoint is put back). Every beat starts on a
 // lesson step's cue and can start clean from it: the men of the roadblock are found by name, and only spawned when nobody by that name is in the world.
-// Scripted rounds are real rounds (the Director's burst): while the squad is on its knees behind its tails they are AIMED at the two trucks, at the snow
-// either side of them and over the tails (heard and seen going by, a knee's height clear of a man); once the squad's smoke is out, into the smoke and the
-// south lane, never down the lane along the wall the squad runs to the gate. And what the bunkhouse does when the lights go: two men and two torches.
-// Imports nothing from src at run time.
+// Scripted rounds are real rounds (the Director's burst): while the squad is on its knees behind its tails they are WALKED over everything a round from the
+// roadblock can reach around it — both trucks' noses and screens, the road in front of them, the wall beside one file and the rail's bank past the other, the air
+// over the tails — two or three rounds to a place, never a burst into one spot (ZONES: each is a box a post has a clear line into, measured, and none is
+// nearer a kneeling man than a truck's width); once the squad's smoke is out, into the smoke and the south lane, never down the lane along the wall the
+// squad runs to the gate. And what the bunkhouse does when the lights go: two men and two torches. Imports nothing from src at run time.
 import type { LevelScriptFn, BeatCtx, UnitRef, Query } from '../src/game/director';
 import type { Vec3 } from '../src/math/vec';
 
 /** the roadblock's three posts (behind the sandbags tools/levels/tut-sky.ts lays across the road at the tunnel's mouth) and the names its men answer to
  *  (the station's own seven are Tango 1 to 7, down its rooms: game/roomclear.ts) */
 const POSTS: { name: string; at: Vec3 }[] = [{ name: 'Tango 8', at: [34.0, 0, 21.6] }, { name: 'Tango 9', at: [34.9, 0, 23.6] }, { name: 'Tango 10', at: [32.4, 0, 23.2] }];
-/** what they shoot at while the squad is behind its trucks: the two bonnets and cabs, the road in front of them */
-const AT_TRUCKS: Vec3[] = [[11.7, 0.9, 22.2], [10.9, 1.3, 22.5], [10.1, 0.7, 24.4], [9.1, 1.25, 24.5], [12.9, 0.05, 23.6], [12.1, 0.05, 25.0], [11.4, 1.0, 24.1]];
-/** …and what makes the road dangerous: the snow beside each file (rounds that come past the trucks' flanks), the air over the tails (a knee's height over
- *  a kneeling man, down the road behind him) */
-const AT_NEAR: Vec3[] = [[7.9, 0.05, 21.0], [6.1, 0.05, 21.1], [4.5, 0.05, 21.0], [6.7, 0.05, 26.0], [4.7, 0.05, 26.1], [1.5, 2.2, 22.5], [1.0, 2.2, 24.6], [1.5, 2.05, 23.6]];
+/** WHERE THE ROADBLOCK'S ROUNDS GO while the squad is behind its trucks: boxes to aim into (`by`: the posts with a clear line into it — the trucks, the
+ *  sandbags and the gun truck stand in the others' — · `w`: its share of the bursts). The maintainer, playing: "would be nice if the fire wasn't at a
+ *  single point, was spread around". A round aimed into a box in the air goes on to what is behind it: the wall, the snow, the road out west. Measured on
+ *  this floor from each post's eye (fifteen points a box, all but the last stretch of each line clear), and none is nearer a kneeling man than a truck's width */
+interface Zone { lo: Vec3; hi: Vec3; w: number; by?: string[] }
+const ZONES: Zone[] = [
+  { lo: [10.9, 0.4, 21.6], hi: [11.9, 1.7, 22.9], w: 3 },                                    // the north truck: nose, bonnet, screen
+  { lo: [9.3, 0.4, 23.9], hi: [10.5, 1.7, 25.2], w: 3, by: ['Tango 8', 'Tango 10'] },        // the south truck's
+  { lo: [12.3, 0.05, 21.6], hi: [16.0, 0.05, 23.0], w: 3, by: ['Tango 9', 'Tango 10'] },     // the road in front of them
+  { lo: [11.0, 0.05, 23.6], hi: [15.5, 0.05, 24.4], w: 2, by: ['Tango 8'] },
+  { lo: [3.0, 0.7, 20.5], hi: [9.0, 1.6, 20.5], w: 3 },                                      // past the north truck's flank: the road wall beside that file
+  { lo: [7.5, 0.7, 25.7], hi: [11.0, 1.1, 26.1], w: 3, by: ['Tango 8'] },                    // past the south truck's: the rail's bank beside the other
+  { lo: [1.5, 2.05, 22.0], hi: [1.5, 2.35, 25.0], w: 2, by: ['Tango 8', 'Tango 10'] },       // over the tails, a knee's height over a kneeling man
+];
 /** what the men behind the trucks call while they are pinned, in turn */
 const PINNED: [string, string][] = [['Blue Two', 'Taking fire! Stay down!'], ['Red Two', 'Rounds coming past the trucks!'], ['Blue One', 'We can not stay here!']];
 /** where the squad's two smokes land (between the trucks and the roadblock) · seconds before more goes out while no order has come (a can burns about 32) */
@@ -24,6 +34,8 @@ const SMOKES: Vec3[] = [[15.6, 0, 22.4], [17.8, 0, 24.2]], SMOKE_AGAIN = 27;
 const AT_SMOKE: Vec3[] = [[15.4, 0.9, 23.6], [14.0, 0.6, 24.6], [12.4, 1.0, 24.4], [16.8, 1.1, 24.9], [9.6, 0.9, 24.6]];
 const SQUAD = ['Red One', 'Red Two', 'Blue One', 'Blue Two'];
 const YARD = { x0: 4.4, x1: 20.5, z0: 12.2, z1: 19.7 };
+/** seconds after the squad breaks before the roadblock comes for the gate whether or not the squad has reached the yard */
+const PUSH_LATEST = 14;
 const WEST: Vec3 = [4.5, 1.1, 23.6];
 /** the two of the bunkhouse who come out to the mains box when the lights go, the door they come by, and where each is walked to: short of the box (a
  *  hand of theirs on its lever would put the lights back), in the open yard, one behind the other */
@@ -49,6 +61,24 @@ const script: LevelScriptFn = D => {
   const atBunk = (q: Query, u: UnitRef) => { const p = q.pos(u); return Math.hypot(p[0] - BUNK_DOOR[0], p[2] - BUNK_DOOR[2]) < 3.6; };
   const inYard = (q: Query, u: UnitRef) => { const p = q.pos(u); return p[0] > YARD.x0 && p[0] < YARD.x1 && p[2] > YARD.z0 && p[2] < YARD.z1; };
   const pick = <T,>(c: BeatCtx, a: T[]): T => a[Math.min(a.length - 1, Math.floor(c.rand() * a.length))];
+  /** the roadblock fires in turns, each burst WALKED over one of `zones` — two or three rounds to a place in it, then another place — until `stop` */
+  function* rake(c: BeatCtx, zones: Zone[], stop: () => boolean, o: { rounds: [number, number]; gap: [number, number]; spread: number }) {
+    const total = zones.reduce((a, z) => a + z.w, 0), mix = (a: number, b: number) => a + c.rand() * (b - a);
+    while (!stop()) {
+      const men = block(c, false); if (!men.length) return;
+      let r = c.rand() * total, Z = zones[0]; for (const z of zones) { r -= z.w; if (r <= 0) { Z = z; break; } }
+      const can = men.filter(m => !Z.by || Z.by.includes(m.callsign ?? '')); if (!can.length) { yield c.wait(0.05); continue; }   // (its posts are down: another box)
+      const u = pick(c, can), heavy = u.callsign === 'Tango 9';
+      let left = Math.round(mix(o.rounds[0], o.rounds[1])) * (heavy ? 2 : 1);
+      while (left > 0 && !stop() && c.query.alive(u)) {
+        const at: Vec3 = [mix(Z.lo[0], Z.hi[0]), mix(Z.lo[1], Z.hi[1]), mix(Z.lo[2], Z.hi[2])], n = Math.min(left, c.rand() < 0.5 ? 2 : 3); left -= n;
+        c.order(u, { goal: null, aimAt: at, upper: 'aim', hot: true });
+        yield c.stimulus.burst(u, at, n, { cadence: heavy ? 0.085 : 0.11, spread: o.spread });
+        yield c.wait(mix(0.05, 0.16));
+      }
+      yield c.wait(mix(o.gap[0], o.gap[1]));
+    }
+  }
   /** the roadblock fires in turns at `marks` until `stop` */
   function* harass(c: BeatCtx, marks: Vec3[], stop: () => boolean, o: { rounds: [number, number]; gap: [number, number]; spread: number }) {
     while (!stop()) {
@@ -79,7 +109,8 @@ const script: LevelScriptFn = D => {
       for (const u of held) if (c.query.alive(u)) c.release(u, 'alert');
     });
 
-    // THE ROAD: the roadblock opens up on the two trucks and keeps it up: into the cabs and the bonnets, into the snow beside the men, over their heads.
+    // THE ROAD: the roadblock opens up on the two trucks and keeps it up, its rounds walked over the noses and screens, the road, the wall and the bank
+    // beside the two files, the air over their heads (rake, ZONES).
     // The squad is on its knees behind its tails (the frame holds it there: rails.sky.low) and says so, until its smoke is out
     P.beat('ambush', function* (c) {
       for (const u of block(c, true)) c.order(u, { goal: null, aimAt: WEST, upper: 'aim', crouch: false, hot: true, flinch: false });
@@ -87,7 +118,7 @@ const script: LevelScriptFn = D => {
       yield c.wait(0.6);
       const red = c.unit('Red One'); if (red) c.say(red, 'Contact front! Roadblock!', { radio: true });
       c.start('pinned');
-      yield* harass(c, [...AT_TRUCKS, ...AT_NEAR, ...AT_NEAR], () => c.flag.smoke === true || c.flag.broke === true, { rounds: [4, 8], gap: [0.25, 0.8], spread: 0.018 });
+      yield* rake(c, ZONES, () => c.flag.smoke === true || c.flag.broke === true, { rounds: [5, 9], gap: [0.2, 0.7], spread: 0.014 });
     });
     P.beat('pinned', function* (c) {
       for (let k = 0; !c.flag.smoke && !c.flag.broke; k++) {
@@ -119,19 +150,26 @@ const script: LevelScriptFn = D => {
       c.start('push');
     });
     P.beat('ordered', function* (c) { yield c.on('signal', e => !!e.name && e.name.startsWith('order:')); c.flag.broke = true; });
+    // (the fire stops while the squad runs the wall's lane for the gate: kept up south of that lane it still put a man of the squad on a knee one seed in
+    //  six, and the squad then never set in the yard. Scripted rounds are real rounds)
     P.beat('blind', function* (c) { yield* harass(c, AT_SMOKE, () => c.flag.through === true, { rounds: [3, 5], gap: [0.5, 1.2], spread: 0.05 }); });
-    // …the roadblock's men come on for the gate, one after another; whoever is left after a while is sent into its mouth
+    // …the roadblock's men come on for the gate AS THE SQUAD SETS in the yard, one after another through the gap in their own sandbags and down the road
+    // into its mouth, and each is his own man there (the maintainer, playing: "this beat is too long, unclear what to do" — they were first left to come
+    // when they would, their sandbags were shut and the road is a lane their side knows the squad covers, so on the floor this mission had then the two behind them went round the whole halt:
+    // twenty seconds of a line that asks for nothing. `direct` is the script's word for the short way).
+    // The fight at the gate is the game's own; whoever is still on his feet after it is walked in again, further each time
     P.beat('push', function* (c) {
+      yield c.any(c.wait(PUSH_LATEST), c.until(q => { const men = squad(c); return men.filter(u => inYard(q, u)).length >= Math.min(3, men.length); }));
       { const u = c.unit('Red One') ?? squad(c)[0]; if (u) c.say(u, 'They are coming for the gate. We have it.', { radio: true }); }
-      for (const u of block(c, false)) c.release(u, 'alert');
-      yield c.any(c.wait(12), c.until(() => block(c, false).length === 0));
-      // whoever is left is walked into the gate's mouth (a man who never comes is a fight nobody sees), and is his own man again once he is there
-      while (block(c, false).length) {
+      for (let k = 0; block(c, false).length; k++) {
         const left = block(c, false);
-        for (const [i, u] of left.entries()) c.order(u, { goal: [14.6 + i * 0.7, 0, 19.2 - i * 0.5], speed: 2.6, aimAt: [11.4, 1.1, 16.4], upper: 'aim', hot: true });
-        yield c.any(c.wait(14), c.until(q => left.every(u => !q.alive(u) || q.arrived(u))));
+        for (const [i, u] of left.entries()) {
+          c.order(u, { goal: [14.6 + i * 0.7 - Math.min(1, k) * 0.9, 0, 19.2 - i * 0.5 - Math.min(1, k) * 0.6], speed: 3.4, aimAt: [11.4, 1.1, 16.4], upper: 'aim', hot: true, direct: true });
+          if (i < left.length - 1) yield c.any(c.wait(0.7), c.until(() => block(c, false).length === 0));
+        }
+        yield c.any(c.wait(k ? 5 : 7), c.until(q => left.every(u => !q.alive(u) || q.arrived(u))));
         for (const u of block(c, false)) c.release(u, 'alert');
-        yield c.any(c.wait(8), c.until(() => block(c, false).length === 0));
+        yield c.any(c.wait(4), c.until(() => block(c, false).length === 0));
       }
       c.signal('done:roadblock');
     });

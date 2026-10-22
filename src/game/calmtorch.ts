@@ -34,7 +34,12 @@ import { hourOf, hourLightAt } from './hours';
  *  stands, `dayM` the same for floor the hour's sun or sky lights; `aheadM` = how far down his way he looks; `onSecs` / `offSecs` = the dwell, `holdSecs` = the
  *  least time between two clicks; `askSecs` = how often the place is read; `calmAw` = the awareness at which something has his attention and the torch is his to
  *  look with. UNTUNED by eye (nobody has seen it on a GPU). */
-export const TORCH = { calmOff: false, litAt: 0.2, offK: 1.2, spillM: 3, dayM: 12, aheadM: 5, onSecs: 0.3, offSecs: 2, holdSecs: 1, askSecs: 0.25, calmAw: 0.3 };
+export const TORCH = { calmOff: false, litAt: 0.2, offK: 1.2, spillM: 3, dayM: 12, aheadM: 5, onSecs: 0.3, offSecs: 2, holdSecs: 1, askSecs: 0.25, calmAw: 0.3,
+  /** NOT A DOT ON THE WALL AT HIS HAND (guards.ts torchLow has the rule): `wallLow` the switch — off here, on in the page (host/profile.ts; ?torchwall=0 puts
+   *  it off) — a hand torch whose carried beam would end on something solid within `wallM` is tipped to the floor at his feet (the pitch whose tangent is
+   *  `lowTan`, eased at `lowRate` /s) until the carry runs clear to `wallBackM` · `wallDark` the other answer to the same reading, off everywhere unless
+   *  asked for (?torchwall=dark): the torch is put out instead of tipped */
+  wallLow: false, wallDark: false, wallM: 1.2, wallBackM: 1.6, lowTan: 2.2, lowRate: 6 };
 
 /** per man: is the torch dark, the last reading of his place (placeRead), seconds the reading has stood against the torch, seconds since the place was read, seconds since the switch last moved */
 interface TorchState { dark: boolean; read: -1 | 0 | 1; against: number; ask: number; held: number; }

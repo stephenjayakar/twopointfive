@@ -59,6 +59,12 @@ export const CLOSE = {
    *  him, the OCP), and never on a civilian or under a show. ON in the page unless ?noheldclicks (src/host/profile.ts pageSwitches); off here and on the
    *  harness's frozen stand (src/host/standup.ts; TPS_HELDCLICKS=1 turns it on there). Off = neither click does anything in the arm hold, as it was. */
   heldClicks: false,
+  /** THE GRAB'S REACH GOES UP FOR A MAN WHO STANDS OVER HIM (character.ts READY_UP, anim.readyUp): crouched behind a standing man the open hand went to the
+   *  small of his back and Sam's face to his seat, the reach being measured off Sam's own shoulder. Up: the trunk comes up out of the crouch's bow and the hand
+   *  goes up for his neck (the grab's tell only; not with the pistol up). The crouch the game reads does not change; his head bone, which sight lines and the
+   *  light meter read, is about 0.19 m higher while the tell is up. ON in the page unless ?noreachup (src/host/profile.ts pageSwitches); off
+   *  here and on the harness's frozen stand (src/host/standup.ts; TPS_REACHUP=1 turns it on there). Off = the tell as it was. */
+  reachUp: false,
   /** m: Sam is in the mode this near a man (centre to centre, nothing solid between) · and out of it again past this */
   modeM: 3.0, modeOutM: 3.6,
   /** the light on Sam (his meter, 0‥1) under which the near-sight floor is nothing · from which it is the build's whole · m: inside this of a man who has
@@ -264,7 +270,7 @@ function modeNow(g: Game, S: State): Guard | null {
 export function closeTick(g: Game) {
   const pl = g.player, an = pl.char.anim; const S = stateOf(g);
   const r = closeReady(g);
-  an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null;
+  an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null; an.readyUp = r && CLOSE.reachUp ? 1 : 0;
   if (r) CLOSE_STATS.readyFrames++;
   const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)
   an.creep = !!m;
