@@ -83,7 +83,7 @@ function shootMen(B: Bot, room: string, secs: number) {
   while (!cleared(B, room) && B.t() - t0 < secs) { const m = near(); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, [m.char.pos[0], 1.25, m.char.pos[2]]); B.wait(0.2); }
 }
 const STORE_IN = [10.6, 0, 18.8], ALLEY = [23.6, 0, 8.6], END = [22.5, 0, 17.5], BLOCKS = [26.6, 0, 16.1], NEST = [32.0, 1.0, 13.8];
-const SHOP_VIEW = [14.25, 0, 12.5], HALL_SIDE = [34.3, 0, 19.75], WINDOW = [30.9, 0, 16.2], BAGS = [30.2, 0, 13.8], MOUTH = [25.0, 0, 11.6];
+const SHOP_VIEW = [18.3, 0, 12.3], HALL_SIDE = [34.3, 0, 19.75], WINDOW = [30.9, 0, 16.2], BAGS = [30.2, 0, 13.8], MOUTH = [25.0, 0, 11.6];
 
 export const steps: Record<string, (B: Bot) => void> = {
   // the two easy rooms: the squad's key on a door, and again
@@ -91,8 +91,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   'go-hut': B => { goIn(B, 'guardhut', 'guardhut'); },
   'stack-store': B => { B.wait(1); stack(B, 'store'); B.until(() => set(B), 40); },
   'go-store': B => { goIn(B, 'store', 'store'); B.go(STORE_IN, 20); },
-  // the workshop: its man on his open lane doorway, in the picture and firing out of it; out to the mouth of the lane to look; the squad sent to the
-  // side door from there (the cursor on the step's ring), the walk round after them, and in at his back
+  // the workshop: its man on his open lane doorway, in the picture and firing out of it; out to the street in front of the workshop to look; the squad
+  // sent to the side door from there (the cursor on the step's ring), the walk round after them, and in at his back
   // (the staged moment itself is held to have happened: a round of his out of the doorway, the man in the script's hand, standing in the line the level
   //  keeps the team's feet out of and, where the fog of war runs, drawn)
   out: B => { B.go(SHOP_VIEW, 30); },
@@ -100,7 +100,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!cleared(B, 'workshop')) {
       if (!B.until(() => raised(B, 'done:shop') || cleared(B, 'workshop'), 14)) B.fail("the workshop's man never fired out of his doorway (no 'done:shop')");
       const m = man(B, 'Tango 4'), F = B.g.fogOfWar;
-      if (m && m.state !== 'dead' && !m.script) B.fail("the workshop's man is not in the script's hand after his first burst: he is not holding his doorway");
+      if (m && m.state !== 'dead' && !m.script) B.fail("the workshop's man is not in the script's hand after his first round: he is not holding his doorway");
       if (m && m.state !== 'dead' && F.active && !F.drawn(m)) B.fail("the workshop's man is not in the picture under the fog of war while he holds his doorway");
       const V = (B.g.level.volumes ?? []).find((v: any) => v.name === 'shop_line');
       if (!V) B.fail("the level has no 'shop_line' volume: nothing keeps his rounds off the team");
@@ -115,7 +115,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   round: B => { B.go(ALLEY, 60, { noDoors: true }); },
   shop: B => { goIn(B, 'workshop_side', 'workshop'); },
   // the nest: the squad called in, the wall's end, rounds at the gun, the blocks, a grenade over the bags
-  wall: B => { menu(B, { ground: B.pos() }, 3); if (!gave(B, 'fallIn')) B.fail(`the menu's 3 gave ${last(B)?.order}`); B.go(END, 60); },
+  follow: B => { menu(B, { ground: B.pos() }, 3); if (!gave(B, 'fallIn')) B.fail(`the menu's 3 gave ${last(B)?.order}`); },
+  wall: B => { B.go(END, 60); },
   gun: B => { if (!B.until(() => raised(B, 'done:gun') || cleared(B, 'nest'), 8)) B.fail("the gun's first burst never came (no 'done:gun')"); B.go([24.3, 0, 16.6], 10); shootAt(B, NEST, () => cleared(B, 'nest'), 6); },
   blocks: B => { B.go(BLOCKS, 20, { sprint: true }); },
   frag: B => { if (B.g.player.frags < 1) B.fail('no frag to throw'); B.press('Digit5', 10); B.click(1, NEST); B.wait(3.5); B.press('Digit2', 10); },

@@ -2,7 +2,7 @@
 // no GPU; the page is ?paused and stepped by __runFrames with nothing drawn, every input a DOM event from Playwright's keyboard and mouse).
 // What the headless lesson run cannot see: that the bundle boots the level and its script on the frame (game/rails.ts), that the one big line is up with the
 // player's own key on a key cap, that what the mission has not taught yet is locked against a real key, that a hand gets through the two easy rooms, that the
-// next line walks him out to the mouth of the lane, that the workshop's man is there on the screen, in the picture under the fog on his open doorway, that
+// next line walks him out to the street in front of the workshop, that the workshop's man is there on the screen, in the picture under the fog on his open doorway, that
 // the authored checkpoint comes back on its step with the level's script running again, and that the squad's key on the side door's ring, the walk round and
 // the key again take the workshop.
 // Then its two menu steps, each put up by hand: the line's caps, the squad's key kept down (the ring), and the digit that gives the order.
@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow
 const OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'tut-squad-page-'));
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
-const HUT = [10.85, 1, 11.0], STORE = [10.85, 1, 16.5], SIDE = [22.0, 1, 8.25], ALLEY = [23.4, 0, 8.8], VIEW = [14.25, 0, 12.5], STORE_IN = [10.6, 0, 18.8], STREET = [8.6, 0, 13.6];
+const HUT = [10.85, 1, 11.0], STORE = [10.85, 1, 16.5], SIDE = [22.0, 1, 8.25], ALLEY = [23.4, 0, 8.8], VIEW = [18.3, 0, 12.3], STORE_IN = [10.6, 0, 18.8], STREET = [8.6, 0, 13.6];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 let failed = false;
 const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -33,6 +33,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
       at: [+g.player.char.pos[0].toFixed(1), +g.player.char.pos[2].toFixed(1)], mates: g.guards.filter(x => x.team === 'operative' && x.state !== 'dead').length, men: g.guards.filter(x => x.team === 'hostile' && x.state !== 'dead').length,
       shop: (() => { const m = g.guards.find(x => x.callsign === 'Tango 4'), F = g.fogOfWar, d = g.doors.byName('workshop'); const v = document.getElementById('view').getBoundingClientRect(), sc = m ? window.__cam.project(m.char.pos, v.width, v.height, 1) : null;
         return { fog: !!F.active, drawn: !!m && F.drawn(m), held: !!m?.script, up: !!m && m.state !== 'dead', door: d ? +d.angle.toFixed(2) : null, screen: !!sc && sc[0] > 40 && sc[0] < v.width - 40 && sc[1] > 40 && sc[1] < v.height - 40 }; })(),
+      ringOn: (() => { const at = g.lesson.step?.at; if (!at) return false; const v = document.getElementById('view').getBoundingClientRect(), sc = window.__cam.project(at, v.width, v.height, 1); return sc[0] > 20 && sc[0] < v.width - 20 && sc[1] > 20 && sc[1] < v.height - 20; })(),
       set: (() => { const m = g.orders.men('all'); return m.length > 0 && m.every(x => g.orders.of(x)?.arrived); })(),
       orders: g.orders.log.length, last: g.orders.log.length ? `${g.orders.log[g.orders.log.length - 1].order} ${g.orders.log[g.orders.log.length - 1].target}` : '', menu: !!window.__orders?.menu, frags: g.player.frags, slot: g.player.slot ?? null, t: +g.time.toFixed(1) }; });
   // (a picture, as tut-page.cjs takes one: the frame is drawn and read back in the page and stood under the HUD as a still)
@@ -94,13 +95,13 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const slots = await page.evaluate(() => window.__game.saves.slots().map(x => ({ key: x.key, label: x.label })));
   const mine = slots.find(x => /the street/.test(x.label || ''));
   check(!!mine, "the checkpoint 'the street' was kept as that step came up", `slots: ${slots.map(x => x.label).join(' · ') || 'none'}`);
-  // ---- out to the mouth of the lane, as the line says: the workshop's man is on the screen there, in the script's hand on his open doorway, and in the
+  // ---- out to the street in front of the workshop, as the line says: its man is on the screen there, in the script's hand on his open doorway, and in the
   //      picture under the fog (the page runs the fog of war: a run with it off fails this line, on purpose)
-  const out = async () => { for (const p of [[10.85, 0, 17.9], [10.85, 0, 15.2], VIEW]) await walk(p, 30); return until(x => x.i >= 5, 10); };
+  const out = async () => { for (const p of [[10.85, 0, 17.9], [10.85, 0, 15.2], [12.6, 0, 13.2], VIEW]) await walk(p, 30); return until(x => x.i >= 5, 10); };
   const shown = x => x.shop.up && x.shop.held && Math.abs(x.shop.door) > 1 && x.shop.fog && x.shop.drawn;
-  R = await out(); check(R.i === 5 && R.id === 'side', 'out at the mouth of the lane: the side door is the step', `step ${R.i + 1} '${R.id}' · "${R.line}" keys [${R.keys}] at ${R.at}`);
+  R = await out(); check(R.i === 5 && R.id === 'side', 'out on the street in front of the workshop: the side door is the step', `step ${R.i + 1} '${R.id}' · "${R.line}" keys [${R.keys}] at ${R.at}`);
   await run(120); R = await read();
-  check(shown(R) && R.shop.screen, "the workshop's man holds his open doorway, is in the picture under the fog and is on the screen from where the player stands", JSON.stringify(R.shop));
+  check(shown(R) && R.shop.screen && R.ringOn, "the workshop's man holds his open doorway, is in the picture under the fog, and he and the side door's ring are both on the screen from where the player stands", `${JSON.stringify(R.shop)} · the step's ring on the screen ${R.ringOn}`);
   log('picture', await shot('6-side'));
   // (the squad's key on the step's ring: the view eases to keep the ring on the screen, so the cursor is put on it again once it has settled)
   const order = async () => { await point(SIDE); await run(40); await point(SIDE); await tap('KeyQ'); };
@@ -115,7 +116,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   await order(); R = await until(x => x.i >= 6, 20); check(R.i >= 6 && /stack door:workshop_side/.test(R.last), 'the key on the side door: the squad is sent to it and the next line is up', `step ${R.i + 1} '${R.id}' · "${R.line}" · last order ${R.last}`);
   for (const p of [[21.4, 0, 12.3], [22.8, 0, 11.6], ALLEY]) await walk(p, 30);
   R = await until(x => x.i >= 7, 40); check(R.i >= 7 && R.shop.up && R.shop.held, "walked round by the street: in the alley, the man still the script's, on his doorway", `step ${R.i + 1} '${R.id}' at ${R.at} · ${JSON.stringify(R.shop)}`);
-  const took = x => x.men <= 7 && x.i >= 8;
+  const took = x => x.men <= 7 && x.i >= 8;   // ('follow', the first menu step, is index 8)
   R = await until(x => x.set, 40); check(R.set, 'the four stand on the side door', `set ${R.set} at ${R.t} s`); await run(30); await point(SIDE); await tap('KeyQ'); R = await until(took, 40); if (!took(R)) { await tap('KeyF'); R = await until(took, 40); }
   check(took(R), 'the key again: in at his back, the workshop is taken', `${R.men} defenders left · step ${R.i + 1} '${R.id}' at ${R.t} s · last order ${R.last}`);
   // ---- the two menu steps, each put up BY HAND (lesson.i set from here: nothing walked or fought to them, and the frame answers the step as it would a
@@ -133,15 +134,17 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
         if (t.kind === 'floor' && !t.man) return true; }
       return false; };
     R = await setStep(8);
-    check(R.id === 'wall' && /^Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,3' && !/—/.test(R.line), "step 9's line reads Hold Q, 3, both on key caps", `"${R.line}" keys [${R.keys}] · ${R.sum}`);
-    let floor = await onFloor(), M = await more(); await tap('KeyX'); let A = await more();
+    check(R.id === 'follow' && /^Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,3' && !/—/.test(R.line), "step 9's line reads Hold Q, 3, both on key caps", `"${R.line}" keys [${R.keys}] · ${R.sum}`);
+    let floor = await onFloor(), M = await more(); await tap('KeyQ'); let A = await more();
+    check(floor && A.n === M.n && !A.menu, "a quick tap of the squad's key gives no order while the step teaches the key held", `floor under the cursor ${floor} · orders ${M.n} → ${A.n} · ${JSON.stringify(A)}`);
+    await tap('KeyX'); A = await more();
     check(floor && !A.menu && A.n === M.n, "the menu's own key gives nothing on this page", `floor under the cursor ${floor} · ${JSON.stringify(A)}`);
     await holdQ(); A = await more();
     check(A.menu && A.ring && !A.man, "the squad's key kept down: the menu is up as a ring, on no man, and stays", JSON.stringify(A));
     await tap('Digit3'); let Z = await more();
     check(Z.n === M.n + 1 && Z.last === 'fallIn' && !Z.menu, '3: fall in is given and the ring is away', `${JSON.stringify(M)} → ${JSON.stringify(Z)}`);
-    R = await setStep(19);
-    check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,2' && !/—/.test(R.line), "step 20's line reads Hold Q … then 2, both on key caps", `"${R.line}" keys [${R.keys}]`);
+    R = await setStep(20);
+    check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,2' && !/—/.test(R.line), "step 21's line reads Hold Q … then 2, both on key caps", `"${R.line}" keys [${R.keys}]`);
     floor = await onFloor(); M = await more(); await holdQ(); A = await more();
     check(floor && A.menu && A.ring && A.kind === 'floor' && !A.man, 'the key kept down with the cursor on the ground: the ring is up on that place', JSON.stringify(A));
     await tap('Digit2'); Z = await more();

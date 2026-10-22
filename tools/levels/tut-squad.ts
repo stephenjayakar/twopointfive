@@ -19,7 +19,8 @@
 //   · the guard hut and the store are the two EASY rooms, door to door across the street: one man, then two, each on the mark a door's first man sees.
 //   · the workshop has TWO doors on opposite walls. The one that faces the guard hut across the lane between them STANDS OPEN on the tutorial's rails
 //     (the level's script swings it in), and its man holds that doorway from the far end of the room. Once the store has fallen he puts rounds out of
-//     it onto the hut's wall, where the squad went in first: he, the doorway and his rounds are all there to be looked at from the mouth of the lane, where a step walks the player. The answer is
+//     it onto the hut's wall, where the squad went in first: he, the doorway and his rounds are all there to be
+//     looked at from the street in front of the workshop, where a step walks the player. The answer is
 //     the side door, at his back, and the way to it is along the street: no part of it is in the line of the doorway he holds.
 //   · THE WALL stands across the street: everything west of it is out of the nest's sight, so the first three rooms are learnt with no gun on them. The only
 //     way on is round its end, and there the gun looks straight down the street. Rounds past the gunner's head put it down; while it is down a man can make
@@ -162,7 +163,11 @@ export function build() {
   const D_STORE: Vec3 = [10.85, 1.1, 16.62], D_HALL: Vec3 = [32.28, 1.1, 19.75], IN_HALL: Vec3 = [31.4, 1.1, 19.75], STREET: Vec3 = [24.6, 1.1, 13.8];
   // the workshop man's line: from his mark at the far end of the room, through the middle of the open lane doorway, to the guard hut's wall across the lane
   const SHOP_FIRE: Vec3 = [19.3, 0, 8.52], D_SHOP: Vec3 = [15.5, 1.1, 8.75], SHOP_AIM: Vec3 = [13.0, 1.0, 8.9];
-  const SHOP_VIEW: Vec3 = [14.25, 0, 12.5];   // (the mouth of the lane, on the street: his doorway and his rounds are four metres up it, and the store, where the player stands when he starts, has neither on its screen)
+  // (where the player is walked to look: the street in front of the workshop, its wall between him and the room. His rounds go out of the far doorway,
+  //  away from here; the room is seen over its wall by the fog's lookout, which stands behind the man and looks down his line — the room, the open
+  //  doorway, the strip of lane and the hut's wall the rounds land on. From the mouth of the lane, tried first, the side door was off the screen)
+  const SHOP_VIEW: Vec3 = [18.3, 0, 12.3];
+  const SHOP_EYE = { at: [21.5, 1.6, 8.5] as Vec3, yaw: Math.atan2(SHOP_AIM[0] - SHOP_FIRE[0], SHOP_AIM[2] - SHOP_FIRE[2]), fov: 110 };
   const LANE_C: Vec3 = [(SHOP_FIRE[0] + SHOP_AIM[0]) / 2, 1, (SHOP_FIRE[2] + SHOP_AIM[2]) / 2], LANE_LEN = Math.hypot(SHOP_AIM[0] - SHOP_FIRE[0], SHOP_AIM[2] - SHOP_FIRE[2]);
   const LANE_YAW = Math.atan2(-(SHOP_AIM[2] - SHOP_FIRE[2]), SHOP_AIM[0] - SHOP_FIRE[0]);   // (a volume's own x along the line: director.ts insideVolume)
   const D_SIDE: Vec3 = [22.0, 1, 8.25], END: Vec3 = [22.5, 0, 17.5], BLOCKS: Vec3 = [26.6, 0, 16.1], BAGS: Vec3 = [30.2, 0, 13.8], MOUTH: Vec3 = [25.0, 0, 10.6], LANE: Vec3 = [37.4, 1.1, 9.6];   // (the way round the blast wall's end to the road gate: what the picket looks at from its camp)
@@ -221,14 +226,19 @@ export function build() {
       { id: 'stack-store', line: '[B] on the store door', done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
       { id: 'go-store', line: '[B] again. Follow them in', done: and(taken('store'), { is: 'in', area: { ...STORE } }), at: [10.85, 1, 18.6] },
       // 2 · A DOORWAY HE HOLDS: as the store falls the workshop's man is on his open lane doorway, in the picture through the fog, his rounds on the
-      //     guard hut's wall. The answer is the other door: the squad sent to it from where the player stands (the ring is the door: an order
-      //     pointed at the ring is an order on it), the walk round, and in at his back
-      { id: 'out', line: 'Shots outside. Out to the street', done: or(near(SHOP_VIEW, 1.8), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street' },
-      { id: 'side', line: 'He has that doorway. [B] on the side door', done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE },
-      { id: 'round', line: 'Go round with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE },
+      //     guard hut's wall; the fog has a lookout behind him while these steps are up, so his room, the doorway and the strip of lane his rounds
+      //     cross are seen too. The player is walked out to the street in front of the workshop (from inside the store none of it is on his screen):
+      //     from there the room is above him and BOTH its doors are on the screen. The answer is the other door: the squad sent to it from where he
+      //     stands (the ring is the door: an order pointed at the ring is an order on it), the walk round after them, and in at the man's back
+      { id: 'out', line: 'Shots outside. Out to the street', done: or(near(SHOP_VIEW, 1.5), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street', eye: SHOP_EYE },
+      { id: 'side', line: 'He has that doorway. [B] on the side door', done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
+      { id: 'round', line: 'Go round with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
       { id: 'shop', line: '[B] again: in behind him', done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
-      { id: 'wall', line: "[X], [3]: they follow. To the wall's end", done: or(and(or({ is: 'following' }, gave('fallIn')), near(END, 1.6)), taken('nest')), at: END, checkpoint: 'the wall', allow: ['menu', 'ring'] },
+      // (the held key is its own step, and a TAP of the squad's key gives nothing while it is up — the frame's `noTap`: tapped at the old one line, the
+      //  key sent the four to the ring at the wall's end and the menu was never met)
+      { id: 'follow', line: '[X], [3]: they follow', noTap: 'Keep [B] held down', done: or({ is: 'following' }, gave('fallIn'), taken('nest')), checkpoint: 'the wall', allow: ['menu', 'ring'] },
+      { id: 'wall', line: "To the wall's end", done: or(near(END, 1.6), taken('nest')), at: END },
       // (no ring on the nest while the line says shoot: a ring is where to GO. The gunner is in the picture through the fog, and his rounds say where he is)
       { id: 'gun', line: 'A gun. Shoot back: it ducks', done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), cue: 'gun' },
       { id: 'blocks', line: 'While it is down: run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS, cue: 'ducks' },
@@ -245,7 +255,7 @@ export function build() {
       // 5 · MORE COME, AND NOT ALL BY ONE WAY: one man at the road gate holds your eyes while two walk round to the back gate
       { id: 'bags', line: 'More are coming. Behind the bags', done: or(near(BAGS, 1.6), taken('road')), at: BAGS, checkpoint: 'the bags' },
       { id: 'front', line: 'Hold the road gate', done: or({ is: 'cue', name: 'flank' }, taken('road')), at: [35.0, 1, 14.0], cue: 'picket' },
-      { id: 'back', line: 'Behind you! [X] on the alley, then [2]', done: or(gave('cover'), taken('road')), at: MOUTH },
+      { id: 'back', line: 'Behind you! [X] on the alley, then [2]', noTap: 'Keep [B] held down', done: or(gave('cover'), taken('road')), at: MOUTH },
       { id: 'hold', line: 'Finish the picket', done: taken('road'), at: [35.0, 1, 14.0], cue: 'covered' },
     ],
   } as LessonData;

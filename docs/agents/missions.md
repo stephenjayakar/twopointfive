@@ -166,7 +166,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     inside the workshop's, the nest's, the hall's and the picket's fights), so the scripted player holds the staged moments to account itself: `done:shop` raised (a round of his is out), the workshop's man still in the
     script's hand, standing in the level's `shop_line` volume, his lane door open and he drawn where the fog runs, `done:gun` raised, the four checkpoints kept, and the checkpoint 'the bags' PUT BACK mid-run with the same step up, the program running again, the picket in hand and the
     road gate shut. It plays under the locks: the menu and the frag are pressed only at their steps. `PORT=<port> node tools/qa/tut-squad-page.cjs`: the row on the real page (software
-    adapter), the big line with Q on a key cap, the frag and a tool locked at the first step, its first eight steps by real keys (out to the mouth of the lane; there the workshop's man held, his door open, drawn under the fog and ON THE SCREEN; the squad's key on the step's ring; the walk round; the key again), the checkpoint 'the street' put back, and its two menu
+    adapter), the big line with Q on a key cap, the frag and a tool locked at the first step, its first eight steps by real keys (out to the street in front of the workshop; there its man held, his door open, drawn under the fog, and he and the side door's ring both ON THE SCREEN; the squad's key on the step's ring; the walk round; the key again), the checkpoint 'the street' put back, and its two menu
     steps put up by hand (`lesson.i` set from the check, nothing walked to them): each line's caps, the menu's own key giving nothing, the squad's key kept down as a ring on no man, the
     digit that gives the order, and the same key kept down at step 1 putting no ring up.
   - **Re-staged on five play notes** (2026-10-22, the maintainer playing it on hard: "weird that we can get little peeks of the guy shooting. can be distracting" · "we should
@@ -178,9 +178,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the wrong way of a one-way leaf is clamped shut). Its man is the script's from the first tick on the mark at the far end of the room (an open doorway and the game's own man would
     have him at it on the first shot of the first room). Step 5 'Shots outside. Out to the street' comes up with the store taken and the player in it: its cue PUTS HIM IN THE
     PICTURE (`c.show`, below) and he lays three rounds every two seconds or so through the doorway onto the hut's block wall, a round at a time and none while
-    `q.inside(shop_lane, 'team')`; its ring is at the mouth of the lane, four metres down it from his line, and the step is passed there. (The first cut had no such step and the cue
-    on the side door's line: on the real page the workshop was OFF THE SCREEN from inside the store, the ring on the side door stood at the screen's top edge fifteen metres off, and
-    the squad's key pointed at it gave a move on the floor.) Step 6 'He has that doorway. [B] on the side door' is passed by the order itself (`did order:stack on workshop_side`: the
+    `q.inside(shop_lane, 'team')`; its ring is on the street in front of the workshop, the room's own wall between the player and the man, and the step is passed there. While
+    steps 5 to 7 are up the fog has a lookout behind the man looking down his line (the frame's step key `eye`): his room, the open doorway, the strip of lane and the hut's wall
+    his rounds land on are seen, not a man drawn on the dark. (WHAT THE REAL PAGE SAID OF TWO EARLIER CUTS: with no such step and the cue on the side door's line, the workshop was
+    OFF THE SCREEN from inside the store and the squad's key pointed at the far ring gave a move on the floor; with the ring at the mouth of the lane the man stood at the screen's
+    top edge and the side door was off it. The camera here is the game's own: the frame keeps a ring on the screen only in mission 1's seat. From the street in front of the
+    workshop both doors are on the screen.) Step 6 'He has that doorway. [B] on the side door' is passed by the order itself (`did order:stack on workshop_side`: the
     ring is the door, and the frame makes an order pointed at the ring an order on it), 7 'Go round with them' by the player in the alley, 8 '[B] again: in behind him' by the room.
     The way round is the street and the gap at the workshop's corner: no part of it is in his line, and in the runs below all four and the player took it. He is the game's own when
     the side door opens (2 s late, as before), when anybody is in his room (the volume `shop_in`, the room's own floor) or when the player has stood 1.5 s in the narrow line
@@ -195,7 +198,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     ends, whoever ended it, and when the program stops), and the fog empties its set with its own reset. `c.stimulus.cease(unit)`: rounds of his a burst has not put yet are not
     put. `q.inside(volume, 'team')` = the player or any living teammate. NO SWITCH AND NO BREAK WORD: the row is new this week and its level, script and scripted player change
     together; the verbs do nothing until a script calls them (no other script does). The level file's fingerprint moved (a door, a table, three volumes): checkpoints and recordings
-    of the row from before are refused. MEASURED on the page's stand, the unprotected scripted player (`lesson-run --plain`): twelve dice of twelve and four slow readers of four (`--pace 6`) passed all twenty-one steps (the first cut of this re-staging: seven of seven and one slow reader); the workshop's man goes down about a second after the side door opens, and the hall door gave to one boot in every run. `lesson-gate tut-squad`: all pass on both stands. Never seen on a GPU: the page check's picture
+    of the row from before are refused. MEASURED on the page's stand, the unprotected scripted player (`lesson-run --plain`): @@MEAS@@ Never seen on a GPU: the page check's picture
     is the software adapter's; how a shown man reads in the fog's own light on a real card, and how his rounds across the lane look, nobody has seen. Nobody has played it.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does

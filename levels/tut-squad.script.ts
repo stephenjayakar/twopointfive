@@ -9,13 +9,15 @@ import type { BeatCtx, Cond, DoorRef, LevelScriptFn, Query, UnitRef } from '../s
 import type { Vec3 } from '../src/math/vec';
 
 /** the roster's men by the order the level places them: the workshop's one, the nest's gunner and the man beside him, the picket's three */
-const SHOP_MAN = 'Tango 4', GUNNER = 'Tango 5', LOADER = 'Tango 6', PICKET = ['Tango 9', 'Tango 10', 'Tango 11'];
+const SHOP_MAN = 'Tango 4', GUNNER = 'Tango 5', LOADER = 'Tango 6', PICKET = ['Tango 9', 'Tango 10', 'Tango 11'], HALL_MEN = ['Tango 7', 'Tango 8'];
 
 /** seconds the two who came round stand in the street, rifles up at the bags, before their first round; the longest they wait outside the wall for the
  *  cover order before they come anyway; and how long men walked out into the open a second time are kept there before they are the game's own again */
 const STREET_SECS = 4, COVER_SECS = 40, OPEN_SECS = 6;
 /** the workshop's man: how long the player stands in his line before he is seen there · how late he is to the door at his back */
 const SEEN_SECS = 1.5, SIDE_SECS = 2.0;
+/** the hall's second man, once his mate has dropped to a round through the window: seconds before he is the game's own (he was looking at the door) */
+const HALL_SECS = 1.2;
 /** the workshop's lane door as the mission opens: swung in square to its wall (rad), out of the doorway and of its man's line through it */
 const SHOP_OPEN = 1.55;
 /** the nest's gun once it has been answered: seconds it stays down behind its bags between bursts, seconds from the frag leaving a hand to the
@@ -43,10 +45,10 @@ function lastMan(c: BeatCtx, men: UnitRef[], what: string) {
 }
 
 const script: LevelScriptFn = D => {
-  const shopDoor = D.door('workshop'), sideDoor = D.door('workshop_side'), roadGate = D.door('gate_e'), backGate = D.door('gate_n'), trackGate = D.door('gate_w');
+  const shopDoor = D.door('workshop'), sideDoor = D.door('workshop_side'), hallDoor = D.door('hall'), roadGate = D.door('gate_e'), backGate = D.door('gate_n'), trackGate = D.door('gate_w');
   // the workshop's man: his mark at the far end of the room, on the line through the middle of the open lane doorway · where that line ends, on the guard
   // hut's wall across the lane (tools/levels/tut-squad.ts SHOP_FIRE / SHOP_AIM: the level's volumes are laid along the same line)
-  const SHOP_FIRE = D.mark('shop.fire', [19.3, 0, 8.52]), SHOP_AIM: Vec3 = [13.0, 1.0, 8.9];
+  const SHOP_FIRE = D.mark('shop.fire', [19.3, 0, 8.52]), SHOP_AIM: Vec3 = [13.0, 1.0, 8.9], IN_HALL: Vec3 = [31.4, 1.1, 19.75];   // (… and the hall's doorway from inside: what its two men watch)
   const shopLane = D.volume('shop_lane'), shopLine = D.volume('shop_line'), shopIn = D.volume('shop_in');
   const LANE = D.mark('nest.lane', [23.7, 0, 13.0]);                                               // the wall's own face, mid street: the first burst lands on concrete, well up the street from whoever is about to step round its end
   const CAMP = [D.mark('picket.camp0', [38.4, 0, 11.6]), D.mark('picket.camp1', [38.8, 0, 9.8]), D.mark('picket.camp2', [38.4, 0, 8.0])];
@@ -167,6 +169,22 @@ const script: LevelScriptFn = D => {
       if (!said) c.signal('done:shop');   // (his hold ended before a round of his: there is nothing left to wait for)
       if (end === 1) yield c.any(c.wait(SIDE_SECS), down());   // the side door, at his back: he is late to it (at 0.9 s an unhurried player who stepped through the doorway was shot on two dice of four)
       ends(end);
+    });
+
+    // TWO WAIT EITHER SIDE OF THE HALL'S DOOR, AND THEY WATCH THE DOOR. Both are this beat's from the first tick, on their marks in the corners of the
+    // door's wall, rifles on the doorway: that is the ambush the window's line shows, and it is why the window is the answer. They are the game's own
+    // the moment their door gives or one of them is hit (the other HALL_SECS later: he was looking at the door); nobody else is theirs to shoot till
+    // then. (Before, they were the game's own from the first shot of the first room, one of them stands a step from the window, and the way round to
+    // the nest's open side passes that window a metre off: an unprotected scripted player walking it was shot through the glass on one die of eight.)
+    P.onStart('hall');
+    P.beat('hall', function* (c) {
+      const men = HALL_MEN.map(n => c.unit(n)).filter((u): u is UnitRef => alive(c, u));
+      if (!men.length) return;
+      const up = () => men.filter(u => c.query.alive(u)), fewer = (k: number) => c.until(q => men.filter(u => q.alive(u)).length < k, 'one of the hall is down');
+      for (const u of men) c.order(u, { goal: null, aimAt: IN_HALL, upper: 'aim' });
+      const r = yield c.any(open(c, hallDoor), fewer(men.length), c.until(q => q.room('sam') === 'hall', 'the player is in the hall'));
+      if (r.index === 1 && up().length) yield c.any(c.wait(HALL_SECS), open(c, hallDoor), fewer(up().length));
+      for (const u of up()) c.release(u, 'alert');
     });
 
     // A GUN ON THE STREET, AND IT IS THE SCRIPT'S UNTIL THE FRAG IS THROWN. Its first burst chips the wall's face, up the street from whoever is about
