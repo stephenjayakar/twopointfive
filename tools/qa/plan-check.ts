@@ -9,6 +9,7 @@ import { standUp, ROOT } from './headless.ts';
 
 const FP: any = await import(`${ROOT}/src/game/floorplan.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
+const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { PLAN, floorPlan, planTag } = FP;
 
@@ -177,13 +178,15 @@ async function planLines(): Promise<boolean> {
     for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, s) - dist(b.frameCentre, s))) { const t = O.targetAt(d.frameCentre); if (t.kind !== 'door') continue; w = O.give('openClear', t, 'red', { onWord: true }); if (!w) { door = d; break; } }
     R.step(3);
     const who0 = O.who; const d1: any[] = floorPlan(g).doors; O.who = 'blue'; const d2: any[] = floorPlan(g).doors; O.who = who0;
-    const ok = !!door && d1.length === 1 && d1[0].door === door && d1[0].why === 'tool' && d1[0].tone === 'red' && d1[0].now && d2.length === 1 && !d2[0].now;
-    line(ok, 'a tool on the word: the pair\'s colour, the key only for the men it would send', door ? `${d1.map(d => `${d.why} · ${d.tone} · now ${d.now}`).join(' | ')} · orders to blue: now ${d2[0]?.now}` : `refused everywhere: ${w}`);
+    // (the squad's only keys, cmdring.ts CMDRING.only — the page's stand: no key steps who the orders go to, so the word frees whoever waits, and the bar says so)
+    const only = CMDRING.only;
+    const ok = !!door && d1.length === 1 && d1[0].door === door && d1[0].why === 'tool' && d1[0].tone === 'red' && d1[0].now && d2.length === 1 && !!d2[0].now === only;
+    line(ok, only ? 'a tool on the word: the pair\'s colour, and the key for them whoever the orders go to (the squad\'s only keys)' : 'a tool on the word: the pair\'s colour, the key only for the men it would send', door ? `${d1.map(d => `${d.why} · ${d.tone} · now ${d.now}`).join(' | ')} · orders to blue: now ${d2[0]?.now}` : `refused everywhere: ${w}`);
     // the key itself: pressed where the bar has no key on it nothing goes; pressed where it has, it goes
     const T = g.doorTools, waitingOp = () => T.ops.find((o: any) => o.door === door && !o.word);
     O.who = 'blue'; R.W.input.pressed.add('KeyF'); R.step(2); const stillWaits = !!waitingOp();
     O.who = who0; const nowAll = (floorPlan(g).doors as any[])[0]?.now; R.W.input.pressed.add('KeyF'); R.step(2); const wentNow = !waitingOp();
-    line(!!door && stillWaits && nowAll && wentNow, 'the key does what the bar says', `orders to blue, F: ${stillWaits ? 'still waiting' : 'WENT'} · orders to all (bar now ${nowAll}), F: ${wentNow ? 'went' : 'STILL WAITING'}`);
+    line(!!door && (only ? !stillWaits : stillWaits && nowAll) && wentNow, 'the key does what the bar says', `orders to blue, F: ${stillWaits ? 'still waiting' : only ? 'went, as the bar said' : 'WENT'}${only ? '' : ` · orders to all (bar now ${nowAll}), F: ${wentNow ? 'went' : 'STILL WAITING'}`}`);
     // 6d. a charge: set, its door is the key's whoever the orders go to; Sam down, no key
     O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => T.ops.length === 0, 30); R.step(60);
     let cd: any = null, cw: string | null = 'no door';
