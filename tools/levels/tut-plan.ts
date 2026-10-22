@@ -226,6 +226,14 @@ export function build() {
   // (every step that is done IN the mode says what puts the mode up while it is down — a checkpoint put back, the mode put away by hand)
   const IN_MODE = new Set(['view', 'send', 'pick', 'door1', 'pick2', 'door2', 'all', 'hall', 'front', 'back', 'all2', 'gates', 'faceA', 'faceB', 'back-in']);
   for (const t of lesson.steps) if (IN_MODE.has(t.id)) t.planLine = 'Hold [Shift], tap [B]: plan mode again';
+  // (an order that is out: the line is what the men are doing, not the ask again — rails.ts `after`; the word's steps carry only the line after the word)
+  const AFTER: Record<string, { line?: string; word?: string }> = {
+    send: { line: 'All four are on their way' }, door1: { line: 'Those two stack on the door' }, door2: { line: 'They stack. Nobody goes in until your word' },
+    word: { word: 'Both doors, together' }, front: { line: 'They stack on the front door' }, back: { line: 'They go round to the back door' },
+    word2: { word: 'The gun is on the front door. They come in behind it' }, faceA: { line: 'They go to the bags and watch the road gate' },
+    faceB: { line: 'They go to the barrier and watch the back gate' }, 'back-in': { line: 'They come back to you' },
+  };
+  for (const t of lesson.steps) if (AFTER[t.id]) t.after = AFTER[t.id];
 
   for (const d of doors) doorFrame(d);
   const level: Level = {
