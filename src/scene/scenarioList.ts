@@ -166,7 +166,7 @@ export const TRAINING_MISSIONS: ScenarioEntry[] = [
  *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
   { id: 'tut-sky', title: 'The tunnel, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
-    place: 'A road tunnel\'s station, under snow', lean: 'loud', defenders: 7, squads: true,
+    place: 'A road tunnel\'s station, under snow', lean: 'loud', defenders: 7, squads: true, hour: 'night',   // (its last third is the mains going out: built for the dark)
     blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.',
     scene: 'A fuel convoy drove into the tunnel and never came out of it. Your squad came up the road to the station at its mouth, and into the roadblock in front of it. Tonight nobody on the ground is you: you lead the four from above.',
     teaches: ['Turn, zoom and move the view', 'One key orders the squad', 'Stack on a door, then send them in', 'A charge on a wall', 'Lights out: what the dark does to men'] },
