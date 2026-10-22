@@ -91,7 +91,10 @@ export async function bangsCheck(): Promise<boolean> {
     line(!!two && !two.why && !!two.aim && two.in >= DOORTOOLS.bangIntoMin - 0.1 && flat(two.at, two.aim.at) < 0.4 && two.handM < 0.6 + (two.passed ? 0 : DOORTOOLS.bangHandM) && two.own === 0,
       `the rule on, ${SECOND[0]}: thrown into the room there too — ${DOORTOOLS.bangIntoMin} m or more inside, at the point named, from the hand (or from the door's edge by a man who stands at it)`, say(two) + (two?.aim ? ` · aimed ${f1(two.aim.in)} m in` : ' · no aim'));
     // (5) one of ours in its flash
-    { const first = await run(DEEP[0], DEEP[1], RULE, 'red'), at = first?.aim?.at ?? null, r = at ? await run(DEEP[0], DEEP[1], RULE, 'red', at) : null;
+    // (DOORTOOLS.tossMate, later, keeps the can in the kit when one of ours is in its reach with a line from the opening — onesignal-check.ts asks that.
+    //  This line is bangInto's own question, WHERE a can that does go lands, so it is asked with that rule held off; put back after)
+    { const tm = (DOORTOOLS as any).tossMate; (DOORTOOLS as any).tossMate = false; let first: any, at: any, r: any;
+      try { first = await run(DEEP[0], DEEP[1], RULE, 'red'); at = first?.aim?.at ?? null; r = at ? await run(DEEP[0], DEEP[1], RULE, 'red', at) : null; } finally { (DOORTOOLS as any).tossMate = tm; }
       line(!!r && !r.why && r.thrower !== undefined && r.mateIn > 0.5 && !r.mateLine && (!r.aim || flat(r.aim.at, at) > 0.5),
         'a man of the team who is not on the order, standing in the room where the can went: the pair still throws, and not at him — the landing as it was, or a point with no line to him inside the flash',
         !first ? 'no floor for the team at that door' : !at ? `the pair alone: no point picked to ask it of — ${first.why ?? first.toss ?? first.beats.slice(-2).join(' → ')}` : r.why ? `the order refused — ${r.why}` : r.thrower === undefined ? `no can thrown: ${r.beats.slice(-3).join(' → ')}`

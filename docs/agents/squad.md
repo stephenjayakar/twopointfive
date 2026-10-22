@@ -315,6 +315,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   for the next and the line says so. KNOWN COSTS: a click on a stop no longer picks the man stood on it (click beside it); a door with its wait off still stops if the entry is
   refused; the cover a look gives stands until the next order, as any cover does; the knee makes him a smaller target for as long as the mode is up.
   NOT measured: no tally, one seed; whether men on a path cover an obvious way by themselves was not judged; nobody has played it; never seen on a GPU.
+- **An order's line starts on the leg he is on** (`floorplan.ts wayOf`; picture only, no switch). A way kept from a stride ago starts behind the
+  man, so its line began "from the corner nearest him" of its first six: on a way that doubles back that skipped the corners between and the line cut
+  the wall. Now from the end of the leg he is nearest on, looked for over the way's first two metres (`Leg.from` is where it was asked), the same way
+  `attention.ts attentionWay` draws a guard's thread. Checked by `probes.ts plan` on both stands; the doubling-back case itself has no line of its own
+  here (the attention thread's check plays it for its copy). STILL OPEN: `floorplan.legs` is a side table of the game and its search runs on the
+  grid's own tables, so a game drawn and one not drawn differ in the full state hash (`NavGrid.findPathAside` and a store on the picture's side are
+  the mend, not taken yet). Never seen on a GPU.
 - **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
   `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
   one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and

@@ -230,11 +230,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   other door meanwhile got the can. NOW: a bang and clear asks again as the can is about to leave the hand (`mateBehind`, beside behindSam's
   question about Sam): a living teammate who is no part of this entry — not of this order; a man of an order on its word or its gate only while he is
   still on his own side of his own door — beyond the door, inside `stunM` with a line from the opening (this door's own leaf aside; `canReach`, the
-  one test samBehind asks too). Sam's own squad only: the response team's cast throws as it did: the can goes back in the kit, the lead says who ('Blue One is in there —
+  one test samBehind asks too). Sam's own squad only: the response team's cast throws as it did: the can goes back in the kit, the lead says who ('Blue One is in there, so
   no bang. going in.'), the beat is 'no bang · Blue One is in there', and they go in. Any squad size. A frag already asked this (`fragBehind`).
   CHECK: lines 2 and 3 of `probes.ts onesignal` (a pair's bang and clear on the guardroom's front door, a man of the other pair put on the room's
   floor from the tick the door opens; the control with nobody inside throws its can as before), both stands; pinned off in the frozen-digest lists beside behindSam
-  (threshold-probes.ts, nvg-probes.ts, irlaser-probes.ts); `TOSSMATE_BREAK=1` fails line 2 (the
+  (threshold-probes.ts, nvg-probes.ts, irlaser-probes.ts); `bangs` line 5 (a man of ours walks in after the order: the can still goes, landed away from him — bangInto's
+  own question) is asked with this rule held off, since on the page the can now stays in the kit there; `TOSSMATE_BREAK=1` fails line 2 (the
   can goes, he is dazzled). NOT measured: a tally, a teammate at the edge of the reach or behind furniture, a can thrown by the threshold's own
   rule (`canBehind` asks that one as it did); nobody has played it; never seen on a GPU.
 - **A known threat first** (`DOORTOOLS.threatFirst`, on; Team feel 'entry ▸ known threat first', `threatSecs` 12, `threatCap` 1.5; off = the entry as it

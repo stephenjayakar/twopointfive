@@ -2219,7 +2219,7 @@ export class DoorTools {
         } else if (K.tossMate) {   // (tossMate: … and about the rest of the team — a pair that went in by the room's other door since the row was given)
           const mate = this.mateBehind(op);
           if (mate) {
-            g.say(lead, `${mate.callsign} is in there — no bang. going in.`);
+            g.say(lead, `${mate.callsign} is in there, so no bang. going in.`);
             op.bangHeld = false; this.refund('bang'); this.beat(op, `no bang · ${mate.callsign} is in there`); this.note(`bang held on ${d.def.name}: ${mate.callsign} in its reach — in without it`);
             if (op.word) { op.phase = 'wait'; op.hold = 2; break; }
             this.enter(op); break;
