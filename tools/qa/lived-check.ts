@@ -33,7 +33,8 @@ const ROOT = resolve(import.meta.dir, '../..');
 // f48b54d8d: the door names (scenarios.doorNames in 25 files: words a row reads, no box, door, mark or route moved).
 // 14d5fc1f4: exits, areas and 23 doors renamed in 22 files (names only: scenarios.quiet starts / exits / wayouts, places.areas, doorNames; nothing else moved).
 // 98281d690: the snatch's van and its response block (levels/snatch.json alone). 317a19cb1: the join of the two, the first here that holds both.
-// 5f8c416e6: the tutorial's squad mission, a level no base before it has (levels/tut-squad.json alone: its lived things are held to their tail from here).
+// 5f8c416e6: the tutorial's squad mission, a level no base before it has. It is the base for EVERY level, as each of these is (one base for all): every
+//   level's 429 lines were green against it when it went in, and tut-squad's lived things are held to their tail from here.
 const BASE_REVS = ['5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
 const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
 /** roomclear.ts propGap, repeated (this tool imports nothing of src/game): the floor distance from a point to a prop's yawed footprint */
