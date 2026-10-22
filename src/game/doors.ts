@@ -255,7 +255,7 @@ export class Door {
    *  of sight, sound, shot or smoke bake meets), update() leaves it alone, no verb moves it, and to everything that reads a door's state it is one standing wide
    *  open with its lock gone (`angle` ±OFF_ANGLE, unlatched, lockBroken): an open doorway. reset() hangs it again. */
   off = false; slab: DoorSlab | null = null;
-  /** doorblast.ts DOORSHOT: the rounds' work this leaf has taken, in the wall engine's unit — one count for the whole leaf. reset() clears it. */
+  /** doorblast.ts DOORSHOT: the rounds' work this leaf has taken, in the wall engine's unit (with DOORSHOT.flat: rifle rounds, whatever the destruction scale) — one count for the whole leaf. reset() clears it. */
   shot = 0;
   /** the hung leaf's half extents and markings (the slab at rest lies under other ones — doorblast.ts; reset() and the fog's remembered leaf put these back) */
   readonly leafH: Vec3; readonly leafMarks: Box['marks'];

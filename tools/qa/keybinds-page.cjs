@@ -10,6 +10,7 @@
 //   Reset is the build's keys and nothing kept · ?keybinds=0: the plain list, the kept table untouched.
 //   THE PAGE'S OWN BOARD (host/keymap.ts qFree, the last three lines; all the above run under ?qfree=0): the wall hold's cap is a dashed —, unmarked, its words
 //   say walk into it · a click and Q: the cap is Q, marked, kept; Reset is — again · ?wallpress=0: Q again · ?keybinds=0: a plain —.
+//   Q and F only: the orders menu's cap and the who cap are a dashed —, unmarked · a click and X: the menu's cap is X, marked, kept; Reset is — again.
 //   EMPTY HANDS ARE A SLOT (game/handslot.ts, host/keymap.ts SLOT; the last line): 'Empty hands' heads the kit's rows on a cap that reads backtick, unmarked;
 //   there is no row for E; the debugger's cap reads backslash, unmarked · a click and K: the slot's cap is K, marked, kept; Reset is backtick again.
 // GPU=1, THE GAME: crouch put on K on the screen, over the start card: K crouches him at once, C does nothing; the kit column names the light's new key; a
@@ -27,10 +28,11 @@ const check = (ok, label, detail = '') => { checks.push(!!ok); console.log(`- ${
 const watch = (page, name, gpu) => { page.on('pageerror', e => errors.push(`${name}: ${e.message}`)); page.on('console', m => { if (m.type() === 'error' && !(NOISE.test(m.text())) && (gpu || !/GPU|adapter|WebGPU/i.test(m.text()))) errors.push(`${name}: ${m.text().slice(0, 200)}`); }); };
 const still = async (page, name) => { if (!outDir) return; const ok = await page.screenshot({ path: path.join(outDir, name), timeout: 180000 }).then(() => true, () => false); if (!ok) log(`no picture ${name}: the screenshot did not come`); };   // (a picture for a person: one that will not come is said, never a red)
 // (`board`: every line but the last four is asked on the board as it was, the wall hold on Q, E the holster, Space the action and V the whistle —
-// ?qfree=0&handslot=0&handring=0; the page's own board gives the wall's row no key, and has empty hands as a slot on backtick with the debugger on backslash.
+// ?qfree=0&handslot=0&handring=0&qonly=0; the page's own board gives the wall's row no key, has empty hands as a slot on backtick with the debugger on
+// backslash, and gives the orders menu's row and the who row no key (Q and F are the squad's only keys: the ring is the menu).
 // &slotsetup=0 on every line: the selector and the light on Z and L and the kit column as it was — the rows a gun's setup frees and its box are
 // slotsetup-page.cjs's)
-const url = (more = '', board = '&qfree=0&handslot=0&handring=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&slotsetup=0${board}${more ? '&' + more : ''}`;
+const url = (more = '', board = '&qfree=0&handslot=0&handring=0&qonly=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&slotsetup=0${board}${more ? '&' + more : ''}`;
 const openControls = async page => { await page.waitForSelector('#menu .actions button', { timeout: 60000 });
   await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].find(b => /^Options/.test(b.textContent))?.click()); await page.waitForSelector('#options.on', { timeout: 10000 });
   await page.evaluate(() => document.querySelector('#options .op-tab[data-tab="controls"]').click()); await page.waitForTimeout(150); };   // (a click by the page's own hand: under the software adapter the frame is seconds late and a pointer waits for it)
@@ -79,6 +81,15 @@ async function screen(browser) {
       && b.t === 'Q' && /moved/.test(b.c) && /Q or a step away/.test(b.small) && kept === '{"KeyQ":"KeyQ"}' && c.t === '—' && !/moved/.test(c.c) && kept2 === null,
       'the page\'s own board: the wall hold\'s cap is a dashed —, not marked as moved, its words say walk into it; a click and Q puts it on Q (marked, kept); Reset is — again and nothing kept',
       `as it opens '${a.t}' [${a.c}] '${a.what}' '${a.small}' kept ${kept0} · after Q '${b.t}' [${b.c}] '${b.small}' kept ${kept} · after Reset '${c.t}' [${c.c}] kept ${kept2}`); await still(page, 'controls-no-wall-key.png'); }
+  { await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (Q and F are the squad's only keys, KEYMAP.qOnly: the two rows the ring took over have no key, and can be given one)
+    const row = id => page.evaluate(id => { const b = document.querySelector(`#options button.op-key[data-key="${id}"]`); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim() }; }, id);
+    const x0 = await row('KeyX'), t0 = await row('KeyT'), kept0 = await page.evaluate(KEPT);
+    await page.evaluate(() => document.querySelector('#options button.op-key[data-key="KeyX"]').click()); await page.waitForTimeout(80); await key('x'); const x1 = await row('KeyX'), t1 = await row('KeyT'), kept = await page.evaluate(KEPT);
+    await page.click('#options [data-act="reset"]'); await page.waitForTimeout(80); const x2 = await row('KeyX'), kept2 = await page.evaluate(KEPT);
+    check(x0.t === '—' && /none/.test(x0.c) && !/moved/.test(x0.c) && t0.t === '—' && /none/.test(t0.c) && !/moved/.test(t0.c) && kept0 === null
+      && x1.t === 'X' && /moved/.test(x1.c) && t1.t === '—' && kept === '{"KeyX":"KeyX"}' && x2.t === '—' && !/moved/.test(x2.c) && kept2 === null,
+      'the page\'s own board: the orders menu\'s cap and the who cap are a dashed —, not marked as moved; a click and X puts the menu on X (marked, kept) and leaves the who row as it was; Reset is — again and nothing kept',
+      `as it opens: orders '${x0.t}' [${x0.c}], who '${t0.t}' [${t0.c}] kept ${kept0} · after X: orders '${x1.t}' [${x1.c}], who '${t1.t}' kept ${kept} · after Reset '${x2.t}' [${x2.c}] kept ${kept2}`); }
   { await page.goto(url('wallpress=0&bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);
     const r = await page.evaluate(() => { const b = document.querySelector('#options button.op-key[data-key="KeyQ"]'), row = b?.closest('.op-krow'); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim(), small: row?.querySelector('small')?.textContent ?? '' }; });
     check(r.t === 'Q' && !r.c && /Q or a step away/.test(r.small), 'the page\'s own board with the walk-in switched off (?wallpress=0): the wall hold is on Q again, its cap and its words as they were', `'${r.t}' [${r.c}] '${r.small}'`); }
