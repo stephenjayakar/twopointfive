@@ -44,7 +44,7 @@ for (const name of list) {
     { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
       const o = g.lesson.objective(), line = g.objectiveText();
       verdict(!r.why && !!r.spec && !!o && g.lesson.i === 0 && line === o.text && line.includes(line0), `'${e.title}': starts, and the objective row is the lesson's first step`, r.why ?? line);
-      if (e.squad === 0 && e.kind === 'quiet') {   // (a quiet run alone saves checkpoints: the lesson's place among its steps rides in the file)
+      if (e.squad === 0 && e.kind === 'quiet' && !L.rails) {   // (a quiet run alone saves checkpoints: the lesson's place among its steps rides in the file. On rails the only saves are the steps' own — rails-check, tut-solo-check)
         const k = Math.min(2, L.steps.length - 1); g.lesson.i = k;   // (the check's own hand on the step counter: the scripted run is lesson-run's)
         let why = ''; try { const snap = W.snapshot('lesson-check', true); g.lesson.i = 0; await quiet(() => { W.restore(snap); for (let i = 0; i < 3; i++) W.step(1 / 60); }); } catch (x) { why = String((x as Error).message); }
         verdict(!why && g.lesson.i >= k && !!g.lesson.objective()?.text.includes(`${g.lesson.i + 1}/${L.steps.length}`), `'${e.title}': a checkpoint carries the step that is up (saved on step ${k + 1}, loaded on step ${g.lesson.i + 1})`, why); }

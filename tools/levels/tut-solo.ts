@@ -23,7 +23,7 @@
 //   page: ?levelFile=tut-solo.json&quiet&hour=dusk&weather=dust
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
-import type { LevelScenarios, LessonData, QuietData, Rect, IssueData } from '../../src/scene/scenarios';
+import type { LevelScenarios, LessonData, LessonStep, QuietData, Rect, IssueData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
@@ -84,19 +84,18 @@ export { LAST_MEN, LAST_IN };
 /** the way out: the yard gate he came in by */
 export const EXIT = { name: 'the road', door: 'gate_w', x: 8.2, z: AXIS, out: [-1, 0] as [number, number] };
 
-/** THE TUTORIAL FRAME'S KEYS, a step each: `allow` turns actions on for the rest of the mission (the first step's are the mission's own: he can only walk),
+/** THE TUTORIAL FRAME'S KEYS, a step each: `allow` turns actions on for the rest of the mission (from the first step he can walk, and turn and zoom the view as the first mission taught him: `rails.allow`),
  *  `cue` goes to the level's script as the step comes up ('lesson:<cue>'), `checkpoint` names the one save of a beat. Four checkpoints, each where he has
  *  just finished a fight and nobody alive can see him: the gate (the sentry is down), the gun (the nest is out), the shop (its man is down), the store (the
  *  building is his). */
 export const FRAME: Record<string, { allow?: string[]; cue?: string; checkpoint?: string }> = {
-  move: { allow: ['move'], cue: 'road' }, sprint: { allow: ['sprint'] }, ready: { allow: ['slot:rifle'] }, wall: { allow: ['wall'], cue: 'cease' }, fire: { allow: ['aim', 'fire'] },
+  move: { cue: 'road' }, sprint: { allow: ['sprint'] }, ready: { allow: ['slot:rifle'] }, wall: { allow: ['wall'], cue: 'cease' }, fire: { allow: ['aim', 'fire'] },
   reload: { allow: ['reload'], checkpoint: 'the gate' }, crouch: { allow: ['crouch'], cue: 'gun' }, low: { cue: 'bags' },
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
   pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use', 'ring'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
   take: { checkpoint: 'the store' }, launch: { allow: ['alt'], cue: 'trucks' }, last: { cue: 'loose' },
 };
-export const FRAME_CUES: Record<string, string> = Object.fromEntries(Object.entries(FRAME).filter(([, f]) => f.cue).map(([id, f]) => [id, f.cue!]));
 
 const SHOP: Rect = { x0: FRONT_X, x1: PART_X, z0: ROOM_Z0, z1: ROOM_Z1 }, STORE: Rect = { x0: PART_X, x1: YARD.x1, z0: ROOM_Z0, z1: ROOM_Z1 };
 
@@ -224,43 +223,44 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const DOWN = (n: number) => ({ is: 'men', down: n } as const);
   const BEHIND: Rect = { x0: 22.3, x1: 24.6, z0: 13.3, z1: 15.3 };
   /** where a smoke can hides the gap from the gun: the court between the two, the gap itself included (a can thrown back the way he came does not pass) */
-  const SMOKED: Rect = { x0: 19.6, x1: 24.8, z0: 7.6, z1: 14.9 };
+  const SMOKED: Rect = { x0: 21.4, x1: 24.8, z0: 7.6, z1: 14.9 };   // (from past where the line before left him: a can dropped at his own feet behind the sandbags hides nothing)
   const lesson: LessonData = {
     title: 'Alone, loud',
-    steps: [
+    rails: { allow: ['move', 'camera', 'zoom'] },
+    steps: ([
       // THE ROAD
-      { id: 'move', line: 'W A S D: get behind the van', done: { is: 'near', at: VAN, r: 1.1 }, at: VAN },
-      { id: 'sprint', line: 'Shift: sprint to the wall', done: { is: 'all', of: [{ is: 'near', at: WALL, r: 1.6 }, { is: 'flag', flag: 'sprint' }] }, at: WALL },
-      { id: 'ready', line: '2: rifle up', done: { is: 'slot', slot: 'rifle', drawn: true } },
+      { id: 'move', line: '[W] [A] [S] [D]: get behind the van', done: { is: 'near', at: VAN, r: 1.1 }, at: VAN },
+      { id: 'sprint', line: 'Hold [Shift]: sprint to the wall', done: { is: 'all', of: [{ is: 'near', at: WALL, r: 1.6 }, { is: 'flag', flag: 'sprint' }] }, at: WALL },
+      { id: 'ready', line: '[2]: rifle up', done: { is: 'slot', slot: 'rifle', drawn: true } },
       { id: 'wall', line: 'Walk into the wall: back to it', done: { is: 'flag', flag: 'wall' }, at: WALL },
       { id: 'fire', line: 'Left button: shoot the sentry', done: DOWN(1), at: [SENTRY[0], 1.2, SENTRY[2]] },
       // THE TRUCK COURT
-      { id: 'reload', line: 'R: reload', done: { is: 'reload' } },
-      { id: 'crouch', line: 'C: crouch at the arch', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: JAMB, r: 1.4 }] }, at: JAMB },
+      { id: 'reload', line: '[R]: reload', done: { is: 'reload' } },
+      { id: 'crouch', line: '[C]: crouch at the arch', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: JAMB, r: 1.4 }] }, at: JAMB },
       // THE GUN COURT
       { id: 'low', line: 'Stay low: follow the sandbags', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: BAGS_END, r: 1.1 }] }, at: BAGS_END },
-      { id: 'smoke', line: '3, then left button: smoke the gap', done: { is: 'any', of: [{ is: 'threw', kind: 'smoke', area: SMOKED }, DOWN(2)] }, hold: 2.5, at: GAP },
+      { id: 'smoke', line: '[3], then left button: smoke the gap', done: { is: 'any', of: [{ is: 'threw', kind: 'smoke', area: SMOKED }, DOWN(2)] }, hold: 2.5, at: GAP },
       { id: 'cross', line: 'Cross behind the smoke', done: { is: 'in', area: BEHIND }, at: BARRIER },
-      { id: 'frag', line: '5, then left button: frag the gun', done: DOWN(2), at: NEST },
+      { id: 'frag', line: '[5], then left button: frag the gun', done: DOWN(2), at: NEST },
       // THE SHOP
-      { id: 'pistol', line: '1: the pistol', done: { is: 'any', of: [{ is: 'slot', slot: 'pistol', drawn: true }, DOWN(5)] } },
-      { id: 'charge', line: 'Hold Space on the door: the charge', done: { is: 'any', of: [{ is: 'door', door: 'shop', state: 'charged' }, { is: 'door', door: 'shop', state: 'open' }] }, at: SHOP_DOOR },
+      { id: 'pistol', line: '[1]: the pistol', done: { is: 'any', of: [{ is: 'slot', slot: 'pistol', drawn: true }, DOWN(5)] } },
+      { id: 'charge', line: 'Hold [Space] on the door: pick the charge', done: { is: 'any', of: [{ is: 'door', door: 'shop', state: 'charged' }, { is: 'door', door: 'shop', state: 'open' }] }, at: SHOP_DOOR },
       { id: 'back', line: 'Stand clear, beside the door', done: { is: 'near', at: BACK, r: 0.9 }, at: BACK },
-      { id: 'blow', line: 'F: blow it', done: { is: 'door', door: 'shop', state: 'open' }, at: SHOP_DOOR },
+      { id: 'blow', line: '[F]: blow it', done: { is: 'door', door: 'shop', state: 'open' }, at: SHOP_DOOR },
       { id: 'shop', line: 'Lean in: shoot him', done: DOWN(3), at: [SHOP_MAN[0], 1.0, SHOP_MAN[2]] },
       // THE STORE
-      { id: 'stun', line: '4, then left button: stun the store', done: { is: 'any', of: [{ is: 'threw', kind: 'flash', area: STORE }, DOWN(5)] }, at: STORE_DOORWAY },   // (it passes on the bang itself, in the store: the next line is up while they are still folded)
+      { id: 'stun', line: '[4], then left button: stun the store', done: { is: 'any', of: [{ is: 'threw', kind: 'flash', area: STORE }, DOWN(5)] }, at: STORE_DOORWAY },   // (it passes on the bang itself, in the store: the next line is up while they are still folded)
       { id: 'store', line: 'Go in: shoot both', done: DOWN(5), at: [33.6, 1.0, AXIS] },
-      { id: 'take', line: 'Space: take the code book', done: { is: 'stage', stage: 'exfil' }, at: front },
+      { id: 'take', line: '[Space]: take the code book', done: { is: 'stage', stage: 'exfil' }, at: front },
       // THE WAY OUT
-      { id: 'rifle', line: '2: back to the rifle', done: { is: 'slot', slot: 'rifle', drawn: true } },
-      { id: 'load', line: '2 again: load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
+      { id: 'rifle', line: '[2]: back to the rifle', done: { is: 'slot', slot: 'rifle', drawn: true } },
+      { id: 'load', line: '[2] again: load the grenade', setupLine: '[2], then [2]: load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
       { id: 'leave', line: 'Back to the arch', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH },
       // (a grenade that met something short of the 8 m it arms at is a dud: the line stays until one of the two is down, by the grenade or by anything else)
       { id: 'launch', line: 'Behind you. Hold right button, aim, let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
       { id: 'last', line: 'Shoot the rest', done: DOWN(7), at: LAST_COVER },
-      { id: 'out', line: 'Shift: out by the gate', done: { is: 'stage', stage: 'done' }, at: [EXIT.x, 0, EXIT.z] },
-    ],
+      { id: 'out', line: 'Sprint out by the gate', done: { is: 'stage', stage: 'done' }, at: [EXIT.x, 0, EXIT.z] },
+    ] as LessonStep[]).map(T => ({ ...T, ...FRAME[T.id] })),
   };
 
   for (const d of doors) doorFrame(d);

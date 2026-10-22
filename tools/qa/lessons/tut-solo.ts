@@ -5,12 +5,14 @@ import type { Bot } from '../lesson-run';
 import { AXIS, VAN, WALL, SENTRY, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, SHOP_DOOR, STORE_DOORWAY, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
 
 export const query = '?quiet';
+/** the level's fights are its script's, which the tutorial frame starts: on a stand without the frame this lesson cannot be played */
+export const needs = 'rails';
 /** THE LESSONS CAN BE FAILED THE WAY THEIR LINES SAY (each of these runs must end with the player down; tools/qa/tut-solo-check.ts asks it):
  *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Two more words are mistakes that must cost
  *  nothing: `piers` stands at each pier of the arch under the last two's fire, `dud` fires the first grenade from too close */
 /** the page itself (no process to ask). The harness's own stand of the page does not wear a lesson level's issue card: only the page's kit is the card's */
 const PAGE = typeof process === 'undefined';
-const brk = () => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : '') ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
+const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : (globalThis as { __TUT_SOLO_ARM?: string }).__TUT_SOLO_ARM) ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
 /** the last men may already be down when 'Shoot the rest' comes up (the grenade took both); and where his card carries no charge (the frozen stand) the boot
  *  opens the door at the line before 'F: blow it' */
 export const idleOk = ['last', 'blow'];
@@ -43,9 +45,31 @@ const take = (B: Bot, code: string) => { B.press(code, 5); B.until(() => B.g.pla
 /** the can in the air, until it has gone off (or `secs`) */
 const landed = (B: Bot, kind: string, secs: number) => { let seen = false; for (let i = 0; i < secs * 60; i++) { const it = B.g.items.items.some((x: any) => x.kind === kind && !x.fired); if (seen && !it) break; seen = seen || it; B.step(); } B.step(20); };
 
+/** THE CHECKPOINTS (TUT_SOLO_ARM=again): a down costs the beat and no more. He goes down twice the way the lines warn of (the sandbags standing, the gap with
+ *  no smoke) and takes the game's own way back each time (Enter: the last checkpoint, 'the gate'); the other three checkpoints are put back by the harness's
+ *  hand a step after each was kept (nothing in this mission kills a man who does as he is told, so nothing else brings them back). After each he plays the
+ *  beat again from its first line: every fight has to start clean from its cue. */
+const once = new Set<string>();
+const stepIs = (B: Bot, id: string) => B.g.lesson.step?.id === id;
+/** play these lines again, each when it is the one that is up */
+const replay = (B: Bot, ids: string[]) => { for (const id of ids) { if (!B.until(() => stepIs(B, id), 4)) B.fail(`again: '${id}' did not come up after the checkpoint (the lesson is on '${B.g.lesson.step?.id}')`); B.step(30); steps[id](B); B.step(30); } };
+/** down as the line warns, then Enter */
+const downAndBack = (B: Bot, how: () => void, to: string) => {
+  how(); if (!B.until(() => B.g.player.down, 4)) B.fail(`again: he was not hit (${to})`);
+  B.step(20); B.press('Enter', 20);
+  if (B.g.player.down || !stepIs(B, to)) B.fail(`again: Enter did not put him back at '${to}' (down ${B.g.player.down}, the lesson is on '${B.g.lesson.step?.id}')`);
+  B.say(`  down, and back at '${to}' by Enter`);
+};
+/** the newest checkpoint of this run, put back by the harness */
+const handBack = (B: Bot, to: string) => {
+  const g = B.g, ck = g.saves.newest(true, g.mission.stats.elapsed), why = ck ? g.saves.loadInStep(g, ck.key) : 'no checkpoint on the shelf'; B.step(20);
+  if (why || !stepIs(B, to)) B.fail(`again: the checkpoint was not put back at '${to}' (${why ?? `the lesson is on '${g.lesson.step?.id}'`})`);
+  B.say(`  the checkpoint put back: '${to}'`);
+};
+
 export const steps: Record<string, (B: Bot) => void> = {
   // THE ROAD: off the start mark and behind the van the sentry is shooting at
-  move: B => { B.go(VAN, 20); },
+  move: B => { once.clear(); B.go(VAN, 20); },
   // round the van's tail and across to the yard wall, running
   sprint: B => { B.go([3.2, 0, 17.4], 10); B.go(WALL, 12, { sprint: true, near: 0.6 }); },
   ready: B => { take(B, 'Digit2'); },
@@ -69,8 +93,14 @@ export const steps: Record<string, (B: Bot) => void> = {
   // in by the gate, round the barrier's far end, crouched at the arch's near jamb
   crouch: B => { if (B.g.player.wall) B.press('KeyQ', 10); B.go([10.6, 0, 11.2], 20); B.go(JAMB, 20); B.crouch(true); },
   // crouched through the arch and along behind the sandbags
-  low: B => { if (brk() === 'stand') B.crouch(false); B.go([16.9, 0, 13.3], 12); B.go(BAGS_END, 15); if (brk() === 'stand') { B.wait(2.5); B.fail('BREAK stand: he walked the sandbags standing and was not hit'); } },
-  smoke: B => { if (brk() === 'nosmoke') { B.go(BARRIER, 10, { near: 0.5 }); B.wait(2.5); B.fail('BREAK nosmoke: he crossed the gap with no smoke up and was not hit'); } take(B, 'Digit3'); B.click(1, GAP); landed(B, 'smoke', 4); B.wait(2.8); },
+  low: B => {
+    if (brk() === 'again' && !once.has('low')) { once.add('low'); downAndBack(B, () => { B.crouch(false); B.go([16.9, 0, 13.3], 12, { stop: () => B.g.player.down }); B.go(BAGS_END, 15, { stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', 'crouch']); B.until(() => stepIs(B, 'low'), 4); }
+    if (brk() === 'stand') B.crouch(false); B.go([16.9, 0, 13.3], 12); B.go(BAGS_END, 15); if (brk() === 'stand') { B.wait(2.5); B.fail('BREAK stand: he walked the sandbags standing and was not hit'); }
+  },
+  smoke: B => {
+    if (brk() === 'again' && !once.has('smoke')) { once.add('smoke'); downAndBack(B, () => { B.go(BARRIER, 10, { near: 0.5, stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', 'crouch', 'low']); B.until(() => stepIs(B, 'smoke'), 4); B.step(30); }
+    if (brk() === 'nosmoke') { B.go(BARRIER, 10, { near: 0.5 }); B.wait(2.5); B.fail('BREAK nosmoke: he crossed the gap with no smoke up and was not hit'); } take(B, 'Digit3'); B.click(1, GAP); landed(B, 'smoke', 4); B.wait(2.8);
+  },
   // when the plume is up: across the gap, behind the barrier
   cross: B => { B.go(BARRIER, 10, { near: 0.5 }); },
   // over the barrier and into the nest; a second one if the first fell short
@@ -82,6 +112,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   pistol: B => { take(B, 'Digit1'); },
   // the door's rows by the held key (a list on the page, a ring where that is switched on): its charge where his card carries one, the boot where it does not
   charge: B => {
+    if (brk() === 'again' && !once.has('charge')) { once.add('charge'); handBack(B, 'pistol'); replay(B, ['pistol']); B.until(() => stepIs(B, 'charge'), 4); B.step(30); }
     const g = B.g, c = [SHOP_DOOR[0], 1.0, SHOP_DOOR[2]];
     B.go([24.2, 0, AXIS + 0.2], 10);
     for (let i = 0; i < 30; i++) { B.aim(c); B.step(); }
@@ -105,19 +136,26 @@ export const steps: Record<string, (B: Bot) => void> = {
   stun: B => { B.go([26.8, 0, AXIS], 10); take(B, 'Digit4'); B.click(1, [33.4, 0.1, AXIS]); landed(B, 'flash', 3.4); },
   // the pistol, and INTO the room (a gun in a doorway has no room to come up across the jamb)
   store: B => {
+    if (brk() === 'again' && !once.has('store')) { once.add('store'); handBack(B, 'stun'); replay(B, ['stun']); B.until(() => stepIs(B, 'store'), 4); B.step(30); }
     take(B, 'Digit1'); B.go([STORE_DOORWAY[0], 0, AXIS], 6);
     if (!fight(B, 5, 30, () => { B.nudge(STORE_DOORWAY, 0.3); })) B.fail('the two in the store did not drop');
   },
   take: B => { B.go([TRUNK[0] - 0.95, 0, TRUNK[2]], 15); if (!B.verb('objective', 'drive', [TRUNK[0] - 0.4, 0.5, TRUNK[2]])) B.fail('no row to take the code book'); B.until(() => B.g.mission.stage === 'exfil', 20); },
   rifle: B => { take(B, 'Digit2'); },
   // 2 with the rifle up steps what is on the right button: the ring, then the grenade
-  load: B => { B.press('Digit2', 10); },
+  // the rifle's key again steps the launcher's load; where that key opens the gun's setup instead, the load is its row 2
+  load: B => { B.press('Digit2', 20); if (B.g.lesson.step?.id === 'load') B.press('Digit2', 10); },
   // back out through the shop and the gun court to the arch's mouth
   leave: B => { B.go([ARCH_MOUTH[0], 0, AXIS], 40); },
   // the two in the shop's doorway behind him: the grenade into it, once both stand there (8.5 m and more: armed)
   launch: B => {
     const men = () => B.g.guards.slice(5);
     B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
+    if (brk() === 'again' && !once.has('launch')) { once.add('launch');
+      handBack(B, 'take'); if (men().length) B.fail(`again: ${men().length} of the last men are on the floor before their line (the checkpoint is from before they came)`);
+      replay(B, ['take', 'rifle', 'load', 'leave']); B.until(() => stepIs(B, 'launch'), 4); B.step(30);
+      B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
+      if (men().length !== 2) B.fail(`again: ${men().length} last men after the checkpoint (two come, once)`); }
     const x = men().find(up); if (!x) B.fail('nobody came out through the shop');
     // (two ways a new player gets this wrong, each of which must cost him nothing: tools/qa/tut-solo-check.ts)
     if (brk() === 'piers') for (const z of [AXIS - 1.25, AXIS + 1.3]) { B.go([ARCH_MOUTH[0] + 0.1, 0, z], 6, { near: 0.25 }); B.wait(4); if (B.g.player.wall) B.press('KeyQ', 10); B.go([ARCH_MOUTH[0], 0, AXIS], 6); }   // (the page takes the pier as a wall: off it, and back to the mouth, before the launcher)

@@ -116,17 +116,20 @@ const script: LevelScriptFn = D => {
     P.beat('loose', function* (c) { c.flag.loose = true; yield c.frames(1); });
     P.beat('trucks', function* (c) {
       yield c.wait(0.4);
-      const men = LAST_IN.map((p, i) => c.spawn(rifleman, p, { yaw: -Math.PI / 2, callsign: ['Brandt', 'Marsh'][i] }));
-      men.forEach((u, i) => c.order(u, { goal: LAST_MEN[i], speed: 3.4, aimAt: ARCH_HEAD[i][0], upper: 'aim', hot: true }));
-      yield c.any(c.until((q: Query) => men.every(u => !q.alive(u) || q.arrived(u)), 'in the doorway'), c.wait(6));
+      // (found by name first: a beat starts clean from its cue, and nobody is spawned twice. Each keeps his own place and his own piece of wall)
+      const men = LAST_IN.map((p, k) => { const name = ['Brandt', 'Marsh'][k]; return { k, u: c.unit(name) ?? c.spawn(rifleman, p, { yaw: -Math.PI / 2, callsign: name }) }; }).filter(m => c.query.alive(m.u));
+      if (!men.length) return;
+      const all = men.length, up = () => men.filter(m => c.query.alive(m.u)).length;
+      for (const m of men) c.order(m.u, { goal: LAST_MEN[m.k], speed: 3.4, aimAt: ARCH_HEAD[m.k][0], upper: 'aim', hot: true });
+      yield c.any(c.until((q: Query) => men.every(m => !q.alive(m.u) || q.arrived(m.u)), 'in the doorway'), c.wait(6));
       // the show: until one of them is hit or the line has gone by ('loose'), however long he takes over the launcher
-      for (let i = 0; men.every(u => c.query.alive(u)) && !c.flag.loose; i++) {
-        const shots = men.map((u, k) => { const at = ARCH_HEAD[k][i % ARCH_HEAD[k].length]; c.order(u, { aimAt: at }); return c.stimulus.burst(u, at, 4, { cadence: 0.14, spread: 0.008 }); });
-        yield c.any(c.all(...shots), c.until((q: Query) => men.some(u => !q.alive(u)), 'one of them is down'));
-        yield c.any(c.wait(0.9 + c.rand() * 0.6), c.until((q: Query) => men.some(u => !q.alive(u)) || !!q.flag('loose'), 'the show is over'));
+      for (let i = 0; up() === all && !c.flag.loose; i++) {
+        const shots = men.map(m => { const at = ARCH_HEAD[m.k][i % ARCH_HEAD[m.k].length]; c.order(m.u, { aimAt: at }); return c.stimulus.burst(m.u, at, 4, { cadence: 0.14, spread: 0.008 }); });
+        yield c.any(c.all(...shots), c.until(() => up() < all, 'one of them is down'));
+        yield c.any(c.wait(0.9 + c.rand() * 0.6), c.until((q: Query) => up() < all || !!q.flag('loose'), 'the show is over'));
       }
       yield c.wait(0.6);
-      for (const u of men) if (c.query.alive(u)) c.release(u, 'alert');
+      for (const m of men) if (c.query.alive(m.u)) c.release(m.u, 'alert');
     });
   });
 };

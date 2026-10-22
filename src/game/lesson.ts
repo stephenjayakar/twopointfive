@@ -153,7 +153,7 @@ export const LESSON_TESTS: Record<string, TestKind> = {
         if (!A) return true;
         // `area`: …and it has gone off in there — one thrown the wrong way does not pass. A smoke can lies venting where it went off: THAT can (his, on the
         // floor no longer than since it left his hand: never an older one). A stun can and a frag are gone with their bang: the bang this frame, by where it was.
-        const me = who(g).char.id, since = g.time - ev[i].t + 0.5, k = t.kind;
+        const me = who(g).char.id, since = g.mission.stats.elapsed - ev[i].t + 0.5, k = t.kind;   // (the chronicle's clock is the mission's own)
         const lying = k !== 'flash' && k !== 'frag' && g.items.items.some(x => x.kind === 'smoke' && x.fired && x.who === me && x.age <= since && inside(A, x.pos));
         const bang = k !== 'smoke' && g.events.some(e => e.kind === 'bang' && !e.charge && (k === undefined || (k === 'frag') === !!e.frag) && inside(A, e.pos));
         if (lying || bang) { S.n.set(key, 1); return true; }
@@ -300,6 +300,8 @@ export class Lesson {
     const T = L.steps[i];
     return { text: `training ${i + 1}/${L.steps.length} ▸ ${lineOf(T).replace(/\[([^\]]+)\]/g, '$1')}`, pos: T.at ?? null };   // ('[B]': a key a tutorial mission's big line draws as a key — rails.ts; plain here)
   }
+  /** a step's line as the keys stand (a tutorial mission's big line: rails.ts prompt) */
+  lineOf(T: LessonStep): string { return lineOf(T); }
   summary(): string {
     const L = this.data; if (!L) return this.g.level.scenarios?.lesson ? (LESSON.on ? 'off · this level carries one (start its mission)' : 'off · switched off') : 'off · this level carries none';
     const i = this.at;

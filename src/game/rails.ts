@@ -123,7 +123,8 @@ export class Rails {
     }
     if (input.clicked & ~buttons) dropped++;
     input.buttons &= buttons; input.clicked &= buttons;
-    if (!wheel && !menuUp) input.wheel = 0;
+    const listUp = keys.has('Space') && input.keys.has('Space');   // (the held key's list is stepped with the wheel: interact.ts — his pace it is not, while that key is down)
+    if (!wheel && !menuUp && !listUp) input.wheel = 0;
     RAILS_STATS.dropped += dropped;
   }
 
@@ -186,7 +187,7 @@ export class Rails {
     const S = this.lesson(); if (!S || S.i >= S.L.steps.length) return null;
     if (!this.g.lesson.objective()) return null;
     const T = S.L.steps[S.i];
-    return { line: T.line, n: S.i + 1, of: S.L.steps.length };
+    return { line: this.g.lesson.lineOf(T), n: S.i + 1, of: S.L.steps.length };   // (the line as the keys stand: a step may carry another where a gun's key again opens its setup)
   }
 
   // ---------------------------------------------------------------- nobody is lost
