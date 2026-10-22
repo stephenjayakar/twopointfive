@@ -79,8 +79,9 @@ export function updateTargets(g: Game, dt: number) {
     let near: Guard | null = null;
     for (const gd of g.guards) if (breakerResetNear(g, gd) && theirMains(gd) && !workNotHis(gd)) near = gd;   // (words.ts: the mains are their side's business; workthings.ts: not a teammate sent to the breaker — both gates at the loop, not inside breakerResetNear, which handwork.ts reads too)
     g.breakerFixT = near ? g.breakerFixT + dt : 0;
-    if (near) leverHands(g, near.char, g.breakerFixT, 2.2);   // (handwork.ts: his hand on the lever while he fumbles with it)
-    if (g.breakerFixT > 2.2 && near) { g.say(near, "breaker's back in", true); g.endBlackout(); }
+    const fumble = g.level.breaker.fumble ?? 2.2;   // (the level's own number where it gives one: a panel a man is long at)
+    if (near) leverHands(g, near.char, g.breakerFixT, fumble);   // (handwork.ts: his hand on the lever while he fumbles with it)
+    if (g.breakerFixT > fumble && near) { g.say(near, "breaker's back in", true); g.endBlackout(); }
   }
   // emergency beacons: spin up ~0.8 s after the trip, keep turning for a second after power returns; each is slaved to its dome fixture
   const beaconsOn = bo.active ? time - bo.since > 0.8 : time - bo.restoredAt < 1.2;

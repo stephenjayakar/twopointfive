@@ -70,6 +70,11 @@ export const CMDRING = {
   stay: false,
   /** … and how long that press is (s), in place of `holdSecs`: a ring that stays costs a press to put away, so it asks for a plainer hold than one that goes with the key */
   stayHoldSecs: 0.3,
+  /** … and A DIGIT INSIDE THAT PRESS IS THE RING'S (a quick hand: the key, then 2 before the hold is over, the key still down): the ring goes up at
+   *  once and that digit gives its wedge — it is not his gun's slot. Only the digits a ring carries (1 to `wedges`), only with the key still down, and
+   *  only where a ring can go up; a tap let go before the digit is still a tap, and the digit after it the gun's. false: until the hold is over a
+   *  digit is the gun's, as it was. Off here and on the frozen stand; the page raises it with `stay` (`?qstay=0` leaves both off) */
+  stayDigit: false,
   /** A PRESS ALREADY UP IN ITS OWN FRAME IS A TAP, GIVEN IN THAT FRAME (the key in `pressed` and not down: a press and its release inside one tick,
    *  which is also every one-frame press a script makes): nothing is waited for, so the order is filed on the tick it was on with the ring off. false:
    *  it is filed on the next tick, where the key is first seen up, as it was built. Off here; the page raises it with the ring */

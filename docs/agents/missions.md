@@ -102,7 +102,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   picket's walk); every man is the room clear's own and is released to the game's AI the moment his show is over.
   - **It is played on the tutorial's frame** (`game/rails.ts`, the bullet above: `RAILS.on`, `TPS_RAILS=1` on the frozen stand; with the switch off the level is its mission alone). Its
     `rails.allow` is what the three missions before it taught (his feet, hands and rifle, the view, the squad's key and the word); the orders menu comes on with the step that asks for it
-    ('wall', `allow: ['menu']`) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun` and `picket`; its checkpoints 'the street', 'the wall', 'the hall'
+    ('wall', `allow: ['menu', 'ring']`: its two menu lines name `[X]`, which the frame draws as "Hold" and the squad's key while that key kept down is the only way to the menu, and
+    without `ring` the frame cuts a held command key to a tap; the scripted player opens the menu that way when the ring is on and stays, by X when not) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun` and `picket`; its checkpoints 'the street', 'the wall', 'the hall'
     and 'the bags' each sit at the start of a staged fight, before the cue of the beat that follows, and every beat starts clean from its cue (the picket's beat starts with the program, holds
     the three in their camp and the yard's gates shut, and waits for its cue: so a checkpoint put back finds them held again).
   - **A man the mission's script has in hand stays the room fight's man** (`roomfight.ts tickDef`, `Def.staged`; `Director.lessonRuns`): on a floor whose defenders are the room clear's own
@@ -125,10 +126,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     inside the nest's, the hall's and the picket's fights), so the scripted player holds the staged moments to account itself: `done:shop` raised and the workshop's man still in the
     script's hand, `done:gun` raised, the four checkpoints kept, and the checkpoint 'the bags' PUT BACK mid-run with the same step up, the program running again, the picket in hand and the
     road gate shut. It plays under the locks: the menu and the frag are pressed only at their steps. `PORT=<port> node tools/qa/tut-squad-page.cjs`: the row on the real page (software
-    adapter), the big line with Q on a key cap, the menu and the frag locked at the first step, its first five steps by real keys, and the checkpoint 'the street' put back.
-  - **How forgiving** (2026-10-22, the page's stand, the scripted player with NO protection, `--plain --seed 1..4`): every step and the end on four dice of four. It was two of four with the
-    workshop's man 0.9 s late to the side door (the player, who goes down to one hit, was shot stepping through it: he is 2.0 s late now) and three of four while the last picket man had to be
-    walked up on in the camp. The scripted player stands where the lines send him and does nothing clever; a person is slower. Nobody has played it.
+    adapter), the big line with Q on a key cap, the frag and a tool locked at the first step, its first five steps by real keys, and the checkpoint 'the street' put back, and its two menu
+    steps put up by hand (`lesson.i` set from the check, nothing walked to them): each line's caps, the menu's own key giving nothing, the squad's key kept down as a ring on no man, the
+    digit that gives the order, and the same key kept down at step 1 putting no ring up.
+  - **How forgiving** (2026-10-22, the page's stand, the scripted player with NO protection, `--plain --seed 1..8`): every step and the end on FIVE dice of eight, on the build with the squad's keys on the command key and the word's alone.
+    The three that end with the player down: one at 'gun' (he steps past the wall's end to shoot back and the nest's gun, by then the game's own, hits him) and two in the last step (he walks up
+    on the picket's last man in the lit street). An earlier line here said four of four: that was dice 1 to 4 before those keys, and the same dice on that tree gave six of seven (die 8 down
+    in the last step there too, die 7 not run), so four was too few to say it. It was two of four with the workshop's man 0.9 s late to the side door (the player, who goes down to one hit,
+    was shot stepping through it: he is 2.0 s late now). The scripted player stands where the lines send him, walks up on a live rifle and does nothing clever; a person is slower. Nobody has
+    played it. Each of the three is put back by the checkpoint before it ('the wall', 'the bags').
   - **Not done / not seen**: its menu picture is a stand-in (the first tutorial mission's own stand-in, copied: none can be made without a GPU); the alley and the road are bare (`lived`
     NOTE); the one locked door is meant to be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot
     carry them. Never seen on a GPU, never played by a hand. Nobody has seen whether the gunner visibly ducks under the player's fire.
@@ -735,3 +741,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the team's van (`snatchout.ts`, above) it says 'to take alive and walk out to your van', so the sheet sets up the walk out the maintainer expected when he
   played it. 152 characters (the list's rule is 160). With `?nosnatchout` the old end is back and the card still names the van: it stands at the gate either
   way. Checked: `probes.ts missions-list` and `missions-screen` on both stands, the src typecheck. Nobody has read it on a page.
+- **The tutorial's quiet mission, the ledger (`tut-quiet`)** (2026-10-22; row `tut-quiet` in `TUTORIAL_MISSIONS`, `kind: 'quiet'`, alone; no switch of its
+  own: it is on rails, so `RAILS.on` is its switch, `?rails=0` in the page = the house as a plain quiet mission with no lesson, `TPS_RAILS=1` in front of a
+  frozen run). `tools/levels/tut-quiet.ts` writes `levels/tut-quiet.json` on the training yard: a money changer's house at night, one way through, three men
+  with one beat each, a lesson of 18 steps (`tools/qa/lessons/tut-quiet.ts` plays it by input alone; the generator's header says what each beat is and why
+  it is built so); `levels/tut-quiet.script.ts` is three exchanges of a few words on the cues `lane` and `store` (nobody is held, moved or spawned). THE
+  BEATS: out of the porch lamp into the house's shadow; a whistle at a mark, then behind a head-high wall: the back court's man comes the long way round to
+  where the sound was and is grabbed from behind, asked twice for the strongroom's code, then put out or knifed; the back door picked; from the dark store
+  the hall's man stands a stride inside the lit doorway with his back turned (the knife, on a knee); a chest beam passed on a knee; night vision; the mains
+  box, then into a niche: the clerk has the longest walk, round a counter the length of the room, and is taken at the box; the code, the safe, out by the front door and the gate (the last line stays up to the mission's own end: with the lesson done in the forecourt the page fell back to the small objective row at the top). THE FRAME'S
+  KEYS HERE: from the first step the walk, the view and the aim; `crouch`, `whistle` + `use`, `fire` + `alt`, `nvg` each come on with the step that teaches
+  them; checkpoints `the lane` (the whistle's line), `the back court`, `the store`, `the hall`, `the counting room`, one before each timed beat and none inside
+  one. TWO THINGS THE FRAME GAINED FOR IT: (1) `lesson.rails.rows`, a list of verbs: with it Space offers only rows of those verbs (`Rails.offers`, asked
+  once in `player.ts buildInteractables`; absent = every row, so `tut-sky` is as it was). The locks are by key and Space is one key: on the page a tap beside
+  the mains box set a wall charge and a tap beside the keypad worked a light plate. On a level that names its rows there is no row at all while `use`
+  is still locked (the page drew "E pull it open" for the yard gate beside the start, a prompt for a key that did nothing). (2) his own actions' ring
+  (`handring.ts`) is worked with its own keys through the gate: while it or the list is up and `use` is open, the digits 1 to 5 and both buttons pass
+  (the frame's own line now). THE ONE LOCK THAT PICKS is the back door's: the front door and the far gate are `steel` (once Space was open the front door
+  offered its pick from the forecourt, a short way into the counting room past every beat; from inside it opens with a push, the way out). A STEP'S `ringLine` (`LessonStep`, `lesson.ts lineOf`; the
+  sibling of `setupLine`) is its line while `HANDRING.on`: the whistle has no key on the page, so that step reads 'Hold [Space], then [5]: whistle. Then
+  hide' there and '[V]: whistle here. Then hide behind the wall' where V still whistles; `Rails.prompt()` now gives `lesson.ts stepLine(T)` (the line as the
+  keys stand), not the raw line. LEVEL DATA: `breaker.fumble` (seconds a man sent to the tripped panel works at it before the mains come back; absent = 2.2
+  as on every level before it; 7 at most, since a room fight's lever party gives a panel up at 8; `lighting.ts updateTargets`, both directions in
+  `levelLoad.ts`, `docs/level-format.md`; `breakerAt(x, z, out, fumble?)` in `train-ground.ts` writes it, the Training files export unchanged). This box
+  takes 7. WHAT THE RUNS TAUGHT, each from a failed run or a picture: a man answering a whistle carries a torch on the place and a glimpse moves his goal, so
+  the hide is behind a wall, never beside his path; a beat with a clock has its whole instruction in the line that is up before the clock starts, and the
+  mark on the place that line means NOW (his own feet for the whistle; the hide the moment it sounds: a mark on the hide first sends a new player there to
+  whistle); a scripted player that picks a row by name hides what a tap does, so this one taps and fails when the lit row is not the line's (`tap()`); ON
+  THE PAGE a man who comes with a light finds a body, and a player, that the headless run leaves dark, and inside 3.5 m he sees 100 degrees to either side:
+  the hall has a screen wall (hides its back half, the body, from the doorway and the box) and a niche by the doorway (the clerk walks past its end and
+  stops with his back to it); no line asks for C while he is already low. CHECKS: `bun run tools/qa/rails-check.ts` line 11 (the rows, no row under a locked key, and the ring's digit;
+  both stands; `RAILS_BREAK=1` fails it on both), `lesson-run tut-quiet` (`TPS_RAILS=1` in front on the frozen stand), `lesson-check`, `level-lint`,
+  `door-size`, `quiet-check`, `second-way-check`, `floor-order-check`, `level-names-check`, `carlamps-check` (its row), both typechecks. MEASURED, headless,
+  after the last change: the scripted player waits a person's beat before each timed move; with that beat at 0, 0.6, 1.5 and 2.5 s it finishes on both
+  stands (seed 1); seeds 3 and 4 finish on both; with every line read for 6 s it finishes on the shipped stand on seeds 1 and 2 and on the frozen one on
+  seed 1; at a 4 s beat the clerk has the mains back in before he is down. ON THE REAL PAGE (headless Chromium, the software adapter,
+  real key and mouse events, the page's own meter, 640 by 360 at the lowest quality): see the notes for what was played and what the pictures showed.
+  RED BY DESIGN: `quiet-light` on three lines (three men where a free-roam night wants four to six; the start beside the way out; no dark way with the
+  lamps on, the lit hall being the point). A SKETCH: the script's few words, the store (four strides of dark), no lived-in rooms, a composed menu picture
+  (`tools/menu-art.ts` PIN). KNOWN: a man put out through the list before he is asked leaves no way to learn the code (the pad then says so). Never seen on
+  a GPU, never played by a hand: the timings are a script's, and whether the dark lane reads on a real screen with the outline off is the maintainer's call.

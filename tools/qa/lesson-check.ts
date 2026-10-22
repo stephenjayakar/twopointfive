@@ -45,8 +45,16 @@ for (const name of list) {
       const o = g.lesson.objective(), line = g.objectiveText();
       verdict(!r.why && !!r.spec && !!o && g.lesson.i === 0 && line === o.text && line.includes(line0), `'${e.title}': starts, and the objective row is the lesson's first step`, r.why ?? line);
       if (e.squad === 0 && e.kind === 'quiet') {   // (a quiet run alone saves checkpoints: the lesson's place among its steps rides in the file)
-        const k = Math.min(2, L.steps.length - 1); g.lesson.i = k;   // (the check's own hand on the step counter: the scripted run is lesson-run's)
-        let why = ''; try { const snap = W.snapshot('lesson-check', true); g.lesson.i = 0; await quiet(() => { W.restore(snap); for (let i = 0; i < 3; i++) W.step(1 / 60); }); } catch (x) { why = String((x as Error).message); }
+        // (a tutorial mission's saves are its authored checkpoints, taken by the frame with the level's program stopped for the snapshot — rails.ts: the
+        // harness's own snapshot is refused while that program runs. So there the step put up is the first that names one, and the frame's save is the one loaded)
+        const ck = L.rails ? L.steps.findIndex((T: any) => !!T.checkpoint) : -1;
+        const k = L.rails ? ck : Math.min(2, L.steps.length - 1); if (k >= 0) g.lesson.i = k;   // (the check's own hand on the step counter: the scripted run is lesson-run's)
+        let why = k < 0 ? 'a tutorial mission played alone names no checkpoint on any step' : '';
+        if (k >= 0) try {
+          if (L.rails) { await quiet(() => { for (let i = 0; i < 3; i++) W.step(1 / 60); }); const kept = g.saves.newest(true, g.mission.stats.elapsed); g.lesson.i = 0;
+            const no = kept ? g.saves.loadInStep(g, kept.key) : `no checkpoint was kept when step ${k + 1} came up`; if (no) why = String(no); await quiet(() => { for (let i = 0; i < 3; i++) W.step(1 / 60); }); }
+          else { const snap = W.snapshot('lesson-check', true); g.lesson.i = 0; await quiet(() => { W.restore(snap); for (let i = 0; i < 3; i++) W.step(1 / 60); }); }
+        } catch (x) { why = String((x as Error).message); }
         verdict(!why && g.lesson.i >= k && !!g.lesson.objective()?.text.includes(`${g.lesson.i + 1}/${L.steps.length}`), `'${e.title}': a checkpoint carries the step that is up (saved on step ${k + 1}, loaded on step ${g.lesson.i + 1})`, why); }
       g.lesson.i = Math.min(1, L.steps.length - 1);   // (the check's own hand again: every row is restarted from a step that is NOT the first)
       // a restart BETWEEN FRAMES: before the lesson's next tick the step it still holds is the last run's — neither a checkpoint nor the row may carry it

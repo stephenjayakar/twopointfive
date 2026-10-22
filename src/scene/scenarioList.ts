@@ -171,6 +171,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
   { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
     place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
     blurb: 'Four men down one street: two easy rooms, then a door they shoot through, a gun, a locked hall, and a picket by two gates.' },
+  { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
+    place: 'A money changer\'s house, at night', lean: 'quiet', defenders: 3,
+    blurb: 'Alone, and nobody knows you came. Through the dark to the strongroom, and out the way you went in.' },
 ];
 /** every row that is a lesson: the tutorial's missions, then the Training levels */
 export const LESSON_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...TRAINING_MISSIONS];

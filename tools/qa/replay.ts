@@ -21,7 +21,9 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { playerBodyR } = await import(`${ROOT}/src/game/player.ts`);
 
 type Vec3 = [number, number, number];
-export interface ReplayOpts { strict?: boolean; invariants?: boolean; until?: number; quiet?: boolean; log?: (s: string) => void; }
+export interface ReplayOpts { strict?: boolean; invariants?: boolean; until?: number; quiet?: boolean; log?: (s: string) => void;
+  /** a check's own hand between two frames, called before frame f is applied: what it did to the recording game there, done again to this one (off the tape, as it was) */
+  between?: (f: number, game: any) => void; }
 export interface ReplayReport {
   file: string; ok: boolean; bad: string; frames: number; replayed: number; seconds: number;
   digestsChecked: number; digestMismatch: { f: number; diffs: string[] } | null;
@@ -63,8 +65,11 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   J.applyKnobs(game, F.knobs); J.applyEnvGame(game, F.env);
   Math.random = simDie(F.seed >>> 0, (Math.random as any).sys ?? Math.random);
   game.sensors.replay(F.sensors);
+  // (the checkpoint store as the recording found it: the rows the Enter once down chooses among; the text of one it loaded comes with its frame — journal.ts slotRead)
+  const slotLoads: [number, string, string][] = F.slots?.loads ?? []; let slotI = 0; if (F.slots) game.saves.tapeSeed(F.slots);
   const P = new J.SessionPlayer(F);
-  const until = Math.min(F.frames, opts.until ?? Infinity);
+  const last = F.frames - (F.meta?.lost ? 1 : 0);   // (a recording ended by a load no replay can make — journal.ts cut, `lost`: its last frame is that load's, and is not played)
+  const until = Math.min(last, opts.until ?? Infinity);
   // ---- invariants' memory
   let prevPl: Vec3 | null = null; const col = game.col;
   const violate = (f: number, kind: string, text: string) => { if (R.violations.length < 40) R.violations.push({ f, kind, text }); };
@@ -74,6 +79,8 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   // ---- the frames
   let f = 0, stoppedEarly = '';
   for (; f < until; f++) {
+    opts.between?.(f, game);
+    while (slotI < slotLoads.length && slotLoads[slotI][0] <= f) { game.saves.tapeText(slotLoads[slotI][1], slotLoads[slotI][2]); slotI++; }
     const dt = P.applyFrame(f, input, cam, canvas);
     game.sensors.beginFrame();
     game.update(dt, input, cam, canvas);
@@ -120,8 +127,8 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   }
   const S = game.sensors.stats; R.sensor.divergences = S.divergences; R.sensor.unjournaled = S.unjournaled; R.sensor.unasked = S.unasked; R.sensor.reads = S.reads;
   if (!R.sensor.first && game.sensors.firstDivergence) R.sensor.first = { ...game.sensors.firstDivergence };
-  const complete = R.replayed === F.frames;
-  R.ok = !R.digestMismatch && !R.sensor.first && !R.violations.length && (complete ? R.lastDigestOk : !stoppedEarly);
+  const complete = R.replayed === last;
+  R.ok = !R.digestMismatch && !R.sensor.first && !R.violations.length && (complete ? R.lastDigestOk || !!F.meta?.lost : !stoppedEarly);
   R.seconds = +R.seconds.toFixed(2);
   return R;
 }

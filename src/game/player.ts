@@ -2270,7 +2270,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     else if (g.wallCharge?.setting) rows = [g.wallCharge.runningRow(running)];
     else if (g.defuse?.working) rows = [g.defuse.runningRow(running)];
     else if (!pl.takedown) {
-      things.sort((a, b) => interactOrder(p)(a.it, b.it)); const flat0 = things.flatMap(t => t.verbs);
+      things.sort((a, b) => interactOrder(p)(a.it, b.it)); const flat0 = things.flatMap(t => t.verbs).filter(r => !r.verb || g.rails.offers(r.verb));   // (rails.ts: a tutorial mission offers only the rows its steps teach)
       // (wand.ts: the look under a door is the one row that GIVES WAY — it is listed after every other thing's rows, so it never takes one of the MAX_NEAR from a
       // body, a wall charge or a second door that had it before the wand existed; alone at a door it is that door's third row)
       const flat = flat0.some(r => r.verb === 'wand') ? [...flat0.filter(r => r.verb !== 'wand'), ...flat0.filter(r => r.verb === 'wand')] : flat0;

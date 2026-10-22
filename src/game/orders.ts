@@ -1001,13 +1001,16 @@ export class SquadOrders {
       if (P) {
         if (!C.on || input.pressed.has('Blur') || input.pressed.has('Paused')) { this.cmdPress = null; return false; }
         if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.quickGive(P.t); return true; }
-        if (g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
-        this.cmdPress = null; return this.backFree() && this.ringUp(P.t, input, canvas, g.time - C.tapSecs);   // (the hold was the wait: the cursor counts at once)
+        const digit = C.stay && C.stayDigit && this.ringDigit(input);   // (a digit inside the press: the ring's wedge, so the ring is up now — CMDRING.stayDigit)
+        if (!digit && g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
+        this.cmdPress = null; if (!this.backFree() || !this.ringUp(P.t, input, canvas, g.time - C.tapSecs)) return false;   // (the hold was the wait: the cursor counts at once)
+        return digit ? this.ringInput(input, cam, canvas) : true;   // (… and the digit is read by the ring it put up, in this frame)
       }
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
       if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.quickGive(this.targetUnder(input, cam, canvas)); return true; }   // (down and up inside one tick: a tap, given on its own tick)
-      if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas) }; return true; }
+      if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas) };
+        return C.stay && C.stayDigit && this.ringDigit(input) ? this.ringInput(input, cam, canvas) || true : true; }   // (the key and a digit in one tick: the same)
       return this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, g.time);
     }
     const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
@@ -1067,6 +1070,8 @@ export class SquadOrders {
     else { this.menu = null; CMDRING_STATS.cancelled++; }
     return true;
   }
+  /** a digit a ring carries went down this frame (CMDRING.stayDigit: inside the press that would put the ring up) */
+  private ringDigit(input: Input): boolean { for (let d = 1; d <= CMDRING.wedges; d++) if (input.pressed.has(`Digit${d}`)) return true; return false; }
   /** the order menu put up on `t` as a ring at the cursor (false: no menu opened there). `t0`: the clock its tap guard counts from */
   private ringUp(t: OrderTarget, input: Input, canvas: View, t0: number): boolean {
     if (!this.open(t)) return false;

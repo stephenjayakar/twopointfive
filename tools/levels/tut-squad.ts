@@ -217,7 +217,7 @@ export function build() {
       { id: 'side', line: 'He shoots through it. Go round', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, cue: 'shop' },
       { id: 'shop', line: '[Space]: open the side door', done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
-      { id: 'wall', line: "[X], [3]: they follow. To the wall's end", done: or(and(or({ is: 'following' }, gave('fallIn')), near(END, 1.6)), taken('nest')), at: END, checkpoint: 'the wall', allow: ['menu'] },
+      { id: 'wall', line: "[X], [3]: they follow. To the wall's end", done: or(and(or({ is: 'following' }, gave('fallIn')), near(END, 1.6)), taken('nest')), at: END, checkpoint: 'the wall', allow: ['menu', 'ring'] },
       { id: 'gun', line: 'A gun. Shoot back: it ducks', done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), at: [31.6, 1.2, 13.8], cue: 'gun' },
       { id: 'blocks', line: 'While it is down: run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS },
       { id: 'frag', line: '[5], left button: a frag over the bags', done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },

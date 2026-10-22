@@ -61,13 +61,14 @@ export function trainGround() {
 
   // the mains breaker and one emergency beacon (the game's blackout wants both): on the north wall's inside face unless the lesson moves the breaker
   let breaker: Level['breaker'] | null = null;
-  /** put the breaker on a wall: `c` = the panel's centre 4 cm proud of the face, `out` = the way it faces (the side a man stands) */
-  const breakerAt = (x: number, z: number, out: 'n' | 's' | 'e' | 'w') => {
+  /** put the breaker on a wall: `c` = the panel's centre 4 cm proud of the face, `out` = the way it faces (the side a man stands); `fumble` = seconds a man
+   *  sent to it works at it before the mains come back (left out: the game's own 2.2) */
+  const breakerAt = (x: number, z: number, out: 'n' | 's' | 'e' | 'w', fumble?: number) => {
     grp('breaker');
     const alongX = out === 'n' || out === 's', s = out === 's' || out === 'e' ? 1 : -1;
     const brk = add({ c: [x, 1.35, z], h: alongX ? [0.28, 0.36, 0.04] : [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
     const led = add({ c: alongX ? [x - 0.18, 1.62, z + s * 0.05] : [x + s * 0.05, 1.62, z - 0.18], h: [0.015, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
-    breaker = { pos: alongX ? [x, 1.35, z + s * 0.14] : [x + s * 0.14, 1.35, z], boxes: [brk, led] };
+    breaker = { pos: alongX ? [x, 1.35, z + s * 0.14] : [x + s * 0.14, 1.35, z], boxes: [brk, led], ...(fumble !== undefined ? { fumble } : {}) };
   };
   grp('beacons');
   add({ c: [20.3, 2.28, 6.18], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow });
