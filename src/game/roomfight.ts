@@ -41,7 +41,7 @@
 import { SideSet } from '../math/side';
 import { conditionSup } from './condition';
 import { Vec3, v3, clamp, lerp, damp, wrapAngle, approachAngle, DEG } from '../math/vec';
-import type { Game, Guard } from './game';
+import type { Game, Guard, Foe } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
 import { teamFight, teamSprinting } from './teampace';   // (read inside methods only)
@@ -281,6 +281,8 @@ interface Def {
   rallyAt: number; rallyGo: boolean;
   mode: DefMode; moveKind: 'fallback' | 'cover'; moveT: number; cameBy: Door | null; stallAt: Vec3; stallT: number; freeAt: number;
   burst: { until: number; n: number; next: number; broke: boolean; daze: number };
+  /** startle.ts (bolt): he is running FROM a man in his eyes — until this time that man does not stop him to fight (−1: never set) */
+  boltUntil: number; boltFrom: Foe;
 }
 /** how long a man held for the glass stays passed over for anybody else his teammate may shoot (the scoring in tickOp; re-stamped every frame the hold lasts) */
 const GLASS_LOOK = 4;
@@ -374,7 +376,7 @@ export class RoomFight {
   /** may the module run at all: the switch, the AI, sides, and no show holding the floor */
   get on(): boolean {
     const g = this.g;
-    return ROOMFIGHT.on && g.aiEnabled && g.tune.teams && !g.touring && !g.quietUtility && !g.puppet && !(g.director?.run && !g.director.run.ended);
+    return ROOMFIGHT.on && g.aiEnabled && g.tune.teams && !g.touring && !g.quietUtility && !g.puppet && !(g.director?.run && !g.director.run.ended && !g.rails?.live);   // (a tutorial mission's own program — rails.ts — runs beside the fight, it does not hold the floor)
   }
   private note(gd: Guard | null, what: string) { this.log.push({ t: this.g.time, who: gd ? gd.callsign : '-', what }); if (this.log.length > 600) this.log.splice(0, 200); }
 
@@ -576,7 +578,7 @@ export class RoomFight {
       glanceTo: -1, glanceUntil: -1, glanceNext: this.g.time + pick(S.hold), pt: [c.pos[0] + f[0] * 6, 0, c.pos[2] + f[2] * 6],
       heardT: gd.witness.heard.lastT, cnt: { shots: gd.witness.heard.shots, kick: gd.witness.heard.kick, bang: gd.witness.heard.bang, small: gd.witness.heard.small }, noiseAt: null, noiseT: -100, noiseOut: false,
       lastState: gd.state, lastSeen: gd.lastSeenT, fixKeep: -1, pre: false, nerve: pick(S.nerve), lostAt: 0, movedAt: -100, rallyAt: NaN, rallyGo: false,
-      mode: 'hold', moveKind: 'cover', moveT: 0, cameBy: null, stallAt: v3.copy(c.pos), stallT: 0, freeAt: 0, burst: { until: -1, n: 0, next: 0, broke: false, daze: 0 } };
+      mode: 'hold', moveKind: 'cover', moveT: 0, cameBy: null, stallAt: v3.copy(c.pos), stallT: 0, freeAt: 0, burst: { until: -1, n: 0, next: 0, broke: false, daze: 0 }, boltUntil: -1, boltFrom: null };
   }
   private tickDef(D: Def, dt: number, k: number) {
     const g = this.g, gd = D.gd;
@@ -742,6 +744,16 @@ export class RoomFight {
     let bi = -1, bv = 0.3; D.ev.forEach((v, i) => { if (v > bv) { bv = v; bi = i; } });
     return bi >= 0 && D.room ? D.room.entries[bi].at : D.pt;
   }
+  /** startle.ts: a man on a post caught unaware and alone goes the way a man whose nerve has gone goes (breakOff). true = he is on his way, and for `clearSecs`
+   *  the man he runs from does not stop him to fight; false = he has a post here and nowhere to go from it; null = no post of this file's */
+  bolt(gd: Guard, clearSecs: number): boolean | null {
+    const g = this.g, D = this.defs.find(X => X.gd === gd); if (!D) return null;
+    if (D.mode !== 'hold' || gd.state === 'dead' || gd.held) return false;
+    const moved = D.movedAt, out = this.stats.fallBackOut, pic = PICTURE_STATS.moved; this.breakOff(D);
+    if (D.mode === 'hold') { D.movedAt = moved; this.stats.fallBackOut = out; PICTURE_STATS.moved = pic; return false; }   // (nowhere: the nerve rule's own clock and the tallies of a fall-back that was not one are left as they stood)
+    D.boltUntil = g.time + clearSecs; D.boltFrom = gd.foe;   // (the man he is running from is in his eyes: tickMove would stop him to fight on his first stride — him, nobody else)
+    return true;
+  }
   /** out of the room by a door nothing has come at, to hold it from the far side; no such door, to cover */
   private breakOff(D: Def) {
     const g = this.g, gd = D.gd, c = gd.char, nav = g.col.nav; const threat = this.threatOf(D);
@@ -811,8 +823,9 @@ export class RoomFight {
     hearingCheck(g, gd);
     let contact: 'player' | Guard | null = null;
     if (g.time >= gd.dazzledUntil) {
-      if (isHostile(gd.team, 'player') && !g.player.down && !g.playerInvisible) { const vis = canSee(g, gd); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGain(g, gd, vis.dist) > 0.25) contact = 'player'; }
-      for (const o of g.guards) { if (contact) break; if (o.state === 'dead' || !isHostile(gd.team, o.team)) continue; const vis = canSeeChar(g, gd, o.char, false); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGainOn(g, gd, o, vis.dist) > 0.25) contact = o; }
+      const from = g.time < D.boltUntil ? D.boltFrom : null;   // (startle.ts's bolt: the one he ran from does not stop him for its first strides; null for every other man)
+      if (from !== 'player' && isHostile(gd.team, 'player') && !g.player.down && !g.playerInvisible) { const vis = canSee(g, gd); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGain(g, gd, vis.dist) > 0.25) contact = 'player'; }
+      for (const o of g.guards) { if (contact) break; if (o === from || o.state === 'dead' || !isHostile(gd.team, o.team)) continue; const vis = canSeeChar(g, gd, o.char, false); if (vis.visible && vis.dist < ROOMFIGHT.moveEngageM && sightGainOn(g, gd, o, vis.dist) > 0.25) contact = o; }
     }
     if (contact) {
       const fc = contact === 'player' ? g.player.char : contact.char;
