@@ -71,6 +71,7 @@ import { charLookFrame, charSides } from './charLook';
 import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
+import { updateSmokeBreak } from './smokebreak';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
@@ -463,6 +464,9 @@ export interface GuardScript { goal: Vec3 | null; speed?: number; face?: number 
   /** his walk to `goal` is the script's own way: the short one, not priced by the lanes his side knows are covered (lanes.ts lanePenalty). A staged advance
    *  down a road the other side has guns on: without it he goes round, as a man left to himself would (director.ts OrderPatch). */
   direct?: boolean;
+  /** he is having a smoke where he stands (smokebreak.ts: the left hand to his mouth and back, the lit end, real smoke — a level script's order, director.ts
+   *  OrderPatch.smoke; nothing with that file's switch off) */
+  smoke?: boolean;
   /** his muzzle taken off the order by his own read of the fight (roomfight.ts): while set the runner aims at `aimAt` with the gun up — whatever aimAt / upper /
    *  stance the order holds, which are left exactly as ordered and take over again the frame this is cleared — and, `face` given, squares him up to it where he stands */
   over?: { aimAt: Vec3; face: number | null; walk?: boolean } | null; }
@@ -1688,6 +1692,7 @@ export class Game {
     this.smokeWake(all);
     this.drawCharacters(all, statured);
     updateSnowBreath(this, dt);         // BREATH (snowBreath.ts): on a snow level the men's breath steams — picture only (here, after the fog of war has said who is hidden this frame), a return with SNOW_LOOK.breath off or on any other level
+    updateSmokeBreak(this, dt);         // A SMOKE (smokebreak.ts): a man a level's script told to have one — his hand, the lit end, the smoke; nothing where nobody was told, or with its switch off
     this.stepSnowTracks(dt);   // boots press the snow (snowTracks.ts): everybody is posed — picture only
     this.lightMeter(dt);
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt * 3);

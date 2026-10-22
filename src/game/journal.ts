@@ -105,6 +105,7 @@ import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { STARTLE } from './startle';
 import { ROWSET } from './rowset';
+import { SMOKEBREAK } from './smokebreak';
 import { FLINCH } from './flinch';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
@@ -351,10 +352,11 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.walk === undefined) SQUADTHROW.walk = false;   // (…and one from before a man walked to a throw: with no arc from where anybody stood the order was refused)
     if (T.lob === undefined) SQUADTHROW.lob = SQUADTHROW.duck = SQUADTHROW.samCall = false;   // (…and one from before a man worked his throw out: the one straight arc or nothing, and a frag refused for anybody of ours it had a line to)
   }
-  if (!k.tables.TAKEDOWN) TAKEDOWN.on = false;   // (a file from before takedowns were moves: a man put down pitched over like a plank and lay where that put him)
+  if (!k.tables.TAKEDOWN) { TAKEDOWN.on = false; TAKEDOWN.haul = false; }   // (a file from before takedowns were moves: a man put down pitched over like a plank and lay where that put him)
   else { const T = k.tables.TAKEDOWN as Partial<typeof TAKEDOWN>;
     if (T.lower === undefined) TAKEDOWN.lower = false;   // (a file from before the choke lowered him: he was choked standing, and both men's bones were where that put them)
     if (T.chokeBeats === undefined) TAKEDOWN.chokeBeats = false;   // (…from before the choke's beats: his hands came onto the arm over most of a second and fell as he was lowered)
+    if (T.haul === undefined) TAKEDOWN.haul = false;   // (…from before the choke hauled him up and back: both men stood where the hold had them)
     if (T.kill === undefined) TAKEDOWN.kill = false; }   // (…and from before the kill from the hold was a move: the phase was drawn as the hold, and he fell as the knife from behind dropped him)
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
   else if ((k.tables.STEALTHPOSE as Partial<typeof STEALTHPOSE>).nod === undefined) STEALTHPOSE.nod = false;   // (…and one from before a goggle nod showed in the look under a door: the look took the nod back out of his head)
@@ -418,6 +420,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.MORALE) MORALE.on = false;   // (a file from before a blast shook the men it did not hurt: every man stood where he stood, and nobody fired into the dust)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.training === undefined) { MORALE.training = 'none'; MORALE.nerve = 'normal'; MORALE.fanStep = 0; }   // (…and one from before a man was green or steady: every man the first slice's — broken alone in the dark only, folded when he was, and scrabbling straight back with no fan to find him a way (fanStep 0 shuts it). A recording that carries the keys keeps its own: assignDeep takes a string row as it takes a number)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.darkRead === undefined) MORALE.darkRead = 'place';   // (…and one from before the dark had a second reading: where he stands, as it was read)
+  if (!k.tables.SMOKEBREAK) SMOKEBREAK.on = false;   // (a file from before a man told to smoke lit anything: he stood there with his hands as they were)
   if (!k.tables.ROWSET) ROWSET.on = false;   // (a file from before a row had an hour and weather of its own: it was started at its query's)
   if (!k.tables.STARTLE) STARTLE.on = false;   // (a file from before a calm man started at the first sight of you: its men went for their guns the frame they knew, and none ran from it)
   if (!k.tables.FLINCH) FLINCH.on = false;   // (a file from before a man ducked at every close round: nobody ducked but on the suppression model's edge, and no green man broke under fire)

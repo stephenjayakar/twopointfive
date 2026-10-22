@@ -26,7 +26,7 @@ const srgb = (l: number) => Math.round(255 * Math.min(1, Math.max(0, l <= 0.0031
 const outDir = resolve(arg('--out') || './close-stills-out'), tag = arg('--tag');
 async function applySet() {
   const raw = arg('--set'); if (!raw) return;
-  const T: Record<string, any> = { ...(await import(`${ROOT}/src/game/close.ts`)), ...(await import(`${ROOT}/src/game/character.ts`)), ...(await import(`${ROOT}/src/game/stealthpose.ts`)) };
+  const T: Record<string, any> = { ...(await import(`${ROOT}/src/game/close.ts`)), ...(await import(`${ROOT}/src/game/character.ts`)), ...(await import(`${ROOT}/src/game/stealthpose.ts`)), ...(await import(`${ROOT}/src/game/takedown.ts`)) };
   for (const [name, row] of Object.entries(JSON.parse(raw))) { if (!T[name] || typeof T[name] !== 'object') throw new Error(`--set: no table ${name}`); Object.assign(T[name], row); }
 }
 
@@ -53,8 +53,9 @@ function recorder(scene: string, g: any, A: any) {
     for (let i = 0; i < nF; i++) { dv.setUint8(k, 3); dv.setInt32(k + 1, faces[i * 3], true); dv.setInt32(k + 5, faces[i * 3 + 1], true); dv.setInt32(k + 9, faces[i * 3 + 2], true); k += 13; }
     writeFileSync(`${outDir}/${file}`, new Uint8Array(buf));
     const a = pl.anim, n = a.nodes, at = (c: any, node: string) => { const p = c.skel.nodePos(c.anim.nodes[node]), w = c.world, x = w[0] * p[0] + w[4] * p[1] + w[8] * p[2] + w[12], yy = w[1] * p[0] + w[5] * p[1] + w[9] * p[2] + w[13], z = w[2] * p[0] + w[6] * p[1] + w[10] * p[2] + w[14]; return rel(x, yy, z).map(q => +q.toFixed(2)); };
+    const raw = (c: any, node: string): number[] => { const p = c.skel.nodePos(c.anim.nodes[node]), w = c.world; return [w[0] * p[0] + w[4] * p[1] + w[8] * p[2] + w[12], w[1] * p[0] + w[5] * p[1] + w[9] * p[2] + w[13], w[2] * p[0] + w[6] * p[1] + w[10] * p[2] + w[14]]; };
     void n; const d = Math.hypot(pl.pos[0] - A.char.pos[0], pl.pos[2] - A.char.pos[2]);
-    const says = `gap ${d.toFixed(2)} m · crouch ${(a.crouch ?? 0).toFixed(2)} · creep ${(a.creepShown ?? 0).toFixed(2)} · ready ${a.ready ?? '—'} ${(a.readyShown ?? 0).toFixed(2)} · hands L ${at(pl, 'handL')} R ${at(pl, 'handR')} · knees L ${at(pl, 'shinL')} R ${at(pl, 'shinR')} · feet L ${at(pl, 'footL')} R ${at(pl, 'footR')} · his neck ${at(A.char, 'neck')}`;
+    const says = `gap ${d.toFixed(2)} m · crouch ${(a.crouch ?? 0).toFixed(2)} · creep ${(a.creepShown ?? 0).toFixed(2)} · ready ${a.ready ?? '—'} ${(a.readyShown ?? 0).toFixed(2)} · hands L ${at(pl, 'handL')} R ${at(pl, 'handR')} · knees L ${at(pl, 'shinL')} R ${at(pl, 'shinR')} · feet L ${at(pl, 'footL')} R ${at(pl, 'footR')} · his neck ${at(A.char, 'neck')} · his feet off the floor L ${raw(A.char, 'footL')[1].toFixed(3)} R ${raw(A.char, 'footR')[1].toFixed(3)} · wrist to his neck ${Math.hypot(...raw(pl, 'handL').map((q, i) => q - raw(A.char, 'neck')[i])).toFixed(3)} · his head ${at(A.char, 'head')} · Sam's head ${at(pl, 'head')} neck ${at(pl, 'neck')} · heads his ${raw(A.char, 'head')[1].toFixed(2)} Sam's ${raw(pl, 'head')[1].toFixed(2)}, ${Math.hypot(...raw(pl, 'head').map((q, i) => q - raw(A.char, 'head')[i])).toFixed(3)} apart`;
     shots.push({ label, file, says });
   } };
 }
@@ -103,7 +104,16 @@ async function hold(scene: string) {
   if (g.selectVerb('held', 'choke')) { W.input.pressed.add('Space'); const t0 = 3.2; to(t0 + 0.35, 'choke 0.35 s'); to(t0 + 1.2, 'choke 1.2 s'); to(t0 + 2.2, 'choke 2.2 s'); to(t0 + 2.95, 'choke 2.95 s'); to(t0 + 3.4, '+0.45 s'); to(t0 + 5.2, 'at rest'); }
   return R;
 }
+/** the choke alone, beat by beat: the arm closing, the haul up and back (TAKEDOWN.haul), set down, lowered */
+async function choke(scene: string) {
+  const S = await lobby(7303), { W, g, A } = S; S.samAt(0.8, true); S.step(30); const R = recorder(scene, g, A);
+  S.look.ahead = true; startGrab(g, A); let f = 0; const to = (t: number, label: string) => { const n = Math.round(t * 60); if (n > f) { S.step(n - f); f = n; } R.snap(label); };
+  to(1.5, 'held');
+  if (g.selectVerb('held', 'choke')) { W.input.pressed.add('Space'); const t0 = 1.5 + 0.35; for (const t of [0.1, 0.2, 0.4, 0.65, 0.9, 1.2, 1.5, 2.3]) to(t0 + t, `choke ${t} s`); }
+  return R;
+}
 const SCENES: Record<string, { title: string; run: (name: string) => Promise<any> }> = {
+  'choke': { title: 'the choke from the hold, beat by beat', run: n => choke(n) },
   'approach-crouch': { title: 'coming up behind him at the crouch, stopping in reach', run: n => approach(n, true, 0.85) },
   'approach-stand': { title: 'coming up behind him on his feet, stopping in reach', run: n => approach(n, false, 0.85) },
   'stops-crouch': { title: 'stopped behind him at four points of the stride, crouched', run: n => stops(n, true) },
