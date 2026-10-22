@@ -2,7 +2,8 @@
 // in the order a new player would do it. He is mortal: the fights are the level's script's (levels/tut-solo.script.ts) and none of them is aimed at a man who
 // does what the line says.
 import type { Bot } from '../lesson-run';
-import { AXIS, VAN, WALL, SENTRY, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, SHOP_DOOR, STORE_DOORWAY, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
+import { AXIS, VAN, WALL, CORNER, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
+import { SLOTSETUP } from '../../../src/game/slotsetup';
 
 export const query = '?quiet';
 /** the level's fights are its script's, which the tutorial frame starts: on a stand without the frame this lesson cannot be played */
@@ -71,36 +72,56 @@ const handBack = (B: Bot, to: string) => {
 export const steps: Record<string, (B: Bot) => void> = {
   // THE ROAD: off the start mark and behind the van the sentry is shooting at
   move: B => { once.clear(); B.go(VAN, 20); },
-  // round the van's tail and across to the yard wall, running
-  sprint: B => { B.go([3.2, 0, 17.4], 10); B.go(WALL, 12, { sprint: true, near: 0.6 }); },
   ready: B => { take(B, 'Digit2'); },
+  // round the van's nose and along the forecourt's edge to the yard wall, running: never in the gate's line
+  sprint: B => { B.go([3.3, 0, 12.0], 10); B.go(WALL, 12, { sprint: true, near: 0.6 }); },
   // walk into the wall as the page takes one; the hold's own key where walking in is switched off (the frozen stand)
   wall: B => {
-    if (B.g.player.wall) B.fail('he is on a wall before the line that teaches it');   // (the frame gives a wall to a walk only once `wall` is allowed: nothing before this line may lean on one)
     B.nudge([9.2, 0, WALL[2]], 1.5, () => !!B.g.player.wall);
     if (!B.g.player.wall) { B.aim([9.0, 1.2, WALL[2]]); B.press('KeyQ', 20); }
     if (!B.g.player.wall) B.fail('no wall taken beside the gate, by walking into it or by its key');
   },
-  // slide to the gate's jamb, lean out, and shoot the man in the gate's line
+  // along the wall to the gate's corner, and the cursor on the man past it: the page steps him out with the rifle in the shoulder (the old hold leans his back out)
+  peek: B => {
+    const g = B.g, s = g.guards[0];
+    const w = () => g.player.wall, stack = () => w()?.kind === 'stack';
+    B.nudge([8.6, 0, CORNER[2] + 0.5], 4, () => !w() || line(B, s) || (stack() ? !!w()!.atEdge : (w()!.peek ?? 0) > 0.5));   // (the old hold leans his back out as he presses on past the end; with the rifle in the shoulder the slide stops at the end and the cursor does the rest)
+    if (stack() && !stepIs(B, 'peek')) B.fail('the lean\'s line went by on the slide alone, before the cursor was past the corner');
+    for (let i = 0; i < 150 && stepIs(B, 'peek'); i++) { B.aim(chest(s)); B.step(); }
+    B.say(`  at the corner: lean ${(g.player.wall?.lean ?? 0).toFixed(2)} · peek ${(g.player.wall?.peek ?? 0).toFixed(2)} · a line to the sentry ${line(B, s)} · body z ${B.pos()[2].toFixed(2)}`);
+    if (stepIs(B, 'peek')) B.fail('at the gate\'s corner with the cursor on the sentry he did not lean out');
+  },
+  // …and shoot the man in the gate's line from there
   fire: B => {
     const g = B.g, s = g.guards[0];
-    B.nudge([8.6, 0, AXIS + 0.4], 4, () => (g.player.wall?.peek ?? 0) >= 1 || line(B, s));
-    // the page's way: at the wall's end with the rifle, the cursor on him steps the player out with it in the shoulder
     for (let i = 0; i < 90 && !line(B, s); i++) { B.aim(chest(s)); B.step(); }
-    // the old hold (the frozen stand: hands down on the wall): off it and a step into the gate
-    if (!line(B, s)) { if (g.player.wall) B.press('KeyQ', 10); B.go([8.3, 0, AXIS + 0.15], 6); }
-    if (!fight(B, 1, 20)) B.fail(`the sentry did not drop (line ${line(B, s)}, he is ${s.state})`);
+    // the old hold (the frozen stand: his back to the wall, hands down): off it and a step into the gate, on the side his rifle clears
+    if (!line(B, s) && g.player.wall?.kind !== 'stack') { if (g.player.wall) B.press('KeyQ', 10); B.go([8.3, 0, AXIS], 6, { near: 0.12 }); }
+    if (!line(B, s)) B.fail('leaning round the gate\'s corner he has no line to the sentry');
+    const r0 = gun(B).roundsReady;
+    if (!fight(B, 1, 20)) B.fail(`the sentry did not drop (line ${line(B, s)}, he is ${s.state}, ${r0 - gun(B).roundsReady} rounds left the gun)`);
+    B.say(`  the sentry is down from the corner: ${r0 - gun(B).roundsReady} round(s)`);
   },
   reload: B => { B.press('KeyR'); B.until(() => !gun(B).reloading, 5); },
-  // in by the gate, round the barrier's far end, crouched at the arch's near jamb
-  crouch: B => { if (B.g.player.wall) B.press('KeyQ', 10); B.go([10.6, 0, 11.2], 20); B.go(JAMB, 20); B.crouch(true); },
+  // the rifle's selector: its own key on the stand from before the gun's setup, the setup's first row where that is up (the rifle's digit, then 1: a digit
+  // that is the pistol's slot anywhere else, and the pistol has no line yet). Then back to single shots: every fight of this run was measured on them
+  auto: B => {
+    const flip = () => { if (SLOTSETUP.on) { B.press('Digit2', 12); B.press('Digit1', 12); } else B.press('KeyZ', 12); };
+    flip(); if (stepIs(B, 'auto')) B.fail(`the selector did not move (the rifle is on ${B.g.player.rifle.mode}, the hands hold ${B.g.player.slot})`);
+    if (B.g.player.slot !== 'rifle') B.fail(`the selector's digit took the ${B.g.player.slot} into his hands`);
+    B.step(100); flip(); B.step(100);   // (past the setup's own clock, so the next press of the rifle's digit opens it afresh)
+    if (B.g.player.rifle.mode !== 'semi') B.fail(`the selector did not come back to single shots (${B.g.player.rifle.mode})`);
+  },
+  // in by the gate, round the barrier's far end, up beside the blue gate; then down, as the gun starts along the sandbags
+  arch: B => { if (B.g.player.wall) B.press('KeyQ', 10); B.go([10.6, 0, 11.2], 20); B.go(JAMB, 20); },
+  crouch: B => { B.wait(1.2); B.crouch(true); },
   // crouched through the arch and along behind the sandbags
   low: B => {
-    if (brk() === 'again' && !once.has('low')) { once.add('low'); downAndBack(B, () => { B.crouch(false); B.go([16.9, 0, 13.3], 12, { stop: () => B.g.player.down }); B.go(BAGS_END, 15, { stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', 'crouch']); B.until(() => stepIs(B, 'low'), 4); }
+    if (brk() === 'again' && !once.has('low')) { once.add('low'); downAndBack(B, () => { B.crouch(false); B.go([16.9, 0, 13.3], 12, { stop: () => B.g.player.down }); B.go(BAGS_END, 15, { stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', 'auto', 'arch', 'crouch']); B.until(() => stepIs(B, 'low'), 4); }
     if (brk() === 'stand') B.crouch(false); B.go([16.9, 0, 13.3], 12); B.go(BAGS_END, 15); if (brk() === 'stand') { B.wait(2.5); B.fail('BREAK stand: he walked the sandbags standing and was not hit'); }
   },
   smoke: B => {
-    if (brk() === 'again' && !once.has('smoke')) { once.add('smoke'); downAndBack(B, () => { B.go(BARRIER, 10, { near: 0.5, stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', 'crouch', 'low']); B.until(() => stepIs(B, 'smoke'), 4); B.step(30); }
+    if (brk() === 'again' && !once.has('smoke')) { once.add('smoke'); downAndBack(B, () => { B.go(BARRIER, 10, { near: 0.5, stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', 'auto', 'arch', 'crouch', 'low']); B.until(() => stepIs(B, 'smoke'), 4); B.step(30); }
     if (brk() === 'nosmoke') { B.go(BARRIER, 10, { near: 0.5 }); B.wait(2.5); B.fail('BREAK nosmoke: he crossed the gap with no smoke up and was not hit'); } take(B, 'Digit3'); B.click(1, GAP); landed(B, 'smoke', 4); B.wait(2.8);
   },
   // when the plume is up: across the gap, behind the barrier
@@ -112,9 +133,16 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (downed(B) < 2) { take(B, 'Digit2'); B.go([24.9, 0, 11.6], 10, { stop: () => line(B, B.g.guards[1]) }); fight(B, 2, 20); }
   },
   pistol: B => { take(B, 'Digit1'); },
+  // the lamp on its pole by the shop's front, from behind the barrier: a round a press until it is dark
+  lamp: B => {
+    const T = B.g.targets.find((t: any) => t.name === 'lamp_shop'); if (!T) B.fail('no lamp_shop among the light targets');
+    for (let i = 0; i < 10 && stepIs(B, 'lamp'); i++) { for (let k = 0; k < 20; k++) { B.aim(LAMP); B.step(); } B.click(1, LAMP); B.step(12); if (gun(B).roundsReady === 0) { B.press('KeyR'); B.until(() => !gun(B).reloading, 5); } }
+    if (stepIs(B, 'lamp')) B.fail('ten pistol rounds at the lamp and it is still lit');
+    B.say(`  the lamp is out: the light on him ${Math.round((B.g.player.visibility ?? 0) * 100)}`);
+  },
   // the door's rows by the held key (a list on the page, a ring where that is switched on): its charge where his card carries one, the boot where it does not
   charge: B => {
-    if (brk() === 'again' && !once.has('charge')) { once.add('charge'); handBack(B, 'pistol'); replay(B, ['pistol']); B.until(() => stepIs(B, 'charge'), 4); B.step(30); }
+    if (brk() === 'again' && !once.has('charge')) { once.add('charge'); handBack(B, 'pistol'); replay(B, ['pistol', 'lamp']); B.until(() => stepIs(B, 'charge'), 4); B.step(30); }
     const g = B.g, c = [SHOP_DOOR[0], 1.0, SHOP_DOOR[2]];
     B.go([24.2, 0, AXIS + 0.2], 10);
     for (let i = 0; i < 30; i++) { B.aim(c); B.step(); }
@@ -157,7 +185,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
     if (brk() === 'again' && !once.has('launch')) { once.add('launch');
       handBack(B, 'take'); if (men().length) B.fail(`again: ${men().length} of the last men are on the floor before their line (the checkpoint is from before they came)`);
-      replay(B, ['take', 'rifle', 'load', 'leave']); B.until(() => stepIs(B, 'launch'), 4); B.step(30);
+      replay(B, ['take', 'rifle', 'leave', 'load']); B.until(() => stepIs(B, 'launch'), 4); B.step(30);
       B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
       if (men().length !== 2) B.fail(`again: ${men().length} last men after the checkpoint (two come, once)`); }
     const x = men().find(up); if (!x) B.fail('nobody came out through the shop');

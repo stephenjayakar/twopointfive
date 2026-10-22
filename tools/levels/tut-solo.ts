@@ -45,20 +45,27 @@ const DOORWAY = { a: AXIS - 0.6, b: AXIS + 0.6 }, HINGE = AXIS - 0.58;
 const ARCH_X = 16, FRONT_X = 25, PART_X = 30.5, ROOM_Z0 = 10.5, ROOM_Z1 = 17.5;
 
 // ---- the marks the level, its script and its scripted player all read ----
-/** where he starts, on the road behind the pumps */
-export const START: Vec3 = [1.3, 0, 11.6];
-/** behind the shot-up van's tail (step 'move') */
-export const VAN: Vec3 = [2.7, 0, 14.4];
-/** the yard wall beside the gate (the sprint's end, the wall he takes) */
-export const WALL: Vec3 = [8.35, 0, 16.2];
+/** where he starts: on the road at the van's open back doors, in the light of its load bay, facing up the van to the forecourt. Well inside the world's edge
+ *  (the first picture is the van, its lamps on the pumps and the gate's fire, not the dark past the road's end), and the first walk is UP the screen: a mark
+ *  toward the camera from him sits under the big line */
+export const START: Vec3 = [4.35, 0, 19.0];
+/** behind the shot-up van's cab (step 'move') */
+export const VAN: Vec3 = [3.0, 0, 13.2];
+/** the yard wall beside the gate (the sprint's end, the wall he takes): the side of the gate the road runs along. A rifle is carried on the right, so a
+ *  man facing in through the gate from THIS jamb has his gun in the opening; from the other jamb it is behind the frame and stays at the low ready */
+export const WALL: Vec3 = [8.35, 0, 12.2];
+/** the gate's near corner: the end of that wall, which he leans round */
+export const CORNER: Vec3 = [8.9, 1.2, AXIS - 0.6];
 /** the sentry, in the gate's line */
 export const SENTRY: Vec3 = [13.9, 0, AXIS];
-/** the arch's near jamb, out of the gun's cone (step 'crouch') */
-export const JAMB: Vec3 = [15.1, 0, 11.5];
+/** beside the blue gate, out of the gun's cone (steps 'arch', 'crouch') */
+export const JAMB: Vec3 = [15.1, 0, 11.7];
 /** the far end of the sandbags (step 'low') */
 export const BAGS_END: Vec3 = [20.2, 0, 13.6];
-/** where the smoke goes: the gap, on the gun's side of it */
-export const GAP: Vec3 = [21.7, 0.1, 11.4];
+/** where the smoke goes: the gap itself, on the gun's line to it. On floor he can see from behind the sandbags' end: the ring is the place to click */
+export const GAP: Vec3 = [21.9, 0.1, 12.7];
+/** the lamp he shoots out with the pistol: on its pole by the shop's front, over where he stands clear of the charge */
+export const LAMP: Vec3 = [24.4, 3.2, 17.7];
 /** behind the barrier (steps 'cross', 'back') */
 export const BARRIER: Vec3 = [23.3, 0, 13.9];
 /** beside the shop's door: out of the charge's backblast (1.6 m) and out of the doorway's line, which the man inside is looking down (step 'back') */
@@ -91,8 +98,8 @@ export const EXIT = { name: 'the road', door: 'gate_w', x: 8.2, z: AXIS, out: [-
  *  just finished a fight and nobody alive can see him: the gate (the sentry is down), the gun (the nest is out), the shop (its man is down), the store (the
  *  building is his). */
 export const FRAME: Record<string, { allow?: string[]; cue?: string; checkpoint?: string }> = {
-  move: { cue: 'road' }, sprint: { allow: ['sprint'] }, ready: { allow: ['slot:rifle'] }, wall: { allow: ['wall'], cue: 'cease' }, fire: { allow: ['aim', 'fire'] },
-  reload: { allow: ['reload'], checkpoint: 'the gate' }, crouch: { allow: ['crouch'], cue: 'gun' }, low: { cue: 'bags' },
+  move: { cue: 'road' }, ready: { allow: ['slot:rifle'] }, sprint: { allow: ['sprint'] }, wall: { allow: ['wall'], cue: 'cease' }, peek: { allow: ['aim'] }, fire: { allow: ['fire'] },
+  reload: { allow: ['reload'], checkpoint: 'the gate' }, auto: { allow: ['mode'] }, arch: { cue: 'gun' }, crouch: { allow: ['crouch'], cue: 'bags' },
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
   pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
@@ -127,7 +134,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.yardWallX(YARD.z0, YARD.x0 - 0.12, YARD.x1 + 0.12); G.yardWallX(YARD.z1, YARD.x0 - 0.12, YARD.x1 + 0.12);
   G.yardWallZ(YARD.x0, YARD.z0, YARD.z1, 'mud', gate); G.yardWallZ(YARD.x1, YARD.z0, ROOM_Z0, 'mud'); G.yardWallZ(YARD.x1, ROOM_Z1, YARD.z1, 'mud');
   for (const [x, z] of [[9, 5], [9, 23], [36, 5], [36, 23], [16, 5], [16, 23], [25, 5], [25, 23]] as const) G.pier(x, z);
-  doors.push({ name: 'gate_w', hinge: [YARD.x0, HINGE], closedDir: HALF, width: 1.16, exterior: true, angle: 1.45, closer: false });   // the yard gate stands open: the sentry's line down the road
+  // the yard gate stands open, out along the road: the sentry's line down it. Hung on the jamb AWAY from the wall he takes, so the corner he leans round is bare
+  doors.push({ name: 'gate_w', hinge: [YARD.x0, AXIS + 0.58], closedDir: -HALF, width: 1.16, exterior: true, angle: -1.45, closer: false });
   grp('walls.arch');
   G.yardWallZ(ARCH_X, YARD.z0, AXIS - 1.6, 'mudLight'); G.yardWallZ(ARCH_X, AXIS + 1.6, YARD.z1, 'mudLight');   // the arch: a truck's width, no leaf
   G.pier(ARCH_X, AXIS - 1.6); G.pier(ARCH_X, AXIS + 1.6);
@@ -144,8 +152,24 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.drums(2.3, 9.2, 3); G.jerryCan(7.4, 10.6, 0.4); G.jerryCan(7.6, 10.2, -0.2, 'drumRed'); G.tyres(2.2, 11.2, 3);
   G.patch(5.0, 10.4, 3.4, 2.0, 'oil', 0.2, 0.019);
   grp('forecourt.van');
-  G.van(4.5, 14.1, HALF + 0.12);                                    // across the road, nose to the plain: his first cover, and what the sentry's rounds chew
-  G.patch(4.4, 14.4, 3.0, 4.6, 'oil', 0.1, 0.019); G.rubble(5.9, 15.6, 0.5, 5);
+  // across the road, nose to the pumps it was leaving: his first cover, and what the sentry's rounds chew. It is as its driver left it, everything on: two
+  // head lamps (beams across the forecourt), the tail lamps, the lamp in the load bay over its open back doors, which is the light he starts in. Each lens
+  // is a glowing sliver a hair off the van's own, which stays the dead glass the lamp check finds
+  const van0 = K.boxes.length; G.van(4.5, 15.0, HALF + 0.12);
+  { const is = (b: { h: Vec3 }, h: Vec3) => Math.abs(b.h[0] - h[0]) < 1e-6 && Math.abs(b.h[1] - h[1]) < 1e-6 && Math.abs(b.h[2] - h[2]) < 1e-6;
+    const parts = K.boxes.slice(van0), heads = parts.filter(b => is(b, [0.03, 0.07, 0.16])), tails = parts.filter(b => is(b, [0.02, 0.15, 0.04]));
+    const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - 4.5, mid[1] - 15.0), nx = (mid[0] - 4.5) / l, nz = (mid[1] - 15.0) / l;
+    heads.forEach((b, k) => {
+      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, 0.055, 0.13], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], flags: BoxFlag.NoShadow });
+      lights.push({ kind: 'spot', pos: [b.c[0] + nx * 0.08, b.c[1], b.c[2] + nz * 0.08], dir: norm([nx, -0.1, nz]), color: [1.0, 0.93, 0.78], intensity: 150, range: 14, innerDeg: 12, outerDeg: 30, name: `van_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: fb, radius: 0.06, mains: false });
+    });
+    for (const b of tails) add({ c: [b.c[0] - nx * 0.03, b.c[1], b.c[2] - nz * 0.03], h: [0.006, 0.12, 0.03], yaw: b.yaw, albedo: [0.5, 0.05, 0.04], rough: 0.4, emissive: [7, 0.4, 0.25], flags: BoxFlag.NoShadow });
+    const bay: Vec3 = [4.5 - nx * 2.3, 1.84, 15.0 - nz * 2.3];
+    const dome = add({ c: bay, h: [0.07, 0.012, 0.07], ...M.plasticWhite, emissive: [22, 19, 13], flags: BoxFlag.NoShadow });
+    lights.push({ kind: 'point', pos: [bay[0], bay[1] - 0.05, bay[2]], dir: [0, -1, 0], color: [1.0, 0.86, 0.62], intensity: 16, range: 6, innerDeg: 0, outerDeg: 180, name: 'van_bay', group: 'exterior', enabled: true, volumetric: 0.2, fixtureBox: dome, radius: 0.05, mains: false });
+  }
+  G.patch(4.4, 15.3, 3.0, 4.6, 'oil', 0.1, 0.019); G.rubble(5.9, 16.6, 0.5, 5);
+  G.lantern(8.55, 11.0, 'lantern_road', 'exterior');                // at the wall's foot beside the gate: the wall he takes is a lit wall
 
   // ---- the truck court: the sentry's post, a barrier across the gate's line, the parked truck the gun finds ----
   grp('court.truck');
@@ -160,7 +184,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('court.gun');
   G.sandbags(22.6, 8.2, 3.0, 0, 4); G.sandbags(21.0, 7.2, 2.0, HALF, 4);            // the nest: two low walls, the gun between them
   G.crates(24.0, 6.2, 0.1, 2); G.patch(22.6, 7.0, 2.6, 2.0, 'damp');
-  G.sandbags(18.6, 12.55, 4.9, 0, 6);                                              // inside the arch, chest high: a crouched man behind them is out of the gun's sight
+  G.sandbags(18.675, 12.2, 4.75, 0, 6);                                            // inside the arch, chest high: a crouched man behind them is out of the gun's sight (a hand north of the gate's open leaf, which stands along them)
   G.hesco(23.4, 12.6, 2, 0);                                                       // the barrier before the shop's door
   G.drumDown(17.6, 16.8, 0.4); G.tyres(19.4, 17.4, 2); G.handcart(20.6, 20.4, 0.5, 'sacks'); G.woodPile(17.2, 21.8, 0.1); G.drums(24.2, 21.6, 3);
   G.blocks(17.4, 6.4, 0.1, 3); G.jerryCan(18.2, 6.2, 0.6);
@@ -189,15 +213,15 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- light: the moon the hour swaps for its sun, a lamp over the gate and one over the shop's door ----
   grp('lights');
-  lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.62, -0.5, -0.6]), color: [0.55, 0.7, 1.0], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
-  const lamp = (x: number, z: number, name: string, h = 3.4, outerDeg = 52) => {
-    add({ c: [x, (h + 0.11) / 2, z - 0.6], h: [0.04, (h + 0.11) / 2, 0.04], ...M.galv });
-    add({ c: [x, h + 0.085, z - 0.3], h: [0.025, 0.025, 0.26], ...M.galv });
+  lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.62, -0.5, -0.6]), color: [0.55, 0.7, 1.0], intensity: 0.22, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
+  const lamp = (x: number, z: number, name: string, h = 3.4, outerDeg = 52, side = -1) => {
+    add({ c: [x, (h + 0.11) / 2, z + side * 0.6], h: [0.04, (h + 0.11) / 2, 0.04], ...M.galv });
+    add({ c: [x, h + 0.085, z + side * 0.3], h: [0.025, 0.025, 0.26], ...M.galv });
     add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...M.plasticBlack });
     const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
     lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.8, 0.5], intensity: 90, range: 9, innerDeg: outerDeg - 22, outerDeg, name, group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.1, mains: false });
   };
-  lamp(10.4, 12.2, 'lamp_gate'); lamp(24.4, 17.7, 'lamp_shop', 3.2, 46);   // (its pole clear of the way from beside the door to the doorway)
+  lamp(10.4, 12.2, 'lamp_gate'); lamp(LAMP[0], LAMP[2], 'lamp_shop', LAMP[1], 46, 1);   // (its pole on the far side of its head: clear of the way from beside the door to the doorway, and of a pistol's line to the lamp from behind the barrier)
 
   // ---- the breaker and the beacon every level carries (the generator's lot, behind the shop: nobody is sent there) ----
   grp('breaker');
@@ -215,7 +239,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const front: Vec3 = [TRUNK[0] - 0.44, 0.45, TRUNK[2]];
   const quiet: QuietData = {
     thing: 'the code book',
-    starts: [{ name: 'the road', sam: START, samYaw: HALF }],
+    starts: [{ name: 'the road', sam: START, samYaw: Math.PI }],
     spots: [{ place: 'the store', area: { x0: STORE.x0 + t, x1: STORE.x1 - t, z0: STORE.z0 + t, z1: STORE.z1 - t }, door: 'shop', holder: 'the green trunk', rackIndex: 0, front, halfW: 0.3 }],
     exits: [EXIT],
     patrols: [routes.map(r => r.name)],
@@ -232,20 +256,28 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     steps: ([
       // THE ROAD
       { id: 'move', line: '[W] [A] [S] [D]: get behind the van', done: { is: 'near', at: VAN, r: 1.1 }, at: VAN },
-      { id: 'sprint', line: 'Hold [Shift]: sprint to the wall', done: { is: 'all', of: [{ is: 'near', at: WALL, r: 1.6 }, { is: 'flag', flag: 'sprint' }] }, at: WALL },
       { id: 'ready', line: '[2]: rifle up', done: { is: 'slot', slot: 'rifle', drawn: true } },
-      { id: 'wall', line: 'Walk into the wall: back to it', done: { is: 'flag', flag: 'wall' }, at: WALL },
+      { id: 'sprint', line: 'Hold [Shift]: sprint to the wall by the gate', done: { is: 'all', of: [{ is: 'near', at: WALL, r: 1.3 }, { is: 'flag', flag: 'sprint' }] }, at: WALL },
+      { id: 'wall', line: 'Walk into the wall: snap to it for cover', done: { is: 'flag', flag: 'wall' }, at: [CORNER[0], CORNER[1], WALL[2]] },
+      // (the peek is the lesson, the shot its reward: he is at the corner the sentry was firing past a moment ago, and a man who walks into that opening
+      //  instead still has the sentry to shoot, so the line passes on him too)
+      { id: 'peek', line: 'Slide along to the gate. Aim past the corner: you lean out', done: { is: 'any', of: [{ is: 'flag', flag: 'lean' }, DOWN(1)] }, at: CORNER },
       { id: 'fire', line: 'Left button: shoot the sentry', done: DOWN(1), at: [SENTRY[0], 1.2, SENTRY[2]] },
       // THE TRUCK COURT
       { id: 'reload', line: '[R]: reload', done: { is: 'reload' } },
-      { id: 'crouch', line: '[C]: crouch at the arch', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: JAMB, r: 1.4 }] }, at: JAMB },
+      // (the gun's own setup, met early and in a quiet moment: the same two presses load the launcher at the end)
+      { id: 'auto', line: '[Z]: full auto', setupLine: '[2], then [1]: full auto', done: { is: 'any', of: [{ is: 'flag', flag: 'auto' }, DOWN(2)] } },
+      { id: 'arch', line: 'Move up beside the blue gate', done: { is: 'near', at: JAMB, r: 1.3 }, at: JAMB },
+      { id: 'crouch', line: '[C]: crouch. The fire goes over you', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: JAMB, r: 1.9 }] }, at: JAMB },
       // THE GUN COURT
       { id: 'low', line: 'Stay low: follow the sandbags', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: BAGS_END, r: 1.1 }] }, at: BAGS_END },
-      { id: 'smoke', line: '[3], then left button: smoke the gap', done: { is: 'any', of: [{ is: 'threw', kind: 'smoke', area: SMOKED }, DOWN(2)] }, hold: 2.5, at: GAP },
+      { id: 'smoke', line: '[3], then click the ring: smoke the gap', done: { is: 'any', of: [{ is: 'threw', kind: 'smoke', area: SMOKED }, DOWN(2)] }, hold: 2.5, at: GAP },
       { id: 'cross', line: 'Cross behind the smoke', done: { is: 'in', area: BEHIND }, at: BARRIER },
-      { id: 'frag', line: '[5], then left button: frag the gun', done: DOWN(2), at: NEST },
+      { id: 'frag', line: '[5], then click the ring: frag the gun', done: DOWN(2), at: NEST },
       // THE SHOP
-      { id: 'pistol', line: '[1]: the pistol', done: { is: 'any', of: [{ is: 'slot', slot: 'pistol', drawn: true }, DOWN(5)] } },
+      // (what the pistol is for: its shot is the one nobody takes for gunfire, and a lamp is a thing to shoot. The lamp lights where the next line stands him)
+      { id: 'pistol', line: '[1]: the pistol. Its shot is quiet', done: { is: 'any', of: [{ is: 'slot', slot: 'pistol', drawn: true }, DOWN(5)] } },
+      { id: 'lamp', line: 'Shoot out the lamp: the dark is cover too', done: { is: 'any', of: [{ is: 'target', name: 'lamp_shop', on: false }, DOWN(3)] }, at: LAMP },
       { id: 'charge', line: 'Hold [Space] on the door: pick the charge', done: { is: 'any', of: [{ is: 'door', door: 'shop', state: 'charged' }, { is: 'door', door: 'shop', state: 'open' }] }, at: SHOP_DOOR },
       { id: 'back', line: 'Stand clear, beside the door', done: { is: 'near', at: BACK, r: 0.9 }, at: BACK },
       { id: 'blow', line: '[F]: blow it', done: { is: 'door', door: 'shop', state: 'open' }, at: SHOP_DOOR },
@@ -256,8 +288,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'take', line: '[Space]: take the code book', done: { is: 'stage', stage: 'exfil' }, at: front },
       // THE WAY OUT
       { id: 'rifle', line: '[2]: back to the rifle', done: { is: 'slot', slot: 'rifle', drawn: true } },
-      { id: 'load', line: '[2] again: load the grenade', setupLine: '[2], then [2]: load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
       { id: 'leave', line: 'Back to the arch', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH },
+      // (asked for where it is used, a line before the men it is for: the load that is up when the right button is pressed is the one this line left there)
+      { id: 'load', line: '[2] again: load the grenade', setupLine: '[2], then [2]: load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
       // (a grenade that met something short of the 8 m it arms at is a dud: the line stays until one of the two is down, by the grenade or by anything else)
       { id: 'launch', line: 'Behind you. Hold right button, aim, let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
       { id: 'last', line: 'Shoot the rest', done: DOWN(7), at: LAST_COVER },
@@ -270,7 +303,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     boxes: K.boxes, props: K.props, lights, switchables, doors, devices: [],
     breaker: { pos: [28.0, 1.35, 10.2], boxes: [brk, led] }, beacons: [{ pos: [20.5, 2.05, 5.3], box: dome }],
     playerSpawn: START, routes, chokepoints: [], clearPlans: [],
-    sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.045, 0.05, 0.07] },
+    sky: { zenith: [0.008, 0.012, 0.026], horizon: [0.02, 0.024, 0.036] },   // (a dark sky over a thin moon: the plain past the lamps and the dark past the world's edge are one dark)
     // (the script's eyes: a play program may ask of the player only whether he stands in a volume. The shop door's line outside it, the shop, the store)
     volumes: [
       { name: 'shop_line', kind: 'trigger', c: [FRONT_X - 1.35, 1, AXIS], h: [1.35, 1, 0.6] },

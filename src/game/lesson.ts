@@ -91,6 +91,7 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   sprint: g => who(g).sprinting,
   wall: g => !!who(g).wall,                                   // back to a wall (Q)
   peek: g => (who(g).wall?.peek ?? 0) > 0.5,                  // …and leaning out of its open end
+  lean: g => { const w = who(g).wall; return !!w && ((w.lean ?? 0) > 0.5 || (w.kind !== 'stack' && (w.peek ?? 0) > 0.5)); },   // out round a wall's open end, whichever hold: stepped out with the rifle in the shoulder, or his back leant out (`peek` alone is also true of a rifleman who has only slid to the end)
   nv: g => who(g).nv,                                         // night vision down (N)
   light: g => { const p = who(g); return (p.pistolUp && p.pistol.lightOn) || (p.rifleUp && p.rifle.lightOn); },   // the weapon light of the gun in hand (L)
   holstered: g => who(g).holstered,                           // hands empty (E)
