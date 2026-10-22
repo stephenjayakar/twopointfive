@@ -57,13 +57,13 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     return read(); };
   const url = `http://localhost:${PORT}/?roomclear&squad4&levelFile=${NAME}.json&paused&quality=${QUALITY}&mute&nocutboxes`;
   log(url);
-  // (a browser kept up from a run before this one: a mission left in the middle is put back by the game's own restart; one that is FINISHED, or a page that is
-  //  on another mission — the end card's own key goes on to the next row — is loaded again, however long the software adapter takes)
-  const state = () => page.evaluate(() => ({ here: /levelFile=tut-plan\.json/.test(location.search), card: !!document.querySelector('.db.vd-on'), mid: !!window.__game && (window.__game.lesson.i > 0 || window.__game.orders.plan.up) })).catch(() => ({ here: false }));
+  // (a browser kept up from a run before this one: a page that is not this mission at its first tick — left in the middle, FINISHED, or on another mission, the
+  //  end card's own key goes on to the next row — is loaded again, however long the software adapter takes: the game's own restart puts back a checkpoint, not
+  //  the first line, and a page loaded before the server was started again is not this build)
+  const state = () => page.evaluate(() => ({ here: /levelFile=tut-plan\.json/.test(location.search), card: !!document.querySelector('.db.vd-on'), mid: !window.__game || window.__game.lesson.i > 0 || window.__game.orders.plan.up || window.__game.time > 1 })).catch(() => ({ here: false }));
   const st = held ? await state() : { here: false };
-  if (!st.here || st.card) await page.goto(url, { timeout: 1800000 });
+  if (!st.here || st.card || st.mid) await page.goto(url, { timeout: 1800000 });
   await page.evaluate(async () => { await window.__ready; window.__testVisible = true; });
-  if (st.here && !st.card && st.mid) await page.evaluate(() => window.__game.restartEncounter());
   await page.evaluate(() => window.__runFrames(5, 1 / 60, [], 'none'));
   let R = await read();
   log('booted', JSON.stringify({ ...R, men: R.men.length }));

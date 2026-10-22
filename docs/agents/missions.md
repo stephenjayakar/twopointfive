@@ -407,6 +407,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     [Shift], tap [B]: plan mode again'. New lesson tests (`lesson.ts LESSON_TESTS`): `planView {at, r}` (the mode up and its view's point within r of a place), `picked {n, free}` (the
     men an order would go to), `stacks {doors, set, n}` (men on a 'stack up' on each named door; `set`: standing on their marks AND their plan chain waiting for the word). The gate
     repeats, in its own words, which of the mode's keys are whose; asking plan mode itself what it would read this tick is the sounder shape and is its owner's.
+  - **A line that stops asking** (the frame's `after`, from the first mission's rework): each step that gives an order carries the line for while the men do it ('All four are on their way',
+    'They stack. Nobody goes in until your word'; seen in a scripted run on six steps, drawn as lines to watch — a step that is done the moment its order is given never shows its own), and the two word steps carry only `after.word` ('Both doors, together'; 'The gun is on the front door. They come in
+    behind it'). `planLine` comes before it: with the mode down the line is what puts the mode up.
   - **The word's lock holds INSIDE the mode** (`planmode.ts wordLocked`, `stackedLocked`; nothing changes where no frame runs or `word` is allowed): until a step allows `word`, men
     stacked on a door wait there whether or not a wait was put on its threshold; a second right click on that door is no entry (before this it was `bangClear`, found by the check's
     line 8); a left click on a stop does not cycle its waits; and the right button held gives no ring while `ring` and `menu` are locked.
@@ -430,9 +433,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     seconds 216.9 s (seeds 3, 5); it fails unless ONE press of the word empties every waiting chain, and it loads the checkpoint 'the gates' in the middle of every run and asks that
     all of it came back. THE WRONG PLAN (`TUTPLAN_ALONE=1`: all four on the hall's front door) on seeds 1 to 4: the run still ends, in 93.4 to 108.8 s, with 2, 0, 5 and 3 teammates
     put on a knee at the hall against 0 on every run of the plan — fewer seeds than would make that a rate, and one of the four cost nobody. `lesson-gate tut-plan` ALL PASS (6:
-    file, lint, lesson-check, the frozen run, four dice as the page ships, two of them at a reader's pace). `level-needs tut-plan --run` no FAIL on both stands. `rails-check`: frozen ALL
-    PASS; on the shipped stand one line is red ("the first play's notes hold", the first mission's) and is red the same way on the build head without this change. The `planmode`
-    probe (plan mode's own file changed): frozen ALL PASS (28); on the shipped stand one line is red ("W held five seconds: the view stops at its reach", 24.93 m against 25) and is
+    file, lint, lesson-check, the frozen run, four dice as the page ships, two of them at a reader's pace). `level-needs tut-plan --run` no FAIL on both stands. `rails-check` ALL PASS on both
+    stands (21 lines; `RAILS_BREAK=1` fails 14). The `planmode`
+    probe (plan mode's own file changed): frozen ALL PASS (30); on the shipped stand one line is red ("W held five seconds: the view stops at its reach", 24.93 m against 25) and is
     red the same way on the build head without this change. `planplus` ALL PASS on both stands (18). `dice-check`, `rollback-check --static`, `knobs-check`, `lesson-check`,
     `carlamps-check` and both typechecks pass.
     ON THE PAGE (`PORT=… node tools/qa/tut-plan-page.cjs`, headless Chromium, the software adapter, real keyboard and mouse events): every step of the mission to its end card (38 lines), with one
