@@ -3,7 +3,7 @@
 **THIS FILE IS AN INDEX. NEW BULLETS GO INTO THE MATCHING `docs/agents/` FILE, NEVER INTO CLAUDE.md. A SESSION READS ONLY THE AREA
 FILES ITS WORK NEEDS** — and inside one, the bullet it needs, not the file: `grep -n '<module or switch>' docs/agents/*.md`, then read
 those lines. This file is loaded into every session; it was 640 KB and sessions died of it. `bun run tools/qa/claude-md-check.ts`
-fails when it is over 12 KB or 150 lines, or when an area file is missing from the index below.
+fails when it is over 14 KB or 150 lines, or when an area file is missing from the index below.
 
 ## What this is
 
@@ -61,6 +61,33 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
 - **A change that players read or that moves a tally** says, in its area file: the switch, both stands' words, the check, what was
   measured and on how many seeds, and what nobody has seen or played.
 
+## Writing for the player
+
+Every word a player reads or hears (tutorial lines and cards, mission blurbs, menus, HUD rows, radio lines) is written the way you'd
+say it out loud to a friend who is playing next to you. Read each line aloud before you commit it: if you wouldn't say it, rewrite it.
+The maintainer's model, from a tutorial card:
+
+> Before: "Where the sound was he stops, his back to you."\
+> After: "He'll check out the sound and then stop, with his back to you."
+
+- **Who, then what they do, then the rest.** Subject, verb, object, and only then where, when or how. Don't open on a place or a
+  participle ("Stacked on a door, they wait") and don't tack on a verbless phrase ("his back to you"). A plain "when" or "if"
+  clause in front is fine: "When he stops, sneak up behind him."
+- **Talk to "you", and you press the key.** "Press [E] to grab him", not "[E] takes hold of him" and not "[E]: grab".
+- **Use contractions** (he'll, you'll, don't, it's, they're), "will" for what is about to happen, and an order for what to do.
+  No sayings: "Men fight by what they can see" is "Enemies can only fight what they can see."
+- **Join ideas with words** (and, then, so, because, with, to), not with a colon, a dash or a bare comma.
+- **Everyday American words**: grab, flashlight, breaker box, around, enemy, guard. Not "take hold of", "torch", "mains box",
+  "round", "a man", "your word".
+- **Short is good, clipped is not.** Cut ideas, never the small words (the, a, to, you, press). "Show, not tell" means fewer
+  screens of text, not telegrams. A character cap is there for layout: if a natural sentence doesn't fit, say less or raise the
+  cap openly. Never squeeze the sentence.
+- **A voice keeps its brevity, not odd grammar.** A radio call can be "Stacked up." or "Room clear."; it still runs in the order a
+  person would say it.
+
+The banned words stand (no compass words, no digit above 5) and a key is still written as its code in brackets (`[B]`). Longer
+notes and before and after pairs from the game's own text: `docs/agents/writing.md`.
+
 ## The area files (`docs/agents/`)
 
 Each is the old CLAUDE.md's bullets for that area, word for word (moved 2026-10-13). The git log is the newest in-repo record of what
@@ -100,6 +127,8 @@ happened when; the live queue is outside the repo.
 - `replays.md` — the F10 session journal and the `Sensors` seam, the game's own die, the fixed step, the input record, F7 replays, the
   engine replay player, kept runs and the dump.
 - `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
+- `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),
+  with before and after pairs from the game.
 - `workflow.md` — the fast loop, reviews, lanes and their deliverables, commits, the maintainer's taste, where the repo lives, the
   playable Artifact.
 

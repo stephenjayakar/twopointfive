@@ -1276,6 +1276,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the roadblock to the gate, so the beat is as short with the word taken off and no longer proves it. The line now also asks `lanes.ts lanePenalty` of
   each roadblock man the script sent, with the word and without: never a price with it; without it, on a stand with covered lanes, the lanes' price
   (670 man-frames on the page's stand; the frozen stand has no covered lanes and only shows the word reached 3 men).
+- **A step's own eye always has a place among the fog's** (2026-10-22; `RAILS.eyeFirst`, a knob of the frame's table, on with it, off on a recording
+  from before the key; `src/game/fogofwar.ts update`). The fog of war takes five eyes. In the sky seat with four men up and the seat's lookout in, the
+  list was full and the step's own eye (`eye { at, yaw, fov? }`, pushed last) was the one dropped: on mission 1 the squad's own wall charge went off in
+  the fog, twice, in the maintainer's play. Now the step's eye goes in ahead of the lookout and, with the places full, takes the last one (the lookout
+  gives way for that step; on a floor mission with the player and four men, the last man's eye does). Mission 1 itself has its fog off since (the
+  level's word); tut-squad, tut-plan and any mission that keeps its fog are what this is for. CHECK `rails-check`, the line "a step's own eye has a
+  place among the fog's five" (the rig puts the fog on itself: on a step with no eye the lookout is one of the fog's and its ground is seen; on the
+  wall's step with four men up the step's eye is one of the five and where it looks is seen; with the rule off it is dropped and the place is in the
+  fog): 23 lines pass on both stands, `RAILS_BREAK=1` fails 15 on both, this one among them. Headless only: the page's fog is the GPU's picture of the
+  same five eyes, and nobody has looked at it since. Never seen on a GPU.
 - **Mission 1's scripted player off the page's stand** (2026-10-22; `tools/qa/lessons/tut-sky.ts raises`, `tools/qa/lesson-run.ts`). `lesson-gate
   tut-sky` was red on its frozen arm at the wall's step since before the level was rebuilt: that stand has no destruction (no wall charge to give), no
   ring that stays up for its digits, and no teammate working a thing (the breaker's step). The player's file now raises those for its own run
@@ -1327,8 +1337,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   generator's, `level-lint`, `lesson-check`, the scripted player on the frozen stand with the frame raised, and on the shipped stand on four dice, two of
   them reading every line for 6 s), `quiet-check`, `carlamps-check` (its row), `level-needs tut-pair --run`, `rails-check` (the frame's own), both
   typechecks, the page play. MEASURED, headless: the scripted player finishes all 18 steps on the shipped stand on seeds 1 to 4; "set" comes 5 to 9 s
-  after the first order and 17 to 21 s after the second, the mains go 3 to 7 s after the order on the box. KNOWN: a `did` deed cannot say WHICH man an order was on (`lesson.ts` counts `order:<id>@<target>` and its check refuses the `@`), so the
-  double's first step passes on the squad's key on either man: the ring rides on the far one (`atMan`) and the card says which; the last man is 14 m
+  after the first order and 17 to 21 s after the second, the mains go 3 to 7 s after the order on the box. THE DOUBLE'S ORDER NAMES ITS MAN (`did` `order:pairMark@foe:<callsign>`): the squad's key on the near man of the two leaves the ask up
+  (`TUTPAIR_NEAR=1` in front of `lesson-run tut-pair` gives the near man first and fails if the step passes). KNOWN: the last man is 14 m
   from the office door, so the dark is walked, not stood in; the two at the start
   are dark figures on a dark road. A SKETCH: the script's few words, the office (one room), no lived-in rooms, a composed menu picture
   (`tools/menu-art.ts` PIN). Never seen on a GPU, never played by a person: the moon shadows, the red of the beacons over the whole yard and whether the
