@@ -234,6 +234,24 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('lots');
   G.generator(30.0, 7.4, 0.1); G.waterTank(32.6, 20.6);
 
+  // ---- a place somebody lives and works in (the maintainer: a tutorial level has "just as much (if not more! since it's first impression) polish and
+  //  [should] really feel great and organic"). ADDITIONS ONLY, every one off the mission's line, off each man's mark and out of every door's sweep: none
+  //  of it is cover a line asks for, and none of it changes a fight (tools/qa/tut-solo-check.ts plays every way through it) ----
+  grp('dress.road');     // the roadside: a melon stall by the forecourt, scrub along the verge
+  G.stall(1.9, 21.8, 0.12, 2.2, 'tarpBlue'); G.bush(1.1, 17.4); G.bush(0.9, 24.4, 0.8); G.bush(7.4, 23.6, 0.9); G.tyres(7.2, 19.8, 2);
+  grp('dress.truck');    // the truck court's north corner: where the gate's men sit out a watch
+  G.charpoy(10.7, 8.6, 0.12); G.lowTable(11.9, 9.5, 0.3); G.stove(12.9, 8.3); G.plasticChair(12.4, 10.4, 2.6); G.jerryCan(13.6, 8.4, 0.2);
+  grp('dress.shop');     // the shop is the room they live in: a stove, a floor mattress and tea, a rug under the table, a hanging on the wall
+  G.rug(27.5, 16.2, 3.4, 1.9, 'afghan'); G.toshak(29.3, 16.95, 1.9, 0); G.lowTable(29.2, 16.1, 0.1); G.stove(28.4, 11.15);
+  G.wallHanging('x', ROOM_Z0, 27.6, 1, 'baluch', 1.4, 0.9); G.gasBottle(30.0, 12.6);
+  grp('dress.store');    // the store: flour and rice against the wall, a mat by the trunk
+  G.sacks(32.6, 11.15, 0.1, 4); G.rug(34.4, 12.2, 1.2, 1.6, 'mat', HALF); G.gasBottle(30.95, 16.0);
+  grp('dress.lots');     // the two back lots nobody walks into: the cook's yard behind the gun, the wash yard by the tank
+  G.tandoor(34.6, 6.5); G.charpoy(33.2, 9.0, 0.08, 'rugNavy'); G.woodPile(27.0, 9.6, 0.1); G.satDish(26.2, 6.2, 0.6); G.bush(35.1, 9.5, 0.8);
+  G.wire(30.0, 7.9, 30.0, ROOM_Z0); G.lantern(32.0, 7.8, 'lantern_cook', 'exterior');
+  G.washLine(26.6, 19.3, 30.2, 19.3, 5); G.motorbike(34.6, 18.7, 0.5); G.bush(26.0, 22.2); G.bush(35.2, 22.3, 0.8); G.sacks(29.6, 22.2, 0.1, 3);
+  G.lantern(30.9, 19.0, 'lantern_wash', 'exterior');
+
   // ---- light: the moon the hour swaps for its sun, a lamp over the gate and one over the shop's door ----
   grp('lights');
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.62, -0.5, -0.6]), color: [0.55, 0.7, 1.0], intensity: 0.22, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
