@@ -208,7 +208,8 @@ export function keyCap(cap: string): string { fresh(); if (!map) return cap; con
 export function keyText(s: string, all = false): string {
   fresh(); if (!map || !s) return s;
   const T = all ? textAll : text; if (!T) return s;
-  T.re.lastIndex = 0; return s.replace(T.re, (m, ...r) => { const to = T.to.get(m) ?? m, at = r.find(x => typeof x === 'number') as number; return to.startsWith('hold ') && (at === 0 || /[.:!?] $/.test(s.slice(0, at))) ? 'H' + to.slice(1) : to; });   // (the orders key's 'hold Q' opens a line with its capital)
+  T.re.lastIndex = 0; return s.replace(T.re, (m, ...r) => { const to = T.to.get(m) ?? m, at = r.find(x => typeof x === 'number') as number; if (!to.startsWith('hold ')) return to; const pre = s.slice(0, at);   // (the orders key's 'hold Q': its capital where it opens a line or a sentence, the bare cap after 'hold', 'Q held' after 'with')
+    return /\bhold $/i.test(pre) ? to.slice(5) : /\bwith $/i.test(pre) ? `${to.slice(5)} held` : at === 0 || /(?:[.:!?] |\n)$/.test(pre) ? 'H' + to.slice(1) : to; });   // (the orders key's 'hold Q' opens a line with its capital)
 }
 /** is anything not as built (what Reset has to undo) */
 export function keysChanged(): boolean { return KEYMAP.on && bound.size > 0 && keyRows().some(a => !same(keysNow(a), home(a))); }

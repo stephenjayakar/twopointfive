@@ -167,6 +167,7 @@ function tick(S: SquadOrders): void {
   if (P.pick && !menOf(S, P.pick).length) P.pick = null;
   if (P.back && !(g.time - P.back.t0 >= 0 && g.time - P.back.t0 < CMDRING.planBackSecs)) P.back = null;   // (the view is back on him)
   if (P.up && !S.men('all').length) down(S, null);   // (nobody left to order: the mouse is Sam's)
+  if (planKnee(S) && !g.player.crouch) { if (P.stood === null) P.stood = true; g.player.crouch = true; }   // (the mode up and he is not down on the knee — a restart stood a new man up, an older file: down he goes)
   for (const C of [...P.chains]) {
     const men = menOf(S, C.who), st = C.steps[0]; C.who = men.map(m => m.callsign);
     if (!men.length || !st) { drop(S, C); continue; }
@@ -174,12 +175,12 @@ function tick(S: SquadOrders): void {
     if (C.phase === 'go') {
       if (door) { if (g.doorTools.waitsOn(men, door)?.set) { if (waitsAt(st)) pause(S, C, 'wait'); else enter(S, C); } }   // (no wait put on its threshold: stacked, they go in)
       else if (g.time - C.t > 0.3 && men.every(m => { const A = S.of(m); return !A || A.arrived; }) && !(st.found === 'thing' && men.some(m => g.work.working(m)))) {   // (a thing: he is done with it — worked, or not there to work — not merely stood at it)
-        const way = st.look && !st.looked ? st.look : null; if (way) { st.looked = true; lookNow(S, men, way, true); }   // (a way to look, planLook: told once they stand there)
-        if (holdOn(st, !more)) pause(S, C, 'held'); else if (way && more) { C.phase = 'look'; C.t = g.time; } else next(S, C); }
-    } else if (C.phase === 'look') { if (g.time - C.t >= CMDRING.planLookSecs) next(S, C);   // (they have checked that way: on to the next stop)
+        const way = st.look && !st.looked ? st.look : null; let took = false; if (way) { st.looked = true; took = lookNow(S, men, way, true); }   // (a way to look, planLook: told once they stand there)
+        if (holdOn(st, !more)) pause(S, C, 'held'); else if (took && more) { C.phase = 'look'; C.t = g.time; } else next(S, C); }   // (nobody could cover that way — a wall at his shoulder: nothing to wait for)
+    } else if (C.phase === 'look') { if (g.time - C.t >= CMDRING.planLookSecs) { if (holdOn(st, !more)) pause(S, C, 'held'); else next(S, C); }   // (they have checked that way: on to the next stop — or a hold put on this one meanwhile)
     } else if (C.phase === 'wait') { if (entering(S, men, st)) { C.phase = 'in'; C.t = g.time; } }   // (the entry given by somebody else's hand: a tool's, a scenario's)
     else if (C.phase === 'in' && g.time - C.t > 0.5 && !g.doorTools.ops.some(op => op.men.some(m => men.includes(m)))) {
-      if (door && g.doorTools.waitsOn(men, door)) { C.phase = 'wait'; C.t = g.time; }   // (the entry was given up — a lock — and they are back on their marks: the threshold again, and its word)
+      if (door && g.doorTools.waitsOn(men, door)) { if (CMDRING.planWaits && st.wait === false) st.wait = true; C.phase = 'wait'; C.t = g.time; }   // (the entry was given up — a lock — and they are back on their marks: the threshold again, and its word)
       else if (holdOn(st, !more)) pause(S, C, 'held'); else if (more) next(S, C); else drop(S, C, true);   // (nothing after it: they hold the room, as they always did)
     }
   }
@@ -253,9 +254,17 @@ function lookNow(S: SquadOrders, men: Guard[], way: [number, number], chain: boo
 function lookOrder(S: SquadOrders, t: OrderTarget, to: Vec3, add: boolean): void {
   const P = S.plan, dx = to[0] - t.at[0], dz = to[2] - t.at[2], l = Math.hypot(dx, dz);
   if (l < 0.5 || t.kind === 'door' || t.kind === 'foe' || (t.kind === 'floor' && t.thing)) return planOrder(S, t, add);
-  const way: [number, number] = [dx / l, dz / l];
-  if (t.kind === 'floor') return planOrder(S, t, add, way);
+  if (t.kind === 'floor') return planOrder(S, t, add, [dx / l, dz / l]);
   const men = t.man ? [t.man] : S.recipients(t); if (!men.length) { S.g.msg('nobody to take that order'); return; }
+  let mx = 0, mz = 0; for (const m of men) { mx += m.char.pos[0] / men.length; mz += m.char.pos[2] / men.length; }   // (the way is from where THEY stand to where the hand let go — the press met a man's chest, not his feet)
+  const wl = Math.hypot(to[0] - mx, to[2] - mz); if (wl < 0.5) return; const way: [number, number] = [(to[0] - mx) / wl, (to[2] - mz) / wl];
+  if (add) {   // (Shift, and they are on a plan: the way is the last stop's — they look there when they get there — and nobody is taken off it)
+    const names = men.map(m => m.callsign), on = P.chains.filter(c => c.who.some(n => names.includes(n))); let set = false;
+    for (const c of on) { const e = c.steps[c.steps.length - 1];
+      if (c.steps.length === 1 && c.phase !== 'go') { if (lookNow(S, men.filter(m => c.who.includes(m.callsign)), way, true)) set = true; }   // (stood on their last stop already: they cover it now, still on the plan)
+      else if (e.kind === 'floor' && e.found !== 'thing') { e.look = [way[0], way[1]]; e.looked = false; set = true; } }
+    if (on.length) { if (set) { P.showT = S.g.time; PLAN_STATS.added++; } return; }
+  }
   if (lookNow(S, men, way, false)) P.showT = S.g.time;
 }
 /** where a stop is drawn and clicked: its door, its man, Sam, or its spot */
@@ -266,6 +275,7 @@ function stopAt(S: SquadOrders, s: PlanStep): Vec3 {
 /** the stop of a chain the cursor is on (within `planStopPx`, × ringZoom, of where it is drawn; null: none) */
 function stopUnder(S: SquadOrders, input: Input, cam: FollowCamera, canvas: View): { C: PlanChain; i: number } | null {
   const w = canvas.clientWidth, h = canvas.clientHeight; let best: { C: PlanChain; i: number } | null = null, bd = CMDRING.planStopPx * ringZoom(w, h);
+  if (!(input.mouseX >= 0 && input.mouseY >= 0 && input.mouseX <= w && input.mouseY <= h)) return null;   // (a stop off the picture is nobody's to click)
   for (const C of S.plan.chains) C.steps.forEach((s, i) => { const [sx, sy, front] = cam.project(stopAt(S, s), w, h); if (!front) return;
     const d = Math.hypot(sx - input.mouseX, sy - input.mouseY); if (d < bd) { bd = d; best = { C, i }; } });
   return best;
@@ -298,7 +308,7 @@ function up(S: SquadOrders): void {
   // HE TAKES A KNEE AT THE RADIO (CMDRING.planKnee; the maintainer, 10-22: "plan mode should also show the player taking a knee and talking on the
   // radio, and then camera can decouple from them and move (up to some limit) with wasd and then gently snap back when exiting the mode"): the
   // crouch is his real one — lower to a round and to an eye, as a man on a knee is — and player.ts lowers the gun and puts his hand to the handset
-  if (CMDRING.planKnee && P.look && !g.player.dragging) { P.stood = !g.player.crouch; g.player.crouch = true; }
+  if (planKnee(S)) { P.stood = !g.player.crouch; g.player.crouch = true; }
 }
 /** the page's Esc (Game.escape, behind everything nearer): the mode comes down (false: it was not up, or the back key is not its way out) */
 export function planEscape(S: SquadOrders): boolean { if (!S.planBack()) return false; PLAN_STATS.toggled++; down(S, S.g.seat.input); return true; }
@@ -324,7 +334,9 @@ export function planLook(S: SquadOrders): Vec3 | null {
   const e = k * k * (3 - 2 * k), p = S.g.player.char.pos; return [B.from[0] + (p[0] - B.from[0]) * e, 0, B.from[2] + (p[2] - B.from[2]) * e];
 }
 /** is he on a knee at the radio right now (player.ts: the gun low, the left hand at the handset) */
-export function planKnee(S: SquadOrders): boolean { return CMDRING.planKnee && S.plan.up && !!S.plan.look; }
+export function planKnee(S: SquadOrders): boolean { const pl = S.g.player; return CMDRING.planKnee && S.plan.up && !!S.plan.look && !pl.down && !pl.dragging && !pl.holding && !pl.takedown && !pl.kick; }   // (never with a man in his arm, a body in tow, a boot or a takedown under way: those are their own carriage)
+/** the mode taken down by the squad going (orders.ts: nobody to order, or he is down) and not by his hand: he is off the knee, nothing eased */
+export function planTorn(S: SquadOrders): void { const P = S.plan, g = S.g, pl = g.player; P.rdown = null; if (P.stood === null) return; if (P.stood && !pl.down && !pl.dragging && canStand(g)) pl.crouch = false; P.stood = null; }
 
 /** orders.ts input, once a tick with a squad on the floor and Sam up — after the who key, ahead of the ring, the menu, the plan laid for the word and
  *  the door tools: the chains move on, then the mode's own keys and buttons are read */
@@ -374,7 +386,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   if (rmb) { P.rmbT = S.g.time; const t = K.planLook ? S.targetUnder(input, cam, canvas) : null; P.rdown = t ? { x: mx, y: my, t, drag: false, to: v3c(t.at) } : null; }
   if (P.rmbT < 0) return;
   // (… dragged before the ring's wait is up, planLook: it is an order with a way to look, and the ring is not opened under it)
-  const RD = P.rdown; if (RD) { if (!RD.drag && Math.hypot(mx - RD.x, my - RD.y) >= K.planDragPx * ringZoom(w, h)) RD.drag = true; if (RD.drag) RD.to = v3c(S.targetUnder(input, cam, canvas).at); }
+  const RD = P.rdown; if (RD) { if (!RD.drag && Math.hypot(mx - RD.x, my - RD.y) >= K.planLookPx * ringZoom(w, h)) RD.drag = true; if (RD.drag) RD.to = v3c(S.targetUnder(input, cam, canvas).at); }
   if (!(input.buttons & 4)) { P.rmbT = -1; P.rdown = null; if (RD?.drag) lookOrder(S, RD.t, RD.to, shift); else planOrder(S, S.targetUnder(input, cam, canvas), shift); }
   else if (!shift && !RD?.drag && S.g.time - P.rmbT >= K.planHoldSecs - 1e-6) { P.rmbT = -1; P.rdown = null; S.ringByButton(input, cam, canvas); }
 }
@@ -405,7 +417,7 @@ export function planGiven(S: SquadOrders, men: Guard[], id: string): void {
 export function planFresh(S: SquadOrders): void {
   const P = S.plan, t = S.g.time; P.drag = null;
   if (P.restoredT >= 0 && t >= P.restoredT && t - P.restoredT < 0.1) return;   // (the cast a checkpoint's own restart stood up: the file's chains stand)
-  P.restoredT = -1; P.chains = []; P.pick = null; planHome(S);
+  P.restoredT = -1; P.chains = []; P.pick = null; P.back = null; planHome(S);
 }
 
 export function planSnapshot(S: SquadOrders): PlanSnap { const P = S.plan; return { up: P.up, pick: P.pick ? [...P.pick] : null, chains: copyChains(P.chains), showT: P.showT, look: P.look ? v3c(P.look) : null, aim: P.aim ? v3c(P.aim) : null, stood: P.stood, back: P.back ? { from: v3c(P.back.from), t0: P.back.t0 } : null }; }

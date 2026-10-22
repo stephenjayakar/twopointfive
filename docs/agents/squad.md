@@ -229,7 +229,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it off. Debugger: Team feel ▸ 'Tab ▸ the ring ▸ carries every order'. CHECK: `probes.ts qonly` (tools/qa/qonly-check.ts, family squadorders; 10
   lines; `QONLY_BREAK=1` fails 8 on the page's stand and 7 on the frozen), both stands; `qkey`'s board line knows the two freed rows. The older ring
   checks pin `only` off. KNOWN COSTS: a door with a look-under row (a wand carried) has six first-page rows, so its fifth wedge is 'more' holding
-  'door tools' and the look, one ring deeper; a line of words that names the orders key (a lesson's 'X on the ground, then 5') reads 'hold Q …' (`keymap.ts rebuild`; `qonly`'s board
+  'door tools' and the look, one ring deeper; a line of words that names the orders key (a lesson's 'X on the ground, then 5') reads 'hold Q …' ('Hold Q …' at the start of a sentence or a line, plain 'Q' after a 'hold' already written, 'Q held' after 'with'; `keymap.ts rebuild` and `keyText`; `qonly`'s board
   line), but lines that name T (the pairs lesson's three steps, a kit card's note) are not rewritten and are stale while the row has no key, and
   the Controls list still says 'or the middle mouse button' on a row that reads as no key; the HUD's 'RED waiting · T, then F' is 'RED waiting'; the
   ring on Sam shows 'fall in' twice (the quick order's wedge and its own); with the quick throw's own switch on (off in the page) G held under a ring
@@ -239,25 +239,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the module and on the frozen stand, each needing plan mode). (1) `CMDRING.planLook` (`?planlook=0` · `TPS_PLANLOOK=1`; the maintainer: "you should
   be able to right click drag on a path and have them check that direction, like door kickers" · "if they're given an angle while not moving, they
   should probably just cover that" · "we expect squad mates to be very smart on their own and not need micromanaging like this"): a right press
-  dragged `planDragPx` is an order with a way. Down on the floor: the click's own order, its stop keeps the way (drawn as an arrow), the men cover
+  dragged `planLookPx` (24, three times a left drag's `planDragPx`: a trackpad's click slides) is an order with a way. Down on the floor: the click's own order, its stop keeps the way (drawn as an arrow), the men cover
   that way once they stand there (`orders.ts coverFor`: the plain 'cover' order on a point `planLookM` out), and a chain with more stops walks on
-  after `planLookSecs` (phase 'look'). Down on a man, on Sam or on nothing: nobody walks, the man (the picked men) cover that way where they stand.
+  after `planLookSecs` (phase 'look'). Down on a man, on Sam or on nothing: nobody walks, the man (the picked men) cover that way where they stand, the way measured from
+  where THEY stand to where the button came up. With Shift, off a man who is on a plan: nobody is taken off it and its last floor stop keeps the way
+  (men already stood on their last stop turn now). A stop whose cover every man refuses (a wall at each shoulder) is not waited at.
   On a door, a thing, a man of the other side, or let go within half a metre: the plain click. A drag never opens the button's ring. (2)
   `CMDRING.planWaits` (`?planwaits=0` · `TPS_PLANWAITS=1`; "let's also make it possible to add and remove F waits in the plan. and then I think we
   can change the flow to be that pressing F only releases the people blocked on it"): a left click on a stop (within `planStopPx`) steps its waits
   instead of picking men. A floor stop: a hold there, on and off. A chain's last door: its threshold wait, on and off. A door with stops after it:
   both, the threshold's alone, the one after alone, neither. A wait taken off under men stood on it lets them go at once; taken off a door they
-  cannot go through (locked) it is back on with its mark. The word frees only men stood waiting on it: a press while they walk is theirs (the stack's
+  cannot go through (locked: refused at once, or tried and given up) it is back on with its mark; a hold put on while the men look a way is kept. The word frees only men stood waiting on it: a press while they walk is theirs (the stack's
   own early word does not get it) and is not kept, and `planLate` keeps nothing. (3) `CMDRING.planKnee` (`?planknee=0` · `TPS_PLANKNEE=1`, needs the
   view's own switch `planRts`; "plan mode should also show the player taking a knee and talking on the radio, and then camera can decouple from them
   and move (up to some limit) with wasd and then gently snap back when exiting the mode"): the mode up, he crouches (his real crouch: lower to a
-  round and to an eye), the long gun low, the left hand at the handset (`player.ts`, `anim.radio`); the mode down, he stands again if he stood before
-  and there is room, and the view comes back to him over `planBackSecs` on a smoothstep (`planLook`, `PlanState.back`, in the snapshot) instead of on
+  round and to an eye), the long gun low, the left hand at the handset (`player.ts`, `anim.radio`); the mode down by any road (the key, a restart with it up, the last man lost: `planTorn`), he stands again if he stood before
+  and there is room; no knee while he is down, drags a body, holds a man, or is in a takedown or a kick (`planKnee`), and the view comes back to him over `planBackSecs` on a smoothstep (`planLook`, `PlanState.back`, in the snapshot) instead of on
   the follow camera's own damping. The reach was already there (`planPanReachM` from the box of Sam and the men). `FROZEN_HOLDS` rows
   `CMDRING.planLook` / `planWaits` / `planKnee`; the journal carries them, a recording with none replays with them off. Debugger: Team feel ▸ 'Tab ▸
   plan mode ▸ a right drag sets where they look' / '… its waits are the plan's own' / '… he takes a knee at the radio'. CHECK: `probes.ts planplus`
-  (tools/qa/planplus-check.ts, family squadorders; 13 lines, the real buttons and keys on the office with four; `PLANPLUS_BREAK=1` fails 10), both
-  stands. KNOWN COSTS: a click on a stop no longer picks the man stood on it (click beside it); a door with its wait off still stops if the entry is
+  (tools/qa/planplus-check.ts, family squadorders; 18 lines, the real buttons and keys on the office with four, the view walked to each door first; `PLANPLUS_BREAK=1` fails
+  16), both stands. A door the men do not hold a stack at on a stand (the break room's two on the page's, an old red of `orders-stack`) is passed over
+  for the next and the line says so. KNOWN COSTS: a click on a stop no longer picks the man stood on it (click beside it); a door with its wait off still stops if the entry is
   refused; the cover a look gives stands until the next order, as any cover does; the knee makes him a smaller target for as long as the mode is up.
   NOT measured: no tally, one seed; whether men on a path cover an obvious way by themselves was not judged; nobody has played it; never seen on a GPU.
 - **Plan mode, a prototype** (`src/game/planmode.ts`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that

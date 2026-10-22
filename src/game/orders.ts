@@ -102,7 +102,7 @@ import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringHoldSecs, rin
 import { backableInteract } from './interact';   // (read inside ringInput only: what the back key would back out of)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
-import { planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, planShift, planEscape, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
+import { planTorn, planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, planShift, planEscape, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
 import { teamFollow, teamDash, teamFight } from './teampace';   // (read inside update only)
 import { noShoveOwn } from './noshove';   // (read inside update only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
@@ -931,7 +931,7 @@ export class SquadOrders {
     this.sync();
     if (this.escUsed) { this.escUsed = false; input.pressed.delete('Escape'); }
     const g = this.g, v = this.view;
-    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; this.plan.drag = null; this.plan.up = false; v.input = v.cam = v.canvas = null; return; }
+    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; this.plan.drag = null; planTorn(this); this.plan.up = false; v.input = v.cam = v.canvas = null; return; }
     v.input = input; v.cam = cam; v.canvas = canvas;
     if (this.lay.laid.length) layPrune(g);   // (planlay.ts: a man who is down is off the plan)
     if (input.hit(K.whoKey)) this.stepWho(1, this.targetUnder(input, cam, canvas));   // who: the man under the cursor, else the next element

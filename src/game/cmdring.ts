@@ -110,6 +110,8 @@ export const CMDRING = {
    *  dragged, they cover that way from where they stand. false: a right press is a click or, kept down, the ring, as it was built. Off here; the
    *  page raises it with the mode (`?planlook=0` off) */
   planLook: false,
+  /** … and how far the right press is dragged before it is that and not a click (px, × the ring's own zoom): well past a click's own slip on a trackpad */
+  planLookPx: 24,
   /** … how long a chain's men check the way of a stop that has more stops after it and no wait on it, before they walk on (s) */
   planLookSecs: 1.2,
   /** … how far out the point they cover is put (m): far enough that men stood apart look the same way */
