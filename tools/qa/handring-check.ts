@@ -14,6 +14,7 @@
 //   a click       standing, with the pistol up: a left click does the lit wedge and no round leaves the gun
 //   the cursor    the key kept down, the cursor out toward the last wedge the moment the ring is up, the key let go: that wedge is done (no second press)
 //   under it      a ring that merely stands is nothing in hand: the wheel is his pace, the squad's key is free, a save is allowed
+//   a save        a save kept in memory under a standing ring is put back with no ring (savestate.ts loadMem): his first click after is his own
 //   put away      the key again does the lit wedge; a right click puts the ring away with nothing done; so does the back key
 //   the rows      the whistle is a wedge and no row: the list and the highlight are as they were (nothing that reads them meets it); on open floor the
 //                 ring is that one wedge; the whistle's old code still whistles (a recording, a check)
@@ -92,6 +93,11 @@ export async function handRingCheck(): Promise<boolean> {
       input.wheel = -100; step(1); input.wheel = 0; tap('Tab'); step(2);
       verdict(paced && sq && sv && ch, 'a ring that merely stands is nothing in hand: the wheel is his pace, the squad\'s key is free, a save is allowed',
         `standing: the wheel took his pace ${p0.toFixed(2)} → down ${paced} · the squad's key free ${sq} · a save allowed ${sv} · not choosing ${ch}`); }
+    // ---- a save in memory
+    { rule(true); atDoor(); stand(); const stood = standing(), C: any = g.saves, r = C.writeMem(g, 'manual', 'ring'), key = r.info?.key; tap('Tab'); step(2); const away = !up();
+      const why = key ? C.load(g, key) : 'no save'; const back = !!pl.sel.ring || pl.sel.open; step(2); const b0 = WHISTLE_STATS.blown, a0 = leaf(); click(); step(6); const clean = !up() && WHISTLE_STATS.blown === b0 && Math.abs(leaf() - a0) < 0.01;
+      verdict(stood && r.ok && away && why === null && !back && clean, 'a save kept in memory under a standing ring (the whole game as it stood) is put back with no ring: his first click after the load is his own',
+        `the ring stood at the save ${stood}, saved ${r.ok}${r.why ? ` (${r.why})` : ''} · Tab put it away ${away} · the load: ${why ?? 'done'} · a ring after it ${back} · a click then did no wedge ${clean}`); }
     // ---- the rows
     { rule(true); floor(); const alone = rows(); atDoor(); const withDoor = rows(), top = g.hover?.verb, topKind = g.hover?.kind; breath(); const b0 = WHISTLE_STATS.blown; tap('KeyV'); step(3); const old = WHISTLE_STATS.blown - b0;
       floor(); down(HOLD + 4); const onFloor = view(); lift(); tap('Tab'); step(2);

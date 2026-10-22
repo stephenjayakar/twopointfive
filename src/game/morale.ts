@@ -196,7 +196,7 @@ export function inTheDark(g: Game, gd: Guard): boolean {
   return Math.max(lightEstimateAt(g, chestOf(c), own, true), lightEstimateAt(g, headOf(c), own, true)) < g.tune.visFloor;
 }
 /** has he company: a living man of his own side inside `aloneM` with nothing solid between his eyes and that man's chest */
-function hasMate(g: Game, gd: Guard): boolean {
+export function hasMate(g: Game, gd: Guard): boolean {
   const c = gd.char, eye = headOf(c);
   for (const o of g.guards) { if (o === gd || !ours(o) || o.team !== gd.team || o.held) continue;
     if (flat(o.char.pos, c.pos) <= MORALE.aloneM && !g.col.segmentBlocked(eye, chestOf(o.char))) return true; }

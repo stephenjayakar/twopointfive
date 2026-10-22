@@ -10,8 +10,8 @@
 //   knife   the ARM hold (no pistol in it): rule ON ≡ rule OFF frame for frame (the old ring — the rule is the pistol's).
 // `GUNHOLD_BREAK=1` leaves the switch off in the ON arm: front, round and line must fail (knife is an identity: it holds either way). Exit 0 / 1.
 if (import.meta.main) (globalThis as any).process.env.TPS_PROFILE ??= 'shipped';   // (run by name: the page's stand; under probes.ts the runner's own — the check holds on both)
-import { ROOT } from './headless.ts';
-import { stageHold, bringIn, bearingPoint, rearDeg, roundClearance } from './standoff-probes.ts';
+const { ROOT } = await import('./headless.ts');   // (loaded AFTER the line above: a static import is hoisted over it, and the harness then stood frozen under a shipped word)
+const { stageHold, bringIn, bearingPoint, rearDeg, roundClearance } = await import('./standoff-probes.ts');
 const { v3, DEG } = await import(`${ROOT}/src/math/vec.ts`);
 const { pairOf, flankShot, clearShot } = await import(`${ROOT}/src/game/guards.ts`);
 const { GUNHOLD, GUNHOLD_DEBUG, gunHoldStats, gunHoldSummary, gunHoldPhase } = await import(`${ROOT}/src/game/gunhold.ts`);

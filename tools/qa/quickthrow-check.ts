@@ -51,7 +51,7 @@ export async function quickthrowCheck(): Promise<boolean> {
       line(up0 && !pl.rifleUp && r.arc && r.armed && pl.canisters === 1 && thrown('smoke') === 1, 'the switch on (the frozen stand, ?quickthrow): G held and let go slings the rifle and throws the smoke can — the build as it was',
         `rifle up ${up0} → ${pl.rifleUp} · arc ${r.arc} · armed ${r.armed} · ${kitOf()} · ${thrown('smoke')} smoke can out`); }
     // (5) the words
-    { const rows = CONTROLS.filter(r => /quick/i.test(r[1]) || /(^|[ ·])G([ ·]|$)/.test(r[0]) && !/X · B · T · F/.test(r[0]));
+    { const rows = CONTROLS.filter(r => /quick/i.test(r[1]) || /(^|[ ·])G([ ·]|$)/.test(r[0]) && !/X · B · T · F/.test(r[0]) && r[0] !== 'H · G');   // (the orders-up row 'H · G': its G is the menu's own key, 'frag and clear', not a throw — it had this line red on both stands)
       const lvl = JSON.parse(readFileSync(resolve(ROOT, 'levels/train-kit.json'), 'utf8')); const steps: any[] = lvl.scenarios?.lesson?.steps ?? [];
       const asks = steps.filter(s => /\bG\b/.test(s.line) || JSON.stringify(s.done).includes('"quick"'));
       line(rows.length === 0 && steps.length > 5 && asks.length === 0, 'no controls row names G or a quick throw, and no step of Training 4 asks for one', `controls rows ${JSON.stringify(rows)} · Training 4: ${steps.length} steps, asking for G: ${JSON.stringify(asks.map(s => s.id))}`); }

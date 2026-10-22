@@ -50,6 +50,7 @@ import { aimWeighBegin, aimWeighTurn, aimWeighShot, aimWeighLaunch, aimWeighLaun
 import { THROW_RELEASE, HOLD } from './character';
 import { WALLSNAP, wsTakeSecs, wsEase, wsHit, wsCornerAngle, wsSeenDeg } from './wallsnap';
 import { HANDSLOT, HANDSLOT_KEY } from './handslot';
+import { THROWBACK } from './throwback';
 import type { HoldPhase, HoldVariant, LongStance } from './character';
 import type { StaticCollision } from '../scene/collision';
 import type { Game, Guard, Player, ThrowKind, Interactable, Verb } from './game';
@@ -347,6 +348,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if ((pl.takedown || pl.kick || pl.picking || pl.wanding || pl.coding) && (KITANIM.on || pl.kitWas !== undefined)) kitTick(g);   // (kitanim.ts: something else has his hands — no errand, and nothing left over in the fist)
   if (pl.takedown) { updateTakedown(g, dt); c.anim.speed = 0; c.anim.upper = 'none'; armRifle(g, false, null); c.update(dt); pl.light.enabled = false; return; }   // locked into the takedown beat: no movement / aim / fire until it resolves (the takedown is a hands-empty click: the rifle, if he has one, is on his back)
   if (pl.holding) { if (KITANIM.on || pl.kitWas !== undefined) kitTick(g); updateHold(g, dt, input, cam); return; }   // a man in his arm: the pair moves, turns and is posed as one; Space / E on his row are read there
+  if (THROWBACK.on && pl.pendingThrow && (pl.kick || pl.picking || pl.wanding || pl.coding || samWork(g))) throwOff(pl);   // (throwback.ts: EVERY return below stops the wind-up's clock, so a beat added to them is added here — the can would leave his hand when the beat ends, from where he then stands; it goes back on the belt, as a grab's does)
   if (pl.kick) { updateKick(g, dt); return; }              // rooted square to the leaf until the foot is back down (the door goes at KICK_IMPACT)
   if (pl.picking) { updatePicking(g, dt, input); return; }  // planted at the lock, on its own clock (a step / Space / Esc breaks off: interact.ts)
   if (pl.wanding) { updateWanding(g, dt); return; }         // on his knee at a shut door with the optical wand under it (wand.ts; a step / Space / Esc pulls it out: interact.ts)
@@ -1318,6 +1320,7 @@ export function startTakedown(g: Game, gd: Guard, way?: CloseKind, lethal = fals
   pl.takedown = kind && kind !== 'behind' ? { g: gd, t: 0, kind, from, alert: gd.state === 'alert', at: closeStation(gd, kind, from).pos } : { g: gd, t: 0 }; pl.sprinting = false;
   if (lethal) { pl.takedown.lethal = true; pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross', true); } else pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross'); takeBegin(g, pl.char, gd, kind, lethal); cancelReloads(pl);   // (lethal: the knife comes out of its sheath in the blow — close.ts CLOSE.lethal, the left click)
   if (kind) closeTook(g, gd, 'take', kind, from, Math.hypot(pl.char.pos[0] - gd.char.pos[0], pl.char.pos[2] - gd.char.pos[2]));
+  if (THROWBACK.on) throwOff(pl);   // (throwback.ts: the can it counted off the belt at the click is not lost with the wind-up)
   pl.throwHeld = false; pl.throwPreview = null; pl.pendingThrow = null;   // a wind-up does not survive the lunge
   gd.speed = 0; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.reactT = Math.max(gd.reactT, 1.0);   // he freezes for the beat it takes
   g.audio.play('bodyHit', v3.add(gd.char.pos, [0, 1.3, 0]), 0.55, { rate: 0.8 });
@@ -1376,7 +1379,7 @@ export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
   releaseWall(g); if (pl.dragging) g.toggleDrag();
   pl.sprinting = false; pl.crouch = false; pl.speedSm = 0; c.vel = [0, 0, 0]; pl.backpedal = false; c.anim.reverse = false;   // you rise into it
   cancelReloads(pl);
-  if (pl.pendingThrow) { canBack(pl, pl.pendingThrow.kind); pl.pendingThrow = null; }   // a wind-up does not survive it (the can goes back on the belt)
+  throwOff(pl);   // a wind-up does not survive it (the can goes back on the belt)
   pl.throwHeld = false; pl.throwPreview = null; pl.easing = null;
   // him
   if (gd.bubble && g.time - gd.bubble.t < gd.bubble.dur) { if (g.time - gd.bubble.t < 0.8) g.msg((WORDS.on && gd.unit ? `${gd.callsign}: ` : 'guard: ') + gd.bubble.text); gd.bubble = null; }   // whatever he was saying is cut off (logged if he had barely begun it, as killGuard does)
@@ -2325,6 +2328,9 @@ export const EASE_RATE = 0.55, EASE_MAX = 1.45, EASE_OFFER = 0.62;
 export function throwCount(g: Game, kind: ThrowKind) { return kind === 'frag' ? g.player.frags : kind === 'flash' ? g.player.flashbangs : g.player.canisters; }
 /** a thrown thing not yet out of the hand (or, under unlimited ammo, just out of it) goes back on the belt */
 function canBack(pl: Player, kind: ThrowKind) { if (kind === 'frag') pl.frags++; else if (kind === 'flash') pl.flashbangs++; else pl.canisters++; }
+/** a wind-up called off with the can still in his fist: the can is back on the belt and nothing leaves his hand (a grab, cancelActions; under throwback.ts
+ *  every beat that stops the wind-up's clock, and a takedown). The swing already begun on the animator is left to play out or be overridden */
+function throwOff(pl: Player) { if (pl.pendingThrow) { canBack(pl, pl.pendingThrow.kind); pl.pendingThrow = null; } }
 
 /** F: let go of the body you are dragging (its ankles fall where they are), or take hold of the nearest one within reach. */
 export function toggleDrag(g: Game, which?: Guard) {
@@ -2359,7 +2365,7 @@ export function cancelActions(g: Game) {
   if (pl.kick || pl.picking || pl.wanding || pl.easing || pl.coding || pl.sel.downT >= 0) pl.fHeld = true;   // a Space still down from what he was doing (or a press half made) is spent: it must come up before it arms again where he arrives (interact.ts clears this the first frame it is up)
   pl.kick = null; pl.picking = null; wandDrop(pl); c.anim.lockpick = false; if (pl.coding) stopCoding(g); samBigDrop(g);   // (bigkit.ts: the big slot's tool, in its beat or on its way back, is on him again)
   pl.easing = null; handsCancel(g); pl.sel.downT = -1; pl.sel.open = false; pl.sel.moved = false; pl.sel.ring = null; c.anim.doorPush = null;   // (the door hand: game.ts drops the record itself once he is carried out of the leaf's reach)
-  if (pl.pendingThrow) { canBack(pl, pl.pendingThrow.kind); pl.pendingThrow = null; }   // not yet out of the hand: keep it
+  throwOff(pl);   // not yet out of the hand: keep it
   pl.throwHeld = false; pl.throwPreview = null;
   pl.sprinting = false; pl.speedSm = 0; c.vel = [0, 0, 0];
 }

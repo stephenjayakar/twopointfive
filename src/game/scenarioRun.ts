@@ -9,14 +9,14 @@ import { weatherOfSearch } from './weatherKinds';   // (tables and pure function
 import { kitSoloStand } from './kit';   // (called inside startFromQuery only)
 import { quietFogOfQuery, quietCamsOfQuery, quietFogStart, quietFogEnd, soloFogLink, type QuietRung } from './quietfog';
 import { stickyVisitSet } from './stickycam';   // (called inside functions only)
-import { ALL_MISSIONS, TRAINING_MISSIONS, specOfQuery, teamWords, type ScenarioSpec } from '../scene/scenarioList';
+import { ALL_MISSIONS, LESSON_MISSIONS, specOfQuery, teamWords, type ScenarioSpec } from '../scene/scenarioList';
 import type { ScenarioEntry } from '../scene/scenarios';
 import type { SquadSize } from './loadout';
 
 const WORDS: Record<ScenarioSpec['kind'], string> = { nightbreach: 'night breach', roomclear: 'room clear', rescue: 'hostage rescue', quiet: 'quiet mission' };
 
 /** the query's level is a Training lesson's (no fog lever, no mission cameras there) */
-const lessonLevel = (q: URLSearchParams): boolean => TRAINING_MISSIONS.some(e => e.level === q.get('levelFile'));
+const lessonLevel = (q: URLSearchParams): boolean => LESSON_MISSIONS.some(e => e.level === q.get('levelFile'));
 /** fog of war on a page with no scenario up: only if the URL asks (?fow / ?fogofwar, and no ?nofow / ?nofogofwar) */
 export function plainFog(q: URLSearchParams): boolean { return !(q.has('nofow') || q.has('nofogofwar')) && (q.has('fow') || q.has('fogofwar')); }
 /** the rung of the fog lever a QUIET mission's query asks to be played under (quietfog.ts: `quietfog=team|cones|own` on a quiet mission's link, put there by

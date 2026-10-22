@@ -13,6 +13,7 @@ import type { Game, Guard } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { PLAN } from '../game/floorplan';
+import { camCap } from '../host/keymap';
 import { FINDME, FINDME_WIDTH, FINDME_MATES, setFindMe, resetFindMe, outlineWant, outlineInk, OUTLINE_LOOK } from '../host/findme';
 import { makeOutlineMan, type OutlineFrame, type OutlineMan } from '../render/outline';
 
@@ -105,7 +106,7 @@ export function findMeRows(K: RowKit, body: HTMLElement): () => void {
   pct('Outline colour', 'colour', 100, 5, true, 'How much colour the rims have: yellow for you, red and blue for your teammates.');
   K.sec(body, 'Camera · trying out');
   pct('Aim pan', 'pan', 100, 10, true, 'How far the view leans toward where you aim. At none you stay in the middle of the screen.');
-  K.seg(body, 'Turn direction', TURNS, () => FINDME.turn < 0 ? 'rev' : 'as', v => setFindMe('turn', v === 'rev' ? -1 : 1), () => 'Which way the view turns when you hold Ctrl and move the mouse.');
-  K.flip(body, 'Double tap Ctrl', () => FINDME.behind, v => setFindMe('behind', v), 'Tap Ctrl twice and the view turns to put what you are facing ahead of you.', ['On', 'Off']);
+  K.seg(body, 'Turn direction', TURNS, () => FINDME.turn < 0 ? 'rev' : 'as', v => setFindMe('turn', v === 'rev' ? -1 : 1), () => `Which way the view turns when you hold ${camCap()} and move the mouse.`);
+  K.flip(body, `Double tap ${camCap()}`, () => FINDME.behind, v => setFindMe('behind', v), `Tap ${camCap()} twice and the view turns to put what you are facing ahead of you.`, ['On', 'Off']);   // (the camera's key as the board has it: host/keymap.ts camCap)
   return resetFindMe;
 }
