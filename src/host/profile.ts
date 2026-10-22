@@ -268,6 +268,7 @@ export function pageSwitches(q: URLSearchParams): void {
   FRAG.fleeWise = !q.has('nofleewise');   // nobody runs onto a live grenade (game/frag.ts FRAG.fleeWise): judged from where it will rest, no leg nearer it than he stands, the leg he has kept, no staying put inside its lethal reach — ON in the page; ?nofleewise = the flee as it was
   FRAG.restProps = FRAG.fleeApart = FRAG.fleeOnto = FRAG.fleeSam = FRAG.fleeLook = !q.has('nofleemates');   // the mends to that flee (game/frag.ts): the rest guess counts the loose furniture the grenade will stop at, no leg shoulders a mate (or Sam) out of the corner he is staying in or running for, a man a stride short of his corner comes onto it, and a man left open floor beside a mate's cover looks once more for his own — ON in the page; ?nofleemates = all off, the flee as it was
   FRAG.fleeDoor = !q.has('nofleedoor');   // caught by a grenade with no cover to get behind, a man leaves by a doorway that already stands open (game/frag.ts fleeByDoor; ?nofleedoor = the one straight leg inside the room)
+  FRAG.downKill = !q.has('nodownkill');   // a burst kills a man who is down and breathing — out cold from a sponge round, a blow or a choke, or down wounded — where it reaches him (game/frag.ts blast; ?nodownkill = every man already down is passed over, as it was)
   FRAG.wallFlee = !q.has('nowallflee');   // a wall or cover piece the burst would open is no cover to a man reckoning it before it goes off (game/frag.ts exposedTo; ?nowallflee = only the door leaves it would take count)
   AIMCOST.lamp = q.get('lamphit') !== '0';   // a lamp breaks only to a round that MEETS it, and the reticle coming onto a lamp starts the aim's settle over (game/aimcost.ts) — ON in the page; ?lamphit=0 = a round passing within 0.3‥0.45 m breaks it, as it was
   AIMCOST.move = q.get('movecost') !== '0';   // moving feet open the cone, for anybody with a gun: the feet term doubled and remembered a beat after he stops; a guard waits that beat before he starts shooting (game/aimcost.ts) — ON in the page; ?movecost=0 = as it was
@@ -462,6 +463,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRAG.fleeSam': 'TPS_FLEEMATES=1',
   'FRAG.fleeLook': 'TPS_FLEEMATES=1',
   'FRAG.wallFlee': 'TPS_WALLFLEE=1',
+  'FRAG.downKill': 'TPS_DOWNKILL=1',
   'FRAG.fleeDoor': 'TPS_FLEEDOOR=1',
   'DOORSTAY.on': 'QA_DOORSTAY=1 (playthrough.ts plays it on)',
   'LIGHTWALL.on': 'TPS_LIGHTWALL=1',
