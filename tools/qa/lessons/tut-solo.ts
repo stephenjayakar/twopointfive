@@ -17,9 +17,9 @@ export const needs = 'rails';
  *  first grenade from too close */
 const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : (globalThis as { __TUT_SOLO_ARM?: string }).__TUT_SOLO_ARM) ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
 /** THE DOOR'S LINE TEACHES HIS OWN CHARGE, and it is the one row the level lets that door offer (`rails.rows`: no pick, no boot). A stand that holds his own
- *  charges off (the frozen one) has no row there at all and the lesson cannot be done on it: a run there raises them, as it raises the frame. Said here,
- *  before the game stands up (TPS_OWNCHARGE=0 in front shows the door with nothing to offer) */
-if (typeof process !== 'undefined' && process.env.TPS_PROFILE !== 'shipped') process.env.TPS_OWNCHARGE ??= '1';
+ *  charges off (the frozen one) has no row there at all and the lesson cannot be done on it: the runner raises them for this run alone, as a run there
+ *  raises the frame (TPS_OWNCHARGE=0 in front shows the door with nothing to offer) */
+export const raises = { TPS_OWNCHARGE: '1' };
 /** the last men may already be down when 'Shoot the rest' comes up (the grenade took both) */
 export const idleOk = ['last'];
 
