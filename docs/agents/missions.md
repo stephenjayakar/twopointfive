@@ -230,6 +230,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     on a made-up element and clock; the opening card's data), nineteen green on both stands; `PORT=… node tools/qa/railcard-page.cjs` on the real page
     (software adapter): the card up, the page's own loop let run under it, Enter, the checkpoint put back, the mission again, the arrow; `tut-page.cjs`
     closes each card it meets the same way. NOBODY HAS seen a card, the arrow or the opening card on a GPU, or read them as a first-time player.
+  - **The second play's notes on 'The halt, from above'** (10-22; the maintainer on a GPU again: "would be nice if the fire wasn't at a single point, was
+    spread around", "Q doesn't do anything here" (the stack's step), "this beat is too long, unclear what to do" (the gate), "after completing the command we
+    shouldn't tell the user to do it again"). All under `RAILS.on`, data in the level, and three knobs the journal carries (`journal.ts applyKnobs`: a
+    recording from before them replays with `afterSecs` 0 and `shiftTap` false). (1) THE FIRE IS WALKED: `levels/tut-sky.script.ts ZONES` are seven boxes to
+    aim into (both trucks' noses and screens, the road in front, the wall beside one file and the lane past the other, the air over the tails), each with
+    the posts that have a clear line into it, and `rake` fires a burst two or three rounds to a place, then another place in the box. Before: 84 of 145 marks
+    in one metre (most of the old fifteen points lay behind one bonnet from where the round came). After: about 170 marks in 30 s over 25 to 27 metres, the
+    busiest 14%, nearest mark to a man 2.6 m (seeds 1 to 3). (2) A LINE STOPS ASKING: a step's `after { line?, on?, word? }` (`scenarios.ts LessonStep`,
+    `rails.ts noteGiven / prompt`) replaces the step's line once an order of the squad's is out (`on` narrows which; `word` is the line once the go word is
+    out) and stays while a man is still on his way and `RAILS.afterSecs` (8) after; the ask comes back when that has stood `RAILS.afterMax` (45) seconds with
+    the step not done. (3) A LINE TO WATCH: an after line, or the line of a step whose `done` is a cue (it only waits for the level's script), when it has
+    no key in it, is drawn smaller with a pulsing dot and no mark on the floor (`prompt().watch`, `ui/overlay.ts`, `index.html .line.watch`). NEVER a step's own
+    line that merely names no key ('Get out of the light' is an ask and its mark is where to go: the first rule read the text alone and would have hidden
+    ten marks of the squad mission, eleven of the solo one, nine of the quiet one; caught in review before it was handed in). The after line needs the order
+    POINTED AT THE STEP'S PLACE (a man's order post within `RAILS.wayM` of the step's `at`), holds after the word too while men are on their way, and a word
+    that sends nobody (the wall charge goes at once, no order is logged) counts where the step's `after` has only a `word`. (4) SHIFT WITH THE COMMAND KEY: while the step does not allow `plan`, Shift down with the command key was a
+    press thrown away (six taps, no order, `give` never called): the one way found to make the stack's step do nothing. `RAILS.shiftTap` takes the Shift off
+    and passes the tap. Whether his Shift was down is a GUESS (a screenshot shortcut's key-up never reaches a page); so the page's input also lets go of a
+    modifier the next key or mouse event says is up, and takes a key that goes down again unrepeated as a fresh press (`game/input.ts modsUp`). (5) THE GATE'S
+    BEAT IS SHORT: the roadblock's two sandbag walls overlapped, and the road is a lane their side knows the squad covers (`lanes.ts lanePenalty`), so its men
+    went round the whole halt: 11 to 13 s of a line that asks for nothing in a scripted run, more in play. The walls now leave a gap a man walks through, a
+    scripted order's `direct: true` (`GuardScript.direct`, `director.ts OrderPatch`) sends a man the short way with no lane price, and the `push` beat waits
+    for three of the squad to be in the yard: the line stands 1.9 to 3.3 s on six seeds on hard, nobody of the squad down. CHECKS: `rails-check` lines "the
+    second play's notes hold" and "the gate's beat is short" (3.4 s on the frozen stand, 3.8 s on the page's, 27.5 s there with `direct` taken off), both
+    stands, `RAILS_BREAK=1` red; the scripted player all fourteen steps on seeds 1 to 6 on hard. TRIED AND TAKEN BACK: fire kept up south of the squad's lane while it runs (one seed in six a man of the
+    squad went on a knee and the squad never set in the yard) and bursts at the gate's wall as the roadblock walks (a man who fires is engaged at once: they
+    died at their own sandbags). A scripted man fires only what the script fires, and scripted rounds are real rounds. A sprint's Shift is left alone (a walk key
+    down on a step that allows `sprint`). A step's arrow (`toward`) no longer fades near the player (the solo mission's claim). NOBODY HAS seen any of it on a GPU or pressed it on a Mac; the
+    fight at the gate has never been watched through real smoke.
 - **The tutorial's squad mission, 'A harder fight'** (row `tut-squad`, `scenarioList.ts TUTORIAL_MISSIONS`, group `tutorial`; `tools/levels/tut-squad.ts` → `levels/tut-squad.json`, its staged
   moments `levels/tut-squad.script.ts`, its scripted player `tools/qa/lessons/tut-squad.ts`, its page run `tools/qa/tut-squad-page.cjs`). A PROTOTYPE: one street through a walled post, the four,
   eleven defenders in six rooms each its own squad (`mayLeave: false`, nobody digs in), twenty-two steps. Two easy rooms on the squad's key, then four staged fights that each show ONE thing the
