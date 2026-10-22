@@ -557,7 +557,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     mark a man who did not FAILS the run. `TUTPLAN_STRICT=1` fails the run on stacks more than a second apart or any teammate dazzled: red on every seed as the build stands, green
     with the tried gate (seeds 1 to 3) — the word is held off until the squad's rule lands, then it is the run's own.
     MEASURED (the page's stand, midday): 19/19 on seeds 1 to 8 (114.3 to 115.1 s) and on hard, seeds 1 to 4; six seconds a line on seeds 3 and 5 (221.3, 222.2 s); the wrong plan on
-    seeds 1 to 4 ends in 102.6 to 118.5 s with 4, 3, 6 and 3 teammates on a knee at the hall. Nobody has played the changed post; nothing of it has been seen on a GPU.
+    seeds 1 to 4 ends in 102.6 to 118.5 s with 4, 3, 6 and 3 teammates on a knee at the hall. On the join with the build head: `tutplan-check`, `level-needs --run` and
+    `rails-check` green on both stands, `lesson-gate`, `rowset-check` and `lived-check` green, and the real page with real keys to its end card (38 lines, the software adapter,
+    no picture taken). Nobody has played the changed post; nothing of it has been seen on a GPU.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
