@@ -19,7 +19,7 @@ import { WORDS } from './words';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { PICTURE, PICTURE_STATS, ideasOf, exposedAt } from './picture';
 import { wallMenLive, thinLine, topEnergy, WALLPEN_STATS } from './wallpen';
-import { flinchRound, flinchScale } from './flinch';
+import { flinchRound, flinchScale, flinchInside } from './flinch';
 
 /** Every number of the model and of the guards' reactions, in one place (panel-tunable; the QA probes read them rather than copy them). */
 export const SUPPRESSION = {
@@ -120,14 +120,16 @@ export function noteRound(g: Game, shooter: Character, from: Vec3, to: Vec3, hit
     if (c === shooter || c === hit || !c.alive || held) return;
     const C = c.bones.chest ?? v3.add(c.pos, [0, 1.1, 0]);
     const s = clamp(v3.dot(v3.sub(C, from), dir), 0, tHit);          // closest approach along the round's actual travel (tHit when it stopped short, in the cover in front of him)
-    if (s < S.minTravel) return;
+    const foe = isHostile(shooterTeam, team);
+    if (s < S.minTravel && !(foe && flinchInside(s))) return;
     const closest = v3.mad(from, dir, s); const dNear = v3.dist(closest, C), dHit = v3.dist(to, C);
     let add = S.wNear * Math.max(0, 1 - dNear / S.nearR) + S.wHit * Math.max(0, 1 - dHit / S.hitR);
+    if (s < S.minTravel) { flinchRound(g, c, gd, add, from, true); return; }   // (flinch.ts: a hostile round from across a small room still ducks him — the picture; this model weighs nothing of it, as before)
     if (c === g.player.char && SUPPRESSION_FX.onSamPass && dNear < SUPPRESSION_FX.fxRange) SUPPRESSION_FX.onSamPass(g, { from, to, closest, travelled: s, dNear, dHit, add: Math.max(0, add), shooterId: shooter.id });   // (R4's crack / whizz: the round went past him, whatever it adds)
     if (add <= 0) return;
-    flinchRound(g, c, gd, add, from, isHostile(shooterTeam, team));   // (flinch.ts: the duck at a close round, anybody's — the picture; off, nothing)
+    flinchRound(g, c, gd, add, from, foe);   // (flinch.ts: the duck at a close round, anybody's — the picture; off, nothing)
     if (sup.downT > 0 || sup.latched || sup.cover) add *= S.downAccrual;   // already down (or shifting): diminishing returns
-    if (!isHostile(shooterTeam, team)) add *= S.friendlyK;   // a colleague's round past a guard: rattles, does not pin (a guard's past a guard — and, teams, any round of a side that is not this man's enemy)
+    if (!foe) add *= S.friendlyK;   // a colleague's round past a guard: rattles, does not pin (a guard's past a guard — and, teams, any round of a side that is not this man's enemy)
     add *= keenOf(g, c);
     sup.v = Math.min(S.cap, sup.v + add); sup.kick = Math.max(sup.kick, add); sup.lastAdd = add;
     sup.src = v3.copy(from); sup.srcId = shooter.id; sup.srcT = g.time;
