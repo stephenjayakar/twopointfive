@@ -234,10 +234,10 @@ export function build() {
     rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'slot:rifle', 'slot:pistol', 'use', 'order', 'word', 'camera', 'zoom'], respawn: 5 },
     steps: [
       // 1 · two easy rooms: the squad's key on a door, twice
-      { id: 'stack-hut', line: '[B] on the guard hut door', done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
-      { id: 'go-hut', line: '[B] again: they choose how, and go in', explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
-      { id: 'stack-store', line: '[B] on the store door', done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
-      { id: 'go-store', line: '[B] again. Follow them in', done: and(taken('store'), { is: 'in', area: { ...STORE } }), at: [10.85, 1, 18.6] },
+      { id: 'stack-hut', line: '[B] on the guard hut door', after: { line: 'They stack up on the door' }, done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
+      { id: 'go-hut', line: '[B] again: they choose how, and go in', after: { line: 'They go in', word: 'They go straight in' }, explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
+      { id: 'stack-store', line: '[B] on the store door', after: { line: 'They stack up on the store' }, done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
+      { id: 'go-store', line: '[B] again. Follow them in', after: { line: 'Follow them in', word: 'Follow them in' }, done: and(taken('store'), { is: 'in', area: { ...STORE } }), at: [10.85, 1, 18.6] },
       // 2 · A DOORWAY HE HOLDS: as the store falls the workshop's man is on his open lane doorway, in the picture through the fog, his rounds on the
       //     guard hut's wall; the fog has a lookout behind him while these steps are up, so his room, the doorway and the strip of lane his rounds
       //     cross are seen too. The player is walked out to the street in front of the workshop (from inside the store none of it is on his screen):
@@ -246,7 +246,7 @@ export function build() {
       { id: 'out', line: 'Shots outside. Out to the street', done: or(near(SHOP_VIEW, 1.5), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street', eye: SHOP_EYE },
       { id: 'side', line: 'He has that doorway. [B] on the side door', explain: CARDS.side, done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
       { id: 'round', line: 'Go round with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
-      { id: 'shop', line: '[B] again: in behind him', done: taken('workshop'), at: D_SIDE },
+      { id: 'shop', line: '[B] again: in behind him', after: { line: 'They go in behind him', word: 'They go in behind him' }, done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
       // (the held key is its own step, and a TAP of the squad's key gives nothing while it is up — the frame's `noTap`: tapped at the old one line, the
       //  key sent the four to the ring at the wall's end and the menu was never met)
