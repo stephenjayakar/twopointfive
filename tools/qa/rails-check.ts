@@ -317,16 +317,18 @@ export async function railsCheck(): Promise<boolean> {
       // places stood on) the key kept down and then the last wedge's digit whistles, though no slot's digit is open
       const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`), { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), ring0 = HANDRING.on, I = W.input, L = g.level.scenarios.lesson;
       const run = (n: number) => { for (let i = 0; i < n; i++) W.step(DT); }, tap = (k: string) => { I.pressed.add(k); I.keys.add(k); W.step(DT); I.keys.delete(k); W.step(DT); };
-      g.restartEncounter(); run(30); HANDRING.on = true; tap('KeyC'); run(20); for (const p of [[13.6, 0, 17.5], [21.5, 0, 17.5]]) { g.teleportPlayer(p); run(90); }
+      // (the two places stood on are the steps' own marks, read from the level: its marks have moved once already)
+      const floorOf = (id: string): number[] => { const m = L.steps.find((s: any) => s.id === id)?.at ?? [0, 0, 0]; return [m[0], 0, m[2]]; }, DARK = floorOf('dark'), WHISTLE = floorOf('whistle');
+      g.restartEncounter(); run(30); HANDRING.on = true; tap('KeyC'); run(20); for (const p of [DARK, WHISTLE]) { g.teleportPlayer(p); run(90); }
       const at = L.steps[g.lesson.i]?.id, digit = `Digit${CMDRING.wedges}`;
       const on = verbs([27.9, 0, 17.2], DOOR); if (R) R.rows = undefined; const all0 = verbs(null, DOOR); if (R) R.rows = named;   // (Space is open from the whistle's step on)
-      const extra = all0.filter(v => !named.includes(v)), pick = g.rails.offers('pick'), boot = g.rails.offers(extra[0] ?? 'pick'); g.teleportPlayer([21.5, 0, 17.5]); run(20);
+      const extra = all0.filter(v => !named.includes(v)), pick = g.rails.offers('pick'), boot = g.rails.offers(extra[0] ?? 'pick'); g.teleportPlayer(WHISTLE); run(20);
       tap(digit); run(10); const early = L.steps[g.lesson.i]?.id;   // (no ring up: the digit is a slot's, and locked)
       I.pressed.add('Space'); I.keys.add('Space'); run(Math.ceil((HANDRING.holdSecs + 0.1) * 60)); I.keys.delete('Space'); const up = !!g.player.sel.ring; run(2); tap(digit); run(10);
       const after = L.steps[g.lesson.i]?.id;
       // …and a digit pressed INSIDE the hold, before the ring is up (handring.ts `early`: what a hand does with "Hold E, then 5"), is the wedge too: the gate
       // lets it through to the ring and it is no slot's
-      const early0 = HANDRING.early; HANDRING.early = true; g.restartEncounter(); run(30); tap('KeyC'); run(20); for (const p of [[13.6, 0, 17.5], [21.5, 0, 17.5]]) { g.teleportPlayer(p); run(90); }
+      const early0 = HANDRING.early; HANDRING.early = true; g.restartEncounter(); run(30); tap('KeyC'); run(20); for (const p of [DARK, WHISTLE]) { g.teleportPlayer(p); run(90); }
       const at2 = L.steps[g.lesson.i]?.id, slot0 = `${g.player.slot}${g.player.holstered ? ' away' : ''}`;
       I.pressed.add('Space'); I.keys.add('Space'); run(4); const notYet = !g.player.sel.ring; I.pressed.add(digit); I.keys.add(digit); W.step(DT); I.keys.delete(digit); run(2); I.keys.delete('Space'); run(10);
       const quick = L.steps[g.lesson.i]?.id, slot1 = `${g.player.slot}${g.player.holstered ? ' away' : ''}`; HANDRING.on = ring0; HANDRING.early = early0;
