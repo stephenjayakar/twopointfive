@@ -10,7 +10,8 @@
 //                      civilian: a leaf he opens short of a boot moves nobody)
 //   doorThrowAfter     game.ts updateDoors, after the leaves are stepped: a carried man is settled against the walls, and a struck man gets —
 //     a leaf OPENED into him (walked, handed, pushed, shoved, flung: tier 'open')
-//       a defender             STARTLED: if he was at his round he stops for DOORTHROW.startle s and then goes to see what is at the door (suspicious, the
+//       a defender             STARTLED: if he was at his round he jolts toward the door (startle.ts startleMan, the start every startled man gets), stops
+//                              for DOORTHROW.startle s with his gun down and then goes to see what is at the door (suspicious, the
 //                              doorway his place to look, awareness DOORTHROW.wary — the decoy's own numbers); whatever he was at is over. He keeps his
 //                              feet, his gun and his eyes: what he finds at the door is his to see. A man already suspicious has the doorway for his
 //                              place; one searching or fighting is moved aside and no more.
@@ -34,6 +35,7 @@ import { v3, type Vec3 } from '../math/vec';
 import { SAMSTUN, samStaggered, staggerPlayer } from './samstun';
 import { endGuardScript } from './squad';
 import { toAlarmed } from './civilians';
+import { startleMan as giveStart } from './startle';
 import { isHostile, type Team } from './teams';
 
 /** QA: since the last reset — defenders a leaf opened into them startled · men thrown by a shouldered leaf · by a boot · of those, put on a knee · and
@@ -79,7 +81,8 @@ function startleMan(g: Game, gd: Guard, s: DoorStrike): void {
   if (gd.state === 'patrol') {
     if (gd.script) endGuardScript(gd, 'suspicious');
     gd.state = 'suspicious'; gd.reactT = Math.max(gd.reactT, T.startle); gd.searchT = 0; gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.weapon.burst = null;
-    gd.char.anim.flinch(); DOORTHROW_STATS.startled++;
+    if (!T.jolt || !giveStart(g, gd, door, T.startle)) gd.char.anim.flinch();   // (the shared start: he jolts toward the door, his gun down for the beat — startle.ts; its own switch is not asked, this rule's is)
+    DOORTHROW_STATS.startled++;
   }
   if (gd.state === 'suspicious') { gd.lastKnown = door; gd.awareness = Math.max(gd.awareness, T.wary); }
 }

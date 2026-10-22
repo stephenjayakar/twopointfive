@@ -30,8 +30,8 @@ export async function camSpaceCheck(): Promise<boolean> {
       const twice = watchCtrlTaps(win, () => false, K.camKey); let now = 1000;
       const fire = (t: string, e: any) => { for (const f of L[t] ?? []) f({ repeat: false, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false, target: {}, timeStamp: now, movementX: 0, movementY: 0, clientX: 0, clientY: 0, deltaY: 0, button: 0, preventDefault() { }, stopPropagation() { }, ...e }); };
       const key = (t: 'keydown' | 'keyup', code: string) => fire(t, { code, key: /^Control/.test(code) ? 'Control' : code === 'Space' ? ' ' : code, ctrlKey: /^Control/.test(code) && t === 'keydown' });
-      const tap = (code: string, ms = 60, drag = 0) => { key('keydown', code); if (drag) fire('mousemove', { movementX: drag, ctrlKey: /^Control/.test(code) }); now += ms; key('keyup', code); now += 80; };
-      return { I, key, tap, twice, move: (dx: number, ctrl = false) => fire('mousemove', { movementX: dx, ctrlKey: ctrl }), wheel: (dy: number, ctrl = false) => fire('wheel', { deltaY: dy, ctrlKey: ctrl }), blur: () => fire('blur', {}), wait: (ms: number) => { now += ms; } }; };
+      const tap = (code: string, ms = 60, drag = 0, shift = false) => { fire('keydown', { code, key: /^Control/.test(code) ? 'Control' : ' ', ctrlKey: /^Control/.test(code), shiftKey: shift }); if (drag) fire('mousemove', { movementX: drag, ctrlKey: /^Control/.test(code) }); now += ms; key('keyup', code); now += 80; };
+      return { I, key, tap, twice, move: (dx: number, ctrl = false) => fire('mousemove', { movementX: dx, ctrlKey: ctrl }), wheel: (dy: number, ctrl = false) => fire('wheel', { deltaY: dy, ctrlKey: ctrl }), blur: () => fire('blur', {}), menu: () => fire('contextmenu', {}), wait: (ms: number) => { now += ms; } }; };
     const read = (I: any) => { const r = { orbit: I.orbitDX, zoom: I.wheelCtrl, pace: I.wheel, filed: [...I.pressed].join('+'), keys: [...I.keys].join('+') }; I.endFrame(); return r; };
     // ---- the board
     { page(true); const on = K.camKey(), cap = K.camCap(); page(true, false); const noRing = K.camKey(); page(true, true, false); const noSlot = K.camKey();
@@ -41,10 +41,10 @@ export async function camSpaceCheck(): Promise<boolean> {
         `the page's board: ${on} (cap ${cap}) · the ring off: ${noRing} · the slot off: ${noSlot} · night vision put on Space: ${taken} (cap ${takenCap}), Reset: ${back} · the switch off: ${off}`); }
     // ---- held
     { page(true); const B = board(); B.move(15); const before = read(B.I); B.key('keydown', 'Space'); const filed = read(B.I); B.move(15); B.move(-4); B.wheel(120); const held = read(B.I);
-      B.key('keyup', 'Space'); B.move(15); B.wheel(120); const after = read(B.I); B.key('keydown', 'Space'); B.blur(); B.I.endFrame(); B.move(15); const lost = read(B.I);
-      verdict(before.orbit === 0 && filed.filed === '' && filed.keys === '' && held.orbit === 11 && held.zoom === 120 && held.pace === 0 && after.orbit === 0 && after.zoom === 0 && after.pace === 120 && lost.orbit === 0,
+      B.key('keyup', 'Space'); B.move(15); B.wheel(120); const after = read(B.I); B.key('keydown', 'Space'); B.blur(); B.I.endFrame(); B.move(15); const lost = read(B.I); B.key('keydown', 'Space'); B.menu(); B.move(15); const menu = read(B.I); B.key('keyup', 'Space');
+      verdict(before.orbit === 0 && filed.filed === '' && filed.keys === '' && held.orbit === 11 && held.zoom === 120 && held.pace === 0 && after.orbit === 0 && after.zoom === 0 && after.pace === 120 && lost.orbit === 0 && menu.orbit === 0,
         'Space held: the mouse turns the view and the wheel zooms; the key files nothing for the game; let go, or the page out of focus, and it is the mouse and his pace again',
-        `before: turn ${before.orbit} · Space down files [${filed.filed}] holds [${filed.keys}] · held: turn ${held.orbit} of 15 − 4, zoom ${held.zoom}, pace ${held.pace} · let go: turn ${after.orbit}, zoom ${after.zoom}, pace ${after.pace} · focus lost with it down: turn ${lost.orbit}`); }
+        `before: turn ${before.orbit} · Space down files [${filed.filed}] holds [${filed.keys}] · held: turn ${held.orbit} of 15 − 4, zoom ${held.zoom}, pace ${held.pace} · let go: turn ${after.orbit}, zoom ${after.zoom}, pace ${after.pace} · focus lost with it down: turn ${lost.orbit} · a browser menu opened with it down: turn ${menu.orbit}`); }
     // ---- Ctrl
     { page(true); const B = board(); B.key('keydown', 'ControlLeft'); B.move(15, true); const ctrl = read(B.I); B.key('keyup', 'ControlLeft'); B.wheel(-40, true); const pinch = read(B.I);
       verdict(ctrl.orbit === 0 && pinch.zoom === -40 && pinch.pace === 0, 'while Space is the camera\'s, Ctrl and the mouse turn nothing; a pinch still zooms',
@@ -52,16 +52,17 @@ export async function camSpaceCheck(): Promise<boolean> {
     // ---- twice
     { page(true); const B = board(); B.tap('Space'); const one = B.twice(); B.tap('Space'); const two = B.twice(), once = B.twice(); B.wait(2000);
       B.tap('ControlLeft'); B.tap('ControlLeft'); const ctrl = B.twice(); B.wait(2000); B.tap('Space', 60, TAPTWICE.driftPx + 8); B.tap('Space'); const dragged = B.twice(); B.wait(2000);
-      B.tap('Space'); B.wait(TAPTWICE.gapMs + 200); B.tap('Space'); const slow = B.twice();
-      verdict(!one && two && !once && !ctrl && !dragged && !slow, 'the double tap is of the camera\'s key: Space twice, never Ctrl twice; a tap with the view dragged, or two too far apart, is none',
-        `Space once ${one}, twice ${two} (asked again ${once}) · Ctrl twice ${ctrl} · a dragged tap then a tap ${dragged} · two a long gap apart ${slow}`); }
+      B.tap('Space'); B.wait(TAPTWICE.gapMs + 200); B.tap('Space'); const slow = B.twice(); B.wait(2000);
+      B.key('keydown', 'Space'); M.camSpace = false; B.wait(60); B.key('keyup', 'Space'); B.wait(2000); B.tap('ControlLeft'); B.tap('ControlLeft'); const handed = B.twice(); M.camSpace = !BRK; B.wait(2000); B.tap('Space', 60, 0, true); B.tap('Space', 60, 0, true); const sprint = B.twice();   // (the camera's key changing hands with a tap under way: the tap is let go as what it was, and the next double tap is whole)
+      verdict(!one && two && !once && !ctrl && !dragged && !slow && handed && sprint, 'the double tap is of the camera\'s key: Space twice, never Ctrl twice; a tap with the view dragged, or two too far apart, is none',
+        `Space once ${one}, twice ${two} (asked again ${once}) · Ctrl twice ${ctrl} · a dragged tap then a tap ${dragged} · two a long gap apart ${slow} · the key moved to Ctrl under a held Space, then Ctrl twice ${handed} · Space twice with Shift held (his sprint) ${sprint}`); }
     // ---- off
     { page(false); const B = board(); B.key('keydown', 'Space'); B.move(15); B.wheel(120); const sp = read(B.I); B.key('keyup', 'Space'); B.I.endFrame();
       B.key('keydown', 'ControlLeft'); B.move(15, true); B.wheel(120, true); const ct = read(B.I); B.key('keyup', 'ControlLeft'); B.wait(2000);
-      B.tap('ControlLeft'); B.tap('ControlLeft'); const t2 = B.twice(); B.wait(2000); B.tap('Space'); B.tap('Space'); const s2 = B.twice();
-      const ok = sp.orbit === 0 && sp.zoom === 0 && sp.pace === 120 && ct.orbit === 15 && ct.zoom === 120 && t2 && !s2 && K.camCap() === 'Ctrl';
+      B.tap('ControlLeft'); B.tap('ControlLeft'); const t2 = B.twice(); B.wait(2000); B.tap('Space'); B.tap('Space'); const s2 = B.twice(); B.wait(2000); B.tap('ControlLeft', 60, 0, true); B.tap('ControlLeft', 60, 0, true); const sh2 = B.twice();
+      const ok = sp.orbit === 0 && sp.zoom === 0 && sp.pace === 120 && ct.orbit === 15 && ct.zoom === 120 && t2 && !s2 && !sh2 && K.camCap() === 'Ctrl';
       verdict(ok, 'the switch off: the camera is on Ctrl as it was, and Space held is nothing to it',
-        `Space held: turn ${sp.orbit}, zoom ${sp.zoom}, pace ${sp.pace} · Ctrl held: turn ${ct.orbit}, zoom ${ct.zoom} · Ctrl twice ${t2}, Space twice ${s2} · cap ${K.camCap()}`); }
+        `Space held: turn ${sp.orbit}, zoom ${sp.zoom}, pace ${sp.pace} · Ctrl held: turn ${ct.orbit}, zoom ${ct.zoom} · Ctrl twice ${t2}, Space twice ${s2}, Ctrl twice with Shift held ${sh2} · cap ${K.camCap()}`); }
   } finally {
     Object.assign(M, was); K.resetKeys(); for (const n of stubs) delete G[n];
     if (had.ls === undefined) delete G.localStorage; else G.localStorage = had.ls;
