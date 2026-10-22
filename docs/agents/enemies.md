@@ -16,6 +16,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `CALMTORCH_BREAK=1` must fail). Never seen on a GPU: the estimate has no bounce, so the bar is a guess.
 
 <!-- was CLAUDE.md lines 1392–1427 -->
+- **A hand torch hangs when the wall is at his hand** (`TORCH.wallLow`, `src/game/guards.ts torchLow`, `rigProps.ts torchCarryDir`; 10-22, the
+  maintainer off the stealth tutorial: "another example of character shining flashlight at a small point in front of them. feels a bit weird but i'm
+  not sure what the natural thing is here"). A patrol's (or a man gone to look's) hand torch is carried level along his heading and chest at his aim's
+  pitch; when he stopped or turned facing a wall a step off, the whole beam landed there as one small blown-out dot (a scripted run of the stealth
+  tutorial, page's stand: 63 of 292 samples of a burning torch ended inside 1 m, 33 of them with him standing). Now, when the beam AS THE CARRY WOULD
+  POINT IT would end whole on something solid within `wallM` 1.2 m of his hand, he lets the torch hang: its beam on the floor at his feet (the pitch
+  whose tangent is `lowTan` 2.2, eased at `lowRate` 6 /s; the torch in his hand tips with it), until the carry runs clear to `wallBackM` 1.6 m. A weapon
+  light is never asked (it points where the gun points). `TORCH.wallDark` is the other answer to the same reading, the torch put out instead of
+  tipped: off everywhere unless asked for. SWITCH: `wallLow` on in the page (`?torchwall=0` off, `?torchwall=dark` the other answer; the debugger's
+  "hand torch hangs at a wall" box), off in the module and on the frozen stand (`TPS_TORCHWALL=1`); a recording from before the key replays with
+  both off. CHECK: `probes.ts torch-wall` (`tools/qa/torchwall-check.ts`), the office's night shift for 150 s with every patrol torch burning: 7 of 7
+  on both stands (burning level at the wall 133 → 0 man-frames on the page's stand, 10 → 0 on the frozen one; never still hanging a second after the
+  carry is clear; `wallDark`: out there, never tipped); `TORCHWALL_BREAK=1` fails it on both. The calm torch's own check and both tutorial scripted
+  runs pass with it on. THE MAINTAINER'S CALL IS OPEN (hang, put out, or leave as it was): this default is the lean, not his pick. NOT MEASURED: what
+  it does to a night of sneaking (a hanging torch lights the floor at his feet where it lit the wall). NEVER SEEN ON A GPU; nobody has played it.
 - **The difficulty switch + the harder defenders (10-07;** record rebuild/harder-defenders/numbers.md, the two parts' own pages beside it):
   `src/game/difficulty.ts` is ONE row — the start card's *Defenders: standard | hard* over the scenario picker (ui/menu.ts `difficultyRow`), Tab ▸ Sandbox ▸
   Difficulty, `?hard` / `?hard=0` / `?difficulty=hard|standard` — over two tables that both ship OFF: `pressure.ts PRESSURE` (defenders come to a held room
