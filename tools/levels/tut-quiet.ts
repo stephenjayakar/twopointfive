@@ -206,8 +206,10 @@ export function build() {
       // ---- the long wall: sound, then hands ----
       // (a beat with a clock: the whole instruction is in the line that is up BEFORE the clock starts, the mark on the place the line means now — his own
       // feet for the whistle; the moment it sounds the next line is up with the mark on the hide. A mark on the hide first sent a new player there to whistle.)
-      { id: 'whistle', line: '[V]: whistle here. Then hide behind the wall', allow: ['whistle'], checkpoint: 'the lane', done: any(did('event:whistle'), ...held, down(1)), at: mark(TQ.whistle) },
-      { id: 'grab', line: 'Hide. When he stops: round the wall, [Space]', allow: ['use'], done: any(...held, down(1)), at: mark(TQ.hide) },
+      // (the whistle has two ways in: its own key where it has one, and on the page the last wedge of the ring his interaction key puts up when it is kept
+      // down — `ringLine`; `use` comes on here for that ring, a step before the grab needs it)
+      { id: 'whistle', line: '[V]: whistle here. Then hide behind the wall', ringLine: 'Hold [Space], then [5]: whistle. Then hide', allow: ['whistle', 'use'], checkpoint: 'the lane', done: any(did('event:whistle'), ...held, down(1)), at: mark(TQ.whistle) },
+      { id: 'grab', line: 'Hide. When he stops: round the wall, [Space]', done: any(...held, down(1)), at: mark(TQ.hide) },
       { id: 'ask', line: '[Space]: ask him the code', done: any(did('chron:codeLearned'), down(1)) },
       { id: 'drop', line: 'Right button: out cold. Left: the knife', allow: ['fire', 'alt'], done: down(1) },
       // ---- the back door: a lock ----

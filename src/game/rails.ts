@@ -31,6 +31,7 @@ import type { Vec3 } from '../math/vec';
 import type { Input } from './input';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
+import { stepLine } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 
 export const RAILS = { on: false,
   /** the sky seat: metres a second the walk keys shift the view at the default zoom, and how far from the squad it may go */
@@ -114,8 +115,11 @@ export class Rails {
     const g = this.g, menuUp = !!g.orders?.menu && (A.has('menu') || A.has('ring'));
     const shift = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
     const enter = input.keys.has('Enter') || input.pressed.has('Enter') || input.keys.has('NumpadEnter') || input.pressed.has('NumpadEnter');   // (Shift+Enter stages the mission again: Shift rides with it)
-    if (menuUp) buttons |= 1;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
-    const ok = (code: string) => FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight'));
+    // (handring.ts: his own actions' ring, up under the interaction key, is worked the same way — a digit does its wedge, a left click the lit one — and
+    // those are no slot and no trigger while it is up: they pass with `use`, whatever else is locked)
+    const handUp = A.has('use') && !!g.player?.sel?.open && !!g.player.sel.ring;
+    if (menuUp || handUp) buttons |= 1;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
+    const ok = (code: string) => FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || (handUp && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight'));
     let dropped = 0;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
     if (this.skyOn) { if (A.has('pan')) this.pan(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
@@ -191,7 +195,7 @@ export class Rails {
     const S = this.lesson(); if (!S || S.i >= S.L.steps.length) return null;
     if (!this.g.lesson.objective()) return null;
     const T = S.L.steps[S.i];
-    return { line: T.line, n: S.i + 1, of: S.L.steps.length };
+    return { line: stepLine(T), n: S.i + 1, of: S.L.steps.length };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 
   // ---------------------------------------------------------------- nobody is lost

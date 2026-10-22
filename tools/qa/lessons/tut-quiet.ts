@@ -4,6 +4,7 @@
 // the same in both arms, lesson on / off).
 import type { Bot } from '../lesson-run';
 import { CLOSE } from '../../../src/game/close';
+import { HANDRING } from '../../../src/game/handring';
 import { TQ } from '../../levels/tut-quiet';
 
 export const query = '?quiet';
@@ -63,7 +64,10 @@ export const steps: Record<string, (B: Bot) => void> = {
   // house's side
   whistle: B => {
     const A = man(B, 'court'), n0 = seen(B);
-    B.press('KeyV', 0); const t0 = B.t();
+    // (the page's way: the interaction key kept down puts the ring up, on open floor its one wedge is the whistle, and its digit does it; the frozen
+    // stand's: the whistle's own key)
+    if (HANDRING.on) { B.I.pressed.add('Space'); B.hold(['Space'], HANDRING.holdSecs + 0.1); if (!B.g.sel?.ring && !B.g.player.sel?.ring) B.fail('the interaction key kept down put no ring up'); B.press('Digit5', 0); } else B.press('KeyV', 0);
+    const t0 = B.t();
     B.wait(REACT);
     B.go([22.7, 0, 19.1], 8, { near: 0.25 }); B.go(TQ.hide, 8, { near: 0.15 });
     B.say(`  behind the wall ${(B.t() - t0).toFixed(1)} s after the whistle: lit ${lit(B)}; ${A.callsign} ${A.state} at ${at(A.char.pos)}, going to ${A.lastKnown ? at(A.lastKnown) : '—'}`);

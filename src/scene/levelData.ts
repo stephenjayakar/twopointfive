@@ -664,11 +664,12 @@ export function validateLevelData(d: LevelData): string[] {
           if (L.rails !== undefined) { const R = L.rails as any; if (!isObj(R)) err(`${w}.rails`, 'must be an object'); else { known(`${w}.rails`, R, ['allow', 'respawn', 'fog', 'sky', 'rows']); if (!Array.isArray(R.allow)) err(`${w}.rails.allow`, 'a list of actions'); if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.every(isStr))) err(`${w}.rails.rows`, 'a list of verbs'); if (R.respawn !== undefined && !(isNum(R.respawn) && R.respawn >= 0)) err(`${w}.rails.respawn`, 'seconds ≥ 0'); if (R.sky !== undefined && !(isObj(R.sky) && isVec(R.sky.park))) err(`${w}.rails.sky`, '{ park: Vec3, reach? }'); } }   // (game/rails.ts: the action names are checked against the built floor by checkLesson)
           const steps = recs(`${w}.steps`, L.steps); if (!steps.length) err(w, 'steps: at least one');
           const ids = new Set<unknown>();
-          steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'setupLine', 'done', 'hold', 'at', 'allow', 'deny', 'cue', 'checkpoint', 'fog']);
+          steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'setupLine', 'ringLine', 'done', 'hold', 'at', 'allow', 'deny', 'cue', 'checkpoint', 'fog']);
             for (const k of ['cue', 'checkpoint'] as const) if (t[k] !== undefined && !isStr(t[k])) err(`${tw}.${k}`, 'a non-empty string'); if (t.fog !== undefined && typeof t.fog !== 'boolean') err(`${tw}.fog`, 'true or false');
             if (!isStr(t.id) || !isStr(t.line)) err(tw, 'id, line: non-empty strings'); else if (ids.has(t.id)) err(tw, `id '${show(t.id)}' used twice`); ids.add(t.id);
             if (!isObj(t.done) || !isStr(t.done.is)) err(`${tw}.done`, "a test record { is: '<kind>', … }");
             if (t.setupLine !== undefined && !isStr(t.setupLine)) err(`${tw}.setupLine`, 'a non-empty string');
+            if (t.ringLine !== undefined && !isStr(t.ringLine)) err(`${tw}.ringLine`, 'a non-empty string');
             if (t.hold !== undefined && !(isNum(t.hold) && t.hold >= 0)) err(`${tw}.hold`, 'seconds ≥ 0'); if (t.at !== undefined && !isVec(t.at)) err(`${tw}.at`, 'Vec3'); });
         }
       }

@@ -230,6 +230,9 @@ export interface LessonStep {
   line: string;
   /** the line while a gun's key again opens its setup (game/slotsetup.ts SLOTSETUP.on), where the step's keys are others then (absent: `line`) */
   setupLine?: string;
+  /** the line while his own actions are a ring (game/handring.ts HANDRING.on), where the step's keys are others then: the whistle has no key of its own
+   *  there, it is the ring's last wedge (absent: `line`) */
+  ringLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;

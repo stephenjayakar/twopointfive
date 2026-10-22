@@ -18,7 +18,8 @@
 //  10. THE MISSION AGAIN: Shift rides with Enter through the gate (the restart's keys) and alone does not; the seat's unseen player is no cheat to the verdict;
 //      a restart from a later step is on the first step, only its action open, before a tick has passed, and does not end; the mission left, he is seen again.
 //  11. THE ROWS (`rails.rows`, on levels/tut-quiet.json): Space offers only the verbs the mission names — at a locked door the pick and no boot; without
-//      the list, every row the door has anywhere.
+//      the list, every row the door has anywhere. And his own actions' ring (handring.ts) is worked with its own digit while it is up: on the whistle's
+//      step the digit alone does nothing, the key kept down and then the digit whistles.
 // RAILS_BREAK=1 = the gate lets everything through: lines 3, 4, 10 and 11 must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
@@ -128,9 +129,17 @@ export async function railsCheck(): Promise<boolean> {
       const verbs = () => { g.teleportPlayer([27.9, 0, 17.2]); for (let i = 0; i < 12; i++) { W.cursorAt(DOOR); W.step(DT); } return [...new Set<string>(g.nearby.filter((r: any) => r.verb).map((r: any) => r.verb as string))]; };
       const on = verbs(); if (R) R.rows = undefined; const all0 = verbs(); if (R) R.rows = named;
       const extra = all0.filter(v => !named.includes(v));
-      verdict(named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && g.rails.offers('pick') && !g.rails.offers(extra[0] ?? 'pick'),
-        'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere',
-        `the list: ${named.join(' ')} · at the back door with it: ${on.join(' ') || 'no row'} · without it: ${all0.join(' ') || 'no row'}`); }
+      // …and his own actions' ring (handring.ts), up under the interaction key, is worked with its own keys: on the whistle's step (the fourth: a key, two
+      // places stood on) the key kept down and then the last wedge's digit whistles, though no slot's digit is open
+      const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`), { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), ring0 = HANDRING.on, I = W.input, L = g.level.scenarios.lesson;
+      const run = (n: number) => { for (let i = 0; i < n; i++) W.step(DT); }, tap = (k: string) => { I.pressed.add(k); I.keys.add(k); W.step(DT); I.keys.delete(k); W.step(DT); };
+      g.restartEncounter(); run(30); HANDRING.on = true; tap('KeyC'); run(20); for (const p of [[13.6, 0, 17.5], [21.5, 0, 17.5]]) { g.teleportPlayer(p); run(90); }
+      const at = L.steps[g.lesson.i]?.id, digit = `Digit${CMDRING.wedges}`; tap(digit); run(10); const early = L.steps[g.lesson.i]?.id;   // (no ring up: the digit is a slot's, and locked)
+      I.pressed.add('Space'); I.keys.add('Space'); run(Math.ceil((HANDRING.holdSecs + 0.1) * 60)); I.keys.delete('Space'); const up = !!g.player.sel.ring; run(2); tap(digit); run(10);
+      const after = L.steps[g.lesson.i]?.id; HANDRING.on = ring0;
+      verdict(named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && g.rails.offers('pick') && !g.rails.offers(extra[0] ?? 'pick') && at === 'whistle' && early === 'whistle' && up && after === 'grab',
+        'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere. His own ring is worked with its own digit: the key kept down, then the last wedge, whistles',
+        `the list: ${named.join(' ')} · at the back door with it: ${on.join(' ') || 'no row'} · without it: ${all0.join(' ') || 'no row'} · the ring: on step '${at}', the digit alone leaves '${early}', the key held puts the ring ${up ? 'up' : 'NOT up'}, then the digit: '${after}'`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
