@@ -251,7 +251,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   checks pin `only` off. KNOWN COSTS: a door with a look-under row (a wand carried) has six first-page rows, so its fifth wedge is 'more' holding
   'door tools' and the look, one ring deeper; a line of words that names the orders key (a lesson's 'X on the ground, then 5') reads 'hold Q …' ('Hold Q …' at the start of a sentence or a line, plain 'Q' after a 'hold' already written, 'Q held' after 'with'; `keymap.ts rebuild` and `keyText`; `qonly`'s board
   line), but lines that name T (the pairs lesson's three steps, a kit card's note) are not rewritten and are stale while the row has no key, and
-  the Controls list still says 'or the middle mouse button' on a row that reads as no key; the HUD's 'RED waiting · T, then F' is 'RED waiting'; the
+  the Controls list still says 'or the middle mouse button' on a row that reads as no key; THE WORD FREES WHOEVER WAITS (`doortools.ts wordMen`; the maintainer: "pressing F only releases the people blocked on it"): with the orders going to
+  men who are not waiting on it, F goes to the men who are, and the squad block offers the key for them ('F go · blue waiting' where it read 'blue
+  waiting · T, then F'; `squadplay-go` reads the stand: red in, the orders still red's, F sends blue). A press while the chosen men still walk and
+  another pair waits therefore sends the pair that waits. The
   ring on Sam shows 'fall in' twice (the quick order's wedge and its own); with the quick throw's own switch on (off in the page) G held under a ring
   still starts Sam's own throw. The older menu's probes (`orders-probes`, `orderui-probes`, `pressorders-probes`) pin `only` off in their rigs. NOT measured: no tally; nobody has played it; never
   seen on a GPU.
