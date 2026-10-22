@@ -98,7 +98,8 @@ function wrap(fn: Function, i: number, kind: 0 | 1 | 2): Function {   // kind 1:
     if (depth === 0) { if (kind === 1) switchPhase(id(`· after ${names[i]}: ${PHASES[names[i]] ?? ''}`), t0); else if (kind === 2) { const gd = guardOf.get(this); if (gd) switchPhase(id(`· updateGuard ${gd.callsign ?? '?'} (${gd.team}${gd.unit ? '' : ' staff'})`), t0); } }
     depth++; sStart[depth] = t0; sChild[depth] = 0; sId[depth] = i;
     try { return fn.apply(this, arguments); }
-    finally { const t1 = performance.now(), incl = t1 - sStart[depth], self = incl - sChild[depth]; if (fN[i] === 0 && fSelf[i] === 0) touched.push(i); fN[i]++; fSelf[i] += self; fIncl[i] += incl; depth--; sChild[depth] += incl; }
+    finally { if (depth >= 0) {   // (below 0 the frame closed inside this call — Input.endFrame, reached through the seat: no start to time it from, and a NaN here went into the run's shares)
+      const t1 = performance.now(), incl = t1 - sStart[depth], self = incl - sChild[depth]; if (fN[i] === 0 && fSelf[i] === 0) touched.push(i); fN[i]++; fSelf[i] += self; fIncl[i] += incl; depth--; sChild[depth] += incl; } }
   };
 }
 /** Game.update's own lines standing in private methods beside it (game.ts 'update()'s parts'): wrapped, the phase marks inside them would sit one call deep and never switch a phase;
