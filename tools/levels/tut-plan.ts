@@ -218,7 +218,7 @@ export function build() {
       { id: 'back', line: 'The other two: right click the back door', done: or(stacks(['hall', 'hall_back'], true), taken('hall')), at: D_BACK, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
       // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — levels/tut-plan.script.ts)
       { id: 'all2', line: 'Left click bare ground again: all four', done: or({ is: 'picked', n: 4 }, taken('hall')), eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 }, cue: 'breach' },
-      { id: 'word2', line: '[F]: both doors at once', done: taken('hall'), at: [28.4, 1, 16.0], eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },   // (the lookout stays: he SEES the gun on the wrong door)
+      { id: 'word2', line: '[F]: both doors at once', done: taken('hall'), at: [28.4, 1, 16.0] },   // (NO lookout on the word's own step: the squad picks its entry by what the fog shows of the room (autopilot.ts contactBehind), a step's eye is in the fog, and with the gunner seen through it the stack given the word first took the last can — a bang and clear beside an open and clear, three seconds behind it. He sees the gun through his men's eyes as the doors give)
       // 3 · WHICH WAY THEY FACE: more come by two gates at once. A right click dragged is a place and a way to look
       { id: 'gates', line: 'Move the view to the two gates', explain: { title: 'Two gates', text: 'More men are coming, by the road gate and the back gate at once.\nA right click that you drag sends men to a place and sets the way they face there.' },
         done: or({ is: 'planView', at: GATES_VIEW, r: 2.5 }, taken('road'), taken('lane')), at: [27.0, 1, 9.5], checkpoint: 'the gates' },
