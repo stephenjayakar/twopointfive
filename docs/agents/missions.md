@@ -151,7 +151,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the ring. Drawn flat on the screen, not laid on the ground in perspective; no shipped step carries one yet (the solo mission's wall is its first use).
     (3) THE OPENING CARD: a tutorial row's `scene` (where we are and why, a sentence or two) and `teaches` (three to five short lines, things and not keys)
     in `scenarioList.ts TUTORIAL_MISSIONS`, drawn by the load brief (`ui/loadbrief.ts`: `.bscene` and a 'You will learn' list IN PLACE OF the job's line and
-    the three cells, so the column fits a 1280 by 720 window: measured, no overflow on any of the four); the four scenes are one light thread (a convoy gone
+    the three cells, so the column fits a 1280 by 720 window: measured, no overflow on any of the four; in the one-column layout under 820 px the scene runs the column's
+    whole width and the list is two abreast: at 820 by 600 Start, Controls and Back are all in the window, measured on two of the four; at 800 by 560 it
+    scrolls 16 px, less than a plain mission's card there; the opening card's line has no break word of its own); the four scenes are one light thread (a convoy gone
     quiet, its code book, the post it names, the house that paid it). CHECK: `rails-check.ts`, two lines (the card and the arrow, with the card's page half
     on a made-up element and clock; the opening card's data), nineteen green on both stands; `PORT=… node tools/qa/railcard-page.cjs` on the real page
     (software adapter): the card up, the page's own loop let run under it, Enter, the checkpoint put back, the mission again, the arrow; `tut-page.cjs`

@@ -107,9 +107,10 @@ const CSS = `
    the box and what is drawn in it are one size and nothing of the sheet is cut or letterboxed */
 #brief .bpic canvas { display: block; width: min(100%, 1140px, calc((100vh / var(--tz, 1) - 2 * clamp(20px, 5vh / var(--tz, 1), 64px)) * 40 / 28)); aspect-ratio: 40 / 28; object-fit: contain; opacity: 0; transition: opacity 0.25s; }
 #brief .bpic canvas.in { opacity: 1; }
-/* a narrow window: the map over the words; a short one: the same column, closer set */
+/* a narrow window: the map over the words (a tutorial's scene the column's whole width, its list two abreast); a short one: the same column, closer set */
 @media (max-width: 820px) { #brief { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } #brief .bpic { order: -1; padding: 16px 24px 0; justify-content: flex-start; } #brief .bpic canvas { width: min(100%, calc(32vh / var(--tz, 1) * 40 / 28)); }
-  #brief .bcol { padding-left: 24px; } #brief .bin { margin: 0; } }
+  #brief .bcol { padding-left: 24px; } #brief .bin { margin: 0; }
+  #brief .bscene { margin-top: 8px; max-width: none; font-size: 15px; line-height: 1.35; } #brief .bteach { margin-top: 10px; max-width: none; } #brief .bteach ul { margin-top: 5px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; } #brief .bteach li { font-size: 14px; padding-top: 1px; padding-bottom: 1px; } }
 @media (max-height: 640px) { #brief .bcol { padding-top: 16px; padding-bottom: 12px; } #brief .bt { margin-top: 10px; font-size: clamp(28px, 3.6vw / var(--tz, 1), 44px); } #brief .bt::after { margin-top: 12px; }
   #brief .bplace { margin-top: 10px; } #brief .bjob { margin-top: 8px; font-size: 15px; } #brief .bfacts { margin-top: 14px; } #brief .bteach { margin-top: 12px; } #brief .bteach li { font-size: 14px; padding-top: 1px; padding-bottom: 1px; } #brief .bgo { margin-top: 18px; font-size: 26px; padding: 10px 18px 8px; } }
 @media (prefers-reduced-motion: reduce) { #brief, #brief .bgo, #brief .bgo i, #brief .bpic canvas { transition: none; } }
