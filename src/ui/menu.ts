@@ -10,6 +10,7 @@
 import { dumpNow, keptNow, keptWords } from '../replay/dumpui';
 import { saveSandbox } from '../game/sandbox';
 import { SAVETIMELINE, type SlotInfo } from '../game/savestate';
+import { HANDRING } from '../game/handring';
 import { gearText } from '../game/gear';   // (the controls list names the kit: shown in the kit's words as issued)
 export { loadSandbox, saveSandbox, SANDBOX_LS } from '../game/sandbox';
 import { Engine } from '../engine';
@@ -33,6 +34,11 @@ import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions,
 const E_ROW: [string, string] = ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'];
 /** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
 const SLOT_ROW: [string, string] = ['0', 'empty hands: what is in them goes away · a digit draws'];
+/** the action key's row, and it and the whistle's while his own actions are a ring that stays (game/handring.ts) */
+const SPACE_ROW: [string, string] = ['Space', 'do the highlighted action (top-left) · hold to pick another (wheel / ↑↓, let go) · long actions run on their own; move or tap again to stop'];
+const RING_ROW: [string, string] = ['Space', 'do the action shown top-left · keep it down a moment: everything you can do here, as a ring (1 to 5 or a click; the whistle is on it) · long actions run on their own; move or tap again to stop'];
+const LN_ROW: [string, string] = ['L · N', 'weapon light · night vision'];
+const N_ROW: [string, string] = ['N', 'night vision'];
 const Q_ROW: [string, string] = ['Q', 'back to the wall beside you — slide, peek at its end; Q / away / Shift lets go'];
 const KIT_ROW: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 (2 again: flip its launcher, RING / 40 mm) · smoke · stun · frag'];
 const ZR_ROW: [string, string] = ['Z · R', 'FN2000 semi / auto · reload'];
@@ -47,7 +53,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   ['Mouse', 'aim; the ring snaps to a man near the cursor, or a light under it'],
   ['LMB', 'fire what is in hand · throw a canister · hands empty behind a man: silent takedown'],
   ['RMB', 'pistol: OCP the light under the ring · FN2000: fire its launcher (hold to see the arc first)'],
-  ['Space', 'do the highlighted action (top-left) · hold to pick another (wheel / ↑↓, let go) · long actions run on their own; move or tap again to stop'],
+  SPACE_ROW,
   E_ROW,
   Q_ROW,
   KIT_ROW,
@@ -63,7 +69,9 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 /** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
 const WALL_ROW: [string, string] = ['Wall', 'walk into one and your back goes to it — slide, peek at its end; away / Shift lets go'];
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
-  if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW]; if (SLOTSETUP.on && r === LNV_ROW && !keysOf('KeyL').length) return [NV_ROW];
+  if (HANDRING.on && r === SPACE_ROW) return [RING_ROW];
+  if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
+  if (r === LNV_ROW) { const l = !(SLOTSETUP.on && !keysOf('KeyL').length), v = !(HANDRING.on && !keysOf('KeyV').length); return [l && v ? r : l ? LN_ROW : v ? NV_ROW : N_ROW]; }   // (the light is a row of the gun's setup, the whistle a wedge of his ring: a key given back to either keeps its place here)
   if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
 
 const TAGLINE = 'a ray-traced stealth sandbox — every light, shadow and wisp of smoke is live';
