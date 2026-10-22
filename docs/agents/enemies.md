@@ -1308,7 +1308,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   keep is marked seen so a calm colleague does not stop to wonder at it. No dice: the heard place is put off by a hash, the rounds draw as any round of
   his does. State per game in a named side table; a restart or a load forgets it. What a flung leaf does to a man behind it is NOT here (its own rule).
   CALLS TAKEN, for play to judge: 'alert' only; a posted man fires and never boots; the pull face and steel go by the handle; a pistol's four rounds and
-  the boot come before a pistol can splinter a leaf (`DOORSHOT` wants a dozen), a rifle's two bursts can take the leaf apart first; no new spoken line;
+  the boot come before a pistol can splinter a leaf (`DOORSHOT` wants two dozen, a dozen until 10-22), a rifle's bursts can take the leaf apart first (twelve rounds, six until 10-22); no new spoken line;
   his own belief store, not `picture.ts`'s, so the switch stands alone. Tab ▸ Player, doors & props: 'an alerted enemy does not wait at a shut door',
   '… fires through it', '… boots it in', 'seconds before the boot', and a counts row. CLAIMS on other owners' files: `guards.ts` (three hook lines in
   `hearingCheck` and the alert branch), `coverfire.ts` (`lane` exported as `coverLane`), `digin.ts` (`digInSetOn`, the question `digInBraced` asks with
@@ -1321,7 +1321,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   intruder's by nobody of his side); the pull face with one-way doors raised: no boot, left to the handle at 5.55 s; steel (the same leaf made steel:
   the office has no steel door with floor both sides): no round, no boot; a sighting, injected and by the tick's own lost-sight hand-off: sure at once,
   rounds through (the hand-off's are `coverfire.ts`'s four, then he is on the door); a place with the wall in his eyes' line: nothing; a colleague past
-  the door in the line: no round, 252 frames held; with `DOORSHOT` on and the boot put off the 12th pistol round takes the leaf apart and none follows;
+  the door in the line: no round, 252 frames held; with `DOORSHOT` on and the boot put off the 24th pistol round (the 12th until 10-22) takes the leaf apart and none follows;
   off: nothing kept; the journal. THE PAGE: `tools/qa/doorforce-page.cjs` (the real bundle in headless Chromium on the software adapter,
   `PORT=… node tools/qa/doorforce-page.cjs` against a dev server): the page opens with the switch on, the staged man puts 4 rounds through the shut leaf and
   tears its keep out at 5.95 s; `?doorforce=0`: off, no round while it is shut, opened by hand at 2.02 s; no page error either way.
