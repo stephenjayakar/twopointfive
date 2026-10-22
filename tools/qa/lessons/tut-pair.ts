@@ -102,7 +102,11 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.wait(1); calm(B, n0, 'when the first man went down'); },
   // to the gap: both men of the truck park in view through it. He comes back by himself (no order asks for it), and the step waits for him
   gap: B => { const n0 = seen(B); B.crouch(true); B.go(TP.gap, 20, { near: 0.3 }); together(B, 4.2, 30, 'fall in again by himself after his man went down'); B.wait(0.4); B.say(`  at the gap: lit ${lit(B)}; the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); calm(B, n0, 'at the gap'); },
-  far: B => { onMan(B, man(B, 'far')); B.wait(1.5); B.say(`  1.5 s on: the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); },
+  // (TUTPAIR_NEAR=1: the squad's key on the NEAR man first, as a player who misread the card would. The step must still be up and still asking; then the far man)
+  far: B => { if (process.env.TUTPAIR_NEAR === '1') { onMan(B, man(B, 'near')); B.wait(1.0); const p = RAILS.on ? B.g.rails.prompt() : null;
+      if (B.g.lesson.step?.id !== 'far') B.fail(`the squad's key on the near man passed the step that asks for the far one (now '${B.g.lesson.step?.id}')`);
+      B.say(`  the near man given first: the step is still 'far'${p ? `, its line "${p.line}"` : ''}`); }
+    onMan(B, man(B, 'far')); B.wait(1.5); B.say(`  1.5 s on: the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); },
   // through the gap to the near man's back, a stride off, and there until the partner is set behind the far one
   near: B => { const n0 = seen(B); B.go(TP.behindB, 15, { near: 0.2 }); B.say(`  behind the near man: lit ${lit(B)}, ${flat(B.pos(), man(B, 'near').char.pos).toFixed(2)} m off`);
     waitSet(B, man(B, 'far')); calm(B, n0, 'behind the near man'); },
