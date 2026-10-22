@@ -77,6 +77,12 @@ const CSS = `
 #brief .bt::after { content: ''; display: block; width: 72px; height: 4px; margin-top: 20px; background: var(--m-accent); }
 #brief .bplace { margin-top: 18px; max-width: 40ch; font-size: 14px; line-height: 1.4; letter-spacing: 0.04em; color: var(--m-soft); }
 #brief .bjob { margin-top: 14px; max-width: 40ch; font-size: 17px; line-height: 1.45; color: var(--m-bright); }
+#brief .bscene { margin-top: 14px; max-width: 42ch; font-size: 16px; line-height: 1.45; color: var(--m-bright); }
+#brief .bteach { margin-top: 20px; max-width: 44ch; }
+#brief .bteach b { display: block; font: 600 11px/1 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-dim); }
+#brief .bteach ul { list-style: none; margin: 8px 0 0; padding: 0; }
+#brief .bteach li { position: relative; padding: 3px 0 3px 18px; font-size: 15px; line-height: 1.35; color: var(--m-bright); }
+#brief .bteach li::before { content: ''; position: absolute; left: 0; top: 0.72em; width: 8px; height: 2px; background: var(--m-accent); }
 #brief .bfacts { display: flex; flex-wrap: wrap; gap: 10px 34px; margin-top: 24px; }
 #brief .bf b { display: block; font: 600 11px/1 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-dim); }
 #brief .bf span { display: block; margin-top: 6px; font-size: 14px; color: var(--m-text); }
@@ -105,7 +111,7 @@ const CSS = `
 @media (max-width: 820px) { #brief { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); } #brief .bpic { order: -1; padding: 16px 24px 0; justify-content: flex-start; } #brief .bpic canvas { width: min(100%, calc(32vh / var(--tz, 1) * 40 / 28)); }
   #brief .bcol { padding-left: 24px; } #brief .bin { margin: 0; } }
 @media (max-height: 640px) { #brief .bcol { padding-top: 16px; padding-bottom: 12px; } #brief .bt { margin-top: 10px; font-size: clamp(28px, 3.6vw / var(--tz, 1), 44px); } #brief .bt::after { margin-top: 12px; }
-  #brief .bplace { margin-top: 10px; } #brief .bjob { margin-top: 8px; font-size: 15px; } #brief .bfacts { margin-top: 14px; } #brief .bgo { margin-top: 18px; font-size: 26px; padding: 10px 18px 8px; } }
+  #brief .bplace { margin-top: 10px; } #brief .bjob { margin-top: 8px; font-size: 15px; } #brief .bfacts { margin-top: 14px; } #brief .bteach { margin-top: 12px; } #brief .bteach li { font-size: 14px; padding-top: 1px; padding-bottom: 1px; } #brief .bgo { margin-top: 18px; font-size: 26px; padding: 10px 18px 8px; } }
 @media (prefers-reduced-motion: reduce) { #brief, #brief .bgo, #brief .bgo i, #brief .bpic canvas { transition: none; } }
 `;
 function styles() {
@@ -130,8 +136,13 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   col.appendChild(el('div', 'bk', W.group));
   col.appendChild(el('h1', 'bt', m.title));
   col.appendChild(el('div', 'bplace', m.place));
-  if (m.blurb) col.appendChild(el('div', 'bjob', m.blurb));
-  { const facts = el('div', 'bfacts');
+  // A TUTORIAL MISSION (its row carries a `scene`): where we are and why, then what it teaches — in place of the job's line and the three cells, which the
+  // scene and a mission on rails make needless, so the card still fits a short window
+  const scene = m.scenario?.scene, teaches = m.scenario?.teaches;
+  if (scene) { col.appendChild(el('div', 'bscene', scene));
+    if (teaches?.length) { const t = el('div', 'bteach'); t.appendChild(el('b', undefined, 'You will learn')); const ul = el('ul'); for (const line of teaches) ul.appendChild(el('li', undefined, line)); t.appendChild(ul); col.appendChild(t); } }
+  else { if (m.blurb) col.appendChild(el('div', 'bjob', m.blurb));
+    const facts = el('div', 'bfacts');
     const fact = (label: string, value: string) => { if (!value || value === '—') return; const f = el('div', 'bf'); f.appendChild(el('b', undefined, label)); f.appendChild(el('span', undefined, value)); facts.appendChild(f); };
     fact('Team', W.team); fact('Defenders', m.defenders); fact('Approach', leanWords(m.lean));   // (the mission sheet's own three cells and their names: ui/missions.ts)
     col.appendChild(facts); }

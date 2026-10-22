@@ -211,6 +211,18 @@
     #railprompt .line.nudge { animation: railnudge .32s ease-in-out; } @keyframes railnudge { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
     #railprompt .pips { display: flex; gap: 6px; } #railprompt .pips i { width: 9px; height: 4px; border-radius: 2px; background: rgba(var(--h-edge),0.35); }
     #railprompt .pips i.done { background: var(--h-acc); opacity: 0.75; } #railprompt .pips i.now { background: var(--h-hi); width: 18px; }
+    /* A TUTORIAL STEP'S CARD (ui/railcard.ts): a heading and a few sentences in the middle, the world held still behind it (main.ts). In the HUD's layer, so by
+       ui/textsize.ts's rule its one viewport unit is divided by the factor */
+    #railcard { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; z-index: 12; pointer-events: auto; background: rgba(0,0,0,0.42); }
+    #railcard.on { display: flex; animation: railcardin .22s ease-out; }
+    #railcard .rc { box-sizing: border-box; width: min(540px, calc(100vw / var(--tz, 1) - 48px)); padding: 26px 30px 24px; background: rgba(var(--h-plate),0.95); border-top: 3px solid var(--h-acc); border-radius: 4px; box-shadow: 0 18px 60px rgba(0,0,0,0.6); }
+    #railcard h2 { margin: 0 0 14px; font: 700 27px/1.1 var(--h-head); letter-spacing: 0.04em; text-transform: uppercase; color: var(--h-hi); }
+    #railcard p { margin: 0 0 10px; font: 17px/1.5 var(--h-font); color: var(--h-ink); text-wrap: pretty; }
+    #railcard p kbd, #railcard h2 kbd { display: inline-block; min-width: 16px; margin: 0 2px; padding: 1px 7px 0; border-radius: 4px; background: var(--h-acc); color: var(--h-on); font: 700 15px/1.3 var(--h-head); text-align: center; }
+    #railcard button { margin-top: 12px; display: flex; align-items: center; gap: 14px; padding: 11px 18px 9px; background: var(--h-acc); color: var(--h-on); border: 0; border-radius: 4px; font: 700 19px/1 var(--h-head); letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; }
+    #railcard button:hover { filter: brightness(1.1); }
+    #railcard button kbd { padding: 3px 7px 2px; border-radius: 3px; background: var(--h-on); color: var(--h-acc); font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; }
+    @keyframes railcardin { from { opacity: 0; } to { opacity: 1; } }
     @keyframes railin { from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.96); } to { opacity: 1; transform: translateX(-50%); } }
     @media (max-width: 900px) { #railprompt .line { font-size: 20px; white-space: normal; text-align: center; } #railprompt kbd { font-size: 18px; } }
     body.skyseat #equip, body.skyseat #meters { display: none !important; }
@@ -218,6 +230,14 @@
     body.onrails .objmark { transform: translate(-50%, -50%); }
     body.onrails .objmark i { width: 26px; height: 26px; border-width: 3px; border-radius: 50%; transform: none; box-shadow: 0 0 10px rgba(0,0,0,0.7), inset 0 0 6px rgba(0,0,0,0.5); animation: railbeat 1.05s ease-out infinite; }
     body.onrails .objmark.edge i { width: 14px; height: 14px; }
+    /* (a step's `toward`: the mark is three chevrons lying from the place to where it points, lit one after another that way) */
+    .objmark u { display: none; }
+    body.onrails .objmark.arrow i { display: none; }
+    body.onrails .objmark.arrow u { display: flex; position: absolute; left: 50%; top: 50%; text-decoration: none; transform-origin: 0 50%; transform: translateY(-50%) rotate(var(--turn, 0deg)); }
+    body.onrails .objmark.arrow u b { display: block; width: 18px; height: 18px; margin-right: 2px; border-top: 6px solid var(--h-acc); border-right: 6px solid var(--h-acc); transform: rotate(45deg); filter: drop-shadow(0 0 4px rgba(0,0,0,0.85)); animation: railarrow 0.9s linear infinite; }
+    body.onrails .objmark.arrow u b:nth-child(2) { animation-delay: 0.15s; } body.onrails .objmark.arrow u b:nth-child(3) { animation-delay: 0.3s; }
+    body.onrails .objmark.arrow span { margin-top: 22px; }
+    @keyframes railarrow { 0%, 60%, 100% { opacity: 0.3; } 20% { opacity: 1; } }
     @keyframes railbeat { 0% { outline: 3px solid var(--h-acc); outline-offset: 0; } 100% { outline: 3px solid transparent; outline-offset: 22px; } }
     #objective:empty { display: none; } #objective.done { color: var(--h-hi); } #objective.failed { color: #f0a090; }
     /* alarm stage (Chaos-Theory-style): hidden at calm; ALARM I amber while the floor is heightened, ALARM II red on lockdown, with the level's clock and
