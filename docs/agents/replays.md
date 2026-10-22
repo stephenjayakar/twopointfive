@@ -476,3 +476,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   marks multiply their device pixels by the factor; `lay()` runs again on `TEXT_EVENT`. No switch of its own: `?textsize=0` is the text size's.
   CHECK: `probes.ts textsize` reads `src/replay/*.ts` too (the layers exist, no bare viewport unit); on the page, a headless look at 3840 × 2160 and
   1280 × 720 (the bar's height against `--tape-h`, the kit and meters on it, the note field, the large map, a step from the keys). Never seen on a GPU.
+- **A replay across a save kept in memory** (10-22). With a team on the floor a save is the whole game kept in memory, and a load of it puts every game
+  object back, the `Sensors` object among them (`savestate.ts loadMem`, `rollback.ts`). The F7 tape keeps nothing in there (it taps `Sensors.read` and its
+  rows are its own; the re-run's walk is outside the game too), and a save in memory is made ON the tape (F5's, an autosave's), so a load INSIDE a step
+  (the bare Enter once down) leaves the tape alive and a re-run makes the save and the load again: `replaybuf-probes.ts`, the `load` lines "with a team
+  on the floor" (a room clear with the four, F5, his own frag puts him down, Enter; the re-run equal to the digest), green on both stands. A load made
+  BETWEEN two steps (a card, the panel) ends the tape in the words "a checkpoint was loaded", as a file's does. The F10 journal is another matter and
+  not this bullet's: there the sensors' recorded stream IS inside what a restore puts back.
