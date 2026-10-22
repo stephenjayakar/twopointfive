@@ -51,7 +51,8 @@ async function openFromDisk(file: File) {
   // onto the shelf, so notes typed on it are kept here too — or back onto its own entry, if this browser already holds this replay (its notes, where the file brings none)
   const have = (await shelfList()).find(r => r.savedAt === parsed.savedAt && r.seconds === parsed.seconds);
   let id: number | null;
-  if (have) { id = have.id; if (parsed.notes.length) await shelfNotes(id, parsed.notes); else parsed.notes = (await shelfGet(id))?.notes ?? []; }
+  if (have) { id = have.id; const kept = (await shelfGet(id))?.notes ?? [], ids = new Set(kept.map(n => n.id)), fresh = parsed.notes.filter(n => !ids.has(n.id));   // (the notes kept here AND the file's, by id, as the engine replay page joins them: the file's alone wiped every note typed since it was saved)
+    parsed.notes = [...kept, ...fresh].sort((a, b) => a.r - b.r || a.n - b.n); if (fresh.length) await shelfNotes(id, parsed.notes); }
   else id = await shelfPut(parsed);
   try { const bad2 = open(parsed, id); if (bad2) { say(`${file.name}: ${bad2}`); return; } } catch (e) { say(`${file.name}: not a replay this page can draw (${(e as Error).message})`); void showShelf(); return; }
   if (id !== null) history.replaceState(null, '', `#id=${id}`);
