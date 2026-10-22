@@ -681,8 +681,8 @@
     { "id": "sentry", "points": [[13.9, 0, 14.25], [14.200000000000001, 0, 14.45]], "wait": [600, 600] },
     { "id": "gunner", "points": [[22.7, 0, 6.9], [23, 0, 7.1000000000000005]], "wait": [600, 600], "weapon": "pkm" },
     { "id": "shop", "points": [[27.7, 0, 14.25], [28, 0, 14.45]], "wait": [600, 600] },
-    { "id": "store_a", "points": [[31.4, 0, 11.5], [31.7, 0, 11.7]], "wait": [600, 600] },
-    { "id": "store_b", "points": [[33.6, 0, 16.3], [33.9, 0, 16.5]], "wait": [600, 600] }
+    { "id": "sacks", "points": [[31.4, 0, 11.5], [31.7, 0, 11.7]], "wait": [600, 600] },
+    { "id": "crates", "points": [[33.6, 0, 16.3], [33.9, 0, 16.5]], "wait": [600, 600] }
   ],
   "chokepoints": [],
   "volumes": [
@@ -722,7 +722,7 @@
       "exits": [
         { "name": "the road", "door": "gate_w", "x": 8.2, "z": 14.25, "out": [-1, 0] }
       ],
-      "patrols": [["sentry", "gunner", "shop", "store_a", "store_b"]],
+      "patrols": [["sentry", "gunner", "shop", "sacks", "crates"]],
       "radioCheck": false
     },
     "lesson": {
@@ -756,8 +756,7 @@
         { "id": "take", "line": "[Space]: take the code book", "done": { "is": "stage", "stage": "exfil" }, "at": [34.86, 0.45, 11.5], "checkpoint": "the store" },
         { "id": "rifle", "line": "[2]: back to the rifle", "done": { "is": "slot", "slot": "rifle", "drawn": true } },
         { "id": "leave", "line": "Back to the arch", "done": { "is": "any", "of": [{ "is": "near", "at": [16.5, 0, 14.25], "r": 0.8 }, { "is": "men", "down": 7 }] }, "at": [16.5, 0, 14.25] },
-        { "id": "load", "line": "Two men behind you. [2] again: load the grenade", "setupLine": "Two men behind you. [2], then [2]: load the grenade", "done": { "is": "any", "of": [{ "is": "launcher", "on": "he40" }, { "is": "men", "down": 7 }] }, "allow": ["alt"], "cue": "trucks" },
-        { "id": "launch", "line": "Behind you: hold right button, aim at their doorway, let go", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "threw", "kind": "he40" }, { "is": "men", "down": 6 }] }, { "is": "men", "down": 7 }] }, "at": [25.9, 1, 14.25] },
+        { "id": "launch", "line": "Two men behind you: hold right button, aim at their doorway, let go", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "threw", "kind": "he40" }, { "is": "men", "down": 6 }] }, { "is": "men", "down": 7 }] }, "at": [25.9, 1, 14.25], "allow": ["alt"], "cue": "trucks" },
         { "id": "last", "line": "Shoot the rest", "done": { "is": "men", "down": 7 }, "at": [25.9, 1, 14.25], "cue": "loose" },
         { "id": "out", "line": "Sprint out by the gate", "done": { "is": "stage", "stage": "done" }, "at": [8.2, 0, 14.25] }
       ]

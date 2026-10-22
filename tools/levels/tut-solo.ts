@@ -104,7 +104,7 @@ export const FRAME: Record<string, { allow?: string[]; cue?: string; checkpoint?
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
   pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
-  take: { checkpoint: 'the store' }, load: { allow: ['alt'], cue: 'trucks' }, last: { cue: 'loose' },
+  take: { checkpoint: 'the store' }, launch: { allow: ['alt'], cue: 'trucks' }, last: { cue: 'loose' },
 };
 
 const SHOP: Rect = { x0: FRONT_X, x1: PART_X, z0: ROOM_Z0, z1: ROOM_Z1 }, STORE: Rect = { x0: PART_X, x1: YARD.x1, z0: ROOM_Z0, z1: ROOM_Z1 };
@@ -275,7 +275,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- five men, each on his mark until the script calls his beat (levels/tut-solo.script.ts names them by roster order) ----
   const post = (name: string, p: Vec3, weapon?: PatrolRoute['weapon']): PatrolRoute => ({ name, points: [p, [p[0] + 0.3, 0, p[2] + 0.2]], wait: [600, 600], ...(weapon ? { weapon } : {}) });
-  const routes: PatrolRoute[] = [post('sentry', SENTRY), post('gunner', GUNNER, 'pkm'), post('shop', SHOP_MAN), post('store_a', STORE_MEN[0]), post('store_b', STORE_MEN[1])];
+  const routes: PatrolRoute[] = [post('sentry', SENTRY), post('gunner', GUNNER, 'pkm'), post('shop', SHOP_MAN), post('sacks', STORE_MEN[0]), post('crates', STORE_MEN[1])];
 
   const front: Vec3 = [TRUNK[0] - 0.44, 0.45, TRUNK[2]];
   const quiet: QuietData = {
@@ -337,13 +337,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // THE WAY OUT
       { id: 'rifle', line: '[2]: back to the rifle', done: { is: 'slot', slot: 'rifle', drawn: true } },
       { id: 'leave', line: 'Back to the arch', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH },
-      // (the maintainer: "weird that we're told to load the grenade long before being told to do anything about it". The two it is for come out as this
-      //  line comes up, so the load is asked for with them in the doorway and used on the very next line)
-      // (a kit dealt with the grenade already on the launcher makes this line true as it comes up: it goes by, its cue is still sent, and the next line
-      //  says where they are by itself)
-      { id: 'load', line: 'Two men behind you. [2] again: load the grenade', setupLine: 'Two men behind you. [2], then [2]: load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
-      // (a grenade that met something short of the 8 m it arms at is a dud: the line stays until one of the two is down, by the grenade or by anything else)
-      { id: 'launch', line: 'Behind you: hold right button, aim at their doorway, let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
+      // (the maintainer: "weird that we're told to load the grenade long before being told to do anything about it". His card is the whole kit now and
+      //  comes with the grenade on the launcher, so nothing is loaded: the two it is for come out as this line comes up. A stand that still deals the
+      //  ring first has the rifle for them: the line is done by the men going down, however)
+      { id: 'launch', line: 'Two men behind you: hold right button, aim at their doorway, let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
       { id: 'last', line: 'Shoot the rest', done: DOWN(7), at: LAST_COVER },
       { id: 'out', line: 'Sprint out by the gate', done: { is: 'stage', stage: 'done' }, at: [EXIT.x, 0, EXIT.z] },
     ] as LessonStep[]).map(T => ({ ...T, ...FRAME[T.id] })),
