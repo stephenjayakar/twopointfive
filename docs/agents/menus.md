@@ -1038,10 +1038,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one that did would be a refusal with its reason (`kitRowCan`), never a second kind of gear. SWITCH: `KITDEAL.stealth` (a key of the registered table,
   journaled; a recording from before the key replays with it off), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row, `TPS_KITSTEALTH=1`; reads
   only under the card as a tree), ON in the page (`?nokitstealth`; a box in the debugger). Off = the build before: the hand-overs, the tiles that say
-  whose, a sponge round a pouch each. CHECK: `bun run tools/qa/probes.ts kitstealth` on BOTH stands (12 lines: off to the count, the card, a reload, the follow, the
+  whose, a sponge round a pouch each. CHECK: `bun run tools/qa/probes.ts kitstealth` on BOTH stands (13 lines: off to the count, the card, a reload, the follow, the
   store, As issued, the Quiet kit, four staged runs, the journal); `KITSTEALTH_BREAK=1` fails 6 on each. The real page: `PORT=<port> node
   tools/qa/kitstealth-page.cjs` (`STEALTH_BREAK=1` must fail). Probes written against the hand-overs run with the key held off by the runner
-  (`STEALTH_AS_IT_WAS` in `probes.ts`; `kitanim-midswap` beside it, whose night alone throws a frag). A run tape carries the kept stealth card beside the cards (`kit.stealth`). Never seen on a GPU; nobody has played
+  (`STEALTH_AS_IT_WAS` in `probes.ts`; `kitanim-midswap` beside it, whose night alone throws a frag; `lesson-check.ts` holds it for its kit block, whose 'same start off a lesson's page' is a quiet run alone — a lesson's page under a kept stealth card is kitstealth's own line). A run tape carries the kept stealth card beside the cards (`kit.stealth`). Never seen on a GPU; nobody has played
   it; whether five rounds, two cameras and a wand is the right kit to start a quiet night with is the maintainer's to say.
 
 - **A suppressed gun is drawn and named as one on the kit card** (2026-10-17; the maintainer on the Team & kit screen of a quiet mission: "quiet missions
