@@ -171,6 +171,9 @@
     .reticle.aim { width: 16px; height: 16px; border-width: 1px; opacity: 0.7; box-shadow: none; pointer-events: none; }   /* the auto-aim snap ring: smaller and quieter than the interaction ring; under the aim model overlay.ts sizes it to the cone and brightens it as the aim settles */
     .reticle.aim.k-free { border-color: rgba(var(--h-hi-rgb),0.85); }   /* …round the bare cursor's point when nothing is near (aim model only) */
     .reticle.aim.trail { opacity: 0.55; }   /* aimweight.ts: the circle is where the gun points — quieter while it is still swinging onto the cursor */
+    .reticle.aim.shut, .aimwish.gun.shut { border-style: dashed; opacity: 0.95 !important; }   /* player.ts gunShut: his gun cannot get a round out from here (a wall holds it down, or its muzzle is past a jamb) — the ring is broken and barred; while the ring is busy on a thing Space acts on, the gun's own small circle is */
+    .reticle.aim.shut::after, .aimwish.gun.shut::after { content: ''; position: absolute; left: 50%; top: 50%; width: 2px; height: 130%; min-height: 20px; background: rgba(var(--h-hi-rgb),0.95); border-radius: 1px; transform: translate(-50%, -50%) rotate(45deg); box-shadow: 0 0 3px rgba(0,0,0,0.9); }
+    .reticle.aim.k-guard.shut::after { background: #ff8070; }
     .aimwish { position: absolute; width: 5px; height: 5px; border-radius: 50%; transform: translate(-50%, -50%); background: #ffe9a8; opacity: 0.85; pointer-events: none; }   /* …and a dot on what the reticle snapped to (a light, a man) until it gets there */
     .aimwish.k-guard { background: #ff8070; }
     .aimwish.gun { width: 12px; height: 12px; background: none; border: 1px solid rgba(var(--h-hi-rgb),0.85); opacity: 0.55; }   /* …or the circle itself, small, while the ring is busy on something Space acts on */
@@ -613,11 +616,14 @@
     .plan .pd { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-opacity: 0.6; stroke-dasharray: 2 5; } .plan .now .pd { stroke-width: 4; stroke-opacity: 1; stroke-dasharray: none; }
     .plan .pk { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.2; } .plan .pkt { font: 700 10px/1 var(--h-mono); fill: currentColor; }
     .plan .w-charge .pk, .plan .w-wall .pk { fill: currentColor; } .plan .w-charge .pkt, .plan .w-wall .pkt { fill: var(--h-base); }
+    /* (PLAN.keyLit) the key's cap on every door that waits on it: dark while its men are on their way or the press would not send it, lit in their colour once they stand there and it would */
+    .plan .lit .pk { fill: rgba(6,6,6,0.92); stroke-opacity: 0.5; transition: fill 0.25s linear, stroke-opacity 0.25s linear; } .plan .lit .pkt { fill: currentColor; fill-opacity: 0.55; transition: fill 0.25s linear; }
+    .plan .lit.live .pk { fill: currentColor; stroke-opacity: 1; } .plan .lit.live .pkt { fill: var(--h-base); fill-opacity: 1; }
     .plan .laid .pp { stroke-width: 2.5; stroke-dasharray: 0.1 13; } .plan .laid .pd { stroke-width: 3; stroke-opacity: 0.9; stroke-dasharray: 5 5; } .plan .laid .pw { stroke-dasharray: 2 3; }   /* (a plan laid for the word, game/planlay.ts: nobody moving yet — wider gaps than a way being walked) */
     body.attract .plan, body.blinded .plan { display: none; }
     /* closer than ever (game/close.ts → ui/overlay.ts drawClose): the windows round a man near Sam, on the floor — open = a thin outline, the one he stands in
        filled and bright, a shut one amber and broken; each with what it gives in a few words just outside its arc */
-    .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); }
+    .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); } .trajroll { stroke: rgba(var(--h-hi-rgb),0.6); } .trajtick { fill: none; stroke: rgba(var(--h-hi-rgb),0.7); }   /* player.ts throwRest: the ring is where the can comes to rest; the tick is its first touch, the dots the floor it rolls over */
     .closewin path { fill: rgba(var(--h-edge),0.06); stroke: rgba(var(--h-edge),0.55); stroke-width: 1.2; stroke-linejoin: round; }
     .closewin path.cw-in { fill: rgba(var(--h-edge),0.2); stroke: rgba(var(--h-hi-rgb),0.98); stroke-width: 2; }
     .closewin path.cw-shut { fill: none; stroke: rgba(255,190,120,0.5); stroke-dasharray: 3 4; }

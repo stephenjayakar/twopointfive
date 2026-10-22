@@ -37,6 +37,7 @@ const BONES = ['hips', 'spine2', 'chest', 'neck', 'head', 'upperArmL', 'upperArm
 export async function world(on: boolean, seed = 95) {
   Math.random = mulberry32(seed);
   const W: any = await standUp(); const g = W.game, input = W.input;
+  WALLSNAP.leanGun = 0;   // (the step-out's share for the rifle has its own card, leangun-check.ts, which sets it after this: these lines ask for the eyes' 0.6 m)
   WALLSNAP.on = on; AIM.player.level = on ? 1 : 0;   // (with the switch on the gun is carried LEVEL along the cursor's heading, as the page ships it; off = the frozen stand as every older probe has it)
   g.playerInvisible = true; g.godMode = true; g.aiEnabled = false; W.cam.yaw = 0; W.cam.rebuild();
   for (let i = 0; i < 5; i++) W.step(DT);
