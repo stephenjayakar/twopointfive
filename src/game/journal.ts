@@ -208,7 +208,7 @@ export interface SessionFile {
   sensors: SensorJournal;
   /** [f, digest] after the update of frame f */
   digests: [number, GameDigest][];
-  meta: { seconds: number; stopped: string; bytesPerFrame?: number; userAgent?: string };
+  meta: { seconds: number; stopped: string; bytesPerFrame?: number; userAgent?: string; /** finished between two frames: the closing digest is of the state after the HUD's write of the last one (a replay of a page recording makes that write before it compares) */ between?: boolean };
 }
 export type JournalState = 'idle' | 'pending' | 'recording';
 type View = { clientWidth: number; clientHeight: number; width: number; height: number };
@@ -505,6 +505,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.GLASS as { bothFaces?: boolean } | undefined)?.bothFaces === undefined) GLASS.bothFaces = false;   // (…and from before a pane's crash was heard from both its faces: only from the point the round met it)
   if (!k.tables.DOORTHROW) DOORTHROW.on = false;   // (a file from before a door driven into a man moved him carries no such table: its leaves stop against whoever stands in their swing, as they were recorded)
   if ((k.tables.DOORTHROW as { soft?: boolean } | undefined)?.soft === undefined) DOORTHROW.soft = false;   // (… or from the first cut of it, where any driven leaf short of a boot folded him: a later key of the same table)
+  if ((k.tables.DOORTHROW as { jolt?: boolean } | undefined)?.jolt === undefined) DOORTHROW.jolt = false;   // (… or from before the startled man got the shared start: the flinch, a later key of the same table)
   if (!k.tables.DOORSHOT) DOORSHOT.on = false;   // (a file from before gunfire took a door leaf apart carries no such table: its doors hang whatever is fired into them, as they were recorded)
   if ((k.tables.DOORSHOT as { toll?: number } | undefined)?.toll === undefined) DOORSHOT.toll = 1;   // (… or from before a leaf stood twice plasterboard's toll: its doors go on drywall's own count, a later key of the same table)
   if (!k.tables.WALLPEN) WALLPEN.on = false;   // (a file from before rounds went through thin walls and doors — it carries no such table: its rounds stop in the first built thing they meet, as they were recorded)
@@ -553,17 +554,31 @@ export class SessionRecorder {
     if (this.state === 'pending') { this.state = 'idle'; this.why = why; return null; }
     if (this.state !== 'recording') return null;
     if (!immediate && !this.inUpdate) { this.stopAfterNext ??= why; return null; }
-    return this.finish(why);
+    return this.finish(why, !this.inUpdate);
   }
-  private finish(why: string): SessionFile {
+  /** The game is about to be changed BETWEEN frames by something no recording files — a checkpoint loaded off a card or the panel, a restart off a card, a
+   *  show or a mission's quit staging the encounter again (savestate.ts Checkpoints.load / loadMem, Game.restartEncounter): the recording ends HERE, whole to
+   *  its last frame, with `why` as how it stopped — a tape that ran on across the change replayed as a break of the game's own at that frame — and a new one
+   *  is asked for with the same options, so one F10 still covers the session, as one file per stretch (it begins at the next update that may: canStart).
+   *  Inside an update nothing is done: what changes the game there came from that frame's own input, which is on the tape. A request still pending stays.
+   *  Its check: tools/qa/journalcut-check.ts. */
+  cut(why: string): void {
+    if (this.state !== 'recording' || this.inUpdate) return;
+    const opts = this.opts; this.finish(why, true); this.request(opts);
+  }
+  /** `between`: finished between two frames (cut(), an immediate stop with no update running). The closing digest taken there is, on a page, the state AFTER
+   *  the HUD's one write of the last frame (hudExpireBubbles below), not the one straight after its update: the file says so (`meta.between`) and a replay
+   *  makes that write before it compares that digest (tools/qa/replay.ts). */
+  private finish(why: string, between = false): SessionFile {
     const g = this.g; this.stopAfterNext = null;
     if (this.inUpdate) { g.sensors.endFrame(); this.frame++; this.inUpdate = false; }   // (stopped from inside a frame — a hook, the cap: that frame is in the file whole)
     if (!this.digests.length || this.digests[this.digests.length - 1][0] !== this.frame - 1) this.digests.push([this.frame - 1, digestGame(g, true)]);
+    else between = false;   // (the last frame was a beat: its digest is the one straight after the update)
     const sensors = g.sensors.journal(); g.sensors.live();
     if (this.die) { if (Math.random === this.die && this.die.sys) Math.random = this.die.sys; this.die = null; }   // (the die it displaced goes back — unless somebody has since put their own in, which stays)
     const seconds = this.dts.reduce((s, [n, dt]) => s + n * dt, 0);
     const file: SessionFile = { v: JOURNAL_VERSION, game: 'twopointsix', recordedAt: this.startedAt, commit: this.opts.commit, note: this.opts.note, seed: this.seed, level: levelFingerprint(g), save: this.save!, env: this.env!, knobs: this.knobs!,
-      frames: this.frame, dt: this.dts, view: this.views, cam: this.cams, input: this.inputs, sensors, digests: this.digests, meta: { seconds: +seconds.toFixed(2), stopped: why, userAgent: this.opts.userAgent } };
+      frames: this.frame, dt: this.dts, view: this.views, cam: this.cams, input: this.inputs, sensors, digests: this.digests, meta: { seconds: +seconds.toFixed(2), stopped: why, userAgent: this.opts.userAgent, ...(between ? { between: true } : {}) } };
     this.state = 'idle'; this.why = why; this.last = file;
     try { this.onStop?.(file, why); } catch { /* the page's problem */ }
     return file;
