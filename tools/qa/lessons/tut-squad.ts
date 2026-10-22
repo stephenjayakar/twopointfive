@@ -3,10 +3,24 @@
 // state is READ to time a press (the men on their marks, a room clear), never the lesson's.
 import type { Bot } from '../lesson-run';
 import { CMDRING } from '../../../src/game/cmdring';
+import { installSkyMeter } from '../hour-lib.ts';
 
 export const query = '?roomclear=1&squad4';
-/** the nest's gun and the hall's two can drop a man who walks the street as a script does: the run is about the steps, so rounds do not drop him */
-export const mode = { god: true };
+/** the nest's gun and the hall's two can drop a man who walks the street as a script does: the run is about the steps, so rounds do not drop him.
+ *  `moon`: the post is played at night under a clear sky (its row's own), and the street is open to it: the page's meter reads about 55 of 100 on a man
+ *  standing in it, the headless estimate of the same man 0. So the player's meter has the moon on every run here, --plain too */
+export const mode = { god: true, moon: true };
+/** …AND SO HAS EVERYBODY ELSE'S (tools/qa/hour-lib.ts installSkyMeter: the game's own light hooks answered as the page's meter would for direct light).
+ *  Headless, the light on a man an AI eye looks at leaves the moon out too, so every fight in the open was measured in the dark: the squad never saw the
+ *  nest's gunner come up, the men at the gates were dropped late, and none of what a first play on the page met was in a run (the gunner shot before the
+ *  frag, the last two men walking round by the west gate). TUT_SQUAD_SKY=0 = the estimate as every other tool has it */
+const SKY = process.env.TUT_SQUAD_SKY !== '0';
+function sky(B: Bot) { const g = B.g as { __sky?: { reads: number } }; if (SKY && !g.__sky) g.__sky = installSkyMeter(B.g); }
+const skyReads = (B: Bot) => (B.g as { __sky?: { reads: number } }).__sky?.reads ?? 0;
+/** THE HALL'S STREET WINDOW IS GLASS, and the frozen stand stands the glass's parts at off (a pane is a wall to a round there: host/standup.ts): the
+ *  window's step cannot be done on it. The runner raises the parts for this run alone; the page's stand has them. (GLASSPARTS and not GLASSFX: that
+ *  word is read by game/glass.ts as the module loads, which is before any runner can raise it) */
+export const raises = { GLASSPARTS: 'on' };
 /** its steps are a tutorial mission's (game/rails.ts): TPS_RAILS=1 on the frozen stand, or the shipped stand */
 export const needs = 'rails';
 
@@ -82,10 +96,15 @@ function shootMen(B: Bot, room: string, secs: number) {
   const near = () => { const me = B.pos(); return R?.defenders.filter(x => x.state !== 'dead').sort((a, b) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0]; };
   while (!cleared(B, room) && B.t() - t0 < secs) { const m = near(); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, [m.char.pos[0], 1.25, m.char.pos[2]]); B.wait(0.2); }
 }
+/** how many of the nest's two are down by a round that was not the player's own (character id 1: consts.ts PLAYER_ID) */
+const nestTaken = (B: Bot) => (rooms(B).find(r => r.def.id === 'nest') as unknown as { defenders: { state: string; killerId: number }[] } | undefined)?.defenders.filter(x => x.state === 'dead' && x.killerId !== 1).length ?? 0;
 const STORE_IN = [10.6, 0, 18.8], ALLEY = [23.6, 0, 8.6], END = [22.5, 0, 17.5], BLOCKS = [26.6, 0, 16.1], NEST = [32.0, 1.0, 13.8];
 const SHOP_VIEW = [18.3, 0, 12.3], HALL_SIDE = [34.3, 0, 19.75], WINDOW = [30.9, 0, 16.2], BAGS = [30.2, 0, 13.8], MOUTH = [25.0, 0, 11.6];
 
-export const steps: Record<string, (B: Bot) => void> = {
+/** seconds the player stands at the blocks before he throws (TUT_SQUAD_FRAG_WAIT: a hand that reads the card, finds the key and aims; 0 = at once) */
+const FRAG_WAIT = Number(process.env.TUT_SQUAD_FRAG_WAIT ?? 0) || 0;
+
+const RAW: Record<string, (B: Bot) => void> = {
   // the two easy rooms: the squad's key on a door, and again
   'stack-hut': B => { B.go([8.6, 0, 13.4], 20); stack(B, 'guardhut'); B.until(() => set(B), 30); },
   'go-hut': B => { goIn(B, 'guardhut', 'guardhut'); },
@@ -120,11 +139,17 @@ export const steps: Record<string, (B: Bot) => void> = {
   wall: B => { B.go(END, 60); },
   gun: B => { if (!B.until(() => raised(B, 'done:gun') || cleared(B, 'nest'), 8)) B.fail("the gun's first burst never came (no 'done:gun')"); B.go([24.3, 0, 16.6], 10); shootAt(B, NEST, () => cleared(B, 'nest'), 6); },
   blocks: B => { B.go(BLOCKS, 20, { sprint: true }); },
-  frag: B => { if (B.g.player.frags < 1) B.fail('no frag to throw'); B.press('Digit5', 10); B.click(1, NEST); B.wait(3.5); B.press('Digit2', 10); },
+  frag: B => {
+    if (B.g.player.frags < 1) B.fail('no frag to throw'); if (FRAG_WAIT > 0) B.wait(FRAG_WAIT);
+    // (the lesson is HIS throw: a nest the squad has already shot a man out of is the lesson gone by, whatever the step's test says)
+    { const n = nestTaken(B); if (n) B.fail(`the squad shot ${n} of the nest's two before the frag was thrown (${FRAG_WAIT} s at the blocks)`); }
+    B.press('Digit5', 10); B.click(1, NEST); B.wait(3.5); B.press('Digit2', 10);
+  },
   // (a man left behind the bags cannot be hit from the blocks: round the nest's open side, as a player would walk)
   nest: B => { shootMen(B, 'nest', 8); if (!cleared(B, 'nest')) { B.go([33.6, 0, 16.2], 30, { stop: () => cleared(B, 'nest') }); shootMen(B, 'nest', 25); } if (!B.until(() => cleared(B, 'nest'), 30)) B.fail('the nest was not taken'); },
   // the hall: its men shot through a street window from outside
-  window: B => { B.wait(1.5);
+  window: B => {
+    if (SKY) B.say(`  the sky on every meter: ${skyReads(B)} readings so far`); B.wait(1.5);
     if (!B.go(WINDOW, 60, { stop: () => cleared(B, 'hall') })) B.say(`  did not reach the window: at ${B.pos().map(v => v.toFixed(1))}`); shootMen(B, 'hall', 40); if (!B.until(() => cleared(B, 'hall'), 60)) B.fail('the hall was not cleared'); },
   // the hall's door: round to the passage, square on to the leaf, and the boot (a frame that held it is kicked again)
   door: B => { B.go(HALL_SIDE, 60, { noDoors: true }); },
@@ -166,13 +191,18 @@ export const steps: Record<string, (B: Bot) => void> = {
     }
   },
 };
+export const steps: Record<string, (B: Bot) => void> = Object.fromEntries(Object.entries(RAW).map(([id, f]) => [id, (B: Bot) => { sky(B); f(B); }]));
 /** lines inside a live fight: the squad's rifles can end the room while the line is up, or before it comes up (each such test also passes on the room taken).
  *  'door' and 'lock' are among them for ONE reason: the hall's last man, his mate shot through the window, can drop his rifle and run by the game's own
- *  rule (runner.ts), and he opens his own locked door on the way out, so the door's lines go by with nobody kicking it (seen on one die of twelve) */
-export const fightOk = ['go-store', 'out', 'side', 'round', 'shop', 'gun', 'blocks', 'frag', 'nest', 'window', 'door', 'lock', 'front', 'back', 'hold'];
+ *  rule (runner.ts), and he opens his own locked door on the way out, so the door's lines go by with nobody kicking it (seen on one die of twelve).
+ *  'frag' IS NOT ONE OF THEM: the gun is the script's until the frag is thrown, so a nest that falls before that step's throw is the squad taking the
+ *  lesson out of the player's hand (the first play on the page), and the run fails on it */
+export const fightOk = ['go-store', 'out', 'side', 'round', 'shop', 'gun', 'blocks', 'nest', 'window', 'door', 'lock', 'front', 'back', 'hold'];
 /** a room clear's own end: every defender down ('structure taken') */
 export const ended = (g: { roomClear: { end: string } }) => g.roomClear.end === 'taken';
-export function finish(B: Bot) { if (!B.until(() => ended(B.g), 30)) B.fail(`the mission did not end (${B.g.roomClear.end || 'still running'})`); }
+export function finish(B: Bot) {
+  if (!B.until(() => ended(B.g), 30)) B.fail(`the mission did not end (${B.g.roomClear.end || 'still running'})`);
+}
 /** the four authored checkpoints, each written as its step came up (the page's stand: a squad's run is kept in memory there, and nowhere on the frozen one) */
 function checkpoints(B: Bot) {
   const wrote = ['the street', 'the wall', 'the hall', 'the bags'].filter(n => B.g.saves.log.some((l: { what: string }) => l.what.includes(`: ${n} (in memory)`)));

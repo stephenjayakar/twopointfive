@@ -335,8 +335,11 @@ export class Player {
   /** slotsetup.ts: the setup of the gun in his hands is up (its digit pressed again) — which gun, the game time it opened or was last used, and the last
    *  update that saw it; null = not up. Never saved: a load is a fresh Player with nothing up */
   setup: { gun: 'pistol' | 'rifle'; t: number; seen: number } | null = null;
-  /** slotsetup.ts: the gun its hook last found in his hands (null: none) and the game time it first did — a gun just drawn does not open its setup */
-  setupHand: { gun: 'pistol' | 'rifle' | null; t: number } | null = null;
+  /** slotsetup.ts: the gun its hook last found in his hands (null: none) and the game time it first did — a gun just drawn does not open its setup,
+   *  unless his own press of its digit is what drew it (`own`: the game time that draw is over; SLOTSETUP.draw) */
+  setupHand: { gun: 'pistol' | 'rifle' | null; t: number; own?: number } | null = null;
+  /** slotsetup.ts: the last press of a gun's digit that the setup did not take (the press that draws that gun), and when */
+  setupKey: { gun: 'pistol' | 'rifle'; t: number } | null = null;
   /** the rifle left his hands when he went down (combat.ts hitPlayer dropped it as an item): nothing to draw slung on the body */
   rifleGone = false;
   /** KIT ANIMATIONS (kitanim.ts): what was in his right hand last frame by the game's rules (undefined = not watched yet: a fresh Player — a restart, a loaded
