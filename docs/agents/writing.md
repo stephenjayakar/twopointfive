@@ -37,9 +37,9 @@ participle, and don't tack a verbless phrase on the end. A plain "when", "if" or
 | Before | After |
 | --- | --- |
 | Where the sound was he stops, his back to you. | He'll check out the sound and then stop, with his back to you. |
-| Stacked on a door, they wait for your word. | Once they're stacked on a door, they'll wait until you tell them to go. |
+| Stacked on a door, they wait for your word. | Once they're stacked on a door, they'll wait until you say go. |
 | Kept down, the same key opens a ring with the rest of them. | Hold the same key down to open a ring with the rest of the orders. |
-| There they wait for your word. | They'll wait there until you tell them to go. |
+| There they wait for your word. | They'll wait there until you say go. |
 
 **2. Talk to "you", and you press the key.** The player is the one doing things. A key never does anything by itself, and a key
 followed by a colon is not a sentence. (The pairs show a key as the player sees it; in a level file it is the key's code,
@@ -63,7 +63,8 @@ Say what to do as an order. Don't write sayings in the timeless present: they re
 | A whistle brings one man (a card's title) | Whistle to lure a guard |
 
 **4. Join ideas with words.** Use and, then, so, because, with, to. A colon, a dash or a bare comma between two ideas makes the
-reader work out how they connect.
+reader work out how they connect. Pick the joining word for what the two ideas have to do with each other: "so" and "because" are for a
+real reason, and two things that are simply both true are two sentences.
 
 | Before | After |
 | --- | --- |
@@ -81,11 +82,16 @@ reader work out how they connect.
 | mains box, fuse box | breaker box |
 | round, towards, whilst | around, toward, while |
 | a man, men, a man of theirs | an enemy, a guard, enemies |
-| your word, the word | "tell them to go", "your go" |
+| your word, the word | "say go", "until you say go" |
 | out cold (as a verb) | knock him out |
-| the store, the lamp | the storeroom, the light |
+| the lamp, the right button | the light, right-click |
+| covered, held (a doorway) | an enemy is watching it |
 
-Call a thing what the rest of the screen calls it. If the menu row says "bang", the line that teaches it says "bang". The end card's
+One word for one thing, every time. The squad "stacks up on" a door and goes when you "say go". You "pick" a pair or a row. It is
+"your squad", an enemy is "watching" a doorway, and the enemy at a machine gun is "the gunner". A line that stands alone on the screen
+names who it is about ("the gunner", "your partner"), because a bare "him" has nothing to point at.
+
+Call a thing what the rest of the screen calls it. If the menu row says "Fall in", the line that teaches it says "fall in". The end card's
 verdict words and its "defenders" and "hostages" rows are settled (dialogue.md) and are not changed by this guide.
 
 **6. Short is good, clipped is not.** Cut ideas, never the small words (the, a, to, you, press). "Show, not tell" means fewer

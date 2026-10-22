@@ -18,7 +18,7 @@ export const SCENARIOS: ScenarioEntry[] = [
   // the office versions of what the levels below were made for, kept beside them
   { id: 'night-breach', title: 'Night breach', kind: 'nightbreach', squad: 2, group: 'raids',
     place: 'The office · the break room', lean: 'either', defenders: 3,
-    blurb: 'Three enemies hold a break room with four doors. Stack your pair up on one door and send them in, or come through another door while they go.' },
+    blurb: 'Three enemies hold a break room with four doors. Stack your pair up on one door and send them in while you come through another.' },
   { id: 'room-clear-pair', title: 'Room clear', kind: 'roomclear', squad: 2,
     place: 'The office · the east wing, room by room', lean: 'loud', defenders: 5,
     blurb: 'Clear four held rooms in the office one at a time with the order menu and the door tools. This is the careful way to play.' },
