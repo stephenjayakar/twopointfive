@@ -70,13 +70,14 @@
 //          · SCALE (the game's clock in the inner half, 2) · ONLY=inner|outer · WAY=1|2 (one way in of the inner half, and no still page) · REAL=1 · KITVIEW_BREAK=1 (the outer half opened `?oldfigure` and still held to the view: it must FAIL) · STANDIN_BREAK=1 (a canvas put into the column while the slow child is waited for, as a stand-in's would be: that row must FAIL, on the canvas alone)
 //          · KITMOMENT_BREAK=1 (the inner half, one way in, the page opened `&stillkit` — the director never plays — and still held to the loop: it must FAIL)
 //          · KITPACE_BREAK=1 (the inner half, one way in, up to the pacer rows, fed a pacer that draws every frame and never moves: it must FAIL)
+//          · KITLEAF_BREAK=1 (the inner half, the SECOND way in — where every round of a burst through the doorway meets the leaf: the picture told not to mend a leaf under fire, `__kitview.leafMend` false — the two rows of THE LEAF UNDER FIRE must FAIL)
 //          · KITCUT_BREAK=1 (the inner half, one way in, pre-emption switched off — a pick waits its turn, as it did — and still held to the pick rows, every kit demo's own among them: it must FAIL)
 //          · ROWS=home (the inner half's HOME rows alone, stepped at 1/60 s and at 0.05 s) · KITHOME_BREAK=1 (those rows with the HOME rule switched off — `__kitview.home` false: it must FAIL)
 //          · KITNOBLOCK=plant (the outer half's 'a mission with no block' row on a PLANTED case even where a level without a block exists: NOBLOCK below)
 // PASS / FAIL lines; exit 0 = all pass, 1 = a FAIL or a page error, 2 = the script died.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', WARM = +(process.env.WARM || 6), REAL = process.env.REAL === '1', SCALE = +(process.env.SCALE || 2);
-const BREAK = process.env.KITVIEW_BREAK === '1', MBREAK = process.env.KITMOMENT_BREAK === '1', CBREAK = process.env.KITCUT_BREAK === '1', PBREAK = process.env.KITPACE_BREAK === '1', ONLY = BREAK ? 'outer' : MBREAK || CBREAK || PBREAK ? 'inner' : process.env.ONLY || '', WAY = +(process.env.WAY || (MBREAK || CBREAK || PBREAK ? 1 : 0));
+const BREAK = process.env.KITVIEW_BREAK === '1', MBREAK = process.env.KITMOMENT_BREAK === '1', CBREAK = process.env.KITCUT_BREAK === '1', PBREAK = process.env.KITPACE_BREAK === '1', LBREAK = process.env.KITLEAF_BREAK === '1', ONLY = BREAK ? 'outer' : MBREAK || CBREAK || PBREAK || LBREAK ? 'inner' : process.env.ONLY || '', WAY = +(process.env.WAY || (MBREAK || CBREAK || PBREAK ? 1 : LBREAK ? 2 : 0));
 const HBREAK = process.env.KITHOME_BREAK === '1', HOME = HBREAK || process.env.ROWS === 'home';
 const SW = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage|Failed to load resource|Failed to fetch/;
@@ -728,6 +729,41 @@ async function inner(browser, way, name, slots0, stillAsked) {
     const settled2 = async (when, frames = 2400) => { const r = await page.evaluate(n => new Promise(res => { const k = window.__kitview; let c = 0;
         const f = () => { c++; if (k.settled) res({ ok: true, c, st: window.__kvStand() }); else if (c >= n) res({ ok: false, c, st: window.__kvStand(), at: `${k.state}${k.beat ? ' ' + k.beat.field + '/' + k.beat.phase + ' by member ' + k.beat.i : ''}, dissolve '${k.dissolve.phase}', ${k.restarts} restart(s)` }); else requestAnimationFrame(f); }; requestAnimationFrame(f); }), frames);
       if (!r.ok) check(false, `WAITED FOR: the picture settled ${when}`, `not in ${r.c} frame(s) of the page — it stood at: ${r.at}`); return r.st; };   // (read on the very frame it is settled, as settle() above is: read a round trip later, the loop's next turn of the tile had begun on a loaded machine — a puppet set, a man a step off his slot)
+
+    // ---- THE LEAF UNDER FIRE (10-22: a whole run of the second way in was 26 rows red, and nobody had run it since the rule came — a wooden leaf goes in
+    // pieces on the count of rounds that opens plasterboard (doorblast.ts DOORSHOT), the gun's row puts rounds into the leaf — every one of a burst through
+    // the doorway, the leaf held open beside it; some of one fired from off his slot at the first way in —, the count ran on from one row to the next, and
+    // the leaf they splintered was never hung again: every row that works a leaf was refused from then on, the gun's row in its place).
+    // The count is the check's to plant (which round meets the leaf is the way in's): half a round short of the whole, once a burst has gone
+    { await tell({ kv: 'sel', who: 0, field: 'weapon' }); await settle();
+      if (LBREAK) { console.log('KITLEAF_BREAK=1: the picture is told not to mend a leaf under fire (`__kitview.leafMend` false: its count of rounds runs on from row to row and a splintered leaf is left in pieces, as before 10-22) and is still held to these rows (this run must FAIL)'); await page.evaluate(() => { window.__kitview.leafMend = false; }); }
+      const toll = await page.evaluate(() => { const R = window.__knobs.registry(), W = (R.WALLS && R.WALLS.tough) || {}; return { n: Math.min(W.drywall ?? 6, W.wood ?? 9) * Math.max(0.1, R.DOORSHOT ? R.DOORSHOT.toll : 1), on: !!(R.DOORSHOT && R.DOORSHOT.on) }; });
+      const s0 = await read(), n0 = await lastN();
+      const a = await page.evaluate(({ n, toll }) => new Promise(res => { const k = window.__kitview, g = window.__game; let c = 0, at = 0, seen = null, off = 0;
+        const f = () => { c++; const d = g.doors.byName(k.door), b = k.beat; if (d && d.off) off++;
+          if (!at && d && !d.off && b && b.n > n && b.field === 'weapon' && b.i === 0 && b.marks.includes('burst')) { d.shot = toll - 0.5; at = b.n; }   // (his burst gone: the leaf is said to have met all but half a round of its count)
+          if (at && !seen && b && b.n > at) seen = { n: b.n, field: b.field, i: b.i, shot: d.shot };   // (the frame the next row is first seen on: its rounds are a second off)
+          if (seen && (!b || b.n > seen.n)) return res({ at, seen, off, c });
+          if (c > 3600) return res({ at, seen, off, c, where: `${k.state}${b ? ' ' + b.field + '/' + b.phase : ''}, dissolve '${k.dissolve.phase}'` });
+          requestAnimationFrame(f); }; requestAnimationFrame(f); }), { n: n0, toll: toll.n }), s1 = await read();
+      check(toll.on && !!a.at && !!a.seen && a.seen.field === 'weapon' && a.seen.shot === 0 && a.off === 0 && !s1.doorOff && s1.rehangs === s0.rehangs && s1.restarts === s0.restarts,
+        '(KITLEAF_BREAK turns this red) THE LEAF\'S COUNT OF ROUNDS does not run on from one gun\'s row to the next: all but half a round of it after his burst, and the next row begins on a leaf that has met none — it is never in pieces, whatever that row\'s burst meets (no restart, nothing hung again)',
+        `the leaf goes in pieces at ${r2(toll.n)} (the rule ${toll.on ? 'on' : 'OFF IN THIS PAGE'}) · ${a.at ? `set to ${r2(toll.n - 0.5)} after the burst of beat #${a.at}` : 'NO BURST OF HIS WAS SEEN'} · ${a.seen ? `as beat #${a.seen.n} (${a.seen.field} by member ${a.seen.i}) began: ${r2(a.seen.shot)}` : `THE NEXT ROW NEVER BEGAN${a.where ? ' — it stood at: ' + a.where : ''}`} · in pieces on ${a.off} frame(s) to that row's end · rehangs ${s0.rehangs} → ${s1.rehangs} · restarts ${s0.restarts} → ${s1.restarts}`);
+      // …and ONE ROW WORTH THE WHOLE COUNT: the leaf half a round short as a gun's row BEGINS, for up to four rows — where a round of his meets the leaf
+      // (the second way in: all of them) it goes in pieces under a row that says it leaves nothing; where none does there is nothing to try at this way in
+      await page.evaluate(() => { window.__kitview.leafMend = true; }); await tell({ kv: 'sel', who: 0, field: 'weapon' }); await settle(); if (LBREAK) await page.evaluate(() => { window.__kitview.leafMend = false; });   // (under the break: the first row's leaf, if it went, hung again — this row is tried on a whole one)
+      const s2 = await read(), n2 = await lastN();
+      const b = await page.evaluate(({ n, toll }) => new Promise(res => { const k = window.__kitview, g = window.__game; let c = 0, last = n, rows = 0, offN = 0;
+        const f = () => { c++; const d = g.doors.byName(k.door), b = k.beat;
+          if (!offN && d && d.off) offN = b ? b.n : last;
+          if (!offN && d && b && b.n > last && b.field === 'weapon' && b.i === 0) { if (rows >= 4) return res({ rows, offN: 0, next: null, off: false, c }); d.shot = toll - 0.5; last = b.n; rows++; }
+          if (offN && b && b.n > offN && k.dissolve.phase === '') return res({ rows, offN, next: { n: b.n, field: b.field, i: b.i }, off: !!d.off, c });
+          if (c > 4800) return res({ rows, offN, next: null, off: !!(d && d.off), c, where: `${k.state}${b ? ' ' + b.field + '/' + b.phase : ''}, dissolve '${k.dissolve.phase}'` });
+          requestAnimationFrame(f); }; requestAnimationFrame(f); }), { n: n2, toll: toll.n }), s3 = await read();
+      check(b.offN ? !!b.next && b.next.field === 'weapon' && !b.off && !s3.doorOff && s3.rehangs === s2.rehangs + 1 && s3.dz.n === s2.dz.n + 1 && s3.restarts === s2.restarts : b.rows >= 4 && !b.where && !s3.doorOff && s3.rehangs === s2.rehangs && s3.restarts === s2.restarts,
+        '(KITLEAF_BREAK turns this red on the second way in) …and A LEAF SHOT TO PIECES under the gun\'s own row: left as it lies to the row\'s end, then HUNG AGAIN under the dissolve as the next row begins — one rehang, no restart, the leaf there for the rows that work it (a way in where no round of his meets the leaf: four rows of it, the leaf whole)',
+        `${b.offN ? `half a round short as each of ${b.rows} row(s) began · in pieces under beat #${b.offN} · the next beat ${b.next ? `#${b.next.n}: ${b.next.field} by member ${b.next.i}` : `NEVER BEGAN in ${b.c} frame(s) — it stood at: ${b.where}`} · the leaf ${s3.doorOff ? 'STILL IN PIECES' : 'hung'}` : `half a round short as each of ${b.rows} row(s) began and NO ROUND OF HIS MET THE LEAF at this way in${b.where ? ' — it stood at: ' + b.where : ''}: nothing to try here`} · rehangs ${s2.rehangs} → ${s3.rehangs} · dissolves ${s2.dz.n} → ${s3.dz.n} · restarts ${s2.restarts} → ${s3.restarts}`);
+      await page.evaluate(() => { window.__kitview.leafMend = true; }); }
 
     // ---- SAM'S OWN DOOR CHARGE: your card opened, the highlight to its tile (a tile at 0 plays too)
     { await tell({ kv: 'sel', who: 0, field: 'weapon' }); await settle();
