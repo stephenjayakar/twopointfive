@@ -120,8 +120,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   // shots, which their fights were measured on
   // the rifle's setup, opened and shut with nothing picked: its rows are locked on these two lines (a row's digit must do nothing), and Tab is the way out.
   // Where the gun has no setup (the switch off) both lines go by with nothing asked
-  setup: B => { once.add('setup'); B.press('Digit2', 12); if (!B.g.player.setup) B.fail('the rifle\'s key pressed again did not open its setup'); },
-  tab: B => { once.add('tab');
+  setup: B => { once.add('setup'); if (!setupOn()) return; B.press('Digit2', 12); if (!B.g.player.setup) B.fail('the rifle\'s key pressed again did not open its setup'); },
+  tab: B => { once.add('tab'); if (!setupOn()) return;
     const rf = B.g.player.rifle, was = `${rf.mode} ${rf.attachment}`; B.press('Digit1', 8); B.press('Digit2', 8);
     if (!B.g.player.setup || `${rf.mode} ${rf.attachment}` !== was) B.fail(`a row's digit was taken on the line that only opens the setup (${was} → ${rf.mode} ${rf.attachment}, the setup ${B.g.player.setup ? 'up' : 'shut'})`);
     B.press('Tab', 12); if (B.g.player.setup) B.fail('Tab did not close the rifle\'s setup'); },
