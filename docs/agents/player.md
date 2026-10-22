@@ -844,8 +844,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   gun his head, the 40 mm his chest), a show's scripted target (`puppet.target`: feet + 1.25 m, as authored). KNOWN: the reticle's own line test
   is from 1.3 m over Sam's feet to the man's chest, not from the muzzle, so a low man behind cover can be ringed from a crouch and the round still
   go into the cover — older than this change. And not this change's: an AI man firing at a foe who is crouched aims 0.8 m over his feet
-  (`guards.ts`, `foeCrouched`), which is at or over the crown of a man who is ducked AND blinded (0.78 to 0.87 m measured here) — read from the
-  code, not run. On the page's stand `aim-unit`, `aim-player` and `aimlevel` are red at the build head this was cut from, the same lines with and
+  (`guards.ts`, `foeCrouched`) — NOT a fault, corrected 10-22: the squad's rig ran it and 0.8 m enters such a man in every sample; only a
+  blinded, flinching defender at exactly half crouch is aimed at as if standing. On the page's stand `aim-unit`, `aim-player` and `aimlevel` are red at the build head this was cut from, the same lines with and
   without this change. NEVER SEEN ON A GPU: how the gun coming down onto a low man looks, and whether the laser and the ring agree, is unseen.
 - **A gun's key again opens its setup; the kit column is one box** (`src/game/slotsetup.ts`, table `SLOTSETUP {on, secs 1.5, stay false, settle 0.35}`;
   `src/ui/handbox.ts`; `src/host/keymap.ts KEYMAP.setFree`; 10-22. The maintainer: "repeating the current selection open up a menu for configuring
@@ -1045,3 +1045,39 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   after the kick ends at 58), a takedown (the game's own start on a parked man), recordings. `THROWBACK_BREAK=1` fails 4. The throw is made through the keys (the can's digit, a click); the kick and
   the pick are begun by the game's own starts a few frames in. NOT in the check: the wand, hands at work and the keypad (the same
   line; read, not run). Headless only; nobody has played it.
+- **A rifle beside a jamb fires, or the ring says it cannot** (`WALLSNAP.leanGun`, wallsnap.ts + player.ts `stackLean`; `GUNWALL.mark`, gunwall.ts +
+  player.ts `gunShut`; the maintainer, 10-22, off the solo tutorial mission: "shooting the sentry doesn't work since the rifle is on the right hand side
+  and the bullets are hitting the doorframe?"). WHAT IT WAS, reproduced headless on that mission's gate and on the conference doorway: stacked on a wall,
+  the cursor round its end steps him out `leanAlong` 0.6 m — measured for his eyes. The rifle rides a hand's width to his right, so round an end on
+  that side his head was clear, the reticle had the man, and the rifle as drawn lay IN the jamb: every round ended at its own muzzle (combat.ts
+  `armThrough`), silently. Free beside the same jamb the gun came down (the gun-at-a-wall rule above) and a click filed 'no room to bring the gun up' —
+  a `g.msg` line, and the page draws none of those but the radio's (overlay.ts). TWO SWITCHES. (1) `leanGun` (m, 0 = off): while a step-out is wanted
+  he steps the least further, by `leanGunStep` up to `leanGun`, from which the rifle as it would lie there and the first `leanClearM` of its round's
+  way are clear (gunwall.ts `gunClearFrom`: the worked-out carriage and 0.1 m outside it, with the arm); `WallHold.leanMore` eases up at the
+  step-out's speed and is kept until he is back in. On the gate: 0.78 m, one round, the sentry down. An end on his off side: 0.6 m, to the
+  centimetre. A sim rule: 0 in the module and on the frozen stand (`TPS_LEANGUN=1`), `LEAN_GUN_M` 0.42 in the page (`?noleangun`), a recording
+  without the key replays at 0 (journal.ts). (2) `mark` (the overlay's; nothing in the game reads it): the aim ring is dashed and barred (`.shut`,
+  index.html) while no round of his can get out — the gun held down by a wall, the stack with the wall he is on in its line, or the gun up with a
+  panel between shoulder and muzzle (a sheet his rounds go through is not one); while the ring is busy on a thing Space acts on (a door in reach) the
+  gun's own small circle wears it. Not through a step-out. Off in the module and on the frozen stand, on in the page (`?nogunmark`). CHECK
+  `probes.ts leangun` (tools/qa/leangun-check.ts, 8 lines, both stands; `LEANGUN_BREAK=1` fails gun-side): gun side / off side / the mark stepped
+  out, stacked and free along the doorway (17 places: barred exactly where a click sends no round into the room) / the stands and the journal. The
+  old `wallsnap` family pins `leanGun` 0 (its lines ask for 0.6 m) and passes on both stands; `lesson-run tut-solo` passes. One level's doorway and
+  one gate, no seeds (nothing here draws from the die). NOT MENDED: free beside a jamb the gun still comes down — he has to step; the ring now shows
+  it. The pistol's line of `gunShut` is not run by the check. If no place within `leanGun` is clear he steps 0.6 m as before, and the ring is barred.
+  `probes.ts gunwall` is red on the page's stand at the build head this was cut from (its standUp line), the same with and without this change.
+  `tools/qa/hudmarks-page.cjs` reads the ring's classes on the real page (software adapter). NEVER SEEN ON A GPU: the bar, the longer step-out.
+- **The throw preview's ring is where the can comes to rest** (`THROWBACK.restMark`, throwback.ts; player.ts `throwRest`, frag.ts `restOfThrow`; the
+  maintainer, 10-22: "hard to toss the smoke to precisely hit the gap … maybe we just need to update the UI to show roughly where it'll end up").
+  WHAT IT WAS: the arc and its ring ended at the can's FIRST TOUCH (throwables.ts `solve`), which is where the cursor is; the can then bounces and
+  rolls on — measured on the corridor's open floor 4.8 to 5.6 m further for a smoke or a stun and 3.7 to 4.0 m for a frag, 1.0 to 1.6 m off a wall
+  or through a doorway. Now the ring is on the point the item's own model leaves it at (frag.ts `rollOn`, the AI's rest guess, replayed on a body
+  that was never spawned: a smoke until it lies still, a stun until its fuse from the first touch, a frag until its fuse from the hand; loose
+  furniture as it stands), a small tick stays on the first touch and the floor between is dotted. The overlay's alone: no throw flies differently,
+  nothing is written, nothing drawn from the die; reckoned again when the arc changes and four times a second under one held still. Off in the
+  module and on the frozen stand, on in the page (`?norestmark` = the ring on the first touch). The launcher's arc has no such mark. CHECK
+  `probes.ts throwrest` (tools/qa/throwrest-check.ts, both stands; `THROWREST_BREAK=1` fails 3): 15 throws (three kinds × three ranges, a wall, a
+  doorway), the mark read on the click's frame against where that can really lay still or went off: 0.00 m on all 15. One level, no seeds. THE CURSOR
+  IS STILL THE FIRST TOUCH: the ring now sits metres past it, and aiming the throw so the can RESTS under the cursor would be a rule of the game
+  (every throw, the scripted ones too) — asked of the maintainer, not built. `tools/qa/hudmarks-page.cjs` reads the ring, the tick and the roll on
+  the real page (software adapter). NEVER SEEN ON A GPU: the tick, the dots, the ring's place on the screen.

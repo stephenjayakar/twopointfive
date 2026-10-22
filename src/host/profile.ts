@@ -45,7 +45,7 @@ import { COVERFIRE } from '../game/coverfire';
 import { LIGHTWALL } from '../game/lighting';
 import { IRLIGHT } from '../game/irlight';
 import { AIRDUST } from '../game/airDust';
-import { WALLSNAP } from '../game/wallsnap';
+import { WALLSNAP, LEAN_GUN_M } from '../game/wallsnap';
 import { HANDSLOT } from '../game/handslot';
 import { HANDRING } from '../game/handring';
 import { THROWBACK } from '../game/throwback';
@@ -246,11 +246,13 @@ export function pageSwitches(q: URLSearchParams): void {
   WALLSNAP.on = !q.has('nowallsnap');   // back to the wall, the feel pass (game/wallsnap.ts): the take on one eased clock with stepping feet and a settle, the way off keeping his momentum, and Q with the rifle in hand STACKS on the wall (low ready; the cursor round an open end steps him out): ON in the page; ?nowallsnap = the hold as it was
   WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as its key does (while this is on the hold has no key on the page's board: host/keymap.ts qFree) — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
   WALLSNAP.voice = q.get('wallvoice') !== '0';   // …heard (wallsnap.ts `voice`): his back landing on a wall and his stepping off it each have a sound, the player's ears only; ?wallvoice=0 = the faint scuff alone, as it was
+  WALLSNAP.leanGun = q.has('noleangun') ? 0 : LEAN_GUN_M;   // …and the step-out round an end goes as far as the RIFLE needs (wallsnap.ts `leanGun`): round an end on his gun side the eyes' 0.6 m left the rifle in the jamb and its rounds in the wood; ?noleangun = 0.6 m whichever side, as it was
   WALLSNAP.slow = q.get('wallslow') !== '0';   // …and unhurried (wallsnap.ts `slow`): the take runs twice its seconds and the pose comes on and lets go at half its rate; ?wallslow=0 = the take as it was
   RELOAD.lastMag = !q.has('nolastmag');   // the last magazine, seated and not racked, can still be reloaded (game/autoreload.ts): ON in the page; ?nolastmag = that gun never fires again, as it was
   HANDSLOT.on = q.get('handslot') !== '0';   // empty hands are a slot (game/handslot.ts): its key puts away whatever is up and is never the way back, a digit draws; on the page's board it is backtick, the debugger is on backslash and E is spare (host/keymap.ts SLOT) — ON in the page; ?handslot=0 = E puts away and draws, as it was
   HANDRING.early = q.get('handring') !== '0';   // …and a digit pressed inside the hold is the ring's wedge at once, never the weapon slot (handring.ts `early`)
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
+  THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
@@ -393,6 +395,7 @@ export function pageSwitches(q: URLSearchParams): void {
   MUSIC.byLevel = !q.has('shuffle');   // the level's own music (audio/setlist.ts): each level plays the two pieces written down for it, the first when play begins and the second after MUSIC.minutes, and the theme is the menu's alone — ON in the page; ?shuffle = the pieces dealt from a shuffled bag, as they were. The listener's ears only
   MUSIC.theirs = !q.has('teamnerves');   // the score's tension is the opposition's nerves (game/guards.ts tension): in live play a teammate counts only while he is in a fight of his own, not for the wariness a blast or a noise left on him under an order (a show's own men read as ever) — ON in the page; ?teamnerves = every man on the floor counts, as it was. The listener's ears only
   LIVED.on = livedOfQuery(q);   // lived-in rooms (scene/lived.ts): the furniture, clutter, floor pieces and lamps that make each room of a level its own place, as the office's rooms are — ON in the page, raised before the level loads; ?lived=0 = every level as it was before there were any
+  GUNWALL.mark = !q.has('nogunmark');   // the aim ring wears a bar while his gun cannot get a round out (game/gunwall.ts `mark`, player.ts gunShut; the overlay's): ?nogunmark = the plain ring, as it was
   GUNWALL.on = !q.has('nogunwall');   // a raised gun comes to the low ready at a wall, a jamb or a leaf inside its reach (game/gunwall.ts): ON in the page; ?nogunwall = guns stay up and are drawn through the wall, as they were
   ROOMCLEAR.fresh = q.get('freshstart') !== '0';   // a room clear that names no placement seed deals a fresh one each visit, off the game's own die's seed (game/roomclear.ts): ON in the page; ?freshstart=0 = the authored placement on every load, as before (a row that pins its seed — the Training lessons — is never touched)
   SAMESTART.on = q.get('samestart') !== '0';   // every mission starts the same way on every try (game/samestart.ts): a room clear's defenders on the level's own marks each load and each restart, a rescue's roamers and clock as written, a quiet mission the first of its lists — ON in the page; ?samestart=0 = every staging dealt as before (the line above, the restart's next placement, the quiet deal off the die)
@@ -466,11 +469,14 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
   'WALLSNAP.voice': 'TPS_WALLVOICE=1',
   'WALLSNAP.slow': 'TPS_WALLSLOW=1',
+  'WALLSNAP.leanGun': 'TPS_LEANGUN=1',
   'HANDSLOT.on': 'TPS_HANDSLOT=1',
   'HANDRING.on': 'TPS_HANDRING=1',
   'HANDRING.early': 'TPS_HANDRING=1',
   'THROWBACK.on': 'TPS_THROWBACK=1',
+  'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
   'GUNWALL.on': 'TPS_GUNWALL=1',
+  'GUNWALL.mark': 'none: the overlay reads it, nothing headless does',
   'REARWATCH.on': 'TPS_REARWATCH=1',
   'STACKLINE.on': 'TPS_STACKLINE=1',
   'LANES.on': 'TPS_LANES=1',
