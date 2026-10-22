@@ -16,6 +16,7 @@
 import { runLesson } from './lesson-run';
 
 process.env.TPS_RAILS ??= '1';   // (the level has a lesson only on the frame: off on the frozen stand unless raised)
+process.env.TPS_OWNCHARGE ??= '1';   // (and its door offers the charge alone, `rails.rows`: his own charges are off on the frozen stand unless raised)
 
 const argv = process.argv.slice(2), flag = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined; };
 const seeds = (flag('--seeds') ?? '1,2').split(',').map(Number).filter(n => Number.isFinite(n));

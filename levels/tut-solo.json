@@ -574,7 +574,7 @@
     },
     "lesson": {
       "title": "Alone, loud",
-      "rails": { "allow": ["move", "camera", "zoom"] },
+      "rails": { "allow": ["move", "camera", "zoom"], "rows": ["charge", "drive"] },
       "steps": [
         { "id": "move", "line": "[W] [A] [S] [D]: get behind the van", "done": { "is": "near", "at": [2.7, 0, 14.4], "r": 1.1 }, "at": [2.7, 0, 14.4], "cue": "road" },
         { "id": "sprint", "line": "Hold [Shift]: sprint to the wall", "done": { "is": "all", "of": [{ "is": "near", "at": [8.35, 0, 16.2], "r": 1.6 }, { "is": "flag", "flag": "sprint" }] }, "at": [8.35, 0, 16.2], "allow": ["sprint"] },
