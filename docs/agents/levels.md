@@ -78,7 +78,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   if it were not there (gwotSkin.ts `bare`), so a look file with the switch off is the old look file too; the exporter refuses a kept thing that names a lived box (fixtures, the
   breaker, beacons) and a lived thing standing IN the dressing; the level editor, its lint and its swing deal load the whole file (`lived: true`), as the probes that hold a file against
   its generator do. QA: `bun run tools/qa/lived-check.ts [level … | path.json] [--sheet] [--base <rev>|none]` (none named = every level that carries a lived thing): the file without its
-  lived things is the base's (`BASE_REVS` in the tool) key for key and loads to the same Level; with them every authored point (starts, marks, pods, waypoints, deals) keeps its floor, every mark's aim line
+  lived things is the base's (the level's own row in `LEVEL_BASE` in the tool, else `BASE_REVS`) key for key and loads to the same Level; with them every authored point (starts, marks, pods, waypoints, deals) keeps its floor, every mark's aim line
   stays open, nothing solid within 1.1 m of a door's line, no floor cut off from the spawn, no walk between authored points more than 30 % + 1.5 m longer; `--sheet` = what each room got.
 
 <!-- was CLAUDE.md lines 2303–2306 -->
@@ -351,3 +351,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pad is not seen, the 3 m round a start is measured through walls, and it is a third reading of "what is drawn flat" beside `tools/levels/flatLayers.ts`
   and the look skin's `floorAt`. What a patch
   does to the picture has NEVER been seen on a GPU here, and no level's ground was changed by this: each noted floor is its owner's to mend or to answer.
+- **The furniture check holds each level to its own base** (2026-10-22; `tools/qa/lived-check.ts`: a tool, no switch, no game code, no level file touched; A
+  CHANGED BAR in a check). It held every level to ONE base, the first of `BASE_REVS` that HEAD descends from: a level changed on purpose moved every level's
+  bar (six times in a day, each a tutorial mission's), and two levels changed side by side left two newest bases that are siblings, so their join was red on
+  the level the taken one did not carry until a third base, the join itself, was written in by hand. NOW `LEVEL_BASE` is a row a level (its note, its line,
+  an empty line; a new row goes in by the level's name, so two branches that each move a row join without a hand): a level changed on purpose in its own part
+  moves ITS row to the commit that carries the change, and no other level's bar moves. Rows today: `tut-pair`, `tut-plan`, `tut-quiet`, `tut-sky`,
+  `tut-squad`; the solo mission takes one with its next change. A look twin with no row is held to the plain level's. `BASE_REVS` is CLOSED and is the base
+  of every level with no row (it stays a list only so that branches cut before the rows came, which still put a commit in front of it, join without a hand).
+  A row's commit must be in the checkout's own history and must carry the level's file, and a level in HEAD that has furniture, no row, and is not in
+  `BASE_REVS`' commit is red (it was "a new level, nothing to hold it to", and with the list closed nothing would ever have taken it in). `--base <rev>` still
+  holds every level named to one commit. WHAT OF A LESSON NEEDS NO ROW MOVE (`LESSON_FREE`, read from today's file): its words (`title`; a step's `line`,
+  `setupLine`, `ringLine`, `blowLine`, `menuLine`, `pageLine`, `planLine`, `noTap`, its card `explain`, its `after`) and its lists of what the frame offers (a
+  step's `allow` / `deny`; the frame's `allow`, `orders`, `rows`): furniture cannot touch one and none names a place; `lesson-check`'s plain run reads them
+  against the floor and `lesson-gate <level>` plays them (BY NAME: its plain run is Training's). STILL HELD (`LESSON_HELD`): the steps' number and order, a
+  step's `id`, its `done` test and `hold`, every place (`at`, `atMan`, `toward`, `eye`, the frame's `sky`), `cue`, `checkpoint`, `fog`, `onWay`, `respawn`,
+  `lasers`. A lesson's key in NEITHER table is a red line: whoever adds a key says which. GONE: the rule that a lesson with another number of steps was read
+  as today's whole (every mark and test of a re-cut lesson went unheld); a re-cut moves the level's own row. THE CHECK'S BREAK PATH (it had none), each on
+  today's files in memory: `LIVED_BREAK=1` moves each level's first own box and stands its first lived solid in its first door: red on line 1 and on the
+  doors' line of all 39 levels (166 lines); `LIVED_BREAK=lesson` changes every held key of each lesson's first marked step and of its frame: red on the 9
+  levels with a lesson and a lived thing (it shows the held keys are held TOGETHER, not each); `LIVED_BREAK=words` changes every key of `LESSON_FREE` on every
+  step: 429 green, and red as soon as a key is struck from the table (tried: `menuLine`, `noTap`). CHECKED on build 881: 429 lines green on both stands (the
+  tool reads files and floors; the stand does not reach it); the six tutorial levels by name green, the ledger's with 21 words and lists off its row's commit.
+  NOT DONE: `BASE_REVS` made one commit (after the branches that still write to it have joined); a base per level for the levels that have no row.

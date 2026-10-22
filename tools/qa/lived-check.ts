@@ -2,8 +2,10 @@
 // LIVED-IN ROOMS' CHECK (src/scene/lived.ts) — `bun run tools/qa/lived-check.ts [levels/x.json | x …] [--sheet] [--base <rev> | --base none] [--quiet]`
 // The furniture that makes a room its own place is REAL (it blocks feet, rounds and sight), so it can break a level the way paint cannot. Per level file:
 //   1. OFF IS THE LEVEL AS IT WAS: the file with its lived things taken out (boxes in group 'lived' / 'lived.<room>', props / lights / switchables whose id
-//      starts 'lived.') equals the file at <rev> key for key, and loads to the same Level with the switch off (default rev = BASE_REVS below, the last
-//      step that changed a level's own part on purpose; `--base none` once that rev no longer speaks for the level; a level that rev does not have is not asked);
+//      starts 'lived.') equals the file at <rev> key for key, and loads to the same Level with the switch off (default rev = THE LEVEL'S OWN BASE, its row
+//      in LEVEL_BASE below, the last step that changed that level's own part on purpose; a level with no row: BASE_REVS; `--base <rev>` holds every level
+//      named to that one; `--base none` once no rev speaks for the level; a level its rev does not have is not asked). A lesson's WORDS and LISTS are read
+//      from today's file (LESSON_FREE below says which keys, and why those);
 //   2. EVERY AUTHORED POINT STILL STANDS: each floor point the level's scenarios, routes, plans, mission, chokepoints, civilians and marks name (team starts,
 //      defenders' marks, pods, waypoints, deals, lesson spots) is free in the nav grid if it was, and no lived solid or prop is within a body's width of it;
 //   3. NOBODY'S AIM IS WALLED: a mark's `pos` → `aimAt` line that was open is still open;
@@ -15,6 +17,10 @@
 // `--sheet` prints, per `lived.<room>` group, what the room got (solids, drawn-only clutter, floor pieces, props, lights, paints) and which of the level's
 // own named rooms got nothing. Lines are `- PASS — …` / `- FAIL — …` (tools/qa/gate.sh counts them); exit 0 = all pass, 1 = a check failed, 2 = bad usage.
 // With no file named: every level that carries a lived thing (none = NO VERDICT, exit 0).
+// THE CHECK'S OWN BREAK PATH (in memory, no file is written): `LIVED_BREAK=1` moves each level's first own box half a metre and stands its first lived solid in
+// its first door — the damage furniture work can do — and must be red on line 1 and on the doors' line of every level; `LIVED_BREAK=lesson` changes every HELD
+// key of each lesson's first marked step and of its frame (LESSON_HELD) and must be red on every level with a lesson; `LIVED_BREAK=words` changes EVERY key
+// of the LESSON_FREE table on every step, the lesson and its frame, and must stay green: what a lesson's owner may change with no new base is that table.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -26,7 +32,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 // 6b2c35201: the crossing's east wall foot cut at the yard gate's frame (one box more; no other level's own part moved).
 // fcae91f17: the snatch's footstep plan covers the whole world, so the gate hut's zone is read.
 // 9fb5b67a1: the join of those two steps. The check holds EVERY level against ONE base, and each of the two holds only its own level's change, so the base
-// is the first commit that carries both; a later step that changes a level's own part on purpose goes in front of it the same way.
+// is the first commit that carries both; a later step that changes a level's own part on purpose goes in front of it the same way (UNTIL 10-22: see CLOSED, below).
 // 150575169: the glasshouse's back wall foot cut at the back door's frame (the same: one box more, no other level's own part moved).
 // 113556864: the join that first carries the glasshouse's step with the two before it (one base for every level, as above).
 // 105ddc056: the join that carries the long hall's two files without the ballistic shield (its issue block is empty; no other level's own part moved).
@@ -42,9 +48,53 @@ const ROOT = resolve(import.meta.dir, '../..');
 // d13650f85: the plan mission's barrier post moved and two drums put in a corner (levels/tut-plan.json alone; a sibling of the join above).
 // 3046a115e: a join's base again. c069ca16f and d13650f85 are siblings (the first holds the reworded levels/tut-quiet.json and not the plan mission's moved
 //   post, the second the other way round); this join is the first commit that holds both. No level's own part moved in the join itself.
+// THIS LIST IS CLOSED (10-22): nothing more goes in front of it. One base for all meant that a level changed on purpose moved EVERY level's bar, and that two
+// levels changed side by side on two branches left two newest bases that are siblings: on their join the one taken does not carry the other's change, and
+// that level was red whatever the order. It is the base of every level with no row of its own below, and only that. (It is still a list, read newest first,
+// because branches cut before the rows came still put a commit in front of it, and those lines must join without a hand; once they have it is one commit.)
 const BASE_REVS = ['3046a115e', 'c069ca16f', 'd13650f85', '0d3a18078', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
-/** a lesson step's keys that are words on the objective row: read from today's file, never held to the base */
-const STEP_WORDS = ['line', 'setupLine', 'ringLine'];
+/** A LEVEL'S OWN BASE: the commit that level's own part (everything but its lived things) was last changed in ON PURPOSE. A level changed on purpose in its own
+ *  part (a box, a door, a mark, a route, a held key of its lesson, a lesson re-cut) moves ITS row to the commit that carries the change — a commit of the
+ *  checkout's own history whose file is the level as meant — and says over the row what changed; no other level's bar moves. A row is its note, its line and
+ *  an empty line, and a new row goes in by the level's name: two branches that each move a row then join without a hand (two that ADD a row at one place
+ *  still meet). A look twin (`<name>-gwot.json`) with no row of its own is held to the plain level's. A level with no row is held to BASE_REVS above, as it
+ *  was; a level BASE_REVS does not carry must have one. */
+const LEVEL_BASE: Record<string, string> = {
+  // the pair's order on the far man is a deed with his name (a step's `done`)
+  'tut-pair.json': 'ebd4d4869',
+
+  // the plan mission's barrier post moved and two drums put in a corner
+  'tut-plan.json': 'd13650f85',
+
+  // the ledger's own level, rebuilt whole (its words and rows since are free: LESSON_FREE)
+  'tut-quiet.json': 'cb936797b',
+
+  // the tunnel station, played with no fog of war (its lesson's rails.fog)
+  'tut-sky.json': 'f3ef62b01',
+
+  // the squad mission's own level, as it came
+  'tut-squad.json': '5f8c416e6',
+};
+/** WHAT OF A LESSON ITS OWNER MAY CHANGE WITH NO NEW BASE (scenarios.lesson; scene/scenarios.ts LessonData, LessonStep, RailsData): its WORDS and its LISTS,
+ *  read from today's file and never held to the base. Decided 10-22, when four re-bases in a day were each a lesson's words:
+ *   · words the player reads — the lesson's `title`; a step's `line` and the lines that stand in for it (`setupLine`, `ringLine`, `blowLine`, `menuLine`,
+ *     `pageLine`, `planLine`), its `noTap` words, its card (`explain`) and its line once the order is given (`after`: the line, the word's line, the orders it waits on);
+ *   · lists of what the frame offers — a step's `allow` / `deny`, the frame's `allow`, `orders` and `rows`.
+ *  Furniture cannot touch one and none names a place. What holds them instead: tools/qa/lesson-check.ts (plain run: every Training and tutorial level) reads
+ *  the block against the floor, and tools/qa/lesson-gate.ts <level> plays the mission through (its plain run is Training's levels: a tutorial mission is
+ *  gated BY NAME, so an owner who changes a list runs it on his level). */
+const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'planLine', 'noTap', 'explain', 'after', 'allow', 'deny'],
+  rails: ['allow', 'orders', 'rows'] };
+/** STILL HELD, each a one-line move of the level's own row: the steps themselves (their number and order), a step's `id`, its `done` test and `hold`, every PLACE
+ *  (`at`, `atMan`, `toward`, `eye`, the frame's `sky`) and what the frame does (`cue`, `checkpoint`, `fog`, `onWay`, `respawn`, `lasers`): a mark moved to
+ *  make room for a desk is the damage this check is for. A key of a lesson that is in NEITHER table is a red line until it is put in one: the choice is made
+ *  in the open, by whoever adds the key. */
+const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay'], rails: ['respawn', 'fog', 'sky', 'lasers'] };
+/** today's value for every free key, the base's for every other, in today's key order (the loaded Levels are compared as text); `n` counts the free keys that moved */
+function readFree(now: any, then: any, keys: string[], n: { v: number }): any { const t: any = {};
+  for (const k of Object.keys(now)) { if (keys.includes(k)) { t[k] = now[k]; if (JSON.stringify(now[k]) !== JSON.stringify(then[k])) n.v++; } else if (k in then) t[k] = then[k]; }
+  for (const k of Object.keys(then)) if (!(k in t)) { if (keys.includes(k)) n.v++; else t[k] = then[k]; }
+  return t; }
 const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
 /** roomclear.ts propGap, repeated (this tool imports nothing of src/game): the floor distance from a point to a prop's yawed footprint */
 function propGap(p: { home: [number, number, number]; hx: number; hz: number }, at: number[]): number {
@@ -62,13 +112,18 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
   const { StaticCollision, NavGrid } = await import(`${ROOT}/src/scene/collision.ts`);
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 
-  const flags = new Set<string>(), files: string[] = []; let base = BASE_REV;
+  const flags = new Set<string>(), files: string[] = []; let named: string | undefined;   // (`named`: a base given with --base, for every level asked; else each level's own)
   for (let i = 0; i < argv.length; i++) { const a = argv[i];
-    if (a === '--base') base = argv[++i] ?? ''; else if (a.startsWith('--')) flags.add(a); else files.push(a); }
+    if (a === '--base') named = argv[++i] ?? ''; else if (a.startsWith('--')) flags.add(a); else files.push(a); }
   for (const f of flags) if (!['--sheet', '--quiet'].includes(f)) { console.error(`lived-check: unknown flag ${f} (--sheet, --quiet, --base <rev|none>)`); process.exit(2); }
   const sheet = flags.has('--sheet'), quiet = flags.has('--quiet');
-  if (!base) { console.error('lived-check: --base wants a revision, or none'); process.exit(2); }
-  if (base !== 'none' && spawnSync('git', ['-C', ROOT, 'cat-file', '-e', `${base}^{commit}`]).status !== 0) { console.error(`lived-check: no commit ${base} in this checkout (a shallow clone? --base <rev> or --base none)`); process.exit(2); }   // (a base that is not there used to read as 'a new level' and pass)
+  if (named === '') { console.error('lived-check: --base wants a revision, or none'); process.exit(2); }
+  const allBase = named ?? '', BREAK = process.env.LIVED_BREAK ?? '';
+  if (!['', '1', 'lesson', 'words'].includes(BREAK)) { console.error(`lived-check: LIVED_BREAK=${BREAK}? (1, lesson, words)`); process.exit(2); }
+  { const one = allBase || BASE_REV, dup = (['lesson', 'step', 'rails'] as const).flatMap(k => LESSON_FREE[k].filter(x => LESSON_HELD[k].includes(x)).map(x => `${k}.${x}`));
+    if (one !== 'none' && spawnSync('git', ['-C', ROOT, 'cat-file', '-e', `${one}^{commit}`]).status !== 0) { console.error(`lived-check: no commit ${one} in this checkout (a shallow clone? --base <rev> or --base none)`); process.exit(2); }   // (a base that is not there used to read as 'a new level' and pass)
+    if (dup.length) { console.error(`lived-check: ${dup.join(', ')} in both LESSON_FREE and LESSON_HELD`); process.exit(2); } }
+  const rowOf = (name: string): string | undefined => LEVEL_BASE[name] ?? LEVEL_BASE[name.replace(/-gwot\.json$/, '.json')];   // (a look twin with no row of its own: the plain level's)
   const fileOf = (a: string) => { if (a.endsWith('.json') && existsSync(resolve(a))) return resolve(a); const n = basename(a).replace(/\.json$/, ''); return resolve(ROOT, 'levels', n + '.json'); };   // (a path to a file anywhere, or a level's name)
   const hasLived = (d: any) => d.boxes.some((b: any) => isLived(b.group)) || [d.props, d.lights, d.switchables].some((l: any[]) => (l ?? []).some(x => isLived(x.id)));
   let list = files.map(fileOf);
@@ -82,10 +137,31 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
   const warn = (s: string) => console.log(`  warn — ${s}`);
   const f2 = (x: number) => x.toFixed(2), at = (p: number[]) => `(${f2(p[0])}, ${f2(p[p.length - 1])})`;
 
+  for (const k of Object.keys(LEVEL_BASE)) if (!existsSync(resolve(ROOT, 'levels', k))) fail(`LEVEL_BASE has a row for '${k}', which is no file under levels/ (a level renamed, or a name mistyped: the row holds nothing)`);
   for (const file of list) {
     const name = basename(file);
     if (!existsSync(file)) { fail(`${name}: no such level file`); continue; }
     const text = readFileSync(file, 'utf8'), data: any = parseLevelData(text);
+    // (the level's own base, unless one was named for all)
+    const rowed = !allBase && !!rowOf(name), base = allBase || rowOf(name) || BASE_REV;
+    if (BREAK) { const L = data.scenarios?.lesson, tail = ' (said another way)';   // (the check's own break path: today's level damaged in memory, as the header says)
+      const mut = (v: any): any => typeof v === 'string' ? v + tail : Array.isArray(v) ? (v.length && v.every(x => typeof x === 'number') ? [v[0] + 0.5, ...v.slice(1)] : [...v, 'x'])
+        : v && typeof v === 'object' ? { ...v, x: 1 } : typeof v === 'number' ? v + 1 : typeof v === 'boolean' ? !v : tail;
+      if (BREAK === '1') { const own = data.boxes.find((b: any) => !isLived(b.group)), d = (data.doors ?? [])[0];
+        const sofa = data.boxes.find((b: any) => isLived(b.group) && !(b.flags ?? []).includes('NoShadow') && b.c[1] + b.h[1] > 0.5 && b.c[1] - b.h[1] < 1);
+        if (own) own.c = [own.c[0] + 0.5, own.c[1], own.c[2]];
+        if (sofa && d) sofa.c = [d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, sofa.c[1], d.hinge[1] + Math.sin(d.closedDir) * d.width / 2]; }
+      // (every held key the first marked step and the frame carry, the step's id apart: a step under another id is held whole whatever the tables say)
+      if (BREAK === 'lesson' && L) { const s = L.steps.find((x: any) => Array.isArray(x.at)) ?? L.steps[0]; let did = 0;
+        for (const k of LESSON_HELD.step) if (k !== 'id' && k in s) { s[k] = mut(s[k]); did++; }
+        if (L.rails) for (const k of LESSON_HELD.rails) if (k in L.rails) { L.rails[k] = mut(L.rails[k]); did++; }
+        if (!did) s.hold = 1; }
+      // (every free key, there or not, on every step, the lesson and its frame
+      //  — each as the loader will take it: a word, a card, a list; a free key of another shape wants its line in `as`)
+      if (BREAK === 'words' && L) { const word = (v: any) => (v ?? 'Words') + tail, list = (v: any) => [...(v ?? []), 'x'];
+        const as: Record<string, (v: any) => any> = { explain: v => ({ ...v, text: word(v?.text) }), after: v => ({ ...v, line: word(v?.line) }), allow: list, deny: list, orders: list, rows: list };
+        const all = (o: any, keys: string[]) => { for (const k of keys) o[k] = (as[k] ?? word)(o[k]); };
+        all(L, LESSON_FREE.lesson); for (const s of L.steps) all(s, LESSON_FREE.step); if (L.rails) all(L.rails, LESSON_FREE.rails); } }
     console.log(`\n${name}`);
 
     // ---- 1. off = the level as it was
@@ -93,9 +169,22 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
       lights: data.lights.filter((l: any) => !isLived(l.id)), switchables: data.switchables.filter((s: any) => !isLived(s.id)) };
     const nLived = { boxes: data.boxes.length - bare.boxes.length, props: data.props.length - bare.props.length, lights: data.lights.length - bare.lights.length,
       switchables: data.switchables.length - bare.switchables.length };
-    if (base && base !== 'none') {
+    // (a ROW's commit must be in this checkout's own history: one that is only on a branch beside it passes on one machine and nowhere else)
+    let held = base !== 'none';
+    if (held && rowed && spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', base, 'HEAD']).status !== 0) { held = false;
+      fail(`${name}: its row's commit ${base} is not in this checkout's history (LEVEL_BASE names a commit of a branch not joined, or the clone is shallow)`); }
+    // (a lesson's key that is in neither table: nobody has said whether its owner may change it)
+    { const L = data.scenarios?.lesson, un = new Set<string>(), ask = (o: any, k: 'lesson' | 'step' | 'rails') => { for (const x of Object.keys(o ?? {})) if (!LESSON_FREE[k].includes(x) && !LESSON_HELD[k].includes(x)) un.add(`${k}.${x}`); };
+      if (L) { ask(L, 'lesson'); for (const s of L.steps ?? []) ask(s, 'step'); ask(L.rails, 'rails'); }
+      if (un.size) fail(`${name}: its lesson has ${un.size > 1 ? 'keys' : 'a key'} in neither LESSON_FREE nor LESSON_HELD (${[...un].join(', ')}): say in tools/qa/lived-check.ts whether a lesson's owner may change ${un.size > 1 ? 'them' : 'it'} with no new base`); }
+    if (held) {
       const g = spawnSync('git', ['-C', ROOT, 'show', `${base}:levels/${name}`], { encoding: 'utf8', maxBuffer: 1 << 28 });
-      if (g.status !== 0) console.log(`  (not in ${base}: a new level, nothing to hold it to)`);
+      // (a level its base does not carry: a ROW that names such a commit holds nothing and is red; so is a level in HEAD that has furniture and no row — since
+      //  BASE_REVS closed no later base will ever take it in. A file not yet in a commit has nothing to be held to, as before)
+      if (g.status !== 0) { const kept = spawnSync('git', ['-C', ROOT, 'cat-file', '-e', `HEAD:levels/${name}`]).status === 0;
+        if (rowed) fail(`${name}: its row's commit ${base} has no levels/${name} (a commit from before the level, or from before a rename: the row holds nothing)`);
+        else if (kept && !allBase && (nLived.boxes || nLived.props || nLived.lights || nLived.switchables)) fail(`${name}: it carries lived things and has nothing to be held to — ${base} has no such level and LEVEL_BASE no row for it: give it one, the commit that carries the level as meant`);
+        else console.log(`  (not in ${base}: a new level, nothing to hold it to)`); }
       else { const out: string[] = [];
         // (a lesson step's LINE is words on the objective row, reworded since the base by other work — 'drags it' became 'takes hold of him' when bodies came to be carried —
         //  and nothing furniture can touch: the base's lines are read as today's. So are the lines a step shows under a newer rule in place of that one —
@@ -116,14 +205,12 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
         // (a base from after the rooms came carries lived things of its own: taken out the same way, so the base's own part is what today's is held to — nothing changes for a bare base)
         was.boxes = was.boxes.filter((x: any) => !isLived(x.group)); was.props = was.props.filter((x: any) => !isLived(x.id));
         was.lights = was.lights.filter((x: any) => !isLived(x.id)); was.switchables = was.switchables.filter((x: any) => !isLived(x.id));
-        if (Array.isArray(ls) && Array.isArray(ws) && ls.length === ws.length) ws.forEach((s: any, i: number) => { if (s.id !== ls[i].id) return; const t: any = {};   // (today's words in today's key order — the loaded Levels are compared as text — the base's value for every other key)
-          for (const k of Object.keys(ls[i])) { if (STEP_WORDS.includes(k)) t[k] = ls[i][k]; else if (k in s) t[k] = s[k]; }
-          for (const k of Object.keys(s)) if (!(k in t) && !STEP_WORDS.includes(k)) t[k] = s[k];
-          ws[i] = t; });
-        // (… and a lesson RE-CUT since the base — Training 4's burst and fight made one step — has another list of steps altogether. The steps are the lesson's own to
-        //  change and tools/qa/lesson-gate.ts holds them; furniture cannot add or drop one. The base's list is read as today's and said so; every spot a step names
-        //  is still asked in 2 below, against the floor as it is now)
-        else if (Array.isArray(ls) && Array.isArray(ws)) { console.log(`  (the lesson was re-cut since ${base}: ${ws.length} steps then, ${ls.length} now — its steps are not held to the base)`); was.scenarios.lesson.steps = JSON.parse(JSON.stringify(ls)); }
+        const moved = { v: 0 }, LN = data.scenarios?.lesson, LW = was.scenarios?.lesson;   // (LESSON_FREE: today's words and lists, the base's value for every other key)
+        if (Array.isArray(ls) && Array.isArray(ws) && ls.length === ws.length) ws.forEach((s: any, i: number) => { if (s.id === ls[i].id) ws[i] = readFree(ls[i], s, LESSON_FREE.step, moved); });
+        // (a lesson RE-CUT since the base — a step added or dropped — is no longer read as today's: with a base of its own a level's re-cut moves that level's
+        //  row and no other bar, and while it was read as today's every mark and test of such a lesson went unheld. Until 10-22 it was, and said so)
+        if (LN && LW) { if (LN.rails && LW.rails) LW.rails = readFree(LN.rails, LW.rails, LESSON_FREE.rails, moved); was.scenarios.lesson = readFree(LN, LW, LESSON_FREE.lesson, moved);
+          if (moved.v) console.log(`  (${moved.v} of the lesson's words and lists are not ${base}'s: the lesson's own, read from today's file and not held to the base)`); }
         // (THE GEAR SCREEN'S BLOCK — scenarios.kitView, src/host/kitView.ts: the start page's picture of the team at the way in, per level. Picture only: no rule of
         //  the game reads it, a bespoke set's boxes are never in the level, and furniture cannot change a key of it — so a level given its picture, or a picture
         //  re-tuned, is not 'a step that changed the level's own part' and takes NO new base revision (levels are staged on branches side by side: each would have

@@ -34,8 +34,12 @@ did not.
 - **Know what your change does to saves and tapes.** Adding, moving or removing a box, door, route, light or prop moves the
   level's fingerprint: old checkpoints and recordings of that level are refused. Marks, waits and room order alone do not.
   Say which in the write-up.
-- **A level changed on purpose in its own part** puts its commit at the front of `BASE_REVS` in `tools/qa/lived-check.ts`,
-  or `lived-check` reads your change as furniture damage.
+- **A level changed on purpose in its own part** (a box, a door, a mark, a route, a held key of its lesson) moves ITS OWN row
+  in `LEVEL_BASE` in `tools/qa/lived-check.ts` to the commit that carries the change (one line a level; a level with no row
+  yet gets one), or `lived-check` reads your change as furniture damage. Nothing goes in front of `BASE_REVS` any more: that
+  moved every level's bar. A lesson's words and lists (`LESSON_FREE` there: lines, cards, `after`, `allow` / `deny`, the
+  frame's `orders` and `rows`) need no row move at all; a step added or dropped, a `done` test or a mark does. A lesson key the
+  tool has in neither of its two tables is red until you put it in one.
 - **Level data is not a switch.** A new RULE that reads level data is (CLAUDE.md: switch, `FROZEN_HOLDS` row, knob table, a
   check with a `_BREAK` path, both stands). A new field wants its key in `src/scene/levelData.ts`, both directions in
   `levelLoad.ts`, and a line in `docs/level-format.md`.
