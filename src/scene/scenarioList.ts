@@ -165,17 +165,17 @@ export const TRAINING_MISSIONS: ScenarioEntry[] = [
 /** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
  *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
-  { id: 'tut-sky', title: 'The halt, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
-    place: 'A truck halt on a pass road, under snow', lean: 'loud', defenders: 5, squads: true,
+  { id: 'tut-sky', title: 'The tunnel, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
+    place: 'A road tunnel\'s station, under snow', lean: 'loud', defenders: 7, squads: true,
     blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.',
-    scene: 'A fuel convoy went quiet on the pass. Your squad found the halt it stopped at, and drove into the roadblock in front of it. Tonight nobody on the ground is you: you lead the four from above.',
-    teaches: ['Turn, zoom and move the view', 'One key orders the squad', 'Stack on a door, then send them in', 'A charge on a wall', 'Lights out, and night vision'] },
+    scene: 'A fuel convoy drove into the tunnel and never came out of it. Your squad came up the road to the station at its mouth, and into the roadblock in front of it. Tonight nobody on the ground is you: you lead the four from above.',
+    teaches: ['Turn, zoom and move the view', 'One key orders the squad', 'Stack on a door, then send them in', 'A charge on a wall', 'Lights out: what the dark does to men'] },
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): he stays at the gate with the handset, and every stop is a thing one order to all
   // four cannot do and a plan can
   { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial',
     place: 'A walled relay post, led from its gate', lean: 'loud', defenders: 8, squads: true,
     blurb: 'You stay at the gate with the handset. Lay a plan for the four: two doors on one word, a gun, two gates.',
-    scene: 'The halt\'s radio log names a relay post below the pass. You take the four to its gate and stay there on the handset: this one is won by the plan.',
+    scene: 'The men who hit the convoy talk through a relay post in the hills. You take the four to its gate and stay there on the handset: this one is won by the plan.',
     teaches: ['Plan mode: you on the radio, the view free', 'Pick two men, give them a door', 'One word sends every stack', 'A gun turned to the wrong door', 'Which way a pair faces'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
