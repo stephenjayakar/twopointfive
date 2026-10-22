@@ -75,6 +75,8 @@ const whistleWedge = (g: Game) => { if (!ringStays(g) || g.player.down || g.play
 /** Sam's own ring is on (the prototype beside the squad's ring, or handring.ts) / it is the ring that STAYS (handring.ts) */
 const ringMode = (g: Game) => !g.puppet && (HANDRING.on || (CMDRING.on && CMDRING.hands));
 const ringStays = (g: Game) => !g.puppet && HANDRING.on;
+/** a wedge's digit pressed this frame */
+const wedgeDigit = (input: Input) => { for (let d = 1; d <= CMDRING.wedges; d++) if (input.hit(`Digit${d}`)) return true; return false; };
 /** a row done by the key, a digit or a click: what updateInteract hands on as Game.act */
 function give(g: Game, r: Interactable | null) {
   if (!r || r.kind === 'cancel' || !r.inReach || !r.verb || r.running || samStaggered(g)) return;   // (samstun.ts: folded by a blast, his hands do nothing)
@@ -162,7 +164,8 @@ export function updateInteract(g: Game, dt: number, input: Input, view?: View) {
   //      left click or the key again does the lit one (the click is not his trigger), a right click or the back key puts it away.
   if (ringMode(g)) {
     if (S.open && S.ring && (g.orders.menu || g.orders.cmdRing)) { closeSelector(g, down); return; }   // (one list at a time: the squad's is up)
-    if (armed && live && !S.open && !g.orders.cmdRing && (!stays || (down && S.downT >= HANDRING.holdSecs - 1e-6))) { S.open = true; S.ring = { ...ringOpen(input, view?.clientWidth ?? 0, view?.clientHeight ?? 0, stays ? g.time - CMDRING.tapSecs : g.time, pl.nearSel + 1), key: pl.nearKey }; pickHover(g); }   // (the ring that stays came up after a hold: the cursor counts at once, as under the squad's — orders.ts ringUp)
+    const early = stays && HANDRING.early && down && armed && !S.open && wedgeDigit(input);   // (handring.ts `early`: a digit inside the hold is the ring's, at once)
+    if (armed && live && !S.open && !g.orders.cmdRing && (!stays || (down && (early || S.downT >= HANDRING.holdSecs - 1e-6)))) { S.open = true; S.ring = { ...ringOpen(input, view?.clientWidth ?? 0, view?.clientHeight ?? 0, stays ? g.time - CMDRING.tapSecs : g.time, pl.nearSel + 1), key: pl.nearKey }; pickHover(g); }   // (the ring that stays came up after a hold: the cursor counts at once, as under the squad's — orders.ts ringUp)
     const R = S.ring;
     if (R && S.open) {
       if (input.hit('Blur')) { closeSelector(g, true); return; }   // (the window lost the keys: nothing is done, as under the squad's ring)

@@ -29,4 +29,8 @@ export const HANDRING = {
   on: false,
   /** the key down this long (s) puts the ring up; let go sooner it is the tap. The squad ring's own number for a ring that stays (cmdring.ts) */
   holdSecs: 0.3,
+  /** a digit pressed with the key down and the ring not yet up (inside `holdSecs`) puts the ring up at once and is its wedge — never the weapon slot
+   *  or the gun's setup, which a quick "key, 2" used to reach. Off in the module and on the frozen stand with `on` (`TPS_HANDRING=1` raises both); a
+   *  recording from before the key replays with it off */
+  early: false,
 };
