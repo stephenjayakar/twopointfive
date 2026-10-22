@@ -49,7 +49,7 @@ import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
 import { WAND } from '../game/wand';
 import { PEEKSIGHT } from '../game/peeksight';
-import { BIGSLOT, KITDEAL } from '../game/kit';
+import { BIGSLOT, KITDEAL, ISSUE } from '../game/kit';
 import { STICKY } from '../game/stickycam';
 import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
@@ -280,6 +280,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_FARCALM')) GUARD_EYE.farCalm = String((globalThis as any).process?.env?.TPS_FARCALM ?? '') === '1';   // a far glimpse is no place to walk to (src/game/guards.ts farFaint): off, the frozen stand has no far reach for it to act on
     if (pinned('TPS_CLOSE')) CLOSE.on = String((globalThis as any).process?.env?.TPS_CLOSE ?? '') === '1';   // closer than ever (src/game/close.ts): off, so a man has the one way in from behind and Sam's rows are what every frozen probe and digest read; `TPS_CLOSE=1` turns it on (the shipped default)
     if (pinned('TPS_HELDCLICKS')) CLOSE.heldClicks = String((globalThis as any).process?.env?.TPS_HELDCLICKS ?? '') === '1';   // the two buttons with a man in the arm (src/game/close.ts, player.ts updateHold): off, so a click in the arm hold does nothing, as every frozen probe and digest read; `TPS_HELDCLICKS=1` turns them on (the shipped default)
+    if (pinned('TPS_REACHUP')) CLOSE.reachUp = String((globalThis as any).process?.env?.TPS_REACHUP ?? '') === '1';   // the grab's reach up for a man who stands over him (src/game/close.ts): off, so the tell's pose is the one every frozen run was made with
     if (pinned('TPS_KITANIM')) KITANIM.on = String((globalThis as any).process?.env?.TPS_KITANIM ?? '') === '1';   // kit animations (src/game/kitanim.ts): off, so every draw, reload beat, lock-out and pose is what every frozen probe and digest read; `TPS_KITANIM=1` turns them on (the shipped default)
     if (pinned('TPS_THROWBY')) THROW_BY.on = String((globalThis as any).process?.env?.TPS_THROWBY ?? '') === '1';   // a throw reads its distance (src/game/character.ts THROW_BY): off, so every throw is the one overhand every frozen pose, strip and digest was read on; `TPS_THROWBY=1` turns it on (the shipped default)
     if (pinned('TPS_TEAMPACE')) TEAMPACE.on = String((globalThis as any).process?.env?.TPS_TEAMPACE ?? '') === '1';   // teammates slower than the player, running only for a reason (src/game/teampace.ts): off, so the team walks every leg at the pace every frozen probe, digest and tape has it
@@ -419,6 +420,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_BIGSLOT')) BIGSLOT.on = String((globalThis as any).process?.env?.TPS_BIGSLOT ?? '') === '1';   // the big slot (src/game/kit.ts BIGSLOT): off, so the shotgun is a weapon row, a wall charge is pouches, and nobody carries a hammer
     if (pinned('TPS_KITMORE')) KITDEAL.more = String((globalThis as any).process?.env?.TPS_KITMORE ?? '') === '1';   // (…and its key `more`: off, so three or four as issued come with every big slot empty and the Quiet kit's fourth man with his pistol alone)
     if (pinned('TPS_KITSTEALTH')) KITDEAL.stealth = String((globalThis as any).process?.env?.TPS_KITSTEALTH ?? '') === '1';   // (…and its key `stealth`: off, so a stealth mission hands its sponge rounds, cameras and wand over your card and a sponge round costs a pouch)
+    if (pinned('TPS_ISSUEWHOLE')) ISSUE.whole = String((globalThis as any).process?.env?.TPS_ISSUEWHOLE ?? '') === '1';   // a mission's own card for you is the whole kit (src/game/kit.ts ISSUE.whole): off, so a quiet kind's sponge rounds and a fog's cameras and wand are handed over it
     if (pinned('TPS_KITDEAL')) KITDEAL.on = String((globalThis as any).process?.env?.TPS_KITDEAL ?? '') === '1';   // the squad's kit dealt over the men who come (src/game/kit.ts KITDEAL): off, so with three or four teammates the first two carry all of it
     if (pinned('TPS_PEEKSIGHT')) PEEKSIGHT.on = String((globalThis as any).process?.env?.TPS_PEEKSIGHT ?? '') === '1';   // a peek round the end of a wall lifts the fog (src/game/peeksight.ts): off, so the fog's eye stays over his feet
     if (pinned('TPS_WAND')) WAND.on = String((globalThis as any).process?.env?.TPS_WAND ?? '') === '1';   // the optical wand (src/game/wand.ts): off, so your kit card has no such row and no door offers the look
