@@ -867,8 +867,9 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   slung, no man in his arm: then the line shows what is set and no keys). That key again: the caps fill with their digits, the box's edge
   lights, the slots whose digits are rows for now go dim in the strip, and a line along the box's foot runs down the seconds (a width set each frame,
   `handBoxTick`: the column is not built again for it). Nothing moves when it
-  opens, no line of words explains it, and the warm colour is the open setup's alone. A holstered gun's box is dashed and dim (no 'holstered · E'
-  words). Every slot is still a `.slot` with its `.key` in the kit's order. WORDS THAT FOLLOW: the Controls lists (`ui/menu.ts controlRows`,
+  opens, no line of words explains it, and the warm colour is the open setup's alone. Where empty hands are a slot of their own (`handslot.ts HANDSLOT`), they have the first place in
+  the strip under that slot's key: with everything put away it is the tab and the box under it is empty and dashed. (With that rule off a gun
+  put away keeps its tab and its box is dashed and dim; no 'holstered · E' words either way.) Every slot is still a `.slot` with its `.key` in the kit's order. WORDS THAT FOLLOW: the Controls lists (`ui/menu.ts controlRows`,
   `ui/options.ts setupSmall`); the lines that named '2 again' (`slotsetup.ts loadKeys`: `player.ts`'s three messages, two kit card notes in
   `kit.ts`, the launcher's debugger summary) read 'press 2, then 2'; the kit card's light ('on L': `lightKeys`, in `kit.ts`'s row note and `ui/kitCard.ts`'s
   line) reads 'its gun's key again, then 3'; and Training 4's four lines that named Z, L or '2 again' — a lesson step may carry `setupLine`, the
@@ -880,8 +881,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   unused', 'stays up after a pick'. CHECKS: `tools/qa/slotsetup-check.ts` (`probes.ts slotsetup`, family `kit`; `SLOTSETUP_BREAK=1` must fail) —
   opens, the three rows, `stay`, every way it shuts, the empty load and the Space list, Esc, the words and the keys the carried aim keeps, what
   does not open it, the pistol and the double tap, the box off the real overlay code on the probes' stand-in page, off = the build before, the
-  journal and the stands' row, the board: @LINES@ lines pass on both stands, the break is red on @BREAK@ on each.
-  `tools/qa/slotsetup-page.cjs` — the real page on the software adapter by real key presses, as it opens and with `?slotsetup=0`: @PAGE@.
+  journal and the stands' row, the board: 12 lines pass on both stands, the break is red on 9 on each.
+  `tools/qa/slotsetup-page.cjs` — the real page on the software adapter by real key presses, as it opens and with `?slotsetup=0`: all five lines pass.
   The lesson bot for Training 4 (`tools/qa/lessons/train-kit.ts`) plays the new presses when the rule is on, read off the page's own table when
   it drives a page. OLDER PROBES that step the launcher with 2 again, or read the kit column against recorded words, run with the switch held
   off on every stand (`probes.ts GUN_KEYS_AS_THEY_WERE`: `rifle-reload`, `kit-slots`, `he40-*`, `sticky-*`, `weapons-identity`; `pouch-table`
@@ -891,7 +892,12 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   smoke turns the light on instead (the old build flipped the launcher's load on that same habit press); the trigger, R, Tab, 4 and 5 all shut
   it. (2) The light has no key where the gun is not in his hands: holstered or slung (a wall hold that put it away included), and with a man in
   his arm (`updateHold` reads 'KeyL', which the board no longer gives; the old L worked in each). (3) A pick shuts the setup (`stay` off): two
-  things set on one gun are four presses. @RUNS@
+  things set on one gun are four presses. RUN on the join with the build that has empty hands as a slot: the check and its break on both stands; `keybinds`, `qkey`,
+  `tabback`, `handslot` on both; `fn2000`, `he40`, `sticky`, `kitanim`, `shotgun`, `fog`, `frag`, `bigslot` on the page's stand, `fn2000` and
+  `weapons-identity` on the frozen one; `lesson-run train-kit` on both; the page check; a pass through whole situations on the real page by key
+  presses (the habit press, the lapse, a double tap off a can, the trigger with it up, three loads, empty hands and back). NOT RUN: the tour, a
+  soak, the solo night, `all-quick`, the other page checks (`keybinds-page.cjs`, `textsize-page.cjs`, `bigslot-page.cjs`, `panel-keys.cjs`,
+  `lesson-page.cjs`).
   NEVER SEEN ON A GPU: the box was looked at as stills of the real page's own markup and styles, and used by real key presses on the software
   adapter with the picture not drawn; nobody has played it.
 - **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the

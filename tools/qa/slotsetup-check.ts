@@ -92,7 +92,7 @@ export async function slotSetupCheck(): Promise<boolean> {
       await quiet(() => key(W, 'Digit2')); const open = hudText(g); await quiet(() => key(W, 'Tab')); pl.setup = null;
       pl.holding = {} as any; const held = hudText(g); pl.holding = null; pl.holstered = true; const away = hudText(g); pl.holstered = false; SLOTSETUP.on = false; const old = hudText(g); SLOTSETUP.on = true;
       const chord = (t: string) => /hb-chord/.test(t), lit = (t: string) => /div\.hb\.setup/.test(t);
-      verdict(chord(shut) && !lit(shut) && /kbd\{2\}/.test(shut) && chord(open) && lit(open) && /kbd\{2\}.*kbd\{1\}.*kbd\{2\}.*kbd\{3\}/.test(open) && !/kbd\{[6-9]\}/.test(open) && !chord(held) && !chord(away) && /div\.hb\.holstered/.test(away) && !/div\.hb/.test(old) && /div\.strip/.test(shut) && !/div\.strip/.test(old),
+      verdict(chord(shut) && !lit(shut) && /kbd\{2\}/.test(shut) && chord(open) && lit(open) && /kbd\{2\}.*kbd\{1\}.*kbd\{2\}.*kbd\{3\}/.test(open) && !/kbd\{[6-9]\}/.test(open) && !chord(held) && !chord(away) && /div\.hb\.(holstered|empty)/.test(away) && !/div\.hb/.test(old) && /div\.strip/.test(shut) && !/div\.strip/.test(old),
         'the kit column is the box: the gun\'s key and a cap before each row it can step are drawn on its second line, the box is marked while the setup is up, no cap is above 5; with a man in his arm or the gun put away the presses are not drawn; with the rule off the column is the one before',
         `shut: ${caps(shut)} (marked ${lit(shut)}) · up: ${caps(open)} (marked ${lit(open)}) · a man held: presses drawn ${chord(held)} · put away: ${chord(away)} · rule off: a box ${/div\.hb/.test(old)}, a strip ${/div\.strip/.test(old)}`); }
     // ---- off: the build as it was

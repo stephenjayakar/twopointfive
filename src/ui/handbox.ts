@@ -9,37 +9,44 @@
 //   before each row that can be set. That key again (slotsetup.ts) and the caps fill with their digits, the box's edge lights, the slots whose digits
 //   are rows for now go dim in the strip, and a thin line along the box's foot runs down while it waits. Nothing moves when it opens and no line of
 //   words explains it. The warm colour is the open setup's alone.
+//   EMPTY HANDS, where they are a slot of their own (game/handslot.ts), have a place at the head of the strip under that slot's key: with everything
+//   put away it is the tab, and the box under it is empty. (With that rule off a gun put away keeps its tab and its box goes dim and dashed.)
 // Every slot is still one `.slot` with its `.key`, in the kit's order: what reads the column by those names finds them. Looks only: it reads the game
 // and writes nothing.
 import { BIGSLOT, kitYouLight } from '../game/kit';
 import { Player } from '../game/game';
 import type { Game, SlotKind } from '../game/game';
 import type { Firearm } from '../game/weapons';
-import { keyCap, keyText, keysOf } from '../host/keymap';
+import { capNow, keyCap, keyText, keysOf } from '../host/keymap';
+import { HANDSLOT, HANDSLOT_KEY } from '../game/handslot';
 import { ringTag, shellTag } from '../game/gear';
 import { FLOOR_KEY } from '../game/doors';
 import { setupGun, setupRows, slotSetupOpen, slotSetupLeft, type SetupGun, type SetupRow } from '../game/slotsetup';
 
 const CSS = `
-#equip.hand { width: 348px; min-width: 0; }
+#equip.hand { width: 380px; min-width: 0; }
 #equip.hand .strip { display: grid; grid-template-columns: auto auto 1fr 1fr 1fr; gap: 3px; align-items: stretch; }
+#equip.hand .strip.h6 { grid-template-columns: auto auto auto 1fr 1fr 1fr; }
+#equip.hand .strip .slot.hands .mt { display: inline-block; width: 7px; height: 10px; border: 1px dashed var(--h-soft); border-radius: 2px; }
 #equip.hand .strip .slot { box-sizing: border-box; gap: 5px; padding: 4px 6px; justify-content: center; min-width: 0; }
 #equip.hand .strip .slot .name { letter-spacing: 0.04em; }
 #equip.hand .strip .slot .n { color: var(--h-soft); font: 600 10px/1 var(--h-mono); min-width: 2ch; text-align: right; }
 #equip.hand .strip .slot.none { opacity: 0.35; }
+#equip.hand .strip .slot.none .name { font-size: 10px; letter-spacing: 0.02em; }
+#equip.hand .strip.h6 .slot { padding-left: 5px; padding-right: 5px; }
 #equip.hand .strip .slot.sel { opacity: 1; border-bottom-color: transparent; border-radius: 3px 3px 0 0; box-shadow: none; background: rgba(var(--h-plate),0.82); padding-bottom: 7px; margin-bottom: -4px; position: relative; z-index: 1; }
 #equip.hand.setup .strip .slot.sel { border-color: var(--h-acc-hi); border-bottom-color: transparent; }
 #equip.hand.setup .strip .slot.sel .key { color: var(--h-acc-hi); }
 #equip.hand.setup .strip .slot.row { opacity: 0.3; }
 #equip.hand .hb { position: relative; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; gap: 6px; min-height: 54px; padding: 8px 9px 8px; border: 1px solid rgba(var(--h-edge),0.7); background: rgba(var(--h-plate),0.82); border-radius: 3px; box-shadow: 0 0 8px rgba(0,0,0,0.4); }
-#equip.hand .hb.holstered { opacity: 0.6; border-style: dashed; }
+#equip.hand .hb.holstered, #equip.hand .hb.empty { opacity: 0.6; border-style: dashed; }
 #equip.hand .hb.setup { border-color: var(--h-acc-hi); box-shadow: 0 0 10px rgba(var(--h-acc-rgb),0.35); }
 #equip.hand .hb-top { display: flex; align-items: flex-end; gap: 8px; min-height: 16px; }
 #equip.hand .hb-top .rounds { position: static; }
 #equip.hand .hb-top .name { font-size: 13px; }
 #equip.hand .hb-top .re { font: 700 9px/1 var(--h-head); letter-spacing: 0.14em; color: var(--h-soft); }
 #equip.hand .hb-n { margin-left: auto; font: 700 17px/0.85 var(--h-mono); color: var(--h-hi); letter-spacing: 0.02em; white-space: nowrap; }
-#equip.hand .hb-n i { font: 600 11px/1 var(--h-mono); font-style: normal; color: var(--h-soft); margin-left: 5px; }
+#equip.hand .hb-n i { font: 600 11px/1 var(--h-mono); color: var(--h-soft); margin-left: 5px; }
 #equip.hand .hb-n.dry { color: #ff9c8c; }
 #equip.hand .hb-top .tag.ocp { margin-left: 4px; }
 #equip.hand .hb-set { display: grid; grid-template-columns: 24px 92px 1fr 54px; align-items: center; column-gap: 7px; min-height: 15px; }
@@ -108,11 +115,13 @@ export function drawHandBox(el: HTMLElement, game: Game, paceShow: boolean, bigA
   const canName: Record<string, string> = { smoke: 'smoke', flash: 'stun', frag: 'frag' }, canCls: Record<string, string> = { smoke: 'cans', flash: 'cans bangs', frag: 'cans frags' };
   const pipsOf = (k: SlotKind) => { const c = mk('span', canCls[k]); for (let i = 0; i < cans(k); i++) c.appendChild(mk('i')); return c; };
   const slots: [SlotKind, string][] = [['pistol', '1'], ['rifle', '2'], ['smoke', '3'], ['flash', '4'], ['frag', '5']];
-  const inHand = setupGun(pl), strip = mk('div', 'strip'); let box: HTMLElement | null = null;
+  const empty = HANDSLOT.on && pl.holstered;   // (empty hands as a slot: nothing of the kit is the tab)
+  const inHand = setupGun(pl), strip = mk('div', 'strip' + (HANDSLOT.on ? ' h6' : '')); let box: HTMLElement | null = null;
+  if (HANDSLOT.on) { const s = mk('div', 'slot hands' + (empty ? ' sel' : '')), k = mk('span', 'key'); k.textContent = capNow(HANDSLOT_KEY); s.appendChild(k); s.appendChild(mk('i', 'mt')); strip.appendChild(s); if (empty) box = mk('div', 'hb empty'); }
   const rowKeys = open && inHand ? setupRows(pl, inHand).map(r => String(r.key)) : [];   // (the digits that are rows while the setup is up: their slots go dim)
   el.classList?.toggle('setup', open);
   for (const [kind, key] of slots) {
-    const f = kind === 'pistol' ? gun : kind === 'rifle' ? rf : null, sel = pl.slot === kind;
+    const f = kind === 'pistol' ? gun : kind === 'rifle' ? rf : null, sel = pl.slot === kind && !empty;
     if (kind === 'rifle' && !pl.hasRifle) { const s = mk('div', 'slot absent'); s.appendChild(mk('span', 'key', key)); s.appendChild(mk('span', 'name', '—')); strip.appendChild(s); continue; }
     // its place in the strip: what the digit brings (the selected one is the box's tab)
     const s = mk('div', 'slot' + (sel ? ' sel' : '') + (!f && !cans(kind) ? ' none' : '') + (!sel && rowKeys.includes(key) ? ' row' : '')); s.appendChild(mk('span', 'key', key));
