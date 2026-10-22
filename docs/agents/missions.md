@@ -774,12 +774,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the mission sheet only; a loud mission of the quiet kind WITHOUT a card of its own would still be dealt as a stealth run: none exists), and a
   checkpoint load's own wand hand-over (`savestate.ts`, `P.wand || quietWand(g)`: no level with a card for you is under a fog today). THE TREE: the
   sponge rounds are a row of the card as a tree; with it off the rifle's are what it is built with on every mission and the rule has none to take (the
-  hold's word says so). A STEALTH mission that wanted its own card for you could not name sponge rounds, cameras or a wand on it today (the block has no
-  such fields): not built, none asks. SWITCH: `ISSUE.whole`, a key of the registered, journaled table (a recording from before the key replays with it
+  hold's word says so). A CARD MAY NAME SPONGE ROUNDS: `rings` on your own card (0‥5, a card with the rifle; the validator refuses it elsewhere), asked by the solo
+  mission's owner for the maintainer's 10-22 "explain secondary attachments for the rifle ... swap between secondaries": with any on the card the
+  launcher comes up on them and the grenades are its next load, so the swap has something to teach. Worn as written by `kitPlayer` (a man alone: no
+  trim, like the card's other counts); through `kitStage` the pouches rule trims a card that does not fit, sponge rounds included, as it trims any card.
+  With the rule off the mission's five land over the count as before. Cameras and the wand still cannot be named on a card (none asks). SWITCH: `ISSUE.whole`, a key of the registered, journaled table (a recording from before the key replays with it
   off), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row, `TPS_ISSUEWHOLE=1`), ON in the page (`?issuelend` puts it off; debugger box "a
   mission's own card for you is the whole kit"). CHECK: `probes.ts issuewhole` (`tools/qa/issuewhole-check.ts`, family `kit`; `ISSUEWHOLE_BREAK=1` must
   fail) on BOTH stands: the solo tutorial stood up as its page stands it (off: 5 sponge rounds, the tube on them; on: none, the tube on the grenade,
-  2/2/2/3 as its card), a rig's quiet run alone under a fog with a card (off 5 / 2 cameras / wand; on none), an empty block, the tree off, a mission
+  2/2/2/3 as its card), a rig's quiet run alone under a fog with a card (off 5 / 2 cameras / wand; on none), a card that names `rings` and the
+  validator's lines for it, an empty block, the tree off, a mission
   with no block and a lesson's page with none (each the same on and off), the journal. MEASURED: one staging each, no seeds (nothing here is drawn).
   FOR THE SOLO MISSION'S OWNER: its step `load` ("[2] again: load the grenade") is already true when it comes up under this rule and goes by unread, and
   its scripted walk never wears the page's kit (`lesson-run.ts` stages no card on a man alone), so `tut-solo-check` plays the sponge rounds either way.

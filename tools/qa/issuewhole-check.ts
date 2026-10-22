@@ -4,7 +4,7 @@
 //   ISSUEWHOLE_BREAK=1 … on either: the rule's broken path (the build before: the mission's hand-overs land over the card) — MUST FAIL.
 // What it holds: off, a mission of the quiet kind whose level names your card is handed the launcher's five sponge rounds (and a fog's cameras and wand)
 // over it, and the launcher comes up on the sponge rounds (the build before, to the count). On: that card is everything he carries — no sponge round, no
-// camera, no wand, the launcher on the first load he does carry — while a block that names no card for you (the long hall's, empty), a mission with no
+// camera, no wand, the launcher on the first load he does carry; a card that names sponge rounds (`rings`) carries that many — while a block that names no card for you (the long hall's, empty), a mission with no
 // block and a lesson's page with none are handed what they ever were, and with the card as a tree off (no sponge row) nothing moves. The tutorial's
 // solo mission is stood up as its page stands it.
 import { readFileSync } from 'node:fs';
@@ -45,6 +45,11 @@ export async function issueWhole(): Promise<boolean> {
       verdict(!!block && block.rings === undefined && (validateLevelData(JSON.parse(text())) as string[]).length === 0 && K.kitIssueWhole({ '0': block }) === (K.ISSUE.whole && !BROKEN) && !K.kitIssueWhole({}) && !K.kitIssueWhole(null),
         'THE FILE: the solo tutorial\'s block names your card, with no sponge round on it; a block that names no card for you is not this rule\'s', `card ${J(block)}`); }
 
+    { const errs = (c0: unknown, c1?: unknown) => { const d = JSON.parse(text()); d.scenarios.issue = { members: { '0': c0, ...(c1 ? { '1': c1 } : {}) } }; return (validateLevelData(d) as string[]).filter(e => /issue/.test(e)); };
+      const takes = [0, 2, K.RINGS_MAX].every(n => errs({ weapon: 'rifle', rings: n }).length === 0) && errs({ rings: 1 }).length === 0;
+      const refuses = [errs({ rings: K.RINGS_MAX + 1 }), errs({ rings: 1.5 }), errs({ rings: -1 }), errs({ weapon: 'pistol', rings: 1 }), errs({ weapon: 'shotgun', rings: 1 }), errs({}, { rings: 1 })].map(e => e.length);
+      verdict(takes && refuses.every(n => n > 0) && K.RINGS_MAX === 5, 'THE VALIDATOR takes `rings` on your own card up to the launcher\'s five, and refuses more, a count that is no whole number, a card with no rifle, and a teammate\'s', `taken ${takes} · refused ${J(refuses)} · the card\'s most ${K.RINGS_MAX}`); }
+
     // ── the tutorial's solo mission as its page stands it
     const page = async (whole: boolean) => { let r: any = null, why = '';
       try { K.kitIssuedPage(true); const W: any = await hushed(() => standUp({ level: loadLevel(parseLevelData(text())), seed: 1 })), g = W.game; raise(whole); K.kitLoad(null, '');
@@ -66,6 +71,10 @@ export async function issueWhole(): Promise<boolean> {
         K.ISSUE.whole = false; const off = run(BLOCK, 2); K.ISSUE.whole = true; const on = run(BLOCK, 2), same = J(K.KIT.members[0]) === table;
         verdict(off.rings === KITTREE.lend && off.cams === 2 && off.wand && on.rings === 0 && on.cams === 0 && !on.wand && on.load === 'he40' && on.frags === 2 && on.shells === 3 && same,
           'A QUIET RUN ALONE UNDER A FOG, with a block: off, the mission\'s five sponge rounds, two cameras and wand land over it; on, none of them, the launcher on the grenade, and the table\'s own card is not touched', `off ${J(off)} · on ${J(on)} · the table ${same ? 'as it was' : 'CHANGED'}`);
+        { const named = run({ ...BLOCK, rings: 2 }, 2), top = run({ ...BLOCK, rings: K.RINGS_MAX }, 2); K.kitShow(g); K.KIT_SOLO.on = true; g.guards = others; stickyVisitSet(g, 2); const FITS = { weapon: 'rifle', smoke: 0, bangs: 1, frags: 1, shells: 1, rings: 2 }; sc.issue = { members: { '0': FITS } }; { const k = g.player.rifle.attachments.indexOf('ring'); if (k >= 0) g.player.rifle.attIdx = k; } K.kitStage(g, []); const staged = held(g);
+          K.ISSUE.whole = false; const lentOver = run({ ...BLOCK, rings: 2 }, 0); K.ISSUE.whole = true;
+          verdict(named.rings === 2 && named.load === 'ring' && named.cams === 0 && !named.wand && named.shells === 3 && top.rings === K.RINGS_MAX && staged.rings === 2 && staged.load === 'ring' && staged.shells === 1 && lentOver.rings === KITTREE.lend,
+            'A CARD THAT NAMES SPONGE ROUNDS (`rings`) carries that many and nothing else of the mission\'s: the launcher comes up on them with the grenades its next load; a card that fits its pouches keeps them through the squad\'s staging too (one that does not is trimmed there like any card); with the rule off the mission\'s five land over them as before', `rings 2: ${J(named)} · rings ${K.RINGS_MAX}: ${top.rings} · a fitting card through kitStage: ${J(staged)} · rule off: ${lentOver.rings} rounds`); }
         g.guards = all0; const ops0 = { members: {} }; const hall = (whole: boolean) => { K.ISSUE.whole = whole; K.kitShow(g); K.KIT_SOLO.on = true; g.guards = others; stickyVisitSet(g, 2); sc.issue = ops0; K.KITDEAL.stealth = false; { const k = g.player.rifle.attachments.indexOf('ring'); if (k >= 0) g.player.rifle.attIdx = k; } try { K.kitPlayer(g); return held(g); } finally { K.KITDEAL.stealth = true; } };
         const hallOff = hall(false), hallOn = hall(true);
         verdict(J(hallOn) === J(hallOff) && hallOn.rings === KITTREE.lend && hallOn.cams === 2 && hallOn.wand, 'A BLOCK THAT NAMES NO CARD FOR YOU (the long hall\'s, empty: written for its room clear) leaves a night alone on that level what it was handed: the same with the rule on and off', `on ${J(hallOn)} · off ${J(hallOff)}`);

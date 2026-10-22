@@ -114,6 +114,25 @@ like that."
   that room has (0.6 m and over, readable from above); clutter of use; its own light or colour; its own floor decal;
   something to shove or break. **check** `lived` (counts things, names bare rooms); the rest **by eye**
   (`lived-check.ts <name> --sheet` prints what each room got).
+- **`ground` · The ground is not one flat sheet.** From above, ground is most of the picture, and one paint over a whole
+  court reads as a floor plan, not a place. What the renderer can carry, all of it in the look's kit
+  (`src/scene/gwotKit.ts`): FINISHES laid as the place is used (`ground`: dust, dirt, gravel, a slab), so a road, a
+  court and a lot meet in lines the eye can follow; WEAR where feet and wheels go (`ruts`, a path trodden between the
+  doors, the floor darker either side of a door as the look's skin lays it); STAINS where the use leaves them (`patch`:
+  damp at a wall's foot or a tap, oil under an engine, ash round a fire); and things LOW enough to walk over, which take
+  light and throw a shadow (`rubble`, a kerb, a step). Put them where the player walks and the camera rests (the start,
+  the mission's line, every court), not evenly. `STYLE.md` holds the rules: a patch is darker than its ground, never
+  paler and never under a third of it; earth stays darker than the walls on it; a floor carries colour only as marks; a
+  place's ground marks are its own family. A mark has to read: a patch of its ground's own paint is no mark (the
+  command counts two paints as apart at 0.15 of the larger value, 0.3 of roughness, or a plain step of hue; the look's
+  own door wear is 0.84 of its floor). A low thing is 0.19 m or under, what feet step over.
+  **seen** "ground looks pretty flat here" on the tutorial's fuel halt: two courts of 126 and 162 m², each one finish
+  with a pair of ruts or a stain. **check** `ground`: one NOTE a file when 40 m² or more in one piece has no paint that
+  reads against its own and nothing low to walk over within 1.5 m, with the six biggest pieces and a square of each; a
+  door's line parts two rooms; ground the player cannot walk to from a start, and the bare margin along the world's
+  edge with no start on it, are added up apart.
+  It does not hold `STYLE.md`'s rule for a patch. Whether it reads is **by eye**, at the level's own hour (a midday
+  sun shows ground a night hid). Never seen on a GPU here.
 - **Furniture is additions only**, the tail of the generator's lists, group `lived.<room>`, behind `LIVED.on`.
 - **Clear of doors, stacks, marks and lines**: 1.1 m off a door's line and out of its sweep; a 0.9 m lane between a room's
   doors; nothing on or 0.45 m beside an authored point; never across a mark's aim line; never a new wall; nothing in the
