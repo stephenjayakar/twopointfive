@@ -8,12 +8,14 @@
 import type { BeatCtx, Cond, DoorRef, LevelScriptFn, Query, UnitRef } from '../src/game/director';
 import type { Vec3 } from '../src/math/vec';
 
-/** the roster's men by the order the level places them: the workshop's one, the nest's gunner and the man beside him, the picket's three */
-const SHOP_MAN = 'Tango 4', GUNNER = 'Tango 5', LOADER = 'Tango 6', PICKET = ['Tango 9', 'Tango 10', 'Tango 11'], HALL_MEN = ['Tango 7', 'Tango 8'];
+/** the roster's men by the order the level places them: the store's two, the workshop's one, the nest's gunner and the man beside him, the picket's three */
+const STORE_MEN = ['Tango 2', 'Tango 3'], SHOP_MAN = 'Tango 4', GUNNER = 'Tango 5', LOADER = 'Tango 6', PICKET = ['Tango 9', 'Tango 10', 'Tango 11'], HALL_MEN = ['Tango 7', 'Tango 8'];
 
 /** seconds the two who came round stand in the street, rifles up at the bags, before their first round; the longest they wait outside the wall for the
  *  cover order before they come anyway; and how long men walked out into the open a second time are kept there before they are the game's own again */
 const STREET_SECS = 4, COVER_SECS = 40, OPEN_SECS = 6;
+/** the store's two: how long after their door gives they are still the script's (the squad's stun charge has burst by then, or its first men are in) */
+const STORE_SECS = 2.5;
 /** the workshop's man: how long the player stands in his line before he is seen there · how late he is to the door at his back */
 const SEEN_SECS = 1.5, SIDE_SECS = 2.0;
 /** the workshop's lane door as the mission opens: swung in square to its wall (rad), out of the doorway and of its man's line through it */
@@ -43,10 +45,10 @@ function lastMan(c: BeatCtx, men: UnitRef[], what: string) {
 }
 
 const script: LevelScriptFn = D => {
-  const shopDoor = D.door('workshop'), sideDoor = D.door('workshop_side'), hallDoor = D.door('hall'), roadGate = D.door('gate_e'), backGate = D.door('gate_n'), trackGate = D.door('gate_w');
+  const storeDoor = D.door('store'), shopDoor = D.door('workshop'), sideDoor = D.door('workshop_side'), hallDoor = D.door('hall'), roadGate = D.door('gate_e'), backGate = D.door('gate_n'), trackGate = D.door('gate_w');
   // the workshop's man: his mark at the far end of the room, on the line through the middle of the open lane doorway · where that line ends, on the guard
   // hut's wall across the lane (tools/levels/tut-squad.ts SHOP_FIRE / SHOP_AIM: the level's volumes are laid along the same line)
-  const SHOP_FIRE = D.mark('shop.fire', [19.3, 0, 8.52]), SHOP_AIM: Vec3 = [13.0, 1.0, 8.9], IN_HALL: Vec3 = [31.4, 1.1, 19.75], HALL_WINDOW: Vec3 = [31.1, 1.4, 17.0];   // (… and the hall's doorway from inside, which its two men watch, and its street window)
+  const SHOP_FIRE = D.mark('shop.fire', [19.3, 0, 8.52]), SHOP_AIM: Vec3 = [13.0, 1.0, 8.9], IN_STORE: Vec3 = [10.75, 1.1, 17.0], IN_HALL: Vec3 = [31.4, 1.1, 19.75], HALL_WINDOW: Vec3 = [31.1, 1.4, 17.0];   // (… and the hall's doorway from inside, which its two men watch, and its street window)
   const shopLane = D.volume('shop_lane'), shopLine = D.volume('shop_line'), shopIn = D.volume('shop_in');
   const LANE = D.mark('nest.lane', [23.7, 0, 13.0]);                                               // the wall's own face, mid street: the first burst lands on concrete, well up the street from whoever is about to step round its end
   const CAMP = [D.mark('picket.camp0', [38.4, 0, 11.6]), D.mark('picket.camp1', [38.8, 0, 9.8]), D.mark('picket.camp2', [38.4, 0, 8.0])];
@@ -73,7 +75,10 @@ const script: LevelScriptFn = D => {
       yield c.on('signal', 'lesson:picket');
       const men = PICKET.map(cs => c.unit(cs)).filter((u): u is UnitRef => alive(c, u)), front = men[0] ?? null, round = men.slice(1);
       const { up, one, broke } = lastMan(c, men, 'the picket');
-      const out = (u: UnitRef) => c.order(u, { goal: u === front ? OPEN : OUT[lane.indexOf(u)], aimAt: BAGS, upper: 'aim' });
+      // (EVERY LEG OF THEIRS IS THE SHORT WAY, `direct`: their side learns which floor the squad's rifles cover as soon as one of them is shot at — lanes.ts —
+      //  and a walk planned after that goes round it. Round, here, is the west gate at the far end of the yard: sent to the street behind the bags, the two
+      //  were met standing by the guard hut, where the mission began, with the squad still laid on the alley they never came down)
+      const out = (u: UnitRef) => c.order(u, { goal: u === front ? OPEN : OUT[lane.indexOf(u)], aimAt: BAGS, upper: 'aim', direct: true });
       const there = (us: UnitRef[], label: string) => c.until(q => us.every(u => !q.alive(u) || q.routed(u) || q.arrived(u)), label);
       // (the back gate stands open before either of them is near it: a leaf swung into a man takes him out of anybody's hands — doorthrow.ts — and the
       //  one it caught was the game's own in the alley, unseen, on two dice of eight. The man nearer the corner leads and takes the farther mark at
@@ -81,10 +86,10 @@ const script: LevelScriptFn = D => {
       for (const g of [roadGate, backGate]) c.doors.lock(g, false);
       c.doors.open(backGate, undefined, { hold: true });
       const lane = round.slice().sort((a, b) => c.query.pos(a)[2] - c.query.pos(b)[2]);
-      lane.forEach((u, i) => c.order(u, { goal: ROUND[i], upper: 'aim' }));
+      lane.forEach((u, i) => c.order(u, { goal: ROUND[i], upper: 'aim', direct: true }));
       if (front) {
         c.doors.open(roadGate, undefined, { hold: true });
-        c.order(front, { goal: GATE_POST, aimAt: BAGS, upper: 'aim' });
+        c.order(front, { goal: GATE_POST, aimAt: BAGS, upper: 'aim', direct: true });
         yield c.any(there([front], 'the front man is in the gate'), c.wait(6));
         if (broke()) { c.signal('done:flank'); c.signal('done:picket'); return; }
         if (alive(c, front)) c.release(front, 'alert');   // (no scripted round here: the player was sent behind those bags, and a scripted round is a real round. He is the fight's from the gate)
@@ -108,19 +113,36 @@ const script: LevelScriptFn = D => {
       yield c.any(one(), c.wait(STREET_SECS));
       if (broke()) return;
       for (const u of lane) if (alive(c, u)) c.release(u, 'alert');
-      // NOBODY IS LEFT TO BE HUNTED: men of the picket still up a while into the fight have gone to ground where the bags cannot see them (the gate's
-      // jamb, the alley's corner, the camp). They break cover instead: out into the open in the script's hand, where the squad's rifles are already
-      // laid, kept there a few seconds, and then the game's own again IN the open. Whenever one of them is left after that, he drops it and runs
-      yield c.any(one(), c.wait(12));
-      if (broke()) return;
-      for (const u of up()) out(u);
-      yield c.any(there(up(), 'they are in the open'), one(), c.wait(10));
-      if (broke()) return;
-      yield c.any(one(), c.wait(OPEN_SECS));
-      if (broke()) return;
-      for (const u of up()) c.release(u, 'alert');
-      yield one();
-      broke();
+      // NOBODY IS LEFT TO BE HUNTED, HOWEVER LONG IT TAKES: men of the picket still up a while into the fight have gone to ground where the bags cannot see
+      // them (the gate's jamb, the alley's corner, the camp), or have set off round the yard by a way nobody covers. They break cover instead: out into
+      // the open by the short way in the script's hand, where the squad's rifles are already laid, kept there a few seconds, and then the game's own
+      // again IN the open. Again, for as long as two of them are up: whenever one is left, he drops it and runs.
+      // (Before, they were brought out once and then left: two who went to ground a second time were the last of the mission, and nothing sent them back)
+      for (;;) {
+        yield c.any(one(), c.wait(12));
+        if (broke()) return;
+        for (const u of up()) out(u);
+        yield c.any(there(up(), 'they are in the open'), one(), c.wait(16));
+        if (broke()) return;
+        yield c.any(one(), c.wait(OPEN_SECS));
+        if (broke()) return;
+        for (const u of up()) c.release(u, 'alert');
+      }
+    });
+
+    // THE STORE IS THE SECOND EASY ROOM, AND ITS TWO ARE NOT WAITING ON ITS DOORWAY WITH A LINE DOWN THE STREET. They heard the guard hut go, a room
+    // away, and they are up with their rifles on their own door: this beat's from the first tick, on their marks, and the game's own STORE_SECS after
+    // the door gives (or at once: one of them hit, or the player in the room). By then the squad's stun charge has burst or its first men are in.
+    // (Left to the game from the hut's first shot, they shot the first man the opening leaf showed them, and that is nobody on the jambs: it is the
+    //  player, who gave the order from the street as the line asked, in the moon's light, in the doorway's line. An unprotected scripted player went
+    //  down there on every die of three once his meter had the moon the page's has.)
+    P.onStart('store');
+    P.beat('store', function* (c) {
+      const men = STORE_MEN.map(n => c.unit(n)).filter((u): u is UnitRef => alive(c, u));
+      const hurt = () => c.until(q => men.some(u => !q.alive(u)) || q.room('sam') === 'store', 'one of the store is down, or the player is in it');
+      for (const u of men) c.order(u, { goal: null, aimAt: IN_STORE, upper: 'aim' });
+      if ((yield c.any(open(c, storeDoor), hurt())).index === 0) yield c.any(c.wait(STORE_SECS), hurt());
+      for (const u of men) if (alive(c, u)) c.release(u, 'alert');
     });
 
     // A DOORWAY HE HOLDS. The workshop's lane door stands open and he is on it from the far end of the room, in this beat's hand from the first tick (a
@@ -229,14 +251,17 @@ const script: LevelScriptFn = D => {
         yield c.any(burst(3), on('ducks'), gunDown(), c.wait(2));
       }
       // ANSWERED: it ducks (a burst already in the air finishes on its own line), and comes up between long gaps for one burst down the lane
+      // …UNTIL THE PLAYER IS AT THE BLOCKS (the cue `atblocks`, the frag's step coming up): from then it stays down. The four are at the blocks with
+      // him, and a gunner who stands up in front of four rifles while a card is read is shot before the grenade its line asks for has left a hand
+      // (the first play on the page: "my guys got him before i could throw a frag")
       while (gun() && !cue('fragged')) {
         down();
-        yield c.any(on('fragged'), gunDown(), c.wait(DOWN_SECS));
-        if (!gun() || cue('fragged')) break;
+        yield c.any(on('fragged'), gunDown(), on('atblocks'), c.wait(DOWN_SECS));
+        if (!gun() || cue('fragged') || cue('atblocks')) break;
         up();
-        yield c.any(c.wait(0.5), on('fragged'), gunDown());
-        if (!gun() || cue('fragged')) break;
-        yield c.any(burst(3), on('fragged'), gunDown(), c.wait(2));
+        yield c.any(c.wait(0.5), on('fragged'), gunDown(), on('atblocks'));
+        if (!gun() || cue('fragged') || cue('atblocks')) break;
+        yield c.any(burst(3), on('fragged'), gunDown(), on('atblocks'), c.wait(2));
       }
       // THE FRAG: both stay down under it (a man's legs still take him off a grenade he knows of: frag.ts, whoever's hands he is in). Both still up when
       // it has gone off: it missed, and they are the game's own. ONE left: he has had a grenade go off beside him and his mate is dead. He gets to

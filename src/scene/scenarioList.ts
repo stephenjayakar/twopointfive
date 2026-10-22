@@ -189,7 +189,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     //  the photocell puts out by day — and measured dry and still)
     hour: 'night', weather: 'clear',
     place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Four men down one street: two easy rooms, then a doorway a man holds, a gun, a locked hall, and a picket by two gates.',
+    blurb: 'Four men down one street: two easy rooms, then a doorway a man holds, a gun, a locked hall, and more enemies coming in through two gates.',
     scene: 'The code book names a post one street long. This time you walk in with the four, and the men in it know how to hold a street.',
     teaches: ['Doors, with the squad behind you', 'A doorway a man holds: go round', 'A gun on the street: make it duck, then move', 'Clear a room through its window', 'Turn the squad to cover your back'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
