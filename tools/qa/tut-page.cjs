@@ -113,6 +113,17 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     if (R.id !== s.id) { check(false, `step ${n + 1} '${s.id}' is the one up`, `up: ${R.id} (${R.i}) · line "${R.line}"`); break; }
     const f = await shot(`${n + 1}-${s.id}`);
     log(`step ${n + 1} '${s.id}': "${R.line}" keys [${R.keys}] t ${R.t} · ${R.team} · foes ${R.foes} · ${f}`);
+    // A CARD on the step (its `explain`, ui/railcard.ts): up and read; the page's OWN loop let run under it holds the world still (LIVE=0 skips that: a drawn
+    // frame is slow here); Enter closes it, and the loop then runs the world again
+    if (s.explain) {
+      const card = () => page.evaluate(() => { const e = document.getElementById('railcard'); return { on: !!e && e.classList.contains('on'), h: e?.querySelector('h2')?.textContent || '', p: [...(e?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / '), owed: !!window.__game.rails.card(), t: window.__game.time }; });
+      const live = n => page.evaluate(async n => { const g = window.__game, t0 = g.time; window.__pauseLoop = false; await new Promise(res => { let k = 0; const f = () => { if (++k > n) res(); else requestAnimationFrame(f); }; requestAnimationFrame(f); }); window.__pauseLoop = true; return +(g.time - t0).toFixed(4); }, n);
+      const C = await card(); log('picture', await shot(`60${n + 1}-card`));
+      const LIVE = process.env.LIVE !== '0', under = LIVE ? await live(3) : null;
+      await page.waitForTimeout(450); await page.keyboard.press('Enter'); const D = await card(), after = LIVE ? await live(3) : null;   // (a card closes on a key only once it has been up a moment)
+      check(C.on && C.owed && !!C.p && !D.on && (!LIVE || (under === 0 && after > 0)), `step ${n + 1} '${s.id}' opens on a card: up with its words, the page's own loop holds the world under it, Enter closes it and the world runs again`,
+        `"${C.h}": ${C.p} · the loop's three frames under it moved the clock ${under ?? '(not asked)'} s · Enter: card ${D.on ? 'up' : 'gone'} · three frames after: ${after ?? '(not asked)'} s`);
+    }
     if (!hand[s.id]) { check(false, `step '${s.id}' has a hand`, 'no entry'); break; }
     await hand[s.id](s);
     for (let k = 0; k < 6; k++) { R = await read(page); if (R.id !== s.id) break; await run(page, 60); }

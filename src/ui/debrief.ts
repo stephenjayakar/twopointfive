@@ -34,15 +34,20 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   // the stealth game's card keeps every part it had under the verdict's head. No verdict (the run still going, the switch off) = the card as it was.
   const V = game.verdict?.result ?? null, squad = !!V && squadVerdict(V);
   if (V) { root.classList.add('vd-on', squad ? 'vd-squad' : 'vd-solo'); root.appendChild(verdictHead(game, V, game.verdict.kept)); }
+  // a row that leans LOUD is not graded as a sneak (game/verdict.ts loudRow, VERDICT.loudCard): no rating word, no score, no line of what was docked, no
+  // badges, and the sneak's numbers stand untoned — five men shot on a mission that is a gunfight is a count, not a fault (a hit taken, a civilian hurt
+  // keep their red). `db-loud` marks the card for a reader of the page; nothing styles it.
+  const plain = !D.scored, tone = (t: string) => plain ? '' : t; if (plain) root.classList.add('db-loud');
   // ---- header: the word, the score, what it is, what it cost
   const head = el('div', 'db-head');
-  const rate = el('div', `db-rating r-${D.rating.toLowerCase()}`); const w = el('b'); w.textContent = D.rating; const sc = el('span', 'db-score'); sc.textContent = String(D.score); rate.append(w, sc);
-  rate.title = D.lines.length ? D.lines.map(l => `−${l.pts}  ${l.label}`).join('\n') : 'nothing docked';
+  if (!plain) { const rate = el('div', `db-rating r-${D.rating.toLowerCase()}`); const w = el('b'); w.textContent = D.rating; const sc = el('span', 'db-score'); sc.textContent = String(D.score); rate.append(w, sc);
+    rate.title = D.lines.length ? D.lines.map(l => `−${l.pts}  ${l.label}`).join('\n') : 'nothing docked'; head.appendChild(rate); }
   const what = el('div', 'db-what');
   const t1 = el('div', 'db-t1'); t1.textContent = D.state === 'done' ? 'mission complete' : D.state === 'down' ? (c.down ? "you're down" : c.civKilled ? 'mission failed — a civilian is dead' : 'mission failed') : 'run so far';   // (failed on his feet: a civilian dead by his hand with the fail rule on — civilians.ts)
-  const t2 = el('div', 'db-t2'); t2.textContent = `${fmtMMSS(c.elapsed)} on the clock · ${D.blurb}${c.sandbox ? ' · sandbox flags were on' : ''}`;
-  const t3 = el('div', 'db-t3'); t3.textContent = D.lines.length ? D.lines.slice(0, 5).map(l => `−${l.pts} ${l.label}`).join('  ·  ') + (D.lines.length > 5 ? '  ·  …' : '') : 'a hundred, and nothing taken off it';
-  what.append(t1, t2, t3); head.append(rate, what); root.appendChild(head);
+  const t2 = el('div', 'db-t2'); t2.textContent = `${fmtMMSS(c.elapsed)} on the clock${plain ? '' : ` · ${D.blurb}`}${c.sandbox ? ' · sandbox flags were on' : ''}`;
+  what.append(t1, t2);
+  if (!plain) { const t3 = el('div', 'db-t3'); t3.textContent = D.lines.length ? D.lines.slice(0, 5).map(l => `−${l.pts} ${l.label}`).join('  ·  ') + (D.lines.length > 5 ? '  ·  …' : '') : 'a hundred, and nothing taken off it'; what.appendChild(t3); }
+  head.appendChild(what); root.appendChild(head);
   // ---- actions (the host's) + copy summary
   const acts = el('div', 'actions db-actions'); for (const a of actions) acts.appendChild(a);
   const copyText = V && squad ? verdictLine(V, game.verdict.kept) : D.summary;
@@ -60,16 +65,16 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   const stats = el('div', 'db-stats'); left.appendChild(stats);
   const st = (k: string, v: string | number, cls = '', title = '') => { const s = el('div', `st${cls ? ' ' + cls : ''}`); const i = el('i'); i.textContent = k; const b = el('b'); b.textContent = String(v); s.append(i, b); if (title) s.title = title; stats.appendChild(s); };
   { const P = game.par?.result(); if (P) st('par', P.medal === 'none' ? 'no medal' : P.medal, P.medal === 'none' ? 'warn' : 'good', game.par.shown ?? P.line); }   // (a level with a par block, its room clear taken: game/par.ts — one cell; the best time on its line is the page's, main.ts)
-  st('time', fmtMMSS(c.elapsed)); st('seen', c.seen ? `×${c.seen}` : '0', c.seen ? 'bad' : 'good', 'sighting episodes: an alert man with eyes on you');
-  st('alarms', c.alarms, c.alarms ? 'bad' : 'good', 'alarm episodes (somebody went to alert while nobody was)'); st('floor up', c.esc1 + c.esc2 ? `×${c.esc1 + c.esc2}` : '0', c.esc2 ? 'bad' : c.esc1 ? 'warn' : 'good', 'times the floor went to heightened / lockdown');
-  st('bodies found', c.bodies, c.bodies ? 'warn' : ''); st('KOs', c.kos, '', gearText('men put down breathing: the takedown, the choke, the whip, a ring to the head')); st('kills', c.kills, c.kills ? 'bad' : 'good');
+  st('time', fmtMMSS(c.elapsed)); st('seen', c.seen ? `×${c.seen}` : '0', tone(c.seen ? 'bad' : 'good'), 'sighting episodes: an alert man with eyes on you');
+  st('alarms', c.alarms, tone(c.alarms ? 'bad' : 'good'), 'alarm episodes (somebody went to alert while nobody was)'); st('floor up', c.esc1 + c.esc2 ? `×${c.esc1 + c.esc2}` : '0', tone(c.esc2 ? 'bad' : c.esc1 ? 'warn' : 'good'), 'times the floor went to heightened / lockdown');
+  st('bodies found', c.bodies, tone(c.bodies ? 'warn' : '')); st('KOs', c.kos, '', gearText('men put down breathing: the takedown, the choke, the whip, a ring to the head')); st('kills', c.kills, tone(c.kills ? 'bad' : 'good'));
   st('shots', c.shots, '', `${c.shotsNearMen} of them into or near a man`); st('OCP', c.ocps); st('lights shot', c.lightsShot);
-  st('doors kicked', c.kicked, c.kicked ? 'warn' : ''); st('locks picked', c.picked); st('keys', c.keys); st('intel', c.intel, '', `${c.questioned} of ${c.roster} men questioned`); st('called in', c.devices, c.devices ? 'warn' : '', 'a camera or a tripwire radioed you in');
-  if (c.thrown) st('thrown', c.thrown, '', 'smoke and stun canisters, frag grenades, and 40 mm grenades off the launcher'); if (c.hits) st('hits taken', c.hits, 'bad'); if (c.loads) st('checkpoint loads', c.loads, 'warn'); if (c.blackout) st('blackout', 'used');
-  if (c.civSeen || c.civReported || c.civKO || c.civKilled || c.civComplied) { st('civilians saw you', c.civSeen, c.civSeen ? 'warn' : 'good', 'times the cleaner / the late worker laid eyes on you (or had your hand on them)'); st('…and told them', c.civReported, c.civReported ? 'bad' : 'good', 'reports that reached the men: told to a guard, rung in, or control ringing the floor after she got out'); if (c.civComplied) st('told to stay down', c.civComplied); if (c.civKO) st('civilian KOs', c.civKO, 'bad', 'civilians you put out cold — priced hard'); if (c.civKilled) st('CIVILIANS KILLED', c.civKilled, 'bad'); }   // (the civilians' block only on a run that met one — civilians.ts)
+  st('doors kicked', c.kicked, tone(c.kicked ? 'warn' : '')); st('locks picked', c.picked); st('keys', c.keys); st('intel', c.intel, '', `${c.questioned} of ${c.roster} men questioned`); st('called in', c.devices, tone(c.devices ? 'warn' : ''), 'a camera or a tripwire radioed you in');
+  if (c.thrown) st('thrown', c.thrown, '', 'smoke and stun canisters, frag grenades, and 40 mm grenades off the launcher'); if (c.hits) st('hits taken', c.hits, 'bad'); if (c.loads) st('checkpoint loads', c.loads, tone('warn')); if (c.blackout) st('blackout', 'used');
+  if (c.civSeen || c.civReported || c.civKO || c.civKilled || c.civComplied) { st('civilians saw you', c.civSeen, tone(c.civSeen ? 'warn' : 'good'), 'times the cleaner / the late worker laid eyes on you (or had your hand on them)'); st('…and told them', c.civReported, tone(c.civReported ? 'bad' : 'good'), 'reports that reached the men: told to a guard, rung in, or control ringing the floor after she got out'); if (c.civComplied) st('told to stay down', c.civComplied); if (c.civKO) st('civilian KOs', c.civKO, 'bad', 'civilians you put out cold — priced hard'); if (c.civKilled) st('CIVILIANS KILLED', c.civKilled, 'bad'); }   // (the civilians' block only on a run that met one — civilians.ts)
   // badges
-  const badges = el('div', 'db-badges'); left.appendChild(badges);
-  for (const b of D.badges) { const chip = el('span', `chip${b.on ? ' on' : ''}`); chip.textContent = b.name; chip.title = b.hint; badges.appendChild(chip); }
+  if (!plain) { const badges = el('div', 'db-badges'); left.appendChild(badges);
+  for (const b of D.badges) { const chip = el('span', `chip${b.on ? ' on' : ''}`); chip.textContent = b.name; chip.title = b.hint; badges.appendChild(chip); } }
   // timeline
   const tlHead = el('div', 'gtitle db-tlhead'); tlHead.textContent = `timeline · ${C.events.length} entr${C.events.length === 1 ? 'y' : 'ies'}${C.dropped ? ` (${C.dropped} more not kept)` : ''}`; left.appendChild(tlHead);
   const tl = el('div', 'db-timeline'); left.appendChild(tl);
