@@ -62,8 +62,8 @@ const BASE_REVS = ['636e5eaef', '3046a115e', 'c069ca16f', 'd13650f85', '0d3a1807
  *  still meet). A look twin (`<name>-gwot.json`) with no row of its own is held to the plain level's. A level with no row is held to BASE_REVS above, as it
  *  was; a level BASE_REVS does not carry must have one. */
 const LEVEL_BASE: Record<string, string> = {
-  // the pair's order on the far man is a deed with his name (a step's `done`)
-  'tut-pair.json': 'ebd4d4869',
+  // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
+  'tut-pair.json': '9048a2e01',
 
   // the plan mission's hall has no lookout on the word's own step (a step's `eye` gone)
   'tut-plan.json': '6cdeafa97',
