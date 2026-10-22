@@ -84,7 +84,22 @@ export const IRLIGHT = {
   cone: 65, core: 20,
   /** how far below level it points, degrees (6, was 11: less of it on the floor at his feet, which is nearest the lens and so the hottest thing in it) */
   dip: 6,
+  /** NO HOTTER THAN IT NEED BE (the maintainer, 10-22, the stealth lesson, stood at the code pad a pace from its wall, the wall white: "i still think the IR
+   *  light is a bit too bright here. ideally it's just enough to be able to see" · "but i like how it's realistic"). The flood falls off by the square of the
+   *  distance, so whatever stands a pace from the lens takes fifty times what a wall five metres off takes, and through the tube that is white whatever
+   *  `power` says (the tube's curve is a logarithm: halving `power` takes a ninth of its range off). So the light turns ITSELF down, as a set with an
+   *  automatic gain does: by the nearest thing the middle of its flood lands on inside `nearM`, by the square of that distance — that thing then reads as
+   *  it would `nearM` off and no brighter (a wall face on at 5 m: about half the tube's range at power 8) — never under `nearMin` of its strength; down at
+   *  `nearDown` a second, up again at `nearUp`. In the open, nothing inside `nearM`: full strength, as it was. The page turns it on (src/host/profile.ts;
+   *  `?irnear=0`, or `?irnear=<metres>` for another distance). false = full strength whatever is in front of it, as it was. Never judged on a real GPU */
+  near: false, nearM: 5, nearMin: 0.003, nearUp: 3, nearDown: 12,
 };
+/** ?irpower=<n> · ?irnear=<metres> — the light's strength and the distance it turns down inside, for a visit, over the kept Team feel rows (the Game's
+ *  constructor, right after teamfeel.ts has read those back; no page — the harness — nothing) */
+export function irFlags() { try { const q = new URLSearchParams(location.search);
+  const p = parseFloat(q.get('irpower') ?? ''); if (Number.isFinite(p) && p > 0) IRLIGHT.power = Math.min(100, p);
+  const n = parseFloat(q.get('irnear') ?? ''); if (Number.isFinite(n) && n > 0) IRLIGHT.nearM = clamp(n, 0.5, 20); } catch { /* no page */ } }
+const NEAR_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.IRNEAR_BREAK === '1';   // (QA: the rule's own check must fail with this set)
 
 /** the key Sam's reading is kept under while the place read is his wand's (no character's id is negative) */
 const WAND_KEY = -1;
@@ -94,9 +109,11 @@ const HEAD_Y = 1.62, LENS_AHEAD = 0.14, LENS_CLEAR = 0.3, LENS_R = 0.04;
  *  the reading began · `own`: the CPU's light on the floor under him where it calls that dark (−1: it does not) · `pts`: the dark points of his fan the
  *  renderer is asked about, x, z and the CPU's light at each · `since`: when each slot was first asked (Infinity: not in use; the last is the wand's own floor) */
 interface Need { readT: number; darkT: number; k: number; t: number; fresh: boolean; t0: number; own: number; pts: number[]; since: number[] }
-interface Kit { sam: RtLight | null; men: Map<Guard, RtLight>; seen: Map<Guard, { t: number; E: number }>; need: Map<number, Need> }
+interface Kit { sam: RtLight | null; men: Map<Guard, RtLight>; seen: Map<Guard, { t: number; E: number }>; need: Map<number, Need>;
+  /** IRLIGHT.near: how far each carrier's light is turned down for what stands in front of it (1 = not at all), and as of when */
+  near: Map<number, { t: number; k: number }> }
 const kits = new SideMap<Game, Kit>('irlight.kits');
-const kitOf = (g: Game): Kit => { let K = kits.get(g); if (!K) { K = { sam: null, men: new Map(), seen: new Map(), need: new Map() }; kits.set(g, K); } return K; };
+const kitOf = (g: Game): Kit => { let K = kits.get(g); if (!K) { K = { sam: null, men: new Map(), seen: new Map(), need: new Map(), near: new Map() }; kits.set(g, K); } return K; };
 const lamp = (name: string, owner: number): RtLight => ({ name, group: 'infrared', kind: 1, pos: [0, -10, 0], dir: [0, 0, 1], color: [1, 1, 1], intensity: 0, range: IRLIGHT.reach,
   innerDeg: IRLIGHT.core, outerDeg: IRLIGHT.cone, radius: LENS_R, volumetric: 0, owner, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0 });   // (volumetric 0: no beam in the haze — at the tube's gain its own back-scatter would be all it showed)
 
@@ -195,10 +212,25 @@ const samOn = (g: Game) => g.player.nvAmount > 0.5;
 /** his lamp is out of the list: the renderer's slot memory of it goes with it (lights.ts upload maps last frame's slot to this frame's by the object) */
 const out = (L: RtLight | null | undefined) => { if (L) { L.enabled = false; L.slot = -1; } };
 
+/** IRLIGHT.near: how much of its strength a posed light keeps for what stands in front of it — three rays over the statics across the middle of the flood
+ *  (its axis and a hand's breadth either side), the nearest hit inside `nearM` squared against `nearM`, eased (a reading older than a quarter second, or
+ *  none: the answer at once — a light that comes on comes on right). 1 with the switch off. */
+const NEAR_YAW = [0, -0.17, 0.17];
+function nearK(g: Game, kit: Kit, key: number, L: RtLight): number {
+  if (!IRLIGHT.near || NEAR_BREAK) return 1;
+  const M = Math.max(0.5, IRLIGHT.nearM); let d = M;
+  for (const a of NEAR_YAW) { const c = Math.cos(a), s = Math.sin(a), h = g.col.raycast(L.pos, [L.dir[0] * c + L.dir[2] * s, L.dir[1], L.dir[2] * c - L.dir[0] * s], d); if (h && h.t < d) d = h.t; }
+  const want = clamp((d / M) * (d / M), IRLIGHT.nearMin, 1), was = kit.near.get(key), dt = was ? g.time - was.t : -1;
+  let k = !was || dt < 0 || dt > 0.25 ? want : was.k + (want - was.k) * Math.min(1, dt * (want < was.k ? IRLIGHT.nearDown : IRLIGHT.nearUp));
+  if (Math.abs(want - k) < 0.005 * Math.max(want, k)) k = want;   // (there: the ease has no tail)
+  kit.near.set(key, { t: g.time, k }); return k;
+}
+/** (QA) how far a carrier's light stands turned down this frame — 1: not at all, or no reading of his this frame */
+export function irNearOf(g: Game, key: number): number { const s = kits.get(g)?.near.get(key); return s && s.t === g.time ? s.k : 1; }
 /** Once a frame from Game.update, after everybody has moved and the doors have swung: the list of infrared lights (LightSet.ir) made again from whose goggles are down. */
 export function irLightTick(g: Game) {
   const list = g.engine.lights.ir, K = kits.get(g);
-  if (!IRLIGHT.on) { if (list.length) list.length = 0; if (K) { out(K.sam); K.men.clear(); K.seen.clear(); for (const id of [...K.need.keys()]) drop(g, K, id); } return; }
+  if (!IRLIGHT.on) { if (list.length) list.length = 0; if (K) { out(K.sam); K.men.clear(); K.seen.clear(); K.near.clear(); for (const id of [...K.need.keys()]) drop(g, K, id); } return; }
   const kit = K ?? kitOf(g); list.length = 0; kit.seen.clear();
   /** his light posed, and in the list if any of it burns (auto: only where his place is too dark for the tube) */
   // (the renderer is asked only where it answers: Sam's own meter — asked every frame, game.ts lightMeter — has an answer. Headless it never has. Read once
@@ -206,7 +238,7 @@ export function irLightTick(g: Game) {
   let live: boolean | undefined;
   const lit = (L: RtLight, key: number, at: Vec3, yaw: number, each: boolean, ownKey: string | null) => {
     live ??= IRLIGHT.auto && IRLIGHT.meter && !SENSE.cpu && g.lightAt('playerChest') !== undefined;
-    const k = burn(g, kit, key, at, yaw, each, live, ownKey); if (k > 0) { L.intensity *= k; L.peakIntensity = L.intensity; list.push(L); } else out(L); };
+    const k = burn(g, kit, key, at, yaw, each, live, ownKey); if (k > 0) { L.intensity *= k * nearK(g, kit, key, L); L.peakIntensity = L.intensity; list.push(L); } else out(L); };
   const sc = g.player.char;
   if (samOn(g)) {
     const L = kit.sam ??= lamp('ir_sam', sc.id); pose(g, L, sc);
