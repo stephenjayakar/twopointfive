@@ -205,11 +205,14 @@ export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<Le
     step(20);   // the start's first frames (poses, the deal's lines)
     for (let i = 0; i < L.steps.length; i++) {
       const T = L.steps[i];
-      if (lessonOn && g.lesson.i !== i) throw new Stop(`step ${i + 1} '${T.id}' is not the step that is up (the lesson is on ${g.lesson.i + 1}: ${g.lesson.summary()})`);
+      // (a step whose honest alternative an earlier deed already made true may have GONE BY when its turn comes — `idleOk`: its half second, its reader's pause and
+      //  its script are run all the same, frame for frame as the arm with no lesson runs them)
+      const gone = lessonOn && g.lesson.i > i && idleOk.has(T.id);
+      if (lessonOn && !gone && g.lesson.i !== i) throw new Stop(`step ${i + 1} '${T.id}' is not the step that is up (the lesson is on ${g.lesson.i + 1}: ${g.lesson.summary()})`);
       step(30);   // half a second of nothing: the line must not move on by itself
       if (lessonOn && g.lesson.i !== i && !idleOk.has(T.id)) throw new Stop(`step ${i + 1} '${T.id}' went by with nothing done (its test was already true when it came up)`);
       if (PACE > 0) step(Math.round(PACE * 60));   // --pace: a reader's seconds on the line (a step that only WAITS for the floor may well go by while he reads: its script then finds its wait already over)
-      say(`step ${i + 1}/${L.steps.length} '${T.id}': ${T.line}`);
+      say(`step ${i + 1}/${L.steps.length} '${T.id}': ${T.line}${gone ? ' (it had already gone by: idleOk)' : ''}`);
       script.steps[T.id](B);
       step(30);   // (the same half second in both arms — a step with a `hold` longer than that waits in its own script)
       if (lessonOn && g.lesson.i <= i) throw new Stop(`step ${i + 1} '${T.id}' did not go by after its script (player at ${at(pos())}, stage ${g.mission.stage}; test ${JSON.stringify(T.done)})`);

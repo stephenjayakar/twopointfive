@@ -738,13 +738,13 @@ export class Director {
   private tickBursts(R: Run) {
     for (const B of R.bursts) {
       if (B.left <= 0) continue;
-      const u = R.units.get(B.u.id); if (!u || u.gd.state === 'dead') { B.left = 0; continue; }
-      if (R.t < B.next || u.gd.weapon.reloading) continue;
-      const at = 'kind' in B.at && B.at.kind === 'unit' ? (() => { const v = R.units.get((B.at as UnitRef).id)?.gd; return v ? (v.char.bones.chest ?? v3.add(v.char.pos, [0, 1.1, 0])) : null; })() : (() => { const p = this.placeOf(B.at as Place); return [p[0], (B.at as Vec3)[1] || 1.1, p[2]] as Vec3; })();
+      const gd = this.guardOrNull(R, B.u); if (!gd || gd.state === 'dead') { B.left = 0; continue; }   // (guardOf's rule: a man of the level's own staff a beat took in hand fires as a spawned one does)
+      if (R.t < B.next || gd.weapon.reloading) continue;
+      const at = 'kind' in B.at && B.at.kind === 'unit' ? (() => { const v = this.guardOrNull(R, B.at as UnitRef); return v ? (v.char.bones.chest ?? v3.add(v.char.pos, [0, 1.1, 0])) : null; })() : (() => { const p = this.placeOf(B.at as Place); return [p[0], (B.at as Vec3)[1] || 1.1, p[2]] as Vec3; })();
       if (!at) { B.left = 0; continue; }
-      if (u.gd.weapon.fire()) { fireWeapon(this.g, u.gd.char, at, false, { steady: true, spread: B.spread }); B.left--; B.fired++; B.next = R.t + B.cadence; }   // a scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from combat.ts
-      else u.gd.weapon.rearm();
-      if (B.left <= 0) this.push({ beat: '', kind: 'stimulus', what: 'burst:done', data: { by: u.ref.callsign, rounds: B.fired } });
+      if (gd.weapon.fire()) { fireWeapon(this.g, gd.char, at, false, { steady: true, spread: B.spread }); B.left--; B.fired++; B.next = R.t + B.cadence; }   // a scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from combat.ts
+      else gd.weapon.rearm();
+      if (B.left <= 0) this.push({ beat: '', kind: 'stimulus', what: 'burst:done', data: { by: B.u.callsign, rounds: B.fired } });
     }
     if (R.bursts.some(B => B.left <= 0)) R.bursts = R.bursts.filter(B => B.left > 0);   // (a beat's cond holds its own record, not the list: the finished leave it — a long program fires hundreds)
   }
@@ -782,6 +782,7 @@ export class Director {
     const gd = this.g.guards.find(x => x.char.id === u.id) ?? R.show?.benched?.find(x => x.char.id === u.id); if (gd) return gd;
     throw new BeatFailure(`unit ${u.callsign} (#${u.id}) is not in the world`);
   }
+  private guardOrNull(R: Run, u: UnitRef): Guard | null { try { return this.guardOf(R, u); } catch { return null; } }
   private planOf(p: PlanRef): BreachPlan | RoomClearPlan {
     if (p.plan === 'breach') { const B = this.g.level.breach; if (!B) throw new BeatFailure(`the level has no breach plan`); return B; }
     const P = (this.g.level.clearPlans ?? []).find(x => x.room === p.id || x.door === p.id); if (!P) throw new BeatFailure(`no room-clear plan '${p.id}'`); return P;
