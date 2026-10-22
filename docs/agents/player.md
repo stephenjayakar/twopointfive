@@ -931,7 +931,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   reload, the panel with its caps and the back key's while up, and the first build's box under `pop` off (no press drawn with the gun put away
   or a man in his arm); the journal line replays a first-build row: 13 lines pass on both stands, `SLOTSETUP_BREAK=1` is red on 10 on each.
   `slotsetup-page.cjs` has six lines (the panel is above the column's top edge, four seconds on it is still up; a third page with `?setuppop=0`).
-  RUN besides: PAGERUN. KNOWN: (1) the habit press has no window to run out now — a 2 pressed with the rifle already up leaves the panel
+  RUN besides, with the change on the build before the join: `shipped`, `handslot`, `tabback`, `handring`, `fn2000`, `kitanim`, `wallsnap-kit`,
+  `keybinds`, `qkey`, `inhand` on the page's stand, `fn2000`, `handslot`, `weapons-identity`, `kit-slots` on the frozen one; on the join: the
+  check and its break on both stands, the page check, `shipped`, `knobs-check`, the rollback static pass, `lesson-run train-kit` on both stands
+  and `tut-solo` on the page's. NOT RUN: the tour, a soak, `all-quick`, the other page checks. KNOWN: (1) the habit press has no window to run out now — a 2 pressed with the rifle already up leaves the panel
   standing, and a 1 or a 3 pressed any time after is its row, not the pistol or the smoke can; the panel is what says so. (2) In a tutorial
   mission the frame's gate (`rails.ts`) drops a row's digit whose slot is still locked, and a click or R it has locked does not shut the setup:
   the solo mission's thread is letting `slotSetupTakes` keys through the gate. (3) The words on the box clip without a mark if a wide fallback
