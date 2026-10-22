@@ -21,7 +21,7 @@ import { rackDist, tally } from './mission';
 import { quietWords } from './quiet';   // (called inside buildInteractables only)
 import { chronicle, chronKey, chronDoor, chronThrown, chronGrab } from './chronicle';
 import { fireWeapon, killGuard, dropFromHand, flashFuse } from './combat';
-import { FRAG, FRAG_STATS } from './frag';
+import { FRAG, FRAG_STATS, restOfThrow } from './frag';
 import { kickScuff } from './marks';
 import { hammerBlows } from './bigkit';
 import { BIGSLOT, kitYouLight, kitYouNvg } from './kit';   // (the two asked at the two keys and each frame beside them: a card that left your light or your goggles at home — kittree.ts)
@@ -40,7 +40,7 @@ import { samAim, AIM, AIM_HOOKS, SNAP_PX } from './aim';
 import { AIMCOST } from './aimcost';
 import { ocpable, lensClear } from './lighting';
 import { deadLamp } from './carlamps';
-import { breachAim, gunWalled, gunWallPose, gunWallStance } from './gunwall';
+import { GUNWALL, breachAim, gunWalled, gunWallIs, gunClearFrom, woodBetween, gunWallPose, gunWallStance } from './gunwall';
 import { friendNoSnap, friendOnRay, samOffFriend } from './friends';
 import { noShoveBegin, noShoveMan, noShoveBack, noShoveNote } from './noshove';
 import { samStaggered, samRooted, samBlind, samStunPose } from './samstun';
@@ -803,7 +803,7 @@ export interface WallHold {
    *  rifle stays in the shoulder (a click, or stepped out), lean = 0‥1 stepped out past the open end `leanDir` (leanWant = where it is going, leanDwell / leanOutT
    *  its clocks, leanOff = the metres along the wall he actually stands past his station for it this frame — the read-back takes them off), flipT = the
    *  cursor-behind-him clock, sayT = when the 'wall in the way' line was last said. */
-  kind?: 'stack'; up?: number; lean?: number; leanWant?: boolean; leanDir?: -1 | 1; leanDwell?: number; leanOutT?: number; leanOff?: number; flipT?: number; sayT?: number; rise?: number; owed?: number; camAlong?: number; cam?: FollowCamera;
+  kind?: 'stack'; up?: number; lean?: number; leanWant?: boolean; leanDir?: -1 | 1; leanDwell?: number; leanOutT?: number; leanOff?: number; leanMore?: number; flipT?: number; sayT?: number; rise?: number; owed?: number; camAlong?: number; cam?: FollowCamera;
 }
 
 /** The static face lying in the plane (n, d) at station u along t — if there is one there fit to lean on: from a point 0.3 m out in the room, a knee-height ray
@@ -1054,7 +1054,7 @@ type WhKind = 'vec' | 'num' | 'unit' | 'opt' | 'bool' | 'optbool' | 'sign' | 'si
 const WH = {
   n: 'vec', along: 'derived', from: 'vec', d: 'num', lo: 'num', hi: 'num', u: 'num', v: 'num', off: 'num', awayT: 'num', blockT: 'num', settle: 'unit', peek: 'unit',
   openLo: 'bool', openHi: 'bool', seated: 'bool', drawn: 'bool', crouched: 'bool', side: 'sign', peekDir: 'sign', blockDir: 'sign0', atEdge: 'sign0',
-  takeT: 'opt', yaw0: 'opt', yawD: 'opt', hitT: 'opt', up: 'opt', lean: 'opt', leanDwell: 'opt', leanOutT: 'opt', leanOff: 'opt', flipT: 'opt', sayT: 'opt', rise: 'opt', owed: 'opt', camAlong: 'opt',
+  takeT: 'opt', yaw0: 'opt', yawD: 'opt', hitT: 'opt', up: 'opt', lean: 'opt', leanDwell: 'opt', leanOutT: 'opt', leanOff: 'opt', leanMore: 'opt', flipT: 'opt', sayT: 'opt', rise: 'opt', owed: 'opt', camAlong: 'opt',
   leanWant: 'optbool', leanDir: 'optsign', kind: 'stack',
 } as const satisfies Record<keyof Omit<WallHold, 'cam'>, WhKind>;
 export type WallSnap = { hold?: Record<string, unknown>; press?: { t: number; at: number; n: number[] | null; dx: number; dz: number; held: boolean; until: number } };
@@ -1108,21 +1108,42 @@ function wallTakeYaw(pl: Player): boolean {
 }
 
 /** Esc with the launcher's button down: the gesture is let go of, nothing sent (Game.escape; the button still down afterwards begins nothing — only a fresh press does) */
+/** WHERE THE CAN HE IS AIMING WILL COME TO REST (THROWBACK.restMark; overlay.ts draws the preview's ring there): the arc's own first touch is not where a can
+ *  stays — it bounces and rolls on a metre or two — and the maintainer could not put a smoke on a gap by it. frag.ts restOfThrow on the arc being shown.
+ *  `path`: the floor it crosses from that touch to there. Null with the mark off, with no arc up, and for the launcher's arc (its round bursts or sticks
+ *  where it lands). Read only. */
+export function throwRest(g: Game): { at: Vec3; path: Vec3[] } | null {
+  const pl = g.player, sol = pl.throwPreview; if (!THROWBACK.restMark || !sol || !sol.points.length || !(pl.throwHeld || (!pl.holstered && pl.canisterSel))) return null;
+  return restOfThrow(g, pl.heldKind, sol.points[0], sol.v0);
+}
 export function launchCancel(g: Game): boolean { const pl = g.player; if (!pl.launchHeld) return false; pl.launchHeld = null; pl.throwPreview = null; return true; }
 /** Stacked on the wall: is the rifle UP this frame? A click (or the trigger held; the right button too with an attachment on it) brings it into the shoulder and
  *  keeps it there WALLSNAP.upSecs; stepped out round the end it is up for as long as he is out. Never while the first WALLSNAP.bore of its line is in a wall
  *  (pointing through the wall he is stacked on): then it stays low and no round leaves — held off through equipT, the 'still coming into the hands' beat every
  *  fire site already honours. Nothing leaves the low ready either: for WALLSNAP.upRise after it starts up the click is held (equipT again) and given to the
  *  fire sites on the frame the rise is over — the first round leaves with the rifle most of the way to the shoulder, a sixth of a second after the click, not level from the thigh. */
+function stackInWay(g: Game): boolean {
+  const pl = g.player, c = pl.char, ap = g.aimPoint, dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
+  const hit = d > 0.25 ? g.col.raycast([c.pos[0], pl.crouch ? 0.85 : 1.3, c.pos[2]], [dx / d, 0, dz / d], WALLSNAP.bore) : null;
+  return !!hit && hit.index < 1e6;
+}
+/** HIS GUN CANNOT GET A ROUND OUT THIS FRAME (GUNWALL.mark; overlay.ts bars the aim ring with it — the words a dead click files are in no list the page
+ *  draws): held down by a wall (gunwall.ts), kept low on the stack with the wall he is on in its line (stackUp), or up with its muzzle the far side of a
+ *  jamb from its shoulder (combat.ts armThrough: that round stops in the wood). Read only: nothing of the game's is written, nothing counted. */
+export function gunShut(g: Game): boolean {
+  const pl = g.player, c = pl.char; if (!GUNWALL.mark || pl.holstered) return false;
+  if (gunWallIs(g, c)) return true;
+  const w = pl.wall;   // (not through a step-out: from his station the point he steps out FOR is behind his wall, and the ring would flash barred each time)
+  if (w?.kind === 'stack') { if (w.leanWant || w.lean! > 0 || w.leanDwell! > 0) { if (w.lean! < 1) return false; } else if (w.settle >= 1 && stackInWay(g)) return true; }
+  return (c.anim.upper === 'aim' || (pl.rifleUp && c.anim.longStance === 'shoulder')) && woodBetween(g, c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]), c.muzzle);   // (combat.ts armThrough's own two points; a sheet his rounds go through is no wood: gunwall.ts)
+}
 function stackUp(g: Game, dt: number, input: Input): boolean {
   const pl = g.player, c = pl.char, w = pl.wall!, W = WALLSNAP;
   const hold = () => { pl.equipT = Math.max(pl.equipT, 1e-3); };
   if (w.settle < 1) { w.up = 0; if (W.slow) w.owed = (w.owed ?? 0) | (input.clicked & 5); hold(); return false; }   // still coming onto the wall (WALLSNAP.slow: the take is long enough for a click to fall inside it — kept, and it brings the rifle up as he lands)
   if (samStaggered(g)) { w.up = 0; w.rise = 0; w.owed = 0; hold(); return false; }   // folded by a blast (samstun.ts): the rifle stays at the low ready, and a click made meanwhile is not owed a round
-  const ap = g.aimPoint, dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
-  const hit = d > 0.25 ? g.col.raycast([c.pos[0], pl.crouch ? 0.85 : 1.3, c.pos[2]], [dx / d, 0, dz / d], W.bore) : null;
   const pull = input.lmb() || input.lmbHit() || (pl.rifle.attachment !== null && (input.rmb() || input.rmbHit())) || (W.slow && !!w.owed && !(w.up! > 0));   // (…or a click kept from the take)
-  if (hit && hit.index < 1e6) {
+  if (stackInWay(g)) {
     w.up = 0; w.rise = 0; w.owed = 0; hold();
     if (input.lmbHit() && g.time - (w.sayT ?? -10) > 1.5) { w.sayT = g.time; g.msg('the wall is in the way — step out past its end, or off it'); }
     return false;
@@ -1143,7 +1164,7 @@ function stackUp(g: Game, dt: number, input: Input): boolean {
 function stackLean(g: Game, dt: number, cam: FollowCamera, w: WallHold, dir: -1 | 0 | 1): number {
   if (w.lean === undefined) return 0;
   const W = WALLSNAP, pl = g.player, t = w.along, n = w.n;
-  if (samRooted(g)) return w.leanDir! * W.leanAlong * w.lean * w.lean * (3 - 2 * w.lean);   // rooted by a blast (samstun.ts): he neither steps out nor back in — he stands where it caught him
+  if (samRooted(g)) return w.leanDir! * (W.leanAlong + (w.leanMore ?? 0)) * w.lean * w.lean * (3 - 2 * w.lean);   // rooted by a blast (samstun.ts): he neither steps out nor back in — he stands where it caught him
   let want = false; const edge = w.atEdge;
   if (w.kind === 'stack' && w.settle >= 1 && edge !== 0 && dir !== -edge && !pl.rifle.reloading && (w.leanWant || Math.abs(w.v) < 0.05)) {
     // What he is pointing AT. The cursor's ray lands on whatever the camera sees first, and seen from his side of a wall that is often the wall's own top or
@@ -1159,6 +1180,13 @@ function stackLean(g: Game, dt: number, cam: FollowCamera, w: WallHold, dir: -1 
       const a: Vec3 = [c.pos[0] + t[0] * k, h, c.pos[2] + t[2] * k], d = Math.hypot(ap[0] - a[0], ap[2] - a[2]), r = Math.min(1, W.leanClearM / Math.max(d, 1e-3));
       if (d < 0.2 || g.col.shotBlocked(a, [a[0] + (ap[0] - a[0]) * r, h + (ap[1] - h) * r, a[2] + (ap[2] - a[2]) * r])) want = false;
     }
+    // THE GUN'S SHARE (WALLSNAP.leanGun): the least further step from which the rifle and the start of its round's way are clear; it grows at the
+    // step-out's own speed and is kept until he is back in (a cursor that wanders does not walk him to and fro)
+    if (want && W.leanGun > 0) {
+      const c = pl.char, k0 = edge * W.leanAlong - (w.leanOff ?? 0); let need = 0;
+      if ((w.leanMore ?? 0) < W.leanGun) for (let m = 0; m <= W.leanGun + 1e-6; m += Math.max(0.02, W.leanGunStep)) if (gunClearFrom(g, c, c.pos[0] + t[0] * (k0 + edge * m), c.pos[2] + t[2] * (k0 + edge * m), ap, W.leanClearM)) { need = m; break; }
+      if (need > (w.leanMore ?? 0)) w.leanMore = Math.min(need, (w.leanMore ?? 0) + dt * W.leanAlong / W.leanOut);
+    }
   }
   if (want !== w.leanWant) {
     w.leanDwell! += dt;
@@ -1167,7 +1195,8 @@ function stackLean(g: Game, dt: number, cam: FollowCamera, w: WallHold, dir: -1 
   } else w.leanDwell = 0;
   w.leanOutT = w.leanWant ? w.leanOutT! + dt : 0;
   w.lean = clamp(w.lean + (w.leanWant ? dt / W.leanOut : -dt / W.leanBack), 0, 1);
-  return w.leanDir! * W.leanAlong * w.lean * w.lean * (3 - 2 * w.lean);
+  if (w.leanMore !== undefined && w.lean <= 0 && !w.leanWant) delete w.leanMore;
+  return w.leanDir! * (W.leanAlong + (w.leanMore ?? 0)) * w.lean * w.lean * (3 - 2 * w.lean);
 }
 
 /** One frame of the feel pass's pose, after the hold's own lines have run (updatePlayer): the take's progress and the landing's settle to the animator (and the

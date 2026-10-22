@@ -7,7 +7,7 @@
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
-import { floorPlan, PLAN } from '../game/floorplan';
+import { floorPlan, PLAN, capOf } from '../game/floorplan';
 
 const NS = 'http://www.w3.org/2000/svg';
 const Y = 0.04;          // just off the floor
@@ -162,10 +162,10 @@ export class PlanFloor {
       // waiting on the key: a bar across the doorway, the key on the one the key would send now
       for (const dr of P.doors) {
         const a = px(dr.a[0], dr.a[2]), b = px(dr.b[0], dr.b[2]); if (!a || !b) continue;
-        const E = this.doorEls(nd++); this.show(E.g, true);
-        this.put(E.g, 'class', `pdoor w-${dr.why}${dr.tone ? ` t-${dr.tone}` : ''}${dr.now ? ' now' : ''}`);
+        const E = this.doorEls(nd++), c = capOf(dr); this.show(E.g, true);
+        this.put(E.g, 'class', `pdoor w-${dr.why}${dr.tone ? ` t-${dr.tone}` : ''}${dr.now ? ' now' : ''}${c === 'lit' ? ' lit live' : c === 'dark' ? ' lit' : ''}`);
         this.show(E.bar, true); this.put(E.bar, 'x1', f1(a[0])); this.put(E.bar, 'y1', f1(a[1])); this.put(E.bar, 'x2', f1(b[0])); this.put(E.bar, 'y2', f1(b[1]));
-        const cap = !!dr.key && dr.now, mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        const cap = c !== 'none', mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         this.show(E.cap, cap); this.show(E.key, cap);
         if (cap) { this.put(E.cap, 'x', f1(mx - 7.5)); this.put(E.cap, 'y', f1(my - 7.5)); this.put(E.key, 'x', f1(mx)); this.put(E.key, 'y', f1(my)); this.put(E.key, 'text', dr.key!); }
       }

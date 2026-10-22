@@ -39,8 +39,10 @@ import type { PelletSpec } from './weapons';
  *  speed added to both (the carriage takes about that long to change). `tuckM`: the room the tucked muzzle keeps; `tuckLeadS`: its lead.
  *  `fightS`: a fight anywhere on the floor (a man gone alert, a scripted man with one in his sights) makes EVERY man a man in a fight for this long after it
  *  was last seen — the calm man's margins bring a gun down a stride early, and a stride early at a jamb with defenders two rooms off is a shot not taken
- *  (0 = only the man who has a target himself). */
-export const GUNWALL = { on: false, downM: 0.03, upM: 0.12, leadS: 0.2, atM: 0.5, tuckM: 0.04, tuckLeadS: 0.12, fightS: 5 };
+ *  (0 = only the man who has a target himself).
+ *  `mark`: the player's aim ring wears a bar while his gun cannot get a round out (player.ts gunShut; the overlay's, nothing in the game reads it — the
+ *  words a dead click files are in no list the page draws). Off here; the page turns it on (?nogunmark = off). */
+export const GUNWALL = { on: false, downM: 0.03, upM: 0.12, leadS: 0.2, atM: 0.5, tuckM: 0.04, tuckLeadS: 0.12, fightS: 5, mark: false };
 /** QA: line tests made, guns brought down (spells) and for how long (man-seconds), frames a low carriage was pulled in — tools/qa/gunwall-watch.ts reads it; nothing in the game does */
 export const GUNWALL_STATS = { asked: 0, lowered: 0, loweredS: 0, tucked: 0 };
 
@@ -86,8 +88,8 @@ function frame(c: Character, yaw: number) {
   const sh = (c.bones.upperArmR?.[1] ?? c.pos[1] + STAND_SH) - c.pos[1];
   return { f, r, sh, k: clamp((STAND_SH - sh) / (STAND_SH - CROUCH_SH), 0, 1) };
 }
-const at = (c: Character, F: { f: Vec3; r: Vec3 }, fwd: number, right: number, y: number): Vec3 =>
-  [c.pos[0] + F.f[0] * fwd + F.r[0] * right, c.pos[1] + y, c.pos[2] + F.f[2] * fwd + F.r[2] * right];
+const at = (o: Vec3, F: { f: Vec3; r: Vec3 }, fwd: number, right: number, y: number): Vec3 =>
+  [o[0] + F.f[0] * fwd + F.r[0] * right, o[1] + y, o[2] + F.f[2] * fwd + F.r[2] * right];
 /** his feet's speed over the floor, sampled once a frame by whoever asks first */
 function track(g: Game, c: Character, S: St): void {
   if (S.vt === g.time) return;
@@ -103,23 +105,39 @@ const closing = (S: St, f: Vec3) => Math.max(0, S.vx * f[0] + S.vz * f[2]);
  *  muzzle. The aim: level with his eye line, on his gun side, pitched as he aims. The port: the long gun slanting up across his chest, the pistol level at
  *  the chin. These are COPIES of what character.ts's carriage tables (LONG, LONG_CROUCH, STANCES) come out as on the mannequin — `probes.ts gunwall`'s
  *  gun-model card holds them to the posed gun, so a re-tuned table that moves a muzzle is a red there and not a rule that silently stopped fitting. */
-function raisedLine(c: Character, up: GunUp, yaw: number): { a: Vec3; b: Vec3 } {
+function raisedLine(c: Character, up: GunUp, yaw: number, o: Vec3 = c.pos): { a: Vec3; b: Vec3 } {
   const F = frame(c, yaw), long = c.anim.longGun;
   if (up === 'aim') {
     const reach = (long ? 0.11 : 0.385) + c.muzzleAhead, side = long ? lerp(0.2, 0.16, F.k) : lerp(0.16, 0.02, F.k), y = F.sh - (long ? 0.11 : lerp(0.02, 0.22, F.k));
     const p = clamp(c.aimPitch, -0.7, 0.7);
-    return { a: at(c, F, 0, side, y), b: at(c, F, reach * Math.cos(p), side, y + reach * Math.sin(p)) };
+    return { a: at(o, F, 0, side, y), b: at(o, F, reach * Math.cos(p), side, y + reach * Math.sin(p)) };
   }
-  return long ? { a: at(c, F, 0.15, 0.12, F.sh - 0.28), b: at(c, F, 0.44, -0.065, F.sh + 0.13) } : { a: at(c, F, 0, 0.07, F.sh + 0.04), b: at(c, F, 0.465, 0.07, F.sh + 0.07) };
+  return long ? { a: at(o, F, 0.15, 0.12, F.sh - 0.28), b: at(o, F, 0.44, -0.065, F.sh + 0.13) } : { a: at(o, F, 0, 0.07, F.sh + 0.04), b: at(o, F, 0.465, 0.07, F.sh + 0.07) };
 }
+/** Stood at (x, z) with the long gun in the shoulder on `to`: would the gun lie clear of every static and leaf, and the first `ahead` metres of its round's
+ *  way too? The worked-out aim carriage from there, and CLEAR_WIDE outside it (stepped out on the wall the posed gun rides that much wider than the
+ *  carriage's own number), each with the arm behind it — the collision rays the rule itself asks. (player.ts stackLean: how far round an end on his gun
+ *  side a step-out has to go before a round can leave.) */
+export function gunClearFrom(g: Game, c: Character, x: number, z: number, to: Vec3, ahead: number): boolean {
+  const yaw = Math.atan2(to[0] - x, to[2] - z), F = frame(c, yaw), M = raisedLine(c, 'aim', yaw, [x, c.pos[1], z]);
+  const sh: Vec3 = [x + F.r[0] * 0.14 - F.f[0] * 0.15, M.a[1] + 0.11, z + F.r[2] * 0.14 - F.f[2] * 0.15];
+  const hits = (a: Vec3, b: Vec3, most = Infinity): boolean => { const d = v3.sub(b, a), L = v3.len(d); return L > 1e-3 && !!g.col.raycast(a, v3.scale(d, 1 / L), Math.min(L, most)); };
+  for (const w of [0, CLEAR_WIDE]) {
+    const off: Vec3 = [F.r[0] * w, 0, F.r[2] * w], a = v3.add(M.a, off), b = v3.add(M.b, off);
+    if (hits(sh, b) || hits(a, b) || hits(b, [to[0], b[1], to[2]], ahead)) return false;   // (the way out asked level: a cursor on the floor near him is a heading, not a point to shoot the ground at)
+  }
+  return true;
+}
+const CLEAR_WIDE = 0.1;
 /** how far ahead of his feet the low ready leaves the muzzle (untucked) */
 const lowReach = (c: Character) => c.anim.longGun ? 0.145 + 0.7 * c.muzzleAhead : 0.241 + 0.74 * c.muzzleAhead;
 /** QA (tools/qa/gunwall-probes.ts gun-model): the worked-out carriages, to be held against the posed gun */
 export const gunWallModel = { raisedLine, lowReach, TUCK_REACH };
 
 /** a PANEL on a → b as a round sees one (combat.ts solidBetween: a static, or a leaf standing shut — one standing open yields), and not a pane rounds go through */
-function panel(g: Game, a: Vec3, b: Vec3): boolean {
-  GUNWALL_STATS.asked++;
+function panel(g: Game, a: Vec3, b: Vec3): boolean { GUNWALL_STATS.asked++; return woodBetween(g, a, b); }
+/** …the same answer with nothing counted (player.ts gunShut: the overlay asks it every frame, and a QA tally is not the picture's to move) */
+export function woodBetween(g: Game, a: Vec3, b: Vec3): boolean {
   if (!solidBetween(g, a, b)) return false;
   if (!glassPenLive(g)) return true;
   const d = v3.sub(b, a), L = v3.len(d), h = L > 1e-3 ? g.col.raycast(a, v3.scale(d, 1 / L), L) : null;
@@ -234,7 +252,7 @@ export function gunWallPose(g: Game, c: Character): void {
     const F = frame(c, yaw), long = an.longGun, B = c.bonesAt;
     const sh = c.bones.upperArmR, shF = sh ? (sh[0] - B[0]) * F.f[0] + (sh[2] - B[1]) * F.f[2] : SH_REST;   // the gun shoulder ahead of his feet as the last pose had it
     const reach = R + clamp((shF - SH_REST) * SH_CARRY, 0, REACH_OVER);
-    const a = long ? at(c, F, 0, 0.18, F.sh - 0.18) : at(c, F, 0, 0.08, F.sh - 0.3), b = long ? at(c, F, R, 0.03, F.sh - 0.51) : at(c, F, R, 0.08, F.sh - 0.49);
+    const a = long ? at(c.pos, F, 0, 0.18, F.sh - 0.18) : at(c.pos, F, 0, 0.08, F.sh - 0.3), b = long ? at(c.pos, F, R, 0.03, F.sh - 0.51) : at(c.pos, F, R, 0.08, F.sh - 0.49);
     const d = v3.sub(b, a), L = v3.len(d), rd = v3.scale(d, 1 / L), lead = closing(S, F.f) * K.tuckLeadS;
     for (const o of [0, -TUCK_HALF, TUCK_HALF]) {   // (a gun's width and the model's error either side: pulling in at an edge it would have cleared costs nothing)
       GUNWALL_STATS.asked++;

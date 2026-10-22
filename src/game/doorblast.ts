@@ -25,7 +25,7 @@ import { BoxFlag } from '../scene/boxes';
 import type { Game } from './game';
 import type { Door, DoorSlab } from './doors';
 import { wandDrop } from './wand';
-import { WALLS } from './wallbreak';
+import { WALLS } from './wallbreak'; import { chaosOf } from './destruction';
 import { FURN_BREAK } from './furnblast';
 import { hash01 } from './debris';
 import { gpuFx } from './particleFx';
@@ -67,12 +67,12 @@ const note = (g: Game, s: string) => { DOORBLAST_LOG.push(`${g.time.toFixed(2)}s
 
 /** GUNFIRE SPLINTERS A WOODEN LEAF APART (the maintainer, 10-19: 'doors should splinter apart on sustained gunfire (at least no slower than drywall)';
  *  10-20, having played it with the destruction scale at its top, where a leaf went in three rounds: 'it should take like 2x the rounds', then, shown
- *  that the scale the page opens on already asks six: 'let's just go back to 6 then, 12 seems like too much' — so `toll` below is 1, drywall's own count).
+ *  that the scale the page opens on already asks six: 'let's just go back to 6 then, 12 seems like too much'; 10-22, from the squad lesson, where six read as too easy: 'it should be a real gameplay tradeoff (requires a lot of ammo? maybe like 12 shots?)' — so `toll` below is 2 and the count is `flat`).
  *  THE COUNT is the wall engine's own: wallbreak.ts WallBreak.round hands every round that met a leaf to `leafRound` with the weight a wall's cell would
  *  have taken for it (a rifle round 1 at chaos 0.5, a pistol round WALLS.pistolK of that; of a shotgun's pellets the ones the walls are handed), and the
  *  leaf stands `leafTough()` of it — `toll` times plasterboard's own number (or wood's if that were ever less) — ONE count for the whole leaf, wherever
- *  on it and on whichever face the rounds land, and it gives whole where drywall keeps its sill. The count rides the destruction scale as a wall's does
- *  (the Tab 'chaos' slider: at its top every round weighs double, on a door and on drywall alike). A
+ *  on it and on whichever face the rounds land, and it gives whole where drywall keeps its sill. With `flat` the count is A COST and the same wherever the
+ *  Tab 'chaos' slider stands above nothing (a wall's still rides it: at its top drywall opens in three while a leaf asks its twelve); without, as a wall's. A
  *  round that goes on through (wallpen.ts) counts as one that stops; so does one fired with the gun pressed through the leaf (combat.ts wallAcrossArm).
  *  Past half its toll the leaf sheds splinters with every round. Then it goes IN PIECES, by the destruction's own gradient: strips along the grain cut
  *  to uneven lengths and thrown the way the round was going as rigid debris (the pool's own cap: what it refuses goes as splinters), each TAGGED WOOD and
@@ -85,9 +85,9 @@ const note = (g: Game, s: string) => { DOORBLAST_LOG.push(`${g.time.toFixed(2)}s
 export const DOORSHOT = {
   /** THE SWITCH (Tab ▸ Player & weapons ▸ Player, doors & props; ?doorshot=0): off = no round ever does more than mark a leaf, as it was */
   on: false,
-  /** how many times plasterboard's toll a wooden leaf stands (1 = drywall's own: six rifle rounds, twelve pistol, at the destruction scale the page
-   *  opens on, and what a recording from before this key replays with; 2 = twelve and twenty-four, tried for a quarter of an hour 10-20 and taken back) */
-  toll: 1,
+  /** how many times plasterboard's toll a wooden leaf stands (2 = twelve rifle rounds, twenty-four pistol; 1 = drywall's own six and twelve, what a recording from
+   *  before this key replays with) · `flat`: that count whatever the destruction scale (false = it rides the scale as a wall's does, as recorded before the key; ?doorcost=0 = 1 and false) */
+  toll: 2, flat: true,
   /** the pieces: strips across the leaf × lengths up it, how uneven the cuts are (0‥1), and how many go as rigid pieces (past it, splinters) */
   strips: 4, lengths: 3, uneven: 0.6, chunks: 11,
   /** m/s a piece leaves at along the round's way (lo, hi) · across it (±) · up (lo, hi) · its tumble (rad/s) */
@@ -249,7 +249,7 @@ export function tearOff(g: Game, d: Door, from: Vec3, who: number, k = 1): boole
   return true;
 }
 
-/** the rounds' work a leaf stands, in the wall engine's unit (WALLS.tough: rifle rounds into one cell at chaos 0.5): DOORSHOT.toll times plasterboard's */
+/** the rounds' work a leaf stands, in the wall engine's unit (WALLS.tough: rifle rounds into one cell at chaos 0.5; with `flat`, rifle rounds): DOORSHOT.toll times plasterboard's */
 export function leafTough(): number { return Math.min(WALLS.tough.drywall ?? 6, WALLS.tough.wood ?? 9) * Math.max(0.1, DOORSHOT.toll); }
 
 /** A ROUND MET A LEAF (DOORSHOT): dynamic box `index − 1e6`, at `hitP`, going `dir`, worth `w` of a wall cell's toll — WallBreak.round calls it for every
@@ -258,7 +258,7 @@ export function leafRound(g: Game, index: number, who: number, hitP: Vec3, dir: 
   const K = DOORSHOT; if (!K.on) return;
   const b = g.col.dynamicBoxes[index - 1e6]; if (!b) return;
   const d = g.doors.list.find(x => x.box === b); if (!d || d.off || d.def.steel) return;
-  d.shot += w; DOORSHOT_STATS.rounds++;
+  d.shot += K.flat ? w / (2 * Math.max(1e-3, chaosOf(g))) : w; DOORSHOT_STATS.rounds++;   // (flat: the weight with the destruction scale taken back out — a rifle round 1, a pistol round WALLS.pistolK)
   const share = d.shot / leafTough();
   if (share >= 1) { splinter(g, d, dir, who, hitP); return; }
   if (share > 0.5) { const P = gpuFx(g), l = Math.hypot(dir[0], dir[1], dir[2]) || 1;   // (past half its toll: every round takes splinters out of its far face)
