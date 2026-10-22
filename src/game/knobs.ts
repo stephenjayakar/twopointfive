@@ -148,7 +148,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'GLASSREAL',
   // a mission that leans loud is not graded as a sneak (verdict.ts VERDICT.loudCard): the two lines the mission says at its end are worded by it, so a recording
   // made with it on replays them without the grade, and one from before the key (or the table) with it
-  'VERDICT'];
+  'VERDICT', 'IR'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';

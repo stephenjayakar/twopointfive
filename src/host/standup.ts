@@ -18,6 +18,7 @@ import { AIM, SNAP_PX } from '../game/aim';
 import { SILENT } from '../game/silent';
 import { LIGHTWALL } from '../game/lighting';
 import { IRLIGHT } from '../game/irlight';
+import { IR } from '../game/irlaser';
 import { AIRDUST } from '../game/airDust';
 import { WALLSNAP, LEAN_GUN_M } from '../game/wallsnap';
 import { HANDSLOT } from '../game/handslot';
@@ -254,6 +255,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_THROWBACK')) THROWBACK.on = String((globalThis as any).process?.env?.TPS_THROWBACK ?? '') === '1';   // a can in the wind-up goes back on the belt when another beat begins (game/throwback.ts): off, so the frozen stand's throws are as every probe has them; `TPS_THROWBACK=1` raises it
     if (pinned('TPS_HANDRING')) HANDRING.early = HANDRING.on = String((globalThis as any).process?.env?.TPS_HANDRING ?? '') === '1';   // his own actions are a ring that stays (game/handring.ts): off, so the frozen stand's Space list, its rows and the whistle's key are as every probe has them; `TPS_HANDRING=1` raises it
     if (pinned('TPS_LIGHTWALL')) LIGHTWALL.on = String((globalThis as any).process?.env?.TPS_LIGHTWALL ?? '') === '1';   // a weapon light stops at the wall its carrier is pressed to (src/game/lighting.ts lensClear): off, so every carried light is at its lens — and the CPU light estimate reads what it read in every frozen digest and tally; `TPS_LIGHTWALL=1` turns it on (the shipped default)
+    if (pinned('TPS_NOTEAMLASER')) IR.teamOff = String((globalThis as any).process?.env?.TPS_NOTEAMLASER ?? '') === '1';   // the team's guns show no laser line (src/game/irlaser.ts; a picture only): off, so every teammate's laser is drawn as the laser probes read it; TPS_NOTEAMLASER=1 raises it
     if (pinned('TPS_IRLIGHT')) IRLIGHT.on = String((globalThis as any).process?.env?.TPS_IRLIGHT ?? '') === '1';   // an infrared light on the goggles (src/game/irlight.ts): off, so a teammate's tube reads the light the meter reads and nothing else, and a room with none is too dark for it
     if (pinned('TPS_IRAUTO')) IRLIGHT.auto = String((globalThis as any).process?.env?.TPS_IRAUTO ?? '') === '1';   // the infrared light burns only where it is too dark for the tube (src/game/irlight.ts): off, so a light raised by TPS_IRLIGHT=1 burns whenever the goggles are down, as every check of it was written
     if (pinned('TPS_IRMETER')) IRLIGHT.meter = String((globalThis as any).process?.env?.TPS_IRMETER ?? '') === '1';   // …and puts what the CPU calls dark to the renderer's meter where that answers (headless it never does: the CPU's rule is the whole rule, at once)

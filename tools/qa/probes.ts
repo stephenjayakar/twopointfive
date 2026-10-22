@@ -3117,6 +3117,7 @@ if (on('ir-draw', 'irlaser', 'all')) await run('ir-draw', async () => (await imp
 if (on('ir-sam', 'irlaser', 'all')) await run('ir-sam', async () => (await import('./irlaser-probes.ts')).irSam());
 if (on('ir-unseen', 'irlaser', 'all')) await run('ir-unseen', async () => (await import('./irlaser-probes.ts')).irUnseen());
 if (on('ir-off', 'irlaser', 'all')) await run('ir-off', async () => (await import('./irlaser-probes.ts')).irOff());
+if (on('ir-team', 'irlaser', 'all')) await run('ir-team', async () => (await import('./irlaser-probes.ts')).irTeam());   // the team's guns show no laser line (IR.teamOff; TEAMLASER_BREAK=1 must fail)
 // ---------------------------------------------------------------- an infrared light on the goggles: a dark room shows through night vision, to you and a goggled teammate and to nobody else (irlight-probes.ts; game/irlight.ts — the frozen stand holds it off)
 if (on('irl-list', 'irlight', 'all')) await run('irl-list', async () => (await import('./irlight-probes.ts')).irlList());
 if (on('irl-unseen', 'irlight', 'all')) await run('irl-unseen', async () => (await import('./irlight-probes.ts')).irlUnseen());
