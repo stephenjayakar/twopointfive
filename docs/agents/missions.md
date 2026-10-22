@@ -57,7 +57,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (3) EVERY STEP DONE ASKS FOR A CHECKPOINT (`lesson.ts advance` -> `g.saves.request(g, 'lesson', 'training N/M')`; the autosave's gates still decide), so
   a down costs a step or two, never the lesson: the floor's own triggers can stay silent for minutes on a one-yard level. (3b) NO LINE BEFORE IT IS TRUE: 'he
   has given up' waits on its own step, done by the lesson test `{ is: 'calm', route? }` (every hostile man on his feet, or the one of that route, in 'patrol'). (4) a lesson level's new door
-  keeps lived things 1.1 m off its line (`lived-check` holds it), and a level changed on purpose adds its commit to `lived-check.ts BASE_REVS`.
+  keeps lived things 1.1 m off its line (`lived-check` holds it), and a level changed on purpose moves its own row in `lived-check.ts LEVEL_BASE` (`levels.md`, *The furniture check holds each level to its own base*).
   (5) THE TWO SQUAD LESSONS (train-orders, train-pairs) set `scenarios.roomClear.digIn: false` (roomfight.ts tickDef): read at six seconds a line, their men
   always had the minute to set on the door. And at a door the lesson HOLDS (threshold hold, then the word), the garrison's marks stand in the middle of the
   back wall, in the band neither jamb man's diagonal reaches (the two stand a metre out and half a metre wide of the jambs): a defender on either diagonal,
@@ -1370,3 +1370,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on his room's door with one can left is open and clear; with the knob off he is seen and the entry is bang and clear, "contact": the regression as it was);
   `RAILS_BREAK=1` 16 red on both. NOT CHECKED: a teammate's eye displaced from the picture by a step's eye still answering `seen()` (mission 1 in the sky
   seat has four eyes and room for the step's); smoke between a frame's eye and a man; anything on a GPU.
+- **The scripted players play in the page's own direct light, and the plain lesson check walks the tutorial too** (2026-10-22; tools only: `lesson-run.ts`,
+  `lesson-gate.ts`, `lesson-check.ts`; A CHANGED BAR for all six tutorial missions). THREE GAPS between a scripted run and the page. (1) The CPU's light
+  estimate leaves every directional light out (`guards.ts lightEstimateAt`: the moon, a sun), and the page's meter does not: `--moon` put it on the player's
+  own meter alone, and only where a script asked. So the squad mission's men "never saw what the page's shot", and the pair's partner followed down a lane
+  in runs that the page's meter called lit; by day a run played the night. NOW `lesson-run --sky` (`hour-lib.ts installSkyMeter`: every man an AI eye looks
+  at, by the page's own arithmetic for direct light, and `--moon` for the player) is ON BY DEFAULT FOR A TUTORIAL MISSION; `--nosky`, or the script's
+  `mode.sky: false` with why, puts it off; a Training row asks for it. STILL NOT THE PAGE'S: no bounce (a place lit only by bounce reads dark: `--floor`),
+  no bodies' shadows, no smoke between a light and a man, no flicker. (2) `lesson-gate`'s frozen arm of a tutorial mission was given the frame's word and
+  not the row's own hour and weather (`TPS_ROWSET=1`): a mission laid by day was played there at night. It is given both now. (3) `lesson-check` with no
+  name walked Training's seven levels: every "ALL PASS (73)" had covered no tutorial level, and a rows note (`rowsWithheld`) never printed. It walks
+  `LESSON_MISSIONS` now: 13 levels, 129 checks, green on both stands. `lesson-gate` with no name is still Training's (a tutorial mission is gated by name).

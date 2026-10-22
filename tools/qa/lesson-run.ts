@@ -16,6 +16,10 @@
 //     --moon       the MOON on his meter too: the CPU's estimate leaves it out (guards.ts lightEstimateAt), so a mark in the open yard read 0 here and 56 % on the
 //                  page (a player's tape, 10-13: the scripted run went by unseen where he was spotted). One ray up the moon's own direction from his chest and his
 //                  head; unshadowed it adds the moon's direct light (0.54 on the meter, the page's 0.56 less its bounce). A script asks for it with `mode.moon`
+//     --sky        THE SKY'S LIGHT ON EVERY METER, as the page's has it (tools/qa/hour-lib.ts installSkyMeter: every man an AI eye looks at, by the page's own
+//                  arithmetic for direct light; and --moon for his own). ON BY DEFAULT FOR A TUTORIAL MISSION (--nosky, or the script's `mode.sky: false`
+//                  with why): its level is built for one hour, and by day the estimate without the sun plays the night. Still not the page's: no bounce
+//                  (a lane the page's meter calls lit by bounce reads dark here: --floor), no bodies' shadows, no smoke between a light and a man
 //     --floor N    his meter never under N (0‥1): the bounce neither estimate has — a moon shadow in the open yard read 0.16 on the page, the walled wood store 0 to 0.06
 //     --hard       the level's name set to hard before the game is stood up (game/difficulty.ts setDifficulty: what the page's ?difficulty=hard does on a lesson)
 //   exit 0 = every step went by on its deed and the run ended · 1 = a step did not / moved on by itself / the run did not end · 2 = no such level or script
@@ -28,7 +32,7 @@
 //   idleOk?: string[]                          step ids that may already be true when they come up (said why in the script)
 //   fightOk?: string[]                         step ids a fight on the floor may finish before the player does (a line inside a live fight: the room can fall
 //                                              while it is up, or before it comes up; said why in the script). Such a step is logged as gone by with the fight
-//   mode?: { unseen?: boolean; god?: boolean; moon?: boolean }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god)
+//   mode?: { unseen?: boolean; god?: boolean; moon?: boolean; sky?: boolean }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god)
 //   raises?: Record<string, string>   words raised for this lesson's run alone on the frozen stand, put back after it (a switch the level's one way on rides on)
 //                                       (PT_DESTR: '1' among them raises the destruction's one switch for the run, which no stand word reaches)
 import { readFileSync, existsSync } from 'node:fs';
@@ -85,7 +89,7 @@ if (import.meta.main) {
     const r = Bun.spawnSync(['bun', 'run', import.meta.path, ...argv], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'inherit', stderr: 'inherit' }); process.exit(r.exitCode ?? 1);
   }
   if (!name) { console.error('usage: bun run tools/qa/lesson-run.ts <name> [--seed N] [--cap SECS] [--plain] [--unseen] [--god] [--verbose] [--digest] [--nolesson]'); process.exit(2); }
-  const r = await runLesson(name.replace(/\.json$/, ''), { seed: Number(flag('--seed') ?? 1), unseen: has('--unseen'), god: has('--god'), plain: has('--plain'), verbose: has('--verbose'), digest: has('--digest'), lesson: !has('--nolesson'), moon: has('--moon'), hard: has('--hard'), floor: Number(flag('--floor') ?? 0) || 0 });
+  const r = await runLesson(name.replace(/\.json$/, ''), { seed: Number(flag('--seed') ?? 1), unseen: has('--unseen'), god: has('--god'), plain: has('--plain'), verbose: has('--verbose'), digest: has('--digest'), lesson: !has('--nolesson'), moon: has('--moon'), sky: has('--sky') ? true : has('--nosky') ? false : undefined, hard: has('--hard'), floor: Number(flag('--floor') ?? 0) || 0 });
   for (const l of r.lines) console.log(l);
   console.log(r.code === 0 ? `\n=== lesson-run ${name}: ALL PASS ===` : r.code === 2 ? `\n=== lesson-run ${name}: NO VERDICT (${r.why}) ===` : `\n=== lesson-run ${name}: FAIL — ${r.why} ===`);
   process.exit(r.code);
@@ -94,7 +98,7 @@ if (import.meta.main) {
 /** a level whose lesson carries a `rails` record */
 function tutorial(file: string): boolean { try { return /"rails"\s*:/.test(readFileSync(file, 'utf8')); } catch { return false; } }
 
-export interface LessonRunOpts { seed?: number; unseen?: boolean; god?: boolean; plain?: boolean; verbose?: boolean; digest?: boolean; lesson?: boolean; moon?: boolean; hard?: boolean; floor?: number }
+export interface LessonRunOpts { seed?: number; unseen?: boolean; god?: boolean; plain?: boolean; verbose?: boolean; digest?: boolean; lesson?: boolean; moon?: boolean; /** the sky's light on EVERY meter (the head: --sky) */ sky?: boolean; hard?: boolean; floor?: number }
 export interface LessonRunOut { code: 0 | 1 | 2; why: string; lines: string[]; digest?: string; steps: { id: string; t: number }[]; secs: number }
 
 /** A scripted player may name the words its level cannot be played without on the frozen stand (`raises`, e.g. a switch its one door row rides on). They are
@@ -116,6 +120,11 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   const script = await import(scriptFile);
   if (script.mode && !o.plain) o = { ...o, unseen: o.unseen || !!script.mode.unseen, god: o.god || !!script.mode.god };
   if (script.mode?.moon) o = { ...o, moon: true };
+  // THE SKY'S LIGHT ON EVERY METER (--sky; the head). The CPU's estimate leaves every directional light out (guards.ts lightEstimateAt: the moon, a sun), and
+  // the page's meter does not: a scripted run played a darker floor than the page shows — by day it played the night — and its ALL PASS did not speak for
+  // what a player sees (a squad that never saw what the page's shot; a partner who followed down a lane the page's meter called lit). ON for a tutorial
+  // mission unless its script says `mode.sky: false` and why, or --nosky; a Training row asks for it (`mode.sky`, --sky). --moon is then on too.
+  const sky = o.sky ?? script.mode?.sky ?? tutorial(file); if (sky) o = { ...o, moon: true };
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   // A TUTORIAL MISSION IS THE PAGE'S (a lesson with a `rails` record — src/game/rails.ts): it teaches the rules the page opens with, the frame among them, and
@@ -138,6 +147,7 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   let W: any;
   try { W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(file, 'utf8'))), seed }); } finally { unhush(); }
   const g = W.game, I = W.input, cam = W.cam;
+  if (sky) (await import('./hour-lib.ts')).installSkyMeter(g);   // (every man an AI eye looks at: his meter, a held man's, a civilian's, the light on a body)
   g.godMode = !!o.god; if (loud) g.tune.chaos = 0.5;   // (…and with the switch, the page's chaos: the harness stands a frozen game up at 0, where nothing breaks)
   hush(); const started = startFromQuery(g, `?levelFile=${name}.json&${String(script.query ?? '?quiet').replace(/^\?/, '')}`); unhush();
   if (!started.spec || started.why) return { ...out, code: 1, why: `the mission did not start: ${started.why ?? 'the script\'s query names no scenario'}` };
@@ -264,6 +274,6 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   }
   out.secs = Number(t.toFixed(1));
   if (o.digest) { out.digest = (fold >>> 0).toString(16).padStart(8, '0'); lines.push(`digest ${out.digest} over ${frames} frames (${lessonOn ? 'lesson on' : 'lesson OFF'})`); }
-  lines.push(`${name}: ${out.steps.length}/${L.steps.length} steps · ${out.secs} s of play · ${o.unseen ? 'meter pinned (unseen)' : `meter fed from the floor\'s lights${o.moon ? ' and the moon' : ''}`}${o.floor ? ` · never under ${o.floor}` : ''}${o.hard ? ' · hard' : ''}${o.god ? ' · god mode' : ''} · seed ${seed}`);
+  lines.push(`${name}: ${out.steps.length}/${L.steps.length} steps · ${out.secs} s of play · ${o.unseen ? 'meter pinned (unseen)' : `meter fed from the floor\'s lights${o.moon ? ' and the moon' : ''}`}${sky ? ' · the sky\'s light on every man\'s meter' : ''}${o.floor ? ` · never under ${o.floor}` : ''}${o.hard ? ' · hard' : ''}${o.god ? ' · god mode' : ''} · seed ${seed}`);
   return out;
 }
