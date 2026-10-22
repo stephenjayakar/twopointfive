@@ -495,7 +495,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     by callsign, so a checkpoint put back stages what is left.
   - **Level facts**: built on the look's kit (one file, no look twin), no glass, one pickup (`carlamps-check` row), no response block; the outside camps' groups are `checkpoint.east` /
     `checkpoint.back` (`road` is a structure word to the lived count); a NEW level, so no save or tape is refused. Furnished for what the post is: the relay's dish and generator behind the
-    hall, a cooking corner, washing, a bed carried out, the runner's motorbike. The row opens at night (a row cannot carry its own hour). The menu picture is `tools/menu-art.ts`'s, which draws no gun laser for a level whose frame says `rails.lasers: false`.
+    hall, a cooking corner, washing, a bed carried out, the runner's motorbike. The ROW names its own hour and sky, `hour: 'midday', weather: 'clear'` (the `ROWSET` rule: `?rowset=0` opens it at the level's own night, as do the frozen stand's runs): a plan is laid by day, every yard and door in plain sight from above — the level's lamps and moon are still authored for the night it was built as, and which daylight (midday, a low dawn) is the maintainer's to pick by eye. The menu picture is `tools/menu-art.ts`'s, which draws no gun laser for a level whose frame says `rails.lasers: false`. That tool knows no hour: the picture is still the level's night.
   - **Checks, and what was measured** (2026-10-22, on the build head of that evening merged in; no new switch: the mission rides the frame's `RAILS.on`, `?rails=0`, and plan
     mode's `CMDRING.plan`, `?qplan=0`; frozen words for a headless run: `TPS_RAILS=1 TPS_QRING=1 TPS_QPLAN=1 TPS_PLANLOOK=1 TPS_PLANWAITS=1 TPS_PLANKNEE=1`, which `lesson-gate` gives a
     level whose steps allow `plan`). `bun run tools/qa/tutplan-check.ts` (probe `tutplan`, family `missions`): 8 lines, ALL PASS on both stands; `TUTPLAN_BREAK=1` (no step allows
@@ -515,6 +515,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     every frame to the end once a picture was taken, and a run for the verdict takes none (`SHOTS=0`).
     NOT EXERCISED BY ANY RUN: the gates' beat past its first release (the walk on into the yard after `ON_SECS`, the last man's rout) — in every run the men faced to the gates had all
     four first; the hall with the back door opened FIRST; a checkpoint other than 'the gates' put back mid-run; the mission with `?qplan=0`.
+  - **At midday** (the row's own hour, measured 2026-10-22 on the page's stand, where `ROWSET` is on; the frozen stand's runs are the level's night as before): the scripted player
+    19/19 on seeds 1 to 8 (108.7 to 109.7 s), six seconds a line on seed 3 (216.8 s); the wrong plan on seeds 1 to 4 ends in 93 to 104 s with 5, 3, 0 and 3 teammates on a knee;
+    `tutplan-check`, `rails-check`, `rowset-check` (`ROWSET_BREAK=1` fails 7), `lesson-gate` and `level-needs --run` green on both stands; the real page with real keys to its end
+    card, 38 lines, its fights drawn frame by frame (software adapter). In those pictures the hall reads dark inside: its light is a ceiling tube, an emissive box the lowest
+    quality barely gathers — how the hall reads by day on a GPU is not known.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
