@@ -127,7 +127,10 @@ raise the cap in the open and say that you did. Never squeeze the sentence.
 block (the big line and its other lines, the after lines, the cards) and every mission row (blurb, opening scene, the "You will learn" rows). It is red on
 a key cap followed by a colon, a sentence that opens on a key cap, a colon in a lesson's line or card, a line that opens on a bare "In." / "To the …" /
 "Out by …" / "Where …" or on a participle, a verbless phrase after a comma, the British and stiff words of rule 5, "a man" / "men" for an enemy in a
-lesson, and a pronoun with its verb left uncontracted. It also reads the sentences this guide was written from and must catch every one of them and pass
+lesson, and a pronoun with its verb left uncontracted. The seven Training lessons (`train-*`) are counted apart (`HELD`, `HELD_MAX`): they were swept
+on 10-22 and one line is left, train-orders' "The armoury is locked", which says the room's own name (a room's name is in a frozen run digest, so it
+cannot move bare); the count may only fall. They write a key as a bare letter, which the page rewrites in running text (`host/keymap.ts keyText`), so
+the two key rules cannot see their keys and their lines rest on the other rules and on the review. It also reads the sentences this guide was written from and must catch every one of them and pass
 their rewrites; `WRITING_BREAK=1` reads the old sentences as a level's and must fail. It cannot read text built in code (menus, HUD rows, spoken lines):
 those rest on the review below.
 
@@ -136,3 +139,20 @@ those rest on the review below.
 Whoever writes or changes player text reads every changed line aloud, and a second reader who did not write it does the same
 before the change is called final. A pattern check can catch a colon after a key or a missing contraction; only a reader catches
 a sentence nobody would say.
+
+## The Training lessons' sweep (10-22)
+
+- **The seven Training lessons' lines are rewritten by this guide** (`tools/levels/train-*.ts` and their level files; 91 steps of 115). NO SWITCH: a
+  lesson's line is in no run digest (the lesson on and off give the same word on all seven, and the frozen words did not move). THE KEYS stay bare
+  letters, because the objective row draws a lesson's line through `keyText` and a code in brackets is stripped to the same bare letter first
+  (`lesson.ts`, the row's text): what has to read well is the DRAWN line, so each was read as the page draws it (the orders key X as "hold Q", B as Q,
+  Space as E, E as backtick). X opens a sentence or follows a comma, never "Press X". THREE STEPS CARRY A `ringLine` now (train-hands `whistle` and
+  `lure`, train-lights `kick`): their old words were swapped in code by a pattern (`lesson.ts WHISTLE_LINE`, `WHEEL_LINE`: "V whistles", "Hold Space,
+  wheel to kick, let go"), which the new words no longer match, so the page's way is written out in the level ("Hold Space and press 5 to whistle
+  …", "Hold Space and press 2 to kick it"). Those two patterns now match no level. LEFT AS IT WAS: "armoury" (the room's name in train-orders is in
+  the frozen digest: changing it moved the word 7a34000a, so the room, its door's name and the line keep it; `writing-check` counts that one line),
+  "grain store" (the room's name on the row), the lesson title "Two pairs, two doors, one word". STALE ON THE PAGE, as before the sweep: the three
+  train-pairs steps that name T (`red`, `blue`, `gold`): the who row has no key there (squad.md, the squad's only keys), and no line of this level says
+  the ring's way of picking who. CHECKS: `lesson-check` on the seven, both stands; `writing-check` and its break word; `lesson-gate` (train-orders'
+  shipped run fails "the kitchen was not cleared after the word" on dice 1, 3 and 4, before this change as after). Nobody has played a lesson with
+  these lines; never seen on a GPU, and not read off the real page (the drawn lines come from `keyText` under the page's key map, staged in a script).

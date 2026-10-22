@@ -167,8 +167,8 @@ export async function keybindsCheck(): Promise<boolean> {
         `Q on the board: filed '${g3.f1}', on a wall ${g3.w1} · 'KeyQ' written in: on a wall ${g3.w2} · the row on K, K on the board: filed '${g3.f3}', on a wall ${g3.w3}`);
       // the two lessons whose lines named Q: the step is done by a held move key, the walk-in on as the page has it (on this stand too: the line is the page's)
       { const { readFileSync } = await import('node:fs'); const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);
-        const LES: [string, string, number[], string, (p: number[]) => boolean][] = [['train-move.json', 'Walk into the container and keep walking: your back goes to it', [18.3, 0, 20.75], 'KeyW', p => p[0] >= 13.2 && p[0] <= 19.7 && p[2] >= 20.2 && p[2] <= 21],
-          ['train-hands.json', 'The last man watches the gap. Back to the wall in the dark corner beside it', [23.45, 0, 19.4], 'KeyS', p => Math.hypot(p[0] - 23.45, p[2] - 19.4) <= 1]];
+        const LES: [string, string, number[], string, (p: number[]) => boolean][] = [['train-move.json', 'Walk into the container and keep walking to put your back against it', [18.3, 0, 20.75], 'KeyW', p => p[0] >= 13.2 && p[0] <= 19.7 && p[2] >= 20.2 && p[2] <= 21],
+          ['train-hands.json', 'The last guard is watching the gap. Put your back to the wall in the dark corner beside it', [23.45, 0, 19.4], 'KeyS', p => Math.hypot(p[0] - 23.45, p[2] - 19.4) <= 1]];
         const rows: string[] = []; let ok = true;
         for (const [file, line, at, key, inside] of LES) { const text = readFileSync(`${ROOT}/levels/${file}`, 'utf8'), has = text.includes(`"line": "${line}"`) && !/"line": "[^"]*\bQ\b/.test(text);
           const r = await quiet(async () => { const W: any = await standUp({ level: loadLevel(parseLevelData(text)), seed: 1 }), g = W.game, pl = g.player; const was = { on: WALLSNAP.on, press: WALLSNAP.press }; WALLSNAP.on = true; WALLSNAP.press = !FB;
