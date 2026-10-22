@@ -233,10 +233,16 @@ export interface LessonStep {
   /** the line while his own actions are a ring (game/handring.ts HANDRING.on), where the step's keys are others then: the whistle has no key of its own
    *  there, it is the ring's last wedge (absent: `line`) */
   ringLine?: string;
+  /** the line while a charge his own hands set goes off from his own actions (game/ownblow.ts OWNBLOW.on), where the step names the squad's key for
+   *  it (absent: `line`) */
+  blowLine?: string;
   /** the line while the SQUAD's ring or menu is up (game/orders.ts): the hold is one line, what to press in the ring the next (absent: `line`) */
   menuLine?: string;
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
+  /** the line while plan mode is DOWN on a step that is done in the mode (a checkpoint put back, the mode put away by hand: what puts it up again —
+   *  absent: `line`) */
+  planLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
@@ -537,6 +543,11 @@ export interface ScenarioEntry {
   only?: string;
   /** a file under levels/ (absent = the bundled office) */
   level?: string;
+  /** THE ROW'S OWN HOUR AND WEATHER (game/rowset.ts, ROWSET.on): what a visit to this row is always started in — a tutorial mission's level is built for one
+   *  hour and one sky (a fuel halt at dusk in dust, a plan laid by day). They win over the link's `hour=` / `weather=`, and the mission sheet draws no Hour
+   *  or Weather row for such a row. Absent (every row but those): the visitor's pick, else the level's own night and weather, as ever. A weather a level can
+   *  be STARTED in: never 'snow' (a level built for snow keeps its own and names none). Types only: nothing here imports the game */
+  hour?: import('../game/hours').HourId; weather?: Exclude<import('../game/weatherKinds').WeatherKind, 'snow'>;
   /** the room clear's placement seed · a quiet mission's deal, pinned (absent: dealt from the page's die on every start) */
   seed?: number;
   /** the picker's one line under the title: what the scenario is for (scene/scenarioList.ts; absent = the title alone) */

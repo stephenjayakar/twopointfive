@@ -77,6 +77,7 @@ const PIN: Record<string, Pin> = {
   'solo-night': { lead: 0.2, flip: true },
   'vault-quiet': { at: [27.55, 0, 12.1], aim: [24.4, 14.6], look: [26, 1, 13], yaw: -35, pitch: 50, dist: 9.5, rim: 5 },   // the court's beam at the shin, between him and the back door
   'tut-quiet': { at: [23.9, 0, 19.05], aim: [22.5, 18], guards: [[22.0, 17.8, 20.5, 17.8]], look: [23.0, 1, 18.6], yaw: 0, pitch: 52, dist: 16, lamps: 'all', keyK: 0.5, keyAz: 249, keyEl: 21, skyK: 0.8, lampK: 1.3, haze: 0.6, tint: [0.035, 0.05, 0.11], tintK: 0.4 },   // the tutorial's quiet shop on its snowing night, the whistle's beat: the court's man stopped where the sound was, his light down the trodden lane, and the player on a knee behind the wall's end at his back, the court's fire beyond
+  'tut-pair': { at: [19.6, 0, 17.75], ops: [[25.0, 0, 19.0]], aim: [20.8, 17.6], guards: [[20.8, 17.6, 23.0, 17.6], [25.4, 17.6, 26.4, 16.6]], look: [22.6, 1, 17.8], yaw: 165, pitch: 40, dist: 12, lamps: 'own', keyK: 0.4, skyK: 0.7, lampK: 1.5, haze: 1.0, tint: [0.035, 0.05, 0.11], tintK: 0.6 },   // the tutorial's truck park: two men at one lantern, the player at the near one's back and the partner behind the far one
   'quiet-yard-alone': { at: [21.2, 0, 16.9], aim: [27, 13.5], guards: [[27.5, 12.6, 20, 13]], pitch: 34, rim: 7 },   // the lamp's pool, a man in it, from the dark corner
   'quiet-yard-two': { at: [17.8, 0, 19.4], ops: [[19.2, 0, 19.7]], aim: [20, 14], guards: [[20.5, 13.8, 12, 13.8]], pitch: 28 },
   'lights-out-two': { at: [19, 0, 18.5], ops: [[18, 0, 19.3]], aim: [21, 16.2], ajar: { front: 0.9 }, pitch: 40 },   // the hall's four beams through its open door
@@ -331,7 +332,7 @@ async function render(m: Mission, O: Opts): Promise<Cam> {
         return; }
       const pitch = Math.atan2(1.05 - 1.4, dist), muzzle = addMan(p, f, D, false, 'rifle', pitch), dir: V3 = [f[0] * Math.cos(pitch), Math.sin(pitch), f[1] * Math.cos(pitch)];
       spots.push({ p: [muzzle[0] + dir[0] * 0.06, muzzle[1] + 0.05, muzzle[2] + dir[2] * 0.06], d: dir, ci: Math.cos(7 * DEG), co: Math.cos(17 * DEG), I: [24, 23, 21], range: 26, rad: 0.02, vol: 1.0 });
-      const hit = trace(S, muzzle[0], muzzle[1], muzzle[2], dir[0], dir[1], dir[2], 40, F_SHADOW, false) ? hT : 40; lasers.push({ a: muzzle, b: [muzzle[0] + dir[0] * hit, muzzle[1] + dir[1] * hit, muzzle[2] + dir[2] * hit] });
+      const hit = trace(S, muzzle[0], muzzle[1], muzzle[2], dir[0], dir[1], dir[2], 40, F_SHADOW, false) ? hT : 40; if ((d.scenarios as any)?.lesson?.rails?.lasers !== false) lasers.push({ a: muzzle, b: [muzzle[0] + dir[0] * hit, muzzle[1] + dir[1] * hit, muzzle[2] + dir[2] * hit] });
     });
     subject.push(...places);
     // the one man a snatch is for: stood where the level has him, facing the way they come

@@ -122,6 +122,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'DOORTHROW',
   // enemies startle when they first see you (startle.ts): a recording made with it on replays its men's beat before the gun, and who ran; one from before has every man go for his gun at once
   'STARTLE',
+  // a mission row's own hour and weather (rowset.ts): a recording made on such a row with it on was started in them, one from before at its query's
+  'ROWSET',
+  // a man flinches when fire comes close (flinch.ts): a recording made with it on replays its men's ducks and the green man who broke under fire; one from before has nobody duck but on the suppression model's own edge
+  'FLINCH',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
@@ -134,6 +138,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'HANDRING',
   // a can in the wind-up goes back on the belt when another beat begins (throwback.ts THROWBACK): a recording made with it on replays those cans kept, one from before as thrown late
   'THROWBACK',
+  // his own charge goes off from his own actions, not the squad's key (ownblow.ts OWNBLOW): a recording made with it on replays its interaction-key row as the blast, one from before the squad's key as it was
+  'OWNBLOW',
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
@@ -184,6 +190,8 @@ import { TWEEN } from '../host/tween';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { STARTLE } from './startle';
+import { ROWSET } from './rowset';
+import { FLINCH } from './flinch';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
 import { POWEROUT } from './powerout';
@@ -214,6 +222,7 @@ import { SAVETIMELINE } from './savestate';
 import { HANDSLOT } from './handslot';
 import { HANDRING } from './handring';
 import { THROWBACK } from './throwback';
+import { OWNBLOW } from './ownblow';
 import { SAMSTUN } from './samstun';
 import { RECAP } from './deathrecap';
 import { TEAMTALLY } from './teamtally';
@@ -289,6 +298,7 @@ export function knobRegistry(): Record<string, object> {
     HANDRING,
     // a can in the wind-up goes back on the belt when another beat begins (throwback.ts): the switch
     THROWBACK,
+    OWNBLOW,
     // a sprint into a door has weight (sprintdoor.ts): the switch, what a shoulder through it keeps of his run, how the leaf leaves him, the boot (or the handle) at the face it opens toward — where the player is a second later reads them
     SPRINTDOOR,
     // teammates are slower than the player and run only for a reason (teampace.ts): the switch, the walk's share of the player's, a follower's closing pace and his run, the reasons — where every teammate is a second later reads them
@@ -350,6 +360,10 @@ export function knobRegistry(): Record<string, object> {
     RUNNER,
     // enemies startle when they first see you (startle.ts): how long a calm man's start holds his gun down, and who runs after it — reads these
     STARTLE,
+    // a mission row's own hour and weather (rowset.ts): the one switch
+    ROWSET,
+    // a man flinches when fire comes close (flinch.ts): how close a round ducks him, how much by training, and how long under fire breaks a green man alone — reads these
+    FLINCH,
     // not in there alone (darkdoor.ts): who stops at the doorway of a dark room, how dark is dark, how long he waits for a mate and when he goes in anyway
     DARKDOOR,
     // an enemy on alert does not sit blind in the dark (darkfoe.ts): whose weapon light burns and who leaves his post read these — the meter reads the lamps

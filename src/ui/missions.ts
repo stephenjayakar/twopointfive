@@ -25,6 +25,7 @@ import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficulty
 import { leverRows, leversSig } from './levers';
 import { fogOfQuery, sameFog } from '../game/scenarioRun';
 import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
+import { rowHour, rowWeather } from '../game/rowset';
 import { WEATHER_KINDS, WEATHER_PRESETS, weatherTitle, weatherWords, weatherOfSearch, weatherSearch, snowLevel, type WeatherKind } from '../game/weatherKinds';
 import { HOUR_IDS, HOURS, hourIdOf, hourHref, hourLive, hourLabel, hourClock, hourWords, type HourId } from '../game/hours';
 import { menuTheme } from './theme';
@@ -190,8 +191,8 @@ export function wayNote(m: Mission, way: number): string {
   return way < 0 ? 'the visit deals one of them, with the defenders\' marks' : way > 1 ? 'another side: another first room, plan it again' : 'where the level was made to be opened from';
 }
 /** THE TWO ROWS TOGETHER (game/hours.ts, the weather over the hour): what the hour's line and the weather's say once the other row is not at its default */
-export function hourNote(h: HourId, wx: WeatherKind | null): string {
-  return `${hourClock(h)} · ${h === 'night' && wx ? 'the level as it was made, the moon and the lamps outside, in the weather picked below' : hourWords(h)}`;
+export function hourNote(h: HourId, wx: WeatherKind | null, own = false): string {   // (own: the weather is the mission's own — no Weather row is drawn below to pick it on)
+  return `${hourClock(h)} · ${h === 'night' && wx ? `the level as it was made, the moon and the lamps outside, in ${own ? 'the mission\'s own weather' : 'the weather picked below'}` : hourWords(h)}`;
 }
 export function weatherNote(wx: WeatherKind | null, h: HourId): string {
   if (h === 'night') return weatherWords(wx);
@@ -200,7 +201,7 @@ export function weatherNote(wx: WeatherKind | null, h: HourId): string {
   const sky = c <= own || c < 0.15 ? '' : c >= 0.99 ? ' · by day no sun at all: a dim grey light, no shadows' : c >= 0.85 ? ' · by day the sun behind cloud: flat grey light, soft shadows' : c >= 0.5 ? ' · by day a pale sun through it' : ' · by day the sun a little dulled';
   return weatherWords(wx).replace('; at night as clear', '') + sky;
 }
-export interface MissionsScreen { root: HTMLElement; list: Mission[]; readonly selected: Mission; readonly hourNow: HourId; select(i: number | string): void; move(d: number): void; difficulty(lv: Difficulty): void; hour(id: HourId | number): void; readonly weather: WeatherKind | null; setWeather(k: WeatherKind | null): void; /** the highlighted row's way in: 0 = the level's own start, k ≥ 2 = its k-th, −1 = dealt */ readonly way: number; setWay(v: number | 'next' | 'prev'): void; pick(): void; close(): void; hrefOf(m: Mission): string }
+export interface MissionsScreen { root: HTMLElement; list: Mission[]; readonly selected: Mission; readonly hourNow: HourId; /** the hour and the weather the highlighted row is STARTED in: its own where it names one (game/rowset.ts), a snow level's weather none, else the picks */ readonly startHour: HourId; readonly startWeather: WeatherKind | null; select(i: number | string): void; move(d: number): void; difficulty(lv: Difficulty): void; hour(id: HourId | number): void; readonly weather: WeatherKind | null; setWeather(k: WeatherKind | null): void; /** the highlighted row's way in: 0 = the level's own start, k ≥ 2 = its k-th, −1 = dealt */ readonly way: number; setWay(v: number | 'next' | 'prev'): void; pick(): void; close(): void; hrefOf(m: Mission): string }
 
 let open: MissionsScreen | null = null;
 export function currentMissions(): MissionsScreen | null { return open; }
@@ -301,16 +302,20 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
   const wayOf = (m: Mission) => { const w = m.scenario?.ways ? wayPick[m.id] ?? 0 : 0; return w < 0 && SAMESTART.on ? 0 : w; }; let wayVer = 0, wayShown = -1;   // (wayOf: a link that came in with way=any while every mission starts the same way = the level's own)
   /** a level BUILT FOR SNOW (game/weatherKinds.ts SNOW_LEVELS) has its own weather: no Weather row is drawn for it, and its link carries none */
   const ownWx = (m: Mission) => snowLevel(m.scenario?.level?.replace(/\.json$/, ''));
+  // A ROW WITH ITS OWN HOUR OR WEATHER (game/rowset.ts — a tutorial mission) is always started in them: that row is not drawn for it (what does not apply is
+  // not drawn), and the note of the row that IS drawn reads the mission's own for the other. Its link is any row's link: the visitor's picks pass through
+  const startHour = (m: Mission) => rowHour(m.scenario) ?? hourSel, startWx = (m: Mission) => ownWx(m) ? null : rowWeather(m.scenario) ?? wx;
   function hrefOf(m: Mission) { return waySearch(weatherSearch(missionHref(m, search, hourSel), ownWx(m) ? null : wx), wayOf(m)); }
   let sel = 0, hrefs: string[] = [], now: Difficulty | 'custom' | null = null, sig = '', planFile: string | null = null;
   const paint = () => {
     const m = list[sel], d = quietFogAside(difficultyNow), lv = leversSig();   // (quietFogAside: the squad's level, not a quiet mission's rung held on the rows)
     if (d !== now || lv !== sig || hourSel !== hourShown || wx !== wxShown || wayVer !== wayShown) { now = d; sig = lv; hourShown = hourSel; wxShown = wx; wayShown = wayVer; hrefs = list.map(hrefOf); rows.forEach((r, i) => r.setAttribute('href', hrefs[i])); }   // (the links change with the difficulty, the hour, the weather and a way in picked alone)
     for (const [id, b] of hbtns) { b.className = hourSel === id ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', hourSel === id ? 'true' : 'false'); }
-    hnote.textContent = hourNote(hourSel, ownWx(m) ? null : wx);
+    hnote.textContent = hourNote(hourSel, startWx(m), !!rowWeather(m.scenario));
     for (const [k, b] of wbtns) { b.className = wx === k ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', wx === k ? 'true' : 'false'); }
-    wnote.textContent = weatherNote(wx, hourSel);
-    (wrow as HTMLElement & { style: { display: string } }).style.display = ownWx(m) ? 'none' : '';   // (what does not apply is not drawn)
+    wnote.textContent = weatherNote(wx, startHour(m));
+    (wrow as HTMLElement & { style: { display: string } }).style.display = ownWx(m) || rowWeather(m.scenario) ? 'none' : '';
+    (hrow as HTMLElement & { style: { display: string } }).style.display = rowHour(m.scenario) ? 'none' : '';   // (what does not apply is not drawn)
     { const W = m.scenario?.ways, y = wayOf(m);
       for (const [v, b] of ybtns) { const k = v < 0 ? -1 : v ? v - 1 : 0, shown = !!W && (v < 0 ? !SAMESTART.on : k < W.length); (b as HTMLElement & { style: { display: string } }).style.display = shown ? '' : 'none'; if (W && v >= 0 && k < W.length) b.textContent = W[k]; b.className = shown && y === v ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', shown && y === v ? 'true' : 'false'); }
       yrow.className = W ? 'mdiff mway' : 'mdiff mway na'; (yrow as HTMLElement & { style: { display: string } }).style.display = W ? '' : 'none'; ynote.textContent = wayNote(m, y); }   // (a mission with one way in shows no row: the one-page start has no line to spare)
@@ -343,6 +348,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     move(d) { sel = (sel + d + list.length) % list.length; paint(); },
     difficulty(lv) { quietFogAside(() => setDifficulty(lv)); paint(); },   // (quietFogAside: the level's rows are written under a quiet mission's rung, not over it)
     get hourNow() { return hourSel; },
+    get startHour() { return startHour(list[sel]); }, get startWeather() { return startWx(list[sel]); },
     hour(id) { hourSel = typeof id === 'number' ? HOUR_IDS[(HOUR_IDS.indexOf(hourSel) + id + HOUR_IDS.length) % HOUR_IDS.length] : id; hourPick = { search, id: hourSel }; paint(); },
     get weather() { return wx; },
     setWeather(k) { wx = k; wxPick = { search, kind: k }; paint(); },
@@ -391,8 +397,8 @@ export function missionsKey(e: { code: string; repeat?: boolean; ctrlKey?: boole
     // kept the same way — the keys that sit under a resting hand do not throw away a mix set up row by row)
     case 'ArrowLeft': case 'KeyA': if (!e.repeat && diffLive(S.selected) && quietFogAside(difficultyNow) !== 'custom') S.difficulty('standard'); return true;
     case 'ArrowRight': case 'KeyD': if (!e.repeat && diffLive(S.selected) && quietFogAside(difficultyNow) !== 'custom') S.difficulty('hard'); return true;
-    case 'KeyH': if (!e.repeat) S.hour((e as { shiftKey?: boolean }).shiftKey ? -1 : 1); return true;
-    case 'KeyJ': if (!e.repeat && !snowLevel(S.selected.scenario?.level?.replace(/\.json$/, ''))) { const all = [null, ...WEATHER_KINDS] as (WeatherKind | null)[]; S.setWeather(all[(all.indexOf(S.weather) + ((e as { shiftKey?: boolean }).shiftKey ? all.length - 1 : 1)) % all.length]); } return true;   // (the key beside H: the next weather, Shift+J the one before)
+    case 'KeyH': if (!e.repeat && !rowHour(S.selected.scenario)) S.hour((e as { shiftKey?: boolean }).shiftKey ? -1 : 1); return true;
+    case 'KeyJ': if (!e.repeat && !rowWeather(S.selected.scenario) && !snowLevel(S.selected.scenario?.level?.replace(/\.json$/, ''))) { const all = [null, ...WEATHER_KINDS] as (WeatherKind | null)[]; S.setWeather(all[(all.indexOf(S.weather) + ((e as { shiftKey?: boolean }).shiftKey ? all.length - 1 : 1)) % all.length]); } return true;   // (the key beside H: the next weather, Shift+J the one before)
     case 'KeyK': if (!e.repeat) S.setWay((e as { shiftKey?: boolean }).shiftKey ? 'prev' : 'next'); return true;   // (the key beside J: the next way in, on a level that gives a choice)
     case 'Enter': case 'NumpadEnter': case 'Space': if (!e.repeat) S.pick(); return true;
     case 'Escape': if (!e.repeat) S.close(); return true;
@@ -437,10 +443,13 @@ interface Plan { walls: number[][]; low: number[][]; glass: number[][]; doors: n
   /** where the team starts, [x, z], by the mission's kind (a room clear: one per way in, the level's own first; 'solo' = the level's own spawn) */ starts: Record<string, number[][]>;
   /** wall charges the level's own room clear ISSUES the squad (the file's scenarios.roomClear.wallCharges — game/issue.ts raises the bag to it at staging); 0 = none */ issued: number;
   /** the kit the level's file ISSUES the squad itself (scenarios.issue.members — game/kit.ts kitIssue: every staging wears the issue cards with these fields written over them, whatever this machine keeps), by place on the roster ('0' = you); null = none */ kit: IssuedKit | null;
-  /** per way in (the level's own first), whether the file says where the team stands for the Team & kit picture (scenarios.kitView.ways — ui/kitView.ts) */ kv: boolean[] }
+  /** per way in (the level's own first), whether the file says where the team stands for the Team & kit picture (scenarios.kitView.ways — ui/kitView.ts) */ kv: boolean[];
+  /** what the place asks of a kit, counted off the file (the Team & kit step's brief — ui/kitBrief.ts): doors found locked · those of them that are steel · the rescue's hostages */ needs: PlaceNeeds;
+  /** the rescue's side door (scenarios.rescue.side.door) is one of the locked ones: its staging unlocks it (game/rescue.ts), so a rescue finds one fewer */ sideLocked: boolean; sideSteel: boolean }
+export interface PlaceNeeds { locked: number; steel: number; hostages: number; /** the map marks where the team goes in (a quiet mission's has no mark) */ marked: boolean }
 /** a level file's own issue, as the file has it: per place on the roster, the fields that differ from that man's issue card */
 export type IssuedKit = Record<string, Record<string, unknown>>;
-interface PlanData extends ArtData { scenarios?: { roomClear?: { wallCharges?: unknown; team?: { sam?: number[] }; starts?: { sam?: number[] }[] }; nightBreach?: { team?: { sam?: number[] } }; rescue?: { team?: { sam?: number[] } }; issue?: { members?: unknown }; kitView?: { ways?: { door?: unknown; span?: unknown }[] } }; mission?: { playerSpawn?: number[] } }
+interface PlanData extends ArtData { scenarios?: { roomClear?: { wallCharges?: unknown; team?: { sam?: number[] }; starts?: { sam?: number[] }[] }; nightBreach?: { team?: { sam?: number[] } }; rescue?: { team?: { sam?: number[] }; hostages?: unknown; side?: { door?: unknown } }; issue?: { members?: unknown }; kitView?: { ways?: { door?: unknown; span?: unknown }[] } }; mission?: { playerSpawn?: number[] } }
 const OFFICE = 'office.json';
 const PLANS = new Map<string, Promise<Plan | null>>();
 const SKIP_GROUP = /^(ground|floors|ceiling|beacons|exterior\.lamps)/;
@@ -448,7 +457,8 @@ function planFrom(d: PlanData): Plan {
   const w = d.scenarios?.roomClear?.wallCharges;
   const k = d.scenarios?.issue?.members;
   let art: PlanArt | null = null;   // (made when a picture of the place is first drawn: the sort of what stands is the dear part, and most files are never drawn on a visit)
-  const P: Plan = { get art() { return art ??= artFrom(d); }, walls: [], low: [], glass: [], doors: [], min: [Infinity, Infinity], max: [-Infinity, -Infinity], issued: typeof w === 'number' && Number.isInteger(w) && w > 0 ? w : 0, kit: k && typeof k === 'object' && !Array.isArray(k) ? k as IssuedKit : null, starts: {}, kv: (Array.isArray(d.scenarios?.kitView?.ways) ? d.scenarios.kitView.ways : []).map(y => (typeof y?.door === 'string' && !!y.door) || Array.isArray(y?.span)) };   // (anchored on a door, or on a span: a stretch of wall, a gap)
+  const P: Plan = { get art() { return art ??= artFrom(d); }, walls: [], low: [], glass: [], doors: [], min: [Infinity, Infinity], max: [-Infinity, -Infinity], issued: typeof w === 'number' && Number.isInteger(w) && w > 0 ? w : 0, kit: k && typeof k === 'object' && !Array.isArray(k) ? k as IssuedKit : null, starts: {}, kv: (Array.isArray(d.scenarios?.kitView?.ways) ? d.scenarios.kitView.ways : []).map(y => (typeof y?.door === 'string' && !!y.door) || Array.isArray(y?.span)),
+    needs: { locked: 0, steel: 0, hostages: Array.isArray(d.scenarios?.rescue?.hostages) ? d.scenarios.rescue.hostages.length : 0, marked: false }, sideLocked: false, sideSteel: false };   // (anchored on a door, or on a span: a stretch of wall, a gap)
   { const at = (v?: number[]) => (Array.isArray(v) && v.length >= 3 && Number.isFinite(v[0]) && Number.isFinite(v[2]) ? [[v[0], v[2]]] : []), sc = d.scenarios;   // where the team starts, per kind of mission (a room clear: one per way in, the level's own first)
     P.starts = { roomclear: [...at(sc?.roomClear?.team?.sam), ...(sc?.roomClear?.starts ?? []).flatMap(t => at(t?.sam))], nightbreach: at(sc?.nightBreach?.team?.sam), rescue: at(sc?.rescue?.team?.sam), solo: at(d.mission?.playerSpawn) }; }
   for (const b of d.boxes ?? []) {
@@ -458,7 +468,10 @@ function planFrom(d: PlanData): Plan {
     const cs = Math.abs(Math.cos(yaw)), sn = Math.abs(Math.sin(yaw)), ex = cs * b.h[0] + sn * b.h[2], ez = sn * b.h[0] + cs * b.h[2];   // (the frame = what stands: walls and glazing)
     P.min = [Math.min(P.min[0], b.c[0] - ex), Math.min(P.min[1], b.c[2] - ez)]; P.max = [Math.max(P.max[0], b.c[0] + ex), Math.max(P.max[1], b.c[2] + ez)];
   }
-  for (const o of d.doors ?? []) P.doors.push([o.hinge[0], o.hinge[1], o.hinge[0] + Math.cos(o.closedDir) * o.width, o.hinge[1] + Math.sin(o.closedDir) * o.width]);
+  const side = d.scenarios?.rescue?.side?.door;
+  for (const o of d.doors ?? []) { P.doors.push([o.hinge[0], o.hinge[1], o.hinge[0] + Math.cos(o.closedDir) * o.width, o.hinge[1] + Math.sin(o.closedDir) * o.width]);
+    const k = o as { id?: unknown; locked?: unknown; steel?: unknown }; if (k.locked !== true) continue;
+    P.needs.locked++; if (k.steel === true) P.needs.steel++; if (typeof side === 'string' && k.id === side) { P.sideLocked = true; P.sideSteel = k.steel === true; } }
   if (!(P.max[0] > P.min[0] && P.max[1] > P.min[1])) { P.min = [0, 0]; P.max = [PLAN_W, PLAN_D]; }
   return P;
 }
@@ -467,7 +480,7 @@ function planOf(file: string): Promise<Plan | null> {
   if (!p) {
     p = (async () => {
       try {
-        if (file === OFFICE) return planFrom({ ...(officeData as unknown as PlanData), scenarios: { kitView: OFFICE_SCENARIOS.kitView as NonNullable<PlanData['scenarios']>['kitView'] } });   // (the bundled office's scenario data is code — levels/office.scenarios.ts: its Team & kit block is read from there, and nothing else of it here: the page's other lines for the office are as they were)
+        if (file === OFFICE) return planFrom({ ...(officeData as unknown as PlanData), scenarios: { kitView: OFFICE_SCENARIOS.kitView as NonNullable<PlanData['scenarios']>['kitView'], rescue: { hostages: OFFICE_SCENARIOS.rescue?.hostages, side: { door: OFFICE_SCENARIOS.rescue?.side?.door } } } });   // (the bundled office's scenario data is code — levels/office.scenarios.ts: its Team & kit block is read from there, and of its rescue only what the kit step's brief counts (the hostages, the side door its staging unlocks): no start is passed, so the page's other lines for the office are as they were)
         if (typeof fetch !== 'function') return null;
         const r = await fetch(`/levels/${file}`); if (!r.ok) return null;
         return planFrom(await r.json() as PlanData);
@@ -483,6 +496,10 @@ export function issuedWalls(file: string): Promise<number> { return planOf(file)
 /** the kit this level file issues the squad itself (null = none, or the file did not come): the loadout screen shows no cards for such a mission and says who
  *  carries what — the same fetch, once per file */
 export function issuedKit(file: string): Promise<IssuedKit | null> { return planOf(file).then(P => P?.kit ?? null); }
+/** what this mission's place asks of a kit, AS THE MISSION IS STAGED (null: the file did not come) — the same fetch, once per file. The hostages are a rescue's, and
+ *  a rescue finds its side door unlocked (game/rescue.ts); the mark is the one the map sheet draws for this kind of mission */
+export function placeNeeds(m: Mission): Promise<PlaceNeeds | null> { const kind = m.scenario ? m.scenario.kind : 'solo', rescue = kind === 'rescue';
+  return planOf(m.scenario?.level ?? OFFICE).then(P => (P ? { locked: P.needs.locked - (rescue && P.sideLocked ? 1 : 0), steel: P.needs.steel - (rescue && P.sideSteel ? 1 : 0), hostages: rescue ? P.needs.hostages : 0, marked: (P.starts[kind] ?? []).length > 0 } : null)); }
 /** which of this level file's ways in have a Team & kit picture staged for them (none: the file has no scenarios.kitView block, or did not come) — the same fetch,
  *  once per file. No file = a mission on the BUNDLED office (its entry names no level): the office's own block, levels/office.scenarios.ts */
 export function kitViewWays(file?: string): Promise<boolean[]> { return planOf(file ?? OFFICE).then(P => P?.kv ?? []); }

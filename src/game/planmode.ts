@@ -137,10 +137,16 @@ function strike(S: SquadOrders, names: string[]): void {
   for (const C of [...P.chains]) { const was = C.who.length; C.who = C.who.filter(n => !names.includes(n)); if (C.who.length !== was) PLAN_STATS.struck++; if (!C.who.length) drop(S, C); }
 }
 
+/** a tutorial mission that has not taught the word yet (rails.ts `word`): no entry is given by any hand of the mode — a second click on a stacked door, a wait
+ *  taken off a stop, the ring by the button — until it has */
+const wordLocked = (S: SquadOrders): boolean => !!S.g.rails?.locks('word');
+/** those men are stacked on that stop's door already and the word is locked: an order there again would be the entry */
+const stackedLocked = (S: SquadOrders, men: Guard[], st: PlanStep): boolean => { const d = st.kind === 'door' ? S.g.doors.list[st.door ?? -1] : null; return !!d && wordLocked(S) && !!S.g.doorTools.waitsOn(men, d); };
 /** the chain's first step, given now: the quick key's order there for its men (refused, or its door or man gone: the chain ends — a man has said why) */
 function start(S: SquadOrders, C: PlanChain): void {
   const g = S.g, st = C.steps[0], men = menOf(S, C.who), t = st ? layTarget(g, st) : null;
   if (!t || !men.length) return drop(S, C);
+  if (stackedLocked(S, men, st)) { C.t = g.time; C.phase = 'wait'; return; }   // (stacked on it already, and the word not taught: an order there again is no entry)
   const r = S.quickFor(men, t); if (!r) return drop(S, C);
   C.t = g.time; C.phase = st.kind === 'door' && r === 'entry' ? 'in' : 'go';   // (already stacked on it: the order was the entry, and the threshold's pause is behind them)
 }
@@ -173,7 +179,7 @@ function tick(S: SquadOrders): void {
     if (!men.length || !st) { drop(S, C); continue; }
     const door = st.kind === 'door' ? g.doors.list[st.door ?? -1] : null, more = C.steps.length > 1;
     if (C.phase === 'go') {
-      if (door) { if (g.doorTools.waitsOn(men, door)?.set) { if (waitsAt(st)) pause(S, C, 'wait'); else enter(S, C); } }   // (no wait put on its threshold: stacked, they go in)
+      if (door) { if (g.doorTools.waitsOn(men, door)?.set) { if (waitsAt(st) || wordLocked(S)) pause(S, C, 'wait'); else enter(S, C); } }   // (no wait put on its threshold: stacked, they go in)
       else if (g.time - C.t > 0.3 && men.every(m => { const A = S.of(m); return !A || A.arrived; }) && !(st.found === 'thing' && men.some(m => g.work.working(m)))) {   // (a thing: he is done with it — worked, or not there to work — not merely stood at it)
         const way = st.look && !st.looked ? st.look : null; let took = false; if (way) { st.looked = true; took = lookNow(S, men, way, true); }   // (a way to look, planLook: told once they stand there)
         if (holdOn(st, !more)) pause(S, C, 'held'); else if (took && more) { C.phase = 'look'; C.t = g.time; } else next(S, C); }   // (nobody could cover that way — a wall at his shoulder: nothing to wait for)
@@ -233,7 +239,8 @@ export function planOrder(S: SquadOrders, t: OrderTarget, add: boolean, look?: [
     names = rest;   // (men on no chain: the stop is theirs now — a chain of one)
   }
   // (given first: a refused order — a man has said why — leaves them on the chain they were on)
-  const to = menOf(S, names), r = S.quickFor(to, t); if (!r) return;
+  const to = menOf(S, names); if (stackedLocked(S, to, st)) { P.showT = g.time; return; }   // (the same door again before the word is taught: they wait as they were)
+  const r = S.quickFor(to, t); if (!r) return;
   strike(S, names); P.showT = g.time; PLAN_STATS.given++;
   P.chains.push({ who: names, steps: [st], phase: st.kind === 'door' && r === 'entry' ? 'in' : 'go', spent: 0, t: g.time });
 }
@@ -373,7 +380,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
       if (Math.hypot(D.x1 - D.x0, D.y1 - D.y0) < K.planDragPx * ringZoom(w, h)) {
         const stop = K.planWaits ? stopUnder(S, input, cam, canvas) : null;
         const k = stop ? -1 : S.manAt(input, cam, canvas), man = k >= 0 ? S.squad()[k] : null;
-        if (stop) cycle(S, stop.C, stop.i);   // (a stop of a chain: its waits, not a choice of men)
+        if (stop) { if (!wordLocked(S)) cycle(S, stop.C, stop.i); }   // (a stop of a chain: its waits, not a choice of men)
         else if (man) { PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]); }
         else if (!shift) choose(S, []);   // (a click on nothing: everyone)
       } else {
@@ -391,7 +398,8 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   // (… dragged before the ring's wait is up, planLook: it is an order with a way to look, and the ring is not opened under it)
   const RD = P.rdown; if (RD) { if (!RD.drag && Math.hypot(mx - RD.x, my - RD.y) >= K.planLookPx * ringZoom(w, h)) RD.drag = true; if (RD.drag) RD.to = v3c(S.targetUnder(input, cam, canvas).at); }
   if (!(input.buttons & 4)) { P.rmbT = -1; P.rdown = null; if (RD?.drag) lookOrder(S, RD.t, RD.to, shift); else planOrder(S, S.targetUnder(input, cam, canvas), shift); }
-  else if (!shift && !RD?.drag && S.g.time - P.rmbT >= K.planHoldSecs - 1e-6) { P.rmbT = -1; P.rdown = null; S.ringByButton(input, cam, canvas); }
+  else if (!shift && !RD?.drag && S.g.time - P.rmbT >= K.planHoldSecs - 1e-6 && !(S.g.rails?.locks('ring') && S.g.rails.locks('menu'))) {   // (a tutorial mission that has taught neither the menu nor the ring: the button let go is the click)
+    P.rmbT = -1; P.rdown = null; S.ringByButton(input, cam, canvas); }
 }
 /** … and at the END of orders.ts input, whatever in it read the frame: with the mode up the mouse is not Sam's — he neither fires nor aims — and Shift,
  *  the mode's own modifier, is not his sprint (the tick's own copy of the input, written afresh from the next record) */

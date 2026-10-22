@@ -7,7 +7,7 @@
 //                                                 script's own pace — still every step, still the end, on all four (one seed hid a fight the pair lost on three dice in eight)
 //   bun run tools/qa/lesson-gate.ts [name …] [--jobs 2]      (no name: the Training levels. A tutorial mission is gated by name: tut-squad)
 // One PASS / FAIL line per level and check; exit 0 = all pass, 1 = any FAIL.
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const { TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -25,7 +25,10 @@ const last = (s: string, re: RegExp) => s.split('\n').filter(l => re.test(l)).po
 // (a tutorial mission, asked for by name: its level carries a script — levels/<name>.script.ts — and its lesson is live only on the frame, game/rails.ts,
 //  which the frozen stand holds off: every frozen run of it here is given TPS_RAILS=1)
 const scripted = (name: string) => existsSync(resolve(ROOT, 'levels', `${name}.script.ts`));
-const frame = (name: string): Record<string, string> | undefined => scripted(name) ? { TPS_RAILS: '1' } : undefined;
+// (…and a mission whose steps allow `plan` is played in plan mode, which the frozen stand holds off too: its frozen runs are given the mode's own words)
+const PLAN_WORDS = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_PLANLOOK: '1', TPS_PLANWAITS: '1', TPS_PLANKNEE: '1' };
+const plans = (name: string): boolean => { try { return (JSON.parse(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')).scenarios?.lesson?.steps ?? []).some((t: { allow?: string[] }) => t.allow?.includes('plan')); } catch { return false; } };
+const frame = (name: string): Record<string, string> | undefined => scripted(name) ? { TPS_RAILS: '1', ...(plans(name) ? PLAN_WORDS : null) } : undefined;
 async function one(name: string) {
   const [fresh, lint] = await Promise.all([run(['tools/levels/export.ts', name, '--check']), run(['tools/qa/level-lint.ts', `levels/${name}.json`])]);
   verdict(fresh.code === 0, `${name}: the level file is its generator's`, fresh.code === 0 ? '' : last(fresh.out, /\S/).trim());
