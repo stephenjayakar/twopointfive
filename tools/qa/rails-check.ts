@@ -276,18 +276,21 @@ export async function railsCheck(): Promise<boolean> {
     //      script's men are kept at their sandbags: the line is gone because they came, not because the step lets go of it
     { const beat = async (how: 'direct' | 'plain' | 'kept') => { const plain = how === 'plain'; const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, km = L.steps.findIndex((T: any) => T.id === 'move'), kg = L.steps.findIndex((T: any) => T.id === 'gate');
         R.run(6); g.lesson.i = km; R.run(0.5); R.command(L.steps[km].at as V);
-        const seen = new Set<unknown>(), home = new Map<unknown, number[]>(); let t0 = -1, t1 = -1;
+        const seen = new Set<unknown>(), home = new Map<unknown, number[]>(); let t0 = -1, t1 = -1, priced = 0, unpriced = 0;
         for (let i = 0; i < 60 * 60 && t1 < 0; i++) {
           if (plain) for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '') && gd.script?.direct) { gd.script.direct = false; if (!seen.has(gd)) { seen.add(gd); gd.path = []; gd.pathGoal = null; } }
+          // (THE WORD'S OWN GUARD, away from this floor's roads: what lanes.ts prices a walk at for a man the script sent, with the word and without it —
+          //  with it never a price; without it, on a stand with covered lanes, the lanes' price while his side knows one)
+          if (plain) for (const gd of seen as Set<any>) { if (!gd.script || gd.state === 'dead') continue; gd.script.direct = true; const a = lanePenalty(g, gd, undefined); gd.script.direct = false; const b = lanePenalty(g, gd, undefined); if (a !== undefined) unpriced = -1e9; else if (typeof b === 'function') priced++; else unpriced++; }
           if (how === 'kept') for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '')) { const at = home.get(gd) ?? [gd.char.pos[0], gd.char.pos[2]]; home.set(gd, at); gd.char.pos[0] = at[0]; gd.char.pos[2] = at[1]; }   // (alive, armed, and where they stood)
           R.run(1 / 60); if (t0 < 0 && g.lesson.i === kg) t0 = g.time; if (t0 >= 0 && g.lesson.i > kg) t1 = g.time; }
-        return { secs: t0 < 0 ? -1 : t1 < 0 ? 99 : t1 - t0, up: R.squad().length, nav: g.col.nav }; };
-      const { LANES } = await import(`${ROOT}/src/game/lanes.ts`);   // (covered lanes are a newer rule: where the stand holds them off there is no price to take the word off)
+        return { secs: t0 < 0 ? -1 : t1 < 0 ? 99 : t1 - t0, up: R.squad().length, nav: g.col.nav, sent: seen.size, priced, unpriced }; };
+      const { LANES, lanePenalty } = await import(`${ROOT}/src/game/lanes.ts`);   // (covered lanes are a newer rule: where the stand holds them off there is no price to take the word off)
       const A = await beat('direct'), B = await beat('plain'), C = await beat('kept');
       const way = A.nav.findPath([30, 0, 23.6], [14.6, 0, 19.2], 6000) as number[][] | null; let m = 0; if (way) { let q = [30, 0, 23.6]; for (const w of way) { m += flat(q, w); q = w; } }
-      verdict(A.secs >= 0 && A.secs <= 8 && A.up === 4 && B.secs >= 0 && B.secs <= 8 && C.secs > 12 && !!way && m < 20,
-        'the gate\'s beat is short: the squad set in the yard, the roadblock comes down the road and the line that only watches is gone within eight seconds, all four on their feet (as short with the script\'s direct walk taken off its men: the road is the one way there; and long with them kept at their sandbags)',
-        `the gate's line stood ${A.secs.toFixed(1)} s, ${A.up} of the squad up · with the direct walk off ${B.secs.toFixed(1)} s${LANES.on ? '' : ' (covered lanes are off on this stand)'} · with its men kept at their sandbags ${C.secs.toFixed(1)} s · the road from the roadblock to the gate ${way ? m.toFixed(1) + ' m' : 'has no path'}`); }
+      verdict(A.secs >= 0 && A.secs <= 8 && A.up === 4 && B.secs >= 0 && B.secs <= 8 && C.secs > 12 && !!way && m < 20 && B.sent > 0 && B.unpriced >= 0 && (B.priced > 0 || !LANES.on),
+        'the gate\'s beat is short: the squad set in the yard, the roadblock comes down the road and the line that only watches is gone within eight seconds, all four on their feet (as short with the script\'s direct walk taken off its men: the road is the one way there; and long with them kept at their sandbags); and the script\'s word still reaches its men and takes the covered lanes\' price off their walk',
+        `the gate's line stood ${A.secs.toFixed(1)} s, ${A.up} of the squad up · with the direct walk off ${B.secs.toFixed(1)} s${LANES.on ? '' : ' (covered lanes are off on this stand)'} · with its men kept at their sandbags ${C.secs.toFixed(1)} s · the word: on ${B.sent} of the script's men, their walk priced by the lanes without it on ${B.priced} man-frames, not priced on ${B.unpriced}${B.unpriced < 0 ? ' (PRICED WITH THE WORD)' : ''} · the road from the roadblock to the gate ${way ? m.toFixed(1) + ' m' : 'has no path'}`); }
     // ---- the big line stays clear of your own men (ui/railclear.ts, rails.ts lineMen; the pair mission's pictures: with the view led up the screen the
     //      plate lay over the player and his partner). The rule is pure — boxes in, a step down out — so it is read here on made-up boxes of a 1280 by 720
     //      layer (a man's box by his feet); the frame's list of men is read on the mission, with the player on the floor and in the sky seat. And a deed
