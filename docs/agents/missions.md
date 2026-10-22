@@ -560,6 +560,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     seeds 1 to 4 ends in 102.6 to 118.5 s with 4, 3, 6 and 3 teammates on a knee at the hall. On the join with the build head: `tutplan-check`, `level-needs --run` and
     `rails-check` green on both stands, `lesson-gate`, `rowset-check` and `lived-check` green, and the real page with real keys to its end card (38 lines, the software adapter,
     no picture taken). Nobody has played the changed post; nothing of it has been seen on a GPU.
+  - **The hall's word step carries no lookout** (2026-10-22, found by the merge run's reading of the scripted player's own line, "hall nobody in"). The hall's steps put a
+    lookout eye inside the room so the player sees the gun. Until `RAILS.eyeFirst` a step's eye was the one the fog had no place for with four men up, so nobody saw through it; with
+    it the fog shows the gunner, and the squad's entry pick reads the fog (`autopilot.ts contactBehind`): at the word the stack asked first took the last can — a bang and clear with
+    its three seconds of re-forming beside an open and clear — the back pair went in alone at 0.2 s and the front stack was still outside when the room fell. A LOOKOUT IS THE
+    PLAYER'S VIEW, NOT THE SQUAD'S KNOWLEDGE: that is claimed to the frame's and the entry pick's owners, and any tutorial level with a step eye in a room the squad then enters is
+    open to it. Here the eye is off the word's own step (`word2`; it stays on the card and the stacking steps): both stacks open and clear again, first men in at 1.1 and 1.2 s
+    (seeds 1 to 4, hard on one, a reader's pace on one), and he sees the gun through his men as the doors give. The lesson block alone changed: the level's fingerprint is the same.
+    THE SCRIPTED PLAYER: a stack that never goes in has no time, so nothing is said of how far apart they were ("not together: a stack never went in") and the PLAIN run fails on
+    it, no strict word asked; on a join, read the "word at" line of EVERY room.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
