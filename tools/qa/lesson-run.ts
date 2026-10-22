@@ -78,7 +78,7 @@ export interface Bot {
 
 if (import.meta.main) {
   const name = argv.find((a, i) => !a.startsWith('--') && argv[i - 1] !== '--seed' && argv[i - 1] !== '--cap' && argv[i - 1] !== '--pace' && argv[i - 1] !== '--floor');
-  if (name && process.env.TPS_PROFILE !== 'shipped' && tutorial(resolve(ROOT, 'levels', `${name.replace(/\.json$/, '')}.json`))) {   // (a tutorial mission: the same run, as the page stands it)
+  if (name && process.env.TPS_PROFILE !== 'shipped' && process.env.TPS_RAILS !== '1' && tutorial(resolve(ROOT, 'levels', `${name.replace(/\.json$/, '')}.json`))) {   // (a tutorial mission: the same run, as the page stands it)
     console.log(`${name}: a tutorial mission, run as the page opens it (the shipped stand)`);
     const r = Bun.spawnSync(['bun', 'run', import.meta.path, ...argv], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'inherit', stderr: 'inherit' }); process.exit(r.exitCode ?? 1);
   }
@@ -107,8 +107,9 @@ export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<Le
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   // A TUTORIAL MISSION IS THE PAGE'S (a lesson with a `rails` record — src/game/rails.ts): it teaches the rules the page opens with, the frame among them, and
   // with the frame off its level has no lesson at all. The stand is set as this process starts, so the command line runs such a level again on the shipped
-  // stand (the entry above) and a caller that asks for one on the frozen stand is told to.
-  if (tutorial(file) && process.env.TPS_PROFILE !== 'shipped') return { ...out, code: 2, why: 'a tutorial mission is the page\'s: run it under TPS_PROFILE=shipped' };
+  // stand (the entry above) and a caller that asks for one on the frozen stand is told to. A run that raises the frame itself on the frozen stand (TPS_RAILS=1,
+  // as lesson-gate does for a mission whose rules that stand has) is left on it.
+  if (tutorial(file) && process.env.TPS_PROFILE !== 'shipped' && process.env.TPS_RAILS !== '1') return { ...out, code: 2, why: 'a tutorial mission is the page\'s: run it under TPS_PROFILE=shipped' };
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
