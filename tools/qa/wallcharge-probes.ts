@@ -27,6 +27,7 @@ const WC = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { WALLCHARGE, WALLCHARGE_DEFAULTS, wallAt, wallPt, wallOff, wallAlong, WALL_ORDER } = WC;
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { OWNCHARGE } = await import(`${ROOT}/src/game/owncharge.ts`);
+const { OWNBLOW } = await import(`${ROOT}/src/game/ownblow.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { WALLS } = await import(`${ROOT}/src/game/wallbreak.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
@@ -72,6 +73,7 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
   const said: string[] = [], spoke: { who: string; text: string }[] = [];
   { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(t); msg(t); }; const say = game.say.bind(game); game.say = (gd: any, t: string, ...r: any[]) => { spoke.push({ who: gd?.callsign ?? '?', text: t }); return say(gd, t, ...r); }; }
   const O = game.orders, D = game.doorTools, C = game.wallCharge;
+  OWNBLOW.on = false;   // (ownblow.ts, on on the shipped stand: these lines press the squad's key on a charge set by hand, as they were written; ownblow-check holds the row and raises the switch itself. restoreKnobs puts it back)
   // (A MAN ALONE: these lines were written on the door tools' own bag, which a man alone had whatever his kit card said. With charges of his own — owncharge.ts,
   // on on the shipped stand — he carries his card's and nothing else, which owncharge-check holds; here the switch is held off and the bag put back as it stood,
   // so the lines still ask what they asked: the wall's row, the setting, the blast. restoreKnobs puts the switch back, as the runner does after the probe.)

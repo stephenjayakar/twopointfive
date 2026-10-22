@@ -40,6 +40,7 @@ export const lessonLine = (line: string): string => HANDRING.on ? line.replace(W
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
 import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)
+import { OWNBLOW } from './ownblow';   // (read inside lineOf only)
 import { SLOTSETUP, slotSetupOpen } from './slotsetup';   // (slotSetupOpen is called inside a flag only)
 
 /** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
@@ -332,7 +333,7 @@ export class Lesson {
 
 /** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys; his own
  *  actions a ring (handring.ts) takes the whistle off its key */
-const lineOf = (T: LessonStep): string => HANDRING.on && T.ringLine ? T.ringLine : SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
+const lineOf = (T: LessonStep): string => OWNBLOW.on && T.blowLine ? T.blowLine : HANDRING.on && T.ringLine ? T.ringLine : SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
 /** …and as the page says it: a tutorial mission's one big line (rails.ts prompt) is the same words as the row's */
 export const stepLine = (T: LessonStep): string => lessonLine(lineOf(T));
 
@@ -348,6 +349,7 @@ export function checkLesson(g: Game): string[] {
     const why = testFault(g, T.done); if (why) out.push(`${w}.done: ${why}`);
     if (T.line.length > 96) out.push(`${w}.line is ${T.line.length} characters: the objective row holds about 96`);
     if (T.setupLine && T.setupLine.length > 96) out.push(`${w}.setupLine is ${T.setupLine.length} characters: the objective row holds about 96`);
+    if (T.blowLine && T.blowLine.length > 96) out.push(`${w}.blowLine is ${T.blowLine.length} characters: the objective row holds about 96`);
     if (T.at && !(T.at[0] > WORLD.min[0] && T.at[0] < WORLD.max[0] && T.at[2] > WORLD.min[2] && T.at[2] < WORLD.max[2])) out.push(`${w}.at (${T.at[0]}, ${T.at[2]}) is outside the world`); });
   return out;
 }

@@ -616,7 +616,7 @@
         { "id": "lamp", "line": "Shoot out the lamp: the dark is cover too", "done": { "is": "any", "of": [{ "is": "target", "name": "lamp_shop", "on": false }, { "is": "men", "down": 3 }] }, "at": [24.4, 3.2, 17.7] },
         { "id": "charge", "line": "Hold [Space] on the door: pick the charge", "done": { "is": "any", "of": [{ "is": "door", "door": "shop", "state": "charged" }, { "is": "door", "door": "shop", "state": "open" }] }, "at": [25, 1, 14.25], "allow": ["use"] },
         { "id": "back", "line": "Stand clear: your back to the wall beside the door", "done": { "is": "near", "at": [24.45, 0, 16], "r": 0.7 }, "at": [24.45, 0, 16] },
-        { "id": "blow", "line": "[F]: blow it", "done": { "is": "door", "door": "shop", "state": "open" }, "at": [25, 1, 14.25], "allow": ["word"] },
+        { "id": "blow", "line": "[F]: blow it", "blowLine": "[Space]: blow it", "done": { "is": "door", "door": "shop", "state": "open" }, "at": [25, 1, 14.25], "allow": ["word"] },
         { "id": "shop", "line": "Lean in: shoot him", "done": { "is": "men", "down": 3 }, "at": [27.7, 1, 14.25], "cue": "shop" },
         { "id": "stun", "line": "[4], then left button: stun the store", "done": { "is": "any", "of": [{ "is": "threw", "kind": "flash", "area": { "x0": 30.5, "x1": 36, "z0": 10.5, "z1": 17.5 } }, { "is": "men", "down": 5 }] }, "at": [31.6, 0.2, 14.25], "allow": ["slot:flash"], "cue": "room", "checkpoint": "the shop" },
         { "id": "store", "line": "Go in: shoot both", "done": { "is": "men", "down": 5 }, "at": [33.6, 1, 14.25] },

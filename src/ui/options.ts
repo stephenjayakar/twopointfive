@@ -88,7 +88,7 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['X'], 'Orders, on what the cursor is on', 'or the middle mouse button; then 1 to 5 picks an order'],
     [['B'], 'The usual order for that spot, at once'],
     [['T'], 'Who takes the next order', 'everyone, red, blue or one man'],
-    [['F'], 'Go', 'the word for an order that waits on you, and the trigger of a set charge'],
+    [['F'], 'Go', 'the word for an order that waits on you, and the trigger of a charge the squad set'],
     [['H'], 'With the orders up: the big tool on a door, smoke on the floor'],
     [['G'], 'With the orders up: frag and clear'],
   ] },
