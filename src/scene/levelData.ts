@@ -700,9 +700,10 @@ export function validateLevelData(d: LevelData): string[] {
             if (!/^[0-4]$/.test(k)) err(cw, "a place on the roster: '0' (you) to '4'");
             if (!isObj(c)) { err(cw, 'must be an object'); continue; }
             if (c.shield !== undefined) err(`${cw}.shield`, 'the ballistic shield is out of the game: take the key out (the rest of the card stands)');
-            known(cw, c, ['weapon', 'shield', ...BOOLS, ...NUMS]);   // ('shield': said above, in words of its own)
+            known(cw, c, ['weapon', 'shield', ...BOOLS, ...NUMS, 'rings']);   // ('shield': said above, in words of its own)
             if (k !== '0' && c.shells !== undefined) err(`${cw}.shells`, 'yours alone: a teammate carries no 40 mm');   // (your own `charges` and `walls` are read where your own charges are switched on — game/owncharge.ts, kit.ts chargeRow / wallRow — and are nothing where they are off)
             if (c.weapon !== undefined && !['rifle', 'pistol', 'shotgun'].includes(c.weapon)) err(`${cw}.weapon`, "'rifle' | 'pistol' | 'shotgun'");
+            if (c.rings !== undefined) { if (k !== '0') err(`${cw}.rings`, 'yours alone: the launcher is on your rifle'); else if (c.weapon === 'pistol' || c.weapon === 'shotgun') err(`${cw}.rings`, 'the launcher is the rifle\'s: this card carries none'); else if (!(Number.isInteger(c.rings) && c.rings >= 0 && c.rings <= 5)) err(`${cw}.rings`, 'a whole number 0‥5'); }   // (the launcher's sponge rounds — game/kit.ts RINGS_MAX, held equal by tools/qa/issuewhole-check.ts; a mission's own card for you is handed none: ISSUE.whole)
             for (const b of BOOLS) if (c[b] !== undefined && typeof c[b] !== 'boolean') err(`${cw}.${b}`, 'true | false');
             for (const n of NUMS) if (c[n] !== undefined && !(Number.isInteger(c[n]) && c[n] >= 0 && c[n] <= 9)) err(`${cw}.${n}`, 'a whole number 0‥9'); }
         }
