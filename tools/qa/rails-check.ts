@@ -26,7 +26,10 @@
 //      `after`, RAILS.afterSecs / afterMax); a line with no key in it is one to watch; the page's input lets go of a modifier the system says is up.
 //  THE GATE'S BEAT: the squad set in the yard, the roadblock comes down the road (the script's `direct` walk) and the line is gone within eight seconds;
 //      with that word taken off its men, and covered lanes on (the page's stand), it is long. No break of its own: the second run is its proof.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's and the card's must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
+//  THE BIG LINE AND YOUR OWN MEN (ui/railclear.ts, Rails.lineMen, RAILS.lineClear): the line has two places, where it lies and the bottom edge, and is at
+//      the edge while a man of yours is under where it lies; the frame lists the squad, and the player when he is on the floor. And a deed can name the
+//      man an order was given on. RAILS_BREAK=1 reaches this line through the list alone (nobody on it); the rule on boxes and the deed have no break.
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's and the big line's must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -282,6 +285,31 @@ export async function railsCheck(): Promise<boolean> {
       verdict(A.secs >= 0 && A.secs <= 8 && A.up === 4 && (B.secs > 12 || !LANES.on) && !!way && m < 20,
         'the gate\'s beat is short: the squad set in the yard, the roadblock comes down the road and the line that only watches is gone within eight seconds, all four on their feet (and is long with the script\'s direct walk taken off its men)',
         `the gate's line stood ${A.secs.toFixed(1)} s, ${A.up} of the squad up · with the direct walk off ${B.secs.toFixed(1)} s${LANES.on ? '' : ' (covered lanes are off on this stand: no contrast)'} · the road from the roadblock to the gate ${way ? m.toFixed(1) + ' m' : 'has no path'}`); }
+    // ---- the big line stays clear of your own men (ui/railclear.ts, rails.ts lineMen; the pair mission's pictures: with the view led up the screen the
+    //      plate lay over the player and his partner). The rule is pure — boxes in, a step down out — so it is read here on made-up boxes of a 1280 by 720
+    //      layer (a man's box by his feet); the frame's list of men is read on the mission, with the player on the floor and in the sky seat. And a deed
+    //      can name the man an order was given on (`order:<id>@foe:<callsign>`): the check knows the floor's men, and the step counts that order only
+    { const { railClear, RAILCLEAR } = await import(`${ROOT}/src/ui/railclear.ts`);
+      const rest = { l: 400, r: 880, t: 513, b: 608 }, H = 720, low = H - RAILCLEAR.gap - rest.b, man = (x: number, y: number) => ({ l: x - 26, r: x + 26, t: y - 78, b: y + 8 });
+      const none = railClear(rest, [], H, false), far = railClear(rest, [man(200, 560), man(640, 300)], H, false), under = railClear(rest, [man(700, 560)], H, false);
+      let was = under, drift = 0; for (let k = 0; k < 240; k++) { const s = railClear(rest, [man(700 + 30 * Math.sin(k / 9), 550 + 20 * Math.sin(k / 5))], H, was > 0); if (s !== was) drift++; was = s; }   // (an aim that wanders: the man drifts under where it lay)
+      const near = railClear(rest, [man(700, 480)], H, true), gone = railClear(rest, [man(700, 440)], H, true);   // (just above where it lies: it stays at the edge; well clear: home)
+      const both = railClear(rest, [man(700, 560), man(700, 700)], H, false), short = railClear(rest, [man(700, 560)], rest.b + RAILCLEAR.gap, false);   // (a second man at the bottom edge, and a layer with no room under it: it lies where it lies)
+      const walk = (from: number, to: number) => { let at = 0, n = 0, top = 9e9; for (let y = from; from < to ? y <= to : y >= to; y += from < to ? 3 : -3) { const s = railClear(rest, [man(700, y)], H, at > 0); if (s !== at) n++; at = s; top = Math.min(top, rest.t + s); } return { n, top }; };
+      const dn = walk(300, 800), up = walk(800, 300);   // (a man walks down the whole picture through both places, and back up: two moves each way, and never up into the picture)
+      const R = await rig(true), g = R.g; R.run(0.5); const squad = R.squad().length, men = g.rails.lineMen(), RD = g.lesson.data.rails, sky = RD.sky;
+      RD.sky = undefined; const floor = g.rails.lineMen(); RD.sky = sky; const lc = RAILS.lineClear; RAILS.lineClear = false; const off = g.rails.lineMen().length; RAILS.lineClear = lc;
+      const foes = g.guards.filter((x: any) => x.team !== 'operative' && x.state !== 'dead'), cs = foes[0]?.callsign as string, other = foes[1]?.callsign as string;
+      const T = g.lesson.step, done0 = T.done, what = (w: string) => { T.done = { is: 'did', what: w }; const f = checkLesson(g).filter((x: string) => /what:|on:/.test(x)); T.done = done0; return f.length; };
+      const named = what(`order:cover@foe:${cs}`), thing = what('order:work@thing:breaker'), plainDeed = what('order:stack'), noMan = what('order:cover@foe:Nobody 99'), door = what('order:stack@door:north door'), bad = what('order:stack@nowhere'), trail = what(`order:cover@foe:${cs} `);
+      // (the step's own count: an order on ANOTHER man does not pass a deed that names one; the order on him does)
+      const i0 = g.lesson.index; T.done = { is: 'did', what: `order:cover@foe:${cs}` }; g.orders.log.push({ t: g.time, order: 'cover', who: [], target: `foe:${other}` }); R.run(0.2); const i1 = g.lesson.index;
+      g.orders.log.push({ t: g.time, order: 'cover', who: [], target: `foe:${cs}` }); R.run(0.2); const i2 = g.lesson.index; T.done = done0;
+      verdict(none === 0 && far === 0 && under === low && low > 0 && drift === 0 && near === low && gone === 0 && both === 0 && short === 0 && dn.n === 2 && up.n === 2 && dn.top === rest.t && up.top === rest.t
+        && squad > 0 && men.length === squad && floor.length === squad + 1 && floor[floor.length - 1] === g.player.char && off === 0
+        && !!cs && !!other && named === 0 && thing === 0 && plainDeed === 0 && noMan > 0 && door > 0 && bad > 0 && trail > 0 && i1 === i0 && i2 === i0 + 1,
+        'the big line stays clear of your own men: it lies where it lies with nobody under it, goes to the bottom edge from over a man, does not move again while he drifts, comes home only when he is well clear, lies where it lies with both places taken, and moves twice and never up while a man walks the whole picture; the frame lists the squad for it, and the player on the floor (nobody with the knob off); and a deed can name the man an order was given on, and only that order counts',
+        `nobody ${none} · men elsewhere ${far} · a man under it ${under} px (the edge is ${low}) · moves in 240 frames of drift ${drift} · just above it ${near}, well clear ${gone} · both places taken ${both} · no room under it ${short} · a walk down ${dn.n} moves, up ${up.n}, highest top ${Math.min(dn.top, up.top)} (it lies at ${rest.t}) · the frame's men ${men.length} of a squad of ${squad}, on the floor ${floor.length}, knob off ${off} · faults: named man ${named}, thing ${thing}, plain ${plainDeed}, no such man ${noMan}, a door after @ ${door}, no kind ${bad}, a space at the end ${trail} · the step: ${i0 + 1}, after an order on ${other} ${i1 + 1}, after the order on ${cs} ${i2 + 1}`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
       const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };

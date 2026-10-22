@@ -157,6 +157,8 @@ export class CmdRingViz {
     this.orders.draw(V, tz); this.hands.draw(H, tz); this.clear(V, H, tz);
   }
   private overKey = '';
+  /** a ring is drawn (the tutorial's big line is at home under one, its step clear of your men stood down: ui/overlay.ts) */
+  get ringUp(): boolean { return this.overKey !== ''; }
   private railShift = 0;
   /** the status column goes faint while the squad ring's words lie over it (a ring put up on a door near that corner was read through the column's plates);
    *  and the tutorial's big line steps out from under either ring (it lies over the ring's layer: with the cursor low in the middle, a ring's lower wedge

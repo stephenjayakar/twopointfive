@@ -13,7 +13,7 @@
 // THE TESTS (LESSON_TESTS below): plain records `{ is: '<kind>', … }`. Two families —
 //   STATE, true while it holds:  in · near · flag · slot · pace · meter · stage · door · target · men · all · any, and by family —
 //     hands: downed · body · calm   kit: reload · launcher · burst   squad: orderTo · stackOn · pairsOn · taken · following   plan mode: planView · picked · stacks   the quiet partner: mate
-//   DEEDS, counted from the moment the step came up:  did { what: 'act:<verb>' | 'event:<kind>' | 'chron:<kind>' | 'order:<id>', n?, on?: '<door>' } ·
+//   DEEDS, counted from the moment the step came up:  did { what: 'act:<verb>' | 'event:<kind>' | 'chron:<kind>' | 'order:<id>' | 'order:<id>@foe:<callsign>', n?, on?: '<door>' } ·
 //     threw (a can, the frag, the launcher's grenade) · word (F, the squad's word, over how many doors) · pair (the quiet pair's log)
 // A new kind is one row of that table (its test, and its check against the built floor for checkLesson). Per-player state is asked of `g.player` through one
 // accessor here (who()), so a second player is one place to change.
@@ -140,10 +140,12 @@ export const LESSON_TESTS: Record<string, TestKind> = {
   men: { ok: (g, t) => g.guards.filter(x => hostileTo(x, 'player') && downed(x)).length >= ((t.down as number) ?? 1), check: (_g, t) => t.down === undefined || (num(t.down) && t.down >= 1) ? null : 'down: how many, ≥ 1' },
 
   // -- deeds, counted since the step came up
-  // (an order may name the DOOR it was given on: `on: '<door name>'` — "stack up on the first hut's door" is not passed by a stack on another)
+  // (an order may name the DOOR it was given on: `on: '<door name>'` — "stack up on the first hut's door" is not passed by a stack on another — or, after an `@` in `what`, the MAN or the THING it was given on, in the words orders.ts logs as its target: a callsign is the deal's, so a man is named only on a mission whose men are placed the same every run)
   did: { ok: (_g, t, S) => (S.n.get(t.on === undefined ? t.what as string : `${t.what}@door:${t.on}`) ?? 0) >= ((t.n as number) ?? 1),
-    check: (g, t) => !(str(t.what) && /^(act|event|chron|order):[\w.-]+$/.test(t.what)) ? "what: 'act:<verb>', 'event:<kind>', 'chron:<kind>' or 'order:<id>'"
-      : t.on === undefined ? null : !(t.what as string).startsWith('order:') ? 'on: only with an order' : !str(t.on) || !g.doors.byName(t.on as string) ? `on: no door '${t.on}'` : null },
+    check: (g, t) => { const m = str(t.what) ? /^(?:(?:act|event|chron|order):[\w.-]+|order:[\w.-]+@(foe:[\w.'-]+(?: [\w.'-]+)*|thing:(?:breaker|objective|device)))$/.exec(t.what) : null, foe = m?.[1]?.startsWith('foe:') ? m[1].slice(4) : null;
+      return !m ? "what: 'act:<verb>', 'event:<kind>', 'chron:<kind>', 'order:<id>', 'order:<id>@foe:<callsign>' (an order given ON that man) or 'order:<id>@thing:breaker|objective|device' (a door is `on`)"
+      : foe !== null && g.guards.some(x => x.team !== 'operative' && x.state !== 'dead') && !g.guards.some(x => x.team !== 'operative' && x.callsign === foe) ? `what: no man called '${foe}' on this floor`
+      : t.on === undefined ? null : m[1] ? 'on: not with a target in `what`' : !(t.what as string).startsWith('order:') ? 'on: only with an order' : !str(t.on) || !g.doors.byName(t.on as string) ? `on: no door '${t.on}'` : null; } },
 
   // -- (the hands' rows)
   // a man put down BY THE PLAYER'S HAND in this run, by the way it was done (the chronicle's own rows — combat.ts killGuard → chronDown): out cold by the

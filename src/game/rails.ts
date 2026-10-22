@@ -64,6 +64,8 @@ export const RAILS = { on: false,
   /** Shift with the command key while the plan is not unlocked IS the command key (Shift + the key is the plan's: before, the press was thrown away —
    *  and a Shift left down by a system shortcut, or a sprinting finger, made the key dead with its row still offered on the squad's panel) */
   shiftTap: true,
+  /** the big line goes to the bottom edge from over the player and his teammates where they stand under it (ui/railclear.ts; picture only) */
+  lineClear: true,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
 export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
@@ -372,6 +374,13 @@ export class Rails {
   isSpared(gd: Guard): boolean { const t = this.spared.get(gd.char.id); return t !== undefined && this.g.time < t; }
 
   // ---------------------------------------------------------------- the sky seat
+  /** where your own men stand, for the big line to keep clear of (ui/railclear.ts): the player when he is on the floor, and every living teammate */
+  lineMen(): { pos: Vec3; bones: { head?: Vec3 } }[] {
+    const out: { pos: Vec3; bones: { head?: Vec3 } }[] = []; if (BREAK || !RAILS.lineClear || !this.live) return out;
+    for (const gd of this.g.guards) if (gd.unit && gd.team === 'operative' && gd.state !== 'dead') out.push(gd.char);
+    if (!this.skyOn) out.push(this.g.player.char);
+    return out;
+  }
   private squad(): Guard[] { return this.g.guards.filter(x => x.unit && x.team === 'operative' && x.state !== 'dead'); }
   private park(R: RailsData) {
     const g = this.g; this.sky.parked = true; this.sky.was = { invisible: g.playerInvisible };

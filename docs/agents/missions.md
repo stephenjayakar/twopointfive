@@ -1134,3 +1134,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `&hour=dawn&weather=rain` on it, dusk in dust and the address untouched; with `&rowset=0&hour=dawn`, dawn in the level's own weather. No console error
   but the favicon's 404. Never seen on a GPU: what dusk in dust looks like on that level is for whoever sets the row, and no shipped row has opened
   through it.
+- **The tutorial's big line stays clear of your own men** (2026-10-22; `src/ui/railclear.ts`, `RAILS.lineClear` — a picture-only knob of the frame's
+  table, on with it; `rails.ts lineMen`; drawn in `ui/overlay.ts`, `index.html` `--railman`). The pair mission's pictures showed it: with the view led up
+  the screen (the aim on a man ahead) the player and his partner stand low in the middle, under the line's plate. Now, while the player (on the floor) or a
+  living teammate stands under where the line lies, it steps to the bottom edge when that clears them, else up over them in steps of 40 px, and comes home
+  only once nobody is within 36 px of where it lies. A step taken is KEPT while it still clears them: the line never glides after a man as the aim
+  wanders. A ring's own step of the line (`ui/cmdring.ts`, `--railshift`) wins: with that one set this one stands down; the line's entrance animation
+  now starts and ends where the line stands. ALSO, from the same thread: a deed can name the man an order was given on (`done: { is: 'did', what:
+  'order:<id>@foe:<callsign>' }`; `lesson.ts` counted it already and its validator refused the `@`), and `docs/level-format.md` says that `allow` and
+  `deny` add up down the steps. CHECK `rails-check`, the line "the big line stays clear of your own men" (the pure rule on made-up boxes: nobody, men
+  elsewhere, a man under it, 240 frames of drift with no move, the hold, two men; the frame's list of men; the deed's four shapes): 22 lines pass on
+  both stands, `RAILS_BREAK=1` fails 15 on both, this one among them. ON THE REAL PAGE (headless Chromium, the software adapter, `tut-solo`, real mouse
+  moves): at 1280 by 720 the player never stands under the line alone (his feet come to 455, the line's top is 513) and the line did not move; at 1280
+  by 560, with the aim at the top of the screen, he stands under where it lies and the line stood 104 px lower, at the bottom edge, clear of him, through
+  40 wandering mouse moves with no second move. NOT PLAYED: a teammate under it (the pair's and the squads' missions), the step up over two men, and a
+  ring up at the same time, on the page. KNOWN: an order to a neighbouring door within `RAILS.wayM` (6 m) of the step's mark still brings the after
+  line (the squad mission's reading). Never seen on a GPU.
