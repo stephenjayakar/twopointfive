@@ -46,7 +46,7 @@ const CENSUS: Record<string, [[number, number, number], [number, number, number]
   office: [[10, 9, 3], [13, 6, 3]], warehouse: [[0, 3, 0], [3, 0, 0]], 'test-rooms': [[0, 1, 0], [1, 0, 0]], registry: [[1, 4, 2], [4, 1, 2]], records: [[2, 5, 0], [7, 0, 0]],
   pass: [[0, 8, 0], [8, 0, 0]], mousehole: [[0, 3, 0], [2, 1, 0]], killhouse: [[4, 0, 0], [4, 0, 0]], hall: [[1, 0, 0], [1, 0, 0]], glasshouse: [[10, 0, 0], [6, 4, 0]],
   defuse: [[0, 2, 0], [2, 0, 0]], consulate: [[1, 5, 1], [5, 1, 1]], block: [[0, 4, 0], [4, 0, 0]], bazaar: [[0, 3, 0], [3, 0, 0]], barracks: [[0, 12, 0], [12, 0, 0]],
-  'tut-solo': [[0, 2, 0], [2, 0, 0]],
+  'tut-solo': [[0, 1, 0], [1, 0, 0]],
   'tut-sky': [[0, 8, 0], [8, 0, 0]],   // (the pass's own halt and its panes)
 };
 const baseOf = (file: string) => file.replace(/\.json$/, '').replace(/-gwot$/, '').replace(/^office-relief$/, 'office').replace(/^block-squads$/, 'block');

@@ -213,10 +213,11 @@ export function build() {
   const ALLEY: Rect = { x0: 22.2, x1: 27.0, z0: 5.3, z1: 10.6 };
   const HALL_FRONT: Vec3 = [34.0, 0, 19.75], HALL_OPEN = or({ is: 'door', door: 'hall', state: 'open' }, { is: 'door', door: 'hall', state: 'unlocked' });   // (the passage, square on to the leaf)
   // THE CARDS (the frame's `explain`: the page stops on one as its step comes up, Enter closes it, and then the line, the ring and the cue). One for each
-  // SYSTEM the mission shows, never for a key: what the other side is doing and why the answer is the answer, in two sentences, on a step whose test
+  // SYSTEM the mission shows, never for a key alone (the first is what each of the squad's two keys does at a stacked door): what the other side is doing and why the answer is the answer, in two sentences, on a step whose test
   // cannot already be true as it comes up (the maintainer, playing the first cut: "i think this needs more explanation for the systems. maybe even a
   // modal that pauses the game and explains it", and the window's card is his own sentence)
   const CARDS = {
+  entry: { title: 'Two ways in', text: 'Stacked on a door, they wait for your word.\n[B] again: they choose how. A flashbang goes in first if the room is held or unknown and they have one to spare.\n[F]: straight in from where they stand, and never a flashbang.' },
     side: { title: 'A doorway he holds', text: 'A man who holds a doorway shoots whoever shows in it.\nMost rooms have another door. Send the squad to the one at his back.' },
     follow: { title: "The squad's ring", text: 'A tap of [B] gives the plain order for whatever you point at.\nKept down, the same key opens a ring with the rest of them.' },
     gun: { title: 'Suppression', text: 'A man under fire keeps his head down, and a man with his head down is not shooting.\nPut rounds on the gun, then move while it is down.' },
@@ -234,7 +235,7 @@ export function build() {
     steps: [
       // 1 · two easy rooms: the squad's key on a door, twice
       { id: 'stack-hut', line: '[B] on the guard hut door', done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
-      { id: 'go-hut', line: '[B] again: they go in', done: taken('guardhut'), at: [10.85, 1, 11.0] },
+      { id: 'go-hut', line: '[B] again: they choose how, and go in', explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
       { id: 'stack-store', line: '[B] on the store door', done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
       { id: 'go-store', line: '[B] again. Follow them in', done: and(taken('store'), { is: 'in', area: { ...STORE } }), at: [10.85, 1, 18.6] },
       // 2 · A DOORWAY HE HOLDS: as the store falls the workshop's man is on his open lane doorway, in the picture through the fog, his rounds on the

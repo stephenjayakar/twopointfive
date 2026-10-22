@@ -93,7 +93,7 @@ export interface LoadoutSpec { team: Team; weapon?: WeaponId; tint?: Vec3; tint2
   /** SHOWCASE casts only (the lint refuses it in a play program): rounds pass through these men (game.ts Guard.god) — the day showcase's two operatives, whose show cannot end on a stray */
   god?: boolean }
 export type Upper = NonNullable<GuardScript['upper']>;
-export type OrderPatch = Partial<{ goal: Place | null; speed: number; face: number | null; strafe: boolean; aimAt: Place | UnitRef | null; stance: Stance; stackSide: -1 | 1; crouch: boolean; upper: Upper; light: boolean; hot: boolean; flinch: boolean }>;
+export type OrderPatch = Partial<{ goal: Place | null; speed: number; face: number | null; strafe: boolean; aimAt: Place | UnitRef | null; stance: Stance; stackSide: -1 | 1; crouch: boolean; upper: Upper; light: boolean; hot: boolean; flinch: boolean; direct: boolean }>;
 export type EventKind = GameEvent['kind'];
 /** what a script sees of a hearing event (never the record itself: it must not write it) */
 export interface EventView { readonly kind: EventKind | 'signal'; readonly pos: Vec3; readonly level: number; readonly loud: boolean; readonly who: number; readonly name?: string; readonly data?: Json;
@@ -871,7 +871,7 @@ export class Director {
         else if ('kind' in o.aimAt && o.aimAt.kind === 'unit') { const tgt = this.guardOf(R, o.aimAt); const vec = v3.copy(tgt.char.bones.chest ?? v3.add(tgt.char.pos, [0, 1.1, 0])); patch.aimAt = vec; R.tracks.push({ gd, vec, tgt }); }   // a MAN: the point follows his chest from here (tickTracks) until this man is handed another aim
         else patch.aimAt = v3.copy(this.placeOf(o.aimAt as Place));
       }
-      for (const k of ['speed', 'face', 'strafe', 'stance', 'stackSide', 'crouch', 'upper', 'light', 'hot', 'flinch'] as const) if (o[k] !== undefined) (patch as Record<string, unknown>)[k] = o[k];
+      for (const k of ['speed', 'face', 'strafe', 'stance', 'stackSide', 'crouch', 'upper', 'light', 'hot', 'flinch', 'direct'] as const) if (o[k] !== undefined) (patch as Record<string, unknown>)[k] = o[k];
       gd.hold = false; squadOrder(gd, patch);
     };
     const mkDrill = (name: string, impl: DrillImpl, ops: UnitRef[], men: Guard[]): DrillRun => {

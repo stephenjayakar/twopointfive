@@ -152,7 +152,7 @@ import { THROWBACK } from './throwback';
 import { WALLREACT } from './wallreact';
 import { COVERFIRE } from './coverfire';
 import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
-import { GUARD_EYE } from './guards';
+import { GUARD_EYE, LIGHTS } from './guards';
 import { PRESSURE } from './pressure';
 import { HARD } from './difficulty';
 import { DOORBLAST, DOORSHOT } from './doorblast';
@@ -383,7 +383,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.SLOTSETUP as { pop?: boolean } | undefined)?.pop !== 'boolean') SLOTSETUP.pop = false;   // (…and one from before the setup was a mode with no clock on it: there it shut by itself after its seconds)
   if (!k.tables.DOORFORCE) DOORFORCE.on = false;   // (a file from before an alerted man fired through a shut door and booted it in: its defenders waited at the leaf or went to its handle)
   if (!k.tables.RAILS) RAILS.on = false;
-  else { const R = k.tables.RAILS as Record<string, unknown>; if (R.snapPx === undefined) RAILS.snapPx = 0; if (R.keep === undefined) RAILS.keep = 0; if (R.keepDeep === undefined) { RAILS.keepDeep = 1; RAILS.keepUp = 0; } if (R.wayM === undefined) RAILS.wayM = 0; }   // (a tutorial run recorded before the ring was the place and the mark was kept in the picture)   // (a file from before a tutorial mission had a frame: nothing in its ticks was locked)
+  else { const R = k.tables.RAILS as Record<string, unknown>; if (R.snapPx === undefined) RAILS.snapPx = 0; if (R.keep === undefined) RAILS.keep = 0; if (R.keepDeep === undefined) { RAILS.keepDeep = 1; RAILS.keepUp = 0; } if (R.wayM === undefined) RAILS.wayM = 0; if (R.afterSecs === undefined) RAILS.afterSecs = 0; if (R.shiftTap === undefined) RAILS.shiftTap = false; }   // (a tutorial run recorded before the ring was the place and the mark was kept in the picture)   // (a file from before a tutorial mission had a frame: nothing in its ticks was locked)
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
@@ -407,6 +407,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.FRIENDLYFIRE) FRIENDLYFIRE.on = false;   // (a file from before a round of his side found the men of his side)
   if (!k.tables.FRIENDS) { FRIENDS.noSnap = false; FRIENDS.lowReady = false; }   // (a file from before the reticle passed over his own side and his gun came down off a teammate)
   if (!k.tables.BACKKEY) BACKKEY.tab = false;   // (a file from before Tab backed out of a list: a Tab in its ticks did nothing)
+  if ((k.tables.TORCH as { wallLow?: boolean } | undefined)?.wallLow === undefined) { TORCH.wallLow = false; TORCH.wallDark = false; }   // (a file from before a hand torch hung when the wall was at his hand: its torches were carried level, and its meters read them)
   if (!k.tables.TORCH) TORCH.calmOff = false;   // (a file from before a calm patrol's torch went dark in a lit place: its torches burned everywhere, and its meters read them)
   if (!k.tables.MORALE) MORALE.on = false;   // (a file from before a blast shook the men it did not hurt: every man stood where he stood, and nobody fired into the dust)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.training === undefined) { MORALE.training = 'none'; MORALE.nerve = 'normal'; MORALE.fanStep = 0; }   // (…and one from before a man was green or steady: every man the first slice's — broken alone in the dark only, folded when he was, and scrabbling straight back with no fan to find him a way (fanStep 0 shuts it). A recording that carries the keys keeps its own: assignDeep takes a string row as it takes a number)
@@ -485,6 +486,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else if ((k.tables.ORDERS as { roundCap?: number } | undefined)?.roundCap === undefined) ORDERS.roundCap = 0;   // (…and a file from before the key: any way round with less unknown floor on it, however long. As above: a run tape that carries the key writes its own value back right after this)
   if ((k.tables.ORDERS as { roundOwn?: boolean } | undefined)?.roundOwn === undefined) ORDERS.roundOwn = false;   // (a recording from before the key replays with it off: a pair behind the door it is to stack on takes the short way through it where the cap refuses the way round, as it was made)
   if ((k.tables.COVER as { backKeep?: boolean } | undefined)?.backKeep === undefined) COVER.backKeep = false;   // (a file from before a man walking backwards on his opening kept to it until his body had come round: he turned to walk forwards the moment the twist allowed. Like ORDERS, never in a recording's own tables; a run tape that carries the key writes its own value back right after this)
+  { const L = k.tables.LIGHTS as { wallOff?: boolean } | undefined; if (L?.wallOff === undefined) LIGHTS.wallOff = false; }   // (a recording from before a teammate's light went dark into the wall at his muzzle — or from before its tables carried LIGHTS at all: his light as the other rules had it)
   { const I = k.tables.IR as { teamOff?: boolean } | undefined; if (I?.teamOff === undefined) IR.teamOff = false; }   // (a recording from before the team's lasers could be put off: they are drawn)
   // (the partner's quiet orders, 10-13 — a file from before them replays with each off: a sweeping sentry's ring, the kept way, 'he'll look back', the habit read from when a man stopped)
   { const P = k.tables.PAIR as { sweep?: boolean; keepWay?: boolean; lookBack?: boolean; habitStood?: boolean } | undefined;

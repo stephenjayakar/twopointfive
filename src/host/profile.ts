@@ -139,7 +139,7 @@ import { HANDWORK } from '../game/handwork';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { GEAR, gearFromQuery } from '../game/gear';
-import { GUARD_EYE } from '../game/guards';
+import { GUARD_EYE, LIGHTS } from '../game/guards';
 import { wordsFromQuery } from '../game/words';
 import { kitLoad, KIT_SOLO, BIGSLOT, KITDEAL, ISSUE } from '../game/kit';
 import { squadSenses } from '../game/enemysquads';
@@ -302,6 +302,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HOLDFIRE.on = !q.has('noholdfire');   // a squad nobody has found never fires first (game/holdfire.ts): a teammate's round at a man who has not noticed anybody is held until the player's own shot or an order of his that means fire, walking or sneaking — ON in the page; ?noholdfire = they shoot on sight unless silent or sneaking, as they did
   SILENT.stackSet = !q.has('nosilentset');   // a silent man told to stack, on his mark with his round held on a man, counts as stacked (game/silent.ts silentOnMan): 'set.' is said and his row reads 'stacked' with his gun still on the man, and no hand goes to the handle while it is. ON in the page; ?nosilentset = he is 'stacking' until his gun is the door's, as it was
   START.fallIn = !q.has('nofallin');   // the team starts a mission fallen in (game/startfile.ts): the night breach and a room clear stage the men on the menu's own 'fall in', unspoken (the rescue's men fall in when its clock starts, as they always have) — ON in the page; ?nofallin = they start with no order, as they did
+  { const w = q.get('torchwall'); TORCH.wallLow = w !== '0' && w !== 'dark'; TORCH.wallDark = w === 'dark'; }   // a hand torch whose beam would end on the wall at his hand hangs, its beam on the floor at his feet (game/guards.ts torchLow; the maintainer, 10-22: "another example of character shining flashlight at a small point in front of them"): ON in the page; ?torchwall=0 = the carry as it was; ?torchwall=dark = the other answer, the torch put out instead of tipped
   TORCH.calmOff = q.get('calmtorch') !== '0' && !q.has('nocalmtorch');   // a calm patrol's hand torch burns only where his place is dark (game/calmtorch.ts): ON in the page; ?calmtorch=0 = every patrol torch burns wherever he walks, as it did
   GUARD_EYE.far = !q.has('nofarsight');   // a man standing in light is seen from past the eye's 16 m (game/guards.ts eyeReach: out to 26 m in full light, the notice building slower out there; the dark hides him as before) — ON in the page; ?nofarsight = every eye stops at 16 m whatever the light, as it was
   GUARD_EYE.farCalm = !q.has('nofarcalm');   // …and a glimpse from past those 16 m is no place to walk to until it is what has him looking (game/guards.ts farFaint: a calm man's fix lands the frame the sight tips him) — ON in the page; ?nofarcalm = every far glimpse writes his fix at once, as the far reach first shipped
@@ -393,6 +394,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CUES.overheard = q.get('overheard') !== '0';   // a shout from a defender the fog hides, where your ears or a living teammate's really get it, is a quiet row on the radio strip: his words alone, no name, no place (game/cues.ts overheard): ?overheard=0 = such a shout is no row, as before
   STICKY.mark = q.get('cammark') !== '0';   // his own stuck sticky cameras show in the fog of war: never taken out of the picture, a small lens on each on the HUD (game/stickycam.ts stickyMarks): ?cammark=0 = a camera on floor nobody sees is not drawn and nothing marks one, as before
   WORK.on = !q.has('noworkthings');   // a teammate works a thing in the level (game/workthings.ts): the orders' menu on the breaker, or on the mission's thing once it is to be taken, carries that thing's own order on digit 1 — ON in the page; ?noworkthings = the menu there is the floor's, and the breaker errand goes to the nearest man whoever he is, as it was
+  LIGHTS.wallOff = q.get('walllight') !== '0';   // a teammate's weapon light is dark while its whole beam would end on the wall, the truck or the dirt at his muzzle (game/guards.ts wallDark; the maintainer, 10-22: "weird that they are shining the flashlight on the wall immediately in front of them"): ON in the page; ?walllight=0 = the light as the other light rules have it, as it was
   IR.teamOff = !q.has('teamlasers');   // the team's guns show no laser line (game/irlaser.ts; the maintainer, 10-22: "why do we have the lasers for the guys? i think we can disable"): no infrared line through your goggles, no red one bare-eyed; your own gun keeps its one. A picture only. ON in the page; ?teamlasers = every teammate's laser as it was
   IRLIGHT.on = !q.has('noirlight');   // an infrared light on the goggles (game/irlight.ts): a room with no light of its own shows through night vision, to you and to a goggled teammate and to nobody else — ON in the page; ?noirlight = a tube amplifies only the light that is there, as it was
   IRLIGHT.auto = !q.has('noirauto');   // …and it burns only where the goggles alone show too little (irlight.ts fanDark: the place's own light through the tube, under NVG.blackAt) — ON in the page; ?noirauto = it burns whenever the goggles are down, as it did
@@ -475,6 +477,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORSTAY.on': 'QA_DOORSTAY=1 (playthrough.ts plays it on)',
   'LIGHTWALL.on': 'TPS_LIGHTWALL=1',
   'IR.teamOff': 'TPS_NOTEAMLASER=1 (a picture only)',
+  'LIGHTS.wallOff': 'TPS_WALLLIGHT=1',
   'IRLIGHT.on': 'TPS_IRLIGHT=1',
   'IRLIGHT.auto': 'TPS_IRAUTO=1',
   'IRLIGHT.meter': 'TPS_IRMETER=1',
@@ -521,6 +524,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'QUIETFOG.wand': 'TPS_QUIETWAND=1',
   'QUIETFOG.solo': 'TPS_SOLOFOG=1',
   'TORCH.calmOff': 'TPS_CALMTORCH=1',
+  'TORCH.wallLow': 'TPS_TORCHWALL=1',
   'MORALE.on': 'TPS_MORALE=1',
   'RUNNER.on': 'TPS_RUNNER=1',
   'STARTLE.on': 'TPS_STARTLE=1',
