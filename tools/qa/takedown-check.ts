@@ -315,10 +315,10 @@ export async function takedownBreathe(): Promise<boolean> {
 interface ChokeRun { err: string | null; out: number; kind: string; man: Record<string, P3>[]; sam: Record<string, P3>[]; phase: string[] }
 /** the grab, the hold, the choke, both skeletons after every frame from the grab (the tap on 'choke' is frame 90) until he is out. `ease` = a Space tap on that
  *  frame (the choke eased off: he breathes again and the hold goes on); the run then goes on `after` frames */
-export async function chokeRun(on: boolean, lower: boolean, ease = -1, after = 0, beats = true, kill = true): Promise<ChokeRun> {
+export async function chokeRun(on: boolean, lower: boolean, ease = -1, after = 0, beats = true, kill = true, haul = false): Promise<ChokeRun> {   // (haul: the choke's haul, HOLD.haul, is HELD OFF these lines — they pin the lowering's and the beats' own numbers; tools/qa/haul-check.ts is its check)
   const rnd = Math.random, knobs = KN.knobsCopy(), R: ChokeRun = { err: null, out: -1, kind: '', man: [], sam: [], phase: [] };
   try {
-    const S = await hold(on, 'choke'), { g, vic } = S; TAKEDOWN.lower = lower; TAKEDOWN.chokeBeats = beats; TAKEDOWN.kill = kill; S.begin();
+    const S = await hold(on, 'choke'), { g, vic } = S; TAKEDOWN.lower = lower; TAKEDOWN.chokeBeats = beats; TAKEDOWN.kill = kill; TAKEDOWN.haul = haul; S.begin();
     for (let f = 0, end = ease >= 0 ? ease + after : S.cap; f < end; f++) {
       S.during?.(f); if (f === ease) S.W.input.pressed.add('Space'); S.step();
       if (vic.state === 'dead') { R.out = f + 1; R.kind = String(vic.downKind); break; }
