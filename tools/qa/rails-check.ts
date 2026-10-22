@@ -30,7 +30,7 @@ const { RAILS, RAILS_STATS } = await import(`${ROOT}/src/game/rails.ts`);
 const { checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const VERBOSE = process.argv.includes('--verbose'), LEVEL = 'tut-sky', DT = 1 / 60;
-const YARD = [17.6, 0.02, 20.4];
+const YARD = [11.4, 0.02, 16.4];
 type V = number[];
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
@@ -66,7 +66,7 @@ export async function railsCheck(): Promise<boolean> {
     // ---- 3, 4, 5
     { const R = await rig(true), g = R.g, d0 = RAILS_STATS.dropped; R.run(0.5);
       const park = g.level.scenarios.lesson.rails.sky.park, mid = R.squad().reduce((c: V, m: any) => [c[0] + m.char.pos[0] / 4, 0, c[2] + m.char.pos[2] / 4], [0, 0, 0]);
-      const look = g.followPos(), n0 = g.orders.log.length, crew = g.guards.filter((x: any) => /^Tango [678]$/.test(x.callsign)).length;
+      const look = g.followPos(), n0 = g.orders.log.length, crew = g.guards.filter((x: any) => /^Tango (8|9|10)$/.test(x.callsign)).length;
       const p0 = [...g.player.char.pos]; R.command(YARD); R.run(0.3, ['KeyW']);
       const A = g.rails.allowed();
       verdict(g.rails.live && g.rails.skyOn && g.playerInvisible && flat(p0, park) < 0.6 && flat(look, mid) < 1.5 && !!g.director.run && !g.director.run.ended && crew === 3
@@ -172,7 +172,7 @@ export async function railsCheck(): Promise<boolean> {
       R.W.cursorAt(WALL); R.press('KeyB'); R.run(0.05); const n1 = g.orders.log.length; up(); const noteUp = !!g.rails.prompt()?.note; R.press('Digit1'); R.run(0.2); const wedgeGave = g.orders.log.length - n1; down();
       // the last step: nothing ordered, the view is the hand's and the goggles stay; ordered on the trucks, the shift eases out and the goggles come up
       const z = L.steps.length - 1, TR = L.steps[z].at as number[], hold = L.steps[z].hold; L.steps[z].hold = 999; g.lesson.i = z;
-      for (const m of men) g.orders.assign(m, { order: 'hold', post: [30, 0, 14], face: 0, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding' });   // (as if in the last room: this rig's squad never left the road)
+      for (const m of men) g.orders.assign(m, { order: 'hold', post: [32, 0, 16.5], face: 0, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding' });   // (as if in the last room: this rig's squad never left the road)
       R.run(0.1); if (!g.player.nv) R.press('KeyN');   // (the squad of this rig never left the road: the step is kept from counting)
       R.run(2.0, ['KeyD']); R.run(0.3);
       const off0 = g.rails.panned(), nv0 = g.player.nv;
@@ -234,7 +234,7 @@ export async function railsCheck(): Promise<boolean> {
         `step '${step}' · the mark on the view (0,0 top left, 1,1 bottom right), key held → let go: ${rows.map(r => `${r.near ? 'near ' : ''}${r.k} ${word(r.held)} → ${word(r.let_)}`).join(' · ')} · out while held ${out}/${rows.length}, back in ${back}/${rows.length}`); }
     // ---- 13: the menu lists only the mission's orders
     { const R = await rig(true), g = R.g; R.run(0.5); const ids = (p: number[]) => g.orders.rowsFor(g.orders.targetAt(p)).map((d: any) => d.id).join(' ');
-      const door = ids([17.0, 1.0, 11.2]), yard = ids([17.6, 0.02, 20.4]), wall = ids([27.95, 1.1, 9.4]);
+      const door = ids([9.0, 1.0, 11.7]), yard = ids([11.4, 0.02, 16.4]), wall = ids([21.95, 1.1, 9.6]);
       verdict(door === 'stack' && yard === 'move go' && (wall === 'move go walltools' || wall === 'move go'),   // (the wall's tools are a switch of their own: held off on the frozen stand)
         'the squad\'s menu lists only the orders the mission names: a door has the stack, the yard the move and the word, the store\'s wall its tools as well where the stand has them, and nothing else is on the ring',
         `door: ${door} · yard: ${yard} · wall: ${wall}`); }

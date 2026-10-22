@@ -165,11 +165,11 @@ export const TRAINING_MISSIONS: ScenarioEntry[] = [
 /** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
  *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
-  { id: 'tut-sky', title: 'The halt, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
-    place: 'A truck halt on a pass road, under snow', lean: 'loud', defenders: 5, squads: true,
+  { id: 'tut-sky', title: 'The tunnel, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
+    place: 'A road tunnel\'s station, under snow', lean: 'loud', defenders: 7, squads: true,
     blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.',
-    scene: 'A fuel convoy went quiet on the pass. Your squad found the halt it stopped at, and drove into the roadblock in front of it. Tonight nobody on the ground is you: you lead the four from above.',
-    teaches: ['Turn, zoom and move the view', 'One key orders the squad', 'Stack on a door, then send them in', 'A charge on a wall', 'Lights out, and night vision'] },
+    scene: 'A fuel convoy drove into the tunnel and never came out of it. Your squad came up the road to the station at its mouth, and into the roadblock in front of it. Tonight nobody on the ground is you: you lead the four from above.',
+    teaches: ['Turn, zoom and move the view', 'One key orders the squad', 'Stack on a door, then send them in', 'A charge on a wall', 'Lights out: what the dark does to men'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
   { id: 'tut-solo', title: 'The fuel halt, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial',
