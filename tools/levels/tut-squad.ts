@@ -132,7 +132,7 @@ export function build() {
 
   // ---- outside the road gate: a blast wall across the road, as a checkpoint has one. Nothing inside the yard sees past it, the picket's camp least of all ----
   grp('road');
-  G.tWall(36.8, 13.4, 5, HALF); G.jersey(38.6, 15.6, 1, 0.3); G.drums(39.2, 12.4, 2); G.tyres(37.6, 6.6, 3);
+  G.tWall(36.8, 13.4, 5, HALF); G.jersey(38.6, 15.6, 1, 0.3); G.drums(39.0, 12.4, 2); G.tyres(37.6, 6.6, 3);
 
   // ---- the motor yard, south of the street: nobody holds it ----
   grp('motoryard');
