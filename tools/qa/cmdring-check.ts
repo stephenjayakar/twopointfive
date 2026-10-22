@@ -91,13 +91,20 @@ export async function cmdringCheck(): Promise<boolean> {
     const D = pick.d, onDoor = () => aimOf(R, D) ?? D.frameCentre;
     const spot = floorSpot(R);
     if (!spot) { line(false, 'a spot of open floor to point at', 'none round Sam'); return false; }
+    // how far the ring stands from where it should (px): from the cursor it came up under — or, where it stays on its point (CMDRING.pin: qring-check's line 8c
+    // is that rule's own check), from that point's place in the view as it is now. The game works its place out before the tick's camera step, so a view still
+    // easing toward a cursor that has just moved puts a few px between the two
+    const astray = (mx: number, my: number): number => { const r = O.cmdRing, cam = R.W.cam, cv = R.W.canvas; if (!r) return Infinity;
+      if (!CMDRING.pin || !r.at) return Math.max(Math.abs(r.ax - mx), Math.abs(r.ay - my));
+      const c = { ...r }, [sx, sy] = cam.project(r.at, cv.clientWidth, cv.clientHeight); CR.ringPin(c, sx, sy, cv.clientWidth, cv.clientHeight); return Math.hypot(c.ax - r.ax, c.ay - r.ay); };
+    const where = (mx: number, my: number): string => CMDRING.pin && O.cmdRing?.at ? ` · it stays on its point: ${astray(mx, my).toFixed(1)} px from that point's place, ${Math.hypot(O.cmdRing.ax - mx, O.cmdRing.ay - my).toFixed(0)} px from the cursor it came up under` : '';
 
     // 1. the key down: the ring is up at the cursor, the first wedge lit in the quick key's words, the panel lists no menu — and nobody has been told anything
     {
       R.aim(spot); const n0 = O.log.length, mx = R.input.mouseX, my = R.input.mouseY; R.down(); R.step(20);
       const V = O.ringView(), hud = O.hud(), keys = (V?.wedges ?? []).map((x: any) => x.key).join(''), mark = O.mark();
-      line(!!O.cmdRing && !!O.menu && !!V && !!V.caption && mark === null && V.lit === 1 && V.wedges[0]?.key === 1 && !!V.wedges[0].text && Math.abs(V.x - mx) < 1 && Math.abs(V.y - my) < 1 && hud.menu === null && O.log.length === n0 && V.wedges.every((x: any) => x.key >= 1 && x.key <= 5),
-        'the key down: the ring is up at the cursor, its first wedge lit, nobody told anything yet', `ring ${!!O.cmdRing} · wedges ${keys} · lit ${V?.lit} · first '${V?.wedges[0]?.text}' · under it '${V?.caption}', the menu's own mark ${mark ? 'drawn too' : 'not drawn'} · the panel's menu ${hud.menu ? 'listed' : 'not listed'} · order book +${O.log.length - n0}`);
+      line(!!O.cmdRing && !!O.menu && !!V && !!V.caption && mark === null && V.lit === 1 && V.wedges[0]?.key === 1 && !!V.wedges[0].text && astray(mx, my) < 1 && hud.menu === null && O.log.length === n0 && V.wedges.every((x: any) => x.key >= 1 && x.key <= 5),
+        'the key down: the ring is up at the cursor, its first wedge lit, nobody told anything yet', `ring ${!!O.cmdRing} · wedges ${keys} · lit ${V?.lit} · first '${V?.wedges[0]?.text}' · under it '${V?.caption}', the menu's own mark ${mark ? 'drawn too' : 'not drawn'} · the panel's menu ${hud.menu ? 'listed' : 'not listed'} · order book +${O.log.length - n0}${where(mx, my)}`);
       // 2. … and the key up gives the lit wedge: on the floor, the quick key's own 'move there'
       const q0 = S.quick; R.up(); const row = R.tail();
       line(!O.cmdRing && !O.menu && O.log.length === n0 + 1 && row?.order === 'move' && S.quick === q0 + 1, 'the key up gives the lit wedge: held on the floor and let go, the squad moves there', `ring ${!!O.cmdRing} · menu ${!!O.menu} · order book +${O.log.length - n0} · ${row?.order}`);
@@ -292,11 +299,11 @@ export async function cmdringCheck(): Promise<boolean> {
         R.home(); R.aim(spot); const tgt = O.hover(), n0 = O.log.length, sx = inp.mouseX, sy = inp.mouseY; keyDown(); R.step(N - 2); const early = !!O.cmdRing || !!O.menu;
         inp.mouseX = sx + (sx > 800 ? -160 : 160); inp.mouseY = sy + (sy > 500 ? -90 : 90); R.step(4);   // (well inside the view: at its edge the ring would stand off the cursor, line 8b)
         const V = O.ringView(), t = O.menu?.target, lit0 = O.cmdRing?.lit, held = O.log.length - n0, moved = Math.hypot(inp.mouseX - sx, inp.mouseY - sy);
-        const r2 = O.menu?.rows.find((r: any) => r.key === 2), a = (-90 + 72) * Math.PI / 180, x0 = O.cmdRing?.ax ?? 0, y0 = O.cmdRing?.ay ?? 0, here = Math.abs(x0 - inp.mouseX) < 1 && Math.abs(y0 - inp.mouseY) < 1;
+        const r2 = O.menu?.rows.find((r: any) => r.key === 2), a = (-90 + 72) * Math.PI / 180, x0 = O.cmdRing?.ax ?? 0, y0 = O.cmdRing?.ay ?? 0, far = astray(inp.mouseX, inp.mouseY), here = far < (CMDRING.pin ? 5 : 1), stood = where(inp.mouseX, inp.mouseY);   // (the view is still on its way to a cursor that moved four ticks ago)
         inp.mouseX = x0 + Math.cos(a) * (CMDRING.flickPx + 14); inp.mouseY = y0 + Math.sin(a) * (CMDRING.flickPx + 14); R.step(); const lit1 = O.cmdRing?.lit;
         R.up(); const row = R.tail();
         line(!early && !!V && t?.kind === 'floor' && tgt?.kind === 'floor' && moved > 150 && here && lit0 === 1 && held === 0 && !!r2 && lit1 === 2 && O.log.length === n0 + 1 && row?.order === r2.id && row.target === floorOf(tgt),
-          'kept down, the ring comes up when the hold is over: for the spot the key went down on, at the cursor; out toward wedge 2 and let go, its order', `${N - 1} frames down: ${early ? 'UP ALREADY' : 'nothing up'} · then the ring ${V ? 'up' : 'NOT up'} on the ${t?.kind} with the cursor moved ${moved.toFixed(0)} px on, ${here ? 'at the cursor' : 'NOT at the cursor'}, lit ${lit0}, order book +${held} · toward wedge 2 ('${r2?.id}'): lit ${lit1} · on the key up: ${row?.order} at ${row?.target} (the key went down on ${tgt?.kind === 'floor' ? floorOf(tgt) : tgt?.kind})`);
+          'kept down, the ring comes up when the hold is over: for the spot the key went down on, at the cursor; out toward wedge 2 and let go, its order', `${N - 1} frames down: ${early ? 'UP ALREADY' : 'nothing up'} · then the ring ${V ? 'up' : 'NOT up'} on the ${t?.kind} with the cursor moved ${moved.toFixed(0)} px on, ${here ? 'at the cursor' : 'NOT at the cursor'}${stood}, lit ${lit0}, order book +${held} · toward wedge 2 ('${r2?.id}'): lit ${lit1} · on the key up: ${row?.order} at ${row?.target} (the key went down on ${tgt?.kind === 'floor' ? floorOf(tgt) : tgt?.kind})`);
       }
       // 18. Shift is only his sprint with plan mode off: a tap with it down orders; with that mode on, Shift + the key is its toggle and no order
       {

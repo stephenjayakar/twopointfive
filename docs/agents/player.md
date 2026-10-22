@@ -844,8 +844,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   gun his head, the 40 mm his chest), a show's scripted target (`puppet.target`: feet + 1.25 m, as authored). KNOWN: the reticle's own line test
   is from 1.3 m over Sam's feet to the man's chest, not from the muzzle, so a low man behind cover can be ringed from a crouch and the round still
   go into the cover — older than this change. And not this change's: an AI man firing at a foe who is crouched aims 0.8 m over his feet
-  (`guards.ts`, `foeCrouched`), which is at or over the crown of a man who is ducked AND blinded (0.78 to 0.87 m measured here) — read from the
-  code, not run. On the page's stand `aim-unit`, `aim-player` and `aimlevel` are red at the build head this was cut from, the same lines with and
+  (`guards.ts`, `foeCrouched`) — NOT a fault, corrected 10-22: the squad's rig ran it and 0.8 m enters such a man in every sample; only a
+  blinded, flinching defender at exactly half crouch is aimed at as if standing. On the page's stand `aim-unit`, `aim-player` and `aimlevel` are red at the build head this was cut from, the same lines with and
   without this change. NEVER SEEN ON A GPU: how the gun coming down onto a low man looks, and whether the laser and the ring agree, is unseen.
 - **A gun's key again opens its setup; the kit column is one box** (`src/game/slotsetup.ts`, table `SLOTSETUP {on, secs 1.5, stay false, settle 0.35}`;
   `src/ui/handbox.ts`; `src/host/keymap.ts KEYMAP.setFree`; 10-22. The maintainer: "repeating the current selection open up a menu for configuring
@@ -911,8 +911,37 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   presses (the habit press, the lapse, a double tap off a can, the trigger with it up, three loads, empty hands and back). NOT RUN: the tour, a
   soak, the solo night, `all-quick`, the other page checks (`keybinds-page.cjs`, `textsize-page.cjs`, `bigslot-page.cjs`, `panel-keys.cjs`,
   `lesson-page.cjs`).
-  NEVER SEEN ON A GPU: the box was looked at as stills of the real page's own markup and styles, and used by real key presses on the software
-  adapter with the picture not drawn; nobody has played it.
+  THE SETUP IS A MODE THAT POPS UP ABOVE THE COLUMN (`SLOTSETUP.pop`, 10-22, the same day, after the maintainer played the first build on the solo
+  tutorial mission: "the timer is bad. we should just have it switch a mode. and we should teach earlier that tab exits out of menus", "to make it
+  feel like the radial menu it should be something that pops up above the equipment menu rather than always taking up space"). What the paragraph
+  above says of the clock and of line two is now the build with `pop` OFF. With it on: NO CLOCK runs on the open setup (`secs` is not read) — it
+  stands until a pick, the back key, the trigger, the right button, R, a digit that is no row, the gun leaving his hands, or another list taking
+  the digits. THE BOX IS ONE LINE: the magazine's pips, what is set as plain words (the selector's position on a gun with two, the load that is up
+  and how many, LIGHT while it is on — `<key> LIGHT` where the player has put the light's row on a key), the two numbers; a reload is written
+  across the pips, which go dim, so what is set stays on the line through it; a can's box is its cans and the count. No key cap is on the box.
+  THE ROWS ARE A PANEL placed off the column's own top edge (`.hp`, nothing under it moves), drawn only while the setup is up: a row for each thing
+  the gun can have set, its digit on a warm cap, its positions beside it with the one that is up a filled plate (a load he is out of dim), and
+  the back key's cap in its corner. The tab's and the box's edges light and the slots whose digits are rows go dim, as before. SWITCH: ON in the
+  page (`?setuppop=0` = the first build: the rows on the box's second line, the clock and its line), OFF in the module and on the frozen stand,
+  raised with the rule by the one word (`TPS_SLOTSETUP=1` sets both, `host/standup.ts`; `FROZEN_HOLDS['SLOTSETUP.pop']`); in the registered
+  table, so a recording carries it, and one from the first build — no `pop` in its row — replays with the clock it had (`journal.ts applyKnobs`);
+  the debugger's 'setup ▸ a mode that pops up above the kit'. A PICK STILL SHUTS IT (`stay` off): that is not his word either way, and is the
+  same two presses every time. CHECKS: `slotsetup-check.ts` now stands the rule up as a mode — the shut line asks that six seconds on it is still
+  up and 1 is still the selector's row, and keeps the clock under `pop` off; the box line asks for no cap and the words while shut and through a
+  reload, the panel with its caps and the back key's while up, and the first build's box under `pop` off (no press drawn with the gun put away
+  or a man in his arm); the journal line replays a first-build row: 13 lines pass on both stands, `SLOTSETUP_BREAK=1` is red on 10 on each.
+  `slotsetup-page.cjs` has six lines (the panel is above the column's top edge, four seconds on it is still up; a third page with `?setuppop=0`).
+  RUN besides, with the change on the build before the join: `shipped`, `handslot`, `tabback`, `handring`, `fn2000`, `kitanim`, `wallsnap-kit`,
+  `keybinds`, `qkey`, `inhand` on the page's stand, `fn2000`, `handslot`, `weapons-identity`, `kit-slots` on the frozen one; on the join: the
+  check and its break on both stands, the page check, `shipped`, `knobs-check`, the rollback static pass, `lesson-run train-kit` on both stands
+  and `tut-solo` on the page's. NOT RUN: the tour, a soak, `all-quick`, the other page checks. KNOWN: (1) the habit press has no window to run out now — a 2 pressed with the rifle already up leaves the panel
+  standing, and a 1 or a 3 pressed any time after is its row, not the pistol or the smoke can; the panel is what says so. (2) In a tutorial
+  mission the frame's gate (`rails.ts`) drops a row's digit whose slot is still locked, and a click or R it has locked does not shut the setup:
+  the solo mission's thread is letting `slotSetupTakes` keys through the gate. (3) The words on the box clip without a mark if a wide fallback
+  font is all the machine has; LIGHT is the last of them.
+  SEEN ON A GPU: the FIRST build's box, in the maintainer's own shots from the solo tutorial mission (what the notes above answer). NEVER SEEN ON
+  A GPU: the one-line box and the panel — looked at as stills of the real page's own markup and styles, and used by real key presses on the
+  software adapter with the picture not drawn; nobody has played them.
 - **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
   maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
   equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is
@@ -1045,3 +1074,39 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   after the kick ends at 58), a takedown (the game's own start on a parked man), recordings. `THROWBACK_BREAK=1` fails 4. The throw is made through the keys (the can's digit, a click); the kick and
   the pick are begun by the game's own starts a few frames in. NOT in the check: the wand, hands at work and the keypad (the same
   line; read, not run). Headless only; nobody has played it.
+- **A rifle beside a jamb fires, or the ring says it cannot** (`WALLSNAP.leanGun`, wallsnap.ts + player.ts `stackLean`; `GUNWALL.mark`, gunwall.ts +
+  player.ts `gunShut`; the maintainer, 10-22, off the solo tutorial mission: "shooting the sentry doesn't work since the rifle is on the right hand side
+  and the bullets are hitting the doorframe?"). WHAT IT WAS, reproduced headless on that mission's gate and on the conference doorway: stacked on a wall,
+  the cursor round its end steps him out `leanAlong` 0.6 m — measured for his eyes. The rifle rides a hand's width to his right, so round an end on
+  that side his head was clear, the reticle had the man, and the rifle as drawn lay IN the jamb: every round ended at its own muzzle (combat.ts
+  `armThrough`), silently. Free beside the same jamb the gun came down (the gun-at-a-wall rule above) and a click filed 'no room to bring the gun up' —
+  a `g.msg` line, and the page draws none of those but the radio's (overlay.ts). TWO SWITCHES. (1) `leanGun` (m, 0 = off): while a step-out is wanted
+  he steps the least further, by `leanGunStep` up to `leanGun`, from which the rifle as it would lie there and the first `leanClearM` of its round's
+  way are clear (gunwall.ts `gunClearFrom`: the worked-out carriage and 0.1 m outside it, with the arm); `WallHold.leanMore` eases up at the
+  step-out's speed and is kept until he is back in. On the gate: 0.78 m, one round, the sentry down. An end on his off side: 0.6 m, to the
+  centimetre. A sim rule: 0 in the module and on the frozen stand (`TPS_LEANGUN=1`), `LEAN_GUN_M` 0.42 in the page (`?noleangun`), a recording
+  without the key replays at 0 (journal.ts). (2) `mark` (the overlay's; nothing in the game reads it): the aim ring is dashed and barred (`.shut`,
+  index.html) while no round of his can get out — the gun held down by a wall, the stack with the wall he is on in its line, or the gun up with a
+  panel between shoulder and muzzle (a sheet his rounds go through is not one); while the ring is busy on a thing Space acts on (a door in reach) the
+  gun's own small circle wears it. Not through a step-out. Off in the module and on the frozen stand, on in the page (`?nogunmark`). CHECK
+  `probes.ts leangun` (tools/qa/leangun-check.ts, 8 lines, both stands; `LEANGUN_BREAK=1` fails gun-side): gun side / off side / the mark stepped
+  out, stacked and free along the doorway (17 places: barred exactly where a click sends no round into the room) / the stands and the journal. The
+  old `wallsnap` family pins `leanGun` 0 (its lines ask for 0.6 m) and passes on both stands; `lesson-run tut-solo` passes. One level's doorway and
+  one gate, no seeds (nothing here draws from the die). NOT MENDED: free beside a jamb the gun still comes down — he has to step; the ring now shows
+  it. The pistol's line of `gunShut` is not run by the check. If no place within `leanGun` is clear he steps 0.6 m as before, and the ring is barred.
+  `probes.ts gunwall` is red on the page's stand at the build head this was cut from (its standUp line), the same with and without this change.
+  `tools/qa/hudmarks-page.cjs` reads the ring's classes on the real page (software adapter). NEVER SEEN ON A GPU: the bar, the longer step-out.
+- **The throw preview's ring is where the can comes to rest** (`THROWBACK.restMark`, throwback.ts; player.ts `throwRest`, frag.ts `restOfThrow`; the
+  maintainer, 10-22: "hard to toss the smoke to precisely hit the gap … maybe we just need to update the UI to show roughly where it'll end up").
+  WHAT IT WAS: the arc and its ring ended at the can's FIRST TOUCH (throwables.ts `solve`), which is where the cursor is; the can then bounces and
+  rolls on — measured on the corridor's open floor 4.8 to 5.6 m further for a smoke or a stun and 3.7 to 4.0 m for a frag, 1.0 to 1.6 m off a wall
+  or through a doorway. Now the ring is on the point the item's own model leaves it at (frag.ts `rollOn`, the AI's rest guess, replayed on a body
+  that was never spawned: a smoke until it lies still, a stun until its fuse from the first touch, a frag until its fuse from the hand; loose
+  furniture as it stands), a small tick stays on the first touch and the floor between is dotted. The overlay's alone: no throw flies differently,
+  nothing is written, nothing drawn from the die; reckoned again when the arc changes and four times a second under one held still. Off in the
+  module and on the frozen stand, on in the page (`?norestmark` = the ring on the first touch). The launcher's arc has no such mark. CHECK
+  `probes.ts throwrest` (tools/qa/throwrest-check.ts, both stands; `THROWREST_BREAK=1` fails 3): 15 throws (three kinds × three ranges, a wall, a
+  doorway), the mark read on the click's frame against where that can really lay still or went off: 0.00 m on all 15. One level, no seeds. THE CURSOR
+  IS STILL THE FIRST TOUCH: the ring now sits metres past it, and aiming the throw so the can RESTS under the cursor would be a rule of the game
+  (every throw, the scripted ones too) — asked of the maintainer, not built. `tools/qa/hudmarks-page.cjs` reads the ring, the tick and the roll on
+  the real page (software adapter). NEVER SEEN ON A GPU: the tick, the dots, the ring's place on the screen.

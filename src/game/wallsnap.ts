@@ -21,6 +21,8 @@
 
 const clamp01 = (x: number) => x < 0 ? 0 : x > 1 ? 1 : x;
 
+/** WALLSNAP.leanGun as the page has it (m) */
+export const LEAN_GUN_M = 0.42;
 export const WALLSNAP = {
   on: false,
   // ---- the take (seconds = takeBase + takePerM × the glide + takePerTurn × the turn in half turns, within [takeMin, takeMax])
@@ -68,6 +70,11 @@ export const WALLSNAP = {
   leanOver: true, leanOverY: 1.9,
   /** he steps out only if, from where he would then stand, this much of the way to the point is open (m; 0 = the angle alone — he would step out to face a shut door) */
   leanClearM: 1.4,
+  /** THE GUN'S SHARE OF THE STEP: leanAlong is measured for his eyes, and the rifle rides a hand's width to his right — round an end on that side it is
+   *  still in the jamb when his head is clear, and its rounds stop in the wood. Up to this much further (m) he steps, by leanGunStep, until the rifle as it
+   *  would lie from there (gunwall.ts gunClearFrom) and the first leanClearM of its round's way are clear; never less again until he is back in.
+   *  0 = leanAlong whichever side the end is on, as it was (the value here; the page sets LEAN_GUN_M: host/profile.ts, ?noleangun = 0) */
+  leanGun: 0, leanGunStep: 0.06,
   /** the cursor must have stayed there this long before he steps out / back (s); once out he stays at least minOut, and afterShot after any round (s) */
   dwellOut: 0.06, dwellBack: 0.15, minOut: 0.35, afterShot: 0.4,
   // ---- the wall taken WITHOUT the key (its own switch; acts only with `on`; false = Q alone takes a wall, as it was)

@@ -19,7 +19,7 @@
 //     carbine: carbine-fire carbine-rig
 //     charmats: charmats-cast charmats-off charmats-shader charmats-slots charmats-tables
 //     civilians: civilians-comply civilians-determinism civilians-hearing civilians-identity civilians-phone civilians-scoring civilians-sight civilians-spots
-//     debrief: debrief-charge debrief-dom debrief-doorname debrief-rooms debrief-run debrief-score
+//     debrief: debrief-charge debrief-dom debrief-doorname debrief-loud debrief-rooms debrief-run debrief-score
 //     decals: decals-follow decals-identity decals-off decals-ring decals-sites
 //     destruction: destruction-bounds destruction-caps destruction-determinism destruction-dust destruction-hearing destruction-identity destruction-impulses destruction-reset destruction-screen destruction-sheet
 //     devices: devices-camera devices-editor devices-keypad devices-laser devices-vision
@@ -69,7 +69,7 @@
 //     teams: teams-dark teams-despawn teams-fight teams-identity teams-player teams-table
 //     wall-clip: wall-clip-doors wall-clip-ends wall-clip-moves wall-clip-shove wall-clip-speed
 //     wall-snap: wall-snap-engage wall-snap-release wall-snap-slide wall-snap-sweep
-//     wallsnap: wallsnap-camera wallsnap-kit wallsnap-cover wallsnap-duo wallsnap-landing wallsnap-off wallsnap-off-same wallsnap-reach wallsnap-stack wallsnap-take wallpress wallfelt   (the wall hold's feel pass + the rifle stack, WALLSNAP.on; ~40 s)
+//     wallsnap: wallsnap-camera wallsnap-kit wallsnap-cover wallsnap-duo wallsnap-landing wallsnap-off wallsnap-off-same wallsnap-reach wallsnap-stack wallsnap-take wallpress wallfelt leangun   (the wall hold's feel pass + the rifle stack, WALLSNAP.on; ~40 s)
 //     kitanim: kitanim-close kitanim-equip kitanim-harness kitanim-joints kitanim-midswap kitanim-nv kitanim-off kitanim-reload kitanim-sling   (Sam's hands carry his kit, the three magazine changes, the close-in carriage by distance — KITANIM.on; ~15 s)
 //     gunhand: gunhand-reload gunhand-throw gunhand-whistle   (a move keeps to the free hand — src/game/gunhand.ts GUNHAND.on: a long gun reloads with a move of its own, a man with a long gun throws with his free hand, a whistle is answered with the torch up in the hand that holds it; ~40 s)
 //     weapons: weapons-identity
@@ -2432,6 +2432,8 @@ if (on('aim-off', 'aim', 'weapons', 'all')) await run('aim-off', async () => (aw
 if (on('aim-snap', 'aim', 'weapons', 'player', 'all')) await run('aim-snap', async () => (await import('./aim-probes.ts')).aimSnap());   // what the reticle takes: a light only on its dot, a man beside one
 if (on('aimlevel', 'aim', 'weapons', 'player', 'all')) await run('aimlevel', async () => (await import('./aimlevel-probes.ts')).aimLevel());   // nothing under the reticle: the gun, its light and the round LEVEL along the cursor's heading (AIM.player.level — the harness itself stands at 0)
 if (on('aimlow', 'aim', 'weapons', 'player', 'all')) await run('aimlow', async () => (await import('./aimlow-check.ts')).aimLow());   // a man under the reticle who is LOW (head down, on a knee, doubled over a flash) is aimed at where he is: the gun comes down onto him and the round finds him (AIM.player.low — the frozen stand's is 0; AIMLOW_BREAK=1 must fail)
+if (on('leangun', 'wallsnap', 'player', 'all')) await run('leangun', async () => (await import('./leangun-check.ts')).leanGun());   // stacked at a jamb on his rifle's side the step-out goes as far as the rifle needs (WALLSNAP.leanGun) and its round gets out; the aim ring is barred while no round of his can (GUNWALL.mark). LEANGUN_BREAK=1 must fail
+if (on('throwrest', 'throw', 'player', 'all')) await run('throwrest', async () => (await import('./throwrest-check.ts')).throwRestCheck());   // the throw preview's ring is where the can comes to REST, not its first touch (THROWBACK.restMark): the mark against where smoke, stun and frag really end, 15 throws. THROWREST_BREAK=1 must fail
 if (on('lightwall', 'player', 'all')) await run('lightwall', async () => (await import('./lightwall-probes.ts')).lightWall());   // a carried light never stands beyond the wall or the leaf its carrier is pressed to (lighting.ts LIGHTWALL — the frozen stand holds it off)
 if (on('gunwall', 'player', 'all')) await run('gunwall', async () => (await import('./gunwall-probes.ts')).gunWall());   // a raised gun comes to the low ready at a wall instead of being drawn through it (gunwall.ts GUNWALL — the frozen stand holds it off)
 // closer than ever (src/game/close.ts; the frozen stand holds CLOSE.on off — every probe turns it on itself). Family `close`, `all` and all-quick.
@@ -2605,6 +2607,7 @@ if (on('debrief-run', 'debrief', 'all')) await run('debrief-run', async () => (a
 if (on('debrief-rooms', 'debrief', 'all')) await run('debrief-rooms', async () => (await import('./debrief-probes.ts')).debriefRooms());
 if (on('debrief-doorname', 'debrief', 'words', 'all')) await run('debrief-doorname', async () => (await import('./debrief-probes.ts')).debriefDoorName());   // a kicked or picked door is called on the card what its level calls it (WORDS.doors)
 if (on('debrief-charge', 'debrief', 'all')) await run('debrief-charge', async () => (await import('./debrief-probes.ts')).debriefCharge());   // the rows a wall charge makes are worded as a charge's
+if (on('debrief-loud', 'debrief', 'all')) await run('debrief-loud', async () => (await import('./debrief-probes.ts')).debriefLoud());   // a row that leans loud is not graded as a sneak (verdict.ts VERDICT.loudCard; LOUDCARD_BREAK=1 must fail)
 if (on('debrief-score', 'debrief', 'all')) await run('debrief-score', async () => (await import('./debrief-probes.ts')).debriefScore());
 if (on('debrief-dom', 'debrief', 'all')) await run('debrief-dom', async () => (await import('./debrief-probes.ts')).debriefDom());
 // ---------------------------------------------------------------- 'breach' = the family (breach-probes.ts): what stays of the removed daytime breach showcase's checks — the daylight variant's round trip (here) and clear-doctrine (below)
@@ -2773,7 +2776,7 @@ if (on('glassears', 'glass', 'all')) await run('glassears', async () => (await i
 if (on('wallpen', 'all')) await run('wallpen', async () => (await import('./wallpen-check.ts')).wallpenCheck());   // rounds through thin walls and doors: a round crosses a plasterboard partition and a wooden leaf by its energy and finds the man beyond, concrete and steel stop it, off = it stops in the first thing it meets (src/game/wallpen.ts; WALLPEN_BREAK=1 must fail)
 if (on('slotsetup', 'kit', 'all')) await run('slotsetup', async () => (await import('./slotsetup-check.ts')).slotSetupCheck());   // the slot in hand pressed again opens its setup: 1 semi / auto, 2 the launcher's load, 3 the light; the board gives Z and L nothing (slotsetup.ts SLOTSETUP / ?slotsetup=0 / TPS_SLOTSETUP=1; SLOTSETUP_BREAK=1 must fail)
 if (on('doorforce', 'doors', 'all')) await run('doorforce', async () => (await import('./doorforce-check.ts')).doorforceCheck());   // an alerted man does not wait at a shut door: rounds through a wooden leaf, then the boot (doorforce.ts DOORFORCE; DOORFORCE_BREAK=1 must fail)
-if (on('doorshot', 'off-hinges', 'doors', 'all')) await run('doorshot', async () => (await import('./doorshot-check.ts')).doorshotCheck());   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall times its toll, 1 (doorblast.ts DOORSHOT; DOORSHOT_BREAK=1 must fail)
+if (on('doorshot', 'off-hinges', 'doors', 'all')) await run('doorshot', async () => (await import('./doorshot-check.ts')).doorshotCheck());   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall times its toll, 2, at any destruction scale (doorblast.ts DOORSHOT; DOORSHOT_BREAK=1 and DOORCOST_BREAK=1 must fail)
 if (on('doorthrow', 'doors', 'all')) await run('doorthrow', async () => (await import('./doorthrow-check.ts')).doorthrowCheck());   // a door opened into a man moves and startles him, one slammed or booted into him throws him (doors.ts DOORTHROW, doorthrow.ts; DOORTHROW_BREAK=1 must fail)
 if (on('startle', 'ai', 'all')) await run('startle', async () => (await import('./startle-check.ts')).startleCheck());   // enemies startle when they first see you (startle.ts STARTLE; STARTLE_BREAK=1 must fail)
 if (on('wallmen', 'wallpen', 'all')) await run('wallmen', async () => (await import('./wallmen-check.ts')).wallmenCheck());   // …and the men act on it: a man who saw somebody go behind a partition or a wooden door fires through it (defender, teammate, teammate under an order), never at a man he has not seen nor through concrete; cover from a gun is what stops a round before what hides (WALLMEN_BREAK=1 / WALLPEN_BREAK=1 must fail)
@@ -2849,6 +2852,7 @@ if (on('frag-theirs', 'frag', 'all')) await run('frag-theirs', async () => (awai
 if (on('frag-mates', 'frag', 'all')) await run('frag-mates', async () => (await import('./frag-probes.ts')).fragMates());   // the rest guess counts loose furniture; no leg ends in a mate's corner (FRAG.restProps / fleeApart; FRAGMATES_BREAK=1 must fail)
 if (on('frag-fleedoor', 'frag', 'all')) await run('frag-fleedoor', async () => (await import('./frag-probes.ts')).fragFleeDoor());   // caught by a grenade with no cover, a man leaves by a doorway that already stands open (FRAG.fleeDoor; FLEEDOOR_BREAK=1 must fail)
 if (on('frag-wallflee', 'frag', 'all')) await run('frag-wallflee', async () => (await import('./frag-probes.ts')).fragWallFlee());   // a wall the burst will open is no cover to a man getting off it (FRAG.wallFlee; WALLFLEE_BREAK=1 must fail)
+if (on('frag-down', 'frag', 'all')) await run('frag-down', async () => (await import('./frag-probes.ts')).fragDown());   // a burst kills a man who is down and breathing — out cold or wounded (FRAG.downKill; DOWNKILL_BREAK=1 must fail)
 // BURSTS × GLASS (tools/qa/burstglass-probes.ts — a frag's or a 40 mm round's burst beside a window: the glass takes it by the fracture model's rules FIRST, the men
 // are judged through what that left; rebuild/gear-and-glass/bursts.md). Stands the glass parts up itself; BURSTGLASS_BASE=1 runs it on the base build's numbers = red.
 for (const [name, fn] of [['burst-whole', 'burstWhole'], ['burst-breaks', 'burstBreaks'], ['burst-open', 'burstOpen'], ['burst-theirs', 'burstTheirs'], ['burst-off', 'burstOff'], ['burst-red', 'burstRed']] as const)
@@ -3114,6 +3118,7 @@ if (on('ir-draw', 'irlaser', 'all')) await run('ir-draw', async () => (await imp
 if (on('ir-sam', 'irlaser', 'all')) await run('ir-sam', async () => (await import('./irlaser-probes.ts')).irSam());
 if (on('ir-unseen', 'irlaser', 'all')) await run('ir-unseen', async () => (await import('./irlaser-probes.ts')).irUnseen());
 if (on('ir-off', 'irlaser', 'all')) await run('ir-off', async () => (await import('./irlaser-probes.ts')).irOff());
+if (on('ir-team', 'irlaser', 'all')) await run('ir-team', async () => (await import('./irlaser-probes.ts')).irTeam());   // the team's guns show no laser line (IR.teamOff; TEAMLASER_BREAK=1 must fail)
 // ---------------------------------------------------------------- an infrared light on the goggles: a dark room shows through night vision, to you and a goggled teammate and to nobody else (irlight-probes.ts; game/irlight.ts — the frozen stand holds it off)
 if (on('irl-list', 'irlight', 'all')) await run('irl-list', async () => (await import('./irlight-probes.ts')).irlList());
 if (on('irl-unseen', 'irlight', 'all')) await run('irl-unseen', async () => (await import('./irlight-probes.ts')).irlUnseen());

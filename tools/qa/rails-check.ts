@@ -20,7 +20,7 @@
 //  14. THE ROWS (`rails.rows`, on levels/tut-quiet.json): Space offers only the verbs the mission names — at a locked door the pick and no boot; without
 //      the list, every row the door has anywhere; and no row at all while Space itself is locked (the gate beside the start). And his own actions' ring (handring.ts) is worked with its own digit while it is up: on the whistle's
 //      step the digit alone does nothing, the key kept down and then the digit whistles.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's and the first play's notes' must fail.   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes' and the card's must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -181,6 +181,43 @@ export async function railsCheck(): Promise<boolean> {
       verdict(low === men.length && men.length === 4 && !lasOff && lasOn && !!eye && line0?.line === T.line && (ringOn ? tapGave === 0 && noted === T.noTap && noteGone && ring && line1 === T.menuLine && paged && line2 === T.pageLine && !noteUp && wedgeGave >= 1 : tapGave >= 1 && !noted && !ring) && off0 > 3 && nv0 && off1 < 0.5 && !nv1,
         'the first play\'s notes hold: the squad is on a knee behind its trucks before any order; no teammate shows a laser on this level; on the hold\'s step a tap of the command key gives no order and its words come up under the line, held it puts the ring up and the line is the ring\'s, a page under it has its own, and the ring\'s first wedge gives its order (a stand with no ring to hold refuses no tap); the wall has its lookout; and once the last order is given the view goes back to the squad and the night vision comes up',
         `on a knee ${low}/${men.length} · laser with the key ${lasOff}, without ${lasOn} · step '${T.id}': "${line0?.line}", lookout ${!!eye} · tap gave ${tapGave} order(s), words "${noted}" (gone after 3 s: ${noteGone}) · held: ring ${ring}${ringOn ? '' : ' (the stand has none)'}, line "${line1}", page ${paged} "${line2}", words over the ring ${noteUp}, first wedge gave ${wedgeGave} · last step: shift ${off0.toFixed(1)} m, nv ${nv0} → ordered: shift ${off1.toFixed(1)} m, nv ${nv1}`); }
+    // ---- the card and the arrow (a step's `explain`, `toward`): the page's two looks at the step. The game says only what the step's card is; which cards
+    //      have been read is the page's (ui/railcard.ts, here on a made-up element): up when its step is, closed by Enter once it has been up a moment, not
+    //      shown again on that page — and nothing of the run moves by it
+    { const R = await rig(true), g = R.g, L = g.level.scenarios.lesson;
+      const k = L.steps.findIndex((T: any) => !!T.explain), T = L.steps[k], other = L.steps.findIndex((T: any, i: number) => i > 0 && !T.explain);
+      R.run(0.5); const none0 = g.rails.card(); g.lesson.i = k; R.run(0.2); const owed = g.rails.card(), t0 = g.time; R.run(1.0); const still = g.rails.card(), ran = g.time - t0;   // (a headless run is never held: the clock goes on under a card nobody closed)
+      g.lesson.i = other; R.run(0.1); const noneThere = g.rails.card(); g.lesson.i = k; R.run(0.1);
+      // the page's half, on a made-up element and a made-up clock
+      const { railCard, CARD_ARM_MS } = await import(`${ROOT}/src/ui/railcard.ts`), G = globalThis as any, doc0 = G.document;
+      const fake = () => ({ id: '', className: '', innerHTML: '', offsetWidth: 0, setAttribute() {}, addEventListener() {}, appendChild() {} }); let made: any = null, clock = 1000, closedN = 0;
+      G.document = { createElement: () => (made = fake()) };
+      let page: any; try { const C = railCard(fake(), () => clock), caps = (x: string) => x, ent = { code: 'Enter' }; C.onClose = () => { closedN++; };
+        C.update(g.rails.card(), caps); const up = C.up && made.className === 'on' && made.innerHTML.includes(T.explain.title);
+        const other1 = C.key({ code: 'KeyW' }), early = C.key(ent), upEarly = C.up; clock += CARD_ARM_MS + 1; const took = C.key(ent), gone = !C.up && made.className === '';
+        C.update(g.rails.card(), caps); const again = C.up; const after = C.key(ent);   // (the same card, owed again by the step: read on this page, so none — and Enter is the game's again)
+        C.update({ text: 'another' }, caps); const next = C.up; C.update(null, caps); const down = !C.up;
+        page = { up, other1, early, upEarly, took, gone, again, after, next, down }; } finally { G.document = doc0; }
+      const pageOk = page.up && !page.other1 && page.early && page.upEarly && page.took && page.gone && closedN === 1 && !page.again && !page.after && page.next && page.down;
+      // the arrow: a step with `toward` beside its `at` is drawn as one; a step without is the ring
+      const ring0 = g.rails.arrow(); T.toward = [T.at[0] + 2, 0, T.at[2]]; const arrow = g.rails.arrow(); delete T.toward;
+      // …and a card nobody would read is a fault of the level
+      const text0 = T.explain.text; T.explain.text = 'x'.repeat(400); const long = checkLesson(g).some((f: string) => /explain/.test(f)); T.explain.text = text0; const fine = !checkLesson(g).some((f: string) => /explain/.test(f));
+      const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), ov = readFileSync(`${ROOT}/src/ui/overlay.ts`, 'utf8');
+      const wired = /frozen: \(\) => \([^\n]*overlay\.cardUp[^\n]*\) && !scripted/.test(main) && /input\.keyVeto = e => \(overlay\.cardUp && !menu\.isOpen && overlay\.cardKey\(e\)\)/.test(main) && /this\.card\.update\(this\.cards \? game\.rails\.card\(\) : null/.test(ov) && /game\.rails\.arrow\(\)/.test(ov);
+      verdict(k > 0 && !none0 && !!owed && owed.text === T.explain.text && !!still && ran > 0.9 && !noneThere && pageOk && !ring0 && !!arrow && long && fine && wired,
+        'a step\'s card and its arrow: the step that is up says its card and a step without one says none (a headless run is not held by it); on the page it is up with its words, Enter closes it only once it has been up a moment and is then no game key, another key is the game\'s, and a card read is not shown again on that page; a step with `toward` is drawn as an arrow and one without as the ring; a card too long to read is a fault of the level; the page holds the world under a card and a scripted page does not',
+        `step '${T?.id}' "${T?.explain?.title}": said ${!!owed}, after 1 s ${!!still} (the clock ran ${ran.toFixed(2)} s) · step '${L.steps[other]?.id}' → ${noneThere ? 'a card' : 'none'} · the page: up ${page.up}, W taken ${page.other1}, Enter at once taken ${page.early} and still up ${page.upEarly}, Enter after ${CARD_ARM_MS} ms closes ${page.took && page.gone} (told ${closedN}), shown again ${page.again}, another card ${page.next} · arrow without the key ${!!ring0}, with ${!!arrow} · 400 characters a fault ${long}, as written ${!fine ? 'a fault' : 'none'} · wired ${wired}`); }
+    // ---- the opening card: every tutorial mission's row says where we are and what it teaches, and the load brief draws both in place of the job's line
+    { const { TUTORIAL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+      const bad: string[] = [];
+      for (const e of TUTORIAL_MISSIONS as any[]) { const t: string[] = e.teaches ?? [];
+        if (!e.scene || e.scene.length < 40 || e.scene.length > 240) bad.push(`${e.id}: scene ${e.scene?.length ?? 0} characters`);
+        if (t.length < 3 || t.length > 5 || t.some(x => x.length > 48 || /[6-9]|\[/.test(x))) bad.push(`${e.id}: teaches ${t.length} (${t.filter(x => x.length > 48).length} long)`); }
+      const lb = readFileSync(`${ROOT}/src/ui/loadbrief.ts`, 'utf8'), drawn = /const scene = m\.scenario\?\.scene, teaches = m\.scenario\?\.teaches;/.test(lb) && /el\('div', 'bscene', scene\)/.test(lb) && /for \(const line of teaches\) ul\.appendChild/.test(lb);
+      verdict(!bad.length && drawn && TUTORIAL_MISSIONS.length >= 4,
+        'the opening card: every tutorial mission\'s row carries a scene (a sentence or two) and what it teaches (three to five short lines, things and not keys, no digit above 5), and the load brief draws both (read as text: tools/qa/loadbrief-check.ts holds the screen)',
+        bad.length ? bad.join(' · ') : `${TUTORIAL_MISSIONS.length} rows: ${(TUTORIAL_MISSIONS as any[]).map(e => `${e.id} ${e.teaches?.length}`).join(' · ')} · drawn ${drawn}`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
       const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };

@@ -167,18 +167,26 @@ export const TRAINING_MISSIONS: ScenarioEntry[] = [
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
   { id: 'tut-sky', title: 'The halt, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
     place: 'A truck halt on a pass road, under snow', lean: 'loud', defenders: 5, squads: true,
-    blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.' },
+    blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.',
+    scene: 'A fuel convoy went quiet on the pass. Your squad found the halt it stopped at, and drove into the roadblock in front of it. Tonight nobody on the ground is you: you lead the four from above.',
+    teaches: ['Turn, zoom and move the view', 'One key orders the squad', 'Stack on a door, then send them in', 'A charge on a wall', 'Lights out, and night vision'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
   { id: 'tut-solo', title: 'The fuel halt, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial',
     place: 'A walled fuel halt on a dust road', lean: 'loud', defenders: 5,
-    blurb: 'On your own feet: a sentry, a gun, a locked door, a room, and the way back out.' },
+    blurb: 'On your own feet: a sentry, a gun, a locked door, a room, and the way back out.',
+    scene: 'The men who hit the convoy keep their code book at a fuel halt down the valley. You go in for it alone, and nobody expects it to stay quiet.',
+    teaches: ['Move, sprint, stay low', 'A wall at your back, and leaning out', 'Rifle, pistol and the reload', 'Smoke, a frag, a stun, the launcher', 'A charge on a locked door'] },
   { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
     place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Four men down one street: two easy rooms, then a door they shoot through, a gun, a locked hall, and a picket by two gates.' },
+    blurb: 'Four men down one street: two easy rooms, then a door they shoot through, a gun, a locked hall, and a picket by two gates.',
+    scene: 'The code book names a post one street long. This time you walk in with the four, and the men in it know how to hold a street.',
+    teaches: ['Doors, with the squad behind you', 'A door they shoot through: go round', 'A gun on the street: make it duck, then move', 'Clear a room through its window', 'Turn the squad to cover your back'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
     place: 'A money changer\'s house, at night', lean: 'quiet', defenders: 3,
-    blurb: 'Alone, and nobody knows you came. Through the dark to the strongroom, and out the way you went in.' },
+    blurb: 'Alone, and nobody knows you came. Through the dark to the strongroom, and out the way you went in.',
+    scene: 'The post was paid through one house in town, and its ledger says by whom. It is in the strongroom. Nobody is to know you were there.',
+    teaches: ['Stay low and out of the light', 'A whistle puts a guard where you want him', 'Take a man from behind', 'Locks, the fuse box, night vision', 'Out the way you came in'] },
 ];
 /** every row that is a lesson: the tutorial's missions, then the Training levels */
 export const LESSON_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...TRAINING_MISSIONS];

@@ -1,7 +1,9 @@
 // DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line, tour caption / timeline.
 import { BIGSLOT } from '../game/kit';
+import { railCard, type RailCard } from './railcard';
 import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/loop.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
 import { v3, clamp, lerp } from '../math/vec';
+import type { Vec3 } from '../math/vec';
 import { FollowCamera } from '../game/camera';
 import { Game, Player, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
@@ -12,6 +14,7 @@ import { playerAim } from '../game/aim';
 import { AIMCOST } from '../game/aimcost';
 import { aimGunPoint, aimGunOn } from '../game/aimweight';
 import { previewTooClose } from '../game/he40';
+import { gunShut, throwRest } from '../game/player';
 import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 import { HANDSLOT } from '../game/handslot';
 import { HANDRING } from '../game/handring';
@@ -89,6 +92,7 @@ export class Overlay implements HudLike {
   private equip = document.getElementById('equip')!;
   private traj = document.getElementById('traj') as unknown as SVGSVGElement;
   private trajPath: SVGPolylineElement; private trajLand: SVGCircleElement; private trajShort = false;
+  private trajRoll: SVGPolylineElement; private trajTick: SVGCircleElement; private restKey = ''; private restN = 0; private rest: { at: Vec3; path: Vec3[] } | null = null;   // player.ts throwRest: the ring goes where the can comes to REST, a tick stays on its first touch, the floor between is dotted
   private squadThrow!: SquadThrowViz;
   private attention!: AttentionViz;
   private picture!: PictureViz;
@@ -143,7 +147,16 @@ export class Overlay implements HudLike {
   private recEl = document.getElementById('journal'); private recKey = '';            // the session journal's REC tag (game.journal.hudText(): 'REC f=1234 · 38 KB' / why it waits) — journal.ts, F10 in main.ts; absent on a page without the element
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private skyWas = false;
-  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private railsWas = false;                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
+  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false;                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
+  private card: RailCard;                                                          // a tutorial step's card, up in the middle with the world held (ui/railcard.ts)
+  /** a tutorial mission's card is up (main.ts holds the world still under it) */
+  get cardUp(): boolean { return this.card.up; }
+  /** a key went down while it may be the card's (main.ts, ahead of the game's own read of it): true = it was */
+  cardKey(e: KeyboardEvent): boolean { return this.card.key(e); }
+  /** main.ts: what a card does as it goes (the keyboard's focus back to the game) */
+  set cardClosed(fn: (() => void) | null) { this.card.onClose = fn; }
+  /** main.ts: this page shows no card (a replay's tape) */
+  cards = true;
   private objMark: HTMLElement;                                                    // diamond + distance on / toward the current objective
   constructor() {
     menuTheme();   // the fight screen's rules read the menus' tokens (index.html `--h-…`)
@@ -152,14 +165,20 @@ export class Overlay implements HudLike {
     this.ring = this.reticle.firstChild as HTMLElement; this.hint = this.reticle.lastChild as HTMLElement; this.hint.style.display = 'none';
     this.orderMark = document.createElement('div'); this.orderMark.className = 'ordermark'; this.orderMark.innerHTML = '<i></i><span></span>'; this.orderMark.style.display = 'none'; this.root.appendChild(this.orderMark);
     this.railEl = document.createElement('div'); this.railEl.id = 'railprompt'; this.root.appendChild(this.railEl);
-    this.objMark = document.createElement('div'); this.objMark.className = 'objmark'; this.objMark.innerHTML = '<i></i><span></span>'; this.objMark.style.display = 'none'; this.root.appendChild(this.objMark);
+    this.card = railCard(this.root);
+    this.objMark = document.createElement('div'); this.objMark.className = 'objmark'; this.objMark.innerHTML = '<i></i><u><b></b><b></b><b></b></u><span></span>'; this.objMark.style.display = 'none'; this.root.appendChild(this.objMark);
     const NS = 'http://www.w3.org/2000/svg';
     this.trajPath = document.createElementNS(NS, 'polyline') as SVGPolylineElement;
     this.trajPath.setAttribute('fill', 'none'); this.trajPath.setAttribute('class', 'trajpath'); this.trajPath.setAttribute('stroke-width', '2'); this.trajPath.setAttribute('stroke-dasharray', '5 6'); this.trajPath.setAttribute('stroke-linecap', 'round');
     this.trajLand = document.createElementNS(NS, 'circle') as SVGCircleElement;
     this.trajLand.setAttribute('r', '9'); this.trajLand.setAttribute('class', 'trajland'); this.trajLand.setAttribute('stroke-width', '1.5');
     this.closeG = document.createElementNS(NS, 'g') as SVGGElement; this.closeG.setAttribute('class', 'closewin'); this.traj.appendChild(this.closeG);   // (under the throw arc: the floor's own marks first)
-    this.traj.appendChild(this.trajPath); this.traj.appendChild(this.trajLand);
+    this.trajRoll = document.createElementNS(NS, 'polyline') as SVGPolylineElement;
+    this.trajRoll.setAttribute('fill', 'none'); this.trajRoll.setAttribute('class', 'trajpath trajroll'); this.trajRoll.setAttribute('stroke-width', '2'); this.trajRoll.setAttribute('stroke-dasharray', '1 6'); this.trajRoll.setAttribute('stroke-linecap', 'round');
+    this.trajTick = document.createElementNS(NS, 'circle') as SVGCircleElement;
+    this.trajTick.setAttribute('r', '3'); this.trajTick.setAttribute('class', 'trajland trajtick'); this.trajTick.setAttribute('stroke-width', '1.5');
+    this.trajRoll.style.display = 'none'; this.trajTick.style.display = 'none';
+    this.traj.appendChild(this.trajPath); this.traj.appendChild(this.trajRoll); this.traj.appendChild(this.trajTick); this.traj.appendChild(this.trajLand);
     this.squadThrow = new SquadThrowViz(this.traj, this.trajPath);   // (a squad throw's ring, walk and arc: over the floor's marks, under his own throw arc)
     this.attention = new AttentionViz(this.traj, this.traj.firstChild as Element | null);   // (where a guard's attention is — game/attention.ts: a thread and a ring on the floor, under everything else drawn there)
     this.picture = new PictureViz(this.traj, this.traj.firstChild as Element | null);   // (one man's picture of the fight — game/picture.ts: a debug view, nothing unless PICTURE.show asks)
@@ -273,6 +292,7 @@ export class Overlay implements HudLike {
     let styled = false;
     const gp = gunOut && !pl.sprinting && !pl.dragging ? aimGunPoint(game) : null, trail = !!gp && !aimGunOn(game);   // aimweight.ts: the circle is where the GUN points — it trails the cursor and swings onto it; null = the circle is the cursor's (switch off, a show, a branch that drives his aim itself)
     let wishKey = '';
+    const shut = gunOut && !pl.sprinting && !pl.dragging && gunShut(game);   // (player.ts gunShut: his gun cannot get a round out from here — the ring is barred, or, while the ring is busy on a thing Space acts on, the gun's own small circle is)
     // Beside the ring: nothing but the 40 mm's too-close warning. The right button's own words ('RMB  OCP' on a light or a man's burning torch, 'RMB  RING' /
     // 'RMB  40 MM' with the rifle up) were taken off the cursor on the maintainer's play note; the kit column says what the button holds (the OCP's meter, the lit load tag).
     let rmb = gunOut && !pl.sprinting && pl.rifleUp && pl.rifle.attachment === 'he40' && pl.rifle.shells > 0 && previewTooClose(game) ? HE40_SHORT : '';   // (a WARNING, not a prompt: the arc the 40 mm would fly is shorter than its arming distance, said before the click)
@@ -282,13 +302,13 @@ export class Overlay implements HudLike {
       this.reticle.className = 'reticle' + (hv.off ? ' off' : '') + (hv.inReach ? '' : ' far') + ` k-${hv.kind}`;
       const pr = hv.progress !== undefined && hv.progress > 0 ? Math.round(Math.min(1, hv.progress) * 200) : -1;   // half-percent steps: no style churn between them
       if (pr !== this.ringKey) { this.ringKey = pr; this.ring.style.display = pr >= 0 ? 'block' : 'none'; if (pr >= 0) this.ring.style.setProperty('--p', `${pr / 2}%`); }
-      if (trail && gp) { const [gx, gy, gv] = cam.project(gp, w, h, EDGE); if (gv) { wishKey = 'c'; this.wish.style.left = `${gx}px`; this.wish.style.top = `${gy}px`; } }   // (the ring is on the thing Space acts on: the gun's own point still shows while it is off the cursor — a round goes there)
+      if ((trail && gp) || shut) { const [gx, gy, gv] = cam.project(gp ?? game.aimPoint, w, h, EDGE); if (gv) { wishKey = shut ? 'x' : 'c'; this.wish.style.left = `${gx}px`; this.wish.style.top = `${gy}px`; } }   // (the ring is on the thing Space acts on: the gun's own point still shows while it is off the cursor — a round goes there)
     } else if (gunOut && (game.aimSnap || model || gp)) {   // nothing to interact with near him, a gun out: the ring shows what the auto-aim snapped to (a light: right click OCPs it with the pistol, click shoots it; a man's chest) — or, under the aim model, sits round the cursor's own point
       const at = gp ?? game.aimSnap ?? game.aimPoint;
       const [x, y, vis] = cam.project(at, w, h, EDGE);
       if (trail && game.aimSnap) { const [wx, wy, wv] = cam.project(game.aimSnap, w, h, EDGE); if (wv) { wishKey = game.aimGuard ? 'g' : 'l'; this.wish.style.left = `${wx}px`; this.wish.style.top = `${wy}px`; } }   // what it will settle on, marked while it travels (bare floor needs none: the cursor is the mark)
       this.reticle.style.display = vis ? 'block' : 'none'; this.reticle.style.left = `${x}px`; this.reticle.style.top = `${y}px`;
-      this.reticle.className = 'reticle aim' + (trail ? ' k-free trail' : game.aimGuard ? ' k-guard' : game.aimSnap ? ' k-light' : ' k-free');   // (it takes the man's / the light's colour only once the gun is on it)
+      this.reticle.className = 'reticle aim' + (trail ? ' k-free trail' : game.aimGuard ? ' k-guard' : game.aimSnap ? ' k-light' : ' k-free') + (shut ? ' shut' : '');   // (it takes the man's / the light's colour only once the gun is on it)
       if (this.ringKey !== -1) { this.ringKey = -1; this.ring.style.display = 'none'; }
       if (model) {   // the ring IS his cone: its diameter the cone's width at the target's distance (spread × range over the metres a CSS pixel covers at the look-at depth), 10‥60 px, eased; brighter and thinner as the track settles
         const A = playerAim(game); const gunAt = pl.char.bones.handR ?? v3.add(pl.char.pos, [0, 1.4, 0]);
@@ -299,7 +319,7 @@ export class Overlay implements HudLike {
         styled = true;
       }
     } else { this.reticle.style.display = 'none'; rmb = ''; }
-    if (wishKey !== this.wishKey) { this.wishKey = wishKey; this.wish.style.display = wishKey ? 'block' : 'none'; this.wish.className = 'aimwish' + (wishKey === 'g' ? ' k-guard' : wishKey === 'c' ? ' gun' : ''); }
+    if (wishKey !== this.wishKey) { this.wishKey = wishKey; this.wish.style.display = wishKey ? 'block' : 'none'; this.wish.className = 'aimwish' + (wishKey === 'g' ? ' k-guard' : wishKey === 'c' ? ' gun' : wishKey === 'x' ? ' gun shut' : ''); }
     rmb = keyText(rmb);
     if (rmb !== this.hintKey) { this.hintKey = rmb; this.hint.textContent = rmb; this.hint.style.display = rmb ? 'block' : 'none'; }
     if (styled !== this.aimStyled) { this.aimStyled = styled; if (!styled) { const st = this.reticle.style; st.width = st.height = st.opacity = st.borderWidth = ''; this.aimPx = 16; } }   // (the class rules again for the interaction ring / the model off)
@@ -340,6 +360,7 @@ export class Overlay implements HudLike {
           let pips = ''; for (let i = 1; i <= rail.of; i++) pips += `<i class="${i < rail.n ? 'done' : i === rail.n ? 'now' : ''}"></i>`;
           this.railEl.innerHTML = `<div class="line">${words}</div><div class="note"></div><div class="pips">${pips}</div>`; this.railNote = '';
           this.railEl.className = ''; void this.railEl.offsetWidth; this.railEl.className = 'on'; } }
+      this.card.update(this.cards ? game.rails.card() : null, caps);
       // (the note is its own piece: it comes and goes under a line that stays put, and the line is shaken once as it comes)
       if (rail && railNote !== this.railNote) { this.railNote = railNote; const n = this.railEl.querySelector?.('.note'), l = this.railEl.querySelector?.('.line') as HTMLElement | null;
         if (n) n.innerHTML = railNote; if (l) { l.classList.remove('nudge'); if (railNote) { void l.offsetWidth; l.classList.add('nudge'); } } }
@@ -374,7 +395,11 @@ export class Overlay implements HudLike {
       let nx = vp[0] * op[0] + vp[4] * op[1] + vp[8] * op[2] + vp[12], ny = vp[1] * op[0] + vp[5] * op[1] + vp[9] * op[2] + vp[13];
       if (cw > 1e-4) { nx /= cw; ny /= cw; } else { const l = Math.hypot(nx, ny) || 1; nx = nx / l * 9; ny = ny / l * 9; }   // behind the eye: keep the undivided clip direction (dividing by w < 0 would mirror it) and force it onto the edge
       const mx = 1 - 2 * 36 / w, my = 1 - 2 * 36 / h; const k = Math.max(1, Math.abs(nx) / mx, Math.abs(ny) / my); nx /= k; ny /= k;   // into a 36 px inset of the view
-      const el = this.objMark; el.style.display = 'block'; el.style.opacity = alpha.toFixed(2); el.className = k > 1 ? 'objmark edge' : 'objmark';
+      const el = this.objMark; el.style.display = 'block'; el.style.opacity = alpha.toFixed(2);
+      // (a tutorial step's `toward`: the mark is an arrow lying from the place to where it points, turned as the view has the two — never at the picture's edge, where the ring says 'that way')
+      const to = k > 1 ? null : game.rails.arrow(); let turn = '';
+      if (to) { const [ax, ay, av] = cam.project(op, w, h, EDGE), [bx, by] = cam.project(to, w, h); if (av && Math.hypot(bx - ax, by - ay) > 4) turn = `${(Math.atan2(by - ay, bx - ax) * 180 / Math.PI).toFixed(1)}deg`; }
+      el.className = k > 1 ? 'objmark edge' : turn ? 'objmark arrow' : 'objmark'; if (turn !== this.objTurn) { this.objTurn = turn; el.style.setProperty?.('--turn', turn || '0deg'); }
       el.style.left = `${((nx * 0.5 + 0.5) * w).toFixed(1)}px`; el.style.top = `${((1 - (ny * 0.5 + 0.5)) * h).toFixed(1)}px`;
       (el.lastChild as HTMLElement).textContent = skySeat ? '' : `${Math.round(od)}m`;
     }
@@ -393,8 +418,17 @@ export class Overlay implements HudLike {
       for (const p of pv.points) { const [x, y, vis] = cam.project(p, w, h, EDGE); if (vis) pts.push(`${x.toFixed(1)},${y.toFixed(1)}`); }
       this.trajPath.setAttribute('points', pts.join(' ')); this.trajPath.style.display = 'block';
       { const short = previewTooClose(game); if (short !== this.trajShort) { this.trajShort = short; this.trajPath.style.stroke = this.trajLand.style.stroke = short ? HE40_SHORT_STROKE : ''; this.trajPath.style.strokeDasharray = short ? '3 7' : ''; } }   // (a 40 mm arc too short to arm: amber, broken — whatever the reticle is busy saying)
-      const [lx, ly, lv] = cam.project(pv.land, w, h, EDGE); this.trajLand.style.display = lv ? 'block' : 'none'; this.trajLand.setAttribute('cx', lx.toFixed(1)); this.trajLand.setAttribute('cy', ly.toFixed(1));
-    } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; }
+      // WHERE IT COMES TO REST (player.ts throwRest; null = the mark off, or the launcher's arc): reckoned again when the arc has changed, and four times a second under one held still (a door swung, a chair shoved)
+      { const p0 = pv.points[0], k = `${p0[0].toFixed(2)},${p0[1].toFixed(2)},${p0[2].toFixed(2)},${pv.v0[0].toFixed(2)},${pv.v0[1].toFixed(2)},${pv.v0[2].toFixed(2)},${game.player.heldKind},${Math.floor(game.time * 4)}`; if (k !== this.restKey && (!this.restKey || (this.restN++ & 1) === 0)) { this.restKey = k; this.rest = throwRest(game); } }   // (every other frame under a moving cursor: the replay is some tenths of a millisecond, the ring trails the arc by a frame)
+      const rest = this.rest, ring = rest ? rest.at : pv.land;
+      const [lx, ly, lv] = cam.project(ring, w, h, EDGE); this.trajLand.style.display = lv ? 'block' : 'none'; this.trajLand.setAttribute('cx', lx.toFixed(1)); this.trajLand.setAttribute('cy', ly.toFixed(1));
+      if (rest) {
+        const [tx, ty, tv] = cam.project(pv.land, w, h, EDGE), far = Math.hypot(rest.at[0] - pv.land[0], rest.at[2] - pv.land[2]) > 0.3;   // (a can that stays where it lands needs no tick under its ring)
+        this.trajTick.style.display = tv && far ? 'block' : 'none'; this.trajTick.setAttribute('cx', tx.toFixed(1)); this.trajTick.setAttribute('cy', ty.toFixed(1));
+        const rp: string[] = []; if (far) for (const p of [pv.land, ...rest.path, rest.at]) { const [x, y, vis] = cam.project(p, w, h, EDGE); if (vis) rp.push(`${x.toFixed(1)},${y.toFixed(1)}`); }
+        this.trajRoll.setAttribute('points', rp.join(' ')); this.trajRoll.style.display = rp.length > 1 ? 'block' : 'none';
+      } else { this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; }
+    } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; this.trajTick.style.display = 'none'; this.trajRoll.style.display = 'none'; this.restKey = ''; this.rest = null; }
     this.drawClose(game, cam, w, h);
     this.plan.update(game, cam, w, h);
     this.findme.update(game, cam, w, h, this.plan.youOn);
@@ -461,7 +495,7 @@ export class Overlay implements HudLike {
     if (SLOTSETUP.on) { const k2 = key + handBoxKey(game); if (k2 !== this.equipKey) { this.equipKey = k2; document.body?.classList?.toggle('handslot', HANDSLOT.on); drawHandBox(this.equip, game, paceShow, bigAt); } handBoxTick(game); return; }   // (ui/handbox.ts: the column as one box of what is in his hands and a strip of the rest — game/slotsetup.ts's switch)
     if (key === this.equipKey) return; this.equipKey = key;
     document.body?.classList?.toggle('handslot', HANDSLOT.on);   // (index.html: the put-away mark names E only while E is the way back — game/handslot.ts)
-    const el = this.equip; el.textContent = ''; el.classList?.remove('hand', 'setup');
+    const el = this.equip; el.textContent = ''; el.classList?.remove('hand', 'setup', 'pop');
     const mk = (tag: string, cls?: string, text?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = cls === 'key' ? keyCap(text) : keyText(text); return e; };   // (.key: a slot's own cap)
     const selCls = (k: SlotKind) => pl.slot === k ? (pl.holstered ? ' sel holstered' : ' sel') : '';   // the selected row lit; put away (E) it is lit-dashed with 'holstered · E' ('slung · E' on the rifle's row)
     // key strip: the selected gun's light and night vision. The right button's business is on the rows themselves — the OCP's charge closes the pistol's, the RING
