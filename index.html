@@ -202,7 +202,8 @@
     /* A TUTORIAL MISSION'S ONE LINE (ui/overlay.ts, game/rails.ts): big, low in the middle, the keys it names drawn as keys, a pip a step */
     #railprompt { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; z-index: 6; }
     #railprompt.on { display: flex; animation: railin .45s cubic-bezier(.2,.9,.3,1.2); }
-    #railprompt .line { padding: 13px 26px 12px; background: rgba(var(--h-plate),0.78); border-radius: 4px; border-bottom: 2px solid var(--h-acc); font: 600 27px/1.25 var(--h-head); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
+    #railprompt .line { padding: 13px 26px 12px; background: rgba(var(--h-plate),0.78); border-radius: 4px; border-bottom: 2px solid var(--h-acc); font: 600 27px/1.25 var(--h-head); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: normal; text-align: center; text-wrap: balance; width: max-content; max-width: max(320px, calc(100vw - 860px)); }
+    body.skyseat #railprompt .line { max-width: 86vw; }   /* (the kit panel owns the lower left 400 px: a long line breaks in two beside it; in the sky seat there is no kit panel) */
     #railprompt kbd { display: inline-block; min-width: 22px; margin: 0 3px; padding: 3px 9px 2px; border-radius: 5px; background: var(--h-acc); color: var(--h-on); box-shadow: 0 3px 0 rgba(0,0,0,0.45); font: 700 24px/1.2 var(--h-head); text-align: center; text-shadow: none; position: relative; top: -2px; }
     #railprompt .pips { display: flex; gap: 6px; } #railprompt .pips i { width: 9px; height: 4px; border-radius: 2px; background: rgba(var(--h-edge),0.35); }
     #railprompt .pips i.done { background: var(--h-acc); opacity: 0.75; } #railprompt .pips i.now { background: var(--h-hi); width: 18px; }

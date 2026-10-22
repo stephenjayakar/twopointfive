@@ -26,6 +26,8 @@
 //   finish?(B: Bot): void                      after the last step: on to the mission's end
 //   ended?(g): boolean                         the run is over (default g.mission.stage === 'done')
 //   idleOk?: string[]                          step ids that may already be true when they come up (said why in the script)
+//   fightOk?: string[]                         step ids a fight on the floor may finish before the player does (a line inside a live fight: the room can fall
+//                                              while it is up, or before it comes up; said why in the script). Such a step is logged as gone by with the fight
 //   mode?: { unseen?: boolean; god?: boolean; moon?: boolean }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god)
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -76,12 +78,19 @@ export interface Bot {
 
 if (import.meta.main) {
   const name = argv.find((a, i) => !a.startsWith('--') && argv[i - 1] !== '--seed' && argv[i - 1] !== '--cap' && argv[i - 1] !== '--pace' && argv[i - 1] !== '--floor');
+  if (name && process.env.TPS_PROFILE !== 'shipped' && process.env.TPS_RAILS !== '1' && tutorial(resolve(ROOT, 'levels', `${name.replace(/\.json$/, '')}.json`))) {   // (a tutorial mission: the same run, as the page stands it)
+    console.log(`${name}: a tutorial mission, run as the page opens it (the shipped stand)`);
+    const r = Bun.spawnSync(['bun', 'run', import.meta.path, ...argv], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'inherit', stderr: 'inherit' }); process.exit(r.exitCode ?? 1);
+  }
   if (!name) { console.error('usage: bun run tools/qa/lesson-run.ts <name> [--seed N] [--cap SECS] [--plain] [--unseen] [--god] [--verbose] [--digest] [--nolesson]'); process.exit(2); }
   const r = await runLesson(name.replace(/\.json$/, ''), { seed: Number(flag('--seed') ?? 1), unseen: has('--unseen'), god: has('--god'), plain: has('--plain'), verbose: has('--verbose'), digest: has('--digest'), lesson: !has('--nolesson'), moon: has('--moon'), hard: has('--hard'), floor: Number(flag('--floor') ?? 0) || 0 });
   for (const l of r.lines) console.log(l);
   console.log(r.code === 0 ? `\n=== lesson-run ${name}: ALL PASS ===` : r.code === 2 ? `\n=== lesson-run ${name}: NO VERDICT (${r.why}) ===` : `\n=== lesson-run ${name}: FAIL — ${r.why} ===`);
   process.exit(r.code);
 }
+
+/** a level whose lesson carries a `rails` record */
+function tutorial(file: string): boolean { try { return /"rails"\s*:/.test(readFileSync(file, 'utf8')); } catch { return false; } }
 
 export interface LessonRunOpts { seed?: number; unseen?: boolean; god?: boolean; plain?: boolean; verbose?: boolean; digest?: boolean; lesson?: boolean; moon?: boolean; hard?: boolean; floor?: number }
 export interface LessonRunOut { code: 0 | 1 | 2; why: string; lines: string[]; digest?: string; steps: { id: string; t: number }[]; secs: number }
@@ -96,6 +105,11 @@ export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<Le
   if (script.mode?.moon) o = { ...o, moon: true };
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+  // A TUTORIAL MISSION IS THE PAGE'S (a lesson with a `rails` record — src/game/rails.ts): it teaches the rules the page opens with, the frame among them, and
+  // with the frame off its level has no lesson at all. The stand is set as this process starts, so the command line runs such a level again on the shipped
+  // stand (the entry above) and a caller that asks for one on the frozen stand is told to. A run that raises the frame itself on the frozen stand (TPS_RAILS=1,
+  // as lesson-gate does for a mission whose rules that stand has) is left on it.
+  if (tutorial(file) && process.env.TPS_PROFILE !== 'shipped' && process.env.TPS_RAILS !== '1') return { ...out, code: 2, why: 'a tutorial mission is the page\'s: run it under TPS_PROFILE=shipped' };
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
@@ -200,13 +214,16 @@ export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<Le
     fail: (why) => { throw new Stop(why); },
   };
 
-  const idleOk = new Set<string>(script.idleOk ?? []);
+  const idleOk = new Set<string>(script.idleOk ?? []), fightOk = new Set<string>(script.fightOk ?? []);
   try {
     step(20);   // the start's first frames (poses, the deal's lines)
     for (let i = 0; i < L.steps.length; i++) {
       const T = L.steps[i];
+      const gone = () => { say(`step ${i + 1}/${L.steps.length} '${T.id}' went by with the fight`); out.steps.push({ id: T.id, t: Number(t.toFixed(2)) }); };
+      if (lessonOn && g.lesson.i > i && fightOk.has(T.id)) { gone(); continue; }
       if (lessonOn && g.lesson.i !== i) throw new Stop(`step ${i + 1} '${T.id}' is not the step that is up (the lesson is on ${g.lesson.i + 1}: ${g.lesson.summary()})`);
       step(30);   // half a second of nothing: the line must not move on by itself
+      if (lessonOn && g.lesson.i !== i && fightOk.has(T.id)) { gone(); continue; }
       if (lessonOn && g.lesson.i !== i && !idleOk.has(T.id)) throw new Stop(`step ${i + 1} '${T.id}' went by with nothing done (its test was already true when it came up)`);
       if (PACE > 0) step(Math.round(PACE * 60));   // --pace: a reader's seconds on the line (a step that only WAITS for the floor may well go by while he reads: its script then finds its wait already over)
       say(`step ${i + 1}/${L.steps.length} '${T.id}': ${g.lesson.objective()?.text.split(' ▸ ')[1] ?? T.line}`);   // (the line as the row reads it: a step may carry another for the keys as they stand)

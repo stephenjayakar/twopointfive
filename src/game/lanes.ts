@@ -869,6 +869,7 @@ export function lanePenalty(g: Game, gd: Guard, base: ((ix: number, iz: number) 
 }
 /** guards.ts followPath: true = this rule has his feet this frame — his way lies down a lane his side knows is covered, and he has been stopped short of it */
 export function laneGate(g: Game, gd: Guard): boolean {
+  if (gd.script && g.director?.lessonRuns) return false;   // (a staged moment of the lesson's script is walking him: its walk, as roomfight.ts leaves him to it)
   const st = states.get(g); if (!st || !st.lanes.length || !live(g) || !mine(g, gd) || !gd.path.length || pushing(g, st, gd)) return false;
   const m = maskOf(g, st, gd); if (!m || flanking(g, st, gd) || st.peek.has(gd)) return false;   // (…out for a look round the corner: that walk is this rule's own)
   { const h = st.held.get(gd), sg = gd.script?.goal; if (h && !h.aimed && sg && flat(sg, h.at) < 0.8) return false; }   // (on his way out of a line to cover: not stopped again on THAT walk — one he is sent on since is asked like any)
