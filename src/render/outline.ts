@@ -3,9 +3,16 @@
 // onto the composite, after the fog of war and before the resolve: a blended triangle a man, scissored to the box round him the host hands in, the
 // teammates first and the player last (where two rims meet, his is the one on top). Modelled on fogofwar.ts: nothing is built until the row is first
 // on (the pipeline compiles off the frame; until it has, and for good if it fails, the pass draws nothing), and with the row off encode() is not called at all.
-// It binds the id and depth targets and one small uniform buffer, a 32-byte slot a man picked by a dynamic offset: no scene group, no storage buffer, no
-// copy of the composite. No timer row either: a render pass's stamp is not to be trusted on every backend (engine.ts says so of the particles' draw), and
+// It binds the id and depth targets, one small uniform buffer (a 48-byte slot a man, picked by a dynamic offset) and, by the picture, a copy of the
+// composite the renderer already keeps or keeps for it: no scene group, no storage buffer. No timer row either: a render pass's stamp is not to be trusted on every backend (engine.ts says so of the particles' draw), and
 // this one is a few scissored triangles. Men who stand close are each looked for in their own box, so where boxes overlap the pixels are read once a man.
+// BY THE PICTURE (OutlineFrame.picture, the row 'Outline fades by'): the rim beside each part of a man is as strong as that part is DARK AS DRAWN — the
+// shader reads the composite's own colour at the pixels of his it found, so a lit shoulder has no rim and the leg in shadow under it has one, and nothing
+// waits on the light meter's one number for the whole man. The pass cannot read the target it draws on: it is handed a COPY of this frame's composite
+// (render/passes.ts: GBAA's own where GBAA runs, taken before its edge blends and the fog; else one made for it just before this pass). Handed none
+// (a frame before the copy exists) it goes by the meter's number, as it was first built.
+// NOT EASED, AND THAT MAY SHOW: by the picture the rim follows this frame's light on him, so a muzzle flash that lights him takes the rim for the frames
+// it lasts. Nobody has seen whether that reads as right (he is lit) or as a blink; the resolve after this pass softens it.
 // WHAT CARRIES A MAN'S OWNER AND IS NOT HIM: a round of his own for the frame it leaves the muzzle, a charge while his hands set it. They take the rim too.
 import { makeShader } from '../gpu/device';
 import outlineSrc from './shaders/outline.wgsl' with { type: 'text' };
@@ -36,11 +43,16 @@ export interface OutlineMan {
  *  (`mates`: a pool, each with its own `on`). `on` false = no pass at all, whatever the mates say. */
 export interface OutlineFrame extends OutlineMan {
   mates: OutlineMan[];
+  /** the rims fade by how bright each part of a man is drawn (true) or by his light meter's word, `strength` (false); and for the first, the two
+   *  ends, as brightness on the screen (0 black … 1 white): no rim beside a part at `lit` and over, the full rim at `dark` and under */
+  picture: boolean; lit: number; dark: number;
+  /** every man's strength where the picture decides (in place of his `strength`): 1 but for the goggles; the light meter is not asked */
+  whole: number;
   /** the renderer's own: the exposure the tone map will put on the composite */
   exposure: number;
 }
 export function makeOutlineMan(): OutlineMan { return { on: false, owner: 0, strength: 0, alpha: 1, ink: [0.5, 0.5, 0.5], at: [0, 0, 0], reach: 1.4, top: 2.3, wide: 1, times: 1, rect: [0, 0, 0, 0] }; }
-export function makeOutlineFrame(): OutlineFrame { return { ...makeOutlineMan(), mates: [], exposure: 1 }; }
+export function makeOutlineFrame(): OutlineFrame { return { ...makeOutlineMan(), mates: [], picture: false, lit: 0, dark: 0, whole: 0, exposure: 1 }; }
 
 type Project = (p: [number, number, number]) => [number, number, boolean];
 /** `F.rect` from the camera a render draws with (`project`: a world point to fractions of the picture + whether it is in front of the lens — FollowCamera
@@ -85,14 +97,16 @@ export function outlineRadius(h: number, wide = 1, times = 1): number {
 
 /** the men one pass can rim (the player and a squad's teammates, with room), and a slot's stride in the uniform buffer (a dynamic offset's alignment) */
 export const OUTLINE_MEN = 8;
-const SLOT = 256;
+const SLOT = 256, UBYTES = 48;
 
 export class OutlinePass {
   private pipe: GPURenderPipeline | null = null; private building = false; private bad = false;
   private layout: GPUBindGroupLayout | null = null; private ubuf: GPUBuffer | null = null;
   private offs = new Uint32Array(OUTLINE_MEN); private sc = new Int32Array(OUTLINE_MEN * 4);
-  private udata = new ArrayBuffer(32); private uf = new Float32Array(this.udata); private uu = new Uint32Array(this.udata);
-  private bg: GPUBindGroup | null = null; private bgView: GPUTextureView | null = null; private bgDepth: GPUTextureView | null = null;
+  private udata = new ArrayBuffer(UBYTES); private uf = new Float32Array(this.udata); private uu = new Uint32Array(this.udata);
+  private bg: GPUBindGroup | null = null; private bgView: GPUTextureView | null = null; private bgDepth: GPUTextureView | null = null; private bgPic: GPUTextureView | null = null;
+  /** what the picture's binding holds while there is no picture to read (one black pixel, never sampled: the slot's own word says so) */
+  private blank: GPUTextureView | null = null;
   /** frames the rim was drawn (QA: 0 = it never was) */
   drawn = 0;
   constructor(private device: GPUDevice) {}
@@ -103,8 +117,10 @@ export class OutlinePass {
     this.layout = d.createBindGroupLayout({ label: 'outline', entries: [
       { binding: 0, visibility: FS, texture: { sampleType: 'uint' } },
       { binding: 1, visibility: FS, texture: { sampleType: 'depth' } },
-      { binding: 2, visibility: FS, buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: 32 } },
+      { binding: 2, visibility: FS, buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: UBYTES } },
+      { binding: 3, visibility: FS, texture: { sampleType: 'float' } },
     ] });
+    this.blank = d.createTexture({ label: 'outline no picture', size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING }).createView();
     this.ubuf = d.createBuffer({ label: 'outline', size: OUTLINE_MEN * SLOT, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     const mod = makeShader(d, outlineSrc, 'outline');
     const over: GPUBlendState = { color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'zero', dstFactor: 'one' } };
@@ -115,16 +131,19 @@ export class OutlinePass {
   }
 
   /** the row went off: let go of the g-buffer's views (the pipeline, its few bytes and no texture, is kept for the next time) */
-  release() { this.bg = null; this.bgView = null; this.bgDepth = null; }
+  release() { this.bg = null; this.bgView = null; this.bgDepth = null; this.bgPic = null; }
 
-  /** one man's 32 bytes into slot `i` and his scissor beside them; false = he has nothing to draw this frame (no strength, no width, off the picture) */
-  private put(i: number, M: OutlineMan, exposure: number, w: number, h: number): boolean {
-    if (!M.on || !(M.strength > 0.004) || !(M.wide > 0) || !(M.times > 0) || !(M.alpha > 0)) return false;   // (width and opacity: a frame built by hand — the host's own is off at either row's none)
+  /** one man's bytes into slot `i` and his scissor beside them; false = he has nothing to draw this frame (no strength, no width, off the picture).
+   *  `pic` = the picture is there to be read and the frame asks for it: his strength is the frame's `whole`, and the two ends ride in the slot */
+  private put(i: number, M: OutlineMan, F: OutlineFrame, pic: boolean, w: number, h: number): boolean {
+    const exposure = F.exposure, strength = pic ? F.whole : M.strength;
+    if (!M.on || !(strength > 0.004) || !(M.wide > 0) || !(M.times > 0) || !(M.alpha > 0)) return false;   // (width and opacity: a frame built by hand — the host's own is off at either row's none)
     const x0 = Math.max(0, Math.floor(M.rect[0] * w)), y0 = Math.max(0, Math.floor(M.rect[1] * h)), x1 = Math.min(w, Math.ceil(M.rect[2] * w)), y1 = Math.min(h, Math.ceil(M.rect[3] * h));
     if (!(x1 > x0 && y1 > y0)) return false;   // (he is off the picture, or behind the lens)
     const k = 1 / Math.max(exposure, 1e-4);
-    this.uf[0] = M.ink[0] * k; this.uf[1] = M.ink[1] * k; this.uf[2] = M.ink[2] * k; this.uf[3] = Math.min(1, M.alpha) * Math.min(1, M.strength);
+    this.uf[0] = M.ink[0] * k; this.uf[1] = M.ink[1] * k; this.uf[2] = M.ink[2] * k; this.uf[3] = Math.min(1, M.alpha) * Math.min(1, strength);
     this.uu[4] = M.owner & 0xff; this.uf[5] = outlineRadius(h, M.wide, M.times);
+    this.uf[8] = F.lit; this.uf[9] = Math.min(F.dark, F.lit); this.uf[10] = exposure; this.uf[11] = pic ? 1 : 0;
     this.device.queue.writeBuffer(this.ubuf!, i * SLOT, this.udata);
     this.sc[i * 4] = x0; this.sc[i * 4 + 1] = y0; this.sc[i * 4 + 2] = x1 - x0; this.sc[i * 4 + 3] = y1 - y0; this.offs[i] = i * SLOT;
     return true;
@@ -132,15 +151,17 @@ export class OutlinePass {
 
   /** After the composite (+ splat, + GBAA, + the fog of war), before the resolve. `hdrView` = the composite (a render target always); `idView` /
    *  `depthView` = the g-buffer's id and depth targets at the composite's size, `w` × `h`. One render pass, a scissored triangle a man (his teammates,
-   *  then the player's over theirs: OUTLINE_MEN in all, his place kept), each with his own slot of the one uniform buffer. */
-  encode(enc: GPUCommandEncoder, F: OutlineFrame, hdrView: GPUTextureView, idView: GPUTextureView, depthView: GPUTextureView, w: number, h: number) {
+   *  then the player's over theirs: OUTLINE_MEN in all, his place kept), each with his own slot of the one uniform buffer. `picView` = this frame's
+   *  composite as a texture that may be read while `hdrView` is drawn on (a copy; null = there is none this frame, and the rims go by the light meter). */
+  encode(enc: GPUCommandEncoder, F: OutlineFrame, hdrView: GPUTextureView, idView: GPUTextureView, depthView: GPUTextureView, w: number, h: number, picView: GPUTextureView | null = null) {
     if (!F.on) return;
     if (!this.pipe) { this.build(); return; }
-    let n = 0;
-    for (const m of F.mates) if (n < OUTLINE_MEN - 1 && this.put(n, m, F.exposure, w, h)) n++;
-    if (this.put(n, F, F.exposure, w, h)) n++;
+    const pic = F.picture && !!picView; let n = 0;
+    for (const m of F.mates) if (n < OUTLINE_MEN - 1 && this.put(n, m, F, pic, w, h)) n++;
+    if (this.put(n, F, F, pic, w, h)) n++;
     if (!n) return;
-    if (this.bgView !== idView || this.bgDepth !== depthView) { this.bgView = idView; this.bgDepth = depthView; this.bg = this.device.createBindGroup({ label: 'outline', layout: this.layout!, entries: [{ binding: 0, resource: idView }, { binding: 1, resource: depthView }, { binding: 2, resource: { buffer: this.ubuf!, offset: 0, size: 32 } }] }); }
+    const seen = pic ? picView! : this.blank!;
+    if (this.bgView !== idView || this.bgDepth !== depthView || this.bgPic !== seen) { this.bgView = idView; this.bgDepth = depthView; this.bgPic = seen; this.bg = this.device.createBindGroup({ label: 'outline', layout: this.layout!, entries: [{ binding: 0, resource: idView }, { binding: 1, resource: depthView }, { binding: 2, resource: { buffer: this.ubuf!, offset: 0, size: UBYTES } }, { binding: 3, resource: seen }] }); }
     const p = enc.beginRenderPass({ label: 'outline', colorAttachments: [{ view: hdrView, loadOp: 'load', storeOp: 'store' }] });
     p.setPipeline(this.pipe);
     for (let i = 0; i < n; i++) { p.setBindGroup(0, this.bg!, this.offs, i, 1); p.setScissorRect(this.sc[i * 4], this.sc[i * 4 + 1], this.sc[i * 4 + 2], this.sc[i * 4 + 3]); p.draw(3); }
