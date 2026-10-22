@@ -206,12 +206,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.jersey(35.4, 10.6, 1, 0); G.tyres(29.7, 10.5, 2); G.motorbike(37.2, 11.6, HALF + 0.2); G.washLine(29.7, 13.6, 29.7, 17.2, 4);
   G.patch(33.4, 20.4, 3.4, 1.4, 'damp', 0.1); G.patch(34.2, 24.2, 2.6, 1.2, 'damp', -0.1); G.bush(37.4, 25.4, 1.1);
 
-  // ---- the fuse box on the inside of the yard's wall, behind the man who watches the far gate; and four beacons, one for each side of the yard ----
+  // ---- the fuse box on the inside of the yard's wall, behind the man who watches the far gate; and five beacons, one for each side of the yard ----
   grp('breaker');
   const brk = add({ c: [TP.box[0], 1.35, 25.84], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
   const brkLed = add({ c: [TP.box[0] - 0.18, 1.62, 25.79], h: [0.015, 0.015, 0.015], albedo: PAL.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   beacon(19.0, 3.2, [0, 1]); beacon(36.2, 9.8, [0, 1]); beacon(22.6, 25.8, [0, -1]); beacon(5.2, 16.4, [1, 0]);
+  beacon(35.6, 25.8, [0, -1]);   // (…and one on the wall by the fuse box, a few strides from the last man: it is in the picture at the moment the lamps go out)
 
   // ---- the devices: the office's pad, and the camera over its door (it sees what the lamp lights; both die with the mains) ----
   const devices: DeviceDef[] = [

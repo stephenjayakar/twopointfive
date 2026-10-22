@@ -723,16 +723,18 @@
     { "id": "sw_beacon2", "floor": "f0", "group": "beacons", "c": [22.6, 2.16, 25.8], "h": [0.055, 0.07, 0.055], "albedo": [0.35, 0.08, 0.05], "flags": ["NoShadow"] },
     { "id": "box_0616", "floor": "f0", "group": "beacons", "c": [5.2, 2.28, 16.4], "h": [0.07, 0.06, 0.07], "albedo": [0.2, 0.2, 0.22], "flags": ["NoShadow"] },
     { "id": "sw_beacon3", "floor": "f0", "group": "beacons", "c": [5.2, 2.16, 16.4], "h": [0.055, 0.07, 0.055], "albedo": [0.35, 0.08, 0.05], "flags": ["NoShadow"] },
-    { "id": "box_0618", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 1.025, 17.79], "h": [0.132, 1.025, 0.03], "albedo": [0.2, 0.21, 0.23] },
-    { "id": "box_0619", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 1.025, 18.71], "h": [0.132, 1.025, 0.03], "albedo": [0.2, 0.21, 0.23] },
-    { "id": "box_0620", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 2.065, 18.25], "h": [0.132, 0.050000000000000044, 0.49], "albedo": [0.2, 0.21, 0.23] },
-    { "id": "box_0621", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 1.025, 17.826], "h": [0.02, 1.025, 0.018000000000000002], "albedo": [0.2, 0.21, 0.23] },
-    { "id": "box_0622", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 1.025, 18.684], "h": [0.02, 1.025, 0.008000000000000007], "albedo": [0.2, 0.21, 0.23] },
-    { "id": "box_0623", "floor": "f0", "group": "doorframe.office", "c": [32.79, 1.025, 9.6], "h": [0.03, 1.025, 0.072], "albedo": [0.3, 0.24, 0.17] },
-    { "id": "box_0624", "floor": "f0", "group": "doorframe.office", "c": [33.709999999999994, 1.025, 9.6], "h": [0.03, 1.025, 0.072], "albedo": [0.3, 0.24, 0.17] },
-    { "id": "box_0625", "floor": "f0", "group": "doorframe.office", "c": [33.25, 2.065, 9.6], "h": [0.49, 0.050000000000000044, 0.072], "albedo": [0.3, 0.24, 0.17] },
-    { "id": "box_0626", "floor": "f0", "group": "doorframe.office", "c": [32.826, 1.025, 9.6], "h": [0.018000000000000002, 1.025, 0.02], "albedo": [0.3, 0.24, 0.17] },
-    { "id": "box_0627", "floor": "f0", "group": "doorframe.office", "c": [33.684, 1.025, 9.6], "h": [0.008000000000000007, 1.025, 0.02], "albedo": [0.3, 0.24, 0.17] }
+    { "id": "box_0618", "floor": "f0", "group": "beacons", "c": [35.6, 2.28, 25.8], "h": [0.07, 0.06, 0.07], "albedo": [0.2, 0.2, 0.22], "flags": ["NoShadow"] },
+    { "id": "sw_beacon4", "floor": "f0", "group": "beacons", "c": [35.6, 2.16, 25.8], "h": [0.055, 0.07, 0.055], "albedo": [0.35, 0.08, 0.05], "flags": ["NoShadow"] },
+    { "id": "box_0620", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 1.025, 17.79], "h": [0.132, 1.025, 0.03], "albedo": [0.2, 0.21, 0.23] },
+    { "id": "box_0621", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 1.025, 18.71], "h": [0.132, 1.025, 0.03], "albedo": [0.2, 0.21, 0.23] },
+    { "id": "box_0622", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 2.065, 18.25], "h": [0.132, 0.050000000000000044, 0.49], "albedo": [0.2, 0.21, 0.23] },
+    { "id": "box_0623", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 1.025, 17.826], "h": [0.02, 1.025, 0.018000000000000002], "albedo": [0.2, 0.21, 0.23] },
+    { "id": "box_0624", "floor": "f0", "group": "doorframe.gate_e", "c": [38, 1.025, 18.684], "h": [0.02, 1.025, 0.008000000000000007], "albedo": [0.2, 0.21, 0.23] },
+    { "id": "box_0625", "floor": "f0", "group": "doorframe.office", "c": [32.79, 1.025, 9.6], "h": [0.03, 1.025, 0.072], "albedo": [0.3, 0.24, 0.17] },
+    { "id": "box_0626", "floor": "f0", "group": "doorframe.office", "c": [33.709999999999994, 1.025, 9.6], "h": [0.03, 1.025, 0.072], "albedo": [0.3, 0.24, 0.17] },
+    { "id": "box_0627", "floor": "f0", "group": "doorframe.office", "c": [33.25, 2.065, 9.6], "h": [0.49, 0.050000000000000044, 0.072], "albedo": [0.3, 0.24, 0.17] },
+    { "id": "box_0628", "floor": "f0", "group": "doorframe.office", "c": [32.826, 1.025, 9.6], "h": [0.018000000000000002, 1.025, 0.02], "albedo": [0.3, 0.24, 0.17] },
+    { "id": "box_0629", "floor": "f0", "group": "doorframe.office", "c": [33.684, 1.025, 9.6], "h": [0.008000000000000007, 1.025, 0.02], "albedo": [0.3, 0.24, 0.17] }
   ],
   "props": [
     { "id": "bin0", "kind": "bin", "x": 11.6, "z": 15.9, "yaw": 0.3, "mass": 6, "parts": [{ "off": [0, 0.2, 0], "h": [0.17, 0.2, 0.08], "material": "olive", "markings": [{ "face": "+z", "at": [-6, -7], "size": [12, 14], "pal": [{ "mul": 0.62 }], "cells": ["aa........aa", "aa........aa", ".aa......aa.", "..aa....aa..", "...aa..aa...", "....aaaa....", "....aaaa....", "....aaaa....", "....aaaa....", "...aa..aa...", "..aa....aa..", ".aa......aa.", "aa........aa", "aa........aa"] }, { "face": "-z", "at": [-6, -7], "size": [12, 14], "pal": [{ "mul": 0.62 }], "cells": ["aa........aa", "aa........aa", ".aa......aa.", "..aa....aa..", "...aa..aa...", "....aaaa....", "....aaaa....", "....aaaa....", "....aaaa....", "...aa..aa...", "..aa....aa..", ".aa......aa.", "aa........aa", "aa........aa"] }] }, { "off": [-0.02, 0.425, 0], "h": [0.1, 0.025, 0.03], "material": "olive" }, { "off": [0.13, 0.42, 0], "h": [0.03, 0.03, 0.03], "material": "iron" }], "half": [0.17, 0.1] },
@@ -768,7 +770,8 @@
     { "id": "beacon0", "boxes": ["sw_beacon0"], "group": "emergency", "on": false, "baseEmissive": [9, 1.2, 0.35], "mains": false },
     { "id": "beacon1", "boxes": ["sw_beacon1"], "group": "emergency", "on": false, "baseEmissive": [9, 1.2, 0.35], "mains": false },
     { "id": "beacon2", "boxes": ["sw_beacon2"], "group": "emergency", "on": false, "baseEmissive": [9, 1.2, 0.35], "mains": false },
-    { "id": "beacon3", "boxes": ["sw_beacon3"], "group": "emergency", "on": false, "baseEmissive": [9, 1.2, 0.35], "mains": false }
+    { "id": "beacon3", "boxes": ["sw_beacon3"], "group": "emergency", "on": false, "baseEmissive": [9, 1.2, 0.35], "mains": false },
+    { "id": "beacon4", "boxes": ["sw_beacon4"], "group": "emergency", "on": false, "baseEmissive": [9, 1.2, 0.35], "mains": false }
   ],
   "doors": [
     { "id": "gate_e", "hinge": [38, 17.82], "closedDir": 1.5707963267948966, "width": 0.86, "exterior": true },
@@ -800,7 +803,8 @@
     { "id": "beacon0", "pos": [19, 2.05, 3.3200000000000003], "box": "sw_beacon0" },
     { "id": "beacon1", "pos": [36.2, 2.05, 9.92], "box": "sw_beacon1" },
     { "id": "beacon2", "pos": [22.6, 2.05, 25.68], "box": "sw_beacon2" },
-    { "id": "beacon3", "pos": [5.32, 2.05, 16.4], "box": "sw_beacon3" }
+    { "id": "beacon3", "pos": [5.32, 2.05, 16.4], "box": "sw_beacon3" },
+    { "id": "beacon4", "pos": [35.6, 2.05, 25.68], "box": "sw_beacon4" }
   ],
   "sky": { "zenith": [0.015, 0.025, 0.05], "horizon": [0.045, 0.05, 0.07] },
   "plans": {

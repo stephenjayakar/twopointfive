@@ -1125,7 +1125,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the word (F) drops him and the partner falls in again by himself (`pairup.ts rejoin`: no line asks for it); in the gap between the containers, two men who watch each other: the
   squad's key on the far one, the player to the near one's back, and the player's own grab is the partner's signal (both down on one beat), then the right
   button; round the court wall to the man who watches the far gate: held and asked, he gives the office door's code; with him still in the arm, the squad's
-  key on the fuse box: the partner throws the mains, every lamp in the yard and the office camera die, four beacons turn red; night vision, the pad, the
+  key on the fuse box: the partner throws the mains, every lamp in the yard and the office camera die, five beacons turn red; night vision, the pad, the
   manifest from the office trunk, then the squad's key on the ground calls the partner from the box (there he does hold where his work ended) and the two
   go out by the far gate. THE ORDER STEPS CARRY AN `after` LINE ('He works round to the man's back', 'He goes for the fuse box. Watch the lamps'): once
   the order is out the line is what the partner is doing, drawn as a thing to watch, and the step is done by what the order was for ("set", the dark). THE FRAME'S KEYS HERE: from the first step the walk, the view and the aim; `crouch`,
