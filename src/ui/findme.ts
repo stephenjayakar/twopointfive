@@ -1,4 +1,4 @@
-// FINDING YOUR OWN MAN ON THE SCREEN (and, by the outline, your teammates): what the page draws for host/findme.ts's two picture settings, and the eleven
+// FINDING YOUR OWN MAN ON THE SCREEN (and, by the outline, your teammates): what the page draws for host/findme.ts's two picture settings, and the twelve
 // rows Options > Game gets for the table.
 //   ring     the gold ring an open order menu puts at his feet (ui/planfloor.ts `py`), drawn here whenever that one is not up
 //   outline  not drawn here: findMeOutline() fills the renderer's frame for it (render/outline.ts — a rim round the pixels that are his, from the g-buffer's
@@ -37,6 +37,7 @@ function outlineMan(M: OutlineMan, pos: Vec3, light: number, nv: number, dt: num
 export function findMeOutline(F: OutlineFrame, game: Game, dt: number, shown = true) {
   const pl = game.player, pool = F.mates;
   if (!FINDME.outline || !(FINDME.width > 0) || !(FINDME.opacity > 0) || pl.down || !shown) { F.on = false; F.strength = 0; for (const m of pool) { m.on = false; m.strength = 0; m.owner = 0; } return; }
+  F.picture = FINDME.picture; F.lit = FINDME.picLit; F.dark = FINDME.picDark; F.whole = Math.max(0, Math.min(1, 1 - pl.nvAmount));   // (by the picture the meter is not asked: only the goggles take the rims out)
   F.owner = pl.char.id; outlineMan(F, pl.char.pos, pl.visibility, pl.nvAmount, dt, 1, 'you');
   const S = game.orders, men = FINDME.mates > 0 ? S.men() : NOBODY;
   for (const m of pool) m.on = false;
@@ -85,18 +86,21 @@ export interface RowKit {
   range(parent: HTMLElement, label: string, min: number, max: number, step: number, get: () => number, set: (v: number) => void, fmt: (v: number) => string, describe: string): void;
 }
 const TURNS: { v: 'as' | 'rev'; label: string }[] = [{ v: 'as', label: 'Normal' }, { v: 'rev', label: 'Reversed' }];
-/** the eleven rows under two headings; returns what Reset does for them */
+const FADES: { v: 'pic' | 'meter'; label: string }[] = [{ v: 'pic', label: 'Picture' }, { v: 'meter', label: 'Light meter' }];
+/** the twelve rows under two headings; returns what Reset does for them */
 export function findMeRows(K: RowKit, body: HTMLElement): () => void {
   /** a row that is a share shown in per cent, from none (`zero`: 0 reads 'None') to `max` */
-  const pct = (label: string, k: 'pan' | 'width' | 'opacity' | 'lit' | 'dark' | 'mates' | 'colour', max: number, step: number, zero: boolean, describe: string) =>
-    K.range(body, label, 0, max, step, () => Math.round(FINDME[k] * 100), v => setFindMe(k, v / 100), v => zero && !v ? 'None' : `${v.toFixed(0)} %`, describe);
+  const pct = (label: string, key: 'pan' | 'width' | 'opacity' | 'mates' | 'colour' | (() => 'lit' | 'dark' | 'picLit' | 'picDark'), max: number, step: number, zero: boolean, describe: string) => {
+    const k = typeof key === 'string' ? () => key : key;
+    K.range(body, label, 0, max, step, () => Math.round(FINDME[k()] * 100), v => setFindMe(k(), v / 100), v => zero && !v ? 'None' : `${v.toFixed(0)} %`, describe); };
   K.sec(body, 'Finding yourself · trying out');
   K.flip(body, 'Ring at your feet', () => FINDME.ring, v => setFindMe('ring', v), 'The gold ring the orders menu puts at your feet, there all the time.', ['On', 'Off']);
   K.flip(body, 'Outline in the dark', () => FINDME.outline, v => setFindMe('outline', v), 'A rim round you, and round each teammate, while he stands in the dark.', ['On', 'Off']);
   pct('Outline width', 'width', FINDME_WIDTH.max * 100, 5, true, 'How wide your rim is.');
   pct('Outline strength', 'opacity', 100, 5, true, 'How strongly the rims are drawn.');
-  pct('Outline shows under light', 'lit', 100, 2, false, 'A rim starts to show when the light on the man drops under this.');
-  pct('Outline full under light', 'dark', 100, 2, false, 'A rim is at its full when the light on the man is under this.');
+  K.seg(body, 'Outline fades by', FADES, () => FINDME.picture ? 'pic' : 'meter', v => setFindMe('picture', v === 'pic'), () => 'By how dark each part of the man looks on the screen, or by the light meter\'s one number for him.');
+  pct('Outline shows under light', () => FINDME.picture ? 'picLit' : 'lit', 100, 2, false, 'A rim starts to show under this much light.');   // (the pair of whichever the row above says: each keeps its own numbers)
+  pct('Outline full under light', () => FINDME.picture ? 'picDark' : 'dark', 100, 2, false, 'A rim is at its full under this much light.');
   pct('Teammate outline width', 'mates', FINDME_MATES.max * 100, 10, true, 'How wide the rim round each teammate is, against yours. At none they have no rim.');
   pct('Outline colour', 'colour', 100, 5, true, 'How much colour the rims have: yellow for you, red and blue for your teammates.');
   K.sec(body, 'Camera · trying out');

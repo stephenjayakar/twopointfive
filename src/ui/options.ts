@@ -22,7 +22,7 @@ import { CMDRING } from '../game/cmdring';
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
-import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
+import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
@@ -45,6 +45,9 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
 /** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print]. The flat list other readers take is ui/menu.ts CONTROLS: a key
  *  that changes is changed in both. */
 const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it, look round its end; Q or a step away lets go';
+const E_WHAT = 'Holster or draw';
+/** the empty hands' own slot (game/handslot.ts; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
+const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'what is in them goes away; a digit draws'];
 const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
@@ -67,7 +70,7 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['R'], 'Reload'],
     [['Z'], 'Rifle semi / auto'],
     [['L'], 'Weapon light'],
-    [['E'], 'Holster or draw'],
+    [['E'], E_WHAT],
   ] },
   { group: 'Kit', rows: [
     [['1'], 'Pistol'],
@@ -299,7 +302,7 @@ function render(S: Screen) {
     flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText('A small mark beside the cursor, and an outline on the floor, for what B would order there.'));
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key (trying out)', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
-    const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — eleven rows on trial, kept by host/findme.ts)
+    const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
     sec(body, 'Cheats');
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'They still see you and shoot you; hits do nothing. Remembered on this machine.', ['On', 'Off']);
     flip(body, 'Enemies do not think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stands where he is: nobody patrols, hears or sees. Remembered on this machine.', ['On', 'Off']);
@@ -350,7 +353,8 @@ function controls(body: HTMLElement, host: KeyHost) {
   for (const g of KEYS) {
     const box = el('div', 'op-kgroup'); box.appendChild(el('div', 'op-sec', g.group));
     const back: typeof g.rows = BACKKEY.tab && g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
-    const rows = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
+    const tabbed = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
+    const rows = !slotNow() ? tabbed : g.group === 'Kit' ? [SLOT_ROW, ...tabbed] : tabbed.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
     for (const [caps, what, small] of rows) {
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');

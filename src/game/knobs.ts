@@ -118,7 +118,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'RESPONSE',
   // gunfire splinters a wooden door leaf apart (doorblast.ts DOORSHOT): a recording made with it on replays its doors going, one from before hangs them
   'DOORSHOT',
-  // a door swung or kicked into a man throws him (doors.ts DOORTHROW): a recording made with it on replays its men thrown, one from before has every leaf stop against them
+  // a door opened into a man moves and startles him, one slammed or booted into him throws him (doors.ts DOORTHROW): a recording made with it on replays its men moved, one from before has every leaf stop against them
   'DOORTHROW',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
@@ -126,6 +126,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'CLEANRESTART',
   // the saves roll and one is kept in memory with a team on the floor (savestate.ts SAVETIMELINE): a recording from before it has no such save to go back to
   'SAVETIMELINE',
+  // empty hands are a slot (handslot.ts HANDSLOT): a recording made with it on replays its key as the slot, one from before reads no such key
+  'HANDSLOT',
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
@@ -195,6 +197,7 @@ import { CARLAMPS } from './carlamps';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
+import { HANDSLOT } from './handslot';
 import { SAMSTUN } from './samstun';
 import { RECAP } from './deathrecap';
 import { TEAMTALLY } from './teamtally';
@@ -262,6 +265,8 @@ export function knobRegistry(): Record<string, object> {
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,
     SAVETIMELINE,
+    // empty hands are a slot (handslot.ts): the switch and the code the game asks for it by
+    HANDSLOT,
     // a sprint into a door has weight (sprintdoor.ts): the switch, what a shoulder through it keeps of his run, how the leaf leaves him, the boot (or the handle) at the face it opens toward — where the player is a second later reads them
     SPRINTDOOR,
     // teammates are slower than the player and run only for a reason (teampace.ts): the switch, the walk's share of the player's, a follower's closing pace and his run, the reasons — where every teammate is a second later reads them

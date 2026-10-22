@@ -140,6 +140,7 @@ import { CARLAMPS } from './carlamps';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
+import { HANDSLOT } from './handslot';
 import { WALLREACT } from './wallreact';
 import { COVERFIRE } from './coverfire';
 import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
@@ -365,6 +366,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.LIGHTSWITCH) LIGHTSWITCH.on = false;   // (a file from before a room's lights had a switch on the wall: no plates, no row, nobody at one)
   if (!k.tables.CARLAMPS) CARLAMPS.on = false;   // (a file from before a vehicle's lamps were light targets: its floor has none)
   if (!k.tables.CLEANRESTART) CLEANRESTART.on = false;   // (a file from before a restart gave a clean level: its restarts mended the mains by the breaker's own road and kept the last try's lines and clocks)
+  if (!k.tables.HANDSLOT) HANDSLOT.on = false;   // (a file from before empty hands were a slot: a 0 pressed in it was no key of the game's)
   if (!k.tables.SAVETIMELINE) SAVETIMELINE.on = false;   // (a file from before the saves rolled: three autosaves, and none with a team on the floor — its Enter once down found what that build kept)
   if ((k.tables.SAVETIMELINE as { holds?: boolean } | undefined)?.holds === undefined) SAVETIMELINE.holds = false;   // (a file from before a save carried the wall hold and the close-in gait: its go-backs stood him free of the wall)
   if (!k.tables.FIRELINE) FIRELINE.on = false;   // (a file from before a teammate waited short of the lane the player was firing down: its men walked their orders through it)
@@ -490,7 +492,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const sl = k.tables.SNOW_LOOK as Record<string, unknown> | undefined; if (!sl || !('marks' in sl)) SNOW_LOOK.marks = false; }   // (… or from before things marked the snow and a mark formed: picture only, a later key of the same table)
   { const sl = k.tables.SNOW_LOOK as Record<string, unknown> | undefined; if (!sl || !('oneAir' in sl)) SNOW_LOOK.oneAir = false; }   // (… or from before the snow was one snow in one air: picture only, a later key of the same table)   // (… or from before a blast marked the snow: picture only, a later key of the same table)
   if ((k.tables.GLASS as { bothFaces?: boolean } | undefined)?.bothFaces === undefined) GLASS.bothFaces = false;   // (…and from before a pane's crash was heard from both its faces: only from the point the round met it)
-  if (!k.tables.DOORTHROW) DOORTHROW.on = false;   // (a file from before a door swung or kicked into a man threw him carries no such table: its leaves stop against whoever stands in their swing, as they were recorded)
+  if (!k.tables.DOORTHROW) DOORTHROW.on = false;   // (a file from before a door driven into a man moved him carries no such table: its leaves stop against whoever stands in their swing, as they were recorded)
+  if ((k.tables.DOORTHROW as { soft?: boolean } | undefined)?.soft === undefined) DOORTHROW.soft = false;   // (… or from the first cut of it, where any driven leaf short of a boot folded him: a later key of the same table)
   if (!k.tables.DOORSHOT) DOORSHOT.on = false;   // (a file from before gunfire took a door leaf apart carries no such table: its doors hang whatever is fired into them, as they were recorded)
   if ((k.tables.DOORSHOT as { toll?: number } | undefined)?.toll === undefined) DOORSHOT.toll = 1;   // (… or from before a leaf stood twice plasterboard's toll: its doors go on drywall's own count, a later key of the same table)
   if (!k.tables.WALLPEN) WALLPEN.on = false;   // (a file from before rounds went through thin walls and doors — it carries no such table: its rounds stop in the first built thing they meet, as they were recorded)

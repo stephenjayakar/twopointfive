@@ -1,7 +1,8 @@
-// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand: eleven settings to play with (Options > Game; ui/findme.ts draws the ring, hands
-// the renderer the outline's frame and builds the rows). With all eleven as they start the game is as it stood before it had them, on the page and on both
-// of the harness's stands: the ring and the outline start off and the camera's three start as the camera was. The six rows under `outline` are read only
-// while it is on, and two of those are NOT how the outline was first built: `mates` and `colour` (teammates rimmed, the rims in colour) are on from their
+// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand: fourteen settings to play with on twelve rows (Options > Game; ui/findme.ts draws the ring, hands
+// the renderer the outline's frame and builds the rows). With all of them as they start the game is as it stood before it had them, on the page and on both
+// of the harness's stands: the ring and the outline start off and the camera's three start as the camera was. The seven rows under `outline` are read only
+// while it is on, and three of those are NOT how the outline was first built: `picture`, `mates` and `colour` (the rims by the picture, teammates rimmed,
+// the rims in colour) are on from their
 // starts for a machine that keeps the outline on. (One more is SHELVED, 2026-10-20: his shape
 // through a wall. A kept line that still names it reads as if it did not: ui/findme.ts says why.)
 //   pan      how far the view leans from the man toward the aim point, as a share of the follow camera's own lead (FollowCamera.aimLead as it was built):
@@ -17,6 +18,14 @@
 //            (put: `lit` stops at `dark`, `dark` at `lit`), so the number a row shows is the number in force. The maintainer, with the rim on
 //            his GPU: "it should probably fade in and out smoothly based on how lit up sam is -- sliders to calibrate that". These three start at the
 //            numbers the rim was built with; what he settles on is to become their starts
+//   picture  what the rim fades by. true = THE PICTURE, part by part: the rim beside each part of him is as strong as that part is dark AS DRAWN
+//            (render/outline.ts reads the composite), so a lit shoulder has
+//            none and the leg in shadow has one, and nothing swings with the meter's one number. false = the light meter's word for the whole man,
+//            as the rim was first built. The maintainer, of that: "the current pulsing of the outline really ruins the lighting", and "is there
+//            a way to make it so it naturally turns on for dark parts of the character and off for bright parts? that might make it feel less pulsey"
+//   picLit, picDark   the same two ends for the picture: brightness ON THE SCREEN (0 black … 1 white) of a part of him at and over which it has no
+//            rim, and at and under which the whole rim. Their own numbers, not `lit` and `dark` read in another unit: the two light rows show and
+//            move the pair of whichever `picture` says, so a hand's tuning of one is not the other's. They start where the meter's do, a guess
 //   mates    his teammates rimmed too, each by his own light: what their rim covers as a share of what his does on the same picture (render/outline.ts
 //            outlineRadius `times`), 0 = no rim round them … 2 = twice his
 //   colour   how much colour the rims have: 0 = the pale ink they were first drawn in … 1 = yellow for him, red and blue for the two pairs
@@ -36,8 +45,8 @@
 // whole is written again that way as it is read. No imports, on purpose:
 // the loop (host/loop.ts) and the engine replay's own view (replay/engineplay.ts, its Ctrl turn) read the table and nothing of the game or the page comes with it.
 
-export interface FindMe { pan: number; ring: boolean; outline: boolean; width: number; opacity: number; lit: number; dark: number; mates: number; colour: number; turn: 1 | -1; behind: boolean }
-export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, lit: 0.3, dark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false };
+export interface FindMe { pan: number; ring: boolean; outline: boolean; width: number; opacity: number; picture: boolean; lit: number; dark: number; picLit: number; picDark: number; mates: number; colour: number; turn: 1 | -1; behind: boolean }
+export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, picture: true, lit: 0.3, dark: 0.12, picLit: 0.3, picDark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false };
 /** the width row's ends (shares of the rim's own width) */
 export const FINDME_WIDTH = { min: 0, max: 1.5 };
 /** the most a teammate's rim is against his */
@@ -54,9 +63,9 @@ const LS = 'twopointsix.findme';
 export function findMeRead(text: string | null | undefined): FindMe {
   let v: Record<string, unknown> = {};
   try { const j = JSON.parse(text ?? 'null'); if (j && typeof j === 'object') v = j; } catch { /* not ours */ }
-  const flag = (k: 'ring' | 'outline' | 'behind') => typeof v[k] === 'boolean' ? v[k] as boolean : FINDME_START[k];
-  const num = (k: 'pan' | 'width' | 'opacity' | 'lit' | 'dark' | 'mates' | 'colour', lo = 0, hi = 1) => { const x = v[k]; return typeof x === 'number' && isFinite(x) ? Math.max(lo, Math.min(hi, x)) : FINDME_START[k]; };
-  return { pan: num('pan'), ring: flag('ring'), outline: flag('outline'), width: num('width', FINDME_WIDTH.min, FINDME_WIDTH.max), opacity: num('opacity'), lit: num('lit'), dark: num('dark'),
+  const flag = (k: 'ring' | 'outline' | 'picture' | 'behind') => typeof v[k] === 'boolean' ? v[k] as boolean : FINDME_START[k];
+  const num = (k: 'pan' | 'width' | 'opacity' | 'lit' | 'dark' | 'picLit' | 'picDark' | 'mates' | 'colour', lo = 0, hi = 1) => { const x = v[k]; return typeof x === 'number' && isFinite(x) ? Math.max(lo, Math.min(hi, x)) : FINDME_START[k]; };
+  return { pan: num('pan'), ring: flag('ring'), outline: flag('outline'), width: num('width', FINDME_WIDTH.min, FINDME_WIDTH.max), opacity: num('opacity'), picture: flag('picture'), lit: num('lit'), dark: num('dark'), picLit: num('picLit'), picDark: num('picDark'),
     mates: num('mates', 0, FINDME_MATES.max), colour: num('colour'), turn: v.turn === -1 ? -1 : 1, behind: flag('behind') };   // (callers: a `dark` kept over its `lit` is read as `lit` by outlineWant)
 }
 /** THE OUTLINE'S STRENGTH from the light meter (Player.visibility, 0 dark … 1 lit): full at the table's `dark` and under, none at its `lit` and over, by
@@ -79,8 +88,10 @@ export function setFindMe<K extends keyof FindMe>(k: K, v: FindMe[K]) { if (put(
 /** every row back to its start (Options' Reset): only what had been moved is written */
 export function resetFindMe() { let any = false; for (const k of Object.keys(FINDME_START) as (keyof FindMe)[]) any = put(k, FINDME_START[k], true) || any; if (any) keep(); }
 function put<K extends keyof FindMe>(k: K, v: FindMe[K], whole = false): boolean {
-  if (!whole && k === 'lit') v = Math.max(v as number, FINDME.dark) as FindMe[K];   // (the two light rows stop at each other; a reset writes both whole)
+  if (!whole && k === 'lit') v = Math.max(v as number, FINDME.dark) as FindMe[K];   // (the two light rows stop at each other, in either pair; a reset writes both whole)
   if (!whole && k === 'dark') v = Math.min(v as number, FINDME.lit) as FindMe[K];
+  if (!whole && k === 'picLit') v = Math.max(v as number, FINDME.picDark) as FindMe[K];
+  if (!whole && k === 'picDark') v = Math.min(v as number, FINDME.picLit) as FindMe[K];
   if (FINDME[k] === v) return false; FINDME[k] = v; if (k === 'pan' && seat) seat.aimLead = lead * FINDME.pan; return true;
 }
 function movedRows(): string { const moved: Record<string, unknown> = {}; for (const k of Object.keys(FINDME_START) as (keyof FindMe)[]) if (FINDME[k] !== FINDME_START[k]) moved[k] = FINDME[k]; return JSON.stringify(moved); }
