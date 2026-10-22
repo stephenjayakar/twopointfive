@@ -42,7 +42,7 @@ const N_ROW: [string, string] = ['N', 'night vision'];
 /** the camera's row, and it while its key is the Space bar (host/keymap.ts camKey): that cap is written as it is — in a list of keys 'Space' is the action's
  *  row, wherever that is (`keyCol`) */
 const CAM_ROW: [string, string] = ['Ctrl + mouse / wheel', 'orbit the camera / zoom (or pinch)'];
-const CAM_SPACE: [string, string] = ['Space + mouse / wheel', 'turn the camera / zoom (or pinch)'];
+const CAM_SPACE: [string, string] = ['Space + mouse / wheel', CAM_ROW[1]];
 const keyCol = (k: string) => k === CAM_SPACE[0] ? k : keyText(k, true);
 const Q_ROW: [string, string] = ['Q', 'back to the wall beside you — slide, peek at its end; Q / away / Shift lets go'];
 const KIT_ROW: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 (2 again: flip its launcher, RING / 40 mm) · smoke · stun · frag'];

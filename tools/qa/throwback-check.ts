@@ -8,6 +8,7 @@
 //   a pick      a can clicked, a pick begun on a locked door inside the wind-up: the can is back on the belt, and none is in the air when the lock is
 //               done, seconds later
 //   a kick      the same with a kick: none in the air when the kick is over and after
+//   a takedown  begun inside the wind-up (the game's own start, on a parked man): the wind-up is dropped and the can it counted is back on the belt
 //   untouched   a can clicked and nothing begun: it leaves his hand on time, one off the belt (the rule changes no plain throw)
 //   off         the rule off: the can freezes through the kick and leaves his hand after it, one off the belt, as it did
 //   recordings  the switch rides the knob snapshot; one from before the key puts it off; FROZEN_HOLDS has its row
@@ -19,7 +20,7 @@ export async function throwBackCheck(): Promise<boolean> {
   const verdict = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== throwback: a can in the wind-up goes back on the belt when another beat begins${BRK ? ' (the rule off: must fail)' : ''} ===`);
   const { THROWBACK } = await import(`${ROOT}/src/game/throwback.ts`); const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`); const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);
-  const { startKick, startPicking } = await import(`${ROOT}/src/game/player.ts`); const { THROW_RELEASE } = await import(`${ROOT}/src/game/character.ts`);
+  const { startKick, startPicking, startTakedown } = await import(`${ROOT}/src/game/player.ts`); const { THROW_RELEASE } = await import(`${ROOT}/src/game/character.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const was = { on: THROWBACK.on, ring: HANDRING.on, ws: WALLSNAP.on, press: WALLSNAP.press }, log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
@@ -39,6 +40,11 @@ export async function throwBackCheck(): Promise<boolean> {
     { rule(true); const d = door('storage'), W = windUp(d, HALF), counted = W.c0 - cans(); startKick(g, d); step(2); const back = cans() === W.c0 && !pl.pendingThrow, kicking = !!pl.kick; let flew = 0; for (let i = 0; i < 240; i++) { step(1); flew = Math.max(flew, air()); }
       verdict(W.pend && counted === 1 && kicking && back && flew === 0 && cans() === W.c0, 'a kick begun inside a can\'s wind-up: the can is back on the belt and none is thrown, then or after the kick',
         `the wind-up pending ${W.pend}, the click counted ${counted} off · the kick began ${kicking} · two frames on: the can back and no wind-up ${back} · cans in the air over the next 4 s: ${flew} · the belt ${cans()} of ${W.c0}`); }
+    // ---- a takedown
+    { rule(true); const d = door('conference'), W = windUp(d, HALF), gd = g.guards.find((x: any) => x.state !== 'dead'); startTakedown(g, gd); const began = !!pl.takedown, gone = !pl.pendingThrow, kept = cans() === W.c0;
+      pl.takedown = null; step(2);
+      verdict(W.pend && began && gone && kept, 'a takedown begun inside a can\'s wind-up drops the wind-up and gives back the can it had counted',
+        `the wind-up pending ${W.pend} · the takedown began ${began} · no wind-up after ${gone} · the belt ${cans()} of ${W.c0}`); }
     // ---- untouched
     { rule(true); const d = door('conference'), W = windUp(d, 1); let at = -1; for (let i = 0; i < 60 && at < 0; i++) { step(1); if (air() > 0) at = i + 2; }
       verdict(W.pend && at > 0 && at <= Math.ceil(THROW_RELEASE * 60) + 2 && cans() === W.c0 - 1, 'a can clicked and nothing begun leaves his hand on time, one off the belt',
