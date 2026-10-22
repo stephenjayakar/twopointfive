@@ -184,6 +184,7 @@ import { Devices, updateDevices, deviceBoxes, loadDeviceTune, startCoding, denyP
 import { Destruction, loadChaos } from './destruction';
 import { fixtureBreakBoxes } from './fixtureBreak';   // the look of a fixture breaking and hanging broken (picture only)
 import { coverfireTick, coverfireReset } from './coverfire';
+import { doorForceTick, doorForceReset } from './doorforce';
 import { Wind, loadWind } from './wind';
 import { updateAirSim, attachAir, airResend } from './airSim';
 import { AirDust } from './airDust';
@@ -1325,7 +1326,7 @@ export class Game {
   }
 
 
-  resetGuards() { powerOutReset(this); rescueCheckReset(this); dozeReset(this); closeReset(this); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
+  resetGuards() { powerOutReset(this); rescueCheckReset(this); dozeReset(this); closeReset(this); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); doorForceReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
   tension(theirs = false) : number { return tension(this, theirs); }
   /** one line on the alarm escalation for the panel / debugging (level, clock, episode, lockdown pair + post) */
   escalationSummary(): string { return escalationSummary(this); }
@@ -1617,6 +1618,7 @@ export class Game {
     for (const g of this.guards) updateGuard(this, g, dt);
     pictureTick(this, dt);   // each man's own picture of the fight (picture.ts): who he sees from where he now stands, whose fire he places by ear, what his net tells him — after everybody has moved; a return on its first line with its switch off
     this.doorPath.after();   // (doorpath.ts: what its gun rule lent a script for this frame's pose is taken back)
+    doorForceTick(this, dt);   // an alerted man at a shut door (doorforce.ts): what each has seen and heard of an enemy at its far face fades, a sighting just lost is put behind the leaf it went behind — a return on its first line with its switch off
     coverfireTick(this, dt);   // aimed fire at breakable cover (coverfire.ts): this frame's sightings kept as what each man knows, the wall engine's change feed read, the rounds counted — a return on its first line unless its own switch is on and either the destruction switch or rounds through thin things (wallpen.ts)
     updateCivilians(this, dt);    // the cleaner / the late worker (civilians.ts): their eyes and ears (the guards' own tests), the loop, the fright, the run to a guard or a phone, what that guard then knows — after the shift has moved and heard, before the escalation reads anybody
     updateEscalation(this, dt);   // after the guards: this frame's alert states settle the episode, the level and the lockdown duties they read next frame

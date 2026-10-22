@@ -1279,3 +1279,48 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lines pass by design); `RESCUEFLUSH_BREAK=lanes` 6 FAIL, the two lane lines on each mission. In the check's scenes the first word comes 4.0 s after the room falls and the second 2.5 s later, round by the side door, on all
   three; a man sent round alone is at the side door and through it in about half a minute. UNTUNED: `afterSecs` 4, `gapSecs` 2.5, `againSecs` 8, `reachM` 10, `killSecs` 3 are first numbers. Headless only: nobody has
   played it; whether two men by two doors READS as a flush, and whether three seconds is fair warning, is a question for play.
+- **An alerted man does not wait at a shut door** (`src/game/doorforce.ts`, `DOORFORCE.on`: ON in the page — `?doorforce=0` — OFF in the module and on the
+  frozen stand, `TPS_DOORFORCE=1`, a `FROZEN_HOLDS` row, in the knob registry and a journal's tables: a recording from before the key replays with it
+  off; off = the build as it was. The maintainer: "and if they're alerted they should behave realistically, like shooting through the door or
+  eventually kicking through it".) WHAT WAS THERE: a defender who was up and knew a man stood at the far side of a shut door either rested his gun on it
+  and waited (a man holding a post, every room fight's defender) or walked to its handle and opened it by hand into whoever was there (a free man);
+  `coverfire.ts` gave one short burst through a wooden leaf to a man who had just SEEN somebody go behind it, and nothing to a man who only heard him.
+  THE RULE, for a man of the defending sides in state 'alert' with nobody in his eyes (never a teammate, never a scripted or taken man; 'search' and
+  calmer states are untouched): per shut door he keeps how SURE he is that an enemy is at its far face, and where, from his own senses.
+  EARS: a footfall or a report made by an enemy within `behindM` 2.5 m of the leaf on its far face, which the hearing model says came to him ACROSS a
+  shut leaf (`hearPath`: routed, carrying no more than `shutCarry` 0.5 — through open air or round an open way it is the fight AI's as before), adds
+  `gain` 4 × (level × falloff × carry, `hearingCheck`'s own sum); a shot at the gunshot line adds `shot` 1; a door's own noise (a tried handle, a pick,
+  a boot its frame held) is word of that door, at least `handle` 0.6, placed at the leaf's far face and counted only while its maker still stands
+  there. Under `hearMin` 0.03 a sound adds nothing: a crouched tread through a shut leaf never counts. EYES: the man he was fighting, in his sight
+  within `seenSecs` 3, with the shut leaf now the first thing in his eyes' line to where he last saw him: `seen` 1.5. Sureness fades to a third in
+  `fadeSecs` 5; he takes a door on at `sure` 1 and stays on it down to `keep` 0.3 while his newest word is under `staleSecs` 6 old.
+  THE NUMBERS THAT ANSWER "how sure, how long": three metres off a shut door with a man walking close behind it he is sure after 7 footfalls (1.8 s, the
+  check's line 1), at once on a shot or a sighting, never on a crouched tread; two footfalls at a run would do it by the same sum (not staged). ROUNDS: through a WOODEN leaf only, and only where this gun's round
+  crosses it by `wallpen.ts thinLine` (so nothing with `WALLPEN.on` or its `men` row off, nothing through steel): he stands, lays on the place by the
+  aim law, puts `rounds` 4 through it, then listens — the next four want a newer word and `gapSecs` 1.5. Nobody of his side, no hostage and no civilian
+  in the lane or past it (`coverfire.ts coverLane`, exported for this). A burst `coverfire.ts` has just put through the leaf on a sighting counts as
+  the first. THE BOOT: a FREE man (no post, no hold) still sure `kickSecs` 4 s after he took the door on (`kickSecsNoShot` 2 with no round for it) walks to
+  `doors.ts kickSpot`, squares to the leaf and kicks it in with the door's own `kickIn`; one man a door; then he is the fight AI's again with the
+  place he believed in as his fix, and the door is left alone for `restSecs` 8. Where no boot opens it — steel, or the face the leaf opens toward,
+  where the frame holds one (`DOORWAY.frameHolds`) — he throws none and goes through by the handle after the same wait, as he always went. A man
+  holding a post never leaves it: his answer is the rounds. A door his room wedged and he is set on (`digin.ts`) is his barricade, not a door to force.
+  His boot is his side's noise: `hearingCheck` asks `doorForceOwnBoot` and no man of his side (he least of all) takes it for an intruder's, and the torn
+  keep is marked seen so a calm colleague does not stop to wonder at it. No dice: the heard place is put off by a hash, the rounds draw as any round of
+  his does. State per game in a named side table; a restart or a load forgets it. What a flung leaf does to a man behind it is NOT here (its own rule).
+  CALLS TAKEN, for play to judge: 'alert' only; a posted man fires and never boots; the pull face and steel go by the handle; a pistol's four rounds and
+  the boot come before a pistol can splinter a leaf (`DOORSHOT` wants a dozen), a rifle's two bursts can take the leaf apart first; no new spoken line;
+  his own belief store, not `picture.ts`'s, so the switch stands alone. Tab ▸ Player, doors & props: 'an alerted enemy does not wait at a shut door',
+  '… fires through it', '… boots it in', 'seconds before the boot', and a counts row. CLAIMS on other owners' files: `guards.ts` (three hook lines in
+  `hearingCheck` and the alert branch), `coverfire.ts` (`lane` exported as `coverLane`), `digin.ts` (`digInSetOn`, the question `digInBraced` asks with
+  nothing counted), `game.ts` (tick and reset). KNOWN: the trigger in `doorForce` is `coverBlind`'s, copied — one helper for both is that file's to make.
+  A locked door of theirs booted by one of them reads as 'forced' to `doorTamper`.
+  CHECK `tools/qa/doorforce-check.ts` (`probes.ts doorforce`, family `doors`; 16 lines green on both stands, `DOORFORCE_BREAK=1` fails 8 on both): on the
+  office, a posted man hears walked footfalls behind a shut wooden door, becomes sure at 1.83 s, fires at 2.17 s, 7 rounds in 8 s all across the leaf,
+  0.00 m off his post, no boot; the same sounds to a calm man, an alert man with nothing known, and a crouched tread: nothing; a free man stands, puts 4
+  through, walks 1.9 m up and boots it 5.95 s after he began (the keep torn, the leaf flung; his fix 0.12 m from the player; the boot heard as an
+  intruder's by nobody of his side); the pull face with one-way doors raised: no boot, left to the handle at 5.55 s; steel (the same leaf made steel:
+  the office has no steel door with floor both sides): no round, no boot; a sighting, injected and by the tick's own lost-sight hand-off: sure at once,
+  rounds through (the hand-off's are `coverfire.ts`'s four, then he is on the door); a place with the wall in his eyes' line: nothing; a colleague past
+  the door in the line: no round, 252 frames held; with `DOORSHOT` on and the boot put off the 12th pistol round takes the leaf apart and none follows;
+  off: nothing kept; the journal. THE PAGE: `tools/qa/doorforce-page.cjs` (the real bundle in headless Chromium on the software adapter,
+  `PORT=… node tools/qa/doorforce-page.cjs` against a dev server).
