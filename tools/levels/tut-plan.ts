@@ -1,0 +1,246 @@
+// TUT-PLAN — the tutorial's plan mode mission, "On the radio": ONE WALLED POST, AND HE NEVER LEAVES THE GATE. He kneels behind the blocks with the handset
+// and the four do everything: the mission is plan mode (game/planmode.ts) and nothing else, so every stop is a thing ONE order to everybody cannot do
+// and a plan can. Nobody could say that of another level: here the player has no feet and no trigger, only the view and the two buttons.
+//
+//        x 5     9  11    15        21 22  24.5              32.5  35
+//   z 5  ┌────────────────────── back gate ───────────────────────┐
+//        │               ┌─────────┐  ╎                           │
+//        │               │guardroom│side   ▬barrier      blocks▮  road
+//        │               │  (2)    │door       B ↑        A →     gate
+//   z 11 │               └──door───┘  ╎                           │
+//  track │  SAM ▮blocks                    ┌─front──────────────┐ │   the lane (2)
+//  gate  │      the four                   │  the hall    ▮gun  │ │   comes by the back gate,
+//        │  ▭ their truck                  │   (2)        bags  │ │   the road (2) by the road gate
+//   z 19 │                                 └────────────back────┘ │
+//   z 23 └────────────────────────────────────────────────────────┘
+//
+// THE HAND PLACEMENT, AND WHY
+//   · the guardroom is the EASY room with two doors on two walls: the first plan is only the mechanics — a pair on each door, one word — and it wins
+//     because two men cannot watch two doors.
+//   · the hall is the room one stack loses. Its gun sits behind bags at the far end and looks down the room's length at the front door: men who come in
+//     by it are taken from the side. The back door is at the gunner's shoulder. A pair on each, sent by one word, and the gun is turned to the wrong door.
+//   · then more come, by the two gates at once: a pair behind the bags facing the road gate, a pair behind the barrier facing the back gate. A way
+//     to face is plan mode's right drag, and two gates are the reason to want two of them.
+//   · SAM'S PLACE is behind his own blocks inside the track gate: no door and no gate of the post has a line to it, and nothing he is asked to do needs
+//     him anywhere else.
+//
+//   bun run tools/levels/export.ts tut-plan [--check]      → levels/tut-plan.json
+//   bun run tools/qa/lesson-check.ts tut-plan               the lesson block against the built floor
+//   bun run tools/qa/lesson-run.ts tut-plan                 the scripted player through every step
+//   page: ?levelFile=tut-plan.json&roomclear=1&squad4
+import type { Vec3 } from '../../src/math/vec';
+import type { Level, LevelDoorDef } from '../../src/scene/level';
+import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
+import type { SurfacesData } from '../../src/scene/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import { WORLD } from '../../src/scene/world';
+import { BoxFlag } from '../../src/scene/boxes';
+
+export const NAME = 'tut-plan';
+export const NOTES = 'The tutorial\'s plan mode mission: a walled post led from the gate on the radio. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-plan';
+export const MATERIALS = GWOT_MATERIALS;
+
+const HALF = Math.PI / 2;
+const YARD: Rect = { x0: 5, x1: 35, z0: 5, z1: 23 };
+type Side = 'n' | 's' | 'e' | 'w';
+interface HutDoor { name: string; side: Side; at: number; extra?: Partial<LevelDoorDef> }
+interface HutSpec { x0: number; z0: number; x1: number; z1: number; kind?: 'mud' | 'mudLight' | 'render' | 'block'; doors: HutDoor[]; floor?: 'mudFloor' | 'slab' }
+
+export function build() {
+  const trace: GeneratorTrace = { groups: [] };
+  const K = officeKit(trace), G = gwotKit(gwotOfOffice(K)), P = GWOT_PALETTE, H = WORLD.ceilingY;
+  const { grp, add, slab, doorFrame, lights, switchables } = K;
+  const doors: LevelDoorDef[] = [];
+  const zones: SurfacesData['zones'] = [];
+  let huts = 0;
+
+  // ---- the ground, the yard wall and its three gates ----
+  grp('ground');
+  slab(0, -0.25, 0, 40, 0, 28, P.dust, { rough: 1 });
+  G.ground(YARD.x0, YARD.z0, YARD.x1, YARD.z1, 'dirt');
+  G.ground(0, 12.6, 5, 15.4, 'gravel'); G.ground(35, 8.6, 40, 11.4, 'gravel');   // the track in, the road out
+  G.ground(8, 11.4, 24, 16.4, 'gravel', 0.006);                                  // the yard's worn middle, gate to hall
+  grp('walls.yard');
+  const gateW = [{ a: 13.4, b: 14.6, y0: 0, y1: 2.2 }], gateE = [{ a: 9.4, b: 10.6, y0: 0, y1: 2.2 }], gateN = [{ a: 21.4, b: 22.6, y0: 0, y1: 2.2 }];
+  G.yardWallX(YARD.z0, 4.88, 35.12, 'mud', gateN); G.yardWallX(YARD.z1, 4.88, 35.12);
+  G.yardWallZ(YARD.x0, YARD.z0, YARD.z1, 'mud', gateW); G.yardWallZ(YARD.x1, YARD.z0, YARD.z1, 'mud', gateE);
+  for (const [x, z] of [[5, 5], [5, 23], [35, 5], [35, 23], [13, 5], [28, 5], [20, 23]] as const) G.pier(x, z);
+  doors.push({ name: 'gate_w', hinge: [5.0, 13.42], closedDir: HALF, width: 1.16, exterior: true }, { name: 'gate_e', hinge: [35.0, 9.42], closedDir: HALF, width: 1.16, exterior: true },
+    { name: 'gate_n', hinge: [21.42, 5.0], closedDir: 0, width: 1.16, exterior: true });
+  // ---- light: a thin moon the hour swaps for its sun, and pools of lamp light — the gate he kneels at, each door the squad is sent to, each gate men come by ----
+  grp('lights');
+  lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.45, -0.5, -0.74]), color: [0.55, 0.7, 1.0], intensity: 0.22, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
+  G.floodLight(5.6, 11.2, [0.9, 0.42], 'flood_gate', true, 3.6);        // over the track gate, thrown along the yard at the truck and the four
+  G.floodLight(34.4, 12.2, [-0.95, -0.3], 'flood_road', true, 3.6);     // by the road gate, thrown west over the ground both gates open onto
+  G.lantern(9.3, 15.1, 'lantern_radio', 'yard', 0);                     // his own, at his knee
+  G.lantern(22.9, 6.0, 'lantern_back', 'yard', 0);                      // inside the back gate
+  G.lantern(23.6, 18.4, 'lantern_well', 'yard', 0);
+
+  // the mains breaker (on the yard's south wall) and one emergency beacon: the game's blackout wants both
+  grp('breaker');
+  const brk = add({ c: [16.0, 1.35, 22.84], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const led = add({ c: [15.82, 1.62, 22.79], h: [0.015, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
+  const breaker: Level['breaker'] = { pos: [16.0, 1.35, 22.7], boxes: [brk, led] };
+  grp('beacons');
+  add({ c: [10.3, 2.28, 5.18], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow });
+  const dome = add({ c: [10.3, 2.16, 5.2], h: [0.055, 0.07, 0.055], albedo: [0.35, 0.08, 0.05], flags: BoxFlag.NoShadow });
+  switchables.push({ name: 'beacon0', boxes: [dome], group: 'emergency', on: false, baseEmissive: [9, 1.2, 0.35], mains: false });
+
+  /** a room: shell walls on the rect's lines, a floor, a roof the camera sees through, each door's 1.2 m opening cut and its leaf hung → its inside rect */
+  const hut = (h: HutSpec): Rect => {
+    const kind = h.kind ?? 'mud', n = huts++, t = GW_SHELL / 2;
+    grp(`hut${n}.floor`); G.ground(h.x0, h.z0, h.x1, h.z1, h.floor ?? 'mudFloor', 0.006);
+    grp(`hut${n}.roof`); slab(h.x0 - 0.1, H, h.z0 - 0.1, h.x1 + 0.1, H + 0.2, h.z1 + 0.1, kind === 'render' ? P.render : P.mudLight, { flags: BoxFlag.NoPrimary, rough: 0.95 });
+    grp(`hut${n}.walls`);
+    const holes = (side: Side) => h.doors.filter(d => d.side === side).map(d => ({ a: d.at, b: d.at + 1.2 }));
+    G.wallX(h.z0, h.x0 - t, h.x1 + t, kind, holes('n')); G.wallX(h.z1, h.x0 - t, h.x1 + t, kind, holes('s'));
+    G.wallZ(h.x0, h.z0 + t, h.z1 - t, kind, holes('w')); G.wallZ(h.x1, h.z0 + t, h.z1 - t, kind, holes('e'));
+    for (const d of h.doors) {
+      const alongX = d.side === 'n' || d.side === 's';
+      doors.push({ name: d.name, hinge: alongX ? [d.at + 0.02, d.side === 'n' ? h.z0 : h.z1] : [d.side === 'w' ? h.x0 : h.x1, d.at + 0.02], closedDir: alongX ? 0 : HALF, width: 1.16, ...d.extra });
+    }
+    zones.push({ id: `hut${n}`, mat: 'stone', x0: h.x0, z0: h.z0, x1: h.x1, z1: h.z1 });
+    return { x0: h.x0 + t, x1: h.x1 - t, z0: h.z0 + t, z1: h.z1 - t };
+  };
+
+  // ---- the gate he leads from: his blocks, the four's truck ----
+  grp('halt');
+  G.hesco(10.0, 14.6, 2, HALF);                                     // HIS blocks: he kneels west of them, and nothing in the post has a line over them to a man on a knee
+  G.pickup(9.4, 17.6, 0.05, 'truckWhite', { load: 'crates' });      // the truck they came in
+  G.crates(7.0, 16.2, 0.3, 2, 'olive'); G.jerryCan(7.4, 12.2); G.drums(6.2, 19.6, 2);
+
+  // ---- the guardroom: two doors on two walls, two men. The first plan ----
+  const GUARD = hut({ x0: 15, z0: 6.5, x1: 21, z1: 11, kind: 'block', floor: 'slab', doors: [{ name: 'guard', side: 's', at: 17.2 }, { name: 'guard_side', side: 'e', at: 7.8 }] });
+  grp('guardroom.room');
+  G.cot(15.7, 7.6, 0); G.trunk(16.9, 7.0, 0); G.table(19.3, 10.2, 1.2, 0.6, 0); G.plasticChair(19.3, 9.5, 0); G.bulb(18.0, 8.6, 'bulb_guardroom', 'guardroom');
+  G.stove(15.55, 10.4); G.gasBottle(20.55, 10.55); G.rug(17.9, 8.7, 2.0, 1.4, 'baluch');
+
+  // ---- the hall: the gun behind its bags at the far end looks down the room at the front door; the back door is at the gunner's shoulder ----
+  const HALL = hut({ x0: 24.5, z0: 13, x1: 32.5, z1: 19, kind: 'render', floor: 'slab', doors: [{ name: 'hall', side: 'n', at: 25.4 }, { name: 'hall_back', side: 's', at: 30.0 }] });
+  grp('hall.room');
+  G.sandbags(30.1, 15.0, 2.4, HALF, 5);                             // across the room, z 13.8 … 16.2: chest high to the front door, nothing to the back one
+  G.rug(27.2, 16.2, 3.0, 2.2, 'afghan'); G.toshak(25.4, 17.6, 1.9, HALF, 'rugGreen'); G.trunk(28.4, 18.4, 0, 'paintBlue'); G.crates(32.0, 13.6, 0.2, 1, 'olive');
+  G.tube(28.4, 16.0, true, 'hall');
+  G.lowTable(26.45, 17.6, HALF); G.table(31.95, 17.3, 1.2, 0.6, HALF);                     // tea by the cushions; the relay's set on its bench by the far wall
+
+  // ---- the ground the two gates open onto: the bags that face the road gate, the barrier that faces the back gate ----
+  grp('yard.cover');
+  G.sandbags(30.4, 10.25, 2.4, HALF, 5);                            // A: chest-high bags (a rifle goes over them): a pair behind them (west of them) looks east at the road gate
+  G.jersey(23.25, 9.6, 2, 0);                                       // B: a pair behind it (south of it) looks north at the back gate
+  grp('yard');
+  G.drums(33.6, 6.4, 3); G.tyres(26.6, 6.2, 3); G.woodPile(13.0, 6.2, 0, 1.6); G.waterTank(13.4, 20.6); G.pump(14.9, 20.4, 0); G.blocks(21.4, 20.8, 0.2, 2);
+  G.tyres(33.6, 21.6, 4); G.handcart(18.2, 18.6, 0.4, 'sacks'); G.ruts(8, 12.2, 22, 16, 'dirt'); G.patch(13.6, 19.8, 2.6, 1.8, 'damp', 0.2);
+  G.bush(6.2, 6.4); G.bush(6.4, 21.6, 1.2); G.bush(33.8, 14.6); G.bush(23.2, 22.2, 1.1);
+  // what the post is FOR, and who lives in it: the relay's dish and its generator in the strip behind the hall, a cooking corner by the wood, washing on a line,
+  // a bed somebody carried out into the cool, the runner's motorbike by the track gate
+  G.satDish(34.1, 16.0, HALF, 2.4); G.generator(34.45, 18.4, HALF); G.wire(32.5, 16.4, 34.1, 16.0, 2.5); G.jerryCan(34.3, 20.0, 0.4);
+  G.tandoor(11.2, 6.5); G.sacks(9.4, 6.2, 0.2, 3); G.washLine(16.4, 21.7, 20.2, 21.7, 4); G.charpoy(22.3, 16.4, HALF); G.motorbike(6.7, 10.2, 1.2);
+  G.skirt('x', 23, 5, 35, -1); G.skirt('x', 5, 5, 21.3, 1); G.skirt('x', 5, 22.7, 35, 1);   // (the band stops at the back gate's jambs)
+
+  // ---- outside the two gates: a blast wall across each way in, as a checkpoint has. Nothing inside the yard sees past them, the men who wait there least of all ----
+  grp('checkpoint.east');
+  G.tWall(37.2, 10.0, 4, HALF); G.jersey(38.4, 12.6, 1, 0.3); G.drums(39.0, 7.4, 2); G.drumDown(36.2, 6.1, 0.5); G.crates(39.25, 9.8, 0.2, 1); G.plasticChair(39.2, 10.7, -HALF);
+  grp('checkpoint.back');
+  G.tWall(22.0, 2.6, 4, 0); G.tyres(18.4, 3.2, 3); G.drums(26.2, 2.2, 2);
+
+  // ---- what the room clear takes from this level ----
+  const SAM: Vec3 = [8.75, 0, 14.25];
+  const WALL: Vec3 = [13.9, 0, 9.25];                                 // the guardroom's blank west wall: where the four wait while the first plan is laid
+  const POST_A: Vec3 = [29.25, 0, 10.25], POST_B: Vec3 = [23.25, 0, 10.75];
+  const GATE_E: Vec3 = [35.0, 0, 10.0], GATE_N: Vec3 = [22.0, 0, 5.0];
+  const ROAD: Rect = { x0: 35.3, x1: 39.7, z0: 5.4, z1: 13.4 }, LANE: Rect = { x0: 17.4, x1: 27.4, z0: 0.4, z1: 4.7 };
+  const IN_FRONT: Vec3 = [26.0, 1.1, 13.6];
+  const roomClear: StructureData = {
+    // (a lesson is read at a person's pace: its men would always get the minute to dig in, and its lines lean on them standing where they were put)
+    digIn: false, maxMen: 11,
+    name: 'the post',
+    team: { sam: SAM, samYaw: HALF, ops: [[11.4, 0, 12.75], [11.4, 0, 13.75], [12.4, 0, 12.75], [12.4, 0, 13.75]], opsYaw: HALF },
+    rooms: [
+      // two men and two doors: one has his back to both, the other is at the table by the street door's far side
+      { id: 'guardroom', name: 'the guardroom', bounds: { ...GUARD }, garrison: 2, doors: [{ id: 'guard', from: 'yard' }, { id: 'guard_side', from: 'yard' }],
+        marks: [{ pos: [16.3, 0, 8.6], watch: 'guard', aimAt: [15.3, 1.1, 7.0] }, { pos: [19.4, 0, 8.4], watch: 'guard_side', aimAt: [17.8, 1.1, 10.8] }] },
+      // the gunner and the man beside him, behind the bags at the far end, both on the front door
+      { id: 'hall', name: 'the hall', bounds: { ...HALL }, garrison: 2, doors: [{ id: 'hall', from: 'yard' }, { id: 'hall_back', from: 'yard' }],
+        marks: [{ pos: [31.2, 0, 15.2], watch: 'hall', aimAt: IN_FRONT }, { pos: [31.4, 0, 14.2], watch: 'hall', aimAt: IN_FRONT }] },
+      // the men who come: the level's script keeps them outside until the last fight (levels/tut-plan.script.ts)
+      { id: 'road', name: 'the road', bounds: { ...ROAD }, garrison: 2, doors: [{ id: 'gate_e', from: 'yard' }],
+        marks: [{ pos: [38.4, 0, 8.2], watch: 'gate_e', aimAt: [38.4, 1.1, 6.0] }, { pos: [38.6, 0, 11.8], watch: 'gate_e', aimAt: [38.6, 1.1, 13.0] }] },   // (behind the blast wall: each looks along it at the end he will walk round)
+      { id: 'lane', name: 'the lane', bounds: { ...LANE }, garrison: 2, doors: [{ id: 'gate_n', from: 'yard' }],
+        marks: [{ pos: [19.6, 0, 1.6], watch: 'gate_n', aimAt: [17.8, 1.1, 1.6] }, { pos: [24.4, 0, 1.6], watch: 'gate_n', aimAt: [26.6, 1.1, 1.6] }] },
+    ],
+    // a squad a room, and none may leave its room: each stop is its own fight
+    squads: [
+      { id: 'guard', name: 'Alpha', rooms: ['guardroom'], mayLeave: false, barricade: [] },
+      { id: 'hall', name: 'Bravo', rooms: ['hall'], mayLeave: false, barricade: [] },
+      { id: 'road', name: 'Road', rooms: ['road'], mayLeave: false, barricade: [] },
+      { id: 'lane', name: 'Lane', rooms: ['lane'], mayLeave: false, barricade: [] },
+    ],
+  };
+
+  const taken = (room: string) => ({ is: 'taken', room }), or = (...of: object[]) => ({ is: 'any', of }), and = (...of: object[]) => ({ is: 'all', of });
+  const flag = (f: string) => ({ is: 'flag', flag: f }), stacks = (doors: string[], set = false) => ({ is: 'stacks', doors, ...(set ? { set } : {}) });
+  const area = (p: Vec3, r: number): Rect => ({ x0: p[0] - r, x1: p[0] + r, z0: p[2] - r, z1: p[2] + r });
+  // (a door's mark is 0.2 m off the leaf's middle, on the side the squad stands: the frame puts an order given near the ring on the door itself)
+  const D_GUARD: Vec3 = [17.8, 1, 11.2], D_SIDE: Vec3 = [21.2, 1, 8.4], D_HALL: Vec3 = [26.0, 1, 12.8], D_BACK: Vec3 = [30.6, 1, 19.2];
+  const GUARD_VIEW: Vec3 = [17.5, 0, 9.5], HALL_VIEW: Vec3 = [28.0, 0, 15.5], GATES_VIEW: Vec3 = [27.0, 0, 9.5];
+  // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = the frame keeps one as it
+  // comes up. A key is written by the game's own code letter in brackets: the page draws the player's key ([B] is the squad's command key).
+  // PLAN MODE IS THE ONLY THING HE HAS (game/rails.ts `plan`: Shift with the command key, and with the mode up its own Shift, walk keys and buttons): no
+  // feet, no trigger, not the command key's own order — he met that one from above in the mission before this, and here a tap of it would undo a plan.
+  const lesson = {
+    title: 'On the radio',
+    rails: { allow: ['camera', 'zoom'], respawn: 5, lasers: false },
+    steps: [
+      // 1 · THE MODE, AND ONE PLAN: the view is the hand's, a right click is an order, a box picks men, one word sends every stack that waits on it
+      { id: 'mode', line: 'Hold [Shift], tap [B]: plan mode', explain: { title: 'Plan mode', text: 'You lead this one from the gate, on the radio.\nIn plan mode you lay out what each pair will do. Nobody goes through a door until you give the word.' },
+        done: flag('plan'), allow: ['plan'], checkpoint: 'the gate' },
+      { id: 'view', line: '[W] [A] [S] [D] move the view. Find the guardroom', done: or({ is: 'planView', at: GUARD_VIEW, r: 4.5 }, taken('guardroom')), at: [18.0, 1, 8.75] },
+      { id: 'send', line: 'Right click by its wall: all four go', done: or({ is: 'squad', area: { x0: 12.2, x1: 14.9, z0: 6.0, z1: 12.6 }, n: 3 }, stacks(['guard']), stacks(['guard_side']), taken('guardroom')), at: WALL },
+      { id: 'pick', line: 'Left button: drag a box round two men', explain: { title: 'Two doors', text: 'The guardroom has two doors, and its men cannot watch both.\nPick two men and give them one door. Then give the other two the other door.' },
+        done: or({ is: 'picked', n: 2 }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
+      { id: 'door1', line: 'Right click the door: those two stack on it', done: or(stacks(['guard']), taken('guardroom')), at: D_GUARD },
+      { id: 'pick2', line: 'Now drag a box round the other two', done: or({ is: 'picked', n: 2, free: true }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
+      { id: 'door2', line: 'Right click the side door', done: or(stacks(['guard', 'guard_side'], true), taken('guardroom')), at: D_SIDE },
+      // (the word's key sends the stacks of the men who are PICKED — planmode.ts chainsOf — and the last box picked two: a click on bare ground is everyone again)
+      { id: 'all', line: 'Left click bare ground: all four are yours again', done: or({ is: 'picked', n: 4 }, taken('guardroom')) },
+      { id: 'word', line: '[F]: one word, both doors', done: taken('guardroom'), at: [18.0, 1, 8.75], allow: ['word'] },
+      // 2 · THE ROOM ONE STACK LOSES: the gun looks down the hall at the front door. A pair on each door, and it is turned to the wrong one
+      { id: 'hall', line: 'Move the view to the hall', explain: { title: 'A gun on the door', text: 'A gun at the far end of the hall is laid on its front door. Men who go in there alone walk into it.\nThe back door is behind the gunner.' },
+        done: or({ is: 'planView', at: HALL_VIEW, r: 3.5 }, taken('hall')), at: [28.4, 1, 16.0], eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 }, checkpoint: 'the hall' },
+      { id: 'front', line: 'Two men: right click the front door', done: or(stacks(['hall']), taken('hall')), at: D_HALL, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
+      { id: 'back', line: 'The other two: right click the back door', done: or(stacks(['hall', 'hall_back'], true), taken('hall')), at: D_BACK, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
+      // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — levels/tut-plan.script.ts)
+      { id: 'all2', line: 'Left click bare ground again: all four', done: or({ is: 'picked', n: 4 }, taken('hall')), eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 }, cue: 'breach' },
+      { id: 'word2', line: '[F]: both doors at once', done: taken('hall'), at: [28.4, 1, 16.0], eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },   // (the lookout stays: he SEES the gun on the wrong door)
+      // 3 · WHICH WAY THEY FACE: more come by two gates at once. A right click dragged is a place and a way to look
+      { id: 'gates', line: 'Move the view to the two gates', explain: { title: 'Two gates', text: 'More men are coming, by the road gate and the back gate at once.\nA right click that you drag sends men to a place and sets the way they face there.' },
+        done: or({ is: 'planView', at: GATES_VIEW, r: 2.5 }, taken('road'), taken('lane')), at: [27.0, 1, 9.5], checkpoint: 'the gates' },
+      { id: 'faceA', line: 'Two men: right drag from the bags to the road gate', done: or(and({ is: 'squad', area: area(POST_A, 1.8), n: 1 }, { is: 'did', what: 'order:cover' }), taken('road')), at: POST_A, toward: GATE_E },
+      { id: 'faceB', line: 'The other two: right drag, barrier to back gate', done: or(and({ is: 'squad', area: area(POST_B, 1.8), n: 1 }, { is: 'squad', area: area(POST_A, 1.8), n: 1 }, { is: 'did', what: 'order:cover' }), taken('lane')), at: POST_B, toward: GATE_N },
+      { id: 'hold', line: 'They come. Your men have both gates', done: and(taken('road'), taken('lane')), at: [27.0, 1, 9.5], cue: 'gates' },
+      // 4 · and back: a right click on himself is 'on me'
+      { id: 'back-in', line: 'Right click yourself: they come back', done: or({ is: 'following' }, { is: 'did', what: 'order:fallIn' }, { is: 'squad', area: area(SAM, 5), n: 3 }), at: [SAM[0], 1, SAM[2]] },
+    ],
+  } as LessonData;
+  // (every step that is done IN the mode says what puts the mode up while it is down — a checkpoint put back, the mode put away by hand)
+  const IN_MODE = new Set(['view', 'send', 'pick', 'door1', 'pick2', 'door2', 'all', 'hall', 'front', 'back', 'all2', 'gates', 'faceA', 'faceB', 'back-in']);
+  for (const t of lesson.steps) if (IN_MODE.has(t.id)) t.planLine = 'Hold [Shift], tap [B]: plan mode again';
+
+  for (const d of doors) doorFrame(d);
+  const level: Level = {
+    boxes: K.boxes, props: K.props, lights, switchables, doors, devices: [],
+    breaker, beacons: [{ pos: [10.3, 2.05, 5.3], box: dome }],
+    playerSpawn: SAM, routes: [], chokepoints: [], clearPlans: [],
+    sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.045, 0.05, 0.07] },
+    mission: { serverRoom: { ...HALL }, entryDoor: 'hall', rack: { index: 0, front: [27.0, 1.0, 17.0], halfW: 0.3 }, exfilDoor: 'gate_w', exfilX: 4.2, exfilZ: 14.0, exfilOut: [-1, 0] },
+  };
+  const surfaces: SurfacesData = { building: { ...YARD }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt', zones };
+  const scenarios: LevelScenarios = {
+    roomClear, lesson,
+    places: { areas: [{ name: 'yard', bounds: { x0: 5, x1: 24.5, z0: 11, z1: 23 } }, { name: 'gates', bounds: { x0: 21, x1: 35, z0: 5, z1: 13 } }] },
+    doorNames: [{ door: 'gate_w', name: 'track gate' }, { door: 'gate_e', name: 'road gate' }, { door: 'gate_n', name: 'back gate' }, { door: 'guard', name: 'guardroom door' }, { door: 'guard_side', name: 'guardroom side door' },
+      { door: 'hall', name: 'hall front door' }, { door: 'hall_back', name: 'hall back door' }],
+  };
+  return { level, scenarios, groups: trace.groups, surfaces };
+}

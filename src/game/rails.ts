@@ -36,6 +36,7 @@ import type { FogEye } from './fogofwar';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
 import { stepLine, lessonLine } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
+import { CMDRING } from './cmdring';   // (read inside gate() only)
 
 export const RAILS = { on: false,
   /** the sky seat: metres a second the walk keys shift the view at the default zoom, and how far from the squad it may go */
@@ -176,6 +177,14 @@ export class Rails {
     const enter = input.keys.has('Enter') || input.pressed.has('Enter') || input.keys.has('NumpadEnter') || input.pressed.has('NumpadEnter');   // (Shift+Enter stages the mission again: Shift rides with it)
     const handUp = A.has('use') && !!g.player.sel?.open;   // (the player's own ring or list, up: its digits and its clicks are its own)
     if (menuUp || handUp) buttons |= 1; if (handUp) buttons |= 4;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
+    // PLAN MODE IS ITS OWN ACTION (`plan`; planmode.ts): the command key with Shift opens it whether or not the key's own order has been taught, and while it
+    // is up its hands are its own — Shift (a stop added, a man added), the walk keys (they move the view: he is on a knee) and both buttons (the left
+    // picks men, the right orders them). None of that is his feet, his sprint or his trigger: those stay locked until a step names them
+    // (only where the page HAS the mode — `?qplan=0` and the frozen stand do not, and there the key with Shift is the key's own order, which stays locked. A walk
+    //  key held is a sprint's only where his feet are his: on a mission that never gives them it cannot stand between Shift and the key)
+    const WALK = ACTS.move.keys!, planOn = A.has('plan') && CMDRING.plan, planUp = planOn && !!g.orders?.plan.up, walking = A.has('move') && WALK.some(k => input.keys.has(k));
+    if (planUp) { buttons |= 5; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
+    if (planOn && (planUp || (!walking && (input.pressed.has('KeyB') || input.keys.has('KeyB'))))) { keys.add('ShiftLeft'); keys.add('ShiftRight'); if (shift) keys.add('KeyB'); }
     const ok = (code: string) => FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || (handUp && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight'));
     let dropped = 0;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
@@ -284,7 +293,9 @@ export class Rails {
     const T = S.L.steps[i], M = S.i < of ? this.g.orders?.menu : null, on = !!M && (!T.at || Math.hypot(M.target.at[0] - T.at[0], M.target.at[2] - T.at[2]) < MENU_M);
     const ring = on ? (M!.page === null ? T.menuLine : T.pageLine ?? T.menuLine) : undefined;
     const d = this.g.time - this.tapT, note = S.i < of && T.noTap && !M && d >= 0 && d < NOTE_SECS ? lessonLine(T.noTap) : undefined;
-    return { line: ring ? lessonLine(ring) : stepLine(T), n: i + 1, of, ...(note ? { note } : null) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
+    // (a step done in plan mode, and the mode is down — a checkpoint put back, the mode put away by hand: the line is what puts it up again, its `planLine`)
+    const plan = S.i < of && T.planLine && !this.g.orders?.plan.up ? T.planLine : undefined;
+    return { line: ring ? lessonLine(ring) : plan ? lessonLine(plan) : stepLine(T), n: i + 1, of, ...(note ? { note } : null) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 
   // ---------------------------------------------------------------- nobody is lost

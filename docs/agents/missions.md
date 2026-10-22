@@ -234,6 +234,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **Not done / not seen**: its menu picture is a stand-in (the first tutorial mission's own stand-in, copied: none can be made without a GPU); the alley and the road are bare (`lived`
     NOTE); the one locked door is meant to be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot
     carry them. Never seen on a GPU, never played by a hand. Nobody has seen the gunner go down behind his bags when he is shot at and come up again, a dazed man on his feet in the nest, or the last man throw his rifle down and run: all are read from the runs' logs. A call for the maintainer: whether the hall's last man may run and open the locked door (the door's lesson skipped), and whether a dazed man standing up to forty seconds reads right.
+- **The tutorial's plan mode mission, 'On the radio'** (2026-10-22; row `tut-plan`, `scenarioList.ts TUTORIAL_MISSIONS` after `tut-sky`, group `tutorial`; `tools/levels/tut-plan.ts` →
+  `levels/tut-plan.json`, its staged moments `levels/tut-plan.script.ts`, its scripted player `tools/qa/lessons/tut-plan.ts`, its page run `tools/qa/tut-plan-page.cjs`, its own check
+  `tools/qa/tutplan-check.ts`, probe `tutplan`). A PROTOTYPE of the second of the six: plan mode as the build has it, taught as the way to win three things one stack cannot. Its own
+  level, a walled relay post at night (yard x 5..35, z 5..23): he kneels behind blocks at the track gate and never leaves them, the four are his hands, eight defenders in four rooms each its
+  own squad (`mayLeave: false`, nobody digs in). Nineteen steps, three plans:
+  - *The guardroom* (two doors on two walls, two men): the mode up (Shift + the command key), the view moved with the walk keys, a right click sends all four to its blank wall, a box
+    picks two and a right click stacks them on a door, the other two on the other door, a click on bare ground is everyone again, ONE word sends both.
+  - *The hall* (a gun behind chest-high bags at the far end, laid on the front door; the back door at the gunner's shoulder): a pair on each door and the word. The step that makes
+    everyone his again carries the cue `breach` (a stack stands on EACH door): from there the gun is the script's and on the wrong door — a burst into the wall beside the front doorway, held
+    `LATE_SECS` (2.4 s) after the first leaf moves — and the pair at his shoulder has him. A front door opened BEFORE that cue is "one stack, alone": three six-round bursts laid on the
+    doorway itself and the man beside the gun up with his rifle on it. A teammate it would put down is on a knee for five seconds (`rails.respawn`), so the wrong plan costs time and a
+    scare, never the mission.
+  - *The two gates* (two men up the road, two in the lane behind the back gate, each pair behind a blast wall, the script's and unseen until the cue `gates`): a right click DRAGGED puts
+    a pair behind chest-high bags facing the road gate and a pair behind the barrier facing the back gate; then both gates open at once, each pair of theirs walks in with rifles up and stands
+    `GATE_SECS` (4 s) in its gate before it is the game's own, and the last man of the four drops it and runs. A last right click on himself brings the squad back.
+  - **The frame's `plan` action** (`game/rails.ts gate`): on a level whose steps allow `plan`, Shift held over the command key reaches the game though neither sprint nor an order is
+    allowed (the command key alone stays locked: a tap of it would undo a plan), and with the mode up its own Shift, the walk keys (they move the view, his feet stay locked) and both
+    mouse buttons. No other level allows `plan`, so nothing else changed. A step done IN the mode carries `planLine` (a new step key: `scene/scenarios.ts`, `levelData.ts`,
+    `rails.ts prompt`), the line while the mode is DOWN — a checkpoint put back puts the mode down, and so can a hand: 'Hold [Shift], tap [B]: plan mode again'. New lesson tests
+    (`lesson.ts LESSON_TESTS`): `planView {at, r}` (the mode up and its view's point within r of a place), `picked {n, free}` (the men an order would go to), `stacks {doors, set, n}`
+    (men on a 'stack up' on each named door; `set`: standing on their marks AND their plan chain waiting for the word).
+  - **Two things the real page found** (both would have read as a broken key). The word's key sends the stacks of the men who are PICKED (`planmode.ts chainsOf`): after the second box
+    the picked men are one pair, and 'one word, both doors' sent one door — hence the steps 'all' and 'all2' (a left click on bare ground) before each word, and the scripted player
+    and the page run both fail unless ONE press empties every waiting chain. And a press while a chain is still walking to its door is eaten (`CMDRING.planWaits`): the men "arrive" about
+    1.7 s before their chain waits, so `stacks.set` now asks for the wait too and the line never asks for a key that does nothing.
+  - **Script facts**: a man handed back crouched behind the bags saw nobody and was seen by nobody (one die of four: the room never fell) — the low man is stood up, rifle on the
+    doorway, a moment before he is let go; a beat asks `q.signalled('lesson:breach')` to know whether the plan was laid when a door moved; a scripted burst is real rounds (laid on a wall's
+    inside face a metre from the doorway while the plan is working); `D.systems.theirFrags(false)` and `qrf(false)` for the level; the three yard gates are locked until the gates' beat.
+  - **Checkpoints** 'the gate' (step 1), 'the hall' (step 10), 'the gates' (step 15), each before the cue of the fight that follows; both beats start with the program and find their men
+    by callsign, so a checkpoint put back stages what is left.
+  - **Level facts**: built on the look's kit (one file, no look twin), no glass, one pickup (`carlamps-check` row), no response block; the outside camps' groups are `checkpoint.east` /
+    `checkpoint.back` (`road` is a structure word to the lived count); a NEW level, so no save or tape is refused. Furnished for what the post is: the relay's dish and generator behind the
+    hall, a cooking corner, washing, a bed carried out, the runner's motorbike. The row opens at night (a row cannot carry its own hour). The menu picture is `tools/menu-art.ts`'s.
+  - **Checks, and what was measured**: see the sub-bullet below (kept as numbers of this build).
+  - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
+    the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
+    reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
 - **A par clock on a room clear** (`src/game/par.ts`, `Game.par`; block `scenarios.par { gold, silver, bronze, lossSecs }`, docs/level-format.md *Scenarios*;
   today `levels/killhouse.json` alone, row `killhouse-four` 'The kill house' in the list's 'On the clock' group, `untuned`): while that level's room clear is up the run
   is timed from the first order, Sam's first stride off his start mark (`PAR_START_M` 1 m) or his first round or throw, to roomclear's 'taken'; every teammate

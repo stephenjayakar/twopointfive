@@ -237,6 +237,9 @@ export interface LessonStep {
   menuLine?: string;
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
+  /** the line while plan mode is DOWN on a step that is done in the mode (a checkpoint put back, the mode put away by hand: what puts it up again —
+   *  absent: `line`) */
+  planLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
