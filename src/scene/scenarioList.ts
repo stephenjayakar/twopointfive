@@ -185,6 +185,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     scene: 'The men who hit the convoy keep their code book at a fuel halt down the valley. You go in for it alone, and nobody expects it to stay quiet.',
     teaches: ['Move, sprint, stay low', 'A wall at your back, and leaning out', 'Rifle and pistol, and a gun\'s setup', 'Smoke, a frag, a stun, the launcher', 'A charge on a locked door'] },
   { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
+    // (its own hour and sky: the post was lit for the night — the street the player stands in is dark, the gates the picket comes through are under lamps
+    //  the photocell puts out by day — and measured dry and still)
+    hour: 'night', weather: 'clear',
     place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
     blurb: 'Four men down one street: two easy rooms, then a doorway a man holds, a gun, a locked hall, and a picket by two gates.',
     scene: 'The code book names a post one street long. This time you walk in with the four, and the men in it know how to hold a street.',
