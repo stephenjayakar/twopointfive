@@ -12,7 +12,7 @@
 //
 // THE TESTS (LESSON_TESTS below): plain records `{ is: '<kind>', … }`. Two families —
 //   STATE, true while it holds:  in · near · flag · slot · pace · meter · stage · door · target · men · all · any, and by family —
-//     hands: downed · body · calm   kit: reload · launcher · burst   squad: orderTo · stackOn · pairsOn · taken · following   the quiet partner: mate
+//     hands: downed · body · calm   kit: reload · launcher · burst   squad: orderTo · stackOn · pairsOn · taken · following   plan mode: planView · picked · stacks   the quiet partner: mate
 //   DEEDS, counted from the moment the step came up:  did { what: 'act:<verb>' | 'event:<kind>' | 'chron:<kind>' | 'order:<id>', n?, on?: '<door>' } ·
 //     threw (a can, the frag, the launcher's grenade) · word (F, the squad's word, over how many doors) · pair (the quiet pair's log)
 // A new kind is one row of that table (its test, and its check against the built floor for checkLesson). Per-player state is asked of `g.player` through one
@@ -115,6 +115,7 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   picking: g => !!who(g).picking,
   coding: g => !!who(g).coding,
   menu: g => !!g.orders?.menu,                                // the order menu is up (X)
+  plan: g => !!g.orders?.plan.up,                             // plan mode is up (Shift + the command key: he is on a knee at the radio)
   silent: g => squadSilent(g),                                // the squad's posture is SILENT
 };
 
@@ -217,6 +218,21 @@ export const LESSON_TESTS: Record<string, TestKind> = {
   // squad: the teammates on their feet stand inside `area`, all of them (or `n` of them): where an order has taken them
   squad: { ok: (g, t) => { const men = g.guards.filter(x => x.unit && x.team === 'operative' && x.state !== 'dead'), inn = men.filter(m => inside(t.area as Rect, m.char.pos)).length; return men.length > 0 && inn >= Math.min(men.length, (t.n as number) ?? men.length); },
     check: (g, t) => !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : !freeIn(g, t.area as Rect) ? 'area: no free floor inside it' : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many, ≥ 1' },
+  // -- (plan mode's rows, planmode.ts: all read off the order book)
+  // planView: the mode is up and the point its view follows is within `r` metres (default 5) of `at` — the walk keys have taken the view there
+  planView: { ok: (g, t) => { const L = g.orders?.plan.up ? g.orders.plan.look : null, a = t.at as Vec3; return !!L && Math.hypot(L[0] - a[0], L[2] - a[2]) < ((t.r as number) ?? 5); },
+    check: (_g, t) => !vec(t.at) ? 'at: a Vec3' : t.r !== undefined && !(num(t.r) && t.r > 0) ? 'r: metres, > 0' : null },
+  // picked: the mode is up and the men an order would go to are `n` of the squad (absent: some of them, not all — a click or a box has chosen);
+  // `free`: …and none of them is on a 'stack up' (the men a first door was not given to)
+  picked: { ok: (g, t) => { const O = g.orders; if (!O?.active || !O.plan.up) return false; const men = O.recipients(), k = men.length, all = O.men('all').length;
+      return (t.n === undefined ? k > 0 && k < all : k === Math.min(t.n as number, all)) && (!t.free || men.every(m => onStack(g, m) === null)); },
+    check: (_g, t) => t.n !== undefined && !(num(t.n) && t.n >= 1) ? 'n: how many men, ≥ 1' : t.free !== undefined && typeof t.free !== 'boolean' ? 'free: true or false' : null },
+  // stacks: each of the named doors has `n` men (default 1) on a 'stack up' on it (`set`: standing on their marks, and a plan's chain they are on is
+  // waiting for the word there — the word's key does nothing for a chain still walking) — a squad split over doors, however he split it
+  stacks: { ok: (g, t) => { const O = g.orders; if (!O?.active) return false; const men = O.men('all');
+      const waits = (m: Guard) => O.plan.chains.every(c => !c.who.includes(m.callsign) || c.phase !== 'go');
+      return (t.doors as string[]).every(d => men.filter(m => onStack(g, m) === d && (!t.set || (!!O.of(m)?.arrived && waits(m)))).length >= ((t.n as number) ?? 1)); },
+    check: (g, t) => !Array.isArray(t.doors) || !t.doors.length ? 'doors: a list of door names' : (t.doors as string[]).find(d => !g.doors.byName(d)) !== undefined ? `doors: no door named '${String((t.doors as string[]).find(d => !g.doors.byName(d)))}'` : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many men a door, ≥ 1' },
   all: { ok: (g, t, S) => (t.of as LessonTest[]).every(u => passes(g, u, S)), check: (g, t) => ofCheck(g, t) },
   any: { ok: (g, t, S) => (t.of as LessonTest[]).some(u => passes(g, u, S)), check: (g, t) => ofCheck(g, t) },
 };
