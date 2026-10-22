@@ -331,7 +331,7 @@ async function render(m: Mission, O: Opts): Promise<Cam> {
         return; }
       const pitch = Math.atan2(1.05 - 1.4, dist), muzzle = addMan(p, f, D, false, 'rifle', pitch), dir: V3 = [f[0] * Math.cos(pitch), Math.sin(pitch), f[1] * Math.cos(pitch)];
       spots.push({ p: [muzzle[0] + dir[0] * 0.06, muzzle[1] + 0.05, muzzle[2] + dir[2] * 0.06], d: dir, ci: Math.cos(7 * DEG), co: Math.cos(17 * DEG), I: [24, 23, 21], range: 26, rad: 0.02, vol: 1.0 });
-      const hit = trace(S, muzzle[0], muzzle[1], muzzle[2], dir[0], dir[1], dir[2], 40, F_SHADOW, false) ? hT : 40; lasers.push({ a: muzzle, b: [muzzle[0] + dir[0] * hit, muzzle[1] + dir[1] * hit, muzzle[2] + dir[2] * hit] });
+      const hit = trace(S, muzzle[0], muzzle[1], muzzle[2], dir[0], dir[1], dir[2], 40, F_SHADOW, false) ? hT : 40; if ((d.scenarios as any)?.lesson?.rails?.lasers !== false) lasers.push({ a: muzzle, b: [muzzle[0] + dir[0] * hit, muzzle[1] + dir[1] * hit, muzzle[2] + dir[2] * hit] });
     });
     subject.push(...places);
     // the one man a snatch is for: stood where the level has him, facing the way they come
