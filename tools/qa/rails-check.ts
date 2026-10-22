@@ -20,7 +20,7 @@
 //  14. THE ROWS (`rails.rows`, on levels/tut-quiet.json): Space offers only the verbs the mission names — at a locked door the pick and no boot; without
 //      the list, every row the door has anywhere; and no row at all while Space itself is locked (the gate beside the start). And his own actions' ring (handring.ts) is worked with its own digit while it is up: on the whistle's
 //      step the digit alone does nothing, the key kept down and then the digit whistles.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's and the wall's must fail.   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's and the first play's notes' must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -152,6 +152,35 @@ export async function railsCheck(): Promise<boolean> {
       verdict(plain && !free0 && locked && !taught && !open && after,
         'a mission that teaches the wall keeps a walk into one from taking it until that line: with no step naming the wall a move key held into the house wall takes it, as on any page; with the wall on a later step it does not; with the wall open it does again',
         `no step names it: taken ${plain} (locked ${free0}) · on the last step: locked ${locked}, taken ${taught} · open from the start: locked ${open}, taken ${after}`); }
+    // ---- the first play's notes (tut-sky): the squad on a knee until its first order; no teammate's laser; the hold is its own line and a tap gives nothing
+    //      on it; the wall has a lookout while its charge is up; the last order hands the view back to the squad and puts the night vision up
+    { const R = await rig(true), g = R.g, I = R.I, L = g.level.scenarios.lesson, { laserOn } = await import(`${ROOT}/src/game/irlaser.ts`);
+      const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), ringOn = !!CMDRING.on && CMDRING.holdSecs > 0;   // (the ring on the command key held is a switch of its own: held off on the frozen stand)
+      R.run(1.0); const men = R.squad(), low = men.filter((m: any) => m.script?.crouch === true).length;
+      // (a laser: a teammate in the hunt, muzzle up — on with the level's key taken away, off with it)
+      const m0 = men[0], st = m0.state, md = m0.muzzleDown; m0.state = 'alert'; m0.muzzleDown = false; const lasOff = laserOn(g, m0); delete L.rails.lasers; const lasOn = laserOn(g, m0); L.rails.lasers = false; m0.state = st; m0.muzzleDown = md;
+      // the hold's step: a tap on the wall's ring gives no order and its words come up; held, the ring is up and the line is the ring's
+      const k = L.steps.findIndex((T: any) => T.id === 'charge'), T = L.steps[k], WALL = T.at as number[]; g.lesson.i = k; R.run(0.2);
+      const line0 = g.rails.prompt(), n0 = g.orders.log.length, eye = g.rails.stepEye();
+      R.W.cursorAt(WALL); R.run(2 / 60); R.W.cursorAt(WALL); R.press('KeyB'); R.run(0.1);
+      const tapGave = g.orders.log.length - n0, noted = g.rails.prompt()?.note ?? null;
+      R.run(3.0); const noteGone = !g.rails.prompt()?.note;
+      const up = () => { R.W.cursorAt(WALL); I.pressed.add('KeyB'); R.run(0.5, ['KeyB']); }, down = () => { I.pressed.add('Tab'); R.run(0.1); if (g.orders.menu) { g.orders.menu = null; g.orders.cmdRing = null; } };
+      up(); const ring = !!g.orders.menu, line1 = g.rails.prompt()?.line ?? null;
+      // (a page under the ring's first: the line is what is left to press · a tap just refused: its words are not up over a ring · the ring's FIRST wedge gives the tap's own order, and is no tap)
+      R.press('Digit5'); R.run(0.1); const paged = !!g.orders.menu && g.orders.menu.page !== null, line2 = g.rails.prompt()?.line ?? null; down();
+      R.W.cursorAt(WALL); R.press('KeyB'); R.run(0.05); const n1 = g.orders.log.length; up(); const noteUp = !!g.rails.prompt()?.note; R.press('Digit1'); R.run(0.2); const wedgeGave = g.orders.log.length - n1; down();
+      // the last step: nothing ordered, the view is the hand's and the goggles stay; ordered on the trucks, the shift eases out and the goggles come up
+      const z = L.steps.length - 1, TR = L.steps[z].at as number[], hold = L.steps[z].hold; L.steps[z].hold = 999; g.lesson.i = z;
+      for (const m of men) g.orders.assign(m, { order: 'hold', post: [30, 0, 14], face: 0, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding' });   // (as if in the last room: this rig's squad never left the road)
+      R.run(0.1); if (!g.player.nv) R.press('KeyN');   // (the squad of this rig never left the road: the step is kept from counting)
+      R.run(2.0, ['KeyD']); R.run(0.3);
+      const off0 = g.rails.panned(), nv0 = g.player.nv;
+      for (const m of men) g.orders.assign(m, { order: 'move', post: [TR[0], 0, TR[2]], face: 0, stance: 'lowReady', upper: 'none', going: 'moving', there: 'there' });
+      R.run(4.0); const off1 = g.rails.panned(), nv1 = g.player.nv; L.steps[z].hold = hold;
+      verdict(low === men.length && men.length === 4 && !lasOff && lasOn && !!eye && line0?.line === T.line && (ringOn ? tapGave === 0 && noted === T.noTap && noteGone && ring && line1 === T.menuLine && paged && line2 === T.pageLine && !noteUp && wedgeGave >= 1 : tapGave >= 1 && !noted && !ring) && off0 > 3 && nv0 && off1 < 0.5 && !nv1,
+        'the first play\'s notes hold: the squad is on a knee behind its trucks before any order; no teammate shows a laser on this level; on the hold\'s step a tap of the command key gives no order and its words come up under the line, held it puts the ring up and the line is the ring\'s, a page under it has its own, and the ring\'s first wedge gives its order (a stand with no ring to hold refuses no tap); the wall has its lookout; and once the last order is given the view goes back to the squad and the night vision comes up',
+        `on a knee ${low}/${men.length} · laser with the key ${lasOff}, without ${lasOn} · step '${T.id}': "${line0?.line}", lookout ${!!eye} · tap gave ${tapGave} order(s), words "${noted}" (gone after 3 s: ${noteGone}) · held: ring ${ring}${ringOn ? '' : ' (the stand has none)'}, line "${line1}", page ${paged} "${line2}", words over the ring ${noteUp}, first wedge gave ${wedgeGave} · last step: shift ${off0.toFixed(1)} m, nv ${nv0} → ordered: shift ${off1.toFixed(1)} m, nv ${nv1}`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
       const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };

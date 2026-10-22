@@ -23,8 +23,8 @@ export const NOTES = `The first tutorial mission, on the pass's halt: the squad'
 const HALF = Math.PI / 2, R = PASS_ROOMS;
 // ---- the road, west: the squad's two pickups where they stopped, one behind the other across the two lanes, noses to the roadblock ----
 const TRUCK_A = { x: 12.9, z: 24.4, yaw: 0.1 }, TRUCK_B = { x: 11.3, z: 26.6, yaw: -0.14 };
-/** the squad, two in file behind each truck's tail */
-const OPS: Vec3[] = [[9.7, 0, 24.5], [8.6, 0, 24.7], [8.1, 0, 26.7], [7.0, 0, 26.6]];
+/** the squad, two in file tight behind each truck's tail (on a knee there until its first order: rails.sky.low) */
+const OPS: Vec3[] = [[9.95, 0, 24.5], [9.05, 0, 24.6], [8.35, 0, 26.7], [7.45, 0, 26.6]];
 /** where the player stands on a stand without the frame (a plain room clear): on the road behind his men */
 const SAM: Vec3 = [5.4, 0, 25.6];
 /** …and with it: out of the picture, behind the lean-to's back wall, in nobody's line */
@@ -40,6 +40,8 @@ const YARD_MARK: Vec3 = [17.6, 0.02, 20.4];
  *  yard wall between the tea room's window and the kitchen's door, where the view from the road side sees it (the halt's own is at the back of the lean-to,
  *  behind a wall from there) · the road by the trucks */
 const PASS_DOOR: Vec3 = [21.8, 1.0, 6.75], INNER_DOOR: Vec3 = [32.25, 1.0, 10.8], WALL_MARK: Vec3 = [27.95, 1.1, 9.4], BREAKER: Vec3 = [22.6, 1.35, 11.32], TRUCKS_MARK: Vec3 = [9.6, 0.02, 25.6];
+/** the squad's charge on the kitchen's wall is seen whichever way its men face (they stand off with their backs to it): a lookout in the kitchen, on the wall */
+const WALL_EYE = { at: [25.4, 1.6, 9.4] as Vec3, yaw: HALF, fov: 100 };
 const ROAD_BACK: Rect = { x0: 4.6, x1: 15.0, z0: 22.6, z1: 29.0 };
 const TEA_IN: Vec3 = [17.25, 1.1, 10.9], PASS_W: Vec3 = [21.9, 1.1, 6.75], KITCHEN_IN: Vec3 = [25.25, 1.1, 10.9], STORE_E: Vec3 = [28.1, 1.1, 8.25], BUNK_IN: Vec3 = [28.2, 1.1, 13.75];
 
@@ -70,26 +72,26 @@ const LESSON: LessonData = {
   title: 'A squad, from above',
   // (the fog of war from the first step: nobody is seen in a room the squad has not looked into. The road is seen from the first truck's cab — the man left with
   //  the trucks — so the roadblock is in the picture while the squad is still behind its tails)
-  rails: { allow: [], respawn: 5, fog: true, orders: ['move', 'stack', 'go', 'walltools', 'wallCharge', 'work'], sky: { park: SKY_PARK, reach: 22, eye: { at: [13.3, 1.9, 25.4], yaw: HALF, fov: 100 } } },
+  rails: { allow: [], respawn: 5, fog: true, lasers: false, orders: ['move', 'stack', 'go', 'walltools', 'wallCharge', 'work'], sky: { park: SKY_PARK, reach: 22, low: true, eye: { at: [13.3, 1.9, 25.4], yaw: HALF, fov: 100 } } },
   steps: [
     // ---- the road ----
     { id: 'turn', line: 'Hold [Ctrl], move the mouse: turn the view', allow: ['camera'], cue: 'ambush', checkpoint: 'the road', done: { is: 'view', turned: 40 } },
     { id: 'zoom', line: '[Ctrl] and scroll: zoom out', allow: ['zoom'], done: { is: 'view', zoomed: 1.2 } },
-    { id: 'pan', line: '[W] [A] [S] [D]: look down the road', allow: ['pan'], done: { is: 'view', panned: 7 } },
+    { id: 'pan', line: '[W] [A] [S] [D]: look down the road', allow: ['pan'], cue: 'smoke', done: { is: 'view', panned: 7 } },
     { id: 'move', line: '[B] on the yard: move them in', allow: ['order'], cue: 'break', at: YARD_MARK, done: { is: 'squad', area: YARD_IN }, hold: 0.6 },
-    { id: 'gate', line: 'They hold the gate. Watch it', at: [19.5, 0.02, 22.0], done: { is: 'cue', name: 'roadblock' } },
+    { id: 'gate', line: 'No order needed: they hold the gate', at: [19.5, 0.02, 22.0], done: { is: 'cue', name: 'roadblock' } },
     // ---- indoors ----
     { id: 'stack', line: '[B] on the door: stack up', cue: 'indoors', checkpoint: 'the yard', at: [17.0, 1.0, 11.2], done: { is: 'any', of: [{ is: 'stackOn', door: 'tea', set: true }, { is: 'taken', room: 'tea' }, { is: 'squad', area: R.tea.bounds, n: 3 }] } },
     { id: 'go', line: '[F]: send them in', allow: ['word'], at: [17.0, 1.0, 11.2], done: { is: 'any', of: [{ is: 'taken', room: 'tea' }, { is: 'all', of: [{ is: 'word' }, { is: 'squad', area: R.tea.bounds, n: 3 }] }] }, hold: 1.5 },
     { id: 'kitchen', line: 'The kitchen: [B] on its door, then [F]', checkpoint: 'the tea room', at: PASS_DOOR, done: { is: 'any', of: [{ is: 'taken', room: 'kitchen' }, { is: 'all', of: [{ is: 'word' }, { is: 'squad', area: R.kitchen.bounds, n: 3 }] }] }, hold: 1.5 },   // (a second tap of the command key sends a stack in with no word: the room taken is the step done, however they went)
     // ---- the wall ---- (a door is where a room expects them. The store taken by its door is the honest other way past both steps)
-    { id: 'charge', line: '[X] on the wall, then [5], [3]', allow: ['menu', 'ring'], cue: 'wall', checkpoint: 'the kitchen', at: WALL_MARK, done: { is: 'any', of: [{ is: 'flag', flag: 'chargeClear' }, { is: 'taken', room: 'store' }, { is: 'squad', area: R.store.bounds, n: 3 }] }, hold: 0.4 },   // (the word's line waits for the squad to stand off: a charge blown with men beside it blinds them)
-    { id: 'blow', line: '[F]: blow it', at: WALL_MARK, done: { is: 'any', of: [{ is: 'taken', room: 'store' }, { is: 'squad', area: R.store.bounds, n: 3 }] }, hold: 1.5 },
+    { id: 'charge', line: '[X] on the wall', menuLine: '[5], then [3]: a charge', pageLine: '[3]: a charge', noTap: 'Keep [B] held down', eye: WALL_EYE, allow: ['menu', 'ring'], cue: 'wall', checkpoint: 'the kitchen', at: WALL_MARK, done: { is: 'any', of: [{ is: 'flag', flag: 'chargeClear' }, { is: 'taken', room: 'store' }, { is: 'squad', area: R.store.bounds, n: 3 }] }, hold: 0.4 },   // (the word's line waits for the squad to stand off: a charge blown with men beside it blinds them)
+    { id: 'blow', line: '[F]: blow it', eye: WALL_EYE, at: WALL_MARK, done: { is: 'any', of: [{ is: 'taken', room: 'store' }, { is: 'squad', area: R.store.bounds, n: 3 }] }, hold: 1.5 },
     // ---- the dark ----
     { id: 'breaker', line: '[B] on the breaker: lights out', cue: 'dark', checkpoint: 'the store', at: BREAKER, done: { is: 'flag', flag: 'dark' } },
     { id: 'nv', line: '[N]: night vision', allow: ['nvg'], cue: 'nv', done: { is: 'flag', flag: 'nv' } },
     { id: 'bunk', line: 'The last room: [B] on its door, then [F]', at: INNER_DOOR, done: { is: 'any', of: [{ is: 'taken', room: 'bunk' }, { is: 'all', of: [{ is: 'word' }, { is: 'squad', area: R.bunk.bounds, n: 3 }] }] }, hold: 1.5 },
-    { id: 'out', line: '[B] on the trucks: back to the road', cue: 'out', at: TRUCKS_MARK, done: { is: 'squad', area: ROAD_BACK }, hold: 1 },
+    { id: 'out', line: '[B] on the trucks: back to the road', cue: 'out', onWay: { nv: false }, at: TRUCKS_MARK, done: { is: 'squad', area: ROAD_BACK }, hold: 1 },
   ],
 };
 
