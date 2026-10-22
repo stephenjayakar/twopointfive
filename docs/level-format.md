@@ -229,6 +229,9 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   the player's alone — the validator refuses them elsewhere; with the pouches rule off nothing trims a count; a card that still says `shield` is refused in words — the ballistic shield left the game on 10-18). Every staging on that level wears the issue card with those
   fields over it, whatever kit the machine keeps, and the kept kit is not written; `?noissue` (`ISSUE.on` false) = the kept kit as on any level. Today:
   `levels/hall.json`, whose block is empty since the shield went (`members: {}`: every man on the plain issue, no visit to the loadout screen).
+  On the player's card alone, and only a card with the rifle, a block may also name `rings`: the launcher's sponge rounds, a whole number 0‥5. A mission
+  whose block names your card hands NOTHING over it (`ISSUE.whole`, on in the page; `?issuelend` = the mission's sponge rounds, cameras and wand land
+  over it as before), so `rings` is how such a mission puts sponge rounds on the tube; with any, the launcher comes up on them.
 - `response` — THIS LEVEL HAS A RESPONSE TEAM (`game/qrf.ts`, switch `RESPONSE`; `scene/scenarios.ts ResponseData`): who comes when the place goes loud, by
   which ways, and what they are called on the net. A LEVEL DESIGN DECISION, NOT A DEFAULT: a level carries the block only where somebody would plausibly
   come (a post with a radio room and a picket down the road, a street under curfew, a border company's lines) and `why` says so in a sentence — the
