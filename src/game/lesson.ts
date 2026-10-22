@@ -299,7 +299,7 @@ export class Lesson {
   }
 
   /** the run is over, whichever scenario it was: the quiet mission's stage, the player down, a room clear taken or the team wiped (roomclear.ts `end`) */
-  private over(): boolean { const g = this.g; return g.mission.stage === 'failed' || g.mission.stage === 'done' || who(g).down || (!!g.roomClear?.active && !!g.roomClear.end); }
+  over(): boolean { const g = this.g; return g.mission.stage === 'failed' || g.mission.stage === 'done' || who(g).down || (!!g.roomClear?.active && !!g.roomClear.end); }
   /** The HUD's objective while a step is up (mission.ts objectiveText / objectivePos; null = the scenario's own: no lesson, or every step done) */
   objective(): { text: string; pos: Vec3 | null } | null {
     const L = this.data, i = this.at; if (!L || i >= L.steps.length) return null;
@@ -315,8 +315,11 @@ export class Lesson {
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 80) this.log.splice(0, 40); }
 }
 
-/** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys */
-const lineOf = (T: LessonStep): string => SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
+/** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys; his own
+ *  actions a ring (handring.ts) takes the whistle off its key */
+const lineOf = (T: LessonStep): string => HANDRING.on && T.ringLine ? T.ringLine : SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
+/** …and as the page says it: a tutorial mission's one big line (rails.ts prompt) is the same words as the row's */
+export const stepLine = (T: LessonStep): string => lessonLine(lineOf(T));
 
 // ---------------------------------------------------------------- the checker (tools/qa/lesson-check.ts; the probes): the block against the BUILT floor
 /** Everything the level file's validator cannot say (scene/levelData.ts checks shapes): each test's kind and fields, its doors / lights / areas on this floor,

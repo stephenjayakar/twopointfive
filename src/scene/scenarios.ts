@@ -230,6 +230,9 @@ export interface LessonStep {
   line: string;
   /** the line while a gun's key again opens its setup (game/slotsetup.ts SLOTSETUP.on), where the step's keys are others then (absent: `line`) */
   setupLine?: string;
+  /** the line while his own actions are a ring (game/handring.ts HANDRING.on), where the step's keys are others then: the whistle has no key of its own
+   *  there, it is the ring's last wedge (absent: `line`) */
+  ringLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
@@ -260,6 +263,9 @@ export interface RailsData {
   /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
    *  not there, on the ring or under the quick key. Absent: every row the game has */
   orders?: string[];
+  /** the verbs Space offers on this level (an Interactable row's `verb`: 'grab', 'pick', 'code'…): a thing in reach whose verb is not here has
+   *  no row, so a tap never lands on something no step taught (absent: every row, as on any level) */
+  rows?: string[];
 }
 export interface LessonData {
   /** the family of systems it teaches, as the row says it ('Moving unseen') */
