@@ -285,7 +285,7 @@ export class Rails {
 
   /** THE MENU'S ROWS on a tutorial mission (orders.ts rowsFor): only the orders the level names — a row nobody taught is not on the ring */
   orderRows<T extends { id: string }>(rows: T[]): T[] { const L = this.live && !BREAK ? this.data?.orders : undefined; return L ? rows.filter(d => L.includes(d.id)) : rows; }
-  /** the sky seat's lookout (fogofwar.ts update: one more of the team's eyes): null without one */
+  /** the sky seat's lookout (fogofwar.ts update: one more eye of the picture's, and of the team's only with RAILS.eyeView off): null without one */
   eye(): FogEye | null {
     const e = this.data?.sky?.eye; if (!e) return null;
     return this.lookout ??= lookoutEye(LOOKOUT_ID, e);

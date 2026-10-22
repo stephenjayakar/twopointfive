@@ -251,6 +251,12 @@ export async function railsCheck(): Promise<boolean> {
       const tap0 = RAILS.shiftTap; let off: string[] = [], on: string[] = []; try { off = shifted(false); on = shifted(true); } finally { RAILS.shiftTap = tap0; }
       // …and its line: the ask before, what the men are doing after — and the ask again once that has stood too long with the step not done
       const aft = g.rails.prompt(), max = RAILS.afterMax; let again: ReturnType<typeof g.rails.prompt> = null; try { RAILS.afterMax = 1.5; R.run(2.0); again = g.rails.prompt(); } finally { RAILS.afterMax = max; }
+      // the stack's door on the floor plan: its bar, and no key on it while the step holds the word shut; the key once a step opens the word
+      const { floorPlan } = await import(`${ROOT}/src/game/floorplan.ts`), caps = () => floorPlan(g).doors.filter((d: any) => d.door).map((d: any) => `${d.why}:${d.key ?? '-'}`).join(' ');
+      const shut = g.rails.locks('word'), capShut = caps(), kw = L.steps.findIndex((_: any, j: number) => { g.lesson.i = j; return j > k && !g.rails.locks('word'); }), capOpen = kw >= 0 ? caps() : 'no step opens the word'; g.lesson.i = k;
+      verdict(shut && /\bstack:-/.test(capShut) && !/:F/.test(capShut) && /\bstack:F/.test(capOpen),
+        'a key is named on the floor only once its lesson has opened it: at the stack\'s step the word is shut, the stack\'s door has its bar and no key on it; at the first step that opens the word the same door carries the key',
+        `the word shut ${shut} · the doors then: ${capShut || 'none'} · at step ${kw >= 0 ? L.steps[kw].id : '-'}: ${capOpen || 'none'}`);
       const kg = L.steps.findIndex((T: any) => T.id === 'gate'); g.lesson.i = kg; const gate = g.rails.prompt();   // (read as it comes up: its cue is long past on this floor and the step is done on its first tick)
       // the page's input (game/input.ts), on a made-up window: a Shift whose key-up never came goes with the next event that says it is up; a key that goes down again unrepeated is a fresh press
       const { Input } = await import(`${ROOT}/src/game/input.ts`); const G: any = globalThis, had: Record<string, unknown> = {}, names = ['window', 'HTMLElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement'];
@@ -348,7 +354,7 @@ export async function railsCheck(): Promise<boolean> {
       const way = g.doors.list.flatMap((d: any) => sides.map(side => ({ d, side }))).find((w: any) => g.cleared.roomBy(w.d, w.side > 0 ? -1 : 1) === room && g.cleared.isKnown(g.cleared.roomBy(w.d, w.side)));
       const read = () => ({ seen: !!foe && F.seen(foe), drawn: !!foe && F.drawn(foe), hidden: !foe || F.hidden(foe), known: !!foe && !!F.sighting(foe), lit: !!foe && F.spotSeen(foe.char.pos[0], foe.char.pos[2]),
         pick: way ? autoEntries(g, { kind: 'door', at: way.d.frameCentre, door: way.d, side: way.side }) : { ids: [] as string[], why: 'no door' } });
-      const on = read(); RAILS.eyeView = false; stand(8); const off = read(); RAILS.eyeView = true;
+      const on = read(); let off = on; RAILS.eyeView = false; try { stand(8); off = read(); } finally { RAILS.eyeView = true; }   // (put back whatever the stand throws: every line after this one is read with the rule on)
       const word = (r: ReturnType<typeof read>) => `seen ${r.seen}, a sighting ${r.known}, drawn ${r.drawn}, hidden ${r.hidden}, his floor lit ${r.lit}, the entry ${r.pick.ids.join(' then ') || 'none'} (${r.pick.why})`;
       verdict(!!s && !!foe && !!m && !!way && room > 0 && on.lit && on.drawn && !on.hidden && !on.seen && !on.known && on.pick.why !== 'contact' && on.pick.ids[0] === 'openClear' && off.seen && off.pick.why === 'contact' && off.pick.ids[0] === 'bangClear',
         'the frame\'s eyes are the player\'s view, not the squad\'s knowledge: a man of the other side in a step\'s eye stands on lit floor and is in the picture, the team has not seen him and has no sighting of him, and the squad\'s entry on his room\'s door with one can left is the one it would take with no eye there (with the rule off he is seen, and the stack throws its last can: as it was)',
