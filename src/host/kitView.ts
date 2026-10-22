@@ -84,6 +84,7 @@ import { BIG_ORDER } from '../game/doortools';   // (a name, read inside a row o
 import { FIXLOOK } from '../game/fixtureBreak';   // (a leaf table: written inside the quiet gun's row only — the dead lamp's arcing lead is held off for that row)
 import { WAND_ORDER, WANDORDER_STATS } from '../game/wandorder';   // (a name and a tally, read inside a row only)
 import { kitOf, kitTreeOn } from '../game/kit';   // (asked inside a row's start only: the card a staged teammate carries · is the card laid out as a tree — your light a row of yours)
+import { SLOTSETUP } from '../game/slotsetup';   // (asked inside a row's start only: a gun's key again is its setup, not the launcher's step)
 import { exposedTo } from '../game/frag';   // (asked inside a row's tick only: has a burst THERE a line to Sam — the game's own reckoning, glass that it would break counted open)
 
 /** THE LIGHT, one table (a way's `light` in the level file lies over it, key by key). Every place is door-relative — [along the wall toward the stack, out
@@ -1428,6 +1429,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const handWas = (): string => { const h = handDue || game.player.slot; if (handDue) { input.pressed.delete(handDue === 'rifle' ? 'Digit2' : 'Digit1'); handDue = ''; } return h; };
   const tube = (load: 'cam' | 'he40' | 'ring'): boolean => { const pl = game.player;
     if (!pl.rifleUp) { input.pressed.add('Digit2'); return false; } if (pl.equipT > 0) return false; if (pl.rifle.attachment === load) return true;
+    if (SLOTSETUP.on) { const i = pl.rifle.attachments.indexOf(load); if (i < 0) return false; pl.rifle.attIdx = i; return true; }   // (2 again is the setup now, and its row steps over a load he is out of: the picture's rifle is handed the load)
     input.pressed.add('Digit2'); return false; };
   /** A STICKY CAMERA (calls 5; Sam's alone — stickycam.ts): the same half step and hand on the leaf as a throw, the rifle up with the camera on its tube (his
    *  own key), and ONE press of the right button: the game's own shot, flat over his aim point onto the first wall behind it — the line, of `camRays` across

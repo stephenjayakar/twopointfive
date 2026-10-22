@@ -31,6 +31,7 @@
 //
 // The card owns its own CSS (one <style> on first use), so index.html needs nothing for it.
 import { gearText } from '../game/gear';   // (a kept note names the kit: worded as issued where it is shown)
+import { lightKeys } from '../game/slotsetup';   // (asked when the card's line is written: where your light is worked)
 import { KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitGunCan, kitIssuedShown, kitName, kitRowCan, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitShown, kitTeam, kitTry, kitWears, kitWorn, kitSlotDef, kitWords, rowGet, rowHas, rowUnder, squadCost, youGunsCan, type KitRow, type MemberKit } from '../game/kit';
 import type { GunSlot } from '../game/gunslots';
 import { GUN_STATS, gunStats } from './gunStats';
@@ -405,7 +406,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       clipEls[0].classList.toggle('on', same); clipEls[0].title = `copy ${whose} kit (C)`;
       clipEls[1].classList.toggle('off', !C || same || !!why); clipEls[1].title = why || (!C ? 'nothing copied yet' : same ? `${i ? 'he wears' : 'you wear'} the copied kit` : `the copied kit onto ${i ? 'him' : 'you'}, ${whose} colours kept (V)`); }
     const noSet = said && said.k === rows.length ? said.why : dense && said && !popAt && isGun(rows[said.k]) ? said.why : ''; words.classList.toggle('refused', !!noSet);   // (the dense card: a gun's tile has no line of its own — a step it refused is said on the card's)
-    words.textContent = noSet || (i === 0 && !tree ? `${kitWords(0)}. ${m.weapon === 'rifle' ? 'Both your guns are suppressed' : m.weapon === 'shotgun' ? 'Your pistol is suppressed, the shotgun is not' : 'Your pistol is suppressed'}; your light is on L, your goggles on N.` : kitWords(i)) + (KIT_NOTE[i] ? ` ${gearText(KIT_NOTE[i])}` : '');
+    words.textContent = noSet || (i === 0 && !tree ? `${kitWords(0)}. ${m.weapon === 'rifle' ? 'Both your guns are suppressed' : m.weapon === 'shotgun' ? 'Your pistol is suppressed, the shotgun is not' : 'Your pistol is suppressed'}; your light is ${lightKeys() === 'on L' ? 'on L' : 'on ' + lightKeys()}, your goggles on N.` : kitWords(i)) + (KIT_NOTE[i] ? ` ${gearText(KIT_NOTE[i])}` : '');
     root.classList.toggle('focus', focused);
   }
   /** the dense card's own: each gun's tile wears what rides on it as chips (lit: fitted or carried, with a count; faint: not, or of no use on this
