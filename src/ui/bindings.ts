@@ -6,6 +6,7 @@
 // way until 'all knobs'. Where a knob TABLE is bound row after row the same way (get / set that key, save, the shipped value for the revert dot) the rows are
 // a declarative spec through knobRows(); anything with logic of its own stays written out. Every row the flat panel had is still here under the same label,
 // range, tooltip and side effects — tools/qa/panel-inventory.ts (probes.ts panel-inventory) holds that against main's frozen list.
+import { rowWeather, rowOfQuery } from '../game/rowset';
 import { WEATHER_KINDS, weatherSearch, type WeatherKind } from '../game/weatherKinds';
 import { UNDERFOOT } from '../scene/collision';
 import { charMatsSummary, resetCharMats } from '../render/charMaterials';
@@ -713,7 +714,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.slider(wx, 'wind x (m/s)', -4, 4, 0.1, () => W.wind[0], v => { W.wind[0] = v; }, 'the streaks lean by wind ÷ 9 m/s of fall');
   panel.slider(wx, 'wind z (m/s)', -4, 4, 0.1, () => W.wind[1], v => { W.wind[1] = v; });
   panel.toggleBox(wx, 'wet lot → gloss (RT reflections off)', () => W.wetGloss, v => { W.wetGloss = v; }, 'while the asphalt is wet it carries BoxFlag.Gloss; with this on the storm also switches Indirect light ▸ Final gather ▸ glossy floors on for its duration so the lamps, the bollards and the lit facade mirror in it (not the strokes: transient lights stay out of the gloss term) — and the polished floors indoors reflect too, at the gloss pass\'s cost. No effect on a tier with RT reflections on (ultra / high / medium): they already mirror the wet lot. Takes effect at the next dry → wet flip (toggle the storm)');
-  { const go = (k: WeatherKind | null) => { if (typeof location === 'undefined') { game.msg('weather kinds: in the page only (?weather=)'); return; } if (k !== W.kind) location.search = weatherSearch(location.search, k); };   // the weather the level is STARTED in (?weather=<kind>, the mission list's Weather row; game/weatherKinds.ts): the page's for its whole life (the renderer's half is compiled at boot), so a button RELOADS the page in that weather — 'as it is' = the level's own
+  { const go = (k: WeatherKind | null) => { if (typeof location === 'undefined') { game.msg('weather kinds: in the page only (?weather=)'); return; } if (rowWeather(rowOfQuery(location.search))) { game.note('this mission is always started in its own weather: ?rowset=0 lets the link pick'); return; } if (k !== W.kind) location.search = weatherSearch(location.search, k); };   // the weather the level is STARTED in (?weather=<kind>, the mission list's Weather row; game/weatherKinds.ts): the page's for its whole life (the renderer's half is compiled at boot), so a button RELOADS the page in that weather — 'as it is' = the level's own
     panel.buttons(wx, 'weather kind (reloads)', [{ text: 'as it is', run: () => go(null) }, ...WEATHER_KINDS.map(k => ({ text: k, run: () => go(k) }))]); }
   panel.buttons(wx, 'lightning', [{ text: 'strike now', run: () => { W.strike(); } }, { text: 'close one (0.4 km)', run: () => { W.strike({ distKm: 0.4 }); } }, { text: 'far (3.5 km)', run: () => { W.strike({ distKm: 3.5 }); } }, { text: 'from the south', run: () => { W.strike({ bearing: Math.PI, elevDeg: 35 }); } }]);
   panel.text(wx, () => W.summary());
