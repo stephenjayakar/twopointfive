@@ -36,7 +36,7 @@ const { RAILS, RAILS_STATS } = await import(`${ROOT}/src/game/rails.ts`);
 const { checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const VERBOSE = process.argv.includes('--verbose'), LEVEL = 'tut-sky', DT = 1 / 60;
-const YARD = [17.6, 0.02, 20.4];
+const YARD = [11.4, 0.02, 16.4];
 type V = number[];
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
@@ -72,7 +72,7 @@ export async function railsCheck(): Promise<boolean> {
     // ---- 3, 4, 5
     { const R = await rig(true), g = R.g, d0 = RAILS_STATS.dropped; R.run(0.5);
       const park = g.level.scenarios.lesson.rails.sky.park, mid = R.squad().reduce((c: V, m: any) => [c[0] + m.char.pos[0] / 4, 0, c[2] + m.char.pos[2] / 4], [0, 0, 0]);
-      const look = g.followPos(), n0 = g.orders.log.length, crew = g.guards.filter((x: any) => /^Tango [678]$/.test(x.callsign)).length;
+      const look = g.followPos(), n0 = g.orders.log.length, crew = g.guards.filter((x: any) => /^Tango (8|9|10)$/.test(x.callsign)).length;
       const p0 = [...g.player.char.pos]; R.command(YARD); R.run(0.3, ['KeyW']);
       const A = g.rails.allowed();
       verdict(g.rails.live && g.rails.skyOn && g.playerInvisible && flat(p0, park) < 0.6 && flat(look, mid) < 1.5 && !!g.director.run && !g.director.run.ended && crew === 3
@@ -180,7 +180,7 @@ export async function railsCheck(): Promise<boolean> {
       R.W.cursorAt(WALL); R.press('KeyB'); R.run(0.05); const n1 = g.orders.log.length; up(); const noteUp = !!g.rails.prompt()?.note; R.press('Digit1'); R.run(0.2); const wedgeGave = g.orders.log.length - n1; down();
       // the last step: nothing ordered, the view is the hand's and the goggles stay; ordered on the trucks, the shift eases out and the goggles come up
       const z = L.steps.length - 1, TR = L.steps[z].at as number[], hold = L.steps[z].hold; L.steps[z].hold = 999; g.lesson.i = z;
-      for (const m of men) g.orders.assign(m, { order: 'hold', post: [30, 0, 14], face: 0, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding' });   // (as if in the last room: this rig's squad never left the road)
+      for (const m of men) g.orders.assign(m, { order: 'hold', post: [32, 0, 16.5], face: 0, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding' });   // (as if in the last room: this rig's squad never left the road)
       R.run(0.1); if (!g.player.nv) R.press('KeyN');   // (the squad of this rig never left the road: the step is kept from counting)
       R.run(2.0, ['KeyD']); R.run(0.3);
       const off0 = g.rails.panned(), nv0 = g.player.nv;
@@ -239,7 +239,7 @@ export async function railsCheck(): Promise<boolean> {
       const k = L.steps.findIndex((T: any) => T.id === 'stack'), T = L.steps[k], DOOR = T.at as number[]; g.lesson.i = k; R.run(0.3);
       const ask = g.rails.prompt();
       // (an order pointed somewhere else is not the step being done: its line stays the ask. And a step's own line with no key in it is an ask, not a line to watch)
-      R.command([8, 0, 25.6]); R.run(0.3); const wrong = g.rails.prompt(), wrongGiven = g.orders.log.length > 0;
+      R.command([13.5, 0, 23.4]); R.run(0.3); const wrong = g.rails.prompt(), wrongGiven = g.orders.log.length > 0;
       const was = T.line; T.line = 'Get up to the door'; const plain = g.rails.prompt(); T.line = was;
       const shifted = (on: boolean) => { RAILS.shiftTap = on; const n = g.orders.log.length; R.W.cursorAt(DOOR); R.run(3 / 60, ['ShiftLeft']); R.W.cursorAt(DOOR); I.pressed.add('KeyB'); R.run(3 / 60, ['ShiftLeft', 'KeyB']); R.run(0.2, ['ShiftLeft']); return g.orders.log.slice(n).map((o: any) => o.order); };
       const tap0 = RAILS.shiftTap; let off: string[] = [], on: string[] = []; try { off = shifted(false); on = shifted(true); } finally { RAILS.shiftTap = tap0; }
@@ -268,20 +268,23 @@ export async function railsCheck(): Promise<boolean> {
         `the fire: ${marks.length} marks in 14 s over ${bins.size} metres, the busiest ${(100 * top / Math.max(1, marks.length)).toFixed(0)}% of them, the nearest to a man ${near.toFixed(1)} m · an order to the road on the door's step: the line "${wrong?.line}"${wrong?.watch ? ' (to watch)' : ''} · a keyless ask is ${plain?.watch ? 'a line to watch' : 'an ask'} · Shift + the key: rule off [${off.join(' ')}], on [${on.join(' ')}] · the line: "${ask?.line}" → "${aft?.line}"${aft?.watch ? ' (to watch)' : ''} → "${again?.line}" · the gate: "${gate?.line}"${gate?.watch ? ' (to watch)' : ''} · the keys: ${keysWhy}`); }
     // ---- the gate's beat is short (tut-sky): once the squad sets in the yard the roadblock's men come DOWN THE ROAD for the gate (the script's `direct`
     //      walk, through the gap in their own sandbags) and the fight is over in seconds. Left to the covered-lane price they go round the whole halt, which
-    //      is what the maintainer sat through ("this beat is too long, unclear what to do"): the second run takes the word off them and must be long
-    { const beat = async (plain: boolean) => { const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, km = L.steps.findIndex((T: any) => T.id === 'move'), kg = L.steps.findIndex((T: any) => T.id === 'gate');
+    //      is what the maintainer sat through ("this beat is too long, unclear what to do"). On the floor the mission has now the road is the one way from the
+    //      roadblock to the gate, so the walk with the word taken off is the same road and is only told; the run that must be long is the third, where the
+    //      script's men are kept at their sandbags: the line is gone because they came, not because the step lets go of it
+    { const beat = async (how: 'direct' | 'plain' | 'kept') => { const plain = how === 'plain'; const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, km = L.steps.findIndex((T: any) => T.id === 'move'), kg = L.steps.findIndex((T: any) => T.id === 'gate');
         R.run(6); g.lesson.i = km; R.run(0.5); R.command(L.steps[km].at as V);
-        const seen = new Set<unknown>(); let t0 = -1, t1 = -1;
+        const seen = new Set<unknown>(), home = new Map<unknown, number[]>(); let t0 = -1, t1 = -1;
         for (let i = 0; i < 60 * 60 && t1 < 0; i++) {
-          if (plain) for (const gd of g.guards as any[]) if (/^Tango [678]$/.test(gd.callsign ?? '') && gd.script?.direct) { gd.script.direct = false; if (!seen.has(gd)) { seen.add(gd); gd.path = []; gd.pathGoal = null; } }
+          if (plain) for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '') && gd.script?.direct) { gd.script.direct = false; if (!seen.has(gd)) { seen.add(gd); gd.path = []; gd.pathGoal = null; } }
+          if (how === 'kept') for (const gd of g.guards as any[]) if (/^Tango (8|9|10)$/.test(gd.callsign ?? '')) { const at = home.get(gd) ?? [gd.char.pos[0], gd.char.pos[2]]; home.set(gd, at); gd.char.pos[0] = at[0]; gd.char.pos[2] = at[1]; }   // (alive, armed, and where they stood)
           R.run(1 / 60); if (t0 < 0 && g.lesson.i === kg) t0 = g.time; if (t0 >= 0 && g.lesson.i > kg) t1 = g.time; }
         return { secs: t0 < 0 ? -1 : t1 < 0 ? 99 : t1 - t0, up: R.squad().length, nav: g.col.nav }; };
       const { LANES } = await import(`${ROOT}/src/game/lanes.ts`);   // (covered lanes are a newer rule: where the stand holds them off there is no price to take the word off)
-      const A = await beat(false), B = await beat(true);
-      const way = A.nav.findPath([30, 0, 23.6], [19.6, 0, 21.2], 6000) as number[][] | null; let m = 0; if (way) { let q = [30, 0, 23.6]; for (const w of way) { m += flat(q, w); q = w; } }
-      verdict(A.secs >= 0 && A.secs <= 8 && A.up === 4 && (B.secs > 12 || !LANES.on) && !!way && m < 20,
-        'the gate\'s beat is short: the squad set in the yard, the roadblock comes down the road and the line that only watches is gone within eight seconds, all four on their feet (and is long with the script\'s direct walk taken off its men)',
-        `the gate's line stood ${A.secs.toFixed(1)} s, ${A.up} of the squad up · with the direct walk off ${B.secs.toFixed(1)} s${LANES.on ? '' : ' (covered lanes are off on this stand: no contrast)'} · the road from the roadblock to the gate ${way ? m.toFixed(1) + ' m' : 'has no path'}`); }
+      const A = await beat('direct'), B = await beat('plain'), C = await beat('kept');
+      const way = A.nav.findPath([30, 0, 23.6], [14.6, 0, 19.2], 6000) as number[][] | null; let m = 0; if (way) { let q = [30, 0, 23.6]; for (const w of way) { m += flat(q, w); q = w; } }
+      verdict(A.secs >= 0 && A.secs <= 8 && A.up === 4 && B.secs >= 0 && B.secs <= 8 && C.secs > 12 && !!way && m < 20,
+        'the gate\'s beat is short: the squad set in the yard, the roadblock comes down the road and the line that only watches is gone within eight seconds, all four on their feet (as short with the script\'s direct walk taken off its men: the road is the one way there; and long with them kept at their sandbags)',
+        `the gate's line stood ${A.secs.toFixed(1)} s, ${A.up} of the squad up · with the direct walk off ${B.secs.toFixed(1)} s${LANES.on ? '' : ' (covered lanes are off on this stand)'} · with its men kept at their sandbags ${C.secs.toFixed(1)} s · the road from the roadblock to the gate ${way ? m.toFixed(1) + ' m' : 'has no path'}`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
       const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };
@@ -298,7 +301,7 @@ export async function railsCheck(): Promise<boolean> {
         `step '${step}' · the mark on the view (0,0 top left, 1,1 bottom right), key held → let go: ${rows.map(r => `${r.near ? 'near ' : ''}${r.k} ${word(r.held)} → ${word(r.let_)}`).join(' · ')} · out while held ${out}/${rows.length}, back in ${back}/${rows.length}`); }
     // ---- 13: the menu lists only the mission's orders
     { const R = await rig(true), g = R.g; R.run(0.5); const ids = (p: number[]) => g.orders.rowsFor(g.orders.targetAt(p)).map((d: any) => d.id).join(' ');
-      const door = ids([17.0, 1.0, 11.2]), yard = ids([17.6, 0.02, 20.4]), wall = ids([27.95, 1.1, 9.4]);
+      const door = ids([9.0, 1.0, 11.7]), yard = ids([11.4, 0.02, 16.4]), wall = ids([21.95, 1.1, 9.6]);
       verdict(door === 'stack' && yard === 'move go' && (wall === 'move go walltools' || wall === 'move go'),   // (the wall's tools are a switch of their own: held off on the frozen stand)
         'the squad\'s menu lists only the orders the mission names: a door has the stack, the yard the move and the word, the store\'s wall its tools as well where the stand has them, and nothing else is on the ring',
         `door: ${door} · yard: ${yard} · wall: ${wall}`); }

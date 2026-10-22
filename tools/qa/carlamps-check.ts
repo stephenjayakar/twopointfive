@@ -38,7 +38,7 @@ const KNOWN: Record<string, [number, number, number][]> = {
   'floodlit.json': [[2, 2, 2]], 'floodlit-gwot.json': [[2, 2, 2]], 'glasshouse.json': [[2, 2, 0]], 'gwot-yard.json': [[4, 4, 0]], 'mousehole.json': [[4, 4, 4]],
   'mousehole-gwot.json': [[4, 4, 4]], 'office.json': [[4, 4, 4]], 'office-relief.json': [[4, 4, 4]], 'pass.json': [[2, 0, 0], [4, 2, 0]], 'police-post.json': [[6, 6, 0]],
   'quiet-relay.json': [[6, 6, 0]], 'records.json': [[4, 4, 4]], 'records-gwot.json': [[4, 4, 4]], 'snatch.json': [[4, 4, 0]], 'train-hands.json': [[2, 2, 0]],
-  'train-move.json': [[6, 6, 0]], 'train-silent.json': [[2, 2, 0]], 'tut-sky.json': [[8, 6, 0], [10, 8, 0]],   // (the pass's own, the squad's two pickups and the roadblock's gun truck)
+  'train-move.json': [[6, 6, 0]], 'train-silent.json': [[2, 2, 0]], 'tut-sky.json': [[8, 6, 0], [10, 8, 0]],   // (the squad's two pickups and the roadblock's gun truck)
   'tut-solo.json': [[4, 4, 0]],
   'tut-squad.json': [[4, 4, 0]], 'tut-quiet.json': [[2, 2, 0]], 'tut-plan.json': [[2, 2, 0]], 'tut-pair.json': [[18, 18, 0]],
 };
