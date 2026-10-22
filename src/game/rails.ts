@@ -223,10 +223,12 @@ export class Rails {
   // ---------------------------------------------------------------- the prompt
   /** the one line on screen (null: no rails, every step done, the run over) */
   prompt(): { line: string; n: number; of: number } | null {
-    const S = this.lesson(); if (!S || S.i >= S.L.steps.length) return null;
-    if (!this.g.lesson.objective()) return null;
-    const T = S.L.steps[S.i];
-    return { line: stepLine(T), n: S.i + 1, of: S.L.steps.length };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
+    const S = this.lesson(), of = S?.L.steps.length ?? 0; if (!S || !of) return null;
+    // (every step done and the mission not yet over — the last metre to an exit, the last man of a fight: the last line stays up until the mission's own
+    //  end. The small row it would fall back to is the one a tutorial mission never shows)
+    if (S.i >= of ? BREAK || this.g.lesson.over() : !this.g.lesson.objective()) return null;
+    const i = Math.min(S.i, of - 1);
+    return { line: stepLine(S.L.steps[i]), n: i + 1, of };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 
   // ---------------------------------------------------------------- nobody is lost

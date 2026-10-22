@@ -20,7 +20,7 @@
 //  14. THE ROWS (`rails.rows`, on levels/tut-quiet.json): Space offers only the verbs the mission names — at a locked door the pick and no boot; without
 //      the list, every row the door has anywhere; and no row at all while Space itself is locked (the gate beside the start). And his own actions' ring (handring.ts) is worked with its own digit while it is up: on the whistle's
 //      step the digit alone does nothing, the key kept down and then the digit whistles.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14 must fail.   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14 and the last line's must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -130,6 +130,13 @@ export async function railsCheck(): Promise<boolean> {
       verdict(!!at && on === at && off === null && g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === 0,
         'the ring on the screen is the place it marks (the cursor on it is on that place, off it is not), and with the fog of war on from the first step the lookout has the men on the road in the picture and nobody in a room',
         `step '${g.lesson.step?.id}' mark ${at ? at.join(',') : 'none'} · cursor on the ring → ${on ? 'the place' : 'nothing'}, 140 px off → ${off ? 'the place' : 'nothing'} · fog ${g.fogOfWar.active ? 'on' : 'off'} · on the road ${seenRoad}/${road.length} drawn · in the house ${seenHouse}/${house.length} drawn`); }
+    // ---- the last line stays up until the mission's own end
+    { const R = await rig(true), g = R.g; R.run(0.5); const L = g.level.scenarios.lesson, n = L.steps.length, first = g.rails.prompt();
+      g.lesson.i = n; const fin = g.lesson.finished, over = g.lesson.over(), last = g.rails.prompt();   // (every step done, the room clear still running)
+      const was = g.roomClear.end; g.roomClear.end = 'taken'; const ended = g.rails.prompt(); g.roomClear.end = was;
+      verdict(first?.n === 1 && fin && !over && last?.line === L.steps[n - 1].line && last?.n === n && last?.of === n && ended === null,
+        'the last line stays up: with every step done and the mission still running the big line is the last step\'s, not the small row; once the mission is over there is none',
+        `first up ${first?.n}/${first?.of} · every step done ${fin}, mission over ${over} → the line "${last?.line ?? 'none'}" (${last?.n ?? '-'}/${last?.of ?? '-'}) · mission over → ${ended ? `"${ended.line}"` : 'none'}`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
       const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };
