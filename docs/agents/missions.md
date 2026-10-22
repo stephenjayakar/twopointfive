@@ -230,7 +230,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     ON THE JOIN: the scripted player ends all fifteen steps on seeds 1 to 7 on the page's stand, and on seeds 1 to 5 again on the build that carries
     the flinch at close fire (130 to 137 s of play). The real page was played on this floor twice on the software adapter before the join (all fifteen
     steps by a hand's keys, no red line, no page error). NOBODY HAS seen it on a GPU; the red of the beacons is seen from the lights going out until the
-    goggles come on, and again on the walk back, where the frame lifts the goggles.
+    goggles come on, and again on the walk back, where the frame lifts the goggles. ITS ROW NAMES THE NIGHT (`hour: 'night'`, the `ROWSET` rule, `?rowset=0` off): the
+    mission's last third is the mains going out, so a visitor's standing pick of another hour no longer opens it by day; no weather is named (a snow
+    level's own stands). `rowset-check` green on both stands with its break red, two seeds of the scripted player after it.
     MEASURED: the scripted player ends all fifteen steps on the page's stand on seeds 1 to 7 in 129 to 140 s of play; the first man with a
     torch is hit two to three and a half seconds after the bunkhouse says it is coming, by the lorry's tail; the second often stays behind the lorry and is
     the last room's fight. `PORT=<port> node tools/qa/tut-page.cjs` (software adapter, a hand's own keys and mouse) played all fifteen steps to the
