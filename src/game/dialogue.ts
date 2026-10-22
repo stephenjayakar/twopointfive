@@ -1703,7 +1703,7 @@ function radioState(g: Game): RadioState {
 }
 /** the run is really the player's and still going (mission.ts missionLive's test, without the import cycle), and Sam is on his feet — and (words.ts) it is the night
  *  she talks him through: with a squad's scenario up (a night breach, a room clear, a rescue) her dry asides about his knees are not that fight's */
-function radioLive(g: Game): boolean { const s = g.mission.stage; return !g.quietUtility && !g.puppet && !g.touring && g.aiEnabled && s !== 'done' && s !== 'failed' && !g.player.down && !(WORDS.on && (g.nightBreach?.active || g.rescue?.active)); }
+function radioLive(g: Game): boolean { const s = g.mission.stage; return !g.quietUtility && !g.puppet && !g.touring && g.aiEnabled && s !== 'done' && s !== 'failed' && !g.player.down && !(WORDS.on && (g.nightBreach?.active || g.rescue?.active)) && !(WORDS.radioHome && !isOffice(g.level)); }
 /** nobody is fighting, and Sam's mouth and hands are free */
 function radioClear(g: Game): boolean { return !g.guards.some(x => x.state === 'alert') && !g.player.holding && !g.player.takedown; }
 /** Sound a beat now (delay 0) or queue it `delay` seconds out (re-checked when it comes due). False if it will never sound: said already this run, the run is

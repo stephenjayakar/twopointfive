@@ -5,9 +5,9 @@
 //        x 5      8       13  15.5        22  23.4  27.2      31     35
 //   z 5  ┌──────────────────────────── back gate ──────────────────┐
 //        │      ┌───────┐   ┌───────────┐ alley ▐    mast,         │  the
-//        │      │guard  │   │ workshop  side    ▐    generator     │  picket
+//        │      │guard  │  door workshop  side    ▐    generator     │  picket
 //        │      │hut (1)│   │   (1)     door    ▐                  │  (3)
-//   z 11 │      └──door─┘   └────door───┘ ▌     ▐                  │
+//   z 11 │      └──door─┘   └───────────┘ ▌     ▐                  │
 //  track        the street ────────────── ▌wall         ▐nest (2)   road
 //  gate   SAM →                           ▌      ▪blocks▐           gate
 //   z 16.5      ┌──door─┐    the motor    way ┌──win──win────────┐ │
@@ -17,15 +17,18 @@
 //
 // THE HAND PLACEMENT, AND WHY
 //   · the guard hut and the store are the two EASY rooms, door to door across the street: one man, then two, each on the mark a door's first man sees.
-//   · the workshop has TWO doors on different walls. Its man holds the street door: he hears the stack through the leaf and puts rounds through it. The
-//     answer is the side door, at his back: he is still on the door he heard you at.
+//   · the workshop has TWO doors on opposite walls. The one that faces the guard hut across the lane between them STANDS OPEN on the tutorial's rails
+//     (the level's script swings it in), and its man holds that doorway from the far end of the room. Once the store has fallen he puts rounds out of
+//     it onto the hut's wall, where the squad went in first: he, the doorway and his rounds are all there to be
+//     looked at from the street in front of the workshop, where a step walks the player. The answer is
+//     the side door, at his back, and the way to it is along the street: no part of it is in the line of the doorway he holds.
 //   · THE WALL stands across the street: everything west of it is out of the nest's sight, so the first three rooms are learnt with no gun on them. The only
 //     way on is round its end, and there the gun looks straight down the street. Rounds past the gunner's head put it down; while it is down a man can make
 //     the blocks. The nest is open to the sky: what finishes it is a grenade over the bags.
 //   · the hall's door is locked and nobody was issued a charge for it. It is on the far face, in the passage past the nest, so nobody stands at it
 //     while the nest is being fought. Its two men stand in the corners of the door's own wall, where the doorway shows nothing and a man who walks in
 //     is between them; the one street window looks straight at both. So the room is cleared from outside, through the open window, and only then is the leaf
-//     shot down and walked through.
+//     kicked in and walked through.
 //   · the picket comes by two gates at once: one man by the road gate, in front; two by the back gate, down the alley, behind whoever is still looking at
 //     the road. Who comes: the post's own picket, camped up the road (the mast in the yard is what calls it).
 //
@@ -114,10 +117,10 @@ export function build() {
   grp('store.room');
   G.sacks(8.7, 20.8, 0, 3); G.sacks(10.0, 20.9, 0.2, 2); G.crates(12.3, 20.7, 0, 2); G.drums(12.3, 17.3, 2); G.lantern(8.5, 17.0, 'lantern_store', 'store', 0);
 
-  // ---- the workshop: two doors on different walls. Its man holds the street door ----
-  const SHOP = hut({ x0: 15.5, z0: 6.5, x1: 22, z1: 11, kind: 'render', floor: 'slab', doors: [{ name: 'workshop', side: 's', at: 17.6 }, { name: 'workshop_side', side: 'e', at: 7.4 }] });
+  // ---- the workshop: two doors on opposite walls. The script stands the lane door open, and its man holds that doorway from the far end of the room ----
+  const SHOP = hut({ x0: 15.5, z0: 6.5, x1: 22, z1: 11, kind: 'render', floor: 'slab', doors: [{ name: 'workshop', side: 'w', at: 7.9 }, { name: 'workshop_side', side: 'e', at: 7.4 }] });
   grp('workshop.room');
-  G.table(16.2, 7.6, 1.8, 0.7, HALF, 'ply'); G.drum(16.1, 10.4, 'rust'); G.tyres(21.4, 10.4, 3); G.generator(20.2, 10.2, 0);   // (nothing stands between the side door and the man on the street door)
+  G.table(18.0, 6.98, 1.8, 0.7, 0, 'ply'); G.drum(16.1, 10.4, 'rust'); G.tyres(21.4, 10.4, 3); G.generator(20.2, 10.2, 0);   // (nothing stands between the side door and the man on the lane doorway, nor in his line out of it; the bench is on the back wall, clear of the leaf)
    G.tube(18.8, 8.6, true, 'workshop'); G.jerryCan(20.9, 7.0);
 
   // ---- the street's furniture: where a pair waits, the barrier, the nest ----
@@ -157,7 +160,16 @@ export function build() {
 
   // ---- what the room clear takes from this level ----
   // (a doorway is the kit's 0.9 m frame inside the 1.2 m hole: its middle is 0.85 m past the door's `at`)
-  const D_STORE: Vec3 = [10.85, 1.1, 16.62], D_SHOP: Vec3 = [18.45, 1.1, 10.88], D_HALL: Vec3 = [32.28, 1.1, 19.75], IN_HALL: Vec3 = [31.4, 1.1, 19.75], STREET: Vec3 = [24.6, 1.1, 13.8];
+  const D_STORE: Vec3 = [10.85, 1.1, 16.62], D_HALL: Vec3 = [32.28, 1.1, 19.75], IN_HALL: Vec3 = [31.4, 1.1, 19.75], STREET: Vec3 = [24.6, 1.1, 13.8];
+  // the workshop man's line: from his mark at the far end of the room, through the middle of the open lane doorway, to the guard hut's wall across the lane
+  const SHOP_FIRE: Vec3 = [19.3, 0, 8.52], D_SHOP: Vec3 = [15.5, 1.1, 8.75], SHOP_AIM: Vec3 = [13.0, 1.0, 8.9];
+  // (where the player is walked to look: the street in front of the workshop, its wall between him and the room. His rounds go out of the far doorway,
+  //  away from here; the room is seen over its wall by the fog's lookout, which stands behind the man and looks down his line — the room, the open
+  //  doorway, the strip of lane and the hut's wall the rounds land on. From the mouth of the lane, tried first, the side door was off the screen)
+  const SHOP_VIEW: Vec3 = [18.3, 0, 12.3];
+  const SHOP_EYE = { at: [21.5, 1.6, 8.5] as Vec3, yaw: Math.atan2(SHOP_AIM[0] - SHOP_FIRE[0], SHOP_AIM[2] - SHOP_FIRE[2]), fov: 110 };
+  const LANE_C: Vec3 = [(SHOP_FIRE[0] + SHOP_AIM[0]) / 2, 1, (SHOP_FIRE[2] + SHOP_AIM[2]) / 2], LANE_LEN = Math.hypot(SHOP_AIM[0] - SHOP_FIRE[0], SHOP_AIM[2] - SHOP_FIRE[2]);
+  const LANE_YAW = Math.atan2(-(SHOP_AIM[2] - SHOP_FIRE[2]), SHOP_AIM[0] - SHOP_FIRE[0]);   // (a volume's own x along the line: director.ts insideVolume)
   const D_SIDE: Vec3 = [22.0, 1, 8.25], END: Vec3 = [22.5, 0, 17.5], BLOCKS: Vec3 = [26.6, 0, 16.1], BAGS: Vec3 = [30.2, 0, 13.8], MOUTH: Vec3 = [25.0, 0, 10.6], LANE: Vec3 = [37.4, 1.1, 9.6];   // (the way round the blast wall's end to the road gate: what the picket looks at from its camp)
   // the picket's camp: outside the yard, up the road, behind the wall from everything inside it
   const ROAD: Rect = { x0: 35.3, x1: 39.7, z0: 6.0, z1: 13.0 };
@@ -171,9 +183,9 @@ export function build() {
         marks: [{ pos: [9.0, 0, 8.3], watch: 'guardhut', aimAt: [8.4, 1.1, 6.7] }] },   // (his back to the door: the first room is the squad's to win)
       { id: 'store', name: 'the store', bounds: { ...STORE }, garrison: 2, doors: [{ id: 'store', from: 'street' }],
         marks: [{ pos: [8.8, 0, 18.6], watch: 'store', aimAt: [8.3, 1.1, 20.8] }, { pos: [12.2, 0, 19.2], watch: 'store', aimAt: D_STORE }] },   // (one on the door, one counting sacks)
-      // one man, on the mark that covers the street door from the far end of the room with the side door at his left shoulder
-      { id: 'workshop', name: 'the workshop', bounds: { ...SHOP }, garrison: 1, doors: [{ id: 'workshop', from: 'street' }, { id: 'workshop_side', from: 'alley' }],
-        marks: [{ pos: [18.2, 0, 7.3], watch: 'workshop', aimAt: D_SHOP }] },
+      // one man, on the mark that covers the lane door from the far end of the room, the side door at his back
+      { id: 'workshop', name: 'the workshop', bounds: { ...SHOP }, garrison: 1, doors: [{ id: 'workshop', from: 'lane' }, { id: 'workshop_side', from: 'alley' }],
+        marks: [{ pos: SHOP_FIRE, watch: 'workshop', aimAt: D_SHOP }] },
       // the gunner and his mate behind the bags, both guns down the street: one hit does not end it, one grenade does
       { id: 'nest', name: 'the nest', bounds: { x0: 30.2, x1: 34.6, z0: 11.4, z1: 16.2 }, garrison: 2, doors: [{ id: 'gate_e', from: 'road' }],
         marks: [{ pos: [32.0, 0, 13.3], watch: 'gate_e', aimAt: STREET }, { pos: [32.0, 0, 14.4], watch: 'gate_e', aimAt: STREET }] },
@@ -199,6 +211,20 @@ export function build() {
   const taken = (room: string) => ({ is: 'taken', room }), or = (...of: object[]) => ({ is: 'any', of }), and = (...of: object[]) => ({ is: 'all', of });
   const near = (at: Vec3, r = 1.5) => ({ is: 'near', at, r }), gave = (order: string, on?: string) => ({ is: 'did', what: `order:${order}`, ...(on ? { on } : {}) });
   const ALLEY: Rect = { x0: 22.2, x1: 27.0, z0: 5.3, z1: 10.6 };
+  const HALL_FRONT: Vec3 = [34.0, 0, 19.75], HALL_OPEN = or({ is: 'door', door: 'hall', state: 'open' }, { is: 'door', door: 'hall', state: 'unlocked' });   // (the passage, square on to the leaf)
+  // THE CARDS (the frame's `explain`: the page stops on one as its step comes up, Enter closes it, and then the line, the ring and the cue). One for each
+  // SYSTEM the mission shows, never for a key alone (the first is what each of the squad's two keys does at a stacked door): what the other side is doing and why the answer is the answer, in two sentences, on a step whose test
+  // cannot already be true as it comes up (the maintainer, playing the first cut: "i think this needs more explanation for the systems. maybe even a
+  // modal that pauses the game and explains it", and the window's card is his own sentence)
+  const CARDS = {
+  entry: { title: 'Two ways in', text: 'Stacked on a door, they wait for your word.\n[B] again: they choose how. A flashbang goes in first if the room is held or unknown and they have one to spare.\n[F]: straight in from where they stand, and never a flashbang.' },
+    side: { title: 'A doorway he holds', text: 'A man who holds a doorway shoots whoever shows in it.\nMost rooms have another door. Send the squad to the one at his back.' },
+    follow: { title: "The squad's ring", text: 'A tap of [B] gives the plain order for whatever you point at.\nKept down, the same key opens a ring with the rest of them.' },
+    gun: { title: 'Suppression', text: 'A man under fire keeps his head down, and a man with his head down is not shooting.\nPut rounds on the gun, then move while it is down.' },
+    frag: { title: 'Grenades', text: 'Sandbags stop a rifle. A grenade goes over them.\nIt does to you what it does to them: throw it from cover, and not close.' },
+    window: { title: 'From outside', text: 'Two men wait either side of that door for whoever walks in.\nYou can shoot through a window. It is often safer to clear a room from outside than to go in.' },
+    back: { title: 'Flanked', text: 'While one man holds your eyes, the others walk round behind you.\nDo not turn everybody: send part of the squad to cover the other way.' },
+  };
   // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = the frame keeps one as it
   // comes up (the start of a fight, never the middle of one). A key is written by the game's own code letter in brackets: the page draws the player's key.
   const lesson = {
@@ -209,28 +235,40 @@ export function build() {
     steps: [
       // 1 · two easy rooms: the squad's key on a door, twice
       { id: 'stack-hut', line: '[B] on the guard hut door', done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
-      { id: 'go-hut', line: '[B] again: they go in', done: taken('guardhut'), at: [10.85, 1, 11.0] },
+      { id: 'go-hut', line: '[B] again: they choose how, and go in', explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
       { id: 'stack-store', line: '[B] on the store door', done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
       { id: 'go-store', line: '[B] again. Follow them in', done: and(taken('store'), { is: 'in', area: { ...STORE } }), at: [10.85, 1, 18.6] },
-      // 2 · THEY KNOW WHERE YOU WERE: the workshop's man shoots through the door he heard the stack at. The answer is the other door
-      { id: 'stack-shop', line: '[B] on the workshop door', done: or({ is: 'stackOn', who: 'all', door: 'workshop', set: true }, taken('workshop')), at: [18.45, 1, 11.0], checkpoint: 'the street' },
-      { id: 'side', line: 'He shoots through it. Go round', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, cue: 'shop' },
-      { id: 'shop', line: '[Space]: open the side door', done: taken('workshop'), at: D_SIDE },
+      // 2 · A DOORWAY HE HOLDS: as the store falls the workshop's man is on his open lane doorway, in the picture through the fog, his rounds on the
+      //     guard hut's wall; the fog has a lookout behind him while these steps are up, so his room, the doorway and the strip of lane his rounds
+      //     cross are seen too. The player is walked out to the street in front of the workshop (from inside the store none of it is on his screen):
+      //     from there the room is above him and BOTH its doors are on the screen. The answer is the other door: the squad sent to it from where he
+      //     stands (the ring is the door: an order pointed at the ring is an order on it), the walk round after them, and in at the man's back
+      { id: 'out', line: 'Shots outside. Out to the street', done: or(near(SHOP_VIEW, 1.5), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street', eye: SHOP_EYE },
+      { id: 'side', line: 'He has that doorway. [B] on the side door', explain: CARDS.side, done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
+      { id: 'round', line: 'Go round with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
+      { id: 'shop', line: '[B] again: in behind him', done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
-      { id: 'wall', line: "[X], [3]: they follow. To the wall's end", done: or(and(or({ is: 'following' }, gave('fallIn')), near(END, 1.6)), taken('nest')), at: END, checkpoint: 'the wall', allow: ['menu', 'ring'] },
-      { id: 'gun', line: 'A gun. Shoot back: it ducks', done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), at: [31.6, 1.2, 13.8], cue: 'gun' },
+      // (the held key is its own step, and a TAP of the squad's key gives nothing while it is up — the frame's `noTap`: tapped at the old one line, the
+      //  key sent the four to the ring at the wall's end and the menu was never met)
+      { id: 'follow', line: '[X], [3]: they follow', explain: CARDS.follow, noTap: 'Keep [B] held down', done: or({ is: 'following' }, gave('fallIn'), taken('nest')), checkpoint: 'the wall', allow: ['menu', 'ring'] },
+      { id: 'wall', line: "To the wall's end", done: or(near(END, 1.6), taken('nest')), at: END },
+      // (no ring on the nest while the line says shoot: a ring is where to GO. The gunner is in the picture through the fog, and his rounds say where he is)
+      { id: 'gun', line: 'A gun. Shoot back: it ducks', explain: CARDS.gun, done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), cue: 'gun' },
       { id: 'blocks', line: 'While it is down: run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS, cue: 'ducks' },
-      { id: 'frag', line: '[5], left button: a frag over the bags', done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },
+      { id: 'frag', line: '[5], left button: a frag over the bags', explain: CARDS.frag, done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },
       { id: 'nest', line: 'Take the nest', done: taken('nest'), at: [32.0, 1, 13.8], cue: 'fragged' },
-      // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A DOOR IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
-      //     leaf is shot down, and it is the way in
-      { id: 'window', line: 'Two wait inside. Shoot through the window', done: taken('hall'), at: [31.1, 1.4, 16.9], checkpoint: 'the hall' },
-      { id: 'lock', line: 'Locked. Shoot the door down', done: or({ is: 'door', door: 'hall', state: 'open' }, { is: 'door', door: 'hall', state: 'unlocked' }), at: [32.6, 1, 19.75] },
+      // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A LOCK IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
+      //     leaf is kicked in, and it is the way in
+      { id: 'window', line: 'Two wait inside. Shoot through the window', explain: CARDS.window, done: taken('hall'), at: [31.1, 1.4, 16.9], checkpoint: 'the hall' },
+      //     (the walk to the door is a step of its own: from the window the leaf is edge on, and a player told to open it tried from there. And the first
+      //      way through a lock anybody is shown is the boot: rounds through a door are for a door nobody can walk up to)
+      { id: 'door', line: 'The door is locked. Go round to it', done: or(near(HALL_FRONT, 1.7), HALL_OPEN), at: [HALL_FRONT[0], 1, HALL_FRONT[2]] },
+      { id: 'lock', line: 'Hold [Space] on the door: kick it in', done: HALL_OPEN, at: [32.6, 1, 19.75] },
       { id: 'hall', line: 'Walk in', done: { is: 'in', area: { ...HALL } }, at: [31.0, 1, 19.75] },
       // 5 · MORE COME, AND NOT ALL BY ONE WAY: one man at the road gate holds your eyes while two walk round to the back gate
       { id: 'bags', line: 'More are coming. Behind the bags', done: or(near(BAGS, 1.6), taken('road')), at: BAGS, checkpoint: 'the bags' },
       { id: 'front', line: 'Hold the road gate', done: or({ is: 'cue', name: 'flank' }, taken('road')), at: [35.0, 1, 14.0], cue: 'picket' },
-      { id: 'back', line: 'Behind you! [X] on the alley, then [2]', done: or(gave('cover'), taken('road')), at: MOUTH },
+      { id: 'back', line: 'Behind you! [X] on the alley, then [2]', explain: CARDS.back, noTap: 'Keep [B] held down', done: or(gave('cover'), taken('road')), at: MOUTH },
       { id: 'hold', line: 'Finish the picket', done: taken('road'), at: [35.0, 1, 14.0], cue: 'covered' },
     ],
   } as LessonData;
@@ -241,12 +279,19 @@ export function build() {
     breaker, beacons: [{ pos: [20.3, 2.05, 5.3], box: dome }],
     playerSpawn: [6.4, 0, 14.0], routes: [], chokepoints: [], clearPlans: [],
     sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.045, 0.05, 0.07] },
+    // (the script's eyes: a play program may ask of the team only whether one of them stands in a volume. The workshop man's line out of his doorway — wide,
+    //  where no round of his is put while anybody is in it; narrow, where he would truly see a man who stays — and the room itself with its threshold)
+    volumes: [
+      { name: 'shop_lane', kind: 'trigger', c: LANE_C, h: [LANE_LEN / 2 + 0.6, 1, 1.3], yaw: LANE_YAW },
+      { name: 'shop_line', kind: 'trigger', c: LANE_C, h: [LANE_LEN / 2, 1, 0.4], yaw: LANE_YAW },
+      { name: 'shop_in', kind: 'trigger', c: [(SHOP.x0 + SHOP.x1) / 2, 1, (SHOP.z0 + SHOP.z1) / 2], h: [(SHOP.x1 - SHOP.x0) / 2 - 0.12, 1, (SHOP.z1 - SHOP.z0) / 2 - 0.12] },
+    ],
     mission: { serverRoom: { ...HALL }, entryDoor: 'hall', rack: { index: 0, front: [31.0, 1.0, 19.6], halfW: 0.3 }, exfilDoor: 'gate_e', exfilX: 35.8, exfilZ: 14.0, exfilOut: [1, 0] },
   };
   const surfaces: SurfacesData = { building: { ...YARD }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt', zones };
   const scenarios: LevelScenarios = {
     roomClear, lesson,
-    places: { areas: [{ name: 'street', bounds: { x0: 5, x1: 30.2, z0: 11, z1: 16.5 } }, { name: 'alley', bounds: { x0: 22, x1: 27, z0: 5, z1: 11 } }, { name: 'motor yard', bounds: { x0: 13, x1: 25.5, z0: 16.5, z1: 23 } }] },
+    places: { areas: [{ name: 'street', bounds: { x0: 5, x1: 30.2, z0: 11, z1: 16.5 } }, { name: 'lane', bounds: { x0: 13, x1: 15.5, z0: 5, z1: 11 } }, { name: 'alley', bounds: { x0: 22, x1: 27, z0: 5, z1: 11 } }, { name: 'motor yard', bounds: { x0: 13, x1: 25.5, z0: 16.5, z1: 23 } }] },
     doorNames: [{ door: 'gate_w', name: 'track gate' }, { door: 'gate_e', name: 'road gate' }, { door: 'gate_n', name: 'back gate' }, { door: 'workshop_side', name: 'workshop side door' }],
   };
   return { level, scenarios, groups: trace.groups, surfaces };

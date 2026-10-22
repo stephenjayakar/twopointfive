@@ -29,6 +29,7 @@
 //   fightOk?: string[]                         step ids a fight on the floor may finish before the player does (a line inside a live fight: the room can fall
 //                                              while it is up, or before it comes up; said why in the script). Such a step is logged as gone by with the fight
 //   mode?: { unseen?: boolean; god?: boolean; moon?: boolean }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god)
+//   raises?: Record<string, string>   words raised for this lesson's run alone on the frozen stand, put back after it (a switch the level's one way on rides on)
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';
@@ -95,7 +96,14 @@ function tutorial(file: string): boolean { try { return /"rails"\s*:/.test(readF
 export interface LessonRunOpts { seed?: number; unseen?: boolean; god?: boolean; plain?: boolean; verbose?: boolean; digest?: boolean; lesson?: boolean; moon?: boolean; hard?: boolean; floor?: number }
 export interface LessonRunOut { code: 0 | 1 | 2; why: string; lines: string[]; digest?: string; steps: { id: string; t: number }[]; secs: number }
 
+/** A scripted player may name the words its level cannot be played without on the frozen stand (`raises`, e.g. a switch its one door row rides on). They are
+ *  raised for that run alone and put back after it: said at the script's own import they stayed up for every row the same process played next */
 export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<LessonRunOut> {
+  const scriptFile = resolve(import.meta.dir, 'lessons', `${name}.ts`), up: string[] = [];
+  if (existsSync(scriptFile) && process.env.TPS_PROFILE !== 'shipped') for (const [k, v] of Object.entries(((await import(scriptFile)).raises ?? {}) as Record<string, string>)) if (process.env[k] === undefined) { process.env[k] = v; up.push(k); }
+  try { return await playLesson(name, o); } finally { for (const k of up) delete process.env[k]; }
+}
+async function playLesson(name: string, o: LessonRunOpts = {}): Promise<LessonRunOut> {
   const lines: string[] = [], out: LessonRunOut = { code: 0, why: '', lines, steps: [], secs: 0 };
   const file = resolve(ROOT, 'levels', `${name}.json`), scriptFile = resolve(import.meta.dir, 'lessons', `${name}.ts`);
   if (!existsSync(file)) return { ...out, code: 2, why: `no levels/${name}.json` };

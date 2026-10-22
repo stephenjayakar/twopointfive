@@ -455,6 +455,9 @@ export interface GuardScript { goal: Vec3 | null; speed?: number; face?: number 
    *  shift to cover, which are the AI's; his feet stay the choreographer's). Off by default: the runner's men are otherwise deaf to fire, as they always were. The day showcase's
    *  firefight orders it on both sides (director.ts OrderPatch; the removed day showcase ordered it). */
   flinch?: boolean;
+  /** his walk to `goal` is the script's own way: the short one, not priced by the lanes his side knows are covered (lanes.ts lanePenalty). A staged advance
+   *  down a road the other side has guns on: without it he goes round, as a man left to himself would (director.ts OrderPatch). */
+  direct?: boolean;
   /** his muzzle taken off the order by his own read of the fight (roomfight.ts): while set the runner aims at `aimAt` with the gun up — whatever aimAt / upper /
    *  stance the order holds, which are left exactly as ordered and take over again the frame this is cleared — and, `face` given, squares him up to it where he stands */
   over?: { aimAt: Vec3; face: number | null; walk?: boolean } | null; }

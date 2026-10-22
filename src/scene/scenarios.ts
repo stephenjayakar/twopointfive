@@ -242,6 +242,9 @@ export interface LessonStep {
   hold?: number;
   /** where the HUD's marker points while the step is up (absent: no marker) */
   at?: Vec3;
+  /** the marker rides on a MAN instead: the one on the patrol route of this name, while he is on his feet (then `at`, if the step has one) — 'come up
+   *  behind him': which him */
+  atMan?: string;
   // ---- on a rails level only (game/rails.ts; a lesson without `rails` carries none of these) ----
   /** actions this step turns on, for the rest of the mission · actions it turns off again */
   allow?: string[]; deny?: string[];
@@ -263,6 +266,9 @@ export interface LessonStep {
   /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no
    *  longer kept in the picture), and `nv: false` puts the night vision up for the walk out */
   onWay?: { nv?: boolean };
+  /** (rails) THE LINE ONCE THE ORDER IS GIVEN: while the men carry out what the step asks for, the line says what they are doing and never asks again
+   *  (`line`, for RAILS.afterSecs after an order — one of `on`, or any but the word — went out on this step; `word`: the line once the word has been given) */
+  after?: { line?: string; on?: string[]; word?: string };
 }
 /** A TUTORIAL MISSION'S FRAME over a lesson (game/rails.ts): what the player can do at all, and what nobody can lose */
 export interface RailsData {
