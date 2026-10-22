@@ -1,14 +1,20 @@
-// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand: six settings to play with (Options > Game; ui/findme.ts draws the ring, hands
+// FINDING YOUR OWN MAN ON THE SCREEN, and how the camera answers the hand: nine settings to play with (Options > Game; ui/findme.ts draws the ring, hands
 // the renderer the outline's frame and builds the rows). Every one starts where the game stood before it had them, on the page and on both of the harness's
-// stands: nothing here is a new default, and with all six as they start the build is the build as it was. (One more is SHELVED, 2026-10-20: his shape
+// stands: nothing here is a new default, and with all nine as they start the build is the build as it was. (One more is SHELVED, 2026-10-20: his shape
 // through a wall. A kept line that still names it reads as if it did not: ui/findme.ts says why.)
 //   pan      how far the view leans from the man toward the aim point, as a share of the follow camera's own lead (FollowCamera.aimLead as it was built):
 //            1 = as it was · 0 = he is the middle of the screen wherever the mouse goes
 //   ring     the gold ring at his feet (the one an open order menu draws: ui/planfloor.ts) on at all times
 //   outline  a pale rim round him while the light meter says he is in the dark — his true silhouette, drawn by the renderer from the pixels that are his
 //            (render/outline.ts). A kept line from the days it was a figure drawn over the picture (before 2026-10-20) turns this one on
-//   width    how wide that rim is, as a share of the rim's own width (render/outline.ts OUTLINE, outlineRadius): 1 = that width. Nothing reads it while
-//            `outline` is off
+//   width    how wide that rim is, as a share of the rim's own width (render/outline.ts OUTLINE, outlineRadius): 1 = that width · 0 = no rim at all.
+//            Nothing reads it while `outline` is off
+//   opacity  how strongly that rim is drawn where it is at its full: its ink's opacity, 0 = none … 1 = solid
+//   lit      the light (Player.visibility, 0 dark … 1 lit) at and over which there is no rim
+//   dark     the light at and under which the rim is at its full; between the two it fades by the light (outlineWant). Neither row crosses the other
+//            (put: `lit` stops at `dark`, `dark` at `lit`), so the number a row shows is the number in force. The maintainer, with the rim on
+//            his GPU: "it should probably fade in and out smoothly based on how lit up sam is -- sliders to calibrate that". These three start at the
+//            numbers the rim was built with; what he settles on is to become their starts
 //   turn     which way the view turns under Ctrl + the mouse: 1 = as it was · -1 = the other way
 //   behind   Ctrl tapped twice brings the view round to look where he was looking at the tap. NOT 'the camera behind him' in a third-person game's sense, and
 //            it cannot be while the system cursor is the aim: he faces the cursor's point in the world, the cursor stays where it is on the screen, so as
@@ -17,13 +23,16 @@
 // pan, turn and behind change the seat's VIEW, and the view is the player's input (game/cmd.ts carries it as data, tick by tick): a recording replays the view
 // it was made with whatever these say today, and no rule of the game reads this table. ring is the HUD's alone and outline the picture's: nobody's senses,
 // no light meter and no digest can tell either on from off.
-// KEPT PER MACHINE (localStorage `twopointsix.findme`), read once as this module loads; a harness has no store and gets the starts. No imports, on purpose:
+// KEPT PER MACHINE (localStorage `twopointsix.findme`), read once as this module loads; a harness has no store and gets the starts. Only the rows that
+// are NOT at their starts are written (keep), so a start that is tuned later reaches every machine whose row stands at the old start — a row put back to
+// its start by hand is one of those: these are rows on trial, and their starts are what the maintainer's own hand is settling. A line an older build kept
+// whole is written again that way as it is read. No imports, on purpose:
 // the loop (host/loop.ts) and the engine replay's own view (replay/engineplay.ts, its Ctrl turn) read the table and nothing of the game or the page comes with it.
 
-export interface FindMe { pan: number; ring: boolean; outline: boolean; width: number; turn: 1 | -1; behind: boolean }
-export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, outline: false, width: 1, turn: 1, behind: false };
+export interface FindMe { pan: number; ring: boolean; outline: boolean; width: number; opacity: number; lit: number; dark: number; turn: 1 | -1; behind: boolean }
+export const FINDME_START: Readonly<FindMe> = { pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, lit: 0.3, dark: 0.12, turn: 1, behind: false };
 /** the width row's ends (shares of the rim's own width) */
-export const FINDME_WIDTH = { min: 0.5, max: 1.5 };
+export const FINDME_WIDTH = { min: 0, max: 1.5 };
 export const FINDME: FindMe = { ...FINDME_START };
 const LS = 'twopointsix.findme';
 
@@ -32,16 +41,17 @@ export function findMeRead(text: string | null | undefined): FindMe {
   let v: Record<string, unknown> = {};
   try { const j = JSON.parse(text ?? 'null'); if (j && typeof j === 'object') v = j; } catch { /* not ours */ }
   const flag = (k: 'ring' | 'outline' | 'behind') => typeof v[k] === 'boolean' ? v[k] as boolean : FINDME_START[k];
-  const pan = typeof v.pan === 'number' && isFinite(v.pan) ? Math.max(0, Math.min(1, v.pan)) : FINDME_START.pan;
-  const width = typeof v.width === 'number' && isFinite(v.width) ? Math.max(FINDME_WIDTH.min, Math.min(FINDME_WIDTH.max, v.width)) : FINDME_START.width;
-  return { pan, ring: flag('ring'), outline: flag('outline'), width, turn: v.turn === -1 ? -1 : 1, behind: flag('behind') };
+  const num = (k: 'pan' | 'width' | 'opacity' | 'lit' | 'dark', lo = 0, hi = 1) => { const x = v[k]; return typeof x === 'number' && isFinite(x) ? Math.max(lo, Math.min(hi, x)) : FINDME_START[k]; };
+  return { pan: num('pan'), ring: flag('ring'), outline: flag('outline'), width: num('width', FINDME_WIDTH.min, FINDME_WIDTH.max), opacity: num('opacity'), lit: num('lit'), dark: num('dark'),
+    turn: v.turn === -1 ? -1 : 1, behind: flag('behind') };   // (callers: a `dark` kept over its `lit` is read as `lit` by outlineWant)
 }
-/** THE OUTLINE'S STRENGTH from the light meter (Player.visibility, 0 dark … 1 lit): full at `full` and under, none at `none` and over; `nv` (the goggles'
- *  amount, 0 … 1) takes it out as they come on — they light him already. `ease` = how fast the drawn strength follows, per second; the box the rim is looked
- *  for in reaches `reachM` round him and `topM` up */
-export const OUTLINE_LOOK = { full: 0.12, none: 0.3, ease: 6, reachM: 1.4, topM: 2.3 };
+/** THE OUTLINE'S STRENGTH from the light meter (Player.visibility, 0 dark … 1 lit): full at the table's `dark` and under, none at its `lit` and over, by
+ *  the light between (a `dark` set over `lit` is read as `lit`: no fade, the rim there under it and gone over it); `nv` (the goggles' amount, 0 … 1) takes
+ *  it out as they come on — they light him already. `ease` = how fast the drawn strength follows, per second; the box the rim is looked for in reaches
+ *  `reachM` round him and `topM` up */
+export const OUTLINE_LOOK = { ease: 6, reachM: 1.4, topM: 2.3 };
 export function outlineWant(visibility: number, nv = 0): number {
-  const t = (OUTLINE_LOOK.none - visibility) / (OUTLINE_LOOK.none - OUTLINE_LOOK.full);
+  const none = FINDME.lit, full = Math.min(FINDME.dark, none), t = none > full ? (none - visibility) / (none - full) : visibility < none ? 1 : 0;   // (the two met: no fade, there under it)
   return Math.max(0, Math.min(1, t)) * Math.max(0, Math.min(1, 1 - nv));
 }
 
@@ -53,10 +63,15 @@ export function bindFindMe(cam: { aimLead: number }) { seat = cam; lead = cam.ai
 /** one setting changed by the player: on the table, on the camera if it is the pan, and kept */
 export function setFindMe<K extends keyof FindMe>(k: K, v: FindMe[K]) { if (put(k, v)) keep(); }
 /** every row back to its start (Options' Reset): only what had been moved is written */
-export function resetFindMe() { let any = false; for (const k of Object.keys(FINDME_START) as (keyof FindMe)[]) any = put(k, FINDME_START[k]) || any; if (any) keep(); }
-function put<K extends keyof FindMe>(k: K, v: FindMe[K]): boolean { if (FINDME[k] === v) return false; FINDME[k] = v; if (k === 'pan' && seat) seat.aimLead = lead * FINDME.pan; return true; }
-function keep() { try { globalThis.localStorage?.setItem(LS, JSON.stringify(FINDME)); } catch { /* no store */ } }
-try { Object.assign(FINDME, findMeRead(globalThis.localStorage?.getItem(LS))); } catch { /* no store */ }
+export function resetFindMe() { let any = false; for (const k of Object.keys(FINDME_START) as (keyof FindMe)[]) any = put(k, FINDME_START[k], true) || any; if (any) keep(); }
+function put<K extends keyof FindMe>(k: K, v: FindMe[K], whole = false): boolean {
+  if (!whole && k === 'lit') v = Math.max(v as number, FINDME.dark) as FindMe[K];   // (the two light rows stop at each other; a reset writes both whole)
+  if (!whole && k === 'dark') v = Math.min(v as number, FINDME.lit) as FindMe[K];
+  if (FINDME[k] === v) return false; FINDME[k] = v; if (k === 'pan' && seat) seat.aimLead = lead * FINDME.pan; return true;
+}
+function movedRows(): string { const moved: Record<string, unknown> = {}; for (const k of Object.keys(FINDME_START) as (keyof FindMe)[]) if (FINDME[k] !== FINDME_START[k]) moved[k] = FINDME[k]; return JSON.stringify(moved); }
+function keep() { try { globalThis.localStorage?.setItem(LS, movedRows()); } catch { /* no store */ } }
+try { const was = globalThis.localStorage?.getItem(LS); Object.assign(FINDME, findMeRead(was)); if (was != null && was !== movedRows()) keep(); } catch { /* no store */ }
 
 // ---- Ctrl + the mouse
 /** the view's turn for `dx` pixels of the mouse under Ctrl (rad), the way round the `turn` row says: the one place the rate and the sign are written (the

@@ -1,4 +1,4 @@
-// FINDING YOUR OWN MAN ON THE SCREEN: what the page draws for host/findme.ts's two picture settings, and the six rows Options > Game gets for the table.
+// FINDING YOUR OWN MAN ON THE SCREEN: what the page draws for host/findme.ts's two picture settings, and the nine rows Options > Game gets for the table.
 //   ring     the gold ring an open order menu puts at his feet (ui/planfloor.ts `py`), drawn here whenever that one is not up
 //   outline  not drawn here: findMeOutline() fills the renderer's frame for it (render/outline.ts — a rim round the pixels that are his, from the g-buffer's
 //            id target), with how strongly the light meter says to draw it and where he stands
@@ -21,15 +21,15 @@ export function findMeRing(game: Game): Vec3 | null {
   return [pl.char.pos[0], 0, pl.char.pos[2]];
 }
 
-/** the outline's frame for this frame (render/outline.ts), written in place: off unless the row is on, he is up and `shown` (the page says no where no
+/** the outline's frame for this frame (render/outline.ts), written in place: off unless the row is on, its width and strength rows are over none, he is up and `shown` (the page says no where no
  *  mark of his is drawn: a stun's white-out, attract mode, the kit's picture); else whose pixels, where he stands, how wide (the width row) and how strong — the light meter's
  *  word, eased over `dt` (a frame with no time in it, the world held under a card, takes the word whole: the row flipped in Options shows at once) */
 export function findMeOutline(F: OutlineFrame, game: Game, dt: number, shown = true) {
   const pl = game.player;
-  if (!FINDME.outline || pl.down || !shown) { F.on = false; F.strength = 0; return; }
+  if (!FINDME.outline || !(FINDME.width > 0) || !(FINDME.opacity > 0) || pl.down || !shown) { F.on = false; F.strength = 0; return; }
   const L = OUTLINE_LOOK, want = outlineWant(pl.visibility, pl.nvAmount), p = pl.char.pos;
   F.on = true; F.owner = pl.char.id; F.strength = dt > 0 ? F.strength + (want - F.strength) * Math.min(1, dt * L.ease) : want;
-  F.at[0] = p[0]; F.at[1] = p[1]; F.at[2] = p[2]; F.reach = L.reachM; F.top = L.topM; F.wide = FINDME.width;
+  F.at[0] = p[0]; F.at[1] = p[1]; F.at[2] = p[2]; F.reach = L.reachM; F.top = L.topM; F.wide = FINDME.width; F.alpha = FINDME.opacity;
 }
 
 const NS = 'http://www.w3.org/2000/svg';
@@ -67,14 +67,20 @@ export interface RowKit {
   range(parent: HTMLElement, label: string, min: number, max: number, step: number, get: () => number, set: (v: number) => void, fmt: (v: number) => string, describe: string): void;
 }
 const TURNS: { v: 'as' | 'rev'; label: string }[] = [{ v: 'as', label: 'Normal' }, { v: 'rev', label: 'Reversed' }];
-/** the six rows under two headings; returns what Reset does for them */
+/** the nine rows under two headings; returns what Reset does for them */
 export function findMeRows(K: RowKit, body: HTMLElement): () => void {
+  /** a row that is a share shown in per cent, from none (`zero`: 0 reads 'None') to `max` */
+  const pct = (label: string, k: 'pan' | 'width' | 'opacity' | 'lit' | 'dark', max: number, step: number, zero: boolean, describe: string) =>
+    K.range(body, label, 0, max, step, () => Math.round(FINDME[k] * 100), v => setFindMe(k, v / 100), v => zero && !v ? 'None' : `${v.toFixed(0)} %`, describe);
   K.sec(body, 'Finding yourself · trying out');
   K.flip(body, 'Ring at your feet', () => FINDME.ring, v => setFindMe('ring', v), 'The gold ring the orders menu puts at your feet, there all the time.', ['On', 'Off']);
   K.flip(body, 'Outline in the dark', () => FINDME.outline, v => setFindMe('outline', v), 'A pale rim round you when you stand in the dark.', ['On', 'Off']);
-  K.range(body, 'Outline width', FINDME_WIDTH.min * 100, FINDME_WIDTH.max * 100, 5, () => Math.round(FINDME.width * 100), v => setFindMe('width', v / 100), v => `${v.toFixed(0)} %`, 'How wide that rim is.');
+  pct('Outline width', 'width', FINDME_WIDTH.max * 100, 5, true, 'How wide that rim is.');
+  pct('Outline strength', 'opacity', 100, 5, true, 'How strongly that rim is drawn.');
+  pct('Outline shows under light', 'lit', 100, 2, false, 'The rim starts to show when the light on you drops under this.');
+  pct('Outline full under light', 'dark', 100, 2, false, 'The rim is at its full when the light on you is under this.');
   K.sec(body, 'Camera · trying out');
-  K.range(body, 'Aim pan', 0, 100, 10, () => Math.round(FINDME.pan * 100), v => setFindMe('pan', v / 100), v => v ? `${v.toFixed(0)} %` : 'None', 'How far the view leans toward where you aim. At none you stay in the middle of the screen.');
+  pct('Aim pan', 'pan', 100, 10, true, 'How far the view leans toward where you aim. At none you stay in the middle of the screen.');
   K.seg(body, 'Turn direction', TURNS, () => FINDME.turn < 0 ? 'rev' : 'as', v => setFindMe('turn', v === 'rev' ? -1 : 1), () => 'Which way the view turns when you hold Ctrl and move the mouse.');
   K.flip(body, 'Double tap Ctrl', () => FINDME.behind, v => setFindMe('behind', v), 'Tap Ctrl twice and the view turns to put what you are facing ahead of you.', ['On', 'Off']);
   return resetFindMe;

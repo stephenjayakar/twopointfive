@@ -1290,13 +1290,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Options ▸ Game ▸ 'Walk into a wall to take it'** (10-20; `ui/options.ts`, shown only with the wall hold's feel pass on): flips `WALLSNAP.press`, kept in
   `twopointsix.options` as `wallpress`, a `?wallpress` in the URL wins over the kept value, Reset puts it back on. The rule: `docs/agents/stealth.md`, the
   wall taken without the key. The Controls list and the Options key list do not mention it.
-- **Finding your own man, and the camera under the hand: six rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21;
+- **Finding your own man, and the camera under the hand: nine rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21, its strength and two light rows 10-22;
   `src/host/findme.ts` the table, `src/ui/findme.ts` the ring, the rows and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
   walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
-  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, turn: 1, behind: false }` on the page and on
+  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, lit: 0.3, dark: 0.12, turn: 1, behind: false }` on the page and on
   both stands, and at those starts the build is the build as it was (measured against the build head each time: the same game digest and the same
   view matrix over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
-  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all six back. THE ROWS: `Aim pan` (a slider, none to today's: it
+  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all nine back. THE ROWS: `Aim pan` (a slider, none to today's: it
   scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
   menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (Ctrl + mouse
   turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
@@ -1326,7 +1326,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   outer pixel fading) and only from one of his that stands in front of it by the G-buffer's depth, so a wall top, a table or a teammate between him
   and the camera is not drawn on. His body, kit and gun are in it because they carry his owner byte; so do a round of his for the frame it leaves the
   muzzle and a charge while his hands set it, and they take the rim too. HOW STRONG is the light meter's word (`host/findme.ts outlineWant`: full at
-  `Player.visibility` 0.12 and under, none at 0.3 and over, none under the goggles), eased at 6 a second, taken whole on a frame with no time in it
+  `Player.visibility` 0.12 and under, none at 0.3 and over as the rows start, none under the goggles), eased at 6 a second, taken whole on a frame with no time in it
   (the row flipped under the pause card shows at once). The page fills the frame once a frame (`ui/findme.ts findMeOutline`: off with the row off,
   the man down, and where the HUD's own marks of him stand down: a stun's white-out, attract mode, the kit's picture); `Engine.render` adds the box
   on the picture from the camera it draws with (`outlineBox`; he behind the lens = no pass), so a still or a card's settled frame has its own. WHAT
@@ -1337,18 +1337,37 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is left off here as the particles' draw's is). On and he is lit: no pass. A kept line from the stick figure's days that says `outline: true`
   turns this one on. UNDER THE RESOLVE: the rim is drawn before it, so it is anti-aliased with the picture, and the pixel next to him rides his
   motion vector; the outer pixel has the floor's and may trail him by a few frames as he moves. Nobody has seen that on a GPU.
-  ITS WIDTH (10-21). The maintainer, having seen the rim on his GPU: "outline in the dark is good but can you add a slider to the options for the
-  width? it's just a touch too fat". Two things. THE RIM ITSELF IS A QUARTER THINNER: `OUTLINE` is now 1.125 to 2.25 pixels by the composite's
-  height (it was 1.5 to 3); the quarter is a guess at "a touch", and it is in the rule, not in the row, so a kept row follows it when it is tuned
-  again. Under a pixel and a half the shader's fading outer pixel makes 'thinner' the one pixel next to him going fainter, so on a composite
-  under 840 rows the new rim is a softer line more than a narrower one. AND `Outline width` IS A ROW (a slider under the outline's row, 50 % to
-  150 % in steps of 5; `FINDME.width`, a share of the rim's own width, starts at 1, kept with the rest): `outlineRadius(h, wide)` = the rule
-  times the row, never under `OUTLINE.floorPx` 0.9 (so on a short composite the low end of the slider stops at the floor: a line cannot be
-  thinner than its pixel) and at most 3.4 pixels, which is up to 81 id reads a pixel inside the scissor where the built rim had 49. Nothing
-  reads the row with the outline off; the page reads it every frame, so it moves live under Options. A machine that kept the outline on gets
-  the thinner rim at once. Line (10) of the check holds the rim's own width inside its two pixel counts and the radius at 100 %, 50 %, both ends
-  and the floor; the page check moves the slider and reads the frame's width (its kept picture is at 150 %). Nobody has seen the thinner rim or
-  the slider on a GPU.
+  ITS WIDTH (10-21, 10-22). The maintainer, having seen the rim on his GPU: "outline in the dark is good but can you add a slider to the options
+  for the width? it's just a touch too fat"; and a day on, with the slider at its least: "can you make the outline slider go to zero? still large
+  at 50%". THE RIM ITSELF IS A QUARTER THINNER than first built: `OUTLINE` is 1.125 to 2.25 pixels by the composite's height (it was 1.5 to 3);
+  the quarter is a guess at "a touch", and it is in the rule, not in the row. `Outline width` IS A ROW (a slider under the outline's row, none to
+  150 % in steps of 5; `FINDME.width`, starts at 1). Over 100 % the row multiplies the radius. UNDER 100 % IT SCALES WHAT THE RIM COVERS, not its
+  radius: the shader fades the outer pixel (radius + 0.5 less the distance), so a rim of radius r covers r − 0.5 of a pixel beside him, and
+  `outlineRadius(h, wide)` = 0.5 + (the rule − 0.5) × the row squared. Every step of the row is a different rim on any composite, finest where
+  it is thinnest, down to none, where the frame is off and nothing is drawn; and no kept row under 100 % is drawn wider than before (the row
+  first multiplied the radius and stopped at a floor of 0.9: on a short composite its low end did nothing, and on a tall one 50 % was still a
+  whole pixel and more). A LINE IS NEVER NARROWER THAN ITS PIXEL: under one pixel covered, thinner is that pixel fainter, and a composite pixel is more than one
+  of the screen's wherever the canvas is capped under the window. At most 3.1 pixels: up to 81 id reads a pixel inside the scissor.
+  HOW VISIBLE, AND BY WHAT LIGHT, ARE ROWS TOO (10-22): "can you also add a slider for how visible it is? i think it should probably fade in and
+  out smoothly based on how lit up sam is -- sliders to calibrate that". `Outline strength` (`FINDME.opacity`, the ink's opacity at the full,
+  none to 100 %, starts at 60 %: the 0.6 that was `OUTLINE.alpha`; none = the frame off), `Outline shows under light` (`FINDME.lit`, starts at
+  30 %) and `Outline full under light` (`FINDME.dark`, starts at 12 %): the two ends `outlineWant` fades between, by the light meter, in the
+  HUD's own LIGHT number; neither row crosses the other (each stops at it, so the number a row shows is the one in force; Reset writes both
+  whole). The three start at the numbers the rim was built with; what he
+  settles on is to become their starts, and FOR THAT THE STORE KEEPS ONLY THE ROWS THAT ARE NOT AT THEIR STARTS (`keep`; Reset leaves `{}`), so
+  a start tuned later reaches every machine whose row stands at the old start (one put back there by hand too: rows on trial). A full line kept
+  by an older build reads as before and is written again that way as it is read. WHAT HE CALLS ITS PULSING ("on levels like the block with the
+  breaker thrown, the current pulsing of the outline really ruins the lighting. we'll tweak it") is the meter crossing those two ends as he
+  moves: nothing in the pass moves with time but the ease. Both light rows at 100 % hold the rim steady; the strength row dims it.
+  THE METER IS NOT THE PICTURE (his next line: "the light meter is a little funky. is it just measuring at a single point?"). It is asked at his
+  chest and his head, the brighter kept; each is the brightest of six facings of shadowed direct light (one ray to each light's centre) plus the
+  bounce (`probe.wgsl`, `Game.lightMeter`), eased at 6 a second, a frame or two late. So window light on one side of him reads lit while the side
+  the camera sees is dark (no rim where one is wanted), and a dark man on a lit floor reads dark (a rim where none is needed). The meter is the
+  guards' and is not to be bent for this; a rim that fades by how he is DRAWN against what is behind him is the picture's own job and is NOT
+  BUILT (put to the maintainer as a choice).
+  Nothing reads these rows with the outline off; the page reads them every frame, so they move live under Options. Line (1) of the check holds
+  what is kept; line (10) the rim's own width inside its two pixel counts, every step of the width row, the strength row and the light rows'
+  ends; the page check moves all four sliders and reads the frame. Nobody has seen any of the four on a GPU.
   SHELVED STILL: `Shape through walls` (no row, no key; a kept line that names it reads without it). A proper one is him drawn once more with the
   depth test off into a mask and filled where a wall hides him: a pass of its own, to be built only once the outline has been seen on a GPU.
   ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording
