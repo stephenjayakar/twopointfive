@@ -228,7 +228,9 @@ export function build() {
       { id: 'out', line: 'Out by the front door', done: any({ is: 'in', area: { x0: 8.12, x1: 12.3, z0: 11.0, z1: 18.0 } }, { is: 'stage', stage: 'done' }), at: [11.4, 1, 15.1] },
     ],
   };
-  { const far = T.doors.find(d => d.name === 'gate_e')!; far.locked = true; far.steel = true; }   // the far gate is no part of this night: locked, and steel so that it offers no pick
+  // the far gate is no part of this night: locked against the road (a man who walks out the near gate and round the yard finds no way back in there), and
+  // steel so that it offers no pick
+  { const far = T.doors.find(d => d.name === 'gate_e')!; far.locked = true; far.steel = true; far.keySide = -1; }
   const out = T.finish({
     spawn: TQ.start, routes,
     mission: { serverRoom: { ...STRONG }, entryDoor: 'strong', rack: { index: 0, front, halfW: 0.35 }, exfilDoor: 'gate_w', exfilX: EXIT_W.x, exfilZ: EXIT_W.z, exfilOut: EXIT_W.out },

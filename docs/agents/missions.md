@@ -709,8 +709,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   them; checkpoints `the lane` (the whistle's line), `the back court`, `the store`, `the hall`, `the counting room`, one before each timed beat and none inside
   one. TWO THINGS THE FRAME GAINED FOR IT: (1) `lesson.rails.rows`, a list of verbs: with it Space offers only rows of those verbs (`Rails.offers`, asked
   once in `player.ts buildInteractables`; absent = every row, so `tut-sky` is as it was). The locks are by key and Space is one key: on the page a tap beside
-  the mains box set a wall charge and a tap beside the keypad worked a light plate. (2) his own actions' ring (`handring.ts`) is worked with its own keys
-  through the gate: while it is up and `use` is open, the digits 1 to 5 and the left click pass. A STEP'S `ringLine` (`LessonStep`, `lesson.ts lineOf`; the
+  the mains box set a wall charge and a tap beside the keypad worked a light plate. On a level that names its rows there is no row at all while `use`
+  is still locked (the page drew "E pull it open" for the yard gate beside the start, a prompt for a key that did nothing). (2) his own actions' ring
+  (`handring.ts`) is worked with its own keys through the gate: while it or the list is up and `use` is open, the digits 1 to 5 and both buttons pass
+  (the frame's own line now). THE ONE LOCK THAT PICKS is the back door's: the front door and the far gate are `steel` (once Space was open the front door
+  offered its pick from the forecourt, a short way into the counting room past every beat; from inside it opens with a push, the way out). A STEP'S `ringLine` (`LessonStep`, `lesson.ts lineOf`; the
   sibling of `setupLine`) is its line while `HANDRING.on`: the whistle has no key on the page, so that step reads 'Hold [Space], then [5]: whistle. Then
   hide' there and '[V]: whistle here. Then hide behind the wall' where V still whistles; `Rails.prompt()` now gives `lesson.ts stepLine(T)` (the line as the
   keys stand), not the raw line. LEVEL DATA: `breaker.fumble` (seconds a man sent to the tripped panel works at it before the mains come back; absent = 2.2
@@ -722,12 +725,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   whistle); a scripted player that picks a row by name hides what a tap does, so this one taps and fails when the lit row is not the line's (`tap()`); ON
   THE PAGE a man who comes with a light finds a body, and a player, that the headless run leaves dark, and inside 3.5 m he sees 100 degrees to either side:
   the hall has a screen wall (hides its back half, the body, from the doorway and the box) and a niche by the doorway (the clerk walks past its end and
-  stops with his back to it); no line asks for C while he is already low. CHECKS: `bun run tools/qa/rails-check.ts` line 11 (the rows, and the ring's digit;
+  stops with his back to it); no line asks for C while he is already low. CHECKS: `bun run tools/qa/rails-check.ts` line 11 (the rows, no row under a locked key, and the ring's digit;
   both stands; `RAILS_BREAK=1` fails it on both), `lesson-run tut-quiet` (`TPS_RAILS=1` in front on the frozen stand), `lesson-check`, `level-lint`,
   `door-size`, `quiet-check`, `second-way-check`, `floor-order-check`, `level-names-check`, `carlamps-check` (its row), both typechecks. MEASURED, headless,
   after the last change: the scripted player waits a person's beat before each timed move; with that beat at 0, 0.6, 1.5 and 2.5 s it finishes on both
   stands (seed 1); seeds 3 and 4 finish on both; with every line read for 6 s it finishes on the shipped stand on seeds 1 and 2 and on the frozen one on
-  seed 1; at a 4 s beat the whistle's man has gone home before the player is round the wall. ON THE REAL PAGE (headless Chromium, the software adapter,
+  seed 1; at a 4 s beat the clerk has the mains back in before he is down. ON THE REAL PAGE (headless Chromium, the software adapter,
   real key and mouse events, the page's own meter, 640 by 360 at the lowest quality): see the notes for what was played and what the pictures showed.
   RED BY DESIGN: `quiet-light` on three lines (three men where a free-roam night wants four to six; the start beside the way out; no dark way with the
   lamps on, the lit hall being the point). A SKETCH: the script's few words, the store (four strides of dark), no lived-in rooms, a composed menu picture

@@ -8,6 +8,7 @@
 //   bun run tools/qa/lesson-gate.ts [name …] [--jobs 2]
 // One PASS / FAIL line per level and check; exit 0 = all pass, 1 = any FAIL.
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
 const { TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const argv = process.argv.slice(2), ji = argv.indexOf('--jobs'), jn = ji >= 0 ? Number(argv[ji + 1]) : 2;
@@ -33,6 +34,10 @@ async function one(name: string) {
   verdict(!lost.length, `${name}: as the page ships, on ${SHIPPED.length} dice (two reading each line for ${PACE} s), the player gets through`, lost.length ? lost.join(' · ') : last(ship[0].out, /steps ·|FAIL/).trim());
   const d = (r: { out: string }) => /digest ([0-9a-f]{8}) over (\d+) frames/.exec(r.out);
   const a = d(on), b = d(off);
+  // (a tutorial mission's lesson is its frame, rails.ts: it locks keys, names the rows the interaction key offers and cues the level's script — with it
+  // off the same keys are another run by design, and tools/qa/rails-check.ts is what holds the frame. Said, not counted.)
+  let rails = false; try { rails = !!JSON.parse(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8')).scenarios?.lesson?.rails; } catch { /* (the file's own line above is red) */ }
+  if (rails) { lines.push(`  NOTE  ${name}: a tutorial mission (its lesson is its frame): the same keys with the lesson off are another run by design — on ${a?.[1] ?? '—'} · off ${b?.[1] ?? '—'}; rails-check holds the frame`); return; }
   verdict(off.code === 0 && !!a && !!b && a[1] === b[1] && a[2] === b[2], `${name}: the same keys with the lesson off play the same run`, `on ${a?.[1] ?? '—'} · off ${b?.[1] ?? '—'} over ${a?.[2] ?? '?'} frames`);
 }
 for (let i = 0; i < names.length; i += jobs) await Promise.all(names.slice(i, i + jobs).map(one));
