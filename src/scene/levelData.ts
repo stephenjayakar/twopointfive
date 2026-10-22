@@ -203,8 +203,9 @@ export interface LevelData {
   vents?: VentData[];
   connectors: ConnectorData[];
   mission: MissionData;
-  /** the mains panel: `panel` / `led` are BoxData ids (OCP the panel for a blackout, shoot it for a permanent one) */
-  breaker: { pos: Vec3; panel: string; led: string };
+  /** the mains panel: `panel` / `led` are BoxData ids (OCP the panel for a blackout, shoot it for a permanent one); `fumble?` = seconds a man sent to the
+   *  tripped panel works at it before the mains come back (absent = 2.2, as on every level before the key; 7 at most) */
+  breaker: { pos: Vec3; panel: string; led: string; fumble?: number };
   /** emergency beacons: `box` is the dome's BoxData id — it MUST also be a switchable's box (game.ts slaves the beam to that target) */
   beacons: { id: string; pos: Vec3; box: string }[];
   sky: SkyData;
@@ -235,7 +236,7 @@ export const KEYS = {
   vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'],
   connector: ['id', 'kind', 'from', 'to', 'cost', 'mat', 'notes'], connEnd: ['floor', 'c', 'h'],
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
-  breaker: ['pos', 'panel', 'led'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
+  breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
   scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView', 'response', 'doorNames'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
 } as const;
@@ -477,7 +478,7 @@ export function validateLevelData(d: LevelData): string[] {
     for (const k of ['reach', 'drive', 'exfil'] as const) if (count[k] !== 1) err('mission.objectives', `v${LEVEL_DATA_VERSION} wants exactly one '${k}' objective (found ${count[k]})`);
   }
   // breaker / beacons / sky
-  if (!isObj(d.breaker) || !isVec(d.breaker.pos)) err('breaker', 'pos Vec3'); else { known('breaker', d.breaker, KEYS.breaker); boxOk('breaker.panel', d.breaker.panel); boxOk('breaker.led', d.breaker.led); }
+  if (!isObj(d.breaker) || !isVec(d.breaker.pos)) err('breaker', 'pos Vec3'); else { known('breaker', d.breaker, KEYS.breaker); boxOk('breaker.panel', d.breaker.panel); boxOk('breaker.led', d.breaker.led); if (d.breaker.fumble !== undefined && !(isNum(d.breaker.fumble) && d.breaker.fumble > 0 && d.breaker.fumble <= 7)) err('breaker.fumble', 'seconds, over 0 and 7 at most (a room fight\'s lever party gives the panel up at 8)'); }
   const bcs = recs('beacons', d.beacons); uniq('beacons', bcs.map(b => (b as any)?.id));
   bcs.forEach((b, i) => { if (!isObj(b)) return; const w = `beacons[${i}]`; known(w, b, KEYS.beacon); if (!isVec(b.pos)) err(w, 'pos Vec3'); boxOk(`${w}.box`, b.box); if (isStr(b.box) && boxIds.has(b.box) && !swBox.has(b.box)) err(w, `box '${show(b.box)}' is not owned by any switchable (game.ts slaves the beacon's beam to that target)`); });
   const skyOk = (w: string, s: SkyData | undefined) => { if (!isObj(s) || !isVec(s!.zenith) || !isVec(s!.horizon)) err(w, 'zenith / horizon Vec3'); else known(w, s, KEYS.sky); };
@@ -660,14 +661,15 @@ export function validateLevelData(d: LevelData): string[] {
         else {
           known(w, L, ['title', 'steps', 'rails']);
           if (!isStr(L.title)) err(`${w}.title`, 'a non-empty string');
-          if (L.rails !== undefined) { const R = L.rails as any; if (!isObj(R)) err(`${w}.rails`, 'must be an object'); else { known(`${w}.rails`, R, ['allow', 'respawn', 'fog', 'sky', 'orders']); if (!Array.isArray(R.allow)) err(`${w}.rails.allow`, 'a list of actions'); if (R.respawn !== undefined && !(isNum(R.respawn) && R.respawn >= 0)) err(`${w}.rails.respawn`, 'seconds ≥ 0'); if (R.sky !== undefined && !(isObj(R.sky) && isVec(R.sky.park))) err(`${w}.rails.sky`, '{ park: Vec3, reach? }'); } }   // (game/rails.ts: the action names are checked against the built floor by checkLesson)
+          if (L.rails !== undefined) { const R = L.rails as any; if (!isObj(R)) err(`${w}.rails`, 'must be an object'); else { known(`${w}.rails`, R, ['allow', 'respawn', 'fog', 'sky', 'rows', 'orders']); if (!Array.isArray(R.allow)) err(`${w}.rails.allow`, 'a list of actions'); if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.every(isStr))) err(`${w}.rails.rows`, 'a list of verbs'); if (R.respawn !== undefined && !(isNum(R.respawn) && R.respawn >= 0)) err(`${w}.rails.respawn`, 'seconds ≥ 0'); if (R.sky !== undefined && !(isObj(R.sky) && isVec(R.sky.park))) err(`${w}.rails.sky`, '{ park: Vec3, reach? }'); } }   // (game/rails.ts: the action names are checked against the built floor by checkLesson)
           const steps = recs(`${w}.steps`, L.steps); if (!steps.length) err(w, 'steps: at least one');
           const ids = new Set<unknown>();
-          steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'setupLine', 'done', 'hold', 'at', 'allow', 'deny', 'cue', 'checkpoint', 'fog']);
+          steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'setupLine', 'ringLine', 'done', 'hold', 'at', 'allow', 'deny', 'cue', 'checkpoint', 'fog']);
             for (const k of ['cue', 'checkpoint'] as const) if (t[k] !== undefined && !isStr(t[k])) err(`${tw}.${k}`, 'a non-empty string'); if (t.fog !== undefined && typeof t.fog !== 'boolean') err(`${tw}.fog`, 'true or false');
             if (!isStr(t.id) || !isStr(t.line)) err(tw, 'id, line: non-empty strings'); else if (ids.has(t.id)) err(tw, `id '${show(t.id)}' used twice`); ids.add(t.id);
             if (!isObj(t.done) || !isStr(t.done.is)) err(`${tw}.done`, "a test record { is: '<kind>', … }");
             if (t.setupLine !== undefined && !isStr(t.setupLine)) err(`${tw}.setupLine`, 'a non-empty string');
+            if (t.ringLine !== undefined && !isStr(t.ringLine)) err(`${tw}.ringLine`, 'a non-empty string');
             if (t.hold !== undefined && !(isNum(t.hold) && t.hold >= 0)) err(`${tw}.hold`, 'seconds ≥ 0'); if (t.at !== undefined && !isVec(t.at)) err(`${tw}.at`, 'Vec3'); });
         }
       }

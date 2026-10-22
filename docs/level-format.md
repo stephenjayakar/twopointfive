@@ -59,7 +59,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView?, response?, doorNames? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
 | `connectors[]` | stair / ladder `{ from{floor,c,h}, to{…}, cost?, mat? }` | **TODO(G2)** — typed stub, empty |
 | `mission` | `{ playerSpawn, objectives[] }` | objectives `reach{area,door}` / `drive{rackIndex,front,halfW}` / `exfil{door,x,z}` — v1 wants exactly one of each (the fixed stage machine in `game/mission.ts`) |
-| `breaker` | `{ pos, panel, led }` | box ids |
+| `breaker` | `{ pos, panel, led, fumble? }` | box ids; `fumble` = seconds a man sent to the tripped panel works at it before the mains come back (absent 2.2; 7 at most: a room fight's lever party gives the panel up at 8) |
 | `beacons[]` | `{ id, pos, box }` | `box` = the dome, which MUST be a switchable's box (game.ts slaves the beam to it) |
 | `sky`, `daylight?` | `{ zenith, horizon }`; `{ sun(light), sky, groupsOn, groupsOff, lightsOff, haze, exposure }` | the level's daytime variant (`lighting.ts setDaylight`, `__daylight`; the editor's 'day' view) |
 | `plans` | `{ roomClear[], breach? }` | `RoomClearPlan` / `BreachPlan` verbatim (see `scene/level.ts`) + `id`; `door` by id |
@@ -182,7 +182,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   worked example). A level that carries only this block passes `map:check`'s structure section with a note (the room clear's sections have nothing to hold).
 
 - `lesson` — a TRAINING LESSON over this level's mission (`game/lesson.ts`; rows in `scenarioList.ts TRAINING_MISSIONS`, `group: 'training'`): `{ title,
-  steps[{ id, line, setupLine?, done, hold?, at? }] }` (`setupLine`: the line while a gun's key again opens its setup, where the step's keys are others then). A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
+  steps[{ id, line, setupLine?, ringLine?, done, hold?, at? }] }` (`setupLine`: the line while a gun's key again opens its setup, where the step's keys are others then; `ringLine`: the line while his own actions are a ring, where the whistle has no key of its own). A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
   characters), `at` the marker, and it moves on when `done` — a test record `{ is: '<kind>', … }` read off the game — is true (for `hold` seconds). Never on a
   clock. Kinds (`lesson.ts LESSON_TESTS`; a new kind is one row there with its `ok` and its `check`): STATE `in {area}` · `near {at, r?}` · `flag {flag,
   value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent dark chargeSet chargeClear wallBlown …) · `slot {slot, drawn?}` ·

@@ -180,7 +180,8 @@ export interface Level {
   /** what is underfoot (game/floor.ts: which footstep, how far it carries) — the level file's own `surfaces` block, attached by loadLevel NON-ENUMERABLY (it is
    *  an annotation of the file, like its ids: nothing that walks a Level as data sees it). Absent = the office's map, as on every level before this field */
   surfaces?: SurfacesData;
-  breaker: { pos: Vec3; boxes: number[] };
+  /** `fumble` (s, absent = 2.2): how long a man sent to the tripped panel works at it before the mains come back */
+  breaker: { pos: Vec3; boxes: number[]; fumble?: number };
   beacons: { pos: Vec3; box: number }[];
   sky: { zenith: Vec3; horizon: Vec3 };
   /** the daytime variant (optional: the viewer's stage has none) and the breach drill's plan (game/breach.ts BreachDrill) */
