@@ -21,7 +21,7 @@ import { Vec3, m4, v3 } from './math/vec';
 
 import { RenderSettings, defaultSettings } from './settings';
 import { FogSight, FOG_SIGHT_BYTES, type FogFrame } from './render/fogofwar';
-import { outlineBox, type OutlineFrame } from './render/outline';
+import { outlineBoxes, type OutlineFrame } from './render/outline';
 export type { RenderSettings } from './settings';
 export { defaultSettings } from './settings';
 
@@ -383,7 +383,7 @@ export class Engine {
   render(cam: FollowCamera, time: number, dt: number, present = true) {
     if (!this.ready) throw new Error('Engine.render() before init() resolved — await engine.init() / Engine.create() first');   // (a readable line instead of setPipeline(undefined) deep in a pass)
     this.lastDt = dt; this.viewFocus = cam.focus;
-    if (this.outline) { this.outline.exposure = this.settings.exposure; if (this.outline.on) outlineBox(this.outline, p => cam.project(p, 1, 1)); }   // THE OUTLINE IN THE DARK (host/findme.ts → render/outline.ts): the box round him on THIS camera's picture
+    if (this.outline) { this.outline.exposure = this.settings.exposure; outlineBoxes(this.outline, p => cam.project(p, 1, 1)); }   // THE OUTLINE IN THE DARK (host/findme.ts → render/outline.ts): the box round each man on THIS camera's picture
     this.passes.outline = this.settings.debugView === 0 ? this.outline : null;   // (never under a debug view, as the fog)
     this.passes.dustLook = !!this.smoke.dusty;   // (look only: destruction dust alive in the bound smoke system → render/dustLookVol.ts)
     this.passes.smokeDiffuseBilinear = this.settings.smokeDiffuseWeight === 'bilinear'; this.passes.smokeDiffuseTau0 = this.settings.smokeDiffuseStart ?? 0.35;   // (smoke battery experiment, post.wgsl diffuseMode)

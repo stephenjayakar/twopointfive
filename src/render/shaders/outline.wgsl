@@ -1,4 +1,5 @@
-// THE OUTLINE IN THE DARK (render/outline.ts; host/findme.ts FINDME.outline): a rim round the pixels that are the player's own man, read off the g-buffer's
+// THE OUTLINE IN THE DARK (render/outline.ts; host/findme.ts FINDME.outline): a rim round the pixels that are one man's (the player's own, or a teammate's:
+// the pass draws this once a man, each with his own owner, ink and width), read off the g-buffer's
 // id target — every pixel there carries the owner of what was drawn into it (gbuffer.wgsl: bits 20–27; his body, his kit and his gun alike), so the rim is
 // his silhouette as this frame drew it, at any zoom and in any pose. One triangle over the composite, blended, inside a scissor round him: a pixel that is
 // not his takes the ink by how near the nearest of his pixels is — and only from one that stands IN FRONT of it (the g-buffer's depth, smaller = nearer),

@@ -1290,13 +1290,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Options ▸ Game ▸ 'Walk into a wall to take it'** (10-20; `ui/options.ts`, shown only with the wall hold's feel pass on): flips `WALLSNAP.press`, kept in
   `twopointsix.options` as `wallpress`, a `?wallpress` in the URL wins over the kept value, Reset puts it back on. The rule: `docs/agents/stealth.md`, the
   wall taken without the key. The Controls list and the Options key list do not mention it.
-- **Finding your own man, and the camera under the hand: nine rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21, its strength and two light rows 10-22;
+- **Finding your own man, and the camera under the hand: eleven rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21, its strength, two light rows, teammates and colour 10-22;
   `src/host/findme.ts` the table, `src/ui/findme.ts` the ring, the rows and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
   walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
-  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, lit: 0.3, dark: 0.12, turn: 1, behind: false }` on the page and on
+  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, lit: 0.3, dark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false }` on the page and on
   both stands, and at those starts the build is the build as it was (measured against the build head each time: the same game digest and the same
   view matrix over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
-  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all nine back. THE ROWS: `Aim pan` (a slider, none to today's: it
+  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all eleven back. THE ROWS: `Aim pan` (a slider, none to today's: it
   scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
   menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (Ctrl + mouse
   turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
@@ -1347,7 +1347,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it is thinnest, down to none, where the frame is off and nothing is drawn; and no kept row under 100 % is drawn wider than before (the row
   first multiplied the radius and stopped at a floor of 0.9: on a short composite its low end did nothing, and on a tall one 50 % was still a
   whole pixel and more). A LINE IS NEVER NARROWER THAN ITS PIXEL: under one pixel covered, thinner is that pixel fainter, and a composite pixel is more than one
-  of the screen's wherever the canvas is capped under the window. At most 3.1 pixels: up to 81 id reads a pixel inside the scissor.
+  of the screen's wherever the canvas is capped under the window. At most 3.4 pixels for him and 4 for anyone (`OUTLINE.capPx`): up to 81 id reads
+  a pixel inside a man's scissor.
   HOW VISIBLE, AND BY WHAT LIGHT, ARE ROWS TOO (10-22): "can you also add a slider for how visible it is? i think it should probably fade in and
   out smoothly based on how lit up sam is -- sliders to calibrate that". `Outline strength` (`FINDME.opacity`, the ink's opacity at the full,
   none to 100 %, starts at 60 %: the 0.6 that was `OUTLINE.alpha`; none = the frame off), `Outline shows under light` (`FINDME.lit`, starts at
@@ -1365,16 +1366,37 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the camera sees is dark (no rim where one is wanted), and a dark man on a lit floor reads dark (a rim where none is needed). The meter is the
   guards' and is not to be bent for this; a rim that fades by how he is DRAWN against what is behind him is the picture's own job and is NOT
   BUILT (put to the maintainer as a choice).
+  HIS TEAMMATES HAVE RIMS TOO, AND THE RIMS HAVE COLOURS (10-22): "can you also add outlines for teammates + have a separate slider for thickness
+  multiplier relative to the player? make the outline for the player yellow and for teammates red/blue and have a slider for saturation".
+  `Teammate outline width` (`FINDME.mates`, none to 200 %, starts at 100 %; none = no teammate has a rim) and `Outline colour`
+  (`FINDME.colour`, none = the pale ink the rim was first drawn in, 100 % = `OUTLINE_INK`: yellow for him, red for the red pair, blue for the
+  blue pair, a duo's partner and a squad not in pairs; starts at 60 %, a guess). THE TEAMMATES' ROW IS A SHARE OF WHAT HIS RIM COVERS on the
+  same picture, whatever his own width row made that (`OutlineMan.times`, `outlineRadius(h, wide, times)`: 50 % is half his, at any width; it
+  first multiplied his row, which the curve under 100 % squared), never over `OUTLINE.capPx` 4, so his row at its most with theirs at its most
+  stops there. WHO: the living men of his squad (`SquadOrders.men()`, the roster, whatever the orders menu is doing: a show's men too), each
+  BY HIS OWN LIGHT METER (`Guard.visibility`, the unit's meter the hostiles' eyes read) through the same two light rows, each eased on his own;
+  nobody else's man ever. The frame is the player's man plus `mates` (`OutlineMan`, a pool keyed by owner byte: a man dead gives his place
+  up); `outlineBoxes` boxes each for the render's camera (a man off to the side whose box crosses the lens's plane gets an empty box, not the
+  whole picture). THE PASS is still one render pass: a scissored triangle a man, each from his own 256-byte slot of one uniform buffer (a
+  dynamic offset; `OUTLINE_MEN` 8 slots), THE TEAMMATES FIRST AND THE PLAYER LAST, so where two rims meet his is the one on top and in a crowd
+  his place is kept. WHAT IT COSTS: five men are five small draws and one bind group; men stood close are each looked for in their own box, so
+  where boxes overlap the id target is read once a man (a stack of five at a door: five times the reads over that patch, a few per cent of the
+  picture). A machine that kept the outline on gets the teammates' rims and the colours at once (that is the ask: the only rows of the eleven
+  whose start is not the outline as first built); with the outline off nothing is asked of the squad's list. Line (11) of the check stands a
+  squad of four up and holds all of it, on a device that writes down what it is asked (the layout's dynamic offset, a slot and a scissor a
+  man), and that a squad stepped with the outline on ends digest for digest where it ends with it off. `tools/qa/findme-squad-page.cjs` is
+  the real page's word on it (the four rimmed, the program in, a draw, no console line; stills to look at). Nobody has seen the colours on a
+  GPU; the three inks were picked by number.
   Nothing reads these rows with the outline off; the page reads them every frame, so they move live under Options. Line (1) of the check holds
   what is kept; line (10) the rim's own width inside its two pixel counts, every step of the width row, the strength row and the light rows'
-  ends; the page check moves all four sliders and reads the frame. Nobody has seen any of the four on a GPU.
+  ends; the page check moves every slider and takes width and strength to None and back. Nobody has seen any of them on a GPU.
   SHELVED STILL: `Shape through walls` (no row, no key; a kept line that names it reads without it). A proper one is him drawn once more with the
   depth test off into a mask and filled where a wall hides him: a pass of its own, to be built only once the outline has been seen on a GPU.
   ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording
   replays the view it was made with; the ring and the outline read his position and his light and write nothing of the game's (a run with both on
   and asked every frame is the run with them off, digest for digest: the picture's own, as the fog of war's pass is; no sense and no meter reads
   the composite after it). Checks: `bun run tools/qa/probes.ts findme` (family `ui`; `FINDME_BREAK=1` = the rows moved and the table not: pan,
-  turn, behind, the carry, the ring and the outline must fail), the same on both stands: its line (10) runs the outline's pass on a stand-in device
+  turn, behind, the carry, the ring, the outline and the teammates' must fail), the same on both stands: its line (10) runs the outline's pass on a stand-in device
   that writes down what it is asked (nothing while off, one program, no draw until it is in, a scissored draw, never after a failed program);
   `PORT=… node tools/qa/findme-page.cjs` (the real page on the software adapter: the rows exist, move live, are kept over a reload and reset; the
   outline's program compiles there and draws with no GPU error; a real Ctrl drag, a real held press, a real double tap with the mouse to one side
