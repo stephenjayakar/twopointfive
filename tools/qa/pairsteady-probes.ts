@@ -21,11 +21,11 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
-interface Tally { code: number; steps: number; secs: number; onMan: number; about: number; flinch: number; back: number; waits: number; longWaits: number; longFaced: number; stoodOn: boolean | null; g: any; when: string[] }
+interface Tally { code: number; steps: number; secs: number; onMan: number; about: number; flinch: number; back: number; waits: number; longWaits: number; longFaced: number; lateSet: number; lateNull: number; stoodOn: boolean | null; g: any; when: string[] }
 /** the lesson played once with the switch as asked (null: as the stand has it), the partner sampled */
 async function play(on: boolean | null): Promise<Tally> {
   const { runLesson } = await import('./lesson-run.ts');
-  const T: Tally = { code: -1, steps: 0, secs: 0, onMan: 0, about: 0, flinch: 0, back: 0, waits: 0, longWaits: 0, longFaced: 0, stoodOn: null, g: null, when: [] };
+  const T: Tally = { code: -1, steps: 0, secs: 0, onMan: 0, about: 0, flinch: 0, back: 0, waits: 0, longWaits: 0, longFaced: 0, lateSet: 0, lateNull: 0, stoodOn: null, g: null, when: [] };
   const hist: { t: number; yaw: number; x: number; z: number }[] = []; let aboutUntil = -1, began = -1, waitT = -1, waitYaw = 0, flinched = false, faced = false, backUntil = -1;
   const upd = GM.Game.prototype.update;
   GM.Game.prototype.update = function (this: any, ...a: any[]) {
@@ -41,6 +41,7 @@ async function play(on: boolean | null): Promise<Tally> {
     // a flinch: parked on a watched way, his chest swung inside the wait's first second
     if (waiting) { if (waitT < 0) { waitT = t; waitYaw = hist.length > 1 ? hist[hist.length - 2].yaw : yaw; flinched = false; faced = false; T.waits++; }
       const sw = Math.abs(wrap(yaw - waitYaw)); if (!flinched && t - waitT < 1.0 && sw > 45 * Math.PI / 180) { flinched = true; T.flinch++; }
+      if (t - waitT > 1.4) { if (A.face != null) T.lateSet++; else T.lateNull++; }   // (past steadyFaceSecs, with a margin: the wait that lasts turns him to his man)
       if (t - waitT > 3 && !faced) { faced = true; T.longWaits++; const foeYaw = A.face; if (foeYaw != null && Math.abs(wrap(yaw - foeYaw)) < 0.35) T.longFaced++; }
     } else waitT = -1;
     // a step back: the corner he is sent to lies behind the way he is walking
@@ -63,14 +64,15 @@ export async function pairSteady(): Promise<boolean> {
     F.verdict(off.code === 0 && off.about + off.back > 0 && off.flinch > 0, 'with the switch off the flaw is there: he turns right round for a corner he has passed, and squares to the man on a short wait', row(off));
     F.verdict(on.code === 0 && on.about === 0 && on.back === 0 && on.flinch === 0 && on.steps === off.steps, 'with it on there is none of it, and the lesson still plays to its end', row(on));
     F.verdict(on.secs <= off.secs + 10 && on.onMan <= off.onMan * 1.25 + 120, '… at no cost in time worth the name', `the lesson ${off.secs.toFixed(0)} s → ${on.secs.toFixed(0)} s · on a man ${(off.onMan / 60).toFixed(1)} s → ${(on.onMan / 60).toFixed(1)} s`);
-    { PAIR.steadyBackM = 9; PAIR.steadyFaceSecs = 9; const moved = await play(false); back();
+    F.verdict(on.lateNull === 0 && on.lateSet > 0, '… and a wait that lasts still turns him to watch his man', `frames of a wait past 1.4 s with his man to face: ${on.lateSet} · with none: ${on.lateNull}${on.lateSet === 0 ? ' · NO wait in this run lasted that long: not shown' : ''}`);
+    { PAIR.steadyFaceSecs = 9; const moved = await play(false); back();
       F.verdict(moved.code === off.code && moved.about === off.about && moved.back === off.back && moved.flinch === off.flinch && moved.onMan === off.onMan, 'off, nothing reads it: the same run with its numbers moved', `${row(moved)}`); }
     { const stood = await play(null); back(); const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_PAIRSTEADY, want = word !== undefined ? word === '1' : shipped;
       F.verdict(stood.stoodOn === want, 'the stand: on as the page opens, off on the frozen stand (TPS_PAIRSTEADY has the say on either)', `stood up with it ${stood.stoodOn ? 'on' : 'off'} · ${shipped ? 'the page\'s' : 'the frozen'} stand${word !== undefined ? `, TPS_PAIRSTEADY=${word}` : ''}`);
       const J: any = await import(`${ROOT}/src/game/journal.ts`), g = stood.g, snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g)));
-      PAIR.steady = true; const own = snap(), old = snap(); delete old.tables.PAIR.steady;
-      PAIR.steady = false; J.applyKnobs(g, own); const carried = PAIR.steady; PAIR.steady = true; J.applyKnobs(g, old); const before = PAIR.steady;
-      F.verdict(carried === true && before === false, 'a recording carries it: one made with it on replays with it on, one from before the key with it off', `the key in the file, on: ${carried} · no key: ${before}`); }
+      PAIR.steady = true; const own = snap(), old = snap(), older = snap(); delete old.tables.PAIR.steady; delete older.tables.PAIR;
+      PAIR.steady = false; J.applyKnobs(g, own); const carried = PAIR.steady; PAIR.steady = true; J.applyKnobs(g, old); const before = PAIR.steady; PAIR.steady = true; J.applyKnobs(g, older); const none = PAIR.steady;
+      F.verdict(carried === true && before === false && none === false, 'a recording carries it: one made with it on replays with it on, one from before the key (or before the table was carried) with it off', `the key in the file, on: ${carried} · no key: ${before} · no table: ${none}`); }
     return F.done();
   } finally { back(); }
 }
