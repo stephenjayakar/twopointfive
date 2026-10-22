@@ -65,6 +65,7 @@ export function railsFaults(L: LessonData): string[] {
   const cues = new Set<string>();
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
+  if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.length > 0 && R.rows.every(v => typeof v === 'string' && !!v))) out.push('rails.rows: a list of verbs, at least one (absent: every row)');
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
   return out;
 }
@@ -100,6 +101,10 @@ export class Rails {
   }
   /** is this action locked right now (the host asks for `camera` and `zoom`, which it turns itself — host/loop.ts) */
   locks(action: string): boolean { const A = this.allowed(); return !!A && !A.has(action); }
+
+  /** does Space offer a row of this verb here (player.ts buildInteractables): the keys are locked by action, and Space is ONE key over every row in
+   *  reach — so a level names the verbs its steps teach (`rails.rows`) and a thing nobody taught has no row at all */
+  offers(verb: string): boolean { const R = this.data?.rows; return !R || BREAK || R.includes(verb); }
 
   /** THE GATE (Game.step, right after the tick's record is loaded into the seat's input): whatever the step has not unlocked is taken out of the tick */
   gate(input: Input, cam: FollowCamera, dt: number) {

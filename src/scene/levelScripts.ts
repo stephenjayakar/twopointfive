@@ -4,5 +4,6 @@
 // starts it: with the frame's switch off the level is its scenario alone).
 import type { LevelScriptFn } from '../game/director';
 import tutSky from '../../levels/tut-sky.script';
+import tutQuiet from '../../levels/tut-quiet.script';
 
-export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-sky': tutSky };
+export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-sky': tutSky, 'tut-quiet': tutQuiet };

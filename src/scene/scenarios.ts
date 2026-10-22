@@ -256,6 +256,9 @@ export interface RailsData {
   /** nobody on the floor is the player: he is parked at `park`, out of the picture and every sense, and the view rides the squad (`reach`: metres the
    *  walk keys may shift it off them) */
   sky?: { park: Vec3; reach?: number };
+  /** the verbs Space offers on this level (an Interactable row's `verb`: 'grab', 'pick', 'code'…): a thing in reach whose verb is not here has
+   *  no row, so a tap never lands on something no step taught (absent: every row, as on any level) */
+  rows?: string[];
 }
 export interface LessonData {
   /** the family of systems it teaches, as the row says it ('Moving unseen') */

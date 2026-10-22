@@ -192,33 +192,37 @@ export function build() {
   const near = (at: P3, r: number) => ({ is: 'near', at, r });
   const held = [did('chron:grab'), { is: 'flag', flag: 'holding' }];
   const mark = (p: P3): P3 => [p[0], 1, p[2]];
-  const WAIT: Rect = { x0: 20.12, x1: 21.0, z0: 13.2, z1: 14.3 };   // in the niche, behind its wall
-  const HIDE: Rect = { x0: 23.45, x1: 25.3, z0: 18.75, z1: 19.9 };   // behind the long wall, on the lane's side
   const lesson: LessonData = {
     title: 'Unseen',
+    // THE FRAME (game/rails.ts). From the first step: the walk, the view, the aim. Each tool is switched on by the step that teaches it and stays on.
+    // `rows` = the verbs Space offers here: nothing a step did not teach has a row (a wall charge at the box, the light plate beside the strongroom's
+    // door, a body to drag), so a tap is always the thing the line means.
+    rails: { allow: ['move', 'camera', 'zoom', 'aim'], rows: ['grab', 'question', 'choke', 'pick', 'push', 'code', 'nocode', 'breakerOff', 'drive'] },
     steps: [
       // ---- the lane: light ----
-      { id: 'crouch', line: 'C: get low', done: any({ is: 'flag', flag: 'crouch' }, down(1)) },
+      { id: 'crouch', line: '[C]: get low', allow: ['crouch'], done: any({ is: 'flag', flag: 'crouch' }, down(1)) },
       { id: 'dark', line: 'Get out of the light', done: any(all(near(TQ.dark, 1.6), { is: 'meter', which: 'light', below: 0.3 }), down(1)), hold: 0.4, at: mark(TQ.dark) },
-      { id: 'creep', line: 'Stay in the shadow', done: any(near(TQ.whistle, 1.0), ...held, down(1)), at: mark(TQ.whistle) },
+      { id: 'creep', line: 'Stay in the shadow', cue: 'lane', done: any(near(TQ.whistle, 1.0), ...held, down(1)), at: mark(TQ.whistle) },
       // ---- the long wall: sound, then hands ----
-      { id: 'whistle', line: 'V: whistle here. Then hide behind the wall', done: any(all(did('event:whistle'), { is: 'in', area: HIDE }), ...held, down(1)), at: mark(TQ.hide) },
-      { id: 'grab', line: 'When he stops: round the wall, Space', done: any(...held, down(1)), at: mark(TQ.his) },
-      { id: 'ask', line: 'Space: ask him the code', done: any(did('chron:codeLearned'), down(1)) },
-      { id: 'drop', line: 'Right button: out cold. Left: the knife', done: down(1) },
+      // (a beat with a clock: the whole instruction is in the line that is up BEFORE the clock starts, the mark on the place the line means now — his own
+      // feet for the whistle; the moment it sounds the next line is up with the mark on the hide. A mark on the hide first sent a new player there to whistle.)
+      { id: 'whistle', line: '[V]: whistle here. Then hide behind the wall', allow: ['whistle'], checkpoint: 'the lane', done: any(did('event:whistle'), ...held, down(1)), at: mark(TQ.whistle) },
+      { id: 'grab', line: 'Hide. When he stops: round the wall, [Space]', allow: ['use'], done: any(...held, down(1)), at: mark(TQ.hide) },
+      { id: 'ask', line: '[Space]: ask him the code', done: any(did('chron:codeLearned'), down(1)) },
+      { id: 'drop', line: 'Right button: out cold. Left: the knife', allow: ['fire', 'alt'], done: down(1) },
       // ---- the back door: a lock ----
-      { id: 'pick', line: 'Space at the lock. Then keep still', done: any(did('chron:lockPicked'), { is: 'door', door: 'back', state: 'open' }, { is: 'door', door: 'back', state: 'unlocked' }, { is: 'door', door: 'back', state: 'broken' }), at: mark(TQ.backDoor) },
+      { id: 'pick', line: '[Space] at the lock. Then keep still', checkpoint: 'the back court', done: any(did('chron:lockPicked'), { is: 'door', door: 'back', state: 'open' }, { is: 'door', door: 'back', state: 'unlocked' }, { is: 'door', door: 'back', state: 'broken' }), at: mark(TQ.backDoor) },
       // ---- the store: a man in the light, the player in the dark ----
-      { id: 'nook', line: 'In. Stay in the dark', done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
-      { id: 'strike', line: 'Stay low: he hears a step. Left button', done: down(2), at: [24.9, 1, 12.6] },
+      { id: 'nook', line: 'In. Stay in the dark', cue: 'store', done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
+      { id: 'strike', line: 'Stay low: he hears a step. Left button', checkpoint: 'the store', done: down(2), at: [24.9, 1, 12.6] },
       // ---- the hall: two beams and the mains ----
-      { id: 'under', line: 'C: under the beam', done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
+      { id: 'under', line: 'Stay low: under the beam', done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
       // ---- the set piece: the mains ----
-      { id: 'nv', line: 'N: night vision', done: any({ is: 'flag', flag: 'nv' }, down(3)) },
-      { id: 'box', line: 'Space at the box. Then behind the wall', done: any(all(did('act:breakerOff'), { is: 'in', area: WAIT }), down(3)), at: mark(TQ.boxAt) },
-      { id: 'boxman', line: 'When he works at the box: strike him', done: down(3), at: mark(TQ.wait) },
-      { id: 'code', line: 'Space at the pad: his code', done: any(did('chron:codeEntered'), { is: 'door', door: 'strong', state: 'open' }, { is: 'door', door: 'strong', state: 'broken' }), at: [17.3, 1, 10.6] },
-      { id: 'safe', line: 'Space at the safe. Keep still', done: { is: 'stage', stage: 'exfil' }, at: front },
+      { id: 'nv', line: '[N]: night vision', allow: ['nvg'], checkpoint: 'the hall', done: any({ is: 'flag', flag: 'nv' }, down(3)) },
+      { id: 'box', line: '[Space] at the box. Then behind the wall', done: any(did('act:breakerOff'), down(3)), at: mark(TQ.boxAt) },
+      { id: 'boxman', line: 'Hide. When he works at the box: strike', done: down(3), at: mark(TQ.wait) },
+      { id: 'code', line: '[Space] at the pad: his code', checkpoint: 'the counting room', done: any(did('chron:codeEntered'), { is: 'door', door: 'strong', state: 'open' }, { is: 'door', door: 'strong', state: 'broken' }), at: [17.3, 1, 10.6] },
+      { id: 'safe', line: '[Space] at the safe. Keep still', done: { is: 'stage', stage: 'exfil' }, at: front },
       { id: 'out', line: 'Out by the front door', done: any({ is: 'in', area: { x0: 8.12, x1: 12.3, z0: 11.0, z1: 18.0 } }, { is: 'stage', stage: 'done' }), at: [11.4, 1, 15.1] },
     ],
   };

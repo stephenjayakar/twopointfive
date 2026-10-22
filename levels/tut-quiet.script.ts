@@ -4,7 +4,7 @@
 //
 // What each is for: `lane` puts a voice behind the wall the player creeps along (a man is THERE, and has not looked up);
 // `store` tells him by ear, from the dark, that the lit room ahead holds two men and that the near one is talking the
-// other way; `dark` is the clerk calling a man who will not answer.
+// other way. (When the mains go the clerk's calls to a man who will not answer are the game's own: nothing here adds to them.)
 import type { LevelScriptFn, BeatCtx, UnitRef } from '../src/game/director';
 
 const script: LevelScriptFn = D => {
@@ -14,12 +14,6 @@ const script: LevelScriptFn = D => {
       const u = c.unit(callsign); if (!u) return null;
       return c.query.state(u) === 'patrol' ? u : null;
     };
-    /** the man by name, if he is on his feet and not hunting anybody (the clerk on his errand to the box) */
-    const unworried = (c: BeatCtx, callsign: string): UnitRef | null => {
-      const u = c.unit(callsign); if (!u) return null;
-      const s = c.query.state(u); return s === 'patrol' || s === 'suspicious' ? u : null;
-    };
-
     P.onSignal('lesson:lane', 'lane');
     P.beat('lane', function* (c) {
       yield c.wait(1.2);
@@ -39,15 +33,6 @@ const script: LevelScriptFn = D => {
       c.say(a, 'Reyes. how long?');
       yield c.wait(2.4);
       const b = calm(c, 'Reyes'); if (b && calm(c, 'Kowalski')) c.say(b, 'still counting');
-    });
-
-    P.onSignal('lesson:dark', 'dark');
-    P.beat('dark', function* (c) {
-      yield c.wait(3.2);
-      const a = unworried(c, 'Reyes'); if (!a) return;
-      c.say(a, 'Kowalski? the lights');
-      yield c.wait(4.2);
-      const b = unworried(c, 'Reyes'); if (b) c.say(b, '... Kowalski?');
     });
   });
 };

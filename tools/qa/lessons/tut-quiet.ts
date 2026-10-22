@@ -15,6 +15,7 @@ const man = (B: Bot, route: string) => B.g.guards.find((x: any) => x.route?.name
 /** how many times the shift has had eyes on him so far (the chronicle's own rows: a sighting, a man gone to alert) */
 const seen = (B: Bot): number => B.g.chronicle.events.filter((e: any) => e.kind === 'spotted' || e.kind === 'contact').length;
 /** a person's beat between seeing a man come through and moving */
+export const needs = 'rails';
 const REACT = Number((globalThis as any).process?.env?.TPS_REACT ?? 0.6);
 const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const at = (p: ArrayLike<number>) => `${p[0].toFixed(1)}, ${p[2].toFixed(1)}`;
@@ -100,6 +101,10 @@ export const steps: Record<string, (B: Bot) => void> = {
   pick: B => {
     B.crouch(true); B.go([24.6, 0, 17.5], 20); B.go([26.4, 0, 17.5], 10); B.go(TQ.backDoor, 15, { near: 0.2 });
     B.say(`  at the back door: lit ${lit(B)}`);
+    // a stray left click here, nobody in an arm and nobody in reach: the button is on since the last step, and it must do nothing a man could hear
+    { const P = B.g.player, shots = () => (P.rifle?.shotsFired ?? 0) + (P.pistol?.shotsFired ?? 0), n = shots(); B.click(1, [26.0, 0, 18.6]); B.step(20);
+      if (shots() > n || !P.holstered) B.fail(`a stray left click at the lock ${shots() > n ? 'fired a round' : 'drew the gun'}`);
+      B.say(`  a stray left click: no round fired (${P.holstered ? 'holstered' : 'in hand'}; ${n} fired so far)`); }
     if (!tap(B, 'door', 'pick', [27.9, 1.0, 16.5])) B.fail('no row to pick the back door');
     if (!B.until(() => !B.door('back').locked, 14)) B.fail('the back door did not pick');
   },

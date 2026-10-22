@@ -17,7 +17,9 @@
 //   9. the journal: a recording from before the key replays with the frame off, one that carries it keeps its own word;
 //  10. THE MISSION AGAIN: Shift rides with Enter through the gate (the restart's keys) and alone does not; the seat's unseen player is no cheat to the verdict;
 //      a restart from a later step is on the first step, only its action open, before a tick has passed, and does not end; the mission left, he is seen again.
-// RAILS_BREAK=1 = the gate lets everything through: lines 3, 4 and 10 must fail.   exit 0 = all hold · 1 = one does not
+//  11. THE ROWS (`rails.rows`, on levels/tut-quiet.json): Space offers only the verbs the mission names — at a locked door the pick and no boot; without
+//      the list, every row the door has anywhere.
+// RAILS_BREAK=1 = the gate lets everything through: lines 3, 4, 10 and 11 must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -118,6 +120,17 @@ export async function railsCheck(): Promise<boolean> {
       verdict(was === 2 && shift && enter && !sprint && started && !cheat && A0.size === 1 && A0.has('camera') && !end && i1 === 0 && A1.size === 1 && unseen && !after && Math.abs(d1 - d0) > 1 && Math.abs(d2 - d0) < 0.01,
         'the mission again: Shift rides with Enter through the gate (and alone does not), the run is no cheat\'s, a restart from the third step is on the first step with only its action open before a tick has passed, on the view the first run opened on, and does not end, and the mission left leaves the player seen again',
         `was on step ${was + 1} · Shift+Enter through ${shift && enter}, Shift alone ${sprint} · verdict started ${started}, cheat ${cheat} · before a tick: ${sum0} · after: step ${i1 + 1}, end ${end ?? 'none'}, open ${[...A1].join(' ')} · unseen in the seat ${unseen}, after quitting ${after} · view ${d0.toFixed(1)} → ${d1.toFixed(1)} → ${d2.toFixed(1)}`); }
+    // ---- 11: Space offers only the rows the mission names (the quiet mission's back door: locked, and a boot would open it too)
+    { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
+      let W: any; try { W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/tut-quiet.json`, 'utf8'))), seed: 1 }); RAILS.on = true; startFromQuery(W.game, '?levelFile=tut-quiet.json&quiet'); }
+      finally { console.log = log; console.warn = warn; console.error = err; }
+      const g = W.game, R = g.lesson.data?.rails, named: string[] = R?.rows ?? [], DOOR = [27.9, 1.0, 16.5];
+      const verbs = () => { g.teleportPlayer([27.9, 0, 17.2]); for (let i = 0; i < 12; i++) { W.cursorAt(DOOR); W.step(DT); } return [...new Set<string>(g.nearby.filter((r: any) => r.verb).map((r: any) => r.verb as string))]; };
+      const on = verbs(); if (R) R.rows = undefined; const all0 = verbs(); if (R) R.rows = named;
+      const extra = all0.filter(v => !named.includes(v));
+      verdict(named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && g.rails.offers('pick') && !g.rails.offers(extra[0] ?? 'pick'),
+        'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere',
+        `the list: ${named.join(' ')} · at the back door with it: ${on.join(' ') || 'no row'} · without it: ${all0.join(' ') || 'no row'}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

@@ -168,6 +168,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
   { id: 'tut-sky', title: 'The halt, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
     place: 'A truck halt on a pass road, under snow', lean: 'loud', defenders: 5, squads: true,
     blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.' },
+  { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
+    place: 'A money changer\'s house, at night', lean: 'quiet', defenders: 3,
+    blurb: 'Alone, and nobody knows you came. Through the dark to the strongroom, and out the way you went in.' },
 ];
 /** every row that is a lesson: the tutorial's missions, then the Training levels */
 export const LESSON_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...TRAINING_MISSIONS];
