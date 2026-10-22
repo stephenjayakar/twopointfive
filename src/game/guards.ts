@@ -57,6 +57,7 @@ import { needsPatrol } from './needs';
 import { dozePatrol, dozeDeaf, dozeDark, dozeAsleep, dozeEar } from './doze';
 import { coverSeen, coverBlind } from './coverfire';
 import { startleSight, startleHolds, startleTorch, startleLeft, startleScript } from './startle';
+import { doorForce, doorForceHear, doorForceOwnBoot } from './doorforce';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
@@ -121,6 +122,7 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
     // walkable space (longer, a bit muffled — a lot if a closed door is across the doorway), or barely through the mass
     const prop = e.kind === 'glass' ? glassHeard(g, e, v3.add(gd.char.pos, [0, 1.5, 0])) : hearPath(g, v3.add(e.pos, [0, 1, 0]), v3.add(gd.char.pos, [0, 1.5, 0]));   // (a pane's crash: from whichever face of it reaches him best — glass.ts glassHeard, hearPath itself for an event without the faces) (weather.ts: propagate(), the path stretched by a picked weather's noise at his ears — rain, a thunderclap; no kind picked = propagate() itself)
     const d = prop.pathLen, carry = prop.carry;                                  // routed & open ≈ 0.72, through a closed door ≈ 0.32, sealed 0.25
+    doorForceHear(g, gd, e, prop);   // (doorforce.ts — a return on its first line with its switch off: an alerted man keeps what he hears of an enemy at the far face of a shut door)
     const heardAt: Vec3 = [prop.via[0], 0, prop.via[2]];                       // where to go and look: the source if heard directly, else the doorway / corner it came through
     // a report below the gunshot line (level < 1: the suppressed pistol — playtest 08-09 — or a canister's pop / skitter): an odd noise worth a look, heard
     // out to ~7 m of open air per unit level along the same propagation (through a shut door far less), suspicion toward it, no radio, no 'shots fired'
@@ -141,7 +143,7 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
       // ear as ever), or a side his has nothing to do with (a neutral's fight is not his: the staff do not answer the showcase's gunfire, three walls off or not).
       // For the staff every 'guardShot' is a colleague's and every 'shot' is Sam's — the game as it was; the stun charge and the door are anybody's.
       const rel = gunfire ? shotRelation(g, gd, e) : 'threat';
-      if (rel === 'none' || ownBang(g, gd, e)) continue;   // (… and a grenade his own side threw was called as it left the hand: frag.ts)
+      if (rel === 'none' || ownBang(g, gd, e) || doorForceOwnBoot(g, gd, e)) continue;   // (… and a grenade his own side threw was called as it left the hand: frag.ts; a door his own side booted in is not an intruder's — doorforce.ts, false with its switch off)
       const dLoud = loudLen(g, d, v3.add(gd.char.pos, [0, 1.5, 0]));   // (weather.ts: rain drowns small sounds — a shot is placed off the path as it is in the air; = d with no weather picked)
       if (gunfire) { H.shots++; H.lastShotT = g.time; } else if (kick) H.kick++; else H.bang++;   // (a colleague's rounds are gunfire heard too: 'shots' is what reached his ears, whoever fired)
       H.lastT = g.time;
@@ -2132,6 +2134,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   c.anim.lookYawExtra = 0; gd.lookPhase += dt;
   let moveSpeed = 0; let upper: UpperMode = 'none'; let aimAt: Vec3 | null = null;   // ('torch' only for a man answering a whistle with the torch still in his hand — the suspicious branch)
   let crouch = 0, duck = false;   // suppression (the alert branch): how far down he is (the animator's crouchTarget — threaded through the one pose write at the bottom, which used to say 0 for every guard) and whether the gun is lowered for it (upper 'none' + the low ready, as for a colleague in the line)
+  let forced: { aim: Vec3; move: number } | null = null;   // (doorforce.ts: the alert branch's answer for a man on a shut door)
   let pied = false;   // a branch that walks a hunting path through doorways runs pieDoorway itself; every other leaves no pie standing (below the switch)
   switch (gd.state) {
     case 'patrol': {
@@ -2311,6 +2314,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         if (gd.searchT > 4 && !g.calledIn && staff) { g.calledIn = true; g.say(gd, WORDS.on && !isOffice(g.level) ? 'target is down. send someone over.' : 'target is down. send someone up.', true); g.audio.play('radio', c.bones.head ?? c.pos, 0.5, { rate: 0.95 }); }   // (the staff's net: a unit covers his man and says nothing up any chain)
         if (gd.searchT > 14) { gd.state = 'suspicious'; gd.awareness = 0.3; gd.searchT = 0; gd.reactT = 0; gd.lastKnown = v3.copy(body); }   // eventually they lower their weapons and mill about the body
       } else if ((aimAt = coverBlind(g, gd, dt))) { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0];   // (coverfire.ts: the man went behind something breakable a moment ago — stood still, his aimed rounds go into it; null = nothing of the kind, the branches below as ever)
+      } else if ((forced = doorForce(g, gd, dt))) { aimAt = forced.aim; moveSpeed = forced.move;   // (doorforce.ts: he is sure an enemy is at the far face of a shut door — his rounds go through a wooden leaf, and a free man ends by booting it in; null = nothing of the kind, and always with its switch off)
       } else if (gd.lastKnown && gd.pinned) {   // scripted: hold the position, cover where he was last seen
         aimAt = v3.add(gd.lastKnown, [0, 1.1, 0]);
         if (DOORMANNERS.on && offThreshold(g, gd, aimAt, dt, false)) moveSpeed = gd.speed;   // (doorway.ts: pinned where he stopped, and that is an open doorway — a step off it first)
