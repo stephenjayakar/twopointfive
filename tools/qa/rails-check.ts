@@ -20,7 +20,7 @@
 //  14. THE ROWS (`rails.rows`, on levels/tut-quiet.json): Space offers only the verbs the mission names — at a locked door the pick and no boot; without
 //      the list, every row the door has anywhere; and no row at all while Space itself is locked (the gate beside the start). And his own actions' ring (handring.ts) is worked with its own digit while it is up: on the whistle's
 //      step the digit alone does nothing, the key kept down and then the digit whistles.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14 and the last line's must fail.   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's and the wall's must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -137,6 +137,21 @@ export async function railsCheck(): Promise<boolean> {
       verdict(first?.n === 1 && fin && !over && last?.line === L.steps[n - 1].line && last?.n === n && last?.of === n && ended === null,
         'the last line stays up: with every step done and the mission still running the big line is the last step\'s, not the small row; once the mission is over there is none',
         `first up ${first?.n}/${first?.of} · every step done ${fin}, mission over ${over} → the line "${last?.line ?? 'none'}" (${last?.n ?? '-'}/${last?.of ?? '-'}) · mission over → ${ended ? `"${ended.line}"` : 'none'}`); }
+    // ---- a mission that teaches the wall keeps a walk into one from taking it until that line (the quiet mission's house wall; `wall` is put on its last
+    //      step here, then among what is open from the start: no mission in the tree with a man on the floor names it yet)
+    { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
+      let W: any; try { W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/tut-quiet.json`, 'utf8'))), seed: 1 }); RAILS.on = true; startFromQuery(W.game, '?levelFile=tut-quiet.json&quiet'); }
+      finally { console.log = log; console.warn = warn; console.error = err; }
+      const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`), was = { on: WALLSNAP.on, press: WALLSNAP.press }; WALLSNAP.on = WALLSNAP.press = true;
+      const g = W.game, I = W.input, L = g.level.scenarios.lesson, T = L.steps[L.steps.length - 1], allow0 = T.allow, base0 = L.rails.allow;
+      const walk = () => { g.teleportPlayer([13.6, 0, 17.0]); for (let i = 0; i < 10; i++) W.step(DT); I.keys.add('KeyW'); for (let i = 0; i < 90; i++) W.step(DT); I.keys.delete('KeyW'); const on = !!g.player.wall; g.teleportPlayer([11.0, 0, 18.5]); for (let i = 0; i < 10; i++) W.step(DT); return on; };
+      const plain = walk(), free0 = g.rails.locksWall();
+      T.allow = [...(allow0 ?? []), 'wall']; const locked = g.rails.locksWall(), taught = walk();
+      L.rails.allow = [...base0, 'wall']; g.restartEncounter(); for (let i = 0; i < 30; i++) W.step(DT); const open = g.rails.locksWall(), after = walk();
+      T.allow = allow0; L.rails.allow = base0; WALLSNAP.on = was.on; WALLSNAP.press = was.press;
+      verdict(plain && !free0 && locked && !taught && !open && after,
+        'a mission that teaches the wall keeps a walk into one from taking it until that line: with no step naming the wall a move key held into the house wall takes it, as on any page; with the wall on a later step it does not; with the wall open it does again',
+        `no step names it: taken ${plain} (locked ${free0}) · on the last step: locked ${locked}, taken ${taught} · open from the start: locked ${open}, taken ${after}`); }
     // ---- 12: the mark stays in the picture, and clear of the step's line
     { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
       const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };

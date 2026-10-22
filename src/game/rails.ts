@@ -117,6 +117,9 @@ export class Rails {
   }
   /** is this action locked right now (the host asks for `camera` and `zoom`, which it turns itself — host/loop.ts) */
   locks(action: string): boolean { const A = this.allowed(); return !!A && !A.has(action); }
+  /** A MISSION THAT TEACHES THE WALL (a step of it allows `wall`) keeps a walk into one from taking it until that line. The walk has no key for the gate to
+   *  drop (player.ts wallPress asks here); a mission that never names the wall leaves it as the page has it. */
+  locksWall(): boolean { if (BREAK) return false; const A = this.allowed(), S = this.lesson(); return !!A && !!S && !A.has('wall') && S.L.steps.some(T => T.allow?.includes('wall')); }
 
   /** does Space offer a row of this verb here (player.ts buildInteractables): the keys are locked by action, and Space is ONE key over every row in
    *  reach — so a level names the verbs its steps teach (`rails.rows`) and a thing nobody taught has no row at all. On such a level
