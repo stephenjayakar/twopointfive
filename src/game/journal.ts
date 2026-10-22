@@ -351,10 +351,11 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.walk === undefined) SQUADTHROW.walk = false;   // (…and one from before a man walked to a throw: with no arc from where anybody stood the order was refused)
     if (T.lob === undefined) SQUADTHROW.lob = SQUADTHROW.duck = SQUADTHROW.samCall = false;   // (…and one from before a man worked his throw out: the one straight arc or nothing, and a frag refused for anybody of ours it had a line to)
   }
-  if (!k.tables.TAKEDOWN) TAKEDOWN.on = false;   // (a file from before takedowns were moves: a man put down pitched over like a plank and lay where that put him)
+  if (!k.tables.TAKEDOWN) { TAKEDOWN.on = false; TAKEDOWN.haul = false; }   // (a file from before takedowns were moves: a man put down pitched over like a plank and lay where that put him)
   else { const T = k.tables.TAKEDOWN as Partial<typeof TAKEDOWN>;
     if (T.lower === undefined) TAKEDOWN.lower = false;   // (a file from before the choke lowered him: he was choked standing, and both men's bones were where that put them)
     if (T.chokeBeats === undefined) TAKEDOWN.chokeBeats = false;   // (…from before the choke's beats: his hands came onto the arm over most of a second and fell as he was lowered)
+    if (T.haul === undefined) TAKEDOWN.haul = false;   // (…from before the choke hauled him up and back: both men stood where the hold had them)
     if (T.kill === undefined) TAKEDOWN.kill = false; }   // (…and from before the kill from the hold was a move: the phase was drawn as the hold, and he fell as the knife from behind dropped him)
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
   else if ((k.tables.STEALTHPOSE as Partial<typeof STEALTHPOSE>).nod === undefined) STEALTHPOSE.nod = false;   // (…and one from before a goggle nod showed in the look under a door: the look took the nod back out of his head)
