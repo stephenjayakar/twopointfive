@@ -747,7 +747,7 @@
         { "id": "store", "line": "Go in: shoot both", "done": { "is": "men", "down": 5 }, "at": [33.6, 1, 14.25] },
         { "id": "take", "line": "[Space]: take the code book", "done": { "is": "stage", "stage": "exfil" }, "at": [34.86, 0.45, 11.5], "checkpoint": "the store" },
         { "id": "rifle", "line": "[2]: back to the rifle", "done": { "is": "slot", "slot": "rifle", "drawn": true } },
-        { "id": "leave", "line": "Back to the arch", "done": { "is": "any", "of": [{ "is": "near", "at": [16.5, 0, 14.25], "r": 0.8 }, { "is": "men", "down": 7 }] }, "at": [16.5, 0, 14.25] },
+        { "id": "leave", "line": "Back to the arch", "done": { "is": "any", "of": [{ "is": "near", "at": [16.5, 0, 14.25], "r": 0.8 }, { "is": "men", "down": 7 }] }, "at": [16.5, 0, 14.25], "explain": { "title": "The rifle's launcher", "text": "Under the rifle's barrel is a launcher. Its loads are the tags on the kit strip beside the rifle: the lit one is on the right button. HE is a grenade: it arms 8 m out. Hold the right button to aim, let go to fire. [2] again, then [2], swaps the load." } },
         { "id": "behind", "line": "Two men behind you", "done": { "is": "cue", "name": "trucks" }, "cue": "trucks" },
         { "id": "load", "line": "[2] again: load the grenade", "setupLine": "[2], then [2]: load the grenade", "done": { "is": "any", "of": [{ "is": "launcher", "on": "he40" }, { "is": "men", "down": 7 }] }, "allow": ["alt"] },
         { "id": "launch", "line": "Hold right button, aim at their doorway, let go", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "threw", "kind": "he40" }, { "is": "men", "down": 6 }] }, { "is": "men", "down": 7 }] }, "at": [25.9, 1, 14.25] },

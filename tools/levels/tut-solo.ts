@@ -340,7 +340,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'take', line: '[Space]: take the code book', done: { is: 'stage', stage: 'exfil' }, at: front },
       // THE WAY OUT
       { id: 'rifle', line: '[2]: back to the rifle', done: { is: 'slot', slot: 'rifle', drawn: true } },
-      { id: 'leave', line: 'Back to the arch', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH },
+      // (the maintainer: "for 2 we probably need to explain secondary attachments for the rifle in a modal" "and where to see it in the UI, swap between
+      //  secondaries, etc.": said here, with the rifle back in his hands and its load on the kit strip, in the quiet before the two it is for come out.
+      //  THE SWAP IS DONE, not only said, on the load's line below wherever his kit carries two loads; his own card carries the grenade alone until a
+      //  level's card can deal sponge rounds — scene/levelData.ts IssueCard has no key for them)
+      { id: 'leave', line: 'Back to the arch', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH,
+        explain: { title: 'The rifle\'s launcher', text: 'Under the rifle\'s barrel is a launcher. Its loads are the tags on the kit strip beside the rifle: the lit one is on the right button. HE is a grenade: it arms 8 m out. Hold the right button to aim, let go to fire. [2] again, then [2], swaps the load.' } },
       // (the maintainer: "weird that we're told to load the grenade long before being told to do anything about it": the two it is for come out first, on a
       //  line that only asks him to look (the frame draws a line with no key and a cue for its end as something to watch); the script ends that line
       //  once they stand in the doorway, so the shot is asked for with men in it. THE LOAD'S LINE is for a kit that deals the ring first: his own card

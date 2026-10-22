@@ -167,7 +167,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   said: `probes.ts words-routes` was red on `store_a`). CHECK: the scripted player now wears what the page deals (`pageKit` in its file, read by
   `lesson-run.ts`: `kitIssuedPage` and the solo card as `main.ts` deals it), so on the page's stand all seven ways of `tut-solo-check` are played
   with the grenade up and no load row, and on the frozen stand with the ring first and the load's line asked. Played: 2 seeds x 7 ways on each stand,
-  and once on the page on the software adapter. Never seen on a GPU; nobody has played it by hand since the rework.
+  and twice on the page on the software adapter. Never seen on a GPU; nobody has played it by hand since the rework.
+  THE LAUNCHER HAS A CARD (the maintainer: "for 2 we probably need to explain secondary attachments for the rifle in a modal" "and where to see it in
+  the UI, swap between secondaries, etc."): 'The rifle's launcher' on step 'leave', with the rifle back in his hands: the loads are the tags on the kit
+  strip beside the rifle, the lit one is on the right button, HE arms 8 m out, the gun's key again and then its row's swaps the load. THE SWAP IS DONE
+  on the load's line only where his kit carries two loads: a level's card (`IssueCard`) has no key for sponge rounds, so on the page he carries the
+  grenade alone and the swap is said, not done (asked of the kit's owner). The card itself has not been looked at on a page.
 - **`tut-solo` dressed (2026-10-22, level data only; groups `dress.*` in the generator).** The maintainer, of every tutorial level: "just as much
   (if not more! since it's first impression) polish and have it really feel great and organic". ADDITIONS ONLY, off the mission's line, each man's
   mark and every door's sweep: a melon stall and scrub on the roadside; a rope bed and a low table in the truck court's north corner; in the
