@@ -379,7 +379,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
       }
     } else { pl.slot = 'rifle'; draw(rifleName(pl)); }
   }
-  { const eKey = input.hit('KeyE'), away = !eKey && HANDSLOT.on && !pl.sel.open && input.hit(HANDSLOT_KEY);   // E: put it away / draw it (whatever the slot is; the rifle 'away' is on his back) · the empty hands' own slot (handslot.ts): away only, never the way back, and not a key of his kit while a list of rows is up
+  { const eKey = input.hit('KeyE'), away = !eKey && HANDSLOT.on && !pl.choosing && input.hit(HANDSLOT_KEY);   // E: put it away / draw it (whatever the slot is; the rifle 'away' is on his back) · the empty hands' own slot (handslot.ts): away only, never the way back, and not a key of his kit while a list of rows is up
     if ((eKey || away) && !pl.dragging && !pl.takedown) {
       if (pl.wall && pl.wall.kind !== 'stack' && !(pl.rifleSel && wallStacks(pl.wall))) { const to = eKey ? !pl.wall.drawn : false; if (to !== pl.wall.drawn) { pl.wall.drawn = to; g.msg(to ? `${itemName(pl)} — in hand once off the wall` : `${pl.rifleSel ? 'slung' : 'holstered'} — and staying so off the wall`); } }
       else setHolstered(g, eKey ? !pl.holstered : true);
@@ -1032,7 +1032,7 @@ function wallPress(g: Game, dt: number, input: Input, cam: FollowCamera, mx: num
   const face = ml > 0 && !wantSprint && !g.puppet && !g.touring ? pressFace(g, mx, mz) : null;
   if (!face || (P.n && (face.n[0] * P.n[0] + face.n[2] * P.n[2] > 0.9 || g.time < P.until))) { P.t = 0; return; }
   const inHand = pl.holstered ? null : pl.rifleUp ? pl.rifle : pl.pistol, gunAway = !pl.holstered && !(W.stack && pl.rifleUp);   // (gunAway: what the back hold takes out of his hand)
-  const busy = pl.dragging || !!pl.haul || !!pl.doorMove || !!pl.easing || !!pl.charging || pl.sel.open || pl.sel.downT >= 0 || pl.throwHeld || !!g.orders.menu
+  const busy = pl.dragging || !!pl.haul || !!pl.doorMove || !!pl.easing || !!pl.charging || pl.choosing || pl.sel.downT >= 0 || pl.throwHeld || !!g.orders.menu
     || input.lmb() || input.rmb() || !!inHand?.reloading || pl.equipT > 0 || g.time - pl.lastFireT < W.pressAfterShot;
   if (busy || (W.pressCalm && gunAway && g.guards.some(h => h.state === 'alert' && h.team !== 'operative' && h.team !== 'civilian'))) { P.t = 0; return; }
   const thing = g.nearby.some(it => it.inReach && PRESS_THINGS.has(it.kind) && Math.min(v3.distXZ(it.pos, face.at), it.door ? v3.distXZ(it.door.frameCentre, face.at) : Infinity) < W.pressThingAt);
@@ -1450,7 +1450,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     }
   } else {
     // ---- E: the other hold — draw the pistol to his head / holster it and the knife is back (held only, and not while the hand is still between tools from the last)
-    if (H.phase === 'held' && H.swapT >= K.swap && (input.hit('KeyE') || (HANDSLOT.on && input.hit(gun ? HANDSLOT_KEY : 'Digit1'))) && !pl.sel.open && pl.sel.downT < 0) { swapHold(g); gun = H.variant === 'gun'; }   // (not while the Space list is open or a press is down: the swap re-opened the list on the gun's rows and the SAME release then chose the pistol-whip — review 08-10 #16)
+    if (H.phase === 'held' && H.swapT >= K.swap && (input.hit('KeyE') || (HANDSLOT.on && input.hit(gun ? HANDSLOT_KEY : 'Digit1'))) && !pl.choosing && pl.sel.downT < 0) { swapHold(g); gun = H.variant === 'gun'; }   // (not while the Space list is open or a press is down: the swap re-opened the list on the gun's rows and the SAME release then chose the pistol-whip — review 08-10 #16)
     const swapping = H.swapT < K.swap;   // the draw / the holstering under way: none of the rows may start (no round, no question; a choke / whip chosen now waits for the hand)
     // ---- his rows, performed this frame (interact.ts → Game.act): the question (arm), the choke (arm) / the whip (gun) — chosen, then run on their own clock.
     //      (No letting him go: once the arm is on, it ends with him on the floor. The tour taps these rows like a player.)
