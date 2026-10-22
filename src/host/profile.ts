@@ -188,6 +188,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.fileSpread = q.get('filespread') !== '0';   // fall in, Sam stopped: a place that fell on the place of a man ahead in the file is dealt again a body's room off it (game/orders.ts apartSlot: two men shoved each other over one spot for as long as he stood); ?filespread=0 = the places as they fall
   ORDERS.fileHold = q.get('filehold') !== '0';   // …and where the spread found no floor and he cannot stop short, he holds where he stands, a step off the mate's place where the floor has one (game/orders.ts apartSlot hold: he was handed the place as it fell, inside a body's room of a mate's, and the two shoved each other in a corner); ?filehold=0 = the place as it fell
   ORDERS.backEnd = q.get('backend') !== '0';   // …and the file's further back off a doorway ends with the floor: a back distance that no longer moves the place is not counted (game/orders.ts clearBack: with no trail beside an open door it was counted in full for every man after the first, the third man's file distance read 8.3 m and a man 8.9 m off in plain sight was taken for one in his place); ?backend=0 = the full count
+  ORDERS.retakeGoal = q.get('retakegoal') !== '0';   // a man back from the fight walks for where his order stands, not for a corner of the way he was on before (game/orders.ts tick): ON in the page; ?retakegoal=0 = his goal left as the fight found it
   ORDERS.inWay = q.get('inway') !== '0';   // a stack refused 'no room on that door' only because Sam's own body is on one of its places: the man says "you're in the way." (game/orders.ts noRoomWords: the places asked once more as if he were not there — words only, the order is refused as it was and no place is dealt by it); ?inway=0 = 'no room on that door.', as it was
   ORDERS.walkTries = q.get('walktries') !== '0';   // a 'move there' whose way runs at a door locked against the team that nobody has tried is not refused with the door's name: the men walk up to it, the man on the jamb tries the handle, and the order ends there as a door order ends 'found shut' — the same line, the men left stacked on it; the team knows from then on (game/orders.ts walkStacks, game/doortools.ts walkTried; only where DOORTOOLS.testDoor is on); ?walktries=0 = refused at once, '<door> is locked.', as it was
   ORDERS.roundCap = q.get('roundcap') === '0' ? 0 : ROUND_CAP;   // the way round an uncleared room is taken only when it is worth it (game/orders.ts route / roundRooms: a way round that still crosses floor nobody has been on, or is longer than this many times the short way + 3 m, is refused — the short way, as with no way round); ?roundcap=0 = any way round with less unknown floor on it, however long, as it was
@@ -544,6 +545,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.fileHold': 'TPS_FILEHOLD=1',
   'ORDERS.backEnd': 'TPS_BACKEND=1',
   'ORDERS.inWay': 'TPS_INWAY=1',
+  'ORDERS.retakeGoal': 'TPS_RETAKEGOAL=1',
   'ORDERS.walkTries': 'TPS_WALKTRIES=1',
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
   'COVER.rearRead': 'TPS_REARREAD=1',

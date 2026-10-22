@@ -3225,6 +3225,8 @@ if (on('cmdring', 'squadorders', 'all')) await run('cmdring', async () => (await
 if (on('qkey', 'squadorders', 'player', 'all')) await run('qkey', async () => (await import('./qkey-check.ts')).qkeyCheck());
 if (on('wordsmall', 'doortools', 'squadorders', 'all')) await run('wordsmall', async () => (await import('./wordsmall-check.ts')).wordsmallCheck());   // the word (F) sends one or two teammates in from a plain stack (DOORTOOLS.wordSmall); WORDSMALL_BREAK=1 fails it
 // the orders ring on the squad's command key as the page has it: a tap is the quick order, the key kept down puts the ring up and it stays without the key; Shift + the key is plan mode (qring-check.ts; CMDRING.on / stay / tapNow / plan / planRun)
+// a man back from the fight walks for where his order stands, and a cover's row carries no compass word (retake-check.ts; ORDERS.retakeGoal)
+if (on('retake', 'squadorders', 'all')) await run('retake', async () => (await import('./retake-check.ts')).retakeCheck());
 if (on('qring', 'squadorders', 'all')) await run('qring', async () => (await import('./qring-check.ts')).qringCheck());
 // the squad's only keys: the ring carries every order (a letter's row on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the board frees the orders key and the who key (qonly-check.ts; CMDRING.only, KEYMAP.qOnly)
 if (on('qonly', 'squadorders', 'all')) await run('qonly', async () => (await import('./qonly-check.ts')).qonlyCheck());

@@ -181,6 +181,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Q on a door, then F, with one or two teammates** (`DOORTOOLS.wordSmall`, `?wordsmall=0`): the word's key sends a small squad in from a plain
   stack as it does the four — the rule, its edges and its check are the door tools' bullet "The word sends a small squad in from its stack"
   (`docs/agents/door-tools.md`). Q on the stacked door again is still the squad's own pick of entry.
+- **A man back from the fight walks for where his order stands: ON IN THE PAGE since 10-22** (`ORDERS.retakeGoal`, `orders.ts tick`; `?retakegoal=0` ·
+  `TPS_RETAKEGOAL=1`; OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row, the journal turns it off for a recording from before the key;
+  debugger: Player, doors & props ▸ 'back from a fight: walks for his place'). A find of the code review: back on his order a man is handed the way
+  from where the fight left him, but his goal was left alone, so with the new way straight he walked to a corner of the way he was on before, stood on
+  it, and after `stuckSecs` said he could not get through, his order marked stopped short. On: his goal is the new way's first corner, or his place.
+  It moves walks after a fight, so it is a switch. CHECK: `probes.ts retake` (tools/qa/retake-check.ts, family squadorders; 4 lines, both stands;
+  `RETAKE_BREAK=1` fails the walk line: all four stand at the old corner five to seven metres off their places). The rig writes the corner into each
+  man's way by hand and hands him to the fight by its own seam (`endGuardScript(gd, 'alert')`). NOT measured: how often play meets it; no tally was run
+  with it on; nobody has played it; never seen on a GPU.
+- **A cover's and an arc hold's squad row carry no compass word while the dialogue pass is on** (`orders.ts` the cover order and the hold's arc; no new
+  switch: it follows `WORDS.on`, on in the page, off on the frozen stand). The rows read 'covering west' and 'holding · east' on the HUD, where no
+  compass word belongs, and `orders-cover` pinned it. Now: 'covering <the place watched, by the level's own name>' or 'covering that way'; 'holding ·
+  <the place>' or 'holding' (`dialogue.ts watchedPlace`). With the pass off the rows are as they were. Row words are in no digest. `orders-cover` and
+  `squadplay`'s hold line read the stand; line 3 of `probes.ts retake` asks both ways.
 - **A longer press of Q is the orders ring and it stays up; Shift + Q is plan mode: ON IN THE PAGE since 10-22** (`CMDRING.on`, `stay`,
   `stayHoldSecs`, `tapNow`, `plan`, `planRts`, `planRun` in `src/game/cmdring.ts`; `ringLatch`, `ringHoldSecs` there; `orders.ts ringInput`,
   `planmode.ts planShift`; the maintainer, 10-22: "longer press for Q opens up squad, doesn't require holding it", "shift Q for plan mode"). The ring and

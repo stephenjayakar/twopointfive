@@ -92,6 +92,7 @@ import { clearLineFeet, clearLineLive } from './clearline';
 import { fireLineFeet, fireLineLive, fireLineTick } from './fireline';
 import { fitSpots, fitGroups, fitTick, type Fit } from './roomfit';   // (used inside the 'move' order only: nothing of roomfit.ts is touched at load)
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { watchedPlace } from './dialogue';   // (read inside an order's issue only: a cover's row names the place watched)
 import { doorSaidName } from './doornames';   // (a leaf: a shorthand door id's said name)
 import { propGap } from './roomclear';   // (used inside workedMarks only: nothing of roomclear.ts is touched at load)
 import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewOpen, STACKROOM, STACKROOM_STATS } from './stackroom';
@@ -222,6 +223,11 @@ export const ORDERS = {
    *  on the door is him, and the man who speaks says so — in the menu's greyed row too. WORDS ONLY: the order is refused exactly as it was, no place is
    *  dealt from the second ask and no man moves by this key. A door with no room without him says 'no room' as before. Off = 'no room on that door.' */
   inWay: false,
+  /** `retakeGoal` (ON in the page — `?retakegoal=0` — off here and on the frozen stand, `TPS_RETAKEGOAL=1`; a FROZEN_HOLDS row) = a man back from the
+   *  fight walks for where his order stands. Back on his order he is handed the way from where the fight left him (tick: `route`); with that way
+   *  straight and a corner left in his goal from the way he was on before, he walked to the old corner, stood on it, and after `stuckSecs` said he could
+   *  not get through. On: his goal is the new way's first corner, or his place. Off = the goal is left as the fight found it. */
+  retakeGoal: false,
   /** `walkTries` (ON in the page — `?walktries=0` — off here and on the frozen harness stand, `TPS_WALKTRIES=1`; a FROZEN_HOLDS row) = a 'move there' whose
    *  way runs at a door locked against the team that NOBODY HAS TRIED is not refused with the door's name. The refusal read the door's real lock, and told
    *  the player of a lock or a wedge no hand had been on ("store door is locked." on the Mousehole) — where doortools.ts testDoor has the team learn a door
@@ -534,7 +540,7 @@ export class SquadOrders {
       { id: 'cover', key: 2, label: t => t.kind === 'door' ? 'cover this door' : 'cover that way', targets: ['floor', 'door'], ack: ['covering.', "i've got it."],
         can: (S, gd, t) => S.hasLine(gd, t) || 'no line from here.', issue: (S, men, t) => {
         const watch: Vec3 = [t.at[0], 1.1, t.at[2]];
-        for (const gd of men) { const p = gd.char.pos; const yaw = yawTo(p, watch); const words = `covering ${t.kind === 'door' ? doorWords(t.door) : compass(yaw)}`;
+        for (const gd of men) { const p = gd.char.pos; const yaw = yawTo(p, watch); const words = `covering ${t.kind === 'door' ? doorWords(t.door) : WORDS.on ? watchedPlace(S.g.level, p, watch) ?? 'that way' : compass(yaw)}`;   // (the dialogue pass: a row on the HUD carries no bearing — the place by the level's own name, or the order's own words)
           S.assign(gd, { order: 'cover', post: [p[0], 0, p[2]], face: yaw, watch, door: t.kind === 'door' ? t.door : null, stance: 'none', upper: 'aim', going: words, there: words }); }
       } },
       { id: 'fallIn', key: 3, label: 'fall in', targets: ['floor', 'door', 'none'], ack: ['on you.', 'with you.'], issue: (S, men) => {
@@ -551,7 +557,7 @@ export class SquadOrders {
         const arcs = S.big && men.length > 1 ? S.holdArcs(posts) : null;   // (the squad of four: men left holding together take an approach each — holdArcs)
         men.forEach((gd, i) => { const arc = arcs?.[i] ?? null;
           if (arc?.door) S.assign(gd, { order: 'hold', post: posts[i], face: arc.yaw, watch: [arc.door.frameCentre[0], 1.1, arc.door.frameCentre[2]], door: arc.door, stance: 'none', upper: 'aim', light: NIGHTBREACH.opLights, going: 'holding', there: `holding · ${doorWords(arc.door)}` });   // (a door close by in his arc: the gun — and the light on it: a man in a dark doorway is not seen without — is ON it)
-          else if (arc) S.assign(gd, { order: 'hold', post: posts[i], face: arc.yaw, watch: [posts[i][0] + Math.sin(arc.yaw) * arc.reach, 1.1, posts[i][2] + Math.cos(arc.yaw) * arc.reach], stance: 'none', upper: 'aim', light: NIGHTBREACH.opLights, going: 'holding', there: `holding · ${compass(arc.yaw)}` });   // (… else out along his arc)
+          else if (arc) S.assign(gd, { order: 'hold', post: posts[i], face: arc.yaw, watch: [posts[i][0] + Math.sin(arc.yaw) * arc.reach, 1.1, posts[i][2] + Math.cos(arc.yaw) * arc.reach], stance: 'none', upper: 'aim', light: NIGHTBREACH.opLights, going: 'holding', there: WORDS.on ? (pl => pl ? `holding · ${pl}` : 'holding')(watchedPlace(S.g.level, posts[i], [posts[i][0] + Math.sin(arc.yaw) * arc.reach, 0, posts[i][2] + Math.cos(arc.yaw) * arc.reach])) : `holding · ${compass(arc.yaw)}` });   // (… else out along his arc)
           else S.assign(gd, { order: 'hold', post: posts[i], face: gd.char.bodyYaw, ...low, going: 'holding', there: 'holding' }); });
       } },
     );
@@ -1215,7 +1221,7 @@ export class SquadOrders {
         gd.state = 'search';
       }
       if (A.yieldT >= 0) { A.yieldT = -1; A.arrived = false; FOLLOW_WORD.delete(A); A.movedT = A.markT = g.time; A.mark[0] = gd.char.pos[0]; A.mark[2] = gd.char.pos[2]; this.fight?.retaken?.(gd, A);
-        if (A.post && (K.cleared || (K.ownDoor && A.thru))) { const R = this.route(gd, A.post, A.shy, A.thru ?? null); if (!R.why) { A.via = R.via; if (R.how) g.cleared.stats[R.how]++; } }
+        if (A.post && (K.cleared || (K.ownDoor && A.thru))) { const R = this.route(gd, A.post, A.shy, A.thru ?? null); if (!R.why) { A.via = R.via; if (K.retakeGoal) A.goal = A.via[0] ?? v3.copy(A.post); if (R.how) g.cleared.stats[R.how]++; } }   // (ORDERS.retakeGoal: … and he walks for it, not for a corner of the way he was on before)
         else if (!A.post) A.viaT = A.viaFor = undefined; }   // back on his order (we took him, or the fight AI let go of him itself) — by the way an order walks him (cleared.ts), from wherever the fight left him
       if (this.ours.delete(gd)) gd.pinned = false;
       const def = this.defs.find(x => x.id === A.order); if (def?.tick) { def.tick(this, gd, A); if (this.asg.get(gd) !== A) continue; }   // (it re-assigned him: his new order's turn is next frame)

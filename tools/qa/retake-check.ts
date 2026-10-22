@@ -9,6 +9,7 @@ import { standUp, ROOT } from './headless.ts';
 
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
+const { endGuardScript } = await import(`${ROOT}/src/game/squad.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const PROFILE = await import(`${ROOT}/src/host/profile.ts`), { FROZEN_HOLDS } = PROFILE;
 const JOURNAL = await import(`${ROOT}/src/game/journal.ts`);
@@ -46,7 +47,7 @@ export async function retakeCheck(): Promise<boolean> {
         O.give('move', O.targetAt(spot), 'all'); step(2);
         const As = team.map(m => O.of(m)), posts = As.map((A: any) => A?.post ? [...A.post] : null), ordered = As.every((A: any) => A?.order === 'move' && A.post);
         for (const A of As) if (A) { A.via = [[corner[0], 0, corner[2]]]; A.goal = [corner[0], 0, corner[2]]; }   // (the way an order round a room leaves him: a corner first)
-        for (const m of team) m.state = 'alert'; step(1); const yielded = As.every((A: any) => A && A.yieldT >= 0);
+        for (const m of team) endGuardScript(m, 'alert'); step(1);   /* (the seam a fight layer takes a man by: his script ended, his state the fight's) */ const yielded = As.every((A: any) => A && A.yieldT >= 0);
         let retaken = false; for (let i = 0; i < 60 * 8 && !retaken; i++) { step(1); retaken = As.every((A: any) => A && A.yieldT < 0); }   // (nobody to fight: it goes cold by itself, ORDERS.coldSecs)
         const via = As.map((A: any) => A?.via.length ?? -1), goalOn = As.map((A: any, i: number) => A && posts[i] ? dist(A.goal, posts[i]!) : 99);
         step(60 * 12);
