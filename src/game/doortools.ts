@@ -425,6 +425,13 @@ export const DOORTOOLS = {
    *  hand (he may have gone in since the row was given) and goes in without it, the same beat. Any squad size. A can HE throws, or one he watches go in
    *  from outside through the open door, blinds him as it did (samstun.ts SAMSTUN.ownSeen: not this rule's). */
   behindSam: false,
+  /** NO CAN INTO A ROOM OUR OWN MEN HOLD (the maintainer, 10-22: "the second team threw a flashbang when our guys were already on the inside"): a
+   *  bang and clear asks about TEAMMATES again as the can is about to leave the hand, as behindSam asks about Sam — a teammate outside this order
+   *  (and outside the orders that go on its word or its gate) beyond the door, inside the can's reach with a line from the opening: the can stays
+   *  in the kit ('no bang · Blue One is in there'), a man says so, and they step in. Any squad size (the row's own test at the time it is given —
+   *  `behind` — asks only a squad of four, and only then). false: the row is asked when it is given and never again, as it was. Off here; the
+   *  page raises it (`?tossmate=0` off) */
+  tossMate: false,
   /** NO POINT OF AN ENTRY IN ANOTHER DOOR'S FRAME. The barracks (rebuild/missions/faults.md B2): the gallery entry by n_end dealt one of its points on the
    *  threshold of n4b, a door in the gallery's side wall 1.7 m on — its floor is floor to the nav grid and nothing solid stands between, so the hand of the
    *  door with no room took it; a man was left standing in an uncleared doorway, and entrypoints.ts had no floor on that hand to move him to. `podFrames`
@@ -1697,16 +1704,27 @@ export class DoorTools {
     const inn = doorPt(d, d.def.width / 2, 0.45, -side as 1 | -1, 1.1);
     return S.men().find(gd => { const p = gd.char.pos; return !men.includes(gd) && offOf(d, p, side) < 0 && flat(p, d.frameCentre) < K.stunM && !g.col.solidBlocked(inn, [p[0], 1.1, p[2]]); }) ?? null;
   }
+  /** is `p` in a stun can's reach through that door: beyond it (its far side, as ever: a man beside a shut door on the squad's own face is not asked
+   *  about), inside `stunM`, with a line from the opening. The line is asked without THIS door's own leaf: shoved, or standing ajar, it sweeps through
+   *  the point the line starts from — and the can goes in past it. Every other leaf, and the walls, still stand in the way */
+  private canReach(d: Door, side: 1 | -1, p: Vec3): boolean {
+    const g = this.g; if (!(offOf(d, p, side) < 0 && flat(p, d.frameCentre) < DOORTOOLS.stunM)) return false;
+    const inn = doorPt(d, d.def.width / 2, 0.45, -side as 1 | -1, 1.1), col = g.col as unknown as { dynamicBoxes: unknown[] }, keep = col.dynamicBoxes; col.dynamicBoxes = keep.filter(b => b !== d.box);
+    try { return !g.col.solidBlocked(inn, [p[0], 1.1, p[2]]); } finally { col.dynamicBoxes = keep; }
+  }
   /** DOORTOOLS.behindSam: Sam himself beyond the door, inside a stun can's reach with a line from the opening — the test canFirst has of him, whatever the squad's size */
   private samBehind(d: Door, side: 1 | -1): boolean {
     const g = this.g, K = DOORTOOLS; if (!K.behindSam || g.player.down) return false;
     if ((g.orders as { sams?: boolean }).sams === false) return false;   // (only Sam's own squad counts him as one of ours: `sams` is a getter that arrives with the response team's own cast of orders — undefined here, so nothing changes; a cast that reaches its orders another way must ask that one)
-    const p = g.player.char.pos, inn = doorPt(d, d.def.width / 2, 0.45, -side as 1 | -1, 1.1);
-    if (!(offOf(d, p, side) < 0 && flat(p, d.frameCentre) < K.stunM)) return false;   // (beyond the door = its far side, as ever: a man beside a shut door on the squad's own face is not asked about)
-    // (the line is asked without THIS door's own leaf: shoved, or standing ajar, it sweeps through the point the line starts from — and the can goes in past it.
-    //  Every other leaf, and the walls, still stand in the way)
-    const col = g.col as unknown as { dynamicBoxes: unknown[] }, keep = col.dynamicBoxes; col.dynamicBoxes = keep.filter(b => b !== d.box);
-    try { return !g.col.solidBlocked(inn, [p[0], 1.1, p[2]]); } finally { col.dynamicBoxes = keep; }
+    return this.canReach(d, side, g.player.char.pos);
+  }
+  /** DOORTOOLS.tossMate: a living teammate in the can's reach who is no part of this entry — not of this order; and a man of an order on its word or its
+   *  gate is no part of it only while he is still on his own side of his own door (gone through it, he is in the room like anybody). Any squad size;
+   *  Sam's own squad only, as samBehind (the response team's cast throws as it did) */
+  private mateBehind(op: DoorOp): Guard | null {
+    const g = this.g, d = op.door; if ((g.orders as { sams?: boolean }).sams === false) return null;
+    const own = (x: Guard) => op.men.includes(x) || this.ops.some(o => o !== op && ((!!op.word && o.word === op.word) || (!!op.gate && o.gate === op.gate)) && o.men.includes(x) && offOf(o.door, x.char.pos, o.side) >= 0);
+    return g.orders.men().find(x => !own(x) && this.canReach(d, op.side, x.char.pos)) ?? null;
   }
   /** who of ours the squad's own can through that door would catch (null: nobody): a teammate outside the order — his callsign — or 'you' */
   private canBehind(d: Door, side: 1 | -1, men: Guard[]): string | null {
@@ -1829,6 +1847,10 @@ export class DoorTools {
     this.wordTick();   // (everybody on his door already: it is now)
     return null;
   }
+  /** (planmode.ts word, CMDRING.planOne) these entries, given this tick, go on ONE word — the four's own (goMen, wordTick): nobody makes a sound until
+   *  every stack on it is formed (`wordStack` at most), the cans go first, a door with no can keeps its leaf for the men behind the can beside it, and
+   *  they step in together (`wordIn` at most after the first sound) */
+  oneWord(ops: DoorOp[]): void { const w: Word = { t0: this.g.time, go1: NaN }; this.words.push(w); for (const op of ops) { op.word = w; this.beat(op, 'the word'); } }
   /** a pair standing on a plain 'stack up' becomes an open-and-clear from the very marks it stands on */
   private fromStack(men: Guard[], d: Door): DoorOp | null {
     const S = this.g.orders, first = S.of(men[0]); if (!first?.post) return null;
@@ -2194,6 +2216,14 @@ export class DoorTools {
           op.bangHeld = false; this.refund('bang'); this.beat(op, 'no bang · you are in there'); this.note(`bang held on ${d.def.name}: you in its reach — in without it`);
           if (op.word) { op.phase = 'wait'; op.hold = 2; break; }   // (on a word with another door: in step with it — wordTick sends them in together, as behind a bang)
           this.enter(op); break;
+        } else if (K.tossMate) {   // (tossMate: … and about the rest of the team — a pair that went in by the room's other door since the row was given)
+          const mate = this.mateBehind(op);
+          if (mate) {
+            g.say(lead, `${mate.callsign} is in there — no bang. going in.`);
+            op.bangHeld = false; this.refund('bang'); this.beat(op, `no bang · ${mate.callsign} is in there`); this.note(`bang held on ${d.def.name}: ${mate.callsign} in its reach — in without it`);
+            if (op.word) { op.phase = 'wait'; op.hold = 2; break; }
+            this.enter(op); break;
+          }
         }
         const first = kicked || !K.secondThrows || !K.leadSeen ? lead : (op.first = this.firstIn(op));   // (leadSeen: the man who will be first through is picked here — the can is somebody else's)
         const next = kicked || K.secondThrows ? op.men.filter(m => m !== first && m.state !== 'dead' && offOf(d, m.char.pos, op.side) > 0 && (kicked || flat(m.char.pos, d.frameCentre) < K.throwReach)).sort((a, b) => flat(a.char.pos, d.frameCentre) - flat(b.char.pos, d.frameCentre))[0] : undefined;

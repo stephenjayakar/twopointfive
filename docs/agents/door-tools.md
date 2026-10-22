@@ -223,6 +223,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a GPU.
 - **Sam beyond a door is one of ours to the squad's own stun can** (`DOORTOOLS.behindSam`: ON in the page, `?behindsam=0`; off in the module and on the frozen stand, `TPS_BEHINDSAM=1`; journal: the key rides in a recording's `flags`, its tables never carry `DOORTOOLS` — no flag = off, a flag = as recorded). `canBehind()` = `behind()`'s teammate, or Sam by `canFirst`'s own test of him, any squad size: the word at a held door steps in with the can kept (beat 'no bang · you are in there') and the bang rows are refused ('you are behind that door.'); a plain bang and clear asks again at the toss, as the frag does (given 'on my word' or from a walk away, he may have gone in since: the can back in the kit, the same beat, in without it — on a word shared with another door it waits in step, `hold` 2, as behind a bang; the line to Sam is asked without that door's own leaf, which a shove or a leaf found ajar sweeps across it); his own can, or one he watches from outside, blinds him as before (`SAMSTUN.ownSeen`).
   Off the owner's tape 20261013-044521 (floodlit yard, 6:47.9: the word given from inside the held guard room, the squad's can blinded him). Check: five lines in `probes.ts threshold-hold` (records-pair and depot-four, seed 1: Sam in the room at the word; Sam outside, a labelled control; a plain bang and clear with Sam gone in after the row; the same with the leaf found 1 rad ajar; the journal round trip, a control; both stands; `BEHINDSAM_BREAK=1` must fail — it fails the three rule lines). Never seen on a GPU or played by anybody.
+- **No can into a room our own men hold** (`DOORTOOLS.tossMate`: ON in the page, `?tossmate=0`; off in the module and on the frozen stand,
+  `TPS_TOSSMATE=1`; journal: the key rides with a recording's flags and its DOORTOOLS table, a recording with neither replays with it off; debugger:
+  'no squad bang where teammates stand'). The maintainer, 10-22: "the second team threw a flashbang when our guys were already on the inside". WAS: a
+  bang row asked about teammates beyond the door only when it was given, and only of a squad of four (`behind`); a pair that went in by the room's
+  other door meanwhile got the can. NOW: a bang and clear asks again as the can is about to leave the hand (`mateBehind`, beside behindSam's
+  question about Sam): a living teammate who is no part of this entry — not of this order; a man of an order on its word or its gate only while he is
+  still on his own side of his own door — beyond the door, inside `stunM` with a line from the opening (this door's own leaf aside; `canReach`, the
+  one test samBehind asks too). Sam's own squad only: the response team's cast throws as it did: the can goes back in the kit, the lead says who ('Blue One is in there —
+  no bang. going in.'), the beat is 'no bang · Blue One is in there', and they go in. Any squad size. A frag already asked this (`fragBehind`).
+  CHECK: lines 2 and 3 of `probes.ts onesignal` (a pair's bang and clear on the guardroom's front door, a man of the other pair put on the room's
+  floor from the tick the door opens; the control with nobody inside throws its can as before), both stands; pinned off in the frozen-digest lists beside behindSam
+  (threshold-probes.ts, nvg-probes.ts, irlaser-probes.ts); `TOSSMATE_BREAK=1` fails line 2 (the
+  can goes, he is dazzled). NOT measured: a tally, a teammate at the edge of the reach or behind furniture, a can thrown by the threshold's own
+  rule (`canBehind` asks that one as it did); nobody has played it; never seen on a GPU.
 - **A known threat first** (`DOORTOOLS.threatFirst`, on; Team feel 'entry ▸ known threat first', `threatSecs` 12, `threatCap` 1.5; off = the entry as it
   was, pinned off in threshold-probes.ts's identity and the nvg digests; the maintainer on a replay, 10-11: "the point man here saw his buddy go down, knows
   roughly where the enemy is in the room and looks the wrong way going in"): while a door is worked the order remembers where ITS OWN men's senses put an

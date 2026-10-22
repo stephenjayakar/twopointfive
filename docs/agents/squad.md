@@ -315,6 +315,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   for the next and the line says so. KNOWN COSTS: a click on a stop no longer picks the man stood on it (click beside it); a door with its wait off still stops if the entry is
   refused; the cover a look gives stands until the next order, as any cover does; the knee makes him a smaller target for as long as the mode is up.
   NOT measured: no tally, one seed; whether men on a path cover an obvious way by themselves was not judged; nobody has played it; never seen on a GPU.
+- **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
+  `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
+  one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
+  the second team threw a flashbang when our guys were already on the inside". WAS: `planmode.ts word()` gave every waiting chain its own entry, each its
+  own order with its own clock — the pair that had to re-form for its throw was seconds behind the other, whose men were inside when the can came.
+  NOW: the entries one press starts (open and clear, bang and clear; two or more) are put on ONE word of the door tools (`doortools.ts oneWord`: the
+  four's own `Word`, run by `wordTick`): nobody makes a sound until every stack on it is formed (`wordStack` at most), the cans go first, a door with no
+  can keeps its leaf shut for the men behind the can beside it, and they all step in together (`wordIn` at most after the first sound). A press that
+  frees ONE door is the entry it always was; a charge the autopilot picks for a door known shut is not on the word; a door that halts at its stack
+  (found locked) drops off it and the other goes on. CHECK: `probes.ts onesignal` (tools/qa/onesignal-check.ts, family squadorders; the plan mission's
+  own level with its frame off, the guardroom, a pair laid on each door through `planOrder`, the word's own key, played with a can a door and with one
+  can to spend), both stands; `PLANONE_BREAK=1` fails line 1. MEASURED (headless, two seeds that play the same, each stand): off, the first men through
+  the two doors are 1.2 to 2.8 s apart (2.8 where one door has no can: its pair is inside 2.5 s before the other's can); on, under 0.2 s apart, nobody
+  through before the last burst, nobody of ours dazzled. KNOWN COSTS: the press now waits for the slower stack — on the guardroom's front door the pair
+  re-forms from a split stack to a file for the throw, about 3 s, and the first man is through 5.7 to 6.6 s after the press on the page's stand (it was
+  1.8 to 3.4 s for the quicker door); the two leaves are shoved up to 0.7 s apart on the page's stand (each lead steps to his own handle). NOT
+  measured: three stacks on one word, a charge beside it, a locked door on it, a squad of two, any tally or digest; nobody has played it; never seen
+  on a GPU.
 - **Plan mode, a prototype** (`src/game/planmode.ts`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that
   requires explicitly leaving"; the design: `rebuild/commanding/command-mode.md`). OFF in the module and on BOTH stands (no `FROZEN_HOLDS` row: it is
   not a shipped-on rule); the page raises it only when asked beside the ring (`?cmd&cmdplan`, or the debugger's tick 'Tab ▸ the ring ▸ plan mode on
