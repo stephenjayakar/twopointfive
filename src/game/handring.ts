@@ -33,4 +33,9 @@ export const HANDRING = {
    *  or the gun's setup, which a quick "key, 2" used to reach. Off in the module and on the frozen stand with `on` (`TPS_HANDRING=1` raises both); a
    *  recording from before the key replays with it off */
   early: false,
+  /** a tap of the key with nothing in reach says so in the corner for a moment (interact.ts files `EMPTY_WORD`, ui/overlay.ts shows it): on open floor
+   *  the key looked dead. On and off with `on`, as `early` is (the same address word and stand word; a recording from before the key replays with it off) */
+  empty: false,
 };
+/** the word an empty tap files, how long before it is filed again (s), and how long the corner shows it (s) */
+export const EMPTY_WORD = 'nothing in reach', EMPTY_AGAIN_SECS = 3, EMPTY_SHOW_SECS = 1.6;

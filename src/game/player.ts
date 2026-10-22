@@ -59,6 +59,7 @@ import { endGuardScript } from './squad';
 import { resetChase, handCarry, inHand, gunBack } from './guards';
 import { whistleKey } from './whistle';
 import { WAND, WAND_STATS, wandOffered, wandFits, wandTurn, wandDrop, wandThrough } from './wand';
+import { ownBlowRow } from './ownblow';
 import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
 import { rescueEndRows } from './rescueend';
@@ -2311,7 +2312,11 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       // (stickycam.ts: a stuck camera's 'take it back' is one more such row, last of all)
       const isOwn = (r: Interactable) => r.kind === 'cam' || (r.kind === 'door' && (r.verb === 'charge' || !!r.past));
       const own = [...flat.filter(r => r.kind === 'door' && r.verb === 'charge').slice(0, 1), ...flat.filter(r => r.kind === 'door' && r.past).slice(0, 1), ...flat.filter(r => r.kind === 'cam').slice(0, 1)], rest = own.length ? flat.filter(r => !isOwn(r)) : flat;
-      rows = hint.length ? [...rest.filter(r => r.verb).slice(0, MAX_NEAR - 1), ...own, ...hint] : [...rest.slice(0, MAX_NEAR), ...own];
+      // (ownblow.ts: a charge his own hands set, wherever he stands — under the rows the things in reach had, so a tap gives it only when it is the only
+      // thing to do, and ahead of the rows past the cap, so its wedge is never past the fourth)
+      const blow = busy || pl.sprinting || pl.dragging ? null : ownBlowRow(g), mine = blow ? [blow] : [];   // (not while his hands or his feet are spoken for: a row that stood alone under a door being pushed would be what the next tap gave)
+      const top = hint.length ? rest.filter(r => r.verb).slice(0, MAX_NEAR - 1) : rest.slice(0, MAX_NEAR), under = top.some(r => r.verb);   // (with no capped row to sit under, it goes under the rows past the cap instead: never the top row while another thing has one)
+      rows = [...top, ...(under ? mine : []), ...own, ...(under ? [] : mine), ...hint];
     }
   }
   if (pl.listOpen && rows.some(r => r.verb && !r.running)) rows.push(cancelRow(g));   // the selector is open (Space held past a tap) over something to choose: its way out sits at the foot (interact.ts shuts it if nothing is left to choose)
@@ -2321,7 +2326,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
   // A running verb's row is NOT carried over into the list that comes back when it ends (done or stopped): the highlight returns to the top — the everyday verb —
   // rather than sitting on the choke / the ease that was just deliberately chosen and is over (a plain tap after easing off a choke asks him; it does not choke again).
   const key = rows.map(rowKey).join('|');
-  if (key !== pl.nearKey) { pl.nearKey = key; const hv = g.hover; const keep = hv && !hv.running ? rows.findIndex(r => rowKey(r) === rowKey(hv)) : -1; pl.nearSel = keep >= 0 ? keep : 0; }
+  if (key !== pl.nearKey) { pl.nearKey = key; const hv = g.hover; const keep = hv && !hv.running ? rows.findIndex(r => rowKey(r) === rowKey(hv)) : -1; pl.nearSel = keep >= 0 && !(rows[keep].kind === 'charge' && keep > 0 && !pl.sel.open) ? keep : 0; }   // (ownblow.ts: his own charge's row is everywhere he goes — the highlight never rides on it into a list where another thing has a row: the top row is the tap's there)
   g.nearby = rows; pickHover(g);
   if (CLOSE.on || pl.char.anim.ready || pl.char.anim.creep) closeTick(g);   // (close.ts: the mode and the knife — and let go of once the switch is off)
 }
@@ -2340,7 +2345,7 @@ export function cancelRow(g: Game): Interactable { const p = g.player.char.pos; 
  *  in reach before out of reach, then by what MATTERS (a man you could grab is perishable and decisive; a door will still be there), then nearest.
  *  Lower = higher up the list. Within one thing its verbs keep the order buildInteractables gave them; MAX_NEAR rows in all, so a man to grab beside a shut
  *  door reads [grab · push · ease] and the door's third verb (if it had one) would be the row that falls off. */
-export const INTERACT_PRIORITY: Record<Interactable['kind'], number> = { guard: 0, held: 0, body: 1, objective: 2, door: 3, light: 9, breaker: 2.5, switch: 3.2, wall: 9.5, cam: 9.6, cancel: 10 };   // (wall: a partition's 'breach with a charge' row ranks last — it never takes one of the MAX_NEAR rows from a door, a body or a switch)
+export const INTERACT_PRIORITY: Record<Interactable['kind'], number> = { guard: 0, held: 0, body: 1, objective: 2, door: 3, light: 9, breaker: 2.5, switch: 3.2, charge: 9.4, wall: 9.5, cam: 9.6, cancel: 10 };   // (wall: a partition's 'breach with a charge' row ranks last — it never takes one of the MAX_NEAR rows from a door, a body or a switch · charge: ownblow.ts's row is put after the capped rows by hand and is never ordered by this — its rank is only the table's)
 export function interactOrder(p: Vec3): (a: Interactable, b: Interactable) => number {
   const dd = (it: Interactable) => { let d = v3.distXZ(it.pos, p); if (it.door) d = Math.min(d, v3.distXZ(it.door.frameCentre, p)); return d; };
   return (a, b) => (a.inReach !== b.inReach ? (a.inReach ? -1 : 1) : (INTERACT_PRIORITY[a.kind] - INTERACT_PRIORITY[b.kind]) || dd(a) - dd(b));

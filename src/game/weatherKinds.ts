@@ -100,7 +100,7 @@ export const SNOW = { on: false };
 // under the roofs when it is a wall's thickness inside them on every side, whichever slab, and a top takes the snow only near the roofs' edge: the outer walls'
 // (particles_common.wgsl flakeHidden, the prelude's SNOW_UNDER; ?snowunder=0, TPS_SNOWUNDER=1). Picture only.
 export const SNOW_LOOK = { on: false, wisps: false, tracks: false, glow: false, sparkle: false, breath: false, steam: false, grains: false, blast: false, oneAir: false, marks: false, past: false, under: false };
-export const SNOW_LEVELS: readonly string[] = ['pass', 'tut-sky'];
+export const SNOW_LEVELS: readonly string[] = ['pass', 'tut-sky', 'tut-quiet'];
 /** is the level called `name` (LevelData.name; a file's name without '.json') one built for snow — and the switch on? */
 export function snowLevel(name: string | null | undefined): boolean { return SNOW.on && !!name && SNOW_LEVELS.includes(name); }
 /** the same asked of a page's query: its `levelFile` */

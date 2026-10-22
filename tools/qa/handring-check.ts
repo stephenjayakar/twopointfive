@@ -2,11 +2,11 @@
 // player.ts buildInteractables) and the page's board for it (src/host/keymap.ts `handWhen`, HAND). ON in the page (?handring=0 = the list on a held Space,
 // the whistle on its key, as it was), OFF in the module and on the frozen stand (TPS_HANDRING=1).
 //   bun run tools/qa/probes.ts handring        (family `player`)        HANDRING_BREAK=1 = the rule and the board's layer left off and the same lines asked: must FAIL
-//   (all but the tap's line: a tap is the tap it was, rule on or off)
 // the maintainer, 10-22: "radial menu for our own actions, remove existing menu in top left and awkward scrolling thing", "move whistle to our actions and
 // remove v binding", "move our actions to E", "i think same would go for our actions (1-5 with the ring open)".
 // WHAT IS ASKED:
 //   the tap       at a door a tap does the top row (the leaf moves) and puts no ring up; on open floor a tap does nothing (the whistle is never a tap)
+//                 but say so, once: 'nothing in reach' (the key looked dead); a second tap straight after says no more, and with the rule off none is said
 //   the ring      the key kept down: nothing before HANDRING.holdSecs, then the ring with a wedge for the door's row and the whistle on the LAST wedge; let
 //                 go in the middle and it stays with no key held; his feet are his own under it
 //   early         a digit pressed with the key down and the ring not yet up (inside the hold) is its wedge at once, never the slot or the gun's setup
@@ -38,14 +38,14 @@ export async function handRingCheck(): Promise<boolean> {
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const K = await import(`${ROOT}/src/host/keymap.ts`);
   const { playerBusy } = await import(`${ROOT}/src/game/savestate.ts`);
-  const was = { on: HANDRING.on, back: BACKKEY.tab, slot: HANDSLOT.on, cmd: CMDRING.on, hands: CMDRING.hands, ws: WALLSNAP.on, press: WALLSNAP.press, kOn: K.KEYMAP.on, slotWhen: K.KEYMAP.slotWhen, handWhen: K.KEYMAP.handWhen, qFree: K.KEYMAP.qFree, qCmd: K.KEYMAP.qCmd };
+  const was = { on: HANDRING.on, early: HANDRING.early, empty: HANDRING.empty, back: BACKKEY.tab, slot: HANDSLOT.on, cmd: CMDRING.on, hands: CMDRING.hands, ws: WALLSNAP.on, press: WALLSNAP.press, kOn: K.KEYMAP.on, slotWhen: K.KEYMAP.slotWhen, handWhen: K.KEYMAP.handWhen, qFree: K.KEYMAP.qFree, qCmd: K.KEYMAP.qCmd };
   const log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const G: any = globalThis, hadLS = G.localStorage; const store = new Map<string, string>();
   G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
   try {
     const S = await quiet(() => world(true)); const { pl, g, step, tap, place, input, click, keys, setCursor } = S as any; WALLSNAP.press = false; CMDRING.on = false; CMDRING.hands = false; BACKKEY.tab = true;   // (the back key is Tab, as the page has it)
-    const rule = (on: boolean) => { HANDRING.on = HANDRING.early = on && !BRK; };
+    const rule = (on: boolean) => { HANDRING.on = HANDRING.early = HANDRING.empty = on && !BRK; };
     const KEY = 'Space', LAST = CMDRING.wedges, HOLD = Math.ceil(HANDRING.holdSecs * 60);
     const door = g.doors.list.find((d: any) => d.def.name === 'conference'), fc = door.frameCentre;
     const rows = () => g.nearby.map((r: any) => `${r.kind}:${r.verb ?? '-'}`).join(' | ') || 'none';
@@ -59,9 +59,11 @@ export async function handRingCheck(): Promise<boolean> {
     const leaf = () => door.angle as number;
     // ---- the tap
     { rule(true); atDoor(); const r0 = rows(), a0 = leaf(), top = g.hover?.verb; tap(KEY); step(1); const noRing = !up(); step(40); const moved = Math.abs(leaf() - a0) > 0.05;
-      floor(); const r1 = rows(), b0 = WHISTLE_STATS.blown; tap(KEY); step(20); const quietTap = WHISTLE_STATS.blown === b0;
-      verdict(moved && noRing && quietTap && r1 === 'none', 'a tap does the top row and puts no ring up; on open floor a tap does nothing (the whistle is never a tap)',
-        `at the door [${r0}], the tap's row ${top}: the leaf ${a0.toFixed(2)} → ${leaf().toFixed(2)}, ring ${!noRing} · open floor [${r1}]: a tap blew ${WHISTLE_STATS.blown - b0}`); }
+      const words = () => g.messages.filter((m: any) => m.text === 'nothing in reach').length as number;
+      rule(false); floor(); g.messages.length = 0; tap(KEY); step(20); const offWord = words(); rule(true);
+      floor(); const r1 = rows(), b0 = WHISTLE_STATS.blown; g.messages.length = 0; tap(KEY); step(20); const quietTap = WHISTLE_STATS.blown === b0, word1 = words(); tap(KEY); step(20); const word2 = words();
+      verdict(moved && noRing && quietTap && r1 === 'none' && word1 === 1 && word2 === 1 && offWord === 0, 'a tap does the top row and puts no ring up; on open floor a tap does nothing (the whistle is never a tap) but say so, once',
+        `at the door [${r0}], the tap's row ${top}: the leaf ${a0.toFixed(2)} → ${leaf().toFixed(2)}, ring ${!noRing} · open floor [${r1}]: a tap blew ${WHISTLE_STATS.blown - b0}, 'nothing in reach' said ${word1}, after a second tap ${word2} · the rule off: said ${offWord}`); }
     // ---- the ring
     { rule(true); atDoor(); down(HOLD - 4); const early = up(); step(8); const v1 = view(), V = handRingView(g), hasDoor = !!V?.wedges.some((w: any) => w.key === 1), hasWhistle = !!V?.wedges.some((w: any) => w.key === LAST && /whistle/.test(w.text));
       lift(); const stays = standing(), v2 = view(); const z0 = pl.char.pos[2]; keys('KeyW'); step(30); keys(); const walked = Math.abs(pl.char.pos[2] - z0) > 0.2, still = standing(); tap('Tab'); step(2);
@@ -139,7 +141,7 @@ export async function handRingCheck(): Promise<boolean> {
       const offOld = await quiet(() => { applyKnobs(g, old); const off = HANDRING.on === false; applyKnobs(g, snap); return off && HANDRING.on === true; });
       verdict(has && offOld && FROZEN_HOLDS['HANDRING.on'] === 'TPS_HANDRING=1', 'a recording carries the switch, one from before it replays with it off, the frozen stand holds it off by name',
         `carried ${has} · a file without it: off, and on again with it ${offOld} · the frozen stand's word ${FROZEN_HOLDS['HANDRING.on']}`); }
-  } finally { HANDRING.on = was.on; BACKKEY.tab = was.back; HANDSLOT.on = was.slot; CMDRING.on = was.cmd; CMDRING.hands = was.hands; WALLSNAP.on = was.ws; WALLSNAP.press = was.press; K.setKeys({}); K.KEYMAP.on = was.kOn; K.KEYMAP.slotWhen = was.slotWhen; K.KEYMAP.handWhen = was.handWhen; K.KEYMAP.qFree = was.qFree; K.KEYMAP.qCmd = was.qCmd; G.localStorage = hadLS; console.log = log; console.error = err; console.warn = warn; }
+  } finally { HANDRING.on = was.on; HANDRING.early = was.early; HANDRING.empty = was.empty; BACKKEY.tab = was.back; HANDSLOT.on = was.slot; CMDRING.on = was.cmd; CMDRING.hands = was.hands; WALLSNAP.on = was.ws; WALLSNAP.press = was.press; K.setKeys({}); K.KEYMAP.on = was.kOn; K.KEYMAP.slotWhen = was.slotWhen; K.KEYMAP.handWhen = was.handWhen; K.KEYMAP.qFree = was.qFree; K.KEYMAP.qCmd = was.qCmd; G.localStorage = hadLS; console.log = log; console.error = err; console.warn = warn; }
   console.log(`\n=== handring: ${all ? 'ALL PASS' : 'FAIL'} ===`);
   return all;
 }
