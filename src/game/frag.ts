@@ -18,6 +18,7 @@
 //   inside lethalM, less than half exposed ................... wounded (folded for seconds: rooted, gun down, no round — Guard.staggerUntil)
 //   lethalM‥woundM, exposed ................................. killed with a chance falling off with the square of the distance, else wounded
 //   nothing of him exposed, or beyond woundM ................. untouched (he hears it like everybody else)
+//   already down and breathing (FRAG.downKill) ............... inside lethalM, any line to where he lies kills; lethalM‥woundM, the chance above; else as he was
 //   hidden ONLY by what this burst itself broke ............... stunned, never killed: a door it took off (FRAG.doorStun), a wall it holed or cover it broke
 //                                                               (FRAG.wallStun) took the fragments as they flew; to the next burst a hole is a hole
 // It is IMPARTIAL: the thrower, his own side, the player and anybody unarmed in the room are judged by the same rule. Deterministic — the one dice roll is a
@@ -29,20 +30,21 @@ import { wandDrop } from './wand';
 import { Vec3, v3, clamp, lerp } from '../math/vec';
 import * as fx from './effects';
 import { PLAYER_ID } from './consts';
-import type { Game, Guard, GuardScript } from './game';
+import { isBreathing, type Game, type Guard, type GuardScript } from './game';   // (isBreathing: asked inside blast only)
 import { GRAVITY, bogBounce, bogSlide, bogStick, type Item } from './throwables';
 import { snowBogAt } from './snowBog';
 import type { WallOpening } from './wallbreak';
-import { chronHit } from './chronicle';
+import { chronHit, chronicle } from './chronicle';
 import { civiliansShown } from './civilians';
 import { killGuard, hitPlayer } from './combat';
 import { bangScorch } from './marks';
 import { gpuFx, bangFx } from './particleFx';
-import { teamOfId, type Team } from './teams';
+import { teamOfId, isHostile, type Team } from './teams';
+import { teamTallied } from './teamtally';   // (asked inside blast only)
 import { fightLive } from './roomfight';
 import { loadPace, loadPaceOn } from './kitload';
 import { teamBlastPace } from './teampace';   // (read inside fragTick only)
-import { PACE, canSee, canSeeChar, crossesDoor, frameOf } from './guards';   // (crossesDoor: asked inside fleeByDoor only)
+import { PACE, canSee, canSeeChar, crossesDoor, frameOf, witnessKill } from './guards';   // (crossesDoor: asked inside fleeByDoor only)
 import type { Door } from './doors';
 import { lanePenalty } from './lanes';       // (asked inside fleeByDoor only)
 import { tacticsPenalty } from './tactics';
@@ -54,6 +56,7 @@ import { w } from './words';
 import { SAMSTUN, foldCancels } from './samstun';
 import { DESTRUCTION } from './destructionSwitch';
 import { runnerOwns } from './runner';   // (asked inside fragThrowTick only)
+import { missionLive } from './mission';   // (asked inside blast only)
 import { conditionHurt, conditionPace } from './condition';   // (called inside blast only)
 import { moraleBlast } from './morale';   // (called inside blast only: src/game is one import cycle)
 import { chaosOf } from './destruction';   // (called inside blast only: src/game is one import cycle)
@@ -143,6 +146,16 @@ export const FRAG = {
    *  no line to (or a wall it will take between), or floor past `woundM`, is taken from it. A man the first walk found cover for is dealt exactly as
    *  before, and so is one with no mate's cover in his reach (the walk is not run for him: its cost is the first walk's again, paid only here). */
   fleeLook: false,
+  /** `downKill` (10-22, from play: two men put out with sponge rounds, then a 40 mm burst beside them, and both lay there breathing — the loop over the men
+   *  skipped everybody already down): A BURST KILLS A MAN WHO IS DOWN AND BREATHING. A man out cold (struck, choked) or down wounded is judged where he lies
+   *  — his hips, his chest, his head and a shin, the same lines and the same wall-and-door rules as a man on his feet — and inside `lethalM` any line to him is
+   *  the end of him (the half-hidden man's 'wounded' is a man who flinched behind something; this one did not); past it, the burst's own chance, and a miss
+   *  leaves him as he was. The books follow: shot, not breathing; by the player's burst, a kill on the card in place of his own knockout, a 'kill' row on
+   *  the timeline and a shooting for whoever watched (a partner's burst on a quiet mission as two is on the card the same way: teamtally.ts); the body is
+   *  shoved off the burst (`downShove` m/s at the burst, none at `woundM`). Only a man who is the player's enemy is asked: a teammate or a hostage who is
+   *  down, and a civilian (what her death costs is the mission's to say, civilians.ts), are passed over as before — and a defender does not throw where
+   *  it would reach a mate of his who is down breathing (`ownClear`). Off = every man already down is passed over, as it was. */
+  downKill: false, downShove: 2.4,
   /** A WALL THE BURST WILL OPEN IS NO COVER (10-15; the twin of the door rule in `exposedTo`): a man reckoning his cover from a grenade that has not gone off
    *  asks the destruction engine which walls and cover its burst would open (`Destruction.wallsFor`, the blast's own plan, nothing touched) and reads his line
    *  with those open (`withWallsOpen`). So the flee leaves a partition the burst is about to hole and a man behind one is not counted safe. ON in the page
@@ -187,8 +200,8 @@ export interface BlastSpec {
   destr?: { radius?: number; power?: number };
 }
 export type BlastResult = 'killed' | 'wounded' | 'shielded' | 'stunned';
-export interface BlastHit { id: number; name: string; team: Team; d: number; exposed: number; result: BlastResult; /** 'stunned' only: what stood between him and the burst and went with it — a door it took off, or a wall it holed / cover it broke (FRAG.wallStun) */ behind?: 'door' | 'cover'; }
-export interface BlastReport { at: Vec3; who: number; hits: BlastHit[]; killed: number; wounded: number; shielded: number; /** men (never the player: `player`) behind a door this burst took off (FRAG.doorStun) or a wall it holed / cover it broke (FRAG.wallStun): folded, not hit — a civilian only flinches */ stunned: number; player: BlastResult | null; }
+export interface BlastHit { id: number; name: string; team: Team; d: number; exposed: number; result: BlastResult; /** FRAG.downKill: he was already down and breathing when it reached him (always 'killed': a burst that does not kill him leaves no row) */ down?: true; /** 'stunned' only: what stood between him and the burst and went with it — a door it took off, or a wall it holed / cover it broke (FRAG.wallStun) */ behind?: 'door' | 'cover'; }
+export interface BlastReport { at: Vec3; who: number; hits: BlastHit[]; killed: number; /** of `killed`: men who were already down and breathing (FRAG.downKill) */ finished: number; wounded: number; shielded: number; /** men (never the player: `player`) behind a door this burst took off (FRAG.doorStun) or a wall it holed / cover it broke (FRAG.wallStun): folded, not hit — a civilian only flinches */ stunned: number; player: BlastResult | null; }
 
 /** QA: every burst's report, newest last (capped), and running counts. */
 export const FRAG_LOG: BlastReport[] = [];
@@ -269,10 +282,19 @@ const sameSide = (a: Team, b: Team) => a === b || (a === 'player' && b === 'oper
 /** THE BLAST. A fragmenting explosion at `at` (the point it is judged from is FRAG.lift over it): kills and wounds by distance and by what is solid in between
  *  (the model at the head of this file), is heard by the whole floor as a 'bang' event flagged `frag`, flashes, scorches, and hands the destruction lane its
  *  cause — the ONE call into g.destr a frag ever makes. Returns who it touched. Impartial; `spec.who` only decides whose card a kill goes on. */
+/** FRAG.downKill: a man a burst can still kill where he lies — down and breathing (out cold, or wounded), the player's enemy, never a civilian */
+const downAsked = (gd: Guard): boolean => isBreathing(gd) && !gd.god && !gd.civ && isHostile('player', gd.team);
+/** …and the points of him a burst is asked for: hips (the one its range is measured to), chest, head, a shin — each as it lies, never under the floor's skin */
+export function lying(gd: Guard): Vec3[] {
+  const b = gd.char.bones, up = (p: Vec3): Vec3 => [p[0], Math.max(p[1], 0.12), p[2]], hips = up(b.hips ?? gd.char.pos);
+  return [hips, up(b.spine2 ?? hips), up(b.head ?? hips), up(b.shinL ?? hips)];
+}
+/** how much of those points a burst at `from` has a line to (0‥1), through the glass as `view` reckons it */
+export const lyingShows = (g: Game, from: Vec3, pts: Vec3[], view: GlassView): number => throughGlass(g, from, view, () => { let n = 0; for (const p of pts) if (!burstBlocked(g, from, p)) n++; return n / pts.length; });
 export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
   const F = FRAG, lethal = spec.lethalM ?? F.lethalM, wound = Math.max(lethal, spec.woundM ?? F.woundM), serial = spec.serial ?? Math.floor(g.time * 1000);
   const from: Vec3 = [at[0], at[1] + F.lift, at[2]]; const name = spec.name ?? 'frag grenade';
-  const rep: BlastReport = { at: v3.copy(at), who: spec.who, hits: [], killed: 0, wounded: 0, shielded: 0, stunned: 0, player: null };
+  const rep: BlastReport = { at: v3.copy(at), who: spec.who, hits: [], killed: 0, finished: 0, wounded: 0, shielded: 0, stunned: 0, player: null };
   const side: Team = spec.who ? teamOfId(g, spec.who) : 'guard'; const mine = spec.who === PLAYER_ID;
   if (spec.fx !== false) {
     const gpu = gpuFx(g);
@@ -306,6 +328,7 @@ export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
     before = new Map();
     const ask = (feet: Vec3, head: Vec3, id: number) => { if (v3.dist(from, [feet[0], feet[1] + 0.9, feet[2]]) <= wound) before!.set(id, exposure(g, from, feet, head, 'blown')); };
     for (const gd of [...g.guards, ...civiliansShown(g)]) if (gd.state !== 'dead' && !gd.god) ask(gd.char.pos, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]), gd.char.id);
+    if (F.downKill) for (const gd of g.guards) if (downAsked(gd)) { const B = lying(gd); if (v3.dist(from, B[0]) <= wound) before.set(gd.char.id, lyingShows(g, from, B, 'blown')); }   // (a man down and breathing: asked where he lies, as `finish` judges him)
     { const pl = g.player; if (!pl.down) ask(pl.char.pos, pl.char.bones.head ?? v3.add(pl.char.pos, [0, 1.6, 0]), pl.char.id); }
   }
   if (typeof destr.blast === 'function') destr.blast(from, { who: spec.who, ...spec.destr });
@@ -314,24 +337,46 @@ export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
   // from the burst is asked again with them out of the collision layer's list (nothing else in it moves): any line at all = 'stunned'.
   let torn: Box[] = [];
   if (hung) { let T = TORN.get(g); if (!T || T.time !== g.time) TORN.set(g, T = { time: g.time, doors: [] }); for (const d of hung) if (d.off && !T.doors.includes(d)) T.doors.push(d); torn = T.doors.filter(d => d.off).map(d => d.box); }
-  const pastLeaf = (feet: Vec3, head: Vec3): number => torn.length ? withoutLeaves(g, torn, () => exposure(g, from, feet, head, 'blown')) : 0;
   g.events.push({ kind: 'bang', pos: v3.copy(from), time: g.time, loud: true, level: 2, who: spec.who, frag: true });   // the loudest thing on the floor: every man hears it (guards.ts hearingCheck)
   // ---- who it touches
-  const judge = (feet: Vec3, head: Vec3, id: number): { d: number; e: number; r: BlastResult | null; behind?: 'door' | 'cover' } => {
-    const d = v3.dist(from, [feet[0], feet[1] + 0.9, feet[2]]); if (d > wound) return { d, e: 0, r: null };
-    const was = before?.get(id), now = was === undefined || was <= 0 ? exposure(g, from, feet, head, 'blown') : was;   // (FRAG.wallStun: the part of him that showed before it broke anything is the part the fragments found)
+  const judgeAt = (id: number, d: number, shows: () => number): { d: number; e: number; r: BlastResult | null; behind?: 'door' | 'cover' } => {
+    if (d > wound) return { d, e: 0, r: null };
+    const was = before?.get(id), now = was === undefined || was <= 0 ? shows() : was;   // (FRAG.wallStun: the part of him that showed before it broke anything is the part the fragments found)
     const e = was ?? now;
     if (e <= 0) {
       if (now > 0) return { d, e: now, r: 'stunned', behind: 'cover' };   // (hidden until this burst holed the wall or broke the cover in front of him)
-      const through = pastLeaf(feet, head); return through > 0 ? { d, e: through, r: 'stunned', behind: 'door' } : { d, e, r: 'shielded' };
+      const through = torn.length ? withoutLeaves(g, torn, shows) : 0; return through > 0 ? { d, e: through, r: 'stunned', behind: 'door' } : { d, e, r: 'shielded' };
     }
     if (d <= lethal) return { d, e, r: e >= 0.5 ? 'killed' : 'wounded' };
     const t = (d - lethal) / Math.max(1e-3, wound - lethal); const p = F.woundKill * (1 - t) * (1 - t) * (e >= 0.5 ? 1 : 0.4);
     return { d, e, r: hash01(serial, id) < p ? 'killed' : 'wounded' };
   };
+  const judge = (feet: Vec3, head: Vec3, id: number) => judgeAt(id, v3.dist(from, [feet[0], feet[1] + 0.9, feet[2]]), () => exposure(g, from, feet, head, 'blown'));
   const away = (feet: Vec3): Vec3 => { const d: Vec3 = [feet[0] - at[0], 0, feet[2] - at[2]]; const l = Math.hypot(d[0], d[2]); return l > 1e-3 ? v3.normalize([d[0] / l, 0.45, d[2] / l]) : [0, 1, 0]; };
+  // A MAN ALREADY DOWN AND BREATHING (FRAG.downKill): judged where he lies; killed outright inside the lethal reach on any line, by the burst's own chance
+  // past it, otherwise left exactly as he was (no row in the report). killGuard has already run for him once, so the books are put right here the way
+  // wounds.ts does for a round into a wounded man: shot, not breathing, and on the card a kill in place of the knockout that was there.
+  const finish = (gd: Guard) => {
+    const c = gd.char, B = lying(gd), j = judgeAt(c.id, v3.dist(from, B[0]), () => lyingShows(g, from, B, 'blown'));
+    if (j.r !== 'killed' && !(j.r === 'wounded' && j.d <= lethal)) return;
+    rep.hits.push({ id: c.id, name: gd.callsign, team: gd.team, d: j.d, exposed: j.e, result: 'killed', down: true }); rep.killed++; rep.finished++;
+    if (sameSide(side, gd.team) && spec.who) FRAG_STATS.own++;
+    const dir = away(B[0]), line = `${gd.callsign} — the ${name} reached him where he lay`;
+    // the card: `had` = his knockout is on it (the player's own, or a partner's that teamtally.ts counted); `fresh` = put down this very step, which that
+    // module has not read yet and will, as he is when the step ends — so a partner's burst leaves the kill itself to it
+    const st = g.mission.stats, fresh = gd.diedAt === g.time, had = gd.downBy === 'player' || (!fresh && teamTallied(g, gd));
+    if (gd.wound) { gd.wound = null; c.anim.wound = null; }
+    gd.downKind = 'shot'; gd.downBy = mine ? 'player' : spec.who ? 'guard' : 'world'; if (spec.who) gd.killerId = spec.who;
+    const team = !mine && teamTallied(g, gd);
+    if (missionLive(g) && (mine || team)) { if (had && st.knockouts > 0) st.knockouts--; if (mine || !fresh) st.kills++; }
+    if (mine || (team && !fresh)) chronicle(g, 'kill', { who: gd.callsign, weapon: mine ? name : `a teammate's ${name}` }, B[0]);
+    if (mine) witnessKill(g, gd, 'shot', 'player');
+    if (!c.ragdoll) c.ragdollize(g.col, dir, true);   // (down wounded: the body is the ragdoll's from the pose he lay in)
+    c.ragdoll?.addRigidVelocity(v3.scale(dir, F.downShove * Math.max(0, 1 - j.d / wound)), [0, 0, 0]);   // (the body goes with the burst)
+    g.msg(line);
+  };
   for (const gd of [...g.guards, ...civiliansShown(g)]) {   // (a civilian who has left the floor is not there to be hit)
-    if (gd.state === 'dead' || gd.god) continue;
+    if (gd.state === 'dead' || gd.god) { if (F.downKill && downAsked(gd)) finish(gd); continue; }
     const c = gd.char, head = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]); const j = judge(c.pos, head, c.id); if (!j.r) continue;
     rep.hits.push({ id: c.id, name: gd.callsign, team: gd.team, d: j.d, exposed: j.e, result: j.r, ...(j.r === 'stunned' && j.behind ? { behind: j.behind } : {}) });
     if (j.r === 'shielded') { rep.shielded++; continue; }
@@ -381,7 +426,7 @@ export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
     // (the men folded behind a door it took: only those an eye has a line to through the opening it left, and never a civilian, who only flinches — the count says nothing of a room nobody can see into)
     const foldedMen = !seen || !rep.stunned ? [] : withoutLeaves(g, torn, () => g.guards.filter(o => !o.civ && o.state !== 'dead' && rep.hits.some(h => h.id === o.char.id && h.result === 'stunned') && eyes.some(e => !g.col.segmentBlocked(e, o.char.bones.chest ?? v3.add(o.char.pos, [0, 1.2, 0])))));
     const folded = foldedMen.length, behind = foldedMen.some(o => rep.hits.some(h => h.id === o.char.id && h.behind === 'cover')) ? 'what it broke' : 'the door';   // (a wall it holed, cover it broke — or those and a door: FRAG.wallStun)
-    g.msg(`${side === 'hostile' ? 'their ' : ''}${name} — ${!seen ? 'out of sight' : `${rep.killed ? `${rep.killed} down` : 'nobody down'}${rep.wounded ? `, ${rep.wounded} hit` : ''}${folded ? `, ${folded} stunned behind ${behind}` : ''}`}`); }
+    g.msg(`${side === 'hostile' ? 'their ' : ''}${name} — ${!seen ? 'out of sight' : `${rep.killed - rep.finished ? `${rep.killed - rep.finished} down` : 'nobody down'}${rep.wounded ? `, ${rep.wounded} hit` : ''}${folded ? `, ${folded} stunned behind ${behind}` : ''}`}`); }
   return rep;
 }
 
@@ -919,10 +964,11 @@ export function fragAway(g: Game, gd: Guard): number { return defBooks.get(g)?.c
 const lands = (sol: { land: Vec3 } | null, p: Vec3, tol: number) => !!sol && sol.land[1] <= FRAG.lift + 0.1 && flat(sol.land, p) <= tol;
 const hostageNear = (g: Game, p: Vec3) => !!g.rescue?.hostages.some(h => h.state !== 'dead' && flat(h.char.pos, p) < FRAG.woundM + FRAG.defScatter[1]);
 /** nobody of the thrower's own side (himself included) within FRAG.defOwnM of where it would land with a line to it, and he himself not within reach of his own arm's error */
-function ownClear(g: Game, gd: Guard, land: Vec3, release = false): boolean {
+export function ownClear(g: Game, gd: Guard, land: Vec3, release = false): boolean {
   const from: Vec3 = [land[0], land[1] + FRAG.lift, land[2]];
   for (const o of g.guards) {
-    if (o.state === 'dead' || o.team !== gd.team) continue;
+    if (o.team !== gd.team) continue;
+    if (o.state === 'dead') { if (FRAG.downKill && downAsked(o)) { const B = lying(o); if (flat(B[0], land) <= FRAG.defOwnM && lyingShows(g, from, B, 'wary') > 0) return false; } continue; }   // (a mate down and breathing is still one of his: the burst would kill him where he lies)
     const od = flat(o.char.pos, land); if (od > FRAG.defOwnM) continue;
     if (o === gd && release) { if (od < FRAG.defNear - 1.5) return false; continue; }   // (as it leaves his hand: he has shouted it and his legs are his own — only never at his own feet)
     if ((o === gd && od < FRAG.defNear - 0.5) || exposedTo(g, from, o.char.pos, o.char.bones.head ?? v3.add(o.char.pos, [0, 1.6, 0])) > 0) return false;   // (a wall between it and him is enough — round the jamb of his own door — but never at his own feet)

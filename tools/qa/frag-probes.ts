@@ -16,7 +16,7 @@
 //                  began, no leg passes nearer it, nobody is turned about mid-leg more than once (never back toward it), nobody stands inside the lethal radius with a leg open.
 //                  FLEEWISE_BREAK=1 = the rule left off and the same lines asked: they must fail. FLEE_GOALS=1 prints each man's goals.
 import { standUp, ROOT } from './headless.ts';
-const { FRAG, FRAG_LOG, FRAG_STATS, FRAG_WHY, fragStatsReset, blast, exposure, exposedTo } = await import(`${ROOT}/src/game/frag.ts`);
+const { FRAG, FRAG_LOG, FRAG_STATS, FRAG_WHY, fragStatsReset, blast, exposure, exposedTo, lying, lyingShows, ownClear } = await import(`${ROOT}/src/game/frag.ts`);
 const { KIT_ORDER } = await import(`${ROOT}/src/game/game.ts`);
 const { QUICKTHROW } = await import(`${ROOT}/src/game/quickthrow.ts`);   // (the G quick throw: on on the frozen stand, off in the page — (c) and (d2) read it)
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
@@ -817,4 +817,89 @@ export const fragFleeDoor = guarded(async () => {
     F.verdict(FRAG.fleeDoor === want && P.FROZEN_HOLDS['FRAG.fleeDoor'] === 'TPS_FLEEDOOR=1' && P.STAND_ENV.includes('TPS_FLEEDOOR'), `(e) the stand: ${want ? 'on, as the page opens' : 'held off, as every frozen digest was recorded'}; the two stands' list carries its word`, `fleeDoor ${FRAG.fleeDoor} · word ${word ?? 'none'} · ${shipped ? 'shipped' : 'frozen'}`); }
   return F.done();
   } finally { ROOMFIGHT.rally = rally0; }
+});
+
+// ---------------------------------------------------------------- frag-down
+// A BURST KILLS A MAN WHO IS DOWN AND BREATHING (FRAG.downKill; from play: two men put out with sponge rounds, a 40 mm burst beside them, and both lay there
+// breathing). Men of the shift are put down the way a sponge round to the head puts them down (combat.ts killGuard, quiet, 'struck', the player's), left to
+// settle, and a burst is set off beside them. DOWNKILL_BREAK=1 = the key left off and the same lines asked: (a), (a2), (d), (e), (f), (f2), (f3) and (g2) must fail, on either stand.
+export const fragDown = guarded(async () => {
+  const BREAK = process.env.DOWNKILL_BREAK === '1';
+  const F = family(`frag-down: a burst kills a man who is down and breathing${BREAK ? ' (DOWNKILL_BREAK: the rule left off)' : ''}`);
+  const { killGuard } = await import(`${ROOT}/src/game/combat.ts`); const { isBreathing } = await import(`${ROOT}/src/game/game.ts`); const { bodyPos } = await import(`${ROOT}/src/game/guards.ts`);
+  const J: any = await import(`${ROOT}/src/game/journal.ts`);
+  const lies = (g: any, gd: any) => { const B = lying(gd), from = [P0[0], FRAG.lift, P0[2]]; return { e: lyingShows(g, from, B, 'blown'), d: Math.hypot(B[0][0] - from[0], B[0][1] - from[1], B[0][2] - from[2]) }; };   // (as blast() asks a man who is down: frag.ts lying)
+  const say = (gd: any) => `${gd.callsign} ${gd.downKind}${isBreathing(gd) ? ', breathing' : ', dead'} by ${gd.downBy}`;
+  /** three men put out by the player — in the open by the burst, behind a wall from it, in the open past its reach — and settled; then a burst at P0 */
+  const deal = async (seed: number, on: boolean, burst: (R: any) => void, how: 'struck' | 'wounded' = 'struck', opt: { watch?: boolean; friend?: boolean; koBy?: 'guard' } = {}) => {
+    const R = await rig(seed), g = R.game; FRAG.downKill = on && !BREAK; g.aiEnabled = false; g.godMode = true; g.teleportPlayer([8, 0, 17.6]);
+    const [A, B, C] = g.guards; const open = R.spot(P0, 2.4, true), far = R.spot(P0, FRAG.woundM + 3, true, [open!]);
+    // (behind a wall: floor the burst has no line to at any height, nor to anywhere a body can come to rest within 0.9 m of it)
+    let wall: number[] | null = null; { const from = [P0[0], FRAG.lift, P0[2]], hid = (q: number[]) => exposure(g, from, q, [q[0], 1.65, q[2]], 'blown') === 0 && exposure(g, from, q, [q[0], 0.3, q[2]], 'blown') === 0;
+      for (let k = 0; k < 720 && !wall; k++) { const a = k * 2.399963, rr = 3.2 + (k % 5) * 0.2, q = [P0[0] + Math.sin(a) * rr, 0, P0[2] + Math.cos(a) * rr];
+        if (g.col.nav.isBlocked(q[0], q[2]) || !hid(q)) continue; let ok = true; for (let i = 0; i < 8 && ok; i++) for (const d of [0.45, 0.9]) ok &&= hid([q[0] + Math.sin(i * Math.PI / 4) * d, 0, q[2] + Math.cos(i * Math.PI / 4) * d]); if (ok) wall = q; } }
+    if (!open || !wall || !far) return null;
+    R.put(A, open, P0); R.put(B, wall, [wall[0] * 2 - P0[0], 0, wall[2] * 2 - P0[2]]); R.put(C, far, open); R.step(2);
+    for (const gd of opt.watch ? [A, B] : [A, B, C]) killGuard(g, gd, [0, 0, 0], how === 'struck', how, gd === A && opt.koBy ? opt.koBy : 'player', `ring to the head — ${gd.callsign} is out cold`);
+    R.step(150);   // (the bodies come to rest)
+    if (opt.friend) A.team = 'operative';   // (a teammate who is out: the rule is not asked of him)
+    const st0 = { ...g.mission.stats }, rows0 = g.chronicle.events.length, said0 = R.said.length, was = [A, B, C].map(gd => lies(g, gd)), hips0 = [...bodyPos(A)];
+    // (watch: the third man stands past the reach with the first in his view — would he throw there himself, with the key as dealt and with it off; and the AI is on as the burst goes, so what he saw is written)
+    let own: boolean[] = []; if (opt.watch) { const k = FRAG.downKill; own = [ownClear(g, C, P0), (FRAG.downKill = false, ownClear(g, C, P0))]; FRAG.downKill = k; g.aiEnabled = true; }
+    burst(R); R.until(() => FRAG_LOG.length > 0, 2); R.step(40);
+    return { R, g, A, B, C, st0, was, own, rep: FRAG_LOG[FRAG_LOG.length - 1], rows: g.chronicle.events.slice(rows0), said: R.said.slice(said0), moved: dist(bodyPos(A), hips0) };
+  };
+  const hand = (R: any) => { R.frag(P0, 0.2, 1); };
+  // (a) (b) (c) the player's hand grenade
+  { const D = await deal(71, true, hand);
+    if (!D) F.verdict(false, 'staging', 'no spots round the corridor point');
+    else { const { g, A, B, C, st0, was, rep, rows, said } = D, st = g.mission.stats, row = rep?.hits.find((h: any) => h.id === A.char.id);
+      F.verdict(was[0].e > 0 && was[0].d <= FRAG.lethalM && A.downKind === 'shot' && !isBreathing(A) && row?.result === 'killed' && row?.down === true && rep.killed === 1 && rep.finished === 1 && said.some((t: string) => /nobody down|out of sight/.test(t)), `(a) ${A.callsign}, out cold ${f2(was[0].d)} m from the grenade with a line to it, is dead: shot on his record, one 'killed' row marked down`, `${say(A)} · lay showing ${was[0].e} · report ${JSON.stringify(rep?.hits.map((h: any) => `${h.name} ${f2(h.d)}m e${h.exposed} ${h.result}${h.down ? ' (down)' : ''}`))} · killed ${rep?.killed}, of them already down ${rep?.finished} · body moved ${f2(D.moved)} m`);
+      F.verdict(st.kills === st0.kills + 1 && st.knockouts === st0.knockouts - 1 && rows.some((e: any) => e.kind === 'kill' && JSON.stringify(e).includes(A.callsign) && JSON.stringify(e).includes('frag grenade')) && said.some((t: string) => t.includes(A.callsign) && t.includes('where he lay')), '(a2) the books: a kill on the card in place of his knockout, a kill row on the timeline naming the grenade, a line on the log', `kills ${st0.kills} → ${st.kills} · knockouts ${st0.knockouts} → ${st.knockouts} · timeline ${JSON.stringify(rows.map((e: any) => ({ ...e, pos: undefined, t: undefined })))} · said ${JSON.stringify(said)}`);
+      F.verdict(was[1].e === 0 && B.downKind === 'struck' && isBreathing(B) && !rep?.hits.some((h: any) => h.id === B.char.id), `(b) ${B.callsign}, out cold ${f2(was[1].d)} m off with a wall between, is as he was: breathing, no row`, `${say(B)} · lay showing ${was[1].e}`);
+      F.verdict(was[2].d > FRAG.woundM && C.downKind === 'struck' && isBreathing(C) && !rep?.hits.some((h: any) => h.id === C.char.id), `(c) ${C.callsign}, out cold in the open ${f2(was[2].d)} m off (past the ${FRAG.woundM} m reach), is as he was`, `${say(C)}`); } }
+  // (d) the 40 mm round's burst (blast() as he40.ts calls it), the player's
+  { const D = await deal(72, true, R => { blast(R.game, [P0[0], 0.4 - FRAG.lift, P0[2]], { who: 1, name: '40 mm grenade' }); });
+    if (!D) F.verdict(false, '(d) staging', 'no spots');
+    else F.verdict(D.A.downKind === 'shot' && D.B.downKind === 'struck' && D.g.mission.stats.kills === D.st0.kills + 1 && D.said.some((t: string) => t.includes('40 mm grenade')), `(d) a 40 mm burst beside him: ${D.A.callsign} is dead, ${D.B.callsign} behind the wall still breathing, the log names the round`, `${say(D.A)} · ${say(D.B)} · said ${JSON.stringify(D.said)}`); }
+  // (e) a man down WOUNDED (a posed figure, not a ragdoll): dead, the wound's record off him, his body the ragdoll's
+  { const D = await deal(73, true, hand, 'wounded');
+    if (!D) F.verdict(false, '(e) staging', 'no spots');
+    else F.verdict(D.A.downKind === 'shot' && D.A.wound === null && !!D.A.char.ragdoll && D.g.mission.stats.kills === D.st0.kills + 1, `(e) ${D.A.callsign}, down wounded in the open: dead, no wound record left on him, the body handed to the ragdoll`, `${say(D.A)} · wound ${JSON.stringify(D.A.wound)} · ragdoll ${!!D.A.char.ragdoll} · kills ${D.st0.kills} → ${D.g.mission.stats.kills} · the others ${say(D.B)}, ${say(D.C)}`); }
+  // (f) somebody else's grenade (a man of the shift's, thrown before he was put down himself): he is dead, by that man, and the card keeps the player's knockout and gains no kill
+  { const D = await deal(74, true, R => { R.frag(P0, 0.2, R.game.guards[2].char.id); });
+    if (!D) F.verdict(false, '(f) staging', 'no spots');
+    else { const st = D.g.mission.stats; F.verdict(D.A.downKind === 'shot' && D.A.downBy === 'guard' && D.A.killerId === D.C.char.id && st.kills === D.st0.kills && st.knockouts === D.st0.knockouts && !D.rows.some((e: any) => e.kind === 'kill'), `(f) a defender's grenade beside him: ${D.A.callsign} is dead by that man's hand, and nothing moves on the player's card or timeline`, `${say(D.A)} · killer ${D.A.killerId} · kills ${D.st0.kills} → ${st.kills} · knockouts ${D.st0.knockouts} → ${st.knockouts}`); } }
+  // (f2) (f3) A QUIET MISSION AS TWO (teamtally.ts: the partner's men are on the card). The third man stands in for the partner, and the mission's record is
+  // put up only around the burst itself, so nothing else of a quiet mission runs: (f2) the player's knockout, the partner's grenade — a kill in place of the
+  // knockout, a row naming a teammate's grenade; (f3) the partner's knockout, the player's 40 mm — the same swap, not a second man counted
+  { const { TEAMTALLY } = await import(`${ROOT}/src/game/teamtally.ts`); const tt0 = TEAMTALLY.on;
+    const asTwo = (who: (R: any) => number) => (R: any) => { const g = R.game, q0 = g.quiet; TEAMTALLY.on = true; g.quiet = { active: true, ops: [g.guards[2]] }; try { blast(g, P0, { who: who(R), name: who(R) === 1 ? '40 mm grenade' : undefined }); } finally { g.quiet = q0; TEAMTALLY.on = tt0; } };
+    try {
+      const D = await deal(79, true, asTwo(R => R.game.guards[2].char.id), 'struck', { watch: true });
+      if (!D) F.verdict(false, '(f2) staging', 'no spots');
+      else { const st = D.g.mission.stats; F.verdict(D.A.downKind === 'shot' && D.A.downBy === 'guard' && st.kills === D.st0.kills + 1 && st.knockouts === D.st0.knockouts - 1 && D.rows.some((e: any) => e.kind === 'kill' && /a teammate's frag grenade/.test(JSON.stringify(e))), `(f2) as two: the player's knockout, the partner's grenade beside him — a kill on the card in place of the knockout, and its row names a teammate's grenade`, `${say(D.A)} · kills ${D.st0.kills} → ${st.kills} · knockouts ${D.st0.knockouts} → ${st.knockouts} · timeline ${JSON.stringify(D.rows.map((e: any) => e.data))}`); }
+      const E = await deal(80, true, asTwo(() => 1), 'struck', { watch: true, koBy: 'guard' });
+      if (!E) F.verdict(false, '(f3) staging', 'no spots');
+      else { const st = E.g.mission.stats; F.verdict(E.A.downKind === 'shot' && E.A.downBy === 'player' && st.kills === E.st0.kills + 1 && st.knockouts === E.st0.knockouts - 1, `(f3) as two: the partner's knockout, the player's 40 mm beside him — one kill more and one knockout fewer, not a second man`, `${say(E.A)} · kills ${E.st0.kills} → ${st.kills} · knockouts ${E.st0.knockouts} → ${st.knockouts}`); }
+    } finally { TEAMTALLY.on = tt0; } }
+  // (g) off = as it was: the same deal as (a) with the key off — every man already down is passed over
+  { const D = await deal(71, false, hand);
+    if (!D) F.verdict(false, '(g) staging', 'no spots');
+    else { const st = D.g.mission.stats; F.verdict([D.A, D.B, D.C].every((x: any) => x.downKind === 'struck') && D.rep.hits.every((h: any) => ![D.A, D.B, D.C].some((x: any) => x.char.id === h.id)) && st.kills === D.st0.kills && st.knockouts === D.st0.knockouts && D.moved < 0.02, '(g) with the key off the same grenade passes over all three: breathing, no rows, the card and the bodies as they were', `${say(D.A)} · ${say(D.B)} · ${say(D.C)} · body moved ${f2(D.moved)} m`); } }
+  // (g2) whoever watched: a man of the shift standing past the reach with the first man in his view remembers a shooting, and to whom; and asked whether he
+  // would throw at that spot himself, with a mate of his out cold beside it, he would not — with the key off he would, as it was
+  { const D = await deal(77, true, hand, 'struck', { watch: true });
+    if (!D) F.verdict(false, '(g2) staging', 'no spots');
+    else { const saw = D.C.witness?.sawAct; F.verdict(D.A.downKind === 'shot' && saw?.kind === 'shot' && saw?.victim === D.A.callsign && D.own[0] === false && D.own[1] === true, `(g2) ${D.C.callsign}, standing ${f2(dist(D.C.char.pos, P0))} m off with ${D.A.callsign} in his view, saw him shot; and he would not throw there himself with ${D.A.callsign} lying by it (with the key off he would)`, `${say(D.A)} · saw ${JSON.stringify(saw ? { kind: saw.kind, victim: saw.victim } : null)} · own side clear: ${D.own[0]} with the key, ${D.own[1]} without`); } }
+  // (g3) only the player's enemy is asked: a teammate who is out cold beside the same grenade is as he was
+  { const D = await deal(78, true, hand, 'struck', { friend: true });
+    if (!D) F.verdict(false, '(g3) staging', 'no spots');
+    else F.verdict(D.A.downKind === 'struck' && isBreathing(D.A) && !D.rep.hits.some((h: any) => h.id === D.A.char.id) && D.g.mission.stats.kills === D.st0.kills, `(g3) a teammate out cold ${f2(D.was[0].d)} m from it is not asked: breathing, no row, the card as it was`, `${say(D.A)} · team ${D.A.team}`); }
+  // (h) the journal and the stand
+  { const g = (await rig(75)).game, was = FRAG.downKill; FRAG.downKill = true; const old = J.knobsSnapshot(g), own = J.knobsSnapshot(g); delete old.tables.FRAG.downKill; J.applyKnobs(g, old); const without = FRAG.downKill; FRAG.downKill = false; J.applyKnobs(g, own); const withIt = FRAG.downKill; FRAG.downKill = was;
+    F.verdict(without === false && withIt === true, '(h) a recording from before the key replays with it off, one that carries it on plays with it on', `applyKnobs with no key → ${without} · with it on → ${withIt}`); }
+  { await rig(76); const P: any = await import(`${ROOT}/src/host/profile.ts`), word = process.env.TPS_DOWNKILL, shipped = P.harnessProfile() === 'shipped', want = word !== undefined ? word === '1' : shipped;
+    F.verdict(FRAG.downKill === want && P.FROZEN_HOLDS['FRAG.downKill'] === 'TPS_DOWNKILL=1' && P.STAND_ENV.includes('TPS_DOWNKILL'), `(i) the stand: ${want ? 'on, as the page opens' : 'held off, as every frozen digest was recorded'}; the two stands' list carries its word`, `downKill ${FRAG.downKill} · word ${word ?? 'none'} · ${shipped ? 'shipped' : 'frozen'} stand`); }
+  return F.done();
 });
