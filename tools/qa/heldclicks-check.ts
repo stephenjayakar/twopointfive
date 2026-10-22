@@ -44,7 +44,10 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 /** the knife's clock as player.ts reads it (the takedowns' half brings HOLD.secs.kill; one second until then) */
 const KILL_SECS = (): number => HOLD.secs.kill;
 const KILL_CUT = (): number => HOLD.kill.hit * KILL_SECS();
-const MARKS = 'LMB  knife — lethal  ·  RMB  choke him out', OLD_ROW = 'Space  choke him out — quiet  ·  E  draw — gun to his head';
+const { HANDSLOT } = await import(`${ROOT}/src/game/handslot.ts`);
+/** the key the arm hold's row names for the pistol: 1 where empty hands are a slot (game/handslot.ts), E where E still swaps the hold */
+const gunKey = () => HANDSLOT.on ? '1' : 'E';
+const MARKS = 'LMB  knife — lethal  ·  RMB  choke him out', oldRow = () => `Space  choke him out — quiet  ·  ${gunKey()}  draw — gun to his head`;
 
 function place(gd: any, p: P3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; gd.dazzledUntil = 1e9; gd.heardUpTo = 1e12; place(gd, [37.5, 0, 6 + i * 1.5], EAST); }
@@ -202,8 +205,8 @@ export async function heldClicksCheck(): Promise<boolean> {
     { const lines: Record<string, string[]> = {}; let bad = false;
       for (const [k, on, opts] of [['on', ON, {}], ['off', false, {}], ['gun, on', ON, { drawn: true }]] as [string, boolean, { drawn?: boolean }][]) { const S = await held(906, on, opts); if (!S) { bad = true; break; } lines[k] = rowLines(S); if (k === 'on') { click(S, LMB); S.step(1); lines['under the knife'] = rowLines(S); lines['under the knife, verbs'] = heldRows(S).filter(r => r.verb).map(r => String(r.verb)); } }   // (the rows are built at the head of a frame: the one after the click has them)
       const has = (k: string, t: string | RegExp) => (lines[k] ?? []).some(l => typeof t === 'string' ? l === t : t.test(l));
-      const onRow = `Space  choke him out — quiet  ·  ${MARKS}  ·  E  draw — gun to his head`, words = [onRow, ...(lines['under the knife'] ?? [])].join(' ');
-      F.verdict(!bad && has('on', onRow) && has('off', OLD_ROW) && !has('off', /LMB|RMB/) && !has('gun, on', /knife — lethal|RMB/),
+      const onRow = `Space  choke him out — quiet  ·  ${MARKS}  ·  ${gunKey()}  draw — gun to his head`, words = [onRow, ...(lines['under the knife'] ?? [])].join(' ');
+      F.verdict(!bad && has('on', onRow) && has('off', oldRow()) && !has('off', /LMB|RMB/) && !has('gun, on', /knife — lethal|RMB/),
         "g · the arm hold's row: with the switch on it carries the marks (LMB knife — lethal · RMB choke him out, then E as it was); off it is the old string; the gun's row never carries them",
         bad ? 'staging: a hold never settled' : `on ${J((lines.on ?? []).find(l => /choke/.test(l)))} · off ${J((lines.off ?? []).find(l => /choke/.test(l)))} · gun ${J((lines['gun, on'] ?? []).find(l => /whip/.test(l)))}`);
       F.verdict(!bad && has('under the knife', 'the knife…') && !has('under the knife', /LMB|RMB|Space|breathes|step/) && (lines['under the knife, verbs'] ?? []).length === 0 && !/[6-9]/.test(words) && !/\b(north|south|east|west)\b/i.test(words),

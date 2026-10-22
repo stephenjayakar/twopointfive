@@ -29,12 +29,12 @@ Pick a mission, pick who comes and what they carry, deploy. Every key is also li
 | mouse | aim · `LMB` fire or throw what is in hand · `RMB` the pistol's light jammer, the rifle's launcher |
 | `Space` | do the highlighted action · hold to pick another |
 | `1` to `5` | pistol · rifle · smoke · stun · frag |
-| `E` | holster or draw |
+| `` ` `` | empty hands: what is in them goes away · a digit draws |
 | a wall | walk into it and your back goes to it · a step away lets go |
 | `R` · `L` · `N` · `V` · `Z` | reload · weapon light · night vision · whistle · semi or auto |
 | `X` · `Q` · `T` · `F` | squad: order menu · the usual order · who takes it · give the word |
 | `Ctrl` + mouse | orbit the camera · `Ctrl` + wheel zooms |
-| `Esc` · `` ` `` | pause and settings · the debugger, with every knob |
+| `Esc` · `\` | pause and settings · the debugger, with every knob |
 
 `F7` saves a replay of the last five minutes and `Shift+F7` opens it in the viewer at `/replay`.
 
