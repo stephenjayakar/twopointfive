@@ -168,8 +168,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     busiest 14%, nearest mark to a man 2.6 m (seeds 1 to 3). (2) A LINE STOPS ASKING: a step's `after { line?, on?, word? }` (`scenarios.ts LessonStep`,
     `rails.ts noteGiven / prompt`) replaces the step's line once an order of the squad's is out (`on` narrows which; `word` is the line once the go word is
     out) and stays while a man is still on his way and `RAILS.afterSecs` (8) after; the ask comes back when that has stood `RAILS.afterMax` (45) seconds with
-    the step not done. (3) A LINE TO WATCH: a line with no key in it is drawn smaller with a pulsing dot and no mark on the floor (`prompt().watch`,
-    `ui/overlay.ts`, `index.html .line.watch`). (4) SHIFT WITH THE COMMAND KEY: while the step does not allow `plan`, Shift down with the command key was a
+    the step not done. (3) A LINE TO WATCH: an after line, or the line of a step whose `done` is a cue (it only waits for the level's script), when it has
+    no key in it, is drawn smaller with a pulsing dot and no mark on the floor (`prompt().watch`, `ui/overlay.ts`, `index.html .line.watch`). NEVER a step's own
+    line that merely names no key ('Get out of the light' is an ask and its mark is where to go: the first rule read the text alone and would have hidden
+    ten marks of the squad mission, eleven of the solo one, nine of the quiet one; caught in review before it was handed in). The after line needs the order
+    POINTED AT THE STEP'S PLACE (a man's order post within `RAILS.wayM` of the step's `at`), holds after the word too while men are on their way, and a word
+    that sends nobody (the wall charge goes at once, no order is logged) counts where the step's `after` has only a `word`. (4) SHIFT WITH THE COMMAND KEY: while the step does not allow `plan`, Shift down with the command key was a
     press thrown away (six taps, no order, `give` never called): the one way found to make the stack's step do nothing. `RAILS.shiftTap` takes the Shift off
     and passes the tap. Whether his Shift was down is a GUESS (a screenshot shortcut's key-up never reaches a page); so the page's input also lets go of a
     modifier the next key or mouse event says is up, and takes a key that goes down again unrepeated as a fresh press (`game/input.ts modsUp`). (5) THE GATE'S
@@ -178,7 +182,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     scripted order's `direct: true` (`GuardScript.direct`, `director.ts OrderPatch`) sends a man the short way with no lane price, and the `push` beat waits
     for three of the squad to be in the yard: the line stands 1.9 to 3.3 s on six seeds on hard, nobody of the squad down. CHECKS: `rails-check` lines "the
     second play's notes hold" and "the gate's beat is short" (3.4 s on the frozen stand, 3.8 s on the page's, 27.5 s there with `direct` taken off), both
-    stands, `RAILS_BREAK=1` red; the scripted player all fourteen steps on seeds 1 to 6 on hard. NOBODY HAS seen any of it on a GPU or pressed it on a Mac; the
+    stands, `RAILS_BREAK=1` red; the scripted player all fourteen steps on seeds 1 to 6 on hard. TRIED AND TAKEN BACK: fire kept up south of the squad's lane while it runs (one seed in six a man of the
+    squad went on a knee and the squad never set in the yard) and bursts at the gate's wall as the roadblock walks (a man who fires is engaged at once: they
+    died at their own sandbags). A scripted man fires only what the script fires, and scripted rounds are real rounds. A sprint's Shift is left alone (a walk key
+    down on a step that allows `sprint`). A step's arrow (`toward`) no longer fades near the player (the solo mission's claim). NOBODY HAS seen any of it on a GPU or pressed it on a Mac; the
     fight at the gate has never been watched through real smoke.
 - **The tutorial's squad mission, 'A harder fight'** (row `tut-squad`, `scenarioList.ts TUTORIAL_MISSIONS`, group `tutorial`; `tools/levels/tut-squad.ts` → `levels/tut-squad.json`, its staged
   moments `levels/tut-squad.script.ts`, its scripted player `tools/qa/lessons/tut-squad.ts`, its page run `tools/qa/tut-squad-page.cjs`). A PROTOTYPE: one street through a walled post, the four,

@@ -79,7 +79,7 @@ const LESSON: LessonData = {
     { id: 'zoom', line: '[Ctrl] and scroll: zoom out', allow: ['zoom'], done: { is: 'view', zoomed: 1.2 } },
     { id: 'pan', line: '[W] [A] [S] [D]: look down the road', allow: ['pan'], cue: 'smoke', done: { is: 'view', panned: 7 } },
     { id: 'move', line: '[B] on the yard: move them in', after: { line: 'They break for the yard, behind the smoke' }, allow: ['order'], cue: 'break', at: YARD_MARK, done: { is: 'squad', area: YARD_IN }, hold: 0.6 },
-    { id: 'gate', line: 'They hold the gate: the roadblock is coming for it', at: [19.5, 0.02, 22.0], done: { is: 'cue', name: 'roadblock' }, hold: 1 },
+    { id: 'gate', line: 'They hold the gate: the roadblock is coming for it', at: [19.5, 0.02, 22.0], done: { is: 'cue', name: 'roadblock' } },   // (no hold: with the roadblock already down when the squad sets, the line never comes up)
     // ---- indoors ----
     { id: 'stack', line: '[B] on the door: stack up', after: { line: 'They stack up on the door' }, explain: { title: 'Doors', text: 'A room is taken through its door. [B] on a door stacks the squad beside it.\nThere they wait for your word.' }, cue: 'indoors', checkpoint: 'the yard', at: [17.0, 1.0, 11.2], done: { is: 'any', of: [{ is: 'stackOn', door: 'tea', set: true }, { is: 'taken', room: 'tea' }, { is: 'squad', area: R.tea.bounds, n: 3 }] } },
     { id: 'go', line: '[F]: send them in', after: { word: 'They go in' }, allow: ['word'], at: [17.0, 1.0, 11.2], done: { is: 'any', of: [{ is: 'taken', room: 'tea' }, { is: 'all', of: [{ is: 'word' }, { is: 'squad', area: R.tea.bounds, n: 3 }] }] }, hold: 1.5 },

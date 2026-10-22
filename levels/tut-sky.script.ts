@@ -31,8 +31,6 @@ const PINNED: [string, string][] = [['Blue Two', 'Taking fire! Stay down!'], ['R
 const SMOKES: Vec3[] = [[19.8, 0, 24.8], [21.6, 0, 26.4]], SMOKE_AGAIN = 27;
 /** …and once the smoke is out: into it, and the south lane behind it (the squad's lane is the wall's) */
 const AT_SMOKE: Vec3[] = [[19.5, 0.9, 25.6], [18.2, 0.6, 26.6], [16.6, 1.0, 26.4], [20.6, 1.1, 26.9], [14.0, 0.9, 26.6]];
-/** what the roadblock's men shoot at as they come for the gate: the outer face of the yard's wall, either side of its mouth */
-const AT_GATE: Vec3[] = [[21.2, 1.0, 22.3], [20.9, 1.5, 22.3], [17.6, 1.2, 22.3]];
 const SQUAD = ['Red One', 'Red Two', 'Blue One', 'Blue Two'];
 const YARD = { x0: 12.3, x1: 21.6, z0: 17.4, z1: 21.9 };
 /** seconds after the squad breaks before the roadblock comes for the gate whether or not the squad has reached the yard */
@@ -128,11 +126,9 @@ const script: LevelScriptFn = D => {
       c.start('push');
     });
     P.beat('ordered', function* (c) { yield c.on('signal', e => !!e.name && e.name.startsWith('order:')); c.flag.broke = true; });
-    P.beat('blind', function* (c) {
-      yield* harass(c, AT_SMOKE, () => c.flag.through === true, { rounds: [3, 5], gap: [0.5, 1.2], spread: 0.05 });
-      // …and while the squad runs the wall's lane for the gate the road is not left silent: the far side of the smoke only, well south of that lane
-      yield* harass(c, AT_SMOKE.filter(p => p[2] >= 26.4), () => c.flag.coming === true, { rounds: [3, 5], gap: [0.6, 1.4], spread: 0.04 });
-    });
+    // (the fire stops while the squad runs the wall's lane for the gate: kept up south of that lane it still put a man of the squad on a knee one seed in
+    //  six, and the squad then never set in the yard. Scripted rounds are real rounds)
+    P.beat('blind', function* (c) { yield* harass(c, AT_SMOKE, () => c.flag.through === true, { rounds: [3, 5], gap: [0.5, 1.2], spread: 0.05 }); });
     // …the roadblock's men come on for the gate AS THE SQUAD SETS in the yard, one after another through the gap in their own sandbags and down the road
     // into its mouth, and each is his own man there (the maintainer, playing: "this beat is too long, unclear what to do" — they were first left to come
     // when they would, their sandbags were shut and the road is a lane their side knows the squad covers, so the two behind them went round the whole halt:
@@ -140,7 +136,6 @@ const script: LevelScriptFn = D => {
     // The fight at the gate is the game's own; whoever is still on his feet after it is walked in again, further each time
     P.beat('push', function* (c) {
       yield c.any(c.wait(PUSH_LATEST), c.until(q => { const men = squad(c); return men.filter(u => inYard(q, u)).length >= Math.min(3, men.length); }));
-      c.flag.coming = true;
       { const u = c.unit('Red One') ?? squad(c)[0]; if (u) c.say(u, 'They are coming for the gate. We have it.', { radio: true }); }
       for (let k = 0; block(c, false).length; k++) {
         const left = block(c, false);
@@ -148,13 +143,7 @@ const script: LevelScriptFn = D => {
           c.order(u, { goal: [19.6 + i * 0.7 - Math.min(1, k) * 0.9, 0, 21.2 - i * 0.5 - Math.min(1, k) * 0.6], speed: 3.4, aimAt: [17.6, 1.1, 20.0], upper: 'aim', hot: true, direct: true });
           if (i < left.length - 1) yield c.any(c.wait(0.7), c.until(() => block(c, false).length === 0));
         }
-        // they shoot as they come: short bursts at the wall either side of the gate, until each is in its mouth or down (a scripted man fires only what
-        // the script fires: walked in silence they were targets, not a fight)
-        for (let n = 0; n < 14; n++) {
-          const up = left.filter(u => c.query.alive(u) && !c.query.arrived(u)); if (!up.length) break;
-          yield c.stimulus.burst(pick(c, up), pick(c, AT_GATE), 2 + Math.floor(c.rand() * 3), { cadence: 0.11, spread: 0.03 });
-          yield c.any(c.wait(0.2 + c.rand() * 0.35), c.until(() => block(c, false).length === 0));
-        }
+        yield c.any(c.wait(k ? 5 : 7), c.until(q => left.every(u => !q.alive(u) || q.arrived(u))));
         for (const u of block(c, false)) c.release(u, 'alert');
         yield c.any(c.wait(4), c.until(() => block(c, false).length === 0));
       }
@@ -163,7 +152,7 @@ const script: LevelScriptFn = D => {
 
     // INDOORS (and the checkpoint in the yard put back): the road is quiet. Whoever of the roadblock is somehow left is held where he stands
     P.beat('indoors', function* (c) {
-      c.flag.broke = true; c.flag.smoke = true; c.flag.through = true; c.flag.coming = true;
+      c.flag.broke = true; c.flag.smoke = true; c.flag.through = true;
       for (const u of block(c, false)) c.order(u, { goal: null, aimAt: [21.5, 1.1, 23.4], upper: 'aim', hot: false });
       yield c.wait(0.1);
       c.signal('done:roadblock');
