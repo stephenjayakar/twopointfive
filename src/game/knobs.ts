@@ -44,7 +44,7 @@ import { SCORE, BADGE } from './chronicle';
 import { WOUND } from './wounds';
 import { DOORPATH } from './doorpath';
 import { FOG } from './fogofwar';
-import { DOORWAY, DOORSTAY } from './doors';
+import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
 import { DOORBLAST, DOORSHOT } from './doorblast';
 import { HANDLE } from './handleside';
 import { DOORMANNERS } from './doorway';
@@ -118,6 +118,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'RESPONSE',
   // gunfire splinters a wooden door leaf apart (doorblast.ts DOORSHOT): a recording made with it on replays its doors going, one from before hangs them
   'DOORSHOT',
+  // a door swung or kicked into a man throws him (doors.ts DOORTHROW): a recording made with it on replays its men thrown, one from before has every leaf stop against them
+  'DOORTHROW',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
@@ -232,7 +234,7 @@ export function knobRegistry(): Record<string, object> {
   const all: Record<string, object | undefined> = {
     // what a recording carries (JOURNAL_KNOBS)
     AIM, TRAINED, AI_TUNE, BODY_LIGHT, GUARD_EYE, NEEDS, WHISTLE, WET, WIND, CIV, CHAOS, RING, LAUNCHER, HE40, LAUNCHER40, FRAG, SHOTGUN, GLASS, GLASSFX, GLASSBREAK, GLASSPEN, SHARDS,
-    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, OPENING,
+    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, OPENING,
     DOORSTAY, HANDLE, DOORMANNERS,
     // what breaks into what, by material (breakTable.ts), and how a blast treats furniture (furnblast.ts): the sim reads both, so a recording carries them
     BREAKS, FURN,

@@ -113,6 +113,49 @@ export const FLOOR_KEY = 'floor';
  *  NOT while a showcase has the stage (Doors.staged ← Game.touring): those films were choreographed against the closers, beat for beat, and run with them. */
 export const DOORSTAY = { on: true };
 
+/** A DOOR SWUNG OR KICKED INTO A MAN THROWS HIM (the maintainer: 'opening a door into the enemy should majorly confuse them' · 'kicking down a door when an
+ *  enemy on the side should stun or knock them out'). A leaf DRIVEN OPEN — walked open by a man on its other face, turned by a hand, shoved, flung by a door
+ *  order, run through, booted — used to stop dead against whoever stood in its swing, and he held it shut on the man opening it. Now it wins: he is carried
+ *  clear ahead of it and along it toward its free end (Doors.update), and what it did to him is handed out on his contact (DoorContact.struck) for doorthrow.ts
+ *  to make of it — folded and blind for `pushSecs`, or for `kickSecs` under a BOOT (kickIn, which says so itself: a boot, a breaching shell), and put on a knee by
+ *  one that met him before it had turned `floorRad` from where it was booted (he stood right at the door). By behaviour, never by hit points: nothing here
+ *  hurts anybody. The same for whoever it meets — a defender, Sam, a teammate, a civilian.
+ *  NOT a throw: a leaf eased (a hand slower than `handRate`, a crouched or silent man's body — DoorContact.quiet — or any leaf slower than `minSpeed` where
+ *  it meets him), pulled (it passes the living on that side as ever), swinging shut, or one the man walked into himself; a leaf opened short of a boot by a
+ *  CALM man (MAN_CALM: staff not alert or searching, any civilian — he opens a door with his hand at a walk: the patrol's round, the cleaner's, throw nobody
+ *  and raise no alarm of their own, and a man hidden behind a door stays hidden); a leaf a man of HIS OWN side opened any way short of a boot (the squad's file through a door, a pair's shove into a room
+ *  the other pair is already in, are not a brawl — a leaf one of them BOOTS meets him like anyone); a man already folded or just up from it (`again` s: he is carried, not
+ *  thrown twice); a showcase on the stage. A man with no floor to be moved onto (his back to a wall) is struck where he stands and the leaf rests on him.
+ *  `on`: ON in the page (src/host/profile.ts; ?doorthrow=0 = every leaf stops against a standing man, as it did), OFF here and on the harness's frozen stand
+ *  (TPS_DOORTHROW=1). */
+export const DOORTHROW = { on: false,
+  /** s folded and blind: a leaf pushed, shoved or flung into him · a booted one */
+  pushSecs: 2.0, kickSecs: 4.0,
+  /** m/s a swinging leaf must still be doing where it meets him (slower, it comes to rest against him as ever) */
+  minSpeed: 0.9,
+  /** rad/s a hand must turn a leaf at for it to be a push (the silent ease is 0.55; the hand's own push 2.6) */
+  handRate: 1.2,
+  /** rad a booted leaf may have turned when it meets him for him to have stood right at the door: he goes onto a knee for it */
+  floorRad: 0.6,
+  /** m/s a leaf carries a thrown man ahead of it at most (a frame's turn beyond that and it rests on him this frame) · m/s he is moved along it toward its free end */
+  rate: 9, slide: 1.5,
+  /** s after a fold has run out in which no leaf throws him again */
+  again: 3.0,
+  /** the awareness a man comes back with when the leaf was a foe's (the ring's own: alert) */
+  aware: 0.92,
+};
+/** who last DROVE a leaf open and how (DOORTHROW; Door.drive): `dir` the sign of the turn, `kind` a boot (kickIn) · any other swing written onto it (a shove,
+ *  a fling, a shoulder at a run) · a body walking it open · a hand turning it; `t` seconds since; `from` the angle it stood at; `quiet` a crouched, silent or
+ *  calm man's; `side` whose man he was when he drove it (MAN_SIDE; 0 nobody's); `rate` rad/s a hand was turning it at, or a body would turn it at by its own
+ *  stride — where he stood when the last update ended (`px`, `pz`) to where he pressed it from, over his lever: never the leaf's own turn, which two men
+ *  pressing one leaf from both faces see-saw up to anything */
+export interface DoorDrive { who: number; dir: 1 | -1; kind: 'boot' | 'swing' | 'body' | 'hand'; t: number; from: number; quiet: boolean; side: number; rate: number; px: number; pz: number; }
+/** what Doors.man answers about a man (DOORTHROW): whose he is in the low two bits (1 Sam and his squad · 2 the defenders · 3 a civilian · 0 nobody's) | is he
+ *  folded right now (he holds no leaf: one driven at him carries him) | braced (just up from a fold, or in somebody's arm: no throw) | calm (above) */
+export const MAN_SIDE = 3, MAN_FOLDED = 4, MAN_BRACED = 8, MAN_CALM = 16;
+/** what a driven leaf did to the man it met (DOORTHROW; DoorContact.struck): whose leaf, a boot's or not, did he stand right at it, and the way he was thrown (x, z) */
+export interface DoorStrike { door: Door; by: number; hard: boolean; floor: boolean; dir: [number, number]; }
+
 /** weak: a limp thing (a corpse's particle) — it never unlatches or bashes a leaf, and a leaf that someone stronger is pushing this frame, or a latched one,
  *  pushes IT (pos is corrected) instead of yielding; otherwise the leaf rests against it like against anyone (the closer cannot shut a door on a body).
  *  key: staff (guards) — every locked leaf unlatches for them like an unlocked one, and they handle leaves the way staff do (pull one to behind them, take the
@@ -132,7 +175,10 @@ export interface DoorContact { pos: Vec3; radius: number; bash: boolean; who: nu
    *  leaves meet him in one frame: one cost a frame, never two). */
   run?: { bash: number; rip: number; ripLevel: number }; bashed?: Door | null; ripped?: Door | null;
   /** (out, with bashed) the angle the leaf stood at when his shoulder met it: what `square on` is measured against */
-  bashedAt?: number; }
+  bashedAt?: number;
+  /** DOORTHROW — struck (out): the driven leaf that threw him this frame · moved (out): a leaf carried him this frame (his place is the caller's to settle
+   *  against the walls) · man: Doors.man's answer about him, asked once a frame and only when he is at a leaf */
+  struck?: DoorStrike | null; moved?: boolean; man?: number; }
 /** does this contact's key ring get it through d's lock: staff always, anyone else by a key that fits */
 const opens = (c: DoorContact, d: Door) => !!c.key || (!!c.keys && c.keys.has(d.lockId));
 /** rattle: the lever tried against a thrown bolt · pick: one click of the pick working · unlock: the cylinder going over and the bolt drawing · kick: a boot through the lock */
@@ -178,6 +224,8 @@ export class Door {
   /** DOORSTAY: the swing this leaf is on toward its frame is a keyed man's body's doing and nobody's order — at its frame it rests to, unlatched (update).
    *  Dropped by whatever moves it next that is not such a body: a hand, a boot, a blast, a script, the player's own push */
   swept = false;
+  /** DOORTHROW: who last drove it open and how (null: nobody since the reset, or the rule is off) */
+  drive: DoorDrive | null = null;
   /** …and has come to rest in its frame that way: to, not latched. To a hand or a body that opens it next it is a shut door all the same — it gives with the creak a latched one gives */
   get restsTo(): boolean { return this.swept && !this.latched && this.angle === 0 && this.vel === 0; }
   pressT = 0; openT = 10; mirrored = 0; private angleSeen = 0; get seenAngle(): number { return this.angleSeen; }
@@ -226,7 +274,7 @@ export class Door {
     this.angle = clamp(this.sided(this.def.angle ?? 0), this.minA, this.maxA);   // (one-way: a leaf authored standing open the way it is not dealt stands as wide the way it is — as setSwing left it)
     this.vel = 0; this.latched = Math.abs(this.angle) < 1e-3; this.closing = false; this.swept = false; this.quietT = 10; this.sinceBash = 10; this.creakArmed = true; this.lastWho = -1;   // (lastWho too: the fresh encounter's first bang / latch is nobody's yet — it used to keep the last man of the encounter before, review B7.12)
     this.locked = !!this.def.locked; this.lockBroken = false; this.noticed = false; this.noticedT = -1000; this.pick = 0; this.picking = false; this.pickIdle = 0; this.pickClock = 0; this.rattleT = 0; this.guardT = -100; this.passers = 0;
-    this.pullT = 0; this.pressT = 0; this.openT = 10;
+    this.pullT = 0; this.pressT = 0; this.openT = 10; this.drive = null;
     this.place();
   }
   /** Deal the side it opens into (game/doorswing.ts, once per level): a leaf authored standing open the other way is stood as far open this way. */
@@ -341,9 +389,44 @@ export class Doors {
    *  and use() puts the key's clack in front of the creak. */
   keyOpens(d: Door, from: Vec3, keys?: ReadonlySet<string>): boolean { return !!keys && keys.has(d.lockId) && this.lockedOut(d, from); }
 
+  /** DOORTHROW: is there floor for a body of radius r at (x, z)? Set by the Game (this file knows no walls); null = anywhere */
+  standable: ((x: number, z: number, r: number) => boolean) | null = null;
+  /** DOORTHROW: what the Game knows of the man with this id (MAN_SIDE | MAN_FOLDED | MAN_BRACED | MAN_CALM); null = nothing of anybody */
+  man: ((who: number) => number) | null = null;
+  /** DOORTHROW as it applies right now: the switch on, no showcase on the stage */
+  get throws(): boolean { return DOORTHROW.on && !this.staged(); }
+  /** would a turn of sign `dir` take d further OPEN (one-way: the way it opens; else away from its frame) */
+  private opening(d: Door, dir: number): boolean { return DOORWAY.oneWay ? dir === d.swing : Math.abs(d.angle) < 0.05 || dir * d.angle > 0; }
+  /** DOORTHROW: somebody drove d open (Door.drive) */
+  private driven(d: Door, who: number, dir: number, kind: DoorDrive['kind'], quiet: boolean, rate: number) {
+    const D = d.drive, s = dir >= 0 ? 1 : -1, m = this.man ? this.man(who) : 0;
+    if (kind !== 'boot' && m & MAN_CALM) quiet = true;
+    if (D && D.who === who && D.dir === s && D.kind === kind) { D.t = 0; D.quiet = quiet; D.rate = rate; D.side = m & MAN_SIDE; if (kind !== 'body' && kind !== 'hand') D.from = d.angle; }   // (a walk or a hand goes on: one drive, from where it began)
+    else d.drive = { who, dir: s, kind, t: 0, from: d.angle, quiet, side: m & MAN_SIDE, rate, px: NaN, pz: NaN };
+  }
+  /** DOORTHROW: a body pressing d open — the drive, at the rate his own stride since the last update would turn it (0 on the first frame of it) */
+  private walked(d: Door, c: DoorContact, dir: number, lever: number, dt: number) {
+    const D = d.drive, on = D && D.who === c.who && D.kind === 'body' && D.dir === (dir >= 0 ? 1 : -1) && D.t <= 2 * dt + 1e-6 && D.px === D.px;
+    this.driven(d, c.who, dir, 'body', c.quiet, on ? Math.min(Math.hypot(c.pos[0] - D!.px, c.pos[2] - D!.pz) / Math.max(dt, 1e-3) / lever, TURN_RATE) : 0);
+  }
+  /** DOORTHROW: the leaf wins against this man — he is put clear of it (`pen` m along qx, qz) and a little along it toward its free end, if there is floor for
+   *  him there and it is no more than a frame's carry. False: he stays, and the leaf rests on him as ever. */
+  private carry(c: DoorContact, d: Door, pen: number, dist: number, qx: number, qz: number, perp: number, dt: number): boolean {
+    const T = DOORTHROW; if (pen > T.rate * dt) return false;
+    const u = d.dir(); let nx = qx, nz = qz, n = dist;
+    if (n < 1e-4) { const s = perp >= 0 ? 1 : -1; nx = -u[1] * s; nz = u[0] * s; n = 1; }   // (his centre on the leaf's own line: out of the face he is on)
+    const k = (pen + 0.001) / n, sl = T.slide * dt, x = c.pos[0] + nx * k, z = c.pos[2] + nz * k;
+    const ok = (px: number, pz: number) => !this.standable || this.standable(px, pz, c.radius);
+    if (ok(x + u[0] * sl, z + u[1] * sl)) { c.pos[0] = x + u[0] * sl; c.pos[2] = z + u[1] * sl; }
+    else if (ok(x, z)) { c.pos[0] = x; c.pos[2] = z; }
+    else return false;
+    c.moved = true; return true;
+  }
+
   /** Resolve contacts (mutates contact positions when a door can't yield), integrate swing, closer, latch. */
   update(dt: number, contacts: DoorContact[]) {
-    for (const c of contacts) { c.blockedBy = null; if (c.run) { c.bashed = null; c.ripped = null; } }
+    for (const c of contacts) { c.blockedBy = null; if (c.run) { c.bashed = null; c.ripped = null; } if (c.struck) c.struck = null; if (c.moved) c.moved = false; if (c.man !== undefined) c.man = undefined; }
+    const T = DOORTHROW, thr = this.throws;
     for (const d of this.list) {
       if (d.off) { d.vel = 0; d.latched = false; d.closing = false; if (d.slab) d.angle = d.slab.ang; continue; }   // off its hinges: no leaf in the frame to swing, latch, close or be walked into — and whatever wrote a swing onto it this frame (a drill's shove, a script) wrote onto nothing
       const [hx, hz] = d.def.hinge; const W = d.def.width; const ht = d.thick / 2;
@@ -362,17 +445,24 @@ export class Doors {
         }
         if ((d.angle - d.seenAngle) * S > 1e-4) { d.openT = 0; eased = true; }   // eased wider since (crack)
       }
+      if (thr) {   // (DOORTHROW) what has been written onto it since the last update: a swing, or a hand's turn (no faster than a body can turn one: a staging's write is nobody's hand) — a boot says so itself (kickIn), a pull passes the living as ever and drives nobody
+        const da = d.angle - d.seenAngle, pulled = ow && d.pullT > 0, rate = Math.abs(da) / Math.max(dt, 1e-3);
+        if (pulled && d.drive) d.drive = null;   // (a pull is nobody's drive: the leaf it leaves swinging is not the last man's who pushed it)
+        if (d.vel !== d.seenVel && d.vel !== 0 && !d.closing && !d.latched && !pulled && this.opening(d, Math.sign(d.vel))) { if (!(d.drive && d.drive.t === 0 && d.drive.kind === 'boot')) this.driven(d, d.lastWho, d.vel, 'swing', false, 0); }
+        else if (da !== 0 && rate >= (d.drive?.kind === 'hand' && d.drive.t < DRIVEN_SECS ? 0.5 : 1) * T.handRate && rate <= TURN_RATE && !d.closing && !d.latched && !pulled && this.opening(d, Math.sign(da))) this.driven(d, d.lastWho, da, 'hand', false, rate);
+      } else if (d.drive) d.drive = null;
       const kicked = d.sinceBash < 0.6;
       if (kicked && !d.latched) {   // a kicked leaf flies ahead of the runner instead of staying glued to them — a long frame's turn walked in steps of ≤ KICK_SUBSTEP, stopping short of the first that would press a standing man (see the constant): it comes to rest against him instead of out of his far side at 20 fps
         const total = clamp(d.angle + d.vel * dt, d.minA, d.maxA) - d.angle; const n = Math.ceil(Math.abs(total) / KICK_SUBSTEP);
         if (n <= 1) d.angle = clamp(d.angle + d.vel * dt, d.minA, d.maxA);
-        else for (let s = 0; s < n; s++) { const a0 = d.angle; d.angle = a0 + total / n; if (this.leafPresses(d, contacts)) { d.angle = a0; break; } }
+        else for (let s = 0; s < n; s++) { const a0 = d.angle; d.angle = a0 + total / n; if (this.leafPresses(d, contacts)) { if (!thr) d.angle = a0; break; } }   // (DOORTHROW: it stands AT the first step that presses him — a step is less than a man is thick — and the contact pass below throws him)
       }
       let touched = false, yank = false, pushed = false, bodyBlock = false;   // bodyBlock: a corpse rests against the leaf · pushed: a living contact moved the leaf this frame — resolved first (pass 0), so the weak ones (pass 1) know
       let pushDir = 0, keyTouched = false;   // pushDir: the way a keyed man has already turned the leaf this frame — the player pressing it the other way from the far face meets a held leaf (he is moved, it does not turn back: else the two clamp it between them and he is fed through it a few centimetres a frame); keyTouched: a guard's hands are on it (he takes the blame for what it does, not the player brushing the other face)
       let here = 0;      // the passers (Door.passers) still overlapping the leaf this frame
       let pressed = false;   // (one-way) a living man is pressing on it from the side it opens into, and it is his to pull (Door.pressT)
       let ran = false;       // (sprintdoor.ts) a runner's shoulder flung it open this frame
+      let walker: DoorContact | null = null;   // (DOORTHROW) the body that pressed it open this frame: where he ends the update is where his next stride is measured from
       for (let pass = 0; pass < 3; pass++) for (const c of contacts) {   // keyed men first (they hold leaves against the player, above), then the player, then the limp things
         if ((c.weak ? 2 : c.key ? 0 : 1) !== pass) continue;
         // quick reject: outside the swing circle
@@ -384,9 +474,22 @@ export class Doors {
           const t = clamp(along, 0, W); const qx = px - u[0] * t, qz = pz - u[1] * t; const dist = Math.hypot(qx, qz);
           const pen = c.radius + ht - dist; if (pen <= (c.weak ? 0.002 : 0)) break;   // (weak: a settled body resting exactly at the leaf must not be re-shoved a hair every frame — that would keep its ragdoll awake)
           const bit = !c.weak ? this.passBit(c) : 0;
+          const man = thr && !c.weak ? (c.man ??= this.man ? this.man(c.who) : 0) : 0, folded = (man & MAN_FOLDED) !== 0;
           if (bit & d.passers) { here |= bit; break; }   // he is stepping through this leaf (see `pulling` below): whichever side of it his centre has got to, it neither feels him nor moves him until they are clear of each other
           if (ow && d.pullT > 0 && !d.latched && !c.weak) { if (bit) { d.passers |= bit; here |= bit; } break; }   // (one-way) a leaf being pulled open: it comes round past the living on the side it opens into — the man pulling it and whoever stands with him — and is not felt until they are clear of it
           if (c.weak && (d.latched || pushed || kicked || eased || (ow && d.pullT > 0))) { const k = pen / Math.max(dist, 1e-4); c.pos[0] += qx * k; c.pos[2] += qz * k; break; }   // the leaf wins: shove the body (eased: a body lying in its swing used to stop a hand easing it from the push face while a man walking into it, a boot, or the same hand from the pull face moved it — one rule for all of them now)
+          // (DOORTHROW) a leaf somebody else DROVE OPEN at him: it wins — before he counts as a hand on it (he is neither blamed for it nor does he stop its swing).
+          // Thrown (struck, for doorthrow.ts) if he was standing; carried if he is folded already.
+          if (thr && !c.weak && d.drive && d.drive.who !== c.who && !d.closing && along > 0.14 && along < W + c.radius) {
+            const D = d.drive, into = perp >= 0 ? 1 : -1, vin = into * d.vel * t, hard = D.kind === 'boot', held = D.kind === 'body' || D.kind === 'hand', fresh = held && D.t < DRIVEN_SECS;   // (held: a body's or a hand's — judged by the man's own rate, never by the speed the leaf has: two men on one leaf see-saw that up to anything)
+            if (D.dir !== into) { /* driven the other way: nothing of his */ }
+            else if (folded) { if ((vin >= 0.2 || fresh) && this.carry(c, d, pen, dist, qx, qz, perp, dt)) break; }
+            else if (!(man & MAN_BRACED) && !D.quiet && (held ? fresh && D.rate * t >= T.minSpeed : vin >= T.minSpeed) && (hard || !D.side || D.side !== (man & MAN_SIDE))) {   // (his own side's leaf: only a boot's)
+              const n = dist > 1e-4 ? 1 / dist : 0;
+              c.struck = { door: d, by: D.who, hard, floor: hard && Math.abs(d.angle - D.from) < T.floorRad, dir: n ? [qx * n, qz * n] : [-u[1] * into, u[0] * into] };
+              if (this.carry(c, d, pen, dist, qx, qz, perp, dt)) break;   // (no floor to be moved onto: struck where he stands, and the leaf rests on him — below, as ever)
+            }
+          }
           if (c.weak) bodyBlock = true; else { touched = true; if (c.key || !keyTouched) d.lastWho = c.who; if (c.key) keyTouched = true; }   // a corpse against the leaf blocks the closer but is nobody: it neither re-arms the closer's quiet timer (that made the leaf twitch into the body every 2 s and kept its ragdoll awake) nor takes the blame; between a guard and the player on one leaf, the guard's doing
           if (!c.weak && !opens(c, d) && d.locked && d.latched && (perp >= 0 ? 1 : -1) === d.keySide && along > 0.14 && along < W + c.radius) {
             // locked against a body with no key to it: the leaf is a wall. Push them back out, tell the caller which door stopped them (a sprinting player turns that into
@@ -400,7 +503,8 @@ export class Doors {
           // its edge. (Without this the leaf he pulls to swung into him, his own contact pushed it back to its stop, and the two see-sawed a hand apart with him
           // going nowhere — the wedge the QA soak kept finding by the break-room door; and a half-way version, let in but felt again once his centre crossed
           // the leaf line, whipped the leaf through the frame into the far stop with a bang.)
-          const pulling = c.key && !c.bash && d.closing && Math.abs(d.angle) > 0.35;
+          const limp = folded;   // (DOORTHROW) a folded man takes no handle: he neither pulls a leaf round, nor pulls one to, nor steps through its edge — it rests on him or is put clear of him
+          const pulling = c.key && !limp && !c.bash && d.closing && Math.abs(d.angle) > 0.35;
           if (along > 0.14 && along < W + c.radius) {
             // leaf yields: rotate away from the contact about the hinge
             const sgn = perp >= 0 ? -1 : 1; const lever = Math.max(0.18, t);
@@ -410,7 +514,7 @@ export class Doors {
             // a leaf locked against him (above), never one somebody is swinging into him (DRIVEN_*: that one stops against him, as ever). A leaf standing wider
             // than that is clear of the doorway: pushed from behind it simply turns toward shut. Run into (bash), it is hauled open at once and as loud as a
             // shoulder through it from the other face; walked into, after PRESS_SECS of it not giving.
-            const presses = ow && !c.weak && sgn * S < 0 && d.angle * S < Math.min(1.35, 0.8 * Math.abs(S > 0 ? d.maxA : d.minA)) && d.openT >= DRIVEN_SECS && d.vel * S <= DRIVEN_VEL;
+            const presses = ow && !c.weak && !limp && sgn * S < 0 && d.angle * S < Math.min(1.35, 0.8 * Math.abs(S > 0 ? d.maxA : d.minA)) && d.openT >= DRIVEN_SECS && d.vel * S <= DRIVEN_VEL;
             if (presses) {
               pressed = true; const hauled = c.bash && c.hand === undefined && d.sinceBash > 0.9;
               if (hauled || d.pressT >= (c.hand ?? PRESS_SECS)) {
@@ -438,19 +542,21 @@ export class Doors {
             const maxTurn = TURN_RATE * dt; const raw = sgn * (pen / lever) * 1.05, capped = Math.abs(raw) > maxTurn;   // a body pressed on the leaf right by its hinge whipped the tip through half a radian in one frame — and flung whoever stood in that arc a foot: a quarter radian a frame is already faster than any kick, the rest of the push waits a frame
             const want = d.angle + (capped ? Math.sign(raw) * maxTurn : raw);
             if (pulling && Math.abs(want) > Math.abs(d.angle)) { if (bit) { d.passers |= bit; here |= bit; } yank = true; break; }   // (see above: he keeps pulling, it passes him)
+            if (thr && !c.weak && !c.key && pushDir && sgn !== pushDir && !folded && this.opening(d, sgn)) { this.walked(d, c, sgn, lever, dt); walker = c; }   // (DOORTHROW: he is driving it all the same — the man holding it against him is thrown next frame)
             if (!c.weak && !c.key && pushDir && sgn !== pushDir) { const k = shove(pen, dt) / Math.max(dist, 1e-4); c.pos[0] += qx * k; c.pos[2] += qz * k; break; }   // a guard on the far face is already pushing it his way this frame: to the player it is a held leaf — it moves him, it does not turn back (guards among themselves work it to and fro as ever); at SHOVE_RATE, so a leaf walked open onto him presses him aside over a few frames, and past a man it cannot move (his back to the wall) it swings on through
             const na = clamp(want, d.minA, d.maxA); const moved = na - d.angle;
             if (Math.abs(moved) > 1e-5) {
               const to = d.restsTo;
+              if (thr && !c.weak && !folded && this.opening(d, Math.sign(moved)) && !(d.drive && d.drive.who !== c.who && d.drive.t === 0 && d.drive.kind !== 'body')) { this.walked(d, c, moved, lever, dt); walker = c; }   // (DOORTHROW: walked open — never over a swing somebody ELSE wrote onto it this frame)
               if (!c.weak) { pushed = true; if (c.key) pushDir = sgn; if (ow && moved * S > 0) d.openT = 0; d.swept = !!c.key && !c.bash && this.stay && Math.abs(na) < Math.abs(d.angle); }   // (swept: a keyed man's body turning it toward its frame at a walk, with doors that stay as they are left)
               if (d.latched || to) { d.latched = false; if (d.creakArmed && !c.bash) { this.emit({ door: d, sound: 'creak', pos: d.pos, who: c.who, level: c.quiet ? 0.12 : 0.3 }); d.creakArmed = false; } }
-              if (c.bash && !(presses && c.hand !== undefined) && d.sinceBash > 0.9 && Math.abs(d.angle) < 1.2) { const open = c.run && (!ow || sgn * S > 0); d.vel = sgn * (open ? c.run!.bash : 7.5); d.sinceBash = 0; if (open) { c.bashed = d; c.bashedAt = d.angle; ran = true; } this.emit({ door: d, sound: 'bash', pos: d.pos, who: c.who, level: 1.0 }); }   // (sprintdoor.ts: a shoulder through it the way it opens — the leaf leads him, and it costs him some of his run, game.ts)
+              if (c.bash && !(presses && c.hand !== undefined) && d.sinceBash > 0.9 && Math.abs(d.angle) < 1.2) { const open = c.run && (!ow || sgn * S > 0); d.vel = sgn * (open ? c.run!.bash : 7.5); d.sinceBash = 0; if (open) { c.bashed = d; c.bashedAt = d.angle; ran = true; } if (thr && this.opening(d, sgn)) this.driven(d, c.who, sgn, 'swing', false, 0); this.emit({ door: d, sound: 'bash', pos: d.pos, who: c.who, level: 1.0 }); }   // (sprintdoor.ts: a shoulder through it the way it opens — the leaf leads him, and it costs him some of his run, game.ts)
               else if (!kicked && !ran) d.vel = c.weak ? d.vel * 0.5 : d.vel * 0.5 + (moved / Math.max(dt, 1e-3)) * 0.5;   // a body soaks up a coasting leaf; it never sets one going (ran — sprintdoor.ts: the leaf a runner's shoulder has just flung keeps that speed through the rest of this frame's passes; without the rule the 7.5 is halved by the second pass, as it always was)
               d.angle = na;
             }
             if (Math.abs(want - na) > 1e-5 && (na === 0 || pen > c.radius - STOP_BODY)) { // at the stop: door is solid, push the character out — standing OPEN on its stop, as a wall would: by his body (STOP_BODY), not the hand of air a swinging leaf keeps off him
               const k = shove(na === 0 ? pen : pen - Math.max(0, c.radius - STOP_BODY), dt) / Math.max(dist, 1e-4); c.pos[0] += qx * k; c.pos[2] += qz * k;
-              if (c.key && !c.bash && !presses && !(ow && na === 0)) { if (!this.stay) yank = true; else if (bit && !d.latched && Math.abs(d.angle) > 0.5) { d.passers |= bit; here |= bit; } }   // (one-way: on its frame there is no other way to take it — he pulls it, above, once it is his to; DOORSTAY: he steps through the edge of a leaf standing OPEN on its stop, and it stays there — never through one whose stop is its frame) …but a man with a key does what anyone would: takes the leaf with him the other way (it swings shut, out of the alley he is trying to use) — else
+              if (c.key && !limp && !c.bash && !presses && !(ow && na === 0)) { if (!this.stay) yank = true; else if (bit && !d.latched && Math.abs(d.angle) > 0.5) { d.passers |= bit; here |= bit; } }   // (one-way: on its frame there is no other way to take it — he pulls it, above, once it is his to; DOORSTAY: he steps through the edge of a leaf standing OPEN on its stop, and it stays there — never through one whose stop is its frame) …but a man with a key does what anyone would: takes the leaf with him the other way (it swings shut, out of the alley he is trying to use) — else
             }                                      // nav, which cannot see leaves, marches him into it for as long as anyone keeps making noise beyond it (the QA soak's commonest wedge)
             if (capped) break;   // (the capped remainder is next frame's business, not two more goes at it now)
           } else {
@@ -458,7 +564,7 @@ export class Doors {
             // toward shut (same yank as at the stop, below); at the hinge there is nothing to take, that is the frame — and one it is already passing (above) does not fling him
             if (pulling) { if (bit) { d.passers |= bit; here |= bit; } yank = true; break; }
             const k = shove(pen, dt) / Math.max(dist, 1e-4); c.pos[0] += qx * k; c.pos[2] += qz * k;
-            if (c.key && !c.bash && along >= W && !d.latched && Math.abs(d.angle) > 0.5) { if (!this.stay) yank = true; else if (bit) { d.passers |= bit; here |= bit; } }
+            if (c.key && !limp && !c.bash && along >= W && !d.latched && Math.abs(d.angle) > 0.5) { if (!this.stay) yank = true; else if (bit) { d.passers |= bit; here |= bit; } }
             break;
           }
         }
@@ -498,6 +604,7 @@ export class Doors {
       if (d.picking) { d.picking = false; d.pickIdle = 0; } else if (d.pick > 0) { d.pickIdle += dt; if (d.pickIdle > 2.0) d.pick = Math.max(0, d.pick - dt / 4); }
       if (d.rattleT > 0) d.rattleT = Math.max(0, d.rattleT - dt);
       if (d.pullT > 0) d.pullT = Math.max(0, d.pullT - dt);
+      if (d.drive) { const D = d.drive; D.t += dt; if (walker && D.kind === 'body' && D.who === walker.who) { D.px = walker.pos[0]; D.pz = walker.pos[2]; } }   // (DOORTHROW: t is 0 through the update that follows a drive — written since the last one)
       d.place();
     }
   }
@@ -638,7 +745,7 @@ export class Doors {
     d.locked = false; d.lockBroken = true;   // (only a leaf locked against the kicker ever gets kicked: game.ts)
     d.pick = 0; d.latched = false; d.closing = false; d.swept = false; d.quietT = -0.5; d.lastWho = who; d.creakArmed = false;
     if (held) { /* (the lock destroyed from the face it opens toward: nothing drove the leaf — the keep is gone and it stands home in its frame, unlocked; left alone it clicks back onto its latch like any shut door, and a hand opens it from either face) */ }
-    else if (Math.abs(d.angle) < 1.4) { d.vel = -this.side(d, from) * 9; d.sinceBash = 0; }   // away from the boot (side +1 pushes the leaf CW = negative angle), on the fast 'kicked' path in update()
+    else if (Math.abs(d.angle) < 1.4) { d.vel = -this.side(d, from) * 9; d.sinceBash = 0; if (this.throws && this.opening(d, Math.sign(d.vel))) this.driven(d, who, d.vel, 'boot', false, 0); }   // away from the boot (side +1 pushes the leaf CW = negative angle), on the fast 'kicked' path in update()
     this.emit({ door: d, sound: 'kick', pos: d.pos, who, level: 1.0 });
     return true;
   }

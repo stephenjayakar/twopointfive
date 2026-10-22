@@ -2399,6 +2399,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   // the line he means it along puts it to the low ready until he is out of it (the alert branch has already asked, on the line of the shot itself)
   if (gd.muzzleEvalT !== g.time) muzzleCheck(g, gd, upper === 'aim' ? (aimAt ?? aimAhead(c)) : null, dt);
   if (!gd.pinned) gunWallCheck(g, gd, upper === 'aim' ? 'aim' : null, aimAt, dt, gd.state === 'alert');   // …and a wall inside the raised gun's reach does the same (gunwall.ts; nothing with its switch off)
+  if (g.time < gd.doorDownUntil) crouch = 1;   // (doorthrow.ts: he stood right at a door that was booted in — on a knee for the fold; the stamp is never written with its switch off)
   const lowered = gd.muzzleDown || duck || staggered;   // the gun down: for a colleague in the line, with his own head down under fire (suppression), or doubled over a ring airfoil — the same low ready ('lowLong' on the carbine, the animator's mapping)
   c.anim.speed = moveSpeed; c.anim.upper = lowered ? 'none' : upper; c.anim.crouchTarget = crouch; c.anim.lean = 0; c.anim.stance = lowered ? 'lowReady' : 'none';   // (the tactical stances the AI holds by itself: muzzle down for a colleague, head down under fire — otherwise none and standing, and a script that just ended must not leave one on him)
   gunWallPose(g, c);
