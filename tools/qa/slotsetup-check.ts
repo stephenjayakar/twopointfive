@@ -95,6 +95,16 @@ export async function slotSetupCheck(): Promise<boolean> {
       verdict(chord(shut) && !lit(shut) && /kbd\{2\}/.test(shut) && chord(open) && lit(open) && /kbd\{2\}.*kbd\{1\}.*kbd\{2\}.*kbd\{3\}/.test(open) && !/kbd\{[6-9]\}/.test(open) && !chord(held) && !chord(away) && /div\.hb\.(holstered|empty)/.test(away) && !/div\.hb/.test(old) && /div\.strip/.test(shut) && !/div\.strip/.test(old),
         'the kit column is the box: the gun\'s key and a cap before each row it can step are drawn on its second line, the box is marked while the setup is up, no cap is above 5; with a man in his arm or the gun put away the presses are not drawn; with the rule off the column is the one before',
         `shut: ${caps(shut)} (marked ${lit(shut)}) · up: ${caps(open)} (marked ${lit(open)}) · a man held: presses drawn ${chord(held)} · put away: ${chord(away)} · rule off: a box ${/div\.hb/.test(old)}, a strip ${/div\.strip/.test(old)}`); }
+    // ---- a load: nothing is up after one
+    { const { W, g, pl } = await rifle(true); const S: any = g.saves; S.runId ||= 'slotsetup-check'; const { takeSnapshot } = await import(`${ROOT}/src/game/rollback.ts`);
+      const file = await quiet(() => S.write(g, 'harness', 'before')); await quiet(() => wait(W, 1));   // (a file from a second ago, the setup shut)
+      await quiet(() => key(W, 'Digit2')); const upAtSave = up(g), m0 = pl.rifle.mode, k = 'slotsetup-check-mem';
+      S.shelf.set(k, { info: { key: k, slot: 'manual', n: 0, label: 'the setup up', kind: 'manual', savedAt: 0, missionT: 0, stage: g.mission.stage, runId: S.runId, bytes: 0, mem: true }, snap: takeSnapshot(g), pic: null });   // (a save kept in memory, as with a team on the floor, taken with the setup up)
+      await quiet(() => wait(W, 0.3)); const whyMem = await quiet(() => S.load(g, k)), memUp = up(g) || pl.setup !== null; await quiet(() => key(W, 'Digit1', 3)); const m1 = pl.rifle.mode, slot = pl.slot;
+      await quiet(() => { key(W, 'Digit2', 90); key(W, 'Digit2'); }); const upAgain = up(g), whyFile = file.ok ? await quiet(() => S.load(g, file.state)) : file.why, fileUp = up(g); await quiet(() => wait(W, DT)); const fileUp2 = up(g) || g.player.setup !== null;   // (a file's load builds the player again)
+      verdict(upAtSave && whyMem === null && !memUp && m1 === m0 && slot === 'pistol' && upAgain && whyFile === null && !fileUp && !fileUp2,
+        'nothing is up after a load: a save kept in memory that was taken with the setup up comes back with it shut (a 1 then is the pistol, not the selector), and a file from before it opened shuts it too',
+        `up at the save ${upAtSave} · memory load: ${whyMem ?? 'loaded'}, setup ${memUp}, then 1 → slot ${slot}, selector ${m0} → ${m1} · up again ${upAgain} · file load: ${whyFile ?? 'loaded'}, setup ${fileUp}, a frame on ${fileUp2}`); }
     // ---- off: the build as it was
     { const { W, g, pl, rf } = await rifle(false); const a0 = rf.attachment, m0 = rf.mode; await quiet(() => key(W, 'Digit2')); const a1 = rf.attachment, open = up(g) || pl.setup !== null;
       await quiet(() => key(W, 'Digit1', 20)); const slot = pl.slot, m1 = rf.mode; await quiet(() => { key(W, 'Digit2', 60); key(W, 'KeyZ', 2); }); const m2 = rf.mode;
