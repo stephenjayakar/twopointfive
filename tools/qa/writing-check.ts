@@ -11,7 +11,9 @@
 //   words    everyday American words: no torch, mains, fuse box, lorry, "round" for around, armoury, metre, whilst, towards, "out cold", "take hold of",
 //            "your word"; in a lesson and a tutorial row an enemy is an enemy or a guard, never "a man" / "men"
 //   short    a pronoun and its verb are contracted (he's, they're, you'll, it's, don't, can't): "he is coming", "do not turn" are not how it is said
-//   held     the seven old Training lessons (`train-*`) are not swept: their count of faulted lines is pinned and may only fall
+//   held     the seven Training lessons (`train-*`) are swept but for one word: their count of faulted lines is pinned and may only fall (1: "armoury" in
+//            train-orders, which is the room's own name there, and a room's name is in a frozen run digest). They write a key as a bare letter ("Press B
+//            on the door": the page rewrites it in running text, host/keymap.ts keyText), so the two `key` rules cannot see their keys
 //   self     the rules catch the sentences the guide was written from and pass their rewrites: each BEFORE below trips a rule, each AFTER trips none
 // WRITING_BREAK=1 = the BEFORE sentences are read as if a level carried them: the check must FAIL on what it finds.   exit 0 = all hold · 1 = one does not
 // A pattern catches a colon after a key or a missing contraction; only a reader catches a sentence nobody would say. The guide's review step (every changed
@@ -37,10 +39,11 @@ const BRITISH: [RegExp, string][] = [
 const UNCONTRACTED = /\b(he|she|it|that|there|who) is (?=[a-z])|(?<!\bof )\b(they|you|we) are (?=[a-z])|\b(he|she|it|they|you|we|i) will (?=[a-z])|\bi am\b|\b(do|does|did|is|are|was|were|will|would|should|could|has|have) not\b|\bcannot\b/i;   // ('have' and 'has' are verbs of their own too often to rule on: "they have one to spare")
 const OPENER = /^(in|on|out|up|through)[.,:]|^(to|out by|back to|through|on past) (the|a|its|his) |^where\b|^(stacked|kept|held|seen|given|sent|taken|left)\b[^.]*,/i;
 const TAIL = /(?<!\bwith),\s(his|her|their|your|its)\s\w+\s(to|on|at|against|in)\b/i;
-/** NOT SWEPT YET: the seven old Training lessons (`train-*`). Their lines are written key first ("V whistles him over") because the page rewrites a bare
- *  key letter in running text (`keyText`), and some name keys the ring controls dropped; they are to be rewritten with their keys in brackets, as the
- *  tutorial's are. Until then the count below may only fall. */
-const HELD = /^train-/, HELD_MAX = 60;
+/** THE SEVEN TRAINING LESSONS (`train-*`), swept by the guide but for ONE line: train-orders says "The armoury is locked", because the room is named
+ *  'armoury' in the level and a room's name is said in a bubble, whose text is in the run digest: the name cannot move bare, and the line says what the
+ *  screen says. The count below may only fall; at 0 this carve-out goes and they are read with the rest. Their keys are bare letters ("Press B on the
+ *  door"), which the page rewrites in running text (`keyText`): the two key rules above look for a cap in brackets and cannot see them. */
+const HELD = /^train-/, HELD_MAX = 1;
 const MAN = /\b(a man|that man|the far man|the near man|men|man's)\b/i;
 
 /** what a text breaks, in words; none = it holds */
@@ -95,7 +98,7 @@ export async function writingCheck(): Promise<boolean> {
   const report = (T: Text[]) => { const bad = T.map(t => ({ t, f: faults(t) })).filter(x => x.f.length); return { n: bad.length, text: bad.slice(0, LIST ? 999 : 12).map(x => `${x.t.where}: "${x.t.text.replace(/\n/g, ' / ').slice(0, 90)}" — ${x.f.join(' · ')}`).join('\n    ') + (bad.length > 12 && !LIST ? `\n    … and ${bad.length - 12} more (--list shows all)` : '') }; };
   { const now = texts.filter(t => !HELD.test(t.where)), old = texts.filter(t => HELD.test(t.where)), R = report(now), O = report(old);
     line(lessons >= 6 && R.n === 0, `every lesson's lines and cards hold to the guide (${lessons} levels, ${now.length} texts)`, R.n ? R.text : '');
-    line(O.n <= HELD_MAX, `the old Training lessons are not swept yet and get no worse (${O.n} of their ${old.length} lines break a rule, ${HELD_MAX} when the guide came in)`, O.n > HELD_MAX || LIST ? O.text : ''); }
+    line(O.n <= HELD_MAX, `the Training lessons get no worse (${O.n} of their ${old.length} lines break a rule, ${HELD_MAX} allowed: the room named 'armoury')`, O.n > HELD_MAX || LIST ? O.text : ''); }
 
   // ---- the mission rows
   { const rows: Text[] = []; const tut = new Set((TUTORIAL_MISSIONS as any[]).map(e => e.id));

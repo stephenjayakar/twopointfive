@@ -437,16 +437,16 @@
       "title": "Two pairs, two doors, one word",
       "steps": [
         { "id": "up", "line": "Walk to the mark, short of the grain store", "done": { "is": "any", "of": [{ "is": "in", "area": { "x0": 21.6, "x1": 24.4, "z0": 15.2, "z1": 17 } }, { "is": "taken", "room": "store" }] }, "at": [23, 1, 16] },
-        { "id": "stack-all", "line": "B on the grain store's door: all four stack up", "done": { "is": "any", "of": [{ "is": "stackOn", "who": "all", "door": "store_n" }, { "is": "taken", "room": "store" }] }, "at": [28, 1, 16.5] },
-        { "id": "word-all", "line": "F gives the word: all four go in", "done": { "is": "any", "of": [{ "is": "word", "doors": 1 }, { "is": "taken", "room": "store" }] } },
+        { "id": "stack-all", "line": "Press B on the grain store's door so all four stack up", "done": { "is": "any", "of": [{ "is": "stackOn", "who": "all", "door": "store_n" }, { "is": "taken", "room": "store" }] }, "at": [28, 1, 16.5] },
+        { "id": "word-all", "line": "Press F to send all four in", "done": { "is": "any", "of": [{ "is": "word", "doors": 1 }, { "is": "taken", "room": "store" }] } },
         { "id": "post", "line": "Walk back to the mark by the white house", "done": { "is": "any", "of": [{ "is": "in", "area": { "x0": 12.6, "x1": 15.6, "z0": 15.6, "z1": 17.6 } }, { "is": "taken", "room": "hut" }] }, "at": [14.2, 1, 16.5] },
-        { "id": "fall-in", "line": "When they call clear: X on the ground, then 3", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "taken", "room": "store" }, { "is": "following" }] }, { "is": "taken", "room": "hut" }] } },
-        { "id": "red", "line": "Cursor on bare ground, then T: RED takes your orders", "done": { "is": "any", "of": [{ "is": "orderTo", "who": "red" }, { "is": "taken", "room": "hut" }] } },
-        { "id": "stack-red", "line": "X on the red door, then 1: RED stacks up", "done": { "is": "any", "of": [{ "is": "stackOn", "who": "red", "door": "hut_w" }, { "is": "taken", "room": "hut" }] }, "at": [16.5, 1, 11.6] },
-        { "id": "blue", "line": "T again, off the men: BLUE", "done": { "is": "any", "of": [{ "is": "orderTo", "who": "blue" }, { "is": "taken", "room": "hut" }] } },
-        { "id": "stack-blue", "line": "B on the blue door: BLUE stacks up", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "stackOn", "who": "blue", "door": "hut_s" }, { "is": "pairsOn", "doors": 2 }] }, { "is": "taken", "room": "hut" }] }, "at": [20.4, 1, 14.5] },
-        { "id": "gold", "line": "Not F yet. T, off the men: GOLD, the whole squad", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "orderTo", "who": "all" }, { "is": "pairsOn", "doors": 2 }] }, { "is": "taken", "room": "hut" }] } },
-        { "id": "word", "line": "F gives the word: both pairs go in together", "done": { "is": "any", "of": [{ "is": "word", "doors": 2 }, { "is": "taken", "room": "hut" }] } }
+        { "id": "fall-in", "line": "When they call clear, X on the ground, then press 3 so they fall in", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "taken", "room": "store" }, { "is": "following" }] }, { "is": "taken", "room": "hut" }] } },
+        { "id": "red", "line": "Point at bare ground and press T so RED takes your orders", "done": { "is": "any", "of": [{ "is": "orderTo", "who": "red" }, { "is": "taken", "room": "hut" }] } },
+        { "id": "stack-red", "line": "X on the red door, then press 1 so RED stacks up", "done": { "is": "any", "of": [{ "is": "stackOn", "who": "red", "door": "hut_w" }, { "is": "taken", "room": "hut" }] }, "at": [16.5, 1, 11.6] },
+        { "id": "blue", "line": "Point away from the squad and press T again to pick BLUE", "done": { "is": "any", "of": [{ "is": "orderTo", "who": "blue" }, { "is": "taken", "room": "hut" }] } },
+        { "id": "stack-blue", "line": "Press B on the blue door so BLUE stacks up", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "stackOn", "who": "blue", "door": "hut_s" }, { "is": "pairsOn", "doors": 2 }] }, { "is": "taken", "room": "hut" }] }, "at": [20.4, 1, 14.5] },
+        { "id": "gold", "line": "Don't press F yet. Point away from the squad and press T for GOLD, the whole squad", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "orderTo", "who": "all" }, { "is": "pairsOn", "doors": 2 }] }, { "is": "taken", "room": "hut" }] } },
+        { "id": "word", "line": "Press F to send both pairs in together", "done": { "is": "any", "of": [{ "is": "word", "doors": 2 }, { "is": "taken", "room": "hut" }] } }
       ]
     },
     "kitView": {

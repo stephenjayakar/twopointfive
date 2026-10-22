@@ -205,27 +205,27 @@ export function build() {
     steps: [
       // (a step whose deed can be made impossible — the lock kicked where the pick was asked, the man out cold before he gives the code, the hut booted —
       //  also passes on the door standing open / the man being down, so the lesson always reaches its end)
-      { id: 'draw', line: '1 draws the pistol', done: { is: 'slot', slot: 'pistol', drawn: true } },
-      { id: 'shoot', line: 'Go in. Left button on the lamp shoots it out', done: { is: 'all', of: [{ is: 'did', what: 'chron:lightShot' }, { is: 'target', name: 'lamp_gate', on: false }] }, at: [11.8, 3.4, 15.4] },
+      { id: 'draw', line: 'Press 1 to draw the pistol', done: { is: 'slot', slot: 'pistol', drawn: true } },
+      { id: 'shoot', line: 'Go in, then left-click on the light to shoot it out', done: { is: 'all', of: [{ is: 'did', what: 'chron:lightShot' }, { is: 'target', name: 'lamp_gate', on: false }] }, at: [11.8, 3.4, 15.4] },
       { id: 'pick', line: 'Tap Space at the lock to pick it, then keep still', done: { is: 'any', of: [{ is: 'did', what: 'chron:lockPicked' }, { is: 'door', door: 'lane', state: 'open' }] }, at: [14.0, 1, 11.0] },
       // (grabbed with a gun out the one row is the pistol whip, and the code goes with him: so the hands come first, as a step of their own)
-      { id: 'empty', line: 'E puts it away. A grab needs empty hands', done: { is: 'any', of: [{ is: 'flag', flag: 'holstered' }, { is: 'men', down: 1 }] } },
-      { id: 'grab', line: 'When his back is to you, Space behind him grabs him', done: { is: 'any', of: [{ is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, { is: 'men', down: 1 }] }, at: [27.5, 1.4, 8.4] },
-      { id: 'ask', line: 'Space asks him. Keep asking: he knows the door code', done: { is: 'any', of: [{ is: 'did', what: 'chron:codeLearned' }, { is: 'men', down: 1 }] }, at: [27.5, 1.4, 8.4] },
-      { id: 'choke', line: 'Right button chokes him out. Then keep still', done: { is: 'men', down: 1 } },
+      { id: 'empty', line: 'Press E to put it away. You need empty hands to grab someone', done: { is: 'any', of: [{ is: 'flag', flag: 'holstered' }, { is: 'men', down: 1 }] } },
+      { id: 'grab', line: 'When his back is to you, sneak up behind him and press Space to grab him', done: { is: 'any', of: [{ is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, { is: 'men', down: 1 }] }, at: [27.5, 1.4, 8.4] },
+      { id: 'ask', line: 'Press Space to question him. Keep asking, because he knows the door code', done: { is: 'any', of: [{ is: 'did', what: 'chron:codeLearned' }, { is: 'men', down: 1 }] }, at: [27.5, 1.4, 8.4] },
+      { id: 'choke', line: 'Right-click to choke him out, then keep still', done: { is: 'men', down: 1 } },
       { id: 'return', line: 'Go back out by the door you picked', done: { is: 'in', area: { x0: 8.2, x1: 15.3, z0: 11.2, z1: 21.8 } }, at: [14.0, 1, 11.8] },
-      { id: 'ocp', line: '1, then Right button on the camera: the OCP jams it', done: { is: 'any', of: [{ is: 'target', name: 'cam_court', on: false }, ...PAST] }, at: CAM },
-      { id: 'camera', line: 'Cross while it is blind. Its battery wakes it: Right button again', done: { is: 'any', of: PAST }, at: [21.2, 1, 12.2] },
-      { id: 'beam', line: 'Right button on the beam\'s box, once the OCP is charged', done: { is: 'any', of: [{ is: 'target', name: 'beam_alley', on: false }, { is: 'in', area: { x0: 24.4, x1: 25.9, z0: 16.8, z1: 21.5 } }, { is: 'door', door: 'hut', state: 'open' }] }, at: EMITTER },
+      { id: 'ocp', line: 'Press 1, then right-click on the camera to jam it with the OCP', done: { is: 'any', of: [{ is: 'target', name: 'cam_court', on: false }, ...PAST] }, at: CAM },
+      { id: 'camera', line: 'Cross while it\'s blind. If it wakes up, right-click on it again', done: { is: 'any', of: PAST }, at: [21.2, 1, 12.2] },
+      { id: 'beam', line: 'Once the OCP is charged, right-click on the beam\'s box', done: { is: 'any', of: [{ is: 'target', name: 'beam_alley', on: false }, { is: 'in', area: { x0: 24.4, x1: 25.9, z0: 16.8, z1: 21.5 } }, { is: 'door', door: 'hut', state: 'open' }] }, at: EMITTER },
       // (a jam wears off in seconds: a slow reader finds the beam back on, and the line says what to do then)
-      { id: 'cross', line: 'Cross while it is out. Right button again if it comes back', done: { is: 'any', of: [{ is: 'in', area: { x0: 24.4, x1: 25.9, z0: 16.8, z1: 21.5 } }, { is: 'door', door: 'hut', state: 'open' }] }, at: [25.2, 1, 19.2] },
+      { id: 'cross', line: 'Cross while it\'s out, and right-click again if it comes back', done: { is: 'any', of: [{ is: 'in', area: { x0: 24.4, x1: 25.9, z0: 16.8, z1: 21.5 } }, { is: 'door', door: 'hut', state: 'open' }] }, at: [25.2, 1, 19.2] },
       { id: 'code', line: 'Tap Space at the door to type the code, then keep still', done: { is: 'any', of: [{ is: 'did', what: 'chron:codeEntered' }, { is: 'door', door: 'hut', state: 'open' }] }, at: PAD },
       { id: 'take', line: 'Tap Space at the green trunk, then keep still', done: { is: 'stage', stage: 'exfil' }, at: front },
-      { id: 'beam-back', line: 'The beam is back on. Right button again, then cross', done: { is: 'any', of: [{ is: 'in', area: { x0: 20.7, x1: 23.6, z0: 16.8, z1: 21.8 } }, { is: 'in', area: COURT_E }] }, at: EMITTER },
+      { id: 'beam-back', line: 'The beam is back on. Right-click again, then cross', done: { is: 'any', of: [{ is: 'in', area: { x0: 20.7, x1: 23.6, z0: 16.8, z1: 21.8 } }, { is: 'in', area: COURT_E }] }, at: EMITTER },
       // THE CLOSER: the breaker box in the dark end of the lit, watched court takes lamps, lens and beam together (the OCP on the box or the lamps shot out pass it too)
-      { id: 'breaker', line: 'One box feeds it all. Space at the breaker box', done: { is: 'any', of: [{ is: 'did', what: 'act:breakerOff' }, { is: 'target', name: 'lamp_exit', on: false }, { is: 'door', door: 'gate_e', state: 'open' }] }, at: BRK },
-      { id: 'walk', line: 'N is night vision. Walk out through the dark', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: { x0: 28, x1: 31.8, z0: 12.4, z1: 15.6 } }, { is: 'meter', which: 'light', below: 0.3 }] }, { is: 'door', door: 'gate_e', state: 'open' }] }, at: [30.6, 1, 14] },
-      { id: 'kick', line: 'The gate is locked. Hold Space, wheel to kick, let go', done: { is: 'any', of: [{ is: 'door', door: 'gate_e', state: 'broken' }, { is: 'door', door: 'gate_e', state: 'open' }] }, at: [32, 1, 14] },
+      { id: 'breaker', line: 'One box powers all the lights. Press Space at the breaker box to cut them', done: { is: 'any', of: [{ is: 'did', what: 'act:breakerOff' }, { is: 'target', name: 'lamp_exit', on: false }, { is: 'door', door: 'gate_e', state: 'open' }] }, at: BRK },
+      { id: 'walk', line: 'Press N for night vision and walk out through the dark', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: { x0: 28, x1: 31.8, z0: 12.4, z1: 15.6 } }, { is: 'meter', which: 'light', below: 0.3 }] }, { is: 'door', door: 'gate_e', state: 'open' }] }, at: [30.6, 1, 14] },
+      { id: 'kick', line: 'The gate is locked. Hold Space, roll the wheel to kick, then let go', ringLine: 'The gate is locked. Hold Space and press 2 to kick it', done: { is: 'any', of: [{ is: 'door', door: 'gate_e', state: 'broken' }, { is: 'door', door: 'gate_e', state: 'open' }] }, at: [32, 1, 14] },
     ],
   };
   const out = T.finish({

@@ -136,24 +136,24 @@ export function build() {
       // the orders on the ground: the menu opened on the ground by the sandbags STAYS UP for the next line's digit (X again would put it away, and 1 with no
       // menu is his pistol: the line says what to do then); the move passes however it was given (the digit, B, the wheel and Space). Then each line whole by
       // itself (X, then the digit): guns down the street, hold, fall in
-      { id: 'menu', line: 'X on the ground by the sandbags opens the orders menu', done: { is: 'flag', flag: 'menu' }, at: bags },
-      { id: 'move', line: '1 sends the pair there. Menu gone? X on the ground again', done: { is: 'did', what: 'order:move' }, at: bags },
-      { id: 'cover', line: 'X down the street, then 2: the pair covers that way', done: { is: 'did', what: 'order:cover' }, at: [17.0, 1, 14.0] },
-      { id: 'hold', line: 'X on the ground, then 4: the pair holds', done: { is: 'did', what: 'order:hold' } },
-      { id: 'fallin', line: 'X on the ground, then 3: the pair falls in behind you', done: { is: 'did', what: 'order:fallIn' } },
+      { id: 'menu', line: 'X on the ground by the sandbags to open the orders menu', done: { is: 'flag', flag: 'menu' }, at: bags },
+      { id: 'move', line: 'Press 1 to send the pair there. If the menu\'s gone, X on the ground again', done: { is: 'did', what: 'order:move' }, at: bags },
+      { id: 'cover', line: 'X down the street, then press 2 so the pair covers that way', done: { is: 'did', what: 'order:cover' }, at: [17.0, 1, 14.0] },
+      { id: 'hold', line: 'X on the ground, then press 4 so the pair holds', done: { is: 'did', what: 'order:hold' } },
+      { id: 'fallin', line: 'X on the ground, then press 3 so the pair falls in behind you', done: { is: 'did', what: 'order:fallIn' } },
       // four doors, four ways in
-      { id: 'stack', line: 'B on the yellow house\'s door: the pair stacks up beside it', done: or(gave('stack', 'hut_a'), taken('a')), at: doorA },
-      { id: 'open', line: 'X on that door, 5, then 1: open and clear', done: or(gave('openClear', 'hut_a'), taken('a')), at: doorA },
+      { id: 'stack', line: 'Press B on the yellow house\'s door so the pair stacks up beside it', done: or(gave('stack', 'hut_a'), taken('a')), at: doorA },
+      { id: 'open', line: 'X on that door, then press 5, then 1 to open and clear', done: or(gave('openClear', 'hut_a'), taken('a')), at: doorA },
       { id: 'in1', line: 'Stay out of the doorway. When they call clear, walk in', done: and(taken('a'), { is: 'in', area: { ...A } }), at: [16.5, 1, 9.4] },
-      { id: 'bang', line: 'The green house. X on either door, 5, then 2: stun can first', done: or(gave('bangClear', 'hut_b'), gave('bangClear', 'hut_b_east'), taken('b')), at: doorB },
+      { id: 'bang', line: 'Go to the green house. X on either door, then press 5, then 2 to bang and clear', done: or(gave('bangClear', 'hut_b'), gave('bangClear', 'hut_b_east'), taken('b')), at: doorB },
       { id: 'in2', line: 'When they call clear, walk in', done: and(taken('b'), { is: 'in', area: { ...B } }), at: [25.2, 1, 9.4] },
       // the kitchen is held from the door, then THE WORD (its beat on the door's order: nothing but F on a held door writes it)
-      { id: 'thr', line: 'The kitchen. X on its door, 5, then 4: hold at the door', done: or(gave('thresholdHold', 'hut_d'), taken('d')), at: doorD },
-      { id: 'word', line: 'When they hold the open door, F gives the word: in they go', done: or({ is: 'word' }, taken('d')), at: doorD },
+      { id: 'thr', line: 'Go to the kitchen. X on its door, then press 5, then 4 to hold at the door', done: or(gave('thresholdHold', 'hut_d'), taken('d')), at: doorD },
+      { id: 'word', line: 'When they\'re holding the open door, press F to send them in', done: or({ is: 'word' }, taken('d')), at: doorD },
       { id: 'in3', line: 'When they call clear, walk in', done: and(taken('d'), { is: 'in', area: { ...D } }), at: [16.0, 1, 18.6] },
       // the closer: the one lit door on the street. The marker moves to the barrier once the charge is ordered: the place to watch it from
-      { id: 'charge', line: 'The armoury is locked. X on its door, 5, then 3: a charge', done: or(gave('charge', 'hut_c'), taken('c')), at: doorC },
-      { id: 'blow', line: 'When the pair has stood back, F gives the word: it blows', done: or({ is: 'door', door: 'hut_c', state: 'broken' }, taken('c')), at: barrier },
+      { id: 'charge', line: 'The armoury is locked. X on its door, then press 5, then 3 to set a charge', done: or(gave('charge', 'hut_c'), taken('c')), at: doorC },
+      { id: 'blow', line: 'When the pair has backed away, press F to blow the charge', done: or({ is: 'door', door: 'hut_c', state: 'broken' }, taken('c')), at: barrier },
       // the pay-off's line while the pair clears the black room (the room clear ends the frame it is called clear, and the row is then the scenario's own:
       // the step still goes by when he walks in, and at once for a player already inside)
       { id: 'in4', line: 'When they call clear, walk in', done: and(taken('c'), { is: 'in', area: { ...C } }), at: [23.0, 1, 18.6] },
