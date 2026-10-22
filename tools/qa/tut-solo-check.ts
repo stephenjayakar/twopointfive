@@ -63,8 +63,8 @@ delete process.env.TUT_SOLO_ARM;
     const meter = () => Math.round(g.visibilityOf(Math.max(lightEstimateAt(g, [BACK[0], 1.2, BACK[2]]), lightEstimateAt(g, [BACK[0], 1.6, BACK[2]]))) * 100);
     const lamp = g.engine.lights.lights.find((l: any) => l.name === 'lamp_shop'); lampLit = meter(); if (lamp) { const was = lamp.intensity; lamp.intensity = 0; lampOut = meter(); lamp.intensity = was; }
   } catch (x) { why = String((x as Error).message); } finally { K.kitIssuedPage(false); console.log = log; console.warn = warn; console.error = err; }
-  const ok = !why && held === '2/2/2/3/2 ring' && (!OWNCHARGE.on || charges === 1);
-  console.log(`  ${ok ? 'PASS' : 'FAIL'}  on its page he carries the level's own card, the launcher on a sponge round so the grenade is a load he swaps to: smoke/stun/frags/40 mm/sponge ${held}${OWNCHARGE.on ? `, door charges ${charges}` : ' (his own charges are off on this stand: the door charge is not asked)'}${why ? ` — ${why}` : ''}`);
+  const ok = !why && held === (K.ISSUE.whole ? '2/2/2/3/2 ring' : `2/2/2/3/${Math.max(2, (await import(`${ROOT}/src/game/kittree.ts`)).KITTREE.lend)} ring`) && (!OWNCHARGE.on || charges === 1);
+  console.log(`  ${ok ? 'PASS' : 'FAIL'}  on its page he carries the level's own card, the launcher on a sponge round so the grenade is a load he swaps to (two of them where his card is the whole kit, the lent five where it is not): smoke/stun/frags/40 mm/sponge ${held}${OWNCHARGE.on ? `, door charges ${charges}` : ' (his own charges are off on this stand: the door charge is not asked)'}${why ? ` — ${why}` : ''}`);
   if (!ok) faults.push(`the page's kit is not the level's card (${held}, door charges ${charges}${why ? `, ${why}` : ''})`);
   const lampOk = lampLit >= 50 && lampOut >= 0 && lampOut <= 20;
   console.log(`  ${lampOk ? 'PASS' : 'FAIL'}  the ground beside the shop's door is lit by the shop's lamp and dark without it: ${lampLit} with it, ${lampOut} with it out`);

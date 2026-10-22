@@ -389,7 +389,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       //  THE SWAP IS DONE, not only said, on the load's line below wherever his kit carries two loads; his own card carries the grenade alone until a
       //  level's card can deal sponge rounds — scene/levelData.ts IssueCard has no key for them)
       { id: 'leave', line: 'Go back to the blue gate', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH,
-        explain: { title: 'Using the rifle\'s launcher', text: 'Your rifle has a grenade launcher. The tags next to the rifle on the kit strip are its loads, and you\'ll fire the lit one. Hold the right mouse button to aim, then let go to fire. The HE grenade won\'t go off within 8 m of you. Press [2] twice to swap loads.' } },
+        explain: { title: 'Using the rifle\'s launcher', text: 'Your rifle\'s launcher fires sponge rounds that stun or HE grenades that kill. Look next to your ammo at the bottom left to see which is loaded. Press [2] twice to swap them. Hold the right mouse button to aim, then let go to fire. HE won\'t go off up close.' } },
       // (the maintainer: "weird that we're told to load the grenade long before being told to do anything about it": the two it is for come out first, on a
       //  line that only asks him to look (the frame draws a line with no key and a cue for its end as something to watch); the script ends that line
       //  once they stand in the doorway, so the shot is asked for with men in it. THE LOAD'S LINE is for a kit that deals the ring first: his own card
