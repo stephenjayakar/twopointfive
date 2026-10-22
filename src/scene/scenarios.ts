@@ -257,8 +257,12 @@ export interface RailsData {
   /** the fog of war at the first step (absent: as the scenario's start has it) */
   fog?: boolean;
   /** nobody on the floor is the player: he is parked at `park`, out of the picture and every sense, and the view rides the squad (`reach`: metres the
-   *  walk keys may shift it off them) */
-  sky?: { park: Vec3; reach?: number };
+   *  walk keys may shift it off them). `eye`: a lookout the mission stands for the fog of war (the man left with the trucks): a place and the way it looks
+   *  (`yaw`, radians, a man's own: 0 = +Z; `fov` degrees, 120 unless said), one more of the team's eyes for as long as the seat is the sky's */
+  sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number } };
+  /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
+   *  not there, on the ring or under the quick key. Absent: every row the game has */
+  orders?: string[];
   /** the verbs Space offers on this level (an Interactable row's `verb`: 'grab', 'pick', 'code'…): a thing in reach whose verb is not here has
    *  no row, so a tap never lands on something no step taught (absent: every row, as on any level) */
   rows?: string[];

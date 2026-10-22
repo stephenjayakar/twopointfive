@@ -70,7 +70,8 @@ const wedgeWords = (r: Interactable) => rowWords(r).split(/\s+[—–-]\s+/)[0];
 /** THE WHISTLE'S WEDGE (handring.ts): the ring's last one, wherever the rows leave it free — no row of the list (nothing that reads the rows or the
  *  highlight meets it), so never what a tap does */
 const WHISTLE_WEDGE = 'whistle', WHISTLE_CAPTION = 'whistle — one man comes to look';
-const whistleWedge = (g: Game) => { if (!ringStays(g) || g.player.down || g.player.takedown) return false; let n = 0; for (const r of g.nearby) if (r.kind !== 'cancel') n++; return n < CMDRING.wedges; };
+const whistleWedge = (g: Game) => { if (!ringStays(g) || g.player.down || g.player.takedown || g.rails?.locks('whistle')) return false;   // (rails.ts: a tutorial mission that has not taught the whistle has no wedge for it)
+  let n = 0; for (const r of g.nearby) if (r.kind !== 'cancel') n++; return n < CMDRING.wedges; };
 /** Sam's own ring is on (the prototype beside the squad's ring, or handring.ts) / it is the ring that STAYS (handring.ts) */
 const ringMode = (g: Game) => !g.puppet && (HANDRING.on || (CMDRING.on && CMDRING.hands));
 const ringStays = (g: Game) => !g.puppet && HANDRING.on;

@@ -185,7 +185,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   steps[{ id, line, setupLine?, ringLine?, done, hold?, at? }] }` (`setupLine`: the line while a gun's key again opens its setup, where the step's keys are others then; `ringLine`: the line while his own actions are a ring, where the whistle has no key of its own). A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
   characters), `at` the marker, and it moves on when `done` — a test record `{ is: '<kind>', … }` read off the game — is true (for `hold` seconds). Never on a
   clock. Kinds (`lesson.ts LESSON_TESTS`; a new kind is one row there with its `ok` and its `check`): STATE `in {area}` · `near {at, r?}` · `flag {flag,
-  value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent …) · `slot {slot, drawn?}` ·
+  value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent dark chargeSet chargeClear wallBlown …) · `slot {slot, drawn?}` ·
   `pace {below?, above?}` · `meter {which: 'light'|'noise', below?, above?}` · `stage {stage}` · `door {door, state: open|shut|unlocked|broken}` · `target
   {name, on}` (a light or a device by name) · `men {down}` · `all {of}` / `any {of}`; DEEDS counted from the moment the step came up: `did {what: 'act:<the
   Space row's verb>' | 'event:<hearing event of the player's>' | 'chron:<chronicle kind>' | 'order:<orders.log id>', n?, on?: '<door name>'}` (`on`: that order given on that door). By family — hands: `downed {how: takedown|choke|whip|ring|knife,

@@ -107,7 +107,7 @@ export function drawHandBox(el: HTMLElement, game: Game, paceShow: boolean, bigA
   const cond = mk('div', 'cond' + (pl.down ? ' down' : '') + (game.godMode ? ' god' : ''));
   if (game.godMode) cond.appendChild(mk('span', 'g on', 'GOD MODE'));
   else { cond.appendChild(mk('span', 'g', pl.down ? 'DOWN — ENTER' : 'CONDITION')); const pips = mk('span', 'pips'); for (let i = 0; i < Player.MAX_HITS; i++) pips.appendChild(mk('i', i < pl.hitsLeft ? '' : 'lost')); cond.appendChild(pips); }
-  { const g = mk('span', 'g' + (pl.nv ? ' on' : ''), 'N NIGHT VISION'); g.style.marginLeft = '10px'; cond.appendChild(g); }
+  if (!game.rails?.locks('nvg')) { const g = mk('span', 'g' + (pl.nv ? ' on' : ''), 'N NIGHT VISION'); g.style.marginLeft = '10px'; cond.appendChild(g); }
   if (pl.keys.size) { const named = [...pl.keys].filter(k => k !== FLOOR_KEY); cond.appendChild(mk('span', 'keytag', named.length ? `KEY · ${named.join(' · ').toUpperCase()}` : 'KEY')); }
   el.appendChild(cond);
   if (paceShow) { const pr = mk('div', 'pace'); pr.appendChild(mk('span', 'g', 'PACE')); const ticks = mk('span', 'ticks'), N = 6, lit = Math.round((pl.pace - 0.35) / 0.65 * (N - 1)) + 1; for (let i = 0; i < N; i++) ticks.appendChild(mk('i', i < lit ? 'on' : '')); pr.appendChild(ticks); pr.appendChild(mk('span', 'g', 'wheel')); el.appendChild(pr); }
