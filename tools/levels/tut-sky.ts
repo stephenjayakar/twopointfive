@@ -121,9 +121,11 @@ const STRUCTURE: StructureData = {
 /** THE STEPS. A line is a verb and a key, eight words at most. One new action a step; done by the deed. */
 const LESSON: LessonData = {
   title: 'A squad, from above',
-  // (the fog of war from the first step: nobody is seen in a room the squad has not looked into. The road is seen from the first truck's cab — the man left with
-  //  the trucks — so the roadblock is in the picture while the squad is still behind its tails)
-  rails: { allow: [], respawn: 5, fog: true, lasers: false, orders: ['move', 'stack', 'go', 'walltools', 'wallCharge', 'work'], sky: { park: SKY_PARK, reach: 26, low: true, eye: { at: [9.8, 1.9, 23.4], yaw: HALF, fov: 100 } } },
+  // (NO FOG OF WAR on this mission: the maintainer, after two plays in which the squad's own wall charge went off unseen, "maybe we just remove fog of war
+  //  entirely from this mission?". He leads from above here and the first lesson is the view: everything on the floor is in the picture. The seat's lookout
+  //  and the wall steps' `eye` are kept for the day the fog comes back: with four men up and the lookout in, the fog's five eyes were full and the wall's
+  //  eye never got one, which is why the blast stayed hidden)
+  rails: { allow: [], respawn: 5, fog: false, lasers: false, orders: ['move', 'stack', 'go', 'walltools', 'wallCharge', 'work'], sky: { park: SKY_PARK, reach: 26, low: true, eye: { at: [9.8, 1.9, 23.4], yaw: HALF, fov: 100 } } },
   steps: [
     // ---- the road ----
     { id: 'turn', line: 'Hold [Ctrl], move the mouse: turn the view', allow: ['camera'], cue: 'ambush', checkpoint: 'the road', done: { is: 'view', turned: 40 } },
