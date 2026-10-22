@@ -215,7 +215,7 @@ export function build() {
       // 2 · THEY KNOW WHERE YOU WERE: the workshop's man shoots through the door he heard the stack at. The answer is the other door
       { id: 'stack-shop', line: '[B] on the workshop door', done: or({ is: 'stackOn', who: 'all', door: 'workshop', set: true }, taken('workshop')), at: [18.45, 1, 11.0], checkpoint: 'the street' },
       { id: 'side', line: 'He shoots through it. Go round', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, cue: 'shop' },
-      { id: 'shop', line: 'Open the side door', done: taken('workshop'), at: D_SIDE },
+      { id: 'shop', line: '[Space]: open the side door', done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
       { id: 'wall', line: "[X], [3]: they follow. To the wall's end", done: or(and(or({ is: 'following' }, gave('fallIn')), near(END, 1.6)), taken('nest')), at: END, checkpoint: 'the wall', allow: ['menu'] },
       { id: 'gun', line: 'A gun. Shoot back: it ducks', done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), at: [31.6, 1.2, 13.8], cue: 'gun' },
