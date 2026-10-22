@@ -39,8 +39,11 @@ export const RAILS = { on: false,
   /** the cursor this near (px) the step's mark on the screen is ON the mark's place, whatever stands between the eye and it (orders.ts targetUnder) */
   snapPx: 40,
   /** the sky seat keeps the step's mark in the picture: with no walk key held, a view shifted so that the mark is further from its middle than `keep` of the
-   *  camera's distance is eased back (m/s at the default zoom) until it is not — a ring off the screen, or under the squad's panel, is a player lost */
-  keep: 0.33, keepSpeed: 9,
+   *  camera's distance is eased back (m/s at the default zoom) until it is not — a ring off the screen, or under the squad's panel, is a player lost.
+   *  The kept ground is an oval, not a round: `keep` of the distance to either side (short of the squad's panel on the left), `keepDeep` of that reach up and
+   *  down the screen, with its middle `keepUp` of the reach up the screen from the view's own (the step's line sits low in the middle: a ring behind it,
+   *  or behind the panel, is a ring nobody sees) */
+  keep: 0.21, keepSpeed: 9, keepDeep: 0.79, keepUp: 0.39,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
 export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
@@ -252,13 +255,15 @@ export class Rails {
     o[0] += (B.fwd[0] * f + B.right[0] * r) * k; o[2] += (B.fwd[2] * f + B.right[2] * r) * k;
     const d = Math.hypot(o[0], o[2]), max = this.data?.sky?.reach ?? RAILS.panReach; if (d > max) { o[0] *= max / d; o[2] *= max / d; }
   }
-  /** THE MARK STAYS IN THE PICTURE (RAILS.keep): the hand's shift is eased toward the step's mark while it is out past the kept radius and no walk key is down */
+  /** THE MARK STAYS IN THE PICTURE (RAILS.keep): the hand's shift is eased toward the step's mark while it is out past the kept oval and no walk key is down */
   private keep(input: Input, cam: FollowCamera, dt: number) {
     if (BREAK || !RAILS.keep || ACTS.move.keys!.some(k => input.keys.has(k))) return;
     const S = this.lesson(), at = S?.L.steps[S.i]?.at, v = at ? this.look() : null; if (!at || !v) return;
-    const dx = at[0] - v[0], dz = at[2] - v[2], L = Math.hypot(dx, dz), R = RAILS.keep * cam.distance; if (L <= R) return;
-    const k = Math.min(L - R, RAILS.keepSpeed * (cam.distance / 21) * dt) / L, o = this.sky.off;
-    o[0] += dx * k; o[2] += dz * k;
+    const B = cam.planarBasis(), Rx = RAILS.keep * cam.distance, Rf = Rx * RAILS.keepDeep, dx = at[0] - v[0], dz = at[2] - v[2];
+    const r = dx * B.right[0] + dz * B.right[2], f = dx * B.fwd[0] + dz * B.fwd[2] - Rx * RAILS.keepUp, e = Math.hypot(r / Rx, f / Rf); if (e <= 1) return;
+    // (the shift that brings the mark to the oval's edge, along the line from the oval's middle to it)
+    const sr = r * (1 - 1 / e), sf = f * (1 - 1 / e), k = Math.min(1, RAILS.keepSpeed * (cam.distance / 21) * dt / Math.hypot(sr, sf)), o = this.sky.off;
+    o[0] += (B.right[0] * sr + B.fwd[0] * sf) * k; o[2] += (B.right[2] * sr + B.fwd[2] * sf) * k;
     const d = Math.hypot(o[0], o[2]), max = this.data?.sky?.reach ?? RAILS.panReach; if (d > max) { o[0] *= max / d; o[2] *= max / d; }   // (never past the walk keys' own reach: the next press of one would snap it back)
   }
   /** how far the view has been shifted off the squad, metres (the lesson test `view`) */
