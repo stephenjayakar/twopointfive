@@ -201,7 +201,10 @@ const script: LevelScriptFn = D => {
     // its locked door on the way, and the door's lesson went by with nobody at it.)
     // (Before: the gunner was the game's own from his first burst, and an unprotected player shooting back from the wall's end was hit on one die of
     //  eight; let go a second after the player reached the blocks, the nest shot a slow reader there on one die of two.)
-    P.onSignal('lesson:gun', 'gun');
+    // BEFORE ITS STEP both men of the nest are down behind their bags, in this beat's hand from the first tick: the way from the workshop's side door to
+    // the wall's end passes the wall's NORTH end a step away, and a man who came round that end was in the nest's sight before any line had said there
+    // was a gun (they were the game's own until the gun's cue: a slow reader's scripted player, jostled by the four in the gap, was shot there on one die of four).
+    P.onStart('gun');
     P.beat('gun', function* (c) {
       const m = c.unit(GUNNER), n = c.unit(LOADER);
       const cue = (k: string) => c.query.signalled(`lesson:${k}`), on = (k: string) => c.until(q => q.signalled(`lesson:${k}`), `the cue '${k}'`);
@@ -210,7 +213,12 @@ const script: LevelScriptFn = D => {
       const burst = (rounds: number) => c.stimulus.burst(m!, LANE, rounds, { cadence: 0.1, spread: rounds > 3 ? 0.035 : 0.03 });
       const up = () => { if (gun()) c.order(m!, { goal: null, aimAt: LANE, upper: 'aim', crouch: false, flinch: true }); };
       const down = () => { if (gun()) c.order(m!, { goal: null, aimAt: null, crouch: true, upper: 'relaxed', flinch: true }); };
-      if (alive(c, n)) c.order(n, { goal: null, crouch: true, upper: 'relaxed' });   // the man beside the gun keeps his head under the bags
+      for (const u of [m, n]) if (alive(c, u)) c.order(u, { goal: null, aimAt: null, crouch: true, upper: 'relaxed' });   // both under the bags until the gun's step; the man beside the gun stays there
+      // (…and not past sense: the player in the nest before its step, or one of the two shot there, and they are the game's own again and fight)
+      if (!cue('gun') && (yield c.any(on('gun'), fewer(2, 'one of the nest is down'), c.until(q => q.room('sam') === 'nest', 'the player is in the nest'))).index > 0 && !cue('gun')) {
+        for (const u of left(c.query)) c.release(u, 'alert');
+        return;
+      }
       if (gun()) c.show(m!);   // (the gunner is in the picture through the fog while he is the script's: the line says shoot back, and there is no ring on him)
       if (gun()) { up(); yield c.wait(0.4); yield c.any(burst(5), c.wait(3)); }
       c.signal('done:gun');

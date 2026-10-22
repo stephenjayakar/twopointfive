@@ -92,20 +92,25 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
 
   // ---- steps 1 to 4 by hand: the squad's key (Q on the page) on two doors, and in behind them
   await walk(STREET, 20);
-  await point(HUT); await tap('KeyQ'); R = await until(x => x.i >= 1, 60); check(R.i >= 1, "the squad's key on the hut door: they stack", `step ${R.i + 1} '${R.id}' at ${R.t} s · "${R.line}"`);
-  await point(HUT); await tap('KeyQ'); R = await until(x => x.i >= 2, 40); if (R.i < 2) { await tap('KeyF'); R = await until(x => x.i >= 2, 40); } check(R.i >= 2 && R.men <= 10, 'the key again: they go in and the hut is taken', `${R.men} defenders left at ${R.t} s · step ${R.i + 1} '${R.id}'`);
+  await point(HUT); await tap('KeyQ');
+  // (the order given: the line stops asking for it, and says what the men are doing — the step's `after`)
+  { const a = await until(x => x.i >= 1 || /They stack/.test(x.line), 3); check(a.i === 0 && /^\s*They stack up on the door\s*$/.test(a.line) && !a.keys.length, 'the order given: the line no longer asks for the key, it says they stack up', `step ${a.i + 1} · "${a.line}" keys [${a.keys}]`); }
+  R = await until(x => x.i >= 1, 60); check(R.i >= 1, "the squad's key on the hut door: they stack", `step ${R.i + 1} '${R.id}' at ${R.t} s · "${R.line}"`);
+  await point(HUT); await tap('KeyQ');
+  { const a = await until(x => x.i >= 2 || /They go/.test(x.line), 3); check(a.i >= 2 || (/^\s*They go in\s*$/.test(a.line) && !a.keys.length), 'the key again: while they go in the line says so, with no key on it', `step ${a.i + 1} · "${a.line}" keys [${a.keys}]`); }
+  R = await until(x => x.i >= 2, 40); if (R.i < 2) { await tap('KeyF'); R = await until(x => x.i >= 2, 40); } check(R.i >= 2 && R.men <= 10, 'the key again: they go in and the hut is taken', `${R.men} defenders left at ${R.t} s · step ${R.i + 1} '${R.id}'`);
   await point(STORE); await tap('KeyQ'); R = await until(x => x.i >= 3, 80); check(R.i >= 3, 'the key on the store door: they stack', `step ${R.i + 1} '${R.id}' at ${R.t} s`);
   await point(STORE); await tap('KeyQ'); R = await until(x => x.men <= 8, 40); if (R.men > 8) { await tap('KeyF'); R = await until(x => x.men <= 8, 40); } check(R.men <= 8, 'the key again: the store is taken', `${R.men} defenders left at ${R.t} s`);
   // (through the doorway as a hand walks it: square on to the open leaf's gap, through, then to the mark)
-  await walk([10.75, 0, 15.3], 20); await walk([10.75, 0, 17.7], 20); const inside = await walk(STORE_IN, 20); R = await until(x => x.i >= 4, 10); check(inside && R.i === 4 && R.id === 'out', 'walked in behind them: the next line sends him back out to the street', `inside ${inside} · step ${R.i + 1} '${R.id}' · "${R.line}" at ${R.at}`);
+  await walk([10.75, 0, 15.3], 20); await walk([10.75, 0, 17.7], 20); const inside = await walk(STORE_IN, 20); R = await until(x => x.i >= 5, 10); check(inside && R.i === 5 && R.id === 'out', 'walked in behind them: the next line sends him back out to the street', `inside ${inside} · step ${R.i + 1} '${R.id}' · "${R.line}" at ${R.at}`);
   const slots = await page.evaluate(() => window.__game.saves.slots().map(x => ({ key: x.key, label: x.label })));
   const mine = slots.find(x => /the street/.test(x.label || ''));
   check(!!mine, "the checkpoint 'the street' was kept as that step came up", `slots: ${slots.map(x => x.label).join(' · ') || 'none'}`);
   // ---- out to the street in front of the workshop, as the line says: its man is on the screen there, in the script's hand on his open doorway, and in the
   //      picture under the fog (the page runs the fog of war: a run with it off fails this line, on purpose)
-  const out = async () => { for (const p of [[10.85, 0, 17.9], [10.85, 0, 15.2], [12.6, 0, 13.2], VIEW]) await walk(p, 30); return until(x => x.i >= 5, 10); };
+  const out = async () => { for (const p of [[10.85, 0, 17.9], [10.85, 0, 15.2], [12.6, 0, 13.2], VIEW]) await walk(p, 30); return until(x => x.i >= 6, 10); };
   const shown = x => x.shop.up && x.shop.held && Math.abs(x.shop.door) > 1 && x.shop.fog && x.shop.drawn;
-  R = await out(); check(R.i === 5 && R.id === 'side', 'out on the street in front of the workshop: the side door is the step', `step ${R.i + 1} '${R.id}' · "${R.line}" keys [${R.keys}] at ${R.at}`);
+  R = await out(); check(R.i === 6 && R.id === 'side', 'out on the street in front of the workshop: the side door is the step', `step ${R.i + 1} '${R.id}' · "${R.line}" keys [${R.keys}] at ${R.at}`);
   await run(120); await card(); R = await read();
   check(cards.some(c => c.h === 'A doorway he holds' && c.closed), 'the side door\'s step opened on its card, and Enter closed it', JSON.stringify(cards));
   check(shown(R) && R.shop.screen && R.ringOn, "the workshop's man holds his open doorway, is in the picture under the fog, and he and the side door's ring are both on the screen from where the player stands", `${JSON.stringify(R.shop)} · the step's ring on the screen ${R.ringOn}`);
@@ -113,17 +118,17 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   // (the squad's key on the step's ring: the view eases to keep the ring on the screen, so the cursor is put on it again once it has settled)
   const order = async () => { await point(SIDE); await run(40); await point(SIDE); await tap('KeyQ'); };
   if (mine) {
-    await order(); const before = await until(x => x.i >= 6, 20);
-    check(before.i >= 6 && /stack door:workshop_side/.test(before.last), "the squad's key on the step's ring: they are sent to the side door", `step ${before.i + 1} '${before.id}' · last order ${before.last}`);
+    await order(); const before = await until(x => x.i >= 7, 20);
+    check(before.i >= 7 && /stack door:workshop_side/.test(before.last), "the squad's key on the step's ring: they are sent to the side door", `step ${before.i + 1} '${before.id}' · last order ${before.last}`);
     const why = await page.evaluate(k => window.__game.saves.load(window.__game, k), mine.key); await run(90); R = await read();
     check(!why && R.id === 'out' && R.script && R.men === 8 && shown(R), 'the checkpoint put back: its own step, the script running again, eight defenders, the man on his doorway and shown', `was step ${before.i + 1} '${before.id}' → step ${R.i + 1} '${R.id}' at ${R.at} · script ${R.script} · ${R.men} defenders · ${JSON.stringify(R.shop)} ${why || ''}`);
-    R = await out(); check(R.i === 5, 'out to the street again: the side door is the step', `step ${R.i + 1} '${R.id}' at ${R.at}`);
+    R = await out(); check(R.i === 6, 'out to the street again: the side door is the step', `step ${R.i + 1} '${R.id}' at ${R.at}`);
   }
   // ---- by hand: the key on the side door, the walk round by the street, the key again
-  await order(); R = await until(x => x.i >= 6, 20); check(R.i >= 6 && /stack door:workshop_side/.test(R.last), 'the key on the side door: the squad is sent to it and the next line is up', `step ${R.i + 1} '${R.id}' · "${R.line}" · last order ${R.last}`);
+  await order(); R = await until(x => x.i >= 7, 20); check(R.i >= 7 && /stack door:workshop_side/.test(R.last), 'the key on the side door: the squad is sent to it and the next line is up', `step ${R.i + 1} '${R.id}' · "${R.line}" · last order ${R.last}`);
   for (const p of [[21.4, 0, 12.3], [22.8, 0, 11.6], ALLEY]) await walk(p, 30);
-  R = await until(x => x.i >= 7, 40); check(R.i >= 7 && R.shop.up && R.shop.held, "walked round by the street: in the alley, the man still the script's, on his doorway", `step ${R.i + 1} '${R.id}' at ${R.at} · ${JSON.stringify(R.shop)}`);
-  const took = x => x.men <= 7 && x.i >= 8;   // ('follow', the first menu step, is index 8)
+  R = await until(x => x.i >= 8, 40); check(R.i >= 8 && R.shop.up && R.shop.held, "walked round by the street: in the alley, the man still the script's, on his doorway", `step ${R.i + 1} '${R.id}' at ${R.at} · ${JSON.stringify(R.shop)}`);
+  const took = x => x.men <= 7 && x.i >= 9;   // ('follow', the first menu step, is index 9)
   R = await until(x => x.set, 40); check(R.set, 'the four stand on the side door', `set ${R.set} at ${R.t} s`); await run(30); await point(SIDE); await tap('KeyQ'); R = await until(took, 40); if (!took(R)) { await tap('KeyF'); R = await until(took, 40); }
   check(took(R), 'the key again: in at his back, the workshop is taken', `${R.men} defenders left · step ${R.i + 1} '${R.id}' at ${R.t} s · last order ${R.last}`);
   // ---- the two menu steps, each put up BY HAND (lesson.i set from here: nothing walked or fought to them, and the frame answers the step as it would a
@@ -140,8 +145,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
         const t = await page.evaluate(() => { const t = window.__game.orders.targetUnder(window.__input, window.__cam, document.getElementById('view')); return { kind: t.kind, man: !!t.man }; });
         if (t.kind === 'floor' && !t.man) return true; }
       return false; };
-    R = await setStep(8);
-    check(R.id === 'follow' && /^Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,3' && !/—/.test(R.line), "step 9's line reads Hold Q, 3, both on key caps", `"${R.line}" keys [${R.keys}] · ${R.sum}`);
+    R = await setStep(9);
+    check(R.id === 'follow' && /^Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,3' && !/—/.test(R.line), "step 10's line reads Hold Q, 3, both on key caps", `"${R.line}" keys [${R.keys}] · ${R.sum}`);
     let floor = await onFloor(), M = await more(); await tap('KeyQ'); let A = await more();
     check(floor && A.n === M.n && !A.menu, "a quick tap of the squad's key gives no order while the step teaches the key held", `floor under the cursor ${floor} · orders ${M.n} → ${A.n} · ${JSON.stringify(A)}`);
     await tap('KeyX'); A = await more();
@@ -150,8 +155,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     check(A.menu && A.ring && !A.man, "the squad's key kept down: the menu is up as a ring, on no man, and stays", JSON.stringify(A));
     await tap('Digit3'); let Z = await more();
     check(Z.n === M.n + 1 && Z.last === 'fallIn' && !Z.menu, '3: fall in is given and the ring is away', `${JSON.stringify(M)} → ${JSON.stringify(Z)}`);
-    R = await setStep(20);
-    check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.slice(0, 2).join(',') === 'Q,2' && !/—/.test(R.line), "step 21's line reads Hold Q … then 2, both on key caps (a third cap is the frame's own words for a tap, still up from the tap this check made)", `"${R.line}" keys [${R.keys}]`);
+    R = await setStep(21);
+    check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.slice(0, 2).join(',') === 'Q,2' && !/—/.test(R.line), "step 22's line reads Hold Q … then 2, both on key caps (a third cap is the frame's own words for a tap, still up from the tap this check made)", `"${R.line}" keys [${R.keys}]`);
     floor = await onFloor(); M = await more(); await holdQ(); A = await more();
     check(floor && A.menu && A.ring && A.kind === 'floor' && !A.man, 'the key kept down with the cursor on the ground: the ring is up on that place', JSON.stringify(A));
     await tap('Digit2'); Z = await more();
@@ -159,7 +164,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     // …and before the menu's step the same key kept down is a tap: no ring comes up (the lesson set back by hand: the steps this floor has already done go
     //  by at once, and the one left up is before 'wall', the ring not among what is unlocked)
     R = await setStep(0); floor = await onFloor(); await holdQ(); A = await more();
-    check(R.i < 8 && !/\bring\b/.test(R.sum) && floor && !A.menu && !A.ring, "before the menu's step the squad's key kept down puts no ring up", `step ${R.i + 1} '${R.id}' · floor under the cursor ${floor} · ${JSON.stringify(A)} · ${R.sum}`); }
+    check(R.i < 9 && !/\bring\b/.test(R.sum) && floor && !A.menu && !A.ring, "before the menu's step the squad's key kept down puts no ring up", `step ${R.i + 1} '${R.id}' · floor under the cursor ${floor} · ${JSON.stringify(A)} · ${R.sum}`); }
   check(['Two ways in', 'A doorway he holds', "The squad's ring", 'Flanked'].every(h => cards.some(c => c.h === h && c.closed && c.p.length > 40)), 'the cards of the steps this run came to were each up once with their words and closed', cards.map(c => `"${c.h}": ${c.p}${c.closed ? '' : ' (STILL UP)'}`).join(' · ') || 'none');
   check(!errors.length, 'no page error and no console error', errors.length ? errors.slice(0, 6).join('\n    ') : 'none');
   console.log(`pictures: ${OUT}`);
