@@ -52,6 +52,21 @@ export function register(SC: Record<string, any>, CH: any) {
     if (c.anim.flinchFrom) c.anim.flinchFrom([0.6, 0, 1]); else c.anim.flinch();
     for (const t of [0.05, 0.12, 0.25, 0.45, 0.8]) { S.run(t - (S.t - 0.8)); S.shot(`${t.toFixed(2)} s`); }
   } };
+  SC['startle'] = { title: 'a calm man sees you (startle.ts): the start of a man with empty hands, from his front-left', run(S: any) {
+    const c = S.man({ tone: 1 }); c.anim.trained = 0; c.anim.upper = 'none'; S.run(0.8); S.shot('before');
+    c.anim.startleFrom([0.6, 0, 1]);
+    for (const t of [0.05, 0.1, 0.25, 0.45, 0.8]) { S.run(t - (S.t - 0.8)); S.shot(`${t.toFixed(2)} s`); }
+  } };
+  SC['startle-rifle'] = { title: 'a calm defender sees you: both hands stay on the gun, at the low ready, and the trunk takes all of it (from dead ahead)', run(S: any) {
+    const c = S.man({ rifle: true, tone: 1 }); c.anim.trained = 0; c.anim.upper = 'none'; c.anim.stance = 'lowReady'; S.run(0.8); S.shot('before');
+    c.anim.startleFrom([0, 0, 1]);
+    for (const t of [0.05, 0.1, 0.25, 0.45, 0.8]) { S.run(t - (S.t - 0.8)); S.shot(`${t.toFixed(2)} s`); }
+  } };
+  SC['startle-behind'] = { title: 'the start of a man taken from behind his right shoulder (a door opened into him)', run(S: any) {
+    const c = S.man({ tone: 1 }); c.anim.trained = 0; c.anim.upper = 'none'; S.run(0.8); S.shot('before');
+    c.anim.startleFrom([-0.7, 0, -1]);
+    for (const t of [0.05, 0.1, 0.25, 0.45, 0.8]) { S.run(t - (S.t - 0.8)); S.shot(`${t.toFixed(2)} s`); }
+  } };
   SC['flinch-operator'] = { title: 'rounds pass close: an operator takes it and stays on the gun', run(S: any) {
     const c = S.man({ rifle: true, steady: 1 }); c.anim.trained = 1; c.anim.upper = 'aim'; S.run(0.8); S.shot('before');
     if (c.anim.flinchFrom) c.anim.flinchFrom([0.6, 0, 1]); else c.anim.flinch();

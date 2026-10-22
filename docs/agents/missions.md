@@ -76,7 +76,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tests `cue`, `squad` (the living teammates inside an area), `view` (turned / zoomed / shifted by a hand), `stackOn.set`. LOCKED UNTIL TAUGHT: the gate
   (`Rails.gate`, ahead of everything that reads the seat's Input) drops every key code and button of an action no step has turned on yet (`ACTS`; pause, back and
   text size always pass); the host's Ctrl-turn and Ctrl-zoom ask `rails.locks()`. ONE BIG LINE: `Rails.prompt()` is the step's line, drawn low in the middle by
-  `ui/overlay.ts` (`#railprompt`), `[B]` in a line drawn as a key cap with the player's own key (`keyText`), a pip per step; the small objective row is empty,
+  `ui/overlay.ts` (`#railprompt`), `[B]` in a line drawn as a key cap with the player's own key (`keyCap`; `[Ctrl]` is the camera's key, whichever the board gives it: `camCap`, the Space bar on the page today), a pip per step; the small objective row is empty,
   and in the sky seat the kit and meter rows are hidden. THE LEVEL'S SCRIPT: `levels/<name>.script.ts` (a `LevelScriptFn`), registered by level name in
   `scene/levelScripts.ts` and attached by `levelLoad.ts`; one play program `tutorial`, started with the mission; a step's `cue` reaches it as the signal
   `lesson:<cue>`, each order the player gives as `order:<id>`, and it answers `done:<name>` for the `cue` test. A running play program does not switch the

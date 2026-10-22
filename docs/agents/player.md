@@ -861,7 +861,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   that is no row (the gun's own shuts it and no more; another is the slot it always was: 4 is the stun can), when the gun leaves his hands, when the
   order menu or the Space list comes up, and by itself `secs` after it opened (1.5: the gap between two presses, not reading time — the box shows
   the presses while it is shut). Nothing is held and nothing is frozen: his feet, aim and trigger are his own while it is up. State: `Player.setup` and
-  `Player.setupHand` (the gun the hook last found in his hands and since when; both null on a fresh player, never saved). The page does not let
+  `Player.setupHand` (the gun the hook last found in his hands and since when; both null on a fresh player, in no file). NOTHING IS UP AFTER A LOAD: a file's load builds the player again; a save kept in memory
+  (`savestate.ts Checkpoints.loadMem`, the rollback snapshot used with a team on the floor) puts him back as he stood, the setup too, so
+  `loadMem` drops it after the snapshot is put back — before that line a load of such a save came back with the setup up and a 1 turned the
+  selector. The page does not let
   the aim it carries through a turn of the view go for the setup's own digits (`host/loop.ts`, `slotSetupTakes`). THE TWO KEYS IT REPLACES: on the page's board the selector's row and the light's have NO KEY
   (`KEYMAP.setFree`, as the wall hold's row has none under `qFree`; only while the game's switch is on — `KEYMAP.setWhen`, the page's — so a
   recording that plays with the setup off has Z and L back); the GAME still asks for 'KeyZ' and 'KeyL' and means what it meant, so a recording from
@@ -888,8 +891,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `JOURNAL_KNOBS` (a recording from before the table replays with it off); Tab ▸ 'Gun setup (its key again)': the switch, 'seconds it stays up
   unused', 'stays up after a pick'. CHECKS: `tools/qa/slotsetup-check.ts` (`probes.ts slotsetup`, family `kit`; `SLOTSETUP_BREAK=1` must fail) —
   opens, the three rows, `stay`, every way it shuts, the empty load and the Space list, Esc, the words and the keys the carried aim keeps, what
-  does not open it, the pistol and the double tap, the box off the real overlay code on the probes' stand-in page, off = the build before, the
-  journal and the stands' row, the board: 12 lines pass on both stands, the break is red on 9 on each.
+  does not open it, the pistol and the double tap, the box off the real overlay code on the probes' stand-in page, a load of each kind, off = the build before, the
+  journal and the stands' row, the board: 13 lines pass on both stands, the break is red on 10 on each.
   `tools/qa/slotsetup-page.cjs` — the real page on the software adapter by real key presses, as it opens and with `?slotsetup=0`: all five lines pass.
   The lesson bot for Training 4 (`tools/qa/lessons/train-kit.ts`) plays the new presses when the rule is on, read off the page's own table when
   it drives a page. OLDER PROBES that step the launcher with 2 again, or read the kit column against recorded words, run with the switch held
@@ -992,5 +995,46 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   open"); a tap of E files `Space` and the leaf opens; E kept down half a second draws the ring ("1 push it shut · 5 whistle", 1 lit); let go, it
   stands; Tab puts it away; ring then 1 shuts the leaf; ring then a click opens it; on open floor the ring is "5 whistle" and 5 raises his noise;
   the V key and the Space key file nothing. No picture was taken: a screenshot does not come back on that adapter.
-  NOT DONE HERE: the camera is still on Ctrl (Space is spare for it); the shared latch helper.
+  NOT DONE HERE: the shared latch helper (the camera moved to the spare Space bar in the next bullet).
   Nobody has played it; never seen on a GPU.
+- **The camera's key is the Space bar** (`src/host/keymap.ts KEYMAP.camSpace`, `camKey()`, `camCap()`, 10-22; the maintainer: "move camera pan from
+  ctrl to space", "zoom can still be just space + scroll"; a tester's Ctrl then W closed his tab). ON in the page (`?camspace=0` = Ctrl, as it
+  was), off in the module, so both of the harness's stands have Ctrl: it is a HOST switch like the board's others (`qFree`, `setFree`), not a game
+  rule: no knob, no journal key, no `FROZEN_HOLDS` row. A recording holds the view's turn and zoom themselves, never the key.
+  ONLY WHILE SPACE IS NO ROW'S: `camKey()` is `'Space'` when the switch is on AND the Space key gives the game nothing (`gameCode('Space') === ''`:
+  his actions a ring on E, `handring.ts`, with empty hands a slot, `handslot.ts`, and no row put on Space by hand in Options). With `?handring=0` or
+  `?handslot=0`, or a row he put on Space, the camera is on Ctrl again, by itself, and the words follow.
+  HELD (`game/input.ts`, `Input.camHeld`: the key on the board that is down, '' = none): the mouse's travel is the view's turn (`orbitDX`) and the
+  wheel is the zoom (`wheelCtrl`), not his pace. The key files nothing for the game. Let go, the page out of focus, or a browser menu opened (which
+  swallows the key's coming up) lets go of it. It is a latch where Ctrl was read off every mouse event: a keyup lost some other way leaves the
+  view turning until Space is tapped. While Space is
+  the camera's, Ctrl and the mouse turn NOTHING; a wheel that says Ctrl still zooms, because that is what a trackpad pinch sends.
+  TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
+  it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.
+  THE WORDS: Options, Controls draws the two camera rows' cap plain (`ui/options.ts camCapEl`: Ctrl or Space; never keyCapEl's 'Space', which is the
+  action's row and reads "E"); the start card's row is "Space + mouse / wheel" (`ui/menu.ts CAM_SPACE`, written as it is by `keyCol`); Options,
+  Game says "Double tap Space" and "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
+  NOT A ROW (a reviewer's note, left as it is): the camera's key cannot be moved in Options, and a row put on Space takes Space from it with no
+  swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`
+  (the settings thread's) reads "Double tap Ctrl" and presses Control: it needs `&camspace=0` or the new words. The engine replay's own view still
+  turns on Ctrl (`replay/engineplay.ts`). A laptop touchpad that goes dead while a key is held would not turn the view under Space: not tried.
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, twice, off; on game/input.ts's own listeners and
+  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
+  `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
+  Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
+- **A can in the wind-up goes back on the belt when his hands start something else** (`src/game/throwback.ts THROWBACK.on`, 10-22; the deep
+  review's src15-01, and src15-02 with it). A throw is counted off the belt at the click and leaves the hand `THROW_RELEASE` (0.28 s) later, on a
+  countdown that runs in the open part of `updatePlayer`, after the early returns for a kick, a pick, the wand, hands at work and the keypad. A can
+  clicked and one of those rows taken inside the wind-up froze in his fist for the whole beat and left it afterwards from where he then stood, on
+  the arc solved at the click: after a pick, four seconds late, a stun or a frag included. THE RULE: one line ahead of those returns gives the can
+  back (`player.ts throwOff`, what `startGrab` and `cancelActions` always did) and ends the wind-up; a takedown's start, which dropped the wind-up and kept the can it had counted,
+  gives it back too. Nothing is thrown. ON in the page (`?throwback=0`; the debugger's Player tick "a can in the wind-up goes back on the belt"),
+  OFF in the module and on the frozen stand (`FROZEN_HOLDS`, `TPS_THROWBACK=1`, pinned in `host/standup.ts`); in the knob registry and carried by a
+  recording (one from before it replays with it off). Only a run that begins such a beat inside a wind-up changes.
+  The swing already begun on the animator is not called off (a grab's never was): read in the code, he may be seen to swing with nothing
+  leaving his hand; nobody has looked. A beat added to `updatePlayer`'s early returns must be added to that one line.
+  CHECK: `bun run tools/qa/probes.ts throwback` (family `player`), 6 lines, the rule raised by the check on both stands: a pick (4.3 s, no can in
+  the air through it or after), a kick, a plain throw untouched (in the air at frame 17, one off the belt), off (the can in the air at frame 67,
+  after the kick ends at 58), a takedown (the game's own start on a parked man), recordings. `THROWBACK_BREAK=1` fails 4. The throw is made through the keys (the can's digit, a click); the kick and
+  the pick are begun by the game's own starts a few frames in. NOT in the check: the wand, hands at work and the keypad (the same
+  line; read, not run). Headless only; nobody has played it.

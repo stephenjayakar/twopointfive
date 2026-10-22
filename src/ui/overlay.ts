@@ -6,7 +6,7 @@ import { FollowCamera } from '../game/camera';
 import { Game, Player, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
 import { backName } from '../game/backkey';
-import { KEYMAP, keyCap, keyText } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
+import { KEYMAP, keyCap, keyText, camCap } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
 import { FLOOR_KEY } from '../game/doors';
 import { playerAim } from '../game/aim';
 import { AIMCOST } from '../game/aimcost';
@@ -331,7 +331,7 @@ export class Overlay implements HudLike {
     // line), a pip for every step. The small row at the top stands down while it is up, and the seat with nobody on the floor hides the rows of a man's own kit.
     const rail = game.rails.prompt();
     // (each cap in brackets is one key, asked of the key map by itself: a line of several — '[W] [A] [S] [D]' — follows a rebind of any of them)
-    const railWords = rail ? rail.line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? `<kbd>${esc(keyCap(t.slice(1, -1)))}</kbd>` : esc(keyText(t))).join('') : '';
+    const railWords = rail ? rail.line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? `<kbd>${esc(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))}</kbd>` : esc(keyText(t))).join('') : '';
     { const key = rail ? `${rail.n}|${rail.of}|${railWords}` : '';
       if (key !== this.railKey) { this.railKey = key;
         if (!rail) { this.railEl.className = ''; this.railEl.innerHTML = ''; }
