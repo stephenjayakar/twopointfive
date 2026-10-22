@@ -1251,6 +1251,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wall's step with four men up the step's eye is one of the five and where it looks is seen; with the rule off it is dropped and the place is in the
   fog): 23 lines pass on both stands, `RAILS_BREAK=1` fails 15 on both, this one among them. Headless only: the page's fog is the GPU's picture of the
   same five eyes, and nobody has looked at it since. Never seen on a GPU.
+- **A rows list that withholds the act that puts a taught one back** (2026-10-22; `rails.ts rowsWithheld`, printed by `tools/qa/lesson-check.ts` as
+  `NOTE` lines, never a verdict). The maintainer on the stealth mission: "nothing in reach to close the door?" — its `rails.rows` named `push` and not
+  `pull`, so the door he opened had no row. The pairs read: push or ease with pull, drag with drop, lightsOff with lightsOn, breakerOff with breakerOn.
+  A note and not a fault, and no base set forced into every list: a mission may mean it, and a row added beside a taught one can take the tap from
+  it, so the list is its author's to mend with its own scripted run. At the time of writing: tut-pair (push, no pull) and tut-quiet (push, no pull;
+  breakerOff, no breakerOn) are noted; tut-solo's list is clean; the other three have no list.
 - **Mission 1's scripted player off the page's stand** (2026-10-22; `tools/qa/lessons/tut-sky.ts raises`, `tools/qa/lesson-run.ts`). `lesson-gate
   tut-sky` was red on its frozen arm at the wall's step since before the level was rebuilt: that stand has no destruction (no wall charge to give), no
   ring that stays up for its digits, and no teammate working a thing (the breaker's step). The player's file now raises those for its own run
