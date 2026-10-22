@@ -473,6 +473,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `silent` family; green on both stands; `SILENTSET_BREAK=1` fails the rule's lines on each): set at 18 s frozen / 17 s shipped with 'set.' once and no round;
   the key off = 'stacking' for 38 s; a locked door under `DOORTOOLS.testDoor` is not tried while held on a man, is tried only with the gun back on the door once
   the men are gone, and is tried with the room empty (control). One seed, one room, headless: never seen on a GPU, never played. No Tab row.
+- **Lit to whom: a lit step is seen only where the eye that has the line would gain on a man there** (`src/game/sneak.ts`, switch
+  `SNEAK.byEye`, `litSeen`, 10-22; the maintainer, playing the pair lesson: "not following me here"). The sneak called a step SEEN, no
+  place to stand and no stretch to cross past `crossM`, when its light was at or over the flat `litAt` 0.1 and ANY defender had a line,
+  out to the eye's 16 m. On the software renderer an open night shadow reads near 0 and the number rarely bit; the maintainer's HUD on a
+  GPU read 14, 15 and 27 of 100 in open shadow that night, so on the page every step with a line was lit and only lines decided. A
+  guard's own eye does not work so: his rate on a crouched man is `detectRate` × light^1.5 × the distance term × 0.75, and a rate at or
+  under 0.05 /s moves no awareness (`guards.ts`). Now such a step is seen only where THAT defender's rate on a man there is over
+  `seenRate` 0.05 (at 0.14 inside about 6 m, at 0.20 about 10 m, at 0.27 about 12 m, at 0.5 and up all the way out); never a step
+  that was not seen before. Read so: the follower's step and standing place (`read`), the stalk map's watched cells and its priced
+  way (`sneakWalk`). NOT read so: a shut door's funnel and a remembered look (no eye to measure from), `darkfoe.ts`, `seenwalk.ts`,
+  `spotted.ts`: the flat number stands there. ON in the page (`?byeye=0` off, `?seenrate=<n>` the rate; panel toggle "sneak: lit to
+  the eye that has the line"), OFF in the module and on the frozen stand (`TPS_BYEYE=1`), a `FROZEN_HOLDS` row, carried by the
+  journal. Check `by-eye` (family `sneak`; `BYEYE_BREAK=1` fails 3 on both stands), 9 of 9 on both: on the pair-up rig's open strip
+  with the partner's meter planted at 0.27 every step out to 15.5 m is watched with it off and only out to 10.5 m with it on (the
+  check's own sum of the guards' arithmetic: 12.1 m); a walk across the view at 14 m costs 0.048 off and nothing on; and THE PAIR
+  LESSON ITSELF, its scripted player on hard with Sam's meter never under 0.2 (`lesson-run.ts --floor`): off, the partner waits on the
+  light 44 s and the lesson does not end (4 steps, 60 s); on, it plays to its end (18 steps, 144 s). Also run by hand, not in the
+  check: a floor of 0.16 the same (fails off, plays on in 139 s); a floor of 0.27 FAILS BOTH WAYS, and by the guards' own arithmetic
+  it should: at 27 a guard gains on a crouched man out to 12 m. So this rule does not make the top of those readings a place to
+  sneak; whether an open night shadow should read 14 to 27 on the meter at all is the light meter's question (it is Sam's meter too).
+  One level, one seed, a planted meter; no tally. Never seen on a GPU, nobody has played it.
 - **The way to a man's back is read by the moon its walker stands in** (`sneak.ts sneakWalk`, `SNEAK.stalkAmbient`, 10-13; tape quiet-as-two 052432 at 1:35.7: on 'take him on my mark' Blue One walked 1.7 m of moonlit yard through Novak's view — the stalk's light was the CPU estimate, 0.000, `lightEstimateAt` has no moon; his own meter read 0.46‥0.56 — Novak alert at 1:38.0, Sam down at 1:39.9). The stalk's steps now read the estimate PLUS the walker's own meter over the estimate of where he stands: all of it on open ground when he stands on open ground (`weather.underRoof`), by a crumb's proportion where he or the step is under a roof; meter = estimate changes nothing. The excess is taken off the LOWER of his eased meter and what it reads this frame (`Guard.irradiance`), so a meter still falling after he steps out of a lamp pool is not read as light on the dark way (stateless: replays and loads read the same).
   ON in the page (`?stalkambient=0`), OFF in the module and on the frozen stand (`TPS_STALKAMBIENT=1`); a `FROZEN_HOLDS` row; journal: the key rides in a recording's `flags` (its tables never carry `SNEAK`) — no flag = off, a flag = as recorded. QA `probes.ts pairup-one-eye` (d): six lines, green on both stands, `STALKAMBIENT_BREAK=1` fails two (the roofed line and the lamp-pool lag line are labelled controls; the lag line fails on the rule as it was before the lower-of-two).
   Measured on that one tape, re-run by hand on its own input (no seeds, no tally): rule off he walks and Novak is alert at 1:38.0; rule on `stalk()` is exposed by Novak at 1:35.7 / 1:36.6 (cost 2.27 / 1.55 against 0.12) and from the order on he holds at (22.9, 20.4), 'waiting · Novak is looking across the way to Reyes'. At 1:37.4 the rest of the way is already out of Novak's view (cost 0).

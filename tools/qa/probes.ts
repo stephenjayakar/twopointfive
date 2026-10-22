@@ -3075,6 +3075,7 @@ if (on('pair-steady', 'pair', 'all')) await run('pair-steady', async () => (awai
 if (on('pair-watch', 'pair', 'all')) await run('pair-watch', async () => (await import('./pair-probes.ts')).pairWatch());
 if (on('pair-identity', 'pair', 'all')) await run('pair-identity', async () => (await import('./pair-probes.ts')).pairIdentity());
 // ---------------------------------------------------------------- the partner sneaks: one teammate following while the squad is silent and unnoticed (sneak-probes.ts; game/sneak.ts)
+if (on('by-eye', 'sneak', 'all')) await run('by-eye', async () => (await import('./byeye-probes.ts')).byEye());   // a lit step with a line is seen only where that defender's eye would gain on a man there (SNEAK.byEye; BYEYE_BREAK=1 must fail)
 if (on('sneak-low', 'sneak', 'all')) await run('sneak-low', async () => (await import('./sneak-probes.ts')).sneakLow());
 if (on('sneak-steps', 'sneak', 'all')) await run('sneak-steps', async () => (await import('./sneak-probes.ts')).sneakSteps());
 if (on('sneak-waits', 'sneak', 'all')) await run('sneak-waits', async () => (await import('./sneak-probes.ts')).sneakWaits());

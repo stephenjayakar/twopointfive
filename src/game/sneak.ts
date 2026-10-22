@@ -75,6 +75,15 @@ export const SNEAK = {
   trail: true, trailM: 60, back: 0.3,
   /** he looks before he steps (off: he never waits) · how far up the trail he reads · this lit (0‥1 on the meter's curve) is a lit step */
   look: true, aheadM: 2.4, litAt: 0.1,
+  /** LIT TO WHOM (the maintainer's partner would not follow him across an open yard at night: on a GPU the open night shadow reads 14 to 27 on the meter,
+   *  over `litAt`, where the software renderer reads near 0 — so on the page every step with a line was "lit" and only lines decided). With `byEye` a step
+   *  at or over `litAt` with a line from a defender is SEEN only where THAT defender's eye would gain on a man there: the guards' own arithmetic (eyeRate:
+   *  detectRate × light^1.5 × the distance term × the crouch) over `seenRate`, which is the guards' own floor — a rate at or under 0.05 /s moves no
+   *  awareness (guards.ts). Dim ground far from an eye is ground he may stand on and cross; dim ground near one is not; nothing is seen that was not seen
+   *  before. Read so: the follower's step and standing place (read), the stalk's watched cells and its priced way (the walker's map). NOT read so: a shut
+   *  door's funnel and a remembered look (no eye to measure from: the flat number stands), darkfoe.ts, seenwalk.ts, spotted.ts. The page: on
+   *  (`?byeye=0`; `?seenrate=<n>`); false here and on the frozen harness stand (`TPS_BYEYE=1`; a FROZEN_HOLDS row). false = the flat number, as it was */
+  byEye: false, seenRate: 0.05,
   /** a step's light is the CPU's direct-light estimate PLUS what Sam's own meter read there over that estimate when he walked it (the moon, the bounce) */
   ambient: true,
   /** … and a man on a way of his OWN (sneakWalk: the stalk to a man's back — floor nobody has walked) reads every step of it by the estimate PLUS what his own
@@ -252,20 +261,20 @@ interface Exp { /** lit with a line from somebody, or at a defender's elbow with
 const NONE: Exp = { seen: false, watched: false, near: false, by: null };
 /** A target's exposure by guards.ts's own eye test (eyeContact: reach, cone, statics and leaves to chest or head): a LINE from each defender (the test with the
  *  cone opened right round), how lit the target is (asked once, only if somebody has a line), and whether that defender is LOOKING (the cone, widened) */
-function read(g: Game, eyes: Guard[], pc: Character, lit: () => number): Exp {
-  let seen = false, watched = false, near = false, by: Guard | null = null, L = -1; const wide = SNEAK.coneDeg * SNEAK.skill;
+function read(g: Game, eyes: Guard[], pc: Character, lit: () => number, low = false): Exp {   // (`low`: he is down on it — the eye's rate on him, SNEAK.byEye; unsaid = upright, the plainer to see)
+  let seen = false, watched = false, near = false, by: Guard | null = null, L = -1; const wide = SNEAK.coneDeg * SNEAK.skill, keen = escalationOf(g) >= 1 ? KEEN : 1;
   for (const h of eyes) {
     const E = eyeFor(h, wide), r = eyeContact(g, { ...E, halfDeg: 180, nearDeg: 180 }, pc, false, false, 1); if (!r.visible) continue;
     if (L < 0) L = lit();
-    const elbow = r.dist < SNEAK.nearM; if (L < SNEAK.litAt && !elbow) continue;
-    seen = true; if (L < SNEAK.litAt) near = true;
+    const elbow = r.dist < SNEAK.nearM, dim = !litSeen(g, h, L, r.dist, keen, low); if (dim && !elbow) continue;
+    seen = true; if (dim) near = true;
     if (eyeContact(g, E, pc, false, true, 1).inCone) { watched = true; by = h; break; }   // ('blind': the cone alone — the line is known)
   }
   return { seen, watched, near, by };
 }
 /** … of a step of the trail, for a man low or upright on it · of the man where he stands: his own bones, his own meter (the renderer's, in the page) */
-const exposure = (g: Game, eyes: Guard[], C: Crumb, low: boolean) => read(g, eyes, standIn(C.p, low), () => litAt(g, C, low));
-const exposureOf = (g: Game, eyes: Guard[], gd: Guard) => read(g, eyes, gd.char, () => gd.visibility);
+const exposure = (g: Game, eyes: Guard[], C: Crumb, low: boolean) => read(g, eyes, standIn(C.p, low), () => litAt(g, C, low), low);
+const exposureOf = (g: Game, eyes: Guard[], gd: Guard) => read(g, eyes, gd.char, () => gd.visibility, gd.char.anim.crouch > 0.5);
 
 /** What crossing the seen steps T[first..end) low at the crossing pace would leave on the most stirred looker: his awareness now + margin × Σ rate × time, the
  *  rate guards.ts sightGainOn's (detectRate × light^1.5 × distance × the crouch's 0.75 × the alarmed floor's keenness, 3.5 at point-blank) on this file's read
@@ -275,6 +284,13 @@ const exposureOf = (g: Game, eyes: Guard[], gd: Guard) => read(g, eyes, gd.char,
 function eyeRate(g: Game, h: Guard, lit: number, dist: number, keen: number, low = true): number {
   let rate = g.tune.detectRate * Math.pow(lit, 1.5) * clamp(1 - (dist - 3) / 13, 0.2, 1) * (low ? 0.75 : 1) * keen; if (dist < 1.8) rate = Math.max(rate, 3.5);
   return h.state === 'alert' || h.state === 'search' ? rate * 2.2 : rate;
+}
+/** the check's own break word (tools/qa byeye-probes.ts): the switch reads on and the flat number decides */
+const BYEYE_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.BYEYE_BREAK === '1';
+/** is a man on a spot this lit, this far from this eye, SEEN as the sneak reads a step (SNEAK.byEye: at or over `litAt` AND this eye gains on him; off: the flat number) */
+function litSeen(g: Game, h: Guard, lit: number, dist: number, keen: number, low: boolean): boolean {
+  if (lit < SNEAK.litAt) return false;
+  return !SNEAK.byEye || BYEYE_BREAK || eyeRate(g, h, lit, dist, keen, low) > SNEAK.seenRate;
 }
 function crossCost(g: Game, eyes: Guard[], T: Crumb[], first: number, end: number, card = 1): number {   // (`card`: kitload.ts loadCross — × what the crossing adds, never what an eye already holds)
   let worst = 0; const wide = SNEAK.coneDeg * SNEAK.skill, keen = escalationOf(g) >= 1 ? KEEN : 1;
@@ -358,7 +374,7 @@ export function sneakWalk(g: Game, gd: Guard, low: boolean, habit?: (h: Guard) =
       let lit = -1, r = false; const pc = standIn([x, 0, z], low);
       for (const m of men) { if (!m.looks.some((_, k) => inCone(m, k, wider, x, z, pc))) continue;
         const d = line(m, x, z, pc, false); if (d < 0) continue;
-        if (d < SNEAK.nearM || (lit < 0 ? lit = litOf(x, z) : lit) >= SNEAK.litAt) { r = true; break; } }
+        if (d < SNEAK.nearM || litSeen(g, m.h, lit < 0 ? lit = litOf(x, z) : lit, d, keen, low)) { r = true; break; } }
       memo.set(key, r); return r;
     },
     cost(pts, pace, skip, skipM = 0.3) {
@@ -369,7 +385,7 @@ export function sneakWalk(g: Game, gd: Guard, low: boolean, habit?: (h: Guard) =
           for (let q = 0; q < men.length; q++) { const m = men[q]; let rate = -1;
             for (let k = 0; k < m.looks.length; k++) { if (!inCone(m, k, false, x, z, pc)) continue;
               if (rate < 0) { const d = line(m, x, z, pc, true); if (d < 0) break; if (lit < 0) lit = litOf(x, z, 0.4);
-                if (d >= SNEAK.nearM && lit < SNEAK.litAt) break;   // (not SEEN as the sneak reads a step — dim, and not at his elbow: it is not priced, as the follower would not stop for it)
+                if (d >= SNEAK.nearM && !litSeen(g, m.h, lit, d, keen, low)) break;   // (not SEEN as the sneak reads a step — dim, and not at his elbow: it is not priced, as the follower would not stop for it)
                 rate = eyeRate(g, m.h, lit, d, keen, low) * loadCross(g, gd); }   // (kitload.ts: what his card makes of the notice he builds and of the time he is in it)
               add[q][k] += rate * dt; } } }
         a = b; }
@@ -481,7 +497,7 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
       /** crumb k is lit and in the line of a shut door Sam is about to open */
       const inLine = (k: number, lo: boolean): boolean => samDoors.length > 0 && funnel(T[k].p, samDoors, K.doorPad) && litAt(g, T[k], lo) >= K.litAt;
       const unseenAt = (q: Vec3, lo: boolean): boolean => { let L = -1; const lit = () => L < 0 ? L = litSpot(q, lo) : L;
-        return !read(g, eyes, standIn(q, lo), lit).seen && !(funnel(q) && lit() >= K.litAt); };
+        return !read(g, eyes, standIn(q, lo), lit, lo).seen && !(funnel(q) && lit() >= K.litAt); };
       /** (`deep`: a spot to TAKE is unseen with that many metres to spare towards the trail — the edge of a jamb's shadow moves when the man beyond it turns his head; one he HOLDS need only be unseen) */
       const sideOk = (q: Vec3, lo: boolean, deep: number): boolean => {
         if (g.col.nav.isBlocked(q[0], q[2]) || flat(q, pl.char.pos) < K.standNear + 0.3 || others.some(o => flat(o.char.pos, q) < 0.7) || g.doors.list.some(d => flat(q, d.frameCentre) < 1.0)) return false;
