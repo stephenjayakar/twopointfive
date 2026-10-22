@@ -44,6 +44,7 @@ export async function bangsCheck(): Promise<boolean> {
     /** one bang and clear on a shut door, watched to its burst */
     const run = async (name: string, side: 1 | -1, rule: boolean, who: 'all' | 'red' = 'all', mateAt: number[] | null = null) => {
       const S: any = await quiet(() => BT.stage(SCN, 1)); const { g, step } = S; DOORTOOLS.bangInto = rule;   // (after the stand-up: the frozen stand holds it off)
+      if (mateAt) (DOORTOOLS as any).tossMate = false;   // (line 5 only — see there: the stand-up puts the stand's own word back, so it is held here)
       const O = g.orders, D = g.doorTools, nav = g.col.nav, d = g.doors.list.find((x: any) => x.def.name === name), W = d.def.width;
       const free = (p: number[]): number[] | null => { const q = nav.isBlocked(p[0], p[2]) ? nav.nearestFreePoint(p[0], p[2]) : p; return q ? [q[0], 0, q[2]] : null; };
       const gate = doorPt(d, W / 2, 0.7, side), clearTo = (p: number[]) => !g.col.solidBlocked([p[0], 1.1, p[2]], [gate[0], 1.1, gate[2]]);
@@ -92,9 +93,8 @@ export async function bangsCheck(): Promise<boolean> {
       `the rule on, ${SECOND[0]}: thrown into the room there too — ${DOORTOOLS.bangIntoMin} m or more inside, at the point named, from the hand (or from the door's edge by a man who stands at it)`, say(two) + (two?.aim ? ` · aimed ${f1(two.aim.in)} m in` : ' · no aim'));
     // (5) one of ours in its flash
     // (DOORTOOLS.tossMate, later, keeps the can in the kit when one of ours is in its reach with a line from the opening — onesignal-check.ts asks that.
-    //  This line is bangInto's own question, WHERE a can that does go lands, so it is asked with that rule held off; put back after)
-    { const tm = (DOORTOOLS as any).tossMate; (DOORTOOLS as any).tossMate = false; let first: any, at: any, r: any;
-      try { first = await run(DEEP[0], DEEP[1], RULE, 'red'); at = first?.aim?.at ?? null; r = at ? await run(DEEP[0], DEEP[1], RULE, 'red', at) : null; } finally { (DOORTOOLS as any).tossMate = tm; }
+    //  This line is bangInto's own question, WHERE a can that does go lands, so it is asked with that rule held off (in `run`, after its stand-up); put back after)
+    { const tm = (DOORTOOLS as any).tossMate, first = await run(DEEP[0], DEEP[1], RULE, 'red'), at = first?.aim?.at ?? null, r = at ? await run(DEEP[0], DEEP[1], RULE, 'red', at) : null; (DOORTOOLS as any).tossMate = tm;
       line(!!r && !r.why && r.thrower !== undefined && r.mateIn > 0.5 && !r.mateLine && (!r.aim || flat(r.aim.at, at) > 0.5),
         'a man of the team who is not on the order, standing in the room where the can went: the pair still throws, and not at him — the landing as it was, or a point with no line to him inside the flash',
         !first ? 'no floor for the team at that door' : !at ? `the pair alone: no point picked to ask it of — ${first.why ?? first.toss ?? first.beats.slice(-2).join(' → ')}` : r.why ? `the order refused — ${r.why}` : r.thrower === undefined ? `no can thrown: ${r.beats.slice(-3).join(' → ')}`
