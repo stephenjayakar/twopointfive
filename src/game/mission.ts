@@ -93,7 +93,7 @@ export function updateMission(g: Game, dt: number, input: Input) {
       const X = exitTaken(g, p);
       chronObjective(g, X ? `out through ${X.name} — mission complete` : 'out through the fire exit — mission complete');   // (written before the stage flips: a done run writes nothing more)
       m.stage = 'done'; m.debrief = true;
-      const D = debriefOf(g); g.msg(`exfiltrated — ${fmtClock(m.stats.elapsed)} · ${D.rating} ${D.score}`);
+      const D = debriefOf(g); g.msg(['exfiltrated — ' + fmtClock(m.stats.elapsed), D.grade].filter(Boolean).join(' · '));   // (no grade on a row that leans loud: chronicle.ts Debrief.grade)
     }
   }
 }
@@ -166,7 +166,7 @@ export function objectiveText(g: Game): string {
   if (s === 'infiltrate') return 'objective ▸ reach the server room';
   if (s === 'drive') return m.driveT >= 0 ? `objective ▸ pulling the drive… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ pull the drive from rack ${n} (Space at its face, then stay on it)`;
   if (s === 'exfil') return 'objective ▸ get out through the fire exit';
-  if (s === 'done') { let t = doneLine.get(m); if (!t) { const D = debriefOf(g); t = `mission complete — ${fmtClock(m.stats.elapsed)} · ${D.rating} ${D.score}`; doneLine.set(m, t); } return t; }   // (worked out once per finished run, not sixty times a second: nothing on it can change any more)
+  if (s === 'done') { let t = doneLine.get(m); if (!t) { const D = debriefOf(g); t = ['mission complete — ' + fmtClock(m.stats.elapsed), D.grade].filter(Boolean).join(' · '); doneLine.set(m, t); } return t; }   // (worked out once per finished run, not sixty times a second: nothing on it can change any more)
   return 'mission failed — enter restarts it';
 }
 const doneLine = new SideMap<object, string>('mission.doneLine');
