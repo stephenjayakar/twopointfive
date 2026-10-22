@@ -751,7 +751,8 @@ async function inner(browser, way, name, slots0, stillAsked) {
         `the leaf goes in pieces at ${r2(toll.n)} (the rule ${toll.on ? 'on' : 'OFF IN THIS PAGE'}) · ${a.at ? `set to ${r2(toll.n - 0.5)} after the burst of beat #${a.at}` : 'NO BURST OF HIS WAS SEEN'} · ${a.seen ? `as beat #${a.seen.n} (${a.seen.field} by member ${a.seen.i}) began: ${r2(a.seen.shot)}` : `THE NEXT ROW NEVER BEGAN${a.where ? ' — it stood at: ' + a.where : ''}`} · in pieces on ${a.off} frame(s) to that row's end · rehangs ${s0.rehangs} → ${s1.rehangs} · restarts ${s0.restarts} → ${s1.restarts}`);
       // …and ONE ROW WORTH THE WHOLE COUNT: the leaf half a round short as a gun's row BEGINS, for up to four rows — where a round of his meets the leaf
       // (the second way in: all of them) it goes in pieces under a row that says it leaves nothing; where none does there is nothing to try at this way in
-      await page.evaluate(() => { window.__kitview.leafMend = true; }); await tell({ kv: 'sel', who: 0, field: 'weapon' }); await settle(); if (LBREAK) await page.evaluate(() => { window.__kitview.leafMend = false; });   // (under the break: the first row's leaf, if it went, hung again — this row is tried on a whole one)
+      if (LBREAK) await page.evaluate(() => { const d = window.__game.doors.byName(window.__kitview.door); if (d && d.off) d.reset(); });   // (under the break the first row's leaf may lie in pieces and nothing hangs it: hung here by the game's own reset, so that this row is tried on a whole one)
+      await settle();
       const s2 = await read(), n2 = await lastN();
       const b = await page.evaluate(({ n, toll }) => new Promise(res => { const k = window.__kitview, g = window.__game; let c = 0, last = n, rows = 0, offN = 0;
         const f = () => { c++; const d = g.doors.byName(k.door), b = k.beat;
