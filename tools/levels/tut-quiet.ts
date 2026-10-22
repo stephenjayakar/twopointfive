@@ -191,6 +191,7 @@ export function build() {
   const all = (...of: object[]) => ({ is: 'all', of });
   const near = (at: P3, r: number) => ({ is: 'near', at, r });
   const held = [did('chron:grab'), { is: 'flag', flag: 'holding' }];
+  const PICKED = any(did('chron:lockPicked'), { is: 'door', door: 'back', state: 'open' }, { is: 'door', door: 'back', state: 'unlocked' }, { is: 'door', door: 'back', state: 'broken' });
   const mark = (p: P3): P3 => [p[0], 1, p[2]];
   const lesson: LessonData = {
     title: 'Unseen',
@@ -209,11 +210,23 @@ export function build() {
       // (the whistle has two ways in: its own key where it has one, and on the page the last wedge of the ring his interaction key puts up when it is kept
       // down — `ringLine`; `use` comes on here for that ring, a step before the grab needs it)
       { id: 'whistle', line: '[V]: whistle here. Then hide behind the wall', ringLine: 'Hold [Space], then [5]: whistle. Then hide', allow: ['whistle', 'use'], checkpoint: 'the lane', done: any(did('event:whistle'), ...held, down(1)), at: mark(TQ.whistle) },
-      { id: 'grab', line: 'Hide. When he stops: round the wall, [Space]', done: any(...held, down(1)), at: mark(TQ.hide) },
+      // (the first play of it on a GPU, with no card and the line "Hide. When he stops: round the wall, [Space]": "not sure what this means". He had hidden,
+      //  off the whistle's own line; he could not tell when "stops" is or what the key would do. So the frame's card says the whole beat the moment the
+      //  whistle has gone, with the world held while it is read — he looks for about four seconds, which is no time to read in; the line names the deed;
+      //  and the mark rides on the man, so where he is and that he has stopped can be seen from behind the wall)
+      { id: 'grab', line: 'When he stops: up behind him. [Space] grabs him', explain: { title: 'A whistle brings one man', text: 'He heard that, and he is coming to look. Stay behind the wall, out of his light.\nWhere the sound was he stops, his back to you. Go round the wall, come up behind him, and [Space] takes hold of him.' },
+        done: any(...held, down(1)), atMan: 'court' },
       { id: 'ask', line: '[Space]: ask him the code', done: any(did('chron:codeLearned'), down(1)) },
       { id: 'drop', line: 'Right button: out cold. Left: the knife', allow: ['fire', 'alt'], done: down(1) },
       // ---- the back door: a lock ----
-      { id: 'pick', line: '[Space] at the lock. Then keep still', checkpoint: 'the back court', done: any(did('chron:lockPicked'), { is: 'door', door: 'back', state: 'open' }, { is: 'door', door: 'back', state: 'unlocked' }, { is: 'door', door: 'back', state: 'broken' }), at: mark(TQ.backDoor) },
+      // (the same play, at one line — "[Space] at the lock. Then keep still": "'E at the lock' isn't sufficient. we need to introduce the lock picking system
+      //  (like via the modal), tell the user they're going to do it, and then show them the controls for doing so"; and of the safe's line: "weird to say
+      //  'keep still' -- we should just have a modal explaining interactions and cancelling them when we first introduce them". So: the walk to the door is
+      //  its own line; AT the door — the first work that takes time — the frame's card says this lock is his to pick, that such work takes seconds and
+      //  what stops it; and no line says 'keep still' again)
+      { id: 'door', line: 'To the back door', checkpoint: 'the back court', done: any(near(TQ.backDoor, 1.3), { is: 'flag', flag: 'picking' }, PICKED), at: mark(TQ.backDoor) },
+      { id: 'pick', line: '[Space] at the lock: pick it', explain: { title: 'Picking a lock', text: 'This door is locked. [Space] at the lock picks it.\nWork like this takes a few seconds: a lock, a keypad, a safe. Move, or press [Space] again, and you stop.\nIt clicks. A man close by can hear it.' },
+        done: PICKED, at: mark(TQ.backDoor) },
       // ---- the store: a man in the light, the player in the dark ----
       { id: 'nook', line: 'In. Stay in the dark', cue: 'store', done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
       { id: 'strike', line: 'Stay low: he hears a step. Left button', checkpoint: 'the store', done: down(2), at: [24.9, 1, 12.6] },
@@ -224,7 +237,7 @@ export function build() {
       { id: 'box', line: '[Space] at the box. Then behind the wall', done: any(did('act:breakerOff'), down(3)), at: mark(TQ.boxAt) },
       { id: 'boxman', line: 'Hide. When he works at the box: strike', done: down(3), at: mark(TQ.wait) },
       { id: 'code', line: '[Space] at the pad: his code', checkpoint: 'the counting room', done: any(did('chron:codeEntered'), { is: 'door', door: 'strong', state: 'open' }, { is: 'door', door: 'strong', state: 'broken' }), at: [17.3, 1, 10.6] },
-      { id: 'safe', line: '[Space] at the safe. Keep still', done: { is: 'stage', stage: 'exfil' }, at: front },
+      { id: 'safe', line: '[Space] at the safe: take the ledger', done: { is: 'stage', stage: 'exfil' }, at: front },
       { id: 'out', line: 'Out by the front door', done: any({ is: 'in', area: { x0: 8.12, x1: 12.3, z0: 11.0, z1: 18.0 } }, { is: 'stage', stage: 'done' }), at: [11.4, 1, 15.1] },
       // (the line stays up to the mission's own end: with the last step done in the forecourt the page fell back to the small objective row at the top)
       { id: 'gate', line: 'Out by the gate', done: any({ is: 'in', area: { x0: 7.25, x1: 7.9, z0: 13.2, z1: 14.8 } }, { is: 'stage', stage: 'done' }), at: [8.3, 1, 14.0] },

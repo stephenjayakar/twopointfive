@@ -41,7 +41,7 @@ import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside
 import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)
 import { OWNBLOW } from './ownblow';   // (read inside lineOf only)
-import { SLOTSETUP } from './slotsetup';
+import { SLOTSETUP, slotSetupOpen } from './slotsetup';   // (slotSetupOpen is called inside a flag only)
 
 /** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
 export const LESSON = { on: true };
@@ -92,6 +92,7 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   sprint: g => who(g).sprinting,
   wall: g => !!who(g).wall,                                   // back to a wall (Q)
   peek: g => (who(g).wall?.peek ?? 0) > 0.5,                  // …and leaning out of its open end
+  lean: g => { const w = who(g).wall; return !!w && ((w.lean ?? 0) > 0.5 || (w.kind !== 'stack' && (w.peek ?? 0) > 0.5)); },   // out round a wall's open end, whichever hold: stepped out with the rifle in the shoulder, or his back leant out (`peek` alone is also true of a rifleman who has only slid to the end)
   nv: g => who(g).nv,                                         // night vision down (N)
   light: g => { const p = who(g); return (p.pistolUp && p.pistol.lightOn) || (p.rifleUp && p.rifle.lightOn); },   // the weapon light of the gun in hand (L)
   holstered: g => who(g).holstered,                           // hands empty (E)
@@ -99,6 +100,10 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   ringsOut: g => who(g).rifle.rings <= 0,                     // the launcher's ring airfoils are spent (the honest other way past a step that asks for one)
   shellsOut: g => who(g).rifle.shells <= 0,                   // …and its 40 mm grenades
   auto: g => who(g).rifle.mode !== 'semi',                              // the rifle's selector on AUTO (Z)
+  // the setup of the gun in his hands is up (slotsetup.ts) — and where a gun has no setup (the switch off) there is nothing to ask for: the line goes by;
+  // `setupShut`: it is not up (Tab, or anything else that puts it away)
+  setup: g => !SLOTSETUP.on || slotSetupOpen(g),
+  setupShut: g => !slotSetupOpen(g),
   dragging: g => !!who(g).dragging,
   dark: g => g.blackout.active,                               // the mains are off (the breaker thrown, by whoever threw it)
   chargeSet: g => (g.wallCharge?.set.length ?? 0) > 0,        // a wall charge is on a wall, waiting on the trigger
@@ -315,8 +320,8 @@ export class Lesson {
   objective(): { text: string; pos: Vec3 | null } | null {
     const L = this.data, i = this.at; if (!L || i >= L.steps.length) return null;
     if (this.over()) return null;   // (the run is over: the row is the scenario's own word on it)
-    const T = L.steps[i];
-    return { text: `training ${i + 1}/${L.steps.length} ▸ ${lessonLine(lineOf(T)).replace(/\[([^\]]+)\]/g, (_m, k: string) => k === 'Ctrl' ? camCap() : k)}`, pos: T.at ?? null };   // ('[B]': a key a tutorial mission's big line draws as a key — rails.ts; plain here. '[Ctrl]' is the camera's key, whichever it is: host/keymap.ts camCap)
+    const T = L.steps[i], M = T.atMan ? this.g.guards.find(x => x.route?.name === T.atMan && !downed(x)) : undefined;   // (`atMan`: the marker rides on the man of that route)
+    return { text: `training ${i + 1}/${L.steps.length} ▸ ${lessonLine(lineOf(T)).replace(/\[([^\]]+)\]/g, (_m, k: string) => k === 'Ctrl' ? camCap() : k)}`, pos: M ? [M.char.pos[0], 1, M.char.pos[2]] : T.at ?? null };   // ('[B]': a key a tutorial mission's big line draws as a key — rails.ts; plain here. '[Ctrl]' is the camera's key, whichever it is: host/keymap.ts camCap)
   }
   summary(): string {
     const L = this.data; if (!L) return this.g.level.scenarios?.lesson ? (LESSON.on ? 'off · this level carries one (start its mission)' : 'off · switched off') : 'off · this level carries none';
