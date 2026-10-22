@@ -79,7 +79,16 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     go: async () => { await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'go') break; } },
     kitchen: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 10; k++) { await run(page, 120); if (k >= 3) break; }
       await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'kitchen') break; } },
+    // the orders' menu on the wall's ring: its fifth row is the wall's page, the third there the charge; then the word once a man has set it
+    charge: async s => { await point(s.at); await tap('KeyX'); await tap('Digit5'); await tap('Digit3'); await until('charge', 30); },
+    blow: async () => { await run(page, 60); await tap('KeyF'); await until('blow', 30); },
+    breaker: async s => { await point(s.at); await tap('KeyQ'); await until('breaker', 40); },
+    nv: async () => { await tap('KeyN'); await run(page, 20); },
+    bunk: async s => { for (let n = 0; n < 2 && (await read(page)).id === 'bunk'; n++) { await point(s.at); await tap('KeyQ'); await run(page, 1200); await tap('KeyF'); await until('bunk', 20); } },
+    out: async s => { await point(s.at); await tap('KeyQ'); await until('out', 40); },
   };
+  /** step the page until another step is up (at most `n` two-second waits) */
+  const until = async (id, n) => { for (let k = 0; k < n; k++) { await run(page, 120); if ((await read(page)).id !== id) break; } };
   // (a hand looks for the marker: if the place is off the picture, pan the view toward it with the keys the mission has taught)
   const point = async p => { for (let k = 0; k < 12; k++) { const s = await at(page, p); if (s.vis) { await page.mouse.move(s.x, s.y); await run(page, 2); return s; }
       const key = s.y < 8 ? 'KeyW' : s.y > 700 ? 'KeyS' : s.x < 8 ? 'KeyA' : 'KeyD'; await page.keyboard.down(key); await run(page, 20); await page.keyboard.up(key); }

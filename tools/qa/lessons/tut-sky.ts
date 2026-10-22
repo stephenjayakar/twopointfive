@@ -1,26 +1,26 @@
-// The scripted player for the first tutorial mission (levels/tut-sky.json; tools/qa/lesson-run.ts runs it, with the frame on: TPS_RAILS=1 on the frozen
-// stand, or the shipped stand). Nobody on the floor is his: he has the view (the host's Ctrl + mouse and Ctrl + wheel, done here as the host does them,
+// The scripted player for the first tutorial mission (levels/tut-sky.json; tools/qa/lesson-run.ts runs it as the page opens it: a tutorial mission is
+// always stood up on the shipped stand). Nobody on the floor is his: he has the view (the host's Ctrl + mouse and Ctrl + wheel, done here as the host does them,
 // and only when the frame has unlocked them), the walk keys that shift it, the squad's command key on a point under the cursor, and the word.
 import type { Bot } from '../lesson-run';
 
 export const query = '?roomclear=1&squad4';
 export const ended = (g: any) => g.lesson.finished;
-/** the view tests need the frame's sky seat: on a stand without it this lesson cannot be played */
-export const needs = 'rails';
 /** the roadblock can be down before the squad is all in the yard: then its step is done as it comes up */
 export const idleOk = ['gate'];
 
-const YARD = [17.6, 0.02, 20.4], TEA_DOOR = [17.0, 1.0, 11.2], KITCHEN_DOOR = [25.0, 1.0, 11.2];
+const YARD = [17.6, 0.02, 20.4], TEA_DOOR = [17.0, 1.0, 11.2], KITCHEN_DOOR = [21.8, 1.0, 6.75], WALL = [27.95, 1.1, 9.4], BREAKER = [22.6, 1.35, 11.32], BUNK_DOOR = [32.25, 1.0, 10.8], TRUCKS = [9.6, 0.02, 25.6];
 const squad = (B: Bot) => B.g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
 const taken = (B: Bot, id: string) => { const r = B.g.roomClear.rooms.find((x: any) => x.def.id === id); if (r?.cleared) return true; const b = r.def.bounds; return squad(B).filter((m: any) => m.char.pos[0] > b.x0 && m.char.pos[0] < b.x1 && m.char.pos[2] > b.z0 && m.char.pos[2] < b.z1).length >= 3; };
 const near = (B: Bot, p: number[], r: number) => squad(B).every((m: any) => Math.hypot(m.char.pos[0] - p[0], m.char.pos[2] - p[2]) < r);
+/** every man of the squad stands on his mark of a stack */
+const stacked = (B: Bot) => squad(B).every((m: any) => { const o = B.g.orders.of(m); return o?.order === 'stack' && o.arrived; });
 /** the command key on a point */
 function command(B: Bot, p: number[]) { B.aim(p); B.step(2); B.aim(p); B.press('KeyB', 2); }
 /** stack on a door, then the word once they stand at it; again if the room is not theirs after a while */
 function breach(B: Bot, door: number[], room: string) {
   for (let k = 0; k < 4 && (k === 0 || !taken(B, room)); k++) {
     command(B, door);
-    B.until(() => near(B, door, 3.2), 25); B.wait(1.5);
+    B.until(() => stacked(B) || near(B, door, 3.2), 25); B.wait(1.5);
     B.press('KeyF', 2);
     B.until(() => taken(B, room), 30); B.wait(2);
   }
@@ -38,4 +38,12 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.until(() => B.g.lesson.step?.id !== 'stack', 30); B.wait(0.5); },   // (set = every man on his mark: the last of four can be a while squaring up)
   go: B => { B.press('KeyF', 2); if (!B.until(() => taken(B, 'tea'), 30)) breach(B, TEA_DOOR, 'tea'); B.wait(2); },
   kitchen: B => { breach(B, KITCHEN_DOOR, 'kitchen'); },
+  // the orders' menu on the wall: its fifth row is the wall's page, the third row there the charge. Then the word, once a man has set it
+  charge: B => { for (let k = 0; k < 3 && B.g.lesson.step?.id === 'charge'; k++) { B.aim(WALL); B.step(2); B.aim(WALL); B.press('KeyX', 3); B.press('Digit5', 3); B.press('Digit3', 3); B.until(() => B.g.lesson.step?.id !== 'charge', 30); } },
+  blow: B => { B.wait(1); B.press('KeyF', 2); if (!B.until(() => taken(B, 'store'), 40)) breach(B, [28.2, 1.0, 8.25], 'store'); B.wait(2); },
+  breaker: B => { for (let k = 0; k < 3 && !B.g.blackout.active; k++) { command(B, BREAKER); B.until(() => B.g.blackout.active, 60); }
+    B.wait(0.5); },
+  nv: B => { B.press('KeyN', 3); },
+  bunk: B => { breach(B, BUNK_DOOR, 'bunk'); },
+  out: B => { for (let k = 0; k < 3 && B.g.lesson.step?.id === 'out'; k++) { command(B, TRUCKS); B.until(() => B.g.lesson.step?.id !== 'out' || B.g.lesson.finished, 60); } },
 };

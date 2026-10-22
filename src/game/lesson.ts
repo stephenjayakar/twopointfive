@@ -98,6 +98,10 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   shellsOut: g => who(g).rifle.shells <= 0,                   // …and its 40 mm grenades
   auto: g => who(g).rifle.mode !== 'semi',                              // the rifle's selector on AUTO (Z)
   dragging: g => !!who(g).dragging,
+  dark: g => g.blackout.active,                               // the mains are off (the breaker thrown, by whoever threw it)
+  chargeSet: g => (g.wallCharge?.set.length ?? 0) > 0,        // a wall charge is on a wall, waiting on the trigger
+  chargeClear: g => { const c = g.wallCharge?.set[0]; return !!c && !g.wallCharge.tooClose(c).length; },   // …with nobody of the squad inside its reach (they have stood off)
+  wallBlown: g => (g.wallCharge?.stats.holes ?? 0) > 0,       // …and one has made its hole this run
   holding: g => !!who(g).holding,                             // a man in his arm
   picking: g => !!who(g).picking,
   coding: g => !!who(g).coding,

@@ -698,6 +698,7 @@ export class SquadOrders {
    *  teammate's body, Sam's own, a leaf, a doorway) comes before what is only near its point (a teammate within manM, Sam's feet). */
   targetUnder(input: Input, cam: FollowCamera, canvas: View): OrderTarget {
     const g = this.g, K = ORDERS; if (g.puppet?.aim) return this.targetAt(g.aimPoint);
+    { const m = g.rails?.markUnder(input, cam, canvas); if (m) return this.targetAt(m); }   // (a tutorial mission's ring on the screen is the place it marks — rails.ts; null off such a level)
     const ray = cam.ray(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight));
     const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, PLAYER_ID);
     const p: Vec3 = hit ? v3.mad(ray.ro, ray.rd, hit.t) : cam.groundPoint(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight), 0) ?? g.aimPoint;
