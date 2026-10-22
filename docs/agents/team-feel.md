@@ -602,8 +602,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `steadyFaceSecs` 1.2 s of a wait before he turns to the man. ON in the page (`?pairsteady=0` puts it off; Team feel row "pair ▸ does
   not turn about on his way"), OFF in the module and on the frozen stand (`TPS_PAIRSTEADY=1`), a `FROZEN_HOLDS` row, carried by the
   journal (`PAIR` joined `JOURNAL_KNOBS` with it: a recording had not carried the table before). Check `pair-steady` (family `pair`;
-  `PAIRSTEADY_BREAK=1` fails it on both stands): the scripted lesson, one seed, off against on: 4 about-turns, 2 steps back and 3
-  flinches in 3 waits → 0, 0, 0, and the lesson still plays to its end (141 → 138 s frozen, 142 → 139 s on the page's stand). One level,
+  `PAIRSTEADY_BREAK=1` fails it on both stands): the scripted lesson, one seed, off against on, on the lesson's level as rebuilt on 10-22: 3 about-turns, 2 steps back and 3
+  flinches in 5 waits → 0, 0, 0, and the lesson still plays to its end (159 → 153 s on the page's stand; frozen 3, 2 and 2 in 4
+  waits → 0, 145 → 142 s). The rebuilt level has one wait that lasts six seconds: he squares to his man in it, as a wait that
+  lasts should, and turns 121 degrees back onto his way when it ends; the check does not count that turn (a swing from a held
+  `face` is the wait ending, not a corner he has passed). One level,
   one seed, the script's player; no tally. Never seen on a GPU, nobody has played it.
 - **Each man's own picture** (`src/game/picture.ts`, table `PICTURE`, 10-14; the maintainer, of two teammates who stood off a wall charge in a known
   enemy's line: "each actor has ideas of where other enemies are (which may be out of date), where is safe, what good cover points are"). Every fighter of
