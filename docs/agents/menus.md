@@ -1317,9 +1317,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   view matrix over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
   `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all twelve back. THE ROWS: `Aim pan` (a slider, none to today's: it
   scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
-  menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (Ctrl + mouse
+  menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (the camera's key + mouse
   turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
-  `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl` (two short presses, answered as the second comes up, bring the view round over about a quarter
+  `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl` (named after the camera's key, `host/keymap.ts camCap`: it reads `Double tap Space` on the page
+  while the Space bar is spare, and `watchCtrlTaps` listens for that key; two short presses, answered as the second comes up, bring the view round over about a quarter
   of a second to look where he looked at the tap; a hand's orbit, a pin, a show or a spectated man drops it; `TapTwice`: a press held is never a tap,
   nor one with another key, a button, the wheel or more than 12 px of orbit in it). The maintainer played them 10-20: "aim pan zero and turn
   direction reversed feel good"; whether those become the starts is his to say.
@@ -1446,9 +1447,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   turn, behind, the carry, the ring, the outline and the teammates' must fail), the same on both stands: its line (10) runs the outline's pass on a stand-in device
   that writes down what it is asked (nothing while off, one program, no draw until it is in, a scissored draw, never after a failed program);
   `PORT=… node tools/qa/findme-page.cjs` (the real page on the software adapter: the rows exist, move live, are kept over a reload and reset; the
-  outline's program compiles there and draws with no GPU error; a real Ctrl drag, a real held press, a real double tap with the mouse to one side
-  and a real move of the mouse after it). NOT DONE: the Controls tab has no line for the double tap. Ctrl is still the camera key, and a double tap
-  is two more presses of it: on Windows Ctrl then W still closes the tab. NEVER SEEN ON A GPU by anyone here; how fast the view should come round,
+  outline's program compiles there and draws with no GPU error; a real drag with the camera's key held, a real held press, a real double tap with the mouse to one side
+  and a real move of the mouse after it; the check asks the page which key that is, `__keys.camCap()`, looks for the last row under that name and
+  presses that key, so it follows the page as it opens). NOT DONE: the Controls tab has no line for the double tap. The camera's key is the Space bar
+  on the page while the board leaves it spare (`KEYMAP.camSpace`, docs/agents/player.md); under `?camspace=0` it is Ctrl as it was, and there a double
+  tap is two more presses of it: on Windows Ctrl then W still closes the tab. NEVER SEEN ON A GPU by anyone here; how fast the view should come round,
   whether 250 / 300 ms is the right tap and 10 px the right let-go are first guesses in `BEHIND`, `TAPTWICE` and `CARRY`.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
