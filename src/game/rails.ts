@@ -37,6 +37,9 @@ import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
 import { stepLine, lessonLine } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 import { slotSetupLeft, setupRows } from './slotsetup';   // (asked inside gate() only)
+import { HANDRING } from './handring';
+import { choosable, runningVerb } from './interact';   // (both read inside gate() only)
+import { INTERACT_KEY } from './consts';
 
 export const RAILS = { on: false,
   /** the sky seat: metres a second the walk keys shift the view at the default zoom, and how far from the squad it may go */
@@ -184,8 +187,13 @@ export class Rails {
     const setup = slotSetupLeft(g) > 0.03 ? g.player.setup : null, rows = setup ? setupRows(g.player, setup.gun) : [];
     // (a row's digit with the setup up is the ROW's, whatever else that digit is: the rifle's own key is also its load's row)
     const rowOf = (code: string) => rows.find(x => code === `Digit${x.key}`);
+    // (handring.ts `early`: a digit pressed INSIDE the interaction key's hold, before the ring is up, puts it up and is its wedge at once. A hand that
+    //  reads "Hold E, then 5" presses the 5 well inside that hold, and with the digit dropped here as a locked slot's the key did nothing at all. It
+    //  passes only where interact.ts will take it this tick — the press armed, the key down, something to choose — so it never reaches a slot)
+    const P = g.player, S = P.sel, handKey = A.has('use') && !handUp && HANDRING.on && HANDRING.early && !g.puppet && !P.down && !P.takedown && !g.orders?.cmdRing && !g.orders?.menu
+      && input.keys.has(INTERACT_KEY) && (S.downT >= 0 || (input.pressed.has(INTERACT_KEY) && !P.fHeld)) && !runningVerb(g) && (!this.locks('whistle') || choosable(g.nearby));
     const ok = (code: string) => { const r = rowOf(code); if (r) return A.has(r.kind === 'mode' ? 'mode' : r.kind === 'light' ? 'light' : 'alt');   // (the load is what the right button fires: its row opens with that button)
-      return FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || (handUp && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight')); };
+      return FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || ((handUp || handKey) && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight')); };
     let dropped = 0;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
     if (this.skyOn) { if (A.has('pan')) this.pan(input, cam, dt); this.keep(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
