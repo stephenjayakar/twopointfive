@@ -42,6 +42,8 @@ import { mountKitFigure, type KitFigure } from './kitFigure';
 import { KIT_VIEW, mountKitView, type KitViewFrame } from './kitView';
 import { KIT_CLIP } from './kitCard';
 import { LOOK, placeOfQuery } from '../scene/look';
+import { mountKitBrief, type KitBrief } from './kitBrief';
+import { mountKitGuide, type KitGuide } from './kitGuide';
 
 export const START_PAGE = { on: typeof window !== 'undefined' && typeof window.addEventListener === 'function' };
 try { if (new URLSearchParams(location.search).has('cards')) START_PAGE.on = false; } catch { /* no page (the harness) */ }
@@ -410,9 +412,13 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   // in. let's just remove the old one with the figure?" — he stood in while the picture booted, and wherever a level stages none): the column waits EMPTY
   // for the picture and stays empty where there is none. He is mounted, and drawn, only under `?oldfigure` (KIT_VIEW.on off: no picture, the page as it was).
   const figHost = el('div', 'onefig'); let fig: KitFigure | null = null, kview: KitViewFrame | null = null;
+  // THE KIT STEP'S BRIEF AND ITS WALKTHROUGH (ui/kitBrief.ts `?kitbrief=0`, ui/kitGuide.ts `?kitguide=0`): the job, the map and what the place asks stay in
+  // sight over the kit, and a first visit is walked through the step row by row. Both are this page's alone; each is null with its switch off.
+  let kbrief: KitBrief | null = null, kguide: KitGuide | null = null;
+  const guideOn = () => (pane === 'loadout' && L?.open ? L : null);
   const paintFigure = (s: LoadoutScreen) => { if (shut || !kview) return; if (pane !== 'loadout' || s !== L) { kview.show(null); fig?.show(null); return; }
     if (kview.show({ search: s.search(), kind: s.entry.kind, level: s.entry.level, way: ready ? M.way : 0, squad: s.squad, member: s.member, row: s.card?.at() ?? -1 }) || !fig) { fig?.show(null); return; }   // (where the mission's level stages it: the team at its way-in door, the real renderer's picture — ui/kitView.ts; `?oldfigure` = the standing man everywhere)
-    const k = s.entry.kind; fig.show({ member: s.member, squad: s.squad, suit: LOOK.on && LOOK.suit && (k === 'quiet' || k === 'solo'), look: LOOK.on && placeOfQuery(new URLSearchParams(s.search().replace(/^[^?]*\?/, ''))), card: s.worn(), hour: ready ? M.hourNow : undefined, cloud: !ready ? 0 : snowLevel(s.entry.level?.replace(/\.json$/, '')) ? WEATHER_PRESETS.snow.cloud : M.weather ? WEATHER_PRESETS[M.weather].cloud : 0 }); };   // (he stands in the light of the hour the mission is set for, under the cloud of its weather: a snow level's own, whatever the hidden pick remembers)
+    const k = s.entry.kind; fig.show({ member: s.member, squad: s.squad, suit: LOOK.on && LOOK.suit && (k === 'quiet' || k === 'solo'), look: LOOK.on && placeOfQuery(new URLSearchParams(s.search().replace(/^[^?]*\?/, ''))), card: s.worn(), hour: ready ? M.startHour : undefined, cloud: !ready ? 0 : snowLevel(s.entry.level?.replace(/\.json$/, '')) ? WEATHER_PRESETS.snow.cloud : M.startWeather ? WEATHER_PRESETS[M.startWeather].cloud : 0 }); };   // (he stands in the light of the hour the mission is set for, under the cloud of its weather: a snow level's own, whatever the hidden pick remembers)
 
   /** the short list's settings are what the page shows for `m`: its pick, else null */
   const asPick = (m: Mission): Pick | null => { const p = pickOfMission(m.id); if (!p) return null; const d = quietFogAside(() => leversMixed() ? leversBase() : difficultyNow());   // (levers moved to a mix of their own: the level they stand over)
@@ -423,11 +429,12 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   const next = el('button', 'lo-btn sp-next', 'Team & kit ›'); next.setAttribute('type', 'button'); next.setAttribute('data-act', 'kit');
   next.addEventListener('click', () => { setPane('loadout'); mount(); });
   const say = () => { const bar = host.querySelector?.('[data-row="actions"]') as HTMLElement | null; if (!bar) return;
-    bar.setAttribute('data-what', pane === 'loadout' && KIT_CLIP.on && L?.card ? WHAT.loadout.replace('change', 'change · C copy · V paste') : WHAT[pane]); if (next.parentElement !== bar) bar.appendChild(next);   // (copy and paste of a man's kit — ui/kitCard.ts KIT_CLIP — where there are cards to copy)
+    bar.setAttribute('data-what', (pane === 'loadout' && KIT_CLIP.on && L?.card ? WHAT.loadout.replace('change', 'change · C copy · V paste') : WHAT[pane]).replace('Esc back', pane === 'loadout' && kbrief?.map ? 'M map · Esc back' : 'Esc back')); if (next.parentElement !== bar) bar.appendChild(next);   // (copy and paste of a man's kit — ui/kitCard.ts KIT_CLIP — where there are cards to copy)
     root.classList.toggle('nokit', !!L && kitAsIssued(L.entry)); root.classList.toggle('quiet', !!L && quietGear(L.entry.kind, search)); };
   const steps: [Pane, HTMLElement][] = [];
   const setPane = (p: Pane) => { const was = pane; pane = p; root.classList.toggle('pane-loadout', p === 'loadout'); root.classList.toggle('pane-list', p === 'list');
     for (const [k, b] of steps) { b.classList.toggle('on', k === p); if (k === p) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); }
+    if (was !== p) kbrief?.setBig(false);
     if (was !== p && sheetEl) sheetEl.scrollTop = 0;   // (the sheet folds or unfolds under the keys: it is read from its top again)
     L?.paint(); say(); paintTeam(); };
   // SETUP (the calm pass): the list's own setting rows — Difficulty with its three levers, Hour, Weather, Way in — stay the list's (it paints them, its keys
@@ -479,11 +486,11 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     if (L) { squads.set(L.entry.id, L.squad); L.close(); }
     mounted = key;
     const p = asPick(m), row = pickOfMission(m.id);   // (a short-list row opens at the ROW's team size — 'you + four' — until a size is picked on the page)
-    L = openLoadout(entryOfMission(m), { host, embedded: { keys: () => !shut && pane === 'loadout' }, search: base, squad: squads.get(m.id) ?? (row && pickEntry(row) ? pickSquad(row) as SquadSize : undefined),
-      back: toList, onPaint: s => { paintFigure(s); if (s === L) say(); },   // (say: the key line names copy and paste only while there are cards — a mission's own issue takes them away after the screen is up)
-      onDeploy: to => { kview?.close(); kview = null; try { globalThis.localStorage?.setItem('twopointsix.mission', m.id); } catch { /* no store */ }   // (the row the page opens on next time, however it was deployed)
+    L = openLoadout(entryOfMission(m), { host, embedded: { keys: () => !shut && pane === 'loadout', key: (code, repeat) => !!kbrief?.key(code, repeat), rest: (code, repeat) => !!kguide?.key(code, repeat) }, search: base, squad: squads.get(m.id) ?? (row && pickEntry(row) ? pickSquad(row) as SquadSize : undefined),
+      back: toList, onPaint: s => { paintFigure(s); if (s === L) { say(); kguide?.paint(guideOn()); } },   // (embedded.key: the map's M, and the keys that put it back while it is large; embedded.rest: the walkthrough's Esc and Enter, after the highlighted row has had its say · say: the key line names copy and paste only while there are cards — a mission's own issue takes them away after the screen is up)
+      onDeploy: to => { kguide?.deployed(); kview?.close(); kview = null; try { globalThis.localStorage?.setItem('twopointsix.mission', m.id); } catch { /* no store */ }   // (the row the page opens on next time, however it was deployed)
         if (p && pickOfQuery(to)) notePicked(p); count.textContent = 'loading…'; } });   // (played = started AS the short list's row: a team size of the player's own is not it)
-    say(); paintTeam(); paintFigure(L);
+    say(); paintTeam(); paintFigure(L); kguide?.paint(guideOn());
   };
   /** out of the kit, back on the rows (Esc there, the Mission step): the size picked is kept for the mission */
   const toList = () => { if (L) squads.set(L.entry.id, L.squad); setPane('list'); mount(); };
@@ -497,6 +504,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     lastId = m.id; lastHour = M.hourNow;
     tip.textContent = p ? p.line : '';
     if (fresh) rest('', '');
+    kbrief?.show(m);
     paintVals(fresh);
     mount();
   };
@@ -504,7 +512,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   M = openMissions({ root: opts.root, list, keep: true, planPx: GROUPS_UI.on ? 640 : 1320, select: opts.select, first: PICKS_UI.on ? PICKS[0]?.mission : undefined, fold: GROUPS_UI.on, tiles: GROUPS_UI.on, heads: GROUPS_UI.on ? undefined : first > 0 && first < list.length ? { [first]: 'Every other mission' } : {},   // (the groups, folded — ui/missions.ts groupHeads / `fold`; a visit that names no row opens on the short list's first, wherever its group stands; ?nogroups = the short list on top and the one heading it had)
     onPick: () => { setPane('loadout'); mount(); },
     onPaint: () => { if (ready) onPaint(); },
-    onClose: () => { shut = true; if (L?.open) L.close(); L = null; fig?.close(); fig = null; kview?.close(); kview = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
+    onClose: () => { shut = true; if (L?.open) L.close(); L = null; fig?.close(); fig = null; kview?.close(); kview = null; kguide?.close(); kguide = null; kbrief?.close(); kbrief = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
       root.removeEventListener?.('click', onClick, true); for (const v of vals) if (v.lit) clearTimeout(v.lit);
       if (playerHour !== null) try { M.hour(playerHour); } catch { /* the list is gone */ }   // (the list remembers the PLAYER's hour, not one a short-list row put on)
       setTimeout(() => { const m = document.getElementById?.('menu'), b = m?.classList.contains('on') && !m.hasAttribute('inert') ? m.querySelector?.('.actions button.primary') as HTMLElement | null : null; if (b && !currentMissions()) b.focus?.(); }, 0); } });   // (the card behind has the keys again: Enter is its 'Play ›')
@@ -540,16 +548,20 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     rail.append(rule, team, read);
     sheet.insertBefore(brief, sheet.firstChild); sheet.insertBefore(rail, brief.nextSibling); sheet.appendChild(store);
     if (GROUPS_UI.on) sheet.insertBefore(map, rail.nextSibling);   // (the tiles' cards are pictures: the map sheet stands under the rail, in the room it leaves)
+    kbrief = mountKitBrief(root, sheet);
   }
   sheet?.appendChild(host);
   if (back) back.textContent = opts.backLabel ?? '‹ Main menu'; if (title) title.textContent = 'Play'; count.textContent = '';
   // the two steps, named on the head: where the keys are is the bright one, and a click on the other goes there
-  if (title?.parentElement) { const bar = el('div', 'msteps');
+  let stepsBar: HTMLElement | null = null;
+  if (title?.parentElement) { const bar = stepsBar = el('div', 'msteps');
     for (const [k, words] of [['list', 'Mission'], ['loadout', 'Team & kit']] as [Pane, string][]) { const b = el('button', 'mstep', words); b.setAttribute('type', 'button'); b.setAttribute('data-step', k);
       b.addEventListener('click', () => { if (pane === k) return; if (k === 'list') toList(); else { setPane('loadout'); mount(); } });
       if (steps.length) bar.appendChild(el('span', undefined, '›')); bar.appendChild(b); steps.push([k, b]); }
     title.parentElement.insertBefore(bar, title.nextSibling); }
   if (foot) foot.textContent = '';   // (the keys are on the rail's rows and on the Deploy bar now)
+  kguide = mountKitGuide(root, kbrief, stepsBar);
+  if (kbrief) kbrief.onChange = () => { if (shut) return; say(); kguide?.paint(guideOn()); };   // (say: the key line names M only where there is a map to open)
   MISSIONS.keysAway = () => !shut && pane === 'loadout' && !!L?.open;
   // THE MOUSE AND THE TWO STEPS. The rail's Team & kit row and the head's step marker step INTO the kit; a click on a mission row steps back out to its
   // briefing; Deploy clicked from the rows is done there and the keys stay where they were. The step is taken AFTER the click has been delivered: the sheet folds when the

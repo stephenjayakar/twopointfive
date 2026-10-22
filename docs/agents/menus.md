@@ -1234,6 +1234,47 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that lies left to right (the card's standing keys; a walk by the four directions would be a change of the screen's keys); a count's tile has no
   pop-up, only its arrows; in a short window the pop-up lies over the lower part of the guns' tiles. Seen only in
   headless Chromium on the software adapter: never on a GPU, nobody has played it.
+- **The kit step says the job and teaches itself** (2026-10-22; `src/ui/kitBrief.ts KITBRIEF`, `src/ui/kitGuide.ts KITGUIDE`; the maintainer: "we should
+  teach how to pick squad layouts! so maybe a tutorial on the gear page for a mission (that's skippable). honestly it doesn't make a ton of sense right
+  now since you don't know anything about the objective or map when picking kit"). TWO THINGS, EACH ITS OWN SWITCH, both UI only (nothing under
+  `src/game` reads either, no knob table, no journal key, no `FROZEN_HOLDS` row: they are mounted by `ui/startpage.ts` alone, which no headless stand
+  opens). **THE BRIEF** (`?kitbrief=0` = the step's head as it was, the name alone): Team & kit keeps a band across its top — the mission list's own map
+  sheet at the left with the way in marked (`.msheet > .mmap`; a click or M makes it large over the step with the name and the job under it, `.kb-cap`;
+  again, Esc or Enter puts it back; the foot's key line gains 'M map' where there is a map to open), and beside it the name, what is set (`.mcsum`), the
+  facts and the job (`.mblurb`), the list's own elements shown by this file's rules and no new sentence. It adds to the facts row WHAT THE PLACE ASKS OF
+  A KIT, counted off the level's file by the plan's own fetch AS THE MISSION IS STAGED (`ui/missions.ts placeNeeds`, `Plan.needs`): the doors found
+  locked, those of them that are steel, a rescue's hostages — a rescue's side door (`scenarios.rescue.side.door`) is unlocked by its staging and is not
+  counted; the bundled office's rescue is read from `levels/office.scenarios.ts`. The cells are `.mfact.kb`, drawn on this step only; a count is a digit
+  to five and a word past it (`countWords`), and the list's Defenders cell is drawn AGAIN by this file with its count in words ('eleven'), the list's
+  own cell hidden on this step. IN A SHORT WINDOW (800 px tall and under: the maintainer's own is about 1000 x 673) THE BAND IS NOT A PIXEL TALLER THAN
+  THE NAME ALONE WAS: the map a small mark, the name, the facts under it, and no job sentence (no text is cut to fit: `textsize-page` holds that) — the
+  job is read on the large sheet. `kitdense-page`'s bars (a gun's pop-up ends over the foot at 1317 x 775, nothing scrolls at 1200 x 675) are why.
+  Under `?nogroups`, in a window under 900 px wide, or where the plan did not come there is no map on the step, only the words, and M is not taken.
+  **THE WALKTHROUGH** (`?kitguide=0` = none, and no word for it; `?kitguide=1` = played on this visit whatever the browser remembers): a browser that
+  has never finished it is walked through the step on the first mission whose kit can be picked — a small card beside ONE lit row, the rest of the step
+  dimmed and still live, the keys put on the lit row, and the card goes when its thing is DONE (`beatDone`) or on its 'Next': the job (the map opened
+  and put back) · who comes (another size) · a kit for the squad (another named kit put on; its card says what THIS place asks: hostages, locked doors)
+  · each man (another picked) · his card (one thing on it changed by hand) · go (Deploy, or its 'Got it'). A beat whose row this mission's step does
+  not have is left out (a man alone has no roster beat; with the brief off, or no map, there is no job beat). ENTER UNDER A CARD IS THE CARD'S 'NEXT'
+  wherever it would otherwise deploy (every row but the named kits, the man's card and Deploy's own): a first press of Enter on a card never starts the
+  mission. 'Skip' on every card, or Esc: the first Esc is the walkthrough's, the next is the step's own. Finished, skipped or deployed UNDER A CARD, it
+  is not shown again (localStorage `twopointsix.kitguide`); THE WAY BACK is the word 'How to pick' on the step's head. A TUTORIAL OR TRAINING ROW HAS
+  NONE: its kit is issued (`kitAsIssued`), there is no card to change, and a deploy from one does not count as seen. NOT PLAYED UNASKED IN A BROWSER A
+  SCRIPT DRIVES (`navigator.webdriver`, `KITGUIDE.driven`): every other page tool measures the step as it stands; the brief IS on their pages. THE
+  SEAMS, in `ui/loadout.ts`: `LoadoutOpts.embedded.key(code, repeat)`, asked before any row of the kit screen (the map's M, and the keys that put the
+  large sheet back); `embedded.rest(code, repeat)`, asked after the highlighted row and before the screen's own Enter / Esc (the walkthrough: an open
+  gun pop-up's Esc shuts the pop-up first); `LoadoutScreen.kitName`, the named kit that is on ('' = a mix of the player's own). WHAT THE WALKTHROUGH
+  CHANGES AND KEEPS: the things it asks the player to try are real changes to the kit this machine keeps. CHECK:
+  `PORT=<dev server> node tools/qa/kitguide-page.cjs [outDir]` — the real page in headless Chromium, no GPU needed, real keys and clicks at 1440 x 900,
+  1353 x 770 and 1000 x 673: the brief's map, words and counts on the registry and the office's rescue, no digit above 5 among the facts, M, the short
+  band no taller than the old head, every beat's card up beside its lit row, whole in the window and clear of the row, put away by its own thing and
+  not by another, Enter as Next, a pop-up's Esc, a card changed by key, the map opened mid-way, a team size named on the address kept, the memory, the
+  word, both Esc, each switch off, a tutorial row, a quiet mission's card, a driven browser (139 PASS); `KITGUIDE_BREAK=1` = both switches off, the
+  step as it was: FAILS (25 lines at one size). The kit step's other page checks were run beside the build head's own: `kitdense-page`, `kitline-page`
+  and `quietgear-page` red on the same old lines as the head, `kitpaste-page`, `kittree-page` and `textsize-page` clean. NOT SEEN: on a GPU (so never
+  with the team's picture in the left column behind it), by a first-time player, and Deploy pressed under a card (it calls `deployed()`; no check
+  loads a mission for it). OPEN, for the menus' owners: the Mission step's own facts row still writes 'Defenders 11' as digits; a named kit a mission
+  recommends (a field on its row, a mark on the Kit row's button) is not built — only what the place asks is said.
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
   a one off UI for tweaking a scene like this? i'm curious what all the "layers" are for the effects and what variables we can configure"). Any link with
@@ -1615,3 +1656,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   file, a recording with and without the key, mission.ts's two lines) and a block of `debrief-dom` (the card on a fake DOM, key up and down, counts that would tone every cell);
   `LOUDCARD_BREAK=1` fails both on both stands. NEVER SEEN ON A GPU; nobody has played to the card since. Left as it was: the stealth game's
   cells and timeline still stand on a loud row's card (a loud card of its own would be new work).
+- **A row with its own hour or weather draws no Hour or Weather row** (2026-10-22; `src/game/rowset.ts` `rowHour` / `rowWeather`, `ROWSET.on`,
+  `?rowset=0`; the rule and its check are in `missions.md`, "A mission row can name its own hour and weather"). What does not apply is not drawn: H and J
+  do nothing on such a row, the start page's Setup rail follows (it already skips a row that is not drawn), and the older kit figure (`?oldfigure`)
+  stands in the row's hour under its cloud (`MissionsScreen.startHour` / `startWeather`: what the highlighted row is started in). A row that names only
+  one keeps the other row, whose note reads the mission's own for the hidden one. Its LINK is any row's link: the visitor's Hour and Weather picks stay
+  on it and on every later link, and the row's own win when the page boots. The debugger's 'weather kind' buttons say so and do nothing on a row with
+  its own weather. No row names one yet.

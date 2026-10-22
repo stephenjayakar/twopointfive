@@ -194,6 +194,12 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Alone, and nobody knows you came. Through the dark to the strongroom, and out the way you went in.',
     scene: 'The post was paid through one house in town, and its ledger says by whom. It is in the strongroom. Nobody is to know you were there.',
     teaches: ['Stay low and out of the light', 'A whistle puts a guard where you want him', 'Take a man from behind', 'Locks, the fuse box, night vision', 'Out the way you came in'] },
+  // quiet, as two (tools/levels/tut-pair.ts): one partner under the pair rules, and each stretch of a truck park is one thing a second man makes possible
+  { id: 'tut-pair', title: 'The truck park, as two', kind: 'quiet', squad: 1, level: 'tut-pair.json', group: 'tutorial',
+    place: 'A walled truck park, at night', lean: 'quiet', defenders: 4,
+    blurb: 'Two of you, and nobody knows you came. A man each, on one beat; the lights; and out together by the far gate.',
+    scene: 'The ledger paid for a truck park at the edge of town, and the convoy\'s fuel went through it. Its manifest is in the office. Two of you go in for it, and nobody is to know.',
+    teaches: ['A partner who follows, as quiet as you', 'One key sends him to a man\'s back', 'Two men down on one beat', 'He works the fuse box while your hands are full', 'On in the dark, together'] },
 ];
 /** every row that is a lesson: the tutorial's missions, then the Training levels */
 export const LESSON_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...TRAINING_MISSIONS];
