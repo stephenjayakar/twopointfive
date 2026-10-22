@@ -370,14 +370,15 @@ export class Panel {
       };
       window.addEventListener('mousemove', mm, true); window.addEventListener('mouseup', mu, true);
     });
+    let shown = inp.value; inp.addEventListener('focus', () => { shown = inp.value; });   // (the text as the field took the keys: left as it was, a click away or Esc writes nothing — parsed back, the ROUNDED text overwrote a finer value)
     inp.addEventListener('keydown', e => {
       e.stopPropagation();   // (Input ignores typing targets anyway; this also keeps host pages' shortcuts off the field)
       if (e.key === 'Enter') { commit(parseFloat(inp.value)); inp.blur(); }
-      else if (e.key === 'Escape') { inp.value = fmt(get()); inp.blur(); }
-      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const cur = parseFloat(inp.value); const base = Number.isFinite(cur) ? cur : get(); const v = clampV(base + (e.key === 'ArrowUp' ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = fmt(v); inp.select(); after(); }
+      else if (e.key === 'Escape') { inp.value = shown = fmt(get()); inp.blur(); }
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const cur = parseFloat(inp.value); const base = Number.isFinite(cur) ? cur : get(); const v = clampV(base + (e.key === 'ArrowUp' ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = shown = fmt(v); inp.select(); after(); }
     });
-    inp.addEventListener('blur', () => { const v = parseFloat(inp.value); if (Number.isFinite(v) && Math.abs(v - get()) > 1e-9) commit(v); inp.value = fmt(get()); });
-    inp.addEventListener('wheel', e => { if (document.activeElement !== inp) return; e.preventDefault(); const v = clampV(get() + (e.deltaY < 0 ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = fmt(v); after(); }, { passive: false });
+    inp.addEventListener('blur', () => { if (inp.value !== shown) { const v = parseFloat(inp.value); if (Number.isFinite(v) && Math.abs(v - get()) > 1e-9) commit(v); } inp.value = fmt(get()); });
+    inp.addEventListener('wheel', e => { if (document.activeElement !== inp) return; e.preventDefault(); const v = clampV(get() + (e.deltaY < 0 ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = shown = fmt(v); after(); }, { passive: false });
     return { el: inp, paint };
   }
   toggleBox(sec: HTMLElement, label: string, get: Getter<boolean>, set: Setter<boolean>, title?: string, def?: boolean) {
