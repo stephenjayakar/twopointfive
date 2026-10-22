@@ -8,11 +8,15 @@ import type { Bot } from '../lesson-run';
 import { CLOSE } from '../../../src/game/close';
 import { WORK } from '../../../src/game/workthings';
 import { RAILS } from '../../../src/game/rails';
+import { floorPlan } from '../../../src/game/floorplan';
 import { TP } from '../../levels/tut-pair';
 
 export const query = '?quiet&squad=1';
-// the moon on his meter (lesson-run's --moon): the CPU's light estimate leaves it out
-export const mode = { moon: true };
+// the moon on his meter (lesson-run's --moon): the CPU's light estimate leaves it out. And a FLOOR under every meter (--floor), the partner's own too:
+// on a real GPU the moon's bounce leaves no shadow in this yard dark. The maintainer's play read 14 in the gap between the containers and 27 behind the low
+// wall, where the software adapter read 0 to 3, and the partner (who will not walk a lit stretch a man has a line to) hung back at the gap and was never
+// going to come: every run here had gone by, the meters dark. So this mission is played at what his GPU showed; `--floor 0` is the dark it was built in.
+export const mode = { moon: true, floor: 0.2 };
 /** its steps are a tutorial mission's (game/rails.ts): TPS_RAILS=1 on the frozen stand, or the shipped stand */
 export const needs = 'rails';
 
@@ -87,6 +91,9 @@ function waitSet(B: Bot, gd: any) {
   calm(B, n0, `while the partner worked round to ${gd.callsign}`);
 }
 
+/** the word's key as the floor plan marks it by a man of the pair who waits on it (game/floorplan.ts: the overlay draws exactly this list) */
+const pairKey = (B: Bot) => floorPlan(B.g).doors.filter(d => d.why === 'pair');
+
 export const steps: Record<string, (B: Bot) => void> = {
   // (the mission's lines name the right button for the man in his arm: close.ts heldClicks, on in the page and held off on the frozen stand — raised here with
   //  the two parts the pair's rules stand on, or the frozen run would be of a mission whose own line is false)
@@ -95,12 +102,18 @@ export const steps: Record<string, (B: Bot) => void> = {
   lead: B => { const n0 = seen(B); B.go(TP.first, 20, { near: 0.3 }); together(B, 4.2, 20, 'follow to the first mark'); B.wait(0.5); B.say(`  on the first mark: lit ${lit(B)}; the partner at ${mate(B).char.pos[0].toFixed(1)}, ${mate(B).char.pos[2].toFixed(1)} (${B.g.orders.statusOf(mate(B))})`);
     if (!mate(B).char.anim.crouch) B.fail('the partner is on his feet behind a player who is low'); calm(B, n0, 'on the way to the first mark'); },
   // (one step: the order, then the line is what he is doing until he says "set")
-  mark: B => { const A = man(B, 'pickup'); onMan(B, A); B.step(4); watchLine(B, 'after the order on the first man'); waitSet(B, A); },
+  // (…and until the word is taught nothing on the floor names its key: the maintainer's play, "what is F here", was the key's mark by the partner at this step)
+  mark: B => { const A = man(B, 'pickup'); onMan(B, A); B.step(4); watchLine(B, 'after the order on the first man');
+    if (B.g.rails.locks('word') && pairKey(B).length) B.fail('the word\'s key is marked by the partner while the lesson still holds the word shut');
+    waitSet(B, A); },
   word: B => { const A = man(B, 'pickup'), n0 = seen(B);
+    { const K = pairKey(B); if (K.length !== 1 || !K[0].ready || !K[0].now) B.fail(`the partner is set and the word is taught, and its key is not marked ready by him (${K.length} mark(s)${K[0] ? `, ready ${K[0].ready}, now ${K[0].now}` : ''})`);
+      B.say('  the word\'s key is marked by the partner, ready'); }
     B.wait(REACT); B.press('KeyF');
     if (!B.until(() => A.state === 'dead', 15)) B.fail(`the word was given and ${A.callsign} is still up (${B.g.orders.statusOf(mate(B))})`);
     B.wait(1); calm(B, n0, 'when the first man went down'); },
-  // to the gap: both men of the truck park in view through it. He comes back by himself (no order asks for it), and the step waits for him
+  // to the gap: both men of the truck park in view through it. He comes back by himself (no order asks for it). The step is done by the player's feet
+  // (it used to wait on the partner, and was a dead end the day he judged the way lit); THIS run still fails if he does not come up, here and past the wall
   gap: B => { const n0 = seen(B); B.crouch(true); B.go(TP.gap, 20, { near: 0.3 }); together(B, 4.2, 30, 'fall in again by himself after his man went down'); B.wait(0.4); B.say(`  at the gap: lit ${lit(B)}; the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); calm(B, n0, 'at the gap'); },
   // (TUTPAIR_NEAR=1: the squad's key on the NEAR man first, as a player who misread the card would. The step must still be up and still asking; then the far man)
   far: B => { if (process.env.TUTPAIR_NEAR === '1') { onMan(B, man(B, 'near')); B.wait(1.0); const p = RAILS.on ? B.g.rails.prompt() : null;

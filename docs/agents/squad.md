@@ -246,6 +246,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shifts a little as the cursor goes out to a wedge; a ring put up right after a fast sweep of the cursor ends some px off it as the view
   finishes easing (25 px after the check's instant jump; a cursor at rest lights nothing); and it can slide under the weapon panel as he walks. Driven on the real page (headless
   Chromium, the software adapter): he walked with the ring up and it moved 45 px with the floor, a digit then gave its wedge; never seen on a GPU.
+  THE QUIET PAIR'S MARK FOLLOWS THE SAME RULE (10-22; the maintainer in the pair's tutorial mission, the order just given: "what is F here"): the key
+  a step ahead of a man who waits on the word was lit from the order on (`ready: true`), and its bar ran through the cap, so it read as a key struck
+  out, at a step where the lesson had not taught the word. Now its `ready` is the man's own 'set' (or held for a watcher: the press sends him anyway),
+  so the cap is DARK while he works round and LIT when he is set; `ui/planfloor.ts` draws no bar for `why: 'pair'` (there is no doorway under it); and
+  a lesson that still holds the word shut (`rails.locks('word')`) lists no pair mark at all. No switch of its own: it rides on `PLAN.keyLit` and
+  `RAILS.on`; picture only, no digest moves. `plan-check` line 16 has a second line for it (dark just ordered, lit when set, none under a lesson's
+  lock; both stands), and the pair mission's scripted player fails if the mark is up before its `word` step or not ready at it. Never seen on a GPU.
   THE KEY'S CAP (`PLAN.keyLit`, `floorplan.ts capOf`, `PlanDoor.ready`, `ui/planfloor.ts`, `.plan .lit` in index.html; "need some indicator on the
   F on the door when it's queued vs live. maybe black background to lighting up to yellow background"): a stack waits on the word from the moment
   it is ordered, so the cap was on the door at once and looked the same walking or stood. Now every door that waits on the key carries its cap:

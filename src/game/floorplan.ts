@@ -18,7 +18,8 @@
 // `doors` = everything WAITING ON THE PLAYER'S KEY, read off its owners' own books by their own rule for the press (`waitsOnKey`: doortools.ts `waiting4` /
 // `thresholdHeld` / `set` / `input`, wallcharge.ts `set` / `input`, the room clear drill's 'set' — repeated here as a reader; if a rule moves, `plan-check`'s
 // word lines say so): a threshold held, a charge set on a door or a wall, the drill stacked, and for the four a tool given 'on my word', a charge being set,
-// a pair on a plain stack. The overlay lays a bar across the doorway (along the wall's foot) with the key on the one the key would send NOW.
+// a pair on a plain stack. The overlay lays a bar across the doorway (along the wall's foot) with the key on the one the key would send NOW (a quiet
+// pair's man who waits on the mark has the key alone, a step ahead of him: see below, 'the quiet pair's mark').
 // `age` = seconds since his order came: the overlay draws an order just given at full strength (who + the way), then lets it sink back.
 // With the menu up, `who` = the men its orders go to (a ring at each one's feet, before anything is given).
 //
@@ -73,7 +74,7 @@ export const PLAN = {
   ringM: 0.3, sectorM: 1.6, sectorDeg: 24, sightM: 14,
   /** the nav grid is asked for a leg his own path does not cover at most this often, seconds */
   reaskSecs: 0.5,
-  /** the quiet pair's man waiting on the mark: his bar is this far ahead of his feet, metres */
+  /** the quiet pair's man waiting on the mark: the key (and, with `keyLit` off, its bar) is this far ahead of his feet, metres */
   pairBarM: 0.55,
 };
 
@@ -198,12 +199,17 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
   // the rescue's entry on the hostage room, stacking or stacked and held for the second word (rescue.ts orderDoor: its own reading of the key, the LAST of them)
   const entry = RS.active && !RS.result && RS.entry && !RS.entry.gate.go ? RS.entry : null;
   if (entry) for (const e of entry.ops) if (e.ended === null) put(e.op.door, e.op.men.filter(alive), 'stack', false).gate = true;
-  // the quiet pair's mark (pairorders.ts input: the FIRST reader of the key — while a man waits on it the press is his and gets no further): a bar a step
-  // ahead of each man who waits, across his gun's line. His own feet and gun: nothing of the man he waits on
+  // the quiet pair's mark (pairorders.ts input: the FIRST reader of the key — while a man waits on it the press is his and gets no further): the key a step
+  // ahead of each man who waits, on his gun's line. His own feet and gun: nothing of the man he waits on. The cap follows the doors' rule (PLAN.keyLit):
+  // dark while he is still working round — a press then sends a man who is not set — and lit once he is on his place (or held for a watcher: the press
+  // sends him anyway). The maintainer's play note (10-22, the pair's lesson, the order just given): "what is F here" — the cap was lit from the order on,
+  // its bar drawn through it (a struck key, to the eye), and the lesson had not taught the word yet. So: `ready` is the man's own 'set'; the overlay
+  // draws no bar for a pair under PLAN.keyLit (ui/planfloor.ts — there is no doorway under it; with the switch off, the bar as it was); and a lesson that still holds the word shut (rails.ts locks) lists no
+  // mark at all: the key does nothing there, so nothing names it.
   const marked = g.pair.waiting(), pairFirst = up && marked.length > 0;
-  for (const [gd] of marked) {
+  for (const [gd, J] of marked.length && !g.rails?.locks('word') ? marked : []) {
     const p = gd.char.pos, y = gd.char.aimYaw, fx = Math.sin(y), fz = Math.cos(y), cx = p[0] + fx * PLAN.pairBarM, cz = p[2] + fz * PLAN.pairBarM;
-    out.doors.push({ door: null, a: [cx - fz * 0.3, 0, cz + fx * 0.3], b: [cx + fz * 0.3, 0, cz - fx * 0.3], tone: toneOf(gd), key: 'F', now: pairFirst, ready: true, why: 'pair' });
+    out.doors.push({ door: null, a: [cx - fz * 0.3, 0, cz + fx * 0.3], b: [cx + fz * 0.3, 0, cz - fx * 0.3], tone: toneOf(gd), key: 'F', now: pairFirst, ready: J.set || !!J.watcher, why: 'pair' });
   }
   if (!by.size && !wSet.length) return;
   const free = tSet.filter(c => !T.ops.some(o => o.kind === 'charge' && o.door === c.door && !!o.word && isNaN(o.word.go1)));   // (not on a word already given)
