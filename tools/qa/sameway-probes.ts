@@ -1,6 +1,6 @@
 // The 'same-way' probe: A PAIR GOES ROUND ONE WAY (orders.ts ORDERS.sameWay — sameWays). Run through probes.ts:
 //   bun run tools/qa/probes.ts same-way        (family: ordereddoor)
-// PASS / FAIL each, headless. The plan lesson's level (levels/tut-plan.json) stood up with its four men and nobody else: a pair is stood side by side at a
+// PASS / FAIL each, headless. The plan lesson's level (levels/tut-plan.json) stood up as its start deals it (the four men; the level's own enemies are at their posts — see rig()): a pair is stood side by side at a
 // row of spots along the front of the hall and told to stack on the hall's back door, as a player tells it. The probe reads each man's planned way (the
 // corners his order was handed, joined by the game's own path search) and measures how far apart the two ways get, with its own ruler:
 //   · with the switch off the flaw is there: at some spot the two ways are a building apart (one man round the hall by each side)
@@ -43,7 +43,7 @@ interface Rig { g: any; W: any; men: any[]; door: any; way: (m: any) => number[]
 async function rig(): Promise<Rig> {
   const W: any = await quiet(() => standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${LEVEL}.json`), 'utf8'))), seed: 1 })), g = W.game;
   LESSON.on = false; const started: any = await quiet(() => startFromQuery(g, `?levelFile=${LEVEL}.json&roomclear=1&squad4`)); if (!started.spec || started.why) throw new Error(`the level did not start: ${started.why}`);
-  for (const h of [...g.guards]) if (h.team !== 'operative') GDM.despawnUnit(g, h);
+  for (const h of [...g.guards]) if (h.team !== 'operative') GDM.despawnUnit(g, h);   // (NOT an empty floor: a man taken off the roster has the start deal the floor afresh on its next frame, so the level's eight are back at their posts when the men below are looked up. Left as it is: every figure of this probe was taken so)
   for (let i = 0; i < 30; i++) W.step(DT);
   const men = g.guards.filter((m: any) => m.team === 'operative' && m.unit && m.state !== 'dead'), door = g.doors.list.find((d: any) => Math.hypot(d.pos[0] - BACK[0], d.pos[2] - BACK[1]) < 0.7);
   if (!door || men.length < 4) throw new Error(`the staging is not there: ${men.length} men, the back door ${door ? 'found' : 'not found'}`);

@@ -267,7 +267,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   entry sends in by a door, nor a follower. A man back from a fight is routed afresh, alone.
   ON in the page (`?sameway=0`), OFF in the module and on the frozen stand (`TPS_SAMEWAY=1`, `FROZEN_HOLDS`, the pin lists in threshold-probes,
   nvg-probes and irlaser-probes); journal: a recording from before the key replays with it off. `probes.ts same-way` (family `ordereddoor`), both
-  stands, 9 of 9; `SAMEWAY_BREAK=1` fails 3 on both. Measured there (the lesson's level, nobody but the four): the pair stood at 30 spots along the
+  stands, 9 of 9; `SAMEWAY_BREAK=1` fails 3 on both. Measured there (the lesson's level as its start deals it: the four, and its eight enemies at their posts): the pair stood at 30 spots along the
   hall's front, the two ways over 6 m apart at 10 → 0 (the widest 9.1 → 2.0 m); the most a man walks more than his own way 3.3 m; walked from the
   worst spot the two got 9.5 m apart → 2.0 m and both stand on their marks (15 s → 16 s on the page's stand). KNOWN: two men more than 5 m apart
   when told are left alone; the lock, own-door and uncleared-room bounds have no staging in the check (the walk cap and the 5 m have). No tally of
