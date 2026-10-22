@@ -193,10 +193,10 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     scene: 'The code book names a post one street long. This time you walk in with the four, and the men in it know how to hold a street.',
     teaches: ['Doors, with the squad behind you', 'A doorway a man holds: go round', 'A gun on the street: make it duck, then move', 'Clear a room through its window', 'Turn the squad to cover your back'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
-    place: 'A money changer\'s shop, a night of snow', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
-    blurb: 'Alone, and nobody knows you came. Through the dark to the strongroom, and out the way you went in.',
-    scene: 'The post was paid through one house in town, and its ledger says by whom. It is in the strongroom. Nobody is to know you were there.',
-    teaches: ['Stay low and out of the light', 'A whistle puts a guard where you want him', 'Take a man from behind', 'Locks, the fuse box, night vision', 'Out the way you came in'] },
+    place: 'A money changer\'s shop on a snowy night', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
+    blurb: 'You go in alone. Slip through the dark to the strongroom, then leave the way you came in.',
+    scene: 'The post was paid through a money changer\'s shop in town, and his ledger shows who paid. The ledger is in the strongroom. Nobody can know you were there.',
+    teaches: ['Stay low and out of the light', 'A whistle puts a guard where you want him', 'Take a man from behind', 'Locks, the fuse box, night vision', 'Leave the way you came in'] },
   // quiet, as two (tools/levels/tut-pair.ts): one partner under the pair rules, and each stretch of a truck park is one thing a second man makes possible
   { id: 'tut-pair', title: 'The truck park, as two', kind: 'quiet', squad: 1, level: 'tut-pair.json', group: 'tutorial',
     place: 'A walled truck park, at night', lean: 'quiet', defenders: 4,
