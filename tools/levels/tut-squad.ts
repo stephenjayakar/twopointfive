@@ -274,6 +274,72 @@ export function build() {
   } as LessonData;
 
   for (const d of doors) doorFrame(d);
+
+  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props and lights 'lived.<place>.…'; LAST, after every kept
+  // thing). A POST THAT MEN SLEEP, EAT AND MEND TRUCKS IN: the guard hut is where the night guard sits (a felt, a stove, the radio on his table); the store is
+  // grain and gas; the workshop a bench with its tools, the welding gas, oil on the slab; the hall where they eat (a low table on the rug, cushions under the
+  // window wall, the stove); the corners of the yard are the water, the washing and the bread oven; the motor yard a bed in the open and a bike. THE GATES ARE
+  // LIT, as a post lights its gates: a lamp over the guard hut's door, one inside the back gate, one outside the road gate, and a work light over the motor
+  // yard. Light is balance, so each is where it shows the OTHER side or nobody: the picket walks in under the two gate lamps, the workshop's man cannot see the
+  // street the work light falls on, and the wall's end, the blocks and the bags (where the player is asked to stand) get none of it.
+  // Kept clear, measured from the things themselves: 1.1 m of every doorway and 2 m of wall beside each jamb a pair stacks on; every mark by 0.45 m and its
+  // aim line; the lane his rounds cross and the room's floor between its two doors; the hall window's line to both corners; the alley from the back gate to
+  // its mouth; the way round the wall's end; the street's own length. What lies on a route is a decal.
+  { const spans: [number, string][] = [], M = G.M;
+    const room = (n: string) => { spans.push([K.props.length, n]); grp(`lived.${n}`); };
+    /** a lamp on a bracket over a door or a gate: warm, small, on the yard's own supply (group 'exterior': the photocell puts it out at midday) */
+    const gateLamp = (x: number, z: number, name: string) => {
+      add({ c: [x, 2.42, z], h: [0.02, 0.02, 0.1], ...M.iron, flags: BoxFlag.NoShadow });
+      const fb = add({ c: [x, 2.34, z], h: [0.05, 0.05, 0.05], ...M.plasticWhite, emissive: [30, 21, 11], flags: BoxFlag.NoShadow });
+      lights.push({ kind: 'point', pos: [x, 2.28, z], dir: [0, -1, 0], color: [1.0, 0.68, 0.4], intensity: 16, range: 6.5, innerDeg: 0, outerDeg: 180, name, group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.06, mains: false });
+    };
+    room('guardhut');
+    G.rug(10.4, 8.5, 2.0, 1.4, 'felt');
+    G.stove(12.45, 10.15);
+    G.jerryCan(8.45, 9.05, 0.2, 'plasticBlue');
+    add({ c: [9.1, 0.84, 9.95], h: [0.12, 0.08, 0.06], ...M.plasticBlack }); add({ c: [9.4, 0.78, 9.8], h: [0.05, 0.02, 0.09], ...M.plasticBlack });   // the radio and its handset, on the guard's table
+    G.wallHanging('x', 6.5, 10.6, 1, 'baluch', 1.4, 0.9);
+    room('store');
+    G.patch(10.7, 19.3, 1.8, 1.2, 'damp', 0.2);
+    G.jerryCan(11.25, 21.05, 0.3, 'jerryYellow');
+    G.gasBottle(12.6, 18.2);
+    room('workshop');
+    G.patch(18.3, 9.9, 1.6, 1.0, 'oil', 0.3);
+    add({ c: [17.5, 0.85, 6.95], h: [0.18, 0.08, 0.12], ...M.paintRust }); add({ c: [18.5, 0.79, 6.9], h: [0.25, 0.02, 0.05], ...M.iron });   // a tool box and a bar, on the bench
+    G.gasBottle(19.7, 6.95, 'drumBlue');                              // the welding gas, on the back wall
+    G.crates(16.6, 6.95, 0.2, 2, 'coyote');
+    G.tyres(16.95, 10.4, 2);
+    room('hall');
+    G.lowTable(29.4, 19.5, 0.1);
+    G.toshak(28.6, 17.45, 1.9, 0, 'rugRed', 'rugOchre');
+    G.wallHanging('z', 25.5, 20.6, 1, 'afghan', 1.6, 0.9);
+    G.stove(26.0, 21.55);
+    add({ c: [28.6, 0.78, 21.4], h: [0.2, 0.03, 0.14], ...M.tin });   // a tray of glasses on the long table
+    room('yard');
+    G.waterTank(6.3, 8.2); G.charpoy(6.5, 10.1, HALF);                // the corner by the guard hut: the water, and a bed in the open
+    G.woodPile(6.0, 19.9, HALF, 1.4); G.tandoor(6.7, 18.6); G.washLine(5.6, 17.3, 7.6, 17.3, 4);   // the corner by the store: the bread oven, its wood, the washing
+    gateLamp(5.9, 6.5, 'lived.yard.lamp_water');                       // (over the water, in the yard's corner, out of reach of the street. NOT over the hut's door, tried first: it lit the street between the two easy rooms, where the player stands while
+                                                                      //  the squad takes them, and the store's men shot him through their opening door on one die of six)
+    room('motoryard');
+    G.charpoy(15.2, 19.0, 0.1); G.motorbike(24.6, 20.6, HALF + 0.1); G.patch(19.9, 17.9, 1.4, 1.0, 'oil', 0.5);
+    // the work light, on the south wall: a NARROW pool (a 32° half cone, not the kit's 70° floodlight, which reached the street between the two easy rooms and
+    // the wall's end): the motor yard and the street in front of the workshop, and neither the start, the store's door, the wall's end nor the blocks
+    { const x = 18.4, z = 22.6, h = 3.4;
+      add({ c: [x, h / 2, z], h: [0.04, h / 2, 0.04], ...M.galv }); add({ c: [x, h + 0.02, z - 0.1], h: [0.16, 0.1, 0.07], ...M.plasticBlack });
+      const fb = add({ c: [x, h + 0.02, z - 0.175], h: [0.13, 0.08, 0.008], ...M.plasticWhite, emissive: [60, 62, 64], flags: BoxFlag.NoShadow });
+      lights.push({ kind: 'spot', pos: [x, h, z - 0.2], dir: [0, -0.6, -0.8], color: [0.92, 0.96, 1.0], intensity: 170, range: 15, innerDeg: 20, outerDeg: 32, name: 'lived.motoryard.worklight', group: 'exterior', enabled: true, volumetric: 0.14, fixtureBox: fb, radius: 0.14, mains: false, broad: true }); }
+    room('alley');
+    G.ruts(22.6, 5.6, 26.8, 10.4, 'dirt'); G.patch(24.9, 7.4, 1.6, 1.1, 'damp', 0.4);
+    gateLamp(25.0, 5.36, 'lived.alley.lamp_gate');
+    room('mast');
+    G.jerryCan(29.9, 9.4, 0.4, 'jerryYellow'); G.patch(28.7, 9.9, 1.2, 0.8, 'oil', 0.2);
+    room('road');
+    G.stove(39.4, 8.9); G.jerryCan(39.5, 11.9, 0.3); G.lantern(39.3, 10.9, 'lived.road.lantern', 'road');   // the picket's camp: its fire, its water, its lantern
+    gateLamp(36.3, 14.0, 'lived.road.lamp_gate');                     // on the road's blast wall, outside the gate: whoever comes through the gate comes through its light
+    spans.push([K.props.length, '']);
+    const serial = new Map<string, number>();
+    for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0]; i < spans[s + 1][0]; i++) { const key = `lived.${spans[s][1]}.${K.props[i].kind}`, n = serial.get(key) ?? 0; serial.set(key, n + 1); K.props[i].name = `${key}${n}`; }
+  }
   const level: Level = {
     boxes: K.boxes, props: K.props, lights, switchables, doors, devices: [],
     breaker, beacons: [{ pos: [20.3, 2.05, 5.3], box: dome }],
