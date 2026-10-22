@@ -74,6 +74,7 @@ import { updateSnowBreath } from './snowBreath';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
+import { doorMan, doorThrowAfter } from './doorthrow';
 import { updateMission } from './mission';
 import { objectivePos, objectiveText } from './mission';
 import { Chronicle, chronInterrogated } from './chronicle';
@@ -646,6 +647,8 @@ export class Guard {
   /** a ring airfoil took him in the body (launcher.ts staggerGuard): doubled over till this time — rooted like the dazzle (reactT), no round from him, but he can SEE,
    *  and he comes out of it alert toward the side it came from */
   staggerUntil = -1;
+  /** a booted door met him where he stood right at it (doorthrow.ts): on a knee till this time, inside the fold the same blow gave him */
+  doorDownUntil = -1;
   /** game time a blast left him hurt (condition.ts: -1 = never; read through isHurt) */
   hurtAt = -1;
   sawPlayerThisFrame = false; lastPos: Vec3; stuckT = 0; stuckN = 0;
@@ -1209,6 +1212,8 @@ export class Game {
     this.doorDeals = dealSwings(level, this.doors, this.col.nav);   // the side each leaf opens into (doors.ts DOORWAY; doorswing.ts: into the room it serves) — geometry only, no dice
     this.doors.staged = () => this.touring;   // (DOORSTAY: a showcase's choreography keeps the closers it was written against)
     this.col.dynamicBoxes = this.doors.leafBoxes();
+    this.doors.man = who => doorMan(this, who);   // (doorthrow.ts: whose man, folded, braced, calm)
+    this.doors.standable = (x, z, r) => { const q: Vec3 = [x, 0, z]; this.col.collideCircle(q, Math.min(r, 0.3), 0.2, 1.5, 1); return Math.hypot(q[0] - x, q[2] - z) < 0.02 && !this.col.clampToWorld(q, 0.3); };   // (doors.ts DOORTHROW: floor for a body a leaf would carry there — the walkers' own radius against the statics)
     this.doors.blaster = (at, tearM, who) => doorBlast(this, at, tearM, who);   // the doors' side of a blast (doorblast.ts): a leaf inside its reach comes off its hinges
     // …and where the build carries the destruction goal's change feed, a torn leaf is a row in it (kind 'door': ONE feed of what the level no longer is)
     this.doors.onTorn((d, who, cause) => {
@@ -1978,6 +1983,7 @@ export class Game {
     if (pl.doorMove) doorMoveTick(this, dt);   // the leaf he is working by hand, on round under it (hands.ts)
     const bx = pc.pos[0], bz = pc.pos[2];
     this.doors.update(dt, contacts);
+    doorThrowAfter(this, contacts);      // …and what a driven leaf did to whoever stood in its swing
     for (const w of woundedAt) { if (w.at[0] === w.x && w.at[2] === w.z) continue; this.col.collideCircle(w.at, 0.3, 0.2, 1.5); this.col.clampToWorld(w.at, 0.3); let dx = w.at[0] - w.x, dz = w.at[2] - w.z; const d = Math.hypot(dx, dz), k = d > 0.25 ? 0.25 / d : 1; dx *= k; dz *= k; const p = w.g.char.pos; p[0] += dx; p[2] += dz; this.col.collideCircle(p, 0.3, 0.2, 1.5); this.col.clampToWorld(p, 0.3); if (d > 0.005) w.g.char.update(0); }   // (a leaf moved a wounded man aside: he has no ragdoll and no walk to keep him out of the wall behind him, so the statics are asked here — at the body the leaf shoved first (on his back that is his hips, a stride from his feet), then at his feet; no more than 0.25 m a frame, so one flung leaf cannot put his centre past a thin pane; his bones re-baked where he now is, as the player's and the props' paths do)
     doorSlabs(this, dt);   // the leaves a blast took off their hinges: each loose slab flown, landed, laid flat (doorblast.ts)
     this.handsOnDoors(angles);   // who is walking which leaf open (or easing it): his free hand goes on it (character.ts doorLayer, posed next frame)

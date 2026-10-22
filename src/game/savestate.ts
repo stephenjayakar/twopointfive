@@ -98,7 +98,7 @@ import { Firearm, Pistol, Rifle, WEAPONS } from './weapons';
 import { aimWeightSnapshot, aimWeightRestore } from './aimweight';
 import type { WeaponId, FireMode } from './weapons';
 import type { Item, ItemKind } from './throwables';
-import { DOORWAY } from './doors';
+import { DOORWAY, type DoorDrive } from './doors';
 import { slabSnapshot, slabRestore, type SlabSnap } from './doorblast';
 import { RAG_COUNT } from './ragdoll';
 import { Chronicle, chronCheckpoint, roomOf, MAX_EVENTS } from './chronicle';
@@ -199,7 +199,7 @@ export interface GuardSnap {
   gunLostAt: number; torchLostAt: number; lightLitAtLoss: boolean; lightDeadUntil: number; flashlightOn: boolean; sweep: number; beamDir: V3;
   path: V3[]; pathI: number; repathT: number; pathGoal: V3 | null;
   weapon: FirearmSnap; fireCd: number; reactT: number; searchT: number; lookPhase: number; speed: number; stepPhase: number; heardUpTo: number;
-  diedAt: number; dazzledUntil: number; staggerUntil: number; hurtAt?: number; lastPos: V3; stuckT: number; stuckN: number; killerId: number; sawBodyT: number;
+  diedAt: number; dazzledUntil: number; staggerUntil: number; hurtAt?: number; doorDownU?: number; lastPos: V3; stuckT: number; stuckN: number; killerId: number; sawBodyT: number;
   alertBest: number; alertStallT: number; alertRef: V3 | null; chaseT: number; shotBlockedT: number;
   sightPos: V3; sightVel: V3; sightT: number; ledT: number; fixT: number; fixRef: V3 | null;
   pieLast: number; pieLastT: number; piePrev: V3 | null; piePrevT: number;   // pieLast: door index, −1 none
@@ -210,7 +210,7 @@ export interface GuardSnap {
   rag: RagSnap | null;   // the body's particles (dead only)
 }
 export interface ItemSnap { kind: ItemKind; pos: V3; yaw: number; tumble: number; heading: number; fill: number; life: number; age: number; fired: boolean; emitT: number; who: number; on: number; onPose: number; radius: number; restitution: number; friction: number; }
-export interface DoorSnap { name: string; angle: number; vel: number; quietT: number; latched: boolean; lastWho: number; sinceBash: number; closing: boolean; locked: boolean; lockBroken: boolean; noticed: boolean; noticedT: number; pick: number; pickIdle: number; pickClock: number; pickN: number; guardT: number; creakArmed: boolean; /** doors.ts DOORWAY, written only while it is on: the pull in hand, the press on its pull face, the seconds since it was driven open */ pullT?: number; pressT?: number; openT?: number; /** who is stepping through the leaf right now (Door.passers), written only under DOORWAY / DOORSTAY and only when somebody is: a pulled leaf and an open one stepped through by its edge make it common state */ passers?: number; /** Door.swept (DOORSTAY), written only when set: brought toward its frame by a keyed man's body alone — it rests to, unlatched */ swept?: boolean; /** doorblast.ts DOORSHOT: the rounds' work the hung leaf has taken (written only when it has taken some) */ shot?: number; off?: SlabSnap; }   // off: lying off its hinges (doorblast.ts) — absent for a hung door
+export interface DoorSnap { name: string; angle: number; vel: number; quietT: number; latched: boolean; lastWho: number; sinceBash: number; closing: boolean; locked: boolean; lockBroken: boolean; noticed: boolean; noticedT: number; pick: number; pickIdle: number; pickClock: number; pickN: number; guardT: number; creakArmed: boolean; /** doors.ts DOORWAY, written only while it is on: the pull in hand, the press on its pull face, the seconds since it was driven open */ pullT?: number; pressT?: number; openT?: number; /** who is stepping through the leaf right now (Door.passers), written only under DOORWAY / DOORSTAY and only when somebody is: a pulled leaf and an open one stepped through by its edge make it common state */ passers?: number; /** Door.swept (DOORSTAY), written only when set: brought toward its frame by a keyed man's body alone — it rests to, unlatched */ swept?: boolean; /** doorblast.ts DOORSHOT: the rounds' work the hung leaf has taken (written only when it has taken some) */ shot?: number; off?: SlabSnap; drive?: DoorDrive | null; }   // off: lying off its hinges (doorblast.ts) — absent for a hung door
 export interface PropSnap { x: number; z: number; yaw: number; vx: number; vz: number; w: number; asleep: boolean; idle: number; lastWho: number; noiseT: number; pushT: number; }
 export interface TargetSnap { name: string; on: boolean; broken: boolean; disabledUntil: number; /** the game time a hand put it out at its wall switch (lightswitch.ts LightTarget.handOff) — written only when set */ hand?: number; }
 // (NOT saved either: wall wear's per-cell lists — wallwear.ts: the marks themselves ride this slice as the kind / radius / param they had; after a load they stop
@@ -509,7 +509,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
       gunLostAt: gd.gunLostAt, torchLostAt: gd.torchLostAt, lightLitAtLoss: gd.lightLitAtLoss, lightDeadUntil: gd.lightDeadUntil, flashlightOn: gd.flashlight.enabled, sweep: gd.sweep, beamDir: c3(gd.beamDir),
       path: scripted ? [] : gd.path.map(c3), pathI: scripted ? 0 : gd.pathI, repathT: gd.repathT, pathGoal: scripted ? null : c3n(gd.pathGoal),
       weapon: firearmSnap(gd.weapon), fireCd: gd.fireCd, reactT: gd.reactT, searchT: gd.searchT, lookPhase: gd.lookPhase, speed: scripted ? 0 : gd.speed, stepPhase: gd.stepPhase, heardUpTo: gd.heardUpTo,
-      diedAt: gd.diedAt, dazzledUntil: gd.dazzledUntil, staggerUntil: gd.staggerUntil, ...(gd.hurtAt >= 0 ? { hurtAt: gd.hurtAt } : {}), lastPos: c3(gd.lastPos), stuckT: gd.stuckT, stuckN: gd.stuckN, killerId: gd.killerId, sawBodyT: gd.sawBodyT,
+      diedAt: gd.diedAt, dazzledUntil: gd.dazzledUntil, staggerUntil: gd.staggerUntil, ...(gd.hurtAt >= 0 ? { hurtAt: gd.hurtAt } : {}), ...(gd.doorDownUntil > g.time ? { doorDownU: gd.doorDownUntil } : {}), lastPos: c3(gd.lastPos), stuckT: gd.stuckT, stuckN: gd.stuckN, killerId: gd.killerId, sawBodyT: gd.sawBodyT,
       alertBest: gd.alertBest, alertStallT: gd.alertStallT, alertRef: c3n(gd.alertRef), chaseT: gd.chaseT, shotBlockedT: gd.shotBlockedT,
       sightPos: c3(gd.sightPos), sightVel: c3(gd.sightVel), sightT: gd.sightT, ledT: gd.ledT, fixT: gd.fixT, fixRef: c3n(gd.fixRef),
       pieLast: gd.pieLast ? g.doors.list.indexOf(gd.pieLast) : -1, pieLastT: gd.pieLastT, piePrev: c3n(gd.piePrev), piePrevT: gd.piePrevT,
@@ -522,7 +522,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     };
   });
   // ---- the level's live state
-  const doors: DoorSnap[] = g.doors.list.map(d => ({ name: d.def.name, angle: d.angle, vel: d.vel, quietT: d.quietT, latched: d.latched, lastWho: d.lastWho, sinceBash: d.sinceBash, closing: d.closing, locked: d.locked, lockBroken: d.lockBroken, noticed: d.noticed, noticedT: d.noticedT, pick: d.pick, pickIdle: d.pickIdle, pickClock: d.pickClock, pickN: d.pickN, guardT: d.guardT, creakArmed: d.creakArmed, ...(DOORWAY.oneWay ? { pullT: d.pullT, pressT: d.pressT, openT: d.openT } : {}), ...((DOORWAY.oneWay || g.doors.stay) && d.passers ? { passers: d.passers } : {}), ...(d.off ? { off: slabSnapshot(g, d) ?? undefined } : {}), ...(d.shot > 0 ? { shot: d.shot } : {}) }));
+  const doors: DoorSnap[] = g.doors.list.map(d => ({ ...(d.drive ? { drive: { ...d.drive } } : {}), name: d.def.name, angle: d.angle, vel: d.vel, quietT: d.quietT, latched: d.latched, lastWho: d.lastWho, sinceBash: d.sinceBash, closing: d.closing, locked: d.locked, lockBroken: d.lockBroken, noticed: d.noticed, noticedT: d.noticedT, pick: d.pick, pickIdle: d.pickIdle, pickClock: d.pickClock, pickN: d.pickN, guardT: d.guardT, creakArmed: d.creakArmed, ...(DOORWAY.oneWay ? { pullT: d.pullT, pressT: d.pressT, openT: d.openT } : {}), ...((DOORWAY.oneWay || g.doors.stay) && d.passers ? { passers: d.passers } : {}), ...(d.off ? { off: slabSnapshot(g, d) ?? undefined } : {}), ...(d.shot > 0 ? { shot: d.shot } : {}) }));
   const props: PropSnap[] = g.props.all.map(p => ({ x: p.x, z: p.z, yaw: p.yaw, vx: p.vx, vz: p.vz, w: p.w, asleep: p.asleep, idle: p.idle, lastWho: p.lastWho, noiseT: p.noiseT, pushT: p.pushT }));
   const targets: TargetSnap[] = g.targets.map(t => ({ name: t.name, on: t.on, broken: t.broken, disabledUntil: t.disabledUntil, ...(t.handOff !== undefined ? { hand: t.handOff } : null) }));
   g.doors.list.forEach((d, i) => { if (d.swept) doors[i].swept = true; });   // (Door.swept, written only when set: a leaf a keyed man's body brought to its frame, resting to unlatched)
@@ -688,7 +688,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     gd.path = (S.path ?? []).map(c3); gd.pathI = Math.max(0, S.pathI | 0);   // (as saved, not clamped to the path — see civiliansRestore)
     gd.repathT = fin(S.repathT); gd.pathGoal = c3n(S.pathGoal);
     gd.fireCd = fin(S.fireCd, 1); gd.reloadT = -1; gd.reactT = fin(S.reactT); gd.searchT = fin(S.searchT); gd.lookPhase = fin(S.lookPhase); gd.speed = dead ? 0 : fin(S.speed); gd.stepPhase = fin(S.stepPhase); gd.heardUpTo = fin(S.heardUpTo, -1);
-    gd.diedAt = fin(S.diedAt, -1); gd.dazzledUntil = fin(S.dazzledUntil, -1); gd.staggerUntil = fin(S.staggerUntil, -1); gd.hurtAt = fin(S.hurtAt ?? -1, -1); gd.lastPos = c3(S.lastPos ?? S.pos); gd.stuckT = fin(S.stuckT); gd.stuckN = S.stuckN | 0; gd.killerId = S.killerId ?? -1; gd.sawBodyT = fin(S.sawBodyT, -100);
+    gd.diedAt = fin(S.diedAt, -1); gd.dazzledUntil = fin(S.dazzledUntil, -1); gd.staggerUntil = fin(S.staggerUntil, -1); gd.doorDownUntil = fin(S.doorDownU ?? -1, -1); gd.hurtAt = fin(S.hurtAt ?? -1, -1); gd.lastPos = c3(S.lastPos ?? S.pos); gd.stuckT = fin(S.stuckT); gd.stuckN = S.stuckN | 0; gd.killerId = S.killerId ?? -1; gd.sawBodyT = fin(S.sawBodyT, -100);
     gd.alertBest = fin(S.alertBest, 1e9); gd.alertStallT = fin(S.alertStallT); gd.alertRef = c3n(S.alertRef); gd.chaseT = fin(S.chaseT); gd.shotBlockedT = fin(S.shotBlockedT);
     gd.sightPos = c3(S.sightPos ?? [0, 0, 0]); gd.sightVel = c3(S.sightVel ?? [0, 0, 0]); gd.sightT = fin(S.sightT, -100); gd.ledT = fin(S.ledT, -100); gd.fixT = fin(S.fixT, -100); gd.fixRef = c3n(S.fixRef);
     gd.searchPlan = null; gd.pieing = null; gd.standoff = null; gd.script = null; gd.hold = false; gd.pinned = false; gd.held = null;
@@ -734,6 +734,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     d.angle = Math.max(d.minA, Math.min(d.maxA, a)); d.vel = turned ? -fin(D.vel) : fin(D.vel); d.pullT = Math.max(0, fin(D.pullT ?? 0)); d.pressT = Math.max(0, fin(D.pressT ?? 0)); d.openT = fin(D.openT ?? 10, 10); d.quietT = fin(D.quietT, 10); d.latched = !!D.latched; d.lastWho = D.lastWho ?? -1; d.sinceBash = fin(D.sinceBash, 10); d.closing = !!D.closing; d.swept = !!D.swept;
     d.locked = !!D.locked; d.lockBroken = !!D.lockBroken; d.noticed = !!D.noticed; d.noticedT = fin(D.noticedT, -1000); d.pick = Math.max(0, Math.min(1, fin(D.pick))); d.picking = false; d.pickIdle = fin(D.pickIdle); d.pickClock = fin(D.pickClock); d.pickN = D.pickN | 0; d.rattleT = 0; d.guardT = fin(D.guardT, -100); d.passers = (D.passers ?? 0) | 0; d.creakArmed = D.creakArmed !== false;
     d.shot = Math.max(0, fin(D.shot ?? 0));   // (doorblast.ts DOORSHOT: the rounds a hung leaf has taken)
+    { const R = D.drive, k = R?.kind; d.drive = R && (k === 'boot' || k === 'swing' || k === 'body' || k === 'hand') ? { who: fin(R.who, -1), dir: R.dir < 0 ? -1 : 1, kind: k, t: Math.max(0, fin(R.t)), from: fin(R.from), quiet: !!R.quiet, side: fin(R.side) & 3, rate: Math.max(0, fin(R.rate)), px: R.px ?? NaN, pz: R.pz ?? NaN } : null; }   // (doors.ts DOORTHROW: who drove a leaf still in flight)
     if (D.off) slabRestore(d, D.off, fin(D.angle));   // off its hinges: the slab where it lay (the reset above hung every leaf)
     d.place();
   }
