@@ -57,6 +57,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   headless → check → replay identical + invariants; perturb: a forged sensor stream diverges at/after the forged frame with the field / key named; knob: guardWalk
   × 1.15 mismatches naming a guard field while a presentation-only env change replays identically; fixtures). NOT captured by decision: Tab-panel edits
   mid-recording, module tables outside KNOB_TABLES, another level (refused by fingerprint), a stroke's light across frame 0.
+  · **A change made BETWEEN frames ends the recording, and a new one is asked for** (10-22; no switch: nothing of play changes). A checkpoint loaded off a card or
+    the panel (`Checkpoints.load` / `loadMem`) and an encounter staged again between two frames (`Game.restartEncounter`: a card's restart, a show, a
+    mission's quit) are in no frame's input, and a tape that ran on across one replayed as a break of the game's own at that frame. Each now calls
+    `SessionRecorder.cut(why)` first: recording and not inside an update, the file is finished there and handed over through `onStop` like any stop
+    (`meta.stopped` 'a checkpoint was loaded' / 'the encounter was staged again'), and the same request is made again, so one F10 covers the session as one
+    file per stretch (the next begins at the first update `canStart` allows; with a unit on the floor it waits and gives up as any request does). Inside an
+    update `cut` does nothing (what changes the game there is that frame's input, on the tape); under a request still pending too (the recorder's own
+    `begin` stages the encounter). A recording FINISHED BETWEEN FRAMES — a cut, or an immediate `stop` with no update running — takes its closing digest
+    after the HUD's bubble write of the last frame, so the file carries `meta.between` and `replay.ts` makes that write before it compares the last digest.
+    After a save in memory is put back with no recorder behind them, the sensors are set live (the snapshot holds them as they stood at the save). Check
+    `probes.ts recordcut` (family checkpoints; both stands; `JOURNALCUT_BREAK=1` must fail): a file's load and a restart (both files of each replay), a
+    page-like tape cut on the very frame a bubble ran out (replays; with `meta.between` struck it does not), a cut asked inside an update, a memory save
+    written while the tape ran and loaded between frames. KNOWN AND OPEN: a save in memory loaded INSIDE an update (Enter once down, with a unit on the
+    floor) under a running recording rolls the sensors' own stream back with the rest of the game (`rollback.ts` keeps the journal out of the snapshot,
+    not the sensors), so that tape is broken from the save's frame on; Enter once down loading a FILE written before the recording is not in a replay's
+    store, which restarts instead; the panel's other hands on a recording game (the sandbox row, a teleport) are on no tape. A page recording cut this way
+    has not been made in a browser.
 - **The game's own die** (`src/math/dice.ts`; engine groundwork for two-player co-op, nothing networked): every roll of the simulation is `simRandom()`, never `Math.random()` —
   `bun run tools/qa/dice-check.ts` is red on a `Math.random` in src/game outside journal.ts (which installs a recording's die) and civilians.ts `withDice`. A Game stood up with a seed
   (`standGame({ seed })`) OWNS a `SimDice` (`Game.dice`: one mulberry32 word `s`, the count `n`, the `seed`), made current by `useDice()` at stand-up, as `Game.update`'s first statement
