@@ -5,6 +5,8 @@
 //           into) shows the same tile saying 'no use here' in the dim grey, its label lit, the words not cut short
 //   play    the room clear staged from that kit: the wand is on him; at a shut door with a defender behind it the panel offers 'look under it'; the row and
 //           one Space start it; once through, the lens is his eye among the fog's and the man behind the door is in the picture; a step pulls it out
+//           (the lens is through as he gets down, with no ring: WAND.quick)
+//   slow    the same page under ?nowandquick: the 1.5 s feed with its ring on the row
 //   nowand  the same page under ?nowand: nothing on him, no row
 //   mate    a teammate's card carries the wand (src/game/wandorder.ts): his chip's card shows the row, carried; in the room clear the door's order menu lists
 //           'wandLook' on V with no digit; X on the door then V sends that man alone, he kneels at it, his lens is one of the fog's eyes and the man behind
@@ -13,7 +15,7 @@
 // exit 0 = all of it, with no page error · 1 = otherwise. Stills (the whole page: frame + HUD) are written to outDir when one is given.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '', ONLY = process.env.ONLY || '';   // (ONLY=card|play|nowand|mate|nowandmate = that page alone)
+const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '', ONLY = process.env.ONLY || '';   // (ONLY=card|play|slow|nowand|mate|nowandmate = that page alone)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const YOURS = { weapon: 'rifle', smoke: 0, bangs: 1, frags: 1, shells: 1, wand: true };
 const KIT = JSON.stringify({ v: 2, members: [YOURS] });
@@ -63,7 +65,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       await page.close(); } }
 
   // ── play, and the same with the switch off
-  for (const [name, q, want] of [['play', 'roomclear&squad4&freshstart=0&nocutboxes', true], ['nowand', 'roomclear&squad4&freshstart=0&nocutboxes&nowand', false]]) {
+  for (const [name, q, want] of [['play', 'roomclear&squad4&freshstart=0&nocutboxes', true], ['slow', 'roomclear&squad4&freshstart=0&nocutboxes&nowandquick', true], ['nowand', 'roomclear&squad4&freshstart=0&nocutboxes&nowand', false]]) {
     if (ONLY && ONLY !== name) continue;
     const { page, errors } = await open(q);
     const R = await page.evaluate(async () => {
@@ -88,9 +90,13 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     if (R.rows !== undefined && want) L = await page.evaluate(async (man) => {
       const g = window.__game, pl = g.player, fog = g.fogOfWar, x = g.guards.find(m => m.callsign === man);
       const ok = g.selectVerb('door', 'wand'); window.__input.pressed.add('Space'); window.__wandStep(1);
-      const started = !!pl.wanding; for (let i = 0; i < 240; i++) { window.__wandAim(); window.__wandStep(1); }
+      const started = !!pl.wanding; let liveF = -1, ring = 0, bar = 0;   // frames to the lens · frames before it with a ring on the row · with a bar in the panel
+      for (let i = 0; i < 240; i++) { window.__wandAim(); window.__wandStep(1);
+        if (liveF < 0 && pl.wanding?.live) liveF = i + 1;
+        if (liveF < 0) { if (g.nearby.some(r => r.progress !== undefined)) ring++; if (document.querySelector('#interact .prog')) bar++; } }
+      const quick = !!window.__knobs.registry().WAND.quick;
       const live = !!pl.wanding?.live, eye = !!fog.eyes[0]?.wand, seen = !fog.hidden(x), panel = (document.getElementById('interact')?.innerText || '').replace(/\s+/g, ' ').slice(0, 300);
-      return { ok, started, live, eye, seen, panel };
+      return { ok, started, live, eye, seen, panel, quick, liveF, ring, bar };
     }, R.man);
     if (L) await shot(page, 'wand-play-live');
     // N while he looks: the goggles go down, the tube's picture comes up, the look goes on (then up again, so the rest runs as it did)
@@ -104,6 +110,11 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     if (N) N.up = await page.evaluate(async () => { const pl = window.__game.player; window.__input.pressed.add('KeyN'); for (let i = 0; i < 90; i++) { window.__wandAim(); window.__wandStep(1); } return { on: pl.nv, a: pl.nvAmount, live: !!pl.wanding?.live }; });
     if (want) line(!!N && N.on === true && N.a0 < 0.05 && N.a1 > 0.9 && N.live && N.up.on === false && N.up.a < 0.1 && N.up.live && !errors.length,
       'N while he looks under the door: his goggles go down and the picture is the tube\'s, the look goes on; N again takes them up', `${JSON.stringify(N)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    // the set-up's time (WAND.quick, on in the page; ?nowandquick = the 1.5 s feed with its ring)
+    if (name === 'play') line(!!L && L.quick === true && L.liveF > 0 && L.liveF <= 45 && L.ring === 0 && L.bar === 0 && !errors.length,
+      'the lens is through as he gets down: within 0.75 s of the Space, no ring on the row and no bar in the panel while he does', `${JSON.stringify({ quick: L?.quick, liveF: L?.liveF, ring: L?.ring, bar: L?.bar })}`);
+    if (name === 'slow') line(!!L && L.quick === false && L.liveF >= 90 && L.ring >= 60 && !errors.length,
+      'under ?nowandquick: the 1.5 s feed, its ring on the row while it runs', `${JSON.stringify({ quick: L?.quick, liveF: L?.liveF, ring: L?.ring, bar: L?.bar })}`);
     let E = null;
     if (L) E = await page.evaluate(async () => { const g = window.__game, pl = g.player; window.__input.pressed.add('KeyS'); window.__wandStep(3, ['KeyS']); const out = !pl.wanding, lock = pl.equipT; window.__wandStep(120); return { out, lock }; });
     if (E) await shot(page, 'wand-play-after');

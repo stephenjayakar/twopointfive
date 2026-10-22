@@ -121,7 +121,7 @@ class Cover {
   // a wand fits · the doors his way met shut, and the frames he walked through
   gsG: number[] = []; gsD: number[] = []; gid = new Map<any, number>(); smT: number[] = []; smRoom: number[] = [];
   looks: { t: number; door: any; gs: number[]; as: number[] }[] = []; met = new Map<any, { fit: boolean; steel: boolean; openT: number }>(); passed = new Set<any>();
-  get wandSecs(): number { return num('--wandsecs', this.M.WAND.feedSecs); }
+  get wandSecs(): number { return num('--wandsecs', this.M.WAND.quick ? this.M.WAND.quickSecs : this.M.WAND.feedSecs); }
   get markSecs(): number { return num('--marksecs', this.M.WAND.markSecs); }
   get wandFov(): number { return num('--wandfov', this.M.WAND.fovDeg); }
   /** his feet, once a second */ path: number[][] = [];

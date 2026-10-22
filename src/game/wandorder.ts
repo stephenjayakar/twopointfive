@@ -11,7 +11,7 @@
 // not shut, off its hinges, or nobody can get to it.
 //
 // THE MAN: walks to the middle of the leaf on the men's face (the player's own kneeling spot: Doors.workSpot), kneels with the lock work's pose, and
-// `WAND.feedSecs` later his lens is LIVE. He keeps it there until he is told something else, the leaf moves (he steps off beside the latch jamb, gun on
+// `WAND.feedSecs` later (`WAND.quick`: as he gets down, the first time — wand.ts wandThrough) his lens is LIVE. He keeps it there until he is told something else, the leaf moves (he steps off beside the latch jamb, gun on
 // the doorway), the fight takes him (the lens comes out; fed again from the start when he is back on his knee), or he is hit.
 //
 // THE LENS IS HIS EYE (fogofwar.ts asks `mateWandEye` in place of his own eye: no sixth eye): the player's lens by every number (wand.ts wandLens /
@@ -29,7 +29,7 @@ import type { Door } from './doors';
 import type { FogEye } from './fogofwar';
 import type { OrderDef, OrderTarget, SquadOrders, Assignment } from './orders';
 import { doorWords } from './orders';
-import { WAND, wandFits, wandLens, wandFov, wandPanMax } from './wand';
+import { WAND, wandFits, wandLens, wandFov, wandPanMax, wandThrough } from './wand';
 import { kitOf } from './kit';
 
 export const WAND_ORDER = 'wandLook';
@@ -49,6 +49,8 @@ interface Job {
   live: boolean;
   /** this file put the lock work's pose on him (and so takes it off) */
   knelt: boolean;
+  /** he has been on his knee at this door and was taken off it (the fight, a flash): what follows is a feed — WAND.feedSecs — whatever WAND.quick says */
+  again: boolean;
 }
 interface State { jobs: Map<Guard, Job> }
 const states = new SideMap<Game, State>('wandorder.states');
@@ -75,7 +77,7 @@ function pick(g: Game, S: SquadOrders, men: Guard[], t: OrderTarget): { gd: Guar
 }
 
 function lensOut(gd: Guard, J: Job) {
-  if (J.knelt) { gd.char.anim.lockpick = false; J.knelt = false; }
+  if (J.knelt) { gd.char.anim.lockpick = false; J.knelt = false; J.again = true; }   // (he was on his knee and is off it: the next feed is a feed, not the quick set-up)
   J.t0 = -1; J.live = false; J.A.crouch = false;
 }
 /** done with it: the lens out, a word, and a plain hold — beside the latch jamb with his gun on the doorway when the leaf moved, else where he stands */
@@ -96,7 +98,7 @@ function issue(g: Game, S: SquadOrders, men: Guard[], t: OrderTarget): string | 
   const k = g.doors.kickSpotSide(d, onFace(d, P.side)), aside = g.col.nav.isBlocked(k.pos[0], k.pos[2]) ? null : { pos: [k.pos[0], 0, k.pos[2]] as Vec3, yaw: k.yaw };
   S.assign(gd, { order: WAND_ORDER, post: [P.spot.pos[0], 0, P.spot.pos[2]], face: P.spot.yaw, door: d, stance: 'lowReady', upper: 'none', move: { stance: 'none', upper: 'aim' },
     going: `wand · ${words}`, there: `feeding the wand · ${words}`, setLine: null });
-  st.jobs.set(gd, { door: d, side: P.side, stand: [P.spot.pos[0], 0, P.spot.pos[2]], yaw: P.spot.yaw, aside, A: S.of(gd)!, t0: -1, liveT: -1, lastT: g.time, live: false, knelt: false });
+  st.jobs.set(gd, { door: d, side: P.side, stand: [P.spot.pos[0], 0, P.spot.pos[2]], yaw: P.spot.yaw, aside, A: S.of(gd)!, t0: -1, liveT: -1, lastT: g.time, live: false, knelt: false, again: false });
   WANDORDER_STATS.ordered++;
 }
 
@@ -115,7 +117,7 @@ function tick(g: Game, S: SquadOrders, gd: Guard, A: Assignment) {
   if (!on) { lensOut(gd, J); return; }
   if (J.t0 < 0) J.t0 = now;
   c.anim.lockpick = true; J.knelt = true; A.crouch = true;
-  if (!J.live && now - J.t0 >= WAND.feedSecs) { J.live = true; J.liveT = now; WANDORDER_STATS.live++; g.say(gd, "wand's in."); }
+  if (!J.live && (J.again || !WAND.quick ? now - J.t0 >= WAND.feedSecs : wandThrough(0, now - J.t0, c.anim.crouch))) { J.live = true; J.liveT = now; WANDORDER_STATS.live++; g.say(gd, "wand's in."); }
   A.there = `${J.live ? 'looking under' : 'feeding the wand'} · ${doorWords(d)}`;
 }
 
