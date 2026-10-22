@@ -131,6 +131,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as the lines say stays on full auto from its line on, as a player is left. A SCRIPTED PLAYER ON THE PAGE IS ITS OWN BUNDLE: it reads a switch from
   the page's `__knobs`, never from its own copy of the module (the page play stopped at the selector's line until it did). Never seen on a
   GPU; the new opening was judged from the software adapter's pictures only.
+- **`tut-solo`, the maintainer's notes from a second look the same evening (2026-10-22; level data and its script, no switch).** (1) "weird that
+  we're standing here right in front of the window here he can shoot us": the shop's front wall keeps ONE window (north of its door: "the top window
+  getting blown out and glass flying everywhere was sick" is that one and stays); the wall south of the door is blank and the stand-clear mark is
+  against it (`BACK`, 1.8 m from the door: outside `DOORTOOLS.backblastM`), its line 'Stand clear: your back to the wall beside the door'. A
+  STAND-CLEAR MARK IS AGAINST BLANK WALL, never a window the man inside can see through. (2) "weird that we're told to load the grenade long before
+  being told to do anything about it": the cue that brings the last two (`trucks`) is on the load's own step, so the line is 'Two behind you. …
+  load the grenade' with them coming, and the next line fires it. (3) "it doesn't make sense that the enemies spawn there though. maybe we have
+  another door on the far room and show them coming from outside of the map and then running at you": the store has a BACK DOOR on the mission's
+  line (door `store`, said 'back door'; steel, locked from the store's side, opening in), a lane behind it that runs off the map's edge between two
+  walls (so nobody walks round the halt by it), and the last two are put on the floor in that lane (`LAST_IN`), the script throws the door open and
+  they run the length of the building to the shop's doorway. The scripted player fails if that door is open or unlocked before its line, or shut
+  when they stand in the doorway. The first line no longer breaks at its colon ('[W] [A] [S] [D] to move. Get behind the van': a key cap followed
+  by a colon may wrap between the two). His fourth note, "F should be reserved for squad", waits on the controls' own-action row for a set charge:
+  the 'blow' step still names the squad's word key until then. Both stands play all 29 lines on seed 1; from the arch the back door is off the
+  page's picture, so what he sees is the two running in through the shop: never seen on a GPU, and nobody has played it.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`

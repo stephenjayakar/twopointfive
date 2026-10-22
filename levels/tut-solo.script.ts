@@ -24,15 +24,16 @@ const BAGS_TOP: Vec3[] = [16.6, 17.2, 17.8, 18.4, 19.0, 19.6, 20.2, 20.8].map((x
 const GAP_FLOOR: Vec3[] = [[21.55, 0.5, 13.75], [21.95, 0.75, 13.8], [21.75, 0.45, 13.75], [22.1, 0.7, 13.85], [21.65, 0.8, 13.7], [22.05, 0.5, 13.8], [21.85, 0.65, 13.75], [21.6, 0.6, 13.75]];
 /** where he was: the sandbags' near end (the gun fires blind once the smoke is up) */
 const WAS: Vec3[] = [[17.2, 1.3, 13.2], [18.4, 1.3, 13.4], [16.8, 1.42, 13.6]];
-/** THE LAST TWO come through the building behind him once he is back at the arch: where they come onto the floor (the store, 15 m and more from the arch: off
- *  his screen), where they stand (the shop's doorway, one a step behind the other: each has his own line out through it) and what each shoots at until the
+/** THE LAST TWO come through the building behind him once he is back at the arch: where they come onto the floor (the lane behind the store, outside its back
+ *  door, which is thrown open for them: 20 m from the arch, off his screen, and they run the length of the building at him), where they stand (the shop's doorway, one a step behind the other: each has his own line out through it) and what each shoots at until the
  *  grenade or a round finds one of them: the top of the arch's wall either side of its mouth, a man's height and more over anyone standing in it */
-export const LAST_IN: Vec3[] = [[32.6, 0, 13.9], [33.6, 0, 14.7]], LAST_MEN: Vec3[] = [[25.7, 0, 13.98], [26.5, 0, 14.5]];
+export const LAST_IN: Vec3[] = [[37.4, 0, 14.0], [38.4, 0, 14.5]], LAST_MEN: Vec3[] = [[25.7, 0, 13.98], [26.5, 0, 14.5]];
 const ARCH_HEAD: Vec3[][] = [[[16.0, 2.2, 12.5], [16.0, 2.1, 12.0], [16.0, 2.25, 12.3]], [[16.0, 2.2, 16.0], [16.0, 2.1, 16.5], [16.0, 2.25, 16.2]]];
 /** the shop's doorway and the doorway in the wall between the shop and the store, chest high */
 const SHOP_DOORWAY: Vec3 = [25.4, 1.2, 14.25], PART_DOORWAY: Vec3 = [30.5, 1.2, 14.25];
 
 const script: LevelScriptFn = D => {
+  const backDoor = D.door('store');
   const shopLine = D.volume('shop_line'), shopIn = D.volume('shop_in'), storeIn = D.volume('store_in');
   const roadEast = D.volume('road_east'), roadNose = D.volume('road_nose');
   const rifleman = D.loadout('rifleman', { team: 'guard', weapon: 'akms' });
@@ -125,6 +126,7 @@ const script: LevelScriptFn = D => {
     // are the AI's once one of them is down.
     P.beat('loose', function* (c) { c.flag.loose = true; yield c.frames(1); });
     P.beat('trucks', function* (c) {
+      c.doors.lock(backDoor, false); c.doors.open(backDoor, 1.5, { hold: true });
       yield c.wait(0.4);
       // (found by name first: a beat starts clean from its cue, and nobody is spawned twice. Each keeps his own place and his own piece of wall)
       const men = LAST_IN.map((p, k) => { const name = ['Brandt', 'Marsh'][k]; return { k, u: c.unit(name) ?? c.spawn(rifleman, p, { yaw: -Math.PI / 2, callsign: name }) }; }).filter(m => c.query.alive(m.u));

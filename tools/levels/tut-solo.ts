@@ -70,7 +70,7 @@ export const LAMP: Vec3 = [24.4, 3.2, 17.7];
 /** behind the barrier (steps 'cross', 'back') */
 export const BARRIER: Vec3 = [23.3, 0, 13.9];
 /** beside the shop's door: out of the charge's backblast (1.6 m) and out of the doorway's line, which the man inside is looking down (step 'back') */
-export const BACK: Vec3 = [23.9, 0, 16.0];
+export const BACK: Vec3 = [24.45, 0, 16.0];
 /** the gun's nest and the man on the gun */
 export const NEST: Vec3 = [22.6, 0.4, 7.0];
 export const GUNNER: Vec3 = [22.7, 0, 6.9];
@@ -104,7 +104,7 @@ export const FRAME: Record<string, { allow?: string[]; cue?: string; checkpoint?
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
   pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
-  take: { checkpoint: 'the store' }, launch: { allow: ['alt'], cue: 'trucks' }, last: { cue: 'loose' },
+  take: { checkpoint: 'the store' }, load: { cue: 'trucks' }, launch: { allow: ['alt'] }, last: { cue: 'loose' },
 };
 
 const SHOP: Rect = { x0: FRONT_X, x1: PART_X, z0: ROOM_Z0, z1: ROOM_Z1 }, STORE: Rect = { x0: PART_X, x1: YARD.x1, z0: ROOM_Z0, z1: ROOM_Z1 };
@@ -127,6 +127,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.ground(YARD.x0, YARD.z0, ARCH_X, YARD.z1, 'dirt');              // the truck court
   G.ground(ARCH_X, YARD.z0, FRONT_X, YARD.z1, 'gravel');            // the gun court
   G.ground(FRONT_X, YARD.z0, YARD.x1, ROOM_Z0, 'dirt'); G.ground(FRONT_X, ROOM_Z1, YARD.x1, YARD.z1, 'dirt');   // the two back lots
+  G.ground(YARD.x1, 12.4, 40, 16.1, 'dirt');                        // the lane behind the halt, at the store's back door: it runs off the map
   G.ruts(9.6, 13.2, 15.6, 14.8); G.ruts(0.4, 13.2, 8.6, 14.8, 'gravel');
 
   // ---- the yard wall, the gate in it, the two cross walls ----
@@ -137,6 +138,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   for (const [x, z] of [[9, 5], [9, 23], [36, 5], [36, 23], [16, 5], [16, 23], [25, 5], [25, 23]] as const) G.pier(x, z);
   // the yard gate stands open, out along the road: the sentry's line down it. Hung on the jamb AWAY from the wall he takes, so the corner he leans round is bare
   doors.push({ name: 'gate_w', hinge: [YARD.x0, AXIS + 0.58], closedDir: -HALF, width: 1.16, exterior: true, angle: -1.45, closer: false });
+  // the lane's two walls, off the map's edge: nobody walks round the halt from the back door, and nobody comes to it but by the lane
+  G.yardWallX(12.4, YARD.x1 + 0.12, 40); G.yardWallX(16.1, YARD.x1 + 0.12, 40);
   grp('walls.arch');
   G.yardWallZ(ARCH_X, YARD.z0, AXIS - 1.6, 'mudLight'); G.yardWallZ(ARCH_X, AXIS + 1.6, YARD.z1, 'mudLight');   // the arch: a truck's width, no leaf
   G.pier(ARCH_X, AXIS - 1.6); G.pier(ARCH_X, AXIS + 1.6);
@@ -209,8 +212,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('shop.roof'); slab(SHOP.x0 - 0.1, H, SHOP.z0 - 0.1, STORE.x1 + 0.1, H + 0.2, SHOP.z1 + 0.1, P.render, { flags: BoxFlag.NoPrimary, rough: 0.95 });
   grp('shop.walls');
   G.wallX(ROOM_Z0, FRONT_X - t, YARD.x1 + t, 'render'); G.wallX(ROOM_Z1, FRONT_X - t, YARD.x1 + t, 'render');
-  G.wallZ(FRONT_X, ROOM_Z0 + t, ROOM_Z1 - t, 'render', [{ a: 11.2, b: 12.5, y0: 0.9, y1: 2.0, glass: 'whole' }, DOORWAY, { a: 15.6, b: 16.9, y0: 0.9, y1: 2.0, glass: 'whole' }]);
-  G.wallZ(YARD.x1, ROOM_Z0 + t, ROOM_Z1 - t, 'render');
+  // (one window, on the door's far side from where the charge's line stands him: the wall he waits against is blank. The maintainer, of a window there:
+  //  "weird that we're standing here right in front of the window here he can shoot us")
+  G.wallZ(FRONT_X, ROOM_Z0 + t, ROOM_Z1 - t, 'render', [{ a: 11.2, b: 12.5, y0: 0.9, y1: 2.0, glass: 'whole' }, DOORWAY]);
+  // the store's back door, on the mission's line: steel, shut and locked from the store's side until the last two come in by it from the lane behind the halt
+  // (the maintainer: "it doesn't make sense that the enemies spawn there though. maybe we have another door on the far room and show them coming from
+  //  outside of the map and then running at you"). Steel: no boot, pick or charge of his opens it, so it is never his way out
+  G.wallZ(YARD.x1, ROOM_Z0 + t, ROOM_Z1 - t, 'render', [DOORWAY]);
+  doors.push({ name: 'store', hinge: [YARD.x1, HINGE], closedDir: HALF, width: 1.16, locked: true, keySide: 1, swing: 1, steel: true, exterior: true, closer: false });
   G.wallZ(PART_X, ROOM_Z0 + t, ROOM_Z1 - t, 'render', [DOORWAY]);   // the doorway to the store: no leaf (a full wall, not a partition: a round that misses in the shop stops in it)
   doors.push({ name: 'shop', hinge: [FRONT_X, HINGE], closedDir: HALF, width: 1.16, locked: true, closer: false });   // (no closer: once it is open the doorway is a line of fire for the rest of the mission)
   G.dado('z', FRONT_X, 10.6, AXIS - 0.5, -1, 'paintGreen'); G.dado('z', FRONT_X, AXIS + 0.5, 17.4, -1, 'paintGreen');
@@ -220,7 +229,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.bulb(27.8, AXIS, 'bulb_shop', 'shop');
   grp('store.room');
   G.trunk(TRUNK[0], TRUNK[2], HALF, 'paintGreen');
-  G.crates(35.2, 14.6, 0.1, 3); G.crates(31.4, 16.8, 0.2, 2); G.drums(35.2, 16.8, 2); G.jerryCan(33.6, 11.0, 0.3);
+  G.crates(35.2, 15.75, 0.1, 3); G.crates(31.4, 16.8, 0.2, 2); G.drums(35.2, 16.8, 2); G.jerryCan(33.6, 11.0, 0.3);
   G.bulb(33.4, AXIS, 'bulb_store', 'store');
   grp('lots');
   G.generator(30.0, 7.4, 0.1); G.waterTank(32.6, 20.6);
@@ -269,7 +278,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     rails: { allow: ['move', 'camera', 'zoom'], rows: ['charge', 'drive'] },   // (the interaction key's rows in this mission are the two its lines teach: the charge on the shop's door, the code book. No pick, no boot, no dead man to drag)
     steps: ([
       // THE ROAD
-      { id: 'move', line: '[W] [A] [S] [D]: behind the van', done: { is: 'near', at: VAN, r: 1.1 }, at: VAN },
+      { id: 'move', line: '[W] [A] [S] [D] to move. Get behind the van', done: { is: 'near', at: VAN, r: 1.1 }, at: VAN },
       { id: 'ready', line: '[2]: rifle up', done: { is: 'slot', slot: 'rifle', drawn: true } },
       { id: 'sprint', line: 'Hold [Shift]: sprint to the wall by the gate', done: { is: 'all', of: [{ is: 'near', at: WALL, r: 1.3 }, { is: 'flag', flag: 'sprint' }] }, at: WALL },
       { id: 'wall', line: 'Walk into the wall: snap to it for cover', done: { is: 'flag', flag: 'wall' }, at: [CORNER[0], CORNER[1], WALL[2]] },
@@ -293,7 +302,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'pistol', line: '[1]: the pistol. Its shot is quiet', done: { is: 'any', of: [{ is: 'slot', slot: 'pistol', drawn: true }, DOWN(5)] } },
       { id: 'lamp', line: 'Shoot out the lamp: the dark is cover too', done: { is: 'any', of: [{ is: 'target', name: 'lamp_shop', on: false }, DOWN(3)] }, at: LAMP },
       { id: 'charge', line: 'Hold [Space] on the door: pick the charge', done: { is: 'any', of: [{ is: 'door', door: 'shop', state: 'charged' }, { is: 'door', door: 'shop', state: 'open' }] }, at: SHOP_DOOR },
-      { id: 'back', line: 'Stand clear, beside the door', done: { is: 'near', at: BACK, r: 0.9 }, at: BACK },
+      { id: 'back', line: 'Stand clear: your back to the wall beside the door', done: { is: 'near', at: BACK, r: 0.7 }, at: BACK },
       { id: 'blow', line: '[F]: blow it', done: { is: 'door', door: 'shop', state: 'open' }, at: SHOP_DOOR },
       { id: 'shop', line: 'Lean in: shoot him', done: DOWN(3), at: [SHOP_MAN[0], 1.0, SHOP_MAN[2]] },
       // THE STORE
@@ -303,10 +312,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // THE WAY OUT
       { id: 'rifle', line: '[2]: back to the rifle', done: { is: 'slot', slot: 'rifle', drawn: true } },
       { id: 'leave', line: 'Back to the arch', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH },
-      // (asked for where it is used, a line before the men it is for: the load that is up when the right button is pressed is the one this line left there)
-      { id: 'load', line: '[2] again: load the grenade', setupLine: '[2], then [2]: load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
+      // (the maintainer: "weird that we're told to load the grenade long before being told to do anything about it". The two it is for come out as this
+      //  line comes up, so the load is asked for with them in the doorway and used on the very next line)
+      { id: 'load', line: 'Two behind you. [2] again: load the grenade', setupLine: 'Two behind you. [2], then [2]: load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
       // (a grenade that met something short of the 8 m it arms at is a dud: the line stays until one of the two is down, by the grenade or by anything else)
-      { id: 'launch', line: 'Behind you. Hold right button, aim, let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
+      { id: 'launch', line: 'Hold right button, aim at their doorway, let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
       { id: 'last', line: 'Shoot the rest', done: DOWN(7), at: LAST_COVER },
       { id: 'out', line: 'Sprint out by the gate', done: { is: 'stage', stage: 'done' }, at: [EXIT.x, 0, EXIT.z] },
     ] as LessonStep[]).map(T => ({ ...T, ...FRAME[T.id] })),
@@ -329,6 +339,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     mission: { serverRoom: { x0: SHOP.x0, x1: STORE.x1, z0: SHOP.z0, z1: SHOP.z1 }, entryDoor: 'shop', rack: { index: 0, front, halfW: 0.3 }, exfilDoor: 'gate_w', exfilX: EXIT.x, exfilZ: EXIT.z, exfilOut: EXIT.out },
   };
   const surfaces: SurfacesData = { building: { ...YARD }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt', zones };
-  const scenarios: LevelScenarios = { quiet, lesson, issue: ISSUE, doorNames: [{ door: 'gate_w', name: 'yard gate' }, { door: 'shop', name: 'shop door' }] };
+  const scenarios: LevelScenarios = { quiet, lesson, issue: ISSUE, doorNames: [{ door: 'gate_w', name: 'yard gate' }, { door: 'shop', name: 'shop door' }, { door: 'store', name: 'back door' }] };
   return { level, scenarios, groups: trace.groups, surfaces };
 }

@@ -195,7 +195,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   // the rifle's key again steps the launcher's load; where that key opens the gun's setup instead, the load is its row 2
   load: B => { B.press('Digit2', 20); if (B.g.lesson.step?.id === 'load') B.press('Digit2', 10); },
   // back out through the shop and the gun court to the arch's mouth
-  leave: B => { B.go([ARCH_MOUTH[0], 0, AXIS], 40); },
+  leave: B => { const d = B.g.doors.byName('store')!; if (!d.locked || Math.abs(d.angle) > 0.05) B.fail('the store\'s back door is open or unlocked before the last two come by it'); B.go([ARCH_MOUTH[0], 0, AXIS], 40); },
   // the two in the shop's doorway behind him: the grenade into it, once both stand there (8.5 m and more: armed)
   launch: B => {
     const men = () => B.g.guards.slice(5);
@@ -206,6 +206,8 @@ export const steps: Record<string, (B: Bot) => void> = {
       B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
       if (men().length !== 2) B.fail(`again: ${men().length} last men after the checkpoint (two come, once)`); }
     const x = men().find(up); if (!x) B.fail('nobody came out through the shop');
+    // (they come by the store's back door, from the lane outside: it was shut and locked on him until now)
+    if (!(Math.abs(B.g.doors.byName('store')!.angle) > 1)) B.fail('the last two are in the doorway and the store\'s back door is not open: they did not come by it');
     // (two ways a new player gets this wrong, each of which must cost him nothing: tools/qa/tut-solo-check.ts)
     if (brk() === 'piers') for (const z of [AXIS - 1.25, AXIS + 1.3]) { B.go([ARCH_MOUTH[0] + 0.1, 0, z], 6, { near: 0.25 }); B.wait(4); if (B.g.player.wall) B.press('KeyQ', 10); B.go([ARCH_MOUTH[0], 0, AXIS], 6); }   // (the page takes the pier as a wall: off it, and back to the mouth, before the launcher)
     if (brk() === 'dud') { B.go([20.4, 0, AXIS], 8); rightHold(B, chest(x)); B.wait(3);
