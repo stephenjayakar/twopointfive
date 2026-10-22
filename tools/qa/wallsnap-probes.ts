@@ -15,7 +15,8 @@
 //   wallsnap-camera   the camera turned any way (24 yaws × 8 key combinations): a stick within 55° of the wall's line sidles him and never drops him; only
 //                     square-out lets go; into the wall does nothing. WALLSNAP_BREAK=1 = the rule before it (must fail)
 //   wallsnap-kit      2 (or E with the rifle selected) on the back hold brings the rifle up into the stack without leaving the wall; another item chosen on the
-//                     stack is the back hold again and says it waits for the step off; Q leaves with what he chose
+//                     stack is the back hold again and says it waits for the step off; Q leaves with what he chose; 2 with the rifle up is the launcher's
+//                     load (through the gun's setup when that is on) and he stays stacked
 //   wallsnap-off-same with the switch OFF nothing of the hold carries a feel-pass field and the take is the old fixed 0.22 s glide
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -550,8 +551,13 @@ async function kit() {
   if (hold('rifle')) { if (pl.wall.kind !== 'stack') fails.push('(staging) Q with the rifle up is not the stack');
     const x0 = c.pos[0]; S.keys('KeyD'); S.step(40); S.tap('Digit1'); let off = false; S.step(40, () => { off ||= !pl.wall; }); S.keys();
     if (off || !pl.wall || pl.wall.kind === 'stack') fails.push(`1 pressed while walking the stack: ${off ? 'he came off the wall' : `hold '${pl.wall?.kind ?? 'back'}'`}`); else rows.push(`1 while walking the stack: stayed on, back hold, ${f2(Math.abs(c.pos[0] - x0))} m along`); msgs.length = 0; }
-  // 2 with the rifle already in his hands on the stack is still the attachment's key, and he stays put
-  if (hold('rifle')) { S.step(40); const a0 = pl.rifle.attIdx; want(press('Digit2', 20), '2 on the stack, the rifle up', 'stack', true); if (pl.rifle.attIdx === a0) fails.push('2 on the stack, the rifle up: the attachment did not change'); }
+  // 2 with the rifle already in his hands on the stack is still the attachment's key, and he stays put. With the gun's setup on (slotsetup.ts) that 2 opens the
+  // setup and changes nothing, and 2 again inside it is the launcher's load: both presses leave him stacked where he stands
+  if (hold('rifle')) { S.step(40); const a0 = pl.rifle.attIdx; const { SLOTSETUP } = await import(`${ROOT}/src/game/slotsetup.ts`);
+    if (SLOTSETUP.on) pl.rifle.shells = Math.max(pl.rifle.shells, 2);   // (a grenade for the tube on every stand: the setup has no load row when the other load is empty)
+    want(press('Digit2', 20), '2 on the stack, the rifle up', 'stack', true);
+    if (SLOTSETUP.on) { if (!pl.setup || pl.rifle.attIdx !== a0) fails.push(`2 on the stack, the rifle up: ${pl.setup ? 'the attachment changed under the setup' : 'the setup did not open'}`); want(press('Digit2', 20), '2 again in the setup, on the stack', 'stack', true); if (pl.setup) fails.push('2 again in the setup, on the stack: the setup is still up'); }
+    if (pl.rifle.attIdx === a0) fails.push(`${SLOTSETUP.on ? '2 again in the setup, on the stack' : '2 on the stack, the rifle up'}: the attachment did not change`); }
   // STEPPED OUT ROUND A CORNER on the stack, the rifle put away and brought straight back (1 then 2, E then E): he must not be read as 'past the end of the wall'
   if (!brk) for (const [a, b] of [['Digit1', 'Digit2'], ['KeyE', 'KeyE']]) for (const gap of [2, 6, 12]) {
     const CX = 10.2, what = `stepped out round the corner, ${a.replace(/Digit|Key/, '')} then ${b.replace(/Digit|Key/, '')} ${gap} frames apart`;
