@@ -861,7 +861,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   that is no row (the gun's own shuts it and no more; another is the slot it always was: 4 is the stun can), when the gun leaves his hands, when the
   order menu or the Space list comes up, and by itself `secs` after it opened (1.5: the gap between two presses, not reading time — the box shows
   the presses while it is shut). Nothing is held and nothing is frozen: his feet, aim and trigger are his own while it is up. State: `Player.setup` and
-  `Player.setupHand` (the gun the hook last found in his hands and since when; both null on a fresh player, never saved). The page does not let
+  `Player.setupHand` (the gun the hook last found in his hands and since when; both null on a fresh player, in no file). NOTHING IS UP AFTER A LOAD: a file's load builds the player again; a save kept in memory
+  (`savestate.ts Checkpoints.loadMem`, the rollback snapshot used with a team on the floor) puts him back as he stood, the setup too, so
+  `loadMem` drops it after the snapshot is put back — before that line a load of such a save came back with the setup up and a 1 turned the
+  selector. The page does not let
   the aim it carries through a turn of the view go for the setup's own digits (`host/loop.ts`, `slotSetupTakes`). THE TWO KEYS IT REPLACES: on the page's board the selector's row and the light's have NO KEY
   (`KEYMAP.setFree`, as the wall hold's row has none under `qFree`; only while the game's switch is on — `KEYMAP.setWhen`, the page's — so a
   recording that plays with the setup off has Z and L back); the GAME still asks for 'KeyZ' and 'KeyL' and means what it meant, so a recording from
@@ -888,8 +891,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `JOURNAL_KNOBS` (a recording from before the table replays with it off); Tab ▸ 'Gun setup (its key again)': the switch, 'seconds it stays up
   unused', 'stays up after a pick'. CHECKS: `tools/qa/slotsetup-check.ts` (`probes.ts slotsetup`, family `kit`; `SLOTSETUP_BREAK=1` must fail) —
   opens, the three rows, `stay`, every way it shuts, the empty load and the Space list, Esc, the words and the keys the carried aim keeps, what
-  does not open it, the pistol and the double tap, the box off the real overlay code on the probes' stand-in page, off = the build before, the
-  journal and the stands' row, the board: 12 lines pass on both stands, the break is red on 9 on each.
+  does not open it, the pistol and the double tap, the box off the real overlay code on the probes' stand-in page, a load of each kind, off = the build before, the
+  journal and the stands' row, the board: 13 lines pass on both stands, the break is red on 10 on each.
   `tools/qa/slotsetup-page.cjs` — the real page on the software adapter by real key presses, as it opens and with `?slotsetup=0`: all five lines pass.
   The lesson bot for Training 4 (`tools/qa/lessons/train-kit.ts`) plays the new presses when the rule is on, read off the page's own table when
   it drives a page. OLDER PROBES that step the launcher with 2 again, or read the kit column against recorded words, run with the switch held
