@@ -77,7 +77,7 @@ export async function qkeyCheck(): Promise<boolean> {
   const store = new Map<string, string>(); G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
   let walk = true;
   /** the page's boot (main.ts): the walk-in switch handed over, the address read, what the machine kept taken */
-  const boot = (q = '') => { K.KEYMAP.freeWhen = () => walk; K.keysBoot(new URLSearchParams(q)); if (BREAK) K.KEYMAP.qCmd = false; };
+  const boot = (q = '') => { K.KEYMAP.freeWhen = () => walk; K.keysBoot(new URLSearchParams(q)); K.KEYMAP.setFree = false; if (BREAK) K.KEYMAP.qCmd = false; };   // (Z and L as they were: the rows the gun's setup frees are slotsetup-check.ts's)
   const BOARD: string[] = [...K.KEY_ACTS.flatMap((a: any) => a.codes), 'KeyI', 'KeyJ', 'KeyK', 'KeyM', 'KeyO', 'KeyU', 'KeyY', 'Digit6', 'Digit0', 'Minus', 'Quote', 'Slash', 'Numpad1'];
   const cmd = () => BOARD.filter(c => K.gameCode(c) === ORDERS.quickKey).join('+') || 'no key';
   console.log(`qkey-check: the squad's command key is Q${BREAK ? '  (QKEY_BREAK: the board as it was — the lines must fail)' : ''}`);

@@ -1,6 +1,9 @@
 // The scripted player for Training 4 (levels/train-kit.json; tools/qa/lesson-run.ts runs it): what each step asks, through the input only.
 import type { Bot } from '../lesson-run';
 import { FIRE, LAMP, PIT, TARGET, FAR, DOOR } from '../../levels/train-kit';
+import { SLOTSETUP } from '../../../src/game/slotsetup';
+/** the rule as THIS run has it: the page's own table when the bot is driving a page (its bundle holds a copy of the module that nothing switches) */
+const setup = (): boolean => (globalThis as { __knobs?: { registry?: () => Record<string, { on?: boolean }> } }).__knobs?.registry?.().SLOTSETUP?.on ?? SLOTSETUP.on;
 
 export const query = '?quiet';
 
@@ -23,8 +26,9 @@ export const steps: Record<string, (B: Bot) => void> = {
   // one round into the lamp's head (a second if the first went by)
   fire: B => { B.click(1, LAMP); B.wait(0.3); if (B.g.targets.find((t: any) => t.name === 'lamp_range')?.broken !== true) B.click(1, LAMP); },
   reload: B => { B.press('KeyR'); B.until(() => !B.g.player.pistol.reloading, 5); },
-  light: B => { B.press('KeyL'); },
-  dark: B => { B.press('KeyL'); },
+  // the light: L, or with the gun's setup on (slotsetup.ts) the pistol's key again and the light's row
+  light: B => { if (setup()) { B.press('Digit1', 2); B.press('Digit3'); } else B.press('KeyL'); },
+  dark: B => { if (setup()) { B.press('Digit1', 2); B.press('Digit3'); } else B.press('KeyL'); },
   holster: B => { B.press('KeyE'); },
   // the can in the fist, the cursor on the pit's floor over its wall, a click
   smoke: B => { B.press('Digit3', 10); B.click(1, PIT); B.wait(1.2); },
@@ -35,8 +39,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   // the ring launcher is on the right button from the draw
   ring: B => { rightClick(B, TARGET); B.wait(1.0); },
   // 2 again with the rifle up: flips ring → the grenade, kept in the tube
-  grenade: B => { B.press('Digit2', 5); },
-  auto: B => { B.go(FIRE, 20); B.press('KeyZ', 3); },
+  grenade: B => { B.press('Digit2', 5); if (setup()) B.press('Digit2', 5); },
+  auto: B => { B.go(FIRE, 20); if (setup()) { B.press('Digit2', 2); B.press('Digit1', 3); } else B.press('KeyZ', 3); },
   // the loud ones: the grenade over the pit onto the far wall (11 m: armed), then the burst and the fight as one step
   he40: B => { rightClick(B, FAR); B.wait(1); },
   // a burst at the lit door calls them; then the two come by that one door in the dividing wall, one after the other: the cursor on whichever is up with a line
