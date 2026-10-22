@@ -118,7 +118,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'RESPONSE',
   // gunfire splinters a wooden door leaf apart (doorblast.ts DOORSHOT): a recording made with it on replays its doors going, one from before hangs them
   'DOORSHOT',
-  // a door swung or kicked into a man throws him (doors.ts DOORTHROW): a recording made with it on replays its men thrown, one from before has every leaf stop against them
+  // a door opened into a man moves and startles him, one slammed or booted into him throws him (doors.ts DOORTHROW): a recording made with it on replays its men moved, one from before has every leaf stop against them
   'DOORTHROW',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
