@@ -2689,6 +2689,7 @@ if (on('roomfight-flank', 'roomfight', 'all')) await run('roomfight-flank', asyn
 if (on('roomfight-nextroom', 'roomfight', 'all')) await run('roomfight-nextroom', async () => (await import('./roomfight-probes.ts')).roomfightNextRoom());
 if (on('roomfight-sight', 'roomfight', 'all')) await run('roomfight-sight', async () => (await import('./roomfight-probes.ts')).roomfightSight());
 if (on('roomfight-eyes', 'roomfight', 'all')) await run('roomfight-eyes', async () => (await import('./roomfight-probes.ts')).roomfightEyes());
+if (on('cover-keep', 'roomfight', 'all')) await run('cover-keep', async () => (await import('./coverkeep-probes.ts')).coverKeep());   // a man told to cover keeps his angle: an enemy off the way he was given whom a mate is shooting at is not his (ROOMFIGHT.coverKeep; COVERKEEP_BREAK=1 must fail)
 if (on('doorlook', 'roomfight', 'all')) await run('doorlook', async () => (await import('./doorlook-check.ts')).doorlookCheck());   // a door an enemy's hand opens is looked at by every free teammate with a line to its doorway (ROOMFIGHT.doorEars)
 if (on('roomfight-friends', 'roomfight', 'all')) await run('roomfight-friends', async () => (await import('./roomfight-probes.ts')).roomfightFriends());
 if (on('roomfight-duel', 'roomfight', 'all')) await run('roomfight-duel', async () => (await import('./roomfight-probes.ts')).roomfightDuel());

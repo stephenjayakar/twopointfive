@@ -172,4 +172,4 @@ Object.assign(KEPT.DOORTOOLS, { openHand: null });
 // several doors on one signal: the hand door's man is on its handle before the boot beside him goes in (doortools.ts DOORTOOLS.gateHand)
 Object.assign(KEPT.DOORTOOLS, { gateHand: null });
 // a door an enemy's hand opens is looked at by every free teammate with a line to its doorway (roomfight.ts ROOMFIGHT.doorEars)
-Object.assign(KEPT.ROOMFIGHT, { doorEars: null, doorLookSecs: [1, 8, 0.5] });
+Object.assign(KEPT.ROOMFIGHT, { coverKeep: null, doorEars: null, doorLookSecs: [1, 8, 0.5] });

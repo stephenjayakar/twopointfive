@@ -538,12 +538,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   keys replays with them off (`journal.ts applyKnobs`); not frozen-stand holds (`PAIR.on` is). Check: `probes.ts pair-watched` (the look-back scenes, each
   red with its fix out; green on both stands). Measured headless, scripted: relay station ways flips 3 to 5 a run down to 0 to 2 over 12 starts; the
   border hold 0.6 to 3.9 s up to tens of seconds on one F; relay quiet runs 5 of 18 done before and after. Never played, never seen on a GPU.
+- **A man told to cover keeps his angle** (`src/game/roomfight.ts`, switch `ROOMFIGHT.coverKeep`, `coverPasses`, 10-22; the maintainer's
+  note in his own recording of the plan lesson: "blue one doesn't watch his angle even though red team has it covered"). The recording,
+  read frame by frame: Blue One, told to cover up the lane through the back gate, swung a quarter turn to the road gate three times in
+  five seconds for men Red One and Red Two already had, with the lane's own men still coming. Nothing in the room fight knew of the way
+  he was told to watch: his eyes took any man they saw, and a mate's contact turned his look (the arc rule, `arcHalfDeg`, is a HOLD's,
+  and only for calls). Now a man stood at the post of a cover order passes over an enemy who is more than `coverHalfDeg` 45° off the
+  way he was given WHILE a mate's gun is on that man with a round at him: he is seen (the meter runs) and is not his, to his eyes or to
+  a call, a shot or a footfall. The man is his again the moment no mate has him, his muzzle comes onto this man (the room fight's own
+  0.35 rad), or he is inside `coverNearM` 6 m. ON in the page (`?coverkeep=0` puts it off; Team feel row "team ▸ a man told to cover
+  keeps his angle"), OFF in the module and on the frozen stand (`TPS_COVERKEEP=1`), a `FROZEN_HOLDS` row, pinned off in the digest
+  checks beside `doorEars`. `ROOMFIGHT` joined `JOURNAL_KNOBS` with it: a recording had not carried the table (so `doorEars` replayed
+  off whatever it was recorded with); one from before the key, or before the table, replays with it off. Check `cover-keep` (family
+  `roomfight`; `COVERKEEP_BREAK=1` fails it on both stands): the plan lesson's level with its yard gates stood open, Blue One covering
+  up the lane, Red One beside him covering the side, one enemy stood 10.7 m off at a quarter turn; nobody's round goes (the check holds
+  every first shot off, so the man is there for the whole four seconds) and the floor is hot. Off: his gun 89° off his way, on the man
+  232 of 240 frames. On: 0° off, never on him, Red One on him throughout. And he is his with his muzzle on Blue One, with no mate on
+  him, or 4.3 m off; a man in the lane is taken frame for frame as before. One staging, one seed; no fight was run with it and no
+  tally: a covering man now leaves a far flank to his mates, which a fight's numbers would show. Never seen on a GPU, nobody has
+  played it.
 - **The partner does not turn about on his way** (`src/game/pairorders.ts`, switch `PAIR.steady`, 10-22; the maintainer, of the pair
   mission: "partner seems to be very paranoid about always turning around to check the other guy"). Two causes, both in the walk to a
   man's back, both found in the scripted run of `tut-pair` on hard. (1) The kept way (`PAIR.keepWay`) took up at its NEAREST corner, and
   with that corner a pace behind him he was sent back to it and round again on the next reading 0.3 s on: two full turns in three
-  seconds. Now a corner he is already past along its own leg is dropped (`stalk()`), and a first corner within `steadyBackM` 1.6 m that
-  lies behind the leg after it is skipped when the next is walkable from where he stands. (2) Each time the way read as watched he
+  seconds. Now a corner he is already past along its own leg is dropped (`stalk()`), where the way on from the next is as plain and
+  as cheap a walk as any kept way must be; where it is not (a turn back round a wall's end) the nearest corner stands. (2) Each time the way read as watched he
   stopped and at once squared to the man, then squared back when it read clear a beat later. Now he keeps the way he was facing for
   `steadyFaceSecs` 1.2 s of a wait before he turns to the man. ON in the page (`?pairsteady=0` puts it off; Team feel row "pair ▸ does
   not turn about on his way"), OFF in the module and on the frozen stand (`TPS_PAIRSTEADY=1`), a `FROZEN_HOLDS` row, carried by the
