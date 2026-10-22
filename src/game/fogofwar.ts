@@ -114,7 +114,7 @@
 //     ray (a tripwire beam's end, the cursor's aim point) no longer meets his gun. Small, real, and invisible to the headless probes.
 //
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal.)
-import { SideMap } from '../math/side';
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, LightTarget } from './game';
 import { type RtLight, packLight } from '../render/lights';
@@ -345,6 +345,10 @@ export class FogOfWar {
   /** FOG.squadFire's memory: each teammate's count of aimed rounds as of the last update (roomfight.ts Op.rounds) · per man fired at, when — on the module's own
    *  clock (s of update()s; never Game.time: a checkpoint load puts that back) */
   private firedN = new SideMap<object, number>(); private firedAt = new SideMap<Guard, number>(); private fireClock = 0;
+  /** men a level's script has put in the picture (director.ts `show`): drawn as the squad's targets are — not SEEN, no laser, nobody's AI learns anything —
+   *  for as long as the script says, whoever's eyes lift the fog. A staged man the lesson is about must be there to be looked at */
+  private shown = new SideSet<Guard>();
+  show(gd: Guard, on: boolean) { if (on) this.shown.add(gd); else this.shown.delete(gd); }
   private recs = new SideMap<Guard, Rec>();
   /** per door: the angle the picture has it at, and the three boxes drawn in its place while that is not where it stands */
   private doorRecs = new Map<Door, { shown: number; ghost: Box[] | null }>();
@@ -458,7 +462,7 @@ export class FogOfWar {
       const seen = lines.get(gd) === true;
       const since = g.time - r.t;   // (a record outlives nothing but its Guard object; a clock put back by a checkpoint load meets fresh men — and a stamp from an abandoned future is no sighting)
       const fired = !seen && this.firedOn(gd);
-      if (dead && (seen || fired || (since >= 0 && since < Math.max(FOG.linger, 0.5)))) r.body = true;   // seen lying there — or seen going down (under the squad's rounds too: FOG.squadFire)
+      if (dead && (seen || fired || this.shown.has(gd) || (since >= 0 && since < Math.max(FOG.linger, 0.5)))) r.body = true;   // seen lying there — or seen going down (under the squad's rounds too: FOG.squadFire)
       r.seen = seen; if (seen) { r.t = g.time; if (!dead) { const a = r.at ?? (r.at = [0, 0, 0]), p = gd.char.pos; a[0] = p[0]; a[1] = p[1]; a[2] = p[2]; } }   // (where he stood, kept in place whatever the knob says: a mark asked for later is never at an older spot than its time)
       if (seen) S.seen++;
       if (!this.drawn(gd)) { this.hiddenChars.add(gd.char); S.hidden++; }
@@ -563,7 +567,7 @@ export class FogOfWar {
     this.pending.length = 0;
   }
   /** A fresh encounter (Game.restartEncounter — a restart, a checkpoint load, the start of an F10 recording and of its replay): nobody has been seen, no pair asked. */
-  reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.fireClock = 0;
+  reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.shown = new SideSet(); this.fireClock = 0;
     this.callClock = 0; this.lastCall = -1e9; this.calledT = new SideMap(); this.knownT = new SideMap(); this.toldStep = new SideMap(); this.callN = 0; this.callLog = []; this.callStats = { contact: 0, heard: 0 }; }
 
   /** one eye on one living man, walls and leaves only: the game's own line-of-sight test (guards.ts eyeContact: statics and leaves against his chest AND his head,
@@ -850,7 +854,7 @@ export class FogOfWar {
     if (!this.active || this.onTeam(gd)) return true;
     const r = this.recs.get(gd); if (!r) return false;
     if (r.seen || (gd.state === 'dead' && r.body)) return true;
-    const since = this.g.time - r.t; return (since >= 0 && since < FOG.linger) || this.firedOn(gd);
+    const since = this.g.time - r.t; return (since >= 0 && since < FOG.linger) || this.firedOn(gd) || this.shown.has(gd);
   }
   /** is the squad shooting at him: a teammate's aimed round went at him inside FOG.squadFireSecs (false while the rule is off) */
   firedOn(gd: Guard): boolean { if (!FOG.squadFire) return false; const t = this.firedAt.get(gd); return t !== undefined && this.fireClock - t < FOG.squadFireSecs; }

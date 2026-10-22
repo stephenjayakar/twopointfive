@@ -54,7 +54,7 @@ function goIn(B: Bot, door: string, room: string) {
 }
 
 const raised = (B: Bot, name: string): boolean => !!B.g.director.signalled(name);
-const man = (B: Bot, callsign: string) => B.g.guards.find((x: { callsign: string }) => x.callsign === callsign) as { state: string; script: unknown } | undefined;
+const man = (B: Bot, callsign: string) => B.g.guards.find((x: { callsign: string }) => x.callsign === callsign) as { state: string; script: unknown; char: { pos: number[] } } | undefined;
 
 /** the orders menu on a door or on the ground, then its digits. Where the squad's key kept down is a ring that stays (game/cmdring.ts: the page's way — the
  *  line's [X] is drawn "Hold" and that key there) it is opened that way; where there is no such ring, by the menu's own key (X) */
@@ -82,8 +82,8 @@ function shootMen(B: Bot, room: string, secs: number) {
   const near = () => { const me = B.pos(); return R?.defenders.filter(x => x.state !== 'dead').sort((a, b) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0]; };
   while (!cleared(B, room) && B.t() - t0 < secs) { const m = near(); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, [m.char.pos[0], 1.25, m.char.pos[2]]); B.wait(0.2); }
 }
-const STORE_IN = [10.6, 0, 18.8], SHOP_STREET = [17.0, 0, 13.4], ALLEY = [23.6, 0, 8.6], END = [22.5, 0, 17.5], BLOCKS = [26.6, 0, 16.1], NEST = [32.0, 1.0, 13.8];
-const HALL_SIDE = [34.3, 0, 19.75], HALL_LEAF = [32.4, 1.0, 19.75], WINDOW = [30.9, 0, 16.2], BAGS = [30.2, 0, 13.8], MOUTH = [25.0, 0, 11.6];
+const STORE_IN = [10.6, 0, 18.8], ALLEY = [23.6, 0, 8.6], END = [22.5, 0, 17.5], BLOCKS = [26.6, 0, 16.1], NEST = [32.0, 1.0, 13.8];
+const SHOP_VIEW = [14.25, 0, 12.5], HALL_SIDE = [34.3, 0, 19.75], WINDOW = [30.9, 0, 16.2], BAGS = [30.2, 0, 13.8], MOUTH = [25.0, 0, 11.6];
 
 export const steps: Record<string, (B: Bot) => void> = {
   // the two easy rooms: the squad's key on a door, and again
@@ -91,23 +91,29 @@ export const steps: Record<string, (B: Bot) => void> = {
   'go-hut': B => { goIn(B, 'guardhut', 'guardhut'); },
   'stack-store': B => { B.wait(1); stack(B, 'store'); B.until(() => set(B), 40); },
   'go-store': B => { goIn(B, 'store', 'store'); B.go(STORE_IN, 20); },
-  // the workshop: the stack on the street door, the player round to the side door and through it
-  'stack-shop': B => { B.go(SHOP_STREET, 30); stack(B, 'workshop'); B.until(() => set(B) || cleared(B, 'workshop'), 40); },
-  // (the staged moment itself is held to have happened: his rounds through the leaf, and the man in the script's hand — still on that door — as the player leaves it)
+  // the workshop: its man on his open lane doorway, in the picture and firing out of it; out to the mouth of the lane to look; the squad sent to the
+  // side door from there (the cursor on the step's ring), the walk round after them, and in at his back
+  // (the staged moment itself is held to have happened: a round of his out of the doorway, the man in the script's hand, standing in the line the level
+  //  keeps the team's feet out of and, where the fog of war runs, drawn)
+  out: B => { B.go(SHOP_VIEW, 30); },
   side: B => {
     if (!cleared(B, 'workshop')) {
-      if (!B.until(() => raised(B, 'done:shop') || cleared(B, 'workshop'), 12)) B.fail("the workshop's man never fired through the door (no 'done:shop')");
-      const m = man(B, 'Tango 4'); if (m && m.state !== 'dead' && !m.script) B.fail("the workshop's man is not in the script's hand after his bursts: he is not holding on the door");
+      if (!B.until(() => raised(B, 'done:shop') || cleared(B, 'workshop'), 14)) B.fail("the workshop's man never fired out of his doorway (no 'done:shop')");
+      const m = man(B, 'Tango 4'), F = B.g.fogOfWar;
+      if (m && m.state !== 'dead' && !m.script) B.fail("the workshop's man is not in the script's hand after his first burst: he is not holding his doorway");
+      if (m && m.state !== 'dead' && F.active && !F.drawn(m)) B.fail("the workshop's man is not in the picture under the fog of war while he holds his doorway");
+      const V = (B.g.level.volumes ?? []).find((v: any) => v.name === 'shop_line');
+      if (!V) B.fail("the level has no 'shop_line' volume: nothing keeps his rounds off the team");
+      else if (m && m.state !== 'dead') {
+        const px = m.char.pos[0] - V.c[0], pz = m.char.pos[2] - V.c[2], cs = Math.cos(V.yaw ?? 0), sn = Math.sin(V.yaw ?? 0);
+        if (Math.abs(cs * px - sn * pz) > V.h[0] + 0.5 || Math.abs(sn * px + cs * pz) > V.h[2]) B.fail(`the workshop's man fires from ${m.char.pos.map((v: number) => v.toFixed(2))}, off the line the level's 'shop_line' volume watches`);
+      }
+      const d = B.door('workshop'); if (d.isClosed()) B.fail("the workshop's lane door is shut: nobody can see him or his rounds");
     }
-    B.go(ALLEY, 40, { noDoors: true });
+    stack(B, 'workshop_side');
   },
-  shop: B => {
-    // (through the doorway, as a hand does it: where a leaf swings shut behind a push, a man who only opened it is looking at a door again)
-    if (!cleared(B, 'workshop')) B.go([21.0, 0, 8.3], 20, { stop: () => cleared(B, 'workshop') });
-    shootMen(B, 'workshop', 20);
-    if (!B.until(() => cleared(B, 'workshop'), 20)) { const m = B.g.guards.find((x: any) => x.callsign === 'Tango 4'), d = B.door('workshop_side'), sh = B.g.events.filter((e: any) => e.kind === 'shot' && e.who === 1).slice(-1)[0];
-      B.fail(`the workshop was not cleared: Tango 4 ${m?.state} at ${m?.char.pos.map((v: number) => v.toFixed(1))}, side door angle ${d.angle.toFixed(2)}, player at ${B.pos().map(v => v.toFixed(1))}, mag ${B.g.player.rifle.mag}, slot ${B.g.player.slot} up ${B.g.player.rifleUp}, last round ${sh ? JSON.stringify([sh.from, sh.to].map((v: any) => v?.map((x: number) => +x.toFixed(1)))) : 'none'}`); }
-  },
+  round: B => { B.go(ALLEY, 60, { noDoors: true }); },
+  shop: B => { goIn(B, 'workshop_side', 'workshop'); },
   // the nest: the squad called in, the wall's end, rounds at the gun, the blocks, a grenade over the bags
   wall: B => { menu(B, { ground: B.pos() }, 3); if (!gave(B, 'fallIn')) B.fail(`the menu's 3 gave ${last(B)?.order}`); B.go(END, 60); },
   gun: B => { if (!B.until(() => raised(B, 'done:gun') || cleared(B, 'nest'), 8)) B.fail("the gun's first burst never came (no 'done:gun')"); B.go([24.3, 0, 16.6], 10); shootAt(B, NEST, () => cleared(B, 'nest'), 6); },
@@ -115,17 +121,16 @@ export const steps: Record<string, (B: Bot) => void> = {
   frag: B => { if (B.g.player.frags < 1) B.fail('no frag to throw'); B.press('Digit5', 10); B.click(1, NEST); B.wait(3.5); B.press('Digit2', 10); },
   // (a man left behind the bags cannot be hit from the blocks: round the nest's open side, as a player would walk)
   nest: B => { shootMen(B, 'nest', 8); if (!cleared(B, 'nest')) { B.go([33.6, 0, 16.2], 30, { stop: () => cleared(B, 'nest') }); shootMen(B, 'nest', 25); } if (!B.until(() => cleared(B, 'nest'), 30)) B.fail('the nest was not taken'); },
-  // the hall: its men shot through a street window, its leaf shot down from one side, and in through the doorway
+  // the hall: its men shot through a street window from outside
   window: B => { B.wait(1.5);
     if (!B.go(WINDOW, 60, { stop: () => cleared(B, 'hall') })) B.say(`  did not reach the window: at ${B.pos().map(v => v.toFixed(1))}`); shootMen(B, 'hall', 40); if (!B.until(() => cleared(B, 'hall'), 60)) B.fail('the hall was not cleared'); },
+  // the hall's door: round to the passage, square on to the leaf, and the boot (a frame that held it is kicked again)
+  door: B => { B.go(HALL_SIDE, 60, { noDoors: true }); },
   lock: B => {
-    B.go(HALL_SIDE, 60, { noDoors: true }); const d = B.door('hall'), r = B.g.player.rifle; let n = 0, m = r.mag;
-    const tries = B.g.tune.chaos > 0 ? 40 : 12;   // (with the destruction knob at nothing no round opens a leaf — 40 were tried —: a dozen here, and the rifle keeps rounds for the picket)
-    for (let k = 0; k < tries && d.isClosed(); k++) { reload(B); m = r.mag; B.click(1, HALL_LEAF); B.wait(0.18); n += m - r.mag; }
-    B.say(`  the hall door: ${d.isClosed() ? 'still shut' : 'open'} after ${n} rifle rounds (destruction ${B.g.tune.chaos})`);
-    // (with the destruction knob at nothing no round opens a leaf: the boot is the other way through a lock)
-    if (d.isClosed() && !d.lockBroken) { B.openDoor('hall', 'push'); B.wait(0.6); for (let k = 0; k < 4 && d.isClosed() && !d.lockBroken; k++) { B.openDoor('hall', 'kick'); B.wait(1.5); } }
-    if (d.isClosed() && !d.lockBroken) B.fail(`the hall door would not give to rounds or to a boot (locked ${d.locked})`);
+    const d = B.door('hall'); let n = 0;
+    for (; n < 4 && d.isClosed() && !d.lockBroken; n++) { B.openDoor('hall', 'kick'); B.wait(1.5); }
+    B.say(`  the hall door: ${d.isClosed() && !d.lockBroken ? 'still shut' : 'in'} after ${n} kick${n === 1 ? '' : 's'}`);
+    if (d.isClosed() && !d.lockBroken) B.fail(`the hall door would not give to a boot (locked ${d.locked})`);
   },
   hall: B => {
     B.go([31.0, 0, 19.75], 30); },
@@ -160,9 +165,9 @@ export const steps: Record<string, (B: Bot) => void> = {
   },
 };
 /** lines inside a live fight: the squad's rifles can end the room while the line is up, or before it comes up (each such test also passes on the room taken).
- *  'lock' is among them for ONE reason: the hall's last man, his mate shot through the window, can drop his rifle and run by the game's own rule
- *  (runner.ts), and he opens his own locked door on the way out, so the door's line goes by with nobody shooting it (seen on one die of twelve) */
-export const fightOk = ['go-store', 'side', 'shop', 'gun', 'blocks', 'frag', 'nest', 'window', 'lock', 'front', 'back', 'hold'];
+ *  'door' and 'lock' are among them for ONE reason: the hall's last man, his mate shot through the window, can drop his rifle and run by the game's own
+ *  rule (runner.ts), and he opens his own locked door on the way out, so the door's lines go by with nobody kicking it (seen on one die of twelve) */
+export const fightOk = ['go-store', 'out', 'side', 'round', 'shop', 'gun', 'blocks', 'frag', 'nest', 'window', 'door', 'lock', 'front', 'back', 'hold'];
 /** a room clear's own end: every defender down ('structure taken') */
 export const ended = (g: { roomClear: { end: string } }) => g.roomClear.end === 'taken';
 export function finish(B: Bot) { if (!B.until(() => ended(B.g), 30)) B.fail(`the mission did not end (${B.g.roomClear.end || 'still running'})`); }
