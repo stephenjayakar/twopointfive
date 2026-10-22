@@ -66,6 +66,9 @@ export const RAILS = { on: false,
   shiftTap: true,
   /** the big line goes to the bottom edge from over the player and his teammates where they stand under it (ui/railclear.ts; picture only) */
   lineClear: true,
+  /** a step's own eye is never the one the fog of war has no place for: with the places full (four men up and the seat's lookout) it takes the last
+   *  (fogofwar.ts update; before, it was the one dropped, and the squad's own wall charge went off unseen) */
+  eyeFirst: true,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
 export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
@@ -270,6 +273,8 @@ export class Rails {
     return this.lookout ??= lookoutEye(LOOKOUT_ID, e);
   }
   private lookout: FogEye | null = null;
+  /** the step's eye has a place in the fog's list whatever else is in it (RAILS.eyeFirst) */
+  get eyeFirst(): boolean { return RAILS.eyeFirst; }
   /** the step's own lookout (its `eye`), for as long as the step is up: null without one */
   stepEye(): FogEye | null {
     const S = this.lesson(), e = S?.L.steps[S.i]?.eye; if (!e || BREAK) return null;
