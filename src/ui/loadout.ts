@@ -71,7 +71,8 @@ export interface LoadoutOpts {
   host?: HTMLElement;
   /** MOUNTED INSIDE ANOTHER SCREEN (ui/startpage.ts: in the mission list's sheet; needs `host`): the list under it is not closed, the focus is not taken
    *  or given back, and the screen takes a key only while `keys()` says the keys are its own */
-  embedded?: { keys(): boolean };
+  embedded?: { keys(): boolean; /** a key, before any row of the screen has it: true = it was the host's (the one starting page's map sheet — ui/kitBrief.ts) */ key?(code: string, repeat: boolean): boolean;
+    /** a key the highlighted row did not take, before the screen's own Enter / Esc / W A S D: true = it was the host's (the one starting page's walkthrough — ui/kitGuide.ts: an open pop-up's Esc is the card's first) */ rest?(code: string, repeat: boolean): boolean };
   /** Deploy is about to load `search` with `n` teammates (told before the load or `deploy`; nothing is replaced) */
   onDeploy?: (search: string, n: SquadSize) => void;
   /** told at the end of every paint (the one starting page draws the picked man from it: ui/kitFigure.ts) */
@@ -86,6 +87,8 @@ export interface LoadoutScreen { readonly entry: LoadoutEntry; readonly root: HT
   readonly member: number; readonly card: MemberCard | null; readonly squadRows: HTMLElement;
   /** the kit the picked member will be staged with: his kept card, or the issue card (with a mission's own fields over it) where the mission hands the kit out */
   worn(): MemberKit;
+  /** the NAMED kit that is on (the Kit row's lit one — kit.ts kitLoadoutOf): '' = a mix of the player's own, or a screen with no such row */
+  readonly kitName: string;
   setSquad(n: SquadSize): boolean; /** gone, with no word to anybody (Back's callback not called) */ close(): void; step(dir: 1 | -1): void; move(dir: 1 | -1): void; pick(i: number): void; pool(): { bangs: number; charges: number }; deploy(): void; back(): void; paint(): void; search(): string; key(code: string, repeat?: boolean): boolean }
 /** the rows of a card whose thing only looks into the fog of war: the optical wand (game/wand.ts) and the sticky cameras (game/stickycam.ts) */
 const FOG_KIT: readonly string[] = ['wand', 'cams'];
@@ -283,7 +286,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
 
   const S: LoadoutScreen = {
     entry, root, rows: [], sel: 0, squadRows,
-    get squad() { return squad; }, get open() { return open; }, get member() { return member; }, get card() { return kitCard; },
+    get squad() { return squad; }, get open() { return open; }, get member() { return member; }, get card() { return kitCard; }, get kitName() { return kitBtns.length > 1 ? kitLoadoutOf(alone()) ?? '' : ''; },
     worn() { const card = (j: number) => { const k = missionKit?.[String(j)]; return k ? { ...kitDefault(j), ...k } as MemberKit : issuedOnly || !KIT.on || !KIT.members[j] ? kitDefault(j) : KIT.members[j]; }, w = (missionKit || issuedOnly || !KIT.on ? kitWorn(squad, KIT.members.map((_c, j) => card(j))) : kitWorn(squad))[member];   // (as the staging will have him: kit.ts KITDEAL shares a named kit out over three or four)
       const cams = KIT_LENT.on ? lentNow('cams') : 0, wand = KIT_LENT.on && lentNow('wand') > 0;   // (… and what the mission hands him over it: the man drawn beside the card carries what the tile says he will have)
       return cams > w.cams || (wand && !w.wand) ? { ...w, cams: Math.max(w.cams, cams), wand: w.wand || wand } : w; },
@@ -335,8 +338,10 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
     key(code, repeat = false) { if (!open) return false; keyed = true; try { return keys(code, repeat); } finally { keyed = false; } },
   };
   const keys = (code: string, repeat: boolean): boolean => {
+      if (code && opts.embedded?.key?.(code, repeat)) return true;
       const row = S.rows[S.sel];
       if (row?.key?.(code, repeat)) return true;
+      if (code && opts.embedded?.rest?.(code, repeat)) return true;
       if (repeat && (code === 'Enter' || code === 'NumpadEnter' || code === 'Space' || code === 'Escape')) return true;   // (a held Enter or Esc acts once)
       switch (code) {
         case 'KeyW': case 'ArrowUp': S.move(-1); return true;
