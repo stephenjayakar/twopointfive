@@ -307,11 +307,11 @@ export const roomfightEyes = guarded(async () => {
   { const was = g.playerInvisible; g.playerInvisible = false; ROOMFIGHT.sights = false; const p0 = fan(op, true); ROOMFIGHT.sights = true; const p1 = fan(op, true); g.playerInvisible = was;
     verdict(seen(p0).length > 0 && JSON.stringify([...p0]) === JSON.stringify([...p1]), 'his reading of Sam is the same with the switch on and off', `Sam seen at ${show(p0)} either way`); }
   // the other side: a defender with his long gun in the shoulder — `sights` does not touch him, `sightsFoe` does
-  { h.dazzledUntil = 0; R.plant = () => { op.dazzledUntil = g.time + 5; h.dazzledUntil = 0; };
+  { const h = R.spawn('hostile', [B[0], 0, B[2]], A, { name: 'Tango 2' }); h.dazzledUntil = 0; R.plant = () => { op.dazzledUntil = g.time + 5; h.dazzledUntil = 0; };   // (a fresh man: the first was shot by the teammate in the part above, and these two lines had never run)
     const hc = h.char, shouldered = () => hc.anim.longShown === 'shoulder' && hc.gunDir[0] * Math.sin(hc.aimYaw) + hc.gunDir[2] * Math.cos(hc.aimYaw) > 0.866;
     g.events.push({ kind: 'shot', pos: [B[0], 0, B[2]], time: g.time, loud: true, level: 1.0, who: op.char.id }); R.until(shouldered, 6);
     ROOMFIGHT.sights = false; ROOMFIGHT.sightsFoe = false; const f0 = fan(h); ROOMFIGHT.sights = true; const f1 = fan(h); ROOMFIGHT.sightsFoe = true; const f2 = fan(h);
-    if (!shouldered()) verdict(true, 'the other side (not staged: the defender never brought his gun to the shoulder here — nothing asked of him)', `carriage ${hc.anim.longShown}`);
+    if (!shouldered()) verdict(false, 'the other side is staged: the defender brings his gun to the shoulder', `carriage ${hc.anim.longShown}`);
     else { verdict(JSON.stringify([...f0]) === JSON.stringify([...f1]), 'a defender with his gun in the shoulder sees the same with the teammates\' switch on and off', `sees ${show(f0)}`);
       verdict(seen(f2).length >= seen(f0).length && [...f0].every(([d, v]) => !v || f2.get(d) === true), 'and his own switch (sightsFoe, shipped off) only ever adds to what he sees', `off ${seen(f0).length} bearings · on ${seen(f2).length}`); } }
   return done();
