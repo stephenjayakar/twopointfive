@@ -13,9 +13,10 @@ import { backHit } from './backkey';
 import { wheelPace, pickHover, cancelRow, easeOffHold, holdKilling, stopPicking, stopWand } from './player';
 import { cancelDrive } from './mission';
 import { stopCoding } from './devices';
+import { ownBlowHeld } from './ownblow';
 import { samStaggered } from './samstun';
 import { CMDRING, ringOpen, ringWant, type RingView } from './cmdring';
-import { HANDRING } from './handring';
+import { HANDRING, EMPTY_WORD, EMPTY_AGAIN_SECS } from './handring';
 import { tryWhistle, whistleReadyIn } from './whistle';
 import { CLOSE } from './close';
 import type { View } from '../host/hud';
@@ -205,7 +206,9 @@ export function updateInteract(g: Game, dt: number, input: Input, view?: View) {
   if (!armed) { if (S.open) closeSelector(g, false); return; }
   if (down) { S.downT += Math.min(dt, 0.05); if (!stays && live && !S.open && S.downT >= TAP_SECS - 1e-6) openSelector(g); return; }   // (a frame hitch must not turn a tap into a hold)
   // ---- released this frame (or begun and ended inside it): the highlighted row is what Space does
-  const rowNow = g.hover;
+  const rowNow = g.hover, listed = S.open, quick = !S.moved && S.downT < (stays ? HANDRING.holdSecs : TAP_SECS);   // (a tap, whatever was up for it: the ring that does not stay is up from the press's edge)
   closeSelector(g, false);
+  if (!listed && !rowNow && HANDRING.empty && !g.puppet && !samStaggered(g)) { const m = g.messages[g.messages.length - 1]; if (m?.text !== EMPTY_WORD || g.time - m.t > EMPTY_AGAIN_SECS) g.msg(EMPTY_WORD); return; }   // (handring.ts `empty`: a tap with nothing in reach was silence — the key looked dead; the corner shows the word for a moment, ui/overlay.ts)
+  if (quick && ownBlowHeld(g, rowNow)) return;   // (ownblow.ts: a bare tap never sets off his own charge with him in its blast — the ring's wedge, or the list's row, does)
   give(g, rowNow);
 }

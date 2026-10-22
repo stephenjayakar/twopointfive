@@ -24,6 +24,7 @@ import { WALLSNAP, LEAN_GUN_M } from '../game/wallsnap';
 import { HANDSLOT } from '../game/handslot';
 import { HANDRING } from '../game/handring';
 import { THROWBACK } from '../game/throwback';
+import { OWNBLOW } from '../game/ownblow';
 import { WALLCHARGE, WALLSHOT, WALLKILL } from '../game/wallcharge';
 import { CHAOS } from '../game/destruction';
 import { WALLREACT } from '../game/wallreact';
@@ -253,7 +254,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_HANDSLOT')) HANDSLOT.on = String((globalThis as any).process?.env?.TPS_HANDSLOT ?? '') === '1';   // empty hands are a slot (game/handslot.ts): off, so the frozen stand's kit keys are as every probe and digest has them; `TPS_HANDSLOT=1` raises it
     if (pinned()) THROWBACK.restMark = false;   // the throw preview's rest mark (throwback.ts `restMark`): the overlay's, held off here like every newer rule
     if (pinned('TPS_THROWBACK')) THROWBACK.on = String((globalThis as any).process?.env?.TPS_THROWBACK ?? '') === '1';   // a can in the wind-up goes back on the belt when another beat begins (game/throwback.ts): off, so the frozen stand's throws are as every probe has them; `TPS_THROWBACK=1` raises it
-    if (pinned('TPS_HANDRING')) HANDRING.early = HANDRING.on = String((globalThis as any).process?.env?.TPS_HANDRING ?? '') === '1';   // his own actions are a ring that stays (game/handring.ts): off, so the frozen stand's Space list, its rows and the whistle's key are as every probe has them; `TPS_HANDRING=1` raises it
+    if (pinned('TPS_OWNBLOW')) OWNBLOW.on = String((globalThis as any).process?.env?.TPS_OWNBLOW ?? '') === '1';   // his own charge goes off from his own actions, not the squad's key (game/ownblow.ts): off, so the frozen stand's charges by hand blow on the key as every probe has them; `TPS_OWNBLOW=1` raises it
+    if (pinned('TPS_HANDRING')) HANDRING.empty = HANDRING.early = HANDRING.on = String((globalThis as any).process?.env?.TPS_HANDRING ?? '') === '1';   // his own actions are a ring that stays (game/handring.ts): off, so the frozen stand's Space list, its rows and the whistle's key are as every probe has them; `TPS_HANDRING=1` raises it
     if (pinned('TPS_LIGHTWALL')) LIGHTWALL.on = String((globalThis as any).process?.env?.TPS_LIGHTWALL ?? '') === '1';   // a weapon light stops at the wall its carrier is pressed to (src/game/lighting.ts lensClear): off, so every carried light is at its lens — and the CPU light estimate reads what it read in every frozen digest and tally; `TPS_LIGHTWALL=1` turns it on (the shipped default)
     if (pinned('TPS_NOTEAMLASER')) IR.teamOff = String((globalThis as any).process?.env?.TPS_NOTEAMLASER ?? '') === '1';   // the team's guns show no laser line (src/game/irlaser.ts; a picture only): off, so every teammate's laser is drawn as the laser probes read it; TPS_NOTEAMLASER=1 raises it
     if (pinned('TPS_IRLIGHT')) IRLIGHT.on = String((globalThis as any).process?.env?.TPS_IRLIGHT ?? '') === '1';   // an infrared light on the goggles (src/game/irlight.ts): off, so a teammate's tube reads the light the meter reads and nothing else, and a room with none is too dark for it

@@ -134,6 +134,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'HANDRING',
   // a can in the wind-up goes back on the belt when another beat begins (throwback.ts THROWBACK): a recording made with it on replays those cans kept, one from before as thrown late
   'THROWBACK',
+  // his own charge goes off from his own actions, not the squad's key (ownblow.ts OWNBLOW): a recording made with it on replays its interaction-key row as the blast, one from before the squad's key as it was
+  'OWNBLOW',
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
@@ -214,6 +216,7 @@ import { SAVETIMELINE } from './savestate';
 import { HANDSLOT } from './handslot';
 import { HANDRING } from './handring';
 import { THROWBACK } from './throwback';
+import { OWNBLOW } from './ownblow';
 import { SAMSTUN } from './samstun';
 import { RECAP } from './deathrecap';
 import { TEAMTALLY } from './teamtally';
@@ -289,6 +292,7 @@ export function knobRegistry(): Record<string, object> {
     HANDRING,
     // a can in the wind-up goes back on the belt when another beat begins (throwback.ts): the switch
     THROWBACK,
+    OWNBLOW,
     // a sprint into a door has weight (sprintdoor.ts): the switch, what a shoulder through it keeps of his run, how the leaf leaves him, the boot (or the handle) at the face it opens toward — where the player is a second later reads them
     SPRINTDOOR,
     // teammates are slower than the player and run only for a reason (teampace.ts): the switch, the walk's share of the player's, a follower's closing pace and his run, the reasons — where every teammate is a second later reads them

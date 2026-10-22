@@ -188,7 +188,9 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
   if (big) for (const gd of S.squad()) { const A = S.of(gd); if (alive(gd) && A && A.order === 'stack' && A.door && A.post && A.there.startsWith('stacked')) put(A.door, [gd], 'stack', addr.has(gd)); }
   else { for (const x of T.stackWaits(S.squad())) for (const gd of x.men) put(x.stack, [gd], 'stack', false);   // (DOORTOOLS.wordSmall: one or two teammates on a plain stack wait on the key too —
     for (const x of T.stackWaits([...addr])) for (const gd of x.men) put(x.stack, [gd], 'stack', true); }   // the key's own list, asked as the key asks it: the addressed men's)
-  for (const c of T.set) put(c.door, S.squad().filter(m => alive(m) && m.callsign === c.by), 'charge', false).set = c;
+  // (ownblow.ts: a charge of his own that the squad is not at waits on HIS key, not this one — no bar, and it is nothing to the press: keyIs on each tool)
+  const tSet = T.set.filter(c => T.keyIs(c)), wSet = WC.set.filter(c => WC.keyIs(c));
+  for (const c of tSet) put(c.door, S.squad().filter(m => alive(m) && m.callsign === c.by), 'charge', false).set = c;
   if (NB.state === 'set') { const d = NB.drill?.door; if (d) put(d, NB.drillOps.filter(alive), 'drill', false).drill = true; }   // (the room clear's own drill, stacked: its second F)
   // the rescue's entry on the hostage room, stacking or stacked and held for the second word (rescue.ts orderDoor: its own reading of the key, the LAST of them)
   const entry = RS.active && !RS.result && RS.entry && !RS.entry.gate.go ? RS.entry : null;
@@ -200,19 +202,19 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
     const p = gd.char.pos, y = gd.char.aimYaw, fx = Math.sin(y), fz = Math.cos(y), cx = p[0] + fx * PLAN.pairBarM, cz = p[2] + fz * PLAN.pairBarM;
     out.doors.push({ door: null, a: [cx - fz * 0.3, 0, cz + fx * 0.3], b: [cx + fz * 0.3, 0, cz - fx * 0.3], tone: toneOf(gd), key: 'F', now: pairFirst, ready: true, why: 'pair' });
   }
-  if (!by.size && !WC.set.length) return;
-  const free = T.set.filter(c => !T.ops.some(o => o.kind === 'charge' && o.door === c.door && !!o.word && isNaN(o.word.go1)));   // (not on a word already given)
+  if (!by.size && !wSet.length) return;
+  const free = tSet.filter(c => !T.ops.some(o => o.kind === 'charge' && o.door === c.door && !!o.word && isNaN(o.word.go1)));   // (not on a word already given)
   const nearSet = free.length ? free.reduce((a, b) => (flat(b.door.frameCentre, sam) < flat(a.door.frameCentre, sam) ? b : a)) : null;
-  const wall = WC.set.length ? WC.nearest() : null, wallD = wall ? flat(wallPt(wall.wall, 0, 0), sam) : Infinity;
-  const wallFirst = !!wall && !T.set.some(x => flat(x.door.frameCentre, sam) < wallD);
-  const reaches = up && !pairFirst && (!wallFirst || !T.set.length);   // the press gets as far as the door tools
+  const wall = wSet.length ? WC.nearest(c => WC.keyIs(c)) : null, wallD = wall ? flat(wallPt(wall.wall, 0, 0), sam) : Infinity;
+  const wallFirst = !!wall && !tSet.some(x => flat(x.door.frameCentre, sam) < wallD);
+  const reaches = up && !pairFirst && (!wallFirst || !tSet.length);   // the press gets as far as the door tools
   const anyWord = wordKey && [...by.values()].some(e => e.word);
   const rowKey = !!S.menu && S.menu.rows.some(d => d.hotKey === DOORTOOLS.blowKey);   // a menu up with a row on the key: the key IS that row (the door tools' rule, the wall charge's too)
   const early = big && T.ops.some(op => (op.thr?.first === 'can' || op.thr?.first === 'burst') && op.men.some(m => addr.has(m)));   // (doortools.ts wordEarly has the press)
-  const last = reaches && !anyWord && !early && !rowKey && !S.menu?.wordRow && !T.set.length && !WC.set.length;   // … and past them all, to the rescue
+  const last = reaches && !anyWord && !early && !rowKey && !S.menu?.wordRow && !tSet.length && !wSet.length;   // … and past them all, to the rescue
   const tone = (men: Guard[]): Tone | null => toneFor(g, men, toneOf);
   const set = (men: Guard[]) => men.every(m => { const A = S.of(m); return !alive(m) || !A || (A.yieldT < 0 && (A.arrived || !A.post || flat(m.char.pos, A.post) < 0.5)); });   // (every man of it on his place — his feet there: a gun still coming round does not put the cap out — none taken off it by a fight)
-  const drillNow = anyWord ? NB.drillOps.some(m => addr.has(m)) : !T.set.length && !WC.set.length;   // (the drill reads the key after them: a word to its own men leaves it the press; a set charge, or a word to others, does not)
+  const drillNow = anyWord ? NB.drillOps.some(m => addr.has(m)) : !tSet.length && !wSet.length;   // (the drill reads the key after them: a word to its own men leaves it the press; a set charge, or a word to others, does not)
   for (const [door, e] of by) {
     const [ja, jb] = jambs(door);
     let now = false;
@@ -222,7 +224,7 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
     }
     out.doors.push({ door, a: ja, b: jb, tone: tone([...e.men]), key: wordKey || e.set || e.drill || e.gate ? F : null, now, ready: set([...e.men]), why: e.why });
   }
-  for (const c of WC.set) out.doors.push({ door: null, a: wallPt(c.wall, -0.4, 0.03), b: wallPt(c.wall, 0.4, 0.03), tone: tone(S.squad().filter(m => alive(m) && m.callsign === c.by)), key: F, now: up && !pairFirst && !rowKey && wallFirst && c === wall, ready: true, why: 'wall' });
+  for (const c of wSet) out.doors.push({ door: null, a: wallPt(c.wall, -0.4, 0.03), b: wallPt(c.wall, 0.4, 0.03), tone: tone(S.squad().filter(m => alive(m) && m.callsign === c.by)), key: F, now: up && !pairFirst && !rowKey && wallFirst && c === wall, ready: true, why: 'wall' });
 }
 
 /** The squad's plan as it stands this frame, for the overlay. Empty with the switch off, with no squad on the floor, and under any show. */

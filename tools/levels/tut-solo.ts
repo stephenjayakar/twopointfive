@@ -248,7 +248,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'pistol', line: '[1]: the pistol', done: { is: 'any', of: [{ is: 'slot', slot: 'pistol', drawn: true }, DOWN(5)] } },
       { id: 'charge', line: 'Hold [Space] on the door: pick the charge', done: { is: 'any', of: [{ is: 'door', door: 'shop', state: 'charged' }, { is: 'door', door: 'shop', state: 'open' }] }, at: SHOP_DOOR },
       { id: 'back', line: 'Stand clear, beside the door', done: { is: 'near', at: BACK, r: 0.9 }, at: BACK },
-      { id: 'blow', line: '[F]: blow it', done: { is: 'door', door: 'shop', state: 'open' }, at: SHOP_DOOR },
+      // (`blowLine`: his own charge is a row of his own actions where that rule is on — game/ownblow.ts — and stood clear it is the only row, so a tap gives it)
+      { id: 'blow', line: '[F]: blow it', blowLine: '[Space]: blow it', done: { is: 'door', door: 'shop', state: 'open' }, at: SHOP_DOOR },
       { id: 'shop', line: 'Lean in: shoot him', done: DOWN(3), at: [SHOP_MAN[0], 1.0, SHOP_MAN[2]] },
       // THE STORE
       { id: 'stun', line: '[4], then left button: stun the store', done: { is: 'any', of: [{ is: 'threw', kind: 'flash', area: STORE }, DOWN(5)] }, at: STORE_DOORWAY },   // (it passes on the bang itself, in the store: the next line is up while they are still folded)

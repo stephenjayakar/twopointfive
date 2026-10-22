@@ -20,6 +20,7 @@ const WC = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { WALLCHARGE, WALLCHARGE_DEFAULTS, wallAt, wallPt, wallOff, outerWall, skyFaces, WALL_ORDER } = WC;
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { OWNCHARGE } = await import(`${ROOT}/src/game/owncharge.ts`);
+const { OWNBLOW } = await import(`${ROOT}/src/game/ownblow.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -61,6 +62,7 @@ async function rig(scn: string, seed: number, o: { squad?: boolean; still?: bool
   const E = entryOf(scn); if (!E) throw new Error(`no scenario '${scn}'`);
   const W: any = await quiet(() => standUp(E.level ? { level: levelOfFile(E.level) } : {})); const game = W.game, input = W.input;
   WALLCHARGE.outer = o.outer ?? true;   // (after the stand-up: the frozen stand pins it off — src/host/standup.ts)
+  OWNBLOW.on = false;   // (ownblow.ts, on on the shipped stand: these lines press the squad's key on a charge set by hand, as they were written; ownblow-check holds the row)
   game.godMode = true; game.tune.chaos = o.chaos ?? 0.5;
   if (o.squad ?? true) { const { why } = await quiet(() => startFromQuery(game, new URLSearchParams(scenarioQuery(E)))); if (why) throw new Error(`start refused — ${why}`); }
   const said: string[] = [], spoke: { who: string; text: string }[] = [];

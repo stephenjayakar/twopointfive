@@ -18,6 +18,7 @@
 // Headless: the lines are the game's own state. Never seen on a GPU; nobody has played it.
 import { standUp, ROOT } from './headless.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
+const { OWNBLOW } = await import(`${ROOT}/src/game/ownblow.ts`);
 const { ORDERS, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -95,17 +96,17 @@ export async function wordsmallCheck(): Promise<boolean> {
         line(!word && !mark && R.filed().length === 0 && R.D.ops.length === dig0, 'the rule off, two teammates stacked: no line for the word, no mark at the door, the key files no order and no door order is made of the stack — as it was (the press is left to whoever read it before: here the room clear\'s own drill)',
           `the panel: ${word ?? 'no line'} · the door's mark: ${mark ? 'ONE' : 'none'} · filed: ${R.filed().join(', ') || 'nothing'} · door orders under way: ${R.D.ops.length} · the men after it: ${R.team.map((m: any) => `${m.callsign} ${R.O.of(m)?.order ?? 'no order'}`).join(', ')} · the drill ${R.g.nightBreach.state}`); } }
 
-    // (5) (6) a set charge: on the stacked door the key is its trigger; on another door it goes with the word
+    // (5) (6) a set charge: on the stacked door the key is its trigger; on another door it goes with the word (his own, where ownblow.ts is on, stands: the word is the squad's)
     for (const same of [true, false]) {
       const R = await quiet(() => rig(2, RULE));
       if (R.why) { line(false, same ? 'a charge on the stacked door' : 'a charge on another door', `not staged: ${R.why}`); continue; }
       const sam = R.g.player.char.pos, other = [...R.g.doors.list].filter((d: any) => d !== R.door).sort((a: any, b: any) => dist(b.frameCentre, sam) - dist(a.frameCentre, sam))[0], cd = same ? R.door : other;
       R.D.set.push({ door: cd, side: sideOf(cd, sam), t: R.g.time, by: 'Sam' });
-      const word = R.wordLine(), waits = R.D.stackWaits(R.O.recipients()).length; await quiet(() => { R.press(F); R.step(20); });
-      const filed = R.filed(), gone = R.D.set.length === 0;
-      if (same) line(!word && waits === 0 && gone && filed.length === 0, 'a charge set on the door they are stacked on: the stack does not wait on the word — the key is the trigger, the charge goes, and no \'go\' is filed',
-        `${cd.def.name} · the panel: ${word ?? 'no line for the word'} · stacks waiting on the word: ${waits} · the charge: ${gone ? 'gone' : 'STILL SET'} · filed: ${filed.join(', ') || 'nothing'}`);
-      else line(!!word && waits === 1 && gone && filed.length === 1 && filed[0].startsWith('go '), 'a charge set on another door: the word sends the stack in and the charge goes with it',
+      const word = R.wordLine(), waits = R.D.stackWaits(R.O.recipients()).length, b0 = R.D.stats.blown; await quiet(() => { R.press(F); R.step(20); });
+      const filed = R.filed(), gone = R.D.set.length === 0, blew = R.D.stats.blown - b0;   // (blown, not merely gone: a charge is also taken off a door that came open)
+      if (same) line(!word && waits === 0 && gone && blew === 1 && filed.length === 0, 'a charge set on the door they are stacked on: the stack does not wait on the word — the key is the trigger, the charge goes, and no \'go\' is filed',
+        `${cd.def.name} · the panel: ${word ?? 'no line for the word'} · stacks waiting on the word: ${waits} · the charge: ${gone ? 'gone' : 'STILL SET'}, blown ${blew} · filed: ${filed.join(', ') || 'nothing'}`);
+      else line(!!word && waits === 1 && gone === !OWNBLOW.on && blew === (OWNBLOW.on ? 0 : 1) && filed.length === 1 && filed[0].startsWith('go '), OWNBLOW.on ? 'a charge of his own set on another door: the word sends the stack in and his charge stands (ownblow.ts: where that is on, it is his own action\'s, not the key\'s)' : 'a charge set on another door: the word sends the stack in and the charge goes with it',
         `stacked on ${R.door.def.name}, the charge on ${cd.def.name} · the panel: ${word ?? 'NO LINE'} · stacks waiting on the word: ${waits} · the charge: ${gone ? 'gone' : 'STILL SET'} · filed: ${filed.join(', ') || 'NOTHING'}`);
     }
 

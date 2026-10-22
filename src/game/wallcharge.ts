@@ -58,6 +58,7 @@ import { chaosOf } from './destruction';
 import { FURN, chargeSource, type BlastFirst } from './furnblast';
 import { surfOf } from './particleFx';
 import { killGuard, detonateStun, hitPlayer } from './combat';
+import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { chronHit } from './chronicle';
 import { civiliansShown } from './civilians';   // (called inside blow only)
 import { NIGHTBREACH } from './nightbreach';
@@ -472,7 +473,10 @@ export class WallCharge {
   private hudNotes(): OrderNote[] { const n = this.set.length; if (!wallChargeOn(this.g)) return [];
     const out: OrderNote[] = this.carried !== null && (this.brought ?? 0) > 0 ? [{ key: '', text: `wall charges ${this.carried}` }] : []; if (!n) return out;
     const mark = ((this.g as any).pair?.waiting?.().length ?? 0) > 0;   // (a build with the pair's orders in it: while his partner waits on a mark, F is the mark first — the note says so)
-    out.push({ key: DOORTOOLS.blowKey.replace('Key', ''), text: `blow the charge · the wall${n > 1 ? ` (${n})` : ''}${mark ? ' · after the mark' : ''}${this.closeWords(this.nearest(), true)}` }); return out; }
+    // (ownblow.ts: the squad's key for the charges that are its to blow, the interaction's for his own — a note each, counted apart)
+    for (const own of [false, true]) { const of = (c: SetWallCharge) => this.keyIs(c) !== own, k = this.set.filter(of).length; if (!k) continue;
+      out.push({ key: blowKeyWord(!own, DOORTOOLS.blowKey.replace('Key', '')), text: `blow the charge · the wall${k > 1 ? ` (${k})` : ''}${mark && !own ? ' · after the mark' : ''}${this.closeWords(this.nearest(of), true)}` }); }
+    return out; }
   summary(): string { const s = this.stats; return `${wallChargeOn(this.g) ? `on (${WALLCHARGE.menu})` : 'off'} · ${this.g.doorTools.charges} charges · ${this.set.length} set · ${this.ops.map(o => o.phase).join(',') || 'nothing under way'} · set ${s.set} (${s.bySam} by the player) blown ${s.blown} holes ${s.holes} · knocked ${s.knocked} stunned ${s.stunned} backblast ${s.backblast} · entries ${s.entries}`; }
 
   // ------------------------------------------------------------ the place
@@ -885,17 +889,17 @@ export class WallCharge {
 
   // ------------------------------------------------------------ Sam's key, the frame
   /** the set charge nearest Sam (null: none) */
-  nearest(): SetWallCharge | null { const sam = this.g.player.char.pos; return [...this.set].sort((a, b) => flat(wallPt(a.wall, 0, 0), sam) - flat(wallPt(b.wall, 0, 0), sam))[0] ?? null; }
+  nearest(of: (c: SetWallCharge) => boolean = () => true): SetWallCharge | null { const sam = this.g.player.char.pos; return this.set.filter(of).sort((a, b) => flat(wallPt(a.wall, 0, 0), sam) - flat(wallPt(b.wall, 0, 0), sam))[0] ?? null; }
   /** Sam's trigger (game.ts, ahead of the door tools' input): the nearest set charge goes — a door's, if that is the nearer, is the door tools' press and this
    *  one waits for the next. With door orders under way the press is also their word (left in the frame); otherwise it is used up here. */
   input(input: Input) {
     this.pressed = false; if (!this.sync() || !this.set.length) return; const g = this.g, S = g.orders, key = DOORTOOLS.blowKey; if (!input.hit(key)) return;
-    if (g.player.down) { input.pressed.delete(key); return; }
+    if (g.player.down) { if (this.set.some(c => this.keyIs(c))) input.pressed.delete(key); return; }
     if (S.menu && S.menu.rows.some(d => d.hotKey === key)) return;   // (a menu up with a row on this key: the key IS that row — the door tools' rule)
-    const D = g.doorTools, sam = g.player.char.pos, c = this.nearest()!;
-    if (D.set.some(x => flat(x.door.frameCentre, sam) < flat(wallPt(c.wall, 0, 0), sam))) return;
+    const D = g.doorTools, sam = g.player.char.pos, c = this.nearest(x => this.keyIs(x)); if (!c) return;   // (ownblow.ts: one his own hands set is not this key's, and does not stop the press here)
+    if (D.set.some(x => D.keyIs(x) && flat(x.door.frameCentre, sam) < flat(wallPt(c.wall, 0, 0), sam))) return;
     this.blow(c);
-    if (D.set.length) input.pressed.delete(key); else this.pressed = true;   // (one charge a press, the nearest first — but men waiting at a door for the word get it on this same press: the wall and the door go together)
+    if (D.set.some(x => D.keyIs(x))) input.pressed.delete(key); else this.pressed = true;   // (one charge a press, the nearest first — but men waiting at a door for the word get it on this same press: the wall and the door go together)
   }
   /** game.ts, straight after the door tools' input: a press that blew a wall and was nobody's word besides is used up (never the drill's 'stack up' as well) */
   inputAfter(input: Input) { if (this.pressed) { this.pressed = false; input.pressed.delete(DOORTOOLS.blowKey); } }
@@ -1155,16 +1159,25 @@ export class WallCharge {
   }
 
   // ------------------------------------------------------------ Sam's own hands
+  /** ownblow.ts: IS THIS SET CHARGE THE SQUAD'S KEY'S to blow — every one with the switch off; with it on, one the squad set, or his own while an order of
+   *  theirs is on that wall. The key's press, the notes and the floor plan ask */
+  keyIs(c: SetWallCharge): boolean { return !OWNBLOW.on || c.by !== SAM_BY || this.ops.some(o => sameWall(o.wall, c.wall)); }
+  /** ownblow.ts: the nearest charge his own hands set — the one his own row 'blow the charge' is for (null: none); where it is; who stands inside its
+   *  radius, in words (the row's line, asked every frame: the far side's rays are the menu's and the note's); is HE in its blast, either side (asked at a tap) */
+  samSet(): SetWallCharge | null { return this.seated ? this.nearest(c => c.by === SAM_BY) : null; }
+  samAt(c: SetWallCharge): Vec3 { return wallPt(c.wall, 0, 0, WALLCHARGE.height); }
+  samWords(c: SetWallCharge): string { return this.closeWords(c); }
+  samNear(c: SetWallCharge): boolean { return this.tooClose(c).includes('you') || this.behind(c).includes('you') || (WALLKILL.on && flat(this.g.player.char.pos, wallPt(c.wall, 0, 0)) < WALLKILL.nearM); }
   /** player.ts buildInteractables: with the cursor on a partition and Sam at its foot, the marker and its row */
   samRows(p: Vec3, busy: boolean, row: RowFn, offer: OfferFn) {
-    this.offered = null; this.marker = null; if (!wallChargeOn(this.g) || !this.seated) return; const g = this.g, pl = g.player, K = WALLCHARGE, key = DOORTOOLS.blowKey.replace('Key', '');
+    this.offered = null; this.marker = null; if (!wallChargeOn(this.g) || !this.seated) return; const g = this.g, pl = g.player, K = WALLCHARGE, F = DOORTOOLS.blowKey.replace('Key', ''), key = blowKeyWord(!OWNBLOW.on, F);   // (ownblow.ts: what his own hands set is his own actions' to blow)
     const W = this.sam?.wall ?? (() => { const w = wallAt(g, g.aimPoint, p); return w ? this.settle(w) : null; })(); if (!W || !W.ok) return;   // (structure: nothing to offer — the squad's menu says why)
     const c = this.chargeOn(W), foot = wallPt(W, 0, K.setOff), d = flat(p, foot); if (d > K.samMarkerM || (!c && !this.sam && this.openAt(W))) return;
     if (!c && !this.sam && !this.affordable) return;   // (none left in the bag: a partition is not a thing to do anything with — no marker, no row; the squad's menu says 'no charges left.')
     const near = d < K.samReach && wallOff(W, p) > 0 && !g.col.solidBlocked([p[0], 0.9, p[2]], wallPt(W, 0, 0.1, 0.9)), free = !pl.sprinting && !pl.dragging && !pl.holding && !pl.takedown, reach = near && free;
     const it: Interactable = { kind: 'wall', pos: wallPt(W, 0, 0.05, K.height), line1: c ? 'wall · charge set' : W.outer ? 'wall · outer wall' : 'wall · partition', line2: reach ? '' : near ? 'hands full' : 'step closer', inReach: reach, off: false };
     if (this.sam) { it.inReach = true; this.marker = it; offer(it, []); return; }   // (the running row is runningRow's)
-    if (c) { it.line2 = `${key}  blow the charge${this.closeWords(c)}`; offer(it, []); return; }
+    if (c) { it.line2 = `${blowKeyWord(this.keyIs(c), F)}  blow the charge${this.closeWords(c)}`; offer(it, []); return; }
     const verbs: Interactable[] = [];
     if (reach && this.ops.some(o => o.phase === 'place' && sameWall(o.wall, W))) it.line2 = 'a charge is going on it';
     else if (reach && !busy) { verbs.push(row(it, 'charge', this.rowWords(), `${key}  blows it once set`)); this.offered = W; }
@@ -1181,8 +1194,8 @@ export class WallCharge {
     this.sam = null;
     if (this.openAt(s.wall) || this.chargeOn(s.wall)) return;
     const paid = this.take(); if (paid < 0) { g.msg(this.noneWords().replace(/\.$/, '')); return; }
-    this.set.push({ wall: s.wall, t: g.time, by: 'Sam', paid, ...(this.freeSet ? { free: true } : {}) }); this.stats.bySam++; g.audio.play('lockPick', wallPt(s.wall, 0, 0, K.height), 0.6); g.destr.furn.warm();
-    g.msg(`charge set on the wall — ${DOORTOOLS.blowKey.replace('Key', '')} blows it`); this.note(`set by the player on wall ${s.wall.index}`);
+    this.set.push({ wall: s.wall, t: g.time, by: SAM_BY, paid, ...(this.freeSet ? { free: true } : {}) }); this.stats.bySam++; g.audio.play('lockPick', wallPt(s.wall, 0, 0, K.height), 0.6); g.destr.furn.warm();
+    g.msg(`charge set on the wall${blowTail(!OWNBLOW.on, DOORTOOLS.blowKey.replace('Key', ''), ' — ')}`); this.note(`set by the player on wall ${s.wall.index}`);
   }
   /** is Sam setting one right now — a sustained verb (interact.ts runningVerb / cancelSustained, savestate.ts playerBusy, player.ts's running row) */
   get setting(): boolean { return !!this.sam; }
