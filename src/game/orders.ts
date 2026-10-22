@@ -1003,16 +1003,17 @@ export class SquadOrders {
     const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
     const stay = C.stay && !R.rmb;   // (the ring stays up without its key — never plan mode's, which is its button's)
     input.pressed.delete(INTERACT_KEY);   // (Sam's own ring is not opened under this one: interact.ts)
-    const esc = stay && C.key !== 'Tab' ? backTake(input) : input.pressed.delete('Escape'), blur = input.pressed.has('Blur') || input.pressed.has('Paused');   // (a ring that stays: the back key, backkey.ts — Esc, and Tab where Tab backs out, never a ring that is on Tab itself; else Esc, as it was built · 'Paused': the key let go under the pause card gives nothing on the tick play comes back)
+    const esc = C.stay && C.key !== 'Tab' ? backTake(input) : input.pressed.delete('Escape'), blur = input.pressed.has('Blur') || input.pressed.has('Paused');   // (a ring that stays: the back key, backkey.ts — Esc, and Tab where Tab backs out, never a ring that is on Tab itself; else Esc, as it was built · 'Paused': the key let go under the pause card gives nothing on the tick play comes back)
     const rmb = input.rmbHit(); if (rmb) input.clicked &= ~4;
     const lmb = input.lmbHit(); let click = false;
     let digit = 0; for (let d = 1; d <= 9; d++) if (input.pressed.delete(`Digit${d}`) && !digit) digit = d;
     if (C.only) for (const d of this.defs) if (d.hotKey && d.hotKey !== ORDERS.waitAlt) input.pressed.delete(d.hotKey);   // (the squad's only keys: a row's own letter — G, H, V — is nobody's while the ring is up; the word's key stays the word's)
     let wheel = 0; if (input.wheel) { M.wheelAcc = Math.max(-2 * WHEEL_STEP, Math.min(2 * WHEEL_STEP, M.wheelAcc + input.wheel)); input.wheel = 0;
       if (Math.abs(M.wheelAcc) >= WHEEL_STEP) { wheel = Math.sign(M.wheelAcc); M.wheelAcc -= wheel * WHEEL_STEP; } }
-    if (g.time - M.readT >= ORDERS.refreshSecs || this.due(M)) { this.refresh(); if (!this.menu) { this.cmdRing = null; return true; } }
+    if (g.time - M.readT >= ORDERS.refreshSecs || this.due(M)) { const was = C.only ? this.seats(M, R).row.join() : ''; this.refresh(); if (!this.menu) { this.cmdRing = null; return true; }
+      if (C.only && this.seats(this.menu, R).row.join() !== was) { R.lit = 0; R.armed = false; } }   // (a row came or went under the ring — a carrier down — and the wedges are other rows now: none is lit until the hand lights one)
     if (blur || esc) { away(); CMDRING_STATS.cancelled++; return true; }
-    if (R.more && !this.seats(M, null).over.length) R.more = false;   // ('more' with nothing left for it: the page's own wedges)
+    if (R.more && !this.seats(M, null).over.length) { R.more = false; R.lit = 0; R.armed = false; }   // ('more' with nothing left for it: the page's own wedges, none lit)
     if (rmb) { if (R.more) { R.more = false; R.lit = 0; R.armed = false; } else if (!this.pageBack()) { away(); CMDRING_STATS.cancelled++; } return true; }   // (turn(): a page turned lights nothing · 'more' steps back to the page it is the rest of)
     if (lmb) {   // on a man: the orders are his (again: everyone's), and the ring starts again for him · anywhere else it is Sam's trigger, and the ring goes
       const k = this.manAt(input, cam, canvas);
@@ -1110,7 +1111,7 @@ export class SquadOrders {
   private ringSel() { const M = this.menu, R = this.cmdRing; if (!M || !R || !R.lit) return; const i = this.seats(M, R).row[R.lit] ?? -1; if (i >= 0) M.sel = i; }
   /** the open menu's rows by wedge (cmdring.ts ringSeats): its page's own — or, the ring on 'more' (`R.more`), the rest of them from wedge 1 */
   private seats(M: Menu, R: RingState | null): { row: number[]; more: number; over: number[] } {
-    const s = ringSeats(M.rows, M.target.kind !== 'none', ORDERS.waitAlt); if (!R?.more) return s;
+    const s = ringSeats(M.rows, M.target.kind !== 'none', ORDERS.waitAlt, M.page === null); if (!R?.more) return s;
     const row = new Array<number>(CMDRING.wedges + 1).fill(-1); s.over.forEach((i, n) => { row[n + 1] = i; }); return { row, more: 0, over: s.over };
   }
   /** the quick key's own order on `t`, given by hand: on a door the men wait on, the entry they pick (autopilot.ts); else the target's first row */
@@ -1125,6 +1126,13 @@ export class SquadOrders {
     try { if (A.word) this.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men: to }); else if (A.id) this.give(A.id, t, undefined, { men: to }); } finally { P.giving = false; this.byHand = false; }
     const row = this.log[this.log.length - 1]; if (row && row !== tail) row.auto = true;   // (floorplan.ts draws its men as it does the quick key's)
     return this.group === n ? null : A.why === 'first' ? 'first' : 'entry';
+  }
+  /** (planmode.ts lookNow) those men cover toward `at` from where they stand, the order book's own 'cover' — `chain`: it is a chain's own order
+   *  and takes nobody off one (true: somebody took it) */
+  coverFor(men: Guard[], at: Vec3, chain: boolean): boolean {
+    const P = this.plan, n = this.group; if (chain) P.giving = true; this.byHand = true;
+    try { this.give('cover', { kind: 'floor', at }, undefined, { men }); } finally { if (chain) P.giving = false; this.byHand = false; }
+    return this.group !== n;
   }
   /** … and its words for the HUD and the ring's first wedge (null: it would give nothing worth a line) */
   private quickWords(t: OrderTarget): string | null { if (AUTOPILOT.on) return autoHint(this.g, t); const d = this.defaultFor(t); return d ? this.labelOf(d, t) : null; }

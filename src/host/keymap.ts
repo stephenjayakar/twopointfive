@@ -129,14 +129,15 @@ function rebuild() {
   const L = `(?<![A-Za-z0-9\\-])(?<!\\b(?:${place}) )(?<!\\b(?!(?:Press|Hold|Tap|Hit|Then|Or|And|With|On|Use)\\b)[A-Z][a-z]+ )`, R = `(?![A-Za-z0-9'’\\-])(?! (?:${place})\\b)`;
   const mk = (all: boolean): Words => {
     const to = new Map<string, string>(), alts: string[] = [];
-    for (const [id, k] of moved) { if (!k && ((FREED[id] && freeNow()) || (DROPPED[id] && KEYMAP.qOnly))) continue;   // (freed and unbound: the letter is not the row's — the header's note)
-      const a = byId.get(id)!, now = k ? keyLabel(k) : NONE, c = esc(a.cap), low = a.cap.toLowerCase(); if (now === a.cap) continue;
+    for (const [id, k] of moved) { if (!k && FREED[id] && freeNow()) continue;   // (freed and unbound: the letter is not the row's — the header's note)
+      const drop = !k && !!DROPPED[id] && KEYMAP.qOnly; if (drop && !all && id !== 'KeyX') continue;   // (dropped and unbound: the who key's letter is left as written; the orders key's is the command key held — the ring is the menu)
+      const a = byId.get(id)!, now = drop && !all ? `hold ${capNow('KeyB')}` : k ? keyLabel(k) : NONE, c = esc(a.cap), low = a.cap.toLowerCase(); if (now === a.cap) continue;
       const walk = /^Key[WASD]$/.test(id), digit = /^Digit\d$/.test(id);
       if (walk && !all) continue;
       to.set(a.cap, now);
       if (digit && !all) { alts.push(`(?<=\\b(?:then|press|tap|key) )${c}(?![A-Za-z0-9])`, `(?<![A-Za-z0-9])${c}(?= again\\b)`); continue; }
       alts.push(`${L}${c}${R}`);
-      if (low === a.cap) continue;
+      if (low === a.cap || drop) continue;
       to.set(low, now.toLowerCase());
       if (a.cap.length > 1) alts.push(`(?<=\\+ ?)${esc(low)}(?![A-Za-z0-9])`, `(?<![A-Za-z0-9])${esc(low)}(?= ?\\+)`);
       else alts.push(`(?<![A-Za-z0-9])${low}(?= closes\\b| / )`); }
@@ -183,7 +184,7 @@ export function keyCap(cap: string): string { fresh(); if (!map) return cap; con
 export function keyText(s: string, all = false): string {
   fresh(); if (!map || !s) return s;
   const T = all ? textAll : text; if (!T) return s;
-  T.re.lastIndex = 0; return s.replace(T.re, m => T.to.get(m) ?? m);
+  T.re.lastIndex = 0; return s.replace(T.re, (m, ...r) => { const to = T.to.get(m) ?? m, at = r.find(x => typeof x === 'number') as number; return to.startsWith('hold ') && (at === 0 || /[.:!?] $/.test(s.slice(0, at))) ? 'H' + to.slice(1) : to; });   // (the orders key's 'hold Q' opens a line with its capital)
 }
 /** is anything not as built (what Reset has to undo) */
 export function keysChanged(): boolean { return KEYMAP.on && bound.size > 0 && KEY_ACTS.some(a => !same(keysNow(a), home(a))); }

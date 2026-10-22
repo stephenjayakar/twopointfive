@@ -71,6 +71,7 @@ import type { Item } from './throwables';
 import { GRAVITY } from './throwables';
 import type { Assignment, OrderDef, OrderTarget, OrderNote, StackPost, Who } from './orders';
 import { sideOf, doorWords, WORD_HEAD, OWN_EPS } from './orders';
+import { CMDRING } from './cmdring';
 import { BoxFlag, makeBox } from '../scene/boxes';
 import { KICK_IMPACT, TOSS_QUICK } from './character';
 import { killGuard, detonateStun, fireWeapon } from './combat';
@@ -3695,12 +3696,12 @@ export class DoorTools {
     const S = this.g.orders;
     if (!S.big) {   // (the small squad's: its plain stacks, under wordSmall — the key is always the word's there)
       const F = DOORTOOLS.blowKey.replace('Key', ''), T = S.knobs.whoKey.replace('Key', ''), mine = this.stackWords(S.recipients()); if (mine) return [{ key: F, text: `go · ${mine} waiting` }];
-      const rest = this.stackWords(S.men()); return rest ? [`${rest} waiting · ${T}, then ${F}`] : [];
+      const rest = this.stackWords(S.men()); return rest ? [CMDRING.only ? `${rest} waiting` : `${rest} waiting · ${T}, then ${F}`] : [];   // (cmdring.ts only: the who key is nobody's)
     }
     const F = DOORTOOLS.blowKey.replace('Key', ''), T = S.knobs.whoKey.replace('Key', ''), key = DOORTOOLS.wordOnKey;
     const mine = this.waitingWords(S.recipients()); if (mine) return [key ? { key: F, text: `go · ${mine} waiting` } : `${mine} waiting on your word`];
     const rest = [...new Set(this.waitingAny(S.men()).filter(x => 'stack' in x || !this.chargeOn(x.door)).map(x => S.whoWords(x.men.filter(m => m.state !== 'dead'))))].join(' + ');
-    return rest ? [`${rest} waiting · ${T}, then ${key ? F : 'go'}`] : [];
+    return rest ? [CMDRING.only ? `${rest} waiting` : `${rest} waiting · ${T}, then ${key ? F : 'go'}`] : [];
   }
   summary(): string {
     return `charges ${this.charges} · bangs ${this.bangs} · set ${this.set.map(c => c.door.def.name).join(',') || 'none'} · ${this.ops.map(o => `${o.kind} ${o.door.def.name}: ${o.phase} (${o.men.map(m => m.callsign).join(', ')})`).join(' · ') || 'nothing under way'}`;

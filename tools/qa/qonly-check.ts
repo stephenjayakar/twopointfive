@@ -100,10 +100,12 @@ export async function qonlyCheck(): Promise<boolean> {
       const wall = [r(1), r(2), r(3), r(4), r(undefined, { hotKey: 'KeyG', opens: 'throw' }), r(undefined, { hotKey: 'KeyF' }), r(5, { opens: 'walltools' }), r(undefined, { free: true, targets: N })];
       const show = (s: any) => `${s.row.slice(1).join(',')}|${s.more}|${s.over.join(',')}`, was = C.only; C.only = !BREAK;
       const a = show(ringSeats(floor, true, 'KeyF')), b = show(ringSeats(floor, false, 'KeyF')), c = show(ringSeats(tools6, true, 'KeyF')), d = show(ringSeats(tools5, true, 'KeyF')), e = show(ringSeats(wall, true, 'KeyF'));
+      const bare = floor.filter((_, i) => i !== 4), no1 = [r(2), r(3), r(undefined, { hotKey: 'KeyG' })];   // (a floor with no throws to order: the posture row has a wedge nothing else wants · a first page with no row on 1)
+      const p = show(ringSeats(bare, true, 'KeyF')), q = show(ringSeats(no1, false, 'KeyF')), q2 = show(ringSeats(no1, false, 'KeyF', false));
       C.only = false; const f = show(ringSeats(floor, true, 'KeyF')), h = show(ringSeats(tools6, true, 'KeyF')); C.only = was;
-      line(a === '0,1,2,3,4|0|' && b === '0,1,2,3,-1|5|5,4' && c === '0,1,2,3,-1|5|4,5' && d === '0,1,2,3,4|0|' && e === '0,1,2,3,-1|5|6,4' && f === '0,1,2,3,5|0|' && h === '0,1,2,3,-1|0|',
-        "the seats: a letter's row on the spare wedge, the posture row off a place's ring; six rows make the last wedge 'more'; a full page gives its last wedge up; the word's rows left out; off, the digits' rows alone",
-        `(wedges 1…5 | 'more' | its rows) a floor ${a} · the same on the squad's own ring ${b} · six tools ${c} · five ${d} · a wall ${e} · off: a floor ${f}, six tools ${h}`); }
+      line(a === '0,1,2,3,4|0|' && b === '0,1,2,3,-1|5|5,4' && c === '0,1,2,3,-1|5|4,5' && d === '0,1,2,3,4|0|' && e === '0,1,2,3,-1|5|6,4' && p === '0,1,2,3,4|0|' && q === '-1,0,1,2,-1|0|' && q2 === '2,0,1,-1,-1|0|' && f === '0,1,2,3,5|0|' && h === '0,1,2,3,-1|0|',
+        "the seats: a letter's row on the spare wedge; the posture row off a place's ring unless a wedge is left over; a first page's wedge 1 is never a spare; six rows make the last wedge 'more'; a full page gives its last wedge up; the word's rows left out; off, the digits' rows alone",
+        `(wedges 1…5 | 'more' | its rows) a floor ${a} · the same on the squad's own ring ${b} · six tools ${c} · five ${d} · a wall ${e} · a floor with no throws ${p} · no row on 1: a first page ${q}, a later one ${q2} · off: a floor ${f}, six tools ${h}`); }
 
     const R = await quiet(() => rig(page)), g = R.g, O = R.O, I = R.I;
     if (R.why) { line(false, 'the room clear stands up', R.why); return false; }
@@ -164,10 +166,11 @@ export async function qonlyCheck(): Promise<boolean> {
     { const boot = (q: string) => { K.keysBoot(new URLSearchParams(q)); if (BREAK) KM.qOnly = false; }, read = () => `${K.gameCode('KeyX') || '∅'}/${K.gameCode('KeyT') || '∅'} ${K.capNow('KeyX')}/${K.capNow('KeyT')}`;
       boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyX', 'KeyT', 'KeyQ', 'KeyB'].includes(c) && K.gameCode(c) !== c).length, f = K.gameCode('KeyF');
       boot('qonly=0'); const b = read(); boot('qring=0'); const c = read();
+      boot(''); const w1 = K.keyText('X on the ground, then 5: he goes loud'), w2 = K.keyText('Stack up. X on the door, then 1'), w3 = K.keyText('T again, off the men: BLUE'), cmd = K.capNow('KeyB');
       boot(''); const r = K.bindKey('KeyX', 'KeyX'), d = read(); K.resetKeys(); const e = read(); boot('');
-      line(a === `∅/∅ ${K.NONE}/${K.NONE}` && others === 0 && f === 'KeyF' && b === 'KeyX/KeyT X/T' && c === b && r.ok && d === `KeyX/∅ X/${K.NONE}` && e === a,
-        'the board: the orders key and the who key give nothing and read as no key, nothing else moves; ?qonly=0 and ?qring=0 put both back; a row put back on its key by hand gives its code again, and Reset frees it',
-        `(X/T give · read) as it boots ${a}, ${others} other keys moved, F gives ${f} · ?qonly=0 ${b} · ?qring=0 ${c} · X bound back: ${d} · Reset: ${e}`); }
+      line(a === `∅/∅ ${K.NONE}/${K.NONE}` && others === 0 && f === 'KeyF' && b === 'KeyX/KeyT X/T' && c === b && r.ok && d === `KeyX/∅ X/${K.NONE}` && e === a && w1 === `Hold ${cmd} on the ground, then 5: he goes loud` && w2 === `Stack up. Hold ${cmd} on the door, then 1` && w3 === 'T again, off the men: BLUE',
+        'the board: the orders key and the who key give nothing and read as no key, nothing else moves; ?qonly=0 and ?qring=0 put both back; a row put back on its key by hand gives its code again, and Reset frees it; a line of words that names the orders key says to hold the command key',
+        `(X/T give · read) as it boots ${a}, ${others} other keys moved, F gives ${f} · ?qonly=0 ${b} · ?qring=0 ${c} · X bound back: ${d} · Reset: ${e} · words: "${w1}" · "${w2}" · "${w3}"`); }
 
     // (10) the journal and the page's flags
     { const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));

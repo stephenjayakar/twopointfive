@@ -104,6 +104,35 @@ export const CMDRING = {
    *  down: the walk keys are its view's). And the back key (backkey.ts) takes the mode down, once no menu or ring is up to back out of first.
    *  false: Shift + the key is always the mode's and only it leaves the mode, as it was built. Off here; the page raises it with the mode */
   planRun: false,
+  /** PLAN MODE: A RIGHT PRESS DRAGGED IS AN ORDER WITH A WAY TO LOOK (planmode.ts lookOrder; the maintainer, 10-22: "you should be able to right
+   *  click drag on a path and have them check that direction, like door kickers", "if they're given an angle while not moving, they should probably
+   *  just cover that"): down on the floor and dragged, the men go there and face the way of the drag; down on a man (or on Sam: the picked men) and
+   *  dragged, they cover that way from where they stand. false: a right press is a click or, kept down, the ring, as it was built. Off here; the
+   *  page raises it with the mode (`?planlook=0` off) */
+  planLook: false,
+  /** … how long a chain's men check the way of a stop that has more stops after it and no wait on it, before they walk on (s) */
+  planLookSecs: 1.2,
+  /** … how far out the point they cover is put (m): far enough that men stood apart look the same way */
+  planLookM: 30,
+  /** PLAN MODE: THE WORD'S WAITS ARE THE PLAN'S OWN (planmode.ts waitsAt / holds / cycle; the maintainer, 10-22: "let's also make it possible to add
+   *  and remove F waits in the plan. and then I think we can change the flow to be that pressing F only releases the people blocked on it"): a left
+   *  click on a stop of a chain steps its waits on (a door: at its threshold, and once its room is taken; any other stop: a hold there), a wait
+   *  taken off under men stood on it lets them go, and the word's key frees the chains that are stood waiting and is never kept for a wait to come.
+   *  false: a threshold always waits, a room in the middle of a chain always holds, and an early press counts for the next pause, as it was built.
+   *  Off here; the page raises it with the mode (`?planwaits=0` off) */
+  planWaits: false,
+  /** … how near the cursor must be to where a stop is drawn for a left click to be the stop's (CSS px, × ringZoom) */
+  planStopPx: 14,
+  /** PLAN MODE: HE TAKES A KNEE AT THE RADIO, AND THE VIEW COMES BACK GENTLY (planmode.ts up / down / planLook, player.ts; the maintainer, 10-22:
+   *  "plan mode should also show the player taking a knee and talking on the radio, and then camera can decouple from them and move (up to some
+   *  limit) with wasd and then gently snap back when exiting the mode"): with the mode up (and its view the hand's, `planRts`) Sam crouches — his real
+   *  crouch, put back as it was when the mode comes down if there is room to stand — with the gun low and his left hand at the handset; and the
+   *  mode put down, the view's point eases back to him over `planBackSecs` in place of jumping to him. The limit he asks for is `planPanReachM`.
+   *  false: he stands as he stood and the view's point is on him the tick the mode goes down, as it was built. Off here; the page raises it with
+   *  the mode (`?planknee=0` off) */
+  planKnee: false,
+  /** … how long the view's point takes to come back to him (s) */
+  planBackSecs: 0.7,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has
@@ -164,16 +193,18 @@ export interface SeatRow { key?: number; hotKey?: string; opens?: string; free?:
  *  `over`: the rows 'more' holds, in order (its ring seats them from wedge 1). As built: a row is on the wedge of its own digit and nowhere else.
  *  CMDRING.only: the rows with digits keep them; the rows with none take the spare wedges in order; with more of those than spare wedges the last
  *  spare wedge is 'more' — no wedge spare, the last wedge is, and its own row leads the rest. Left out: the word's own rows (`wordKey`: F gives
- *  them), and on a place (`place`) the rows that move nobody and belong to the squad's own ring (free, on no page, on no letter, listed for 'none'). */
-export function ringSeats(rows: readonly SeatRow[], place: boolean, wordKey: string): { row: number[]; more: number; over: number[] } {
-  const W = CMDRING.wedges, row = new Array<number>(W + 1).fill(-1), rest: number[] = [];
+ *  them). On a place (`place`) the rows that move nobody and belong to the squad's own ring (free, on no page, on no letter, listed for 'none') come
+ *  last and only onto a wedge nothing else wants: they never make a 'more'. `first`: the menu's first page, whose wedge 1 is the quick order's. */
+export function ringSeats(rows: readonly SeatRow[], place: boolean, wordKey: string, first = true): { row: number[]; more: number; over: number[] } {
+  const W = CMDRING.wedges, row = new Array<number>(W + 1).fill(-1), rest: number[] = [], last: number[] = [];
   rows.forEach((r, i) => {
-    if (CMDRING.only && (r.hotKey === wordKey || (place && !!r.free && !r.opens && !r.hotKey && (r.listed ?? r.targets).includes('none')))) return;
+    if (CMDRING.only && r.hotKey === wordKey) return;
+    if (CMDRING.only && place && !!r.free && !r.opens && !r.hotKey && (r.listed ?? r.targets).includes('none')) { last.push(i); return; }
     const k = r.key; if (k !== undefined && k >= 1 && k <= W && row[k] < 0) row[k] = i; else rest.push(i);
   });
   if (!CMDRING.only) return { row, more: 0, over: [] };
-  const spare: number[] = []; for (let d = 1; d <= W; d++) if (row[d] < 0) spare.push(d);
-  if (rest.length <= spare.length) { rest.forEach((i, n) => { row[spare[n]] = i; }); return { row, more: 0, over: [] }; }
+  const spare: number[] = []; for (let d = first ? 2 : 1; d <= W; d++) if (row[d] < 0) spare.push(d);   // (a first page's wedge 1 is the quick order's, whatever the rows are)
+  if (rest.length <= spare.length) { [...rest, ...last].slice(0, spare.length).forEach((i, n) => { row[spare[n]] = i; }); return { row, more: 0, over: [] }; }
   const more = spare.length ? spare.pop()! : W, over = [...rest];
   if (row[more] >= 0) { over.unshift(row[more]); row[more] = -1; }
   for (const d of spare) row[d] = over.shift()!;

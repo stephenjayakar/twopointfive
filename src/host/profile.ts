@@ -335,6 +335,9 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.plan = CMDRING.on && q.get('qplan') !== '0' && !q.has('nocmdplan');   // …and plan mode (game/planmode.ts): Shift + the key toggles it; the left button picks men, the right button orders them and Shift chains, F at a chain's pauses. ON in the page with the ring since 10-22 (the maintainer: "shift Q for plan mode"); `?qplan=0` (or `?nocmdplan`) = Shift and the key as they were
   CMDRING.planRts = CMDRING.plan && !q.has('nocmdrts');   // …that mode as an RTS's: Sam stands, the walk keys move the view, the right button kept down is the ring (`?nocmdrts` = the mode as it was first built)
   CMDRING.planRun = CMDRING.plan;   // …but Shift + the key out of a sprint (a walk key down, the mode down) is still the key's own order
+  CMDRING.planLook = CMDRING.plan && CMDRING.planRts && q.get('planlook') !== '0';   // …a right press dragged is an order with a way to look: on the floor they go there and face it, on a man he covers it from where he stands (`?planlook=0` = a right press is a click or the ring)
+  CMDRING.planWaits = CMDRING.plan && q.get('planwaits') !== '0';   // …the word's waits are the plan's own: a left click on a stop steps them on, and the word frees only the chains stood waiting (`?planwaits=0` = the build's own pauses and the early press)
+  CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && q.get('planknee') !== '0';   // …he takes a knee at the radio while the mode is up, and the view eases back to him when it comes down (`?planknee=0` = he stands, the view's point jumps)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
@@ -552,6 +555,9 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.plan': 'TPS_QPLAN=1 (needs TPS_QRING=1)',
   'CMDRING.planRts': 'TPS_QPLAN=1 (with the mode)',
   'CMDRING.planRun': 'TPS_QPLAN=1 (with the mode)',
+  'CMDRING.planLook': 'TPS_PLANLOOK=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planWaits': 'TPS_PLANWAITS=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
   'CMDRING.only': 'TPS_QONLY=1 (needs TPS_QRING=1)',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
   'SEENWALK.on': 'TPS_SEENWALK=1',

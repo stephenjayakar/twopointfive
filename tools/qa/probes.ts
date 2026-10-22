@@ -3220,6 +3220,7 @@ if (on('qring', 'squadorders', 'all')) await run('qring', async () => (await imp
 if (on('qonly', 'squadorders', 'all')) await run('qonly', async () => (await import('./qonly-check.ts')).qonlyCheck());
 // plan mode, a prototype beside the ring: Shift + the key, men picked with the left button, orders chained with the right, the word's key at a chain's pauses (planmode-check.ts; CMDRING.plan)
 if (on('planmode', 'squadorders', 'all')) await run('planmode', async () => (await import('./planmode-check.ts')).planmodeCheck());
+if (on('planplus', 'squadorders', 'all')) await run('planplus', async () => (await import('./planplus-check.ts')).planplusCheck());
 // X is where the plan is laid: an order picked with 'wait for my word' on is laid — nobody moves — F sends the plan, a restart puts it back (planlay-check.ts; PLANLAY.on)
 if (on('planlay', 'squadorders', 'all')) await run('planlay', async () => (await import('./planlay-check.ts')).planlayCheck());
 // ---------------------------------------------------------------- the BREACHING SHOTGUN (shotgun-probes.ts; game/shotgun.ts, weapons.ts row 'm870', doortools.ts toGun / gunStep, kit.ts 'shotgun'): 'shotgun' = the family

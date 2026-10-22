@@ -9,6 +9,7 @@
 //   the board      Q gives the quick order's code, B gives nothing, every other key is itself; the row reads Q, as built, nothing to reset; the wall hold
 //                  has no key — and with walking in switched off it still has none: Q never means two things (under `?bkey` it is the wall's again there)
 //   the words      a line written with the old cap names Q ('B on the blue door', the key card's 'X · B · T · F'); a place's letter is left alone
+//                  (the orders key and the who key read as no key in a list of keys where the ring carries every order: KEYMAP.qOnly)
 //   his own keys   the command put back on B by hand stays on B, kept and read back, and Reset is Q again; a table kept before, the command on another
 //                  key, means what it meant; Q given to another row (the wall hold by hand, Reload in a table kept while Q was spare) leaves the
 //                  command on B, and on no key only when B is held too; after 3,000 moves by a die,
@@ -104,7 +105,7 @@ export async function qkeyCheck(): Promise<boolean> {
     {
       boot(''); const a = K.keyText("B on the yellow house's door: the pair stacks up beside it"), b = K.keyText('X · B · T · F', true), c = K.keyText('with a team — X (or middle click) orders · B the usual order · T who it goes to'), d = K.keyText('room B is clear'), e = K.keyText('Vault B'), f = K.keyText('Q / away / Shift lets go'), cap = K.keyCap('B');
       boot('bkey'); const asWas = K.keyText('B on the blue door: BLUE stacks up'); boot('');
-      line(a.startsWith('Q on the yellow') && b === 'X · Q · T · F' && c.includes('· Q the usual order ·') && d === 'room B is clear' && e === 'Vault B' && f === 'Q / away / Shift lets go' && cap === 'Q' && asWas === 'B on the blue door: BLUE stacks up',
+      line(a.startsWith('Q on the yellow') && b === (K.KEYMAP.qOnly ? `${K.NONE} · Q · ${K.NONE} · F` : 'X · Q · T · F') && c.includes('· Q the usual order ·') && d === 'room B is clear' && e === 'Vault B' && f === 'Q / away / Shift lets go' && cap === 'Q' && asWas === 'B on the blue door: BLUE stacks up',
         'a line written with the old cap names Q; a place\'s letter is left alone; under ?bkey it reads as it did', `'${a.slice(0, 24)}…' · '${b}' · '${d}' · '${e}' · the cap handed 'B': '${cap}' · ?bkey: '${asWas}'`);
     }
     // 4. his own keys

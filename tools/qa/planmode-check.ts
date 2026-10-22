@@ -18,10 +18,10 @@ const { CMDRING } = CR, { PLAN_STATS, planView } = PM, { AUTOPILOT } = AP;
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+export const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const BREAK = process.env.PLANMODE_BREAK === '1';
 
-async function rig(seed: number, plan = !BREAK) {
+export async function rig(seed: number, plan = !BREAK) {
   const squad0 = NIGHTBREACH.squad; let W: any, why: any;
   try {
     Object.assign(NIGHTBREACH, { squad: 4 });
@@ -61,17 +61,17 @@ async function rig(seed: number, plan = !BREAK) {
   for (const m of R.team) m.god = true;
   return R;
 }
-function doorsNear(R: any): { d: any; t: any }[] {
+export function doorsNear(R: any): { d: any; t: any }[] {
   const s = R.game.player.char.pos, out: { d: any; t: any }[] = [];
   for (const d of [...R.game.doors.list].sort((a: any, b: any) => dist(a.frameCentre, s) - dist(b.frameCentre, s))) { const t = R.O.targetAt(d.frameCentre); if (t.kind === 'door' && t.door === d) out.push({ d, t }); }
   return out;
 }
-function aimOf(R: any, d: any): number[] | null {
+export function aimOf(R: any, d: any): number[] | null {
   const c = d.frameCentre, th = d.def.closedDir, nx = -Math.sin(th), nz = Math.cos(th);
   for (const y of [c[1], 0.05, 1.0, 1.8]) for (const k of [0, 0.35, -0.35]) { const p = [c[0] + nx * k, y, c[2] + nz * k]; const h = R.aim(p); if (h?.kind === 'door' && h.door === d) return p; }
   return null;
 }
-function floorSpot(R: any, skip: number[][] = []): number[] | null {
+export function floorSpot(R: any, skip: number[][] = []): number[] | null {
   const s = R.game.player.char.pos;
   for (const [dx, dz] of [[2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5], [2, 2], [-2, -2], [2, -2], [-2, 2], [3.5, 0], [0, 3.5], [-3.5, 0], [0, -3.5]]) { const p = [s[0] + dx, 0.04, s[2] + dz]; if (skip.some(q => dist(q, p) < 1.5)) continue;
     const h = R.aim(p); if (h?.kind === 'floor' && !h.wall && !h.thing && R.team.every((m: any) => dist(m.char.pos, p) > 1.2) && R.O.defaultFor(h)?.id === 'move' && R.O.whyNot(R.O.defaultFor(h), h) === null) return p; }
