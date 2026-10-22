@@ -532,6 +532,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     `tutplan-check`, `rails-check`, `rowset-check` (`ROWSET_BREAK=1` fails 7), `lesson-gate` and `level-needs --run` green on both stands; the real page with real keys to its end
     card, 38 lines, its fights drawn frame by frame (software adapter). In those pictures the hall reads dark inside: its light is a ceiling tube, an emissive box the lowest
     quality barely gathers — how the hall reads by day on a GPU is not known.
+  - **Two stacks on one word, and the two posts, from a player's tape** (2026-10-22: two replays of the mission on hard, the maintainer's notes "simultaneous breach on mission 2
+    didn't really work. and the second team threw a flashbang when our guys were already on the inside" and "blue one doesn't watch his angle even though red team has it covered").
+    WHAT THE TAPE SHOWED. At the guardroom one press of the word gave each pair its OWN `bangClear` (planmode.ts `word` → `enter` → `quickFor`, a chain at a time: no `DoorGate`
+    between them). Blue was through the side door at 2.6 s and the room was clear at 3.7 s; red first re-formed for the throw (its second man walked 3.5 m across the doorway from
+    his stack mark to a place further along the wall), its can went off at 4.3 s on both blue men standing in the room, and red came in at 5 s. At the hall both pairs were given
+    `openClear` (no can left over `AUTOPILOT.keepBangs`) and went in 0.1 s apart. At the gates a man told to face the back gate swung 85° to the road gate three times for men the
+    other pair's two rifles had, and his partner never took the way to face at all: the move had put him in the corner south of the guardroom (`roomfit.ts`: a few steps round the
+    click, a wall at his back), `cover` had no line for him there and he stood looking at a wall. The scripted player did the first two on every seed and said nothing: its check
+    asked only that one press empties every waiting chain.
+    NOT THE LEVEL'S, claimed to their owners and NOT changed here: one word is one signal for every stack it frees; no can goes into a room friends hold; a man covering a way keeps
+    it while another pair has the contact. The first was TRIED and taken out again (the entries the word frees share a gate, `doorTools.together()`): first men in 0.1 s apart and
+    nobody dazzled on seeds 1 to 3, hard.
+    THE LEVEL'S, changed (boxes moved: the fingerprint is new, so a checkpoint or a tape of the level from before is refused): post B and its barrier stand at (24.0, 10.3) and
+    (24.0, 9.3), were (23.25, 10.75) and (23.25, 9.6); two drums fill the corner south of the guardroom (20.7, 11.65); a post's area in the two facing steps is 2.6 m, was 1.8. A
+    hand does not land on the mark (his fell 1.25 m west of it), so the post is where a click a metre and a half off still gets two men who see the gate. SWEPT with the scripted
+    player (`TUTPLAN_POSTB=x,z` clicks the barrier's order there; hard, one seed a click): before the drums 10 of 13 clicks gave two men facing the gate — (22.2, 11.0) put one in
+    that corner, (25.3, 11.3) and (25.9, 10.4) were taken by the picture of the hall's front door, which stands over the ground north of it (the right click became a stack on that
+    door: STILL SO, a level rule for the next post: nothing to click within 2.5 m north of a door); with the drums (22.4, 11.6), (25.3, 10.3), (22.2, 11.0), (24.0, 11.6),
+    (22.6, 9.6) and (25.2, 9.7) all give two. The drums also took the re-form away (the place along the wall is gone and the stack throws from its marks): first men in at 2.8 and
+    3.4 s, 0.6 s apart — and the second can still dazzles the first pair, two teammates on every run, until the squad's rule is in the build.
+    WHAT THE SCRIPTED PLAYER NOW SAYS AND ASKS (`tools/qa/lessons/tut-plan.ts`): after each word, when the first man of each stack was inside the room, how far apart, and the
+    teammates the team's own can dazzled ("the word at guardroom: …"); after each facing order, where each man of the pair stands and whether he took it ("the barrier: …") — on the
+    mark a man who did not FAILS the run. `TUTPLAN_STRICT=1` fails the run on stacks more than a second apart or any teammate dazzled: red on every seed as the build stands, green
+    with the tried gate (seeds 1 to 3) — the word is held off until the squad's rule lands, then it is the run's own.
+    MEASURED (the page's stand, midday): 19/19 on seeds 1 to 8 (114.3 to 115.1 s) and on hard, seeds 1 to 4; six seconds a line on seeds 3 and 5 (221.3, 222.2 s); the wrong plan on
+    seeds 1 to 4 ends in 102.6 to 118.5 s with 4, 3, 6 and 3 teammates on a knee at the hall. On the join with the build head: `tutplan-check`, `level-needs --run` and
+    `rails-check` green on both stands, `lesson-gate`, `rowset-check` and `lived-check` green, and the real page with real keys to its end card (38 lines, the software adapter,
+    no picture taken). Nobody has played the changed post; nothing of it has been seen on a GPU.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.

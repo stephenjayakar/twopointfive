@@ -193,6 +193,11 @@ like that."
   the player": the way you'd say it aloud), in 96 characters, no compass word; a step never passes by itself and
   never becomes impossible; a line arrives with its prompt, inside reach; checked at a reader's pace on the shipped stand.
   **check** `bun run tools/qa/lesson-gate.ts <name>`.
+- **A place a line asks the player to click has room round it.** A hand lands a metre or more off the mark, and a move's places are the squad's own (a few
+  steps round the click, a wall at the back). So for a metre and a half round the mark: no corner a man can be put behind with no line the way he is told to
+  face, and no door within 2.5 m to its south (the door's picture stands over that ground and takes the click). **seen** a click 1.25 m off a post's mark: the
+  second man was put behind a building's corner and stood looking at a wall. **check** the level's scripted player clicks off the mark on purpose (the plan
+  mode mission's `TUTPLAN_POSTB=x,z`) and says who took the order.
 - **A level whose idea leans on geometry gets a check of its own** (`tools/qa/<name>-check.ts`, a `_BREAK` path, both
   stands): the pattern of the glasshouse, the pass, the depot. A check that holds the file against the generator that
   wrote it runs the generator as the exporter does (`asExporter` in `tools/qa/headless.ts`): the page's own sin and cos
