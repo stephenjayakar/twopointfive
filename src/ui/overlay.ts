@@ -401,7 +401,7 @@ export class Overlay implements HudLike {
       if (key !== this.recKey && this.recEl) { this.recKey = key; this.recEl.className = key ? (game.journal.recording ? 'on rec' : 'on') : ''; this.recEl.textContent = key ? (game.journal.recording ? '● ' : '') + key + (game.journal.recording ? '  (F10 stops)' : '') : ''; } }
     const op = game.objectivePos();
     const skySeat = game.rails.skyOn;   // (nobody on the floor is the player: the marker is a place to point at, not a walk to it — no fade near it, no metres)
-    const od = op ? (skySeat || game.rails.arrow() ? 99 : v3.distXZ(op, game.player.char.pos)) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
+    const far = op ? v3.distXZ(op, game.player.char.pos) : 0, od = op ? (skySeat || game.rails.arrow() ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
     const floor = game.mission.stage === 'drive' && game.hover?.kind !== 'objective' ? 0.35 : 0;   // the rack has no marker of its own: keep a faint diamond on it until the cursor finds it (doors have their own dot / reticle)
     const alpha = op ? Math.max(floor, Math.min(0.9, (od - 1.6) / 1.5)) : 0;
     if (!op || alpha < 0.03 || rail?.watch) this.objMark.style.display = 'none';   // (a line that asks for nothing marks no place to press on: rails.ts prompt)
@@ -416,7 +416,7 @@ export class Overlay implements HudLike {
       if (to) { const [ax, ay, av] = cam.project(op, w, h, EDGE), [bx, by] = cam.project(to, w, h); if (av && Math.hypot(bx - ax, by - ay) > 4) turn = `${(Math.atan2(by - ay, bx - ax) * 180 / Math.PI).toFixed(1)}deg`; }
       el.className = k > 1 ? 'objmark edge' : turn ? 'objmark arrow' : 'objmark'; if (turn !== this.objTurn) { this.objTurn = turn; el.style.setProperty?.('--turn', turn || '0deg'); }
       el.style.left = `${((nx * 0.5 + 0.5) * w).toFixed(1)}px`; el.style.top = `${((1 - (ny * 0.5 + 0.5)) * h).toFixed(1)}px`;
-      (el.lastChild as HTMLElement).textContent = skySeat ? '' : `${Math.round(od)}m`;
+      (el.lastChild as HTMLElement).textContent = skySeat || turn ? '' : `${Math.round(far)}m`;   // (an arrow lies at his feet and says which way, not how far: under it the metres read '99m', the number that keeps it from fading)
     }
     // the squad's order menu: a ring on the door / spot / man it was opened on, in the addressed element's colour (it stays there while Sam walks and aims on)
     this.cmdRing.update(game, cam, w, h, tz);
