@@ -1,25 +1,27 @@
 // GUNFIRE SPLINTERS A WOODEN DOOR LEAF APART (src/game/doorblast.ts DOORSHOT; the maintainer: 'doors should splinter apart on sustained gunfire (at least
-// no slower than drywall)'; DOORSHOT.toll multiplies the count and is 1: 'let's just go back to 6 then, 12 seems like too much').
+// no slower than drywall)'; DOORSHOT.toll multiplies the count and is 2, and with DOORSHOT.flat the count is a cost that the destruction scale does not move:
+// 'it should be a real gameplay tradeoff (requires a lot of ammo? maybe like 12 shots?)').
 //   bun run tools/qa/doorshot-check.ts        (or: bun run tools/qa/probes.ts doorshot)        exit 0 = every line PASS, 1 = a FAIL line
 // Headless, on the office, real rounds from Sam's guns (combat.ts fireWeapon); nothing here looks at a picture. The rule and the destruction switch are set
 // by the check itself on either stand (the frozen stand holds both off).
 //   yardstick   rifle rounds into one stretch of a plasterboard partition until the wall engine opens it: the count a door's toll multiplies
-//   rifle       the same gun into a shut wooden leaf: it hangs to the round before and goes on DOORSHOT.toll times the yardstick (the toll is 1: six
+//   rifle       the same gun into a shut wooden leaf: it hangs to the round before and goes on DOORSHOT.toll times the yardstick (the toll is 2: twelve
 //               where plasterboard opens on six); then it is a door off its hinges — no leaf in the frame to a sight line, its sound seal gone, pieces thrown, the lock
 //               rail lying flat by the frame with the handles on it, every thrown piece wood to the break table (on the shipped stand: dressed, a
 //               snapped outline); rounds into the rail on the floor count nothing
 //   pressed     a pistol from 0.42 m: the same count, whether the stand draws the gun back or lets the muzzle through the leaf (combat.ts wallAcrossArm)
 //   pistol      a pistol round counts as it does on a wall (WALLS.pistolK)
-//   toll        the toll at 2: the leaf stands twice the yardstick; the destruction scale at its top halves the rounds
+//   toll        the toll at 1: the leaf stands the yardstick's own rounds; the destruction scale at its top leaves the count where it was (flat), and with
+//               flat off halves it, as it does a wall's
 //   faces       rounds into one face, then the other: one count
 //   steel       a steel door hangs through three times the rounds
 //   off         the rule off: a wooden leaf hangs through three times the rounds and counts nothing (the build as it was)
 //   checkpoint  a leaf two rounds short, saved and loaded into a fresh game, goes on the second round; a leaf in pieces, saved and loaded, lies where it lay
 //   journal     a recording from before the table replays with the rule off; one that carries it keeps its own word; one from before the toll's key
-//               replays with the toll at 1
-// DOORSHOT_BREAK=1: the rule is left off where the lines want it on — red.
+//               replays with the toll at 1, one from before flat's with the count riding the scale
+// DOORSHOT_BREAK=1: the rule is left off where the lines want it on — red. DOORCOST_BREAK=1: the count as it was (toll 1, riding the scale) — red.
 type Vec3 = [number, number, number];
-const BREAK = process.env.DOORSHOT_BREAK === '1';
+const BREAK = process.env.DOORSHOT_BREAK === '1', COST_BREAK = process.env.DOORCOST_BREAK === '1';
 
 export async function doorshotCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
@@ -36,12 +38,13 @@ export async function doorshotCheck(): Promise<boolean> {
   const DT = 1 / 60, CHAOS = 0.5, SHIPPED = process.env.TPS_PROFILE === 'shipped'; const f2 = (x: number) => x.toFixed(2);
   let failed = false; const line = (ok: boolean, s: string) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}`); };
   const quiet = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => {}; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
-  const was = DOORSHOT.on, destr0 = DESTRUCTION.on;
+  const was = DOORSHOT.on, destr0 = DESTRUCTION.on, tollWas = DOORSHOT.toll, flatWas = DOORSHOT.flat;
   const thinN = (b: any): Vec3 => { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); return b.h[0] < b.h[2] ? [cs, 0, -sn] : [sn, 0, cs]; };
   const park = (g: any) => g.guards.forEach((o: any, i: number) => { o.hold = true; o.pinned = true; o.dazzledUntil = 1e9; o.heardUpTo = 1e12; o.char.pos = [37.5, 0, 25 + i * 1.2]; o.char.vel = [0, 0, 0]; o.path = []; o.pathGoal = null; o.flashlight.enabled = false; o.char.update(0); });
   /** a fresh office with walls that break, the rule as asked, everybody parked */
   const world = async (on: boolean) => {
     DESTRUCTION.on = true; const W: any = await quiet(() => standUp()); const g = W.game; DESTRUCTION.on = true; DOORSHOT.on = on && !BREAK;   // AFTER standUp: the stand-up line would otherwise write them back
+    if (COST_BREAK) { DOORSHOT.toll = 1; DOORSHOT.flat = false; }
     g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.infiniteAmmo = true; g.tune.chaos = CHAOS; park(g);
     return W;
   };
@@ -94,7 +97,7 @@ export async function doorshotCheck(): Promise<boolean> {
       const other = (g.destr.debris.list as any[]).slice(deb0); deb0 = g.destr.debris.list.length;   // (a ceiling tile the beaten spot shook down — destruction.ts tileDrop, heat past CHAOS.tTile — is not the door's)
       if (other.length) console.log(`  (the ${early} rounds before the last brought down ${other.length} piece(s) that are not the door's — a ceiling tile over the beaten spot: ${other.map(c => `${c.mat?.mat ?? c.kind ?? '?'} at ${f2(c.box.c[0])}, ${f2(c.box.c[2])}`).join(' · ')})`);
       const [m] = d.off ? [0] : until(g, st.pc, D.at, d, 3 * need), n = m < 0 ? -1 : early + m;
-      line(n === need && DOORSHOT.toll === 1 && n === DOORSHOT.toll * wall, `a rifle into the shut wooden leaf '${D.name}': it hangs through round ${need - 1} and goes on round ${n} (want ${need}: ${DOORSHOT.toll} times the drywall's ${wall})`);
+      line(n === need && DOORSHOT.toll === 2 && DOORSHOT.flat && n === DOORSHOT.toll * wall, `a rifle into the shut wooden leaf '${D.name}': it hangs through round ${need - 1} and goes on round ${n} (want ${need}: ${DOORSHOT.toll} times the drywall's ${wall})`);
       const b = d.box, top = b.c[1] + b.h[1], pieces = DOORSHOT_STATS.chunks + DOORSHOT_STATS.demoted - c0, deb = g.destr.debris.list.length - deb0, hb = d.handleBoxes as any[];
       const ru = [Math.cos(-b.yaw), Math.sin(-b.yaw)];   // (the rail's own axes on the floor: its width along ru, its length across it)
       const onRail = hb.every(h => { const x = h.c[0] - b.c[0], z = h.c[2] - b.c[2]; return Math.abs(x * ru[0] + z * ru[1]) + 0.06 <= b.h[0] + 0.006 && Math.abs(-x * ru[1] + z * ru[0]) <= b.h[2] + 0.005 && h.c[1] < 0.2; });   // (0.06: the lever's half length along the rail's width)
@@ -131,12 +134,12 @@ export async function doorshotCheck(): Promise<boolean> {
       const mid = !d.off; st = await stage(W, D.B, 'rifle', [D.A[0], 1.25, D.A[2]]); const [n] = until(g, st.pc, [D.A[0], 1.25, D.A[2]], d, 3 * need);
       line(mid && n === need - a, `${a} rounds into one face, then the other: it goes on round ${n} from there (want ${need - a}: one count for the leaf)`); }
 
-    // ------------------------------------------------------------ the toll: at 2 twice the yardstick; the destruction scale at its top halves the count
-    { const toll0 = DOORSHOT.toll; let two = -1, top = -1;
-      try { DOORSHOT.toll = 2; { const W = await world(true), g = W.game, st = await stage(W, D.A, 'rifle', D.at); [two] = until(g, st.pc, D.at, door(g), 6 * need); }
-        DOORSHOT.toll = toll0; { const W = await world(true), g = W.game, st = await stage(W, D.A, 'rifle', D.at); g.tune.chaos = 1; [top] = until(g, st.pc, D.at, door(g), 3 * need); } }
-      finally { DOORSHOT.toll = toll0; }
-      line(two === 2 * wall && top === Math.ceil(need / 2), `the toll at 2: the leaf goes on round ${two} (want twice the drywall's ${wall}) · the toll back at ${toll0} and the destruction scale at its top (chaos 1): round ${top} (want ${Math.ceil(need / 2)}: every round weighs double there, on a wall as on a door)`); }
+    // ------------------------------------------------------------ the toll: at 1 the yardstick's own; the count is a cost the destruction scale does not move
+    { const toll0 = DOORSHOT.toll, flat0 = DOORSHOT.flat; let one = -1, top = -1, low = -1, rode = -1;
+      const at = async (chaos: number, most: number) => { const W = await world(true), g = W.game, st = await stage(W, D.A, 'rifle', D.at); g.tune.chaos = chaos; return until(g, st.pc, D.at, door(g), most)[0]; };
+      try { DOORSHOT.toll = 1; one = await at(CHAOS, 3 * need); DOORSHOT.toll = toll0; top = await at(1, 3 * need); low = await at(0.25, 3 * need); DOORSHOT.flat = false; rode = await at(1, 3 * need); }
+      finally { DOORSHOT.toll = toll0; DOORSHOT.flat = flat0; }
+      line(one === wall && top === need && low === need && rode === Math.ceil(need / 2), `the toll at 1: the leaf goes on round ${one} (want the drywall's ${wall}) · the toll back at ${toll0} and the destruction scale at its top (chaos 1): round ${top}, at a quarter (chaos 0.25): round ${low} (want ${need} at both: a door's count is a cost, the same at any scale) · and with flat off at the top: round ${rode} (want ${Math.ceil(need / 2)}: every round weighs double, as on a wall)`); }
 
     // ------------------------------------------------------------ steel
     if (S) { const W = await world(true), g = W.game, d = g.doors.byName(S.name), st = await stage(W, S.A, 'rifle', S.at); const [n] = until(g, st.pc, S.at, d, 3 * need);
@@ -160,13 +163,15 @@ export async function doorshotCheck(): Promise<boolean> {
 
     // ------------------------------------------------------------ the journal
     { const g = g0, snap = () => JSON.parse(JSON.stringify(knobsSnapshot(g)));
-      const toll0 = DOORSHOT.toll; DOORSHOT.on = true; const old = snap(); delete old.tables.DOORSHOT; applyKnobs(g, old); const before = DOORSHOT.on;
+      const toll0 = DOORSHOT.toll, flat0 = DOORSHOT.flat; DOORSHOT.on = true; DOORSHOT.toll = 2; DOORSHOT.flat = true; const old = snap(); delete old.tables.DOORSHOT; applyKnobs(g, old); const before = DOORSHOT.on, bareToll = DOORSHOT.toll, bareFlat = DOORSHOT.flat;
       DOORSHOT.on = false; const own = snap(); own.tables.DOORSHOT.on = true; applyKnobs(g, own); const carried = DOORSHOT.on;
       DOORSHOT.toll = 2; const noKey = snap(); delete noKey.tables.DOORSHOT.toll; applyKnobs(g, noKey); const oldToll = DOORSHOT.toll;
       DOORSHOT.toll = 1; const keyed = snap(); keyed.tables.DOORSHOT.toll = 2; applyKnobs(g, keyed); const ownToll = DOORSHOT.toll; DOORSHOT.toll = toll0;
-      line(before === false && carried === true && oldToll === 1 && ownToll === 2, `a recording from before the table replays with the rule off (journal.ts applyKnobs): ${before} · one that carries it keeps its own word: ${carried} · one from before the toll's key replays with the toll at ${oldToll} (want 1, from 2), one that carries 2 keeps it over a 1: ${ownToll}`); }
+      DOORSHOT.flat = true; const noFlat = snap(); delete noFlat.tables.DOORSHOT.flat; applyKnobs(g, noFlat); const oldFlat = DOORSHOT.flat;
+      const flatKeyed = snap(); flatKeyed.tables.DOORSHOT.flat = true; applyKnobs(g, flatKeyed); const ownFlat = DOORSHOT.flat; DOORSHOT.flat = flat0; DOORSHOT.toll = toll0;
+      line(before === false && bareToll === 1 && bareFlat === false && carried === true && oldToll === 1 && ownToll === 2 && oldFlat === false && ownFlat === true, `a recording from before the table replays with the rule off (journal.ts applyKnobs): ${before}, toll ${bareToll}, flat ${bareFlat} · one that carries it keeps its own word: ${carried} · one from before the toll's key replays with the toll at ${oldToll} (want 1, from 2), one that carries 2 keeps it over a 1: ${ownToll} · one from before flat's key replays with the count riding the scale: flat ${oldFlat} (want false, from true), one that carries true keeps it over a false: ${ownFlat}`); }
   } catch (err) { line(false, `threw: ${(err as Error)?.stack ?? err}`); }
-  finally { DOORSHOT.on = was; DESTRUCTION.on = destr0; }
+  finally { DOORSHOT.on = was; DOORSHOT.toll = tollWas; DOORSHOT.flat = flatWas; DESTRUCTION.on = destr0; }
   console.log(failed ? '=== doorshot-check: FAIL ===' : '=== doorshot-check: ALL PASS ===');
   return !failed;
 }

@@ -523,6 +523,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.DOORTHROW as { soft?: boolean } | undefined)?.soft === undefined) DOORTHROW.soft = false;   // (… or from the first cut of it, where any driven leaf short of a boot folded him: a later key of the same table)
   if ((k.tables.DOORTHROW as { jolt?: boolean } | undefined)?.jolt === undefined) DOORTHROW.jolt = false;   // (… or from before the startled man got the shared start: the flinch, a later key of the same table)
   if (!k.tables.DOORSHOT) DOORSHOT.on = false;   // (a file from before gunfire took a door leaf apart carries no such table: its doors hang whatever is fired into them, as they were recorded)
+  if ((k.tables.DOORSHOT as { flat?: boolean } | undefined)?.flat === undefined) DOORSHOT.flat = false;   // (… or from before a leaf's count was a cost that no longer rode the destruction scale: as a wall's, a later key again)
   if ((k.tables.DOORSHOT as { toll?: number } | undefined)?.toll === undefined) DOORSHOT.toll = 1;   // (… or from before a leaf stood twice plasterboard's toll: its doors go on drywall's own count, a later key of the same table)
   if (!k.tables.WALLPEN) WALLPEN.on = false;   // (a file from before rounds went through thin walls and doors — it carries no such table: its rounds stop in the first built thing they meet, as they were recorded)
   if (!k.tables.WALLSHOT) WALLSHOT.on = false;   // (a file from before a wall shot's smoke was thinned and its shock filled the room: its charges' pall and stun were the build's own)
