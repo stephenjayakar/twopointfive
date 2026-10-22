@@ -986,7 +986,7 @@
     },
     "lesson": {
       "title": "Unseen",
-      "rails": { "allow": ["move", "camera", "zoom", "aim"], "rows": ["grab", "question", "choke", "pick", "push", "code", "nocode", "breakerOff", "drive"] },
+      "rails": { "allow": ["move", "camera", "zoom", "aim"], "rows": ["grab", "question", "choke", "pick", "push", "pull", "ease", "drag", "drop", "code", "nocode", "breakerOff", "drive"] },
       "steps": [
         { "id": "crouch", "line": "Press [C] to crouch", "allow": ["crouch"], "done": { "is": "any", "of": [{ "is": "flag", "flag": "crouch" }, { "is": "men", "down": 1 }] } },
         { "id": "dark", "line": "Get out of the light", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "near", "at": [15.2, 0, 17.6], "r": 1.6 }, { "is": "meter", "which": "light", "below": 0.45 }] }, { "is": "near", "at": [17.6, 0, 17.7], "r": 1 }, { "is": "men", "down": 1 }] }, "hold": 0.4, "at": [15.2, 1, 17.6] },

@@ -473,7 +473,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // THE FRAME (game/rails.ts). From the first step: the walk, the view, the aim. Each tool is switched on by the step that teaches it and stays on.
     // `rows` = the verbs Space offers here: nothing a step did not teach has a row (a wall charge at the box, the light plate beside the strongroom's
     // door, a body to drag), so a tap is always the thing the line means.
-    rails: { allow: ['move', 'camera', 'zoom', 'aim'], rows: ['grab', 'question', 'choke', 'pick', 'push', 'code', 'nocode', 'breakerOff', 'drive'] },
+    // (the rows: what the steps teach, AND the plain quiet acts a player tries unasked — shutting a door behind him, easing one open, moving a body out of the
+    //  light. The first play on the new level: "nothing in reach to close the door?", at the back door he had just picked. What stays off is what would break
+    //  the night: the boot, the hammer, a rattled handle, the mains put back on.)
+    rails: { allow: ['move', 'camera', 'zoom', 'aim'], rows: ['grab', 'question', 'choke', 'pick', 'push', 'pull', 'ease', 'drag', 'drop', 'code', 'nocode', 'breakerOff', 'drive'] },
     steps: [
       // ---- the lane: light ----
       { id: 'crouch', line: 'Press [C] to crouch', allow: ['crouch'], done: any({ is: 'flag', flag: 'crouch' }, down(1)) },
