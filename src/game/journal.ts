@@ -150,7 +150,7 @@ import { THROWBACK } from './throwback';
 import { WALLREACT } from './wallreact';
 import { COVERFIRE } from './coverfire';
 import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
-import { GUARD_EYE } from './guards';
+import { GUARD_EYE, LIGHTS } from './guards';
 import { PRESSURE } from './pressure';
 import { HARD } from './difficulty';
 import { DOORBLAST, DOORSHOT } from './doorblast';
@@ -477,6 +477,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else if ((k.tables.ORDERS as { roundCap?: number } | undefined)?.roundCap === undefined) ORDERS.roundCap = 0;   // (…and a file from before the key: any way round with less unknown floor on it, however long. As above: a run tape that carries the key writes its own value back right after this)
   if ((k.tables.ORDERS as { roundOwn?: boolean } | undefined)?.roundOwn === undefined) ORDERS.roundOwn = false;   // (a recording from before the key replays with it off: a pair behind the door it is to stack on takes the short way through it where the cap refuses the way round, as it was made)
   if ((k.tables.COVER as { backKeep?: boolean } | undefined)?.backKeep === undefined) COVER.backKeep = false;   // (a file from before a man walking backwards on his opening kept to it until his body had come round: he turned to walk forwards the moment the twist allowed. Like ORDERS, never in a recording's own tables; a run tape that carries the key writes its own value back right after this)
+  { const L = k.tables.LIGHTS as { wallOff?: boolean } | undefined; if (L?.wallOff === undefined) LIGHTS.wallOff = false; }   // (a recording from before a teammate's light went dark into the wall at his muzzle — or from before its tables carried LIGHTS at all: his light as the other rules had it)
   { const I = k.tables.IR as { teamOff?: boolean } | undefined; if (I?.teamOff === undefined) IR.teamOff = false; }   // (a recording from before the team's lasers could be put off: they are drawn)
   // (the partner's quiet orders, 10-13 — a file from before them replays with each off: a sweeping sentry's ring, the kept way, 'he'll look back', the habit read from when a man stopped)
   { const P = k.tables.PAIR as { sweep?: boolean; keepWay?: boolean; lookBack?: boolean; habitStood?: boolean } | undefined;

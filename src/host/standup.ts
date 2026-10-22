@@ -72,7 +72,7 @@ import { HANDWORK } from '../game/handwork';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { GEAR } from '../game/gear';
-import { GUARD_EYE } from '../game/guards';
+import { GUARD_EYE, LIGHTS } from '../game/guards';
 import { WORDS } from '../game/words';
 import { UNSEEN } from '../game/unseen';
 import { SEENWALK } from '../game/seenwalk';
@@ -254,6 +254,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_THROWBACK')) THROWBACK.on = String((globalThis as any).process?.env?.TPS_THROWBACK ?? '') === '1';   // a can in the wind-up goes back on the belt when another beat begins (game/throwback.ts): off, so the frozen stand's throws are as every probe has them; `TPS_THROWBACK=1` raises it
     if (pinned('TPS_HANDRING')) HANDRING.early = HANDRING.on = String((globalThis as any).process?.env?.TPS_HANDRING ?? '') === '1';   // his own actions are a ring that stays (game/handring.ts): off, so the frozen stand's Space list, its rows and the whistle's key are as every probe has them; `TPS_HANDRING=1` raises it
     if (pinned('TPS_LIGHTWALL')) LIGHTWALL.on = String((globalThis as any).process?.env?.TPS_LIGHTWALL ?? '') === '1';   // a weapon light stops at the wall its carrier is pressed to (src/game/lighting.ts lensClear): off, so every carried light is at its lens — and the CPU light estimate reads what it read in every frozen digest and tally; `TPS_LIGHTWALL=1` turns it on (the shipped default)
+    if (pinned('TPS_WALLLIGHT')) LIGHTS.wallOff = String((globalThis as any).process?.env?.TPS_WALLLIGHT ?? '') === '1';   // a teammate's light is dark into the wall at his muzzle (src/game/guards.ts wallDark): off, so his light is what the other light rules make it, as in every frozen probe, tally and digest; `TPS_WALLLIGHT=1` turns it on
     if (pinned('TPS_NOTEAMLASER')) IR.teamOff = String((globalThis as any).process?.env?.TPS_NOTEAMLASER ?? '') === '1';   // the team's guns show no laser line (src/game/irlaser.ts; a picture only): off, so every teammate's laser is drawn as the laser probes read it; TPS_NOTEAMLASER=1 raises it
     if (pinned('TPS_IRLIGHT')) IRLIGHT.on = String((globalThis as any).process?.env?.TPS_IRLIGHT ?? '') === '1';   // an infrared light on the goggles (src/game/irlight.ts): off, so a teammate's tube reads the light the meter reads and nothing else, and a room with none is too dark for it
     if (pinned('TPS_IRAUTO')) IRLIGHT.auto = String((globalThis as any).process?.env?.TPS_IRAUTO ?? '') === '1';   // the infrared light burns only where it is too dark for the tube (src/game/irlight.ts): off, so a light raised by TPS_IRLIGHT=1 burns whenever the goggles are down, as every check of it was written
