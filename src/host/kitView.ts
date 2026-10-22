@@ -1371,7 +1371,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   /** THE OPTICAL WAND (calls 5; this row is Sam's — wand.ts; a teammate's is `wandMate`, below): the game's own row at the SHUT door, by his own key. That row is offered only under the fog of war,
    *  so the fog is ON for the game for the length of this row and LIFTED for every draw (Game.fogLift / fogBack — the engine replay's own switch: the picture
    *  never shows it; by code — never seen on a GPU). He is walked to the door and LET GO (Game.puppet stops a look), goes onto his knee at the middle of the
-   *  leaf with both hands at its foot, the lens is through after the game's own 1.5 s, his cursor turns it to one side and the other, and he is walked home
+   *  leaf with both hands at its foot, the lens is through after the game's own wait (WAND.quick, the page: as he gets down), his cursor turns it to one side and the other, and he is walked home
    *  (which pulls it). Nothing to undo: a cut is the fog off and the walk home — both end the look by the game's own rule */
   const cursor = (p: Vec3) => { const q = cam.project([p[0], 0, p[2]], view.clientWidth, view.clientHeight); if (q[2]) { input.mouseX = q[0]; input.mouseY = q[1]; } };
   const wandRow: Row = { door: 'shut', damage: 'none', leaf: true, rest: K.restQuiet, cap: 13,

@@ -333,6 +333,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else {
     if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
     if ((k.tables.WAND as Partial<typeof WAND>).mate === undefined) WAND.mate = false;   // (…and one from before a teammate could carry one: no card of theirs had the row, no door's menu the order)
+    if ((k.tables.WAND as Partial<typeof WAND>).quick === undefined) WAND.quick = false;   // (…and one from before the quick set-up: the lens came through after the feed's 1.5 s)
   }
   if (!k.tables.STICKY) STICKY.on = false;   // (a file from before the sticky cameras: no such load on his rifle)
   else if ((k.tables.STICKY as Partial<typeof STICKY>).live === undefined) STICKY.live = STICKY.max;   // (…and one from before only the newest camera sent a picture: every camera out was an eye)

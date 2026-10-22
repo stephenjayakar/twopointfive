@@ -339,6 +339,7 @@ export function pageSwitches(q: URLSearchParams): void {
   PEEKSIGHT.on = q.get('peeksight') !== '0';   // a peek round the end of a wall (back to it, pushed into an open end) lifts the fog of war as a head leaned round it would see (game/peeksight.ts): ?peeksight=0 = the fog's eye stays over his feet, as before
   WAND.on = !q.has('nowand');   // the optical wand (game/wand.ts): a row of YOUR kit card and, carrying it, 'look under it' on a shut door's rows where the fog of war hides the room — ON in the page, ?nowand = no such row on the card or the door; off on the frozen stand (TPS_WAND=1). Before the kit is read (kitLoad): a stored card's wand is read through its row
   WAND.mate = !q.has('nowandmate');   // … and a TEAMMATE's card can carry one, which he uses ONLY on your order (game/wandorder.ts: a door's menu, V): ON in the page, ?nowandmate = yours alone, as it was; off on the frozen stand (TPS_WANDMATE=1)
+  WAND.quick = !q.has('nowandquick');   // … and it is set up in the time its animation takes (game/wand.ts `quick`): the lens through as he gets onto his knee, no ring on the row — ON in the page, ?nowandquick = the 1.5 s feed and its ring, as it was; off on the frozen stand (TPS_WANDQUICK=1)
   BIGSLOT.on = !q.has('nobigslot');   // the big slot (game/kit.ts BIGSLOT, game/bigkit.ts): every card has ONE big slot beside its pouches — the wall charge, the breaching shotgun (kit now, not a gun: the man keeps his rifle) or the dynamic hammer — and the last two take a lock from either face, yours on a locked door's row, a teammate's on a door order. ON in the page, ?nobigslot = the cards and the weapon row as they were; off on the frozen stand (TPS_BIGSLOT=1). Before the kit is read from the store: a stored shotgun-as-gun card is read as rifle + shotgun in the big slot.
   KITDEAL.on = !q.has('nokitdeal');   // the squad's kit dealt over the men who come (game/kit.ts KITDEAL): with three or four teammates the issued kit and every named squad kit are shared out among them — a charge and a stun to each pair — where the first two carried it all and the others showed empty pouches. The squad's count is the same at every size (but for the one canister of its key `more`, below), so a run is the run it was. ?nokitdeal = the cards as they were
   KITDEAL.more = !q.has('nokitmore');   // (…and of 10-18, the maintainer's pick "a tool each pair": three or four as issued are lent the breaching shotgun on Red Two and, of four, the hammer on Blue Two — each pair's second man, so its first goes in with a gun up — in big slots that stood empty, and a man a kit leaves with nothing counted is handed a stun canister — the Quiet kit's fourth man; ?nokitmore = big slots empty as issued, that man with his pistol alone)
@@ -577,6 +578,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WORK.on': 'TPS_WORKTHINGS=1',
   'WAND.on': 'TPS_WAND=1',
   'WAND.mate': 'TPS_WANDMATE=1',
+  'WAND.quick': 'TPS_WANDQUICK=1',
   'PEEKSIGHT.on': 'TPS_PEEKSIGHT=1',
   'STICKY.on': 'TPS_STICKY=1',
   'STICKY.take': 'TPS_CAMTAKE=1',

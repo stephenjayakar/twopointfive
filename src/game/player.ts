@@ -56,7 +56,7 @@ import { isBreathing } from './game';
 import { endGuardScript } from './squad';
 import { resetChase, handCarry, inHand, gunBack } from './guards';
 import { whistleKey } from './whistle';
-import { WAND, WAND_STATS, wandOffered, wandFits, wandTurn, wandDrop } from './wand';
+import { WAND, WAND_STATS, wandOffered, wandFits, wandTurn, wandDrop, wandThrough } from './wand';
 import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
 import { rescueEndRows } from './rescueend';
@@ -1854,8 +1854,8 @@ export function startWand(g: Game, d: Door) {
   if (!wandOffered(g, pl, d)) { if (WAND.on && pl.wand) g.msg(wandFits(d) ? 'nothing here the wand would show you' : d.def.steel ? 'no gap under a steel fire door' : 'the wand goes under a shut door'); return; }   // (the row is never offered then; a script asking anyway gets the reason)
   releaseWall(g); if (pl.dragging) g.toggleDrag();
   cancelReloads(pl); pl.throwHeld = false; pl.throwPreview = null; pl.sprinting = false; pl.easing = null; pl.picking = null;
-  pl.wanding = { door: d, side: g.doors.side(d, c.pos), t: 0, pan: 0, live: false, off: 0 }; pl.crouch = true;   // (on his knee — and he stays down there afterwards, as at a lock)
-  WAND_STATS.looks++; g.msg('feeding the wand under the door — a step or Space pulls it out');
+  pl.wanding = { door: d, side: g.doors.side(d, c.pos), t: 0, pan: 0, live: false, off: 0, age: 0 }; pl.crouch = true;   // (on his knee — and he stays down there afterwards, as at a lock)
+  WAND_STATS.looks++; if (!WAND.quick) g.msg('feeding the wand under the door — a step or Space pulls it out');   // (WAND.quick: 'the wand is through' follows inside half a second — one line, and the row says how it stops)
 }
 /** The wand pulled out (a step, Space, Esc; the door moving; a show): no round for WAND.stowSecs, he stays on his knee. */
 export function stopWand(g: Game, text?: string) {
@@ -1863,7 +1863,7 @@ export function stopWand(g: Game, text?: string) {
   wandDrop(pl); pl.speedSm = 0; if (text) g.msg(text);
 }
 /** One frame of the look (Player.wanding): planted on his knee square to the middle of the leaf, both hands at it (the lock work's pose), nothing in the sights;
- *  once he has been there WAND.feedSecs the lens is live — fogofwar.ts takes wandEye in place of his own — and turns after the frame's aim point. */
+ *  once he has been there WAND.feedSecs (WAND.quick: as soon as he is — the animation is the wait) the lens is live — fogofwar.ts takes wandEye in place of his own — and turns after the frame's aim point. */
 function updateWanding(g: Game, dt: number) {
   const pl = g.player, c = pl.char, W = pl.wanding!, d = W.door;
   if (g.puppet || !WAND.on || !g.fogOfWar.active) stopWand(g);
@@ -1876,7 +1876,8 @@ function updateWanding(g: Game, dt: number) {
     pl.crouch = true; pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false;
     c.anim.lockpick = true; c.anim.speed = 0; c.anim.crouchTarget = 1; c.anim.upper = 'none';
     const planted = v3.distXZ(c.pos, spot.pos) < 0.12 && c.anim.hideHeldItem;   // there, and both hands on it
-    if (planted) { W.off = 0; W.t += dt; if (!W.live && W.t >= WAND.feedSecs) { W.live = true; WAND_STATS.live++; g.msg('the wand is through'); } }
+    W.age += dt;
+    if (planted) { W.off = 0; W.t += dt; if (!W.live && wandThrough(W.t, W.age, c.anim.crouch, true)) { W.live = true; WAND_STATS.live++; g.msg('the wand is through'); } }
     else if (W.live) { stopWand(g, 'shoved off it — the wand is out'); }   // (a man walked into him: the cable came out with him — one line, and the look is his to start again)
     else if (v3.distXZ(c.pos, spot.pos) >= 0.12 && (W.off += dt) >= WAND.giveUpSecs) stopWand(g, 'no room to kneel at that door');   // (somebody, or something, stands where he must kneel)
     if (pl.wanding && W.live) wandTurn(W, g.aimPoint, dt);
@@ -2067,7 +2068,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
   const NO_BOOT = 'kick it — opens toward you: a boot will not shift it';   // (the kick row greyed: doors.ts DOORWAY.frameHolds)
   const row = (base: Interactable, verb: Verb, text: string, hints = '', over: Partial<Interactable> = {}): Interactable => ({ ...base, verb, running: false, progress: undefined, line2: `Space  ${text}${hints ? '  ·  ' + hints : ''}`, ...over });
   /** the one row of a running sustained verb: worded as running, its bar, and how it stops */
-  const running = (base: Interactable, verb: Verb, text: string, progress: number): Interactable => ({ ...base, verb, running: true, line2: text, progress: Math.max(0, Math.min(1, progress)), inReach: true });
+  const running = (base: Interactable, verb: Verb, text: string, progress?: number): Interactable => ({ ...base, verb, running: true, line2: text, progress: progress === undefined ? undefined : Math.max(0, Math.min(1, progress)), inReach: true });   // (no `progress`: a verb with nothing to count — no ring, no bar)
   /** a row Space does nothing with (getting hold of him…, kicking it in…): no verb */
   const status = (base: Interactable, text: string): Interactable => ({ ...base, verb: undefined, running: false, line2: text, progress: undefined, inReach: true });
   /** the marker of a thing that has verb rows: its line2 lists them the way the rows word them (probes and the dots read the marker; the panel reads the rows) */
@@ -2248,7 +2249,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
     const marker = (d: Door) => list.find(x => x.door === d) ?? { kind: 'door' as const, pos: d.pos, line1: 'door', line2: '', inReach: true, off: false, door: d };
     if (pl.picking) { const d = pl.picking; rows = [running(marker(d), 'pick', `picking… ${Math.min(99, Math.round(d.pick * 100))}%  ·  Space or a step breaks off (the lock keeps it a moment)`, d.pick)]; }
-    else if (pl.wanding) { const W = pl.wanding; rows = [running(marker(W.door), 'wand', W.live ? 'looking under it — the cursor turns the lens  ·  Space or a step pulls it out' : 'feeding the wand under…  ·  Space or a step pulls it out', W.live ? 1 : W.t / Math.max(0.01, WAND.feedSecs))]; }
+    else if (pl.wanding) { const W = pl.wanding; rows = [running(marker(W.door), 'wand', W.live ? 'looking under it — the cursor turns the lens  ·  Space or a step pulls it out' : 'feeding the wand under…  ·  Space or a step pulls it out', WAND.quick ? undefined : W.live ? 1 : W.t / Math.max(0.01, WAND.feedSecs))]; }   // (WAND.quick: nothing left to count — no ring, no bar)
     else if (pl.coding) { const d = pl.coding; rows = [running(marker(d), 'code', `keying the ${g.devices.padOf(d) ? padDoorName(g.devices.padOf(d)!) : 'door'} code… — Space or a step breaks off`, pl.codeT / CODE_SECS)]; }
     else if (pl.kick) rows = [status(marker(pl.kick.door), pl.kick.tool ? (pl.kick.tool.kind === 'hammer' ? 'hammering it…' : 'on the lock…') : 'kicking it in…')];
     else if (pl.easing) { const d = pl.easing; rows = [running(marker(d), 'ease', 'easing it open… — Space or a step stops it where it is', Math.abs(d.angle) / EASE_MAX)]; }
