@@ -246,7 +246,9 @@ export interface DirectorApi {
   plan(id: 'breach'): PlanRef<'breach'>; plan(id: string): PlanRef; loadout(id: string, spec: LoadoutSpec): LoadoutRef; lightGroup(name: string): GroupRef; variant(id: 'daylight'): VariantRef;
   program(name: string, body: (P: ProgramApi) => void, opts?: ProgramOpts): void;
   expect: { order(program: string, beats: string[]): void; within(program: string, a: string, b: string, maxSecs: number): void; never(what: 'samHit' | 'unitThroughWall'): void };
-  systems: { qrf(on: boolean): void; needs(on: boolean): void; civilians(on: boolean): void; autosave(on: boolean): void };
+  systems: { qrf(on: boolean): void; needs(on: boolean): void; civilians(on: boolean): void; autosave(on: boolean): void;
+    /** the defenders' own grenades (frag.ts): off = nobody on their side throws one on this level */
+    theirFrags(on: boolean): void };
   /** small pure helpers so a script needs no runtime import for arithmetic on places */
   util: { yawTo(from: Vec3, to: Vec3): number; distXZ(a: Vec3, b: Vec3): number; lerp(a: Vec3, b: Vec3, t: number): Vec3; add(a: Vec3, b: Vec3): Vec3; ahead(p: Vec3, yaw: number, dist: number, y?: number): Vec3 };
 }
@@ -261,7 +263,7 @@ export interface Manifest {
   marks: Map<string, { pos: Vec3 | null; yaw?: number }>; volumes: Set<string>; routes: Set<string>; doors: Set<string>; devices: Set<string>; plans: Map<string, PlanKind>; loadouts: Map<string, LoadoutSpec>; groups: Set<string>; variants: Set<string>;
   programs: Map<string, ProgramDef>;
   expects: { kind: 'order' | 'within' | 'never'; program?: string; beats?: string[]; a?: string; b?: string; max?: number; what?: string }[];
-  systems: Partial<Record<'qrf' | 'needs' | 'civilians' | 'autosave', boolean>>;
+  systems: Partial<Record<'qrf' | 'needs' | 'civilians' | 'autosave' | 'theirFrags', boolean>>;
 }
 interface TriggerDef { kind: 'start' | 'after' | 'event' | 'signal' | 'enter' | 'when'; beat: string; secs?: number; event?: EventKind; name?: string; filter?: EventFilter; volume?: string; who?: 'sam' | 'anyUnit' | UnitRef; once?: boolean; pred?: (q: Query) => boolean; label?: string }
 interface ProgramDef { name: string; opts: ProgramOpts; beats: Map<string, { fn: BeatFn; atomic: boolean }>; triggers: TriggerDef[] }
@@ -300,7 +302,7 @@ export function manifestOf(script: LevelScriptFn): Manifest {
       within: (program, a, b, max) => { M.expects.push({ kind: 'within', program, a, b, max }); },
       never: what => { M.expects.push({ kind: 'never', what }); },
     },
-    systems: { qrf: on => { M.systems.qrf = on; }, needs: on => { M.systems.needs = on; }, civilians: on => { M.systems.civilians = on; }, autosave: on => { M.systems.autosave = on; } },
+    systems: { qrf: on => { M.systems.qrf = on; }, needs: on => { M.systems.needs = on; }, civilians: on => { M.systems.civilians = on; }, autosave: on => { M.systems.autosave = on; }, theirFrags: on => { M.systems.theirFrags = on; } },
     util: UTIL,
   };
   script(D);
@@ -449,6 +451,11 @@ export class Director {
   }
   /** why a checkpoint cannot be written (savestate.ts canSave): M1 refuses throughout a program — its cursor (fired triggers, flags, live beats, units) has no save slice until M3 */
   blocksSave(): string | null { const R = this.run; return R && !R.ended ? `the level script's program '${R.name}' is running` : null; }
+  get running(): string | null { const R = this.run; return R && !R.ended ? R.name : null; }
+  /** a tutorial mission's own program is running (roomfight.ts, lanes.ts: a man of the floor's roster that it has in hand is left to it until it lets him go) */
+  get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.rails?.live; }
+  /** frag.ts: the level's script put the defenders' own grenades off (`D.systems.theirFrags(false)`): for the level, whatever program is or is not running */
+  get theirFragsOff(): boolean { return this.armed && this.manifest?.systems.theirFrags === false; }
   get objective(): { text: string; pos: Vec3 | null } | null { return this.run && !this.run.ended ? this.run.objective : null; }
   /** a signal from OUTSIDE a beat (rails.ts: a lesson step's cue, 'lesson:<cue>'): the running program's onSignal triggers and c.on('signal', name) meet it on its next tick. Nothing with no program running. */
   signal(name: string, data?: Json) { const R = this.run; if (!R || R.ended) return; R.signals.push({ name, t: R.t, data }); this.push({ beat: '', kind: 'note', what: `signal:${name}`, ...(data !== undefined ? { data } : {}) }); }
@@ -710,11 +717,12 @@ export class Director {
     this.push({ beat: '', kind: 'note', what: 'handover' });
   }
   private applySystems(R: Run) {
-    const M = this.manifest!.systems; if (!Object.keys(M).length) return;
-    const g = this.g; R.systemsSaved = { qrf: g.tune.qrf, needs: g.tune.needs, civilians: g.tune.civilians, autosave: g.saves.enabled };
+    const M = this.manifest!.systems; if (M.qrf === undefined && M.needs === undefined && M.civilians === undefined && M.autosave === undefined) return;
+    const g = this.g, S: NonNullable<Run['systemsSaved']> = R.systemsSaved = {};   // (only what the script set is kept, so only that is put back: a setting the player changed under the program stays his)
+    if (M.qrf !== undefined) S.qrf = g.tune.qrf; if (M.needs !== undefined) S.needs = g.tune.needs; if (M.civilians !== undefined) S.civilians = g.tune.civilians; if (M.autosave !== undefined) S.autosave = g.saves.enabled;
     if (M.qrf !== undefined) g.tune.qrf = M.qrf; if (M.needs !== undefined) g.tune.needs = M.needs; if (M.civilians !== undefined) g.tune.civilians = M.civilians; if (M.autosave !== undefined) g.saves.enabled = M.autosave;
   }
-  private restoreSystems(R: Run) { const s = R.systemsSaved; if (!s) return; const g = this.g; g.tune.qrf = s.qrf!; g.tune.needs = s.needs!; g.tune.civilians = s.civilians!; g.saves.enabled = s.autosave!; R.systemsSaved = null; }
+  private restoreSystems(R: Run) { const s = R.systemsSaved; if (!s) return; const g = this.g; if (s.qrf !== undefined) g.tune.qrf = s.qrf; if (s.needs !== undefined) g.tune.needs = s.needs; if (s.civilians !== undefined) g.tune.civilians = s.civilians; if (s.autosave !== undefined) g.saves.enabled = s.autosave; R.systemsSaved = null; }
 
   // ---------------------------------------------------------------- drills
   private tickDrill(R: Run, D: DrillRun, dt: number) {
@@ -747,9 +755,10 @@ export class Director {
   private tickBursts(R: Run) {
     for (const B of R.bursts) {
       if (B.left <= 0) continue;
-      const u = R.units.get(B.u.id); if (!u || u.gd.state === 'dead') { B.left = 0; continue; }
+      const gd = R.units.get(B.u.id)?.gd ?? this.g.guards.find(x => x.char.id === B.u.id);   // (a man the program spawned, or one of the level's own it took in hand: c.unit)
+      const u = gd ? { gd, ref: B.u } : null; if (!u || u.gd.state === 'dead') { B.left = 0; continue; }
       if (R.t < B.next || u.gd.weapon.reloading) continue;
-      const at = 'kind' in B.at && B.at.kind === 'unit' ? (() => { const v = R.units.get((B.at as UnitRef).id)?.gd; return v ? (v.char.bones.chest ?? v3.add(v.char.pos, [0, 1.1, 0])) : null; })() : (() => { const p = this.placeOf(B.at as Place); return [p[0], (B.at as Vec3)[1] || 1.1, p[2]] as Vec3; })();
+      const at = 'kind' in B.at && B.at.kind === 'unit' ? (() => { const id = (B.at as UnitRef).id, v = R.units.get(id)?.gd ?? this.g.guards.find(x => x.char.id === id); return v ? (v.char.bones.chest ?? v3.add(v.char.pos, [0, 1.1, 0])) : null; })() : (() => { const p = this.placeOf(B.at as Place); return [p[0], (B.at as Vec3)[1] || 1.1, p[2]] as Vec3; })();
       if (!at) { B.left = 0; continue; }
       if (u.gd.weapon.fire()) { fireWeapon(this.g, u.gd.char, at, false, { steady: true, spread: B.spread }); B.left--; B.fired++; B.next = R.t + B.cadence; }   // a scripted round is a REAL round: hits, suppression, marks, heat, glass, hearing all follow from combat.ts
       else u.gd.weapon.rearm();

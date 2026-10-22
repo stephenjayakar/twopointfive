@@ -168,6 +168,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
   { id: 'tut-sky', title: 'The halt, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
     place: 'A truck halt on a pass road, under snow', lean: 'loud', defenders: 5, squads: true,
     blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.' },
+  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
+    place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
+    blurb: 'Four men down one street: two easy rooms, then a door they shoot through, a gun, a locked hall, and a picket by two gates.' },
 ];
 /** every row that is a lesson: the tutorial's missions, then the Training levels */
 export const LESSON_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...TRAINING_MISSIONS];
