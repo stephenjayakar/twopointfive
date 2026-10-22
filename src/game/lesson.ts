@@ -40,7 +40,7 @@ export const lessonLine = (line: string): string => HANDRING.on ? line.replace(W
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
 import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)
-import { SLOTSETUP } from './slotsetup';
+import { SLOTSETUP, slotSetupOpen } from './slotsetup';   // (slotSetupOpen is called inside a flag only)
 
 /** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
 export const LESSON = { on: true };
@@ -91,6 +91,7 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   sprint: g => who(g).sprinting,
   wall: g => !!who(g).wall,                                   // back to a wall (Q)
   peek: g => (who(g).wall?.peek ?? 0) > 0.5,                  // …and leaning out of its open end
+  lean: g => { const w = who(g).wall; return !!w && ((w.lean ?? 0) > 0.5 || (w.kind !== 'stack' && (w.peek ?? 0) > 0.5)); },   // out round a wall's open end, whichever hold: stepped out with the rifle in the shoulder, or his back leant out (`peek` alone is also true of a rifleman who has only slid to the end)
   nv: g => who(g).nv,                                         // night vision down (N)
   light: g => { const p = who(g); return (p.pistolUp && p.pistol.lightOn) || (p.rifleUp && p.rifle.lightOn); },   // the weapon light of the gun in hand (L)
   holstered: g => who(g).holstered,                           // hands empty (E)
@@ -98,6 +99,10 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   ringsOut: g => who(g).rifle.rings <= 0,                     // the launcher's ring airfoils are spent (the honest other way past a step that asks for one)
   shellsOut: g => who(g).rifle.shells <= 0,                   // …and its 40 mm grenades
   auto: g => who(g).rifle.mode !== 'semi',                              // the rifle's selector on AUTO (Z)
+  // the setup of the gun in his hands is up (slotsetup.ts) — and where a gun has no setup (the switch off) there is nothing to ask for: the line goes by;
+  // `setupShut`: it is not up (Tab, or anything else that puts it away)
+  setup: g => !SLOTSETUP.on || slotSetupOpen(g),
+  setupShut: g => !slotSetupOpen(g),
   dragging: g => !!who(g).dragging,
   dark: g => g.blackout.active,                               // the mains are off (the breaker thrown, by whoever threw it)
   chargeSet: g => (g.wallCharge?.set.length ?? 0) > 0,        // a wall charge is on a wall, waiting on the trigger

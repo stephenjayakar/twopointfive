@@ -86,6 +86,78 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   was built for is `?hour=dusk&weather=dust`; a row cannot carry its hour or weather, so picked from the list it opens at the visit's hour (night) and dry. Never seen on a GPU, never played by a hand; the pace wheel is not taught. Lines for other levels: `lesson.ts` `door` test state
   `charged` (a charge hangs on the door) and `threw`'s `area`; `director.ts` `c.stimulus.burst` now fires a roster man a beat holds (and at one), not only a spawned one; `rails.ts` the big line is the step's line AS THE KEYS STAND (`setupLine` where a gun's key again opens its setup); `lesson-run.ts`
   runs an `idleOk` step's script even when the step had already gone by, so its two arms press the same keys.
+- **`tut-solo` after the maintainer's first play (2026-10-22, the same day; it changes the bullet above where the two differ).** Twelve notes, played on
+  hard by link. WHAT THE MISSION CHANGED, 29 steps now: (1) THE FIRST PICTURE: he starts on the road at the van's open back doors (x 4.35, not 1.3: the world ends at
+  x 0 and half the first frame was the dark past it; and the first walk is up the screen, a mark toward the camera from him sits under the big line),
+  the moon is thin (0.22, was 0.9: an even moon was the flat look) under a darker sky, and the van is as its driver left it, everything on: two head
+  lamps (beams across the forecourt), the tail lamps and the lamp in its load bay, which is the light he starts in (each a glowing sliver a hair off the
+  van's own lens and a little wider, with a light of its own, so a round at a lamp meets the sliver and puts it out; the lens behind stays the dead
+  glass `carlamps-check` finds, and the generator finds the lenses with `carlamps.ts findCarLamps`, so the kit's sizes are named in one place); a
+  lantern at the foot of the wall he takes. THE FIRST SECONDS KILL NOBODY: the sentry's rounds cross the road east of the van, and nothing there tells
+  a new player to keep off it, so the script holds his fire while the player is in either of two volumes (`road_east`, `road_nose`: that road and the
+  way round the van's nose to it), and his bursts are three rounds, over before a running man is across the margin. (2) A HELD MAN FACES WHAT HE AIMS AT: an order's `aimAt` alone is his arms and eyes (the sentry shot over his shoulder), so
+  the script's `aim()` gives every such order a `face` too. (3, 4, 5) THE WALL IS TAKEN ON THE SIDE A RIFLE SHOOTS FROM, AND THE LEAN IS A LINE OF ITS
+  OWN. A rifle is carried on the right: facing in through the gate from the jamb on his right the gun is behind the frame and `GUNWALL` holds it at the
+  low ready, no round leaves and nothing says why (measured: body within 0.4 m of that jamb, three clicks, no round; the other side one round and the
+  sentry is down). The first build sent him to that side. Now the wall he sprints to is the other side of the gate, the gate's leaf is hung on the far
+  jamb, the van is a little down the road so the run goes past its nose and never into the gate's line, and the order is: behind the van, rifle up,
+  sprint to the wall, 'Walk into the wall: snap to it for cover', 'Slide along to the gate. Aim past the corner: you lean out' (the trigger is still
+  locked on this line, so the lean is its only way on; lesson flag `lean`, new
+  in `lesson.ts` FLAGS: out round a wall's open end by either hold; `peek` alone is also true for a moment of a rifleman who has only slid to the end,
+  and the scripted player fails the step if it goes by on the slide), then 'shoot the sentry'. The sentry's fire through the gate is what makes the wall
+  worth taking; it stops when the wall's line comes up. (6) THE BLUE GATE'S LEAF STOOD INSIDE THE SANDBAGS: the sandbags are a hand further from the
+  arch's line. (7) THE CROUCH IS ASKED FOR UNDER THE FIRE IT IS FOR: 'Move up beside the blue gate' (the gun opens on the truck; the step holds a second, so the
+  truck is shot at before the next line whenever he came), then '[C]: crouch.
+  The fire goes over you' as the gun starts along the sandbags' top. (8) THE SMOKE'S RING IS ON FLOOR HE CAN SEE (the gap itself, not behind the
+  sandbags) and the two throw lines say 'click the ring'. THE GAP IS CERTAIN NOW: eight lanes a hand apart, two rounds a lane at the gun's own beat
+  (six-round bursts at six points left a crouched man across unhit once the step times moved: the no-smoke arm of the check found it). (9) THE PISTOL HAS A
+  JOB: '[1]: the pistol. Its shot is quiet', then 'Shoot out the lamp: the dark is cover too' (test `target lamp_shop` dark), the lamp over where the
+  charge's line stands him; its pole is on the far side of its head. THE LINE IS TRUE BY THE METER: the ground beside the door is lit by that lamp
+  alone (70 with it, 0 without, by the CPU's estimate, which has no moon). For that the truck court's flood stands in the corner by the arch's wall
+  and throws back across its own court (from the far corner it went over the wall and lit the gun court's south half), and the gun court has a mast
+  lamp of its own, its head between the nest and the gap. (10) THE GUN'S SETUP IS MET EARLY: after the first reload, '[2], then [1]: full
+  auto' ('[Z]: full auto' where the setup is off), and the grenade's '[2], then [2]' is asked at the arch, a line before it is used. FOR THAT THE
+  FRAME'S GATE LETS A SETUP ROW'S DIGIT THROUGH BY WHAT THE ROW DOES (`rails.ts gate`, with `slotsetup.ts setupRows` and `slotSetupLeft`): before, a
+  row's digit was dropped while that digit's slot was still locked (1 before the pistol's line). The selector's row passes with `mode`, the lamp's
+  with `light`, the load's with the gun's own slot (its digit pressed again was the load's key before there was a setup); never on the setup's last
+  ticks, where a digit let through as a row would be the locked slot's key after all. No switch of its own: it acts only where the frame and the
+  setup are both on (the page), and either one off is the build without it. One tick is left open: a row's digit pressed the same tick as a click or
+  a reload that shuts the setup. NOT THE MISSION'S, handed to their owners: the rifle that will not fire beside a jamb on
+  its right (`gunwall.ts`); a mark where a thrown can will land (the throw preview is an arc to the cursor); a blast skips a man a sponge round put out
+  (`frag.ts blast`: `state === 'dead'`); sponge rounds lent to this mission because its row is kind `quiet` (`kit.ts kitPlayer`); the stealth score on
+  its end card for the same reason (`ui/debrief.ts`); an arrow on the ground for the wall's line (the frame's step key `toward`, not in this build);
+  the setup box's own clock. Checks: `tut-solo-check.ts` plays it seven ways a seed (the new one stands six seconds east of the van in the sentry's
+  line: nobody is hit), reads the shop's lamp by the meter, and is green on both stands with all 29 lines on two seeds, its break red on both. The run
+  as the lines say stays on full auto from its line on, as a player is left. A SCRIPTED PLAYER ON THE PAGE IS ITS OWN BUNDLE: it reads a switch from
+  the page's `__knobs`, never from its own copy of the module (the page play stopped at the selector's line until it did). Never seen on a
+  GPU; the new opening was judged from the software adapter's pictures only.
+- **`tut-solo`, the maintainer's notes from a second look the same evening (2026-10-22; level data and its script, no switch).** (1) "weird that
+  we're standing here right in front of the window here he can shoot us": the shop's front wall keeps ONE window (north of its door: "the top window
+  getting blown out and glass flying everywhere was sick" is that one and stays); the wall south of the door is blank and the stand-clear mark is
+  against it (`BACK`, 1.8 m from the door: outside `DOORTOOLS.backblastM`), its line 'Stand clear: your back to the wall beside the door'. A
+  STAND-CLEAR MARK IS AGAINST BLANK WALL, never a window the man inside can see through. (2) "weird that we're told to load the grenade long before
+  being told to do anything about it": the cue that brings the last two (`trucks`) is on the load's own step, so the line is 'Two behind you. …
+  load the grenade' with them coming, and the next line fires it. (3) "it doesn't make sense that the enemies spawn there though. maybe we have
+  another door on the far room and show them coming from outside of the map and then running at you": the store has a BACK DOOR on the mission's
+  line (door `store`, said 'back door'; steel, locked from the store's side, opening in), a lane behind it that runs off the map's edge between two
+  walls (so nobody walks round the halt by it), and the last two are put on the floor in that lane (`LAST_IN`), the script throws the door open and
+  they run the length of the building to the shop's doorway. The scripted player fails if that door is open or unlocked before its line, or shut
+  when they stand in the doorway. The first line no longer breaks at its colon ('[W] [A] [S] [D] to move. Get behind the van': a key cap followed
+  by a colon may wrap between the two). His fourth note, "F should be reserved for squad", waits on the controls' own-action row for a set charge:
+  the 'blow' step still names the squad's word key until then. Both stands play all 29 lines on seed 1; from the arch the back door is off the
+  page's picture, so what he sees is the two running in through the shop: never seen on a GPU, and nobody has played it.
+- **`tut-solo` on the frame's cards and arrow and the setup as a mode (2026-10-22, after build step 844; 31 steps).** After the reload: 'setup'
+  ('[2] again: the rifle's setup', lesson flag `setup`: the setup of the gun in his hands is up; where the switch is off the flag is true and the line
+  goes by) and 'tab' ('[Tab]: close it. [Tab] closes every menu', flag `setupShut`), then the selector as before. The maintainer: "the timer is bad. we
+  should just have it switch a mode. and we should teach earlier that tab exits out of menus". THE FRAME'S GATE, WITH THE SETUP UP, GIVES A ROW'S DIGIT
+  TO THE ROW ALONE (`rails.ts gate`): the selector's row opens with `mode`, the lamp's with `light`, the load's with `alt` (so on the two lines that
+  only open and shut the setup no row can be picked, the rifle's own digit included, and Tab is the way out); `alt` is unlocked on the load's step. The
+  wall's mark is the frame's arrow (`at` a pace short of the wall, `toward` the wall); two cards: 'Walls' on the wall's step, 'A gun's setup' on the
+  setup's. The row's third `teaches` line is 'Rifle and pistol, and a gun's setup'. The scripted player presses both row digits on the Tab line and
+  fails if either is taken; it fails on the selector's line if the two lines went by on a stand that has the setup.
+  A KIT THAT COMES WITH THE GRENADE ALREADY ON THE LAUNCHER (the player's own card dealt whole, with no sponge rounds lent over it) makes the load's
+  line true as it comes up: it goes by, its cue still brings the last two, and the next line says where they are by itself ('Behind you: hold right
+  button, aim at their doorway, let go'). `tut-solo-check` plays that as its eighth way (`loaded`: the grenade put up by hand before the line).
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
