@@ -1,23 +1,27 @@
-// A DOOR SWUNG OR KICKED INTO A MAN THROWS HIM (src/game/doors.ts DOORTHROW, src/game/doorthrow.ts; the maintainer: 'opening a door into the enemy should
-// majorly confuse them' · 'kicking down a door when an enemy on the side should stun or knock them out').
+// A DOOR OPENED INTO A MAN STARTLES HIM; A DOOR KICKED INTO HIM THROWS HIM (src/game/doors.ts DOORTHROW, src/game/doorthrow.ts; the maintainer: 'opening a
+// door into the enemy should majorly confuse them' · 'it's not like we're slamming these doors' · 'confusion here being put on alert but being very confused
+// and investigating what's going on' · 'kicking down a door when an enemy on the side should stun or knock them out').
 //   bun run tools/qa/doorthrow-check.ts        (or: bun run tools/qa/probes.ts doorthrow)        exit 0 = every line PASS, 1 = a FAIL line
 // Headless, on the office, at one wooden door with open floor on the side it opens into; nothing here looks at a picture. The rule is set by the check itself
 // on either stand (the frozen stand holds it off, and its doors swing both ways: the lines hold on both).
 //   fault      the rule off: Sam walks at a shut door with a man stood behind it — the man holds it shut on him, and nothing happens to the man
-//   walked     the rule on, the same walk: the man is carried clear, folded and blind for DOORTHROW.pushSecs, the door opens, and he is up again after it,
-//              alert toward the doorway, unhurt
-//   shoved     a leaf flung open (a door order's shove), and the player's own push at it (Doors.use): the same, by the push's seconds
+//   walked     the rule on, the same walk: the man is carried clear and the door opens; he is STARTLED — stopped for DOORTHROW.startle, suspicious, the
+//              doorway his place to look — and neither folded nor blind, nor on a knee, nor hurt; with the AI on and nobody to see he goes to the
+//              doorway, looks about and is back at his round
+//   opened     a leaf flung open (a door order's shove), and the player's own push at it (Doors.use): the same startle, no fold
+//   slammed    a defender at a run shoulders the door open onto one of Sam's men: folded and blind for DOORTHROW.pushSecs, on his feet
 //   booted     a boot (Doors.kickIn) with the man stood right at the door: folded and blind for DOORTHROW.kickSecs, on a knee for it, unhurt; a man stood
 //              further round the swing: the boot's seconds, on his feet
 //   sam        a defender's boot onto Sam: folded for the boot's seconds (SAMSTUN reads it: shown on the shipped stand), in a crouch, not down
 //   teammate   a defender's boot onto one of Sam's men: the same as any man, and he comes back alert toward the door
-//   calm       a defender who is not alert walking a door open onto one of Sam's men: nothing; the same man alert: thrown
-//   own side   a man walking a door open onto one of his own side, or flinging it: nothing (the leaf stops against him); the same walk by a foe: thrown;
+//   calm       a defender who is not alert walking a door open onto one of Sam's men: the leaf stops against him as it did; the same man alert: the
+//              leaf moves him aside (and no more: Sam's men know whose door it is)
+//   own side   a man walking a door open onto one of his own side, or flinging it: nothing (the leaf stops against him); the same walk by a foe: startled;
 //              a BOOT throws a man of the kicker's own side like anyone
-//   not        eased by a hand, leaned open slower than DOORTHROW.minSpeed, set open by a script in one frame, walked open at a crouch, pulled toward the men on its pull face (one-way doors), swinging shut, a man walking into a leaf
-//              himself: nobody is thrown
+//   not        eased by a hand, leaned open slower than DOORTHROW.minSpeed, set open by a script in one frame, walked open at a crouch, pulled toward the
+//              men on its pull face (one-way doors), swinging shut, a man walking into a leaf himself: nobody is moved, startled or thrown
 //   again      a man just up from a fold is not thrown again inside DOORTHROW.again
-//   checkpoint a man on a knee, saved and loaded into a fresh game, is still folded and on his knee to the same clock
+//   checkpoint a man on a knee, saved and loaded into a fresh game, is still folded and on his knee to the same clock; a boot saved in flight still throws
 //   journal    a recording from before the table replays with the rule off; one that carries it keeps its own word
 // DOORTHROW_BREAK=1: the rule is left off where the lines want it on — red.
 type Vec3 = [number, number, number];
@@ -76,29 +80,42 @@ export async function doorthrowCheck(): Promise<boolean> {
     // ------------------------------------------------------------ the fault, and the walk with the rule on
     const walked = async (on: boolean) => {
       const W = await world(on), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), pl = sam(g, F.pt(F.W * 0.6, -1.3));
-      let wide = 0, fold = -1; walk(W, F, pl, 2.5, 1.6, () => { wide = Math.max(wide, Math.abs(d.angle)); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); });
-      const moved = flat(v.char.pos, p0), through = F.out(pl.char.pos); for (let i = 0; i < (T.pushSecs + 0.3) * 60; i++) W.step(DT);
-      return { g, v, wide, fold, moved, through, up: folded(g, v) <= 0, pushed: DOORTHROW_STATS.pushed, kicked: DOORTHROW_STATS.kicked };
+      let wide = 0, fold = -1, beat = -1, st = v.state, aw = 0; walk(W, F, pl, 2.5, 1.6, () => { wide = Math.max(wide, Math.abs(d.angle)); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); if (beat < 0 && DOORTHROW_STATS.startled) { beat = v.reactT; st = v.state; aw = v.awareness; } });
+      const moved = flat(v.char.pos, p0), through = F.out(pl.char.pos), look = v.lastKnown ? flat(v.lastKnown, d.frameCentre) : 99;
+      return { g, v, wide, fold, beat, st, aw, look, moved, through, startled: DOORTHROW_STATS.startled, thrown: DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked };
     };
     { const r = await walked(false);
-      line(r.fold < 0 && r.pushed === 0 && r.wide < 0.5 && r.moved < 0.15 && r.through < 0, `the rule off: Sam walks at the shut door for 2.5 s with a man stood ${BEHIND} m behind it — the man is not folded (${r.fold < 0}), is moved ${f2(r.moved)} m, the leaf never stands wider than ${f2(r.wide)} rad and Sam is still ${f2(-r.through)} m short of the frame: he holds it shut, as he did`); }
+      line(r.fold < 0 && r.startled + r.thrown === 0 && r.v.state === 'patrol' && r.wide < 0.5 && r.moved < 0.15 && r.through < 0, `the rule off: Sam walks at the shut door for 2.5 s with a man stood ${BEHIND} m behind it — the man is not folded (${r.fold < 0}), is moved ${f2(r.moved)} m, the leaf never stands wider than ${f2(r.wide)} rad and Sam is still ${f2(-r.through)} m short of the frame: he holds it shut, as he did`); }
     { const r = await walked(true), v = r.v;
-      line(r.fold > T.pushSecs - 0.1 && r.fold <= T.pushSecs + 1e-6 && r.pushed === 1 && r.kicked === 0 && r.moved > 0.2 && r.wide > 0.9 && r.through > 0,
-        `the rule on, the same walk: the man is folded and blind ${f2(r.fold)} s (want ${T.pushSecs}: the push's seconds), carried ${f2(r.moved)} m, the leaf stands ${f2(r.wide)} rad wide and Sam is ${f2(r.through)} m through the frame · thrown ${r.pushed} time(s)`);
-      line(r.up && v.state !== 'dead' && !v.wound && v.state === 'alert' && v.doorDownUntil < 0, `after it he is up again (${r.up}), alive and unwounded, alert (state ${v.state}) and never on a knee: a push does not floor a man`); }
+      line(r.startled === 1 && r.thrown === 0 && r.fold < 0 && r.moved > 0.2 && r.wide > 0.9 && r.through > 0,
+        `the rule on, the same walk: the man is carried ${f2(r.moved)} m, the leaf stands ${f2(r.wide)} rad wide and Sam is ${f2(r.through)} m through the frame · startled ${r.startled} time(s), thrown ${r.thrown}, never folded (${r.fold < 0})`);
+      line(r.st === 'suspicious' && r.beat > T.startle - 0.1 && r.beat <= T.startle + 1e-6 && r.look < 0.05 && r.aw >= T.wary - 0.05 && r.aw < 0.8 && v.dazzledUntil < 0 && v.staggerUntil < 0 && v.doorDownUntil < 0 && !v.wound && v.state !== 'alert',
+        `he is startled, not thrown: stopped ${f2(r.beat)} s (want ${T.startle}), suspicious (state ${r.st}) with the doorway his place to look (${f2(r.look)} m off it), awareness ${f2(r.aw)} as it met him; he keeps his eyes, his feet and his gun, is unhurt, and nothing but his own eyes makes him alert (${v.state} after it, nobody to see)`); }
+    { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), pl = sam(g, F.pt(F.W * 0.6, -1.3)); g.aiEnabled = true;   // his wits about him, Sam unseen
+      let t0 = -1, near = 99, sus = 0, back = -1;
+      for (let i = 0; i < 60 * 14; i++) { if (i < 150) { const pos = pl.char.pos; pos[0] += F.n[0] * 1.6 * DT; pos[2] += F.n[1] * 1.6 * DT; } W.step(DT);
+        if (t0 < 0 && DOORTHROW_STATS.startled) { t0 = g.time; v.hold = false; v.pinned = false; }
+        if (t0 >= 0 && back < 0) { if (v.state === 'suspicious') { sus += DT; if (g.time - t0 > T.startle) near = Math.min(near, flat(v.char.pos, d.frameCentre)); } else if (v.state === 'patrol') back = g.time - t0; } }
+      line(t0 >= 0 && near < 0.6 && sus > T.startle + 2 && back > 0 && v.state === 'patrol', `the same walk with his wits about him and nobody to see: he goes to the doorway (to ${f2(near)} m of it), looks about, and is back at his round ${f2(back)} s after it met him (${f2(sus)} s of it suspicious, never alert)`); }
 
     // ------------------------------------------------------------ a leaf flung open
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0); sam(g, F.pt(F.W * 0.6, -1.3));
       W.step(DT); d.latched = false; d.closing = false; d.vel = F.S * 5.5; d.quietT = -1; d.lastWho = PLAYER_ID;
-      let fold = -1; for (let i = 0; i < 60; i++) { W.step(DT); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); }
-      line(fold > T.pushSecs - 0.1 && fold <= T.pushSecs + 1e-6 && DOORTHROW_STATS.pushed === 1 && DOORTHROW_STATS.kicked === 0 && flat(v.char.pos, p0) > 0.2 && Math.abs(d.angle) > 1.0,
-        `a leaf flung open at a door order's 5.5 rad/s: the man behind it is folded and blind ${f2(fold)} s (want ${T.pushSecs}), carried ${f2(flat(v.char.pos, p0))} m, and the leaf swings on to ${f2(Math.abs(d.angle))} rad`); }
+      let fold = -1, st = ''; for (let i = 0; i < 60; i++) { W.step(DT); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); if (!st && DOORTHROW_STATS.startled) st = v.state; }
+      line(fold < 0 && DOORTHROW_STATS.startled === 1 && DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked === 0 && st === 'suspicious' && flat(v.char.pos, p0) > 0.2 && Math.abs(d.angle) > 1.0,
+        `a leaf flung open at a door order's 5.5 rad/s: the man behind it is startled (${DOORTHROW_STATS.startled}, state ${st}), not folded (${fold < 0}), carried ${f2(flat(v.char.pos, p0))} m, and the leaf swings on to ${f2(Math.abs(d.angle))} rad`); }
 
     // ------------------------------------------------------------ the player's own push at the door (Doors.use)
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), from = F.pt(F.W * 0.7, -0.7); sam(g, from);
       W.step(DT); g.doors.use(d, from, PLAYER_ID);
-      let fold = -1; for (let i = 0; i < 60; i++) { W.step(DT); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); }
-      line(fold > T.pushSecs - 0.1 && fold <= T.pushSecs + 1e-6 && DOORTHROW_STATS.pushed === 1 && DOORTHROW_STATS.kicked === 0, `the player's own push at the door from the face it opens away from (Doors.use): the man behind it is folded and blind ${f2(fold)} s (want ${T.pushSecs}), carried ${f2(flat(v.char.pos, p0))} m`); }
+      let fold = -1, st = ''; for (let i = 0; i < 60; i++) { W.step(DT); if (fold < 0 && folded(g, v) > 0) fold = folded(g, v); if (!st && DOORTHROW_STATS.startled) st = v.state; }
+      line(fold < 0 && DOORTHROW_STATS.startled === 1 && DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked === 0 && st === 'suspicious' && flat(v.char.pos, p0) > 0.2, `the player's own push at the door from the face it opens away from (Doors.use): the man behind it is startled (state ${st}), not folded (${fold < 0}), carried ${f2(flat(v.char.pos, p0))} m`); }
+
+    // ------------------------------------------------------------ slammed: a shoulder at a run
+    { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), m = stand(g, 0, p0, 'operative'), k = stand(g, 1, F.pt(F.W * 0.6, -1.6), 'hostile'); sam(g, F.pt(F.W * 0.6, -5));
+      let fold = -1; walk(W, F, k, 1.2, 3.2, () => { k.state = 'alert'; k.speed = 3.2; if (fold < 0 && folded(g, m) > 0) fold = folded(g, m); });
+      line(fold > T.pushSecs - 0.1 && fold <= T.pushSecs + 1e-6 && DOORTHROW_STATS.pushed === 1 && DOORTHROW_STATS.kicked === 0 && m.doorDownUntil < 0 && m.state !== 'dead',
+        `a defender at a run shoulders the door open onto one of Sam's men: folded and blind ${f2(fold)} s (want ${T.pushSecs}: a slam's seconds), on his feet, alive`); }
 
     // ------------------------------------------------------------ a boot
     let snapKnee: any = null, kneeUntil = 0;
@@ -131,23 +148,23 @@ export async function doorthrowCheck(): Promise<boolean> {
     // ------------------------------------------------------------ his own side's walk is not a throw; a foe's is
     const mates = async (teamA: string, teamB: string, stateA?: string) => {
       const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), b = stand(g, 0, p0, teamB), a = stand(g, 1, F.pt(F.W * 0.6, -1.0), teamA); sam(g, F.pt(F.W * 0.6, -4));
-      let fold = -1; walk(W, F, a, 2, 1.4, () => { if (stateA) a.state = stateA; if (fold < 0 && folded(g, b) > 0) fold = folded(g, b); });
-      return { fold, thrown: DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked, moved: flat(b.char.pos, p0) };
+      let fold = -1, st = ''; walk(W, F, a, 2, 1.4, () => { if (stateA) a.state = stateA; if (fold < 0 && folded(g, b) > 0) fold = folded(g, b); if (!st && DOORTHROW_STATS.startled) st = b.state; });
+      return { fold, thrown: DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked, startled: DOORTHROW_STATS.startled, carried: DOORTHROW_STATS.carried, moved: flat(b.char.pos, p0), state: st };
     };
     { const calm = await mates('hostile', 'operative'), hot = await mates('hostile', 'operative', 'alert');
-      line(calm.fold < 0 && calm.thrown === 0 && hot.fold > T.pushSecs - 0.1 && hot.thrown === 1, `a defender who is not alert walking the door open onto one of Sam's men: nobody thrown (${calm.thrown}: a calm man opens a door with his hand) · the same defender alert: thrown (${hot.thrown}), folded ${f2(hot.fold)} s`); }
+      line(calm.fold < 0 && calm.thrown === 0 && calm.carried === 0 && hot.fold < 0 && hot.thrown === 0 && hot.carried > 0, `a defender who is not alert walking the door open onto one of Sam's men: the leaf never moves him (carried ${calm.carried} frames: a calm man opens a door with his hand) · the same defender alert: it moves him aside (${hot.carried} frames) and no more (thrown ${hot.thrown}, startled ${hot.startled}: Sam's men know whose door it is)`); }
     { const own = await mates('hostile', 'hostile', 'alert'), foe = await mates('operative', 'hostile');
-      line(own.fold < 0 && own.thrown === 0 && foe.fold > T.pushSecs - 0.1 && foe.thrown === 1, `a man walking the door open onto one of his own side: nobody thrown (${own.thrown}), the man behind it moved ${f2(own.moved)} m · the same walk by a foe: thrown (${foe.thrown}), folded ${f2(foe.fold)} s`); }
+      line(own.fold < 0 && own.thrown + own.startled + own.carried === 0 && foe.fold < 0 && foe.thrown === 0 && foe.startled === 1 && foe.state === 'suspicious', `a man walking the door open onto one of his own side: nobody startled or thrown (${own.thrown + own.startled}), the leaf carries nobody (${own.carried}) · the same walk by a foe: startled (${foe.startled}, state ${foe.state}), not folded`); }
 
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), m = stand(g, 0, p0, 'operative'), from = F.pt(F.W * 0.7, -0.76); sam(g, from);
       W.step(DT); d.latched = false; d.closing = false; d.vel = F.S * 5.5; d.quietT = -1; d.lastWho = PLAYER_ID; for (let i = 0; i < 60; i++) W.step(DT);
-      const flung = DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked, calm = m.staggerUntil < 0;
+      const flung = DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked + DOORTHROW_STATS.startled + DOORTHROW_STATS.carried, calm = m.staggerUntil < 0;
       d.angle = 0; d.vel = 0; d.latched = true; d.drive = null; d.place(); m.char.pos[0] = p0[0]; m.char.pos[2] = p0[2]; m.char.update(0); W.step(DT); g.doors.kickIn(d, from, PLAYER_ID); for (let i = 0; i < 30; i++) W.step(DT);
-      line(flung === 0 && calm && DOORTHROW_STATS.kicked === 1 && folded(g, m) > 0, `Sam's own leaf and one of his men behind it: flung at 5.5 rad/s nobody is thrown (${flung}) · BOOTED he is (${DOORTHROW_STATS.kicked}): only a boot throws a man of the kicker's own side`); }
+      line(flung === 0 && calm && DOORTHROW_STATS.kicked === 1 && folded(g, m) > 0, `Sam's own leaf and one of his men behind it: flung at 5.5 rad/s nobody is moved, startled or thrown (${flung}) · BOOTED he is (${DOORTHROW_STATS.kicked}): only a boot throws a man of the kicker's own side`); }
 
     // ------------------------------------------------------------ not a throw
-    { const out: string[] = []; let bad = false; const note = (ok: boolean, s: string) => { if (!ok) bad = true; out.push(`${s}: ${ok ? 'nobody' : 'THROWN'}`); };
-      const none = (g: any, v: any) => DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked === 0 && v.staggerUntil < 0;
+    { const out: string[] = []; let bad = false; const note = (ok: boolean, s: string) => { if (!ok) bad = true; out.push(`${s}: ${ok ? 'nobody' : 'SOMEBODY'}`); };
+      const none = (g: any, v: any) => DOORTHROW_STATS.pushed + DOORTHROW_STATS.kicked + DOORTHROW_STATS.startled + DOORTHROW_STATS.carried === 0 && v.staggerUntil < 0 && v.state === 'patrol';
       { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)), pl = sam(g, F.pt(F.W * 0.7, -0.62));   // eased by a hand
         for (let i = 0; i < 180; i++) { g.doors.crack(d, pl.char.pos, PLAYER_ID, DT, undefined, EASE_RATE, EASE_MAX); W.step(DT); } note(none(g, v), 'a leaf eased by a hand into him'); }
       { const W = await world(true), g = W.game, d = door(g), F = frame(d), v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)), pl = sam(g, F.pt(F.W * 0.6, -1.3)); pl.crouch = true;   // walked open at a crouch
@@ -163,7 +180,7 @@ export async function doorthrowCheck(): Promise<boolean> {
         walk(W, F, w, 4, 0.25); note(none(g, v), 'a foe leaning the leaf onto him at 0.25 m/s'); }
       { const W = await world(true), g = W.game, d = door(g), F = frame(d); sam(g, F.pt(F.W * 0.6, -4));   // a staging's write: the leaf put wide open in one frame, no hand on it
         const v = stand(g, 0, F.pt(F.W * 0.6, BEHIND)); W.step(DT); d.latched = false; d.angle = F.S * 1.2; for (let i = 0; i < 20; i++) W.step(DT); note(none(g, v), 'a leaf a script set wide open in one frame'); }
-      line(!bad, `not a throw — ${out.join(' · ')}`); }
+      line(!bad, `nobody moved, startled or thrown — ${out.join(' · ')}`); }
 
     // ------------------------------------------------------------ a man just up from a fold is not thrown again
     { const W = await world(true), g = W.game, d = door(g), F = frame(d), p0 = F.pt(F.W * 0.6, BEHIND), v = stand(g, 0, p0), from = F.pt(F.W * 0.7, -0.76); sam(g, from);
