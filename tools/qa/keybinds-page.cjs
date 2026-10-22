@@ -26,9 +26,11 @@ const checks = [], errors = [];
 const check = (ok, label, detail = '') => { checks.push(!!ok); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
 const watch = (page, name, gpu) => { page.on('pageerror', e => errors.push(`${name}: ${e.message}`)); page.on('console', m => { if (m.type() === 'error' && !(NOISE.test(m.text())) && (gpu || !/GPU|adapter|WebGPU/i.test(m.text()))) errors.push(`${name}: ${m.text().slice(0, 200)}`); }); };
 const still = async (page, name) => { if (!outDir) return; const ok = await page.screenshot({ path: path.join(outDir, name), timeout: 180000 }).then(() => true, () => false); if (!ok) log(`no picture ${name}: the screenshot did not come`); };   // (a picture for a person: one that will not come is said, never a red)
-// (`board`: every line but the last four is asked on the board as it was, the wall hold on Q, E the holster, Space the action and V the whistle — ?qfree=0&handslot=0&handring=0; the page's own board
-// gives the wall's row no key, and has empty hands as a slot on backtick with the debugger on backslash)
-const url = (more = '', board = '&qfree=0&handslot=0&handring=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute${board}${more ? '&' + more : ''}`;
+// (`board`: every line but the last four is asked on the board as it was, the wall hold on Q, E the holster, Space the action and V the whistle —
+// ?qfree=0&handslot=0&handring=0; the page's own board gives the wall's row no key, and has empty hands as a slot on backtick with the debugger on backslash.
+// &slotsetup=0 on every line: the selector and the light on Z and L and the kit column as it was — the rows a gun's setup frees and its box are
+// slotsetup-page.cjs's)
+const url = (more = '', board = '&qfree=0&handslot=0&handring=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&slotsetup=0${board}${more ? '&' + more : ''}`;
 const openControls = async page => { await page.waitForSelector('#menu .actions button', { timeout: 60000 });
   await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].find(b => /^Options/.test(b.textContent))?.click()); await page.waitForSelector('#options.on', { timeout: 10000 });
   await page.evaluate(() => document.querySelector('#options .op-tab[data-tab="controls"]').click()); await page.waitForTimeout(150); };   // (a click by the page's own hand: under the software adapter the frame is seconds late and a pointer waits for it)

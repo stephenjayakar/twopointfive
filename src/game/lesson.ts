@@ -37,6 +37,7 @@ const WHISTLE_LINE = /\bV whistles\b/g;
 const WHEEL_LINE = /\bHold Space, wheel to kick, let go\b/g, WHEEL_RING = 'Hold Space, then 2 kicks it';
 /** a step's line as the HUD's row says it now */
 export const lessonLine = (line: string): string => HANDRING.on ? line.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : line;
+import { SLOTSETUP } from './slotsetup';
 
 /** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
 export const LESSON = { on: true };
@@ -280,15 +281,18 @@ export class Lesson {
     const L = this.data, i = this.at; if (!L || i >= L.steps.length) return null;
     if (this.over()) return null;   // (the run is over: the row is the scenario's own word on it)
     const T = L.steps[i];
-    return { text: `training ${i + 1}/${L.steps.length} ▸ ${lessonLine(T.line)}`, pos: T.at ?? null };
+    return { text: `training ${i + 1}/${L.steps.length} ▸ ${lessonLine(lineOf(T))}`, pos: T.at ?? null };
   }
   summary(): string {
     const L = this.data; if (!L) return this.g.level.scenarios?.lesson ? (LESSON.on ? 'off · this level carries one (start its mission)' : 'off · switched off') : 'off · this level carries none';
     const i = this.at;
-    return i >= L.steps.length ? `'${L.title}' · every step done (${L.steps.length})` : `'${L.title}' · step ${i + 1}/${L.steps.length} '${L.steps[i].id}': ${L.steps[i].line}`;
+    return i >= L.steps.length ? `'${L.title}' · every step done (${L.steps.length})` : `'${L.title}' · step ${i + 1}/${L.steps.length} '${L.steps[i].id}': ${lineOf(L.steps[i])}`;
   }
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 80) this.log.splice(0, 40); }
 }
+
+/** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys */
+const lineOf = (T: LessonStep): string => SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
 
 // ---------------------------------------------------------------- the checker (tools/qa/lesson-check.ts; the probes): the block against the BUILT floor
 /** Everything the level file's validator cannot say (scene/levelData.ts checks shapes): each test's kind and fields, its doors / lights / areas on this floor,
@@ -300,6 +304,7 @@ export function checkLesson(g: Game): string[] {
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`;
     const why = testFault(g, T.done); if (why) out.push(`${w}.done: ${why}`);
     if (T.line.length > 96) out.push(`${w}.line is ${T.line.length} characters: the objective row holds about 96`);
+    if (T.setupLine && T.setupLine.length > 96) out.push(`${w}.setupLine is ${T.setupLine.length} characters: the objective row holds about 96`);
     if (T.at && !(T.at[0] > WORLD.min[0] && T.at[0] < WORLD.max[0] && T.at[2] > WORLD.min[2] && T.at[2] < WORLD.max[2])) out.push(`${w}.at (${T.at[0]}, ${T.at[2]}) is outside the world`); });
   return out;
 }

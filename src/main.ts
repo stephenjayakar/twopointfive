@@ -33,7 +33,7 @@ import { pageSwitches } from './host/profile';
 import { LOOK, LOOK_DOORS, lookLevelFile, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
-import { bindFindMe, watchCtrlTaps } from './host/findme';
+import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
 import { findMeOutline } from './ui/findme';
 import { makeOutlineFrame } from './render/outline';
 import { TWEEN, Tween } from './host/tween';
@@ -85,6 +85,7 @@ import { requestQrf, callPerimeter, qrfStandDown } from './game/qrf';
 import { needsSend, needsTrip, NEEDS, NEEDS_STATS, NEEDS_LOG, type NeedKind } from './game/needs';
 import { WOUND, WOUND_STATS, woundedMen } from './game/wounds';
 import { WALLSNAP } from './game/wallsnap';
+import { SLOTSETUP } from './game/slotsetup';
 import { HANDSLOT } from './game/handslot';
 import { HANDRING } from './game/handring';
 import * as keymap from './host/keymap';
@@ -172,6 +173,7 @@ async function main() {
   keymap.KEYMAP.handWhen = () => HANDRING.on;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
   keymap.KEYMAP.slotWhen = () => HANDSLOT.on;   // (empty hands are a slot on backtick, the debugger on backslash, E spare: host/keymap.ts SLOT, the rule game/handslot.ts)
   keymap.KEYMAP.freeWhen = () => WALLSNAP.on && walkInNow();   // (the wall hold's row has no key while walking into a wall takes it: host/keymap.ts qFree)
+  keymap.KEYMAP.setWhen = () => SLOTSETUP.on;   // (…and the selector's and the light's while a gun's key again opens its setup: host/keymap.ts setFree)
   keymap.keysBoot(q);   // the player's own keys (host/keymap.ts): live on this page from before anything is drawn; ?keybinds=0 = the build's
   bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
@@ -296,6 +298,7 @@ async function main() {
   const { audio, testMute } = pageAudio(game);
   worldHooks(engine, game, audio);
   const input = new Input(canvas);
+  (window as any).__findme = { table: FINDME, set: setFindMe };   // (host/findme.ts: the Options rows for finding your own man, for a page check to move without the screen)
   bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
   const overlay = new Overlay();

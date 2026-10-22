@@ -113,6 +113,7 @@ import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
 import { throwCount, toggleDrag, teleportPlayer, startPicking, startWand, startKick, settlePlayer, startGrab, freeHeld, settleHeld, takeKey, pickHover, EASE_RATE, EASE_MAX } from './player';
 import type { WallHold, Hold } from './player';
 import { updateInteract, escapeInteract, backableInteract } from './interact';
+import { slotSetupOpen, slotSetupShut } from './slotsetup';
 import { tacticsTick, loadTactics, tacticsSummary, tacticsReset } from './tactics';
 import { lanesTick, lanesReset } from './lanes';
 import { pictureTick, pictureReset } from './picture';
@@ -328,6 +329,11 @@ export class Player {
   rifle = new Rifle(); hasRifle: boolean;
   /** seconds left of the rifle coming off the sling into the hands (or of any change of what is in them that involves it): no round or ring meanwhile */
   equipT = 0;
+  /** slotsetup.ts: the setup of the gun in his hands is up (its digit pressed again) — which gun, the game time it opened or was last used, and the last
+   *  update that saw it; null = not up. Never saved: a load is a fresh Player with nothing up */
+  setup: { gun: 'pistol' | 'rifle'; t: number; seen: number } | null = null;
+  /** slotsetup.ts: the gun its hook last found in his hands (null: none) and the game time it first did — a gun just drawn does not open its setup */
+  setupHand: { gun: 'pistol' | 'rifle' | null; t: number } | null = null;
   /** the rifle left his hands when he went down (combat.ts hitPlayer dropped it as an item): nothing to draw slung on the body */
   rifleGone = false;
   /** KIT ANIMATIONS (kitanim.ts): what was in his right hand last frame by the game's rules (undefined = not watched yet: a fresh Player — a restart, a loaded
@@ -1901,9 +1907,9 @@ export class Game {
     this.player.nearSel = i; pickHover(this); return true;
   }
   /** Esc, before the pause menu gets it (main.ts): the open selector backs out / a running sustained verb stops. True = used here, no menu this press. */
-  escape(): boolean { return this.orders.escape() || launchCancel(this) || escapeInteract(this); }   // (the squad's command menu backs out first: orders.ts)
+  escape(): boolean { return this.orders.escape() || launchCancel(this) || escapeInteract(this) || slotSetupShut(this); }   // (the squad's command menu backs out first: orders.ts)
   /** is there anything the back key would back out of right now (backkey.ts; asked by the page before Tab's trial choice gets the key) */
-  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this); }
+  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this) || slotSetupOpen(this); }   // (…and the open setup of the gun in his hands: slotsetup.ts)
   /** The light meter's mapping, irradiance (W/m², max over the axes as the probe reports it) → 0‥1 visibility: 0 at or below visFloor, 1 by visFloor·e^(1/visSlope).
    *  One mapping for the meter on Sam and for a searcher judging how dark a hiding place is (guards.ts): dark for the one is dark for the other. */
   visibilityOf(E: number): number { return clamp(this.tune.visSlope * Math.log(Math.max(E, 1e-5) / this.tune.visFloor), 0, 1); }

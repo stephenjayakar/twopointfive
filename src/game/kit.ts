@@ -54,6 +54,7 @@ import { SideMap, SideSet } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { Firearm, Pistol, Rifle, WEAPONS, type WeaponDef, type WeaponId } from './weapons';
+import { loadKeys, lightKeys } from './slotsetup';   // (read when a row's note is asked for: the presses that step the launcher's load)
 import { gearText } from './gear';   // (a leaf: the kit's names as issued — applied where a row's words are asked for, never as this module loads)
 import { HE40 } from './he40';   // (read inside a row's note only: src/game is one import cycle)
 import { DOORTOOLS } from './doortools';   // (read inside kitPool only: nothing of it is touched at load)
@@ -842,10 +843,10 @@ function buildRows(i: number): KitRow[] {
     ...(SLOTS.on ? youCanRows() : [cansRow]),
     { field: 'frags', item: 'frags', label: 'Frag grenades', values: upTo(slotMax('frags', 0, FRAGS_MAX)), word: v => String(v), note: m => m.frags ? 'on 5, then a click: kills what it has a line to — you included' : 'none on your belt' },
     { field: 'shells', item: 'shells', label: '40 mm grenades', values: upTo(slotMax('shells', 0, SHELLS_MAX)), word: v => String(v),
-      note: m => !tubed(m) ? gearText(SLOTS.on ? 'no FN2000, no launcher: none carried, and no pouch spent on them' : 'no FN2000, no launcher: these stay home') : m.shells ? '2 again with the rifle up, then the right button: a frag\'s blast where it lands, past ' + HE40.armM + ' m' : gearText('none for the launcher: rings only') },
+      note: m => !tubed(m) ? gearText(SLOTS.on ? 'no FN2000, no launcher: none carried, and no pouch spent on them' : 'no FN2000, no launcher: these stay home') : m.shells ? loadKeys() + ' with the rifle up, then the right button: a frag\'s blast where it lands, past ' + HE40.armM + ' m' : gearText('none for the launcher: rings only') },
     ...chargeRows(0),
     ...(camRow() ? [{ field: 'cams', item: 'cams', label: 'Sticky cameras', values: upTo(slotMax('cams', 0, CAMS_MAX)), word: (v: KitValue) => String(v),
-      note: (m: MemberKit) => !tubed(m) ? gearText('no FN2000, no launcher: these stay home') : m.cams ? '2 again with the rifle up, then the right button: it sticks where it lands and watches' : 'none for the launcher' } as KitRow] : []),
+      note: (m: MemberKit) => !tubed(m) ? gearText('no FN2000, no launcher: these stay home') : m.cams ? loadKeys() + ' with the rifle up, then the right button: it sticks where it lands and watches' : 'none for the launcher' } as KitRow] : []),
     ...(wandRow() ? [{ field: 'wand', item: 'wand', label: 'Optical wand', values: [false, true], word: yesNo('carried', 'none'),
       note: (m: MemberKit) => m.wand ? 'at a shut door, Space: a look under it' : 'none in your pouches' } as KitRow] : []),
     suitRow, { ...trimRow, note: m => m.trim === 'issued' ? 'your own green joints' : 'the joints: how you pick yourself out from above' },
@@ -903,7 +904,7 @@ function buildRowsTree(i: number): KitRow[] {
       fixed: m => (canChoice(m[slot]) ? '' : `${gearText(pickWord(m[slot]))}: ${kitSlotCan(m, slot) ? 'made with it' : 'none fits it'}`),
       note: m => (kitSlotCan(m, slot) ? (slot === 'secondary' || WEAPONS[pickRow(m.primary, true) ?? 'fn2000'].report.level < 1 ? 'the floor does not hear it as gunfire' : 'a small flash · still heard as gunfire') : 'a bright flash, the hard report'),
       get: m => kitSlotCan(m, slot), set: (m, v) => { if (canChoice(m[slot])) m[f] = !!v; } }; };   // (a gun with no choice writes nothing: a paste of its card leaves the other man's flag his own)
-  const light: KitRow = { ...(by('light') ?? { field: 'light', label: 'Weapon light', values: [true, false], word: yesNo('fitted', 'none'), note: (m: MemberKit) => (m.light ? 'on L' : 'none: L does nothing') }), under: m => (long(m) ? 'primary' : 'secondary') };
+  const light: KitRow = { ...(by('light') ?? { field: 'light', label: 'Weapon light', values: [true, false], word: yesNo('fitted', 'none'), note: (m: MemberKit) => (m.light ? lightKeys() : lightKeys() === 'on L' ? 'none: L does nothing' : 'none') }), under: m => (long(m) ? 'primary' : 'secondary') };
   const nvg: KitRow = by('nvg') ?? { field: 'nvg', label: 'Night vision', values: [true, false], word: yesNo('goggles', 'none'), note: m => (m.nvg ? 'on N' : 'bare eyes: N does nothing') };
   const tube = (r: KitRow | undefined): KitRow[] => (r && r.values.length > 1 ? [{ ...r, under: 'primary', has: tubed }] : []);   // (a most of none: not his to carry — no row)
   const rings: KitRow = { field: 'rings', item: 'rings', label: 'Sponge rounds', values: upTo(slotMax('rings', i, OWN_MAX.rings[you ? 0 : 1])), word: v => String(v),
