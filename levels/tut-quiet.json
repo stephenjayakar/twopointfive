@@ -485,7 +485,8 @@
         { "id": "boxman", "line": "Hide. When he works at the box: strike", "done": { "is": "men", "down": 3 }, "at": [20.45, 1, 13.85] },
         { "id": "code", "line": "[Space] at the pad: his code", "checkpoint": "the counting room", "done": { "is": "any", "of": [{ "is": "did", "what": "chron:codeEntered" }, { "is": "door", "door": "strong", "state": "open" }, { "is": "door", "door": "strong", "state": "broken" }] }, "at": [17.3, 1, 10.6] },
         { "id": "safe", "line": "[Space] at the safe. Keep still", "done": { "is": "stage", "stage": "exfil" }, "at": [14.5, 1, 9.48] },
-        { "id": "out", "line": "Out by the front door", "done": { "is": "any", "of": [{ "is": "in", "area": { "x0": 8.12, "x1": 12.3, "z0": 11, "z1": 18 } }, { "is": "stage", "stage": "done" }] }, "at": [11.4, 1, 15.1] }
+        { "id": "out", "line": "Out by the front door", "done": { "is": "any", "of": [{ "is": "in", "area": { "x0": 8.12, "x1": 12.3, "z0": 11, "z1": 18 } }, { "is": "stage", "stage": "done" }] }, "at": [11.4, 1, 15.1] },
+        { "id": "gate", "line": "Out by the gate", "done": { "is": "any", "of": [{ "is": "in", "area": { "x0": 7.25, "x1": 7.9, "z0": 13.2, "z1": 14.8 } }, { "is": "stage", "stage": "done" }] }, "at": [8.3, 1, 14] }
       ]
     },
     "doorNames": [

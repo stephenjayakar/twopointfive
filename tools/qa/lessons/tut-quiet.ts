@@ -180,6 +180,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!tap(B, 'objective', 'drive', TQ.safeFront)) B.fail('no row at the safe'); B.until(() => B.g.mission.stage === 'exfil', 20);
   },
   out: B => { B.crouch(false); B.go([16.9, 0, 12.85], 20); B.go([13.25, 0, 12.85], 10); B.go([13.4, 0, 15.0], 20); B.go([11.4, 0, 15.1], 20); },
+  gate: B => { B.go([9.0, 0, 14.0], 20); B.go([7.5, 0, 14.0], 30, { near: 0.25 }); },
 };
 /** out by the track gate */
-export function finish(B: Bot) { B.go([9.0, 0, 14.0], 20); B.go([6.0, 0, 14.0], 30); }
+export function finish(B: Bot) { B.go([6.0, 0, 14.0], 30); }

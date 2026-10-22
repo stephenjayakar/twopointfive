@@ -226,6 +226,8 @@ export function build() {
       { id: 'code', line: '[Space] at the pad: his code', checkpoint: 'the counting room', done: any(did('chron:codeEntered'), { is: 'door', door: 'strong', state: 'open' }, { is: 'door', door: 'strong', state: 'broken' }), at: [17.3, 1, 10.6] },
       { id: 'safe', line: '[Space] at the safe. Keep still', done: { is: 'stage', stage: 'exfil' }, at: front },
       { id: 'out', line: 'Out by the front door', done: any({ is: 'in', area: { x0: 8.12, x1: 12.3, z0: 11.0, z1: 18.0 } }, { is: 'stage', stage: 'done' }), at: [11.4, 1, 15.1] },
+      // (the line stays up to the mission's own end: with the last step done in the forecourt the page fell back to the small objective row at the top)
+      { id: 'gate', line: 'Out by the gate', done: any({ is: 'in', area: { x0: 7.25, x1: 7.9, z0: 13.2, z1: 14.8 } }, { is: 'stage', stage: 'done' }), at: [8.3, 1, 14.0] },
     ],
   };
   // the far gate is no part of this night: locked against the road (a man who walks out the near gate and round the yard finds no way back in there), and

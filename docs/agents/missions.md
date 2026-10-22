@@ -699,12 +699,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The tutorial's quiet mission, the ledger (`tut-quiet`)** (2026-10-22; row `tut-quiet` in `TUTORIAL_MISSIONS`, `kind: 'quiet'`, alone; no switch of its
   own: it is on rails, so `RAILS.on` is its switch, `?rails=0` in the page = the house as a plain quiet mission with no lesson, `TPS_RAILS=1` in front of a
   frozen run). `tools/levels/tut-quiet.ts` writes `levels/tut-quiet.json` on the training yard: a money changer's house at night, one way through, three men
-  with one beat each, a lesson of 17 steps (`tools/qa/lessons/tut-quiet.ts` plays it by input alone; the generator's header says what each beat is and why
+  with one beat each, a lesson of 18 steps (`tools/qa/lessons/tut-quiet.ts` plays it by input alone; the generator's header says what each beat is and why
   it is built so); `levels/tut-quiet.script.ts` is three exchanges of a few words on the cues `lane` and `store` (nobody is held, moved or spawned). THE
   BEATS: out of the porch lamp into the house's shadow; a whistle at a mark, then behind a head-high wall: the back court's man comes the long way round to
   where the sound was and is grabbed from behind, asked twice for the strongroom's code, then put out or knifed; the back door picked; from the dark store
   the hall's man stands a stride inside the lit doorway with his back turned (the knife, on a knee); a chest beam passed on a knee; night vision; the mains
-  box, then into a niche: the clerk has the longest walk, round a counter the length of the room, and is taken at the box; the code, the safe, out. THE FRAME'S
+  box, then into a niche: the clerk has the longest walk, round a counter the length of the room, and is taken at the box; the code, the safe, out by the front door and the gate (the last line stays up to the mission's own end: with the lesson done in the forecourt the page fell back to the small objective row at the top). THE FRAME'S
   KEYS HERE: from the first step the walk, the view and the aim; `crouch`, `whistle` + `use`, `fire` + `alt`, `nvg` each come on with the step that teaches
   them; checkpoints `the lane` (the whistle's line), `the back court`, `the store`, `the hall`, `the counting room`, one before each timed beat and none inside
   one. TWO THINGS THE FRAME GAINED FOR IT: (1) `lesson.rails.rows`, a list of verbs: with it Space offers only rows of those verbs (`Rails.offers`, asked
