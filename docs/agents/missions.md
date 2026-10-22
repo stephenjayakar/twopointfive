@@ -1193,6 +1193,59 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lamps on, the lit hall being the point). A SKETCH: the script's few words, the store (four strides of dark), a composed menu picture
   (`tools/menu-art.ts` PIN). KNOWN: a man put out through the list before he is asked leaves no way to learn the code (the pad then says so). Never seen on
   a GPU, never played by a hand: the timings are a script's, and whether the dark lane reads on a real screen with the outline off is the maintainer's call.
+- **The ledger's whistled man looks from the gap, then turns away to smoke** (2026-10-22; `levels/tut-quiet.script.ts` beat `night`, the marks `TQ.look` /
+  `TQ.smoke` and the volumes `tq_walk` / `tq_beam` / `tq_past` in `tools/levels/tut-quiet.ts`; level data and a level script, no switch of its own). The
+  maintainer, playing the ledger on a GPU, of the man who had walked to the whistle's own mark: "guard seems kinda dumb that he doesn't notice the
+  footprints. maybe we should make him stop a bit further away and then turn around for a cigarette break. may need to rework the map for that", and "he
+  can stop further off so long as he's covered the spot with his flashlight, but maybe isn't close enough to notice the footprints". (Guards do NOT read
+  prints: the snow's tracks are the picture's alone, and nothing here changes that.) WHAT HE DOES: the game's own whistle rule starts him (the nearest
+  calm man who hears it goes suspicious); 0.9 s later the script takes him. He comes round the long wall's far end as before, stops in the back strip a
+  stride short of the gap in the cross wall (26.4, 17.75), puts his torch through the gap and over where the whistle was (5.2 m off in the scripted run,
+  his beam within 6 degrees of the mark) for 3.6 s, says "nothing. wind", walks back up the strip past the back door to his chair at its far end
+  (30.3, 17.7), and smokes there for 50 s with his back to the gap; then the script lets him go and he walks back to his fire, the game's own man. The
+  player comes round the long wall's near end, up the walk, through the gap and along the strip to his back: seven metres with the man's back to him.
+  A MAN A SCRIPT WALKS IS BLIND AND DEAF (`squad.ts runGuardScript`), so the script is his eyes and ears while it has him, and each of these hands him
+  back to the game `alert`: the player on the walk or in the strip while he comes down it; the player there or in the lane (`tq_beam`: all of it but the
+  pocket behind the long wall) while his light is through the gap; the player past him the way he faces; a step behind him that is not a crouched one
+  (a run inside 6 m, an upright walk inside 2.4 m: an event's `level` is the gait's times the floor's). A second whistle while he smokes sends him to
+  look again, at where that one was. A grab, or the man down, ends it (the `ask` step's cue `held`). THE STEP AFTER: he is taken 2.5 m past the back
+  door's lock on purpose. A body within 1.3 m of a hand has the row before a door's (`player.ts INTERACT_PRIORITY`), so a man put down nearer made
+  Space at the lock DRAG him; the `door` step's reach is 0.8 m so it does not pass from where he was taken. WORDS: the grab line is "When he lights a
+  smoke, sneak up behind him and press [Space] to grab him"; the card keeps the maintainer's sentence ("He'll check out the sound and then stop for a
+  smoke, with his back to you."). CHECKS: `lesson-run tut-quiet` on both stands (`TPS_RAILS=1` in front on the frozen one; `--pace 6` on the shipped)
+  finishes 19 of 19 and prints where he looked from and how far his light was off the mark (it fails under 4 m or past 16 degrees); its BREAK PATHS,
+  each of which must fail the run: `TQSMOKE_BREAK=front` (the player stands on the walk), `=beam` (he stays on the whistle's mark), `=upright` (he
+  walks up behind the smoking man on his feet). All three fail on the frozen stand, seed 1. `lesson-gate`, `level-needs --run` on both stands,
+  `rails-check` on both, `second-way-check`, `ownroofs-check`, `rowset-check`: green. `quiet-light`: its three red lines by design, no fourth.
+  THE LEVEL'S FINGERPRINT MOVED (three volumes, a chair and a gas bottle moved, a tin added): checkpoints and recordings of this level from before are
+  refused. `lived-check` wants a base that carries this change; none is added here (the per-level base is the tutorial goal's). SEEN: on the real page
+  on the software adapter only (the notes page has the pictures). NEVER SEEN ON A GPU, never played by a hand: how long 50 s feels, whether a man in a
+  dark strip reads from the gap, and whether the look through the gap is long enough to be noticed are the maintainer's.
+  A SMALL FLAW IT TURNED UP, not this change's and not mended: creeping up behind the hall's man the scripted player's footfall was filed on seven
+  frames running (0.1 s) at 1.1 m, and seven crouched steps on stone at that range take a calm man to suspicious; the same approach six seconds
+  earlier in the same run files one. It looks like the walk cycle's phase crossing its half back and forth (`player.ts`, the footstep's edge test).
+- **A man told to have a smoke lights one** (2026-10-22; `src/game/smokebreak.ts SMOKEBREAK` / `updateSmokeBreak`, called from `game.ts` beside the
+  breath in the cold; the order is `director.ts OrderPatch.smoke` → `GuardScript.smoke`; the arm is `character.ts smokeLayer`, its numbers `SMOKEARM`
+  in that file). The maintainer: "cigarette break animation (with real smoke!) would be sick". THE SWITCH: `SMOKEBREAK.on`, ON in the page
+  (`?smokebreak=0` puts it off), OFF in the module and on the frozen stand (`FROZEN_HOLDS`; `TPS_SMOKEBREAK=1` raises it there); registered in
+  `knobs.ts`, and a recording from before the key replays with it off (`journal.ts applyKnobs`). Off, a man told to smoke stands where he was sent with
+  his hands as they were: the same game digest as a man never told (the check's `off` line). WHO: a living man on his feet whose script says `smoke`,
+  once he stands where it sent him; not a man in an arm; the frame his script ends the hand is given back. One man in the game today: the ledger's.
+  WHAT: his LEFT hand goes up to his mouth to light it (0.5 to 2.6 s; the torch and the gun are the right hand's) and again for 2.1 s of every 7.5 s;
+  a lighter's flame at his mouth (one `LightSet.flash`, 0.9 s, range 3.2 m) and the lit end (a flash re-filed every 0.4 s at the left hand, intensity
+  0.1 and 0.7 at a draw, range 1.3 m): the engine's own short lights, so the light meter has them as the picture does. THE SMOKE IS THE SOLVER'S: a
+  thread off the end that rides his hand (one long source) and what he breathes out 0.7 s after each draw, off his mouth for 1.3 s, both `look`
+  sources on the fine lattice with a blue grey `tint` (`smoke/types.ts`: the game's own smoke, the one sight lines are cut by, is never told). With no
+  solver drawing, what he breathes out is the particle system's dust puffs with a steam share, as a breath in the cold is, and the thread is not shown.
+  Nothing live shows in the fog of war: a hidden man's smoke is not filed (his lights are the meter's and stay). THE IMPORT TRAP: `character.ts` must
+  not import `smokebreak.ts` (it did at first, for the arm's numbers: in the page's bundle that module, and through it `particleFx.ts`, was evaluated
+  in the middle of `character.ts`, and `wounds.ts` then ran its top level before `FOLD_WITH` existed: the page died at boot with every headless check
+  green). CHECK: `bun run tools/qa/smokebreak-check.ts` (probe `smokebreak`, also under `missions`): lights, hand (the left wrist from 0.57 / 0.73 m
+  off the head joint on the frozen / shipped stand to 0.21 m, the right moving under 0.1 m), smoke (one thread, a breath a draw, every source
+  look-only, fine, confined; the thread dropped the frame he is let go), puffs, who, off, old: 8 of 8 on both stands; `SMOKEBREAK_BREAK=1` fails six.
+  NOT DONE: no cigarette is drawn in the hand (at the game's zoom it is two pixels: the light is what shows), no sound of the lighter, no ash, and the
+  arm's numbers are first-pass. Its lights add to the frame's 64 while he smokes (one, two for the 0.9 s of the flame). SEEN: on the real page on the
+  software adapter only. NEVER SEEN ON A GPU.
 - **A mission row can name its own hour and weather** (2026-10-22; `src/game/rowset.ts`, `ROWSET.on` — ON in the page, `?rowset=0` = the link's hour and
   weather as ever; OFF in the module and on the frozen stand, `TPS_ROWSET=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables. NO ROW
   NAMES ONE YET, so on or off is the build as it was). A tutorial mission's level is built for one hour and one sky, and its row used to open at the
