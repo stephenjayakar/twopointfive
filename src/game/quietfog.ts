@@ -39,6 +39,7 @@ import type { FogRung } from './difficulty';
 import { FOG } from './fogofwar';
 import { STICKY, stickyVisit } from './stickycam';   // (read inside functions only)
 import type { Game } from './game';
+import { lessonGroup } from '../scene/scenarios';   // (called inside functions only)
 
 export const QUIETFOG: { on: boolean; def: QuietRung; wand: boolean; solo: boolean } = { on: false, def: 'off', wand: false, solo: false };
 /** the solo night's row is one the lever is live on (QUIETFOG.solo): the screens ask this where a quiet row is asked quietFogRow */
@@ -119,7 +120,7 @@ export function setQuietFog(rung: QuietRung, keep = true) {
 export function quietFogForget() { PICK = null; KEPT = false; CAMS = null; CAMS_READ = false; }
 
 /** a mission's row is one the lever is live on: a quiet mission that is not a Training lesson, while the rule is on */
-export const quietFogRow = (e: { kind: string; group?: string } | null | undefined): boolean => QUIETFOG.on && !!e && e.kind === 'quiet' && e.group !== 'training';
+export const quietFogRow = (e: { kind: string; group?: string } | null | undefined): boolean => QUIETFOG.on && !!e && e.kind === 'quiet' && !lessonGroup(e.group);
 /** A mission link with the quiet pick put right on it: whatever rung it carried is dropped (the visitor's own flags ride on every link — a rung is one
  *  mission's), and `quiet` — the link is a quiet mission's, not a Training lesson's — puts this machine's pick on it where that is not the default's
  *  (QUIETFOG.def: a bare quiet link IS the default). The switch's own `quietfog=0` is left where it is; with the switch off the link is returned as it came. */

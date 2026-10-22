@@ -8,11 +8,12 @@
 import { VERDICT, type KeptNote } from '../game/verdict';
 import { difficultyNow } from '../game/difficulty';
 import { ALL_MISSIONS } from '../scene/scenarioList';
+import { lessonGroup } from '../scene/scenarios';
 import { recordOf, verdictKey, keptWays } from './verdictStore';
 import { pipsEl } from './verdictPips';
 
 /** a mission that can be won some way (every row but the training lessons and ids the list does not know) */
-export function rowEarns(id: string): boolean { const e = ALL_MISSIONS.find(m => m.id === id); return e ? e.group !== 'training' : id === 'solo-night'; }
+export function rowEarns(id: string): boolean { const e = ALL_MISSIONS.find(m => m.id === id); return e ? !lessonGroup(e.group) : id === 'solo-night'; }
 
 /** Dress every mission row under `root` (default the page's `#missions`). Idempotent: a row whose pips already say what is kept is left alone. Returns how
  *  many rows carry pips. `ways` (the checks) = a reader other than this machine's store. */

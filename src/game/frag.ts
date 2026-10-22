@@ -773,7 +773,7 @@ const SHOUTS = ['frag out!', 'grenade out!', 'fire in the hole!'];
 /** Once a frame, beside fragTick (game.ts): the defenders' frags — FRAG.defenders, and only in a room fight (a scenario; never the night game, a tour or a
  *  showcase). Reads only what the man's own AI already knows (his foe, his fix, when he last saw him): with no throw it moves nothing and asks no sensor. */
 export function fragThrowTick(g: Game, dt: number) {
-  const F = FRAG; if (!F.on || !F.defenders || !g.aiEnabled || !fightLive(g)) return;
+  const F = FRAG; if (!F.on || !F.defenders || !g.aiEnabled || !fightLive(g) || g.director?.theirFragsOff) return;   // (a level's script may put them off for its level: director.ts `systems.theirFrags`)
   let B = defBooks.get(g); const men = defendersOf(g);
   if (!B || B.men.length !== men.length || B.men.some((m, i) => m !== men[i])) { if (!men.length) return; B = dealCarriers(g, B); }
   for (const C of B.carriers) {
@@ -882,7 +882,7 @@ export function armRound(g: Game, p: Vec3, to: Vec3): Vec3 {
 /** the book and the carrier of a man who may start a throw this moment, wherever it is meant for: the switches, a grenade on him and none coming out, on his
  *  feet with his wits and his legs his own, the floor's gap between grenades run out */
 function free(g: Game, gd: Guard): { B: DefBook; C: Carrier } | null {
-  const F = FRAG; if (!F.on || !F.defenders || !g.aiEnabled || !fightLive(g)) return null;
+  const F = FRAG; if (!F.on || !F.defenders || !g.aiEnabled || !fightLive(g) || g.director?.theirFragsOff) return null;
   const B = defBooks.get(g), C = B?.carriers.find(x => x.gd === gd); if (!B || !C || !C.frags || C.wind) return null;
   if (gd.state === 'dead' || gd.held || runnerOwns(gd) || g.time < gd.staggerUntil || g.time < gd.dazzledUntil || fragFlee(g, gd) || g.time - B.lastT < F.defGap) return null;
   return { B, C };

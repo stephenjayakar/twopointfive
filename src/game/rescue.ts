@@ -295,7 +295,7 @@ export class Rescue {
     if (!g.doors.byName(S.room.door)) return `the door '${S.room.door}' is not in the level`;
     if (!g.tune.teams) return 'sides are switched off (tune.teams)';
     if (!g.aiEnabled) return 'the AI is switched off (sandbox: no AI) — nobody would move';
-    if (g.director?.run && !g.director.run.ended) return `the level script's program '${g.director.run.name}' is running`;
+    if (g.director?.staging && g.director.run) return `the level script's program '${g.director.run.name}' is running`;
     if (g.touring || g.quietUtility || g.puppet) return 'a show is running';
     if (g.nightBreach?.active) return g.roomClear?.active ? 'the room clear is staged' : 'the night breach is staged';
     if (g.guards.some(x => x.unit)) return 'a spawned unit is already on the floor';

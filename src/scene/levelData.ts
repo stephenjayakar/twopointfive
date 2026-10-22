@@ -658,11 +658,15 @@ export function validateLevelData(d: LevelData): string[] {
         const L = S.lesson, w = 'scenarios.lesson';
         if (!isObj(L)) err(w, 'must be an object');
         else {
-          known(w, L, ['title', 'steps']);
+          known(w, L, ['title', 'steps', 'rails']);
           if (!isStr(L.title)) err(`${w}.title`, 'a non-empty string');
+          const strs = (v: unknown) => Array.isArray(v) && v.every(isStr);
+          if (L.rails !== undefined && !(isObj(L.rails) && (L.rails.allow === undefined || strs(L.rails.allow)))) err(`${w}.rails`, 'an object; allow: a list of action names');
           const steps = recs(`${w}.steps`, L.steps); if (!steps.length) err(w, 'steps: at least one');
           const ids = new Set<unknown>();
-          steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'done', 'hold', 'at']);
+          steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'done', 'hold', 'at', 'cue', 'checkpoint', 'allow', 'deny']);
+            for (const k of ['cue', 'checkpoint'] as const) if (t[k] !== undefined && !isStr(t[k])) err(`${tw}.${k}`, 'a non-empty string');
+            for (const k of ['allow', 'deny'] as const) if (t[k] !== undefined && !strs(t[k])) err(`${tw}.${k}`, 'a list of action names');
             if (!isStr(t.id) || !isStr(t.line)) err(tw, 'id, line: non-empty strings'); else if (ids.has(t.id)) err(tw, `id '${show(t.id)}' used twice`); ids.add(t.id);
             if (!isObj(t.done) || !isStr(t.done.is)) err(`${tw}.done`, "a test record { is: '<kind>', … }");
             if (t.hold !== undefined && !(isNum(t.hold) && t.hold >= 0)) err(`${tw}.hold`, 'seconds ≥ 0'); if (t.at !== undefined && !isVec(t.at)) err(`${tw}.at`, 'Vec3'); });

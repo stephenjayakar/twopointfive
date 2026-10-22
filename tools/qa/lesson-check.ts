@@ -11,7 +11,8 @@ import { standUp } from './headless';
 const ROOT = resolve(import.meta.dir, '../..');
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { TRAINING_MISSIONS, ALL_MISSIONS, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+const { TRAINING_MISSIONS: TRAINING, TUTORIAL_MISSIONS, ALL_MISSIONS, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+const TRAINING_MISSIONS = [...TRAINING, ...TUTORIAL_MISSIONS];   // (every lesson level's row: the Training group's and the Tutorial's)
 const { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -32,7 +33,7 @@ for (const name of list) {
   if (!L) continue;
   const stand = async () => { const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(file, 'utf8'))), seed: 1 })); return W; };
   const rows = (TRAINING_MISSIONS as any[]).filter(e => e.level === `${name}.json`);
-  verdict(rows.length > 0 && rows.every(e => e.group === 'training'), `the missions list has it under Training (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
+  verdict(rows.length > 0 && rows.every(e => e.group === 'training' || e.group === 'tutorial'), `the missions list has it under Training or Tutorial (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
   verdict(rows.every(e => kitAsIssued(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'training')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued), and no other row is');
   { const W = await stand(), faults: string[] = checkLesson(W.game); verdict(!faults.length, 'the block against the built floor: every test names a kind, a door, a light and an area this floor has', faults.join(' · ')); }
   for (const e of rows) {

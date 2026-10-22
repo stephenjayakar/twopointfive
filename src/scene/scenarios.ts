@@ -233,11 +233,19 @@ export interface LessonStep {
   hold?: number;
   /** where the HUD's marker points while the step is up (absent: no marker) */
   at?: Vec3;
+  /** a beat of the level's script (levels/<name>.script.ts, program 'tutorial') this step starts as it comes up: the signal `lesson:<cue>` */
+  cue?: string;
+  /** a save is asked for as this step comes up, under this name. A lesson with any such step saves ONLY there (the start of a fight, never the middle) */
+  checkpoint?: string;
+  /** what the player may do while this step is up, over the lesson's `rails.allow` (carried as written: nothing reads them yet) */
+  allow?: string[]; deny?: string[];
 }
 export interface LessonData {
   /** the family of systems it teaches, as the row says it ('Moving unseen') */
   title: string;
   steps: LessonStep[];
+  /** what the player may do on this level from its first step (carried as written: nothing reads it yet) */
+  rails?: { allow: string[]; respawn?: number; sky?: string };
 }
 
 /** A PAR (game/par.ts): the level's room clear run AGAINST A CLOCK. The clock runs from the squad's first order (or Sam's first stride off his start) to the
@@ -448,8 +456,11 @@ export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: Str
  *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A
  *  group is a KIND OF PLAY, every mission is under exactly one, and none holds more than eight (probes.ts missions-list). SHOW, NOT TELL: a heading is a
  *  word or two; `line` is its tooltip, never drawn. A group with no row draws nothing. */
-export type MissionGroup = 'training' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
+export type MissionGroup = 'tutorial' | 'training' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
+/** a group whose rows are LESSONS (Training, the Tutorial): the kit as issued and no other team size, no levers, the fog as the lesson has it, nothing earned */
+export const lessonGroup = (g: string | null | undefined): boolean => g === 'training' || g === 'tutorial';
 export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[] = [
+  { id: 'tutorial', title: 'Tutorial', line: 'Taught by playing' },
   { id: 'training', title: 'Training', line: 'One family of systems at a time' },
   { id: 'raids', title: 'Raids', line: 'Small buildings, up to seven defenders' },   // (where a squad's mission that names no group falls: ui/missions.ts groupOf)
   { id: 'strongholds', title: 'Strongholds', line: 'Eight to eleven defenders' },

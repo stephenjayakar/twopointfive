@@ -18,7 +18,7 @@
 // Plain DOM, styled in index.html (#missions …). Nothing at module level uses another module's exports (ui/menu.ts imports this beside the game).
 import { PICKS_UI, pickLeaveSearch, onShortList } from '../scene/picks';
 import { SAMESTART } from '../game/samestart';   // (a leaf: every mission starts the same way on every try)
-import { MISSION_GROUPS, type MissionGroup, type ScenarioEntry } from '../scene/scenarios';
+import { MISSION_GROUPS, lessonGroup, type MissionGroup, type ScenarioEntry } from '../scene/scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, levelWords, teamWords, teamTag } from '../scene/scenarioList';
 import { lookLevelFile } from '../scene/look';   // (a leaf: which file of a level the page loads)
 import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficultyHref, structureOfLevel, squadsHeld, type Difficulty } from '../game/difficulty';
@@ -325,7 +325,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     dnote.title = dnote.textContent ?? '';   // (the sheet shows two lines of it: index.html .mdiff > .dn)
     { const fogOn = !!m.scenario && fogOfQuery(new URLSearchParams(hrefs[sel].replace(/^[^?]*\?/, '')));   // (the fog of war is up on a room clear and a rescue — game/scenarioRun.ts fogOfQuery: the lever is greyed where the mission has none; a Training lesson is taught on the level as it is — its page reads no lever, game/difficulty.ts initDifficulty)
       const quiet = m.scenario ? quietFogRow(m.scenario) : soloFogRow();   // (a quiet mission may be played under the fog — game/quietfog.ts: the lever is live there with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved)
-      levers.paint(key => m.scenario?.group !== 'training' && (key === 'fog' ? fogOn || quiet : diffLive(m)), m.scenario?.kind === 'roomclear' ? structureOfLevel(m.scenario.level) : '', quiet); }
+      levers.paint(key => !lessonGroup(m.scenario?.group) && (key === 'fog' ? fogOn || quiet : diffLive(m)), m.scenario?.kind === 'roomclear' ? structureOfLevel(m.scenario.level) : '', quiet); }
     go.textContent = MISSIONS.pickLabel; go.setAttribute('href', hrefs[sel]); go.setAttribute('data-mission', m.id);
     (rows[sel] as unknown as { scrollIntoView?: (o: unknown) => void }).scrollIntoView?.({ block: 'nearest' });
     const file = m.scenario?.level ?? OFFICE, mark: PlanMark = { kind: m.scenario ? m.scenario.kind : 'solo', way: wayOf(m) }, pk = `${file}|${mark.kind}|${mark.way}`;

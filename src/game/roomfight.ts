@@ -271,6 +271,8 @@ const ROOM_DX = [1, -1, 0, 0], ROOM_DZ = [0, 0, 1, -1];   // the fill's four nei
 type DefMode = 'hold' | 'move' | 'free';
 interface Def {
   gd: Guard; station: Vec3; home: Vec3; room: Room | null; pinned0: boolean;
+  /** the lesson's script has him in hand for a staged moment (tickDef): this module does nothing with him until it lets him go */
+  staged?: boolean;
   /** evidence per entry of `room`; the entry watched (−1 = home), the one he is coming round to and when, the wandering eye */
   ev: number[]; watch: number; want: number; wantAt: number; glanceTo: number; glanceUntil: number; glanceNext: number;
   /** what he watches, on the floor — the ONE object written into his fix (lastKnown === pt ⇒ the fix is this module's, anything else is his senses') */
@@ -374,7 +376,7 @@ export class RoomFight {
   /** may the module run at all: the switch, the AI, sides, and no show holding the floor */
   get on(): boolean {
     const g = this.g;
-    return ROOMFIGHT.on && g.aiEnabled && g.tune.teams && !g.touring && !g.quietUtility && !g.puppet && !(g.director?.run && !g.director.run.ended);
+    return ROOMFIGHT.on && g.aiEnabled && g.tune.teams && !g.touring && !g.quietUtility && !g.puppet && !g.director?.staging;
   }
   private note(gd: Guard | null, what: string) { this.log.push({ t: this.g.time, who: gd ? gd.callsign : '-', what }); if (this.log.length > 600) this.log.splice(0, 200); }
 
@@ -587,6 +589,11 @@ export class RoomFight {
     if ((DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) && g.level.scenarios?.roomClear?.digIn !== false && !laneThrows(g, gd)) digInTick(this, D, dt); // digin.ts (default off): a man who knows they are coming gets ready for them — may put him on the move (enemysquads.ts: a squad that barricades does it through the same file, whatever the switch) — not a man whose grenade is leaving his hand for a covered lane (lanes.ts LANES.fragOwn, false with its switch off): that second is the throw's
     if (D.mode === 'move') { this.tickMove(D, dt); return; }
     if (D.mode === 'free') { this.tickFree(D); return; }
+    if (gd.script && g.director?.lessonRuns) { D.staged = true; return; }   // a staged moment of the lesson's own script has him (director.ts LESSON_PROGRAM): his body is its, and he stays this roster's man
+    if (D.staged) {                                                        // …and is a man holding a post again the moment it lets him go (a script's order takes `hold` off a man):
+      D.staged = false; gd.hold = true;
+      if (v3.distXZ(gd.char.pos, D.station) > 1.5) { this.defs = this.defs.filter(d => d !== D); this.note(gd, 'left on a new post by the lesson\'s script'); return; }   // his old post where it left him there; where it walked him to, as a held man this roster does not know is taken up (tick: `adopt`)
+    }
     if (gd.script) endGuardScript(gd, gd.state === 'dead' ? 'patrol' : gd.state);   // (somebody else's script on a man holding a room: he is the fight AI's)
     if (!gd.hold) {   // somebody else has let him off his post (guards.ts engage() — the Director's drill.exchange —, a stager): he is theirs — off this roster, and taken up again only if he is put to hold again
       gd.skill = null; this.defs = this.defs.filter(d => d !== D);   // (his pin is whatever they wrote with it: engage() always writes one)

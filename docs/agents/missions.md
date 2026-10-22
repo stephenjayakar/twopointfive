@@ -67,6 +67,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the word with no can (train-pairs' white house), no defender sees OUT of a door: a man in a far corner with his gun down the room shot the first of each
   pair as he crossed his opening (1 to 3 men on most paced dice). Each stands in the pocket behind the open leaf of the door he watches.
   (6) a held man: 'Right button chokes him out' (close.ts `CLOSE.heldClicks`, on in the page); the step counts the deed (`downed how: 'choke'`), not the row.
+- **The tutorial's squad mission, 'A harder fight'** (row `tut-squad`, `scenarioList.ts TUTORIAL_MISSIONS`, group `tutorial`; `tools/levels/tut-squad.ts` → `levels/tut-squad.json`, its staged
+  moments `levels/tut-squad.script.ts`, its scripted player `tools/qa/lessons/tut-squad.ts`, its page run `tools/qa/tut-squad-page.cjs`). A PROTOTYPE: one street through a walled post, the four,
+  eleven defenders in six rooms each its own squad (`mayLeave: false`, nobody digs in), nineteen steps. Two easy rooms on the squad's key, then four staged fights that each show ONE thing the
+  other side does: the workshop's man puts rounds through the door he heard the stack at (the answer is the side door), a gun behind chest-high bags covers the street (shoot back, move to the
+  blocks, a frag over the bags), two men wait in the dead ground either side of the hall's locked door (shot through the sill window, then the leaf is shot down), and a picket of three comes by
+  two gates (one shows in the road gate while two walk round to the back gate: the cover order turns half the squad). What is SCRIPTED is only what must be seen at a known moment (the bursts
+  through the leaf, the gun's first burst on the wall, the picket's walk); every man is the room clear's own and is released to the game's AI the moment his show is over.
+  - **The lesson keys it stands on are a STAND-IN for the tutorial frame** (the frame's own code was on no branch this one could reach; it replaces these): a step's `cue` (raised to the level's
+    script as the signal `lesson:<cue>` the tick the step comes up) and `checkpoint` (where any step names one, a save is asked for only as such a step comes up, named so); the test
+    `{ is: 'cue', name }` (true once the script raised `done:<name>`); `lesson.rails` is validated and READ BY NOTHING here (nothing is locked, the prompt is the old objective row, a teammate who
+    goes down stays down). The level's script is found by name in `src/scene/levelScripts.ts` (`LEVEL_SCRIPTS`; `levelLoad.ts` hangs it on the level as a non-enumerable `script`), and the lesson
+    starts its ONE program, `tutorial` (`director.ts LESSON_PROGRAM`), with the run and again at a checkpoint's load, then sends the step's cue again: every beat starts clean from its cue.
+  - **What the lesson's program is exempt from** (`Director.staging` = a program OTHER than the lesson's is running): the room fight and the stress rules no longer stand down under it, a room
+    clear / rescue / night breach may start under it, and `blocksSave()` lets its checkpoints through. Every one of these read `director.run` before; with no level script (every other level) nothing moved.
+  - **Director facts learnt the hard way**: a beat that ENDS hands back every roster man it touched, so a beat that holds men must stay alive (it waits on its cue); `tickBursts` could not find a
+    roster man it had not spawned (mended: it looks him up among the guards); a scripted round is a real round (a burst laid on a line that ran on through a gap killed the player: lay it on a wall);
+    a new script switch `D.systems.theirFrags(false)` holds the defenders' own grenades while a program of that script runs (`frag.ts fragThrowTick`, `Director.theirFragsOff`): this level's three
+    carriers are the nest's second man and both of the hall's, and a grenade nobody has been shown killed the player 1.3 s after his own.
+  - **Level facts**: a doorway's middle is 0.85 m past the door's `at`; `locked` with `keySide` locks one face only (the hall's outside is `keySide: -1`); the game's own "they force a locked door
+    near the squad" rule opened the hall by itself until its men were moved to the door wall's corners and the door to the far face; the response team proper (`scenarios.response`) is timed from
+    the first shot and cannot wait for a cue, so the picket is roster men the script walks; the street wall runs a metre past where followers wait or the gun shoots them there.
+  - **The door, measured and NOT changed** (the doors goal's): the hall's wooden leaf opens after 6 rifle rounds squarely at the page's destruction (0.5), 19 to 23 from 1.5 m to one side and
+    on one run not in 40 (rounds on the jamb do not count), never at destruction 0 (so the step also passes on a kick, and on the frozen stand the scripted player kicks).
+  - **Checks**: `bun run tools/qa/lesson-gate.ts tut-squad` on both stands (ALL PASS: the scripted player does all nineteen steps and the run ends 'taken'; on the page's stand four dice, two at
+    six seconds a line). For a level WITH a script the gate's "lesson off = the same run" line is a NOTE, not a bar: the script makes it another mission. `lesson-run` reads a script's `fightOk`
+    (steps a fight may finish by itself: here the steps inside the nest's, the hall's and the picket's fights). An UNPROTECTED scripted player (`--plain`, the page's stand): four dice of four, no
+    teammate lost. `PORT=<port> node tools/qa/tut-squad-page.cjs`: the row on the real page (software adapter), its first five steps by real keys, and the checkpoint 'the street' loaded.
+  - **Not done / not seen**: no menu picture (none can be made without a GPU: `level-needs` is red on `picture`); the alley and the road are bare (`lived` NOTE); the one locked door is meant to
+    be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot carry them. Never seen on a GPU, never
+    played by a hand. Nobody has seen whether the gunner visibly ducks under the player's fire.
 - **A par clock on a room clear** (`src/game/par.ts`, `Game.par`; block `scenarios.par { gold, silver, bronze, lossSecs }`, docs/level-format.md *Scenarios*;
   today `levels/killhouse.json` alone, row `killhouse-four` 'The kill house' in the list's 'On the clock' group, `untuned`): while that level's room clear is up the run
   is timed from the first order, Sam's first stride off his start mark (`PAR_START_M` 1 m) or his first round or throw, to roomclear's 'taken'; every teammate

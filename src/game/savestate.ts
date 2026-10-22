@@ -833,6 +833,9 @@ export class Checkpoints {
   runId = ''; visited = new Set<string>(); quietT = 0; bodyFrom: Vec3 | null = null;
   /** game time of the last save written (any kind) */
   lastSaveT = -1e9;
+  /** an AUTHORED checkpoint asked for inside this step (lesson.ts: a tutorial's own, by name): written as the frame ends, past the autosave's gates — its
+   *  author put it where a fight is over, and on a loud floor somebody is alert from the first shot to the last — and never marked as one to regret */
+  authored: string | null = null;
   /** the request waiting on the gates: why, since when, the label it will carry */
   pending: { why: string; label: string; at: number } | null = null;
   /** the HUD's tag: text + game time it went up (overlay.ts shows it CKPT.flashSecs) */
@@ -885,10 +888,11 @@ export class Checkpoints {
   tick(g: Game, dt: number) {
     const pl = g.player, m = g.mission;
     // a fresh run (boot, restartEncounter): fresh memory, a fresh id
-    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it)
+    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.authored = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it)
     // what the keys asked for inside this step, now that the frame is whole: F5's save, and a bare Enter once down onto a save in memory
     if (this.due) { const key = this.due; this.due = null; this.hand = false; const why = this.loadMem(g, key); if (why) g.msg(`checkpoint: ${why}`); return; }
     if (this.hand) { this.hand = false; const r = this.write(g, 'manual', 'by hand'); if (!r.ok) g.msg(`not saved: ${r.why}`); }
+    if (this.authored !== null) { const label = this.authored; this.authored = null; if (this.enabled && missionLive(g) && this.write(g, 'auto', label).ok) this.lastAuto = null; }
     // regret: the floor came down on him within regretSecs of the last autosave — that slot is marked, and the cards offer the one before it (checked ahead of the
     // live gate: the frame he drops is not live, and is exactly when it matters)
     if (this.lastAuto) {

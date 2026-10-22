@@ -202,6 +202,11 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   floor and the list), `tools/qa/lesson-run.ts <name>` (a scripted player — `tools/qa/lessons/<name>.ts`, input only — through every step to the debrief; a
   step that moves on with nothing done is a FAIL), `tools/qa/lesson-gate.ts [name …]` (per Training level: the file is its generator's, level-lint, lesson-check, the scripted run, and the on / off digests equal),
   `tools/qa/light-map.ts <name>` (how lit a man is across the floor).
+  A TUTORIAL mission (rows in `TUTORIAL_MISSIONS`, `group: 'tutorial'`) adds, as a stand-in for the tutorial frame's own keys: on a step `cue?` (a name: raised to the
+  level's script as the signal `lesson:<cue>` the tick the step comes up, and again at a checkpoint's load) and `checkpoint?` (a name: where any step of a lesson
+  names one, a save is asked for ONLY as such a step comes up); on the block `rails?` (validated as an object, read by nothing yet); the test `cue {name}` (true once
+  the script raised `done:<name>`). The script is `levels/<name>.script.ts`, registered by the level's name in `src/scene/levelScripts.ts`, with one play program
+  named `tutorial` that the lesson starts with the run.
 - `par` — a PAR CLOCK over this level's room clear (`game/par.ts`; needs a `roomClear` block): `{ gold, silver, bronze, lossSecs }`, seconds, with
   gold < silver < bronze and `lossSecs` ≥ 0. The run is timed from the first order, Sam's first stride off his start mark or his first round or throw to
   the room clear's 'taken'; every teammate down at the end adds `lossSecs`; the total, in whole seconds as shown, earns the medal. The clock leads the

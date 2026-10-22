@@ -20,6 +20,7 @@
 // Types and pure functions only: nothing here imports the game (src/game is one import cycle) or touches the DOM beyond localStorage, guarded.
 import type { PairId } from './game';
 import { soloFogRow } from './quietfog';   // (called inside noteOf only: src/game is one import cycle)
+import { lessonGroup } from '../scene/scenarios';   // (called inside functions only)
 
 /** how many teammates stand beside Sam */
 export type SquadSize = 0 | 1 | 2 | 3 | 4;
@@ -71,14 +72,14 @@ export function lessonNote(note: string): string { return [note.replace('your ow
  *  over them, whatever this machine keeps): its loadout screen shows no cards either and says so, with who carries what (`who`, the screen's own words) */
 export const MISSION_KIT = 'This mission issues its own kit, whatever this machine keeps';
 export function issueNote(note: string, who: string): string { return [note.replace('your own kit, and nobody', 'nobody'), `${MISSION_KIT}${who ? `: ${who}` : ''}.`].filter(Boolean).join(' '); }
-export function kitAsIssued(e: { group?: string } | null | undefined): boolean { return e?.group === 'training'; }
+export function kitAsIssued(e: { group?: string } | null | undefined): boolean { return lessonGroup(e?.group); }
 /** WHICH SIZES A SCENARIO CAN STAGE — a pure function of its row (kind, own size, level), since the level itself is not loaded until Deploy. Every kind stages
  *  every size today (tools/qa/loadout-probes.ts boots each one and counts the men); the notes say what a size changes. `CANNOT` is where a size that truly
  *  cannot work on a scenario is greyed with its reason: keyed by entry id or by kind. A row that carries `only` (scenarios.ts ScenarioEntry: The two charges, The long hall)
  *  is offered at its own size alone, with that line on the others — a mission built for one size, as a Training row is; such a size still STAGES. */
 export function squadChoices(e: { id?: string; kind: LoadoutKind; squad: number; level?: string; group?: string; only?: string }): SquadChoice[] {
   return SQUAD_SIZES.map(n => {
-    const no = (e.id && CANNOT[e.id]?.[n]) || CANNOT[e.kind]?.[n] || (e.group === 'training' && n !== e.squad ? LESSON_ONLY : '') || (e.only && n !== e.squad ? e.only : '') || (e.kind === 'solo' && n > 0 ? SOLO_ONLY : e.kind === 'quiet' && n > 1 ? QUIET_ONLY : '');
+    const no = (e.id && CANNOT[e.id]?.[n]) || CANNOT[e.kind]?.[n] || (lessonGroup(e.group) && n !== e.squad ? LESSON_ONLY : '') || (e.only && n !== e.squad ? e.only : '') || (e.kind === 'solo' && n > 0 ? SOLO_ONLY : e.kind === 'quiet' && n > 1 ? QUIET_ONLY : '');
     return { n, ok: !no, own: n === e.squad, note: no || noteOf(e.kind, n, !e.level, e.squad) };
   });
 }
