@@ -45,9 +45,9 @@ const ROOT = resolve(import.meta.dir, '../..');
 // 493643cab: the join of the solo tutorial's halt (dressed as the level's own furniture, two posts renamed, its last beat re-cut, its cards and the stun's mark:
 //   levels/tut-solo.json alone) with the base before it, f3ef62b01: it holds both, 429 lines green against it.
 // 483deaee9: a join's base again: the solo tutorial's halt (493643cab) and the ledger's words (c069ca16f) are siblings, and this join is the first commit that holds both.
-// 5f1d4da94: the solo tutorial's halt with its ground laid (a drive, wheel tracks, worn earth, stones: levels/tut-solo.json alone) on the join that holds the
+// 530d439b2: the solo tutorial's halt with its ground laid (a drive, wheel tracks, worn earth, stones: levels/tut-solo.json alone) on the join that holds the
 //   plan mission's moved post and the ledger's words: the first commit that holds all three.
-const BASE_REVS = ['5f1d4da94', '483deaee9', '3046a115e', '493643cab', 'c069ca16f', 'd13650f85', '0d3a18078', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
+const BASE_REVS = ['530d439b2', '483deaee9', '3046a115e', '493643cab', 'c069ca16f', 'd13650f85', '0d3a18078', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
 /** a lesson step's keys that are words on the objective row: read from today's file, never held to the base */
 const STEP_WORDS = ['line', 'setupLine', 'ringLine'];
 const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
