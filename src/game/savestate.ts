@@ -451,7 +451,7 @@ export function playerBusy(g: Game): string | null {
   if (pl.char.anim.bigTool) return 'putting his tool back';   // (bigkit.ts, BIGSLOT.moves: the hammer or the shotgun on its way back onto him is the animator's too — never set with the switch off)
   if (pl.char.anim.kitBusy) return 'changing what is in his hands';   // (kitanim.ts: a swap is the animator's, not the file's — never true with the switch off)
   if (g.mission.driveT >= 0) return 'pulling the drive';
-  if (pl.sel.open || pl.sel.downT >= 0) return 'choosing an action';
+  if ((pl.sel.open && !pl.sel.ring?.free) || pl.sel.downT >= 0) return 'choosing an action';   // (a ring that merely stands — handring.ts — is nothing in hand: nothing of it is filed, and a load finds no ring)
   return null;
 }
 

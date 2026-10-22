@@ -223,7 +223,7 @@ export class Panel {
     const nav = NAV_KEYS[e.code];
     if (nav && !typingIn && !(t instanceof HTMLInputElement && t.type === 'range')) { this.step(nav); e.preventDefault(); return true; }   // (← / → on a focused slider still nudge it)
     if (gameCode(e.code) === 'Backquote') return false;   // (the panel's own key: main.ts's hotkey shuts it — never a character for the search)
-    if (e.key.length === 1 && !typingIn && this.search && gameCode(e.code) !== 'Space') { this.search.focus(); this.search.value += e.key; this.applyFilter(); e.preventDefault(); return true; }   // (Space stays the game's one action key even over the panel)
+    if (e.key.length === 1 && !typingIn && this.search && e.code !== 'Space') { this.search.focus(); this.search.value += e.key; this.applyFilter(); e.preventDefault(); return true; }   // (Space stays the game's one action key even over the panel)
     return false;
   }
   private saveSoon() { if (!this.game) return; clearTimeout(this.saveT); this.saveT = setTimeout(() => lsSet('twopointsix.panel', JSON.stringify(this.state)), 250) as unknown as number; }

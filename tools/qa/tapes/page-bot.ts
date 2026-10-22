@@ -96,6 +96,7 @@ function run(name: string, o: { cap?: number; pace?: number } = {}): TapeRun {
         if (aimAt) aim(aimAt); step();
         if (!g.player.sel.open) continue;
         const rows: any[] = g.nearby, want = rows.findIndex(is); if (want < 0) break;
+        if (g.player.sel.ring && want < 5) { I.pressed.add(`Digit${want + 1}`); held.delete('Space'); I.keys.delete('Space'); step(2); say(`  Space held, ${want + 1}: ${kind} ▸ ${v}`); return true; }   // (his rows up as a ring — game/handring.ts: the wedge's digit does it at once)
         if (is(g.hover)) { ok = true; break; }
         I.pressed.add(want > rows.indexOf(g.hover) ? 'ArrowDown' : 'ArrowUp');
       }
