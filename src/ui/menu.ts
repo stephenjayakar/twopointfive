@@ -26,9 +26,12 @@ import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
 import { TABKEY } from './tabkey';
-import { keyText } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
+import { keyText, keysOf, slotNow } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 
+const E_ROW: [string, string] = ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'];
+/** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
+const SLOT_ROW: [string, string] = ['0', 'empty hands: what is in them goes away · a digit draws'];
 const Q_ROW: [string, string] = ['Q', 'back to the wall beside you — slide, peek at its end; Q / away / Shift lets go'];
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
   ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'],
@@ -36,7 +39,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   ['LMB', 'fire what is in hand · throw a canister · hands empty behind a man: silent takedown'],
   ['RMB', 'pistol: OCP the light under the ring · FN2000: fire its launcher (hold to see the arc first)'],
   ['Space', 'do the highlighted action (top-left) · hold to pick another (wheel / ↑↓, let go) · long actions run on their own; move or tap again to stop'],
-  ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'],
+  E_ROW,
   Q_ROW,
   ['1 2 3 4 5', 'Five-seveN · FN2000 (2 again: flip its launcher, RING / 40 mm) · smoke · stun · frag'],
   ['Z · R', 'FN2000 semi / auto · reload'],
@@ -50,7 +53,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 ];
 /** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
 const WALL_ROW: [string, string] = ['Wall', 'walk into one and your back goes to it — slide, peek at its end; away / Shift lets go'];
-const controlRows = (): [string, string][] => CONTROLS.flatMap(r => { if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
+const controlRows = (): [string, string][] => CONTROLS.flatMap(r => { if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
 
 const TAGLINE = 'a ray-traced stealth sandbox — every light, shadow and wisp of smoke is live';
 /** the title screen's line under the wordmark */
