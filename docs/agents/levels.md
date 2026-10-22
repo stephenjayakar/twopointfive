@@ -196,12 +196,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that list, in the order a level is made (before you touch anything · the idea · the file · rooms, doors, walls · lived-in rooms · light, hour, weather ·
   the mission in the file · the team and its kit · what the player reads · measure it, then say it), every need with what was SEEN when it was learnt and
   the command that checks it; what no tool can ask is marked by eye or by play. `bun run tools/qa/level-needs.ts [name …] [--run] [--jobs 4] [--skip need,…]
-  [--quiet] [--md f] [--json f]` asks the sixteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
-  kit picture · look · lived · floor · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
+  [--quiet] [--md f] [--json f]` asks the seventeen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
+  kit picture · look · lived · floor · ground · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
   The floor itself stays `tools/qa/map-check.ts`'s (structure, size, nav, the scripted runs): `--run` runs that with `--no-runs` and the level's other own
   checks as they stand (export `--check`, level-lint, door-size, second-way-check, lived-check, kitview-plan, level-names-check, floor-order-check,
   quiet-check, lesson-check), four at a time: about 13 s for one level, 90 to 120 s for all. Exit 1 on a FAIL; a NOTE never fails. `NEEDS_BREAK=1` plants
-  gaps in fourteen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
+  gaps in fifteen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
   (exit 1; a MISSED one exits 0). THREE NEEDS ARE NEW CHECKS: `doorway` (a wall decal across a door's opening: the dado rule had no check), `roof` (a drawn
   slab in `weather.ts roofsOf`'s band: the floodlit shed's), `kit` (as issued, through the game's own cards and pouches, at every size the row offers, who
   comes with nothing but a gun; the team's size is set before a card is read, so an issue shared out over the men who come is read as shared). AS THE 36
@@ -323,3 +323,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stand: `destruction.md`, *Glass as buildings have it*; no level file touched). Foot under 0.7 m, or a panel of a door = toughened (one round, the sheet drops, the
   opening is walked); from a sill = float (a hole, then daggers); a narrow inside sidelight or a high outside strip = laminated. The level skill's section 3 has
   the rule as a need; `probes.ts glassreal` line 9 holds every level's count of panes by kind, on and off, and a level with new glass adds its row there.
+- **The level skill asks that the ground is not one flat sheet (`ground`, the seventeenth need of `tools/qa/level-needs.ts`, 10-22).** The maintainer, on a
+  shot of the tutorial's fuel halt (`tut-solo`) at night: "ground looks pretty flat here. we should make this part of our level skill". The skill's
+  lived-in section gains the item (finishes, wear, stains, low things to walk over; `STYLE.md`'s rules for a patch). THE MEASURE (`bareGround`, from the
+  file's boxes, props and paints, no floor stood up): the world in 0.25 m squares, each with the TOPMOST flat paint drawn over it (a box no higher
+  than 6 cm that is a decal, a leaf of 2 cm or less, or the world's own slab; one under half a metre wide is widened by half a square so that a painted
+  line is not lost, and a speck under a square long is nothing). Two paints read apart at 0.15 of the larger value, 0.3 of roughness, or 0.08 of any channel's share of the colour (the look's
+  lightest door wear is 0.84 of its floor; a patch of its ground's own paint is no mark, and dust beside gravel is one sheet). A BREAK is the open line
+  where two paints that read apart meet, a mat under 10 m² with markings on its upper face, and anything standing on the ground no higher than 0.19 m,
+  the height feet step over (rubble, a kerb, a loose thing by the game's own footprint for it; a pad wider than 3 m is a floor, and paint). Squares under anything standing (below
+  1.9 m), and on a door's line, are not ground the eye sees and nothing passes them: a break dresses the squares within about 1.5 m of it, walked round
+  the walls, and two rooms are never added up through their door. What is left is the stretches, each named for the paint most of it wears. A stretch
+  is OUTSIDE THE PLACE, and only added up, when the player cannot walk to it from any start mark of the file (`sam`, the solo night's `playerSpawn`;
+  doors open), or when four fifths of its squares lie within 4 m of the world's edge and no start mark stands within 3 m of it. 40 m² or more in one piece is a NOTE, never a FAIL: one line a file, the six
+  biggest with a square of each; a look twin is asked for itself. THE NUMBERS ARE FIRST NUMBERS (40 m², 1.5 m, 0.15, 0.3, 0.08): nobody tuned them
+  against a picture, a step of roughness alone may not show at all, and the measure does not hold `STYLE.md`'s rule for a patch (darker than its
+  ground, never under a third). IT NOTES NEARLY EVERYTHING TODAY, which is the state of the ground and also how blunt the measure is: on build
+  5d31894, both stands, of 42 levels 38 are noted and 4 pass (office, office-relief, pass, tut-sky); of 14 look twins 9 are noted and 5 pass (block,
+  block-squads, consulate, registry, warehouse). Most of it is the ground OUTSIDE the building: the yard levels stand on sheets of dust or asphalt of
+  250 to 875 m², and the test maps are noted with the missions. `tut-solo`: 260 m² of dust and gravel (the road, where the mission starts), 101 of
+  gravel (the gun court), 57 of slab (the shop), 56 of dirt (the truck court), 323 more outside the place. `NEEDS_BREAK=1` plants one
+  sheet over the level's ground, which must be found, and asks the measure sixteen made floors: bare, patches of the ground's own paint, a speck of paint every 2.5 m,
+  strips of two paints that do not read apart, a yard with one marking, two rooms with an open gap between them and the start in one, a bare ring at
+  the edge with the start on it (each must be noted); a dark patch, a patch of another sheen, rubble, a turned 6 cm line, each every 2.5 m, strips of
+  two paints that read apart, the two rooms with a door between them, the two rooms with the start outside their walls, the ring with no start (each
+  must pass). Three reviews of the measure found 39 things; left as they are: a step of roughness alone counts, metal does not, a decal on a raised
+  pad is not seen, the 3 m round a start is measured through walls, and it is a third reading of "what is drawn flat" beside `tools/levels/flatLayers.ts`
+  and the look skin's `floorAt`. What a patch
+  does to the picture has NEVER been seen on a GPU here, and no level's ground was changed by this: each noted floor is its owner's to mend or to answer.
