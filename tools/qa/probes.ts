@@ -19,7 +19,7 @@
 //     carbine: carbine-fire carbine-rig
 //     charmats: charmats-cast charmats-off charmats-shader charmats-slots charmats-tables
 //     civilians: civilians-comply civilians-determinism civilians-hearing civilians-identity civilians-phone civilians-scoring civilians-sight civilians-spots
-//     debrief: debrief-charge debrief-dom debrief-doorname debrief-rooms debrief-run debrief-score
+//     debrief: debrief-charge debrief-dom debrief-doorname debrief-loud debrief-rooms debrief-run debrief-score
 //     decals: decals-follow decals-identity decals-off decals-ring decals-sites
 //     destruction: destruction-bounds destruction-caps destruction-determinism destruction-dust destruction-hearing destruction-identity destruction-impulses destruction-reset destruction-screen destruction-sheet
 //     devices: devices-camera devices-editor devices-keypad devices-laser devices-vision
@@ -2606,6 +2606,7 @@ if (on('debrief-run', 'debrief', 'all')) await run('debrief-run', async () => (a
 if (on('debrief-rooms', 'debrief', 'all')) await run('debrief-rooms', async () => (await import('./debrief-probes.ts')).debriefRooms());
 if (on('debrief-doorname', 'debrief', 'words', 'all')) await run('debrief-doorname', async () => (await import('./debrief-probes.ts')).debriefDoorName());   // a kicked or picked door is called on the card what its level calls it (WORDS.doors)
 if (on('debrief-charge', 'debrief', 'all')) await run('debrief-charge', async () => (await import('./debrief-probes.ts')).debriefCharge());   // the rows a wall charge makes are worded as a charge's
+if (on('debrief-loud', 'debrief', 'all')) await run('debrief-loud', async () => (await import('./debrief-probes.ts')).debriefLoud());   // a row that leans loud is not graded as a sneak (verdict.ts VERDICT.loudCard; LOUDCARD_BREAK=1 must fail)
 if (on('debrief-score', 'debrief', 'all')) await run('debrief-score', async () => (await import('./debrief-probes.ts')).debriefScore());
 if (on('debrief-dom', 'debrief', 'all')) await run('debrief-dom', async () => (await import('./debrief-probes.ts')).debriefDom());
 // ---------------------------------------------------------------- 'breach' = the family (breach-probes.ts): what stays of the removed daytime breach showcase's checks — the daylight variant's round trip (here) and clear-doctrine (below)
@@ -2851,6 +2852,7 @@ if (on('frag-theirs', 'frag', 'all')) await run('frag-theirs', async () => (awai
 if (on('frag-mates', 'frag', 'all')) await run('frag-mates', async () => (await import('./frag-probes.ts')).fragMates());   // the rest guess counts loose furniture; no leg ends in a mate's corner (FRAG.restProps / fleeApart; FRAGMATES_BREAK=1 must fail)
 if (on('frag-fleedoor', 'frag', 'all')) await run('frag-fleedoor', async () => (await import('./frag-probes.ts')).fragFleeDoor());   // caught by a grenade with no cover, a man leaves by a doorway that already stands open (FRAG.fleeDoor; FLEEDOOR_BREAK=1 must fail)
 if (on('frag-wallflee', 'frag', 'all')) await run('frag-wallflee', async () => (await import('./frag-probes.ts')).fragWallFlee());   // a wall the burst will open is no cover to a man getting off it (FRAG.wallFlee; WALLFLEE_BREAK=1 must fail)
+if (on('frag-down', 'frag', 'all')) await run('frag-down', async () => (await import('./frag-probes.ts')).fragDown());   // a burst kills a man who is down and breathing — out cold or wounded (FRAG.downKill; DOWNKILL_BREAK=1 must fail)
 // BURSTS × GLASS (tools/qa/burstglass-probes.ts — a frag's or a 40 mm round's burst beside a window: the glass takes it by the fracture model's rules FIRST, the men
 // are judged through what that left; rebuild/gear-and-glass/bursts.md). Stands the glass parts up itself; BURSTGLASS_BASE=1 runs it on the base build's numbers = red.
 for (const [name, fn] of [['burst-whole', 'burstWhole'], ['burst-breaks', 'burstBreaks'], ['burst-open', 'burstOpen'], ['burst-theirs', 'burstTheirs'], ['burst-off', 'burstOff'], ['burst-red', 'burstRed']] as const)
@@ -3116,6 +3118,7 @@ if (on('ir-draw', 'irlaser', 'all')) await run('ir-draw', async () => (await imp
 if (on('ir-sam', 'irlaser', 'all')) await run('ir-sam', async () => (await import('./irlaser-probes.ts')).irSam());
 if (on('ir-unseen', 'irlaser', 'all')) await run('ir-unseen', async () => (await import('./irlaser-probes.ts')).irUnseen());
 if (on('ir-off', 'irlaser', 'all')) await run('ir-off', async () => (await import('./irlaser-probes.ts')).irOff());
+if (on('ir-team', 'irlaser', 'all')) await run('ir-team', async () => (await import('./irlaser-probes.ts')).irTeam());   // the team's guns show no laser line (IR.teamOff; TEAMLASER_BREAK=1 must fail)
 // ---------------------------------------------------------------- an infrared light on the goggles: a dark room shows through night vision, to you and a goggled teammate and to nobody else (irlight-probes.ts; game/irlight.ts — the frozen stand holds it off)
 if (on('irl-list', 'irlight', 'all')) await run('irl-list', async () => (await import('./irlight-probes.ts')).irlList());
 if (on('irl-unseen', 'irlight', 'all')) await run('irl-unseen', async () => (await import('./irlight-probes.ts')).irlUnseen());
