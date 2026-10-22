@@ -16,10 +16,13 @@
 
 /** `doors`: a door's said name may be the level's own (scenarios.doorNames, read by doornames.ts) — a key of its own, because a door's name is said in
  *  bubbles and a bubble's text is in the run digest: a recording from before the key replays with it off (journal.ts). Read only while `on`. */
-export const WORDS = { on: false, doors: false };
+/** `radioHome`: the handler's radio asides (dialogue.ts handlerBeat: her dry lines and his answers about the drive, the rack, the floor's lights) belong to the
+ *  office night they were written for, and are said nowhere else: not on a tutorial mission, not on another level's quiet night. ON in the page
+ *  (`?handlerall` = everywhere a solo night runs, as before), OFF here and on the frozen stand (`TPS_RADIOHOME=1` raises it). */
+export const WORDS = { on: false, doors: false, radioHome: false };
 
 /** the page's one rule for the switch: on unless the address says `?oldwords` */
-export function wordsFromQuery(q: URLSearchParams) { WORDS.on = !q.has('oldwords'); WORDS.doors = q.get('doornames') !== '0'; }
+export function wordsFromQuery(q: URLSearchParams) { WORDS.on = !q.has('oldwords'); WORDS.doors = q.get('doornames') !== '0'; WORDS.radioHome = !q.has('handlerall'); }
 
 /** a line (or a pool, or any value a line is picked by) as the pass has it — `was` with the switch off */
 export function w<T>(now: T, was: T): T { return WORDS.on ? now : was; }

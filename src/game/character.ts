@@ -1003,6 +1003,12 @@ const CREEP = {
   R: { at: [0.05, -0.33, 0.27] as Vec3, atC: [0.0, -0.21, 0.28] as Vec3, pole: [-0.7, -0.6, -0.5] as Vec3, fing: [0.2, 0.3, 1] as Vec3, back: [-0.7, 0.7, 0] as Vec3, curl: 0.38, thumb: 0.3, spread: 0.15 },
 };
 const READY_RATE = 12, READY_REACH = 0.85, READY_AZ: [number, number] = [0.5, 0.9];
+/** THE REACH GOES UP (CharacterAnimator.readyUp, fed by game/close.ts CLOSE.reachUp; 0 = every pose as it was). A crouched Sam behind a STANDING man: the
+ *  grab's reach is measured off his own shoulder, which at the crouch is at the man's belt — the open hand went to the small of his back and Sam's face to
+ *  his seat. With the point more than `over` m ([none, all of it]) above the left shoulder: the trunk comes UP out of its crouched bow by `rise` degrees over
+ *  spine1‥3 (the head let back `look` of it, so the eyes go up to the neck), the hand's height off the shoulder may reach `dy` (the level run pulled in to
+ *  `r`), the fingers' line tips up by `fing`, the hand's way there (and the pose's way out when he steps back) takes `slow` as long again (it is that much further), and the whole comes in at `rate` 1/s from the reach as it was. The grab's tell only: 'grabGun' keeps the pistol's aim and 'seat' is under him. anim.crouch does not change, so what reads it (the men's detect rate, the fog's eye height) is as it was; his HEAD BONE is about 0.19 m higher and his chest 0.04, which the men's sight lines and the light meter do read. */
+const READY_UP = { over: [0.25, 0.45] as [number, number], rise: 38, look: 0.5, dy: 0.36, r: [0.32, 0.42] as [number, number], fing: 0.3, slow: 0.8, rate: 6 };
 /** KIT HANDLING — the hand's half (the maintainer, 10-10: "better animations for equipping and unequipping kit. like rifle for sam goes on his back, pistol in
  *  holster, knife, etc."). rigProps KitDraw is the drawer's half; game/kitanim.ts deals both, for Sam. NOTHING here runs unless kitSwap() is called, a reload is
  *  handed a `hand` / `keep` beat, or closeK is fed: every pose is otherwise what it was.
@@ -1071,7 +1077,7 @@ export const KIT = {
   close: { far: 0.4, hover: 0.045, bow: [-0.02, 0.01, 0.035] as Vec3, lead: [0, 0, 0] as Vec3, left: 0.3, leftAt: 0.85, leftIn: 0.24, leftOut: 0.2, rate: 7, flex: 0.55, flexAmp: 0.1, drift: 0.008, regrip: 1.7, curl: 0.5 },
 };
 /** the eased numbers' layout (CharacterAnimator.rd): the two hands' offsets off their shoulders (model axes), poles, fingers / backs, then the scalars */
-const RD = { l: 0, r: 3, lPole: 6, rPole: 9, lFing: 12, lBack: 15, rFing: 18, rBack: 21, lean: 24, blade: 25, wR: 26, lCurl: 27, lThumb: 28, lSpread: 29, rCurl: 30, rThumb: 31, clav: 32, into: 33 }, RD_N = 35;
+const RD = { l: 0, r: 3, lPole: 6, rPole: 9, lFing: 12, lBack: 15, rFing: 18, rBack: 21, lean: 24, blade: 25, wR: 26, lCurl: 27, lThumb: 28, lSpread: 29, rCurl: 30, rThumb: 31, clav: 32, into: 33, up: 35 }, RD_N = 36;
 /** Overhand throw timing (s): the whole one-shot, and the instant the canister leaves the hand — the hand passing in front of the head at its fastest, at the end
  *  of the delivery. player.ts spawns the item at exactly THROW_RELEASE into the wind-up (pendingThrow), so a beat that clicks at T has its can in the air at
  *  T + THROW_RELEASE. Phases: wind-up 0 → 0.165 (top of the backswing), delivery → 0.28 = release, follow-through → ~0.48, recovery → 0.75. (Any earlier and
@@ -1469,6 +1475,8 @@ export class CharacterAnimator {
    *  readyShown (output, the probes): the weight the layer put into this frame's pose, 0‥1 — it eases IN at 10/s and OUT at 8/s (never popped: a suppressed pose
    *  is still on its way down for a quarter of a second, and this is that), 0 once it is gone. */
   ready: ReadyKind | null = null; readyAt: Vec3 | null = null; readyShown = 0;
+  /** the reach goes up for a man who stands over him (READY_UP; game/close.ts feeds it — 0, as a man nobody feeds has it: every pose as it was) */
+  readyUp = 0;
   // the close-in mode (the caller sets `creep` each frame he is in it; `creepAt` = the nearest man's chest, for the head
   // and trunk to attend to): `creepShown` = the eased weight in the pose. THE KNIFE: `reachShown` = the eased weight of
   // the right hand on the sheathed knife's hilt (the tell: a ready pose with the hands empty; ≥ 0.9 a quarter second after
@@ -2236,7 +2244,7 @@ export class CharacterAnimator {
       const held = wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || kt >= 0 || this.throwT >= 0 || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.mvHands || this.mvs.tsT >= 0;   // (what has the arms, the blow apart)
       const busy = held || this.strikeT >= 0 || this.bw !== null, want = this.ready && !busy ? 1 : 0;
       if (this.ready) { this.readyK = this.ready; this.rdAt = this.readyAt; }
-      this.readyW = Math.abs(want - this.readyW) < 0.01 ? want : this.readyW + (want - this.readyW) * Math.min(1, dt * (want ? 10 : 8));
+      this.readyW = Math.abs(want - this.readyW) < 0.01 ? want : this.readyW + (want - this.readyW) * Math.min(1, dt * (want ? 10 : busy ? 8 : 8 / (1 + READY_UP.slow * this.rd[RD.up])));   // (READY_UP: a hand that went up has further to come down when he steps out of reach — 8 unless fed, and 8 when a move takes the arms: the grab's own clocks are what they were)
       // the reach's clock: on with a live pose whose right hand is free for the knife — and kept on THROUGH the knife's own blow (the hand comes back to the hilt it left); off with anything else: a plain blow takes the hand off the hilt empty
       { const on = (want > 0 && READY[this.readyK].knife && !this.grip[1]) || (this.strikeT >= 0 && this.strikeLeth && !held && !!this.ready);
         this.rcT = clamp(this.rcT + (on ? dt / REACH.in : -dt / REACH.out), 0, 1); }
@@ -4124,12 +4132,20 @@ export class CharacterAnimator {
     fk.run(pA);
     const wp = this.rdAt ? this.toModelP(this.rdAt) : null;
     { let a = 0; if (wp) { const g = this.untwist(twY, twP)(wp), o = fk.pos[nd.spine3]; a = clamp(Math.atan2(g[0] - o[0], g[2] - o[2]), -1, 1); }
-      ease(RD.into, Math.sin(a)); ease(RD.into + 1, Math.cos(a)); ease(RD.lean, K.lean * DEGR); ease(RD.blade, K.blade * DEGR); ease(RD.clav, K.clav * DEGR); }
-    const lean = c[RD.lean] * e, blade = c[RD.blade] * e;
+      ease(RD.into, Math.sin(a)); ease(RD.into + 1, Math.cos(a)); ease(RD.lean, K.lean * DEGR); ease(RD.blade, K.blade * DEGR); ease(RD.clav, K.clav * DEGR);
+      if (!this.rdLive) c[RD.up] = 0;   // (READY_UP: never snapped — it comes in from the reach as it was, at its own rate)
+      if (this.readyUp > 0 || c[RD.up] > 1e-4) { const to = this.readyUp > 0 && wp && kind === 'grab' ? this.readyUp * smoothstep(READY_UP.over[0], READY_UP.over[1], this.untwist(twY, twP)(wp)[1] - fk.pos[nd.upperArmL][1]) : 0;   // (the grab alone: a pistol that is up keeps its aim — 'grabGun' — and a seated man is under him)
+        ease(RD.up, to, live ? 1 - Math.exp(-READY_UP.rate * dt) : 0); if (to === 0 && c[RD.up] < 1e-4) c[RD.up] = 0; } }   // (READY_UP: how far over his own shoulder the point is)
+    const lean = c[RD.lean] * e, blade = c[RD.blade] * e, hi = c[RD.up] * e;
     if (lean > 1e-4) {
       const ax = v3.normalize(v3.cross(AY, [c[RD.into], 0, c[RD.into + 1] + 1e-6]));   // (bowing toward +Z is + about +X = up × Z)
       this.turn(pA, nd.spine2, quat.axisAngle(ax, lean * 0.45)); this.turn(pA, nd.spine3, quat.axisAngle(ax, lean * 0.55));
       this.turn(pA, nd.neck, quat.axisAngle(ax, -lean * 0.45)); this.turn(pA, nd.head, quat.axisAngle(ax, -lean * 0.55));
+    }
+    if (hi > 1e-4) {   // (READY_UP: up out of the crouch's bow toward the man who stands over him)
+      const ax = v3.normalize(v3.cross(AY, [c[RD.into], 0, c[RD.into + 1] + 1e-6])), r = hi * READY_UP.rise * DEGR;
+      this.turn(pA, nd.spine1, quat.axisAngle(ax, -r * 0.3)); this.turn(pA, nd.spine2, quat.axisAngle(ax, -r * 0.35)); this.turn(pA, nd.spine3, quat.axisAngle(ax, -r * 0.35));
+      this.turn(pA, nd.neck, quat.axisAngle(ax, r * READY_UP.look * 0.45)); this.turn(pA, nd.head, quat.axisAngle(ax, r * READY_UP.look * 0.55));
     }
     if (blade > 1e-4) {   // (− yaw swings his left shoulder toward +Z)
       this.turn(pA, nd.spine1, qYaw(-blade * 0.25)); this.turn(pA, nd.spine2, qYaw(-blade * 0.35)); this.turn(pA, nd.spine3, qYaw(-blade * 0.4));
@@ -4147,10 +4163,11 @@ export class CharacterAnimator {
       if (wp) { const g = this.untwist(twY, twP)(wp), d = v3.sub(g, sl), a = d[0] * fx + d[2] * fz, b = d[0] * fz - d[2] * fx; h = hyp2(a, b); up = d[1]; if (h > 0.05) az = clamp(Math.atan2(b, a), -READY_AZ[0], READY_AZ[1]); }   // where the man is off the left shoulder: level run, height, bearing off square (+ = his left)
       if (R) {
         if (!wp) { h = R.h0; up = R.y0; }
-        oL = frame([0, clamp(R.frac * up + R.bias, R.dy[0], R.dy[1]), clamp(R.frac * h, R.r[0], R.r[1])], az);
+        const q = c[RD.up];   // (READY_UP: 0 unless fed — the bounds as they were)
+        oL = frame([0, clamp(R.frac * up + R.bias, R.dy[0], lerp(R.dy[1], READY_UP.dy, q)), clamp(R.frac * h, lerp(R.r[0], READY_UP.r[0], q), lerp(R.r[1], READY_UP.r[1], q))], az);
         const l = v3.len(oL), cap = READY_REACH * arm; if (l > cap) oL = v3.scale(oL, cap / l);
       } else oL = frame(K.L.at!, az);   // (a fixed spot is still turned to face him: the guard's lead hand is out toward the man)
-      ease3(RD.l, oL); ease3(RD.lPole, frame(K.L.pole, az)); ease3(RD.lFing, frame(K.L.fing, az)); ease3(RD.lBack, frame(K.L.back, az));
+      ease3(RD.l, oL); ease3(RD.lPole, frame(K.L.pole, az)); ease3(RD.lFing, frame(c[RD.up] > 1e-4 ? [K.L.fing[0], K.L.fing[1] + READY_UP.fing * c[RD.up], K.L.fing[2]] : K.L.fing, az)); ease3(RD.lBack, frame(K.L.back, az));
       ease(RD.lCurl, K.L.curl); ease(RD.lThumb, K.L.thumb); ease(RD.lSpread, K.L.spread);
     }
     twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(sl, get3(RD.l)), get3(RD.lPole), 0.85, this.handRot(0, get3(RD.lFing), get3(RD.lBack)));
@@ -4172,7 +4189,7 @@ export class CharacterAnimator {
     const wUp = smoothstep(0, 0.75, w), wFore = smoothstep(0.08, 0.88, w), wHand = smoothstep(0.16, 1, w);
     const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
     let lg = 1;   // KIT.close: the left arm's move for the man waits for the right hand to be on the hilt (a pistol in that hand: no wait — the reach is all the tell there is)
-    if (this.closeK >= 0 && K.knife) { const KC = KIT.close; if (!this.rdLive) this.clL = 0; this.clL = clamp(this.clL + (live && u >= KC.leftAt ? dt / KC.leftIn : -dt / KC.leftOut), 0, 1); lg = this.clL * this.clL * (3 - 2 * this.clL); }
+    if (this.closeK >= 0 && K.knife) { const KC = KIT.close; if (!this.rdLive) this.clL = 0; this.clL = clamp(this.clL + (live && u >= KC.leftAt ? dt / (KC.leftIn * (1 + READY_UP.slow * c[RD.up])) : -dt / KC.leftOut), 0, 1);   /* (READY_UP: the longer way up takes that much longer — 1 unless fed) */ lg = this.clL * this.clL * (3 - 2 * this.clL); }
     m[nd.shoulderL] = wUp * lg; m[nd.upperArmL] = wUp * lg; m[nd.forearmL] = wFore * lg; setSub(nd.handL, wHand * lg);
     this.reachShown = smoothstep(0.16, 1, u);
     if (u > 0) { m[nd.shoulderR] = m[nd.upperArmR] = smoothstep(0, 0.75, u); m[nd.forearmR] = smoothstep(0.08, 0.88, u); setSub(nd.handR, this.reachShown); }

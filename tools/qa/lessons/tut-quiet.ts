@@ -102,9 +102,12 @@ export const steps: Record<string, (B: Bot) => void> = {
       B.fail('no choke row with a man held');
     if (!B.until(() => A.state === 'dead', 15)) B.fail('the choke did not put him out'); B.wait(1); },
   // through the gap into the back court, to the door under its lamp
-  pick: B => {
+  door: B => {
     B.crouch(true); B.go([24.6, 0, 17.5], 20); B.go([26.4, 0, 17.5], 10); B.go(TQ.backDoor, 15, { near: 0.2 });
     B.say(`  at the back door: lit ${lit(B)}`);
+  },
+  // the key at the lock, then nothing until the cylinder goes over (the card that comes up with this line is the page's: a headless run has none)
+  pick: B => {
     // a stray left click here, nobody in an arm and nobody in reach: the button is on since the last step, and it must do nothing a man could hear
     { const P = B.g.player, shots = () => (P.rifle?.shotsFired ?? 0) + (P.pistol?.shotsFired ?? 0), n = shots(); B.click(1, [26.0, 0, 18.6]); B.step(20);
       if (shots() > n || !P.holstered) B.fail(`a stray left click at the lock ${shots() > n ? 'fired a round' : 'drew the gun'}`);
