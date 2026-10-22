@@ -1,5 +1,6 @@
 // DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line, tour caption / timeline.
 import { BIGSLOT } from '../game/kit';
+import { railCard, type RailCard } from './railcard';
 import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/loop.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
 import { v3, clamp, lerp } from '../math/vec';
 import type { Vec3 } from '../math/vec';
@@ -146,7 +147,16 @@ export class Overlay implements HudLike {
   private recEl = document.getElementById('journal'); private recKey = '';            // the session journal's REC tag (game.journal.hudText(): 'REC f=1234 · 38 KB' / why it waits) — journal.ts, F10 in main.ts; absent on a page without the element
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private skyWas = false;
-  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private railsWas = false;                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
+  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false;                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
+  private card: RailCard;                                                          // a tutorial step's card, up in the middle with the world held (ui/railcard.ts)
+  /** a tutorial mission's card is up (main.ts holds the world still under it) */
+  get cardUp(): boolean { return this.card.up; }
+  /** a key went down while it may be the card's (main.ts, ahead of the game's own read of it): true = it was */
+  cardKey(e: KeyboardEvent): boolean { return this.card.key(e); }
+  /** main.ts: what a card does as it goes (the keyboard's focus back to the game) */
+  set cardClosed(fn: (() => void) | null) { this.card.onClose = fn; }
+  /** main.ts: this page shows no card (a replay's tape) */
+  cards = true;
   private objMark: HTMLElement;                                                    // diamond + distance on / toward the current objective
   constructor() {
     menuTheme();   // the fight screen's rules read the menus' tokens (index.html `--h-…`)
@@ -155,7 +165,8 @@ export class Overlay implements HudLike {
     this.ring = this.reticle.firstChild as HTMLElement; this.hint = this.reticle.lastChild as HTMLElement; this.hint.style.display = 'none';
     this.orderMark = document.createElement('div'); this.orderMark.className = 'ordermark'; this.orderMark.innerHTML = '<i></i><span></span>'; this.orderMark.style.display = 'none'; this.root.appendChild(this.orderMark);
     this.railEl = document.createElement('div'); this.railEl.id = 'railprompt'; this.root.appendChild(this.railEl);
-    this.objMark = document.createElement('div'); this.objMark.className = 'objmark'; this.objMark.innerHTML = '<i></i><span></span>'; this.objMark.style.display = 'none'; this.root.appendChild(this.objMark);
+    this.card = railCard(this.root);
+    this.objMark = document.createElement('div'); this.objMark.className = 'objmark'; this.objMark.innerHTML = '<i></i><u><b></b><b></b><b></b></u><span></span>'; this.objMark.style.display = 'none'; this.root.appendChild(this.objMark);
     const NS = 'http://www.w3.org/2000/svg';
     this.trajPath = document.createElementNS(NS, 'polyline') as SVGPolylineElement;
     this.trajPath.setAttribute('fill', 'none'); this.trajPath.setAttribute('class', 'trajpath'); this.trajPath.setAttribute('stroke-width', '2'); this.trajPath.setAttribute('stroke-dasharray', '5 6'); this.trajPath.setAttribute('stroke-linecap', 'round');
@@ -349,6 +360,7 @@ export class Overlay implements HudLike {
           let pips = ''; for (let i = 1; i <= rail.of; i++) pips += `<i class="${i < rail.n ? 'done' : i === rail.n ? 'now' : ''}"></i>`;
           this.railEl.innerHTML = `<div class="line">${words}</div><div class="note"></div><div class="pips">${pips}</div>`; this.railNote = '';
           this.railEl.className = ''; void this.railEl.offsetWidth; this.railEl.className = 'on'; } }
+      this.card.update(this.cards ? game.rails.card() : null, caps);
       // (the note is its own piece: it comes and goes under a line that stays put, and the line is shaken once as it comes)
       if (rail && railNote !== this.railNote) { this.railNote = railNote; const n = this.railEl.querySelector?.('.note'), l = this.railEl.querySelector?.('.line') as HTMLElement | null;
         if (n) n.innerHTML = railNote; if (l) { l.classList.remove('nudge'); if (railNote) { void l.offsetWidth; l.classList.add('nudge'); } } }
@@ -383,7 +395,11 @@ export class Overlay implements HudLike {
       let nx = vp[0] * op[0] + vp[4] * op[1] + vp[8] * op[2] + vp[12], ny = vp[1] * op[0] + vp[5] * op[1] + vp[9] * op[2] + vp[13];
       if (cw > 1e-4) { nx /= cw; ny /= cw; } else { const l = Math.hypot(nx, ny) || 1; nx = nx / l * 9; ny = ny / l * 9; }   // behind the eye: keep the undivided clip direction (dividing by w < 0 would mirror it) and force it onto the edge
       const mx = 1 - 2 * 36 / w, my = 1 - 2 * 36 / h; const k = Math.max(1, Math.abs(nx) / mx, Math.abs(ny) / my); nx /= k; ny /= k;   // into a 36 px inset of the view
-      const el = this.objMark; el.style.display = 'block'; el.style.opacity = alpha.toFixed(2); el.className = k > 1 ? 'objmark edge' : 'objmark';
+      const el = this.objMark; el.style.display = 'block'; el.style.opacity = alpha.toFixed(2);
+      // (a tutorial step's `toward`: the mark is an arrow lying from the place to where it points, turned as the view has the two — never at the picture's edge, where the ring says 'that way')
+      const to = k > 1 ? null : game.rails.arrow(); let turn = '';
+      if (to) { const [ax, ay, av] = cam.project(op, w, h, EDGE), [bx, by] = cam.project(to, w, h); if (av && Math.hypot(bx - ax, by - ay) > 4) turn = `${(Math.atan2(by - ay, bx - ax) * 180 / Math.PI).toFixed(1)}deg`; }
+      el.className = k > 1 ? 'objmark edge' : turn ? 'objmark arrow' : 'objmark'; if (turn !== this.objTurn) { this.objTurn = turn; el.style.setProperty?.('--turn', turn || '0deg'); }
       el.style.left = `${((nx * 0.5 + 0.5) * w).toFixed(1)}px`; el.style.top = `${((1 - (ny * 0.5 + 0.5)) * h).toFixed(1)}px`;
       (el.lastChild as HTMLElement).textContent = skySeat ? '' : `${Math.round(od)}m`;
     }

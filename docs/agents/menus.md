@@ -1476,7 +1476,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dropped unstarted at the boot's end on a muted test rig (`?mute`), for a show, for a mission whose start was refused (the start card says why), and
   at the loop's next step once a hook that drives the game is called (`__runFrames`, `__mouse`, `__click`, a save or load; NOT one that only
   shoots the page: `docs/agents/qa.md`); the headless harness never comes through `main.ts`. A restart, a
-  checkpoint and the next try are not page loads and show no brief. SWITCH `LOADBRIEF.on` (`ui/loadbrief.ts`): ON in the page, `?loadbrief=0` = the
+  checkpoint and the next try are not page loads and show no brief. A TUTORIAL mission's brief also carries its row's `scene` and a 'You will learn' list (`teaches`): `docs/agents/missions.md`, the opening card. SWITCH `LOADBRIEF.on` (`ui/loadbrief.ts`): ON in the page, `?loadbrief=0` = the
   boot card and the straight start as the build was; OFF in the module, a page-only screen like `START_PAGE` — no game rule reads it, no knob table
   or journal carries it, no `FROZEN_HOLDS` row: both stands are the build as it was, there being no code of it on either. WHO OWNS WHAT IN THE BOOT:
   this screen is the card line, its branch of the READY block, the `frozen` term, the ladder's guard and its word in `viewCovered` in `main.ts`; when the level is READY
