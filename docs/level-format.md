@@ -186,11 +186,11 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   characters), `at` the marker, and it moves on when `done` — a test record `{ is: '<kind>', … }` read off the game — is true (for `hold` seconds). Never on a
   clock. Kinds (`lesson.ts LESSON_TESTS`; a new kind is one row there with its `ok` and its `check`): STATE `in {area}` · `near {at, r?}` · `flag {flag,
   value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent dark chargeSet chargeClear wallBlown …) · `slot {slot, drawn?}` ·
-  `pace {below?, above?}` · `meter {which: 'light'|'noise', below?, above?}` · `stage {stage}` · `door {door, state: open|shut|unlocked|broken}` · `target
+  `pace {below?, above?}` · `meter {which: 'light'|'noise', below?, above?}` · `stage {stage}` · `door {door, state: open|shut|unlocked|broken|charged}` (`charged`: a charge hangs on it) · `target
   {name, on}` (a light or a device by name) · `men {down}` · `all {of}` / `any {of}`; DEEDS counted from the moment the step came up: `did {what: 'act:<the
   Space row's verb>' | 'event:<hearing event of the player's>' | 'chron:<chronicle kind>' | 'order:<orders.log id>', n?, on?: '<door name>'}` (`on`: that order given on that door). By family — hands: `downed {how: takedown|choke|whip|ring|knife,
   n?}`, `body {area}` (a man down lies there, let go of); kit: `reload`, `launcher {on: ring|he40|none, fired?}`, `burst {n?}`, `threw {kind?:
-  smoke|flash|frag|he40, quick?}`; squad: `orderTo {who: all|red|blue}`, `stackOn {who?, door, set?}`, `pairsOn {doors?}`, `word {doors?}`
+  smoke|flash|frag|he40, quick?, area?}` (`area`: …and one of that kind has gone off lying inside the rect); squad: `orderTo {who: all|red|blue}`, `stackOn {who?, door, set?}`, `pairsOn {doors?}`, `word {doors?}`
   (F, over how many doors), `taken {room}` (a room of `roomClear` stands cleared), `following`; the quiet partner: `mate {area?, at?, r?, by?, away?}`, `pair
   {what: mark|now|set|go|go:F|go:hands|down, n?}`. A step must never be able to become impossible while the mission can go on (a can or a charge can run
   out, a door can come open another way): give such a step an `any` with the honest alternative. The lesson only READS the game: the
@@ -225,7 +225,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   against the whole squad to one charge then the other, by the wings or by the workshops' back doors, and the player's own hands on one).
 - `issue` — a KIT ISSUED BY THE LEVEL (`game/kit.ts kitIssue`): `{ members: { '<place>': { …card fields } } }`, place `'0'` = the player, `'1'`‥`'4'` the
   teammates in roster order; each entry lists only the fields that differ from the issue card (`weapon` rifle | pistol | shotgun, `suppressed`, `light`,
-  `nvg`, and the counts `bangs charges smoke frags walls shells`, whole numbers 0‥9; `charges walls` are a teammate's alone and `shells`
+  `nvg`, and the counts `bangs charges smoke frags walls shells`, whole numbers 0‥9; `charges walls` on your own card (`'0'`) are read only where your own charges are switched on, `shells` is
   the player's alone — the validator refuses them elsewhere; with the pouches rule off nothing trims a count; a card that still says `shield` is refused in words — the ballistic shield left the game on 10-18). Every staging on that level wears the issue card with those
   fields over it, whatever kit the machine keeps, and the kept kit is not written; `?noissue` (`ISSUE.on` false) = the kept kit as on any level. Today:
   `levels/hall.json`, whose block is empty since the shield went (`members: {}`: every man on the plain issue, no visit to the loadout screen).
