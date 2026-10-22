@@ -1,6 +1,7 @@
 // THE TRUCK PARK — the tutorial's quiet mission for TWO: the player and one partner through a haulier's yard at night, and each stretch of it is one thing a
 // second man makes possible. Its own ground (nothing shared with another level but the GWOT kit's pieces): a walled yard 33 × 23 m with a truck gate chained
-// shut, a way in through a fallen stretch of its wall, two shipping containers end to end across it, the watch's camp in the truck park beyond them, and an
+// shut, a way in through a fallen stretch of its wall, two shipping containers end to end across it (a third stood across the mouth of the gap between
+// them), the watch's camp in the truck park beyond them, walled on its south side, and an
 // office court with a fuel point at the far end. The rules are the quiet pair's (game/pairorders.ts, workthings.ts) on the frame (game/rails.ts), in an
 // order a first-time player can follow, with the mains and the dark added.
 //
@@ -10,11 +11,12 @@
 //        │             ╎        ☼            │  │   trunk  │  │                    to the yard; the two come in by the fallen wall, behind a low wall
 //  truck │ pickup      █                     │  └pad─door──┘  │   the truck park   two men either side of the watch's lantern, the near one watching the
 //  gate  │  A ↑ ☼      █ container           │    ☼ camera    │                    far one's back; a stub of old wall a pace behind the far one
-//        │             █      ☼lantern       │      ☼ pump    │   the office court a lamp and a camera over the office door, a lamp on the fuel point and
-//        │        gap →   B →     C ↗        │               gate_e                one on the far gate, all on the mains; a man watching the far gate;
-//        │   first     █          ╎stub      │         ☼      │                    the fuse box on the wall behind him
-//        │─────┐       █ container           ┘     D ↗        │
-// start→ fallen       █                          ▣ box       │
+//        │         ▓   █      ☼lantern       │      ☼ pump    │   the office court a lamp and a camera over the office door, a lamp on the fuel point and
+//        │         ▓ gap→ B →     C ↗        │               gate_e                one on the far gate, all on the mains; a man watching the far gate;
+//        │   first ▓   █          ╎stub      │         ☼      │                    the fuse box on the wall behind him
+//        │─────┐       █ container╎          ┘     D ↗        │   ▓ the third container, across the gap's mouth: the two come round its end
+// start→ fallen       █▔▔▔▔▔▔▔▔▔▔╎               ▣ box       │   ▔ the camp's south wall: the partner's way round goes behind it
+//        │             ← the strip round the south container's end is open
 //   z 26 └───────────────────────────────────────────────────┘
 //
 // THE LINE (scenarios.lesson; tools/qa/lessons/tut-pair.ts plays it by input alone):
@@ -37,8 +39,20 @@
 //     no man has a line (tools/qa/quiet-check.ts).
 //   · THE MOON AND THE PARTNER. On the page the partner reads the way to a man's back by the light on himself (sneak.ts stalkAmbient): stood in the moon, he
 //     takes the whole way for lit, and will not cross it in front of a man who looks that way. So the moon is low in the south-west and every mark the
-//     player is led to, and the partner's whole way round to the far man (east of the container, along the south wall, up the far side of the old wall),
-//     is in a moon shadow. The headless run cannot see this: its partner has no moon on him.
+//     player is led to is in a moon shadow.
+//   · NO SHADOW HERE IS DARK ON A REAL GPU, SO THE PARTNER'S WAYS ARE OUT OF EVERY LINE. The maintainer's first play (10-22, hard): the light meter read 14
+//     in the gap and 27 behind the low wall, where the software adapter had read 0 to 3: the moon's bounce. To the partner 10 is lit, and he will not walk a
+//     lit stretch a man has a line to, nor stand in one. The two lantern men looked straight down the gap and their line ran the length of the gate yard:
+//     he stopped by the van and was never going to come, and the step waited on him. The same fault stood one step on: his way to the far man went through
+//     the gap and down the container's side a stride behind the near man, whose head swings. So the level no longer leans on dark for him:
+//       – THE THIRD CONTAINER (SCREEN) stands across the gap's mouth, a stride and a half off. Nothing west of it is in either lantern man's line; the two
+//         come round its end into the alley, and only the last strides to the mark are in the line. He stops short of them, three metres from the player.
+//       – THE STRIP ROUND THE SOUTH CONTAINER'S END IS OPEN (SOUTH_Z: that container ends 0.8 m short), and THE CAMP HAS A SOUTH WALL (PEN) from that
+//         container to the stub. His way to the far man is down the alley, round the container's end, along the yard wall behind the camp's wall and up
+//         the far side of the stub: the near man has no line to any step of it, wherever he looks.
+//       – NO 'LEAD HIM' STEP BUT THE FIRST WAITS ON WHERE THE PARTNER IS. He stands back out of a line by his own rule; a step that waited on him was a
+//         dead end the day he judged the way lit.
+//     The scripted run plays at that light (tools/qa/lessons/tut-pair.ts mode.floor; lesson-run's --floor reaches the partner's own meter).
 //   · A MAN'S POST is on the middle of a nav cell (x and z ending .25 or .75) where his facing matters to a stride: a man put on a cell's edge takes one step
 //     onto it and stands as that step turned him.
 //   · NOBODY IS LEFT TO MEND THE MAINS. The game sends the nearest calm man to the box when the lights die (lighting.ts). Here the last man on his feet is in
@@ -65,12 +79,20 @@ const HALF = Math.PI / 2;
 export const YARD: Rect = { x0: 5, x1: 38, z0: 3, z1: 26 };
 /** the way out: the foot gate in the far wall */
 export const EXIT = { name: 'the far gate', door: 'gate_e', x: 38.8, z: 18.25, out: [1, 0] as [number, number] };   // (z: the middle of the gate AS FITTED — see TP.gate)
+/** the container stood across the mouth of the gap: its middle (it lies along z, 6.06 long and 2.44 wide) */
+const SCREEN = { x: 12.9, z: 16.9 };
+/** the south container's middle: it ends 0.8 m short of where a container stood end to end with the north one would, which leaves the strip along the yard
+ *  wall open. THE GAP PAYS FOR IT: 1.8 m now (z 16.2 to 18.0, it was 2.6), which is two nav cells. Nothing may stand in its mouth, and a nudge to SCREEN or
+ *  to this number wants the scripted run after it: one cell less and the way to the mark and to the near man's back is shut */
+const SOUTH_Z = 21.03;
+/** the wall along the south of the watch's camp: its line, and where it starts (the south container's east face) */
+const PEN = { z: 22.5, x0: 18.42 };
 /** the places the scripted player and the lesson name (tools/qa/lessons/tut-pair.ts imports these, so a moved wall moves the script) */
 export const TP = {
   start: P(3.5, 24.9), mate: P(2.6, 25.8),   // outside the wall, on the road by their pickup, in the moon: the first picture has both of them in it
   first: P(9.4, 20.0),             // the first mark: round the end of the low wall, in its moon shadow, at the first man's back
   A: P(9.75, 15.25),               // the man at the pickup, looking at its load
-  gap: P(17.3, 17.4),              // in the mouth of the gap between the containers, in their moon shadow: both men of the truck park are in view through it
+  gap: P(17.3, 17.1),              // in the gap between the containers (z 16.2 to 18.0), in their moon shadow: both men of the truck park are in view through it
   B: P(20.8, 17.6),                // the near man: looks across the lantern at the far man's back
   C: P(25.4, 17.6),                // the far man: looks out past the parked trucks
   lantern: P(23.5, 16.3),
@@ -148,11 +170,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('yard.gate');
   lamp(10.9, 14.8, 'lamp_gate', 46);
   G.pickup(9.6, 13.0, 0, 'truckWhite', { load: 'drums' });
-  G.drums(7.0, 15.6, 3); G.jerryCan(11.6, 15.9, 0.3); G.jerryCan(11.85, 16.2, -0.2);
+  G.drums(7.0, 15.6, 3); G.jerryCan(10.9, 16.1, 0.3); G.jerryCan(11.15, 16.4, -0.2);
   G.patch(9.6, 14.9, 4.2, 1.6, 'damp'); G.ruts(5.4, 12.3, 15.4, 13.9, 'damp');
   G.van(12.6, 5.2, 0.03, 'truckWhite'); G.tyres(9.2, 4.2, 3); G.tyres(8.4, 4.3, 2); G.woodPile(6.2, 8.4, HALF, 1.6);
-  G.van(13.6, 20.7, HALF + 0.04, 'truckWhite');                                           // (its moon shadow is the dark way from the first mark to the gap)
-  G.crates(13.4, 24.9, 0.1, 3, 'olive'); G.sacks(11.4, 25.1, 0.05, 3); G.handcart(11.6, 23.8, 0.4, 'sacks'); G.tyres(15.3, 22.6, 3);
+  G.crates(13.4, 24.9, 0.1, 3, 'olive'); G.sacks(11.4, 25.1, 0.05, 3); G.handcart(11.6, 23.8, 0.4, 'sacks'); G.tyres(13.7, 23.0, 3);
   G.drums(6.2, 5.0, 3); G.crates(7.3, 9.9, 0.2, 2, 'ply'); G.crates(13.9, 12.4, -0.1, 3, 'olive'); G.jerryCan(8.1, 18.3, 0.6);
   G.drumDown(7.4, 19.9, 0.4); G.blocks(14.6, 9.6, 0.2, 2); G.bush(5.7, 9.6, 1.1); G.bush(5.6, 17.4, 0.9);
   G.pickup(2.3, 20.9, HALF + 0.08, 'truckWhite');                                       // outside the wall, off the road: how the two came
@@ -160,9 +181,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- two containers end to end across the yard, and the gap between them ----
   grp('yard.containers');
-  G.container(17.2, 13.17, HALF, 'paintRust'); G.container(17.2, 21.83, HALF, 'paintBlue');
-  G.tyres(17.0, 25.4, 3); G.drums(17.6, 25.3, 2);                                       // (the strip between the container and the wall is shut)
-  G.drums(15.4, 11.0, 2); G.jerryCan(15.6, 20.2, 0.5);
+  G.container(17.2, 13.17, HALF, 'paintRust'); G.container(17.2, SOUTH_Z, HALF, 'paintBlue');
+  // a third, stood across the mouth of the gap a stride off (SCREEN: see WHY THE PIECES STAND WHERE THEY DO). Both lantern men look straight down the gap:
+  // without it their line ran the length of the gate yard, and a partner who will not walk a lit stretch a man has a line to never came up to the gap
+  G.container(SCREEN.x, SCREEN.z, HALF, 'paintGreen');
+  // (the strip between the south container's end and the yard wall is OPEN, two strides wide: the partner's way round to the far man — see PEN)
+  G.drums(15.4, 11.0, 2); G.jerryCan(12.7, 21.5, 0.5);
 
   // ---- the truck park: the trucks along the far wall under their lamp, the watch's camp round its lantern, the stub of old wall behind the far man ----
   grp('yard.park');
@@ -174,8 +198,25 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.charpoy(22.2, 13.4, 0.08); G.jerryCan(24.9, 14.2, 0.2); G.woodPile(25.6, 13.6, 0.3);
   G.van(27.7, 13.2, HALF - 0.04, 'truckWhite'); G.tyres(27.9, 16.6, 3); G.crates(27.8, 19.4, 0.15, 2, 'ply');
   G.yardWallZ(24.0, 17.95, 23.0, 'mud', [], 2.4); G.pier(24.0, 23.0); G.pier(24.0, 20.4); G.rubble(23.9, 23.9, 0.6, 7);
-  G.pickup(20.9, 21.4, HALF + 0.03, 'truckWhite', { load: 'sacks' });                // (shuts the open ground south of the lantern: the way round is the dark one)
+  // the old pen's south side: a wall from the south container to the stub. The near man's head swings, and on a real GPU no shadow in this yard reads
+  // dark to the partner (the moon's bounce): a way through the gap and down the container's side, a stride behind that man, was refused on every look
+  // south. Behind this wall the partner's way round (down the west side of the south container, round its end, along the yard wall, up the far side of
+  // the stub) has no line from the near man at all, whatever the light and wherever he looks
+  G.yardWallX(PEN.z, PEN.x0, 24.0, 'mud', [], 2.4);
   G.drums(27.2, 25.2, 3); G.tyres(22.6, 20.4, 2); G.sacks(22.9, 21.6, 0.3, 2); G.jerryCan(26.7, 23.9, 0.4); G.bush(28.3, 25.3, 1);
+
+  // ---- the ground between the pieces: wheel ruts where the trucks turn, gravel shed off the road, dust drifted against what stands, a few stones. Decals and
+  //      walk-over stones only (nothing a foot, a round or a line of sight meets), so the play is as it was. The maintainer, 10-22: "ground looks pretty flat"
+  grp('yard.ground');
+  G.ruts(5.6, 17.9, 11.0, 19.3, 'damp'); G.patch(7.4, 23.3, 3.2, 1.4, 'gravel', 0.2); G.patch(11.9, 22.7, 2.6, 1.8, 'dust', -0.3); G.patch(6.7, 17.5, 2.2, 1.2, 'damp', 0.4);
+  G.rubble(8.3, 21.7, 0.5, 5); G.patch(10.6, 8.6, 3.0, 1.6, 'dust', 0.15); G.patch(7.2, 11.4, 1.8, 1.1, 'damp', -0.3); G.rubble(14.9, 14.0, 0.4, 4);
+  G.patch(14.95, 20.9, 1.1, 3.4, 'gravel', 0.04); G.patch(16.4, 25.0, 3.2, 0.9, 'dust', 0.03); G.rubble(18.9, 25.0, 0.45, 5); G.patch(21.6, 24.3, 4.2, 1.1, 'gravel', -0.04);
+  G.patch(20.3, 14.3, 2.8, 1.6, 'dust', 0.3); G.ruts(19.0, 12.5, 26.4, 13.1, 'damp'); G.patch(21.4, 19.6, 2.4, 1.5, 'damp', -0.2); G.rubble(19.4, 20.9, 0.5, 5);
+  G.patch(26.2, 21.6, 1.9, 2.6, 'dust', 0.1); G.rubble(28.3, 22.3, 0.45, 5);
+  G.ruts(29.6, 17.5, 37.5, 18.3, 'damp'); G.patch(31.6, 16.1, 2.8, 1.8, 'dust', 0.3); G.patch(30.7, 21.3, 2.2, 1.4, 'gravel', -0.2); G.rubble(29.7, 19.2, 0.4, 4);
+  // (the verge outside the south wall: the ruts of whatever drives round the yard, and what the road sheds)
+  G.ruts(5.6, 26.98, 38.4, 26.92, 'dirt'); G.patch(12.2, 26.9, 4.6, 0.9, 'gravel', 0.02); G.patch(23.4, 27.2, 5.8, 0.8, 'gravel', -0.02); G.patch(31.0, 26.8, 3.4, 0.7, 'dirt', 0.03);
+  G.bush(9.4, 27.3, 0.9); G.bush(20.2, 26.9, 1.0); G.bush(27.6, 27.4, 0.8); G.bush(34.8, 27.0, 1.1); G.rubble(16.2, 27.0, 0.5, 5);
 
   // ---- the office court: the office with its pad, the lamp and the camera over its door, the fuel point, the far gate's lamp, the fuse box ----
   grp('walls.inner');
@@ -254,7 +295,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // THE FRAME (game/rails.ts). From the first step: the walk, the view, the aim, the knee. Each key is switched on by the step that teaches it and stays on.
     // `orders` = the squad's rows this night: his key on a man, on a thing to work, and anywhere else (the partner comes back). `rows` = the verbs the
     // interaction key offers: no row for the fuse box (the partner's work here), none for a lock, a body or a light plate.
-    rails: { allow: ['move', 'camera', 'zoom', 'aim'], orders: ['pairMark', 'work', 'fallIn'], rows: ['grab', 'question', 'choke', 'push', 'code', 'nocode', 'drive'] },
+    rails: { allow: ['move', 'camera', 'zoom', 'aim'], orders: ['pairMark', 'work', 'fallIn'], rows: ['grab', 'question', 'choke', 'push', 'pull', 'code', 'nocode', 'drive'] },
     steps: [
       // ---- the gate yard: he follows; a man on the word ----
       { id: 'crouch', line: '[C]: get low. Your partner copies you', allow: ['crouch'], done: any(flag('crouch'), down(1)) },
@@ -268,8 +309,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'word', line: '[F]: your word. He strikes', after: { word: 'He strikes, and comes back to you' }, allow: ['word'], at: chest(TP.A), atMan: 'pickup', done: down(1) },
       // ---- the truck park: two men on one beat ----
       // (he falls in again by himself when his man is down — pairup.ts `rejoin` — so no line asks for it)
-      { id: 'gap', line: 'Lead him to the gap between the containers', cue: 'park', checkpoint: 'the gate yard', done: any(all(near(TP.gap, 1.0), { is: 'mate', by: 5 }), down(2)), hold: 0.3, at: mark(TP.gap) },
-      { id: 'far', line: '[B] on the far man: your partner takes him', at: chest(TP.C), atMan: 'far', done: any(did(`order:pairMark@foe:${FAR_MAN}`), down(2)),
+      { id: 'gap', line: 'Lead him to the gap between the containers', cue: 'park', checkpoint: 'the gate yard', done: any(near(TP.gap, 1.0), down(2)), hold: 0.3, at: mark(TP.gap) },   // (not on where the partner is: he stands back out of the two men's line by his own rule, and a step that waited on him was a dead end the day he judged the way lit)
+      // (the word is shut from here on: this beat's signal is the player's own grab, and a second key lit by the partner asked 'what is F here' again. A
+      //  press of it with the near man looking was 'hold', then 'going anyway' in his sight)
+      { id: 'far', line: '[B] on the far man: your partner takes him', deny: ['word'], at: chest(TP.C), atMan: 'far', done: any(did(`order:pairMark@foe:${FAR_MAN}`), down(2)),
         explain: { title: 'Two men, one beat', text: 'These two see each other: drop one alone and the other shouts.\nGive your partner the far one. Then get behind the near one yourself. Your grab is his signal.' } },
       { id: 'near', line: 'Get behind the near man. Wait for "set"', allow: ['use'], at: mark(TP.behindB), done: any(pair('set'), pair('go'), flag('holding'), down(2)) },
       { id: 'hands', line: '[Space] at his back: your grab is the signal', at: chest(TP.B), atMan: 'near', done: any(all(flag('holding'), down(2)), down(3)) },
@@ -280,7 +323,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // (the last man is the only way to the code: until he has given it the right button is shut, and so are the squad's key and the word — a taught "[B]
       //  on the man, then [F]" would put him out through the partner. The squad's key comes back for the fuse box, and is shut again while the dark is
       //  walked: a second order on the box would put the mains back on)
-      { id: 'past', line: 'On, past the wall', cue: 'yard', deny: ['alt', 'order', 'word'], checkpoint: 'the truck park', done: any(all(near(TP.past, 1.4), { is: 'mate', by: 4.5 }), flag('holding'), down(4)), hold: 0.3, at: mark(TP.past) },
+      { id: 'past', line: 'On, past the wall', cue: 'yard', deny: ['alt', 'order', 'word'], checkpoint: 'the truck park', done: any(near(TP.past, 1.4), flag('holding'), down(4)), hold: 0.3, at: mark(TP.past) },   // (nor this one on where the partner is: the last man has a line down this strip, and the partner stands a few strides back out of it)
       { id: 'hold', line: 'He knows the door code. [Space] at his back', allow: ['use'], at: chest(TP.D), atMan: 'gate', done: any(flag('holding'), did('chron:codeLearned'), down(4)) },
       { id: 'ask', line: '[Space]: ask him the code', done: any(did('chron:codeLearned'), down(4)) },
       { id: 'box', line: 'Your hands are full. [B] on the fuse box', after: { line: 'He goes for the fuse box. Watch the lamps', on: ['work'] }, allow: ['order'], at: [TP.box[0], 1.35, TP.box[2]], done: flag('dark'),

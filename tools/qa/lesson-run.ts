@@ -17,6 +17,8 @@
 //                  page (a player's tape, 10-13: the scripted run went by unseen where he was spotted). One ray up the moon's own direction from his chest and his
 //                  head; unshadowed it adds the moon's direct light (0.54 on the meter, the page's 0.56 less its bounce). A script asks for it with `mode.moon`
 //     --floor N    his meter never under N (0‥1): the bounce neither estimate has — a moon shadow in the open yard read 0.16 on the page, the walled wood store 0 to 0.06
+//                  (and every other meter with it — a unit's own, a body's: a partner reads the light on himself, and on the page that is the renderer's.
+//                  Give it what a GPU showed)
 //     --hard       the level's name set to hard before the game is stood up (game/difficulty.ts setDifficulty: what the page's ?difficulty=hard does on a lesson)
 //   exit 0 = every step went by on its deed and the run ended · 1 = a step did not / moved on by itself / the run did not end · 2 = no such level or script
 //
@@ -28,7 +30,7 @@
 //   idleOk?: string[]                          step ids that may already be true when they come up (said why in the script)
 //   fightOk?: string[]                         step ids a fight on the floor may finish before the player does (a line inside a live fight: the room can fall
 //                                              while it is up, or before it comes up; said why in the script). Such a step is logged as gone by with the fight
-//   mode?: { unseen?: boolean; god?: boolean; moon?: boolean }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god)
+//   mode?: { unseen?: boolean; god?: boolean; moon?: boolean; floor?: number }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god; --floor N overrides floor)
 //   raises?: Record<string, string>   words raised for this lesson's run alone on the frozen stand, put back after it (a switch the level's one way on rides on)
 //                                       (PT_DESTR: '1' among them raises the destruction's one switch for the run, which no stand word reaches)
 import { readFileSync, existsSync } from 'node:fs';
@@ -84,8 +86,9 @@ if (import.meta.main) {
     console.log(`${name}: a tutorial mission, run as the page opens it (the shipped stand)`);
     const r = Bun.spawnSync(['bun', 'run', import.meta.path, ...argv], { env: { ...process.env, TPS_PROFILE: 'shipped' }, stdout: 'inherit', stderr: 'inherit' }); process.exit(r.exitCode ?? 1);
   }
+  const floorArg = (): number => { const v = Number(flag('--floor')); if (!(v >= 0 && v <= 1)) { console.error(`lesson-run: --floor wants a number from 0 to 1 (0 = no floor), got '${flag('--floor')}'`); process.exit(2); } return v; };
   if (!name) { console.error('usage: bun run tools/qa/lesson-run.ts <name> [--seed N] [--cap SECS] [--plain] [--unseen] [--god] [--verbose] [--digest] [--nolesson]'); process.exit(2); }
-  const r = await runLesson(name.replace(/\.json$/, ''), { seed: Number(flag('--seed') ?? 1), unseen: has('--unseen'), god: has('--god'), plain: has('--plain'), verbose: has('--verbose'), digest: has('--digest'), lesson: !has('--nolesson'), moon: has('--moon'), hard: has('--hard'), floor: Number(flag('--floor') ?? 0) || 0 });
+  const r = await runLesson(name.replace(/\.json$/, ''), { seed: Number(flag('--seed') ?? 1), unseen: has('--unseen'), god: has('--god'), plain: has('--plain'), verbose: has('--verbose'), digest: has('--digest'), lesson: !has('--nolesson'), moon: has('--moon'), hard: has('--hard'), floor: has('--floor') ? floorArg() : undefined });
   for (const l of r.lines) console.log(l);
   console.log(r.code === 0 ? `\n=== lesson-run ${name}: ALL PASS ===` : r.code === 2 ? `\n=== lesson-run ${name}: NO VERDICT (${r.why}) ===` : `\n=== lesson-run ${name}: FAIL — ${r.why} ===`);
   process.exit(r.code);
@@ -116,6 +119,7 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   const script = await import(scriptFile);
   if (script.mode && !o.plain) o = { ...o, unseen: o.unseen || !!script.mode.unseen, god: o.god || !!script.mode.god };
   if (script.mode?.moon) o = { ...o, moon: true };
+  if (script.mode?.floor && o.floor === undefined) o = { ...o, floor: script.mode.floor };   // (--floor 0 on the command line = the run as it was, no floor)
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   // A TUTORIAL MISSION IS THE PAGE'S (a lesson with a `rails` record — src/game/rails.ts): it teaches the rules the page opens with, the frame among them, and
@@ -157,6 +161,15 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   const moon = o.moon ? g.engine.lights.lights.find((l: any) => l.kind === 2 && l.enabled && l.intensity > 0) : null;
   const moonAt = (P: Vec3): number => { if (!moon) return 0; const d = moon.dir, c = moon.color;
     return g.col.segmentBlocked(P, [P[0] - d[0] * 60, P[1] - d[1] * 60, P[2] - d[2] * 60]) ? 0 : (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * moon.intensity * Math.max(Math.abs(d[0]), Math.abs(d[1]), Math.abs(d[2])); };
+  // --floor reaches every other meter too: each unit's own, a body's, a held man's (every probe key but the player's, which is fed below, and a search
+  // light's). On the page those are the renderer's, bounce and all (guards.ts meterOf), and a partner reads his own before he sets off for a man's back
+  // (sneak.ts stalkAmbient); here they were the CPU's estimate, with no bounce and no moon in it — a mission whose partner hung back on a real GPU (lit,
+  // and a man had a line) went by on every seed. The probe's answer is stood in for: the estimate where it was asked about, the moon as the player's
+  // meter has it, never under the floor. (The same shape as hour-lib.ts installSkyMeter, which answers with the sky's own light for the hour checks.)
+  if (o.floor) { const asked = new Map<string, Vec3>(), q0 = g.lightQuery.bind(g), a0 = g.lightAt.bind(g), Ef = g.tune.visFloor * Math.exp(o.floor / g.tune.visSlope);
+    const mine = (k: string) => !k.startsWith('player') && !k.startsWith('srch:');
+    g.lightQuery = (k: string, p: Vec3, skip?: number) => { if (mine(k)) asked.set(k, [p[0], p[1], p[2]]); q0(k, p, skip); };
+    g.lightAt = (k: string) => { const p = mine(k) ? asked.get(k) : undefined; return p ? Math.max(Ef, lightEstimateAt(g, p) + moonAt(p)) : a0(k); }; }
   const cap = Number(flag('--cap') ?? 600);
   function step(n = 1) {
     for (let i = 0; i < n; i++) {
