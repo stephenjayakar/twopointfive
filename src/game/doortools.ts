@@ -102,6 +102,7 @@ import { SAMSTUN, dazzlePlayer } from './samstun';
 import { rearHolds, rearLast, rearWatcher } from './rearwatch';
 import { gunFirst, gunTurn, gunBefore } from './gunroles';   // (called inside firstIn / enter only)
 import { OWNCHARGE } from './owncharge';   // (a leaf: the player's own charges' one switch)
+import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { PICTURE, PICTURE_STATS, anyIdea, safestSets } from './picture';
 
 export const DOORTOOLS = {
@@ -562,7 +563,7 @@ const flat = v3.distXZ, yawTo = v3.yawTo;
  *  every post out along its wall is behind the leaf, and the floor that sees past a leaf stood square is nearer the door's own line and deep */
 const LEAF_EDGE = 0.1, LEAF_FROM = 1.45, LEAF_STEP = 0.1, LEAF_COST = 4, LEAF_POSTS = [[0.2, 2.4], [0.5, 2.4]];
 /** who set a charge the player put on by hand (SetCharge.by), and how far a step may take him off it before it is broken off (the wall charge's own) */
-const SAM_BY = 'Sam', SAM_SHIFT = 0.35;
+const SAM_SHIFT = 0.35;
 
 export type DoorToolKind = 'openClear' | 'bangClear' | 'charge' | 'outside' | 'threshold';
 /** the page of the command menu the tools are on (orders.ts OrderDef.page), and the id of the row that opens it */
@@ -1404,11 +1405,18 @@ export class DoorTools {
    *  row 'set a charge · N left' — the count is the squad's own bag (kit.ts kitPool: his card's among it) */
   samRows(it: Interactable, d: Door, verbs: Interactable[], free: boolean, row: (base: Interactable, verb: Verb, text: string, hints?: string) => Interactable) {
     if (!OWNCHARGE.on) return;
-    const F = DOORTOOLS.blowKey.replace('Key', ''), c = this.chargeOn(d);
-    if (c) { const w = `${this.closeWords(c)} · charge set · ${F} blows it`; it.line1 += w; for (const v of verbs) v.line1 += w; return; }   // (the warning FIRST: the door's header is one line the HUD cuts at its end — what goes is the hint, never who is in the blast)
+    const c = this.chargeOn(d), F = blowKeyWord(!OWNBLOW.on, DOORTOOLS.blowKey.replace('Key', ''));   // (ownblow.ts: one his own hands set is his own actions' to blow, and the words say so)
+    if (c) { const w = `${this.closeWords(c)} · charge set${blowTail(this.keyIs(c), DOORTOOLS.blowKey.replace('Key', ''))}`; it.line1 += w; for (const v of verbs) v.line1 += w; return; }   // (the warning FIRST: the door's header is one line the HUD cuts at its end — what goes is the hint, never who is in the blast)
     if (!free || this.samFace(d) === null) return;
     verbs.push(row(it, 'charge', `set a charge · ${this.charges} left`, `${F}  blows it once set`));
   }
+  /** ownblow.ts: IS THIS SET CHARGE THE SQUAD'S KEY'S to blow — every one with the switch off; with it on, one the squad set, or his own while the squad
+   *  works its door (stood off behind it, stacked on it: the key is their word and it goes with them). The key's press, the words and the floor plan ask */
+  keyIs(c: SetCharge): boolean { return !OWNBLOW.on || c.by !== SAM_BY || this.ops.some(o => o.door === c.door) || this.stacksOf(this.g.orders.men()).some(x => x.stack === c.door); }
+  /** ownblow.ts: the nearest charge his own hands set that is on no word still to go — the one his own row 'blow the charge' is for (null: none) */
+  samSet(): SetCharge | null { return this.nearest(c => c.by === SAM_BY && !this.onPendingWord(c)); }
+  /** …and where it is, in the row's words */
+  samWhere(c: SetCharge): string { return `the ${doorWords(c.door)}`; }
   /** the charge going on under his hands: where on the leaf, and the face's normal (handwork.ts samWork plants him by it; `at` is his to move) */
   get samJob(): { p: Vec3; n: Vec3; at: Vec3 } | null {
     const s = this.g.player.charging; if (!s) return null;
@@ -1444,7 +1452,7 @@ export class DoorTools {
     if (!this.take('charge')) { g.msg('no charges left'); return; }
     this.samSpent++;
     this.set.push({ door: d, side: s.side, t: g.time, by: SAM_BY }); g.audio.play('lockPick', d.pos, 0.6);
-    g.msg(`charge set on the ${doorWords(d)} — ${K.blowKey.replace('Key', '')} blows it`);
+    g.msg(`charge set on the ${doorWords(d)}${blowTail(!OWNBLOW.on, K.blowKey.replace('Key', ''), ' — ')}`);
     this.note(`charge set by hand on ${d.def.name}`);
   }
   /** the charges that stand set: drawn, and one whose door has come open (or off its hinges) is off it — back in the count */
@@ -1804,7 +1812,7 @@ export class DoorTools {
   }
   private pairWord(men: Guard[]): boolean {
     if (!this.wordOnHold(men)) return false;
-    this.wordKeyT = this.g.time; for (const c of this.set.filter(c => !this.onPendingWord(c))) this.trigger(c); return true;
+    this.wordKeyT = this.g.time; for (const c of this.set.filter(c => !this.onPendingWord(c) && this.keyIs(c))) this.trigger(c); return true;   // (ownblow.ts keyIs: not a charge of his own on a door they are not at)
   }
   private goMen(men: Guard[], only?: { stack: Door; men: Guard[] }[]): string | null {
     const g = this.g;
@@ -1996,7 +2004,7 @@ export class DoorTools {
     this.sync();
     const K = DOORTOOLS, g = this.g, S = g.orders, NB = g.nightBreach, key = K.blowKey;
     if (!input.hit(key)) return;
-    if (g.player.down) { if (this.set.length) input.pressed.delete(key); return; }   // (Sam down: nothing goes, and a set charge still keeps the press from the drill)
+    if (g.player.down) { if (this.set.some(c => this.keyIs(c))) input.pressed.delete(key); return; }   // (Sam down: nothing goes, and a set charge still keeps the press from the drill)
     // (with a menu up that shows the 'go' row, the key IS that row, as a digit is its own: the word goes to who the row names — the one man a menu opened on
     // a teammate is for — or, greyed, is refused in the row's words; either way the menu is away and the press is neither the trigger's nor the drill's)
     const four = K.wordOnKey && S.big, M = four ? S.menu : null, row = M ? M.rows.findIndex(d => d.hotKey === key) : -1;   // ('go' — or, on the page of a held threshold, its own word row)
@@ -2011,7 +2019,7 @@ export class DoorTools {
       // menu that is up is for (one opened on a teammate: him), and AGAIN — outside `wordTap` of the first — for a word held for men who ran from a grenade
       if (K.wordSmall) { const men = S.menu ? S.recipients(S.menu.target) : this.wordMen();
         if (this.stackWaits(men).length || (K.fragHold && g.time - this.wordKeyT >= K.wordTap && this.fragHeld(men).length > 0)) { input.pressed.delete(key); const p = g.player.char.pos; S.close();
-          if (S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men }) === null) { this.wordKeyT = g.time; for (const c of this.set.filter(c => !this.onPendingWord(c))) this.trigger(c); }
+          if (S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men }) === null) { this.wordKeyT = g.time; for (const c of this.set.filter(c => !this.onPendingWord(c) && this.keyIs(c))) this.trigger(c); }
           return; } }
     }
     const men = four ? (row >= 0 ? S.recipients(M!.target) : this.wordMen()) : [];
@@ -2024,9 +2032,10 @@ export class DoorTools {
       return;
     }
     if (four && this.wordEarly(S.recipients())) { input.pressed.delete(key); S.close(); return; }
-    if (this.set.length) {
+    const mine = this.set.filter(c => this.keyIs(c));   // (ownblow.ts: a charge of his own that the squad is not at is not this key's, and does not stop the press here)
+    if (mine.length) {
       input.pressed.delete(key);
-      const free = this.set.filter(c => !this.onPendingWord(c)); if (!free.length) return;
+      const free = mine.filter(c => !this.onPendingWord(c)); if (!free.length) return;
       const sam = g.player.char.pos; this.trigger(free.sort((a, b) => flat(a.door.frameCentre, sam) - flat(b.door.frameCentre, sam))[0]);
       return;
     }
@@ -2042,7 +2051,7 @@ export class DoorTools {
     const also = this.linked.includes(c.door) ? this.set.filter(o => o !== c && this.linked.includes(o.door)) : [];
     this.blow(c); for (const o of also) this.blow(o);
   }
-  private nearest(): SetCharge | null { const p = this.g.player.char.pos; return [...this.set].sort((a, b) => flat(a.door.frameCentre, p) - flat(b.door.frameCentre, p))[0] ?? null; }
+  private nearest(of: (c: SetCharge) => boolean = () => true): SetCharge | null { const p = this.g.player.char.pos; return this.set.filter(of).sort((a, b) => flat(a.door.frameCentre, p) - flat(b.door.frameCentre, p))[0] ?? null; }
   /** Game.update, right before orders.tick() poses the men */
   tick() {
     const g = this.g, S = g.orders;
@@ -3689,7 +3698,7 @@ export class DoorTools {
     const out = [`charges ${this.charges} · bangs ${this.bangs}`], S = this.g.orders, F = DOORTOOLS.blowKey.replace('Key', '');
     if (FRAG.on && FRAG.squad > 0) out.push(`frags ${this.frags}`);
     const word = DOORTOOLS.wordOnKey && S.big && this.waitingAny(this.wordMen()).length > 0;
-    for (const c of this.set) out.push(`charge set · ${doorWords(c.door)}${this.onPendingWord(c) ? ' — on the word' : word ? '' : ` — ${F} blows it`}${OWNCHARGE.on ? this.closeWords(c).replace('too close:', 'TOO CLOSE:').replace('behind the door:', 'BEHIND THE DOOR:') : ''}`);   // (who it would catch, where a long line wraps: the door's own header is cut short)
+    for (const c of this.set) out.push(`charge set · ${doorWords(c.door)}${this.onPendingWord(c) ? ' — on the word' : word ? '' : blowTail(this.keyIs(c), F, ' — ')}${OWNCHARGE.on ? this.closeWords(c).replace('too close:', 'TOO CLOSE:').replace('behind the door:', 'BEHIND THE DOOR:') : ''}`);   // (who it would catch, where a long line wraps: the door's own header is cut short)
     for (const op of this.ops) if (op.onWord && op.phase === 'ready') out.push(`${S.whoWords(op.men)} ready on your word · ${doorWords(op.door)}`);   // (what matters first: the panel clips a long line's tail)
     for (const op of this.ops) if (op.thr?.hold && op.phase === 'thr') out.push(`${S.whoWords(op.men)} ${op.thr.told ? 'holding on your word' : 'working the threshold'} · ${doorWords(op.door)}${S.big ? '' : ` — ${F} goes`}`);   // (the four's key line is the word's own: wordNote)
     for (const w of this.words) if (isNaN(w.go1)) { const late = this.ops.filter(o => o.word === w && o.hold < 1); if (late.length) out.push(`word given · waiting for ${[...new Set(late.map(o => S.whoWords(o.men.filter(m => m.state !== 'dead'))))].join(' + ')}`); }

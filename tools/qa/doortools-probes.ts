@@ -29,6 +29,7 @@
 //                       The quiet floor's numbers are printed as information (there the plain door wins by surprise: that is the point of having three tools)
 import { standUp, ROOT } from './headless.ts';
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
+const { OWNBLOW } = await import(`${ROOT}/src/game/ownblow.ts`);
 const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
@@ -63,6 +64,7 @@ export async function rig(seed: number, o: { stage?: 'rc' | 'nb' | false; door?:
   const sd0 = process.env.TPS_SQUADDEAL; if (o.deal === false) process.env.TPS_SQUADDEAL = '0';
   const W: any = await standUp().finally(() => { if (o.deal !== false) return; if (sd0 === undefined) delete process.env.TPS_SQUADDEAL; else process.env.TPS_SQUADDEAL = sd0; }); const game = W.game, input = W.input; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
   game.godMode = true;
+  OWNBLOW.on = false;   // (ownblow.ts, on on the shipped stand: these lines press the squad's key on a charge set by hand, as they were written; ownblow-check holds the row that took its place and raises the switch itself. The runner puts the table back after the probe)
   const said: string[] = []; { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(t); msg(t); }; }
   const stage = o.stage ?? 'rc';
   const why = stage === 'rc' ? RC.start(seed) : stage === 'nb' ? NB.start() : null;

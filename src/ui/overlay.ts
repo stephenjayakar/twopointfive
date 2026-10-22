@@ -17,7 +17,7 @@ import { previewTooClose } from '../game/he40';
 import { gunShut, throwRest } from '../game/player';
 import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 import { HANDSLOT } from '../game/handslot';
-import { HANDRING } from '../game/handring';
+import { HANDRING, EMPTY_WORD, EMPTY_SHOW_SECS } from '../game/handring';
 /** the reticle's ONE word: the 40 mm's arc is too short to arm (the plain 'RMB  OCP' / 'RMB  RING' / 'RMB  40 MM' words went on the 10-11 play note: "we can remove
  *  the RMB overlay on the cursor" — what the right button holds is read on the kit column's rows) */
 const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
@@ -286,7 +286,7 @@ export class Overlay implements HudLike {
       el.style.background = it.kind === 'door' ? 'rgba(150,190,230,0.5)' : it.kind === 'body' ? 'rgba(230,140,120,0.6)' : it.kind === 'objective' ? 'rgba(var(--h-acc-rgb),0.8)' : it.off ? 'rgba(120,140,160,0.45)' : 'rgba(255,240,180,0.55)';
     });
     // the ring on the highlighted row's thing (what it offers is listed in the interaction panel, below — the ring only says WHICH thing Space means; the selector's cancel row has no thing)
-    const hv = game.hover?.kind === 'cancel' ? null : game.hover; const pl = game.player;
+    const hv = game.hover?.kind === 'cancel' || game.hover?.kind === 'charge' ? null : game.hover; const pl = game.player;   // (charge: ownblow.ts's row is on his list wherever he stands — it is no thing under the cursor, and the gun's ring stays his)
     const gunOut = !!pl.gunInHand() && !pl.down;   // pistol OR the FN2000 actually in the hands (R5's rule), not the pistol's slot alone
     const model = game.tune.aimModel && gunOut && !pl.sprinting && !pl.dragging;   // the aim model's ring: at the snapped thing, or round the bare cursor's point when nothing is near — sized to his cone (aim.ts playerAim) at that distance
     let styled = false;
@@ -477,6 +477,7 @@ export class Overlay implements HudLike {
     const thing = (it: Interactable) => `${it.kind}:${it.door?.def.name ?? it.guard?.callsign ?? ''}`;
     const cap = MAX_ROWS + (list.some(it => it.kind === 'cam') ? 1 : 0);   // (stickycam.ts: a stuck camera's 'take it back' is one row past every row the list had before it — it is always drawn)
     const rows = list.slice(0, cap).map((it, i): InteractRow => { const d = dist(it); return { kind: it.kind, label: it.line1, opts: it.kind === 'cancel' ? [] : parseOpts(it.line2), inReach: it.inReach, off: it.off, dist: it.inReach || it.kind === 'light' || it.kind === 'cancel' ? undefined : d, progress: it.progress, cont: i > 0 && it.kind !== 'cancel' && thing(list[i - 1]) === thing(it) }; });
+    if (HANDRING.empty && !list.length && !game.puppet) { const m = game.messages[game.messages.length - 1]; if (m?.text === EMPTY_WORD && game.time >= m.t && game.time - m.t < EMPTY_SHOW_SECS) rows.push({ kind: 'wall', label: EMPTY_WORD, opts: [], inReach: false, off: false }); }   // (handring.ts `empty`: the key tapped with nothing in reach — said here for a moment, where his rows come up)
     rows.push(...sq.status);   // … and otherwise the squad's block under the Space rows: who the orders go to, what each man is doing (nothing without a squad)
     const primary = hv ? list.indexOf(hv) : -1;
     return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.listOpen };   // (up as a ring — cmdring.ts CMDRING.hands — the panel's list is the list at rest)

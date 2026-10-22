@@ -86,7 +86,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     settled(B, A, 0.3, 3);
     B.wait(REACT);
     B.go([22.75, 0, 19.0], 8, { near: 0.25 });
-    B.say(`  at the wall's end: ${A.callsign} at ${at(A.char.pos)}, facing ${A.char.bodyYaw.toFixed(2)}, ${A.state}, ${flat(B.pos(), A.char.pos).toFixed(1)} m off`);
+    B.say(`  at the wall's end: ${A.callsign} at ${at(A.char.pos)}, facing ${A.char.bodyYaw.toFixed(2)}, his light pointing ${A.char.aimYaw.toFixed(2)}, ${A.state}, ${flat(B.pos(), A.char.pos).toFixed(1)} m off`);
     if (!closeIn(B, A, null)) B.fail(`could not get behind the first man (${flat(B.pos(), A.char.pos).toFixed(2)} m off, he stands at ${at(A.char.pos)}, ${A.state})`);
     unseen(B, n0, A, 'coming up behind him');
     if (!tap(B, 'guard', 'grab', [A.char.pos[0], 1.35, A.char.pos[2]])) B.fail('no grab row behind the first man');

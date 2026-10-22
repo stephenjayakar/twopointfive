@@ -23,7 +23,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
     await page.addInitScript(k => { try { localStorage.setItem('twopointsix.kit', k); } catch { } }, KIT);
-    await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&${q}`);
+    await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&ownblow=0&${q}`);
     const fatal = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return document.getElementById('fatal')?.textContent || ''; });
     if (fatal) errors.push('fatal: ' + fatal);
     // (the software adapter draws a frame in seconds: the game is STEPPED with the renderer stubbed to the world's upload, and a still draws a few real frames first)

@@ -1406,10 +1406,12 @@ export class CharacterAnimator {
   dazzle: { from: Vec3; k: number } | null = null;
   /** MOVES state: recoil (decaying sums the rounds add to), the flinch / hit / toss clocks with their directions (model space), the dazzle's eased weight */
   private mvs = { back: 0, climb: 0, yaw: 0, rock: 0, sho: 0, head: 0, n: 0,
-    flT: -1, flD: [0, 0, 1] as Vec3, stT: -1, stD: [0, 0, 1] as Vec3, htT: -1, htD: [0, 0, -1] as Vec3, htSide: 1, tsT: -1, tsRel: TOSS_RELEASE, armL: 0,
+    flT: -1, flK: 1, flKTo: 1, flSoft: false, flD: [0, 0, 1] as Vec3, stT: -1, stD: [0, 0, 1] as Vec3, htT: -1, htD: [0, 0, -1] as Vec3, htSide: 1, tsT: -1, tsRel: TOSS_RELEASE, armL: 0,
     dz: new Spring(), dzD: [0, 0, 1] as Vec3, dzT: 0, dzSd: 0, glide: new Spring(), hipY: NaN, cf: new Spring(), cfT: 0, hu: new Spring(), huT: 0, sk: new Spring() };
   /** a MOVES reaction has the trunk and head this frame (the life layer, the tells and the gaze stabiliser stand aside as they do for the old one-shots) */
   private get mvBusy() { const m = this.mvs; return m.flT >= 0 || m.stT >= 0 || m.htT >= 0 || m.dz.x > 0 || m.cf.x > 0; }
+  /** …that also has his ARMS: all of them but a soft duck (a round going close: both hands stay where they are, so the hand's errand goes on under it) */
+  private get mvHands() { const m = this.mvs; return (m.flT >= 0 && !m.flSoft) || m.stT >= 0 || m.htT >= 0 || m.dz.x > 0 || m.cf.x > 0; }
   /** MOVES (second pass, inputs — nothing reads them with the pass off). `reloadBack`: the long gun in his hands is a bullpup (the magazine BEHIND the grip: the
    *  FN2000) — where the support hand goes for it. `bound`: an unarmed figure kept down — 1 = wrists tied behind the back (a hostage), 2 = hands on the head (told
    *  to stay down). `clutch`: 0‥1, the support hand pressed to the body (a man knocked about and still on his feet). `dip`: 0‥1, a friend's back is in front of the
@@ -1703,14 +1705,18 @@ export class CharacterAnimator {
   /** MOVES: rounds going past — a DUCK away from where they come from (`toward`: world direction from him to the source; null = his front): head down and turned
    *  off it, trunk folded over the gun, knees soft; both hands stay on the weapon. Big and slow for an untrained man, a dip of the head for a trained one.
    *  With the pass off this is the old flinch (the Hit_Chest twitch). */
-  flinchFrom(toward: Vec3 | null) {
-    if (!mvOn('flinch')) { this.hitT = 0; return; }
+  flinchFrom(toward: Vec3 | null, k = 1, soft = false) {
+    if (!mvOn('flinch')) { if (!soft) this.hitT = 0; return; }   // (a soft duck is nothing without the pass: the old clip is a hit reaction, and every round would start it again)
     const m = this.mvs, D = lerp(MV.flinch.dur[0], MV.flinch.dur[1], clamp(this.trained, 0, 1));
+    // `k`: how much of the duck this round is worth, `soft`: it leaves the hand's errand alone (game/flinch.ts). A nearer round while one shows deepens it — eased, never a jump — and a farther one does not lift him; one hard start makes the whole duck hard
+    if (m.flT >= 0) { m.flKTo = Math.max(m.flKTo, k); if (!soft) m.flSoft = false; }
     if (m.flT >= 0 && m.flT < 0.34 * D) return;   // (already down: a burst is one duck)
     // re-startled on the way back up: straight back down from where he is — the clock goes to the point on the way DOWN that shows what he shows now, and the side he ducked to stays his
     if (m.flT >= 0) { m.flT = 0.14 * D * clamp(curve(m.flT / D, MV_FLINCH_ENV), 0, 1); return; }
-    m.flD = toward ? this.flatModel(toward, [0, 0, 1]) : [0, 0, 1]; m.flT = 0;
+    m.flD = toward ? this.flatModel(toward, [0, 0, 1]) : [0, 0, 1]; m.flT = 0; m.flK = m.flKTo = k; m.flSoft = soft;
   }
+  /** the duck at a round is showing (0 = not, else how much of the whole untrained duck: its envelope × his training's share × what the round was worth) */
+  get flinchShown(): number { const m = this.mvs, T = clamp(this.trained, 0, 1); return m.flT >= 0 ? clamp(curve(m.flT / lerp(MV.flinch.dur[0], MV.flinch.dur[1], T), MV_FLINCH_ENV), 0, 1) * lerp(MV.flinch.amp[0], MV.flinch.amp[1], T) * m.flK : 0; }
   /** MOVES: the START of a man who has just seen what he did not expect (`toward`: world direction from him to it; null = his front) — the jolt back off it,
    *  the head snapped round to it, the arms flung out from his sides (MV_STARTLE). One at a time: a second call while the first still shows is the same start.
    *  With the pass off this is the old flinch (the Hit_Chest twitch). Presentation only: what it buys the man who caused it is the caller's (game/startle.ts). */
@@ -2218,7 +2224,7 @@ export class CharacterAnimator {
       this.tellT += dt; if (this.tellT > TELL_DUR[this.tellK]) { this.tellT = -1; this.tellShown = 0; }
     }
     if (this.wk.last || this.sw.t >= 0 || this.rx.left > 0 || this.rx.w.x > 0.003) {   // handwork (handwork.ts): the swap (right arm), the work hands, the radio hand (left) — each stood down, eased, by whatever has the arms
-      const taken = wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || wHl > 0.003 || kt >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.mvBusy || this.mvs.tsT >= 0 || wSt * wl > 0.003;
+      const taken = wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || wHl > 0.003 || kt >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.mvHands || this.mvs.tsT >= 0 || wSt * wl > 0.003;
       const rifleUp = this.longGun && this.upperW.aim > 0.3;   // (a shouldered long gun keeps both hands)
       if (this.sw.t >= 0) this.swapLayer(dt, taken, y, -p * 0.35);
       this.workLayer(dt, !taken && !rifleUp, armed, y, -p * 0.35);
@@ -2235,7 +2241,7 @@ export class CharacterAnimator {
     if (this.stealth || this.sp) this.stealthLayer(dt, wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || wHl > 0.003 || kt >= 0 || this.throwT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.hitT >= 0 || this.strikeT >= 0 || this.bw !== null || this.tk !== null || this.clutch > 0 || this.bound !== 0 || this.mvBusy || this.mvs.tsT >= 0 || this.mvs.armL > 0 || wSt * wl > 0.003 || wWallArms > 0.003 || this.longGun || wLg > 0.003 || this.kit !== null || !!this.nv?.hand || !!this.act || !!this.wound || !!this.dazzle || this.wk.fed || this.wk.shown > 0.003 || this.dp.wL.x > 0.003 || this.dp.wR.x > 0.003 || this.rx.w.x > 0.003 || this.upperW.relaxed + this.upperW.aim + this.upperW.torch + wCarry > 0.003, crouchPose, crouchPose > 0.001 ? this.crWalk / crouchPose : 0, y, -p * 0.35);   // STEALTH POSES (stealthpose.ts): Sam's hands-empty crouch — over the crouch and the close-in carriage, under the ready tell; out, eased, for anything else that has his arms
     if (this.bw) this.blowLegs(this.bw);   // (a takedown's own move stands him into the man: the lunge's rear foot drawn in, the knees near straight)
     if (this.ready || this.readyW > 0 || this.rcT > 0) {   // the ready pose (Sam in an open hands-on window): over the carries and the aim clip — 'grabGun' takes the support hand OFF a pistol that is up, so the aim does not veto it — under the one-shots below; stood down, eased, by whatever has the arms: a hold either way, lock work, the kick, a throw, the strike itself, a flinch, a reload, a signal, a tell, a MOVES reaction or toss
-      const held = wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || kt >= 0 || this.throwT >= 0 || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.mvBusy || this.mvs.tsT >= 0;   // (what has the arms, the blow apart)
+      const held = wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || kt >= 0 || this.throwT >= 0 || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.mvHands || this.mvs.tsT >= 0;   // (what has the arms, the blow apart)
       const busy = held || this.strikeT >= 0 || this.bw !== null, want = this.ready && !busy ? 1 : 0;
       if (this.ready) { this.readyK = this.ready; this.rdAt = this.readyAt; }
       this.readyW = Math.abs(want - this.readyW) < 0.01 ? want : this.readyW + (want - this.readyW) * Math.min(1, dt * (want ? 10 : busy ? 8 : 8 / (1 + READY_UP.slow * this.rd[RD.up])));   // (READY_UP: a hand that went up has further to come down when he steps out of reach — 8 unless fed, and 8 when a move takes the arms: the grab's own clocks are what they were)
@@ -2245,7 +2251,7 @@ export class CharacterAnimator {
       if (this.readyW > 0.003 || this.rcT > 0) this.readyLayer(this.readyW, this.readyK, want > 0, dt, y, -p * 0.35); else { this.readyShown = this.reachShown = 0; this.rdLive = false; if (!this.ready) this.rdAt = null; }
     }
     if (this.kit) {   // KIT: the right hand's errand between what was in it and what will be — over the carries, the aim and the close-in poses; dropped by whatever else takes the arms (a body in both hands among them: hands.ts); NOT by the wall hold — its arms are the pose the errand starts from and ends on
-      if (this.holdPose || this.heldPose || this.haul || this.lockpick || kt >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.mvBusy || this.mvs.tsT >= 0 || this.act || this.wound) this.kitCancel();
+      if (this.holdPose || this.heldPose || this.haul || this.lockpick || kt >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.mvHands || this.mvs.tsT >= 0 || this.act || this.wound) this.kitCancel();
       else this.kitLayer(dt, y, -p * 0.35);
     } else if (this.kitHold !== undefined) this.kitCancel();
     this.kitGunFree = 0;
@@ -2666,7 +2672,8 @@ export class CharacterAnimator {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, m = this.mvs, T = clamp(this.trained, 0, 1), k = (p: readonly [number, number]) => lerp(p[0], p[1], T);
     let pitch = 0, yaw = 0, roll = 0, hp = 0, hy = 0, drop = 0, sx = 0, sz = 0;
     if (m.flT >= 0) {
-      const F = MV.flinch, D = k(F.dur), e = curve(m.flT / D, MV_FLINCH_ENV) * k(F.amp) * gate;
+      m.flK += (m.flKTo - m.flK) * Math.min(1, dt * 12);
+      const F = MV.flinch, D = k(F.dur), e = curve(m.flT / D, MV_FLINCH_ENV) * k(F.amp) * m.flK * gate;
       const sd = m.flD[0] >= 0 ? 1 : -1, lat = Math.min(1, Math.abs(m.flD[0]) * 1.6);
       pitch += F.pitch * e * (0.65 + 0.35 * Math.max(0, m.flD[2])); yaw -= sd * F.away * e * lat; roll += sd * 3 * e * lat;
       hp += F.head * e; hy -= sd * F.away * e * lat; drop += F.drop * e; sx -= m.flD[0] * F.side * e; sz -= m.flD[2] * F.side * e;

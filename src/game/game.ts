@@ -85,6 +85,7 @@ import { dropThrowable } from './combat';
 import { FRAG, fragTick, fragThrowTick, fragReset } from './frag';
 import { moraleTick, moraleReset } from './morale';
 import { runnerTick } from './runner';
+import { flinchTick } from './flinch';
 import { darkDoorTick } from './darkdoor';
 import { netQuietTick } from './netquiet';
 import { samStaggered } from './samstun';
@@ -113,6 +114,7 @@ import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
 import { throwCount, toggleDrag, teleportPlayer, startPicking, startWand, startKick, settlePlayer, startGrab, freeHeld, settleHeld, takeKey, pickHover, EASE_RATE, EASE_MAX } from './player';
 import type { WallHold, Hold } from './player';
 import { updateInteract, escapeInteract, backableInteract } from './interact';
+import { ownBlowAct } from './ownblow';
 import { slotSetupOpen, slotSetupShut } from './slotsetup';
 import { tacticsTick, loadTactics, tacticsSummary, tacticsReset } from './tactics';
 import { lanesTick, lanesReset } from './lanes';
@@ -239,7 +241,7 @@ export const KIT_ORDER: readonly SlotKind[] = ['pistol', 'rifle', 'smoke', 'flas
  *  bar in the row / the ring round the reticle while a sustained verb runs (`running`: that row IS the running verb — a lock being picked, a leaf being eased,
  *  the choke, the drive coming out). 'held' = the man in Sam's arm (player.ts Hold): his rows are the only rows while he is held. 'cancel' = the selector's
  *  bottom row while it is open (interact.ts): letting go of Space on it does nothing. */
-export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'objective' | 'held' | 'breaker' | 'wall' | 'cam' | 'switch' | 'cancel'; pos: Vec3; line1: string; line2: string; inReach: boolean; off: boolean; progress?: number; target?: LightTarget; door?: Door; guard?: Guard; verb?: Verb; running?: boolean;
+export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'objective' | 'held' | 'breaker' | 'wall' | 'cam' | 'switch' | 'charge' | 'cancel'; pos: Vec3; line1: string; line2: string; inReach: boolean; off: boolean; progress?: number; target?: LightTarget; door?: Door; guard?: Guard; verb?: Verb; running?: boolean;
   /** a man's row with the close-in windows on (close.ts): the way in Sam's spot gives — the click and the grab that follow make that move */
   close?: CloseKind;
   /** a door's row that is listed PAST the list's cap, under the rows Space had before it (the big slot's tool on an unlocked door — bigkit.ts; a charge by hand
@@ -249,7 +251,7 @@ export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'obj
  *  push / ease (silent, sustained), an open one's pull, a lock's pick (sustained) / kick / rattle (the handle tried, crouched), a keyed lock's unlock; the grab
  *  of a man from behind; the held man's question / choke (sustained) / pistol-whip (sustained); a body's drag / drop; the rack's drive (sustained); the mains
  *  thrown / re-armed by hand; and the selector's own cancel. */
-export type Verb = 'push' | 'pull' | 'ease' | 'unlock' | 'pick' | 'kick' | 'rattle' | 'code' | 'nocode' | 'wand' | 'breach' | 'hammer' | 'grab' | 'question' | 'choke' | 'whip' | 'comply' | 'drag' | 'drop' | 'drive' | 'breakerOff' | 'breakerOn' | 'charge' | 'defuse' | 'takeCam' | 'lightsOff' | 'lightsOn' | 'lead' | 'stay' | 'cancel';   // lightsOff / lightsOn: a room's wall switch (lightswitch.ts);   // lead / stay: a rescue's hostage told to get up and follow, or to stay where she stands (rescueend.ts);   // takeCam: a stuck sticky camera of his own taken back onto the launcher (stickycam.ts);   // comply: a held CIVILIAN told to get down and stay quiet — lets her go, cowering (civilians.ts);   // code / nocode: a keypad door's pad — the code entered (sustained, devices.ts) / the pad tried without one (a deny beep)
+export type Verb = 'push' | 'pull' | 'ease' | 'unlock' | 'pick' | 'kick' | 'rattle' | 'code' | 'nocode' | 'wand' | 'breach' | 'hammer' | 'grab' | 'question' | 'choke' | 'whip' | 'comply' | 'drag' | 'drop' | 'drive' | 'breakerOff' | 'breakerOn' | 'charge' | 'blow' | 'defuse' | 'takeCam' | 'lightsOff' | 'lightsOn' | 'lead' | 'stay' | 'cancel';   // lightsOff / lightsOn: a room's wall switch (lightswitch.ts);   // lead / stay: a rescue's hostage told to get up and follow, or to stay where she stands (rescueend.ts);   // takeCam: a stuck sticky camera of his own taken back onto the launcher (stickycam.ts);   // comply: a held CIVILIAN told to get down and stay quiet — lets her go, cowering (civilians.ts);   // code / nocode: a keypad door's pad — the code entered (sustained, devices.ts) / the pad tried without one (a deny beep)
 
 // ---------------------------------------------------------------- mission
 /** The one mission thread: insert (the spawn) → reach the server room → pull the drive from one rack (F, a few seconds within reach) → out through the
@@ -1626,6 +1628,7 @@ export class Game {
     rescueCheckTick(this, dt);  // the rescue's men check in (rescuecheck.ts): their radio check when it is due, the man out for a silent post a step on — a return on its first line with its switch off or no rescue on the floor
     this.fight.tick(dt);   // the room fight (roomfight.ts): what every hostile / operative unit watches, fears and shoots at this frame — a return on its first lines while none stands or a show has the floor
     moraleTick(this, dt);   // shaken (morale.ts): the blasts since last frame read for who they shook, each man's dread and rung, a broken man's sequence a step on — before anybody moves; a return on its first line with the switch off
+    flinchTick(this, dt);   // flinch at close fire (flinch.ts): a green man alone kept under close fire long enough is handed to the runner below
     runnerTick(this, dt);   // drops it and runs (runner.ts): a broken man alone, dry, with an enemy in his eyes at arm's length shouts it, lets the weapon go and runs; every man in a run a step on — a return on its first line with the switch off
     darkDoorTick(this, dt);   // not in there alone (darkdoor.ts): the man called to a mate stopped at a dark doorway kept on him, a stopped man whose walk has ended let go — a return on its first line with either switch off
     netQuietTick(this, dt);   // the net goes quiet (netquiet.ts): the lines owed for a check nobody answered, a jumpy man's whip to the noise his ears counted last frame, the last man a step through his act — after the rungs are read, before anybody moves; a return on its first line with either switch off
@@ -1959,6 +1962,7 @@ export class Game {
     }
     breakerTick(this, dt);
     if (act?.kind === 'cam' && verb === 'takeCam') takeCam(this, pl);   // a stuck sticky camera taken back (stickycam.ts — a row only with STICKY.take up)
+    if (act?.kind === 'charge') ownBlowAct(this);   // a charge his own hands set, set off from his own list (ownblow.ts — a row only with its switch up)
     if (act?.kind === 'switch' && verb) switchAct(this, pl, verb);   // a room's wall switch (lightswitch.ts — a row only with its switch up)
     // A living guard from behind: his one row GRABS him — an arm round his throat with the hands empty, the pistol to his head with it drawn (player.ts startGrab /
     // updateHold — questions, the choke / the whip are HIS rows from then on). The silent takedown is the other hand's business (Chaos Theory's melee): a LEFT
