@@ -545,8 +545,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   he was told to watch: his eyes took any man they saw, and a mate's contact turned his look (the arc rule, `arcHalfDeg`, is a HOLD's,
   and only for calls). Now a man stood at the post of a cover order passes over an enemy who is more than `coverHalfDeg` 45° off the
   way he was given WHILE a mate's gun is on that man with a round at him: he is seen (the meter runs) and is not his, to his eyes or to
-  a call, a shot or a footfall. The man is his again the moment no mate has him, his muzzle comes onto this man (the room fight's own
-  0.35 rad), or he is inside `coverNearM` 6 m. ON in the page (`?coverkeep=0` puts it off; Team feel row "team ▸ a man told to cover
+  a call, a shot or a footfall, and a look he had begun at him is dropped. "Has him" is a gun on the man and a round to send: not
+  behind a jamb (`blockT`), not reloading, no friend in his line, his muzzle not down. The man is his again the moment no mate has
+  him, his muzzle comes onto this man (the room fight's own 0.35 rad), or he is inside `coverNearM` 6 m; and a man he is already ON he
+  hands over only to a mate past his own beat to fire, so there is no gap with nobody's rounds going. Not covered: `coverfire.ts`'s
+  rounds into cover at a man a mate knows of. ON in the page (`?coverkeep=0` puts it off; Team feel row "team ▸ a man told to cover
   keeps his angle"), OFF in the module and on the frozen stand (`TPS_COVERKEEP=1`), a `FROZEN_HOLDS` row, pinned off in the digest
   checks beside `doorEars`. `ROOMFIGHT` joined `JOURNAL_KNOBS` with it: a recording had not carried the table (so `doorEars` replayed
   off whatever it was recorded with); one from before the key, or before the table, replays with it off. Check `cover-keep` (family
@@ -554,7 +557,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   up the lane, Red One beside him covering the side, one enemy stood 10.7 m off at a quarter turn; nobody's round goes (the check holds
   every first shot off, so the man is there for the whole four seconds) and the floor is hot. Off: his gun 89° off his way, on the man
   232 of 240 frames. On: 0° off, never on him, Red One on him throughout. And he is his with his muzzle on Blue One, with no mate on
-  him, or 4.3 m off; a man in the lane is taken frame for frame as before. One staging, one seed; no fight was run with it and no
+  him, with Red One's gun behind a jamb, or 4.3 m off; a man he was on first is kept while Red One has only just seen him; a man in
+  the lane is taken frame for frame as before. 11 of 11 on both stands. Not shown: the hand-over to a mate who is ready (nobody fires
+  in the staging), a mate reloading or with a friend in his line (read, not run). One staging, one seed; no fight was run with it and no
   tally: a covering man now leaves a far flank to his mates, which a fight's numbers would show. Never seen on a GPU, nobody has
   played it.
 - **The partner does not turn about on his way** (`src/game/pairorders.ts`, switch `PAIR.steady`, 10-22; the maintainer, of the pair

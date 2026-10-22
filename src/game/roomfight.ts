@@ -149,7 +149,9 @@ export const ROOMFIGHT = {
    *  lane's own men still coming: "doesn't watch his angle even though red team has it covered"). With `coverKeep` a man stood at the post of a cover order
    *  passes over an enemy who is more than `coverHalfDeg` off the way he was told to watch WHILE a mate's gun is on that man with a round at him: the man is
    *  seen (his meter runs) and is not his — not to his eyes, and no call, shot or footfall of that man's turns his look. The man is his again the moment no
-   *  mate has him, his muzzle comes onto this man, or he is inside `coverNearM`. Off = as it was: his eyes took any man they saw. */
+   *  mate has him (the mate is behind a jamb, reloading, has a friend in his line or his muzzle down), his muzzle comes onto this man, or he is inside
+   *  `coverNearM`; a man he is already on he hands over only when the mate is past his own beat to fire. A look he had begun at such a man is dropped.
+   *  Not covered: coverfire.ts's rounds into cover at a man a mate knows of. Off = as it was: his eyes took any man they saw. */
   coverKeep: false, coverHalfDeg: 45, coverNearM: 6,
   /** s a teammate stays ROUSED after a shot, a charge or a boot last reached his ears: a sighting alone is a man to him (no making the shape out first) and he
    *  reads at the roused rate. 10 = as it was — a quarter of a minute after a room was taken the team looked as calm men look, and a defender walking in through
@@ -956,7 +958,10 @@ export class RoomFight {
     if (flat(c.pos, A.post) > 0.8 || flat(c.pos, hc.pos) < R.coverNearM) return false;   // not on his post yet · a man this close is anybody's
     if (Math.abs(wrapAngle(v3.yawTo(c.pos, hc.pos) - v3.yawTo(c.pos, A.watch))) <= R.coverHalfDeg * DEG) return false;   // in the angle he was given
     if (Math.abs(wrapAngle(v3.yawTo(hc.pos, c.pos) - hc.aimYaw)) < 0.35) return false;   // a muzzle on him is his own business
-    for (const X of this.ops) if (X !== O && X.tgt === h && X.gd.state !== 'dead' && X.blockT < R.noShot) return true;   // a mate is on the man, with a round at him
+    // a mate HAS the man: his gun on him and a round to send — not behind a jamb (blockT), not reloading, no friend in his line, his muzzle not down.
+    // And a man this one is already ON is handed over only to a mate past his own beat to fire (readyAt): no gap with nobody's rounds going at him
+    const g0 = g.time, mine = O.tgt === h;
+    for (const X of this.ops) if (X !== O && X.tgt === h && X.gd.state !== 'dead' && X.blockT < R.noShot && X.lineT === 0 && g0 >= X.reloadUntil && !X.gd.muzzleDown && (!mine || g0 >= X.readyAt)) return true;
     return false;
   }
   private tickOp(O: Op, dt: number) {
@@ -1089,7 +1094,7 @@ export class RoomFight {
    *  mate's muzzle is on if he has a line to him — after his reaction beat, for a couple of seconds */
   private cue(O: Op) {
     const g = this.g, c = O.gd.char, S = FIGHT_SKILL.operative;
-    if (O.turn && (g.time > O.turn.until || O.turn.to.state === 'dead' || (!O.turn.door && workPasses(g, O.gd, O.turn.to)))) { O.turn = null; O.lostAt = g.time; }   // (… or workthings.ts: he is stood at the thing he was sent to work, and the look is for a man no round of his may go at — a door come open is still looked at)
+    if (O.turn && (g.time > O.turn.until || O.turn.to.state === 'dead' || (!O.turn.door && (workPasses(g, O.gd, O.turn.to) || this.coverPasses(g, O, O.turn.to))))) { O.turn = null; O.lostAt = g.time; }   // (… or workthings.ts: he is stood at the thing he was sent to work, and the look is for a man no round of his may go at — a door come open is still looked at)
     const look = O.turn && O.turn.pt ? O.turn : null;   // (a look at where steps come from — it follows them and lasts while they keep coming, `stepLookSecs` at most, and gives way to a shot or a mate's call)
     if (look && !look.door && O.stepBy && O.stepBy.by === look.to && g.time - O.stepBy.t < 0.6) { look.pt = O.stepBy.at; look.until = Math.min(Math.max(look.until, O.stepBy.t + 2.5), (look.t0 ?? g.time) + ROOMFIGHT.stepLookSecs); }
     if (O.turn && !look) return;
