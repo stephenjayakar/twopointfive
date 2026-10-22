@@ -67,7 +67,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the word with no can (train-pairs' white house), no defender sees OUT of a door: a man in a far corner with his gun down the room shot the first of each
   pair as he crossed his opening (1 to 3 men on most paced dice). Each stands in the pocket behind the open leaf of the door he watches.
   (6) a held man: 'Right button chokes him out' (close.ts `CLOSE.heldClicks`, on in the page); the step counts the deed (`downed how: 'choke'`), not the row.
-- **The tutorial's solo loud mission, `tut-solo` 'The fuel halt, alone'** (2026-10-22; row `tut-solo` in `TUTORIAL_MISSIONS`, played on the tutorial's frame, `game/rails.ts`: the bullet below; `tools/levels/tut-solo.ts` → `levels/tut-solo.json`, a quiet-kind mission alone with a
+- **The tutorial's solo loud mission, `tut-solo` 'The fuel stop, alone' (its title until the writing guide: 'The fuel halt, alone')** (2026-10-22; row `tut-solo` in `TUTORIAL_MISSIONS`, played on the tutorial's frame, `game/rails.ts`: the bullet below; `tools/levels/tut-solo.ts` → `levels/tut-solo.json`, a quiet-kind mission alone with a
   `scenarios.lesson` of 25 steps on rails and its own `scenarios.issue` card; the fights are `levels/tut-solo.script.ts`, one PLAY program `tutorial` whose beats start on the cue each step sends,
   `lesson:<cue>`; the scripted player is `tools/qa/lessons/tut-solo.ts`). ONE LINE through a walled halt on a road, every doorway centred on it (`AXIS` 14.25: a door's middle sits on a
   walk-grid cell): the road and a shot-up van (move, sprint), the yard wall beside the gate (rifle up, take the wall, shoot the sentry, reload), the arch (crouch), the sandbags in the gun's
@@ -173,6 +173,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   strip beside the rifle, the lit one is on the right button, HE arms 8 m out, the gun's key again and then its row's swaps the load. THE SWAP IS DONE
   on the load's line only where his kit carries two loads: a level's card (`IssueCard`) has no key for sponge rounds, so on the page he carries the
   grenade alone and the swap is said, not done (asked of the kit's owner). The card itself has not been looked at on a page.
+  EVERY LINE, CARD AND LIST ROW REWRITTEN TO THE WRITING GUIDE (`docs/agents/writing.md`; the same night): each big line opens on a verb or on Press /
+  Hold and the key and is one sentence ("Press [R] to reload", "Press [Tab] to close it, like any other menu", "Shoot out the light so you can hide in
+  the dark"); the three cards are 'Taking cover on a wall', 'Setting up your gun', 'Using the rifle's launcher'; the row is 'The fuel stop, alone'. A
+  second reader who did not write them read all 45 and flagged 13, all taken. ONE OF THEM WAS A TRAP IN THE BUILD: the stun grenade's ring stood in
+  the storeroom's doorway, and a can thrown AT it catches the partition and stays in the shop, so the line never passed for a player who clicked the
+  ring (the scripted player had thrown past it). The ring is now the middle of the storeroom (`STUN_AT`), the line says to click it, and the scripted
+  player throws at the ring, as it does for the smoke and the frag.
 - **`tut-solo` dressed (2026-10-22, level data only; groups `dress.*` in the generator).** The maintainer, of every tutorial level: "just as much
   (if not more! since it's first impression) polish and have it really feel great and organic". ADDITIONS ONLY, off the mission's line, each man's
   mark and every door's sweep: a melon stall and scrub on the roadside; a rope bed and a low table in the truck court's north corner; in the

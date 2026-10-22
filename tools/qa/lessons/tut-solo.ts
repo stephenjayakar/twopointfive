@@ -3,7 +3,7 @@
 // does what the line says.
 import { OWNBLOW } from '../../../src/game/ownblow';
 import type { Bot } from '../lesson-run';
-import { AXIS, VAN, WALL, CORNER, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
+import { AXIS, VAN, WALL, CORNER, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, STUN_AT, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
 import { SLOTSETUP } from '../../../src/game/slotsetup';
 
 /** is the gun's setup switched on IN THE GAME THIS RUN PLAYS: on a page the script is its own bundle, with its own copy of the table (the page's is `__knobs`) */
@@ -200,7 +200,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!fight(B, 3, 25, () => { B.step(6); }, [s])) B.fail('the man in the shop did not drop');
   },
   // from the shop's floor, the can through the doorway to the store
-  stun: B => { B.go([26.8, 0, AXIS], 10); take(B, 'Digit4'); B.click(1, [33.4, 0.1, AXIS]); landed(B, 'flash', 3.4); },
+  stun: B => { B.go([26.8, 0, AXIS], 10); take(B, 'Digit4'); B.click(1, STUN_AT); landed(B, 'flash', 3.4); },
   // the pistol, and INTO the room (a gun in a doorway has no room to come up across the jamb)
   store: B => {
     if (brk() === 'again' && !once.has('store')) { once.add('store'); handBack(B, 'stun'); replay(B, ['stun']); B.until(() => stepIs(B, 'store'), 4); B.step(30); }
