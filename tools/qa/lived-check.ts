@@ -35,9 +35,9 @@ const ROOT = resolve(import.meta.dir, '../..');
 // 98281d690: the snatch's van and its response block (levels/snatch.json alone). 317a19cb1: the join of the two, the first here that holds both.
 // 5f8c416e6: the tutorial's squad mission, a level no base before it has. It is the base for EVERY level, as each of these is (one base for all): every
 //   level's 429 lines were green against it when it went in, and tut-squad's lived things are held to their tail from here.
-// MERGEREV: the join of the solo tutorial's halt (dressed as the level's own furniture, two posts renamed, its last beat re-cut, a card:
+// 9807836cf: the join of the solo tutorial's halt (dressed as the level's own furniture, two posts renamed, its last beat re-cut, a card:
 //   levels/tut-solo.json alone, step 4a5d40557) with the base before it, f3ef62b01: the first here that holds both, 429 lines green against it.
-const BASE_REVS = ['MERGEREV', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
+const BASE_REVS = ['9807836cf', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
 /** a lesson step's keys that are words on the objective row: read from today's file, never held to the base */
 const STEP_WORDS = ['line', 'setupLine', 'ringLine'];
 const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
