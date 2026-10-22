@@ -24,7 +24,7 @@ import { SLOTSETUP } from '../game/slotsetup';   // (read when the Controls list
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
-import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
+import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
@@ -323,7 +323,7 @@ function render(S: Screen) {
     S.rows.forEach((R, i) => R.el.classList.toggle('sel', i === S.sel));
     const R = S.rows[S.sel]; desc.innerHTML = '';
     if (R) { desc.appendChild(el('b', '', R.label)); desc.appendChild(document.createTextNode(R.desc())); }
-    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? gearText('Nothing here needs holding down but Space, to choose between actions, and the rifle\'s launcher, to see its arc.') : ''));
+    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? gearText(HANDRING.on ? `Nothing here needs holding down for long: ${capNow('Space')} a moment for the ring of your actions, ${camCap()} to turn the view, and the rifle's launcher to see its arc.` : `Nothing here needs holding down but ${capNow('Space')}, to choose between actions, and the rifle's launcher, to see its arc.`) : ''));
   };
   S.paint();
 }
