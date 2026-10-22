@@ -29,7 +29,7 @@ async function rig(seed: number, on = !BREAK) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp();
-    CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.holdSecs = HOLD_SECS; AUTOPILOT.on = true;   // (the ring that goes with its key, as these lines were written: the one that stays is `probes.ts qring`'s)
+    CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.only = false; CMDRING.holdSecs = HOLD_SECS; AUTOPILOT.on = true;   // (the ring that goes with its key, as these lines were written: the one that stays is `probes.ts qring`'s)
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }

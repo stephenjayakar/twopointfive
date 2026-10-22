@@ -13,6 +13,7 @@
 //   (6) left up, the cursor out to a wedge and the key again gives that wedge;
 //   (7) left up, a right click puts it away and nothing is ordered; on a page it steps back first; a click with nothing lit gives nothing;
 //   (7b) the back key puts a ring left up away, and takes plan mode down;
+//   (7c) the page's Esc (Game.escape) takes plan mode down;
 //   (8) kept down, the cursor out to a wedge and the key let go gives that wedge (the ring as it was built);
 //   (9) `stay` off: the key up in the middle gives the lit wedge, as it was built;
 //   (10) Shift + the key puts plan mode up and takes it down; out of a sprint (a walk key down) it is the key's own order; the mode up, it is left whatever is down;
@@ -79,7 +80,7 @@ export async function qringCheck(): Promise<boolean> {
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const log = console.log, quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { console.log = () => { }; try { return await fn(); } finally { console.log = log; } };
   const knobs0 = knobsCopy(), rnd0 = Math.random, ap0 = AUTOPILOT.on, C = CMDRING as any, S = CMDRING_STATS;
-  const page = () => { C.on = true; C.hint = false; C.hands = false; C.stay = !BREAK; C.tapNow = !BREAK; C.plan = true; C.planRts = true; C.planRun = !BREAK; };
+  const page = () => { C.on = true; C.hint = false; C.hands = false; C.stay = !BREAK; C.tapNow = !BREAK; C.plan = true; C.planRts = true; C.planRun = !BREAK; C.only = false; };
   try {
     // (1) the stand, read off the first stand-up before the check sets anything
     { await quiet(() => standUp({})); const shipped = process.env.TPS_PROFILE === 'shipped', E = process.env;
@@ -138,6 +139,11 @@ export async function qringCheck(): Promise<boolean> {
     { const BK = BACKKEY.tab ? 'Tab' : 'Escape', open = R.open(spot), n0 = O.log.length, can = g.backable(); R.press(BK); const gone = !O.cmdRing && !O.menu, told = O.log.length - n0;
       I.keys.add('ShiftLeft'); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.clear(); R.step(2); const up = O.plan.up, can2 = g.backable(); R.press(BK); const down = !O.plan.up, can3 = g.backable();
       line(open && can && gone && told === 0 && up && can2 === !BREAK && down === !BREAK && !can3 === !BREAK, 'the back key puts a ring left up away and orders nothing; with plan mode up it takes the mode down', `the back key here: ${BK} · ring left up ${open}, something to back out of ${can} · after it: ring ${gone ? 'gone' : 'up'}, order book +${told} · plan mode ${up ? 'up' : 'NOT up'}, to back out of ${can2} · after it: ${down ? 'down' : 'STILL up'}`);
+      R.home(); }
+    // (7c) … and the page's own Esc (Game.escape, the pause's key there) takes the mode down too, once: nothing is left for it to back out of after
+    { I.keys.add('ShiftLeft'); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.clear(); R.step(2); const up = O.plan.up, took = g.escape(), down = !O.plan.up; R.step(2); const again = g.escape();
+      line(up && took === !BREAK && down === !BREAK && !again === !BREAK, "the page's Esc takes plan mode down, and has nothing more to back out of", `plan mode ${up ? 'up' : 'NOT up'} · Game.escape() ${took} · the mode ${down ? 'down' : 'still up'} · again: ${again}`);
+      if (O.plan.up) { I.keys.add('ShiftLeft'); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.clear(); R.step(2); }
       R.home(); }
 
     // (8) kept down, out to a wedge, let go: that wedge (the ring as it was built)

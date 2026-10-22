@@ -223,6 +223,8 @@ function up(S: SquadOrders): void {
   if (CMDRING.planRts) { P.look = [p[0], 0, p[2]]; P.aim = v3c(g.aimPoint); }
 }
 /** Sam put somewhere else with the mode up (a restart, a fresh cast): the view starts on him again, and he faces what he faces there */
+/** the page's Esc (Game.escape, behind everything nearer): the mode comes down (false: it was not up, or the back key is not its way out) */
+export function planEscape(S: SquadOrders): boolean { if (!S.planBack()) return false; PLAN_STATS.toggled++; down(S, S.g.seat.input); return true; }
 export function planHome(S: SquadOrders): void { const P = S.plan, g = S.g, p = g.player.char.pos; if (P.up && P.look) { P.look = [p[0], 0, p[2]]; P.aim = v3c(g.aimPoint); P.rmbT = -1; } }
 /** the walk keys move the view's point, the way they would have walked him (the camera's own basis), `planPanMps` — kept within `planPanReachM` of the
  *  box he and the men stand in, so the view is never lost */
@@ -254,7 +256,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   const shift = input.down('ShiftLeft') || input.down('ShiftRight');
   // (the toggle is the ring's key where the ring's key is free: with something for it to back out of — a menu, a Space list, a verb, the launcher's arc — it backs out, Shift or no)
   if (planShift(S, input) && !S.cmdRing && S.backFree() && input.pressed.delete(K.key)) { PLAN_STATS.toggled++; if (P.up) down(S, input); else up(S); }
-  if (P.up && K.planRun && !S.menu && !S.cmdRing && backTake(input)) { PLAN_STATS.toggled++; down(S, input); }   // (the back key takes the mode down, once nothing nearer is up to back out of: backkey.ts)
+  if (P.up && K.planRun && !S.cmdRing && S.backFree() && backTake(input)) { PLAN_STATS.toggled++; down(S, input); }   // (the back key takes the mode down, once nothing nearer is up to back out of: backkey.ts)
   word(S, input);
   if (!P.up) return;
   if (input.pressed.has('Blur')) { P.drag = null; P.rmbT = -1; }

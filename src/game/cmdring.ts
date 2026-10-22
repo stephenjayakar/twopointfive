@@ -104,6 +104,15 @@ export const CMDRING = {
    *  down: the walk keys are its view's). And the back key (backkey.ts) takes the mode down, once no menu or ring is up to back out of first.
    *  false: Shift + the key is always the mode's and only it leaves the mode, as it was built. Off here; the page raises it with the mode */
   planRun: false,
+  /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
+   *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
+   *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has
+   *  more rows than wedges its last wedge is 'more', a ring of the rest (ringSeats). The squad's posture rows (go silent / go loud) are the squad's
+   *  own: on the ring opened on Sam or on a man, not on a place's. While a ring is up those letters are nobody's, and the middle button opens no menu.
+   *  (The orders menu's own key and the who key have no key on the page's board with it: host/keymap.ts qOnly — the game's reads of them stand, as
+   *  every recording holds them.) false: the wedges are the rows the menu has on digits, the letters work beside the ring, as it was built. Off here
+   *  and on the frozen stand; the page raises it with the ring (`?qonly=0` off) */
+  only: false,
   /** plan mode: a left press that has moved less than this (CSS px, × ringZoom) by the time it is let go is a click, not a box */
   planDragPx: 8,
   /** plan mode: seconds the chains are drawn with the mode down after the word's key or an order changed them */
@@ -125,7 +134,8 @@ export const CMDRING_STATS = { opened: 0, quick: 0, given: 0, pages: 0, cancelle
 /** `ax, ay`: its middle (CSS px of the view) · `z`: how much larger than its px it stands (ringZoom, as it was opened) · `t0`: the game's clock when its
  *  key went down · `lit`: the lit wedge's digit (0: none) · `armed`: the cursor may light a wedge (it has been in the middle) */
 export interface RingState { ax: number; ay: number; z: number; t0: number; lit: number; armed: boolean; /** kept up by the right button, not the key (plan mode's: orders.ts ringByButton) */ rmb?: boolean;
-  /** (CMDRING.stay) the press that opened it has come up and it stands by itself: ringLatch */ free?: boolean }
+  /** (CMDRING.stay) the press that opened it has come up and it stands by itself: ringLatch */ free?: boolean;
+  /** (CMDRING.only) it shows the rows its page has no wedge for: ringSeats `over` */ more?: boolean }
 /** what a ring shows (orders.ts ringView, interact.ts handRingView → ui/cmdring.ts): where, how much larger than its px, the lit wedge, whose colour, the
  *  words under it, and the wedge on each digit */
 export interface RingView { x: number; y: number; zoom: number; lit: number; tone: string | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] }
@@ -146,6 +156,28 @@ export function ringWant(R: RingState, input: Input, digit: number, time: number
   if (early) { if (out) R.armed = false; } else if (!out) R.armed = true;
   if (digit) { R.armed = false; return digit <= C.wedges ? digit : 0; }
   return !early && out && R.armed ? wedgeAt(dx, dy, C.wedges) : 0;
+}
+
+/** a menu row as the seats read it (orders.ts OrderDef) */
+export interface SeatRow { key?: number; hotKey?: string; opens?: string; free?: boolean; targets: readonly string[]; listed?: readonly string[] }
+/** WHICH ROW IS ON WHICH WEDGE. `row[d]`: the index of the row on wedge d (1 … CMDRING.wedges; -1 none) · `more`: the wedge that is 'more' (0: none) ·
+ *  `over`: the rows 'more' holds, in order (its ring seats them from wedge 1). As built: a row is on the wedge of its own digit and nowhere else.
+ *  CMDRING.only: the rows with digits keep them; the rows with none take the spare wedges in order; with more of those than spare wedges the last
+ *  spare wedge is 'more' — no wedge spare, the last wedge is, and its own row leads the rest. Left out: the word's own rows (`wordKey`: F gives
+ *  them), and on a place (`place`) the rows that move nobody and belong to the squad's own ring (free, on no page, on no letter, listed for 'none'). */
+export function ringSeats(rows: readonly SeatRow[], place: boolean, wordKey: string): { row: number[]; more: number; over: number[] } {
+  const W = CMDRING.wedges, row = new Array<number>(W + 1).fill(-1), rest: number[] = [];
+  rows.forEach((r, i) => {
+    if (CMDRING.only && (r.hotKey === wordKey || (place && !!r.free && !r.opens && !r.hotKey && (r.listed ?? r.targets).includes('none')))) return;
+    const k = r.key; if (k !== undefined && k >= 1 && k <= W && row[k] < 0) row[k] = i; else rest.push(i);
+  });
+  if (!CMDRING.only) return { row, more: 0, over: [] };
+  const spare: number[] = []; for (let d = 1; d <= W; d++) if (row[d] < 0) spare.push(d);
+  if (rest.length <= spare.length) { rest.forEach((i, n) => { row[spare[n]] = i; }); return { row, more: 0, over: [] }; }
+  const more = spare.length ? spare.pop()! : W, over = [...rest];
+  if (row[more] >= 0) { over.unshift(row[more]); row[more] = -1; }
+  for (const d of spare) row[d] = over.shift()!;
+  return { row, more, over: over.slice(0, W) };
 }
 
 /** how long the key is kept down before its ring goes up (s): `stayHoldSecs` for a ring that stays, `holdSecs` for one that goes with its key */

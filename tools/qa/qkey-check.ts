@@ -93,7 +93,7 @@ export async function qkeyCheck(): Promise<boolean> {
     }
     // 2. the board
     {
-      boot(''); const code = ORDERS.quickKey, q = K.gameCode('KeyQ'), bk = K.gameCode('KeyB'), rest = BOARD.filter(c => c !== 'KeyQ' && c !== 'KeyB' && K.gameCode(c) !== c);
+      boot(''); const code = ORDERS.quickKey, q = K.gameCode('KeyQ'), bk = K.gameCode('KeyB'), only = K.KEYMAP.qOnly ? ['KeyX', 'KeyT'] : [], rest = BOARD.filter(c => c !== 'KeyQ' && c !== 'KeyB' && !only.includes(c) && K.gameCode(c) !== c).concat(only.filter(c => K.gameCode(c) !== ''));   // (the squad's only keys, host/keymap.ts qOnly: the orders key and the who key give nothing — qonly-check.ts asks the rest of it)
       const row = K.capNow(code), built = K.keyBuilt(code), changed = K.keysChanged(), wall = K.keysOf('KeyQ').length;
       walk = false; const offQ = K.gameCode('KeyQ'), offWall = K.keysOf('KeyQ').length, offAny = BOARD.filter(c => K.gameCode(c) === 'KeyQ').length; walk = true;
       boot('bkey'); walk = false; const bOff = K.gameCode('KeyQ') === 'KeyQ' && K.gameCode('KeyB') === 'KeyB'; walk = true; boot('');

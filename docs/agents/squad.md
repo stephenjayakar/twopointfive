@@ -189,21 +189,46 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in place of the 0.2 of the ring that goes with its key) the order menu goes up as a ring at the cursor and STAYS when the key comes up. Left up: a
   digit 1 to 5 gives its wedge at once (a page's wedge turns the ring), a left click anywhere but on a man gives the lit wedge and is not Sam's
   trigger (a click with nothing lit, a page just turned, gives nothing), the key again gives the lit wedge, a right click steps a page back or puts
-  the ring away, the back key (Tab on the page) puts it away, and so do Esc where it reaches the game, the pause and a lost window. Kept down,
+  the ring away, the back key (Tab on the page; only a ring that stays: one that goes with its key hears Esc alone, as it was built) puts it away,
+  and so do Esc where it reaches the game, the pause and a lost window. Kept down,
   taken out to a wedge and let go, the key still gives that wedge (`ringLatch`: one rule a second ring can read; Space's own ring is not latched by
   this change). Plan mode's ring on the right button is not latched. `tapNow`: a press already up in its own tick (down and up inside one tick, and
   every one-frame press a headless line makes) is given on that tick, so lines that press the quick key for one frame read as they did. SHIFT + Q
   toggles plan mode (as `?cmd&cmdplan` had it, Sam parked and the view on the walk keys) EXCEPT out of a sprint (`planRun`): Shift with a walk key down
   and the mode down is his run, and Q there is the quick order as at a walk; with the mode up Shift + Q leaves it whatever else is down, and so does
-  the back key once no menu or ring is up (`SquadOrders.planBack`, `Game.backable`). SWITCHES: ON in the page; `?qring=0` = the key as it was (its
+  the back key once nothing nearer is up to back out of, a menu, a ring, a Space list, a running verb or the launcher's arc (`SquadOrders.planBack`,
+  `backFree`, `Game.backable`; the page's own Esc the same way, last in `Game.escape`). SWITCHES: ON in the page; `?qring=0` = the key as it was (its
   order as it goes down, no ring, no plan mode), `?qstay=0` = the ring only while the key is down, given as it comes up, `?qplan=0` (or `?nocmdplan`)
   = no plan mode; `?cmd` now only raises Space's own ring (`CMDRING.hands`) beside it. OFF in the module and on the frozen stand: `FROZEN_HOLDS` rows
   `CMDRING.on` / `tapNow` (`TPS_QRING=1`), `stay` (`TPS_QSTAY=1`), `plan` / `planRts` / `planRun` (`TPS_QPLAN=1`; the last two words need the first). The
   journal carries the table: a recording with no `stay` / `tapNow` / `planRun` key replays with them off. Debugger: Team feel ▸ 'Tab ▸ the orders ring',
-  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 12 lines; `QRING_BREAK=1`
-  fails 9 on the page's stand and 8 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
+  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 13 lines; `QRING_BREAK=1`
+  fails 10 on the page's stand and 9 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
   Shift always the mode's (25 and 28 lines, both stands); `qkey`'s game line reads the stand (the order on the tick the key is seen up, with the ring
   on). NOT measured: no tally (the play-through's commander presses no key); nobody has played it; never seen on a GPU.
+- **Q and F are the squad's only keys; the ring carries every order: ON IN THE PAGE since 10-22** (`CMDRING.only`, `ringSeats` in
+  `src/game/cmdring.ts`; `orders.ts seats`, `ringInput`, `ringView`; `KEYMAP.qOnly`, `DROPPED` in `src/host/keymap.ts`; the maintainer, 10-22: "squad is
+  now just q and f. everything is through the radial menu (which is 1-5? is that sufficient) so we don't need all the other keys"). IS 1 TO 5 ENOUGH:
+  every ring fitted five wedges but two, a floor's (move, cover, fall in, hold, go silent, and throw there on G) and the door tools' (four tools, frag
+  and clear on G, the big slot's tool on H). THE SEATS: a row with a digit keeps its wedge; a row that had a letter of its own takes a spare wedge of
+  its page; where a page has more such rows than spare wedges its last spare wedge is 'more', a ring of the rest seated from wedge 1 (no wedge spare:
+  the last wedge is 'more' and its own row leads the rest, which is what a wall's ring does with 'wall tools' and 'throw there'). A right click on
+  'more' is the page it is the rest of. Left out of a ring: the word's own rows (F gives them), and, on a place's ring, the squad's posture rows (go
+  silent / go loud), which are on the ring opened on Sam himself or on a teammate. So a floor's fifth wedge is the throws, the door tools' fifth is
+  frag and clear for a pair and 'more' (the big tool, frag and clear) for the four. 'Wait for my word' has no wedge and never had: the command key
+  stacks them, they wait, and the word or a tool from the ring sends them. WHAT IS NOBODY'S: while a ring is up a row's own letter (G, H, V) is taken
+  and does nothing; the middle button opens no menu; the squad panel lists no key for the menu and none for who. THE BOARD (the page only): the
+  orders menu's row (code 'KeyX') and the who row ('KeyT') have no key, the way the wall hold's has none; the game's reads of both codes stand, so
+  every recording and every headless line that presses them reads as it did, and Options ▸ Controls can put either back on a key. Who an order goes
+  to is the ring's wheel or a click on a man with the ring up, or plan mode's picks. SWITCHES: ON in the page with the ring; `?qonly=0` = the wedges
+  and the letters as they were and X and T back on the board (`?qring=0` the same, with the ring gone). OFF in the module and on the frozen stand:
+  `FROZEN_HOLDS` row `CMDRING.only` (`TPS_QONLY=1`, needs `TPS_QRING=1`); the journal carries the table, a recording with no `only` key replays with
+  it off. Debugger: Team feel ▸ 'Tab ▸ the ring ▸ carries every order'. CHECK: `probes.ts qonly` (tools/qa/qonly-check.ts, family squadorders; 10
+  lines; `QONLY_BREAK=1` fails 8 on the page's stand and 7 on the frozen), both stands; `qkey`'s board line knows the two freed rows. The older ring
+  checks pin `only` off. KNOWN COSTS: a door with a look-under row (a wand carried) has six first-page rows, so its fifth wedge is 'more' holding
+  'door tools' and the look, one ring deeper; lines of words that name X or T (a kit card's note, a lesson) are not rewritten and are stale while the
+  rows have no key; the ring on Sam shows 'fall in' twice (the quick order's wedge and its own). NOT measured: no tally; nobody has played it; never
+  seen on a GPU.
 - **Plan mode, a prototype** (`src/game/planmode.ts`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that
   requires explicitly leaving"; the design: `rebuild/commanding/command-mode.md`). OFF in the module and on BOTH stands (no `FROZEN_HOLDS` row: it is
   not a shipped-on rule); the page raises it only when asked beside the ring (`?cmd&cmdplan`, or the debugger's tick 'Tab ▸ the ring ▸ plan mode on

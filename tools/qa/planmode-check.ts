@@ -27,7 +27,7 @@ async function rig(seed: number, plan = !BREAK) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp();
-    CMDRING.on = true; CMDRING.hint = true; CMDRING.hands = true; CMDRING.plan = plan; CMDRING.planRts = plan; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; AUTOPILOT.on = true;   // (the ring that goes with its key and Shift always the mode's, as these lines were written: `probes.ts qring` has the page's)
+    CMDRING.on = true; CMDRING.hint = true; CMDRING.hands = true; CMDRING.plan = plan; CMDRING.planRts = plan; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.only = false; AUTOPILOT.on = true;   // (the ring that goes with its key and Shift always the mode's, as these lines were written: `probes.ts qring` has the page's)
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
