@@ -71,6 +71,7 @@ import { padState, stopCoding, spell, CODE_SECS, padDoorName } from './devices';
 import { civilianGrabbed, civilianComply, civilianSamLine, civilianBodies, civiliansShown } from './civilians';
 import { promptFor, agitationOf, samLineFor, samRemarkFor, samKeyLineFor, CIV_LINES } from './dialogue';
 import { autoReloadDue, autoReloads } from './autoreload';   // a dry gun starts its own reload (autoreload.ts): the R line below asks it
+import { slotSetupKeys, loadKeys } from './slotsetup';
 import { QUICKTHROW } from './quickthrow';   // the G quick throw's switch (quickthrow.ts): off in the page, G is then a dead key here
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
@@ -362,6 +363,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     g.audio.play('equip', null, 0.5);
   };
   const wasIn = pl.gunInHand();
+  slotSetupKeys(g, input);   // (slotsetup.ts: the digit of the gun in his hands opens its setup, and with it up a row's digit steps the row — taken out of the frame, so the lines below never see it; nothing with its switch off)
   if (input.hit('Digit1')) { pl.slot = 'pistol'; draw(gun.def.short); }
   if (input.hit('Digit2')) {   // 2: the rifle — off the sling into the hands (selected but slung, or anything else selected); pressed again with it IN the hands: the launcher's NEXT load goes on the right button (RING ⇄ 40 MM, and CAM third once sticky cameras are issued — there is no 'nothing' to step through; remembered while it is away)
     if (!pl.hasRifle) g.msg(gearText('no FN2000 in this loadout — the start card / pause menu puts it in the kit'));
@@ -369,7 +371,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
       if (pl.equipT <= 0) {   // not while it is still coming round off the sling: a double-tapped 2 draws it, it does not also flip the launcher
         const a = rifle.cycleAttachment(); g.audio.play('click', c.muzzle, 0.7);
         g.msg(a === 'ring' ? gearText(rifle.rings > 0 ? `ring airfoil ×${rifle.rings} on the right button — head = out cold, body = staggered, a wall = a noise they go and look at; 2 again for the 40 mm` : 'the ring launcher — but no ring airfoils left (2 again for the 40 mm)')
-          : a === 'he40' ? gearText(rifle.shells > 0 ? `40 mm grenade ×${rifle.shells} on the right button — goes off on what it hits, like a frag; arms ${HE40.armM} m out (nearer: a dud); 2 again for ${nextLoad(rifle)}` : `the 40 mm — but no grenades left for it (2 again for ${nextLoad(rifle)})`)
+          : a === 'he40' ? gearText(rifle.shells > 0 ? `40 mm grenade ×${rifle.shells} on the right button — goes off on what it hits, like a frag; arms ${HE40.armM} m out (nearer: a dud); ${loadKeys()} for ${nextLoad(rifle)}` : `the 40 mm — but no grenades left for it (2 again for ${nextLoad(rifle)})`)
           : a === 'cam' ? (rifle.cams > 0 ? `sticky camera ×${rifle.cams} on the right button` : 'no sticky cameras left')
           : `${rifle.def.short} — nothing goes on its right button`);
       }
@@ -609,8 +611,8 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
       else {   // the dry click, and why: nothing left of this load (and where the other is), or the tube still closing
         g.audio.play('dryFire', c.muzzle, 0.4);
         g.msg(load === 'cam' ? (rifle.cams > 0 ? 'loading the launcher…' : 'no sticky cameras left')
-          : load === 'ring' ? (rifle.rings > 0 ? 'cycling the launcher…' : gearText(rifle.shells > 0 ? 'no ring airfoils left — they are not coming back (2 again for the 40 mm)' : 'no ring airfoils left — they are not coming back'))
-          : rifle.shells > 0 ? 'loading the launcher…' : gearText(rifle.rings > 0 || rifle.cams > 0 ? `no 40 mm grenades left (2 again for ${nextLoad(rifle)})` : 'no 40 mm grenades left'));
+          : load === 'ring' ? (rifle.rings > 0 ? 'cycling the launcher…' : gearText(rifle.shells > 0 ? 'no ring airfoils left — they are not coming back (2 again for the 40 mm)' : 'no ring airfoils left — they are not coming back').replace('2 again', loadKeys()))
+          : rifle.shells > 0 ? 'loading the launcher…' : gearText(rifle.rings > 0 || rifle.cams > 0 ? `no 40 mm grenades left (${loadKeys()} for ${nextLoad(rifle)})` : 'no 40 mm grenades left'));
       }
     }
     if (held && !owed) {

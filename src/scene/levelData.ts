@@ -662,9 +662,10 @@ export function validateLevelData(d: LevelData): string[] {
           if (!isStr(L.title)) err(`${w}.title`, 'a non-empty string');
           const steps = recs(`${w}.steps`, L.steps); if (!steps.length) err(w, 'steps: at least one');
           const ids = new Set<unknown>();
-          steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'done', 'hold', 'at']);
+          steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'setupLine', 'done', 'hold', 'at']);
             if (!isStr(t.id) || !isStr(t.line)) err(tw, 'id, line: non-empty strings'); else if (ids.has(t.id)) err(tw, `id '${show(t.id)}' used twice`); ids.add(t.id);
             if (!isObj(t.done) || !isStr(t.done.is)) err(`${tw}.done`, "a test record { is: '<kind>', … }");
+            if (t.setupLine !== undefined && !isStr(t.setupLine)) err(`${tw}.setupLine`, 'a non-empty string');
             if (t.hold !== undefined && !(isNum(t.hold) && t.hold >= 0)) err(`${tw}.hold`, 'seconds ≥ 0'); if (t.at !== undefined && !isVec(t.at)) err(`${tw}.at`, 'Vec3'); });
         }
       }

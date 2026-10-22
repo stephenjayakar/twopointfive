@@ -130,6 +130,7 @@ import { SPRINTDOOR } from './sprintdoor';
 import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
 import { DOORFORCE } from './doorforce';
+import { SLOTSETUP } from './slotsetup';
 import { GLASSREAL } from './glassbreak';
 import { AIMCOST } from './aimcost';
 import { QUICKTHROW } from './quickthrow';
@@ -352,6 +353,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.SAMSTUN) SAMSTUN.on = false; else if ((k.tables.SAMSTUN as Partial<typeof SAMSTUN>).ownSeen === undefined) SAMSTUN.ownSeen = false;   // (a file from before a blast folded or blinded the player: his feet and his picture were his own through every one — and one from before a watched can of his own side counted in full)
   if (!k.tables.SPRINTDOOR) SPRINTDOOR.on = false;
   if (!k.tables.GLASSREAL) { GLASSREAL.drop = false; GLASSREAL.place = false; }   // (a file from before glass was typed by where it sits and toughened glass dropped at once: its panes are the wall's kinds and dice in the wave)
+  if (!k.tables.SLOTSETUP) SLOTSETUP.on = false;   // (a file from before the slot in hand pressed again opened its setup: its 2 pressed with the rifle up stepped the launcher's load)
   if (!k.tables.DOORFORCE) DOORFORCE.on = false;   // (a file from before an alerted man fired through a shut door and booted it in: its defenders waited at the leaf or went to its handle)
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
