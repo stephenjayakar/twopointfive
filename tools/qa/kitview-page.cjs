@@ -72,6 +72,7 @@
 //          · KITPACE_BREAK=1 (the inner half, one way in, up to the pacer rows, fed a pacer that draws every frame and never moves: it must FAIL)
 //          · KITCUT_BREAK=1 (the inner half, one way in, pre-emption switched off — a pick waits its turn, as it did — and still held to the pick rows, every kit demo's own among them: it must FAIL)
 //          · ROWS=home (the inner half's HOME rows alone, stepped at 1/60 s and at 0.05 s) · KITHOME_BREAK=1 (those rows with the HOME rule switched off — `__kitview.home` false: it must FAIL)
+//          · QEXTRA='&flag' (more of the query for the inner half's page, to run it with one of the page's switches off: QEXTRA='&nowandquick')
 //          · KITNOBLOCK=plant (the outer half's 'a mission with no block' row on a PLANTED case even where a level without a block exists: NOBLOCK below)
 // PASS / FAIL lines; exit 0 = all pass, 1 = a FAIL or a page error, 2 = the script died.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -232,7 +233,7 @@ async function inner(browser, way, name, slots0, stillAsked) {
   let meant = null;   // (the error rows at the end: the console lines of a throw this tool made itself)
   page.on('pageerror', e => { console.log(`  PAGE ERROR (${name})`, String(e).slice(0, 300)); bad++; });
   page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !(meant && meant.test(m.text()))) { console.log(`  console error (${name})`, m.text().slice(0, 300)); bad++; } });
-  await page.goto(`${BASE}?levelFile=records.json&roomclear&squad=2&way=${way}&kitview=${WARM}&mute&noreplay&quality=${QUALITY}${stillAsked || MBREAK ? '&stillkit' : ''}`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE}?levelFile=records.json&roomclear&squad=2&way=${way}&kitview=${WARM}&mute&noreplay&quality=${QUALITY}${stillAsked || MBREAK ? '&stillkit' : ''}${process.env.QEXTRA || ''}`, { waitUntil: 'domcontentloaded' });
   // (the dev server bundles the tree at a page load and may load the page once more when the bundle is fresh: a boot cut off by that is waited for again)
   for (let i = 0; ; i++) {
     try { await page.waitForFunction(() => !!window.__ready, null, { timeout: 60000 }); await page.evaluate(() => window.__ready); break; }
