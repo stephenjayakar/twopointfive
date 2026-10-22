@@ -305,14 +305,20 @@ async function planLines(): Promise<boolean> {
     try {
       const { R, foe, mate }: any = await scene(); PLAN.on = !BREAK;
       const game = R.game, P = R.P, before = floorPlan(game).doors.length;
-      R.O.give('pairMark', R.foe(foe)); const set = R.until(() => !!P.jobOf(mate)?.set, 30); R.step(2);
+      R.O.give('pairMark', R.foe(foe)); R.step(1);
+      // (the cap before he is set: dark, as a door's is while its men are on their way — and no mark at all while a lesson holds the word shut)
+      const early: any = (floorPlan(game).doors as any[]).find(x => x.why === 'pair'), earlyCap = early ? capOf(early) : 'no mark', locks0 = game.rails.locks;
+      let shut = -1; game.rails.locks = (a: string) => a === 'word'; try { shut = (floorPlan(game).doors as any[]).filter(x => x.why === 'pair').length; } finally { game.rails.locks = locks0; }
+      const set = R.until(() => !!P.jobOf(mate)?.set, 30); R.step(2);
       const ds: any[] = floorPlan(game).doors, d = ds[0], off = d ? dist([(d.a[0] + d.b[0]) / 2, 0, (d.a[2] + d.b[2]) / 2], mate.char.pos) : NaN;
       const fx = Math.sin(mate.char.aimYaw), fz = Math.cos(mate.char.aimYaw), ahead = d ? ((d.a[0] + d.b[0]) / 2 - mate.char.pos[0]) * fx + ((d.a[2] + d.b[2]) / 2 - mate.char.pos[2]) * fz : NaN;
       game.player.down = true; const downNow = (floorPlan(game).doors as any[]).some(x => x.now); game.player.down = false;
       R.press('KeyF'); R.step(2);
       const J = P.jobOf(mate), went = !J || J.go, after = (floorPlan(game).doors as any[]).filter(x => x.why === 'pair').length;
       line(before === 0 && set && ds.length === 1 && d.why === 'pair' && d.door === null && d.key === 'F' && d.now && off < 1 && ahead > 0.3 && !downNow && went && after === 0,
-        'the quiet pair\'s mark: the man waiting has the key on a bar ahead of him, and the key is the mark', `before ${before} · set ${set} · ${ds.map(x => `${x.why} · key ${x.key} · now ${x.now}`).join(' | ') || 'no bar'} · ${f1(off)} m from him, ${f1(ahead)} m ahead · Sam down: ${downNow ? 'STILL now' : 'none now'} · after F: ${went ? 'gone' : 'STILL waiting'}, ${after} listed`);
+        'the quiet pair\'s mark: the man waiting has the key a step ahead of him, and the key is the mark', `before ${before} · set ${set} · ${ds.map(x => `${x.why} · key ${x.key} · now ${x.now}`).join(' | ') || 'no mark'} · ${f1(off)} m from him, ${f1(ahead)} m ahead · Sam down: ${downNow ? 'STILL now' : 'none now'} · after F: ${went ? 'gone' : 'STILL waiting'}, ${after} listed`);
+      line(earlyCap === 'dark' && !!d && capOf(d) === 'lit' && shut === 0, 'the quiet pair\'s mark: its cap is dark until he is set, lit then, and a lesson that has not taught the word lists none',
+        `just ordered: ${earlyCap} · set: ${d ? capOf(d) : 'no mark'} · the word held shut by a lesson: ${shut} listed`);
     } catch (e) { line(false, 'the quiet pair\'s mark: the lines threw', e instanceof Error ? (e.stack ?? e.message).split('\n').slice(0, 3).join(' · ') : String(e)); }
     finally { Object.assign(PAIR, kept.pair); Object.assign(SILENT, kept.silent); NIGHTBREACH.squad = kept.squad; PLAN.on = kept.on; Math.random = kept.random; }
   }
