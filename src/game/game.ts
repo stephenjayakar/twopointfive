@@ -135,6 +135,7 @@ import { Director } from './director';
 import { NightBreach } from './nightbreach';
 import { QuietMission } from './quiet';
 import { Lesson } from './lesson';
+import { Rails } from './rails';
 import { Par } from './par';
 import { Verdict } from './verdict';
 import { Snatch } from './snatch';
@@ -1004,6 +1005,8 @@ export class Game {
   quiet!: QuietMission;
   /** a training lesson's steps (lesson.ts): reads the game, writes nothing of it; inert on a level without the block */
   lesson!: Lesson;
+  /** a tutorial mission's frame over the lesson (rails.ts): locked actions, cues to the level's script, authored checkpoints, the sky seat; inert on a level without a lesson.rails record */
+  rails!: Rails;
   /** a room clear against a clock (par.ts): reads the game, writes nothing of it; inert on a level without a scenarios.par block */
   par!: Par;
   /** how the run went, said once it is over (verdict.ts): reads only — the end card's record */
@@ -1245,6 +1248,7 @@ export class Game {
     this.quiet = new QuietMission(this);        // the quiet mission (quiet.ts): inert until started
     this.par = new Par(this);                   // a par clock over a room clear (par.ts): inert on a level without a scenarios.par block
     this.verdict = new Verdict(this);           // the run's verdict (verdict.ts): reads only, said once at the run's end
+    this.rails = new Rails(this);               // a tutorial mission's frame (rails.ts): inert unless the level's lesson carries a rails record
     this.lesson = new Lesson(this);             // a training lesson's steps (lesson.ts): inert on a level without a scenarios.lesson block
     this.snatch = new Snatch(this);             // the man to take alive (snatch.ts): inert on a level without a scenarios.snatch block
     this.defuse = new Defuse(this);             // a defuse mission's charges (defuse.ts): inert on a level without a scenarios.defuse block
@@ -1423,7 +1427,7 @@ export class Game {
   clearQueueSummary(): string { return clearQueueSummary(this); }
   clearNearestRoom() { forceClear(this); }
   /** Camera follow position (player or spectated guard). */
-  followPos(): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : (this.orders && planLook(this.orders)) ?? this.player.char.pos; }   // (planmode.ts: with plan mode up the view follows its own point, not Sam)
+  followPos(): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.rails?.look() ?? (this.orders && planLook(this.orders)) ?? this.player.char.pos; }   // (planmode.ts: with plan mode up the view follows its own point, not Sam)
   teleportPlayer(p: Vec3) { return teleportPlayer(this, p); }
   /** HUD / panel: what the player's feet are on as the hearing model has it (floor.ts — lino everywhere with tune.floorMaterials off) */
   get floorUnderPlayer(): FloorMat { return stepMat(this, this.player.char.pos); }
@@ -1564,6 +1568,7 @@ export class Game {
     this.senseStep(dt);
     this.seat.load(cmd);
     const input = this.seat.input, cam = this.seat.cam, canvas = this.seat.canvas;
+    this.rails.gate(input, cam, dt);   // a tutorial mission's locked actions (rails.ts): what the step that is up has not unlocked is out of the tick before anything reads it — a return on its first line off a rails level
     openingStart(this);   // (opening.ts: a fresh encounter made under a show's flag and handed over live gets its opening here — each man looked at once, a return otherwise)
     this.viewProj = cam.viewProj;
     this.time += dt; this.ocpCooldown = Math.max(0, this.ocpCooldown - dt); this.col.sound.tick(this.time);
@@ -1634,6 +1639,7 @@ export class Game {
     updateMission(this, dt, input);   // after the guards (this frame's sightings) and the other F handlers; before updateTargets bakes the rack's switch state
     this.par.tick();        // a par (par.ts): the run's clock against this frame's orders and the room clear's end — read-only
     this.lesson.tick(dt);   // a training lesson (lesson.ts): this frame's verb, events, chronicle rows and orders against the step that is up — read-only
+    this.rails.tick(dt);    // …and its frame (rails.ts): the run's start, the step that came up answered (its cue, its checkpoint, its fog) — a return on its first line off a rails level
     this.snatch.tick(dt);   // a snatch level's one man (snatch.ts): gives up, is tied, gets away — and the end that hangs on him
     this.defuse.tick(dt);   // a defuse mission (defuse.ts): the charges' one clock, Sam's own row at one, the blast at zero — a return on its first line on a level without the block
     this.verdict.tick();    // the run's verdict (verdict.ts): after every end this frame could write — read-only
@@ -1831,7 +1837,8 @@ export class Game {
   private drawMen(all: Character[], statured: boolean, bare: boolean) {
     const world = this.engine.world; world.resetCapsules();
     const wetOn = (this.engine.settings as { wetChars?: boolean }).wetChars !== false;   // wet characters (wet.ts): the renderer's switch — off (or a dry man) hands the g-buffer zeros, and it shades him exactly as before
-    let drawn = bare ? this.fogOfWar.everybody(all) : this.fogOfWar.filter(all);   // (fog of war: the men nobody on the team sees are not drawn and cast nothing — the list itself while it is off)
+    let drawn = bare ? this.fogOfWar.everybody(all) : this.fogOfWar.filter(all);
+    if (this.rails.skyOn) { const me = this.player.char; drawn = drawn.filter(c => c !== me); }   // (rails.ts, the sky seat: nobody on the floor is the player — he is parked, and not in the picture)   // (fog of war: the men nobody on the team sees are not drawn and cast nothing — the list itself while it is off)
     if (drawn.length > 8 && (this.nightBreach.active || this.rescue.active)) {   // more men on screen than cast shadows (the four-man squad, nightbreach.ts: Sam + four + up to five defenders — BoxWorld.addCharacterCapsules stops at eight): the men down give up their proxy places first, so it is a body that goes without a shadow before any man standing does. Eight or fewer = the list as it was
       const down = new Set<Character>(); for (const gd of this.guards) if (gd.state === 'dead') down.add(gd.char);
       if (down.size) drawn = [...drawn.filter(c => !down.has(c)), ...drawn.filter(c => down.has(c))];

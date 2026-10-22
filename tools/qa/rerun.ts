@@ -90,7 +90,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     const { standUp } = await import('./headless.ts');
     if (need === 'shipped') { const P = await import(`${ROOT}/src/host/profile.ts`); P.shippedBoot(); if (want === 'page') P.pageSwitches(new URLSearchParams(rc.search ?? '')); }
     tables(); kitOf(rc.kit);
-    if (want === 'page') { const { TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`); Kt.kitIssuedPage(!!kitAsIssued(TRAINING_MISSIONS.find((e: any) => e.level === rc.levelFile))); }   // (a Training level's page plays the issue kit whatever the cards are)
+    if (want === 'page') { const { LESSON_MISSIONS: TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`); Kt.kitIssuedPage(!!kitAsIssued(TRAINING_MISSIONS.find((e: any) => e.level === rc.levelFile))); }   // (a Training level's page plays the issue kit whatever the cards are)
     if (want === 'page' && !rc.tables) warnings.push('this replay was saved before the tape carried every switch: the re-run plays the page\'s rules for its address, not what this browser kept (Team feel rows, a kit, a difficulty picked on the card)');
     if (loaded && stoodAs !== need && !rc.tables) warnings.push(`this process had already stood the harness as ${stoodAs} and the tape was made as ${want}, with no tables of its own on it: run it in a process of its own (replay-at.ts) to stand it right`);
     if (rc.levelFile) { try { level = await levelOf(rc.levelFile); } catch (e) { return out(`the replay's level file ${rc.levelFile} could not be loaded here: ${(e as Error).message}`); } }

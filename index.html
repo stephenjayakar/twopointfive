@@ -199,6 +199,21 @@
     /* mission: one objective line top-centre and a small diamond on (or, clamped to the screen edge, toward) the current objective — the same caps as the meters; the objective is one of the things the orange is for (overlay.ts) */
     #objective { position: absolute; left: 50%; top: 5px; padding: 5px 12px 4px; background: rgba(var(--h-plate),0.5); border-radius: 2px; transform: translateX(-50%); font: 12px/1 var(--h-font); letter-spacing: 0.02em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0.95; }
     #objective b { margin-right: 3px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--h-acc); } #objective.done b, #objective.failed b { color: inherit; }
+    /* A TUTORIAL MISSION'S ONE LINE (ui/overlay.ts, game/rails.ts): big, low in the middle, the keys it names drawn as keys, a pip a step */
+    #railprompt { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; z-index: 6; }
+    #railprompt.on { display: flex; animation: railin .45s cubic-bezier(.2,.9,.3,1.2); }
+    #railprompt .line { padding: 13px 26px 12px; background: rgba(var(--h-plate),0.78); border-radius: 4px; border-bottom: 2px solid var(--h-acc); font: 600 27px/1.25 var(--h-head); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
+    #railprompt kbd { display: inline-block; min-width: 22px; margin: 0 3px; padding: 3px 9px 2px; border-radius: 5px; background: var(--h-acc); color: var(--h-on); box-shadow: 0 3px 0 rgba(0,0,0,0.45); font: 700 24px/1.2 var(--h-head); text-align: center; text-shadow: none; position: relative; top: -2px; }
+    #railprompt .pips { display: flex; gap: 6px; } #railprompt .pips i { width: 9px; height: 4px; border-radius: 2px; background: rgba(var(--h-edge),0.35); }
+    #railprompt .pips i.done { background: var(--h-acc); opacity: 0.75; } #railprompt .pips i.now { background: var(--h-hi); width: 18px; }
+    @keyframes railin { from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.96); } to { opacity: 1; transform: translateX(-50%); } }
+    @media (max-width: 900px) { #railprompt .line { font-size: 20px; white-space: normal; text-align: center; } #railprompt kbd { font-size: 18px; } }
+    body.skyseat #equip, body.skyseat #meters { display: none !important; }
+    /* a tutorial mission: the place its one line points at is a ring that beats, not a small diamond */
+    body.onrails .objmark { transform: translate(-50%, -50%); }
+    body.onrails .objmark i { width: 26px; height: 26px; border-width: 3px; border-radius: 50%; transform: none; box-shadow: 0 0 10px rgba(0,0,0,0.7), inset 0 0 6px rgba(0,0,0,0.5); animation: railbeat 1.05s ease-out infinite; }
+    body.onrails .objmark.edge i { width: 14px; height: 14px; }
+    @keyframes railbeat { 0% { outline: 3px solid var(--h-acc); outline-offset: 0; } 100% { outline: 3px solid transparent; outline-offset: 22px; } }
     #objective:empty { display: none; } #objective.done { color: var(--h-hi); } #objective.failed { color: #f0a090; }
     /* alarm stage (Chaos-Theory-style): hidden at calm; ALARM I amber while the floor is heightened, ALARM II red on lockdown, with the level's clock and
        a pulsing pip while an alarm episode is actually running (someone is alert / searching) */

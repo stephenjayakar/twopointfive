@@ -233,11 +233,34 @@ export interface LessonStep {
   hold?: number;
   /** where the HUD's marker points while the step is up (absent: no marker) */
   at?: Vec3;
+  // ---- on a rails level only (game/rails.ts; a lesson without `rails` carries none of these) ----
+  /** actions this step turns on, for the rest of the mission · actions it turns off again */
+  allow?: string[]; deny?: string[];
+  /** sent to the level's script the tick the step comes up, as the signal 'lesson:<cue>' */
+  cue?: string;
+  /** an authored checkpoint, kept the tick this step comes up and named so ('the yard') */
+  checkpoint?: string;
+  /** the fog of war from this step on */
+  fog?: boolean;
+}
+/** A TUTORIAL MISSION'S FRAME over a lesson (game/rails.ts): what the player can do at all, and what nobody can lose */
+export interface RailsData {
+  /** the actions that work from the first step (rails.ts ACTS); every other key, button and wheel is dropped from the tick's input */
+  allow: string[];
+  /** seconds a teammate who would have gone down spends on a knee before he is up again (absent: he goes down) */
+  respawn?: number;
+  /** the fog of war at the first step (absent: as the scenario's start has it) */
+  fog?: boolean;
+  /** nobody on the floor is the player: he is parked at `park`, out of the picture and every sense, and the view rides the squad (`reach`: metres the
+   *  walk keys may shift it off them) */
+  sky?: { park: Vec3; reach?: number };
 }
 export interface LessonData {
   /** the family of systems it teaches, as the row says it ('Moving unseen') */
   title: string;
   steps: LessonStep[];
+  /** a tutorial mission's frame (absent: a lesson as it always was) */
+  rails?: RailsData;
 }
 
 /** A PAR (game/par.ts): the level's room clear run AGAINST A CLOCK. The clock runs from the squad's first order (or Sam's first stride off his start) to the
@@ -448,8 +471,9 @@ export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: Str
  *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A
  *  group is a KIND OF PLAY, every mission is under exactly one, and none holds more than eight (probes.ts missions-list). SHOW, NOT TELL: a heading is a
  *  word or two; `line` is its tooltip, never drawn. A group with no row draws nothing. */
-export type MissionGroup = 'training' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
+export type MissionGroup = 'tutorial' | 'training' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
 export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[] = [
+  { id: 'tutorial', title: 'Tutorial', line: 'The game, a mission at a time' },   // (game/rails.ts: missions on rails — one thing at a time, everything not yet met switched off)
   { id: 'training', title: 'Training', line: 'One family of systems at a time' },
   { id: 'raids', title: 'Raids', line: 'Small buildings, up to seven defenders' },   // (where a squad's mission that names no group falls: ui/missions.ts groupOf)
   { id: 'strongholds', title: 'Strongholds', line: 'Eight to eleven defenders' },
@@ -457,6 +481,9 @@ export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[]
   { id: 'quiet-alone', title: 'Quiet, alone', line: 'Light, noise and cameras' },
   { id: 'quiet-two', title: 'Quiet, as two', line: 'You and one partner, silent from the start' },
 ];
+
+/** a row of a LESSON group (the tutorial's missions, the Training levels): its own team size and no other, the kit as issued, no levers, no verdict kept */
+export const lessonGroup = (g: string | undefined): boolean => g === 'training' || g === 'tutorial';
 
 /** One row of a scenario list (what a picker shows and a URL starts): which kind, how many teammates, on which level file. THE SMALLEST SHAPE — nothing reads it
  *  in the game yet; `scenarioQuery` is how a row becomes the page's query string. */
