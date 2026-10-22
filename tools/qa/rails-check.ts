@@ -19,7 +19,8 @@
 //      a restart from a later step is on the first step, only its action open, before a tick has passed, and does not end; the mission left, he is seen again.
 //  14. THE ROWS (`rails.rows`, on levels/tut-quiet.json): Space offers only the verbs the mission names — at a locked door the pick and no boot; without
 //      the list, every row the door has anywhere; and no row at all while Space itself is locked (the gate beside the start). And his own actions' ring (handring.ts) is worked with its own digit while it is up: on the whistle's
-//      step the digit alone does nothing, the key kept down and then the digit whistles.
+//      step the digit alone does nothing, the key kept down and then the digit whistles. A digit pressed inside the hold, before the ring is up,
+//      whistles too and is no slot's.
 //  THE SECOND PLAY'S NOTES (tut-sky): the roadblock's fire lands over many places and none by a man; Shift down with the command key gives the order while
 //      the plan is locked (RAILS.shiftTap); a line says what the men are doing once its order is out and asks again when nothing comes of it (a step's
 //      `after`, RAILS.afterSecs / afterMax); a line with no key in it is one to watch; the page's input lets go of a modifier the system says is up.
@@ -319,10 +320,16 @@ export async function railsCheck(): Promise<boolean> {
       const extra = all0.filter(v => !named.includes(v)), pick = g.rails.offers('pick'), boot = g.rails.offers(extra[0] ?? 'pick'); g.teleportPlayer([21.5, 0, 17.5]); run(20);
       tap(digit); run(10); const early = L.steps[g.lesson.i]?.id;   // (no ring up: the digit is a slot's, and locked)
       I.pressed.add('Space'); I.keys.add('Space'); run(Math.ceil((HANDRING.holdSecs + 0.1) * 60)); I.keys.delete('Space'); const up = !!g.player.sel.ring; run(2); tap(digit); run(10);
-      const after = L.steps[g.lesson.i]?.id; HANDRING.on = ring0;
-      verdict(named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && pick && !boot && shut.length === 0 && shut0.length > 0 && at === 'whistle' && early === 'whistle' && up && after === 'grab',
-        'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere; and while Space itself is locked a thing in reach has no row at all. His own ring is worked with its own digit: the key kept down, then the last wedge, whistles',
-        `the list: ${named.join(' ')} · on the first step at the gate: ${shut.join(' ') || 'no row'} (without the list: ${shut0.join(' ') || 'no row'}) · at the back door with it: ${on.join(' ') || 'no row'} · without it: ${all0.join(' ') || 'no row'} · the ring: on step '${at}', the digit alone leaves '${early}', the key held puts the ring ${up ? 'up' : 'NOT up'}, then the digit: '${after}'`); }
+      const after = L.steps[g.lesson.i]?.id;
+      // …and a digit pressed INSIDE the hold, before the ring is up (handring.ts `early`: what a hand does with "Hold E, then 5"), is the wedge too: the gate
+      // lets it through to the ring and it is no slot's
+      const early0 = HANDRING.early; HANDRING.early = true; g.restartEncounter(); run(30); tap('KeyC'); run(20); for (const p of [[13.6, 0, 17.5], [21.5, 0, 17.5]]) { g.teleportPlayer(p); run(90); }
+      const at2 = L.steps[g.lesson.i]?.id, slot0 = `${g.player.slot}${g.player.holstered ? ' away' : ''}`;
+      I.pressed.add('Space'); I.keys.add('Space'); run(4); const notYet = !g.player.sel.ring; I.pressed.add(digit); I.keys.add(digit); W.step(DT); I.keys.delete(digit); run(2); I.keys.delete('Space'); run(10);
+      const quick = L.steps[g.lesson.i]?.id, slot1 = `${g.player.slot}${g.player.holstered ? ' away' : ''}`; HANDRING.on = ring0; HANDRING.early = early0;
+      verdict(at2 === 'whistle' && notYet && quick === 'grab' && slot1 === slot0 && named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && pick && !boot && shut.length === 0 && shut0.length > 0 && at === 'whistle' && early === 'whistle' && up && after === 'grab',
+        'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere; and while Space itself is locked a thing in reach has no row at all. His own ring is worked with its own digit: the key kept down, then the last wedge, whistles; and the digit pressed inside the hold, before the ring is up, whistles too and draws nothing',
+        `the list: ${named.join(' ')} · on the first step at the gate: ${shut.join(' ') || 'no row'} (without the list: ${shut0.join(' ') || 'no row'}) · at the back door with it: ${on.join(' ') || 'no row'} · without it: ${all0.join(' ') || 'no row'} · the ring: on step '${at}', the digit alone leaves '${early}', the key held puts the ring ${up ? 'up' : 'NOT up'}, then the digit: '${after}' · the digit 0.07 s into the hold (ring ${notYet ? 'not yet up' : 'UP'}): '${at2}' → '${quick}', in his hand ${slot0} → ${slot1}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

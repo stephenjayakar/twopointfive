@@ -242,6 +242,9 @@ export interface LessonStep {
   hold?: number;
   /** where the HUD's marker points while the step is up (absent: no marker) */
   at?: Vec3;
+  /** the marker rides on a MAN instead: the one on the patrol route of this name, while he is on his feet (then `at`, if the step has one) — 'come up
+   *  behind him': which him */
+  atMan?: string;
   // ---- on a rails level only (game/rails.ts; a lesson without `rails` carries none of these) ----
   /** actions this step turns on, for the rest of the mission · actions it turns off again */
   allow?: string[]; deny?: string[];
