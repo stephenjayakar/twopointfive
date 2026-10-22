@@ -127,14 +127,20 @@ export async function railsCheck(): Promise<boolean> {
       verdict(!!at && on === at && off === null && g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === 0,
         'the ring on the screen is the place it marks (the cursor on it is on that place, off it is not), and with the fog of war on from the first step the lookout has the men on the road in the picture and nobody in a room',
         `step '${g.lesson.step?.id}' mark ${at ? at.join(',') : 'none'} · cursor on the ring → ${on ? 'the place' : 'nothing'}, 140 px off → ${off ? 'the place' : 'nothing'} · fog ${g.fogOfWar.active ? 'on' : 'off'} · on the road ${seenRoad}/${road.length} drawn · in the house ${seenHouse}/${house.length} drawn`); }
-    // ---- 12: the mark stays in the picture
-    { const R = await rig(true), g = R.g; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
-      const at = g.lesson.step?.at as [number, number, number] | undefined, far = () => { const v = g.rails.look(); return at && v ? Math.hypot(at[0] - v[0], at[2] - v[2]) : -1; };
-      for (let i = 0; i < 40; i++) { R.W.cam.zoom(-60); R.run(1 / 60); }   // (zoomed in: the kept radius is a few metres)
-      R.run(2.5, ['KeyD']); const held = far(), kept = RAILS.keep * g.seat.cam.distance; R.run(4); const let_ = far(), step = g.lesson.step?.id;
-      verdict(!!at && held > kept + 2 && let_ >= 0 && let_ <= kept + 0.05 && step === 'move',
-        'the mark stays in the picture: a view shifted far off the step\'s mark stays there while the walk key is held, and comes back to within the kept radius once it is let go',
-        `step '${step}' · kept radius ${kept.toFixed(1)} m · the mark from the view's middle: ${held.toFixed(1)} m with the key held → ${let_.toFixed(1)} m let go`); }
+    // ---- 12: the mark stays in the picture, and clear of the step's line
+    { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
+      const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };
+      // (the picture's kept part, as fractions of the view: off its edges, not under the squad's panel — the top left, to 0.24 across and 0.30 down at the smallest view — and above the line low in its middle — index.html #railprompt, whose top is at 0.77)
+      const inPic = ([x, y]: [number, number]) => x >= 0.20 && x <= 0.90 && y >= 0.08 && y <= 0.70 && !(x < 0.25 && y < 0.31), word = ([x, y]: [number, number]) => `${x.toFixed(2)},${y.toFixed(2)}`;
+      const rows: { k: string; near: boolean; held: [number, number]; let_: [number, number] }[] = [];
+      for (const near of [false, true]) {
+        if (near) for (let i = 0; i < 40; i++) { cam.zoom(-60); R.run(1 / 60); }   // (zoomed in: the kept ground is a few metres)
+        for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) { R.run(2.5, [k]); const held = at_(); R.run(4); rows.push({ k: k.slice(3), near, held, let_: at_() }); }
+      }
+      const out = rows.filter(r => !inPic(r.held)).length, back = rows.filter(r => inPic(r.let_)).length, step = g.lesson.step?.id;
+      verdict(!!at && out >= 4 && back === rows.length && step === 'move',
+        'the mark stays in the picture: a view shifted far off the step\'s mark stays there while the walk key is held, and once it is let go the mark comes back inside the picture\'s edges, clear of the squad\'s panel and above the step\'s line, each way the view can be shifted, zoomed out and in',
+        `step '${step}' · the mark on the view (0,0 top left, 1,1 bottom right), key held → let go: ${rows.map(r => `${r.near ? 'near ' : ''}${r.k} ${word(r.held)} → ${word(r.let_)}`).join(' · ')} · out while held ${out}/${rows.length}, back in ${back}/${rows.length}`); }
     // ---- 13: the menu lists only the mission's orders
     { const R = await rig(true), g = R.g; R.run(0.5); const ids = (p: number[]) => g.orders.rowsFor(g.orders.targetAt(p)).map((d: any) => d.id).join(' ');
       const door = ids([17.0, 1.0, 11.2]), yard = ids([17.6, 0.02, 20.4]), wall = ids([27.95, 1.1, 9.4]);
