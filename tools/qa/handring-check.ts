@@ -9,6 +9,7 @@
 //   the tap       at a door a tap does the top row (the leaf moves) and puts no ring up; on open floor a tap does nothing (the whistle is never a tap)
 //   the ring      the key kept down: nothing before HANDRING.holdSecs, then the ring with a wedge for the door's row and the whistle on the LAST wedge; let
 //                 go in the middle and it stays with no key held; his feet are his own under it
+//   early         a digit pressed with the key down and the ring not yet up (inside the hold) is its wedge at once, never the slot or the gun's setup
 //   a digit       standing, the last wedge's digit whistles at once and the ring is gone — and it was no weapon slot; a digit with no wedge does nothing
 //                 and the ring stays; the whistle's digit, or a click, before the breath is back lights it and the ring stays
 //   a click       standing, with the pistol up: a left click does the lit wedge and no round leaves the gun
@@ -44,7 +45,7 @@ export async function handRingCheck(): Promise<boolean> {
   G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
   try {
     const S = await quiet(() => world(true)); const { pl, g, step, tap, place, input, click, keys, setCursor } = S as any; WALLSNAP.press = false; CMDRING.on = false; CMDRING.hands = false; BACKKEY.tab = true;   // (the back key is Tab, as the page has it)
-    const rule = (on: boolean) => { HANDRING.on = on && !BRK; };
+    const rule = (on: boolean) => { HANDRING.on = HANDRING.early = on && !BRK; };
     const KEY = 'Space', LAST = CMDRING.wedges, HOLD = Math.ceil(HANDRING.holdSecs * 60);
     const door = g.doors.list.find((d: any) => d.def.name === 'conference'), fc = door.frameCentre;
     const rows = () => g.nearby.map((r: any) => `${r.kind}:${r.verb ?? '-'}`).join(' | ') || 'none';
@@ -66,6 +67,12 @@ export async function handRingCheck(): Promise<boolean> {
       lift(); const stays = standing(), v2 = view(); const z0 = pl.char.pos[2]; keys('KeyW'); step(30); keys(); const walked = Math.abs(pl.char.pos[2] - z0) > 0.2, still = standing(); tap('Tab'); step(2);
       verdict(!early && hasDoor && hasWhistle && stays && walked && still, 'the key kept down puts the ring up after the hold, the whistle on the last wedge; let go in the middle it stays; he can walk under it',
         `before the hold: ring ${early} · after: ${v1} · let go: ${v2} · W for half a second under it moved him ${Math.abs(pl.char.pos[2] - z0).toFixed(2)} m, the ring still standing ${still}`); }
+    // ---- a digit inside the hold
+    { rule(true); floor('pistol'); breath(); const s0 = pl.slot, b0 = WHISTLE_STATS.blown; down(6); const notYet = !up(); tap(`Digit${LAST}`); step(2); const blew = WHISTLE_STATS.blown - b0, kept = pl.slot === s0 && !pl.holstered && !pl.setup, gone = !up(); lift(); step(4);
+      atDoor(); place(fc[0], fc[2] + 1.0, 180, 'pistol'); step(4); const two = g.nearby[1]?.verb; down(6); tap('Digit1'); step(2); const noSetup = !pl.setup && pl.slot === 'pistol'; lift(); step(4); tap('Tab'); step(2);
+      HANDRING.early = false; floor('pistol'); breath(); const b1 = WHISTLE_STATS.blown; down(6); tap(`Digit${LAST}`); step(2); const old = WHISTLE_STATS.blown === b1; lift(); step(4); tap('Tab'); step(2);
+      verdict(notYet && blew === 1 && kept && gone && noSetup && old, 'a digit pressed with the key down and the ring not yet up is the ring\'s wedge at once, never the weapon slot or the gun\'s setup; with that off it is not the ring\'s',
+        `0.1 s into the hold: no ring yet ${notYet} · ${LAST} then: whistled ${blew}, the pistol still in hand and no setup ${kept}, the ring gone ${gone} · at the door (second row ${two}), the pistol's own digit inside the hold: no setup opened ${noSetup} · early off: ${LAST} whistled nothing ${old}`); }
     // ---- a digit
     { rule(true); floor('pistol'); breath(); stand(); const s0 = pl.slot, b0 = WHISTLE_STATS.blown; tap('Digit3'); step(3); const none = up() && WHISTLE_STATS.blown === b0 && pl.slot === s0;
       tap(`Digit${LAST}`); step(3); const blew = WHISTLE_STATS.blown - b0, gone = !up(), slot = pl.slot === s0 && !pl.holstered;
