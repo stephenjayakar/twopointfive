@@ -120,6 +120,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'DOORSHOT',
   // a door opened into a man moves and startles him, one slammed or booted into him throws him (doors.ts DOORTHROW): a recording made with it on replays its men moved, one from before has every leaf stop against them
   'DOORTHROW',
+  // enemies startle when they first see you (startle.ts): a recording made with it on replays its men's beat before the gun, and who ran; one from before has every man go for his gun at once
+  'STARTLE',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
@@ -178,6 +180,7 @@ import { FIXEDSTEP } from '../host/loop';
 import { TWEEN } from '../host/tween';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
+import { STARTLE } from './startle';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
 import { POWEROUT } from './powerout';
@@ -342,6 +345,8 @@ export function knobRegistry(): Record<string, object> {
     GUNHAND,
     // drops it and runs (runner.ts): who lets his weapon go and runs, where to, and when he stops counting as a living hostile — reads these
     RUNNER,
+    // enemies startle when they first see you (startle.ts): how long a calm man's start holds his gun down, and who runs after it — reads these
+    STARTLE,
     // not in there alone (darkdoor.ts): who stops at the doorway of a dark room, how dark is dark, how long he waits for a mate and when he goes in anyway
     DARKDOOR,
     // an enemy on alert does not sit blind in the dark (darkfoe.ts): whose weapon light burns and who leaves his post read these — the meter reads the lamps

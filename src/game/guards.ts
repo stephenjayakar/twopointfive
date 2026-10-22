@@ -56,6 +56,7 @@ import { DOORMANNERS, doorwayGate, offThreshold } from './doorway';
 import { needsPatrol } from './needs';
 import { dozePatrol, dozeDeaf, dozeDark, dozeAsleep, dozeEar } from './doze';
 import { coverSeen, coverBlind } from './coverfire';
+import { startleSight, startleHolds, startleTorch, startleLeft, startleScript } from './startle';
 import { doorForce, doorForceHear, doorForceOwnBoot } from './doorforce';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
@@ -2009,6 +2010,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   { const fs = fragFlee(g, gd); if (fs) { const own = gd.script; gd.script = fs; gd.pieing = null; gd.aim.clear(); runGuardScript(g, gd, dt); gd.script = own; return; } }   // a live fragmentation grenade he knows of has a line to him (frag.ts): this frame his legs get him off it — his own orders, state and fix stand exactly as they were and take over again the frame it is gone
   { const rs = runnerScript(g, gd); if (rs) { const own = gd.script; gd.script = rs; gd.pieing = null; gd.aim.clear(); runGuardScript(g, gd, dt); gd.script = own; return; } }   // drops it and runs (runner.ts; null on its first line with the switch off): from his shout on his body is that file's — he senses nothing and fights nobody
   { const ms = moraleScript(g, gd); if (ms) { const own = gd.script; gd.script = ms; gd.pieing = null; gd.aim.clear(); runGuardScript(g, gd, dt); gd.script = own; return; } }   // shaken (morale.ts; null on its first line with the switch off): a blast has him ducked, or broken and scrabbling off the hole — this frame his body is that file's, his own orders, state and fix exactly as they were
+  { const ss = startleScript(g, gd); if (ss) { const own = gd.script; gd.script = ss; gd.pieing = null; gd.aim.clear(); runGuardScript(g, gd, dt); gd.script = own; return; } }   // caught alone at first sight (startle.ts; null on its first line for every man not on such a run): a green man runs for cover with his hands down — this frame his body is that run's
   if (gd.script) { gd.pieing = null; gd.searchPlan = null; gd.standoff = null; gd.aim.clear(); gd.drawn = !!gd.script.over || (gd.script.upper ?? 'aim') === 'aim'; runGuardScript(g, gd, dt); return; }   // choreographed (tour beat / squad drill): squad.ts owns him this frame — and what is in his hand follows the ordered pose ('aim' = the pistol), not the AI state; the drill has its own threshold work and its own search; handed back to the AI he lines Sam up from nothing (aim.ts)
   const lvl = escalationOf(g);   // the floor's alarm level (0 calm · 1 heightened · 2 lockdown; always 0 under the tour): how he carries himself while calm
   gd.drawn = lvl >= 1 || !staff; // heightened: the sidearm is out even on patrol — weapon light instead of the hand torch (handProps / attachFlashlight / killGuard); a unit is a combatant: his weapon is out whatever the staff's alarm says
@@ -2113,6 +2115,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
     if (gd.bodyDuty) gd.reactT = 0.5 + simRandom() * 0.5;   // called to a body over the net: no 'huh?' — a beat to take it in, then over to him (bodyAftermath)
     else { gd.reactT = 0.9; if ((!WORDS.on || gd.team !== 'operative') && !attentionAgain(g, gd)) g.say(gd, 'huh?'); g.audio.play('radio', c.bones.head ?? c.pos, 0.45, { rate: 1.15 }); }
   }
+  startleSight(g, gd, prev, seen);   // (startle.ts — nothing with its switch off: a calm man whose own eyes have just told him it is a man starts at it, and draws or runs only after that beat)
   if (prev !== gd.state) { gd.path = []; gd.pathGoal = null; gd.stallRef = null; if (gd.state !== 'suspicious') gd.bodyDuty = null; }   // (the body script lives inside 'suspicious': contact or calm ends it)
   attentionTick(g, gd);   // (attention.ts — a return on its first line with its switch off: a small thing that made him look takes his attention; one that no longer stands is let go)
   if (gd.state !== 'search') gd.searchPlan = null;   // (the plan lives inside 'search': whatever ends the search — contact, a body, calm, a script — drops it, and the next search deals afresh)
@@ -2122,6 +2125,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   if (dazzled) gd.reactT = Math.max(gd.reactT, gd.dazzledUntil - g.time);   // the transitions above reset reactT; a dazzled guard stays rooted (suspicious / alert both hold still while reactT > 0)
   const staggered = g.time < gd.staggerUntil;                                // a ring airfoil in the body (launcher.ts staggerGuard): rooted the same way for its second and a half and no round from him — but his eyes work
   if (staggered) gd.reactT = Math.max(gd.reactT, gd.staggerUntil - g.time);
+  { const st = startleLeft(g, gd); if (st > 0) gd.reactT = Math.max(gd.reactT, st); }   // a start (startle.ts; 0 with nobody startled): rooted the same way for its beat, whatever else caps the clock meanwhile
   trackGuard(g, gd, dt);   // the aim-settle model (aim.ts): his track on Sam this frame — off this frame's sight, state and reaction beat, last frame's aim yaw (the same the fire gate reads) — before any branch below asks aimReady / guardRound
   const p0x = c.pos[0], p0z = c.pos[2];   // where this frame's feet start: the collision sweep at the bottom walks him from here (collideGuard)
   // (alarm episodes are counted in updateMission: someone going to alert while nobody was)       // mission stats: every time a man goes to alert (from patrol, suspicion or a lapsed search alike)
@@ -2397,6 +2401,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   collideGuard(g, gd, p0x, p0z);
   // muzzle discipline: with the pistol up (every armed state — the heightened patrol's low carry, a fix being covered, the search's sweep), a living colleague in
   // the line he means it along puts it to the low ready until he is out of it (the alert branch has already asked, on the line of the shot itself)
+  if (startleHolds(g, gd)) { upper = 'none'; duck ||= handCarry(gd) !== 'torch'; }   // (startle.ts: in his start the gun is not up — a weapon at the low ready, the torch still the torch; false for every man with no start on him)
   if (gd.muzzleEvalT !== g.time) muzzleCheck(g, gd, upper === 'aim' ? (aimAt ?? aimAhead(c)) : null, dt);
   if (!gd.pinned) gunWallCheck(g, gd, upper === 'aim' ? 'aim' : null, aimAt, dt, gd.state === 'alert');   // …and a wall inside the raised gun's reach does the same (gunwall.ts; nothing with its switch off)
   if (g.time < gd.doorDownUntil) crouch = 1;   // (doorthrow.ts: he stood right at a door that was booted in — on a knee for the fold; the stamp is never written with its switch off)
@@ -2592,7 +2597,7 @@ export function longRigOf(gd: Guard): 'carbine' | 'sc20k' | null { const r = rig
  *  answering (whistle.ts whistleSoft: suspicious, on a calm floor, and nothing but the whistle has reached him since) keeps the torch — a whistle is not worth
  *  the pistol until a footfall, a glimpse or a second whistle makes it so. The one rule handProps, attachFlashlight, killGuard, the grab and the hold used to
  *  spell out each for itself. */
-export function handCarry(gd: Guard): 'torch' | 'weapon' { return (gd.state === 'patrol' || (gd.state === 'suspicious' && whistleSoft(gd))) && !gd.drawn && rigOf(gd) === 'pistol' && !kitPistol(gd) ? 'torch' : 'weapon'; }   // (kit.ts: a teammate whose card hands him a pistol carries no hand torch)
+export function handCarry(gd: Guard): 'torch' | 'weapon' { return startleTorch(gd) || ((gd.state === 'patrol' || (gd.state === 'suspicious' && whistleSoft(gd))) && !gd.drawn && rigOf(gd) === 'pistol' && !kitPistol(gd)) ? 'torch' : 'weapon'; }   // (kit.ts: a teammate whose card hands him a pistol carries no hand torch)
 /** What is physically in the hand: what he carries — unless it has left it: he is down (it lies on the floor as gd.dropped), or the torch was knocked out of it at
  *  the grab (dropped while he still carries 'torch': his hands are empty until the floor has him draw). */
 /** (HOLD.dropGun) A living man on his own feet has the gun that was knocked out of his hand at the grab again: it is off the floor and in his fist. Called where
