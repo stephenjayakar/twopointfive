@@ -361,19 +361,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - *The guardroom* (two doors on two walls, two men): the mode up (Shift + the command key), the view moved with the walk keys, a right click sends all four to its blank wall, a box
     picks two and a right click stacks them on a door, the other two on the other door, a click on bare ground is everyone again, ONE word sends both.
   - *The hall* (a gun behind chest-high bags at the far end, laid on the front door; the back door at the gunner's shoulder): a pair on each door and the word. The step that makes
-    everyone his again carries the cue `breach` (a stack stands on EACH door): from there the gun is the script's and on the wrong door — a burst into the wall beside the front doorway, held
-    `LATE_SECS` (2.4 s) after the first leaf moves — and the pair at his shoulder has him. A front door opened BEFORE that cue is "one stack, alone": three six-round bursts laid on the
-    doorway itself and the man beside the gun up with his rifle on it. A teammate it would put down is on a knee for five seconds (`rails.respawn`), so the wrong plan costs time and a
-    scare, never the mission.
+    everyone his again carries the cue `breach` (a stack stands on EACH door), but the gun goes by what the DOORS do: the back door opened first, or within `BACK_SECS` (1.5 s) of a
+    front door that moved after the cue, is the plan — a burst into the wall beside the front doorway, the gun held on it `LATE_SECS` (2.4 s), and the pair at his shoulder has him. A
+    front door the back one does not follow, cue or not, is "one stack, alone": up to `ALONE_BURSTS` (5) six-round bursts laid on the doorway itself while the back door stays shut, and
+    the man beside the gun up with his rifle on it. A teammate it would put down is on a knee for five seconds (`rails.respawn`), so the wrong plan costs MEN ON A KNEE, never the
+    mission — and not time: by the clock it is the quicker of the two (the numbers are below), which is the maintainer's to weigh.
   - *The two gates* (two men up the road, two in the lane behind the back gate, each pair behind a blast wall, the script's and unseen until the cue `gates`): a right click DRAGGED puts
     a pair behind chest-high bags facing the road gate and a pair behind the barrier facing the back gate; then both gates open at once, each pair of theirs walks in with rifles up and stands
     `GATE_SECS` (4 s) in its gate before it is the game's own, and the last man of the four drops it and runs. A last right click on himself brings the squad back.
   - **The frame's `plan` action** (`game/rails.ts gate`): on a level whose steps allow `plan`, Shift held over the command key reaches the game though neither sprint nor an order is
     allowed (the command key alone stays locked: a tap of it would undo a plan), and with the mode up its own Shift, the walk keys (they move the view, his feet stay locked) and both
-    mouse buttons. No other level allows `plan`, so nothing else changed. A step done IN the mode carries `planLine` (a new step key: `scene/scenarios.ts`, `levelData.ts`,
-    `rails.ts prompt`), the line while the mode is DOWN — a checkpoint put back puts the mode down, and so can a hand: 'Hold [Shift], tap [B]: plan mode again'. New lesson tests
-    (`lesson.ts LESSON_TESTS`): `planView {at, r}` (the mode up and its view's point within r of a place), `picked {n, free}` (the men an order would go to), `stacks {doors, set, n}`
-    (men on a 'stack up' on each named door; `set`: standing on their marks AND their plan chain waiting for the word).
+    mouse buttons. Only where the page HAS the mode: the gate reads `CMDRING.plan` (and `planRts` for the walk keys), so with `?qplan=0` or on the frozen stand the key with Shift is the
+    key's own order and stays locked — THE MISSION CANNOT BE PLAYED WITH PLAN MODE SWITCHED OFF, and no line says so on the page. A walk key held down is a sprint's only where his feet
+    are his: on a step with no `move` it does not stand between Shift and the key. No other level allows `plan`, so nothing else changed. A step done IN the mode carries `planLine`
+    (a new step key: `scene/scenarios.ts`, `levelData.ts`, `rails.ts prompt`), the line while the mode is DOWN — a checkpoint put back puts the mode down, and so can a hand: 'Hold
+    [Shift], tap [B]: plan mode again'. New lesson tests (`lesson.ts LESSON_TESTS`): `planView {at, r}` (the mode up and its view's point within r of a place), `picked {n, free}` (the
+    men an order would go to), `stacks {doors, set, n}` (men on a 'stack up' on each named door; `set`: standing on their marks AND their plan chain waiting for the word). The gate
+    repeats, in its own words, which of the mode's keys are whose; asking plan mode itself what it would read this tick is the sounder shape and is its owner's.
+  - **The word's lock holds INSIDE the mode** (`planmode.ts wordLocked`, `stackedLocked`; nothing changes where no frame runs or `word` is allowed): until a step allows `word`, men
+    stacked on a door wait there whether or not a wait was put on its threshold; a second right click on that door is no entry (before this it was `bangClear`, found by the check's
+    line 8); a left click on a stop does not cycle its waits; and the right button held gives no ring while `ring` and `menu` are locked.
   - **Two things the real page found** (both would have read as a broken key). The word's key sends the stacks of the men who are PICKED (`planmode.ts chainsOf`): after the second box
     the picked men are one pair, and 'one word, both doors' sent one door — hence the steps 'all' and 'all2' (a left click on bare ground) before each word, and the scripted player
     and the page run both fail unless ONE press empties every waiting chain. And a press while a chain is still walking to its door is eaten (`CMDRING.planWaits`): the men "arrive" about
@@ -386,7 +393,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **Level facts**: built on the look's kit (one file, no look twin), no glass, one pickup (`carlamps-check` row), no response block; the outside camps' groups are `checkpoint.east` /
     `checkpoint.back` (`road` is a structure word to the lived count); a NEW level, so no save or tape is refused. Furnished for what the post is: the relay's dish and generator behind the
     hall, a cooking corner, washing, a bed carried out, the runner's motorbike. The row opens at night (a row cannot carry its own hour). The menu picture is `tools/menu-art.ts`'s.
-  - **Checks, and what was measured**: see the sub-bullet below (kept as numbers of this build).
+  - **Checks, and what was measured** (2026-10-22, on the build head of that evening merged in; no new switch: the mission rides the frame's `RAILS.on`, `?rails=0`, and plan
+    mode's `CMDRING.plan`, `?qplan=0`; frozen words for a headless run: `TPS_RAILS=1 TPS_QRING=1 TPS_QPLAN=1 TPS_PLANLOOK=1 TPS_PLANWAITS=1 TPS_PLANKNEE=1`, which `lesson-gate` gives a
+    level whose steps allow `plan`). `bun run tools/qa/tutplan-check.ts` (probe `tutplan`, family `missions`): 8 lines, ALL PASS on both stands; `TUTPLAN_BREAK=1` (no step allows
+    `plan`) fails 5 on both (the mode's own action, its hands, the hall, a walk key held, the word's lock) — the hall line's break is its own (the cue is not sent) and line 5 is excused
+    the mode's state under the break. The scripted player (`lesson-run tut-plan`, always the shipped stand): 19/19 steps on seeds 1 to 8, 108.9 to 110.1 s; reading every line for six
+    seconds 216.9 s (seeds 3, 5); it fails unless ONE press of the word empties every waiting chain, and it loads the checkpoint 'the gates' in the middle of every run and asks that
+    all of it came back. THE WRONG PLAN (`TUTPLAN_ALONE=1`: all four on the hall's front door) on seeds 1 to 4: the run still ends, in 93.4 to 108.8 s, with 2, 0, 5 and 3 teammates
+    put on a knee at the hall against 0 on every run of the plan — fewer seeds than would make that a rate, and one of the four cost nobody. `lesson-gate tut-plan` ALL PASS (6:
+    file, lint, lesson-check, the frozen run, four dice as the page ships, two of them at a reader's pace). `level-needs tut-plan --run` no FAIL on both stands. `rails-check`: frozen ALL
+    PASS; on the shipped stand one line is red ("the first play's notes hold", the first mission's) and is red the same way on the build head without this change. The `planmode`
+    probe (plan mode's own file changed): frozen ALL PASS (28); on the shipped stand one line is red ("W held five seconds: the view stops at its reach", 24.93 m against 25) and is
+    red the same way on the build head without this change. `planplus` ALL PASS on both stands (18). `dice-check`, `rollback-check --static`, `knobs-check`, `lesson-check`,
+    `carlamps-check` and both typechecks pass.
+    ON THE PAGE (`PORT=… node tools/qa/tut-plan-page.cjs`, headless Chromium, the software adapter, real keyboard and mouse events): every step of the mission to its end card (38 lines), with one
+    press of the word sending both stacks, the `planLine` up with the mode down, each mark inside the picture when its line is up, and no page or console error. A page that has DRAWN a
+    frame plays on live GPU senses, and a scripted page that then steps without drawing to completion plays on stale ones (men a metre apart who do not fire): the script's fights draw
+    every frame to the end once a picture was taken, and a run for the verdict takes none (`SHOTS=0`).
+    NOT EXERCISED BY ANY RUN: the gates' beat past its first release (the walk on into the yard after `ON_SECS`, the last man's rout) — in every run the men faced to the gates had all
+    four first; the hall with the back door opened FIRST; a checkpoint other than 'the gates' put back mid-run; the mission with `?qplan=0`.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
