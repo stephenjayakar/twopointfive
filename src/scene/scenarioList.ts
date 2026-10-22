@@ -172,7 +172,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     teaches: ['Turn, zoom and move the view', 'One key orders the squad', 'Stack on a door, then send them in', 'A charge on a wall', 'Lights out: what the dark does to men'] },
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): he stays at the gate with the handset, and every stop is a thing one order to all
   // four cannot do and a plan can
-  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial',
+  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', hour: 'midday', weather: 'clear',   // (a plan is laid by day: every yard and door in plain sight from above)
     place: 'A walled relay post, led from its gate', lean: 'loud', defenders: 8, squads: true,
     blurb: 'You stay at the gate with the handset. Lay a plan for the four: two doors on one word, a gun, two gates.',
     scene: 'The men who hit the convoy talk through a relay post in the hills. You take the four to its gate and stay there on the handset: this one is won by the plan.',

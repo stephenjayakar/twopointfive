@@ -5,6 +5,10 @@ import type { Bot } from '../lesson-run';
 
 export const query = '?roomclear=1&squad4';
 export const ended = (g: any) => g.lesson.finished;
+/** A run off the page's stand cannot do three of this mission's steps: the wall's (the squad is ordered to set a charge from the ring on the command key
+ *  — there is no destruction there, so no wall charge to give, and no ring that stays up for its digits to give it from) and the breaker's (a teammate
+ *  works a thing). The runner raises those four for this run alone; the page's stand has them */
+export const raises = { PT_DESTR: '1', TPS_QRING: '1', TPS_QSTAY: '1', TPS_WORKTHINGS: '1' };
 /** the roadblock can be down before the squad is all in the yard: then its step is done as it comes up */
 export const idleOk = ['gate', 'torches'];
 
