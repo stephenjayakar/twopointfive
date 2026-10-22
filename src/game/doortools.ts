@@ -1732,7 +1732,7 @@ export class DoorTools {
   /** … with the rooms being worked from the threshold: the word sends those in too (the pockets, then the step in) */
   /** THE MEN THE WORD IS FOR: those the orders go to — or, with the squad's only keys (cmdring.ts `only`: there is no who key to turn to them with), whoever
    *  stands waiting on it when none of those does (the maintainer, 10-22: "pressing F only releases the people blocked on it") */
-  private wordMen(): Guard[] { const S = this.g.orders, men = S.recipients(); if (!CMDRING.only) return men;
+  wordMen(): Guard[] { const S = this.g.orders, men = S.recipients(); if (!CMDRING.only) return men;
     if (S.big ? this.waitingAny(men).length : this.stackWaits(men).length) return men;
     const all = S.men('all'); return (S.big ? this.waitingAny(all).some(x => 'stack' in x || !this.chargeOn(x.door)) : this.stackWaits(all).length > 0) ? all : men; }   // (a set charge with nobody else waiting is not the word's: it has its own line and F blows it, as it did)
   private waitingAny(men: Guard[]): (DoorOp | { stack: Door; men: Guard[] })[] { return [...this.waiting4(men), ...this.thresholdHeld(men).filter(op => !op.word)]; }

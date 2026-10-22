@@ -157,7 +157,7 @@ const angDiff = (a: number, b: number) => { let d = (a - b) % (Math.PI * 2); if 
  *  doortools.ts `input`: the word to whatever of the addressed men's is waiting, else the nearest free set charge; the pair's word takes its set charges too). */
 function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null) {
   const S = g.orders, T = g.doorTools, WC = g.wallCharge, NB = g.nightBreach, RS = g.rescue, big = S.big, alive = (m: Guard) => m.state !== 'dead';
-  const sam = g.player.char.pos, up = !g.player.down, addr = new Set(S.recipients());   // (the SEAT's: see the head)
+  const sam = g.player.char.pos, up = !g.player.down, addr = new Set(T.wordMen());   // (the SEAT's: see the head · the men the word's key reads, doortools.ts wordMen: the orders' own, and — the squad's only keys, cmdring.ts — whoever waits when none of those do)
   const F = keyCap(DOORTOOLS.blowKey), wordKey = !big || DOORTOOLS.wordOnKey;
   type Why = PlanDoor['why'];
   const RANK: Record<Why, number> = { stack: 0, pair: 0, tool: 1, thr: 2, drill: 2, charge: 3, wall: 3 };

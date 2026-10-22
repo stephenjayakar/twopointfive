@@ -258,7 +258,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the Controls list still says 'or the middle mouse button' on a row that reads as no key; THE WORD FREES WHOEVER WAITS (`doortools.ts wordMen`; the maintainer: "pressing F only releases the people blocked on it"): with the orders going to
   men who are not waiting on it, F goes to the men who are, and the squad block offers the key for them ('F go · blue waiting' where it read 'blue
   waiting · T, then F'; `squadplay-go` reads the stand: red in, the orders still red's, F sends blue). A press while the chosen men still walk and
-  another pair waits therefore sends the pair that waits. The
+  another pair waits therefore sends the pair that waits. THE PLAN'S KEY MARK FOLLOWS (`floorplan.ts waitsOnKey` asks `wordMen`, not the orders' own
+  men: the door's mark said no key while the key sent them; `probes.ts plan` lines 6c read the stand, red on the page's stand until this). The
   ring on Sam shows 'fall in' twice (the quick order's wedge and its own); with the quick throw's own switch on (off in the page) G held under a ring
   still starts Sam's own throw. The older menu's probes (`orders-probes`, `orderui-probes`, `pressorders-probes`) pin `only` off in their rigs. NOT measured: no tally; nobody has played it; never
   seen on a GPU.
