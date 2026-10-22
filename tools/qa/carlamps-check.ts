@@ -39,6 +39,7 @@ const KNOWN: Record<string, [number, number, number][]> = {
   'mousehole-gwot.json': [[4, 4, 4]], 'office.json': [[4, 4, 4]], 'office-relief.json': [[4, 4, 4]], 'pass.json': [[2, 0, 0], [4, 2, 0]], 'police-post.json': [[6, 6, 0]],
   'quiet-relay.json': [[6, 6, 0]], 'records.json': [[4, 4, 4]], 'records-gwot.json': [[4, 4, 4]], 'snatch.json': [[4, 4, 0]], 'train-hands.json': [[2, 2, 0]],
   'train-move.json': [[6, 6, 0]], 'train-silent.json': [[2, 2, 0]], 'tut-sky.json': [[8, 6, 0], [10, 8, 0]],   // (the pass's own, the squad's two pickups and the roadblock's gun truck)
+  'tut-squad.json': [[4, 4, 0]],
 };
 
 export async function carlampsCheck(): Promise<boolean> {
