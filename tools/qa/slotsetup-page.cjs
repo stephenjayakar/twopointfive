@@ -3,7 +3,8 @@
 //   as the page opens     the switch is on and the kit column is the box, no key cap on it · 2 draws the rifle; 2 again and the setup stands above the column:
 //                         a digit in the cap before each row, none above 5, the back key's cap in its corner; four seconds on it is still up · a row's digit
 //                         steps the row and the setup is gone: 2 1 the selector, 2 2 the launcher's load, 2 3 the light ·
-//                         Z and L file nothing · 2 then Tab: shut, nothing set · 1 draws the pistol, 1 again then 3: its light
+//                         Z and L file nothing · 2 then Tab: shut, nothing set · 1 draws the pistol, 1 again then 3: its light ·
+//                         with the pistol up, 2 2 two frames apart: the rifle and its setup, and a 1 straight after is the selector
 //   with ?setuppop=0      the first build's: the rows are the box's second line, and the setup shuts by itself after its seconds
 //   with ?slotsetup=0     the switch is off and the column is the one before · 2 again steps the launcher's load, no setup · Z turns the selector, L the light
 //   PORT=<port> node tools/qa/slotsetup-page.cjs        (a dev server on that port: PORT=<port> bun run tools/serve.ts)
@@ -46,6 +47,9 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute${
     await key('1', 120); const p0 = await read(); await key('1'); const p1 = await read(); await key('3'); const p2 = await read();
     line(p0.slot === 'pistol' && !p0.away && p0.up === '' && p1.up === 'pistol' && p1.kbd.includes('3') && p2.plight !== p0.plight && p2.up === '' && !A.errors.length,
       '1 draws the pistol; 1 again and 3 turns its light; no page error in the whole of it', `1: ${s(p0)}\n    1 again: ${s(p1)}\n    3: ${s(p2)} · errors ${JSON.stringify(A.errors.slice(0, 3))}`);
+    await key('2', 2); const q1 = await read(); await key('2', 2); const q2 = await read(); await key('1', 2); const q3 = await read();
+    line(p2.slot === 'pistol' && q1.slot === 'rifle' && q1.up === '' && q2.up === 'rifle' && q2.pop && q2.above && q2.mode === q1.mode && q2.load === q1.load && q3.mode !== q2.mode && q3.up === '' && q3.slot === 'rifle' && !A.errors.length,
+      'with the pistol up, 2 pressed twice two frames apart is the rifle and its setup at once (nothing set by it), and a 1 straight after turns the selector with the rifle still his', `2: ${s(q1)}\n    2 again, two frames on: ${s(q2)}\n    1: ${s(q3)} · errors ${JSON.stringify(A.errors.slice(0, 3))}`);
     await A.page.close(); }
 
   { const B = await open('&slotsetup=0'), { key, read } = B; const r0 = await read();
