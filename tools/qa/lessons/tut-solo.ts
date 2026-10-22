@@ -10,12 +10,13 @@ export const needs = 'rails';
 /** THE LESSONS CAN BE FAILED THE WAY THEIR LINES SAY (each of these runs must end with the player down; tools/qa/tut-solo-check.ts asks it):
  *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Two more words are mistakes that must cost
  *  nothing: `piers` stands at each pier of the arch under the last two's fire, `dud` fires the first grenade from too close */
-/** the page itself (no process to ask). The harness's own stand of the page does not wear a lesson level's issue card: only the page's kit is the card's */
-const PAGE = typeof process === 'undefined';
 const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : (globalThis as { __TUT_SOLO_ARM?: string }).__TUT_SOLO_ARM) ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
-/** the last men may already be down when 'Shoot the rest' comes up (the grenade took both); and where his card carries no charge (the frozen stand) the boot
- *  opens the door at the line before 'F: blow it' */
-export const idleOk = ['last', 'blow'];
+/** THE DOOR'S LINE TEACHES HIS OWN CHARGE, and it is the one row the level lets that door offer (`rails.rows`: no pick, no boot). A stand that holds his own
+ *  charges off (the frozen one) has no row there at all and the lesson cannot be done on it: a run there raises them, as it raises the frame. Said here,
+ *  before the game stands up (TPS_OWNCHARGE=0 in front shows the door with nothing to offer) */
+if (typeof process !== 'undefined' && process.env.TPS_PROFILE !== 'shipped') process.env.TPS_OWNCHARGE ??= '1';
+/** the last men may already be down when 'Shoot the rest' comes up (the grenade took both) */
+export const idleOk = ['last'];
 
 /** the right button pressed, held on a world point for `secs` (the arc is up) and let go: Input's bits are 1 left · 2 middle · 4 right */
 const rightHold = (B: Bot, p: number[], secs = 0.5) => { B.aim(p); B.step(); B.I.clicked |= 4; for (let i = 0; i < secs * 60; i++) { B.aim(p); B.I.buttons |= 4; B.step(); } B.I.buttons &= ~4; B.aim(p); B.step(3); };
@@ -75,7 +76,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   ready: B => { take(B, 'Digit2'); },
   // walk into the wall as the page takes one; the hold's own key where walking in is switched off (the frozen stand)
   wall: B => {
-    if (!B.g.player.wall) B.nudge([9.2, 0, WALL[2]], 1.5, () => !!B.g.player.wall);
+    if (B.g.player.wall) B.fail('he is on a wall before the line that teaches it');   // (the frame gives a wall to a walk only once `wall` is allowed: nothing before this line may lean on one)
+    B.nudge([9.2, 0, WALL[2]], 1.5, () => !!B.g.player.wall);
     if (!B.g.player.wall) { B.aim([9.0, 1.2, WALL[2]]); B.press('KeyQ', 20); }
     if (!B.g.player.wall) B.fail('no wall taken beside the gate, by walking into it or by its key');
   },
@@ -118,10 +120,9 @@ export const steps: Record<string, (B: Bot) => void> = {
     for (let i = 0; i < 30; i++) { B.aim(c); B.step(); }
     const rows = g.nearby.filter((r: any) => r.kind === 'door').map((r: any) => r.verb);
     B.say(`  the door's rows: ${rows.join(' ')}`);
-    // (his card carries one door charge, read where his own charges are switched on, which is the page: there the row must be)
-    if (PAGE && !rows.includes('charge')) B.fail(`the shop's door has no 'charge' row on the page (rows: ${rows.join(' ')})`);
-    const v = rows.includes('charge') ? 'charge' : 'kick';
-    if (!B.verb('door', v, c)) B.fail(`no '${v}' row on the shop's door`);
+    // (the level names the rows its lines teach: at this door that is the charge and nothing else, the lock's pick and the boot have no line)
+    if (rows.join(' ') !== 'charge') B.fail(`the shop's door offers '${rows.join(' ')}', not the charge alone`);
+    if (!B.verb('door', 'charge', c)) B.fail(`no 'charge' row on the shop's door`);
     B.until(() => !g.player.charging && !g.player.kick, 12); B.step(20);
   },
   back: B => { B.go(BACK, 10, { near: 0.5 }); },

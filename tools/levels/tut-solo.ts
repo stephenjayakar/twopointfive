@@ -228,7 +228,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const SMOKED: Rect = { x0: 21.4, x1: 24.8, z0: 7.6, z1: 14.9 };   // (from past where the line before left him: a can dropped at his own feet behind the sandbags hides nothing)
   const lesson: LessonData = {
     title: 'Alone, loud',
-    rails: { allow: ['move', 'camera', 'zoom'] },
+    rails: { allow: ['move', 'camera', 'zoom'], rows: ['charge', 'drive'] },   // (the interaction key's rows in this mission are the two its lines teach: the charge on the shop's door, the code book. No pick, no boot, no dead man to drag)
     steps: ([
       // THE ROAD
       { id: 'move', line: '[W] [A] [S] [D]: get behind the van', done: { is: 'near', at: VAN, r: 1.1 }, at: VAN },
