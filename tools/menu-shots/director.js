@@ -96,7 +96,9 @@
   // a camera laid over a set of places as they are now: look = their middle, the lens far enough back to hold them;
   // `from` = the side the camera stands on (a place; `turn` swings it round from there), else `yaw`
   function frameOn(places, o = {}) {
-    const P = places.flatMap(p => Array.isArray(p) && typeof p[0] !== 'number' ? p : [p]).map(at).filter(Boolean);   // (a list of men opens out; a coordinate stays one place) let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
+    const P = places.flatMap(p => Array.isArray(p) && typeof p[0] !== 'number' ? p : [p]).map(at).filter(Boolean);   // (a list of men opens out; a coordinate stays one place)
+    if (!P.length) throw new Error('frameOn: none of the places is on the floor');
+    let x0 = 1e9, x1 = -1e9, z0 = 1e9, z1 = -1e9;
     for (const p of P) { x0 = Math.min(x0, p[0]); x1 = Math.max(x1, p[0]); z0 = Math.min(z0, p[2]); z1 = Math.max(z1, p[2]); }
     const c = [(x0 + x1) / 2 + (o.dx ?? 0), o.y ?? 1, (z0 + z1) / 2 + (o.dz ?? 0)], r = Math.max(...P.map(p => flat(p, c)), 0.5), f = o.from ? at(o.from) : null;
     const yaw = (f ? Math.atan2(f[0] - c[0], f[2] - c[2]) : (o.yaw ?? 0)) + (o.turn ?? 0);

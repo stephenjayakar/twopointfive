@@ -373,9 +373,11 @@ export class Player {
    *  last frame and the movement keys already down when it began (a step cancels a running verb — a key held into it does not until it has come up once). */
   sel = { downT: -1, open: false, moved: false, wheelAcc: 0, runKey: '', moveLatch: 0,
     /** the list up as a ring at the cursor (cmdring.ts CMDRING.hands — null: the list as it was): where, and whether the cursor may light a wedge yet; `key`: the rows it was last read over (Player.nearKey) */
-    ring: null as (RingState & { key: string }) | null };
+    ring: null as (RingState & { key: string; /** handring.ts: the press that opened it has come up and it stands by itself */ free?: boolean; /** …the lit wedge is the whistle's, which is no row (interact.ts) */ whistle?: boolean }) | null };
   /** the selector open AS A LIST (feet still, a cancel row at its foot, the panel in its open look) — not up as a ring */
   get listOpen(): boolean { return this.sel.open && !this.sel.ring; }
+  /** the selector open with his hand on it — a list, or a ring whose key is still down; not a ring that merely stands (handring.ts) */
+  get choosing(): boolean { return this.sel.open && !this.sel.ring?.free; }
   pace = 1; paceShownT = -10;   // walking-pace multiplier set with the mouse wheel, PACE_MIN‥1 of the walk / crouch-walk speed (sprint is its own held modifier); shown as ticks in the kit column
   nv = false; nvAmount = 0;
   light!: RtLight;   // the rail light: posed from the gun every frame (rigProps.rigLightPose)

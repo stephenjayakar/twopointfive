@@ -50,8 +50,8 @@ for (const level of LEVELS) {
   if (on.length !== off.length) { console.log(`- FAIL — ${level}: ${on.length} blasts with the pace, ${off.length} without`); bad++; continue; }
   let m = 0, d = 0, g = 0; for (let i = 0; i < on.length; i++) { if (on[i].masks !== off[i].masks || on[i].reachFrames < 0) m++; if (on[i].drips !== off[i].drips || on[i].dripFrames < 0) d++; if (on[i].digest !== off[i].digest) g++; }
   const n = on.length, pts = on.length ? JSON.parse(on[on.length - 1].drips).length : 0;
-  console.log(`- ${m || d || g ? 'FAIL' : 'PASS'} — ${level}: ${n} walls blasted, ${FRAMES} frames after each: reach masks equal ${n - m} of ${n} · drip lines equal ${n - d} of ${n} (${pts} points) · digest equal ${n - g} of ${n} · masks landed ${on.map(r => r.reachFrames).join(' ')} frames after the blast with the pace (${off.map(r => r.reachFrames).join(' ')} without) · drip lines ${on.map(r => r.dripFrames).join(' ')} (${off.map(r => r.dripFrames).join(' ')})`);
-  if (m || d || g) bad++;
+  console.log(`- ${m || d || g || !n ? 'FAIL' : 'PASS'} — ${level}: ${n} walls blasted, ${FRAMES} frames after each: reach masks equal ${n - m} of ${n} · drip lines equal ${n - d} of ${n} (${pts} points) · digest equal ${n - g} of ${n} · masks landed ${on.map(r => r.reachFrames).join(' ')} frames after the blast with the pace (${off.map(r => r.reachFrames).join(' ')} without) · drip lines ${on.map(r => r.dripFrames).join(' ')} (${off.map(r => r.dripFrames).join(' ')})`);
+  if (m || d || g || !n) bad++;   // (no wall blasted is no check: both arms agree on nothing)
 }
 console.log(bad ? `=== blast-pace-check: ${bad} level(s) differ ===` : '=== blast-pace-check: ALL PASS ===');
 process.exit(bad ? 1 : 0);

@@ -445,9 +445,9 @@ export function report(runs: RunOut[], md = false): { text: string; holds: boole
   // THE VERDICT, on what the maintainer asked be counted (wins and men kept): a WIN is a clean floor — taken with Sam never shot down, what a player
   // who can be hit calls taking it. A laid plan over B: at least as many clean floors AND fewer men lost. B over going solo: more clean floors.
   const of = (h: string) => runs.filter(r => r.hand === h && r.end !== 'error'), clean = (h: string) => of(h).filter(isClean).length / Math.max(1, of(h).length), lost = (h: string) => mean(of(h).map(r => r.of - r.men));
-  const have = hands.length === 3 && HANDS.every(h => of(h).length > 0), planB = have && clean('plan') >= clean('b') && lost('plan') < lost('b'), bSolo = have && clean('b') > clean('solo'), holds = planB && bSolo;
+  const have = hands.length === 3 && HANDS.every(h => of(h).length > 0), planB = have && clean('plan') >= clean('b') && lost('plan') < lost('b'), bSolo = have && clean('b') > clean('solo'), errs = runs.filter(r => r.end === 'error').length, holds = planB && bSolo && errs === 0;   // (a run that threw is no run: the runs left over are not the sample that was asked for, so nothing HOLDS on them)
   const say = (h: string) => `${h} ${of(h).filter(isClean).length} of ${of(h).length} clean, ${f2(lost(h))} men lost a floor`;
-  L.push(have ? `VERDICT: ${holds ? 'HOLDS' : 'DOES NOT HOLD'} — a laid plan over B: ${planB ? 'yes' : 'NO'} (as many clean floors and fewer men lost) · B over solo: ${bSolo ? 'yes' : 'NO'} (more clean floors) · ${['plan', 'b', 'solo'].map(say).join(' · ')}` : 'NO VERDICT: not every hand was run');
+  L.push(have ? `VERDICT: ${holds ? 'HOLDS' : errs ? `DOES NOT HOLD (${errs} of ${runs.length} runs threw)` : 'DOES NOT HOLD'} — a laid plan over B: ${planB ? 'yes' : 'NO'} (as many clean floors and fewer men lost) · B over solo: ${bSolo ? 'yes' : 'NO'} (more clean floors) · ${['plan', 'b', 'solo'].map(say).join(' · ')}` : 'NO VERDICT: not every hand was run');
   return { text: L.join('\n'), holds };
 }
 

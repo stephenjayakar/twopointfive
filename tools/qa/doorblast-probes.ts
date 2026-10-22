@@ -326,7 +326,7 @@ export const offHingesSweep = guarded(async () => {
   let total = 0, backs = 0; const bad: string[] = []; const perLevel: string[] = []; const T0 = { ...DOORBLAST_STATS }; DOORBLAST_STATS.nudgeMax = 0;
   for (const file of LEVELS) {
     let R: Awaited<ReturnType<typeof rig>>;
-    try { R = await rig(23, file); } catch (e) { perLevel.push(`${file ?? 'office'}: did not load (${String(e).slice(0, 60)})`); continue; }
+    try { R = await rig(23, file); } catch (e) { bad.push(`${file ?? 'office'}: did not load (${String(e).slice(0, 60)})`); continue; }   // (a level that does not load is a FAIL and no level swept, as in doorstay-probes: it was a logged line under a PASS)
     const g = R.g, doors = ordinary(g); let n = 0, b0 = DOORBLAST_STATS.back, longest = 0;
     for (const d of doors) for (const side of [1, -1] as const) for (const how of ['blast', 'charge', 'open'] as const) {
       shut(g, d); for (const x of g.doors.list) if (x !== d && x.off) x.reset();
