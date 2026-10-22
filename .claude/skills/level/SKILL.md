@@ -189,7 +189,8 @@ like that."
   from wherever he can be caught that a led man can walk, and room at its doors. The van itself is the look kit's piece
   (`van` in `src/scene/gwotKit.ts`). **seen** the maintainer, playing it: "like maybe we need to get him to a van near
   our infil". **check** `bun run tools/qa/snatch-check.ts`, `bun run tools/qa/snatchout-check.ts`.
-- **A lesson**: a line names the key and what to do, in 96 characters, no compass word; a step never passes by itself and
+- **A lesson**: a line is one short sentence that names the key and what to do, written by the guide in CLAUDE.md ("Writing for
+  the player": the way you'd say it aloud), in 96 characters, no compass word; a step never passes by itself and
   never becomes impossible; a line arrives with its prompt, inside reach; checked at a reader's pace on the shipped stand.
   **check** `bun run tools/qa/lesson-gate.ts <name>`.
 - **A level whose idea leans on geometry gets a check of its own** (`tools/qa/<name>-check.ts`, a `_BREAK` path, both
