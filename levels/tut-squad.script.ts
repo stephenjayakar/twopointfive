@@ -214,7 +214,11 @@ const script: LevelScriptFn = D => {
       const up = () => { if (gun()) c.order(m!, { goal: null, aimAt: LANE, upper: 'aim', crouch: false, flinch: true }); };
       const down = () => { if (gun()) c.order(m!, { goal: null, aimAt: null, crouch: true, upper: 'relaxed', flinch: true }); };
       for (const u of [m, n]) if (alive(c, u)) c.order(u, { goal: null, aimAt: null, crouch: true, upper: 'relaxed' });   // both under the bags until the gun's step; the man beside the gun stays there
-      if (!cue('gun')) yield c.any(on('gun'), fewer(1, 'the nest is empty'));
+      // (…and not past sense: the player in the nest before its step, or one of the two shot there, and they are the game's own again and fight)
+      if (!cue('gun') && (yield c.any(on('gun'), fewer(2, 'one of the nest is down'), c.until(q => q.room('sam') === 'nest', 'the player is in the nest'))).index > 0 && !cue('gun')) {
+        for (const u of left(c.query)) c.release(u, 'alert');
+        return;
+      }
       if (gun()) c.show(m!);   // (the gunner is in the picture through the fog while he is the script's: the line says shoot back, and there is no ring on him)
       if (gun()) { up(); yield c.wait(0.4); yield c.any(burst(5), c.wait(3)); }
       c.signal('done:gun');

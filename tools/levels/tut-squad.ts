@@ -209,6 +209,7 @@ export function build() {
   };
 
   const taken = (room: string) => ({ is: 'taken', room }), or = (...of: object[]) => ({ is: 'any', of }), and = (...of: object[]) => ({ is: 'all', of });
+  const ENTRY = ['openClear', 'bangClear', 'charge'];   // (the orders that send a stacked squad in: a second 'stack' on the same door is not one)
   const near = (at: Vec3, r = 1.5) => ({ is: 'near', at, r }), gave = (order: string, on?: string) => ({ is: 'did', what: `order:${order}`, ...(on ? { on } : {}) });
   const ALLEY: Rect = { x0: 22.2, x1: 27.0, z0: 5.3, z1: 10.6 };
   const HALL_FRONT: Vec3 = [34.0, 0, 19.75], HALL_OPEN = or({ is: 'door', door: 'hall', state: 'open' }, { is: 'door', door: 'hall', state: 'unlocked' });   // (the passage, square on to the leaf)
@@ -234,10 +235,12 @@ export function build() {
     rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'slot:rifle', 'slot:pistol', 'use', 'order', 'word', 'camera', 'zoom'], respawn: 5 },
     steps: [
       // 1 · two easy rooms: the squad's key on a door, twice
-      { id: 'stack-hut', line: '[B] on the guard hut door', after: { line: 'They stack up on the door' }, done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
-      { id: 'go-hut', line: '[B] again: they choose how, and go in', after: { line: 'They go in', word: 'They go straight in' }, explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
-      { id: 'stack-store', line: '[B] on the store door', after: { line: 'They stack up on the store' }, done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
-      { id: 'go-store', line: '[B] again. Follow them in', after: { line: 'Follow them in', word: 'Follow them in' }, done: and(taken('store'), { is: 'in', area: { ...STORE } }), at: [10.85, 1, 18.6] },
+      { id: 'stack-hut', line: '[B] on the guard hut door', after: { line: 'They stack up on the door', on: ['stack'] }, done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
+      { id: 'go-hut', line: '[B] again: they choose how, and go in', after: { line: 'They go in', on: ENTRY, word: 'They go straight in' }, explain: CARDS.entry, done: taken('guardhut'), at: [10.85, 1, 11.0] },
+      { id: 'stack-store', line: '[B] on the store door', after: { line: 'They stack up on the store', on: ['stack'] }, done: or({ is: 'stackOn', who: 'all', door: 'store', set: true }, taken('store')), at: [10.85, 1, 16.5] },
+      { id: 'go-store', line: '[B] again: they go in', after: { line: 'They go in', on: ENTRY, word: 'They go straight in' }, done: taken('store'), at: [10.85, 1, 16.5] },
+      // (its own step: a line the men's order has gone out on is drawn as something to watch, with no ring, and this one is an ask with a place)
+      { id: 'in-store', line: 'Follow them in', done: { is: 'in', area: { ...STORE } }, at: [10.85, 1, 18.6] },
       // 2 · A DOORWAY HE HOLDS: as the store falls the workshop's man is on his open lane doorway, in the picture through the fog, his rounds on the
       //     guard hut's wall; the fog has a lookout behind him while these steps are up, so his room, the doorway and the strip of lane his rounds
       //     cross are seen too. The player is walked out to the street in front of the workshop (from inside the store none of it is on his screen):
@@ -246,7 +249,7 @@ export function build() {
       { id: 'out', line: 'Shots outside. Out to the street', done: or(near(SHOP_VIEW, 1.5), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street', eye: SHOP_EYE },
       { id: 'side', line: 'He has that doorway. [B] on the side door', explain: CARDS.side, done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
       { id: 'round', line: 'Go round with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
-      { id: 'shop', line: '[B] again: in behind him', after: { line: 'They go in behind him', word: 'They go in behind him' }, done: taken('workshop'), at: D_SIDE },
+      { id: 'shop', line: '[B] again: in behind him', after: { line: 'They go in behind him', on: ENTRY, word: 'They go in behind him' }, done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
       // (the held key is its own step, and a TAP of the squad's key gives nothing while it is up — the frame's `noTap`: tapped at the old one line, the
       //  key sent the four to the ring at the wall's end and the menu was never met)
@@ -279,7 +282,7 @@ export function build() {
   // thing). A POST THAT MEN SLEEP, EAT AND MEND TRUCKS IN: the guard hut is where the night guard sits (a felt, a stove, the radio on his table); the store is
   // grain and gas; the workshop a bench with its tools, the welding gas, oil on the slab; the hall where they eat (a low table on the rug, cushions under the
   // window wall, the stove); the corners of the yard are the water, the washing and the bread oven; the motor yard a bed in the open and a bike. THE GATES ARE
-  // LIT, as a post lights its gates: a lamp over the guard hut's door, one inside the back gate, one outside the road gate, and a work light over the motor
+  // LIT, as a post lights its gates: a lamp over the water in the yard's corner, one inside the back gate, one outside the road gate, and a work light over the motor
   // yard. Light is balance, so each is where it shows the OTHER side or nobody: the picket walks in under the two gate lamps, the workshop's man cannot see the
   // street the work light falls on, and the wall's end, the blocks and the bags (where the player is asked to stand) get none of it.
   // Kept clear, measured from the things themselves: 1.1 m of every doorway and 2 m of wall beside each jamb a pair stacks on; every mark by 0.45 m and its
@@ -287,9 +290,10 @@ export function build() {
   // its mouth; the way round the wall's end; the street's own length. What lies on a route is a decal.
   { const spans: [number, string][] = [], M = G.M;
     const room = (n: string) => { spans.push([K.props.length, n]); grp(`lived.${n}`); };
-    /** a lamp on a bracket over a door or a gate: warm, small, on the yard's own supply (group 'exterior': the photocell puts it out at midday) */
-    const gateLamp = (x: number, z: number, name: string) => {
-      add({ c: [x, 2.42, z], h: [0.02, 0.02, 0.1], ...M.iron, flags: BoxFlag.NoShadow });
+    /** a lamp on a bracket off a wall's top (`wx`, `wz`: the wall's own middle line, where the arm starts): warm, small, on the yard's own supply (group
+     *  'exterior': the photocell puts it out at midday) */
+    const gateLamp = (x: number, z: number, name: string, wx: number, wz: number) => {
+      add({ c: [(x + wx) / 2, 2.42, (z + wz) / 2], h: [Math.abs(x - wx) / 2 + 0.02, 0.02, Math.abs(z - wz) / 2 + 0.02], ...M.iron, flags: BoxFlag.NoShadow });
       const fb = add({ c: [x, 2.34, z], h: [0.05, 0.05, 0.05], ...M.plasticWhite, emissive: [30, 21, 11], flags: BoxFlag.NoShadow });
       lights.push({ kind: 'point', pos: [x, 2.28, z], dir: [0, -1, 0], color: [1.0, 0.68, 0.4], intensity: 16, range: 6.5, innerDeg: 0, outerDeg: 180, name, group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.06, mains: false });
     };
@@ -297,7 +301,7 @@ export function build() {
     G.rug(10.4, 8.5, 2.0, 1.4, 'felt');
     G.stove(12.45, 10.15);
     G.jerryCan(8.45, 9.05, 0.2, 'plasticBlue');
-    add({ c: [9.1, 0.84, 9.95], h: [0.12, 0.08, 0.06], ...M.plasticBlack }); add({ c: [9.4, 0.78, 9.8], h: [0.05, 0.02, 0.09], ...M.plasticBlack });   // the radio and its handset, on the guard's table
+    add({ c: [9.1, 0.83, 9.95], h: [0.12, 0.08, 0.06], ...M.plasticBlack }); add({ c: [9.4, 0.77, 9.8], h: [0.05, 0.02, 0.09], ...M.plasticBlack });   // the radio and its handset, on the guard's table
     G.wallHanging('x', 6.5, 10.6, 1, 'baluch', 1.4, 0.9);
     room('store');
     G.patch(10.7, 19.3, 1.8, 1.2, 'damp', 0.2);
@@ -305,20 +309,20 @@ export function build() {
     G.gasBottle(12.6, 18.2);
     room('workshop');
     G.patch(18.3, 9.9, 1.6, 1.0, 'oil', 0.3);
-    add({ c: [17.5, 0.85, 6.95], h: [0.18, 0.08, 0.12], ...M.paintRust }); add({ c: [18.5, 0.79, 6.9], h: [0.25, 0.02, 0.05], ...M.iron });   // a tool box and a bar, on the bench
+    add({ c: [17.5, 0.83, 6.95], h: [0.18, 0.08, 0.12], ...M.paintRust }); add({ c: [18.5, 0.77, 6.9], h: [0.25, 0.02, 0.05], ...M.iron });   // a tool box and a bar, on the bench
     G.gasBottle(19.7, 6.95, 'drumBlue');                              // the welding gas, on the back wall
     G.crates(16.6, 6.95, 0.2, 2, 'coyote');
     G.tyres(16.95, 10.4, 2);
     room('hall');
     G.lowTable(29.4, 19.5, 0.1);
-    G.toshak(28.6, 17.45, 1.9, 0, 'rugRed', 'rugOchre');
+    G.toshak(28.6, 17.5, 1.9, 0, 'rugRed', 'rugOchre');
     G.wallHanging('z', 25.5, 20.6, 1, 'afghan', 1.6, 0.9);
     G.stove(26.0, 21.55);
     add({ c: [28.6, 0.78, 21.4], h: [0.2, 0.03, 0.14], ...M.tin });   // a tray of glasses on the long table
     room('yard');
     G.waterTank(6.3, 8.2); G.charpoy(6.5, 10.1, HALF);                // the corner by the guard hut: the water, and a bed in the open
     G.woodPile(6.0, 19.9, HALF, 1.4); G.tandoor(6.7, 18.6); G.washLine(5.6, 17.3, 7.6, 17.3, 4);   // the corner by the store: the bread oven, its wood, the washing
-    gateLamp(5.9, 6.5, 'lived.yard.lamp_water');                       // (over the water, in the yard's corner, out of reach of the street. NOT over the hut's door, tried first: it lit the street between the two easy rooms, where the player stands while
+    gateLamp(5.45, 6.5, 'lived.yard.lamp_water', 5.0, 6.5);                    // (over the water, in the yard's corner, out of reach of the street. NOT over the hut's door, tried first: it lit the street between the two easy rooms, where the player stands while
                                                                       //  the squad takes them, and the store's men shot him through their opening door on one die of six)
     room('motoryard');
     G.charpoy(15.2, 19.0, 0.1); G.motorbike(24.6, 20.6, HALF + 0.1); G.patch(19.9, 17.9, 1.4, 1.0, 'oil', 0.5);
@@ -330,12 +334,12 @@ export function build() {
       lights.push({ kind: 'spot', pos: [x, h, z - 0.2], dir: [0, -0.6, -0.8], color: [0.92, 0.96, 1.0], intensity: 170, range: 15, innerDeg: 20, outerDeg: 32, name: 'lived.motoryard.worklight', group: 'exterior', enabled: true, volumetric: 0.14, fixtureBox: fb, radius: 0.14, mains: false, broad: true }); }
     room('alley');
     G.ruts(22.6, 5.6, 26.8, 10.4, 'dirt'); G.patch(24.9, 7.4, 1.6, 1.1, 'damp', 0.4);
-    gateLamp(25.0, 5.36, 'lived.alley.lamp_gate');
+    gateLamp(25.0, 5.36, 'lived.alley.lamp_gate', 25.0, 5.0);
     room('mast');
     G.jerryCan(29.9, 9.4, 0.4, 'jerryYellow'); G.patch(28.7, 9.9, 1.2, 0.8, 'oil', 0.2);
     room('road');
-    G.stove(39.4, 8.9); G.jerryCan(39.5, 11.9, 0.3); G.lantern(39.3, 10.9, 'lived.road.lantern', 'road');   // the picket's camp: its fire, its water, its lantern
-    gateLamp(36.3, 14.0, 'lived.road.lamp_gate');                     // on the road's blast wall, outside the gate: whoever comes through the gate comes through its light
+    G.crates(39.4, 8.9, 0.3, 1, 'olive'); G.jerryCan(39.5, 11.9, 0.3); G.lantern(39.3, 10.9, 'lived.road.lantern', 'exterior');   // the picket's camp: a box, its water, its lantern (on the photocell's group with the lamps: nobody burns one at midday)
+    gateLamp(36.3, 14.22, 'lived.road.lamp_gate', 36.3, 14.6);                  // on the road's blast wall, outside the gate: whoever comes through the gate comes through its light
     spans.push([K.props.length, '']);
     const serial = new Map<string, number>();
     for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0]; i < spans[s + 1][0]; i++) { const key = `lived.${spans[s][1]}.${K.props[i].kind}`, n = serial.get(key) ?? 0; serial.set(key, n + 1); K.props[i].name = `${key}${n}`; }
