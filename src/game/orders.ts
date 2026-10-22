@@ -1083,7 +1083,7 @@ export class SquadOrders {
     // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
     const R = this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, t0); this.ringSel(); CMDRING_STATS.opened++;
     if (CMDRING.pin && cam) { const [sx, sy, front] = cam.project(t.at, canvas.clientWidth, canvas.clientHeight);   // (it stays on its point: the place, and where its middle stands from it)
-      if (front) { R.at = v3.copy(t.at); R.ox = R.ax - sx; R.oy = R.ay - sy; R.mx = input.mouseX; R.my = input.mouseY; } }
+      if (front) { R.at = v3.copy(t.at); R.ox = input.mouseX - sx; R.oy = input.mouseY - sy; R.mx = input.mouseX; R.my = input.mouseY; } }   // (from the CURSOR, not from where the view's edge stood it: the edge is asked again every tick)
     return true;
   }
   /** PLAN MODE'S RING (planmode.ts: the right button kept down): the same ring, kept up by that button and given when it is let go. The hold was the

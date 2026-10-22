@@ -238,14 +238,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`FROZEN_HOLDS` `CMDRING.pin`, `TPS_RINGPIN=1`, needs `TPS_QRING=1`); a recording with no `pin` key replays with it off; debugger: Team feel ▸
   'Tab ▸ the ring ▸ stays on its point'. Line 8c of `probes.ts qring` (he walks with the ring up: it stands within 2 px of its place, lit wedge
   unchanged, nothing told, a digit still gives), `RINGPIN_BREAK=1` fails it, both stands. Plan mode's ring on the right button is pinned the same
-  way; the ring on E (handring.ts) is not. Known: the view leads toward the cursor, so the ring shifts a little as the cursor goes out to a wedge.
+  way; the ring on E (handring.ts) is not. Its place from its point is the CURSOR's when it came up (not where the view's edge stood it: the edge
+  is asked again every tick, so a ring opened in a corner stays whole in the corner). The game works the place out before the tick's camera step,
+  so the page draws it from the picture's own camera (`ui/cmdring.ts pinned`; the game's `ax` / `ay`, a tick old, still decide the wedge under the
+  cursor). `probes.ts cmdring` asked "at the cursor" some ticks after the key: on the page's stand its lines 1 and 17 now ask that it stands on its
+  point's place (`astray`), and say how far that is from the cursor. Known: the view leads toward the cursor (`camera.ts aimLead`), so the ring
+  shifts a little as the cursor goes out to a wedge, and it can slide under the weapon panel as he walks. Driven on the real page (headless
+  Chromium, the software adapter): he walked with the ring up and it moved 45 px with the floor, a digit then gave its wedge; never seen on a GPU.
   THE KEY'S CAP (`PLAN.keyLit`, `floorplan.ts capOf`, `PlanDoor.ready`, `ui/planfloor.ts`, `.plan .lit` in index.html; "need some indicator on the
   F on the door when it's queued vs live. maybe black background to lighting up to yellow background"): a stack waits on the word from the moment
   it is ordered, so the cap was on the door at once and looked the same walking or stood. Now every door that waits on the key carries its cap:
   DARK while its men are still on their way (their feet not on their places, or a fight has them) or while the press would not send it, LIT in
   their colour once they stand there and the press sends them. A picture only, on on both stands like the rest of `PLAN`; `?keylit=0` = the cap
   only on the door the key would send now, on its plate; debugger: 'plan ▸ the key on a door is dark until it is live'. Line 6b' of `probes.ts
-  plan`, `KEYLIT_BREAK=1` fails it, both stands. NOT measured; nobody has played either; never seen on a GPU.
+  plan`, `KEYLIT_BREAK=1` fails it, both stands. Driven on the real page (the same drive): the cap read near black with a dim F while the four
+  walked to a door, and their colour with a dark F once all four stood. NOT measured; nobody has played either; never seen on a GPU.
 - **Q and F are the squad's only keys; the ring carries every order: ON IN THE PAGE since 10-22** (`CMDRING.only`, `ringSeats` in
   `src/game/cmdring.ts`; `orders.ts seats`, `ringInput`, `ringView`; `KEYMAP.qOnly`, `DROPPED` in `src/host/keymap.ts`; the maintainer, 10-22: "squad is
   now just q and f. everything is through the radial menu (which is 1-5? is that sufficient) so we don't need all the other keys"). IS 1 TO 5 ENOUGH:
