@@ -5,7 +5,7 @@
 //   WHO       a living man on his feet whose script says `smoke`, once he stands where it sent him. Not a man in an arm, not a man the script has let go
 //             of (the order is the script's: a man handed back to the game has both hands for the game the frame he is).
 //   THE HAND  his LEFT (the torch and the gun are the right's): up to his mouth to light it, then down at his side, and up again for a draw every `every`
-//             seconds. The animator's own layer (character.ts smokeLayer) carries the arm; this file only says how far up it is asked.
+//             seconds. The animator's own layer (character.ts smokeLayer, its numbers SMOKEARM) carries the arm; this file only says how far up it is asked.
 //   THE LIGHT a lighter's flame at his mouth as he lights it, and the end going bright at every draw: the engine's own short lights (LightSet.flash, as a
 //             muzzle's), so the picture and the light meter have the same thing. Small: a flame lights a face and a hand's reach of wall.
 //   THE SMOKE real smoke: sources on the smoke solver's fine lattice, the one a gun's gas and the cold's breath live on. A thin thread off the end in his
@@ -32,11 +32,6 @@ export const SMOKEBREAK = {
   /** the lights (LightSet.flash: colour, intensity, range m; the end's is re-filed every `emberEvery` s so it never quite goes out) */
   flameColor: [1.0, 0.62, 0.24] as Vec3, flameK: 2.4, flameRange: 3.2,
   emberColor: [1.0, 0.36, 0.1] as Vec3, emberK: 0.1, emberDrawK: 0.7, emberRange: 1.3, emberEvery: 0.4,
-  /** THE ARM (character.ts smokeLayer; a place in the HEAD's frame [his left, up, forward] off the head joint for the wrist, the fingers' and the back of
-   *  the hand's directions in that frame, the elbow's pole in the body's, a shrug of the shoulder °, the fingers' curl; `rate` = the most of the way the
-   *  hand goes in a second, `away` = the same once something else has taken the arm) */
-  arm: { at: [0.075, -0.15, 0.125] as Vec3, fingers: [-0.55, 0.8, -0.1] as Vec3, back: [0.35, 0.1, 0.9] as Vec3, pole: [0.7, -0.6, 0.35] as Vec3, shrug: 5,
-    curl: [0.3, 0.34, 0.6, 0.66] as [number, number, number, number], thumb: 0.3, rate: 1.9, away: 3 },
   /** where the end is off the left hand's joint, m along the hand's own heading (worked out from the forearm) and up */
   tipOut: 0.11, tipUp: 0.02,
   /** THE THREAD off the end (the solver's units, as snowBreath.ts BREATHSTEAM: 6 /m of extinction a unit of density; +1.6 m/s² a unit of heat) */

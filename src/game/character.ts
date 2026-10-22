@@ -5,7 +5,6 @@ import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothste
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
 import { NodeOverride, Pose, PoseFK, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK } from '../anim/skeleton';
-import { SMOKEBREAK } from './smokebreak';   // (read inside the update only)
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
 import { hyp2, hyp3 } from '../math/vec';
@@ -1024,6 +1023,12 @@ const READY_UP = { over: [0.25, 0.45] as [number, number], rise: 38, look: 0.5, 
  *  `arc` = how far the hand's path bows out at its middle (trunk frame) so it goes ROUND the body, `cross` the same for an empty hand going from one place to the
  *  next. The support hand: with a gun coming it waits at `rest` (off its own shoulder) and joins over the last `1 − join` of the draw; a gun put away with no gun after it, it lets go of over `letGo` s; otherwise it is left alone. */
 export type KitItem = 'pistol' | 'rifle' | 'can' | 'knife';
+/** A SMOKE's arm (smokeLayer; the rule and its switch are game/smokebreak.ts, which this file must not import: it would be evaluated in the middle of this
+ *  one in the page's bundle): the wrist's place in the HEAD's frame [his left, up, forward] off the head joint, the fingers' and the back of the hand's
+ *  directions in that frame, the elbow's pole in the body's, a shrug of the shoulder °, the fingers' curl; `rate` = the most of the way the hand goes in a
+ *  second, `away` = the same once something else has taken the arm. FIRST-PASS numbers, never seen in the renderer. Authored data. */
+export const SMOKEARM = { at: [0.075, -0.15, 0.125] as Vec3, fingers: [-0.55, 0.8, -0.1] as Vec3, back: [0.35, 0.1, 0.9] as Vec3, pole: [0.7, -0.6, 0.35] as Vec3, shrug: 5,
+  curl: [0.3, 0.34, 0.6, 0.66] as [number, number, number, number], thumb: 0.3, rate: 1.9, away: 3 };
 export const KIT = {
   stow: { pistol: 0.3, rifle: 0.54, can: 0.26, knife: 0.34 } as Record<KitItem, number>,
   reach: { pistol: 0.17, rifle: 0.28, can: 0.16, knife: 0.2 } as Record<KitItem, number>,
@@ -3731,10 +3736,10 @@ export class CharacterAnimator {
    *  has the job and `free` says nothing else wants it (a hand flip whose arm is taken before the goggles have moved becomes a nod), and tips the head for a
    *  nod: the HEAD joint alone, about the level axis square to his gaze — the joint stays where it is and the way he faces on the plan does not turn, so what the game
    *  reads off his head (where his eye is, which way his gaze goes) is the same with a nod on it. pB is free scratch here. */
-  /** A SMOKE's arm (see `smoke`; the numbers are smokebreak.ts SMOKEBREAK.arm): the left wrist to a place in front of the mouth, in the head's frame as it will be
+  /** A SMOKE's arm (see `smoke`; the numbers are SMOKEARM): the left wrist to a place in front of the mouth, in the head's frame as it will be
    *  DRAWN (the goggle flip's own arithmetic, nvLayer), blended over the arm alone by how far up it has got. pB is scratch. */
   private smokeLayer(dt: number, free: boolean) {
-    const K = SMOKEBREAK.arm, want = this.smoke !== null && free ? clamp(this.smoke, 0, 1) : 0, step = (free ? K.rate : K.away) * dt;
+    const K = SMOKEARM, want = this.smoke !== null && free ? clamp(this.smoke, 0, 1) : 0, step = (free ? K.rate : K.away) * dt;
     this.smokeArm += clamp(want - this.smokeArm, -step, step);
     if (this.kit) this.smokeArm = 0;
     if (this.smokeArm <= 0.004) { if (want <= 0) this.smokeArm = 0; return; }
