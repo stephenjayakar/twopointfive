@@ -143,7 +143,7 @@ export class Overlay implements HudLike {
   private recEl = document.getElementById('journal'); private recKey = '';            // the session journal's REC tag (game.journal.hudText(): 'REC f=1234 · 38 KB' / why it waits) — journal.ts, F10 in main.ts; absent on a page without the element
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private skyWas = false;
-  private railEl: HTMLElement; private railKey = '\0'; private railsWas = false;                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
+  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private railsWas = false;                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
   private objMark: HTMLElement;                                                    // diamond + distance on / toward the current objective
   constructor() {
     menuTheme();   // the fight screen's rules read the menus' tokens (index.html `--h-…`)
@@ -331,14 +331,18 @@ export class Overlay implements HudLike {
     // line), a pip for every step. The small row at the top stands down while it is up, and the seat with nobody on the floor hides the rows of a man's own kit.
     const rail = game.rails.prompt();
     // (each cap in brackets is one key, asked of the key map by itself: a line of several — '[W] [A] [S] [D]' — follows a rebind of any of them)
-    const railWords = rail ? rail.line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? (t === '[X]' && KEYMAP.qOnly ? `Hold <kbd>${esc(keyCap('B'))}</kbd>` : `<kbd>${esc(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))}</kbd>`) : esc(keyText(t))).join('') : '';
+    const caps = (line: string) => line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? (t === '[X]' && KEYMAP.qOnly ? `Hold <kbd>${esc(keyCap('B'))}</kbd>` : `<kbd>${esc(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))}</kbd>`) : esc(keyText(t))).join('');
+    const railWords = rail ? caps(rail.line) : '', railNote = rail?.note ? caps(rail.note) : '';   // (a note: the words under the line after a tap the step refused)
     { const key = rail ? `${rail.n}|${rail.of}|${railWords}` : '';
       if (key !== this.railKey) { this.railKey = key;
         if (!rail) { this.railEl.className = ''; this.railEl.innerHTML = ''; }
         else { const words = railWords;
           let pips = ''; for (let i = 1; i <= rail.of; i++) pips += `<i class="${i < rail.n ? 'done' : i === rail.n ? 'now' : ''}"></i>`;
-          this.railEl.innerHTML = `<div class="line">${words}</div><div class="pips">${pips}</div>`;
+          this.railEl.innerHTML = `<div class="line">${words}</div><div class="note"></div><div class="pips">${pips}</div>`; this.railNote = '';
           this.railEl.className = ''; void this.railEl.offsetWidth; this.railEl.className = 'on'; } }
+      // (the note is its own piece: it comes and goes under a line that stays put, and the line is shaken once as it comes)
+      if (rail && railNote !== this.railNote) { this.railNote = railNote; const n = this.railEl.querySelector?.('.note'), l = this.railEl.querySelector?.('.line') as HTMLElement | null;
+        if (n) n.innerHTML = railNote; if (l) { l.classList.remove('nudge'); if (railNote) { void l.offsetWidth; l.classList.add('nudge'); } } }
       const sky = game.rails.skyOn; if (sky !== this.skyWas) { this.skyWas = sky; document.body.classList.toggle('skyseat', sky); }
       const on = game.rails.live; if (on !== this.railsWas) { this.railsWas = on; document.body.classList.toggle('onrails', on); } }   // (…and on any tutorial mission the place the line points at is marked big: index.html .objmark)
     const ot = rail ? '' : keyText(game.objectiveText());

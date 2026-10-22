@@ -233,6 +233,10 @@ export interface LessonStep {
   /** the line while his own actions are a ring (game/handring.ts HANDRING.on), where the step's keys are others then: the whistle has no key of its own
    *  there, it is the ring's last wedge (absent: `line`) */
   ringLine?: string;
+  /** the line while the SQUAD's ring or menu is up (game/orders.ts): the hold is one line, what to press in the ring the next (absent: `line`) */
+  menuLine?: string;
+  /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
+  pageLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
@@ -247,6 +251,13 @@ export interface LessonStep {
   checkpoint?: string;
   /** the fog of war from this step on */
   fog?: boolean;
+  /** the step teaches the command key HELD: a tap of it gives no order while the step is up, and these words come up under the line ('Keep [B] held') */
+  noTap?: string;
+  /** a lookout for the fog of war while this step is up (as `rails.sky.eye`): a place the squad knows without a man's eyes on it, its own charge on a wall */
+  eye?: { at: Vec3; yaw: number; fov?: number };
+  /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no
+   *  longer kept in the picture), and `nv: false` puts the night vision up for the walk out */
+  onWay?: { nv?: boolean };
 }
 /** A TUTORIAL MISSION'S FRAME over a lesson (game/rails.ts): what the player can do at all, and what nobody can lose */
 export interface RailsData {
@@ -259,7 +270,11 @@ export interface RailsData {
   /** nobody on the floor is the player: he is parked at `park`, out of the picture and every sense, and the view rides the squad (`reach`: metres the
    *  walk keys may shift it off them). `eye`: a lookout the mission stands for the fog of war (the man left with the trucks): a place and the way it looks
    *  (`yaw`, radians, a man's own: 0 = +Z; `fov` degrees, 120 unless said), one more of the team's eyes for as long as the seat is the sky's */
-  sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number } };
+  sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number };
+    /** the squad holds ON A KNEE where the mission stood it until its first order (men behind their trucks under fire), not at the low ready on its feet */
+    low?: boolean };
+  /** false: no teammate shows an aiming laser on this level, red or infrared (game/irlaser.ts laserOn) */
+  lasers?: boolean;
   /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
    *  not there, on the ring or under the quick key. Absent: every row the game has */
   orders?: string[];
