@@ -869,3 +869,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   scene as a contact sheet with numpy and Pillow alone (a small z-buffer rasteriser: from the side, the game camera's pitch from behind and from in front,
   from above); it reads `pose-mesh.ts` / `ready-pose-probes.ts` PLYs too. `pose-mesh-render.py` (Blender) is the better picture where there is one. No light,
   no cloth, no camera framing: it is the mesh the page skins at the poses the game reaches.
+- **The attention thread runs the way he will walk** (`ATTENTION.way`, attention.ts `attentionWay`, drawn by ui/attentionviz.ts `threadPoints`; the maintainer,
+  10-22, off the stealth tutorial mission, of a thread drawn from a man in a hut straight through its wall: "weird that the line here is a straight line, not a
+  pathed one. i'd expected pathed from squad commands"). For a man WALKING to the place (`AttentionMark.walking`: a `go` hold not yet at the thing) the dotted
+  thread is his feet, every corner of his way, the place: his own nav path from where he is on it when it is the walk to this place, else the nav grid's answer
+  kept `wayReask` 0.5 s (the first frames, before he has a path). A man who only LOOKS (a turned head, a lent hold, a man standing at the thing) and a place the
+  floor has no way to keep the straight thread. PICTURE ONLY, so it is ON in the module and on BOTH stands, no `FROZEN_HOLDS` row: nothing in the update reads
+  it, the one piece of state is the kept answer (SideMap `attention.wayKept`: a named side table, so it rides the in-memory snapshot as `floorplan.legs` does, and
+  only this picture reads it), and a run that asks for every way each frame DIGESTS as the run that never asks (the nav grid's scratch tables and the kept
+  answer do differ between the two: a state hash would see it). Off: `?straightthread` on the address, Tab ▸ the attention group ▸ 'the thread runs the way he will walk'. CHECK `probes.ts
+  attentionway` (tools/qa/attentionway-check.ts; `ATTENTIONWAY_BREAK=1` fails `way`), both stands: on tut-quiet, the office and lights-out a knock 5 m off
+  behind a wall is 13.3 / 5.5‥6.3 / 14.1 m of walk; the thread starts at his feet, ends at the place, no step on blocked floor; he then walks within 0.23 m of
+  the thread he set off with. One seed, one man a level. A TRAP MET ON THE WAY: a kept answer must not be started 'from the corner nearest him' (a way that
+  doubles back passes near him again further on, and the thread then cuts the wall) — floorplan.ts `wayOf` still starts its kept leg that way. NOT SEEN: the
+  overlay itself (no page was driven, nothing on a GPU): the dots at a corner, the thread across a door's leaf, a thread half out of the view.
