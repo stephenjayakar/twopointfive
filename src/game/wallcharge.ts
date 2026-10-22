@@ -1069,12 +1069,12 @@ export class WallCharge {
       const lined = dist <= K.stunM && !g.col.solidBlocked(far ? inn : out, chest), inRoom = !!room && far && gd.team !== 'operative' && dist <= SH!.roomM && g.cleared.roomAt(p) === room;
       if ((far && !hole) || (!lined && !inRoom)) continue;   // (a wall that held is still a wall to the men behind it)
       if (!far) {   // too near the charge on its own side (WALLKILL: at it, he is killed)
-        if (WK && dist < WK.nearM) { killGuard(g, gd, away(p), false, 'shot', 'player', `${gd.callsign ?? 'a man'} down — at the charge when it went`); if (ours) lost++; else knocked++; }
+        if (WK && dist < WK.nearM) { killGuard(g, gd, away(p), false, 'shot', 'player', `${gd.callsign ?? 'a man'} down — at the charge when it went`); if (!ours) knocked++; else if (!g.rails?.isSpared(gd)) lost++; }
         else if (dist < R.reach) { this.dazzle(gd, nearSecs(dist), inn); if (ours) backblast++; else stunned++; }
         continue; }
       if (!lined) { this.shock(gd, SH!.staggerSecs, inn); stunned++; continue; }   // (WALLSHOT: in the room with no line to the hole — the shock, not the flash)
       if (ours && (WK ? dist >= K.knockM : g.orders.big)) { this.dazzle(gd, SH ? SH.oursSecs : K.backblastSecs, inn); backblast++; continue; }   // (one of ours past the wall: the order is refused while he is there — gone in since, he is dazzled, not felled; WALLKILL: inside knockM he is killed as anyone is, and past it he is dazzled as one of ours whatever the team's size)
-      if (dist < K.knockM) { killGuard(g, gd, away(p), false, 'struck', 'player', `${gd.callsign ?? 'a man'} down — behind the wall when it went`); if (ours && WK) lost++; else knocked++; }
+      if (dist < K.knockM) { killGuard(g, gd, away(p), false, 'struck', 'player', `${gd.callsign ?? 'a man'} down — behind the wall when it went`); if (!(ours && WK)) knocked++; else if (!g.rails?.isSpared(gd)) lost++; }
       else { const ss = SH ? SH.stunSecs : K.stunSecs; this.dazzle(gd, lerp(ss[0], ss[1], clamp(dist / K.stunM, 0, 1)), inn); gd.staggerUntil = Math.max(gd.staggerUntil, g.time + (SH ? SH.staggerSecs : K.staggerSecs)); gd.weapon.burst = null; stunned++; }
     }
     // (WALLKILL: a civilian in the building is a man on the floor too — at the charge, or behind the wall inside knockM, with the same line; the rest of the

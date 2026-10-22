@@ -116,7 +116,7 @@ src/game/            game.ts (Game: state, constructor, event plumbing, doors/pr
                      Sam's FN2000 in hand / slung — the viewer's "copy constants" pastes into RIG here), input.ts
                      ALSO in src/game/ (each has its bullet below): teams.ts, interact.ts, devices.ts, attract.ts, savestate.ts, dialogue.ts, floor.ts, civilians.ts, tactics.ts, needs.ts, whistle.ts,
                      qrf.ts, destruction.ts + debris.ts + sheetModel.ts, wind.ts + moths.ts, wet.ts, weather.ts, glass.ts, marks.ts, particleFx.ts, audio_iface.ts, consts.ts
-src/ui/              menu.ts (start/pause card + the debrief / down card), debrief.ts, bindings.ts (the tweak panel = the debugger, on backtick — every knob), quality.ts (presets, auto calibration, the ladder + climb),
+src/ui/              menu.ts (start/pause card + the debrief / down card), debrief.ts, bindings.ts (the tweak panel = the debugger, on the backslash key — every knob), quality.ts (presets, auto calibration, the ladder + climb),
                      overlay.ts (HUD), panel.ts, boot.ts (boot card + timeline), bubbles.ts, capture.ts, perfrec.ts (F9 recorder)
 src/anim/            gltf.ts (loader; accepts embedded data-URI buffers), skeleton.ts, characters.ts (skinning, CharInst)
 src/audio/ gpu/      audio.ts (mixer, propagation use, voice cap), music.ts (score; its newer pieces: pieces.ts), sfx.ts; gpu/device.ts (adapter/device, the Async pipeline helpers + progress), timer.ts (per-pass timestamps + union)

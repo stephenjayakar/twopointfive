@@ -179,7 +179,10 @@ export const PASS_SCENARIOS: LevelScenarios = { roomClear: PASS_STRUCTURE, kitVi
     { name: 'the road', bounds: { x0: 0, x1: 40, z0: 22.2, z1: 28 } }, { name: 'the back', bounds: { x0: 0, x1: 40, z0: 0, z1: 4.8 } },
   ] } };
 
-export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
+/** what a level built ON the halt adds (tools/levels/tut-sky.ts): `kept` runs after the halt's own kept things and before the lived-in tail, with the kit in
+ *  hand; `scenarios` and `spawn` stand in for the halt's own. With none of them given the file is the halt, byte for byte. */
+export interface PassExtra { kept?: (X: { K: ReturnType<typeof officeKit>; G: ReturnType<typeof gwotKit>; cap: (x: number, z: number, w: number, d: number, y: number, yaw?: number, t?: number) => void }) => void; scenarios?: LevelScenarios; spawn?: Vec3 }
+export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
   const K = officeKit(trace), G = gwotKit(gwotOfOffice(K)), P = GWOT_PALETTE, H = WORLD.ceilingY, M = G.M;
   const { grp, add, slab, doorFrame, lights, switchables } = K;
@@ -476,6 +479,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
+  extra.kept?.({ K, G, cap });
+
   // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it: the TEA ROOM is rugs and floor cushions round the stove, low tables with the tea on them, the
   // samovar's table; the KITCHEN the bread oven, a work table, flour in sacks and the water cans; the STORE sacks to the beams, fuel drums and
@@ -530,7 +535,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     devices: [],
     breaker: { pos: [6.3, 1.35, 8.0], boxes: [brk, brkLed] },
     beacons: [{ pos: [17.6, H - 0.3, 8.6], box: dome }],
-    playerSpawn: PASS_ROAD,
+    playerSpawn: extra.spawn ?? PASS_ROAD,
     routes: [], chokepoints: [], clearPlans: [],     // nobody patrols it: the room clear brings its own cast
     sky: { zenith: [0.012, 0.02, 0.042], horizon: [0.04, 0.05, 0.075] },
     // the stealth mission's three places, because the level format wants them (the room clear stands the mission still): the store, a point on its back wall, the tea room's door
@@ -550,5 +555,5 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       ...zones,
     ],
   };
-  return { level, scenarios: PASS_SCENARIOS, groups: trace.groups, surfaces };
+  return { level, scenarios: extra.scenarios ?? PASS_SCENARIOS, groups: trace.groups, surfaces };
 }

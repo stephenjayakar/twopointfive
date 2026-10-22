@@ -9,6 +9,8 @@
 import type { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT } from './boxes';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef } from './level';
+import { withScript } from './level';
+import { LEVEL_SCRIPTS } from './levelScripts';
 import { LevelData, LEVEL_DATA_VERSION, BoxData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from './markings';
 import { LIVED, isLived } from './lived';   // (no imports of its own: the lived-in rooms' switch and what counts as lived)
@@ -139,6 +141,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   // data.surfaces → Level.surfaces, what game/floor.ts reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
   // (a file with none: floor.ts's own office map, which level-probes.ts holds equal to the office file's block).
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
+  { const script = LEVEL_SCRIPTS[data.name]; if (script) withScript(level, script); }   // (a level that carries a script: scene/levelScripts.ts)
   levelNames.set(level, data.name); const inB = new Set(fileBoxes), inP = new Set(fileProps), left = [...new Set([...data.boxes.filter(b => !inB.has(b)).flatMap(b => b.group !== undefined ? [b.id, b.group] : [b.id]), ...data.props.filter(p => !inP.has(p)).map(p => p.id)])];
   levelFileOf.set(level, { boxes: fileBoxes, doors: data.doors, lights: fileLights, props: fileProps, left });
   return level;

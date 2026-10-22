@@ -6,6 +6,7 @@
 //   Tab       does nothing to the panel; the game is handed the press (Input.pressed) and the browser's focus does not move
 //   node tools/qa/panel-keys.cjs      env: PORT (the dev server's, default 5199) · QUALITY (default verylow)      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (game/handslot.ts; under ?handslot=0 it is Backquote)
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
@@ -27,9 +28,9 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   await page.mouse.move(game.x, game.y);
   let s = await frame(); check(!s.open && s.view === 0, 'boot: the panel is shut, the final picture is up', s);
 
-  await page.keyboard.press('Backquote'); s = await frame(); check(s.open && s.view === 0, 'backtick opens the panel and steps no debug view', s);
-  await page.keyboard.press('Shift+Backquote'); s = await frame(); check(!s.open && s.view === 0, 'Shift+backtick is the same key (it used to step the views backwards)', s);
-  await page.keyboard.press('Backquote'); s = await frame(); check(s.open, 'backtick opens it again', s);
+  await page.keyboard.press(KEY); s = await frame(); check(s.open && s.view === 0, 'the debugger\'s key opens the panel and steps no debug view', s);
+  await page.keyboard.press('Shift+' + KEY); s = await frame(); check(!s.open && s.view === 0, 'Shift + the key is the same key (it used to step the views backwards)', s);
+  await page.keyboard.press(KEY); s = await frame(); check(s.open, 'the key opens it again', s);
 
   await page.keyboard.press('Tab'); const tabSeen = await pressed('Tab'); s = await frame();
   check(s.open, 'Tab leaves the open panel alone', s); check(tabSeen, 'Tab reaches the game (Input.pressed has it for that frame)', tabSeen); check(s.focus === 'none', 'Tab moves no browser focus', s.focus);
@@ -37,25 +38,25 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   const box = await page.locator('#panel').boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.keyboard.press('KeyF'); s = await frame(); check(s.open && s.search === 'f' && s.focus === 'panel', 'pointer over the panel: a typed letter still opens its search', s);
-  await page.keyboard.press('Backquote'); s = await frame(); check(!s.open && s.search === 'f', 'backtick in the search box shuts the panel and types nothing', s);
+  await page.keyboard.press(KEY); s = await frame(); check(!s.open && s.search === 'f', 'the key in the search box shuts the panel and types nothing', s);
   check(s.focus === 'none', 'shut from a field: the keyboard is handed back to the game', s.focus);
 
   await page.evaluate(() => { const b = document.querySelector('#panel input[type=search]'); b.value = ''; b.dispatchEvent(new Event('input')); });
-  await page.keyboard.press('Backquote'); s = await frame(); check(s.open, 'open again, pointer still over the panel', s);
+  await page.keyboard.press(KEY); s = await frame(); check(s.open, 'open again, pointer still over the panel', s);
   await page.mouse.move(box.x + box.width / 2 + 3, box.y + box.height / 2 + 3);   // (a panel that appears under a still pointer gets no mouseenter: move, so the hover is real)
-  await page.keyboard.press('Backquote'); s = await frame(); check(!s.open && s.search === '', 'pointer over the panel, nothing focused: backtick shuts it (not a character for the search)', s);
+  await page.keyboard.press(KEY); s = await frame(); check(!s.open && s.search === '', 'pointer over the panel, nothing focused: the key shuts it (not a character for the search)', s);
 
-  await page.keyboard.press('Backquote'); s = await frame();
+  await page.keyboard.press(KEY); s = await frame();
   const slider = await page.evaluate(() => { const fr = [...document.querySelectorAll('#panel .sys')].find(b => (b.title || '').startsWith('Frame')); if (fr) fr.click();   // (a page that opens with a slider in sight, whatever page the rail starts on)
     const r = [...document.querySelectorAll('#panel input[type=range]')].find(e => e.offsetParent); if (!r) return false; r.focus(); return true; });
-  await page.keyboard.press('Backquote'); s = await frame(); check(slider && !s.open, 'a slider holding the keyboard: backtick shuts the panel', { slider, ...s });
+  await page.keyboard.press(KEY); s = await frame(); check(slider && !s.open, 'a slider holding the keyboard: the key shuts the panel', { slider, ...s });
 
-  await page.keyboard.press('Backquote'); s = await frame();
+  await page.keyboard.press(KEY); s = await frame();
   const row = await page.evaluate(() => { const lab = [...document.querySelectorAll('#panel .row')].find(e => { const l = e.querySelector('label'); return !!l && (l.textContent || '').trim() === 'debug view'; }); const sel = lab && lab.querySelector('select'); if (!sel) return null;
     const n = sel.options.length; sel.value = '2'; sel.dispatchEvent(new Event('change')); const v = window.__engine.settings.debugView; sel.value = '0'; sel.dispatchEvent(new Event('change')); return { n, v, back: window.__engine.settings.debugView, }; });
   check(!!row && row.v === 2 && row.back === 0 && row.n >= 10, 'the buffers are still there: the Frame page\'s \'debug view\' list sets them', row);
   await page.mouse.move(game.x, game.y); await page.evaluate(() => { const a = document.activeElement; if (a && a.blur) a.blur(); });
-  await page.keyboard.press('Backquote'); s = await frame(); check(!s.open && s.view === 0, 'and backtick shuts it from the game again', s);
+  await page.keyboard.press(KEY); s = await frame(); check(!s.open && s.view === 0, 'and the key shuts it from the game again', s);
 
   const rail = await page.evaluate(() => { const names = [...document.querySelectorAll('#panel .sys')].map(b => (b.title || '').split(' — ')[0]); const rows = document.querySelectorAll('#panel .row').length; const empty = [...document.querySelectorAll('#panel .ppage')].filter(p => !p.querySelector('.row')).length; return { names, rows, empty }; });
   check(rail.names[0] === 'Sandbox' && ['Missions', 'Squad', 'Enemy AI', 'Stealth', 'Player & weapons', 'Frame'].every(n => rail.names.includes(n)) && rail.rows > 1000 && rail.empty === 0, 'the rail: the game\'s pages first, every page has rows', { ...rail, names: rail.names.join(' · ') });
