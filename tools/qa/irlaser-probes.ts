@@ -66,6 +66,8 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 const IR_DEFAULTS = JSON.parse(JSON.stringify(IR));
+if ('teamOff' in IR_DEFAULTS) IR_DEFAULTS.teamOff = false;   // (the team's lasers put off, a later default-on switch: every probe here but ir-team reads the lines DRAWN — held off after each staging, which puts the stand's own back)
+const teamDrawn = () => { if ('teamOff' in IR) IR.teamOff = false; };
 const reset = () => { Object.assign(IR, JSON.parse(JSON.stringify(IR_DEFAULTS))); LASER.enemy = false; };
 const guarded = (fn: () => Promise<boolean>) => async () => { try { return await fn(); } catch (e) { console.log(`- FAIL — the probe threw\n    ${e instanceof Error ? e.stack : String(e)}`); return false; } finally { reset(); } };
 const quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { if (VERBOSE) return await fn(); const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
@@ -96,7 +98,7 @@ const mates = (g: any): any[] => g.orders.squad().filter((x: any) => x.state !==
 const doorsOf = (S: any): any[] => { const sam = S.g.player.char.pos; const c: { ent: any; dist: number }[] = []; for (const d of S.defs) for (const e of d.room.entries) if (!c.some(q => q.ent === e)) c.push({ ent: e, dist: flat(sam, e.at) }); c.sort((a, b) => a.dist - b.dist); return c.map(q => q.ent); };
 /** a scenario as its row starts it, the team fallen in on Sam and four seconds on: every man's goggles are where his place puts them */
 async function settled(id: string) {
-  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S;
+  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; teamDrawn();
   await quiet(() => g.orders.give('fallIn', g.orders.targetAt(g.player.char.pos), 'all')); step(240);
   return S;
 }
@@ -228,7 +230,7 @@ export const irSam = guarded(async () => {
 interface Play { hash: string; frames: number; irFrames: number; irMateFrames: number; redMateFrames: number; onFoe: number; hunting: number; gogHunting: number; camSeen: number; awMax: number; lightsMin: number; lightsMax: number; unshadowed: number; shots: number; down: number; raw: any }
 /** a scenario played through a held door from its own seed: fall in, stack, open and clear, the room's men alive — every frame hashed and its boxes counted */
 async function play(id: string, nv: boolean, irOn: boolean): Promise<Play | null> {
-  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IR.on = irOn; g.player.nv = nv;
+  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IR.on = irOn; teamDrawn(); g.player.nv = nv;
   const team = mates(g), foes = g.guards.filter((x: any) => x.team === 'hostile'); const H = fnv();
   const R: Play = { hash: '', frames: 0, irFrames: 0, irMateFrames: 0, redMateFrames: 0, onFoe: 0, hunting: 0, gogHunting: 0, camSeen: 0, awMax: 0, lightsMin: Infinity, lightsMax: 0, unshadowed: 0, shots: 0, down: 0, raw: null };
   const shots0 = foes.reduce((n: number, x: any) => n + x.weapon.shotsFired, 0);
@@ -276,7 +278,7 @@ export const irUnseen = guarded(async () => {
   { type Look = { hash: string; peak: number; ir: number; frames: number; who: string };
     const look = async (id: string | null, what: 'foe' | 'cam', irOn: boolean): Promise<Look | null> => {
       const dice = Math.random; if (!id) { let k = 0x1f2e3d; Math.random = () => { k = (k + 0x6D2B79F5) | 0; let t = Math.imul(k ^ (k >>> 15), 1 | k); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }   // (the solo office is stood up bare: seed its dice as stage() seeds a scenario's, or two runs are two shifts)
-      const S: any = id ? await quiet(() => stage(id, 1)) : { W: await quiet(() => standUp()) }; const W = S.W, g = W.game; IR.on = irOn; const pl = g.player; g.godMode = true;
+      const S: any = id ? await quiet(() => stage(id, 1)) : { W: await quiet(() => standUp()) }; const W = S.W, g = W.game; IR.on = irOn; teamDrawn(); const pl = g.player; g.godMode = true;
       if (!id) { pl.slot = 'pistol'; pl.holstered = false; }   // (the office at night, alone: the one game the level's cameras run in)
       pl.nv = true; g.playerInvisible = false; g.aiEnabled = true;
       const lit = () => { pl.visibility = 1; W.step(DT); };   // (the meter's stand-in: plainly lit)
@@ -321,8 +323,42 @@ export const irOff = guarded(async () => {
   { const S = await settled(IDS[0]); const { g, step } = S; g.player.nv = true; step(30); const was = samIr(g).length; IR.on = false; step(1); const mid = g.dynBoxes.filter(isIr).length; IR.on = true; step(1); const back = samIr(g).length;
     F.verdict(was > 0 && mid === 0 && back > 0, 'flipped in play: off inside a frame, on again inside a frame', `infrared boxes ${was} → ${mid} → ${back}`); }
   // the panel's rows
-  { const TFM: any = await import(`${ROOT}/src/game/teamfeel.ts`); const rows = ['on', 'sam', 'carry'], kept = rows.filter(k => TFM.feelRange('IR', k) === null);
-    F.verdict(kept.length === rows.length && TFM.feelTables().IR === IR && rows.every(k => k in IR) && IR_DEFAULTS.on === true, 'the Team feel rows: three switches, the table the module reads, shipped on', `kept as switches: ${kept.join(', ')} · feelTables().IR is irlaser.ts IR: ${TFM.feelTables().IR === IR} · shipped: ${JSON.stringify(IR_DEFAULTS)}`); }
+  { const TFM: any = await import(`${ROOT}/src/game/teamfeel.ts`); const rows = ['on', 'sam', 'carry', 'teamOff'], kept = rows.filter(k => TFM.feelRange('IR', k) === null);
+    F.verdict(kept.length === rows.length && TFM.feelTables().IR === IR && rows.every(k => k in IR) && IR_DEFAULTS.on === true, 'the Team feel rows: four switches, the table the module reads, shipped on', `kept as switches: ${kept.join(', ')} · feelTables().IR is irlaser.ts IR: ${TFM.feelTables().IR === IR} · shipped: ${JSON.stringify(IR_DEFAULTS)}`); }
+  return F.done();
+});
+
+// ---------------------------------------------------------------- the team's guns show no laser line (IR.teamOff)
+/** IR.teamOff: no man on the player's side hands the renderer a laser box, infrared or red, in any picture; Sam's own line is the one it was; an enemy's
+ *  sandbox laser is not this switch's; and it is a picture only — a scripted stretch is the same game, frame for frame, with it on and off.
+ *  The red path: TEAMLASER_BREAK=1 (irlaser.ts: the switch is not read) must FAIL. */
+export const irTeam = guarded(async () => {
+  const F = family('ir-team: the team\'s guns show no laser line — Sam\'s own stays, an enemy\'s is not this switch\'s, nothing but the picture moves');
+  const teamIr = (g: any) => g.dynBoxes.filter((b: any) => isIr(b) && !onBore(g.player.char, b)).length;
+  const menOn = (g: any) => IRM.irState(g).men.filter((m: any) => m.on).length;
+  let drawn = 0, gone = 0, back = 0, onWas = 0, onNow = 0, samWas = 0, samNow = 0, foeOn = 0, foes = 0, bare = 0; const per: string[] = [];
+  for (const id of IDS) {
+    const S = await settled(id); const { g, step } = S; g.player.nv = true; step(30);
+    const a = teamIr(g), sa = samIr(g).length, ma = menOn(g);
+    IR.teamOff = true; step(1); const b = teamIr(g), sb = samIr(g).length, mb = menOn(g);
+    g.player.nv = false; step(30); bare += g.dynBoxes.filter((x: any) => (isIr(x) || isRed(x)) && mates(g).some((m: any) => onBore(m.char, x))).length; g.player.nv = true; step(30);
+    { const h = g.guards.find((x: any) => x.state !== 'dead' && x.team === 'hostile'); if (h) { foes++; const st = h.state, md = h.muzzleDown, hd = h.held; h.state = 'alert'; h.muzzleDown = false; h.held = null; if (IRM.laserOn(g, h)) foeOn++; h.state = st; h.muzzleDown = md; h.held = hd; } }
+    IR.teamOff = false; step(1); const c = teamIr(g);
+    drawn += a; gone += b; back += c; onWas += ma; onNow += mb; samWas += sa; samNow += sb; per.push(`${id} ${a}→${b}→${c}`); reset();
+  }
+  F.verdict(drawn > 0 && onWas > 0 && gone === 0 && onNow === 0 && bare === 0, 'with it on no teammate\'s gun draws a line: none through the tube, none bare-eyed, no man\'s laser reads on', `infrared boxes off the team's bores over ${IDS.length} scenarios, goggles down: ${drawn} with the lines drawn → ${gone} with the switch (want 0) · men whose laser is on ${onWas} → ${onNow} (want 0) · laser boxes on a teammate's bore in thirty bare-eyed frames: ${bare} (want 0)`);
+  F.verdict(samWas > 0 && samNow === samWas, 'Sam\'s own line is the one it was', `infrared boxes on Sam's bore ${samWas} → ${samNow}`);
+  F.verdict(back === drawn && back > 0, 'flipped in play: the lines are back inside a frame', per.join(' · '));
+  F.verdict(foes > 0 && foeOn === foes, 'an enemy is not a teammate: the hunting man\'s laser still reads on (it is drawn only where the sandbox gives him one)', `${foeOn} of ${foes} hostile men asked while hunting`);
+  // a picture only: the same scripted stretch with it on and off is the same game
+  { const run = async (off: boolean) => { const S: any = await quiet(() => stage(IDS[0], 1)); const { g, step } = S; const O = g.orders; IR.teamOff = off; const H = fnv(); g.player.nv = true;
+      const frame = () => { step(); H.eat(JSON.stringify(digestGame(g, true))); for (const x of g.guards) H.eat(`${x.flashlight?.enabled ? 1 : 0}${x.state[0]}${x.char.pos[0].toFixed(4)},${x.char.pos[2].toFixed(4)},${x.char.aimYaw.toFixed(4)}`); };
+      const sam = g.player.char.pos; await quiet(() => O.give('fallIn', O.targetAt([sam[0], 0, sam[2]]), 'all')); for (let f = 0; f < 120; f++) frame();
+      let fc: any = null; for (const e of doorsOf(S)) { fc = e.door.frameCentre; if (!(await quiet(() => O.give('stack', O.targetAt(fc), 'all')))) break; } for (let f = 0; f < 60 * 8; f++) frame();
+      await quiet(() => O.give('openClear', O.targetAt(fc), 'all')); for (let f = 0; f < 60 * 20; f++) frame();
+      const r = `${H.hex()} · ${g.guards.filter((x: any) => x.state !== 'dead').length} of ${g.guards.length} standing at ${g.time.toFixed(2)} s`; reset(); return r; };
+    const a = await run(false), b = await run(true);
+    F.verdict(a === b, 'a picture only: fall in, stack, open and clear is the same game frame for frame with it on and off', `${IDS[0]}: drawn ${a} · put off ${b}`); }
   return F.done();
 });
 
@@ -335,7 +371,7 @@ export async function digestLines(): Promise<string[]> {
   const CVM: any = await import(`${ROOT}/src/game/cover.ts`).catch(() => null), keep0 = CVM?.COVER.backKeep; if (CVM && 'backKeep' in CVM.COVER) CVM.COVER.backKeep = false;   // (a later default-on rule of the cover's: off for the whole digest, put back at its end)
   const brace0 = DGM?.DIGIN.braceInRoom, fbIn0 = RFM.ROOMFIGHT.fallBackIn; if (DGM && 'braceInRoom' in DGM.DIGIN) DGM.DIGIN.braceInRoom = false;   // (the brace goal rule: a later default-on rule, off for the whole digest, put back at its end)
   for (const id of IDS) {
-    const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IR.on = false; if (ILM) ILM.IRLIGHT.on = false; if (CUM) CUM.CUES.on = false; if ('litMan' in GDM.LIGHTS) GDM.LIGHTS.litMan = false; if ('sights' in RFM.ROOMFIGHT) RFM.ROOMFIGHT.sights = false; if ('workOut' in O.knobs) O.knobs.workOut = false; if ('hallFile' in O.knobs) O.knobs.hallFile = false; if ('secondFloor' in O.knobs) O.knobs.secondFloor = false; if ('cleared' in O.knobs) Object.assign(O.knobs, { cleared: false, knownFace: false, ownDoor: false }); if ('roundCap' in O.knobs) O.knobs.roundCap = 0; if ('fileHold' in O.knobs) O.knobs.fileHold = false; if ('backEnd' in O.knobs) O.knobs.backEnd = false; if ('inWay' in O.knobs) O.knobs.inWay = false; if ('walkTries' in O.knobs) O.knobs.walkTries = false; if ('buddy' in DTM.DOORTOOLS) DTM.DOORTOOLS.buddy = false; if ('otherDoorM' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).otherDoorM = 0; if ('ownCan' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).ownCan = false; if ('behindSam' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).behindSam = false; if ('haltBack' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).haltBack = false; if ('thrHand' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).thrHand = false; for (const k of ['thrNoCan', 'thrFragHold', 'fragHold', 'thrDoorsLeaf']) if (k in DTM.DOORTOOLS) (DTM.DOORTOOLS as any)[k] = false; if (BDM) BDM.BUDDY.on = false; if (SLM) SLM.SILENT.on = false; if (DWM) DWM.DOORMANNERS.on = false; if (RWM) { RWM.REARWATCH.on = false; RWM.REARWATCH.room = false; } if ('fallBackIn' in RFM.ROOMFIGHT) RFM.ROOMFIGHT.fallBackIn = false; const H = fnv(); let lasers = 0;   // (litMan, sights: later default-on rules, off where the checkout has them so this stays the base's digest; stage() puts them back)
+    const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IR.on = false; teamDrawn(); if (ILM) ILM.IRLIGHT.on = false; if (CUM) CUM.CUES.on = false; if ('litMan' in GDM.LIGHTS) GDM.LIGHTS.litMan = false; if ('sights' in RFM.ROOMFIGHT) RFM.ROOMFIGHT.sights = false; if ('workOut' in O.knobs) O.knobs.workOut = false; if ('hallFile' in O.knobs) O.knobs.hallFile = false; if ('secondFloor' in O.knobs) O.knobs.secondFloor = false; if ('cleared' in O.knobs) Object.assign(O.knobs, { cleared: false, knownFace: false, ownDoor: false }); if ('roundCap' in O.knobs) O.knobs.roundCap = 0; if ('fileHold' in O.knobs) O.knobs.fileHold = false; if ('backEnd' in O.knobs) O.knobs.backEnd = false; if ('inWay' in O.knobs) O.knobs.inWay = false; if ('walkTries' in O.knobs) O.knobs.walkTries = false; if ('buddy' in DTM.DOORTOOLS) DTM.DOORTOOLS.buddy = false; if ('otherDoorM' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).otherDoorM = 0; if ('ownCan' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).ownCan = false; if ('behindSam' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).behindSam = false; if ('haltBack' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).haltBack = false; if ('thrHand' in DTM.DOORTOOLS) (DTM.DOORTOOLS as any).thrHand = false; for (const k of ['thrNoCan', 'thrFragHold', 'fragHold', 'thrDoorsLeaf']) if (k in DTM.DOORTOOLS) (DTM.DOORTOOLS as any)[k] = false; if (BDM) BDM.BUDDY.on = false; if (SLM) SLM.SILENT.on = false; if (DWM) DWM.DOORMANNERS.on = false; if (RWM) { RWM.REARWATCH.on = false; RWM.REARWATCH.room = false; } if ('fallBackIn' in RFM.ROOMFIGHT) RFM.ROOMFIGHT.fallBackIn = false; const H = fnv(); let lasers = 0;   // (litMan, sights: later default-on rules, off where the checkout has them so this stays the base's digest; stage() puts them back)
     const frame = () => { step(); H.eat(JSON.stringify(digestGame(g, true)));
       for (const x of g.guards) H.eat(`${x.flashlight?.enabled ? 1 : 0}${x.state[0]}${x.char.pos[0].toFixed(4)},${x.char.pos[2].toFixed(4)},${x.char.aimYaw.toFixed(4)}`);
       for (const b of g.dynBoxes) { H.eat(`${b.c[0].toFixed(4)},${b.c[1].toFixed(4)},${b.c[2].toFixed(4)};${b.h[0].toFixed(4)},${b.h[1].toFixed(4)},${b.h[2].toFixed(4)};${b.flags};${b.emissive ? b.emissive.map((e: number) => e.toFixed(3)).join(',') : ''}|`); if (isRed(b)) lasers++; } };

@@ -44,6 +44,7 @@ import { DOORPATH } from '../game/doorpath';
 import { COVERFIRE } from '../game/coverfire';
 import { LIGHTWALL } from '../game/lighting';
 import { IRLIGHT } from '../game/irlight';
+import { IR } from '../game/irlaser';
 import { AIRDUST } from '../game/airDust';
 import { WALLSNAP } from '../game/wallsnap';
 import { HANDSLOT } from '../game/handslot';
@@ -379,6 +380,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CUES.overheard = q.get('overheard') !== '0';   // a shout from a defender the fog hides, where your ears or a living teammate's really get it, is a quiet row on the radio strip: his words alone, no name, no place (game/cues.ts overheard): ?overheard=0 = such a shout is no row, as before
   STICKY.mark = q.get('cammark') !== '0';   // his own stuck sticky cameras show in the fog of war: never taken out of the picture, a small lens on each on the HUD (game/stickycam.ts stickyMarks): ?cammark=0 = a camera on floor nobody sees is not drawn and nothing marks one, as before
   WORK.on = !q.has('noworkthings');   // a teammate works a thing in the level (game/workthings.ts): the orders' menu on the breaker, or on the mission's thing once it is to be taken, carries that thing's own order on digit 1 — ON in the page; ?noworkthings = the menu there is the floor's, and the breaker errand goes to the nearest man whoever he is, as it was
+  IR.teamOff = !q.has('teamlasers');   // the team's guns show no laser line (game/irlaser.ts; the maintainer, 10-22: "why do we have the lasers for the guys? i think we can disable"): no infrared line through your goggles, no red one bare-eyed; your own gun keeps its one. A picture only. ON in the page; ?teamlasers = every teammate's laser as it was
   IRLIGHT.on = !q.has('noirlight');   // an infrared light on the goggles (game/irlight.ts): a room with no light of its own shows through night vision, to you and to a goggled teammate and to nobody else — ON in the page; ?noirlight = a tube amplifies only the light that is there, as it was
   IRLIGHT.auto = !q.has('noirauto');   // …and it burns only where the goggles alone show too little (irlight.ts fanDark: the place's own light through the tube, under NVG.blackAt) — ON in the page; ?noirauto = it burns whenever the goggles are down, as it did
   IRLIGHT.meter = !q.has('noirmeter');   // …and what the CPU's direct-light estimate calls too dark is put to the renderer's light meter, which has the bounce (irlight.ts burn): a room with its own bulb off but lit round its door frame is not dark to the tube — ON in the page; ?noirmeter = the CPU's estimate alone, as it was
@@ -457,6 +459,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRAG.fleeDoor': 'TPS_FLEEDOOR=1',
   'DOORSTAY.on': 'QA_DOORSTAY=1 (playthrough.ts plays it on)',
   'LIGHTWALL.on': 'TPS_LIGHTWALL=1',
+  'IR.teamOff': 'TPS_NOTEAMLASER=1 (a picture only)',
   'IRLIGHT.on': 'TPS_IRLIGHT=1',
   'IRLIGHT.auto': 'TPS_IRAUTO=1',
   'IRLIGHT.meter': 'TPS_IRMETER=1',
