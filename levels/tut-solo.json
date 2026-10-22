@@ -623,8 +623,8 @@
         { "id": "take", "line": "[Space]: take the code book", "done": { "is": "stage", "stage": "exfil" }, "at": [34.86, 0.45, 11.5], "checkpoint": "the store" },
         { "id": "rifle", "line": "[2]: back to the rifle", "done": { "is": "slot", "slot": "rifle", "drawn": true } },
         { "id": "leave", "line": "Back to the arch", "done": { "is": "any", "of": [{ "is": "near", "at": [16.5, 0, 14.25], "r": 0.8 }, { "is": "men", "down": 7 }] }, "at": [16.5, 0, 14.25] },
-        { "id": "load", "line": "Two behind you. [2] again: load the grenade", "setupLine": "Two behind you. [2], then [2]: load the grenade", "done": { "is": "any", "of": [{ "is": "launcher", "on": "he40" }, { "is": "men", "down": 7 }] }, "allow": ["alt"], "cue": "trucks" },
-        { "id": "launch", "line": "Hold right button, aim at their doorway, let go", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "threw", "kind": "he40" }, { "is": "men", "down": 6 }] }, { "is": "men", "down": 7 }] }, "at": [25.9, 1, 14.25] },
+        { "id": "load", "line": "Two men behind you. [2] again: load the grenade", "setupLine": "Two men behind you. [2], then [2]: load the grenade", "done": { "is": "any", "of": [{ "is": "launcher", "on": "he40" }, { "is": "men", "down": 7 }] }, "allow": ["alt"], "cue": "trucks" },
+        { "id": "launch", "line": "Behind you: hold right button, aim at their doorway, let go", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "threw", "kind": "he40" }, { "is": "men", "down": 6 }] }, { "is": "men", "down": 7 }] }, "at": [25.9, 1, 14.25] },
         { "id": "last", "line": "Shoot the rest", "done": { "is": "men", "down": 7 }, "at": [25.9, 1, 14.25], "cue": "loose" },
         { "id": "out", "line": "Sprint out by the gate", "done": { "is": "stage", "stage": "done" }, "at": [8.2, 0, 14.25] }
       ]

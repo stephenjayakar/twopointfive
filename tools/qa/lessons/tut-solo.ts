@@ -22,7 +22,7 @@ const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO
 export const raises = { TPS_OWNCHARGE: '1' };
 /** the last men may already be down when 'Shoot the rest' comes up (the grenade took both) */
 /** …and where the gun has no setup (the switch off: the frozen stand) the two lines that open and shut it have nothing to ask and go by */
-export const idleOk = ['last', 'setup', 'tab'];
+export const idleOk = ['last', 'setup', 'tab', 'load'];   // ('load': a kit that comes with the grenade on the launcher has nothing to load — the arm `loaded`)
 
 /** the right button pressed, held on a world point for `secs` (the arc is up) and let go: Input's bits are 1 left · 2 middle · 4 right */
 const rightHold = (B: Bot, p: number[], secs = 0.5) => { B.aim(p); B.step(); B.I.clicked |= 4; for (let i = 0; i < secs * 60; i++) { B.aim(p); B.I.buttons |= 4; B.step(); } B.I.buttons &= ~4; B.aim(p); B.step(3); };
@@ -200,10 +200,12 @@ export const steps: Record<string, (B: Bot) => void> = {
   take: B => { B.go([TRUNK[0] - 0.95, 0, TRUNK[2]], 15); B.step(2);
     const top = B.g.nearby.find((r: any) => !!r.verb); if (top && top.verb !== 'drive') B.fail(`a tap at the trunk gives '${top.kind} ▸ ${top.verb}', not the code book`);
     if (!B.verb('objective', 'drive', [TRUNK[0] - 0.4, 0.5, TRUNK[2]])) B.fail('no row to take the code book'); B.until(() => B.g.mission.stage === 'exfil', 20); },
-  rifle: B => { take(B, 'Digit2'); },
+  rifle: B => { take(B, 'Digit2');
+    // (the arm `loaded`: the launcher as a kit with no other load deals it, the grenade already on the right button, put there by hand before its line)
+    if (brk() === 'loaded') { const rf = B.g.player.rifle; for (let k = 0; k < 4 && rf.attachment !== 'he40'; k++) rf.cycleAttachment(); if (rf.attachment !== 'he40') B.fail('loaded: the launcher has no grenade to put up'); } },
   // 2 with the rifle up steps what is on the right button: the ring, then the grenade
   // the rifle's key again steps the launcher's load; where that key opens the gun's setup instead, the load is its row 2
-  load: B => { B.press('Digit2', 20); if (B.g.lesson.step?.id === 'load') B.press('Digit2', 10); },
+  load: B => { if (B.g.player.rifle.attachment === 'he40') return; B.press('Digit2', 20); if (B.g.lesson.step?.id === 'load') B.press('Digit2', 10); },
   // back out through the shop and the gun court to the arch's mouth
   leave: B => { const d = B.g.doors.byName('store')!; if (!d.locked || Math.abs(d.angle) > 0.05) B.fail('the store\'s back door is open or unlocked before the last two come by it'); B.go([ARCH_MOUTH[0], 0, AXIS], 40); },
   // the two in the shop's doorway behind him: the grenade into it, once both stand there (8.5 m and more: armed)

@@ -1,5 +1,5 @@
 // TUT-SOLO-CHECK: the tutorial's solo loud mission (levels/tut-solo.json, its fights in levels/tut-solo.script.ts) played by its scripted player
-// (tools/qa/lessons/tut-solo.ts, through the input only) on the tutorial's frame (game/rails.ts: raised here on the frozen stand), seven ways a seed:
+// (tools/qa/lessons/tut-solo.ts, through the input only) on the tutorial's frame (game/rails.ts: raised here on the frozen stand), eight ways a seed:
 //   · as the lines say                      → every step goes by and the mission ends
 //   · the sandbags walked STANDING          → the player goes down at that line (the gun's traverse is over a crouched head and through a standing chest)
 //   · the gap crossed with NO SMOKE up      → the player goes down at that line (the gap is hosed until a smoke can has gone off between it and the gun)
@@ -11,7 +11,7 @@
 // The two lessons that are about not getting shot are only lessons if they can be failed: a mission where the wrong way also works teaches nothing.
 //   bun run tools/qa/tut-solo-check.ts [--seeds 1,2]        and again with TPS_PROFILE=shipped in front (the stand the page opens on)
 //   TUT_SOLO_BREAK=1 …   the standing arm is played crouched, as the line says: nobody goes down there, and the check must be RED
-// EXIT: 0 = all seven as said on every seed · 1 = a fault, each a line.
+// EXIT: 0 = all eight as said on every seed · 1 = a fault, each a line.
 // Then THE SHOP'S LAMP: the ground beside the door is lit by that lamp and dark without it (the line that has him shoot it out says the dark is cover).
 // Last, THE PAGE'S KIT: on a lesson's page (kit.ts kitIssuedPage) he carries this level's own card, not the plain issue every other lesson is played with.
 // Headless: no GPU, no smoke sight lines, nothing here saw a picture or heard a round.
@@ -31,6 +31,7 @@ const ARMS: { word: string; say: string; downAt?: string; after?: string }[] = [
   { word: 'east', say: 'six seconds on the road east of the van, in the sentry\'s line' },
   { word: 'piers', say: 'four seconds at each pier of the arch under the last two\'s fire' },
   { word: 'dud', say: 'the first grenade fired from too close (a dud), the second from the arch' },
+  { word: 'loaded', say: 'the grenade already on the launcher before its line: the line goes by and the last two still come' },
   { word: 'again', say: 'down twice and back by Enter, the other checkpoints put back by hand, each beat played again' },
 ];
 const faults: string[] = [];
