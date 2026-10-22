@@ -360,13 +360,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tut-squad`; the solo mission takes one with its next change. A look twin with no row is held to the plain level's. `BASE_REVS` is CLOSED and is the base
   of every level with no row (it stays a list only so that branches cut before the rows came, which still put a commit in front of it, join without a hand).
   A row's commit must be in the checkout's own history and must carry the level's file, and a level in HEAD that has furniture, no row, and is not in
-  `BASE_REVS`' commit is red (it was "a new level, nothing to hold it to", and with the list closed nothing would ever have taken it in). `--base <rev>` still
+  `BASE_REVS`' commit is red (it was "a new level, nothing to hold it to", and with the list closed nothing would ever have taken it in); the same level
+  not yet in a commit is a warn line that says what it will need once it is. `--base <rev>` still
   holds every level named to one commit. WHAT OF A LESSON NEEDS NO ROW MOVE (`LESSON_FREE`, read from today's file): its words (`title`; a step's `line`,
   `setupLine`, `ringLine`, `blowLine`, `menuLine`, `pageLine`, `planLine`, `noTap`, its card `explain`, its `after`) and its lists of what the frame offers (a
   step's `allow` / `deny`; the frame's `allow`, `orders`, `rows`): furniture cannot touch one and none names a place; `lesson-check`'s plain run reads them
   against the floor and `lesson-gate <level>` plays them (BY NAME: its plain run is Training's). STILL HELD (`LESSON_HELD`): the steps' number and order, a
   step's `id`, its `done` test and `hold`, every place (`at`, `atMan`, `toward`, `eye`, the frame's `sky`), `cue`, `checkpoint`, `fog`, `onWay`, `respawn`,
-  `lasers`. A lesson's key in NEITHER table is a red line: whoever adds a key says which. GONE: the rule that a lesson with another number of steps was read
+  `lasers`. A lesson's key in NEITHER table is a red line: whoever adds a key says which (with no file named this is asked of every level with a lesson,
+  furniture or none). GONE: the rule that a lesson with another number of steps was read
   as today's whole (every mark and test of a re-cut lesson went unheld); a re-cut moves the level's own row. THE CHECK'S BREAK PATH (it had none), each on
   today's files in memory: `LIVED_BREAK=1` moves each level's first own box and stands its first lived solid in its first door: red on line 1 and on the
   doors' line of all 39 levels (166 lines); `LIVED_BREAK=lesson` changes every held key of each lesson's first marked step and of its frame: red on the 9

@@ -65,8 +65,8 @@ const LEVEL_BASE: Record<string, string> = {
   // the pair's order on the far man is a deed with his name (a step's `done`)
   'tut-pair.json': 'ebd4d4869',
 
-  // the plan mission's barrier post moved and two drums put in a corner
-  'tut-plan.json': 'd13650f85',
+  // the plan mission's hall has no lookout on the word's own step (a step's `eye` gone)
+  'tut-plan.json': '6cdeafa97',
 
   // the ledger's own level, rebuilt whole (its words and rows since are free: LESSON_FREE)
   'tut-quiet.json': 'cb936797b',
@@ -74,8 +74,8 @@ const LEVEL_BASE: Record<string, string> = {
   // the tunnel station, played with no fog of war (its lesson's rails.fog)
   'tut-sky.json': 'f3ef62b01',
 
-  // the squad mission's own level, as it came
-  'tut-squad.json': '5f8c416e6',
+  // the squad mission after a first play: the hall's street window glazed, a step given a cue
+  'tut-squad.json': 'be980f1e1',
 };
 /** WHAT OF A LESSON ITS OWNER MAY CHANGE WITH NO NEW BASE (scenarios.lesson; scene/scenarios.ts LessonData, LessonStep, RailsData): its WORDS and its LISTS,
  *  read from today's file and never held to the base. Decided 10-22, when four re-bases in a day were each a lesson's words:
@@ -139,6 +139,13 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
   const warn = (s: string) => console.log(`  warn — ${s}`);
   const f2 = (x: number) => x.toFixed(2), at = (p: number[]) => `(${f2(p[0])}, ${f2(p[p.length - 1])})`;
 
+  /** a lesson's key that is in neither table: nobody has said whether its owner may change it */
+  const unsaid = (name: string, data: any) => { const L = data.scenarios?.lesson, un = new Set<string>(), ask = (o: any, k: 'lesson' | 'step' | 'rails') => { for (const x of Object.keys(o ?? {})) if (!LESSON_FREE[k].includes(x) && !LESSON_HELD[k].includes(x)) un.add(`${k}.${x}`); };
+    if (L) { ask(L, 'lesson'); for (const s of L.steps ?? []) ask(s, 'step'); ask(L.rails, 'rails'); }
+    if (un.size) fail(`${name}: its lesson has ${un.size > 1 ? 'keys' : 'a key'} in neither LESSON_FREE nor LESSON_HELD (${[...un].join(', ')}): say in tools/qa/lived-check.ts whether a lesson's owner may change ${un.size > 1 ? 'them' : 'it'} with no new base`); };
+  // (with no file named that question is asked of EVERY level with a lesson, furniture or none: a key added to a bare level is in neither table just the same)
+  if (!files.length) for (const f of readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json')).map(f => resolve(ROOT, 'levels', f))) if (!list.includes(f)) {
+    try { const d = JSON.parse(readFileSync(f, 'utf8')); if (d.scenarios?.lesson) unsaid(basename(f), d); } catch { /* (not a level file: the level checks' own red) */ } }
   for (const k of Object.keys(LEVEL_BASE)) if (!existsSync(resolve(ROOT, 'levels', k))) fail(`LEVEL_BASE has a row for '${k}', which is no file under levels/ (a level renamed, or a name mistyped: the row holds nothing)`);
   for (const file of list) {
     const name = basename(file);
@@ -175,18 +182,15 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
     let held = base !== 'none';
     if (held && rowed && spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', base, 'HEAD']).status !== 0) { held = false;
       fail(`${name}: its row's commit ${base} is not in this checkout's history (LEVEL_BASE names a commit of a branch not joined, or the clone is shallow)`); }
-    // (a lesson's key that is in neither table: nobody has said whether its owner may change it)
-    { const L = data.scenarios?.lesson, un = new Set<string>(), ask = (o: any, k: 'lesson' | 'step' | 'rails') => { for (const x of Object.keys(o ?? {})) if (!LESSON_FREE[k].includes(x) && !LESSON_HELD[k].includes(x)) un.add(`${k}.${x}`); };
-      if (L) { ask(L, 'lesson'); for (const s of L.steps ?? []) ask(s, 'step'); ask(L.rails, 'rails'); }
-      if (un.size) fail(`${name}: its lesson has ${un.size > 1 ? 'keys' : 'a key'} in neither LESSON_FREE nor LESSON_HELD (${[...un].join(', ')}): say in tools/qa/lived-check.ts whether a lesson's owner may change ${un.size > 1 ? 'them' : 'it'} with no new base`); }
+    unsaid(name, data);
     if (held) {
       const g = spawnSync('git', ['-C', ROOT, 'show', `${base}:levels/${name}`], { encoding: 'utf8', maxBuffer: 1 << 28 });
       // (a level its base does not carry: a ROW that names such a commit holds nothing and is red; so is a level in HEAD that has furniture and no row — since
-      //  BASE_REVS closed no later base will ever take it in. A file not yet in a commit has nothing to be held to, as before)
+      //  BASE_REVS closed no later base will ever take it in. A file not yet in a commit has nothing to be held to, and is told what it will need)
       if (g.status !== 0) { const kept = spawnSync('git', ['-C', ROOT, 'cat-file', '-e', `HEAD:levels/${name}`]).status === 0;
         if (rowed) fail(`${name}: its row's commit ${base} has no levels/${name} (a commit from before the level, or from before a rename: the row holds nothing)`);
         else if (kept && !allBase && (nLived.boxes || nLived.props || nLived.lights || nLived.switchables)) fail(`${name}: it carries lived things and has nothing to be held to — ${base} has no such level and LEVEL_BASE no row for it: give it one, the commit that carries the level as meant`);
-        else console.log(`  (not in ${base}: a new level, nothing to hold it to)`); }
+        else warn(`${name}: not in ${base} and not in a commit yet — nothing to hold it to. Once it is in a commit with furniture it needs its own LEVEL_BASE row (that commit, or a later one that carries the level as meant), or this check is red`); }
       else { const out: string[] = [];
         // (a lesson step's LINE is words on the objective row, reworded since the base by other work — 'drags it' became 'takes hold of him' when bodies came to be carried —
         //  and nothing furniture can touch: the base's lines are read as today's. So are the lines a step shows under a newer rule in place of that one —
