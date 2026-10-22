@@ -34,6 +34,7 @@ const SHOP_DOORWAY: Vec3 = [25.4, 1.2, 14.25], PART_DOORWAY: Vec3 = [30.5, 1.2, 
 
 const script: LevelScriptFn = D => {
   const shopLine = D.volume('shop_line'), shopIn = D.volume('shop_in'), storeIn = D.volume('store_in');
+  const roadEast = D.volume('road_east'), roadNose = D.volume('road_nose');
   const rifleman = D.loadout('rifleman', { team: 'guard', weapon: 'akms' });
   const STAFF = ['Kowalski', 'Novak', 'Reyes', 'Okafor', 'Lindqvist'];
   const AIMS: Record<string, Vec3> = { Kowalski: VAN_FLANK[1], Novak: TRUCK[0], Reyes: SHOP_DOORWAY, Okafor: PART_DOORWAY, Lindqvist: PART_DOORWAY };
@@ -57,10 +58,14 @@ const script: LevelScriptFn = D => {
     P.beat('cease', function* (c) { c.flag.cease = true; yield c.frames(1); });
     P.beat('road', function* (c) {
       const s = c.unit('Kowalski'); if (!s) return;
+      // (his rounds cross the road east of the van and nowhere else. Nothing there tells a new player to keep off it, so while the player is on that side,
+      //  or coming round the van's nose to it, he holds his fire: three rounds are over before a running man is across the margin the two volumes leave)
+      const lane = () => c.query.inside(roadEast, 'sam') || c.query.inside(roadNose, 'sam');
       yield c.wait(0.8);
       for (let i = 0; c.query.alive(s) && !c.flag.cease; i++) {
+        if (lane()) { yield c.wait(0.2); continue; }
         const at = VAN_FLANK[i % VAN_FLANK.length]; aim(c, s, at, true);
-        yield c.stimulus.burst(s, at, 4, { cadence: 0.13, spread: 0.02 });
+        yield c.stimulus.burst(s, at, 3, { cadence: 0.12, spread: 0.02 });
         yield c.wait(1.3 + c.rand() * 1.1);
       }
       yield c.until(q => !q.alive(s), 'the sentry is down');
@@ -79,7 +84,7 @@ const script: LevelScriptFn = D => {
           yield c.stimulus.burst(u, at, 4, { cadence: 0.08, spread: 0.01 }); yield c.wait(0.1);
         } else if (mode === 'gap') {    // the gap, hosed: nobody is meant to try it before the smoke
           const at = GAP_FLOOR[i % GAP_FLOOR.length]; aim(c, u, at, true);
-          yield c.stimulus.burst(u, at, 2, { cadence: 0.08, spread: 0.006 });
+          yield c.stimulus.burst(u, at, 2, { cadence: 0.08, spread: 0.006 }); yield c.wait(0.08);   // (a burst's first round leaves at once: the pause is the gun's own beat between the last of one and the first of the next)
         } else {                        // the parked truck through the arch, and (blind, slower) where he was before the smoke went up
           const pts = mode === 'blind' ? WAS : TRUCK, at = pts[Math.floor(c.rand() * pts.length) % pts.length];
           aim(c, u, at, true);

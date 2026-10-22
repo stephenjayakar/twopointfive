@@ -5,12 +5,16 @@ import type { Bot } from '../lesson-run';
 import { AXIS, VAN, WALL, CORNER, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
 import { SLOTSETUP } from '../../../src/game/slotsetup';
 
+/** is the gun's setup switched on IN THE GAME THIS RUN PLAYS: on a page the script is its own bundle, with its own copy of the table (the page's is `__knobs`) */
+const setupOn = (): boolean => (globalThis as { __knobs?: { registry?: () => Record<string, { on?: boolean }> } }).__knobs?.registry?.().SLOTSETUP?.on ?? SLOTSETUP.on;
+
 export const query = '?quiet';
 /** the level's fights are its script's, which the tutorial frame starts: on a stand without the frame this lesson cannot be played */
 export const needs = 'rails';
 /** THE LESSONS CAN BE FAILED THE WAY THEIR LINES SAY (each of these runs must end with the player down; tools/qa/tut-solo-check.ts asks it):
- *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Two more words are mistakes that must cost
- *  nothing: `piers` stands at each pier of the arch under the last two's fire, `dud` fires the first grenade from too close */
+ *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Three more words are mistakes that must cost
+ *  nothing: `east` stands on the road east of the van in the sentry's line, `piers` stands at each pier of the arch under the last two's fire, `dud` fires the
+ *  first grenade from too close */
 const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : (globalThis as { __TUT_SOLO_ARM?: string }).__TUT_SOLO_ARM) ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
 /** THE DOOR'S LINE TEACHES HIS OWN CHARGE, and it is the one row the level lets that door offer (`rails.rows`: no pick, no boot). A stand that holds his own
  *  charges off (the frozen one) has no row there at all and the lesson cannot be done on it: a run there raises them, as it raises the frame. Said here,
@@ -71,12 +75,18 @@ const handBack = (B: Bot, to: string) => {
 
 export const steps: Record<string, (B: Bot) => void> = {
   // THE ROAD: off the start mark and behind the van the sentry is shooting at
-  move: B => { once.clear(); B.go(VAN, 20); },
+  // (TUT_SOLO_ARM=east first walks the wrong side of the van and stands in the sentry's line: he holds his fire for a man there, and nobody is hit)
+  move: B => {
+    once.clear();
+    if (brk() === 'east') { B.go([6.3, 0, 17.0], 10); B.go([6.0, 0, 14.0], 10); B.wait(6); if (B.g.player.down) B.fail('BREAK east: he stood in the sentry\'s line east of the van and was hit'); B.go([6.3, 0, 17.6], 10); B.go([3.0, 0, 18.2], 10); }
+    B.go(VAN, 20);
+  },
   ready: B => { take(B, 'Digit2'); },
   // round the van's nose and along the forecourt's edge to the yard wall, running: never in the gate's line
   sprint: B => { B.go([3.3, 0, 12.0], 10); B.go(WALL, 12, { sprint: true, near: 0.6 }); },
   // walk into the wall as the page takes one; the hold's own key where walking in is switched off (the frozen stand)
   wall: B => {
+    if (B.g.player.wall) B.fail('he is on a wall before the line that teaches it');   // (the frame gives a wall to a walk only once `wall` is allowed: nothing before this line may lean on one)
     B.nudge([9.2, 0, WALL[2]], 1.5, () => !!B.g.player.wall);
     if (!B.g.player.wall) { B.aim([9.0, 1.2, WALL[2]]); B.press('KeyQ', 20); }
     if (!B.g.player.wall) B.fail('no wall taken beside the gate, by walking into it or by its key');
@@ -104,11 +114,13 @@ export const steps: Record<string, (B: Bot) => void> = {
   },
   reload: B => { B.press('KeyR'); B.until(() => !gun(B).reloading, 5); },
   // the rifle's selector: its own key on the stand from before the gun's setup, the setup's first row where that is up (the rifle's digit, then 1: a digit
-  // that is the pistol's slot anywhere else, and the pistol has no line yet). Then back to single shots: every fight of this run was measured on them
+  // that is the pistol's slot anywhere else, and the pistol has no line yet). The run as the lines say stays on full auto, as a player is left; the arms that are each about one mistake go back to single
+  // shots, which their fights were measured on
   auto: B => {
-    const flip = () => { if (SLOTSETUP.on) { B.press('Digit2', 12); B.press('Digit1', 12); } else B.press('KeyZ', 12); };
-    flip(); if (stepIs(B, 'auto')) B.fail(`the selector did not move (the rifle is on ${B.g.player.rifle.mode}, the hands hold ${B.g.player.slot})`);
+    const flip = () => { if (setupOn()) { B.press('Digit2', 12); B.press('Digit1', 12); } else B.press('KeyZ', 12); };
+    flip(); if (stepIs(B, 'auto')) B.fail(`the selector did not move (the rifle is on ${B.g.player.rifle.mode}, the hands hold ${B.g.player.slot}, its setup is ${B.g.player.setup ? 'up' : 'shut'}, reloading ${gun(B).reloading})`);
     if (B.g.player.slot !== 'rifle') B.fail(`the selector's digit took the ${B.g.player.slot} into his hands`);
+    if (brk() === '') return;
     B.step(100); flip(); B.step(100);   // (past the setup's own clock, so the next press of the rifle's digit opens it afresh)
     if (B.g.player.rifle.mode !== 'semi') B.fail(`the selector did not come back to single shots (${B.g.player.rifle.mode})`);
   },
@@ -153,7 +165,12 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!B.verb('door', 'charge', c)) B.fail(`no 'charge' row on the shop's door`);
     B.until(() => !g.player.charging && !g.player.kick, 12); B.step(20);
   },
-  back: B => { B.go(BACK, 10, { near: 0.5 }); },
+  // beside the door, on the ground the shop's lamp lit until he shot it out: dark now (asked of the harness's meter, which has no moon; said of the page's)
+  back: B => {
+    B.go(BACK, 10, { near: 0.5 }); B.step(20);
+    const lit = Math.round((B.g.player.visibility ?? 0) * 100); B.say(`  beside the door with the lamp out: the light on him ${lit}`);
+    if (B.W && lit > 25) B.fail(`the lamp is out and he is still lit beside the door (${lit}): 'the dark is cover too' is not true here`);
+  },
   blow: B => { B.press('KeyF', 30); },
   // out from beside the door, square to the doorway (from its edge the rounds go into the jamb), and the pistol
   shop: B => {

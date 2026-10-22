@@ -29,6 +29,7 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { findCarLamps } from '../../src/game/carlamps';
 import { LAST_IN, LAST_MEN } from '../../levels/tut-solo.script';
 
 export const NAME = 'tut-solo';
@@ -154,19 +155,23 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('forecourt.van');
   // across the road, nose to the pumps it was leaving: his first cover, and what the sentry's rounds chew. It is as its driver left it, everything on: two
   // head lamps (beams across the forecourt), the tail lamps, the lamp in the load bay over its open back doors, which is the light he starts in. Each lens
-  // is a glowing sliver a hair off the van's own, which stays the dead glass the lamp check finds
-  const van0 = K.boxes.length; G.van(4.5, 15.0, HALF + 0.12);
-  { const is = (b: { h: Vec3 }, h: Vec3) => Math.abs(b.h[0] - h[0]) < 1e-6 && Math.abs(b.h[1] - h[1]) < 1e-6 && Math.abs(b.h[2] - h[2]) < 1e-6;
-    const parts = K.boxes.slice(van0), heads = parts.filter(b => is(b, [0.03, 0.07, 0.16])), tails = parts.filter(b => is(b, [0.02, 0.15, 0.04]));
-    const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - 4.5, mid[1] - 15.0), nx = (mid[0] - 4.5) / l, nz = (mid[1] - 15.0) / l;
+  // is a glowing sliver a hair off the van's own and a little wider, so a round at a lamp meets the sliver first and puts it out; the van's own lens behind
+  // it stays the dead glass the lamp check finds (carlamps.ts, whose own search finds the lenses here: the kit's sizes are named in one place)
+  const VAN_AT = [4.5, 15.0] as const, van0 = K.boxes.length; G.van(VAN_AT[0], VAN_AT[1], HALF + 0.12);
+  { const lenses = findCarLamps(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
+    if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-solo: the van's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
+    const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - VAN_AT[0], mid[1] - VAN_AT[1]), nx = (mid[0] - VAN_AT[0]) / l, nz = (mid[1] - VAN_AT[1]) / l;
     heads.forEach((b, k) => {
-      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, 0.055, 0.13], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], flags: BoxFlag.NoShadow });
+      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], flags: BoxFlag.NoShadow });
       lights.push({ kind: 'spot', pos: [b.c[0] + nx * 0.08, b.c[1], b.c[2] + nz * 0.08], dir: norm([nx, -0.1, nz]), color: [1.0, 0.93, 0.78], intensity: 150, range: 14, innerDeg: 12, outerDeg: 30, name: `van_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: fb, radius: 0.06, mains: false });
     });
-    for (const b of tails) add({ c: [b.c[0] - nx * 0.03, b.c[1], b.c[2] - nz * 0.03], h: [0.006, 0.12, 0.03], yaw: b.yaw, albedo: [0.5, 0.05, 0.04], rough: 0.4, emissive: [7, 0.4, 0.25], flags: BoxFlag.NoShadow });
-    const bay: Vec3 = [4.5 - nx * 2.3, 1.84, 15.0 - nz * 2.3];
-    const dome = add({ c: bay, h: [0.07, 0.012, 0.07], ...M.plasticWhite, emissive: [22, 19, 13], flags: BoxFlag.NoShadow });
-    lights.push({ kind: 'point', pos: [bay[0], bay[1] - 0.05, bay[2]], dir: [0, -1, 0], color: [1.0, 0.86, 0.62], intensity: 16, range: 6, innerDeg: 0, outerDeg: 180, name: 'van_bay', group: 'exterior', enabled: true, volumetric: 0.2, fixtureBox: dome, radius: 0.05, mains: false });
+    tails.forEach((b, k) => {   // (each a small red light of its own, so a round puts the glow out as it does any lamp's)
+      const fb = add({ c: [b.c[0] - nx * 0.03, b.c[1], b.c[2] - nz * 0.03], h: [0.006, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, albedo: [0.5, 0.05, 0.04], rough: 0.4, emissive: [7, 0.4, 0.25], flags: BoxFlag.NoShadow });
+      lights.push({ kind: 'point', pos: [b.c[0] - nx * 0.1, b.c[1], b.c[2] - nz * 0.1], dir: [0, -1, 0], color: [1.0, 0.12, 0.08], intensity: 1.6, range: 3, innerDeg: 0, outerDeg: 180, name: `van_tail_${k}`, group: 'exterior', enabled: true, volumetric: 0, fixtureBox: fb, radius: 0.04, mains: false });
+    });
+    const bay: Vec3 = [VAN_AT[0] - nx * 2.3, 1.84, VAN_AT[1] - nz * 2.3];
+    const bayLens = add({ c: bay, h: [0.07, 0.012, 0.07], ...M.plasticWhite, emissive: [22, 19, 13], flags: BoxFlag.NoShadow });
+    lights.push({ kind: 'point', pos: [bay[0], bay[1] - 0.05, bay[2]], dir: [0, -1, 0], color: [1.0, 0.86, 0.62], intensity: 16, range: 6, innerDeg: 0, outerDeg: 180, name: 'van_bay', group: 'exterior', enabled: true, volumetric: 0.2, fixtureBox: bayLens, radius: 0.05, mains: false });
   }
   G.patch(4.4, 15.3, 3.0, 4.6, 'oil', 0.1, 0.019); G.rubble(5.9, 16.6, 0.5, 5);
   G.lantern(8.55, 11.0, 'lantern_road', 'exterior');                // at the wall's foot beside the gate: the wall he takes is a lit wall
@@ -178,7 +183,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.drums(10.2, 21.6, 4); G.tyres(15.2, 21.8, 4); G.crates(10.0, 6.4, 0.1, 3); G.gasBottle(11.0, 6.2); G.gasBottle(11.4, 6.5);
   G.sacks(14.6, 6.5, 0.2, 4); G.patch(12.4, 18.8, 4.2, 2.6, 'oil', 0.3, 0.019);
   G.lantern(14.6, 13.0, 'lantern_sentry', 'yard', 0);
-  G.floodLight(9.5, 22.4, [0.6, -0.8], 'flood_court', true, 3.6);
+  G.floodLight(15.5, 22.6, [-0.6, -0.8], 'flood_court', true, 3.6);   // (in the corner by the arch's wall, thrown back across the truck court: from the far corner it went over that wall and lit the gun court's south half, the shop's door with it)
 
   // ---- the gun court: the nest in the far corner, the sandbags inside the arch, the gap, the barrier before the shop ----
   grp('court.gun');
@@ -188,7 +193,16 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.hesco(23.4, 12.6, 2, 0);                                                       // the barrier before the shop's door
   G.drumDown(17.6, 16.8, 0.4); G.tyres(19.4, 17.4, 2); G.handcart(20.6, 20.4, 0.5, 'sacks'); G.woodPile(17.2, 21.8, 0.1); G.drums(24.2, 21.6, 3);
   G.blocks(17.4, 6.4, 0.1, 3); G.jerryCan(18.2, 6.2, 0.6);
-  G.floodLight(24.4, 22.2, [-0.5, -0.86], 'flood_gun', true, 3.6);
+
+  // the gun court's own lamp: a mast by the shop's corner, its arm out over the court, the head between the nest and the gap. It lights the gun, the sandbags'
+  // far end and the gap, and stops short of the shop's door: the ground he stands on for the door is lit by the shop's lamp alone (the line that has him shoot it out)
+  { const x = 22.3, z = 9.9, h = 4.6, px = 24.6;
+    add({ c: [px, (h + 0.11) / 2, z], h: [0.05, (h + 0.11) / 2, 0.05], ...M.galv });
+    add({ c: [(px + x) / 2, h + 0.085, z], h: [(px - x) / 2 + 0.1, 0.025, 0.025], ...M.galv });
+    add({ c: [x, h + 0.06, z], h: [0.2, 0.05, 0.2], ...M.plasticBlack });
+    const fb = add({ c: [x, h, z], h: [0.12, 0.012, 0.12], ...M.plasticWhite, emissive: [40, 34, 22], flags: BoxFlag.NoShadow });
+    lights.push({ kind: 'spot', pos: [x, h - 0.03, z], dir: [0, -1, 0], color: [1.0, 0.8, 0.5], intensity: 120, range: 10, innerDeg: 34, outerDeg: 58, name: 'lamp_gun', group: 'exterior', enabled: true, volumetric: 0.25, fixtureBox: fb, radius: 0.1, mains: false });
+  }
 
   // ---- the shop and the store behind it: one building against the yard's far wall ----
   grp('shop.floor'); G.ground(SHOP.x0, SHOP.z0, STORE.x1, SHOP.z1, 'slab', 0.006);
@@ -255,19 +269,19 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     rails: { allow: ['move', 'camera', 'zoom'], rows: ['charge', 'drive'] },   // (the interaction key's rows in this mission are the two its lines teach: the charge on the shop's door, the code book. No pick, no boot, no dead man to drag)
     steps: ([
       // THE ROAD
-      { id: 'move', line: '[W] [A] [S] [D]: get behind the van', done: { is: 'near', at: VAN, r: 1.1 }, at: VAN },
+      { id: 'move', line: '[W] [A] [S] [D]: behind the van', done: { is: 'near', at: VAN, r: 1.1 }, at: VAN },
       { id: 'ready', line: '[2]: rifle up', done: { is: 'slot', slot: 'rifle', drawn: true } },
       { id: 'sprint', line: 'Hold [Shift]: sprint to the wall by the gate', done: { is: 'all', of: [{ is: 'near', at: WALL, r: 1.3 }, { is: 'flag', flag: 'sprint' }] }, at: WALL },
       { id: 'wall', line: 'Walk into the wall: snap to it for cover', done: { is: 'flag', flag: 'wall' }, at: [CORNER[0], CORNER[1], WALL[2]] },
-      // (the peek is the lesson, the shot its reward: he is at the corner the sentry was firing past a moment ago, and a man who walks into that opening
-      //  instead still has the sentry to shoot, so the line passes on him too)
-      { id: 'peek', line: 'Slide along to the gate. Aim past the corner: you lean out', done: { is: 'any', of: [{ is: 'flag', flag: 'lean' }, DOWN(1)] }, at: CORNER },
+      // (the peek is the lesson, the shot its reward: he is at the corner the sentry was firing past a moment ago. The trigger is still locked here, so the
+      //  lean is the only way on: a man who walks into the opening instead is shot at by nobody, the sentry's fire having stopped at the line before)
+      { id: 'peek', line: 'Slide along to the gate. Aim past the corner: you lean out', done: { is: 'flag', flag: 'lean' }, at: CORNER },
       { id: 'fire', line: 'Left button: shoot the sentry', done: DOWN(1), at: [SENTRY[0], 1.2, SENTRY[2]] },
       // THE TRUCK COURT
       { id: 'reload', line: '[R]: reload', done: { is: 'reload' } },
       // (the gun's own setup, met early and in a quiet moment: the same two presses load the launcher at the end)
       { id: 'auto', line: '[Z]: full auto', setupLine: '[2], then [1]: full auto', done: { is: 'any', of: [{ is: 'flag', flag: 'auto' }, DOWN(2)] } },
-      { id: 'arch', line: 'Move up beside the blue gate', done: { is: 'near', at: JAMB, r: 1.3 }, at: JAMB },
+      { id: 'arch', line: 'Move up beside the blue gate', done: { is: 'near', at: JAMB, r: 1.3 }, hold: 1, at: JAMB },   // (a second there: the gun opens on the truck before the next line, whenever he came)
       { id: 'crouch', line: '[C]: crouch. The fire goes over you', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: JAMB, r: 1.9 }] }, at: JAMB },
       // THE GUN COURT
       { id: 'low', line: 'Stay low: follow the sandbags', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: BAGS_END, r: 1.1 }] }, at: BAGS_END },
@@ -303,9 +317,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     boxes: K.boxes, props: K.props, lights, switchables, doors, devices: [],
     breaker: { pos: [28.0, 1.35, 10.2], boxes: [brk, led] }, beacons: [{ pos: [20.5, 2.05, 5.3], box: dome }],
     playerSpawn: START, routes, chokepoints: [], clearPlans: [],
-    sky: { zenith: [0.008, 0.012, 0.026], horizon: [0.02, 0.024, 0.036] },   // (a dark sky over a thin moon: the plain past the lamps and the dark past the world's edge are one dark)
+    sky: { zenith: [0.003, 0.004, 0.008], horizon: [0.007, 0.008, 0.012] },   // (a dark sky over a thin moon: the plain past the lamps and the dark past the world's edge are one dark)
     // (the script's eyes: a play program may ask of the player only whether he stands in a volume. The shop door's line outside it, the shop, the store)
     volumes: [
+      // (the road east of the van's flank, and round its nose: the sentry's rounds cross it, so he holds his fire while the player is anywhere in either)
+      { name: 'road_east', kind: 'trigger', c: [7.5, 1, 14.2], h: [1.9, 1, 3.2] }, { name: 'road_nose', kind: 'trigger', c: [4.9, 1, 11.55], h: [0.7, 1, 1.05] },
       { name: 'shop_line', kind: 'trigger', c: [FRONT_X - 1.35, 1, AXIS], h: [1.35, 1, 0.6] },
       { name: 'shop_in', kind: 'trigger', c: [(FRONT_X + PART_X) / 2, 1, (ROOM_Z0 + ROOM_Z1) / 2], h: [(PART_X - FRONT_X) / 2 - 0.05, 1, (ROOM_Z1 - ROOM_Z0) / 2] },
       { name: 'store_in', kind: 'trigger', c: [(PART_X + YARD.x1) / 2 + 0.05, 1, (ROOM_Z0 + ROOM_Z1) / 2], h: [(YARD.x1 - PART_X) / 2 - 0.1, 1, (ROOM_Z1 - ROOM_Z0) / 2] },
