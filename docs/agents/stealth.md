@@ -556,6 +556,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the leaf moved ends it, a man with no wand is refused in words, `WAND.mate` off = no row on the card or the menu. On the real page: `PORT=<dev server> ONLY=mate node
   tools/qa/wand-page.cjs [outDir]` and `ONLY=nowandmate` (his card's tile from the roster chip; the room clear staged from that kit; the menu, V, the kneel, the fog eye). Never seen
   on a GPU and never played by anybody: the sweep's five seconds, the key and the words are first-pass.
+- **The wand is set up in the time its animation takes** (`WAND.quick`, a key of the wand's own table — ON in the page, `?nowandquick` = the 1.5 s feed and its ring, as it
+  was; OFF in the module and on the frozen stand, `TPS_WANDQUICK=1`; a `FROZEN_HOLDS` row, the word in `STAND_ENV`, a debugger row and slider, and a recording from before the key
+  replays with it off; acts only with `WAND.on`). The maintainer, 2026-10-22: "setting up the optical wand should be faster. pretty much just the time for the animation and none
+  of the waiting time with the spinner (which we can probably just remove)". With the key on the lens is through the first step he is PLANTED (at the middle of the leaf, both
+  hands on it — the gate the feed always waited behind), DOWN (the animator's crouch past `quickDown` 0.9) and the animation's time has gone since the look began
+  (`Wanding.age`; `wand.ts wandThrough` / `wandFeedSecs`: the squat's own `STEALTHPOSE.cableIn` where the squat is drawn, else `quickSecs` 0.4): nothing is counted after the
+  animation, and where putting the gun away takes longer, that is the wait. A teammate's FIRST look on an order is through the same way from his mark at the door
+  (`wandorder.ts`); fed AGAIN after the fight or a flash took him off his knee (`Job.again`) it is the old `feedSecs` — a lull in a fight is not a set-up, and his "wand's in."
+  must not come back every half second. The row of a look under way keeps its words and draws NO ring and NO bar, feeding or looking (`running()` with no `progress`), and the
+  log says one line ('the wand is through'), not two. Nothing else moves: the lens, its wedge, what pulls it out, the stow after. Measured headless, one stage each, the same on
+  both stands: Space to the lens through 1.63 s → 0.42 s (hands on it at 0.12 s there), a teammate from on his mark 1.52 s → 0.42 s. QA: `bun run tools/qa/wand-check.ts quick`
+  (`probes.ts wand-quick`, family `wand`; both stands; `WANDQUICK_BREAK=1` must fail): off = the feed and the ring on every frame of the row, two log lines; on = through inside
+  the animation's time, more than a second sooner, the same time to hands-on as before, no ring on any frame, one log line; a teammate's the same; the stands' row and a
+  recording's tables both ways. wand-look reads the wait as the keys stand; wand-mate's two fed-again lines still hold the 1.5 s on both stands. The kit picture's page check
+  (`tools/qa/kitview-page.cjs`) reads the wait off the page's own table and holds the key off for its one pick-half-way-through-the-feed line. On the real page (software
+  adapter) `ONLY=play node tools/qa/wand-page.cjs` times it: the lens through 24 frames after the Space, no ring on the row and no bar in the panel on any of them; `ONLY=slow`
+  is the same page under `?nowandquick`, the 1.5 s feed with its ring. Never seen on a GPU and never
+  played by anybody: whether the lens coming up as the squat lands reads right is a call for an eye (the two sliders are there for it).
 - **In a hold: left click the knife, right click the choke** (`CLOSE.heldClicks`, a key of `src/game/close.ts`'s table beside `lethal` and its OWN switch — it does not wait on
   `CLOSE.on`; ON in the page, `?noheldclicks` = neither click does anything in the arm hold, as it was; OFF in the module and on the frozen stand, `TPS_HELDCLICKS=1` raises it
   there, `TPS_PROFILE=shipped TPS_HELDCLICKS=0` holds it off on the shipped one; a `FROZEN_HOLDS` row, the word in `STAND_ENV`, a Tab toggle under 'Closer than ever', and

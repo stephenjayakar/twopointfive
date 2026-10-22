@@ -28,7 +28,7 @@
 //     hands: hands-body hands-door hands-team hands-off hands-harness
 //     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-held work-walk work-defuse work-off work-harness
 //     handwork: handwork-work handwork-radio handwork-swap handwork-off handwork-harness
-//     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-off
+//     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-quick wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
@@ -2548,6 +2548,7 @@ if (on('wand-look', 'wand', 'fog', 'all')) await run('wand-look', async () => (a
 if (on('wand-costs', 'wand', 'all')) await run('wand-costs', async () => (await import('./wand-check.ts')).wandCosts());   // the pan's rate and stops, the low lens, what pulls it out, the stow, the mark, the checkpoint gate
 if (on('wand-doors', 'wand', 'all')) await run('wand-doors', async () => (await import('./wand-check.ts')).wandDoors());   // every door face of every squad level: the lens beyond the leaf, in the open
 if (on('wand-mate', 'wand', 'kit', 'squadorders', 'all')) await run('wand-mate', async () => (await import('./wand-check.ts')).wandMate());   // a teammate's wand: carried and never ordered nothing happens; X on a shut door then V, his lens among the fog's eyes; what ends it; refusals
+if (on('wand-quick', 'wand', 'all')) await run('wand-quick', async () => (await import('./wand-check.ts')).wandQuick());   // the quick set-up: the lens through as he gets onto his knee, no ring on the row; off, the feed and its ring; a teammate's the same; the stands' row
 if (on('wand-off', 'wand', 'all')) await run('wand-off', async () => (await import('./wand-check.ts')).wandOff());   // off, or carried and unused: the same run by digest; the two stands' row and the registry
 // ---------------------------------------------------------------- sticky cameras (src/game/stickycam.ts, sticky-check.ts): the launcher's third load; one stuck to a wall is one more eye for the fog of war
 if (on('sticky-kit', 'sticky', 'kit', 'all')) await run('sticky-kit', async () => (await import('./sticky-check.ts')).stickyKit());   // the row on your card with the switch, a pouch each, the store, staging onto the rifle
