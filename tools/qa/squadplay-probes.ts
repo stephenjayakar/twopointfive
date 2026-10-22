@@ -29,6 +29,8 @@ const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ORDERS, WORD_HEAD, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { SILENT, squadSilent } = await import(`${ROOT}/src/game/silent.ts`);
+const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
+const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 
 const DT = 1 / 60;
 /** the keys of the door menu since no order is on a digit above 5: 5 on its first page turns to the door tools' page, where the four are 1 to 4 */
@@ -163,9 +165,11 @@ export const squadplayGo = guarded(async () => {
     const blue = R.men('blue'), still = blue.every((m: any) => O.of(m)?.order === 'stack' && O.of(m).door === dw && !inBounds(BREAKROOM, m.char.pos, -0.3));
     const note = R.notes().filter(s => /waiting/.test(s)).join(' ; ');
     verdict(stacked && red && l?.order === 'go' && l.who.join(' + ') === 'Red One + Red Two' && ops.length === 1 && ops[0].ended === 'in' && still, 'the orders going to red, F: red goes in at its door and blue stays stacked on its own', `${line(l)} · ${ops.map((op: any) => `${op.door.def.name} ended '${op.ended}'`).join(' · ')} · ${R.where('blue')}`);
-    verdict(/^blue waiting · T, then F$/.test(note), '… and with red in, the squad block says blue is still waiting and how to reach them (no key offered: F would not be theirs)', `"${note}"`);
-    const toBlue = R.who('blue'); R.press(F); const l2 = R.last(); R.until(() => !D.ops.length, 40);
-    verdict(toBlue && l2?.order === 'go' && l2.who.join(' + ') === 'Blue One + Blue Two' && D.stats.words === 2 && R.held === 0, 'T to blue, F: blue goes — nothing held', `${line(l2)} · words ${D.stats.words} · ${R.keys.join(' ')}`); }
+    // (the squad's only keys, cmdring.ts `only`: there is no who key to turn to blue with, so the word is theirs — it frees whoever stands waiting on it)
+    if (CMDRING.only) verdict(/^\[F\] go · blue waiting/.test(note), '… and with red in, the squad block offers F for blue, who are the ones still waiting (the squad\'s only keys: the word frees whoever waits on it)', `"${note}"`);
+    else verdict(/^blue waiting · T, then F$/.test(note), '… and with red in, the squad block says blue is still waiting and how to reach them (no key offered: F would not be theirs)', `"${note}"`);
+    const toBlue = CMDRING.only ? O.who === 'red' : R.who('blue'); R.press(F); const l2 = R.last(); R.until(() => !D.ops.length, 40);
+    verdict(toBlue && l2?.order === 'go' && l2.who.join(' + ') === 'Blue One + Blue Two' && D.stats.words === 2 && R.held === 0, CMDRING.only ? 'F again, the orders still going to red: blue goes — nothing held' : 'T to blue, F: blue goes — nothing held', `${line(l2)} · words ${D.stats.words} · ${R.keys.join(' ')}`); }
   return done();
 });
 
@@ -244,7 +248,8 @@ export const squadplayTry = guarded(async () => {
     const blue = R.who('blue'); R.toolsOnDoor('breakroom_w'); R.step(10); const row = R.row('2'); R.press(BANG); const l2 = R.last(), op = D.ops[0];
     let kept = true, strayed = 0; R.post = () => { reds.forEach((m: any, i: number) => { if (m.state === 'dead') return; if (O.of(m)?.order !== 'hold') kept = false; strayed = Math.max(strayed, dist(m.char.pos, posts[i])); }); };
     const ended = R.until(() => !D.ops.length, 50); R.step(60); R.post = null;
-    verdict(red && l0?.order === 'move' && there && l1?.order === 'hold' && l1.who.join(' + ') === 'Red One + Red Two' && arcs.every((s: string) => /^holding · /.test(s)) && arcs[0] !== arcs[1], 'T, B on the corridor spot, then X and 4: red goes there and holds, a way out each', `${line(l0)} · ${line(l1)} · ${reds.map((m: any, i: number) => `${m.callsign} [${arcs[i]}]`).join(' · ')}`);
+    verdict(red && l0?.order === 'move' && there && l1?.order === 'hold' && l1.who.join(' + ') === 'Red One + Red Two' && arcs.every((s: string) => WORDS.on ? /^holding\b/.test(s) && !/\b(north|south|east|west)\b/.test(s) : /^holding · /.test(s)) && (WORDS.on || arcs[0] !== arcs[1]),   // (the dialogue pass on: the row names the place watched or says 'holding', never a bearing)
+      'T, B on the corridor spot, then X and 4: red goes there and holds, a way out each', `${line(l0)} · ${line(l1)} · ${reds.map((m: any, i: number) => `${m.callsign} [${arcs[i]}]`).join(' · ')}`);
     verdict(blue && /^bang and clear/.test(row?.text ?? '') && !row?.off && l2?.order === 'bangClear' && l2.who.join(' + ') === 'Blue One + Blue Two' && op?.men.length === 2 && ended && op.ended === 'in' && kept && strayed < 1 && R.held === 0, 'T, X on the west door, 5, 2: blue bangs and clears the break room while red keeps its hold from the order to the end — nothing held', `${line(l2)} · blue's order ended '${op?.ended}' · red still on 'hold' throughout ${kept}, never more than ${f2(strayed)} m off · most keys held ${R.held} · ${R.keys.join(' ')}`); }
   // ---- a tool on a held door: T to red, B on the manager's door; T to blue, X on it, 5, 3 (charge); F blows it
   { const R = await rig(5, MANAGER); const { O, D } = R; const d = R.door('manager');
