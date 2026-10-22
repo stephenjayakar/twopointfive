@@ -170,6 +170,13 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.',
     scene: 'A fuel convoy went quiet on the pass. Your squad found the halt it stopped at, and drove into the roadblock in front of it. Tonight nobody on the ground is you: you lead the four from above.',
     teaches: ['Turn, zoom and move the view', 'One key orders the squad', 'Stack on a door, then send them in', 'A charge on a wall', 'Lights out, and night vision'] },
+  // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): he stays at the gate with the handset, and every stop is a thing one order to all
+  // four cannot do and a plan can
+  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial',
+    place: 'A walled relay post, led from its gate', lean: 'loud', defenders: 8, squads: true,
+    blurb: 'You stay at the gate with the handset. Lay a plan for the four: two doors on one word, a gun, two gates.',
+    scene: 'The halt\'s radio log names a relay post below the pass. You take the four to its gate and stay there on the handset: this one is won by the plan.',
+    teaches: ['Plan mode: you on the radio, the view free', 'Pick two men, give them a door', 'One word sends every stack', 'A gun turned to the wrong door', 'Which way a pair faces'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
   { id: 'tut-solo', title: 'The fuel halt, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial',
@@ -183,7 +190,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     scene: 'The code book names a post one street long. This time you walk in with the four, and the men in it know how to hold a street.',
     teaches: ['Doors, with the squad behind you', 'A doorway a man holds: go round', 'A gun on the street: make it duck, then move', 'Clear a room through its window', 'Turn the squad to cover your back'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
-    place: 'A money changer\'s house, at night', lean: 'quiet', defenders: 3,
+    place: 'A money changer\'s shop, a night of snow', lean: 'quiet', defenders: 3,
     blurb: 'Alone, and nobody knows you came. Through the dark to the strongroom, and out the way you went in.',
     scene: 'The post was paid through one house in town, and its ledger says by whom. It is in the strongroom. Nobody is to know you were there.',
     teaches: ['Stay low and out of the light', 'A whistle puts a guard where you want him', 'Take a man from behind', 'Locks, the fuse box, night vision', 'Out the way you came in'] },

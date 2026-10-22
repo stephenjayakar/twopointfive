@@ -1,6 +1,7 @@
 // The scripted player for the tutorial's solo loud mission (levels/tut-solo.json; tools/qa/lesson-run.ts runs it): what each line asks, through the input only,
 // in the order a new player would do it. He is mortal: the fights are the level's script's (levels/tut-solo.script.ts) and none of them is aimed at a man who
 // does what the line says.
+import { OWNBLOW } from '../../../src/game/ownblow';
 import type { Bot } from '../lesson-run';
 import { AXIS, VAN, WALL, CORNER, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
 import { SLOTSETUP } from '../../../src/game/slotsetup';
@@ -181,7 +182,8 @@ export const steps: Record<string, (B: Bot) => void> = {
     const lit = Math.round((B.g.player.visibility ?? 0) * 100); B.say(`  beside the door with the lamp out: the light on him ${lit}`);
     if (B.W && lit > 25) B.fail(`the lamp is out and he is still lit beside the door (${lit}): 'the dark is cover too' is not true here`);
   },
-  blow: B => { B.press('KeyF', 30); },
+  // (the page's way: his own charge is a row of his own list — ownblow.ts — and stood clear it is the only one, so a tap gives it; the frozen stand's: the squad's key)
+  blow: B => { B.press(OWNBLOW.on ? 'Space' : 'KeyF', 30); },
   // out from beside the door, square to the doorway (from its edge the rounds go into the jamb), and the pistol
   shop: B => {
     const s = B.g.guards[2];
