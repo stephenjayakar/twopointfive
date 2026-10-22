@@ -1141,7 +1141,7 @@
     },
     "lesson": {
       "title": "A squad, from above",
-      "rails": { "allow": [], "respawn": 5, "fog": true, "lasers": false, "orders": ["move", "stack", "go", "walltools", "wallCharge", "work"], "sky": { "park": [2, 0, 9], "reach": 26, "low": true, "eye": { "at": [9.8, 1.9, 23.4], "yaw": 1.5707963267948966, "fov": 100 } } },
+      "rails": { "allow": [], "respawn": 5, "fog": false, "lasers": false, "orders": ["move", "stack", "go", "walltools", "wallCharge", "work"], "sky": { "park": [2, 0, 9], "reach": 26, "low": true, "eye": { "at": [9.8, 1.9, 23.4], "yaw": 1.5707963267948966, "fov": 100 } } },
       "steps": [
         { "id": "turn", "line": "Hold [Ctrl], move the mouse: turn the view", "allow": ["camera"], "cue": "ambush", "checkpoint": "the road", "done": { "is": "view", "turned": 40 } },
         { "id": "zoom", "line": "[Ctrl] and scroll: zoom out", "allow": ["zoom"], "done": { "is": "view", "zoomed": 1.2 } },

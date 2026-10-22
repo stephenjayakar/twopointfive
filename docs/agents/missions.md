@@ -179,7 +179,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   put back, the journal, the mission again, the ring is the place and the lookout sees the road and no room, the mark stays in the picture, the menu lists only the mission's orders) passes on both stands and `RAILS_BREAK=1` (the gate passes everything, the ring is no place, nothing keeps it in the picture, the menu lists every order) fails seven lines on both. THE FIRST MISSION `tut-sky` ('The tunnel, from
   above', `tools/levels/tut-sky.ts`: a floor of its own since 10-22, the bullet below; before that the pass's own geometry under snow, as 'The halt, from above'; a roadblock and a gun truck with lit
   lamps on the road, shutters on the windows; `levels/tut-sky.script.ts`): the squad pinned behind its trucks, the view turned, zoomed and shifted; the first
-  order under the squad's own smoke; a fight for the gate; stack and the word on two doors; the kitchen by the door between the two rooms; the store's door is locked, so a charge goes on its wall from the squad's ring (the command key held, wall tools, the charge: three charges carried, a wrong wall costs one and the line stays up) and the word blows it once the squad has stood off; the command key on the mains box on the yard wall puts the lights out, night vision comes on, the last room is taken in the dark by the store's inner door and the squad is sent back to its trucks. A room taken is its step done however the squad went in (a second tap of the command key at a stacked door sends them in with no word). A teammate says what the squad has found as the wall, the mains, the dark and the way out come up (the script's beats `wall`, `dark`, `nv`, `out`). Fourteen steps then (fifteen with the tunnel station's `torches`), the fog of war from the first (a lookout on the first truck's cab shows the roadblock and nobody in a room). Checkpoints: the road, the yard, the tea room, the kitchen, the store. A TUTORIAL MISSION IS THE PAGE'S: `lesson-run.ts <name>` stands one up on the shipped stand whatever stand it was asked on (the frozen stand holds the frame and the newer orders off, where it has no lesson to play). MEASURED: the
+  order under the squad's own smoke; a fight for the gate; stack and the word on two doors; the kitchen by the door between the two rooms; the store's door is locked, so a charge goes on its wall from the squad's ring (the command key held, wall tools, the charge: three charges carried, a wrong wall costs one and the line stays up) and the word blows it once the squad has stood off; the command key on the mains box on the yard wall puts the lights out, night vision comes on, the last room is taken in the dark by the store's inner door and the squad is sent back to its trucks. A room taken is its step done however the squad went in (a second tap of the command key at a stacked door sends them in with no word). A teammate says what the squad has found as the wall, the mains, the dark and the way out come up (the script's beats `wall`, `dark`, `nv`, `out`). Fourteen steps then (fifteen with the tunnel station's `torches`), the fog of war from the first (a lookout on the first truck's cab shows the roadblock and nobody in a room) until the tunnel station put it off for the whole mission (the bullet below). Checkpoints: the road, the yard, the tea room, the kitchen, the store. A TUTORIAL MISSION IS THE PAGE'S: `lesson-run.ts <name>` stands one up on the shipped stand whatever stand it was asked on (the frozen stand holds the frame and the newer orders off, where it has no lesson to play). MEASURED: the
   scripted player (`bun run tools/qa/lesson-run.ts tut-sky --seed N`) ends all fourteen steps on seeds 1, 2, 3, 4, 7, 9 and 10 in 130 to 144 s of play on the page's stand; `PORT=<port> node tools/qa/tut-page.cjs` plays it on the real page with real key and mouse events (software adapter: it steps with `__runFrames(n, dt, keys, 'none')`, which draws nothing, and takes a picture by reading one drawn frame back; on that adapter a hand's own keys played all fourteen steps to the mission's end on the tree with the squad's keys on Q and F alone, the ring for the wall charge among them: sixteen lines, none red, the squad back at its trucks at 140 s). NOBODY HAS: seen it
   on a GPU, felt it with a hand, or seen what the smoke does to the road fight (the harness has no smoke sight lines). FOUND: a teammate who has seen an enemy
   through glass he cannot shoot through stays rooted in 'alert' under an order (hence the shutters); a man a script holds runs no AI.
@@ -232,7 +232,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     steps by a hand's keys, no red line, no page error). NOBODY HAS seen it on a GPU; the red of the beacons is seen from the lights going out until the
     goggles come on, and again on the walk back, where the frame lifts the goggles. ITS ROW NAMES THE NIGHT (`hour: 'night'`, the `ROWSET` rule, `?rowset=0` off): the
     mission's last third is the mains going out, so a visitor's standing pick of another hour no longer opens it by day; no weather is named (a snow
-    level's own stands). `rowset-check` green on both stands with its break red, two seeds of the scripted player after it.
+    level's own stands). `rowset-check` green on both stands with its break red, two seeds of the scripted player after it. NO FOG OF WAR
+    ON THIS MISSION (`rails.fog: false`, level data; the maintainer after a third play with the squad's own wall charge going off unseen: "still can't see
+    the wall shot detonate here. maybe we just remove fog of war entirely from this mission?"). WHY IT WAS UNSEEN, measured: the fog takes five eyes
+    (`FOG_EYES`), the four men and the seat's road lookout fill them, and the eye the wall steps name (`eye`, `rails.ts stepEye`) is pushed last, so with
+    four men up it never got one: at the blow's step the fog had eyes 20 21 22 23 199 and the wall's face was not seen. That is the frame's to mend for a
+    mission that keeps its fog; this one shows the whole floor. `rails-check`'s line on the ring now holds that every man on the road and in the rooms is
+    drawn (it held the lookout's road and nobody in a room); `tut-sky-check` has a tenth line, the wall's face in the live picture on the blow's step,
+    red with the fog put back (`TUT_SKY_BREAK=1`: "fog of war on, 5 eyes · the wall's face HIDDEN"). Nobody has seen the blast on a GPU since.
     MEASURED: the scripted player ends all fifteen steps on the page's stand on seeds 1 to 7 in 129 to 140 s of play; the first man with a
     torch is hit two to three and a half seconds after the bunkhouse says it is coming, by the lorry's tail; the second often stays behind the lorry and is
     the last room's fight. `PORT=<port> node tools/qa/tut-page.cjs` (software adapter, a hand's own keys and mouse) played all fifteen steps to the
@@ -525,6 +532,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     `tutplan-check`, `rails-check`, `rowset-check` (`ROWSET_BREAK=1` fails 7), `lesson-gate` and `level-needs --run` green on both stands; the real page with real keys to its end
     card, 38 lines, its fights drawn frame by frame (software adapter). In those pictures the hall reads dark inside: its light is a ceiling tube, an emissive box the lowest
     quality barely gathers — how the hall reads by day on a GPU is not known.
+  - **Two stacks on one word, and the two posts, from a player's tape** (2026-10-22: two replays of the mission on hard, the maintainer's notes "simultaneous breach on mission 2
+    didn't really work. and the second team threw a flashbang when our guys were already on the inside" and "blue one doesn't watch his angle even though red team has it covered").
+    WHAT THE TAPE SHOWED. At the guardroom one press of the word gave each pair its OWN `bangClear` (planmode.ts `word` → `enter` → `quickFor`, a chain at a time: no `DoorGate`
+    between them). Blue was through the side door at 2.6 s and the room was clear at 3.7 s; red first re-formed for the throw (its second man walked 3.5 m across the doorway from
+    his stack mark to a place further along the wall), its can went off at 4.3 s on both blue men standing in the room, and red came in at 5 s. At the hall both pairs were given
+    `openClear` (no can left over `AUTOPILOT.keepBangs`) and went in 0.1 s apart. At the gates a man told to face the back gate swung 85° to the road gate three times for men the
+    other pair's two rifles had, and his partner never took the way to face at all: the move had put him in the corner south of the guardroom (`roomfit.ts`: a few steps round the
+    click, a wall at his back), `cover` had no line for him there and he stood looking at a wall. The scripted player did the first two on every seed and said nothing: its check
+    asked only that one press empties every waiting chain.
+    NOT THE LEVEL'S, claimed to their owners and NOT changed here: one word is one signal for every stack it frees; no can goes into a room friends hold; a man covering a way keeps
+    it while another pair has the contact. The first was TRIED and taken out again (the entries the word frees share a gate, `doorTools.together()`): first men in 0.1 s apart and
+    nobody dazzled on seeds 1 to 3, hard.
+    THE LEVEL'S, changed (boxes moved: the fingerprint is new, so a checkpoint or a tape of the level from before is refused): post B and its barrier stand at (24.0, 10.3) and
+    (24.0, 9.3), were (23.25, 10.75) and (23.25, 9.6); two drums fill the corner south of the guardroom (20.7, 11.65); a post's area in the two facing steps is 2.6 m, was 1.8. A
+    hand does not land on the mark (his fell 1.25 m west of it), so the post is where a click a metre and a half off still gets two men who see the gate. SWEPT with the scripted
+    player (`TUTPLAN_POSTB=x,z` clicks the barrier's order there; hard, one seed a click): before the drums 10 of 13 clicks gave two men facing the gate — (22.2, 11.0) put one in
+    that corner, (25.3, 11.3) and (25.9, 10.4) were taken by the picture of the hall's front door, which stands over the ground north of it (the right click became a stack on that
+    door: STILL SO, a level rule for the next post: nothing to click within 2.5 m north of a door); with the drums (22.4, 11.6), (25.3, 10.3), (22.2, 11.0), (24.0, 11.6),
+    (22.6, 9.6) and (25.2, 9.7) all give two. The drums also took the re-form away (the place along the wall is gone and the stack throws from its marks): first men in at 2.8 and
+    3.4 s, 0.6 s apart — and the second can still dazzles the first pair, two teammates on every run, until the squad's rule is in the build.
+    WHAT THE SCRIPTED PLAYER NOW SAYS AND ASKS (`tools/qa/lessons/tut-plan.ts`): after each word, when the first man of each stack was inside the room, how far apart, and the
+    teammates the team's own can dazzled ("the word at guardroom: …"); after each facing order, where each man of the pair stands and whether he took it ("the barrier: …") — on the
+    mark a man who did not FAILS the run. `TUTPLAN_STRICT=1` fails the run on stacks more than a second apart or any teammate dazzled: red on every seed as the build stands, green
+    with the tried gate (seeds 1 to 3) — the word is held off until the squad's rule lands, then it is the run's own.
+    MEASURED (the page's stand, midday): 19/19 on seeds 1 to 8 (114.3 to 115.1 s) and on hard, seeds 1 to 4; six seconds a line on seeds 3 and 5 (221.3, 222.2 s); the wrong plan on
+    seeds 1 to 4 ends in 102.6 to 118.5 s with 4, 3, 6 and 3 teammates on a knee at the hall. On the join with the build head: `tutplan-check`, `level-needs --run` and
+    `rails-check` green on both stands, `lesson-gate`, `rowset-check` and `lived-check` green, and the real page with real keys to its end card (38 lines, the software adapter,
+    no picture taken). Nobody has played the changed post; nothing of it has been seen on a GPU.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
@@ -730,12 +765,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the mission sheet only; a loud mission of the quiet kind WITHOUT a card of its own would still be dealt as a stealth run: none exists), and a
   checkpoint load's own wand hand-over (`savestate.ts`, `P.wand || quietWand(g)`: no level with a card for you is under a fog today). THE TREE: the
   sponge rounds are a row of the card as a tree; with it off the rifle's are what it is built with on every mission and the rule has none to take (the
-  hold's word says so). A STEALTH mission that wanted its own card for you could not name sponge rounds, cameras or a wand on it today (the block has no
-  such fields): not built, none asks. SWITCH: `ISSUE.whole`, a key of the registered, journaled table (a recording from before the key replays with it
+  hold's word says so). A CARD MAY NAME SPONGE ROUNDS: `rings` on your own card (0‥5, a card with the rifle; the validator refuses it elsewhere), asked by the solo
+  mission's owner for the maintainer's 10-22 "explain secondary attachments for the rifle ... swap between secondaries": with any on the card the
+  launcher comes up on them and the grenades are its next load, so the swap has something to teach. Worn as written by `kitPlayer` (a man alone: no
+  trim, like the card's other counts); through `kitStage` the pouches rule trims a card that does not fit, sponge rounds included, as it trims any card.
+  With the rule off the mission's five land over the count as before. Cameras and the wand still cannot be named on a card (none asks). SWITCH: `ISSUE.whole`, a key of the registered, journaled table (a recording from before the key replays with it
   off), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row, `TPS_ISSUEWHOLE=1`), ON in the page (`?issuelend` puts it off; debugger box "a
   mission's own card for you is the whole kit"). CHECK: `probes.ts issuewhole` (`tools/qa/issuewhole-check.ts`, family `kit`; `ISSUEWHOLE_BREAK=1` must
   fail) on BOTH stands: the solo tutorial stood up as its page stands it (off: 5 sponge rounds, the tube on them; on: none, the tube on the grenade,
-  2/2/2/3 as its card), a rig's quiet run alone under a fog with a card (off 5 / 2 cameras / wand; on none), an empty block, the tree off, a mission
+  2/2/2/3 as its card), a rig's quiet run alone under a fog with a card (off 5 / 2 cameras / wand; on none), a card that names `rings` and the
+  validator's lines for it, an empty block, the tree off, a mission
   with no block and a lesson's page with none (each the same on and off), the journal. MEASURED: one staging each, no seeds (nothing here is drawn).
   FOR THE SOLO MISSION'S OWNER: its step `load` ("[2] again: load the grenade") is already true when it comes up under this rule and goes by unread, and
   its scripted walk never wears the page's kit (`lesson-run.ts` stages no card on a man alone), so `tut-solo-check` plays the sponge rounds either way.
@@ -1294,6 +1333,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the roadblock to the gate, so the beat is as short with the word taken off and no longer proves it. The line now also asks `lanes.ts lanePenalty` of
   each roadblock man the script sent, with the word and without: never a price with it; without it, on a stand with covered lanes, the lanes' price
   (670 man-frames on the page's stand; the frozen stand has no covered lanes and only shows the word reached 3 men).
+- **A step's own eye always has a place among the fog's** (2026-10-22; `RAILS.eyeFirst`, a knob of the frame's table, on with it, off on a recording
+  from before the key; `src/game/fogofwar.ts update`). The fog of war takes five eyes. In the sky seat with four men up and the seat's lookout in, the
+  list was full and the step's own eye (`eye { at, yaw, fov? }`, pushed last) was the one dropped: on mission 1 the squad's own wall charge went off in
+  the fog, twice, in the maintainer's play. Now the step's eye goes in ahead of the lookout and, with the places full, takes the last one (the lookout
+  gives way for that step; on a floor mission with the player and four men, the last man's eye does). Mission 1 itself has its fog off since (the
+  level's word); tut-squad, tut-plan and any mission that keeps its fog are what this is for. CHECK `rails-check`, the line "a step's own eye has a
+  place among the fog's five" (the rig puts the fog on itself: on a step with no eye the lookout is one of the fog's and its ground is seen; on the
+  wall's step with four men up the step's eye is one of the five and where it looks is seen; with the rule off it is dropped and the place is in the
+  fog): 23 lines pass on both stands, `RAILS_BREAK=1` fails 15 on both, this one among them. Headless only: the page's fog is the GPU's picture of the
+  same five eyes, and nobody has looked at it since. Never seen on a GPU.
+- **A rows list that withholds the act that puts a taught one back** (2026-10-22; `rails.ts rowsWithheld`, printed by `tools/qa/lesson-check.ts` as
+  `NOTE` lines, never a verdict). The maintainer on the stealth mission: "nothing in reach to close the door?" — its `rails.rows` named `push` and not
+  `pull`, so the door he opened had no row. The pairs read: push or ease with pull, drag with drop, lightsOff with lightsOn, breakerOff with breakerOn.
+  A note and not a fault, and no base set forced into every list: a mission may mean it, and a row added beside a taught one can take the tap from
+  it, so the list is its author's to mend with its own scripted run. At the time of writing: tut-pair (push, no pull) and tut-quiet (push, no pull;
+  breakerOff, no breakerOn) are noted; tut-solo's list is clean; the other three have no list.
 - **Mission 1's scripted player off the page's stand** (2026-10-22; `tools/qa/lessons/tut-sky.ts raises`, `tools/qa/lesson-run.ts`). `lesson-gate
   tut-sky` was red on its frozen arm at the wall's step since before the level was rebuilt: that stand has no destruction (no wall charge to give), no
   ring that stays up for its digits, and no teammate working a thing (the breaker's step). The player's file now raises those for its own run
@@ -1345,8 +1400,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   generator's, `level-lint`, `lesson-check`, the scripted player on the frozen stand with the frame raised, and on the shipped stand on four dice, two of
   them reading every line for 6 s), `quiet-check`, `carlamps-check` (its row), `level-needs tut-pair --run`, `rails-check` (the frame's own), both
   typechecks, the page play. MEASURED, headless: the scripted player finishes all 18 steps on the shipped stand on seeds 1 to 4; "set" comes 5 to 9 s
-  after the first order and 17 to 21 s after the second, the mains go 3 to 7 s after the order on the box. KNOWN: a `did` deed cannot say WHICH man an order was on (`lesson.ts` counts `order:<id>@<target>` and its check refuses the `@`), so the
-  double's first step passes on the squad's key on either man: the ring rides on the far one (`atMan`) and the card says which; the last man is 14 m
+  after the first order and 17 to 21 s after the second, the mains go 3 to 7 s after the order on the box. THE DOUBLE'S ORDER NAMES ITS MAN (`did` `order:pairMark@foe:<callsign>`): the squad's key on the near man of the two leaves the ask up
+  (`TUTPAIR_NEAR=1` in front of `lesson-run tut-pair` gives the near man first and fails if the step passes). KNOWN: the last man is 14 m
   from the office door, so the dark is walked, not stood in; the two at the start
   are dark figures on a dark road. A SKETCH: the script's few words, the office (one room), no lived-in rooms, a composed menu picture
   (`tools/menu-art.ts` PIN). Never seen on a GPU, never played by a person: the moon shadows, the red of the beacons over the whole yard and whether the
