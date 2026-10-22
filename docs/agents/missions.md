@@ -457,7 +457,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     - *The ground round the nest* (asked with these: the biggest bare sheet of dirt on the level, by a new ground reading not yet in the build): seven decals and a scatter of field
       stones in the group `lived.nest` (sand run out of the bags, oil under the can, the wet where the pot is emptied, gravel under the hall wall's drip line, a drift by the gate wall,
       the trodden way round the bags' end).
-    - MEASURED: MEASURE_22
+    - MEASURED (2026-10-22, the moon on every meter, the unprotected scripted player `--plain` on the page's stand unless said). Before the ground and the last wording: dice 1 to 8
+      finish, and `--hard` with 30 s stood at the blocks (`TUT_SQUAD_FRAG_WAIT=30`) dice 1 to 3. On the level as it went in: dice 2 to 5, `--pace 6` dice 2, 3 and 5, `--hard`
+      with the 30 s dice 1 and 3, `--hard --pace 6` die 1. On the join with the build's head: die 6, `--hard --pace 6` with the 30 s die 4, and `lesson-gate tut-squad` (the
+      frozen run with `TPS_RAILS=1` and the glass's parts raised, 117.3 s; the page's four dice, two slow). WITHOUT THE STORE'S HOLD the same player, with the moon on his own meter
+      alone, went down at the store's door on three dice of three. The real page (`tools/qa/tut-squad-page.cjs`, software adapter): 33 checks pass, to the workshop taken. Statics:
+      export `--check`, `level-lint`, `door-size`, `second-way-check`, `floor-order-check`, `level-names-check`, `lesson-check`, `probes.ts glassreal` and `rowset-check` on both
+      stands, `level-needs` (its ground reading: no bare sheet of 40 m2 is left, the largest 35 m2 by the guard hut), `lived-check` over every level against the new base (the join:
+      `BASE_REVS`). Not run: `map-check`'s 48 runs, `missions-gate`, the tour and the soak.
     - NOT DONE / NOBODY HAS SEEN: none of it on a GPU (the pane's fracture, the decals, the gun staying down, the two held in the store); notes 2, 5 and 6 were never reproduced headless,
       so whether his page now plays as written is his next play to say; the page run reaches the workshop only.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
