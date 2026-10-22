@@ -828,10 +828,13 @@ function watch(F: Fight, st: St) {
 
 /** roomfight.ts evidence: a door of his room booted in — a man set on a door his room wedged was waiting for exactly that */
 export function digInBraced(g: Game, gd: Guard, d: Door): boolean {
-  if (!DIGIN.steady) return false;
-  const st = states.get(g); if (!st || !st.wedges.has(d)) return false;
-  const M = st.men.get(gd); if (!M || M.phase !== 'set') return false;
+  if (!DIGIN.steady || !digInSetOn(g, gd, d)) return false;
   DIGIN_STATS.steady++; return true;
+}
+/** the same question with nothing counted: `gd` is set on `d`, a door his room wedged (doorforce.ts: that leaf is his barricade, not a door to force) */
+export function digInSetOn(g: Game, gd: Guard, d: Door): boolean {
+  const st = states.get(g); if (!st || !st.wedges.has(d)) return false;
+  const M = st.men.get(gd); return !!M && M.phase === 'set';
 }
 
 /** laststand.ts: this man is TOLD to dig in where he holds (the last stand's order — no noise faked, no squad's news): after `beat` he starts on his room as

@@ -130,6 +130,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
   'NOSHOVE',
+  // an alerted man does not wait at a shut door (doorforce.ts DOORFORCE): a recording made with it on replays its defenders firing through a leaf and booting it in, one from before has them wait or use the handle
+  'DOORFORCE',
   // glass as buildings have it (glassbreak.ts GLASSREAL): a recording made with it on replays its toughened sheets dropping at once and its panes typed by where they sit, one from before with the wave and the wall's typing
   'GLASSREAL'];
 import { GUNWALL } from './gunwall';
@@ -200,6 +202,7 @@ import { AIMWEIGHT } from './aimweight';
 import { SPRINTDOOR } from './sprintdoor';
 import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
+import { DOORFORCE } from './doorforce';
 import { AIMCOST } from './aimcost';
 import { HANDWORK } from './handwork';
 import { TAKEDOWN } from './takedown';
@@ -265,6 +268,8 @@ export function knobRegistry(): Record<string, object> {
     TEAMPACE,
     // teammates falling in never shove the player (noshove.ts): the switch, its two halves, the squeeze past, the ring a man keeps and his step back out — where every follower and the player are a second later reads them
     NOSHOVE,
+    // an alerted man does not wait at a shut door (doorforce.ts): the switch, its two halves, how sure he must be and how long before the boot — when a defender's rounds go through a leaf and when it is kicked in reads them
+    DOORFORCE,
     // glass as buildings have it (glassbreak.ts): toughened glass drops at once, and which glass a pane is comes from where it sits — which panes a round opens, and when
     GLASSREAL,
     // quiet missions under the fog of war (quietfog.ts): whether a quiet mission's query is read for a rung of the fog lever — a run tape's start reads it
