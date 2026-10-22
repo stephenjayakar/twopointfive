@@ -213,6 +213,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.patch(14.95, 20.9, 1.1, 3.4, 'gravel', 0.04); G.patch(16.4, 25.0, 3.2, 0.9, 'dust', 0.03); G.rubble(18.9, 25.0, 0.45, 5); G.patch(21.6, 24.3, 4.2, 1.1, 'gravel', -0.04);
   G.patch(20.3, 14.3, 2.8, 1.6, 'dust', 0.3); G.ruts(19.0, 12.5, 26.4, 13.1, 'damp'); G.patch(21.4, 19.6, 2.4, 1.5, 'damp', -0.2); G.rubble(19.4, 20.9, 0.5, 5);
   G.patch(26.2, 21.6, 1.9, 2.6, 'dust', 0.1); G.rubble(28.3, 22.3, 0.45, 5);
+  G.ruts(7.6, 7.3, 15.4, 8.0, 'damp'); G.patch(14.3, 6.6, 2.4, 1.3, 'gravel', 0.2); G.rubble(15.7, 5.0, 0.5, 5); G.patch(11.2, 9.9, 2.0, 1.1, 'dust', -0.25); G.rubble(13.2, 8.9, 0.4, 4);
   G.ruts(29.6, 17.5, 37.5, 18.3, 'damp'); G.patch(31.6, 16.1, 2.8, 1.8, 'dust', 0.3); G.patch(30.7, 21.3, 2.2, 1.4, 'gravel', -0.2); G.rubble(29.7, 19.2, 0.4, 4);
   // (the verge outside the south wall: the ruts of whatever drives round the yard, and what the road sheds)
   G.ruts(5.6, 26.98, 38.4, 26.92, 'dirt'); G.patch(12.2, 26.9, 4.6, 0.9, 'gravel', 0.02); G.patch(23.4, 27.2, 5.8, 0.8, 'gravel', -0.02); G.patch(31.0, 26.8, 3.4, 0.7, 'dirt', 0.03);
