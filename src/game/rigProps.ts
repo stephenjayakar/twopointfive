@@ -993,10 +993,14 @@ export function torchLightDef(name: string, owner: number, intensity: number, in
  *  from last frame's `prev` so the arm swing only bobs the origin, never the direction. Returns the new beam direction. The smoothing is per
  *  SECOND (1 − e^(−13·dt): 0.195 of the way at 60 Hz, the old per-frame fifth — which at 30 fps eased the beam, and with it what the light
  *  meter reads off it, half as fast: review B7.6). */
-export function torchCarryDir(c: Character, prev: Vec3, dt = 1 / 60): Vec3 {
+export function torchCarryDir(c: Character, prev: Vec3, dt = 1 / 60, low?: { tan: number; rate: number }): Vec3 {   // (low: tipped to the floor at his feet, eased at its own rate — guards.ts torchLow, calmtorch.ts TORCH.wallLow)
+  const want = torchCarryWant(c, low ? -low.tan : undefined);
+  return v3.normalize(v3.lerp(prev, want, 1 - Math.exp(-(low ? low.rate : TORCH_CARRY_RATE) * Math.max(0, dt))));
+}
+/** where the relaxed carry is easing to: half his aim heading, half his chest, at his aim's pitch (or the pitch whose tangent is handed in) */
+export function torchCarryWant(c: Character, tan?: number): Vec3 {
   const f: Vec3 = [Math.sin(c.aimYaw), 0, Math.cos(c.aimYaw)];
-  const want = v3.normalize([f[0] * 0.5 + c.chestDir[0] * 0.5, Math.tan(c.aimPitch), f[2] * 0.5 + c.chestDir[2] * 0.5]);
-  return v3.normalize(v3.lerp(prev, want, 1 - Math.exp(-TORCH_CARRY_RATE * Math.max(0, dt))));
+  return v3.normalize([f[0] * 0.5 + c.chestDir[0] * 0.5, tan ?? Math.tan(c.aimPitch), f[2] * 0.5 + c.chestDir[2] * 0.5]);
 }
 /** /s: the relaxed torch carry's easing rate toward the chest / aim heading (torchCarryDir) */
 const TORCH_CARRY_RATE = 13;
