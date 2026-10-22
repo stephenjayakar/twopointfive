@@ -61,6 +61,7 @@ import { LIVE_CAP_MAX, SHARDS, SHARDS_DEFAULTS, saveShards, shardsLive } from '.
 import { DESTRUCTION, RUBBLE, EVICT } from '../game/destructionSwitch';
 import { DOORBLAST, DOORSHOT, doorBlastSummary } from '../game/doorblast';
 import { DOORFORCE, doorForceSummary } from '../game/doorforce';
+import { SLOTSETUP } from '../game/slotsetup';
 import { PLAYER_ID } from '../game/consts';
 import { FEEL, feelKick, saveFeel } from '../game/blastFeel';
 import { glassBreakConfig } from '../render/frame';
@@ -1950,6 +1951,12 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.slider(sc, 'cam ▸ reload (s)', 0.2, 3, 0.1, () => STICKY.cd, v => { STICKY.cd = v; }, 'seconds before the tube sends anything again');
     panel.slider(sc, 'cam ▸ launch noise', 0, 1, 0.05, () => STICKY.launchNoise, v => { STICKY.launchNoise = v; }, 'how loud the tube is in a guard\'s ears (the ring airfoil\'s is 0.45)');
     panel.slider(sc, 'cam ▸ landing noise', 0, 1, 0.02, () => STICKY.stickNoise, v => { STICKY.stickNoise = v; }, 'how loud it is where it lands: a tick a man beside it goes to look at');
+  }
+  // (game/slotsetup.ts: the digit of the gun in your hands, pressed again, opens its setup; on in the page, ?slotsetup=0)
+  { const ss = panel.section('Gun setup (its key again)', { open: false, summary: () => `gun setup ▸ ${SLOTSETUP.on ? `on · up ${SLOTSETUP.secs ? SLOTSETUP.secs + ' s' : 'until shut'}${SLOTSETUP.stay ? ' · stays after a pick' : ''}` : 'off (2 again steps the launcher, Z the selector, L the light)'}` });
+    panel.toggleBox(ss, 'a gun\'s key again opens its setup', () => SLOTSETUP.on, v => { SLOTSETUP.on = v; }, 'THE switch (also ?slotsetup=0 on the address for off). On: with a gun in your hands its own digit lights the rows of its box — 1 semi / auto, 2 the launcher\'s load, 3 the light — and the row\'s digit sets it; Z and L give nothing unless you put their rows on a key in Options, Controls. Off = 2 again steps the launcher\'s load, Z is the selector and L the light, and the kit column is the list it was.');
+    panel.slider(ss, 'setup ▸ seconds it stays up unused', 0, 10, 0.5, () => SLOTSETUP.secs, v => { SLOTSETUP.secs = v; }, 'how long the setup waits for a row\'s digit before it shuts itself (the line along the box\'s foot runs down). 0 = it stays until Tab, the trigger or another slot shuts it.');
+    panel.toggleBox(ss, 'setup ▸ stays up after a pick', () => SLOTSETUP.stay, v => { SLOTSETUP.stay = v; }, 'off (as it opens): a pick shuts the setup, so the same two presses always do the same thing — 2 1 the selector, 2 2 the next load, 2 3 the light. On: it stays up for another pick until its seconds run out.');
   }
   // (game/kitanim.ts: Sam handles his kit — the hands carry it to where it lives, the magazine change goes by the gun's state, the close-in carriage by distance; on in the page, ?nokitanim)
   { const kt = panel.section('Kit handling (equip, reloads, knife hand)', { open: false, summary: () => kitSummary() });

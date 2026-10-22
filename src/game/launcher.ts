@@ -20,6 +20,7 @@ import { PLAYER_ID } from './consts';
 import { chipMark, staticSurface } from './marks';
 import { clackFx } from './particleFx';
 import { w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { loadKeys } from './slotsetup';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** Every number of the ring's flight and of what it does (panel-tunable; the QA probes read them rather than copy them). */
@@ -247,5 +248,5 @@ export function ringBoxes(g: Game, out: Box[]) {
 /** Panel / QA: 'rings ▸ 4 left · attachment RING · 1 in the air · 2 on the floor' */
 export function ringSummary(g: Game): string {
   const rf = g.player.rifle;
-  return `rings ▸ ${g.player.hasRifle ? `${rf.rings} left · attachment ${rf.attachment ? rf.attachment.toUpperCase() : 'none'} (2 again with the rifle up; RMB fires it)` : gearText('no FN2000 in the kit')} · ${g.rings.length} in the air · ${g.items.items.filter(x => x.kind === 'ring').length} on the floor`;
+  return `rings ▸ ${g.player.hasRifle ? `${rf.rings} left · attachment ${rf.attachment ? rf.attachment.toUpperCase() : 'none'} (${loadKeys()} with the rifle up; RMB fires it)` : gearText('no FN2000 in the kit')} · ${g.rings.length} in the air · ${g.items.items.filter(x => x.kind === 'ring').length} on the floor`;
 }
