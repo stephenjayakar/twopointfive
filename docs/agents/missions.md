@@ -106,8 +106,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     ('wall', `allow: ['menu']`) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun` and `picket`; its checkpoints 'the street', 'the wall', 'the hall'
     and 'the bags' each sit at the start of a staged fight, before the cue of the beat that follows, and every beat starts clean from its cue (the picket's beat starts with the program, holds
     the three in their camp and the yard's gates shut, and waits for its cue: so a checkpoint put back finds them held again).
-  - **What a tutorial mission's program no longer stands down beyond the room fight** (`Director.staging` = a program is running and the level is NOT on rails): the stress rules, and the
-    start of a room clear / rescue / night breach, read it where they read `director.run` before. With no level script (every level but the tutorial's) nothing moved.
   - **A man the mission's script has in hand stays the room fight's man** (`roomfight.ts tickDef`, `Def.staged`; `Director.lessonRuns`): on a floor whose defenders are the room clear's own
     roster, the fight ended "somebody else's script" on a roster man the frame after the order (so nothing the script staged was ever held: only its bursts fired) and then dropped him from
     its roster for good. Now it leaves him alone while the script holds him; let go ON his post he holds it again, let go somewhere else he is taken up as a man holding THAT place (the

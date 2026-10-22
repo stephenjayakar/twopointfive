@@ -186,7 +186,7 @@ export class NightBreach {
     if (g.level.breach && !g.doors.byName(g.level.breach.door)) return `the plan's door '${g.level.breach.door}' is not in the level`;
     if (!g.tune.teams) return 'sides are switched off (tune.teams)';
     if (!g.aiEnabled) return 'the AI is switched off (sandbox: no AI) — nobody would move';
-    if (g.director?.staging && g.director.run) return `the level script's program '${g.director.run.name}' is running`;
+    if (g.director?.run && !g.director.run.ended) return `the level script's program '${g.director.run.name}' is running`;
     if (g.touring || g.quietUtility || g.puppet) return 'a show is running';
     if (g.guards.some(x => x.unit)) return 'a spawned unit is already on the floor';
     return null;

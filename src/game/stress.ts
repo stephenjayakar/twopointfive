@@ -94,7 +94,7 @@ export function standExtra(g: Game, n: number, spawn: (g: Game, o: UnitOpts) => 
 export function stressTick(g: Game) {
   if (!STRESS.want) return;
   if (STRESS.men.some(m => g.guards.includes(m))) return;
-  if (g.touring || g.puppet || g.player.down || g.director?.staging) return;
+  if (g.touring || g.puppet || g.player.down || (g.director?.run && !g.director.run.ended)) return;
   const nb = g.nightBreach, rs = g.rescue;   // (a scenario mid-staging: its own cast first — a man stood ahead of it would be counted against its budget)
   if (nb?.active && !(nb.hostiles.length && nb.hostiles.every(h => g.guards.includes(h) || runnerFled(h)))) return;
   if (rs?.active && !(rs.hostiles.length && rs.hostiles.every(h => g.guards.includes(h)))) return;

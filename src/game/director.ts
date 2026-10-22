@@ -452,9 +452,6 @@ export class Director {
   /** why a checkpoint cannot be written (savestate.ts canSave): M1 refuses throughout a program — its cursor (fired triggers, flags, live beats, units) has no save slice until M3 */
   blocksSave(): string | null { const R = this.run; return R && !R.ended ? `the level script's program '${R.name}' is running` : null; }
   get running(): string | null { const R = this.run; return R && !R.ended ? R.name : null; }
-  /** a program that STAGES the floor is running (a showcase, a drill's play program): the stress model and a scenario's start stand off it. A tutorial
-   *  mission's program (rails.ts) is not one: it runs under a mission that is the player's, start to end */
-  get staging(): boolean { const R = this.run; return !!R && !R.ended && !this.g.rails?.live; }
   /** a tutorial mission's own program is running (roomfight.ts, lanes.ts: a man of the floor's roster that it has in hand is left to it until it lets him go) */
   get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.rails?.live; }
   /** frag.ts: the level's script put the defenders' own grenades off (`D.systems.theirFrags(false)`): for the level, whatever program is or is not running */

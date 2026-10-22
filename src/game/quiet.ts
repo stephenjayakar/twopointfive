@@ -108,7 +108,7 @@ export class QuietMission {
     if (!Q.starts?.length || !Q.spots?.length || !Q.exits?.length) return 'its quiet mission wants at least one start, one spot and one exit';
     if (!g.aiEnabled) return 'the AI is switched off (sandbox: no AI) — nobody would walk his route';
     if (squad && !g.tune.teams) return 'sides are switched off (tune.teams): no partner';
-    if (g.director?.staging && g.director.run) return `the level script's program '${g.director.run.name}' is running`;
+    if (g.director?.run && !g.director.run.ended) return `the level script's program '${g.director.run.name}' is running`;
     if (g.touring || g.quietUtility || g.puppet) return 'a show is running';
     if (g.nightBreach?.active || g.rescue?.active) return 'another scenario is staged';
     if (g.guards.some(x => x.unit)) return 'a spawned unit is already on the floor';
