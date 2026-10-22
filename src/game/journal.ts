@@ -78,7 +78,7 @@ import { GUNSLOTS } from './gunslots';
 import { GUNLOOK } from './gunlook';
 import { GUNROLES } from './gunroles';
 import { KITTREE } from './kittree';
-import { BIGSLOT, KITDEAL } from './kit';
+import { BIGSLOT, KITDEAL, ISSUE } from './kit';
 import { SQUADTHROW } from './squadthrow';
 import { SQUAD40 } from './squad40';
 import { AUTOPILOT } from './autopilot';
@@ -151,7 +151,7 @@ import { THROWBACK } from './throwback';
 import { WALLREACT } from './wallreact';
 import { COVERFIRE } from './coverfire';
 import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
-import { GUARD_EYE } from './guards';
+import { GUARD_EYE, LIGHTS } from './guards';
 import { PRESSURE } from './pressure';
 import { HARD } from './difficulty';
 import { DOORBLAST, DOORSHOT } from './doorblast';
@@ -247,6 +247,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (g.saves && typeof k.flags.autosave === 'boolean') g.saves.enabled = k.flags.autosave;   // (the field, not setEnabled: nothing to persist on a replay's machine)
   if (!(k.tables.DOORWAY && typeof (k.tables.DOORWAY as Record<string, unknown>).frameHolds === 'boolean')) DOORWAY.frameHolds = false;   // (a recording from before a frame held a boot — its DOORWAY row has no such key — replays without the rule, whatever this process had on)
   if (typeof (k.tables.CLOSE as { heldClicks?: boolean } | undefined)?.heldClicks !== 'boolean') CLOSE.heldClicks = false;   // (a recording from before a click did anything in the arm hold — its CLOSE row has no such key — replays with both buttons dead there)
+  if (typeof (k.tables.CLOSE as { reachUp?: boolean } | undefined)?.reachUp !== 'boolean') CLOSE.reachUp = false;   // (a recording from before the grab's reach went up: the tell's pose as it was)
   if (typeof (k.tables.GUARD_EYE as { far?: boolean } | undefined)?.far !== 'boolean') GUARD_EYE.far = false;   // (a recording from before a lit man was seen past the eye's 16 m — its GUARD_EYE row has no such key — replays with every eye stopping there, whatever this process had on)
   if (typeof (k.tables.GUARD_EYE as { farCalm?: boolean } | undefined)?.farCalm !== 'boolean') GUARD_EYE.farCalm = false;   // (…nor has one from before a far glimpse stopped being a place to walk to: it replays with every glimpse writing his fix, as that build did)
   if (!k.tables.TEAMTALLY) TEAMTALLY.on = false;   // (a recording from before a partner's men were on the card replays with them on nobody's)
@@ -284,6 +285,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const rw = k.tables.REARWATCH as Partial<typeof REARWATCH> | undefined; if (rw && rw.roomLast === undefined) REARWATCH.roomLast = false; }   // (a file from before a room keeper waited for the men on their way out of the room: freed the moment they had come by him)
   if (!k.tables.GUNWALL) GUNWALL.on = false;   // (a file from before a raised gun came down at a wall: its men kept theirs up, and fired or did not by that)
   if ((k.tables.WORDS as Partial<typeof WORDS> | undefined)?.doors === undefined) WORDS.doors = false;   // (a file from before a level could name its own doors: every door called what it was)
+  if ((k.tables.WORDS as Partial<typeof WORDS> | undefined)?.radioHome === undefined) WORDS.radioHome = false;   // (a file from before the handler kept to the office: she speaks wherever she spoke)
   if (!k.tables.CMDRING) CMDRING.on = false;   // (a file from before the orders ring: its key was nobody's)
   if (typeof (k.tables.CMDRING as { hint?: boolean } | undefined)?.hint !== 'boolean') CMDRING.hint = false;   // (… and one from before its hint: nothing drawn at the cursor before the key)
   if (typeof (k.tables.CMDRING as { hands?: boolean } | undefined)?.hands !== 'boolean') CMDRING.hands = false;   // (… and from before Space was a ring too: the list as it was)
@@ -332,6 +334,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
   else if ((k.tables.KITDEAL as Partial<typeof KITDEAL>).more === undefined) KITDEAL.more = false;   // (…and from before a team of three or four as issued was lent a big tool each pair: every man came with his big slot empty, and the Quiet kit's fourth man with his pistol alone)
   if ((k.tables.KITDEAL as Partial<typeof KITDEAL> | undefined)?.stealth === undefined) KITDEAL.stealth = false;   // (…and from before a stealth mission's kit was your card's own: its sponge rounds, cameras and wand were handed over the card at the staging, and a sponge round cost a pouch)
+  if ((k.tables.ISSUE as Partial<typeof ISSUE> | undefined)?.whole === undefined) ISSUE.whole = false;   // (a file from before a mission's own card for you was the whole kit: the mission's sponge rounds, cameras and wand were handed over it)
   if (!k.tables.PLANLAY) PLANLAY.on = false;   // (a file from before an order could be laid for the word: 'wait for my word' was the four's door tools' row, and they walked to the door at once)
   if (!k.tables.CONDITION) CONDITION.on = false;   // (a file from before a blast left a man hurt: nobody in it ever was)
   if (!k.tables.GUNHAND) GUNHAND.on = false;   // (a file from before a move kept to the hand that is free: a whistle raised the empty fist, a defender threw with his carbine hand, a long gun reloaded on the pistol's clip)
@@ -403,6 +406,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.FRIENDLYFIRE) FRIENDLYFIRE.on = false;   // (a file from before a round of his side found the men of his side)
   if (!k.tables.FRIENDS) { FRIENDS.noSnap = false; FRIENDS.lowReady = false; }   // (a file from before the reticle passed over his own side and his gun came down off a teammate)
   if (!k.tables.BACKKEY) BACKKEY.tab = false;   // (a file from before Tab backed out of a list: a Tab in its ticks did nothing)
+  if ((k.tables.TORCH as { wallLow?: boolean } | undefined)?.wallLow === undefined) { TORCH.wallLow = false; TORCH.wallDark = false; }   // (a file from before a hand torch hung when the wall was at his hand: its torches were carried level, and its meters read them)
   if (!k.tables.TORCH) TORCH.calmOff = false;   // (a file from before a calm patrol's torch went dark in a lit place: its torches burned everywhere, and its meters read them)
   if (!k.tables.MORALE) MORALE.on = false;   // (a file from before a blast shook the men it did not hurt: every man stood where he stood, and nobody fired into the dust)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.training === undefined) { MORALE.training = 'none'; MORALE.nerve = 'normal'; MORALE.fanStep = 0; }   // (…and one from before a man was green or steady: every man the first slice's — broken alone in the dark only, folded when he was, and scrabbling straight back with no fan to find him a way (fanStep 0 shuts it). A recording that carries the keys keeps its own: assignDeep takes a string row as it takes a number)
@@ -480,6 +484,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else if ((k.tables.ORDERS as { roundCap?: number } | undefined)?.roundCap === undefined) ORDERS.roundCap = 0;   // (…and a file from before the key: any way round with less unknown floor on it, however long. As above: a run tape that carries the key writes its own value back right after this)
   if ((k.tables.ORDERS as { roundOwn?: boolean } | undefined)?.roundOwn === undefined) ORDERS.roundOwn = false;   // (a recording from before the key replays with it off: a pair behind the door it is to stack on takes the short way through it where the cap refuses the way round, as it was made)
   if ((k.tables.COVER as { backKeep?: boolean } | undefined)?.backKeep === undefined) COVER.backKeep = false;   // (a file from before a man walking backwards on his opening kept to it until his body had come round: he turned to walk forwards the moment the twist allowed. Like ORDERS, never in a recording's own tables; a run tape that carries the key writes its own value back right after this)
+  { const L = k.tables.LIGHTS as { wallOff?: boolean } | undefined; if (L?.wallOff === undefined) LIGHTS.wallOff = false; }   // (a recording from before a teammate's light went dark into the wall at his muzzle — or from before its tables carried LIGHTS at all: his light as the other rules had it)
   { const I = k.tables.IR as { teamOff?: boolean } | undefined; if (I?.teamOff === undefined) IR.teamOff = false; }   // (a recording from before the team's lasers could be put off: they are drawn)
   // (the partner's quiet orders, 10-13 — a file from before them replays with each off: a sweeping sentry's ring, the kept way, 'he'll look back', the habit read from when a man stopped)
   { const P = k.tables.PAIR as { sweep?: boolean; keepWay?: boolean; lookBack?: boolean; habitStood?: boolean } | undefined;
