@@ -102,7 +102,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   picket's walk); every man is the room clear's own and is released to the game's AI the moment his show is over.
   - **It is played on the tutorial's frame** (`game/rails.ts`, the bullet above: `RAILS.on`, `TPS_RAILS=1` on the frozen stand; with the switch off the level is its mission alone). Its
     `rails.allow` is what the three missions before it taught (his feet, hands and rifle, the view, the squad's key and the word); the orders menu comes on with the step that asks for it
-    ('wall', `allow: ['menu']`) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun` and `picket`; its checkpoints 'the street', 'the wall', 'the hall'
+    ('wall', `allow: ['menu', 'ring']`: its two menu lines name `[X]`, which the frame draws as "Hold" and the squad's key while that key kept down is the only way to the menu, and
+    without `ring` the frame cuts a held command key to a tap; the scripted player opens the menu that way when the ring is on and stays, by X when not) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun` and `picket`; its checkpoints 'the street', 'the wall', 'the hall'
     and 'the bags' each sit at the start of a staged fight, before the cue of the beat that follows, and every beat starts clean from its cue (the picket's beat starts with the program, holds
     the three in their camp and the yard's gates shut, and waits for its cue: so a checkpoint put back finds them held again).
   - **A man the mission's script has in hand stays the room fight's man** (`roomfight.ts tickDef`, `Def.staged`; `Director.lessonRuns`): on a floor whose defenders are the room clear's own
@@ -125,10 +126,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     inside the nest's, the hall's and the picket's fights), so the scripted player holds the staged moments to account itself: `done:shop` raised and the workshop's man still in the
     script's hand, `done:gun` raised, the four checkpoints kept, and the checkpoint 'the bags' PUT BACK mid-run with the same step up, the program running again, the picket in hand and the
     road gate shut. It plays under the locks: the menu and the frag are pressed only at their steps. `PORT=<port> node tools/qa/tut-squad-page.cjs`: the row on the real page (software
-    adapter), the big line with Q on a key cap, the menu and the frag locked at the first step, its first five steps by real keys, and the checkpoint 'the street' put back.
-  - **How forgiving** (2026-10-22, the page's stand, the scripted player with NO protection, `--plain --seed 1..4`): every step and the end on four dice of four. It was two of four with the
-    workshop's man 0.9 s late to the side door (the player, who goes down to one hit, was shot stepping through it: he is 2.0 s late now) and three of four while the last picket man had to be
-    walked up on in the camp. The scripted player stands where the lines send him and does nothing clever; a person is slower. Nobody has played it.
+    adapter), the big line with Q on a key cap, the frag and a tool locked at the first step, its first five steps by real keys, and the checkpoint 'the street' put back, and its two menu
+    steps put up by hand (`lesson.i` set from the check, nothing walked to them): each line's caps, the menu's own key giving nothing, the squad's key kept down as a ring on no man, the
+    digit that gives the order, and the same key kept down at step 1 putting no ring up.
+  - **How forgiving** (2026-10-22, the page's stand, the scripted player with NO protection, `--plain --seed 1..8`): every step and the end on FIVE dice of eight, on the build with the squad's keys on the command key and the word's alone.
+    The three that end with the player down: one at 'gun' (he steps past the wall's end to shoot back and the nest's gun, by then the game's own, hits him) and two in the last step (he walks up
+    on the picket's last man in the lit street). An earlier line here said four of four: that was dice 1 to 4 before those keys, and the same dice on that tree gave six of seven (die 8 down
+    in the last step there too, die 7 not run), so four was too few to say it. It was two of four with the workshop's man 0.9 s late to the side door (the player, who goes down to one hit,
+    was shot stepping through it: he is 2.0 s late now). The scripted player stands where the lines send him, walks up on a live rifle and does nothing clever; a person is slower. Nobody has
+    played it. Each of the three is put back by the checkpoint before it ('the wall', 'the bags').
   - **Not done / not seen**: its menu picture is a stand-in (the first tutorial mission's own stand-in, copied: none can be made without a GPU); the alley and the road are bare (`lived`
     NOTE); the one locked door is meant to be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot
     carry them. Never seen on a GPU, never played by a hand. Nobody has seen whether the gunner visibly ducks under the player's fire.
