@@ -120,18 +120,30 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'DOORSHOT',
   // a door opened into a man moves and startles him, one slammed or booted into him throws him (doors.ts DOORTHROW): a recording made with it on replays its men moved, one from before has every leaf stop against them
   'DOORTHROW',
+  // enemies startle when they first see you (startle.ts): a recording made with it on replays its men's beat before the gun, and who ran; one from before has every man go for his gun at once
+  'STARTLE',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
   'CARLAMPS',
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
   'CLEANRESTART',
   // the saves roll and one is kept in memory with a team on the floor (savestate.ts SAVETIMELINE): a recording from before it has no such save to go back to
   'SAVETIMELINE',
+  // empty hands are a slot (handslot.ts HANDSLOT): a recording made with it on replays its key as the slot, one from before reads no such key
+  'HANDSLOT',
+  // his own actions are a ring that stays (handring.ts HANDRING): a recording made with it on replays its presses as that ring's, one from before as the list's
+  'HANDRING',
+  // a can in the wind-up goes back on the belt when another beat begins (throwback.ts THROWBACK): a recording made with it on replays those cans kept, one from before as thrown late
+  'THROWBACK',
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
   'NOSHOVE',
+  // a tutorial mission's frame (rails.ts RAILS): a recording made with it on replays its locked keys dropped and its spared teammates up again, one from before as a plain lesson
+  'RAILS',
   // an alerted man does not wait at a shut door (doorforce.ts DOORFORCE): a recording made with it on replays its defenders firing through a leaf and booting it in, one from before has them wait or use the handle
   'DOORFORCE',
+  // the slot in hand pressed again opens its setup (slotsetup.ts SLOTSETUP): a recording made with it on replays its second press of a gun's digit as the setup, one from before as the launcher's next load
+  'SLOTSETUP',
   // glass as buildings have it (glassbreak.ts GLASSREAL): a recording made with it on replays its toughened sheets dropping at once and its panes typed by where they sit, one from before with the wave and the wall's typing
   'GLASSREAL'];
 import { GUNWALL } from './gunwall';
@@ -168,6 +180,7 @@ import { FIXEDSTEP } from '../host/loop';
 import { TWEEN } from '../host/tween';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
+import { STARTLE } from './startle';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
 import { POWEROUT } from './powerout';
@@ -195,6 +208,9 @@ import { CARLAMPS } from './carlamps';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
+import { HANDSLOT } from './handslot';
+import { HANDRING } from './handring';
+import { THROWBACK } from './throwback';
 import { SAMSTUN } from './samstun';
 import { RECAP } from './deathrecap';
 import { TEAMTALLY } from './teamtally';
@@ -202,7 +218,9 @@ import { AIMWEIGHT } from './aimweight';
 import { SPRINTDOOR } from './sprintdoor';
 import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
+import { RAILS } from './rails';
 import { DOORFORCE } from './doorforce';
+import { SLOTSETUP } from './slotsetup';
 import { AIMCOST } from './aimcost';
 import { HANDWORK } from './handwork';
 import { TAKEDOWN } from './takedown';
@@ -262,14 +280,24 @@ export function knobRegistry(): Record<string, object> {
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,
     SAVETIMELINE,
+    // empty hands are a slot (handslot.ts): the switch and the code the game asks for it by
+    HANDSLOT,
+    // his own actions are a ring that stays (handring.ts): the switch and the press that opens it
+    HANDRING,
+    // a can in the wind-up goes back on the belt when another beat begins (throwback.ts): the switch
+    THROWBACK,
     // a sprint into a door has weight (sprintdoor.ts): the switch, what a shoulder through it keeps of his run, how the leaf leaves him, the boot (or the handle) at the face it opens toward — where the player is a second later reads them
     SPRINTDOOR,
     // teammates are slower than the player and run only for a reason (teampace.ts): the switch, the walk's share of the player's, a follower's closing pace and his run, the reasons — where every teammate is a second later reads them
     TEAMPACE,
     // teammates falling in never shove the player (noshove.ts): the switch, its two halves, the squeeze past, the ring a man keeps and his step back out — where every follower and the player are a second later reads them
     NOSHOVE,
+    // a tutorial mission's frame (rails.ts): the switch, the sky seat's pan and how long a spared teammate is on his knee — what the tick's input and a teammate's fall read
+    RAILS,
     // an alerted man does not wait at a shut door (doorforce.ts): the switch, its two halves, how sure he must be and how long before the boot — when a defender's rounds go through a leaf and when it is kicked in reads them
     DOORFORCE,
+    // the slot in hand pressed again opens its setup (slotsetup.ts): the switch, how long it stays up unused, and whether a pick shuts it — what a digit pressed with a gun in the hands does reads them
+    SLOTSETUP,
     // glass as buildings have it (glassbreak.ts): toughened glass drops at once, and which glass a pane is comes from where it sits — which panes a round opens, and when
     GLASSREAL,
     // quiet missions under the fog of war (quietfog.ts): whether a quiet mission's query is read for a rung of the fog lever — a run tape's start reads it
@@ -317,6 +345,8 @@ export function knobRegistry(): Record<string, object> {
     GUNHAND,
     // drops it and runs (runner.ts): who lets his weapon go and runs, where to, and when he stops counting as a living hostile — reads these
     RUNNER,
+    // enemies startle when they first see you (startle.ts): how long a calm man's start holds his gun down, and who runs after it — reads these
+    STARTLE,
     // not in there alone (darkdoor.ts): who stops at the doorway of a dark room, how dark is dark, how long he waits for a mate and when he goes in anyway
     DARKDOOR,
     // an enemy on alert does not sit blind in the dark (darkfoe.ts): whose weapon light burns and who leaves his post read these — the meter reads the lamps

@@ -102,6 +102,7 @@ import { TORCH } from './calmtorch';
 import { BACKKEY } from './backkey';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
+import { STARTLE } from './startle';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
 import { POWEROUT } from './powerout';
@@ -129,7 +130,9 @@ import { AIM } from './aim';   // (used inside applyKnobs only: src/game is one 
 import { SPRINTDOOR } from './sprintdoor';
 import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
+import { RAILS } from './rails';
 import { DOORFORCE } from './doorforce';
+import { SLOTSETUP } from './slotsetup';
 import { GLASSREAL } from './glassbreak';
 import { AIMCOST } from './aimcost';
 import { QUICKTHROW } from './quickthrow';
@@ -140,6 +143,9 @@ import { CARLAMPS } from './carlamps';
 import { CLEANRESTART } from './cleanrestart';
 import { FIRELINE } from './fireline';
 import { SAVETIMELINE } from './savestate';
+import { HANDSLOT } from './handslot';
+import { HANDRING } from './handring';
+import { THROWBACK } from './throwback';
 import { WALLREACT } from './wallreact';
 import { COVERFIRE } from './coverfire';
 import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
@@ -352,7 +358,9 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.SAMSTUN) SAMSTUN.on = false; else if ((k.tables.SAMSTUN as Partial<typeof SAMSTUN>).ownSeen === undefined) SAMSTUN.ownSeen = false;   // (a file from before a blast folded or blinded the player: his feet and his picture were his own through every one — and one from before a watched can of his own side counted in full)
   if (!k.tables.SPRINTDOOR) SPRINTDOOR.on = false;
   if (!k.tables.GLASSREAL) { GLASSREAL.drop = false; GLASSREAL.place = false; }   // (a file from before glass was typed by where it sits and toughened glass dropped at once: its panes are the wall's kinds and dice in the wave)
+  if (!k.tables.SLOTSETUP) SLOTSETUP.on = false;   // (a file from before the slot in hand pressed again opened its setup: its 2 pressed with the rifle up stepped the launcher's load)
   if (!k.tables.DOORFORCE) DOORFORCE.on = false;   // (a file from before an alerted man fired through a shut door and booted it in: its defenders waited at the leaf or went to its handle)
+  if (!k.tables.RAILS) RAILS.on = false;   // (a file from before a tutorial mission had a frame: nothing in its ticks was locked)
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
@@ -360,11 +368,15 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.AIMWEIGHT) AIMWEIGHT.on = false; else if ((k.tables.AIMWEIGHT as Partial<typeof AIMWEIGHT>).launchWait === undefined) AIMWEIGHT.launchWait = 0;   // (a file from before the player's aim had weight: its clicks were aimed with the gun eased straight onto the cursor — and one from before a launcher's load waited on the swing: it left the frame the button came up)
   if (!k.tables.AIMCOST) { AIMCOST.lamp = false; AIMCOST.move = false; }   // (a file from before a lamp needed a real hit and moving feet cost the shot: its rounds broke the lamps they passed, and its cones were the old ones)
   if ((k.tables.AIMCOST as Partial<typeof AIMCOST> | undefined)?.flankAt === undefined) AIMCOST.flankAt = 1e9;   // (…and one from before the standoff's flank round waited for still feet: it went the frame the line was his)
+  if ((k.tables.RELOAD as Partial<typeof RELOAD> | undefined)?.lastMag === undefined) RELOAD.lastMag = false;   // (a file from before the last magazine, seated and not racked, could be reloaded: its R was refused there)
   if (!k.tables.RELOAD) RELOAD.auto = false;   // (a file from before a dry gun reloaded itself: its player pressed R, and its frames have no reload he did not ask for)
   if (!k.tables.QUICKTHROW) QUICKTHROW.on = true;   // (a file from before the G quick throw left the page: its G presses threw)
   if (!k.tables.LIGHTSWITCH) LIGHTSWITCH.on = false;   // (a file from before a room's lights had a switch on the wall: no plates, no row, nobody at one)
   if (!k.tables.CARLAMPS) CARLAMPS.on = false;   // (a file from before a vehicle's lamps were light targets: its floor has none)
   if (!k.tables.CLEANRESTART) CLEANRESTART.on = false;   // (a file from before a restart gave a clean level: its restarts mended the mains by the breaker's own road and kept the last try's lines and clocks)
+  if (!k.tables.THROWBACK) THROWBACK.on = false;   // (a file from before a can in the wind-up went back on the belt: its cans froze through a kick or a pick and left his hand after)
+  if (!k.tables.HANDRING) HANDRING.on = false;   // (a file from before his own actions were a ring that stays: its held presses opened the list, and its rows had no whistle)
+  if (!k.tables.HANDSLOT) HANDSLOT.on = false;   // (a file from before empty hands were a slot: a 0 pressed in it was no key of the game's)
   if (!k.tables.SAVETIMELINE) SAVETIMELINE.on = false;   // (a file from before the saves rolled: three autosaves, and none with a team on the floor — its Enter once down found what that build kept)
   if ((k.tables.SAVETIMELINE as { holds?: boolean } | undefined)?.holds === undefined) SAVETIMELINE.holds = false;   // (a file from before a save carried the wall hold and the close-in gait: its go-backs stood him free of the wall)
   if (!k.tables.FIRELINE) FIRELINE.on = false;   // (a file from before a teammate waited short of the lane the player was firing down: its men walked their orders through it)
@@ -375,6 +387,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.MORALE) MORALE.on = false;   // (a file from before a blast shook the men it did not hurt: every man stood where he stood, and nobody fired into the dust)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.training === undefined) { MORALE.training = 'none'; MORALE.nerve = 'normal'; MORALE.fanStep = 0; }   // (…and one from before a man was green or steady: every man the first slice's — broken alone in the dark only, folded when he was, and scrabbling straight back with no fan to find him a way (fanStep 0 shuts it). A recording that carries the keys keeps its own: assignDeep takes a string row as it takes a number)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.darkRead === undefined) MORALE.darkRead = 'place';   // (…and one from before the dark had a second reading: where he stands, as it was read)
+  if (!k.tables.STARTLE) STARTLE.on = false;   // (a file from before a calm man started at the first sight of you: its men went for their guns the frame they knew, and none ran from it)
   if (!k.tables.RUNNER) RUNNER.on = false;   // (a file from before a broken man dropped it and ran: its men changed their magazines where they stood, and every one of them was there to be counted)
   if (!k.tables.DARKDOOR) DARKDOOR.on = false;   // (a file from before a green man stopped at the doorway of a dark room: every man walked in as he came to it)
   if (!k.tables.DOZE) DOZE.on = false;   // (a file from before a man dozed a long dark wait out in a chair: its men stood their waits awake)

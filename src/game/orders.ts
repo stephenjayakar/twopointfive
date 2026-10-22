@@ -99,7 +99,7 @@ import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfi
 import { silentOnMan } from './silent';   // (called inside tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint, autoPick } from './autopilot';   // (read inside input(), hud() and show() only)
 import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
-import { backableInteract } from './interact';   // (read inside ringInput only: what the back key would back out of)
+import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
 import { planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
@@ -1058,7 +1058,7 @@ export class SquadOrders {
    *  mode off Shift is only his sprint, and the key orders as it does at a walk */
   private ringFree(input: Input): boolean { return !(CMDRING.plan && (input.down('ShiftLeft') || input.down('ShiftRight'))) && this.backFree(); }
   /** the ring's key is free: no menu up and nothing the key backs out of instead (backkey.ts: a Space list, a running verb, the launcher's arc) */
-  backFree(): boolean { return !this.menu && !this.g.player.launchHeld && !backableInteract(this.g); }
+  backFree(): boolean { return !this.menu && !this.g.player.launchHeld && !handsBusy(this.g); }   // (interact.ts handsBusy: his own ring merely standing — handring.ts — is not in the key's way; it goes when this one comes up)
   /** What Tab would open on, for a hint drawn before the key is pressed (null: the switch off, no squad, or the key would open no ring now — ringFree): the
    *  kind of thing, where the glyph goes — beside the cursor, or in the middle of a ring that is up, whose target it then is — how much larger than its px it
    *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
@@ -2266,9 +2266,10 @@ export class SquadOrders {
     const posture = this.posture?.word() ?? null;   // (silent.ts: which of the two the squad is in, at a glance)
     const words = hov ? this.quickWords(hov) : null;   // (autopilot.ts: the squad's first choice on a door it waits on)
     const quick = hov && words ? `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}` : null;   // (what the quick key would give on what the cursor is on)
-    return { menu: null, status: [{ kind: 'objective', label: `squad · ${posture ? `${posture} · ` : ''}orders to ${this.whoTag().tag}`, inReach: true, off: false, tone,
-      opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x), ...layNote(this.g, keyName(layKey())),   // (planlay.ts: the key's line while a plan waits on it)
-        ...(quick ? [{ key: keyName(ORDERS.quickKey), text: quick }] : []), { key, text: hov ? `orders · ${this.hoverWords(hov)}` : 'orders' }, { key: whoKey, text: onMan && next === S.indexOf(onMan) ? `who · ${onMan.callsign} (under the cursor)` : onMan && next === 'all' ? `who · back to ${this.paired ? 'gold' : 'all'}` : `who · ${this.whoStrip()}` }] }] };
+    const lk = (act: string) => !!this.g.rails?.locks(act);   // (rails.ts, a tutorial mission: a key the mission has not taught yet is not named on the panel either)
+    return { menu: null, status: [{ kind: 'objective', label: lk('who') ? 'squad' : `squad · ${posture ? `${posture} · ` : ''}orders to ${this.whoTag().tag}`, inReach: true, off: false, tone,
+      opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...(lk('menu') ? [] : [...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x), ...layNote(this.g, keyName(layKey()))]),   // (planlay.ts: the key's line while a plan waits on it)
+        ...(quick && !lk('order') ? [{ key: keyName(ORDERS.quickKey), text: quick }] : []), ...(lk('menu') ? [] : [{ key, text: hov ? `orders · ${this.hoverWords(hov)}` : 'orders' }]), ...(lk('who') ? [] : [{ key: whoKey, text: onMan && next === S.indexOf(onMan) ? `who · ${onMan.callsign} (under the cursor)` : onMan && next === 'all' ? `who · back to ${this.paired ? 'gold' : 'all'}` : `who · ${this.whoStrip()}` }]) ] }] };
   }
   /** Where the menu that is up is frozen, for a mark in the world (the page's overlay rings it — Sam may have walked on and be aiming elsewhere): the point, a
    *  word for it, the addressed element's colour. Null: no menu, or one opened on nothing (himself, nowhere). */

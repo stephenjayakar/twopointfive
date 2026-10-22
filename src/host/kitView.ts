@@ -84,6 +84,7 @@ import { BIG_ORDER } from '../game/doortools';   // (a name, read inside a row o
 import { FIXLOOK } from '../game/fixtureBreak';   // (a leaf table: written inside the quiet gun's row only — the dead lamp's arcing lead is held off for that row)
 import { WAND_ORDER, WANDORDER_STATS } from '../game/wandorder';   // (a name and a tally, read inside a row only)
 import { kitOf, kitTreeOn } from '../game/kit';   // (asked inside a row's start only: the card a staged teammate carries · is the card laid out as a tree — your light a row of yours)
+import { SLOTSETUP } from '../game/slotsetup';   // (asked inside a row's start only: a gun's key again is its setup, not the launcher's step)
 import { exposedTo } from '../game/frag';   // (asked inside a row's tick only: has a burst THERE a line to Sam — the game's own reckoning, glass that it would break counted open)
 
 /** THE LIGHT, one table (a way's `light` in the level file lies over it, key by key). Every place is door-relative — [along the wall toward the stack, out
@@ -420,6 +421,9 @@ export interface KitView {
   /** the switch a check turns off: the wall charge's STAND-CLEAR gate can open — off, a man is counted inside the charge's reach whatever the game says, so
    *  the gate's own timeout plays (the charge down unblown under the dissolve, the way's refusal remembered) */
   standClear: boolean;
+  /** the switch a check turns off: THE LEAF UNDER FIRE is the picture's to mend (mend(), finish()) — off, a leaf's count of rounds runs on from one gun's
+   *  row to the next and a leaf they splintered is left in pieces, as before 10-22 */
+  leafMend: boolean;
   /** THE HOLD through Sam's frag (after()): man-frames it had to put a teammate back on his place or back on his knee — 0 while the game's own men do
    *  nothing about the grenade; anything else says the game moved one and the hold overrode it */
   pins: number;
@@ -1225,13 +1229,14 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // order Game.resetLevelState runs them — the marks, the glass's books and holes, the panes, the DESTRUCTION (wall cells and their damage, knocked clutter,
   // dead screens, debris, heat: destruction.ts reset → wallbreak.ts reset, which cuts the world back to its authored boxes — the porch lamp's box is hung
   // again), the shards — then every prop on its rest pose and every shot-out fixture mended. Never the doors, the switches or the men (resetLevelState's
-  // own: the leaf stays where the row left it, the building stays dark). Only after a row that FIRED (`shot`): with no round gone nothing here is called
+  // own: the leaf stays where the row left it, the building stays dark) — but the rounds a leaf has taken are counted off it. Only after a row that FIRED (`shot`): with no round gone nothing here is called
   // A WALL LEFT OPEN (`Staged.hole`) IS NEVER STOOD AGAIN HERE: destruction.ts reset stands every wall as authored, with no dissolve over it, and the hole's
   // flag would outlive its hole (the light on a blank wall, a can thrown back at the team). While the hole is kept this mends what is not the wall's — the
   // glass, the shards, the fixtures — and leaves the marks, the wall cells and the props to the restage that stands the wall (`holeShots` counts the bursts so
   // looked past: after `holeBursts` of them begin() has the whole room staged again under the dissolve, and the row asked blows its wall again)
   let shot = false, shotAt = -1e9, holeShots = 0;
   const mend = () => { if (!shot) return; shot = false; const W = engine.world;
+    if (V.leafMend && staged?.door && !staged.door.off) staged.door.shot = 0;   // (THE LEAF'S OWN COUNT OF ROUNDS, doorblast.ts DOORSHOT: damage that never decays, like the wall cells' — a burst through the doorway meets the leaf held open, and the second gun's row splintered it. Its marks go here; so does its count)
     if (staged?.hole) { holeShots++; d.mendGlass(); game.glassBreak.reset(); (game.destr as unknown as { clearMoving?(): void }).clearMoving?.(); game.shards.reset(); game.repairLights(); poolSync(); return; }
     game.decals.clear(); d.mendGlass(); game.glassBreak.reset(); game.destr.reset(); game.shards.reset(); game.props.reset(); dropProps(plan); game.repairLights();
     if (fixture && !W.statics.includes(fixture)) W.addStatic(fixture); poolSync(); };
@@ -1424,6 +1429,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const handWas = (): string => { const h = handDue || game.player.slot; if (handDue) { input.pressed.delete(handDue === 'rifle' ? 'Digit2' : 'Digit1'); handDue = ''; } return h; };
   const tube = (load: 'cam' | 'he40' | 'ring'): boolean => { const pl = game.player;
     if (!pl.rifleUp) { input.pressed.add('Digit2'); return false; } if (pl.equipT > 0) return false; if (pl.rifle.attachment === load) return true;
+    if (SLOTSETUP.on) { const i = pl.rifle.attachments.indexOf(load); if (i < 0) return false; pl.rifle.attIdx = i; return true; }   // (2 again is the setup now, and its row steps over a load he is out of: the picture's rifle is handed the load)
     input.pressed.add('Digit2'); return false; };
   /** A STICKY CAMERA (calls 5; Sam's alone — stickycam.ts): the same half step and hand on the leaf as a throw, the rifle up with the camera on its tube (his
    *  own key), and ONE press of the right button: the game's own shot, flat over his aim point onto the first wall behind it — the line, of `camRays` across
@@ -1819,6 +1825,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (S && B.row === wallRow && how !== 'cut' && !B.marks.includes('blow')) {
       const no = B.marks.includes('cap') ? 'the wall charge never went off inside its row' : (V.refused ?? '').replace(/^[a-z]+: /, '') || 'the wall charge came down unblown'; wallKept(S, B, no); if (V.refused === null) V.refused = `walls: ${no}`;
       const WC = game.wallCharge; if (WC && (WC.set.length || WC.ops.length || B.marks.includes('down') || far)) { dirty = 'world'; apart ||= far; restUntil = game.time; } }
+    // A LEAF SHOT TO PIECES under a row that says it leaves nothing (one burst worth the leaf's whole count — doorblast.ts DOORSHOT): no undo under the eye,
+    // so it is hung again under the dissolve as the next row begins, like a blown one. It was left off for good, and every row that works a leaf was refused
+    if (V.leafMend && S && S.door?.off && dirty === null) dirty = 'leaf';
     // LOUD KIT'S COST (the quiet picture): a loud row that went off is answered from inside — costBegin(); what the row left is mended by the cost's own restage
     if (S && kitViewCostly({ quiet: Q, loud: !!B.row.loud, prelude: B.prelude, how, gun: B.row === gunRow || B.row === gunDoor, shots: B.shots, suppressed: !!(B.man ? B.man.weapon : game.player.gunInHand())?.def.suppressed, marked: !isNaN(B.markT) })) costBegin(S, B);
   };
@@ -2084,7 +2093,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
 
   const V: KitView & { readonly lamps: { porch: RtLight | null; fill: RtLight | null }; readonly pin: FollowCamera['pin']; /** for the page check (tools/qa/kitview-levels.cjs HOUR): the way's own lamps put out for the hour, by id · the porch lamp's glowing box is among the world's statics */ readonly dayOut: string[]; readonly fixtureUp: boolean; /** THE QUIET PICTURE (KIT_VIEW_QUIET), for the page checks: null on a loud link or with the switch off — else the link's kind, whether it is staged, the pool lamp as the game has it, the level's lamps put out, the room's dimmed and the share they burn at, the leaf's rest angle, where Sam and a partner rest, how he is, and why the last quiet row gave way to the loud one */ readonly quiet: { kind: 'quiet' | 'solo'; on: boolean; lamp: { target: boolean; on: boolean; broken: boolean; lit: boolean; fixture: boolean; pos: Vec3 } | null; out: string[]; /** the roof slabs drawn (KIT_VIEW_QUIET.roofs) */ roofs: number; inside: { lamps: string[]; own: boolean; share: number }; leaf: number; place: V2 | null; mate: V2 | null; crouch: boolean; knee: number; holstered: boolean; lift: number; kept: string | null } | null } = {
     get state() { return kitViewLoop && paused && said && state !== 'none' ? 'paused' : state; }, drawn: 0, skipped: 0, blocked: 0, men: [], door: null, way: 0,
-    get beat() { return beat ? { n: beat.n, field: beat.field, i: beat.i, t: beat.t, phase: beat.phase, marks: beat.marks, post: beat.post ?? null } : null; }, get queue() { return asked !== null ? [asked] : []; }, get held() { return held ? { ...held, why: held.why.slice(), by: { ...held.by } } : null; }, restarts: 0, rehangs: 0, cuts: 0, preempt: true, home: true, standClear: true, seats: 0, pins: 0, roused: { men: 0, alarms: 0 }, last: null, refused: null, hits: { sam: 0, team: 0 }, shots: 0, stroke: { n: 0, raw: 0, drawn: 0, cap: 0 },
+    get beat() { return beat ? { n: beat.n, field: beat.field, i: beat.i, t: beat.t, phase: beat.phase, marks: beat.marks, post: beat.post ?? null } : null; }, get queue() { return asked !== null ? [asked] : []; }, get held() { return held ? { ...held, why: held.why.slice(), by: { ...held.by } } : null; }, restarts: 0, rehangs: 0, cuts: 0, preempt: true, home: true, standClear: true, leafMend: true, seats: 0, pins: 0, roused: { men: 0, alarms: 0 }, last: null, refused: null, hits: { sam: 0, team: 0 }, shots: 0, stroke: { n: 0, raw: 0, drawn: 0, cap: 0 },
     get dissolve() { return { n: dz.n, phase: dz.phase, cuts: dz.cuts }; },
     get settled() { const S = staged; return !!S && !beat && !costOn() && !game.puppet && dz.phase === '' && !offRest(S) && S.order.every(g => flat(g.char.pos, homeOf(S, g).p) <= (V.home ? K.homeM : K.onSlot + 0.1)) && flat(game.player.char.pos, S.sam) <= K.onSlot + 0.1; },
     get pace() { return { hz: pacer.hz, every: pacer.every, base: pacer.base, slow: pacer.slow }; }, pacer: kitViewPacer,

@@ -108,7 +108,7 @@ export class Panel {
       this.root.addEventListener('mouseenter', () => { this.hovered = true; }); this.root.addEventListener('mouseleave', () => { this.hovered = false; this.hideTip(); });
       // backtick opens and shuts the panel (main.ts's hotkey). A FIELD of the panel holding the keyboard (the search box, a slider just dragged, a list, a number) keeps its keys from
       // Input, so the hotkey never sees the press: shut it from here, before the field types the character. Anywhere else the press reaches Input once and the hotkey toggles.
-      this.root.addEventListener('keydown', e => { if (e.code !== 'Backquote' || gameCode(e.code) !== 'Backquote' || e.metaKey || e.ctrlKey || e.altKey || !isField(e.target)) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && this.visible) this.toggle(); }, { capture: true });
+      this.root.addEventListener('keydown', e => { if (gameCode(e.code) !== 'Backquote' || (e.code !== 'Backquote' && e.code !== 'Backslash') || e.metaKey || e.ctrlKey || e.altKey || !isField(e.target)) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && this.visible) this.toggle(); }, { capture: true });
       this.installTips();
     } else this.root.appendChild(this.body);
     setInterval(() => { if (this.visible) this.refresh(); }, opts.refreshMs ?? 400);
@@ -223,7 +223,7 @@ export class Panel {
     const nav = NAV_KEYS[e.code];
     if (nav && !typingIn && !(t instanceof HTMLInputElement && t.type === 'range')) { this.step(nav); e.preventDefault(); return true; }   // (← / → on a focused slider still nudge it)
     if (gameCode(e.code) === 'Backquote') return false;   // (the panel's own key: main.ts's hotkey shuts it — never a character for the search)
-    if (e.key.length === 1 && !typingIn && this.search && gameCode(e.code) !== 'Space') { this.search.focus(); this.search.value += e.key; this.applyFilter(); e.preventDefault(); return true; }   // (Space stays the game's one action key even over the panel)
+    if (e.key.length === 1 && !typingIn && this.search && e.code !== 'Space') { this.search.focus(); this.search.value += e.key; this.applyFilter(); e.preventDefault(); return true; }   // (Space stays the game's one action key even over the panel)
     return false;
   }
   private saveSoon() { if (!this.game) return; clearTimeout(this.saveT); this.saveT = setTimeout(() => lsSet('twopointsix.panel', JSON.stringify(this.state)), 250) as unknown as number; }
@@ -370,14 +370,15 @@ export class Panel {
       };
       window.addEventListener('mousemove', mm, true); window.addEventListener('mouseup', mu, true);
     });
+    let shown = inp.value; inp.addEventListener('focus', () => { shown = inp.value; });   // (the text as the field took the keys: left as it was, a click away or Esc writes nothing — parsed back, the ROUNDED text overwrote a finer value)
     inp.addEventListener('keydown', e => {
       e.stopPropagation();   // (Input ignores typing targets anyway; this also keeps host pages' shortcuts off the field)
-      if (e.key === 'Enter') { commit(parseFloat(inp.value)); inp.blur(); }
-      else if (e.key === 'Escape') { inp.value = fmt(get()); inp.blur(); }
-      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const cur = parseFloat(inp.value); const base = Number.isFinite(cur) ? cur : get(); const v = clampV(base + (e.key === 'ArrowUp' ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = fmt(v); inp.select(); after(); }
+      if (e.key === 'Enter') { if (inp.value !== shown) commit(parseFloat(inp.value)); inp.blur(); }
+      else if (e.key === 'Escape') { inp.value = shown = fmt(get()); inp.blur(); }
+      else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const cur = parseFloat(inp.value); const base = Number.isFinite(cur) ? cur : get(); const v = clampV(base + (e.key === 'ArrowUp' ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = shown = fmt(v); inp.select(); after(); }
     });
-    inp.addEventListener('blur', () => { const v = parseFloat(inp.value); if (Number.isFinite(v) && Math.abs(v - get()) > 1e-9) commit(v); inp.value = fmt(get()); });
-    inp.addEventListener('wheel', e => { if (document.activeElement !== inp) return; e.preventDefault(); const v = clampV(get() + (e.deltaY < 0 ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = fmt(v); after(); }, { passive: false });
+    inp.addEventListener('blur', () => { if (inp.value !== shown) { const v = parseFloat(inp.value); if (Number.isFinite(v) && Math.abs(v - get()) > 1e-9) commit(v); } inp.value = fmt(get()); });
+    inp.addEventListener('wheel', e => { if (document.activeElement !== inp) return; e.preventDefault(); const v = clampV(get() + (e.deltaY < 0 ? 1 : -1) * step * gain(e)); set(+v.toFixed(6)); inp.value = shown = fmt(v); after(); }, { passive: false });
     return { el: inp, paint };
   }
   toggleBox(sec: HTMLElement, label: string, get: Getter<boolean>, set: Setter<boolean>, title?: string, def?: boolean) {

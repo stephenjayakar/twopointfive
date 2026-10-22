@@ -25,6 +25,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   latched: a reload a sprint / holster took away starts again); R is still his for a part-spent magazine; AI men always reloaded by themselves. Tab ▸ Sandbox ▸ Weapons & rifles ▸ 'reload by itself when dry' + 'auto reload delay s'. (3) THE G QUICK THROW IS GONE FROM THE PAGE
   (`src/game/quickthrow.ts QUICKTHROW.on`: off in the page, `?quickthrow`; the one row the FROZEN stand has ON — its probes and a recorded session press G (the soak does not) — `TPS_QUICKTHROW=0`): a
   can is thrown from its slot (3 / 4 / 5) with a click; the order menu's own G row (`FRAG.orderKey`) stays. Tab ▸ Sandbox ▸ Player, doors & props ▸ 'G quick throw'. Training 4 lost its quick-throw step.
+- **THE LAST MAGAZINE, SEATED AND NOT RACKED, IS STILL A RELOAD** (`src/game/autoreload.ts RELOAD.lastMag`: on in the page, `?nolastmag`; frozen off, `TPS_LASTMAG=1`; a
+  `FROZEN_HOLDS` row, in `RELOAD`'s registered table, and a journal from before the key replays with it off). The flaw: a reload of the last magazine broken off between
+  'magazine in' and the rack (a sprint, a holster, a takedown: a half-second window on the plain row) left a full magazine under an empty chamber with nothing spare;
+  `Firearm.startReload` refused it for want of a spare ('no spare magazines' over a full gun), the dry-gun rule skipped it for the same reason, and the gun never fired
+  again. On: `startReload` takes that one state (the magazine comes out to the spares, goes back in, the handle is racked: mag 29, a round up), and `autoReloadDue` counts it
+  as a reload to come (with the dry-gun rule off, a click there still says 'reloading…' until R is pressed: player.ts's own line, not touched). Any Firearm, so an AI man's gun in that state too; no man was found who reaches it. Check: `tools/qa/autoreload-check.ts`
+  lines (5c) and (5d) (`probes.ts autoreload`), `LASTMAG_BREAK=1` must fail (5c); run on both stands. No Tab row. Measured: nothing; the state was made by the check's
+  own sprint. Nobody has played it, and it has never been seen on a GPU.
 - **The player and his own side** (`src/game/friends.ts FRIENDS {noSnap, lowReady, reachM 8, pastM, clearM, upSecs 0.25, quietS 5}`; two `FROZEN_HOLDS` rows, in the knob registry and a
   journal's tables; `probes.ts friends` = tools/qa/friends-check.ts, also under `player`, passes on both stands, `FRIENDS_BREAK=1` must fail). (1) NO RETICLE ON A FRIEND (`noSnap`: on in the page,
   `?friendsnap`; frozen stand off, `TPS_FRIENDS=1`; Tab ▸ Player, doors & props ▸ 'no aim ring on teammates'): player.ts `updateAim`'s three loops pass over a man not hostile to the player
@@ -839,3 +847,194 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   (`guards.ts`, `foeCrouched`), which is at or over the crown of a man who is ducked AND blinded (0.78 to 0.87 m measured here) — read from the
   code, not run. On the page's stand `aim-unit`, `aim-player` and `aimlevel` are red at the build head this was cut from, the same lines with and
   without this change. NEVER SEEN ON A GPU: how the gun coming down onto a low man looks, and whether the laser and the ring agree, is unseen.
+- **A gun's key again opens its setup; the kit column is one box** (`src/game/slotsetup.ts`, table `SLOTSETUP {on, secs 1.5, stay false, settle 0.35}`;
+  `src/ui/handbox.ts`; `src/host/keymap.ts KEYMAP.setFree`; 10-22. The maintainer: "repeating the current selection open up a menu for configuring
+  the current one", "can allow us to pick between auto/semi (get rid of z)", "also lets us pick attachments better", "for L can we move that to the
+  pistol/gun's equipment menu?", and of the box "scct had a really compact current equipment screen, probably too compact for us but we can aspire
+  to it"). THE RULE: with a gun IN HIS HANDS (`Player.gunInHand`: not holstered, not slung; and not with a man in his arm, where the hold has the
+  keys) its own digit opens that gun's setup — 1 the pistol's, 2 the long gun's; not in the gun's first `settle` seconds in his hands nor while the rifle is still coming off
+  its sling (a double-tapped digit draws the gun and no more), and a can's digit again is as it was. THE ROWS are on the same digits on every gun: **1** the selector (a gun with two
+  positions), **2** the launcher's load (the next one round the tube that he has any of: one he is out of is stepped over, and with nothing else to
+  put up the row has no digit), **3** the light (a kit that carries one). A row's digit steps it AND SHUTS the setup, so the two presses are always
+  the same two: 2 1, 2 2 (the old '2 again', one press on), 2 3, 1 3. It also shuts on the back key (`backkey.ts`; `Game.backable()` counts it, and
+  `Game.escape()` shuts it where the back key's rule is off), on the trigger, the right button or R (none of them taken: the round goes), on a digit
+  that is no row (the gun's own shuts it and no more; another is the slot it always was: 4 is the stun can), when the gun leaves his hands, when the
+  order menu or the Space list comes up, and by itself `secs` after it opened (1.5: the gap between two presses, not reading time — the box shows
+  the presses while it is shut). Nothing is held and nothing is frozen: his feet, aim and trigger are his own while it is up. State: `Player.setup` and
+  `Player.setupHand` (the gun the hook last found in his hands and since when; both null on a fresh player, in no file). NOTHING IS UP AFTER A LOAD: a file's load builds the player again; a save kept in memory
+  (`savestate.ts Checkpoints.loadMem`, the rollback snapshot used with a team on the floor) puts him back as he stood, the setup too, so
+  `loadMem` drops it after the snapshot is put back — before that line a load of such a save came back with the setup up and a 1 turned the
+  selector. The page does not let
+  the aim it carries through a turn of the view go for the setup's own digits (`host/loop.ts`, `slotSetupTakes`). THE TWO KEYS IT REPLACES: on the page's board the selector's row and the light's have NO KEY
+  (`KEYMAP.setFree`, as the wall hold's row has none under `qFree`; only while the game's switch is on — `KEYMAP.setWhen`, the page's — so a
+  recording that plays with the setup off has Z and L back); the GAME still asks for 'KeyZ' and 'KeyL' and means what it meant, so a recording from
+  before plays and every headless tool that writes those codes into the input works; a player who wants either back puts its row on a key in
+  Options ▸ Controls (the box then reads `<key> LIGHT`). THE BOX (`handbox.ts`, drawn by `overlay.ts updateEquip` while the switch is on; the old
+  column is drawn with it off): a strip of the five slots, each in its own place whatever is selected (a gun's name and rounds ready, the cans
+  themselves), the selected one a tab over ONE box of two lines. Line one: the magazine as pips, the pistol's OCP, the rounds in the gun and in
+  reserve as two numbers (the spare magazines are that number now, not boxes). Line two: the gun's own key and an arrow, then a place each for the
+  selector, the loads and the light, the one that is up a filled plate and the rest dim words (a load he is out of dimmer; three loads: the count
+  only on the one that is up), an EMPTY key cap before each row that can be set — the presses are drawn only while that key again WOULD open it (not holstered, not
+  slung, no man in his arm: then the line shows what is set and no keys). That key again: the caps fill with their digits, the box's edge
+  lights, the slots whose digits are rows for now go dim in the strip, and a line along the box's foot runs down the seconds (a width set each frame,
+  `handBoxTick`: the column is not built again for it). Nothing moves when it
+  opens, no line of words explains it, and the warm colour is the open setup's alone. Where empty hands are a slot of their own (`handslot.ts HANDSLOT`), they have the first place in
+  the strip under that slot's key: with everything put away it is the tab and the box under it is empty and dashed. (With that rule off a gun
+  put away keeps its tab and its box is dashed and dim; no 'holstered · E' words either way.) Every slot is still a `.slot` with its `.key` in the kit's order. WORDS THAT FOLLOW: the Controls lists (`ui/menu.ts controlRows`,
+  `ui/options.ts setupSmall`); the lines that named '2 again' (`slotsetup.ts loadKeys`: `player.ts`'s three messages, two kit card notes in
+  `kit.ts`, the launcher's debugger summary) read 'press 2, then 2'; the kit card's light ('on L': `lightKeys`, in `kit.ts`'s row note and `ui/kitCard.ts`'s
+  line) reads 'its gun's key again, then 3'; and Training 4's four lines that named Z, L or '2 again' — a lesson step may carry `setupLine`, the
+  line shown while the switch is on (`scenarios.ts LessonStep`, `lesson.ts lineOf`; `line` is the build before, so the frozen stand's lessons
+  read as they did). Every such line puts 'press', 'then' or 'key' before a digit, which is what `host/keymap.ts`'s text rule needs to name the
+  key a rebound slot is on. The kit screen's preview hands its rifle the load it shows (`host/kitView.ts tube`), where it pressed 2 until it came. ONE SWITCH for all of it: ON in the page (`?slotsetup=0` = 2 again steps the load, Z and L are keys, the
+  column as it was), OFF in the module and on the frozen stand (`TPS_SLOTSETUP=1`), `FROZEN_HOLDS['SLOTSETUP.on']`; a registered knob table, in
+  `JOURNAL_KNOBS` (a recording from before the table replays with it off); Tab ▸ 'Gun setup (its key again)': the switch, 'seconds it stays up
+  unused', 'stays up after a pick'. CHECKS: `tools/qa/slotsetup-check.ts` (`probes.ts slotsetup`, family `kit`; `SLOTSETUP_BREAK=1` must fail) —
+  opens, the three rows, `stay`, every way it shuts, the empty load and the Space list, Esc, the words and the keys the carried aim keeps, what
+  does not open it, the pistol and the double tap, the box off the real overlay code on the probes' stand-in page, a load of each kind, off = the build before, the
+  journal and the stands' row, the board: 13 lines pass on both stands, the break is red on 10 on each.
+  `tools/qa/slotsetup-page.cjs` — the real page on the software adapter by real key presses, as it opens and with `?slotsetup=0`: all five lines pass.
+  The lesson bot for Training 4 (`tools/qa/lessons/train-kit.ts`) plays the new presses when the rule is on, read off the page's own table when
+  it drives a page. OLDER PROBES that step the launcher with 2 again, or read the kit column against recorded words, run with the switch held
+  off on every stand (`probes.ts GUN_KEYS_AS_THEY_WERE`: `rifle-reload`, `kit-slots`, `he40-*`, `sticky-*`, `weapons-identity`; `pouch-table`
+  too, for a card's note), `sticky-look.cjs` opens with `&slotsetup=0`, and the two key board checks ask their own rules with Z and L as they
+  were (`keybinds-check.ts`, `qkey-check.ts`; `keybinds-page.cjs` opens with `&slotsetup=0`). KNOWN, and the maintainer's to call: (1) with the
+  setup up a 1, 2 or 3 is a ROW for `secs`, so a 2 pressed out of habit with the rifle already up and then, inside a second and a half, a 3 for
+  smoke turns the light on instead (the old build flipped the launcher's load on that same habit press); the trigger, R, Tab, 4 and 5 all shut
+  it. (2) The light has no key where the gun is not in his hands: holstered or slung (a wall hold that put it away included), and with a man in
+  his arm (`updateHold` reads 'KeyL', which the board no longer gives; the old L worked in each). (3) A pick shuts the setup (`stay` off): two
+  things set on one gun are four presses. RUN on the join with the build that has empty hands as a slot: the check and its break on both stands; `keybinds`, `qkey`,
+  `tabback`, `handslot` on both; `fn2000`, `he40`, `sticky`, `kitanim`, `shotgun`, `fog`, `frag`, `bigslot` on the page's stand, `fn2000` and
+  `weapons-identity` on the frozen one; `lesson-run train-kit` on both; the page check; a pass through whole situations on the real page by key
+  presses (the habit press, the lapse, a double tap off a can, the trigger with it up, three loads, empty hands and back). NOT RUN: the tour, a
+  soak, the solo night, `all-quick`, the other page checks (`keybinds-page.cjs`, `textsize-page.cjs`, `bigslot-page.cjs`, `panel-keys.cjs`,
+  `lesson-page.cjs`).
+  NEVER SEEN ON A GPU: the box was looked at as stills of the real page's own markup and styles, and used by real key presses on the software
+  adapter with the picture not drawn; nobody has played it.
+- **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
+  maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
+  equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is
+  nonlethal"). ON in the page (`?handslot=0` = E puts away and draws, as it was; the debugger's Player tick "empty hands are a slot"), OFF in the
+  module and on the frozen stand (`FROZEN_HOLDS`, `TPS_HANDSLOT=1`, pinned in `host/standup.ts`: `TPS_HANDSLOT=0` puts it off on the shipped
+  stand); in the knob registry and carried by a recording (one from before it replays with it off).
+  THE RULE (player.ts `updatePlayer`, `updateHold`): the slot's own code, `HANDSLOT_KEY` = `'Digit0'`, a code no key gave the game before, puts
+  away whatever is up and does nothing when the hands are empty; it never draws. A digit draws, as it always did. On a wall it chooses empty hands
+  for the step off (`WallHold.drawn = false`, never back to true). With a man held it is the arm (only from the pistol), and `Digit1` is the pistol
+  at his head (only from the arm). It is not read under an open Space list. The two takedown clicks are untouched.
+  E'S OWN CODE (`'KeyE'`: put away OR draw, and the swap of a hold) means what it meant, rule on or off: about ninety lines of checks press it.
+  THE BOARD (`src/host/keymap.ts KEYMAP.slotWhen`, the page hands it `() => HANDSLOT.on`; `SLOT`, `ALIAS`, `SLOT_ACT`, `keyRows()`): while the rule
+  is on, the backtick key gives `'Digit0'`, the backslash key gives the debugger's `'Backquote'` (main.ts and ui/panel.ts go on asking for that
+  code), and nothing gives `'KeyE'`: the E key and the 0 key file nothing. It follows the rule live, so a recording from before the rule plays in
+  the page on the old board. The slot's row is no row at all while the rule is off (`keyRows()` leaves it out: the 0 key is nobody's, a kept
+  table's line for it waits). A machine that kept backtick on another row keeps it there, and the slot then sits on the 0 key until it is given
+  one; E's row kept on a key of the player's choosing stays a row and is listed.
+  THE WORDS: lines all over the game and three lessons say "E puts it away" / "E holsters it". They are not rewritten: while the slot is on and
+  E's row has no key, the letter E in a line is read as the slot's key (`ALIAS`), so they follow, and follow a rebind of the slot's row. The lines
+  that named E for the way TO the pistol (the hold's "E puts the gun to his head", its row hints) say 1 with the rule on. The kit box's holstered
+  slot says "holstered" / "slung" with no key (`body.handslot`, overlay.ts). Options, Controls: the row "Empty hands" heads the Kit group (cap
+  `'0'` in the source, shown as the key it is on) and E's row is gone unless it holds a key; the start card's list has the same row; the
+  debugger's row shows backslash. README's table follows.
+  CHECK: `bun run tools/qa/probes.ts handslot` (family `player`), 7 lines, both stands; `HANDSLOT_BREAK=1` fails 6 (the seventh is E's old code,
+  which must pass either way). Read: the hands after the key once and five times from the pistol and the rifle, the digits, the wall's waiting
+  item, the hold's variant, the board's answers and words, the kept table (backtick held by another row, E kept on a key), a recording with and
+  without the key. On the page (`tools/qa/keybinds-page.cjs`, its last line; `tools/qa/panel-keys.cjs` on backslash): the Controls tab on the
+  page's own board, and the debugger's key.
+  SEEN ON THE REAL PAGE (software adapter, real key presses, 10-22): backslash opens and shuts the debugger, 1 files `Digit1` and draws, backtick
+  files `Digit0` and empties the hands, backtick again leaves them empty, the E key files nothing.
+  NOT DONE HERE: the HUD's kit box still shows no row for the empty slot.
+  Nobody has played it; never seen on a GPU.
+- **His own actions are a ring that stays, on E; the whistle is its last wedge; the corner shows one line** (`src/game/handring.ts HANDRING {on,
+  holdSecs}`, 10-22; the maintainer: "radial menu for our own actions, remove existing menu in top left and awkward scrolling thing", "move whistle
+  to our actions and remove v binding", "move our actions to E", "i think same would go for our actions (1-5 with the ring open)", "we can make our
+  actions and squad actions symmetric … what the default action might be … in the top left, which might be fine", "tab could be that for us").
+  ON in the page (`?handring=0` = the list on a held Space with its wheel and cancel row, the corner list, V for the whistle; the debugger's Player
+  tick "your own actions are a ring that stays"), OFF in the module and on the frozen stand (`FROZEN_HOLDS`, `TPS_HANDRING=1`, pinned in
+  `host/standup.ts`); in the knob registry and carried by a recording (one from before it replays with it off).
+  THE RULE (interact.ts `updateInteract`, `ringStays`): a TAP of the interaction key does the highlighted row, as it always did. The key kept down
+  `holdSecs` (0.3, the squad ring's number for a ring that stays) puts his rows up as a ring at the cursor (the ring `CMDRING.hands` drew as a
+  prototype, now standing without the squad's switch; rows 1 to 5 are wedges 1 to 5). Let go with the cursor out on a wedge: that wedge is done.
+  Let go in the middle: the ring STAYS (`Player.sel.ring.free`), his feet his own. Standing: a digit does its wedge at once (and is no weapon
+  slot), a left click does the lit wedge and is swallowed (he does not fire; the held button stays taken, as under the squad's ring), the key
+  again does the lit wedge, a right click or the back key (Tab, Esc where it reaches the game) puts it away with nothing done, and so do a blur,
+  the pause, going down, and the squad's menu or ring coming up. A wedge that cannot be done NOW (out of reach, or the whistle before the breath
+  is back) is lit by its digit or a click and the ring stays: only a thing done, or a put-away, takes it down. A ring put away leaves the
+  highlight on the top row. The ring opens already armed (the hold was the wait: a flick the moment it is up counts). The held list and its
+  cancel row do not exist under the rule; the wheel is his pace, also under a standing ring, unless the key is down. A STANDING RING IS NOT
+  "HANDS BUSY": `Player.choosing` (the selector up and not standing free) is what the slot key, the wall press and the hold swap ask,
+  `interact.ts handsBusy` what the squad's key asks (`orders.backFree`), and a quick save is allowed under it (savestate.ts). A save kept in MEMORY
+  (a team on the floor) is the whole game as it stood, the ring included: `Checkpoints.loadMem` puts a standing ring away after the snapshot is put
+  back, as a file's load finds none (found by the quick saves' owner: without it his first click after such a load did the lit wedge). This is the press rule agreed with the squad ring's owner (`CMDRING.stay`, `ringLatch` in cmdring.ts when that lands: this file
+  holds its own copy of the same rule until then, and should read the shared one after).
+  THE WHISTLE (`whistleWedge`): the ring's LAST wedge, always the same one, wherever fewer rows than wedges are on offer (`CMDRING.wedges`); greyed while the breath
+  is not back; not there where the rows fill every wedge, while a verb runs, or with him down. It is NO ROW of the list: `Game.nearby` and `Game.hover` are as they were, so nothing that reads them meets it, and a tap never
+  whistles. On open floor the ring is that one wedge, lit. `whistle.ts whistleKey` still answers `'KeyV'`: every recording and check that presses
+  it is as it was; the page's board takes the key off the row.
+  THE CORNER (ui/overlay.ts `deriveInteractions`): one line, what a tap would do now (the highlighted row with its hints, or a running verb's own
+  row, or a status line) with at most one no-key hint line under it (a locked door's "needs a key"), and no action line while the whistle is the
+  lit wedge. Nothing where a tap does nothing. The squad's block under it is untouched.
+  THE BOARD (`src/host/keymap.ts KEYMAP.handWhen`, `HAND`, `HAND_SLOT`, `handNow()`; main.ts hands it `() => HANDRING.on`): the whistle's row has
+  no key (the player may give it one in Options, Controls; the letter V in a line of words is left alone, as a freed row's is). Over the slot's
+  layer (which is what leaves E spare) the E key gives the interaction's code `'Space'` and the Space key gives the game nothing. Words follow:
+  "Space  open" reads "E  open", and "E puts it away" still reads as the slot's key. With `?handslot=0` the ring is on Space. THE ORDER MENU'S
+  ROW ON V (the wand under a door) has no key on the page while the rule is on: it is the squad owner's to seat on a wedge.
+  THE WORDS: Options, Controls and the start card reword the action key's row and the whistle's under the rule (ui/options.ts `RING_SMALL`,
+  ui/menu.ts `RING_ROW`). A lesson's line that says "V whistles" (Training 2 has two) is shown as "Space held, then 5, whistles" while the rule is
+  on, and "Hold Space, wheel to kick, let go" (the lights lesson's gate) as "Hold Space, then 2 kicks it" (`lesson.ts lessonLine`; the page's
+  words put the key in): the level's own text is not edited. A lesson that gains a line naming V or the held list's wheel needs a row there.
+  PAGE DRIVERS: `tools/qa/keybinds-page.cjs` holds the rule off on its older lines (`&handring=0`) and reads the page's own board in its last
+  (the action on E with the ring's words, no V on the whistle); `tools/qa/tapes/page-bot.ts verb()` presses the wedge's digit when the ring is
+  up.
+  OLDER CHECKS: selector-probes, grab-probes, tabback-check and cmdring-check read the list as it was built and hold the rule off after standing
+  up (their note says so), as grab-probes already holds the close-in mode off.
+  CHECK: `bun run tools/qa/probes.ts handring` (family `player`), 13 lines, both stands; `HANDRING_BREAK=1` fails 12 (the tap's line passes either
+  way: a tap is the tap it was). Read: the leaf after a tap, the ring's view before and after the hold, standing after a walk, a digit, the
+  whistle's digit and a click before the breath is back, a click with the rounds counted, the cursor out the moment the ring is up and the key
+  let go, the key again, right click, Tab, the list and highlight unchanged, off, the board, the lesson's line, a recording, and under a standing ring the wheel as his
+  pace, the squad's key free and a save allowed.
+  SEEN ON THE REAL PAGE (software adapter, real keys and pointer, the draw stubbed, 10-22): the corner reads one line ("DOOR · SHUT / E / pull it
+  open"); a tap of E files `Space` and the leaf opens; E kept down half a second draws the ring ("1 push it shut · 5 whistle", 1 lit); let go, it
+  stands; Tab puts it away; ring then 1 shuts the leaf; ring then a click opens it; on open floor the ring is "5 whistle" and 5 raises his noise;
+  the V key and the Space key file nothing. No picture was taken: a screenshot does not come back on that adapter.
+  NOT DONE HERE: the shared latch helper (the camera moved to the spare Space bar in the next bullet).
+  Nobody has played it; never seen on a GPU.
+- **The camera's key is the Space bar** (`src/host/keymap.ts KEYMAP.camSpace`, `camKey()`, `camCap()`, 10-22; the maintainer: "move camera pan from
+  ctrl to space", "zoom can still be just space + scroll"; a tester's Ctrl then W closed his tab). ON in the page (`?camspace=0` = Ctrl, as it
+  was), off in the module, so both of the harness's stands have Ctrl: it is a HOST switch like the board's others (`qFree`, `setFree`), not a game
+  rule: no knob, no journal key, no `FROZEN_HOLDS` row. A recording holds the view's turn and zoom themselves, never the key.
+  ONLY WHILE SPACE IS NO ROW'S: `camKey()` is `'Space'` when the switch is on AND the Space key gives the game nothing (`gameCode('Space') === ''`:
+  his actions a ring on E, `handring.ts`, with empty hands a slot, `handslot.ts`, and no row put on Space by hand in Options). With `?handring=0` or
+  `?handslot=0`, or a row he put on Space, the camera is on Ctrl again, by itself, and the words follow.
+  HELD (`game/input.ts`, `Input.camHeld`: the key on the board that is down, '' = none): the mouse's travel is the view's turn (`orbitDX`) and the
+  wheel is the zoom (`wheelCtrl`), not his pace. The key files nothing for the game. Let go, the page out of focus, or a browser menu opened (which
+  swallows the key's coming up) lets go of it. It is a latch where Ctrl was read off every mouse event: a keyup lost some other way leaves the
+  view turning until Space is tapped. While Space is
+  the camera's, Ctrl and the mouse turn NOTHING; a wheel that says Ctrl still zooms, because that is what a trackpad pinch sends.
+  TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
+  it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.
+  THE WORDS: Options, Controls draws the two camera rows' cap plain (`ui/options.ts camCapEl`: Ctrl or Space; never keyCapEl's 'Space', which is the
+  action's row and reads "E"); the start card's row is "Space + mouse / wheel" (`ui/menu.ts CAM_SPACE`, written as it is by `keyCol`); Options,
+  Game says "Double tap Space" and "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
+  NOT A ROW (a reviewer's note, left as it is): the camera's key cannot be moved in Options, and a row put on Space takes Space from it with no
+  swap shown. Making the camera hold a row of the board would give it caps, words and a swap by the board's own machinery. `tools/qa/findme-page.cjs`
+  (the settings thread's) reads "Double tap Ctrl" and presses Control: it needs `&camspace=0` or the new words. The engine replay's own view still
+  turns on Ctrl (`replay/engineplay.ts`). A laptop touchpad that goes dead while a key is held would not turn the view under Space: not tried.
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, twice, off; on game/input.ts's own listeners and
+  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
+  `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
+  Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
+- **A can in the wind-up goes back on the belt when his hands start something else** (`src/game/throwback.ts THROWBACK.on`, 10-22; the deep
+  review's src15-01, and src15-02 with it). A throw is counted off the belt at the click and leaves the hand `THROW_RELEASE` (0.28 s) later, on a
+  countdown that runs in the open part of `updatePlayer`, after the early returns for a kick, a pick, the wand, hands at work and the keypad. A can
+  clicked and one of those rows taken inside the wind-up froze in his fist for the whole beat and left it afterwards from where he then stood, on
+  the arc solved at the click: after a pick, four seconds late, a stun or a frag included. THE RULE: one line ahead of those returns gives the can
+  back (`player.ts throwOff`, what `startGrab` and `cancelActions` always did) and ends the wind-up; a takedown's start, which dropped the wind-up and kept the can it had counted,
+  gives it back too. Nothing is thrown. ON in the page (`?throwback=0`; the debugger's Player tick "a can in the wind-up goes back on the belt"),
+  OFF in the module and on the frozen stand (`FROZEN_HOLDS`, `TPS_THROWBACK=1`, pinned in `host/standup.ts`); in the knob registry and carried by a
+  recording (one from before it replays with it off). Only a run that begins such a beat inside a wind-up changes.
+  The swing already begun on the animator is not called off (a grab's never was): read in the code, he may be seen to swing with nothing
+  leaving his hand; nobody has looked. A beat added to `updatePlayer`'s early returns must be added to that one line.
+  CHECK: `bun run tools/qa/probes.ts throwback` (family `player`), 6 lines, the rule raised by the check on both stands: a pick (4.3 s, no can in
+  the air through it or after), a kick, a plain throw untouched (in the air at frame 17, one off the belt), off (the can in the air at frame 67,
+  after the kick ends at 58), a takedown (the game's own start on a parked man), recordings. `THROWBACK_BREAK=1` fails 4. The throw is made through the keys (the can's digit, a click); the kick and
+  the pick are begun by the game's own starts a few frames in. NOT in the check: the wand, hands at work and the keypad (the same
+  line; read, not run). Headless only; nobody has played it.

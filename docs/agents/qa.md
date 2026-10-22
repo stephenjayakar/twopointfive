@@ -72,7 +72,7 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
 (+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program, `?sdfsmooth` / `?charsoft` / `?charsoftmarch` + `__rigTrace(rays)` from the SDF character rig),
 `__runFrames(n, dt=1/60, keys=[], draw=true)` (fixed-step frames with synthetic keys held; `draw` false = only the burst's last step is drawn, the others pack the world as a draw would and go on — what a script on the software adapter wants, and NOT a check of the drawn-every-step path: the GPU's senses then answer once a burst), `__mouse(x, y, buttons?)`,
 `__click`, `__pauseLoop` (stop the rAF loop; step only via `__runFrames`), `__resetClock()`, `__shot(name, q, scale)`
-(JPEG to the shot server), `__panelShot(name, {frame?, quality?, scale?})` (the tweak PANEL (the debugger, on backtick) is HTML, outside the frame `__shot` reads back: `#panel` rasterised through
+(JPEG to the shot server), `__panelShot(name, {frame?, quality?, scale?})` (the tweak PANEL (the debugger, on the backslash key: `player.md`, empty hands are a slot) is HTML, outside the frame `__shot` reads back: `#panel` rasterised through
 editor/domshot.ts and laid over the frame + the overlay's canvases; native sliders in the raster), `__png(name)` (lossless readback for pixel A/B), `__timeScale`, `__wgsl(src, {prelude:'scene'|'lighting'})`
 (compile-check WGSL against the live device with the same prelude the scene passes get — 'scene' for direct/softblur/
 temporal, 'lighting' adds lighting_common for gather/rc/probe/volumetrics — `naga` is not installed here, so Chrome/Tint through the page is the WGSL validator; a Linux sandbox could run naga if ever
@@ -309,7 +309,7 @@ but synthetic writes still work.
 - **A mission's page waits for Start; a script's page does not** (2026-10-19, `src/ui/loadbrief.ts`; `docs/agents/menus.md` has the screen). A page
   whose address names a mission resolves `__ready` with the mission's brief up and the world held: nothing ticks until the brief is started. A tool is
   never held by it: no brief is made under `?paused`, a replay, `?kitview` or a benchmark scene, `?mute` (or the test profile's mute) drops it at the
-  boot's end, and a hook that drives the game (`__runFrames`, `__mouse`, `__click`, a save or a load, `__session.start`) drops it at the loop's next
+  boot's end, and a hook that drives the game (`__runFrames`, `__mouse`, `__click`, a save or a load, `__journal.start`) drops it at the loop's next
   step. A tool that loads a mission with none of those and only watches or shoots the page (`__shot`, `__png`, `__demo.start`) is looking at a held
   world under the brief: it presses Enter, or loads the page with `?loadbrief=0`.
 

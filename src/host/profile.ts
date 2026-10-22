@@ -46,6 +46,9 @@ import { LIGHTWALL } from '../game/lighting';
 import { IRLIGHT } from '../game/irlight';
 import { AIRDUST } from '../game/airDust';
 import { WALLSNAP } from '../game/wallsnap';
+import { HANDSLOT } from '../game/handslot';
+import { HANDRING } from '../game/handring';
+import { THROWBACK } from '../game/throwback';
 import { GUNWALL } from '../game/gunwall';
 import { REARWATCH } from '../game/rearwatch';
 import { STACKLINE } from '../game/stackline';
@@ -87,6 +90,7 @@ import { TORCH } from '../game/calmtorch';
 import { BACKKEY } from '../game/backkey';
 import { moraleFromQuery } from '../game/morale';
 import { RUNNER } from '../game/runner';
+import { STARTLE } from '../game/startle';
 import { DARKDOOR } from '../game/darkdoor';
 import { DARKFOE } from '../game/darkfoe';
 import { POWEROUT } from '../game/powerout';
@@ -115,7 +119,9 @@ import { AIM } from '../game/aim';
 import { SPRINTDOOR } from '../game/sprintdoor';
 import { TEAMPACE } from '../game/teampace';
 import { NOSHOVE } from '../game/noshove';
+import { RAILS } from '../game/rails';
 import { DOORFORCE } from '../game/doorforce';
+import { SLOTSETUP } from '../game/slotsetup';
 import { GLASSREAL } from '../game/glassbreak';
 import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
@@ -239,10 +245,16 @@ export function pageSwitches(q: URLSearchParams): void {
   WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as its key does (while this is on the hold has no key on the page's board: host/keymap.ts qFree) — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
   WALLSNAP.voice = q.get('wallvoice') !== '0';   // …heard (wallsnap.ts `voice`): his back landing on a wall and his stepping off it each have a sound, the player's ears only; ?wallvoice=0 = the faint scuff alone, as it was
   WALLSNAP.slow = q.get('wallslow') !== '0';   // …and unhurried (wallsnap.ts `slow`): the take runs twice its seconds and the pose comes on and lets go at half its rate; ?wallslow=0 = the take as it was
+  RELOAD.lastMag = !q.has('nolastmag');   // the last magazine, seated and not racked, can still be reloaded (game/autoreload.ts): ON in the page; ?nolastmag = that gun never fires again, as it was
+  HANDSLOT.on = q.get('handslot') !== '0';   // empty hands are a slot (game/handslot.ts): its key puts away whatever is up and is never the way back, a digit draws; on the page's board it is backtick, the debugger is on backslash and E is spare (host/keymap.ts SLOT) — ON in the page; ?handslot=0 = E puts away and draws, as it was
+  HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
+  THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
   GLASSREAL.drop = q.get('glassdrop') !== '0'; GLASSREAL.place = q.get('glassplace') !== '0';   // glass as buildings have it (game/glassbreak.ts GLASSREAL): a toughened sheet goes white and drops at once, no wave across it; and a pane is toughened where it reaches the floor or is a door's panel, float where it starts at a sill — ON in the page; ?glassdrop=0 = the wave, ?glassplace=0 = outside toughened and inside float, as they were
+  SLOTSETUP.on = q.get('slotsetup') !== '0';   // the slot in hand pressed again opens its setup (game/slotsetup.ts): 1 or 2 pressed with that gun in the hands lights its rows — 1 semi / auto, 2 the launcher's load, 3 the light — and the Z and L keys give nothing (host/keymap.ts setFree, the same word) — ON in the page; ?slotsetup=0 = 2 again steps the load, Z is the selector and L the light, as they were
   DOORFORCE.on = q.get('doorforce') !== '0';   // an alerted man does not wait at a shut door (game/doorforce.ts): a defender who is sure an enemy is at its far face fires through a wooden leaf and, free to move, ends by booting it in — ON in the page; ?doorforce=0 = he rests his gun on it or goes to its handle, as he did
+  RAILS.on = q.get('rails') !== '0';   // a tutorial mission's frame (game/rails.ts): on a level whose lesson carries a rails record, only what the step that is up has unlocked works, the level's script is cued by the steps, the checkpoints are the authored ones and a teammate is never lost — ON in the page; ?rails=0 = such a level plays as a plain lesson
   NOSHOVE.on = q.get('noshove') !== '0';   // teammates falling in never shove the player (game/noshove.ts): a follower whose way lies through him goes round or stops short, and a shove from anybody is not read as his walking — ON in the page; ?noshove=0 = shouldered aside by his own file, as it was
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
   AIMWEIGHT.on = !q.has('noaimweight');   // the player's aim has weight (game/aimweight.ts): his gun turns at a limited rate and the aiming circle trails the cursor, shots going where the circle is — ON in the page; ?noaimweight = the gun eased onto the cursor as it was
@@ -285,6 +297,7 @@ export function pageSwitches(q: URLSearchParams): void {
   GUARD_EYE.farCalm = !q.has('nofarcalm');   // …and a glimpse from past those 16 m is no place to walk to until it is what has him looking (game/guards.ts farFaint: a calm man's fix lands the frame the sight tips him) — ON in the page; ?nofarcalm = every far glimpse writes his fix at once, as the far reach first shipped
   PLAN.menuOnly = !q.has('planalways');   // the plan's ways, marks and fans only while the order menu is up (picture only, on on both stands); `?planalways` = for as long as the orders stand
   moraleFromQuery(q);   // shaken (game/morale.ts): a blast makes the men near it duck, and breaks a man alone in the dark — down, back off the hole, a burst into the dust, a call nobody answers: ON in the page; ?nomorale = every man as steady as he was. With it who is green and how brittle they all are: ?training=green|mixed|trained (absent: by the squad's own key and the difficulty), ?nerve=brittle|steady — and a choice made by hand in the debugger's Enemy nerve section, kept for the visit
+  STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
   RUNNER.on = !q.has('norunner');   // drops it and runs (game/runner.ts): a broken man alone, his magazine run dry, with an enemy in his eyes at arm's length shouts that he is done, lets the weapon fall and runs — to his mates, then out of the building: ON in the page; ?norunner = he stays and changes his magazine, as he did
   DARKDOOR.on = !q.has('nodarkdoor');   // not in there alone (game/darkdoor.ts): a green man, alarmed and alone, stops at the doorway of a dark room, says so, sweeps the opening and waits for a mate — then they go in together, or nobody comes and he gives it up: ON in the page (it acts only with morale on); ?nodarkdoor = every man walks into the dark as he did
   DOZE.on = !q.has('nodoze');   // dozing in the dark (game/doze.ts): a calm staff man with a long wait in an unlit place sits in the chair there and nods off, and can be woken — ON in the page; ?nodoze = every man stands his wait awake, as it was
@@ -442,6 +455,9 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
   'WALLSNAP.voice': 'TPS_WALLVOICE=1',
   'WALLSNAP.slow': 'TPS_WALLSLOW=1',
+  'HANDSLOT.on': 'TPS_HANDSLOT=1',
+  'HANDRING.on': 'TPS_HANDRING=1',
+  'THROWBACK.on': 'TPS_THROWBACK=1',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'REARWATCH.on': 'TPS_REARWATCH=1',
   'STACKLINE.on': 'TPS_STACKLINE=1',
@@ -474,6 +490,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'TORCH.calmOff': 'TPS_CALMTORCH=1',
   'MORALE.on': 'TPS_MORALE=1',
   'RUNNER.on': 'TPS_RUNNER=1',
+  'STARTLE.on': 'TPS_STARTLE=1',
   'DARKDOOR.on': 'TPS_DARKDOOR=1',
   'DARKFOE.on': 'TPS_DARKFOE=1',
   'POWEROUT.on': 'TPS_POWEROUT=1',
@@ -492,13 +509,16 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'PICTURE.on': 'TPS_PICTURE=1',
   'RESPONSE.on': 'TPS_RESPONSE=1',
   'RELOAD.auto': 'TPS_AUTORELOAD=1',
+  'RELOAD.lastMag': 'TPS_LASTMAG=1',
   'SAMSTUN.on': 'TPS_SAMSTUN=1',
   'TEAMTALLY.on': 'TPS_TEAMTALLY=1',
   'AIMWEIGHT.on': 'TPS_AIMWEIGHT=1',
   'SPRINTDOOR.on': 'TPS_SPRINTDOOR=1',
   'TEAMPACE.on': 'TPS_TEAMPACE=1',
   'NOSHOVE.on': 'TPS_NOSHOVE=1',
+  'RAILS.on': 'TPS_RAILS=1',
   'DOORFORCE.on': 'TPS_DOORFORCE=1',
+  'SLOTSETUP.on': 'TPS_SLOTSETUP=1',
   'GLASSREAL.drop': 'TPS_GLASSDROP=1 (acts only with the glass up: GLASSFX=on)',
   'GLASSREAL.place': 'TPS_GLASSPLACE=1 (acts only with the glass up: GLASSFX=on)',
   'AIMCOST.lamp': 'TPS_LAMPHIT=1',

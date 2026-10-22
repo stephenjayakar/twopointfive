@@ -118,6 +118,7 @@ import { dozeSnapshot, dozeRestore, type DozeSnap } from './doze';
 import { moraleSnapshot, moraleRestore, type MoraleSnap } from './morale';
 import { runnerSnapshot, runnerRestore, type RunnerSnap } from './runner';
 import { darkDoorSnapshot, darkDoorRestore, type DarkDoorSnap } from './darkdoor';
+import { startleSnapshot, startleRestore, type StartleSnap } from './startle';
 import { netQuietSnapshot, netQuietRestore, type NetQuietSnap } from './netquiet';
 import { powerOutSnapshot, powerOutRestore, type PowerOutSnap } from './powerout';
 import { rescueCheckSnapshot, rescueCheckRestore, type RescueCheckSnap } from './rescuecheck';
@@ -272,6 +273,8 @@ export interface SaveState {
   morale?: MoraleSnap;
   /** each roster man's run — the shout's beat, the weapon gone, where he is going — runner.ts; absent with its switch off or nobody has run */
   runner?: RunnerSnap;
+  /** each roster man's start at a first sight — when he last stood calm, the beat he is in — startle.ts; absent while no man has a record */
+  startle?: StartleSnap;
   /** each roster man's part in a balk at a dark doorway — stopped, called, going in — and the doors that will not stop him again yet — darkdoor.ts; absent with its switch off or nobody met */
   darkdoor?: DarkDoorSnap;
   /** each roster man's count of mates gone quiet, the line he owes, his whip and the last man's act — netquiet.ts; absent with its switch off or nobody met */
@@ -373,13 +376,14 @@ function rosterWanted(g: Game): number { return g.quiet?.active ? g.quiet.patrol
 // ================================================================================================================================ can we save
 /** What no save of either kind can stand for: a show or a level script puppeting the floor, a man already down, a run that is over, the response team's set
  *  piece. `mem` = the save is kept in memory (canSnap): daylight is in it, and a run the verdict has closed with the stage still live is over too. */
-function runNo(g: Game, mem: boolean): string | null {
+function runNo(g: Game, mem: boolean, authored = false): string | null {
   if (g.touring || g.quietUtility || g.puppet) return 'a show is running (tour / attract / breach)';
-  { const why = g.director?.blocksSave(); if (why) return why; }   // the level script mid-program (director.ts): its cursor — fired triggers, live beats, units — has no save slice until M3
+  if (!authored) { const why = g.director?.blocksSave(); if (why) return why; }   // (an authored checkpoint of a tutorial mission — rails.ts — is taken with its program running: the program is started again when it is put back)   // the level script mid-program (director.ts): its cursor — fired triggers, live beats, units — has no save slice until M3
   if (!mem && isDaylight(g)) return 'daylight is in (the breach variant)';
   if (g.player.down) return 'the player is down';
   if (g.mission.stage === 'failed' || g.mission.stage === 'done') return `the run is over (${g.mission.stage}) — nothing to come back to`;   // (a civilian killed under tune.civilianKillFails fails the run with Sam on his feet: that file would have loaded as a live one — review G3.2)
   if (mem && g.verdict?.result) return 'the run is over — nothing to come back to';
+  if (authored) return null;
   if (g.qrf && g.qrf.state !== 'idle') return `the response team is ${g.qrf.state} — no checkpoint inside the response`;
   if (g.qrf && g.qrf.silentAt >= 0 && !g.qrf.silentSpent) return 'control is calling a net gone silent — no checkpoint inside the response';   // (qrf.ts silentNet's fourteen seconds are not in the file: a load would start them, and the radio check, afresh; never true with tune.qrfSilent off)
   return null;
@@ -451,7 +455,7 @@ export function playerBusy(g: Game): string | null {
   if (pl.char.anim.bigTool) return 'putting his tool back';   // (bigkit.ts, BIGSLOT.moves: the hammer or the shotgun on its way back onto him is the animator's too — never set with the switch off)
   if (pl.char.anim.kitBusy) return 'changing what is in his hands';   // (kitanim.ts: a swap is the animator's, not the file's — never true with the switch off)
   if (g.mission.driveT >= 0) return 'pulling the drive';
-  if (pl.sel.open || pl.sel.downT >= 0) return 'choosing an action';
+  if ((pl.sel.open && !pl.sel.ring?.free) || pl.sel.downT >= 0) return 'choosing an action';   // (a ring that merely stands — handring.ts — is nothing in hand: nothing of it is filed, and a load finds no ring)
   return null;
 }
 
@@ -552,7 +556,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     if (LOOK_DECALS.has(d)) D.look = 1;   // (a mark laid only for the picture — lookDecals.ts: it comes back tagged, so the digest's count is the same carrying on and loaded)
     decals.push(D);
   }
-  const bo = g.blackout, gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
+  const bo = g.blackout, gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), sl = startleSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
   const air = g.airDust?.snapshot();
   const s: SaveState = {
     v: SAVE_VERSION, savedAt: Date.now(), label, kind, level: levelFingerprint(g),
@@ -573,6 +577,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     ...(ct ? { calmTorch: ct } : null),   // (which calm patrol torches are dark, and their dwell — calmtorch.ts; no key with its switch off)
     ...(mo ? { morale: mo } : null),   // (each man's dread and where his sequence stands — morale.ts; no key with its switch off)
     ...(ru ? { runner: ru } : null),   // (each man who dropped it and ran, and where his run stands — runner.ts; no key with its switch off)
+    ...(sl ? { startle: sl } : null),   // (each man's start at a first sight — startle.ts; no key while no man has a record)
     ...(dd ? { darkdoor: dd } : null),   // (who is stopped at which dark doorway, who is coming — darkdoor.ts; no key with its switch off)
     ...(nq ? { netQuiet: nq } : null),   // (each man's quiet count, owed line, whip and last-man act — netquiet.ts; no key with its switch off)
     ...(po ? { powerOut: po } : null),   // (the men out for the breaker and what their side has said about the dark — powerout.ts; no key with its switch off or before a first blackout)
@@ -720,6 +725,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   calmTorchRestore(g, s.calmTorch);   // (before the lights are posed, and no dwell counted while they are: a calm man's torch is dark or burning as the file had it — calmtorch.ts)
   moraleRestore(g, s.morale);   // (each man's dread, rung and sequence as the file had them — morale.ts; a file without the slice: every man met afresh)
   runnerRestore(g, s.runner);   // (who had dropped it and run, as the file had them — runner.ts; a file without the slice: nobody has)
+  startleRestore(g, s.startle);   // (who was in his start, who has had his — startle.ts; a file without the slice: nobody has)
   darkDoorRestore(g, s.darkdoor);   // (each man's balk as the file had it — darkdoor.ts; a file without the slice: nobody stopped, every door open to him)
   netQuietRestore(g, s.netQuiet);   // (…and what the quiet net has done to each of them — netquiet.ts; a file without it: every man met afresh)
   powerOutRestore(g, s.powerOut);   // (…and the walk to the breaker — powerout.ts; a file without it: nobody is out and the next blackout is their first)
@@ -888,6 +894,15 @@ export class Checkpoints {
     if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it)
     // what the keys asked for inside this step, now that the frame is whole: F5's save, and a bare Enter once down onto a save in memory
     if (this.due) { const key = this.due; this.due = null; this.hand = false; const why = this.loadMem(g, key); if (why) g.msg(`checkpoint: ${why}`); return; }
+    if (g.rails?.live) {   // a tutorial mission (rails.ts): its checkpoints are authored — the triggers below, the every-step request and the save by hand all stand down
+      this.pending = null; this.hand = false;
+      if (this.authored) { const label = this.authored; this.authored = null;
+        // (the level's program is stopped for the take and started again by the frame on the next tick, with this step's cue: a beat is a function half run, which
+        //  no snapshot holds — so what is kept is the floor with no program, exactly what putting it back starts from)
+        const D = g.director; if (D?.run && !D.run.ended) { D.stop(false); g.rails.restart(); }
+        this.writeMem(g, 'auto', label, true); }
+      return; }
+    this.authored = null;
     if (this.hand) { this.hand = false; const r = this.write(g, 'manual', 'by hand'); if (!r.ok) g.msg(`not saved: ${r.why}`); }
     // regret: the floor came down on him within regretSecs of the last autosave — that slot is marked, and the cards offer the one before it (checked ahead of the
     // live gate: the frame he drops is not live, and is exactly when it matters)
@@ -974,14 +989,18 @@ export class Checkpoints {
   /** F5 (player.ts, inside a step): a save by hand at the end of this update — the keys are the recording's, so a run played again saves where this one did */
   /** would a save by hand be refused at this moment — the reason write() would give? Asks only: nothing is written, counted or noted (the pause card, where the world is held and the answer cannot change) */
   handNo(g: Game): string | null { return SAVETIMELINE.on && squadUp(g) ? canSnap(g) : canSave(g); }
-  askSave() { if (SAVETIMELINE.on) this.hand = true; }   // (the switch is read HERE: player.ts imports nothing of this module — an import there loads this file early from that door and the cycle then meets wind.ts before weather.ts)
+  askSave() { if (SAVETIMELINE.on) this.hand = true; }
+  /** AN AUTHORED CHECKPOINT (rails.ts: a tutorial mission's step says where its checkpoints are, and they are the only ones there): kept in memory at the
+   *  end of this update, whatever is on the floor — a team, the level's own program mid-beat, a round in the air */
+  private authored: string | null = null;
+  keep(label: string) { this.authored = label; }   // (the switch is read HERE: player.ts imports nothing of this module — an import there loads this file early from that door and the cycle then meets wind.ts before weather.ts)
   /** a load asked for INSIDE a step (player.ts: the bare Enter once down): a file is poured in at once, as ever; a save in memory is put back at the end of
    *  this update, where it was taken — never under the feet of the frame that is running */
   loadInStep(g: Game, key: string): string | null { const e = this.shelf.get(key); if (!e) return this.load(g, key); const why = this.memNo(g, e); if (why) return why; this.due = key; return null; }   // (refused NOW, where the caller can still fall back on a restart)
   private memNo(g: Game, e: MemSave): string | null { return e.snap.game !== g || e.info.runId !== this.runId ? 'made in another run' : g.touring || g.puppet ? 'a show is running — stop it first' : null; }
   /** SAVETIMELINE with a team on the floor: the game as it stands kept in memory, in its own two rings (this run's only) */
-  private writeMem(g: Game, slot: 'auto' | 'manual', label: string): SaveResult {
-    const why = canSnap(g); if (why) { this.stats.refused++; this.note(g, `refused ${slot}: ${why}`); return { ok: false, why }; }
+  private writeMem(g: Game, slot: 'auto' | 'manual', label: string, authored = false): SaveResult {
+    const why = authored ? runNo(g, true, true) : canSnap(g); if (why) { this.stats.refused++; this.note(g, `refused ${slot}: ${why}`); return { ok: false, why }; }
     chronCheckpoint(g, 'save', label);
     this.lastSaveT = g.time; this.quietT = 0;
     const ring = slot === 'auto' ? SAVETIMELINE.auto : SAVETIMELINE.manual; let n = 0, at = Infinity;
@@ -1005,6 +1024,8 @@ export class Checkpoints {
     const host = { enabled: this.enabled, picture: this.picture, onPutBack: this.onPutBack, onSaved: this.onSaved }, tune = { ...g.tune }, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo };
     const st = this.store as { map?: Map<string, string> }, kept = st.map instanceof Map ? [...st.map] : null;   // (the harness's store is a Map the game reaches: the files written since are not the snapshot's to take back)
     restoreSnapshot(e.snap);
+    { const pl = g.player, S = pl.sel; if (S.ring?.free) { S.open = false; S.ring = null; S.downT = -1; S.moved = false; pl.nearSel = 0; } }   // (handring.ts: a ring that merely stood at the save is nothing of the saved moment — a file's load finds none either, and his first click after a load is his trigger, not a wedge)
+    g.player.setup = null;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load — its digits are his slots again)
     if (kept && st.map) { st.map.clear(); for (const [k, v] of kept) st.map.set(k, v); }
     Object.assign(this.stats, stats); this.log.length = 0; this.log.push(...log);
     Object.assign(this, host); Object.assign(g.tune, tune); Object.assign(g, flags); loadSandbox(g, false);
@@ -1012,6 +1033,7 @@ export class Checkpoints {
     this.pending = null; this.lastAuto = null; this.hand = false; this.due = null; this.lastSaveT = g.time;   // (a load counts as a save for the gap, as a file's does)
     chronCheckpoint(g, 'load', e.info.label); g.messages.push({ text: `checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`, t: g.time }); if (g.messages.length > 5) g.messages.shift();
     this.stats.loads++; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${key.replace(KEY_PREFIX, '')}: ${e.info.label || '—'} (from memory)`);
+    g.rails?.putBack();   // (a tutorial mission's program is functions half run, which no snapshot holds: rails.ts starts it again and sends the step's cue again)
     this.onPutBack?.(e.info);
     return null;
   }
