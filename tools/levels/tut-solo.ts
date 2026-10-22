@@ -69,8 +69,8 @@ export const GAP: Vec3 = [21.9, 0.1, 12.7];
 export const LAMP: Vec3 = [24.4, 3.2, 17.7];
 /** behind the barrier (steps 'cross', 'back') */
 export const BARRIER: Vec3 = [23.3, 0, 13.9];
-/** beside the shop's door: out of the charge's backblast (1.6 m) and out of the doorway's line, which the man inside is looking down (step 'back') */
-export const BACK: Vec3 = [24.45, 0, 16.0];
+/** beside the shop's door: the whole mark (0.6 m round it) out of the charge's backblast, 1.6 m from the frame's middle, and out of the doorway's line, which the man inside is looking down (step 'back') */
+export const BACK: Vec3 = [24.45, 0, 16.5];
 /** the gun's nest and the man on the gun */
 export const NEST: Vec3 = [22.6, 0.4, 7.0];
 export const GUNNER: Vec3 = [22.7, 0, 6.9];
@@ -98,13 +98,13 @@ export const EXIT = { name: 'the road', door: 'gate_w', x: 8.2, z: AXIS, out: [-
  *  `cue` goes to the level's script as the step comes up ('lesson:<cue>'), `checkpoint` names the one save of a beat. Four checkpoints, each where he has
  *  just finished a fight and nobody alive can see him: the gate (the sentry is down), the gun (the nest is out), the shop (its man is down), the store (the
  *  building is his). */
-export const FRAME: Record<string, { allow?: string[]; cue?: string; checkpoint?: string }> = {
+export const FRAME: Record<string, { allow?: string[]; deny?: string[]; cue?: string; checkpoint?: string }> = {
   move: { cue: 'road' }, ready: { allow: ['slot:rifle'] }, sprint: { allow: ['sprint'] }, wall: { allow: ['wall'], cue: 'cease' }, peek: { allow: ['aim'] }, fire: { allow: ['fire'] },
-  reload: { allow: ['reload'], checkpoint: 'the gate' }, auto: { allow: ['mode'] }, arch: { cue: 'gun' }, crouch: { allow: ['crouch'], cue: 'bags' },
+  reload: { allow: ['reload'], checkpoint: 'the gate' }, tab: { deny: ['slot:rifle'] }, auto: { allow: ['mode', 'slot:rifle'] }, arch: { cue: 'gun' }, crouch: { allow: ['crouch'], cue: 'bags' },
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
   pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
-  take: { checkpoint: 'the store' }, launch: { allow: ['alt'], cue: 'trucks' }, last: { cue: 'loose' },
+  take: { checkpoint: 'the store' }, behind: { cue: 'trucks' }, load: { allow: ['alt'] }, last: { cue: 'loose' },
 };
 
 const SHOP: Rect = { x0: FRONT_X, x1: PART_X, z0: ROOM_Z0, z1: ROOM_Z1 }, STORE: Rect = { x0: PART_X, x1: YARD.x1, z0: ROOM_Z0, z1: ROOM_Z1 };
@@ -236,13 +236,15 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- a place somebody lives and works in (the maintainer: a tutorial level has "just as much (if not more! since it's first impression) polish and
   //  [should] really feel great and organic"). ADDITIONS ONLY, every one off the mission's line, off each man's mark and out of every door's sweep: none
-  //  of it is cover a line asks for, and none of it changes a fight (tools/qa/tut-solo-check.ts plays every way through it) ----
+  //  of it is cover a line asks for, and none of it changes a fight (tools/qa/tut-solo-check.ts plays every way through it). It is the level's own
+  //  furniture as built, on both stands, like the table and the crates above: not the lived-in pass (src/scene/lived.ts), which furnishes levels that
+  //  were recorded bare ----
   grp('dress.road');     // the roadside: a melon stall by the forecourt, scrub along the verge
   G.stall(1.9, 21.8, 0.12, 2.2, 'tarpBlue'); G.bush(1.1, 17.4); G.bush(0.9, 24.4, 0.8); G.bush(7.4, 23.6, 0.9); G.tyres(7.2, 19.8, 2);
   grp('dress.truck');    // the truck court's north corner: where the gate's men sit out a watch
-  G.charpoy(10.7, 8.6, 0.12); G.lowTable(11.9, 9.5, 0.3); G.stove(12.9, 8.3); G.plasticChair(12.4, 10.4, 2.6); G.jerryCan(13.6, 8.4, 0.2);
+  G.charpoy(10.7, 8.6, 0.12); G.lowTable(11.9, 9.5, 0.3); G.plasticChair(12.4, 10.4, 2.6); G.jerryCan(13.6, 8.4, 0.2);
   grp('dress.shop');     // the shop is the room they live in: a stove, a floor mattress and tea, a rug under the table, a hanging on the wall
-  G.rug(27.5, 16.2, 3.4, 1.9, 'afghan'); G.toshak(29.3, 16.95, 1.9, 0); G.lowTable(29.2, 16.1, 0.1); G.stove(28.4, 11.15);
+  G.rug(27.5, 16.2, 3.2, 1.9, 'afghan'); G.toshak(29.3, 16.95, 1.9, 0); G.lowTable(29.2, 16.1, 0.1); G.stove(28.4, 11.15);
   G.wallHanging('x', ROOM_Z0, 27.6, 1, 'baluch', 1.4, 0.9); G.gasBottle(30.0, 12.6);
   grp('dress.store');    // the store: flour and rice against the wall, a mat by the trunk
   G.sacks(32.6, 11.15, 0.1, 4); G.rug(34.4, 12.2, 1.2, 1.6, 'mat', HALF); G.gasBottle(30.95, 16.0);
@@ -308,11 +310,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'fire', line: 'Left button: shoot the sentry', done: DOWN(1), at: [SENTRY[0], 1.2, SENTRY[2]] },
       // THE TRUCK COURT
       { id: 'reload', line: '[R]: reload', done: { is: 'reload' } },
-      // (the gun's own setup, met early and in a quiet moment: the same two presses load the launcher at the end)
+      // (the gun's own setup, met early and in a quiet moment)
       // (the maintainer: "the timer is bad. we should just have it switch a mode. and we should teach earlier that tab exits out of menus": the setup is
-      //  opened and shut before anything is picked in it; its rows stay locked until the next line, so Tab is the way out here)
+      //  opened and shut before anything is picked in it; its rows stay locked until the next line, and the rifle's own key is
+      //  taken back for the Tab line alone (with no load row that key is no row and would put the setup away as it opened it), so Tab is the way out here)
       { id: 'setup', line: '[2] again: the rifle\'s setup', done: { is: 'flag', flag: 'setup' },
-        explain: { title: 'A gun\'s setup', text: 'Press the key of the gun in your hands again and its setup opens over the kit: single shots or automatic, what the launcher is loaded with, its light. It stays until you pick a row or close it.' } },
+        explain: { title: 'A gun\'s setup', text: 'Press the key of the gun in your hands again and its setup opens over the kit: single shots or automatic, its light, and its loads when it carries more than one. It stays until you pick a row or close it.' } },
       { id: 'tab', line: '[Tab]: close it. [Tab] closes every menu', done: { is: 'flag', flag: 'setupShut' } },
       { id: 'auto', line: '[Z]: full auto', setupLine: '[2], then [1]: full auto', done: { is: 'any', of: [{ is: 'flag', flag: 'auto' }, DOWN(2)] } },
       { id: 'arch', line: 'Move up beside the blue gate', done: { is: 'near', at: JAMB, r: 1.3 }, hold: 1, at: JAMB },   // (a second there: the gun opens on the truck before the next line, whenever he came)
@@ -327,7 +330,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'pistol', line: '[1]: the pistol. Its shot is quiet', done: { is: 'any', of: [{ is: 'slot', slot: 'pistol', drawn: true }, DOWN(5)] } },
       { id: 'lamp', line: 'Shoot out the lamp: the dark is cover too', done: { is: 'any', of: [{ is: 'target', name: 'lamp_shop', on: false }, DOWN(3)] }, at: LAMP },
       { id: 'charge', line: 'Hold [Space] on the door: pick the charge', done: { is: 'any', of: [{ is: 'door', door: 'shop', state: 'charged' }, { is: 'door', door: 'shop', state: 'open' }] }, at: SHOP_DOOR },
-      { id: 'back', line: 'Stand clear: your back to the wall beside the door', done: { is: 'near', at: BACK, r: 0.7 }, at: BACK },
+      { id: 'back', line: 'Stand clear: your back to the wall beside the door', done: { is: 'near', at: BACK, r: 0.6 }, at: BACK },
       { id: 'blow', line: '[F]: blow it', done: { is: 'door', door: 'shop', state: 'open' }, at: SHOP_DOOR },
       { id: 'shop', line: 'Lean in: shoot him', done: DOWN(3), at: [SHOP_MAN[0], 1.0, SHOP_MAN[2]] },
       // THE STORE
@@ -337,10 +340,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // THE WAY OUT
       { id: 'rifle', line: '[2]: back to the rifle', done: { is: 'slot', slot: 'rifle', drawn: true } },
       { id: 'leave', line: 'Back to the arch', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH },
-      // (the maintainer: "weird that we're told to load the grenade long before being told to do anything about it". His card is the whole kit now and
-      //  comes with the grenade on the launcher, so nothing is loaded: the two it is for come out as this line comes up. A stand that still deals the
-      //  ring first has the rifle for them: the line is done by the men going down, however)
-      { id: 'launch', line: 'Two men behind you: hold right button, aim at their doorway, let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
+      // (the maintainer: "weird that we're told to load the grenade long before being told to do anything about it": the two it is for come out first, on a
+      //  line that only asks him to look (the frame draws a line with no key and a cue for its end as something to watch); the script ends that line
+      //  once they stand in the doorway, so the shot is asked for with men in it. THE LOAD'S LINE is for a kit that deals the ring first: his own card
+      //  dealt whole comes with the grenade on the launcher, the line is true as it comes up and goes by unread, and the setup has no load row for him)
+      { id: 'behind', line: 'Two men behind you', done: { is: 'cue', name: 'trucks' } },
+      { id: 'load', line: '[2] again: load the grenade', setupLine: '[2], then [2]: load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
+      { id: 'launch', line: 'Hold right button, aim at their doorway, let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
       { id: 'last', line: 'Shoot the rest', done: DOWN(7), at: LAST_COVER },
       { id: 'out', line: 'Sprint out by the gate', done: { is: 'stage', stage: 'done' }, at: [EXIT.x, 0, EXIT.z] },
     ] as LessonStep[]).map(T => ({ ...T, ...FRAME[T.id] })),

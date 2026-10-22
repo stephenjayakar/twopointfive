@@ -155,19 +155,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wall's mark is the frame's arrow (`at` a pace short of the wall, `toward` the wall); two cards: 'Walls' on the wall's step, 'A gun's setup' on the
   setup's. The row's third `teaches` line is 'Rifle and pistol, and a gun's setup'. The scripted player presses both row digits on the Tab line and
   fails if either is taken; it fails on the selector's line if the two lines went by on a stand that has the setup.
-  THE LOAD'S LINE IS GONE (30 steps; the same evening, after the build that deals the player's own card whole): his card comes with the grenade on
-  the launcher and no sponge rounds, so "load the grenade" was true as it came up and the rifle's setup has no load row. The last two come out on the
-  launcher's own line ('Two men behind you: hold right button, aim at their doorway, let go', which carries the cue `trucks` and unlocks `alt`). On a
-  stand that still deals the ring first the scripted player puts the grenade up by that build's keys, and the line is done by the two going down
-  however he does it. The scripted player's Tab line presses the load's digit only where the setup has that row (with none, the rifle's own digit
-  is no row and puts the setup away as it opened it). `tut-solo-check` is seven ways a seed. The two store posts are routes `sacks` and `crates`
-  (a route's name is said: `probes.ts words-routes`).
+  THE LAST TWO COME ON A LINE THAT ONLY HAS HIM LOOK (32 steps; the same evening, after the build that deals the player's own card whole). His card on
+  the page comes with the grenade on the launcher and no sponge rounds, so the load's line is true as it comes up and goes by unread, and the rifle's
+  setup has no load row for him. Step 'behind' ('Two men behind you', cue `trucks`, done `{ is: 'cue', name: 'trucks' }`: the frame draws it as a
+  watch line) is up while the back door is thrown open and the two run in; the script raises `done:trucks` once they stand in the shop's doorway, and
+  only then is the shot asked for ('Hold right button, aim at their doorway, let go'). The load's line stays between the two for a kit that deals the
+  ring first (the frozen stand, `?issuelend`); `alt` is unlocked on it. ON THE TAB LINE THE RIFLE'S OWN KEY IS TAKEN BACK (`tab: deny slot:rifle`,
+  given again on the selector's line): with no load row that key is no row and would put the setup away as it opened it, and the line would pass with
+  Tab never pressed. The stand-clear mark is 0.5 m further from the door (16.5, r 0.6): the whole mark is outside the charge's 1.6 m backblast, and
+  the scripted player fails at 'blow' if the row would say "too close: you". The two store posts are routes `sacks` and `crates` (a route's name is
+  said: `probes.ts words-routes` was red on `store_a`). CHECK: the scripted player now wears what the page deals (`pageKit` in its file, read by
+  `lesson-run.ts`: `kitIssuedPage` and the solo card as `main.ts` deals it), so on the page's stand all seven ways of `tut-solo-check` are played
+  with the grenade up and no load row, and on the frozen stand with the ring first and the load's line asked. Played: 2 seeds x 7 ways on each stand,
+  and once on the page on the software adapter. Never seen on a GPU; nobody has played it by hand since the rework.
 - **`tut-solo` dressed (2026-10-22, level data only; groups `dress.*` in the generator).** The maintainer, of every tutorial level: "just as much
   (if not more! since it's first impression) polish and have it really feel great and organic". ADDITIONS ONLY, off the mission's line, each man's
-  mark and every door's sweep: a melon stall and scrub on the roadside; a rope bed, a low table and a stove in the truck court's north corner; in the
+  mark and every door's sweep: a melon stall and scrub on the roadside; a rope bed and a low table in the truck court's north corner; in the
   shop a rug under the table, a floor mattress with tea, a stove, a wall hanging; sacks and a mat in the store; the two walled back lots nobody walks
-  into made a cook's yard (tandoor, rope bed, wood, a dish, a lantern) and a wash yard (a line, a motorbike, a lantern). 121 boxes, 10 props and two
-  lanterns more (16 lights). No fight moved by the scripted player's ways on either stand; judged from the software adapter's pictures only.
+  into made a cook's yard (tandoor, rope bed, wood, a dish, a lantern) and a wash yard (a line, a motorbike, a lantern). 113 boxes, 10 props and two
+  lanterns more (16 lights). It is the level's own furniture on both stands (groups `dress.*`), not the lived-in pass: `?lived=0` leaves it. The level's
+  fingerprint moved: checkpoints and recordings of `tut-solo` from before it are refused. No fight moved: the scripted player's seven ways, 2 seeds on
+  each stand (no tally over more seeds was taken: every man in it is the script's). Two free cells inside the floor mattress's footprint are cut off
+  (under the lived check's three). Judged from the software adapter's pictures only; never seen on a GPU.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`

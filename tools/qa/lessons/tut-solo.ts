@@ -3,7 +3,7 @@
 // does what the line says.
 import type { Bot } from '../lesson-run';
 import { AXIS, VAN, WALL, CORNER, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
-import { SLOTSETUP, setupRows } from '../../../src/game/slotsetup';
+import { SLOTSETUP } from '../../../src/game/slotsetup';
 
 /** is the gun's setup switched on IN THE GAME THIS RUN PLAYS: on a page the script is its own bundle, with its own copy of the table (the page's is `__knobs`) */
 const setupOn = (): boolean => (globalThis as { __knobs?: { registry?: () => Record<string, { on?: boolean }> } }).__knobs?.registry?.().SLOTSETUP?.on ?? SLOTSETUP.on;
@@ -22,7 +22,10 @@ const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO
 export const raises = { TPS_OWNCHARGE: '1' };
 /** the last men may already be down when 'Shoot the rest' comes up (the grenade took both) */
 /** …and where the gun has no setup (the switch off: the frozen stand) the two lines that open and shut it have nothing to ask and go by */
-export const idleOk = ['last', 'setup', 'tab'];
+export const idleOk = ['last', 'setup', 'tab', 'load'];   // ('load': his own card dealt whole comes with the grenade on the launcher, and the line goes by)
+/** the run wears what the mission's page deals him (lesson-run.ts): his own card, whole on the page's stand (the grenade up, no load row in the setup), the
+ *  ring first on the frozen one. Without it every way below was played with a kit the page never deals */
+export const pageKit = true;
 
 /** the right button pressed, held on a world point for `secs` (the arc is up) and let go: Input's bits are 1 left · 2 middle · 4 right */
 const rightHold = (B: Bot, p: number[], secs = 0.5) => { B.aim(p); B.step(); B.I.clicked |= 4; for (let i = 0; i < secs * 60; i++) { B.aim(p); B.I.buttons |= 4; B.step(); } B.I.buttons &= ~4; B.aim(p); B.step(3); };
@@ -122,8 +125,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   // Where the gun has no setup (the switch off) both lines go by with nothing asked
   setup: B => { once.add('setup'); if (!setupOn()) return; B.press('Digit2', 12); if (!B.g.player.setup) B.fail('the rifle\'s key pressed again did not open its setup'); },
   tab: B => { once.add('tab'); if (!setupOn()) return;
-    // (the load's row is there only for a man who carries another load: with none, the rifle's own digit is no row and puts the setup away as it opened it)
-    const rf = B.g.player.rifle, was = `${rf.mode} ${rf.attachment}`, loadRow = setupRows(B.g.player, 'rifle').some(r => r.kind === 'load'); B.press('Digit1', 8); if (loadRow) B.press('Digit2', 8);
+    const rf = B.g.player.rifle, was = `${rf.mode} ${rf.attachment}`; B.press('Digit1', 8); B.press('Digit2', 8);   // (the rifle's own key too: a row where he carries another load, the setup's way shut where he does not)
     if (!B.g.player.setup || `${rf.mode} ${rf.attachment}` !== was) B.fail(`a row's digit was taken on the line that only opens the setup (${was} → ${rf.mode} ${rf.attachment}, the setup ${B.g.player.setup ? 'up' : 'shut'})`);
     B.press('Tab', 12); if (B.g.player.setup) B.fail('Tab did not close the rifle\'s setup'); },
   auto: B => {
@@ -182,7 +184,9 @@ export const steps: Record<string, (B: Bot) => void> = {
     const lit = Math.round((B.g.player.visibility ?? 0) * 100); B.say(`  beside the door with the lamp out: the light on him ${lit}`);
     if (B.W && lit > 25) B.fail(`the lamp is out and he is still lit beside the door (${lit}): 'the dark is cover too' is not true here`);
   },
-  blow: B => { B.press('KeyF', 30); },
+  blow: B => {
+    const T = B.g.doorTools, c = T.set[0]; if (c && /too close:[^·]*\byou\b/.test(T.closeWords(c))) B.fail('the mark that says stand clear is inside his own charge\'s backblast');
+    B.press('KeyF', 30); },
   // out from beside the door, square to the doorway (from its edge the rounds go into the jamb), and the pistol
   shop: B => {
     const s = B.g.guards[2];
@@ -204,16 +208,21 @@ export const steps: Record<string, (B: Bot) => void> = {
   rifle: B => { take(B, 'Digit2'); },
   // back out through the shop and the gun court to the arch's mouth
   leave: B => { const d = B.g.doors.byName('store')!; if (!d.locked || Math.abs(d.angle) > 0.05) B.fail('the store\'s back door is open or unlocked before the last two come by it'); B.go([ARCH_MOUTH[0], 0, AXIS], 40); },
+  // the line that only has him look: it goes by once the two stand in the shop's doorway, and not before
+  behind: B => {
+    B.until(() => !stepIs(B, 'behind'), 9); if (stepIs(B, 'behind')) return;
+    const men = B.g.guards.slice(5).filter(up), off = men.filter((x: any, k: number) => Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) > 0.8);
+    if (men.length < 2 || off.length) B.fail(`the shot is asked for before the two stand in the doorway (${men.length} up, ${off.length} still on the way)`);
+  },
+  // 2 with the rifle up steps what is on the right button (the setup's load row where the setup is a mode); a kit that came loaded has nothing to do
+  load: B => { if (B.g.player.rifle.attachment === 'he40') return; B.press('Digit2', 20); if (stepIs(B, 'load')) B.press('Digit2', 10); },
   // the two in the shop's doorway behind him: the grenade into it, once both stand there (8.5 m and more: armed)
   launch: B => {
     const men = () => B.g.guards.slice(5);
-    // (a stand that deals the ring first, not the page's whole card: the grenade is put up as that build's keys do it, which the page never asks)
-    const up40 = () => { const rf = B.g.player.rifle; if (rf.attachment === 'he40') return; B.press('Digit2', 20); if (rf.attachment !== 'he40') B.press('Digit2', 10); if (rf.attachment !== 'he40') B.fail(`the grenade could not be put on the launcher (${rf.attachment})`); };
-    up40();
     B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
     if (brk() === 'again' && !once.has('launch')) { once.add('launch');
       handBack(B, 'take'); if (men().length) B.fail(`again: ${men().length} of the last men are on the floor before their line (the checkpoint is from before they came)`);
-      replay(B, ['take', 'rifle', 'leave']); B.until(() => stepIs(B, 'launch'), 4); B.step(30); up40();
+      replay(B, ['take', 'rifle', 'leave', 'behind', 'load']); B.until(() => stepIs(B, 'launch'), 4); B.step(30);
       B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
       if (men().length !== 2) B.fail(`again: ${men().length} last men after the checkpoint (two come, once)`); }
     const x = men().find(up); if (!x) B.fail('nobody came out through the shop');

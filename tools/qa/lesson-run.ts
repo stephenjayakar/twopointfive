@@ -30,6 +30,8 @@
 //                                              while it is up, or before it comes up; said why in the script). Such a step is logged as gone by with the fight
 //   mode?: { unseen?: boolean; god?: boolean; moon?: boolean }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god)
 //   raises?: Record<string, string>   words raised for this lesson's run alone on the frozen stand, put back after it (a switch the level's one way on rides on)
+//   pageKit?: boolean                 the run wears what the mission's own page deals him (kit.ts kitIssuedPage, then the solo card as main.ts deals it after
+//                                     the start): for a mission whose lines lean on its own card. Without it he is the Player as built, on either stand
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';
@@ -101,7 +103,9 @@ export interface LessonRunOut { code: 0 | 1 | 2; why: string; lines: string[]; d
 export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<LessonRunOut> {
   const scriptFile = resolve(import.meta.dir, 'lessons', `${name}.ts`), up: string[] = [];
   if (existsSync(scriptFile) && process.env.TPS_PROFILE !== 'shipped') for (const [k, v] of Object.entries(((await import(scriptFile)).raises ?? {}) as Record<string, string>)) if (process.env[k] === undefined) { process.env[k] = v; up.push(k); }
-  try { return await playLesson(name, o); } finally { for (const k of up) delete process.env[k]; }
+  const pageKit = existsSync(scriptFile) && (await import(scriptFile)).pageKit === true, K = pageKit ? await import(`${resolve(import.meta.dir, '../..')}/src/game/kit.ts`) : null;
+  K?.kitIssuedPage(true);
+  try { return await playLesson(name, o); } finally { K?.kitIssuedPage(false); for (const k of up) delete process.env[k]; }
 }
 async function playLesson(name: string, o: LessonRunOpts = {}): Promise<LessonRunOut> {
   const lines: string[] = [], out: LessonRunOut = { code: 0, why: '', lines, steps: [], secs: 0 };
@@ -136,6 +140,7 @@ async function playLesson(name: string, o: LessonRunOpts = {}): Promise<LessonRu
   g.godMode = !!o.god;
   hush(); const started = startFromQuery(g, `?levelFile=${name}.json&${String(script.query ?? '?quiet').replace(/^\?/, '')}`); unhush();
   if (!started.spec || started.why) return { ...out, code: 1, why: `the mission did not start: ${started.why ?? 'the script\'s query names no scenario'}` };
+  if (script.pageKit === true) (await import(`${ROOT}/src/game/kit.ts`)).kitSoloIf(g, false);   // (main.ts, straight after the page's start: a quiet mission alone wears its card)
   const L = g.level.scenarios?.lesson;
   if (!L) return { ...out, code: 2, why: 'the level carries no scenarios.lesson block' };
   { const faults = checkLesson(g); if (faults.length) return { ...out, code: 1, why: `lesson-check: ${faults.join(' · ')}` }; }
