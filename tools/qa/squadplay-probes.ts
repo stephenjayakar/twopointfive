@@ -30,6 +30,7 @@ const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { ORDERS, WORD_HEAD, sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { SILENT, squadSilent } = await import(`${ROOT}/src/game/silent.ts`);
 const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
+const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 
 const DT = 1 / 60;
 /** the keys of the door menu since no order is on a digit above 5: 5 on its first page turns to the door tools' page, where the four are 1 to 4 */
@@ -164,9 +165,11 @@ export const squadplayGo = guarded(async () => {
     const blue = R.men('blue'), still = blue.every((m: any) => O.of(m)?.order === 'stack' && O.of(m).door === dw && !inBounds(BREAKROOM, m.char.pos, -0.3));
     const note = R.notes().filter(s => /waiting/.test(s)).join(' ; ');
     verdict(stacked && red && l?.order === 'go' && l.who.join(' + ') === 'Red One + Red Two' && ops.length === 1 && ops[0].ended === 'in' && still, 'the orders going to red, F: red goes in at its door and blue stays stacked on its own', `${line(l)} · ${ops.map((op: any) => `${op.door.def.name} ended '${op.ended}'`).join(' · ')} · ${R.where('blue')}`);
-    verdict(/^blue waiting · T, then F$/.test(note), '… and with red in, the squad block says blue is still waiting and how to reach them (no key offered: F would not be theirs)', `"${note}"`);
-    const toBlue = R.who('blue'); R.press(F); const l2 = R.last(); R.until(() => !D.ops.length, 40);
-    verdict(toBlue && l2?.order === 'go' && l2.who.join(' + ') === 'Blue One + Blue Two' && D.stats.words === 2 && R.held === 0, 'T to blue, F: blue goes — nothing held', `${line(l2)} · words ${D.stats.words} · ${R.keys.join(' ')}`); }
+    // (the squad's only keys, cmdring.ts `only`: there is no who key to turn to blue with, so the word is theirs — it frees whoever stands waiting on it)
+    if (CMDRING.only) verdict(/^\[F\] go · blue waiting/.test(note), '… and with red in, the squad block offers F for blue, who are the ones still waiting (the squad\'s only keys: the word frees whoever waits on it)', `"${note}"`);
+    else verdict(/^blue waiting · T, then F$/.test(note), '… and with red in, the squad block says blue is still waiting and how to reach them (no key offered: F would not be theirs)', `"${note}"`);
+    const toBlue = CMDRING.only ? O.who === 'red' : R.who('blue'); R.press(F); const l2 = R.last(); R.until(() => !D.ops.length, 40);
+    verdict(toBlue && l2?.order === 'go' && l2.who.join(' + ') === 'Blue One + Blue Two' && D.stats.words === 2 && R.held === 0, CMDRING.only ? 'F again, the orders still going to red: blue goes — nothing held' : 'T to blue, F: blue goes — nothing held', `${line(l2)} · words ${D.stats.words} · ${R.keys.join(' ')}`); }
   return done();
 });
 
