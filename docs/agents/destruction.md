@@ -894,3 +894,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are on the probe runner's hold for checks written against one card (`probes.ts STEALTH_AS_IT_WAS`; `TPS_KITSTEALTH` set by hand wins). What a
   stealth run is issued is `kitstealth-check.ts`'s. `he40-keys` (d) also said 'teammates have no such row': a teammate's card has the row where
   his one round can be fired on your order (the card as a tree and `squad40.ts`; `kittree-check.ts` holds it), and the line now asks exactly that.
+- **A burst kills a man who is down and breathing** (`frag.ts FRAG.downKill`, 10-22; from play: two men put out with sponge rounds, a 40 mm burst
+  beside them, and both lay there breathing — `blast()` passed over every man already down, and `killGuard` returns on one). OFF in the module and
+  on the frozen stand (`TPS_DOWNKILL=1`; a `FROZEN_HOLDS` row; `STAND_ENV`), ON in the page (`?nodownkill`; a row on the debugger's page beside the
+  grenade's others); the journal carries it and a recording from before the key replays with it off. The rule: an ENEMY of the player's who is out
+  cold (struck, choked) or down wounded is judged where he lies — his hips (the range is measured to them), chest, head and a shin, the same lines
+  and the same wall and door rules as a man on his feet. Inside `lethalM` any line to him kills (no 'wounded' for a man who cannot flinch); past
+  it, the burst's own chance; a burst that does not kill him leaves him exactly as he was and writes no row. Everything through `blast()` has it:
+  the hand grenade, the 40 mm HE round, anybody's. The books, as `wounds.ts` does for a round into a wounded man: `downKind` 'shot'; by the
+  player's burst a kill on the card in place of the knockout that was there, a 'kill' row on the timeline naming the grenade, a shooting for
+  whoever watched; by a partner's on a quiet mission as two, the same swap (`teamtally.ts teamTallied`, new: the test that module makes the step a
+  man goes down, asked of him later); by anyone else's, his record names that man and the player's card does not move. The report counts him in
+  `killed` and in `finished`, and the log's 'N down' is the men who were up. The body is shoved off the burst (`downShove`). A defender does not
+  throw where the burst would reach a mate of his who is down breathing (`ownClear`, as `squadthrow.ts` already has it for the team). NOT ASKED:
+  a teammate or a hostage who is down, and a civilian (what her death costs is `civilians.ts`'s to say); a wall charge and the stun charge (they
+  do not go through `blast()`). NOT MENDED, seen on the way: a man on his feet killed by a burst is filed on the timeline under the gun in hand
+  (`chronicle.ts chronDown` reads the weapon off the hand), so one burst can write two weapons. Check: `frag-down` (three men put down the way a
+  ring to the head puts them, a burst beside them: dead in the open, breathing behind a wall and past the reach; the 40 mm's call; a wounded man;
+  a defender's grenade; the pair's card both ways; a watcher's memory and his own throw; a teammate passed over; off = as it was; the journal;
+  the stand), 14 lines green on both stands; `DOWNKILL_BREAK=1` fails (a), (a2), (d), (e), (f), (f2), (f3), (g2) on both. Never seen on a GPU,
+  nobody has played it.

@@ -76,6 +76,8 @@ const LOOKOUT_ID = 199, STEP_EYE_ID = 198;
 const NOTE_SECS = 2.6;
 /** metres from the step's mark the squad's ring may be opened and still be the step's ring (its `menuLine`) */
 const MENU_M = 6;
+/** the most a step's card may say (its `explain.text`): three short sentences */
+const CARD_CHARS = 260;
 function lookoutEye(id: number, e: { at: Vec3; yaw: number; fov?: number }): FogEye { return { id, pos: e.at, look: [Math.sin(e.yaw), 0, Math.cos(e.yaw)], at: e.at, fov: e.fov ?? 120, near: 0 }; }
 const FREE = /^(Escape|Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|BracketRight)$/;
 const DIGIT = /^Digit[1-5]$/;
@@ -83,11 +85,12 @@ export const RAILS_ACTIONS: readonly string[] = Object.keys(ACTS);
 
 /** what is wrong with a lesson block's rails keys (lesson.ts checkLesson adds these to its own) */
 export function railsFaults(L: LessonData): string[] {
-  const out: string[] = [], R = L.rails; if (!R) { L.steps.forEach((T, i) => { if (T.allow || T.deny || T.cue || T.checkpoint || T.fog !== undefined || T.noTap || T.eye || T.onWay) out.push(`steps[${i}] '${T.id}' carries rails keys and the lesson has no rails record`); }); return out; }
+  const out: string[] = [], R = L.rails; if (!R) { L.steps.forEach((T, i) => { if (T.allow || T.deny || T.cue || T.checkpoint || T.fog !== undefined || T.noTap || T.eye || T.onWay || T.explain || T.toward) out.push(`steps[${i}] '${T.id}' carries rails keys and the lesson has no rails record`); }); return out; }
   const bad = (w: string, a: unknown) => { if (a === undefined) return; if (!Array.isArray(a)) { out.push(`${w}: a list of actions`); return; } for (const x of a) if (!ACTS[x as string]) out.push(`${w}: no action '${String(x)}' (${RAILS_ACTIONS.join(', ')})`); };
   bad('rails.allow', R.allow);
   const cues = new Set<string>();
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
+    if (T.explain && (T.explain.text.length > CARD_CHARS || (T.explain.title?.length ?? 0) > 40)) out.push(`${w}.explain: a card is a heading of at most 40 characters and at most ${CARD_CHARS} of text (it is ${T.explain.title?.length ?? 0} and ${T.explain.text.length}): a card nobody reads teaches nothing`);
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
   if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.length > 0 && R.rows.every(v => typeof v === 'string' && !!v))) out.push('rails.rows: a list of verbs, at least one (absent: every row)');
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
@@ -136,6 +139,13 @@ export class Rails {
   /** A MISSION THAT TEACHES THE WALL (a step of it allows `wall`) keeps a walk into one from taking it until that line. The walk has no key for the gate to
    *  drop (player.ts wallPress asks here); a mission that never names the wall leaves it as the page has it. */
   locksWall(): boolean { if (BREAK) return false; const A = this.allowed(), S = this.lesson(); return !!A && !!S && !A.has('wall') && S.L.steps.some(T => T.allow?.includes('wall')); }
+
+  // ---------------------------------------------------------------- the page's two looks at the step (nothing under src/game reads them)
+  /** THE CARD of the step that is up (its `explain`) — the step's own data and nothing else: which cards have been read is the page's to keep
+   *  (ui/railcard.ts, which draws it; main.ts holds the world still under it), so nothing here is in a snapshot or a recording */
+  card(): { title?: string; text: string } | null { const S = this.lesson(), T = S?.L.steps[S.i]; return BREAK || !T?.explain || this.g.lesson.over() ? null : T.explain; }
+  /** THE ARROW the step's mark is drawn as (its `toward`): where it points — null: the ring */
+  arrow(): Vec3 | null { const S = this.lesson(), T = S?.L.steps[S.i]; return BREAK || !T?.at || !T.toward || this.g.lesson.over() ? null : T.toward; }
 
   /** no teammate shows an aiming laser on this level (irlaser.ts laserOn asks) */
   noLasers(): boolean { return !BREAK && this.data?.lasers === false; }

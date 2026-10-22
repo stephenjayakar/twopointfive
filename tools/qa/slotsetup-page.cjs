@@ -1,8 +1,10 @@
 // SLOTSETUP-PAGE: the gun's key pressed again opens its setup ON THE REAL PAGE, by the keyboard alone (src/game/slotsetup.ts, ui/handbox.ts, host/keymap.ts
 // `setFree`). Headless Chromium on the software adapter; every press is a real key event on the page, never a line written into the game's input.
-//   as the page opens     the switch is on and the kit column is the box · 2 draws the rifle; 2 again and the box is the setup: a digit in the cap before each row,
-//                         none above 5 · a row's digit steps the row and the setup is gone: 2 1 the selector, 2 2 the launcher's load, 2 3 the light ·
+//   as the page opens     the switch is on and the kit column is the box, no key cap on it · 2 draws the rifle; 2 again and the setup stands above the column:
+//                         a digit in the cap before each row, none above 5, the back key's cap in its corner; four seconds on it is still up · a row's digit
+//                         steps the row and the setup is gone: 2 1 the selector, 2 2 the launcher's load, 2 3 the light ·
 //                         Z and L file nothing · 2 then Tab: shut, nothing set · 1 draws the pistol, 1 again then 3: its light
+//   with ?setuppop=0      the first build's: the rows are the box's second line, and the setup shuts by itself after its seconds
 //   with ?slotsetup=0     the switch is off and the column is the one before · 2 again steps the launcher's load, no setup · Z turns the selector, L the light
 //   PORT=<port> node tools/qa/slotsetup-page.cjs        (a dev server on that port: PORT=<port> bun run tools/serve.ts)
 // exit 0 = every line PASS with no page error · 1 = otherwise. Nothing here has been seen on a GPU, and nobody has played it.
@@ -24,16 +26,17 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute${
     if (fatal) errors.push('fatal: ' + fatal);
     const key = async (k, frames = 3) => { await page.keyboard.press(k); await page.evaluate(n => window.__step(n), frames); };
     const read = () => page.evaluate(() => { const g = window.__game, pl = g.player, el = document.getElementById('equip'), box = el.querySelector('.hb');
-      const kbd = [...el.querySelectorAll('.hb-row kbd:not(.no)')].map(k => k.textContent);   // (the caps before the rows the setup can step: empty to the eye while it is shut)
-      return { on: window.__knobs.registry().SLOTSETUP.on, hand: el.classList.contains('hand'), slot: pl.slot, away: pl.holstered, up: pl.setup ? pl.setup.gun : '', lit: !!box && box.classList.contains('setup'), kbd,
+      const hp = el.querySelector('.hp'), kbd = [...el.querySelectorAll(hp ? '.hp kbd:not(.x)' : '.hb-row kbd:not(.no)')].map(k => k.textContent);   // (the caps before the rows the setup can step; with ?setuppop=0 they are on the box, empty to the eye while it is shut)
+      const R = hp && hp.getBoundingClientRect(), E = el.getBoundingClientRect();
+      return { pop: !!hp, above: !!R && R.height > 20 && R.top >= 0 && R.bottom <= E.top + 1, back: hp ? (hp.querySelector('kbd.x') || {}).textContent || '' : '', caps: el.querySelectorAll('kbd').length, words: (el.querySelector('.hb-st') || {}).textContent || '', on: window.__knobs.registry().SLOTSETUP.on, hand: el.classList.contains('hand'), slot: pl.slot, away: pl.holstered, up: pl.setup ? pl.setup.gun : '', lit: !!box && box.classList.contains('setup'), kbd,
         mode: pl.rifle.mode, load: pl.rifle.attachment, light: pl.rifle.lightOn === true, plight: pl.pistol.lightOn === true, keys: [...el.querySelectorAll('.slot .key')].map(k => k.textContent).join(' ') }; });
     return { page, errors, key, read }; };
-  const s = r => `on ${r.on} · box ${r.hand} · ${r.slot}${r.away ? ' (away)' : ''} · setup '${r.up}'${r.lit ? ' lit' : ''} [${r.kbd.join(' ')}] · ${r.mode} · ${r.load} · light ${r.light} · pistol light ${r.plight}`;
+  const s = r => `on ${r.on} · box ${r.hand} · ${r.slot}${r.away ? ' (away)' : ''} · setup '${r.up}'${r.lit ? ' lit' : ''}${r.pop ? ` panel${r.above ? ' above' : ' NOT above'} ${r.back}` : ''} [${r.kbd.join(' ')}] '${r.words}' · ${r.mode} · ${r.load} · light ${r.light} · pistol light ${r.plight}`;
 
   { const A = await open(''), { key, read } = A; const r0 = await read();
-    await key('2', 120); const drawn = await read(); await key('2'); const up = await read();
-    line(r0.on === true && r0.hand && drawn.slot === 'rifle' && !drawn.away && drawn.up === '' && up.up === 'rifle' && up.lit && up.kbd.length >= 2 && up.kbd.every(d => +d >= 1 && +d <= 5) && up.load === drawn.load && up.mode === drawn.mode,
-      'the page opens with the switch on and the kit column is the box; 2 draws the rifle, 2 again and the box is its setup: a digit before each row, none above 5, nothing set yet', `${s(r0)}\n    drawn: ${s(drawn)}\n    2 again: ${s(up)} · slot keys ${up.keys}`);
+    await key('2', 120); const drawn = await read(); await key('2'); const up = await read(); await A.page.evaluate(() => window.__step(240)); const later = await read();
+    line(r0.on === true && r0.hand && drawn.slot === 'rifle' && !drawn.away && drawn.up === '' && !drawn.pop && drawn.caps === 0 && /SEMI|AUTO/.test(drawn.words) && up.up === 'rifle' && up.lit && up.pop && up.above && up.back === 'TAB' && up.kbd.length >= 2 && up.kbd.every(d => +d >= 1 && +d <= 5) && up.load === drawn.load && up.mode === drawn.mode && later.up === 'rifle' && later.pop,
+      'the page opens with the switch on and the kit column is the box, what is set in plain words and no key cap on it; 2 draws the rifle, 2 again and its setup stands above the column: a digit before each row, none above 5, the back key in its corner, nothing set yet; four seconds on it is still up', `${s(r0)}\n    drawn: ${s(drawn)}\n    2 again: ${s(up)} · slot keys ${up.keys}\n    four seconds on: ${s(later)}`);
     await key('1'); const a = await read(); await key('2'); await key('2'); const b = await read(); await key('2'); await key('3'); const c = await read();
     line(a.mode !== up.mode && a.up === '' && a.load === up.load && b.load !== a.load && b.mode === a.mode && b.up === '' && c.light !== b.light && c.load === b.load && c.up === '' && c.slot === 'rifle',
       'a row\'s digit steps its row and the setup is gone: 2 1 turns the selector, 2 2 puts the next load on the launcher, 2 3 turns the light', `2 1: ${s(a)}\n    2 2: ${s(b)}\n    2 3: ${s(c)}`);
@@ -50,6 +53,11 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute${
     line(r0.on === false && !r0.hand && drawn.slot === 'rifle' && again.up === '' && !again.lit && again.load !== drawn.load && z.mode !== again.mode && l.light !== z.light && !B.errors.length,
       'the same page with ?slotsetup=0: the switch is off and the column is the one before; 2 again steps the launcher\'s load with no setup, Z turns the selector, L the light', `${s(r0)}\n    2: ${s(drawn)}\n    2 again: ${s(again)}\n    Z: ${s(z)}\n    L: ${s(l)} · errors ${JSON.stringify(B.errors.slice(0, 3))}`);
     await B.page.close(); }
+  { const C = await open('&setuppop=0'), { key, read } = C; const r0 = await read();
+    await key('2', 120); const drawn = await read(); await key('2'); const up = await read(); await C.page.evaluate(() => window.__step(150)); const later = await read();
+    line(r0.on === true && r0.hand && !up.pop && drawn.caps > 0 && up.up === 'rifle' && up.lit && up.kbd.length >= 2 && later.up === '' && !later.lit && later.load === drawn.load && later.mode === drawn.mode && !C.errors.length,
+      'the same page with ?setuppop=0: the rows are the box\'s second line, 2 again fills their caps, and the setup shuts by itself after its seconds with nothing set', `${s(r0)}\n    2: ${s(drawn)}\n    2 again: ${s(up)}\n    two and a half seconds on: ${s(later)} · errors ${JSON.stringify(C.errors.slice(0, 3))}`);
+    await C.page.close(); }
   await browser.close();
   console.log(failed ? '=== slotsetup-page: FAIL ===' : '=== slotsetup-page: ALL PASS ===');
   process.exit(failed ? 1 : 0);

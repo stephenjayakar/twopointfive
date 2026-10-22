@@ -145,7 +145,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the slot in hand pressed again opens its setup (slotsetup.ts SLOTSETUP): a recording made with it on replays its second press of a gun's digit as the setup, one from before as the launcher's next load
   'SLOTSETUP',
   // glass as buildings have it (glassbreak.ts GLASSREAL): a recording made with it on replays its toughened sheets dropping at once and its panes typed by where they sit, one from before with the wave and the wall's typing
-  'GLASSREAL', 'IR', 'LIGHTS'];
+  'GLASSREAL',
+  // a mission that leans loud is not graded as a sneak (verdict.ts VERDICT.loudCard): the two lines the mission says at its end are worded by it, so a recording
+  // made with it on replays them without the grade, and one from before the key (or the table) with it
+  'VERDICT', 'IR', 'LIGHTS'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';

@@ -19,7 +19,7 @@
 //     carbine: carbine-fire carbine-rig
 //     charmats: charmats-cast charmats-off charmats-shader charmats-slots charmats-tables
 //     civilians: civilians-comply civilians-determinism civilians-hearing civilians-identity civilians-phone civilians-scoring civilians-sight civilians-spots
-//     debrief: debrief-charge debrief-dom debrief-doorname debrief-rooms debrief-run debrief-score
+//     debrief: debrief-charge debrief-dom debrief-doorname debrief-loud debrief-rooms debrief-run debrief-score
 //     decals: decals-follow decals-identity decals-off decals-ring decals-sites
 //     destruction: destruction-bounds destruction-caps destruction-determinism destruction-dust destruction-hearing destruction-identity destruction-impulses destruction-reset destruction-screen destruction-sheet
 //     devices: devices-camera devices-editor devices-keypad devices-laser devices-vision
@@ -2434,6 +2434,7 @@ if (on('aimlevel', 'aim', 'weapons', 'player', 'all')) await run('aimlevel', asy
 if (on('aimlow', 'aim', 'weapons', 'player', 'all')) await run('aimlow', async () => (await import('./aimlow-check.ts')).aimLow());   // a man under the reticle who is LOW (head down, on a knee, doubled over a flash) is aimed at where he is: the gun comes down onto him and the round finds him (AIM.player.low — the frozen stand's is 0; AIMLOW_BREAK=1 must fail)
 if (on('leangun', 'wallsnap', 'player', 'all')) await run('leangun', async () => (await import('./leangun-check.ts')).leanGun());   // stacked at a jamb on his rifle's side the step-out goes as far as the rifle needs (WALLSNAP.leanGun) and its round gets out; the aim ring is barred while no round of his can (GUNWALL.mark). LEANGUN_BREAK=1 must fail
 if (on('throwrest', 'throw', 'player', 'all')) await run('throwrest', async () => (await import('./throwrest-check.ts')).throwRestCheck());   // the throw preview's ring is where the can comes to REST, not its first touch (THROWBACK.restMark): the mark against where smoke, stun and frag really end, 15 throws. THROWREST_BREAK=1 must fail
+if (on('radiohome', 'words', 'dialogue', 'all')) await run('radiohome', async () => (await import('./radiohome-check.ts')).radioHomeCheck());   // the handler's radio asides are said on the office night only (WORDS.radioHome): the office still hears her, three other levels do not, with the key down they do. RADIOHOME_BREAK=1 must fail
 if (on('lightwall', 'player', 'all')) await run('lightwall', async () => (await import('./lightwall-probes.ts')).lightWall());   // a carried light never stands beyond the wall or the leaf its carrier is pressed to (lighting.ts LIGHTWALL — the frozen stand holds it off)
 if (on('gunwall', 'player', 'all')) await run('gunwall', async () => (await import('./gunwall-probes.ts')).gunWall());   // a raised gun comes to the low ready at a wall instead of being drawn through it (gunwall.ts GUNWALL — the frozen stand holds it off)
 // closer than ever (src/game/close.ts; the frozen stand holds CLOSE.on off — every probe turns it on itself). Family `close`, `all` and all-quick.
@@ -2606,6 +2607,7 @@ if (on('debrief-run', 'debrief', 'all')) await run('debrief-run', async () => (a
 if (on('debrief-rooms', 'debrief', 'all')) await run('debrief-rooms', async () => (await import('./debrief-probes.ts')).debriefRooms());
 if (on('debrief-doorname', 'debrief', 'words', 'all')) await run('debrief-doorname', async () => (await import('./debrief-probes.ts')).debriefDoorName());   // a kicked or picked door is called on the card what its level calls it (WORDS.doors)
 if (on('debrief-charge', 'debrief', 'all')) await run('debrief-charge', async () => (await import('./debrief-probes.ts')).debriefCharge());   // the rows a wall charge makes are worded as a charge's
+if (on('debrief-loud', 'debrief', 'all')) await run('debrief-loud', async () => (await import('./debrief-probes.ts')).debriefLoud());   // a row that leans loud is not graded as a sneak (verdict.ts VERDICT.loudCard; LOUDCARD_BREAK=1 must fail)
 if (on('debrief-score', 'debrief', 'all')) await run('debrief-score', async () => (await import('./debrief-probes.ts')).debriefScore());
 if (on('debrief-dom', 'debrief', 'all')) await run('debrief-dom', async () => (await import('./debrief-probes.ts')).debriefDom());
 // ---------------------------------------------------------------- 'breach' = the family (breach-probes.ts): what stays of the removed daytime breach showcase's checks — the daylight variant's round trip (here) and clear-doctrine (below)
@@ -2851,6 +2853,7 @@ if (on('frag-theirs', 'frag', 'all')) await run('frag-theirs', async () => (awai
 if (on('frag-mates', 'frag', 'all')) await run('frag-mates', async () => (await import('./frag-probes.ts')).fragMates());   // the rest guess counts loose furniture; no leg ends in a mate's corner (FRAG.restProps / fleeApart; FRAGMATES_BREAK=1 must fail)
 if (on('frag-fleedoor', 'frag', 'all')) await run('frag-fleedoor', async () => (await import('./frag-probes.ts')).fragFleeDoor());   // caught by a grenade with no cover, a man leaves by a doorway that already stands open (FRAG.fleeDoor; FLEEDOOR_BREAK=1 must fail)
 if (on('frag-wallflee', 'frag', 'all')) await run('frag-wallflee', async () => (await import('./frag-probes.ts')).fragWallFlee());   // a wall the burst will open is no cover to a man getting off it (FRAG.wallFlee; WALLFLEE_BREAK=1 must fail)
+if (on('frag-down', 'frag', 'all')) await run('frag-down', async () => (await import('./frag-probes.ts')).fragDown());   // a burst kills a man who is down and breathing — out cold or wounded (FRAG.downKill; DOWNKILL_BREAK=1 must fail)
 // BURSTS × GLASS (tools/qa/burstglass-probes.ts — a frag's or a 40 mm round's burst beside a window: the glass takes it by the fracture model's rules FIRST, the men
 // are judged through what that left; rebuild/gear-and-glass/bursts.md). Stands the glass parts up itself; BURSTGLASS_BASE=1 runs it on the base build's numbers = red.
 for (const [name, fn] of [['burst-whole', 'burstWhole'], ['burst-breaks', 'burstBreaks'], ['burst-open', 'burstOpen'], ['burst-theirs', 'burstTheirs'], ['burst-off', 'burstOff'], ['burst-red', 'burstRed']] as const)

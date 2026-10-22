@@ -16,9 +16,13 @@
 //            rifle's selector, 2 2 its next load (the '2 again' the build had, one press on), 2 3 its light; 1 3 the pistol's light.
 //   SHUT     by a pick; by the back key (backkey.ts); by the trigger, the right button or a reload (none of them is taken: the round goes); by a digit
 //            that is no row (the gun's own shuts it and no more, any other is the slot it always was); when what is in his hands changes or something
-//            takes them; when the order menu or the Space list comes up (the digits are theirs); and by itself `secs` after it opened or was last used (0: never).
+//            takes them; when the order menu or the Space list comes up (the digits are theirs). No clock runs on it (`pop`, below): it is a MODE he
+//            is in until one of those — the maintainer, 10-22, after playing the first build's second and a half: "the timer is bad. we should just
+//            have it switch a mode", "it should be something that pops up above the equipment menu rather than always taking up space". With `pop`
+//            off it also shuts by itself `secs` after it opened or was last used (0: never), as that build did.
 // His feet, his aim and his trigger are his own throughout: nothing is held, nothing is frozen, and no key is read here but the digits and the back key.
-// WHAT THE HUD SHOWS is ui/handbox.ts's: the box of the thing in his hands lights its rows' digits while the setup is up.
+// WHAT THE HUD SHOWS is ui/handbox.ts's: the setup's rows stand above the kit column while it is up and at no other time; the box of the thing in his
+// hands says what is set in plain words. (`pop` off: the rows are the box's second line, their digits lit while the setup is up.)
 // THE TWO KEYS IT REPLACES (Z the selector, L the light) are the board's to drop, not the game's (host/keymap.ts `setFree`): the game goes on asking for
 // 'KeyZ' and 'KeyL' and meaning what it meant, so a recording made before plays, and a player who wants either on a key puts its row on one in Options.
 // Off = the build as it was: every function here answers on its first line, 2 again steps the launcher's load in player.ts as it did.
@@ -36,7 +40,11 @@ import { backableInteract } from './interact';
 
 export const SLOTSETUP = {
   on: false,
-  /** seconds the setup stays up with nothing pressed in it (0: until it is shut) */
+  /** the setup is a mode that pops up above the kit column: no clock runs on it (`secs` is not read) and its rows are drawn only while it is up
+   *  (ui/handbox.ts). Off in the module and on the frozen stand with `on` (`TPS_SLOTSETUP=1` raises both); on in the page (`?setuppop=0`: the rows in
+   *  the box and the clock, as the first build had them); a recording from before the key replays with it off */
+  pop: false,
+  /** with `pop` off: seconds the setup stays up with nothing pressed in it (0: until it is shut) */
   secs: 1.5,
   /** a pick leaves the setup up for another (false: a pick shuts it — the same two presses every time) */
   stay: false,
@@ -71,7 +79,7 @@ export function slotSetupOpen(g: Game): boolean {
   return S.gun === setupGun(pl) && g.time - S.seen <= STALE && !lapsed(g, S.t);
 }
 /** how much of its time the open setup has left, 1‥0 (1 with no clock on it; 0 = not up) */
-export function slotSetupLeft(g: Game): number { const S = g.player.setup; return !S || !slotSetupOpen(g) ? 0 : SLOTSETUP.secs > 0 ? Math.max(0, 1 - (g.time - S.t) / SLOTSETUP.secs) : 1; }
+export function slotSetupLeft(g: Game): number { const S = g.player.setup; return !S || !slotSetupOpen(g) ? 0 : clocked() ? Math.max(0, 1 - (g.time - S.t) / SLOTSETUP.secs) : 1; }
 /** Esc with the back key's rule off (Game.escape): shut it, and say whether there was one to shut */
 export function slotSetupShut(g: Game): boolean { if (!slotSetupOpen(g)) return false; g.player.setup = null; return true; }
 /** the presses that put the next load on the launcher, as a line of words names them ('2 again' in the build before) */
@@ -85,7 +93,9 @@ export function slotSetupTakes(g: Game, code: string): boolean {
   const pl = g.player, gun = setupGun(pl); if (!gun) return false;
   return code === `Digit${SLOT_KEY[gun]}` || (slotSetupOpen(g) && setupRows(pl, gun).some(r => code === `Digit${r.key}`));
 }
-const lapsed = (g: Game, t: number) => SLOTSETUP.secs > 0 && g.time - t >= SLOTSETUP.secs;
+/** does the open setup run down by itself (never as a mode: `pop`) */
+const clocked = () => !SLOTSETUP.pop && SLOTSETUP.secs > 0;
+const lapsed = (g: Game, t: number) => clocked() && g.time - t >= SLOTSETUP.secs;
 
 /** presses of the launcher's own step from the load that is up to the next one he has any of (0: none but the one that is up) */
 function loadSteps(pl: Player): number { const rf = pl.rifle, A = rf.attachments, n = A.length, i0 = rf.attachment ? A.indexOf(rf.attachment) : -1; for (let k = 1; k < n; k++) if (rf.left(A[(i0 + k) % n]) > 0) return k; return 0; }

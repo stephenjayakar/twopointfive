@@ -92,6 +92,7 @@ import { BACKKEY } from '../game/backkey';
 import { moraleFromQuery } from '../game/morale';
 import { RUNNER } from '../game/runner';
 import { STARTLE } from '../game/startle';
+import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
 import { DARKFOE } from '../game/darkfoe';
 import { POWEROUT } from '../game/powerout';
@@ -259,6 +260,7 @@ export function pageSwitches(q: URLSearchParams): void {
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
   GLASSREAL.drop = q.get('glassdrop') !== '0'; GLASSREAL.place = q.get('glassplace') !== '0';   // glass as buildings have it (game/glassbreak.ts GLASSREAL): a toughened sheet goes white and drops at once, no wave across it; and a pane is toughened where it reaches the floor or is a door's panel, float where it starts at a sill — ON in the page; ?glassdrop=0 = the wave, ?glassplace=0 = outside toughened and inside float, as they were
   SLOTSETUP.on = q.get('slotsetup') !== '0';   // the slot in hand pressed again opens its setup (game/slotsetup.ts): 1 or 2 pressed with that gun in the hands lights its rows — 1 semi / auto, 2 the launcher's load, 3 the light — and the Z and L keys give nothing (host/keymap.ts setFree, the same word) — ON in the page; ?slotsetup=0 = 2 again steps the load, Z is the selector and L the light, as they were
+  SLOTSETUP.pop = q.get('setuppop') !== '0';   // …and the setup is a mode that pops up above the kit column, with no clock on it (slotsetup.ts `pop`) — ON in the page; ?setuppop=0 = its rows on the box's second line and shut by itself after a second and a half, as the first build had it
   DOORFORCE.on = q.get('doorforce') !== '0';   // an alerted man does not wait at a shut door (game/doorforce.ts): a defender who is sure an enemy is at its far face fires through a wooden leaf and, free to move, ends by booting it in — ON in the page; ?doorforce=0 = he rests his gun on it or goes to its handle, as he did
   RAILS.on = q.get('rails') !== '0';   // a tutorial mission's frame (game/rails.ts): on a level whose lesson carries a rails record, only what the step that is up has unlocked works, the level's script is cued by the steps, the checkpoints are the authored ones and a teammate is never lost — ON in the page; ?rails=0 = such a level plays as a plain lesson
   NOSHOVE.on = q.get('noshove') !== '0';   // teammates falling in never shove the player (game/noshove.ts): a follower whose way lies through him goes round or stops short, and a shove from anybody is not read as his walking — ON in the page; ?noshove=0 = shouldered aside by his own file, as it was
@@ -268,6 +270,7 @@ export function pageSwitches(q: URLSearchParams): void {
   FRAG.fleeWise = !q.has('nofleewise');   // nobody runs onto a live grenade (game/frag.ts FRAG.fleeWise): judged from where it will rest, no leg nearer it than he stands, the leg he has kept, no staying put inside its lethal reach — ON in the page; ?nofleewise = the flee as it was
   FRAG.restProps = FRAG.fleeApart = FRAG.fleeOnto = FRAG.fleeSam = FRAG.fleeLook = !q.has('nofleemates');   // the mends to that flee (game/frag.ts): the rest guess counts the loose furniture the grenade will stop at, no leg shoulders a mate (or Sam) out of the corner he is staying in or running for, a man a stride short of his corner comes onto it, and a man left open floor beside a mate's cover looks once more for his own — ON in the page; ?nofleemates = all off, the flee as it was
   FRAG.fleeDoor = !q.has('nofleedoor');   // caught by a grenade with no cover to get behind, a man leaves by a doorway that already stands open (game/frag.ts fleeByDoor; ?nofleedoor = the one straight leg inside the room)
+  FRAG.downKill = !q.has('nodownkill');   // a burst kills a man who is down and breathing — out cold from a sponge round, a blow or a choke, or down wounded — where it reaches him (game/frag.ts blast; ?nodownkill = every man already down is passed over, as it was)
   FRAG.wallFlee = !q.has('nowallflee');   // a wall or cover piece the burst would open is no cover to a man reckoning it before it goes off (game/frag.ts exposedTo; ?nowallflee = only the door leaves it would take count)
   AIMCOST.lamp = q.get('lamphit') !== '0';   // a lamp breaks only to a round that MEETS it, and the reticle coming onto a lamp starts the aim's settle over (game/aimcost.ts) — ON in the page; ?lamphit=0 = a round passing within 0.3‥0.45 m breaks it, as it was
   AIMCOST.move = q.get('movecost') !== '0';   // moving feet open the cone, for anybody with a gun: the feet term doubled and remembered a beat after he stops; a guard waits that beat before he starts shooting (game/aimcost.ts) — ON in the page; ?movecost=0 = as it was
@@ -304,6 +307,7 @@ export function pageSwitches(q: URLSearchParams): void {
   GUARD_EYE.farCalm = !q.has('nofarcalm');   // …and a glimpse from past those 16 m is no place to walk to until it is what has him looking (game/guards.ts farFaint: a calm man's fix lands the frame the sight tips him) — ON in the page; ?nofarcalm = every far glimpse writes his fix at once, as the far reach first shipped
   PLAN.menuOnly = !q.has('planalways');   // the plan's ways, marks and fans only while the order menu is up (picture only, on on both stands); `?planalways` = for as long as the orders stand
   moraleFromQuery(q);   // shaken (game/morale.ts): a blast makes the men near it duck, and breaks a man alone in the dark — down, back off the hole, a burst into the dust, a call nobody answers: ON in the page; ?nomorale = every man as steady as he was. With it who is green and how brittle they all are: ?training=green|mixed|trained (absent: by the squad's own key and the difficulty), ?nerve=brittle|steady — and a choice made by hand in the debugger's Enemy nerve section, kept for the visit
+  VERDICT.loudCard = q.get('loudcard') !== '0';   // a mission that leans loud is not graded as a sneak (game/verdict.ts loudRow): its end card shows no rating word, no score, no badges, and the sneak's numbers stand untoned — ON in the page; ?loudcard=0 = the stealth game's rating on every card it stands on, as it was
   STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
   RUNNER.on = !q.has('norunner');   // drops it and runs (game/runner.ts): a broken man alone, his magazine run dry, with an enemy in his eyes at arm's length shouts that he is done, lets the weapon fall and runs — to his mates, then out of the building: ON in the page; ?norunner = he stays and changes his magazine, as he did
   DARKDOOR.on = !q.has('nodarkdoor');   // not in there alone (game/darkdoor.ts): a green man, alarmed and alone, stops at the doorway of a dark room, says so, sweeps the opening and waits for a mate — then they go in together, or nobody comes and he gives it up: ON in the page (it acts only with morale on); ?nodarkdoor = every man walks into the dark as he did
@@ -464,6 +468,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRAG.fleeSam': 'TPS_FLEEMATES=1',
   'FRAG.fleeLook': 'TPS_FLEEMATES=1',
   'FRAG.wallFlee': 'TPS_WALLFLEE=1',
+  'FRAG.downKill': 'TPS_DOWNKILL=1',
   'FRAG.fleeDoor': 'TPS_FLEEDOOR=1',
   'DOORSTAY.on': 'QA_DOORSTAY=1 (playthrough.ts plays it on)',
   'LIGHTWALL.on': 'TPS_LIGHTWALL=1',
@@ -518,6 +523,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'MORALE.on': 'TPS_MORALE=1',
   'RUNNER.on': 'TPS_RUNNER=1',
   'STARTLE.on': 'TPS_STARTLE=1',
+  'VERDICT.loudCard': 'TPS_LOUDCARD=1',
   'DARKDOOR.on': 'TPS_DARKDOOR=1',
   'DARKFOE.on': 'TPS_DARKFOE=1',
   'POWEROUT.on': 'TPS_POWEROUT=1',
@@ -546,6 +552,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'RAILS.on': 'TPS_RAILS=1',
   'DOORFORCE.on': 'TPS_DOORFORCE=1',
   'SLOTSETUP.on': 'TPS_SLOTSETUP=1',
+  'SLOTSETUP.pop': 'TPS_SLOTSETUP=1',
   'GLASSREAL.drop': 'TPS_GLASSDROP=1 (acts only with the glass up: GLASSFX=on)',
   'GLASSREAL.place': 'TPS_GLASSPLACE=1 (acts only with the glass up: GLASSFX=on)',
   'AIMCOST.lamp': 'TPS_LAMPHIT=1',
@@ -674,6 +681,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'GEAR.on': 'TPS_GEAR=1',
   'WORDS.on': 'TPS_WORDS=1',
   'WORDS.doors': 'TPS_DOORNAMES=1',
+  'WORDS.radioHome': 'TPS_RADIOHOME=1',
   'UNSEEN.on': 'TPS_UNSEEN=1',
   'HOLDFIRE.on': 'TPS_HOLDFIRE=1',
   'SILENT.stackSet': 'TPS_SILENTSET=1',
