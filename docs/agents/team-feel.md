@@ -255,6 +255,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sits beside it in `laserOn` and is not this switch. `ir-draw` was red before this change and is as red after it (block-four, block-squads,
   warehouse-four, and snatch-four on the page's stand: the same lines on the untouched build). Never seen on a GPU; nobody has played it. Open with
   the maintainer: whether Sam's own line should go too.
+- **A pair goes round one way** (`ORDERS.sameWay`, orders.ts `sameWays`, run at the end of a giving and of a tried door's second leg; the maintainer,
+  10-22, the plan lesson's hall, the blue pair sent to its back door and walking round the hall one man by each side: "the guys shouldn't split up in
+  situations like this -- buddy teams should try to stay together"). Cause: each man's way is his own short one (`route`), and from in front of a
+  building the two ways round it are a tie two men a step apart break differently. The rule: of the men one giving handed one order on one door, a
+  pair at a time (a pair's two where both are among them, the rest together), a man who stands within `sameNearM` (5 m) of the first of his lot and
+  is sent within 5 m of where that one is sent, and whose own way gets more than `sameApartM` (6 m) off his, goes by ONE of the two ways: the other
+  man's corners and then his own mark, whichever costs its taker the fewer metres more (the first man's where it is all one). Handed out as a way
+  round is (`via` corners), to both men, so the two keep one pace (a man on corners does not dash). Never at a lock, through the door he is kept off,
+  through more uncleared room than his own way, nor more than `sameLong` (1.5) times his own + 2 m; else each his own way, as it was. Not the men an
+  entry sends in by a door, nor a follower. A man back from a fight is routed afresh, alone.
+  ON in the page (`?sameway=0`), OFF in the module and on the frozen stand (`TPS_SAMEWAY=1`, `FROZEN_HOLDS`, the pin lists in threshold-probes,
+  nvg-probes and irlaser-probes); journal: a recording from before the key replays with it off. `probes.ts same-way` (family `ordereddoor`), both
+  stands, 9 of 9; `SAMEWAY_BREAK=1` fails 3 on both. Measured there (the lesson's level, nobody but the four): the pair stood at 30 spots along the
+  hall's front, the two ways over 6 m apart at 10 → 0 (the widest 9.1 → 2.0 m); the most a man walks more than his own way 3.3 m; walked from the
+  worst spot the two got 9.5 m apart → 2.0 m and both stand on their marks (15 s → 16 s on the page's stand). KNOWN: two men more than 5 m apart
+  when told are left alone; the lock, own-door and uncleared-room bounds have no staging in the check (the walk cap and the 5 m have). No tally of
+  fights was run. Never seen on a GPU, nobody has played it.
 - **A teammate's light is dark into the wall at his muzzle** (`LIGHTS.wallOff`, `src/game/guards.ts wallDark`; 10-22, the maintainer off the first
   tutorial mission: "weird that they are shining the flashlight on the wall immediately in front of them"). The other light rules decide whether a
   teammate WANTS a light (walking to a mark, searching, a shot just heard); the light points where the gun points, so a man walking up to a stack along
@@ -269,8 +286,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's stand, 32 → 0 on the frozen one, never dark with a ray clear, never dark on a man in the beam. MEASURED (page's stand, the scripted player): the first tutorial mission's
   opening, men lit into something under a metre 42 of 56 samples → 0 of 14, and its stack 110 → 3; the tutorial's scripted
   run still plays through; registry rescue seeds 1 to 24 and night breach seeds 1 to 16, on against off: no seed differs in its end, the men standing
-  or the enemies down (the mean run is a tenth of a second shorter). It moves no fight there because a light on a wall at arm's length lights nothing
-  else by the CPU estimate. KNOWN: in a dim place a man whose light is off takes his goggles down (nvg.ts, as with every other reason his light is
+  or the enemies down (the mean run is a tenth of a second shorter). That is those forty runs' ends, not "it moves no fight": a light is in the
+  simulation (a lit man is seen sooner, a dark light in a dim place takes his goggles down), so a run with the rule on is another game from the first
+  light it puts out, and a long one drifts (the plan lesson's check, played twice over: a third enemy alerted with it on, none with it off). KNOWN: in a dim place a man whose light is off takes his goggles down (nvg.ts, as with every other reason his light is
   off) and raises them 0.7 s after it burns again; a checkpoint does not keep the 0.3 s clock (as with the other light clocks). A man facing a mate's
   back at arm's length is not a wall and stays lit. NEVER SEEN ON A GPU; nobody has played it.
 - **An IR light on the goggles** (`src/game/irlight.ts`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
