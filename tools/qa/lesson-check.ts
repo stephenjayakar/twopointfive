@@ -37,6 +37,8 @@ for (const name of list) {
   verdict(rows.length > 0 && rows.every(e => e.group === (L.rails ? 'tutorial' : 'training')), `the missions list has it under ${L.rails ? 'Tutorial' : 'Training'} (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
   verdict(rows.every(e => kitAsIssued(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'training' && e.group !== 'tutorial')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued), and no other row is');
   { const W = await stand(), faults: string[] = checkLesson(W.game); verdict(!faults.length, 'the block against the built floor: every test names a kind, a door, a light and an area this floor has', faults.join(' · ')); }
+  // (not a verdict: a rows list that names an act and withholds the one that puts it back — game/rails.ts rowsWithheld; its author's to judge)
+  { const { rowsWithheld } = await import(`${ROOT}/src/game/rails.ts`); for (const n of rowsWithheld(JSON.parse(readFileSync(file, 'utf8')).scenarios?.lesson) as string[]) console.log(`  NOTE  ${n}`); }
   for (const e of rows) {
     const q: string = scenarioQuery(e);
     verdict(entryOfQuery(q)?.id === e.id, `'${e.title}': its link reads back to its own row`, q);

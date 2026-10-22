@@ -105,6 +105,17 @@ const FREE = /^(Escape|Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|Br
 const DIGIT = /^Digit[1-5]$/;
 export const RAILS_ACTIONS: readonly string[] = Object.keys(ACTS);
 
+/** A ROWS LIST THAT TAKES AN ACT BACK OUT OF HIS HANDS (`rails.rows`): a list names the verbs a mission teaches, and every other row is withheld — the act that
+ *  puts a listed one back among them. He opens a door with the taught row and nothing in reach shuts it (the maintainer on the stealth mission: "nothing
+ *  in reach to close the door?"). Each pair here is [an act, the act that undoes it]; `rowsWithheld` says which a list names without its other half. Notes,
+ *  not faults: a mission may mean it (a door that must stand open), and a row added beside a taught one can take Space's tap from it — the list is its
+ *  author's to mend. tools/qa/lesson-check.ts prints them */
+const UNDO: readonly (readonly [string, string, string])[] = [['push', 'pull', 'a door he opens cannot be shut'], ['ease', 'pull', 'a door he eases open cannot be shut'],
+  ['drag', 'drop', 'a body he drags cannot be let go'], ['lightsOff', 'lightsOn', 'a room\'s lights he puts out cannot be put on'], ['breakerOff', 'breakerOn', 'the mains he cuts cannot be put back']];
+export function rowsWithheld(L: LessonData | null | undefined): string[] {
+  const R = L?.rails?.rows; if (!Array.isArray(R)) return [];
+  return UNDO.filter(([a, b]) => R.includes(a) && !R.includes(b)).map(([a, b, why]) => `rails.rows names '${a}' and not '${b}': ${why}`);
+}
 /** what is wrong with a lesson block's rails keys (lesson.ts checkLesson adds these to its own) */
 export function railsFaults(L: LessonData): string[] {
   const out: string[] = [], R = L.rails; if (!R) { L.steps.forEach((T, i) => { if (T.allow || T.deny || T.cue || T.checkpoint || T.fog !== undefined || T.noTap || T.eye || T.onWay || T.explain || T.toward || T.after) out.push(`steps[${i}] '${T.id}' carries rails keys and the lesson has no rails record`); }); return out; }
