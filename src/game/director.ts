@@ -1,6 +1,8 @@
 // The DIRECTOR: a level's bespoke scripting, run on the game clock (docs/design/level-scripting.md — milestone M1; the notebook is docs/internal/director.md).
-// NO SHIPPED LEVEL HAS A SCRIPT TODAY: the office's (levels/office.script.ts — the night and day showcases, its programs 'night' and 'breach') was removed with the two
-// showcases, so on every level the Director has no manifest and idles (tick() returns on its first line); the engine stays as level scripting, and the checks stage scripts of their own (tools/qa/director-probes.ts).
+// ONE LEVEL HAS A SCRIPT TODAY: the first tutorial mission's (levels/tut-sky.script.ts, attached by scene/levelLoad.ts off scene/levelScripts.ts; its one play
+// program 'tutorial' is started by game/rails.ts, and only with that switch on). The office's (the night and day showcases, its programs 'night' and 'breach')
+// was removed with the two showcases, so on every other level the Director has no manifest and idles (tick() returns on its first line); the checks stage
+// scripts of their own (tools/qa/director-probes.ts).
 // A level's script is a plain function `(D: DirectorApi) => void` that imports NOTHING from src/ at run time (`import type` only —
 // the API is injected), so the same file can be transpile-served and hot-swapped later (M3) and its define pass runs under bun with no Game (the lint below).
 // What it can say:
@@ -250,6 +252,9 @@ export interface DirectorApi {
   /** small pure helpers so a script needs no runtime import for arithmetic on places */
   util: { yawTo(from: Vec3, to: Vec3): number; distXZ(a: Vec3, b: Vec3): number; lerp(a: Vec3, b: Vec3, t: number): Vec3; add(a: Vec3, b: Vec3): Vec3; ahead(p: Vec3, yaw: number, dist: number, y?: number): Vec3 };
 }
+/** the character budget a script's spawn is held to on a tutorial mission (rails.ts): every character the engine skins — Sam, the four and eleven more —
+ *  since a beat's men come on top of the men the staging dealt. Anywhere else: none (spawnUnit's own eight) */
+function liftedBudget(g: Game): number | undefined { return g.rails?.live ? 16 : undefined; }
 /** the module shape of a level script: levels/<name>.script.ts `const script: LevelScriptFn = D => { … }; export default script;` */
 export type LevelScriptFn = (D: DirectorApi) => void;
 
@@ -396,8 +401,6 @@ interface Run { serial: number; name: string; def: ProgramDef; t: number; dt: nu
   show: ShowState | null; objective: { text: string; pos: Vec3 | null } | null; systemsSaved: Partial<Record<'qrf' | 'needs' | 'civilians' | 'autosave', boolean>> | null; ended: boolean; finishing: boolean; failedShow: boolean; query: Query | null }
 class BeatFailure extends Error {}
 
-/** the play program a lesson's level script carries (lesson.ts starts it with the run and sends it each step's cue) */
-export const LESSON_PROGRAM = 'tutorial';
 export class Director {
   /** the script's manifest (null: a level with no script — today's game exactly) and what the lint said of it; armed = no lint error: programs may start */
   readonly manifest: Manifest | null; readonly problems: LintProblem[] = []; readonly scan: { program: string; beat: string; verb: string }[] = []; armed = false;
@@ -447,26 +450,20 @@ export class Director {
     return null;
   }
   /** why a checkpoint cannot be written (savestate.ts canSave): M1 refuses throughout a program — its cursor (fired triggers, flags, live beats, units) has no save slice until M3 */
-  blocksSave(): string | null { const R = this.run; return R && !R.ended ? `the level script's program '${R.name}' is running` : null; }   // (a lesson stops its own program for the tick of an authored checkpoint and starts it over on the next, as it does at that checkpoint's load: lesson.ts)
-  /** has the level's script a program of this name it may start */
-  has(name: string): boolean { return this.armed && !!this.manifest?.programs.has(name); }
-  /** lesson.ts checkLesson: does a beat of the lesson's program start on this signal · does any of its beats raise this one (read off the beat's own text, as
-   *  preflight reads a beat for a spawn: a name that nothing listens for, or that nothing raises, is a step that never moves) */
-  listens(name: string): boolean { return !!this.manifest?.programs.get(LESSON_PROGRAM)?.triggers.some(t => t.kind === 'signal' && t.name === name) || this.raises(name); }   // (a trigger, or a beat that waits on it mid-way)
-  raises(name: string): boolean { return [...(this.manifest?.programs.get(LESSON_PROGRAM)?.beats.values() ?? [])].some(B => String(B.fn).includes(name)); }
-  /** a signal raised from OUTSIDE a beat (the lesson's cue as a step comes up): what c.signal does, on the running program — nothing with none running */
-  signal(name: string) { const R = this.run; if (!R || R.ended) return; R.signals.push({ name, t: R.t, data: undefined }); this.push({ beat: '', kind: 'note', what: `signal:${name}` }); }
-  /** has the running program raised this signal (a beat's c.signal, or `signal` above) */
-  raised(name: string): boolean { const R = this.run; return !!R && R.signals.some(s => s.name === name); }
+  blocksSave(): string | null { const R = this.run; return R && !R.ended ? `the level script's program '${R.name}' is running` : null; }
   get running(): string | null { const R = this.run; return R && !R.ended ? R.name : null; }
-  /** a program that STAGES the floor is running (a showcase, a drill's play program): the room fight, the stress model and a scenario's start stand off it.
-   *  A lesson's program is not one: it runs under a mission that is the player's, start to end */
-  get staging(): boolean { const R = this.run; return !!R && !R.ended && R.name !== LESSON_PROGRAM; }
-  /** the lesson's own program is running (roomfight.ts: a man of its roster that this program has in hand is left to it until it lets him go) */
-  get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && R.name === LESSON_PROGRAM; }
+  /** a program that STAGES the floor is running (a showcase, a drill's play program): the stress model and a scenario's start stand off it. A tutorial
+   *  mission's program (rails.ts) is not one: it runs under a mission that is the player's, start to end */
+  get staging(): boolean { const R = this.run; return !!R && !R.ended && !this.g.rails?.live; }
+  /** a tutorial mission's own program is running (roomfight.ts, lanes.ts: a man of the floor's roster that it has in hand is left to it until it lets him go) */
+  get lessonRuns(): boolean { const R = this.run; return !!R && !R.ended && !!this.g.rails?.live; }
   /** frag.ts: the level's script put the defenders' own grenades off (`D.systems.theirFrags(false)`): for the level, whatever program is or is not running */
   get theirFragsOff(): boolean { return this.armed && this.manifest?.systems.theirFrags === false; }
   get objective(): { text: string; pos: Vec3 | null } | null { return this.run && !this.run.ended ? this.run.objective : null; }
+  /** a signal from OUTSIDE a beat (rails.ts: a lesson step's cue, 'lesson:<cue>'): the running program's onSignal triggers and c.on('signal', name) meet it on its next tick. Nothing with no program running. */
+  signal(name: string, data?: Json) { const R = this.run; if (!R || R.ended) return; R.signals.push({ name, t: R.t, data }); this.push({ beat: '', kind: 'note', what: `signal:${name}`, ...(data !== undefined ? { data } : {}) }); }
+  /** has the running program raised, or been sent, this signal (rails.ts: a beat's 'done:<name>') */
+  signalled(name: string): boolean { const R = this.run; return !!R && !R.ended && R.signals.some(s => s.name === name); }
   chapters(): { list: { title: string; dur: number }[]; i: number; frac: number } | null {
     const R = this.run, S = R?.show; if (!R || !S || !S.chapters.length || S.handedOver) return null;
     const cur = S.chapters[S.shotI]; return { list: S.chapters, i: S.shotI, frac: cur && S.shot ? Math.min(1, (R.t - S.chapterT0) / cur.dur) : 0 };   // (a chapter's clock runs from the shot that ENTERED it: several set-ups inside one chapter do not restart its bar)
@@ -884,7 +881,7 @@ export class Director {
       spawn: (L, at, o = {}) => {
         const spec = this.manifest!.loadouts.get(L.id); if (!spec) throw new BeatFailure(`no loadout '${L.id}'`);
         const p = this.placeOf(at);
-        const gd = spawnUnit(g, { team: spec.team, pos: [p[0], 0, p[2]], yaw: o.yaw ?? (Array.isArray(at) ? 0 : this.manifest!.marks.get(at.id)?.yaw ?? 0), weapon: spec.weapon, tint: spec.tint, tint2: spec.tint2, name: o.callsign, light: o.light ?? spec.light });
+        const gd = spawnUnit(g, { team: spec.team, pos: [p[0], 0, p[2]], yaw: o.yaw ?? (Array.isArray(at) ? 0 : this.manifest!.marks.get(at.id)?.yaw ?? 0), weapon: spec.weapon, tint: spec.tint, tint2: spec.tint2, name: o.callsign, light: o.light ?? spec.light, budget: liftedBudget(g) });
         if ((o.light ?? spec.light) === false) gd.flashlight.enabled = false;   // dark from the first frame (attachFlashlight would leave a fresh unit's light on until his script says otherwise)
         if (spec.trained) gd.trained = true; if (spec.god && R.show) gd.god = true;   // (structural besides the lint: only a SHOWCASE run's cast can carry the net — a play program's spawn of the same loadout is mortal)
         const ref = unitRefOf(gd); R.units.set(ref.id, { ref, gd, loadout: L.id, by: b.name }); touch(ref);

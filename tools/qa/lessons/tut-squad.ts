@@ -6,6 +6,8 @@ import type { Bot } from '../lesson-run';
 export const query = '?roomclear=1&squad4';
 /** the nest's gun and the hall's two can drop a man who walks the street as a script does: the run is about the steps, so rounds do not drop him */
 export const mode = { god: true };
+/** its steps are a tutorial mission's (game/rails.ts): TPS_RAILS=1 on the frozen stand, or the shipped stand */
+export const needs = 'rails';
 
 interface Man { char: { pos: number[] }; state: string; callsign: string }
 interface Target { kind: string; door?: unknown; man?: unknown }
@@ -50,7 +52,7 @@ function goIn(B: Bot, door: string, room: string) {
   if (!B.until(() => cleared(B, room), 60)) B.fail(`${room} was not cleared`);
 }
 
-const raised = (B: Bot, name: string): boolean => !!B.g.director.raised(name);
+const raised = (B: Bot, name: string): boolean => !!B.g.director.signalled(name);
 const man = (B: Bot, callsign: string) => B.g.guards.find((x: { callsign: string }) => x.callsign === callsign) as { state: string; script: unknown } | undefined;
 
 /** the orders menu (X) on a door or on the ground, then its digits */
@@ -111,7 +113,8 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!B.go(WINDOW, 60, { stop: () => cleared(B, 'hall') })) B.say(`  did not reach the window: at ${B.pos().map(v => v.toFixed(1))}`); shootMen(B, 'hall', 40); if (!B.until(() => cleared(B, 'hall'), 60)) B.fail('the hall was not cleared'); },
   lock: B => {
     B.go(HALL_SIDE, 60, { noDoors: true }); const d = B.door('hall'), r = B.g.player.rifle; let n = 0, m = r.mag;
-    for (let k = 0; k < 40 && d.isClosed(); k++) { reload(B); m = r.mag; B.click(1, HALL_LEAF); B.wait(0.18); n += m - r.mag; }
+    const tries = B.g.tune.chaos > 0 ? 40 : 12;   // (with the destruction knob at nothing no round opens a leaf — 40 were tried —: a dozen here, and the rifle keeps rounds for the picket)
+    for (let k = 0; k < tries && d.isClosed(); k++) { reload(B); m = r.mag; B.click(1, HALL_LEAF); B.wait(0.18); n += m - r.mag; }
     B.say(`  the hall door: ${d.isClosed() ? 'still shut' : 'open'} after ${n} rifle rounds (destruction ${B.g.tune.chaos})`);
     // (with the destruction knob at nothing no round opens a leaf: the boot is the other way through a lock)
     if (d.isClosed() && !d.lockBroken) { B.openDoor('hall', 'push'); B.wait(0.6); for (let k = 0; k < 4 && d.isClosed() && !d.lockBroken; k++) { B.openDoor('hall', 'kick'); B.wait(1.5); } }
@@ -132,7 +135,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     } else if (process.env.TPS_PROFILE === 'shipped') B.fail(`no checkpoint 'the bags' was written as its step came up (slots: ${B.g.saves.slots().map((x: { label: string }) => x.label).join(' · ') || 'none'})`);
     B.go(BAGS, 60);
   },
-  front: B => { checkpoints(B); B.until(() => !!B.g.director.raised('done:flank') || cleared(B, 'road'), 30); },
+  front: B => { checkpoints(B); B.until(() => !!B.g.director.signalled('done:flank') || cleared(B, 'road'), 30); },
   back: B => { menu(B, { ground: MOUTH }, 2); if (!gave(B, 'cover')) B.fail(`X, 2 gave ${last(B)?.order}`); },
   // (from the bags while they come; a man who holds where the bags cannot see him — round the road gate's jamb, up the alley — is walked up on, as a player would)
   hold: B => {
@@ -140,7 +143,8 @@ export const steps: Record<string, (B: Bot) => void> = {
     for (let k = 0; k < 8 && !cleared(B, 'road'); k++) {
       const me = B.pos(), m = B.g.guards.filter((x: Man & { team: string }) => x.team === 'hostile' && x.state !== 'dead').sort((a: Man, b: Man) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0] as Man | undefined;
       if (!m) break;
-      B.go([m.char.pos[0], 0, m.char.pos[2]], 20, { stop: () => m.state === 'dead' || Math.hypot(m.char.pos[0] - B.pos()[0], m.char.pos[2] - B.pos()[2]) < 3.5 }); shootMen(B, 'road', 6);
+      { const r = B.g.player.rifle; reload(B); if (r && r.mag === 0 && !r.reloading) B.press('Digit1', 6); }   // (the rifle dry and nothing to fill it with: the pistol)
+      B.go([m.char.pos[0], 0, m.char.pos[2]], 20, { stop: () => m.state === 'dead' || Math.hypot(m.char.pos[0] - B.pos()[0], m.char.pos[2] - B.pos()[2]) < 1.8 }); shootMen(B, 'road', 6);   // (right up on him: a man at the alley's mouth is round a corner from three metres off)
     }
   },
 };

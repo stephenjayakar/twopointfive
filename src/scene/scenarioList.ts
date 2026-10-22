@@ -161,16 +161,20 @@ export const TRAINING_MISSIONS: ScenarioEntry[] = [
     place: 'The well court: a well, a lantern, a back gate', lean: 'quiet', defenders: 3,
     blurb: 'A silent partner in the dark: park him, set him behind a guard, and drop two men in one lantern\'s light on one beat.' },
 ];
-// THE TUTORIAL GROUP: missions that teach by being played, in the order a new player meets them. A row is a lesson level like a Training row (its file
-// carries `scenarios.lesson`; its kit is the issue; its team is the row's own size) and its level may carry a script (scene/levelScripts.ts).
+/** EVERY MISSION THE LIST HOLDS: the squad's, the quiet ones, the training group — what the missions screen draws, what a query is read back to, what the pause card names */
+/** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
+ *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
+  { id: 'tut-sky', title: 'The halt, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
+    place: 'A truck halt on a pass road, under snow', lean: 'loud', defenders: 5, squads: true,
+    blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.' },
   { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
     place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
     blurb: 'Four men down one street: two easy rooms, then a door they shoot through, a gun, a locked hall, and a picket by two gates.' },
 ];
-/** a row whose level is a LESSON (the Training group, the Tutorial group): as issued, at its own team size, no verdict to earn */
-/** EVERY MISSION THE LIST HOLDS: the squad's, the quiet ones, the training group, the tutorial — what the missions screen draws, what a query is read back to, what the pause card names */
-export const ALL_MISSIONS: ScenarioEntry[] = [...SCENARIOS, ...QUIET_MISSIONS, ...TRAINING_MISSIONS, ...TUTORIAL_MISSIONS];
+/** every row that is a lesson: the tutorial's missions, then the Training levels */
+export const LESSON_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...TRAINING_MISSIONS];
+export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS, ...TRAINING_MISSIONS];
 
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
  *  (`?level=` is NOT: a scenario on the

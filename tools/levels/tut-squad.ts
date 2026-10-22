@@ -199,11 +199,13 @@ export function build() {
   const taken = (room: string) => ({ is: 'taken', room }), or = (...of: object[]) => ({ is: 'any', of }), and = (...of: object[]) => ({ is: 'all', of });
   const near = (at: Vec3, r = 1.5) => ({ is: 'near', at, r }), gave = (order: string, on?: string) => ({ is: 'did', what: `order:${order}`, ...(on ? { on } : {}) });
   const ALLEY: Rect = { x0: 22.2, x1: 27.0, z0: 5.3, z1: 10.6 };
-  // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = a save is asked for as it
-  // comes up (the start of a fight, never the middle of one). The squad keys are named as the build has them (B, X, F): the page writes the player's own.
+  // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = the frame keeps one as it
+  // comes up (the start of a fight, never the middle of one). A key is written by the game's own code letter in brackets: the page draws the player's key.
   const lesson = {
     title: 'A harder fight',
-    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'slot:rifle', 'slot:pistol', 'slot:frag', 'use', 'order', 'word'] },
+    // (game/rails.ts: what the three missions before this one taught is on from the first step — his own feet, hands and rifle, the view, the squad's key and
+    //  the word; the orders menu comes on with the step that asks for it, the frag with its step. A teammate who would go down is on a knee for a few seconds)
+    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'slot:rifle', 'slot:pistol', 'use', 'order', 'word', 'camera', 'zoom'], respawn: 5 },
     steps: [
       // 1 · two easy rooms: the squad's key on a door, twice
       { id: 'stack-hut', line: '[B] on the guard hut door', done: or({ is: 'stackOn', who: 'all', door: 'guardhut', set: true }, taken('guardhut')), at: [10.85, 1, 11.0] },
@@ -215,10 +217,10 @@ export function build() {
       { id: 'side', line: 'He shoots through it. Go round', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, cue: 'shop' },
       { id: 'shop', line: 'Open the side door', done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
-      { id: 'wall', line: "[X], [3]: they follow. To the wall's end", done: or(and(or({ is: 'following' }, gave('fallIn')), near(END, 1.6)), taken('nest')), at: END, checkpoint: 'the wall' },
+      { id: 'wall', line: "[X], [3]: they follow. To the wall's end", done: or(and(or({ is: 'following' }, gave('fallIn')), near(END, 1.6)), taken('nest')), at: END, checkpoint: 'the wall', allow: ['menu'] },
       { id: 'gun', line: 'A gun. Shoot back: it ducks', done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), at: [31.6, 1.2, 13.8], cue: 'gun' },
       { id: 'blocks', line: 'While it is down: run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS },
-      { id: 'frag', line: '[5], left button: a frag over the bags', done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8] },
+      { id: 'frag', line: '[5], left button: a frag over the bags', done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },
       { id: 'nest', line: 'Take the nest', done: taken('nest'), at: [32.0, 1, 13.8] },
       // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A DOOR IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
       //     leaf is shot down, and it is the way in

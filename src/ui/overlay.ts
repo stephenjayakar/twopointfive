@@ -26,6 +26,8 @@ import { stripRows } from '../game/cues';
 import { fragMarks } from '../game/frag';
 import { RECAP, lostLive, lostArrowsShown, type LostMan } from '../game/deathrecap';
 import { QUICKTHROW } from '../game/quickthrow';
+import { SLOTSETUP } from '../game/slotsetup';
+import { drawHandBox, handBoxKey, handBoxTick } from './handbox';
 import { samBlind } from '../game/samstun';
 import { CmdRingViz } from './cmdring';
 import { closeMarks } from '../game/close';
@@ -139,6 +141,8 @@ export class Overlay implements HudLike {
   private ckEl = document.getElementById('checkpoint'); private ckKey = '';           // the CHECKPOINT tag (game.saves.flash: written / loaded), shown CKPT.flashSecs — absent on a page without the element
   private recEl = document.getElementById('journal'); private recKey = '';            // the session journal's REC tag (game.journal.hudText(): 'REC f=1234 · 38 KB' / why it waits) — journal.ts, F10 in main.ts; absent on a page without the element
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
+  private skyWas = false;
+  private railEl: HTMLElement; private railKey = '\0'; private railsWas = false;                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
   private objMark: HTMLElement;                                                    // diamond + distance on / toward the current objective
   constructor() {
     menuTheme();   // the fight screen's rules read the menus' tokens (index.html `--h-…`)
@@ -146,6 +150,7 @@ export class Overlay implements HudLike {
     this.wish = document.createElement('div'); this.wish.className = 'aimwish'; this.wish.style.display = 'none'; this.root.appendChild(this.wish);
     this.ring = this.reticle.firstChild as HTMLElement; this.hint = this.reticle.lastChild as HTMLElement; this.hint.style.display = 'none';
     this.orderMark = document.createElement('div'); this.orderMark.className = 'ordermark'; this.orderMark.innerHTML = '<i></i><span></span>'; this.orderMark.style.display = 'none'; this.root.appendChild(this.orderMark);
+    this.railEl = document.createElement('div'); this.railEl.id = 'railprompt'; this.root.appendChild(this.railEl);
     this.objMark = document.createElement('div'); this.objMark.className = 'objmark'; this.objMark.innerHTML = '<i></i><span></span>'; this.objMark.style.display = 'none'; this.root.appendChild(this.objMark);
     const NS = 'http://www.w3.org/2000/svg';
     this.trajPath = document.createElementNS(NS, 'polyline') as SVGPolylineElement;
@@ -321,7 +326,21 @@ export class Overlay implements HudLike {
         return `<span class="rx${heard ? ' heard old' : game.time - m.t > 5 ? ' old' : ''}"><b>${heard ? 'HEARD' : '·)) RADIO'}</b>${m.text.slice(7).replace(/[<>&]/g, c => c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;')}</span>`; }).join(''); } }
     // mission: the objective line, and a diamond + distance on the objective — clamped to the screen edge in its direction when it is off screen (the
     // usual case from this camera), faded out within a couple of metres so it never fights the F reticle / door marker that takes over there
-    const ot = keyText(game.objectiveText());
+    // A TUTORIAL MISSION (game/rails.ts): its step is the one instruction on screen — big, low in the middle, each key it names drawn as a key ('[B]' in the
+    // line), a pip for every step. The small row at the top stands down while it is up, and the seat with nobody on the floor hides the rows of a man's own kit.
+    const rail = game.rails.prompt();
+    // (each cap in brackets is one key, asked of the key map by itself: a line of several — '[W] [A] [S] [D]' — follows a rebind of any of them)
+    const railWords = rail ? rail.line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? `<kbd>${esc(keyCap(t.slice(1, -1)))}</kbd>` : esc(keyText(t))).join('') : '';
+    { const key = rail ? `${rail.n}|${rail.of}|${railWords}` : '';
+      if (key !== this.railKey) { this.railKey = key;
+        if (!rail) { this.railEl.className = ''; this.railEl.innerHTML = ''; }
+        else { const words = railWords;
+          let pips = ''; for (let i = 1; i <= rail.of; i++) pips += `<i class="${i < rail.n ? 'done' : i === rail.n ? 'now' : ''}"></i>`;
+          this.railEl.innerHTML = `<div class="line">${words}</div><div class="pips">${pips}</div>`;
+          this.railEl.className = ''; void this.railEl.offsetWidth; this.railEl.className = 'on'; } }
+      const sky = game.rails.skyOn; if (sky !== this.skyWas) { this.skyWas = sky; document.body.classList.toggle('skyseat', sky); }
+      const on = game.rails.live; if (on !== this.railsWas) { this.railsWas = on; document.body.classList.toggle('onrails', on); } }   // (…and on any tutorial mission the place the line points at is marked big: index.html .objmark)
+    const ot = rail ? '' : keyText(game.objectiveText());
     if (ot !== this.objKey) { this.objKey = ot; const W = 'objective ▸', cut = ot.indexOf(W);   // the line's own word is set apart as its label (a par clock in front of it is not part of it); the text read back is unchanged
       if (cut < 0) this.objEl.textContent = ot; else this.objEl.innerHTML = `${esc(ot.slice(0, cut))}<b>${W}</b>${esc(ot.slice(cut + W.length))}`;
       this.objEl.className = game.mission.stage; }
@@ -340,7 +359,8 @@ export class Overlay implements HudLike {
       const raw = game.journal.hudText(); const key = raw.replace(/f=(\d+)/, (_m, n) => `f=${Math.floor(Number(n) / 10) * 10}`);
       if (key !== this.recKey && this.recEl) { this.recKey = key; this.recEl.className = key ? (game.journal.recording ? 'on rec' : 'on') : ''; this.recEl.textContent = key ? (game.journal.recording ? '● ' : '') + key + (game.journal.recording ? '  (F10 stops)' : '') : ''; } }
     const op = game.objectivePos();
-    const od = op ? v3.distXZ(op, game.player.char.pos) : 0;
+    const skySeat = game.rails.skyOn;   // (nobody on the floor is the player: the marker is a place to point at, not a walk to it — no fade near it, no metres)
+    const od = op ? (skySeat ? 99 : v3.distXZ(op, game.player.char.pos)) : 0;
     const floor = game.mission.stage === 'drive' && game.hover?.kind !== 'objective' ? 0.35 : 0;   // the rack has no marker of its own: keep a faint diamond on it until the cursor finds it (doors have their own dot / reticle)
     const alpha = op ? Math.max(floor, Math.min(0.9, (od - 1.6) / 1.5)) : 0;
     if (!op || alpha < 0.03) this.objMark.style.display = 'none';
@@ -351,7 +371,7 @@ export class Overlay implements HudLike {
       const mx = 1 - 2 * 36 / w, my = 1 - 2 * 36 / h; const k = Math.max(1, Math.abs(nx) / mx, Math.abs(ny) / my); nx /= k; ny /= k;   // into a 36 px inset of the view
       const el = this.objMark; el.style.display = 'block'; el.style.opacity = alpha.toFixed(2); el.className = k > 1 ? 'objmark edge' : 'objmark';
       el.style.left = `${((nx * 0.5 + 0.5) * w).toFixed(1)}px`; el.style.top = `${((1 - (ny * 0.5 + 0.5)) * h).toFixed(1)}px`;
-      (el.lastChild as HTMLElement).textContent = `${Math.round(od)}m`;
+      (el.lastChild as HTMLElement).textContent = skySeat ? '' : `${Math.round(od)}m`;
     }
     // the squad's order menu: a ring on the door / spot / man it was opened on, in the addressed element's colour (it stays there while Sam walks and aims on)
     this.cmdRing.update(game, cam, w, h, tz);
@@ -430,9 +450,10 @@ export class Overlay implements HudLike {
     const rifleKey = pl.hasRifle ? [rf.chamber, rf.mag, rf.spare.join(','), rf.reloading ? 1 : 0, rf.mode, rf.attIdx, rf.rings, rf.shells, rf.attachments.length, rf.cams, rf.lightOn ? 1 : 0].join('/') : '-';   // (the rifle's row: rounds, the beat, SEMI / AUTO, the selected attachment and its rings, its light)
     const big = BIGSLOT.on && !game.touring ? pl.bigKit : 'none', bigAt = big === 'none' ? '' : big + (game.nearby.some(r => r.kind === 'door' && (r.verb === 'breach' || r.verb === 'hammer')) ? '!' : '') + (BIGSLOT.shut ? 's' : '');   // (the big slot's row: what he carries, and whether a door in reach offers it now)
     const key = [pl.slot, gun.chamber, gun.mag, gun.spare.join(','), gun.reloading ? 1 : 0, pl.canisters, pl.flashbangs, pl.frags, pl.throwKind, gun.lightOn ? 1 : 0, pl.nv ? 1 : 0, (Math.round(pl.ocp.charge * 20) + (pl.ocp.ready() ? 100 : 0)), pl.hitsLeft, pl.down ? 1 : 0, game.godMode ? 1 : 0, pl.holstered ? 1 : 0, paceShow ? Math.round(pl.pace * 100) : -1, [...pl.keys].join(','), rifleKey, GEAR.on ? 1 : 0, bigAt, KEYMAP.rev, HANDSLOT.on ? 1 : 0].join('|');   // (…and which kit's words the rows are in)
+    if (SLOTSETUP.on) { const k2 = key + handBoxKey(game); if (k2 !== this.equipKey) { this.equipKey = k2; document.body?.classList?.toggle('handslot', HANDSLOT.on); drawHandBox(this.equip, game, paceShow, bigAt); } handBoxTick(game); return; }   // (ui/handbox.ts: the column as one box of what is in his hands and a strip of the rest — game/slotsetup.ts's switch)
     if (key === this.equipKey) return; this.equipKey = key;
-    document.body.classList.toggle('handslot', HANDSLOT.on);   // (index.html: the put-away mark names E only while E is the way back — game/handslot.ts)
-    const el = this.equip; el.textContent = '';
+    document.body?.classList?.toggle('handslot', HANDSLOT.on);   // (index.html: the put-away mark names E only while E is the way back — game/handslot.ts)
+    const el = this.equip; el.textContent = ''; el.classList?.remove('hand', 'setup');
     const mk = (tag: string, cls?: string, text?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = cls === 'key' ? keyCap(text) : keyText(text); return e; };   // (.key: a slot's own cap)
     const selCls = (k: SlotKind) => pl.slot === k ? (pl.holstered ? ' sel holstered' : ' sel') : '';   // the selected row lit; put away (E) it is lit-dashed with 'holstered · E' ('slung · E' on the rifle's row)
     // key strip: the selected gun's light and night vision. The right button's business is on the rows themselves — the OCP's charge closes the pistol's, the RING

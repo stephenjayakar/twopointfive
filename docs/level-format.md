@@ -182,7 +182,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   worked example). A level that carries only this block passes `map:check`'s structure section with a note (the room clear's sections have nothing to hold).
 
 - `lesson` — a TRAINING LESSON over this level's mission (`game/lesson.ts`; rows in `scenarioList.ts TRAINING_MISSIONS`, `group: 'training'`): `{ title,
-  steps[{ id, line, done, hold?, at? }] }`. A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
+  steps[{ id, line, setupLine?, done, hold?, at? }] }` (`setupLine`: the line while a gun's key again opens its setup, where the step's keys are others then). A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
   characters), `at` the marker, and it moves on when `done` — a test record `{ is: '<kind>', … }` read off the game — is true (for `hold` seconds). Never on a
   clock. Kinds (`lesson.ts LESSON_TESTS`; a new kind is one row there with its `ok` and its `check`): STATE `in {area}` · `near {at, r?}` · `flag {flag,
   value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent …) · `slot {slot, drawn?}` ·
@@ -202,11 +202,9 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   floor and the list), `tools/qa/lesson-run.ts <name>` (a scripted player — `tools/qa/lessons/<name>.ts`, input only — through every step to the debrief; a
   step that moves on with nothing done is a FAIL), `tools/qa/lesson-gate.ts [name …]` (per Training level: the file is its generator's, level-lint, lesson-check, the scripted run, and the on / off digests equal),
   `tools/qa/light-map.ts <name>` (how lit a man is across the floor).
-  A TUTORIAL mission (rows in `TUTORIAL_MISSIONS`, `group: 'tutorial'`) adds, as a stand-in for the tutorial frame's own keys: on a step `cue?` (a name: raised to the
-  level's script as the signal `lesson:<cue>` the tick the step comes up, and again at a checkpoint's load) and `checkpoint?` (a name: where any step of a lesson
-  names one, a save is asked for ONLY as such a step comes up); on the block `rails?` (validated as an object, read by nothing yet); the test `cue {name}` (true once
-  the script raised `done:<name>`). The script is `levels/<name>.script.ts`, registered by the level's name in `src/scene/levelScripts.ts`, with one play program
-  named `tutorial` that the lesson starts with the run.
+  A TUTORIAL mission (rows in `TUTORIAL_MISSIONS`, `group: 'tutorial'`) carries `lesson.rails` and the frame's own step keys (`allow`, `deny`, `cue`, `checkpoint`, `fog`) and tests
+  (`cue`, `squad`, `view`): `game/rails.ts` and `docs/agents/missions.md` say what each does. Its script is `levels/<name>.script.ts`, registered by the level's name in
+  `src/scene/levelScripts.ts`, with one play program named `tutorial`.
 - `par` — a PAR CLOCK over this level's room clear (`game/par.ts`; needs a `roomClear` block): `{ gold, silver, bronze, lossSecs }`, seconds, with
   gold < silver < bronze and `lossSecs` ≥ 0. The run is timed from the first order, Sam's first stride off his start mark or his first round or throw to
   the room clear's 'taken'; every teammate down at the end adds `lossSecs`; the total, in whole seconds as shown, earns the medal. The clock leads the

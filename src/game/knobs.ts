@@ -132,8 +132,12 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
   'NOSHOVE',
+  // a tutorial mission's frame (rails.ts RAILS): a recording made with it on replays its locked keys dropped and its spared teammates up again, one from before as a plain lesson
+  'RAILS',
   // an alerted man does not wait at a shut door (doorforce.ts DOORFORCE): a recording made with it on replays its defenders firing through a leaf and booting it in, one from before has them wait or use the handle
   'DOORFORCE',
+  // the slot in hand pressed again opens its setup (slotsetup.ts SLOTSETUP): a recording made with it on replays its second press of a gun's digit as the setup, one from before as the launcher's next load
+  'SLOTSETUP',
   // glass as buildings have it (glassbreak.ts GLASSREAL): a recording made with it on replays its toughened sheets dropping at once and its panes typed by where they sit, one from before with the wave and the wall's typing
   'GLASSREAL'];
 import { GUNWALL } from './gunwall';
@@ -205,7 +209,9 @@ import { AIMWEIGHT } from './aimweight';
 import { SPRINTDOOR } from './sprintdoor';
 import { TEAMPACE } from './teampace';
 import { NOSHOVE } from './noshove';
+import { RAILS } from './rails';
 import { DOORFORCE } from './doorforce';
+import { SLOTSETUP } from './slotsetup';
 import { AIMCOST } from './aimcost';
 import { HANDWORK } from './handwork';
 import { TAKEDOWN } from './takedown';
@@ -273,8 +279,12 @@ export function knobRegistry(): Record<string, object> {
     TEAMPACE,
     // teammates falling in never shove the player (noshove.ts): the switch, its two halves, the squeeze past, the ring a man keeps and his step back out — where every follower and the player are a second later reads them
     NOSHOVE,
+    // a tutorial mission's frame (rails.ts): the switch, the sky seat's pan and how long a spared teammate is on his knee — what the tick's input and a teammate's fall read
+    RAILS,
     // an alerted man does not wait at a shut door (doorforce.ts): the switch, its two halves, how sure he must be and how long before the boot — when a defender's rounds go through a leaf and when it is kicked in reads them
     DOORFORCE,
+    // the slot in hand pressed again opens its setup (slotsetup.ts): the switch, how long it stays up unused, and whether a pick shuts it — what a digit pressed with a gun in the hands does reads them
+    SLOTSETUP,
     // glass as buildings have it (glassbreak.ts): toughened glass drops at once, and which glass a pane is comes from where it sits — which panes a round opens, and when
     GLASSREAL,
     // quiet missions under the fog of war (quietfog.ts): whether a quiet mission's query is read for a rung of the fog lever — a run tape's start reads it

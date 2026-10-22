@@ -140,6 +140,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/kit.ts team': 'CONFIG · the team size the kit screen is set to: kitTeam (393), kitLoad (784), and put back as it was by asIssued\'s finally (827)',
   'src/game/kitanim.ts KITANIM_STATS': 'TALLY · counted in kitanim.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/kitanim.ts:271)',
   'src/game/lesson.ts LESSON_STATS': 'TALLY · counted in lesson.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
+  'src/game/rails.ts RAILS_STATS': 'TALLY · counted in rails.ts; no read in src/game, src/scene or src/anim; read by tools/qa/rails-check.ts',
   'src/game/lighting.ts LENS_STATS': 'TALLY · counted in lighting.ts:42-46 (maxBack keeps a peak: max of itself); no other read',
   'src/game/morale.ts MORALE_STATS': 'TALLY · counted in morale.ts; no read in src/game, src/scene or src/anim',
   'src/game/moths.ts MOTH_STATS': 'TALLY · counted in moths.ts; no read in src/game, src/scene or src/anim; shown by main.ts',

@@ -67,6 +67,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the word with no can (train-pairs' white house), no defender sees OUT of a door: a man in a far corner with his gun down the room shot the first of each
   pair as he crossed his opening (1 to 3 men on most paced dice). Each stands in the pocket behind the open leaf of the door he watches.
   (6) a held man: 'Right button chokes him out' (close.ts `CLOSE.heldClicks`, on in the page); the step counts the deed (`downed how: 'choke'`), not the row.
+- **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
+  the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
+  `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
+  row, in the knob registry and the journal). The seven Training levels carry no `rails` record and are untouched. WHAT IT ADDS to a level's `scenarios.lesson`:
+  a `rails` record (`allow` = the actions that work from the first step, `respawn` seconds for a teammate who went down, `fog`, `sky` = nobody on the floor is
+  the player: he is parked unseen, the view rides the squad's middle, the walk keys shift it) and step keys `allow` / `deny` / `cue` / `checkpoint` / `fog`;
+  tests `cue`, `squad` (the living teammates inside an area), `view` (turned / zoomed / shifted by a hand), `stackOn.set`. LOCKED UNTIL TAUGHT: the gate
+  (`Rails.gate`, ahead of everything that reads the seat's Input) drops every key code and button of an action no step has turned on yet (`ACTS`; pause, back and
+  text size always pass); the host's Ctrl-turn and Ctrl-zoom ask `rails.locks()`. ONE BIG LINE: `Rails.prompt()` is the step's line, drawn low in the middle by
+  `ui/overlay.ts` (`#railprompt`), `[B]` in a line drawn as a key cap with the player's own key (`keyText`), a pip per step; the small objective row is empty,
+  and in the sky seat the kit and meter rows are hidden. THE LEVEL'S SCRIPT: `levels/<name>.script.ts` (a `LevelScriptFn`), registered by level name in
+  `scene/levelScripts.ts` and attached by `levelLoad.ts`; one play program `tutorial`, started with the mission; a step's `cue` reaches it as the signal
+  `lesson:<cue>`, each order the player gives as `order:<id>`, and it answers `done:<name>` for the `cue` test. A running play program does not switch the
+  room fight off on a rails level, and the Director's spawn budget is 16 there (`liftedBudget`). THE SKY SEAT'S SQUAD holds where the mission stood it until its first order (an unordered man would fall in on the parked player), and the squad panel shows no key no step has taught (`Rails.locks` in `orders.ts`). THE MISSION AGAIN opens on the view the first run opened on (`Rails.hostView`, between ticks on the host's camera; `Rails.fresh` keeps that from counting as the hand's turn). CHECKPOINTS ARE AUTHORED: on a rails level the
+  every-step save and the floor's own triggers are off; a step's `checkpoint` writes an in-memory save the tick it comes up (the program is stopped for the
+  snapshot and started again next tick with the step's cue; a load does the same), so a beat must start fresh from its cue. A room clear on rails ends with the
+  last step, not with the rooms. CHECK: `bun run tools/qa/rails-check.ts` (probe `rails`, family `missions`; ten lines: the block whole, switch off = the mission alone with
+  no lesson, the first step parked and locked, one action a step, done by the deed, nobody lost, the room fight beside the program and no early end, a checkpoint
+  put back, the journal, the mission again) passes on both stands and `RAILS_BREAK=1` (the gate passes everything) fails on both. THE FIRST MISSION `tut-sky` ('The halt, from
+  above', `tools/levels/tut-sky.ts` on the pass's own geometry under snow — `tools/levels/pass.ts build(extra)` — with a roadblock and a gun truck with lit
+  lamps on the road, shutters on the windows; `levels/tut-sky.script.ts`): the squad pinned behind its trucks, the view turned, zoomed and shifted; the first
+  order under the squad's own smoke; a fight for the gate; stack and the word on two doors. Checkpoints: the road, the yard, the tea room. MEASURED: the
+  scripted player (`TPS_RAILS=1 bun run tools/qa/lesson-run.ts tut-sky --seed N`) ends it on 8 seeds of 8 on the frozen stand and 4 of 4 on the shipped stand,
+  55 to 70 s of play; `PORT=<port> node tools/qa/tut-page.cjs` plays it on the real page with real key and mouse events (software adapter: it steps with `__runFrames(n, dt, keys, 'none')`, which draws nothing, and takes a picture by reading one drawn frame back; on that adapter the first four steps were played so, the squad moving on the hand's own order under fire). NOBODY HAS: seen it
+  on a GPU, felt it with a hand, or seen what the smoke does to the road fight (the harness has no smoke sight lines). FOUND: a teammate who has seen an enemy
+  through glass he cannot shoot through stays rooted in 'alert' under an order (hence the shutters); a man a script holds runs no AI.
 - **The tutorial's squad mission, 'A harder fight'** (row `tut-squad`, `scenarioList.ts TUTORIAL_MISSIONS`, group `tutorial`; `tools/levels/tut-squad.ts` → `levels/tut-squad.json`, its staged
   moments `levels/tut-squad.script.ts`, its scripted player `tools/qa/lessons/tut-squad.ts`, its page run `tools/qa/tut-squad-page.cjs`). A PROTOTYPE: one street through a walled post, the four,
   eleven defenders in six rooms each its own squad (`mayLeave: false`, nobody digs in), nineteen steps. Two easy rooms on the squad's key, then four staged fights that each show ONE thing the
@@ -75,23 +101,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   two gates (one shows in the road gate while two walk round to the back gate and down the alley: the cover order turns half the squad; the last line is 'Finish the picket', and a man who
   holds out of the bags' sight has to be walked up on). What is SCRIPTED is only what must be seen at a known moment (the bursts through the leaf, the gun's first burst on the wall, the
   picket's walk); every man is the room clear's own and is released to the game's AI the moment his show is over.
-  - **The lesson keys it stands on are a STAND-IN for the tutorial frame** (the frame's own code was on no branch this one could reach; it replaces these): a step's `cue` (raised to the level's
-    script as the signal `lesson:<cue>` the tick the step comes up) and `checkpoint` (where any step names one, those are the lesson's only saves: see below); the test
-    `{ is: 'cue', name }` (true once the script raised `done:<name>`); `lesson.rails` is validated and READ BY NOTHING here (nothing is locked, the prompt is the old objective row, a teammate who
-    goes down stays down). The level's script is found by name in `src/scene/levelScripts.ts` (`LEVEL_SCRIPTS`; `levelLoad.ts` hangs it on the level as a non-enumerable `script`), and the lesson
-    starts its ONE program, `tutorial` (`director.ts LESSON_PROGRAM`), with the run and again at a checkpoint's load, then sends the step's cue again: every beat starts clean from its cue.
-  - **What the lesson's program is exempt from** (`Director.staging` = a program OTHER than the lesson's is running): the room fight and the stress rules no longer stand down under it, and a
-    room clear / rescue / night breach may start under it. Every one of these read `director.run` before; with no level script (every other level) nothing moved.
-  - **A man the lesson's script has in hand stays the room fight's man** (`roomfight.ts tickDef`, `Def.staged`; `Director.lessonRuns`): the fight used to end "somebody else's script" on a
-    roster man the frame after the order (so nothing the script staged was ever held: only its bursts fired) and then drop him from its roster for good. Now it leaves him alone while the
-    script holds him; let go ON his post he holds it again, let go somewhere else he is taken up as a man holding THAT place (the roster's own `adopt`). The covered-lane rule
-    (`lanes.ts laneGate`) leaves a staged walker to the script too: it stopped the picket's two in the alley ("I'm not walking into that!") the moment they were truly held.
-  - **AN AUTHORED CHECKPOINT** (`lesson.ts advance`, `savestate.ts Checkpoints.authored`): no save can hold a level script mid-program (`blocksSave()` refuses under ANY running program, the
-    lesson's too, so the autosave's own triggers and F5 are refused for the mission's length: the authored ones are the only saves). As a step that names one comes up the lesson STOPS its
-    program, marks itself owed a start (`boot`), and asks for the save by name; it is written as that frame ends, past the autosave's gates (on a loud floor somebody is alert from the first
-    shot to the last, so a gated request never landed) and is never marked as one to regret. The save carries `boot`, so a load of it starts the program over on that step's cue. Each beat is
-    written to start clean from its cue; the four checkpoints all sit before the cue of the beat that follows them. On the frozen stand a squad's run has no save at all (no file can hold a
-    unit, and the memory timeline is a page rule): the lesson notes the refusal and goes on.
+  - **It is played on the tutorial's frame** (`game/rails.ts`, the bullet above: `RAILS.on`, `TPS_RAILS=1` on the frozen stand; with the switch off the level is its mission alone). Its
+    `rails.allow` is what the three missions before it taught (his feet, hands and rifle, the view, the squad's key and the word); the orders menu comes on with the step that asks for it
+    ('wall', `allow: ['menu']`) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun` and `picket`; its checkpoints 'the street', 'the wall', 'the hall'
+    and 'the bags' each sit at the start of a staged fight, before the cue of the beat that follows, and every beat starts clean from its cue (the picket's beat starts with the program, holds
+    the three in their camp and the yard's gates shut, and waits for its cue: so a checkpoint put back finds them held again).
+  - **What a tutorial mission's program no longer stands down beyond the room fight** (`Director.staging` = a program is running and the level is NOT on rails): the stress rules, and the
+    start of a room clear / rescue / night breach, read it where they read `director.run` before. With no level script (every level but the tutorial's) nothing moved.
+  - **A man the mission's script has in hand stays the room fight's man** (`roomfight.ts tickDef`, `Def.staged`; `Director.lessonRuns`): on a floor whose defenders are the room clear's own
+    roster, the fight ended "somebody else's script" on a roster man the frame after the order (so nothing the script staged was ever held: only its bursts fired) and then dropped him from
+    its roster for good. Now it leaves him alone while the script holds him; let go ON his post he holds it again, let go somewhere else he is taken up as a man holding THAT place (the
+    roster's own `adopt`). The covered-lane rule (`lanes.ts laneGate`) leaves a staged walker to the script too: it stopped the picket's two in the alley ("I'm not walking into that!") the
+    moment they were truly held. (The first tutorial mission spawns its men by the script, so it never met this.)
   - **Director facts learnt the hard way**: a beat that ENDS hands back every roster man it touched, so a beat that holds men must stay alive (it waits on its cue); `tickBursts` could not find a
     roster man it had not spawned (mended: it looks him up among the guards); a scripted round is a real round (a burst laid on a line that ran on through a gap killed the player: lay it on a wall);
     a new script switch `D.systems.theirFrags(false)` holds the defenders' own grenades for the level (`frag.ts fragThrowTick` and `free`, `Director.theirFragsOff`): this level's three
@@ -101,15 +122,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the first shot and cannot wait for a cue, so the picket is roster men the script walks; the street wall runs a metre past where followers wait or the gun shoots them there.
   - **The door, measured and NOT changed** (the doors goal's): the hall's wooden leaf opens after 6 rifle rounds squarely at the page's destruction (0.5), 19 to 23 from 1.5 m to one side and
     on one run not in 40 (rounds on the jamb do not count), never at destruction 0 (so the step also passes on a kick, and on the frozen stand the scripted player kicks).
-  - **Checks**: `bun run tools/qa/lesson-gate.ts tut-squad` on both stands (ALL PASS: the scripted player does all nineteen steps and the run ends 'taken'; on the page's stand four dice, two at
-    six seconds a line). For a level WITH a script the gate's "lesson off = the same run" line is a NOTE, not a bar, and that run is not made: the script makes it another mission. `lesson-run`
-    reads a script's `fightOk` (steps a fight may finish by itself: here the steps inside the nest's, the hall's and the picket's fights), so the scripted player holds the staged moments to
-    account itself: `done:shop` raised and the workshop's man still in the script's hand, `done:gun` raised, the four checkpoints written (the page's stand), and the checkpoint 'the bags'
-    LOADED mid-run with the same step up, the program running again, the picket in hand and the road gate shut. `lesson-check` holds every step's `cue` to a beat that starts or waits on
-    `lesson:<cue>` and every cue test to a beat that raises `done:<name>`. `PORT=<port> node tools/qa/tut-squad-page.cjs`: the row on the real page (software adapter), its first five steps by real keys, and the checkpoint 'the street' loaded.
-  - **Not done / not seen**: no menu picture (none can be made without a GPU: `level-needs` is red on `picture`); the alley and the road are bare (`lived` NOTE); the one locked door is meant to
-    be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot carry them. Never seen on a GPU, never
-    played by a hand. Nobody has seen whether the gunner visibly ducks under the player's fire.
+  - **Checks**: `bun run tools/qa/lesson-gate.ts tut-squad` (a tutorial mission is gated by name; the gate gives its frozen runs `TPS_RAILS=1`): the scripted player does all nineteen
+    steps and the run ends 'taken' on the frozen stand, and on the page's stand on four dice, two at six seconds a line. For a level WITH a script the gate's "lesson off = the same run"
+    line is a NOTE, not a bar, and that run is not made: the script makes it another mission. `lesson-run` reads a script's `fightOk` (steps a fight may finish by itself: here the steps
+    inside the nest's, the hall's and the picket's fights), so the scripted player holds the staged moments to account itself: `done:shop` raised and the workshop's man still in the
+    script's hand, `done:gun` raised, the four checkpoints kept, and the checkpoint 'the bags' PUT BACK mid-run with the same step up, the program running again, the picket in hand and the
+    road gate shut. It plays under the locks: the menu and the frag are pressed only at their steps. `PORT=<port> node tools/qa/tut-squad-page.cjs`: the row on the real page (software
+    adapter), the big line with Q on a key cap, the menu and the frag locked at the first step, its first five steps by real keys, and the checkpoint 'the street' put back.
+  - **Not done / not seen**: its menu picture is a stand-in (the first tutorial mission's own stand-in, copied: none can be made without a GPU); the alley and the road are bare (`lived`
+    NOTE); the one locked door is meant to be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot
+    carry them. Never seen on a GPU, never played by a hand. Nobody has seen whether the gunner visibly ducks under the player's fire.
 - **A par clock on a room clear** (`src/game/par.ts`, `Game.par`; block `scenarios.par { gold, silver, bronze, lossSecs }`, docs/level-format.md *Scenarios*;
   today `levels/killhouse.json` alone, row `killhouse-four` 'The kill house' in the list's 'On the clock' group, `untuned`): while that level's room clear is up the run
   is timed from the first order, Sam's first stride off his start mark (`PAR_START_M` 1 m) or his first round or throw, to roomclear's 'taken'; every teammate

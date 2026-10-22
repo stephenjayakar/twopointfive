@@ -20,7 +20,7 @@
 // Types and pure functions only: nothing here imports the game (src/game is one import cycle) or touches the DOM beyond localStorage, guarded.
 import type { PairId } from './game';
 import { soloFogRow } from './quietfog';   // (called inside noteOf only: src/game is one import cycle)
-import { lessonGroup } from '../scene/scenarios';   // (called inside functions only)
+import { lessonGroup } from '../scene/scenarios';
 
 /** how many teammates stand beside Sam */
 export type SquadSize = 0 | 1 | 2 | 3 | 4;

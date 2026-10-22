@@ -28,7 +28,8 @@ import { squadSilent } from './silent';
 import { PAIR_LOG } from './pairorders';
 import { hostileTo } from './teams';
 import { WORLD } from '../scene/world';
-import { LESSON_PROGRAM } from './director';
+import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
+import { SLOTSETUP } from './slotsetup';
 
 /** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
 export const LESSON = { on: true };
@@ -41,7 +42,9 @@ interface StepSeen { t0: number; n: Map<string, number>; chron: number; heard: W
   /** the chronicle row the step began at, and the row G was first seen held at (-1: not yet) — the kit's `threw` */
   chron0: number; heldAt: number;
   /** the doors the word (F) has let go since the step came up — the squad's `word` */
-  words: Set<object> }
+  words: Set<object>;
+  /** the seat's view as the step found it and how far it has been turned since, radians summed (the rails' `view`) */
+  yaw0: number; dist0: number; yawLast: number; turned: number }
 type TestFn = (g: Game, t: LessonTest, S: StepSeen) => boolean;
 /** a test kind: `ok` = is it true now; `check` = what is wrong with this record on this floor (null: nothing) */
 interface TestKind { ok: TestFn; check?: (g: Game, t: LessonTest) => string | null }
@@ -173,11 +176,14 @@ export const LESSON_TESTS: Record<string, TestKind> = {
   pair: { ok: (_g, t, S) => { let n = 0; for (let i = after(PAIR_LOG, S.lastPair); i < PAIR_LOG.length; i++) if (PAIR_LOG[i].what.startsWith(t.what as string)) n++; return n >= ((t.n as number) ?? 1); },
     check: (_g, t) => !PAIR_WHATS.includes(t.what as string) ? `what: one of ${PAIR_WHATS.join(', ')}` : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many, ≥ 1' },
 
-  // -- (the level script's rows)
-  // cue: a beat of the level's script has said it is over (its c.signal('done:<name>')) in this run of the program
-  cue: { ok: (g, t) => !!g.director?.raised(`done:${t.name as string}`), check: (g, t) => !str(t.name) ? 'name: the beat\'s name' : !g.director?.has(LESSON_PROGRAM) ? "the level carries no script with a program 'tutorial'" : g.director.raises(`done:${t.name}`) ? null : `no beat of the level's script raises 'done:${t.name}'` },
-
   // -- several at once
+  // ---- a rails level's (rails.ts) ----
+  cue: { ok: (g, t) => !!g.rails?.cued(t.name as string), check: (_g, t) => str(t.name) ? null : 'name: the beat the level\'s script ends with c.signal(\'done:<name>\')' },   // the level's script has played a beat out
+  view: { ok: (g, t, S) => (t.turned === undefined || S.turned * 180 / Math.PI >= (t.turned as number)) && (t.zoomed === undefined || Math.abs(Math.log(g.seat.cam.distance / S.dist0)) >= Math.log(t.zoomed as number)) && (t.panned === undefined || (g.rails?.panned() ?? 0) >= (t.panned as number)),   // the seat's own view since the step came up: turned by so many degrees in all, zoomed by this ratio either way, shifted this far off the squad (the sky seat)
+    check: (_g, t) => t.turned === undefined && t.zoomed === undefined && t.panned === undefined ? 'turned (degrees), zoomed (a ratio over 1) and / or panned (metres)' : (t.turned !== undefined && !num(t.turned)) || (t.panned !== undefined && !num(t.panned)) || (t.zoomed !== undefined && !(num(t.zoomed) && t.zoomed > 1)) ? 'turned, panned: numbers · zoomed: a ratio over 1' : null },
+  // squad: the teammates on their feet stand inside `area`, all of them (or `n` of them): where an order has taken them
+  squad: { ok: (g, t) => { const men = g.guards.filter(x => x.unit && x.team === 'operative' && x.state !== 'dead'), inn = men.filter(m => inside(t.area as Rect, m.char.pos)).length; return men.length > 0 && inn >= Math.min(men.length, (t.n as number) ?? men.length); },
+    check: (g, t) => !rect(t.area) ? 'area: a rect { x0, x1, z0, z1 }' : !freeIn(g, t.area as Rect) ? 'area: no free floor inside it' : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many, ≥ 1' },
   all: { ok: (g, t, S) => (t.of as LessonTest[]).every(u => passes(g, u, S)), check: (g, t) => ofCheck(g, t) },
   any: { ok: (g, t, S) => (t.of as LessonTest[]).some(u => passes(g, u, S)), check: (g, t) => ofCheck(g, t) },
 };
@@ -205,19 +211,21 @@ export class Lesson {
   log: string[] = [];
   private seen: StepSeen | null = null;
   private run: object | null = null;   // the Mission this pass belongs to: a fresh one (restartEncounter) starts the lesson over
-  private boot = false;                // the level script's program is owed a (re)start, and the step that is up its cue: a fresh run, a checkpoint loaded
   constructor(private g: Game) {}
 
   /** the lesson in force (null: not live) */
   get data(): LessonData | null {
     const g = this.g; if (!LESSON.on) return null;
     const L = g.level.scenarios?.lesson; if (!L?.steps?.length) return null;
+    if (L.rails && !RAILS.on) return null;   // (a tutorial mission's steps are written for the frame — a seat, locks, cues: with its switch off the level is its mission alone)
     if (g.touring || g.quietUtility || g.puppet) return null;
     return g.quiet?.active || g.roomClear?.active || g.nightBreach?.active || g.rescue?.active ? L : null;
   }
   /** the step that is up for THE MISSION THAT IS RUNNING: `i` is the last pass's until tick() has met a fresh Mission (a restart between frames), and that
    *  pass's step is nobody's — not the row's, not a checkpoint's. A fresh run is on its first step. */
   private get at(): number { return this.run === this.g.mission ? this.i : 0; }
+  /** the index of the step that is up for the mission that is running (rails.ts asks this, never `i`) */
+  get index(): number { return this.at; }
   get step(): LessonStep | null { return this.data?.steps[this.at] ?? null; }
   get finished(): boolean { const L = this.data; return !!L && this.at >= L.steps.length; }
 
@@ -225,8 +233,7 @@ export class Lesson {
   tick(dt: number) {
     const L = this.data; if (!L) return;   // (switched off or stood down for a frame: its place is kept — only a fresh Mission starts it over)
     const g = this.g;
-    if (this.run !== g.mission) { this.run = g.mission; this.i = 0; this.doneAt.clear(); this.seen = null; this.log.length = 0; this.boot = true; LESSON_STATS.started++; this.note(`lesson '${L.title}': ${L.steps.length} steps`); }
-    if (this.boot) { this.boot = false; this.script(L); }
+    if (this.run !== g.mission) { this.run = g.mission; this.i = 0; this.doneAt.clear(); this.seen = null; this.log.length = 0; LESSON_STATS.started++; this.note(`lesson '${L.title}': ${L.steps.length} steps`); }
     if (this.i >= L.steps.length || g.mission.stage === 'failed' || who(g).down) return;
     const S = this.seen ??= this.fresh(1e-6);   // (the run's first step, or the first after a load: this frame's own deeds are in)
     this.count(S);
@@ -238,36 +245,20 @@ export class Lesson {
     const g = this.g; this.doneAt.set(T.id, g.time); this.i++; this.seen = this.fresh(); LESSON_STATS.steps++;   // (the next step counts from THIS frame's end: a deed on its first frame is its own)
     this.note(`done ${this.i}/${L.steps.length} '${T.id}'`);
     if (this.i >= L.steps.length) { LESSON_STATS.finished++; this.note('every step done'); }
-    this.cue(L);
-    // A LESSON THAT NAMES ITS CHECKPOINTS saves only there: as a step that carries one comes up (the start of a fight, never the middle of one). The save is
-    // written as this frame ends (savestate.ts `authored`), and no save can hold a level script mid-program (director.ts blocksSave): the lesson's program is
-    // stopped for it here and owed a start on the next tick, so the save carries `boot` and a load of it starts the program over on this step's cue
-    if (L.steps.some(s => s.checkpoint)) {
-      const N = L.steps[this.i]; if (!N?.checkpoint) return;
-      if (g.director?.running === LESSON_PROGRAM) { g.director.stop(); this.boot = true; }
-      g.saves.authored = N.checkpoint; this.note(`checkpoint '${N.checkpoint}'`); return;
-    }
     // A STEP DONE ASKS FOR A CHECKPOINT, by the autosave's own road (savestate.ts Checkpoints.request), so its gates decide when and whether: nobody alert or
     // searching, nothing in his hands half done, ten seconds since the last save; steps done inside one wait are one save, labelled with the step then up. The
     // floor's own triggers (the stage, a new room, a body hidden, 90 s of quiet) can all stay silent for minutes of a lesson on one yard, and a down then cost
     // the whole of it. Still read-only over the run: a save writes its chronicle row and nothing else, and the digest leaves that row out (digest.ts).
+    if (g.rails?.live) return;   // (a rails level's checkpoints are authored, one a beat: rails.ts asks for them by the step's own key)
     g.saves.request(g, 'lesson', this.i < L.steps.length ? `training ${this.i + 1}/${L.steps.length}` : 'training done');
   }
-  /** THE LEVEL'S SCRIPT (director.ts; levels/<name>.script.ts): a lesson level that carries a program named 'tutorial' has it started with the run and
-   *  started over at a checkpoint's load, and each step that carries a `cue` raises the signal `lesson:<cue>` as it comes up. The script's beats begin
-   *  on those signals and say they are over with `done:<name>` (the `cue` test). A level with no script: nothing here runs. */
-  private script(L: LessonData) {
-    const D = this.g.director; if (!D?.has(LESSON_PROGRAM)) return;
-    if (D.running === LESSON_PROGRAM) D.stop();
-    const why = D.start(LESSON_PROGRAM); if (why) { this.note(`the level script did not start: ${why}`); return; }
-    this.cue(L);
-  }
-  private cue(L: LessonData) { const c = L.steps[this.i]?.cue; if (c && this.g.director?.running === LESSON_PROGRAM) { this.g.director.signal(`lesson:${c}`); this.note(`cue '${c}'`); } }
   private fresh(back = 0): StepSeen { const g = this.g, lg = g.orders?.log ?? [], ev = g.chronicle.events.length;
-    return { t0: g.time - back, n: new Map(), chron: ev, chron0: ev, heldAt: -1, lastOrder: lg[lg.length - 1] ?? null, lastPair: PAIR_LOG[PAIR_LOG.length - 1] ?? null, words: new Set(), heard: new SideSet(), held: 0 }; }
+    return { t0: g.time - back, n: new Map(), chron: ev, chron0: ev, heldAt: -1, lastOrder: lg[lg.length - 1] ?? null, lastPair: PAIR_LOG[PAIR_LOG.length - 1] ?? null, words: new Set(), heard: new SideSet(), held: 0, yaw0: g.seat.cam.yaw, dist0: g.seat.cam.distance, yawLast: g.seat.cam.yaw, turned: 0 }; }
   /** this frame's deeds into the step's counts */
   private count(S: StepSeen) {
     const g = this.g, add = (k: string) => S.n.set(k, (S.n.get(k) ?? 0) + 1);
+    if (g.rails?.fresh) { S.yaw0 = S.yawLast = g.seat.cam.yaw; S.dist0 = g.seat.cam.distance; S.turned = 0; }   // (a tutorial mission staged again: its view is set back in the run's first ticks, and that is no turn of the hand's)
+    { const y = g.seat.cam.yaw; let d = y - S.yawLast; d = Math.atan2(Math.sin(d), Math.cos(d)); S.turned += Math.abs(d); S.yawLast = y; }   // (the rails' `view`: read off the tick's record, like every other deed)
     if (g.act?.verb && !who(g).down) add(`act:${g.act.verb}`);
     for (const e of g.events) { if (e.who !== PLAYER_ID || e.time <= S.t0 || S.heard.has(e)) continue; S.heard.add(e); add(`event:${e.kind}`); }
     { const ev = g.chronicle.events; if (ev.length < S.chron) S.chron = ev.length; if (ev.length < S.chron0) S.chron0 = ev.length; for (; S.chron < ev.length; S.chron++) add(`chron:${ev[S.chron].kind}`);
@@ -287,7 +278,6 @@ export class Lesson {
     const L = this.data; if (!L) return;
     this.run = this.g.mission; this.seen = null; this.doneAt.clear(); this.i = L.steps.length;
     if (s && Number.isInteger(s.i) && s.i >= 0 && s.i <= L.steps.length) { this.i = s.i; for (const [id, t] of s.done ?? []) if (typeof id === 'string' && Number.isFinite(t)) this.doneAt.set(id, t); }
-    this.boot = true;   // (the script's program ended with the encounter the load replaced: the next tick starts it over, on this step's cue)
     this.note(`checkpoint loaded: step ${Math.min(this.i + 1, L.steps.length)}/${L.steps.length}`);
   }
 
@@ -298,15 +288,18 @@ export class Lesson {
     const L = this.data, i = this.at; if (!L || i >= L.steps.length) return null;
     if (this.over()) return null;   // (the run is over: the row is the scenario's own word on it)
     const T = L.steps[i];
-    return { text: `training ${i + 1}/${L.steps.length} ▸ ${T.line}`, pos: T.at ?? null };
+    return { text: `training ${i + 1}/${L.steps.length} ▸ ${lineOf(T).replace(/\[([^\]]+)\]/g, '$1')}`, pos: T.at ?? null };   // ('[B]': a key a tutorial mission's big line draws as a key — rails.ts; plain here)
   }
   summary(): string {
     const L = this.data; if (!L) return this.g.level.scenarios?.lesson ? (LESSON.on ? 'off · this level carries one (start its mission)' : 'off · switched off') : 'off · this level carries none';
     const i = this.at;
-    return i >= L.steps.length ? `'${L.title}' · every step done (${L.steps.length})` : `'${L.title}' · step ${i + 1}/${L.steps.length} '${L.steps[i].id}': ${L.steps[i].line}`;
+    return i >= L.steps.length ? `'${L.title}' · every step done (${L.steps.length})` : `'${L.title}' · step ${i + 1}/${L.steps.length} '${L.steps[i].id}': ${lineOf(L.steps[i])}`;
   }
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 80) this.log.splice(0, 40); }
 }
+
+/** a step's line as the keys stand: the gun's setup on (slotsetup.ts) moves the selector, the launcher's load and the light off their old keys */
+const lineOf = (T: LessonStep): string => SLOTSETUP.on && T.setupLine ? T.setupLine : T.line;
 
 // ---------------------------------------------------------------- the checker (tools/qa/lesson-check.ts; the probes): the block against the BUILT floor
 /** Everything the level file's validator cannot say (scene/levelData.ts checks shapes): each test's kind and fields, its doors / lights / areas on this floor,
@@ -314,11 +307,12 @@ export class Lesson {
 export function checkLesson(g: Game): string[] {
   const L = g.level.scenarios?.lesson, out: string[] = [];
   if (!L) return ['the level carries no scenarios.lesson block'];
+  out.push(...railsFaults(L));   // (rails.ts: the frame's own keys — action names, cues)
   if (!g.level.scenarios?.quiet && !g.level.scenarios?.roomClear && !g.level.scenarios?.rescue && !g.level.scenarios?.nightBreach) out.push('the level carries a lesson and no scenario to run it over (scenarios.quiet / roomClear / rescue / nightBreach)');
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`;
     const why = testFault(g, T.done); if (why) out.push(`${w}.done: ${why}`);
     if (T.line.length > 96) out.push(`${w}.line is ${T.line.length} characters: the objective row holds about 96`);
-    if (T.cue && !g.director?.listens(`lesson:${T.cue}`)) out.push(`${w}.cue '${T.cue}': no beat of the level's script starts on 'lesson:${T.cue}'`);
+    if (T.setupLine && T.setupLine.length > 96) out.push(`${w}.setupLine is ${T.setupLine.length} characters: the objective row holds about 96`);
     if (T.at && !(T.at[0] > WORLD.min[0] && T.at[0] < WORLD.max[0] && T.at[2] > WORLD.min[2] && T.at[2] < WORLD.max[2])) out.push(`${w}.at (${T.at[0]}, ${T.at[2]}) is outside the world`); });
   return out;
 }

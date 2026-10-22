@@ -1,7 +1,9 @@
-// THE LEVELS THAT CARRY A SCRIPT (game/director.ts; levels/<name>.script.ts), by the name of the level file. A script is CODE, not level data: it is
-// attached to the built Level as the file loads (levelLoad.ts loadLevel → level.ts withScript), so a level file says nothing of it and a level with no
-// row here is exactly what it was. Type-only imports from the game: nothing here runs until a Director is stood up on the level.
+// THE LEVELS THAT CARRY A SCRIPT (game/director.ts), by the level file's own name. A script is code, so it is not in the level file: loadLevel hangs it on
+// the Level it builds (level.ts withScript) and the Director reads it there like any field. Each script file is `levels/<name>.script.ts`, imports nothing
+// from src at run time, and carries one play program named 'tutorial' that game/rails.ts starts with the mission (a level that is not played on rails never
+// starts it: with the frame's switch off the level is its scenario alone).
 import type { LevelScriptFn } from '../game/director';
+import tutSky from '../../levels/tut-sky.script';
 import tutSquad from '../../levels/tut-squad.script';
 
-export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-squad': tutSquad };
+export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-sky': tutSky, 'tut-squad': tutSquad };

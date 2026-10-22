@@ -39,7 +39,7 @@ import type { FogRung } from './difficulty';
 import { FOG } from './fogofwar';
 import { STICKY, stickyVisit } from './stickycam';   // (read inside functions only)
 import type { Game } from './game';
-import { lessonGroup } from '../scene/scenarios';   // (called inside functions only)
+import { lessonGroup } from '../scene/scenarios';
 
 export const QUIETFOG: { on: boolean; def: QuietRung; wand: boolean; solo: boolean } = { on: false, def: 'off', wand: false, solo: false };
 /** the solo night's row is one the lever is live on (QUIETFOG.solo): the screens ask this where a quiet row is asked quietFogRow */

@@ -376,7 +376,7 @@ export class RoomFight {
   /** may the module run at all: the switch, the AI, sides, and no show holding the floor */
   get on(): boolean {
     const g = this.g;
-    return ROOMFIGHT.on && g.aiEnabled && g.tune.teams && !g.touring && !g.quietUtility && !g.puppet && !g.director?.staging;
+    return ROOMFIGHT.on && g.aiEnabled && g.tune.teams && !g.touring && !g.quietUtility && !g.puppet && !(g.director?.run && !g.director.run.ended && !g.rails?.live);   // (a tutorial mission's own program — rails.ts — runs beside the fight, it does not hold the floor)
   }
   private note(gd: Guard | null, what: string) { this.log.push({ t: this.g.time, who: gd ? gd.callsign : '-', what }); if (this.log.length > 600) this.log.splice(0, 200); }
 
@@ -589,7 +589,7 @@ export class RoomFight {
     if ((DIGIN.on || squadsLive(g) || lastStandMan(g, gd)) && g.level.scenarios?.roomClear?.digIn !== false && !laneThrows(g, gd)) digInTick(this, D, dt); // digin.ts (default off): a man who knows they are coming gets ready for them — may put him on the move (enemysquads.ts: a squad that barricades does it through the same file, whatever the switch) — not a man whose grenade is leaving his hand for a covered lane (lanes.ts LANES.fragOwn, false with its switch off): that second is the throw's
     if (D.mode === 'move') { this.tickMove(D, dt); return; }
     if (D.mode === 'free') { this.tickFree(D); return; }
-    if (gd.script && g.director?.lessonRuns) { D.staged = true; return; }   // a staged moment of the lesson's own script has him (director.ts LESSON_PROGRAM): his body is its, and he stays this roster's man
+    if (gd.script && g.director?.lessonRuns) { D.staged = true; return; }   // a staged moment of a tutorial mission's own script has him (director.ts lessonRuns): his body is its, and he stays this roster's man
     if (D.staged) {                                                        // …and is a man holding a post again the moment it lets him go (a script's order takes `hold` off a man):
       D.staged = false; gd.hold = true;
       if (v3.distXZ(gd.char.pos, D.station) > 1.5) { this.defs = this.defs.filter(d => d !== D); this.note(gd, 'left on a new post by the lesson\'s script'); return; }   // his old post where it left him there; where it walked him to, as a held man this roster does not know is taken up (tick: `adopt`)

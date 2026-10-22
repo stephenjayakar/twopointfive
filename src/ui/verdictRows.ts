@@ -8,9 +8,9 @@
 import { VERDICT, type KeptNote } from '../game/verdict';
 import { difficultyNow } from '../game/difficulty';
 import { ALL_MISSIONS } from '../scene/scenarioList';
-import { lessonGroup } from '../scene/scenarios';
 import { recordOf, verdictKey, keptWays } from './verdictStore';
 import { pipsEl } from './verdictPips';
+import { lessonGroup } from '../scene/scenarios';
 
 /** a mission that can be won some way (every row but the training lessons and ids the list does not know) */
 export function rowEarns(id: string): boolean { const e = ALL_MISSIONS.find(m => m.id === id); return e ? !lessonGroup(e.group) : id === 'solo-night'; }
