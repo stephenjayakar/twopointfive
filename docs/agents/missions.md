@@ -189,6 +189,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fingerprint moved: checkpoints and recordings of `tut-solo` from before it are refused. No fight moved: the scripted player's seven ways, 2 seeds on
   each stand (no tally over more seeds was taken: every man in it is the script's). Two free cells inside the floor mattress's footprint are cut off
   (under the lived check's three). Judged from the software adapter's pictures only; never seen on a GPU.
+- **`tut-solo`'s ground and its two loads (2026-10-22 late, level data; one name more in the frame's action table, no switch).** THE GROUND: the
+  maintainer, of the gun court at night: "ground looks pretty flat here". Each court was one finish with a pair of ruts in its own paint (no mark at
+  all). Now the yard is the plain's dust inside its walls; the road's gravel goes on through the gate and the arch as a drive a truck wide (`DRIVE`) and
+  opens into a turning apron before the shop (`APRON`, which reaches past the mark for the shop's door, so the ground he hides on is no paler than it
+  was); group `ground.marks` lays wheel tracks (damp on gravel, dirt on dust, broken where a thing stands on them), worn earth under the stores, the
+  nest, the wood and the van's verge, oil where a truck stands at the shop's door, a fire's ring, a foot track outside the south wall, rubble, eight
+  dry bushes, and flat whitewashed stones along the drive's edges (the place's own ground mark; no painted line). Three flat layers a millimetre and
+  more apart; every low thing is under 0.19 m. 136 boxes and 8 props more (652 and 25). `level-needs tut-solo`: `ground` passes (the largest bare
+  piece 39 m², outside the walls). The fingerprint moved again. Judged from three CPU stills (`tools/menu-art.ts`, a picture's light, not the
+  game's) and the software adapter's page; never seen on a GPU, and whether the tracks read as tracks at the game's own exposure is by eye there.
+  THE LOADS: the maintainer: "for 2 we probably need to explain secondary attachments for the rifle in a modal" "and where to see it in the UI, swap
+  between secondaries, etc." The card names `rings: 2` (the kit's key for a mission's own card), so on the page the launcher comes up on a sponge
+  round and the step `load` ('Press [2] twice to load the grenade') is a swap he does, after the card 'Using the rifle's launcher' has said where
+  the loads show. THE RIGHT BUTTON STAYS SHUT UNTIL THE GRENADE IS ON (his first play: "i first accidentally sponged the guys"; a round at the two in
+  the doorway lets them go, and a wait after it had the scripted player shot): the frame's gate gave the load's row and the right button one action
+  (`alt`), so `rails.ts ACTS` has a name for the row alone, `load` (no key, no button: `gate` passes the load row's digit on `alt` or `load`), the
+  step `load` allows `load` and the step `launch` allows `alt`. No other level names it. Checks: `tut-solo-check` plays an eighth way, `sponge`
+  (the right button held on the two before the swap must fire nothing), and its kit line holds the page's card to two sponge rounds with the
+  launcher on them. Where the grenade comes loaded (`?issuelend`, the frozen stand's lent kit) the way is the run as the lines say.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
