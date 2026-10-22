@@ -219,9 +219,9 @@ export function build() {
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
       { id: 'wall', line: "[X], [3]: they follow. To the wall's end", done: or(and(or({ is: 'following' }, gave('fallIn')), near(END, 1.6)), taken('nest')), at: END, checkpoint: 'the wall', allow: ['menu', 'ring'] },
       { id: 'gun', line: 'A gun. Shoot back: it ducks', done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), at: [31.6, 1.2, 13.8], cue: 'gun' },
-      { id: 'blocks', line: 'While it is down: run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS },
+      { id: 'blocks', line: 'While it is down: run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS, cue: 'ducks' },
       { id: 'frag', line: '[5], left button: a frag over the bags', done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },
-      { id: 'nest', line: 'Take the nest', done: taken('nest'), at: [32.0, 1, 13.8] },
+      { id: 'nest', line: 'Take the nest', done: taken('nest'), at: [32.0, 1, 13.8], cue: 'fragged' },
       // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A DOOR IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
       //     leaf is shot down, and it is the way in
       { id: 'window', line: 'Two wait inside. Shoot through the window', done: taken('hall'), at: [31.1, 1.4, 16.9], checkpoint: 'the hall' },
@@ -231,7 +231,7 @@ export function build() {
       { id: 'bags', line: 'More are coming. Behind the bags', done: or(near(BAGS, 1.6), taken('road')), at: BAGS, checkpoint: 'the bags' },
       { id: 'front', line: 'Hold the road gate', done: or({ is: 'cue', name: 'flank' }, taken('road')), at: [35.0, 1, 14.0], cue: 'picket' },
       { id: 'back', line: 'Behind you! [X] on the alley, then [2]', done: or(gave('cover'), taken('road')), at: MOUTH },
-      { id: 'hold', line: 'Finish the picket', done: taken('road'), at: [35.0, 1, 14.0] },
+      { id: 'hold', line: 'Finish the picket', done: taken('road'), at: [35.0, 1, 14.0], cue: 'covered' },
     ],
   } as LessonData;
 

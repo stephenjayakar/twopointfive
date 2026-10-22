@@ -62,7 +62,7 @@ tick_yield + n), `until(pred(q), label?)`, `on(kind | 'signal', filter | name)` 
 `all(…)` (EVERY branch evaluated every tick; holds when all do at once), `any(…)` (→ `{index, event}` handed back into the generator); flow `start(beat)`,
 `cancel(beat)`, `signal(name, data)`, `flag` (a per-run `Record<string, Json>`), `note(what, data)`, `finish()` (the program ends: a showcase cuts — veil, restore
 — a play program stops), `rand()` (the run's own mulberry32), `query`, `dt`; actors `spawn(loadout, place, {callsign, yaw, light}) → UnitRef`, `despawn(u)`,
-`unit(callsign)`, `order(u, {goal, speed, face, strafe, aimAt (place | unit), stance, stackSide, crouch, upper, light, hot})`, `arrived(u)`, `release(u, state)`,
+`unit(callsign)`, `order(u, {goal, speed, face, strafe, aimAt (place | unit), stance, stackSide, crouch, upper, light, hot})`, `arrived(u)`, `release(u, state)`, `rout(u)` (the level's own man drops it and runs by runner.ts's rule: true = that rule has him and he is out of the beat's hand; false = nothing done to him),
 `drillOf(plan | name)`, `drill.breach(plan, [op1, op2], {hostiles, guaranteeDowns}) / clear(plan, [a, b?], {live}) / hold(units, places, faces) / exchange(a[], b[],
 {timeout, surprise, pin})` → `DrillRef {name, beat, phase, t, done, aborted, cleared, since(what), has(what), ops}`, `say(u, line, {radio})`, `radio(callsign, line)`,
 `control(line)`; world `lights.group(g, on) / mains(on) / blackout(secs)`, `doors.lock / open / fling(d, by) / shut / latch`, `stimulus.charge(place, {by, kind, fuse})`
