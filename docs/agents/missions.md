@@ -189,15 +189,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     fight at the gate has never been watched through real smoke.
 - **The tutorial's squad mission, 'A harder fight'** (row `tut-squad`, `scenarioList.ts TUTORIAL_MISSIONS`, group `tutorial`; `tools/levels/tut-squad.ts` → `levels/tut-squad.json`, its staged
   moments `levels/tut-squad.script.ts`, its scripted player `tools/qa/lessons/tut-squad.ts`, its page run `tools/qa/tut-squad-page.cjs`). A PROTOTYPE: one street through a walled post, the four,
-  eleven defenders in six rooms each its own squad (`mayLeave: false`, nobody digs in), nineteen steps. Two easy rooms on the squad's key, then four staged fights that each show ONE thing the
-  other side does: the workshop's man puts rounds through the door he heard the stack at (the answer is the side door), a gun behind chest-high bags covers the street (shoot back, move to the
-  blocks, a frag over the bags), two men wait in the dead ground either side of the hall's locked door (shot through the sill window, then the leaf is shot down), and a picket of three comes by
+  eleven defenders in six rooms each its own squad (`mayLeave: false`, nobody digs in), twenty-two steps. Two easy rooms on the squad's key, then four staged fights that each show ONE thing the
+  other side does: the workshop's man holds his open doorway from the far end of the room, in the picture through the fog, his rounds on the guard hut's wall (the answer is the side door, at his back), a gun behind chest-high bags covers the street (shoot back, move to the
+  blocks, a frag over the bags), two men wait in the dead ground either side of the hall's locked door (shot through the sill window, then the walk round to the door and the boot), and a picket of three comes by
   two gates (one shows in the road gate while two walk round to the back gate, down the alley and out into the street in front of the rifles the cover order turned; the last line is
-  'Finish the picket', and the picket's last man drops his rifle and runs: the sub-bullet on the two harsh places below). What is SCRIPTED is only what must be seen at a known moment (the bursts through the leaf, the gun's first burst on the wall, the
+  'Finish the picket', and the picket's last man drops his rifle and runs: the sub-bullet on the two harsh places below). What is SCRIPTED is only what must be seen at a known moment (the bursts out of the doorway, the gun's first burst on the wall, the
   picket's walk); every man is the room clear's own and is released to the game's AI the moment his show is over.
   - **It is played on the tutorial's frame** (`game/rails.ts`, the bullet above: `RAILS.on`, `TPS_RAILS=1` on the frozen stand; with the switch off the level is its mission alone). Its
     `rails.allow` is what the three missions before it taught (his feet, hands and rifle, the view, the squad's key and the word); the orders menu comes on with the step that asks for it
-    ('wall', `allow: ['menu', 'ring']`: its two menu lines name `[X]`, which the frame draws as "Hold" and the squad's key while that key kept down is the only way to the menu, and
+    ('follow', `allow: ['menu', 'ring']`, `noTap`: a tap of the squad's key gives nothing while it or 'back' is up; its two menu lines name `[X]`, which the frame draws as "Hold" and the squad's key while that key kept down is the only way to the menu, and
     without `ring` the frame cuts a held command key to a tap; the scripted player opens the menu that way when the ring is on and stays, by X when not) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun`, `ducks` (on the step after 'gun': he has shot back), `fragged` (on 'nest', the step after the frag's), `picket` and `covered` (on the last step: the cover order is given); a beat that was busy when a cue came asks `q.signalled('lesson:<cue>')`; its checkpoints 'the street', 'the wall', 'the hall'
     and 'the bags' each sit at the start of a staged fight, before the cue of the beat that follows, and every beat starts clean from its cue (the picket's beat starts with the program, holds
     the three in their camp and the yard's gates shut, and waits for its cue: so a checkpoint put back finds them held again).
@@ -213,17 +213,60 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **Level facts**: a doorway's middle is 0.85 m past the door's `at`; `locked` with `keySide` locks one face only (the hall's outside is `keySide: -1`); the game's own "they force a locked door
     near the squad" rule opened the hall by itself until its men were moved to the door wall's corners and the door to the far face; the response team proper (`scenarios.response`) is timed from
     the first shot and cannot wait for a cue, so the picket is roster men the script walks; the street wall runs a metre past where followers wait or the gun shoots them there.
-  - **The door, measured and NOT changed** (the doors goal's): the hall's wooden leaf opens after 6 rifle rounds squarely at the page's destruction (0.5), 19 to 23 from 1.5 m to one side and
-    on one run not in 40 (rounds on the jamb do not count), never at destruction 0 (so the step also passes on a kick, and on the frozen stand the scripted player kicks).
-  - **Checks**: `bun run tools/qa/lesson-gate.ts tut-squad` (a tutorial mission is gated by name; the gate gives its frozen runs `TPS_RAILS=1`): the scripted player does all nineteen
+  - **The hall's door is kicked, not shot** (since the play notes below; what a leaf costs to shoot out is the doors goal's rule and no line of this mission asks for it now). Measured
+    before that, for whoever stages the later lesson: a wooden leaf opened after 6 rifle rounds squarely at the page's destruction (0.5), 19 to 23 from 1.5 m to one side and on one run
+    not in 40 (rounds on the jamb do not count), never at destruction 0.
+  - **Checks**: `bun run tools/qa/lesson-gate.ts tut-squad` (a tutorial mission is gated by name; the gate gives its frozen runs `TPS_RAILS=1`): the scripted player does all twenty-two
     steps and the run ends 'taken' on the frozen stand, and on the page's stand on four dice, two at six seconds a line. For a level WITH a script the gate's "lesson off = the same run"
     line is a NOTE, not a bar, and that run is not made: the script makes it another mission. `lesson-run` reads a script's `fightOk` (steps a fight may finish by itself: here the steps
-    inside the nest's, the hall's and the picket's fights), so the scripted player holds the staged moments to account itself: `done:shop` raised and the workshop's man still in the
-    script's hand, `done:gun` raised, the four checkpoints kept, and the checkpoint 'the bags' PUT BACK mid-run with the same step up, the program running again, the picket in hand and the
+    inside the workshop's, the nest's, the hall's and the picket's fights), so the scripted player holds the staged moments to account itself: `done:shop` raised (a round of his is out), the workshop's man still in the
+    script's hand, standing in the level's `shop_line` volume, his lane door open and he drawn where the fog runs, `done:gun` raised, the four checkpoints kept, and the checkpoint 'the bags' PUT BACK mid-run with the same step up, the program running again, the picket in hand and the
     road gate shut. It plays under the locks: the menu and the frag are pressed only at their steps. `PORT=<port> node tools/qa/tut-squad-page.cjs`: the row on the real page (software
-    adapter), the big line with Q on a key cap, the frag and a tool locked at the first step, its first five steps by real keys, and the checkpoint 'the street' put back, and its two menu
+    adapter), the big line with Q on a key cap, the frag and a tool locked at the first step, its first eight steps by real keys and the cards on the way (out to the street in front of the workshop; there its man held, his door open, drawn under the fog, and he and the side door's ring both ON THE SCREEN; the squad's key on the step's ring; the walk round; the key again), the checkpoint 'the street' put back, and its two menu
     steps put up by hand (`lesson.i` set from the check, nothing walked to them): each line's caps, the menu's own key giving nothing, the squad's key kept down as a ring on no man, the
     digit that gives the order, and the same key kept down at step 1 putting no ring up.
+  - **Re-staged on five play notes** (2026-10-22, the maintainer playing it on hard: "weird that we can get little peeks of the guy shooting. can be distracting" · "we should
+    motivate going into this room that he's shooting. maybe we have the guy notice us after we finish the second room, get rid of one of the dividers so we can see his bullets (and him,
+    maybe clear FoW for him once we enable him), and then motivate going through the other door" · "weird that we signal going around the nest but then tell player to suppress" ·
+    "awkward here in that player will try to shoot the door through the window but can't hit it" · "weird to teach shooting doors before kicking them"). No switch: the level's files,
+    one Director verb, one Director read, one method of the fog's. THE WORKSHOP: its door on the street is gone; the door it has instead faces the guard hut across the lane between the
+    two buildings and the script stands it open from the first tick (`c.doors.open` at an angle with the dealt swing's sign: a level's `angle` did not survive the staging, and a velocity
+    the wrong way of a one-way leaf is clamped shut). Its man is the script's from the first tick on the mark at the far end of the room (an open doorway and the game's own man would
+    have him at it on the first shot of the first room). Step 5 'Shots outside. Out to the street' comes up with the store taken and the player in it: its cue PUTS HIM IN THE
+    PICTURE (`c.show`, below) and he lays three rounds every two seconds or so through the doorway onto the hut's block wall, a round at a time and none while
+    `q.inside(shop_lane, 'team')`; its ring is on the street in front of the workshop, the room's own wall between the player and the man, and the step is passed there. While
+    steps 5 to 7 are up the fog has a lookout behind the man looking down his line (the frame's step key `eye`): his room, the open doorway, the strip of lane and the hut's wall
+    his rounds land on are seen, not a man drawn on the dark. (WHAT THE REAL PAGE SAID OF TWO EARLIER CUTS: with no such step and the cue on the side door's line, the workshop was
+    OFF THE SCREEN from inside the store and the squad's key pointed at the far ring gave a move on the floor; with the ring at the mouth of the lane the man stood at the screen's
+    top edge and the side door was off it. The camera here is the game's own: the frame keeps a ring on the screen only in mission 1's seat. From the street in front of the
+    workshop both doors are on the screen.) Step 6 'He has that doorway. [B] on the side door' is passed by the order itself (`did order:stack on workshop_side`: the
+    ring is the door, and the frame makes an order pointed at the ring an order on it), 7 'Go round with them' by the player in the alley, 8 '[B] again: in behind him' by the room.
+    The way round is the street and the gap at the workshop's corner: no part of it is in his line, and in the runs below all four and the player took it. He is the game's own when
+    the side door opens (2 s late, as before), when anybody is in his room (the volume `shop_in`, the room's own floor) or when the player has stood 1.5 s in the narrow line
+    (`shop_line`). `done:shop` is raised by his first round, not by a clock; a round he could not put in half a second is not put later (`c.stimulus.cease`). TRIED FIRST AND
+    DROPPED: the street door standing open with his line on the truck by the store. Every way east crosses that line, the teammate who took the street shot him through the doorway
+    as he went by (one run of one), and shutting the gap at the corner to send everybody round the back sent the player out of the alley on the nest's side of the wall, where he
+    was shot. THE NEST: 'A gun. Shoot back: it ducks' carries no ring (a ring is where to go, and it stood on the nest); the gunner is shown through the fog while he is the
+    script's. THE HALL: 'The door is locked. Go round to it' (passed within 1.7 m of the passage mark, square on to the leaf) and then 'Hold [Space] on the door: kick it in'; the
+    scripted player kicks (one boot in every run so far). Shooting a door out is NOT taught here any more: his later ask is another place for it, men barricaded in a far room, with
+    rounds through cover, once the doors goal has said what a leaf costs. `Director` (`director.ts`): `c.show(unit, on?)` → `fogofwar.ts show(gd, on)`, a set of men drawn as the
+    squad's targets are (`drawn`, never `seen`: no AI learns anything); a man is shown only while a script holds him (the Director takes him out of the picture the frame his script
+    ends, whoever ended it, and when the program stops), and the fog empties its set with its own reset. `c.stimulus.cease(unit)`: rounds of his a burst has not put yet are not
+    put. `q.inside(volume, 'team')` = the player or any living teammate. NO SWITCH AND NO BREAK WORD: the row is new this week and its level, script and scripted player change
+    together; the verbs do nothing until a script calls them (no other script does). The level file's fingerprint moved (a door, a table, three volumes): checkpoints and recordings
+    of the row from before are refused. THE HALL'S TWO MEN are the script's from the first tick (beat `hall`: KNEELING on their marks, rifles on their doorway; standing, the one by the street window was shot through it from the alley, twelve metres off, in both of two slow
+    readers' runs, before the player had come near) until their door gives or
+    the player is in the room; one of them hit, the other turns his rifle to the window and stays on his mark, still the script's (let go, he went to the far corner out of the
+    window's sight and the window's line had nobody to shoot: a slow reader's run, twice, the first man shot through the glass from far off): they were the game's own from the first shot of the first room, one stands a step from the
+    street window, the walk round to the nest's open side passes that window a metre off, and an unprotected scripted player was shot through it on one die of eight and tied
+    up in a duel there on another. FALL IN IS ITS OWN STEP ('follow': '[X], [3]: they follow', then 'wall': 'To the wall's end'), and it and 'back' carry the frame's `noTap`
+    (the maintainer, having tapped the key at the old one line and sent the four to the ring: "we should block quick Q here when we want to teach something else"). SIX CARDS
+    (the frame's `explain`; `CARDS` in the generator; his: "i think this needs more explanation for the systems. maybe even a modal that pauses the game and explains it"): the
+    held doorway on 'side', the ring on 'follow', suppression on 'gun', grenades on 'frag', the window on 'window' (his own sentence), the flank on 'back'. A card is for a
+    system, never a key. The row's opening card (`scenarioList.ts teaches`) says 'A doorway a man holds: go round'. MEASURED on the page's stand, the unprotected scripted player (`lesson-run --plain`): dice 1 to 8 all finish; reading each line for 6 s (`--pace 6`), dice 2, 3, 5 and 7 all finish; the gate passes (the frozen stand with `TPS_RAILS=1`, and four dice of the page's). Before the hall's men knelt,
+    the same slow reader failed on two dice of two ('the hall was not cleared'), and with both kneeling the frozen stand's run failed the same way: measure both stands and a slow reader after any change there.
+    The real page (`tools/qa/tut-squad-page.cjs`, software adapter): 32 checks pass, to the workshop taken by hand, with steps 9 and 21 put up by hand; it does not reach the hall. Never seen on a GPU: the page check's picture
+    is the software adapter's; how a shown man reads in the fog's own light on a real card, and how his rounds across the lane look, nobody has seen. Nobody has played it.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
     not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.

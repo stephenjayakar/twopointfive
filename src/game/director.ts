@@ -124,7 +124,9 @@ export interface Query {
   pos(u: UnitRef | 'sam' | Place): Vec3;
   /** `swing`: the face the leaf opens onto, in the door's own ± (what a level's `swing` key means); 0 = double-acting (it opens off whoever works it) */
   door(d: DoorRef): { angle: number; open: boolean; latched: boolean; locked: boolean; broken: boolean; swing: 1 | -1 | 0 };
-  groupOn(g: GroupRef): boolean; inside(v: VolumeRef, who: UnitRef | 'sam'): boolean;
+  groupOn(g: GroupRef): boolean;
+  /** `'team'`: the player or any of his teammates, standing */
+  inside(v: VolumeRef, who: UnitRef | 'sam' | 'team'): boolean;
   /** the authored plan data behind a handle (marks, doors, lines) — data, not AI state */
   plan(p: PlanRef<'breach'>): Readonly<BreachPlan>; plan(p: PlanRef<'roomClear'>): Readonly<RoomClearPlan>; plan(p: PlanRef): Readonly<BreachPlan | RoomClearPlan>;
   flag(name: string): Json | undefined;
@@ -162,6 +164,9 @@ export interface BeatCtx {
    *  one of the response team's, a show on the floor; and for a man this program SPAWNED (his way out of the level would leave the program's record of
    *  him behind: the level's own men only). A play program may call it: it is the game's own rule, not a showcase verb. */
   rout(u: UnitRef): boolean;
+  /** the level's own man put in the picture through the fog of war, or taken out of it again (fogofwar.ts `show`): drawn, not seen — no AI learns
+   *  anything and the squad's eyes are their own. For a staged man the lesson is about: he must be there to be looked at. A play program may call it */
+  show(u: UnitRef, on?: boolean): void;
   /** a drill this program has begun, by the plan / name it was begun on (null before) — how one beat frames what another set going */
   drillOf(what: PlanRef | string): DrillRef | null;
   drill: {
@@ -184,7 +189,9 @@ export interface BeatCtx {
     kick(d: DoorRef, by: UnitRef, opts?: { leg?: 'left' | 'right' }): void;
     /** where `by` throws that kick from on his side of the leaf: square to it three-quarters of a metre off, by the lock (doors.ts kickSpot) */
     kickSpot(d: DoorRef, by: UnitRef): { pos: Vec3; yaw: number } };
-  stimulus: { charge(at: Place, opts: { by: UnitRef; kind?: 'flash' | 'smoke'; fuse?: number }): void; burst(u: UnitRef, at: Place | UnitRef, rounds: number, opts?: { cadence?: number; spread?: number }): Cond };
+  stimulus: { charge(at: Place, opts: { by: UnitRef; kind?: 'flash' | 'smoke'; fuse?: number }): void; burst(u: UnitRef, at: Place | UnitRef, rounds: number, opts?: { cadence?: number; spread?: number }): Cond;
+    /** rounds of his that a burst has not put yet are not put (a burst a beat stopped waiting on would otherwise fire them later, whoever stands in its line by then) */
+    cease(u: UnitRef): void };
   objective(text: string | null, markAt?: Place | DoorRef): void; chronicle(kind: 'objective', text: string): void;
   // ---- showcase-only (throw in a program not declared showcase: true; scanShowcaseVerbs flags them statically)
   stage(who: UnitRef | 'sam', at: Place, opts?: { yaw?: number }): void;
@@ -511,6 +518,7 @@ export class Director {
     const R = this.run; if (!R || R.ended || this.exiting) return;
     this.exiting = true;
     try {
+      for (const gd of [...this.shown]) this.showMan(gd, false);
       for (const b of R.beats) if (b.state === 'running') { b.state = 'cancelled'; try { b.it.return(); } catch { /* a finally that throws is nobody's problem now */ } this.push({ beat: b.name, kind: 'beat', what: 'cancelled', data: { step: b.step } }); }
       for (const d of R.drills) this.endDrill(R, d);
       if (R.show) {
@@ -540,7 +548,7 @@ export class Director {
     if (R.show?.shot) R.show.shot.t += dt;
     // drills first: the men are sequenced for this frame before any beat reads where a drill has got to
     for (const d of R.drills) this.tickDrill(R, d, dt);
-    this.tickTracks(R, dt); this.tickBursts(R); this.tickKicks(R);
+    this.tickTracks(R, dt); this.tickBursts(R); this.tickKicks(R); this.tickShown();
     // this frame's news: hearing events not seen before (pushed since the last tick — the guards' from the end of last frame, Sam's from this one), signals raised since
     const fresh: EventView[] = [];
     for (const e of this.g.events) { if (this.seen.has(e)) continue; this.seen.add(e); fresh.push(viewOf(this.g, R, e)); }
@@ -762,6 +770,11 @@ export class Director {
     else if (I.kind === 'hold') { for (const m of D.men) if (m.script && m.state !== 'dead') endGuardScript(m, R.show ? 'patrol' : m.team === 'guard' ? 'search' : 'alert'); }
     D.done = true;
   }
+  /** men a beat has put in the picture through the fog (c.show). A man is shown only while a script holds him: let go by his beat, handed back by a beat that
+   *  failed or was cancelled, taken out of its hand by the game (a door thrown into him), or the program stopped, he is the fog's own again */
+  private shown = new Set<Guard>();
+  private showMan(gd: Guard, on: boolean) { if (on) this.shown.add(gd); else if (!this.shown.delete(gd)) return; this.g.fogOfWar.show(gd, on); }
+  private tickShown() { for (const gd of [...this.shown]) if (!gd.script || gd.state === 'dead') this.showMan(gd, false); }
   private tickBursts(R: Run) {
     for (const B of R.bursts) {
       if (B.left <= 0) continue;
@@ -814,10 +827,11 @@ export class Director {
     if (p.plan === 'breach') { const B = this.g.level.breach; if (!B) throw new BeatFailure(`the level has no breach plan`); return B; }
     const P = (this.g.level.clearPlans ?? []).find(x => x.room === p.id || x.door === p.id); if (!P) throw new BeatFailure(`no room-clear plan '${p.id}'`); return P;
   }
-  private insideVolume(R: Run, id: string, who: 'sam' | 'anyUnit' | UnitRef): boolean {
+  private insideVolume(R: Run, id: string, who: 'sam' | 'anyUnit' | 'team' | UnitRef): boolean {
     const V = (this.g.level.volumes ?? []).find(v => v.name === id); if (!V) return false;
     const test = (p: Vec3) => { const px = p[0] - V.c[0], pz = p[2] - V.c[2]; const cs = Math.cos(V.yaw ?? 0), sn = Math.sin(V.yaw ?? 0); const lx = cs * px - sn * pz, lz = sn * px + cs * pz; return Math.abs(lx) <= V.h[0] && Math.abs(lz) <= V.h[2] && p[1] >= V.c[1] - V.h[1] - 0.1 && p[1] <= V.c[1] + V.h[1] + 2; };   // (world → the volume's local frame with the boxes' own convention — scene/collision.ts rayBox — feet anywhere from its floor to head height inside count)
     if (who === 'sam') return !this.g.player.down && test(this.g.player.char.pos);
+    if (who === 'team') { if (!this.g.player.down && test(this.g.player.char.pos)) return true; for (const gd of this.g.guards) if (gd.team === 'operative' && gd.state !== 'dead' && test(gd.char.pos)) return true; return false; }
     if (who === 'anyUnit') { for (const u of R.units.values()) if (u.gd.state !== 'dead' && test(u.gd.char.pos)) return true; return false; }
     const gd = R.units.get(who.id)?.gd; return !!gd && gd.state !== 'dead' && test(gd.char.pos);
   }
@@ -902,15 +916,16 @@ export class Director {
       order: orderNow,
       drillOf: what => { const name = typeof what === 'string' ? what : what.id; for (let i = R.drills.length - 1; i >= 0; i--) if (R.drills[i].ref.name === name) return R.drills[i].ref; return null; },
       arrived: u => !!this.guardOf(R, u).script?.arrived,
+      show: (u, on = true) => { this.showMan(this.guardOf(R, u), on); this.push({ beat: b.name, kind: 'note', what: `${on ? 'show' : 'unshow'} ${u.callsign}` }); },
       rout: u => {
         if (R.units.has(u.id)) return false;
         const gd = this.guardOf(R, u); if (gd.state === 'dead') return false;
         if (runnerOwns(gd)) return true;
         if (!runnerBreak(g, gd)) return false;   // (asked while he is still in this beat's hand: refused, he is exactly as he was)
-        if (gd.script) endGuardScript(gd, 'alert'); gd.hold = false; b.touched.delete(u.id);
+        if (gd.script) endGuardScript(gd, 'alert'); gd.hold = false; this.showMan(gd, false); b.touched.delete(u.id);
         this.push({ beat: b.name, kind: 'note', what: `rout ${u.callsign}` }); return true;
       },
-      release: (u, state = 'search') => { const gd = this.guardOf(R, u); if (gd.script) endGuardScript(gd, state); gd.hold = false; b.touched.delete(u.id); this.push({ beat: b.name, kind: 'note', what: `release ${u.callsign}`, data: { state } }); },
+      release: (u, state = 'search') => { const gd = this.guardOf(R, u); if (gd.script) endGuardScript(gd, state); gd.hold = false; this.showMan(gd, false); b.touched.delete(u.id); this.push({ beat: b.name, kind: 'note', what: `release ${u.callsign}`, data: { state } }); },
       drill: {
         breach: (plan, ops, o) => {
           const P = this.planOf(plan) as BreachPlan; const A = this.guardOf(R, ops[0]), B2 = this.guardOf(R, ops[1]); const H = o.hostiles.map(h => this.guardOf(R, h));
@@ -987,6 +1002,7 @@ export class Director {
           it.onBounce = (sp, p, g) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.audio.play('throw', from, 0.7);
           this.push({ beat: b.name, kind: 'stimulus', what: `charge ${o.kind ?? 'flash'}`, data: { by: o.by.callsign, at: [+to[0].toFixed(2), 0, +to[2].toFixed(2)] } });
         },
+        cease: u => { for (const B of R.bursts) if (B.u.id === u.id) B.left = 0; },
         burst: (u, at, rounds, o = {}) => {
           this.guardOf(R, u); touch(u);
           const B = { u, at, left: Math.max(0, Math.floor(rounds)), cadence: Math.max(0.05, o.cadence ?? 0.16), spread: o.spread ?? 0.01, next: R.t, fired: 0, cond: { k: 'pred' as const, test: () => B.left <= 0, label: `burst ${u.callsign} ×${rounds}` } };
