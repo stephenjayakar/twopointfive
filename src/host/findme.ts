@@ -139,7 +139,7 @@ export function watchCtrlTaps(win: Window, idle: () => boolean, key: () => strin
   win.addEventListener('keydown', e => {
     if (!mine(e)) { if (!e.repeat) T.other(); return; }   // (a held W repeating is not a new thing the hand did)
     if (e.repeat) return;
-    if (field(e) || e.altKey || e.metaKey || e.shiftKey) { T.reset(); return; }
+    if (field(e) || e.altKey || e.metaKey || (e.shiftKey && !key())) { T.reset(); return; }   // (Shift with Ctrl is a chord of the browser's; with the camera on a key of its own Shift is only his sprint, and a tap under it is a tap)
     held = key() ? e.code : 'Control'; T.down(e.timeStamp);
   }, { capture: true });
   win.addEventListener('keyup', e => { if (!lifts(e)) return; held = null; if (T.up(e.timeStamp) && !idle()) twice = true; }, { capture: true });
