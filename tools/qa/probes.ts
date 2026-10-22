@@ -2689,6 +2689,7 @@ if (on('roomfight-flank', 'roomfight', 'all')) await run('roomfight-flank', asyn
 if (on('roomfight-nextroom', 'roomfight', 'all')) await run('roomfight-nextroom', async () => (await import('./roomfight-probes.ts')).roomfightNextRoom());
 if (on('roomfight-sight', 'roomfight', 'all')) await run('roomfight-sight', async () => (await import('./roomfight-probes.ts')).roomfightSight());
 if (on('roomfight-eyes', 'roomfight', 'all')) await run('roomfight-eyes', async () => (await import('./roomfight-probes.ts')).roomfightEyes());
+if (on('cover-keep', 'roomfight', 'all')) await run('cover-keep', async () => (await import('./coverkeep-probes.ts')).coverKeep());   // a man told to cover keeps his angle: an enemy off the way he was given whom a mate is shooting at is not his (ROOMFIGHT.coverKeep; COVERKEEP_BREAK=1 must fail)
 if (on('doorlook', 'roomfight', 'all')) await run('doorlook', async () => (await import('./doorlook-check.ts')).doorlookCheck());   // a door an enemy's hand opens is looked at by every free teammate with a line to its doorway (ROOMFIGHT.doorEars)
 if (on('roomfight-friends', 'roomfight', 'all')) await run('roomfight-friends', async () => (await import('./roomfight-probes.ts')).roomfightFriends());
 if (on('roomfight-duel', 'roomfight', 'all')) await run('roomfight-duel', async () => (await import('./roomfight-probes.ts')).roomfightDuel());
@@ -3070,6 +3071,7 @@ if (on('pair-dark', 'pair', 'all')) await run('pair-dark', async () => (await im
 if (on('pair-mark', 'pair', 'all')) await run('pair-mark', async () => (await import('./pair-probes.ts')).pairMark());
 if (on('pair-now', 'pair', 'all')) await run('pair-now', async () => (await import('./pair-probes.ts')).pairNow());
 if (on('pair-watched', 'pair', 'all')) await run('pair-watched', async () => (await import('./pair-probes.ts')).pairWatched());
+if (on('pair-steady', 'pair', 'all')) await run('pair-steady', async () => (await import('./pairsteady-probes.ts')).pairSteady());   // a partner on his way to a man does not turn about (PAIR.steady; PAIRSTEADY_BREAK=1 must fail)
 if (on('pair-watch', 'pair', 'all')) await run('pair-watch', async () => (await import('./pair-probes.ts')).pairWatch());
 if (on('pair-identity', 'pair', 'all')) await run('pair-identity', async () => (await import('./pair-probes.ts')).pairIdentity());
 // ---------------------------------------------------------------- the partner sneaks: one teammate following while the squad is silent and unnoticed (sneak-probes.ts; game/sneak.ts)
@@ -3135,9 +3137,11 @@ if (on('irl-team', 'irlight', 'all')) await run('irl-team', async () => (await i
 if (on('irl-off', 'irlight', 'all')) await run('irl-off', async () => (await import('./irlight-probes.ts')).irlOff());
 if (on('irl-auto', 'irlight', 'all')) await run('irl-auto', async () => (await import('./irlight-probes.ts')).irlAuto());
 if (on('irl-meter', 'irlight', 'all')) await run('irl-meter', async () => (await import('./irlight-probes.ts')).irlMeter());
+if (on('irl-near', 'irlight', 'all')) await run('irl-near', async () => (await import('./irlight-probes.ts')).irlNear());   // the infrared light turns itself down for what stands close in front of it (IRLIGHT.near; IRNEAR_BREAK=1 must fail)
 // ---------------------------------------------------------------- dark on a lit man: from the dark, a teammate's light stays off and his closing walk waits (litman-probes.ts; guards.ts LIGHTS.litMan)
 if (on('litman-rule', 'litman', 'all')) await run('litman-rule', async () => (await import('./litman-probes.ts')).litmanRule());
 if (on('light-wall', 'litman', 'all')) await run('light-wall', async () => (await import('./walllight-probes.ts')).lightWall());   // a teammate's light is dark into the wall at his muzzle (LIGHTS.wallOff; WALLLIGHT_BREAK=1 must fail)
+if (on('same-way', 'ordereddoor', 'all')) await run('same-way', async () => (await import('./sameway-probes.ts')).sameWay());   // a pair handed one order on one door goes round a building by one side (ORDERS.sameWay; SAMEWAY_BREAK=1 must fail)
 // ---------------------------------------------------------------- the loud demo's motion pass (moves-probes.ts; character.ts MOVES): off = the old calls to the bit; on = recoil, the toss, the flinch / hit, the stun hunch, the two gaits, a staged fight
 for (const [nm, fn] of [['moves-off', 'movesOff'], ['moves-recoil', 'movesRecoil'], ['moves-react', 'movesReact'], ['moves-toss', 'movesToss'], ['moves-dazzle', 'movesDazzle'], ['moves-gait', 'movesGait'], ['moves-game', 'movesGame'], ['moves-reload', 'movesReload'], ['moves-kept', 'movesKept'], ['moves-entry', 'movesEntry'], ['moves-second', 'movesSecond'], ['moves-hands', 'movesHands'], ['moves-cast', 'movesCast'], ['moves-snap', 'movesSnap'], ['moves-steady', 'movesSteady']] as const)
   if (on(nm, 'moves', 'all')) await run(nm, async () => ((await import('./moves-probes.ts')) as any)[fn]());

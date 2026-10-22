@@ -31,6 +31,8 @@ import { CASTOR } from '../game/props';
 import { DOORTOOLS } from '../game/doortools';
 import { SEENWALK } from '../game/seenwalk';
 import { ORDERS, ROUND_CAP } from '../game/orders';
+import { PAIR } from '../game/pairorders';
+import { ROOMFIGHT } from '../game/roomfight';
 import { HANDLE } from '../game/handleside';
 import { COVER } from '../game/cover';
 import { SNEAK } from '../game/sneak';
@@ -201,6 +203,9 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.walkTries = q.get('walktries') !== '0';   // a 'move there' whose way runs at a door locked against the team that nobody has tried is not refused with the door's name: the men walk up to it, the man on the jamb tries the handle, and the order ends there as a door order ends 'found shut' — the same line, the men left stacked on it; the team knows from then on (game/orders.ts walkStacks, game/doortools.ts walkTried; only where DOORTOOLS.testDoor is on); ?walktries=0 = refused at once, '<door> is locked.', as it was
   ORDERS.roundCap = q.get('roundcap') === '0' ? 0 : ROUND_CAP;   // the way round an uncleared room is taken only when it is worth it (game/orders.ts route / roundRooms: a way round that still crosses floor nobody has been on, or is longer than this many times the short way + 3 m, is refused — the short way, as with no way round); ?roundcap=0 = any way round with less unknown floor on it, however long, as it was
   ORDERS.roundOwn = q.get('roundown') !== '0';   // …and the cap never refuses a pair a way round that keeps it off the door it is to stack on (game/orders.ts route): ?roundown=0 = the cap as it was first made, a pair behind the ordered door walks through it
+  ORDERS.sameWay = q.get('sameway') !== '0';   // a pair handed one order on one door from one spot goes round a building by one side (game/orders.ts sameWays): ?sameway=0 = each man his own short way, as it was
+  ROOMFIGHT.coverKeep = q.get('coverkeep') !== '0';   // a man told to cover keeps his angle: an enemy off the way he was given whom a mate is already shooting at is not his (src/game/roomfight.ts)
+  PAIR.steady = q.get('pairsteady') !== '0';   // a partner on his way to a man's back does not turn about: never back to a corner he has passed, and a short wait on a watched way does not square him to the man (game/pairorders.ts takeTick): ?pairsteady=0 = as it was
   COVER.rearRead = q.get('rearread') !== '0';   // a rear man on a mark with no door (a wall charge's stand-off, the mate covering a man at work) watches what the ground round him offers — a way in, a long run of floor — not the spot he stood on when the order came (game/cover.ts readRear over roomfit.ts watchablesAt): ON in the page; ?rearread=0 = 'the way he came', as it was
   COVER.backTurn = q.get('backturn') !== '0';   // a man walking backwards whose opening the deal lets go of comes out of it on his feet: the path kept, his body turning to the way he goes (game/cover.ts turnOut): ?backturn=0 = he walks forward along a body still turned to the rear, a quarter of a metre the wrong way, as he did
   UNDERFOOT.on = q.get('underfoot') !== '0';   // what the walk grid calls floor, feet cross (scene/collision.ts): a walker is stopped by what the grid's bake calls blocked and by nothing lower — the bottom layer of a pile of sacks a wall charge left in its own hole no longer holds the men ordered through it: ?underfoot=0 = a thing 0.2 m high stops feet the grid routes across
@@ -405,6 +410,7 @@ export function pageSwitches(q: URLSearchParams): void {
   IRLIGHT.on = !q.has('noirlight');   // an infrared light on the goggles (game/irlight.ts): a room with no light of its own shows through night vision, to you and to a goggled teammate and to nobody else — ON in the page; ?noirlight = a tube amplifies only the light that is there, as it was
   IRLIGHT.auto = !q.has('noirauto');   // …and it burns only where the goggles alone show too little (irlight.ts fanDark: the place's own light through the tube, under NVG.blackAt) — ON in the page; ?noirauto = it burns whenever the goggles are down, as it did
   IRLIGHT.meter = !q.has('noirmeter');   // …and what the CPU's direct-light estimate calls too dark is put to the renderer's light meter, which has the bounce (irlight.ts burn): a room with its own bulb off but lit round its door frame is not dark to the tube — ON in the page; ?noirmeter = the CPU's estimate alone, as it was
+  IRLIGHT.near = q.get('irnear') !== '0';   // …and it turns itself down for what stands close in front of it, so a wall a pace off reads as one five metres off and not white (irlight.ts nearK): ?irnear=0 = full strength whatever is in front of it, as it was; ?irnear=<metres> and ?irpower=<n> set its two numbers for a visit (irlight.ts irFlags)
   LIGHTWALL.on = !q.has('nolightwall');   // a weapon light stops at the wall its carrier is pressed to (game/lighting.ts lensClear): ON in the page; ?nolightwall = the light at its lens wherever that is, as it was
   AIRDUST.on = !q.has('flatfog');   // a picked weather's dust stands in the rooms where the openings let it (game/airDust.ts): the men's eyes read that field — ON in the page; ?flatfog = the leak under every roof and the picture's flat veil, as it was (main.ts lowers render/frame.ts weatherVolConfig by the same word)
   gearFromQuery(q);   // the 2010s issue kit (game/gear.ts): Sam's rifle and pistol named a Mk 18 and a Glock 19 (the rifle drawn as an M4-pattern carbine), two-tube goggles that do not glow, the ring worded and drawn a 40 mm sponge round — ON in the page; ?oldgear = the Splinter Cell kit, as it was. Words and boxes, and one number: the Glock's magazines hold fifteen
@@ -487,6 +493,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'IRLIGHT.on': 'TPS_IRLIGHT=1',
   'IRLIGHT.auto': 'TPS_IRAUTO=1',
   'IRLIGHT.meter': 'TPS_IRMETER=1',
+  'IRLIGHT.near': 'TPS_IRNEAR=1',
   'AIRDUST.on': 'TPS_AIRDUST=1',
   'WALLSNAP.on': 'TPS_WALLSNAP=1',
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
@@ -602,6 +609,9 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.retakeGoal': 'TPS_RETAKEGOAL=1',
   'ORDERS.walkTries': 'TPS_WALKTRIES=1',
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
+  'ORDERS.sameWay': 'TPS_SAMEWAY=1',
+  'PAIR.steady': 'TPS_PAIRSTEADY=1',
+  'ROOMFIGHT.coverKeep': 'TPS_COVERKEEP=1',
   'COVER.rearRead': 'TPS_REARREAD=1',
   'COVER.backTurn': 'TPS_BACKTURN=1',
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',

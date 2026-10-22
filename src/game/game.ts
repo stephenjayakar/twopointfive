@@ -127,7 +127,7 @@ import { wallReactTick, wallReactReset } from './wallreact';
 import { BLAST_PACE } from './destructionSwitch';
 import { loadTeamFeel } from './teamfeel';
 import { nvgTick } from './nvg';
-import { irLightTick } from './irlight';
+import { irLightTick, irFlags } from './irlight';
 import { silentTick, silentEase } from './silent';
 import { holdFireReset } from './holdfire';
 import { spottedTick } from './spotted';
@@ -1109,7 +1109,7 @@ export class Game {
     try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
     loadQrfTune(this);   // …and so are the response team's knobs (qrf.ts: on/off, ETA, size, the perimeter tier's)
     loadTactics(this.tune);   // the pursuit tactics' four knobs, kept per machine like the aim rows (tactics.ts)
-    leversFog(loadTeamFeel); fogFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
+    leversFog(loadTeamFeel); fogFlags(); irFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
     loadNeeds(this.tune);     // …and the needs' switch + fairness knobs (needs.ts)
     loadChaos(this.tune);     // …and the destruction lane's chaos knob (destruction.ts)
     loadWind(this.tune);      // …and the wind's master + rows (wind.ts; the moths' switch rides with it)

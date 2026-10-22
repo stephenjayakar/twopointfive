@@ -76,7 +76,7 @@ const headOf = (c: any): number[] => c.bones.head ?? [c.pos[0], c.pos[1] + 1.62,
 const f2 = (x: number) => x.toFixed(2);
 /** a scenario as its row starts it with the light as asked, the team fallen in on Sam, Sam's goggles as asked, four seconds on */
 async function settled(id: string, on: boolean, team: boolean, nv: boolean, auto = false) {
-  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = auto; IRLIGHT.meter = false; g.player.nv = nv;
+  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = auto; IRLIGHT.meter = false; IRLIGHT.near = false; g.player.nv = nv;
   await quiet(() => g.orders.give('fallIn', g.orders.targetAt(g.player.char.pos), 'all')); step(240);
   return S;
 }
@@ -135,7 +135,7 @@ export const irlList = guarded(async () => {
 // ---------------------------------------------------------------- irl-unseen / irl-team: the same held-door play
 interface Play { hash: string; frames: number; irFrames: number; irMax: number; flood: number; awMax: number; black: number; white: number; gog: number; shots: number; down: number }
 async function play(id: string, on: boolean, team: boolean, nv: boolean): Promise<Play | null> {
-  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = false; IRLIGHT.meter = false; g.player.nv = nv;
+  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = false; IRLIGHT.meter = false; IRLIGHT.near = false; g.player.nv = nv;
   const L = g.engine.lights, foes = g.guards.filter((x: any) => x.team === 'hostile'), H = fnv();
   const R: Play = { hash: '', frames: 0, irFrames: 0, irMax: 0, flood: 0, awMax: 0, black: 0, white: 0, gog: 0, shots: 0, down: 0 };
   const shots0 = foes.reduce((n: number, x: any) => n + x.weapon.shotsFired, 0);
@@ -229,7 +229,7 @@ export const irlOff = guarded(async () => {
     IRLIGHT.on = true; step(2); const on = L.ir.length; IRLIGHT.on = false; step(1);
     F.verdict(on > 0 && L.ir.length === 0, 'flipped in play it takes hold inside a frame', `on: ${on} burning two frames later · off: ${L.ir.length} the next frame`);
     reset(); }
-  { const rows = ['on', 'team', 'auto', 'meter', 'show', 'power', 'cone', 'reach'], kept = rows.filter(k => TFM.feelRange('IRLIGHT', k) !== undefined), sw = ['on', 'team', 'auto', 'meter'].every(k => TFM.feelRange('IRLIGHT', k) === null);
+  { const rows = ['on', 'team', 'auto', 'meter', 'near', 'nearM', 'show', 'power', 'cone', 'reach'], kept = rows.filter(k => TFM.feelRange('IRLIGHT', k) !== undefined), sw = ['on', 'team', 'auto', 'meter', 'near'].every(k => TFM.feelRange('IRLIGHT', k) === null);
     F.verdict(kept.length === rows.length && sw, 'the Team feel rows are kept per machine (teamfeel.ts)', `${kept.join(', ')} · on / team / auto are switches: ${sw}`); }
   { const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_IRLIGHT;
     const want = frozen || word !== undefined ? word === '1' : true;
@@ -404,5 +404,59 @@ export const irlMeter = guarded(async () => {
       frozen ? 'the frozen stand holds the switch off (TPS_IRMETER=1 raises it); a recording from before the key replays with it off; the Team feel row is kept' : 'the shipped stand has the switch on from the moment the harness loads, as the page does; a recording from before the key replays with it off; the Team feel row is kept',
       `as the harness loaded: ${METER_AT_LOAD} · after standUp: ${stood} · TPS_IRMETER ${word ?? 'unset'} · FROZEN_HOLDS row: ${row ?? 'none'} · the journal carries the key: ${carries}; applyKnobs without it → ${without}, with it on → ${withIt} · kept by teamfeel.ts: ${kept}`);
     IRLIGHT.meter = stood; }
+  return F.done();
+});
+
+// ---------------------------------------------------------------- irl-near
+// THE LIGHT TURNS ITSELF DOWN FOR WHAT STANDS CLOSE IN FRONT OF IT (IRLIGHT.near — irlight.ts nearK). Sam stood with his goggles down, the 'only where it
+// is too dark' rule held off so the light burns wherever he is, faced first at the nearest wall from a pace off and then down the longest clear way the
+// place has. The probe casts its own rays from the lamp as the frame left it (its axis and four more across the middle of the flood) and works out, by the
+// shader's own on-axis terms, the light each landing point takes — against what a point IRLIGHT.nearM off takes at full strength:
+//   · off, the flaw is there: the wall a pace off takes many times that
+//   · on, nothing the middle of the flood lands on takes more than that, and the light is never under its floor
+//   · in the open (nothing inside nearM) it burns at full strength, as it was
+//   · a light that comes on facing the wall comes on turned down (no white frame), and turned to the wall from the open it is down inside half a second
+//   · off, nothing reads its numbers · the stand's own word · a recording carries the key
+// What it cannot say: what the wall looks like through the tube (never seen on a GPU). Its red path: IRNEAR_BREAK=1 must FAIL (the rule answers "full").
+export const irlNear = guarded(async () => {
+  const F = family('irl-near: the infrared light turns itself down for what stands close in front of it');
+  let stoodOn = false; { await quiet(() => stage(IDS[0], 1)); stoodOn = !!IRLIGHT.near; reset(); }
+  const S = await settled(IDS[0], true, false, true); const { g, step } = S; const L = g.engine.lights, pl = g.player, c = pl.char, col = g.col;
+  g.godMode = true; g.aiEnabled = false; const X = g.engine.settings.exposure > 0 ? g.engine.settings.exposure : 1, M: number = IRLIGHT.nearM, full = IRLIGHT.power / X;
+  const samLit = () => L.ir.find((l: any) => l.owner === c.id);
+  const w2 = (d: number, r: number) => { const x = d / r, w = Math.max(0, 1 - x * x * x * x); return w * w; };
+  /** the most any point the middle of the flood lands on takes, in units of what a point nearM off takes at full strength — and how near the nearest is */
+  const hottest = (l: any): { e: number; d: number } => { let e = 0, dn = Infinity; const ref = full * w2(M, l.range) / (M * M);
+    for (const a of [0, -0.09, 0.09, -0.17, 0.17]) { const k = Math.cos(a), q = Math.sin(a), h = col.raycast(l.pos, [l.dir[0] * k + l.dir[2] * q, l.dir[1], l.dir[2] * k - l.dir[0] * q], 30); if (!h) continue;
+      dn = Math.min(dn, h.t); e = Math.max(e, l.intensity * w2(h.t, l.range) / Math.max(h.t * h.t, l.radius * l.radius) / ref); }
+    return { e, d: dn }; };
+  // the nearest wall and the longest clear way from where Sam stands, by a ring of rays at brow height
+  const p0 = [c.pos[0], 0, c.pos[2]], eye = [p0[0], 1.5, p0[2]]; let near = { t: Infinity, yaw: 0 }, far = { t: 0, yaw: 0 };
+  for (let i = 0; i < 48; i++) { const yaw = i / 48 * Math.PI * 2, t = Math.min(...[0, -0.2, 0.2].map(a => col.raycast(eye, [Math.sin(yaw + a), -0.1, Math.cos(yaw + a)], 30)?.t ?? 30)); if (t < near.t) near = { t, yaw }; if (t > far.t) far = { t, yaw }; }
+  const face = async (yaw: number, at: number[] | null, n: number) => { if (at) await quiet(() => g.teleportPlayer(at)); for (let f = 0; f < n; f++) { c.bodyYaw = c.aimYaw = yaw; pl.nv = true; step(1); } };
+  const wallAt = [p0[0] + Math.sin(near.yaw) * Math.max(0, near.t - 0.8), 0, p0[2] + Math.cos(near.yaw) * Math.max(0, near.t - 0.8)];
+  IRLIGHT.near = false; await face(near.yaw, wallAt, 90); const offL = samLit(), off = offL ? hottest(offL) : { e: -1, d: -1 };
+  F.verdict(!!offL && off.d < 1.5 && off.e > 4, 'off, the flaw is there: a wall a pace from the lens takes many times what one nearM off takes', `Sam faced at the nearest wall: the nearest thing in the middle of his flood ${f2(off.d)} m off takes ${off.e.toFixed(1)} times what a point ${M} m off takes at full strength (want over 4) · his light at ${offL ? f2(offL.intensity * X) : '—'} of power ${IRLIGHT.power}`);
+  IRLIGHT.near = true; await face(near.yaw, null, 90); const onL = samLit(), on = onL ? hottest(onL) : { e: -1, d: -1 }, kOn = onL ? onL.intensity / full : -1;
+  F.verdict(!!onL && on.e > 0 && on.e <= 1.15 && kOn >= IRLIGHT.nearMin - 1e-9 && kOn < 0.5, 'on, nothing the middle of the flood lands on takes more than a thing nearM off would, and the light is never under its floor', `the same stand: ${on.e.toFixed(2)} times (want at most 1.15; it was ${off.e.toFixed(1)}) · his light at ${kOn.toFixed(4)} of its strength (floor ${IRLIGHT.nearMin}) · the reading the rule keeps: ${ILM.irNearOf(g, c.id).toFixed(4)}`);
+  // …a light that comes on facing the wall comes on turned down
+  pl.nv = false; for (let f = 0; f < 60; f++) { c.bodyYaw = c.aimYaw = near.yaw; pl.nv = false; step(1); } let first = -1, most = 0;
+  for (let f = 0; f < 90; f++) { c.bodyYaw = c.aimYaw = near.yaw; pl.nv = true; step(1); const l = samLit(); if (l) { const h = hottest(l).e; if (first < 0) first = h; most = Math.max(most, h); } }
+  F.verdict(first > 0 && most <= 1.15, '… and a light that comes on facing the wall comes on turned down: no frame of it at full strength', `goggles down at the wall: the first frame it burns the wall takes ${first.toFixed(2)} times, the most in 90 frames ${most.toFixed(2)} (want at most 1.15)`);
+  // in the open: full strength; then turned to a wall from there
+  // (the place may have no clear way as long as nearM: the distance is then set inside the nearest thing in his flood for this one line, and said)
+  await face(far.yaw, p0, 120); const opD = samLit() ? hottest(samLit()).d : -1, Mo = opD >= M ? M : Math.max(0.5, Math.floor((opD - 0.2) * 2) / 2); IRLIGHT.nearM = Mo; await face(far.yaw, null, 240);
+  const opL = samLit(), opH = opL ? hottest(opL) : { e: -1, d: -1 }, kOpen = opL ? opL.intensity / full : -1; IRLIGHT.nearM = M;
+  F.verdict(!!opL && opH.d > Mo && Mo >= 1 && Math.abs(kOpen - 1) < 1e-6, 'nothing inside nearM: it burns at full strength, as it was', `Sam faced down the longest clear way the place has (${f2(far.t)} m by the probe's ring): the nearest thing in the middle of his flood ${f2(opH.d)} m off, nearM ${Mo}${Mo === M ? '' : ` for this line (the place has nothing clear to ${M} m)`} · his light at ${kOpen.toFixed(4)} of its strength (want 1)`);
+  { await face(near.yaw, wallAt, 0); let downAt = -1, f1 = -1; for (let f = 0; f < 90; f++) { c.bodyYaw = c.aimYaw = near.yaw; pl.nv = true; step(1); const l = samLit(); if (!l) continue; const h = hottest(l).e; if (f1 < 0) f1 = h; if (downAt < 0 && h <= 1.15) downAt = f; }
+    F.verdict(downAt >= 0 && downAt <= 30, 'brought up to the wall from the open, it is down inside half a second', `frames until the wall takes at most 1.15 times: ${downAt} (want at most 30) · the first frame at the wall: ${f1.toFixed(2)} times`); }
+  { IRLIGHT.near = false; await face(near.yaw, wallAt, 60); const a = samLit()?.intensity ?? -1; IRLIGHT.nearM = 2; IRLIGHT.nearMin = 0.5; IRLIGHT.nearDown = 1; await face(near.yaw, null, 60); const b = samLit()?.intensity ?? -2; IRLIGHT.nearM = M; IRLIGHT.nearMin = DEFAULTS.nearMin; IRLIGHT.nearDown = DEFAULTS.nearDown;
+    F.verdict(a === b && Math.abs(a - full) < 1e-9, 'off, nothing reads it: full strength at the wall with its numbers moved', `his light at the wall: ${f2(a * X)} · numbers moved ${f2(b * X)} (power ${IRLIGHT.power})`); }
+  { const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_IRNEAR, want = word !== undefined ? word === '1' : !frozen;
+    F.verdict(stoodOn === want, 'the stand: on as the page opens, off on the frozen stand (TPS_IRNEAR has the say on either)', `stood up with it ${stoodOn ? 'on' : 'off'} · ${frozen ? 'the frozen' : 'the page\'s'} stand${word !== undefined ? `, TPS_IRNEAR=${word}` : ''}`);
+    const JOURNAL: any = await import(`${ROOT}/src/game/journal.ts`), snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
+    IRLIGHT.near = true; const own = snap(), old = snap(); delete old.tables.IRLIGHT.near;
+    IRLIGHT.near = false; await quiet(() => JOURNAL.applyKnobs(g, own)); const carried = IRLIGHT.near; IRLIGHT.near = true; await quiet(() => JOURNAL.applyKnobs(g, old)); const before = IRLIGHT.near;
+    F.verdict(carried === true && before === false, 'a recording carries it: one made with it on replays with it on, one from before the key with it off', `the key in the file, on: ${carried} · no key: ${before}`); }
   return F.done();
 });
