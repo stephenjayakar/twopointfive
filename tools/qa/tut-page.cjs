@@ -67,9 +67,11 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     check(after.o === before.o && !after.menu && R.i === 0, 'before anything is taught, the command key, the menu, the word, a throw and a click do nothing', `orders ${before.o} → ${after.o} · menu up ${after.menu} · step ${R.i} · ${R.rails.sum}`); }
 
   // ---- the steps, by hand
+  const camKey = async () => (await page.evaluate(() => document.querySelector('#railprompt kbd')?.textContent || '')) === 'Space' ? 'Space' : 'ControlLeft';
   const hand = {
-    turn: async () => { await page.keyboard.down('ControlLeft'); for (let x = 400; x <= 900; x += 50) { await page.mouse.move(x, 320); await run(page, 3); } await page.keyboard.up('ControlLeft'); },
-    zoom: async () => { await page.keyboard.down('ControlLeft'); for (let k = 0; k < 8; k++) { await page.mouse.wheel(0, 120); await run(page, 4); } await page.keyboard.up('ControlLeft'); },
+    // (the camera's key is the one the line's own cap names: Ctrl, or the Space bar where the page's board leaves it spare)
+    turn: async () => { const k = await camKey(); await page.keyboard.down(k); for (let x = 400; x <= 900; x += 50) { await page.mouse.move(x, 320); await run(page, 3); } await page.keyboard.up(k); },
+    zoom: async () => { const k = await camKey(); await page.keyboard.down(k); for (let n = 0; n < 8; n++) { await page.mouse.wheel(0, 120); await run(page, 4); } await page.keyboard.up(k); },
     pan: async () => { await page.keyboard.down('KeyD'); await run(page, 70); await page.keyboard.up('KeyD'); },
     move: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 25; k++) { await run(page, 120); if ((await read(page)).id !== 'move') break; } },
     gate: async () => { for (let k = 0; k < 40; k++) { await run(page, 120); if ((await read(page)).id !== 'gate') break; } },
