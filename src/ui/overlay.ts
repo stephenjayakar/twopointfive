@@ -17,7 +17,7 @@ import { previewTooClose } from '../game/he40';
 import { gunShut, throwRest } from '../game/player';
 import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 import { HANDSLOT } from '../game/handslot';
-import { HANDRING } from '../game/handring';
+import { HANDRING, EMPTY_WORD, EMPTY_SHOW_SECS } from '../game/handring';
 /** the reticle's ONE word: the 40 mm's arc is too short to arm (the plain 'RMB  OCP' / 'RMB  RING' / 'RMB  40 MM' words went on the 10-11 play note: "we can remove
  *  the RMB overlay on the cursor" — what the right button holds is read on the kit column's rows) */
 const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
@@ -286,7 +286,7 @@ export class Overlay implements HudLike {
       el.style.background = it.kind === 'door' ? 'rgba(150,190,230,0.5)' : it.kind === 'body' ? 'rgba(230,140,120,0.6)' : it.kind === 'objective' ? 'rgba(var(--h-acc-rgb),0.8)' : it.off ? 'rgba(120,140,160,0.45)' : 'rgba(255,240,180,0.55)';
     });
     // the ring on the highlighted row's thing (what it offers is listed in the interaction panel, below — the ring only says WHICH thing Space means; the selector's cancel row has no thing)
-    const hv = game.hover?.kind === 'cancel' ? null : game.hover; const pl = game.player;
+    const hv = game.hover?.kind === 'cancel' || game.hover?.kind === 'charge' ? null : game.hover; const pl = game.player;   // (charge: ownblow.ts's row is on his list wherever he stands — it is no thing under the cursor, and the gun's ring stays his)
     const gunOut = !!pl.gunInHand() && !pl.down;   // pistol OR the FN2000 actually in the hands (R5's rule), not the pistol's slot alone
     const model = game.tune.aimModel && gunOut && !pl.sprinting && !pl.dragging;   // the aim model's ring: at the snapped thing, or round the bare cursor's point when nothing is near — sized to his cone (aim.ts playerAim) at that distance
     let styled = false;
@@ -351,14 +351,14 @@ export class Overlay implements HudLike {
     // line), a pip for every step. The small row at the top stands down while it is up, and the seat with nobody on the floor hides the rows of a man's own kit.
     const rail = game.rails.prompt();
     // (each cap in brackets is one key, asked of the key map by itself: a line of several — '[W] [A] [S] [D]' — follows a rebind of any of them)
-    const caps = (line: string) => line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? (t === '[X]' && KEYMAP.qOnly ? `Hold <kbd>${esc(keyCap('B'))}</kbd>` : `<kbd>${esc(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))}</kbd>`) : esc(keyText(t))).join('');
+    const caps = (line: string) => line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? (t === '[X]' && KEYMAP.qOnly ? `Hold <kbd>${esc(keyCap('B'))}</kbd>` : `<kbd>${esc(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))}</kbd>`) : esc(keyText(t))).join('').replace(/(<kbd>[^<]*<\/kbd>)([:,.;!?])/g, '<span class="nb">$1$2</span>');   // (…and a cap is never parted from the mark after it: a second row that begins ': behind the van')
     const railWords = rail ? caps(rail.line) : '', railNote = rail?.note ? caps(rail.note) : '';   // (a note: the words under the line after a tap the step refused)
-    { const key = rail ? `${rail.n}|${rail.of}|${railWords}` : '';
+    { const key = rail ? `${rail.n}|${rail.of}|${rail.watch ? 'w' : ''}|${railWords}` : '';
       if (key !== this.railKey) { this.railKey = key;
         if (!rail) { this.railEl.className = ''; this.railEl.innerHTML = ''; }
         else { const words = railWords;
           let pips = ''; for (let i = 1; i <= rail.of; i++) pips += `<i class="${i < rail.n ? 'done' : i === rail.n ? 'now' : ''}"></i>`;
-          this.railEl.innerHTML = `<div class="line">${words}</div><div class="note"></div><div class="pips">${pips}</div>`; this.railNote = '';
+          this.railEl.innerHTML = `<div class="line${rail.watch ? ' watch' : ''}">${words}</div><div class="note"></div><div class="pips">${pips}</div>`; this.railNote = '';
           this.railEl.className = ''; void this.railEl.offsetWidth; this.railEl.className = 'on'; } }
       this.card.update(this.cards ? game.rails.card() : null, caps);
       // (the note is its own piece: it comes and goes under a line that stays put, and the line is shaken once as it comes)
@@ -386,10 +386,10 @@ export class Overlay implements HudLike {
       if (key !== this.recKey && this.recEl) { this.recKey = key; this.recEl.className = key ? (game.journal.recording ? 'on rec' : 'on') : ''; this.recEl.textContent = key ? (game.journal.recording ? '● ' : '') + key + (game.journal.recording ? '  (F10 stops)' : '') : ''; } }
     const op = game.objectivePos();
     const skySeat = game.rails.skyOn;   // (nobody on the floor is the player: the marker is a place to point at, not a walk to it — no fade near it, no metres)
-    const od = op ? (skySeat ? 99 : v3.distXZ(op, game.player.char.pos)) : 0;
+    const od = op ? (skySeat || game.rails.arrow() ? 99 : v3.distXZ(op, game.player.char.pos)) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
     const floor = game.mission.stage === 'drive' && game.hover?.kind !== 'objective' ? 0.35 : 0;   // the rack has no marker of its own: keep a faint diamond on it until the cursor finds it (doors have their own dot / reticle)
     const alpha = op ? Math.max(floor, Math.min(0.9, (od - 1.6) / 1.5)) : 0;
-    if (!op || alpha < 0.03) this.objMark.style.display = 'none';
+    if (!op || alpha < 0.03 || rail?.watch) this.objMark.style.display = 'none';   // (a line that asks for nothing marks no place to press on: rails.ts prompt)
     else {
       const vp = cam.viewProj; const cw = vp[3] * op[0] + vp[7] * op[1] + vp[11] * op[2] + vp[15];
       let nx = vp[0] * op[0] + vp[4] * op[1] + vp[8] * op[2] + vp[12], ny = vp[1] * op[0] + vp[5] * op[1] + vp[9] * op[2] + vp[13];
@@ -477,6 +477,7 @@ export class Overlay implements HudLike {
     const thing = (it: Interactable) => `${it.kind}:${it.door?.def.name ?? it.guard?.callsign ?? ''}`;
     const cap = MAX_ROWS + (list.some(it => it.kind === 'cam') ? 1 : 0);   // (stickycam.ts: a stuck camera's 'take it back' is one row past every row the list had before it — it is always drawn)
     const rows = list.slice(0, cap).map((it, i): InteractRow => { const d = dist(it); return { kind: it.kind, label: it.line1, opts: it.kind === 'cancel' ? [] : parseOpts(it.line2), inReach: it.inReach, off: it.off, dist: it.inReach || it.kind === 'light' || it.kind === 'cancel' ? undefined : d, progress: it.progress, cont: i > 0 && it.kind !== 'cancel' && thing(list[i - 1]) === thing(it) }; });
+    if (HANDRING.empty && !list.length && !game.puppet) { const m = game.messages[game.messages.length - 1]; if (m?.text === EMPTY_WORD && game.time >= m.t && game.time - m.t < EMPTY_SHOW_SECS) rows.push({ kind: 'wall', label: EMPTY_WORD, opts: [], inReach: false, off: false }); }   // (handring.ts `empty`: the key tapped with nothing in reach — said here for a moment, where his rows come up)
     rows.push(...sq.status);   // … and otherwise the squad's block under the Space rows: who the orders go to, what each man is doing (nothing without a squad)
     const primary = hv ? list.indexOf(hv) : -1;
     return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.listOpen };   // (up as a ring — cmdring.ts CMDRING.hands — the panel's list is the list at rest)
