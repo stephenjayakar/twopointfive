@@ -150,7 +150,8 @@ export class LineWatch {
       { const s0 = m.script, v0 = Math.hypot(c.vel[0], c.vel[2]), A0 = g.orders.of(m); S.snap = { feet: s0 && O?.step && s0.goal === O.step.mine ? 'step' : s0 && s0.goal && !s0.arrived ? 'walk' : v0 > 0.3 ? 'drift' : 'still', low: !!m.muzzleDown, order: A0 ? `${A0.order}${A0.arrived ? ' (on his mark)' : ''}` : m.script ? 'scripted' : `no order, ${m.state}`, tgt: O?.tgt ?? (!m.script && m.foe && m.foe !== 'player' ? m.foe : null) }; }
       // the game's own moves since last frame (read off its records, nothing asked of it)
       let stepOk = S.evStep, stepNo = 0, letGo = S.evLetGo, aiStep = 0; S.evStep = S.evLetGo = 0;
-      if (O) { const d = O.stepUntil - S.stepUntil; if (d > 0.05 && !stepOk && Math.abs(O.stepUntil - g.time - 1) < 0.06) stepNo = 1;   // (sideStep's own 'no spot from here': it bars itself for a second and leaves no note; a doorway step bars 1.5 s, its miss 0.5) S.stepUntil = O.stepUntil;
+      if (O) { const d = O.stepUntil - S.stepUntil; if (d > 0.05 && !stepOk && Math.abs(O.stepUntil - g.time - 1) < 0.06) stepNo = 1;   // (sideStep's own 'no spot from here': it bars itself for a second and leaves no note; a doorway step bars 1.5 s, its miss 0.5)
+        S.stepUntil = O.stepUntil;
         S.pass = O.pass; this.out.rounds += O.rounds - S.rounds; S.rounds = O.rounds; }
       if (!m.script && (m.lineSide ?? 0) !== 0 && S.lineSide === 0) aiStep = 1; S.lineSide = m.lineSide ?? 0;
       const heldNow = O ? O.heldForFriend - S.held : 0; if (O) S.held = O.heldForFriend;
