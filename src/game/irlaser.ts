@@ -95,7 +95,7 @@ export function samLaserBoxes(g: Game, out: Box[]) {
 /** A TEAMMATE'S LASER IS ON this frame (combat.ts handProps asks, for a man carrying Sam's rifle): never with the muzzle lowered for a colleague in the line or
  *  pinned in somebody's arm; hunting (the guard AI's alert / search) as it always was; and, infrared, whenever the gun is at his shoulder (IR.carry) */
 export function laserOn(g: Game, gd: Guard): boolean {
-  if (gd.muzzleDown || gd.held) return false;
+  if (gd.muzzleDown || gd.held || g.rails?.noLasers()) return false;   // (rails.ts: a tutorial mission that shows no lasers)
   if (IR.teamOff && !BREAK && !isHostile(gd.team, 'player')) return false;   // (teamOff: a man on the player's side carries none — goggled or not, hunting or not; an enemy's sandbox laser, combat.ts LASER.enemy, is not this switch's)
   if (gd.state === 'alert' || gd.state === 'search') return true;
   return IR.on && IR.carry && gd.char.anim.upper === 'aim' && laserBand(g, gd) === 'ir';
