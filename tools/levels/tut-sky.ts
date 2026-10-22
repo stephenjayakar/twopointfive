@@ -47,7 +47,7 @@ const TEA_IN: Vec3 = [17.25, 1.1, 10.9], PASS_W: Vec3 = [21.9, 1.1, 6.75], KITCH
  *  Nobody stands at a window: the yard behind the lorry is safe ground, and each room is met at its door. */
 const STRUCTURE: StructureData = {
   name: 'the halt',
-  wallCharges: 1,
+  wallCharges: 3,
   team: { sam: SAM, samYaw: HALF, ops: OPS, opsYaw: HALF },
   rooms: [
     { id: 'tea', name: 'tea room', bounds: R.tea.bounds, garrison: 2, doors: [{ id: 'tea', from: 'yard' }, { id: 'pass', from: 'kitchen' }],
@@ -70,7 +70,7 @@ const LESSON: LessonData = {
   title: 'A squad, from above',
   // (the fog of war from the first step: nobody is seen in a room the squad has not looked into. The road is seen from the first truck's cab — the man left with
   //  the trucks — so the roadblock is in the picture while the squad is still behind its tails)
-  rails: { allow: [], respawn: 5, fog: true, sky: { park: SKY_PARK, reach: 18, eye: { at: [13.3, 1.9, 25.4], yaw: HALF, fov: 100 } } },
+  rails: { allow: [], respawn: 5, fog: true, orders: ['move', 'stack', 'go', 'walltools', 'wallCharge', 'work'], sky: { park: SKY_PARK, reach: 22, eye: { at: [13.3, 1.9, 25.4], yaw: HALF, fov: 100 } } },
   steps: [
     // ---- the road ----
     { id: 'turn', line: 'Hold [Ctrl], move the mouse: turn the view', allow: ['camera'], cue: 'ambush', checkpoint: 'the road', done: { is: 'view', turned: 40 } },
@@ -79,11 +79,11 @@ const LESSON: LessonData = {
     { id: 'move', line: '[B] on the yard: move them in', allow: ['order'], cue: 'break', at: YARD_MARK, done: { is: 'squad', area: YARD_IN }, hold: 0.6 },
     { id: 'gate', line: 'They hold the gate. Watch it', at: [19.5, 0.02, 22.0], done: { is: 'cue', name: 'roadblock' } },
     // ---- indoors ----
-    { id: 'stack', line: '[B] on the door: stack up', cue: 'indoors', checkpoint: 'the yard', at: [17.0, 1.0, 11.2], done: { is: 'stackOn', door: 'tea', set: true } },
-    { id: 'go', line: '[F]: send them in', allow: ['word'], at: [17.0, 1.0, 11.2], done: { is: 'all', of: [{ is: 'word' }, { is: 'any', of: [{ is: 'taken', room: 'tea' }, { is: 'squad', area: R.tea.bounds, n: 3 }] }] }, hold: 1.5 },
-    { id: 'kitchen', line: 'The kitchen: [B] on its door, then [F]', checkpoint: 'the tea room', at: PASS_DOOR, done: { is: 'all', of: [{ is: 'any', of: [{ is: 'did', what: 'order:stack', on: 'pass' }, { is: 'did', what: 'order:stack', on: 'kitchen' }] }, { is: 'word' }, { is: 'any', of: [{ is: 'taken', room: 'kitchen' }, { is: 'squad', area: R.kitchen.bounds, n: 3 }] }] }, hold: 1.5 },
+    { id: 'stack', line: '[B] on the door: stack up', cue: 'indoors', checkpoint: 'the yard', at: [17.0, 1.0, 11.2], done: { is: 'any', of: [{ is: 'stackOn', door: 'tea', set: true }, { is: 'taken', room: 'tea' }, { is: 'squad', area: R.tea.bounds, n: 3 }] } },
+    { id: 'go', line: '[F]: send them in', allow: ['word'], at: [17.0, 1.0, 11.2], done: { is: 'any', of: [{ is: 'taken', room: 'tea' }, { is: 'all', of: [{ is: 'word' }, { is: 'squad', area: R.tea.bounds, n: 3 }] }] }, hold: 1.5 },
+    { id: 'kitchen', line: 'The kitchen: [B] on its door, then [F]', checkpoint: 'the tea room', at: PASS_DOOR, done: { is: 'any', of: [{ is: 'taken', room: 'kitchen' }, { is: 'all', of: [{ is: 'word' }, { is: 'squad', area: R.kitchen.bounds, n: 3 }] }] }, hold: 1.5 },   // (a second tap of the command key sends a stack in with no word: the room taken is the step done, however they went)
     // ---- the wall ---- (a door is where a room expects them. The store taken by its door is the honest other way past both steps)
-    { id: 'charge', line: 'Locked. [X] on the wall, [5], [3]', allow: ['menu'], cue: 'wall', checkpoint: 'the kitchen', at: WALL_MARK, done: { is: 'any', of: [{ is: 'flag', flag: 'chargeClear' }, { is: 'flag', flag: 'wallBlown' }, { is: 'taken', room: 'store' }] }, hold: 0.4 },   // (the word's line waits for the squad to stand off: a charge blown with men beside it blinds them)
+    { id: 'charge', line: '[X] on the wall, then [5], [3]', allow: ['menu', 'ring'], cue: 'wall', checkpoint: 'the kitchen', at: WALL_MARK, done: { is: 'any', of: [{ is: 'flag', flag: 'chargeClear' }, { is: 'taken', room: 'store' }, { is: 'squad', area: R.store.bounds, n: 3 }] }, hold: 0.4 },   // (the word's line waits for the squad to stand off: a charge blown with men beside it blinds them)
     { id: 'blow', line: '[F]: blow it', at: WALL_MARK, done: { is: 'any', of: [{ is: 'taken', room: 'store' }, { is: 'squad', area: R.store.bounds, n: 3 }] }, hold: 1.5 },
     // ---- the dark ----
     { id: 'breaker', line: '[B] on the breaker: lights out', cue: 'dark', checkpoint: 'the store', at: BREAKER, done: { is: 'flag', flag: 'dark' } },

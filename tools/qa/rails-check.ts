@@ -17,7 +17,7 @@
 //   9. the journal: a recording from before the key replays with the frame off, one that carries it keeps its own word;
 //  10. THE MISSION AGAIN: Shift rides with Enter through the gate (the restart's keys) and alone does not; the seat's unseen player is no cheat to the verdict;
 //      a restart from a later step is on the first step, only its action open, before a tick has passed, and does not end; the mission left, he is seen again.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place and nothing keeps it in the picture: lines 3, 4, 10, 11 and 12 must fail.   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12 and 13 must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -135,6 +135,12 @@ export async function railsCheck(): Promise<boolean> {
       verdict(!!at && held > kept + 2 && let_ >= 0 && let_ <= kept + 0.05 && step === 'move',
         'the mark stays in the picture: a view shifted far off the step\'s mark stays there while the walk key is held, and comes back to within the kept radius once it is let go',
         `step '${step}' · kept radius ${kept.toFixed(1)} m · the mark from the view's middle: ${held.toFixed(1)} m with the key held → ${let_.toFixed(1)} m let go`); }
+    // ---- 13: the menu lists only the mission's orders
+    { const R = await rig(true), g = R.g; R.run(0.5); const ids = (p: number[]) => g.orders.rowsFor(g.orders.targetAt(p)).map((d: any) => d.id).join(' ');
+      const door = ids([17.0, 1.0, 11.2]), yard = ids([17.6, 0.02, 20.4]), wall = ids([27.95, 1.1, 9.4]);
+      verdict(door === 'stack' && yard === 'move go' && (wall === 'move go walltools' || wall === 'move go'),   // (the wall's tools are a switch of their own: held off on the frozen stand)
+        'the squad\'s menu lists only the orders the mission names: a door has the stack, the yard the move and the word, the store\'s wall its tools as well where the stand has them, and nothing else is on the ring',
+        `door: ${door} · yard: ${yard} · wall: ${wall}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

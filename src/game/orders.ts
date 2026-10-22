@@ -742,10 +742,10 @@ export class SquadOrders {
    *  listed — greyed, with whyNot's word) */
   rowsFor(t: OrderTarget, page: string | null = null, men?: Guard[]): OrderDef[] {
     const on = workRows(this.g, t, page, wallRows(this.g, t, page, this.defs.filter(d => (d.listed ?? d.targets).includes(t.kind) && (d.page ?? null) === page)));   // (wallcharge.ts: a wall's menu · workthings.ts: a thing's own order where 'move there' is)
-    if (!on.some(d => d.standsIn)) return on;
+    if (!on.some(d => d.standsIn)) return this.g.rails ? this.g.rails.orderRows(on) : on;   // (rails.ts: a tutorial mission's menu lists only the orders it names)
     // a row that STANDS IN for another (OrderDef.standsIn): in while its `when` says so — the row it stands in for out — and out otherwise
     const who = men ?? this.recipients(t), ins = on.filter(d => d.standsIn?.when(this, t, who)), out = new Set(ins.map(d => d.standsIn!.for));
-    return on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id));
+    const all = on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)); return this.g.rails ? this.g.rails.orderRows(all) : all;
   }
   /** a stand-in row put where the row it stands in for is: that row's digit and page, the next place in the table */
   private seat(def: OrderDef, stood: OrderDef) { def.key = stood.key; def.hotKey = stood.hotKey; def.page = stood.page; this.defs.splice(this.defs.indexOf(stood) + 1, 0, def); }

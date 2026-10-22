@@ -80,7 +80,7 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     kitchen: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 10; k++) { await run(page, 120); if (k >= 3) break; }
       await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'kitchen') break; } },
     // the orders' menu on the wall's ring: its fifth row is the wall's page, the third there the charge; then the word once a man has set it
-    charge: async s => { await point(s.at); await tap('KeyX'); await tap('Digit5'); await tap('Digit3'); await until('charge', 30); },
+    charge: async s => { await point(s.at); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3); await tap('Digit5'); await tap('Digit3'); await until('charge', 40); },   // (the command key held is the squad's menu, a ring that stays: its wall page, then the charge)
     blow: async () => { await run(page, 60); await tap('KeyF'); await until('blow', 30); },
     breaker: async s => { await point(s.at); await tap('KeyQ'); await until('breaker', 40); },
     nv: async () => { await tap('KeyN'); await run(page, 20); },
