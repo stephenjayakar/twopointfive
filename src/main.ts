@@ -299,7 +299,7 @@ async function main() {
   worldHooks(engine, game, audio);
   const input = new Input(canvas);
   (window as any).__findme = { table: FINDME, set: setFindMe };   // (host/findme.ts: the Options rows for finding your own man, for a page check to move without the screen)
-  bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
+  bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept, keymap.camKey);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
   const overlay = new Overlay();
   const bubbles = new Bubbles(document.getElementById('overlay')!);
