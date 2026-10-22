@@ -330,6 +330,7 @@ export function pageSwitches(q: URLSearchParams): void {
   PICTURE.run = q.get('picrun') !== '0';   // (?picrun=0: a man who drops his gun and runs plans his way round every enemy's true place, as it was)
   if (q.has('picture')) PICTURE.show = q.get('picture') === 'all' ? 'all' : 'cursor';   // (?picture = the floor shows the picture of the man under the cursor; ?picture=all = every teammate's ideas)
   PLAN.on = !q.has('noplan');   // the squad's plan drawn on the floor (game/floorplan.ts): picture only, on on both stands; `?noplan` = nothing drawn
+  PLAN.keyLit = q.get('keylit') !== '0';   // …and the key's cap on a door says whether it is live: dark while its men are still on their way or the press would not send it, lit once they stand there and it would (picture only, on on both stands; `?keylit=0` = the cap only on the door the key would send now, the same either way)
   CLOSE.on = !q.has('noclose');   // closer than ever (game/close.ts): the windows round a man drawn on the floor, the ready pose, the ways in from his sides, his front and over a chair — ON in the page; ?noclose = one way in, from behind, in words, as it was
   CLOSE.heldClicks = !q.has('noheldclicks');   // with a man in his arm the two buttons (game/close.ts, player.ts updateHold): left click the knife — he is dead — right click the choke; the arm hold only — ON in the page; ?noheldclicks = neither click does anything there, as it was
   KITANIM.on = !q.has('nokitanim');   // kit animations (game/kitanim.ts): Sam's hands put kit away and bring it out, magazine changes by the gun's state (empty / tactical), the close-in mode's knife hand by distance — ON in the page; ?nokitanim = the kit changing hands on the key's frame, one reload, as it was
@@ -348,6 +349,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.on = q.get('qring') !== '0';   // THE ORDERS RING (game/cmdring.ts): the squad's command key (Q on the board) let go at once is the quick order, as it was, and kept down a moment puts the order menu up as a ring at the cursor. ON in the page since 10-22 (the maintainer: "longer press for Q opens up squad, doesn't require holding it"); `?qring=0` = the key as it was, its order as it goes down and no ring. Held off on the frozen stand
   CMDRING.stay = CMDRING.on && q.get('qstay') !== '0';   // …and the ring stays up when the key comes up: a digit, a click or the key again gives a wedge, a right click puts it away (`?qstay=0` = the ring only while the key is down, given as it comes up)
   CMDRING.stayDigit = CMDRING.stay;   // …and a digit pressed inside that press, the key still down, puts the ring up at once and gives its wedge: it is not the gun's slot
+  CMDRING.pin = CMDRING.on && q.get('ringpin') !== '0';   // …and the ring stays on the place it was opened on as the view moves; a cursor the hand has not moved lights no other wedge (`?ringpin=0` = it stays where it was opened on the screen)
   CMDRING.tapNow = CMDRING.on;   // …and a press already up in its own tick is a tap given on that tick
   CMDRING.hint = q.has('cmdhint') && !q.has('nocmdhint');   // …and the mark at the cursor before the key — a glyph beside it and an outline on the floor for what the key would order there (a picture only). A GAME SETTING, off unless chosen: Options ▸ Game keeps it on this machine (ui/options.ts); `?cmdhint` = on for this visit, with the ring or without
   CMDRING.hands = CMDRING.on && q.has('cmd') && !q.has('nocmdhands');   // …and Space the same way for his own hands (interact.ts): down = his rows as a ring at the cursor, up = the lit one, a tap the tap it was — still only when asked for (`?cmd`; `?nocmdhands` = Space as it was beside the ring)
@@ -585,6 +587,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.tapNow': 'TPS_QRING=1 (with the ring)',
   'CMDRING.stay': 'TPS_QSTAY=1 (needs TPS_QRING=1)',
   'CMDRING.stayDigit': 'TPS_QSTAY=1 (with the ring that stays)',
+  'CMDRING.pin': 'TPS_RINGPIN=1 (needs TPS_QRING=1)',
   'CMDRING.plan': 'TPS_QPLAN=1 (needs TPS_QRING=1)',
   'CMDRING.planRts': 'TPS_QPLAN=1 (with the mode)',
   'CMDRING.planRun': 'TPS_QPLAN=1 (with the mode)',
