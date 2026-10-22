@@ -893,14 +893,14 @@
         { "id": "rifle", "line": "Press [2] to switch back to your rifle", "done": { "is": "slot", "slot": "rifle", "drawn": true } },
         { "id": "leave", "line": "Go back to the blue gate", "done": { "is": "any", "of": [{ "is": "near", "at": [16.5, 0, 14.25], "r": 0.8 }, { "is": "men", "down": 7 }] }, "at": [16.5, 0, 14.25], "explain": { "title": "Using the rifle's launcher", "text": "Your rifle has a grenade launcher. The tags next to the rifle on the kit strip are its loads, and you'll fire the lit one. Hold the right mouse button to aim, then let go to fire. The HE grenade won't go off within 8 m of you. Press [2] twice to swap loads." } },
         { "id": "behind", "line": "Turn around and watch the shop doorway for two more enemies", "done": { "is": "cue", "name": "trucks" }, "cue": "trucks" },
-        { "id": "load", "line": "Press [2] again to load the grenade", "setupLine": "Press [2] twice to load the grenade", "done": { "is": "any", "of": [{ "is": "launcher", "on": "he40" }, { "is": "men", "down": 7 }] }, "allow": ["alt"] },
-        { "id": "launch", "line": "Hold the right mouse button, aim at the doorway, and let go", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "threw", "kind": "he40" }, { "is": "men", "down": 6 }] }, { "is": "men", "down": 7 }] }, "at": [25.9, 1, 14.25] },
+        { "id": "load", "line": "Press [2] again to load the grenade", "setupLine": "Press [2] twice to load the grenade", "done": { "is": "any", "of": [{ "is": "launcher", "on": "he40" }, { "is": "men", "down": 7 }] }, "allow": ["load"] },
+        { "id": "launch", "line": "Hold the right mouse button, aim at the doorway, and let go", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "threw", "kind": "he40" }, { "is": "men", "down": 6 }] }, { "is": "men", "down": 7 }] }, "at": [25.9, 1, 14.25], "allow": ["alt"] },
         { "id": "last", "line": "Shoot the rest", "done": { "is": "men", "down": 7 }, "at": [25.9, 1, 14.25], "cue": "loose" },
         { "id": "out", "line": "Sprint out through the gate you came in by", "done": { "is": "stage", "stage": "done" }, "at": [8.2, 0, 14.25] }
       ]
     },
     "issue": {
-      "members": { "0": { "weapon": "rifle", "smoke": 2, "bangs": 2, "frags": 2, "shells": 3, "charges": 1 } }
+      "members": { "0": { "weapon": "rifle", "smoke": 2, "bangs": 2, "frags": 2, "shells": 3, "rings": 2, "charges": 1 } }
     },
     "doorNames": [
       { "door": "gate_w", "name": "yard gate" },

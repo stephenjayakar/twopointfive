@@ -90,6 +90,9 @@ const ACTS: Record<string, Act> = {
   // (ownblow.ts: a charge his own hands set, set off from his own list — no key of its own: the row is `use`'s, and a mission that names this action or
   //  the squad's word has that row from the step that opens either)
   blow: {},
+  // (a mission that hands him two loads and has him swap before he fires: the setup's load row with the right button still shut. No key of its own: the
+  //  row's digit is the row's — `gate`, below — and off the setup the swap is the rifle's own key)
+  load: {},
 };
 /** never locked: the page's own (the pause, the back key, a restart, the one-tick codes the host hands the tick) */
 /** the lookout's id among the fog's eyes: no character's, and under the sticky cameras' (stickycam.ts EYE_ID, which its count starts at) */
@@ -242,7 +245,7 @@ export class Rails {
     //  passes only where interact.ts will take it this tick — the press armed, the key down, something to choose — so it never reaches a slot)
     const P = g.player, S = P.sel, handKey = A.has('use') && !handUp && HANDRING.on && HANDRING.early && !g.puppet && !P.down && !P.takedown && !g.orders?.cmdRing && !g.orders?.menu
       && input.keys.has(INTERACT_KEY) && (S.downT >= 0 || (input.pressed.has(INTERACT_KEY) && !P.fHeld)) && !runningVerb(g) && (!this.locks('whistle') || choosable(g.nearby));
-    const ok = (code: string) => { const r = rowOf(code); if (r) return A.has(r.kind === 'mode' ? 'mode' : r.kind === 'light' ? 'light' : 'alt');   // (the load is what the right button fires: its row opens with that button)
+    const ok = (code: string) => { const r = rowOf(code); if (r) return r.kind === 'load' ? A.has('alt') || A.has('load') : A.has(r.kind === 'mode' ? 'mode' : 'light');   // (the load is what the right button fires: its row opens with that button, or by its own name ahead of it)
       return FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || ((handUp || handKey) && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight')); };
     let dropped = 0;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick

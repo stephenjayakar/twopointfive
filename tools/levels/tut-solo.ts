@@ -109,13 +109,13 @@ export const FRAME: Record<string, { allow?: string[]; deny?: string[]; cue?: st
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
   pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
-  take: { checkpoint: 'the store' }, behind: { cue: 'trucks' }, load: { allow: ['alt'] }, last: { cue: 'loose' },
+  take: { checkpoint: 'the store' }, behind: { cue: 'trucks' }, load: { allow: ['load'] }, launch: { allow: ['alt'] }, last: { cue: 'loose' },
 };
 
 const SHOP: Rect = { x0: FRONT_X, x1: PART_X, z0: ROOM_Z0, z1: ROOM_Z1 }, STORE: Rect = { x0: PART_X, x1: YARD.x1, z0: ROOM_Z0, z1: ROOM_Z1 };
 
 /** HIS KIT (game/kit.ts kitIssue): one of each can the steps ask for and one to spare of what a first throw may waste */
-export const ISSUE: IssueData = { members: { '0': { weapon: 'rifle', smoke: 2, bangs: 2, frags: 2, shells: 3, charges: 1 } } };
+export const ISSUE: IssueData = { members: { '0': { weapon: 'rifle', smoke: 2, bangs: 2, frags: 2, shells: 3, rings: 2, charges: 1 } } };
 
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };

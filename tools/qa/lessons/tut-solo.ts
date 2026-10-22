@@ -16,7 +16,7 @@ export const needs = 'rails';
 /** THE LESSONS CAN BE FAILED THE WAY THEIR LINES SAY (each of these runs must end with the player down; tools/qa/tut-solo-check.ts asks it):
  *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Three more words are mistakes that must cost
  *  nothing: `east` stands on the road east of the van in the sentry's line, `piers` stands at each pier of the arch under the last two's fire, `dud` fires the
- *  first grenade from too close */
+ *  first grenade from too close, `sponge` holds the right button on the two before the grenade is loaded, which must fire nothing (it asks something only where he carries sponge rounds) */
 const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : (globalThis as { __TUT_SOLO_ARM?: string }).__TUT_SOLO_ARM) ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
 /** THE DOOR'S LINE TEACHES HIS OWN CHARGE, and it is the one row the level lets that door offer (`rails.rows`: no pick, no boot). A stand that holds his own
  *  charges off (the frozen one) has no row there at all and the lesson cannot be done on it: the runner raises them for this run alone, as a run there
@@ -221,7 +221,12 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (men.length < 2 || off.length) B.fail(`the shot is asked for before the two stand in the doorway (${men.length} up, ${off.length} still on the way)`);
   },
   // 2 with the rifle up steps what is on the right button (the setup's load row where the setup is a mode); a kit that came loaded has nothing to do
-  load: B => { if (B.g.player.rifle.attachment === 'he40') return; B.press('Digit2', 20); if (stepIs(B, 'load')) B.press('Digit2', 10); },
+  load: B => { if (B.g.player.rifle.attachment === 'he40') return;
+    // (he carries two loads on the page and the launcher is on the sponge round: the right button stays shut until the grenade is on, so a round he did not
+    //  mean cannot go at the two in the doorway. The maintainer, of his first play: "i first accidentally sponged the guys")
+    if (brk() === 'sponge') { const x = B.g.guards.slice(5).find(up); if (!x) B.fail('sponge: nobody stands in the doorway on the line that loads the grenade'); const had = B.g.player.rifle.rings; rightHold(B, chest(x)); B.wait(1);
+      if (B.g.player.rifle.rings !== had) B.fail(`sponge: the right button fired a sponge round on the line that loads the grenade (${had} → ${B.g.player.rifle.rings})`); }
+    B.press('Digit2', 20); if (stepIs(B, 'load')) B.press('Digit2', 10); },
   // the two in the shop's doorway behind him: the grenade into it, once both stand there (8.5 m and more: armed)
   launch: B => {
     const men = () => B.g.guards.slice(5);
