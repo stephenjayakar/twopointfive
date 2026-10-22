@@ -1385,7 +1385,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   seconds (`flinch.stateOf`, checkpoint slice `flinch`; eases back at `easeK`); at `breakSecs` in all, ALONE (no living man of his side who still has his gun within `MORALE.aloneM` in his view — a mate the runner
   already has is no company), he is handed to `runner.ts runnerBreak`: shouts, a beat low, drops the gun, runs for his mates or out. With a mate he stays and is asked again every `askSecs`. Steady men, the response
   team, operatives, the player: never.
-  CHECK: `bun run tools/qa/probes.ts flinch` (23 lines on BOTH stands; `FLINCH_BREAK=1` = 17 FAIL on both); the real page: `PORT=<port> node tools/qa/flinch-page.cjs` (software adapter: a guard ducks at Sam's round
+  CHECK: `bun run tools/qa/probes.ts flinch` (23 lines on BOTH stands; `FLINCH_BREAK=1` = 16 FAIL on both); the real page: `PORT=<port> node tools/qa/flinch-page.cjs` (software adapter: a guard ducks at Sam's round
   past him, Sam ducks under a guard's fire, `?flinch=0` neither).
   MEASURED (headless, 10-22, the page's stand, the compound room fight, seeds 1 to 30, rush and careful, 60 runs an arm; off = `TPS_FLINCH=0`, duck only = `TPS_FLINCHRUN=0`): rush taken / wiped / stalled 14 / 14 / 2
   off, 17 / 11 / 2 with the duck (teammates standing 26 → 30 of 60); careful 20 / 3 / 7 off, 21 / 4 / 5 with it (45 → 42 of 60). 15 of the 60 runs are a different run; about four ducks a run (248 in 60). With the
