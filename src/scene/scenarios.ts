@@ -228,6 +228,8 @@ export interface LessonStep {
   id: string;
   /** what the objective row says while the step is up: what to do and the key that does it ('Crouch: press C') */
   line: string;
+  /** the line while a gun's key again opens its setup (game/slotsetup.ts SLOTSETUP.on), where the step's keys are others then (absent: `line`) */
+  setupLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;

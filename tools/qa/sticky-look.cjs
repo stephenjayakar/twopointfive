@@ -21,7 +21,7 @@ const PLAY = (arg) => { const e = window.__engine, real = e.render; let threw = 
   page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 400)); });
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 600)));
   const play = async (frames, press) => { const t = await page.evaluate(PLAY, { frames, press }); if (t) errors.push('play threw: ' + t); };
-  await page.goto(`http://localhost:${PORT}/?paused&quality=verylow&mute&${QUERY}`);
+  await page.goto(`http://localhost:${PORT}/?paused&quality=verylow&mute&slotsetup=0&${QUERY}`);
   const ready = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return { fatal: document.getElementById('fatal')?.textContent || '' }; });
   log('ready', JSON.stringify(ready)); if (ready.fatal) errors.push('fatal: ' + ready.fatal);
   await page.evaluate(async () => { const P = window.__cut?.programs; if (P?.swap) await Promise.race([Promise.resolve(P.ready).catch(() => 0), new Promise(d => setTimeout(d, 300000))]); });

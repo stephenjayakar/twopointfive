@@ -36,6 +36,7 @@ import type { RenderSettings } from '../settings';
 import type { HudLike, BubblesLike, View, Chapters } from './hud';
 import { TWEEN, type Tween } from './tween';
 import { FINDME, ctrlTurn, behindYaw, behindStep, aimCarry, carryStep, CARRY_KEYS, type AimCarry } from './findme';
+import { slotSetupTakes } from '../game/slotsetup';
 
 /** the showcase tour (game/demo.ts Demo) as the loop sees it */
 export interface DemoLike { readonly active: boolean; caption: string; sub: string; fade: number; update(dt: number): Vec3 | null; chapters(): Chapters; goto(k: number): void; }
@@ -165,7 +166,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   const carryAim = () => {
     const c = ctx.carry; if (!c) return;
     let used = frozen || !FINDME.behind || !viewFree() || !!input.clicked;   // (a button pressed NOW, not one held since before: a burst under way goes on to where it was going)
-    if (!used) for (const k of input.pressed) if (!CARRY_KEYS.has(k)) { used = true; break; }
+    if (!used) for (const k of input.pressed) if (!CARRY_KEYS.has(k) && !slotSetupTakes(game, k)) { used = true; break; }   // (…nor by the digits of a gun's setup: game/slotsetup.ts)
     const s = carryStep(c, input.mouseX, input.mouseY, used, game.player.char.pos, (x, y, z) => cam.project([x, y, z], view.clientWidth, view.clientHeight, Infinity, 1e-3));
     input.mouseX = s.x; input.mouseY = s.y; if (!s.held) ctx.carry = null;
   };

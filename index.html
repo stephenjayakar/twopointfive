@@ -605,7 +605,8 @@
     #equip .slot.sel { opacity: 1; border-color: rgba(var(--h-edge),0.7); box-shadow: 0 0 8px rgba(0,0,0,0.4); }
     #equip .slot.holstered { opacity: 0.7; border-style: dashed; }   /* E: the selected item put away */
     #equip .slot.holstered::after { content: 'holstered · E'; margin-left: 8px; color: var(--h-dim); font-size: 10px; letter-spacing: 0.1em; }
-    #equip .slot.slung.holstered::after { content: 'slung · E'; }   /* the FN2000's row: put away is on his back */
+    #equip .slot.slung.holstered::after { content: 'slung · E'; }
+    body.handslot #equip .slot.holstered::after { content: 'holstered'; } body.handslot #equip .slot.slung.holstered::after { content: 'slung'; }   /* empty hands are a slot (game/handslot.ts): E is not the way back, the row's own digit is */   /* the FN2000's row: put away is on his back */
     #equip .slot.slung .rounds i { width: 2px; } #equip .slot.slung .rounds i.spent { width: 0; }   /* thirty of them: slimmer pips */
     #equip .slot.absent { opacity: 0.3; border-style: dotted; }   /* the rifle's row in a kit without it: kept (greyed) so smoke and stun keep their numbers */
     #equip .slot.absent .name { color: var(--h-dim); }

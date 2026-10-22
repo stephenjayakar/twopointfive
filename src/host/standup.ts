@@ -20,6 +20,7 @@ import { LIGHTWALL } from '../game/lighting';
 import { IRLIGHT } from '../game/irlight';
 import { AIRDUST } from '../game/airDust';
 import { WALLSNAP } from '../game/wallsnap';
+import { HANDSLOT } from '../game/handslot';
 import { WALLCHARGE, WALLSHOT, WALLKILL } from '../game/wallcharge';
 import { CHAOS } from '../game/destruction';
 import { WALLREACT } from '../game/wallreact';
@@ -110,6 +111,7 @@ import { TEAMPACE } from '../game/teampace';
 import { NOSHOVE } from '../game/noshove';
 import { RAILS } from '../game/rails';
 import { DOORFORCE } from '../game/doorforce';
+import { SLOTSETUP } from '../game/slotsetup';
 import { GLASSREAL } from '../game/glassbreak';
 import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
@@ -241,6 +243,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_WALLPRESS')) WALLSNAP.press = String((globalThis as any).process?.env?.TPS_WALLPRESS ?? '') === '1';   // the wall taken without the key (src/game/wallsnap.ts `press`): off, so only Q takes a wall, as every frozen probe and digest has it; `TPS_WALLPRESS=1` turns it on (the shipped default; it acts only with the feel pass on)
     if (pinned('TPS_WALLVOICE')) WALLSNAP.voice = String((globalThis as any).process?.env?.TPS_WALLVOICE ?? '') === '1';   // the hold's two sounds (wallsnap.ts `voice`): off on the frozen stand, where only the old scuff is asked for; `TPS_WALLVOICE=1` turns them on (the shipped default)
     if (pinned('TPS_WALLSLOW')) WALLSNAP.slow = String((globalThis as any).process?.env?.TPS_WALLSLOW ?? '') === '1';   // the unhurried take (wallsnap.ts `slow`): off, so every frozen probe and digest has the take's seconds as they were; `TPS_WALLSLOW=1` turns it on (the shipped default)
+    if (pinned('TPS_HANDSLOT')) HANDSLOT.on = String((globalThis as any).process?.env?.TPS_HANDSLOT ?? '') === '1';   // empty hands are a slot (game/handslot.ts): off, so the frozen stand's kit keys are as every probe and digest has them; `TPS_HANDSLOT=1` raises it
     if (pinned('TPS_LIGHTWALL')) LIGHTWALL.on = String((globalThis as any).process?.env?.TPS_LIGHTWALL ?? '') === '1';   // a weapon light stops at the wall its carrier is pressed to (src/game/lighting.ts lensClear): off, so every carried light is at its lens — and the CPU light estimate reads what it read in every frozen digest and tally; `TPS_LIGHTWALL=1` turns it on (the shipped default)
     if (pinned('TPS_IRLIGHT')) IRLIGHT.on = String((globalThis as any).process?.env?.TPS_IRLIGHT ?? '') === '1';   // an infrared light on the goggles (src/game/irlight.ts): off, so a teammate's tube reads the light the meter reads and nothing else, and a room with none is too dark for it
     if (pinned('TPS_IRAUTO')) IRLIGHT.auto = String((globalThis as any).process?.env?.TPS_IRAUTO ?? '') === '1';   // the infrared light burns only where it is too dark for the tube (src/game/irlight.ts): off, so a light raised by TPS_IRLIGHT=1 burns whenever the goggles are down, as every check of it was written
@@ -270,6 +273,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_TEAMPACE')) TEAMPACE.on = String((globalThis as any).process?.env?.TPS_TEAMPACE ?? '') === '1';   // teammates slower than the player, running only for a reason (src/game/teampace.ts): off, so the team walks every leg at the pace every frozen probe, digest and tape has it
     if (pinned('TPS_GLASSDROP')) GLASSREAL.drop = String((globalThis as any).process?.env?.TPS_GLASSDROP ?? '') === '1';   // toughened glass drops at once (src/game/glassbreak.ts GLASSREAL): off, so a diced sheet lets go in the wave every frozen glass probe, tally and tape timed
     if (pinned('TPS_GLASSPLACE')) GLASSREAL.place = String((globalThis as any).process?.env?.TPS_GLASSPLACE ?? '') === '1';   // a pane's glass by where it sits (the same table): off, so outside glass is toughened and inside float, the kinds every frozen glass probe and stack mark was dealt on
+    if (pinned('TPS_SLOTSETUP')) SLOTSETUP.on = String((globalThis as any).process?.env?.TPS_SLOTSETUP ?? '') === '1';   // the slot in hand pressed again opens its setup (src/game/slotsetup.ts): off, so 2 pressed with the rifle up steps the launcher's load, as every frozen probe, tape and lesson run has it; TPS_SLOTSETUP=1 raises it
     if (pinned('TPS_DOORFORCE')) DOORFORCE.on = String((globalThis as any).process?.env?.TPS_DOORFORCE ?? '') === '1';   // an alerted man does not wait at a shut door (src/game/doorforce.ts): off, so a defender who knows a man is behind a shut leaf rests his gun on it or goes to its handle, as in every frozen probe, digest and tally; TPS_DOORFORCE=1 raises it
     if (pinned('TPS_RAILS')) RAILS.on = String((globalThis as any).process?.env?.TPS_RAILS ?? '') === '1';   // a tutorial mission's frame (src/game/rails.ts): off, so a level whose lesson carries a rails record plays as a plain lesson on the frozen stand (no shipped level but the tutorial group's carries one)
     if (pinned('TPS_NOSHOVE')) NOSHOVE.on = String((globalThis as any).process?.env?.TPS_NOSHOVE ?? '') === '1';   // teammates falling in never shove the player (src/game/noshove.ts): off, so a follower walks into him and the squad reads the shove as his walking, as every frozen probe, digest and tape has it
@@ -363,7 +367,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_WXWIND')) WX_OWN.wind = String((globalThis as any).process?.env?.TPS_WXWIND ?? '') === '1';   // … and that storm's WIND roof by roof (src/game/wind.ts syncField): off, so three or four roofs keep the storm out of their bounding box — no wind in a yard, for a flake or for smoke — as in every frozen probe; TPS_WXWIND=1 raises it
     if (pinned('TPS_GLASSEARS')) GLASS.bothFaces = String((globalThis as any).process?.env?.TPS_GLASSEARS ?? '') === '1';   // a pane's crash heard from both its faces (src/game/glass.ts glassEvent, guards.ts glassHeard): off, so a window shot from outside is heard only from the shooter's side of it, as in every frozen probe; TPS_GLASSEARS=1 raises it
     if (pinned('TPS_DOORSHOT')) DOORSHOT.on = String((globalThis as any).process?.env?.TPS_DOORSHOT ?? '') === '1';   // gunfire splinters a door leaf apart (src/game/doorblast.ts DOORSHOT): off, so a leaf hangs whatever is fired into it, as in every frozen probe, digest and tally; TPS_DOORSHOT=1 raises it
-    if (pinned('TPS_DOORTHROW')) DOORTHROW.on = String((globalThis as any).process?.env?.TPS_DOORTHROW ?? '') === '1';   // a door swung or kicked into a man throws him (src/game/doors.ts DOORTHROW): off, so a leaf stops against a standing man, as in every frozen probe, tally and digest
+    if (pinned('TPS_DOORTHROW')) DOORTHROW.on = String((globalThis as any).process?.env?.TPS_DOORTHROW ?? '') === '1';   // a door opened into a man moves and startles him, one slammed or booted throws him (src/game/doors.ts DOORTHROW): off, so a leaf stops against a standing man, as in every frozen probe, tally and digest
     if (pinned('TPS_WALLPEN')) WALLPEN.on = String((globalThis as any).process?.env?.TPS_WALLPEN ?? '') === '1';   // rounds through thin walls and doors (src/game/wallpen.ts): off, so a round stops in the first built thing it meets, as in every frozen probe, digest and tally; TPS_WALLPEN=1 raises it
     if (pinned('TPS_TAKEDOWN')) TAKEDOWN.on = String((globalThis as any).process?.env?.TPS_TAKEDOWN ?? '') === '1';   // takedowns as moves (src/game/takedown.ts): off, so a man taken down falls and lies as every stored digest has him
     if (pinned('TPS_STEALTHPOSE')) STEALTHPOSE.on = String((globalThis as any).process?.env?.TPS_STEALTHPOSE ?? '') === '1';   // stealth poses (src/game/stealthpose.ts): off, so his arms and head are where every stored digest has them

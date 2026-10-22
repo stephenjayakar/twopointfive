@@ -13,6 +13,7 @@ import { AIMCOST } from '../game/aimcost';
 import { aimGunPoint, aimGunOn } from '../game/aimweight';
 import { previewTooClose } from '../game/he40';
 import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
+import { HANDSLOT } from '../game/handslot';
 /** the reticle's ONE word: the 40 mm's arc is too short to arm (the plain 'RMB  OCP' / 'RMB  RING' / 'RMB  40 MM' words went on the 10-11 play note: "we can remove
  *  the RMB overlay on the cursor" — what the right button holds is read on the kit column's rows) */
 const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
@@ -25,6 +26,8 @@ import { stripRows } from '../game/cues';
 import { fragMarks } from '../game/frag';
 import { RECAP, lostLive, lostArrowsShown, type LostMan } from '../game/deathrecap';
 import { QUICKTHROW } from '../game/quickthrow';
+import { SLOTSETUP } from '../game/slotsetup';
+import { drawHandBox, handBoxKey, handBoxTick } from './handbox';
 import { samBlind } from '../game/samstun';
 import { CmdRingViz } from './cmdring';
 import { closeMarks } from '../game/close';
@@ -446,9 +449,11 @@ export class Overlay implements HudLike {
     const paceShow = game.time - pl.paceShownT < 2.5 || pl.pace < 0.99;   // pace ticks: shown for a moment after a wheel step, and kept while below full pace
     const rifleKey = pl.hasRifle ? [rf.chamber, rf.mag, rf.spare.join(','), rf.reloading ? 1 : 0, rf.mode, rf.attIdx, rf.rings, rf.shells, rf.attachments.length, rf.cams, rf.lightOn ? 1 : 0].join('/') : '-';   // (the rifle's row: rounds, the beat, SEMI / AUTO, the selected attachment and its rings, its light)
     const big = BIGSLOT.on && !game.touring ? pl.bigKit : 'none', bigAt = big === 'none' ? '' : big + (game.nearby.some(r => r.kind === 'door' && (r.verb === 'breach' || r.verb === 'hammer')) ? '!' : '') + (BIGSLOT.shut ? 's' : '');   // (the big slot's row: what he carries, and whether a door in reach offers it now)
-    const key = [pl.slot, gun.chamber, gun.mag, gun.spare.join(','), gun.reloading ? 1 : 0, pl.canisters, pl.flashbangs, pl.frags, pl.throwKind, gun.lightOn ? 1 : 0, pl.nv ? 1 : 0, (Math.round(pl.ocp.charge * 20) + (pl.ocp.ready() ? 100 : 0)), pl.hitsLeft, pl.down ? 1 : 0, game.godMode ? 1 : 0, pl.holstered ? 1 : 0, paceShow ? Math.round(pl.pace * 100) : -1, [...pl.keys].join(','), rifleKey, GEAR.on ? 1 : 0, bigAt, KEYMAP.rev].join('|');   // (…and which kit's words the rows are in)
+    const key = [pl.slot, gun.chamber, gun.mag, gun.spare.join(','), gun.reloading ? 1 : 0, pl.canisters, pl.flashbangs, pl.frags, pl.throwKind, gun.lightOn ? 1 : 0, pl.nv ? 1 : 0, (Math.round(pl.ocp.charge * 20) + (pl.ocp.ready() ? 100 : 0)), pl.hitsLeft, pl.down ? 1 : 0, game.godMode ? 1 : 0, pl.holstered ? 1 : 0, paceShow ? Math.round(pl.pace * 100) : -1, [...pl.keys].join(','), rifleKey, GEAR.on ? 1 : 0, bigAt, KEYMAP.rev, HANDSLOT.on ? 1 : 0].join('|');   // (…and which kit's words the rows are in)
+    if (SLOTSETUP.on) { const k2 = key + handBoxKey(game); if (k2 !== this.equipKey) { this.equipKey = k2; document.body?.classList?.toggle('handslot', HANDSLOT.on); drawHandBox(this.equip, game, paceShow, bigAt); } handBoxTick(game); return; }   // (ui/handbox.ts: the column as one box of what is in his hands and a strip of the rest — game/slotsetup.ts's switch)
     if (key === this.equipKey) return; this.equipKey = key;
-    const el = this.equip; el.textContent = '';
+    document.body?.classList?.toggle('handslot', HANDSLOT.on);   // (index.html: the put-away mark names E only while E is the way back — game/handslot.ts)
+    const el = this.equip; el.textContent = ''; el.classList?.remove('hand', 'setup');
     const mk = (tag: string, cls?: string, text?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = cls === 'key' ? keyCap(text) : keyText(text); return e; };   // (.key: a slot's own cap)
     const selCls = (k: SlotKind) => pl.slot === k ? (pl.holstered ? ' sel holstered' : ' sel') : '';   // the selected row lit; put away (E) it is lit-dashed with 'holstered · E' ('slung · E' on the rifle's row)
     // key strip: the selected gun's light and night vision. The right button's business is on the rows themselves — the OCP's charge closes the pistol's, the RING

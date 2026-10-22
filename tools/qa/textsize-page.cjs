@@ -208,7 +208,7 @@ async function fight() {
     const came = await page.waitForFunction(w => Math.abs(window.__textsize.zoom - w) < 0.011, autoFor(W, H), { timeout: 120000, polling: 500 }).then(() => true, () => false);
     if (!came) await page.evaluate(() => window.dispatchEvent(new Event('resize')));
     await page.mouse.move(Math.round(W * 0.62), Math.round(H * 0.44)); await page.evaluate(STEP, 3);
-    if (!await page.evaluate(() => !!document.querySelector('#overlay .reticle')?.getClientRects().length)) { await page.keyboard.press('KeyE'); await page.evaluate(STEP, 40); }   // (the ring is the drawn gun's)
+    if (!await page.evaluate(() => !!document.querySelector('#overlay .reticle')?.getClientRects().length)) { await page.keyboard.press('Digit1'); await page.evaluate(STEP, 40); }   // (the ring is the drawn gun's: 1 draws the pistol on either board — E does not while empty hands are a slot)
     const want = autoFor(W, H), s = await page.evaluate(STATE), h = await page.evaluate(HUD), cutHud = await page.evaluate(CUT, '#equip, #meters, #objective');
     await page.evaluate(() => window.__textsize.set(window.__textsize.table.steps.length - 1)); await page.evaluate(STEP, 2); const big = await page.evaluate(HUD), bigZ = (await page.evaluate(STATE)).zoom;
     await page.evaluate(() => window.__textsize.set(null)); await page.evaluate(STEP, 2);
