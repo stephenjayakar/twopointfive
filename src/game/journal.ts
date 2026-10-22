@@ -208,7 +208,7 @@ export interface SessionFile {
   sensors: SensorJournal;
   /** [f, digest] after the update of frame f */
   digests: [number, GameDigest][];
-  meta: { seconds: number; stopped: string; bytesPerFrame?: number; userAgent?: string };
+  meta: { seconds: number; stopped: string; bytesPerFrame?: number; userAgent?: string; /** finished between two frames: the closing digest is of the state after the HUD's write of the last one (a replay of a page recording makes that write before it compares) */ between?: boolean };
 }
 export type JournalState = 'idle' | 'pending' | 'recording';
 type View = { clientWidth: number; clientHeight: number; width: number; height: number };
@@ -280,6 +280,11 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.CMDRING as { plan?: boolean } | undefined)?.plan !== 'boolean') CMDRING.plan = false;   // (… and from before plan mode: Shift and the key were nobody's)
   if (typeof (k.tables.CMDRING as { holdSecs?: number } | undefined)?.holdSecs !== 'number') CMDRING.holdSecs = 0;   // (… and from before a tap opened no ring: the ring went up as the key went down)
   if (typeof (k.tables.CMDRING as { planRts?: boolean } | undefined)?.planRts !== 'boolean') CMDRING.planRts = false;   // (… and from before that mode parked him: he walked with it up, and a right click ordered as it went down)
+  if (typeof (k.tables.CMDRING as { stay?: boolean } | undefined)?.stay !== 'boolean') CMDRING.stay = false;   // (… and from before the ring stayed up without its key: it went with the key, given as the key came up)
+  if (typeof (k.tables.CMDRING as { tapNow?: boolean } | undefined)?.tapNow !== 'boolean') CMDRING.tapNow = false;   // (… and from before a press already up in its own tick was given on that tick: it was given on the next)
+  if (typeof (k.tables.CMDRING as { planRun?: boolean } | undefined)?.planRun !== 'boolean') CMDRING.planRun = false;   // (… and from before a sprint's Shift was not the mode's: Shift + the key was always the mode's)
+  if (typeof (k.tables.CMDRING as { only?: boolean } | undefined)?.only !== 'boolean') CMDRING.only = false;   // (… and from before the ring carried every order: its wedges were the rows on digits, the letters worked beside it)
+  for (const key of ['planLook', 'planWaits', 'planKnee'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before plan mode's right drag, its own waits and the knee at the radio: a right press was a click or the ring, the pauses were the build's, he stood)
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
   if (!k.tables.KITANIM) KITANIM.on = false;   // (a file from before the kit animations: its draws were instant and its reloads the row's one beat)
@@ -360,7 +365,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.GLASSREAL) { GLASSREAL.drop = false; GLASSREAL.place = false; }   // (a file from before glass was typed by where it sits and toughened glass dropped at once: its panes are the wall's kinds and dice in the wave)
   if (!k.tables.SLOTSETUP) SLOTSETUP.on = false;   // (a file from before the slot in hand pressed again opened its setup: its 2 pressed with the rifle up stepped the launcher's load)
   if (!k.tables.DOORFORCE) DOORFORCE.on = false;   // (a file from before an alerted man fired through a shut door and booted it in: its defenders waited at the leaf or went to its handle)
-  if (!k.tables.RAILS) RAILS.on = false;   // (a file from before a tutorial mission had a frame: nothing in its ticks was locked)
+  if (!k.tables.RAILS) RAILS.on = false;
+  else { const R = k.tables.RAILS as Record<string, unknown>; if (R.snapPx === undefined) RAILS.snapPx = 0; if (R.keep === undefined) RAILS.keep = 0; if (R.keepDeep === undefined) { RAILS.keepDeep = 1; RAILS.keepUp = 0; } }   // (a tutorial run recorded before the ring was the place and the mark was kept in the picture)   // (a file from before a tutorial mission had a frame: nothing in its ticks was locked)
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
@@ -453,6 +459,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.ORDERS as { fileSpread?: boolean } | undefined)?.fileSpread === undefined) ORDERS.fileSpread = false;   // (a file from before two fall-in places on one spot were dealt apart: the places as they fell. A recording from before its tables carried ORDERS (knobs.ts JOURNAL_KNOBS) lands here too; a run tape writes its own value back right after this — rerun.ts / engineplay.ts tables())
   if ((k.tables.ORDERS as { fileHold?: boolean } | undefined)?.fileHold === undefined) ORDERS.fileHold = false;   // (a recording from before the key — its ORDERS row has no such key — replays with it off: a follower the spread found no floor for is handed his place as it fell, a mate's body's room or no)
   if ((k.tables.ORDERS as { backEnd?: boolean } | undefined)?.backEnd === undefined) ORDERS.backEnd = false;   // (a recording from before the key — its ORDERS row has no such key — replays with it off: the file's further back off a doorway is counted in full where the floor has run out, and the near band is as wide as it was)
+  if ((k.tables.ORDERS as { retakeGoal?: boolean } | undefined)?.retakeGoal === undefined) ORDERS.retakeGoal = false;   // (a recording from before the key replays with it off: a man back from the fight keeps the goal the fight found him with)
   if ((k.tables.ORDERS as { inWay?: boolean } | undefined)?.inWay === undefined) ORDERS.inWay = false;   // (a recording from before the key — its ORDERS row has no such key — replays with it off: a stack refused for Sam's own body is refused 'no room on that door.', the words it was made with)
   if ((k.tables.ORDERS as { walkTries?: boolean } | undefined)?.walkTries === undefined) ORDERS.walkTries = false;   // (a recording from before the key — its ORDERS row has no such key — replays with it off: a 'move' whose way runs at a door nobody has tried is refused with the door's name, as it was made)
   if (typeof k.flags.roundCap === 'number' && Number.isFinite(k.flags.roundCap)) ORDERS.roundCap = k.flags.roundCap;   // (a recording's own tables did not carry ORDERS when this key came, so it rides with the flags as well, as the stalk's moon rule does: made with a way round held to its worth, it replays so)
@@ -505,6 +512,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.GLASS as { bothFaces?: boolean } | undefined)?.bothFaces === undefined) GLASS.bothFaces = false;   // (…and from before a pane's crash was heard from both its faces: only from the point the round met it)
   if (!k.tables.DOORTHROW) DOORTHROW.on = false;   // (a file from before a door driven into a man moved him carries no such table: its leaves stop against whoever stands in their swing, as they were recorded)
   if ((k.tables.DOORTHROW as { soft?: boolean } | undefined)?.soft === undefined) DOORTHROW.soft = false;   // (… or from the first cut of it, where any driven leaf short of a boot folded him: a later key of the same table)
+  if ((k.tables.DOORTHROW as { jolt?: boolean } | undefined)?.jolt === undefined) DOORTHROW.jolt = false;   // (… or from before the startled man got the shared start: the flinch, a later key of the same table)
   if (!k.tables.DOORSHOT) DOORSHOT.on = false;   // (a file from before gunfire took a door leaf apart carries no such table: its doors hang whatever is fired into them, as they were recorded)
   if ((k.tables.DOORSHOT as { toll?: number } | undefined)?.toll === undefined) DOORSHOT.toll = 1;   // (… or from before a leaf stood twice plasterboard's toll: its doors go on drywall's own count, a later key of the same table)
   if (!k.tables.WALLPEN) WALLPEN.on = false;   // (a file from before rounds went through thin walls and doors — it carries no such table: its rounds stop in the first built thing they meet, as they were recorded)
@@ -553,17 +561,31 @@ export class SessionRecorder {
     if (this.state === 'pending') { this.state = 'idle'; this.why = why; return null; }
     if (this.state !== 'recording') return null;
     if (!immediate && !this.inUpdate) { this.stopAfterNext ??= why; return null; }
-    return this.finish(why);
+    return this.finish(why, !this.inUpdate);
   }
-  private finish(why: string): SessionFile {
+  /** The game is about to be changed BETWEEN frames by something no recording files — a checkpoint loaded off a card or the panel, a restart off a card, a
+   *  show or a mission's quit staging the encounter again (savestate.ts Checkpoints.load / loadMem, Game.restartEncounter): the recording ends HERE, whole to
+   *  its last frame, with `why` as how it stopped — a tape that ran on across the change replayed as a break of the game's own at that frame — and a new one
+   *  is asked for with the same options, so one F10 still covers the session, as one file per stretch (it begins at the next update that may: canStart).
+   *  Inside an update nothing is done: what changes the game there came from that frame's own input, which is on the tape. A request still pending stays.
+   *  Its check: tools/qa/journalcut-check.ts. */
+  cut(why: string): void {
+    if (this.state !== 'recording' || this.inUpdate) return;
+    const opts = this.opts; this.finish(why, true); this.request(opts);
+  }
+  /** `between`: finished between two frames (cut(), an immediate stop with no update running). The closing digest taken there is, on a page, the state AFTER
+   *  the HUD's one write of the last frame (hudExpireBubbles below), not the one straight after its update: the file says so (`meta.between`) and a replay
+   *  makes that write before it compares that digest (tools/qa/replay.ts). */
+  private finish(why: string, between = false): SessionFile {
     const g = this.g; this.stopAfterNext = null;
     if (this.inUpdate) { g.sensors.endFrame(); this.frame++; this.inUpdate = false; }   // (stopped from inside a frame — a hook, the cap: that frame is in the file whole)
     if (!this.digests.length || this.digests[this.digests.length - 1][0] !== this.frame - 1) this.digests.push([this.frame - 1, digestGame(g, true)]);
+    else between = false;   // (the last frame was a beat: its digest is the one straight after the update)
     const sensors = g.sensors.journal(); g.sensors.live();
     if (this.die) { if (Math.random === this.die && this.die.sys) Math.random = this.die.sys; this.die = null; }   // (the die it displaced goes back — unless somebody has since put their own in, which stays)
     const seconds = this.dts.reduce((s, [n, dt]) => s + n * dt, 0);
     const file: SessionFile = { v: JOURNAL_VERSION, game: 'twopointsix', recordedAt: this.startedAt, commit: this.opts.commit, note: this.opts.note, seed: this.seed, level: levelFingerprint(g), save: this.save!, env: this.env!, knobs: this.knobs!,
-      frames: this.frame, dt: this.dts, view: this.views, cam: this.cams, input: this.inputs, sensors, digests: this.digests, meta: { seconds: +seconds.toFixed(2), stopped: why, userAgent: this.opts.userAgent } };
+      frames: this.frame, dt: this.dts, view: this.views, cam: this.cams, input: this.inputs, sensors, digests: this.digests, meta: { seconds: +seconds.toFixed(2), stopped: why, userAgent: this.opts.userAgent, ...(between ? { between: true } : {}) } };
     this.state = 'idle'; this.why = why; this.last = file;
     try { this.onStop?.(file, why); } catch { /* the page's problem */ }
     return file;

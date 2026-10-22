@@ -6,7 +6,7 @@ import { FollowCamera } from '../game/camera';
 import { Game, Player, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
 import { backName } from '../game/backkey';
-import { KEYMAP, keyCap, keyText } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
+import { KEYMAP, keyCap, keyText, camCap } from '../host/keymap';   // (the player's own keys: every key this HUD names is named as it is bound — the same string back while nothing is rebound)
 import { FLOOR_KEY } from '../game/doors';
 import { playerAim } from '../game/aim';
 import { AIMCOST } from '../game/aimcost';
@@ -331,7 +331,7 @@ export class Overlay implements HudLike {
     // line), a pip for every step. The small row at the top stands down while it is up, and the seat with nobody on the floor hides the rows of a man's own kit.
     const rail = game.rails.prompt();
     // (each cap in brackets is one key, asked of the key map by itself: a line of several — '[W] [A] [S] [D]' — follows a rebind of any of them)
-    const railWords = rail ? rail.line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? `<kbd>${esc(keyCap(t.slice(1, -1)))}</kbd>` : esc(keyText(t))).join('') : '';
+    const railWords = rail ? rail.line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? (t === '[X]' && KEYMAP.qOnly ? `Hold <kbd>${esc(keyCap('B'))}</kbd>` : `<kbd>${esc(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))}</kbd>`) : esc(keyText(t))).join('') : '';
     { const key = rail ? `${rail.n}|${rail.of}|${railWords}` : '';
       if (key !== this.railKey) { this.railKey = key;
         if (!rail) { this.railEl.className = ''; this.railEl.innerHTML = ''; }
@@ -464,7 +464,7 @@ export class Overlay implements HudLike {
     // tag lights on the rifle's while the launcher is selected (nothing is worded beside the reticle any more but the 40 mm's too-close warning)
     const gad = mk('div', 'gadgets');
     gad.appendChild(mk('span', 'g' + ((rifleSel ? rf.lightOn : gun.lightOn) ? ' on' : ''), 'L LIGHT'));
-    gad.appendChild(mk('span', 'g' + (pl.nv ? ' on' : ''), 'N NIGHT VISION'));
+    if (!game.rails?.locks('nvg')) gad.appendChild(mk('span', 'g' + (pl.nv ? ' on' : ''), 'N NIGHT VISION'));   // (a tutorial mission names no key it has not taught)
     el.appendChild(gad);
     // walking pace (mouse wheel): a row of ticks, PACE_MIN‥1 — lit up to the current notch; shown after a wheel step and while below full pace
     if (paceShow) { const pr = mk('div', 'pace'); pr.appendChild(mk('span', 'g', 'PACE')); const ticks = mk('span', 'ticks'); const N = 6; const lit = Math.round((pl.pace - 0.35) / 0.65 * (N - 1)) + 1; for (let i = 0; i < N; i++) ticks.appendChild(mk('i', i < lit ? 'on' : '')); pr.appendChild(ticks); pr.appendChild(mk('span', 'g', 'wheel')); el.appendChild(pr); }

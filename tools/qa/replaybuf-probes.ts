@@ -40,7 +40,7 @@ if (val('stealth-tape-to')) {
 if (val('tape-to')) {
   const K = await import(`${ROOT}/src/game/knobs.ts`), Kt = await import(`${ROOT}/src/game/kit.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   // what a browser keeps per machine: a Team feel row (a table no recording carries — and one that moves this run: the teammates' legs), a kit card
-  (K.knobsNamed().PACE as { max: number }).max = 1.4; Kt.KIT.members[4].suit = 'navy';
+  (K.knobsNamed().PACE as { accel: number }).accel = 0.6; Kt.KIT.members[4].suit = 'navy';   // (how fast a teammate's legs pick a walk up, 2.6 as built: it moves this run on either stand. The row here was PACE.max = 1.4 until the team's walk went under it — teampace.ts, 0.8 of the player's — and the cap stopped moving anything)
   Math.random = mulberry32(0xbeef);
   const W: any = await standUp({ seed: 21 }); const r = startFromQuery(W.game, 'roomclear&squad4'); if (r.why) throw new Error(r.why);
   const buf = new ReplayBuffer(); buf.tape.born(W.game);
@@ -254,12 +254,41 @@ console.log('\n=== replay buffer ===');
     check(inStep, `load: Sam went down and a bare Enter loaded this run's checkpoint inside a step (down ${byHand ? 'by hand' : `after ${n} steps`}; wrote ${JSON.stringify(wrote)?.slice(0, 60)})`);
     check(!r.dead && r.loads === 1 && !r.restarts && kept === 1, `load: a load made inside a step leaves the tape alive, is marked once, and the step after it loses nothing (tape: ${r.dead || 'alive'}; ${r.loads} marks; the next step's event filed ${kept}×)`);
     W.game.replayTap = null; }
+  // …and a save kept IN MEMORY (a team on the floor: savestate.ts loadMem puts the whole game back, the Sensors object with it) loaded inside a step. All of it is
+  // on the tape — F5's save, his own frag that puts him down, the bare Enter — so the tape lives and its re-run is the first run again, to the digest.
+  { const SS = await import(`${ROOT}/src/game/savestate.ts`), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { rerun } = await import('./rerun.ts'), Q = '?roomclear&squad4&freshstart=0&seed=7', was = SS.SAVETIMELINE.on;
+    try {
+      Math.random = mulberry32(0xa18); const W: any = await standUp({ seed: 7 }), g = W.game; startFromQuery(g, Q); SS.SAVETIMELINE.on = true; g.godMode = true;
+      const buf = new ReplayBuffer(); buf.tape.born(g); g.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(g, dt, cmd); else buf.tick(g, dt, W.cam); };
+      let f = 0, still = false; const go = (n: number, pre?: () => void) => { for (let i = 0; i < n; i++, f++) { const I = W.input; I.keys.clear(); I.buttons = 0; I.mouseX = 800; I.mouseY = 520; if (!still && f % 240 < 150) I.keys.add('KeyW'); pre?.(); W.step(1 / 60); } };
+      go(240); go(1, () => W.input.pressed.add('F5')); go(42); const mem = (g.saves.timeline() as any[]).filter(x => x.mem).length;
+      g.godMode = false; still = true; go(30); go(1, () => W.input.pressed.add('Digit5')); go(30);   // (the flag is a row of the tape; the frag lands at his own feet)
+      for (let k = 0; k < 3 && !g.player.down; k++) { go(1, () => { W.input.clicked |= 1; W.input.buttons |= 1; }); go(62, () => { if (f % 62 < 2) W.input.buttons |= 1; }); }
+      let n = 0; while (!g.player.down && n < 900) { go(1); n++; } still = false; go(20);
+      const loads0 = g.saves.stats.loads, down = g.player.down; go(1, () => W.input.pressed.add('Enter')); const inStep = down && g.saves.stats.loads === loads0 + 1 && !g.player.down;
+      g.godMode = true; go(240); const N = f, dEnd = hashDigest(digestGame(g, true)), file = JSON.parse(JSON.stringify(buf.file(g, 'probe', { url: Q, fp: levelFingerprint(g) }))), marks = (JSON.stringify(file).match(/a checkpoint loaded/g) ?? []).length;
+      check(mem === 1 && inStep, `load: with a team on the floor F5 kept a save in memory, and a bare Enter once down loaded it inside a step (saves in memory ${mem}; down ${down}; loads ${loads0} → ${g.saves.stats.loads})`);
+      check(!buf.tape.dead && file.rerun?.ticks === N && marks === 1, `load: the tape lives across it, holds every step, and the load is marked once (tape: ${buf.tape.dead || 'alive'}; ${file.rerun?.ticks} of ${N} steps; ${marks} marks)`);
+      const R = await rerun(file, { toN: N }), same = !!R.W && hashDigest(digestGame(R.W.game, true)) === dEnd;
+      check(!R.refuse && !!R.report && R.report.compared > 50 && !R.report.drift && same, `load: its re-run is the first run again, to the digest at step ${N}${R.refuse ? ` — REFUSED: ${R.refuse}` : ` (${R.report?.compared} trace samples, worst ${R.report?.worst?.metres?.toFixed(3)} m, drift ${R.report?.drift ? 'YES' : 'none'}, digest ${same ? 'equal' : 'DIFFERS'})`}`);
+      g.replayTap = null;
+    } finally { SS.SAVETIMELINE.on = was; } }
   { const { W, buf, go } = await stand(0xa17, 120, true, true), J = W.game.journal, random = Math.random, until = () => { let n = 0; while (!J.recording && n < 300) { go(1); n++; } return J.recording; };
     try {
       J.request({ seed: 5 }); const on = until(); go(30); const a = read(W, buf);
       check(on && /F10/.test(a.dead) && a.recs === 1 && !a.restarts && !a.loads, `load: an F10 recording starting ends the tape in those words and is marked as that in the trace, not as a restart (tape: ${a.dead || 'alive'}${on ? '' : `; it never started: ${J.why}`})`);
       J.stop('probe', true); J.request({ seed: 6 }); const again = until(); go(30); const b = read(W, buf);
       check(again && b.recs === 2 && !b.restarts && !b.loads, `load: one stopped and started again with no step between is seen too (${b.recs} marks)`);
+      // a recorder that ends its file at a change made between two frames and asks for the next (journal.ts): the recording is running on both sides of the
+      // gap, and the restart / the load in it is marked too, ahead of the recording's own mark — the run the file ends in begins at that restart
+      { J.stop('probe', true); W.game.restartEncounter(); J.request({ seed: 7 }); const on2 = until(); go(30); const c = read(W, buf);
+        const marks = c.file.lines.filter((l: any) => l.k === 'mark').map((l: any) => String(l.text)), iR = marks.findIndex((t: string) => /^restart \(/.test(t)), at = F.lastRun(c.file);
+        check(on2 && c.recs === 3 && c.restarts === 1 && !c.loads && iR >= 0 && /F10/.test(marks[iR + 1] ?? '') && at > 1 && at < c.file.seconds,
+          `load: a restart between a recording's end and the next one's start is marked a restart, ahead of the recording's mark, and is where the file's last run begins (${c.restarts} restart, ${c.recs} recordings; last run from ${at.toFixed(2)} s of ${c.file.seconds.toFixed(2)})`);
+        const s = saveState(W.game, { label: 'under a recording', kind: 'manual', force: true }); go(10); J.stop('probe', true); const why = W.game.saves.load(W.game, s); J.request({ seed: 8 }); const on3 = until(); go(30); const d = read(W, buf);
+        const m2 = d.file.lines.filter((l: any) => l.k === 'mark').map((l: any) => String(l.text)), iL = m2.findIndex((t: string) => /a checkpoint loaded/.test(t));
+        check(why === null && on3 && d.recs === 4 && d.loads === 1 && d.restarts === 1 && iL >= 0 && /F10/.test(m2[iL + 1] ?? ''),
+          `load: a checkpoint loaded in such a gap is marked a load, ahead of the recording's mark (${d.loads} load, ${d.recs} recordings${why ? `; load refused: ${why}` : ''})`); }
       const b2 = new ReplayBuffer(); b2.tape.born(W.game); W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) b2.top(W.game, dt, cmd); else b2.tick(W.game, dt, W.cam); }; go(2);
       check(/F10/.test(String(b2.tape.dead || '')), `load: a tape handed a game already being recorded ends at its first step (tape: ${b2.tape.dead || 'alive'})`);
     } finally { try { J.stop('probe', true); } catch { /* */ } Math.random = random; W.game.replayTap = null; } } }
@@ -275,13 +304,13 @@ console.log('\n=== replay buffer ===');
     check(child.exitCode === 0, `stand: a room clear with the four taped on the shipped stand${child.exitCode !== 0 ? ` — the child failed (${child.exitCode}): ${child.stderr.toString().slice(-300)}` : ''}`);
     if (child.exitCode === 0) {
       const file = JSON.parse(readFileSync(at, 'utf8')), rc = file.rerun.recipe, names = Object.keys(rc.tables ?? {});
-      check(rc.stand === 'shipped' && rc.tables?.PACE?.max === 1.4 && !names.some(n => n in J.knobTables()) && names.length + Object.keys(rc.knobs.tables).length === Object.keys(K.knobsNamed()).length && rc.kit?.members?.[4]?.suit === 'navy',
+      check(rc.stand === 'shipped' && rc.tables?.PACE?.accel === 0.6 && !names.some(n => n in J.knobTables()) && names.length + Object.keys(rc.knobs.tables).length === Object.keys(K.knobsNamed()).length && rc.kit?.members?.[4]?.suit === 'navy',
         `stand: the tape says where it stood and carries the kit and every knob table once (${names.length} beside the ${Object.keys(rc.knobs.tables).length} a recording has)`);
       const same = (R: any) => !R.refuse && !!R.report && R.report.compared > 100 && !R.report.drift && hashDigest(digestGame(R.W.game, true)) === file.probeDigest;
       const R = await rerun(file, { toN: 1140 });
       check(same(R), `stand: walked here it is the same run, to the digest (${R.report?.compared} samples, worst ${R.report?.worst?.metres.toFixed(3)} m)`);
       { const odd = (R.report?.warnings ?? []).filter((w: string) => /the tape does not carry|this build does not play/.test(w)); check(odd.length === 0, `stand: a tape of this build made on another stand is not called older or newer than the tables${odd.length ? ` — ${odd[0].slice(0, 160)}` : ''}`); }
-      check((K.knobsNamed().PACE as { max: number }).max === 1.4 && Kt.KIT.members[4].suit === 'navy' && process.env.TPS_PROFILE === word, 'stand: the re-run stood on the tape\'s own table and kit card, and left this process\'s stand word as it was');
+      check((K.knobsNamed().PACE as { accel: number }).accel === 0.6 && Kt.KIT.members[4].suit === 'navy' && process.env.TPS_PROFILE === word, 'stand: the re-run stood on the tape\'s own table and kit card, and left this process\'s stand word as it was');
       // the faults the tape's own tables and stand mend, each asserted with that part taken off the tape
       const less = (...keys: string[]) => { const f = JSON.parse(JSON.stringify(file)); for (const k of keys) delete f.rerun.recipe[k]; return f; };
       back(); const R1 = await rerun(less('tables'), { toN: 1140 });

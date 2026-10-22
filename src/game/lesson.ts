@@ -38,6 +38,8 @@ const WHEEL_LINE = /\bHold Space, wheel to kick, let go\b/g, WHEEL_RING = 'Hold 
 /** a step's line as the HUD's row says it now */
 export const lessonLine = (line: string): string => HANDRING.on ? line.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : line;
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
+import { camCap } from '../host/keymap';
+import { wallPt } from './wallcharge';   // (called inside a flag only)
 import { SLOTSETUP } from './slotsetup';
 
 /** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
@@ -97,6 +99,12 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   shellsOut: g => who(g).rifle.shells <= 0,                   // …and its 40 mm grenades
   auto: g => who(g).rifle.mode !== 'semi',                              // the rifle's selector on AUTO (Z)
   dragging: g => !!who(g).dragging,
+  dark: g => g.blackout.active,                               // the mains are off (the breaker thrown, by whoever threw it)
+  chargeSet: g => (g.wallCharge?.set.length ?? 0) > 0,        // a wall charge is on a wall, waiting on the trigger
+  // …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach (they have stood off)
+  chargeClear: g => { const W = g.wallCharge, c = W?.set[0], at = g.lesson?.step?.at; if (!c || W.tooClose(c).length) return false; if (!at) return true;
+    const p = wallPt(c.wall, 0, 0); return (c.wall.alongX ? Math.abs(p[2] - at[2]) : Math.abs(p[0] - at[0])) < 0.4 && Math.hypot(p[0] - at[0], p[2] - at[2]) < 4; },
+  wallBlown: g => (g.wallCharge?.stats.holes ?? 0) > 0,       // …and one has made its hole this run
   holding: g => !!who(g).holding,                             // a man in his arm
   picking: g => !!who(g).picking,
   coding: g => !!who(g).coding,
@@ -297,7 +305,7 @@ export class Lesson {
     const L = this.data, i = this.at; if (!L || i >= L.steps.length) return null;
     if (this.over()) return null;   // (the run is over: the row is the scenario's own word on it)
     const T = L.steps[i];
-    return { text: `training ${i + 1}/${L.steps.length} ▸ ${lessonLine(lineOf(T)).replace(/\[([^\]]+)\]/g, '$1')}`, pos: T.at ?? null };   // ('[B]': a key a tutorial mission's big line draws as a key — rails.ts; plain here)
+    return { text: `training ${i + 1}/${L.steps.length} ▸ ${lessonLine(lineOf(T)).replace(/\[([^\]]+)\]/g, (_m, k: string) => k === 'Ctrl' ? camCap() : k)}`, pos: T.at ?? null };   // ('[B]': a key a tutorial mission's big line draws as a key — rails.ts; plain here. '[Ctrl]' is the camera's key, whichever it is: host/keymap.ts camCap)
   }
   summary(): string {
     const L = this.data; if (!L) return this.g.level.scenarios?.lesson ? (LESSON.on ? 'off · this level carries one (start its mission)' : 'off · switched off') : 'off · this level carries none';

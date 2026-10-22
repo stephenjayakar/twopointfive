@@ -185,7 +185,7 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   steps[{ id, line, setupLine?, done, hold?, at? }] }` (`setupLine`: the line while a gun's key again opens its setup, where the step's keys are others then). A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
   characters), `at` the marker, and it moves on when `done` — a test record `{ is: '<kind>', … }` read off the game — is true (for `hold` seconds). Never on a
   clock. Kinds (`lesson.ts LESSON_TESTS`; a new kind is one row there with its `ok` and its `check`): STATE `in {area}` · `near {at, r?}` · `flag {flag,
-  value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent …) · `slot {slot, drawn?}` ·
+  value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent dark chargeSet chargeClear wallBlown …) · `slot {slot, drawn?}` ·
   `pace {below?, above?}` · `meter {which: 'light'|'noise', below?, above?}` · `stage {stage}` · `door {door, state: open|shut|unlocked|broken}` · `target
   {name, on}` (a light or a device by name) · `men {down}` · `all {of}` / `any {of}`; DEEDS counted from the moment the step came up: `did {what: 'act:<the
   Space row's verb>' | 'event:<hearing event of the player's>' | 'chron:<chronicle kind>' | 'order:<orders.log id>', n?, on?: '<door name>'}` (`on`: that order given on that door). By family — hands: `downed {how: takedown|choke|whip|ring|knife,
@@ -202,6 +202,9 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   floor and the list), `tools/qa/lesson-run.ts <name>` (a scripted player — `tools/qa/lessons/<name>.ts`, input only — through every step to the debrief; a
   step that moves on with nothing done is a FAIL), `tools/qa/lesson-gate.ts [name …]` (per Training level: the file is its generator's, level-lint, lesson-check, the scripted run, and the on / off digests equal),
   `tools/qa/light-map.ts <name>` (how lit a man is across the floor).
+  A TUTORIAL mission (rows in `TUTORIAL_MISSIONS`, `group: 'tutorial'`) carries `lesson.rails` and the frame's own step keys (`allow`, `deny`, `cue`, `checkpoint`, `fog`) and tests
+  (`cue`, `squad`, `view`): `game/rails.ts` and `docs/agents/missions.md` say what each does. Its script is `levels/<name>.script.ts`, registered by the level's name in
+  `src/scene/levelScripts.ts`, with one play program named `tutorial`.
 - `par` — a PAR CLOCK over this level's room clear (`game/par.ts`; needs a `roomClear` block): `{ gold, silver, bronze, lossSecs }`, seconds, with
   gold < silver < bronze and `lossSecs` ≥ 0. The run is timed from the first order, Sam's first stride off his start mark or his first round or throw to
   the room clear's 'taken'; every teammate down at the end adds `lossSecs`; the total, in whole seconds as shown, earns the medal. The clock leads the

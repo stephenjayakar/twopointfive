@@ -1505,7 +1505,8 @@ export class Game {
     if (CLEANRESTART.picture && this.engine.restartPicture) { this.engine.restartPicture('level restarted'); CLEANRESTART_STATS.pictures++; }
   }
   /** Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored. */
-  restartEncounter() { useDice(this.dice); this.sensors.ownReset(); this.quiet?.current();
+  restartEncounter() { this.journal.cut('the encounter was staged again');   // (between frames — a card's restart, a show, a mission's quit — this is on no tape: an F10 recording ends whole before it and a new one is asked for; inside an update, or under a request still pending, it does nothing: journal.ts cut)
+    useDice(this.dice); this.sensors.ownReset(); this.quiet?.current();
     const clean = CLEANRESTART.on;   // (cleanrestart.ts: nothing of the try that ended stands, sounds or plays on in this one — off, every line below as it was)
     if (clean) { CLEANRESTART_STATS.restarts++; CLEANRESTART_STATS.lines += this.messages.length; this.messages.length = 0; }   // (the lines of the encounter that ended go before anything below speaks: a staging's own line is this one's)
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise
@@ -1915,9 +1916,9 @@ export class Game {
     this.player.nearSel = i; pickHover(this); return true;
   }
   /** Esc, before the pause menu gets it (main.ts): the open selector backs out / a running sustained verb stops. True = used here, no menu this press. */
-  escape(): boolean { return this.orders.escape() || launchCancel(this) || escapeInteract(this) || slotSetupShut(this); }   // (the squad's command menu backs out first: orders.ts)
+  escape(): boolean { return this.orders.escape() || launchCancel(this) || escapeInteract(this) || slotSetupShut(this) || this.orders.planEscape(); }   // (the squad's command menu backs out first: orders.ts)
   /** is there anything the back key would back out of right now (backkey.ts; asked by the page before Tab's trial choice gets the key) */
-  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this) || slotSetupOpen(this); }   // (…and the open setup of the gun in his hands: slotsetup.ts)
+  backable(): boolean { return !!this.orders.menu || this.orders.planBack() || !!this.player.launchHeld || backableInteract(this) || slotSetupOpen(this); }   // (…and the open setup of the gun in his hands: slotsetup.ts)
   /** The light meter's mapping, irradiance (W/m², max over the axes as the probe reports it) → 0‥1 visibility: 0 at or below visFloor, 1 by visFloor·e^(1/visSlope).
    *  One mapping for the meter on Sam and for a searcher judging how dark a hiding place is (guards.ts): dark for the one is dark for the other. */
   visibilityOf(E: number): number { return clamp(this.tune.visSlope * Math.log(Math.max(E, 1e-5) / this.tune.visFloor), 0, 1); }

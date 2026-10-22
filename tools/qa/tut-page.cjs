@@ -67,9 +67,11 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     check(after.o === before.o && !after.menu && R.i === 0, 'before anything is taught, the command key, the menu, the word, a throw and a click do nothing', `orders ${before.o} → ${after.o} · menu up ${after.menu} · step ${R.i} · ${R.rails.sum}`); }
 
   // ---- the steps, by hand
+  const camKey = async () => (await page.evaluate(() => document.querySelector('#railprompt kbd')?.textContent || '')) === 'Space' ? 'Space' : 'ControlLeft';
   const hand = {
-    turn: async () => { await page.keyboard.down('ControlLeft'); for (let x = 400; x <= 900; x += 50) { await page.mouse.move(x, 320); await run(page, 3); } await page.keyboard.up('ControlLeft'); },
-    zoom: async () => { await page.keyboard.down('ControlLeft'); for (let k = 0; k < 8; k++) { await page.mouse.wheel(0, 120); await run(page, 4); } await page.keyboard.up('ControlLeft'); },
+    // (the camera's key is the one the line's own cap names: Ctrl, or the Space bar where the page's board leaves it spare)
+    turn: async () => { const k = await camKey(); await page.keyboard.down(k); for (let x = 400; x <= 900; x += 50) { await page.mouse.move(x, 320); await run(page, 3); } await page.keyboard.up(k); },
+    zoom: async () => { const k = await camKey(); await page.keyboard.down(k); for (let n = 0; n < 8; n++) { await page.mouse.wheel(0, 120); await run(page, 4); } await page.keyboard.up(k); },
     pan: async () => { await page.keyboard.down('KeyD'); await run(page, 70); await page.keyboard.up('KeyD'); },
     move: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 25; k++) { await run(page, 120); if ((await read(page)).id !== 'move') break; } },
     gate: async () => { for (let k = 0; k < 40; k++) { await run(page, 120); if ((await read(page)).id !== 'gate') break; } },
@@ -77,7 +79,16 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     go: async () => { await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'go') break; } },
     kitchen: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 10; k++) { await run(page, 120); if (k >= 3) break; }
       await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'kitchen') break; } },
+    // the orders' menu on the wall's ring: its fifth row is the wall's page, the third there the charge; then the word once a man has set it
+    charge: async s => { await point(s.at); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3); await tap('Digit5'); await tap('Digit3'); await until('charge', 40); },   // (the command key held is the squad's menu, a ring that stays: its wall page, then the charge)
+    blow: async () => { await run(page, 60); await tap('KeyF'); await until('blow', 30); },
+    breaker: async s => { await point(s.at); await tap('KeyQ'); await until('breaker', 40); },
+    nv: async () => { await tap('KeyN'); await run(page, 20); },
+    bunk: async s => { for (let n = 0; n < 2 && (await read(page)).id === 'bunk'; n++) { await point(s.at); await tap('KeyQ'); await run(page, 1200); await tap('KeyF'); await until('bunk', 20); } },
+    out: async s => { await point(s.at); await tap('KeyQ'); await until('out', 40); },
   };
+  /** step the page until another step is up (at most `n` two-second waits) */
+  const until = async (id, n) => { for (let k = 0; k < n; k++) { await run(page, 120); if ((await read(page)).id !== id) break; } };
   // (a hand looks for the marker: if the place is off the picture, pan the view toward it with the keys the mission has taught)
   const point = async p => { for (let k = 0; k < 12; k++) { const s = await at(page, p); if (s.vis) { await page.mouse.move(s.x, s.y); await run(page, 2); return s; }
       const key = s.y < 8 ? 'KeyW' : s.y > 700 ? 'KeyS' : s.x < 8 ? 'KeyA' : 'KeyD'; await page.keyboard.down(key); await run(page, 20); await page.keyboard.up(key); }

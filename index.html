@@ -202,7 +202,8 @@
     /* A TUTORIAL MISSION'S ONE LINE (ui/overlay.ts, game/rails.ts): big, low in the middle, the keys it names drawn as keys, a pip a step */
     #railprompt { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; z-index: 6; }
     #railprompt.on { display: flex; animation: railin .45s cubic-bezier(.2,.9,.3,1.2); }
-    #railprompt .line { padding: 13px 26px 12px; background: rgba(var(--h-plate),0.78); border-radius: 4px; border-bottom: 2px solid var(--h-acc); font: 600 27px/1.25 var(--h-head); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
+    #railprompt .line { padding: 13px 26px 12px; background: rgba(var(--h-plate),0.78); border-radius: 4px; border-bottom: 2px solid var(--h-acc); font: 600 27px/1.25 var(--h-head); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: normal; text-align: center; text-wrap: balance; width: max-content; max-width: max(320px, calc(100vw - 860px)); }
+    body.skyseat #railprompt .line { max-width: 86vw; }   /* (the kit panel owns the lower left 400 px: a long line breaks in two beside it; in the sky seat there is no kit panel) */
     #railprompt kbd { display: inline-block; min-width: 22px; margin: 0 3px; padding: 3px 9px 2px; border-radius: 5px; background: var(--h-acc); color: var(--h-on); box-shadow: 0 3px 0 rgba(0,0,0,0.45); font: 700 24px/1.2 var(--h-head); text-align: center; text-shadow: none; position: relative; top: -2px; }
     #railprompt .pips { display: flex; gap: 6px; } #railprompt .pips i { width: 9px; height: 4px; border-radius: 2px; background: rgba(var(--h-edge),0.35); }
     #railprompt .pips i.done { background: var(--h-acc); opacity: 0.75; } #railprompt .pips i.now { background: var(--h-hi); width: 18px; }
@@ -563,6 +564,8 @@
     .planmode .pk.now rect { fill: currentColor; } .planmode .pk.now text { fill: var(--h-base); }
     .planmode .pself { fill: none; stroke: currentColor; stroke-width: 2.4; opacity: 0.95; } .planmode .pe { fill: currentColor; stroke: rgba(var(--h-plate),0.85); stroke-width: 1.5; stroke-linejoin: round; paint-order: stroke; }
     .planmode .pb { fill: currentColor; fill-opacity: 0.08; stroke: currentColor; stroke-width: 1; stroke-dasharray: 4 3; }
+    .planmode .pa { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; } .planmode .pa.drag { stroke-dasharray: 2 5; opacity: 0.9; }
+    body.ringover #interact { opacity: 0.28; }   /* the status column under the ring's words (ui/cmdring.ts clear) */
     body.attract .cmdring, body.blinded .cmdring, body.attract .cmdhint, body.blinded .cmdhint, body.attract .planmode, body.blinded .planmode { display: none; }
     body.kitview { cursor: none; }
     body.kitview::after { content: ''; position: fixed; left: 0; top: 0; right: 0; height: 15vh; z-index: 100000; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); }   /* the top of the picture held down: a lit wall there is the brightest thing on the start page */

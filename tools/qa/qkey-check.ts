@@ -9,6 +9,7 @@
 //   the board      Q gives the quick order's code, B gives nothing, every other key is itself; the row reads Q, as built, nothing to reset; the wall hold
 //                  has no key — and with walking in switched off it still has none: Q never means two things (under `?bkey` it is the wall's again there)
 //   the words      a line written with the old cap names Q ('B on the blue door', the key card's 'X · B · T · F'); a place's letter is left alone
+//                  (the orders key and the who key read as no key in a list of keys where the ring carries every order: KEYMAP.qOnly)
 //   his own keys   the command put back on B by hand stays on B, kept and read back, and Reset is Q again; a table kept before, the command on another
 //                  key, means what it meant; Q given to another row (the wall hold by hand, Reload in a table kept while Q was spare) leaves the
 //                  command on B, and on no key only when B is held too; after 3,000 moves by a die,
@@ -27,6 +28,7 @@ const K: any = await import(`${ROOT}/src/host/keymap.ts`);
 const { Input } = await import(`${ROOT}/src/game/input.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { ORDERS } = OR, { AUTOPILOT } = AP;
+const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -92,7 +94,7 @@ export async function qkeyCheck(): Promise<boolean> {
     }
     // 2. the board
     {
-      boot(''); const code = ORDERS.quickKey, q = K.gameCode('KeyQ'), bk = K.gameCode('KeyB'), rest = BOARD.filter(c => c !== 'KeyQ' && c !== 'KeyB' && K.gameCode(c) !== c);
+      boot(''); const code = ORDERS.quickKey, q = K.gameCode('KeyQ'), bk = K.gameCode('KeyB'), only = K.KEYMAP.qOnly ? ['KeyX', 'KeyT'] : [], rest = BOARD.filter(c => c !== 'KeyQ' && c !== 'KeyB' && !only.includes(c) && K.gameCode(c) !== c).concat(only.filter(c => K.gameCode(c) !== ''));   // (the squad's only keys, host/keymap.ts qOnly: the orders key and the who key give nothing — qonly-check.ts asks the rest of it)
       const row = K.capNow(code), built = K.keyBuilt(code), changed = K.keysChanged(), wall = K.keysOf('KeyQ').length;
       walk = false; const offQ = K.gameCode('KeyQ'), offWall = K.keysOf('KeyQ').length, offAny = BOARD.filter(c => K.gameCode(c) === 'KeyQ').length; walk = true;
       boot('bkey'); walk = false; const bOff = K.gameCode('KeyQ') === 'KeyQ' && K.gameCode('KeyB') === 'KeyB'; walk = true; boot('');
@@ -103,7 +105,7 @@ export async function qkeyCheck(): Promise<boolean> {
     {
       boot(''); const a = K.keyText("B on the yellow house's door: the pair stacks up beside it"), b = K.keyText('X · B · T · F', true), c = K.keyText('with a team — X (or middle click) orders · B the usual order · T who it goes to'), d = K.keyText('room B is clear'), e = K.keyText('Vault B'), f = K.keyText('Q / away / Shift lets go'), cap = K.keyCap('B');
       boot('bkey'); const asWas = K.keyText('B on the blue door: BLUE stacks up'); boot('');
-      line(a.startsWith('Q on the yellow') && b === 'X · Q · T · F' && c.includes('· Q the usual order ·') && d === 'room B is clear' && e === 'Vault B' && f === 'Q / away / Shift lets go' && cap === 'Q' && asWas === 'B on the blue door: BLUE stacks up',
+      line(a.startsWith('Q on the yellow') && b === (K.KEYMAP.qOnly ? `${K.NONE} · Q · ${K.NONE} · F` : 'X · Q · T · F') && c.includes('· Q the usual order ·') && d === 'room B is clear' && e === 'Vault B' && f === 'Q / away / Shift lets go' && cap === 'Q' && asWas === 'B on the blue door: BLUE stacks up',
         'a line written with the old cap names Q; a place\'s letter is left alone; under ?bkey it reads as it did', `'${a.slice(0, 24)}…' · '${b}' · '${d}' · '${e}' · the cap handed 'B': '${cap}' · ?bkey: '${asWas}'`);
     }
     // 4. his own keys
@@ -149,7 +151,7 @@ export async function qkeyCheck(): Promise<boolean> {
         for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, g.player.char.pos) - dist(b.frameCentre, g.player.char.pos))) { const t = O.targetAt(d.frameCentre); if (t.kind !== 'door' || t.door !== d) continue; const far = g.cleared.roomBy(t.door, t.side > 0 ? -1 : 1); if (!far || g.cleared.isKnown(far)) continue; if (!O.whyNot(stackDef, O.forMen(t, all()), all()) && aimOf(R, d)) { D = d; break; } }
         const spot = floorSpot(R);
         if (!D || !spot) return { log: '', digest: '', rows: [] as string[], filed, lag: -1, why: !D ? 'no door to stack on' : 'no open floor round Sam' };
-        R.aim(spot); const n0 = O.log.length; press(); const lag = O.log.length - n0; R.step(90);
+        R.aim(spot); const n0 = O.log.length; press(); let lag = O.log.length - n0; R.step(1); if (CMDRING.on) lag = lag === 0 && O.log.length - n0 === 1 ? 1 : -1; R.step(89);   // (with the orders ring on — the page — a tap is given as the key is seen up, the tick after the press; off, on the press's own tick)
         aimOf(R, D); press(); R.until(() => R.stacked(), 40); R.step(30);
         aimOf(R, D); press(); R.step(240);
         R.aim(spot); press(); R.step(120);
@@ -161,7 +163,7 @@ export async function qkeyCheck(): Promise<boolean> {
       const dead = !b.why && b.rows.length === 0 && b.filed.every(f => f === '');
       line(same && q.rows.length >= 4 && code.lag === 1 && q.lag === 1 && q.filed.every(f => f === ORDERS.quickKey) && dead,
         `the game (${process.env.TPS_PROFILE === 'shipped' ? 'the page\'s stand' : 'the frozen stand'}): a tap of Q is the press B was — the same order book to the millisecond and the same game after four orders; the B key orders nothing`,
-        code.why || q.why || b.why ? `not played: ${code.why ?? q.why ?? b.why}` : `the code straight in: ${code.rows.length} rows, digest ${code.digest} · the Q key: ${q.rows.length} rows, digest ${q.digest}, filed '${q.filed[0]}' · ${same ? 'the same' : `DIFFERENT (first row that differs: ${q.rows.find((r, i) => r !== code.rows[i]) ?? 'none — the game differs'})`} · the orders: ${q.rows.map(r => r.split(' ')[1]).join(', ')} · from the stack: ${entry?.split(' ')[1]} · the order on the frame of the press: ${q.lag === 1} · the B key: filed '${b.filed.join('')}', ${b.rows.length} rows`);
+        code.why || q.why || b.why ? `not played: ${code.why ?? q.why ?? b.why}` : `the code straight in: ${code.rows.length} rows, digest ${code.digest} · the Q key: ${q.rows.length} rows, digest ${q.digest}, filed '${q.filed[0]}' · ${same ? 'the same' : `DIFFERENT (first row that differs: ${q.rows.find((r, i) => r !== code.rows[i]) ?? 'none — the game differs'})`} · the orders: ${q.rows.map(r => r.split(' ')[1]).join(', ')} · from the stack: ${entry?.split(' ')[1]} · the order ${CMDRING.on ? 'on the tick the key is seen up (the orders ring is on)' : 'on the frame of the press'}: ${q.lag === 1} · the B key: filed '${b.filed.join('')}', ${b.rows.length} rows`);
     }
   } finally {
     K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.freeWhen = null; AUTOPILOT.on = keep.ap; Math.random = keep.rnd;

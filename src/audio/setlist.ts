@@ -53,6 +53,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'train-kit': ['Wire Act', 'Night Shift'],
   'train-orders': ['Dead Freight', 'Wire Act'],
   'train-pairs': ['Cold Storage', 'Wire Act'],
+  'tut-squad': ['Dead Freight', 'Wire Act'],
   'train-silent': ['Night Shift', 'Wire Act'],
 };
 /** a level with no row of its own */

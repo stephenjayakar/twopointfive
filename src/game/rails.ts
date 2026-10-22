@@ -29,12 +29,21 @@ import type { Game, Guard } from './game';
 import type { LessonData, LessonStep, RailsData } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
 import type { Input } from './input';
+import type { FogEye } from './fogofwar';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
 
 export const RAILS = { on: false,
   /** the sky seat: metres a second the walk keys shift the view at the default zoom, and how far from the squad it may go */
   panSpeed: 11, panReach: 16,
+  /** the cursor this near (px) the step's mark on the screen is ON the mark's place, whatever stands between the eye and it (orders.ts targetUnder) */
+  snapPx: 40,
+  /** the sky seat keeps the step's mark in the picture: with no walk key held, a view shifted so that the mark is further from its middle than `keep` of the
+   *  camera's distance is eased back (m/s at the default zoom) until it is not — a ring off the screen, or under the squad's panel, is a player lost.
+   *  The kept ground is an oval, not a round: `keep` of the distance to either side (short of the squad's panel on the left), `keepDeep` of that reach up and
+   *  down the screen, with its middle `keepUp` of the reach up the screen from the view's own (the step's line sits low in the middle: a ring behind it,
+   *  or behind the panel, is a ring nobody sees) */
+  keep: 0.21, keepSpeed: 9, keepDeep: 0.79, keepUp: 0.39,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
 export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
@@ -48,11 +57,15 @@ const ACTS: Record<string, Act> = {
   sprint: { keys: ['ShiftLeft', 'ShiftRight'] }, crouch: { keys: ['KeyC'] }, wall: { keys: ['KeyQ'] }, pace: { wheel: true },
   aim: {}, fire: { buttons: 1 }, alt: { buttons: 4 }, reload: { keys: ['KeyR'] }, mode: { keys: ['KeyZ'] },
   'slot:pistol': { keys: ['Digit1'] }, 'slot:rifle': { keys: ['Digit2'] }, 'slot:smoke': { keys: ['Digit3'] }, 'slot:flash': { keys: ['Digit4'] }, 'slot:frag': { keys: ['Digit5'] },
-  hands: { keys: ['KeyE', 'Backquote'] }, use: { keys: ['Space', 'ArrowUp', 'ArrowDown'] }, whistle: { keys: ['KeyV'] }, light: { keys: ['KeyL'] }, nvg: { keys: ['KeyN'] },
+  // (codes, as everywhere here: the hands' own slot is 'Digit0' whatever key the board gives it — handslot.ts; the whistle's code has no key on the page
+  //  while the player's own ring is on — handring.ts: there it is the ring's last wedge, and the ring is `use`'s, worked with its digits and a click)
+  hands: { keys: ['KeyE', 'Digit0'] }, use: { keys: ['Space', 'ArrowUp', 'ArrowDown'] }, whistle: { keys: ['KeyV'] }, light: { keys: ['KeyL'] }, nvg: { keys: ['KeyN'] },
   order: { keys: ['KeyB'] }, ring: {}, menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] }, plan: {},
   camera: {}, zoom: {},
 };
 /** never locked: the page's own (the pause, the back key, a restart, the one-tick codes the host hands the tick) */
+/** the lookout's id among the fog's eyes: no character's, and under the sticky cameras' (stickycam.ts EYE_ID, which its count starts at) */
+const LOOKOUT_ID = 199;
 const FREE = /^(Escape|Tab|Enter|NumpadEnter|Blur|Paused|F\d{1,2}|BracketLeft|BracketRight)$/;
 const DIGIT = /^Digit[1-5]$/;
 export const RAILS_ACTIONS: readonly string[] = Object.keys(ACTS);
@@ -66,6 +79,8 @@ export function railsFaults(L: LessonData): string[] {
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
+  if (R.orders !== undefined && !(Array.isArray(R.orders) && R.orders.length > 0 && R.orders.every(x => typeof x === 'string'))) out.push('rails.orders: a list of order ids (at least one)');
+  if (R.sky?.eye && !(Array.isArray(R.sky.eye.at) && R.sky.eye.at.length === 3 && typeof R.sky.eye.yaw === 'number' && (R.sky.eye.fov === undefined || (R.sky.eye.fov > 0 && R.sky.eye.fov <= 360)))) out.push('rails.sky.eye: { at: a Vec3, yaw: radians, fov?: degrees up to 360 }');
   return out;
 }
 
@@ -109,11 +124,12 @@ export class Rails {
     const g = this.g, menuUp = !!g.orders?.menu && (A.has('menu') || A.has('ring'));
     const shift = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
     const enter = input.keys.has('Enter') || input.pressed.has('Enter') || input.keys.has('NumpadEnter') || input.pressed.has('NumpadEnter');   // (Shift+Enter stages the mission again: Shift rides with it)
-    if (menuUp) buttons |= 1;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
-    const ok = (code: string) => FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight'));
+    const handUp = A.has('use') && !!g.player.sel?.open;   // (the player's own ring or list, up: its digits and its clicks are its own)
+    if (menuUp || handUp) buttons |= 1; if (handUp) buttons |= 4;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
+    const ok = (code: string) => FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || (handUp && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight'));
     let dropped = 0;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
-    if (this.skyOn) { if (A.has('pan')) this.pan(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
+    if (this.skyOn) { if (A.has('pan')) this.pan(input, cam, dt); this.keep(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
     for (const k of [...input.pressed]) if (!ok(k)) { input.pressed.delete(k); dropped++; }
     for (const k of [...input.keys]) if (!ok(k)) input.keys.delete(k);
     // the command key held is the ring, and with Shift the plan: each its own action over `order`
@@ -123,9 +139,26 @@ export class Rails {
     }
     if (input.clicked & ~buttons) dropped++;
     input.buttons &= buttons; input.clicked &= buttons;
-    if (!wheel && !menuUp) input.wheel = 0;
+    if (!wheel && !menuUp && !handUp) input.wheel = 0;
     RAILS_STATS.dropped += dropped;
   }
+
+  /** the step's mark under the cursor (orders.ts targetUnder): the place itself, so an order pointed at the ring on the screen is an order on the door, the
+   *  wall or the thing the ring is on, even where a wall stands between the eye and it. Null: no mark, or the cursor is not on it */
+  markUnder(input: Input, cam: FollowCamera, canvas: { clientWidth: number; clientHeight: number }): Vec3 | null {
+    const S = this.lesson(); if (!S || BREAK) return null; const at = S.L.steps[S.i]?.at; if (!at) return null;
+    const [sx, sy, front] = cam.project(at, canvas.clientWidth, canvas.clientHeight); if (!front) return null;
+    return RAILS.snapPx > 0 && Math.hypot(input.mouseX - sx, input.mouseY - sy) <= RAILS.snapPx ? at : null;
+  }
+
+  /** THE MENU'S ROWS on a tutorial mission (orders.ts rowsFor): only the orders the level names — a row nobody taught is not on the ring */
+  orderRows<T extends { id: string }>(rows: T[]): T[] { const L = this.live && !BREAK ? this.data?.orders : undefined; return L ? rows.filter(d => L.includes(d.id)) : rows; }
+  /** the sky seat's lookout (fogofwar.ts update: one more of the team's eyes): null without one */
+  eye(): FogEye | null {
+    const e = this.data?.sky?.eye; if (!e) return null;
+    return this.lookout ??= { id: LOOKOUT_ID, pos: e.at, look: [Math.sin(e.yaw), 0, Math.cos(e.yaw)], at: e.at, fov: e.fov ?? 120, near: 0 };
+  }
+  private lookout: FogEye | null = null;
 
   /** between ticks, with the HOST's camera (game.ts update): the mission again opens on the view the first run opened on. A view left zoomed all the way out
    *  could not do the step that asks for a zoom. The view is the host's, so it is set there and reaches the game in the next tick's record like any turn of it */
@@ -141,7 +174,7 @@ export class Rails {
   tick(dt: number) {
     const S = this.lesson(), g = this.g;
     if (!S) { if (this.sky.parked) this.unpark(); return; }
-    if (this.run !== g.mission) { this.run = g.mission; this.answered = -1; this.back = false; this.spared.clear(); if (this.sky.parked) this.unpark(); this.sky.again = true; this.fresh = 3; this.sky.off = [0, 0, 0]; this.sky.mid = null; this.sky.midT = -1; this.log.length = 0; this.ordersSeen = g.orders?.log.length ?? 0; this.startProgram('start'); }
+    if (this.run !== g.mission) { this.run = g.mission; this.answered = -1; this.back = false; this.spared.clear(); if (this.sky.parked) this.unpark(); this.sky.again = true; this.fresh = 3; this.lookout = null; this.sky.off = [0, 0, 0]; this.sky.mid = null; this.sky.midT = -1; this.log.length = 0; this.ordersSeen = g.orders?.log.length ?? 0; this.startProgram('start'); }
     else if (this.fresh > 0) this.fresh--;
     if (this.back) { this.back = false; this.startProgram('checkpoint'); this.answered = -1; this.answer(S, true); }
     if (this.skyOn && !this.sky.parked) this.park(S.L.rails!);
@@ -171,7 +204,7 @@ export class Rails {
    *  snapshot holds — it is started again, and the step's cue sent again, on the next tick */
   putBack() { if (!this.live) return; this.back = true; RAILS_STATS.putBack++; }
   /** an authored checkpoint was just taken with the program stopped for it (savestate.ts): started again on the next tick, the step's cue with it */
-  restart() { if (this.live) this.back = true; }
+  resume() { if (this.live) this.back = true; }
 
   /** has the level's program said this beat has played out (the lesson test `cue`) */
   cued(name: string): boolean { return !!this.g.director?.signalled(`done:${name}`); }
@@ -221,6 +254,17 @@ export class Rails {
     const B = cam.planarBasis(), k = RAILS.panSpeed * (cam.distance / 21) * dt / Math.hypot(f, r), o = this.sky.off;
     o[0] += (B.fwd[0] * f + B.right[0] * r) * k; o[2] += (B.fwd[2] * f + B.right[2] * r) * k;
     const d = Math.hypot(o[0], o[2]), max = this.data?.sky?.reach ?? RAILS.panReach; if (d > max) { o[0] *= max / d; o[2] *= max / d; }
+  }
+  /** THE MARK STAYS IN THE PICTURE (RAILS.keep): the hand's shift is eased toward the step's mark while it is out past the kept oval and no walk key is down */
+  private keep(input: Input, cam: FollowCamera, dt: number) {
+    if (BREAK || !RAILS.keep || ACTS.move.keys!.some(k => input.keys.has(k))) return;
+    const S = this.lesson(), at = S?.L.steps[S.i]?.at, v = at ? this.look() : null; if (!at || !v) return;
+    const B = cam.planarBasis(), Rx = RAILS.keep * cam.distance, Rf = Rx * RAILS.keepDeep, dx = at[0] - v[0], dz = at[2] - v[2];
+    const r = dx * B.right[0] + dz * B.right[2], f = dx * B.fwd[0] + dz * B.fwd[2] - Rx * RAILS.keepUp, e = Math.hypot(r / Rx, f / Rf); if (e <= 1) return;
+    // (the shift that brings the mark to the oval's edge, along the line from the oval's middle to it)
+    const sr = r * (1 - 1 / e), sf = f * (1 - 1 / e), k = Math.min(1, RAILS.keepSpeed * (cam.distance / 21) * dt / Math.hypot(sr, sf)), o = this.sky.off;
+    o[0] += (B.right[0] * sr + B.fwd[0] * sf) * k; o[2] += (B.right[2] * sr + B.fwd[2] * sf) * k;
+    const d = Math.hypot(o[0], o[2]), max = this.data?.sky?.reach ?? RAILS.panReach; if (d > max) { o[0] *= max / d; o[2] *= max / d; }   // (never past the walk keys' own reach: the next press of one would snap it back)
   }
   /** how far the view has been shifted off the squad, metres (the lesson test `view`) */
   panned(): number { return Math.hypot(this.sky.off[0], this.sky.off[2]); }

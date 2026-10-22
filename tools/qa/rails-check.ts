@@ -17,7 +17,7 @@
 //   9. the journal: a recording from before the key replays with the frame off, one that carries it keeps its own word;
 //  10. THE MISSION AGAIN: Shift rides with Enter through the gate (the restart's keys) and alone does not; the seat's unseen player is no cheat to the verdict;
 //      a restart from a later step is on the first step, only its action open, before a tick has passed, and does not end; the mission left, he is seen again.
-// RAILS_BREAK=1 = the gate lets everything through: lines 3, 4 and 10 must fail.   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12 and 13 must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -118,6 +118,35 @@ export async function railsCheck(): Promise<boolean> {
       verdict(was === 2 && shift && enter && !sprint && started && !cheat && A0.size === 1 && A0.has('camera') && !end && i1 === 0 && A1.size === 1 && unseen && !after && Math.abs(d1 - d0) > 1 && Math.abs(d2 - d0) < 0.01,
         'the mission again: Shift rides with Enter through the gate (and alone does not), the run is no cheat\'s, a restart from the third step is on the first step with only its action open before a tick has passed, on the view the first run opened on, and does not end, and the mission left leaves the player seen again',
         `was on step ${was + 1} · Shift+Enter through ${shift && enter}, Shift alone ${sprint} · verdict started ${started}, cheat ${cheat} · before a tick: ${sum0} · after: step ${i1 + 1}, end ${end ?? 'none'}, open ${[...A1].join(' ')} · unseen in the seat ${unseen}, after quitting ${after} · view ${d0.toFixed(1)} → ${d1.toFixed(1)} → ${d2.toFixed(1)}`); }
+    // ---- 11: the ring on the screen is the place it marks; the lookout sees the road and no room
+    { const R = await rig(true), g = R.g, I = R.I; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step: its mark is on the yard)
+      const at = g.lesson.step?.at as [number, number, number] | undefined, cv = R.W.canvas, cam = R.W.cam; const [sx, sy] = at ? cam.project(at, cv.clientWidth, cv.clientHeight) : [0, 0];
+      I.mouseX = sx + 12; I.mouseY = sy - 9; const on = g.rails.markUnder(I, cam, cv); I.mouseX = sx + 140; const off = g.rails.markUnder(I, cam, cv);
+      const foes = g.guards.filter((x: any) => x.team !== 'operative' && x.state !== 'dead'), road = foes.filter((x: any) => x.char.pos[2] > 22), house = foes.filter((x: any) => x.char.pos[2] < 18);
+      const seenRoad = road.filter((x: any) => g.fogOfWar.drawn(x)).length, seenHouse = house.filter((x: any) => g.fogOfWar.drawn(x)).length;
+      verdict(!!at && on === at && off === null && g.fogOfWar.active && road.length > 0 && seenRoad === road.length && house.length > 0 && seenHouse === 0,
+        'the ring on the screen is the place it marks (the cursor on it is on that place, off it is not), and with the fog of war on from the first step the lookout has the men on the road in the picture and nobody in a room',
+        `step '${g.lesson.step?.id}' mark ${at ? at.join(',') : 'none'} · cursor on the ring → ${on ? 'the place' : 'nothing'}, 140 px off → ${off ? 'the place' : 'nothing'} · fog ${g.fogOfWar.active ? 'on' : 'off'} · on the road ${seenRoad}/${road.length} drawn · in the house ${seenHouse}/${house.length} drawn`); }
+    // ---- 12: the mark stays in the picture, and clear of the step's line
+    { const R = await rig(true), g = R.g, cam = R.W.cam; R.run(0.5); R.turn(1.0); R.run(0.3); R.zoom(); R.run(1.0); R.run(2.6, ['KeyD']);   // (the fourth step again)
+      const at = g.lesson.step?.at as [number, number, number] | undefined, at_ = () => { const [x, y] = at ? cam.project(at, 1, 1) : [9, 9]; return [x, y] as [number, number]; };
+      // (the picture's kept part, as fractions of the view: off its edges, not under the squad's panel — the top left, to 0.24 across and 0.30 down at the smallest view — and above the line low in its middle — index.html #railprompt, whose top is at 0.77)
+      const inPic = ([x, y]: [number, number]) => x >= 0.20 && x <= 0.90 && y >= 0.08 && y <= 0.70 && !(x < 0.25 && y < 0.31), word = ([x, y]: [number, number]) => `${x.toFixed(2)},${y.toFixed(2)}`;
+      const rows: { k: string; near: boolean; held: [number, number]; let_: [number, number] }[] = [];
+      for (const near of [false, true]) {
+        if (near) for (let i = 0; i < 40; i++) { cam.zoom(-60); R.run(1 / 60); }   // (zoomed in: the kept ground is a few metres)
+        for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) { R.run(2.5, [k]); const held = at_(); R.run(4); rows.push({ k: k.slice(3), near, held, let_: at_() }); }
+      }
+      const out = rows.filter(r => !inPic(r.held)).length, back = rows.filter(r => inPic(r.let_)).length, step = g.lesson.step?.id;
+      verdict(!!at && out >= 4 && back === rows.length && step === 'move',
+        'the mark stays in the picture: a view shifted far off the step\'s mark stays there while the walk key is held, and once it is let go the mark comes back inside the picture\'s edges, clear of the squad\'s panel and above the step\'s line, each way the view can be shifted, zoomed out and in',
+        `step '${step}' · the mark on the view (0,0 top left, 1,1 bottom right), key held → let go: ${rows.map(r => `${r.near ? 'near ' : ''}${r.k} ${word(r.held)} → ${word(r.let_)}`).join(' · ')} · out while held ${out}/${rows.length}, back in ${back}/${rows.length}`); }
+    // ---- 13: the menu lists only the mission's orders
+    { const R = await rig(true), g = R.g; R.run(0.5); const ids = (p: number[]) => g.orders.rowsFor(g.orders.targetAt(p)).map((d: any) => d.id).join(' ');
+      const door = ids([17.0, 1.0, 11.2]), yard = ids([17.6, 0.02, 20.4]), wall = ids([27.95, 1.1, 9.4]);
+      verdict(door === 'stack' && yard === 'move go' && (wall === 'move go walltools' || wall === 'move go'),   // (the wall's tools are a switch of their own: held off on the frozen stand)
+        'the squad\'s menu lists only the orders the mission names: a door has the stack, the yard the move and the word, the store\'s wall its tools as well where the stand has them, and nothing else is on the ring',
+        `door: ${door} · yard: ${yard} · wall: ${wall}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
