@@ -34,7 +34,7 @@ const BRITISH: [RegExp, string][] = [
   [/\btorch(es)?\b/i, 'flashlight'], [/\bmains\b/i, 'breaker'], [/\bfuse box\b/i, 'breaker box'], [/\blorr(y|ies)\b/i, 'truck'], [/\barmoury\b/i, 'armory'],
   [/\bmetres?\b/i, 'meters'], [/\bwhilst\b/i, 'while'], [/\btowards\b/i, 'toward'], [/\bcolour/i, 'color'],
   [/\bround (the|to|a|an|him|her|them|it|behind|each|with|you)\b/i, 'around'], [/\b(go|goes|going|walk|walks|come|comes|work|works) round\b/i, 'around'],
-  [/\bout cold\b/i, 'knock him out'], [/\btakes? hold of\b/i, 'grab'], [/\b(your|the|one) word\b(?! for)/i, '"tell them to go", "say go"'],
+  [/\bout cold\b/i, 'knock him out'], [/\btakes? hold of\b/i, 'grab'], [/\b(your|the|one) word\b(?! for)/i, '"say go", "until you say go"'],
 ];
 const UNCONTRACTED = /\b(he|she|it|that|there|who) is (?=[a-z])|(?<!\bof )\b(they|you|we) are (?=[a-z])|\b(he|she|it|they|you|we|i) will (?=[a-z])|\bi am\b|\b(do|does|did|is|are|was|were|will|would|should|could|has|have) not\b|\bcannot\b/i;   // ('have' and 'has' are verbs of their own too often to rule on: "they have one to spare")
 const OPENER = /^(in|on|out|up|through)[.,:]|^(to|out by|back to|through|on past) (the|a|its|his) |^where\b|^(stacked|kept|held|seen|given|sent|taken|left)\b[^.]*,/i;
@@ -78,7 +78,7 @@ const BEFORE = [
   'In. Stay in the dark', 'To the back door', 'Right button: out cold. Left: the knife', '[B] on the mains box: lights out', 'He heard that, and he is coming to look.', 'Do not turn everybody: send part of the squad to cover the other way.',
 ];
 const AFTER = [
-  "He'll check out the sound and then stop, with his back to you.", "Once they're stacked on a door, they'll wait until you tell them to go.", 'Press [B] on the door to stack up',
+  "He'll check out the sound and then stop, with his back to you.", "Once they're stacked on a door, they'll wait until you say go.", 'Press [B] on the door to stack up',
   'When he stops, sneak up behind him and press [Space] to grab him', 'Go around the wall, come up behind him, and press [Space] to grab him.',
   "Enemies can only fight what they can see. In the dark they'll slow down and turn on flashlights.", 'Go in and stay in the dark', 'Go to the back door',
   'Right-click to knock him out, or left-click to use the knife', 'Press [B] on the breaker box to cut the lights', "He heard that, and he's coming to take a look.", '[X] on the wall',

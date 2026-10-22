@@ -138,11 +138,11 @@ export function build() {
       // itself (X, then the digit): guns down the street, hold, fall in
       { id: 'menu', line: 'X on the ground by the sandbags to open the orders menu', done: { is: 'flag', flag: 'menu' }, at: bags },
       { id: 'move', line: 'Press 1 to send the pair there. If the menu\'s gone, X on the ground again', done: { is: 'did', what: 'order:move' }, at: bags },
-      { id: 'cover', line: 'X down the street, then press 2 so the pair covers that way', done: { is: 'did', what: 'order:cover' }, at: [17.0, 1, 14.0] },
-      { id: 'hold', line: 'X on the ground, then press 4 so the pair holds', done: { is: 'did', what: 'order:hold' } },
-      { id: 'fallin', line: 'X on the ground, then press 3 so the pair falls in behind you', done: { is: 'did', what: 'order:fallIn' } },
+      { id: 'cover', line: 'X down the street, then press 2 to have the pair cover that way', done: { is: 'did', what: 'order:cover' }, at: [17.0, 1, 14.0] },
+      { id: 'hold', line: 'X on the ground, then press 4 to have the pair hold', done: { is: 'did', what: 'order:hold' } },
+      { id: 'fallin', line: 'X on the ground, then press 3 to have the pair fall in behind you', done: { is: 'did', what: 'order:fallIn' } },
       // four doors, four ways in
-      { id: 'stack', line: 'Press B on the yellow house\'s door so the pair stacks up beside it', done: or(gave('stack', 'hut_a'), taken('a')), at: doorA },
+      { id: 'stack', line: 'Press B on the yellow house\'s door to stack the pair up beside it', done: or(gave('stack', 'hut_a'), taken('a')), at: doorA },
       { id: 'open', line: 'X on that door, then press 5, then 1 to open and clear', done: or(gave('openClear', 'hut_a'), taken('a')), at: doorA },
       { id: 'in1', line: 'Stay out of the doorway. When they call clear, walk in', done: and(taken('a'), { is: 'in', area: { ...A } }), at: [16.5, 1, 9.4] },
       { id: 'bang', line: 'Go to the green house. X on either door, then press 5, then 2 to bang and clear', done: or(gave('bangClear', 'hut_b'), gave('bangClear', 'hut_b_east'), taken('b')), at: doorB },
