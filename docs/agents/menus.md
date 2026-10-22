@@ -266,6 +266,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   things): nothing of those shows on it.
   SEEN: one offline still of a teammate's rifle hand each way (the software view; the fist moves up onto the gun). NEVER SEEN ON A GPU, nor on the page,
   nor by the maintainer: whether the fist reads as closed round the grip, the pistols' new place in the hands, the idle in motion.
+- **The picture's door outlasts the gun's row** (2026-10-22; `src/host/kitView.ts`; no switch of its own: with `DOORSHOT` off, `?doorshot=0`, no
+  round does more than mark a leaf and none of this is reached; `__kitview.leafMend` is the flag a check turns off). `doorblast.ts DOORSHOT` (10-19)
+  makes a wooden leaf go in pieces once it has met plasterboard's count of rounds, six rifle rounds on the page, and the count never decays. The
+  picture's gun row puts rounds into its own door: at the records office's second way in all three of a burst through the doorway meet the leaf held
+  open beside it; at the first, one or two of a burst fired from off his slot meet the shut one. The row is `damage: 'none'` and loops, so the leaf
+  splintered on the second or third turn and nothing hung it again: every row that works a leaf (charges, the wand, the big slot's tools, the
+  throws) was refused from then on and the gun's row played in its place. A whole run of `kitview-page.cjs` was 26 rows red on the second way in;
+  nobody had run that half since before the rule (the first way in passed: fewer rounds meet its leaf and a charge's rehang came before the
+  count was full — in one run on a loaded machine the leaf went there too). NOW: `mend()`, which already puts back
+  everything else a burst leaves as the next row begins, zeroes the leaf's count too (`Door.shot`); and `finish()` marks a leaf found in pieces
+  after ANY row as `dirty = 'leaf'`, so the next row begins under the dissolve with the leaf hung again (`rehang()`, as for a blown one) — one
+  burst worth the whole count still splinters the door, as the game has it, and is mended. CHECK: `kitview-page.cjs`, THE LEAF UNDER FIRE, two rows
+  in the inner half: the count set half a round short after his burst is 0 as the next gun's row begins and the leaf never goes; the count set half
+  a round short as a row begins, the leaf goes in pieces under it and is hung again under one dissolve (at a way in where no round of his meets the
+  leaf in four rows there is nothing to try and the row says so: the first way in). `KITLEAF_BREAK=1` (the second way in by default) turns both red.
+  Measured, software adapter, one run each: outer 32 / 32, the first way in 161 / 161, the second 155 / 155. NOT DONE, and for the list: a burst
+  through the doorway still goes into the open leaf rather than past it at the second way in (seen in the rounds' own log; why was not looked
+  into); the quiet picture's one round at the lamp does not count as a burst for `mend()` (a miss into the leaf is counted until the next restage).
+  Never seen on a GPU: what the splinters of a one-row leaf look like under the dissolve, and whether its GPU debris (about 20 s of life) outlasts it.
 - **The picture and the standing man follow the tree card's new rows** (2026-10-19; `src/host/kitView.ts`, `src/ui/kitFigure.ts`; no switch of its
   own: it follows `KITTREE`, and with that off no card has these tiles and the man is drawn as before). THE STANDING MAN read both of his guns by
   one flag (yours: always suppressed; a teammate's: his `suppressed` for both) and drew your goggles whatever the card said: under the tree the check
