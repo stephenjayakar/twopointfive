@@ -1,4 +1,4 @@
-// Static production build into ./dist (bundle + copy public/). Two real pages — the game (index.html) and the WORKBENCH (workbench.html: level editor + character viewer in one
+// Static production build into ./dist (bundle + copy public/ + the level files). Two real pages — the game (index.html) and the WORKBENCH (workbench.html: level editor + character viewer in one
 // shell) — plus the forwards that keep old links working: viewer.html → workbench.html#mode=chars, editor.html → workbench.html#mode=level (both plain pages, bundled as they are),
 // gaitlab.html (written here) → the workbench's Characters ▸ Sam ▸ walk.
 import { $ } from "bun";
@@ -6,6 +6,7 @@ await $`rm -rf dist`;
 const res = await Bun.build({ entrypoints: ["./index.html", "./workbench.html", "./viewer.html", "./editor.html", "./replay.html", "./sounds.html", "./music.html"], outdir: "./dist", minify: true, target: "browser", sourcemap: "linked", loader: { ".wgsl": "text" } });
 if (!res.success) { for (const m of res.logs) console.error(m); process.exit(1); }
 await $`cp -R public/. dist/`;
+await $`mkdir -p dist/levels`; await $`cp ${(await Array.fromAsync(new Bun.Glob("levels/*.json").scan())).sort()} dist/levels/`;   // (every mission's level file, fetched as /levels/<file>: without them a mission with a level of its own fell back to the office on a static host)
 await Bun.write("dist/gaitlab.html", `<!doctype html><meta charset="utf-8"><title>twopointsix — gait lab → workbench</title>
 <meta http-equiv="refresh" content="0; url=workbench.html#mode=chars&scene=sam/walk">
 <script>location.replace('workbench.html' + location.search + '#mode=chars&scene=sam/walk')</script>

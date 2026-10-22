@@ -16,14 +16,18 @@ import type { Firearm } from './weapons';
 
 /** the switch and its one number: off in the module, raised by the page (host/profile.ts pageSwitches; ?noautoreload = a dry gun waits for R, as it did) and by the
  *  shipped stand; the harness's frozen stand leaves it off (TPS_AUTORELOAD=1 turns it on). `delay` = seconds after the last round before the hands move (UNTUNED by eye: the round's recoil is seen first). */
-export const RELOAD = { auto: false, delay: 0.25 };
+/** `lastMag` = THE LAST MAGAZINE, SEATED AND NOT RACKED, IS STILL A RELOAD: a reload broken off between 'magazine in' and the rack with no spare left stood as a
+ *  full magazine under an empty chamber that R refused ('no spare magazines') and nothing restarted — a gun that never fired again. On, R and the rule above
+ *  take it: the magazine comes out, goes back in and the handle is racked (weapons.ts startReload). Off in the module and on the frozen stand
+ *  (TPS_LASTMAG=1), on in the page (?nolastmag = the build as it was). */
+export const RELOAD = { auto: false, delay: 0.25, lastMag: false };
 
 /** would THIS player's `gun` (the one in his hands: the caller's own test) start its reload by itself this frame? */
 export function autoReloadDue(g: Game, pl: Player, gun: Firearm): boolean {
   if (!RELOAD.auto || g.touring || g.puppet || pl.equipT > 0 || pl.dragging) return false;   // (equipT: the gun is still coming out — no round leaves it yet either; dragging: an ankle in each hand)
   // (the CHAMBER, not the rounds he has: a reload broken off between 'magazine in' and the rack leaves a full magazine under an empty chamber — a gun that
   //  cannot fire. fire() itself never leaves that state, so the two tests differ nowhere else)
-  if (gun.chamber !== 0 || gun.reloading || gun.spare.length === 0 || (gun.infinite && gun.mag !== null)) return false;   // (unlimited ammo with a magazine seated fires on from a dry chamber: weapons.ts canFire)
+  if (gun.chamber !== 0 || gun.reloading || (gun.spare.length === 0 && !(RELOAD.lastMag && (gun.mag ?? 0) > 0)) || (gun.infinite && gun.mag !== null)) return false;   // (unlimited ammo with a magazine seated fires on from a dry chamber: weapons.ts canFire)
   const since = g.time - pl.lastFireT;   // (a checkpoint puts lastFireT back with the clock; a stamp ahead of the clock is no reason to wait)
   return !(since >= 0 && since < RELOAD.delay);
 }

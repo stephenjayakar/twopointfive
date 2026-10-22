@@ -124,7 +124,7 @@ const nightShift: Piece = {
     const riff = tonic ? (bar % 2 ? NS_B : NS_A) : NS_OFF;
     for (const [st, semi, len] of riff) if (st === s && (st === 0 || h.maybe(0.15 + x * 1.6))) h.pluck(t, root + semi, spb * len * 1.5, 0.45 + x * 0.3);
     // the trumpet: one long note every four bars, and the half step or the step it falls; the clarinet under it two bars on
-    if (!hot && bar % 4 === 1) { if (s === 2) { h.m[1] = h.pick(NS_HORN); h.wind(t, h.m[1], spb * 7, 0.2, 'trumpet'); } else if (s === 10 && h.maybe(0.75)) h.wind(t, h.m[1] - h.pick([1, 1, 2]), spb * 9, 0.16, 'trumpet'); }
+    if (!hot && bar % 4 === 1) { if (s === 2) { h.m[1] = h.pick(NS_HORN); h.wind(t, h.m[1], spb * 7, 0.2, 'trumpet'); } else if (s === 10 && h.m[1] && h.maybe(0.75)) h.wind(t, h.m[1] - h.pick([1, 1, 2]), spb * 9, 0.16, 'trumpet'); }
     if (x < 0.7 && bar % 4 === 3 && s === 4 && h.maybe(0.7)) h.wind(t, h.pick(NS_REED), spb * 11, 0.22, 'clarinet');
     // the vibraphone: two or three notes a bar, or none; a felt piano's low fifth where the phrase turns
     const mo = h.m[0] >= 0 ? NS_VIBES[h.m[0]] : null;

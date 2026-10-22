@@ -11,7 +11,9 @@
 //   (6) a gun drawn dry is reloaded once it is up;
 //   (7) unlimited ammo: the gun never runs dry and nothing starts;
 //   (8) the switch off: the dry gun waits, the line asks for R, and R reloads it — the build as it was.
-// AUTORELOAD_BREAK=1 = the rule left on for the 'off' lines: (8) must fail.   exit 0 = all hold · 1 = one does not
+//   (5c) the same break on the LAST magazine (RELOAD.lastMag: on in the page, ?nolastmag; off on the frozen stand, TPS_LASTMAG=1): it restarts and R takes it;
+//   (5d) with that switch off the gun is as it was: R refused, nothing restarts.
+// AUTORELOAD_BREAK=1 = the rule left on for the 'off' lines: (8) must fail. LASTMAG_BREAK=1 = the last-magazine rule left off for (5c): it must fail.   exit 0 = all hold · 1 = one does not
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -58,6 +60,19 @@ export async function autoreloadCheck(): Promise<boolean> {
       input.keys.add('ShiftLeft'); input.keys.add('KeyD'); idle(20); const st = `${kit(rf)} reloading ${rf.reloading} canFire ${rf.canFire()}`; input.keys.delete('ShiftLeft'); input.keys.delete('KeyD');
       const b = waitReload(rf, 90); idle(190);
       line(a >= 0 && mid && b >= 0 && rf.chamber === 1 && rf.canFire(), 'a sprint between the magazine going in and the rack leaves a full magazine under an empty chamber: that reload starts again by itself too, and ends with a round up', `first at +${a} · caught between in and rack ${mid} · after the sprint: ${st} · again at +${b} · ${kit(rf)}`); }
+    // (5c) the same break on the LAST magazine: nothing is left to seat, and the full magazine under the empty chamber is still reloaded (RELOAD.lastMag)
+    { RELOAD.lastMag = process.env.LASTMAG_BREAK !== '1';
+      rf.cancelReload(); rf.chamber = 0; rf.mag = 0; rf.spare = [30]; const a = waitReload(rf, 60); let n = 0; while (rf.reloading && rf.stage < 2 && n++ < 400) idle(1);
+      const mid = rf.reloading && rf.chamber === 0 && (rf.mag ?? 0) > 0 && rf.spare.length === 0;
+      input.keys.add('ShiftLeft'); input.keys.add('KeyD'); idle(20); const st = `${kit(rf)} reloading ${rf.reloading} canFire ${rf.canFire()}`; input.keys.delete('ShiftLeft'); input.keys.delete('KeyD');
+      const b = waitReload(rf, 90); idle(190); const auto = `${kit(rf)} canFire ${rf.canFire()}`, autoOk = b >= 0 && kit(rf) === 'chamber 1 mag 29 spare []' && rf.canFire();
+      RELOAD.auto = false; rf.cancelReload(); rf.chamber = 0; rf.mag = 30; rf.spare = []; msgs.length = 0; idle(5); input.pressed.add('KeyR'); W.step(DT); const byR = rf.reloading; idle(190); RELOAD.auto = true;
+      line(a >= 0 && mid && autoOk && byR && kit(rf) === 'chamber 1 mag 29 spare []' && !msgs.some(m => /no spare/.test(m)), 'the last magazine, in and not racked when a sprint broke the reload: it starts again by itself and ends with a round up, and with the rule off R takes it too',
+        `first at +${a} · caught between in and rack with nothing spare ${mid} · after the sprint: ${st} · again at +${b}: ${auto} · by R alone: took ${byR}, ${kit(rf)} · ${JSON.stringify(msgs)}`); }
+    // (5d) the switch off: that gun is the build as it was — R is refused and nothing restarts
+    { RELOAD.lastMag = false; rf.cancelReload(); rf.chamber = 0; rf.mag = 30; rf.spare = []; msgs.length = 0; const b = waitReload(rf, 90); input.pressed.add('KeyR'); W.step(DT); const byR = rf.reloading; idle(30);
+      line(b === -1 && !byR && !rf.canFire() && kit(rf) === 'chamber 0 mag 30 spare []', 'the last-magazine switch off: nothing restarts and R is refused, as it was', `auto ${b} · R took ${byR} · ${kit(rf)} canFire ${rf.canFire()} · ${JSON.stringify(msgs)}`);
+      RELOAD.lastMag = was.lastMag; rf.cancelReload(); rf.chamber = 1; rf.mag = 30; rf.spare = [30]; }
     // (3b) dragging a body with the dry pistol selected: nothing starts by itself
     { gun.cancelReload(); const was2 = { slot: pl.slot, hol: pl.holstered, drag: pl.dragging }; gun.chamber = 0; gun.mag = 0; gun.spare = [10];
       const { autoReloadDue } = await import(`${ROOT}/src/game/autoreload.ts`); pl.dragging = {} as any; const due = autoReloadDue(game, pl, gun); pl.dragging = was2.drag; const free = autoReloadDue(game, pl, gun);

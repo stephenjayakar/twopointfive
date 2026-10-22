@@ -15,6 +15,8 @@ import { cancelDrive } from './mission';
 import { stopCoding } from './devices';
 import { samStaggered } from './samstun';
 import { CMDRING, ringOpen, ringWant, type RingView } from './cmdring';
+import { HANDRING } from './handring';
+import { tryWhistle, whistleReadyIn } from './whistle';
 import { CLOSE } from './close';
 import type { View } from '../host/hud';
 
@@ -63,15 +65,30 @@ export function cancelSustained(g: Game): boolean {
 const wedged = (r: Interactable) => !!r.verb && !r.running && r.kind !== 'cancel';
 /** a row's words as the panel has them, less its key — and less what follows a dash, which the ring keeps for under it */
 const rowWords = (r: Interactable) => r.line2.replace(/^Space\s+/, '').split(/\s+·\s+/)[0].trim();
+/** … and up to that dash: what its wedge says */
+const wedgeWords = (r: Interactable) => rowWords(r).split(/\s+[—–-]\s+/)[0];
+/** THE WHISTLE'S WEDGE (handring.ts): the ring's last one, wherever the rows leave it free — no row of the list (nothing that reads the rows or the
+ *  highlight meets it), so never what a tap does */
+const WHISTLE_WEDGE = 'whistle', WHISTLE_CAPTION = 'whistle — one man comes to look';
+const whistleWedge = (g: Game) => { if (!ringStays(g) || g.player.down || g.player.takedown) return false; let n = 0; for (const r of g.nearby) if (r.kind !== 'cancel') n++; return n < CMDRING.wedges; };
+/** Sam's own ring is on (the prototype beside the squad's ring, or handring.ts) / it is the ring that STAYS (handring.ts) */
+const ringMode = (g: Game) => !g.puppet && (HANDRING.on || (CMDRING.on && CMDRING.hands));
+const ringStays = (g: Game) => !g.puppet && HANDRING.on;
+/** a row done by the key, a digit or a click: what updateInteract hands on as Game.act */
+function give(g: Game, r: Interactable | null) {
+  if (!r || r.kind === 'cancel' || !r.inReach || !r.verb || r.running || samStaggered(g)) return;   // (samstun.ts: folded by a blast, his hands do nothing)
+  g.act = r;
+}
 /** What Sam's own ring shows this frame (null: none — cmdring.ts CMDRING.hands): where it is, how much larger than its px (ringZoom), the lit wedge (0: the
  *  highlight is on a row with no wedge), and a wedge a row on a digit — its words up to a dash, greyed where the row cannot be done; a row with no verb (a
  *  status line) has none. Under it the thing's name and the highlighted row's words in full. ui/cmdring.ts draws it; the simulation never reads it. */
 export function handRingView(g: Game): RingView | null {
   const pl = g.player, S = pl.sel, R = S.ring; if (!R || !S.open) return null;
   const wedges: RingView['wedges'] = [];
-  g.nearby.slice(0, CMDRING.wedges).forEach((r, i) => { if (wedged(r)) wedges.push({ key: i + 1, text: rowWords(r).split(/\s+[—–-]\s+/)[0], off: r.off || !r.inReach, opens: false }); });
-  const hv = g.hover, lit = hv && wedged(hv) && pl.nearSel < CMDRING.wedges ? pl.nearSel + 1 : 0;
-  return { x: R.ax, y: R.ay, zoom: R.z, lit, tone: 'hands', caption: hv ? (wedged(hv) ? `${hv.line1} · ${rowWords(hv)}` : hv.line1) : '', wedges };
+  g.nearby.slice(0, CMDRING.wedges).forEach((r, i) => { if (wedged(r)) wedges.push({ key: i + 1, text: wedgeWords(r), off: r.off || !r.inReach, opens: false }); });
+  if (whistleWedge(g)) wedges.push({ key: CMDRING.wedges, text: WHISTLE_WEDGE, off: whistleReadyIn(g) > 0, opens: false });
+  const hv = g.hover, lit = R.whistle ? CMDRING.wedges : hv && wedged(hv) && pl.nearSel < CMDRING.wedges ? pl.nearSel + 1 : 0;
+  return { x: R.ax, y: R.ay, zoom: R.z, lit, tone: 'hands', caption: R.whistle ? WHISTLE_CAPTION : hv ? (wedged(hv) ? `${hv.line1} · ${rowWords(hv)}` : hv.line1) : '', wedges };
 }
 /** Esc, ahead of the pause menu (main.ts asks this first; the headless harness's Escape lands in updateInteract): the open selector backs out — that press is
  *  spent — else a running sustained verb stops. True = it was used here (no menu). */
@@ -80,6 +97,9 @@ export function escapeInteract(g: Game): boolean {
   if (S.open || S.downT >= 0) { closeSelector(g, true); return true; }
   return cancelSustained(g);
 }
+/** his hands are on a choice or a verb: a list open or a press in hand — but not a ring that merely STANDS (handring.ts: he walks, saves, takes a wall,
+ *  puts his gun away and gives the squad an order under it) — or a sustained verb running */
+export function handsBusy(g: Game): boolean { const S = g.player.sel; return (S.open && !S.ring?.free) || S.downT >= 0 || !!runningVerb(g); }
 /** is there anything here the back key would back out of — the open list or a press in hand, a running sustained verb (asked, nothing touched) */
 export function backableInteract(g: Game): boolean { const S = g.player.sel; return S.open || S.downT >= 0 || !!runningVerb(g); }
 /** anything to CHOOSE in this list: a row with a verb that is not the running one (a status line — getting hold of him, kicking it in — is nothing to open a list over) */
@@ -92,7 +112,8 @@ function openSelector(g: Game) {
 }
 /** the list shut (the cancel row goes, a highlight left on it returns to the top) — the press itself untouched: shutList alone when the rows empty under an open list, closeSelector when the press is over */
 function shutList(g: Game) {
-  const pl = g.player; pl.sel.open = false; pl.sel.ring = null;
+  const pl = g.player, ring = !!pl.sel.ring; pl.sel.open = false; pl.sel.ring = null;
+  if (ring && ringStays(g) && pl.nearSel) { pl.nearSel = 0; pickHover(g); }   // (handring.ts: a wedge lit and not done is not left as what a tap does: the top row is)
   if (g.nearby.some(r => r.kind === 'cancel')) { const hv = g.hover; g.nearby = g.nearby.filter(r => r.kind !== 'cancel'); if (hv?.kind === 'cancel') pl.nearSel = 0; pickHover(g); }
 }
 /** shut the list AND end the press (`spent`: it must also come up before Space arms again — Esc, a teleport) */
@@ -126,42 +147,61 @@ export function updateInteract(g: Game, dt: number, input: Input, view?: View) {
   S.runKey = ''; S.moveLatch = 0;
   if (pl.down) { closeSelector(g, false); if (input.wheel && !down) wheelPace(g, input.wheel); return; }
   // ---- the press edge: armed unless this press is already spent
-  if (hit && !pl.fHeld) { S.downT = 0; S.open = false; S.moved = false; S.ring = null; }
+  const stays = ringStays(g), free = S.open && !!S.ring?.free;   // (handring.ts: a ring standing with no key held — the key again is its own, below)
+  if (hit && !pl.fHeld && !free) { S.downT = 0; S.open = false; S.moved = false; S.ring = null; }
   const armed = S.downT >= 0;
-  const live = choosable(g.nearby);   // anything to choose at all (an open list whose rows have gone — the man walked out of reach — shuts, and opens again if they come back under the same held key)
+  const live = choosable(g.nearby) || (stays && whistleWedge(g));   // anything to choose at all (an open list whose rows have gone — the man walked out of reach — shuts, and opens again if they come back under the same held key)
   if (S.open && !live) shutList(g);
   // ---- THE LIST AS A RING (cmdring.ts CMDRING.hands): up at the cursor the moment the press is armed over something to choose — no wait, no cancel row, his
   //      feet his own — the highlighted row lit; a digit, or the cursor out of its middle (cmdring.ts ringWant), lights another row that has a wedge; a
   //      right click gives nothing, and so does a left click (Sam's trigger, as under the squad's ring — but never the knife of the arm hold). The wheel
   //      and ↑ / ↓ move the highlight as they did. The press's end below is the list's own: letting go does the lit row.
-  if (CMDRING.on && CMDRING.hands && !g.puppet) {
-    if (armed && live && !S.open && !g.orders.cmdRing) { S.open = true; S.ring = { ...ringOpen(input, view?.clientWidth ?? 0, view?.clientHeight ?? 0, g.time, pl.nearSel + 1), key: pl.nearKey }; pickHover(g); }
+  //      WITH handring.ts IT STAYS: it comes up once the key has been down HANDRING.holdSecs (a tap is the tap it was, and never the whistle), the key
+  //      let go with the cursor out on a wedge does that wedge, let go in the middle leaves the ring standing; then a digit does its wedge at once, a
+  //      left click or the key again does the lit one (the click is not his trigger), a right click or the back key puts it away.
+  if (ringMode(g)) {
+    if (S.open && S.ring && (g.orders.menu || g.orders.cmdRing)) { closeSelector(g, down); return; }   // (one list at a time: the squad's is up)
+    if (armed && live && !S.open && !g.orders.cmdRing && (!stays || (down && S.downT >= HANDRING.holdSecs - 1e-6))) { S.open = true; S.ring = { ...ringOpen(input, view?.clientWidth ?? 0, view?.clientHeight ?? 0, stays ? g.time - CMDRING.tapSecs : g.time, pl.nearSel + 1), key: pl.nearKey }; pickHover(g); }   // (the ring that stays came up after a hold: the cursor counts at once, as under the squad's — orders.ts ringUp)
     const R = S.ring;
     if (R && S.open) {
       if (input.hit('Blur')) { closeSelector(g, true); return; }   // (the window lost the keys: nothing is done, as under the squad's ring)
       if (input.rmbHit()) { input.clicked &= ~4; closeSelector(g, true); return; }
-      if (input.lmbHit()) { if (CLOSE.heldClicks && pl.holding?.variant === 'arm') input.clicked &= ~1; closeSelector(g, true); return; }   // (close.ts: with a man in the arm the click is the knife — the click that puts the ring away is not that click as well)
+      const lmb = input.lmbHit();
+      if (lmb && !stays) { if (CLOSE.heldClicks && pl.holding?.variant === 'arm') input.clicked &= ~1; closeSelector(g, true); return; }   // (close.ts: with a man in the arm the click is the knife — the click that puts the ring away is not that click as well)
       let digit = 0; for (let d = 1; d <= 9; d++) if (input.pressed.delete(`Digit${d}`) && !digit) digit = d;   // (not his weapon slots while it is up)
-      if (R.key !== pl.nearKey) { R.key = pl.nearKey; R.armed = false; }   // (the rows changed under it: the cursor lights nothing until it has been back to the middle)
-      if (input.hit('ArrowDown') || input.hit('ArrowUp') || input.wheel) R.armed = false;   // (… nor after the highlight was stepped by hand)
-      const want = ringWant(R, input, digit, g.time), row = want ? g.nearby[want - 1] : null;
-      if (row && wedged(row) && want - 1 !== pl.nearSel) { pl.nearSel = want - 1; pickHover(g); }
+      if (R.key !== pl.nearKey) { R.key = pl.nearKey; R.armed = false; R.whistle = false; }   // (the rows changed under it: the cursor lights nothing until it has been back to the middle — and the top row, not the whistle, is lit over rows that have just come)
+      if (!stays && (input.hit('ArrowDown') || input.hit('ArrowUp') || input.wheel)) R.armed = false;   // (… nor after the highlight was stepped by hand)
+      const want = ringWant(R, input, digit, g.time), wh = stays && whistleWedge(g), toWh = wh && want === CMDRING.wedges, row = want && !toWh ? g.nearby[want - 1] : null, at = row && wedged(row) ? want - 1 : -1;
+      if (at >= 0) { R.whistle = false; if (at !== pl.nearSel) { pl.nearSel = at; pickHover(g); } }
+      if (stays) {
+        if (toWh || (wh && !choosable(g.nearby))) R.whistle = true; else if (!wh) R.whistle = false;   // (the whistle's wedge lit: asked for, or the only one there is)
+        R.lit = R.whistle ? CMDRING.wedges : pl.nearSel + 1;
+        const lit = !R.whistle && g.hover && wedged(g.hover) ? g.hover : null, pointed = !digit && (at >= 0 || toWh);
+        if (lmb) { input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1); }   // (the click is the ring's: he does not fire — the held button stays taken until he lets go, as under the squad's ring)
+        const ask = lmb || (digit > 0 && (toWh || at >= 0)) || (R.free ? hit : !down && pointed), can = R.whistle ? whistleReadyIn(g) <= 0 : !!lit?.inReach;
+        if (ask && can) { const whistle = !!R.whistle; closeSelector(g, down); if (whistle) { if (!samStaggered(g)) tryWhistle(g); } else give(g, lit); return; }   // (a wedge that cannot be done now — out of reach, the breath not back — is lit and the ring stays)
+        if (input.wheel && !down) wheelPace(g, input.wheel);   // (the wheel is his pace under a ring that stands, as it is with no ring)
+        if (!R.free && !down) { R.free = true; S.downT = -1; }   // let go in the middle: the ring stands by itself
+        if (esc) closeSelector(g, true);
+        else if (down && !R.free) S.downT += Math.min(dt, 0.05);
+        return;
+      }
     }
   }
   // ---- the highlight: ↑ / ↓ any time (the tour's arrows step its stops instead), the wheel while an armed press is down; else the wheel is his pace
   let dSel = 0;
   if (!g.puppet) { if (input.hit('ArrowDown')) dSel++; if (input.hit('ArrowUp')) dSel--; }
-  if (input.wheel) { if (armed && live) { S.wheelAcc = Math.max(-2 * WHEEL_STEP, Math.min(2 * WHEEL_STEP, S.wheelAcc + input.wheel)); if (Math.abs(S.wheelAcc) >= WHEEL_STEP) { const sg = Math.sign(S.wheelAcc); dSel += sg; S.wheelAcc -= sg * WHEEL_STEP; S.moved = true; } } else if (!down) wheelPace(g, input.wheel); }   // (Space down but spent: the wheel does nothing rather than change his pace under a finger that is choosing)
+  if (input.wheel) { if (stays) { if (!down) wheelPace(g, input.wheel); } else if (armed && live) { S.wheelAcc = Math.max(-2 * WHEEL_STEP, Math.min(2 * WHEEL_STEP, S.wheelAcc + input.wheel)); if (Math.abs(S.wheelAcc) >= WHEEL_STEP) { const sg = Math.sign(S.wheelAcc); dSel += sg; S.wheelAcc -= sg * WHEEL_STEP; S.moved = true; } } else if (!down) wheelPace(g, input.wheel); }   // (Space down but spent: the wheel does nothing rather than change his pace under a finger that is choosing)
   if (!armed) S.wheelAcc = 0;
-  if (armed && live && !S.open && (S.moved || (down && S.downT >= TAP_SECS - 1e-6))) openSelector(g);
+  if (!stays && armed && live && !S.open && (S.moved || (down && S.downT >= TAP_SECS - 1e-6))) openSelector(g);
   if (dSel && g.nearby.length > 1) { pl.nearSel += dSel; pickHover(g); }
   if (S.ring) S.ring.lit = pl.nearSel + 1;
   // ---- Esc: back out of an open list (or a press not yet a hold): the press is spent, nothing happens on its release
   if (esc && armed) { closeSelector(g, true); return; }
   if (!armed) { if (S.open) closeSelector(g, false); return; }
-  if (down) { S.downT += Math.min(dt, 0.05); if (live && !S.open && S.downT >= TAP_SECS - 1e-6) openSelector(g); return; }   // (a frame hitch must not turn a tap into a hold)
+  if (down) { S.downT += Math.min(dt, 0.05); if (!stays && live && !S.open && S.downT >= TAP_SECS - 1e-6) openSelector(g); return; }   // (a frame hitch must not turn a tap into a hold)
   // ---- released this frame (or begun and ended inside it): the highlighted row is what Space does
   const rowNow = g.hover;
   closeSelector(g, false);
-  if (rowNow && rowNow.kind !== 'cancel' && rowNow.inReach && rowNow.verb && !rowNow.running && !samStaggered(g)) g.act = rowNow;   // (samstun.ts: folded by a blast, his hands do nothing)
+  give(g, rowNow);
 }

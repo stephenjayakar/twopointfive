@@ -24,7 +24,8 @@ export async function tabBackCheck(): Promise<boolean> {
   const { stage, rmbHold, rmbUp } = await import('./fn2000-probes.ts');
   const was = BACKKEY.tab, log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
-  const set = (rule: boolean) => { BACKKEY.tab = rule && !BRK; };
+  const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`);
+  const set = (rule: boolean) => { BACKKEY.tab = rule && !BRK; HANDRING.on = false; };   // (handring.ts: these lines read the list on a held Space as it was built — the ring that stays has its own check, probes.ts handring)
   const key = (W: any, code: string, n = 1) => { W.input.pressed.add(code); for (let i = 0; i < n; i++) W.step(DT); };
   try {
     // ---- the Space list and the leaf being eased: the office, a shut door, everybody parked
