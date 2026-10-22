@@ -3134,6 +3134,7 @@ if (on('irl-team', 'irlight', 'all')) await run('irl-team', async () => (await i
 if (on('irl-off', 'irlight', 'all')) await run('irl-off', async () => (await import('./irlight-probes.ts')).irlOff());
 if (on('irl-auto', 'irlight', 'all')) await run('irl-auto', async () => (await import('./irlight-probes.ts')).irlAuto());
 if (on('irl-meter', 'irlight', 'all')) await run('irl-meter', async () => (await import('./irlight-probes.ts')).irlMeter());
+if (on('irl-near', 'irlight', 'all')) await run('irl-near', async () => (await import('./irlight-probes.ts')).irlNear());   // the infrared light turns itself down for what stands close in front of it (IRLIGHT.near; IRNEAR_BREAK=1 must fail)
 // ---------------------------------------------------------------- dark on a lit man: from the dark, a teammate's light stays off and his closing walk waits (litman-probes.ts; guards.ts LIGHTS.litMan)
 if (on('litman-rule', 'litman', 'all')) await run('litman-rule', async () => (await import('./litman-probes.ts')).litmanRule());
 if (on('light-wall', 'litman', 'all')) await run('light-wall', async () => (await import('./walllight-probes.ts')).lightWall());   // a teammate's light is dark into the wall at his muzzle (LIGHTS.wallOff; WALLLIGHT_BREAK=1 must fail)

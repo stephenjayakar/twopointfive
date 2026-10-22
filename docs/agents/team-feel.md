@@ -417,6 +417,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   after this change, a tour, a soak, an entry tally. NEVER SEEN ON A GPU, and only a player can judge: whether the meter on his GPU reads that room
   as his picture shows it (if his light still burns there, lower 'floor min'), a light that comes on for the darker half of a room
   as he turns, and a torch beam crossing dark floor putting his light out for a moment.
+  **It turns itself down for what is close** (10-22, `IRLIGHT.near`, irlight.ts `nearK`; the maintainer, the stealth lesson, stood at the code pad a
+  pace from its wall, the wall a white blob in his goggles: "i still think the IR light is a bit too bright here. ideally it's just enough to be able
+  to see" · "but i like how it's realistic"). Cause: the flood falls off by the square of the distance, so a wall a pace from the lens takes fifty to
+  a hundred times what one five metres off takes, and through the tube that is white whatever `power` says (the tube's curve is a logarithm: halving
+  `power` takes a ninth of its range off). The rule, as a set with an automatic gain does it: three rays over the statics across the middle of the
+  flood; the nearest hit inside `nearM` (5) turns the light down by the square of the distance, so that thing reads as it would 5 m off (a wall face
+  on: about half the tube's range at power 8, by the shader's curve) and no brighter; never under `nearMin` (0.003); down at 12 a second, up at 3; a
+  light that comes on comes on turned down. Nothing inside `nearM`: full strength, as it was. Indoors the light is down most of the time, so the far
+  floor of a small room is dimmer than it was. Both stands' words: ON in the page (`?irnear=0`; `?irnear=<metres>` and `?irpower=<n>` set its two
+  numbers for a visit, read after the kept Team feel rows — irlight.ts `irFlags`), OFF in the module and on the frozen stand (`TPS_IRNEAR=1`,
+  `FROZEN_HOLDS`); two Team feel rows (kept); journal: a recording from before the key replays with it off. In the simulation: a goggled teammate
+  sees a man by the light as it burns (`irOnMan`), so a mate's light turned down at a wall shows less of a man beside that wall; `irShowsAt` still
+  asks by `power`. `probes.ts irl-near` (family `irlight`), both stands, 8 of 8; `IRNEAR_BREAK=1` fails 3 on both. Measured there: the wall
+  1.2 m off took 16 times what a point 5 m off takes → 0.96 times (0.5 m off on the frozen stand: 107 → 0.99); first frame of a light that comes on
+  at the wall 1.01; brought to the wall from the open, down in 15 frames. The other irlight probes hold it off. NEVER SEEN ON A GPU: 5 m is
+  arithmetic, not a look — whether "about half" is "just enough to see", and whether a small room is now too dim, are the maintainer's eye.
 - **Silent or loud, on Sam's word** (`src/game/silent.ts`, 10-07; the maintainer: "some way of telling the squad to be silent or not. silent implies walking
   quietly, no flashlight, etc."; scope page rebuild/silent-order/scope.md): the squad's POSTURE, one order — `go silent` on **X, 5** of the
   floor's menu and of a man's (under the header 'the whole squad'; a door's menu keeps 5 for the door tools; the order fits any target through `give`), the row
