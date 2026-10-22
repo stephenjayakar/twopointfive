@@ -984,5 +984,24 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   open"); a tap of E files `Space` and the leaf opens; E kept down half a second draws the ring ("1 push it shut · 5 whistle", 1 lit); let go, it
   stands; Tab puts it away; ring then 1 shuts the leaf; ring then a click opens it; on open floor the ring is "5 whistle" and 5 raises his noise;
   the V key and the Space key file nothing. No picture was taken: a screenshot does not come back on that adapter.
-  NOT DONE HERE: the camera is still on Ctrl (Space is spare for it); the shared latch helper.
+  NOT DONE HERE: the shared latch helper (the camera moved to the spare Space bar in the next bullet).
   Nobody has played it; never seen on a GPU.
+- **The camera's key is the Space bar** (`src/host/keymap.ts KEYMAP.camSpace`, `camKey()`, `camCap()`, 10-22; the maintainer: "move camera pan from
+  ctrl to space", "zoom can still be just space + scroll"; a tester's Ctrl then W closed his tab). ON in the page (`?camspace=0` = Ctrl, as it
+  was), off in the module, so both of the harness's stands have Ctrl: it is a HOST switch like the board's others (`qFree`, `setFree`), not a game
+  rule: no knob, no journal key, no `FROZEN_HOLDS` row. A recording holds the view's turn and zoom themselves, never the key.
+  ONLY WHILE SPACE IS NO ROW'S: `camKey()` is `'Space'` when the switch is on AND the Space key gives the game nothing (`gameCode('Space') === ''`:
+  his actions a ring on E, `handring.ts`, with empty hands a slot, `handslot.ts`, and no row put on Space by hand in Options). With `?handring=0` or
+  `?handslot=0`, or a row he put on Space, the camera is on Ctrl again, by itself, and the words follow.
+  HELD (`game/input.ts`, `Input.camHeld`: the key on the board that is down, '' = none): the mouse's travel is the view's turn (`orbitDX`) and the
+  wheel is the zoom (`wheelCtrl`), not his pace. The key files nothing for the game. Let go, or the page out of focus, lets go of it. While Space is
+  the camera's, Ctrl and the mouse turn NOTHING; a wheel that says Ctrl still zooms, because that is what a trackpad pinch sends.
+  TWICE (`host/findme.ts watchCtrlTaps(win, idle, key)`; main.ts hands it `camKey`): the "Double tap" option of Options, Game (off unless he turns
+  it on) is two taps of the camera's key, wherever it is. findme.ts still imports nothing.
+  THE WORDS: Options, Controls draws the two camera rows' cap plain (`ui/options.ts camCapEl`: Ctrl or Space; never keyCapEl's 'Space', which is the
+  action's row and reads "E"); the start card's row is "Space + mouse / wheel" (`ui/menu.ts CAM_SPACE`, written as it is by `keyCol`); Options,
+  Game says "Double tap Space" and "hold Space and move the mouse" (`ui/findme.ts`, `camCap()`).
+  CHECK: `bun run tools/qa/probes.ts camspace` (family `player`), 5 lines: the board, held, Ctrl, twice, off; on game/input.ts's own listeners and
+  the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
+  `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
+  Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.

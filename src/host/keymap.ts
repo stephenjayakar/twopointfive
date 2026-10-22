@@ -75,6 +75,7 @@ export const KEYMAP = { /** false = the build's own keys, whatever is kept: the 
   /** the squad's command (the quick order's row, code 'KeyB') has Q for its key in the build and B gives nothing: only with `qFree`. false = it is on B: the module's own stand, and the page's under `?bkey` */ qCmd: false,
   /** the selector's row and the weapon light's have no key in the build: both are rows of the gun's setup (the header's note). false = they are on Z and L: the module's own stand, and the page's under `?slotsetup=0` */ setFree: false,
   /** …only while this says so (the page hands it the setup's own switch as it stands, so a recording that plays with the setup off has Z and L back; null = always) */ setWhen: null as (() => boolean) | null,
+  /** the camera's key is Space while Space is no row's (`camKey` below: the action on E, nothing put on Space by hand). false = it is Ctrl: the module's own stand, and the page's under `?camspace=0` */ camSpace: false,
   /** …only while this says so (the page hands it the walk-in switch; null = always) */ freeWhen: null as (() => boolean) | null,
   /** empty hands are a slot on backtick while this says so (the page hands it game/handslot.ts's switch; null = never: the module's own stand) */ slotWhen: null as (() => boolean) | null, /** his own actions are a ring while this says so (game/handring.ts; null = never): the whistle's row has no key and, with the slot on, the interaction's row is on the key E left */ handWhen: null as (() => boolean) | null, /** steps on every change: what a drawn surface keys its cache on */ rev: 0 };
 const LS = 'twopointsix.keys';
@@ -127,7 +128,7 @@ for (const a of WITH_SLOT) { byId.set(a.id, a); byCap.set(a.cap.toLowerCase(), a
 const CODE = /^[A-Za-z][A-Za-z0-9]{1,23}$/;
 /** THE GAME PAGE, as it boots (main.ts, before anything is drawn): the player's keys are live here unless `?keybinds=0`, and what this machine kept is read */
 export function keysBoot(q: URLSearchParams) {
-  KEYMAP.on = q.get('keybinds') !== '0'; KEYMAP.qFree = q.get('qfree') !== '0'; KEYMAP.qCmd = !q.has('bkey'); KEYMAP.setFree = q.get('slotsetup') !== '0';
+  KEYMAP.on = q.get('keybinds') !== '0'; KEYMAP.qFree = q.get('qfree') !== '0'; KEYMAP.qCmd = !q.has('bkey'); KEYMAP.setFree = q.get('slotsetup') !== '0'; KEYMAP.camSpace = q.get('camspace') !== '0';
   try { const v = JSON.parse((globalThis as any).localStorage?.getItem(LS) ?? 'null'); if (v && typeof v === 'object') adopt(v); } catch { /* no store */ }
 }
 /** take a kept table: only what is whole is taken (a row we have, a key that may be one, no key twice); anything else leaves that row as built */
@@ -214,6 +215,12 @@ export function capNow(id: string): string { const a = byId.get(id); if (!a) ret
 export function actOfCap(cap: string): KeyAct | null { return byCap.get(cap.toLowerCase()) ?? null; }
 /** a cap the HUD was handed, as it is bound now. Anything that is no row's cap ('LMB', '×') is handed back */
 export function keyCap(cap: string): string { fresh(); if (!map) return cap; const a = byCap.get(cap.toLowerCase()); if (!a || same(keysNow(a), a.codes)) return cap; const now = capNow(a.id); return cap === cap.toUpperCase() && cap !== cap.toLowerCase() ? now.toUpperCase() : now; }
+/** THE CAMERA'S KEY (game/input.ts: held, the mouse turns the view and the wheel zooms; host/findme.ts: tapped twice): the Space bar while the board leaves
+ *  it spare — his own actions are a ring on E (`HAND_SLOT`) and he put no row on Space himself — else null: it is Ctrl, as it always was. It is no row: it
+ *  cannot be moved, and its cap is drawn plain (a line of words that says Space means the action's key, wherever that is) */
+export const camKey = (): string | null => KEYMAP.camSpace && gameCode('Space') === '' ? 'Space' : null;
+/** …and its name on a list of keys */
+export const camCap = (): string => camKey() ? 'Space' : 'Ctrl';
 /** a line of words with the keys it names as they are bound now. `all` = the line is a list of keys (the Controls list's key column): the walk keys and the
  *  digits are keys there too. Handed back untouched, the same string, while nothing is rebound */
 export function keyText(s: string, all = false): string {

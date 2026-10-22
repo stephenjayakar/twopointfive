@@ -1,11 +1,11 @@
 // Keyboard + mouse state.
-import { gameCode } from '../host/keymap';
+import { gameCode, camKey } from '../host/keymap';
 export class Input {
   keys = new Set<string>();
   pressed = new Set<string>();     // edge-triggered this frame
   mouseX = 0; mouseY = 0;          // CSS pixels relative to canvas
-  orbitDX = 0;                     // horizontal mouse travel this frame WHILE Ctrl is held (camera orbit; main.ts consumes it) — Ctrl does nothing else now
-  wheelCtrl = 0;                   // wheel travel with Ctrl held (zoom); plain `wheel` is the walking-pace control (player.ts)
+  orbitDX = 0;                     // horizontal mouse travel this frame WHILE the camera's key is held (Ctrl, or the Space bar while it is spare — host/keymap.ts camKey; the loop consumes it)
+  wheelCtrl = 0;                   // wheel travel with the camera's key held, or a pinch (zoom); plain `wheel` is the walking-pace control (player.ts)
   buttons = 0; clicked = 0;        // held / edge-this-frame button bits, 1 << MouseEvent.button: 1 = LMB, 2 = MMB, 4 = RMB (see lmb() / mmb() / rmb())
   suppressClick = false;           // set by the title card: swallow the very next mouse press
   wheel = 0;
@@ -28,6 +28,9 @@ export class Input {
   /** the keys down on the board → the code each was filed under (host/keymap.ts: the player's own keys): a key let go lets go of what its press put down,
    *  whatever was rebound while it was held */
   private heldAs = new Map<string, string>();
+  /** the camera's key is down (host/keymap.ts camKey: the Space bar while it is no row's): the key on the board, '' = not. Ctrl needs no such note:
+   *  every mouse event says whether it is down */
+  camHeld = '';
 
   /** an Input with EVERY field initialised and NO listeners — the headless harness's, the session replayer's and a native host's: they write keys / pressed / mouse /
    *  buttons themselves (tools/qa/headless.ts used to Object.create(Input.prototype) and forgot orbitDX / wheelCtrl / keyVeto). `el` is null: focusGame() is a no-op. */
@@ -53,19 +56,20 @@ export class Input {
       const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: held, it is the camera's orbit / zoom modifier — host/loop.ts; no game key reads it, crouch is C; F-keys stay the browser's)
       const code = gameCode(e.code);   // (the key as the game knows it — host/keymap.ts: itself unless the player moved a key in Options ▸ Controls; '' = a key whose row he moved away)
       if (ours) { e.stopPropagation(); const typing = e.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(e.key); if ((e.target === this.sink && typing) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) || (code && code !== e.code)) e.preventDefault(); }   // (a key he gave a row is the game's whole: Backspace goes back a page nowhere, ' and / open no find bar)
+      if (ours && !e.repeat && e.code === camKey()) this.camHeld = e.code;   // (held, it is the camera's: the mouse turns the view, the wheel zooms — below)
       if (!code) { this.heldAs.set(e.code, ''); return; }   // (…and let go, it lets go of nothing: the key his row moved TO may be down)
       if (this.lockExcept && !this.lockExcept.has(code)) { if (!inMenu && !e.repeat && e.code !== 'Escape' && !modifier && !e.metaKey && !e.ctrlKey) this.onLockedInput?.(); return; }   // hands off during the tour (menu keyboard nav still works)
       if (e.repeat) return;   // OS auto-repeat is never a fresh press (holding P must not strobe the tour on and off)
       if (!this.keys.has(code)) this.pressed.add(code);
       this.keys.add(code); this.heldAs.set(e.code, code);
     }, { capture: true });
-    window.addEventListener('keyup', e => { { const as = this.heldAs.get(e.code) ?? gameCode(e.code); this.heldAs.delete(e.code); if (as) this.keys.delete(as); } if (!typingTarget(e) && e.code !== 'Escape' && !e.metaKey) e.stopPropagation(); if (this.sink && e.target === this.sink) this.sink.value = ''; }, { capture: true });
-    window.addEventListener('blur', () => { this.keys.clear(); this.heldAs.clear(); this.buttons = 0; this.pressed.add('Blur'); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
-    el.addEventListener('mousemove', e => { const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if (e.ctrlKey && !this.lockExcept) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock — the tour writes its own aim over it every frame it has one — so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
+    window.addEventListener('keyup', e => { if (e.code === this.camHeld) this.camHeld = ''; { const as = this.heldAs.get(e.code) ?? gameCode(e.code); this.heldAs.delete(e.code); if (as) this.keys.delete(as); } if (!typingTarget(e) && e.code !== 'Escape' && !e.metaKey) e.stopPropagation(); if (this.sink && e.target === this.sink) this.sink.value = ''; }, { capture: true });
+    window.addEventListener('blur', () => { this.keys.clear(); this.heldAs.clear(); this.camHeld = ''; this.buttons = 0; this.pressed.add('Blur'); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
+    el.addEventListener('mousemove', e => { const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if ((camKey() ? !!this.camHeld : e.ctrlKey) && !this.lockExcept) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock — the tour writes its own aim over it every frame it has one — so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
     el.addEventListener('mousedown', e => { e.preventDefault(); this.focusGame(); if (this.lockExcept) { this.onLockedInput?.(); return; } if (this.suppressClick) { this.suppressClick = false; return; } this.buttons |= 1 << e.button; this.clicked |= 1 << e.button; });
     window.addEventListener('mouseup', e => { if (this.lockExcept) return; this.buttons &= ~(1 << e.button); });
     el.addEventListener('contextmenu', e => e.preventDefault());
-    el.addEventListener('wheel', e => { e.preventDefault(); if (this.lockExcept) return; if (e.ctrlKey) this.wheelCtrl += e.deltaY; else this.wheel += e.deltaY; }, { passive: false });   // (a trackpad pinch also arrives as ctrl+wheel: it zooms, which is what a pinch should do)
+    el.addEventListener('wheel', e => { e.preventDefault(); if (this.lockExcept) return; if (e.ctrlKey || (this.camHeld && camKey())) this.wheelCtrl += e.deltaY; else this.wheel += e.deltaY; }, { passive: false });   // (a trackpad pinch also arrives as ctrl+wheel: it zooms, which is what a pinch should do — whichever key the camera is on)
   }
   /** Give keyboard focus back to the game (the sink when embedded, else just drop focus from whatever button / field had it). */
   focusGame() { if (!this.el) return; if (this.sink) { if (document.activeElement !== this.sink) this.sink.focus({ preventScroll: true }); } else if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body && !document.activeElement.closest('#panel')) document.activeElement.blur(); }

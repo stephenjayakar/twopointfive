@@ -28,7 +28,7 @@ import { openList, openStartPage, startPageWanted, startPageFromQuery } from './
 import { menuTheme } from './theme';
 import { TABKEY } from './tabkey';
 import { SLOTSETUP } from '../game/slotsetup';
-import { keyText, keysOf, slotNow } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
+import { keyText, keysOf, slotNow, camKey } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 
 const E_ROW: [string, string] = ['E', 'holster / draw the selected item (on a wall: choose what comes back in hand)'];
@@ -39,6 +39,11 @@ const SPACE_ROW: [string, string] = ['Space', 'do the highlighted action (top-le
 const RING_ROW: [string, string] = ['Space', 'do the action shown top-left · keep it down a moment: everything you can do here, as a ring (1 to 5 or a click; the whistle is on it) · long actions run on their own; move or tap again to stop'];
 const LN_ROW: [string, string] = ['L · N', 'weapon light · night vision'];
 const N_ROW: [string, string] = ['N', 'night vision'];
+/** the camera's row, and it while its key is the Space bar (host/keymap.ts camKey): that cap is written as it is — in a list of keys 'Space' is the action's
+ *  row, wherever that is (`keyCol`) */
+const CAM_ROW: [string, string] = ['Ctrl + mouse / wheel', 'orbit the camera / zoom (or pinch)'];
+const CAM_SPACE: [string, string] = ['Space + mouse / wheel', 'turn the camera / zoom (or pinch)'];
+const keyCol = (k: string) => k === CAM_SPACE[0] ? k : keyText(k, true);
 const Q_ROW: [string, string] = ['Q', 'back to the wall beside you — slide, peek at its end; Q / away / Shift lets go'];
 const KIT_ROW: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 (2 again: flip its launcher, RING / 40 mm) · smoke · stun · frag'];
 const ZR_ROW: [string, string] = ['Z · R', 'FN2000 semi / auto · reload'];
@@ -63,13 +68,13 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   ['H · G', 'with the orders up — the big tool on a door, smoke on the floor · frag and clear'],
   ['F5', 'save'],
   ['Enter', 'once down: back to the last checkpoint · Shift+Enter restarts the run any time'],
-  ['Ctrl + mouse / wheel', 'orbit the camera / zoom (or pinch)'],
+  CAM_ROW,
   ['Esc · `', 'pause & settings · the debugger (every knob)'],
 ];
 /** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
 const WALL_ROW: [string, string] = ['Wall', 'walk into one and your back goes to it — slide, peek at its end; away / Shift lets go'];
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
-  if (HANDRING.on && r === SPACE_ROW) return [RING_ROW];
+  if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return [camKey() ? CAM_SPACE : r];
   if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
   if (r === LNV_ROW) { const l = !(SLOTSETUP.on && !keysOf('KeyL').length), v = !(HANDRING.on && !keysOf('KeyV').length); return [l && v ? r : l ? LN_ROW : v ? NV_ROW : N_ROW]; }   // (the light is a row of the gun's setup, the whistle a wedge of his ring: a key given back to either keeps its place here)
   if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });
@@ -116,7 +121,7 @@ export function bootCard(): { status(text: string): void; off(): void } {
     for (const t of picks ? PICKS_NOTES : START_NOTES) { const n = el('div', 'note'); n.textContent = t; card.appendChild(n); }
     const body = el('div', 'body'); card.appendChild(body);
     const list = el('div', 'controls');
-    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyCol(k); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     body.appendChild(list);
     const foot = el('div', 'foot'); foot.textContent = keyText('Esc pauses · ` opens the debugger (every knob)'); card.appendChild(foot);
   }
@@ -399,7 +404,7 @@ export class Menu {
 
   private controls() {
     const list = el('div', 'controls');
-    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyText(k, true); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
+    for (const [k, v] of controlRows()) { if (k === 'F5' && !SAVETIMELINE.on) continue; const row = el('div', 'row'); const kk = el('div', 'k'); kk.textContent = keyCol(k); const vv = el('div', 'v'); vv.textContent = keyText(gearText(v)); row.append(kk, vv); list.appendChild(row); }
     this.body.appendChild(list);
   }
 
