@@ -7,7 +7,8 @@ import { AXIS, VAN, WALL, CORNER, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP
 import { SLOTSETUP } from '../../../src/game/slotsetup';
 
 /** is the gun's setup switched on IN THE GAME THIS RUN PLAYS: on a page the script is its own bundle, with its own copy of the table (the page's is `__knobs`) */
-const setupOn = (): boolean => (globalThis as { __knobs?: { registry?: () => Record<string, { on?: boolean }> } }).__knobs?.registry?.().SLOTSETUP?.on ?? SLOTSETUP.on;
+const pageOn = (name: string, here: boolean): boolean => (globalThis as { __knobs?: { registry?: () => Record<string, { on?: boolean }> } }).__knobs?.registry?.()[name]?.on ?? here;
+const setupOn = (): boolean => pageOn('SLOTSETUP', SLOTSETUP.on), blowOn = (): boolean => pageOn('OWNBLOW', OWNBLOW.on);
 
 export const query = '?quiet';
 /** the level's fights are its script's, which the tutorial frame starts: on a stand without the frame this lesson cannot be played */
@@ -191,7 +192,7 @@ export const steps: Record<string, (B: Bot) => void> = {
   // (the page's way: his own charge is a row of his own list — ownblow.ts — and stood clear it is the only one, so a tap gives it; the frozen stand's: the squad's key)
   blow: B => {
     const T = B.g.doorTools, c = T.set[0]; if (c && /too close:[^·]*\byou\b/.test(T.closeWords(c))) B.fail('the mark that says stand clear is inside his own charge\'s backblast');
-    B.press(OWNBLOW.on ? 'Space' : 'KeyF', 30); },
+    B.press(blowOn() ? 'Space' : 'KeyF', 30); },
   // out from beside the door, square to the doorway (from its edge the rounds go into the jamb), and the pistol
   shop: B => {
     const s = B.g.guards[2];
