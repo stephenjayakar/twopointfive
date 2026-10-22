@@ -22,8 +22,10 @@
 // THE TWO KEYS IT REPLACES (Z the selector, L the light) are the board's to drop, not the game's (host/keymap.ts `setFree`): the game goes on asking for
 // 'KeyZ' and 'KeyL' and meaning what it meant, so a recording made before plays, and a player who wants either on a key puts its row on one in Options.
 // Off = the build as it was: every function here answers on its first line, 2 again steps the launcher's load in player.ts as it did.
-// State: two fields on the Player (`setup`, and `setupHand`: which gun the hook last found in his hands and since when), null on a fresh one (a
-// restart, a load: nothing is up). No dice, no clock but the game's.
+// State: two fields on the Player (`setup`, and `setupHand`: which gun the hook last found in his hands and since when), null on a fresh one.
+// NOTHING IS UP AFTER A LOAD: a file's load builds the player again; a save kept in memory puts him back as he stood, the setup too, so
+// savestate.ts drops it there (Checkpoints.loadMem).
+// No dice, no clock but the game's.
 import type { Game, Player } from './game';
 import type { Input } from './input';
 import { backTake } from './backkey';

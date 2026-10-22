@@ -28,8 +28,6 @@ import { squadSilent } from './silent';
 import { PAIR_LOG } from './pairorders';
 import { hostileTo } from './teams';
 import { WORLD } from '../scene/world';
-import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
-import { camCap } from '../host/keymap';
 import { HANDRING } from './handring';
 import { CMDRING } from './cmdring';
 /** a step's line that names the whistle's old key, and what it says while the whistle is the ring's last wedge (handring.ts): the page's words turn
@@ -39,6 +37,8 @@ const WHISTLE_LINE = /\bV whistles\b/g;
 const WHEEL_LINE = /\bHold Space, wheel to kick, let go\b/g, WHEEL_RING = 'Hold Space, then 2 kicks it';
 /** a step's line as the HUD's row says it now */
 export const lessonLine = (line: string): string => HANDRING.on ? line.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : line;
+import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
+import { camCap } from '../host/keymap';
 import { SLOTSETUP } from './slotsetup';
 
 /** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
