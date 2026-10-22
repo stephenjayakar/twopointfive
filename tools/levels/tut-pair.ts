@@ -19,13 +19,14 @@
 //
 // THE LINE (scenarios.lesson; tools/qa/lessons/tut-pair.ts plays it by input alone):
 //   the gate yard     the partner follows, low when the player is low. The squad's key on a man: the partner works round to that man's back, says "set" and
-//                     waits; the word (F) sends him. Then the squad's key on the ground: he comes back.
+//                     waits; the word (F) sends him, and he falls in again by himself.
 //   the truck park    two men who see each other. The squad's key on the far one; the player goes to the near one's back himself; his own grab is the
 //                     partner's signal, and both go down on one beat. The man in his arm is put out.
 //   the office court  the office door is on a keypad, under a lamp and a camera. The man who watches the far gate knows the code: held from behind and
 //                     asked, he gives it. With that man still in the player's arm, the squad's key on the fuse box: the partner throws the mains. Every
 //                     lamp in the yard and the camera die, and the yard's red beacons turn.
-//   the dark          night vision, the pad, the manifest out of the office trunk, and out by the far gate with the partner.
+//   the dark          night vision, the pad, the manifest out of the office trunk; the squad's key on the ground calls the partner from the box, and out
+//                     by the far gate with him.
 //
 // WHY THE PIECES STAND WHERE THEY DO
 //   · THE DOUBLE is the old Training lesson's geometry for it (the men 4.6 m apart, the near one looking straight at the far one's back, the far one looking
@@ -63,7 +64,7 @@ const HALF = Math.PI / 2;
 /** the yard inside its wall */
 export const YARD: Rect = { x0: 5, x1: 38, z0: 3, z1: 26 };
 /** the way out: the foot gate in the far wall */
-export const EXIT = { name: 'the far gate', door: 'gate_e', x: 38.8, z: 18.0, out: [1, 0] as [number, number] };
+export const EXIT = { name: 'the far gate', door: 'gate_e', x: 38.8, z: 18.25, out: [1, 0] as [number, number] };   // (z: the middle of the gate AS FITTED — see TP.gate)
 /** the places the scripted player and the lesson name (tools/qa/lessons/tut-pair.ts imports these, so a moved wall moves the script) */
 export const TP = {
   start: P(3.5, 24.9), mate: P(2.6, 25.8),   // outside the wall, on the road by their pickup, in the moon: the first picture has both of them in it
@@ -81,7 +82,10 @@ export const TP = {
   pad: [31.95, 1.3, 9.735] as P3,
   padAt: P(32.3, 10.35),
   trunkFront: [35.6, 1.0, 6.8] as P3,
-  out: { x0: 38.1, x1: 38.75, z0: 17.2, z1: 18.8 } as Rect,
+  // the two doorways' middles as build() fits them (a real-size leaf stands at the latch end of its 1.2 m slot, so the middle of the way through is not the
+  // slot's): every mark and every scripted stride that goes through a door is written off these, and build() throws if a fitted door is not on them
+  door: P(33.25, 9.6), gate: P(38.0, 18.25),
+  out: { x0: 38.1, x1: 38.75, z0: 17.45, z1: 19.05 } as Rect,
 };
 const LOW = 1.8;
 
@@ -212,7 +216,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- the devices: the office's pad, and the camera over its door (it sees what the lamp lights; both die with the mains) ----
   const devices: DeviceDef[] = [
     { kind: 'keypad', name: 'pad_office', pos: TP.pad, yaw: 0, door: 'office', code: '3124' },
-    { kind: 'camera', name: 'cam_office', pos: [33.0, 2.6, 9.82], yaw: 0, pitch: -0.5, sweep: [-0.55, 0.55], sweepPeriod: 9, fovDeg: 60, range: 5.5, mains: true },
+    { kind: 'camera', name: 'cam_office', pos: [TP.door[0], 2.6, 9.82], yaw: 0, pitch: -0.5, sweep: [-0.55, 0.55], sweepPeriod: 9, fovDeg: 60, range: 5.5, mains: true },
   ];
 
   // ---- four men, each ON A POST: he stands at the first point looking at the second (a stride out and back once an hour) ----
@@ -240,7 +244,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const near = (at: P3, r: number) => ({ is: 'near', at, r });
   const flag = (f: string) => ({ is: 'flag', flag: f });
   const pair = (what: string) => ({ is: 'pair', what });
-  const mark = (p: P3): P3 => [p[0], 1, p[2]];
+  const mark = (p: P3): P3 => [p[0], 1, p[2]], chest = (p: P3): P3 => [p[0], 1.2, p[2]];
   const opened = (door: string) => [{ is: 'door', door, state: 'open' }, { is: 'door', door, state: 'broken' }];
   const lesson: LessonData = {
     title: 'As two',
@@ -252,34 +256,44 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // ---- the gate yard: he follows; a man on the word ----
       { id: 'crouch', line: '[C]: get low. Your partner copies you', allow: ['crouch'], done: any(flag('crouch'), down(1)) },
       { id: 'lead', line: 'Lead him to the mark', cue: 'gate', done: any(all(near(TP.first, 1.0), { is: 'mate', by: 5 }), down(1)), hold: 0.3, at: mark(TP.first) },
-      { id: 'mark', line: '[B] on that man: your partner takes him', allow: ['order'], at: [TP.A[0], 1.2, TP.A[2]], done: any(did('order:pairMark'), down(1)),
+      // (an order step's `after` is the line while the partner is on his way: it never asks twice, and it is drawn as a thing to watch. The step is done by
+      //  what the order was FOR: "set", the dark. KNOWN: a `did` deed cannot say WHICH man an order was on (lesson.ts counts 'order:<id>@<target>' and its
+      //  check refuses the '@'), so 'far' passes on his key on either man of the two; the ring rides on the far one and the card says which)
+      { id: 'mark', line: '[B] on that man: your partner takes him', after: { line: 'He works round to the man\'s back', on: ['pairMark'] }, allow: ['order'], at: chest(TP.A), atMan: 'pickup',
+        done: any(pair('set'), pair('go'), down(1)),
         explain: { title: 'Two of you', text: 'Your partner follows you, and stays as quiet as you do.\n[B] on a man sends him round to that man\'s back. He says "set" when he is there, and waits for your word.' } },
-      { id: 'set', line: 'He creeps to the man\'s back. Wait for "set"', at: [TP.A[0], 1.2, TP.A[2]], done: any(pair('set'), pair('go'), down(1)) },
-      { id: 'word', line: '[F]: your word. He strikes', allow: ['word'], at: [TP.A[0], 1.2, TP.A[2]], done: down(1) },
-      { id: 'back', line: '[B] on the ground: he comes back to you', done: any(all(did('order:fallIn'), { is: 'mate', by: 3 }), down(2)), hold: 0.3 },
+      { id: 'word', line: '[F]: your word. He strikes', after: { word: 'He strikes, and comes back to you' }, allow: ['word'], at: chest(TP.A), atMan: 'pickup', done: down(1) },
       // ---- the truck park: two men on one beat ----
-      { id: 'gap', line: 'Lead him to the gap between the containers', cue: 'park', checkpoint: 'the gate yard', done: any(near(TP.gap, 1.0), down(2)), at: mark(TP.gap) },
-      { id: 'far', line: '[B] on the far man: your partner takes him', at: [TP.C[0], 1.2, TP.C[2]], done: any(did('order:pairMark'), down(2)),
+      // (he falls in again by himself when his man is down — pairup.ts `rejoin` — so no line asks for it)
+      { id: 'gap', line: 'Lead him to the gap between the containers', cue: 'park', checkpoint: 'the gate yard', done: any(all(near(TP.gap, 1.0), { is: 'mate', by: 5 }), down(2)), hold: 0.3, at: mark(TP.gap) },
+      { id: 'far', line: '[B] on the far man: your partner takes him', at: chest(TP.C), atMan: 'far', done: any(did('order:pairMark'), down(2)),
         explain: { title: 'Two men, one beat', text: 'These two see each other: drop one alone and the other shouts.\nGive your partner the far one. Then get behind the near one yourself. Your grab is his signal.' } },
       { id: 'near', line: 'Get behind the near man. Wait for "set"', allow: ['use'], at: mark(TP.behindB), done: any(pair('set'), pair('go'), flag('holding'), down(2)) },
-      { id: 'hands', line: '[Space] at his back: your grab is the signal', at: [TP.B[0], 1.2, TP.B[2]], done: any(all(flag('holding'), down(2)), down(3)) },
-      { id: 'sleep', line: 'Right button: out cold', allow: ['alt'], done: down(3) },
+      { id: 'hands', line: '[Space] at his back: your grab is the signal', at: chest(TP.B), atMan: 'near', done: any(all(flag('holding'), down(2)), down(3)) },
+      // (the interaction key is shut while the line is the right button: a tap of it in the hold is a question, and ANY held man gives the office code —
+      //  learnt here, the last man would have nothing left to say and his step no way to pass)
+      { id: 'sleep', line: 'Right button: out cold', allow: ['alt'], deny: ['use'], done: down(3) },
       // ---- the office yard: a man held and asked while the partner throws the mains ----
-      { id: 'past', line: '[B] on the ground: bring him. On, past the wall', cue: 'yard', deny: ['alt'], checkpoint: 'the truck park', done: any(all(near(TP.past, 1.4), { is: 'mate', by: 4.5 }), flag('holding'), down(4)), hold: 0.3, at: mark(TP.past) },
-      { id: 'hold', line: 'He knows the door code. [Space] at his back', at: [TP.D[0], 1.2, TP.D[2]], done: any(flag('holding'), did('chron:codeLearned'), down(4)) },
+      // (the last man is the only way to the code: until he has given it the right button is shut, and so are the squad's key and the word — a taught "[B]
+      //  on the man, then [F]" would put him out through the partner. The squad's key comes back for the fuse box, and is shut again while the dark is
+      //  walked: a second order on the box would put the mains back on)
+      { id: 'past', line: 'On, past the wall', cue: 'yard', deny: ['alt', 'order', 'word'], checkpoint: 'the truck park', done: any(all(near(TP.past, 1.4), { is: 'mate', by: 4.5 }), flag('holding'), down(4)), hold: 0.3, at: mark(TP.past) },
+      { id: 'hold', line: 'He knows the door code. [Space] at his back', allow: ['use'], at: chest(TP.D), atMan: 'gate', done: any(flag('holding'), did('chron:codeLearned'), down(4)) },
       { id: 'ask', line: '[Space]: ask him the code', done: any(did('chron:codeLearned'), down(4)) },
-      { id: 'box', line: 'Your hands are full. [B] on the fuse box', at: [TP.box[0], 1.35, TP.box[2]], done: any(did('order:work'), flag('dark')),
+      { id: 'box', line: 'Your hands are full. [B] on the fuse box', after: { line: 'He goes for the fuse box. Watch the lamps', on: ['work'] }, allow: ['order'], at: [TP.box[0], 1.35, TP.box[2]], done: flag('dark'),
         explain: { title: 'He works things too', text: '[B] on a thing you could work yourself sends your partner to do it.\nThe lamp and the camera over the office door both run on this box.' } },
-      { id: 'lamps', line: 'Hold him. Watch the lamps', done: flag('dark') },
-      { id: 'drop', line: 'Right button: out cold', allow: ['alt'], done: down(4) },
+      { id: 'drop', line: 'Right button: out cold', allow: ['alt'], deny: ['order'], done: down(4) },
       // ---- the dark ----
       { id: 'nv', line: '[N]: night vision', allow: ['nvg'], checkpoint: 'the dark', done: flag('nv') },
       { id: 'code', line: '[Space] at the pad: his code', at: [TP.pad[0], 1.3, TP.pad[2] + 0.2], done: any(did('chron:codeEntered'), ...opened('office')) },
       { id: 'take', line: '[Space] at the trunk: the manifest', at: front, done: { is: 'stage', stage: 'exfil' } },
-      { id: 'out', line: '[B] on the ground: bring him. Out by the far gate', done: any({ is: 'in', area: TP.out }, { is: 'stage', stage: 'done' }), at: [37.6, 1, EXIT.z] },
+      // (the partner stood where his work ended, at the box: here the squad's key on the ground is a call he has not already answered)
+      { id: 'out', line: '[B] on the ground: bring him. Out by the far gate', allow: ['order'], done: any(all({ is: 'in', area: TP.out }, { is: 'mate', by: 6 }), { is: 'stage', stage: 'done' }), at: [37.6, 1, EXIT.z] },
     ],
   };
   for (const d of doors) doorFrame(d);
+  for (const [id, m] of [['office', TP.door], ['gate_e', TP.gate]] as const) { const d = doors.find(x => x.name === id)!, c = [d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, d.hinge[1] + Math.sin(d.closedDir) * d.width / 2];
+    if (Math.hypot(c[0] - m[0], c[1] - m[2]) > 0.03) throw new Error(`tut-pair: door '${id}' is fitted with its middle at ${c[0].toFixed(2)}, ${c[1].toFixed(2)}, and TP has it at ${m[0]}, ${m[2]}`); }
   const level: Level = {
     boxes: K.boxes, props: K.props, lights, switchables, doors, devices,
     breaker: { pos: TP.box, boxes: [brk, brkLed] }, beacons,

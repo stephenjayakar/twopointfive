@@ -7,6 +7,7 @@
 import type { Bot } from '../lesson-run';
 import { CLOSE } from '../../../src/game/close';
 import { WORK } from '../../../src/game/workthings';
+import { RAILS } from '../../../src/game/rails';
 import { TP } from '../../levels/tut-pair';
 
 export const query = '?quiet&squad=1';
@@ -71,6 +72,13 @@ function onGround(B: Bot) {
   }
   B.fail(`the cursor finds no bare ground beside the player at ${at(me)}`);
 }
+/** the frame's line once an order is out: what the partner is doing, drawn as a thing to watch — never the ask a second time */
+function watchLine(B: Bot, when: string) {
+  if (!RAILS.on) return;
+  const p = B.g.rails.prompt(); if (!p) B.fail(`no line ${when}`);
+  if (!p!.watch || /\[/.test(p!.line)) B.fail(`${when} the line is still an ask: "${p!.line}"`);
+  B.say(`  the line ${when}: "${p!.line}" (a thing to watch)`);
+}
 function together(B: Bot, by: number, secs: number, what: string) { if (!B.until(() => flat(mate(B).char.pos, B.pos()) < by, secs)) B.fail(`the partner did not ${what} (${B.g.orders.statusOf(mate(B))}, ${flat(mate(B).char.pos, B.pos()).toFixed(1)} m off)`); }
 function waitSet(B: Bot, gd: any) {
   const m = mate(B), n0 = seen(B), t0 = B.t();
@@ -80,19 +88,20 @@ function waitSet(B: Bot, gd: any) {
 }
 
 export const steps: Record<string, (B: Bot) => void> = {
-  crouch: B => { CLOSE.on = true; WORK.on = true; B.say(`  at the start: lit ${lit(B)}; the partner ${flat(mate(B).char.pos, B.pos()).toFixed(1)} m off`); B.crouch(true); },
+  // (the mission's lines name the right button for the man in his arm: close.ts heldClicks, on in the page and held off on the frozen stand — raised here with
+  //  the two parts the pair's rules stand on, or the frozen run would be of a mission whose own line is false)
+  crouch: B => { CLOSE.on = true; CLOSE.heldClicks = true; WORK.on = true; B.say(`  at the start: lit ${lit(B)}; the partner ${flat(mate(B).char.pos, B.pos()).toFixed(1)} m off`); B.crouch(true); },
   // a few strides in, the partner behind
   lead: B => { const n0 = seen(B); B.go(TP.first, 20, { near: 0.3 }); together(B, 4.2, 20, 'follow to the first mark'); B.wait(0.5); B.say(`  on the first mark: lit ${lit(B)}; the partner at ${mate(B).char.pos[0].toFixed(1)}, ${mate(B).char.pos[2].toFixed(1)} (${B.g.orders.statusOf(mate(B))})`);
-    B.say(`  at the first mark: lit ${lit(B)}; the partner ${mate(B).char.crouch || mate(B).crouch ? 'low' : 'standing'}`); calm(B, n0, 'on the way to the first mark'); },
-  mark: B => { onMan(B, man(B, 'pickup')); },
-  set: B => { waitSet(B, man(B, 'pickup')); },
+    if (!mate(B).char.anim.crouch) B.fail('the partner is on his feet behind a player who is low'); calm(B, n0, 'on the way to the first mark'); },
+  // (one step: the order, then the line is what he is doing until he says "set")
+  mark: B => { const A = man(B, 'pickup'); onMan(B, A); B.step(4); watchLine(B, 'after the order on the first man'); waitSet(B, A); },
   word: B => { const A = man(B, 'pickup'), n0 = seen(B);
     B.wait(REACT); B.press('KeyF');
     if (!B.until(() => A.state === 'dead', 15)) B.fail(`the word was given and ${A.callsign} is still up (${B.g.orders.statusOf(mate(B))})`);
     B.wait(1); calm(B, n0, 'when the first man went down'); },
-  back: B => { onGround(B); together(B, 2.6, 30, 'come back'); B.wait(0.4); },
-  // to the gap: both men of the truck park in view through it
-  gap: B => { const n0 = seen(B); B.crouch(true); B.go(TP.gap, 20, { near: 0.3 }); B.wait(0.4); B.say(`  at the gap: lit ${lit(B)}; the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); calm(B, n0, 'at the gap'); },
+  // to the gap: both men of the truck park in view through it. He comes back by himself (no order asks for it), and the step waits for him
+  gap: B => { const n0 = seen(B); B.crouch(true); B.go(TP.gap, 20, { near: 0.3 }); together(B, 4.2, 30, 'fall in again by himself after his man went down'); B.wait(0.4); B.say(`  at the gap: lit ${lit(B)}; the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); calm(B, n0, 'at the gap'); },
   far: B => { onMan(B, man(B, 'far')); B.wait(1.5); B.say(`  1.5 s on: the partner at ${at(mate(B).char.pos)} (${B.g.orders.statusOf(mate(B))})`); },
   // through the gap to the near man's back, a stride off, and there until the partner is set behind the far one
   near: B => { const n0 = seen(B); B.go(TP.behindB, 15, { near: 0.2 }); B.say(`  behind the near man: lit ${lit(B)}, ${flat(B.pos(), man(B, 'near').char.pos).toFixed(2)} m off`);
@@ -107,10 +116,10 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.say(`  the far man down ${(B.t() - t0).toFixed(1)} s after the grab; the near man ${B.g.player.holding ? 'in the arm' : `NOT held (${b.state})`}`);
     if (b.state === 'alert') B.fail('the near man was roused by the double'); },
   sleep: B => { const b = man(B, 'near');
-    if (CLOSE.heldClicks) B.click(2); else if (!B.verb('held', 'choke')) B.fail('no choke row with a man held');
+    B.click(2);
     if (!B.until(() => b.state === 'dead' && !B.g.player.holding, 15)) B.fail('the held man did not go out'); B.wait(0.6); },
   // the partner called in, round the second wall's end to the office yard's dark corner
-  past: B => { const n0 = seen(B); onGround(B); B.crouch(true); B.go(TP.round, 40); B.go(TP.past, 30, { near: 0.3 }); together(B, 4.2, 30, 'come along past the wall');
+  past: B => { const n0 = seen(B); B.crouch(true); B.go(TP.round, 40); B.go(TP.past, 30, { near: 0.3 }); together(B, 4.2, 30, 'come along past the wall');
     B.say(`  past the wall: lit ${lit(B)}; ${man(B, 'gate').callsign} ${man(B, 'gate').state}, ${flat(B.pos(), man(B, 'gate').char.pos).toFixed(1)} m off`); calm(B, n0, 'coming into the office yard'); },
   hold: B => { const d = man(B, 'gate'), n0 = seen(B);
     if (!closeIn(B, d)) B.fail(`could not get behind the man at the far gate (${flat(B.pos(), d.char.pos).toFixed(2)} m off, he stands at ${at(d.char.pos)}, ${d.state})`);
@@ -125,22 +134,23 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!P.holding) B.fail('nobody in his arm at the fuse box line');
     B.wait(0.3); B.aim(TP.box); B.step(2); B.aim(TP.box); B.press('KeyB', 4);
     const l = last(B); if (l?.order !== 'work') B.fail(`the squad's key on the fuse box gave ${l ? `${l.order} on ${l.target}` : 'nothing'}`);
-    B.say(`  the squad's key on the fuse box: ${l.order} on ${l.target}`); },
-  lamps: B => { const t0 = B.t();
+    B.say(`  the squad's key on the fuse box: ${l.order} on ${l.target}`); B.step(4); watchLine(B, 'after the order on the fuse box');
+    const t0 = B.t();
     if (!B.until(() => B.g.blackout.active, 40)) B.fail(`the partner did not throw the mains (${B.g.orders.statusOf(mate(B))}, at ${at(mate(B).char.pos)})`);
     B.say(`  the mains went ${(B.t() - t0).toFixed(1)} s after the order; the man ${B.g.player.holding ? 'still held' : 'NOT held'}`); },
   drop: B => { const d = man(B, 'gate');
     B.wait(REACT);
-    if (CLOSE.heldClicks) B.click(2); else if (!B.verb('held', 'choke')) B.fail('no choke row with a man held');
+    B.click(2);
     if (!B.until(() => d.state === 'dead' && !B.g.player.holding, 15)) B.fail('the held man did not go out'); B.wait(0.6);
     if (!B.g.blackout.active) B.fail('the mains came back'); },
   nv: B => { B.press('KeyN', 20); },
   code: B => { B.go(TP.padAt, 30, { near: 0.25, noDoors: true });
-    if (!tap(B, 'door', 'code', [33.0, 1.0, 9.6])) B.fail(`no row to type the code (at ${at(B.pos())}; rows: ${B.g.nearby.map((r: any) => `${r.kind}:${r.verb}`).join(' ') || 'none'})`);
+    if (!tap(B, 'door', 'code', [TP.door[0], 1.0, TP.door[2]])) B.fail(`no row to type the code (at ${at(B.pos())}; rows: ${B.g.nearby.map((r: any) => `${r.kind}:${r.verb}`).join(' ') || 'none'})`);
     if (!B.until(() => !B.door('office').locked || !B.door('office').isClosed(), 10)) B.fail('the office did not open to the code'); },
-  take: B => { B.go([33.0, 0, 8.6], 20); B.go([TP.trunkFront[0] - 0.25, 0, TP.trunkFront[2]], 10, { near: 0.2 });
+  take: B => { B.go([TP.door[0], 0, TP.door[2] - 1.0], 20); B.go([TP.trunkFront[0] - 0.25, 0, TP.trunkFront[2]], 10, { near: 0.2 });
     if (!tap(B, 'objective', 'drive', TP.trunkFront)) B.fail('no row at the trunk'); B.until(() => B.g.mission.stage === 'exfil', 20); },
-  out: B => { onGround(B); B.crouch(false); B.go([33.0, 0, 10.8], 20); B.go([37.0, 0, 18.0], 30); B.go([38.45, 0, 18.0], 20, { near: 0.2 }); },
+  out: B => { onGround(B); B.crouch(false); B.go([TP.door[0], 0, TP.door[2] + 1.2], 20); B.go([TP.gate[0] - 1.0, 0, TP.gate[2]], 30); together(B, 5, 30, 'come to the far gate when called');
+    B.go([(TP.out.x0 + TP.out.x1) / 2, 0, TP.gate[2]], 20, { near: 0.2 }); },
 };
 /** on out by the far gate */
-export function finish(B: Bot) { B.go([39.5, 0, 18.0], 30); }
+export function finish(B: Bot) { B.go([39.5, 0, TP.gate[2]], 30); }

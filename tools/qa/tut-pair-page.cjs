@@ -35,7 +35,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
       note: el?.querySelector('.note')?.textContent ?? '', row: document.getElementById('objective')?.textContent ?? '', fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, sum: g.rails.summary(), script: !!g.director.running,
       at: [+P.char.pos[0].toFixed(2), +P.char.pos[2].toFixed(2)], crouch: !!P.crouch, holding: !!P.holding, nv: !!P.nv, lit: +P.visibility.toFixed(2), dark: !!g.blackout.active,
       mate: mate ? [+mate.char.pos[0].toFixed(1), +mate.char.pos[2].toFixed(1)] : null, mateSays: mate ? g.orders.statusOf(mate) : '', men: g.guards.filter(x => !x.unit && x.state !== 'dead').length,
-      roused: g.guards.filter(x => !x.unit && x.state !== 'dead' && x.state !== 'patrol' && x.state !== 'held').map(x => `${x.callsign} ${x.state}`).join(', '),
+      roused: g.guards.filter(x => !x.unit && x.state !== 'dead' && x.state !== 'patrol' && !x.held).map(x => `${x.callsign} ${x.state}`).join(', '),
       orders: g.orders.log.length, last: g.orders.log.length ? `${g.orders.log[g.orders.log.length - 1].order}@${g.orders.log[g.orders.log.length - 1].target}` : '', menu: !!window.__orders?.menu, stage: g.mission.stage, t: +g.time.toFixed(1) }; });
   // (a picture, as tut-page.cjs takes one: the frame is drawn and read back in the page and stood under the HUD as a still)
   const shot = async tag => { if (process.env.SHOTS === '0' || (PICS && !PICS.includes(String(tag).replace(/^\d+-/, '')))) return '(no picture asked)'; const f = path.join(OUT, `tut-pair-${tag}.png`);
@@ -79,6 +79,9 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
       return (n.findPath([c[0], 0, c[2]], [q[0], 0, q[2]], 8000) ?? []).map(w => [w[0], 0, w[2]]); }, to);
     for (const w of legs.slice(0, -1)) await walk(w, secs / 2, 0.35);
     return walk(to, secs / 2, near); };
+  /** once the order a step asks for is out, its line is what the partner is doing, drawn as a thing to watch: no key cap, never the ask again */
+  const watched = async id => { const w = await page.evaluate(() => { const e = document.querySelector('#railprompt .line'); return { watch: !!e && e.classList.contains('watch'), line: e?.textContent ?? '', caps: e ? e.querySelectorAll('kbd').length : -1 }; });
+    check(w.watch && w.caps === 0, `step '${id}': with the order out the line is a thing to watch, not the ask again`, `"${w.line}" · watch style ${w.watch} · key caps ${w.caps}`); };
   const low = async () => { if (!(await read()).crouch) await tap('KeyC'); };
   /** the place a stride behind a man, off the way he faces now */
   const backOf = (name, off = 0.85) => page.evaluate(([name, off]) => { const g = window.__game, h = g.guards.find(x => !x.unit && g.level.routes[x.routeI]?.name === name), c = h.char; return [c.pos[0] - Math.sin(c.bodyYaw) * off, 0, c.pos[2] - Math.cos(c.bodyYaw) * off]; }, [name, off]);
@@ -99,7 +102,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
 
   // ---- locked: what the first step has not taught does nothing under a real key (the squad's key, the word, the interaction key, night vision, a click)
   { const b = await read(); await point(chest(A));
-    for (const k of ['KeyQ', 'KeyF', 'KeyE', 'KeyN', 'KeyX']) await tap(k);
+    for (const k of ['KeyQ', 'KeyF', 'KeyE', 'KeyN']) await tap(k);
     await page.mouse.down(); await run(4); await page.mouse.up(); await run(4); await right();
     const a = await read();
     check(a.orders === b.orders && !a.menu && !a.nv && a.i === 0 && !a.roused, 'before anything is taught, the squad\'s key, the word, the interaction key, night vision and both buttons do nothing', `orders ${b.orders} → ${a.orders} · menu ${a.menu} · nv ${a.nv} · step ${a.i} · roused "${a.roused}" · ${a.sum}`); }
@@ -107,20 +110,17 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const hand = {
     crouch: async () => { await tap(await lineKey()); },
     lead: async () => { await go(FIRST, 40); await settle(); await until('lead', 12); },
-    mark: async () => { await settle(); await point(chest(A)); await tap(await lineKey()); },
-    set: async () => { await until('set', 60); },
+    mark: async () => { await settle(); await point(chest(A)); await tap(await lineKey()); await run(20); await watched('mark'); await until('mark', 60); },
     word: async () => { await tap(await lineKey()); await until('word', 20); },
-    back: async () => { await point(await ground()); await tap(await lineKey()); await until('back', 30); },
     gap: async () => { await low(); await go(GAP, 40); await settle(); },
     far: async () => { await settle(); await point(chest(C)); await tap(await lineKey()); },
     near: async () => { await go(BEHIND, 30, 0.3); await until('near', 70); },
     hands: async () => { await walk(await backOf('near'), 10, 0.2); await point(chest(B)); await tap(await lineKey()); await until('hands', 15); },
     sleep: async () => { await right(); await until('sleep', 15); },
-    past: async () => { await point(await ground()); await tap(await lineKey()); await low(); await go(PAST, 60, 0.35); await settle(); await until('past', 30); },
+    past: async () => { await low(); await go(PAST, 60, 0.35); await settle(); await until('past', 30); },
     hold: async () => { await go(await backOf('gate', 1.6), 30, 0.3); await walk(await backOf('gate'), 10, 0.2); await point(chest(D)); await tap(await lineKey()); await until('hold', 10); },
     ask: async () => { for (let n = 0; n < 4 && (await read()).id === 'ask'; n++) { await tap(await lineKey()); await until('ask', 6); } },
-    box: async () => { await settle(2); await point(BOX); await tap(await lineKey()); },
-    lamps: async () => { await until('lamps', 60); },
+    box: async () => { await settle(2); await point(BOX); await tap(await lineKey()); await run(20); await watched('box'); await until('box', 60); },
     drop: async () => { await right(); await until('drop', 15); },
     nv: async () => { await tap(await lineKey()); await run(20); },
     code: async () => { await go([DOOR[0] - 0.7, 0, DOOR[2] + 0.75], 80, 0.25); await point(DOOR); await tap(await lineKey()); await until('code', 15); },
