@@ -1385,9 +1385,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   frame and its 8 bytes a pixel. NOT EASED, AND THAT MAY SHOW: a muzzle flash that lights him takes the rim for the frames it lasts; whether
   that reads as right or as a blink nobody has seen. Line (10) of the check holds the frame, the slot, what is bound and the two pairs; what
   the shader makes of the copy only a device can say: `findme-squad-page.cjs` counts the rims' ink on the software adapter with the rows at
-  their most, at none, at their starts, and at their most again with GBAA put off. SEEN SO FAR on that adapter: the rows at their most with GBAA on, whole rims round all five men in a
-  dark room and no GPU error; the other three captures had not come back when this was written. `findme` is green on both stands, its break
-  word red with seven lines. Nobody has seen it on a GPU.
+  their most, at none, at their starts, and at their most again with GBAA put off. MEASURED on that adapter, one run, a squad of four stood in a dark room, strongly coloured pixels in the men's
+  boxes: 1501 with the rows at their most, 66 at none, 1629 at their starts (men that dark have the whole rim; the resolve had more frames
+  to gather it), 2442 at their most with GBAA off (the copy kept for the outline; that picture is not anti-aliased, so more of it counts), no
+  GPU error in any. That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
+  on both stands, its break word red with seven lines. THE TWO COPIES ARE NOT THE SAME PICTURE: GBAA's is taken before its edge blends and
+  the fog of war, the outline's own after both; the team's own men are never fogged and the blend moves edge pixels only, so the mean over
+  a man's pixels is near enough the same. Nobody has seen any of it on a GPU, and nobody has timed the pass by the picture.
   HIS OWN ROWS when he said so (a screenshot, 10-22): width 25 %, strength 60 %, the light rows at their starts, teammates 80 %, colour 50 %.
   Not made the starts: he has not called them settled.
   HIS TEAMMATES HAVE RIMS TOO, AND THE RIMS HAVE COLOURS (10-22): "can you also add outlines for teammates + have a separate slider for thickness
