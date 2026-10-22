@@ -146,6 +146,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   by a colon may wrap between the two). His fourth note, "F should be reserved for squad", waits on the controls' own-action row for a set charge:
   the 'blow' step still names the squad's word key until then. Both stands play all 29 lines on seed 1; from the arch the back door is off the
   page's picture, so what he sees is the two running in through the shop: never seen on a GPU, and nobody has played it.
+- **`tut-solo` on the frame's cards and arrow and the setup as a mode (2026-10-22, after build step 844; 31 steps).** After the reload: 'setup'
+  ('[2] again: the rifle's setup', lesson flag `setup`: the setup of the gun in his hands is up; where the switch is off the flag is true and the line
+  goes by) and 'tab' ('[Tab]: close it. [Tab] closes every menu', flag `setupShut`), then the selector as before. The maintainer: "the timer is bad. we
+  should just have it switch a mode. and we should teach earlier that tab exits out of menus". THE FRAME'S GATE, WITH THE SETUP UP, GIVES A ROW'S DIGIT
+  TO THE ROW ALONE (`rails.ts gate`): the selector's row opens with `mode`, the lamp's with `light`, the load's with `alt` (so on the two lines that
+  only open and shut the setup no row can be picked, the rifle's own digit included, and Tab is the way out); `alt` is unlocked on the load's step. The
+  wall's mark is the frame's arrow (`at` a pace short of the wall, `toward` the wall); two cards: 'Walls' on the wall's step, 'A gun's setup' on the
+  setup's. The row's third `teaches` line is 'Rifle and pistol, and a gun's setup'. The scripted player presses both row digits on the Tab line and
+  fails if either is taken; it fails on the selector's line if the two lines went by on a stand that has the setup.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`

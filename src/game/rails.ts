@@ -178,12 +178,14 @@ export class Rails {
     const handUp = A.has('use') && !!g.player.sel?.open;   // (the player's own ring or list, up: its digits and its clicks are its own)
     if (menuUp || handUp) buttons |= 1; if (handUp) buttons |= 4;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
     // THE SETUP OF THE GUN IN HIS HANDS, up (slotsetup.ts): a row's digit is the row's there, whatever slot that digit is anywhere else, so it is let through
-    // by what the ROW does and never by the slot: the selector with `mode`, the lamp with `light`, the launcher's load with the gun's own slot (its digit
-    // pressed again was the load's key before there was a setup). Not on the setup's last ticks: a digit let through as a row the tick the setup shuts by
+    // by what the ROW does and never by the slot: the selector with `mode`, the lamp with `light`, the launcher's load with `alt` (the right button fires
+    // what that row loads: a lesson that opens the setup before it has taught the launcher keeps the row shut). Not on the setup's last ticks: a digit let through as a row the tick the setup shuts by
     // its clock would be the locked slot's key after all
     const setup = slotSetupLeft(g) > 0.03 ? g.player.setup : null, rows = setup ? setupRows(g.player, setup.gun) : [];
-    const rowOk = (code: string) => { const r = rows.find(x => code === `Digit${x.key}`); return !!r && A.has(r.kind === 'mode' ? 'mode' : r.kind === 'light' ? 'light' : `slot:${setup!.gun}`); };
-    const ok = (code: string) => FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || (handUp && DIGIT.test(code)) || rowOk(code) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight'));
+    // (a row's digit with the setup up is the ROW's, whatever else that digit is: the rifle's own key is also its load's row)
+    const rowOf = (code: string) => rows.find(x => code === `Digit${x.key}`);
+    const ok = (code: string) => { const r = rowOf(code); if (r) return A.has(r.kind === 'mode' ? 'mode' : r.kind === 'light' ? 'light' : 'alt');   // (the load is what the right button fires: its row opens with that button)
+      return FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || (handUp && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight')); };
     let dropped = 0;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
     if (this.skyOn) { if (A.has('pan')) this.pan(input, cam, dt); this.keep(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }

@@ -21,7 +21,8 @@ const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO
  *  raises the frame (TPS_OWNCHARGE=0 in front shows the door with nothing to offer) */
 export const raises = { TPS_OWNCHARGE: '1' };
 /** the last men may already be down when 'Shoot the rest' comes up (the grenade took both) */
-export const idleOk = ['last'];
+/** …and where the gun has no setup (the switch off: the frozen stand) the two lines that open and shut it have nothing to ask and go by */
+export const idleOk = ['last', 'setup', 'tab'];
 
 /** the right button pressed, held on a world point for `secs` (the arc is up) and let go: Input's bits are 1 left · 2 middle · 4 right */
 const rightHold = (B: Bot, p: number[], secs = 0.5) => { B.aim(p); B.step(); B.I.clicked |= 4; for (let i = 0; i < secs * 60; i++) { B.aim(p); B.I.buttons |= 4; B.step(); } B.I.buttons &= ~4; B.aim(p); B.step(3); };
@@ -58,6 +59,7 @@ const landed = (B: Bot, kind: string, secs: number) => { let seen = false; for (
 const once = new Set<string>();
 const stepIs = (B: Bot, id: string) => B.g.lesson.step?.id === id;
 /** play these lines again, each when it is the one that is up */
+const SETUP = () => setupOn() ? ['setup', 'tab'] : [];
 const replay = (B: Bot, ids: string[]) => { for (const id of ids) { if (!B.until(() => stepIs(B, id), 4)) B.fail(`again: '${id}' did not come up after the checkpoint (the lesson is on '${B.g.lesson.step?.id}')`); B.step(30); steps[id](B); B.step(30); } };
 /** down as the line warns, then Enter */
 const downAndBack = (B: Bot, how: () => void, to: string) => {
@@ -116,7 +118,15 @@ export const steps: Record<string, (B: Bot) => void> = {
   // the rifle's selector: its own key on the stand from before the gun's setup, the setup's first row where that is up (the rifle's digit, then 1: a digit
   // that is the pistol's slot anywhere else, and the pistol has no line yet). The run as the lines say stays on full auto, as a player is left; the arms that are each about one mistake go back to single
   // shots, which their fights were measured on
+  // the rifle's setup, opened and shut with nothing picked: its rows are locked on these two lines (a row's digit must do nothing), and Tab is the way out.
+  // Where the gun has no setup (the switch off) both lines go by with nothing asked
+  setup: B => { once.add('setup'); B.press('Digit2', 12); if (!B.g.player.setup) B.fail('the rifle\'s key pressed again did not open its setup'); },
+  tab: B => { once.add('tab');
+    const rf = B.g.player.rifle, was = `${rf.mode} ${rf.attachment}`; B.press('Digit1', 8); B.press('Digit2', 8);
+    if (!B.g.player.setup || `${rf.mode} ${rf.attachment}` !== was) B.fail(`a row's digit was taken on the line that only opens the setup (${was} → ${rf.mode} ${rf.attachment}, the setup ${B.g.player.setup ? 'up' : 'shut'})`);
+    B.press('Tab', 12); if (B.g.player.setup) B.fail('Tab did not close the rifle\'s setup'); },
   auto: B => {
+    if (setupOn() && !(once.has('setup') && once.has('tab'))) B.fail('the setup\'s two lines went by with nothing done');
     const flip = () => { if (setupOn()) { B.press('Digit2', 12); B.press('Digit1', 12); } else B.press('KeyZ', 12); };
     flip(); if (stepIs(B, 'auto')) B.fail(`the selector did not move (the rifle is on ${B.g.player.rifle.mode}, the hands hold ${B.g.player.slot}, its setup is ${B.g.player.setup ? 'up' : 'shut'}, reloading ${gun(B).reloading})`);
     if (B.g.player.slot !== 'rifle') B.fail(`the selector's digit took the ${B.g.player.slot} into his hands`);
@@ -129,11 +139,11 @@ export const steps: Record<string, (B: Bot) => void> = {
   crouch: B => { B.wait(1.2); B.crouch(true); },
   // crouched through the arch and along behind the sandbags
   low: B => {
-    if (brk() === 'again' && !once.has('low')) { once.add('low'); downAndBack(B, () => { B.crouch(false); B.go([16.9, 0, 13.3], 12, { stop: () => B.g.player.down }); B.go(BAGS_END, 15, { stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', 'auto', 'arch', 'crouch']); B.until(() => stepIs(B, 'low'), 4); }
+    if (brk() === 'again' && !once.has('low')) { once.add('low'); downAndBack(B, () => { B.crouch(false); B.go([16.9, 0, 13.3], 12, { stop: () => B.g.player.down }); B.go(BAGS_END, 15, { stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', ...SETUP(), 'auto', 'arch', 'crouch']); B.until(() => stepIs(B, 'low'), 4); }
     if (brk() === 'stand') B.crouch(false); B.go([16.9, 0, 13.3], 12); B.go(BAGS_END, 15); if (brk() === 'stand') { B.wait(2.5); B.fail('BREAK stand: he walked the sandbags standing and was not hit'); }
   },
   smoke: B => {
-    if (brk() === 'again' && !once.has('smoke')) { once.add('smoke'); downAndBack(B, () => { B.go(BARRIER, 10, { near: 0.5, stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', 'auto', 'arch', 'crouch', 'low']); B.until(() => stepIs(B, 'smoke'), 4); B.step(30); }
+    if (brk() === 'again' && !once.has('smoke')) { once.add('smoke'); downAndBack(B, () => { B.go(BARRIER, 10, { near: 0.5, stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', ...SETUP(), 'auto', 'arch', 'crouch', 'low']); B.until(() => stepIs(B, 'smoke'), 4); B.step(30); }
     if (brk() === 'nosmoke') { B.go(BARRIER, 10, { near: 0.5 }); B.wait(2.5); B.fail('BREAK nosmoke: he crossed the gap with no smoke up and was not hit'); } take(B, 'Digit3'); B.click(1, GAP); landed(B, 'smoke', 4); B.wait(2.8);
   },
   // when the plume is up: across the gap, behind the barrier

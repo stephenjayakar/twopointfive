@@ -176,7 +176,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     place: 'A walled fuel halt on a dust road', lean: 'loud', defenders: 5,
     blurb: 'On your own feet: a sentry, a gun, a locked door, a room, and the way back out.',
     scene: 'The men who hit the convoy keep their code book at a fuel halt down the valley. You go in for it alone, and nobody expects it to stay quiet.',
-    teaches: ['Move, sprint, stay low', 'A wall at your back, and leaning out', 'Rifle, pistol and the reload', 'Smoke, a frag, a stun, the launcher', 'A charge on a locked door'] },
+    teaches: ['Move, sprint, stay low', 'A wall at your back, and leaning out', 'Rifle and pistol, and a gun\'s setup', 'Smoke, a frag, a stun, the launcher', 'A charge on a locked door'] },
   { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
     place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
     blurb: 'Four men down one street: two easy rooms, then a door they shoot through, a gun, a locked hall, and a picket by two gates.',

@@ -104,7 +104,7 @@ export const FRAME: Record<string, { allow?: string[]; cue?: string; checkpoint?
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
   pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
-  take: { checkpoint: 'the store' }, load: { cue: 'trucks' }, launch: { allow: ['alt'] }, last: { cue: 'loose' },
+  take: { checkpoint: 'the store' }, load: { allow: ['alt'], cue: 'trucks' }, last: { cue: 'loose' },
 };
 
 const SHOP: Rect = { x0: FRONT_X, x1: PART_X, z0: ROOM_Z0, z1: ROOM_Z1 }, STORE: Rect = { x0: PART_X, x1: YARD.x1, z0: ROOM_Z0, z1: ROOM_Z1 };
@@ -281,7 +281,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'move', line: '[W] [A] [S] [D] to move. Get behind the van', done: { is: 'near', at: VAN, r: 1.1 }, at: VAN },
       { id: 'ready', line: '[2]: rifle up', done: { is: 'slot', slot: 'rifle', drawn: true } },
       { id: 'sprint', line: 'Hold [Shift]: sprint to the wall by the gate', done: { is: 'all', of: [{ is: 'near', at: WALL, r: 1.3 }, { is: 'flag', flag: 'sprint' }] }, at: WALL },
-      { id: 'wall', line: 'Walk into the wall: snap to it for cover', done: { is: 'flag', flag: 'wall' }, at: [CORNER[0], CORNER[1], WALL[2]] },
+      // (the maintainer: "instead of a circle pointer, maybe we need an arrow on the ground": the mark is a pace short of the wall and points into it)
+      { id: 'wall', line: 'Walk into the wall: snap to it for cover', done: { is: 'flag', flag: 'wall' }, at: [WALL[0] - 0.35, 0.05, WALL[2]], toward: [YARD.x0, 0.05, WALL[2]],
+        explain: { title: 'Walls', text: 'Walk into a wall and you snap to it: your back on it, out of the line of fire. The walk keys slide you along it. At its end, aim past the corner and you lean out to shoot.' } },
       // (the peek is the lesson, the shot its reward: he is at the corner the sentry was firing past a moment ago. The trigger is still locked here, so the
       //  lean is the only way on: a man who walks into the opening instead is shot at by nobody, the sentry's fire having stopped at the line before)
       { id: 'peek', line: 'Slide along to the gate. Aim past the corner: you lean out', done: { is: 'flag', flag: 'lean' }, at: CORNER },
@@ -289,6 +291,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // THE TRUCK COURT
       { id: 'reload', line: '[R]: reload', done: { is: 'reload' } },
       // (the gun's own setup, met early and in a quiet moment: the same two presses load the launcher at the end)
+      // (the maintainer: "the timer is bad. we should just have it switch a mode. and we should teach earlier that tab exits out of menus": the setup is
+      //  opened and shut before anything is picked in it; its rows stay locked until the next line, so Tab is the way out here)
+      { id: 'setup', line: '[2] again: the rifle\'s setup', done: { is: 'flag', flag: 'setup' },
+        explain: { title: 'A gun\'s setup', text: 'Press the key of the gun in your hands again and its setup opens over the kit: single shots or automatic, what the launcher is loaded with, its light. It stays until you pick a row or close it.' } },
+      { id: 'tab', line: '[Tab]: close it. [Tab] closes every menu', done: { is: 'flag', flag: 'setupShut' } },
       { id: 'auto', line: '[Z]: full auto', setupLine: '[2], then [1]: full auto', done: { is: 'any', of: [{ is: 'flag', flag: 'auto' }, DOWN(2)] } },
       { id: 'arch', line: 'Move up beside the blue gate', done: { is: 'near', at: JAMB, r: 1.3 }, hold: 1, at: JAMB },   // (a second there: the gun opens on the truck before the next line, whenever he came)
       { id: 'crouch', line: '[C]: crouch. The fire goes over you', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: JAMB, r: 1.9 }] }, at: JAMB },
