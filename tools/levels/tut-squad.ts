@@ -24,7 +24,7 @@
 //     the blocks. The nest is open to the sky: what finishes it is a grenade over the bags.
 //   · the hall's door is locked and nobody was issued a charge for it. It is on the far face, in the passage past the nest, so nobody stands at it
 //     while the nest is being fought. Its two men stand in the corners of the door's own wall, where the doorway shows nothing and a man who walks in
-//     is between them; the one street window looks straight at both. So the room is cleared from outside, through the glass, and only then is the leaf
+//     is between them; the one street window looks straight at both. So the room is cleared from outside, through the open window, and only then is the leaf
 //     shot down and walked through.
 //   · the picket comes by two gates at once: one man by the road gate, in front; two by the back gate, down the alley, behind whoever is still looking at
 //     the road. Who comes: the post's own picket, camped up the road (the mast in the yard is what calls it).
