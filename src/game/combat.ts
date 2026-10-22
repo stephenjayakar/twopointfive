@@ -1,6 +1,7 @@
 // Combat and kit: shots and hits, kills and what leaves dying hands, hand props / holsters / lasers, live throwables (canisters, stun) and their effects.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
+import { railsSpare } from './rails';   // (asked inside killGuard only)
 import { rollbackVar } from '../math/side';
 import { Vec3, v3, clamp, lerp, quat } from '../math/vec';
 import { wandDrop } from './wand';
@@ -354,6 +355,7 @@ export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: Dow
   if (gd.civ) { civilianDown(g, gd, dir, quiet, how, by, line); return; }   // a CIVILIAN (the cleaner, the late worker — every path that puts a 'Guard' down comes through here: the round, the cross, the choke, the whip, the ring): her own record, her own price on the card, nothing in her hands to fall (civilians.ts)
   if (gd.bubble && g.time - gd.bubble.t < 0.8 && !w(g.messages.some(m => m.t === gd.bubble!.t && m.text.endsWith(gd.bubble!.text)), false)) g.msg(w(gd.unit ? `${gd.callsign}: ` : 'guard: ', 'guard: ') + gd.bubble.text);   // he did not get to finish saying it on screen (a unit's cut-off line goes under his own name, as guards.ts say files it: a teammate's 'man down.' is not a guard's) — and a line say already put in the log (out of sight, or over the net: its row carries the bubble's own stamp) is not put there a second time
   if (gd.state === 'dead') return;
+  if (railsSpare(g, gd)) return;   // (rails.ts: on a tutorial mission that says so a teammate is on a knee for a few seconds instead, and up again — a return with no rails record)
   gd.script = null;   // (his lockdown role — leader / post — deliberately stays on the corpse: the others only re-deal once they KNOW, see superviseLockdown)
   const held = inHand(gd);   // what is in the hand as he goes (guards.ts): the torch on a calm patrol, his drawn weapon otherwise (alarmed floor, or any other state) — nothing if the torch already went at the grab
   if (by === 'player') { if (!(ffLive(g) && !isHostile('player', gd.team))) tally(g, how === 'shot' ? 'kills' : 'knockouts'); chronDown(g, gd, how, line); }   // (a man dropped by his own side's round or by the world is on nobody's card — nor on the debrief's timeline)
@@ -420,7 +422,7 @@ function rigKeys(out: Box[], n0: number) {
   for (let k = n0; k < out.length; k++) { const b = out[k]; const o = b.owner & 0xff; if (o === 0) continue; b.mkey = MKEY.rig + (o << 8) + Math.min(255, ord[o]++); }
 }
 function handPropsRaw(g: Game, out: Box[]) {
-  const pl = g.player;
+  const pl = g.player, mine0 = out.length;
   const busy = pl.char.anim.hideHeldItem;   // hands on the lock tools (anim.lockpick) or both round a held man (the arm variant): empty hand, the Five-seveN on the thigh, no can, no lit lens — whatever the kit says. Holding a man with the pistol drawn (the gun variant) it stays in the hand — up beside his head, laid along the hold layer's gun hand like any carry — and its rail light with it if L had it on (updateHold poses the light off the same hand); drawn mid-hold (E) it comes into the fist as the animator's hand-over passes half way (holdGunSide), the fist then behind the man's shoulder; holstered mid-hold it is on the thigh from the key's frame like any E
   // the can in the hand: during a throw it is the one being thrown until the release frame and nothing for the rest of the swing (whatever the
   // count says — the count drops at release, which used to pop the next can into the follow-through and empty the hand while winding up the last one)
@@ -451,6 +453,7 @@ function handPropsRaw(g: Game, out: Box[]) {
   rigBoxes(pl.char, { goggles: kitYouNvg(pl) /* (kittree.ts: a card that left them at home — nothing is worn) */, nv: pl.nv, slot: pistolInHand ? 1 : 0, lightOn: pl.pistol.lightOn && pistolInHand && !pl.sprinting && lensUp, isGuard: false, holster: !(pl.down && pl.pistolUp), held, knife, rifle, rifleBlack: sneakSuit(g, pl.char), rifleLight: rifle === 'hand' && pl.rifle.lightOn && !pl.sprinting && lensUp, ...(CLOSE.on ? { sheath: true } : null), ...(kit ? { kit } : null), ...(fit ? { fit } : null), ...(inHand ? { inHand } : null), ...(KITANIM.on && rifle === 'slung' && kitSlingFront(g) ? { slingFront: true, slingRest: kitSlingRest(g) } : null), ...(pl.char.anim.nvShown !== undefined ? { nvK: pl.char.anim.nvShown } : null), ...(bigS ? { big: bigS, bigK: pl.down ? 0 : an.bigK, bigClear: bigOver } : null) }, out);   // (close.ts: the knife he reaches for is drawn in its sheath on his chest only with the close-in switch on)   // holstered (E): empty hands, the pistol drawn on the thigh   // canister up (or the rifle in the hands): gun on the thigh, can in the fist only if a can is what is selected; down: whatever was in the hand has left it (dropFromHand) — a holstered gun stays holstered, the goggles stay on   // (the light itself is forced off while down / sprinting: no blazing lens then)   // (a downed player's light is forced off in updatePlayer: no lit lens on the body either)
   workProps(pl.char, out);   // (handwork.ts: the objective in his hands as it comes out of its rack)
   samLaserBoxes(g, out);   // (irlaser.ts: the IR laser on the gun in his hands, his goggles down, a scenario's team on the floor — nothing otherwise)
+  if (g.rails?.skyOn) out.length = mine0;   // (rails.ts, the seat with nobody on the floor: the parked player is not drawn — game.ts drawMen — and neither is his kit)
   for (const gd of g.guards) {
     if (g.fogOfWar.hidden(gd)) { gd.char.inHand = null; continue; }   // fog of war (fogofwar.ts): a man nobody on the team sees is not drawn — nor what he carries (never true while it is off)
     guardProps(g, gd, out);

@@ -162,7 +162,16 @@ export const TRAINING_MISSIONS: ScenarioEntry[] = [
     blurb: 'A silent partner in the dark: park him, set him behind a guard, and drop two men in one lantern\'s light on one beat.' },
 ];
 /** EVERY MISSION THE LIST HOLDS: the squad's, the quiet ones, the training group — what the missions screen draws, what a query is read back to, what the pause card names */
-export const ALL_MISSIONS: ScenarioEntry[] = [...SCENARIOS, ...QUIET_MISSIONS, ...TRAINING_MISSIONS];
+/** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
+ *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
+export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
+  { id: 'tut-sky', title: 'The halt, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
+    place: 'A truck halt on a pass road, under snow', lean: 'loud', defenders: 5, squads: true,
+    blurb: 'Your squad is pinned on the road. Lead it from above: through the gate, then door by door.' },
+];
+/** every row that is a lesson: the tutorial's missions, then the Training levels */
+export const LESSON_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...TRAINING_MISSIONS];
+export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS, ...TRAINING_MISSIONS];
 
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
  *  (`?level=` is NOT: a scenario on the

@@ -355,6 +355,8 @@ export class RoomClearScenario {
     if (!this.entrySaid && nb.state === 'failed') { this.entrySaid = true; if (pairUp > 0 && play) g.msg(`point man down at the door — the ${this.drillRoom()?.name ?? 'room'} is yours to take`); }   // (the drill's entry is off with a man still up: he holds where he stands — nightbreach.ts)
     if (this.end) return;
     if (g.player.down) this.finish('wiped', 'player down');   // (first: the last defender and Sam down inside one frame is no win — the mission has failed and the down card is coming)
+    else if (g.rails?.endsNow()) this.finish('taken', 'the mission is done');   // (a tutorial mission — rails.ts — is over when its last step is, whoever is still in a room)
+    else if (g.rails?.holdsEnd()) { if (pairUp === 0 && nb.ops.length && (K.pairOnly || g.rails.skyOn)) this.finish('wiped', nb.ops.length > 2 ? 'the squad down' : 'the pair down'); }   // …and not before it (the men of a later beat are not on the floor yet) — but a team that is all down has still lost
     else if (live.length === 0 && !responseUp(g)) this.finish('taken', `${this.rooms.length} rooms clear, ${nb.ops.length ? `${pairUp} of ${nb.ops.length} teammates up` : 'alone'}`);
     else if (K.pairOnly && pairUp === 0 && nb.ops.length) this.finish('wiped', nb.ops.length > 2 ? 'the squad down' : 'the pair down');
     else if (live.length === 0 && !this.teamSaid) { this.teamSaid = true; this.obj = null; this.note('team-up'); if (K.announce) g.msg(`rooms clear — ${responseTeam(g)} still on the ground`); }   // (qrf.ts RESPONSE.raid: the place is not taken while the team it called is up — said once, and it stays on the objective row)

@@ -110,6 +110,7 @@ import { AIMWEIGHT } from '../game/aimweight';
 import { SPRINTDOOR } from '../game/sprintdoor';
 import { TEAMPACE } from '../game/teampace';
 import { NOSHOVE } from '../game/noshove';
+import { RAILS } from '../game/rails';
 import { DOORFORCE } from '../game/doorforce';
 import { SLOTSETUP } from '../game/slotsetup';
 import { GLASSREAL } from '../game/glassbreak';
@@ -276,6 +277,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_GLASSPLACE')) GLASSREAL.place = String((globalThis as any).process?.env?.TPS_GLASSPLACE ?? '') === '1';   // a pane's glass by where it sits (the same table): off, so outside glass is toughened and inside float, the kinds every frozen glass probe and stack mark was dealt on
     if (pinned('TPS_SLOTSETUP')) SLOTSETUP.on = String((globalThis as any).process?.env?.TPS_SLOTSETUP ?? '') === '1';   // the slot in hand pressed again opens its setup (src/game/slotsetup.ts): off, so 2 pressed with the rifle up steps the launcher's load, as every frozen probe, tape and lesson run has it; TPS_SLOTSETUP=1 raises it
     if (pinned('TPS_DOORFORCE')) DOORFORCE.on = String((globalThis as any).process?.env?.TPS_DOORFORCE ?? '') === '1';   // an alerted man does not wait at a shut door (src/game/doorforce.ts): off, so a defender who knows a man is behind a shut leaf rests his gun on it or goes to its handle, as in every frozen probe, digest and tally; TPS_DOORFORCE=1 raises it
+    if (pinned('TPS_RAILS')) RAILS.on = String((globalThis as any).process?.env?.TPS_RAILS ?? '') === '1';   // a tutorial mission's frame (src/game/rails.ts): off, so a level whose lesson carries a rails record plays as a plain lesson on the frozen stand (no shipped level but the tutorial group's carries one)
     if (pinned('TPS_NOSHOVE')) NOSHOVE.on = String((globalThis as any).process?.env?.TPS_NOSHOVE ?? '') === '1';   // teammates falling in never shove the player (src/game/noshove.ts): off, so a follower walks into him and the squad reads the shove as his walking, as every frozen probe, digest and tape has it
     if (pinned('TPS_SPRINTDOOR')) SPRINTDOOR.on = String((globalThis as any).process?.env?.TPS_SPRINTDOOR ?? '') === '1';   // a sprint into a door has weight (src/game/sprintdoor.ts): off, so a scripted player who runs through a door is where every frozen probe, digest and tape has him a second later
     if (pinned('TPS_AIMWEIGHT')) AIMWEIGHT.on = String((globalThis as any).process?.env?.TPS_AIMWEIGHT ?? '') === '1';   // the player's gun turns at a limited rate and trails the cursor (src/game/aimweight.ts): off, so a scripted player who puts the cursor on a man and clicks on the same frame hits him as every frozen probe, digest and tally expects; `TPS_AIMWEIGHT=1` turns it on
