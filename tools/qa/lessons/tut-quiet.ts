@@ -18,6 +18,12 @@ const seen = (B: Bot): number => B.g.chronicle.events.filter((e: any) => e.kind 
 /** a person's beat between seeing a man come through and moving */
 export const needs = 'rails';
 const REACT = Number((globalThis as any).process?.env?.TPS_REACT ?? 0.6);
+/** THE BREAK PATHS of the staged man (the level's script walks him, so what he sees and hears is the script's to say: levels/tut-quiet.script.ts). Each
+ *  of these has the player do what a man with eyes and ears would catch, and the run must FAIL on it:
+ *  TQSMOKE_BREAK=front    after the whistle he stands on the walk, in front of the gap the man comes to
+ *  TQSMOKE_BREAK=beam     he stays on the whistle's own mark, where the man's light is put
+ *  TQSMOKE_BREAK=upright  he hides, then walks up behind the smoking man on his feet instead of crouched */
+const WRONG = String((globalThis as any).process?.env?.TQSMOKE_BREAK ?? '');
 const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const at = (p: ArrayLike<number>) => `${p[0].toFixed(1)}, ${p[2].toFixed(1)}`;
 const lit = (B: Bot) => B.g.player.visibility.toFixed(2);
@@ -69,26 +75,37 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (HANDRING.on) { B.I.pressed.add('Space'); B.hold(['Space'], HANDRING.holdSecs + 0.1); if (!B.g.sel?.ring && !B.g.player.sel?.ring) B.fail('the interaction key kept down put no ring up'); B.press('Digit5', 0); } else B.press('KeyV', 0);
     const t0 = B.t();
     B.wait(REACT);
-    B.go([22.7, 0, 19.1], 8, { near: 0.25 }); B.go(TQ.hide, 8, { near: 0.15 });
-    B.say(`  behind the wall ${(B.t() - t0).toFixed(1)} s after the whistle: lit ${lit(B)}; ${A.callsign} ${A.state} at ${at(A.char.pos)}, going to ${A.lastKnown ? at(A.lastKnown) : '—'}`);
+    if (WRONG === 'front') B.go([24.4, 0, 17.75], 8, { near: 0.25 }); else if (WRONG === 'beam') B.wait(1.5); else { B.go([22.7, 0, 19.1], 8, { near: 0.25 }); B.go(TQ.hide, 8, { near: 0.15 }); }
+    B.say(`  behind the wall ${(B.t() - t0).toFixed(1)} s after the whistle: lit ${lit(B)}; ${A.callsign} ${A.state} at ${at(A.char.pos)}, ${A.script ? 'the script has him' : 'his own man'}`);
     if (A.state === 'patrol') B.fail(`the whistle moved nobody (${A.callsign} at ${at(A.char.pos)})`);
+    if (!A.script) B.fail(`the level's script did not take the man who heard the whistle (${A.callsign} ${A.state})`);
     unseen(B, n0, A, 'going behind the wall');
     (B as any).whistledAt = t0;
   },
-  // nothing pressed while he walks the other side of the wall; once he stands where the sound was, a person's beat, round the wall's end, to his back
+  // nothing pressed while he comes round, looks through the gap and turns away; once he stands by the crate with his back to the gap, a person's beat,
+  // round the wall's end, up the walk, through the gap, to his back
   grab: B => {
     const A = man(B, 'court'), n0 = seen(B), t0 = (B as any).whistledAt ?? B.t();
-    let nearest = 99;
-    const there = B.until(() => { nearest = Math.min(nearest, flat(B.pos(), A.char.pos)); return flat(A.char.pos, TQ.whistle) < 1.3 || A.state === 'alert' || A.state === 'patrol'; }, 30);
-    B.say(`  ${A.callsign} passed ${nearest.toFixed(2)} m off; ${there ? 'he is' : 'he never got'} at the mark ${(B.t() - t0).toFixed(1)} s after the whistle (${at(A.char.pos)}, ${A.state}); lit ${lit(B)}`);
+    // (what his light does while he looks: the most it puts on the place the whistle came from, and on the player behind the wall)
+    let onSpot = 0, onMe = 0, lookedFrom: number[] | null = null, lookT = 0;
+    const watch = () => { const L = A.flashlight, d = A.beamDir; if (L?.enabled && d) { const to = [TQ.whistle[0] - A.char.pos[0], TQ.whistle[2] - A.char.pos[2]], n = Math.hypot(to[0], to[1]) || 1, cos = (to[0] * d[0] + to[1] * d[2]) / n;
+        if (flat(A.char.pos, TQ.look) < 0.4 && cos > onSpot) { onSpot = cos; lookedFrom = [...A.char.pos]; lookT = B.t(); } }
+      onMe = Math.max(onMe, B.g.player.visibility); };
+    const there = B.until(() => { watch(); return (!!A.script && flat(A.char.pos, TQ.smoke) < 0.35 && Math.abs(Math.atan2(Math.sin(A.char.bodyYaw - Math.PI / 2), Math.cos(A.char.bodyYaw - Math.PI / 2))) < 0.3) || A.state === 'alert' || !A.script; }, 45);
+    B.say(`  ${A.callsign} ${lookedFrom ? `looked from ${at(lookedFrom)}, ${flat(lookedFrom, TQ.whistle).toFixed(1)} m from the whistle's mark, his light within ${(Math.acos(Math.min(1, onSpot)) * 57.3).toFixed(0)}° of it, ${(lookT - t0).toFixed(1)} s after the whistle` : 'never looked'}; the most light on the player behind the wall ${onMe.toFixed(2)}`);
+    B.say(`  ${there && A.script ? 'he is' : 'he never got'} at his smoke ${(B.t() - t0).toFixed(1)} s after the whistle (${at(A.char.pos)}, facing ${A.char.bodyYaw.toFixed(2)}, ${A.state}${A.script ? '' : ', his own man'})`);
     unseen(B, n0, A, 'behind the wall');
-    if (!there || A.state === 'patrol') B.fail(`${A.callsign} was not there to be taken (${A.state}, at ${at(A.char.pos)})`);
-    settled(B, A, 0.3, 3);
+    const from = lookedFrom as number[] | null;
+    if (!from || onSpot < 0.96) B.fail(`${A.callsign} did not put his light on the place the whistle came from`);
+    else if (flat(from, TQ.whistle) < 4) B.fail(`${A.callsign} looked from ${flat(from, TQ.whistle).toFixed(1)} m: close enough to read the prints`);
+    if (!there || !A.script) B.fail(`${A.callsign} was not there to be taken (${A.state}, at ${at(A.char.pos)})`);
     B.wait(REACT);
-    B.go([22.75, 0, 19.0], 8, { near: 0.25 });
-    B.say(`  at the wall's end: ${A.callsign} at ${at(A.char.pos)}, facing ${A.char.bodyYaw.toFixed(2)}, his light pointing ${A.char.aimYaw.toFixed(2)}, ${A.state}, ${flat(B.pos(), A.char.pos).toFixed(1)} m off`);
-    if (!closeIn(B, A, null)) B.fail(`could not get behind the first man (${flat(B.pos(), A.char.pos).toFixed(2)} m off, he stands at ${at(A.char.pos)}, ${A.state})`);
+    B.go([22.75, 0, 19.0], 8, { near: 0.25 }); B.go([23.6, 0, 17.8], 8, { near: 0.25 });
+    B.say(`  on the walk: ${A.callsign} at ${at(A.char.pos)}, facing ${A.char.bodyYaw.toFixed(2)}, ${A.state}, ${flat(B.pos(), A.char.pos).toFixed(1)} m off; lit ${lit(B)}`);
+    if (WRONG === 'upright') { B.crouch(false); B.go(behind(A, 1.2), 20, { near: 0.25, stop: () => A.state === 'alert' || !A.script }); B.say(`  upright behind him: ${A.callsign} ${A.state}${A.script ? ', still at his smoke' : ', his own man'}, ${flat(B.pos(), A.char.pos).toFixed(1)} m off`); B.crouch(true); }
+    if (!closeIn(B, A, [25.5, 0, 17.75])) B.fail(`could not get behind the first man (${flat(B.pos(), A.char.pos).toFixed(2)} m off, he stands at ${at(A.char.pos)}, ${A.state})`);
     unseen(B, n0, A, 'coming up behind him');
+    if (!A.script) B.fail(`${A.callsign} turned from his smoke as the player came up crouched (${A.state})`);
     if (!tap(B, 'guard', 'grab', [A.char.pos[0], 1.35, A.char.pos[2]])) B.fail('no grab row behind the first man');
     if (!B.until(() => B.g.player.holding?.phase === 'held', 4)) B.fail('the grab did not take');
     B.say(`  held ${(B.t() - t0).toFixed(1)} s after the whistle`);
@@ -101,9 +118,9 @@ export const steps: Record<string, (B: Bot) => void> = {
   drop: B => { const A = man(B, 'court'); if (CLOSE.heldClicks) B.click(2); else if (!B.verb('held', 'choke'))   // (the frozen stand has no buttons for a held man: the list's second row)
       B.fail('no choke row with a man held');
     if (!B.until(() => A.state === 'dead', 15)) B.fail('the choke did not put him out'); B.wait(1); },
-  // through the gap into the back court, to the door under its lamp
+  // the back door is three strides on from where the man was taken, past him
   door: B => {
-    B.crouch(true); B.go([24.6, 0, 17.5], 20); B.go([26.4, 0, 17.5], 10); B.go(TQ.backDoor, 15, { near: 0.2 });
+    B.crouch(true); B.go(TQ.backDoor, 15, { near: 0.2 });
     B.say(`  at the back door: lit ${lit(B)}`);
   },
   // the key at the lock, then nothing until the cylinder goes over (the card that comes up with this line is the page's: a headless run has none)
