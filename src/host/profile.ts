@@ -140,7 +140,7 @@ import { STEALTHPOSE } from '../game/stealthpose';
 import { GEAR, gearFromQuery } from '../game/gear';
 import { GUARD_EYE, LIGHTS } from '../game/guards';
 import { wordsFromQuery } from '../game/words';
-import { kitLoad, KIT_SOLO, BIGSLOT, KITDEAL } from '../game/kit';
+import { kitLoad, KIT_SOLO, BIGSLOT, KITDEAL, ISSUE } from '../game/kit';
 import { squadSenses } from '../game/enemysquads';
 import { LOOK, lookOfQuery, suitOfQuery } from '../scene/look';
 import { MUSIC } from '../audio/pieces';
@@ -381,6 +381,7 @@ export function pageSwitches(q: URLSearchParams): void {
   KITDEAL.on = !q.has('nokitdeal');   // the squad's kit dealt over the men who come (game/kit.ts KITDEAL): with three or four teammates the issued kit and every named squad kit are shared out among them — a charge and a stun to each pair — where the first two carried it all and the others showed empty pouches. The squad's count is the same at every size (but for the one canister of its key `more`, below), so a run is the run it was. ?nokitdeal = the cards as they were
   KITDEAL.more = !q.has('nokitmore');   // (…and of 10-18, the maintainer's pick "a tool each pair": three or four as issued are lent the breaching shotgun on Red Two and, of four, the hammer on Blue Two — each pair's second man, so its first goes in with a gun up — in big slots that stood empty, and a man a kit leaves with nothing counted is handed a stun canister — the Quiet kit's fourth man; ?nokitmore = big slots empty as issued, that man with his pistol alone)
   KITDEAL.stealth = !q.has('nokitstealth');   // (…and of 10-20, the maintainer's "that should just be defaults": a stealth mission's sponge rounds, cameras and wand are what your stealth card is issued as — rows you change, priced like any other, the sponge rounds five to a pouch — and nothing is handed over a card or written on a tile as the mission's)
+  ISSUE.whole = !q.has('issuelend');   // (…and of 10-22, the maintainer's play of the solo tutorial: a mission whose level names your card hands nothing over it — that card is the whole kit, so a loud mission of the quiet kind no longer comes up on five sponge rounds; ?issuelend = the hand-overs land over the card again)
   BIGSLOT.moves = !q.has('nobigmoves');   // (…and of 10-15 evening: the hammer rides on a man's back, his gun is put away for it, it is wound up and swung as one move, and you take the row from where a stack stands and WALK to a free place beside either jamb — ?nobigmoves = the tools as they stood that morning)
   BIGSLOT.snug = !q.has('nobigsnug');   // (…and with the moves: his gun and the tool each stay in a hand while they are off him — the gun let go as his hands leave it, the tool changing between his back and his fist while the fist is there; ?nobigsnug = the first-pass shares, the tool drawn part way between the two. Looks, and how long your own gun and its light are away: about a sixth of a second more)
   BIGSLOT.weight = !q.has('nobigweight');   // (…and of 10-18: the tool changes hands with the weight of a gun swap — your gun carried to its place by hand before the hand goes for the tool, the tool out and back in the times a long gun takes; ?nobigweight = the gun let go at once, 0.6 s out and 0.45 s back)
@@ -665,6 +666,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'KITDEAL.on': 'TPS_KITDEAL=1 (reads only with the pouches rule on: SLOTS=on)',
   'KITDEAL.more': 'TPS_KITMORE=1 (reads only with the deal and the big slot on: TPS_KITDEAL=1, TPS_BIGSLOT=1)',
   'KITDEAL.stealth': 'TPS_KITSTEALTH=1 (reads only under the card as a tree: TPS_KITTREE=1 and what it needs)',
+  'ISSUE.whole': 'TPS_ISSUEWHOLE=1 (the sponge rounds are a row of the card as a tree: TPS_KITTREE=1 and what it needs)',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',
   'SQUAD40.on': 'TPS_SQUAD40=1',
   'AUTOPILOT.on': 'TPS_AUTOPILOT=1',

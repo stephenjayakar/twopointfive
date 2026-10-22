@@ -78,7 +78,7 @@ import { GUNSLOTS } from './gunslots';
 import { GUNLOOK } from './gunlook';
 import { GUNROLES } from './gunroles';
 import { KITTREE } from './kittree';
-import { BIGSLOT, KITDEAL } from './kit';
+import { BIGSLOT, KITDEAL, ISSUE } from './kit';
 import { SQUADTHROW } from './squadthrow';
 import { SQUAD40 } from './squad40';
 import { AUTOPILOT } from './autopilot';
@@ -333,6 +333,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
   else if ((k.tables.KITDEAL as Partial<typeof KITDEAL>).more === undefined) KITDEAL.more = false;   // (…and from before a team of three or four as issued was lent a big tool each pair: every man came with his big slot empty, and the Quiet kit's fourth man with his pistol alone)
   if ((k.tables.KITDEAL as Partial<typeof KITDEAL> | undefined)?.stealth === undefined) KITDEAL.stealth = false;   // (…and from before a stealth mission's kit was your card's own: its sponge rounds, cameras and wand were handed over the card at the staging, and a sponge round cost a pouch)
+  if ((k.tables.ISSUE as Partial<typeof ISSUE> | undefined)?.whole === undefined) ISSUE.whole = false;   // (a file from before a mission's own card for you was the whole kit: the mission's sponge rounds, cameras and wand were handed over it)
   if (!k.tables.PLANLAY) PLANLAY.on = false;   // (a file from before an order could be laid for the word: 'wait for my word' was the four's door tools' row, and they walked to the door at once)
   if (!k.tables.CONDITION) CONDITION.on = false;   // (a file from before a blast left a man hurt: nobody in it ever was)
   if (!k.tables.GUNHAND) GUNHAND.on = false;   // (a file from before a move kept to the hand that is free: a whistle raised the empty fist, a defender threw with his carbine hand, a long gun reloaded on the pistol's clip)
