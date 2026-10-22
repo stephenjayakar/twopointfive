@@ -1005,3 +1005,17 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   the double tap's, stood on a window and a canvas that are lists of them. `CAMSPACE_BREAK=1` fails 4 (the `off` line is the build as it was).
   `tools/qa/keybinds-page.cjs` reads the camera's cap in its last line.
   Never seen on a GPU; nobody has felt Space held under a thumb while the same hand walks.
+- **A can in the wind-up goes back on the belt when his hands start something else** (`src/game/throwback.ts THROWBACK.on`, 10-22; the deep
+  review's src15-01, and src15-02 with it). A throw is counted off the belt at the click and leaves the hand `THROW_RELEASE` (0.28 s) later, on a
+  countdown that runs in the open part of `updatePlayer`, after the early returns for a kick, a pick, the wand, hands at work and the keypad. A can
+  clicked and one of those rows taken inside the wind-up froze in his fist for the whole beat and left it afterwards from where he then stood, on
+  the arc solved at the click: after a pick, four seconds late, a stun or a frag included. THE RULE: one line ahead of those returns gives the can
+  back (`canBack`, as `startGrab` always did) and ends the wind-up; a takedown's start, which dropped the wind-up and kept the can it had counted,
+  gives it back too. Nothing is thrown. ON in the page (`?throwback=0`; the debugger's Player tick "a can in the wind-up goes back on the belt"),
+  OFF in the module and on the frozen stand (`FROZEN_HOLDS`, `TPS_THROWBACK=1`, pinned in `host/standup.ts`); in the knob registry and carried by a
+  recording (one from before it replays with it off). Only a run that begins such a beat inside a wind-up changes.
+  CHECK: `bun run tools/qa/probes.ts throwback` (family `player`), 5 lines, the rule raised by the check on both stands: a pick (4.3 s, no can in
+  the air through it or after), a kick, a plain throw untouched (in the air at frame 17, one off the belt), off (the can in the air at frame 67,
+  after the kick ends at 58), recordings. `THROWBACK_BREAK=1` fails 3. The throw is made through the keys (the can's digit, a click); the kick and
+  the pick are begun by the game's own starts a few frames in. NOT in the check: the wand, hands at work, the keypad and the takedown (the same
+  line or its twin; read, not run). Headless only; nobody has played it.
