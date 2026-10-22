@@ -243,7 +243,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   so the page draws it from the picture's own camera (`ui/cmdring.ts pinned`; the game's `ax` / `ay`, a tick old, still decide the wedge under the
   cursor). `probes.ts cmdring` asked "at the cursor" some ticks after the key: on the page's stand its lines 1 and 17 now ask that it stands on its
   point's place (`astray`), and say how far that is from the cursor. Known: the view leads toward the cursor (`camera.ts aimLead`), so the ring
-  shifts a little as the cursor goes out to a wedge, and it can slide under the weapon panel as he walks. Driven on the real page (headless
+  shifts a little as the cursor goes out to a wedge; a ring put up right after a fast sweep of the cursor ends some px off it as the view
+  finishes easing (25 px after the check's instant jump; a cursor at rest lights nothing); and it can slide under the weapon panel as he walks. Driven on the real page (headless
   Chromium, the software adapter): he walked with the ring up and it moved 45 px with the floor, a digit then gave its wedge; never seen on a GPU.
   THE KEY'S CAP (`PLAN.keyLit`, `floorplan.ts capOf`, `PlanDoor.ready`, `ui/planfloor.ts`, `.plan .lit` in index.html; "need some indicator on the
   F on the door when it's queued vs live. maybe black background to lighting up to yellow background"): a stack waits on the word from the moment
