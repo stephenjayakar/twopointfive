@@ -610,7 +610,7 @@
         { "id": "stack-shop", "line": "[B] on the workshop door", "done": { "is": "any", "of": [{ "is": "stackOn", "who": "all", "door": "workshop", "set": true }, { "is": "taken", "room": "workshop" }] }, "at": [18.45, 1, 11], "checkpoint": "the street" },
         { "id": "side", "line": "He shoots through it. Go round", "done": { "is": "any", "of": [{ "is": "in", "area": { "x0": 22.2, "x1": 27, "z0": 5.3, "z1": 10.6 } }, { "is": "taken", "room": "workshop" }] }, "at": [22, 1, 8.25], "cue": "shop" },
         { "id": "shop", "line": "[Space]: open the side door", "done": { "is": "taken", "room": "workshop" }, "at": [22, 1, 8.25] },
-        { "id": "wall", "line": "[X], [3]: they follow. To the wall's end", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "any", "of": [{ "is": "following" }, { "is": "did", "what": "order:fallIn" }] }, { "is": "near", "at": [22.5, 0, 17.5], "r": 1.6 }] }, { "is": "taken", "room": "nest" }] }, "at": [22.5, 0, 17.5], "checkpoint": "the wall", "allow": ["menu"] },
+        { "id": "wall", "line": "Hold [B], [3]: they follow. To the wall's end", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "any", "of": [{ "is": "following" }, { "is": "did", "what": "order:fallIn" }] }, { "is": "near", "at": [22.5, 0, 17.5], "r": 1.6 }] }, { "is": "taken", "room": "nest" }] }, "at": [22.5, 0, 17.5], "checkpoint": "the wall", "allow": ["menu", "ring"] },
         { "id": "gun", "line": "A gun. Shoot back: it ducks", "done": { "is": "any", "of": [{ "is": "did", "what": "event:shot", "n": 3 }, { "is": "taken", "room": "nest" }] }, "at": [31.6, 1.2, 13.8], "cue": "gun" },
         { "id": "blocks", "line": "While it is down: run to the blocks", "done": { "is": "any", "of": [{ "is": "near", "at": [26.6, 0, 16.1], "r": 1.3 }, { "is": "taken", "room": "nest" }] }, "at": [26.6, 0, 16.1] },
         { "id": "frag", "line": "[5], left button: a frag over the bags", "done": { "is": "any", "of": [{ "is": "threw", "kind": "frag" }, { "is": "taken", "room": "nest" }] }, "at": [32, 1, 13.8], "allow": ["slot:frag"] },
@@ -620,7 +620,7 @@
         { "id": "hall", "line": "Walk in", "done": { "is": "in", "area": { "x0": 25.62, "x1": 32.28, "z0": 17.12, "z1": 22.08 } }, "at": [31, 1, 19.75] },
         { "id": "bags", "line": "More are coming. Behind the bags", "done": { "is": "any", "of": [{ "is": "near", "at": [30.2, 0, 13.8], "r": 1.6 }, { "is": "taken", "room": "road" }] }, "at": [30.2, 0, 13.8], "checkpoint": "the bags" },
         { "id": "front", "line": "Hold the road gate", "done": { "is": "any", "of": [{ "is": "cue", "name": "flank" }, { "is": "taken", "room": "road" }] }, "at": [35, 1, 14], "cue": "picket" },
-        { "id": "back", "line": "Behind you! [X] on the alley, then [2]", "done": { "is": "any", "of": [{ "is": "did", "what": "order:cover" }, { "is": "taken", "room": "road" }] }, "at": [25, 0, 10.6] },
+        { "id": "back", "line": "Behind you! Hold [B] on the alley, then [2]", "done": { "is": "any", "of": [{ "is": "did", "what": "order:cover" }, { "is": "taken", "room": "road" }] }, "at": [25, 0, 10.6] },
         { "id": "hold", "line": "Finish the picket", "done": { "is": "taken", "room": "road" }, "at": [35, 1, 14] }
       ]
     },
