@@ -203,8 +203,8 @@
     #objective { position: absolute; left: 50%; top: 5px; padding: 5px 12px 4px; background: rgba(var(--h-plate),0.5); border-radius: 2px; transform: translateX(-50%); font: 12px/1 var(--h-font); letter-spacing: 0.02em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0.95; }
     #objective b { margin-right: 3px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--h-acc); } #objective.done b, #objective.failed b { color: inherit; }
     /* A TUTORIAL MISSION'S ONE LINE (ui/overlay.ts, game/rails.ts): big, low in the middle, the keys it names drawn as keys, a pip a step */
-    #railprompt { position: absolute; left: 50%; bottom: max(13%, 112px); transform: translateX(-50%) translateY(var(--railshift, 0px)); transition: transform .14s ease-out; display: none; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; z-index: 6; }
-    body.onrails #log { bottom: 30px; } body.onrails #log .rx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* (the net's rows stay under a tutorial mission's line: three of them, one line each, never up over it) */
+    #railprompt { position: absolute; left: 50%; bottom: max(13%, 112px); transform: translateX(-50%) translateY(calc(var(--railshift, 0px) + var(--railman, 0px))); transition: transform .18s ease-out; display: none; flex-direction: column; align-items: center; gap: 9px; pointer-events: none; z-index: 6; }
+    body.onrails #log { bottom: var(--raillog, 30px); transition: bottom .18s ease-out; } body.onrails #log .rx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* (the net's rows stay under a tutorial mission's line: three of them, one line each, never up over it — and when the line is at the bottom edge, clear of your men, they stand just above it: ui/railclear.ts) */
     #railprompt.on { display: flex; animation: railin .45s cubic-bezier(.2,.9,.3,1.2); }
     #railprompt .line { padding: 13px 26px 12px; background: rgba(var(--h-plate),0.78); border-radius: 4px; border-bottom: 2px solid var(--h-acc); font: 600 27px/1.25 var(--h-head); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: normal; text-align: center; text-wrap: balance; width: max-content; max-width: max(320px, calc(100vw / var(--tz, 1) - 860px)); }
     body.skyseat #railprompt .line { max-width: calc(86vw / var(--tz, 1)); }   /* (the kit panel owns the lower left 400 px: a long line breaks in two beside it; in the sky seat there is no kit panel) */
@@ -231,7 +231,7 @@
     #railcard button:hover { filter: brightness(1.1); }
     #railcard button kbd { padding: 3px 7px 2px; border-radius: 3px; background: var(--h-on); color: var(--h-acc); font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; }
     @keyframes railcardin { from { opacity: 0; } to { opacity: 1; } }
-    @keyframes railin { from { opacity: 0; transform: translateX(-50%) translateY(14px) scale(0.96); } to { opacity: 1; transform: translateX(-50%); } }
+    @keyframes railin { from { opacity: 0; transform: translateX(-50%) translateY(calc(14px + var(--railshift, 0px) + var(--railman, 0px))) scale(0.96); } to { opacity: 1; transform: translateX(-50%) translateY(calc(var(--railshift, 0px) + var(--railman, 0px))); } }   /* (the line comes in where it stands: a ring's step and the step to the bottom edge clear of your men — ui/railclear.ts — are in both ends) */
     @media (max-width: 900px) { #railprompt .line { font-size: 20px; white-space: normal; text-align: center; } #railprompt .line.watch { font-size: 17px; } #railprompt kbd { font-size: 18px; } }
     body.skyseat #equip, body.skyseat #meters { display: none !important; }
     /* a tutorial mission: the place its one line points at is a ring that beats, not a small diamond */

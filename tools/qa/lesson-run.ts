@@ -30,6 +30,7 @@
 //                                              while it is up, or before it comes up; said why in the script). Such a step is logged as gone by with the fight
 //   mode?: { unseen?: boolean; god?: boolean; moon?: boolean }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god)
 //   raises?: Record<string, string>   words raised for this lesson's run alone on the frozen stand, put back after it (a switch the level's one way on rides on)
+//                                       (PT_DESTR: '1' among them raises the destruction's one switch for the run, which no stand word reaches)
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';
@@ -101,9 +102,13 @@ export interface LessonRunOut { code: 0 | 1 | 2; why: string; lines: string[]; d
 export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<LessonRunOut> {
   const scriptFile = resolve(import.meta.dir, 'lessons', `${name}.ts`), up: string[] = [];
   if (existsSync(scriptFile) && process.env.TPS_PROFILE !== 'shipped') for (const [k, v] of Object.entries(((await import(scriptFile)).raises ?? {}) as Record<string, string>)) if (process.env[k] === undefined) { process.env[k] = v; up.push(k); }
-  try { return await playLesson(name, o); } finally { for (const k of up) delete process.env[k]; }
+  // (…and THE ONE SWITCH of the destruction goal is no word of the stand's: playthrough.ts raises it only as the program itself. A lesson that cannot be
+  //  played without it — a wall charge the squad is ordered to set — names PT_DESTR in its `raises`, and it is raised here, before the level loads, with the
+  //  page's chaos once the game stands, and put back)
+  const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`), destr = DESTRUCTION.on, loud = up.includes('PT_DESTR') && process.env.PT_DESTR === '1'; if (loud) DESTRUCTION.on = true;
+  try { return await playLesson(name, o, loud); } finally { for (const k of up) delete process.env[k]; DESTRUCTION.on = destr; }
 }
-async function playLesson(name: string, o: LessonRunOpts = {}): Promise<LessonRunOut> {
+async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Promise<LessonRunOut> {
   const lines: string[] = [], out: LessonRunOut = { code: 0, why: '', lines, steps: [], secs: 0 };
   const file = resolve(ROOT, 'levels', `${name}.json`), scriptFile = resolve(import.meta.dir, 'lessons', `${name}.ts`);
   if (!existsSync(file)) return { ...out, code: 2, why: `no levels/${name}.json` };
@@ -133,7 +138,7 @@ async function playLesson(name: string, o: LessonRunOpts = {}): Promise<LessonRu
   let W: any;
   try { W = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(file, 'utf8'))), seed }); } finally { unhush(); }
   const g = W.game, I = W.input, cam = W.cam;
-  g.godMode = !!o.god;
+  g.godMode = !!o.god; if (loud) g.tune.chaos = 0.5;   // (…and with the switch, the page's chaos: the harness stands a frozen game up at 0, where nothing breaks)
   hush(); const started = startFromQuery(g, `?levelFile=${name}.json&${String(script.query ?? '?quiet').replace(/^\?/, '')}`); unhush();
   if (!started.spec || started.why) return { ...out, code: 1, why: `the mission did not start: ${started.why ?? 'the script\'s query names no scenario'}` };
   const L = g.level.scenarios?.lesson;

@@ -1,4 +1,5 @@
 // DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line, tour caption / timeline.
+import { railClear, type Box } from './railclear';
 import { BIGSLOT } from '../game/kit';
 import { railCard, type RailCard } from './railcard';
 import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/loop.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
@@ -147,7 +148,7 @@ export class Overlay implements HudLike {
   private recEl = document.getElementById('journal'); private recKey = '';            // the session journal's REC tag (game.journal.hudText(): 'REC f=1234 · 38 KB' / why it waits) — journal.ts, F10 in main.ts; absent on a page without the element
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private skyWas = false;
-  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false;                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
+  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
   private card: RailCard;                                                          // a tutorial step's card, up in the middle with the world held (ui/railcard.ts)
   /** a tutorial mission's card is up (main.ts holds the world still under it) */
   get cardUp(): boolean { return this.card.up; }
@@ -366,6 +367,20 @@ export class Overlay implements HudLike {
         if (n) n.innerHTML = railNote; if (l) { l.classList.remove('nudge'); if (railNote) { void l.offsetWidth; l.classList.add('nudge'); } } }
       const sky = game.rails.skyOn; if (sky !== this.skyWas) { this.skyWas = sky; document.body.classList.toggle('skyseat', sky); }
       const on = game.rails.live; if (on !== this.railsWas) { this.railsWas = on; document.body.classList.toggle('onrails', on); } }   // (…and on any tutorial mission the place the line points at is marked big: index.html .objmark)
+    // …and the line stays clear of your own men (ui/railclear.ts): with the view led up the screen, or in a short window, it lay over the player and his
+    // partner. Where it lies is measured once a line (offsets are the layout's: no transform, no animation in them). With a ring up it is at home: the
+    // ring's own step of it (ui/cmdring.ts) is the only one. At the bottom edge it is where the radio's rows live, so they go up over it (`--raillog`)
+    { let s = 0; const men = rail && !this.cmdRing.ringUp ? game.rails.lineMen() : [], E = this.railEl, O = this.railRestOf;
+      if (men.length) {
+        if (O[0] !== this.railKey || O[1] !== this.railNote || O[2] !== w || O[3] !== h) { O[0] = this.railKey; O[1] = this.railNote; O[2] = w; O[3] = h;
+          const W = E.offsetWidth, H = E.offsetHeight, L = E.offsetLeft, T = E.offsetTop; this.railRest = W > 0 && H > 0 ? { l: L - W / 2, r: L + W / 2, t: T, b: T + H } : null; }
+        if (this.railRest) { const B = this.railBoxes; let n = 0;
+          for (const c of men) { const p = c.pos, hd = c.bones.head, [fx, fy, fv] = cam.project(p, w, h, 1.2), [hx, hy] = cam.project(hd ? [hd[0], hd[1] + 0.25, hd[2]] : [p[0], p[1] + 1.85, p[2]], w, h, 1.2); if (!fv) continue;
+            const hw = Math.max(18, 0.32 * Math.hypot(fx - hx, fy - hy)), q = B[n] ?? (B[n] = { l: 0, r: 0, t: 0, b: 0 }); n++; q.l = Math.min(fx, hx) - hw; q.r = Math.max(fx, hx) + hw; q.t = Math.min(fy, hy); q.b = Math.max(fy, hy) + 8; }
+          B.length = n; s = railClear(this.railRest, B, h, this.railMan > 0); } }
+      else if (!rail) O[0] = '\0';
+      if (s !== this.railMan) { this.railMan = s; E.style.setProperty?.('--railman', `${s.toFixed(0)}px`); const st = document.body.style;
+        if (s > 0 && this.railRest) st?.setProperty?.('--raillog', `${(h - this.railRest.t - s + 6).toFixed(0)}px`); else st?.removeProperty?.('--raillog'); } }
     const ot = rail ? '' : keyText(game.objectiveText());
     if (ot !== this.objKey) { this.objKey = ot; const W = 'objective ▸', cut = ot.indexOf(W);   // the line's own word is set apart as its label (a par clock in front of it is not part of it); the text read back is unchanged
       if (cut < 0) this.objEl.textContent = ot; else this.objEl.innerHTML = `${esc(ot.slice(0, cut))}<b>${W}</b>${esc(ot.slice(cut + W.length))}`;

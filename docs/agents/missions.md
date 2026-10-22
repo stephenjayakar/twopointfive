@@ -1215,6 +1215,37 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `&hour=dawn&weather=rain` on it, dusk in dust and the address untouched; with `&rowset=0&hour=dawn`, dawn in the level's own weather. No console error
   but the favicon's 404. Never seen on a GPU: what dusk in dust looks like on that level is for whoever sets the row, and no shipped row has opened
   through it.
+- **The tutorial's big line stays clear of your own men** (2026-10-22; `src/ui/railclear.ts`, `RAILS.lineClear` — a picture-only knob of the frame's
+  table, on with it, off on a recording from before the key; `rails.ts lineMen`; drawn in `ui/overlay.ts`, `index.html` `--railman` and `--raillog`).
+  The pair mission's pictures showed it: with the view led up the screen (the aim on a man ahead), or in a short window, the player and his partner stand
+  low in the middle, under the line's plate. The line now has TWO places and no more: where it lies, and the bottom edge of the picture just under that.
+  While the player (on the floor) or a living teammate is under where it lies and the bottom edge is clear of them all, it is at the bottom edge, and the
+  radio's rows, which live there, stand just above it; it comes home once nobody is within 36 px of where it lies, or when a man walks under the edge.
+  With both places taken it lies where it lies. It never follows a man and never goes up into the picture, where the step's mark and the aim are (a
+  first cut stepped up over the men in 40 px steps: it landed mid-picture and climbed ahead of a walking man). With a ring up (`ui/cmdring.ts ringUp`)
+  it is at home and the ring's own step of it (`--railshift`) is the only one. A man's box is his feet to the top of his head bone. ALSO, from the same
+  thread: a deed can name the man or the thing an order was given on (`done: { is: 'did', what: 'order:<id>@foe:<callsign>' }` or
+  `@thing:breaker|objective|device`; `lesson.ts` counted these already and its validator refused the `@`; it now refuses a callsign nobody on the floor
+  has, and a door after the `@`: a door is `on`), and `docs/level-format.md` says that `allow` and `deny` add up down the steps. CHECK `rails-check`,
+  the line "the big line stays clear of your own men" (the pure rule on made-up boxes: nobody, men elsewhere, a man under it, 240 frames of drift with
+  no move, the hold, both places taken, no room under it, a man walking the whole picture down and up: two moves each way and never above where it
+  lies; the frame's list in the sky seat and on the floor, and with the knob off; the deed's shapes, and a step that counts the order on the named man
+  only): 22 lines pass on both stands, `RAILS_BREAK=1` fails 14 on both, this one among them (through the list alone: the rule on boxes and the deed
+  have no break). ON THE REAL PAGE (headless Chromium, the software adapter, real mouse moves): `tut-solo` at 1280 by 560, the aim at the top of the
+  screen: the line at the bottom edge, 104 px down, clear of the player through 40 wandering mouse moves with no second move; `tut-pair` at 1280 by 720
+  as it opens with the aim up the screen: the partner stands under where the line lies and the line is at the edge, clear of both; the partner then put
+  at the bottom edge by hand: the line home, between the two men, and at the edge again four seconds later when he had walked back. NOT PLAYED: the
+  radio's rows over the line at the edge (none were up in either play), a ring up at the same time, four men. KNOWN: an order to a neighbouring door
+  within `RAILS.wayM` of the step's mark still brings the step's `after` line (the squad mission's reading). Never seen on a GPU.
+- **The script's `direct` walk has its own guard** (2026-10-22; `tools/qa/rails-check.ts`, the gate's line). Mission 1's new floor has one road from
+  the roadblock to the gate, so the beat is as short with the word taken off and no longer proves it. The line now also asks `lanes.ts lanePenalty` of
+  each roadblock man the script sent, with the word and without: never a price with it; without it, on a stand with covered lanes, the lanes' price
+  (670 man-frames on the page's stand; the frozen stand has no covered lanes and only shows the word reached 3 men).
+- **Mission 1's scripted player off the page's stand** (2026-10-22; `tools/qa/lessons/tut-sky.ts raises`, `tools/qa/lesson-run.ts`). `lesson-gate
+  tut-sky` was red on its frozen arm at the wall's step since before the level was rebuilt: that stand has no destruction (no wall charge to give), no
+  ring that stays up for its digits, and no teammate working a thing (the breaker's step). The player's file now raises those for its own run
+  (`PT_DESTR`, `TPS_QRING`, `TPS_QSTAY`, `TPS_WORKTHINGS`), and `lesson-run` honours `PT_DESTR` in a `raises` (the switch before the level loads, the
+  page's chaos 0.5 once the game stands, both put back): no stand word reaches the destruction's switch.
 - **The tutorial's pair mission, the truck park (`tut-pair`)** (2026-10-22; row `tut-pair` in `TUTORIAL_MISSIONS`, `kind: 'quiet'`, `squad: 1`; no switch
   of its own: it is on rails, so `RAILS.on` is its switch, `?rails=0` in the page = the yard as a plain quiet mission for two with no lesson, `TPS_RAILS=1`
   in front of a frozen run). The old Training lesson for the quiet pair, rebuilt on the frame: no new rule, the pair's own (`pairorders.ts`, `workthings.ts`,
