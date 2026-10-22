@@ -191,6 +191,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     key is the player's again). CHECK: `rails-check.ts`, the line 'the first play's notes hold', seventeen lines green on both stands and `RAILS_BREAK=1` red on
     eleven on both; the scripted player ends all fourteen steps on seeds 1 to 4 on the page's stand. `tut-page.cjs` taps, holds and reads the lines on the real
     page (software adapter). NOBODY HAS seen any of this on a GPU or felt it with a hand: whether the road now feels dangerous is a thing only a play can say.
+  - **A step's card, its arrow, and the opening card** (10-22; the maintainer playing the squad mission: "i think this needs more explanation for the systems.
+    maybe even a modal that pauses the game and explains it … and then the player can try it out", and of every tutorial mission: "the mission card at the
+    beginning should also explain everything we're teaching and the general context / some light scenario setting"; of the solo mission's wall: "instead of a
+    circle pointer, maybe we need an arrow on the ground"). They are the frame's (`RAILS.on`: `?rails=0` = no lesson, so none of them) and page-only: the
+    game says what a step's card and arrow ARE (its data), and nothing under `src/game` knows whether a card is up or was read, so no run, snapshot or digest
+    moves. (1) THE CARD: step key `explain: { title?, text }` (a heading of at most 40 characters, at most 260 of text, a new line a new paragraph, a key in
+    brackets drawn as a key; longer is a fault `checkLesson` names). `Rails.card()` is the card of the step that is up; `ui/railcard.ts` draws it in the
+    middle (`#railcard`, rules in `index.html`, over the speech bubbles) and `main.ts` holds the world still under it (one term of the loop's `frozen`,
+    `overlay.cardUp`; the quality ladder does not sample those frames), so the step's own beat plays out only after it is closed. Enter, Space or a click on
+    its block closes it, but a key only once it has been up 0.4 s (the tap that ended the last step does not put it away unread); those keys are asked of the
+    card by the game's `Input` first (`keyVeto`), so the press that closes it is no game key; every other key is the game's, and Esc is the pause card's.
+    ONCE A PAGE: a card that was closed is not shown again on that page, not after a checkpoint put back and not when the mission is started again (which
+    cards were read is kept in `railcard.ts`, outside the Game, because the checkpoint a step asks for is taken the tick its card comes up). `?cards=0`
+    leaves the cards out. NOT HELD: a headless run (it never makes one), a page a script steps (`__runFrames`: the card is drawn, and goes with Enter or its
+    step), a replay's tape (none drawn). KNOWN: a step that comes up and is done inside one drawn frame never shows its card. Mission 1 carries two ('Doors'
+    on the first stack, 'Walls' on the charge); the other missions' are their own to write. (2) THE ARROW: step key `toward: Vec3` beside `at`: the HUD's
+    ring is three chevrons from the place toward that point, turned as the view has the two (`Rails.arrow()`, `.objmark.arrow`); at the picture's edge it is
+    the ring. Drawn flat on the screen, not laid on the ground in perspective; no shipped step carries one yet (the solo mission's wall is its first use).
+    (3) THE OPENING CARD: a tutorial row's `scene` (where we are and why, a sentence or two) and `teaches` (three to five short lines, things and not keys)
+    in `scenarioList.ts TUTORIAL_MISSIONS`, drawn by the load brief (`ui/loadbrief.ts`: `.bscene` and a 'You will learn' list IN PLACE OF the job's line and
+    the three cells, so the column fits a 1280 by 720 window: measured, no overflow on any of the four; in the one-column layout under 820 px the scene runs the column's
+    whole width and the list is two abreast: at 820 by 600 Start, Controls and Back are all in the window, measured on two of the four; at 800 by 560 it
+    scrolls 16 px, less than a plain mission's card there; the opening card's line has no break word of its own); the four scenes are one light thread (a convoy gone
+    quiet, its code book, the post it names, the house that paid it). CHECK: `rails-check.ts`, two lines (the card and the arrow, with the card's page half
+    on a made-up element and clock; the opening card's data), nineteen green on both stands; `PORT=… node tools/qa/railcard-page.cjs` on the real page
+    (software adapter): the card up, the page's own loop let run under it, Enter, the checkpoint put back, the mission again, the arrow; `tut-page.cjs`
+    closes each card it meets the same way. NOBODY HAS seen a card, the arrow or the opening card on a GPU, or read them as a first-time player.
 - **The tutorial's squad mission, 'A harder fight'** (row `tut-squad`, `scenarioList.ts TUTORIAL_MISSIONS`, group `tutorial`; `tools/levels/tut-squad.ts` → `levels/tut-squad.json`, its staged
   moments `levels/tut-squad.script.ts`, its scripted player `tools/qa/lessons/tut-squad.ts`, its page run `tools/qa/tut-squad-page.cjs`). A PROTOTYPE: one street through a walled post, the four,
   eleven defenders in six rooms each its own squad (`mayLeave: false`, nobody digs in), nineteen steps. Two easy rooms on the squad's key, then four staged fights that each show ONE thing the
