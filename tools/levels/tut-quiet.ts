@@ -69,9 +69,12 @@ export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
 const HALF = Math.PI / 2;
 type P3 = [number, number, number];
 /** the places the scripted player and the lesson name (tools/qa/lessons/tut-quiet.ts imports these, so a moved wall moves the script) */
+/** well down the lane, past the first dark: being here passes the step `dark` whatever the light meter reads */
+const DEEP: [number, number, number] = [17.6, 0, 17.7];
 export const TQ = {
   start: [9.3, 0, 14.0] as P3,
-  dark: [13.6, 0, 17.5] as P3,            // the first dark: round the shop's corner, on the path
+  dark: [15.2, 0, 17.6] as P3,            // the first dark: round the shop's corner and three strides down the lane, on the path (at the corner itself the snow still
+                                          // throws the porch lamp back: the page's meter read 0.41 there against the step's line of 0.45)
   whistle: [21.5, 0, 17.8] as P3,         // where the whistle is blown: on the path, ON THE LINE the court's man walks in by (see `his`)
   his: [22.0, 0, 17.8] as P3,             // where the man who comes to the whistle ends his walk, his back to the long wall's end. He looks at where the sound
                                           // was: with the mark on his own line that is straight ahead, down the lane (0.3 m to one side of his line, as it
@@ -476,7 +479,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'crouch', line: '[C]: get low', allow: ['crouch'], done: any({ is: 'flag', flag: 'crouch' }, down(1)) },
       // (the meter's line is 0.45, not the 0.3 it was on bare earth: snow throws the porch lamp's light back, and on the page the mark — round the corner, out of
       //  the lamp's sight — read 0.28 to 0.32 where earth read under 0.2; the lamp itself is 1.0, so 0.45 still means 'out of it')
-      { id: 'dark', line: 'Get out of the light', done: any(all(near(TQ.dark, 1.6), { is: 'meter', which: 'light', below: 0.45 }), down(1)), hold: 0.4, at: mark(TQ.dark) },
+      // (…and a step never becomes impossible: a renderer whose snow reads brighter than the one this was measured on must not hold him at step 2, so a
+      //  player well down the lane has passed it whatever the meter says)
+      { id: 'dark', line: 'Get out of the light', done: any(all(near(TQ.dark, 1.6), { is: 'meter', which: 'light', below: 0.45 }), near(DEEP, 1.0), down(1)), hold: 0.4, at: mark(TQ.dark) },
       { id: 'creep', line: 'Stay in the shadow', cue: 'lane', done: any(near(TQ.whistle, 0.7), ...held, down(1)), at: mark(TQ.whistle) },
       // ---- the long wall: sound, then hands ----
       // (a beat with a clock: the whole instruction is in the line that is up BEFORE the clock starts, the mark on the place the line means now — his own
