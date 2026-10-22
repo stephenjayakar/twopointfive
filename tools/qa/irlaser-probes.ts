@@ -336,19 +336,24 @@ export const irTeam = guarded(async () => {
   const F = family('ir-team: the team\'s guns show no laser line — Sam\'s own stays, an enemy\'s is not this switch\'s, nothing but the picture moves');
   const teamIr = (g: any) => g.dynBoxes.filter((b: any) => isIr(b) && !onBore(g.player.char, b)).length;
   const menOn = (g: any) => IRM.irState(g).men.filter((m: any) => m.on).length;
-  let drawn = 0, gone = 0, back = 0, onWas = 0, onNow = 0, samWas = 0, samNow = 0, foeOn = 0, foes = 0, bare = 0; const per: string[] = [];
+  let drawn = 0, gone = 0, back = 0, onWas = 0, onNow = 0, samWas = 0, samNow = 0, foeOn = 0, foes = 0, bare = 0, redWas = 0, redNow = 0, stood = 0, stoodOff = 0; const per: string[] = [];
+  /** a man asked as the red laser's own frames have him: hunting, gun up, in nobody's arm (his goggles as they are) */
+  const hunting = (g: any, x: any) => { const st = x.state, md = x.muzzleDown, hd = x.held; x.state = 'alert'; x.muzzleDown = false; x.held = null; const on = IRM.laserOn(g, x); x.state = st; x.muzzleDown = md; x.held = hd; return on; };
   for (const id of IDS) {
-    const S = await settled(id); const { g, step } = S; g.player.nv = true; step(30);
+    stood++; const S: any = await quiet(() => stage(id, 1)); if (IR.teamOff) stoodOff++; teamDrawn();   // (the stand's own word, read off a fresh staging before it is held off)
+    const { g, step } = S; await quiet(() => g.orders.give('fallIn', g.orders.targetAt(g.player.char.pos), 'all')); step(240); g.player.nv = true; step(30);
     const a = teamIr(g), sa = samIr(g).length, ma = menOn(g);
     IR.teamOff = true; step(1); const b = teamIr(g), sb = samIr(g).length, mb = menOn(g);
     g.player.nv = false; step(30); bare += g.dynBoxes.filter((x: any) => (isIr(x) || isRed(x)) && mates(g).some((m: any) => onBore(m.char, x))).length; g.player.nv = true; step(30);
-    { const h = g.guards.find((x: any) => x.state !== 'dead' && x.team === 'hostile'); if (h) { foes++; const st = h.state, md = h.muzzleDown, hd = h.held; h.state = 'alert'; h.muzzleDown = false; h.held = null; if (IRM.laserOn(g, h)) foeOn++; h.state = st; h.muzzleDown = md; h.held = hd; } }
+    { const h = g.guards.find((x: any) => x.state !== 'dead' && x.team === 'hostile'); if (h) { foes++; if (hunting(g, h)) foeOn++; } }
+    for (const m of mates(g)) { if (hunting(g, m)) redNow++; IR.teamOff = false; if (hunting(g, m)) redWas++; IR.teamOff = true; }   // (the red laser's own frames — the guard AI's hunting states, goggles up or down: a showcase's operative, a man the AI has in them)
     IR.teamOff = false; step(1); const c = teamIr(g);
     drawn += a; gone += b; back += c; onWas += ma; onNow += mb; samWas += sa; samNow += sb; per.push(`${id} ${a}→${b}→${c}`); reset();
   }
   F.verdict(drawn > 0 && onWas > 0 && gone === 0 && onNow === 0 && bare === 0, 'with it on no teammate\'s gun draws a line: none through the tube, none bare-eyed, no man\'s laser reads on', `infrared boxes off the team's bores over ${IDS.length} scenarios, goggles down: ${drawn} with the lines drawn → ${gone} with the switch (want 0) · men whose laser is on ${onWas} → ${onNow} (want 0) · laser boxes on a teammate's bore in thirty bare-eyed frames: ${bare} (want 0)`);
   F.verdict(samWas > 0 && samNow === samWas, 'Sam\'s own line is the one it was', `infrared boxes on Sam's bore ${samWas} → ${samNow}`);
   F.verdict(back === drawn && back > 0, 'flipped in play: the lines are back inside a frame', per.join(' · '));
+  F.verdict(redWas > 0 && redNow === 0, '… nor in the red laser\'s own frames: a teammate the guard AI has hunting reads off too', `teammates asked while hunting: on ${redWas} with the lines drawn → ${redNow} with the switch (want 0)`);
   F.verdict(foes > 0 && foeOn === foes, 'an enemy is not a teammate: the hunting man\'s laser still reads on (it is drawn only where the sandbox gives him one)', `${foeOn} of ${foes} hostile men asked while hunting`);
   // a picture only: the same scripted stretch with it on and off is the same game
   { const run = async (off: boolean) => { const S: any = await quiet(() => stage(IDS[0], 1)); const { g, step } = S; const O = g.orders; IR.teamOff = off; const H = fnv(); g.player.nv = true;
@@ -359,6 +364,13 @@ export const irTeam = guarded(async () => {
       const r = `${H.hex()} · ${g.guards.filter((x: any) => x.state !== 'dead').length} of ${g.guards.length} standing at ${g.time.toFixed(2)} s`; reset(); return r; };
     const a = await run(false), b = await run(true);
     F.verdict(a === b, 'a picture only: fall in, stack, open and clear is the same game frame for frame with it on and off', `${IDS[0]}: drawn ${a} · put off ${b}`); }
+  // the stand, and a recording
+  { const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_NOTEAMLASER, want = word !== undefined ? word === '1' : shipped;
+    F.verdict(stoodOff === (want ? stood : 0), 'the stand: on as the page opens, off on the frozen stand (TPS_NOTEAMLASER has the say on either)', `${stoodOff} of ${stood} stagings stood up with it on · ${shipped ? 'the page\'s' : 'the frozen'} stand${word !== undefined ? `, TPS_NOTEAMLASER=${word}` : ''}`);
+    const J: any = await import(`${ROOT}/src/game/journal.ts`), S: any = await quiet(() => stage(IDS[0], 1)), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(S.g)));
+    IR.teamOff = true; const own = snap(), old = snap(), none = snap(); delete old.tables.IR.teamOff; delete none.tables.IR;
+    IR.teamOff = false; J.applyKnobs(S.g, own); const carried = IR.teamOff; IR.teamOff = true; J.applyKnobs(S.g, old); const before = IR.teamOff; IR.teamOff = true; J.applyKnobs(S.g, none); const bare0 = IR.teamOff;
+    F.verdict(carried === true && before === false && bare0 === false, 'a recording carries it: one made with the lines off replays with them off, one from before the key (or before the table was carried) with them drawn', `the key in the file, on: ${carried} · no key: ${before} · no IR table: ${bare0}`); reset(); }
   return F.done();
 });
 

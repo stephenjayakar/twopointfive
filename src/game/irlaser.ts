@@ -58,9 +58,9 @@ export const IR = {
    *  man's laser as it was. A picture only, like every laser here: nobody's aim, sight or decision reads it */
   teamOff: false,
 };
+const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TEAMLASER_BREAK ?? '') === '1'; } catch { return false; } })();
 /** an IR line's emissive colour: no hue, at the red laser's own luminance (Rec. 709 of [1, 0.06, 0.03]) — through the tube, which counts luminance alone, it is
  *  the line the red one was. UNTUNED BY EYE: nothing here was seen on a GPU. */
-const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TEAMLASER_BREAK ?? '') === '1'; } catch { return false; } })();
 export const IR_TINT: Vec3 = [0.2577, 0.2577, 0.2577];
 
 export type LaserBand = 'ir' | 'visible';
@@ -113,7 +113,7 @@ export function irState(g: Game): { viewer: boolean; sam: boolean; men: { gd: Gu
 }
 /** 'IR lasers off: …' / 'IR lasers: yours on · Blue One infrared · Blue Two off (goggles up) — infrared ones shown (your goggles are down)' */
 export function irSummary(g: Game): string {
-  if (!IR.on) return 'IR lasers off: the team\'s lasers are the red ones, yours has none';
+  if (!IR.on) return IR.teamOff ? 'IR lasers off: the team\'s guns show none, yours has none' : 'IR lasers off: the team\'s lasers are the red ones, yours has none';
   const S = irState(g); if (!S.men.length && !fightLive(g)) return 'IR lasers: no team on the floor';
   if (IR.teamOff) return `IR lasers: ${IR.sam ? `yours ${S.sam ? 'on' : 'off'}` : 'you carry none'} · the team's guns show none — yours ${S.viewer ? 'shown (your goggles are down)' : 'not shown (your goggles are up)'}`;
   const men = S.men.map(m => `${m.gd.callsign} ${m.on ? (m.band === 'ir' ? 'infrared' : 'red') : m.band === 'ir' ? 'off (gun lowered)' : 'off (goggles up)'}`);
