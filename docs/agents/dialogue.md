@@ -174,3 +174,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`rearwatch.ts`, 'holding · …') now reads the door's one name through `doorWords` with the words switch on — it built its own from the raw id and said
   'gen door door' of the bazaar's `gen_door`; a status row is in no digest (`digest.ts` has no `going`), so it needed no key. Headless; no row seen on a page.
 
+- **The handler's radio asides are the office night's (`WORDS.radioHome`, `dialogue.ts radioLive`).** The maintainer, off the stealth tutorial mission: "the
+  'subtle was twenty years ago' text with the handler keeps popping up -- should be confined to just the office level and honestly a bit stale anyways". Her
+  lines and his answers (`HANDLER_LINES`: the drive, the rack, the alarm, the lockdown, the lights, a body found) were written for the solo night at the office
+  and were said on every level a solo night ran on, and a mission restarted at a checkpoint heard the same pair again each time. With the key up `radioLive` is
+  false on any level that is not the office (`isOffice`): no beat sounds, a queued one is dropped, no reply. ON in the page (`?handlerall` = as before); OFF in
+  the module and on the frozen stand (`TPS_RADIOHOME=1` raises it); a `FROZEN_HOLDS` row, a `STAND_ENV` word, in the journal's `WORDS` table (a recording from
+  before the key replays with it down). Check: `tools/qa/radiohome-check.ts` (`probes.ts radiohome`, families words / dialogue; `RADIOHOME_BREAK=1` fails
+  `away`), both stands: the office hears the blackout pair, `tut-quiet` / `quiet-yard` / `lights-out` hear nothing in twelve seconds with the key up and the
+  pair with it down. One staged night a level, no seeds varied. The lines themselves are untouched (whether to rewrite or drop them is the maintainer's call).
+  NOBODY HAS SEEN IT ON A GPU; the radio strip is not drawn headless (the game's message list is what was read).
