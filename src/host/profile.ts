@@ -46,6 +46,7 @@ import { LIGHTWALL } from '../game/lighting';
 import { IRLIGHT } from '../game/irlight';
 import { AIRDUST } from '../game/airDust';
 import { WALLSNAP } from '../game/wallsnap';
+import { HANDSLOT } from '../game/handslot';
 import { GUNWALL } from '../game/gunwall';
 import { REARWATCH } from '../game/rearwatch';
 import { STACKLINE } from '../game/stackline';
@@ -239,6 +240,7 @@ export function pageSwitches(q: URLSearchParams): void {
   WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as its key does (while this is on the hold has no key on the page's board: host/keymap.ts qFree) — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
   WALLSNAP.voice = q.get('wallvoice') !== '0';   // …heard (wallsnap.ts `voice`): his back landing on a wall and his stepping off it each have a sound, the player's ears only; ?wallvoice=0 = the faint scuff alone, as it was
   WALLSNAP.slow = q.get('wallslow') !== '0';   // …and unhurried (wallsnap.ts `slow`): the take runs twice its seconds and the pose comes on and lets go at half its rate; ?wallslow=0 = the take as it was
+  HANDSLOT.on = q.get('handslot') !== '0';   // empty hands are a slot (game/handslot.ts): its key puts away whatever is up and is never the way back, a digit draws; on the page's board it is backtick, the debugger is on backslash and E is spare (host/keymap.ts SLOT) — ON in the page; ?handslot=0 = E puts away and draws, as it was
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
   GLASSREAL.drop = q.get('glassdrop') !== '0'; GLASSREAL.place = q.get('glassplace') !== '0';   // glass as buildings have it (game/glassbreak.ts GLASSREAL): a toughened sheet goes white and drops at once, no wave across it; and a pane is toughened where it reaches the floor or is a door's panel, float where it starts at a sill — ON in the page; ?glassdrop=0 = the wave, ?glassplace=0 = outside toughened and inside float, as they were
@@ -449,6 +451,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
   'WALLSNAP.voice': 'TPS_WALLVOICE=1',
   'WALLSNAP.slow': 'TPS_WALLSLOW=1',
+  'HANDSLOT.on': 'TPS_HANDSLOT=1',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'REARWATCH.on': 'TPS_REARWATCH=1',
   'STACKLINE.on': 'TPS_STACKLINE=1',
