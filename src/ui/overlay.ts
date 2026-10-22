@@ -351,14 +351,14 @@ export class Overlay implements HudLike {
     // line), a pip for every step. The small row at the top stands down while it is up, and the seat with nobody on the floor hides the rows of a man's own kit.
     const rail = game.rails.prompt();
     // (each cap in brackets is one key, asked of the key map by itself: a line of several — '[W] [A] [S] [D]' — follows a rebind of any of them)
-    const caps = (line: string) => line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? (t === '[X]' && KEYMAP.qOnly ? `Hold <kbd>${esc(keyCap('B'))}</kbd>` : `<kbd>${esc(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))}</kbd>`) : esc(keyText(t))).join('');
+    const caps = (line: string) => line.split(/(\[[^\]]+\])/).map(t => /^\[[^\]]+\]$/.test(t) ? (t === '[X]' && KEYMAP.qOnly ? `Hold <kbd>${esc(keyCap('B'))}</kbd>` : `<kbd>${esc(t === '[Ctrl]' ? camCap() : keyCap(t.slice(1, -1)))}</kbd>`) : esc(keyText(t))).join('').replace(/(<kbd>[^<]*<\/kbd>)([:,.;!?])/g, '<span class="nb">$1$2</span>');   // (…and a cap is never parted from the mark after it: a second row that begins ': behind the van')
     const railWords = rail ? caps(rail.line) : '', railNote = rail?.note ? caps(rail.note) : '';   // (a note: the words under the line after a tap the step refused)
-    { const key = rail ? `${rail.n}|${rail.of}|${railWords}` : '';
+    { const key = rail ? `${rail.n}|${rail.of}|${rail.watch ? 'w' : ''}|${railWords}` : '';
       if (key !== this.railKey) { this.railKey = key;
         if (!rail) { this.railEl.className = ''; this.railEl.innerHTML = ''; }
         else { const words = railWords;
           let pips = ''; for (let i = 1; i <= rail.of; i++) pips += `<i class="${i < rail.n ? 'done' : i === rail.n ? 'now' : ''}"></i>`;
-          this.railEl.innerHTML = `<div class="line">${words}</div><div class="note"></div><div class="pips">${pips}</div>`; this.railNote = '';
+          this.railEl.innerHTML = `<div class="line${rail.watch ? ' watch' : ''}">${words}</div><div class="note"></div><div class="pips">${pips}</div>`; this.railNote = '';
           this.railEl.className = ''; void this.railEl.offsetWidth; this.railEl.className = 'on'; } }
       this.card.update(this.cards ? game.rails.card() : null, caps);
       // (the note is its own piece: it comes and goes under a line that stays put, and the line is shaken once as it comes)
@@ -389,7 +389,7 @@ export class Overlay implements HudLike {
     const od = op ? (skySeat ? 99 : v3.distXZ(op, game.player.char.pos)) : 0;
     const floor = game.mission.stage === 'drive' && game.hover?.kind !== 'objective' ? 0.35 : 0;   // the rack has no marker of its own: keep a faint diamond on it until the cursor finds it (doors have their own dot / reticle)
     const alpha = op ? Math.max(floor, Math.min(0.9, (od - 1.6) / 1.5)) : 0;
-    if (!op || alpha < 0.03) this.objMark.style.display = 'none';
+    if (!op || alpha < 0.03 || rail?.watch) this.objMark.style.display = 'none';   // (a line that asks for nothing marks no place to press on: rails.ts prompt)
     else {
       const vp = cam.viewProj; const cw = vp[3] * op[0] + vp[7] * op[1] + vp[11] * op[2] + vp[15];
       let nx = vp[0] * op[0] + vp[4] * op[1] + vp[8] * op[2] + vp[12], ny = vp[1] * op[0] + vp[5] * op[1] + vp[9] * op[2] + vp[13];

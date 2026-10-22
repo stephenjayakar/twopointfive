@@ -211,6 +211,11 @@
     #railprompt kbd { display: inline-block; min-width: 22px; margin: 0 3px; padding: 3px 9px 2px; border-radius: 5px; background: var(--h-acc); color: var(--h-on); box-shadow: 0 3px 0 rgba(0,0,0,0.45); font: 700 24px/1.2 var(--h-head); text-align: center; text-shadow: none; position: relative; top: -2px; }
     #railprompt .note { padding: 5px 14px 4px; background: var(--h-acc); color: var(--h-on); border-radius: 4px; font: 700 17px/1.2 var(--h-head); letter-spacing: 0.03em; } #railprompt .note:empty { display: none; }   /* (a tap the step refused: what to do instead, under the line) */
     #railprompt .note kbd { min-width: 16px; padding: 1px 6px 0; margin: 0 2px; background: var(--h-on); color: var(--h-acc); font-size: 15px; box-shadow: none; top: 0; }
+    #railprompt .nb, #railcard .nb { white-space: nowrap; }
+    /* (a line with no key in it — what the men are doing, a fight to watch: smaller, no rule of the accent's under it, a dot that beats beside it) */
+    #railprompt .line.watch { font-weight: 500; font-size: 21px; border-bottom-color: rgba(var(--h-edge),0.45); opacity: 0.92; }
+    #railprompt .line.watch::before { content: ''; display: inline-block; width: 8px; height: 8px; margin: 0 12px 2px 0; border-radius: 50%; background: var(--h-acc); animation: railwatch 1.1s ease-in-out infinite; }
+    @keyframes railwatch { 0%, 100% { opacity: 0.25; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.15); } }
     #railprompt .line.nudge { animation: railnudge .32s ease-in-out; } @keyframes railnudge { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
     #railprompt .pips { display: flex; gap: 6px; } #railprompt .pips i { width: 9px; height: 4px; border-radius: 2px; background: rgba(var(--h-edge),0.35); }
     #railprompt .pips i.done { background: var(--h-acc); opacity: 0.75; } #railprompt .pips i.now { background: var(--h-hi); width: 18px; }
