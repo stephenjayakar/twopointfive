@@ -911,8 +911,34 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   presses (the habit press, the lapse, a double tap off a can, the trigger with it up, three loads, empty hands and back). NOT RUN: the tour, a
   soak, the solo night, `all-quick`, the other page checks (`keybinds-page.cjs`, `textsize-page.cjs`, `bigslot-page.cjs`, `panel-keys.cjs`,
   `lesson-page.cjs`).
-  NEVER SEEN ON A GPU: the box was looked at as stills of the real page's own markup and styles, and used by real key presses on the software
-  adapter with the picture not drawn; nobody has played it.
+  THE SETUP IS A MODE THAT POPS UP ABOVE THE COLUMN (`SLOTSETUP.pop`, 10-22, the same day, after the maintainer played the first build on the solo
+  tutorial mission: "the timer is bad. we should just have it switch a mode. and we should teach earlier that tab exits out of menus", "to make it
+  feel like the radial menu it should be something that pops up above the equipment menu rather than always taking up space"). What the paragraph
+  above says of the clock and of line two is now the build with `pop` OFF. With it on: NO CLOCK runs on the open setup (`secs` is not read) — it
+  stands until a pick, the back key, the trigger, the right button, R, a digit that is no row, the gun leaving his hands, or another list taking
+  the digits. THE BOX IS ONE LINE: the magazine's pips, what is set as plain words (the selector's position on a gun with two, the load that is up
+  and how many, LIGHT while it is on — `<key> LIGHT` where the player has put the light's row on a key), the two numbers; a reload is written
+  across the pips, which go dim, so what is set stays on the line through it; a can's box is its cans and the count. No key cap is on the box.
+  THE ROWS ARE A PANEL placed off the column's own top edge (`.hp`, nothing under it moves), drawn only while the setup is up: a row for each thing
+  the gun can have set, its digit on a warm cap, its positions beside it with the one that is up a filled plate (a load he is out of dim), and
+  the back key's cap in its corner. The tab's and the box's edges light and the slots whose digits are rows go dim, as before. SWITCH: ON in the
+  page (`?setuppop=0` = the first build: the rows on the box's second line, the clock and its line), OFF in the module and on the frozen stand,
+  raised with the rule by the one word (`TPS_SLOTSETUP=1` sets both, `host/standup.ts`; `FROZEN_HOLDS['SLOTSETUP.pop']`); in the registered
+  table, so a recording carries it, and one from the first build — no `pop` in its row — replays with the clock it had (`journal.ts applyKnobs`);
+  the debugger's 'setup ▸ a mode that pops up above the kit'. A PICK STILL SHUTS IT (`stay` off): that is not his word either way, and is the
+  same two presses every time. CHECKS: `slotsetup-check.ts` now stands the rule up as a mode — the shut line asks that six seconds on it is still
+  up and 1 is still the selector's row, and keeps the clock under `pop` off; the box line asks for no cap and the words while shut and through a
+  reload, the panel with its caps and the back key's while up, and the first build's box under `pop` off (no press drawn with the gun put away
+  or a man in his arm); the journal line replays a first-build row: 13 lines pass on both stands, `SLOTSETUP_BREAK=1` is red on 10 on each.
+  `slotsetup-page.cjs` has six lines (the panel is above the column's top edge, four seconds on it is still up; a third page with `?setuppop=0`).
+  RUN besides: PAGERUN. KNOWN: (1) the habit press has no window to run out now — a 2 pressed with the rifle already up leaves the panel
+  standing, and a 1 or a 3 pressed any time after is its row, not the pistol or the smoke can; the panel is what says so. (2) In a tutorial
+  mission the frame's gate (`rails.ts`) drops a row's digit whose slot is still locked, and a click or R it has locked does not shut the setup:
+  the solo mission's thread is letting `slotSetupTakes` keys through the gate. (3) The words on the box clip without a mark if a wide fallback
+  font is all the machine has; LIGHT is the last of them.
+  SEEN ON A GPU: the FIRST build's box, in the maintainer's own shots from the solo tutorial mission (what the notes above answer). NEVER SEEN ON
+  A GPU: the one-line box and the panel — looked at as stills of the real page's own markup and styles, and used by real key presses on the
+  software adapter with the picture not drawn; nobody has played them.
 - **Empty hands are a slot on backtick; E is spare; the debugger is on backslash** (`src/game/handslot.ts HANDSLOT {on}`, `HANDSLOT_KEY`, 10-22; the
   maintainer: "having backtick be the empty state", "when holding a guy, we can just have picking empty hands or pistol as the way to change
   equipment", "we can move the debug menu to \ or something like that", "if we have an empty equipment state, we can keep that lmb is knife, rmb is

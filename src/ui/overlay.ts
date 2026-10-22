@@ -457,7 +457,7 @@ export class Overlay implements HudLike {
     if (SLOTSETUP.on) { const k2 = key + handBoxKey(game); if (k2 !== this.equipKey) { this.equipKey = k2; document.body?.classList?.toggle('handslot', HANDSLOT.on); drawHandBox(this.equip, game, paceShow, bigAt); } handBoxTick(game); return; }   // (ui/handbox.ts: the column as one box of what is in his hands and a strip of the rest — game/slotsetup.ts's switch)
     if (key === this.equipKey) return; this.equipKey = key;
     document.body?.classList?.toggle('handslot', HANDSLOT.on);   // (index.html: the put-away mark names E only while E is the way back — game/handslot.ts)
-    const el = this.equip; el.textContent = ''; el.classList?.remove('hand', 'setup');
+    const el = this.equip; el.textContent = ''; el.classList?.remove('hand', 'setup', 'pop');
     const mk = (tag: string, cls?: string, text?: string) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = cls === 'key' ? keyCap(text) : keyText(text); return e; };   // (.key: a slot's own cap)
     const selCls = (k: SlotKind) => pl.slot === k ? (pl.holstered ? ' sel holstered' : ' sel') : '';   // the selected row lit; put away (E) it is lit-dashed with 'holstered · E' ('slung · E' on the rifle's row)
     // key strip: the selected gun's light and night vision. The right button's business is on the rows themselves — the OCP's charge closes the pistol's, the RING
