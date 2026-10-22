@@ -1104,11 +1104,12 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   it back' or a door's lone 'set a charge'; not while his hands or feet are spoken for, a sprint or a drag included). The interaction key's tap gives
   it only when it is the only thing to do: the highlight goes back to the top row when other rows come into reach with no list or ring up (walk from
   his charge to another door and the tap is that door's). It is no thing under the cursor: `ui/overlay.ts` keeps the reticle and the gun's ring his
-  while it is the highlighted row. A BARE TAP NEVER BLOWS IT WITH HIM IN ITS BLAST (`ownBlowHeld`, interact.ts, a tap being the key let go inside the
-  hold with nothing scrolled, whatever list was up for it): the row is greyed by the same test and its words say who is too close or behind; the
-  ring's wedge, or the list's row, still does: there he chose it. ('too close to your own charge' goes to the log only: the page draws no log line.)
-  Who is in the blast is each tool's own warning (`closeWords`' 'you' at a door, so only where SAMSTUN is on; `samNear` at a wall: the safety radius,
-  the far side's reach, or WALLKILL's distance). The nearest of his own goes; `game.ts` reads the act (`ownBlowAct`). THE SQUAD'S KEY (`DOORTOOLS.blowKey`, F) no longer blows it and no
+  while it is the highlighted row. A BARE TAP NEVER BLOWS IT WHERE IT WOULD KILL HIM (`ownBlowHeld`, interact.ts, a tap being the key let go inside the hold
+  with nothing scrolled, whatever list was up for it; `wallcharge.ts samFatal`: WALLKILL's own distances, at a wall charge on its side or just past
+  it, never in god mode): the row is greyed by the same test; the ring's wedge, or the list's row, still does it: there he chose it. ('too close to
+  your own charge' goes to the log only: the page draws no log line.) A DOOR'S charge never puts him down, so nothing holds its tap: the row's words
+  say who it would catch (`closeWords`: 'too close: you', 'behind the door: …') and the dazzle is his to take, as it was on F. (The solo tutorial's
+  stand-clear mark reaches inside the 1.6 m backblast at its near edge: a tap from there blows the door and dazzles him for a moment.) The nearest of his own goes; `game.ts` reads the act (`ownBlowAct`). THE SQUAD'S KEY (`DOORTOOLS.blowKey`, F) no longer blows it and no
   longer stops at it: `keyIs(c)` on each tool is the one rule (the squad's charges, and HIS while the squad works that door or wall: told to stand off
   behind it, or stacked on it, one press and it goes). The press, the pair word, the stack word, the squad block's notes and
   `floorplan.ts waitsOnKey` (the plan's bars and the key's glyph) all ask it, so with only his own charge set F goes on to whatever else it means. A
@@ -1121,16 +1122,16 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   '[F]: blow it' is the squad's charge and stays. ON in the page (`?ownblow=0` = F blows any set charge, as it did), OFF in the module and on the
   frozen stand (`FROZEN_HOLDS`, `TPS_OWNBLOW=1`, pinned in `host/standup.ts`); in the knob registry and a journal's tables (a recording from before
   the table replays with it off); a box in the debugger's player section. CHECK `bun run tools/qa/probes.ts ownblow` (family `player`, 11 lines, both
-  stands; it raises the switch, SAMSTUN and the wall's safety radius itself): the row at the door and stood off and its words, the squad's key
-  leaving it, a tap, the ring's wedge (greyed at the door, and it goes), back at the door (the highlight, the tap, no row while his hands are busy),
-  beside a row past the cap (his stuck camera: that row is the tap's), the squad's own charge still on the key, the squad behind his charge, a wall (a tap refused at its foot, then all of it stood off), off,
+  stands; it raises the switch, SAMSTUN, WALLKILL and the wall's safety radius itself): the row at the door and stood off and its words, the squad's key
+  leaving it, a tap, the ring's wedge (its words warn at the door, and it goes), back at the door (the highlight, the tap, no row while his hands are busy),
+  beside a row past the cap (his stuck camera: that row is the tap's), the squad's own charge still on the key, the squad behind his charge, a wall (greyed and a tap refused at its foot, not for a player nothing can
+  hurt, then all of it stood off), off,
   recordings. `OWNBLOW_BREAK=1` fails 8 (the two squad lines and `off` hold either way). `wordsmall`'s two charge lines ask the blown count and read
   both rules: on the stacked door the key blows it; on another door the word sends the stack in and, with this on, his charge stands. The old charge rigs (`doortools-probes.ts rig`,
   `wallcharge-probes.ts`, `outerwall-probes.ts`) and `owncharge-page.cjs` (`&ownblow=0`) HOLD THE SWITCH OFF: their lines press F on a charge set by
   hand, as they were written. The solo tutorial's scripted player (`tools/qa/lessons/tut-solo.ts`) taps the interaction key where the switch is on.
   Costs and not done: the row is a fourth row at a door, so where five rows are up the whistle has no wedge until the charge has gone; the squad's menu
-  row 'blow the charge' on a door and the debugger panel's rescue button still blow any charge; at a door with SAMSTUN off nothing reaches him, so
-  nothing holds the tap; nobody has played it, never seen on a GPU.
+  row 'blow the charge' on a door and the debugger panel's rescue button still blow any charge; nobody has played it, never seen on a GPU.
 - **A tap of his own key with nothing in reach says so; the tutorial's big line steps out from under a ring** (10-22, two claims from a play of the
   stealth tutorial on the real page). (1) `HANDRING.empty` (on and off with `on`, as `early` is: `?handring=0`, `TPS_HANDRING=1`, a `FROZEN_HOLDS` row,
   a recording from before the key replays with it off): a bare tap with no row at all files 'nothing in reach' (`EMPTY_WORD`, interact.ts at the

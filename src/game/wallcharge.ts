@@ -1167,7 +1167,9 @@ export class WallCharge {
   samSet(): SetWallCharge | null { return this.seated ? this.nearest(c => c.by === SAM_BY) : null; }
   samAt(c: SetWallCharge): Vec3 { return wallPt(c.wall, 0, 0, WALLCHARGE.height); }
   samWords(c: SetWallCharge): string { return this.closeWords(c); }
-  samNear(c: SetWallCharge): boolean { return this.tooClose(c).includes('you') || this.behind(c).includes('you') || (WALLKILL.on && flat(this.g.player.char.pos, wallPt(c.wall, 0, 0)) < WALLKILL.nearM); }
+  /** …and whether it would put HIM down where he stands (WALLKILL, blow()'s own distances: at it on its own side, or past it inside the knock's reach;
+   *  asked without the line, so it may hold a tap the blast would have spared him — the ring's wedge is still his) */
+  samFatal(c: SetWallCharge): boolean { const g = this.g, p = g.player.char.pos, W = c.wall; return WALLKILL.on && !g.godMode && flat(p, wallPt(W, 0, 0)) < (wallOff(W, p) < -thick(W) / 2 ? DOORTOOLS.knockM : WALLKILL.nearM); }
   /** player.ts buildInteractables: with the cursor on a partition and Sam at its foot, the marker and its row */
   samRows(p: Vec3, busy: boolean, row: RowFn, offer: OfferFn) {
     this.offered = null; this.marker = null; if (!wallChargeOn(this.g) || !this.seated) return; const g = this.g, pl = g.player, K = WALLCHARGE, F = DOORTOOLS.blowKey.replace('Key', ''), key = blowKeyWord(!OWNBLOW.on, F);   // (ownblow.ts: what his own hands set is his own actions' to blow)
