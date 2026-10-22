@@ -140,7 +140,10 @@ export const steps: Record<string, (B: Bot) => void> = {
     take(B, 'Digit1'); B.go([STORE_DOORWAY[0], 0, AXIS], 6);
     if (!fight(B, 5, 30, () => { B.nudge(STORE_DOORWAY, 0.3); })) B.fail('the two in the store did not drop');
   },
-  take: B => { B.go([TRUNK[0] - 0.95, 0, TRUNK[2]], 15); if (!B.verb('objective', 'drive', [TRUNK[0] - 0.4, 0.5, TRUNK[2]])) B.fail('no row to take the code book'); B.until(() => B.g.mission.stage === 'exfil', 20); },
+  // (the line asks for a TAP, and a tap does the top row: a body in arm's reach outranks the trunk there, so no man of the store may lie by it)
+  take: B => { B.go([TRUNK[0] - 0.95, 0, TRUNK[2]], 15); B.step(2);
+    const top = B.g.nearby.find((r: any) => !!r.verb); if (top && top.verb !== 'drive') B.fail(`a tap at the trunk gives '${top.kind} ▸ ${top.verb}', not the code book`);
+    if (!B.verb('objective', 'drive', [TRUNK[0] - 0.4, 0.5, TRUNK[2]])) B.fail('no row to take the code book'); B.until(() => B.g.mission.stage === 'exfil', 20); },
   rifle: B => { take(B, 'Digit2'); },
   // 2 with the rifle up steps what is on the right button: the ring, then the grenade
   // the rifle's key again steps the launcher's load; where that key opens the gun's setup instead, the load is its row 2

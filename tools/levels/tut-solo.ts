@@ -70,7 +70,9 @@ export const GUNNER: Vec3 = [22.7, 0, 6.9];
 export const SHOP_DOOR: Vec3 = [FRONT_X, 1.0, AXIS];
 export const SHOP_MAN: Vec3 = [27.7, 0, AXIS];
 export const STORE_DOORWAY: Vec3 = [31.6, 0.2, AXIS];
-export const STORE_MEN: Vec3[] = [[33.9, 0, 11.9], [33.6, 0, 16.3]];   // (neither can be seen, or shot, from outside the shop: the two doorways' cone misses both)
+/** (neither can be seen, or shot, from outside the shop: the two doorways' cone misses both. The first stands in the near corner, 3 m from where a man
+ *  stands at the trunk: a body within arm's reach outranks the trunk on the interaction key's tap, and the line there asks for a tap) */
+export const STORE_MEN: Vec3[] = [[31.4, 0, 11.5], [33.6, 0, 16.3]];
 /** the trunk the code book is in: the store's far corner, OFF the mission's line (the doorways make that line a gallery the length of the yard) */
 export const TRUNK: Vec3 = [35.3, 0, 11.5];
 /** THE LAST FIGHT IS BEHIND HIM, AND TO THE RIGHT OF THE SCREEN. The launcher's grenade arms 8 m out, and that is the edge of what the camera shows: only up the
@@ -180,7 +182,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.bulb(27.8, AXIS, 'bulb_shop', 'shop');
   grp('store.room');
   G.trunk(TRUNK[0], TRUNK[2], HALF, 'paintGreen');
-  G.crates(35.2, 14.6, 0.1, 3); G.crates(31.4, 16.8, 0.2, 2); G.drums(35.2, 16.8, 2); G.jerryCan(31.2, 11.0, 0.3);
+  G.crates(35.2, 14.6, 0.1, 3); G.crates(31.4, 16.8, 0.2, 2); G.drums(35.2, 16.8, 2); G.jerryCan(33.6, 11.0, 0.3);
   G.bulb(33.4, AXIS, 'bulb_store', 'store');
   grp('lots');
   G.generator(30.0, 7.4, 0.1); G.waterTank(32.6, 20.6);

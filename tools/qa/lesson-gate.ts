@@ -8,6 +8,7 @@
 //   bun run tools/qa/lesson-gate.ts [name …] [--jobs 2]
 // One PASS / FAIL line per level and check; exit 0 = all pass, 1 = any FAIL.
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
 const { TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const argv = process.argv.slice(2), ji = argv.indexOf('--jobs'), jn = ji >= 0 ? Number(argv[ji + 1]) : 2;
@@ -25,13 +26,17 @@ async function one(name: string) {
   const [fresh, lint] = await Promise.all([run(['tools/levels/export.ts', name, '--check']), run(['tools/qa/level-lint.ts', `levels/${name}.json`])]);
   verdict(fresh.code === 0, `${name}: the level file is its generator's`, fresh.code === 0 ? '' : last(fresh.out, /\S/).trim());
   verdict(lint.code === 0, `${name}: level-lint`, last(lint.out, /=== level-lint .*(PASS|FAIL)/).replace(/=/g, '').trim());
-  const [chk, on, off] = await Promise.all([run(['tools/qa/lesson-check.ts', name]), run(['tools/qa/lesson-run.ts', name, '--digest']), run(['tools/qa/lesson-run.ts', name, '--digest', '--nolesson'])]);
+  // (a level on the tutorial's frame — rails.ts: its lesson is not only words. Each step's cue starts a beat of the level's script and its locks drop keys, so
+  // the frame is raised for its frozen run, and the same keys with the lesson off are another run by design: that last line is the plain lessons')
+  const rails = !!JSON.parse(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')).scenarios?.lesson?.rails, fr = rails ? { TPS_RAILS: '1' } : undefined;
+  const [chk, on, off] = await Promise.all([run(['tools/qa/lesson-check.ts', name]), run(['tools/qa/lesson-run.ts', name, '--digest'], fr), rails ? Promise.resolve({ code: 0, out: '' }) : run(['tools/qa/lesson-run.ts', name, '--digest', '--nolesson'])]);
   verdict(chk.code === 0, `${name}: lesson-check`, last(chk.out, /===/).replace(/=/g, '').trim());
   verdict(on.code === 0, `${name}: the scripted player does every step and the run ends`, last(on.out, /steps ·|FAIL/).trim());
   const ship = await Promise.all(SHIPPED.map(([seed, pace]) => run(['tools/qa/lesson-run.ts', name, '--seed', String(seed), ...(pace ? ['--pace', String(pace)] : [])], { TPS_PROFILE: 'shipped' })));
   const lost = ship.map((r, i) => r.code === 0 ? '' : `seed ${SHIPPED[i][0]}${SHIPPED[i][1] ? ` at ${SHIPPED[i][1]} s a line` : ''}: ${last(r.out, /steps ·|FAIL/).trim()}`).filter(Boolean);
   verdict(!lost.length, `${name}: as the page ships, on ${SHIPPED.length} dice (two reading each line for ${PACE} s), the player gets through`, lost.length ? lost.join(' · ') : last(ship[0].out, /steps ·|FAIL/).trim());
   const d = (r: { out: string }) => /digest ([0-9a-f]{8}) over (\d+) frames/.exec(r.out);
+  if (rails) { lines.push(`  NOTE  ${name}: on the tutorial's frame the lesson drives the level's script: 'the lesson off plays the same run' is not asked`); return; }
   const a = d(on), b = d(off);
   verdict(off.code === 0 && !!a && !!b && a[1] === b[1] && a[2] === b[2], `${name}: the same keys with the lesson off play the same run`, `on ${a?.[1] ?? '—'} · off ${b?.[1] ?? '—'} over ${a?.[2] ?? '?'} frames`);
 }
