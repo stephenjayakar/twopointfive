@@ -432,7 +432,7 @@ export class Firearm {
       this.planShells(shells.times, shells.port); return true;
     }
     if (this.spare.length === 0 && !this.bottomless && !(RELOAD.lastMag && this.chamber === 0 && (this.mag ?? 0) > 0)) return false;   // (…but the last magazine seated under an empty chamber — a reload broken off before the rack — is one: it comes out, goes back in and is racked. autoreload.ts RELOAD.lastMag)
-    const best = Math.min(this.spare.length ? Math.max(...this.spare) : this.def.magCapacity, this.magRoom);
+    const best = Math.min(this.spare.length ? Math.max(...this.spare) : this.bottomless || !RELOAD.lastMag ? this.def.magCapacity : this.mag ?? 0, this.magRoom);   // (RELOAD.lastMag, nothing spare on a row that counts its magazines = the last-magazine case just above: the one in the gun goes back in, and nothing is fed)
     if (this.mag !== null && this.mag >= best && this.chamber === 1) return false;   // nothing to gain
     this.reloadT = 0; this.stage = 0; this.ev = ev; this.beat = beat ?? null; this.cues = cues && cues.length ? cues : null; this.cueI = 0;
     this.feedN = Math.max(0, best - (this.mag ?? 0)); this.feedPort = this.chamber === 0 && !this.mag;

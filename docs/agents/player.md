@@ -29,8 +29,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `FROZEN_HOLDS` row, in `RELOAD`'s registered table, and a journal from before the key replays with it off). The flaw: a reload of the last magazine broken off between
   'magazine in' and the rack (a sprint, a holster, a takedown: a half-second window on the plain row) left a full magazine under an empty chamber with nothing spare;
   `Firearm.startReload` refused it for want of a spare ('no spare magazines' over a full gun), the dry-gun rule skipped it for the same reason, and the gun never fired
-  again. On: `startReload` takes that one state (the magazine comes out to the spares, goes back in, the handle is racked: mag 29, a round up), and `autoReloadDue` /
-  `autoReloads` count it as a reload to come. Any Firearm, so an AI man's gun in that state too; no man was found who reaches it. Check: `tools/qa/autoreload-check.ts`
+  again. On: `startReload` takes that one state (the magazine comes out to the spares, goes back in, the handle is racked: mag 29, a round up), and `autoReloadDue` counts it
+  as a reload to come (with the dry-gun rule off, a click there still says 'reloading…' until R is pressed: player.ts's own line, not touched). Any Firearm, so an AI man's gun in that state too; no man was found who reaches it. Check: `tools/qa/autoreload-check.ts`
   lines (5c) and (5d) (`probes.ts autoreload`), `LASTMAG_BREAK=1` must fail (5c); run on both stands. No Tab row. Measured: nothing; the state was made by the check's
   own sprint. Nobody has played it, and it has never been seen on a GPU.
 - **The player and his own side** (`src/game/friends.ts FRIENDS {noSnap, lowReady, reachM 8, pastM, clearM, upSecs 0.25, quietS 5}`; two `FROZEN_HOLDS` rows, in the knob registry and a

@@ -33,4 +33,4 @@ export function autoReloadDue(g: Game, pl: Player, gun: Firearm): boolean {
 }
 
 /** the words for a gun that has just gone dry / been clicked dry: with the switch on and a magazine left the reload is coming and R is not asked for */
-export function autoReloads(g: Game, gun: Firearm): boolean { return RELOAD.auto && !g.touring && !g.puppet && (gun.spare.length > 0 || (RELOAD.lastMag && gun.chamber === 0 && (gun.mag ?? 0) > 0)); }
+export function autoReloads(g: Game, gun: Firearm): boolean { return RELOAD.auto && !g.touring && !g.puppet && gun.spare.length > 0; }
