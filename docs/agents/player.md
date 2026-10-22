@@ -961,7 +961,10 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   highlight on the top row. The ring opens already armed (the hold was the wait: a flick the moment it is up counts). The held list and its
   cancel row do not exist under the rule; the wheel is his pace, also under a standing ring, unless the key is down. A STANDING RING IS NOT
   "HANDS BUSY": `Player.choosing` (the selector up and not standing free) is what the slot key, the wall press and the hold swap ask,
-  `interact.ts handsBusy` what the squad's key asks (`orders.backFree`), and a quick save is allowed under it (savestate.ts). A save kept in MEMORY
+  `interact.ts handsBusy` what the squad's key asks (`orders.backFree`), and a quick save is allowed under it (savestate.ts). A DIGIT INSIDE THE HOLD
+  (`HANDRING.early`, on and off with `on`: the same address word and stand word; a recording from before the key replays with it off): the key
+  down and the ring not yet up, a wedge's digit puts the ring up at once and is that wedge, so a quick "E, 2" is never the rifle or the gun's
+  setup (the squad ring's owner found the same window on Q). A save kept in MEMORY
   (a team on the floor) is the whole game as it stood, the ring included: `Checkpoints.loadMem` puts a standing ring away after the snapshot is put
   back, as a file's load finds none (found by the quick saves' owner: without it his first click after such a load did the lit wedge). This is the press rule agreed with the squad ring's owner (`CMDRING.stay`, `ringLatch` in cmdring.ts when that lands: this file
   holds its own copy of the same rule until then, and should read the shared one after).
@@ -986,7 +989,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   up.
   OLDER CHECKS: selector-probes, grab-probes, tabback-check and cmdring-check read the list as it was built and hold the rule off after standing
   up (their note says so), as grab-probes already holds the close-in mode off.
-  CHECK: `bun run tools/qa/probes.ts handring` (family `player`), 13 lines, both stands; `HANDRING_BREAK=1` fails 12 (the tap's line passes either
+  CHECK: `bun run tools/qa/probes.ts handring` (family `player`), 14 lines, both stands; `HANDRING_BREAK=1` fails 13 (the tap's line passes either
   way: a tap is the tap it was). Read: the leaf after a tap, the ring's view before and after the hold, standing after a walk, a digit, the
   whistle's digit and a click before the breath is back, a click with the rounds counted, the cursor out the moment the ring is up and the key
   let go, the key again, right click, Tab, the list and highlight unchanged, off, the board, the lesson's line, a recording, and under a standing ring the wheel as his
