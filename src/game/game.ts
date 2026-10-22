@@ -111,7 +111,7 @@ import type { StickyCam } from './stickycam';
 import { updateStickies, stickyBoxes, takeCam } from './stickycam';
 import { lightSwitchTick, lightSwitchReset, switchAct, switchBoxes } from './lightswitch';
 import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
-import { throwCount, toggleDrag, teleportPlayer, startPicking, startWand, startKick, settlePlayer, startGrab, freeHeld, settleHeld, takeKey, pickHover, EASE_RATE, EASE_MAX } from './player';
+import { throwCount, toggleDrag, teleportPlayer, startPicking, startWand, startKick, settlePlayer, settleSpot, startGrab, freeHeld, settleHeld, takeKey, pickHover, EASE_RATE, EASE_MAX } from './player';
 import type { WallHold, Hold } from './player';
 import { updateInteract, escapeInteract, backableInteract } from './interact';
 import { ownBlowAct } from './ownblow';
@@ -1231,6 +1231,7 @@ export class Game {
     this.col.dynamicBoxes = this.doors.leafBoxes();
     this.doors.man = who => doorMan(this, who);   // (doorthrow.ts: whose man, folded, braced, calm)
     this.doors.standable = (x, z, r) => { const q: Vec3 = [x, 0, z]; this.col.collideCircle(q, Math.min(r, 0.3), 0.2, 1.5, 1); return Math.hypot(q[0] - x, q[2] - z) < 0.02 && !this.col.clampToWorld(q, 0.3); };   // (doors.ts DOORTHROW: floor for a body a leaf would carry there — the walkers' own radius against the statics)
+    this.doors.settle = p => settleSpot(this, p);   // (doors.ts DOORWAY.solid: where the statics let a man a pulled leaf moved stand)
     this.doors.blaster = (at, tearM, who) => doorBlast(this, at, tearM, who);   // the doors' side of a blast (doorblast.ts): a leaf inside its reach comes off its hinges
     // …and where the build carries the destruction goal's change feed, a torn leaf is a row in it (kind 'door': ONE feed of what the level no longer is)
     this.doors.onTorn((d, who, cause) => {
@@ -1932,7 +1933,7 @@ export class Game {
 
   private updateDoors(dt: number, input: Input) {
     const pl = this.player; const pc = pl.char;
-    const own: DoorContact | null = pl.down ? null : { pos: pc.pos, radius: 0.34, bash: pl.sprinting, who: PLAYER_ID, quiet: pl.crouch, keys: pl.keys, run: sprintDoorRun(this, pl) };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
+    const own: DoorContact | null = pl.down ? null : { pos: pc.pos, radius: 0.34, bash: pl.sprinting, who: PLAYER_ID, quiet: pl.crouch, keys: pl.keys, run: sprintDoorRun(this, pl), solid: DOORWAY.solid && DOORWAY.oneWay && !this.puppet && !this.touring, vel: pc.vel };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
     const contacts: DoorContact[] = own ? [own] : [];
     for (const g of this.guards) if (g.state !== 'dead') contacts.push({ pos: g.char.pos, radius: 0.34, bash: g.state === 'alert' && loadGait(this, g, g.speed) > 2.2, who: g.char.id, quiet: silentEase(this, g), key: true, hand: handPress(this, g), round: g.speed > ROUND_PACE && roundsLeaves(g) });   // staff carry keys: locked doors open to them and lock again behind them (closer + latch) — every man, whatever Sam has had off his belt (Guard.keys is what he can hand over, not what the leaves ask)
     const woundedAt: { g: Guard; at: Vec3; x: number; z: number }[] = [];   // (a copy of where his BODY is — the hips of a man on his back lie a stride behind his feet — so what a leaf does to it can be put through the walls before it is his: below, after doors.update)

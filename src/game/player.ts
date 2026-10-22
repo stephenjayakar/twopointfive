@@ -136,6 +136,8 @@ const DOOR_R = 0.3, DOOR_FIT = { lat: [0.12, 0.5] as const, out: [0.55, 1.0] as 
 /** his collision circle's radius against the statics with his centre at `p` (the checks' own: tools/qa — a watcher that holds him to BODY_R reads the air a
  *  door frame gives him as a wall he is inside) */
 export const playerBodyR = (g: Game, p: Vec3): number => bodyR(g, p);
+/** the player's own push-out of the statics for a spot he is not standing on yet (doors.ts DOORWAY.solid: where a leaf may put him — Doors.settle) */
+export function settleSpot(g: Game, p: Vec3) { const y1 = g.player.crouch ? 1.0 : 1.7; for (let k = 0; k < 4; k++) { g.col.collideCircle(p, bodyR(g, p), 0.2, y1, 6); if (!g.col.clampToWorld(p, BODY_R)) break; } }
 function bodyR(g: Game, p: Vec3): number {
   let k = 0;
   for (const d of g.doors.list) {
