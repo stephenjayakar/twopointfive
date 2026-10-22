@@ -372,7 +372,7 @@ export function spawnTarget(g: Game, def: { name: string; pos: Vec3; face: numbe
   const pts = def.points?.length ? def.points : [def.pos];
   const gd = makeCivilian(g, { name: def.name, kind: 'worker', tint: def.tint, tint2: def.tint2, points: pts.map(p => v3.copy(p)), wait: pts.map((_, i) => def.wait?.[i] ?? 30), face: pts.map(() => def.face) }, g.civilians.length);
   g.civilians.push(gd);
-  gd.civ!.label = 'the man you came for';
+  gd.civ!.label = 'man you came for';   // (no article: every reader writes 'the ' in front of the label)
   return gd;
 }
 /** he gives up where he stands, to the man at `to`: the complied cower (hands on his head) with no end to it — gunfire leaves him there (toAlarmed's own rule) */
