@@ -160,7 +160,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     //  by at once, and the one left up is before 'wall', the ring not among what is unlocked)
     R = await setStep(0); floor = await onFloor(); await holdQ(); A = await more();
     check(R.i < 8 && !/\bring\b/.test(R.sum) && floor && !A.menu && !A.ring, "before the menu's step the squad's key kept down puts no ring up", `step ${R.i + 1} '${R.id}' · floor under the cursor ${floor} · ${JSON.stringify(A)} · ${R.sum}`); }
-  check(['A doorway he holds', "The squad's ring", 'Flanked'].every(h => cards.some(c => c.h === h && c.closed && c.p.length > 40)), 'the cards of the steps this run came to were each up once with their words and closed', cards.map(c => `"${c.h}": ${c.p}${c.closed ? '' : ' (STILL UP)'}`).join(' · ') || 'none');
+  check(['Two ways in', 'A doorway he holds', "The squad's ring", 'Flanked'].every(h => cards.some(c => c.h === h && c.closed && c.p.length > 40)), 'the cards of the steps this run came to were each up once with their words and closed', cards.map(c => `"${c.h}": ${c.p}${c.closed ? '' : ' (STILL UP)'}`).join(' · ') || 'none');
   check(!errors.length, 'no page error and no console error', errors.length ? errors.slice(0, 6).join('\n    ') : 'none');
   console.log(`pictures: ${OUT}`);
   await browser.close();

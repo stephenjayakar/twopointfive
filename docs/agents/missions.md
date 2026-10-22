@@ -231,8 +231,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     window's sight and the window's line had nobody to shoot: a slow reader's run, twice, the first man shot through the glass from far off): they were the game's own from the first shot of the first room, one stands a step from the
     street window, the walk round to the nest's open side passes that window a metre off, and an unprotected scripted player was shot through it on one die of eight and tied
     up in a duel there on another. FALL IN IS ITS OWN STEP ('follow': '[X], [3]: they follow', then 'wall': 'To the wall's end'), and it and 'back' carry the frame's `noTap`
-    (the maintainer, having tapped the key at the old one line and sent the four to the ring: "we should block quick Q here when we want to teach something else"). SIX CARDS
+    (the maintainer, having tapped the key at the old one line and sent the four to the ring: "we should block quick Q here when we want to teach something else"). SEVEN CARDS
     (the frame's `explain`; `CARDS` in the generator; his: "i think this needs more explanation for the systems. maybe even a modal that pauses the game and explains it"): the
+    two ways in on 'go-hut' (his, paused on that line with a bang thrown: "we should say that hitting Q (vs F) on a stacked squad has them more aggressively take a room or something. or should
+    it always be throwing a bang? what if they don't have any more bangs?"; the card says what the code does today, as the squad's own thread read it in `autopilot.ts autoEntries` and
+    `doortools.ts fromStack`: the squad's key again lets them choose, a bang first when the room is held or unknown and one is to spare; the word's key is straight in and never a bang;
+    the line is now '[B] again: they choose how, and go in'; whether those rules stay is his open call, so expect a re-word), the
     held doorway on 'side', the ring on 'follow', suppression on 'gun', grenades on 'frag', the window on 'window' (his own sentence), the flank on 'back'. A card is for a
     system, never a key. The row's opening card (`scenarioList.ts teaches`) says 'A doorway a man holds: go round'. MEASURED on the page's stand, the unprotected scripted player (`lesson-run --plain`): dice 1 to 8 all finish; reading each line for 6 s (`--pace 6`), dice 2, 3, 5 and 7 all finish; the gate passes (the frozen stand with `TPS_RAILS=1`, and four dice of the page's). Before the hall's men knelt,
     the same slow reader failed on two dice of two ('the hall was not cleared'), and with both kneeling the frozen stand's run failed the same way: measure both stands and a slow reader after any change there.
