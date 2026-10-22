@@ -154,6 +154,7 @@ export async function createEditorApp(H: EditorAppHost): Promise<EditorApp> {
     const t = e.target; if (t instanceof HTMLInputElement || t instanceof HTMLSelectElement || (t instanceof HTMLTextAreaElement && t.getAttribute('aria-label') !== 'game input')) return;   // (Input's off-screen sink when the page is framed is not a typing target)
     const mod = e.metaKey || e.ctrlKey; if (!mod) return;
     const k = e.key.toLowerCase();
+    if (tools.drag && (k === 'z' || k === 'y')) { e.preventDefault(); e.stopPropagation(); tools.cancel(); ed.msg('cancelled'); return; }   // (mid-drag the chord is Esc: the drag holds a ref the undo would take away, and its next frame threw)
     if (k === 'z') { e.preventDefault(); e.stopPropagation(); if (e.shiftKey) ed.redo(); else ed.undo(); }
     else if (k === 'y') { e.preventDefault(); e.stopPropagation(); ed.redo(); }
     else if (k === 'd') { e.preventDefault(); e.stopPropagation(); if (ed.sel.size) ed.duplicate(ed.selection()); }

@@ -76,6 +76,8 @@ export class Tools {
   // ---------------------------------------------------------------- per frame
   update(p: Pointer, dt: number) {
     const view = this.view; void dt;
+    { const d = this.drag as { kind: string; ref?: string; refs?: string[]; tool?: string; id?: string | null } | null;   // (a drag whose thing went from under it — an undo or a delete by the menu or the API — is dropped where it is: moving a thing that is gone threw, and a throw here stops the page's loop)
+      if (d && ((d.ref !== undefined && !this.ed.exists(d.ref)) || d.refs?.some(r => !this.ed.exists(r)) || (d.kind === 'footprint' && d.id && !this.ed.doc.get(d.tool === 'box' ? 'boxes' : 'volumes', d.id)))) { this.drag = null; this.downAt = null; } }
     const mx = p.mouseX, my = p.mouseY; const dmx = mx - this.lastMX, dmy = my - this.lastMY; this.lastMX = mx; this.lastMY = my;
     const lmb = (p.buttons & 1) !== 0, mmb = (p.buttons & 2) !== 0, rmb = (p.buttons & 4) !== 0;
     const lHit = (p.clicked & 1) !== 0; const released = this.wasDown && !lmb; this.wasDown = lmb;
@@ -283,7 +285,7 @@ export class Tools {
     if (hit('KeyO')) { ed.set('grid', !ed.settings.grid); }
     if (hit('KeyH')) { ed.set('showHidden', !ed.settings.showHidden); ed.msg(ed.settings.showHidden ? 'hidden (NoPrimary) boxes shown + pickable' : 'hidden boxes as the game camera sees them'); }
     if (hit('KeyN')) { if (ed.data.daylight) { ed.set('day', !ed.settings.day); ed.msg(ed.settings.day ? 'daylight variant (data.daylight)' : 'night'); } else ed.msg('this level has no daylight variant'); }
-    if ((hit('Delete') || hit('Backspace')) && ed.sel.size) { try { const n = ed.sel.size; ed.delete(ed.selection()); ed.msg(`deleted ${n}`); } catch (e) { ed.msg(String((e as Error).message)); } }
+    if ((hit('Delete') || hit('Backspace')) && ed.sel.size && !this.drag) { try { const n = ed.sel.size; ed.delete(ed.selection()); ed.msg(`deleted ${n}`); } catch (e) { ed.msg(String((e as Error).message)); } }   // (not mid-drag: the drag's next frame would move a thing that is gone)
     const fine = this.mod(p, 'shift'); const step = fine ? Math.max(0.01, ed.settings.snapStep / 5) : ed.settings.snapStep; const alt = this.mod(p, 'alt');
     if (ed.sel.size) {
       const { fwd, right } = this.view.cam.planarBasis();   // arrows move in SCREEN terms: up = away from the camera, snapped to the dominant world axis
