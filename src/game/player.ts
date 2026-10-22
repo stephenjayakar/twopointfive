@@ -79,6 +79,7 @@ import { simRandom } from '../math/dice';   // the simulation's die (math/dice.t
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
 import { STEALTHPOSE } from './stealthpose';
 import { stealthFeed } from './stealthfeed';   // Sam's hands-empty crouch poses (stealthpose.ts): what the animator is told each frame
+import { planKnee } from './planmode';   // (called inside the update only)
 import { takeBegin, takeFall, takeLower, takeKill, takeBeats, TAKEDOWN } from './takedown';   // a takedown's own move and the fall it leaves (takedown.ts): poses only
 
 /** the player's movement circle: wider than the body so arms / gun don't clip into walls */
@@ -561,6 +562,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   const walled = (stunned && (rifleAim || gunUp)) || (!pl.wall && gunWalled(g, c, rifleAim || gunUp ? 'aim' : null, lockAt, dt, false, !!lockAt)) || offFriend !== false;   // (stunned with a gun up: it comes down as at a wall)   // (the pistol in the hand, aimed or carried: a click is about to bring it up)
   if (walled) { c.anim.upper = 'none'; if (rifleAim) armRifle(g, true, 'lowLong'); if (input.lmbHit()) g.msg(stunned ? 'stunned — the gun will not come up yet' : offFriend !== false ? `gun down — ${offFriend ? offFriend.callsign : 'a friend'} is in your line` : 'no room to bring the gun up'); }
   gunWallStance(c, walled && !rifleAim);
+  if (g.orders && planKnee(g.orders)) { c.anim.upper = 'none'; if (rifleAim) armRifle(g, true, 'lowLong'); c.anim.radio(0.9); }   // (planmode.ts planKnee: plan mode up, he is on a knee at the radio — the gun low, his left hand at the handset, asked again each tick so it stays; nothing with its switch off)
   // --- slot actions
   if (pl.wall && WALLSNAP.on) wallSnapPose(g, dt, aiming);   // (the take's feet, the landing, the stack's stance and carriage: wallsnap.ts)
   else if (pl.wall && pl.wall.takeT !== undefined) { c.anim.wallTake = -1; c.anim.wallHit = 0; c.anim.stackPress = 0; c.anim.stanceIn = 0; }   // (the switch thrown off under a hold it took: its channels to rest, the hold goes on as the old one)

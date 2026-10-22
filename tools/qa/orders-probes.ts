@@ -35,6 +35,7 @@ import { standUp, ROOT } from './headless.ts';
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { ORDERS, doorIdWords } = await import(`${ROOT}/src/game/orders.ts`);   // (doorIdWords: a door's name as the squad says it — it follows the dialogue pass, so the expected words do too)
 const { COVER } = await import(`${ROOT}/src/game/cover.ts`);
+const { WORDS } = await import(`${ROOT}/src/game/words.ts`);
 const { DOORSTAY, DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 const { FRIENDS } = await import(`${ROOT}/src/game/friends.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
@@ -67,6 +68,7 @@ async function rig(seed: number, o: { nb?: boolean; quiet?: boolean; knobs?: Rec
   Object.assign(NIGHTBREACH, NB_DEFAULTS, { blindFire: false }, o.knobs ?? {});
   Math.random = seeded(seed);
   const W: any = await standUp(); const game = W.game, NB = game.nightBreach, O = game.orders, input = W.input;
+  (await import(`${ROOT}/src/game/cmdring.ts`)).CMDRING.only = false;   // (the menu's own keys and the middle button, as these lines were written: `probes.ts qonly` has the page's, where the ring carries every order)
   const why = o.nb === false ? null : NB.start();
   const R = { W, game, NB, O, input, why, quiet: o.quiet !== false, samHit: false, said: [] as { who: string; text: string; t: number }[],
     /** run before every frame (Sam's walk) */
@@ -305,7 +307,7 @@ export const ordersCover = guarded(async () => {
     return ack;
   };
   const tA = g.time;
-  const ackA = cover('cover that way (a floor point behind them, to the west)', WEST, 2, /^covering west$/, tA);
+  const ackA = cover('cover that way (a floor point behind them, to the west)', WEST, 2, WORDS.on ? /^covering (?!.*\b(north|south|east|west)\b)\S/ : /^covering west$/, tA);   // (the dialogue pass on: the place by its name or 'that way', never a bearing — a row on the HUD has no compass)
   const tB = g.time;
   const W = R.door('breakroom_w');
   const ackB = cover('cover this door (the break room\'s west door)', W.frameCentre, 2, new RegExp(`^covering ${doorIdWords('breakroom_w')}$`), tB);
