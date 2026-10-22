@@ -2851,6 +2851,7 @@ if (on('frag-theirs', 'frag', 'all')) await run('frag-theirs', async () => (awai
 if (on('frag-mates', 'frag', 'all')) await run('frag-mates', async () => (await import('./frag-probes.ts')).fragMates());   // the rest guess counts loose furniture; no leg ends in a mate's corner (FRAG.restProps / fleeApart; FRAGMATES_BREAK=1 must fail)
 if (on('frag-fleedoor', 'frag', 'all')) await run('frag-fleedoor', async () => (await import('./frag-probes.ts')).fragFleeDoor());   // caught by a grenade with no cover, a man leaves by a doorway that already stands open (FRAG.fleeDoor; FLEEDOOR_BREAK=1 must fail)
 if (on('frag-wallflee', 'frag', 'all')) await run('frag-wallflee', async () => (await import('./frag-probes.ts')).fragWallFlee());   // a wall the burst will open is no cover to a man getting off it (FRAG.wallFlee; WALLFLEE_BREAK=1 must fail)
+if (on('frag-down', 'frag', 'all')) await run('frag-down', async () => (await import('./frag-probes.ts')).fragDown());   // a burst kills a man who is down and breathing — out cold or wounded (FRAG.downKill; DOWNKILL_BREAK=1 must fail)
 // BURSTS × GLASS (tools/qa/burstglass-probes.ts — a frag's or a 40 mm round's burst beside a window: the glass takes it by the fracture model's rules FIRST, the men
 // are judged through what that left; rebuild/gear-and-glass/bursts.md). Stands the glass parts up itself; BURSTGLASS_BASE=1 runs it on the base build's numbers = red.
 for (const [name, fn] of [['burst-whole', 'burstWhole'], ['burst-breaks', 'burstBreaks'], ['burst-open', 'burstOpen'], ['burst-theirs', 'burstTheirs'], ['burst-off', 'burstOff'], ['burst-red', 'burstRed']] as const)
@@ -3116,6 +3117,7 @@ if (on('ir-draw', 'irlaser', 'all')) await run('ir-draw', async () => (await imp
 if (on('ir-sam', 'irlaser', 'all')) await run('ir-sam', async () => (await import('./irlaser-probes.ts')).irSam());
 if (on('ir-unseen', 'irlaser', 'all')) await run('ir-unseen', async () => (await import('./irlaser-probes.ts')).irUnseen());
 if (on('ir-off', 'irlaser', 'all')) await run('ir-off', async () => (await import('./irlaser-probes.ts')).irOff());
+if (on('ir-team', 'irlaser', 'all')) await run('ir-team', async () => (await import('./irlaser-probes.ts')).irTeam());   // the team's guns show no laser line (IR.teamOff; TEAMLASER_BREAK=1 must fail)
 // ---------------------------------------------------------------- an infrared light on the goggles: a dark room shows through night vision, to you and a goggled teammate and to nobody else (irlight-probes.ts; game/irlight.ts — the frozen stand holds it off)
 if (on('irl-list', 'irlight', 'all')) await run('irl-list', async () => (await import('./irlight-probes.ts')).irlList());
 if (on('irl-unseen', 'irlight', 'all')) await run('irl-unseen', async () => (await import('./irlight-probes.ts')).irlUnseen());

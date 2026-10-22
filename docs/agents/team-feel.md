@@ -238,6 +238,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   camera and the light list identically, then Sam LIT in front of an enemy with his laser on / off: awareness rises the same — and in front of a camera: with a
   team on the floor its integrator stays 0 either way (devices.ts `sensing` is off under every team scenario), alone in the office it fills and no laser exists ·
   ir-off; `IR_BREAK=1 … ir-draw` must fail). NOT built: enemies with night vision, a laser's dot as something heard of (the IR ILLUMINATOR is the next bullet).
+- **The team's guns show no laser line** (`IR.teamOff`, `src/game/irlaser.ts laserOn`; 10-22, the maintainer after the first tutorial mission, played
+  with the goggles down: "why do we have the lasers for the guys? i think we can disable"). ON in the page (`?teamlasers` puts the lines back; Tab ▸
+  Sandbox ▸ Team feel ▸ 'IR lasers ▸ none on the team's guns'), OFF in the module and on the frozen stand (`TPS_NOTEAMLASER=1` raises it;
+  `FROZEN_HOLDS` row; the journal replays a recording from before the key with the lines drawn). With it on no man on the player's side hands the
+  renderer a laser box, infrared or red, hunting or not; Sam's own infrared line (`IR.sam`) is left, since it is how the player sees his bore through
+  the tube, and an enemy's sandbox laser (`LASER.enemy`) is not this switch's. Everything in the bullet above still holds underneath it (the band, the
+  thumb off the switch, who sees infrared): the switch only keeps the boxes from being made. A PICTURE ONLY, as every laser here is: no tally moves.
+  Check: `probes.ts ir-team` (8 lines; `TEAMLASER_BREAK=1` fails 3, on both stands): over the 21 scenarios with the goggles down the team's infrared
+  boxes go 52 → 0 on the frozen stand and 56 → 0 on the page's, men whose laser reads on 28 → 0 and 30 → 0, a teammate asked in the red laser's own
+  frames (hunting) 74 → 0, Sam's boxes unchanged (42 and 39), a hostile man asked while hunting still on, the lines back inside a frame when it is
+  flipped, a scripted fall in, stack, open and clear the same game frame for frame with it on and off, the stand's own word on a fresh staging, and
+  a recording (the `IR` table is carried from this change on, the last name in `JOURNAL_KNOBS`: a file with the key keeps it, a file from before
+  the key or before the table replays with the lines drawn). The row is in `teamfeel.ts KEPT.IR` (a row not listed there is never built). The older
+  laser probes and `replayfog` hold it off after each staging (they read the lines drawn). A tutorial mission's own clause (`g.rails?.noLasers()`)
+  sits beside it in `laserOn` and is not this switch. `ir-draw` was red before this change and is as red after it (block-four, block-squads,
+  warehouse-four, and snatch-four on the page's stand: the same lines on the untouched build). Never seen on a GPU; nobody has played it. Open with
+  the maintainer: whether Sam's own line should go too.
 - **An IR light on the goggles** (`src/game/irlight.ts`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
   model IR lights on the nvg so even totally dark rooms are visible. and we can assume enemies never have nvg"). SWITCH `IRLIGHT.on`: ON in the page
   (`?noirlight` puts it off), OFF in the module and on the frozen stand (`TPS_IRLIGHT=1` raises it; `FROZEN_HOLDS`, standup pin, standEnv); registered in

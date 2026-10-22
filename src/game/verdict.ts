@@ -36,7 +36,8 @@ export const VERDICT = {
   /** a mission of the stealth game's kind that leans LOUD is not graded as a sneak (`loudRow` below): its end card, the copied line and the two lines the
    *  mission says at its end carry no rating word, no score out of a hundred, no badges, and the sneak's numbers on the card stand untoned. ON in the page
    *  (`?loudcard=0` = the stealth game's rating on every card it stands on, as it was), off here and on the frozen stand (TPS_LOUDCARD=1). Reads only: the
-   *  run is the same either way, and no recording carries it (a replay words its lines by the page's own key). */
+   *  run is the same either way. A recording carries it (knobs.ts JOURNAL_KNOBS: the mission's two end lines are worded by it), and one from before the
+   *  key replays with it off. */
   loudCard: false,
   /** seconds between a squad mission's end and its card (the stealth mission's own card keeps its own beat) */
   winSecs: 2.0, lossSecs: 2.6,

@@ -349,7 +349,7 @@ export function bodyHit(c: Character, ro: Vec3, rd: Vec3, tmax: number, contact:
  *  `line`: the log line if the default for `how` does not say it (the pistol-whip is 'struck' like the takedown, but not a takedown).
  *  TODO (docs/internal/grab-interrogate-design.md §6, item 9b): a breathing man could come round after a few minutes — there is no way back from a ragdoll today
  *  (Character.ragdollize is one-way, no get-up clip), so nobody wakes; and a body on the floor cannot be shot (Character.rayHit skips the fallen), so a knockout
- *  cannot be finished off either. */
+ *  cannot be finished off by a round either (a burst can: frag.ts FRAG.downKill). */
 export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: DownKind = quiet ? 'struck' : 'shot', by: DownBy = 'player', line?: string, zone?: 'side' | 'leg') {
   // (below: state checks come first everywhere, but a corpse should not carry choreography around)
   if (gd.civ) { civilianDown(g, gd, dir, quiet, how, by, line); return; }   // a CIVILIAN (the cleaner, the late worker — every path that puts a 'Guard' down comes through here: the round, the cross, the choke, the whip, the ring): her own record, her own price on the card, nothing in her hands to fall (civilians.ts)

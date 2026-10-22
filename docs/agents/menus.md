@@ -1476,7 +1476,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dropped unstarted at the boot's end on a muted test rig (`?mute`), for a show, for a mission whose start was refused (the start card says why), and
   at the loop's next step once a hook that drives the game is called (`__runFrames`, `__mouse`, `__click`, a save or load; NOT one that only
   shoots the page: `docs/agents/qa.md`); the headless harness never comes through `main.ts`. A restart, a
-  checkpoint and the next try are not page loads and show no brief. SWITCH `LOADBRIEF.on` (`ui/loadbrief.ts`): ON in the page, `?loadbrief=0` = the
+  checkpoint and the next try are not page loads and show no brief. A TUTORIAL mission's brief also carries its row's `scene` and a 'You will learn' list (`teaches`): `docs/agents/missions.md`, the opening card. SWITCH `LOADBRIEF.on` (`ui/loadbrief.ts`): ON in the page, `?loadbrief=0` = the
   boot card and the straight start as the build was; OFF in the module, a page-only screen like `START_PAGE` — no game rule reads it, no knob table
   or journal carries it, no `FROZEN_HOLDS` row: both stands are the build as it was, there being no code of it on either. WHO OWNS WHAT IN THE BOOT:
   this screen is the card line, its branch of the READY block, the `frozen` term, the ladder's guard and its word in `viewCovered` in `main.ts`; when the level is READY
@@ -1608,9 +1608,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   at the clock. The numbers, the timeline and the map stay. A row that leans quiet or either way, the plain night, and every squad kind (its end
   card never showed the rating; its 'run so far' and its card under `?noverdict` still do) are as they were. Reads only: no run's digest differs.
   ON in the page (`?loudcard=0` = the rating on every card it stood on); off in the module and on the frozen stand (`TPS_LOUDCARD=1`); a
-  `FROZEN_HOLDS` row; NOT journalled (`VERDICT` is no journal table: a replay words its card and its two end lines by the page's own key, so a
-  recording of a loud row from before the key replays with its 'exfiltrated' line shorter than it was said). CHECK `probes.ts debrief-loud` (the
+  `FROZEN_HOLDS` row; a recording carries it (`VERDICT` is the last name of `JOURNAL_KNOBS`: `mission.ts`'s two end lines are worded by it), and
+  one from before the key, or the table, replays with it off (`journal.ts applyKnobs`). CHECK `probes.ts debrief-loud` (the
   rule, the key down, a quiet row, the plain night, a room clear on a loud row, every row's level file and its look's file read back as the row's
-  file, mission.ts's two lines) and a block of `debrief-dom` (the card on a fake DOM, key up and down, counts that would tone every cell);
+  file, a recording with and without the key, mission.ts's two lines) and a block of `debrief-dom` (the card on a fake DOM, key up and down, counts that would tone every cell);
   `LOUDCARD_BREAK=1` fails both on both stands. NEVER SEEN ON A GPU; nobody has played to the card since. Left as it was: the stealth game's
   cells and timeline still stand on a loud row's card (a loud card of its own would be new work).

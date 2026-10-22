@@ -32,7 +32,7 @@ export function debriefRows(s: MissionStats): [string, string][] {
     ['times spotted', String(s.spotted)],
     ['bodies found', String(s.bodies)],
     ['shots fired', String(s.shots)],
-    ['knocked out (breathing) · killed', `${s.knockouts} · ${s.kills}`],   // the takedown, the choke, the whip, a ring to the head all leave a man breathing: the left number; only rounds kill
+    ['knocked out (breathing) · killed', `${s.knockouts} · ${s.kills}`],   // the takedown, the choke, the whip, a ring to the head all leave a man breathing: the left number; only rounds kill, and a burst (which also kills a man already out: frag.ts FRAG.downKill)
     ['blackout', s.blackout ? 'used' : 'no'],
   ];
   if (s.keys > 0) rows.push(['keys taken off them', String(s.keys)]);
