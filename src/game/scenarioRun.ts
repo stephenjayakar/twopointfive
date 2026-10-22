@@ -5,6 +5,7 @@
 import type { Game } from './game';
 import { hourFromQuery } from './hours';   // (called inside startFromQuery only)
 import { difficultyHere } from './difficulty';   // (called inside startScenario only)
+import { rowSettings } from './rowset';   // (used inside calls only)
 import { weatherOfSearch } from './weatherKinds';   // (tables and pure functions: no game import)
 import { kitSoloStand } from './kit';   // (called inside startFromQuery only)
 import { quietFogOfQuery, quietCamsOfQuery, quietFogStart, quietFogEnd, soloFogLink, type QuietRung } from './quietfog';
@@ -54,8 +55,9 @@ export function startScenario(g: Game, spec: ScenarioSpec): string | null {
  *  `?squad4` alone is the room clear with the four, beside `?nightbreach` that scenario with four, beside `?rescue` ignored with a warning. A REFUSED start
  *  (the sandbox's 'no AI' ticked, say) leaves the plain floor: fog of war as a URL without the scenario would have it, the reason returned for the card. */
 export function startFromQuery(g: Game, search: string | URLSearchParams): { spec: ScenarioSpec | null; why: string | null } {
-  const q = typeof search === 'string' ? new URLSearchParams(search) : search;
+  const q = new URLSearchParams(search);   // (a copy: the row's own hour and weather are written onto it below, never onto the caller's)
   if (q.has('squad4') && q.has('rescue') && !q.has('roomclear') && !q.has('nightbreach')) console.warn('?squad4 beside ?rescue: the hostage rescue never read that flag and stages its own pair — its size is ?squad=N (0 to 4)');
+  rowSettings(q);   // (the row's own hour and weather over the query's — rowset.ts: a tool's start is the page's)
   hourFromQuery(g, q);   // (?hour= on the query a tool hands over: the same hour the page's own boot lays on — nothing without the key)
   g.fogOfWar.on = fogOfQuery(q);
   quietFogStart(q, g.fogOfWar.on ? quietRungOfQuery(q) : 'off');   // (a quiet mission's rung of the fog lever on the fog's two rows for the visit; none: whatever an earlier start here held is let go of)

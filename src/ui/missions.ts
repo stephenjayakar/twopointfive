@@ -25,6 +25,7 @@ import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficulty
 import { leverRows, leversSig } from './levers';
 import { fogOfQuery, sameFog } from '../game/scenarioRun';
 import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
+import { rowHour, rowWeather } from '../game/rowset';
 import { WEATHER_KINDS, WEATHER_PRESETS, weatherTitle, weatherWords, weatherOfSearch, weatherSearch, snowLevel, type WeatherKind } from '../game/weatherKinds';
 import { HOUR_IDS, HOURS, hourIdOf, hourHref, hourLive, hourLabel, hourClock, hourWords, type HourId } from '../game/hours';
 import { menuTheme } from './theme';
@@ -190,8 +191,8 @@ export function wayNote(m: Mission, way: number): string {
   return way < 0 ? 'the visit deals one of them, with the defenders\' marks' : way > 1 ? 'another side: another first room, plan it again' : 'where the level was made to be opened from';
 }
 /** THE TWO ROWS TOGETHER (game/hours.ts, the weather over the hour): what the hour's line and the weather's say once the other row is not at its default */
-export function hourNote(h: HourId, wx: WeatherKind | null): string {
-  return `${hourClock(h)} · ${h === 'night' && wx ? 'the level as it was made, the moon and the lamps outside, in the weather picked below' : hourWords(h)}`;
+export function hourNote(h: HourId, wx: WeatherKind | null, own = false): string {   // (own: the weather is the mission's own — no Weather row is drawn below to pick it on)
+  return `${hourClock(h)} · ${h === 'night' && wx ? `the level as it was made, the moon and the lamps outside, in ${own ? 'the mission\'s own weather' : 'the weather picked below'}` : hourWords(h)}`;
 }
 export function weatherNote(wx: WeatherKind | null, h: HourId): string {
   if (h === 'night') return weatherWords(wx);
@@ -200,7 +201,7 @@ export function weatherNote(wx: WeatherKind | null, h: HourId): string {
   const sky = c <= own || c < 0.15 ? '' : c >= 0.99 ? ' · by day no sun at all: a dim grey light, no shadows' : c >= 0.85 ? ' · by day the sun behind cloud: flat grey light, soft shadows' : c >= 0.5 ? ' · by day a pale sun through it' : ' · by day the sun a little dulled';
   return weatherWords(wx).replace('; at night as clear', '') + sky;
 }
-export interface MissionsScreen { root: HTMLElement; list: Mission[]; readonly selected: Mission; readonly hourNow: HourId; select(i: number | string): void; move(d: number): void; difficulty(lv: Difficulty): void; hour(id: HourId | number): void; readonly weather: WeatherKind | null; setWeather(k: WeatherKind | null): void; /** the highlighted row's way in: 0 = the level's own start, k ≥ 2 = its k-th, −1 = dealt */ readonly way: number; setWay(v: number | 'next' | 'prev'): void; pick(): void; close(): void; hrefOf(m: Mission): string }
+export interface MissionsScreen { root: HTMLElement; list: Mission[]; readonly selected: Mission; readonly hourNow: HourId; /** the hour and the weather the highlighted row is STARTED in: its own where it names one (game/rowset.ts), a snow level's weather none, else the picks */ readonly startHour: HourId; readonly startWeather: WeatherKind | null; select(i: number | string): void; move(d: number): void; difficulty(lv: Difficulty): void; hour(id: HourId | number): void; readonly weather: WeatherKind | null; setWeather(k: WeatherKind | null): void; /** the highlighted row's way in: 0 = the level's own start, k ≥ 2 = its k-th, −1 = dealt */ readonly way: number; setWay(v: number | 'next' | 'prev'): void; pick(): void; close(): void; hrefOf(m: Mission): string }
 
 let open: MissionsScreen | null = null;
 export function currentMissions(): MissionsScreen | null { return open; }
@@ -301,16 +302,20 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
   const wayOf = (m: Mission) => { const w = m.scenario?.ways ? wayPick[m.id] ?? 0 : 0; return w < 0 && SAMESTART.on ? 0 : w; }; let wayVer = 0, wayShown = -1;   // (wayOf: a link that came in with way=any while every mission starts the same way = the level's own)
   /** a level BUILT FOR SNOW (game/weatherKinds.ts SNOW_LEVELS) has its own weather: no Weather row is drawn for it, and its link carries none */
   const ownWx = (m: Mission) => snowLevel(m.scenario?.level?.replace(/\.json$/, ''));
+  // A ROW WITH ITS OWN HOUR OR WEATHER (game/rowset.ts — a tutorial mission) is always started in them: that row is not drawn for it (what does not apply is
+  // not drawn), and the note of the row that IS drawn reads the mission's own for the other. Its link is any row's link: the visitor's picks pass through
+  const startHour = (m: Mission) => rowHour(m.scenario) ?? hourSel, startWx = (m: Mission) => ownWx(m) ? null : rowWeather(m.scenario) ?? wx;
   function hrefOf(m: Mission) { return waySearch(weatherSearch(missionHref(m, search, hourSel), ownWx(m) ? null : wx), wayOf(m)); }
   let sel = 0, hrefs: string[] = [], now: Difficulty | 'custom' | null = null, sig = '', planFile: string | null = null;
   const paint = () => {
     const m = list[sel], d = quietFogAside(difficultyNow), lv = leversSig();   // (quietFogAside: the squad's level, not a quiet mission's rung held on the rows)
     if (d !== now || lv !== sig || hourSel !== hourShown || wx !== wxShown || wayVer !== wayShown) { now = d; sig = lv; hourShown = hourSel; wxShown = wx; wayShown = wayVer; hrefs = list.map(hrefOf); rows.forEach((r, i) => r.setAttribute('href', hrefs[i])); }   // (the links change with the difficulty, the hour, the weather and a way in picked alone)
     for (const [id, b] of hbtns) { b.className = hourSel === id ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', hourSel === id ? 'true' : 'false'); }
-    hnote.textContent = hourNote(hourSel, ownWx(m) ? null : wx);
+    hnote.textContent = hourNote(hourSel, startWx(m), !!rowWeather(m.scenario));
     for (const [k, b] of wbtns) { b.className = wx === k ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', wx === k ? 'true' : 'false'); }
-    wnote.textContent = weatherNote(wx, hourSel);
-    (wrow as HTMLElement & { style: { display: string } }).style.display = ownWx(m) ? 'none' : '';   // (what does not apply is not drawn)
+    wnote.textContent = weatherNote(wx, startHour(m));
+    (wrow as HTMLElement & { style: { display: string } }).style.display = ownWx(m) || rowWeather(m.scenario) ? 'none' : '';
+    (hrow as HTMLElement & { style: { display: string } }).style.display = rowHour(m.scenario) ? 'none' : '';   // (what does not apply is not drawn)
     { const W = m.scenario?.ways, y = wayOf(m);
       for (const [v, b] of ybtns) { const k = v < 0 ? -1 : v ? v - 1 : 0, shown = !!W && (v < 0 ? !SAMESTART.on : k < W.length); (b as HTMLElement & { style: { display: string } }).style.display = shown ? '' : 'none'; if (W && v >= 0 && k < W.length) b.textContent = W[k]; b.className = shown && y === v ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', shown && y === v ? 'true' : 'false'); }
       yrow.className = W ? 'mdiff mway' : 'mdiff mway na'; (yrow as HTMLElement & { style: { display: string } }).style.display = W ? '' : 'none'; ynote.textContent = wayNote(m, y); }   // (a mission with one way in shows no row: the one-page start has no line to spare)
@@ -343,6 +348,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     move(d) { sel = (sel + d + list.length) % list.length; paint(); },
     difficulty(lv) { quietFogAside(() => setDifficulty(lv)); paint(); },   // (quietFogAside: the level's rows are written under a quiet mission's rung, not over it)
     get hourNow() { return hourSel; },
+    get startHour() { return startHour(list[sel]); }, get startWeather() { return startWx(list[sel]); },
     hour(id) { hourSel = typeof id === 'number' ? HOUR_IDS[(HOUR_IDS.indexOf(hourSel) + id + HOUR_IDS.length) % HOUR_IDS.length] : id; hourPick = { search, id: hourSel }; paint(); },
     get weather() { return wx; },
     setWeather(k) { wx = k; wxPick = { search, kind: k }; paint(); },
@@ -391,8 +397,8 @@ export function missionsKey(e: { code: string; repeat?: boolean; ctrlKey?: boole
     // kept the same way — the keys that sit under a resting hand do not throw away a mix set up row by row)
     case 'ArrowLeft': case 'KeyA': if (!e.repeat && diffLive(S.selected) && quietFogAside(difficultyNow) !== 'custom') S.difficulty('standard'); return true;
     case 'ArrowRight': case 'KeyD': if (!e.repeat && diffLive(S.selected) && quietFogAside(difficultyNow) !== 'custom') S.difficulty('hard'); return true;
-    case 'KeyH': if (!e.repeat) S.hour((e as { shiftKey?: boolean }).shiftKey ? -1 : 1); return true;
-    case 'KeyJ': if (!e.repeat && !snowLevel(S.selected.scenario?.level?.replace(/\.json$/, ''))) { const all = [null, ...WEATHER_KINDS] as (WeatherKind | null)[]; S.setWeather(all[(all.indexOf(S.weather) + ((e as { shiftKey?: boolean }).shiftKey ? all.length - 1 : 1)) % all.length]); } return true;   // (the key beside H: the next weather, Shift+J the one before)
+    case 'KeyH': if (!e.repeat && !rowHour(S.selected.scenario)) S.hour((e as { shiftKey?: boolean }).shiftKey ? -1 : 1); return true;
+    case 'KeyJ': if (!e.repeat && !rowWeather(S.selected.scenario) && !snowLevel(S.selected.scenario?.level?.replace(/\.json$/, ''))) { const all = [null, ...WEATHER_KINDS] as (WeatherKind | null)[]; S.setWeather(all[(all.indexOf(S.weather) + ((e as { shiftKey?: boolean }).shiftKey ? all.length - 1 : 1)) % all.length]); } return true;   // (the key beside H: the next weather, Shift+J the one before)
     case 'KeyK': if (!e.repeat) S.setWay((e as { shiftKey?: boolean }).shiftKey ? 'prev' : 'next'); return true;   // (the key beside J: the next way in, on a level that gives a choice)
     case 'Enter': case 'NumpadEnter': case 'Space': if (!e.repeat) S.pick(); return true;
     case 'Escape': if (!e.repeat) S.close(); return true;

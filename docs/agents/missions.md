@@ -1112,3 +1112,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lamps on, the lit hall being the point). A SKETCH: the script's few words, the store (four strides of dark), a composed menu picture
   (`tools/menu-art.ts` PIN). KNOWN: a man put out through the list before he is asked leaves no way to learn the code (the pad then says so). Never seen on
   a GPU, never played by a hand: the timings are a script's, and whether the dark lane reads on a real screen with the outline off is the maintainer's call.
+- **A mission row can name its own hour and weather** (2026-10-22; `src/game/rowset.ts`, `ROWSET.on` — ON in the page, `?rowset=0` = the link's hour and
+  weather as ever; OFF in the module and on the frozen stand, `TPS_ROWSET=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables. NO ROW
+  NAMES ONE YET, so on or off is the build as it was). A tutorial mission's level is built for one hour and one sky, and its row used to open at the
+  level's own night, or at whatever hour and weather the visitor's last pick had left on the link. `hour: 'dusk', weather: 'dust'` on the row
+  (`ScenarioEntry` in `src/scene/scenarios.ts`; rows in `TUTORIAL_MISSIONS`) and a visit to it is ALWAYS started in them: THE ROW'S OWN WINS over
+  `hour=` / `weather=` on the link, because every link the page builds (the sheet, the next mission, the loadout, a quit) carries the visitor's standing
+  picks; those pass through such a row untouched and are his again after it. THE HOUR IS THE LEVEL'S: any mission booted on that level file gets it (a
+  tool's other seed or team size too), so only a row with a level file of its own may name one, every row of one level file names the same, and only a
+  Tutorial row may (the check is red otherwise). A level built for snow names no weather; a weather is one a level can be started in. WHERE: `main.ts`
+  writes the row's keys over its copy of the query (never the address) after the page's switches and the tape's tables and before the weather, the snow
+  and the hour are read, so a bare link and a restart are the row's; `scenarioRun.ts startFromQuery` does the same on its own copy for a headless tool
+  (on the page's stand a tool's own `PT_HOUR` or `--set WEATHER.kind` loses to the row; what a start laid on stays on that game after the quit, as an
+  asked `hour=` always has). THE SHEET: `docs/agents/menus.md`. A RECORDING from before the key replays with the switch off (`applyKnobs`; on the page's
+  tape player `rowsetTape`, read at boot). KNOWN: a CHECKPOINT made on a row before it named a weather is refused once it does ("made in other weather":
+  the page is compiled for one), and `?rowset=0` opens the row as it was to load it; `sun=` on a link still applies to the row's hour; the older start
+  card's short list and `?pick=` go by `picks.ts`'s own `hour` / `weather`. CHECK `bun run tools/qa/rowset-check.ts` (`probes.ts rowset`, family
+  `missions`): 17 lines on both stands and with `TPS_ROWSET=1`; `ROWSET_BREAK=1` fails 7 of them on both; run before `missions-screen` in one process it
+  leaves that probe green. ON THE REAL PAGE (headless Chromium, the software adapter, lowest quality, a scratch copy of the tree whose `tut-solo` row was
+  given dusk and dust; three loads, the page's own `__hour.id` and `__weather.kind` read after the boot): the bare link stood at dusk in dust; with
+  `&hour=dawn&weather=rain` on it, dusk in dust and the address untouched; with `&rowset=0&hour=dawn`, dawn in the level's own weather. No console error
+  but the favicon's 404. Never seen on a GPU: what dusk in dust looks like on that level is for whoever sets the row, and no shipped row has opened
+  through it.

@@ -122,6 +122,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'DOORTHROW',
   // enemies startle when they first see you (startle.ts): a recording made with it on replays its men's beat before the gun, and who ran; one from before has every man go for his gun at once
   'STARTLE',
+  // a mission row's own hour and weather (rowset.ts): a recording made on such a row with it on was started in them, one from before at its query's
+  'ROWSET',
   // a man flinches when fire comes close (flinch.ts): a recording made with it on replays its men's ducks and the green man who broke under fire; one from before has nobody duck but on the suppression model's own edge
   'FLINCH',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
@@ -188,6 +190,7 @@ import { TWEEN } from '../host/tween';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { STARTLE } from './startle';
+import { ROWSET } from './rowset';
 import { FLINCH } from './flinch';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
@@ -357,6 +360,8 @@ export function knobRegistry(): Record<string, object> {
     RUNNER,
     // enemies startle when they first see you (startle.ts): how long a calm man's start holds his gun down, and who runs after it — reads these
     STARTLE,
+    // a mission row's own hour and weather (rowset.ts): the one switch
+    ROWSET,
     // a man flinches when fire comes close (flinch.ts): how close a round ducks him, how much by training, and how long under fire breaks a green man alone — reads these
     FLINCH,
     // not in there alone (darkdoor.ts): who stops at the doorway of a dark room, how dark is dark, how long he waits for a mate and when he goes in anyway

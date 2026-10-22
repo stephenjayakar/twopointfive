@@ -49,7 +49,7 @@
 //     grab: grab-auto grab-choke grab-gate grab-release grab-rollcall grab-talk grab-walk
 //     gunhold: gunhold-cover gunhold-dialogue gunhold-fire gunhold-variant gunhold-whip
 //     journal: journal-fixtures journal-knob journal-knobs journal-pagelike journal-perturb journal-roundtrip
-//     missions: missions-shipped secondway
+//     missions: missions-shipped secondway rowset
 //     shipped: shipped-profile
 //     music: music   (the score's newer pieces: tools/qa/music-check.ts; MUSIC_BREAK=1 must fail)
 //     restart: restart-fresh   (a restart equals a fresh staging, the solo night + three office missions as shipped; ~45 s of CPU, 30–60 s of wall on a busy box: not in all-quick)
@@ -2784,6 +2784,7 @@ if (on('slotsetup', 'kit', 'all')) await run('slotsetup', async () => (await imp
 if (on('doorforce', 'doors', 'all')) await run('doorforce', async () => (await import('./doorforce-check.ts')).doorforceCheck());   // an alerted man does not wait at a shut door: rounds through a wooden leaf, then the boot (doorforce.ts DOORFORCE; DOORFORCE_BREAK=1 must fail)
 if (on('doorshot', 'off-hinges', 'doors', 'all')) await run('doorshot', async () => (await import('./doorshot-check.ts')).doorshotCheck());   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall times its toll, 2, at any destruction scale (doorblast.ts DOORSHOT; DOORSHOT_BREAK=1 and DOORCOST_BREAK=1 must fail)
 if (on('doorthrow', 'doors', 'all')) await run('doorthrow', async () => (await import('./doorthrow-check.ts')).doorthrowCheck());   // a door opened into a man moves and startles him, one slammed or booted into him throws him (doors.ts DOORTHROW, doorthrow.ts; DOORTHROW_BREAK=1 must fail)
+if (on('rowset', 'missions', 'all')) await run('rowset', async () => (await import('./rowset-check.ts')).rowsetCheck());   // a mission row's own hour and weather (src/game/rowset.ts ROWSET; ROWSET_BREAK=1 fails it): the rule, the rows as shipped, a start and its quit, the sheet, the switch
 if (on('startle', 'ai', 'all')) await run('startle', async () => (await import('./startle-check.ts')).startleCheck());   // enemies startle when they first see you (startle.ts STARTLE; STARTLE_BREAK=1 must fail)
 if (on('flinch', 'ai', 'all')) await run('flinch', async () => (await import('./flinch-check.ts')).flinchCheck());   // a man flinches when fire comes close, by his training, and a green man alone kept under it runs (flinch.ts FLINCH; FLINCH_BREAK=1 must fail)
 if (on('wallmen', 'wallpen', 'all')) await run('wallmen', async () => (await import('./wallmen-check.ts')).wallmenCheck());   // …and the men act on it: a man who saw somebody go behind a partition or a wooden door fires through it (defender, teammate, teammate under an order), never at a man he has not seen nor through concrete; cover from a gun is what stops a round before what hides (WALLMEN_BREAK=1 / WALLPEN_BREAK=1 must fail)

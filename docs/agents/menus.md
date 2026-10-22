@@ -1656,3 +1656,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   file, a recording with and without the key, mission.ts's two lines) and a block of `debrief-dom` (the card on a fake DOM, key up and down, counts that would tone every cell);
   `LOUDCARD_BREAK=1` fails both on both stands. NEVER SEEN ON A GPU; nobody has played to the card since. Left as it was: the stealth game's
   cells and timeline still stand on a loud row's card (a loud card of its own would be new work).
+- **A row with its own hour or weather draws no Hour or Weather row** (2026-10-22; `src/game/rowset.ts` `rowHour` / `rowWeather`, `ROWSET.on`,
+  `?rowset=0`; the rule and its check are in `missions.md`, "A mission row can name its own hour and weather"). What does not apply is not drawn: H and J
+  do nothing on such a row, the start page's Setup rail follows (it already skips a row that is not drawn), and the older kit figure (`?oldfigure`)
+  stands in the row's hour under its cloud (`MissionsScreen.startHour` / `startWeather`: what the highlighted row is started in). A row that names only
+  one keeps the other row, whose note reads the mission's own for the hidden one. Its LINK is any row's link: the visitor's Hour and Weather picks stay
+  on it and on every later link, and the row's own win when the page boots. The debugger's 'weather kind' buttons say so and do nothing on a row with
+  its own weather. No row names one yet.
