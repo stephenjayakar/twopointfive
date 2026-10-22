@@ -184,7 +184,7 @@ function ask(g: Game, gd: Guard, to: Vec3): Ask | 'clear' | null {
   return { index: st.index, id: B.id, kind: B.kind, hit, rounds: Math.max(1, rounds), layers: ids.size };
 }
 /** nobody of his own side, no neutral, no hostage in the lane from `from` to the place — or past it, as far as a round that got through would fly */
-function lane(g: Game, gd: Guard, from: Vec3, to: Vec3): boolean {
+export function coverLane(g: Game, gd: Guard, from: Vec3, to: Vec3): boolean {
   const C = COVERFIRE; const dx = to[0] - from[0], dz = to[2] - from[2]; const L2 = dx * dx + dz * dz; if (L2 < 0.01) return false;
   const L = Math.sqrt(L2); const dir = v3.normalize(v3.sub(to, from));
   const on = wallMenLive(g) ? null : g.col.raycast(to, dir, C.pastM); const tMax = 1 + (wallMenLive(g) ? flightLen(g, to, dir, C.pastM, roundEnergy(gd.weapon.def)) : on ? on.t : C.pastM) / L;   // (to what stops it: wallpen.ts — the next wall, unless a round goes through that too)
@@ -254,7 +254,7 @@ function choose(g: Game, S: State, gd: Guard, K: Know, call: boolean, seen: bool
 export function coverSeen(g: Game, gd: Guard, who: Who | null, to: Vec3): boolean {
   if (!live(g) || !who) return false;
   const S = stateOf(g); const Cw = choose(g, S, gd, { who, at: to, y0: charOf(g, who).pos[1], v: [0, 0], t: g.time }, false, true); if (!Cw) return false;
-  if (!lane(g, gd, gd.char.muzzle, Cw.to)) { bump(S, 'heldFriend'); return false; }
+  if (!coverLane(g, gd, gd.char.muzzle, Cw.to)) { bump(S, 'heldFriend'); return false; }
   return true;
 }
 /** NO EYES ON HIM (guards.ts alert branch, ahead of covering / chasing the fix): the fight AI's man lays on the place he knows and fires through what hides it
@@ -267,7 +267,7 @@ export function coverBlind(g: Game, gd: Guard, dt: number): Vec3 | null {
   for (const o of known(g, S, gd, who)) { Cw = choose(g, S, gd, o.K, o.call, false); if (Cw) { if (o.call) heard(S, gd, o.K); break; } }
   if (!Cw) return null;
   const to = Cw.to, P = AIM.guard; const dist = flat(c.pos, to);
-  if (gd.reloadT < 0 && !lane(g, gd, c.muzzle, to)) { bump(S, 'heldFriend'); return null; }   // (a round he may not fire is no reason to stand on it: the branch goes on as it always did)
+  if (gd.reloadT < 0 && !coverLane(g, gd, c.muzzle, to)) { bump(S, 'heldFriend'); return null; }   // (a round he may not fire is no reason to stand on it: the branch goes on as it always did)
   const facingErr = Math.abs(wrapAngle(Math.atan2(to[0] - c.pos[0], to[2] - c.pos[2]) - c.aimYaw));
   const on = facingErr < 0.25 && !gd.muzzleDown;
   const settle = Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1) * (gd.skill ? gd.skill.settleK : 1);
@@ -297,7 +297,7 @@ export function coverOp(g: Game, O: OpLike, dt: number, speed: number, point: (t
   }
   if (!Cw || !who) return false;
   const to = Cw.to, P = AIM.guard, Sk = FIGHT_SKILL.operative; const dist = flat(c.pos, to);
-  if (!lane(g, gd, c.muzzle, to)) { bump(S, 'heldFriend'); return false; }   // (not his round: his order's own watch goes on)
+  if (!coverLane(g, gd, c.muzzle, to)) { bump(S, 'heldFriend'); return false; }   // (not his round: his order's own watch goes on)
   if (who !== 'player' && silentGlassHolds(g, gd, who, c, to)) { bump(S, 'heldSilent'); return false; }   // (silent.ts: standing glass on the way to that cover and the man has raised no alarm — a silent squad breaks no pane for it)
   const brg = point(to);
   const on = Math.abs(wrapAngle(brg - c.aimYaw)) < P.onDeg * DEG + Math.atan2(0.35, Math.max(dist, 0.3)) && v3.dist(O.aim, to) < 0.3 && !gd.muzzleDown;
