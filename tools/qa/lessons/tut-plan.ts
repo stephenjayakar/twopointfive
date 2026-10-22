@@ -119,9 +119,11 @@ function word(B: Bot, doors: string[], room: string) {
   const R = B.g.roomClear.rooms.find((r: any) => r.def.id === room)?.def.bounds, inside = (m: any) => !!R && m.char.pos[0] > R.x0 + 0.2 && m.char.pos[0] < R.x1 - 0.2 && m.char.pos[2] > R.z0 + 0.2 && m.char.pos[2] < R.z1 - 0.2;
   const watch = () => { for (const d of doors) if (!(d in inAt) && (stacks[d] ?? []).some(inside)) inAt[d] = B.t() - t0; for (const [m, u] of daz0) if (m.dazzledUntil > u + 1e-6) hit.add(m.callsign); return false; };
   B.until(() => watch() || cleared(B, room), 40); for (let i = 0; i < 180; i++) { watch(); B.step(); }
-  const ts = doors.map(d => inAt[d]), apart = doors.length > 1 && ts.every(t => t !== undefined) ? Math.max(...ts) - Math.min(...ts) : 0;
-  const said = `the word at ${room}: ${doors.map((d, i) => `${d} ${ts[i] === undefined ? 'nobody in' : `first man in at ${ts[i].toFixed(1)} s`}`).join(' · ')}${doors.length > 1 ? ` · ${apart.toFixed(1)} s apart` : ''} · teammates their own can dazzled: ${hit.size}${hit.size ? ` (${[...hit].join(', ')})` : ''}`;
-  if (STRICT && !ALONE && (apart > 1 || ts.some(t => t === undefined) || hit.size)) B.fail(said);
+  // (a stack that never went in has no time: nothing is said of how far apart they were, and the run FAILS — every stack through its door is the mission's own
+  //  claim, whatever the squad's entry rules are)
+  const ts = doors.map(d => inAt[d]), out = doors.filter((_, i) => ts[i] === undefined), apart = doors.length > 1 && !out.length ? Math.max(...ts) - Math.min(...ts) : NaN;
+  const said = `the word at ${room}: ${doors.map((d, i) => `${d} ${ts[i] === undefined ? 'NOBODY IN' : `first man in at ${ts[i].toFixed(1)} s`}`).join(' · ')}${doors.length < 2 ? '' : out.length ? ' · not together: a stack never went in' : ` · ${apart.toFixed(1)} s apart`} · teammates their own can dazzled: ${hit.size}${hit.size ? ` (${[...hit].join(', ')})` : ''}`;
+  if (!ALONE && (out.length || (STRICT && (apart > 1 || hit.size)))) B.fail(said);
   B.say(`  ${said}`);
   for (let k = 0; k < 2 && !cleared(B, room); k++) { B.wait(0.6); B.press('KeyF', 3); B.until(() => cleared(B, room), 40); }
 }

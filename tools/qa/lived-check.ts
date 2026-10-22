@@ -42,7 +42,9 @@ const ROOT = resolve(import.meta.dir, '../..');
 // d13650f85: the plan mission's barrier post moved and two drums put in a corner (levels/tut-plan.json alone; a sibling of the join above).
 // 3046a115e: a join's base again. c069ca16f and d13650f85 are siblings (the first holds the reworded levels/tut-quiet.json and not the plan mission's moved
 //   post, the second the other way round); this join is the first commit that holds both. No level's own part moved in the join itself.
-const BASE_REVS = ['3046a115e', 'c069ca16f', 'd13650f85', '0d3a18078', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
+// 636e5eaef: a join's base once more. Its two parents are siblings: one glazed the hall's street window in levels/tut-squad.json (a box), reworded a card
+//   there and gave a step a cue; the other is 3046a115e's line. This join is the first commit that holds both. No level's own part moved in the join itself.
+const BASE_REVS = ['636e5eaef', '3046a115e', 'c069ca16f', 'd13650f85', '0d3a18078', 'f3ef62b01', 'cb936797b', '5f8c416e6', '317a19cb1', '98281d690', '14d5fc1f4', 'f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
 /** a lesson step's keys that are words on the objective row: read from today's file, never held to the base */
 const STEP_WORDS = ['line', 'setupLine', 'ringLine'];
 const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
