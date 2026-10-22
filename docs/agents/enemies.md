@@ -1323,8 +1323,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rounds through (the hand-off's are `coverfire.ts`'s four, then he is on the door); a place with the wall in his eyes' line: nothing; a colleague past
   the door in the line: no round, 252 frames held; with `DOORSHOT` on and the boot put off the 12th pistol round takes the leaf apart and none follows;
   off: nothing kept; the journal. THE PAGE: `tools/qa/doorforce-page.cjs` (the real bundle in headless Chromium on the software adapter,
-  `PORT=… node tools/qa/doorforce-page.cjs` against a dev server).
-  MEASURED 10-22: switch off = the build as it was, 21 of 21 run digests equal on EACH stand (`PT_DIGEST=1 playthrough.ts --seeds 1`; the page's stand with
+  `PORT=… node tools/qa/doorforce-page.cjs` against a dev server): the page opens with the switch on, the staged man puts 4 rounds through the shut leaf and
+  tears its keep out at 5.95 s; `?doorforce=0`: off, no round while it is shut, opened by hand at 2.02 s; no page error either way.
+  WITH THE THROWN-MAN RULE (`doorthrow.ts`, in the build since): his boot is a boot like any other — on the page's stand the player stood behind the leaf
+  is folded for its 4 s by the staged boot (one staged run; `doorthrow` and `doorforce` checks green together on both stands).
+  MEASURED 10-22 (on the build one step before the thrown-man rule joined it): switch off = the build as it was, 21 of 21 run digests equal on EACH stand (`PT_DIGEST=1 playthrough.ts --seeds 1`; the page's stand with
   `TPS_DOORFORCE=0`). On against off on the page's stand, all 21 scenarios x seeds 1, 2, 3 (the tool's own player; its JSON carries `doorforce`): 47 of
   the 63 runs are the same run digest for digest (the rule never fired in them); it fired in 16 — 29 doors taken on, 30 rounds through a leaf in 7 runs,
   194 frames a round was held for a friend (one stand on block-squads), 2 boots thrown and both doors gave (the compound), 4 left to the handle. Ends
