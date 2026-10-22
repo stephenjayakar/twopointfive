@@ -227,7 +227,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     script's `direct` walk taken off its men sent them round the whole halt (27.5 s); here the road is the one way from the roadblock to the gate, so with
     `direct` off they walk the same road (5.6 s) and that run now has the same eight-second bar. The run that must be long is a third, the roadblock's
     men kept where they stand: 99 s on both stands. So nothing on this floor fails when `direct` stops meaning anything: that is a gap this level opened.
-    ON THE JOIN: the scripted player ends all fifteen steps on seeds 1 to 7 on the page's stand.
+    ON THE JOIN: the scripted player ends all fifteen steps on seeds 1 to 7 on the page's stand, and on seeds 1 to 5 again on the build that carries
+    the flinch at close fire (130 to 137 s of play). The real page was played on this floor twice on the software adapter before the join (all fifteen
+    steps by a hand's keys, no red line, no page error). NOBODY HAS seen it on a GPU; the red of the beacons is seen from the lights going out until the
+    goggles come on, and again on the walk back, where the frame lifts the goggles.
     MEASURED: the scripted player ends all fifteen steps on the page's stand on seeds 1 to 7 in 129 to 140 s of play; the first man with a
     torch is hit two to three and a half seconds after the bunkhouse says it is coming, by the lorry's tail; the second often stays behind the lorry and is
     the last room's fight. `PORT=<port> node tools/qa/tut-page.cjs` (software adapter, a hand's own keys and mouse) played all fifteen steps to the
