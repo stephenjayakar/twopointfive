@@ -1257,7 +1257,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   her · not when quiet · they're gone (hostages stood at the way out: the room found empty, men sent on, one shot out there by a man outside the room) ·
   the state's pair · off · a lane known at both doors keeps nobody back · a lane on the main door's floor alone sends the first man by the side door (both
   with a lane planted through the lanes' own save, `lanesRestore`); `RESCUEFLUSH_BREAK=1` fails, `RESCUEFLUSH_BREAK=lanes` (`lanesChoose` off) fails those
-  last two alone. NOT asked by the check: what a man sent DOES at a corridor the team's guns hold — that is the lanes' own (`probes.ts lanes` / `corridor`),
+  last two alone. NOT asked by the check: what a man sent DOES at a corridor the team's guns hold — that is the lanes' own (`probes.ts corridor`),
   and the check's floor has no team on it to hold one.
   THE MEND OF 10-19 (`lanesChoose`: module default true, inert wherever `RESCUEFLUSH.on` is off, so the frozen stand needs no word; a recording whose
   RESCUEFLUSH row has no such key replays with it off — `journal.ts applyKnobs`; no URL flag and no debugger row: off is the stall below). AS BUILT ON 10-18
