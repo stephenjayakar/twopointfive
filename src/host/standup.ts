@@ -90,6 +90,7 @@ import { TWEEN } from './tween';
 import { MORALE } from '../game/morale';
 import { RUNNER } from '../game/runner';
 import { STARTLE } from '../game/startle';
+import { FLINCH } from '../game/flinch';
 import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
 import { DARKFOE } from '../game/darkfoe';
@@ -322,6 +323,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_MORALE')) MORALE.on = String((globalThis as any).process?.env?.TPS_MORALE ?? '') === '1';   // shaken (src/game/morale.ts): off, so a blast leaves every man it does not hurt standing where he stood, no man is met and no die is drawn, as every frozen digest and tally was made; `TPS_MORALE=1` turns it on (the shipped default)
     if (pinned('TPS_LOUDCARD')) VERDICT.loudCard = String((globalThis as any).process?.env?.TPS_LOUDCARD ?? '') === '1';   // a mission that leans loud is not graded as a sneak (src/game/verdict.ts loudRow): off, so every card the stealth game stands on carries its rating, as every frozen probe reads it; TPS_LOUDCARD=1 raises it
     if (pinned('TPS_STARTLE')) STARTLE.on = String((globalThis as any).process?.env?.TPS_STARTLE ?? '') === '1';   // enemies startle when they first see you (src/game/startle.ts): off, so a man who sees you goes for his gun the frame he knows, as in every frozen probe, tally and digest; `TPS_STARTLE=1` turns it on (the shipped default)
+    if (pinned('TPS_FLINCH')) FLINCH.on = String((globalThis as any).process?.env?.TPS_FLINCH ?? '') === '1';   // a man flinches when fire comes close (src/game/flinch.ts): off, so nobody ducks but on the suppression model's own edge and no green man breaks under fire, as in every frozen probe, tally and digest; `TPS_FLINCH=1` turns it on (the shipped default)
+    if (pinned('TPS_FLINCHRUN')) FLINCH.run = String((globalThis as any).process?.env?.TPS_FLINCHRUN ?? '') === '1';   // …and a green man alone kept under close fire drops it and runs (flinch.ts FLINCH.run): off with it; `TPS_FLINCHRUN=1` turns it on (the shipped default), and under TPS_PROFILE=shipped `TPS_FLINCHRUN=0` leaves the duck alone
     if (pinned('TPS_RUNNER')) RUNNER.on = String((globalThis as any).process?.env?.TPS_RUNNER ?? '') === '1';   // drops it and runs (src/game/runner.ts): off, so a broken man with an empty gun changes his magazine where he is, no man is taken and no die is drawn, as every frozen digest and tally was made; `TPS_RUNNER=1` turns it on (the shipped default; it acts only with TPS_MORALE=1 beside it)
     if (pinned('TPS_DARKDOOR')) DARKDOOR.on = String((globalThis as any).process?.env?.TPS_DARKDOOR ?? '') === '1';   // not in there alone (src/game/darkdoor.ts): off, so an alarmed man walks through a dark doorway as he always did, no man is met and no room is read, as every frozen digest and tally was made; `TPS_DARKDOOR=1` turns it on (the shipped default — it acts only with TPS_MORALE=1 as well)
     if (pinned('TPS_DOZE')) DOZE.on = String((globalThis as any).process?.env?.TPS_DOZE ?? '') === '1';   // a calm man dozes a long dark wait out in a chair (src/game/doze.ts): off, so every man stands his waits awake with his eyes and ears as every frozen run had them; `TPS_DOZE=1` turns it on (the shipped stand has it on)

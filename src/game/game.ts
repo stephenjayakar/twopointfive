@@ -85,6 +85,7 @@ import { dropThrowable } from './combat';
 import { FRAG, fragTick, fragThrowTick, fragReset } from './frag';
 import { moraleTick, moraleReset } from './morale';
 import { runnerTick } from './runner';
+import { flinchTick } from './flinch';
 import { darkDoorTick } from './darkdoor';
 import { netQuietTick } from './netquiet';
 import { samStaggered } from './samstun';
@@ -1627,6 +1628,7 @@ export class Game {
     rescueCheckTick(this, dt);  // the rescue's men check in (rescuecheck.ts): their radio check when it is due, the man out for a silent post a step on — a return on its first line with its switch off or no rescue on the floor
     this.fight.tick(dt);   // the room fight (roomfight.ts): what every hostile / operative unit watches, fears and shoots at this frame — a return on its first lines while none stands or a show has the floor
     moraleTick(this, dt);   // shaken (morale.ts): the blasts since last frame read for who they shook, each man's dread and rung, a broken man's sequence a step on — before anybody moves; a return on its first line with the switch off
+    flinchTick(this, dt);   // flinch at close fire (flinch.ts): a green man alone kept under close fire long enough is handed to the runner below
     runnerTick(this, dt);   // drops it and runs (runner.ts): a broken man alone, dry, with an enemy in his eyes at arm's length shouts it, lets the weapon go and runs; every man in a run a step on — a return on its first line with the switch off
     darkDoorTick(this, dt);   // not in there alone (darkdoor.ts): the man called to a mate stopped at a dark doorway kept on him, a stopped man whose walk has ended let go — a return on its first line with either switch off
     netQuietTick(this, dt);   // the net goes quiet (netquiet.ts): the lines owed for a check nobody answered, a jumpy man's whip to the noise his ears counted last frame, the last man a step through his act — after the rungs are read, before anybody moves; a return on its first line with either switch off
