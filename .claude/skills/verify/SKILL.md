@@ -67,15 +67,15 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
 
 ## Flows worth driving
 - Spawn → WASD/crouch/run → aim + LMB (muzzle flash light count goes up by 2, smoke goes live: `__smoke.stats.pool` > 0 a read-back later).
-- Pistol up (key `1`, `E` unholsters) + RMB with the reticle snapped on a fixture (the ring is on the light; no word is drawn beside it any more) → the light goes dark, restrikes
+- Pistol up (key `1` draws it; backtick empties the hands, `E` does nothing on the page's board) + RMB with the reticle snapped on a fixture (the ring is on the light; no word is drawn beside it any more) → the light goes dark, restrikes
   after `tune.ocpDuration`; RMB on a guard's lit torch works too; nothing lit under the reticle → nothing happens.
 - Stand in a guard's flashlight (`__game.guards[i]`, put the player 3–4 m along its `bodyYaw`) → suspicious → alert → guards fire.
 - Key `3` (smoke) / `4` (stun) + LMB, or `G` quick-throw → billowing plume within ~3 s (debug view 5 shows volumetrics only).
-  `5` + LMB throws a frag (it kills Sam too; `G` never throws one). Debug / sandbox actions are buttons in the debugger (the tweak panel, on backtick; Tab is the game's key and opens nothing).
+  `5` + LMB throws a frag (it kills Sam too; `G` never throws one). Debug / sandbox actions are buttons in the debugger (the tweak panel, on the backslash key; Tab is the game's key and opens nothing).
   `X`, `T`, `B` and `F` ARE keys again, with a squad on the floor (`src/game/orders.ts`): `X` (or the middle mouse button)
   opens the orders menu on what the cursor is on, `T` steps who takes the order, `B` gives the target's first row with no menu,
   `F` is the go word for an order that waits on Sam's mark. With no operative on the floor X / T / the middle button do nothing.
-- The debugger (backtick; `__panel.toggle()`): "rebuild cache" with other presets must not throw; debug views 0–17 are the
+- The debugger (the backslash key; `__panel.toggle()`): "rebuild cache" with other presets must not throw; debug views 0–17 are the
   'debug view' list on its Frame page (`__engine.settings.debugView = n`) — no key steps them. Its keys pressed for real:
   `PORT=<port> node tools/qa/panel-keys.cjs` (headless Chromium on the software adapter, ~3 min).
 - `Space` at a door / walk or sprint into it (`__game.doors.byName('server')` → `.angle`, events via `onDoorEvent`);

@@ -1290,13 +1290,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Options ▸ Game ▸ 'Walk into a wall to take it'** (10-20; `ui/options.ts`, shown only with the wall hold's feel pass on): flips `WALLSNAP.press`, kept in
   `twopointsix.options` as `wallpress`, a `?wallpress` in the URL wins over the kept value, Reset puts it back on. The rule: `docs/agents/stealth.md`, the
   wall taken without the key. The Controls list and the Options key list do not mention it.
-- **Finding your own man, and the camera under the hand: eleven rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21, its strength, two light rows, teammates and colour 10-22;
+- **Finding your own man, and the camera under the hand: twelve rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21, its strength, two light rows, teammates and colour 10-22;
   `src/host/findme.ts` the table, `src/ui/findme.ts` the ring, the rows and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
   walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
-  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, lit: 0.3, dark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false }` on the page and on
+  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, picture: true, lit: 0.3, dark: 0.12, picLit: 0.3, picDark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false }` on the page and on
   both stands, and at those starts the build is the build as it was (measured against the build head each time: the same game digest and the same
   view matrix over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
-  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all eleven back. THE ROWS: `Aim pan` (a slider, none to today's: it
+  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all twelve back. THE ROWS: `Aim pan` (a slider, none to today's: it
   scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
   menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (Ctrl + mouse
   turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
@@ -1330,11 +1330,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the row flipped under the pause card shows at once). The page fills the frame once a frame (`ui/findme.ts findMeOutline`: off with the row off,
   the man down, and where the HUD's own marks of him stand down: a stun's white-out, attract mode, the kit's picture); `Engine.render` adds the box
   on the picture from the camera it draws with (`outlineBox`; he behind the lens = no pass), so a still or a card's settled frame has its own. WHAT
-  IT COSTS: with the row off, nothing: the pass object is not made and `encode` is not called. First frame on: one bind group layout, 32 bytes of
-  uniform, one small module compiled off the frame; until that is in, and for good if it fails (said once), nothing is drawn. On and he is in the
+  IT COSTS: with the row off, nothing: the pass object is not made and `encode` is not called. First frame on: one bind group layout, a small
+  uniform buffer, one small module compiled off the frame; until that is in, and for good if it fails (said once), nothing is drawn. On and he is in the
   dark: one render pass on the composite (load and store), a scissor of about a tenth of the picture close in and a fiftieth from a squad level's
-  distance, up to 49 id reads a pixel inside it (81 with the width row at its most). No scene group, no storage buffer, no copy of the composite, no timer row (a render pass's stamp
-  is left off here as the particles' draw's is). On and he is lit: no pass. A kept line from the stick figure's days that says `outline: true`
+  distance, up to 49 id reads a pixel inside it (81 with the width row at its most). No scene group, no storage buffer, no timer row (a render pass's stamp
+  is left off here as the particles' draw's is). On and he is lit: no pass (BY THE METER; by the picture, below, it runs lit or dark and reads a
+  copy of the composite). A kept line from the stick figure's days that says `outline: true`
   turns this one on. UNDER THE RESOLVE: the rim is drawn before it, so it is anti-aliased with the picture, and the pixel next to him rides his
   motion vector; the outer pixel has the floor's and may trail him by a few frames as he moves. Nobody has seen that on a GPU.
   ITS WIDTH (10-21, 10-22). The maintainer, having seen the rim on his GPU: "outline in the dark is good but can you add a slider to the options
@@ -1366,6 +1367,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the camera sees is dark (no rim where one is wanted), and a dark man on a lit floor reads dark (a rim where none is needed). The meter is the
   guards' and is not to be bent for this; a rim that fades by how he is DRAWN against what is behind him is the picture's own job and is NOT
   BUILT (put to the maintainer as a choice).
+  BY THE PICTURE, PART BY PART (10-22, an hour on, the rims in colour on his GPU: "these feel a lot better already"): "is there a way to make it
+  so it naturally turns on for dark parts of the character and off for bright parts? that might make it feel less pulsey". `Outline fades by`
+  IS A ROW (`FINDME.picture`: `Picture`, where it starts, or `Light meter`, the rim as first built). By the picture the meter is not asked at
+  all: `outline.wgsl`, at every pixel beside a man, takes the mean light of the few pixels of HIS within the rim's reach off this frame's
+  composite, makes of it a brightness on the screen (the exposure on, l / (1 + l), a square root: 0 black … 1 white) and fades the rim between
+  two ends. A lit shoulder has no rim and the leg in shadow under it has one; nothing swings as the meter's one number crosses a line, and
+  nothing is eased (the frame's `whole`: 1 but for the goggles). THE PICTURE HAS ITS OWN TWO ENDS (`FINDME.picLit`, `picDark`): the two light
+  rows show and move the pair of whichever the row above says, so the meter's numbers are never read as brightness on the screen nor the other
+  way; both pairs start at 30 % and 12 %, which were tuned for the meter and are a GUESS for the picture (a part darker than 12 % of white has
+  the whole rim, one brighter than 30 % none). THE COMPOSITE IS READ FROM A COPY (the pass cannot read the target it draws on): `hdrCopy`, which
+  GBAA already fills each frame before its edge blends and the fog; where GBAA does not run (render resolution at 100 %, TAAU off, its own
+  toggle) `passes.setOutlineCopy` keeps that texture for the outline alone (the engine mirrors the frame's `on` and `picture` before resize, as
+  it does the fog's switch; the composite's set is made again only when that changes what it holds) and `passes.ts` fills it just before the
+  pass. A frame handed no copy goes by the meter. WHAT IT COSTS: by the picture the pass runs every frame the outline's row is on, lit or dark
+  (by the meter it ran only in the dark), reads the copy only at pixels that are a man's, and without GBAA adds one copy of the composite a
+  frame and its 8 bytes a pixel. NOT EASED, AND THAT MAY SHOW: a muzzle flash that lights him takes the rim for the frames it lasts; whether
+  that reads as right or as a blink nobody has seen. Line (10) of the check holds the frame, the slot, what is bound and the two pairs; what
+  the shader makes of the copy only a device can say: `findme-squad-page.cjs` counts the rims' ink on the software adapter with the rows at
+  their most, at none, at their starts, and at their most again with GBAA put off. MEASURED on that adapter, one run, a squad of four stood in a dark room, strongly coloured pixels in the men's
+  boxes: 1501 with the rows at their most, 66 at none, 1629 at their starts (men that dark have the whole rim; the resolve had more frames
+  to gather it), 2442 at their most with GBAA off (the copy kept for the outline; that picture is not anti-aliased, so more of it counts), no
+  GPU error in any. That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
+  on both stands, its break word red with seven lines. THE TWO COPIES ARE NOT THE SAME PICTURE: GBAA's is taken before its edge blends and
+  the fog of war, the outline's own after both; the team's own men are never fogged and the blend moves edge pixels only, so the mean over
+  a man's pixels is near enough the same. Nobody has seen any of it on a GPU, and nobody has timed the pass by the picture.
+  HIS OWN ROWS when he said so (a screenshot, 10-22): width 25 %, strength 60 %, the light rows at their starts, teammates 80 %, colour 50 %.
+  Not made the starts: he has not called them settled.
   HIS TEAMMATES HAVE RIMS TOO, AND THE RIMS HAVE COLOURS (10-22): "can you also add outlines for teammates + have a separate slider for thickness
   multiplier relative to the player? make the outline for the player yellow and for teammates red/blue and have a slider for saturation".
   `Teammate outline width` (`FINDME.mates`, none to 200 %, starts at 100 %; none = no teammate has a rim) and `Outline colour`
@@ -1381,7 +1409,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dynamic offset; `OUTLINE_MEN` 8 slots), THE TEAMMATES FIRST AND THE PLAYER LAST, so where two rims meet his is the one on top and in a crowd
   his place is kept. WHAT IT COSTS: five men are five small draws and one bind group; men stood close are each looked for in their own box, so
   where boxes overlap the id target is read once a man (a stack of five at a door: five times the reads over that patch, a few per cent of the
-  picture). A machine that kept the outline on gets the teammates' rims and the colours at once (that is the ask: the only rows of the eleven
+  picture). A machine that kept the outline on gets the teammates' rims and the colours at once (that is the ask: with `picture`, the only rows
   whose start is not the outline as first built); with the outline off nothing is asked of the squad's list. Line (11) of the check stands a
   squad of four up and holds all of it, on a device that writes down what it is asked (the layout's dynamic offset, a slot and a scissor a
   man), and that a squad stepped with the outline on ends digest for digest where it ends with it off. `tools/qa/findme-squad-page.cjs` is
@@ -1542,5 +1570,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (headless Chromium, real key presses; the screen needs no adapter, `GPU=1` adds the game on the software adapter, two boots,
   about twenty minutes; `ONLY=game` leaves the screen out). NEVER SEEN
   ON A GPU, and nobody has played it: not the feel of any moved key, not a Mac's keys (Cmd chords, a trackpad), not Safari or Firefox.
+  ROWS THE BUILD HAS ELSEWHERE WHILE EMPTY HANDS ARE A SLOT (`KEYMAP.slotWhen`, `SLOT`, `ALIAS`, 10-22): the slot's row (code `'Digit0'`) on backtick,
+  the debugger's on backslash, E's row with no key and its letter in a line read as the slot's key. The bullet is in `player.md`.
   A ROW THE BUILD GIVES NO KEY (`KEYMAP.qFree`, the wall hold's, 10-21): `home(a)` is a row's keys in the build, and 'as built', the swap, the kept
   table and Reset all measure against that, not against the row's code. The bullet is in `stealth.md` ('Q is free').

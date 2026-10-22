@@ -19,10 +19,11 @@ import { TABKEY, tabChoices, setTabKey, tabDoes } from './tabkey';
 import { BACKKEY } from '../game/backkey';
 import { WALLSNAP } from '../game/wallsnap';
 import { CMDRING } from '../game/cmdring';
+import { SLOTSETUP } from '../game/slotsetup';   // (read when the Controls list is drawn: the gun's setup took the selector's key and the light's)
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
-import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
+import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
@@ -45,6 +46,9 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
 /** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print]. The flat list other readers take is ui/menu.ts CONTROLS: a key
  *  that changes is changed in both. */
 const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it, look round its end; Q or a step away lets go';
+const E_WHAT = 'Holster or draw';
+/** the empty hands' own slot (game/handslot.ts; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
+const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'what is in them goes away; a digit draws'];
 const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
@@ -67,7 +71,7 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['R'], 'Reload'],
     [['Z'], 'Rifle semi / auto'],
     [['L'], 'Weapon light'],
-    [['E'], 'Holster or draw'],
+    [['E'], E_WHAT],
   ] },
   { group: 'Kit', rows: [
     [['1'], 'Pistol'],
@@ -299,7 +303,7 @@ function render(S: Screen) {
     flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText('A small mark beside the cursor, and an outline on the floor, for what B would order there.'));
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key (trying out)', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
-    const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — eleven rows on trial, kept by host/findme.ts)
+    const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
     sec(body, 'Cheats');
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'They still see you and shoot you; hits do nothing. Remembered on this machine.', ['On', 'Off']);
     flip(body, 'Enemies do not think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stands where he is: nobody patrols, hears or sees. Remembered on this machine.', ['On', 'Off']);
@@ -341,6 +345,11 @@ export function walkInNow(): boolean {
  *  dashed — a click puts on a key, and writes the row's words to suit; the start card's list does the same (ui/menu.ts controlRows) */
 export function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
 const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Back to a wall: walk into it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it, look round its end; a step away lets go' : 'no key: click the cap to give it one') : s; };
+/** THE GUN'S SETUP (game/slotsetup.ts), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
+ *  and a gun's own row says what its key does pressed again */
+const SETUP_SMALL: Record<string, string> = { Z: 'the gun\'s key again, then 1', L: 'the gun\'s key again, then 3', '1': 'again: its setup', '2': 'again: its setup' };
+const SETUP_ROW: Record<string, string> = { Z: 'KeyZ', L: 'KeyL' };
+const setupSmall = (cap: string, small?: string): string | undefined => !SLOTSETUP.on || !SETUP_SMALL[cap] || (SETUP_ROW[cap] && keysOf(SETUP_ROW[cap]).length) ? small : SETUP_SMALL[cap];
 function controls(body: HTMLElement, host: KeyHost) {
   const cols = el('div', 'op-keys'); body.appendChild(cols);
   // (ui/keybinds.ts: a cap of a key the player may move is its button, the words beside it name the keys as they are bound; a click off a waiting cap lets it go)
@@ -350,13 +359,14 @@ function controls(body: HTMLElement, host: KeyHost) {
   for (const g of KEYS) {
     const box = el('div', 'op-kgroup'); box.appendChild(el('div', 'op-sec', g.group));
     const back: typeof g.rows = BACKKEY.tab && g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
-    const rows = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
-    for (const [caps, what, small] of rows) {
+    const tabbed = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
+    const rows = !slotNow() ? tabbed : g.group === 'Kit' ? [SLOT_ROW, ...tabbed] : tabbed.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
+    for (const [caps, what, small0] of rows) {
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
       caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(keyCapEl(k, gearText(wallLine(what)), host, seen)); });
-      const w = el('div', 'op-what', gearText(wallLine(what))), wt = w.firstChild, sm = small ? el('small', '', gearText(wallLine(small))) : null; if (sm) w.appendChild(sm);
-      host.paints.push(() => { const t = keyText(gearText(wallLine(what))); if (wt && wt.textContent !== t) wt.textContent = t; if (sm) { const u = keyText(gearText(wallLine(small!))); if (sm.textContent !== u) sm.textContent = u; } });
+      const w = el('div', 'op-what', gearText(wallLine(what))), wt = w.firstChild, small = () => setupSmall(caps[0], small0) ?? '', sm = small0 || (SLOTSETUP.on && SETUP_SMALL[caps[0]]) ? el('small', '', gearText(wallLine(small()))) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)
+      host.paints.push(() => { const t = keyText(gearText(wallLine(what))); if (wt && wt.textContent !== t) wt.textContent = t; if (sm) { const u = keyText(gearText(wallLine(small()))); if (sm.textContent !== u) sm.textContent = u; } });
       r.appendChild(c); r.appendChild(w); box.appendChild(r);
     }
     cols.appendChild(box);
