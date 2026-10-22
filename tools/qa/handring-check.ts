@@ -7,6 +7,11 @@
 // WHAT IS ASKED:
 //   the tap       at a door a tap does the top row (the leaf moves) and puts no ring up; on open floor a tap does nothing (the whistle is never a tap)
 //                 but say so, once: 'nothing in reach' (the key looked dead); a second tap straight after says no more, and with the rule off none is said
+//   beside a thing a tap that finds no row beside a thing names the thing and why (handring.ts `near`; the maintainer on the stealth mission: "nothing in
+//                 reach to close the door?"): a stride short of a door 'door · step closer', every tap (one line of it in the log); on the quiet tutorial mission, at the open back
+//                 door its frame has no row for, 'door · not in this mission' (from a step short of it too); sprinting inside a door's reach 'door · stop sprinting'; a second tap with
+//                 the leaf in his hand 'door · not now'; open floor, a door behind a wall and a door with a living man nearer still 'nothing in
+//                 reach'; `near` off, the old word everywhere
 //   the ring      the key kept down: nothing before HANDRING.holdSecs, then the ring with a wedge for the door's row and the whistle on the LAST wedge; let
 //                 go in the middle and it stays with no key held; his feet are his own under it
 //   early         a digit pressed with the key down and the ring not yet up (inside the hold) is its wedge at once, never the slot or the gun's setup
@@ -38,14 +43,14 @@ export async function handRingCheck(): Promise<boolean> {
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const K = await import(`${ROOT}/src/host/keymap.ts`);
   const { playerBusy } = await import(`${ROOT}/src/game/savestate.ts`);
-  const was = { on: HANDRING.on, early: HANDRING.early, empty: HANDRING.empty, back: BACKKEY.tab, slot: HANDSLOT.on, cmd: CMDRING.on, hands: CMDRING.hands, ws: WALLSNAP.on, press: WALLSNAP.press, kOn: K.KEYMAP.on, slotWhen: K.KEYMAP.slotWhen, handWhen: K.KEYMAP.handWhen, qFree: K.KEYMAP.qFree, qCmd: K.KEYMAP.qCmd };
+  const was = { on: HANDRING.on, early: HANDRING.early, empty: HANDRING.empty, near: HANDRING.near, back: BACKKEY.tab, slot: HANDSLOT.on, cmd: CMDRING.on, hands: CMDRING.hands, ws: WALLSNAP.on, press: WALLSNAP.press, kOn: K.KEYMAP.on, slotWhen: K.KEYMAP.slotWhen, handWhen: K.KEYMAP.handWhen, qFree: K.KEYMAP.qFree, qCmd: K.KEYMAP.qCmd };
   const log = console.log, err = console.error, warn = console.warn;
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const G: any = globalThis, hadLS = G.localStorage; const store = new Map<string, string>();
   G.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, String(v)); }, removeItem: (k: string) => { store.delete(k); } };
   try {
     const S = await quiet(() => world(true)); const { pl, g, step, tap, place, input, click, keys, setCursor } = S as any; WALLSNAP.press = false; CMDRING.on = false; CMDRING.hands = false; BACKKEY.tab = true;   // (the back key is Tab, as the page has it)
-    const rule = (on: boolean) => { HANDRING.on = HANDRING.early = HANDRING.empty = on && !BRK; };
+    const rule = (on: boolean) => { HANDRING.on = HANDRING.early = HANDRING.empty = HANDRING.near = on && !BRK; };
     const KEY = 'Space', LAST = CMDRING.wedges, HOLD = Math.ceil(HANDRING.holdSecs * 60);
     const door = g.doors.list.find((d: any) => d.def.name === 'conference'), fc = door.frameCentre;
     const rows = () => g.nearby.map((r: any) => `${r.kind}:${r.verb ?? '-'}`).join(' | ') || 'none';
@@ -141,7 +146,53 @@ export async function handRingCheck(): Promise<boolean> {
       const offOld = await quiet(() => { applyKnobs(g, old); const off = HANDRING.on === false; applyKnobs(g, snap); return off && HANDRING.on === true; });
       verdict(has && offOld && FROZEN_HOLDS['HANDRING.on'] === 'TPS_HANDRING=1', 'a recording carries the switch, one from before it replays with it off, the frozen stand holds it off by name',
         `carried ${has} · a file without it: off, and on again with it ${offOld} · the frozen stand's word ${FROZEN_HOLDS['HANDRING.on']}`); }
-  } finally { HANDRING.on = was.on; HANDRING.early = was.early; HANDRING.empty = was.empty; BACKKEY.tab = was.back; HANDSLOT.on = was.slot; CMDRING.on = was.cmd; CMDRING.hands = was.hands; WALLSNAP.on = was.ws; WALLSNAP.press = was.press; K.setKeys({}); K.KEYMAP.on = was.kOn; K.KEYMAP.slotWhen = was.slotWhen; K.KEYMAP.handWhen = was.handWhen; K.KEYMAP.qFree = was.qFree; K.KEYMAP.qCmd = was.qCmd; G.localStorage = hadLS; console.log = log; console.error = err; console.warn = warn; }
+    // ---- beside a thing (last: the mission stood up here puts every switch on its stand, and they are put back after it)
+    { const { EMPTY_WHY } = await import(`${ROOT}/src/game/handring.ts`), FAR = `door · ${EMPTY_WHY.far}`, RUN = `door · ${EMPTY_WHY.run}`, HELD = `door · ${EMPTY_WHY.held}`, NONE = 'nothing in reach';
+      // (what the corner would show is the selector's own word; the log takes a line of it once in a while)
+      const clr = (G: any = g) => { G.messages.length = 0; G.player.sel.word = ''; G.player.sel.fileT = -1e9; }, said = (G: any = g) => (G.player.sel.word as string) || 'nothing said', short = () => place(fc[0], fc[2] + 1.8, 180);
+      rule(true); atDoor(); step(90); short(); const r0 = rows(), a0 = leaf(); clr(); tap(KEY); step(20); const far1 = said(); pl.sel.word = ''; tap(KEY); step(20); const far2 = said(), lines = g.messages.filter((m: any) => m.text === FAR).length, still = Math.abs(leaf() - a0) < 0.01;
+      HANDRING.near = false; short(); clr(); tap(KEY); step(20); const old = said(); rule(true);
+      floor(); clr(); tap(KEY); step(20); const open = said();
+      // sprinting away from inside its reach: the door is near enough, and it is his feet that are wrong
+      place(fc[0], fc[2] + 0.5, 180); clr(); keys('ShiftLeft', 'KeyS'); step(8); const sprinting = pl.sprinting, offR = Math.hypot(pl.char.pos[0] - fc[0], pl.char.pos[2] - fc[2]); tap(KEY); step(2); keys(); step(20); const ran = said();
+      // a wall between: the nearest door's marker is the level's, a stride and a half off through the plaster
+      const walled = (() => { const col = g.col, eyeY = 1.3; for (const d of g.doors.list) { const c = d.frameCentre; for (let a = 0; a < 16; a++) { const q = [c[0] + Math.cos(a * Math.PI / 8) * 1.9, 0, c[2] + Math.sin(a * Math.PI / 8) * 1.9];
+        const cut = (to: number[]) => { const k = 1 - 0.7 / Math.hypot(to[0] - q[0], to[2] - q[2]); return col.solidBlocked([q[0], eyeY, q[2]], [q[0] + (to[0] - q[0]) * k, eyeY, q[2] + (to[2] - q[2]) * k]); };   // (blocked well short of the door: a wall, not its own leaf)
+        if (col.nav.isBlocked(q[0], q[2]) || !cut(d.pos) || !cut(c)) continue;
+        if (g.doors.list.some((o: any) => o !== d && Math.min(Math.hypot(o.pos[0] - q[0], o.pos[2] - q[2]), Math.hypot(o.frameCentre[0] - q[0], o.frameCentre[2] - q[2])) < 2.4)) continue; return { q, name: d.def.name as string }; } } return null; })();
+      let wall = 'no such place'; if (walled) { place(walled.q[0], walled.q[2], 180); const lone = !g.interactables.some((it: any) => it.kind !== 'door' && it.kind !== 'light' && it.kind !== 'wall' && Math.hypot(it.pos[0] - walled.q[0], it.pos[2] - walled.q[2]) < 2.3); clr(); tap(KEY); step(20); wall = lone ? said() : 'another thing stands there'; }
+      // a living man nearer than the door, not yet his to grab: the tap was for him, and the door does not answer it
+      const gd = g.guards.find((x: any) => x.state !== 'dead' && !x.unit), gp = gd ? [...gd.char.pos] : null; let man = 'no man'; short();
+      if (gd) { const put = () => { gd.char.pos[0] = pl.char.pos[0] + 1.25; gd.char.pos[2] = pl.char.pos[2]; }; put(); step(2); put(); clr(); tap(KEY); step(4);
+        const mk = g.interactables.find((it: any) => it.guard === gd); man = mk && !mk.inReach ? said() : 'he has no marker out of reach'; gd.char.pos[0] = gp![0]; gd.char.pos[2] = gp![2]; step(2); }
+      // (a recording from before the word: the rest of the rule on, this off)
+      const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), before = JSON.parse(JSON.stringify(snap)); delete before.tables.HANDRING.near;
+      const kept = await quiet(() => { applyKnobs(g, before); const off = HANDRING.near === false && HANDRING.empty === !BRK; applyKnobs(g, snap); return off && HANDRING.near === !BRK; }) && FROZEN_HOLDS['HANDRING.near'] === 'TPS_HANDRING=1';
+      // (the quiet tutorial mission as the page stands it: its frame names its rows, and shutting a door is not one of them)
+      const { standUp } = await import('./headless.ts'), { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+      const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { RAILS } = await import(`${ROOT}/src/game/rails.ts`), { readFileSync } = await import('node:fs'), rails0 = RAILS.on;
+      let held = 'no mission', farHeld = '?', rowsIn = '?', rowsFree = '?', twice = '?', shutIt = false, inHand = false;
+      const tables = JSON.parse(JSON.stringify(knobsSnapshot(g))), cmd1 = CMDRING.on; CMDRING.on = was.cmd;   // (the stand-up reads the squad ring's switch to set its dependents: the stand's own, not this check's)
+      try { await quiet(async () => {
+        const W: any = await standUp({ uploadEvery: 4, level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/tut-quiet.json`, 'utf8'))), seed: 1 }); RAILS.on = true; startFromQuery(W.game, '?levelFile=tut-quiet.json&quiet'); rule(true);
+        const q = W.game, I = W.input, DT = 1 / 60, L = q.level.scenarios.lesson, R = q.lesson.data?.rails, named = R?.rows, back = q.doors.list.find((d: any) => d.def.name === 'back'), fb = back.frameCentre;
+        const run = (n: number) => { for (let i = 0; i < n; i++) { W.cursorAt([fb[0], 1.0, fb[2]]); W.step(DT); } }, hit = (k: string) => { I.pressed.add(k); I.keys.add(k); run(1); I.keys.delete(k); run(1); };
+        const qrows = () => q.nearby.map((r: any) => `${r.kind}:${r.verb ?? '-'}`).join(' | ') || 'none';
+        q.restartEncounter(); run(30); q.lesson.i = L.steps.findIndex((x: any) => x.id === 'nook'); back.locked = false; q.teleportPlayer([fb[0], 0, fb[2] + 0.7]); run(12);   // (the step that sends him in through it: the key is his, the lock is done)
+        hit('Space'); run(150);   // (the court side: 'push' is a row the mission names)
+        const opened = !back.isClosed(); q.teleportPlayer([fb[0] + 0.15, 0, fb[2] - 0.55]); /* (inside, a little to the latch's side: clear of the leaf's way home) */ run(12); rowsIn = qrows(); const b0 = back.angle; clr(q); hit('Space'); run(20);
+        held = `${opened ? '' : 'the door did not open · '}${said(q)}${Math.abs(back.angle - b0) < 0.01 ? '' : ' · the leaf moved'}`;
+        // …and from a step short of it the word is the same: 'step closer' to a leaf the mission will not let him shut would be a walk for nothing
+        q.teleportPlayer([fb[0] + 0.15, 0, fb[2] - 1.8]); run(12); clr(q); hit('Space'); run(10); farHeld = `${qrows() === 'none' ? '' : `rows ${qrows()} · `}${said(q)}`; q.teleportPlayer([fb[0] + 0.15, 0, fb[2] - 0.55]); run(12);
+        if (R) R.rows = undefined; run(3); rowsFree = qrows(); clr(q); hit('Space'); run(40); shutIt = Math.abs(back.angle - b0) > 0.05 && said(q) === 'nothing said'; if (R) R.rows = named;
+        // …and a second tap with the leaf already in his hand is no fault of the mission's ('push' is a row it names). Only where a push is his hand's
+        // work (hands.ts, the page's stand): on the frozen stand the leaf is simply open by then, and the row it has left is the one the mission lacks
+        run(120); clr(q); hit('Space'); run(2); inHand = !!q.player.doorMove; hit('Space'); run(4); twice = said(q);
+      }); } finally { await quiet(() => applyKnobs(g, tables)); CMDRING.on = cmd1; RAILS.on = rails0; }   // (every table as it stood before the mission was stood up)
+      verdict(r0 === 'none' && far1 === FAR && far2 === FAR && lines === 1 && still && old === NONE && open === NONE && sprinting && offR < 1.35 && ran === RUN && wall === NONE && man === NONE && rowsIn === 'none' && held === HELD && farHeld === HELD && (!inHand || twice === `door · ${EMPTY_WHY.no}`) && shutIt && kept,
+        'a tap that finds no row beside a thing names the thing and why: a stride short of a door, sprinting past it, and at a door the tutorial mission has no row for; open floor, a door behind a wall and a door with a man nearer are still nothing in reach',
+        `1.8 m from the door [${r0}]: "${far1}", a second tap "${far2}" (one line of it in the log: ${lines === 1}), the leaf still ${still} · that word's switch off: "${old}" · open floor: "${open}" · sprinting ${sprinting} ${offR.toFixed(2)} m from it: "${ran}" · 1.9 m from ${walled ? `'${walled.name}'` : 'a door'} with a wall between: "${wall}" · 1.8 m from the door with a man 1.25 m off: "${man}" · the quiet mission, inside its open back door [${rowsIn}]: "${held}", from 1.8 m off it: "${farHeld}" · the same tap with the mission naming no rows [${rowsFree}]: the leaf moved and no word ${shutIt} · a second tap with the shut leaf ${inHand ? 'in his hand' : 'already swung open (no hand on it on this stand)'}: "${twice}" · a recording from before the word replays with it off, the frozen stand holds it by name ${kept}`); }
+  } finally { HANDRING.on = was.on; HANDRING.early = was.early; HANDRING.empty = was.empty; HANDRING.near = was.near; BACKKEY.tab = was.back; HANDSLOT.on = was.slot; CMDRING.on = was.cmd; CMDRING.hands = was.hands; WALLSNAP.on = was.ws; WALLSNAP.press = was.press; K.setKeys({}); K.KEYMAP.on = was.kOn; K.KEYMAP.slotWhen = was.slotWhen; K.KEYMAP.handWhen = was.handWhen; K.KEYMAP.qFree = was.qFree; K.KEYMAP.qCmd = was.qCmd; G.localStorage = hadLS; console.log = log; console.error = err; console.warn = warn; }
   console.log(`\n=== handring: ${all ? 'ALL PASS' : 'FAIL'} ===`);
   return all;
 }

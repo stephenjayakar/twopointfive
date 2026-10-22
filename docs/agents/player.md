@@ -1143,6 +1143,32 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   rest, writes `--railshift` on it: down past the ring if the window has the room, else up over it (index.html: the line's transform, eased). The
   line stays readable: it is often what says which wedge to press. The older `ringover` (the status column faint under the squad's ring) is as it
   was. Page-only: no headless check sees it; read on the software adapter by the boxes' places, never seen on a GPU, no picture taken.
+- **A tap that finds no row beside a thing names the thing and why** (`HANDRING.near`, handring.ts; interact.ts `emptyThing` / `emptyWord`; on and off
+  with `on`, as `empty` is: `?handring=0`, `TPS_HANDRING=1`, a `FROZEN_HOLDS` row, a recording from before the key replays with it off). The
+  maintainer, 10-22, on the stealth tutorial with the back door open at his elbow: "nothing in reach to close the door?". THE CAUSE was not reach:
+  tut-quiet's frame names the rows it offers (`rails.rows`: push and pick on a door, never `pull`, the row that shuts an open leaf), player.ts drops
+  every row the frame does not offer, and the bare tap then filed 'nothing in reach' 0.55 m from the leaf (measured headless on the page's stand;
+  with `pull` let through the row is there). Whether that mission should offer the row is the tutorial's own call. THE WORD names only what the
+  game knows exactly (`emptyThing`, in this order, the nearest of each): a thing worked by hand (player.ts `PRESS_THINGS`) in reach whose every
+  row the frame kept back (buildInteractables marks its marker `framed`) says 'not in this mission'; a door in his hand's reach with no row while
+  his hands are not his (a leaf already in his hand) 'not now'; a door his sprint alone keeps from him 'stop sprinting' (never one locked against
+  him: its own line there is the boot's); a door a step off, within `EMPTY_NEAR_M` (2.2 m, as its reach is measured: `thingDist`) and in sight (a
+  level line from his eye to `EMPTY_SHY_M` short of the leaf or the doorway: the door markers are the whole level's) 'step closer'. A door's reach
+  is read as its distance and his feet (`Doors.USE_REACH`; the marker's `inReach` is also true from a stack's distance when the big slot's tool
+  has a row). A door of the last two that the frame offers NO door row for (`SHUT_ROWS` / `OPEN_ROWS`, interact.ts: the open back door of
+  tut-quiet) says 'not in this mission' from the step off as well. KNOWN GAP: a frame that offers some door row but none for this door (a steel
+  door, a lock it names no pick for) says 'step closer' and then, in reach, 'not in this mission'. After the thing's name (the head of its marker's
+  `line1`). NOTHING, so 'nothing in reach' as it was: open floor, a body or a switch out of reach (their reach is not a plain distance; and where
+  one is nearer than the door the door is not named either), a takedown under way, and wherever a living man in sight is nearer than the thing
+  (that tap was for him). THE CORNER reads the word off the selector (`Player.sel.word` / `wordT`, set by every such tap and cleared by the next
+  press, so a second tap always answers and a later log line never hides it) for 1.6 s, only while it is still what a tap would say (a step into
+  reach, or away, takes it down), and beside 'step closer' it shows how far the door is. With `near` off the corner and the log are as they were.
+  THE LOG takes one line in 3 s whatever the word (it changes as he walks). Check: `handring`'s last line, on both stands (1.8 m from a door,
+  twice, one log line; sprinting 0.7 m from it; a door 1.9 m off behind a wall; a man 1.25 m off; inside the quiet mission's open back door and
+  1.8 m short of it; the same tap with no rows named shuts the leaf; a second tap with the leaf in his hand, only where the stand has hands, so
+  'not now' is asserted on the page's stand alone; a recording from before; `HANDRING_BREAK=1` fails it). Nothing in it turns on a die: one
+  stand-up of each level, the rig's seed and seed 1. NOT CHECKED: a body or a switch nearer than the door (a ragdoll does not land where it is
+  put), the corner's row (read on the page by the DOM, on the software adapter). Never seen on a GPU; nobody has played it.
 - **The throw preview's ring is where the can comes to rest** (`THROWBACK.restMark`, throwback.ts; player.ts `throwRest`, frag.ts `restOfThrow`; the
   maintainer, 10-22: "hard to toss the smoke to precisely hit the gap … maybe we just need to update the UI to show roughly where it'll end up").
   WHAT IT WAS: the arc and its ring ended at the can's FIRST TOUCH (throwables.ts `solve`), which is where the cursor is; the can then bounces and
