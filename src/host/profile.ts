@@ -46,6 +46,7 @@ import { LIGHTWALL } from '../game/lighting';
 import { IRLIGHT } from '../game/irlight';
 import { AIRDUST } from '../game/airDust';
 import { WALLSNAP } from '../game/wallsnap';
+import { HANDSLOT } from '../game/handslot';
 import { GUNWALL } from '../game/gunwall';
 import { REARWATCH } from '../game/rearwatch';
 import { STACKLINE } from '../game/stackline';
@@ -229,7 +230,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SNOW_LOOK.breath = q.get('snowbreath') !== '0';   // … and the men's breath steams in its cold (game/snowBreath.ts; picture only): ON in the page; ?snowbreath=0 = no breath shows
   GLASS.bothFaces = q.get('glassears') !== '0';   // a pane's crash is heard from BOTH its faces (game/glass.ts glassEvent, guards.ts glassHeard: a window shot out from the yard reached the men in the room behind it only round by the front door): ON in the page; ?glassears=0 = heard only from the point the round met it, as it was
   DOORSHOT.on = q.get('doorshot') !== '0';   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall times its `toll`, 1 (game/doorblast.ts DOORSHOT): ON in the page; ?doorshot=0 = a round only marks a leaf, as it did
-  DOORTHROW.on = q.get('doorthrow') !== '0';   // a door swung or kicked into a man throws him: folded and blind a moment, longer under a boot, carried clear of the leaf (game/doors.ts DOORTHROW, game/doorthrow.ts): ON in the page; ?doorthrow=0 = a leaf stops against a standing man, as it did
+  DOORTHROW.on = q.get('doorthrow') !== '0';   // a door opened into a man carries him clear and startles him (a defender stops a beat and goes to look at the doorway); one slammed at a run or booted into him folds and blinds him a moment, longer under a boot (game/doors.ts DOORTHROW, game/doorthrow.ts): ON in the page; ?doorthrow=0 = a leaf stops against a standing man, as it did
   WALLPEN.on = q.get('wallpen') !== '0';   // a round carries on through thin walls and wooden door leaves with the energy it has left (game/wallpen.ts: plasterboard partitions, fabric and wood screens, a leaf that is not steel — by the glass rule's energy, a toll by stuff and the length of its path through): ON in the page; ?wallpen=0 = a round stops in the first built thing it meets, as it did
   WALLCHARGE.on = !q.has('nowallcharge'); if (q.get('wallmenu') === 'direct') WALLCHARGE.menu = 'direct';   // the wall charge's own switch (game/wallcharge.ts; it also needs the destruction's) · ?wallmenu=direct: X, 5 instead of X, 5, 3
   // each man of a room entry walks a real path through the door (doorpath.ts) — clear of the leaf, one tight file: ON in the page; ?nodoorpath = the entry as it
@@ -239,6 +240,7 @@ export function pageSwitches(q: URLSearchParams): void {
   WALLSNAP.press = q.get('wallpress') !== '0';   // …taken without the key (game/wallsnap.ts `press`, player.ts wallPress): a move key held into a wall takes it as its key does (while this is on the hold has no key on the page's board: host/keymap.ts qFree) — ON in the page (Options ▸ Game has its row, kept per machine); ?wallpress=0 = Q alone, as it was
   WALLSNAP.voice = q.get('wallvoice') !== '0';   // …heard (wallsnap.ts `voice`): his back landing on a wall and his stepping off it each have a sound, the player's ears only; ?wallvoice=0 = the faint scuff alone, as it was
   WALLSNAP.slow = q.get('wallslow') !== '0';   // …and unhurried (wallsnap.ts `slow`): the take runs twice its seconds and the pose comes on and lets go at half its rate; ?wallslow=0 = the take as it was
+  HANDSLOT.on = q.get('handslot') !== '0';   // empty hands are a slot (game/handslot.ts): its key puts away whatever is up and is never the way back, a digit draws; on the page's board it is backtick, the debugger is on backslash and E is spare (host/keymap.ts SLOT) — ON in the page; ?handslot=0 = E puts away and draws, as it was
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
   GLASSREAL.drop = q.get('glassdrop') !== '0'; GLASSREAL.place = q.get('glassplace') !== '0';   // glass as buildings have it (game/glassbreak.ts GLASSREAL): a toughened sheet goes white and drops at once, no wave across it; and a pane is toughened where it reaches the floor or is a door's panel, float where it starts at a sill — ON in the page; ?glassdrop=0 = the wave, ?glassplace=0 = outside toughened and inside float, as they were
@@ -442,6 +444,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
   'WALLSNAP.voice': 'TPS_WALLVOICE=1',
   'WALLSNAP.slow': 'TPS_WALLSLOW=1',
+  'HANDSLOT.on': 'TPS_HANDSLOT=1',
   'GUNWALL.on': 'TPS_GUNWALL=1',
   'REARWATCH.on': 'TPS_REARWATCH=1',
   'STACKLINE.on': 'TPS_STACKLINE=1',
