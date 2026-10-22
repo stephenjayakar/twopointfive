@@ -299,7 +299,7 @@ export class Lesson {
   }
 
   /** the run is over, whichever scenario it was: the quiet mission's stage, the player down, a room clear taken or the team wiped (roomclear.ts `end`) */
-  private over(): boolean { const g = this.g; return g.mission.stage === 'failed' || g.mission.stage === 'done' || who(g).down || (!!g.roomClear?.active && !!g.roomClear.end); }
+  over(): boolean { const g = this.g; return g.mission.stage === 'failed' || g.mission.stage === 'done' || who(g).down || (!!g.roomClear?.active && !!g.roomClear.end); }
   /** The HUD's objective while a step is up (mission.ts objectiveText / objectivePos; null = the scenario's own: no lesson, or every step done) */
   objective(): { text: string; pos: Vec3 | null } | null {
     const L = this.data, i = this.at; if (!L || i >= L.steps.length) return null;

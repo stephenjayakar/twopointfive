@@ -216,10 +216,12 @@ export class Rails {
   // ---------------------------------------------------------------- the prompt
   /** the one line on screen (null: no rails, every step done, the run over) */
   prompt(): { line: string; n: number; of: number } | null {
-    const S = this.lesson(); if (!S || S.i >= S.L.steps.length) return null;
-    if (!this.g.lesson.objective()) return null;
-    const T = S.L.steps[S.i];
-    return { line: T.line, n: S.i + 1, of: S.L.steps.length };
+    const S = this.lesson(), of = S?.L.steps.length ?? 0; if (!S || !of) return null;
+    // (every step done and the mission not yet over — the last metre to an exit, the last man of a fight: the last line stays up until the mission's own
+    //  end. The small row it would fall back to is the one a tutorial mission never shows)
+    if (S.i >= of ? BREAK || this.g.lesson.over() : !this.g.lesson.objective()) return null;
+    const i = Math.min(S.i, of - 1);
+    return { line: S.L.steps[i].line, n: i + 1, of };
   }
 
   // ---------------------------------------------------------------- nobody is lost
