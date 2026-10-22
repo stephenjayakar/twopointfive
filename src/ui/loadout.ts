@@ -42,7 +42,7 @@ import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
 import { weatherOfSearch } from '../game/weatherKinds';
 import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
-import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
+import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CAN, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
 import { KITDENSE } from './kitDense';
@@ -172,7 +172,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // (game/kit.ts KITDEAL.stealth: nothing is handed over a card — a stealth mission's kit is what your stealth card is issued as, so no tile is the mission's; the
   // screen tells the kit which mission the cards are for, as it opens and as the fog lever moves: syncHand)
   const syncHand = () => kitMission(stealthKind && kitStealthOn() ? kitStealthHand(lentOf().n, lentOf().wand > 0) : null);
-  const lentNow = (f: string): number => (member !== 0 || (kitStealthOn() && cardsOn()) ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
+  const lentNow = (f: string): number => (member !== 0 || (kitStealthOn() && cardsOn()) || kitIssueWhole(missionKit) /* (a mission's own card for you: nothing is handed over it — kit.ts ISSUE.whole) */ ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
   const lookSig = () => `${noFog()}|${lentNow('cams')}|${lentNow('wand')}|${lentNow('rings')}|${stealthKind && kitStealthOn() ? `${lentOf().n}|${lentOf().wand}` : ''}`;
   let fogWas = '';   // (set where the first card is mounted: `member` is not there yet)
   const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' ? quietRow || fogOfQuery(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : entry.kind !== 'quiet' && entry.kind !== 'solo'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)

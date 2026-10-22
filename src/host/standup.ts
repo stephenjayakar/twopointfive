@@ -48,7 +48,7 @@ import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
 import { WAND } from '../game/wand';
 import { PEEKSIGHT } from '../game/peeksight';
-import { BIGSLOT, KITDEAL } from '../game/kit';
+import { BIGSLOT, KITDEAL, ISSUE } from '../game/kit';
 import { STICKY } from '../game/stickycam';
 import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
@@ -409,6 +409,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_BIGSLOT')) BIGSLOT.on = String((globalThis as any).process?.env?.TPS_BIGSLOT ?? '') === '1';   // the big slot (src/game/kit.ts BIGSLOT): off, so the shotgun is a weapon row, a wall charge is pouches, and nobody carries a hammer
     if (pinned('TPS_KITMORE')) KITDEAL.more = String((globalThis as any).process?.env?.TPS_KITMORE ?? '') === '1';   // (…and its key `more`: off, so three or four as issued come with every big slot empty and the Quiet kit's fourth man with his pistol alone)
     if (pinned('TPS_KITSTEALTH')) KITDEAL.stealth = String((globalThis as any).process?.env?.TPS_KITSTEALTH ?? '') === '1';   // (…and its key `stealth`: off, so a stealth mission hands its sponge rounds, cameras and wand over your card and a sponge round costs a pouch)
+    if (pinned('TPS_ISSUEWHOLE')) ISSUE.whole = String((globalThis as any).process?.env?.TPS_ISSUEWHOLE ?? '') === '1';   // a mission's own card for you is the whole kit (src/game/kit.ts ISSUE.whole): off, so a quiet kind's sponge rounds and a fog's cameras and wand are handed over it
     if (pinned('TPS_KITDEAL')) KITDEAL.on = String((globalThis as any).process?.env?.TPS_KITDEAL ?? '') === '1';   // the squad's kit dealt over the men who come (src/game/kit.ts KITDEAL): off, so with three or four teammates the first two carry all of it
     if (pinned('TPS_PEEKSIGHT')) PEEKSIGHT.on = String((globalThis as any).process?.env?.TPS_PEEKSIGHT ?? '') === '1';   // a peek round the end of a wall lifts the fog (src/game/peeksight.ts): off, so the fog's eye stays over his feet
     if (pinned('TPS_WAND')) WAND.on = String((globalThis as any).process?.env?.TPS_WAND ?? '') === '1';   // the optical wand (src/game/wand.ts): off, so your kit card has no such row and no door offers the look

@@ -1052,7 +1052,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   length of its own call and puts the table back (`forRun`), so nothing read off the table between stagings moves with the last run played. THE QUIET KIT'S
   CARD FOR YOU is that same kit under the switch (the table's, a pistol alone with three smoke and a frag, predates the rounds, the cameras and the wand),
   so on a stealth mission the row of kits does not list Quiet beside the same card as issued; the teammates' Quiet cards are the table's. NOT COVERED: a
-  mission's own issue and a lesson's page wear the issue cards with the hand-overs as they were (nobody's card); the tile seam (`lent`, `LENT_WORD`,
+  mission's own issue and a lesson's page wear the issue cards (nobody's card: a lesson's page with the hand-overs as they were, a mission's own card for
+  you with none since `ISSUE.whole`, `docs/agents/missions.md`); the tile seam (`lent`, `LENT_WORD`,
   `KIT_LENT`) is kept and inert under the switch, and is the page as it was under `?nokitstealth`. REQUIRED EQUIPMENT: no mission requires a thing today;
   one that did would be a refusal with its reason (`kitRowCan`), never a second kind of gear. SWITCH: `KITDEAL.stealth` (a key of the registered table,
   journaled; a recording from before the key replays with it off), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row, `TPS_KITSTEALTH=1`; reads

@@ -397,6 +397,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     one. This bullet's first numbers are the hall as staged with one (history); the ones under WITHOUT THE SHIELD are the game as it is. `PT_HALL=bare` still walks
     the first teammate down the hall; `PT_HALL=file` and `low`, the same walk led by the plate, are refused in words. The frozen stand staged the shield here until the cut, so its hall-four digests moved to the shipped stand's of the day before;
     no other mission's did (playthrough.ts, the 21 loud missions × seeds 1-3 on each stand, digests against the build before the cut).
+- **A mission's own card for you is the whole kit** (`src/game/kit.ts ISSUE.whole`, 10-22; from the maintainer's play of the tutorial's solo mission:
+  "i first accidentally sponged the guys"). `tut-solo` is a LOUD mission of the QUIET kind (a lone man, the quiet scenario's frame) whose
+  `scenarios.issue` names his card, and `kitPlayer` asks only `stealthRun` (a quiet scenario up, or the night alone), so the mission's five sponge rounds
+  were handed over that card and the launcher came up on them, ahead of the grenades its lines teach. THE RULE: where the level's block names YOUR card
+  (place '0') and the staging runs under it (`issuing === 'own'`), nothing is handed over it: no sponge rounds for a quiet kind, no cameras or wand for a
+  fog (`lent` in `kitPlayer`; `kitIssueWhole(members)` is the one test, asked by `ui/loadout.ts lentNow` too so the Team & kit figure draws no camera or
+  wand the run will not have). With no sponge round the right button is on the first load he does carry (the grenade). NOT TOUCHED: a block that names
+  no card for you (the long hall's two levels, `members: {}`: a night alone there is handed what it was), a mission with no block (the stealth card, or
+  the hand-overs with that card off), a lesson's page with no block (the hand-overs over the plain issue), the teammates, the row's `lean` (still a word
+  on the mission sheet only; a loud mission of the quiet kind WITHOUT a card of its own would still be dealt as a stealth run: none exists), and a
+  checkpoint load's own wand hand-over (`savestate.ts`, `P.wand || quietWand(g)`: no level with a card for you is under a fog today). THE TREE: the
+  sponge rounds are a row of the card as a tree; with it off the rifle's are what it is built with on every mission and the rule has none to take (the
+  hold's word says so). A STEALTH mission that wanted its own card for you could not name sponge rounds, cameras or a wand on it today (the block has no
+  such fields): not built, none asks. SWITCH: `ISSUE.whole`, a key of the registered, journaled table (a recording from before the key replays with it
+  off), OFF in the module and on the frozen stand (`FROZEN_HOLDS` row, `TPS_ISSUEWHOLE=1`), ON in the page (`?issuelend` puts it off; debugger box "a
+  mission's own card for you is the whole kit"). CHECK: `probes.ts issuewhole` (`tools/qa/issuewhole-check.ts`, family `kit`; `ISSUEWHOLE_BREAK=1` must
+  fail) on BOTH stands: the solo tutorial stood up as its page stands it (off: 5 sponge rounds, the tube on them; on: none, the tube on the grenade,
+  2/2/2/3 as its card), a rig's quiet run alone under a fog with a card (off 5 / 2 cameras / wand; on none), an empty block, the tree off, a mission
+  with no block and a lesson's page with none (each the same on and off), the journal. MEASURED: one staging each, no seeds (nothing here is drawn).
+  FOR THE SOLO MISSION'S OWNER: its step `load` ("[2] again: load the grenade") is already true when it comes up under this rule and goes by unread, and
+  its scripted walk never wears the page's kit (`lesson-run.ts` stages no card on a man alone), so `tut-solo-check` plays the sponge rounds either way.
+  NOBODY HAS played the mission with it, on a GPU or off; no page was opened for it.
 - **A strongroom reached past cameras and beams** (`levels/vault.json` ← `tools/levels/vault.ts`, built on the look's kit, no second look file; row `vault-quiet`
   'The counting house' in `QUIET_MISSIONS`, group 'quiet-alone', `untuned`; `?levelFile=vault.json&quiet`, alone; level data only, no game code): a walled money house at
   night, the ledger in a safe. Two gates, each lit and under a lens (`cam_yard`, `cam_east`, mains); each dark way crosses a beam (`beam_strip` chest high, battery,
