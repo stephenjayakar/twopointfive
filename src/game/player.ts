@@ -429,7 +429,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (rooted) { /* folded: no reaching for a wall, no pushing off one */ }
   else if (input.hit('KeyQ')) { if (pl.wall) wallStepOff(g, mx, mz, ml, 'q'); else if (!wantSprint) { const why = { blocked: false }; if (!wallSnap(g, cam, why) && !wallSnapLater(g, ml, why)) g.msg(pl.dragging ? 'hands full' : why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); } }   // (at a run there is no taking hold: Shift is one of the ways off it; blocked: a face in reach but furniture standing against it where he would go)
   else if (WALLSNAP.on) wallSnapPending(g, dt, cam, wantSprint);   // (Q a moment before the face came into reach: taken as it does)
-  if (WALLSNAP.on && WALLSNAP.press && !rooted) wallPress(g, dt, input, cam, mx, mz, ml, wantSprint);   // (…and with no Q at all: a move key held into the wall he is up against)
+  if (WALLSNAP.on && WALLSNAP.press && !rooted && !g.rails?.locksWall()) wallPress(g, dt, input, cam, mx, mz, ml, wantSprint);   // (…and with no Q at all: a move key held into the wall he is up against)
   if (pl.wall && wantSprint) wallStepOff(g, mx, mz, ml, 'run');
   const onWall = !!pl.wall && moveOnWall(g, dt, cam, mx, mz, ml);   // false: free (or let go this very frame — then he walks on from where he stands, below)
   if (!onWall) {
