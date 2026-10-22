@@ -43,7 +43,7 @@ const script: LevelScriptFn = D => {
   }
 
   D.program('tutorial', P => {
-    P.onSignal('lesson:ambush', 'ambush'); P.onSignal('lesson:break', 'break'); P.onSignal('lesson:indoors', 'indoors');
+    P.onSignal('lesson:ambush', 'ambush'); P.onSignal('lesson:break', 'break'); P.onSignal('lesson:indoors', 'indoors'); P.onSignal('lesson:wall', 'wall'); P.onSignal('lesson:dark', 'dark'); P.onSignal('lesson:nv', 'nv'); P.onSignal('lesson:out', 'out');
 
     // THE ROAD: the roadblock opens up on the two trucks and keeps it up; the squad is down behind them, heads in, until it is told to move
     P.beat('ambush', function* (c) {
@@ -89,6 +89,28 @@ const script: LevelScriptFn = D => {
       for (const u of block(c, false)) c.order(u, { goal: null, aimAt: [21.5, 1.1, 23.4], upper: 'aim', hot: false });
       yield c.wait(0.1);
       c.signal('done:roadblock');
+    });
+
+    // THE WALL, THE MAINS and THE DARK: one man says what the squad has found, a breath after the line comes up (each starts clean: a checkpoint put back says it again)
+    P.beat('wall', function* (c) {
+      c.flag.broke = true;
+      yield c.wait(0.8);
+      const u = c.unit('Blue One') ?? squad(c)[0]; if (u) c.say(u, 'Store is locked. Charge on the wall.', { radio: true });
+    });
+    P.beat('dark', function* (c) {
+      c.flag.broke = true;
+      yield c.wait(0.6);
+      const u = c.unit('Red One') ?? squad(c)[0]; if (u) c.say(u, 'Mains box, on the yard wall. We can kill the lights.', { radio: true });
+    });
+    P.beat('nv', function* (c) {
+      c.flag.broke = true;
+      yield c.wait(0.4);
+      const u = c.unit('Red Two') ?? squad(c)[0]; if (u) c.say(u, 'Lights are out. Goggles on.', { radio: true });
+    });
+    P.beat('out', function* (c) {
+      c.flag.broke = true;
+      yield c.wait(0.4);
+      const u = c.unit('Red One') ?? squad(c)[0]; if (u) c.say(u, 'House is clear.', { radio: true });
     });
   });
 };

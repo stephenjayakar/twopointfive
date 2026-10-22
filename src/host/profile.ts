@@ -191,6 +191,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.fileSpread = q.get('filespread') !== '0';   // fall in, Sam stopped: a place that fell on the place of a man ahead in the file is dealt again a body's room off it (game/orders.ts apartSlot: two men shoved each other over one spot for as long as he stood); ?filespread=0 = the places as they fall
   ORDERS.fileHold = q.get('filehold') !== '0';   // …and where the spread found no floor and he cannot stop short, he holds where he stands, a step off the mate's place where the floor has one (game/orders.ts apartSlot hold: he was handed the place as it fell, inside a body's room of a mate's, and the two shoved each other in a corner); ?filehold=0 = the place as it fell
   ORDERS.backEnd = q.get('backend') !== '0';   // …and the file's further back off a doorway ends with the floor: a back distance that no longer moves the place is not counted (game/orders.ts clearBack: with no trail beside an open door it was counted in full for every man after the first, the third man's file distance read 8.3 m and a man 8.9 m off in plain sight was taken for one in his place); ?backend=0 = the full count
+  ORDERS.retakeGoal = q.get('retakegoal') !== '0';   // a man back from the fight walks for where his order stands, not for a corner of the way he was on before (game/orders.ts tick): ON in the page; ?retakegoal=0 = his goal left as the fight found it
   ORDERS.inWay = q.get('inway') !== '0';   // a stack refused 'no room on that door' only because Sam's own body is on one of its places: the man says "you're in the way." (game/orders.ts noRoomWords: the places asked once more as if he were not there — words only, the order is refused as it was and no place is dealt by it); ?inway=0 = 'no room on that door.', as it was
   ORDERS.walkTries = q.get('walktries') !== '0';   // a 'move there' whose way runs at a door locked against the team that nobody has tried is not refused with the door's name: the men walk up to it, the man on the jamb tries the handle, and the order ends there as a door order ends 'found shut' — the same line, the men left stacked on it; the team knows from then on (game/orders.ts walkStacks, game/doortools.ts walkTried; only where DOORTOOLS.testDoor is on); ?walktries=0 = refused at once, '<door> is locked.', as it was
   ORDERS.roundCap = q.get('roundcap') === '0' ? 0 : ROUND_CAP;   // the way round an uncleared room is taken only when it is worth it (game/orders.ts route / roundRooms: a way round that still crosses floor nobody has been on, or is longer than this many times the short way + 3 m, is refused — the short way, as with no way round); ?roundcap=0 = any way round with less unknown floor on it, however long, as it was
@@ -340,11 +341,18 @@ export function pageSwitches(q: URLSearchParams): void {
   GUNLOOK.shells = !q.has('nogunshells');   // (…and of 10-19: a tube gun is fed a shell at a time in time and in the books — the M1014 and the pump gun take a lead, so long a shell and a tail, each shell in the gun as it is heard; ?nogunshells = the row's one length and the tube booked at its end)
   GUNROLES.on = !q.has('nogunroles');   // a gun is used for what it is for (game/gunroles.ts): a cast of defenders is dealt an AKMS, one belt-fed PKM for a lane or a big cast and a few pistols off the squad's table, and a teammate's place in the stack, his turn at the door, the opening he covers and his trigger follow the gun in his hands. ?nogunroles = every defender the short carbine and every teammate as with the issue carbine
   PLANLAY.on = !q.has('noplanlay');   // X is where the plan is laid (game/planlay.ts): 'wait for my word' is under every order menu, an order picked with it on is laid — nobody moves — and F sends the plan; Enter puts it back. ON in the page, ?noplanlay = the row is the four's door tools' alone and the men walk to the door at once, as it was; off on the frozen stand (TPS_PLANLAY=1 raises it)
-  CMDRING.on = q.has('cmd');   // THE ORDERS RING, A PROTOTYPE (game/cmdring.ts): Tab down puts the order menu up as a ring at the cursor, Tab up gives the lit wedge — a tap is B. OFF in the page unless `?cmd` asks (and the debugger's tick), off on both stands: nothing is recorded with it on
+  CMDRING.on = q.get('qring') !== '0';   // THE ORDERS RING (game/cmdring.ts): the squad's command key (Q on the board) let go at once is the quick order, as it was, and kept down a moment puts the order menu up as a ring at the cursor. ON in the page since 10-22 (the maintainer: "longer press for Q opens up squad, doesn't require holding it"); `?qring=0` = the key as it was, its order as it goes down and no ring. Held off on the frozen stand
+  CMDRING.stay = CMDRING.on && q.get('qstay') !== '0';   // …and the ring stays up when the key comes up: a digit, a click or the key again gives a wedge, a right click puts it away (`?qstay=0` = the ring only while the key is down, given as it comes up)
+  CMDRING.tapNow = CMDRING.on;   // …and a press already up in its own tick is a tap given on that tick
   CMDRING.hint = q.has('cmdhint') && !q.has('nocmdhint');   // …and the mark at the cursor before the key — a glyph beside it and an outline on the floor for what the key would order there (a picture only). A GAME SETTING, off unless chosen: Options ▸ Game keeps it on this machine (ui/options.ts); `?cmdhint` = on for this visit, with the ring or without
-  CMDRING.hands = CMDRING.on && !q.has('nocmdhands');   // …and Space the same way for his own hands (interact.ts): down = his rows as a ring at the cursor, up = the lit one, a tap the tap it was (`?nocmdhands` = Space as it was beside the ring)
-  CMDRING.plan = CMDRING.on && q.has('cmdplan') && !q.has('nocmdplan');   // …and plan mode (game/planmode.ts): Shift+Tab toggles it; the left button picks men, the right button orders them and Shift chains, F at a chain's pauses — only when asked for beside the ring (`?cmd&cmdplan`): with it on Shift + the key is its toggle, so a tap made at a sprint orders nothing, and the single key is being got right first (docs/agents/squad.md)
+  CMDRING.hands = CMDRING.on && q.has('cmd') && !q.has('nocmdhands');   // …and Space the same way for his own hands (interact.ts): down = his rows as a ring at the cursor, up = the lit one, a tap the tap it was — still only when asked for (`?cmd`; `?nocmdhands` = Space as it was beside the ring)
+  CMDRING.plan = CMDRING.on && q.get('qplan') !== '0' && !q.has('nocmdplan');   // …and plan mode (game/planmode.ts): Shift + the key toggles it; the left button picks men, the right button orders them and Shift chains, F at a chain's pauses. ON in the page with the ring since 10-22 (the maintainer: "shift Q for plan mode"); `?qplan=0` (or `?nocmdplan`) = Shift and the key as they were
   CMDRING.planRts = CMDRING.plan && !q.has('nocmdrts');   // …that mode as an RTS's: Sam stands, the walk keys move the view, the right button kept down is the ring (`?nocmdrts` = the mode as it was first built)
+  CMDRING.planRun = CMDRING.plan;   // …but Shift + the key out of a sprint (a walk key down, the mode down) is still the key's own order
+  CMDRING.planLook = CMDRING.plan && CMDRING.planRts && q.get('planlook') !== '0';   // …a right press dragged is an order with a way to look: on the floor they go there and face it, on a man he covers it from where he stands (`?planlook=0` = a right press is a click or the ring)
+  CMDRING.planWaits = CMDRING.plan && q.get('planwaits') !== '0';   // …the word's waits are the plan's own: a left click on a stop steps them on, and the word frees only the chains stood waiting (`?planwaits=0` = the build's own pauses and the early press)
+  CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && q.get('planknee') !== '0';   // …he takes a knee at the radio while the mode is up, and the view eases back to him when it comes down (`?planknee=0` = he stands, the view's point jumps)
+  CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
   SQUAD40.on = !q.has('nosquad40');   // a teammate whose card carries 40 mm grenades fires one where he points (game/squad40.ts): X on a spot of floor, G, then 3. ON in the page, ?nosquad40 = no such row; off on the frozen stand (TPS_SQUAD40=1 raises it). Nothing at all while no teammate's card carries a round
@@ -548,6 +556,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.fileHold': 'TPS_FILEHOLD=1',
   'ORDERS.backEnd': 'TPS_BACKEND=1',
   'ORDERS.inWay': 'TPS_INWAY=1',
+  'ORDERS.retakeGoal': 'TPS_RETAKEGOAL=1',
   'ORDERS.walkTries': 'TPS_WALKTRIES=1',
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
   'COVER.rearRead': 'TPS_REARREAD=1',
@@ -562,6 +571,16 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.outsidePlain': 'TPS_OUTSIDEPLAIN=1',
   'DOORTOOLS.wordNoCan': 'TPS_WORDNOCAN=1',
   'DOORTOOLS.wordSmall': 'TPS_WORDSMALL=1',
+  'CMDRING.on': 'TPS_QRING=1',
+  'CMDRING.tapNow': 'TPS_QRING=1 (with the ring)',
+  'CMDRING.stay': 'TPS_QSTAY=1 (needs TPS_QRING=1)',
+  'CMDRING.plan': 'TPS_QPLAN=1 (needs TPS_QRING=1)',
+  'CMDRING.planRts': 'TPS_QPLAN=1 (with the mode)',
+  'CMDRING.planRun': 'TPS_QPLAN=1 (with the mode)',
+  'CMDRING.planLook': 'TPS_PLANLOOK=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planWaits': 'TPS_PLANWAITS=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
+  'CMDRING.only': 'TPS_QONLY=1 (needs TPS_QRING=1)',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
   'SEENWALK.on': 'TPS_SEENWALK=1',
   'DOORTOOLS.haltBack': 'TPS_HALTBACK=1',

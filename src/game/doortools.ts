@@ -71,6 +71,7 @@ import type { Item } from './throwables';
 import { GRAVITY } from './throwables';
 import type { Assignment, OrderDef, OrderTarget, OrderNote, StackPost, Who } from './orders';
 import { sideOf, doorWords, WORD_HEAD, OWN_EPS } from './orders';
+import { CMDRING } from './cmdring';
 import { BoxFlag, makeBox } from '../scene/boxes';
 import { KICK_IMPACT, TOSS_QUICK } from './character';
 import { killGuard, detonateStun, fireWeapon } from './combat';
@@ -1729,6 +1730,11 @@ export class DoorTools {
   /** the men among `men` with something waiting on the word */
   private waitingMen(men: Guard[]): Guard[] { const on = new Set<Guard>(); for (const x of this.waitingAny(men)) for (const m of x.men) on.add(m); return men.filter(m => on.has(m)); }
   /** … with the rooms being worked from the threshold: the word sends those in too (the pockets, then the step in) */
+  /** THE MEN THE WORD IS FOR: those the orders go to — or, with the squad's only keys (cmdring.ts `only`: there is no who key to turn to them with), whoever
+   *  stands waiting on it when none of those does (the maintainer, 10-22: "pressing F only releases the people blocked on it") */
+  private wordMen(): Guard[] { const S = this.g.orders, men = S.recipients(); if (!CMDRING.only) return men;
+    if (S.big ? this.waitingAny(men).length : this.stackWaits(men).length) return men;
+    const all = S.men('all'); return (S.big ? this.waitingAny(all).some(x => 'stack' in x || !this.chargeOn(x.door)) : this.stackWaits(all).length > 0) ? all : men; }   // (a set charge with nobody else waiting is not the word's: it has its own line and F blows it, as it did)
   private waitingAny(men: Guard[]): (DoorOp | { stack: Door; men: Guard[] })[] { return [...this.waiting4(men), ...this.thresholdHeld(men).filter(op => !op.word)]; }
   /** what of these men's waits on THAT door, and who (autopilot.ts — the quick key on it): 'stack' = men on a plain 'stack up' there (the word would make an
    *  open-and-clear of it), 'word' = anything else the word would send (an order given on the word, a threshold held, a charge set or being set). Null: nothing */
@@ -2003,17 +2009,17 @@ export class DoorTools {
       if ((K.thrMenuWord || !S.menu || own) && this.pairWord(S.recipients())) { input.pressed.delete(key); S.close(); return; }   // (with no menu, or any other: a menu that is up goes away, as it does for the four's word)
       // … and the men standing on a plain stack (wordSmall): the word sends them in, a free set charge goes with it — the pair's word again. To the men a
       // menu that is up is for (one opened on a teammate: him), and AGAIN — outside `wordTap` of the first — for a word held for men who ran from a grenade
-      if (K.wordSmall) { const men = S.menu ? S.recipients(S.menu.target) : S.recipients();
+      if (K.wordSmall) { const men = S.menu ? S.recipients(S.menu.target) : this.wordMen();
         if (this.stackWaits(men).length || (K.fragHold && g.time - this.wordKeyT >= K.wordTap && this.fragHeld(men).length > 0)) { input.pressed.delete(key); const p = g.player.char.pos; S.close();
           if (S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men }) === null) { this.wordKeyT = g.time; for (const c of this.set.filter(c => !this.onPendingWord(c))) this.trigger(c); }
           return; } }
     }
-    const men = four ? S.recipients(row >= 0 ? M!.target : null) : [];
+    const men = four ? (row >= 0 ? S.recipients(M!.target) : this.wordMen()) : [];
     const again = four && K.fragHold && g.time - this.wordKeyT >= K.wordTap && this.fragHeld(men).length > 0;   // (the word AGAIN, on a word held for men who ran from a grenade; a second tap inside `wordTap` of the first is not it)
     const waiting = this.waitingAny(men).length > 0 || again;
     if (waiting || row >= 0) {
       const st = NB.state; if (!(waiting && (st === 'set' || st === 'stacking') && NB.drillOps.some(m => men.includes(m)))) input.pressed.delete(key);
-      if (row >= 0) S.pick(row); else { const p = g.player.char.pos; S.close(); S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }); }
+      if (row >= 0) S.pick(row); else { const p = g.player.char.pos; S.close(); S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, CMDRING.only ? { men } : undefined); }   // (cmdring.ts only: to the men found waiting, wordMen)
       if (waiting) this.wordKeyT = g.time;
       return;
     }
@@ -3682,7 +3688,7 @@ export class DoorTools {
   hudNotes(): string[] {
     const out = [`charges ${this.charges} · bangs ${this.bangs}`], S = this.g.orders, F = DOORTOOLS.blowKey.replace('Key', '');
     if (FRAG.on && FRAG.squad > 0) out.push(`frags ${this.frags}`);
-    const word = DOORTOOLS.wordOnKey && S.big && this.waitingAny(S.recipients()).length > 0;
+    const word = DOORTOOLS.wordOnKey && S.big && this.waitingAny(this.wordMen()).length > 0;
     for (const c of this.set) out.push(`charge set · ${doorWords(c.door)}${this.onPendingWord(c) ? ' — on the word' : word ? '' : ` — ${F} blows it`}${OWNCHARGE.on ? this.closeWords(c).replace('too close:', 'TOO CLOSE:').replace('behind the door:', 'BEHIND THE DOOR:') : ''}`);   // (who it would catch, where a long line wraps: the door's own header is cut short)
     for (const op of this.ops) if (op.onWord && op.phase === 'ready') out.push(`${S.whoWords(op.men)} ready on your word · ${doorWords(op.door)}`);   // (what matters first: the panel clips a long line's tail)
     for (const op of this.ops) if (op.thr?.hold && op.phase === 'thr') out.push(`${S.whoWords(op.men)} ${op.thr.told ? 'holding on your word' : 'working the threshold'} · ${doorWords(op.door)}${S.big ? '' : ` — ${F} goes`}`);   // (the four's key line is the word's own: wordNote)
@@ -3694,13 +3700,13 @@ export class DoorTools {
   wordNote(): OrderNote[] {
     const S = this.g.orders;
     if (!S.big) {   // (the small squad's: its plain stacks, under wordSmall — the key is always the word's there)
-      const F = DOORTOOLS.blowKey.replace('Key', ''), T = S.knobs.whoKey.replace('Key', ''), mine = this.stackWords(S.recipients()); if (mine) return [{ key: F, text: `go · ${mine} waiting` }];
-      const rest = this.stackWords(S.men()); return rest ? [`${rest} waiting · ${T}, then ${F}`] : [];
+      const F = DOORTOOLS.blowKey.replace('Key', ''), T = S.knobs.whoKey.replace('Key', ''), mine = this.stackWords(this.wordMen()); if (mine) return [{ key: F, text: `go · ${mine} waiting` }];
+      const rest = this.stackWords(S.men()); return rest ? [CMDRING.only ? `${rest} waiting` : `${rest} waiting · ${T}, then ${F}`] : [];   // (cmdring.ts only: the who key is nobody's)
     }
     const F = DOORTOOLS.blowKey.replace('Key', ''), T = S.knobs.whoKey.replace('Key', ''), key = DOORTOOLS.wordOnKey;
-    const mine = this.waitingWords(S.recipients()); if (mine) return [key ? { key: F, text: `go · ${mine} waiting` } : `${mine} waiting on your word`];
+    const mine = this.waitingWords(this.wordMen()); if (mine) return [key ? { key: F, text: `go · ${mine} waiting` } : `${mine} waiting on your word`];
     const rest = [...new Set(this.waitingAny(S.men()).filter(x => 'stack' in x || !this.chargeOn(x.door)).map(x => S.whoWords(x.men.filter(m => m.state !== 'dead'))))].join(' + ');
-    return rest ? [`${rest} waiting · ${T}, then ${key ? F : 'go'}`] : [];
+    return rest ? [CMDRING.only ? `${rest} waiting` : `${rest} waiting · ${T}, then ${key ? F : 'go'}`] : [];
   }
   summary(): string {
     return `charges ${this.charges} · bangs ${this.bangs} · set ${this.set.map(c => c.door.def.name).join(',') || 'none'} · ${this.ops.map(o => `${o.kind} ${o.door.def.name}: ${o.phase} (${o.men.map(m => m.callsign).join(', ')})`).join(' · ') || 'nothing under way'}`;

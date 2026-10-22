@@ -16,6 +16,13 @@ import { handRingView } from '../game/interact';
 import { planView } from '../game/planmode';
 
 const NS = 'http://www.w3.org/2000/svg';
+/** a line from one point of the layer to another with a head on its far end (too short to read: nothing) */
+function arrow(x0: number, y0: number, x1: number, y1: number, cls: string): string {
+  const dx = x1 - x0, dy = y1 - y0, l = Math.hypot(dx, dy); if (l < 6) return '';
+  const ux = dx / l, uy = dy / l, h = 7, f = (n: number) => n.toFixed(1);
+  const ax = x1 - (ux * 0.87 - uy * 0.5) * h, ay = y1 - (uy * 0.87 + ux * 0.5) * h, bx = x1 - (ux * 0.87 + uy * 0.5) * h, by = y1 - (uy * 0.87 - ux * 0.5) * h;
+  return `<path class="${cls}" d="M${f(x0)},${f(y0)}L${f(x1)},${f(y1)}M${f(ax)},${f(ay)}L${f(x1)},${f(y1)}L${f(bx)},${f(by)}"/>`;
+}
 const R0 = 17, R1 = 44, RN = 30.5, RT = 53, RC = 86;   // px: the hole, the rim, where a digit sits, where a wedge's words start, how far under the middle the caption sits
 const GAP = 3;   // degrees left open each side of a wedge
 
@@ -125,8 +132,10 @@ export class CmdRingViz {
       C.stops.forEach((q, i) => { const p = pts[i + 1]; if (!p) return; const [x, y] = p;
         s += q.door ? `<rect class="ps" x="${(x - 5).toFixed(1)}" y="${(y - 5).toFixed(1)}" width="10" height="10"/>` : `<circle class="ps" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5"/>`;
         for (let k = 0; k < q.keys; k++) { const bx = x + 9 + k * 17, by = y - 19;
-          s += `<g class="pk${q.now && k === 0 ? ' now' : ''}"><rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="14" height="14" rx="2"/><text x="${(bx + 7).toFixed(1)}" y="${(by + 10.5).toFixed(1)}">${V.key}</text></g>`; } });
+          s += `<g class="pk${q.now && k === 0 ? ' now' : ''}"><rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="14" height="14" rx="2"/><text x="${(bx + 7).toFixed(1)}" y="${(by + 10.5).toFixed(1)}">${V.key}</text></g>`; }
+        const e = q.look ? xy(q.look) : null; if (e) s += arrow(x, y, e[0], e[1], 'pa'); });   // (the way its men face once there: planmode.ts lookOrder)
       s += '</g>'; }
+    if (V.aim) { const a = xy(V.aim.from), b = xy(V.aim.to); if (a && b) s += arrow(a[0], a[1], b[0], b[1], 'pa drag'); }   // (a right press being dragged: the way it will set)
     if (V.drag) { const D = V.drag; s += `<rect class="pb" x="${(Math.min(D.x0, D.x1) / tz).toFixed(1)}" y="${(Math.min(D.y0, D.y1) / tz).toFixed(1)}" width="${(Math.abs(D.x1 - D.x0) / tz).toFixed(1)}" height="${(Math.abs(D.y1 - D.y0) / tz).toFixed(1)}"/>`; }
     if (s === this.planWas) return; this.planWas = s;
     if (!this.plan) { const g = this.plan = document.createElementNS(NS, 'g') as SVGGElement; g.setAttribute('class', 'planmode'); this.svg.insertBefore(g, this.svg.firstChild); }
@@ -136,7 +145,18 @@ export class CmdRingViz {
   update(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
     this.updatePlan(game, cam, w, h, tz);
     this.updateHint(game, cam, w, h, tz);
-    this.orders.draw(CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, tz);
+    const V = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null;
+    this.orders.draw(V, tz); this.clear(V, tz);
     this.hands.draw(game.player.sel.ring ? handRingView(game) : null, tz);
+  }
+  private overKey = '';
+  /** the status column goes faint while the ring's words lie over it (a ring put up on a door near that corner was read through the column's plates) */
+  private clear(V: RingView | null, tz: number) {
+    const key = V ? `${V.x.toFixed(0)},${V.y.toFixed(0)},${V.zoom.toFixed(2)}` : ''; if (key === this.overKey) return; this.overKey = key;
+    let over = false;
+    if (V) { const b = document.getElementById('interact')?.getBoundingClientRect(), s = this.svg.getBoundingClientRect();
+      const cx = s.left + V.x / tz, cy = s.top + V.y / tz, rx = 190 * V.zoom / tz, ry = 80 * V.zoom / tz;   // (the words reach further to the sides than up and down)
+      over = !!b && b.width > 0 && b.height > 0 && cx - rx < b.right && cx + rx > b.left && cy - ry < b.bottom && cy + ry > b.top; }
+    document.body.classList.toggle('ringover', over);
   }
 }

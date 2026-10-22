@@ -901,7 +901,7 @@ export class Checkpoints {
       if (this.authored) { const label = this.authored; this.authored = null;
         // (the level's program is stopped for the take and started again by the frame on the next tick, with this step's cue: a beat is a function half run, which
         //  no snapshot holds — so what is kept is the floor with no program, exactly what putting it back starts from)
-        const D = g.director; if (D?.run && !D.run.ended) { D.stop(false); g.rails.restart(); }
+        const D = g.director; if (D?.run && !D.run.ended) { D.stop(false); g.rails.resume(); }
         this.writeMem(g, 'auto', label, true); }
       return; }
     this.authored = null;
@@ -1033,6 +1033,7 @@ export class Checkpoints {
     restoreSnapshot(e.snap);
     { const pl = g.player, S = pl.sel; if (S.ring?.free) { S.open = false; S.ring = null; S.downT = -1; S.moved = false; pl.nearSel = 0; } }   // (handring.ts: a ring that merely stood at the save is nothing of the saved moment — a file's load finds none either, and his first click after a load is his trigger, not a wedge)
     g.player.setup = null;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load — its digits are his slots again)
+    g.orders.loaded();   // (a standing squad ring or plan mode in the save is put away: orders.ts)
     if (kept && st.map) { st.map.clear(); for (const [k, v] of kept) st.map.set(k, v); }
     Object.assign(this.stats, stats); this.log.length = 0; this.log.push(...log);
     Object.assign(this, host); Object.assign(g.tune, tune); Object.assign(g, flags); loadSandbox(g, false);
