@@ -22,7 +22,7 @@ const script: LevelScriptFn = D => {
   const DOORWAY_AT: [number, number, number] = [26.0, 0, 13.5], DOORWAY = D.mark('hall.doorway', DOORWAY_AT);    // the doorway itself: where they go when one stack came alone
   const ROAD_CAMP = [D.mark('road.camp0', [38.4, 0, 8.2]), D.mark('road.camp1', [38.6, 0, 11.8])], LANE_CAMP = [D.mark('lane.camp0', [19.6, 0, 1.6]), D.mark('lane.camp1', [24.4, 0, 1.6])];
   const ROAD_IN = [D.mark('road.in0', [33.4, 0, 9.5]), D.mark('road.in1', [34.0, 0, 10.6])], LANE_IN = [D.mark('lane.in0', [21.6, 0, 6.9]), D.mark('lane.in1', [22.5, 0, 6.2])];
-  const POST_A = D.mark('post.a', [29.25, 0, 10.25]), POST_B = D.mark('post.b', [23.25, 0, 10.75]);
+  const POST_A = D.mark('post.a', [29.25, 0, 10.25]), POST_B = D.mark('post.b', [24.0, 0, 10.3]);
   // where a man nobody has shot yet walks on to, in the open on either side of the cover the squad was put behind
   const ROAD_ON = [D.mark('road.on0', [31.2, 0, 7.6]), D.mark('road.on1', [31.4, 0, 12.2])], LANE_ON = [D.mark('lane.on0', [22.2, 0, 8.0]), D.mark('lane.on1', [24.9, 0, 8.0])];
 
