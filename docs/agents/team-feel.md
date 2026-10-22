@@ -538,6 +538,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   keys replays with them off (`journal.ts applyKnobs`); not frozen-stand holds (`PAIR.on` is). Check: `probes.ts pair-watched` (the look-back scenes, each
   red with its fix out; green on both stands). Measured headless, scripted: relay station ways flips 3 to 5 a run down to 0 to 2 over 12 starts; the
   border hold 0.6 to 3.9 s up to tens of seconds on one F; relay quiet runs 5 of 18 done before and after. Never played, never seen on a GPU.
+- **The partner does not turn about on his way** (`src/game/pairorders.ts`, switch `PAIR.steady`, 10-22; the maintainer, of the pair
+  mission: "partner seems to be very paranoid about always turning around to check the other guy"). Two causes, both in the walk to a
+  man's back, both found in the scripted run of `tut-pair` on hard. (1) The kept way (`PAIR.keepWay`) took up at its NEAREST corner, and
+  with that corner a pace behind him he was sent back to it and round again on the next reading 0.3 s on: two full turns in three
+  seconds. Now a corner he is already past along its own leg is dropped (`stalk()`), and a first corner within `steadyBackM` 1.6 m that
+  lies behind the leg after it is skipped when the next is walkable from where he stands. (2) Each time the way read as watched he
+  stopped and at once squared to the man, then squared back when it read clear a beat later. Now he keeps the way he was facing for
+  `steadyFaceSecs` 1.2 s of a wait before he turns to the man. ON in the page (`?pairsteady=0` puts it off; Team feel row "pair ▸ does
+  not turn about on his way"), OFF in the module and on the frozen stand (`TPS_PAIRSTEADY=1`), a `FROZEN_HOLDS` row, carried by the
+  journal (`PAIR` joined `JOURNAL_KNOBS` with it: a recording had not carried the table before). Check `pair-steady` (family `pair`;
+  `PAIRSTEADY_BREAK=1` fails it on both stands): the scripted lesson, one seed, off against on: 4 about-turns, 2 steps back and 3
+  flinches in 3 waits → 0, 0, 0, and the lesson still plays to its end (141 → 138 s frozen, 142 → 139 s on the page's stand). One level,
+  one seed, the script's player; no tally. Never seen on a GPU, nobody has played it.
 - **Each man's own picture** (`src/game/picture.ts`, table `PICTURE`, 10-14; the maintainer, of two teammates who stood off a wall charge in a known
   enemy's line: "each actor has ideas of where other enemies are (which may be out of date), where is safe, what good cover points are"). Every fighter of
   both sides keeps an IDEA per enemy: the place he last saw him, heard him fire or was told of him, and when. It is never refreshed from the truth (a man

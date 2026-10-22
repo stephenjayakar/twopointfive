@@ -42,7 +42,7 @@ const KEPT: Record<FeelName, Record<string, [number, number, number] | null>> = 
   COVER: { on: null, stacked: null, rearWalkM: [0, 30, 0.5], inRoom: null, edge: null, laneWalk: null },
   ENTRY: { offOpenings: null, watch: null, nearM: [0, 6, 0.5], gaps: null },
   REAR: { settle: null, secs: [0, 3, 0.25], file: null },
-  PAIR: { on: null, markOnHands: null, watched: null, quietFirst: null, stageM: [1.2, 4, 0.1], secs: [0.2, 2, 0.1], pace: [0.6, 2.2, 0.1], goPace: [0.6, 2.2, 0.1], coneM: [0, 16, 1], crouch: null, darkVis: [0.05, 0.9, 0.05], darkM: [0, 3, 0.5], darkRefuse: null, darkCrouch: null },   // quiet orders for one partner (pairorders.ts)
+  PAIR: { on: null, steady: null, markOnHands: null, watched: null, quietFirst: null, stageM: [1.2, 4, 0.1], secs: [0.2, 2, 0.1], pace: [0.6, 2.2, 0.1], goPace: [0.6, 2.2, 0.1], coneM: [0, 16, 1], crouch: null, darkVis: [0.05, 0.9, 0.05], darkM: [0, 3, 0.5], darkRefuse: null, darkCrouch: null },   // quiet orders for one partner (pairorders.ts)
   DOORMANNERS: { on: null, pass: null, stand: null, swing: null, lane: null, laneMove: null, laneLeaf: null, laneWalk: null, watch: null, fight: null, gap: [0.8, 2, 0.05], patience: [0.5, 1.2, 0.1] },   // doorway manners, both sides (doorway.ts): its one switch, and the rules under it for an A/B
 };
 // (the rescue-with-goggles rows, added down here so the tables above stay line for line what the other parts of the build merge against)

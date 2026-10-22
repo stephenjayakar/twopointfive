@@ -498,7 +498,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   // (the partner's quiet orders, 10-13 — a file from before them replays with each off: a sweeping sentry's ring, the kept way, 'he'll look back', the habit read from when a man stopped)
   { const P = k.tables.PAIR as { sweep?: boolean; keepWay?: boolean; lookBack?: boolean; habitStood?: boolean } | undefined;
     if (P?.sweep === undefined) PAIR.sweep = false; if (P?.keepWay === undefined) PAIR.keepWay = false;
-    if (P?.lookBack === undefined) PAIR.lookBack = false; if (P?.habitStood === undefined) PAIR.habitStood = false; }
+    if (P?.lookBack === undefined) PAIR.lookBack = false; if (P?.habitStood === undefined) PAIR.habitStood = false;
+    if ((P as { steady?: boolean } | undefined)?.steady === undefined) PAIR.steady = false; }   // (…and one from before the partner stopped turning about on his way: he walked back to a passed corner and squared to his man on every short wait, as it was made)
   if ((k.tables.COVER as { rearRead?: boolean } | undefined)?.rearRead === undefined) COVER.rearRead = false;   // (…and from before a rear man on a door-less mark read the ground for what to watch: his rear is the way he came. A recording that carries the key keeps its own.)
   if ((k.tables.COVER as { backTurn?: boolean } | undefined)?.backTurn === undefined) COVER.backTurn = false;   // (…and from before a back-pedalling man the deal let go of kept his path while his body came round: he walked forward along it, as the file was made)
   if (k.tables.UNDERFOOT === undefined) UNDERFOOT.on = false;   // (…and from before a walker's feet were asked from where the walk grid's bake begins: a thing 0.2 m high stopped them, as the file was made)

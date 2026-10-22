@@ -3069,6 +3069,7 @@ if (on('pair-dark', 'pair', 'all')) await run('pair-dark', async () => (await im
 if (on('pair-mark', 'pair', 'all')) await run('pair-mark', async () => (await import('./pair-probes.ts')).pairMark());
 if (on('pair-now', 'pair', 'all')) await run('pair-now', async () => (await import('./pair-probes.ts')).pairNow());
 if (on('pair-watched', 'pair', 'all')) await run('pair-watched', async () => (await import('./pair-probes.ts')).pairWatched());
+if (on('pair-steady', 'pair', 'all')) await run('pair-steady', async () => (await import('./pairsteady-probes.ts')).pairSteady());   // a partner on his way to a man does not turn about (PAIR.steady; PAIRSTEADY_BREAK=1 must fail)
 if (on('pair-watch', 'pair', 'all')) await run('pair-watch', async () => (await import('./pair-probes.ts')).pairWatch());
 if (on('pair-identity', 'pair', 'all')) await run('pair-identity', async () => (await import('./pair-probes.ts')).pairIdentity());
 // ---------------------------------------------------------------- the partner sneaks: one teammate following while the squad is silent and unnoticed (sneak-probes.ts; game/sneak.ts)
