@@ -80,7 +80,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   await point(HUT); await tap('KeyQ'); R = await until(x => x.i >= 2, 40); if (R.i < 2) { await tap('KeyF'); R = await until(x => x.i >= 2, 40); } check(R.i >= 2 && R.men <= 10, 'the key again: they go in and the hut is taken', `${R.men} defenders left at ${R.t} s · step ${R.i + 1} '${R.id}'`);
   await point(STORE); await tap('KeyQ'); R = await until(x => x.i >= 3, 80); check(R.i >= 3, 'the key on the store door: they stack', `step ${R.i + 1} '${R.id}' at ${R.t} s`);
   await point(STORE); await tap('KeyQ'); R = await until(x => x.men <= 8, 40); if (R.men > 8) { await tap('KeyF'); R = await until(x => x.men <= 8, 40); } check(R.men <= 8, 'the key again: the store is taken', `${R.men} defenders left at ${R.t} s`);
-  const inside = await walk(STORE_IN, 40); R = await until(x => x.i >= 4, 10); check(inside && R.i >= 4 && R.id === 'stack-shop', 'walked in behind them: the workshop door is the step up', `step ${R.i + 1} '${R.id}' · Sam at ${R.at} · "${R.line}"`);
+  // (through the doorway as a hand walks it: square on to the open leaf's gap, through, then to the mark)
+  await walk([10.75, 0, 15.3], 20); await walk([10.75, 0, 17.7], 20); const inside = await walk(STORE_IN, 20); R = await until(x => x.i >= 4, 10); check(inside && R.i >= 4 && R.id === 'stack-shop', 'walked in behind them: the workshop door is the step up', `step ${R.i + 1} '${R.id}' · Sam at ${R.at} · "${R.line}"`);
   log('picture', await shot('5-stack-shop'));
 
   // ---- the authored checkpoint: kept as step 5 came up; put back, that step is up again with the script started over

@@ -17,6 +17,7 @@ const script: LevelScriptFn = D => {
   const CAMP = [D.mark('picket.camp0', [38.4, 0, 11.6]), D.mark('picket.camp1', [38.8, 0, 9.8]), D.mark('picket.camp2', [38.4, 0, 8.0])];
   const GATE_POST = D.mark('picket.gate', [35.9, 0, 14.0]), BAGS = D.mark('picket.bags', [31.0, 0, 13.8]);
   const ROUND = [D.mark('picket.round0', [24.6, 0, 4.1]), D.mark('picket.round1', [26.0, 0, 4.1])];   // outside the back gate
+  const OPEN = [D.mark('picket.open0', [34.0, 0, 14.0]), D.mark('picket.open1', [27.0, 0, 13.0]), D.mark('picket.open2', [27.8, 0, 12.3])];   // in the open: inside the road gate, and in the street off the alley's mouth
   const MOUTH = [D.mark('picket.mouth0', [24.7, 0, 11.4]), D.mark('picket.mouth1', [26.0, 0, 11.6])];   // the alley's last metre, where the street first sees a man: behind whoever is at the bags
 
   // nobody on their side throws a grenade here: the mission's own HE lesson is the player's, and a grenade nobody has been shown yet is not a lesson
@@ -54,6 +55,14 @@ const script: LevelScriptFn = D => {
       yield c.any(c.until(q => round.every(u => !q.alive(u) || q.arrived(u)), 'the two are in the alley\'s mouth'), c.wait(14));
       for (const u of round) if (alive(c, u)) c.release(u, 'alert');
       c.signal('done:picket');
+      // NOBODY IS LEFT TO BE HUNTED: a man of the picket still up a while into the fight has gone to ground where the bags cannot see him (the gate's jamb,
+      // the alley's corner, the camp), and a last man the player must walk up on alone is no end for a lesson. He breaks cover instead: out into the street
+      // in the script's hand, where the squad's rifles are already laid, and the game's own again where he stops
+      yield c.any(c.until(q => men.every(u => !q.alive(u)), 'the picket is down'), c.wait(12));
+      const left = men.filter(u => alive(c, u)); if (!left.length) return;
+      left.forEach(u => c.order(u, { goal: OPEN[men.indexOf(u)], aimAt: BAGS, upper: 'aim' }));
+      yield c.any(c.until(q => left.every(u => !q.alive(u) || q.arrived(u)), 'the last of them are in the street'), c.wait(12));
+      for (const u of left) if (alive(c, u)) c.release(u, 'alert');
     });
 
     // THEY KNOW WHERE YOU WERE: two short bursts through the leaf the stack stands at. He stays on that door until one of his doors opens
@@ -67,7 +76,7 @@ const script: LevelScriptFn = D => {
       c.signal('done:shop');
       const r = yield c.any(open(c, shopDoor), open(c, sideDoor), c.until(q => !q.alive(m), 'he is down'), c.wait(90));
       c.note(`his wait ends: ${['the street door', 'the side door', 'he is down', 'time'][r.index]}`);
-      if (r.index === 1) yield c.wait(0.9);   // the side door, at his back: he is a moment late to it
+      if (r.index === 1) yield c.wait(2.0);   // the side door, at his back: he is late to it (at 0.9 s an unhurried player who stepped through the doorway was shot on two dice of four)
       if (alive(c, m)) c.release(m, 'alert');
     });
 

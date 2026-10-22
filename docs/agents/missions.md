@@ -98,8 +98,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   eleven defenders in six rooms each its own squad (`mayLeave: false`, nobody digs in), nineteen steps. Two easy rooms on the squad's key, then four staged fights that each show ONE thing the
   other side does: the workshop's man puts rounds through the door he heard the stack at (the answer is the side door), a gun behind chest-high bags covers the street (shoot back, move to the
   blocks, a frag over the bags), two men wait in the dead ground either side of the hall's locked door (shot through the sill window, then the leaf is shot down), and a picket of three comes by
-  two gates (one shows in the road gate while two walk round to the back gate and down the alley: the cover order turns half the squad; the last line is 'Finish the picket', and a man who
-  holds out of the bags' sight has to be walked up on). What is SCRIPTED is only what must be seen at a known moment (the bursts through the leaf, the gun's first burst on the wall, the
+  two gates (one shows in the road gate while two walk round to the back gate and down the alley: the cover order turns half the squad; the last line is 'Finish the picket'. A picket man still up twelve seconds into that fight has gone to ground where the bags cannot see him: the script
+  walks him out into the street and lets him go there, so nobody is left to be hunted). What is SCRIPTED is only what must be seen at a known moment (the bursts through the leaf, the gun's first burst on the wall, the
   picket's walk); every man is the room clear's own and is released to the game's AI the moment his show is over.
   - **It is played on the tutorial's frame** (`game/rails.ts`, the bullet above: `RAILS.on`, `TPS_RAILS=1` on the frozen stand; with the switch off the level is its mission alone). Its
     `rails.allow` is what the three missions before it taught (his feet, hands and rifle, the view, the squad's key and the word); the orders menu comes on with the step that asks for it
@@ -127,6 +127,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     script's hand, `done:gun` raised, the four checkpoints kept, and the checkpoint 'the bags' PUT BACK mid-run with the same step up, the program running again, the picket in hand and the
     road gate shut. It plays under the locks: the menu and the frag are pressed only at their steps. `PORT=<port> node tools/qa/tut-squad-page.cjs`: the row on the real page (software
     adapter), the big line with Q on a key cap, the menu and the frag locked at the first step, its first five steps by real keys, and the checkpoint 'the street' put back.
+  - **How forgiving** (2026-10-22, the page's stand, the scripted player with NO protection, `--plain --seed 1..4`): every step and the end on four dice of four. It was two of four with the
+    workshop's man 0.9 s late to the side door (the player, who goes down to one hit, was shot stepping through it: he is 2.0 s late now) and three of four while the last picket man had to be
+    walked up on in the camp. The scripted player stands where the lines send him and does nothing clever; a person is slower. Nobody has played it.
   - **Not done / not seen**: its menu picture is a stand-in (the first tutorial mission's own stand-in, copied: none can be made without a GPU); the alley and the road are bare (`lived`
     NOTE); the one locked door is meant to be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot
     carry them. Never seen on a GPU, never played by a hand. Nobody has seen whether the gunner visibly ducks under the player's fire.
