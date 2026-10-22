@@ -23,7 +23,9 @@
 // which a checkpoint does carry. `kept` is the page's note to the card (which try of the streak this was, the ways won so far) — display only.
 import type { Game, Guard } from './game';
 import type { Vec3 } from '../math/vec';
-import { activeScenario, teamOf } from './scenarioRun';
+import { activeScenario, runningScenario, teamOf } from './scenarioRun';
+import { levelNameOf } from '../scene/levelLoad';   // (asked inside rowFile only)
+import { LOOK_LEVELS } from '../scene/look';   // (a table of file names: read inside rowFile only)
 import { roomOf } from './chronicle';
 import { hostileTo } from './teams';
 import { PAR_START_M } from './par';
@@ -31,9 +33,34 @@ import { runnerFled } from './runner';   // (asked inside the verdict only: fals
 
 export const VERDICT = {
   on: true,
+  /** a mission of the stealth game's kind that leans LOUD is not graded as a sneak (`loudRow` below): its end card, the copied line and the two lines the
+   *  mission says at its end carry no rating word, no score out of a hundred, no badges, and the sneak's numbers on the card stand untoned. ON in the page
+   *  (`?loudcard=0` = the stealth game's rating on every card it stands on, as it was), off here and on the frozen stand (TPS_LOUDCARD=1). Reads only: the
+   *  run is the same either way. A recording carries it (knobs.ts JOURNAL_KNOBS: the mission's two end lines are worded by it), and one from before the
+   *  key replays with it off. */
+  loudCard: false,
   /** seconds between a squad mission's end and its card (the stealth mission's own card keeps its own beat) */
   winSecs: 2.0, lossSecs: 2.6,
 };
+
+/** The file a mission row names for the level this game stands on (null: the bundled office, which rows name by naming none). The game is not told the
+ *  page's `levelFile`, so it is read back off the level's own name: `<name>.json`, or the file whose look that is (scene/look.ts LOOK_LEVELS: the page
+ *  loads `barracks-gwot.json` for the row on `barracks.json`). `probes.ts debrief-loud` holds every row's file and its look's file to this. */
+export function rowFile(g: Game): string | null {
+  const name = levelNameOf(g.level); if (!name || name === 'office') return null;
+  const file = `${name}.json`; for (const k in LOOK_LEVELS) if (LOOK_LEVELS[k] === file) return k;
+  return file;
+}
+/** The mission that is up is the STEALTH GAME'S kind (a quiet mission: the one kind whose card carries the rating beside a verdict) on a row of the list
+ *  that LEANS LOUD (scene/scenarios.ts `lean`: the mission sheet's 'Approach'), asked while VERDICT.loudCard is up. The stealth game's rating prices every
+ *  man shot and every time he was seen, and a mission that is meant to be shot through reads as failed by it ('ASSAULT 14' on a won tutorial fight) — so
+ *  on such a row nothing grades the run as a sneak. A row that leans either way, or quiet, keeps its rating; no row up (the plain night) keeps it; a
+ *  squad's kinds never showed it on their end card and are not asked. */
+export function loudRow(g: Game): boolean {
+  if (!VERDICT.loudCard) return false;
+  const run = runningScenario(g, rowFile(g));
+  return run?.kind === 'quiet' && run.entry?.lean === 'loud';
+}
 
 /** the way a run was won, read off the run */
 export type Approach = 'doors' | 'walls' | 'dark' | 'quiet';

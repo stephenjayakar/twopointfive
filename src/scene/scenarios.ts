@@ -255,6 +255,11 @@ export interface LessonStep {
   noTap?: string;
   /** a lookout for the fog of war while this step is up (as `rails.sky.eye`): a place the squad knows without a man's eyes on it, its own charge on a wall */
   eye?: { at: Vec3; yaw: number; fov?: number };
+  /** A CARD that pauses the page when the step comes up (ui/railcard.ts): a heading and a few sentences on a rule of the game no key press shows — a new
+   *  line in `text` is a new paragraph, a key in brackets is drawn as a key. Closed with Enter or a click; then the step's line is what to try. Once a run */
+  explain?: { title?: string; text: string };
+  /** an ARROW on the ground in place of the ring: from the step's `at` it points at this place ('walk into the wall': which way) */
+  toward?: Vec3;
   /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no
    *  longer kept in the picture), and `nv: false` puts the night vision up for the walk out */
   onWay?: { nv?: boolean };
@@ -530,6 +535,9 @@ export interface ScenarioEntry {
   seed?: number;
   /** the picker's one line under the title: what the scenario is for (scene/scenarioList.ts; absent = the title alone) */
   blurb?: string;
+  /** A TUTORIAL MISSION'S OPENING CARD (ui/loadbrief.ts; display only): where we are and why, in a sentence or two · what this mission teaches, one short
+   *  line a thing, five at most — the things, not their keys (the keys are each step's own line) */
+  scene?: string; teaches?: string[];
   /** the picker tags the row 'untuned': it runs, nobody has balanced it */
   untuned?: boolean;
   /** CUT FROM THE MISSION LIST (the maintainer's tap, 2026-10-13: 'Three' — the four-man office room clear and both yard rows, then the block's three-squads row): the row stays in this table,

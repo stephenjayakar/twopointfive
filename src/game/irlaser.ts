@@ -30,6 +30,8 @@
 // tools/qa/irlaser-probes.ts holds all of it (probes.ts irlaser).
 //
 // IR.on false = the lasers of the build before this file, box for box: every laser 'visible', Sam with none.
+// IR.teamOff (ON in the page, ?teamlasers puts the lines back; off here and on the frozen stand): no man on the player's side shows a laser line, of either
+// band, in any state; Sam's own is untouched. The band and every rule above still hold underneath it — the switch only keeps the boxes from being made.
 // NOT here: the IR ILLUMINATOR — a LIGHT only a tube sees by, on the same goggles. That one is irlight.ts (it retired nvg.ts's 'too dark for the tube, so white
 // light' for a man who carries one).
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
@@ -51,7 +53,12 @@ export const IR = {
   /** a goggled teammate's laser is on whenever his gun is at his shoulder — every sector he covers, not only a man he is hunting (off = on in the red laser's
    *  own frames only: the guard AI's alert / search, which a scenario's teammate is never in) */
   carry: true,
+  /** the team's guns show NO laser line at all, infrared or red — the maintainer, 10-22, of the lines on his men all through a goggled mission: "why do we
+   *  have the lasers for the guys? i think we can disable". Sam's own (IR.sam) is left: it is how the player sees his bore through the tube. Off = every
+   *  man's laser as it was. A picture only, like every laser here: nobody's aim, sight or decision reads it */
+  teamOff: false,
 };
+const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TEAMLASER_BREAK ?? '') === '1'; } catch { return false; } })();
 /** an IR line's emissive colour: no hue, at the red laser's own luminance (Rec. 709 of [1, 0.06, 0.03]) — through the tube, which counts luminance alone, it is
  *  the line the red one was. UNTUNED BY EYE: nothing here was seen on a GPU. */
 export const IR_TINT: Vec3 = [0.2577, 0.2577, 0.2577];
@@ -89,6 +96,7 @@ export function samLaserBoxes(g: Game, out: Box[]) {
  *  pinned in somebody's arm; hunting (the guard AI's alert / search) as it always was; and, infrared, whenever the gun is at his shoulder (IR.carry) */
 export function laserOn(g: Game, gd: Guard): boolean {
   if (gd.muzzleDown || gd.held || g.rails?.noLasers()) return false;   // (rails.ts: a tutorial mission that shows no lasers)
+  if (IR.teamOff && !BREAK && !isHostile(gd.team, 'player')) return false;   // (teamOff: a man on the player's side carries none — goggled or not, hunting or not; an enemy's sandbox laser, combat.ts LASER.enemy, is not this switch's)
   if (gd.state === 'alert' || gd.state === 'search') return true;
   return IR.on && IR.carry && gd.char.anim.upper === 'aim' && laserBand(g, gd) === 'ir';
 }
@@ -105,8 +113,9 @@ export function irState(g: Game): { viewer: boolean; sam: boolean; men: { gd: Gu
 }
 /** 'IR lasers off: …' / 'IR lasers: yours on · Blue One infrared · Blue Two off (goggles up) — infrared ones shown (your goggles are down)' */
 export function irSummary(g: Game): string {
-  if (!IR.on) return 'IR lasers off: the team\'s lasers are the red ones, yours has none';
+  if (!IR.on) return IR.teamOff ? 'IR lasers off: the team\'s guns show none, yours has none' : 'IR lasers off: the team\'s lasers are the red ones, yours has none';
   const S = irState(g); if (!S.men.length && !fightLive(g)) return 'IR lasers: no team on the floor';
+  if (IR.teamOff) return `IR lasers: ${IR.sam ? `yours ${S.sam ? 'on' : 'off'}` : 'you carry none'} · the team's guns show none — yours ${S.viewer ? 'shown (your goggles are down)' : 'not shown (your goggles are up)'}`;
   const men = S.men.map(m => `${m.gd.callsign} ${m.on ? (m.band === 'ir' ? 'infrared' : 'red') : m.band === 'ir' ? 'off (gun lowered)' : 'off (goggles up)'}`);
   return `IR lasers: ${IR.sam ? `yours ${S.sam ? 'on' : 'off'}` : 'you carry none'}${men.length ? ' · ' + men.join(' · ') : ''} — infrared ones ${S.viewer ? 'shown (your goggles are down)' : 'not shown (your goggles are up)'}`;
 }
