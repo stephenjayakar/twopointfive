@@ -389,12 +389,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   other side does: the workshop's man holds his open doorway from the far end of the room, in the picture through the fog, his rounds on the guard hut's wall (the answer is the side door, at his back), a gun behind chest-high bags covers the street (shoot back, move to the
   blocks, a frag over the bags), two men wait in the dead ground either side of the hall's locked door (shot through the sill window, then the walk round to the door and the boot), and a picket of three comes by
   two gates (one shows in the road gate while two walk round to the back gate, down the alley and out into the street in front of the rifles the cover order turned; the last line is
-  'Finish the picket', and the picket's last man drops his rifle and runs: the sub-bullet on the two harsh places below). What is SCRIPTED is only what must be seen at a known moment (the bursts out of the doorway, the gun's first burst on the wall, the
-  picket's walk); every man is the room clear's own and is released to the game's AI the moment his show is over.
+  'Finish the last of them' (it was 'Finish the picket': "what's a picket", the maintainer; no line, card, squad name or blurb of the mission says the word now, and the squad is 'Roadblock'), and the picket's last man drops his rifle and runs: the sub-bullet on the two harsh places below). What is SCRIPTED is only what must be seen at a known moment (the bursts out of the doorway, the gun's first burst on the wall, the
+  picket's walk) and what keeps a line from putting the player down (the store's two, the nest, the hall's two: the sub-bullets below); every man is the room clear's own and is released to the game's AI the moment his show is over.
   - **It is played on the tutorial's frame** (`game/rails.ts`, the bullet above: `RAILS.on`, `TPS_RAILS=1` on the frozen stand; with the switch off the level is its mission alone). Its
     `rails.allow` is what the three missions before it taught (his feet, hands and rifle, the view, the squad's key and the word); the orders menu comes on with the step that asks for it
     ('follow', `allow: ['menu', 'ring']`, `noTap`: a tap of the squad's key gives nothing while it or 'back' is up; its two menu lines name `[X]`, which the frame draws as "Hold" and the squad's key while that key kept down is the only way to the menu, and
-    without `ring` the frame cuts a held command key to a tap; the scripted player opens the menu that way when the ring is on and stays, by X when not) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun`, `ducks` (on the step after 'gun': he has shot back), `fragged` (on 'nest', the step after the frag's), `picket` and `covered` (on the last step: the cover order is given); a beat that was busy when a cue came asks `q.signalled('lesson:<cue>')`; its checkpoints 'the street', 'the wall', 'the hall'
+    without `ring` the frame cuts a held command key to a tap; the scripted player opens the menu that way when the ring is on and stays, by X when not) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun`, `ducks` (on the step after 'gun': he has shot back), `atblocks` (on the frag's step: he is at the blocks, and the gun stays down from then), `fragged` (on 'nest', the step after the frag's), `picket` and `covered` (on the last step: the cover order is given); a beat that was busy when a cue came asks `q.signalled('lesson:<cue>')`; its checkpoints 'the street', 'the wall', 'the hall'
     and 'the bags' each sit at the start of a staged fight, before the cue of the beat that follows, and every beat starts clean from its cue (the picket's beat starts with the program, holds
     the three in their camp and the yard's gates shut, and waits for its cue: so a checkpoint put back finds them held again).
   - **A man the mission's script has in hand stays the room fight's man** (`roomfight.ts tickDef`, `Def.staged`; `Director.lessonRuns`): on a floor whose defenders are the room clear's own
@@ -436,7 +436,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     OFF THE SCREEN from inside the store and the squad's key pointed at the far ring gave a move on the floor; with the ring at the mouth of the lane the man stood at the screen's
     top edge and the side door was off it. The camera here is the game's own: the frame keeps a ring on the screen only in mission 1's seat. From the street in front of the
     workshop both doors are on the screen.) Step 6 'He has that doorway. [B] on the side door' is passed by the order itself (`did order:stack on workshop_side`: the
-    ring is the door, and the frame makes an order pointed at the ring an order on it), 7 'Go round with them' by the player in the alley, 8 '[B] again: in behind him' by the room.
+    ring is the door, and the frame makes an order pointed at the ring an order on it), 7 'Go round with them' by the player in the alley, 8 '[B] on the door again: in behind him' by the room.
     The way round is the street and the gap at the workshop's corner: no part of it is in his line, and in the runs below all four and the player took it. He is the game's own when
     the side door opens (2 s late, as before), when anybody is in his room (the volume `shop_in`, the room's own floor) or when the player has stood 1.5 s in the narrow line
     (`shop_line`). `done:shop` is raised by his first round, not by a clock; a round he could not put in half a second is not put later (`c.stimulus.cease`). TRIED FIRST AND
@@ -461,7 +461,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     two ways in on 'go-hut' (his, paused on that line with a bang thrown: "we should say that hitting Q (vs F) on a stacked squad has them more aggressively take a room or something. or should
     it always be throwing a bang? what if they don't have any more bangs?"; the card says what the code does today, as the squad's own thread read it in `autopilot.ts autoEntries` and
     `doortools.ts fromStack`: the squad's key again lets them choose, a bang first when the room is held or unknown and one is to spare; the word's key is straight in and never a bang;
-    the line is now '[B] again: they choose how, and go in'; whether those rules stay is his open call, so expect a re-word), the
+    the line is now '[B] on the door again: they choose how, and go in'; whether those rules stay is his open call, so expect a re-word. THE THREE 'AGAIN' LINES NAME THE DOOR, his, playing the store's step with his cursor in the guard hut and the squad panel reading 'move there · that wall': "was confused that it's really 'Q again on the door' not elsewhere". The key again anywhere else is a move order and takes the four off their stack; the frame has no step key that drops such a tap, asked of the frame's owner), the
     held doorway on 'side', the ring on 'follow', suppression on 'gun', grenades on 'frag', the window on 'window' (his own sentence), the flank on 'back'. A card is for a
     system, never a key. The row's opening card (`scenarioList.ts teaches`) says 'A doorway a man holds: go round'. MEASURED on the page's stand, the unprotected scripted player (`lesson-run --plain`): dice 1 to 8 all finish; reading each line for 6 s (`--pace 6`), dice 2, 3, 5 and 7 all finish; the gate passes (the frozen stand with `TPS_RAILS=1`, and four dice of the page's). Before the hall's men knelt,
     the same slow reader failed on two dice of two ('the hall was not cleared'), and with both kneeling the frozen stand's run failed the same way: measure both stands and a slow reader after any change there.
@@ -486,6 +486,47 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     with a breath of wind; dust, which would make the lamps' beams stand in the air, also cuts far sight and is a call for whoever has seen it on a GPU. A checkpoint of
     the row from before it named a weather is refused ("made in other weather"). FOUND WHILE MEASURING IT, AND NOT THE FURNITURE'S: the nest's two men are now the script's from the first tick, down behind their bags (beat `gun` starts with the mission and waits for its cue), where they were the game's own until the gun's step: the way from the workshop's side door to the wall's end passes the wall's NORTH end a step away, a man who comes round that end is in the nest's sight, and a slow reader's scripted player, jostled by the four in the 1.4 m gap, was shot there before any line had said there was a gun. CHECKS: `lived-check tut-squad` (9 lines: marks, aim lines, doors,
     walks, heights), `level-lint`, `door-size`, `second-way-check`, `floor-order-check`, `lesson-check`. MEASURED, the page's stand with the lived things in, the unprotected scripted player: dice 1 to 8 all finish, `--pace 6` dice 2, 3, 5 and 7 all finish, the gate passes (its frozen run has none of this in it). AGAIN AFTER THE REVIEW'S MENDS (the lamps' arms, the nest's way out, the 23rd step, the after lines' `on`): the same twelve runs all finish, the gate passes, and the real page's check passes 34 of 34 (two new lines: the order given, the line reads "They stack up on the door" and then "They go in", with no key on it). `lived-check` now holds the level to its own commit (`BASE_REVS`), every level's 429 lines green. A LINE STOPS ASKING ONCE ITS ORDER IS GIVEN (the frame's step key `after`, on the five steps whose order takes the men some seconds: the two stacks say "They stack up on the door" / "... on the store" (`on: ['stack']`), the two easy rooms "They go in" ("They go straight in" for the word) and the workshop "They go in behind him" (`on` the three orders that send a stacked squad in, so the key pressed again before they are set, which is a second stack, keeps the ask); the other order steps pass the moment the order is given. 'Follow them in' is A STEP OF ITS OWN after the store's, 23 in all: an after line with no key in it is drawn as something to watch, with no ring, and that one is an ask with a place). THE NEST'S HOLD HAS A WAY OUT: before the gun's step, the player inside the nest's own bounds, or one of its two men shot, and both are the game's own again and fight (held with no way out they could be walked up to and shot without a move, found in review with a player sent there on step 2). SAVES AND TAPES: with the lived things on, the page's level has new boxes and lights, so its checkpoints and recordings from before this are refused; the frozen stand's level is the one it was. THE STREET IN FRONT OF THE WORKSHOP lies in the edge of the work light's cone and no logged event of the scripted player is there: on the real page (software adapter) the HUD's light reads 56 at that spot with the lamps and read 56 without them, the store's own light through its door. Never seen on a GPU; the stills taken of it are the software adapter's.
+  - **The first play on the page, six notes** (2026-10-22, the maintainer on the page's own build, hard, his words in quotes; level data, its script and its scripted player: no switch,
+    no rule of the game's). WHAT MY RUNS HAD MISSED, AND WHY: THE MOON. The post is played at night under a clear sky and its street is open to it: the page's meter reads about 55 of 100
+    on anybody standing in it. Headless, `guards.ts lightEstimateAt` leaves every directional light out, for the player AND for every man an AI eye looks at, so every fight in the
+    open had been measured in the dark (the scripted player's log said `lit 0.00` at the blocks, the window and the bags; his HUD said 55 to 59 there). The scripted player now puts the
+    moon on every meter: `mode.moon` for the player's own (the runner's `--moon`) and, for everybody else, `tools/qa/hour-lib.ts installSkyMeter` (the game's light hooks answered as the
+    page's meter would for direct light; `tools/qa/lessons/tut-squad.ts sky()`, `TUT_SQUAD_SKY=0` = as it was). It has no
+    bounce and no bodies' shadows, and it did NOT by itself reproduce his notes 2, 5 and 6 below: those mends are from reading the code and are measured not to break the run, no more.
+    - *"was confused that it's really 'Q again on the door' not elsewhere".* The three lines are 'Press [B] on the door again to send them in' (twice) and '… to go in behind him', and
+      the card 'Two ways in' says "that door" (all four in the voice of `docs/agents/writing.md`). The key anywhere else is still a move order, the game's own rule; a step key that drops
+      a tap of the squad's key off the step's mark is the frame's to add, and asked of its owner.
+    - *"my guys got him before i could throw a frag".* Answered, the gun came up every five seconds for a burst; with the four at the blocks beside him that is a man standing up in front of
+      four rifles while a card is read. FROM THE FRAG'S STEP COMING UP (its cue `atblocks`) THE GUN STAYS DOWN behind its bags, where nobody at the blocks can hit it. The scripted player
+      holds it to account: 'frag' is off its `fightOk`, and the throw fails the run if a round that was not the player's has dropped either man of the nest (`TUT_SQUAD_FRAG_WAIT=<s>` =
+      seconds stood at the blocks first).
+    - *"we can showcase glass fracturing here".* The hall's street window is a pane (`glass: 'whole'` on the hut's window; its foot is a metre up, so it is FLOAT glass by where it
+      stands: a round holes it and a few run it to daggers, which is what 'Shoot through the window' asks for). `glassreal-check.ts CENSUS` has the level's row (0/1/0). The frozen stand
+      stands the glass's parts at off (a pane is a wall to a round), so the scripted player `raises` `GLASSPARTS=on` for its frozen run (not `GLASSFX`: `game/glass.ts` reads that
+      word as the module loads, before a runner can raise it). A box more: the level's fingerprint moved, so a checkpoint or a tape of the row from before is refused.
+    - *"what's a picket".* No line, card, squad name or blurb of the mission says it: 'Finish off the rest of them', the squad 'Roadblock', the row's blurb "more enemies coming in
+      through two gates". (The pair mission's blurb in `scenarioList.ts` still says "a picket": its owner's.)
+    - *"guards aren't coming by, just waiting around" and "bad guys are stuck here near the level start".* The last three were sent on walks planned at the covered-lane rule's price
+      (`lanes.ts lanePenalty`: once one of theirs is shot at, their side knows which floor the squad's rifles cover, and a walk planned after that goes round it). Round, on this level,
+      is the west gate at the far end of the yard, so two men ordered to the street behind the bags were met by the guard hut, and the beat's last wait (`yield one()`) left them there.
+      EVERY LEG OF THEIRS IS NOW `direct` (the Director's short way), and the beat's tail is a loop: while two are up they are brought out into the open by the short way, kept there
+      `OPEN_SECS`, let go, and brought out again twelve seconds on; one left drops it and runs, as before. Not the lived-in things (nothing of theirs is on that way).
+    - *Found with the moon on, his note or not: the store's door.* Its two heard the guard hut go and stood with their rifles on their own door; when the squad opened it the first man the
+      doorway showed them was the player, in the moon's light in the street where the line had him give the order. The unprotected scripted player went down there on three dice of three.
+      THE STORE'S TWO ARE THE SCRIPT'S (beat `store`, from the first tick) until `STORE_SECS` (2.5) after their door gives, one of them is hit or the player is in the room.
+    - *The ground round the nest* (asked with these: the biggest bare sheet of dirt on the level, by a new ground reading not yet in the build): seven decals and a scatter of field
+      stones in the group `lived.nest` (sand run out of the bags, oil under the can, the wet where the pot is emptied, gravel under the hall wall's drip line, a drift by the gate wall,
+      the trodden way round the bags' end).
+    - MEASURED (2026-10-22, the moon on every meter, the unprotected scripted player `--plain` on the page's stand unless said). Before the ground and the last wording: dice 1 to 8
+      finish, and `--hard` with 30 s stood at the blocks (`TUT_SQUAD_FRAG_WAIT=30`) dice 1 to 3. On the level as it went in: dice 2 to 5, `--pace 6` dice 2, 3 and 5, `--hard`
+      with the 30 s dice 1 and 3, `--hard --pace 6` die 1. On the join with the build's head: die 6, `--hard --pace 6` with the 30 s die 4, and `lesson-gate tut-squad` (the
+      frozen run with `TPS_RAILS=1` and the glass's parts raised, 117.3 s; the page's four dice, two slow). WITHOUT THE STORE'S HOLD the same player, with the moon on his own meter
+      alone, went down at the store's door on three dice of three. The real page (`tools/qa/tut-squad-page.cjs`, software adapter): 33 checks pass, to the workshop taken. Statics:
+      export `--check`, `level-lint`, `door-size`, `second-way-check`, `floor-order-check`, `level-names-check`, `lesson-check`, `probes.ts glassreal` and `rowset-check` on both
+      stands, `level-needs` (its ground reading: no bare sheet of 40 m2 is left, the largest 35 m2 by the guard hut), `lived-check` over every level against the new base (the join:
+      `BASE_REVS`). Not run: `map-check`'s 48 runs, `missions-gate`, the tour and the soak.
+    - NOT DONE / NOBODY HAS SEEN: none of it on a GPU (the pane's fracture, the decals, the gun staying down, the two held in the store); notes 2, 5 and 6 were never reproduced headless,
+      so whether his page now plays as written is his next play to say; the page run reaches the workshop only.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
     not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.
@@ -620,6 +661,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     seeds 1 to 4 ends in 102.6 to 118.5 s with 4, 3, 6 and 3 teammates on a knee at the hall. On the join with the build head: `tutplan-check`, `level-needs --run` and
     `rails-check` green on both stands, `lesson-gate`, `rowset-check` and `lived-check` green, and the real page with real keys to its end card (38 lines, the software adapter,
     no picture taken). Nobody has played the changed post; nothing of it has been seen on a GPU.
+  - **The hall's word step carries no lookout** (2026-10-22, found by the merge run's reading of the scripted player's own line, "hall nobody in"). The hall's steps put a
+    lookout eye inside the room so the player sees the gun. Until `RAILS.eyeFirst` a step's eye was the one the fog had no place for with four men up, so nobody saw through it; with
+    it the fog shows the gunner, and the squad's entry pick reads the fog (`autopilot.ts contactBehind`): at the word the stack asked first took the last can — a bang and clear with
+    its three seconds of re-forming beside an open and clear — the back pair went in alone at 0.2 s and the front stack was still outside when the room fell. A LOOKOUT IS THE
+    PLAYER'S VIEW, NOT THE SQUAD'S KNOWLEDGE: that is claimed to the frame's and the entry pick's owners, and any tutorial level with a step eye in a room the squad then enters is
+    open to it. Here the eye is off the word's own step (`word2`; it stays on the card and the stacking steps): both stacks open and clear again, first men in at 1.1 and 1.2 s
+    (seeds 1 to 4, hard on one, a reader's pace on one), and he sees the gun through his men as the doors give. The lesson block alone changed: the level's fingerprint is the same.
+    THE SCRIPTED PLAYER: a stack that never goes in has no time, so nothing is said of how far apart they were ("not together: a stack never went in") and the PLAIN run fails on
+    it, no strict word asked; on a join, read the "word at" line of EVERY room.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
@@ -1367,7 +1417,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `sneak.ts`). `tools/levels/tut-pair.ts` writes `levels/tut-pair.json` on ITS OWN GROUND (it shares the kit's pieces with other levels and nothing else: a
   tutorial mission is not built on the training yard or on another mission's floor): a haulier's yard at night, 33 by 23 m, which is what the 40 by 28 m
   world leaves with a road either side; a truck gate chained shut, a fallen stretch of wall the two come in by from the road where their own pickup stands,
-  two shipping containers end to end across the yard with a gap between them, the watch's camp round a lantern, an office court with a fuel point. Four
+  two shipping containers end to end across the yard with a gap between them and a third stood across the gap's mouth, the watch's camp round a lantern
+  with a wall along its south side, an office court with a fuel point. Four
   men on posts, a lesson of 18 steps (`tools/qa/lessons/tut-pair.ts` plays it by input alone; the generator's header has the map and why each piece stands
   where it does); `levels/tut-pair.script.ts` is a few words between the men on the cues `gate`, `park` and `yard` (nobody is held, moved or spawned). THE
   BEATS: get low and lead the partner round the end of a low wall; the squad's key on the man at the pickup, the partner creeps to his back and says "set",
@@ -1394,22 +1445,59 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   mark the player is led to is in a moon shadow (the low wall's, the containers', the south wall's). (5) ON THE PAGE THE PARTNER ALSO READS THE LIGHT ON
   HIMSELF (`SNEAK.stalkAmbient`, on in the page): sent to a man's back from a place in the moon he takes the whole way for lit, says who is looking across
   it, and gives up. The headless partner has no moon on him, so only the page showed it: the first page run stopped at the double with every headless seed
-  green. The moon is low in the south-west so that shadows fall across the yard, and his way round to the far man is dark from end to end (east of the
-  south container, along the south wall, up the far side of the old wall); a pickup shuts the open ground he would otherwise cut across. With it the page
-  plays the double: he waits for the near man's look to pass and is set about half a minute after the order. (6) The way to a man's back must have room
+  green. The moon is low in the south-west so that shadows fall across the yard, and every mark the player is led to is in one. With it the page (software
+  adapter) played the double. That was not enough on a GPU: see (8). (6) The way to a man's back must have room
   to pass the men who are not his, and a vehicle moved to throw a shadow can close the nav between two parts of the yard (the scripted player then walked
   round outside the wall): look at the path after moving one. (7) A look-at point inside a parked truck is a lint warning; a mark for the pad is 0.75 m
-  off the door, not a metre. THE PAGE PLAY, `tools/qa/tut-pair-page.cjs` (Playwright on the software adapter against a dev server; `PORT`, `OUT`, `PICS`,
+  off the door, not a metre. (8) NO SHADOW IN AN OPEN YARD IS DARK ON A REAL GPU, AND THE PARTNER'S RULE IS LIT + A LINE. The maintainer's first play
+  (10-22, Chrome on his GPU, hard): "not following me here" at the gap, the partner 'with you · waiting on the light' by the van; his light meter read
+  14 in the gap and 27 behind the low wall, where the software adapter had read 0 to 3 (the moon's bounce: neither the CPU's estimate nor the software
+  page has it). To the partner 10 is lit; both lantern men looked straight down the gap, so their LINE ran the length of the gate yard, and he will not
+  walk a lit stretch a man has a line to nor stand in one: he was never going to come, and the step waited on him (`mate`). Reproduced headless with
+  `lesson-run tut-pair --floor 0.2` once the floor reached the partner's own meter (below); with it the NEXT step failed as well (his way to the far man
+  went through the gap and down the container's side, a stride behind the near man, whose head swings: 'waiting · Novak is looking across the way',
+  then he gave up). THE MEND IS GEOMETRY, NOT DARK: a third container across the gap's mouth (nothing west of it is in either lantern man's line; the two
+  come round its end and he stops in the alley three metres short of the player); the strip round the south container's end opened (that container
+  ends 0.8 m short) and a wall along the south of the camp from that container to the stub (his way to the far man is down the alley, round the
+  container's end, along the yard wall and up the far side of the stub: no line from the near man to any step of it). And NO 'LEAD HIM' STEP BUT THE
+  FIRST WAITS ON WHERE THE PARTNER IS (`gap` and `past` are done by the player's feet): a step that waits on the partner's own judgement of the light is
+  a dead end the day he judges it lit; the scripted player still fails a run where he does not come. THE SCRIPTED RUN PLAYS AT THAT LIGHT
+  (`tools/qa/lessons/tut-pair.ts` `mode.floor` 0.2; `--floor 0` = the dark it was built in). `lesson-run --floor N` now floors EVERY UNIT'S meter, not
+  only the player's (it stands in for the probe's answer under the `unit` keys: the CPU's estimate where he was asked about, the moon, never under N),
+  and a script can ask for it (`mode.floor`): use it on any quiet level that will be played on a GPU, with what a GPU showed. Measured at floors 0,
+  0.15, 0.3 and 0.45 on seeds 1 to 4 (16 of 16), at 0.2 and 0.3 on hard, and at 0.2 with every line read for 6 s: all 18 steps; "set" behind the far man
+  comes 25 to 32 s after the order with a floor (17 to 23 s in the dark), which is a long watch. ALSO FROM THAT PLAY, "what is F here": the key by the
+  partner was the floor plan's mark for a man who waits on the word; see `squad.md`, the key's cap. `rails.rows` gained `pull` (a door he opens can be
+  shut: the tutorial frame's note from the stealth mission). THE PAGE PLAY, `tools/qa/tut-pair-page.cjs` (Playwright on the software adapter against a dev server; `PORT`, `OUT`, `PICS`,
   `STEPS`, `SETTLE`): it boots the row, checks the frame is up and the untaught keys do nothing, then does every step with real keys and the mouse, a
   picture where asked. Two things it had to learn: a hand walks by the game's own path finder, not in straight lines (a real-size door leaves a hand's
   width either side of a man); and stepped frames are never drawn there, so THE PAGE'S LIGHT METER DOES NOT MOVE unless a frame is drawn: it draws a few
   before each order (`settle`), or the partner reads the light of wherever the last picture was taken. CHECKS: `lesson-gate tut-pair` (the file is its
   generator's, `level-lint`, `lesson-check`, the scripted player on the frozen stand with the frame raised, and on the shipped stand on four dice, two of
   them reading every line for 6 s), `quiet-check`, `carlamps-check` (its row), `level-needs tut-pair --run`, `rails-check` (the frame's own), both
-  typechecks, the page play. MEASURED, headless: the scripted player finishes all 18 steps on the shipped stand on seeds 1 to 4; "set" comes 5 to 9 s
-  after the first order and 17 to 21 s after the second, the mains go 3 to 7 s after the order on the box. THE DOUBLE'S ORDER NAMES ITS MAN (`did` `order:pairMark@foe:<callsign>`): the squad's key on the near man of the two leaves the ask up
+  typechecks, the page play. MEASURED, headless: the scripted player finishes all 18 steps on the shipped stand on seeds 1 to 4; "set" comes 5 to 12 s
+  after the first order (the second: see (8)), the mains go 3 to 7 s after the order on the box. THE DOUBLE'S ORDER NAMES ITS MAN (`did` `order:pairMark@foe:<callsign>`): the squad's key on the near man of the two leaves the ask up
   (`TUTPAIR_NEAR=1` in front of `lesson-run tut-pair` gives the near man first and fails if the step passes). KNOWN: the last man is 14 m
   from the office door, so the dark is walked, not stood in; the two at the start
   are dark figures on a dark road. A SKETCH: the script's few words, the office (one room), no lived-in rooms, a composed menu picture
-  (`tools/menu-art.ts` PIN). Never seen on a GPU, never played by a person: the moon shadows, the red of the beacons over the whole yard and whether the
-  lamps going out reads as the moment it is meant to be are the maintainer's to judge.
+  (`tools/menu-art.ts` PIN). Played once by the maintainer on a GPU as far as the gap (10-22), which is where (8) comes from. THE LEVEL AS MENDED IN (8)
+  HAS NEVER BEEN SEEN ON A GPU and not on the page at all (headless runs only): the third container, the camp's wall, how the alley reads, whether a
+  floor of 0.2 is what his GPU shows past the gap, the red of the beacons over the whole yard and whether the lamps going out reads as the moment it is
+  meant to be are his to judge.
+- **The frame's eyes are the player's view, not the squad's knowledge** (2026-10-22; `RAILS.eyeView`, a knob of the frame's table: on with the frame, off for
+  a recording from before the key, `journal.ts applyKnobs`; no word of its own, `RAILS_BREAK=1` is its break path). A MEND OF THE STEP BEFORE IT (`eyeFirst`):
+  the seat's lookout (`rails.sky.eye`) and a step's `eye` were one more of the TEAM's eyes, so a man in one was in the fog's `seen()`, which the squad's own
+  choices read. On the plan mission a step's lookout stood inside the hall; once `eyeFirst` gave it a place with the list full, the hall's gunner was "the
+  team's contact", and the stack at the front door (`autopilot.ts contactBehind`) threw its last can and re-formed three seconds while the pair at the back
+  went in alone. NOW (`fogofwar.ts update`): the picture's list (`pic`: the mask, the doors, the loose things, `spotSeen`) carries the frame's eyes; the team's
+  own list, which every man's `seen()` and `sighting()` are answered from, does not, and is the list a level with no frame would have — the teammate a step's
+  eye takes the picture's last place from still answers for the team. A man only a frame's eye has a line to is DRAWN, NOT SEEN (`Rec.framed`), as a man the
+  squad is shooting at is (`FOG.squadFire`): in the picture, under the cursor, with his markers; no last-seen mark, no linger when the eye leaves him; a body
+  seen through one stays in the picture. His line is walls and leaves only: no plume is asked along a frame eye's line. WHAT STILL READS HIM, by `hidden()` /
+  `drawn()` as for any man in the picture: the cursor and rings, the 40 mm's list of who is near a round, a pair order on a man pointed at, the shut-door rule.
+  THIS CHANGES RUNS of every tutorial mission played with the fog on and a lookout or a step's eye that had a place before (the squad mission, the pair): a
+  man the lookout alone has is no longer the squad's contact. CHECKED, both stands: `rails-check` 24 lines (the new one: on mission 1's wall step, fog put on
+  by the rig, a man of the other side stood 1.5 m down the step's eye in room 3 is on lit floor, drawn, not hidden, not seen, with no sighting, and the entry
+  on his room's door with one can left is open and clear; with the knob off he is seen and the entry is bang and clear, "contact": the regression as it was);
+  `RAILS_BREAK=1` 16 red on both. NOT CHECKED: a teammate's eye displaced from the picture by a step's eye still answering `seen()` (mission 1 in the sky
+  seat has four eyes and room for the step's); smoke between a frame's eye and a man; anything on a GPU.

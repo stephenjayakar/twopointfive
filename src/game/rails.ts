@@ -69,6 +69,13 @@ export const RAILS = { on: false,
   /** a step's own eye is never the one the fog of war has no place for: with the places full (four men up and the seat's lookout) it takes the last
    *  (fogofwar.ts update; before, it was the one dropped, and the squad's own wall charge went off unseen) */
   eyeFirst: true,
+  /** THE FRAME'S EYES ARE THE PLAYER'S VIEW, NOT THE SQUAD'S KNOWLEDGE (fogofwar.ts update): the seat's lookout and a step's eye light the floor they look at
+   *  and put a man there in the picture — drawn, as a man the squad is shooting at is — and are no answer to the fog's seen() or sighting(), which the
+   *  squad's own choices read (the entry on a door: autopilot.ts contactBehind; the rescue's flow; the plan's marks; a charge's known men). The team's
+   *  own eyes answer those exactly as on a level with no frame, the one a step's eye takes the picture's last place from included. false: a frame's eye is
+   *  one more of the team's (as it was: with a step's lookout in a hall the squad then entered, the stack at its door threw its last can at a man nobody
+   *  of the team had seen, and went in three seconds after the pair at the back) */
+  eyeView: true,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
 export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
@@ -290,6 +297,8 @@ export class Rails {
   private lookout: FogEye | null = null;
   /** the step's eye has a place in the fog's list whatever else is in it (RAILS.eyeFirst) */
   get eyeFirst(): boolean { return RAILS.eyeFirst; }
+  /** the frame's eyes are the picture's alone (RAILS.eyeView) */
+  get eyeView(): boolean { return RAILS.eyeView && !BREAK; }
   /** the step's own lookout (its `eye`), for as long as the step is up: null without one */
   stepEye(): FogEye | null {
     const S = this.lesson(), e = S?.L.steps[S.i]?.eye; if (!e || BREAK) return null;
