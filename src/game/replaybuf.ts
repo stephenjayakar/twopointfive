@@ -65,20 +65,25 @@ export class ReplayBuffer {
     try { this.tape.end(g); } catch (e) { this.tape.dead = `the tape threw: ${String((e as Error)?.message ?? e)}`; }
     try { this.step(g, dt, cam ?? null); }
     catch (e) { this.broke = String((e as Error)?.message ?? e); try { console.error('replay buffer switched off:', e); } catch { /* */ } }
-    const J = recOf(g); this.based = true; this.baseT = g.time; this.basePlayer = g.player; this.baseLoads = loadsOf(g); this.baseRec = J.on; this.baseLast = J.last;
+    const J = recOf(g); this.based = true; this.baseT = g.time; this.basePlayer = g.player; this.baseLoads = loadsOf(g); this.baseRec = J.on; this.baseLast = J.last; this.baseRun = g.mission?.t0 ?? 0;
   }
   /** the game as the last read step LEFT it (tick), against the game as the next step FINDS it (top): what was done to it from outside a step that is not a
    *  restart. A restart leaves the clock where it was; a load writes the file's — earlier, LATER (a checkpoint of an earlier visit) or the same to the bit (saved
    *  and loaded with no step between) — and counts itself (savestate.ts Checkpoints.load); an F10 recording re-enters a checkpoint of the moment (journal.ts),
    *  which neither moves the clock nor counts. Asked once, here, before the step moves the clock; the tape is handed the answer and step() words the trace's mark
-   *  from it. A load made INSIDE a step (the bare Enter once down) is not this: step() sees the count move across the step. */
-  private based = false; private baseT = 0; private basePlayer: object | null = null; private baseLoads = 0; private baseRec = false; private baseLast: object | null = null;
-  private topLoads = -1; private outside: { why: 'load' | 'rec'; from: number } | null = null;
+   *  from it. A load made INSIDE a step (the bare Enter once down) is not this: step() sees the count move across the step. BOTH can be true of one gap — a
+   *  recording running, then a load or a restart, then a recording running again before the next step (a recorder that ends its file at such a change and
+   *  asks for the next): the tape is told of the recording, and the trace marks the load or the restart too, first (`also`) — the run a file ends in begins
+   *  at that restart whatever the recorder did around it (format.ts lastRun). A recording's own start counts no load, and though it stages the encounter
+   *  to pour its checkpoint in (a fresh player), it puts the MISSION back as it stood: a mission whose clock starts elsewhere is a restart's. */
+  private based = false; private baseT = 0; private basePlayer: object | null = null; private baseLoads = 0; private baseRec = false; private baseLast: object | null = null; private baseRun = 0;
+  private topLoads = -1; private outside: { why: 'load' | 'rec'; from: number; also?: 'load' | 'restart' } | null = null;
   private look(g: Game): Outside {
     const n = loadsOf(g), J = recOf(g); this.topLoads = n;
     if (!this.based) return J.on ? 'rec' : null;   // (nothing to hold it against: the tape alone is told of a recording already running — its die is not the game's)
-    const why: Outside = J.on && (!this.baseRec || J.last !== this.baseLast) ? 'rec' : n !== this.baseLoads || (g.player !== this.basePlayer && g.time !== this.baseT) ? 'load' : null;
-    if (why) this.outside = { why, from: this.baseT };
+    const rec = J.on && (!this.baseRec || J.last !== this.baseLast), fresh = g.player !== this.basePlayer, load = n !== this.baseLoads || (fresh && g.time !== this.baseT);
+    const why: Outside = rec ? 'rec' : load ? 'load' : null, again = fresh && (g.mission?.t0 ?? 0) !== this.baseRun;
+    if (why) this.outside = { why, from: this.baseT, ...(rec && (load || again) ? { also: load ? 'load' as const : 'restart' as const } : {}) };
     return why;
   }
   private step(g: Game, dt: number, cam: { target: ArrayLike<number>; yaw: number; distance: number } | null): void {
@@ -91,9 +96,11 @@ export class ReplayBuffer {
     const out = this.outside, inStep = this.topLoads >= 0 && loadsOf(g) !== this.topLoads; this.outside = null;
     if (g.player !== this.playerRef || out || g.time < this.lastT - 0.5) {
       const back = !!out || inStep || g.time < this.lastT - 0.5, was = out ? out.from : this.lastT;
-      if (this.playerRef) this.mark(out?.why === 'rec' ? `an F10 recording started (the game re-entered a checkpoint of the moment; game clock ${g.time.toFixed(1)} s)`
-        : !back ? `${RESTART_MARK}a fresh run; game clock ${g.time.toFixed(1)} s)`
-        : g.time < was ? `a checkpoint loaded (the game clock went back ${(was - g.time).toFixed(1)} s)` : `a checkpoint loaded (game clock ${was.toFixed(1)} s, now ${g.time.toFixed(1)} s)`);
+      if (this.playerRef) {
+        const restart = `${RESTART_MARK}a fresh run; game clock ${g.time.toFixed(1)} s)`, loaded = g.time < was ? `a checkpoint loaded (the game clock went back ${(was - g.time).toFixed(1)} s)` : `a checkpoint loaded (game clock ${was.toFixed(1)} s, now ${g.time.toFixed(1)} s)`;
+        if (out?.why === 'rec') { if (out.also) this.mark(out.also === 'restart' ? restart : loaded); this.mark(`an F10 recording started (the game re-entered a checkpoint of the moment; game clock ${g.time.toFixed(1)} s)`); }
+        else this.mark(!back ? restart : loaded);
+      }
       this.playerRef = g.player; this.lastKeyR = -1;
       // (a load hands back a restored message line, event list and timeline: old rows, not this moment's — they are passed over, not filed again)
       if (back) { for (const e of g.events as unknown as object[]) this.filed.add(e); this.lastMsg = g.messages.length ? g.messages[g.messages.length - 1] : null; this.chronN = CE?.length ?? 0; }
