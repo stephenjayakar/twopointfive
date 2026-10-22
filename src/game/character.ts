@@ -5,6 +5,7 @@ import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothste
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
 import { NodeOverride, Pose, PoseFK, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK } from '../anim/skeleton';
+import { SMOKEBREAK } from './smokebreak';   // (read inside the update only)
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
 import { hyp2, hyp3 } from '../math/vec';
@@ -1827,6 +1828,10 @@ export class CharacterAnimator {
     this.nv = { t, hand, down, k0, c0: this.nv ? this.nvNod : 0 }; this.nvShown = k0;   // (c0: a nod cut short by this press is let go of over KIT.nv.nod.carry, not dropped in a frame)
   }
   /** the flip let go of where it is (he is down, a show has the stage): the goggles are where the game says */
+  /** SMOKING (game/smokebreak.ts, which alone writes it): how far the LEFT hand is asked up to the mouth, 0‥1 — eased here at a hand's pace (smokeLayer) and
+   *  given up the frame anything else has the arm. null = nobody asked: nothing of the layer runs for a figure that was never told to smoke. */
+  smoke: number | null = null;
+  private smokeArm = 0;
   nvCancel() { this.nv = null; this.nvArm = 0; this.nvNod = 0; this.nvA = 0; this.nvShown = undefined; }
   /** KIT: the errand under way has the rifle in it (going to the sling or coming off it) */
   private get kitRifle(): boolean { const k = this.kit; return !!k && (k.from === 'rifle' || k.to === 'rifle'); }
@@ -2327,6 +2332,9 @@ export class CharacterAnimator {
     }
     // ---- KIT: the goggles flipped by hand (the left arm, over everything: it is asked only of a free hand, and gives the arm up the frame something takes it) or by a nod (the head joint alone, a pitch in his gaze's own upright plane)
     if (this.nv) this.nvLayer(dt, wHd < 0.05 && wHe < 0.05 && wLp < 0.05 && wHl < 0.05 && wLg < 0.05 && wWallArms < 0.05 && wAct <= 0 && wStrike <= 0 && kt < 0 && this.throwT < 0 && this.reloadT < 0 && this.hitT < 0 && this.tellT < 0
+      && this.upperW.aim < 0.3 && !this.kit && !this.ready && !this.wound && !this.dazzle && !this.mvBusy && this.mvs.armL <= 0 && this.mvs.tsT < 0 && this.dp.wL.x < 0.05 && !this.wk.fed && this.wk.shown < 0.05);
+    // ---- A SMOKE (game/smokebreak.ts): the left hand up to the mouth and down again, asked only of a free hand as the goggles' flip is — never looked at for a figure nobody told to smoke
+    if (this.smoke !== null || this.smokeArm > 0) this.smokeLayer(dt, !this.nv && wHd < 0.05 && wHe < 0.05 && wLp < 0.05 && wHl < 0.05 && wLg < 0.05 && wWallArms < 0.05 && wAct <= 0 && wStrike <= 0 && kt < 0 && this.throwT < 0 && this.reloadT < 0 && this.hitT < 0 && this.tellT < 0
       && this.upperW.aim < 0.3 && !this.kit && !this.ready && !this.wound && !this.dazzle && !this.mvBusy && this.mvs.armL <= 0 && this.mvs.tsT < 0 && this.dp.wL.x < 0.05 && !this.wk.fed && this.wk.shown < 0.05);   // (dp.wL: the hand that goes out to a leaf he walks into is the door's; wk: a hand at work on a thing is the work's — handwork.ts)
     const nod = this.nvNod, nodIn = !!this.sp && STEALTHPOSE.nod; this.nvA = nod;   // (a goggle nod: tipped onto the head here — but where the look under a door is drawn the LOOK poses it, after its own look at the gap, which measured the head with the nod on and took it back out: the goggles swung on a still head. STEALTHPOSE.nod off = that, as it was)
     if (nod !== 0 && !nodIn) this.nvTip(this.pA, nod);
@@ -2365,7 +2373,7 @@ export class CharacterAnimator {
     this.twists.push({ node: nd.spine3, yaw: y * 0.40, pitch: -p * 0.35 });
     if (Math.abs(look) > 1e-3) { this.twists.push({ node: nd.neck, yaw: look * 0.4, pitch: 0 }); this.twists.push({ node: nd.head, yaw: look * 0.6, pitch: 0 }); }
     if (this.lookPitchExtra !== 0) { this.twists.push({ node: nd.neck, yaw: 0, pitch: this.lookPitchExtra * 0.4 }); this.twists.push({ node: nd.head, yaw: 0, pitch: this.lookPitchExtra * 0.6 }); }
-    if (this.nv) {   // (KIT.nv: what turns the head after the layers, kept for the hand's reach next frame)
+    if (this.nv || this.smoke !== null) {   // (KIT.nv, and a smoke: what turns the head after the layers, kept for the hand's reach next frame)
       const w = this.nvTw; w[0] = w[1] = w[2] = w[3] = 0;
       for (const t of this.twists) { if (t.node === nd.neck) { w[0] += t.yaw; w[1] += t.pitch; } else if (t.node === nd.head) { w[2] += t.yaw; w[3] += t.pitch; } }
     }
@@ -3723,6 +3731,27 @@ export class CharacterAnimator {
    *  has the job and `free` says nothing else wants it (a hand flip whose arm is taken before the goggles have moved becomes a nod), and tips the head for a
    *  nod: the HEAD joint alone, about the level axis square to his gaze — the joint stays where it is and the way he faces on the plan does not turn, so what the game
    *  reads off his head (where his eye is, which way his gaze goes) is the same with a nod on it. pB is free scratch here. */
+  /** A SMOKE's arm (see `smoke`; the numbers are smokebreak.ts SMOKEBREAK.arm): the left wrist to a place in front of the mouth, in the head's frame as it will be
+   *  DRAWN (the goggle flip's own arithmetic, nvLayer), blended over the arm alone by how far up it has got. pB is scratch. */
+  private smokeLayer(dt: number, free: boolean) {
+    const K = SMOKEBREAK.arm, want = this.smoke !== null && free ? clamp(this.smoke, 0, 1) : 0, step = (free ? K.rate : K.away) * dt;
+    this.smokeArm += clamp(want - this.smokeArm, -step, step);
+    if (this.kit) this.smokeArm = 0;
+    if (this.smokeArm <= 0.004) { if (want <= 0) this.smokeArm = 0; return; }
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, x = this.smokeArm, e = x * x * (3 - 2 * x), tw = this.nvTw;
+    fk.run(pA);
+    const twq = (y: number, p: number): Quat => { let q = quat.yaw(y); if (p !== 0) q = quat.mul(quat.axisAngle(quat.rotate(q, [1, 0, 0]), p), q); return q; };
+    const Tn = twq(tw[0], tw[1]), hr = quat.mul(twq(tw[2], tw[3]), quat.mul(Tn, quat.mul(fk.rot[nd.head], this.headRestInv)));
+    const nk = fk.pos[nd.neck], hp = v3.add(nk, quat.rotate(Tn, v3.sub(fk.pos[nd.head], nk)));
+    const X = quat.rotate(hr, [1, 0, 0]), Y = quat.rotate(hr, [0, 1, 0]), Z = quat.rotate(hr, [0, 0, 1]);
+    const inHead = (p: Vec3): Vec3 => [X[0] * p[0] + Y[0] * p[1] + Z[0] * p[2], X[1] * p[0] + Y[1] * p[1] + Z[1] * p[2], X[2] * p[0] + Y[2] * p[1] + Z[2] * p[2]];
+    pB.copy(pA); this.turn(pB, nd.shoulderL, qRoll(K.shrug * DEGR)); fk.run(pB);
+    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(hp, inHead(K.at)), K.pole, 0.85, this.handRot(0, inHead(K.fingers), inHead(K.back)));
+    this.hand(pB, 0, K.curl, K.thumb);
+    const m = this.dynMask; m.fill(0); m[nd.shoulderL] = e; m[nd.upperArmL] = e; m[nd.forearmL] = e;
+    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); }; setSub(nd.handL, e);
+    blendPose(pA, pB, 1, m, pA);
+  }
   private nvLayer(dt: number, free: boolean) {
     const n = this.nv!, N = KIT.nv, H = N.hand, O = N.nod;
     if (n.hand && !free && n.t < H.flip[0]) { n.hand = false; n.t = 0; n.c0 = this.nvNod; }   // (c0: what is left of a nod this flip cut short starts its let-go again from where it has got to — kept whole it came back at full size)
