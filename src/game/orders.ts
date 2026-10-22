@@ -98,11 +98,11 @@ import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewO
 import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { silentOnMan } from './silent';   // (called inside tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint, autoPick } from './autopilot';   // (read inside input(), hud() and show() only)
-import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringHoldSecs, ringLatch, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { backableInteract } from './interact';   // (read inside ringInput only: what the back key would back out of)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
-import { planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
+import { planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, planShift, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
 import { teamFollow, teamDash, teamFight } from './teampace';   // (read inside update only)
 import { noShoveOwn } from './noshove';   // (read inside update only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
@@ -991,19 +991,21 @@ export class SquadOrders {
       if (P) {
         if (!C.on || input.pressed.has('Blur') || input.pressed.has('Paused')) { this.cmdPress = null; return false; }
         if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.quickGive(P.t); return true; }
-        if (g.time - P.t0 < C.holdSecs - 1e-6) return false;
+        if (g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
         this.cmdPress = null; return this.backFree() && this.ringUp(P.t, input, canvas, g.time - C.tapSecs);   // (the hold was the wait: the cursor counts at once)
       }
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
+      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.quickGive(this.targetUnder(input, cam, canvas)); return true; }   // (down and up inside one tick: a tap, given on its own tick)
       if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas) }; return true; }
       return this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, g.time);
     }
     const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
+    const stay = C.stay && !R.rmb;   // (the ring stays up without its key — never plan mode's, which is its button's)
     input.pressed.delete(INTERACT_KEY);   // (Sam's own ring is not opened under this one: interact.ts)
-    const esc = input.pressed.delete('Escape'), blur = input.pressed.has('Blur') || input.pressed.has('Paused');   // ('Paused', backkey.ts: the key let go under the pause card gives nothing on the tick play comes back)
+    const esc = C.key === 'Tab' ? input.pressed.delete('Escape') : backTake(input), blur = input.pressed.has('Blur') || input.pressed.has('Paused');   // (the back key, backkey.ts: Esc, and Tab where Tab backs out — never a ring that is on Tab itself · 'Paused': the key let go under the pause card gives nothing on the tick play comes back)
     const rmb = input.rmbHit(); if (rmb) input.clicked &= ~4;
-    const lmb = input.lmbHit();
+    const lmb = input.lmbHit(); let click = false;
     let digit = 0; for (let d = 1; d <= 9; d++) if (input.pressed.delete(`Digit${d}`) && !digit) digit = d;
     let wheel = 0; if (input.wheel) { M.wheelAcc = Math.max(-2 * WHEEL_STEP, Math.min(2 * WHEEL_STEP, M.wheelAcc + input.wheel)); input.wheel = 0;
       if (Math.abs(M.wheelAcc) >= WHEEL_STEP) { wheel = Math.sign(M.wheelAcc); M.wheelAcc -= wheel * WHEEL_STEP; } }
@@ -1012,26 +1014,37 @@ export class SquadOrders {
     if (rmb) { if (!this.pageBack()) { away(); CMDRING_STATS.cancelled++; } return true; }   // (turn(): a page turned lights nothing)
     if (lmb) {   // on a man: the orders are his (again: everyone's), and the ring starts again for him · anywhere else it is Sam's trigger, and the ring goes
       const k = this.manAt(input, cam, canvas);
-      if (k < 0) { if (this.plan.up || (CLOSE.heldClicks && g.player.holding?.variant === 'arm')) input.clicked &= ~1;   // (close.ts: with a man in the arm the click is the knife — the click that puts the ring away is not that click as well)
+      if (k < 0 && stay) { input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1); click = true; }   // (a ring that stays: the click gives the lit wedge, below — it is not his trigger)
+      else if (k < 0) { if (this.plan.up || (CLOSE.heldClicks && g.player.holding?.variant === 'arm')) input.clicked &= ~1;   // (close.ts: with a man in the arm the click is the knife — the click that puts the ring away is not that click as well)
         away(); CMDRING_STATS.fired++; return true; }
+      else {
       input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1);
       this.who = this.who === k ? 'all' : k; this.plan.pick = null; CMDRING_STATS.who++;
       if (M.target.kind === 'none' && M.target.man) M.target = { kind: 'none', at: M.target.at };   // (opened on a man it was his: now it is whose the click says)
       if (M.page !== null) this.turn(null); else this.refresh();
       if (!this.menu) { this.cmdRing = null; return true; }
       R.lit = 1; R.armed = false; this.ringSel();   // (the cursor is out on him: it lights nothing until it has come back to the ring's middle)
+      }
     } else if (wheel) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
     // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
     // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
-    const want = ringWant(R, input, digit, g.time);
+    const want = ringWant(R, input, digit, g.time); let turned = false;
     if (want && want !== R.lit) {
       const rows = this.menu!.rows, i = rows.findIndex(r => r.key === want), first = this.menu!.page === null;
       if (first && want === 1) R.lit = 1;
-      else if (i >= 0 && rows[i].opens) { this.turn(rows[i].opens!); CMDRING_STATS.pages++; if (!this.menu) { this.cmdRing = null; return true; } }
+      else if (i >= 0 && rows[i].opens) { this.turn(rows[i].opens!); CMDRING_STATS.pages++; turned = true; if (!this.menu) { this.cmdRing = null; return true; } }
       else if (i >= 0) R.lit = want;
       this.ringSel();
     }
-    if (R.rmb ? (input.buttons & 4) !== 0 : input.down(C.key)) return true;
+    if (stay) {
+      // IT STAYS UP WITHOUT ITS KEY (cmdring.ts ringLatch): a digit's own wedge is given at once, a left click gives the lit one, and so does the key again
+      // once the press that opened it has come up; that press coming up gives only a wedge the cursor is out on — in the middle, the ring is left up
+      const again = !!R.free && input.pressed.delete(C.key);
+      const latch = ringLatch(R, input.down(C.key), again, !digit && want > 0 && want === R.lit);
+      const byDigit = digit > 0 && !turned && R.lit === digit;
+      if (latch !== 'give' && !byDigit && !(click && !turned)) return true;
+      if (click && !R.lit) return true;   // (a click with nothing lit — a page just turned — gives nothing and puts nothing away)
+    } else if (R.rmb ? (input.buttons & 4) !== 0 : input.down(C.key)) return true;
     // the key let go: the lit wedge is given — the first page's first wedge is the quick key's own order (autopilot.ts), every other one its row's
     // (… the right button let go, plan mode's ring: that first wedge is the right click's own order — planmode.ts planOrder, which keeps the chain's books)
     const N = this.menu!, lit = R.lit, i = N.rows.findIndex(r => r.key === lit); this.cmdRing = null;
@@ -1054,9 +1067,11 @@ export class SquadOrders {
     if (!this.backFree() || !this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, this.g.time - CMDRING.tapSecs)) return false;
     this.cmdRing!.rmb = true; return true;
   }
-  /** the ring's key would open a ring now: the key free, and — with plan mode on (planmode.ts: Shift + the key is its toggle) — Shift not down. With that
-   *  mode off Shift is only his sprint, and the key orders as it does at a walk */
-  private ringFree(input: Input): boolean { return !(CMDRING.plan && (input.down('ShiftLeft') || input.down('ShiftRight'))) && this.backFree(); }
+  /** the ring's key would open a ring now: the key free, and — with plan mode on (planmode.ts: Shift + the key is its toggle) — Shift not the mode's
+   *  (planShift: out of a run it is not, CMDRING.planRun). With that mode off Shift is only his sprint, and the key orders as it does at a walk */
+  private ringFree(input: Input): boolean { return !planShift(this, input) && this.backFree(); }
+  /** plan mode is up and the back key takes it down (planmode.ts, CMDRING.planRun): Game.backable */
+  planBack(): boolean { return CMDRING.plan && CMDRING.planRun && this.plan.up; }
   /** the ring's key is free: no menu up and nothing the key backs out of instead (backkey.ts: a Space list, a running verb, the launcher's arc) */
   backFree(): boolean { return !this.menu && !this.g.player.launchHeld && !backableInteract(this.g); }
   /** What Tab would open on, for a hint drawn before the key is pressed (null: the switch off, no squad, or the key would open no ring now — ringFree): the

@@ -27,6 +27,7 @@ const K: any = await import(`${ROOT}/src/host/keymap.ts`);
 const { Input } = await import(`${ROOT}/src/game/input.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { ORDERS } = OR, { AUTOPILOT } = AP;
+const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -149,7 +150,7 @@ export async function qkeyCheck(): Promise<boolean> {
         for (const d of [...g.doors.list].sort((a: any, b: any) => dist(a.frameCentre, g.player.char.pos) - dist(b.frameCentre, g.player.char.pos))) { const t = O.targetAt(d.frameCentre); if (t.kind !== 'door' || t.door !== d) continue; const far = g.cleared.roomBy(t.door, t.side > 0 ? -1 : 1); if (!far || g.cleared.isKnown(far)) continue; if (!O.whyNot(stackDef, O.forMen(t, all()), all()) && aimOf(R, d)) { D = d; break; } }
         const spot = floorSpot(R);
         if (!D || !spot) return { log: '', digest: '', rows: [] as string[], filed, lag: -1, why: !D ? 'no door to stack on' : 'no open floor round Sam' };
-        R.aim(spot); const n0 = O.log.length; press(); const lag = O.log.length - n0; R.step(90);
+        R.aim(spot); const n0 = O.log.length; press(); let lag = O.log.length - n0; R.step(1); if (CMDRING.on) lag = lag === 0 && O.log.length - n0 === 1 ? 1 : -1; R.step(89);   // (with the orders ring on — the page — a tap is given as the key is seen up, the tick after the press; off, on the press's own tick)
         aimOf(R, D); press(); R.until(() => R.stacked(), 40); R.step(30);
         aimOf(R, D); press(); R.step(240);
         R.aim(spot); press(); R.step(120);
@@ -161,7 +162,7 @@ export async function qkeyCheck(): Promise<boolean> {
       const dead = !b.why && b.rows.length === 0 && b.filed.every(f => f === '');
       line(same && q.rows.length >= 4 && code.lag === 1 && q.lag === 1 && q.filed.every(f => f === ORDERS.quickKey) && dead,
         `the game (${process.env.TPS_PROFILE === 'shipped' ? 'the page\'s stand' : 'the frozen stand'}): a tap of Q is the press B was — the same order book to the millisecond and the same game after four orders; the B key orders nothing`,
-        code.why || q.why || b.why ? `not played: ${code.why ?? q.why ?? b.why}` : `the code straight in: ${code.rows.length} rows, digest ${code.digest} · the Q key: ${q.rows.length} rows, digest ${q.digest}, filed '${q.filed[0]}' · ${same ? 'the same' : `DIFFERENT (first row that differs: ${q.rows.find((r, i) => r !== code.rows[i]) ?? 'none — the game differs'})`} · the orders: ${q.rows.map(r => r.split(' ')[1]).join(', ')} · from the stack: ${entry?.split(' ')[1]} · the order on the frame of the press: ${q.lag === 1} · the B key: filed '${b.filed.join('')}', ${b.rows.length} rows`);
+        code.why || q.why || b.why ? `not played: ${code.why ?? q.why ?? b.why}` : `the code straight in: ${code.rows.length} rows, digest ${code.digest} · the Q key: ${q.rows.length} rows, digest ${q.digest}, filed '${q.filed[0]}' · ${same ? 'the same' : `DIFFERENT (first row that differs: ${q.rows.find((r, i) => r !== code.rows[i]) ?? 'none — the game differs'})`} · the orders: ${q.rows.map(r => r.split(' ')[1]).join(', ')} · from the stack: ${entry?.split(' ')[1]} · the order ${CMDRING.on ? 'on the tick the key is seen up (the orders ring is on)' : 'on the frame of the press'}: ${q.lag === 1} · the B key: filed '${b.filed.join('')}', ${b.rows.length} rows`);
     }
   } finally {
     K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.freeWhen = null; AUTOPILOT.on = keep.ap; Math.random = keep.rnd;

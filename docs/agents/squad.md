@@ -181,6 +181,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Q on a door, then F, with one or two teammates** (`DOORTOOLS.wordSmall`, `?wordsmall=0`): the word's key sends a small squad in from a plain
   stack as it does the four — the rule, its edges and its check are the door tools' bullet "The word sends a small squad in from its stack"
   (`docs/agents/door-tools.md`). Q on the stacked door again is still the squad's own pick of entry.
+- **A longer press of Q is the orders ring and it stays up; Shift + Q is plan mode: ON IN THE PAGE since 10-22** (`CMDRING.on`, `stay`,
+  `stayHoldSecs`, `tapNow`, `plan`, `planRts`, `planRun` in `src/game/cmdring.ts`; `ringLatch`, `ringHoldSecs` there; `orders.ts ringInput`,
+  `planmode.ts planShift`; the maintainer, 10-22: "longer press for Q opens up squad, doesn't require holding it", "shift Q for plan mode"). The ring and
+  plan mode are no longer behind `?cmd`. WHAT THE KEY DOES NOW: let go inside the hold it is the quick order, the same order as before, filed as the
+  key comes UP (it was filed as the key went down: a tap's own length later, the price of telling a tap from a hold); kept down `stayHoldSecs` (0.3 s,
+  in place of the 0.2 of the ring that goes with its key) the order menu goes up as a ring at the cursor and STAYS when the key comes up. Left up: a
+  digit 1 to 5 gives its wedge at once (a page's wedge turns the ring), a left click anywhere but on a man gives the lit wedge and is not Sam's
+  trigger (a click with nothing lit, a page just turned, gives nothing), the key again gives the lit wedge, a right click steps a page back or puts
+  the ring away, the back key (Tab on the page) puts it away, and so do Esc where it reaches the game, the pause and a lost window. Kept down,
+  taken out to a wedge and let go, the key still gives that wedge (`ringLatch`: one rule a second ring can read; Space's own ring is not latched by
+  this change). Plan mode's ring on the right button is not latched. `tapNow`: a press already up in its own tick (down and up inside one tick, and
+  every one-frame press a headless line makes) is given on that tick, so lines that press the quick key for one frame read as they did. SHIFT + Q
+  toggles plan mode (as `?cmd&cmdplan` had it, Sam parked and the view on the walk keys) EXCEPT out of a sprint (`planRun`): Shift with a walk key down
+  and the mode down is his run, and Q there is the quick order as at a walk; with the mode up Shift + Q leaves it whatever else is down, and so does
+  the back key once no menu or ring is up (`SquadOrders.planBack`, `Game.backable`). SWITCHES: ON in the page; `?qring=0` = the key as it was (its
+  order as it goes down, no ring, no plan mode), `?qstay=0` = the ring only while the key is down, given as it comes up, `?qplan=0` (or `?nocmdplan`)
+  = no plan mode; `?cmd` now only raises Space's own ring (`CMDRING.hands`) beside it. OFF in the module and on the frozen stand: `FROZEN_HOLDS` rows
+  `CMDRING.on` / `tapNow` (`TPS_QRING=1`), `stay` (`TPS_QSTAY=1`), `plan` / `planRts` / `planRun` (`TPS_QPLAN=1`; the last two words need the first). The
+  journal carries the table: a recording with no `stay` / `tapNow` / `planRun` key replays with them off. Debugger: Team feel ▸ 'Tab ▸ the orders ring',
+  '… ▸ stays up without the key', '… ▸ plan mode'. CHECK: `probes.ts qring` (tools/qa/qring-check.ts, family squadorders; 12 lines; `QRING_BREAK=1`
+  fails 9 on the page's stand and 8 on the frozen), both stands. The older `cmdring` and `planmode` checks pin the ring that goes with its key and
+  Shift always the mode's (25 and 28 lines, both stands); `qkey`'s game line reads the stand (the order on the tick the key is seen up, with the ring
+  on). NOT measured: no tally (the play-through's commander presses no key); nobody has played it; never seen on a GPU.
 - **Plan mode, a prototype** (`src/game/planmode.ts`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that
   requires explicitly leaving"; the design: `rebuild/commanding/command-mode.md`). OFF in the module and on BOTH stands (no `FROZEN_HOLDS` row: it is
   not a shipped-on rule); the page raises it only when asked beside the ring (`?cmd&cmdplan`, or the debugger's tick 'Tab ▸ the ring ▸ plan mode on

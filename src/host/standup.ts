@@ -61,6 +61,7 @@ import { INHAND } from '../game/inhand';
 import { GUNHAND } from '../game/gunhand';
 import { PACKSIDE } from '../game/packside';
 import { PLANLAY } from '../game/planlay';
+import { CMDRING } from '../game/cmdring';
 import { STACKROOM } from '../game/stackroom';
 import { HANDLE } from '../game/handleside';
 import { HANDWORK } from '../game/handwork';
@@ -341,6 +342,10 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_OUTSIDEPLAIN')) DOORTOOLS.outsidePlain = String((globalThis as any).process?.env?.TPS_OUTSIDEPLAIN ?? '') === '1';   // 'clear from outside' as one order, no threshold pages: off, the menu every frozen probe presses; TPS_OUTSIDEPLAIN=1
     if (pinned('TPS_WORDNOCAN')) DOORTOOLS.wordNoCan = String((globalThis as any).process?.env?.TPS_WORDNOCAN ?? '') === '1';   // the word at a door held from outside spends no can (src/game/doortools.ts wordSteps): off, the word bangs the pockets as every frozen probe has it; acts with TPS_OUTSIDEPLAIN=1
     if (pinned('TPS_WORDSMALL')) DOORTOOLS.wordSmall = String((globalThis as any).process?.env?.TPS_WORDSMALL ?? '') === '1';   // the word sends one or two teammates in from a plain stack (src/game/doortools.ts stackWaits): off, a small squad's stack has no word, as every frozen probe has it; TPS_WORDSMALL=1 raises it
+    if (pinned('TPS_QRING')) { CMDRING.on = String((globalThis as any).process?.env?.TPS_QRING ?? '') === '1'; CMDRING.tapNow = CMDRING.on; }   // the orders ring on the squad's command key (src/game/cmdring.ts): off, so the quick key gives its order as it goes down and no ring opens, as every frozen probe presses it; TPS_QRING=1 raises it (a press already up in its own tick is then a tap given on that tick)
+    if (pinned('TPS_QSTAY')) CMDRING.stay = CMDRING.on && String((globalThis as any).process?.env?.TPS_QSTAY ?? '') === '1';   // … and the ring staying up when its key comes up: off; TPS_QSTAY=1 raises it beside TPS_QRING=1
+    if (pinned('TPS_QPLAN')) { CMDRING.plan = CMDRING.on && String((globalThis as any).process?.env?.TPS_QPLAN ?? '') === '1'; CMDRING.planRts = CMDRING.plan; CMDRING.planRun = CMDRING.plan; }   // … and plan mode on Shift + the key (src/game/planmode.ts): off; TPS_QPLAN=1 raises it beside TPS_QRING=1, as the page has it (Sam parked, the view on the walk keys, a sprint's Shift not the mode's)
+    if (!CMDRING.on) { CMDRING.stay = false; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.hands = false; }   // (TPS_QRING=0 on the page's stand is the page's ?qring=0: what rides on the ring goes with it)
     if (pinned('TPS_SEENWALK')) SEENWALK.on = String((globalThis as any).process?.env?.TPS_SEENWALK ?? '') === '1';   // an ordered walk keeps off lit floor in view of an uncleared room (src/game/seenwalk.ts): off, the walks as every frozen tally walked them
     if (pinned('TPS_BANGINTO')) DOORTOOLS.bangInto = String((globalThis as any).process?.env?.TPS_BANGINTO ?? '') === '1';   // a bang and clear's can thrown into the room from the hand (src/game/doortools.ts bangSpot): off, the can as every frozen tally threw it
     if (pinned('TPS_HALTBACK')) DOORTOOLS.haltBack = String((globalThis as any).process?.env?.TPS_HALTBACK ?? '') === '1';   // a pair halted on a door the other pair is charging steps back off it (src/game/doortools.ts haltBack): off, so every frozen probe's halted pair stands where it stood; TPS_HALTBACK=1 raises it

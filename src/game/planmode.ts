@@ -43,6 +43,7 @@ import type { OrderTarget, SquadOrders } from './orders';
 import type { LaidWhere } from './planlay';
 import { layTarget } from './planlay';   // (these are called inside functions only: src/game is one import cycle)
 import { CMDRING, ringZoom } from './cmdring';
+import { backTake } from './backkey';   // (read inside planInput only)
 import { DOORTOOLS } from './doortools';
 
 export const PLAN_STATS = { toggled: 0, picked: 0, boxed: 0, given: 0, added: 0, words: 0, early: 0, struck: 0, dropped: 0, done: 0 };
@@ -240,13 +241,20 @@ export function planLook(S: SquadOrders): Vec3 | null { const P = S.plan; return
 
 /** orders.ts input, once a tick with a squad on the floor and Sam up — after the who key, ahead of the ring, the menu, the plan laid for the word and
  *  the door tools: the chains move on, then the mode's own keys and buttons are read */
+/** Shift + the ring's key is the mode's this frame (false: it is the key's own order, orders.ts ringFree): the mode on and Shift down — and, with
+ *  CMDRING.planRun, not out of a run: a walk key down with the mode down is his sprint, and the key orders there as it does at a walk */
+export function planShift(S: SquadOrders, input: Input): boolean {
+  if (!CMDRING.plan || !(input.down('ShiftLeft') || input.down('ShiftRight'))) return false;
+  return S.plan.up || !CMDRING.planRun || !WALK.some(k => input.down(k));
+}
 export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canvas: View, dt = 0): void {
   const P = S.plan, K = CMDRING;
   if (!K.plan || !K.on) { if (P.up || P.chains.length || P.pick) { down(S, input); P.chains = []; P.pick = null; } return; }
   tick(S);
   const shift = input.down('ShiftLeft') || input.down('ShiftRight');
   // (the toggle is the ring's key where the ring's key is free: with something for it to back out of — a menu, a Space list, a verb, the launcher's arc — it backs out, Shift or no)
-  if (shift && !S.cmdRing && S.backFree() && input.pressed.delete(K.key)) { PLAN_STATS.toggled++; if (P.up) down(S, input); else up(S); }
+  if (planShift(S, input) && !S.cmdRing && S.backFree() && input.pressed.delete(K.key)) { PLAN_STATS.toggled++; if (P.up) down(S, input); else up(S); }
+  if (P.up && K.planRun && !S.menu && !S.cmdRing && backTake(input)) { PLAN_STATS.toggled++; down(S, input); }   // (the back key takes the mode down, once nothing nearer is up to back out of: backkey.ts)
   word(S, input);
   if (!P.up) return;
   if (input.pressed.has('Blur')) { P.drag = null; P.rmbT = -1; }

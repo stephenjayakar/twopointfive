@@ -27,7 +27,7 @@ async function rig(seed: number, plan = !BREAK) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp();
-    CMDRING.on = true; CMDRING.hint = true; CMDRING.hands = true; CMDRING.plan = plan; CMDRING.planRts = plan; AUTOPILOT.on = true;
+    CMDRING.on = true; CMDRING.hint = true; CMDRING.hands = true; CMDRING.plan = plan; CMDRING.planRts = plan; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; AUTOPILOT.on = true;   // (the ring that goes with its key and Shift always the mode's, as these lines were written: `probes.ts qring` has the page's)
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
@@ -81,7 +81,7 @@ function floorSpot(R: any, skip: number[][] = []): number[] | null {
 export async function planmodeCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
-  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, rts: CMDRING.planRts, ap: AUTOPILOT.on, rnd: Math.random };
+  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, rts: CMDRING.planRts, run: CMDRING.planRun, stay: CMDRING.stay, tapNow: CMDRING.tapNow, ap: AUTOPILOT.on, rnd: Math.random };
   console.log(`plan mode (src/game/planmode.ts)${BREAK ? ' — PLANMODE_BREAK=1: the switch left off, the lines below must fail' : ''}`);
   try {
     // 1. the switch off (the ring's own on): Shift and the key are nobody's, the mouse is Sam's, the file has no plan in it
@@ -262,7 +262,7 @@ export async function planmodeCheck(): Promise<boolean> {
         CMDRING.planRts = !BREAK; R.toggle();
         line(!BREAK && walked > 0.5 && onHim && !!spot && atOnce === 1 && !ring, 'that word off: he walks with the mode up, the view is on him, and a right click orders as it goes down', `he walked ${walked.toFixed(2)} m · the view ${onHim ? 'on him' : 'not on him'} · the button down: ${atOnce} order at once, ${ring ? 'a ring' : 'no ring'} after half a second`); }
     }
-  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; CMDRING.planRts = keep.rts; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
+  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; CMDRING.planRts = keep.rts; CMDRING.planRun = keep.run; CMDRING.stay = keep.stay; CMDRING.tapNow = keep.tapNow; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
   console.log(fails ? `planmode-check: ${fails} FAIL` : 'planmode-check: ALL PASS');
   return fails === 0;
 }

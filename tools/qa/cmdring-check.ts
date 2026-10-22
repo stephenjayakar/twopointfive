@@ -29,7 +29,7 @@ async function rig(seed: number, on = !BREAK) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp();
-    CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.holdSecs = HOLD_SECS; AUTOPILOT.on = true;
+    CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.holdSecs = HOLD_SECS; AUTOPILOT.on = true;   // (the ring that goes with its key, as these lines were written: the one that stays is `probes.ts qring`'s)
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
@@ -78,7 +78,7 @@ const line = (ok: boolean, name: string, detail: string) => { if (!ok) fails++; 
 
 export async function cmdringCheck(): Promise<boolean> {
   fails = 0;
-  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, rts: CMDRING.planRts, hold: CMDRING.holdSecs, ap: AUTOPILOT.on, rnd: Math.random };
+  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, rts: CMDRING.planRts, run: CMDRING.planRun, stay: CMDRING.stay, tapNow: CMDRING.tapNow, hold: CMDRING.holdSecs, ap: AUTOPILOT.on, rnd: Math.random };
   console.log(`cmdring-check: the orders ring on one key (a prototype)${BREAK ? '  (CMDRING_BREAK: the switch is left off — the lines must fail)' : ''}`);
   try {
     const R = await rig(5), g = R.game, O = R.O, T = g.doorTools, S = CMDRING_STATS;
@@ -397,7 +397,7 @@ export async function cmdringCheck(): Promise<boolean> {
         CMDRING.hands = was; rest();
       }
     }
-  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; CMDRING.planRts = keep.rts; CMDRING.holdSecs = keep.hold; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
+  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; CMDRING.planRts = keep.rts; CMDRING.planRun = keep.run; CMDRING.stay = keep.stay; CMDRING.tapNow = keep.tapNow; CMDRING.holdSecs = keep.hold; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
   console.log(fails ? `cmdring-check: ${fails} FAIL` : 'cmdring-check: ALL PASS');
   return fails === 0;
 }
