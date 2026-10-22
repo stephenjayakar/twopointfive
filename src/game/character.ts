@@ -869,6 +869,14 @@ export const TOSS_QUICK = 0.08;
 /** the flinch's envelope over its own length (0‥1) and the hit's over seconds (it ends at MV.hit.dur) */
 const MV_FLINCH_ENV: [number, number][] = [[0, 0], [0.14, 1], [0.34, 0.9], [0.7, 0.22], [1, 0]];
 const MV_HIT_ENV: [number, number][] = [[0, 0], [0.07, 1], [0.16, 0.8], [0.32, 0.28], [0.45, -0.07], [0.6, 0]];
+/** THE START (startleFrom): a man who has just SEEN something he did not expect — not the duck from a round (the flinch folds him down and away) and not a blow
+ *  (the hit knocks him along it): he JOLTS. The trunk rears back off the thing and turns a little toward it, the head snaps round to it with the chin up, the
+ *  weight goes back off it over planted feet with the knees giving, and the arms that are not on a long gun fly out from his sides — shoulders up, elbows wide,
+ *  forearms half raised — then all of it comes back as he gathers himself. Big and long for an untrained man, a twitch for a trained one. `amp` / `dur` by
+ *  training (0 → 1); the angles in degrees, the shifts in metres; `env` over its own length (0‥1): there in a tenth of it, held, let go. */
+const MV_STARTLE = { amp: [1, 0.5] as const, dur: [0.65, 0.45] as const, rear: 10, turn: 8, lean: 3, head: 9, headTurn: 32, back: 0.075, drop: 0.035,
+  gunAmp: 0.7, gunRear: 0.5, gunBack: 1, behindTurn: 1.8, behindHead: 0.8, behindPitch: 0.5,
+  shrug: 11, wide: [30, 19] as const, raise: [56, 40] as const, env: [[0, 0], [0.12, 1], [0.4, 0.86], [0.72, 0.18], [0.87, -0.1], [1, 0]] as [number, number][] };
 /** where a carriage's trigger-hand point swings about when the aim pitches (model, off the chest joint): between the shoulder joints — a hand ahead of them rises with
  *  the muzzle and drops back under it, as an arm pointing does (longArms) */
 export const LONG_PIVOT: Vec3 = [0, 0.13, -0.06];
@@ -1392,10 +1400,10 @@ export class CharacterAnimator {
   dazzle: { from: Vec3; k: number } | null = null;
   /** MOVES state: recoil (decaying sums the rounds add to), the flinch / hit / toss clocks with their directions (model space), the dazzle's eased weight */
   private mvs = { back: 0, climb: 0, yaw: 0, rock: 0, sho: 0, head: 0, n: 0,
-    flT: -1, flD: [0, 0, 1] as Vec3, htT: -1, htD: [0, 0, -1] as Vec3, htSide: 1, tsT: -1, tsRel: TOSS_RELEASE, armL: 0,
+    flT: -1, flD: [0, 0, 1] as Vec3, stT: -1, stD: [0, 0, 1] as Vec3, htT: -1, htD: [0, 0, -1] as Vec3, htSide: 1, tsT: -1, tsRel: TOSS_RELEASE, armL: 0,
     dz: new Spring(), dzD: [0, 0, 1] as Vec3, dzT: 0, dzSd: 0, glide: new Spring(), hipY: NaN, cf: new Spring(), cfT: 0, hu: new Spring(), huT: 0, sk: new Spring() };
   /** a MOVES reaction has the trunk and head this frame (the life layer, the tells and the gaze stabiliser stand aside as they do for the old one-shots) */
-  private get mvBusy() { const m = this.mvs; return m.flT >= 0 || m.htT >= 0 || m.dz.x > 0 || m.cf.x > 0; }
+  private get mvBusy() { const m = this.mvs; return m.flT >= 0 || m.stT >= 0 || m.htT >= 0 || m.dz.x > 0 || m.cf.x > 0; }
   /** MOVES (second pass, inputs — nothing reads them with the pass off). `reloadBack`: the long gun in his hands is a bullpup (the magazine BEHIND the grip: the
    *  FN2000) — where the support hand goes for it. `bound`: an unarmed figure kept down — 1 = wrists tied behind the back (a hostage), 2 = hands on the head (told
    *  to stay down). `clutch`: 0‥1, the support hand pressed to the body (a man knocked about and still on his feet). `dip`: 0‥1, a friend's back is in front of the
@@ -1695,6 +1703,16 @@ export class CharacterAnimator {
     if (m.flT >= 0) { m.flT = 0.14 * D * clamp(curve(m.flT / D, MV_FLINCH_ENV), 0, 1); return; }
     m.flD = toward ? this.flatModel(toward, [0, 0, 1]) : [0, 0, 1]; m.flT = 0;
   }
+  /** MOVES: the START of a man who has just seen what he did not expect (`toward`: world direction from him to it; null = his front) — the jolt back off it,
+   *  the head snapped round to it, the arms flung out from his sides (MV_STARTLE). One at a time: a second call while the first still shows is the same start.
+   *  With the pass off this is the old flinch (the Hit_Chest twitch). Presentation only: what it buys the man who caused it is the caller's (game/startle.ts). */
+  startleFrom(toward: Vec3 | null) {
+    if (!mvOn('flinch')) { this.hitT = 0; return; }
+    const m = this.mvs; if (m.stT >= 0) return;
+    m.stD = toward ? this.flatModel(toward, [0, 0, 1]) : [0, 0, 1]; m.stT = 0;
+  }
+  /** the start is showing (0 = not, else how much of it: its envelope) */
+  get startleShown(): number { const m = this.mvs; return m.stT >= 0 ? clamp(curve(m.stT / lerp(MV_STARTLE.dur[0], MV_STARTLE.dur[1], clamp(this.trained, 0, 1)), MV_STARTLE.env), 0, 1) : 0; }
   /** MOVES: a round that went home on a man who stays up (`along`: the world direction the round was travelling; null = from his front): the torso knocked along
    *  it and twisted off the struck shoulder, the pelvis shoved, the head lagging — then he fights back to where he was. Off = the old Hit_Chest clip. */
   hitFrom(along: Vec3 | null) {
@@ -2406,8 +2424,8 @@ export class CharacterAnimator {
 
   // ================================================================ MOVES (the loud demo's motion pass — see MOVES / MV)
   private mvOut: MvGait = { live: false, g: 0, u: 0, st: 0 };
-  private get mvLive() { const m = this.mvs; return m.flT >= 0 || m.htT >= 0 || m.tsT >= 0 || m.dz.x !== 0 || m.dz.v !== 0 || m.cf.x !== 0 || m.hu.x !== 0 || m.sk.x !== 0 || m.back + m.climb + Math.abs(m.yaw) + m.rock + m.sho + m.head > 0 || m.glide.x !== 0 || this.rlT >= 0 || this.mv2.rw.x !== 0 || this.mv2.bd.x !== 0 || this.mv2.cl.x !== 0 || this.mv2.dip.x !== 0; }
-  private mvReset() { const m = this.mvs; m.back = m.climb = m.yaw = m.rock = m.sho = m.head = 0; m.flT = m.htT = m.tsT = -1; m.dz.x = m.dz.v = 0; m.dzT = 0; m.cf.x = m.cf.v = 0; m.cfT = 0; m.hu.x = m.hu.v = 0; m.huT = 0; m.sk.x = m.sk.v = 0; m.glide.x = m.glide.v = 0; m.hipY = NaN; const n = this.mv2, o = this.mv2Shown; this.rlT = -1; n.rw.x = n.rw.v = n.bd.x = n.bd.v = n.cl.x = n.cl.v = n.dip.x = n.dip.v = 0; o.reload = o.bound = o.clutch = o.dip = 0; this.sightsLift = 0; }
+  private get mvLive() { const m = this.mvs; return m.flT >= 0 || m.stT >= 0 || m.htT >= 0 || m.tsT >= 0 || m.dz.x !== 0 || m.dz.v !== 0 || m.cf.x !== 0 || m.hu.x !== 0 || m.sk.x !== 0 || m.back + m.climb + Math.abs(m.yaw) + m.rock + m.sho + m.head > 0 || m.glide.x !== 0 || this.rlT >= 0 || this.mv2.rw.x !== 0 || this.mv2.bd.x !== 0 || this.mv2.cl.x !== 0 || this.mv2.dip.x !== 0; }
+  private mvReset() { const m = this.mvs; m.back = m.climb = m.yaw = m.rock = m.sho = m.head = 0; m.flT = m.stT = m.htT = m.tsT = -1; m.dz.x = m.dz.v = 0; m.dzT = 0; m.cf.x = m.cf.v = 0; m.cfT = 0; m.hu.x = m.hu.v = 0; m.huT = 0; m.sk.x = m.sk.v = 0; m.glide.x = m.glide.v = 0; m.hipY = NaN; const n = this.mv2, o = this.mv2Shown; this.rlT = -1; n.rw.x = n.rw.v = n.bd.x = n.bd.v = n.cl.x = n.cl.v = n.dip.x = n.dip.v = 0; o.reload = o.bound = o.clutch = o.dip = 0; this.sightsLift = 0; }
   /** Before the stances and the arms: bleed the recoil's sums off (each at its own rate, by training), and the pelvis's share of how a side carries itself — a
    *  trained man with a long gun sinks onto bent knees when he moves (and a little when he stands on the gun) and most of the walk's bob is taken out, the feet
    *  IK'd back exactly where the cycle has them (the sneak layer's way: pole weight 0, so at no drop this is the identity). `moveW` = moving, upright, off the wall;
@@ -2646,6 +2664,15 @@ export class CharacterAnimator {
       hp += F.head * e; hy -= sd * F.away * e * lat; drop += F.drop * e; sx -= m.flD[0] * F.side * e; sz -= m.flD[2] * F.side * e;
       m.flT += dt; if (m.flT > D) m.flT = -1;
     }
+    let stw = 0, stn = 1;   // the start's arms: how far they are flung out this frame, and the side the thing is on (below, after the trunk)
+    if (m.stT >= 0) {
+      const S = MV_STARTLE, D = k(S.dur), lw = clamp(this.lg.w.x, 0, 1), d = m.stD;
+      const e = curve(m.stT / D, S.env) * lerp(k(S.amp), Math.max(k(S.amp), S.gunAmp), lw) * gate;   // (both hands on a long gun: the trunk has to say all of it, so a trained man's is not halved away)
+      const bh = clamp(-d[2], 0, 1), sd = d[0] >= 0 ? 1 : -1, lat = bh > 0 ? 1 : Math.min(1, Math.abs(d[0]) * 1.6);   // (a thing behind him: he comes ROUND to it — a turn, not a shove in the back)
+      pitch -= S.rear * (1 + S.gunRear * lw) * e * d[2] * (d[2] < 0 ? S.behindPitch : 1); yaw += sd * S.turn * (1 + S.behindTurn * bh) * e * lat; roll -= sd * S.lean * e * lat;   // (reared back off a thing in front, pitched a little on away from one behind; turned and tipped toward the side it is on)
+      hp -= S.head * e * Math.max(0.3, d[2]); hy += sd * S.headTurn * (1 + S.behindHead * bh) * e * lat; drop += S.drop * e; sx -= d[0] * S.back * (1 + S.gunBack * lw) * e; sz -= d[2] * S.back * (1 + S.gunBack * lw) * e;
+      stw = e; stn = sd; m.stT += dt; if (m.stT > D) m.stT = -1;   // (past its length the curve dips under zero: he sinks a little forward into what comes next)
+    }
     if (m.htT >= 0) {
       const H = MV.hit, d = m.htD, e = curve(m.htT, MV_HIT_ENV) * gate;
       const fz = d[2] <= 0 ? 1 : -1, tp = d[2] * H.pitch * e, ty = m.htSide * fz * H.yaw * e * (0.4 + 0.6 * Math.abs(d[2]));
@@ -2708,6 +2735,14 @@ export class CharacterAnimator {
     if (Math.abs(hp) + Math.abs(hy) > 1e-3) {
       const q = (kk: number) => quat.mul(qYaw(hy * DEGR * kk), qPitch(hp * DEGR * kk));
       this.turn(pA, nd.neck, q(0.4)); this.turn(pA, nd.head, q(0.6));
+    }
+    if (stw > 0.003) {   // the start's arms: shoulders up (a long gun's too: its hands are put back on it below), elbows wide and forearms half raised by what a long gun leaves of them — the arm on the thing's side thrown up more, the far one out less
+      const S = MV_STARTLE, a = stw * (1 - clamp(this.lg.w.x, 0, 1));
+      for (const [sh, up, fo, sg] of [[nd.shoulderL, nd.upperArmL, nd.forearmL, 1], [nd.shoulderR, nd.upperArmR, nd.forearmR, -1]] as const) {
+        const far = sg * stn < 0 ? 1 : 0;
+        this.turn(pA, sh, qRoll(sg * S.shrug * DEGR * stw));
+        if (a > 0.003) { this.turn(pA, up, qRoll(sg * S.wide[far] * DEGR * a)); this.turn(pA, fo, qPitch(-S.raise[far] * DEGR * a)); }
+      }
     }
     const setSub = (mk: Float32Array, i: number, wv: number) => { mk[i] = wv; for (const c of this.ch.nodes[i].children) setSub(mk, c, wv); };
     if (gunP && gunR) {

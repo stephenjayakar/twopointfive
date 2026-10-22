@@ -83,6 +83,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/doorblast.ts DOORBLAST_LOG': 'TALLY · counted in doorblast.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/doorblast.ts DOORBLAST_STATS': 'TALLY · counted in doorblast.ts (169 picks it or a throwaway to count into); read by its summary (418) and main.ts',
   'src/game/doorblast.ts DOORSHOT_STATS': 'TALLY · counted in doorblast.ts (leafRound 261, splinter 297-310); read by the log line it writes (311) and by tools/qa/doorshot-check.ts',
+  'src/game/startle.ts STARTLE_STATS': 'TALLY · counted in startle.ts (startleMan, startleSight, choose); read by tools/qa/startle-check.ts only',
   'src/game/doorthrow.ts DOORTHROW_STATS': 'TALLY · counted in doorthrow.ts (doorThrowAfter, count); read by tools/qa/doorthrow-check.ts only',
   'src/game/doorway.ts DOORMANNERS_STATS': 'TALLY · counted in doorway.ts; orders.ts:1398/1443-1449/1466 copies and puts back the counts round a trial ask; shown by main.ts — no rule reads a value',
   'src/game/doorway.ts STACK_OWN': 'TALLY · counted in orders.ts (1076/1499/1621/1756); orders.ts:1398-1466 only copies the counts and puts them back round a trial ask (1449 compares two counts of one call to write a count) — no rule reads a value',
