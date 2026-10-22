@@ -1608,9 +1608,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   at the clock. The numbers, the timeline and the map stay. A row that leans quiet or either way, the plain night, and every squad kind (its end
   card never showed the rating; its 'run so far' and its card under `?noverdict` still do) are as they were. Reads only: no run's digest differs.
   ON in the page (`?loudcard=0` = the rating on every card it stood on); off in the module and on the frozen stand (`TPS_LOUDCARD=1`); a
-  `FROZEN_HOLDS` row; NOT journalled (`VERDICT` is no journal table: a replay words its card and its two end lines by the page's own key, so a
-  recording of a loud row from before the key replays with its 'exfiltrated' line shorter than it was said). CHECK `probes.ts debrief-loud` (the
+  `FROZEN_HOLDS` row; a recording carries it (`VERDICT` is the last name of `JOURNAL_KNOBS`: `mission.ts`'s two end lines are worded by it), and
+  one from before the key, or the table, replays with it off (`journal.ts applyKnobs`). CHECK `probes.ts debrief-loud` (the
   rule, the key down, a quiet row, the plain night, a room clear on a loud row, every row's level file and its look's file read back as the row's
-  file, mission.ts's two lines) and a block of `debrief-dom` (the card on a fake DOM, key up and down, counts that would tone every cell);
+  file, a recording with and without the key, mission.ts's two lines) and a block of `debrief-dom` (the card on a fake DOM, key up and down, counts that would tone every cell);
   `LOUDCARD_BREAK=1` fails both on both stands. NEVER SEEN ON A GPU; nobody has played to the card since. Left as it was: the stealth game's
   cells and timeline still stand on a loud row's card (a loud card of its own would be new work).

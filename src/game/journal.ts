@@ -125,6 +125,7 @@ import { RELOAD } from './autoreload';
 import { SAMSTUN } from './samstun';
 import { SEENWALK } from './seenwalk';
 import { TEAMTALLY } from './teamtally';
+import { VERDICT } from './verdict';   // (used inside applyKnobs only: src/game is one import cycle)
 import { AIMWEIGHT } from './aimweight';
 import { AIM } from './aim';   // (used inside applyKnobs only: src/game is one import cycle)
 import { SPRINTDOOR } from './sprintdoor';
@@ -248,6 +249,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.GUARD_EYE as { far?: boolean } | undefined)?.far !== 'boolean') GUARD_EYE.far = false;   // (a recording from before a lit man was seen past the eye's 16 m — its GUARD_EYE row has no such key — replays with every eye stopping there, whatever this process had on)
   if (typeof (k.tables.GUARD_EYE as { farCalm?: boolean } | undefined)?.farCalm !== 'boolean') GUARD_EYE.farCalm = false;   // (…nor has one from before a far glimpse stopped being a place to walk to: it replays with every glimpse writing his fix, as that build did)
   if (!k.tables.TEAMTALLY) TEAMTALLY.on = false;   // (a recording from before a partner's men were on the card replays with them on nobody's)
+  if ((k.tables.VERDICT as Partial<typeof VERDICT> | undefined)?.loudCard === undefined) VERDICT.loudCard = false;   // (a recording from before a loud mission stopped being graded as a sneak: its end lines said the rating)
   if (!k.tables.DOORSTAY) DOORSTAY.on = false;   // (a recording from before the switch was made with the closers on every leaf: it replays with them)
   if ((k.tables.DOORWAY as { exitsOut?: boolean } | undefined)?.exitsOut === undefined) DOORWAY.exitsOut = false;   // (…and one from before outside doors opened outward had them dealt by the room rules: Door.swing reads the switch live)
   if (!k.tables.DOORBLAST) DOORBLAST.on = false; if (!k.tables.HANDLE) HANDLE.on = false; if (!k.tables.DOORMANNERS) DOORMANNERS.on = false;   // (likewise the other door switches: a file from before one of them replays without it, whatever the last file in this process left on)
