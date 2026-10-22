@@ -876,7 +876,7 @@ const MV_HIT_ENV: [number, number][] = [[0, 0], [0.07, 1], [0.16, 0.8], [0.32, 0
  *  training (0 → 1); the angles in degrees, the shifts in metres; `env` over its own length (0‥1): there in a tenth of it, held, let go. */
 const MV_STARTLE = { amp: [1, 0.5] as const, dur: [0.65, 0.45] as const, rear: 10, turn: 8, lean: 3, head: 9, headTurn: 32, back: 0.075, drop: 0.035,
   gunAmp: 0.7, gunRear: 0.5, gunBack: 1, behindTurn: 1.8, behindHead: 0.8, behindPitch: 0.5,
-  shrug: 11, wide: [30, 19] as const, raise: [56, 40] as const, env: [[0, 0], [0.12, 1], [0.4, 0.86], [0.72, 0.18], [0.87, -0.1], [1, 0]] as [number, number][] };
+  shrug: 11, wide: [30, 19] as const, raise: [56, 40] as const, env: [[0, 0], [0.12, 1], [0.4, 0.86], [0.72, 0.18], [1, 0]] as [number, number][] };
 /** where a carriage's trigger-hand point swings about when the aim pitches (model, off the chest joint): between the shoulder joints — a hand ahead of them rises with
  *  the muzzle and drops back under it, as an arm pointing does (longArms) */
 export const LONG_PIVOT: Vec3 = [0, 0.13, -0.06];
@@ -2671,7 +2671,7 @@ export class CharacterAnimator {
       const bh = clamp(-d[2], 0, 1), sd = d[0] >= 0 ? 1 : -1, lat = bh > 0 ? 1 : Math.min(1, Math.abs(d[0]) * 1.6);   // (a thing behind him: he comes ROUND to it — a turn, not a shove in the back)
       pitch -= S.rear * (1 + S.gunRear * lw) * e * d[2] * (d[2] < 0 ? S.behindPitch : 1); yaw += sd * S.turn * (1 + S.behindTurn * bh) * e * lat; roll -= sd * S.lean * e * lat;   // (reared back off a thing in front, pitched a little on away from one behind; turned and tipped toward the side it is on)
       hp -= S.head * e * Math.max(0.3, d[2]); hy += sd * S.headTurn * (1 + S.behindHead * bh) * e * lat; drop += S.drop * e; sx -= d[0] * S.back * (1 + S.gunBack * lw) * e; sz -= d[2] * S.back * (1 + S.gunBack * lw) * e;
-      stw = e; stn = sd; m.stT += dt; if (m.stT > D) m.stT = -1;   // (past its length the curve dips under zero: he sinks a little forward into what comes next)
+      stw = e; stn = sd; m.stT += dt; if (m.stT > D) m.stT = -1;   // (the curve never goes under zero: his head is his eye, and a start that ended leaning in toward the thing saw round a jamb the man standing straight does not)
     }
     if (m.htT >= 0) {
       const H = MV.hit, d = m.htD, e = curve(m.htT, MV_HIT_ENV) * gate;

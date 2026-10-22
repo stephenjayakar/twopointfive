@@ -81,8 +81,8 @@ export async function startleCheck(): Promise<boolean> {
       const late = r.upAt - offUp, moves = MOVES.on > 0.5;
       line(!isNaN(r.startAt) && Math.abs(r.startAt - r.alertAt) < 0.03 && !r.raisedEarly && Math.abs(r.held - T.beat) < 0.04 && r.torchHeld && r.movedInBeat < 0.05,
         `the rule on, the same step: nothing raised before he knows (${!r.raisedEarly}); he starts the frame he knows (${f2(r.startAt)} s, alert at ${f2(r.alertAt)}), held ${f2(r.held)} s (the beat's ${f2(T.beat)}) with the torch still in his hand and nothing raised (${r.torchHeld}), feet still (${f2(r.movedInBeat)} m)`);
-      line(r.upAt >= r.startAt + T.beat - 0.03 && late > T.beat - 0.15 && late < T.beat + 0.15 && (isNaN(r.roundAt) || r.roundAt >= r.startAt + T.beat - 1e-6) && handCarry(A) === 'weapon' && !r.saidIn && r.saidAt >= r.startAt + T.beat - 0.03 && r.saidAt < r.startAt + T.beat + 0.1,
-        `…then the gun comes up, at ${f2(r.upAt)} s: ${f2(late)} s later than with the rule off, and only then does he shout it (${f2(r.saidAt)} s; nothing over his head inside the beat: ${!r.saidIn}); ${isNaN(r.roundAt) ? 'no round inside the watch' : `his first round at ${f2(r.roundAt)} s, after the beat`}`);
+      line(r.upAt >= r.startAt + T.beat - 0.03 && late > T.beat - 0.15 && late < T.beat + 0.15 && (isNaN(r.roundAt) || r.roundAt >= r.startAt + T.beat + T.draw - 0.02) && handCarry(A) === 'weapon' && !r.saidIn && r.saidAt >= r.startAt + T.beat - 0.03 && r.saidAt < r.startAt + T.beat + 0.1,
+        `…then the gun comes up, at ${f2(r.upAt)} s: ${f2(late)} s later than with the rule off, and only then does he shout it (${f2(r.saidAt)} s; nothing over his head inside the beat: ${!r.saidIn}); ${isNaN(r.roundAt) ? 'no round inside the watch' : `his first round at ${f2(r.roundAt)} s, after the beat and the draw`}`);
       line(STARTLE_STATS.seen === 1 && STARTLE_STATS.drew === 1 && STARTLE_STATS.ran === 0 && (moves ? r.shown > 0.5 : r.shown === 0),
         `counted: ${STARTLE_STATS.seen} startled by what he saw, ${STARTLE_STATS.drew} drew, ${STARTLE_STATS.ran} ran; the animator's jolt ${moves ? `showed (${f2(r.shown)} of it at most)` : 'is the old twitch with the motion pass off, as on this stand'}`);
       const back = calm(s); s.step(60); zero(); s.show(); const again = watch(s, 3);
@@ -122,13 +122,13 @@ export async function startleCheck(): Promise<boolean> {
         const line2 = (q: number[]) => !g.col.segmentBlocked([c.pos[0], 1.6, c.pos[2]], [q[0], 1.2, q[2]]);
         const lone = !men.some((o: any) => o !== M && flat(o.char.pos, c.pos) < MORALE.aloneM && line2(o.char.pos));
         if (mate) { const o = men[men.length - 1], q = ([[-f[2], f[0]], [f[2], -f[0]]] as const).map(([x, z]): Vec3 => [c.pos[0] + x * 1.3, 0, c.pos[2] + z * 1.3]).find(line2)!; o.char.pos = q; o.char.vel = [0, 0, 0]; o.path = []; o.pathGoal = null; o.char.update(0); step(5); }
-        g.teleportPlayer([c.pos[0] + f[0] * 3.5, 0, c.pos[2] + f[2] * 3.5]); vis = 1; const n0 = M.weapon.shotsFired; let started = false, far = 0;
-        step(240, () => { if (startled(g, M)) started = true; far = Math.max(far, flat(c.pos, p0)); });
-        return { lone, started, far, rounds: M.weapon.shotsFired - n0, ran: STARTLE_STATS.ran, drew: STARTLE_STATS.drew, seen: STARTLE_STATS.seen };
+        g.teleportPlayer([c.pos[0] + f[0] * 3.5, 0, c.pos[2] + f[2] * 3.5]); vis = 1; const n0 = M.weapon.shotsFired; let started = false, far = 0, t0 = NaN, first = NaN;
+        step(240, () => { if (startled(g, M)) { started = true; if (isNaN(t0)) t0 = g.time; } if (isNaN(first) && M.weapon.shotsFired > n0) first = g.time - t0; far = Math.max(far, flat(c.pos, p0)); });
+        return { lone, started, far, first, rounds: M.weapon.shotsFired - n0, ran: STARTLE_STATS.ran, drew: STARTLE_STATS.drew, seen: STARTLE_STATS.seen };
       };
       const G = await stage('green', false), S = await stage('trained', false), B = await stage('green', true);
       line(G.lone && G.started && G.ran === 1 && G.drew === 0 && G.far > 1.2 && G.rounds === 0, `the compound, every defender green — the first man, alone (${G.lone}), Sam 3.5 m in front of him: he starts (${G.started}), then runs (${G.ran}): ${f2(G.far)} m off his spot inside four seconds, ${G.rounds} rounds from him meanwhile`);
-      line(S.started && S.ran === 0 && S.drew === 1 && S.far < 0.3, `the same man trained: he starts (${S.started}) and draws where he stands (drew ${S.drew}, ran ${S.ran}, ${f2(S.far)} m)`);
+      line(S.started && S.ran === 0 && S.drew === 1 && S.far < 0.3 && (isNaN(S.first) || S.first >= T.beat + T.draw - 0.03), `the same man trained: he starts (${S.started}) and draws where he stands (drew ${S.drew}, ran ${S.ran}, ${f2(S.far)} m); ${isNaN(S.first) ? 'no round inside four seconds' : `his first round ${f2(S.first)} s after the start, not before the beat and the draw (${f2(T.beat + T.draw)})`}`);
       line(B.started && B.ran === 0 && B.drew >= 1 && B.far < 0.3, `the same green man with a mate at his shoulder: he starts (${B.started}) and draws (drew ${B.drew}, ran ${B.ran}, ${f2(B.far)} m)`);
       MORALE.training = train0; MORALE.on = nerve0; }
     // …and a man on no post (the night staff): he turns and runs for cover with his hands down, and fights from there

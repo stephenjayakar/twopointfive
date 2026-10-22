@@ -10,7 +10,7 @@
 //     under the fight AI's own reaction clock (Guard.reactT), laid again every frame of it (guards.ts, beside the blinded man's), which already holds every
 //     round, and where that clock is longer (the room fight's surprise) the start plays at its head and the gun comes up inside what is left of it. The
 //     'CONTACT!' his first sight would have put over his head waits for the end of it: he shouts as he draws, and a man dropped inside it has called nothing.
-//   · THEN HE DRAWS, OR RUNS. Draws: the fight as it was, from the end of the beat. RUNS (`run`, and only where the nerve rule is on: morale.ts): a GREEN man
+//   · THEN HE DRAWS, OR RUNS. Draws: the gun comes up, and for `draw` seconds of that no round leaves it; then the fight as it was. RUNS (`run`, and only where the nerve rule is on: morale.ts): a GREEN man
 //     (trainingOf: by his squad's key, the difficulty's mix, the night staff's temperament) who is ALONE (that file's own test: no living man of his side near
 //     him in his view) with the man he saw inside `runM` — standing to draw there is losing. A man on a post of the room fight's goes the way that file sends
 //     a man whose nerve has gone (out by a door nothing has come at, to hold it from the far side — else to cover: roomfight.ts bolt, with that file's own
@@ -33,11 +33,11 @@ import { runnerOwns } from './runner';
 import { handCarry } from './guards';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?startle=0 = a man who sees you goes for his gun at once,
- *  as he did). `beat` s of the start; `fresh` s since he last stood calm inside which a sighting still catches him unaware; `late` s past the end of a beat
+ *  as he did). `beat` s of the start; `draw` s after it for the gun to come up before a round can leave it (a man who draws: his feet still, his gun rising); `fresh` s since he last stood calm inside which a sighting still catches him unaware; `late` s past the end of a beat
  *  after which draw-or-run is no longer asked (something else had him meanwhile: he is in the fight by now); `run`: a green man alone, caught inside `runM`
  *  m and not inside `nearM` (at arm's length nobody turns his back: he draws), runs for it instead of drawing; `clearSecs`: how long a man running off a post is let run before the man he ran from can stop him to fight; `runSecs`:
  *  the longest a run for cover lasts, and `stuckSecs` gaining under `stuckM` m ends it where he is */
-export const STARTLE = { on: false, beat: 0.5, fresh: 1.0, late: 0.25, run: true, runM: 8, nearM: 2.5, clearSecs: 1.5, runSecs: 4, stuckSecs: 0.75, stuckM: 0.3 };
+export const STARTLE = { on: false, beat: 0.5, draw: 0.3, fresh: 1.0, late: 0.25, run: true, runM: 8, nearM: 2.5, clearSecs: 1.5, runSecs: 4, stuckSecs: 0.75, stuckM: 0.3 };
 /** QA: men startled by what they saw · starts given by a caller (startleMan, all of them) · of the first: drew after the beat · ran */
 export const STARTLE_STATS = { seen: 0, given: 0, drew: 0, ran: 0 };
 
@@ -56,11 +56,13 @@ interface St {
   choose: boolean;
   /** his 'CONTACT!' was taken off him at the start: a man who draws shouts it as the gun comes up */
   call: boolean;
+  /** the gun is coming up after a start (a man who drew): no round before this (−1: none) */
+  drawUntil: number;
   /** RUNNING for cover (a man on no post): where to and since when; where he was `refT` ago (a run that gains nothing ends); the order his body follows */
   run: Vec3 | null; runAt: number; ref: Vec3 | null; refT: number; script: GuardScript | null;
 }
 const stateOf = new SideMap<Guard, St>('startle.stateOf');
-const blank = (): St => ({ calmT: -100, calmTorch: false, bySight: false, at: -1, until: -1, toward: [0, 0, 0], pre: false, torch: false, choose: false, call: false, run: null, runAt: -1, ref: null, refT: -1, script: null });
+const blank = (): St => ({ calmT: -100, calmTorch: false, bySight: false, at: -1, until: -1, toward: [0, 0, 0], pre: false, torch: false, choose: false, call: false, drawUntil: -1, run: null, runAt: -1, ref: null, refT: -1, script: null });
 
 /** THE START, for any caller: he jolts toward `at`, and for `secs` his gun stays down and — a man looking or fighting — his feet are still and no round
  *  leaves him (startleLeft floors the fight AI's reaction clock each frame). `torch`: the hand torch was in his hand and stays there for it (left out: asked
@@ -113,8 +115,9 @@ export function startleHolds(g: Game, gd: Guard): boolean { const S = stateOf.ge
 export function startleTorch(gd: Guard): boolean { const S = stateOf.get(gd); return !!S && S.torch && (gd.state === 'alert' || gd.state === 'suspicious') && !gd.script; }
 /** is he in a start right now (anybody's: QA, and a caller that would not give two) */
 export function startled(g: Game, gd: Guard): boolean { const S = stateOf.get(gd); return !!S && g.time < S.until; }
-/** guards.ts updateGuard, beside the blinded man's floor: the seconds of a start still on him (0: none) — the least his reaction clock may read this frame */
-export function startleLeft(g: Game, gd: Guard): number { const S = stateOf.get(gd); return S && g.time < S.until ? S.until - g.time : 0; }
+/** guards.ts updateGuard, beside the blinded man's floor: the seconds of a start still on him, and of the draw after it (0: none) — the least his reaction
+ *  clock may read this frame */
+export function startleLeft(g: Game, gd: Guard): number { const S = stateOf.get(gd); return !S ? 0 : g.time < S.until ? S.until - g.time : g.time < S.drawUntil ? S.drawUntil - g.time : 0; }
 /** is he running for cover off a start (QA; a post man's run is the room fight's own move) */
 export function startleRunning(gd: Guard): boolean { return !!stateOf.get(gd)?.run; }
 /** THE BODY'S SEAM (guards.ts updateGuard, beside the nerve rule's): the order a man running for cover follows this frame, null = he is nobody's but his own.
@@ -133,7 +136,7 @@ export function startleScript(g: Game, gd: Guard): GuardScript | null {
 /** the beat is over: he draws — the fight as it was, from here — or he runs */
 function choose(g: Game, gd: Guard, S: St): void {
   if (gd.state !== 'alert' || gd.held || g.time < gd.dazzledUntil || g.time < gd.staggerUntil) return;   // (something else has him: neither is his to choose)
-  if (STARTLE.run && runs(g, gd, S)) STARTLE_STATS.ran++; else { STARTLE_STATS.drew++; if (S.call) g.say(gd, 'CONTACT!', false, false, false); }
+  if (STARTLE.run && runs(g, gd, S)) STARTLE_STATS.ran++; else { STARTLE_STATS.drew++; S.drawUntil = g.time + STARTLE.draw; if (S.call) g.say(gd, 'CONTACT!', false, false, false); }
   S.call = false;
 }
 function runs(g: Game, gd: Guard, S: St): boolean {
@@ -152,7 +155,7 @@ function runs(g: Game, gd: Guard, S: St): boolean {
 export interface StartleSnap { men: (number[] | null)[] }
 /** nothing (no key in the file) while no man has a record */
 export function startleSnapshot(g: Game): StartleSnap | undefined {
-  const men = g.guards.map(gd => { const S = stateOf.get(gd); return S ? [S.calmT, S.calmTorch ? 1 : 0, S.bySight ? 1 : 0, S.at, S.until, S.toward[0], S.toward[2], S.pre ? 1 : 0, S.torch ? 1 : 0, S.choose ? 1 : 0, S.call ? 1 : 0,
+  const men = g.guards.map(gd => { const S = stateOf.get(gd); return S ? [S.calmT, S.calmTorch ? 1 : 0, S.bySight ? 1 : 0, S.at, S.until, S.toward[0], S.toward[2], S.pre ? 1 : 0, S.torch ? 1 : 0, S.choose ? 1 : 0, S.call ? 1 : 0, S.drawUntil,
     ...(S.run ? [S.run[0], S.run[2], S.runAt] : [])] : null; });
   return men.some(m => m) ? { men } : undefined;
 }
@@ -162,6 +165,6 @@ export function startleRestore(g: Game, s: StartleSnap | null | undefined) {
   const f = (x: unknown, d = 0) => typeof x === 'number' && Number.isFinite(x) ? x : d;
   g.guards.forEach((gd, i) => { const M = s?.men?.[i];
     if (!M) { stateOf.delete(gd); return; }
-    stateOf.set(gd, { ...blank(), calmT: f(M[0], -100), calmTorch: !!M[1], bySight: !!M[2], at: f(M[3], -1), until: f(M[4], -1), toward: [f(M[5]), 0, f(M[6])], pre: !!M[7], torch: !!M[8], choose: !!M[9], call: !!M[10],
-      ...(M.length >= 14 ? { run: [f(M[11]), 0, f(M[12])] as Vec3, runAt: f(M[13], -1) } : null) }); });
+    stateOf.set(gd, { ...blank(), calmT: f(M[0], -100), calmTorch: !!M[1], bySight: !!M[2], at: f(M[3], -1), until: f(M[4], -1), toward: [f(M[5]), 0, f(M[6])], pre: !!M[7], torch: !!M[8], choose: !!M[9], call: !!M[10], drawUntil: f(M[11], -1),
+      ...(M.length >= 15 ? { run: [f(M[12]), 0, f(M[13])] as Vec3, runAt: f(M[14], -1) } : null) }); });
 }
