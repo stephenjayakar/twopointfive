@@ -54,8 +54,8 @@ export async function issueCheck(): Promise<boolean> {
     line(!!D && Object.keys(D.members).length === 0, `${FILE} carries an issue, and it names no card (the plain issue for every man): ${JSON.stringify(D?.members)}`);
     const refused = (patch: unknown) => { const d = JSON.parse(textOf(FILE)); d.scenarios.issue = patch; return validateLevelData(d).some((e: string) => /issue/.test(e)); };
     line(validateLevelData(JSON.parse(textOf(FILE))).length === 0 && validateLevelData(JSON.parse(named())).length === 0 && refused({ members: { '7': { bangs: 1 } } }) && refused({ members: { '1': { armour: 3 } } }) && refused({ members: { '1': { bangs: 12 } } }) && refused({ members: { '1': { light: 'yes' } } })
-      && refused({ members: { '0': { charges: 1 } } }) && refused({ members: { '2': { shells: 1 } } }) && refused({ members: { '1': { weapon: 'cannon' } } }),
-      'the validator takes the file, and the file with a card in its block, and refuses a place that is no member, an unknown field, a count out of range, a switch that is not true / false, a charge on your own card, 40 mm on a teammate\'s and a weapon no card has');
+      && !refused({ members: { '0': { charges: 1, walls: 1 } } }) && refused({ members: { '2': { shells: 1 } } }) && refused({ members: { '1': { weapon: 'cannon' } } }),
+      'the validator takes the file, and the file with a card in its block, and refuses a place that is no member, an unknown field, a count out of range, a switch that is not true / false, 40 mm on a teammate\'s and a weapon no card has, and takes charges on your own card (read where your own charges are on)');
 
     // 2. the staging over a changed kit
     K.kitLoad(null, '?noslots'); K.kitReset();
