@@ -33,6 +33,8 @@ export const M4_ITEM = {
   optic: { z: 0.035, y: 0.052, h: [0.016, 0.02, 0.035] as [number, number, number] },
   polymer: [0.03, 0.03, 0.033] as Vec3, metal: [0.03, 0.03, 0.033] as Vec3, foreCol: [0.2, 0.155, 0.1] as Vec3,   // rigProps COL.anodised (receiver, box, sight) / COL.fde (the handguard)
 };
+/** a smoke or stun canister's contact sphere and bounce (spawn's numbers for both; frag.ts restOfThrow replays them for the throw preview's rest mark) */
+export const CAN_ITEM = { radius: 0.055, restitution: 0.38, friction: 0.35 };
 /** A FRAG GRENADE in the air and on the floor (frag.ts: its fuse runs from the hand, and what it does when it runs out): a small heavy ball — a smaller contact
  *  sphere than a can's, livelier off a hard floor and with less grip, so it skips and ROLLS on where a can would stop (the men it lands among see where it is
  *  going) — drawn as an olive body with a pale yellow band and the fuse's stub on top. */
@@ -127,8 +129,8 @@ export class Throwables {
   spawn(kind: ItemKind, pos: Vec3, vel: Vec3, opts: Partial<Item> = {}): Item {
     const can = kind === 'smoke' || kind === 'flash';   // smoke and stun canisters share the body: same arc, same bounces
     const R = RIFLE_ITEM, rifle = kind === 'rifle', ring = kind === 'ring', G = RING_ITEM, frag = kind === 'frag', F = FRAG_ITEM, shell = kind === 'shell', S = SHELL_ITEM;
-    const radius = can ? 0.055 : frag ? F.radius : kind === 'pistol' ? 0.05 : kind === 'torch' ? 0.045 : rifle ? R.radius : ring ? G.radius : shell ? S.radius : 0.03; const restitution = can ? 0.38 : frag ? F.restitution : kind === 'mag' ? 0.25 : rifle ? R.restitution : ring ? G.restitution : shell ? S.restitution : 0.22;
-    const it: Item = { kind, pos: v3.copy(pos), vel: v3.copy(vel), radius, restitution, friction: kind === 'pistol' || kind === 'torch' ? 0.5 : rifle ? R.friction : ring ? G.friction : frag ? F.friction : shell ? S.friction : 0.35,
+    const radius = can ? CAN_ITEM.radius : frag ? F.radius : kind === 'pistol' ? 0.05 : kind === 'torch' ? 0.045 : rifle ? R.radius : ring ? G.radius : shell ? S.radius : 0.03; const restitution = can ? CAN_ITEM.restitution : frag ? F.restitution : kind === 'mag' ? 0.25 : rifle ? R.restitution : ring ? G.restitution : shell ? S.restitution : 0.22;
+    const it: Item = { kind, pos: v3.copy(pos), vel: v3.copy(vel), radius, restitution, friction: can ? CAN_ITEM.friction : kind === 'pistol' || kind === 'torch' ? 0.5 : rifle ? R.friction : ring ? G.friction : frag ? F.friction : shell ? S.friction : 0.35,
       yaw: simRandom() * Math.PI, spin: (simRandom() - 0.5) * 14, tumble: simRandom() * 6.28, tumbleRate: (simRandom() < 0.5 ? -1 : 1) * (7 + simRandom() * 9), settled: false, age: 0, fuse: 1.3, fired: false, life: kind === 'mag' ? 40 : ring ? G.life : shell ? S.life : 60, emitT: 0, fill: 0, bounces: 0, heading: v3.yawOf(vel), who: 0, on: null, onPose: 0, serial: this.serial++, ...opts };
     // FIFO cap (applied before the push, so the new item can never evict itself), but never evict a canister whose fuse is still running or that is still venting:
     // dropped mags and guns are items too, and a firefight must not swallow a stun charge already deducted from the player's kit — it would simply never go off —
