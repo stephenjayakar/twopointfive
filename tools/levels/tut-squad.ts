@@ -212,6 +212,18 @@ export function build() {
   const near = (at: Vec3, r = 1.5) => ({ is: 'near', at, r }), gave = (order: string, on?: string) => ({ is: 'did', what: `order:${order}`, ...(on ? { on } : {}) });
   const ALLEY: Rect = { x0: 22.2, x1: 27.0, z0: 5.3, z1: 10.6 };
   const HALL_FRONT: Vec3 = [34.0, 0, 19.75], HALL_OPEN = or({ is: 'door', door: 'hall', state: 'open' }, { is: 'door', door: 'hall', state: 'unlocked' });   // (the passage, square on to the leaf)
+  // THE CARDS (the frame's `explain`: the page stops on one as its step comes up, Enter closes it, and then the line, the ring and the cue). One for each
+  // SYSTEM the mission shows, never for a key: what the other side is doing and why the answer is the answer, in two sentences, on a step whose test
+  // cannot already be true as it comes up (the maintainer, playing the first cut: "i think this needs more explanation for the systems. maybe even a
+  // modal that pauses the game and explains it", and the window's card is his own sentence)
+  const CARDS = {
+    side: { title: 'A doorway he holds', text: 'A man who holds a doorway shoots whoever shows in it.\nMost rooms have another door. Send the squad to the one at his back.' },
+    follow: { title: "The squad's ring", text: 'A tap of [B] gives the plain order for whatever you point at.\nKept down, the same key opens a ring with the rest of them.' },
+    gun: { title: 'Suppression', text: 'A man under fire keeps his head down, and a man with his head down is not shooting.\nPut rounds on the gun, then move while it is down.' },
+    frag: { title: 'Grenades', text: 'Sandbags stop a rifle. A grenade goes over them.\nIt does to you what it does to them: throw it from cover, and not close.' },
+    window: { title: 'From outside', text: 'Two men wait either side of that door for whoever walks in.\nYou can shoot through a window. It is often safer to clear a room from outside than to go in.' },
+    back: { title: 'Flanked', text: 'While one man holds your eyes, the others walk round behind you.\nDo not turn everybody: send part of the squad to cover the other way.' },
+  };
   // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = the frame keeps one as it
   // comes up (the start of a fight, never the middle of one). A key is written by the game's own code letter in brackets: the page draws the player's key.
   const lesson = {
@@ -231,22 +243,22 @@ export function build() {
       //     from there the room is above him and BOTH its doors are on the screen. The answer is the other door: the squad sent to it from where he
       //     stands (the ring is the door: an order pointed at the ring is an order on it), the walk round after them, and in at the man's back
       { id: 'out', line: 'Shots outside. Out to the street', done: or(near(SHOP_VIEW, 1.5), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street', eye: SHOP_EYE },
-      { id: 'side', line: 'He has that doorway. [B] on the side door', done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
+      { id: 'side', line: 'He has that doorway. [B] on the side door', explain: CARDS.side, done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
       { id: 'round', line: 'Go round with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
       { id: 'shop', line: '[B] again: in behind him', done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
       // (the held key is its own step, and a TAP of the squad's key gives nothing while it is up — the frame's `noTap`: tapped at the old one line, the
       //  key sent the four to the ring at the wall's end and the menu was never met)
-      { id: 'follow', line: '[X], [3]: they follow', noTap: 'Keep [B] held down', done: or({ is: 'following' }, gave('fallIn'), taken('nest')), checkpoint: 'the wall', allow: ['menu', 'ring'] },
+      { id: 'follow', line: '[X], [3]: they follow', explain: CARDS.follow, noTap: 'Keep [B] held down', done: or({ is: 'following' }, gave('fallIn'), taken('nest')), checkpoint: 'the wall', allow: ['menu', 'ring'] },
       { id: 'wall', line: "To the wall's end", done: or(near(END, 1.6), taken('nest')), at: END },
       // (no ring on the nest while the line says shoot: a ring is where to GO. The gunner is in the picture through the fog, and his rounds say where he is)
-      { id: 'gun', line: 'A gun. Shoot back: it ducks', done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), cue: 'gun' },
+      { id: 'gun', line: 'A gun. Shoot back: it ducks', explain: CARDS.gun, done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), cue: 'gun' },
       { id: 'blocks', line: 'While it is down: run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS, cue: 'ducks' },
-      { id: 'frag', line: '[5], left button: a frag over the bags', done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },
+      { id: 'frag', line: '[5], left button: a frag over the bags', explain: CARDS.frag, done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'] },
       { id: 'nest', line: 'Take the nest', done: taken('nest'), at: [32.0, 1, 13.8], cue: 'fragged' },
       // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A LOCK IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
       //     leaf is kicked in, and it is the way in
-      { id: 'window', line: 'Two wait inside. Shoot through the window', done: taken('hall'), at: [31.1, 1.4, 16.9], checkpoint: 'the hall' },
+      { id: 'window', line: 'Two wait inside. Shoot through the window', explain: CARDS.window, done: taken('hall'), at: [31.1, 1.4, 16.9], checkpoint: 'the hall' },
       //     (the walk to the door is a step of its own: from the window the leaf is edge on, and a player told to open it tried from there. And the first
       //      way through a lock anybody is shown is the boot: rounds through a door are for a door nobody can walk up to)
       { id: 'door', line: 'The door is locked. Go round to it', done: or(near(HALL_FRONT, 1.7), HALL_OPEN), at: [HALL_FRONT[0], 1, HALL_FRONT[2]] },
@@ -255,7 +267,7 @@ export function build() {
       // 5 · MORE COME, AND NOT ALL BY ONE WAY: one man at the road gate holds your eyes while two walk round to the back gate
       { id: 'bags', line: 'More are coming. Behind the bags', done: or(near(BAGS, 1.6), taken('road')), at: BAGS, checkpoint: 'the bags' },
       { id: 'front', line: 'Hold the road gate', done: or({ is: 'cue', name: 'flank' }, taken('road')), at: [35.0, 1, 14.0], cue: 'picket' },
-      { id: 'back', line: 'Behind you! [X] on the alley, then [2]', noTap: 'Keep [B] held down', done: or(gave('cover'), taken('road')), at: MOUTH },
+      { id: 'back', line: 'Behind you! [X] on the alley, then [2]', explain: CARDS.back, noTap: 'Keep [B] held down', done: or(gave('cover'), taken('road')), at: MOUTH },
       { id: 'hold', line: 'Finish the picket', done: taken('road'), at: [35.0, 1, 14.0], cue: 'covered' },
     ],
   } as LessonData;

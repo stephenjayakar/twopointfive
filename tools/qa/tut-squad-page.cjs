@@ -51,7 +51,13 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     return f; };
   const point = async w => { const s = await page.evaluate(p => { const c = document.getElementById('view'), r = c.getBoundingClientRect(), [x, y] = window.__cam.project(p, r.width, r.height, 1); return { x: r.left + x, y: r.top + y }; }, w); await page.mouse.move(s.x, s.y); await run(2); };
   const tap = async k => { await page.keyboard.down(k); await run(3); await page.keyboard.up(k); await run(3); };
-  const until = async (want, secs) => { for (let k = 0; k < secs; k++) { const s = await read(); if (want(s)) return s; await run(60); } return read(); };
+  // A CARD (a step's `explain`, ui/railcard.ts): read and closed with Enter, as a hand does it (a key closes one only once it has been up a moment). Every
+  // card met is kept by its title: the last lines hold the list to the level's own
+  const cards = [];
+  const card = async () => { const c = await page.evaluate(() => { const e = document.getElementById('railcard'); return e && e.classList.contains('on') ? { h: e.querySelector('h2')?.textContent || '', p: [...e.querySelectorAll('p')].map(x => x.textContent).join(' / ') } : null; });
+    if (!c) return null; await page.waitForTimeout(450); await page.keyboard.press('Enter'); await run(2);
+    const still = await page.evaluate(() => !!document.getElementById('railcard')?.classList.contains('on')); cards.push({ ...c, closed: !still }); return c; };
+  const until = async (want, secs) => { for (let k = 0; k < secs; k++) { await card(); const s = await read(); if (want(s)) return s; await run(60); } await card(); return read(); };
   // (walked with the walk keys held, steered off where the page says he is. The view may be turned, so which key is which way is MEASURED: a short stride on D
   //  and one on S give the two directions the keys move him in, and each stride after is the pair of keys whose sum points most nearly at the mark)
   let AX = null;
@@ -100,7 +106,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const out = async () => { for (const p of [[10.85, 0, 17.9], [10.85, 0, 15.2], [12.6, 0, 13.2], VIEW]) await walk(p, 30); return until(x => x.i >= 5, 10); };
   const shown = x => x.shop.up && x.shop.held && Math.abs(x.shop.door) > 1 && x.shop.fog && x.shop.drawn;
   R = await out(); check(R.i === 5 && R.id === 'side', 'out on the street in front of the workshop: the side door is the step', `step ${R.i + 1} '${R.id}' · "${R.line}" keys [${R.keys}] at ${R.at}`);
-  await run(120); R = await read();
+  await run(120); await card(); R = await read();
+  check(cards.some(c => c.h === 'A doorway he holds' && c.closed), 'the side door\'s step opened on its card, and Enter closed it', JSON.stringify(cards));
   check(shown(R) && R.shop.screen && R.ringOn, "the workshop's man holds his open doorway, is in the picture under the fog, and he and the side door's ring are both on the screen from where the player stands", `${JSON.stringify(R.shop)} · the step's ring on the screen ${R.ringOn}`);
   log('picture', await shot('6-side'));
   // (the squad's key on the step's ring: the view eases to keep the ring on the screen, so the cursor is put on it again once it has settled)
@@ -124,7 +131,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   //      squad's keys are the command key and the word's (the page as it opens) the menu's own key gives nothing, the line's [X] is drawn "Hold" and the
   //      command key's cap, and that key kept down is the menu as a ring
   { const more = () => page.evaluate(() => { const g = window.__game, l = g.orders.log, m = g.orders.menu; return { n: l.length, last: l.length ? l[l.length - 1].order : null, menu: !!m, ring: !!g.orders.cmdRing, kind: m?.target?.kind ?? null, man: !!m?.target?.man }; });
-    const setStep = async i => { await page.evaluate(i => { const L = window.__game.lesson; L.i = i; L.seen = null; }, i); await run(4); return read(); };
+    const setStep = async i => { await page.evaluate(i => { const L = window.__game.lesson; L.i = i; L.seen = null; }, i); await run(4); await card(); await run(2); return read(); };
     const holdQ = async () => { await page.keyboard.down('KeyQ'); await run(30); await page.keyboard.up('KeyQ'); await run(3); };
     // (the cursor on a spot the game's own pick calls bare floor — no man, no door — asked before the key goes down)
     const onFloor = async () => { const s0 = await read();
@@ -144,7 +151,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     await tap('Digit3'); let Z = await more();
     check(Z.n === M.n + 1 && Z.last === 'fallIn' && !Z.menu, '3: fall in is given and the ring is away', `${JSON.stringify(M)} → ${JSON.stringify(Z)}`);
     R = await setStep(20);
-    check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,2' && !/—/.test(R.line), "step 21's line reads Hold Q … then 2, both on key caps", `"${R.line}" keys [${R.keys}]`);
+    check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.slice(0, 2).join(',') === 'Q,2' && !/—/.test(R.line), "step 21's line reads Hold Q … then 2, both on key caps (a third cap is the frame's own words for a tap, still up from the tap this check made)", `"${R.line}" keys [${R.keys}]`);
     floor = await onFloor(); M = await more(); await holdQ(); A = await more();
     check(floor && A.menu && A.ring && A.kind === 'floor' && !A.man, 'the key kept down with the cursor on the ground: the ring is up on that place', JSON.stringify(A));
     await tap('Digit2'); Z = await more();
@@ -153,6 +160,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     //  by at once, and the one left up is before 'wall', the ring not among what is unlocked)
     R = await setStep(0); floor = await onFloor(); await holdQ(); A = await more();
     check(R.i < 8 && !/\bring\b/.test(R.sum) && floor && !A.menu && !A.ring, "before the menu's step the squad's key kept down puts no ring up", `step ${R.i + 1} '${R.id}' · floor under the cursor ${floor} · ${JSON.stringify(A)} · ${R.sum}`); }
+  check(['A doorway he holds', "The squad's ring", 'Flanked'].every(h => cards.some(c => c.h === h && c.closed && c.p.length > 40)), 'the cards of the steps this run came to were each up once with their words and closed', cards.map(c => `"${c.h}": ${c.p}${c.closed ? '' : ' (STILL UP)'}`).join(' · ') || 'none');
   check(!errors.length, 'no page error and no console error', errors.length ? errors.slice(0, 6).join('\n    ') : 'none');
   console.log(`pictures: ${OUT}`);
   await browser.close();
