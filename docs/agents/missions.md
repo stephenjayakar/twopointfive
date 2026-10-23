@@ -1881,12 +1881,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   walk the pair with a walk key still down puts the mode up and him on his knee, 20 lines pass and the page has no error; with `URL_ADD='&planwalk=0'`
   that one line fails. NOT DONE: nobody has played it or seen it on a GPU; the scripted player of mission 2 stands still for the pair, so its runs do
   not pass through this rule.
-- **The cigarette's book is the host's (2026-10-23; `smokebreak.ts SmokeShown`, `engine.smokeShown`).** A man's row in the smoke break's table kept
+- **The cigarette's book is the host's (2026-10-23; `smokebreak.ts SmokeShown`, `engine.hostBooks.smokeBreak`).** A man's row in the smoke break's table kept
   `thread` (his thread's source is on the smoke solver) and `left` / `gap` (puffs still to file), and the counts `threads` and `records`: all of it written by
   `g.smoke.drawing()` and by whether the host has a particle pool. So the solver's word was in the game's state: two games that differed only in their
   picture differed in the table, and a save put back (`host/putback.ts` empties the solver) came back saying the thread was still on it, so the thread
   was never filed again. The open fire had the same and moved its book to the host; this is that mend for the cigarette. NOW: those five live on
-  `engine.smokeShown` (a man by his character's id), which no snapshot carries. AND THE BOOK IS NOT TAKEN AT ITS WORD, which a list of places that drop it
+  `engine.hostBooks.smokeBreak` (a man by his character's id; first a member of its own, `engine.smokeShown`, moved into the one bag of host books that
+  `host/putback.ts` drops whole, and `game.ts restartEncounter` now drops the whole bag too: the rows are by id, and a fresh man with the old id took
+  the old man's puffs still owed), which no snapshot carries. THE THREAD ALSO LETS GO IN THE FOG (no switch: the picture's only, no state row or digest
+  moves): filed in view, it rode his hand on after he was hidden, against 'nothing live shows in the fog'; its track now answers 'gone' while
+  `fogOfWar.hidden` has him and one is filed again when he is seen. The smoke already in the air stays the solver's. Checked by the same line
+  (`smokebreak-check`, the host's real put-back, the restart, hidden and seen again); never seen on a GPU. AND THE BOOK IS NOT TAKEN AT ITS WORD, which a list of places that drop it
   would be (the first cut of this mend listed three and a review found four more: an encounter restarted, a file loaded, a script's clear, the panel's;
   and the solver drops a source whose `ttl` ran out, or the first look-only one off a full list, with no word to anybody). The solver asks every source
   it holds where it is, every step, so the thread's own track stamps the book, and a thread nobody has asked after for `SMOKEBREAK.threadGone` frames (30)
@@ -1895,7 +1900,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clock, the lights (the meter reads those) and the counts that hang on nothing of the host's; `smokeBreakStats` no longer makes a row by being read, and
   `resetSmokeBreak`, which nothing called, is gone. No switch: no rule of play changes and nothing reads the book back. CHECK: `smokebreak-check`, whose
   stand-in solver now asks its sources every step as the real one does, two new lines: the game that smoked on a solver for twenty seconds and the one
-  nothing drew differ in no row of the table (58 rows read, the man's own among them); and one thread rides his hand again, never two, after the solver
+  nothing drew differ in no line of the table's (read by `rollback.ts stateAlike` since the lighter compare: the check's peak fell from 1.1 GB to
+  0.36 GB; that the man's row and the counts ARE read is shown by changing a number in each by hand, which must give a line); and one thread rides his hand again, never two, after the solver
   is cleared, after the source is dropped without a word, after the book is dropped, and after `restartEncounter` with the order given again. Before the
   mend the first failed on `stats.threads`. MEASURED, seed 7: 10 of 10 on FROZEN and on SHIPPED, `SMOKEBREAK_BREAK=1` fails 8 on both; `rollback-check`
   on SHIPPED and its static pass, `lived-check` 393, `lesson-gate tut-quiet` on SHIPPED all pass. ON THE PAGE (`tut-quiet`, the software adapter, the

@@ -926,7 +926,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `host/api.ts`): how the breath is shown this frame, per man the breath that was asked and its live source, the sources and puff records filed.
   THE BOOK IS DROPPED when a save is put back (with the whole bag: `host/putback.ts`'s one line), by `seedBreath`, with the breath switched off or off a snow level, and by itself
   where the game's frame count is not the one after the book's last (a snapshot put back by a road that does not tell the host: the harness's). A
-  RESTART or a file's load keeps the frame count and builds the men anew under their old ids, so a row is bound to the Character it was written for
+  RESTART drops the whole bag too (`game.ts restartEncounter`, since the smoke break's step). A restart or a file's load also keeps the frame count
+  and builds the men anew under their old ids, so, whoever drops what, a row is bound to the Character it was written for
   (`who`): a fresh man starts a fresh row (found in review: without it a restart a moment after a man's first breath took his next breath 1 for
   filed, and it went out with no steam). Behind a drop a breath in the air is asked for afresh on its next record, so a man in mid breath can file a
   second source at his mouth for what is left of it (look only). NOT COVERED: a solver emptied under the same men with the book kept (a script's or
