@@ -203,13 +203,13 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   const alone = () => (oneList && !squad ? 0 : undefined);   // (a man going alone: the row is HIS kit — the kits that differ on his card, put on his card alone; kit.ts)
   const putKit = (id: string) => { const why = kitLoadout(id, alone()); mountCard(true); drawSlots(); S.paint(); if (why) { note.textContent = why; note.className = 'lo-note off'; } };
   for (const L of squadKits()) {
-    const b = el('button', 'lo-set', L.name) as HTMLButtonElement; b.type = 'button'; b.setAttribute('data-kit', L.id); b.title = L.id === 'issued' ? 'every man as he is issued (colours kept)' : `${L.name}: this loadout on all five cards (colours kept)`;
+    const b = el('button', 'lo-set', L.name) as HTMLButtonElement; b.type = 'button'; b.setAttribute('data-kit', L.id); b.title = L.id === 'issued' ? 'give everyone their issued kit (colours kept)' : `put the ${L.name} loadout on all five cards (colours kept)`;
     b.onclick = () => { if (!squad && !oneList) return; S.sel = Math.max(0, S.rows.findIndex(r => r.el === kitsRow)); kitPick = kitBtns.findIndex(k => k.id === L.id); putKit(L.id); };
     kitBtns.push({ id: L.id, b }); kitsRow.appendChild(b);
   }
   const kitsOwn = el('div', 'lo-kits-own'); kitsRow.appendChild(kitsOwn);
   if (kitBtns.length > 1) squadRows.appendChild(kitsRow);
-  const noteLine = el('div', 'lo-noteline'), note = el('div', 'lo-note'), pool = el('div', 'lo-pool'); pool.title = 'the stun canisters and door charges the door tools spend: what the men who come carry (their cards)';
+  const noteLine = el('div', 'lo-noteline'), note = el('div', 'lo-note'), pool = el('div', 'lo-pool'); pool.title = 'the stun canisters and door charges that the door tools use up, counted from what your teammates carry (see their cards)';
   // a mission that ISSUES its own wall charges (the level file's scenarios.roomClear.wallCharges → game/issue.ts: the bag raised to that count at every staging, whatever
   // the cards carry): the line says the larger of the two and that it is the mission's. Read off the level file the plan is drawn from; until it has come, the cards' own
   let issued = 0;
@@ -325,7 +325,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       const P = kitPool(squad), own = kitWalls(squad), W = Math.max(own, issued), sm = kitSmokes(squad), walls = W ? `${W} wall charge${W === 1 ? '' : 's'}${issued > own ? ' (issued for this mission)' : ''}` : '';
       pool.textContent = issuedOnly ? (missionKit && issued ? `${squad ? 'Squad carries' : 'You carry'} · ${issued} wall charge${issued === 1 ? '' : 's'} (issued for this mission)` : '') : squad ? `Squad carries · ${P.bangs} stun · ${P.charges} charge${P.charges === 1 ? '' : 's'} · ${P.frags} frag${P.frags === 1 ? '' : 's'}${walls ? ` · ${walls}` : ''}${sm ? ` · ${sm} smoke` : ''}` : issued ? `You carry · ${walls}` : '';   // (smoke: named only when a card carries one — squadsmoke.ts)
       if (kitBtns.length > 1) { const now = kitLoadoutOf(alone()), mine = alone() === undefined ? null : new Set(kitLoadouts(0).map(l => l.id)); if (mine && !mine.has(kitBtns[kitPick].id)) kitPick = 0;
-        kitBtns.forEach((k, n) => { k.b.style.display = mine && !mine.has(k.id) ? 'none' : ''; k.b.classList.toggle('on', k.id === now); k.b.classList.toggle('pick', n === kitPick && (squad > 0 || oneList)); k.b.setAttribute('aria-pressed', k.id === now ? 'true' : 'false'); k.b.disabled = !squad && !oneList; }); kitsOwn.textContent = !squad && !oneList ? 'you go alone: no squad to kit' : now ? '' : 'a mix of your own'; }
+        kitBtns.forEach((k, n) => { k.b.style.display = mine && !mine.has(k.id) ? 'none' : ''; k.b.classList.toggle('on', k.id === now); k.b.classList.toggle('pick', n === kitPick && (squad > 0 || oneList)); k.b.setAttribute('aria-pressed', k.id === now ? 'true' : 'false'); k.b.disabled = !squad && !oneList; }); kitsOwn.textContent = !squad && !oneList ? 'you\'re going alone, so there\'s no squad to kit' : now ? '' : 'a mix of your own'; }
       paintLevers();
       { const nf = lookSig(); if (nf !== fogWas) { fogWas = nf; if (cardsOn()) { syncHand(); drawSlots(); } kitCard?.refresh(); } }   // (the optical wand and the sticky cameras look into the fog of war: on a mission without one a tile that carries one says 'no use here' — the card's own `idle` — and it can still be carried; the fog lever moved = the card drawn again)
       S.rows.forEach((r, i) => r.el.classList.toggle('sel', i === S.sel));
