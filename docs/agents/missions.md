@@ -1521,7 +1521,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   civilian's) by the SAME SUM as the player's: the estimate where he is, plus the moon where nothing solid is up its direction (an hour's own sun is
   never added again: at midday that lit a man twice). `--floor N` (the pair mission's, `mode.floor`) is the same hook's lower bound: the bounce neither
   has; with `--nosky` it is the floor alone. Two models of one floor would let a man be lit to the squad and dark to himself. This is also what every
-  caller of `runLesson` gets (`tut-solo-check`'s arms). STILL NOT THE PAGE'S: no bounce but that floor,
+  caller of `runLesson` gets (`tut-solo-check`'s arms). AND THE NIGHT SKY'S OWN LIGHT (10-23, `glowAt`; `--noglow` = the moon alone): the page's meter
+  has it through the bounce cache, so open moon shadow reads LIGHT 8 to 16 at the presets a player uses (measured by the stealth sight work on the pair's
+  level, software adapter, preset high) and read 0 here. By the sky's own numbers (`skyRadiance`: the zenith's colour, read live): pi times its luminance
+  times how much sky the point has, five rays (the zenith's cap a quarter, four at 60 degrees three sixteenths each). On the pair's level, against the
+  page at high: the lane's gap 0.034 here and 0.036 to 0.050 there; its east end 0.048 and 0.040 to 0.053; the low wall's mark LIGHT 50 and 47. Nothing
+  by day (an authored hour's sky is in the estimate). ONE PLACE THE TWO DISAGREE THE OTHER WAY: the pair's start on the road and the partner's start
+  read moonlit here (0.29, LIGHT 45 to 50) and dark on the page at both presets (0.02 to 0.04, LIGHT 2 to 8): the page has something between those
+  spots and the moon that the collision statics do not. Not found; nobody's yet. MEASURED with it (lesson-gate, build 897's head): mission 1, the plan, the
+  squad, the ledger and the pair pass on both arms; THE SOLO MISSION DOES NOT: its `back` beat ("the dark is cover too", beside the shop's door with the
+  lamp shot out) reads 31 over its own bar of 25 (the moon alone: 23). Its script holds the sky's light off (`mode.glow: false`, a HELD BAR with the
+  reason over it) until its owner moves the spot or the claim. STILL NOT THE PAGE'S: the moon's bounce into a shadow beside lit
+  ground (the page's low wall at knee height, 0.1: `--floor`), THE PRESET (the page's own meter reads tight shadow two to three times darker at low and
+  lowest, a coarser cache grid, and every page lane in the cloud runs lowest: a lane that reads the meter, or a man who sees by it, wants
+  `QUALITY=high`), no bounce but that floor,
   no bodies' shadows, no smoke between a light and a man, no flicker. (2) `lesson-gate`'s frozen arm of a tutorial mission was given the frame's word and
   not the row's own hour and weather (`TPS_ROWSET=1`): a mission laid by day was played there at night. It is given both now. (3) `lesson-check` with no
   name walked Training's seven levels: every "ALL PASS (73)" had covered no tutorial level, and a rows note (`rowsWithheld`) never printed. It walks
