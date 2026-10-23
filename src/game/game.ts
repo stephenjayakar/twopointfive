@@ -1623,6 +1623,7 @@ export class Game {
     this.time += dt; this.ocpCooldown = Math.max(0, this.ocpCooldown - dt); this.col.sound.tick(this.time);
     updateAim(this, input, cam, canvas);   // (builds the interaction rows too: player.ts buildInteractables)
     this.orders.input(dt, input, cam, canvas);   // the squad's command menu (orders.ts): X / B / T / the middle button, and the open menu's wheel / arrows / digits / clicks / Space / Esc taken out of the frame's input before the selector and the player read them — with no squad, one pass over the guard list and a return
+    this.rails.afterOrders(input);   // (rails.ts RAILS.planDown: a plan mode that came down inside that read takes back what the gate let through for it)
     if (this.doorTools.menuKey(input)) this.player.throwEaten = true;   // (the door tools' 'frag and clear' row is on G with its page up — doortools.ts: taken here, before the player's quick-throw reads the key)
     squadSmokeKey(this, input);
     wandOrderKey(this, input);   // (a teammate's look under a door, on order: its row's key, and its lens put away when the fight or another order has him — wandorder.ts; nothing unless one is carried)

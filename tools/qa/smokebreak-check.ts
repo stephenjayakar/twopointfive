@@ -111,7 +111,7 @@ export async function smokeBreakCheck(o: { verbose?: boolean } = {}): Promise<bo
       // twenty seconds and the one nothing drew are the same game, row for row of this file's table
       { const RB = await import(`${ROOT}/src/game/rollback.ts`), B = await rig(true, false); B.step(10); order(B.gd, { goal: null, upper: 'torch', smoke: true }); B.step(20 * 60);
         // (this file's own rows of the two states, taken out and laid side by side: the whole-state diff stops at the first table whose shape differs, and
-        //  on this level the breath in the cold — snowBreath.ts — keeps the solver's word in its own table, which is its own to mend)
+        //  when this was written the breath in the cold, snowBreath.ts, kept the solver's word in its own table: read row by row, another table's shape cannot hide this one's)
         const rows = (g: any) => { const F = RB.stateFlat(g); return F.paths.map((p: string, i: number) => [p, F.toks[i]] as [string, unknown]).filter(([p]: [string, unknown]) => p.includes('smokebreak.')); };   // (the men's own rows are filed as 'the table at smokebreak.states…')
         const ra = rows(A.g), rb = rows(B.g), own = ra.length !== rb.length ? [`${ra.length} rows against ${rb.length}`] : ra.flatMap(([p, t]: [string, unknown], i: number) => p === rb[i][0] && t === rb[i][1] ? [] : [`${p}: ${t} | ${rb[i][1]}`]);
         const cut = !ra.some(([p]: [string, unknown]) => p.endsWith('.emberT')) || !ra.some(([p]: [string, unknown]) => p.endsWith('.stats.breaths')), P = smokeShown(A.g), Q = smokeShown(B.g);
