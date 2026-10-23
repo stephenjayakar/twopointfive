@@ -169,19 +169,22 @@ like that."
   and is left dark by its defenders. **seen** "we should have light switches for rooms!"; two rooms of 176 keep a
   circuit no plate was found for. **check** `bun run tools/qa/probes.ts lightswitch` (every level file: each plate on
   plain wall with floor in a hand's reach). Never seen on a GPU.
-- **`leak` · A lamp close behind the wall of a dark room shows on what stands against that wall.** The picture keeps
-  bounced light in probes a metre apart and reads it a metre off the face a ray lands on, blended between the probes
-  round that point. A wall is a hand thick, so a shelf, a rack or a stack stood against one is read among the probes of
-  the room behind it, and can glow with that room's lamp. It is the renderer's to mend, not a level's: nearly every
-  furnished wall has it. A level shows it worst where three things meet: a room shipped dark, tall or glossy furniture
-  on the shared wall, and a bright lamp within a few metres on the far side. Where all three meet in your level, look
-  at it before you ship, and say in the level's notes that you did. Moving the lamp off that wall or the furniture to another
-  one is a way round, never a rule. **seen** "some weird light leakage on bookshelf?": the manager's shelves against the
-  lit store, the same wall as two months before; and on a man by the tea room's wall on the pass. **check** `leak` (how many things stand so, by a lamp and by the sky, and a NOTE with the rooms and lamps where the
-  far lamp outweighs the room's own light on that face; 39 of 42 levels today, so where to look and never a pass
-  mark), then **by eye** in a real browser with the near room dark: the debugger's
-  indirect light and specular views (the cache irradiance view blends through every wall and proves nothing). Never
-  seen on a GPU here.
+- **`leak` · Bare metal against the wall of a dark room shows the lamp behind that wall.** The picture keeps bounced
+  light in probes a metre apart. A traced reflection shades what it hits with the probes round a point a metre along
+  that face's normal, and nothing asks whether a wall stands between. A shelf board's top, an upright's side or the
+  floor within half a metre of a wall is read partly from the room behind it. Smooth bare metal reflects with its whole
+  colour, so a steel unit glows with the next room's lamp; paint, wood and card reflect a few hundredths and do not
+  show it. It is the renderer's to mend, not a level's. Until it is mended a level shows it where three things meet: a
+  room shipped dark, a thing of bare metal smoother than 0.55 on the shared wall (a metal paint: `metal`, the look
+  files' `galv`, `tin` and `iron`; or a box marked `metal` itself), and a bright lamp within a few metres behind it. Where all three meet, look at it
+  before you ship and say in the level's notes that you did. Another wall for the unit, a rougher finish or a lamp
+  further off is a way round, never a rule. **seen** "some weird light leakage on bookshelf?": the manager's steel
+  shelves against the lit store. **check** `leak` (a NOTE where a thing of such metal stands so, with the rooms and
+  lamps; every other finish is counted and passes; 28 of 42 levels are noted today, so where to look and never a pass
+  mark; it does not see a frame in the wall itself, nor a wooden thing a steel one beside it reflects), then **by
+  eye** in a real browser on the ultra preset (high traces no reflection above 0.45, medium above 0.35, low none)
+  with the near room dark: the debugger's specular view (the cache irradiance view blends through every wall and
+  proves nothing). Never seen on a GPU here.
 - **Starts are dark and unseen**: nobody sees the team on its start marks, through a pane either; the first stack is in no
   roamer's line. **seen** a start on the road in front of the glass, in six marks' sight.
 - **The headless light meter has no moon and no bounce.** A mark "dark" headless can be 57 % lit on the page. Hide marks

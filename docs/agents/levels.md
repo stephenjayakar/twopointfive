@@ -407,3 +407,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT IN THE MEASURE: heights (a plan: a wall under the ceiling is no wall), a lamp the game switches on later, gloss, how bright either room is. Two
   reviews found 23 things; left as they are: the wall rule and the footprint test are written a second time, and 0.5 is a first number. The cause of
   the 10-23 shots was with the renderer's owner when this was written, and the rule may narrow to it. Nothing here was seen on a GPU.
+  NARROWED TO THE CAUSE the same morning (the renderer's owner, from the code and the level's numbers, with no GPU either): the read is the traced
+  reflections' (`reflect.wgsl shadeReflHit`: the cache one spacing along the HIT's normal, trilinear, no wall test), so the face that leaks is one a
+  mirror reflects within half a cell of a ceiling-high wall (a board's top, an upright's side, the floor at the wall's foot), and it shows on bare
+  metal, whose reflection carries its whole colour, and at a few hundredths on any other finish. So `LeakRead` has `mirror` (the box or its paint is
+  `metal`, and its roughness is under the widest `rt.maxRough` of the presets that trace, read from `ui/quality.ts`: 0.55, ultra) and the need
+  (`leakLine`) is a NOTE only where a STRONG thing is a MIRROR; every other count is in the PASS line, with the mirrors named by the sky alone (never
+  strong: the sky has no figure here) as "look by day". Both stands the same on build 66bed95: 238 strong mirrors over the 56 files (25 on
+  `barracks`, the most); 27 plain files are noted and `killhouse` by its look twin only, so 28 of 42 levels, and 14 pass (`defuse`, `kit-yard`,
+  `pass`, `quiet-yard`, `registry`, `test-rooms`, five `train-*`, `tut-pair`, `tut-plan`, `tut-solo`); 12 look twins read differently from their
+  plain files (the look's `galv`, `tin`, `iron`). The solo office: 10, 6 of them the manager's unit by `storage_bulb`. The red path asks 35 things
+  of made rooms now: a smooth steel shelf, one in a metal paint and one just under the cut are mirrors; no finish, rough metal, metal with no
+  roughness, smooth and not metal, just over the cut, a box that overrides its metal paint are not; and of the line itself, that a strong shelf
+  of no metal raises no note, a strong steel one does, and a steel one with its own bulb nearer does not (with the note put back on `strong` the
+  red path goes green, tried). A third review found 8 things; mended: the cut and the matte default are read, not typed; the line is held; the
+  skill names the preset to look on and a box marked metal itself. STILL NOT IN IT, and a NOTE-free level can show it: a thing of another finish
+  that a mirror beside it reflects (the hit is shaded whatever its finish: the review counted 770 strong things within 2 m of a mirror), mirror
+  metal the pass does not measure (the building's own groups, so every `glassFrame` in a wall and a door's frame; a drawn-only box; a steel door
+  leaf, for `doors` carry no finish in this tool; a prop), and the weaker share of the same blend in the diffuse gather and on presets with no
+  traced reflections, which the named and strong counts are the place to look for. A mend for the reflections was being handed in when this was
+  written; this number will not move with it.
