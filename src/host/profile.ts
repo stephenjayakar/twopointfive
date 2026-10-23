@@ -92,6 +92,7 @@ import { SILENT } from '../game/silent';
 import { SAMESTART } from '../game/samestart';
 import { TAKE } from '../game/takecheck';
 import { QUIETFOG } from '../game/quietfog';
+import { TOLD } from '../game/told';
 import { TORCH } from '../game/calmtorch';
 import { BACKKEY } from '../game/backkey';
 import { moraleFromQuery } from '../game/morale';
@@ -322,6 +323,8 @@ export function pageSwitches(q: URLSearchParams): void {
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
   QUIETFOG.def = q.get('quietdef') === 'off' || q.get('quietdef') === '0' ? 'off' : 'team';   // WHERE a quiet mission starts (the maintainer's pick, 10-13): under the fog, lifted round you and your partner, the mission's sticky cameras handed out — a bare quiet link is that. ?quietdef=off = it starts with every guard shown, as it did
   QUIETFOG.solo = q.get('solofog') !== '0';   // the solo night's own link is read as a quiet row's: it opens under the fog of war with the mission's cameras and wand (game/quietfog.ts soloFogLink): ?solofog=0 = the solo night with every guard shown, as it was
+  TOLD.on = q.get('told') !== '0';   // the fourth difficulty lever, how much you're told (game/told.ts): guided | standard | bare on the mission sheet, a fading mark where your team last saw an enemy on the first two (standard is the level standard, bare is hard's). ?told=0 = three levers and no mark, as it was
+  TOLD.fogOff = q.get('fogoff') !== '0';   // the fog lever on a squad mission has a bottom rung, off: every enemy drawn (game/told.ts, difficulty.ts fogOffNow). ?fogoff=0 = the three rungs it had
   QUIETFOG.wand = q.get('quietwand') !== '0';   // a quiet mission under the fog hands you an optical wand with its cameras, whatever your card carries (game/quietfog.ts quietWand): ?quietwand=0 = only a wand in your own pouch
   TAKE.wired = !(q.has('takecheck') && q.get('takecheck') !== '0');   // on a quiet mission a man is sent to look at the emptied holder only where the level says it is wired (game/takecheck.ts): ON in the page; ?takecheck = a man is sent seven seconds after every take, as it was
   HOLDFIRE.on = !q.has('noholdfire');   // a squad nobody has found never fires first (game/holdfire.ts): a teammate's round at a man who has not noticed anybody is held until the player's own shot or an order of his that means fire, walking or sneaking — ON in the page; ?noholdfire = they shoot on sight unless silent or sneaking, as they did
@@ -392,6 +395,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SQUADNET.on = q.get('squadnet') !== '0';   // the squad reaches you (game/squadnet.ts): a teammate's line said off your screen is drawn near you on his side with a click, and a teammate going down is called with a sound of its own: ON in the page; ?squadnet=0 = a line over a head off the screen is not drawn, as it was
   SQUADNET.why = q.get('qwhy') !== '0';   // the quick key says why (game/squadnet.ts): its row ends on the reason when the squad's pick is not a plain open, and the man who answers says it: ON in the page; ?qwhy=0 = the row and the answer as they were
   SQUADNET.clear = q.get('honestclear') !== '0';   // 'clear' means clear (game/squadnet.ts): a room is called clear only when its search left no floor unseen, and called quiet otherwise: ON in the page; ?honestclear=0 = the call as it was
+  SQUADNET.endCall = q.get('endcall') !== '0';   // every entry ends with a call (game/squadnet.ts): the lead calls a room the mission has no name for too ('room clear.', 'clear so far.' of open floor): ON in the page; ?endcall=0 = such an entry ends with nothing said, as it was
   HANDS.on = !q.has('nohands');   // hands on the world (game/hands.ts): a body is taken up from the end he is at with both hands and laid down again, a door comes round under his hand with him stepped clear of it — ON in the page; ?nohands = bodies snap to the ankle drag and doors are flung, as they were
   OWNCHARGE.on = !q.has('noowncharge');   // the player's own charges (game/owncharge.ts): charge rows on YOUR kit card, 'set a charge' on a shut door, a man alone carries his card's charges only. ?noowncharge = as it was
   GUNSLOTS.on = !q.has('nogunslots');   // a primary and a secondary for every man (game/gunslots.ts): the card's one gun row is two — Primary and Secondary — and a teammate carries both, going to his sidearm when the primary runs dry on a man close in front of him. ?nogunslots = one gun row, and nobody but you has a second gun
@@ -593,6 +597,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'QUIETFOG.def': 'TPS_QUIETDEF=team',
   'QUIETFOG.wand': 'TPS_QUIETWAND=1',
   'QUIETFOG.solo': 'TPS_SOLOFOG=1',
+  'TOLD.on': 'TPS_TOLD=1',
+  'TOLD.fogOff': 'TPS_FOGOFF=1',
   'TORCH.calmOff': 'TPS_CALMTORCH=1',
   'TORCH.wallLow': 'TPS_TORCHWALL=1',
   'MORALE.on': 'TPS_MORALE=1',
@@ -777,6 +783,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SQUADNET.on': 'TPS_SQUADNET=1',
   'SQUADNET.why': 'TPS_QWHY=1',
   'SQUADNET.clear': 'TPS_HONESTCLEAR=1',
+  'SQUADNET.endCall': 'TPS_ENDCALL=1',
   'TAKEDOWN.on': 'TPS_TAKEDOWN=1',
   'TAKEDOWN.haul': 'TPS_HAUL=1',
   'STEALTHPOSE.on': 'TPS_STEALTHPOSE=1',

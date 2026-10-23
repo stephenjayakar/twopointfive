@@ -26,6 +26,7 @@ const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const SAVE = await import(`${ROOT}/src/game/savestate.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
+const { threeLevers } = await import('./told-check.ts');   // (the fourth lever and the squad's fog-off rung are held down here: these lines count three levers — told-check.ts has them up)
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
@@ -54,7 +55,8 @@ const rowsOf = (root: El) => root.all(e => !!e.attrs['data-lever']).map(r => { c
   shown: btns.filter(b => (b as any).style.display !== 'none').map(b => b.attrs['data-rung']).join(','), lit: btns.filter(b => b.cls.has('on') && (b as any).style.display !== 'none').map(b => b.attrs['data-rung']).join(','), note: r.all(e => e.tagName === 'SPAN').at(-1)?.textContent ?? '' }; });
 const press = (root: El, key: string, rung: string) => { const b = rowsOf(root).find(r => r.key === key)?.btns.find(b => b.attrs['data-rung'] === rung); if (!b?.onclick) throw new Error(`no ${key}:${rung} button`); b.onclick(); };
 
-export async function quietfogCheck(): Promise<boolean> {
+export const quietfogCheck = (): Promise<boolean> => threeLevers(quietfogCheck3);
+async function quietfogCheck3(): Promise<boolean> {
   const F = family('quietfog: a quiet mission can be played under the fog of war — the fog lever\'s rungs, asked with all shown as where a quiet mission starts');
   const BREAK = process.env.QUIETFOG_BREAK === '1', onWas = QF.QUIETFOG.on, defWas = QF.QUIETFOG.def, soloWas = QF.QUIETFOG.solo, ownWas = FOG.own, rnd = Math.random;
   // the rungs are asked with the bottom rung as the quiet missions' default, as they were written (QUIETFOG.def 'off': the frozen stand's); the page's own default — the fog all round — is sticky-check.ts's `default` family

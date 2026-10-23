@@ -230,8 +230,8 @@ export class Overlay implements HudLike {
       if (game.showDebug) { const T = needsTrip(g); if (T) text += ` ${T.kind}:${T.phase}${T.phase === 'telegraph' ? ` ${Math.ceil(T.departAt - game.time)}s` : T.phase === 'dwell' ? ` ${Math.ceil(T.dwellUntil - game.time)}s` : ''}`; }   // (the debug label only: in play the trip is told by the man himself — the watch, the word, the neck — never by the HUD; needs.ts)
       el.textContent = text; el.className = 'marker ' + cls;
     });
-    // where an enemy who has gone out of the team's sight was last seen (fogofwar.ts lastSeen — empty unless FOG.lastSeen is turned up): a '?' on the spot, fading
-    { const seen = game.fogOfWar.lastSeen();   // (each mark fades over its own life: FOG.lastSeen, or the wand's WAND.markSecs for a man its lens had)
+    // where an enemy who has gone out of the team's sight was last seen (fogofwar.ts lastSeen — empty on the 'you're told' lever's Bare rung, game/told.ts, unless FOG.lastSeen is turned up): a '?' on the spot, fading
+    { const seen = game.fogOfWar.lastSeen();   // (each mark fades over its own life: the lever's seconds or FOG.lastSeen, or the wand's WAND.markSecs for a man its lens had)
       while (this.seenMarks.length < seen.length) { const el = document.createElement('div'); el.className = 'marker lastseen'; el.textContent = '(?)'; this.root.appendChild(el); this.seenMarks.push(el); }
       this.seenMarks.forEach((el, i) => { const s = seen[i]; if (!s) { el.style.display = 'none'; return; }
         const [x, y, vis] = cam.project([s.at[0], s.at[1] + 2.1, s.at[2]], w, h, EDGE); if (!vis) { el.style.display = 'none'; return; }

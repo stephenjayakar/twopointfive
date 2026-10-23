@@ -101,6 +101,7 @@ import { SILENT } from './silent';
 import { SAMESTART } from './samestart';
 import { TAKE } from './takecheck';
 import { QUIETFOG } from './quietfog';
+import { TOLD } from './told';
 import { TORCH } from './calmtorch';
 import { BACKKEY } from './backkey';
 import { MORALE } from './morale';
@@ -423,6 +424,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.AUTOCAM as Partial<typeof AUTOCAM> | undefined)?.sway === undefined) AUTOCAM.sway = false;   // (…and one from before it could turn in a fight)
   if (!k.tables.WORKSTOW) WORKSTOW.on = false;   // (a file from before the gun was put away for a two-handed job: a charge went on with it in the hand, on the shorter clock)
   if (!k.tables.SQUADNET) SQUADNET.on = SQUADNET.why = SQUADNET.clear = false;   // (a file from before the squad's far lines reached the player and the quick key said why: the answers and the room call as they were)
+  if ((k.tables.SQUADNET as Partial<typeof SQUADNET> | undefined)?.endCall === undefined) SQUADNET.endCall = false;   // (…and one from before an entry into a room with no name of the mission's ended with a call: nothing was said there)
   if (!k.tables.OWNBLOW) OWNBLOW.on = false;   // (a file from before his own charge went off from his own actions: the squad's key blew it)
   if (typeof (k.tables.HANDRING as { early?: boolean } | undefined)?.early !== 'boolean') HANDRING.early = false;   // (…and one from before a digit inside the hold was the ring's: there it drew the slot)
   if (typeof (k.tables.HANDRING as { empty?: boolean } | undefined)?.empty !== 'boolean') HANDRING.empty = false;   // (…nor before an empty tap said so)
@@ -491,6 +493,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.QUIETFOG as Partial<typeof QUIETFOG> | undefined)?.def === undefined) QUIETFOG.def = 'off';   // (…and one from before a quiet mission STARTED under the fog: its bare quiet link was played with every guard shown)
   if ((k.tables.QUIETFOG as Partial<typeof QUIETFOG> | undefined)?.wand === undefined) QUIETFOG.wand = false;   // (…and one from before the mission handed out a wand: only the card's)
   if ((k.tables.QUIETFOG as Partial<typeof QUIETFOG> | undefined)?.solo === undefined) QUIETFOG.solo = false;   // (…and one from before the solo night could open under the fog: its `solo` link raised none)
+  if (!k.tables.TOLD) { TOLD.on = false; TOLD.fogOff = false; }   // (a file from before the fourth difficulty lever and the squad fog lever's bottom rung: three levers, no last-seen mark but FOG.lastSeen's)
   if (!k.tables.TAKE) TAKE.wired = false;   // (a file from before only a wired holder sent a man: on its quiet missions a man was sent seven seconds after every take)
   if (!k.tables.HOLDFIRE) HOLDFIRE.on = false;   // (a file from before an unfound squad held its fire for the player's shot or order: its teammates shot on sight)
   if ((k.tables.HOLDFIRE as Partial<typeof HOLDFIRE> | undefined)?.loud === undefined) HOLDFIRE.loud = false;   // (…and one from before 'go loud' told to a silent squad started the fight: its squad, told loud, held until his shot or a door order)

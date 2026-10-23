@@ -220,7 +220,11 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         if (yaw != null && ctx.behind == null && !auto!.sway && !auto!.swayV) { ctx.behind = yaw; ctx.behindAuto = true; auto!.turnT = 0; AUTOCAM_STATS.turns++; carryOn(); }   // (his aim goes round with the view, as the double tap's does; never begun across a lean of the sway's: that comes home first)
         // …and the sway (AUTOCAM.sway): a slow lean of the yaw round the hand's own, toward the fight and the way he moves — not while a turn of another kind is under way
         if (ctx.behind != null) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
+<<<<<<< HEAD
         const at: Vec3 = hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look;   // (after the sway's turn: the panel's shift is the page's, read new each frame from the view as it stands — sneaklab.ts panelShift)
+=======
+        const at: Vec3 = hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look;
+>>>>>>> origin/twopointsix
         if (tick) cam.step(cdt, at, null); else cam.update(cdt, at, null);
         return shot;
       }

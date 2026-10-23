@@ -130,7 +130,7 @@ export async function tutplanCheck(): Promise<boolean> {
     // ---- 9: his feet come with the first walk, and every plan is laid from its spot with the view held near him. The spots and the places are the lesson's own
     { const N = await rig(), ng = N.g, NP = ng.orders.plan, np = ng.player, w = N.W.canvas.clientWidth, h = N.W.canvas.clientHeight, EDGE = 40, steps = ng.level.scenarios.lesson.steps as any[];
       const find = (t: any, is: string): any => !t ? null : t.is === is ? t : (t.of ?? []).map((x: any) => find(x, is)).find(Boolean) ?? null;
-      const isWalk = (T: any) => !!find(T.done, 'in') && !find(T.done, 'planView') && !T.planLine;
+      const isWalk = (T: any) => !!find(T.done, 'in') && !find(T.done, 'planView');   // (a walk step's own `planLine` is the walk with the mode already down, not a way back into the mode)
       const first = steps.findIndex(T => (T.allow ?? []).includes('move')), feet = !ng.level.scenarios.lesson.rails.allow.includes('move') && first > 0 && isWalk(steps[first]) && steps.slice(0, first).some(T => !!find(T.done, 'squad'));
       type Ask = { i: number; from: string; spot: V; id: string; p: V; r?: number };
       const asks: Ask[] = []; let spot: V = [...np.char.pos], from = 'the gate';
