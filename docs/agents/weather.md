@@ -333,8 +333,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     as they were). `SNOWBOOK_BREAK=1` fails each (the book hung on the game; the list cut as the pool's path once did). NOT YET THE WHOLE OF THE SNOW, by
     measurement on the shipped stand: the same update's pool path still writes what a blast owes the pool (`snowBlast.states`: `puffLeft`, `flakeLeft`,
     `turn`, and after one blast `stats.puffs` 28 against 0 and `stats.thrown` 180 against 0 for good) and the air's row (`airSim.states`: it exists only where a
-    field does, `want`, `stats.why`, `puffs`); the wind keeps a list and two scratch vectors the pool's path writes (`game.wind.forParticles`, `scratch`,
-    `scratchP`); the rain's own recycler (`rainFx.states`) is the table this one was, not measured. `book` passes because it flies no blast and has no air
+    field does, `want`, `stats.why`, `puffs`); the wind keeps two scratch vectors the pool's path writes (`game.wind.scratch`, `scratchP`; its list for the pool,
+    `forParticles`, went to the host the same day); the rain's own recycler (`rainFx.states`) is the table this one was, not measured. `book` passes because it flies no blast and has no air
     field. ALSO MEASURED, the snapshot's own: the host's put-back moves the game's state hash by itself, because the books of what was last sent to the GPU
     are in the state (`world.visibleSent` 7711 values and `gbSent` 4608, `game.chars.instSent` 744, the epochs, `game.snowLookWas`): a hash taken after
     `hostAfterPutBack` is not the saved moment's (`docs/agents/replays.md`, the rollback snapshot's KNOWN LIMITS). ON A PAGE (headless Chromium, the software

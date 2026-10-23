@@ -294,7 +294,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   BEFORE the host is told, or these become the host's inside their objects (`HostOwned`, as the light meter's plumbing is): not done. A HOST BOOK IN THE
   GAME'S STATE is the same fault from the other side — a table that follows the pool, the solver or the view; the fires', the smoke break's, the breath's
   and the falling snow's are in `engine.hostBooks` / on the engine now, and `docs/agents/weather.md` ("Whose the recycler's table is") lists what was
-  measured still to go (a blast's owed snow, the air's row, the wind's list and scratch, the rain's recycler). A
+  measured still to go (a blast's owed snow, the air's row, the wind's scratch, the rain's recycler; the wind's pool list went to the host the same day). AN OLD RED, found 10-23
+  by running the check where it had not been run: `--scn pass-four` on the SHIPPED stand fails `fresh game` at 3 of 14 moments (the first at frame 809,
+  tick 2), the same before the snow's book as after; `--why` shows the other game pressing other prints (`game.snowTracks.prints` 186 against 191, and
+  the map, the marks forming and the kicks after them). Read, not proved: the feet's memory is a module variable keyed by the man
+  (`snowTracks.feetOf`), and the other game's men are other objects. Frozen, and every other line on shipped, pass there. A
   showcase beat of the Director's is a generator: a snapshot across a running show cannot be put back (no save is taken beside one).
   A GPU BUFFER MADE ANEW between a save and its load goes back as the old, destroyed one (a field that holds a GPU object is put back like any field): one can be,
   `BoxWorld.itemBuf`, when the grid's list passes 32,768 entries — compound-four and block-squads use about 4,500, so it does not happen today. The game objects
