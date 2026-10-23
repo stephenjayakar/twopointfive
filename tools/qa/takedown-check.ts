@@ -345,10 +345,11 @@ export async function takedownLower(): Promise<boolean> {
       `out at frame ${off.out} | ${plain0.out} · largest bone difference over ${n} frames ${d.toExponential(1)} m`); }
   const n = low.man.length, last = n - 1, tap = 90;
   { // 2. no rule moved by it, and he is really lowered
-    const mh = plain.man[last].hips[1] - low.man[last].hips[1], sh = plain.sam[last].hips[1] - low.sam[last].hips[1], hd = low.sam[last].head[1] - plain.sam[last].head[1];
+    const sat = HOLD.catchShape && CLOSE.noKnife ? HOLD.catch.sink : 0;   // (HOLD.catch: in the bare hold he is SAT that far down into the arm already, so the choke that does not lower him no longer ends with him standing — the line's 30 cm is below standing, as it reads)
+    const mh = plain.man[last].hips[1] + sat - low.man[last].hips[1], sh = plain.sam[last].hips[1] - low.sam[last].hips[1], hd = low.sam[last].head[1] - plain.sam[last].head[1];
     F.verdict(low.out === plain.out && low.kind === 'choked' && plain.kind === 'choked', 'lowered or not, he is out on the same frame and out cold', `out at frame ${plain.out} | ${low.out} · ${plain.kind} | ${low.kind}`);
     F.verdict(mh >= 0.3 && sh >= 0.2 && hd < 0, "on the choke's last frame the man's hips are 30 cm or more lower than standing, Sam's 20 cm or more, Sam's head lower too",
-      `the man's hips ${cm(mh)} cm lower (at ${f2(low.man[last].hips[1])} m) · Sam's ${cm(sh)} cm lower (at ${f2(low.sam[last].hips[1])} m) · Sam's head ${cm(hd)} cm`); }
+      `the man's hips ${cm(mh)} cm lower (at ${f2(low.man[last].hips[1])} m${sat ? `; ${cm(sat)} cm of it the bare hold's seat` : ''}) · Sam's ${cm(sh)} cm lower (at ${f2(low.sam[last].hips[1])} m) · Sam's head ${cm(hd)} cm`); }
   { // 3. the arm stays on his neck, feet where they were, nothing under the floor, nothing pops
     let hand = 0, sFeet = 0, mFeet = 0, floor = Infinity; const [pop, popAt] = fastest(low, tap + 1);
     for (let i = tap; i < n; i++) {
