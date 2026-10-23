@@ -1,6 +1,6 @@
 // TRAIN-ORDERS — Training 5, "Orders and door tools": commanding a pair. The orders menu on the ground (move, cover, hold, fall in), the usual order on a
-// door (stack up), then the door tools on four houses, one each: open and clear · bang and clear · the door held until the
-// word · a charge on a locked door, blown on the word.
+// door (stack up), then the door tools on four houses, one each: open and clear · bang and clear · the door held from
+// outside, then a can and in · a charge on a locked door, blown on the word.
 // A ROOM CLEAR (game/roomclear.ts) for the pair, with a `scenarios.lesson` block (game/lesson.ts) whose steps name each key and move on when the thing is DONE.
 //
 // THE PLACE: THE QUARTERS, a short gravel street of four one-room houses — the compound's fifth corner (west: the range's T-walls; east: the white house).
@@ -110,12 +110,12 @@ export function build() {
       { id: 'b', name: 'green house', bounds: { ...B }, garrison: 1, doors: [{ id: 'hut_b', from: 'the street' }, { id: 'hut_b_east', from: 'the east side' }],
         marks: [{ pos: [23.2, 0, 8.2], watch: 'hut_b', aimAt: doorB }, { pos: [27.4, 0, 10.6], watch: 'hut_b', aimAt: doorB }, { pos: [23.4, 0, 10.4], watch: 'hut_b_east', aimAt: doorBe }] },
       { id: 'd', name: 'kitchen', bounds: { ...D }, garrison: 1, doors: [{ id: 'hut_d', from: 'the street' }],
-        marks: [{ pos: [16.2, 0, 18.9], watch: 'hut_d', aimAt: doorD }, { pos: [16.3, 0, 19.5], watch: 'hut_d', aimAt: doorD }] },   // (the back of the room, IN the open door's view: the word's can goes in before the pair does, and they meet him in its flash. A man in a near corner was a pocket too small for the can at a real-size door, and the pair stepped in to a coin's toss)
+        marks: [{ pos: [16.2, 0, 18.9], watch: 'hut_d', aimAt: doorD }, { pos: [16.3, 0, 19.5], watch: 'hut_d', aimAt: doorD }] },   // (the back of the room, IN the open door's view: the can goes in before the pair does ('bang and clear' given at the held door: the lesson's order; the word's own can where the word still throws one), and they meet him in its flash. A man in a near corner was a pocket too small for the can at a real-size door, and the pair stepped in to a coin's toss)
         // (both marks in the MIDDLE of the back wall, in the band neither jamb man's diagonal reaches: the two who hold stand a metre out and half a metre
         //  wide of the jambs, the west man looking at the east back and the east man at the west back, and a defender on either diagonal — awake since the
         //  first shots, his gun already on the door — met ONE of them alone. From the west back he shot the man who shoved the door as he crossed (the tape);
         //  from the east back, once that man worked the handle from past the latch jamb (handleside.ts HANDLE.toolNear) and no longer saw in, he shot the
-        //  hinge-jamb man: 7 of 8 shipped dice. In the middle nobody duels at the hold: they set, the word's can goes in, and they meet him in its flash —
+        //  hinge-jamb man: 7 of 8 shipped dice. In the middle nobody duels at the hold: they set, the can goes in, and they meet him in its flash —
         //  0 lost over 12 shipped dice (four on hard) and 3 on the frozen stand. With the handle rule off (?notoolnear) the old fault is back on hard)
       { id: 'c', name: 'armoury', bounds: { ...C }, garrison: 1, doors: [{ id: 'hut_c', from: 'the street' }],
         marks: [{ pos: [24.4, 0, 17.6], watch: 'hut_c', aimAt: doorC }, { pos: [21.4, 0, 19.8], watch: 'hut_c', aimAt: doorC }] },
@@ -147,9 +147,11 @@ export function build() {
       { id: 'in1', line: 'Stay out of the doorway. When they call clear, walk in', done: and(taken('a'), { is: 'in', area: { ...A } }), at: [16.5, 1, 9.4] },
       { id: 'bang', line: 'Go to the green house. X on either door, then press 5, then 2 to bang and clear', done: or(gave('bangClear', 'hut_b'), gave('bangClear', 'hut_b_east'), taken('b')), at: doorB },
       { id: 'in2', line: 'When they call clear, walk in', done: and(taken('b'), { is: 'in', area: { ...B } }), at: [25.2, 1, 9.4] },
-      // the kitchen is held from the door, then THE WORD (its beat on the door's order: nothing but F on a held door writes it)
+      // the kitchen is held from the door, then THE SECOND ORDER: 'bang and clear' given to the men holding it (one can, then in). The word alone (F) sends
+      // them in too, but with no can since DOORTOOLS.wordNoCan, and this room's man is awake, aimed and where neither jamb sees him: sixteen shipped dice
+      // on the word, both teammates dead on ten; on the can, nobody lost on sixteen. F still ends the step (a player who knows the key is not held up)
       { id: 'thr', line: 'Go to the kitchen. X on its door, then press 5, then 4 to hold at the door', done: or(gave('thresholdHold', 'hut_d'), taken('d')), at: doorD },
-      { id: 'word', line: 'When they\'re holding the open door, press F to send them in', done: or({ is: 'word' }, taken('d')), at: doorD },
+      { id: 'word', line: "They're holding the door. Press X on it, then 5, then 2 to throw a flashbang in first", done: or(gave('bangClear', 'hut_d'), { is: 'word' }, taken('d')), at: doorD },
       { id: 'in3', line: 'When they call clear, walk in', done: and(taken('d'), { is: 'in', area: { ...D } }), at: [16.0, 1, 18.6] },
       // the closer: the one lit door on the street. The marker moves to the barrier once the charge is ordered: the place to watch it from
       { id: 'charge', line: 'The armoury is locked. X on its door, then press 5, then 3 to set a charge', done: or(gave('charge', 'hut_c'), taken('c')), at: doorC },
