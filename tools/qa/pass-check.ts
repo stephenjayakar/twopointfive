@@ -16,7 +16,11 @@
 //    gateway through glass (a line open with glass see-through and shut with glass solid); and the tea room has the yard on both sides of the lorry
 //    through glass
 // 11 the light, by the headless stand-in of the meter (guards.ts lightEstimateAt: direct light, no moon, no bounce): the gateway reads lit, both starts dark
-// PASS_BREAK=1 = way 1's start is stood in the gateway under its lamp (lines 9 and 11 must fail) and a bank is stood back at the back wall's outside foot (line 6, feet).
+// 12 THE MELT ROUND THE BRAZIER IS ROUND: the slush and the bare earth about the burning drum each reach the same distance from it on every bearing (a square
+//    of ground finish round a round drum read as a tile once the fire lit it), the slush shows all the way round the earth, the drum stands inside the earth,
+//    and no slab of it is taken for a round THING (scene/round.ts: a cylinder with a drum's rim)
+// PASS_BREAK=1 = way 1's start is stood in the gateway under its lamp (lines 9 and 11 must fail), a bank is stood back at the back wall's outside foot (line 6, feet)
+// and the melt is laid as the two squares it was (line 12).
 // Exit 0 = every line holds, 1 = one does not. Nothing here looks at a picture: never seen on a GPU.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -163,6 +167,21 @@ export async function passCheck(): Promise<boolean> {
     const span = (L: number[]) => `${Math.min(...L).toFixed(2)}‥${Math.max(...L).toFixed(2)}`;
     line(Math.min(...gateL) > GATE_LO && Math.max(...w1) < DARK_HI && Math.max(...w2) < DARK_HI && Math.max(...w1M) < DARK_HI && Math.max(...w2M) < DARK_HI, `the gateway reads over ${GATE_LO}; both ways' starts under ${DARK_HI}, the moon counted or not`,
       `gateway ${span(gateL)} · way 1's start ${span(w1)}, with the moon ${span(w1M)} · way 2's start ${span(w2)}, with the moon ${span(w2M)}`);
+
+    // 12 — the melt round the brazier is round (the maintainer, 10-23, of a close shot of the burning drum: a hard grey square of ground round a round drum)
+    { const fire = (data.lights as any[]).find(l => l.id === 'brazier'), fx: number = fire?.pos[0] ?? 0, fz: number = fire?.pos[2] ?? 0;
+      const melt = boxes.map((b, i) => ({ b, i })).filter(({ b, i }) => groups[i] === 'snow.cleared' && Math.hypot(b.c[0] - fx, b.c[2] - fz) < 0.01);
+      const sq = (hw: number, y: number, albedo: number[]) => ({ b: { c: [fx, y, fz], h: [hw, y, hw], yaw: 0, flags: 0, albedo } as any, i: -1 });
+      const laid = BREAK && melt.length ? [sq(0.85, 0.002, melt[0].b.albedo), sq(0.5, 0.003, melt[melt.length - 1].b.albedo)] : melt;   // (as the file had it: this line must fail)
+      /** how far one paint's slabs reach from the fire on 72 bearings (every slab is about the fire: the farthest edge of any of them along the bearing) */
+      const reach = (L: typeof laid) => Array.from({ length: 72 }, (_, k) => { const a = k * Math.PI / 36, dx = Math.cos(a), dz = Math.sin(a);
+        return Math.max(...L.map(({ b }) => { const c = Math.cos(b.yaw || 0), s = Math.sin(b.yaw || 0); return Math.min(b.h[0] / Math.max(1e-9, Math.abs(c * dx - s * dz)), b.h[2] / Math.max(1e-9, Math.abs(s * dx + c * dz))); })); });
+      const paints = [...new Set(laid.map(({ b }) => key(b.albedo)))].map(k => { const L = laid.filter(({ b }) => key(b.albedo) === k), R = reach(L); return { n: paintOf(L[0].b) ?? 'earth', slabs: L.length, lo: Math.min(...R), hi: Math.max(...R), top: Math.max(...L.map(({ b }) => top(b))), low: Math.min(...L.map(({ b }) => top(b))) }; }).sort((p, q) => p.hi - q.hi);
+      const drum = boxes.filter((b, i) => groups[i] === 'stoves' && !(b.flags & BoxFlag.NoShadow) && Math.hypot(b.c[0] - fx, b.c[2] - fz) < 0.01), drumR = Math.max(0, ...drum.map(b => Math.hypot(b.h[0], b.round ? 0 : b.h[2])));
+      const [earth, slush] = paints, taken = melt.filter(({ b }) => b.round || b.was).length;
+      line(!!fire && paints.length === 2 && paints.every(p => p.hi / p.lo < 1.07) && earth.n === 'earth' && slush.n === 'snowOld' && slush.lo > earth.hi + 0.15 && earth.low > slush.top + 0.0006 && drum.length > 0 && earth.lo > drumR + 0.1 && taken === 0,
+        'the ground melted round the brazier is round: slush and earth each reach the same distance from the fire on every bearing, within 7 % (a square is 41 % out at its corners); the slush shows all the way round the earth, which lies over it; the drum stands inside the earth; none of it is taken for a round thing',
+        `${paints.map(p => `${p.n}: ${p.slabs} slab${p.slabs === 1 ? '' : 's'}, reach ${p.lo.toFixed(3)}‥${p.hi.toFixed(3)} m (${((p.hi / p.lo - 1) * 100).toFixed(1)} % out), tops ${(p.low * 1000).toFixed(1)}‥${(p.top * 1000).toFixed(1)} mm`).join(' · ')} · the drum ${drum.length} box${drum.length === 1 ? '' : 'es'}, ${drumR.toFixed(2)} m out · taken for a round thing: ${taken}`); }
     console.log(ok ? '=== pass: ALL PASS ===' : '=== pass: FAILURES above ===');
     return ok;
   } finally { ROOMCLEAR.way = wayWas; console.log = log; }
