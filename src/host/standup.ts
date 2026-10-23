@@ -47,7 +47,7 @@ import { HAULHOME } from '../game/digin';
 import { HARD } from '../game/difficulty';
 import { GUNHOLD } from '../game/gunhold';
 import { CLOSE } from '../game/close';
-import { FOOTFALL } from '../game/player';
+import { FOOTFALL, TWOGEARS } from '../game/player';
 import { KITANIM } from '../game/kitanim';
 import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
@@ -292,6 +292,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_FARCALM')) GUARD_EYE.farCalm = String((globalThis as any).process?.env?.TPS_FARCALM ?? '') === '1';   // a far glimpse is no place to walk to (src/game/guards.ts farFaint): off, the frozen stand has no far reach for it to act on
     if (pinned('TPS_CLOSE')) CLOSE.on = String((globalThis as any).process?.env?.TPS_CLOSE ?? '') === '1';   // closer than ever (src/game/close.ts): off, so a man has the one way in from behind and Sam's rows are what every frozen probe and digest read; `TPS_CLOSE=1` turns it on (the shipped default)
     if (pinned('TPS_HELDCLICKS')) CLOSE.heldClicks = String((globalThis as any).process?.env?.TPS_HELDCLICKS ?? '') === '1';   // the two buttons with a man in the arm (src/game/close.ts, player.ts updateHold): off, so a click in the arm hold does nothing, as every frozen probe and digest read; `TPS_HELDCLICKS=1` turns them on (the shipped default)
+    if (pinned('TPS_HANDSLOW')) CLOSE.handsLow = String((globalThis as any).process?.env?.TPS_HANDSLOW ?? '') === '1';   // crouched, his hands stay low until the move (src/game/close.ts): off, so the grab's tell reaches from the crouch as on every frozen recording
     if (pinned('TPS_REACHUP')) CLOSE.reachUp = String((globalThis as any).process?.env?.TPS_REACHUP ?? '') === '1';   // the grab's reach up for a man who stands over him (src/game/close.ts): off, so the tell's pose is the one every frozen run was made with
     if (pinned('TPS_KITANIM')) KITANIM.on = String((globalThis as any).process?.env?.TPS_KITANIM ?? '') === '1';   // kit animations (src/game/kitanim.ts): off, so every draw, reload beat, lock-out and pose is what every frozen probe and digest read; `TPS_KITANIM=1` turns them on (the shipped default)
     if (pinned('TPS_THROWBY')) THROW_BY.on = String((globalThis as any).process?.env?.TPS_THROWBY ?? '') === '1';   // a throw reads its distance (src/game/character.ts THROW_BY): off, so every throw is the one overhand every frozen pose, strip and digest was read on; `TPS_THROWBY=1` turns it on (the shipped default)
@@ -426,6 +427,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_WALLPEN')) WALLPEN.on = String((globalThis as any).process?.env?.TPS_WALLPEN ?? '') === '1';   // rounds through thin walls and doors (src/game/wallpen.ts): off, so a round stops in the first built thing it meets, as in every frozen probe, digest and tally; TPS_WALLPEN=1 raises it
     if (pinned('TPS_TAKEDOWN')) TAKEDOWN.on = String((globalThis as any).process?.env?.TPS_TAKEDOWN ?? '') === '1';   // takedowns as moves (src/game/takedown.ts): off, so a man taken down falls and lies as every stored digest has him
     if (pinned('TPS_HAUL')) TAKEDOWN.haul = String((globalThis as any).process?.env?.TPS_HAUL ?? '') === '1';   // the choke's haul (character.ts HOLD.haul; a half of TAKEDOWN with a switch of its own): off, so the choke is posed as it was
+    if (pinned('TPS_TWOGEARS')) TWOGEARS.on = String((globalThis as any).process?.env?.TPS_TWOGEARS ?? '') === '1';   // two gears, not a dial (src/game/player.ts TWOGEARS): off, so the wheel is his pace and the crouch-walk the tune's, as on every frozen recording
     if (pinned('TPS_FOOTFALL')) FOOTFALL.once = String((globalThis as any).process?.env?.TPS_FOOTFALL ?? '') === '1';   // one footfall a step (src/game/player.ts): off, so every crossing of the walk cycle's half files one, as on every frozen recording
     if (pinned('TPS_FOOTOWED')) FOOTFALL.owed = String((globalThis as any).process?.env?.TPS_FOOTOWED ?? '') === '1';   // a footfall the legs owe (src/game/player.ts; under the first key, so a frozen run that wants it raises both words): off, so only an edge of the walk cycle files one
     if (pinned('TPS_STEALTHPOSE')) STEALTHPOSE.on = String((globalThis as any).process?.env?.TPS_STEALTHPOSE ?? '') === '1';   // stealth poses (src/game/stealthpose.ts): off, so his arms and head are where every stored digest has them

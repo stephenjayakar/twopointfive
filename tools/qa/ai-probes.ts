@@ -5,6 +5,7 @@ import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
+const { crouchPace } = await import(`${ROOT}/src/game/player.ts`);
 const { sightGain } = guardsMod;
 
 type Vec3 = [number, number, number];
@@ -344,7 +345,7 @@ export async function motionTable(opts: { vis?: number[]; legacyToo?: boolean } 
     game.player.char.bodyYaw = game.player.char.aimYaw = -Math.PI / 2;
     // oscillate about S: half-amplitude A along the chosen axis, turning about at the ends (the puppet's direction flips at once; speedSm carries the pace through)
     const A = pace.sprint ? 1.15 : 1.0; const axis: Vec3 = dir === 'radial' ? [1, 0, 0] : [0, 0, 1]; let sgn = 1;
-    const walkScale = pace.v <= 0 ? 0 : pace.sprint ? pace.v / game.tune.playerSprint : pace.crouch ? pace.v / game.tune.playerCrouch : pace.v / game.tune.playerWalk;
+    const walkScale = pace.v <= 0 ? 0 : pace.sprint ? pace.v / game.tune.playerSprint : pace.crouch ? pace.v / crouchPace(game) : pace.v / game.tune.playerWalk;
     game.puppet = { goal: pace.v > 0 ? v3.mad(S, axis, A) : null, aim: [G[0], 1.3, G[2]], crouch: pace.crouch, walk: walkScale };
     if (pace.sprint) input.keys.add('ShiftLeft');
     let tS = -1, tA = -1, letGo = false; let rateSum = 0, rateN = 0; const t0 = game.time; let sawSusp = false;

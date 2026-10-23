@@ -862,6 +862,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the change. One staging, no seeds. NOT MENDED, the maintainer's eye: stopping in the mode keeps the stride he was in (the held gait, by design), which at
   the crouch is the rear knee on the floor and the rear foot half a metre back, and standing can be a foot held off the floor; and the grab takes him from
   that crouch to upright against the man's back in about 0.12 s. NOBODY HAS SEEN IT ON A GPU OR IN THE PAGE.
+- **Crouched in reach behind a man, his hands stay low until the move (`CLOSE.handsLow`, close.ts `closeReady`).** The maintainer, of a still from the
+  pair's stealth mission with Sam crouched behind a guard: "the weirdness in this case was his hand". The hand was the grab's tell with `reachUp` above: the
+  open left hand 1.18 m up over a head at 0.91 m, 0.3 to 0.6 m short of the man. From the side it reads as a reach for his neck; from the game's camera, above
+  and behind, it reads as a kneeling man with a hand put up. With the key up, crouched, the man not seated and his neck more than `handsLowNeckM` (1.15 m) off his own floor (a man on his
+  feet: 1.44; one cowering keeps the level reach), `closeReady` answers 'strike' where it answered 'grab': the hand on the knife is the whole tell, as it is from a side, and the grab's own rise brings the arm up when he takes him. Measured at
+  gaps of 0.97, 0.80 and 0.64 m: left hand 1.18 → 0.62 m up, head bone 0.91 → 0.73 m (so the 0.19 m of head that `reachUp` put over low cover is gone too).
+  The row, the reach, the grab and the hold are untouched; on his feet the tell is the grab's to the bit; the pistol's (`grabGun`) and a seated man's are
+  untouched. With this up `reachUp` has nothing to raise, and its check stages with this key down. Switch: ON in the page (`?handslow=0` off; Tab ▸ Closer
+  than ever ▸ 'crouched ▸ hands stay low until the move'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'CLOSE.handsLow': `TPS_HANDSLOW=1`;
+  `TPS_HANDSLOW=0` holds it off on the shipped stand), in the journal's `CLOSE` table, and a recording from before the key replays with it off. CHECK:
+  `bun run tools/qa/handslow-check.ts` (probe `handslow`, families handslow / close / player), both stands; `HANDSLOW_BREAK=1` must fail `low`. Lines: low
+  (the three gaps above), offer (the grab is still offered and its row is there), stand (standing, and with the pistol up, the pose is the same to the bit),
+  harness. One staging, no seeds, and no line stages a low man (the neck bar is read from the code alone). Pictures: `close-stills.ts --scene stops-crouch` with and without `--set '{"CLOSE":{"handsLow":false}}'`. WHAT IT COSTS:
+  crouched, nothing on Sam's body now says "the grab is on" before he presses; the row says it. NOT MENDED: the grab still takes him from the crouch to
+  upright against the man's back in about 0.12 s. Seen only as CPU mesh stills; never in the page, never on a GPU.
 - **The close-in poses as pictures with no Blender: `tools/qa/close-stills.ts` + `tools/qa/pose-mesh-raster.py`.** `close-stills.ts [--scene approach-crouch |
   approach-stand | stops-crouch | stops-stand | hold] [--out dir] [--set '{"CLOSE":{"reachUp":false}}']` stages the real game headless (the page's stand unless
   `TPS_PROFILE` says otherwise), runs the game's own entry points, and at each moment skins BOTH men's worn meshes on the CPU into one PLY in the taken man's
