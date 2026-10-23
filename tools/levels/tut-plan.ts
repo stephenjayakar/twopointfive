@@ -265,6 +265,10 @@ export function build() {
   // (every step that is done IN the mode says what puts the mode up while it is down — a checkpoint put back, the mode put away by hand)
   const IN_MODE = new Set(['view', 'send', 'pick', 'door1', 'pick2', 'door2', 'all', 'hall', 'front', 'back', 'all2', 'gates', 'faceA', 'faceB', 'back-in']);
   for (const t of lesson.steps) if (IN_MODE.has(t.id)) t.planLine = 'Hold [Shift] and tap [B] to open plan mode again';
+  // (a walk step with the mode already down stops asking for the key that closes it: with nothing to back out of, that key is the page's own
+  //  objectives card — ui/tabkey.ts — so the line then only says where to walk)
+  const WALK: Record<string, string> = { up1: 'Use [W] [A] [S] [D] to walk to the marked spot by your squad', up2: 'Walk to the marked spot beside the hall', up3: 'Walk into the hall to the marked spot' };
+  for (const t of lesson.steps) if (WALK[t.id]) t.planLine = WALK[t.id];
   // (an order that is out: the line is what the men are doing, not the ask again — rails.ts `after`; the word's steps carry only the line after the word)
   const AFTER: Record<string, { line?: string; word?: string }> = {
     send: { line: 'Your squad is on the way' }, door1: { line: "They're stacking up on the door" }, door2: { line: "They'll stack up and wait until you say go" },
