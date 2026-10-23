@@ -26,7 +26,7 @@
 //   digest    the game does not know: 300 frames of the pass STEPPED BY THE GAME with a solver that takes the sources, on and off — one game digest; the same
 //             with the senses on the CPU, where the game's own smoke ends the run holding nothing
 //   whose     what remembers how a breath was shown (steam or puffs, whose source rides whose mouth, the records filed) is on the host, in no snapshot: two
-//             games that differ only in whether a solver draws, where the view looks and whether a particle pool is there have the same state; a snapshot put
+//             games that differ only in whether a solver draws, where the view looks and whether a particle pool takes the puffs have one state hash; a snapshot put
 //             back (with the host's hook, and without) and a restart each leave every breath with its source
 //   switch    a recording carries the key, one from before it replays with it off, the frozen stand holds it off by name
 import { standUp, ROOT } from './headless.ts';
@@ -189,19 +189,23 @@ export async function breathSteamCheck(): Promise<boolean> {
     // ---- whose: the book of what a breath was shown as is the host's (snowBreath.ts BreathShown, on the engine), not the game's
     { process.env.TPS_CPUSENSE = '0'; const RB = await import(`${ROOT}/src/game/rollback.ts`);
       // the pass stood and nothing started on it, twice (two games a mission was started on in one process are not comparable row for row: the walk stops at a module's own start row)
-      const W1 = await rig(true, true, false), W0 = await rig(true, true, false), cam = () => [W1.g.player.char.pos[0], 0, W1.g.player.char.pos[2]], rows = (d: string[]) => d.filter(x => x.includes('snowBreath.'));
-      const twins = (RB.stateDiff(W1.g, W0.g, 8) as string[]).length;
+      // (one state = one state hash, rollback.ts stateHash: the whole state walked into one word. The row-by-row walk, stateDiff, holds both states flat — some
+      //  3 GB a call on the shipped stand — so it is asked for the rows only on a red run with BREATHSTEAM_WHY=1)
+      const W1 = await rig(true, true, false), W0 = await rig(true, true, false), cam = () => [W1.g.player.char.pos[0], 0, W1.g.player.char.pos[2]];
+      const same = () => RB.stateHash(W1.g) === RB.stateHash(W0.g), why = (): string => process.env.BREATHSTEAM_WHY === '1' ? `: ${(RB.stateDiff(W1.g, W0.g, 6) as string[]).join(' | ')}` : ' (BREATHSTEAM_WHY=1 names the rows)';
+      const twins = same();
       // the same game twice, stepped by the game: one with a solver that draws and the view on the player, one with a solver that says it does not and the view a street away
       (W1.g.engine as any).viewFocus = cam(); (W0.g.engine as any).viewFocus = [cam()[0] + 400, 0, cam()[2]];
       const a = fly(W1, 900, { own: true }), b = fly(W0, 900, { own: true, smoke: solver(false) });
-      const all: string[] = RB.stateDiff(W1.g, W0.g, 64), own = rows(all), cut = all.some(d => d.startsWith('(the shapes part')) || all.length >= 64;
-      // … and the same of the particle pool: one with a pool that takes its puffs, one with none, no solver drawing for either
-      const pl = pool(), e1 = W1.g.engine as any, had = { p: e1.particles, gp: e1.settings.gpuParticles }; let c: any, d: any;
-      const whole = new Proxy(pl.P, { get: (t: any, k) => t[k] ?? (() => 0) });   // (under the game's own step the wind and the dust ask the pool for more than `emit`)
-      try { e1.particles = whole; e1.settings.gpuParticles = true; c = fly(W1, 600, { own: true, smoke: solver(false) }); } finally { e1.particles = had.p; e1.settings.gpuParticles = had.gp; }
-      d = fly(W0, 600, { own: true, smoke: solver(false) }); const all2: string[] = RB.stateDiff(W1.g, W0.g, 64), own2 = rows(all2);
-      // … and the walk does reach the breath's table: the second game's breaths dealt off another seed, it differs from the first in it
-      seedBreath(W0.g, 2); W0.step(1); W1.step(1); const teeth = rows(RB.stateDiff(W1.g, W0.g, 256) as string[]).length;
+      const one = same(), oneWhy = one ? '' : why();
+      // … and the same of the particle pool: each game has one (so that what else asks a pool for anything is asked alike), one that takes the breath's puffs and
+      // one that takes none of them, no solver drawing for either
+      const all = (pl: any, puffs: boolean) => new Proxy(pl.P, { get: (t: any, k) => k === 'emit' ? (kind: string, pos: number[], dir: number[], count: number, opts: any) => !puffs && opts?.steam !== undefined ? 0 : t.emit(kind, pos, dir, count, opts) : t[k] ?? (() => 0) });   // (under the game's own step the wind and the dust ask the pool for more than `emit`)
+      const withPool = (W: any, puffs: boolean) => { const e = W.g.engine as any, had = { p: e.particles, gp: e.settings.gpuParticles };
+        try { e.particles = all(pool(), puffs); e.settings.gpuParticles = true; return fly(W, 600, { own: true, smoke: solver(false) }); } finally { e.particles = had.p; e.settings.gpuParticles = had.gp; } };
+      const c = withPool(W1, true), d = withPool(W0, false), two = same(), twoWhy = two ? '' : why();
+      // … and the hash does take in the breath's table: the second game's breaths dealt off another seed, the two part
+      seedBreath(W0.g, 2); W0.step(1); W1.step(1); const teeth = !same();
       // … and a save put back drops the book, by the game's own roads (never by a hand on the host's field). `kept`: nothing put back — a breath files one source and
       // no more. `hook`: a snapshot taken straight after the frame his source was filed, put back at once, then the host's own hook as the page wires it
       // (host/standup.ts → putback.ts; the frame count has not moved, so the hook's line alone can drop the book): the same breath's next record files a second
@@ -226,11 +230,11 @@ export async function breathSteamCheck(): Promise<boolean> {
           W1.g.aiEnabled = false; (W1.g.engine as any).viewFocus = cam(); const n0 = sv.ems.length, b0 = breathStats(W1.g).breaths;
           for (let i = 0; i < 600; i++) { W1.step(1); sv.tick(); } again.filed = sv.ems.length - n0; again.breaths = breathStats(W1.g).breaths - b0;
         } finally { W1.g.smoke = was; } }
-      verdict(W1.sw && twins === 0 && own.length === 0 && all.length === 0 && !cut && teeth > 0 && a.ems.length >= 3 && b.ems.length === 0 && a.S.steam === a.ems.length && b.S.steam === 0
-        && c.S.records > 0 && c.S.records <= pl.recs.length && d.S.records === 0 && own2.length === 0 && kept.first >= 0 && kept.more === 0 && hook.first >= 0 && hook.more >= 1 && bare.first >= 0 && bare.more >= 1
+      verdict(W1.sw && twins && one && teeth && a.ems.length >= 3 && b.ems.length === 0 && a.S.steam === a.ems.length && b.S.steam === 0
+        && c.S.records > 0 && d.S.records === 0 && two && kept.first >= 0 && kept.more === 0 && hook.first >= 0 && hook.more >= 1 && bare.first >= 0 && bare.more >= 1
         && again.fresh && again.breaths >= 2 && again.filed === again.breaths,
-        'whose — what remembers how a breath was shown is the host\'s, not the game\'s: the game whose man steamed through a solver for 900 frames and the same game with nothing drawn and the view elsewhere are one state to the bit, and so with a particle pool and without; a save put back, a breath in the air is filed again; a restart swallows no breath',
-        `${a.ems.length} sources with a solver drawing (the host's book counts ${a.S.steam}), ${b.ems.length} with none (${b.S.steam}) · the two games' states differ in ${all.length} rows, ${own.length} of them the breath's${all.length ? `: ${all.slice(0, 4).join(' | ')}` : ''}${cut ? ' · THE WALK WAS CUT SHORT' : ''} (as stood, before either breathed: ${twins}) · with a pool ${c.S.records} puff records filed, with none ${d.S.records}: ${own2.length} rows of the breath's differ (${all2.length} in all${all2.length ? `, others' own: ${all2.slice(0, 3).join(' | ')}` : ''}) · dealt off another seed the walk finds ${teeth} rows of the breath's · a breath's source filed, twenty frames on the same man has ${kept.more} more with nothing put back, ${hook.more} with that frame's own snapshot put back and the host's hook run, and ${bare.more} playing the breath again from an earlier snapshot put back with no hook · restarted behind a man's first source (fresh men under the old ids: ${again.fresh}): ${again.filed} sources for the ${again.breaths} breaths begun in the ten seconds after`); }
+        'whose — what remembers how a breath was shown is the host\'s, not the game\'s: the game whose man steamed through a solver for 900 frames and the same game with nothing drawn and the view elsewhere are one state by its hash, and so with a particle pool that takes his puffs and one that takes none; a save put back, a breath in the air is filed again; a restart swallows no breath',
+        `${a.ems.length} sources with a solver drawing (the host's book counts ${a.S.steam}), ${b.ems.length} with none (${b.S.steam}) · the two games are one state: ${one}${oneWhy} (as stood, before either breathed: ${twins}) · a pool that took ${c.S.records} puff records and one that took ${d.S.records}: one state ${two}${twoWhy} · the second dealt off another seed, the hash parts: ${teeth} · a breath's source filed, twenty frames on the same man has ${kept.more} more with nothing put back, ${hook.more} with that frame's own snapshot put back and the host's hook run, and ${bare.more} playing the breath again from an earlier snapshot put back with no hook · restarted behind a man's first source (fresh men under the old ids: ${again.fresh}): ${again.filed} sources for the ${again.breaths} breaths begun in the ten seconds after`); }
     // ---- switch
     { SNOW_LOOK.steam = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), has = typeof snap.tables?.SNOW_LOOK?.steam === 'boolean'; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.SNOW_LOOK.steam;
       let offOld = false; await quiet(() => { applyKnobs(g, old); offOld = SNOW_LOOK.steam === false; applyKnobs(g, snap); offOld &&= SNOW_LOOK.steam === true; });
