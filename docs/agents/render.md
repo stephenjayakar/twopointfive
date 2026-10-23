@@ -413,9 +413,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   ms for being awake at all on a level where nothing else smokes) 0.5 ms on the pass and about 0.95 ms where the fire is the only smoke. The plume was still
   growing slowly at twenty seconds. `?firesmoke=0` is the same fire without it, to weigh that on a GPU. BY PRESET, and the
   one rung that draws the fire without its smoke: FIRE SMOKE SHED, the next bullet.
-  CHECK: `bun run tools/qa/probes.ts fire` (`tools/qa/fire-check.ts`, families `render`, `all`; thirteen lines, both stands; `FIRE_BREAK=1` fails eleven): the lamp's swing
-  and place, a second game the same frame for frame, the bed and the cracks, out and lit again, a checkpoint load, the smoke's sources (look-only, coarse, foot over
-  heads; none without a solver, on a preset that sheds it, or with the smoke put off), the steady readers, the CPU estimate (1.25 m off: steady 3.350, burning 2.06 to 4.37, mean −6.9 %; 3 m: 0.533 against 0.35 to 0.72,
+  CHECK: `bun run tools/qa/probes.ts fire` (`tools/qa/fire-check.ts`, families `render`, `all`; fifteen lines, both stands; `FIRE_BREAK=1` fails thirteen): the lamp's swing
+  and place, a second game the same frame for frame, the bed and the cracks, out and lit again, a checkpoint load (and the bed asked for again behind it), the smoke's sources (look-only, coarse, foot over
+  heads; none without a solver, on a preset that sheds it, or with the smoke put off; the game that smoked for twelve seconds and the one nothing drew differ in
+  nothing of the fire's state), the steady readers, the CPU estimate (1.25 m off: steady 3.350, burning 2.06 to 4.37, mean −6.9 %; 3 m: 0.533 against 0.35 to 0.72,
   mean −2.6 %), off = the build as it was, an old recording. THE SHADER ALONE: `node tools/qa/fire-lab.cjs` (seconds; where the look was set). THE REAL PAGE:
   `node tools/qa/fire-page.cjs` (software adapter, minutes): it boots with the switch either way (119 of 119 pipelines, no page error) and
   the stills are on the fire's page (rebuild/fire/): a flame on a bed of coals with the man beside it, the wall and the snow lit warm, a pale plume leaning downwind — against
@@ -446,8 +447,14 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   journal line; `?firesmoke=0` still puts the smoke off at every preset). WHAT IT IS NOT: a game rule on any stand (the source is look-only, and no headless stand
   has a solver that draws) — but in the PAGE a sight line reads the solver, so beside a fire a line over a standing man's head (the fire's notes: 0.92 to 0.94 kept
   at 1.9 m, 0.55 at 2.6 m, all of it at 1.7 m and under) reads the plume on low and up and none on verylow. Nobody in the game looks along such a line today.
-  ALSO RENDER-SIDE BY WAIVER, to be confirmed: the key is read inside the game's update (beside `drawing`, itself a render setting) and decides what `fire.states`
-  counts as smoked; no headless stand has a solver that draws, so no digest can move, but a page replay under another preset files other look sources. NOT DONE: the
+  ALSO RENDER-SIDE BY WAIVER, to be confirmed: the key is read inside the game's update (beside `drawing`, itself a render setting). What it
+  decides is kept out of the game's state: the fire's book of which smoke it filed and which bed voices it asked for is on the HOST, beside the list the
+  renderer is handed (`engine.fireShown`, `fire.ts FireShown`; `Game.engine` is in no snapshot), and `fire.states` holds only what the clock alone decides — so a
+  preset or a solver moves no state hash through the fire (the fire check's line 'the host's, not the game's': the game that smoked for twelve seconds and the
+  one nothing drew differ in no row of the fire's, and the lamp and the coals are the same to the bit). The book is dropped when a save is put back
+  (`host/putback.ts`, and a load's or a restart's own paint): the smoke is filed and the bed asked for on the next frame, where before a load into an earlier
+  twelve seconds left a burning fire silent until the next mark (the check's second load line; red with the drop taken out). A page replay under another preset
+  still files other look sources, and the men's breath still writes its own word for the solver into the game's state (`snowBreath.states … why`: not this file's). NOT DONE: the
   other look sources (the men's breath, the cigarette) still wake the solver on verylow, so on a level with them the shed saves the plume's bricks (0.5 ms) and not
   the 0.43 ms of being awake; `settings.fireSmoke` is written when a preset is put on, so the switch moved by hand on a running page waits for the next preset.
   CHECK: `bun run tools/qa/probes.ts ladder` (four lines: by hand, under auto up from the floor, the switch off, a bare mock; `FIRESHED_BREAK=1` fails two) and
