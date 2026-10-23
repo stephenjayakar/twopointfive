@@ -1200,18 +1200,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     eases to a stop `keyM` (0.8 m) behind the man and KEEPS STATION there: the man's own speed, plus or minus the last of the closing
     speed by how far he is from `keyM`, his speed following closely (`StalkMove.keep`: the creep's own ease made him hunt back and
     forth behind a man who walks). The grab is the row's own, `grab him` on the interaction's key (E in the page), back in the list
-    whatever `STALK.only` says, and it is taken AS the stalk's (`stalkKeyGrab`, game.ts: the step in from where he stood, the landing,
-    the haul back, one `STALK_STATS.grabs`), whether the click or his own keys walked him in. The hint row reads "hold to sneak up on
-    him". A corner's wait still takes its man by itself. A lesson's grab token reads as with the stalk off ("press [Space] to grab
+    whatever `STALK.only` says (`stalkClickOnly`, the one place that asks: on a wall the row stays away, the corner's wait is the
+    click's), and it is taken AS the stalk's (`stalkKeyCan` asks, `stalkKeyTook` counts once `startGrab` has him, game.ts: the step
+    in from where he stood, the landing, the haul back, one `STALK_STATS.grabs`), whether the click or his own keys walked him in.
+    The line over the man reads "hold to sneak up on him". A corner's wait still takes its man by itself. A lesson's grab token reads as with the stalk off ("press [Space] to grab
     him": `lesson.ts tokenLine`), which is true again.
   - **`STALK.low`** (`?stalklow=0`, `TPS_STALKLOW=1`). No arm comes up and he does not rise (`stalkTell` gives reach 0, rise 0 and
-    `low`, 0 at `lowFrom` 2.6 m to 1 at `lowBy` 1.1 m). The animator (`anim.low`, eased; `CREEP.low`) sinks the pelvis `lowDrop` 6 cm,
+    `low`, 0 at `lowFrom` 2.6 m to 1 at `lowBy` 1.1 m, and only out of his crouch: walked up on standing, he is drawn standing).
+    The animator (`anim.low`, eased at `CREEP.low`'s rates; the shape is fed as `anim.lowShape`) sinks the pelvis `lowDrop` 6 cm,
     sets it back `lowBack` 3 cm and bows the spine `lowLean` 6 degrees more, straight by the distance, so letting go holds it. The
-    creep's carriage gives up its raised hands at ANY distance (`anim.handsDown`, `lowHands`). Each metre beyond the reach adds `lowK`
+    creep's carriage gives up its raised hands at ANY distance and for any man the mode is on (`anim.handsDown`, `lowHands`; bare
+    hands only: with `?noknife=0` the right hand's hover by the hilt is the carriage's). Each metre beyond the reach adds `lowK`
     0.35 m/s where it added `closeK` 0.6: slower all the way in. Through a stalk's grab he leaves the crouch at `lowSpring` 18 (the
-    animator's own is 10), a rate wound up over `lowWind` 0.12 s (`anim.spring`, fed by `closeTick`): the spring. And a press can begin
-    one from `lowBeginM` 4.2 m, kept out to `lowOutM` 5 m, where the mode's 3.0 and 3.6 m were the limit: from out there he comes on
-    at his plain crouch walk, and the mode's carriage and the sink come in inside it.
+    animator's own is 10), a rate wound up over `lowWind` 0.12 s (`anim.spring`, fed by `closeTick`; not for the corner's grab, which
+    comes up out of its own coil): the spring. And a press can begin one from `lowBeginM` 4.2 m, kept out to `lowOutM` 5 m
+    (`stalkBeginM`, `stalkOutM`: the lab's rings draw them), where the mode's 3.0 and 3.6 m were the limit: from out there he comes on
+    at his plain crouch walk, and the mode's carriage and the sink come in inside it. The line over the man that says what the click
+    does is shown out to that start (`closeRows`: past 2.4 m it is the one line, with no row).
   Carried by the journal (a recording from before either key replays with both down: `applyKnobs`); every number has its row in the
   lab, and the lab's two toggles are the switches. THE CHECK is `stalk-check.ts` (`STALK_BREAK=1` reds them): card `key` (seven
   seconds of hold behind a man who stands grab nobody and leave him still 0.81 m behind, the stalk still his and the row offered; the
@@ -1219,10 +1224,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   his own keys the key's grab is the same one; off, the hold grabs by itself), card `low` (a press from 3.8 m begins it and with the
   rule off does not; hips 5.2 cm lower in reach than at 2.9 m on the shipped stand and 3.3 on the frozen one, never coming back up;
   neither hand ever within 22 cm of chest height; no reach, no rise; 4.5 s to close against 3.7 with it off; the pose holds when
-  let go; out of the wait his hips come up 45 cm in the grab against 20 with it off), and a harness line (rows, both stands, a
-  recording, the page's boot). One seed each: these are poses and distances, not tallies. Every card before these two writes both
-  keys DOWN in its world, so the first nine passes are still read as they were; `stalk-pose.ts` does the same. `STALK_ONLY=key,low`
-  runs cards alone for a quick look. Tools that held the click for the grab now press the key in reach: `lesson-run.ts` (verb),
+  let go; out of the wait his hips come up 45 cm in the grab against 20 with it off), card `shipped` (both keys up, as the page
+  opens: the man turning on Sam while he keeps station ends it with nobody grabbed; the button let go in reach leaves him still and a
+  new press takes it up again; a man suddenly 4.6 m off is still stalked and 5.3 m off is not; the line over the man 3.6 m and 1.8 m
+  behind him and none with the rule off or past the start; stood up behind him he is drawn standing with no sink fed), and a harness
+  line (rows, both stands, a recording, the page's boot). One seed each: these are poses and distances, not tallies. Every card before
+  these three writes both keys DOWN in its world, so the first nine passes are still read as they were; `stalk-pose.ts` does the
+  same. `STALK_ONLY=key,low` runs cards alone for a quick look: it says PARTIAL and exits 1, and a name that is no card is refused.
+  `writing-check.ts` reads every lesson line with the key up as well. Tools that held the click for the grab now press the key in reach: `lesson-run.ts` (verb),
   `sneaklab-check.ts`, `close-stills.ts`, `stalk-page.cjs` (`ONLY=nokey` drives the page with both off). `lesson-check.ts` and
   `noknife-check.ts` write `STALK.key` down where they read the held click's words. The three tutorial missions play through on the
   shipped stand. NOT DONE: the wait at a corner has no key (its timing is the press); a guard who turns while Sam keeps station is

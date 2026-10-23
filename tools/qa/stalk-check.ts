@@ -467,6 +467,37 @@ async function keyCard() {
   verdict(O.alone && O.grabs === 1, 'STALK.key off: the hold ends in the grab by itself, as before', `grabbed by itself ${O.alone} · counted ${O.grabs}`);
 }
 
+/** AS THE PAGE SHIPS IT (the tenth pass's two keys both up): what ends a stalk, and what is drawn and offered, with the key finishing the grab from the low creep —
+ *  the cards before this one run with both keys down (they read the passes before). */
+async function shippedCard() {
+  console.log('\n=== shipped: with the key and the low creep both up — what ends it, the wider way out, the line that says what the click does, and a man walked up on standing ===');
+  const mk = async (gap: number) => { const C = await world(true, SEEDS[0], gap, 0); CLOSE.ready = true; CLOSE.noKnife = true; STALK.key = up(); STALK.low = up(); return C; };
+  const inReach = async () => { const C = await mk(2.6); C.press(); for (let i = 0; i < 7 * 60; i++) C.step(); return C; };
+  const speed = (C: Ctx) => Math.hypot(C.g.player.char.vel[0], C.g.player.char.vel[2]);
+  // he turns on Sam while Sam keeps station in reach
+  { const C = await inReach(), on0 = stalkOn(C.g) === C.A && !C.held(); C.A.char.bodyYaw = C.A.char.aimYaw = -EAST; let grabbed = false, again = false; C.step(); const on1 = stalkOn(C.g); for (let i = 0; i < 120; i++) { C.step(); grabbed ||= C.held(); again ||= !!stalkOn(C.g); }
+    verdict(on0 && on1 === null && !grabbed && !again, 'keeping station in reach behind him with the button down, the man turns to face Sam: the stalk is over on that frame, and two seconds on nobody is grabbed and nothing is stalked again',
+      `waiting in reach before ${on0} · the frame after, ${on1 ? 'still stalking' : 'nothing stalked'} · grabbed ${grabbed}, stalking again ${again}`); }
+  // let go in reach, and pressed again
+  { const C = await inReach(), on0 = stalkOn(C.g) === C.A; C.lift(); for (let i = 0; i < 30; i++) C.step(); const on1 = stalkOn(C.g), v = speed(C), held1 = C.held(); C.press(); for (let i = 0; i < 20; i++) C.step(); const on2 = stalkOn(C.g) === C.A, held2 = C.held();
+    verdict(on0 && on1 === null && v < 0.02 && !held1 && on2 && !held2, 'the button let go while he waits in reach: nothing is stalked, he stands still and nobody is grabbed. Pressed on him again from there: the stalk is his again, and still nobody is grabbed without the key',
+      `waiting ${on0} · let go: ${on1 ? 'still stalking' : 'nothing stalked'}, ${f2(v)} m/s, in his arm ${held1} · pressed again: stalking ${on2}, in his arm ${held2}`); }
+  // the wider way out: begun from 3.8 m, the man is put 4.6 m off (inside lowOutM) and then 5.3 m off (outside it)
+  { const C = await mk(3.8); C.press(); for (let i = 0; i < 6; i++) C.step(); const on0 = stalkOn(C.g) === C.A; C.A.char.pos[0] += 4.6 - C.gap(); C.step(); C.step(); const on1 = stalkOn(C.g) === C.A; C.A.char.pos[0] += STALK.lowOutM + 0.3 - C.gap(); C.step(); C.step(); const on2 = stalkOn(C.g);
+    verdict(on0 && on1 && on2 === null, `begun from 3.8 m, the man suddenly 4.6 m off is still stalked (the wider way out, ${f1(STALK.lowOutM)} m) and ${f1(STALK.lowOutM + 0.3)} m off he is not`,
+      `begun ${on0} · 4.6 m off: stalking ${on1} · ${f1(STALK.lowOutM + 0.3)} m off: ${on2 ? 'still stalking' : 'nothing stalked'}`); }
+  // the line that says what the click does, out to where a press begins it
+  { const hint = async (gap: number, low: boolean) => { const C = await mk(gap); STALK.low = low; for (let i = 0; i < 4; i++) C.step(); const r = C.g.interactables.find((x: any) => x.kind === 'guard' && x.guard === C.A), row = C.g.nearby.some((x: any) => x.kind === 'guard' && x.verb); return r ? `${r.line2 ?? ''}${row ? ' [a row]' : ''}` : ''; };   // (the man's marker: the line over him — and whether the list has a row to press on him)
+    const far = await hint(3.6, up()), off = await hint(3.6, false), near = await hint(1.8, up()), past = await hint(STALK.lowBeginM + 0.3, up());
+    verdict(/hold to sneak up on him$/.test(far) && off === '' && /hold to sneak up on him$/.test(near) && past === '', '3.6 m behind him the man has one line, what the held click does, and no row to press (with STALK.low off there is nothing that far out, as before); 1.8 m behind him the same line; past the wider start nothing',
+      `3.6 m: '${far}' (off: '${off}') · 1.8 m: '${near}' · ${f1(STALK.lowBeginM + 0.3)} m: '${past}'`); }
+  // a man walked up on STANDING is walked up on standing: the low creep is out of his crouch, and nothing forces one
+  { const C = await mk(2.0), pl = C.g.player, an = pl.char.anim; pl.crouch = false; let low = 0; for (let i = 0; i < 90; i++) { C.step(); low = Math.max(low, an.low); } const head = pl.char.bones.head[1];
+    pl.crouch = true; for (let i = 0; i < 90; i++) C.step(); const headC = pl.char.bones.head[1];
+    verdict(low === 0 && head > 1.3 && headC < head - 0.3 && an.low > 0, 'stood up 2.0 m behind him with no button: for a second and a half nothing of the low creep is fed and he is drawn standing (head above 1.3 m); crouched there, he is lower by 30 cm or more and the creep\'s sink is fed',
+      `standing: the most of the sink fed ${f2(low)}, head ${f2(head)} m · crouched: head ${f2(headC)} m, the sink fed ${f2(an.low)}`); }
+}
+
 /** LOWER, HANDS DOWN (STALK.low, the tenth pass): closing, he sinks and slows and no arm comes up; the grab is the rise. */
 async function lowCard() {
   console.log('\n=== low: closing, he sinks lower and slower with his hands down, the pose holds when the button is let go, and the grab springs up out of it ===');
@@ -557,10 +588,14 @@ async function harness() {
 /** the whole card (probes.ts 'stalk'): true = every check passed. The switches are put back as they were found. */
 export async function stalkCheck(): Promise<boolean> {
   const was = { ...STALK }, close = JSON.parse(JSON.stringify(CLOSE)), rnd = Math.random; allPass = true; found = STALK.on; polFound = polVals(); keyFound = STALK.key; lowFound = STALK.low; const hold = knobsCopy(['HOLD']);
-  try { const only = process.env.STALK_ONLY?.split(',');   // (STALK_ONLY=key,low: those cards alone, for a quick look while tuning. A whole verdict is the whole card)
-    for (const [name, card] of Object.entries({ grab, still, steer, letGo, walkPress, out, tell, stepIn, shape, legs, catchShape, lands, key: keyCard, low: lowCard, corner, off })) if (!only || only.includes(name)) await card();
+  const only = process.env.STALK_ONLY?.split(',').filter(Boolean);   // (STALK_ONLY=key,low: those cards alone, for a quick look while tuning. Never a verdict: that is the whole card, and a run of some of it says PARTIAL and fails)
+  const cards: Record<string, () => Promise<void>> = { grab, still, steer, letGo, walkPress, out, tell, stepIn, shape, legs, catchShape, lands, key: keyCard, low: lowCard, shipped: shippedCard, corner, off };
+  const unknown = only?.filter(n => n !== 'harness' && !(n in cards)) ?? [];
+  if (unknown.length) { console.log(`STALK_ONLY names no card: ${unknown.join(', ')} (the cards: ${Object.keys(cards).join(', ')}, harness)`); return false; }
+  try {
+    for (const [name, card] of Object.entries(cards)) if (!only || only.includes(name)) await card();
     Object.assign(STALK, was); if (!only || only.includes('harness')) await harness(); }
   finally { Object.assign(STALK, was); Object.assign(CLOSE, close); Math.random = rnd; knobsBack(hold); }   // (the hold's table too, as it was found: world() raises its share of the polish)
-  console.log(`\n=== stalk: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
+  console.log(`\n=== stalk: ${only ? `PARTIAL (${only.join(', ')}): ${allPass ? 'those pass' : 'FAILURES above'} — not a verdict` : allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass && !only;
 }
 if (import.meta.main) process.exit((await stalkCheck()) ? 0 : 1);

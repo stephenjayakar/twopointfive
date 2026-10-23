@@ -9,7 +9,6 @@ import type { Game, Guard } from '../game/game';
 import type { Panel } from '../ui/panel';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
-import { keyCap } from './keymap';
 import { STALK, STALK_STATS, stalkOn } from '../game/stalk';
 import { CLOSE, closeSeat, closeUnseat, closeSeated } from '../game/close';
 import { TWOGEARS } from '../game/player';
@@ -103,13 +102,13 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.toggleBox(cr, 'on a wall, holding the click waits for him', () => STALK.corner, v => { STALK.corner = v; }, 'with your back on a wall [Q] and empty hands, hold the left button: the man who walks past the corner is grabbed as he passes. Off = the button on a wall does nothing');
   panel.toggleBox(cr, 'you press the key to finish the grab', () => STALK.key, v => { STALK.key = v; }, 'on: holding the click only sneaks you up behind him, and you press the action key to grab. Off = the hold ends in the grab by itself');
   panel.toggleBox(cr, 'he goes lower, hands down', () => STALK.low, v => { STALK.low = v; }, 'on: no arm comes up and he sinks lower and slower as he closes, then springs up into the grab. Off = the arm comes up and he rises as he closes');
-  panel.toggleBox(cr, 'the click is the only way to grab', () => STALK.only, v => { STALK.only = v; }, 'off = the grab\'s row is back beside the held click');
+  panel.toggleBox(cr, 'the click is the only way to grab', () => STALK.only, v => { STALK.only = v; }, 'off = the grab\'s row is back beside the held click. It only matters with "you press the key to finish the grab" off: with that on the row is there and its key grabs');
   for (const n of nums) panel.slider(cr, n.label, n.min, n.max, n.step, () => n.t[n.key] as number, v => { n.t[n.key] = v; }, n.tip);
   for (const a of ARCS) panel.slider(cr, a.label, 60, 180, 1, () => deg(STALK[a.key]), v => { STALK[a.key] = cosOf(v); }, a.tip);
   const out = panel.section('Hand the numbers back', { open: true });
   panel.buttons(out, 'numbers', [{ text: 'copy them', run: () => { copied = asText(); try { void navigator.clipboard?.writeText(copied); } catch { /* no clipboard here: the line below shows them */ } }, title: 'the numbers as they stand, as one line of text on the clipboard (and shown below)' }]);
   panel.text(out, () => copied || 'Move the sliders until it feels right, then copy the numbers and paste them where you send notes.');
-  game.objectiveText = () => STALK.on && STALK.key ? `sneak lab ▸ hold left click behind a man to sneak up, then press ${keyCap('Space')} to grab him` : 'sneak lab ▸ hold left click on a man from behind';   // (the level has no mission of its own: the HUD's line says what the floor is for)
+  game.objectiveText = () => STALK.on && STALK.key ? 'sneak lab ▸ hold left click behind a man to sneak up, then press [Space] to grab him' : 'sneak lab ▸ hold left click on a man from behind';   // (the level has no mission of its own: the HUD's line says what the floor is for)
   hands(game); sneakLabFrame(game);
   panel.show(SNEAKLAB_SYSTEM);
 }

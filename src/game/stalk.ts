@@ -122,10 +122,17 @@ const able = (g: Game): boolean => !samStaggered(g) && !g.player.breakerMove;
 /** why this man cannot be stalked from `p` right now, or null when he can (`begin`: the stricter test a press must pass — the rear arc itself) */
 /** how far off a press can begin one: close.ts's mode range — and with STALK.low the wider `lowBeginM` (he starts at his plain crouch walk and goes lower inside the mode) */
 const beginM = (): number => STALK.low ? Math.max(CLOSE.modeM, STALK.lowBeginM) : CLOSE.modeM;
+const outM = (): number => STALK.low ? Math.max(CLOSE.modeOutM, STALK.lowOutM) : CLOSE.modeOutM;
+/** how far off a press begins a stalk, and how far off one is given up (the lab's rings, close.ts's hint) */
+export function stalkBeginM(): number { return beginM(); }
+export function stalkOutM(): number { return outM(); }
+/** is the held click the ONE way to grab a man from behind (no row grabs him)? `only`, until the key finishes the grab (STALK.key) — and still on a wall,
+ *  where the wait at the corner is the click's and no stalk can be the key's */
+export function stalkClickOnly(g?: Game): boolean { return STALK.on && STALK.only && (!STALK.key || !!g?.player.wall); }
 function outOf(g: Game, gd: Guard, p: ArrayLike<number>, begin: boolean): Why | null {
   if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') return 'him';
   const d = Math.hypot(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]);
-  if (d >= (begin ? beginM() : STALK.low ? Math.max(CLOSE.modeOutM, STALK.lowOutM) : CLOSE.modeOutM)) return 'far';
+  if (d >= (begin ? beginM() : outM())) return 'far';
   if (Math.cos(bearingOf(gd, p)) > (begin ? STALK.beginCos : STALK.outCos)) return 'turned';
   if (!closeClear(g, gd.char.pos, p)) return 'wall';
   return null;
@@ -196,7 +203,7 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
   if (why) {   // (STALK.jolt: broken off by the man himself, Sam shrinks back off him — at once when the man is onto him, and when he has turned off his back only if he comes on round to face Sam: brokeDuck; not on the frame a stalk began)
     if (had === gd && STALK.jolt > 0) { if (why === 'him') duck(g, gd, 1); else if (why === 'turned') { if (STALK.joltAtOnce) duck(g, gd, STALK.jolt); else S.broke = { gd, t: g.time, at: [p[0], p[1], p[2]] }; } }   // (joltAtOnce, which only journal.ts raises: the fifth pass's rule to the letter — at any turn, on this frame, whatever stands between them — for a recording of that pass)
     end(S, why); brokeDuck(g, S); return null; }
-  const gp = gd.char.pos, at: Vec3 = [gp[0], gp[1] + 1.2, gp[2]], dist = Math.hypot(p[0] - gp[0], p[2] - gp[2]); let hold = -2;
+  const gp = gd.char.pos, at: Vec3 = [gp[0], gp[1] + 1.2, gp[2]], dist = Math.hypot(p[0] - gp[0], p[2] - gp[2]); let hold: number | null = null;   // (hold: keeping station under STALK.key — how far outside `keyM` he is, −1‥1)
   if (dist < STALK.grabM) {
     const o = closeAt(g, gd, p);
     if (o.can && o.grab && !STALK.key) { S.on = null; S.grab = gd; STALK_STATS.grabs++; STALK_STATS.last = 'grab'; }   // (game.ts takes it this frame, where it takes the row's — with STALK.key he waits here for the row's key instead)
@@ -207,9 +214,9 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
   }
   // toward the point behind his back: from his rear it is a straight line in; from a rear quarter it swings Sam in behind him as he closes
   const yaw = gd.char.bodyYaw, bx = gp[0] - Math.sin(yaw) * STALK.stationM - p[0], bz = gp[2] - Math.cos(yaw) * STALK.stationM - p[2], bl = Math.hypot(bx, bz) || 1;
-  const his = Math.hypot(gd.char.vel[0], gd.char.vel[2]), ease = STALK.closeMin * hold;
-  const pace = Math.min(STALK.pace, hold >= -1 ? Math.max(0, his + (Math.abs(ease) < 0.02 ? 0 : ease)) : his + STALK.closeMin + clamp(dist - STALK.grabM, 0, 4) * (STALK.low ? STALK.lowK : STALK.closeK));
-  return hold >= -1 ? { mx: bx / bl, mz: bz / bl, pace, at, keep: true } : { mx: bx / bl, mz: bz / bl, pace, at };
+  const his = Math.hypot(gd.char.vel[0], gd.char.vel[2]);
+  if (hold !== null) { const ease = STALK.closeMin * hold; return { mx: bx / bl, mz: bz / bl, pace: Math.min(STALK.pace, Math.max(0, his + (Math.abs(ease) < 0.02 ? 0 : ease))), at, keep: true }; }
+  return { mx: bx / bl, mz: bz / bl, pace: Math.min(STALK.pace, his + STALK.closeMin + clamp(dist - STALK.grabM, 0, 4) * (STALK.low ? STALK.lowK : STALK.closeK)), at };
 }
 /** THE TELL BY DISTANCE (close.ts closeTick, once a frame): the man Sam's body speaks of — the one stalked, else the nearest he could begin on —
  *  the point the arm goes for (his neck), and how much of the reach and of the rise the distance asks for. null = none of it (the tell as close.ts has it). */
@@ -221,7 +228,7 @@ export function stalkTell(g: Game): { gd: Guard; at: Vec3; reach: number; rise: 
   const gp = gd.char.pos, d = Math.hypot(p[0] - gp[0], p[2] - gp[2]), neck = gd.char.bones.neck ?? gd.char.bones.head, at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : [gp[0], gp[1] + 1.45, gp[2]];
   // (straight by the distance, not an S: an S did all of its work between 1.8 and 1.5 m and nothing either side — the animator's own easing rounds the ends)
   const by = (from: number, to: number) => clamp((from - d) / Math.max(0.05, from - to), 0, 1);
-  if (STALK.low) return { gd, at, reach: 0, rise: 0, low: by(STALK.lowFrom, Math.max(STALK.grabM, STALK.lowBy)) };   // (hands down, and down he goes)
+  if (STALK.low) return { gd, at, reach: 0, rise: 0, low: g.player.crouch ? by(STALK.lowFrom, Math.max(STALK.grabM, STALK.lowBy)) : 0 };   // (hands down, and down he goes — from his crouch: a man walked up on standing is walked up on standing)
   return { gd, at, reach: STALK.reach * by(STALK.reachFrom, STALK.grabM), rise: at[1] - gp[1] > 1.2 ? STALK.rise * by(STALK.riseFrom, Math.max(STALK.grabM, STALK.riseBy)) : 0, low: 0 };   // (a man sat or bent low: nothing to come up for)
 }
 /** THE WAIT AT A CORNER, ON HIS BODY (close.ts closeTick): lying in wait this frame — where his hands point (the neck of the nearest man he could take, else
@@ -239,12 +246,14 @@ export function stalkWait(g: Game): { at: Vec3; reach: number; coil: number } | 
 export function stalkHas(g: Game): boolean { const S = STATE.get(g); return !!S && S.t === g.time && (!!S.on || !!S.grab); }
 /** the man the stalk reached this frame: the grab to take now (game.ts) */
 export function stalkGrab(g: Game): Guard | null { const S = STATE.get(g); return S && S.t === g.time ? S.grab : null; }
-/** STALK.key: the row's grab on this man is about to be taken (game.ts) — is it the stalk's? With the key's rule up and his hands as a stalk wants them it
- *  is, whether the held click walked him in or his own keys did: the stalk on him (if any) is over, counted as a grab. */
-export function stalkKeyGrab(g: Game, gd: Guard): boolean {
-  if (!STALK.on || !STALK.key || gd.civ || !free(g) || outOf(g, gd, g.player.char.pos, false) !== null) return false;
-  const S = stateOf(g); S.on = null; S.armed = false; STALK_STATS.grabs++; STALK_STATS.last = 'grab'; return true;
+/** STALK.key: the row's grab on this man is about to be taken (game.ts) — is it the stalk's? With the key's rule up, his hands as a stalk wants them and
+ *  room to come up it is, whether the held click walked him in or his own keys did. A question only: `stalkKeyTook` once the grab has him. */
+export function stalkKeyCan(g: Game, gd: Guard): boolean {
+  const pl = g.player;
+  return STALK.on && STALK.key && !gd.civ && free(g) && !(pl.crouch && !canStand(g)) && outOf(g, gd, pl.char.pos, false) === null;
 }
+/** …and the grab took him: the stalk on him (if any) is over, counted as a grab */
+export function stalkKeyTook(g: Game) { const S = stateOf(g); S.on = null; S.armed = false; STALK_STATS.grabs++; STALK_STATS.last = 'grab'; }
 /** the man being stalked right now, for the picture and the checks */
 export function stalkOn(g: Game): Guard | null { return STATE.get(g)?.on ?? null; }
 /** a reset of the floor's men (game.ts resetGuards), a load: nothing is stalked */

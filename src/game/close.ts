@@ -34,7 +34,7 @@ import { canStand, grabVariant } from './player';
 import { civilianSeated, civiliansShown, SIT_ADVANCE } from './civilians';
 import type { ReadyKind } from './character';
 import { handworkOn, samWork } from './handwork';
-import { STALK, stalkCould, stalkTell, stalkWait } from './stalk';
+import { STALK, stalkBeginM, stalkClickOnly, stalkCould, stalkTell, stalkWait } from './stalk';
 
 const DEGR = Math.PI / 180;
 export const CLOSE = {
@@ -222,13 +222,17 @@ type OfferFn = (it: Interactable, verbs: Interactable[]) => void;
  *  front there is no Space row — one line says what the click does. The marker carries the way in (`close`) so the click that follows makes the move the row offered. */
 export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolean, row: RowFn, offer: OfferFn) {
   const pl = g.player; const gp = gd.char.pos;
-  if (Math.hypot(p[0] - gp[0], p[2] - gp[2]) >= 2.4) return;
+  const far = Math.hypot(p[0] - gp[0], p[2] - gp[2]);
+  if (far >= 2.4) {   // (STALK.low: a press begins the creep from further off than any row reaches — the one line that says so is shown out to there, and nothing else is)
+    if (STALK.on && STALK.low && !busy && far < stalkBeginM() && stalkCould(g, gd)) offer({ kind: 'guard', pos: v3.add(gp, [0, 1.35, 0]), line1: 'guard', line2: sneakHint(), inReach: false, off: false, guard: gd }, []);
+    return;
+  }
   const o = closeAt(g, gd, p); const kind = closeKindOf(o); const seated = closeSeated(g, gd);
   const alert = gd.state === 'alert';
   const where = !o.win ? '' : o.win.kind === 'front' ? ' · facing you' : o.win.kind === 'side' ? ' · side on' : '';
   const it: Interactable = { kind: 'guard', pos: v3.add(gp, [0, seated ? 1.05 : 1.35, 0]), line1: `guard${alert ? ' · alert' : seated ? ' · seated' : ''}${alert ? '' : where}`, line2: o.why, inReach: o.can, off: false, guard: gd, close: kind };
   const sneak = STALK.on && !busy && stalkCould(g, gd);   // (stalk.ts: the left button held on him walks Sam in to the grab)
-  if (sneak && !o.can) it.line2 = STALK.key ? 'LMB  hold to sneak up on him' : 'LMB  hold to sneak up and grab him';   // (STALK.key: the hold walks him in, the row's key grabs)
+  if (sneak && !o.can) it.line2 = sneakHint();   // (STALK.key: the hold walks him in, the row's key grabs)
   const verbs: Interactable[] = [];
   if (o.can && !busy) {
     const empty = pl.holstered, gun = grabVariant(g) === 'gun';
@@ -238,7 +242,7 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
       : (two && sneak) || bare ? 'RMB  knock him out'   // (behind him the left button is the stalk's: it grabs him)
       : two ? 'LMB  knife — lethal  ·  RMB  knock him out'
       : kind === 'behind' ? 'LMB  takedown — silent' : kind === 'seat' ? 'LMB  put him out where he sits — silent' : kind === 'side' ? 'LMB  strike — quiet' : `LMB  strike — he gets a sound out`;
-    const only = STALK.on && STALK.only && !STALK.key && !gd.civ;   // (stalk.ts: the held click is the one way to him — no row grabs a staff man)
+    const only = stalkClickOnly(g) && !gd.civ;   // (stalk.ts: the held click is the one way to him — no row grabs a staff man)
     if (o.grab && only) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, inReach: true,
       line2: empty ? `LMB  hold to grab him${two && o.strike ? '  ·  RMB  knock him out' : ''}` : `E  ${pl.rifleUp ? 'sling it' : 'holster'}, then hold LMB to grab him` });
     else if (o.grab) {
@@ -250,6 +254,8 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
   }
   offer(it, verbs);
 }
+/** the line that says what the held click does (STALK.key: the hold walks him in, the row's key grabs) */
+const sneakHint = (): string => STALK.key ? 'LMB  hold to sneak up on him' : 'LMB  hold to sneak up and grab him';
 /** this frame's best offer: the nearest man Sam could do something to (what the ready pose is taken from) */
 function noteBest(g: Game, o: CloseOffer) { const S = stateOf(g); if (S.t !== g.time) { S.t = g.time; S.best = null; } if (!S.best || o.dist < S.best.dist) S.best = o; }
 /** A civilian's gate with the windows on (player.ts keeps her rows and their wording): is Sam in her window, and near enough */
@@ -310,7 +316,8 @@ export function closeTick(g: Game) {
   else { const H = pl.holding;   // (…and he comes up out of it THROUGH the step in, not in its first frame)
     if (H && H.from && H.phase === 'grab' && an.coil > 0) { H.coil0 ??= an.coil; an.coil = STALK.cornerRise > 0 ? H.coil0 * (1 - smoothstep(0, STALK.cornerRise, H.t)) : 0; } else an.coil = 0; }
   // (stalk.ts STALK.low: his hands are down wherever the carriage would raise them, and a stalk's grab is the spring up out of the low creep)
-  { const H = pl.holding, low = STALK.on && STALK.low; an.handsDown = low ? STALK.lowHands : 0; an.spring = low && H && H.from && H.phase === 'grab' ? Math.max(1, STALK.lowSpring * smoothstep(0, STALK.lowWind, H.t)) : 0; }   // (…a rate that winds up over `lowWind` s: he leaves the floor slowly and arrives fast, where a plain ease would jump in its first frame)
+  { const H = pl.holding, low = STALK.on && STALK.low; an.handsDown = low && closeBare(g) ? STALK.lowHands : 0;   // (bare hands: with a knife the right hand's hover by the hilt is the carriage's own)
+    an.spring = low && H && H.from && H.phase === 'grab' && H.coil0 === undefined ? Math.max(1, STALK.lowSpring * (STALK.lowWind > 0 ? smoothstep(0, STALK.lowWind, H.t) : 1)) : 0; }   // (…a rate that winds up over `lowWind` s: he leaves the floor slowly and arrives fast, where a plain ease would jump in its first frame)
   if (r) CLOSE_STATS.readyFrames++;
   const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)
   an.creep = !!m;
