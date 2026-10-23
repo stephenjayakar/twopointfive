@@ -63,6 +63,9 @@ const BASE_REVS = ['636e5eaef', '3046a115e', 'c069ca16f', 'd13650f85', '0d3a1807
  *  still meet). A look twin (`<name>-gwot.json`) with no row of its own is held to the plain level's. A level with no row is held to BASE_REVS above, as it
  *  was; a level BASE_REVS does not carry must have one. */
 const LEVEL_BASE: Record<string, string> = {
+  // the ground melted round the brazier laid round: two ten-sided patches of five slabs each where two squares lay (eight boxes more, in the level's own part)
+  'pass.json': '5d2bfc3f0',
+
   // the lesson taken out of the yard (the seven Training lessons went 2026-10-23; the yard stays as a stage for checks)
   'train-move.json': 'd5893130e',
 

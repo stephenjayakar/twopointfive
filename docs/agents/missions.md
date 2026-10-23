@@ -2161,3 +2161,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE: Tab's objectives card and the small objective row still read the done step's ask while it settles; an order given in the beat still snaps
   to the done step's mark. The other missions' cards are plain (the beat): which of them follow a fight he only watches is their parts' to mark.
   Never seen on a GPU; nobody has played it.
+- **The pass: the ground melted round the brazier is round** (10-23; the maintainer, of a close shot of the burning drum on his GPU: a hard grey square
+  of ground round a round drum, plain once the fire's lamp stood at the flame). Level data, no switch. `tools/levels/pass.ts cleared('brazier', …)` laid two
+  axis-aligned squares under the drum (slush 1.7 m, earth 1.0 m); `melted('brazier', 19.6, 13.6, 0.5, 0.3)` lays each paint as a regular TEN-sided patch:
+  five slabs through the drum's centre, 36° apart, each tan 18° as deep as it is long (their union is the decagon exactly: 5 % out of round, a square is
+  41), the earth turned half a side from the slush, all solid as `cleared`'s are. Slush reaches 0.80‥0.84 m, earth 0.50‥0.53. Tops stepped 0.7 mm a slab
+  (slush 4.0 down to 1.2 mm, earth 8.8 down to 6.0), so no two lie in one plane and the earth's lowest is 2 mm over the slush's highest. NOT THE KIT'S
+  OCTAGON, on purpose: four equal slabs 45° apart with stepped tops is how a round THING is written — `scene/round.ts octagonAt` stands it up as a cylinder
+  and the cut shader draws a drum's rolled rim on its lid — and four such slabs the rule does NOT take (level tops) fail `round-check` line 1 ('a ring of
+  four the rule left'). Anyone laying a round patch of GROUND: not four equal slabs at 45°. The footstep zone `brazier` is the square it was. WHAT MOVES:
+  eight boxes more (653); every box index after 197 moves by eight and the level's fingerprint with it, so a checkpoint or a recording of the pass from
+  before does not load; `lived-check` has a row for `pass.json` (the commit that carries the patch). The tunnel station (`tut-sky`) had the same squares
+  and is mended on its own (not in this step). CHECK: `pass-check` line 12 (each paint
+  reaches the same distance from the fire on 72 bearings within 7 %, the slush shows all round the earth, the drum stands inside the earth, no slab taken
+  for a round thing), both stands; `PASS_BREAK=1` lays the two squares back and the line fails.
+  RUN (10-23, on the build head of that evening, both stands unless said): `export pass --check`, `map-check pass --no-runs`, `level-lint`, `level-needs
+  pass` (no FAIL; its two NOTEs are the row's 'untuned' and the lived-in road and back, as before), `lived-check` 393, `knobs-check`, both typechecks; the
+  probes that stand the pass up — `pass round fire standfire underfoot holebase holesnow snow snowglow snowlook wxwind bouncewalls menclear kitdeal-cards
+  cardreplay carlamps holdturn scenetweak picture findme missions-list` — all green, `round-check`'s row for the pass unmoved ([8, 19]: the patch is not
+  taken for a round thing); `ships.ts --scn pass-four --seeds 1-2` on the shipped stand: both ended, none stalled. Every box but the patch's ten is the
+  box it was, key for key (a scratch compare of the two files), and so is every other key of the file. RED AND NOT THIS STEP'S: `probes.ts
+  thresholdmenu-held` on the SHIPPED stand fails its row for The pass ('back held, then X, 5, F … DID NOT HOLD THE STACK') — the same line, word for
+  word, on the build head without this step (run side by side); green on the frozen stand. SEEN: one page run on the software adapter (`fire-page.cjs`,
+  low quality, 119 of 119 programs, no page error), two stills of the drum from above and close: no square at the drum's foot, a soft round dark patch
+  about it (most of that dark is the drum's own shadow under the fire's lamp; the earth's brown was not told apart in it). No before still was taken.
+  NEVER SEEN ON A GPU, and the maintainer's shot was a GPU's: whether the patch reads as melt or as a stain there is his to say.
