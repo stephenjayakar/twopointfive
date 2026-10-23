@@ -25,7 +25,12 @@ export function lineBox(a: Vec3, rd: Vec3, b: Box): { t0: number; t1: number; de
     if (t0 > t1) return null;
   }
   let depth = Math.min(h[0] - Math.abs(ox), h[1] - Math.abs(oy), h[2] - Math.abs(oz));
-  if (b.cut !== undefined && cutConfig.on && b.cut.length > 0) {   // CUT BOXES (scene/cut.ts): the interval inside the CUT solid, and the origin's depth under its nearest face — a cut plane included
+  if (b.round === true) {   // ROUND THINGS (scene/round.ts): the interval inside the CYLINDER about the box's own y (radius h[0]), and the origin's depth under its side or an end
+    const qa = dx * dx + dz * dz, qb = ox * dx + oz * dz, qc = ox * ox + oz * oz - h[0] * h[0];
+    if (qa < 1e-18) { if (qc > 0) return null; }
+    else { const disc = qb * qb - qa * qc; if (disc < 0) return null; const s = Math.sqrt(disc), ta = (-qb - s) / qa, tb = (-qb + s) / qa; if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) return null; }
+    depth = Math.min(h[0] - Math.sqrt(ox * ox + oz * oz), h[1] - Math.abs(oy));
+  } else if (b.cut !== undefined && cutConfig.on && b.cut.length > 0) {   // CUT BOXES (scene/cut.ts): the interval inside the CUT solid, and the origin's depth under its nearest face — a cut plane included
     if (!cutClip(b.cut, ox, oy, oz, dx, dy, dz, t0, t1)) return null;
     t0 = CUT_CLIP.t0; t1 = CUT_CLIP.t1;
     for (let k = 0; k < b.cut.length && k < MAX_CUT_PLANES; k++) { const c = b.cut[k]; if (c.n[0] === 0 && c.n[1] === 0 && c.n[2] === 0) break; depth = Math.min(depth, c.d - (c.n[0] * ox + c.n[1] * oy + c.n[2] * oz)); }   // (the planes cutClip read: ≤ MAX_CUT_PLANES, ended by a zero normal)
@@ -174,6 +179,7 @@ export class StaticCollision {
     let k = 0;
     for (let j = 0; j < n; j++) {
       const b = this.boxes[out[j]]; const c = Math.cos(b.yaw), s = Math.sin(b.yaw), dx = x - b.c[0], dz = z - b.c[2];
+      if (b.round === true) { const rr = r + b.h[0]; if (dx * dx + dz * dz < rr * rr) out[k++] = out[j]; continue; }   // (ROUND THINGS: a circle against a circle, as collideCircle)
       const lx = c * dx - s * dz, lz = s * dx + c * dz, ex = lx - Math.max(-b.h[0], Math.min(b.h[0], lx)), ez = lz - Math.max(-b.h[2], Math.min(b.h[2], lz));
       if (ex * ex + ez * ez < r * r) out[k++] = out[j];
     }
@@ -192,9 +198,14 @@ export class StaticCollision {
         const b = this.boxes[bi];
         if (b.c[1] + b.h[1] < y0 || b.c[1] - b.h[1] > y1 || (b.flags & BoxFlag.NoShadow)) continue;   // (a runtime-hidden static: see gather)
         if (this.glassWalkable && (b.flags & BoxFlag.Glass) && this.glassWalkable(bi)) continue;   // (GLASS BREAKING: a pane whose cells along a walker's height have ALL fallen out is walked through — glassbreak.ts walkable; the nav grid is NOT rebaked)
+        const dx = p[0] - b.c[0], dz = p[2] - b.c[2];
+        if (b.round === true) {   // ROUND THINGS (scene/round.ts): a body is pushed off the CIRCLE of radius h[0], straight out from its centre
+          const rr = r + b.h[0], d2r = dx * dx + dz * dz; if (d2r >= rr * rr) continue;
+          if (d2r > 1e-10) { const d = Math.sqrt(d2r), pen = rr - d; p[0] += dx / d * pen; p[2] += dz / d * pen; } else p[0] += rr;   // (dead centre: out along +x)
+          any = true; touched = true; continue;
+        }
         // circle center in box local space
         const c = Math.cos(b.yaw), s = Math.sin(b.yaw);
-        const dx = p[0] - b.c[0], dz = p[2] - b.c[2];
         const lx = c * dx - s * dz, lz = s * dx + c * dz;
         const qx = Math.max(-b.h[0], Math.min(b.h[0], lx)), qz = Math.max(-b.h[2], Math.min(b.h[2], lz));
         let ddx = lx - qx, ddz = lz - qz; let d2 = ddx * ddx + ddz * ddz;
@@ -247,7 +258,7 @@ export class StaticCollision {
     const uu = r0 * r0 + r2 * r2, su = Math.sqrt(uu), lu = len * uu;   // (the segment on the floor plan: a + t · (r0, r2), t in [0, len])
     for (let i = 0; i < dyn.length; i++) {
       const db = dyn[i]; if ((db.flags & needFlags) !== needFlags) continue;
-      if (db.rot || (db.cut !== undefined && cutConfig.on && db.cut.length > 0)) { if (segClear(a0, a1, a2, r0, r1, r2, len, db, SEG_PAD)) continue; const hit = rayBox(a, [r0, r1, r2], db, len); if (hit && hit.t >= 0) return true; continue; }
+      if (db.rot || db.round === true || (db.cut !== undefined && cutConfig.on && db.cut.length > 0)) { if (segClear(a0, a1, a2, r0, r1, r2, len, db, SEG_PAD)) continue; const hit = rayBox(a, [r0, r1, r2], db, len); if (hit && hit.t >= 0) return true; continue; }
       // an upright leaf stands inside the cylinder of radius |h0| + |h2| round its centre: a segment whose floor-plan line passes further off than that (the cross
       // product, no division), or whose stretch of it ends before / starts after it, cannot enter the leaf — rayBox would say no
       const c = db.c, h = db.h; const R = (h[0] < 0 ? -h[0] : h[0]) + (h[2] < 0 ? -h[2] : h[2]) + SEG_PAD;
@@ -347,7 +358,7 @@ export class StaticCollision {
           const bi = cell[k]; if (stamp[bi] === id) continue; stamp[bi] = id;
           const bx = boxes[bi]; if (bx.flags & skip) continue;
           let t0 = -Infinity, t1 = Infinity, depth: number;
-          if (bx.rot || (bx.cut !== undefined && cutConfig.on && bx.cut.length > 0)) {   // (CUT BOXES: a cut static takes lineBox, which holds the cut rule — the scalar copy below is the whole box's)
+          if (bx.rot || bx.round === true || (bx.cut !== undefined && cutConfig.on && bx.cut.length > 0)) {   // (CUT BOXES: a cut static takes lineBox, which holds the cut rule — the scalar copy below is the whole box's; ROUND THINGS: lineBox holds the round too)
             if (segClear(a0, a1, a2, r0, r1, r2, len, bx, pad)) continue; const s = lineBox(a, rdv ??= [r0, r1, r2], bx); if (!s) continue; t0 = s.t0; t1 = s.t1; depth = s.depth; }
           else {
             // nowhere near the segment — outside the box's height span, or its floor-plan line / stretch clear of the cylinder (|h0| + |h2|) that holds the box at any

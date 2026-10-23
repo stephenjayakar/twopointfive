@@ -73,11 +73,12 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   /** K.assignDeep, but a null on the tape is written too (a knob that is `number | null`: the wall charges carried) — only for tapes that carry their own tables */
   const put = (dst: Record<string, unknown>, src: Record<string, unknown>) => { for (const k of Object.keys(src)) { if (!(k in dst)) continue; const a = dst[k], b = src[k];
     if (plain(a) && plain(b)) put(a, b); else if (typeof a === typeof b || a === null || b === null) dst[k] = b !== null && typeof b === 'object' ? JSON.parse(JSON.stringify(b)) : b; } };
+  const RD = await import(`${ROOT}/src/scene/round.ts`);   // (a tape from before round things were round: the switch is read as the level is stood up)
   const CL = await import(`${ROOT}/src/game/carlamps.ts`);   // (a tape from before a vehicle's lamps were light targets: the switch is read as the Game is built)
   const tables = () => { const src = { ...(rc.knobs?.tables ?? {}), ...(rc.tables ?? {}) } as Record<string, unknown>, into = rc.tables ? reg : J.knobTables() as Record<string, Record<string, unknown>>;
     for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
     if (!plain(src.EXACT)) (reg.EXACT as { on: boolean }).on = false;
-    if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
+    if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; CL.carLampsTape(src); RD.roundTape(src); };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
   const Kt = await import(`${ROOT}/src/game/kit.ts`);
   const kitOf = (k: unknown) => { const c = k as { on?: unknown; members?: unknown; own?: unknown; stealth?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
     Kt.kitMission(null);   // (no mission's card stands first in the table while the tape's cards are written into it)
