@@ -5,10 +5,11 @@ import { OWNBLOW } from '../../../src/game/ownblow';
 import type { Bot } from '../lesson-run';
 import { AXIS, VAN, WALL, CORNER, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, STUN_AT, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
 import { SLOTSETUP } from '../../../src/game/slotsetup';
+import { SAMSTUN } from '../../../src/game/samstun';
 
 /** is the gun's setup switched on IN THE GAME THIS RUN PLAYS: on a page the script is its own bundle, with its own copy of the table (the page's is `__knobs`) */
 const pageOn = (name: string, here: boolean): boolean => (globalThis as { __knobs?: { registry?: () => Record<string, { on?: boolean }> } }).__knobs?.registry?.()[name]?.on ?? here;
-const setupOn = (): boolean => pageOn('SLOTSETUP', SLOTSETUP.on), blowOn = (): boolean => pageOn('OWNBLOW', OWNBLOW.on);
+const setupOn = (): boolean => pageOn('SLOTSETUP', SLOTSETUP.on), blowOn = (): boolean => pageOn('OWNBLOW', OWNBLOW.on), samStunOn = (): boolean => pageOn('SAMSTUN', SAMSTUN.on);
 
 export const query = '?quiet';
 /** the level's fights are its script's, which the tutorial frame starts: on a stand without the frame this lesson cannot be played */
@@ -16,7 +17,8 @@ export const needs = 'rails';
 /** THE LESSONS CAN BE FAILED THE WAY THEIR LINES SAY (each of these runs must end with the player down; tools/qa/tut-solo-check.ts asks it):
  *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Four more words are mistakes that must cost
  *  nothing: `east` stands on the road east of the van in the sentry's line, `piers` stands at each pier of the arch under the last two's fire, `dud` fires the
- *  first grenade from too close, `sponge` holds the right button on the two before the grenade is loaded, which must fire nothing (it asks something only where he carries sponge rounds) */
+ *  first grenade from too close, `sponge` holds the right button on the two before the grenade is loaded, which must fire nothing (it asks something only where he carries sponge rounds).
+ *  And one mistake that must cost what its card says: `flash` throws the stun grenade down the store's doorway and stays on that line, and his own can blinds him */
 const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : (globalThis as { __TUT_SOLO_ARM?: string }).__TUT_SOLO_ARM) ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
 /** THE DOOR'S LINE TEACHES HIS OWN CHARGE, and it is the one row the level lets that door offer (`rails.rows`: no pick, no boot). A stand that holds his own
  *  charges off (the frozen one) has no row there at all and the lesson cannot be done on it: the runner raises them for this run alone, as a run there
@@ -203,7 +205,18 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!fight(B, 3, 25, () => { B.step(6); }, [s])) B.fail('the man in the shop did not drop');
   },
   // from the shop's floor, the can through the doorway to the store
-  stun: B => { B.go([26.8, 0, AXIS], 10); take(B, 'Digit4'); B.click(1, STUN_AT); landed(B, 'flash', 3.4); },
+  // A STUN GRENADE BLINDS WHOEVER HAS A LINE TO IT INSIDE ITS REACH, HIM TOO (combat.ts detonateStun, the night game's rule: a clear line from the burst to a
+  // head within bang.dazzleRadius; the player by samstun.ts where that rule is on). The store's doorway has no leaf and stands in line with the shop's
+  // door, so a man who throws from inside the shop is looking down that line (the maintainer: "i flashed myself in the solo loud tutorial level even
+  // though it went into the other room"). He throws and STEPS ASIDE, as the line and its card say, and the partition is between him and the can when it
+  // goes. The way `flash` throws from nearer and stays: there the can must blind him, and the mission still goes by once he can see
+  stun: B => { const pl = B.g.player, stay = brk() === 'flash', blind = () => pl.dazzledUntil > B.g.time;
+    B.go([stay ? 28.6 : 26.8, 0, AXIS], 10); take(B, 'Digit4'); B.click(1, STUN_AT);
+    if (!stay) { B.until(() => B.g.items.items.some((x: any) => x.kind === 'flash' && !x.fired), 2); B.go([26.8, 0, AXIS + 1.5], 4); }   // (once the can has left his hand: the cursor is the throw's aim until it does)
+    landed(B, 'flash', 3.4);
+    if (!stay && blind()) B.fail('he stepped aside as the line says and his own stun grenade still blinded him');
+    if (stay && samStunOn() && !blind()) B.fail('flash: he stood in the doorway\'s line inside the can\'s reach and it did not blind him (the card says it will)');
+    if (stay) { B.say(`  flash: his own can ${blind() ? `blinded him for ${(pl.dazzledUntil - B.g.time).toFixed(1)} s more` : 'did not blind him (the rule is off on this stand)'}`); B.until(() => !blind(), 8); } },
   // the pistol, and INTO the room (a gun in a doorway has no room to come up across the jamb)
   store: B => {
     if (brk() === 'again' && !once.has('store')) { once.add('store'); handBack(B, 'stun'); replay(B, ['stun']); B.until(() => stepIs(B, 'store'), 4); B.step(30); }
