@@ -66,7 +66,7 @@ export const PICKS: Pick[] = [
   { id: 'registry', mission: 'rescue-registry',
     line: 'Two hostages and a captor who will not wait. Look through the glass before you go in.' },
   { id: 'warehouse', mission: 'warehouse-four', oneDifficulty: true,
-    line: 'The hard one. Eleven hold a ring of rooms. Fight at one door and someone walks round to your back.' },
+    line: 'The hard one. The rooms make a ring, so if you fight at one door, someone will walk around behind you.' },
   { id: 'depot', mission: 'depot-four',
     line: 'A lit yard watched from the dark. The mains are behind the hut that has no door on the yard.' },
   { id: 'barracks-day', mission: 'barracks-four', hour: 'midday',

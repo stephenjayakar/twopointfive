@@ -106,9 +106,9 @@ export async function cmdringCheck(): Promise<boolean> {
     // 1. the key down: the ring is up at the cursor, the first wedge lit in the quick key's words, the panel lists no menu — and nobody has been told anything
     {
       R.aim(spot); const n0 = O.log.length, mx = R.input.mouseX, my = R.input.mouseY; R.down(); R.step(20);
-      const V = O.ringView(), hud = O.hud(), keys = (V?.wedges ?? []).map((x: any) => x.key).join(''), mark = O.mark();
-      line(!!O.cmdRing && !!O.menu && !!V && !!V.caption && mark === null && V.lit === 1 && V.wedges[0]?.key === 1 && !!V.wedges[0].text && astray(mx, my) < 1 && hud.menu === null && O.log.length === n0 && V.wedges.every((x: any) => x.key >= 1 && x.key <= 5),
-        'the key down: the ring is up at the cursor, its first wedge lit, nobody told anything yet', `ring ${!!O.cmdRing} · wedges ${keys} · lit ${V?.lit} · first '${V?.wedges[0]?.text}' · under it '${V?.caption}', the menu's own mark ${mark ? 'drawn too' : 'not drawn'} · the panel's menu ${hud.menu ? 'listed' : 'not listed'} · order book +${O.log.length - n0}${where(mx, my)}`);
+      const V = O.ringView(), hud = O.hud(), keys = (V?.wedges ?? []).map((x: any) => x.key).join(''), mark = O.mark(), bits = O.ringKeys(), read = [1, 2, 3, 4, 5].filter(d => bits >> d & 1).join('');   // (ringKeys: the digits the game reads of the ring, with none of its words)
+      line(!!O.cmdRing && !!O.menu && !!V && !!V.caption && mark === null && V.lit === 1 && V.wedges[0]?.key === 1 && !!V.wedges[0].text && astray(mx, my) < 1 && hud.menu === null && O.log.length === n0 && V.wedges.every((x: any) => x.key >= 1 && x.key <= 5) && read === keys,
+        'the key down: the ring is up at the cursor, its first wedge lit, nobody told anything yet', `ring ${!!O.cmdRing} · wedges ${keys} (the game reads ${read}) · lit ${V?.lit} · first '${V?.wedges[0]?.text}' · under it '${V?.caption}', the menu's own mark ${mark ? 'drawn too' : 'not drawn'} · the panel's menu ${hud.menu ? 'listed' : 'not listed'} · order book +${O.log.length - n0}${where(mx, my)}`);
       // 2. … and the key up gives the lit wedge: on the floor, the quick key's own 'move there'
       const q0 = S.quick; R.up(); const row = R.tail();
       line(!O.cmdRing && !O.menu && O.log.length === n0 + 1 && row?.order === 'move' && S.quick === q0 + 1, 'the key up gives the lit wedge: held on the floor and let go, the squad moves there', `ring ${!!O.cmdRing} · menu ${!!O.menu} · order book +${O.log.length - n0} · ${row?.order}`);
@@ -412,8 +412,7 @@ export async function cmdringCheck(): Promise<boolean> {
     // the last line. what the cursor is on is kept by whoever reads the HUD, not on the order book (orders.ts HoverKept): two runs of one seed, one whose
     // HUD lines and ring hint are read every frame (with the asker's own store; once more with none) and one never read — the digest is the same, the
     // store holds the answer, and NO FIELD OF THE ORDER BOOK is another value after a read than before it (each own field: the same thing, and where it is
-    // a list or a record of plain values, the same values). THE WHOLE STATE IS NOT HELD HERE: a read still writes the room clear drill's memo of its two
-    // men (nightbreach.ts drillOf) and the collision world's query stamps (the cursor's pick) — printed, not judged.
+    // a list or a record of plain values, the same values). The whole state is printed beside it, not judged here.
     {
       const plain = (v: any) => v === null || typeof v !== 'object';
       const shot = (O: any) => Object.keys(O).map(k => { const v = O[k]; return [k, v, v && typeof v === 'object' && Object.values(v).every(plain) ? JSON.stringify(v) : ''] as [string, unknown, string]; });

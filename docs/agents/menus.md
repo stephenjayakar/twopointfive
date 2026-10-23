@@ -9,7 +9,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   accent `--m-accent`, the condensed heading stack `--m-head`; a canvas — the floor plans, the debrief's map — and the kit silhouettes repeat `--m-base` as literals).
   A fresh visit opens on the TITLE (`#menu.title`: **Play ›** · Options · Controls · Extras; Esc does nothing there; W S walk the buttons; EXTRAS swaps the title's own column for the list `ui/menu.ts EXTRAS` — the level editor and the character / effects viewer = `workbench.html#mode=level|chars`, the replay viewer `replay.html`, the listening page `sounds.html`, each a link, a NAME only (its sentence is the row's tooltip), Esc back; the BENCHMARK row starts in place from the live title (no page load), and its link — what it is while the page boots, or in a new tab — is `?bench` with the visitor's other flags kept; the list's first section was the two SHOWCASES, removed 2026-10-17 with their `?demo` / `?breach` pages (docs/agents/showcases.md); the one-file build lists no tool page (tools/artifact-page.py marks its page, `onePage`); the workbench's rail and the replay viewer's bar each carry a '‹ Game' link back; a row added to that table is a row on the title; what is kept and not listed, and why: rebuild/menus/tools.md); Play opens the ONE STARTING PAGE
   (`src/ui/startpage.ts` over the mission list — its rows in the list's six groups (`scenarios.ts MISSION_GROUPS`: training · raids · strongholds · against the clock · quiet alone · quiet as two), drawn the way Door Kickers 2 draws them (the maintainer, 10-11: "i think door kickers did a good job of this btw"): the groups are PICTURE TILES in a rail down the left (`.mgroups .msec`, each its first mission's picture and its count), the open group's missions a grid of CARDS, a picture and a name each (`.mgrid .mrow`, canvas `.mthumb`), the short list's missions first inside a group, a fresh visit on the compound; `?nogroups` = the short list on top as text rows, no tiles — in TWO STEPS named on its head, MISSION › TEAM & KIT — Enter goes on, Esc back, Enter on the second deploys. A CARD'S PICTURE IS KEY ART (the maintainer: "our art style is also AWESOME so if we could highlight it" · "use your artistic judgment though. and it can be synthetic, doesn't have to literally be a rendering of the level. make it awesome!"): `public/assets/menu/<mission id>.jpg` + `stills.json`, read by `src/ui/menuStills.ts` (a list that is not there is the answer for the page's life; a server that did not answer, a 5xx or a picture that failed to load is asked for again when the Play page is next opened: `bun run tools/qa/menustills-check.ts`); since 10-12 (the maintainer on the composed set: "they look somewhat staged and repetitive … our actual gameplay looks a lot cooler!") a mission that has a RECIPE in `tools/menu-shots/recipes.cjs` is a frame of the REAL page with the mission being PLAYED — `PORT=<dev server> node tools/menu-shots/shots.cjs make [id …]` boots the mission's own link in headless Chromium on the software adapter, the in-page director (`director.js`, `window.__ms`: Sam on the walk keys, the squad on the menu's own orders, the fight the game's) plays it undrawn until the recipe's moment (a can going off, a round, a wall coming down), then the frame is drawn from a pinned camera (minutes a picture; `shots.cjs serve` keeps pages alive for finding a moment; a recipe gives that KIND of moment again, not the frame to the pixel; across a group no two recipes share a moment, an hour and a camera) — every other mission's picture is still the first set, COMPOSED offline by `bun run tools/menu-art.ts [id …]` — a small CPU path tracer over the mission's own level file (the look's file where there is one: boxes, paint, lamps, door leaves) with a cast placed for the picture (weapon lights and lasers in haze on a loud mission, one man low in the dark and the guards' torches on a quiet one, the captor and hostages on a rescue), its mood by GROUP (`MOODS`) and its place by mission where the level's own start does not make a picture (`PIN`: the office is five missions on one floor, each its own corner); not a capture of play, nothing is marked on it, no GPU; a mission added since gets its picture by running the tool again (two to three minutes a picture a core at the shipped 760 × 475, 40 samples: about half an hour for all of them on four cores; do not edit the tool while it runs — each picture is a fresh bun that imports it. A picture is aimed by its `PIN` row: who stands where — `at`, `ops`, `guards`, `aim` —, the camera — `look`, `yaw`, `pitch`, `dist` —, doors `ajar`, and any field of the mood) and until then — and in the one-file build, which has no folder beside it — its card shows the menu's own drawn model of the place, `src/ui/planArt.ts` (the level's boxes tilted as the game's camera sees them, walls cut, flat fills: also THE MAP SHEET beside the list, where the way in is marked). MISSION: the
-  cards · a briefing · a SETUP rail of one row a setting with its VALUE (Difficulty, its three levers hung under it, Hour,
+  cards · a briefing · a SETUP rail of one row a setting with its VALUE (Difficulty, its three levers hung under it (a fourth since 10-23, `You're told`: stealth.md), Hour,
   Weather, Way in; a click or its key steps it; the list's own setting rows are parked unseen in `.mstore` and the rail's rows press THEIR buttons, so what a setting may
   be is still `ui/missions.ts`'s) · a Team & kit row · the place as that map sheet under the rail (with the tiles; not drawn in a window under 730 px tall). SHOW, NOT TELL (the maintainer, 10-11: "we should generally show, not tell. e.g. no \"play this first\", wordy explanations of different options, etc."): a group's heading is a word or two with its row count, no sentence explains a setting (a row's sentence is its `title` tooltip and the screen reader's live region `.mread`; a Custom difficulty arms in its own row as 'Custom → <level>'; the place line shows only where a mission has no plan; the kit step repeats no setting, the Approach fact and a chip's 'Sam' / 'Red pair' line are not drawn), the way in is an accent dot on the plan at the picked start — rings at every start for 'Dealt' (`ui/missions.ts drawPlan(…, mark)` off the level file's `scenarios`; none for the office's rows or a quiet mission), a roster chip shows what differs man to man as icons — his gun, what he carries a count of, the wand (`.lo-ics`, `loadout.ts CHIP_SHOWS`), a kit tile speaks only when a step is refused, and a carried wand or card camera on a mission with no fog of war — nothing for it to look into: the solo night always, a quiet mission with its fog lever off — says so on its own tile: the value reads 'no use here' in the dim grey with a faint icon, the label lit and the arrows live (`.kc-row.idle` ← kitCard.ts `MemberCardOpts.idle`, asked by loadout.ts `noFog()` off the mission's own link, redrawn when the screen's fog lever moves; an empty tile is like any other. It was the whole tile at 40 %, still reading CARRIED: the maintainer, 10-12, "wand greyed out"). A new line on a menu screen needs the same test: can it be shown instead. TEAM & KIT: team size, squad kit, the roster chips, THE PICKED MAN IN 3D (`src/ui/kitFigure.ts`: the cast's own mesh and the rig's own prop boxes — rigProps.ts, read only — posed by the game's animator and drawn by a small SOFTWARE view of the menu's own on a 2D canvas, LIT BY RAYS as the game is (`src/ui/figureTrace.ts`: a lattice of points over him and a patch of the mission's ground keeps what each lamp and the second-hand light put on it, traced a slice a frame on the CPU, through a mirror of post.wgsl's tone curve — keep the two in step) and breathing on the game's own idle, in the dress the mission will give him and under the HOUR picked for it (`FigureAsk.hour` → `lightOf`: that hour's own sun and sky off `game/hours.ts HOURS`, scaled by `FIGURE.day` and put under the mission's weather by `FigureAsk.cloud` → hours.ts `cloudLight`; night or none = the figure's own key lamp, pale rim and `FIGURE.glow`, a soft glow on the backdrop behind him: `FIGURE.back`; the ground's paint is `FIGURE.ground`, lifted at night — `ground.night` — so the key lamp shows its pool and his cast shadow, and by day as the sun comes down or the cloud closes — `day.ground` / `groundCloud`). THE SIDEARM IS DRESSED FOR THE CLOSE VIEW, in the figure's own picture only (`dress()` reads rigBoxes' part list — `RigNodeMeta` — and draws the pistol's one-box slide as slide + frame + sights + trigger guard, the can eight-sided with a bore, a shell round the holstered pistol; `FIGURE.yawPistol` turns a pistol man so he shows round it, the lamps turning with the view and the camera looking `FIGURE.lead` m in front of him so a held-out gun is not cut by the frame; the game's rig and every box the game draws are untouched) (`TPS_PROFILE=shipped bun run tools/qa/kit-figure-sheet.ts --out DIR [--only substr] [--per N] [--part k/n]` = rows of men over many kit cards, no page; `--part k/n` in n processes draws the sweep side by side: 63 figures in about two minutes on four cores); what he holds and carries follows his kit rows and the picked chip, a drag turns him; it reads the card it is handed and writes nothing, shows for each roster place the man the mission will stand up (`figureMan` → `game/cast.ts operatorAt`, the ONE deal of a teammate's cast variant: by his place among the team as staged, not by his id, which a rescue's captors move — `bun run tools/qa/kit-figure-roster-check.ts`, `ROSTER_BREAK=1` must fail; a show's cast keeps the deal by id), builds its man under a die of its own, and draws nothing until main.ts has handed it the loaded cast — `setFigureCast` — so a page whose boot died shows no figure; he is drawn on the page's one thread at `FIGURE.fps` 30 pictures a second (every second frame of a 60 Hz display, every fourth of 120: 24 fell 3, 2, 3, 2 frames apart on 60 Hz), `fpsSlow` 20 where a frame of him costs over `slowMs` of that thread, only the box of the canvas that changed is laid again, and the canvas says what a frame costs (`data-ms`, `data-fps`); THE LEVEL IS NOT DRAWN BEHIND A PAGE THAT HIDES ALL OF IT (the maintainer, 10-12, on Team & kit: "framerate isn't great here -- are we rendering this + the level?" — we were: the world under the start page and the options layer is frozen and both paint over the whole view, yet the level's whole frame was drawn every display frame; main.ts `viewHidden` now skips `engine.render` `behind.warm` 90 frames after such a page goes up — never while calibrating, under a sweep or a recording, a script's `__runFrames` or a tape; the title, the pause card and the options layer opened over a paused run — it lets the frame show through: `.over-game` — show the level and are drawn as ever; `?menurender` = drawn every frame as it was, `__behind {on, warm, drawn, skipped, hidden}`; `PORT=<dev server> node tools/qa/menu-idle-page.cjs` = the real page on the software adapter); `PORT=<dev server> node tools/qa/menu-art-page.cjs [outDir]` = the real page on the software adapter: the figure drawn and changed by a kit row and by the pick, the key art on the cards, and the drawn plan in its place on a page marked as the one-file build, ~8 min), the picked man's kit as tiles (`ui/kitCard.ts`,
   icons `src/ui/kitIcons.ts`). A sticky foot bar on both with the page's ONE filled block, which leads on: 'Team & kit ›' on MISSION (the page's own button on the loadout's bar, `.sp-next`; Deploy a quiet word beside it — the maintainer, 10-12: "confusing that CTA is to deploy but that skips the kit selection screen"), DEPLOY on TEAM & KIT; a mission played with the kit as issued (a Training lesson, root `.nokit`) has no kit to pick and keeps Deploy as the block on both). A man's kit holds ONE LINE on his roster chip however full his card is (the things are sized in ems of ONE icon height for all five chips: 17 px, or the chip's width over the fullest man's row — `--u` on `.lo-slots`, loadout.ts `drawSlots`; `PORT=<dev server> node tools/qa/kitline-page.cjs`, no GPU needed, `KITLINE_BREAK=1` must fail). The page comes up by itself only for
@@ -1234,47 +1234,65 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that lies left to right (the card's standing keys; a walk by the four directions would be a change of the screen's keys); a count's tile has no
   pop-up, only its arrows; in a short window the pop-up lies over the lower part of the guns' tiles. Seen only in
   headless Chromium on the software adapter: never on a GPU, nobody has played it.
-- **The kit step says the job and teaches itself** (2026-10-22; `src/ui/kitBrief.ts KITBRIEF`, `src/ui/kitGuide.ts KITGUIDE`; the maintainer: "we should
+- **The kit step says the job, and a tutorial mission teaches planning on it** (2026-10-22, the walkthrough moved onto a tutorial mission 10-23; `src/ui/kitBrief.ts KITBRIEF`, `src/ui/kitGuide.ts KITGUIDE`; the maintainer: "we should
   teach how to pick squad layouts! so maybe a tutorial on the gear page for a mission (that's skippable). honestly it doesn't make a ton of sense right
   now since you don't know anything about the objective or map when picking kit"). TWO THINGS, EACH ITS OWN SWITCH, both UI only (nothing under
   `src/game` reads either, no knob table, no journal key, no `FROZEN_HOLDS` row: they are mounted by `ui/startpage.ts` alone, which no headless stand
-  opens). **THE BRIEF** (`?kitbrief=0` = the step's head as it was, the name alone): Team & kit keeps a band across its top — the mission list's own map
+  opens; the one game rule beside them, a lesson's kit that can be picked, is `ISSUE.picked`). **THE BRIEF** (`?kitbrief=0` = the step's head as it was, the name alone): Team & kit keeps a band across its top — the mission list's own map
   sheet at the left with the way in marked (`.msheet > .mmap`; a click or M makes it large over the step with the name and the job under it, `.kb-cap`;
   again, Esc or Enter puts it back; the foot's key line gains 'M map' where there is a map to open), and beside it the name, what is set (`.mcsum`), the
   facts and the job (`.mblurb`), the list's own elements shown by this file's rules and no new sentence. It adds to the facts row WHAT THE PLACE ASKS OF
   A KIT, counted off the level's file by the plan's own fetch AS THE MISSION IS STAGED (`ui/missions.ts placeNeeds`, `Plan.needs`): the doors found
   locked, those of them that are steel, a rescue's hostages — a rescue's side door (`scenarios.rescue.side.door`) is unlocked by its staging and is not
   counted; the bundled office's rescue is read from `levels/office.scenarios.ts`. The cells are `.mfact.kb`, drawn on this step only; a count is a digit
-  to five and a word past it (`countWords`), and the list's Defenders cell is drawn AGAIN by this file with its count in words ('eleven'), the list's
+  to five and a word past it (`countWords`), and the list's Defenders cell was drawn AGAIN by this file with its count in words ('eleven'; since 10-23 only under `?mystery=0`), the list's
   own cell hidden on this step. IN A SHORT WINDOW (800 px tall and under: the maintainer's own is about 1000 x 673) THE BAND IS NOT A PIXEL TALLER THAN
   THE NAME ALONE WAS: the map a small mark, the name, the facts under it, and no job sentence (no text is cut to fit: `textsize-page` holds that) — the
   job is read on the large sheet. `kitdense-page`'s bars (a gun's pop-up ends over the foot at 1317 x 775, nothing scrolls at 1200 x 675) are why.
   Under `?nogroups`, in a window under 900 px wide, or where the plan did not come there is no map on the step, only the words, and M is not taken.
-  **THE WALKTHROUGH** (`?kitguide=0` = none, and no word for it; `?kitguide=1` = played on this visit whatever the browser remembers): a browser that
-  has never finished it is walked through the step on the first mission whose kit can be picked — a small card beside ONE lit row, the rest of the step
-  dimmed and still live, the keys put on the lit row, and the card goes when its thing is DONE (`beatDone`) or on its 'Next': the job (the map opened
-  and put back) · who comes (another size) · a kit for the squad (another named kit put on; its card says what THIS place asks: hostages, locked doors)
-  · each man (another picked) · his card (one thing on it changed by hand) · go (Deploy, or its 'Got it'). A beat whose row this mission's step does
-  not have is left out (a man alone has no roster beat; with the brief off, or no map, there is no job beat). ENTER UNDER A CARD IS THE CARD'S 'NEXT'
-  wherever it would otherwise deploy (every row but the named kits, the man's card and Deploy's own): a first press of Enter on a card never starts the
-  mission. 'Skip' on every card, or Esc: the first Esc is the walkthrough's, the next is the step's own. Finished, skipped or deployed UNDER A CARD, it
-  is not shown again (localStorage `twopointsix.kitguide`); THE WAY BACK is the word 'How to pick' on the step's head. A TUTORIAL OR TRAINING ROW HAS
-  NONE: its kit is issued (`kitAsIssued`), there is no card to change, and a deploy from one does not count as seen. NOT PLAYED UNASKED IN A BROWSER A
-  SCRIPT DRIVES (`navigator.webdriver`, `KITGUIDE.driven`): every other page tool measures the step as it stands; the brief IS on their pages. THE
-  SEAMS, in `ui/loadout.ts`: `LoadoutOpts.embedded.key(code, repeat)`, asked before any row of the kit screen (the map's M, and the keys that put the
-  large sheet back); `embedded.rest(code, repeat)`, asked after the highlighted row and before the screen's own Enter / Esc (the walkthrough: an open
-  gun pop-up's Esc shuts the pop-up first); `LoadoutScreen.kitName`, the named kit that is on ('' = a mix of the player's own). WHAT THE WALKTHROUGH
-  CHANGES AND KEEPS: the things it asks the player to try are real changes to the kit this machine keeps. CHECK:
+  **THE WALKTHROUGH IS A TUTORIAL MISSION'S OWN PLAN** (2026-10-23; `src/ui/kitPlan.ts KIT_PLANS`, the engine `src/ui/kitGuide.ts`; the maintainer, of
+  the walkthrough that first came up on every mission: "this tutorial is good but we should attach it to a tutorial mission (and make it bespoke and
+  explain how to plan), not for the regular ones"). A REGULAR MISSION PLAYS NONE and has no word for one. The walkthrough is a SCRIPT (`GuideScript`:
+  beats as data — the row a card sits by, its words for the step as it stands, what counts as done, the key it is remembered under, the word on the
+  head, `auto` = played unasked), and the one played unasked is the plan written for one mission, the tutorial's squad mission ('A harder fight',
+  `tut-squad`): the first the player walks into with the four, after the mission that had him throw each grenade by hand, on a street with what a kit
+  is chosen for. Its row is the one lesson NOT played with the kit as issued (`game/kit.ts ISSUE.picked`, `docs/agents/missions.md`), so its cards are
+  on the step. THE BEATS, each a small card beside ONE lit row, the rest of the step dimmed and still live, the keys put on the lit row, gone when its
+  thing is DONE or on its 'Next': **Plan it first** (the map opened and put back — large, it names the street's rooms, the machine gun and the locked
+  hall as words pinned on the sheet, `.kb-pin`, placed through the sheet's own projection: `planArt.ts sheetView`, `missions.ts sheetSpots`; and the
+  line under it says what to look for) · **Pack for the rooms** (Stun heavy put on: the squad throws one into a room first when it has one to spare,
+  it is sent into three rooms on that street by the lesson's own door lines, and the card counts what they carry now, three as issued, so nothing to
+  spare — the step's own 'Squad carries' line stays in view under the row) · **The machine
+  gun** (your own card opened: a frag goes over sandbags; Stun heavy took yours and one will be handed over, but pack your own, so a smoke canister is traded for a frag grenade — or, with one
+  carried, 'keep it') · **The four** (a teammate's card opened) · **That's a plan** (Deploy; packed with no frag it says one will be handed over, which
+  the page does, `kit.ts kitLessonPage`, and his card's frag tile reads '1 · mission's' on that step: `loadout.ts lentNow`). A beat whose row the step does not have, or whose thing is already so (Stun heavy on), is left out. THE WORDS
+  follow the writing rules (`docs/agents/writing.md`): to "you", who presses the key; a count in a sentence is written out; no digit, no compass word.
+  ENTER UNDER A CARD IS THE CARD'S 'NEXT' wherever it would otherwise deploy (every row but the named kits, the man's card and Deploy's own): a first
+  press of Enter on a card never starts the mission. 'Skip' on every card, or Esc: the first Esc is the walkthrough's, the next is the step's own.
+  Finished, skipped or deployed UNDER A CARD, it is not shown again, under ITS OWN key (localStorage `twopointsix.kitplan.tut-squad`: a browser that
+  went through the general walkthrough has not been through this); THE WAY BACK is the word 'How to plan' on the step's head. NOT PLAYED UNASKED IN A
+  BROWSER A SCRIPT DRIVES (`navigator.webdriver`, `KITGUIDE.driven`): every other page tool measures the step as it stands; the brief and the word ARE
+  on their pages. THE SWITCHES: `?kitguide=0` = no walkthrough and no word on any step (that mission's cards stay) · `?kitguide=1` = played on this
+  visit whatever the browser remembers, and ON A REGULAR MISSION the step's GENERAL walkthrough (`kitGuide.ts GENERIC`: the job · who comes · a kit for
+  the squad · each man · his card · go; word 'How to pick', key `twopointsix.kitguide`), kept for comparing and played only so · `?kitpack=0` = the
+  game's rule off: that mission as issued again, no cards on its step and so no plan. UI only but for that rule. THE SEAMS, in `ui/loadout.ts`:
+  `LoadoutOpts.embedded.key(code, repeat)`, asked before any row of the kit screen (the map's M, and the keys that put the large sheet back);
+  `embedded.rest(code, repeat)`, asked after the highlighted row and before the screen's own Enter / Esc (the walkthrough: an open gun pop-up's Esc
+  shuts the pop-up first); `LoadoutScreen.kitName`, the named kit that is on ('' = a mix of the player's own). WHAT IT CHANGES AND KEEPS: the things it
+  asks the player to do are real changes to the kit this machine keeps, and that kit is what the mission is then played with. CHECK:
   `PORT=<dev server> node tools/qa/kitguide-page.cjs [outDir]` — the real page in headless Chromium, no GPU needed, real keys and clicks at 1440 x 900,
   1353 x 770 and 1000 x 673: the brief's map, words and counts on the registry and the office's rescue, no digit above 5 among the facts, M, the short
-  band no taller than the old head, every beat's card up beside its lit row, whole in the window and clear of the row, put away by its own thing and
-  not by another, Enter as Next, a pop-up's Esc, a card changed by key, the map opened mid-way, a team size named on the address kept, the memory, the
-  word, both Esc, each switch off, a tutorial row, a quiet mission's card, a driven browser (139 PASS); `KITGUIDE_BREAK=1` = both switches off, the
-  step as it was: FAILS (25 lines at one size). The kit step's other page checks were run beside the build head's own: `kitdense-page`, `kitline-page`
-  and `quietgear-page` red on the same old lines as the head, `kitpaste-page`, `kittree-page` and `textsize-page` clean. NOT SEEN: on a GPU (so never
-  with the team's picture in the left column behind it), by a first-time player, and Deploy pressed under a card (it calls `deployed()`; no check
-  loads a mission for it). OPEN, for the menus' owners: the Mission step's own facts row still writes 'Defenders 11' as digits; a named kit a mission
-  recommends (a field on its row, a mark on the Kit row's button) is not built — only what the place asks is said.
+  band no taller than the old head; a regular mission with no card, no word and a bare map; the squad mission's cards at its own four, the five words
+  pinned on its large map (each on the sheet, clear of the others), every beat's card up beside its lit row, whole in the window and clear of the row,
+  no digit and no compass word on it, put away by its own thing and not by another, the squad's line in view and counted as the card counts it, its own
+  key, the word, both Esc, a browser that finished the general walkthrough still walked through, Enter as Next, a pop-up's Esc, the words with the kit
+  as issued and with no frag packed, each switch, the general walkthrough under `?kitguide=1`, the handed frag read whole on its tile, a driven browser (148 PASS); `KITGUIDE_BREAK=1` = the
+  walkthrough and the brief off: FAILS. The game's side has its own check (`probes.ts kitpack`, `docs/agents/missions.md`): the plan's marks lie in the
+  level's rooms of those names, what its cards say of the kits is true of the kits, and the mission is played through on five kits. NOT SEEN: on a GPU
+  (so never with the team's picture in the left column behind it, and the pinned words never over the sheet as a GPU's browser draws it), by a
+  first-time player. (The Mission step's facts row wrote 'Defenders 11' as digits: since 10-23 no screen draws that cell, `MYSTERY`.) OPEN, for the menus' owners: a named kit a mission
+  recommends (a field on its row, a mark on the Kit row's button) is not built for regular missions — only what the place asks is said. OPEN, for the
+  squad mission's owner: its frame refuses the player's smoke and stun slots all mission, so of what he packs for himself only the frag is used.
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
   a one off UI for tweaking a scene like this? i'm curious what all the "layers" are for the effects and what variables we can configure"). Any link with
@@ -1495,6 +1513,70 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the page while the board leaves it spare (`KEYMAP.camSpace`, docs/agents/player.md); under `?camspace=0` it is Ctrl as it was, and there a double
   tap is two more presses of it: on Windows Ctrl then W still closes the tab. NEVER SEEN ON A GPU by anyone here; how fast the view should come round,
   whether 250 / 300 ms is the right tap and 10 px the right let-go are first guesses in `BEHIND`, `TAPTWICE` and `CARRY`.
+- **The camera runs itself: a double tap of the camera's key puts it on, the key held with the mouse or a walk key gives the view back** (`src/host/autocam.ts`,
+  `AUTOCAM.on`, 10-23; the maintainer: "double tap space just turns on auto camera mode, and then space + movement disables to go to manual mode", and "the
+  squad AI is already magical and just tapping Q feels amazing. i think we can do the same for the camera"). SWITCH: on in the page (`?autocam=0` = the page as it
+  was; `?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms), OFF in the module and on the frozen stand (`FROZEN_HOLDS['AUTOCAM.on']`,
+  `TPS_AUTOCAM=1`), in the knob registry and `JOURNAL_KNOBS` (a recording from before the key replays with it off). The MODE is not the switch: `AUTOVIEW.on`
+  (`host/findme.ts`), off until the key is tapped twice, kept per machine (`localStorage` `twopointsix.autocam`), also the row "Auto camera" in Options > Game,
+  which stands where "Double tap Space" stood (Reset puts it off). With the switch on and the mode never put on the game and the view are the build's, by run
+  digest, on the free and the fixed step.
+  WHAT MOVED: the double tap was the Options row "look where he looks" (`FINDME.behind`, off at the start). Now the tap puts the mode on AND brings the view
+  round as that row did; with the mode on, a tap twice brings it round again. Under `?autocam=0` the old row is back.
+  THE RULE (all in `autoRead` / `autoFrame` / `turnGoal`, called from `host/loop.ts camStep`, which only a tool that steps through `stepFrame` reaches):
+  the look-at is his feet moved toward, in rising order, the middle of the room he is in, the door under his hand or the way out he walks at (and the floor
+  past it), the squad's beat for a few seconds (a door order changing phase, a post newly given), the enemies he could shoot (hostile, in the picture, a clear
+  line: never one `fogOfWar.hidden` says is hidden). It is held inside a box on the screen so he never leaves the middle (`sideM` / `awayM` / `backM`, scaled
+  by the zoom), eased, and frozen while a mouse button is down. NOTHING LEANS ON THE CURSOR (the maintainer had already put the aim pan at none). The zoom is
+  the hand's own, a little tighter in a room and in close-in, wider under the sky and in a fight, and out to fit what is framed; it never zooms in on a fight;
+  the wheel under the key still zooms and that becomes the base. THE TURN: the view is the seat's input (walk keys and the aim ray are read through it), so the
+  view turns by itself only with his feet still for half a second, no button down, no hostile man shown in his line (or within `nearM`, 9 m, in his line or
+  not), no shot for three seconds, and at most once every 2.5 s, for two reasons: a wall stands between the lens and him, or what is framed lies on the lens's side of him. A walk key, a click, the hand taking the cursor back, or anything that would have stopped it
+  beginning ends such a turn where it is. His aim goes round with the view (`AimCarry`); a long turn looks at his point past walls it did not look past before, so `carryStep` takes
+  an `aimOf` and, where the cursor's ray would land off his line, puts the cursor on another point of that line (`CARRY.tries`, `CARRY.heights`): measured on
+  a 141° turn beside a door, 0.01° off at the end and at the most on the way (it was 8° to 38° mid-turn before that). GIVING IT BACK (`autoHand`): the key
+  held and the mouse moved more than 12 px inside 0.4 s, or the key held over a quarter second with a walk key down; two quick taps with a walk key held still
+  put it ON. Going off, the zoom goes back to the hand's own. IT STANDS DOWN, the mode still on, under a pin, a show, a spectated man, plan mode's look point, the sky seat, a puppet, and with him down; it
+  starts no turn while a lesson locks the camera or teaches the view. Sounds are NOT used: the sound list is every sound on the floor, enemy footsteps
+  included, and a camera that leaned toward them would point at men the fog hides.
+  CHECK: `bun run tools/qa/probes.ts autocam` (`tools/qa/autocam-check.ts`, 13 lines: the frame and the turn from made-up scenes; the mode on and off
+  through `stepFrame`; a real door walked at and stood by; a real hostile man shown and fog-hidden; the stand-downs; three CONTROL lines: switch on and mode
+  never on = the same digest and view, the scene read every frame and never used = the same game, the stand words and the journal). ALL PASS on both stands;
+  `AUTOCAM_BREAK=1` (the switch left off) fails four of them on both. On the real page, software adapter: `PORT=… node tools/qa/autocam-page.cjs` (the row,
+  a real double tap, the look-at no longer following the mouse, the key + a real drag, the key + a walk key, kept over a reload, Reset).
+  `findme-page.cjs` now opens the page with `autocam=0` and `findme-check.ts` stands the switch off: their subject is the old row's double tap. One floor (the office), one seed. NOBODY HAS SEEN OR PLAYED
+  IT, AND NEVER ON A GPU: every number in `AUTOCAM` is a first guess (how far it leans, how long it lingers on the squad, the turn's speed and its 2.5 s
+  gap, the zoom range). KNOWN: with the mouse held still, a frame that leans or zooms slides the floor under the cursor, so his aim drifts a little toward
+  where the frame went (worst with the cursor near his feet); the frame freezes under a held button for that reason. No HUD mark says the mode is on: the
+  view coming round is the answer to the tap.
+- **The auto camera may turn in a fight and on the move, smoothly: the sway** (`AUTOCAM.sway`, `src/host/autocam.ts autoSway`, 10-23; the maintainer, of
+  the bullet above: "i think we could play with auto camera moving during battle so long as it does so smoothly. bonus points for being correlated with
+  moment and reversible so it still feels somewhat connected to human control", and then "smoothness is the only thing that's mandatory"). SWITCH: on in the
+  page (`?autosway=0` = the turn rule of the bullet above, only at rest), OFF in the module and on the frozen stand (`FROZEN_HOLDS['AUTOCAM.sway']`,
+  `TPS_AUTOSWAY=1`); a key of the `AUTOCAM` table, so a recording from before it replays with it off (`journal.ts applyKnobs`). Nothing with the mode off.
+  THE RULE: the yaw the hand left the view at is the anchor (`cam.yaw − A.sway`); the sway is a lean round it, a function of the moment and not a sum of
+  turns. It leans toward the middle of the MEN OF THE FIGHT, so the fight comes up the screen where the picture is longest (`swayFight`, 0.6 of the angle to
+  them, 38° at the most; a man of the fight is a hostile man the picture shows who was in his line within `swayLinger`, 2 s, so one stepping in and out of
+  cover does not rock the view; men gone round behind the lens to the other side do not flip the side it took; their middle within 1.5 m of him leans
+  nothing), and, while no fight asks for a lean, toward the side he moves to ("moment" was read as movement: `swayMove`, 14° at 2.5 m/s across the view;
+  straight up or down the screen leans nowhere), 45° in all. SMOOTH IS THE BAR (his one hard rule): what the scene asks for is worked out ten times a second
+  and eased (`swayEase`), the yaw goes to it by a critically damped spring (`swayHz`) whose speed is capped (`swayRate`, 11.5° a second), and every stop or
+  change of mind goes through that spring or a decay: a mouse button down (its speed dies away over a fifth of a second, and it stays stopped 0.6 s after the
+  button comes up, so tapped shots are one stop), a wall (it never goes to a yaw that puts a wall between the lens and him or a man in his line where the
+  hand's own view has none; the share the walls allow falls at once and comes back only after a second clear), the view gone to plan mode or a show (it
+  coasts to a stop and is where it was when the view is his again). REVERSIBLE: the cause gone, it comes back to the hand's yaw, to the bit; a turn the hand
+  made meanwhile is kept. A come-round (the double tap) takes the view from it at once, and a turn at rest waits for it to be home. NOTHING CARRIES HIS AIM
+  through it: the view turns slowly under a live cursor, and a held walk key bends his path at the same slow rate, as in any game whose camera follows.
+  CHECK: `autocam` lines 14 to 16. 14, from made-up scenes: the lean and its first step (a seventh of the cap), home to the bit, the walk, a button and ten
+  tapped shots, a wall and a wall that flickers, the kept side, one of two men in and out each second (3.5° of movement, the worst case: longer out than the
+  linger), the men's middle beside him, a turn by hand mid-lean kept, the switch off; and over ALL of it no step past the cap and no step that differs from
+  the one before by more than the spring can make it. 15: a real hostile man to one side through `stepFrame` on the fixed step (the lean, a second behind a
+  wall and still a man of the fight, home when the fog hides him), and the same with the sway off: the yaw never moves. 16: the stand words and the journal.
+  ALL PASS on both stands; `AUTOSWAY_BREAK=1` fails 14 and 15 on both. Lines 1 to 13 run with the sway off: they are the rule as it was. A second reader
+  simulated the first cut and found a 2.9° jump at the snap home after a hand's tremor, rocking when one of several men peeked and a stutter under tapped
+  fire: all mended, and the rate came down from 26° to 11.5° a second on that reading. Real page: `autocam-page.cjs` walks across the view with the mode on
+  (the lean, the cap, home). One floor, one seed. NOBODY HAS SEEN OR PLAYED IT, NEVER ON A GPU: whether a view that turns under a held walk key and a live
+  cursor is welcome in a fight is the maintainer's to say, and every number is a first guess.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
   notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the
@@ -1663,3 +1745,63 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one keeps the other row, whose note reads the mission's own for the hidden one. Its LINK is any row's link: the visitor's Hour and Weather picks stay
   on it and on every later link, and the row's own win when the page boots. The debugger's 'weather kind' buttons say so and do nothing on a row with
   its own weather. No row names one yet.
+- **How many are inside is a mystery, and the large map is left by a click beside it** (10-23; `src/ui/missions.ts` `MYSTERY`, `src/ui/kitBrief.ts`
+  `KITBRIEF.outside`). The maintainer, off the Team & kit step with its map opened large: "clicking outside the map should close it. we should also
+  remove all defender counts from the menus, etc., it should be a mystery!" **THE COUNT** (`?mystery=0` = the cells as they were): no screen draws a
+  Defenders cell: the Mission step's sheet, the same cell on the Team & kit step (`kitBrief.ts`) and the fact on a mission's load page
+  (`loadbrief.ts`) all ask `defendersShown(m)`, which is '—' ("no cell") while the switch is on, and the pause card's intel cell says how many were
+  questioned without "of N". The facts row loses the cell and not a gap (`.mfacts.nodef`: three columns on the old sheet, no row at all on the one
+  starting page's Mission step, where Defenders was its only cell, nor on a kit band with nothing to say of locks or hostages). A row's `defenders`
+  number is untouched: the stand-up, the picks probe and the levers still count on it. THE WORDS
+  are changed in the data and have no switch (a wording change, like the writing guide's): the rows that said a head count say the place instead
+  (`scene/scenarioList.ts`: the pair's break room, the block's squads, the warehouse, the compound, the barracks, the kill house; `scene/picks.ts`
+  the warehouse's line), Hard's sentence names no number of guards (`game/difficulty.ts`), and the kit lesson's first card no longer says the band "shows who holds the
+  floor": it sends the player to the map, where the job is read (`ui/kitGuide.ts`; true in a short window too, where the band has no room for the job). KEPT ON PURPOSE: a smaller number that is the puzzle's premise ("two sentries who watch each
+  other", "a gunman waits in one of them"), every Training and tutorial row (the number is the exercise; the lessons' own steps are their
+  owners'), and the end-of-run card's "N of M down" (after the fact). NOT TOUCHED, and claimed to their owners: what the enemy SAYS during a
+  mission (the last-stand call "{n} of us left", the staff radio check's roll of callsigns, a questioned guard's "{N} of us tonight", the response
+  team's "{n} of us", the numbered Tango callsigns on the radio strip). **THE MAP** (`?mapout=0` = as it was: a click on the map, M, Esc, Enter or
+  Space): large, the sheet reads as a card laid over the step, so a click anywhere off it puts it back. The click, and the press that begins it, are caught on the document before
+  the step hears them and do nothing else: a teammate's slot under the pointer is not picked, a kit card does not take the keys, the figure does not
+  start to turn. Small, a click on the step is the step's own; so is a click made after the window was narrowed until the sheet is no longer drawn. Both
+  switches are UI only: nothing under `src/game` reads them, no recording carries them, no frozen row. CHECKS: `bun run tools/qa/mystery-check.ts`
+  (also `probes.ts mystery`, families ui and words: no mission has a cell, no row, pick line or Hard sentence says a head count, no file under
+  `src/ui` but `missions.ts` reads a row's `defenders`; `--list` prints the lessons' numbers it does not judge; `MYSTERY_BREAK=1` must fail), the
+  missions-screen probe (the sheet's cell with the switch on and off) and `PORT=<dev server> node tools/qa/mystery-page.cjs [outDir]` (the real
+  page in headless Chromium, real keys and clicks at 1440 x 900 and 1000 x 673: no cell and no count word on the kit step, the large map's
+  caption, the Mission step and three load pages; the click beside the large map on a teammate's slot; each switch off; `MYSTERY_BREAK=1` must
+  fail). SEEN: those two runs and stills of the three screens, on the software adapter. NOBODY has seen it on a GPU or played it, and the pause
+  card's intel tooltip was read in the code only.
+
+- **Tab shows the objectives and the squad** (2026-10-23; `ui/tabkey.ts` choice `brief`, `ui/tabcard.ts`, `index.html #tabcard`; the maintainer, with
+  the corner panel cut down to what the two keys do: "if you don't have a menu open, tab opens up an objectives modal that also has your squad
+  equipment?"). With nothing to back out of (Tab is the back key first: `game/backkey.ts`; the card also stays down over anything `game.backable()`
+  names where `?tabback=0` has the back key off) and no menu open, Tab HOLDS THE GAME (`main.ts frozen`, as a pausing card does) on a card in the
+  middle of the screen: the OBJECTIVE under its own word with the par or clock at the right, its sentence, and where it lists (`objectiveList`,
+  only under the word 'objective': a room clear's rooms) each thing with a tick (taken), an arrow (the one being called) or a ring (to do); the
+  SQUAD with the block's own title note at the right (loud or quiet, the formation), a line a man in the squad's order with what he is doing
+  and what he covers (`orders.statusOf` and `cover.tail`, the block's own line past his name) and under it his kit in a line, a man lost struck, then the block's plain notes (what the squad carries between them, a
+  charge set, who waits on him). A man's kit is the STAGED card (`kit.ts kitOf`, then `kitWords(i, m)`): what this run gave him, not this machine's
+  table; its counted things read 'started with 1 stun, 1 charge' (`tabcard.ts staged`), because throwables and charges are one squad
+  pool once the run is on and the live count is the note under the men. His own kit has no section (the slot bar shows it). Tab again or Esc goes back (Esc alone does not open the pause card over it); a menu,
+  Options, a lesson's card or a script that steps the page puts it away. F5 under it puts it away and saves by hand, as on the pause card. Every word is one the game already makes, through `keyText`; the card lays them out once
+  as it comes up (not a live readout) and scales with the text size (`textsize.ts LAYERS`). It is the home of what the corner panel stopped saying
+  (`docs/agents/player.md`, the corner panel). THE SWITCH is the Tab key's row on Options, Game (the row is 'Tab key' now, no longer '(trying out)'; 'Objectives', beside Nothing, Run so far, Order
+  who, Controls): it is what Tab does where nobody has chosen (`TABKEY.first`, set by the page before its menu is made), `?tab=off` = nothing for a visit, and a choice
+  made on Options stands, Nothing included (`picked`, kept with the choice: a kept 'off' from before this was written by every machine and is no
+  choice). OFF in the module, for anything headless and on a page a script drives (`navigator.webdriver`: the page tools press Tab for other
+  things; they pass `?tab=brief` to see it). No rule of the game reads it and nothing of it is in a recording: under a replay or a script that
+  steps the page (`__runFrames`) the hold does not apply and the card is put away on the next frame. CHECK: `tabcard` (family `ui`), both
+  stands, `TABCARD_BREAK=1` red: the choice, what settles it and what is kept, the list, the card of a room clear with the squad of four (a
+  staged kit, a man lost), the page's wiring read as text. DRIVEN on the real page on the software adapter (`tut-squad`, a room clear, four men,
+  `?tab=brief`, no picture drawn): Tab put the card up at 560 x 422 in the middle with the six rooms, the four men each with his words and kit and
+  the two carry notes, the clock stood still under it, Tab took it down and the clock ran, Tab put it up again, Esc took it down with no pause
+  card; the same page without the word showed nothing on Tab; no console errors. MEASURED: nothing; it moves no tally. DECLINED, from review: the card as one of
+  `overlay.card`'s (those are a lesson's, with its own key and locks) or a page of `#menu` (the menu is the pause, with its own Tab); the
+  objective handed over in parts by `mission.ts` (the line is the one source the top line, the corner and this card all read; the list is cut
+  from it only under 'objective'); a place in `bubbles.ts BLOCKER_IDS` (the card is above the bubbles by z-index and holds the game); one page-level 'what holds the game' reader
+  for the load brief, a lesson's card, the menu and this card (a change to `main.ts` wider than this card; the check pins each site it added);
+  `picked` and `kept` as one field (the kept file's two keys are already on machines); the menu's HTML escaper shared (a private one-liner of a
+  neighbour's file); the break reaching the list and the page lines (both are fixed inputs: a break there would be by fiat). NOT DONE: a
+  lesson's frame does not teach or lock it (the frame's key locks do not know Tab's card); nobody tracks what a man himself has left (the pool is the squad's), so a man's counts stay
+  what he started with; a run's end line still says to press Enter while the card holds the game (Tab or Esc first). Never seen on a GPU. NOBODY HAS PLAYED IT.

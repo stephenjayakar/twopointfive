@@ -75,6 +75,7 @@ import { fireWeapon } from './combat';
 import { feedBegin } from './gunreload';
 import { isHostile, teamOfId } from './teams';
 import { w, wg } from './words';
+import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nomorale = every man as steady as he was) and by the shipped
  *  stand; the harness's frozen stand leaves it off (TPS_MORALE=1 turns it on). Dread is 0‥1: `jumpy` / `broken` are the rungs' lines, `hyst` how far under its
@@ -198,7 +199,7 @@ export function inTheDark(g: Game, gd: Guard): boolean {
 /** has he company: a living man of his own side inside `aloneM` with nothing solid between his eyes and that man's chest */
 export function hasMate(g: Game, gd: Guard): boolean {
   const c = gd.char, eye = headOf(c);
-  for (const o of g.guards) { if (o === gd || !ours(o) || o.team !== gd.team || o.held) continue;
+  for (const o of g.guards) { if (o === gd || !ours(o) || o.team !== gd.team || o.held || runnerNobody(o)) continue;   // (runner.ts nobody: a mate who has dropped his gun is no company)
     if (flat(o.char.pos, c.pos) <= MORALE.aloneM && !g.col.segmentBlocked(eye, chestOf(o.char))) return true; }
   return false;
 }

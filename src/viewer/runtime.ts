@@ -127,6 +127,8 @@ export class Runtime {
     this.gizmo = new RigGizmo(canvas, cam, this.input);
     { const sk = new URLSearchParams(location.search).get('smokekeep'); if (sk !== null) engine.settings.smokeKeep = smokeKeepOf(sk); }   // ?smokekeep=0|1|2: the smoke under high as each preset had it / high's smoke at half size (the page) / high's whole path (ui/quality.ts SMOKE KEEP) — before the Quality below puts its first preset on
     { const og = new URLSearchParams(location.search).get('onegrid'); if (og !== null) engine.settings.oneCacheGrid = !(og === '0' || og === 'off' || og === 'false'); }   // ?onegrid=0, as on the game page (main.ts): before the Quality below puts its first preset on
+    { const os = new URLSearchParams(location.search).get('onesolve'); if (os !== null) engine.settings.oneSmokeSolve = !(os === '0' || os === 'off' || os === 'false'); }   // ?onesolve=0, as on the game page (main.ts)
+    { const fs = new URLSearchParams(location.search).get('fireshed'); if (fs !== null) engine.settings.fireSmokeShed = !(fs === '0' || fs === 'off' || fs === 'false'); }   // ?fireshed=0, as on the game page (main.ts)
     this.quality = new Quality(engine, this.smoke);
     { const qp = new URLSearchParams(location.search).get('quality'); if (qp && (QUALITY_NAMES as string[]).includes(qp)) { this.quality.auto = false; this.quality.apply(qp as QualityName); } }
     { const q = new URLSearchParams(location.search); if ((meshAuthored(ch.mesh) || q.has('charmats')) && !q.has('nocharmats')) engine.settings.charMats = true; }   // character materials: as on the game page (main.ts) — on for a mesh with slot-named materials, ?charmats dresses the mannequin, ?nocharmats holds the two tints
@@ -231,6 +233,8 @@ export class Runtime {
       case 10: st.hold.on = !st.hold.on; st.hold.t = 0; if (st.hold.on) { st.hold.phase = 0; st.hold.chain = true; } this.msg(st.hold.on ? 'hold: taken again (the reach, then held)' : 'hold: let go (the layers ease out)'); break;
       case 11: st.doorHand.w = st.doorHand.w > 0.5 ? 0 : 1; this.msg(st.doorHand.w ? 'door hand: pushing (w 1)' : 'door hand: off the leaf (w 0, easing out)'); break;
       case 12: an.signal('squeeze'); break;   // (the stack's 'set': appended, the three older signals keep 1‥3)
+      case 13: an.signal('aside'); break;     // (showwhy.ts 'off my line': the hand pushed out to his left)
+      case 14: an.signal('aside', -1); break; // (… and across his front to his right)
     }
   }
   /** Pose the figure at an exact instant of a one-shot for a still: pauses the character clock, pushes the state into the animator, runs out anything still
@@ -242,7 +246,7 @@ export class Runtime {
     this.armLong(false);
     for (let i = 0; i < 400 && (an.kicking || an.signalling || an.inThrow); i++) char.update(1 / 60);
     for (let i = 0; i < 48; i++) char.update(1 / 60);
-    if (shot) this.fireTac(shot === 'kick' ? 0 : shot === 'flinch' ? 4 : shot === 'throw' ? 5 : shot === 'squeeze' ? 12 : ['hold', 'go', 'rally'].indexOf(shot) + 1);   // (squeeze sits at the END of TAC_SHOTS: indexOf's −1 used to make it the door kick)
+    if (shot) this.fireTac(shot === 'kick' ? 0 : shot === 'flinch' ? 4 : shot === 'throw' ? 5 : shot === 'squeeze' ? 12 : shot === 'aside' ? 13 : ['hold', 'go', 'rally'].indexOf(shot) + 1);   // (squeeze sits at the END of TAC_SHOTS: indexOf's −1 used to make it the door kick)
     for (let i = 0, n = Math.max(0, Math.round(t * 120)); i < n; i++) char.update(1 / 120);
     return `${shot ?? 'settled'} @ ${t.toFixed(3)} s${an.kicking ? ` (kick t=${an.kickTime.toFixed(3)})` : ''}${an.inThrow ? ` (throw t=${an.throwTime.toFixed(3)}${an.throwTime >= THROW_RELEASE ? ', released' : ', can in hand'}, ${an.throwRead})` : ''} — viewer paused`;
   }

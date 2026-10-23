@@ -15,17 +15,18 @@ import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClear
 import { sideLocal } from './packside';   // (a leaf)
 import { sideHung } from './gunslots';   // (called inside handProps only)
 import { voiceOf, flameOf } from './gunlook';   // (called inside fireWeapon only)
+import { stowHang, stowFired } from './workstow';   // (called inside guardProps / fireWeapon only)
 import { bigCarried, bigFired } from './bigkit';   // (called inside handProps only: the big slot's tool a man carries — null with its switch off)
 import { tally } from './mission';
 import { chronShot, chronLightShot, chronDown, chronHit } from './chronicle';
 import { plainShort } from './gear';   // (a leaf: a weapon's name as a chronicle row writes it — the same on and off the 2010s kit)
 import { witnessKill, hostageHitBark, inHand, rigOf } from './guards';
-import { runnerFled } from './runner';
+import { runnerFled, runnerBare } from './runner';
 import { handworkOn, swapHeld, beltTorch, workProps } from './handwork';
 import { tacticsManDown } from './tactics';
 import { moraleManDown } from './morale';
 import { netQuietFall } from './netquiet';
-import { CLOSE } from './close';
+import { CLOSE, closeBare } from './close';
 import { KITANIM, kitShow, kitGunUp, kitSlingFront, kitSlingRest } from './kitanim';
 import { Firearm, WEAPONS, WeaponDef, DropKind } from './weapons';
 import { noteRound } from './suppression';
@@ -61,6 +62,7 @@ import { recapRound } from './deathrecap';
 import { wallReport } from './blastFeel';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { ffLive, ffBody, ffSide, ffUnpressed, ffNote, ffPast } from './friendlyfire';   // (called inside fireWeapon only)
+import { disarmHand } from './disarm';   // (called inside handProps only)
 import { holdFireShot } from './holdfire';   // (called inside fireWeapon only)
 import { sneakSuit } from './cast';   // (called inside handProps only: the sneaking suit's rifle is drawn black)
 
@@ -111,6 +113,7 @@ function aiWide(g: Game, sg: Guard | null, shooter: Character, def: WeaponDef): 
 }
 export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) {
   const sg = isPlayer ? null : g.guards.find(x => x.char === shooter) ?? null;   // the guard whose round this is (null: Sam, or a stray in a harness)
+  if (sg?.workStow) stowFired(sg);   // (workstow.ts: a round out of a gun let go of for a two-handed job — it is in his hands at once; the fire site's own gate keeps this from happening)
   if (!isPlayer && shooter.anim.bigTool) bigFired(g, shooter);   // (bigkit.ts, BIGSLOT.moves: a teammate with the hammer out who fires — it is on his back at once)
   const sgTeam: Team = isPlayer ? 'player' : sg?.team ?? 'guard';
   const def = o.weapon ?? firearmOf(g, shooter, isPlayer).def; let spread = o.spread ?? 0;
@@ -380,8 +383,8 @@ export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: Dow
  *  dropped torch — guards.ts attachFlashlight rides gd.dropped whatever it is); `suppressed` = drawn with its can (fill 1: Sam's Five-seveN). Once down it is set
  *  dressing: nothing on the floor is picked up — a guard's magazines do not fit the Five-seveN, so a dead man's gun is no ammunition (player.ts buildInteractables
  *  offers no row for it). */
-export function dropFromHand(g: Game, c: Character, kind: 'torch' | DropKind, along: Vec3, dir: Vec3, suppressed = false, quiet = false): Item {
-  const h = c.bones.handR ?? v3.add(c.pos, [0, 1.0, 0]);
+export function dropFromHand(g: Game, c: Character, kind: 'torch' | DropKind, along: Vec3, dir: Vec3, suppressed = false, quiet = false, from?: Vec3): Item {
+  const h = from ?? c.bones.handR ?? v3.add(c.pos, [0, 1.0, 0]);   // (`from`: a thing that was not in his hand — runner.ts, the sidearm off his thigh)
   const v: Vec3 = [c.vel[0] * 0.6 + dir[0] * 1.1 + (simRandom() - 0.5) * 0.6, 0.9 + simRandom() * 0.6, c.vel[2] * 0.6 + dir[2] * 1.1 + (simRandom() - 0.5) * 0.6];
   const it = g.items.spawn(kind, [h[0], Math.max(0.25, h[1]), h[2]], v, { who: c.id, fill: suppressed ? 1 : 0, heading: v3.yawOf(along), yaw: v3.yawOf(along), life: kind === 'torch' ? 90 : GUN_ITEM_LIFE });
   if (kind === 'rifle') { it.tumbleRate *= 0.55; it.spin *= 0.5; }   // 0.7 m and 2.7 kg of it: it turns over on the way down, it does not flick round like a pistol
@@ -433,7 +436,8 @@ function handPropsRaw(g: Game, out: Box[]) {
   const heldNow: ThrowKind | null = pl.down || busy || !kindSel || pl.holstered || pl.dragging || pl.sprinting ? null
     : an.inThrow ? (an.throwing ? (pl.pendingThrow ? pl.pendingThrow.kind : THROW_BY.on && an.throwTime >= THROW_RELEASE ? null : kindSel) : null)   // (THROW_BY: the can is out of the fist the frame it is in the air — `throwing` runs three frames past the release, and the fist used to show the next can under the one just thrown; a wind-up called off before that keeps its can, as ever)
     : g.throwCount(kindSel) > 0 ? kindSel : null;
-  const knifeNow = (!!pl.holding && pl.holding.variant === 'arm' && !pl.down && !an.holdGunSide) || (an.knifeShown && !pl.down && !pl.holding && !pistolUpNow);   // a man held with the hands empty: the knife is out, in the fist at his throat (character.ts holdLayer poses it) — for exactly as long as the hold lasts, sheathed again the frame it ends however it ends; swapped mid-hold (E) the old tool leaves the fist on the key's frame (the variant / Player.holstered change there) and the other arrives half way through the animator's hand-over, the fist then back behind the man's shoulder (holdGunSide) — never the two in one fist
+  an.noKnife = closeBare(g);   // (close.ts CLOSE.noKnife: nothing of his reaches for a blade)
+  const knifeNow = !an.noKnife && ((!!pl.holding && pl.holding.variant === 'arm' && !pl.down && !an.holdGunSide && !disarmHand(pl.holding)) || (an.knifeShown && !pl.down && !pl.holding && !pistolUpNow));   // a man held with the hands empty: the knife is out, in the fist at his throat (character.ts holdLayer poses it) — for exactly as long as the hold lasts, sheathed again the frame it ends however it ends; swapped mid-hold (E) the old tool leaves the fist on the key's frame (the variant / Player.holstered change there) and the other arrives half way through the animator's hand-over, the fist then back behind the man's shoulder (holdGunSide) — never the two in one fist
   // the FN2000: in both hands (selected and off the sling, hands not busy on a lock or a man, not hauling a body — the animator's long gun then, player.ts), else slung across
   // his back for as long as the kit has it; gone from a downed man's hands if that is where the round found it (hitPlayer dropped the item), still on his back if it was there.
   // One place a frame.
@@ -450,7 +454,7 @@ function handPropsRaw(g: Game, out: Box[]) {
   const inHand = INHAND.on && !pl.down;   // (inhand.ts: his pistol is laid out in the hand's own frame, and the figure is told what its right hand holds — a frame behind, as gripCan is: its look-only pass turns that hand onto the aim line; a rifle drawn without kit handling's fit has the hand moved onto its grip instead)
   pl.char.inHand = !inHand ? null : pistolInHand ? IN_PISTOL : rifle === 'hand' && !fit && INHAND.long ? longHold('sc20k') : null;
   an.grip[1] = held !== null;   // the fist round a can stays a fist (character.ts HAND: the hand pass would otherwise let an 'empty' right hand hang open through the can) — fingers only, read by nothing; by what the fist SHOWS
-  rigBoxes(pl.char, { goggles: kitYouNvg(pl) /* (kittree.ts: a card that left them at home — nothing is worn) */, nv: pl.nv, slot: pistolInHand ? 1 : 0, lightOn: pl.pistol.lightOn && pistolInHand && !pl.sprinting && lensUp, isGuard: false, holster: !(pl.down && pl.pistolUp), held, knife, rifle, rifleBlack: sneakSuit(g, pl.char), rifleLight: rifle === 'hand' && pl.rifle.lightOn && !pl.sprinting && lensUp, ...(CLOSE.on ? { sheath: true } : null), ...(kit ? { kit } : null), ...(fit ? { fit } : null), ...(inHand ? { inHand } : null), ...(KITANIM.on && rifle === 'slung' && kitSlingFront(g) ? { slingFront: true, slingRest: kitSlingRest(g) } : null), ...(pl.char.anim.nvShown !== undefined ? { nvK: pl.char.anim.nvShown } : null), ...(bigS ? { big: bigS, bigK: pl.down ? 0 : an.bigK, bigClear: bigOver } : null) }, out);   // (close.ts: the knife he reaches for is drawn in its sheath on his chest only with the close-in switch on)   // holstered (E): empty hands, the pistol drawn on the thigh   // canister up (or the rifle in the hands): gun on the thigh, can in the fist only if a can is what is selected; down: whatever was in the hand has left it (dropFromHand) — a holstered gun stays holstered, the goggles stay on   // (the light itself is forced off while down / sprinting: no blazing lens then)   // (a downed player's light is forced off in updatePlayer: no lit lens on the body either)
+  rigBoxes(pl.char, { goggles: kitYouNvg(pl) /* (kittree.ts: a card that left them at home — nothing is worn) */, nv: pl.nv, slot: pistolInHand ? 1 : 0, lightOn: pl.pistol.lightOn && pistolInHand && !pl.sprinting && lensUp, isGuard: false, holster: !(pl.down && pl.pistolUp), held, knife, rifle, rifleBlack: sneakSuit(g, pl.char), rifleLight: rifle === 'hand' && pl.rifle.lightOn && !pl.sprinting && lensUp, ...(CLOSE.on && !CLOSE.noKnife ? { sheath: true } : null), ...(kit ? { kit } : null), ...(fit ? { fit } : null), ...(inHand ? { inHand } : null), ...(KITANIM.on && rifle === 'slung' && kitSlingFront(g) ? { slingFront: true, slingRest: kitSlingRest(g) } : null), ...(pl.char.anim.nvShown !== undefined ? { nvK: pl.char.anim.nvShown } : null), ...(bigS ? { big: bigS, bigK: pl.down ? 0 : an.bigK, bigClear: bigOver } : null) }, out);   // (close.ts: the knife he reaches for is drawn in its sheath on his chest only with the close-in switch on)   // holstered (E): empty hands, the pistol drawn on the thigh   // canister up (or the rifle in the hands): gun on the thigh, can in the fist only if a can is what is selected; down: whatever was in the hand has left it (dropFromHand) — a holstered gun stays holstered, the goggles stay on   // (the light itself is forced off while down / sprinting: no blazing lens then)   // (a downed player's light is forced off in updatePlayer: no lit lens on the body either)
   workProps(pl.char, out);   // (handwork.ts: the objective in his hands as it comes out of its rack)
   samLaserBoxes(g, out);   // (irlaser.ts: the IR laser on the gun in his hands, his goggles down, a scenario's team on the floor — nothing otherwise)
   if (g.rails?.skyOn) out.length = mine0;   // (rails.ts, the seat with nobody on the floor: the parked player is not drawn — game.ts drawMen — and neither is his kit)
@@ -469,10 +473,11 @@ export function hammerSide(c: Game['player']['char']): { o: Vec3; z: Vec3 } | nu
 /** what ONE guard / unit carries and wears, as boxes (handPropsRaw's row for him — it only reads him) */
 function guardProps(g: Game, gd: Guard, out: Box[]) {
   const big = bigCarried(g, gd.char);   // (bigkit.ts: a teammate's big slot — null for everybody else and with the switch off: his row as it always was)
-  if (!big) { guardKit(g, gd, out, false); hungSide(g, gd, out); return; }
+  const stow = stowHang(g, gd);   // (workstow.ts: his gun is out of his hands for a two-handed job — hung as for the hammer; false with the switch off)
+  if (!big) { guardKit(g, gd, out, stow); hungSide(g, gd, out); return; }
   const an = gd.char.anim, alive = gd.state !== 'dead';
   an.bigSide = big === 'hammer' ? hammerSide(gd.char) : null;
-  guardKit(g, gd, out, alive && an.bigTool !== null && an.hideHeldItem);   // (the hammer in his hands: his own gun hangs down his front — the animator's own word for when his hands are off it)
+  guardKit(g, gd, out, stow || (alive && an.bigTool !== null && an.hideHeldItem));   // (the hammer in his hands: his own gun hangs down his front — the animator's own word for when his hands are off it)
   // … then the tool itself, LAST of his boxes (the motion keys of the parts above are their ordinals). The shotgun OUT (bigkit.ts gunUp) is already the gun in his
   // hands, drawn above as his weapon: the gun he put down for it hangs down his front, and no second shotgun rides his back
   if (big === 'shotgun' && alive && gd.slung?.out) { const own = gd.slung.own.def.rig; if (own === 'carbine' || own === 'sc20k') hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); else hungSide(g, gd, out); return; }
@@ -483,18 +488,18 @@ function guardProps(g: Game, gd: Guard, out: Box[]) {
 function freeCan(g: Game, gd: Guard, out: Box[]) { if (GUNHAND.on && GUNHAND.throwFree && gd.char.anim.throwOff && fragInFist(g, gd)) freeCanBoxes(gd.char, 'frag', out); }
 /** gunslots.ts: a teammate with his sidearm out — the long gun he let go of hangs down his front on its sling */
 function hungSide(g: Game, gd: Guard, out: Box[]) { const own = sideHung(gd); if (own) hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); }
-/** … his row without the big slot's tool. `hang` (never without one): his own gun is out of his hands for it — a long gun on its sling down his front, a sidearm on his thigh, no lit lens, no laser */
+/** … his row without the big slot's tool. `hang` (the tool in his hands, or a two-handed job — workstow.ts): his own gun is out of his hands for it — a long gun on its sling down his front, a sidearm on his thigh, no lit lens, no laser */
 function guardKit(g: Game, gd: Guard, out: Box[], hang: boolean) {
   gd.char.inHand = null;   // (inhand.ts: said below on the rows that put a pistol, a torch or a long gun in his hands)
   const HO = INHAND.on && sideOfTeam(gd.team, gd.trained) === 'defender' ? INHAND.holsterOut : 0, HR = HO ? { ...RIG.holster, out: RIG.holster.out + HO } : undefined;   // (inhand.ts: a defender's holster clear of his long shirt)
   const rk = rigOf(gd); const carbine = rk === 'carbine';   // rifles (guards.ts rigOf): the carbine is in both hands in every living state, its light on the handguard, the sidearm on the thigh throughout; dying, the whole rifle leaves his hands (killGuard → the row's 'rifle' drop) and the sidearm he never drew stays on the body
   if (gd.state === 'dead') { if (nvgWorn(g, gd)) gogglesBoxes(gd.char, false, out, RIG.goggles);   // (nvg.ts: a teammate's goggles stay on his head, dark, as Sam's do)
-    if (gd.dropped?.kind === 'torch' || gd.dropped?.kind === 'rifle') holsterBoxes(gd.char, out, rk === 'sc20k' ? { slide: RIG.pistol.slide, grip: RIG.pistol.grip, suppressor: RIG.pistol.suppressor } : { slide: RIG.guardPistol.slide, grip: RIG.guardPistol.grip }, undefined, rk === 'sc20k' ? undefined : HR); return; }   // what he held is on the floor; a man who died on patrol — or a rifleman, whose sidearm never left the thigh — still wears his sidearm (an operative's, the suppressed one he wore alive)
+    if ((gd.dropped?.kind === 'torch' || gd.dropped?.kind === 'rifle') && !runnerBare(gd)) holsterBoxes(gd.char, out, rk === 'sc20k' ? { slide: RIG.pistol.slide, grip: RIG.pistol.grip, suppressor: RIG.pistol.suppressor } : { slide: RIG.guardPistol.slide, grip: RIG.guardPistol.grip }, undefined, rk === 'sc20k' ? undefined : HR); return; }   // what he held is on the floor; a man who died on patrol — or a rifleman, whose sidearm never left the thigh — still wears his sidearm (an operative's, the suppressed one he wore alive)
   const fl = gd.flashlight;   // torch carried in the hand on a calm patrol (the spot light sits at its lens), drawn pistol with a weapon light otherwise (an alarmed floor patrols drawn: Guard.drawn) — guards.ts handCarry / inHand
   const rule = inHand(gd), held = swapHeld(gd, rule);   // (handwork.ts: for the frames of a torch ↔ sidearm swap the hand shows what it really has — the rule's own answer otherwise)
   if (handworkOn('swap') && rule !== null && held !== 'torch' && rk === 'pistol' && !kitPistol(gd) && gd.torchLostAt < 0) beltTorch(gd.char, out);
   if (!held && gd.gunLostAt >= 0 && rk === 'pistol' && !kitPistol(gd) && gd.torchLostAt < 0 && handworkOn('swap')) beltTorch(gd.char, out);   // (HOLD.dropGun: the pistol went to the floor at the grab; the torch he was not carrying is still on his belt)   // …and the torch hangs on his belt whenever it is not in his hand (nor on the floor)
-  if (!held && ((!carbine && runnerFled(gd)) || (rk === 'pistol' && gd.gunLostAt >= 0))) return;   // (runner.ts, false with its switch off: the sidearm he dropped is on the floor — empty hands and an empty holster; a rifleman who ran keeps the sidearm he never drew, below)
+  if (!held && ((runnerFled(gd) && (!carbine || runnerBare(gd))) || (rk === 'pistol' && gd.gunLostAt >= 0))) return;   // (runner.ts, false with its switch off: the sidearm he dropped is on the floor — empty hands and an empty holster; a rifleman who ran keeps the sidearm he never drew, below — unless it went to the floor too: runnerBare, RUNNER.anyway)
   if (!held) { holsterBoxes(gd.char, out, { slide: RIG.guardPistol.slide, grip: RIG.guardPistol.grip }, undefined, HR); return; }   // his torch is on the floor (knocked out at the grab) and the pistol stays holstered: empty hands
   if (hang) {   // (bigkit.ts: his hands are on the hammer — the three rows below with the gun let go of)
     if (rk === 'sc20k') rigBoxes(gd.char, { goggles: nvgWorn(g, gd), nv: nvgDown(g, gd), slot: 0, lightOn: false, isGuard: false, holster: true, rifle: 'slung', slingFront: true, rifleBlack: sneakSuit(g, gd.char) }, out);

@@ -259,3 +259,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   turning on the floor at 0.13 s (25 % under 500 Hz). Plain `render` rows, not levelled to a `HEARD` number (no voice before them to keep a level from);
   both on the listening page under 'hands'; the old table (`sfxWas.ts`) has neither, so `?oldsounds` plays these. Graded by `tools/qa/audio-render.ts --all`
   and held by `probes.ts wallfelt`'s table line. Played at `WALLSNAP.voiceOn` 0.35 and `voiceOff` 0.5. Written blind: nobody has heard them.
+- **The grab's three voices (2026-10-23)** (`src/audio/sfx.ts` rows `grabCatch`, `gunStrip`, `gunDown`; two other takes of each in `sfxAlt.ts`; rows on the
+  listening page under 'hands', where `grabCatch` also plays the whole grab in order, pistol and carbine). The maintainer: "we should also make the grab super
+  satisfying. cool animation where sam disarms him and satisfying sounds". They ride the disarm move's switch (`HOLD.disarm` under `HOLD.dropGun`, both in `src/game/character.ts`; the rule is `game/disarm.ts`): ON in the page
+  (`?disarm=0`), off in the module and on the frozen stand (`TPS_DISARM=1` with `TPS_HOLDDROP=1`); off, the grab says what it said (`grabScuffle`, the knocked-out
+  gun's borrowed `magDrop`). WHO PLAYS WHAT: `player.ts startGrab` (through `disarm.ts disarmCatch`, one condition for all three) plays `grabCatch` at his throat on the grab's frame (gain 0.5, rate pinned to 1 so the beat does
+  not wander); `game/disarm.ts take()` plays `gunStrip` at the gun on the frame it leaves his hand (0.45; 0.22 s after the catch as the move stands); the item's
+  first landing plays `gunDown` ONCE at the floor (0.4, less for a slow landing; 0.82 s after the catch for a pistol, 0.58 s when Sam's own pistol raps it out).
+  Gains: `disarm.ts DISARM_GAIN`. A carbine is the same strip and knock at rate 0.8; the rapped strip is at 1.12. `heldProtest` still comes in as the hold locks.
+  THE VOICES: `grabCatch` 0.31 s, a whip of sleeve, one thump 0.03 s in (99 % of its energy under 2 kHz), a breath cut off; `gunStrip` 0.20 s, a dry snap, four
+  ticks of slide rattle, one click, nothing ringing past 25 ms (57 % above 2 kHz: the bright beat between two dull ones); `gunDown` 0.30 s, one knock and three
+  dying ticks. In the game by `audio-render.ts`'s yardstick (dB against the takedown's `bodyHit`): catch +2.5 (the scuffle was +0.8, the whip is +7.6), knock
+  −2.8, strip −4.6. WHAT THE ROOM HEARS is what it heard before, to the number: the grab's one `prop` event at level 0.12 on the grab's frame and nothing for the
+  strip or the gun set down (the knocked-out gun never was an event either). A second man 3.5 m off on open floor goes from 0 to 0.083 awareness and turns to
+  look, one 4.5 m off hears nothing (the rule is `guards.ts`: heard while `0.12 * (1 - d / 12)` is over 0.08, so just under 4 m, less through a door).
+  Checks: `probes.ts grabvoice` (`tools/qa/grabvoice-check.ts`, family `grab`: each voice by frame, place, gain and rate; the listening page's whole grab on the
+  game's beats; the move's key without `HOLD.dropGun` = the scuffle; a carbine; the pistol hold; the same frame and place for the knock on a second die (two
+  seeds: this is one staging, not a tally); let go before the take; the room's one event and the two listening men; `GRABVOICE_BREAK=1` must fail; it raises
+  both keys itself, so it asks the same on both stands). `probes.ts audio-hold` asks for the grab's first voice by the keys (`grabVoice`), and `holddrop`
+  holds the move off to ask the older rule's own frame. Also `audio-render.ts --all` (the three graded: low thump, bright snap, dull knock, each loudest
+  at its start) and `sound-takes-check.ts` (the six other takes). `tools/qa/grab-sounds-render.ts <dir>` writes every take and the whole grab, old and new, as
+  WAVs with their numbers. Written blind: nobody has heard one on a speaker, the rate 0.8 was never judged as a carbine, and nothing was played through the real
+  mixer's room. Which take of each is the game's is the maintainer's pick.
+- **A fire's two voices (2026-10-23)** (`src/audio/sfx.ts` rows `fireBed`, `fireCrack`; played by `game/fire.ts`, the whole rule in `docs/agents/render.md`, "An
+  open fire burns"). `fireBed` is 7.6 s of low, slowly swelling noise with sparse ticks, looped between `FIRE_LOOP`'s marks 0.12 and 7.12 s (`rollLoop` takes a
+  span now; `audio.ts FOLLOW_LOOPS` has the row) and held as a follow voice at the drum: the fire asks for one on its first frame, again when it is lit again after a restart or a load (the book of what was asked is the host's, `engine.hostBooks.fire`,
+  dropped by who abandons the moment: the old voice lets go; a still frame keeps it; a page frozen past the mixer's own hold has no bed until the next mark), and
+  hands on to a fresh one every `FIRE.bedSecs` 12 s (a followed voice is let go after its own time, and one the mixer never took is asked for again then); its
+  level and pitch follow the fire's heat (the follow voice's `k`, ⅔ at full heat). `fireCrack` 0.3 s plays with each pop of the wood, the same pop that throws embers and kicks the light, at
+  `FIRE.crack` 0.55 × how hard, its rate 0.8 to 1.3. Levelled by hand under a footstep on a hard floor (`HEARD` 0.03 and 0.075). The mixer's alone: no sound
+  event is filed, nobody in the game hears a fire. Both on the listening page under 'things'. Off with `?fire=0`. Written blind: nobody has heard them.

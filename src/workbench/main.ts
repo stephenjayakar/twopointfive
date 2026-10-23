@@ -249,8 +249,8 @@ async function main() {
   window.__cans = { smokeCan: () => rt.smokeCan(), stunCan: () => rt.stunCan() };
   window.__tac = {
     stance: (name: Stance, side?: -1 | 1) => rt.setStance(name, side), peek: (v: number) => { rt.st.peek = clamp(v, 0, 1); },
-    kick: () => rt.fireTac(0), signal: (k: SignalKind) => { if (k === 'squeeze') { rt.fireTac(12); return; }   // (the stack's shoulder squeeze: TAC_SHOTS' last entry — the list is append-only, so it is not beside the other three)
-      const i = ['hold', 'go', 'rally'].indexOf(k); if (i < 0) throw new Error('signal: hold | go | rally | squeeze'); rt.fireTac(i + 1); }, flinch: () => rt.fireTac(4), throw: () => rt.fireTac(5),
+    kick: () => rt.fireTac(0), signal: (k: SignalKind) => { if (k === 'squeeze') { rt.fireTac(12); return; } if (k === 'aside') { rt.fireTac(13); return; }   // (the stack's shoulder squeeze: TAC_SHOTS' last entry — the list is append-only, so it is not beside the other three)
+      const i = ['hold', 'go', 'rally'].indexOf(k); if (i < 0) throw new Error('signal: hold | go | rally | squeeze | aside'); rt.fireTac(i + 1); }, flinch: () => rt.fireTac(4), throw: () => rt.fireTac(5),
     lockpick: (on: boolean) => { rt.st.lockpick = on; }, loop: (on: boolean, shot?: number, every?: number) => { rt.st.tacLoop = on; if (shot !== undefined) rt.st.tacShot = shot; if (every) rt.st.tacEvery = every; },
     at: (t: number, shot?: 'kick' | SignalKind | 'flinch' | 'throw') => rt.poseAt(t, shot), resume: () => { rt.st.paused = false; },
     long: (on: boolean, name?: LongStance | null) => rt.setLong(on, name),

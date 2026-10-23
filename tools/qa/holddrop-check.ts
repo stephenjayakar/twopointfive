@@ -15,14 +15,15 @@ export async function holdDropCheck(): Promise<boolean> {
   const { HOLD } = await import(`${ROOT}/src/game/character.ts`); const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
   const { inHand, rigOf } = await import(`${ROOT}/src/game/guards.ts`); const { handProps } = await import(`${ROOT}/src/game/combat.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-  const was = HOLD.dropGun, log = console.log, AT: Vec3 = [14, 0, 11.2], YAW = Math.PI / 2;
+  const was = HOLD.dropGun, wasDisarm = HOLD.disarm, log = console.log, AT: Vec3 = [14, 0, 11.2], YAW = Math.PI / 2;
   const guns = (g: any) => g.items.items.filter((it: any) => it.kind === 'rifle' || it.kind === 'pistol');
   const props = (g: any) => { const out: any[] = []; handProps(g, out); return out.length; };
+  // (the disarm move, HOLD.disarm, takes the gun a beat into the grab: it is held off here, and this check asks the rule under it — the move's voices are probes.ts grabvoice)
   /** one man taken in the arm on a fresh stand; `who`: a rifleman · a man with his pistol drawn · a calm man with the torch in his hand */
   const take = async (who: 'rifle' | 'pistol' | 'torch', rule: boolean) => {
     HOLD.dropGun = rule; console.log = () => { };
     try {
-      const W: any = await standUp(); HOLD.dropGun = rule; const g = W.game; g.godMode = true; g.player.visibility = 0.02; g.tune.carbineGuards = who === 'rifle' ? 'reyes' : 'none';
+      const W: any = await standUp(); HOLD.dropGun = rule; HOLD.disarm = false; const g = W.game; g.godMode = true; g.player.visibility = 0.02; g.tune.carbineGuards = who === 'rifle' ? 'reyes' : 'none';
       for (let i = 0; i < 5; i++) W.step(DT);
       const A = g.guards.find((x: any) => x.callsign === 'Reyes'); g.guards.forEach((o: any, i: number) => { if (o !== A) park(o, i); });
       place(A, AT, YAW); A.wp = 1; 
@@ -85,7 +86,7 @@ export async function holdDropCheck(): Promise<boolean> {
       quiet(() => applyKnobs(on.g, snap)); const newOn = HOLD.dropGun === true;
       verdict(has && oldOff && newOn && FROZEN_HOLDS['HOLD.dropGun'] === 'TPS_HOLDDROP=1', 'the switch rides the journal (a recording from before the key replays with it off) and has its row on the stands\' list',
         `in the journal's tables ${has} · a recording without the key → ${oldOff ? 'off' : 'ON'} · one with it on → ${newOn ? 'on' : 'OFF'} · FROZEN_HOLDS row ${FROZEN_HOLDS['HOLD.dropGun'] ?? 'missing'}`); }
-  } finally { console.log = log; HOLD.dropGun = was; }
+  } finally { console.log = log; HOLD.dropGun = was; HOLD.disarm = wasDisarm; }
   console.log(`=== holddrop: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

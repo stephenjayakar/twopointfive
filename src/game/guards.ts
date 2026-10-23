@@ -31,6 +31,7 @@ import { pairSmoke, fightLive, lampGlare, closeLane, ROOMFIGHT } from './roomfig
 import { roomName, updateAmbient, isOffice, temperamentOf } from './dialogue';
 import { WORDS, w, wg } from './words';
 import { CUES } from './cues';
+import { SQUADNET } from './squadnet';
 import { SUPPRESSION, headDown, endDisplace, holdingCover, guardFireMods, flinching } from './suppression';
 import { trackGuard, aimReady, feetSettled, guardRound, handsCone, aimBrake, noteBore, boreFouled, AIM_DEBUG } from './aim';
 import { isHostile, teamOfId, hostileTo, foeChar, foeDown, foeCrouched, HOSTILE, spokenName, defenderWords } from './teams';
@@ -2356,7 +2357,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         // is who a round from in front finds first, combat.ts fireWeapon), and the same beat is kept in hand for when he is out of it.
         const shield = T.muzzleDiscipline && shieldUp(g);
         if (shield) gd.fireCd = Math.max(gd.fireCd, SHIELD_RELEASE_BEAT_MIN + dt);   // (+dt as in standoffAlert: measured from the frame the man leaves the arm, not this one)
-        if (sideLocked(g, gd)) { /* (gunslots.ts: his hands are between his two guns — no round, no magazine) */ }
+        if (sideLocked(g, gd)) { /* (gunslots.ts: his hands are between his two guns, or off his gun for a charge — no round, no magazine) */ }
         else if (gd.reloadT >= 0) tickReloadBeat(g, gd, dt);
         else if (gd.weapon.def.burst) burstTrigger(g, gd, dt, aimAt, !shield && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && aimReady(g, gd), !shield && !twisted && !poked && !gd.muzzleDown);   // the carbine: short bursts through the same gates — all of them to begin one (aimReady among them: a burst is gated on the track at its START, not round by round — aim.ts), the per-round ones (the shield, a colleague in the line, poked, twisted) to let each round of it go (rifles, burstTrigger)
         else if (!shield && gd.fireCd <= 0 && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && !roundPastColleague(g, gd, aimAt) && aimReady(g, gd) && gd.weapon.fire()) {   // (muzzleDown: the pistol is not even up — a colleague is, or a beat ago was, in the line; roundPastColleague: the bore's own line this frame, the last look in a scrum; aimReady: lined up on him — the aim model's first-shot gate, aim.ts, always true with it off; weapon.fire last: the round is only cycled out of the gun once everything else has said yes)
@@ -2552,7 +2553,8 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
     const l = lights[i];
     if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) continue;
     if (steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l))) continue;   // (LIGHTS.litMan asks what the PLACE lights: a round's impact flash, a tracer's lamp, a stun charge, a stroke of lightning, a blackout beacon sweeping past are nobody's lamp)
-    const dx = l.pos[0] - P[0], dy = l.pos[1] - P[1], dz = l.pos[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
+    const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos;   // (a fixture somebody flickers — an open fire, fire.ts — is its authored self, where the level hung it, to who asks what the PLACE lights)
+    const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
     if (dist > l.range || dist < 1e-3) continue;
     const Lx = dx / dist, Ly = dy / dist, Lz = dz / dist;
     let att = lightWindow(dist, l.range) / Math.max(dist2, l.radius * l.radius);
@@ -2566,7 +2568,7 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
       att *= ce;
     }
     if (att <= 0) continue;
-    const c = l.color, I = l.intensity;
+    const c = l.color, I = sp ? sp.intensity : l.intensity;
     if (Math.max(c[0], c[1], c[2]) * I * att < 0.002) continue;                                    // (the probe's own floor for a light worth a shadow ray)
     const lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * I * att;
     const tmax = dist - l.radius - 0.02;
@@ -2817,6 +2819,9 @@ export const bubbleSecs = (text: string) => Math.min(4, Math.max(2, 1.5 + text.l
 /** A guard says something: a bubble over his head if he is on screen, otherwise (or if it went out over the radio) a line in the log. A man held in Sam's arm has
  *  no voice of his own — whatever the floor's logic would have him bark or radio is dropped (the callers that matter pick somebody else: spokesman, radioCaller,
  *  pickChecker skip him) — except his answers to Sam, which come `force`d (Game.interrogate) and go to the log under his name. */
+/** his head, or where it would be (what a line is on or off the screen by: say() below and ui/bubbles.ts ask the same point) */
+export const headOf = (gd: Guard): Vec3 => gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0]);
+
 export function say(g: Game, gd: Guard, text: string, radio = false, force = false, row = true) {   // (`row` false = the bubble alone: no log row even out of sight)
   if (gd.held && !force) return;
   const net = radio || silentHush(g, gd);   // (a SILENT teammate calls nothing out: his line goes over the net — silent.ts)
@@ -2825,7 +2830,8 @@ export function say(g: Game, gd: Guard, text: string, radio = false, force = fal
   if (!net && row) g.cues?.overheard(gd, text);   // a shout from a man the fog hides, where an ear of the team's really gets it: a row of its own on the strip, his words alone (cues.ts, behind CUES.overheard — off: nothing asked)
   if (radio && gd.unit) g.cues.heard(gd, text);   // a room fight's defenders' net reaches the strip (cues.ts: ranked, rate-limited; nothing here reads it back)
   if (radio) chronRadio(g, gd, text);   // the debrief's row: what went over their net (the routine radio check is dropped there)
-  if (row && (radio || g.fogOfWar.hidden(gd) || !onScreen(g, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0])))) g.msg((net ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
+  if (row && (radio || g.fogOfWar.hidden(gd) || !onScreen(g, headOf(gd)))) g.msg((net ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
+  if (SQUADNET.on && g.orders?.sams && g.orders.mine(gd) && !onScreen(g, headOf(gd))) g.squadNet?.line();   // (squadnet.ts: a teammate's line said off your screen clicks in your ear, and the page draws it near you; nothing asked with its switch off. `sams`: the response team's men are 'mine' to their own cast of orders, and are not the squad)
 }
 
 /** Fresh guards at the start of their routes (keeps their flashlight lights and tints). Spawned units (teams: the showcase's operatives and hostiles) are not the

@@ -21,6 +21,7 @@
 import type { PairId } from './game';
 import { soloFogRow } from './quietfog';   // (called inside noteOf only: src/game is one import cycle)
 import { lessonGroup } from '../scene/scenarios';
+import { kitPacks } from './kit';   // (called inside kitAsIssued only: src/game is one import cycle)
 
 /** how many teammates stand beside Sam */
 export type SquadSize = 0 | 1 | 2 | 3 | 4;
@@ -58,8 +59,8 @@ export interface SquadChoice { n: SquadSize; ok: boolean;
 export type LoadoutKind = 'nightbreach' | 'roomclear' | 'rescue' | 'quiet' | 'solo';
 const SOLO_ONLY = 'The solo night is yours alone: nobody else is on the roster.';
 const QUIET_ONLY = 'A quiet mission is for one or two: you, or you and one partner.';
-/** a Training row (scenarioList.ts TRAINING_MISSIONS: `group: 'training'`) is its own size and no other: its lines name that team's keys */
-const LESSON_ONLY = 'A training lesson is taught at its own size.';
+/** a lesson's row (scenarioList.ts LESSON_MISSIONS: the tutorial's missions) is its own size and no other: its lines name that team's keys */
+const LESSON_ONLY = 'A tutorial mission is played at its own size.';
 /** …and with the kit AS ISSUED, whatever this machine keeps: its steps ask for the issue kit's own things (the rifle on 2, a frag on 5, the launcher's rounds,
  *  the squad's cans and charges), and a kept card without one would leave a step that can never pass. The page reads the kit table without the store on a
  *  Training row's load (main.ts) and the loadout screen shows no cards for one (ui/loadout.ts). (Your own four counts in a lesson are what a Player is built
@@ -72,7 +73,9 @@ export function lessonNote(note: string): string { return [note.replace('your ow
  *  over them, whatever this machine keeps): its loadout screen shows no cards either and says so, with who carries what (`who`, the screen's own words) */
 export const MISSION_KIT = 'This mission issues its own kit, whatever this machine keeps';
 export function issueNote(note: string, who: string): string { return [note.replace('your own kit, and nobody', 'nobody'), `${MISSION_KIT}${who ? `: ${who}` : ''}.`].filter(Boolean).join(' '); }
-export function kitAsIssued(e: { group?: string } | null | undefined): boolean { return lessonGroup(e?.group); }
+/** …BUT NOT a lesson the player packs for (kit.ts ISSUE.picked, the row's `packs`: the tutorial's squad mission): its screen shows the cards and its page
+ *  stages what this machine keeps. Its SIZE stays its own (squadChoices below reads the group), and its levers stay off (main.ts reads the group). */
+export function kitAsIssued(e: { group?: string; packs?: unknown } | null | undefined): boolean { return lessonGroup(e?.group) && !kitPacks(e); }
 /** WHICH SIZES A SCENARIO CAN STAGE — a pure function of its row (kind, own size, level), since the level itself is not loaded until Deploy. Every kind stages
  *  every size today (tools/qa/loadout-probes.ts boots each one and counts the men); the notes say what a size changes. `CANNOT` is where a size that truly
  *  cannot work on a scenario is greyed with its reason: keyed by entry id or by kind. A row that carries `only` (scenarios.ts ScenarioEntry: The two charges, The long hall)

@@ -239,6 +239,11 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
   function verb(kind: string, v: string, aimAt?: number[]): boolean {
     for (let i = 0; i < 60; i++) { if (aimAt) aim(aimAt); step();
       if (g.nearby.some((r: any) => r.kind === kind && r.verb === v) && g.selectVerb(kind, v)) { I.pressed.add('Space'); step(2); say(`  Space: ${kind} ▸ ${v}`); return true; } }
+    if (kind === 'guard' && v === 'grab' && !g.player.holding) {   // (stalk.ts: with the held click the only way to a man there is no such row — the left button held on the nearest man is the grab)
+      let gd: any = null, bd = 4; for (const x of g.guards) { if (x.state === 'dead' || x.civ) continue; const d = flat(pos(), x.char.pos); if (d < bd) { gd = x; bd = d; } }
+      if (gd) { for (let i = 0; i < 300 && !g.player.holding; i++) { const c = gd.char.pos; aim([c[0], 1.2, c[2]]); I.buttons |= 1; if (i === 0) I.clicked |= 1; step(); }
+        I.buttons &= ~1; if (g.player.holding) { say(`  left button held: the stalk ▸ grab`); return true; } }
+    }
     say(`  no '${kind} ▸ ${v}' row (rows: ${g.nearby.map((r: any) => `${r.kind}:${r.verb}`).join(' ') || 'none'})`); return false;
   }
   function openDoor(nm: string, v = 'push'): boolean {
@@ -278,6 +283,8 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
   };
 
   const idleOk = new Set<string>(script.idleOk ?? []), fightOk = new Set<string>(script.fightOk ?? []);
+  // (two gears — player.ts TWOGEARS — gives the wheel to nobody, so a step that asks for a pace has nothing to ask for and goes by, as lesson.ts says: it is run all the same)
+  if ((await import(`${ROOT}/src/game/player.ts`)).TWOGEARS.on) for (const T of L.steps) if (T.done?.is === 'pace') idleOk.add(T.id);
   try {
     step(20);   // the start's first frames (poses, the deal's lines)
     for (let i = 0; i < L.steps.length; i++) {

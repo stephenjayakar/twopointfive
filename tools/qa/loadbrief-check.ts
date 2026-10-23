@@ -54,8 +54,8 @@ export async function loadbriefCheck(): Promise<boolean> {
       const W = briefOfQuery(missionHref(m, '')); const head = MISSION_GROUPS.find((g: any) => g.id === m.group)?.title;
       if (!W || W.mission.id !== m.id || W.mission.title !== m.title || W.mission.place !== m.place || W.mission.blurb !== m.blurb || !m.blurb || !m.place || !head || W.group !== head || W.team !== teamWordsOf(m)) bad.push(`${m.id} → ${W ? W.mission.id : 'none'}`);
     }
-    const kinds = new Set(list.map((m: any) => m.scenario?.kind ?? 'solo')), lessons = list.filter((m: any) => m.group === 'training').length;
-    line(!bad.length && list.length >= 30 && kinds.size === 5 && lessons >= 5, `words: each of the list's ${list.length} rows (${[...kinds].join(', ')}; ${lessons} Training lessons) reads back from its own address as its own brief — title, place, its line, its heading, its team${bad.length ? ` — NOT: ${bad.slice(0, 5).join(' · ')}` : ''}`);
+    const kinds = new Set(list.map((m: any) => m.scenario?.kind ?? 'solo')), lessons = list.filter((m: any) => m.group === 'tutorial').length;
+    line(!bad.length && list.length >= 30 && kinds.size === 5 && lessons >= 5, `words: each of the list's ${list.length} rows (${[...kinds].join(', ')}; ${lessons} tutorial missions) reads back from its own address as its own brief — title, place, its line, its heading, its team${bad.length ? ` — NOT: ${bad.slice(0, 5).join(' · ')}` : ''}`);
     const at = (q: string) => briefOfQuery(q);
     const two = at('?levelFile=depot.json&roomclear&squad=2'), keep = at('?levelFile=depot.json&roomclear&squad4&mute&quality=low&seed=7'), yardA = at('?levelFile=quiet-yard.json&quiet'), yardB = at('?levelFile=quiet-yard.json&quiet&squad=1');
     line(two?.mission.id === 'depot-four' && two.team === teamWordsOf({ squad: 2 }) && keep?.mission.id === 'depot-four' && keep.team === teamWordsOf({ squad: 4 }) && yardA?.mission.id === 'quiet-yard-alone' && yardB?.mission.id === 'quiet-yard-two',

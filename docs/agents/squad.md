@@ -354,7 +354,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   mission (`tut-plan`, led from the gate with no feet) plays as it did: 19 of 19 steps by its scripted player on the page's stand with the rule
   on. That mission's hall and two gates are 19 m from where he is parked and its guardroom view asks for 5.5 m, so to hold the bound it would
   have to walk him or move him between its parts, and until it does the lesson teaches a reach the game no longer has (its thread's, and the
-  maintainer's call). NOT BOUNDED: where an order may be given (anything on the screen takes a right click: from an edge about 15 m from him at
+  maintainer's call). SINCE 10-23 IT WALKS HIM (the maintainer's pick, "You walk to each spot, then plan"): three walk steps, his feet from the first
+  of them, and the bound holds there from that step on (`docs/agents/missions.md`, the plan mission's "He walks to three spots"). NOT BOUNDED: where an order may be given (anything on the screen takes a right click: from an edge about 15 m from him at
   the camera's own distance, about 22 m zoomed all the way out), chains already laid (they walk on and the word still frees them wherever they
   wait) and a mark of the plan outside the view (it is off the screen). CHECK `probes.ts plannear` (9 lines, both stands, one deal: the rule has
   no die in it; `PLANNEAR_BREAK=1` fails lines 1, 2, 3, 4 and 6 on both): a walk key for five seconds and a second key to the corner; all eight
@@ -362,6 +363,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   filed further out; a right click from a corner and the ease back; the journal; the stands. `planmode-check`'s rig holds the rule off (its lines
   19 and 21 ask the reach as first built), so `planmode` and `planplus` do not play it. THE LEVEL HALF of his note (no place that is always safe
   to command from) is not built here: it is level design, for the level skill and the missions. Nobody has played it; never seen on a GPU.
+- **The squad's ring is two rings deep and nothing rides the cursor** (2026-10-23; `CMDRING.flat` / `plainHint`; `cmdring.ts flatSeats`,
+  `FLAT_TOP`, `FLAT_LEFT`; `orders.ts flatRows`, `menuRows`, `seats`, `hintView`, `OrderDef.gone`). The maintainer: "radial menu tree needs some
+  work, way too nested"; "loud and quiet should be an option on squad wheel"; "let's remove the icons on mouse position from squad orders
+  entirely". BOTH: ON in the page (`flat` with `only`), `?ringflat=0` / `?plainhint=0`; off in the module and on the frozen stand,
+  `TPS_RINGFLAT=1` (beside `TPS_QRING=1 TPS_QONLY=1`) / `TPS_PLAINHINT=1`; a tick each in the debugger; a recording from before the keys replays
+  with them off. THE TREE (`flat`): the ring holds every order of the thing under the cursor, never a page. Floor, wall, a thing: 1 what a tap
+  gives · 2 cover that way · 3 fall in · 4 hold position · 5 more (frag there · bang there · a wall charge when the squad carries one · go
+  silent). A door: 1 what a tap gives · 2 cover this door · 3 open and clear · 4 bang and clear · 5 more (charge, or shut that door · clear from
+  outside · shotgun and clear · frag and clear · go silent); fall in and hold position are NOT on a door's ring. The squad's own ring (on a man,
+  on Sam, on nothing): 1 fall in · 4 hold position · 5 go silent. An enemy: no ring, as before. Rules: a row that says what wedge 1 says has no
+  wedge of its own and its digit is wedge 1's (`seats().same`: 3 is still fall in on the squad's own ring; stacked on a door the entry the squad
+  would pick is on 1 only); no ring has one row (a lone left-over sits on wedge 5 itself); a row for kit the squad never carried or a tool this
+  door never takes is not offered (`gone`: a wall charge with none brought, a charge or the big slot's tool on steel, the big slot's tool on an
+  open door), one off only for now stays greyed; the posture row is the last of every second ring and gives up its place first when rows
+  overflow. No key sets loud or quiet, before or now. A TUTORIAL MISSION (rails live) KEEPS THE PAGED TREE: its lines name the old digits
+  ("[X], then press [3]", "Press [5], then [3]"), the tutorial's own to move. THE CURSOR (`plainHint`): the outline on the floor of what the
+  key orders on, no glyph beside the cursor or in the ring's middle. THE SQUAD'S CORNER cut down to its key lines (his same notes) is NOT here:
+  it is the page's own layer's, which reads `orders.hud()` whole, so the order book's lines are as they were. CHECK `probes.ts ringflat`
+  (family squadorders; 12 lines, both stands, one deal seed 3: the rules have no die in them; `RINGFLAT_BREAK=1` fails lines 1 to 6 and 9 on
+  both). `qonly-check` holds `flat` off in its rig (its lines ask the ring by the menu's pages). Neighbours' files touched for it:
+  `wallcharge.ts`, `doortools.ts` (the `gone` rows), `squadthrow.ts` (the throw's arc on a flat ring), `ui/cmdring.ts` (one line, the glyph),
+  `ui/options.ts` (the hint's words). Nobody has played it; never seen on a GPU.
+- **A held door's key lights when the men say so** (2026-10-23; `PLAN.thrTold`, `floorplan.ts waitsOnKey` / `PlanDoor.ready`; picture only, on on
+  both stands like `PLAN.keyLit`, `?thrtold=0`, a tick in the debugger). Found by the squad's own behaviour work: on a door held from outside the
+  word pressed before the men's "holding · on your word" call cuts their slice of the room short, and the key's cap was lit from the moment their
+  feet were on the jambs. Now that cap is dark until `thr.told`, then lit; the key does what it did. CHECK `tools/qa/plan-check.ts`, the last
+  line, both stands (one deal, the conference door: dark with feet on the jambs, lit 3.5 to 4.5 s later at the call; `THRTOLD_BREAK=1` red on
+  both). NOT covered: the HUD's own word line (`doortools.ts wordNote`, "go · … waiting") still shows from the stack, and several doors on one
+  word (`planOne`) wait for every stack to FORM, not for a call. Never seen on a GPU.
 - **What the cursor is on is kept by whoever reads the HUD** (2026-10-23; `orders.ts hover / hud / hintView`, `HoverKept`, `ui/hoverkept.ts`; picture
   only, no switch). `hover()`'s answer, kept a tenth of a second while the cursor rests, and the camera it was asked under were fields of the order
   book (`orders.hov`, `orders.hovCam`): a game whose HUD was read each frame differed in the whole state from one never read. Now `hud(kept)` and
@@ -991,8 +1021,67 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   state (read every frame against never read: whole state and digest equal), same (the pick aside on the kept store is the pick straight on all
   480 frames: kind, place, door and side, man, wall, thing). `HOVERPICK_BREAK=1` (the pick asked straight) fails ask and state on both stands:
   one break for all five wrappers, it does not prove each apart. One seed, one level. NOT ON THE CURSOR'S WAY: a man of the other side, a
-  thing to be worked, a leaf drawn in the fog of war, the room seen through a doorway. STILL OPEN, not the pick and not this module's: on the
-  shipped stand the HUD's own ROW LIST (`SquadOrders.hud`) fills the wall charge's memo of digitless rows (`wallcharge.ts standIns`, a table
-  hung off the object, so `asMemo` does not take it out of the state) the first time it lists a floor's rows, so a game whose whole HUD is
-  read still differs there from one never read until a menu is first opened. The store is outside the rollback snapshot (scratch and a list a
+  thing to be worked, a leaf drawn in the fog of war, the room seen through a doorway. THE HUD'S ROW LIST IS HELD TOO (10-23): on the
+  shipped stand `SquadOrders.hud` filled the wall charge's memo of digitless rows (`wallcharge.ts standIns`) the first time it listed a
+  floor's rows; that memo is a module `SideMap` marked `asMemo()` now (the charges' own mend), and the check's read asks `hud(kept)` every
+  frame after the pick, so `ask` and `state` stand for the whole HUD read. The store is outside the rollback snapshot (scratch and a list a
   second old). Never seen in a page.
+- **The squad reaches you, and the quick key says why** (`src/game/squadnet.ts`, table `SQUADNET`, one `SquadNet` on the Game as `game.squadNet`;
+  drawn by `src/ui/bubbles.ts`; Tab ▸ 'Squad net'). The maintainer picked it from the AI legibility doc: "The squad reaches you, and Q says why.
+  Off-screen teammate lines arrive near you with a radio click, a man down has its own sound, the Q row says 'Bang and clear. Nobody's been in
+  there.', and 'clear' means clear." Three rules from that pick and a fourth found while building it, a switch each, all ON in the page and OFF in the
+  module and on the frozen stand.
+  FAR LINES (`SQUADNET.on`, `?squadnet=0`, `TPS_SQUADNET=1`): a bubble was drawn only over a head on the screen, so a teammate's line said two
+  rooms off was said to nobody. With the rule his bubble is drawn NEAR YOU (`SQUADNET.near` × the view's shorter side from you, toward where he
+  is on the screen; about the middle of the view while you are off it yourself: the plan's camera, a man watched) as `↙ Red One: stacked up.`,
+  class `bubble net` + his tone, one row, each further line a row higher, never under a HUD card. `say()` asks `squadNet.line()` for a click
+  when his head (`guards.ts headOf`, the point and the `onScreen` test the HUD draws by) is off the screen: `'radio'` at `SQUADNET.click`, rate
+  `clickRate` 1.3 so that it is not the defenders' net's squelch (cues.ts, rate 1), once a frame. A teammate whose state turns `dead` is a row of
+  its own on `squadNet.rows` (`Red Two is down.`, 5 s, drawn over where he fell while that is on the screen and near you otherwise) with the
+  same voice louder and at rate 0.55: there is no voice of its own for it in `audio/sfx.ts` yet, that is the sound work's to make. Nothing
+  writes a `Guard.bubble`: the run with it on is the run with it off by digest (the check holds it). A man already down when a run starts or a
+  checkpoint loads is not called; a roster stood up again under the same names is. NOT DONE: a line said on the screen whose man the camera
+  then leaves moves to the near place with no click; a cue's own bubble (`cues.aside`) on a far teammate is drawn near and does not click.
+  WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`): `squadnet.ts whyWords(pick)` gives the reason when the autopilot's pick on a door the men wait
+  on is not a plain open: at the end of the quick key's row (`orders.ts hud()`, one `autoPick` a frame for the words and the reason) and in the
+  answer of the man who takes the order (`GiveOpts.ack`, in place of the row's own; `autoQuick` and a plan's `quickFor` both pass it):
+  `nobody's been in there` / `banging it. nobody's been in there.` · `they see one inside` / `banging it. i see one in there.` · `they're saving
+  the last bang` / `going in. i'm saving the last bang.` (`AutoPick.kept`: an unknown room opened plain because `AUTOPILOT.keepBangs` holds
+  the last stun) · `they can't open it` / `we can't open it. setting a charge.` (the press only: the HUD's line asks no lock). A plain open, a
+  silent squad and a stack say nothing more; no press waits. The answer changes a bubble's length, so a run with it on is not the run with it
+  off by digest once such a line is said.
+  CLEAR (`SQUADNET.clear`, `?honestclear=0`, `TPS_HONESTCLEAR=1`): the lead's call at an entry's end (`doortools.ts`, a room of the room clear's
+  own) goes through `roomCall()`: `<room> clear.` only with nobody standing in it AND a search that was not cut short (`RoomSearch.left` under
+  `DOORTOOLS.deadCells`, the search's own bar for floor no man could see); `<room>'s quiet. we didn't see all of it.` (`bunks are quiet. …` for
+  a name in the plural) with a search cut short and no enemy of the room in the team's sight; nothing with one in sight, or one standing on
+  floor they saw (as before: nothing was said there). An entry with no search of its own (open floor) is called as it was. The floor counted is
+  the room fight's flood, the name and who stands inside are the room clear's own rectangle: two models of a room, not reconciled here.
+  EVERY ENTRY ENDS WITH A CALL (`SQUADNET.endCall`, `?endcall=0`, `TPS_ENDCALL=1`): the lead called only a room of the room clear's own list,
+  so an entry into any other room (the office's conference room, a hall, every room of a mission with no list) ended with nothing said. With
+  the rule, at the same place in `doortools.ts`: a lead who stands in no room of the list calls the listed room the entry's own points are in;
+  with none there either he calls the room fight's flood with no name through `squadnet.ts plainCall()`: `room clear.` / `room's quiet. we
+  didn't see all of it.` by `roomCall`'s own rule (who stands inside is `inFlood()`: the flood's cells and the room's own doorways, a man who
+  has dropped his gun left out as in the named call), and of open floor (`openFloor`, which nobody searches) `clear so far.` unless an enemy
+  on it is in the team's sight. Sam's own squad only (`g.orders.sams`): the response team runs the same door orders as a cast of its own and
+  says none of it. The same test now guards the far lines' click in `guards.ts say()`: before it, the response team's lines clicked the
+  squad's net (7 clicks over two of its entries with no squad on the floor). It adds a line where there was none, so a run with it on is not
+  the run with it off by digest once one is said; off is the build as it was (seeds 1–4, two entries each, both stands, against the build
+  head it was merged on). The pre-existing named call has no such guard: a response team that ends an entry in a listed room of a room clear
+  would call it by name, as it did before any of this (not seen, not changed here).
+  CHECK `bun run tools/qa/squadnet-check.ts` (also `probes.ts squadnet`: why · clear · end · net · off; `end` runs under `doortools` too;
+  `SQUADNET_BREAK=1` fails all five), both stands, the room clear on the office with four, seeds 5, 7 and 11, and the response team on seed
+  41. It reads what a man SAID off his bubble, a frame at a time. MEASURED on the office (the squad of four, the quick key's own pick, the
+  defenders of the room beyond left as dealt, every switch on): entries into the room clear's four listed rooms, seeds 1–4 on the shipped
+  stand, 16 of 16 called by name (all `clear`; floor unseen 0 or 1 cell, under the bar); entries into the conference room, which is on no
+  list, seeds 1–8: 8 of 8 silent before the rule (shipped stand) and 8 of 8 `room clear.` with it (each stand). So on the office the honest call changes
+  nothing a player would hear, and the fourth rule is what he hears. A COUNT THIS FILE CARRIED WAS WRONG: an earlier pass read 24 of 60
+  entries into listed rooms as ending with no call. It counted rows of the message log, and `say()` files a row only for a man off the
+  screen or in the fog, so every call made in view was missed. NOT MEASURED: any level but the office; a live entry onto open floor (`clear
+  so far.` is held as words only); a mission with no room list (rescue, the quiet missions as two), where every entry now takes the
+  no-name call. ON THE PAGE (`PORT=<port> node
+  tools/qa/squadnet-look.cjs <dir>`, software adapter): the far lines and the down row are read off the HUD's own elements with where they lie
+  against you and against the man; `ENTRY=1` in front of it drives an entry into the conference room and read `↑ Red Two: room clear.` as a
+  far line near you (the lead off the screen), counted once, no page or console errors. Never seen on a GPU, never played, never heard: the click's level and pitch and the pitched-down click for a
+  man down are guesses. The words are lower case like the rows and answers beside them. OPEN: where the reason sits on the quick key's row is
+  the commanding work's to settle (its flat wheel and the corner panel draw that row); the reason for a charge is not on the HUD's line (the
+  hint does not ask the lock, so it shows the open it will not do).

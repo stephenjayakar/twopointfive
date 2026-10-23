@@ -44,6 +44,8 @@ import { KIT_CLIP } from './kitCard';
 import { LOOK, placeOfQuery } from '../scene/look';
 import { mountKitBrief, type KitBrief } from './kitBrief';
 import { mountKitGuide, type KitGuide } from './kitGuide';
+import { KIT_PLANS } from './kitPlan';
+import { kitPacks } from '../game/kit';
 
 export const START_PAGE = { on: typeof window !== 'undefined' && typeof window.addEventListener === 'function' };
 try { if (new URLSearchParams(location.search).has('cards')) START_PAGE.on = false; } catch { /* no page (the harness) */ }
@@ -98,6 +100,7 @@ const CSS = `
 #missions.one .mfact { display: flex; align-items: baseline; gap: 8px; padding: 0; border: 0; border-radius: 0; background: none; }
 #missions.one .mfact i { font: 600 11px/1 var(--m-head); letter-spacing: 0.18em; color: var(--m-dim); }
 #missions.one .mfact b { margin: 0; font: 600 11px/1 var(--m-head); letter-spacing: 0.18em; text-transform: uppercase; color: var(--m-text); }
+#missions.one:not(.pane-loadout) .mfacts.nodef { display: none; }   /* (the Defenders cell was this step's only one: with the count a mystery — ui/missions.ts MYSTERY — the row is not drawn) */
 #missions.one .mfact[data-fact="level"], #missions.one .mfact[data-fact="team"], #missions.one .mfact[data-fact="approach"] { display: none; }   /* (the name over it says where, the rail's Team row says who, the list's own tag says how) */
 /* the plan: a map sheet. Crop ticks at its corners, the place's own line and a scale at its foot (the canvas draws the grid and the scale) */
 #missions.one .mmap { --tick: rgba(var(--m-edge),0.34); position: relative; margin: 14px 0 0; padding: 0;
@@ -110,7 +113,7 @@ const CSS = `
 #missions.one .mblurb { max-width: 62ch; margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: var(--m-text); }
 #missions.one .mtip { display: none; }
 #missions.one .mstore, #missions.one .mgo, #missions.one .mfoot { display: none; }
-/* THE RAIL: one row a setting, its value at the right; a click steps it, its key steps it; the three levers hang under Difficulty */
+/* THE RAIL: one row a setting, its value at the right; a click steps it, its key steps it; the levers hang under Difficulty (three, and a fourth while game/told.ts's is on) */
 #missions.one .mrail { grid-column: 2; grid-row: 1; display: flex; flex-direction: column; min-width: 0; padding: 4px 0 14px; }
 #missions.one .mrl { margin: 0 0 8px; font: 600 11px/1 var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; color: var(--m-dim); }
 #missions.one .mval { flex: 0 0 auto; display: flex; align-items: center; gap: 0; box-sizing: border-box; width: 100%; min-height: 34px; margin: 0; padding: 4px 4px 3px 10px; text-align: left; color: var(--m-text); font: inherit; background: none; border: 0; border-radius: 0; cursor: pointer; }
@@ -437,7 +440,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     if (was !== p) kbrief?.setBig(false);
     if (was !== p && sheetEl) sheetEl.scrollTop = 0;   // (the sheet folds or unfolds under the keys: it is read from its top again)
     L?.paint(); say(); paintTeam(); };
-  // SETUP (the calm pass): the list's own setting rows — Difficulty with its three levers, Hour, Weather, Way in — stay the list's (it paints them, its keys
+  // SETUP (the calm pass): the list's own setting rows — Difficulty with its levers, Hour, Weather, Way in — stay the list's (it paints them, its keys
   // step them) but are parked out of sight; the rail shows each as ONE row with its value. A click on a row is the next value (on its ‹, the one before),
   // done by pressing the list's own button, so every rule about what a setting may be is still the list's. The sentence of the row last changed or pointed
   // at is the one line at the rail's foot; a mission just come up says the short list's line there.
@@ -504,7 +507,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     lastId = m.id; lastHour = M.hourNow;
     tip.textContent = p ? p.line : '';
     if (fresh) rest('', '');
-    kbrief?.show(m);
+    kbrief?.show(m, kguide && kitPacks(m.scenario) ? KIT_PLANS[m.id] ?? null : null);   // (a tutorial mission with a kit plan of its own: its map names the rooms — ui/kitPlan.ts)
     paintVals(fresh);
     mount();
   };

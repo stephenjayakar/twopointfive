@@ -35,6 +35,7 @@ import { CLOSE } from './close';   // (read inside functions only — the game's
 import { activeScenario } from './scenarioRun';   // (the same)
 import { slingRestWant } from './rigProps';   // (the same)
 import { feedOf, reloadShow } from './gunreload';   // (the same)
+import { samStowing } from './workstow';   // (the same: the thing in his hand is on its way to where it lives before a two-handed job — that errand is this file's)
 import { samWork } from './handwork';   // (the same: while his hands are at work on a thing the work has them)
 import { samBigCarry, bigWeighed } from './bigkit';   // (the same)
 import { bigOff, type Character } from './character';   // (the same)
@@ -124,7 +125,7 @@ function handsOff(an: Character['anim']): boolean { return an.bigTool && bigWeig
 export function kitInHand(g: Game): KitItem | null {
   const pl = g.player, an = pl.char.anim;
   if (pl.down) return null;
-  if (pl.holding) return pl.holding.variant === 'arm' && !an.holdGunSide ? 'knife' : pl.pistolUp ? 'pistol' : null;
+  if (pl.holding) return pl.holding.variant === 'arm' && !an.holdGunSide && !an.noKnife ? 'knife' : pl.pistolUp ? 'pistol' : null;
   if (handsOff(an)) return null;
   if (samBigCarry(g)) return null;   // (bigkit.ts BIGSLOT.weight: the big slot's tool is asked for — his gun goes to its place by hand before the hand goes for the tool)
   if (pl.pistolUp) return 'pistol';
@@ -174,7 +175,7 @@ export function kitTick(g: Game, late = false) {
   // something else has his arms, or the item is not his to carry about: no errand — the kit is where the game says, and what was in the hand is forgotten
   // (the WALL hold is not on the list: taking a wall with the pistol up, coming off one, E on the stack — the hand carries the gun there as anywhere, the wall's own arms taking over once it is away)
   const carry = samBigCarry(g);   // (bigkit.ts BIGSLOT.weight: the tool's beat begins with this hand's own errand — the gun to its place — and the beat does not take the arm from it)
-  const hard = pl.down || !!pl.holding || !!pl.takedown || !!pl.dragging || (!!pl.kick && !carry) || !!pl.picking || !!pl.wanding || !!pl.coding || !!samWork(g) || an.inThrow, quiet = hard || (handsOff(an) && !carry);
+  const hard = pl.down || !!pl.holding || !!pl.takedown || !!pl.dragging || (!!pl.kick && !carry) || !!pl.picking || !!pl.wanding || !!pl.coding || (!!samWork(g) && !samStowing(g)) || an.inThrow, quiet = hard || (handsOff(an) && !carry);
   if (pl.kitWas === undefined || quiet) {
     if (quiet && an.kitBusy) an.kitCancel();
     // (a can thrown: the next one is FETCHED once the arm is back; a held man just let go of: the knife stays in the fist while the hold's pose lets go of

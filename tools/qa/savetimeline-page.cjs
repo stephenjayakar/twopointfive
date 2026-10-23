@@ -3,7 +3,7 @@
 //   on      the plain night as the page opens it: F5 (a real keydown, kept from the browser) three times a few seconds apart, each on a drawn frame; the pause card's strip shows three tiles in time
 //           order, each with a picture that is not one flat colour; a click on the middle one closes the card with the mission clock at that save's; the
 //           down card shows the strip too; no page error
-//   lesson  Training five (a pair on the floor): F5 saves are kept in memory and show on the strip with pictures; a light is put out AFTER the save and the
+//   lesson  the quarters yard, once Training five (a pair on the floor): F5 saves are kept in memory and show on the strip with pictures; a light is put out AFTER the save and the
 //           save loaded from its tile — the frame drawn after the load is lit as the frame at the save was, not as the dark one (the GPU's buffers were told:
 //           host/putback.ts); SAVEPUTBACK_BREAK=1 takes that telling away and this line must FAIL
 //   off     ?savetimeline=0: F5 writes nothing and the pause card has no strip
@@ -189,7 +189,7 @@ const CARD3 = async () => {
     if (errs.length) fails.push(`page errors: ${errs.slice(0, 3).join(' | ')}`);
     const ok = !fails.length; if (!ok) red++;
     const said = { on: 'the page as it opens: three F5 saves a few seconds apart; the pause card shows three tiles in time order, each a picture; the middle one loads to its own mission clock; the down card shows them too',
-      lesson: `Training five, a pair on the floor: saves kept in memory show on the strip with pictures; a light put out after a save is lit again on the frame after its load${BREAK ? ' (SAVEPUTBACK_BREAK: the host is not told)' : ''}`,
+      lesson: `the quarters yard, a pair on the floor: saves kept in memory show on the strip with pictures; a light put out after a save is lit again on the frame after its load${BREAK ? ' (SAVEPUTBACK_BREAK: the host is not told)' : ''}`,
       off: 'under ?savetimeline=0: F5 writes nothing, the pause card has no strip',
       card: `F5 on the pause card is kept, shows a tile to come and saves once as play goes on; under a key lock it is the browser's${CARDBREAK ? ' (SAVECARD_BREAK: the kept press is not handed over)' : ''}` }[name];
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${said}\n    ${JSON.stringify({ set: r.set, saves: (r.saves || []).map(s => +s.t.toFixed(1)), tiles: r.strip ? r.strip.tiles.map(t => `${t.w}x${t.h} ${(t.bytes / 1024).toFixed(1)}KB range ${t.range} '${t.age}'`) : null, pick: r.pick, lum: r.lum, lamp: r.lamp, card1: r.card1, card2: r.card2, card3: r.card3 })}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);

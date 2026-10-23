@@ -11,6 +11,7 @@ import { dumpNow, keptNow, keptWords } from '../replay/dumpui';
 import { saveSandbox } from '../game/sandbox';
 import { SAVETIMELINE, type SlotInfo } from '../game/savestate';
 import { HANDRING } from '../game/handring';
+import { TWOGEARS } from '../game/player';
 import { gearText } from '../game/gear';   // (the controls list names the kit: shown in the kit's words as issued)
 export { loadSandbox, saveSandbox, SANDBOX_LS } from '../game/sandbox';
 import { Engine } from '../engine';
@@ -28,6 +29,7 @@ import { openList, openStartPage, startPageWanted, startPageFromQuery } from './
 import { menuTheme } from './theme';
 import { TABKEY } from './tabkey';
 import { SLOTSETUP } from '../game/slotsetup';
+import { AUTOCAM } from '../host/autocam';
 import { keyText, keysOf, slotNow, camKey } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 
@@ -43,7 +45,9 @@ const N_ROW: [string, string] = ['N', 'night vision'];
  *  row, wherever that is (`keyCol`) */
 const CAM_ROW: [string, string] = ['Ctrl + mouse / wheel', 'orbit the camera / zoom (or pinch)'];
 const CAM_SPACE: [string, string] = ['Space + mouse / wheel', CAM_ROW[1]];
-const keyCol = (k: string) => k === CAM_SPACE[0] ? k : keyText(k, true);
+/** …and the auto camera's (host/autocam.ts, AUTOCAM.on): the camera's key tapped twice */
+const CAM_AUTO = (cap: string): [string, string] => [`${cap} twice`, 'the camera frames things for you · turn the view yourself to take it back'];
+const keyCol = (k: string) => k === CAM_SPACE[0] || k === CAM_AUTO('Space')[0] ? k : keyText(k, true);
 const Q_ROW: [string, string] = ['Q', 'put your back to the wall beside you, then slide and peek around its end · press Q or Shift, or step away, to let go'];
 const KIT_ROW: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 (press 2 again to switch its launcher, RING / 40 mm) · smoke · stun · frag'];
 const ZR_ROW: [string, string] = ['Z · R', 'FN2000 semi / auto · reload'];
@@ -53,8 +57,11 @@ const LNV_ROW: [string, string] = ['L · N · V', 'weapon light · night vision 
 const KIT_SET: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 · smoke · stun · frag · press a gun\'s key again for its setup (key 1 semi / auto · key 2 its launcher · key 3 its light)'];
 const R_ROW: [string, string] = ['R', 'reload'];
 const NV_ROW: [string, string] = ['N · V', 'night vision · whistle (the nearest guard will come to look)'];
+const MOVE_ROW: [string, string] = ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'];
+/** …with two gears (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch is the sneak */
+const MOVE_GEARS: [string, string] = ['W A S D', 'move · Shift sprint · C crouch (slower and quiet)'];
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
-  ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'],
+  MOVE_ROW,
   ['Mouse', 'aim, and the ring snaps to an enemy near the cursor or a light under it'],
   ['LMB', 'fire what\'s in your hand · throw a canister · take an enemy down silently from behind with empty hands'],
   ['RMB', 'with the pistol, OCP the light under the ring · with the FN2000, fire its launcher (hold to see the arc first)'],
@@ -74,7 +81,8 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 /** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
 const WALL_ROW: [string, string] = ['Wall', 'walk into one to put your back to it, then slide and peek around its end · step away or press Shift to let go'];
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
-  if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return [camKey() ? CAM_SPACE : r];
+  if (TWOGEARS.on && r === MOVE_ROW) return [MOVE_GEARS];
+  if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return AUTOCAM.on ? [camKey() ? CAM_SPACE : r, CAM_AUTO(camKey() ? 'Space' : 'Ctrl')] : [camKey() ? CAM_SPACE : r];
   if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
   if (r === LNV_ROW) { const l = !(SLOTSETUP.on && !keysOf('KeyL').length), v = !(HANDRING.on && !keysOf('KeyV').length); return [l && v ? r : l ? LN_ROW : v ? NV_ROW : N_ROW]; }   // (the light is a row of the gun's setup, the whistle a wedge of his ring: a key given back to either keeps its place here)
   if (r === E_ROW) return slotNow() ? (keysOf('KeyE').length ? [SLOT_ROW, r] : [SLOT_ROW]) : [r]; if (r !== Q_ROW) return [r]; const w = wallWay(); return w === 'key' ? [r] : w === 'walk' ? [WALL_ROW] : []; });

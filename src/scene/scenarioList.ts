@@ -11,14 +11,13 @@ import { scenarioQuery, type ScenarioEntry } from './scenarios';
 import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from '../game/loadout';   // (pure: the loadout's size, its words and its query key — nothing of the game)
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
-// two' by its team, a rescue is 'on the clock' and any other squad's mission a 'raid'. A training level is a row with `group: 'training'` in
-// TRAINING_MISSIONS below. (A comment over a row below that says group 'ideas' or 'more' is of the groups before 10-11: the row's own field is the fact.)
+// two' by its team, a rescue is 'on the clock' and any other squad's mission a 'raid'. (A comment over a row below that says group 'ideas' or 'more' is of the groups before 10-11: the row's own field is the fact.)
 export const SCENARIOS: ScenarioEntry[] = [
   // the office (the bundled level). The night breach stays here: it was built and tuned on this floor and its idea is picking your entry. The other three are
   // the office versions of what the levels below were made for, kept beside them
   { id: 'night-breach', title: 'Night breach', kind: 'nightbreach', squad: 2, group: 'raids',
     place: 'The office · the break room', lean: 'either', defenders: 3,
-    blurb: 'Three enemies hold a break room with four doors. Stack your pair up on one door and send them in while you come through another.' },
+    blurb: 'Enemies hold a break room with four doors. Stack your pair up on one door and send them in while you come through another.' },
   { id: 'room-clear-pair', title: 'Room clear', kind: 'roomclear', squad: 2,
     place: 'The office · the east wing, room by room', lean: 'loud', defenders: 5,
     blurb: 'Clear four held rooms in the office one at a time with the order menu and the door tools. This is the careful way to play.' },
@@ -39,17 +38,17 @@ export const SCENARIOS: ScenarioEntry[] = [
     place: 'Four rooms off one hall, a turn in each', lean: 'loud', defenders: 8, squads: true,
     blurb: 'Every held room turns a corner, so the enemies wait in the dark past a lit doorway. Each has a second door from the small room beside it.' },
   { id: 'block-squads', title: 'The block, three squads', kind: 'roomclear', squad: 4, level: 'block-squads.json', ways: ['the loading hall, on the main hall', 'the loading hall, on the tool crib'], untuned: true, offList: true, group: 'strongholds',
-    place: 'The block again, held by three squads', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'It\'s five against eleven. Three squads hold the block, each in its own rooms. Hit one squad and listen to what the others do.' },
+    place: 'The block again, held by squads', lean: 'loud', defenders: 11, squads: true,
+    blurb: 'The enemies hold the block in squads, and each squad has its own rooms. Hit one squad and listen to what the others do.' },
   { id: 'warehouse-four', title: 'The warehouse', kind: 'roomclear', squad: 4, level: 'warehouse.json', ways: ['the south-west corner', 'the south-east corner'], untuned: true, group: 'strongholds',
     place: 'A racked hall, a loading dock, a ring of small rooms', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Eleven enemies hold a building laid out as a ring, so whichever door you fight at, someone can walk around behind you.' },
+    blurb: 'The building is laid out as a ring, so whichever door you fight at, someone can walk around behind you.' },
   { id: 'compound-four', title: 'The compound', kind: 'roomclear', squad: 4, level: 'compound.json', ways: ['the side yard gate', 'the back gate'], untuned: true, group: 'strongholds',
     place: 'A walled yard, a house of eight rooms, three outbuildings', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Eleven enemies are behind a wall. Two of its three gates are dark, two windows are open, and the breaker is in a pantry nobody\'s guarding.' },
+    blurb: 'The enemies are behind a wall. Two of its three gates are dark, two windows are open, and the breaker is in a pantry nobody\'s guarding.' },
   { id: 'barracks-four', title: 'The barracks', kind: 'roomclear', squad: 4, level: 'barracks.json', ways: ['the south-east corner', 'the galley back door'], untuned: true, group: 'strongholds',
     place: 'Two wings and a mess hall round an open yard', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Eleven enemies hold two galleries that look across an open yard at each other. Six rooms are empty, and the breaker is in the duty office.' },
+    blurb: 'Enemies hold two galleries that look across an open yard at each other. Six rooms are empty, and the breaker is in the duty office.' },
   { id: 'rescue-registry', title: 'The registry', kind: 'rescue', squad: 2, level: 'registry.json', untuned: true,
     place: 'A lit gallery to the hostage room, a dark way round', lean: 'loud', defenders: 3,
     blurb: 'You\'re on a clock. A lit gallery passes two rooms on the way to the hostages, and a gunman waits in one of them. Check the glass.' },
@@ -72,7 +71,7 @@ export const SCENARIOS: ScenarioEntry[] = [
     blurb: 'The yard is floodlit, with guns in two open windows. The breaker is in a shed outside the wall, and the enemies don\'t have night vision.' },
   { id: 'killhouse-four', title: 'The kill house', kind: 'roomclear', squad: 4, level: 'killhouse.json', ways: ['the ready line, on the front door', 'the dark side, on the back door'], untuned: true, group: 'clock',
     place: 'A five-room shoot house on a range', lean: 'loud', defenders: 6,
-    blurb: 'Six enemies, and the clock starts on your first move. Gold is 1:05, silver 1:30 and bronze 2:00. Every teammate you lose adds 25 seconds.' },
+    blurb: 'The clock starts on your first move. Gold is 1:05, silver 1:30 and bronze 2:00. Every teammate you lose adds 25 seconds.' },
   // new ideas (group 'ideas': small missions, each built on one idea). Mousehole = the walls are the way in: the level's own room clear issues the squad wall
   // charges for the run (scenarios.roomClear.wallCharges → game/issue.ts), and every room's door opens on one lit corridor a duty-room gun looks down
   { id: 'mousehole-four', title: 'Mousehole', kind: 'roomclear', squad: 4, level: 'mousehole.json', ways: ['the dark yard, on the blank wall', 'the dark side, on the fire exit'], untuned: true, group: 'strongholds',
@@ -134,34 +133,7 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
     place: 'A walled yard, a bunkhouse, a store', lean: 'quiet', defenders: 3,
     blurb: 'It\'s the same yard, with a silent partner who follows you and stays low. With X on a guard you can send him around behind, and F tells him to go.' },
 ];
-// THE TRAINING GROUP (game/lesson.ts), in a table of its own for the same reason: short levels, each a real mission of its kind (quiet alone, quiet as two, a
-// room clear with a pair or the four) whose file also carries a `scenarios.lesson` block — steps on the objective row, each naming its key, each moving on when
-// the player has done the thing. A row here is `group: 'training'` and nothing else special: the page starts it like any row of its kind. Not in SCENARIOS or
-// QUIET_MISSIONS, so the squad's and the quiet tools' walks are what they were; tools/qa/lesson-check.ts and lesson-run.ts are this table's.
-export const TRAINING_MISSIONS: ScenarioEntry[] = [
-  { id: 'train-move', title: '1 · Moving unseen', kind: 'quiet', squad: 0, level: 'train-move.json', group: 'training',
-    place: 'The motor pool: three lamps, one guard', lean: 'quiet', defenders: 1,
-    blurb: 'Read the light and sound meters, keep to the dark, and take the vehicle log from behind a guard\'s back.' },
-  { id: 'train-hands', title: '2 · Hands', kind: 'quiet', squad: 0, level: 'train-hands.json', group: 'training',
-    place: 'The kitchen court: a cook, a baker, a watchman', lean: 'quiet', defenders: 3,
-    blurb: 'Take down three guards in a kitchen court one at a time with your bare hands. You\'ll whistle, grab, question, knock out and hide.' },
-  { id: 'train-lights', title: '3 · Lights, locks and devices', kind: 'quiet', squad: 0, level: 'train-lights.json', group: 'training',
-    place: 'The generator yard: a camera, a beam, a keypad', lean: 'quiet', defenders: 1,
-    blurb: 'Everything that can see you runs on something. Learn the lights, locks, keypad, camera and beam, and the power behind all of them.' },
-  { id: 'train-kit', title: '4 · Guns and the kit', kind: 'quiet', squad: 0, level: 'train-kit.json', group: 'training',
-    place: 'The range: five slots, two men behind a lit door', lean: 'loud', defenders: 2,
-    blurb: 'Try every slot on the range, starting with the quiet ones. Then fight two enemies through a lit door, in the dark you made.' },
-  { id: 'train-orders', title: '5 · Orders and door tools', kind: 'roomclear', squad: 2, level: 'train-orders.json', seed: 1, group: 'training',
-    place: 'The quarters: a dark street of four one-room houses', lean: 'loud', defenders: 4, squads: true,
-    blurb: 'Lead a pair down a dark street with the move, cover, hold, fall in and stack up orders. Then take four doors four different ways.' },
-  { id: 'train-pairs', title: '6 · Two pairs, two doors, one word', kind: 'roomclear', squad: 4, level: 'train-pairs.json', seed: 1, group: 'training',
-    place: 'The white house: two doors, and its grain store', lean: 'loud', defenders: 3, squads: true,
-    blurb: 'Lead four teammates as two pairs. Put them all on one door, then put a pair on each door of the white house and send both in at once.' },
-  { id: 'train-silent', title: '7 · Quiet, as two', kind: 'quiet', squad: 1, level: 'train-silent.json', group: 'training',
-    place: 'The well court: a well, a lantern, a back gate', lean: 'quiet', defenders: 3,
-    blurb: 'Work with a silent partner in the dark. Park him, set him up behind a guard, and take down two guards at the same moment under one lantern.' },
-];
-/** EVERY MISSION THE LIST HOLDS: the squad's, the quiet ones, the training group — what the missions screen draws, what a query is read back to, what the pause card names */
+/** EVERY MISSION THE LIST HOLDS: the tutorial's, the squad's, the quiet ones — what the missions screen draws, what a query is read back to, what the pause card names */
 /** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
  *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
@@ -170,12 +142,12 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Your squad is pinned down on the road. Lead them from above, through the gate and then door by door.',
     scene: 'A fuel convoy drove into the tunnel and never came out, and your squad ran straight into a roadblock at the station by the tunnel\'s mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',
     teaches: ['Turn, zoom and move the view', 'Order the squad with one key', 'Stack the squad up on a door, then send them in', 'Put a charge on a wall', 'Cut the lights and fight in the dark'] },
-  // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): he stays at the gate with the handset, and every stop is a thing one order to all
+  // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): he leads with the handset and never fires, moving up behind the four from spot to spot, and every stop is a thing one order to all
   // four cannot do and a plan can
   { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', hour: 'midday', weather: 'clear',   // (a plan is laid by day: every yard and door in plain sight from above)
     place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
-    blurb: "You'll stay at the gate with the radio and plan what your squad will do. Hit two doors at once, beat a gunner, and cover two gates.",
-    scene: "The enemies who hit the convoy use this relay post to talk to each other. You'll take your squad to the gate, then stay there and lead them over the radio.",
+    blurb: "You'll stay behind your squad with the radio and plan what they'll do. Hit two doors at once, beat a gunner, and cover two gates.",
+    scene: "The enemies who hit the convoy use this relay post to talk to each other. You'll send your squad in ahead of you, follow behind, and lead them over the radio.",
     teaches: ['Plan mode', 'Give each pair its own door', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Choose which way a pair faces'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
@@ -184,7 +156,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'You\'re on your own. Get past a sentry, a machine gun and a locked door, clear a room, and get back out.',
     scene: 'The people who hit the convoy keep their code book at a fuel stop down the valley. You\'re going in alone to get it, and nobody expects it to stay quiet.',
     teaches: ['Move, sprint and stay low', 'Take cover on a wall and lean out', 'Use your rifle, its launcher and your pistol', 'Throw smoke, a frag and a stun grenade', 'Blow a locked door with a charge'] },
-  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
+  // (packs: the one lesson whose kit is the player's to plan — its Team & kit step walks him through reading this street and packing for it, ui/kitPlan.ts;
+  //  one frag is his whatever he packs: the men behind the sandbags are held down until his lands)
+  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial', packs: { frags: 1 },
     // (its own hour and sky: the post was lit for the night — the street the player stands in is dark, the gates the picket comes through are under lamps
     //  the photocell puts out by day — and measured dry and still)
     hour: 'night', weather: 'clear',
@@ -204,9 +178,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     scene: 'The ledger shows payments to a truck park at the edge of town, and the convoy\'s fuel went through it. Two of you are going in to get the manifest from the office, and nobody can know.',
     teaches: ['A partner who follows you quietly', 'Send him around behind a guard', 'Take down two guards at once', 'Have him cut the power while your hands are full', 'Move through the dark together'] },
 ];
-/** every row that is a lesson: the tutorial's missions, then the Training levels */
-export const LESSON_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...TRAINING_MISSIONS];
-export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS, ...TRAINING_MISSIONS];
+/** every row that is a lesson: the tutorial's missions (the seven older Training lessons were taken out 2026-10-23) */
+export const LESSON_MISSIONS: ScenarioEntry[] = TUTORIAL_MISSIONS;
+export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS];
 
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
  *  (`?level=` is NOT: a scenario on the

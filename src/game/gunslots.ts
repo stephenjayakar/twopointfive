@@ -91,8 +91,9 @@ export function sideOut(g: Game, gd: Guard, dist: number): boolean {
 }
 /** he has a man in front of him this frame: the sidearm stays out */
 export function sideSeen(g: Game, gd: Guard) { const s = gd.second; if (s?.out) s.t = g.time; }
-/** his hands are between guns: no round (asked by every trigger a teammate has: roomfight.ts, coverfire.ts, the fight AI's fire site in guards.ts) */
-export const sideLocked = (g: Game, gd: Guard): boolean => !!gd.second && g.time < gd.second.lock;
+/** his hands are between guns — or off his gun for a two-handed job, until it is back up (workstow.ts, Guard.workStow: never set with that switch off): no round
+ *  (asked by every trigger a teammate has: roomfight.ts, coverfire.ts, the fight AI's fire site in guards.ts) */
+export const sideLocked = (g: Game, gd: Guard): boolean => (!!gd.second && g.time < gd.second.lock) || !!gd.workStow;
 /** the long gun he let go of hangs down his front (combat.ts guardProps draws it): its rig, while the sidearm is out */
 export function sideHung(gd: Guard): 'carbine' | 'sc20k' | null { const s = gd.second; if (!s?.out || gd.state === 'dead') return null; const r = s.gun.def.rig; return r === 'carbine' || r === 'sc20k' ? r : null; }
 /** … every frame, each man (game.ts, where his row is dealt): nobody in front of him for `lull` seconds — the sidearm goes back and the primary comes up

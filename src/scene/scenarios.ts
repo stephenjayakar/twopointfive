@@ -521,10 +521,9 @@ export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: Str
  *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A
  *  group is a KIND OF PLAY, every mission is under exactly one, and none holds more than eight (probes.ts missions-list). SHOW, NOT TELL: a heading is a
  *  word or two; `line` is its tooltip, never drawn. A group with no row draws nothing. */
-export type MissionGroup = 'tutorial' | 'training' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
+export type MissionGroup = 'tutorial' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
 export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[] = [
   { id: 'tutorial', title: 'Tutorial', line: 'The game, a mission at a time' },   // (game/rails.ts: missions on rails — one thing at a time, everything not yet met switched off)
-  { id: 'training', title: 'Training', line: 'One family of systems at a time' },
   { id: 'raids', title: 'Raids', line: 'Small buildings, up to seven defenders' },   // (where a squad's mission that names no group falls: ui/missions.ts groupOf)
   { id: 'strongholds', title: 'Strongholds', line: 'Eight to eleven defenders' },
   { id: 'clock', title: 'On the clock', line: 'A hostage, a runner, a charge or a par time' },
@@ -532,8 +531,8 @@ export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[]
   { id: 'quiet-two', title: 'Quiet, as two', line: 'You and one partner, silent from the start' },
 ];
 
-/** a row of a LESSON group (the tutorial's missions, the Training levels): its own team size and no other, the kit as issued, no levers, no verdict kept */
-export const lessonGroup = (g: string | undefined): boolean => g === 'training' || g === 'tutorial';
+/** a row of the LESSON group (the tutorial's missions; the older Training group was taken out 2026-10-23): its own team size and no other, the kit as issued, no levers, no verdict kept */
+export const lessonGroup = (g: string | undefined): boolean => g === 'tutorial';
 
 /** One row of a scenario list (what a picker shows and a URL starts): which kind, how many teammates, on which level file. THE SMALLEST SHAPE — nothing reads it
  *  in the game yet; `scenarioQuery` is how a row becomes the page's query string. */
@@ -547,6 +546,10 @@ export interface ScenarioEntry {
   /** this row deploys at ITS OWN SIZE and no other, as a Training row does: the line every other size shows greyed on the loadout screen (game/loadout.ts
    *  squadChoices). A design call, not an inability: the level still stages any size from a URL or a harness tool (loadout-probes.ts knows the difference) */
   only?: string;
+  /** a lesson THE PLAYER PACKS FOR (kit.ts ISSUE.picked): its Team & kit step shows the cards and its page stages what this machine keeps, not the plain issue
+   *  every other lesson is played with. A row that carries it has a plan written for it (ui/kitPlan.ts). `frags` = the least of them he carries there whatever
+   *  he packs (kit.ts kitLessonPage: a step of that mission asks for one of his own) */
+  packs?: { frags?: number };
   /** a file under levels/ (absent = the bundled office) */
   level?: string;
   /** THE ROW'S OWN HOUR AND WEATHER (game/rowset.ts, ROWSET.on): what a visit to this row is always started in — a tutorial mission's level is built for one

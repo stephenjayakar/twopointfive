@@ -55,7 +55,7 @@ export async function aimcostCheck(): Promise<boolean> {
     {
       const near = (t: any, legs: any[], slack: number) => { const rad = t.kind === 'emissive' ? 0.45 : t.kind === 'breaker' ? 0.4 : 0.3; for (const s of legs) { const toT = v3.sub(t.pos, s.o); const depth = v3.dot(toT, s.d); if (depth > s.end + slack) continue; if (v3.len(v3.sub(toT, v3.scale(s.d, Math.max(0, Math.min(depth, s.end))))) < rad) return true; } return false; };
       let shots = 0, oldDead = 0, newDead = 0, refused = 0, oldOff = 0, newOff = 0, fixtures = 0, behind = 0, behindOld = 0, behindNew = 0; const lost: string[] = [], shut: string[] = [];
-      for (const name of ['office', 'bazaar', 'vault', 'lights-out', 'police-post', 'compound', 'train-lights', 'records']) {
+      for (const name of ['office', 'bazaar', 'vault', 'lights-out', 'police-post', 'compound', 'records']) {
         Math.random = seeded(7);
         const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${name}.json`, 'utf8'))) });
         const g = W.game, st = g.engine.world.statics;

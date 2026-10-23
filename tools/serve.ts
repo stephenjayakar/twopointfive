@@ -19,6 +19,7 @@ const server = Bun.serve({
   routes: {
     "/": index, "/viewer": viewer, "/editor": editor, "/workbench": workbench, "/replay": replay, "/sounds": sounds, "/music": music,
     "/look": req => { const u = new URL(req.url); return Response.redirect("/?look&" + (u.searchParams.has("levelFile") ? "" : "roomclear&squad4&levelFile=pass.json&hud&") + u.search.slice(1), 302); },   // THE LOOK PROTOTYPE (src/render/shaders/look.wgsl): the game's page with ?look, on the pass unless the link names its own mission
+    "/sneaklab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=sneak-lab.json&solo&sneaklab" + (q ? "&" + q : ""), 302); },   // the sneak lab: the close-in on a man, its numbers live (src/host/sneaklab.ts)
     "/gait": req => Response.redirect("/workbench" + new URL(req.url).search + "#mode=chars&scene=sam/walk", 302),   // the gait lab is the workbench's Characters ▸ Sam ▸ walk / jog / … now; old links land there
   },
   async fetch(req) {

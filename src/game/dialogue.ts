@@ -42,6 +42,7 @@ import { TEMPERAMENT, isBreathing } from './game';
 import { rollcallState, escalationOf, bubbleSecs } from './guards';
 import { needsBusy } from './needs';
 import { CUES } from './cues';
+import { CLOSE } from './close';   // (read inside a function only: src/game is one import cycle)
 import { simRandom, hashStr } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { defenderWords } from './teams';
 import { takeTold } from './takecheck';   // (a leaf: was anybody told the thing is gone)
@@ -948,7 +949,7 @@ export function samStageOf(s: StageKey, gives: boolean): SamStage { return s ===
 /** Sam's facts for SAM_NEEDS, off the same context the man's answer is read from plus the hold's variant */
 export function samFacts(ctx: DialogueCtx, variant: HoldVariant): Record<SamNeed, boolean> {
   const alarm = !!(ctx.facts.floorUp || ctx.facts.episode || ctx.facts.lockdown);
-  return { gun: variant === 'gun', arm: variant === 'arm', knife: variant === 'arm' && ARM_HOLD_HAS_KNIFE, blackout: !!ctx.facts.blackout, alarm, calm: !alarm, lockdown: !!ctx.facts.lockdown, heldLong: !!ctx.facts.heldLong };
+  return { gun: variant === 'gun', arm: variant === 'arm', knife: variant === 'arm' && ARM_HOLD_HAS_KNIFE && !CLOSE.noKnife, blackout: !!ctx.facts.blackout, alarm, calm: !alarm, lockdown: !!ctx.facts.lockdown, heldLong: !!ctx.facts.heldLong };
 }
 /** does this line fit the man and the moment (its tier — category or 'q' — is chosen by the caller) */
 function samLineFits(l: SamLine, ctx: DialogueCtx, facts: Record<SamNeed, boolean>): boolean {

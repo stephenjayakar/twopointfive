@@ -16,6 +16,7 @@
 import { standUp, ROOT } from './headless.ts';
 import type { AudioCall } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
+const { crouchPace } = await import(`${ROOT}/src/game/player.ts`);
 const { floorAt, FLOOR, FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/src/game/floor.ts`);
 
 type Vec3 = [number, number, number];
@@ -59,7 +60,7 @@ async function walkBehind(o: { seed: number; venue: keyof typeof VENUES; materia
   for (let i = 0; i < 10; i++) W.step(DT);
   const gd = parkOthers(game);
   gd.hold = true; placeGuard(gd, V.at, V.yaw); gd.state = 'patrol'; gd.awareness = 0; gd.reactT = 0; gd.lastKnown = null;
-  const speed = o.gait === 'crouch' ? game.tune.playerCrouch : o.gait === 'sprint' ? game.tune.playerSprint : game.tune.playerWalk;
+  const speed = o.gait === 'crouch' ? crouchPace(game) : o.gait === 'sprint' ? game.tune.playerSprint : game.tune.playerWalk;
   const back: Vec3 = [-Math.sin(V.yaw), 0, -Math.cos(V.yaw)]; const behind = (d: number): Vec3 => v3.mad(V.at, back, d);
   const startD = P.kind === 'approach' ? P.endD + covered(speed, P.secs) : P.farD;   // (he reaches endD as the window ends — the puppet halts him a hand short of it)
   const laneNear = P.kind === 'approach' ? P.endD : P.nearD; const start = behind(startD), near = behind(laneNear);

@@ -23,7 +23,7 @@ import { ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, leve
 import { lookLevelFile } from '../scene/look';   // (a leaf: which file of a level the page loads)
 import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficultyHref, structureOfLevel, squadsHeld, type Difficulty } from '../game/difficulty';
 import { leverRows, leversSig } from './levers';
-import { fogOfQuery, sameFog } from '../game/scenarioRun';
+import { fogOfLink, sameFog } from '../game/scenarioRun';
 import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
 import { rowHour, rowWeather } from '../game/rowset';
 import { WEATHER_KINDS, WEATHER_PRESETS, weatherTitle, weatherWords, weatherOfSearch, weatherSearch, snowLevel, type WeatherKind } from '../game/weatherKinds';
@@ -31,7 +31,7 @@ import { HOUR_IDS, HOURS, hourIdOf, hourHref, hourLive, hourLabel, hourClock, ho
 import { menuTheme } from './theme';
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals, type-only imports: the office's Team & kit block — planOf)
 import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled office — scene/level.ts imports the same module: its plan needs no server)
-import { artFrom, drawSheet, type ArtData, type PlanArt } from './planArt';   // (the map sheet's picture: the place as a model)
+import { artFrom, drawSheet, sheetView, type ArtData, type PlanArt } from './planArt';   // (the map sheet's picture: the place as a model)
 import { stillOf, drawStill } from './menuStills';   // (a card's picture: the mission's key art, where one was made)
 
 export type Lean = 'quiet' | 'loud' | 'either';
@@ -45,9 +45,18 @@ export interface Mission {
   /** the group it is listed under (scene/scenarios.ts MISSION_GROUPS: the list draws a heading per group, in that table's order) */
   group: MissionGroup;
   place: string; blurb: string; lean: Lean; untuned: boolean;
-  /** the sheet's 'defenders' cell, in words ('11', '3 holding hostages', '3, and 2 civilians'; '—' where the row does not say) */
+  /** the sheet's 'defenders' cell, in words ('11', '3 holding hostages', '3, and 2 civilians'; '—' where the row does not say). No screen draws it while
+   *  MYSTERY is on: a screen asks defendersShown(), never this */
   defenders: string;
 }
+/** HOW MANY ARE INSIDE IS A MYSTERY. The maintainer, 10-23: "we should also remove all defender counts from the menus, etc., it should be a mystery!" The
+ *  sheet's Defenders cell, the same cell on the Team & kit step (ui/kitBrief.ts) and on the mission's load page (ui/loadbrief.ts) are not drawn, and the
+ *  run tally's intel cell no longer says how many there were to question (ui/debrief.ts). A row's `defenders` is untouched: it is what the stand-up and
+ *  the probes count against. On in the page; `?mystery=0` = the cells as they were. UI only: nothing under src/game reads it and no recording carries it. */
+export const MYSTERY = { on: true };
+try { if (new URLSearchParams(location.search).get('mystery') === '0') MYSTERY.on = false; } catch { /* no page (the harness) */ }
+/** the Defenders cell's words: '—' (which every screen reads as "no cell") while the count is a mystery */
+export function defendersShown(m: Mission): string { return MYSTERY.on ? '—' : m.defenders; }
 export type PickFn = (m: Mission, href: string) => void;
 /** the seams other screens set once: `onPick` replaces the page load (the loadout screen's way in), `startSolo` is the start card's Start (set by ui/menu.ts
  *  only while the real start card is up), `pickLabel` is the sheet's button */
@@ -63,7 +72,7 @@ const LS = 'twopointsix.mission';   // the row last started on this machine: the
  *  but `?solo`, which only keeps the start card shut. The shift is three guards and two civilians (tools/qa missions probe counts them on a plain boot). */
 export const SOLO_KEY = 'solo';
 export const SOLO_NIGHT: Mission = { id: 'solo-night', title: 'Solo night', scenario: null, squad: 0, group: 'quiet-alone', place: 'The office, after dark', lean: 'quiet', untuned: false, defenders: '3, and 2 civilians',
-  blurb: 'You\'re alone on the office floor. Reach the server room, pull the drive from the marked rack and leave through the fire exit. Watch out for lights, noise and cameras.' };
+  blurb: 'You\'re alone on the office floor. Reach the server room, pull the drive and leave through the fire exit. Watch out for lights, noise and cameras.' };
 
 const LEAN_OF_KIND: Record<ScenarioEntry['kind'], Lean> = { nightbreach: 'either', roomclear: 'loud', rescue: 'loud', quiet: 'quiet' };
 /** THE GROUP A ROW IS LISTED UNDER: its own (`group`), else by what it is — a quiet mission alone or as two, a rescue on the clock, and any other squad's
@@ -323,14 +332,14 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     secs.forEach((x, k) => { const on = k === secOf[sel]; x.h.className = `msec${x.at ? ' rest' : ''}${on ? ' open' : ''}`; x.h.setAttribute('aria-expanded', on ? 'true' : 'false'); x.h.setAttribute('data-count', String((secs[k + 1]?.at ?? list.length) - x.at)); });
     title.textContent = m.title; untuned.style.display = unplayed(m) ? '' : 'none';   // (a mission on the short list does not wear the hand-set label — scene/picks.ts; ?nopicks = as it was)
     place.textContent = m.place; blurb.textContent = m.blurb;
-    fTeam.textContent = teamWordsOf(m); fDef.textContent = m.defenders; fLean.textContent = leanWords(m.lean); fLevel.textContent = m.scenario?.level ? levelWords(m.scenario) : 'office';
+    fTeam.textContent = teamWordsOf(m); fDef.textContent = defendersShown(m); if (fDef.parentElement) fDef.parentElement.style.display = MYSTERY.on ? 'none' : ''; facts.className = MYSTERY.on ? 'mfacts nodef' : 'mfacts';   /* (the cell out of the row: three cells on the old sheet, no row at all where it was the only one — index.html, ui/startpage.ts, ui/kitBrief.ts) */ fLean.textContent = leanWords(m.lean); fLevel.textContent = m.scenario?.level ? levelWords(m.scenario) : 'office';
     for (const [lv, b] of dbtns) { b.className = now === lv ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', now === lv ? 'true' : 'false'); }
     diff.className = diffLive(m) ? 'mdiff' : 'mdiff na';   // (greyed where the pick changes nothing: the solo night, and a quiet mission — its shift is the level's own)
     dnote.textContent = m.scenario?.kind === 'quiet' ? 'a quiet mission uses the level\'s own shift on either setting' : m.scenario ? quietFogAside(() => difficultyWords(now!, squadsHeld(m.scenario))) : 'the night shift is the same on either setting';
     dnote.title = dnote.textContent ?? '';   // (the sheet shows two lines of it: index.html .mdiff > .dn)
-    { const fogOn = !!m.scenario && fogOfQuery(new URLSearchParams(hrefs[sel].replace(/^[^?]*\?/, '')));   // (the fog of war is up on a room clear and a rescue — game/scenarioRun.ts fogOfQuery: the lever is greyed where the mission has none; a Training lesson is taught on the level as it is — its page reads no lever, game/difficulty.ts initDifficulty)
+    { const fogOn = !!m.scenario && fogOfLink(new URLSearchParams(hrefs[sel].replace(/^[^?]*\?/, '')));   // (the fog of war is up on a room clear and a rescue — game/scenarioRun.ts fogOfQuery: the lever is greyed where the mission has none; a Training lesson is taught on the level as it is — its page reads no lever, game/difficulty.ts initDifficulty)
       const quiet = m.scenario ? quietFogRow(m.scenario) : soloFogRow();   // (a quiet mission may be played under the fog — game/quietfog.ts: the lever is live there with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved)
-      levers.paint(key => !lessonGroup(m.scenario?.group) && (key === 'fog' ? fogOn || quiet : diffLive(m)), m.scenario?.kind === 'roomclear' ? structureOfLevel(m.scenario.level) : '', quiet); }
+      levers.paint(key => !lessonGroup(m.scenario?.group) && (key === 'fog' || key === 'told' ? fogOn || quiet : diffLive(m)),   /* (how much you're told — game/told.ts — is live wherever the fog's lever is, its off rung included: the lever is for more signs than the fog's mark) */ m.scenario?.kind === 'roomclear' ? structureOfLevel(m.scenario.level) : '', quiet); }
     go.textContent = MISSIONS.pickLabel; go.setAttribute('href', hrefs[sel]); go.setAttribute('data-mission', m.id);
     (rows[sel] as unknown as { scrollIntoView?: (o: unknown) => void }).scrollIntoView?.({ block: 'nearest' });
     const file = m.scenario?.level ?? OFFICE, mark: PlanMark = { kind: m.scenario ? m.scenario.kind : 'solo', way: wayOf(m) }, pk = `${file}|${mark.kind}|${mark.way}`;
@@ -538,8 +547,17 @@ export function drawMissionMap(cv: HTMLCanvasElement, m: Mission, search: string
   cv.width = width; cv.height = Math.round(width * PLAN_D / PLAN_W);
   return drawPlan(cv, file, false, true, { kind: m.scenario ? m.scenario.kind : 'solo', way: w < 0 && SAMESTART.on ? 0 : w }).then(() => cv.style?.display !== 'none' && !!cv.getContext?.('2d'));
 }
+/** WHERE SPOTS OF THE PLACE FALL ON A DRAWN SHEET: `spots` (x, z on the floor) as fractions of the canvas `cv`, which this list drew a small sheet on
+ *  (its `data-level` names the file, `data-sheet` the size it was drawn at). Null: no sheet is drawn there (no file, a plain plan, a still picture). For a caller that pins words on
+ *  the map (ui/kitBrief.ts: a tutorial's plan names the rooms of its street). */
+export function sheetSpots(cv: HTMLCanvasElement, spots: number[][]): Promise<number[][] | null> {
+  const file = cv.getAttribute?.('data-level') ?? '', sheet = cv.getAttribute?.('data-sheet') ?? ''; if (!file || !sheet || cv.getAttribute?.('data-still') || !cv.width || !cv.height) return Promise.resolve(null);
+  return planOf(file).then(P => { if (!P || cv.getAttribute('data-level') !== file) return null;
+    const V = sheetView(P.art, cv.width, cv.height, [P.min[0], P.min[1], P.max[0], P.max[1]], Object.values(P.starts).flat(), sheet === 'small');   // (the view it was drawn through)
+    return spots.map(([x, z]) => [V.x(x) / cv.width, V.y(z) / cv.height]); });
+}
 function drawPlan(cv: HTMLCanvasElement, file: string, thumb = false, map = false, mark?: PlanMark, small = thumb): Promise<void> {
-  cv.setAttribute('data-level', file); cv.setAttribute('data-mark', mark ? `${mark.kind}|${mark.way}` : '');
+  cv.setAttribute('data-level', file); cv.setAttribute('data-sheet', map ? (small ? 'small' : 'full') : ''); cv.setAttribute('data-mark', mark ? `${mark.kind}|${mark.way}` : '');
   const g = cv.getContext?.('2d') ?? null; if (!g) { if (!thumb) cv.style.display = 'none'; return Promise.resolve(); }
   const paint = (P: Plan | null) => {
     if (cv.getAttribute('data-level') !== file || cv.getAttribute('data-mark') !== (mark ? `${mark.kind}|${mark.way}` : '')) return;   // (another row was highlighted while this one loaded)
