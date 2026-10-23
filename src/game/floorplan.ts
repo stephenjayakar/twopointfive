@@ -37,8 +37,11 @@
 // nearest a set charge, who is down) are the SEAT's — today the one player's, read off `g.orders` and `g.player` at the two marked places.
 //
 // PLAN.on: on on every stand (it is picture only: with nobody asking `floorPlan` nothing runs; asked, a run's digest is the same — tools/qa/plan-check.ts);
-// `?noplan` in the page = nothing drawn, the HUD as it was. The one piece of state is a WeakMap of nav legs kept between asks, picture only, in no checkpoint.
-import { SideMap } from '../math/side';
+// `?noplan` in the page = nothing drawn, the HUD as it was. IT KEEPS NOTHING OF ITS OWN: the nav grid's answer for a leg, kept between asks, lives with
+// whoever asks (`PlanKept`: the overlay's own table in ui/planfloor.ts, a check's own Map — attention.ts attentionWay's rule), and the grid is searched
+// on the asker's tables too (`kept.nav`, NavGrid.findPathAside), so asking for the men's ways and the laid orders writes nothing of the game's. The
+// throw page's preview, read through squadthrow.ts `squadThrowPlans`, is asked aside in the same way, on the store this one carries for it
+// (`kept.throws`, squadthrow.ts SquadThrowKept; tools/qa/throwview-check.ts).
 import type { Vec3 } from '../math/vec';
 import { v3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -47,7 +50,7 @@ import type { Door } from './doors';
 import type { SetCharge } from './doortools';
 import { DOORTOOLS } from './doortools';   // (both read inside functions only: src/game is one import cycle)
 import { wallPt } from './wallcharge';
-import { squadThrowPlans } from './squadthrow';
+import { squadThrowPlans, squadThrowKept, type SquadThrowKept } from './squadthrow';
 import { FRAG } from './frag';
 import { AUTOPILOT, showSecsOf } from './autopilot';   // (read inside floorPlan only)
 import { PLANLAY, layMen, layPoint, layKey, layPending } from './planlay';   // (the same)
@@ -130,18 +133,23 @@ export function planTag(callsign: string): string {
   return (w[0][0].toUpperCase() + w.slice(1).map(x => NUM[x.toLowerCase()] ?? x[0].toUpperCase()).join('')).slice(0, 3);
 }
 
-interface Leg { key: string; t: number; pts: Vec3[] | null; /** where the leg was asked from */ from: Vec3 }
-const legs = new SideMap<Guard, Leg[]>('floorplan.legs');   // picture only (see the head): the nav grid's answer for a leg, kept PLAN.reaskSecs
-function leg(g: Game, gd: Guard, k: number, a: Vec3, b: Vec3, iters = 3000): Vec3[] | null {
-  let L = legs.get(gd); if (!L) legs.set(gd, L = []);
+/** the nav grid's answer for one leg of a man's way, kept PLAN.reaskSecs */
+export interface PlanLeg { key: string; t: number; pts: Vec3[] | null; /** where the leg was asked from */ from: Vec3 }
+/** WHERE THE KEPT LEGS LIVE: with the one who asks, never in the game (see the head). `nav` = the tables the grid is searched on, made at the first search */
+export interface PlanKept { get(gd: Guard): PlanLeg[] | undefined; set(gd: Guard, L: PlanLeg[]): unknown; nav: { s?: object }; /** the throw page's preview, kept for squadthrow.ts (made at the first ask) */ throws?: SquadThrowKept }
+/** a store for one asker (a check, a tool) of ONE game: its own Map, gone with it (it holds its men: make one a game, never one for many) */
+export function planKept(): PlanKept { const m = new Map<Guard, PlanLeg[]>(); return { get: gd => m.get(gd), set: (gd, L) => m.set(gd, L), nav: {} }; }
+function leg(g: Game, kept: PlanKept, gd: Guard, k: number, a: Vec3, b: Vec3, iters = 3000): PlanLeg {
+  let L = kept.get(gd); if (!L) kept.set(gd, L = []);
   const key = `${b[0].toFixed(1)},${b[2].toFixed(1)}`, c = L[k], dt = c ? g.time - c.t : -1;
-  if (c && c.key === key && dt >= 0 && dt < PLAN.reaskSecs) return c.pts;   // (dt < 0: the clock went back on a load)
-  const pts = g.col.nav.findPath(a, b, iters);   // (null: the floor has no way — nothing is drawn, never a line through a wall)
-  L[k] = { key, t: g.time, pts, from: [a[0], 0, a[2]] }; return pts;
+  // (dt < 0: the clock went back on a load · asked from somewhere else: an answer from a time line a restore left behind, the store being the picture's)
+  if (c && c.key === key && dt >= 0 && dt < PLAN.reaskSecs && flat(a, c.from) < 2.5) return c;
+  const pts = g.col.nav.findPathAside(kept.nav, a, b, iters);   // (null: the floor has no way — nothing is drawn, never a line through a wall)
+  return L[k] = { key, t: g.time, pts, from: [a[0], 0, a[2]] };
 }
 
 /** the way an order walks a man from where he stands to his mark: his feet, then every corner, then the mark — empty where the floor has none */
-function wayOf(g: Game, gd: Guard, A: Assignment, mark: Vec3): Vec3[] {
+function wayOf(g: Game, kept: PlanKept, gd: Guard, A: Assignment, mark: Vec3): Vec3[] {
   const p = gd.char.pos, stops: Vec3[] = A.via.length ? [...A.via, mark] : [mark];
   const out: Vec3[] = [[p[0], 0, p[2]]];
   const add = (q: Vec3) => { const l = out[out.length - 1]; if (flat(l, q) > 0.05) out.push([q[0], 0, q[2]]); };
@@ -149,16 +157,16 @@ function wayOf(g: Game, gd: Guard, A: Assignment, mark: Vec3): Vec3[] {
   const P = gd.path, own = !!gd.pathGoal && gd.pathI < P.length && (flat(gd.pathGoal, stops[0]) < 0.9 || flat(gd.pathGoal, A.goal) < 0.9) && flat(P[P.length - 1], gd.pathGoal) < 1.2;
   if (own) for (let i = gd.pathI; i < P.length; i++) add(P[i]);
   else {
-    const pts = leg(g, gd, 0, p, stops[0]); if (!pts) return [];
+    const first = leg(g, kept, gd, 0, p, stops[0]), pts = first.pts; if (!pts) return [];
     // an answer kept from a stride ago starts behind him: from the end of the leg he is nearest on — looked for over its first two metres only, never 'the
     // corner nearest him' of its first six (a way that doubles back passes near him again further on: the corners between were skipped and the line cut
     // the wall; attention.ts attentionWay draws a guard's thread the same way)
-    let k = 0, best = Infinity, arc = 0, a = legs.get(gd)![0].from;
+    let k = 0, best = Infinity, arc = 0, a = first.from;
     for (let i = 0; i < pts.length && arc <= 2; i++) { const b = pts[i], dx = b[0] - a[0], dz = b[2] - a[2], l2 = dx * dx + dz * dz, u = l2 > 1e-9 ? Math.min(1, Math.max(0, ((p[0] - a[0]) * dx + (p[2] - a[2]) * dz) / l2)) : 0, d = Math.hypot(p[0] - a[0] - dx * u, p[2] - a[2] - dz * u); if (d < best - 1e-6) { best = d; k = i; } arc += Math.sqrt(l2); a = b; }
     for (let i = k < pts.length - 1 && flat(p, pts[k]) < 0.3 ? k + 1 : k; i < pts.length; i++) add(pts[i]);
   }
   add(stops[0]);
-  for (let k = 1; k < stops.length; k++) { const pts = leg(g, gd, k, stops[k - 1], stops[k]); if (!pts) return []; for (const q of pts) add(q); add(stops[k]); }
+  for (let k = 1; k < stops.length; k++) { const pts = leg(g, kept, gd, k, stops[k - 1], stops[k]).pts; if (!pts) return []; for (const q of pts) add(q); add(stops[k]); }
   return out;
 }
 
@@ -241,8 +249,9 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
   if (g.rails?.hushes('word')) for (const d of out.doors) if (d.why !== 'pair') { d.key = null; d.now = false; }
 }
 
-/** The squad's plan as it stands this frame, for the overlay. Empty with the switch off, with no squad on the floor, and under any show. */
-export function floorPlan(g: Game): FloorPlan {
+/** The squad's plan as it stands this frame, for the overlay. Empty with the switch off, with no squad on the floor, and under any show.
+ *  `kept` = the asker's own store (PlanKept); with none, nothing is kept past this one ask and every leg is asked of the grid afresh. */
+export function floorPlan(g: Game, kept: PlanKept = planKept()): FloorPlan {
   const out: FloorPlan = { men: [], who: [], you: null, doors: [], throws: [], laid: [], mode: true };
   const S = g.orders; if (!PLAN.on || !S.active) return out;
   // outside the order mode: only what the order book was just told (its log: who, when) — a module's own re-assign of a man stamps him anew and is not that
@@ -275,7 +284,7 @@ export function floorPlan(g: Game): FloorPlan {
     if (there) { aim = gd.char.aimYaw; if (told && angDiff(yawTo(gd.char.pos, told), aim) < 0.4) watch = told; }
     else if (walking) { if (told && flat(mark, told) > 0.3) { aim = yawTo(mark, told); watch = told; } else if (!A.foe) aim = A.fit?.face ?? A.face; }
     if (watch && flat(mark, watch) > PLAN.sightM) watch = null;
-    out.men.push({ gd, tag: planTag(gd.callsign), tone: toneOf(gd), age, path: walking && PLAN.paths ? wayOf(g, gd, A, mark) : [], mark, there, held, aim: PLAN.sectors ? aim : null, watch: PLAN.sectors ? watch : null, onDoor: !!watch && onDoor });
+    out.men.push({ gd, tag: planTag(gd.callsign), tone: toneOf(gd), age, path: walking && PLAN.paths ? wayOf(g, kept, gd, A, mark) : [], mark, there, held, aim: PLAN.sectors ? aim : null, watch: PLAN.sectors ? watch : null, onDoor: !!watch && onDoor });
   }
   if (PLAN.word) waitsOnKey(g, out, toneOf);
   // a plan laid for the word (planlay.ts): in the order mode all of it; with the menu down an order just laid, going out as an order just given does —
@@ -289,13 +298,13 @@ export function floorPlan(g: Game): FloorPlan {
       const at = layPoint(g, o), door = o.kind === 'door' ? g.doors.list[o.door ?? -1] : null;
       const L: PlanLaid = { tone: toneFor(g, men, toneOf), feet: men.map((m): Vec3 => [m.char.pos[0], 0, m.char.pos[2]]), ways: [], at, a: null, b: null, key: F, k };
       if (door) [L.a, L.b] = jambs(door);
-      if (at && PLAN.paths) for (const m of men) { const pts = leg(g, m, 9, m.char.pos, at, 20000); if (pts) L.ways.push([[m.char.pos[0], 0, m.char.pos[2]], ...pts.map((q): Vec3 => [q[0], 0, q[2]]), at]); }
+      if (at && PLAN.paths) for (const m of men) { const pts = leg(g, kept, m, 9, m.char.pos, at, 20000).pts; if (pts) L.ways.push([[m.char.pos[0], 0, m.char.pos[2]], ...pts.map((q): Vec3 => [q[0], 0, q[2]]), at]); }
       out.laid.push(L);
     }
   }
   if (PLAN.throws) {
     const ours = new Set(S.squad());
-    for (const T of squadThrowPlans(g)) {
+    for (const T of squadThrowPlans(g, kept.throws ??= squadThrowKept())) {
       if (!ours.has(T.gd) || T.gd.state === 'dead' || T.points.length < 2) continue;
       const walked = !T.preview && out.men.some(m => m.gd === T.gd && m.path.length > 1);   // (ordered: his way is already his order's, above)
       out.throws.push({ gd: T.gd, tag: planTag(T.gd.callsign), tone: toneOf(T.gd), kind: T.kind, preview: !!T.preview, from: [T.from[0], 0, T.from[2]],

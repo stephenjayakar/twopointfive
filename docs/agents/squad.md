@@ -326,9 +326,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   man, so its line began "from the corner nearest him" of its first six: on a way that doubles back that skipped the corners between and the line cut
   the wall. Now from the end of the leg he is nearest on, looked for over the way's first two metres (`Leg.from` is where it was asked), the same way
   `attention.ts attentionWay` draws a guard's thread. Checked by `probes.ts plan` on both stands; the doubling-back case itself has no line of its own
-  here (the attention thread's check plays it for its copy). STILL OPEN: `floorplan.legs` is a side table of the game and its search runs on the
-  grid's own tables, so a game drawn and one not drawn differ in the full state hash (`NavGrid.findPathAside` and a store on the picture's side are
-  the mend, not taken yet). Never seen on a GPU.
+  here (the attention thread's check plays it for its copy). THE KEPT LEGS ARE THE ASKER'S (2026-10-23): `floorplan.legs` was a side table of the game and its search ran on the
+  grid's own tables, so a game drawn and one not drawn differed in the full state hash. Now `floorPlan(g, kept)` takes the asker's own store
+  (`PlanKept`: the overlay's in `ui/planfloor.ts`, a check's own from `planKept()`; with none, nothing is kept past the one ask) and searches with
+  `NavGrid.findPathAside` on that store's tables; the module keeps nothing. `probes.ts plan` line 9 asks every frame, once as he walks and once with
+  his own path set aside so the grid is asked, and holds the run's digest AND its whole state (`stateHash`) equal to the run never asked: red on the
+  code before ("whole state DIFFERS") and with `PLANKEPT_BREAK=1` (the search put back on the grid's own tables), green on both stands. A kept leg is
+  used again only when asked from within 2.5 m of where it was asked (the store is outside the rollback snapshot: a restore leaves it an answer from
+  the other time line). STILL OPEN, not this module's: with the THROW PAGE up `floorPlan` reads `squadthrow.ts squadThrowPlans`, whose `view`
+  question keeps its answer in that module's own table and searches on the game's, so a game drawn and one not drawn still differ in the whole
+  state there (digest equal); line 9 does not play the throw page. Never seen on a GPU.
+- **What the cursor is on is kept by whoever reads the HUD** (2026-10-23; `orders.ts hover / hud / hintView`, `HoverKept`, `ui/hoverkept.ts`; picture
+  only, no switch). `hover()`'s answer, kept a tenth of a second while the cursor rests, and the camera it was asked under were fields of the order
+  book (`orders.hov`, `orders.hovCam`): a game whose HUD was read each frame differed in the whole state from one never read. Now `hud(kept)` and
+  `hintView(kept)` take the asker's store (the page's one store for both, `ui/hoverkept.ts`); with none nothing is kept and every ask looks again.
+  CHECK `probes.ts cmdring`, the last line, both stands: read every frame against never read, digest equal, the answer in the store, and no field of
+  the order book another value after a read than before it; `HOVERKEPT_BREAK=1` (the book handed in as the store, so kept on it again) is red on
+  both. The store is outside the rollback snapshot (after a restore it can hold the other time line's answer for its tenth of a second). The page's
+  own wiring (`overlay.ts`, `ui/cmdring.ts` passing the one store) is held by no check and the page was not driven. STILL OPEN, not held by that line and not this module's: a HUD read
+  still writes the room clear drill's memo of its two men (`nightbreach.ts drillOf`, a getter that keeps its answer) and the collision world's query
+  stamps under the cursor's pick (`game.col.stamp`, `world.rgStamp`), so the whole state still differs (the line prints where). Never seen on a GPU.
 - **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
   `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
   one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
@@ -787,7 +804,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The squad's plan is drawn on the floor** (`src/game/floorplan.ts` = WHAT, `src/ui/planfloor.ts` = the drawing, index.html `.plan …` = the look; `PLAN.on` ON on every stand — it is picture only —
   `?noplan` = nothing drawn; Tab ▸ Squad ▸ Order menu & keys ▸ 'plan drawn on the floor' + three part rows, this visit only; page rebuild/plan-on-floor/read-first.md).
   `floorPlan(g)` ONLY READS: the squad's assignments as they stand (`orders.of(gd)`), each man's own nav path (`gd.path` from `gd.pathI` where `gd.pathGoal` is this order's and the path runs
-  to it, else the nav grid's answer kept ≤ `reaskSecs` in a WeakMap — the file's one piece of state, in no checkpoint; no way on the floor = nothing drawn, never a line through a wall), the
+  to it, else the nav grid's answer kept ≤ `reaskSecs` in the ASKER'S own store (`PlanKept`, since 2026-10-23: the module keeps nothing; see 'An order's line starts on the leg he is on'); no way on the floor = nothing drawn, never a line through a wall), the
   open menu's men, and the books of whatever waits on the key. Per living teammate WITH A MARK (`Assignment.post`, or the order's own `goal` a step off it with no `via`: the unasked cover's
   step; a follower has none and is not drawn): walking = the dotted WAY feet → corners (`via`) → mark, a dashed ring at the mark with his two-character tag IN it (`planTag`: 'R1'), the fan
   he WILL watch; standing (his feet within 0.45 m of the mark — not `A.arrived`, which also wants his gun round) = the ring filled, the tag UNDER it, the fan along his gun AS IT POINTS
@@ -907,3 +924,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a focused field of the debugger (Esc lets go of it). Check: `tabback` (family `orders`; each of the four staged as play stages it, rule on and off, then
   the pause under `stepFrame` with Space let go under the card, the same keys tick by tick as a replay gives them, the switch in a recording;
   `TABBACK_BREAK=1`), both stands. Never seen on a GPU.
+- **The throw page's picture writes nothing of the game's** (2026-10-23; `squadThrowPlans(g, V)`, `SquadThrowKept` / `squadThrowKept()` in
+  src/game/squadthrow.ts; `Collision.aside` and `NavGrid.aside` in src/scene/collision.ts). The page's preview is a whole search (flights, walks, who a
+  frag would catch). It kept its answer in `squadthrow.states` (the 'v' slot) and looked with the game's own tables, so a game drawn and the same game
+  not drawn differed in whole state, run digest equal. Now the preview is asked ASIDE: its kept answer, its verdict of who is caught and the walk
+  search's marks live in the asker's store (ui/squadthrowviz.ts keeps one a game, the floor plan's `PlanKept.throws` carries one; a store asked of another game starts empty; with none handed in nothing
+  is kept and every ask is a whole search), the rays and path searches run on the asker's tables (`Collision.aside` swaps the query stamps, the segment
+  scratch, the cos / sin cache and the walk grid's search tables, and holds off the sound routes' cache: `SoundPaths.asking`), the walks the orders are
+  asked about are kept in the store too (`SquadOrders.askAside` swaps `reached`), the duck's memo (`duckMates`) is put back as it was, and two answers OF
+  THE TICK that other modules keep by game (`frag.WALLS_FOR`, `seenwalk.shared`, named in `TICK_KEPT`) stand aside while it asks and are put back. Not a switch: the picture is the same (the check's `same`
+  line) and no run digest moves. CHECK: `bun run tools/qa/throwview-check.ts` (probe `throwview`, family squadthrow), both stands,
+  `THROWVIEW_BREAK=1` must fail `state` and `ask`: a frag and a stun, worked-out throws on and off, one seed; lines state (two games, thirty frames of
+  the page), ask (ONE game with a fight on and the men shifted about, 150 frames: the state hashed before and after each ask, the module variables
+  looked at — before the mend an ask wrote `orders.reached` on 4 to 11 of them), none, same, plan (the floor plan asked on its own store), kept (1 or
+  2 searches in the thirty frames with a store, 30 with none). One break for all the swaps: it does not prove each apart; the sound cache and the
+  duck memo were mended from a review's reading and were never seen writing in a run. A NEW cache a
+  search fills in turns `state` red on the stand that has the rule, and the line prints the table's name: add it to `TICK_KEPT`, or to
+  `Collision.aside` when it is the collision's own. NOT COVERED: `squad40Plans` (the 40 mm's picture) was not looked at; `orders.hud()` read with no
+  menu up writes `orders.hov` (a drawn game differs from an undrawn one there too, digest equal). Never seen in a page.

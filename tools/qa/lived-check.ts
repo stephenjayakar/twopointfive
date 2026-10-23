@@ -66,8 +66,9 @@ const LEVEL_BASE: Record<string, string> = {
   // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
   'tut-pair.json': '9048a2e01',
 
-  // the plan mission's hall has no lookout on the word's own step (a step's `eye` gone)
-  'tut-plan.json': '6cdeafa97',
+  // the plan mission's yard has its ground (three walked ways of gravel, a pad under the dish and the generator, six stains, six scatters of stones), the
+  // hall's lookout is back on the word's own step (a step's `eye`), and a card stands on the step that picks all four again
+  'tut-plan.json': '6833cb33b',
 
   // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
   'tut-quiet.json': '87c7cebef',
@@ -75,8 +76,9 @@ const LEVEL_BASE: Record<string, string> = {
   // the tunnel station, played with no fog of war (its lesson's rails.fog)
   'tut-sky.json': 'f3ef62b01',
 
-  // the fuel stop, alone: its ground re-laid, the gun's setup its own beat, his own charge on his own key
-  'tut-solo.json': '86c882d26',
+  // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, two sponge rounds on his card and the swap's own lists, the moon
+  // behind the shop
+  'tut-solo.json': 'bd7b25a26',
 
   // the squad mission after a first play: the hall's street window glazed, a step given a cue
   'tut-squad.json': 'be980f1e1',

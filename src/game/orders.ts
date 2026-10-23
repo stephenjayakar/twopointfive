@@ -296,6 +296,13 @@ const COMPASS = ['south', 'south-east', 'east', 'north-east', 'north', 'north-we
 const flat = v3.distXZ, yawTo = v3.yawTo;
 const compass = (yaw: number) => COMPASS[((Math.round(yaw / (Math.PI / 4)) % 8) + 8) % 8];
 
+/** WHERE hover()'s KEPT ANSWER LIVES: with the one who asks (the page's own, ui/hoverkept.ts, shared by the HUD's lines and the ring's hint), never on the
+ *  order book. `hov` = the last answer while the cursor rests; `cam` = the camera it was asked under (hintView asks again when that has moved). It is outside
+ *  the rollback snapshot: after a restore it can hold an answer from the time line left behind, used only if the clock comes back into its tenth of a
+ *  second with the cursor on the same pixel. */
+export interface HoverKept { hov: { x: number; y: number; t: number; v: OrderTarget } | null; cam: number[] }
+/** a store for one asker (the page's, a check's) */
+export function hoverStore(): HoverKept { return { hov: null, cam: [] }; }
 /** What the menu was opened on. `man`: the reticle was on that teammate — the order is his alone. */
 export type OrderTarget =
   | { kind: 'floor'; at: Vec3; wall?: WallSpot; thing?: WorkThing }   // (wall: the point is on a wall a charge might go on — wallcharge.ts · thing: it is the spot a man stands on to work a thing — workthings.ts)
@@ -501,9 +508,7 @@ export class SquadOrders {
   private asg = new Map<Guard, Assignment>();
   private trail: Vec3[] = [];
   private back: Vec3 = [0, 0, -1];   // which way 'behind Sam' lies past the trail's end: fixed when the trail is seeded, never his live facing (he turns with the reticle)
-  private view: { input: Input | null; cam: FollowCamera | null; canvas: View | null } = { input: null, cam: null, canvas: null };
-  private hovCam: number[] = [];   // the camera hover()'s kept answer was asked under (hintView: asked again when it has moved)
-  private hov: { x: number; y: number; t: number; v: OrderTarget } | null = null;   // hover()'s last answer, while the cursor rests   // this frame's cursor and camera, kept for the HUD's own look at what the cursor is on (hud() — never read by the simulation)
+  private view: { input: Input | null; cam: FollowCamera | null; canvas: View | null } = { input: null, cam: null, canvas: null };   // this frame's cursor and camera, kept for the HUD's own look at what the cursor is on (hud() — never read by the simulation)
   private escUsed = false;  // Esc closed the menu since the last frame (Game.escape, from the page's key handler): that press is not the selector's as well
   private ours = new SideSet<Guard>();   // men whose Guard.pinned this module set (the fight seam): unpinned when their order goes
   private acks = 0; private group = 0;
@@ -911,12 +916,14 @@ export class SquadOrders {
     return rows.length !== M.rows.length || rows.some((d, i) => d !== M.rows[i]);
   }
   /** what the cursor is on (null: no squad, or before the first frame) — the HUD's lines under the squad block; the simulation never reads it. Kept while the
-   *  cursor has not moved, for a tenth of a second: the page asks every frame */
-  hover(): OrderTarget | null {
+   *  cursor has not moved, for a tenth of a second (the page asks every frame) — in the ASKER'S store (`HoverKept`), never on the order book. With no store
+   *  nothing is kept and every ask looks again. (A read is still not free of the game's state: the pick under it stamps the collision world's query
+   *  tables and hud() fills the room clear drill's memo — docs/agents/squad.md.) */
+  hover(kept?: HoverKept): OrderTarget | null {
     const v = this.view; if (!v.input || !v.cam || !v.canvas || !this.active) return null;
-    const c = this.hov, x = v.input.mouseX, y = v.input.mouseY, t = this.g.time;
+    const c = kept?.hov, x = v.input.mouseX, y = v.input.mouseY, t = this.g.time;
     if (c && c.x === x && c.y === y && t >= c.t && t - c.t < 0.1) return c.v;
-    const out = this.targetUnder(v.input, v.cam, v.canvas); this.hov = { x, y, t, v: out }; return out;
+    const out = this.targetUnder(v.input, v.cam, v.canvas); if (kept) kept.hov = { x, y, t, v: out }; return out;
   }
   /** the order the quick key gives on a target: its first row (null: none fits) */
   defaultFor(t: OrderTarget): OrderDef | null { return this.rowsFor(t).find(d => !d.opens) ?? null; }
@@ -1111,15 +1118,15 @@ export class SquadOrders {
    *  kind of thing, where the glyph goes — beside the cursor, or in the middle of a ring that is up, whose target it then is — how much larger than its px it
    *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
    *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
-  hintView(): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null } | null {
+  hintView(kept?: HoverKept): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null } | null {
     const v = this.view; if ((!CMDRING.on && !CMDRING.hint) || !this.active || !v.input || !v.cam || !v.canvas) return null;   // (`hint` is a setting of its own: the mark is drawn with the ring off too)
     if (!CMDRING.hint && !this.cmdRing && !this.cmdPress) return null;   // (before the key it is drawn only when asked for — `hint`; with the key down it is the press seen to land, and the ring's own middle)
     const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
     if (!R && !this.cmdPress && !this.ringFree(v.input)) return null;
     // (before the key the outline is drawn every frame under a view that moves: hover()'s answer, kept while the cursor rests, is asked again when it has)
-    if (!R) { const c = v.cam, k = this.hovCam; if (k[0] !== c.pos[0] || k[1] !== c.pos[1] || k[2] !== c.pos[2] || k[3] !== c.yaw || k[4] !== c.pitch) { k[0] = c.pos[0]; k[1] = c.pos[1]; k[2] = c.pos[2]; k[3] = c.yaw; k[4] = c.pitch; this.hov = null; } }
+    if (!R && kept) { const c = v.cam, k = kept.cam; if (k[0] !== c.pos[0] || k[1] !== c.pos[1] || k[2] !== c.pos[2] || k[3] !== c.yaw || k[4] !== c.pitch) { k[0] = c.pos[0]; k[1] = c.pos[1]; k[2] = c.pos[2]; k[3] = c.yaw; k[4] = c.pitch; kept.hov = null; } }
     const P = R ? null : this.cmdPress;   // (the key down, the ring not yet up: the thing it went down on, its outline as bright as the ring's — the press is seen to land)
-    const t = R ? M!.target : P ? P.t : this.hover(); if (!t) return null;
+    const t = R ? M!.target : P ? P.t : this.hover(kept); if (!t) return null;
     const kind: RingHint = t.kind === 'door' ? 'door' : t.kind === 'foe' ? 'foe' : t.kind === 'floor' ? (t.thing ? 'thing' : t.wall ? 'wall' : 'floor') : t.man ? 'man' : 'squad';
     let seg: [Vec3, Vec3] | null = null, ring: { at: Vec3; r: number } | null = null; const Y = 0.03, C = CMDRING;
     const at = (p: Vec3, r: number) => ({ at: [p[0], Y, p[2]] as Vec3, r });
@@ -2291,6 +2298,12 @@ export class SquadOrders {
     const R = this.route(gd, to, null, null, true), kept = { t, why: R.why, lock: R.lock }; this.reached.set(key, kept); return kept;
   }
   private reached = new Map<string, { t: number; why: string | null; lock?: { door: Door; side: 1 | -1 } }>();
+  /** A QUESTION ASKED BY THE PICTURE (squadthrow.ts: the throw page's preview): `fn` with the walks it asks about kept in the asker's own table (`own.r`), not
+   *  in `reached` — a game drawn and the same game not drawn keep the same answers, and the menu never reads one the picture asked for */
+  askAside<T>(own: { r?: object }, fn: () => T): T {
+    const mine = this.reached; this.reached = (own.r as typeof mine | undefined) ?? new Map();
+    try { return fn(); } finally { own.r = this.reached; this.reached = mine; }
+  }
   /** Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for the first two metres */
   hasLine(gd: Guard, t: OrderTarget): boolean {
     const p = gd.char.pos, d = flat(p, t.at); if (d < 0.6) return true;
@@ -2350,7 +2363,7 @@ export class SquadOrders {
    *  its digit (one that cannot be done here greyed with the reason), the cancel row — and, otherwise, one block under the Space rows: who the next order goes
    *  to, every man with what he is doing (the addressed ones marked when it is not all of them), what X would open on under the cursor right now, the keys.
    *  Nothing without a squad. */
-  hud(): { menu: OrderHudMenu | null; status: OrderHudRow[] } {
+  hud(kept?: HoverKept): { menu: OrderHudMenu | null; status: OrderHudRow[] } {
     if (!this.active) return { menu: null, status: [] };
     const M = this.cmdRing ? null : this.menu, key = keyName(ORDERS.key), whoKey = keyName(ORDERS.whoKey);   // (cmdring.ts: a menu up as a ring is drawn at the cursor, not listed in the panel)
     if (M) {
@@ -2372,7 +2385,7 @@ export class SquadOrders {
       return { menu: { rows: [whoRow, ...rows], primary: M.sel + 1, more: 0, open: true, hint: `${ORDERS.wheelElement ? 'digit picks · wheel: who' : ORDERS.clickGives ? 'digit, or wheel + click' : `digit, or wheel + space${ORDERS.mouseOpens ? ' / middle click' : ''}`} · ${closes}`, cancel: 'close — no order' }, status: [] };
     }
     const S = this.squad(), men = this.recipients(), tone = this.toneOf(men), some = men.length < S.filter(gd => gd.state !== 'dead').length;
-    const hov = this.hover(), onMan = hov?.kind === 'none' && hov.man ? hov.man : null;
+    const hov = this.hover(kept), onMan = hov?.kind === 'none' && hov.man ? hov.man : null;
     const next = onMan ? this.whoAfterT(hov) : null;   // (what T would do with the cursor on a teammate: him — or, already him, back to everyone)
     const posture = this.posture?.word() ?? null;   // (silent.ts: which of the two the squad is in, at a glance)
     const words = hov ? this.quickWords(hov) : null;   // (autopilot.ts: the squad's first choice on a door it waits on)

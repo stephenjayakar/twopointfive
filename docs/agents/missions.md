@@ -67,8 +67,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the word with no can (train-pairs' white house), no defender sees OUT of a door: a man in a far corner with his gun down the room shot the first of each
   pair as he crossed his opening (1 to 3 men on most paced dice). Each stands in the pocket behind the open leaf of the door he watches.
   (6) a held man: 'Right button chokes him out' (close.ts `CLOSE.heldClicks`, on in the page); the step counts the deed (`downed how: 'choke'`), not the row.
-- **The tutorial's solo loud mission, `tut-solo` 'The fuel halt, alone'** (2026-10-22; row `tut-solo` in `TUTORIAL_MISSIONS`, played on the tutorial's frame, `game/rails.ts`: the bullet below; `tools/levels/tut-solo.ts` → `levels/tut-solo.json`, a quiet-kind mission alone with a
-  `scenarios.lesson` of 25 steps on rails and its own `scenarios.issue` card; the fights are `levels/tut-solo.script.ts`, one PLAY program `tutorial` whose beats start on the cue each step sends,
+- **The tutorial's solo loud mission, `tut-solo` 'The fuel stop, alone' (its title until the writing guide: 'The fuel halt, alone')** (2026-10-22; row `tut-solo` in `TUTORIAL_MISSIONS`, played on the tutorial's frame, `game/rails.ts`: the bullet below; `tools/levels/tut-solo.ts` → `levels/tut-solo.json`, a quiet-kind mission alone with a
+  `scenarios.lesson` of 25 steps on rails (32 since the evening's reworks) and its own `scenarios.issue` card; the fights are `levels/tut-solo.script.ts`, one PLAY program `tutorial` whose beats start on the cue each step sends,
   `lesson:<cue>`; the scripted player is `tools/qa/lessons/tut-solo.ts`). ONE LINE through a walled halt on a road, every doorway centred on it (`AXIS` 14.25: a door's middle sits on a
   walk-grid cell): the road and a shot-up van (move, sprint), the yard wall beside the gate (rifle up, take the wall, shoot the sentry, reload), the arch (crouch), the sandbags in the gun's
   court (stay low), the gap (smoke, cross), the nest (frag), the shop's locked door (pistol, the held key's ring for the charge, stand clear, the word), the man behind it, the store (stun
@@ -155,9 +155,77 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wall's mark is the frame's arrow (`at` a pace short of the wall, `toward` the wall); two cards: 'Walls' on the wall's step, 'A gun's setup' on the
   setup's. The row's third `teaches` line is 'Rifle and pistol, and a gun's setup'. The scripted player presses both row digits on the Tab line and
   fails if either is taken; it fails on the selector's line if the two lines went by on a stand that has the setup.
-  A KIT THAT COMES WITH THE GRENADE ALREADY ON THE LAUNCHER (the player's own card dealt whole, with no sponge rounds lent over it) makes the load's
-  line true as it comes up: it goes by, its cue still brings the last two, and the next line says where they are by itself ('Behind you: hold right
-  button, aim at their doorway, let go'). `tut-solo-check` plays that as its eighth way (`loaded`: the grenade put up by hand before the line).
+  THE LAST TWO COME ON A LINE THAT ONLY HAS HIM LOOK (32 steps; the same evening, after the build that deals the player's own card whole). His card on
+  the page comes with the grenade on the launcher and no sponge rounds, so the load's line is true as it comes up and goes by unread, and the rifle's
+  setup has no load row for him. Step 'behind' ('Two men behind you', cue `trucks`, done `{ is: 'cue', name: 'trucks' }`: the frame draws it as a
+  watch line) is up while the back door is thrown open and the two run in; the script raises `done:trucks` once they stand in the shop's doorway, and
+  only then is the shot asked for ('Hold right button, aim at their doorway, let go'). The load's line stays between the two for a kit that deals the
+  ring first (the frozen stand, `?issuelend`); `alt` is unlocked on it. ON THE TAB LINE THE RIFLE'S OWN KEY IS TAKEN BACK (`tab: deny slot:rifle`,
+  given again on the selector's line): with no load row that key is no row and would put the setup away as it opened it, and the line would pass with
+  Tab never pressed. The stand-clear mark is 0.5 m further from the door (16.5, r 0.6): the whole mark is outside the charge's 1.6 m backblast, and
+  the scripted player fails at 'blow' if the row would say "too close: you". The two store posts are routes `sacks` and `crates` (a route's name is
+  said: `probes.ts words-routes` was red on `store_a`). CHECK: the scripted player now wears what the page deals (`pageKit` in its file, read by
+  `lesson-run.ts`: `kitIssuedPage` and the solo card as `main.ts` deals it), so on the page's stand all seven ways of `tut-solo-check` are played
+  with the grenade up and no load row, and on the frozen stand with the ring first and the load's line asked. Played: 2 seeds x 7 ways on each stand,
+  and twice on the page on the software adapter. Never seen on a GPU; nobody has played it by hand since the rework.
+  THE LAUNCHER HAS A CARD (the maintainer: "for 2 we probably need to explain secondary attachments for the rifle in a modal" "and where to see it in
+  the UI, swap between secondaries, etc."): 'The rifle's launcher' on step 'leave', with the rifle back in his hands: the loads are the tags on the kit
+  strip beside the rifle, the lit one is on the right button, HE arms 8 m out, the gun's key again and then its row's swaps the load. THE SWAP IS DONE
+  on the load's line only where his kit carries two loads: a level's card (`IssueCard`) had no key for sponge rounds then (it has `rings` now and this level names two: the bullet on its ground and its two loads), so on the page he carried the
+  grenade alone and the swap is said, not done (asked of the kit's owner). The card itself has not been looked at on a page.
+  EVERY LINE, CARD AND LIST ROW REWRITTEN TO THE WRITING GUIDE (`docs/agents/writing.md`; the same night): each big line opens on a verb or on Press /
+  Hold and the key and is one sentence ("Press [R] to reload", "Press [Tab] to close it, like any other menu", "Shoot out the light so you can hide in
+  the dark"); the three cards are 'Taking cover on a wall', 'Setting up your gun', 'Using the rifle's launcher'; the row is 'The fuel stop, alone'. A
+  second reader who did not write them read all 45 and flagged 13, all taken. ONE OF THEM WAS A TRAP IN THE BUILD: the stun grenade's ring stood in
+  the storeroom's doorway, and a can thrown AT it catches the partition and stays in the shop, so the line never passed for a player who clicked the
+  ring (the scripted player had thrown past it). The ring is now the middle of the storeroom (`STUN_AT`), the line says to click it, and the scripted
+  player throws at the ring, as it does for the smoke and the frag.
+- **`tut-solo` dressed (2026-10-22, level data only; groups `dress.*` in the generator).** The maintainer, of every tutorial level: "just as much
+  (if not more! since it's first impression) polish and have it really feel great and organic". ADDITIONS ONLY, off the mission's line, each man's
+  mark and every door's sweep: a melon stall and scrub on the roadside; a rope bed and a low table in the truck court's north corner; in the
+  shop a rug under the table, a floor mattress with tea, a stove, a wall hanging; sacks and a mat in the store; the two walled back lots nobody walks
+  into made a cook's yard (tandoor, rope bed, wood, a dish, a lantern) and a wash yard (a line, a motorbike, a lantern). 113 boxes, 10 props and two
+  lanterns more (16 lights). It is the level's own furniture on both stands (groups `dress.*`), not the lived-in pass: `?lived=0` leaves it. The level's
+  fingerprint moved: checkpoints and recordings of `tut-solo` from before it are refused. No fight moved: the scripted player's seven ways, 2 seeds on
+  each stand (no tally over more seeds was taken: every man in it is the script's). Two free cells inside the floor mattress's footprint are cut off
+  (under the lived check's three). Judged from the software adapter's pictures only; never seen on a GPU.
+- **`tut-solo`'s ground and its two loads (2026-10-22 late, level data; one name more in the frame's action table, no switch; 32 steps).** THE
+  GROUND: the maintainer, of the gun court at night: "ground looks pretty flat here". Each court was one finish with a pair of ruts in its own paint
+  (no mark at all). Now the yard is the plain's dust inside its walls. A gravel drive a truck wide (`DRIVE`) comes in by THE TRUCKS' OWN GATE, new, in
+  the truck court's south wall (`TRUCK_GATE_X`; group `walls.truckgate`: two shut steel leaves on each face of the wall, which stands whole behind
+  them, so nobody walks, sees or shoots through), turns the corner, goes through the arch and opens into a turning apron before the shop (`APRON`,
+  which reaches past the mark for the shop's door, so the ground he hides on is no paler than it was). The gate on the road is a man's width: the
+  wheel tracks turn off the road before it, pass the start and go round the corner to the trucks' gate; a foot path comes in from the man's gate.
+  Group `ground.marks` lays those tracks (damp on gravel, dirt on dust, broken where a thing stands on them), worn earth under the stores, the nest,
+  the wood and the van's verge, oil where a truck stands at the shop's door, a fire's ring, rubble, eight dry bushes, and flat whitewashed stones
+  along the drive's edges (the place's own ground mark; no painted line). Three flat layers a millimetre and more apart; every low thing is under
+  0.19 m. 155 boxes and 8 props more (671 and 25). `level-needs tut-solo`: `ground` passes (the largest bare piece 36 m², outside the walls). The
+  fingerprint moved again. Judged from CPU stills (`tools/menu-art.ts`, a picture's light, not the game's) and the software adapter's page; never
+  seen on a GPU, and whether the tracks read as tracks at the game's own exposure is by eye there. The row's menu picture is made again.
+  THE LOADS: the maintainer: "for 2 we probably need to explain secondary attachments for the rifle in a modal" "and where to see it in the UI, swap
+  between secondaries, etc." The card names `rings: 2` (the kit's key for a mission's own card), so on the page the launcher comes up on a sponge
+  round and the step `load` ('Press [2] twice to load the grenade') is a swap he does. The card 'Using the rifle's launcher' (on the step `leave`)
+  says what the two loads do, where the loaded one shows, how to swap and how to fire; THE LOAD'S ROW IS HIS FROM THAT CARD ON (`leave: allow load`),
+  so the swap works the moment he has read how, and the line `load` goes by for a man who left the grenade up. THE RIGHT BUTTON STAYS SHUT UNTIL THE
+  LINE THAT FIRES (`launch: allow alt`; his first play: "i first accidentally sponged the guys"; a round at the two in the doorway lets them go, and
+  a wait after it had the scripted player shot): the frame's gate gave the load's row and the right button one action (`alt`), so `rails.ts ACTS`
+  has a name for the row alone, `load` (no key, no button: `gate` passes the load row's digit on `alt` or `load`). No other level names it. ON THE
+  TAB LINE the trigger and the reload are taken back with the rifle's key (`tab: deny slot:rifle, fire, reload`, given back on `auto`): each puts the
+  setup away, and the line went by with Tab never pressed. Checks: `tut-solo-check` plays an eighth way, `sponge` (the right button held on the two
+  before the swap must fire nothing; it fails where the launcher comes up on the grenade), its Tab step clicks and reloads and fails if the setup
+  is put away, and its kit line holds the page's card to the generator's own (`ISSUE`: two sponge rounds, the launcher on them). ON THE FROZEN STAND
+  and with `?issuelend` he carries the lent five sponge rounds over the card and the launcher is on them too: the swap is asked on both stands.
+  `issuewhole-check`'s two lines on this level follow the card's own `rings`. KNOWN: the card has one text, written for the setup as the page has
+  it; with `?slotsetup=0` the rifle's key steps the load at once and "twice" is one press too many (the step's own line has both wordings). Five
+  short sentences on that card, against the three a card is meant to be: his note asks for five things.
+  THE MOON STANDS BEHIND THE SHOP (10-23, level data; the level's row in `lived-check`'s `LEVEL_BASE` moved to it). The line 'Shoot out the light so
+  you can hide in the dark' stood him against the shop's front in the moon: with the lamp out the runner's meter, the moon and the night sky's own
+  light on it (`lesson-run --sky`), read 31 beside the door, over the scripted player's own bar of 25, and the page read 28 (42 on a build before the one light-cache grid at every preset). The moon's direction is
+  turned about the road's line (`[-0.62, -0.5, -0.6]`, from over the back lots), so the shop's front, the door he blows and the wall he waits
+  against, is in the shop's own shadow and the lamp over the door is the one light on him there. Measured: the runner 10 (the bar held with no
+  `mode.glow: false` in the script); the page on the software adapter, lamp out, 24 as he arrives and 14 settled, against 28 settled with the moon turned back on the same page. Every shadow in the yard falls the
+  other way; no line, mark or fight moved, and `tut-solo-check` is green on both stands, two seeds, all eight ways. The menu picture is its own
+  light and did not change. Never seen on a GPU: how the yard reads with the shadows turned is by eye there.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
@@ -595,13 +663,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     3.4 s, 0.6 s apart — and the second can still dazzles the first pair, two teammates on every run, until the squad's rule is in the build.
     WHAT THE SCRIPTED PLAYER NOW SAYS AND ASKS (`tools/qa/lessons/tut-plan.ts`): after each word, when the first man of each stack was inside the room, how far apart, and the
     teammates the team's own can dazzled ("the word at guardroom: …"); after each facing order, where each man of the pair stands and whether he took it ("the barrier: …") — on the
-    mark a man who did not FAILS the run. `TUTPLAN_STRICT=1` fails the run on stacks more than a second apart or any teammate dazzled: red on every seed as the build stands, green
-    with the tried gate (seeds 1 to 3) — the word is held off until the squad's rule lands, then it is the run's own.
+    mark a man who did not FAILS the run. Stacks more than a second apart, or any teammate dazzled, were first asked only under a word of the run's (red on every seed until the
+    squad's rule was in the build, green with the tried gate on seeds 1 to 3); the bar is the run's own now: the bullet after the next.
     MEASURED (the page's stand, midday): 19/19 on seeds 1 to 8 (114.3 to 115.1 s) and on hard, seeds 1 to 4; six seconds a line on seeds 3 and 5 (221.3, 222.2 s); the wrong plan on
     seeds 1 to 4 ends in 102.6 to 118.5 s with 4, 3, 6 and 3 teammates on a knee at the hall. On the join with the build head: `tutplan-check`, `level-needs --run` and
     `rails-check` green on both stands, `lesson-gate`, `rowset-check` and `lived-check` green, and the real page with real keys to its end card (38 lines, the software adapter,
     no picture taken). Nobody has played the changed post; nothing of it has been seen on a GPU.
-  - **The hall's word step carries no lookout** (2026-10-22, found by the merge run's reading of the scripted player's own line, "hall nobody in"). The hall's steps put a
+  - **The hall's word step went without its lookout for a few builds** (PUT BACK since: the next bullet. 2026-10-22, found by the merge run's reading of the scripted player's own line, "hall nobody in"). The hall's steps put a
     lookout eye inside the room so the player sees the gun. Until `RAILS.eyeFirst` a step's eye was the one the fog had no place for with four men up, so nobody saw through it; with
     it the fog shows the gunner, and the squad's entry pick reads the fog (`autopilot.ts contactBehind`): at the word the stack asked first took the last can — a bang and clear with
     its three seconds of re-forming beside an open and clear — the back pair went in alone at 0.2 s and the front stack was still outside when the room fell. A LOOKOUT IS THE
@@ -610,6 +678,37 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     (seeds 1 to 4, hard on one, a reader's pace on one), and he sees the gun through his men as the doors give. The lesson block alone changed: the level's fingerprint is the same.
     THE SCRIPTED PLAYER: a stack that never goes in has no time, so nothing is said of how far apart they were ("not together: a stack never went in") and the PLAIN run fails on
     it, no strict word asked; on a join, read the "word at" line of EVERY room.
+  - **Its words, its yard's ground, the lookout back, and the bar on two doors** (2026-10-23). No new switch: text, level data and the scripted player.
+    THE TEXT: every line, card, after line and the menu row (`blurb`, `scene`, `teaches`, `place`) is written to `docs/agents/writing.md`, and a second reader who did not
+    write it read every string aloud against the guide, as its Review asks; the notes taken: the first card says "each teammate" (pairs are met a card later); the pick card
+    is "Hit two doors at once" and says what the set-up is for; the hall's card ends on what to do about the gunner; the gates' card speaks of enemies who WILL come; and
+    step `all` has a NEW card, "Pick everyone again" (the go sends only the teammates who are picked — the one thing here a player would carry wrong into a real mission).
+    That card names no key: the word is locked until the next step, and a card that said "press [F]" on a step where [F] is dead was a review's find. KNOWN: `faceA` is 14
+    words and `faceB` 14 (the guide: about twelve), each two deeds in one line (pick two, drag an order); cutting each into two steps wants a lesson test that does not
+    exist (two picked and neither on an order: `picked`'s `free` asks about stacks only), the frame's to add. A click is written "right-click" and the squad's word is "say go", as the guide's owner has the rest of the game
+    (three wording notes of its read, taken the same night; `faceB` got its comma back from that read).
+    THE LOOKOUT is back on `word2` (`HALL_EYE`, one const for the hall's five steps): a frame's eye is the picture's alone since `RAILS.eyeView`, so the squad picks its
+    entry by what its own men saw. IT LEANS ON THAT RULE: with `?eyeview=0` the gunner is seen through the eye, the squad takes a can and the first men are in at 5.9 and
+    6.1 s, not 1.2 (a review's run, two seeds); no check plays the mission with it off. With four men up the step's eye is the picture's fifth and last place.
+    THE GROUND (the `ground` need of `level-needs`: was a NOTE, 159 m² and 53 m² of bare dirt; now PASS, the largest bare piece 13 m²): the track runs on through its gate
+    to the worn middle; a walked way of gravel from the road gate (the post has since laid its bags across it) and another down from the back gate meet at the guardroom's
+    corner and run into the middle; the dish and the generator stand on a poured pad; oil on the pad, the motorbike's stain in the dirt (the dark of damp: `oil`'s paint
+    is no darker than `dirt`), water thrown out of the hall's back door and off the cooking corner, drips under the washing, a burn pit behind the hall, and five scatters
+    of field stones along the yard wall's foot, clear of its face. 49 boxes more (434), all decals, thin finishes or stones under 0.19 m. THE LEVEL'S FINGERPRINT MOVED:
+    checkpoints and recordings of this level from before are refused. `lived-check`'s own row for the level (`LEVEL_BASE`) is at the commit that carries it.
+    THE BAR: two stacks on one word more than a second apart, or a teammate dazzled as they went in, FAIL the scripted run wherever both of the squad's rules are on
+    (`CMDRING.planOne`, `DOORTOOLS.tossMate`: the page; a frozen run without `TPS_PLANONE=1 TPS_TOSSMATE=1` only says the line, as does `TUTPLAN_LOOSE=1` anywhere). A room
+    that fell before the word fails too (a stack that did not wait: nothing could be measured). With `TPS_PLANONE=0` on the page's stand the line reads as his tape did:
+    2.8 and 3.4 s, two teammates dazzled.
+    MEASURED on the join with the build head (the page's stand, midday, the sky's light on every meter): 19/19 on seeds 1 to 8 (114.4 to 114.7 s) and on hard, seeds 1 to
+    4, every one with the guardroom's first men in at 3.8 and 3.7 s and the hall's at 1.2 and 1.2 s, nobody dazzled; six seconds a line on seeds 3 and 5 (222.6, 222.5 s);
+    the wrong plan on seeds 1 to 4 ends in 102.7 to 102.8 s. `tutplan-check`, `level-needs --run` and `rails-check` green on both stands (`TUTPLAN_BREAK=1` red, as it
+    must be), `lesson-gate`, `lesson-check`, `rowset-check`, `lived-check`, `door-size`, `second-way-check`, `floor-order-check`, `wallfurn-check`, `level-names-check`,
+    `level-lint`, `export --check`, both typechecks.
+    THE REAL PAGE with real keys and a real mouse (`tools/qa/tut-plan-page.cjs`, the software adapter, no picture taken): 38 lines pass, to its end card, no page or
+    console error.
+    Nobody has played the reworded mission. Whether the ground reads is by eye and nobody has seen it on a GPU: the paints' values are held to STYLE.md's rule by
+    arithmetic only, and the oil on the pad is 0.34 of its ground, a hair over the third the rule allows.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
