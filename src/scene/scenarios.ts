@@ -246,6 +246,9 @@ export interface LessonStep {
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
+  /** seconds the step waits AFTER it has counted before the next one comes up, whether or not the test stays true: the moment plays out (the man falls,
+   *  the blast clears) before the next line or card is over it (absent: none). Not waited by a step whose test was already true as it came up */
+  settle?: number;
   /** where the HUD's marker points while the step is up (absent: no marker) */
   at?: Vec3;
   /** the marker rides on a MAN instead: the one on the patrol route of this name, while he is on his feet (then `at`, if the step has one) — 'come up
@@ -266,8 +269,11 @@ export interface LessonStep {
    *  The picture's alone: the squad knows nothing through it (rails.ts RAILS.eyeView) */
   eye?: { at: Vec3; yaw: number; fov?: number };
   /** A CARD that pauses the page when the step comes up (ui/railcard.ts): a heading and a few sentences on a rule of the game no key press shows — a new
-   *  line in `text` is a new paragraph, a key in brackets is drawn as a key. Closed with Enter or a click; then the step's line is what to try. Once a run */
-  explain?: { title?: string; text: string };
+   *  line in `text` is a new paragraph, a key in brackets is drawn as a key. Closed with Enter or a click; then the step's line is what to try. Once a run.
+   *  A card lands a beat after the deed before it (rails.ts RAILS.cardBeat: the step before it settles, and this step's cue, checkpoint and keys come with
+   *  the card). `quiet`: the deed before this card sets off a fight the player is there to watch (his squad sent at a gate, into a room) — the card also
+   *  waits until that fight has gone quiet, to a cap. `now`: no beat at all, for a card whose news is the fight itself ('They're behind you') */
+  explain?: { title?: string; text: string; quiet?: boolean; now?: boolean };
   /** an ARROW on the ground in place of the ring: from the step's `at` it points at this place ('walk into the wall': which way) */
   toward?: Vec3;
   /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no

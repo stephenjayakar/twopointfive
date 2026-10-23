@@ -19,6 +19,7 @@ const server = Bun.serve({
   routes: {
     "/": index, "/viewer": viewer, "/editor": editor, "/workbench": workbench, "/replay": replay, "/sounds": sounds, "/music": music,
     "/sneaklab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=sneak-lab.json&solo&sneaklab" + (q ? "&" + q : ""), 302); },   // the sneak lab: the close-in on a man, its numbers live (src/host/sneaklab.ts)
+    "/firelab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=pass.json&roomclear&squad4&nofow&firelab" + (q ? "&" + q : ""), 302); },   // the fire lab: beside the pass's brazier, the flame's numbers live (src/host/firelab.ts)
     "/gait": req => Response.redirect("/workbench" + new URL(req.url).search + "#mode=chars&scene=sam/walk", 302),   // the gait lab is the workbench's Characters ▸ Sam ▸ walk / jog / … now; old links land there
   },
   async fetch(req) {

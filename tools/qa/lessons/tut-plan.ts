@@ -8,7 +8,7 @@ import { CMDRING } from '../../../src/game/cmdring';
 import { DOORTOOLS } from '../../../src/game/doortools';
 import { planView } from '../../../src/game/planmode';
 
-export const query = '?roomclear=1&squad4';
+export const query = `?roomclear=1&squad4${process.env.TUTPLAN_HOUR ? `&hour=${process.env.TUTPLAN_HOUR}` : ''}`;   // (TUTPLAN_HOUR=dusk: the level at another hour — the page's row gives the mission its own)
 /** the frozen stand's arm of the gate: the mission is played in plan mode, which that stand holds off — the mode's own words (the gate gives them to a
  *  level whose STEPS allow `plan`; here the frame allows it for the whole mission) */
 export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_PLANLOOK: '1', TPS_PLANWAITS: '1', TPS_PLANKNEE: '1' };

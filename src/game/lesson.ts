@@ -88,7 +88,7 @@ export const LESSON = { on: true };
 export const LESSON_STATS = { started: 0, steps: 0, finished: 0 };
 
 /** what a step has seen since it came up (the deeds): counts by `what` */
-interface StepSeen { t0: number; n: Map<string, number>; chron: number; heard: WeakSet<object>; held: number;
+interface StepSeen { t0: number; n: Map<string, number>; chron: number; heard: WeakSet<object>; held: number; /** the clock the step's deed was done at (LessonStep.settle waits from it) · …and it was already done as the step came up */ doneT?: number; idle?: boolean;
   /** where the step began in the logs that are TRIMMED from the front (orders.log, pairorders.ts PAIR_LOG): the last row there was then, by identity */
   lastOrder: object | null; lastPair: object | null;
   /** the chronicle row the step began at, and the row G was first seen held at (-1: not yet) — the kit's `threw` */
@@ -96,7 +96,9 @@ interface StepSeen { t0: number; n: Map<string, number>; chron: number; heard: W
   /** the doors the word (F) has let go since the step came up — the squad's `word` */
   words: Set<object>;
   /** the seat's view as the step found it and how far it has been turned since, radians summed (the rails' `view`) */
-  yaw0: number; dist0: number; yawLast: number; turned: number }
+  yaw0: number; dist0: number; yawLast: number; turned: number;
+  /** the step `doneT` was set on (a tool or a debugger that moves `Lesson.i` by hand moves it off this, and the deed was not that step's) */
+  doneI?: number }
 type TestFn = (g: Game, t: LessonTest, S: StepSeen) => boolean;
 /** a test kind: `ok` = is it true now; `check` = what is wrong with this record on this floor (null: nothing) */
 interface TestKind { ok: TestFn; check?: (g: Game, t: LessonTest) => string | null }
@@ -204,6 +206,11 @@ export const LESSON_TESTS: Record<string, TestKind> = {
   // -- (the lights', locks' and devices' rows)
 
   // -- (the guns' and the kit's rows)
+  // loaded: a reload of the gun in his hands has run to its end since the step came up, or one would gain him nothing (weapons.ts startReload's own
+  // refusal: a round up the pipe and no fuller magazine to seat, or nothing spare at all) — what 'press R to reload' waits for when the next line must
+  // not come up over the reload. A gun he ran dry reloads itself (autoreload.ts): that reload counts, R pressed or not
+  loaded: { ok: (g, _t, S) => { const w = who(g).gunInHand(); if (!w) return false; if (w.reloading) { S.n.set('loaded:began', 1); return false; }
+      return !!S.n.get('loaded:began') || !w.spare.length || (w.chamber === 1 && (w.mag ?? 0) >= Math.min(Math.max(...w.spare), w.magRoom)); }, check: () => null },
   // reload: the gun in his hands is being reloaded (R) — true for the beat's length
   reload: { ok: g => { const p = who(g); return (p.pistolUp && p.pistol.reloading) || (p.rifleUp && p.rifle.reloading); }, check: () => null },
   // launcher: what the rifle's right button fires (2 again, with the rifle up, flips it): on 'ring' | 'he40' ('none' was a selection once: now it is true only of a long gun with no launcher, the shotgun); `fired` = …and the tube has just sent one (true while it cycles)
@@ -328,11 +335,22 @@ export class Lesson {
     if (this.run !== g.mission) { this.run = g.mission; this.i = 0; this.doneAt.clear(); this.seen = null; this.log.length = 0; LESSON_STATS.started++; this.note(`lesson '${L.title}': ${L.steps.length} steps`); }
     if (this.i >= L.steps.length || g.mission.stage === 'failed' || who(g).down) return;
     const S = this.seen ??= this.fresh(1e-6);   // (the run's first step, or the first after a load: this frame's own deeds are in)
+    if (S.doneT !== undefined && S.doneI !== this.i) { S.doneT = S.doneI = S.idle = undefined; S.held = 0; }   // (the step was moved by hand under a deed already done: that deed, and the time it was held, were another step's)
     this.count(S);
     const T = L.steps[this.i];
-    if (passes(g, T.done, S)) { S.held += dt;   // (an unknown kind never passes: checkLesson names it)
-      if (S.held > (T.hold ?? 0) || !(T.hold ?? 0)) this.advance(L, T); } else S.held = 0;
+    // THE DEED IS DONE ONCE (`doneT`: the clock it was done at) and the step then waits its `settle` out before the next comes up, whatever its test does
+    // meanwhile — the man falls, the blast clears, the reload ends, and only then is the next line or card over it. A step with no `settle` moves on the
+    // tick its deed is done, as it always did; so does one whose test was already true as it came up (nothing happened that needs to play out).
+    // …AND THE STEP BEFORE A CARD stays up for the card's beat as well (rails.ts `settles`, RAILS.cardBeat), done as it came up or not: the card would
+    // land on whatever the step before THAT set off
+    if (S.doneT === undefined) {
+      if (passes(g, T.done, S)) { S.held += dt;   // (an unknown kind never passes: checkLesson names it)
+        if (S.held > (T.hold ?? 0) || !(T.hold ?? 0)) { S.doneT = g.time; S.doneI = this.i; if (g.time - S.t0 <= dt * 1.5) S.idle = true; } } else S.held = 0;
+    }
+    if (S.doneT !== undefined && !((!S.idle && g.time - S.doneT < (T.settle ?? 0)) || g.rails?.settles(L, this.i, S.doneT))) { if (g.time > S.doneT) this.note(`'${T.id}' settled ${(g.time - S.doneT).toFixed(1)} s`); this.advance(L, T); }
   }
+  /** the step that is up has done its deed and is waiting for the moment to play out — its own `settle`, or the beat before the next step's card (rails.ts `settles`) — (the frame's to read: nothing more is asked of him) */
+  get settling(): boolean { return this.run === this.g.mission && this.seen?.doneT !== undefined && this.seen.doneI === this.i; }
   private advance(L: LessonData, T: LessonStep) {
     const g = this.g; this.doneAt.set(T.id, g.time); this.i++; this.seen = this.fresh(); LESSON_STATS.steps++;   // (the next step counts from THIS frame's end: a deed on its first frame is its own)
     this.note(`done ${this.i}/${L.steps.length} '${T.id}'`);

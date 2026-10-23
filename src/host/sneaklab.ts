@@ -61,6 +61,8 @@ const NUMS = (): Num[] => [
   { t: STALK, name: 'STALK', key: 'keyM', label: 'he waits for the key m behind him', min: 0.6, max: 0.94, step: 0.01, tip: 'with "you press the key to finish the grab" on: how far behind the man he stops and waits. It has to be inside the grab\'s reach' },
   { t: CLOSE, name: 'CLOSE', key: 'modeM', label: 'it can begin inside m', min: 1.5, max: 7, step: 0.1, tip: 'the close-in range: inside it the sneak holds its pose and a press on a man begins the creep' },
   { t: CLOSE, name: 'CLOSE', key: 'modeOutM', label: 'it lets go past m', min: 2, max: 9, step: 0.1, tip: 'he got too far away: the creep ends past this' },
+  { t: CLOSE, name: 'CLOSE', key: 'rmbTapSecs', label: 'right click: a tap is shorter than s', min: 0.08, max: 0.5, step: 0.01, tip: 'let go of the right button inside this and it is the knockout; keep it down past this behind a man and it is the choke' },
+  { t: CLOSE, name: 'CLOSE', key: 'rmbLoud', label: 'right click: how much louder the knockout is', min: 0, max: 0.5, step: 0.01, tip: 'added to how loud the knockout is to the room. Each 0.1 is about 0.7 m further that a guard hears it in open air. The choke stays as quiet as it was' },
   { t: TWOGEARS, name: 'TWOGEARS', key: 'crouch', label: 'your own crouch walk m/s', min: 0.8, max: 2.2, step: 0.05, tip: 'the speed you arrive at before the creep takes over' },
 ];
 /** the two arcs are kept as cosines; the lab shows them as degrees off his nose */
@@ -103,6 +105,7 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.toggleBox(cr, 'you press the key to finish the grab', () => STALK.key, v => { STALK.key = v; }, 'on: holding the click only sneaks you up behind him, and you press the action key to grab. Off = the hold ends in the grab by itself');
   panel.toggleBox(cr, 'he goes lower, hands down', () => STALK.low, v => { STALK.low = v; }, 'on: no arm comes up and he sinks lower and slower as he closes, then springs up into the grab. Off = the arm comes up and he rises as he closes');
   panel.toggleBox(cr, 'the click is the only way to grab', () => STALK.only, v => { STALK.only = v; }, 'off = the grab\'s row is back beside the held click. It only matters with "you press the key to finish the grab" off: with that on the row is there and its key grabs');
+  panel.toggleBox(cr, 'right click: tap to knock out, hold to choke', () => CLOSE.rmbHold, v => { CLOSE.rmbHold = v; }, 'on: a quick right click behind him is the knockout (fast, a little louder), and the right button kept down takes him into your arm and chokes him while you hold it (quiet, slow). Off = the right click is the knockout the moment you press');
   for (const n of nums) panel.slider(cr, n.label, n.min, n.max, n.step, () => n.t[n.key] as number, v => { n.t[n.key] = v; }, n.tip);
   for (const a of ARCS) panel.slider(cr, a.label, 60, 180, 1, () => deg(STALK[a.key]), v => { STALK[a.key] = cosOf(v); }, a.tip);
   const out = panel.section('Hand the numbers back', { open: true });
