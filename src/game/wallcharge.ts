@@ -299,6 +299,7 @@ const skyMemo = new SideMap<object, Map<number, number>>('wallcharge.skyMemo');
 /** THE FACES OF A WALL THE OPEN SKY IS OVER: 0 = neither (a wall inside), 1 = one (a building's outer wall), 2 = both (a yard wall). Asked of the level's own
  *  geometry as the glass asks it of a pane (glassbreak.ts skySide): upward solid rays from chest height at nine places off each face — a canopy or a lamp head
  *  over part of one side does not flip the majority. Kept per static (the authored statics do not move; a hole in the wall changes nothing over it). */
+const standIns = new SideMap<OrderDef, OrderDef>('wallcharge.standIns'); standIns.asMemo();   // (a pure function of the row, and a row is one game's own; the HUD's row list asks it before any menu is opened, so it is no part of the state)
 export function skyFaces(g: Game, index: number): number {
   let memo = skyMemo.get(g.col); if (!memo) skyMemo.set(g.col, memo = new Map());
   let n = memo.get(index); if (n !== undefined) return n;
@@ -423,8 +424,7 @@ export class WallCharge {
     return live;
   }
   /** a row the wall's fifth has taken the digit of: itself, digitless (one stand-in a row, so the menu's highlight rides it by identity) */
-  private standIns = new SideMap<OrderDef, OrderDef>();
-  undigit(d: OrderDef): OrderDef { let x = this.standIns.get(d); if (!x) this.standIns.set(d, x = Object.create(d, { key: { value: undefined, writable: true, enumerable: true } }) as OrderDef); return x; }
+  undigit(d: OrderDef): OrderDef { let x = standIns.get(d); if (!x) standIns.set(d, x = Object.create(d, { key: { value: undefined, writable: true, enumerable: true } }) as OrderDef); return x; }
   private seat() {
     const S = this.g.orders; S.unregister(WALL_PAGE); S.unregister(WALL_ORDER); this.seated = false; if (!this.mode) return;
     const page = this.mode === 'page';
