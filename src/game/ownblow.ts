@@ -37,7 +37,7 @@ export const SAM_BY = 'Sam';
 export const blowKeyWord = (keyIs: boolean, key: string): string => keyIs ? key : 'Space';
 /** …and what a line drawn AS IT IS WRITTEN says after 'charge set' (a door's header, a note, the log): the squad's key by name while that key blows it;
  *  nothing for his own — its row, with the key it is on, is on his list */
-export const blowTail = (keyIs: boolean, key: string, sep = ' · '): string => keyIs ? `${sep}${key} blows it` : '';
+export const blowTail = (keyIs: boolean, key: string, sep = ' · '): string => keyIs ? `${sep}press ${key} to blow it` : '';
 
 /** the nearest free charge of his own, a door's or a wall's (null: none) */
 function ownSet(g: Game): { at: Vec3; words: string; where: string; /** it would put him down where he stands */ fatal: boolean; go: () => void } | null {

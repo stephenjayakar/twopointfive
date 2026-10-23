@@ -567,7 +567,7 @@ export class SquadOrders {
       release: gd => { const NB = g.nightBreach; return NB?.active && NB.drillOps.includes(gd) ? NB.callOff() : null; },   // (the drill is the pair's: letting go of one man ends it for both — the other is handed to the fight AI, nightbreach.ts)
       status: gd => { const NB = g.nightBreach; if (!NB?.active || !NB.ops.includes(gd)) return null;
         if (!NB.drillOps.includes(gd)) return NB.state === 'off' ? null : 'standing by';
-        switch (NB.state) { case 'staged': return 'waiting'; case 'stacking': return 'stacking · the breach'; case 'set': return 'set · F sends them in'; case 'going': case 'inside': return 'breaching';
+        switch (NB.state) { case 'staged': return 'waiting'; case 'stacking': return 'stacking · the breach'; case 'set': return 'set · press F to send them in'; case 'going': case 'inside': return 'breaching';
           case 'clear': return 'holding the room'; default: return 'holding'; } },
     });
   }

@@ -1070,7 +1070,7 @@ export function civilianComply(g: Game): boolean {
   toCower(g, gd, true);
   chronicleN(g, 'civilianComplied', 'civComplied', { who: C.name }, gd.char.pos);
   log(g, gd, `told to stay down — complies for ${CIV.complyMin} min`);
-  g.msg(`${C.name} is down and quiet — ${w(C.she, 'she')}'ll stay put a while, and says nothing unless they find ${w(C.her, 'her')}`);
+  g.msg(`${C.name} is down and quiet. ${w(C.she, 'she')}'ll stay put for a while and won't say anything unless they find ${w(C.her, 'her')}`);
   return true;
 }
 /** combat.ts killGuard's first line hands a civilian here: `how` she went (shot = dead; struck / choked = out cold, breathing), by whose hand. Her state is 'dead' either
@@ -1092,7 +1092,7 @@ export function civilianDown(g: Game, gd: Guard, dir: Vec3, quiet: boolean, how:
   if (by === 'player') {
     if (dead) { CIV_STATS.killed++; chronicleN(g, 'civilianKilled', 'civKilled', { who: C.name, label: C.label, weapon: g.player.gunInHand() ? plainShort(g.player.gunInHand()!.def) : 'a round' }, c.pos); }
     else if (!mark) { CIV_STATS.ko++; chronicleN(g, 'civilianKO', 'civKO', { who: C.name, label: C.label, method: how === 'choked' ? 'choke' : /whip/.test(line ?? '') ? 'whip' : /^ring/.test(line ?? '') ? 'ring' : /behind the wall when it went$/.test(line ?? '') ? 'charge' : 'takedown' }, c.pos); }
-    if (dead && g.tune.civilianKillFails && missionLive(g)) { const m = g.mission; m.stage = 'failed'; m.driveT = -1; m.downCardAt = g.missionInTour ? -1 : g.time + DOWN_CARD_SECS; g.msg(`MISSION FAILED — ${C.name}, the ${C.label}, is dead by your hand. Enter restarts the encounter`); }
+    if (dead && g.tune.civilianKillFails && missionLive(g)) { const m = g.mission; m.stage = 'failed'; m.driveT = -1; m.downCardAt = g.missionInTour ? -1 : g.time + DOWN_CARD_SECS; g.msg(`MISSION FAILED — you killed ${C.name}, the ${C.label}. press Enter to restart the encounter`); }
     else if (!hostage && !mark) g.msg(line ?? (dead ? `CIVILIAN CASUALTY — ${C.name}, the ${C.label}, is dead. that is on your record, and they will find ${C.her}` : how === 'choked' ? `${C.name} choked out — breathing. a civilian: that costs, and they may find ${C.her}` : `${C.name} out cold — breathing. a civilian: that costs, and they may find ${C.her}`));
   } else if (!hostage && !mark) g.msg(line ?? `${C.name}, the ${C.label}, is down`);
   log(g, gd, `DOWN — ${how} by ${by}`);

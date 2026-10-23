@@ -409,14 +409,14 @@ export class PairOrders {
       if (!now) {   // (his head is turned, and it will come back: said once, and the row says so)
         if (g.time - J.seenT > 0.4 && J.cued && !J.backSaid) { g.say(gd, "he'll look back. your call."); J.backSaid = true; this.note(`lookback:${name} by ${nameOf(w)}`); }
         J.backT = g.time;   // (still held, and F still sends him: waiting() reads it)
-        A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `on ${name} · ${nameOf(w)} will look back · F: go anyway`;
+        A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `on ${name} · ${nameOf(w)} will look back · press F to go anyway`;
         if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', "he's watched. no clean moment.", false); }
         return;
       }
       if (!J.watcher) { if (g.time - J.seenT > 2) J.watchT = g.time; PAIR_STATS.watched++; this.note(`watched:${name} by ${nameOf(w)}`);
         if (g.time - J.cueT > 8) { g.say(gd, `hold. ${nameOf(w)} has eyes on him.`); J.cueT = g.time; J.cueBy = w; J.cued = true; } }
       J.watcher = w; J.seenT = g.time;
-      A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `on ${name} · WATCHED by ${nameOf(w)} · F: go anyway`;
+      A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `on ${name} · WATCHED by ${nameOf(w)} · press F to go anyway`;
       if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', "he's watched. no clean moment.", false); }
       return;
     }
@@ -455,7 +455,7 @@ export class PairOrders {
     }
     J.waitT = -1;
     if (staging) {
-      if (flat(p, spot) < 0.45) { J.set = true; A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `set on ${name} · F is the mark`;
+      if (flat(p, spot) < 0.45) { J.set = true; A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `set on ${name} · press F to give the mark`;
         if (!J.setSaid) { J.setSaid = true; g.say(gd, 'set.'); this.note(`set:${gd.callsign} on ${name}`); }
         return; }
       J.set = false; A.going = A.there = `moving up on ${name}`;

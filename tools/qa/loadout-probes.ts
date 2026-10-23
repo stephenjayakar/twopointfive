@@ -66,7 +66,7 @@ async function boot(query: string): Promise<BootReport> {
     Math.random = seeded(0x51c4);
     const W = await standUp({ uploadEvery: 4, ...(levelFile ? { level: levelOfFile(levelFile) } : {}) });
     const g = W.game; g.godMode = true;
-    let line = ''; const msg = g.msg.bind(g); g.msg = (t: string, ...r: unknown[]) => { if (!line && /armed men|hostage|rescue/i.test(t)) line = t; return msg(t, ...r); };
+    let line = ''; const msg = g.msg.bind(g); g.msg = (t: string, ...r: unknown[]) => { if (!line && /armed enemies|hostage|rescue/i.test(t)) line = t; return msg(t, ...r); };
     const { why } = startFromQuery(g, q); R.why = why;
     R.start = shotOf(W, levelFile, line);
     // ten seconds of play with the keys a player presses first: F (the drill's word, or the rescue's), then X twice (the order menu up and away)

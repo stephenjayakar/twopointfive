@@ -396,7 +396,7 @@ const EXPECT: Record<string, any> = {
     restFlashes: 20,
     kitDry: "chamber 0 mag 0 spare [10,10,10]",
     canFireDry: false,
-    msgs: ["empty — press R","click — empty (R to reload)"],
+    msgs: ["you're empty. press R to reload","click — empty (R to reload)"],
     reloadEmpty: {"beat":["magOut@0.7:f23","magIn@0.8:f62","rack@0.8:f83"],"doneAt":97,"animReload":true,"kitAfter":"chamber 1 mag 9 spare [10,10]","msgs":["reloading"],"items":["mag/fill0/who1/life38.2167"]},
     reloadPartial: {"kitBefore":"chamber 1 mag 6 spare [10,10]","beat":["magOut@0.7:f23","magIn@0.8:f62"],"doneAt":97,"kitAfter":"chamber 1 mag 10 spare [10,6]","spareSorted":"10,6","msgs":["reloading"],"items":0},
     reloadRefused: {"reloading":false,"msgs":[],"kit":"chamber 1 mag 10 spare [10,6]"},

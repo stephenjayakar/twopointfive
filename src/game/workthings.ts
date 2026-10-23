@@ -188,7 +188,7 @@ export class WorkThings {
   /** the row's words */
   words(th: WorkThing): string {
     if (th.kind === 'device') return `make ${th.name} safe`;
-    if (th.kind === 'breaker') return this.g.blackout.active ? 're-arm the mains' : 'throw the breaker';
+    if (th.kind === 'breaker') return this.g.blackout.active ? 'turn the power back on' : 'throw the breaker';
     const W = quietWords(this.g); return W ? `take ${W.thing}` : 'pull the drive';
   }
   /** why that is not there to be done any more (null: it is) — the word the man says */

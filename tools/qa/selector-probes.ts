@@ -385,7 +385,7 @@ export async function selectorNoise() {
   { const { W, game, d } = await atLockedDoor(402, false); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'kick'); W.input.pressed.add(IK); collect(W, 120, ev, t0);
     check('kick', mine(ev), OLD_EVENTS.kick); if (!d.lockBroken) fails.push('kick: keep not torn out'); }
   { const { W, game, d } = await atLockedDoor(403, true); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'rattle'); W.input.pressed.add(IK); collect(W, 60, ev, t0);
-    check('rattle', mine(ev), OLD_EVENTS.rattle); if (!d.latched || game.player.picking || game.player.kick) fails.push('rattle: more than a rattle'); if (!game.messages.some((m: any) => /^locked — pick it/.test(m.text))) fails.push('rattle: no hint line'); }
+    check('rattle', mine(ev), OLD_EVENTS.rattle); if (!d.latched || game.player.picking || game.player.kick) fails.push('rattle: more than a rattle'); if (!game.messages.some((m: any) => /^it's locked, so pick it/.test(m.text))) fails.push('rattle: no hint line'); }
   { const { W, game, d } = await atLockedDoor(404, false, true); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'unlock'); W.input.pressed.add(IK); collect(W, 90, ev, t0);
     check('unlock', mine(ev), OLD_EVENTS.unlock); if (!d.locked || Math.abs(d.angle) < 0.5) fails.push(`unlock: locked ${d.locked} angle ${f2(d.angle)} (want the lock merely turned, the leaf swung)`); }
   { const { W, game, d } = await atLockedDoor(405, false, true); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'ease'); W.input.pressed.add(IK); collect(W, 120, ev, t0);

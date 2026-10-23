@@ -942,7 +942,7 @@ export class WallCharge {
         if (op.owes && flat(lead.char.pos, wallPt(W, 0, 0)) >= WALLKILL.nearM) { op.owes = false; g.say(lead, 'charge set.'); }   // (a man who cannot get that far says only the call below)
         if (!op.men.every(gd => op.mine.get(gd)!.arrived) && this.waiting(op, el)) break;
         // (WALLCHARGE.safe: said by the man who calls it, once, where the floor left them inside the radius)
-        g.say(lead, (op.close || WALLCHARGE.safe) && op.men.some(m => this.blastShare(W, m.char.pos, undefined, false) > 0) ? "can't get clear of it. your call." : 'stood off. your call.'); g.msg(`charge set on the wall — ${DOORTOOLS.blowKey.replace('Key', '')} blows it`);
+        g.say(lead, (op.close || WALLCHARGE.safe) && op.men.some(m => this.blastShare(W, m.char.pos, undefined, false) > 0) ? "can't get clear of it. your call." : 'stood off. your call.'); g.msg(`charge set on the wall. press ${DOORTOOLS.blowKey.replace('Key', '')} to blow it`);
         op.phase = 'armed'; op.t0 = t; this.beat(op, 'armed');
         break;
       }
@@ -1197,7 +1197,7 @@ export class WallCharge {
     if (this.openAt(s.wall) || this.chargeOn(s.wall)) return;
     const paid = this.take(); if (paid < 0) { g.msg(this.noneWords().replace(/\.$/, '')); return; }
     this.set.push({ wall: s.wall, t: g.time, by: SAM_BY, paid, ...(this.freeSet ? { free: true } : {}) }); this.stats.bySam++; g.audio.play('lockPick', wallPt(s.wall, 0, 0, K.height), 0.6); g.destr.furn.warm();
-    g.msg(`charge set on the wall${blowTail(!OWNBLOW.on, DOORTOOLS.blowKey.replace('Key', ''), ' — ')}`); this.note(`set by the player on wall ${s.wall.index}`);
+    g.msg(`charge set on the wall${blowTail(!OWNBLOW.on, DOORTOOLS.blowKey.replace('Key', ''), '. ')}`); this.note(`set by the player on wall ${s.wall.index}`);
   }
   /** is Sam setting one right now — a sustained verb (interact.ts runningVerb / cancelSustained, savestate.ts playerBusy, player.ts's running row) */
   get setting(): boolean { return !!this.sam; }

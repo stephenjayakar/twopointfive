@@ -1452,7 +1452,7 @@ export class DoorTools {
     if (!this.take('charge')) { g.msg('no charges left'); return; }
     this.samSpent++;
     this.set.push({ door: d, side: s.side, t: g.time, by: SAM_BY }); g.audio.play('lockPick', d.pos, 0.6);
-    g.msg(`charge set on the ${doorWords(d)}${blowTail(!OWNBLOW.on, K.blowKey.replace('Key', ''), ' — ')}`);
+    g.msg(`charge set on the ${doorWords(d)}${blowTail(!OWNBLOW.on, K.blowKey.replace('Key', ''), '. ')}`);
     this.note(`charge set by hand on ${d.def.name}`);
   }
   /** the charges that stand set: drawn, and one whose door has come open (or off its hinges) is off it — back in the count */
@@ -1462,7 +1462,7 @@ export class DoorTools {
       const gone = OWNCHARGE.on && c.door.off;   // (blown off its hinges by something else: the same — owncharge.ts; without it the charge stood on in the air)
       if (gone || isOpen(c.door)) {
         this.set.splice(this.set.indexOf(c), 1); this.refund('charge'); if (c.by === SAM_BY) this.samSpent = Math.max(0, this.samSpent - 1);
-        g.msg(gone ? `the ${doorWords(c.door)} is off its hinges — the charge is off it` : `the ${doorWords(c.door)} came open — the charge is off it`); this.note(`charge off ${c.door.def.name}: the door ${gone ? 'is gone' : 'opened'}`); continue;
+        g.msg(gone ? `the ${doorWords(c.door)} is off its hinges, so the charge came off with it` : `the ${doorWords(c.door)} came open, so the charge came off`); this.note(`charge off ${c.door.def.name}: the door ${gone ? 'is gone' : 'opened'}`); continue;
       }
       this.drawCharge(c);
     }
@@ -2316,7 +2316,7 @@ export class DoorTools {
         if (!this.chargeOn(d)) { if (isOpen(d)) this.stayHands(op); this.end(op, 'the charge is gone'); break; }
         { const near = op.men.filter(gd => flat(gd.char.pos, d.frameCentre) < K.backblastM + 0.05);   // (… and every one of them OUT of the backblast, not merely counted in on a mark a stride outside it: 'arrived' is said a foot short of the mark — so a man still inside it is waited on for as long as he is still walking, up to `stackCap`)
           if (!op.men.every(gd => this.arrived(op, gd)) ? this.waiting(op, el) : near.length > 0 && el < K.stackCap && (el < K.stillSecs || near.some(gd => g.time - op.mine.get(gd)!.movedT < K.stillSecs))) break; }
-        g.say(lead, 'stood off. your call.'); g.msg(`charge set on the ${name} — ${K.blowKey.replace('Key', '')} blows it`);
+        g.say(lead, 'stood off. your call.'); g.msg(`charge set on the ${name}. press ${K.blowKey.replace('Key', '')} to blow it`);
         op.phase = 'armed'; op.t0 = t; this.beat(op, 'armed'); if (op.word) op.hold = 1;
         break;
       }

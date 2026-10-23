@@ -229,7 +229,7 @@ export const roomclearEnds = guarded(async () => {
     const M = g.level.mission, stage0 = g.mission.stage;
     g.teleportPlayer([(M.serverRoom.x0 + M.serverRoom.x1) / 2, 0, (M.serverRoom.z0 + M.serverRoom.z1) / 2]); R.step(30); const inServer = g.mission.stage;
     g.mission.stage = 'exfil'; g.teleportPlayer([M.exfilX + 0.6, 0, M.exfilZ]); R.step(30); const outside = g.mission.stage; g.mission.stage = stage0;
-    verdict(stage0 === 'infiltrate' && inServer === 'infiltrate' && outside === 'exfil' && !g.mission.debrief && R.heard(/server room —|exfiltrated/) === 0 && /structure taken/.test(g.objectiveText()),
+    verdict(stage0 === 'infiltrate' && inServer === 'infiltrate' && outside === 'exfil' && !g.mission.debrief && R.heard(/reached the server room|exfiltrated/) === 0 && /structure taken/.test(g.objectiveText()),
       'the stealth mission stands still under it: Sam in the server room starts no drive objective, and past the fire exit nothing is completed', `stage ${stage0} → in the server room ${inServer} · forced to exfil and stood outside: ${outside} · debrief ${g.mission.debrief}`);
   }
   { const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
@@ -240,13 +240,13 @@ export const roomclearEnds = guarded(async () => {
     verdict(g.player.down && RC.end === 'wiped' && RC.endWhy === 'player down' && R.logged('end:wiped') === 1 && up(NB.ops) === 2, '\'wiped\' fires when Sam goes down (the pair still up: the player\'s run is over)', `Sam down ${g.player.down} · end ${RC.end} (${RC.endWhy}) · pair ${up(NB.ops)}/2`);
     for (const id of ['server', 'manager', 'breakroom']) R.drop(id);
     R.step(30);
-    verdict(RC.end === 'wiped' && R.logged('end:taken') === 0 && RC.rooms.every((r: any) => r.cleared) && R.heard(/to go$/) === 1 && R.heard(/Enter stages it again/) === 1 && /(team wiped|player down) — enter stages/.test(g.objectiveText()),
+    verdict(RC.end === 'wiped' && R.logged('end:taken') === 0 && RC.rooms.every((r: any) => r.cleared) && R.heard(/to go$/) === 1 && R.heard(/press Enter to restart$/) === 1 && /(team wiped|player down) — press enter to restart/.test(g.objectiveText()),
       'and stays: the rooms emptied afterwards are counted clear but do not turn it into a win, and nothing more is called after the end', `end ${RC.end} · cleared ${R.cleared()} · room calls ${R.heard(/to go$/)} (storage, before he fell) · '${g.objectiveText()}'`);
   }
   { const R = await rig(11); const { game: g, RC, NB } = R; R.step(30);
     for (const o of NB.ops) killGuard(g, o, [1, 0, 0], false, 'shot', 'guard'); R.step(5);
     R.step(60);
-    verdict(RC.end === null && RC.state === 'live' && R.logged('pair:down') === 1 && RC.team.ops === 0 && RC.team.sam && R.heard(/the rest is yours/) === 1 && R.heard(/yours to take/) === 0, 'in play the pair down is not an end: it is logged, said once — by this scenario alone, not the night breach\'s line as well — and Sam fights on', `end ${RC.end} · team ${JSON.stringify(RC.team)} · log ${RC.log.map((l: any) => l.what).join(',')} · said: ${R.said.slice(1).join(' | ')}`);
+    verdict(RC.end === null && RC.state === 'live' && R.logged('pair:down') === 1 && RC.team.ops === 0 && RC.team.sam && R.heard(/the rest is up to you/) === 1 && R.heard(/have to take the/) === 0, 'in play the pair down is not an end: it is logged, said once — by this scenario alone, not the night breach\'s line as well — and Sam fights on', `end ${RC.end} · team ${JSON.stringify(RC.team)} · log ${RC.log.map((l: any) => l.what).join(',')} · said: ${R.said.slice(1).join(' | ')}`);
     for (const id of ['server', 'manager', 'storage', 'breakroom']) R.drop(id);
     verdict(RC.end === 'taken' && /0 of 2 teammates/.test(RC.endWhy), 'and Sam alone can still take it', `end ${RC.end} (${RC.endWhy})`);
   }
@@ -256,18 +256,18 @@ export const roomclearEnds = guarded(async () => {
     for (const h of R.room('breakroom').defenders) killGuard(g, h, [1, 0, 0], false, 'shot', 'player');
     for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
     R.step(2);
-    verdict(g.player.down && RC.end === 'wiped' && R.logged('end:taken') === 0 && RC.rooms.every((r: any) => r.cleared) && /(team wiped|player down) — enter/.test(g.objectiveText()), 'the last defender and Sam down inside one frame is \'wiped\', not a win', `end ${RC.end} (${RC.endWhy}) · cleared ${R.cleared()} · '${g.objectiveText()}'`);
+    verdict(g.player.down && RC.end === 'wiped' && R.logged('end:taken') === 0 && RC.rooms.every((r: any) => r.cleared) && /(team wiped|player down) — press enter/.test(g.objectiveText()), 'the last defender and Sam down inside one frame is \'wiped\', not a win', `end ${RC.end} (${RC.endWhy}) · cleared ${R.cleared()} · '${g.objectiveText()}'`);
   }
   { const R = await rig(11, { pairOnly: true }); const { game: g, RC, NB } = R; R.step(30);
     killGuard(g, NB.ops[0], [1, 0, 0], false, 'shot', 'guard'); R.step(5); const one = RC.end;
     killGuard(g, NB.ops[1], [1, 0, 0], false, 'shot', 'guard'); R.step(5);
-    verdict(one === null && RC.end === 'wiped' && RC.endWhy === 'the pair down' && !g.player.down && /shift\+enter/.test(g.objectiveText()) && R.heard(/team wiped — the pair down\. Shift\+Enter/) === 1 && R.heard(/the rest is yours/) === 0,
+    verdict(one === null && RC.end === 'wiped' && RC.endWhy === 'the pair down' && !g.player.down && /shift\+enter/.test(g.objectiveText()) && R.heard(/team wiped — the pair down\. press Shift\+Enter to restart/) === 1 && R.heard(/the rest is up to you/) === 0,
       'under the tally\'s switch (the team is the pair alone) both teammates down IS \'wiped\', with Sam standing — and the HUD names the key that works for a standing man', `after one ${one} · after both ${RC.end} (${RC.endWhy}) · '${g.objectiveText()}'`);
   }
   { // the point man dropped on the stack with his number two still up: the drill's entry is off — said once, by this scenario
     const R = await rig(11); const { game: g, RC, NB } = R; R.step(60); R.press(); R.until(() => NB.state === 'set', 30);
     killGuard(g, NB.ops[0], [1, 0, 0], false, 'shot', 'hostile'); R.until(() => NB.state === 'failed', 10); R.step(60);
-    verdict(NB.state === 'failed' && RC.end === null && up(NB.ops) === 1 && R.heard(/point man down at the door — the break room is yours to take/) === 1 && R.heard(/or Shift\+Enter stages it again/) === 0 && R.logged('pair:down') === 0,
+    verdict(NB.state === 'failed' && RC.end === null && up(NB.ops) === 1 && R.heard(/your point man is down at the door, so you'll have to take the break room yourself/) === 1 && R.heard(/or press Shift\+Enter to restart/) === 0 && R.logged('pair:down') === 0,
       'the point man down on the stack: the entry is off, said once in this scenario\'s words; no end, his number two still up', `${NB.summary()} · ${RC.summary()} · said: ${R.said.slice(1).join(' | ')}`);
   }
   { // WHAT THE LOG CALLS IT (words.ts, on in the page; from a tape of the compound: 'guard: man down.' over a teammate, 'guard down — dead' beside 'Tango 4 down — Red
@@ -282,7 +282,7 @@ export const roomclearEnds = guarded(async () => {
         for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
         R.step(2);
         const kill = on ? `${h.callsign} down` : 'guard down — dead', cut = `${on ? op.callsign : 'guard'}: man down.`;
-        const end = on ? /^player down\. Enter stages it again$/ : /^team wiped — player down\. Enter stages it again$/, obj = on ? /^player down — enter stages/ : /^team wiped — enter stages/;
+        const end = on ? /^player down\. press Enter to restart$/ : /^team wiped — player down\. press Enter to restart$/, obj = on ? /^player down — press enter to restart/ : /^team wiped — press enter to restart/;
         verdict(mine.includes(kill) && R.said.includes(cut) && R.heard(end) === 1 && obj.test(g.objectiveText()) && up(NB.ops) === 1 && RC.end === 'wiped' && RC.endWhy === 'player down',
           `words ${on ? 'on' : 'off'}: the player's kill, a teammate's cut-off line and Sam down with a man still up read ${on ? 'by name, and as what happened' : 'as they did'}`,
           `want '${kill}' · '${cut}' · ${end} · row ${obj} — said: ${R.said.slice(1).join(' | ')} · row '${g.objectiveText()}' · pair ${up(NB.ops)}/2`);
@@ -292,7 +292,7 @@ export const roomclearEnds = guarded(async () => {
       R.step(5);
       for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
       R.step(2);
-      verdict(RC.end === 'wiped' && up(NB.ops) === 0 && R.heard(/^team wiped — player down\. Enter stages it again$/) === 1 && /^team wiped — enter stages/.test(g.objectiveText()),
+      verdict(RC.end === 'wiped' && up(NB.ops) === 0 && R.heard(/^team wiped — player down\. press Enter to restart$/) === 1 && /^team wiped — press enter to restart/.test(g.objectiveText()),
         'words on, every teammate down and then Sam: that IS the team wiped, and it is called so', `end ${RC.end} (${RC.endWhy}) · pair ${up(NB.ops)}/2 · row '${g.objectiveText()}' · said: ${R.said.slice(-3).join(' | ')}`);
     } finally { WORDS.on = was; }
   }

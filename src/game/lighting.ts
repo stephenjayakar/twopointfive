@@ -117,7 +117,7 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
   if (!bo.active) bo.since = g.time;
   bo.active = true; bo.permanent = permanent; bo.until = permanent ? Infinity : Math.max(bo.until, g.time + seconds);
   g.audio.play('powerDown', g.level.breaker.pos, 1.0); g.audio.play('powerDown', null, 0.35);
-  g.msg(cause === 'shot' ? 'breaker destroyed — mains gone for good' : cause === 'hand' ? 'breaker thrown — emergency lighting until someone resets it' : 'mains tripped — emergency lighting');
+  g.msg(cause === 'shot' ? 'breaker destroyed — power gone for good' : cause === 'hand' ? 'breaker thrown — emergency lighting until someone resets it' : 'power tripped — emergency lighting');
   if (cause !== 'debug' && missionLive(g)) { g.mission.stats.blackout = true; chronBlackout(g, cause); }   // the player's own doing (OCP / round / his hand on it), not the panel button or the tour — and a row + pin for the debrief
   // guards: everyone gets edgy; the nearest one goes to check the breaker
   let best: Guard | null = null, bd = 1e9;
@@ -138,7 +138,7 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
 export function endBlackout(g: Game) {
   const bo = g.blackout; if (!bo.active) return;
   bo.active = false; bo.permanent = false; bo.until = -1; bo.restoredAt = g.time; g.breakerFixT = 0;
-  g.audio.play('powerUp', g.level.breaker.pos, 1.0); g.audio.play('powerUp', null, 0.3); g.msg('mains restored');
+  g.audio.play('powerUp', g.level.breaker.pos, 1.0); g.audio.play('powerUp', null, 0.3); g.msg('power is back on');
   for (const gd of g.guards) if (gd.task?.kind === 'breaker') gd.task = null;
 }
 
@@ -173,8 +173,8 @@ export function ocp(g: Game, t: LightTarget | null) {
   }
   if (t.kind === 'breaker') {
     const eye = g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]);
-    if (g.col.segmentBlocked(eye, v3.add(t.pos, [0, 0, -0.18]))) { g.msg('OCP: no line of sight to the breaker'); g.audio.play('deny', null, 0.5); return; }
-    if (g.blackout.active) { g.msg('mains already down'); g.audio.play('deny', null, 0.5); return; }
+    if (g.col.segmentBlocked(eye, v3.add(t.pos, [0, 0, -0.18]))) { g.msg("the OCP can't see the breaker from here"); g.audio.play('deny', null, 0.5); return; }
+    if (g.blackout.active) { g.msg('power is already off'); g.audio.play('deny', null, 0.5); return; }
     o.use(); g.audio.play('ocp', g.player.char.muzzle, 1); g.setBlackout(g.tune.ocpDuration * 2.5, 'ocp'); return;
   }
   if (t.factor <= 0) { g.msg(`OCP: ${t.name} already off`); return; }
