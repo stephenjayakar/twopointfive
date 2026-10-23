@@ -369,7 +369,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     four men up it never got one: at the blow's step the fog had eyes 20 21 22 23 199 and the wall's face was not seen. That is the frame's to mend for a
     mission that keeps its fog; this one shows the whole floor. `rails-check`'s line on the ring now holds that every man on the road and in the rooms is
     drawn (it held the lookout's road and nobody in a room); `tut-sky-check` has a tenth line, the wall's face in the live picture on the blow's step,
-    red with the fog put back (`TUT_SKY_BREAK=1`: "fog of war on, 5 eyes · the wall's face HIDDEN"). Nobody has seen the blast on a GPU since.
+    red with the fog put back (`TUT_SKY_BREAK=1`: "fog of war on, 5 eyes · the wall's face HIDDEN"). Nobody has seen the blast on a GPU since. THE BRAZIER'S MELT PATCH IS ROUND (10-23; the
+    maintainer's close shot of a burning drum, where the patch read as a hard grey square tile under the fire's light): `melted()` in the generator lays
+    each of the two layers as four slabs through one centre 45 degrees apart, a little unequal and turned off the walls' lines. Six more boxes (824), the
+    level's fingerprint moves (old checkpoints and recordings of it are refused), `lived-check`'s row for the level moved. Never seen on a GPU.
     MEASURED: the scripted player ends all fifteen steps on the page's stand on seeds 1 to 7 in 129 to 140 s of play; the first man with a
     torch is hit two to three and a half seconds after the bunkhouse says it is coming, by the lorry's tail; the second often stays behind the lorry and is
     the last room's fight. `PORT=<port> node tools/qa/tut-page.cjs` (software adapter, a hand's own keys and mouse) played all fifteen steps to the

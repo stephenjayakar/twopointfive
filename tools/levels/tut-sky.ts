@@ -180,6 +180,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     lay(x0 - ring, z0 - ring, x1 + ring, z1 + ring, S.snowOld, 0.004); lay(x0, z0, x1, z1, M.dust, 0.006);
     zones.push({ id, mat: 'asphalt', x0: x0 - ring, z0: z0 - ring, x1: x1 + ring, z1: z1 + ring });
   };
+  /** GROUND MELTED ROUND A FIRE: the same two layers as `cleared`, each laid as four slabs through one centre 45 degrees apart (an octagon to the eye), the
+   *  slabs a little unequal and the whole turned off the walls' lines, so that a round drum stands in a rough round patch and not on a square tile (the
+   *  maintainer's close look at a burning drum: the patch read as a hard grey tile under the fire's light). `r` = the bare earth's reach from the centre */
+  const melted = (id: string, x: number, z: number, r: number, ring = 0.35) => {
+    const T = Math.tan(Math.PI / 8), oct = (R: number, m: Mat, y: number, turn: number, f: number[]) => { for (let k = 0; k < 4; k++) add({ c: [x, y / 2, z], h: [R * f[k], y / 2, R * T], yaw: turn + k * Math.PI / 4, ...m }); };
+    oct(r + ring, S.snowOld, 0.004, 0.2, [1, 0.92, 1.06, 0.9]); oct(r, M.dust, 0.006, 0.5, [0.94, 1.05, 0.9, 1]);
+    zones.push({ id, mat: 'asphalt', x0: x - r - ring * 0.6, z0: z - r - ring * 0.6, x1: x + r + ring * 0.6, z1: z + r + ring * 0.6 });
+  };
   /** DECAL: a flat mark at the floor, w along local x, d along local z */
   const flat = (x: number, z: number, w: number, d: number, m: Mat, yaw = 0) => add({ c: [x, 0.012, z], h: [w / 2, 0.003, d / 2], yaw, ...m, flags: DECAL });
   let pathN = 0;
@@ -383,7 +391,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   cleared('tea_door', 8.15, 11.64, 10.35, 13.0, 0.4);
   cleared('kitchen_door', 16.5, 11.64, 19.9, 12.7, 0.35);                                     // (the kitchen's door and the mains box beside it)
   cleared('bunk_door', 27.6, 15.5, 28.86, 17.0, 0.35);
-  cleared('brazier', 11.0, 13.9, 12.0, 14.9, 0.35);
+  melted('brazier', 11.5, 14.4, 0.55, 0.35);                                                 // (round, as the drum is: it was a square of slush with a square of earth in it)
   cleared('generator', 30.2, 7.8, 33.6, 8.9, 0.3);
   // ---- trodden paths: from the gate to each door, between the doors, round to the court ----
   grp('snow.paths');
