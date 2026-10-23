@@ -5,11 +5,12 @@
 //   hold    2.6 m behind him, the left button pressed on him and kept down (the mouse's own events on the canvas): he is in Sam's arm inside six seconds.
 //   let     the same, let go after two thirds of a second: nobody stalked, Sam at rest; pressed again: in his arm.
 //   slider  the lab's first slider moved by its own input event writes the stalk's top speed.
+// ONLY=polish: the lab under ?stalkpolish=0 — the polish's numbers are down and the held click still ends in the grab.
 // ONLY=off: a plain night under ?stalk=0 instead — the switch is off, the list offers the grab on its key and the key grabs him.
 //   PORT=5231 node tools/qa/stalk-page.cjs        (a dev server on that port: PORT=5231 bun run tools/serve.ts)     SHOT=<file.png>: one drawn frame of the lab kept
 // exit 0 = all hold with no page error · 1 = otherwise.   What this cannot say: how any of it LOOKS or FEELS (the software adapter draws it; nobody plays it here).
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OFF = process.env.ONLY === 'off', SHOT = process.env.SHOT || '';
+const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OFF = process.env.ONLY === 'off', POLISH = process.env.ONLY === 'polish', SHOT = process.env.SHOT || '';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
 (async () => {
@@ -17,7 +18,7 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); const errors = []; page.setDefaultTimeout(900000);
   page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
-  await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&levelFile=sneak-lab.json&solo${OFF ? '&stalk=0' : '&sneaklab'}`);
+  await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&levelFile=sneak-lab.json&solo${OFF ? '&stalk=0' : '&sneaklab'}${POLISH ? '&stalkpolish=0' : ''}`);
   const rows = []; const say = (ok, text) => { rows.push(ok); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); };
   const boot = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; window.__menu.close(); await window.__runFrames(5, 1 / 60, [], 'none');
     const g = window.__game, S = window.__knobs.registry().STALK; g.godMode = true; g.playerInvisible = true;
@@ -40,6 +41,8 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   } else {
     say(!boot.fatal && boot.on && boot.only && boot.men === 6 && boot.holstered && boot.panel && /^Sneak lab/.test(boot.sys) && boot.sliders >= 12,
       `the lab: stalk ${boot.on ? 'on' : 'OFF'}, the click the only way ${boot.only}, ${boot.men} men, empty hands ${boot.holstered}, the panel ${boot.panel ? 'open' : 'SHUT'} on '${boot.sys.slice(0, 20)}' with ${boot.sliders} sliders${boot.fatal ? ' · FATAL ' + boot.fatal : ''}`);
+    { const v = await page.evaluate(() => { const R = window.__knobs.registry(), S = R.STALK, H = R.HOLD; return { jolt: S.jolt, turnIn: S.turnIn, show: S.cornerShow, way: H.wayShape, dip: H.lunge.dip, apart: H.apart.side }; }), up = v.jolt > 0 && v.turnIn && v.show && v.way && v.dip > 0 && v.apart > 0, down = v.jolt === 0 && !v.turnIn && !v.show && !v.way && v.dip === 0 && v.apart === 0;
+      say(POLISH ? down : up, `${POLISH ? '?stalkpolish=0: the polish is down' : 'a plain address: the polish is up'} (the duck ${v.jolt}, the turn through the step ${v.turnIn}, the wait's pose ${v.show}, the shaped way in ${v.way}, the dip ${v.dip}, the heads apart ${v.apart})`); }
     // (one DRAWN frame before the page is read: the corner's rows are written by the draw)
     await behind(0.8); await page.evaluate(() => window.__runFrames(1)); const before = await frames(0); await tap('KeyE'); await tap('Space'); const k = await frames(30, true);
     say(!k.held && /hold to grab him/.test(before.list) && /hold to grab him/i.test(before.page), `0.8 m behind him a tap of E and of Space grabs nobody (in his arm ${k.held}), the man's rows say the click (${/hold to grab him/.test(before.list)}) and so does the page (${/hold to grab him/i.test(before.page)})`);
