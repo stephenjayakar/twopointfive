@@ -26,6 +26,7 @@ import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is 
 import { findMeRows } from './findme';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
+import { AUTOCAM } from '../host/autocam';
 import { keyCapEl, keyCapture, keyStop, keyWaiting, type KeyHost } from './keybinds';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
@@ -54,6 +55,8 @@ const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'put away w
 /** the action key's row and the whistle's while his own actions are a ring that stays (game/handring.ts): the list's wheel is gone, the whistle is a wedge */
 const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
+/** the auto camera's row (host/autocam.ts): the camera's key tapped twice */
+const AUTO_WHAT = 'Tap twice for the auto camera';
 const PACE_WHAT = 'Walking pace';
 const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
@@ -64,6 +67,7 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['Q'], WALL_WHAT, WALL_SMALL],   // (wallLine below: its words while the row has no key)
     [['Ctrl', 'Mouse'], 'Orbit the camera'],
     [['Ctrl', 'Wheel'], 'Zoom'],
+    [['Ctrl'], AUTO_WHAT, 'turn the view yourself to take it back'],   // (host/autocam.ts: no row while AUTOCAM.on is off)
   ] },
   { group: 'Hands', rows: [
     [['Space'], ACT_WHAT, 'hold it to pick another with the wheel, then let go to do it'],
@@ -374,6 +378,7 @@ function controls(body: HTMLElement, host: KeyHost) {
     for (const [caps, what, small0] of rows) {
       const small1 = !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
+      if (what === AUTO_WHAT && !AUTOCAM.on) continue;   // (the camera that runs itself: host/autocam.ts)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
       caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(k === 'Ctrl' ? camCapEl(host) : keyCapEl(k, gearText(wallLine(what)), host, seen)); });
       const w = el('div', 'op-what', gearText(wallLine(what))), wt = w.firstChild, small = () => setupSmall(caps[0], small1) ?? '', sm = small1 || (SLOTSETUP.on && SETUP_SMALL[caps[0]]) ? el('small', '', gearText(wallLine(small()))) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)
