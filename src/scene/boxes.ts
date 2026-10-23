@@ -82,6 +82,13 @@ export interface Box {
   cutCore?: Vec3;
   /** GLASS (cut.ts CutGlass): this cut box's two z faces are drawn see-through inside a rim in the core colour. Picture only; packed with the record, like cutCore. */
   cutGlass?: CutGlass;
+  /** ROUND (a geometry trial: scene/geoTry.ts): this cut box is a prism standing for a ROUND thing about its own x (1), y (2) or z (3). Picture only, packed with the
+   *  record like cutCore: the g-buffer's cut pass shades the faces round that axis with one turning normal and lets marks and the look's paint run over them. Every
+   *  ray still meets the prism's flat faces. Not with cutGlass. */
+  cutRound?: 1 | 2 | 3;
+  /** AN OLD BREAK (the same trial): the cut faces were not made a moment ago. Picture only, packed with the record: on the look page they take the look's paint
+   *  as a face of the core's stuff, and on a snow level the snow lies on the ones that face up. A blast's fresh cut never sets it. Not with cutGlass. */
+  cutOld?: boolean;
 }
 /** MKEY ranges (Box.mkey): the system in the top byte, its own numbering below — doors (index × 4 + part), props (id × 16 + part), items (serial × 8 + part), the
  *  rig props on a character (owner << 8 | ordinal this frame; the owner-0 lasers stay unkeyed), devices (ordinal over the frame's device boxes), staging / QA boxes
@@ -551,7 +558,7 @@ export class BoxWorld {
       if (mk.slot > 0 && mk.slot <= MARK_SLOT_MAX) { flags |= mk.slot << MARK_SLOT_SHIFT; s0 = mk.sec[0] * wk; s1 = mk.sec[1] * wk; s2a = mk.sec[2] * wk; marked = true; }
     }
     if (this.cutOn && b.cut !== undefined && b.cut.length > 0) {   // CUT BOXES: the flag bit + this index's rows of the cut table (uploaded by upload() over the packed range)
-      flags |= BOX_CUT_BIT; packCut(b.cut, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass);
+      flags |= BOX_CUT_BIT; packCut(b.cut, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass, b.cutRound, b.cutOld);
       if (i < this.cutSplit) { if (i < this.cutLo) this.cutLo = i; if (i > this.cutHi) this.cutHi = i; } else { if (i < this.cutLoD) this.cutLoD = i; if (i > this.cutHiD) this.cutHiD = i; }
     }
     gf[o] = b.c[0]; gf[o + 1] = b.c[1]; gf[o + 2] = b.c[2]; gu[o + 3] = pack2x16f(Math.cos(b.yaw), Math.sin(b.yaw));

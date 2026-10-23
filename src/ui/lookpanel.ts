@@ -19,7 +19,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['size', 'Map size', '× the 2 m a map covers', 2],
 ];
 
-export function buildLookPanel(engine: Engine, fps: () => number): void {
+export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }): void {
   const el = document.createElement('div');
   el.style.cssText = 'position:fixed;right:10px;top:10px;z-index:50;width:232px;padding:10px 12px;background:rgba(12,14,16,.86);color:#cfd6d2;font:11px/1.35 ui-monospace,Menlo,monospace;border:1px solid #2c3432;border-radius:4px;user-select:none';
   for (const ev of ['mousedown', 'click', 'pointerdown', 'wheel', 'contextmenu', 'dblclick']) el.addEventListener(ev, e => e.stopPropagation());   // (never the releases: the game clears a held button on the window's mouseup)
@@ -53,6 +53,7 @@ export function buildLookPanel(engine: Engine, fps: () => number): void {
   const w = window as any;
   const hours = line('Hour'); for (const h of ['night', 'dawn', 'midday', 'overcast', 'dusk']) { const b = btn(h); b.addEventListener('click', () => w.__hour?.set(h)); hours.append(b); }
   const qual = line('Quality'); for (const p of ['low', 'medium', 'high', 'ultra']) { const b = btn(p); b.addEventListener('click', () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } }); qual.append(b); }   // (auto off for the visit: the ladder would move the preset again)
+  if (shapes) { const sh = line('Shapes (a trial)'); const b = btn(shapes.on ? 'Round and broken: on' : 'Round and broken: off', 'round drums and tyres, a bite out of the yard wall’s top. The page loads again to change it'); b.addEventListener('click', shapes.flip); sh.append(b); }   // A GEOMETRY TRIAL (scene/geoTry.ts): made when the level loads, so the button loads the page again
   document.body.append(el);
   setInterval(() => { const f = fps(); cost.textContent = `${f.toFixed(0)} fps · ${(1000 / Math.max(f, 1)).toFixed(1)} ms a frame · ${engine.width}×${engine.height} → ${engine.outWidth}×${engine.outHeight}`; }, 500);
 }
