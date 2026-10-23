@@ -8,8 +8,8 @@
 //   THE STRIP   HOLD.strip.take seconds in: Sam's right hand is on the gun and it is out of the man's fist — an item from that frame, `carried` in Sam's hand
 //               (throwables.ts: placed here every frame, no physics); the man's hands are empty (Guard.gunLostAt, as HOLD.dropGun always stamped it). Voice
 //               `gunStrip`. The pistol hold (Sam's right hand has his own gun) raps it out with the frame instead: it falls from where the man held it.
-//   THE GUN DOWN  HOLD.strip.drop: he lets it go from a straight arm at his right thigh. It falls dead (no spin, next to no bounce) and lies beside the pair,
-//               where he put it: no dice. Voice `gunDown`, once, as it lands.
+//   THE GUN DOWN  HOLD.strip.drop: he lets it fly from a straight arm out at his right. It turns flat as it goes (a fixed rate), lands most of a metre clear of
+//               the pair with next to no bounce, and lies there: no dice. Voice `gunDown`, once, as it lands.
 // then the hand comes back up behind the man's shoulder and onto its station on him (character.ts holdLayer; the knife is in that fist only from
 // HOLD.strip.knife on — combat.ts asks disarmHand).
 //
@@ -100,7 +100,7 @@ function letGo(g: Game, it: Item, by: Character): void {
   const d: Vec3 = [it.pos[0] - from[0], 0, it.pos[2] - from[2]], L = Math.hypot(d[0], d[2]);
   let push = K.push[0];
   if (L > 1e-3) { const dir: Vec3 = [d[0] / L, 0, d[2] / L], hit = g.col.raycast(from, dir, L + it.radius + 0.05); if (hit) { it.pos = v3.mad(from, dir, Math.max(0, hit.t - it.radius - 0.03)); push = 0; } }
-  it.carried = false; it.settled = false; it.spin = 0; it.tumbleRate = 0;
+  it.carried = false; it.settled = false; it.spin = push > 0 ? K.spin : 0; it.tumbleRate = 0;   // (thrown: it turns flat as it goes — a fixed rate, no dice; stopped at a wall: dead, as it was)
   it.vel = [by.vel[0] - Math.cos(y) * push, -K.push[1], by.vel[2] + Math.sin(y) * push];
 }
 /** the gun on the floor: one dull knock, the first time it lands (Item.onBounce — it keeps nothing of its own but the item's count) */

@@ -151,12 +151,36 @@ async function stalk(scene: string, who: 'calm' | 'rifle', pause: boolean) {
   for (const t of [0.07, 0.14, 0.22, 0.34, 0.5, 0.7, 0.95, 1.5]) to(t, `grab ${t.toFixed(2)} s`);
   return R;
 }
+/** THE WAIT AT A CORNER (stalk.ts STALK.corner): Sam's back on the lobby's nearest wall, hands empty, the left button held — a man walks past along the wall a
+ *  pace out: moments as he comes, then the grab off the wall, beat by beat */
+async function cornerWait(scene: string) {
+  const S = await lobby(7306), { W, g, A } = S, pl = g.player, SAM = [6.2, 0, 19.5]; let hit: { t: number; d: number[] } | null = null;
+  for (let k = 0; k < 16; k++) { const a = k * Math.PI / 8, d = [Math.sin(a), 0, Math.cos(a)], h = g.col.raycast([SAM[0], 1.0, SAM[2]], d, 14); if (h && (!hit || h.t < hit.t)) hit = { t: h.t, d }; }
+  if (!hit) { console.log(`  [${scene}] no wall`); return recorder(scene, g, A); }
+  const foot = [SAM[0] + hit.d[0] * (hit.t - 0.6), 0, SAM[2] + hit.d[2] * (hit.t - 0.6)]; g.teleportPlayer(foot); pl.crouch = false;
+  const step = (n: number) => { for (let i = 0; i < n; i++) { W.cursorAt([foot[0] + hit!.d[0] * 2, 1.2, foot[2] + hit!.d[2] * 2]); W.step(DT); pl.visibility = 0.02; } };
+  step(10); W.input.pressed.add('KeyQ'); step(51); const R = recorder(scene, g, A);
+  if (!pl.wall) { console.log(`  [${scene}] no wall took him`); return R; }
+  const n = pl.wall.n, t0 = [n[2], 0, -n[0]], p = pl.char.pos, back = 2.6;
+  const run = (sg: number) => g.col.raycast([p[0] + n[0] * 0.75 - t0[0] * back * sg, 0.5, p[2] + n[2] * 0.75 - t0[2] * back * sg], [t0[0] * sg, 0, t0[2] * sg], back + 1.6)?.t ?? 99;
+  const sg = run(1) >= run(-1) ? 1 : -1, t = [t0[0] * sg, 0, t0[2] * sg];
+  place(A, [p[0] + n[0] * 0.75 - t[0] * back, 0, p[2] + n[2] * 0.75 - t[2] * back], Math.atan2(t[0], t[2]));
+  const along = () => (A.char.pos[0] - p[0]) * t[0] + (A.char.pos[2] - p[2]) * t[2];
+  const walk = () => { A.char.pos[0] += t[0] * 1.15 * DT; A.char.pos[2] += t[2] * 1.15 * DT; A.char.vel = [t[0] * 1.15, 0, t[2] * 1.15]; W.input.buttons |= 1; step(1); };
+  let k = 0; for (const m of [-2.0, -1.2, -0.7, -0.4]) { while (along() < m && !pl.holding && k++ < 600) walk(); if (!pl.holding) R.snap(`waiting, the button held · he is ${(-along()).toFixed(2)} m short of him`); }
+  while (!pl.holding && k++ < 600) walk();
+  if (!pl.holding) { console.log(`  [${scene}] THE GRAB NEVER CAME`); return R; }
+  W.input.buttons &= ~1; A.char.vel = [0, 0, 0]; R.snap('the grab · frame 0'); let f = 0; const to = (s: number, label: string) => { const q = Math.round(s * 60); if (q > f) { S.look.ahead = true; S.step(q - f); f = q; } R.snap(label); };
+  for (const s of [0.07, 0.14, 0.22, 0.34, 0.5, 0.95]) to(s, `grab ${s.toFixed(2)} s`);
+  return R;
+}
 const SCENES: Record<string, { title: string; run: (name: string) => Promise<any> }> = {
   'disarm': { title: 'the grab disarms him: a drawn pistol stripped out of his hand and let down', run: n => disarm(n, 'pistol', false) },
   'disarm-rifle': { title: 'the grab disarms him: a carbine torn out of his hands', run: n => disarm(n, 'rifle', false) },
   'disarm-gun': { title: 'the grab with Sam\'s pistol drawn: the gun rapped out of his hand', run: n => disarm(n, 'pistol', true) },
   'stalk': { title: 'the stalk: the held click from 2.9 m, the arm and the rise by distance, into the grab', run: n => stalk(n, 'calm', false) },
   'stalk-rifle': { title: 'the stalk into a rifleman: the creep, then the grab that takes his carbine', run: n => stalk(n, 'rifle', false) },
+  'stalk-corner': { title: 'the wait at a corner: back on a wall, the button held, a man walks past and is taken', run: n => cornerWait(n) },
   'stalk-pause': { title: 'the stalk let go at 1.4 m (the pose held), then pressed again', run: n => stalk(n, 'calm', true) },
   'choke': { title: 'the choke from the hold, beat by beat', run: n => choke(n) },
   'approach-crouch': { title: 'coming up behind him at the crouch, stopping in reach', run: n => approach(n, true, 0.85) },

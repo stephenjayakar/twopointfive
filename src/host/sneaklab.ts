@@ -32,6 +32,11 @@ const NUMS = (): Num[] => [
   { t: STALK, name: 'STALK', key: 'reach', label: 'how far the arm is up at the grab', min: 0, max: 1, step: 0.05, tip: '1 = the whole reach held out as the grab fires, 0 = no arm before the grab at all' },
   { t: STALK, name: 'STALK', key: 'riseFrom', label: 'he starts to come up out of the crouch at m', min: 1.0, max: 3.5, step: 0.05, tip: 'from this far behind a man on his feet Sam begins to stand up into him' },
   { t: STALK, name: 'STALK', key: 'rise', label: 'how far up he is at the grab', min: 0, max: 1, step: 0.05, tip: '0 = still in the full crouch when the grab fires (the grab stands him up in one go), 1 = on his feet by then' },
+  { t: STALK, name: 'STALK', key: 'riseBy', label: 'he is that far up by m', min: 0.6, max: 2.5, step: 0.05, tip: 'the distance behind the man by which Sam is as far out of the crouch as the row above says' },
+  { t: STALK, name: 'STALK', key: 'catchSecs', label: 'the step into the grab, s', min: 0, max: 0.45, step: 0.01, tip: 'the grab closes the last of the gap in one eased step this long. 0 = the grab\'s own snap' },
+  { t: STALK, name: 'STALK', key: 'catchStride', label: 'his legs in that step, m/s', min: 0, max: 3, step: 0.1, tip: 'the most walking speed his legs are given for the step in' },
+  { t: STALK, name: 'STALK', key: 'cornerM', label: 'at a corner he is taken inside m', min: 0.8, max: 2.5, step: 0.05, tip: 'waiting on a wall with the button held: how close the man must pass' },
+  { t: STALK, name: 'STALK', key: 'cornerDeg', label: 'at a corner, how far past you he must be, degrees', min: 30, max: 150, step: 5, tip: 'how far round from his nose Sam must be before the wait takes him: 90 = level with his shoulder, more = he has gone further past' },
   { t: CLOSE, name: 'CLOSE', key: 'modeM', label: 'it can begin inside m', min: 1.5, max: 7, step: 0.1, tip: 'the close-in range: inside it the sneak holds its pose and a press on a man begins the creep' },
   { t: CLOSE, name: 'CLOSE', key: 'modeOutM', label: 'it lets go past m', min: 2, max: 9, step: 0.1, tip: 'he got too far away: the creep ends past this' },
   { t: TWOGEARS, name: 'TWOGEARS', key: 'crouch', label: 'your own crouch walk m/s', min: 0.8, max: 2.2, step: 0.05, tip: 'the speed you arrive at before the creep takes over' },
@@ -72,6 +77,7 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   const cr = panel.section('The creep', { open: true, reset: () => { nums.forEach((n, i) => { n.t[n.key] = was[i]; }); ARCS.forEach((a, i) => { STALK[a.key] = wasArc[i]; }); }, resetTitle: 'every number back to the build\'s' });
   panel.toggleBox(cr, 'holding the click creeps in', () => STALK.on, v => { STALK.on = v; }, 'off = the build before it: your own keys all the way, and the grab on its key');
   panel.toggleBox(cr, 'his body shows how close he is', () => STALK.tell, v => { STALK.tell = v; }, 'the arm comes up and he comes out of the crouch as he closes on the man\'s back, by distance, so a pause holds the pose. Off = the pose in reach alone');
+  panel.toggleBox(cr, 'on a wall, holding the click waits for him', () => STALK.corner, v => { STALK.corner = v; }, 'with your back on a wall [Q] and empty hands, hold the left button: the man who walks past the corner is grabbed as he passes. Off = the button on a wall does nothing');
   panel.toggleBox(cr, 'the click is the only way to grab', () => STALK.only, v => { STALK.only = v; }, 'off = the grab\'s row is back beside the held click');
   for (const n of nums) panel.slider(cr, n.label, n.min, n.max, n.step, () => n.t[n.key] as number, v => { n.t[n.key] = v; }, n.tip);
   for (const a of ARCS) panel.slider(cr, a.label, 60, 180, 1, () => deg(STALK[a.key]), v => { STALK[a.key] = cosOf(v); }, a.tip);

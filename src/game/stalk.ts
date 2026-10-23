@@ -46,16 +46,23 @@ export const STALK = {
    *  and hold its very smooth to gradually shift the animation until you end on a grab, and you can be interrupted any time"). Behind a man he could stalk, or
    *  stalking him, Sam's pose is a function of the DISTANCE to that man's back and of nothing else: from `reachFrom` m in, the left arm comes up for his neck
    *  (the tell's own reach, character.ts readyLayer, at a weight that is `reach` by the time the grab fires), and from `riseFrom` m in he comes up out of the
-   *  crouch (`rise` of the way to his feet at the grab — the grab itself stands him up the rest). Because it is the distance's, letting go of the button holds
+   *  crouch (`rise` of the way to his feet by `riseBy` m — the grab itself stands him up the rest). Both run straight by the distance. Because it is the distance's, letting go of the button holds
    *  the pose where it is — a frame of the move, paused — and the next press goes on from it; his own keys behind the same man show the same body. What the men
    *  see and hear of him is the crouch's, as it was. `tell` off = the tell in reach alone, as before the stalk. */
-  tell: true, reachFrom: 2.3, reach: 0.9, riseFrom: 1.9, rise: 0.55,
+  tell: true, reachFrom: 2.6, reach: 1, riseFrom: 2.3, riseBy: 1.05, rise: 0.7,
   /** THE STEP IN: the grab a stalk ends in closes the last of the gap in one eased step over `catchSecs` (never longer than the grab itself, HOLD.secs.grab) —
    *  the grab's own way in covers most of it in its first three frames. His legs are given the step, at no more than `catchStride` m/s. 0 = the grab's own. */
   catchSecs: 0.36, catchStride: 1.5,
+  /** THE SAME AT A CORNER (the maintainer: "curious if we can make this language work for working corners. like when you're at a corner you can either grab
+   *  or CQC with the right timing"). With his back on a wall (the wall hold, not the stack) and his hands empty, the left button HELD is a man lying in wait:
+   *  nothing moves, and the moment a man who is not onto him is inside `cornerM` with Sam at least `cornerDeg`° round from his nose — he has come past the
+   *  corner — Sam comes off the wall onto him: the grab, by the same eased step in. Pressed too soon it simply waits; let go, nothing happens; a man who comes
+   *  round FACING him is not taken (the right button's knockout is still the player's own timing, as off a wall). `corner` off = the button on a wall does
+   *  nothing, as before. The page: ?stalkcorner=0. */
+  corner: true, cornerM: 1.35, cornerDeg: 75,
 };
 /** tallies for the checks and the page's hook (begun = presses that took a man; out = why each ended without a grab) */
-export const STALK_STATS = { begun: 0, grabs: 0, out: { let: 0, far: 0, turned: 0, wall: 0, him: 0, hands: 0, keys: 0 }, last: '' };
+export const STALK_STATS = { begun: 0, grabs: 0, corner: 0, out: { let: 0, far: 0, turned: 0, wall: 0, him: 0, hands: 0, keys: 0 }, last: '' };
 type Why = keyof typeof STALK_STATS.out;
 
 interface St { on: Guard | null; grab: Guard | null; t: number }
@@ -90,13 +97,28 @@ function pressed(g: Game): Guard | null {
   return best;
 }
 
+/** STALK.corner: the man the wait at a corner takes this frame — the nearest who has come past him — or null (not on a wall with empty hands; nobody past) */
+function cornerMan(g: Game): Guard | null {
+  const pl = g.player, w = pl.wall;
+  if (!STALK.on || !STALK.corner || !w || w.kind === 'stack' || w.drawn || !closeLive(g) || g.puppet || !pl.holstered || pl.down || pl.holding || pl.takedown || pl.dragging || pl.kick || pl.picking || pl.wanding || pl.listOpen) return null;
+  const p = pl.char.pos, cos = Math.cos(STALK.cornerDeg * Math.PI / 180); let best: Guard | null = null, bd = STALK.cornerM;
+  for (const gd of g.guards) {
+    if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') continue;
+    const d = Math.hypot(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]);
+    if (d < bd && Math.cos(bearingOf(gd, p)) <= cos && closeClear(g, gd.char.pos, p)) { best = gd; bd = d; }
+  }
+  return best;
+}
+/** is he lying in wait at a corner (the wall hold, hands empty, the switch up) — the page's hint and the lab ask */
+export function stalkCorner(g: Game): boolean { const pl = g.player; return STALK.on && STALK.corner && !!pl.wall && pl.wall.kind !== 'stack' && !pl.wall.drawn && pl.holstered && !pl.holding && closeLive(g); }
+
 /** what the stalk asks of his feet this frame: the unit direction, the speed, and the point he faces (the man's chest) */
 export interface StalkMove { mx: number; mz: number; pace: number; at: Vec3 }
 /** ONCE A FRAME from updatePlayer, before his keys become a step: the left button held / pressed this frame, and whether a move key of his own is down.
  *  null = his feet and his aim are his own. */
 export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boolean): StalkMove | null {
   const S = stateOf(g); S.t = g.time; S.grab = null;
-  if (!free(g)) { end(S, 'hands'); return null; }
+  if (!free(g)) { end(S, 'hands'); if (lmb || lmbHit) { const gd = cornerMan(g); if (gd) { S.grab = gd; STALK_STATS.grabs++; STALK_STATS.corner++; STALK_STATS.last = 'corner'; } } return null; }
   if (!S.on && lmbHit && !ownKeys) { const gd = pressed(g); if (gd) { S.on = gd; STALK_STATS.begun++; } }
   const gd = S.on; if (!gd) return null;
   if (!lmb && !lmbHit) { end(S, 'let'); return null; }
@@ -121,8 +143,9 @@ export function stalkTell(g: Game): { at: Vec3; reach: number; rise: number } | 
   if (!gd) for (const x of g.guards) { const d = Math.hypot(p[0] - x.char.pos[0], p[2] - x.char.pos[2]); if (d < bd && d < CLOSE.modeM && outOf(g, x, p, true) === null) { gd = x; bd = d; } }
   if (!gd) return null;
   const gp = gd.char.pos, d = Math.hypot(p[0] - gp[0], p[2] - gp[2]), neck = gd.char.bones.neck ?? gd.char.bones.head, at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : [gp[0], gp[1] + 1.45, gp[2]];
-  const by = (from: number) => { const u = clamp((from - d) / Math.max(0.05, from - STALK.grabM), 0, 1); return u * u * (3 - 2 * u); };
-  return { at, reach: STALK.reach * by(STALK.reachFrom), rise: at[1] - gp[1] > 1.2 ? STALK.rise * by(STALK.riseFrom) : 0 };   // (a man sat or bent low: nothing to come up for)
+  // (straight by the distance, not an S: an S did all of its work between 1.8 and 1.5 m and nothing either side — the animator's own easing rounds the ends)
+  const by = (from: number, to: number) => clamp((from - d) / Math.max(0.05, from - to), 0, 1);
+  return { at, reach: STALK.reach * by(STALK.reachFrom, STALK.grabM), rise: at[1] - gp[1] > 1.2 ? STALK.rise * by(STALK.riseFrom, Math.max(STALK.grabM, STALK.riseBy)) : 0 };   // (a man sat or bent low: nothing to come up for)
 }
 /** a man is being stalked, or the stalk has just become a grab: this frame's left click is the stalk's, no blow */
 export function stalkHas(g: Game): boolean { const S = STATE.get(g); return !!S && S.t === g.time && (!!S.on || !!S.grab); }

@@ -178,7 +178,9 @@ const GUN_KEYS_AS_THEY_WERE = /^(rifle-reload|kit-slots|he40|sticky|weapons-iden
 // knife in an arm hold — the build before the held click became the only way to a man (src/game/stalk.ts STALK, on in the page) and before the knife went
 // (src/game/close.ts CLOSE.noKnife, on in the page). The new rules' own lines are stalk-check.ts's and noknife-check.ts's, on both stands. So the two are held
 // off for these on EVERY stand, as the frozen stand holds them — unless whoever runs the tool set the word himself.
-const GRAB_ROW_AS_IT_WAS = /^(handslow|heldclicks|reachup)$|^close-/;
+// (grab-talk, grab-choke, grab-auto, hold-draw, selector-input, selector-noise and the gunhold-* probes take their man by the row, several of them with the
+//  pistol already out — a way in the page no longer has: the click needs empty hands, and the pistol comes out in the hold. kitanim-close reads the hand on the hilt.)
+const GRAB_ROW_AS_IT_WAS = /^(handslow|heldclicks|reachup|hold-draw|kitanim-close|grab-talk|grab-choke|grab-auto|selector-input|selector-noise)$|^close-|^gunhold-/;
 const KNIFE_AS_IT_WAS = GRAB_ROW_AS_IT_WAS;   // (one list while every probe on it reads both: split it when one reads only the row or only the knife)
 const CARD_HOLDS: readonly [string, string, string][] = [['TPS_GEAR', 'gear', 'GEAR'], ['TPS_OWNCHARGE', 'owncharge', 'OWNCHARGE'], ['TPS_STICKY', 'stickycam', 'STICKY'], ['TPS_WAND', 'wand', 'WAND'], ['TPS_SLOTSETUP', 'slotsetup', 'SLOTSETUP']];   // (…and a card's note names the launcher's key as '2 again': slotsetup.ts loadKeys)
 async function run(name: string, fn: () => unknown): Promise<boolean> {

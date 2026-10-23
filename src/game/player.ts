@@ -1639,7 +1639,7 @@ function holdTail(g: Game, dt: number, speed: number, own = -1) {
   if (H) {
     const gd = H.g, hc = gd.char, an = hc.anim;
     an.speed = speed; an.reverse = pl.backpedal; an.crouchTarget = 0; an.upper = 'none'; an.stance = 'none'; an.lookYawExtra = 0; an.deliberate = 0;
-    an.heldPose = { phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon', low, kill, beats, haul, strip: strip ? { t: strip.t } : undefined };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
+    an.heldPose = { phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, bare: CLOSE.noKnife || undefined, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon', low, kill, beats, haul, strip: strip ? { t: strip.t } : undefined };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
     if (gd.held) gd.held.phase = H.phase;
     // where his torch points: nowhere useful — up over Sam's arm at the ceiling, wandering with the struggle (torchCarryDir reads his aim yaw / pitch; the pistol, if
     // that is what he has out, just rides the raised hand). The yaw share stays small and eased — it is also his chest's twist, and his neck must stay on the arm.

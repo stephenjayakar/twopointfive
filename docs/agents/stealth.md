@@ -929,10 +929,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   arc's edges, the station point, the grab's ring, Sam's line). Not a row of the start card, no mission of its own (the plain night on that floor). CHECK:
   `bun run tools/qa/sneaklab-check.ts` (probe `sneaklab`; the file is its generator's, six men of whom five walk and all stay calm over 40 s, the held click
   takes the man who stands in 2.52 s with the real guards running, every number of `STALK` has its row); `SNEAKLAB_BREAK=1` must fail men and creep. The
-  page: `tools/qa/stalk-page.cjs`. `map-check.ts sneak-lab` says FAIL for the missing room clear, as it does of `quiet-yard`. Never played by a person; its
+  page: `tools/qa/stalk-page.cjs`. The panel covered the middle of the page, where Sam stands, so a press on the man landed on a slider: with 'keep Sam
+  clear of this panel' (`SNEAKLAB.clear`, on) the view's follow point is shifted (`camera.ts hostShift`, host only, null in a game) so he stands in the
+  middle of what the panel leaves. The corner list's lone hint row ('LMB  hold to grab him') was never drawn when it was also the hovered row
+  (`ui/overlay.ts deriveInteractions`): a hovered row with no verb is now a hint, not the lead. `map-check.ts sneak-lab` says FAIL for the missing room clear, as it does of `quiet-yard`. Never played by a person; its
   two floods are bare lights and its light has never been seen on a GPU.
+- **The way in shows on his body, and ends in one step (`STALK.tell`, `STALK.catchSecs`; `stalk.ts stalkTell`, `close.ts closeTick`, `character.ts
+  READY_BARE`).** The maintainer, 10-23: "we want very very smooth transitions from regular crouching to the closer than ever state. then, once you click and
+  hold its very smooth to gradually shift the animation until you end on a grab, and you can be interrupted any time". With the stalk on, Sam's pose behind a
+  man he could stalk is the DISTANCE's: from `reachFrom` (2.6 m) the reach comes in straight by distance to whole at `grabM`, and from `riseFrom` (2.3 m) he
+  comes up out of the crouch, `rise` (0.7) of the way by `riseBy` (1.05 m). Pose only: `anim.readyAmt` and `anim.rise`; the crouch the men see and hear is
+  untouched, though his head bone is higher (their sight lines read bones). Let go, the pose stands where it is. With no knife (`noKnife`) the reach is two
+  hands for one target (`READY_BARE`: left out ahead of its shoulder at neck height and never more than 0.2 m over it, right nearly level, both elbows
+  down), and it is not dropped when the grab begins: it is let go over 0.25 to 0.8 of the grab's reach (`READY_BARE.out`), the right hand's share by 0.3
+  (the disarm needs that hand at 0.2 s). The grab a stalk ends in walks him the last of the gap in one eased step over `catchSecs` (0.36 s, `Hold.from`,
+  `player.ts`), his legs given the step at up to `catchStride`; 0 = the grab's own snap (a fifth of the gap in the first frame). `STALK.tell` off = the pose
+  in reach alone. CHECK: `stalk-check.ts` lines `tell` and `stepin` (BREAK fails both), both stands. Judged on CPU stills only (`close-stills.ts --scene stalk
+  | stalk-rifle | stalk-pause`) and by a reviewer reading them; never seen on a GPU, never played.
+- **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
+  like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
+  left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (75) degrees round from
+  his nose, with nothing solid between, the grab fires (`startGrab` takes him off the wall; the same eased step in). Pressed early it waits; a man who
+  comes round facing him is not taken; the right click's knockout in reach is the player's own timing, as off a wall. Before this the button did nothing on a
+  wall with empty hands, and with `STALK.only` no row grabbed from a wall at all. Rides `STALK.on` (so off on the frozen stand and in a recording from before
+  the stalk); the page: `?stalkcorner=0`; the lab has its toggle and both numbers. CHECK: `stalk-check.ts` line `corner` (a man walking past is taken once
+  past, not before; no press or the switch off and he walks by; a man facing him is not taken; `STALK_BREAK=1` fails it), both stands. LIMITS: no pose of
+  its own while he waits (the wall stance), no hint on screen until the man is in the grab's own reach, and whether a guard notices him first is the guard's
+  sight as ever. One scene, one seed, the AI off; stills `--scene stalk-corner`; never seen on a GPU, never played.
+- **The grab's disarm, second pass (`HOLD.strip`, `HOLD.bareGrip`; `disarm.ts`, `character.ts`).** The move itself is `HOLD.disarm` (`?disarm=0`,
+  `TPS_DISARM=1` with `TPS_HOLDDROP=1`): Sam's right hand takes the gun out of the man's hand 0.2 s into the grab and lets it go at 0.5 s; its voices are
+  `docs/agents/sounds.md`'s. Judged on stills, the first pass set the gun down at his thigh (it slid down his leg and lay under his foot) and the held man's
+  open right hand waved over the pair. Now the gun is torn out to a straight arm at Sam's right (`strip.low`), his chest going with it (`strip.yaw` -16),
+  and thrown from there (`strip.push` 1.3 m/s out, `strip.spin`): it lands clear of the pair at the same moment as before, so the sounds' beats stand
+  (`grabvoice` green). With no knife in the hold the man's right hand is on the arm across his throat from the start (`HeldPose.bare`, `HOLD.bareGrip`
+  0.9) instead of half up and open beside his head. CHECK: `tools/qa/disarm-check.ts` (probe `disarm`; beats, pose, ends, off, harness; `DISARM_BREAK=1`
+  fails), both stands. Where the gun lands is the item's own physics and was read off stills in one open room; never seen on a GPU.
 - **The close-in poses as pictures with no Blender: `tools/qa/close-stills.ts` + `tools/qa/pose-mesh-raster.py`.** `close-stills.ts [--scene approach-crouch |
-  approach-stand | stops-crouch | stops-stand | hold] [--out dir] [--set '{"CLOSE":{"reachUp":false}}']` stages the real game headless (the page's stand unless
+  approach-stand | stops-crouch | stops-stand | hold | stalk | stalk-rifle | stalk-pause | stalk-corner | disarm…] [--out dir] [--set '{"CLOSE":{"reachUp":false}}']` stages the real game headless (the page's stand unless
   `TPS_PROFILE` says otherwise), runs the game's own entry points, and at each moment skins BOTH men's worn meshes on the CPU into one PLY in the taken man's
   first frame, with a line of numbers a moment (gap, hands, knees, feet). `python3 -I tools/qa/pose-mesh-raster.py dir/<scene>.json [--tile 300]` draws the
   scene as a contact sheet with numpy and Pillow alone (a small z-buffer rasteriser: from the side, the game camera's pitch from behind and from in front,

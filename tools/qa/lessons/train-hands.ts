@@ -109,8 +109,8 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!came) B.fail(`${E.callsign} did not come through the gap`);
     B.wait(REACT);
     B.nudge([E.char.pos[0], 0, E.char.pos[2]], 3, () => flat(B.pos(), E.char.pos) < 0.88);
-    B.click(1);
-    if (!B.until(() => E.state === 'dead', 4)) B.fail(`the left button did not put the last man down (${flat(B.pos(), E.char.pos).toFixed(2)} m off, ${E.state})`);
+    B.click(CLOSE.on && CLOSE.noKnife ? 2 : 1);   // (close.ts CLOSE.noKnife: no knife — the line says the right click's knockout, and that is the blow)
+    if (!B.until(() => E.state === 'dead', 4)) B.fail(`the click did not put the last man down (${flat(B.pos(), E.char.pos).toFixed(2)} m off, ${E.state})`);
     if (seen(B) > n0) B.fail(`${E.callsign} saw the player before the knife landed (aware ${E.awareness.toFixed(2)})`);
     B.say(`  the knife landed unseen (his awareness ${E.awareness.toFixed(2)})`);
     B.wait(1);
