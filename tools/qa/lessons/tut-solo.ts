@@ -22,11 +22,6 @@ const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO
  *  charges off (the frozen one) has no row there at all and the lesson cannot be done on it: the runner raises them for this run alone, as a run there
  *  raises the frame (TPS_OWNCHARGE=0 in front shows the door with nothing to offer) */
 export const raises = { TPS_OWNCHARGE: '1' };
-// A HELD BAR, put here by the lesson harness's owner (10-23) and this mission's to lift: the run is played WITHOUT the night sky's own light (lesson-run's
-// glowAt). With it the `back` beat below reads 31 beside the door with the lamp out, over its own bar of 25 (the moon alone: 23): by the harness's best
-// account of the page, "the dark is cover too" is not true at that spot. The page at the presets a player uses reads open shadow brighter still. Move the
-// spot under something, or change what the beat claims, then strike this line.
-export const mode = { glow: false };
 /** the last men may already be down when 'Shoot the rest' comes up (the grenade took both) */
 /** …and where the gun has no setup (the switch off: the frozen stand) the two lines that open and shut it have nothing to ask and go by */
 export const idleOk = ['last', 'setup', 'tab', 'load'];   // ('load': the load's row is his from the launcher's card on, and a man who left the grenade up then has done the line)
@@ -190,7 +185,8 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!B.verb('door', 'charge', c)) B.fail(`no 'charge' row on the shop's door`);
     B.until(() => !g.player.charging && !g.player.kick, 12); B.step(20);
   },
-  // beside the door, on the ground the shop's lamp lit until he shot it out: dark now (asked of the harness's meter, which has no moon; said of the page's)
+  // beside the door, on the ground the shop's lamp lit until he shot it out: dark now. Asked of the runner's meter, which has the moon and the night sky's
+  // own light on it (lesson-run --sky): the moon stands behind the shop, so this wall is in the shop's shadow (10 here; 31 while the moon lit the wall)
   back: B => {
     B.go(BACK, 10, { near: 0.5 }); B.step(20);
     const lit = Math.round((B.g.player.visibility ?? 0) * 100); B.say(`  beside the door with the lamp out: the light on him ${lit}`);
