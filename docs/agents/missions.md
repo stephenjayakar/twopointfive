@@ -1782,8 +1782,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kit lines → `tut-quiet` and `tut-plan` (two that issue no kit of their own and are played as issued); `quickthrow` (5) reads the steps of every tutorial row's level; `levers` and
   `loadbrief` count tutorial rows. DROPPED WITH THEIR SUBJECT: `fresh-start`'s "every Training room clear names its seed", `writing-check`'s held count
   for the Training lines, `keybinds-check`'s two lesson lines (the wall line is kept on the yard), `aimcost`'s `train-lights` leg, `carlamps`'
-  `train-hands` row, and the Training rows of `second-way`, `wallfurn` and `kitview-plan`. NOT DONE:
-  nothing here was seen on a GPU or played; no page look was run (`verdict-look.cjs lesson` now puts the mission's frame off, `rails=0`, because the frame
+  `train-hands` row, and the Training rows of `second-way`, `wallfurn` and `kitview-plan`. MEASURED on the build of 2026-10-23 with the corner panel in it, FROZEN and SHIPPED alike unless said (one seed, each check's own): both
+  typechecks; `lesson-check` ALL PASS (62); `lived-check` ALL PASS (393); `rails-check`, `writing-check`, `knobs-check`, `dice-check`, `rollback-check
+  --static`; `lesson-gate` for the six missions ALL PASS (36: each scripted run, and four dice as the page ships); `verdict-lessons` all six (shipped);
+  the 26 probe families the change touched, green but for three lines that were red before it on the build it started from: `missions-list` "every
+  mission has a place…" (three blurbs over their cap, both stands), `pouch-wall` "staged: the wall charge…" and `takecheck` "with the rule off…" (shipped).
+  `sounds-page.cjs` ALL PASS in a headless browser (one build earlier). NOT DONE:
+  nothing here was seen on a GPU or played; of the other page looks only `loadbrief-page.cjs`'s tutorial job was tried (it drew the brief the mended line
+  reads, then did not finish in nine minutes on a loaded machine) (`verdict-look.cjs lesson` now puts the mission's frame off, `rails=0`, because the frame
   holds a tutorial mission's end while a step is up; `loadbrief-page.cjs`'s tutorial job reads the scene and what it teaches, which a tutorial row draws in
   place of the job's line and the three cells); the comments across `src/` that say "a Training lesson" for what is now any lesson level were left (about
   thirty).
