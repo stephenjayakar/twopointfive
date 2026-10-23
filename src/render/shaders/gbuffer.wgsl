@@ -64,7 +64,7 @@ struct BoxVOut {
   @location(5) @interpolate(flat) mark: u32,                 // the box's MARKING slot (1-based first record in the tail of boxMat; 0 = none, or markings off) — markings.wgsl
   @location(6) lc: vec3f,                                    // GBAA: the corner in BOX units (interpolated across the face: the fragment's box-local position) …
   @location(7) @interpolate(flat) hf: vec4f,                 // … and the box's half-extents + the face index (w) it lies on — boxEdgeOffset
-  @location(8) @interpolate(flat) look: u32,                 // THE LOOK PROTOTYPE (look.wgsl): the paint's material class (surface.wgsl surfClass), found once a corner — 0 on every other page
+  @location(8) @interpolate(flat) look: u32,                 // THE LOOK PROTOTYPE (look.wgsl): the paint's material class (lookClass), found once a corner — 0 on every other page
 };
 
 fn cubeCorner(vi: u32) -> vec3f {
@@ -114,7 +114,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   o.pos = frame.viewProj * vec4f(wp, 1.0);
   o.normal = quatRotate(q, ln);
   o.albedo = boxAlbedo(bi);
-  if (LOOK) { o.look = surfClass(o.albedo); }
+  if (LOOK) { o.look = lookClass(o.albedo); }
   o.id = bi | (boxOwner(b) << 20u) | (select(0u, 1u, cap) << 29u);
   o.wp = wp;
   // motion: the same corner under last frame's transform of THIS box — by its motion identity when the CPU named one (pslot: the index its key had last frame, whatever spawned or died
@@ -158,7 +158,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   if (LOOK && !cap) {                                                    // THE LOOK PROTOTYPE (look.wgsl; the page /look — dead code on every other): the paint drawn off its material's maps, weathered as the building is, a small box's edges rounded
     let lk = lookSurface(v.look, v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
     albedo = lk.albedo; rough = lk.rough;
-    if (!(SNOW_SURF || SNOW_GLOW || SNOW_SPARKLE)) { n = lk.n; lookTilt = lk.tilted; }   // (a snow level keeps the normal and its alpha for the snow: paint and finish only there)
+    n = lk.n; lookTilt = lk.tilted;
   }
   if (SURF_TRY && !LOOK && !cap) {                                                // SURFACES, A TRY (surface.wgsl; ?surf at boot — dead code on every other page): a paint drawn as the stuff it stands for, after the wear, before the markings
     let sf = surfaceTry(v.wp, n, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
@@ -172,14 +172,15 @@ fn cubeNormal(vi: u32) -> vec3f {
   }
   if (SNOW_SURF && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) {   // THE SNOW'S SURFACE (snow.wgsl; a snow level with its look on — dead code on every other page): the ground and every snow-painted box of the level file are shaded off the level's snow field, after the markings, before the encounter's marks
     let snowPaint = snowIsPaint(v.albedo);
-    let snowGround = n.y > 0.9 && v.wp.y < 0.03 && v.wp.y > -0.01 && (boxGeo[bi].flags & BOX_EMISSIVE) == 0u;
+    let snowGround = select(n.y, gn.y, LOOK) > 0.9 && v.wp.y < 0.03 && v.wp.y > -0.01 && (boxGeo[bi].flags & BOX_EMISSIVE) == 0u;
     if (snowGround || snowPaint || (v.hf.y < 0.016 && v.wp.y < 0.035)) {
-      let sb = snowBox(v.wp, n, bi, v.lc, v.hf, snowGround, snowPaint, snowIsLay(v.albedo), albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+      let sb = snowBox(v.wp, select(n, gn, lookTilt), bi, v.lc, v.hf, snowGround, snowPaint, snowIsLay(v.albedo), albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
       if (sb.gone) { discard; }
-      albedo = sb.albedo; n = sb.n; rough = sb.rough; metal = metal * (1.0 - sb.amt);
+      if (!lookTilt || sb.amt > 0.0) { albedo = sb.albedo; n = sb.n; rough = sb.rough; metal = metal * (1.0 - sb.amt); lookTilt = false; }   // (THE LOOK PROTOTYPE: where no snow lies the relief stays; where it does, the pixel is the snow's, normal and alpha)
       if (SNOW_GLOW || SNOW_SPARKLE) { o.normal.a = sb.amt * 0.6667; }   // SNOW GLOW, SNOW SPARKLE (composite.wgsl snowGlow): how much of this pixel is snow, held in `o` (zero until here) for the output line below
     }
   }
+  if (LOOK && SNOW_SURF && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) { let ls = lookSnow(v.look, v.wp, gn, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); if (ls.amt > 0.0) { albedo = ls.albedo; rough = ls.rough; metal = metal * (1.0 - ls.amt); if (ls.bank) { n = ls.n; lookTilt = false; if (SNOW_GLOW || SNOW_SPARKLE) { o.normal.a = ls.amt * 0.6667; } } } }   // THE LOOK PROTOTYPE on a snow level (look.wgsl lookSnow; a box of the level file, as the snow above): snow against the foot of what stands in the open and on what was left out. A BANK is snow to the glow and the sparkle and keeps none of the wall's relief; a grain stuck higher up is paint and finish only
   if ((frame.flags & FLAG_DECALS) != 0u) {                              // decals (experiment E1, decals.wgsl): the marks registered in this pixel's 1 m cell edit what is stored — so every light that reads the g-buffer answers to them
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;   // this pixel's footprint on the surface (m): edges are softened over it, sub-pixel texture fades under it
     let nl = n; if (lookTilt) { n = gn; }                              // (THE LOOK PROTOTYPE: a mark is laid on the FACE, and the relief put back under it below)
@@ -189,7 +190,8 @@ fn cubeNormal(vi: u32) -> vec3f {
     if (lookTilt) { n = normalize(n + nl - gn); let c = dot(n, gn); if (c < 0.8773) { n = normalize(gn * 0.8773 + normalize(n - gn * c) * 0.48); } }   // (… held inside LOOK_MAX_TILT again, mark and relief together: lookGeoN must find this face)
   }
   o.albedo = vec4f(albedo, keep);
-  o.normal = vec4f(n * 0.5 + 0.5, select(select(1.0, 1.0 - o.normal.a, SNOW_GLOW || SNOW_SPARKLE), 0.0, LOOK && lookTilt));   // (.a: 1 = not snow, as every writer of this target stores it; SNOW GLOW or SNOW SPARKLE: 2∕3 = thin snow, 1∕3 = snow — the target's two spare bits, read by composite.wgsl snowGlowAmt alone)
+  o.normal = vec4f(n * 0.5 + 0.5, select(1.0, 1.0 - o.normal.a, SNOW_GLOW || SNOW_SPARKLE));   // (.a: 1 = not snow, as every writer of this target stores it; SNOW GLOW or SNOW SPARKLE: 2∕3 = thin snow, 1∕3 = snow — the target's two spare bits, read by composite.wgsl snowGlowAmt alone)
+  if (LOOK && lookTilt) { o.normal.a = 0.0; }   // THE LOOK PROTOTYPE: the alpha's fourth code = this normal carries the look's relief (common.wgsl lookGeoN gives the face back)
   o.id = v.id;
   o.vel = motionOf(v.wp, v.wpPrev);
   o.mat = vec2f(rough, metal);

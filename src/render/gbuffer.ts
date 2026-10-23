@@ -27,19 +27,32 @@ const SURF_OF: Readonly<Partial<Record<GwotMat, number>>> = {
 /** surface.wgsl behind its `surfClass`: the palette's colours written out as the shader's tests. A paint as the palette has it first (a stand-in, scene/gwotPalette.ts
  *  gwotAs, is at most 0.0024 off a channel), every paint of the palette, so that one with no row is plain whatever it is near; then a classed paint DARKENED in one
  *  piece, which is how a level writes wear and shade (a worn patch is its ground × 0.7) */
-function surfaceWgsl(): string {
+function classWgsl(name: string, of: Readonly<Partial<Record<GwotMat, number>>>): string {
   const v = (m: GwotMat) => `vec3f(${GWOT_PALETTE[m].join(', ')})`;
-  const exact = (Object.keys(GWOT_PALETTE) as GwotMat[]).map(m => `  if (all(abs(a - ${v(m)}) < vec3f(0.006))) { return ${SURF_OF[m] ?? 0}u; }   // ${m}`);
-  const dark = (Object.keys(SURF_OF) as GwotMat[]).map(m => `  { let p = ${v(m)}; let k = dot(a, p) / dot(p, p); if (k > 0.55 && k < 0.99 && all(abs(a - k * p) < vec3f(0.006))) { return ${SURF_OF[m]}u; } }   // ${m}, darkened`);
-  return `fn surfClass(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n` + surfaceSrc;
+  const exact = (Object.keys(GWOT_PALETTE) as GwotMat[]).map(m => `  if (all(abs(a - ${v(m)}) < vec3f(0.006))) { return ${of[m] ?? 0}u; }   // ${m}`);
+  const dark = (Object.keys(of) as GwotMat[]).map(m => `  { let p = ${v(m)}; let k = dot(a, p) / dot(p, p); if (k > 0.55 && k < 0.99 && all(abs(a - k * p) < vec3f(0.006))) { return ${of[m]}u; } }   // ${m}, darkened`);
+  return `fn ${name}(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n`;
 }
+function surfaceWgsl(): string { return classWgsl('surfClass', SURF_OF) + surfaceSrc; }
+/** THE LOOK PROTOTYPE's classes: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11) */
+const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = { ...SURF_OF,
+  sack: 9, sandbag: 9, hesco: 9, canvas: 9, tarpBlue: 9, blanketGrey: 9, blanketBrown: 9, rugRed: 9, rugNavy: 9, rugCream: 9, rugOchre: 9, rugGreen: 9, rugMadder: 9, coyote: 9,
+  rust: 10, iron: 10,
+  paintBlue: 11, paintGreen: 11, paintRust: 11, drumBlue: 11, drumRed: 11, genYellow: 11, truckWhite: 11, truckTan: 11, truckRed: 11, olive: 11,
+};
 
-/** look.wgsl on the look page; on every other, the two names fsBox's dead call needs and nothing else (no binding: the bind group is the page's as it was) */
+/** look.wgsl on the look page; on every other, the few names fsBox's dead calls need and nothing else (no binding: the bind group is the page's as it was) */
 function lookWgsl(): string {
-  return lookConfig.on ? lookSrc : 'struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };\nfn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32) -> LookOut { return LookOut(albedoIn, n, roughIn, false); }\n';
+  return lookConfig.on ? classWgsl('lookClass', LOOK_OF) + lookSrc : `struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
+fn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, albedoIn: vec3f, roughIn: f32, dwx: vec3f, dwy: vec3f, fp: f32) -> LookOut { return LookOut(albedoIn, n, roughIn, false); }
+fn lookClass(a: vec3f) -> u32 { return 0u; }
+struct LookSnow { albedo: vec3f, n: vec3f, rough: f32, amt: f32, bank: bool };
+fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint: vec3f, albedoIn: vec3f, roughIn: f32, fp: f32) -> LookSnow { return LookSnow(albedoIn, gn, roughIn, 0.0, false); }
+`;
 }
-/** the look page's panel numbers, as look.wgsl's LookCfg takes them (a, b: the eight amounts; the layers' base roughness follows) */
-export const lookAmounts = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1 };
+/** the look page's panel numbers, as look.wgsl's LookCfg takes them (a, b: the eight amounts; the layers' base roughness follows, and `snow` after it) */
+export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1 };   // (`air` is not the shader's: × settings.hazeDensity, ui/lookpanel.ts)
+export const lookAmounts = { ...LOOK_DEFAULTS };
 
 export interface SkinnedDrawable {
   vertexBuf: GPUBuffer;      // interleaved: pos f32x3, normal f32x3, weights f32x4, matSel f32 (44 B)
@@ -127,7 +140,7 @@ export class GBuffer {
     device.queue.writeBuffer(this.snowCfg, 0, new Float32Array(SNOW_CFG_FLOATS));
     if (lookConfig.on) this.makeLook();
   }
-  // ---- THE LOOK PROTOTYPE (render/lookTex.ts, shaders/look.wgsl): the eight materials as two mipped texture arrays, made here at boot; the panel's numbers
+  // ---- THE LOOK PROTOTYPE (render/lookTex.ts, shaders/look.wgsl): the materials as two mipped texture arrays, made here at boot; the panel's numbers
   private lookView: [GPUTextureView, GPUTextureView] | null = null; private lookSamp: GPUSampler | null = null; private lookCfg: GPUBuffer | null = null;
   private makeLook() {
     const d = this.device; let mips = 1; for (let n = LOOK_N; n > 1; n >>= 1) mips++;
@@ -141,14 +154,14 @@ export class GBuffer {
     }
     this.lookView = [tex[0].createView({ dimension: '2d-array' }), tex[1].createView({ dimension: '2d-array' })];
     this.lookSamp = d.createSampler({ label: 'look', addressModeU: 'repeat', addressModeV: 'repeat', magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'linear', maxAnisotropy: 8 });
-    this.lookCfg = makeBuffer(d, 64, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'lookCfg');
+    this.lookCfg = makeBuffer(d, 80, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'lookCfg');
     this.setLook();
   }
   /** the panel moved a number (lookAmounts): the uniform block again. Nothing on a page without the look. */
   setLook() {
     if (!this.lookCfg) return;
     const k = lookAmounts;
-    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief, k.shine, k.weather, k.untile, k.edges, k.cavity, k.size, ...LOOK_ROUGH]));
+    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief, k.shine, k.weather, k.untile, k.edges, k.cavity, k.size, ...LOOK_ROUGH, k.snow]));
   }
   // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
   private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;

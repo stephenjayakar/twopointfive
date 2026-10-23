@@ -301,8 +301,9 @@ export const surfTryConfig = { on: false };
  *  class, their relief lit by the screen-size direct light, weather that follows the building, small boxes' edges rounded. The g-buffer keeps the tilted normal with
  *  alpha 0 and gdown hands the working-size passes the box's own face back (common.wgsl lookGeoN). OFF: main.ts raises it at BOOT, and the prelude's `const LOOK` is
  *  false on every other page (the g-buffer module gets a stub, its bind group no new entry). A switch of the picture: nothing in the update or the light meter
- *  reads it. `bounce` = how far the relief leans the bounced light (composite.wgsl). Never seen on a GPU. */
-export const lookConfig = { on: false, bounce: 0.7 };
+ *  reads it. `bounce` = how far the relief leans the bounced light (composite.wgsl); `air` = × the haze the frame block carries (engine.ts: the panel's Air row —
+ *  the setting itself is the hour's to write). Never seen on a GPU. */
+export const lookConfig = { on: false, bounce: 0.7, air: 1 };
 /** the prelude's consts for it: the switch, and where the air grid (scene/airGrid.ts) sits in boxMat's tail — after the marking and glass tables and BEFORE the cut
  *  table, so this text is the same with the cut switch on or off (the cut swap's boot programs are the ?nocutboxes text character for character: probes.ts cutboxes-pack) */
 function weatherVolWgsl(): string {

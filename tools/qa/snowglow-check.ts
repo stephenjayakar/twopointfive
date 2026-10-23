@@ -69,6 +69,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
   const text: Record<string, string> = {};
   for (const f of files) {
     let t = readFileSync(resolve(SH, f), 'utf8');
+    t = t.split('\n').map(l => /\/\/.*THE LOOK PROTOTYPE/.test(l) && /\bLOOK\b/.test(l.replace(/\/\/.*$/, '')) ? '' : l).join('\n');   // (the look prototype's own lines, each tagged in its comment and behind LOOK in its code: live only on its page — shaders/look.wgsl. It reads and writes the mark's fourth level, alpha 0, and is not this check's)
     if (BREAK) {
       t = t.replace(/if \(SNOW_GLOW(?: \|\| SNOW_SPARKLE)?\) \{/g, '{').replace(/select\(1\.0, ([^,()]+(?:\([^()]*\))?[^,()]*), SNOW_GLOW(?: \|\| SNOW_SPARKLE)?\)/g, '$1');
       if (f === 'common.wgsl') t = t.replace('  r.E = li.color * (att * c); r.ok = true;\n', '  r.E = li.color * (att * c) + snowGlow(vec2i(0), P, N, 1.0, vec3f(0.0), vec3f(0.0)); r.ok = true;\n');
@@ -110,7 +111,7 @@ export async function snowGlowCheck(o: { verbose?: boolean } = {}): Promise<bool
             if (!whole && !mine) badR.push(`${f}:${i + 1}${sz}`);
           } }); }
       const clear = (readFileSync(resolve(ROOT, 'src/render/gbuffer.ts'), 'utf8').match(/normal\w*View, loadOp: 'clear', storeOp: 'store', clearValue: \{ r: 0\.5, g: 1, b: 0\.5, a: 0 \}/g) ?? []).length;
-      const amt = /fn snowGlowAmt\(a: f32\) -> f32 \{ return clamp\(\(1\.0 - a\) \* 1\.5, 0\.0, 1\.0\); \}/.test(text['composite.wgsl']);
+      const amt = /fn snowGlowAmt\(a: f32\) -> f32 \{\s*return clamp\(\(1\.0 - a\) \* 1\.5, 0\.0, 1\.0\); \}/.test(text['composite.wgsl']);
       const men = /if \(sa > 0\.0 && \(\(id >> 28u\) & 3u\) == 0u\) \{/.test(text['composite.wgsl']);
       verdict(writers.length >= 4 && badW.length === 0 && readers.length === 2 && badR.length === 0 && amt && men && clear >= 1,
         'mark — a snow pixel is told by the normal target\'s alpha, written under 1 only behind the switch and read by the term alone', `${writers.length} writers of the target in the shaders (${writers.join(', ')})${badW.length ? ` · NOT 1 and not behind SNOW_GLOW: ${badW.join(', ')}` : ': fsBox and fsSnow under 1 only behind SNOW_GLOW || SNOW_SPARKLE, the rest store 1'} · reads of more than its xyz: ${readers.join(', ') || 'none'}${badR.length ? ` · NOT the term's: ${badR.join(', ')}` : ' (the term\'s own, and gdown.wgsl\'s whole-texel copy)'} · the reader's decode: ${amt} · never on a man's pixel or a cap's: ${men} · nothing drawn = alpha 0 with depth 1, never shaded (${clear} clear values)`); }

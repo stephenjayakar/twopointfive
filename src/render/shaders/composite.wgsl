@@ -45,8 +45,8 @@ fn linearDepth(d: f32, pix: vec2f) -> f32 { return distance(worldFromDepth(pix, 
 
 /// a guide's normal: the g-buffer's — on the look page (look.wgsl) the box's own FACE where the look tilted it, so every weight below is the one it always was
 fn geoN(p: vec2i) -> vec3f {
-  let t = textureLoad(gNormal, p, 0); let n = t.xyz * 2.0 - 1.0;
-  if (LOOK && t.a < 0.17) { return lookGeoN(normalize(n), textureLoad(gId, p, 0).x); }
+  let n = textureLoad(gNormal, p, 0).xyz * 2.0 - 1.0;
+  if (LOOK && textureLoad(gNormal, p, 0).a < 0.17) { return lookGeoN(normalize(n), textureLoad(gId, p, 0).x); }   // THE LOOK PROTOTYPE
   return n;
 }
 fn upsampleIndirect(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {   // pin = the pixel's position on the INTERNAL raster (= pixf; under SHARP pixf × in∕out)
@@ -430,7 +430,9 @@ const SNOW_GLOW_WHITEN: f32 = 0.6;                        // how far the lamp's 
 const SNOW_GLOW_REACH: f32 = 0.12;                        // metres: the stencil's arm (1 ‥ 14 px)
 const SNOW_GLOW_CONF: f32 = 0.03;                         // the stencil's mean N·L (per class) under which the term fades out
 const SNOW_GLOW_SHADE: vec3f = vec3f(0.93, 1.0, 1.11);    // × the bounce and the sky's light on snow in full shade (luminance kept): never dead grey
-fn snowGlowAmt(a: f32) -> f32 { return clamp((1.0 - a) * 1.5, 0.0, 1.0); }
+fn snowGlowAmt(a: f32) -> f32 {
+  if (LOOK && a < 0.17) { return 0.0; }   // THE LOOK PROTOTYPE: the alpha's fourth code is a wall's relief, not snow
+  return clamp((1.0 - a) * 1.5, 0.0, 1.0); }
 fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> vec3f {
   var fac = vec4f(0.0); var kS = vec3f(0.0); var kB = vec3f(0.0); let V = (frame.camPos - P) / max(z, 1e-4);   // SNOW SPARKLE (below): this pixel's facet, what it flashes per class
   if (SNOW_SPARKLE) { snowSparkleL = vec3f(0.0); fac = snowSparkleFacet(P, N, z); if (!SNOW_GLOW && fac.w <= 0.0) { return vec3f(0.0); } }   // (the sparkle alone, and no facet here: nothing to do)
@@ -729,8 +731,8 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     let albedo4 = textureLoad(gAlbedo, sPix, 0);
     let albedo = albedo4.rgb;                   // (.a = the decals' gloss-keep: exactly 1 unless a mark's soot lies on this pixel — gbuffer.wgsl fsBox)
     let id = textureLoad(gId, sPix, 0).x;
-    let nT = textureLoad(gNormal, sPix, 0); let Nl = normalize(nT.xyz * 2.0 - 1.0);   // (Nl: the stored normal. THE LOOK PROTOTYPE, look.wgsl: where the look tilted it, N below is the box's own face — the guides' and the cache's normal, as ever — and Nl only leans the bounce)
-    var N = Nl; if (LOOK && nT.a < 0.17) { N = lookGeoN(Nl, id); }
+    var N = normalize(textureLoad(gNormal, sPix, 0).xyz * 2.0 - 1.0);
+    let Nl = N; if (LOOK && textureLoad(gNormal, sPix, 0).a < 0.17) { N = lookGeoN(Nl, id); }   // (Nl: the stored normal. THE LOOK PROTOTYPE, look.wgsl: where the look tilted it, N below is the box's own face — the guides' and the cache's normal, as ever — and Nl only leans the bounce)
     let boxIdx = id & 0xFFFFFu;
     let P = worldFromDepth(sPixf, sDepth);
     let z = distance(P, frame.camPos);

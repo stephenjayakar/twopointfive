@@ -42,6 +42,7 @@ import { loadCharacterSet, castUrlFor } from './anim/gltf';
 import * as charMatsMod from './render/charMaterials';
 import * as charLookMod from './game/charLook';
 import { buildLookPanel } from './ui/lookpanel';
+import { lookAmounts } from './render/gbuffer';
 import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, surfTryConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
@@ -219,7 +220,9 @@ async function main() {
   if (q.has('flatfog')) weatherVolConfig.on = false;   // ?flatfog: a picked weather's dust / fog as the flat veil composite laid over the outdoors, the picture as it was (render/frame.ts weatherVolConfig; the men's eyes: game/airDust.ts AIRDUST.on, host/profile.ts)
   if (q.has('norainwalls')) rainWallsConfig.on = false;   // ?norainwalls: the rain hidden from every pixel whose surface is inside a roof's rectangle — it stops dead at an outer wall's face and top, as it was (render/frame.ts rainWallsConfig)
   if (q.has('surf')) surfTryConfig.on = true;   // ?surf: SURFACES, A TRY — a paint drawn as the stuff it stands for (render/frame.ts surfTryConfig; shaders/surface.wgsl). Off on every other page
-  if (q.has('look') || document.querySelector('meta[name="tps-look"]')) lookConfig.on = true;   // ?look (the page /look; a one-file build of the prototype carries the meta instead, where the address takes no flags): THE LOOK PROTOTYPE — material maps, lit relief, weather, rounded edges (render/frame.ts lookConfig; shaders/look.wgsl; its panel: ui/lookpanel.ts). Off on every other page
+  { const lv = q.getAll('look').filter(v => v !== 'plain' && v !== '0' && v !== 'off');   // (those three words are the GWOT dress's, scene/look.ts lookOfQuery: not this page)
+    if (lv.length || document.querySelector('meta[name="tps-look"]')) lookConfig.on = true;   // ?look (the page /look; a one-file build of the prototype carries the meta instead, where the address takes no flags): THE LOOK PROTOTYPE — material maps, lit relief, weather, rounded edges (render/frame.ts lookConfig; shaders/look.wgsl; its panel: ui/lookpanel.ts). Off on every other page
+    if (lookConfig.on) for (const kv of lv.join(',').split(',')) { const [k, v] = kv.split(':'); if (Object.hasOwn(lookAmounts, k) && v !== undefined && v !== '' && isFinite(+v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, +v)); } }   // (?look=relief:1.4,air:2 opens it with those amounts: a still without the panel)
   if (q.has('nobouncewalls')) bounceWallsConfig.on = false;   // ?nobouncewalls: the radiance cache read a probe spacing along a man's normal whatever stands there — a man by a lit room's outer wall takes the room's bounce and mirrors its lamps, as it was (render/frame.ts bounceWallsConfig)
   if (q.has('norainscale')) rainScaleConfig.on = false;   // ?norainscale: a splash ring as bright however wide the volumetric pass's texel draws it — blobs on the lit ground with the camera pulled back, as it was (render/frame.ts rainScaleConfig)
   if (q.has('norainshadow')) rainShadowConfig.on = false;   // ?norainshadow: the rain lit by the reach masks alone — through a shut door, through the wall a weapon light is pointed at — as it was (render/frame.ts rainShadowConfig)
@@ -387,7 +390,7 @@ async function main() {
   input.keyVeto = e => (overlay.cardUp && !menu.isOpen && overlay.cardKey(e)) || panel.onKey(e);   // (a tutorial step's card first: the Enter or Space that closes it is no game key — ui/railcard.ts)
     // ← / → and [ / ] over the open panel walk its systems, a typed letter opens its search — before the game reads the key
   (window as any).__panel = panel;
-  if (lookConfig.on) buildLookPanel(engine, () => fpsSm);
+  if (lookConfig.on) { lookConfig.air = lookAmounts.air; buildLookPanel(engine, () => fpsSm); }
   const hud = document.getElementById('hud')!;
   const tourVeil = document.getElementById('veil')!;   // black fade the tour raises around its cuts
   // start card now, pause menu on Esc (settings + controls); the simulation freezes while it is open, the frame keeps rendering

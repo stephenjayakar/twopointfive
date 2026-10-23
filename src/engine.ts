@@ -3,7 +3,7 @@ import { Gpu, makeBuffer } from './gpu/device';
 import { GpuTimer } from './gpu/timer';
 import { BoxWorld } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
-import { FRAME_BYTES, MAX_CARDS, FrameFlags, FrameParams, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig } from './render/frame';
+import { FRAME_BYTES, MAX_CARDS, FrameFlags, FrameParams, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig } from './render/frame';
 import { GBuffer, SkinnedDrawable } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { LightingPasses } from './render/passes';
@@ -395,7 +395,7 @@ export class Engine {
     this.passes.setTaau(this.settings.taau);   // (mirrored before resize: the output-size target set — the resolve's history pair — exists only while it is on)
     { const S = this.settings, refl = S.beamReflect && S.rtReflect, air = S.beamAir && S.debugView === 0;   // (a debug view shows the boxes: the air look is added in the composite only)
       // how much of a beam the AIR shows (0.4 ≈ the old box's brightness under the tube): a little in clear indoor air, more by the haze, most in rain — smoke is read per pixel in the shader
-      const A = air ? S.beamAirK * (0.03 + 0.09 * Math.min(2, S.hazeDensity / 0.035)) : 0;   // (0.12 at the default haze: the software adapter's stills put the line at the old box's level, clipped, at 0.4)
+      const A = air ? S.beamAirK * (0.03 + 0.09 * Math.min(2, S.hazeDensity * (lookConfig.on ? lookConfig.air : 1) / 0.035)) : 0;   // (0.12 at the default haze: the software adapter's stills put the line at the old box's level, clipped, at 0.4)
       this.world.hidePrimary = this.passes.setBeams(refl || air ? this.world.dynamics : null, thinIs, this.viewFocus, { reflect: refl, air: air ? thinAirOf : null, A, rain: this.weather.rain, wet: S.wetMirror && S.rtReflect ? 2 : 0 });
     }   // (lasers / tracers in the reflections: ≤ 8 segments in a small uniform; none = a zero count, the pass as it was)
     this.passes.setRt(this.settings.rtReflect, this.settings.rtReflectDiv);   // (likewise before resize: the reflection targets' divisor — pooled + re-made on change like the gather's — and the switch that first allocates them at all)
@@ -520,7 +520,7 @@ export class Engine {
         | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0) | (s.directSeedHold ? FrameFlags.DirectSeedHold : 0) | (s.giAdaptiveHistory ? FrameFlags.GiAdaptiveHist : 0)
         | (froxOn ? FrameFlags.FroxelVol : 0) | (s.restir ? FrameFlags.Restir : 0),
       exposure: s.exposure,   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
-      skyZenith: s.skyZenith, skyHorizon: s.skyHorizon, hazeDensity: s.hazeDensity,
+      skyZenith: s.skyZenith, skyHorizon: s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
       rcInterval0: this.rc.cfg.interval0, rcC0Dims: [this.rc.cfg.nx, this.rc.cfg.ny, this.rc.cfg.nz], rcNumCascades: this.rc.cfg.cascades, rcD0: this.rc.cfg.d0, rcFrameParity: this.frameIdx & 1,
       numSmoke: this.smoke.count, debugView: s.debugView, indirectScale: s.indirectScale, emissiveScale: s.emissiveScale, volSteps: s.volSteps,
       capColor: s.capColor, post: [s.nvAmount, s.nvGain, s.hitFlash, Math.tan(cam.fov / 2)],

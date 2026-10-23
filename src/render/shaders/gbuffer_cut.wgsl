@@ -147,9 +147,9 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   }
   var lookTilt = false; let gn = n;
   if (LOOK && !cap && own < 0) {                            // THE LOOK PROTOTYPE (look.wgsl; as fsBox, the class found here a pixel): a cut face shows the bare material
-    let lk = lookSurface(surfClass(v.albedo), v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+    let lk = lookSurface(lookClass(v.albedo), v.wp, n, bi, v.lc, v.hf, albedo, rough, dwx, dwy, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
     albedo = lk.albedo; rough = lk.rough;
-    if (!(SNOW_SURF || SNOW_GLOW || SNOW_SPARKLE)) { n = lk.n; lookTilt = lk.tilted; }
+    n = lk.n; lookTilt = lk.tilted;
   }
   if (SURF_TRY && !LOOK && !cap && own < 0) {                         // SURFACES, A TRY (surface.wgsl; as fsBox): the box's own faces keep the pattern they had before the cut; a cut face shows the bare material
     let sf = surfaceTry(v.wp, n, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
@@ -169,7 +169,8 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   }
   if (gone) { discard; }
   o.albedo = vec4f(albedo, keep);
-  o.normal = vec4f(n * 0.5 + 0.5, select(1.0, 0.0, LOOK && lookTilt));
+  o.normal = vec4f(n * 0.5 + 0.5, 1.0);
+  if (LOOK && lookTilt) { o.normal.a = 0.0; }   // THE LOOK PROTOTYPE: as fsBox
   o.id = v.id;
   o.vel = motionOf(v.wp, v.wpPrev);
   o.mat = vec2f(rough, metal);

@@ -1,14 +1,13 @@
-// THE LOOK PROTOTYPE's material maps (the page /look, render/frame.ts lookConfig; shaders/look.wgsl reads them): eight tiling materials made HERE, by the page,
+// THE LOOK PROTOTYPE's material maps (the page /look, render/frame.ts lookConfig; shaders/look.wgsl reads them): eleven tiling materials made HERE, by the page,
 // at boot — no image file, nothing fetched, nothing licensed. Each layer is LOOK_N × LOOK_N texels over LOOK_TILE metres, two maps a layer:
 //   A (rgba8): rgb = what the box's paint is multiplied by, ÷ 2 (128 = the paint as it is; so a map can also turn a hue), a = the height, 0‥1 of the layer's range
 //   B (rgba8): rg = the tangent-space normal's xy (½ + ½·n), b = roughness, a = how open the texel is to the sky (cavity: 1 = open)
-// Everything is periodic over the tile, so a layer repeats without a seam; the shader breaks the repeat up. Pure arithmetic on typed arrays: runs the same in a
-// browser and under bun (tools/look-preview.ts writes the maps out to look at with no GPU).
-export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 8;
-/** the layers, in surface.wgsl's class order less one (SURF_MUD 1 → layer 0 …) */
-export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet'] as const;
+// Everything is periodic over the tile, so a layer repeats without a seam; the shader breaks the repeat up. Pure arithmetic on typed arrays: runs the same in a browser and under bun.
+export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 11;
+/** the layers, in surface.wgsl's class order less one (SURF_MUD 1 → layer 0 …); the last three are the look's own (look.wgsl LOOK_CLOTH, LOOK_METAL, LOOK_PAINT) */
+export const LOOK_NAMES = ['mud wall', 'plaster', 'block', 'earth', 'gravel', 'slab', 'wood', 'sheet', 'cloth', 'metal', 'paint'] as const;
 /** the roughness each layer is written around (the shader adds a texel's difference from it to the box's own finish) */
-export const LOOK_ROUGH = [0.95, 0.86, 0.93, 0.94, 0.88, 0.82, 0.84, 0.5];
+export const LOOK_ROUGH = [0.95, 0.86, 0.93, 0.94, 0.88, 0.82, 0.84, 0.5, 0.96, 0.75, 0.5];
 
 const TAU = Math.PI * 2;
 function hash(ix: number, iy: number, seed: number): number {
@@ -186,9 +185,53 @@ const sheet: Mat = (u, v, t) => {
   const screw = smooth(0.006, 0.003, Math.hypot(su, sv)), washer = smooth(0.011, 0.008, Math.hypot(su, sv)) * (1 - screw);
   t.h += 0.002 * screw + 0.0008 * washer; tint(t, 1 - 0.5 * washer + 0.15 * screw); if (screw + washer > 0) t.rough = mix(t.rough, 0.7, washer);
 };
-const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet];
+// ---- sackcloth, canvas, a blanket: a plain weave drawn coarse enough to survive the play camera (a thread every 1.6 cm), no thread the weight of its neighbour
+// and none of them straight; the cloth itself lies in folds, holds dust in them and is stained
+const cloth: Mat = (u, v, t) => {
+  const N = 128;
+  const x = (u + 0.006 * (vn(u, v, 6, 6, 171) - 0.5)) * N, y = (v + 0.006 * (vn(u, v, 6, 6, 172) - 0.5)) * N;
+  const ix = wrap(Math.floor(x), N), iy = wrap(Math.floor(y), N), fx = x - Math.floor(x), fy = y - Math.floor(y);
+  const over = ((ix + iy) & 1) === 0;                                   // warp over weft at every other crossing
+  const a = Math.sin(fx * Math.PI), b = Math.sin(fy * Math.PI);
+  const thick = over ? hash(ix, 0, 173) : hash(0, iy, 174);             // a thread keeps its weight along its whole length: slubs run across the cloth
+  const yarn = over ? a * (0.55 + 0.45 * b) : b * (0.55 + 0.45 * a);
+  const fold = 0.6 * vn(u, v, 2, 7, 175) + 0.4 * vn(u, v, 5, 13, 176), stain = fbm(u, v, 3, 3, 177);   // it lies in folds that run one way more than the other
+  t.h = 0.0015 * yarn * (0.6 + 0.8 * thick) + 0.011 * (fold - 0.5);
+  tint(t, (0.82 + 0.3 * thick) * (0.78 + 0.22 * yarn) * (1 + 0.3 * (fold - 0.5)));
+  hue(t, 0.88, 0.86, 0.82, smooth(0.5, 0.85, stain) * 0.6);
+  t.rough = 0.93 + 0.06 * yarn;
+};
+// ---- bare iron left out: a skin of rust that blooms in patches and lifts in plates, pits, and bright scratches where the skin is still sound
+const metal: Mat = (u, v, t) => {
+  const bloom = fbm(u, v, 5, 4, 181), fine = fbm(u, v, 40, 3, 182), pit = cells(u, v, 46, 183), where = fbm(u, v, 6, 2, 187);
+  const pits = pit.id < 0.5 * smooth(0.45, 0.7, where) ? smooth(0.3, 0.1, pit.f1) : 0;   // pits come in patches
+  const rust = smooth(0.4, 0.64, bloom + 0.25 * (fine - 0.5));
+  const plate = cells(u + 0.02 * (fine - 0.5), v + 0.02 * (bloom - 0.5), 11, 186), lift = rust * smooth(0.55, 0.8, where + 0.3 * (plate.id - 0.5)), edge = lift * smooth(0.07, 0.015, plate.f2 - plate.f1);   // where it is worst the skin lifts in plates
+  const scratch = Math.max(smooth(0.88, 0.95, vn(u, v, 3, 150, 184)), smooth(0.91, 0.97, vn(u, v, 120, 4, 185))) * (1 - rust);
+  t.h = 0.0014 * rust * (fine - 0.5) + 0.0011 * lift * (plate.id - 0.5) - 0.0011 * edge - 0.0013 * pits - 0.0003 * scratch;
+  tint(t, 0.86 + 0.34 * (fine - 0.5) + 0.26 * (bloom - 0.5));
+  hue(t, 1.28, 0.92, 0.68, rust * (0.5 + 0.5 * fine));
+  tint(t, (1 - 0.3 * edge) * (1 - 0.4 * pits) * (1 + 0.5 * scratch));
+  t.rough = mix(mix(0.5, 0.97, rust), 0.3, scratch);
+};
+// ---- old paint on steel or boards (a drum, a gate, a truck's door): dented, chalked by the sun, scuffed in long strokes, and gone in ragged patches with a
+// lifted rim, down to what is under it
+const paint: Mat = (u, v, t) => {
+  const dent = fbm(u, v, 3, 3, 191), peel = fbm(u, v, 7, 4, 192), fine = vn(u, v, 90, 90, 193), chip = cells(u, v, 9, 194, 1.0), brush = vn(u, v, 4, 150, 195);
+  const e = peel + 0.35 * (0.5 - chip.f1) + 0.12 * (fine - 0.5);
+  const gone = smooth(0.66, 0.72, e), rim = smooth(0.59, 0.66, e) * (1 - gone);
+  const scuff = smooth(0.82, 0.96, vn(u, v, 2, 70, 196)) * (1 - gone);
+  const under = vn(u, v, 50, 50, 198);
+  t.h = 0.003 * (dent - 0.5) + 0.00025 * (brush - 0.5) - 0.0007 * gone + 0.0004 * rim + 0.0004 * gone * (under - 0.5);
+  tint(t, 0.93 + 0.16 * (dent - 0.5) + 0.06 * (brush - 0.5));
+  hue(t, 1.1, 1.08, 1.06, smooth(0.4, 0.8, fbm(u, v, 2, 2, 197)) * 0.6);   // chalked pale in patches
+  tint(t, 1 + 0.3 * rim + 0.22 * scuff);
+  t.r = mix(t.r, 0.62 + 0.2 * under, gone); t.g = mix(t.g, 0.4 + 0.12 * under, gone); t.b = mix(t.b, 0.3 + 0.08 * under, gone);   // (a multiplier of the paint: bare patches come out dark and warm whatever the paint was)
+  t.rough = mix(mix(0.46 + 0.08 * brush, 0.72, scuff), 0.94, gone);
+};
+const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, cloth, metal, paint];
 /** how much the relief is stood up when the normal is taken off the height (1 = true to the metres above; a map read from twenty metres wants more) */
-const RELIEF = [1.6, 1.8, 1.5, 1.6, 1.3, 1.8, 1.6, 1.0];
+const RELIEF = [1.6, 1.8, 1.5, 1.6, 1.3, 1.8, 1.6, 1.0, 1.6, 1.6, 1.6];
 
 /** one layer's two maps at full size (LOOK_N² × 4 bytes each) */
 export function lookLayer(layer: number, N = LOOK_N): { a: Uint8Array; b: Uint8Array } {

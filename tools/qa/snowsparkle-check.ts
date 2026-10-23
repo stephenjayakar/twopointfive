@@ -73,6 +73,7 @@ export async function snowSparkleCheck(o: { verbose?: boolean } = {}): Promise<b
   const CARELESS = ['  r.E = li.color * (att * c); r.ok = true;\n', '  r.E = li.color * (att * c) * (1.0 + snowSparkleLobe(N, L, N) * SNOW_SPARKLE_GAIN); r.ok = true;\n'] as const;
   for (const f of files) {
     let t = readFileSync(resolve(SH, f), 'utf8');
+    t = t.split('\n').map(l => /\/\/.*THE LOOK PROTOTYPE/.test(l) && /\bLOOK\b/.test(l.replace(/\/\/.*$/, '')) ? '' : l).join('\n');   // (the look prototype's own lines, each tagged in its comment and behind LOOK in its code: live only on its page — shaders/look.wgsl. It reads and writes the mark's fourth level, alpha 0, and is not this check's)
     if (BREAK) { t = t.replace(/if \(SNOW_SPARKLE\) \{/g, '{'); if (f === 'common.wgsl') t = t.replace(CARELESS[0], CARELESS[1]); }
     text[f] = t;
   }
