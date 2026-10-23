@@ -125,6 +125,7 @@ import { PAIRUP, PAIRUP_DEFAULTS, savePairUp, pairUpApply, pairUpSummary } from 
 import { SPOTTED, SPOTTED_DEFAULTS, saveSpotted, spottedSummary } from '../game/spotted';
 import { PLAN } from '../game/floorplan';
 import { CLOSE, closeSummary, closeSeat, closeUnseat, closeSeated } from '../game/close';
+import { STALK } from '../game/stalk';
 import { FOOTFALL, TWOGEARS, crouchPace } from '../game/player';
 import { KITANIM, kitSummary } from '../game/kitanim';
 import { INHAND } from '../game/inhand';
@@ -1557,7 +1558,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     ]);
     tf = fw;
     feelRows('FOG', [
-      { k: 'lastSeen', label: 'fog ▸ last seen s', title: 'an enemy who goes out of the team\'s sight keeps a fading ? where he was last seen for this long (s). 0 = no mark (as shipped): a ready answer if the game is too hard to read without enemy lasers' },
+      { k: 'lastSeen', label: 'fog ▸ last seen s', title: 'an enemy who goes out of the team\'s sight keeps a fading ? where he was last seen for this long (s). 0 (as shipped) = the You\'re told lever on the mission sheet decides: a few seconds on Standard, longer on Guided, no mark on Bare. Turned up, this row is the seconds on every setting' },
     ]);
     tf = TF.door;
     feelRows('ENTRY', [
@@ -1857,6 +1858,10 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.toggleBox(cl, 'melee ▸ LMB knife, RMB knockout', () => CLOSE.lethal, v => { CLOSE.lethal = v; }, 'hands empty in reach of a man: the left click is the knife (he is dead, a kill on the card), the right click the knockout (out cold, breathing); off = the left click is the knockout and the right click nothing, as it was', true);
     panel.toggleBox(cl, 'in a hold ▸ LMB knife, RMB choke', () => CLOSE.heldClicks, v => { CLOSE.heldClicks = v; }, 'a man in your arm, the knife at his throat: the left click uses it (he is dead, a kill on the card; once begun nothing stops it), the right click starts the choke as its Space row does (out cold, breathing). Not with the pistol at his head, not on a civilian. Its own switch (also ?noheldclicks on the address): it does not need the close-in mode. Off = neither click does anything in the arm hold, as it was.', true);
     panel.toggleBox(cl, 'crouched ▸ hands stay low until the move', () => CLOSE.handsLow, v => { CLOSE.handsLow = v; }, 'crouched in reach behind a standing man: only the hand on the knife says so, and the grab itself brings the arm up. Off (also ?handslow=0) = the open hand reaches for his neck from the crouch, which from above reads as a hand held up.', true);
+    panel.toggleBox(cl, 'no knife ▸ only the right click, and it never kills', () => CLOSE.noKnife, v => { CLOSE.noKnife = v; }, 'empty hands: the right click knocks a man out from any side and the left click is no blow (held on a man from behind it is the creep). With a man in the arm the right click chokes him out. No sheath, no hand to a hilt, no blade at his throat. Off (also ?noknife=0) = the knife on the left click, as it was.', true);
+    panel.toggleBox(cl, 'the stalk ▸ hold the click to sneak in and grab', () => STALK.on, v => { STALK.on = v; }, 'hands empty, close behind a man who is not onto you: press the left button on him and keep it down, and Sam creeps in on his own, at the man\'s pace and a little more, and grabs him. Let go and he stops where he is; press again to go on. He is let go of if the man turns, gets away or a wall or door comes between. Off (also ?stalk=0 on the address) = the last metres are your own keys.', true);
+    panel.toggleBox(cl, 'the stalk ▸ the click is the only way to grab', () => STALK.only, v => { STALK.only = v; }, 'with the stalk on, a guard has no grab row: holding the left button on him is the one way in. Off (also ?stalkonly=0) = the row is back beside the stalk.', true);
+    panel.slider(cl, 'the stalk ▸ top pace m/s', 1.2, 2.2, 0.05, () => STALK.pace, v => { STALK.pace = v; }, 'never faster than this while the click walks him in (a patrol walks at 1.15; the crouch-walk is 1.45)');
     panel.toggleBox(cl, 'crouched ▸ the reach goes up for his neck', () => CLOSE.reachUp, v => { CLOSE.reachUp = v; }, 'crouched in reach behind a standing man: the free hand goes up for his neck and the trunk comes up with it; off = the hand at the small of his back, as it was. Its own switch (also ?noreachup on the address).', true);
     panel.toggleBox(cl, 'one footfall a step', () => FOOTFALL.once, v => { FOOTFALL.once = v; }, 'a step is heard once: when the legs flip between forwards and backwards frame by frame (a man walked in the arm, or the two keys by turns) the walk cycle rocks over one edge; on = a footfall needs a quarter of the cycle walked since the last one; off = every frame of the rocking files a footfall, as it always did (also ?footfallonce=0)');
     panel.toggleBox(cl, 'a footfall the legs owe', () => FOOTFALL.owed, v => { FOOTFALL.owed = v; }, 'under one footfall a step: with the cursor shaken across him the walk cycle turns about before it reaches an edge, or crosses one too soon to count, and the walk goes on a third to two thirds of its footfalls; on = a step\'s worth of the cycle walked since the last edge files one; off = only an edge files a footfall (also ?footfallowed=0)');
@@ -1905,14 +1910,15 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.text(hw, () => `guns put away: yours ${WORKSTOW_STATS.samDown} (back ${WORKSTOW_STATS.samUp}, kept away ${WORKSTOW_STATS.samKept}) · teammates ${WORKSTOW_STATS.mateDown} (back ${WORKSTOW_STATS.mateUp})`);
   }
   // (game/squadnet.ts: the squad's lines where you cannot see the man, a teammate down, the quick key's reason, the honest room call)
-  { const sn = panel.section('Squad net (far lines, man down, why, clear)', { open: false, summary: () => [SQUADNET.on ? 'lines' : '', SQUADNET.why ? 'why' : '', SQUADNET.clear ? 'clear' : ''].filter(Boolean).join(' · ') || 'off' });
+  { const sn = panel.section('Squad net (far lines, man down, why, clear)', { open: false, summary: () => [SQUADNET.on ? 'lines' : '', SQUADNET.why ? 'why' : '', SQUADNET.clear ? 'clear' : '', SQUADNET.endCall ? 'every entry' : ''].filter(Boolean).join(' · ') || 'off' });
     panel.toggleBox(sn, 'far lines reach you', () => SQUADNET.on, v => { SQUADNET.on = v; }, 'also ?squadnet=0 on the address. On: a teammate\'s line said off your screen is drawn near you on his side with his name and an arrow, the net clicks, and a teammate going down is called with a lower click. Off: a line over a head off the screen is not drawn');
     panel.toggleBox(sn, 'the quick key says why', () => SQUADNET.why, v => { SQUADNET.why = v; }, 'also ?qwhy=0. On: when the squad\'s pick on a door is not a plain open, the quick key\'s row ends on the reason and the man who answers says it');
     panel.toggleBox(sn, '\'clear\' means clear', () => SQUADNET.clear, v => { SQUADNET.clear = v; }, 'also ?honestclear=0. On: a room is called clear only when its search left no floor unseen; otherwise the lead calls it quiet and says they did not see all of it');
+    panel.toggleBox(sn, 'every entry ends with a call', () => SQUADNET.endCall, v => { SQUADNET.endCall = v; }, 'also ?endcall=0. On: the lead calls a room the mission has no name for too (\'room clear.\'; \'clear so far.\' of open floor nobody searches). Off: such an entry ends with nothing said');
     panel.slider(sn, 'far line: distance from you', 0.1, 0.4, 0.01, () => SQUADNET.near, v => { SQUADNET.near = v; }, 'a share of the view\'s shorter side');
     panel.slider(sn, 'click (gain)', 0, 1, 0.05, () => SQUADNET.click, v => { SQUADNET.click = v; }, 'the click a far line arrives with; 0 = silent');
     panel.slider(sn, 'man down (gain)', 0, 1, 0.05, () => SQUADNET.downGain, v => { SQUADNET.downGain = v; }, 'the lower click a teammate going down is called with; 0 = silent');
-    panel.text(sn, () => { const S = game.squadNet.stats; return `far lines ${S.lines} · men down ${S.downs} · reasons given ${S.whys} · rooms clear ${S.clears} · quiet ${S.quiets}`; });
+    panel.text(sn, () => { const S = game.squadNet.stats; return `far lines ${S.lines} · men down ${S.downs} · reasons given ${S.whys} · rooms clear ${S.clears} · quiet ${S.quiets} · calls of a room with no name ${S.ends}`; });
   }
   // (game/takedown.ts: close-up takedowns as moves — the chop, the palm heel, the hand over the mouth, the slash; the partner's blow and the man it lands on; the fall by the blow; a man out cold breathes; on in the page, ?notakedown)
   { const tk = panel.section('Takedowns (the blow, the fall, out cold)', { open: false, summary: () => TAKEDOWN.on ? 'on' : 'off' });

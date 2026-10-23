@@ -63,6 +63,7 @@ import { GUNHOLD } from '../game/gunhold';
 import { HOLD, THROW_BY, HARDBREATH } from '../game/character';
 import { CLOSE } from '../game/close';
 import { FOOTFALL, TWOGEARS } from '../game/player';
+import { STALK } from '../game/stalk';
 import { PLAN } from '../game/floorplan';
 import { KITANIM } from '../game/kitanim';
 import { HANDS } from '../game/hands';
@@ -91,6 +92,7 @@ import { SILENT } from '../game/silent';
 import { SAMESTART } from '../game/samestart';
 import { TAKE } from '../game/takecheck';
 import { QUIETFOG } from '../game/quietfog';
+import { TOLD } from '../game/told';
 import { TORCH } from '../game/calmtorch';
 import { BACKKEY } from '../game/backkey';
 import { moraleFromQuery } from '../game/morale';
@@ -321,6 +323,8 @@ export function pageSwitches(q: URLSearchParams): void {
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
   QUIETFOG.def = q.get('quietdef') === 'off' || q.get('quietdef') === '0' ? 'off' : 'team';   // WHERE a quiet mission starts (the maintainer's pick, 10-13): under the fog, lifted round you and your partner, the mission's sticky cameras handed out — a bare quiet link is that. ?quietdef=off = it starts with every guard shown, as it did
   QUIETFOG.solo = q.get('solofog') !== '0';   // the solo night's own link is read as a quiet row's: it opens under the fog of war with the mission's cameras and wand (game/quietfog.ts soloFogLink): ?solofog=0 = the solo night with every guard shown, as it was
+  TOLD.on = q.get('told') !== '0';   // the fourth difficulty lever, how much you're told (game/told.ts): guided | standard | bare on the mission sheet, a fading mark where your team last saw an enemy on the first two (standard is the level standard, bare is hard's). ?told=0 = three levers and no mark, as it was
+  TOLD.fogOff = q.get('fogoff') !== '0';   // the fog lever on a squad mission has a bottom rung, off: every enemy drawn (game/told.ts, difficulty.ts fogOffNow). ?fogoff=0 = the three rungs it had
   QUIETFOG.wand = q.get('quietwand') !== '0';   // a quiet mission under the fog hands you an optical wand with its cameras, whatever your card carries (game/quietfog.ts quietWand): ?quietwand=0 = only a wand in your own pouch
   TAKE.wired = !(q.has('takecheck') && q.get('takecheck') !== '0');   // on a quiet mission a man is sent to look at the emptied holder only where the level says it is wired (game/takecheck.ts): ON in the page; ?takecheck = a man is sent seven seconds after every take, as it was
   HOLDFIRE.on = !q.has('noholdfire');   // a squad nobody has found never fires first (game/holdfire.ts): a teammate's round at a man who has not noticed anybody is held until the player's own shot or an order of his that means fire, walking or sneaking — ON in the page; ?noholdfire = they shoot on sight unless silent or sneaking, as they did
@@ -373,7 +377,11 @@ export function pageSwitches(q: URLSearchParams): void {
   CLOSE.on = !q.has('noclose');   // closer than ever (game/close.ts): the windows round a man drawn on the floor, the ready pose, the ways in from his sides, his front and over a chair — ON in the page; ?noclose = one way in, from behind, in words, as it was
   CLOSE.heldClicks = !q.has('noheldclicks');   // with a man in his arm the two buttons (game/close.ts, player.ts updateHold): left click the knife — he is dead — right click the choke; the arm hold only — ON in the page; ?noheldclicks = neither click does anything there, as it was
   CLOSE.handsLow = q.get('handslow') !== '0';   // crouched in reach behind a standing man his hands stay low until the move: the tell is the hand on the knife, not an open hand held up over his own head (game/close.ts closeReady). ON in the page; ?handslow=0 = the grab's tell reaches from the crouch, as it was
+  CLOSE.noKnife = q.get('noknife') !== '0';   // no knife: empty hands knock a man out on the right click and the left click is no blow; nothing draws or names a blade (game/close.ts). ON in the page; ?noknife=0 = the two buttons as they were
   CLOSE.reachUp = !q.has('noreachup');   // crouched behind a standing man the grab's reach goes UP for his neck and the trunk comes up with it (game/close.ts, character.ts READY_UP): ON in the page; ?noreachup = the hand at the small of his back, as it was
+  STALK.only = q.get('stalkonly') !== '0';   // …and it is the only way to a staff man: his 'grab him' row is gone (?stalkonly=0 puts the row back beside the stalk)
+  STALK.corner = q.get('stalkcorner') !== '0';   // …and with his back on a wall the held button lies in wait: the man who comes past the corner is grabbed (?stalkcorner=0 = the button on a wall does nothing, as it was)
+  STALK.on = q.get('stalk') !== '0';   // the stalk (game/stalk.ts): the left button held on a man he is close behind walks Sam in to the grab. ON in the page; ?stalk=0 = the last metres are his own keys, as they were
   TWOGEARS.on = q.get('twogears') !== '0';   // two gears, not a dial (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch-walk is the sneak, at its own quicker pace. ON in the page; ?twogears=0 = the wheel's six notches and the tune's crouch-walk, as it was
   FOOTFALL.once = q.get('footfallonce') !== '0';   // one footfall a step (game/player.ts FOOTFALL): a footfall is filed only once the walk cycle has come a quarter of a turn since the last one filed, so a cycle rocking over one edge (backpedal flipping frame by frame: forwards and backwards keys by turns, or a man walked in the arm) is one footfall and not one a frame. ON in the page; ?footfallonce=0 = every crossing files one, as it always did
   FOOTFALL.owed = q.get('footfallowed') !== '0';   // …and under it, a footfall the legs owe (FOOTFALL.owed): a cycle turned about again and again (the cursor shaken across him) rocks between its edges or crosses one with too little travel to count, and with the first key alone that walk files a third to two thirds of a plain walk's footfalls; on = a step's worth of the cycle walked since the last edge passed files one. ON in the page; ?footfallowed=0 = only an edge files a footfall
@@ -387,6 +395,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SQUADNET.on = q.get('squadnet') !== '0';   // the squad reaches you (game/squadnet.ts): a teammate's line said off your screen is drawn near you on his side with a click, and a teammate going down is called with a sound of its own: ON in the page; ?squadnet=0 = a line over a head off the screen is not drawn, as it was
   SQUADNET.why = q.get('qwhy') !== '0';   // the quick key says why (game/squadnet.ts): its row ends on the reason when the squad's pick is not a plain open, and the man who answers says it: ON in the page; ?qwhy=0 = the row and the answer as they were
   SQUADNET.clear = q.get('honestclear') !== '0';   // 'clear' means clear (game/squadnet.ts): a room is called clear only when its search left no floor unseen, and called quiet otherwise: ON in the page; ?honestclear=0 = the call as it was
+  SQUADNET.endCall = q.get('endcall') !== '0';   // every entry ends with a call (game/squadnet.ts): the lead calls a room the mission has no name for too ('room clear.', 'clear so far.' of open floor): ON in the page; ?endcall=0 = such an entry ends with nothing said, as it was
   HANDS.on = !q.has('nohands');   // hands on the world (game/hands.ts): a body is taken up from the end he is at with both hands and laid down again, a door comes round under his hand with him stepped clear of it — ON in the page; ?nohands = bodies snap to the ankle drag and doors are flung, as they were
   OWNCHARGE.on = !q.has('noowncharge');   // the player's own charges (game/owncharge.ts): charge rows on YOUR kit card, 'set a charge' on a shut door, a man alone carries his card's charges only. ?noowncharge = as it was
   GUNSLOTS.on = !q.has('nogunslots');   // a primary and a secondary for every man (game/gunslots.ts): the card's one gun row is two — Primary and Secondary — and a teammate carries both, going to his sidearm when the primary runs dry on a man close in front of him. ?nogunslots = one gun row, and nobody but you has a second gun
@@ -460,6 +469,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ROOMCLEAR.fresh = q.get('freshstart') !== '0';   // a room clear that names no placement seed deals a fresh one each visit, off the game's own die's seed (game/roomclear.ts): ON in the page; ?freshstart=0 = the authored placement on every load, as before (a row that pins its seed — the Training lessons — is never touched)
   SAMESTART.on = q.get('samestart') !== '0';   // every mission starts the same way on every try (game/samestart.ts): a room clear's defenders on the level's own marks each load and each restart, a rescue's roamers and clock as written, a quiet mission the first of its lists — ON in the page; ?samestart=0 = every staging dealt as before (the line above, the restart's next placement, the quiet deal off the die)
   { const w = q.get('way'); ROOMCLEAR.way = w === 'any' ? -1 : w !== null && /^\d+$/.test(w) ? +w : 0; }   // …and the way in (ROOMCLEAR.way; the mission sheet's 'Way in' row writes it on the link): absent or ?way=1 = the level's own start, ?way=2 … = its other ones, ?way=any = dealt off this visit's die with the marks
+  HOLD.disarm = q.get('disarm') !== '0';   // the grab disarms him (game/disarm.ts): Sam's right hand takes the gun out of the man's as the arm goes round him and lets it down beside them, with voices of its own for the catch, the strip and the gun on the floor — ON in the page; ?disarm=0 = knocked out of his hand on the first frame, as it was
   HOLD.dropGun = !q.has('nogundrop');   // a man taken in the arm drops the gun he had in his hand: it lies on the floor like any dropped gun (game/player.ts startGrab)
   BACKKEY.tab = q.get('tabback') !== '0';   // Esc is only the pause; Tab backs out of the order menu, the Space list, a running verb, the launcher's arc (game/backkey.ts): ON in the page; ?tabback=0 = Esc backs out first, as it did
   HOLD.oneFacing = q.get('holdyaw') !== '0';   // a man in the arm faces where the hold faces him — nothing else turns him (game/nightbreach.ts: the calm defenders' marks)
@@ -558,6 +568,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HAULHOME.on': 'TPS_HAULHOME=1',
   'GUNHOLD.on': 'TPS_GUNHOLD=1',
   'HOLD.dropGun': 'TPS_HOLDDROP=1',
+  'HOLD.disarm': 'TPS_DISARM=1',
   'HOLD.oneFacing': 'TPS_HOLDYAW=1',
   'BACKKEY.tab': 'TPS_TABBACK=1',
   'WALLSHOT.on': 'TPS_WALLSHOT=1',
@@ -570,9 +581,11 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CLOSE.heldClicks': 'TPS_HELDCLICKS=1',
   'CLOSE.reachUp': 'TPS_REACHUP=1',
   'CLOSE.handsLow': 'TPS_HANDSLOW=1',
+  'CLOSE.noKnife': 'TPS_NOKNIFE=1',
   'FOOTFALL.once': 'TPS_FOOTFALL=1',
   'FOOTFALL.owed': 'TPS_FOOTOWED=1 (acts only under FOOTFALL.once: with TPS_FOOTFALL=1)',
   'TWOGEARS.on': 'TPS_TWOGEARS=1',
+  'STALK.on': 'TPS_STALK=1',
   'GUARD_EYE.far': 'TPS_FARSIGHT=1',
   'GUARD_EYE.farCalm': 'TPS_FARCALM=1',
   'KITANIM.on': 'TPS_KITANIM=1',
@@ -584,6 +597,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'QUIETFOG.def': 'TPS_QUIETDEF=team',
   'QUIETFOG.wand': 'TPS_QUIETWAND=1',
   'QUIETFOG.solo': 'TPS_SOLOFOG=1',
+  'TOLD.on': 'TPS_TOLD=1',
+  'TOLD.fogOff': 'TPS_FOGOFF=1',
   'TORCH.calmOff': 'TPS_CALMTORCH=1',
   'TORCH.wallLow': 'TPS_TORCHWALL=1',
   'MORALE.on': 'TPS_MORALE=1',
@@ -768,6 +783,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SQUADNET.on': 'TPS_SQUADNET=1',
   'SQUADNET.why': 'TPS_QWHY=1',
   'SQUADNET.clear': 'TPS_HONESTCLEAR=1',
+  'SQUADNET.endCall': 'TPS_ENDCALL=1',
   'TAKEDOWN.on': 'TPS_TAKEDOWN=1',
   'TAKEDOWN.haul': 'TPS_HAUL=1',
   'STEALTHPOSE.on': 'TPS_STEALTHPOSE=1',

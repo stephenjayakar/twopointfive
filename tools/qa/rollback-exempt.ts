@@ -58,6 +58,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/civilians.ts CIV_STATS': 'TALLY · counted in civilians.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/clearline.ts CLEARLINE_LOG': 'TALLY · counted in clearline.ts; no read in src/game, src/scene or src/anim',
   'src/game/clearline.ts CLEARLINE_STATS': 'TALLY · counted in clearline.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/clearline.ts:402)',
+  'src/game/stalk.ts STALK_STATS': 'TALLY · counted in stalk.ts (begun, grabs, why each ended); read by no file under src/game, src/scene or src/anim (the checks and the page\'s hook read it)',
   'src/game/close.ts CLOSE_STATS': 'TALLY · counted in close.ts (188, 268, 294); read only by closeSummary (391) and the page\'s hook (main.ts:1264)',
   'src/game/condition.ts CONDITION_STATS': 'TALLY · counted in condition.ts; no read in src/game, src/scene or src/anim',
   'src/game/coverfire.ts COVERFIRE_LOG': 'TALLY · counted in coverfire.ts; no read in src/game, src/scene or src/anim',

@@ -18,8 +18,11 @@ const PRESS_SECS = 0.45;
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 /** the hold's own voices (sfx.ts) and the gains player.ts plays them at (heldProtest: 0.18 as the arm locks, 0.16 under an answer; shove: 0.55 pushed, 0.3 torn loose) */
-const HOLD_VOICES = ['grabScuffle', 'heldProtest', 'murmur', 'chokeStrain', 'chokeLimp', 'whipThud', 'shove'];
-const GAINS: Record<string, number[]> = { grabScuffle: [0.4], heldProtest: [0.18, 0.16], murmur: [0.2], chokeStrain: [0.25], chokeLimp: [0.35], whipThud: [0.7], shove: [0.55, 0.3] };
+const HOLD_VOICES = ['grabScuffle', 'grabCatch', 'gunStrip', 'gunDown', 'heldProtest', 'murmur', 'chokeStrain', 'chokeLimp', 'whipThud', 'shove'];
+/** the grab's first voice: the catch with the disarm move's two keys on (HOLD.disarm under HOLD.dropGun; game/disarm.ts disarmCatch, where the page's stand has
+ *  them), the scuffle without. The move's other two voices are probes.ts grabvoice's: the men staged here have no gun in the hand */
+const grabVoice = () => HOLD.disarm && HOLD.dropGun ? 'grabCatch' : 'grabScuffle';
+const GAINS: Record<string, number[]> = { grabScuffle: [0.4], grabCatch: [0.5], gunStrip: [0.45], heldProtest: [0.18, 0.16], murmur: [0.2], chokeStrain: [0.25], chokeLimp: [0.35], whipThud: [0.7], shove: [0.55, 0.3] };
 const CHOKE_GRAIN = 0.4;   // player.ts's (private there): the strain grain's spacing
 
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -87,9 +90,9 @@ export async function audioHold() {
     const { grabT, heldT } = grabAndSettle(S);
     if (grabT < 0 || heldT < 0) fails.push(`staging: grab at ${grabT}, held at ${heldT}`);
     const pairAt = (): Vec3 => v3.copy(A.char.pos);
-    // the grab: grabScuffle once, on the frame the hold began; nothing else of the hold's until it locks
+    // the grab: its first voice (grabVoice) once, on the frame the hold began; nothing else of the hold's until it locks
     const grabWin = voicesIn(log, grabT, grabT + 1e-4);
-    if (count(grabWin, 'grabScuffle') !== 1 || grabWin.length !== 1) fails.push(`grab frame: ${tally(grabWin)} (want grabScuffle×1 alone)`);
+    if (count(grabWin, grabVoice()) !== 1 || grabWin.length !== 1) fails.push(`grab frame: ${tally(grabWin)} (want ${grabVoice()}×1 alone)`);
     const reach = voicesIn(log, grabT + 1e-3, heldT - 1e-3); if (reach.length) fails.push(`during the reach: ${tally(reach)} (want nothing)`);
     // the lock: heldProtest once at 0.18, HOLD.secs.grab after the grab
     const lockWin = voicesIn(log, heldT - 1e-4, heldT + 1e-4);
@@ -184,7 +187,7 @@ export async function audioHold() {
     const { grabT, heldT } = grabAndSettle(S);
     if (game.player.holding?.variant !== 'gun') fails.push(`staging: variant ${game.player.holding?.variant} (want gun)`);
     const pre = voicesIn(log, grabT, heldT + 1e-4);
-    if (count(pre, 'grabScuffle') !== 1 || count(pre, 'heldProtest') !== 1 || pre.length !== 2) fails.push(`grab + lock: ${tally(pre)} (want grabScuffle×1 heldProtest×1 — the same in either variant)`);
+    if (count(pre, grabVoice()) !== 1 || count(pre, 'heldProtest') !== 1 || pre.length !== 2) fails.push(`grab + lock: ${tally(pre)} (want ${grabVoice()}×1 heldProtest×1 — the same in either variant)`);
     for (let i = 0; i < 30; i++) W.step(DT);
     // checked: the whip chosen, then a second tap 0.5 s on = 0.15 s into the whip
     const tChk = game.time; endThenStop(W, 0.5); const phaseMid = A.held?.phase === 'whip' || game.player.holding?.phase === 'held'; W.step(DT); W.step(DT); for (let i = 0; i < 60; i++) W.step(DT);

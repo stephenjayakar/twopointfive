@@ -179,7 +179,8 @@ export const callsRally = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- the last-seen mark
-export const callsLastSeen = guarded(async () => {
+// (FOG.lastSeen by itself: the 'you're told' lever, which decides the mark while that row is 0, is held down here — tools/qa/told-check.ts has it up)
+export const callsLastSeen = guarded(async () => (await import('./told-check.ts')).threeLevers(async () => {
   const { verdict, done } = family('calls-lastseen: FOG.lastSeen — no mark as shipped; turned up, an enemy seen and then lost keeps a mark where he was last seen for that long');
   const E = scn('room-clear-pair');
   const run = async (secs: number) => {
@@ -203,4 +204,4 @@ export const callsLastSeen = guarded(async () => {
     `before ${on.before} (hidden ${on.hid0}) · Sam beside him: seen ${on.seen}, marks ${on.during} · Sam gone: hidden ${on.lost}, marks ${on.n}, ${on.age1.toFixed(2)} s old, ${on.off.toFixed(2)} m from where he stands · 4 s on: ${on.after}`);
   verdict(offR.seen && offR.lost && offR.n === 0 && offR.during === 0 && offR.after === 0, 'lastSeen 0 (shipped): the same sighting and loss leave no mark', `seen ${offR.seen} · lost ${offR.lost} · marks ${offR.before} / ${offR.during} / ${offR.n} / ${offR.after}`);
   return done();
-});
+}));

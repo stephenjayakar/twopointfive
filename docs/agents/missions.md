@@ -797,6 +797,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     changes to `rails.ts` and `planmode.ts`): seeds 1 to 4, hard and the wrong plan on seed 1, `tutplan-check` on both stands and both breaks, `lesson-gate`,
     `level-needs --run` and `rails-check` on both stands, `lived-check`, `writing-check`, `picker-list`, `rowset-check`, `lesson-check`, both typechecks, and the real
     page again (51 lines): the same numbers. Nobody has played it, and nothing of it has been seen on a GPU.
+  - **A walk line stops naming Tab once the mode is down** (2026-10-23, after Tab's objectives card came in, `ui/tabkey.ts`): with nothing to back out
+    of, Tab on a played page holds the game on that card, and the three walk lines said "Press [Tab] to close plan mode, then walk…" for as long as
+    the step lasted. Each walk step now carries a `planLine` (the frame shows it while the mode is down): "Use [W] [A] [S] [D] to walk to the marked
+    spot by your squad", "Walk to the marked spot beside the hall", "Walk into the hall to the marked spot". Lesson prose only: no switch, no list
+    and no box changed, the level's lived row stands. `tutplan-check`'s walk-step test no longer reads `planLine`. The real page
+    (`tools/qa/tut-plan-page.cjs`, 54 lines now; `URL_ADD='&tab=brief'` in front gives the page Tab's card as a played page has it, a driven page has
+    none) asks at each walk that the press which closed the mode did not open the card and that the line then names neither Tab nor plan mode:
+    green both ways on the software adapter. Not shown: the card opening on a second press there. Never seen on a GPU, nobody has played it.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
@@ -1502,7 +1510,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   calm man who hears it goes suspicious); 0.9 s later the script takes him. He comes round the long wall's far end as before, stops in the back strip a
   stride short of the gap in the cross wall (26.4, 17.75), puts his torch through the gap and over where the whistle was (5.2 m off in the scripted run,
   his beam within 6 degrees of the mark) for 3.6 s, says "nothing. wind", walks back up the strip past the back door to his chair at its far end
-  (30.3, 17.7), brings the torch down to his side (the smoke order is `upper: 'none'`: a whistled man keeps his torch in the hand, `guards.ts handCarry`, and with no upper layer it hangs as a calm man carries it), and smokes there for 50 s with his back to the gap; then the script lets him go and he walks back to his fire, the game's own man. The
+  (30.6, 17.7; it was 30.3 until the grab hauled a man a step back, `docs/agents/stealth.md` the stalk after its review), brings the torch down to his side (the smoke order is `upper: 'none'`: a whistled man keeps his torch in the hand, `guards.ts handCarry`, and with no upper layer it hangs as a calm man carries it), and smokes there for 50 s with his back to the gap; then the script lets him go and he walks back to his fire, the game's own man. The
   player comes round the long wall's near end, up the walk, through the gap and along the strip to his back: seven metres with the man's back to him.
   A MAN A SCRIPT WALKS IS BLIND AND DEAF (`squad.ts runGuardScript`), so the script is his eyes and ears while it has him, and each of these hands him
   back to the game `alert`: the player on the walk or in the strip while he comes down it; the player there or in the lane (`tq_beam`: all of it but the

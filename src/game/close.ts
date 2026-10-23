@@ -34,6 +34,7 @@ import { canStand, grabVariant } from './player';
 import { civilianSeated, civiliansShown, SIT_ADVANCE } from './civilians';
 import type { ReadyKind } from './character';
 import { handworkOn, samWork } from './handwork';
+import { STALK, stalkCould, stalkTell } from './stalk';
 
 const DEGR = Math.PI / 180;
 export const CLOSE = {
@@ -72,6 +73,13 @@ export const CLOSE = {
    *  feet the tell is the grab's, and a seated man's and the pistol's are untouched. With this up `reachUp` has nothing to raise. ON in the page unless
    *  ?handslow=0 (src/host/profile.ts pageSwitches); off here and on the harness's frozen stand (src/host/standup.ts; TPS_HANDSLOW=1 turns it on there). */
   handsLow: false,
+  /** NO KNIFE (the maintainer: "remove the knife, only rmb for non lethal CQC when nothing equipped … then we also remove the knife from interrogation. you can
+   *  still select nothing equipped or the pistol, but there's only rmb to choke out"): with empty hands the LEFT click is no blow at all (it is the stalk's hold,
+   *  stalk.ts) and the RIGHT click is the knockout, from any side; with a man in the arm the left click does nothing and the right click chokes him out. Nothing
+   *  draws, names or reaches for a blade: no sheath on his chest, no hand to a hilt in the tell, no knife at the held man's throat, no line of Sam's about an
+   *  edge. ON in the page unless ?noknife=0 (src/host/profile.ts pageSwitches); off here and on the harness's frozen stand (src/host/standup.ts; TPS_NOKNIFE=1
+   *  turns it on there). Off = the two buttons as they were. */
+  noKnife: false,
   /** m: …and only under a neck this high off his own floor (a man on his feet: 1.44; one cowering or sat on the floor is under it and keeps the level reach) */
   handsLowNeckM: 1.15,
   /** m: Sam is in the mode this near a man (centre to centre, nothing solid between) · and out of it again past this */
@@ -166,6 +174,8 @@ function clearBetween(g: Game, p: ArrayLike<number>, q: ArrayLike<number>): bool
   const a: Vec3 = [p[0], 1.0, p[2]], b: Vec3 = [q[0], 1.0, q[2]];
   return !g.col.solidBlocked(a, b) && !g.col.segmentBlockedDynamic(a, b);
 }
+/** …the same test for the stalk (stalk.ts): a wall or a leaf between them ends it */
+export const closeClear = clearBetween;
 /** may anything be done to him at all by Sam's hands (dead, a teammate, out of the picture, already in an arm: no) */
 export function closeSubject(g: Game, gd: Guard): boolean {
   if (gd.state === 'dead' || gd.held) return false;
@@ -197,6 +207,8 @@ export function closeAt(g: Game, gd: Guard, p: ArrayLike<number>): CloseOffer {
 /** the move a window makes of a click / a grab: its kind */
 /** the two-button blow is live (CLOSE.lethal, the switch on, no show running): left = the knife, right = the knockout */
 export function closeLethal(g: Game): boolean { return CLOSE.on && CLOSE.lethal && !g.touring; }
+/** …and there is no knife (CLOSE.noKnife, the switch on, no show running): the right click is the knockout, the left click no blow */
+export function closeBare(g: Game): boolean { return CLOSE.on && CLOSE.noKnife && !g.touring; }
 /** the windows are live: the switch on and no show running (under a show Sam's hands are the build's: one way in, from behind) */
 export function closeLive(g: Game): boolean { return CLOSE.on && !g.touring; }
 /** a blow landed (player.ts updateTakedown): the tally */
@@ -215,15 +227,21 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
   const alert = gd.state === 'alert';
   const where = !o.win ? '' : o.win.kind === 'front' ? ' · facing you' : o.win.kind === 'side' ? ' · side on' : '';
   const it: Interactable = { kind: 'guard', pos: v3.add(gp, [0, seated ? 1.05 : 1.35, 0]), line1: `guard${alert ? ' · alert' : seated ? ' · seated' : ''}${alert ? '' : where}`, line2: o.why, inReach: o.can, off: false, guard: gd, close: kind };
+  const sneak = STALK.on && !busy && stalkCould(g, gd);   // (stalk.ts: the left button held on him walks Sam in to the grab)
+  if (sneak && !o.can) it.line2 = 'LMB  hold to sneak up and grab him';
   const verbs: Interactable[] = [];
   if (o.can && !busy) {
     const empty = pl.holstered, gun = grabVariant(g) === 'gun';
     // what the left click does from here, as the hint beside the Space row (or as the one line where there is no Space row)
-    const two = closeLethal(g);
-    const click = !o.strike ? '' : !empty ? `E  ${pl.rifleUp ? 'sling it' : 'holster'} for the ${two ? 'knife / the knockout' : `LMB ${kind === 'behind' || kind === 'seat' ? 'takedown' : 'strike'}`}`
+    const bare = closeBare(g), two = closeLethal(g) || bare;   // (no knife: the right click is the knockout whatever `lethal` says, and no line names a blade)
+    const click = !o.strike ? '' : !empty ? `E  ${pl.rifleUp ? 'sling it' : 'holster'} for the ${bare ? 'knockout' : two ? 'knife / the knockout' : `LMB ${kind === 'behind' || kind === 'seat' ? 'takedown' : 'strike'}`}`
+      : (two && sneak) || bare ? 'RMB  knock him out'   // (behind him the left button is the stalk's: it grabs him)
       : two ? 'LMB  knife — lethal  ·  RMB  knock him out'
       : kind === 'behind' ? 'LMB  takedown — silent' : kind === 'seat' ? 'LMB  put him out where he sits — silent' : kind === 'side' ? 'LMB  strike — quiet' : `LMB  strike — he gets a sound out`;
-    if (o.grab) {
+    const only = STALK.on && STALK.only && !gd.civ;   // (stalk.ts: the held click is the one way to him — no row grabs a staff man)
+    if (o.grab && only) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, inReach: true,
+      line2: empty ? `LMB  hold to grab him${two && o.strike ? '  ·  RMB  knock him out' : ''}` : `E  ${pl.rifleUp ? 'sling it' : 'holster'}, then hold LMB to grab him` });
+    else if (o.grab) {
       const text = kind === 'seat' ? (gun ? 'haul him out of the chair — pistol to his head' : 'haul him out of the chair')
         : gun ? 'grab him — pistol to his head' : pl.rifleUp ? 'grab him — the rifle goes on your back' : 'grab him';
       verbs.push(row(it, 'grab', text, click));
@@ -280,7 +298,12 @@ function modeNow(g: Game, S: State): Guard | null {
 export function closeTick(g: Game) {
   const pl = g.player, an = pl.char.anim; const S = stateOf(g);
   const r = closeReady(g);
-  an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null; an.readyUp = r && CLOSE.reachUp ? 1 : 0;
+  // (stalk.ts STALK.tell: behind a man he could stalk the pose is the distance's — the arm coming up and the body coming out of the crouch as he closes, the
+  // grab's own reach at a part weight; a chair's haul keeps its own pose, and whatever stands the tell down in reach — hands at work, the switch — stands this down)
+  const T = STALK.on && CLOSE.ready && r?.kind !== 'seat' && !samWork(g) && !(pl.coding && handworkOn('work')) ? stalkTell(g) : null, best = S.t === g.time ? S.best : null;
+  // (in reach of ANOTHER man the tell is that man's, as it was)
+  if (T && (!r || !best || best.guard === T.gd)) { an.ready = 'grab'; an.readyAt = T.at; an.readyUp = CLOSE.reachUp ? 1 : 0; an.readyAmt = T.reach; an.rise = T.rise; }
+  else { an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null; an.readyUp = r && CLOSE.reachUp ? 1 : 0; an.readyAmt = 1; an.rise = 0; }
   if (r) CLOSE_STATS.readyFrames++;
   const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)
   an.creep = !!m;

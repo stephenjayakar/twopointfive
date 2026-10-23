@@ -100,6 +100,13 @@ export const SOUNDS: Record<SfxName, Sound> = {
   // ---- hands and bodies (player.ts the hold, game.ts ragdolls) ----
   bodyFall: { group: 'hands', what: 'a body hits the floor', gain: 0.8, also: [{ what: 'a body laid down', gain: 0.12 }] },
   grabScuffle: { group: 'hands', what: 'grabbing a man from behind', gain: 0.4 },
+  // (the grab as three beats: the catch at his chest, the strip 0.22 s on at his gun hand, the gun let down 0.82 s on at the floor, his protest as the hold locks
+  //  at 0.47, as tools/qa/grabvoice-check.ts measures them; a carbine = the strip and the knock slowed to 0.8)
+  grabCatch: { group: 'hands', what: 'the grab: the catch', gain: 0.5, rate: 1, also: [
+    { what: 'the whole grab: catch, his pistol stripped and let down', gain: 0.5, rate: 1, plus: [{ name: 'gunStrip', gain: 0.45, rate: 1, after: 0.22 }, { name: 'heldProtest', gain: 0.18, after: 0.47 }, { name: 'gunDown', gain: 0.4, rate: 1, after: 0.82 }] },
+    { what: 'the whole grab, a carbine (strip and knock slowed)', gain: 0.5, rate: 1, plus: [{ name: 'gunStrip', gain: 0.45, rate: 0.8, after: 0.22 }, { name: 'heldProtest', gain: 0.18, after: 0.47 }, { name: 'gunDown', gain: 0.4, rate: 0.8, after: 0.82 }] }] },
+  gunStrip: { group: 'hands', what: 'the grab: his pistol twisted out of his hand', gain: 0.45, rate: 1, also: [{ what: 'a carbine stripped (slowed)', gain: 0.45, rate: 0.8 }, { what: 'rapped out of his hand by Sam\'s own pistol (quicker)', gain: 0.45, rate: 1.12 }] },
+  gunDown: { group: 'hands', what: 'the grab: his pistol let down onto the floor', gain: 0.4, rate: 1, also: [{ what: 'a carbine let down (slowed)', gain: 0.4, rate: 0.8 }] },
   chokeStrain: { group: 'hands', what: 'the choke, one strain', gain: 0.25, also: [{ what: 'choking him out', gain: 0.25, burst: { n: 6, every: 0.4 }, plus: [{ name: 'chokeLimp', gain: 0.35, after: 2.5 }] }] },
   chokeLimp: { group: 'hands', what: 'he goes limp', gain: 0.35 },
   whipThud: { group: 'hands', what: 'the pistol whip', gain: 0.7 },
