@@ -595,8 +595,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The tutorial's plan mode mission, 'On the radio'** (2026-10-22; row `tut-plan`, `scenarioList.ts TUTORIAL_MISSIONS` after `tut-sky`, group `tutorial`; `tools/levels/tut-plan.ts` →
   `levels/tut-plan.json`, its staged moments `levels/tut-plan.script.ts`, its scripted player `tools/qa/lessons/tut-plan.ts`, its page run `tools/qa/tut-plan-page.cjs`, its own check
   `tools/qa/tutplan-check.ts`, probe `tutplan`). A PROTOTYPE of the second of the six: plan mode as the build has it, taught as the way to win three things one stack cannot. Its own
-  level, a walled relay post at night (yard x 5..35, z 5..23): he kneels behind blocks at the track gate and never leaves them, the four are his hands, eight defenders in four rooms each its
-  own squad (`mayLeave: false`, nobody digs in). Nineteen steps, three plans:
+  level, a walled relay post at night (yard x 5..35, z 5..23): he kneels behind blocks at the track gate and never leaves them (until 10-23: he now walks to three spots between the plans, the sub-bullet "He walks to
+  three spots" below), the four are his hands, eight defenders in four rooms each its
+  own squad (`mayLeave: false`, nobody digs in). Nineteen steps (22 with the three walks), three plans:
   - *The guardroom* (two doors on two walls, two men): the mode up (Shift + the command key), the view moved with the walk keys, a right click sends all four to its blank wall, a box
     picks two and a right click stacks them on a door, the other two on the other door, a click on bare ground is everyone again, ONE word sends both.
   - *The hall* (a gun behind chest-high bags at the far end, laid on the front door; the back door at the gunner's shoulder): a pair on each door and the word. The step that makes
@@ -727,6 +728,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     console error.
     Nobody has played the reworded mission. Whether the ground reads is by eye and nobody has seen it on a GPU: the paints' values are held to STYLE.md's rule by
     arithmetic only, and the oil on the pad is 0.34 of its ground, a hair over the third the rule allows.
+  - **He walks to three spots, and each plan is laid from its spot** (2026-10-23; the maintainer's pick on a card, "You walk to each spot, then plan"). WHY: plan
+    mode's view now stays near him (`CMDRING.planNear`, the squad's rule: `?plannear=0`; `TPS_PLANNEAR=1` on a frozen run, needs `TPS_QPLAN=1`), a room's worth, and it
+    holds only where a frame leaves him his feet. This mission held them, so it taught a 19 m reach the game no longer has. No switch of the mission's own: it is lesson
+    data. THE STEPS (22): the first plan as before, from the gate with his feet held (mode, view, send: the rule does not hold on those three); then `up1` gives `move`
+    (the step's `allow`, NOT the frame's: with his feet from the first tick he could walk into the guardroom before the mode was ever up, the four following him, and
+    their walk after him did 'send' for him) and walks him behind his squad at the guardroom's blind wall (12.3, 11.1); `up2` beside the hall's blind wall (23.5, 15.3),
+    between it and the charpoy; `up3` inside the hall once it is theirs, behind the gunner's own bags (31.0, 15.9). Each is a ring 0.9 m either way. The mode is put
+    away to walk (in it the walk keys are the view's): the first walk's line names Tab and a card says the same keys walk him once the mode is closed; after a walk the
+    line is the old "open plan mode again". The gates' view point moved to (27.5, 11.5), inside the view's reach from the hall; the last step lost its mark and its
+    after line (with no mark any order but the right one put the line up). The menu row's blurb and scene no longer say he stays at the gate. Seven lines and two
+    cards were read by a second reader against `docs/agents/writing.md` (nine notes, all taken). `lived-check`'s row for the level is at the commit that carries the lists.
+    NO BOX MOVED: the fingerprint is the level's as it was, except its lesson block and its notes.
+    THE CHECKS: `tutplan-check` line 9 (new; 9 lines, both stands): the frame gives no `move` and the first step that does is a walk step after the squad is sent; he is
+    stood by `Game.teleportPlayer` on the gate's mark and on each walk's spot, the lesson on the step asked, and the walk keys take the view toward every mark, drag end
+    and view point of the steps up to the next walk: 20 places from 4 spots, each on the picture (the tightest 337 px inside), each view test passed, the rule held on
+    17 of 17 asked after the first walk and the view never more than 7.9 m from him (the box's far corner is 8.8 m). `TUTPLAN_BREAK=spots` (every plan tried from the
+    gate) fails that line, `TUTPLAN_BREAK=1` fails lines 3, 4, 6, 7, 8 and 9. THE SCRIPTED PLAYER closes the mode with the back key and walks with the walk keys along
+    the game's own path, reads the spots and view points from the level, fails a run where a place cannot be brought onto the picture from where he stands, where the
+    view leaves its box with the rule on, or where he is down after a walk, before the checkpoint 'the gates' is put back, or at the end; on the gate's frozen arm it
+    raises `TPS_TABBACK=1 TPS_PLANNEAR=1` (the lines name Tab; the frozen stand has no back key on Tab).
+    MEASURED (the page's stand, midday, the sky's light on every meter): 22/22 on seeds 1 to 8 (139.0 to 139.7 s) and on hard, seeds 1 to 4; the guardroom's first men in
+    at 3.8 and 3.7 s, the hall's at 1.2 and 1.2 s, nobody dazzled, on every one; the walks 4.7, 12.1 and 7.7 m in 3.3, 8.0 and 8.4 s; he was never put down; the view
+    never more than 7.0 m from him, the same with `TPS_PLANNEAR=0` (seeds 1, 2: the mission plays alike with the rule off). Six seconds a line on seeds 3 and 5 (265.0,
+    265.5 s). The wrong plan (`TUTPLAN_ALONE=1`) on seeds 1 to 4 ends in 122.4 to 128.2 s with him beside the hall while the gun is laid on its doorway, and he is not
+    hit. `lesson-gate tut-plan` (6), `level-needs --run` and `rails-check` on both stands, `rowset-check`, `lived-check`, `lesson-check` (129), `writing-check`
+    (`WRITING_BREAK=1` red), `picker-list`, `knobs-check`, `dice-check`, `rollback-check --static`, `export --check`, both typechecks green.
+    THE REAL PAGE with real keys and a real mouse (`tools/qa/tut-plan-page.cjs`, the software adapter, no picture): 51 lines pass to the end card, no page or console
+    error: Tab puts the mode away and he stands, the walk keys walk him to each spot, the line after a walk is the one that puts the mode up again, and with the mode
+    closed each next ring is on the picture (the first and third) or its mark is pinned to the picture's edge with the metres to it (the second, 12 m off: the
+    objective mark's own rule, `ui/overlay.ts`).
+    KNOWN, NOT MENDED: (1) Shift with the command key does nothing while a walk key is held (`rails.ts` gate and `planShift`: out of a walk it is the sprint's side),
+    and here sprint and the key's own order are both locked, so a hand that arrives in a ring still holding a walk key and presses for the mode gets nothing until it
+    lets go: the frame's and the squad's rule, claimed to their owners. (2) The box shrinks as the camera comes in and turns with it; the hall's and the gates' view
+    tests were tried turned and zoomed by a reviewer and held, but a player zoomed far in has to zoom out or walk nearer, and no line says so. (3) With `?tabback=0` the
+    back key is Esc and the walk lines still say Tab (as the solo mission's does); Shift with the command key closes the mode too. (4) He can walk into a room nobody
+    has taken and be shot there: he has no trigger, and nothing but the lines keeps him on his spots. (5) A ring is 0.9 m either way and its mark fades inside 1.6 m, as
+    other lessons' rings do. Nobody has played it, and nothing of it has been seen on a GPU.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
