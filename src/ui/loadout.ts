@@ -31,6 +31,7 @@
 // pouches rule, kit.ts): a button for the issued kit and one for each of the cost table's named loadouts this build can carry — one press puts it on all
 // five cards, colours kept (by the keys: A D move the pick along the row, Enter puts it on); the lit one is what the cards are now (none: a mix of your own).
 import type { ScenarioEntry } from '../scene/scenarios';
+import { lessonGroup } from '../scene/scenarios';
 import { pickSearch, levelWords, SCENARIO_KEYS } from '../scene/scenarioList';
 import { MISSIONS, SOLO_NIGHT, SOLO_KEY, unplayed, missionList, missionHref, openMissions, closeMissions, issuedWalls, issuedKit, type IssuedKit, type Mission } from './missions';
 import { difficultyHref, leversHref, leversMixed, leversLine, structureOfLevel } from '../game/difficulty';
@@ -42,7 +43,7 @@ import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
 import { weatherOfSearch } from '../game/weatherKinds';
 import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
-import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
+import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitPacks, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CAN, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
 import { KITDENSE } from './kitDense';
@@ -57,7 +58,7 @@ const CHIP_SHOWS = new Set(['weapon', 'primary', 'wand', 'big']), CHIP_NARROW = 
 const CHIP_GAP = 0.65, CHIP_IN = 0.18, CHIP_DIGIT = 0.46;   // a chip's icon row in icon heights: between two things, between a drawing and its count, one digit (startpage.ts's em values for the same)
 
 /** what the screen preps: a scenario's row (scene/scenarios.ts ScenarioEntry fits as it is), or the solo night (`kind: 'solo'`, squad 0) */
-export interface LoadoutEntry { id: string; title: string; kind: LoadoutKind; squad: number; level?: string; blurb?: string; untuned?: boolean; group?: string }
+export interface LoadoutEntry { id: string; title: string; kind: LoadoutKind; squad: number; level?: string; blurb?: string; untuned?: boolean; group?: string; packs?: { frags?: number } }
 export interface LoadoutOpts {
   /** Esc / Back (after the screen has closed itself) */
   back?: () => void;
@@ -175,12 +176,13 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // (game/kit.ts KITDEAL.stealth: nothing is handed over a card — a stealth mission's kit is what your stealth card is issued as, so no tile is the mission's; the
   // screen tells the kit which mission the cards are for, as it opens and as the fog lever moves: syncHand)
   const syncHand = () => kitMission(stealthKind && kitStealthOn() ? kitStealthHand(lentOf().n, lentOf().wand > 0) : null);
-  const lentNow = (f: string): number => (member !== 0 || (kitStealthOn() && cardsOn()) || kitIssueWhole(missionKit) /* (a mission's own card for you: nothing is handed over it — kit.ts ISSUE.whole) */ ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
+  const packFrags = kitPacks(entry) ? entry.packs?.frags ?? 0 : 0;   // (a lesson he packs for: the least frags its page puts on him whatever his card says — kit.ts kitLessonPage — shown on his tile as the mission's where he packed fewer)
+  const lentNow = (f: string): number => (f === 'frags' ? (member === 0 ? packFrags : 0) : member !== 0 || (kitStealthOn() && cardsOn()) || kitIssueWhole(missionKit) /* (a mission's own card for you: nothing is handed over it — kit.ts ISSUE.whole) */ ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
   const lookSig = () => `${noFog()}|${lentNow('cams')}|${lentNow('wand')}|${lentNow('rings')}|${stealthKind && kitStealthOn() ? `${lentOf().n}|${lentOf().wand}` : ''}`;
   let fogWas = '';   // (set where the first card is mounted: `member` is not there yet)
   const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' ? quietRow || fogOfQuery(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : entry.kind !== 'quiet' && entry.kind !== 'solo'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)
     leverNote.textContent = entry.kind === 'quiet' || entry.kind === 'solo' ? '' : quietFogAside(() => leversMixed() ? `Your own mix, kept on this machine: ${leversLine()}.` : ''); };   // (the kept mix is the squad levers': none of it acts on a quiet mission or the solo night, and its fog word would read against the quiet fog's row just above)
-  if ((entry.kind !== 'solo' || quietRow) && !kitAsIssued(entry) && !opts.embedded) {   // (mounted inside the one starting page — ui/startpage.ts — the sheet over it carries the rows: ui/missions.ts; the solo night under the fog has the fog's lever, its other two stay greyed: the shift is the level's own)
+  if ((entry.kind !== 'solo' || quietRow) && !lessonGroup(entry.group) && !opts.embedded) {   // (mounted inside the one starting page — ui/startpage.ts — the sheet over it carries the rows: ui/missions.ts; the solo night under the fog has the fog's lever, its other two stay greyed: the shift is the level's own)
     leversBack = leversOpenOn(base);
     const box = el('div', 'lo-levers'); box.setAttribute('data-row', 'levers');
     levers = leverRows(box, { row: 'lo-lever', label: 'lo-levl', btn: 'lo-levb', note: 'lo-levn' }, () => S.paint());

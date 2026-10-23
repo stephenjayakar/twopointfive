@@ -1234,11 +1234,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that lies left to right (the card's standing keys; a walk by the four directions would be a change of the screen's keys); a count's tile has no
   pop-up, only its arrows; in a short window the pop-up lies over the lower part of the guns' tiles. Seen only in
   headless Chromium on the software adapter: never on a GPU, nobody has played it.
-- **The kit step says the job and teaches itself** (2026-10-22; `src/ui/kitBrief.ts KITBRIEF`, `src/ui/kitGuide.ts KITGUIDE`; the maintainer: "we should
+- **The kit step says the job, and a tutorial mission teaches planning on it** (2026-10-22, the walkthrough moved onto a tutorial mission 10-23; `src/ui/kitBrief.ts KITBRIEF`, `src/ui/kitGuide.ts KITGUIDE`; the maintainer: "we should
   teach how to pick squad layouts! so maybe a tutorial on the gear page for a mission (that's skippable). honestly it doesn't make a ton of sense right
   now since you don't know anything about the objective or map when picking kit"). TWO THINGS, EACH ITS OWN SWITCH, both UI only (nothing under
   `src/game` reads either, no knob table, no journal key, no `FROZEN_HOLDS` row: they are mounted by `ui/startpage.ts` alone, which no headless stand
-  opens). **THE BRIEF** (`?kitbrief=0` = the step's head as it was, the name alone): Team & kit keeps a band across its top — the mission list's own map
+  opens; the one game rule beside them, a lesson's kit that can be picked, is `ISSUE.picked`). **THE BRIEF** (`?kitbrief=0` = the step's head as it was, the name alone): Team & kit keeps a band across its top — the mission list's own map
   sheet at the left with the way in marked (`.msheet > .mmap`; a click or M makes it large over the step with the name and the job under it, `.kb-cap`;
   again, Esc or Enter puts it back; the foot's key line gains 'M map' where there is a map to open), and beside it the name, what is set (`.mcsum`), the
   facts and the job (`.mblurb`), the list's own elements shown by this file's rules and no new sentence. It adds to the facts row WHAT THE PLACE ASKS OF
@@ -1250,31 +1250,48 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE NAME ALONE WAS: the map a small mark, the name, the facts under it, and no job sentence (no text is cut to fit: `textsize-page` holds that) — the
   job is read on the large sheet. `kitdense-page`'s bars (a gun's pop-up ends over the foot at 1317 x 775, nothing scrolls at 1200 x 675) are why.
   Under `?nogroups`, in a window under 900 px wide, or where the plan did not come there is no map on the step, only the words, and M is not taken.
-  **THE WALKTHROUGH** (`?kitguide=0` = none, and no word for it; `?kitguide=1` = played on this visit whatever the browser remembers): a browser that
-  has never finished it is walked through the step on the first mission whose kit can be picked — a small card beside ONE lit row, the rest of the step
-  dimmed and still live, the keys put on the lit row, and the card goes when its thing is DONE (`beatDone`) or on its 'Next': the job (the map opened
-  and put back) · who comes (another size) · a kit for the squad (another named kit put on; its card says what THIS place asks: hostages, locked doors)
-  · each man (another picked) · his card (one thing on it changed by hand) · go (Deploy, or its 'Got it'). A beat whose row this mission's step does
-  not have is left out (a man alone has no roster beat; with the brief off, or no map, there is no job beat). ENTER UNDER A CARD IS THE CARD'S 'NEXT'
-  wherever it would otherwise deploy (every row but the named kits, the man's card and Deploy's own): a first press of Enter on a card never starts the
-  mission. 'Skip' on every card, or Esc: the first Esc is the walkthrough's, the next is the step's own. Finished, skipped or deployed UNDER A CARD, it
-  is not shown again (localStorage `twopointsix.kitguide`); THE WAY BACK is the word 'How to pick' on the step's head. A TUTORIAL OR TRAINING ROW HAS
-  NONE: its kit is issued (`kitAsIssued`), there is no card to change, and a deploy from one does not count as seen. NOT PLAYED UNASKED IN A BROWSER A
-  SCRIPT DRIVES (`navigator.webdriver`, `KITGUIDE.driven`): every other page tool measures the step as it stands; the brief IS on their pages. THE
-  SEAMS, in `ui/loadout.ts`: `LoadoutOpts.embedded.key(code, repeat)`, asked before any row of the kit screen (the map's M, and the keys that put the
-  large sheet back); `embedded.rest(code, repeat)`, asked after the highlighted row and before the screen's own Enter / Esc (the walkthrough: an open
-  gun pop-up's Esc shuts the pop-up first); `LoadoutScreen.kitName`, the named kit that is on ('' = a mix of the player's own). WHAT THE WALKTHROUGH
-  CHANGES AND KEEPS: the things it asks the player to try are real changes to the kit this machine keeps. CHECK:
+  **THE WALKTHROUGH IS A TUTORIAL MISSION'S OWN PLAN** (2026-10-23; `src/ui/kitPlan.ts KIT_PLANS`, the engine `src/ui/kitGuide.ts`; the maintainer, of
+  the walkthrough that first came up on every mission: "this tutorial is good but we should attach it to a tutorial mission (and make it bespoke and
+  explain how to plan), not for the regular ones"). A REGULAR MISSION PLAYS NONE and has no word for one. The walkthrough is a SCRIPT (`GuideScript`:
+  beats as data — the row a card sits by, its words for the step as it stands, what counts as done, the key it is remembered under, the word on the
+  head, `auto` = played unasked), and the one played unasked is the plan written for one mission, the tutorial's squad mission ('A harder fight',
+  `tut-squad`): the first the player walks into with the four, after the mission that had him throw each grenade by hand, on a street with what a kit
+  is chosen for. Its row is the one lesson NOT played with the kit as issued (`game/kit.ts ISSUE.picked`, `docs/agents/missions.md`), so its cards are
+  on the step. THE BEATS, each a small card beside ONE lit row, the rest of the step dimmed and still live, the keys put on the lit row, gone when its
+  thing is DONE or on its 'Next': **Plan it first** (the map opened and put back — large, it names the street's rooms, the machine gun and the locked
+  hall as words pinned on the sheet, `.kb-pin`, placed through the sheet's own projection: `planArt.ts sheetView`, `missions.ts sheetSpots`; and the
+  line under it says what to look for) · **Pack for the rooms** (Stun heavy put on: the squad throws one into a room first when it has one to spare,
+  the street has four rooms, and the card counts what they carry now — the step's own 'Squad carries' line stays in view under the row) · **The machine
+  gun** (your own card opened: a frag goes over sandbags; Stun heavy took yours, so a smoke canister is traded for a frag grenade — or, with one
+  carried, 'keep it') · **The four** (a teammate's card opened) · **That's a plan** (Deploy; packed with no frag it says one will be handed over, which
+  the page does: `kit.ts kitLessonPage`). A beat whose row the step does not have, or whose thing is already so (Stun heavy on), is left out. THE WORDS
+  follow the writing rules (`docs/agents/writing.md`): to "you", who presses the key; a count in a sentence is written out; no digit, no compass word.
+  ENTER UNDER A CARD IS THE CARD'S 'NEXT' wherever it would otherwise deploy (every row but the named kits, the man's card and Deploy's own): a first
+  press of Enter on a card never starts the mission. 'Skip' on every card, or Esc: the first Esc is the walkthrough's, the next is the step's own.
+  Finished, skipped or deployed UNDER A CARD, it is not shown again, under ITS OWN key (localStorage `twopointsix.kitplan.tut-squad`: a browser that
+  went through the general walkthrough has not been through this); THE WAY BACK is the word 'How to plan' on the step's head. NOT PLAYED UNASKED IN A
+  BROWSER A SCRIPT DRIVES (`navigator.webdriver`, `KITGUIDE.driven`): every other page tool measures the step as it stands; the brief and the word ARE
+  on their pages. THE SWITCHES: `?kitguide=0` = no walkthrough and no word on any step (that mission's cards stay) · `?kitguide=1` = played on this
+  visit whatever the browser remembers, and ON A REGULAR MISSION the step's GENERAL walkthrough (`kitGuide.ts GENERIC`: the job · who comes · a kit for
+  the squad · each man · his card · go; word 'How to pick', key `twopointsix.kitguide`), kept for comparing and played only so · `?kitpack=0` = the
+  game's rule off: that mission as issued again, no cards on its step and so no plan. UI only but for that rule. THE SEAMS, in `ui/loadout.ts`:
+  `LoadoutOpts.embedded.key(code, repeat)`, asked before any row of the kit screen (the map's M, and the keys that put the large sheet back);
+  `embedded.rest(code, repeat)`, asked after the highlighted row and before the screen's own Enter / Esc (the walkthrough: an open gun pop-up's Esc
+  shuts the pop-up first); `LoadoutScreen.kitName`, the named kit that is on ('' = a mix of the player's own). WHAT IT CHANGES AND KEEPS: the things it
+  asks the player to do are real changes to the kit this machine keeps, and that kit is what the mission is then played with. CHECK:
   `PORT=<dev server> node tools/qa/kitguide-page.cjs [outDir]` — the real page in headless Chromium, no GPU needed, real keys and clicks at 1440 x 900,
   1353 x 770 and 1000 x 673: the brief's map, words and counts on the registry and the office's rescue, no digit above 5 among the facts, M, the short
-  band no taller than the old head, every beat's card up beside its lit row, whole in the window and clear of the row, put away by its own thing and
-  not by another, Enter as Next, a pop-up's Esc, a card changed by key, the map opened mid-way, a team size named on the address kept, the memory, the
-  word, both Esc, each switch off, a tutorial row, a quiet mission's card, a driven browser (139 PASS); `KITGUIDE_BREAK=1` = both switches off, the
-  step as it was: FAILS (25 lines at one size). The kit step's other page checks were run beside the build head's own: `kitdense-page`, `kitline-page`
-  and `quietgear-page` red on the same old lines as the head, `kitpaste-page`, `kittree-page` and `textsize-page` clean. NOT SEEN: on a GPU (so never
-  with the team's picture in the left column behind it), by a first-time player, and Deploy pressed under a card (it calls `deployed()`; no check
-  loads a mission for it). OPEN, for the menus' owners: the Mission step's own facts row still writes 'Defenders 11' as digits; a named kit a mission
-  recommends (a field on its row, a mark on the Kit row's button) is not built — only what the place asks is said.
+  band no taller than the old head; a regular mission with no card, no word and a bare map; the squad mission's cards at its own four, the five words
+  pinned on its large map (each on the sheet, clear of the others), every beat's card up beside its lit row, whole in the window and clear of the row,
+  no digit and no compass word on it, put away by its own thing and not by another, the squad's line in view and counted as the card counts it, its own
+  key, the word, both Esc, a browser that finished the general walkthrough still walked through, Enter as Next, a pop-up's Esc, the words with the kit
+  as issued and with no frag packed, each switch, the general walkthrough under `?kitguide=1`, a driven browser (145 PASS); `KITGUIDE_BREAK=1` = the
+  walkthrough and the brief off: FAILS. The game's side has its own check (`probes.ts kitpack`, `docs/agents/missions.md`): the plan's marks lie in the
+  level's rooms of those names, what its cards say of the kits is true of the kits, and the mission is played through on five kits. NOT SEEN: on a GPU
+  (so never with the team's picture in the left column behind it, and the pinned words never over the sheet as a GPU's browser draws it), by a
+  first-time player. OPEN, for the menus' owners: the Mission step's own facts row still writes 'Defenders 11' as digits; a named kit a mission
+  recommends (a field on its row, a mark on the Kit row's button) is not built for regular missions — only what the place asks is said. OPEN, for the
+  squad mission's owner: its frame refuses the player's smoke and stun slots all mission, so of what he packs for himself only the frag is used.
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
   a one off UI for tweaking a scene like this? i'm curious what all the "layers" are for the effects and what variables we can configure"). Any link with

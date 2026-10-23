@@ -7,8 +7,7 @@ import { TABKEY, tabFromQuery } from './ui/tabkey';
 import { bootTextSize } from './ui/textsize';
 import { BACKKEY } from './game/backkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
-import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitIssuedPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
-import { kitAsIssued } from './game/loadout';
+import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitPreview';
 import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI } from './ui/missions';
 import { START_PAGE, startPage, openStartPage, openList } from './ui/startpage';
@@ -195,7 +194,7 @@ async function main() {
   LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
   wireMissions();   // one flow: a pick on the mission list is the loadout screen, whose Deploy is the page load (ui/loadout.ts)
   kitBoot(q);   // each member's kit and uniform read from this machine's store; ?kit = the cards' preview (ui/kitPreview.ts, game/kit.ts)
-  if (kitAsIssued(LESSON_MISSIONS.find(e => e.level === q.get('levelFile')))) kitIssuedPage();   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): every staging on this page puts the issue cards on the men (kit.ts kitIssuedPage), since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
+  const lessonRow = LESSON_MISSIONS.find(e => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): the page names its lesson's row (kit.ts kitLessonPage) and every staging on it puts the issue cards on the men — all but the one lesson he packs for (kit.ts ISSUE.picked), whose stagings wear the kept cards —, since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
   tape?.tables();
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   const loading = document.getElementById('loading')!;
@@ -204,7 +203,7 @@ async function main() {
   // re-renders over it, buttons live, when everything is ready. `tick()` yields to the event loop between the CPU-heavy phases so the card and its status line actually paint.
   // THE DIFFICULTY SWITCH (game/difficulty.ts) before the card paints its row: the level this machine keeps, then ?hard / ?hard=0 / ?difficulty=hard|standard for
   // the visit, then ?pressure / ?pressure=0 and ?digin — the two tables under the switch (game/pressure.ts, game/digin.ts) one at a time — over that
-  initDifficulty(q, kitAsIssued(LESSON_MISSIONS.find(e => e.level === q.get('levelFile'))));   // (…and the LEVERS this machine keeps over the level — fog of war, enemy AI, enemy kit — but not on a Training lesson's page: it is taught on the level as it is)
+  initDifficulty(q, lessonGroup(lessonRow?.group));   // (…and the LEVERS this machine keeps over the level — fog of war, enemy AI, enemy kit — but not on a Training lesson's page: it is taught on the level as it is)
   if (q.has('noverdict')) VERDICT.on = false;   // ?noverdict: no verdict at a run's end — the end card as it was, no tries or ways kept (game/verdict.ts reads only: the run is the same either way)
   watchMissionRows();   // each mission's card on the start page shows the ways it has been won (ui/verdictRows.ts: this machine's record at the difficulty picked; none under ?noverdict) — here, before the boot card paints: the start page is live long before the renderer is
   { const n = parseInt(q.get('smokepool') || q.get('sparsesmoke') || '', 10); if (n >= 256) smokeGridConfig.cap = Math.min(8192, Math.ceil(n / 256) * 256); }   // ?smokepool=N: the smoke solver's pool in bricks (smoke/smokeGrid.ts; 4096 ships) — buffer sizes and shader constants, so it is read at boot. (?sparsesmoke[=N] = the flag the pool was tried behind: still read for its N, otherwise nothing)

@@ -129,6 +129,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/kit.ts dealKits': 'CACHE · the counted things of the issue and of each kit the slots table names, in the table\'s layout: made once a table (kit.ts dealTable), a pure function of that table',
   'src/game/kit.ts dealOwn': 'CONFIG · the stored cards are the player\'s own layout (a counted thing changed by hand on a team of three or four): written by the kit screen\'s edits, kitLoad, kitReset and a squad kit put on by name; read where the cards are worn (kitWorn) — the kit screen and a staging, never a tick',
   'src/game/kit.ts issuedPage': 'CONFIG · written by kitIssuedPage only (kit.ts:805: a lesson\'s page says so at its start)',
+  'src/game/kit.ts lessonRow': 'CONFIG · written by kitLessonPage only (a lesson\'s page names its row at its start, as issuedPage)',
   'src/game/kit.ts issuing': 'SCRATCH · true only for the length of one asIssued call (kit.ts:825-827, dropped in its finally)',
   'src/game/kit.ts hand': 'CONFIG · the mission the table\'s first card is for (KITDEAL.stealth): written by the kit screen (kitMission) and kitLoad; a staging sets it for the length of its own call and puts it back (forRun), never a tick',
   'src/game/kit.ts staged': 'TRANSIENT · up for the length of one staging call (forRun) and down again in its finally: never read across a tick',
