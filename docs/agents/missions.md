@@ -2100,3 +2100,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE: Tab's objectives card and the small objective row still read the done step's ask while it settles; an order given in the beat still snaps
   to the done step's mark. The other missions' cards are plain (the beat): which of them follow a fight he only watches is their parts' to mark.
   Never seen on a GPU; nobody has played it.
+- **A tutorial mission may take the flat ring (2026-10-23, the maintainer on the first mission's wall charge, the ring then [5] then a second ring of
+  one row under a line asking for [3]: "weird after hitting 5")**. A level's `lesson.rails.flatRing: true` gives that mission the ring the rest of the
+  game has (`cmdring.ts CMDRING.flat`; `orders.ts flatRing` asks `Rails.flatRing`), with the level's `rails.orders` its only rows, and a step's line
+  while that ring is up is its `flatLine` (absent: `menuLine`). `tut-sky` takes it: on the wall the ring is "1 move there · 2 breach with a wall
+  charge" and the line is "Press [2] for a charge" (was "Press [5], then [3] for a charge", then "Press [3] for a charge"). Its `menuLine` and
+  `pageLine` are kept for the pages. The other missions have the pages still: each is its part's to move, one line of level data and its lines.
+  SWITCH `RAILS.flatRing`: ON in the page (`?railflat=0`; `?ringflat=0` puts the whole flat tree off, here too), OFF in the module and on the frozen
+  stand (`TPS_RAILFLAT=1`, which acts only with `TPS_RAILS=1 TPS_QRING=1 TPS_QONLY=1 TPS_RINGFLAT=1`), off for a recording from before the key.
+  CHECK `tools/qa/rails-check.ts`, the first play's notes line, both stands (the frozen one raises the tree itself): the ring is flat, nothing is
+  behind a 'more', the digit `flatLine` names is the wedge 'wallCharge' is on, that digit gives the charge, and with the switch off the pages and
+  their two lines are back. `RAILS_BREAK=1` fails it on both. The scripted player presses what the ring up asks for.

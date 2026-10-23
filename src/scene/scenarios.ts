@@ -240,6 +240,9 @@ export interface LessonStep {
   menuLine?: string;
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
+  /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, game/rails.ts RAILS.flatRing:
+   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` (tools/qa/rails-check.ts asks) */
+  flatLine?: string;
   /** the line while plan mode is DOWN on a step that is done in the mode (a checkpoint put back, the mode put away by hand: what puts it up again —
    *  absent: `line`) */
   planLine?: string;
@@ -308,6 +311,10 @@ export interface RailsData {
   /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
    *  not there, on the ring or under the quick key. Absent: every row the game has */
   orders?: string[];
+  /** the squad's ring on this mission is the game's flat tree (game/cmdring.ts CMDRING.flat: every order of the thing on one ring, no pages), as it
+   *  is off the tutorial — and a step that names a digit of it says so in `flatLine` (game/rails.ts RAILS.flatRing; absent: the menu's pages, whose
+   *  digits `menuLine` and `pageLine` name) */
+  flatRing?: boolean;
   /** the verbs Space offers on this level (an Interactable row's `verb`: 'grab', 'pick', 'code'…): a thing in reach whose verb is not here has
    *  no row, so a tap never lands on something no step taught (absent: every row, as on any level) */
   rows?: string[];

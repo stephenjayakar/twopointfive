@@ -80,7 +80,8 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
     go: async () => { await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'go') break; } },
     kitchen: async s => { await point(s.at); await tap('KeyQ'); for (let k = 0; k < 10; k++) { await run(page, 120); if (k >= 3) break; }
       await tap('KeyF'); for (let k = 0; k < 20; k++) { await run(page, 120); if ((await read(page)).id !== 'kitchen') break; } },
-    // the orders' menu on the wall's ring: its fifth row is the wall's page, the third there the charge; then the word once a man has set it
+    // the orders' menu on the wall's ring: ONE ring with the charge on a wedge of it (the level's `rails.flatRing`) — or, with that off, its fifth row
+    // is the wall's page, the third there the charge; then the word once a man has set it
     charge: async s => {
       // (the step teaches the key HELD: a tap gives no order and says so under the line; held, the ring is up and the line is what to press in it)
       await point(s.at); const o0 = await page.evaluate(() => window.__game.orders.log.length); await tap('KeyQ'); await run(page, 6);
@@ -88,10 +89,13 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
       check(T.o === o0 && !!T.note, 'on the hold\'s step a tap of the command key gives no order and words come up under the line', `orders ${o0} → ${T.o} · line "${T.line}" · under it "${T.note}"`);
       log('picture', await shot('91-tap'));
       await point(s.at); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3);
-      const U = await page.evaluate(() => ({ menu: !!window.__orders.menu, line: document.querySelector('#railprompt .line')?.textContent || '' }));
-      check(U.menu && /5/.test(U.line) && /3/.test(U.line), 'held, the ring is up and stays with the key let go, and the line names the two digits', `ring ${U.menu} · line "${U.line}"`);
+      const U = await page.evaluate(() => ({ menu: !!window.__orders.menu, flat: !!window.__orders.menu?.flat, line: document.querySelector('#railprompt .line')?.textContent || '', keys: [...document.querySelectorAll('#railprompt .line kbd')].map(k => k.textContent) }));
+      if (U.flat) check(U.menu && U.keys.length === 1 && /^[1-5]$/.test(U.keys[0]), 'held, the ring is up and stays with the key let go: one ring, and the line names its one digit', `ring ${U.menu}, flat ${U.flat} · line "${U.line}" · keys ${JSON.stringify(U.keys)}`);
+      else check(U.menu && /5/.test(U.line) && /3/.test(U.line), 'held, the ring is up and stays with the key let go, and the line names the two digits', `ring ${U.menu} · line "${U.line}"`);
       log('picture', await shot('92-ring'));
-      await tap('Digit5'); await tap('Digit3'); await until('charge', 40); },   // (the command key held is the squad's menu, a ring that stays: its wall page, then the charge)
+      if (U.flat) { await tap('Digit' + U.keys[0]); const V = await page.evaluate(() => ({ menu: !!window.__orders.menu, last: window.__game.orders.log[window.__game.orders.log.length - 1]?.order ?? null })); check(!V.menu && V.last === 'wallCharge', 'that one digit gives the wall charge and the ring is gone: no second ring', `ring up ${V.menu} · the last order '${V.last}'`); }
+      else { await tap('Digit5'); await tap('Digit3'); }
+      await until('charge', 40); },   // (the command key held is the squad's menu, a ring that stays: its wall page, then the charge)
     blow: async () => { await run(page, 60); await tap('KeyF'); await until('blow', 30); },
     breaker: async s => { await point(s.at); await tap('KeyQ'); await until('breaker', 40); },
     nv: async () => { await tap('KeyN'); await run(page, 20); },

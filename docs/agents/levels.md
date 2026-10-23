@@ -363,7 +363,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `BASE_REVS`' commit is red (it was "a new level, nothing to hold it to", and with the list closed nothing would ever have taken it in); the same level
   not yet in a commit is a warn line that says what it will need once it is. `--base <rev>` still
   holds every level named to one commit. WHAT OF A LESSON NEEDS NO ROW MOVE (`LESSON_FREE`, read from today's file): its WORDS (`title`; a step's `line`,
-  `setupLine`, `ringLine`, `blowLine`, `menuLine`, `pageLine`, `planLine`, `noTap`, its card `explain`, its `after`): furniture cannot touch one, none
+  `setupLine`, `ringLine`, `blowLine`, `menuLine`, `pageLine`, `flatLine`, `planLine`, `noTap`, its card `explain`, its `after`): furniture cannot touch one, none
   names a place and none is a rule; no check holds the wording, on purpose (the loader takes their shape, `lesson-check` reads the first line on the
   objective row). HELD (`LESSON_HELD`): the steps' number and order, a step's `id`, its `done` test and `hold`, every place (`at`, `atMan`, `toward`,
   `eye`, the frame's `sky`), `cue`, `checkpoint`, `fog`, `onWay`, `respawn`, `lasers`, AND THE LISTS OF WHAT THE FRAME OFFERS (a step's `allow` / `deny`;

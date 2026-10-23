@@ -103,7 +103,7 @@ const LEVEL_BASE: Record<string, string> = {
  *  the orders that only decide WHICH of those lines shows). Decided 10-22, when four re-bases in a day were each a lesson's words. Furniture cannot touch
  *  one, none names a place and none is a rule: a reworded lesson plays the same. What reads them: the loader (each a string or a card of strings),
  *  tools/qa/lesson-check.ts (the first line is the objective row's) and the player's own eyes; no check holds the wording, on purpose. */
-const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'planLine', 'noTap', 'explain', 'after'], rails: [] as string[] };
+const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'flatLine', 'planLine', 'noTap', 'explain', 'after'], rails: [] as string[] };
 /** HELD, each a one-line move of the level's own row: the steps themselves (their number and order), a step's `id`, its `done` test and `hold`, every PLACE
  *  (`at`, `atMan`, `toward`, `eye`, the frame's `sky`), what the frame does (`cue`, `checkpoint`, `fog`, `onWay`, `respawn`, `lasers`) and WHAT IT OFFERS —
  *  a step's `allow` / `deny`, the frame's `allow`, `orders` and `rows`. Those lists are rules, not wording: one more word in an `allow` opens a key a step
@@ -111,7 +111,7 @@ const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine',
  *  row a level, a list changed on purpose is its owner's one line. A mark moved to make room for a desk is the damage this check is for. A key of a
  *  lesson that is in NEITHER table is a red line until it is put in one: the choice is made in the open, by whoever adds the key. */
 const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'settle', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
-  rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows'] };
+  rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows', 'flatRing'] };
 /** today's value for every free key, the base's for every other, in today's key order (the loaded Levels are compared as text); `n` counts the free keys that moved */
 function readFree(now: any, then: any, keys: string[], n: { v: number }): any { const t: any = {};
   for (const k of Object.keys(now)) { if (keys.includes(k)) { t[k] = now[k]; if (JSON.stringify(now[k]) !== JSON.stringify(then[k])) n.v++; } else if (k in then) t[k] = then[k]; }
