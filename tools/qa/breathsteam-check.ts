@@ -212,10 +212,12 @@ export async function breathSteamCheck(): Promise<boolean> {
       // only where a pool is, by distance from where the view looks (wind.ts: a HostOwned). What else parts there is other modules' and is printed, not judged.
       // The walk is shown to reach the wind: with the list hung on each game's wind as a plain field, the same walk names it
       const p1 = withPool(W1, true), p0 = fly(W0, 600, { own: true, smoke: solver(false) }), handed = W1.g.wind.forParticles.length, none = W0.g.wind.forParticles.length;
+      // (… and asked for the air as the pool's path and the panel's probe ask, in the one game alone: the wind's working vectors are nobody's state)
+      const share = W1.g.wind.stormShare(3, 4), air = W1.g.wind.at([1, 1, 1]);
       const of = (rows: string[], w: string) => rows.filter(r => r.includes(w)), apart: string[] = RB.stateDiff(W1.g, W0.g, 24, false, true);
       (W1.g.wind as any).leak = W1.g.wind.forParticles; (W0.g.wind as any).leak = W0.g.wind.forParticles; const leaked = of(RB.stateDiff(W1.g, W0.g, 24, false, true), 'wind').length; delete (W1.g.wind as any).leak; delete (W0.g.wind as any).leak;
-      verdict(p1.S.records > 0 && p0.S.records === 0 && handed > 0 && none === 0 && of(apart, 'snowBreath').length === 0 && of(apart, 'wind').length === 0 && leaked > 0,
-        'pool — a game with a particle pool and a game with none: no row of the breath\'s parts them, and none of the wind\'s, whose list of what it hands the pool is the host\'s',
+      verdict(p1.S.records > 0 && p0.S.records === 0 && handed > 0 && none === 0 && Number.isFinite(share) && air.length === 3 && of(apart, 'snowBreath').length === 0 && of(apart, 'wind').length === 0 && leaked > 0,
+        'pool — a game with a particle pool and a game with none: no row of the breath\'s parts them, and none of the wind\'s, whose list of what it hands the pool is the host\'s and whose working vectors are nobody\'s',
         `ten seconds, the pool took ${p1.S.records} of the breath's puff records and the wind handed it ${handed} sources (none: ${p0.S.records}, ${none}) · rows that part the two: ${of(apart, 'snowBreath').length} the breath's, ${of(apart, 'wind').length} the wind's, ${apart.length} in all${apart.length ? ` (others' own: ${apart.slice(0, 3).join(' | ')})` : ''} · the list hung on the wind as a plain field: the walk names ${leaked} rows of the wind's`);
       // … and a save put back drops the book, by the game's own roads (never by a hand on the host's field). `kept`: nothing put back — a breath files one source and
       // no more. `hook`: a snapshot taken straight after the frame his source was filed, put back at once, then the host's own hook as the page wires it
