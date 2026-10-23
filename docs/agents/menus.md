@@ -1263,7 +1263,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line under it says what to look for) · **Pack for the rooms** (Stun heavy put on: the squad throws one into a room first when it has one to spare,
   it is sent into three rooms on that street by the lesson's own door lines, and the card counts what they carry now, three as issued, so nothing to
   spare — the step's own 'Squad carries' line stays in view under the row) · **The machine
-  gun** (your own card opened: a frag goes over sandbags; Stun heavy took yours, so a smoke canister is traded for a frag grenade — or, with one
+  gun** (your own card opened: a frag goes over sandbags; Stun heavy took yours and one will be handed over, but pack your own, so a smoke canister is traded for a frag grenade — or, with one
   carried, 'keep it') · **The four** (a teammate's card opened) · **That's a plan** (Deploy; packed with no frag it says one will be handed over, which
   the page does, `kit.ts kitLessonPage`, and his card's frag tile reads '1 · mission's' on that step: `loadout.ts lentNow`). A beat whose row the step does not have, or whose thing is already so (Stun heavy on), is left out. THE WORDS
   follow the writing rules (`docs/agents/writing.md`): to "you", who presses the key; a count in a sentence is written out; no digit, no compass word.
@@ -1286,7 +1286,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pinned on its large map (each on the sheet, clear of the others), every beat's card up beside its lit row, whole in the window and clear of the row,
   no digit and no compass word on it, put away by its own thing and not by another, the squad's line in view and counted as the card counts it, its own
   key, the word, both Esc, a browser that finished the general walkthrough still walked through, Enter as Next, a pop-up's Esc, the words with the kit
-  as issued and with no frag packed, each switch, the general walkthrough under `?kitguide=1`, a driven browser (145 PASS); `KITGUIDE_BREAK=1` = the
+  as issued and with no frag packed, each switch, the general walkthrough under `?kitguide=1`, the handed frag read whole on its tile, a driven browser (148 PASS); `KITGUIDE_BREAK=1` = the
   walkthrough and the brief off: FAILS. The game's side has its own check (`probes.ts kitpack`, `docs/agents/missions.md`): the plan's marks lie in the
   level's rooms of those names, what its cards say of the kits is true of the kits, and the mission is played through on five kits. NOT SEEN: on a GPU
   (so never with the team's picture in the left column behind it, and the pinned words never over the sheet as a GPU's browser draws it), by a

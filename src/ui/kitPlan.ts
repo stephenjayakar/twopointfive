@@ -14,7 +14,7 @@
 //     read   · the map. Open it and put it back. Large, it names the rooms of the street (the marks below) and says what to look for.
 //     squad  · the named kits. Put Stun heavy on: the squad throws one into a room first when it has one to spare, the street has three rooms
 //              for them, and as issued they carry three: nothing to spare.
-//     gun    · your own card. A frag for the machine gun: Stun heavy took yours, so trade a smoke for one.
+//     gun    · your own card. A frag for the machine gun: Stun heavy took yours and the mission hands one over (the tile says so), but pack your own.
 //     four   · the roster. Look at one of the four.
 //     go     · Deploy.
 //   The words follow the game's writing rules (CLAUDE.md, docs/agents/writing.md): said the way you would say it aloud, to "you", who presses the key.
@@ -46,7 +46,7 @@ const SQUAD_BEATS: readonly Beat[] = [
   { id: 'gun', row: 'kit', member: 0, done: (was, now) => now.frags > was.frags,
     words: ({ now }) => ({ title: 'The machine gun', text: `A machine gun is set up behind sandbags at the end of the street. Sandbags stop a rifle, but a frag goes over them.\n${now.frags > 0
       ? `You're carrying ${say(now.frags)}, so keep ${now.frags === 1 ? 'it' : 'them'} whatever else you change.`
-      : `${now.kit === 'stun' ? 'Stun heavy took your frag' : 'You aren\'t carrying a frag'}, so ${now.smoke > 0 ? 'trade a smoke canister for a frag grenade' : 'put a frag grenade on your card'}. Point at a tile and click its arrows, or use [W] [A] [S] [D].`}` }) },
+      : `${now.kit === 'stun' ? 'Stun heavy took your frag' : 'You aren\'t carrying a frag'}. You'll be handed one this time, but it's better to pack your own, so ${now.smoke > 0 ? 'trade a smoke canister for a frag grenade' : 'put a frag grenade on your card'}.\nPoint at a tile and click its arrows, or use [W] [A] [S] [D].`}` }) },
   { id: 'four', row: 'members', done: (was, now) => now.member !== was.member && now.member > 0,
     words: ({ now }) => ({ title: 'The four', text: `Your four work as two pairs, Red and Blue, and each of them has a card like yours.\nPress [D] to look at one of them and see what ${now.kit === 'stun' ? 'Stun heavy gave him' : 'he carries'}.` }) },
   { id: 'go', row: 'actions',
