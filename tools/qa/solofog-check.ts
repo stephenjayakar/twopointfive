@@ -64,8 +64,8 @@ export async function soloFog(): Promise<boolean> {
     verdict(!e.on && !f.on && !s.on && !nf.on && e.visit + f.visit + s.visit + nf.visit === 0, 'a page stood up plain (no `solo` on its link), a game no link was staged on, a showcase\'s link beside `solo`, and ?solo&nofow: no fog and nothing handed, the switch up', `'' → ${say(e)}\n    (none) → ${say(f)}\n    ?solo&demo → ${say(s)}\n    ?solo&nofow → ${say(nf)}`);
     { const n = await night(1, null, up); games.push(n.g); QF.QUIETFOG.on = false; const q = new URLSearchParams('?solo'); await hushed(() => RUN.startFromQuery(n.g, q)); for (let i = 0; i < 10; i++) n.W.step(DT);
       verdict(!n.g.fogOfWar.on && SC.stickyVisit(n.g) === 0 && !QF.soloFogRow(), 'with the quiet fog\'s own switch down (QUIETFOG.on) the solo switch alone raises nothing', `QUIETFOG.on false, solo ${QF.QUIETFOG.solo}: fog on ${n.g.fogOfWar.on}, handed ${SC.stickyVisit(n.g)}, a fog row ${QF.soloFogRow()}`); QF.QUIETFOG.on = true; }
-    const l = await night(1, '?solo&levelFile=train-move.json', up, 'train-move.json'); games.push(l.g);
-    verdict(!l.on && l.visit === 0, 'the solo link on a Training lesson\'s level: taught on the level as it is, no fog', say(l));
+    const l = await night(1, '?solo&levelFile=tut-quiet.json', up, 'tut-quiet.json'); games.push(l.g);
+    verdict(!l.on && l.visit === 0, 'the solo link on a tutorial mission\'s level: taught on the level as it is, no fog', say(l));
     // the plain night itself is not touched by the switch: the same seconds digest the same with it down and up
     const run = async (solo: boolean) => { const n = await night(7, '', solo); games.push(n.g); Math.random = seeded(99); for (let i = 0; i < 240; i++) n.W.step(DT); return hashDigest(digestGame(n.g, true)); };
     const h0 = await run(false), h1 = await run(up);

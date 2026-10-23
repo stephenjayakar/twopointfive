@@ -47,6 +47,7 @@ import { needsBusy } from './needs';
 import { foeDown } from './teams';
 import { w } from './words';
 import { netFeedHolds } from './netquietfeed';   // (the leaf, not netquiet.ts: false on its first line with that rule off)
+import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkdoor = every man walks into the dark as he did) and by
  *  the shipped stand; the harness's frozen stand leaves it off (TPS_DARKDOOR=1 turns it on — with TPS_MORALE=1: it acts only under MORALE.on). `who` = who is
@@ -142,7 +143,7 @@ function greenMan(g: Game, gd: Guard): boolean {
 /** the nearest living man of his side inside `pairM` with nothing solid between his eyes and that man's chest (`fit`: of those the test passes) */
 function mateBy(g: Game, gd: Guard, fit?: (o: Guard) => boolean): Guard | null {
   const c = gd.char, eye = headOf(c); let best: Guard | null = null, bd = DARKDOOR.pairM;
-  for (const o of g.guards) { if (o === gd || !ours(o) || o.team !== gd.team || (fit && !fit(o))) continue;
+  for (const o of g.guards) { if (o === gd || !ours(o) || o.team !== gd.team || (fit && !fit(o)) || runnerNobody(o)) continue;   // (runner.ts nobody: a mate who has dropped his gun is no company)
     const d = flat(o.char.pos, c.pos); if (d <= bd && !g.col.segmentBlocked(eye, chestOf(o.char))) { bd = d; best = o; } }
   return best;
 }
