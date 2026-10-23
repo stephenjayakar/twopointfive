@@ -27,7 +27,7 @@ const FLIP = (label) => { const r = [...document.querySelectorAll('#options .op-
 const RESET = () => { const b = document.querySelector('#options [data-act="reset"]'); if (!b) return 'no Reset'; b.click(); return ''; };
 const SHUT = () => { document.querySelector('#options [data-act="back"]')?.click(); window.__menu.close(); if (window.__smoke) window.__smoke.params.enabled = false; window.__game.godMode = true; window.__game.aiEnabled = false; const K = window.__knobs.registry().AUTOCAM; window.__swayWas = K.sway; K.sway = false; };
 // in the page: n frames one at a time with these keys held, and how the yaw went
-const SWAY = ([keys, n]) => { const c = window.__cam, y0 = c.yaw; let most = 0, far = 0, prev = y0; for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 60, keys, false); most = Math.max(most, Math.abs(c.yaw - prev)); far = Math.max(far, Math.abs(c.yaw - y0)); prev = c.yaw; } return { yaw: c.yaw, most, far }; };
+const SWAY = ([keys, n]) => { const c = window.__cam, y0 = c.yaw; let most = 0, far = 0, prev = y0; for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 60, keys, i % 60 === 59 ? false : 'none'); most = Math.max(most, Math.abs(c.yaw - prev)); far = Math.max(far, Math.abs(c.yaw - y0)); prev = c.yaw; } return { yaw: c.yaw, most, far }; };
 const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasis().fwd, a = g.player.char.aimYaw, p = g.player.char.pos;
   return { yaw: c.yaw, aim: a, dot: f[0] * Math.sin(a) + f[2] * Math.cos(a), lead: Math.hypot(c.desired[0] - p[0], c.desired[2] - p[2]), look: [c.desired[0], c.desired[2]], kept: localStorage.getItem('twopointsix.autocam'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
 
