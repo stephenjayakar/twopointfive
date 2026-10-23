@@ -336,6 +336,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the other time line). STILL OPEN, not this module's: with the THROW PAGE up `floorPlan` reads `squadthrow.ts squadThrowPlans`, whose `view`
   question keeps its answer in that module's own table and searches on the game's, so a game drawn and one not drawn still differ in the whole
   state there (digest equal); line 9 does not play the throw page. Never seen on a GPU.
+- **What the cursor is on is kept by whoever reads the HUD** (2026-10-23; `orders.ts hover / hud / hintView`, `HoverKept`, `ui/hoverkept.ts`; picture
+  only, no switch). `hover()`'s answer, kept a tenth of a second while the cursor rests, and the camera it was asked under were fields of the order
+  book (`orders.hov`, `orders.hovCam`): a game whose HUD was read each frame differed in the whole state from one never read. Now `hud(kept)` and
+  `hintView(kept)` take the asker's store (the page's one store for both, `ui/hoverkept.ts`); with none nothing is kept and every ask looks again.
+  CHECK `probes.ts cmdring`, the last line, both stands: read every frame against never read, digest equal, the answer in the store, and no field of
+  the order book another value after a read than before it; `HOVERKEPT_BREAK=1` (the book handed in as the store, so kept on it again) is red on
+  both. The store is outside the rollback snapshot (after a restore it can hold the other time line's answer for its tenth of a second). The page's
+  own wiring (`overlay.ts`, `ui/cmdring.ts` passing the one store) is held by no check and the page was not driven. STILL OPEN, not held by that line and not this module's: a HUD read
+  still writes the room clear drill's memo of its two men (`nightbreach.ts drillOf`, a getter that keeps its answer) and the collision world's query
+  stamps under the cursor's pick (`game.col.stamp`, `world.rgStamp`), so the whole state still differs (the line prints where). Never seen on a GPU.
 - **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
   `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
   one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
