@@ -388,6 +388,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CLOSE.heldClicks = !q.has('noheldclicks');   // with a man in his arm the two buttons (game/close.ts, player.ts updateHold): left click the knife — he is dead — right click the choke; the arm hold only — ON in the page; ?noheldclicks = neither click does anything there, as it was
   CLOSE.handsLow = q.get('handslow') !== '0';   // crouched in reach behind a standing man his hands stay low until the move: the tell is the hand on the knife, not an open hand held up over his own head (game/close.ts closeReady). ON in the page; ?handslow=0 = the grab's tell reaches from the crouch, as it was
   CLOSE.noKnife = q.get('noknife') !== '0';   // no knife: empty hands knock a man out on the right click and the left click is no blow; nothing draws or names a blade (game/close.ts). ON in the page; ?noknife=0 = the two buttons as they were
+  CLOSE.rmbHold = q.get('rmbhold') !== '0';   // the right button, tapped or held: a tap is the knockout (quick, heard further), kept down it is the choke (game/close.ts). ON in the page; ?rmbhold=0 = the press itself is the knockout
   CLOSE.reachUp = !q.has('noreachup');   // crouched behind a standing man the grab's reach goes UP for his neck and the trunk comes up with it (game/close.ts, character.ts READY_UP): ON in the page; ?noreachup = the hand at the small of his back, as it was
   STALK.only = q.get('stalkonly') !== '0';   // …and it is the only way to a staff man: his 'grab him' row is gone (?stalkonly=0 puts the row back beside the stalk)
   STALK.corner = q.get('stalkcorner') !== '0';   // …and with his back on a wall the held button lies in wait: the man who comes past the corner is grabbed (?stalkcorner=0 = the button on a wall does nothing, as it was)
@@ -605,6 +606,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CLOSE.reachUp': 'TPS_REACHUP=1',
   'CLOSE.handsLow': 'TPS_HANDSLOW=1',
   'CLOSE.noKnife': 'TPS_NOKNIFE=1',
+  'CLOSE.rmbHold': 'TPS_RMBHOLD=1',
   'FOOTFALL.once': 'TPS_FOOTFALL=1',
   'FOOTFALL.owed': 'TPS_FOOTOWED=1 (acts only under FOOTFALL.once: with TPS_FOOTFALL=1)',
   'TWOGEARS.on': 'TPS_TWOGEARS=1',

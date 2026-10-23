@@ -134,6 +134,9 @@ export interface Hold { g: Guard; variant: HoldVariant; phase: HoldPhase; t: num
    *  is a snap (a fifth of the gap in its first frame). Unset = the grab as it was. `hitAt` = the game's time as that step landed (the yank's clock, for
    *  both poses); `yankM` / `yanked` = how far the man is hauled back after it (STALK.yank, less where there is no room) and how much of that is done */
   from?: Vec3; hitAt?: number; yankM?: number; yanked?: number; stepE?: number; stepM?: number; yaw0?: number; coil0?: number;
+  /** close.ts CLOSE.rmbHold: the right button is on him (he was taken by it held down, or it was pressed in the arm) — 1 = the arm closes as soon as it has
+   *  him, 2 = it is closed and stays so while the button is down (let go, or the choke stopped by anything else: unset, and the hold is a hold) */
+  rmbChoke?: number; /** …and for how long the button has been down on him, s (a press made in the arm starts at 0: let go inside a tap, the choke is the whole one) */ rmbT?: number;
 }
 
 /** IN A DOOR FRAME HE IS AS WIDE AS HIS SHOULDERS. BODY_R is a margin for his arms and his gun, 0.84 m across; a real door (scene/doorSize.ts) leaves 0.83 m
@@ -1404,7 +1407,7 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
 
 /** Silent takedown (a left click with the hands empty on the man in reach behind — game.ts updateDoors; the tour and the harness call it too): lock in behind the
  *  guard, throw the cross, he drops with a soft thud only the room hears. */
-export function startTakedown(g: Game, gd: Guard, way?: CloseKind, lethal = false) {
+export function startTakedown(g: Game, gd: Guard, way?: CloseKind, lethal = false, loud = false) {
   const pl = g.player; if (gd.state === 'dead' || pl.down) return;   // (F + fire in the same frame: the round got there first)
   // closer than ever (close.ts): the way in the row offered — from a side or the front he strikes from where he stands, a seated man is put out in his chair
   const kind: CloseKind | undefined = closeLive(g) ? way ?? closeKindOf(closeAt(g, gd, pl.char.pos)) : undefined;
@@ -1413,12 +1416,13 @@ export function startTakedown(g: Game, gd: Guard, way?: CloseKind, lethal = fals
   releaseWall(g);
   if (pl.dragging) g.toggleDrag();
   pl.takedown = kind && kind !== 'behind' ? { g: gd, t: 0, kind, from, alert: gd.state === 'alert', at: closeStation(gd, kind, from).pos } : { g: gd, t: 0 }; pl.sprinting = false;
+  if (loud) pl.takedown.loud = true;   // (close.ts CLOSE.rmbHold: the quick knockout is heard further)
   if (lethal) { pl.takedown.lethal = true; pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross', true); } else pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross'); takeBegin(g, pl.char, gd, kind, lethal); cancelReloads(pl);   // (lethal: the knife comes out of its sheath in the blow — close.ts CLOSE.lethal, the left click)
   if (kind) closeTook(g, gd, 'take', kind, from, Math.hypot(pl.char.pos[0] - gd.char.pos[0], pl.char.pos[2] - gd.char.pos[2]));
   if (THROWBACK.on) throwOff(pl);   // (throwback.ts: the can it counted off the belt at the click is not lost with the wind-up)
   pl.throwHeld = false; pl.throwPreview = null; pl.pendingThrow = null;   // a wind-up does not survive the lunge
   gd.speed = 0; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.reactT = Math.max(gd.reactT, 1.0);   // he freezes for the beat it takes
-  g.audio.play('bodyHit', v3.add(gd.char.pos, [0, 1.3, 0]), 0.55, { rate: 0.8 });
+  g.audio.play('bodyHit', v3.add(gd.char.pos, [0, 1.3, 0]), loud ? 0.8 : 0.55, { rate: 0.8 });
 }
 
 export function updateTakedown(g: Game, dt: number) {
@@ -1436,7 +1440,7 @@ export function updateTakedown(g: Game, dt: number) {
   c.bodyYaw = approachAngle(c.bodyYaw, yaw, 14 * dt); c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, 0.1, 8, dt);
   td.t += dt;
   if (td.t >= 0.28 && gd.state !== 'dead') {                    // the cross lands
-    const level = td.kind ? closeNoise(td.kind, !!td.alert) : closeLive(g) ? closeNoise('behind', gd.state === 'alert') : 0.3;   // (from behind with the windows on: the table's own number, and his shout if he was onto Sam)
+    const level = (td.kind ? closeNoise(td.kind, !!td.alert) : closeLive(g) ? closeNoise('behind', gd.state === 'alert') : 0.3) + (td.loud ? CLOSE.rmbLoud : 0);   // (from behind with the windows on: the table's own number, and his shout if he was onto Sam)
     if (td.kind && closeSeated(g, gd)) closeUnseat(g, gd);
     takeFall(g, gd, td.kind, !!td.lethal);   // (takedown.ts: how he goes down, by the blow)
     if (td.lethal) {
@@ -1558,11 +1562,12 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     if (STALK.turnIn && stepU >= 0 && stepU < 1 && H.yaw0 !== undefined) { const e = clamp(stepU / 0.85, 0, 1); c.bodyYaw = H.yaw0 + wrapAngle(yaw - H.yaw0) * e * e * (3 - 2 * e); } else c.bodyYaw = approachAngle(c.bodyYaw, yaw, 14 * dt);
     c.aimYaw = approachAngle(c.aimYaw, c.bodyYaw, 12 * dt); c.aimPitch = damp(c.aimPitch, 0, 8, dt);   // (the chest untwists over the reach, not in a frame)
     gd.speed = 0; hc.vel = [0, 0, 0];
+    if (H.rmbChoke && !input.rmb()) H.rmbChoke = undefined;   // (CLOSE.rmbHold: the button let go while the grab was still landing — a plain hold, with its words; the arm never closes)
     if (H.t >= K.grab) {
       setPhase(g, 'held'); H.since = g.time; if (gd.held) gd.held.since = g.time; gd.talk.heldSince = g.time; c.bodyYaw = c.aimYaw = hc.bodyYaw;   // (the dialogue's held clock and the hold's are one)
       g.audio.play('heldProtest', v3.add(hc.pos, [0, 1.5, 0]), 0.18);   // his first sound in the arm, muffled under it (the buffer carries its own 0.3 s: it lands as the hold settles)
       if (gd.civ) g.msg(gun ? `got ${gd.callsign}, the ${gd.civ.label}. press Space to tell ${gd.civ.her} to stay down and quiet (lets ${gd.civ.her} go) · hold Space for the pistol-whip · press E to holster and question ${gd.civ.her}` : `got ${gd.callsign}, the ${gd.civ.label}. press Space to ask what ${gd.civ.she} knows · hold Space for 'stay down, stay quiet' or the choke · knocking out a civilian will cost you`);
-      else g.msg(gun ? `got ${gd.callsign} with the pistol at his head. click to fire past him, press Space to pistol-whip him, or E to holster it and question him` : `got ${gd.callsign}. press Space to make him talk, hold Space for the choke, or press ${HANDSLOT.on ? '1' : 'E'} to put the gun to his head`);
+      else if (!H.rmbChoke) g.msg(gun ? `got ${gd.callsign} with the pistol at his head. click to fire past him, press Space to pistol-whip him, or E to holster it and question him` : `got ${gd.callsign}. press Space to make him talk, hold Space for the choke, or press ${HANDSLOT.on ? '1' : 'E'} to put the gun to his head`);
     }
   } else {
     // ---- E: the other hold — draw the pistol to his head / holster it and the knife is back (held only, and not while the hand is still between tools from the last)
@@ -1579,8 +1584,17 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     if (H.phase === 'held') {
       if (act === 'comply' && gd.civ && !swapping) { if (civilianComply(g)) { holdTail(g, dt, 0); return; } }   // 'stay down, stay quiet': a civilian let go into a crouch where she stands, told (civilians.ts) — the one way out of the arm on your feet by his choice, and hers alone
       if (act === 'question' && !swapping) { if (gun) g.msg(`press E to holster the gun first, then Space to question ${gd.callsign}`); else askHeld(g); }
-      if (!swapping && ((act === 'choke' && !gun) || (act === 'whip' && gun) || clk === 'choke')) H.windT = 0;   // chosen: the arm closes / the pistol comes off his head HOLD.secs.chokeHold from now — the commit beat the held key used to be (the rows are a status line under a swap: nothing is chosen while the hand is between tools)
+      if (clk === 'choke' && CLOSE.rmbHold) { H.rmbChoke = 1; H.rmbT = 0; }   // (close.ts CLOSE.rmbHold: in the arm too the right button kept down is the choke for as long as it is down, and a tap of it the whole choke — below)
+      if (!swapping && ((act === 'choke' && !gun) || (act === 'whip' && gun) || (clk === 'choke' && !CLOSE.rmbHold))) H.windT = 0;   // chosen: the arm closes / the pistol comes off his head HOLD.secs.chokeHold from now — the commit beat the held key used to be (the rows are a status line under a swap: nothing is chosen while the hand is between tools)
       if (H.windT >= 0 && !swapping) { H.windT += Math.min(dt, 0.05); if (H.windT >= K.chokeHold) { H.windT = -1; if (gun) startWhip(g); else startChoke(g); } }   // (a frame hitch must not swallow the beat)
+    }
+    if (H.rmbChoke) {   // (close.ts CLOSE.rmbHold: the right button on a man in the arm — taken by it held down, or pressed here. The arm closes the frame it can, with no commit beat: the button is the commitment)
+      H.rmbT = (H.rmbT ?? 0) + dt;
+      if (H.rmbChoke === 1) {
+        if (H.phase === 'held' && !gun && !swapping && !gd.civ && !g.touring) { H.windT = -1; startChoke(g); H.rmbChoke = (H.phase as HoldPhase) === 'choke' ? 2 : undefined; }
+        else if (!input.rmb()) H.rmbChoke = undefined;   // (let go before the hold had him: he is held, and that is all)
+      } else if (H.phase !== 'choke') H.rmbChoke = undefined;   // (stopped by a step, a tap or Esc: it is a hold now, and the button still down does not start it again)
+      if (H.rmbChoke === 2 && !input.rmb()) { if (H.rmbT > CLOSE.rmbTapSecs + 1e-6) easeOffHold(g); H.rmbChoke = undefined; }   // (let go: he breathes — unless it was a tap in the arm, which is the whole choke as the click always was)
     }
     if (H.ask && H.phase === 'held' && g.time + 1e-6 >= H.ask.t + H.ask.dur) { H.ask = null; answerHeld(g); }   // Sam's line has hung its beat: the man answers it (after the row's inputs, so a tap this frame saw Sam still speaking and did nothing)
     if (H.after && H.phase === 'held' && !H.ask && !heldTalk(g, H).speaking) sayAfter(g);                        // a remark that waited for the man to finish (his key pocketed, takeKey): the answer is down and no question is going up — now
