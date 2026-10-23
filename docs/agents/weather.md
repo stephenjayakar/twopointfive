@@ -934,9 +934,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   cigarette's ten-minute thread is. `breathStats(g)` still answers every reader with one merged row, a copy; the host's counts (`records`, `births`,
   `steam`, `by`) run from the book's opening, so behind a drop they start again while `breaths` goes on (the panel's line can read more breaths than
   records). The check's `whose` line, on both stands: the pass stood plainly twice; stepped 900 frames by the game's own step with a drawing solver
-  and the view on the player, and with a solver that draws nothing and the view 400 m off, the two differ in NO state row (`rollback.ts stateDiff`);
-  the same with a particle pool that takes the puffs and with none (no row of the breath's; other modules' rows do differ there, and the walk stops
-  at one of them: not the breath's to mend, told to the merge); dealt off another seed the walk finds 9 rows of the breath's. By the game's own
+  and the view on the player, and with a solver that draws nothing and the view 400 m off, the two are ONE STATE HASH (`rollback.ts stateHash`);
+  the same with a particle pool that takes the breath's puffs and one that takes none of them (both have a pool: with one against none,
+  `game.wind.forParticles` differs, the wind's own book of what it handed a pool, told to the merge); the second dealt off another seed, the hash
+  parts. Run against the module as it was, the line is red and names the old rows (`stats.why`, `stats.steam`, `stats.steaming`, a man's `steam`;
+  with the pool `stats.records`, `births`, `by`). By hash and not by `stateDiff`'s row walk because the walk holds both states flat: 6.4 GB on the
+  shipped stand as first written, 650 MB now; `BREATHSTEAM_WHY=1` on a red run asks the walk for the rows. By the game's own
   roads: a snapshot of the filing frame put back at once with the host's real hook run files the breath's source again (red with the hook's line
   taken out), a snapshot from before the breath put back with no hook plays the breath again WITH its source (red with the frame-count test taken
   out), and a real restart a third of a second after a man's first source leaves 3 sources for the 3 breaths of the next ten seconds (2 with the
