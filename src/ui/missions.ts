@@ -23,7 +23,7 @@ import { ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, leve
 import { lookLevelFile } from '../scene/look';   // (a leaf: which file of a level the page loads)
 import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficultyHref, structureOfLevel, squadsHeld, type Difficulty } from '../game/difficulty';
 import { leverRows, leversSig } from './levers';
-import { fogOfQuery, sameFog } from '../game/scenarioRun';
+import { fogOfLink, sameFog } from '../game/scenarioRun';
 import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
 import { rowHour, rowWeather } from '../game/rowset';
 import { WEATHER_KINDS, WEATHER_PRESETS, weatherTitle, weatherWords, weatherOfSearch, weatherSearch, snowLevel, type WeatherKind } from '../game/weatherKinds';
@@ -337,9 +337,9 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     diff.className = diffLive(m) ? 'mdiff' : 'mdiff na';   // (greyed where the pick changes nothing: the solo night, and a quiet mission — its shift is the level's own)
     dnote.textContent = m.scenario?.kind === 'quiet' ? 'a quiet mission uses the level\'s own shift on either setting' : m.scenario ? quietFogAside(() => difficultyWords(now!, squadsHeld(m.scenario))) : 'the night shift is the same on either setting';
     dnote.title = dnote.textContent ?? '';   // (the sheet shows two lines of it: index.html .mdiff > .dn)
-    { const fogOn = !!m.scenario && fogOfQuery(new URLSearchParams(hrefs[sel].replace(/^[^?]*\?/, '')));   // (the fog of war is up on a room clear and a rescue — game/scenarioRun.ts fogOfQuery: the lever is greyed where the mission has none; a Training lesson is taught on the level as it is — its page reads no lever, game/difficulty.ts initDifficulty)
+    { const fogOn = !!m.scenario && fogOfLink(new URLSearchParams(hrefs[sel].replace(/^[^?]*\?/, '')));   // (the fog of war is up on a room clear and a rescue — game/scenarioRun.ts fogOfQuery: the lever is greyed where the mission has none; a Training lesson is taught on the level as it is — its page reads no lever, game/difficulty.ts initDifficulty)
       const quiet = m.scenario ? quietFogRow(m.scenario) : soloFogRow();   // (a quiet mission may be played under the fog — game/quietfog.ts: the lever is live there with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved)
-      levers.paint(key => !lessonGroup(m.scenario?.group) && (key === 'fog' ? fogOn || quiet : diffLive(m)), m.scenario?.kind === 'roomclear' ? structureOfLevel(m.scenario.level) : '', quiet); }
+      levers.paint(key => !lessonGroup(m.scenario?.group) && (key === 'fog' || key === 'told' ? fogOn || quiet : diffLive(m)),   /* (how much you're told — game/told.ts — is live wherever the fog's lever is, its off rung included: the lever is for more signs than the fog's mark) */ m.scenario?.kind === 'roomclear' ? structureOfLevel(m.scenario.level) : '', quiet); }
     go.textContent = MISSIONS.pickLabel; go.setAttribute('href', hrefs[sel]); go.setAttribute('data-mission', m.id);
     (rows[sel] as unknown as { scrollIntoView?: (o: unknown) => void }).scrollIntoView?.({ block: 'nearest' });
     const file = m.scenario?.level ?? OFFICE, mark: PlanMark = { kind: m.scenario ? m.scenario.kind : 'solo', way: wayOf(m) }, pk = `${file}|${mark.kind}|${mark.way}`;

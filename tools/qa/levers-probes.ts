@@ -28,6 +28,7 @@ const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
 const { QUIETFOG } = await import(`${ROOT}/src/game/quietfog.ts`);   // (a quiet row's fog lever is live while that rule is on: the page, the shipped stand)
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
+const { threeLevers } = await import('./told-check.ts');   // (the fourth lever and the squad's fog-off rung are held down here: these lines count three levers — told-check.ts has them up)
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
@@ -47,7 +48,8 @@ async function withStore<T>(init: Record<string, string> | null, fn: (m: Map<str
 function fresh() { D.difficultyHere(''); D.setConeVisit(null); D.setDifficulty('standard', false); FOG.own = false; }
 
 // ───────────────────────────────────────────────────────────── rules ─────────────────────────────────────────────────────────────
-export async function leversRules(): Promise<boolean> {
+export const leversRules = (): Promise<boolean> => threeLevers(leversRules3);
+async function leversRules3(): Promise<boolean> {
   const F = family('levers-rules: the difficulty levers as rules — a level puts every lever on its rung, a lever moved alone writes its own rows and no other\'s');
   const ownWas = FOG.own;
   try {
@@ -183,7 +185,8 @@ export async function leversRules(): Promise<boolean> {
 const leverRowsOf = (root: El) => root.all(e => !!e.attrs['data-lever'] && e.attrs['data-lever'] !== 'cams').map(r => ({ key: r.attrs['data-lever'], el: r, na: r.cls.has('na'), moved: r.cls.has('moved'),
   btns: r.all(e => e.tagName === 'BUTTON'), lit: r.all(e => e.tagName === 'BUTTON' && e.cls.has('on')).map(b => b.attrs['data-rung']).join(','), note: r.all(e => e.tagName === 'SPAN').at(-1)?.textContent ?? '' }));
 const press = (root: El, key: string, rung: string) => { const b = leverRowsOf(root).find(r => r.key === key)?.btns.find(b => b.attrs['data-rung'] === rung); if (!b?.onclick) throw new Error(`no ${key}:${rung} button`); b.onclick(); };
-export async function leversScreens(): Promise<boolean> {
+export const leversScreens = (): Promise<boolean> => threeLevers(leversScreens3);
+async function leversScreens3(): Promise<boolean> {
   const F = family('levers-screens: the lever rows on the mission sheet and the loadout screen (the real screens on a fake DOM)');
   const SEARCH = '?quality=high&mute', G = globalThis as any, ownWas = FOG.own;
   try {
@@ -251,7 +254,8 @@ export async function leversScreens(): Promise<boolean> {
 }
 
 // ───────────────────────────────────────────────────────────── run ─────────────────────────────────────────────────────────────
-export async function leversRun(): Promise<boolean> {
+export const leversRun = (): Promise<boolean> => threeLevers(leversRun3);
+async function leversRun3(): Promise<boolean> {
   const F = family('levers-run: the levers in a run — the fog lever in a Game built after it, the enemy kit playing with the AI on standard');
   const ownWas = FOG.own;
   try {

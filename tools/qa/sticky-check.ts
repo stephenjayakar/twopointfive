@@ -47,6 +47,7 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 
 type Vec3 = [number, number, number];
 type Verdict = (ok: boolean, label: string, detail: string) => void;
+const { threeLevers } = await import('./told-check.ts');   // (the fourth lever and the squad's fog-off rung are held down here: these lines count three levers — told-check.ts has them up)
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
@@ -536,7 +537,8 @@ export async function stickyOff(): Promise<boolean> {
 }
 
 // ================================================================================================ the three ways, a press each from a quiet row
-export async function stickyWays(): Promise<boolean> {
+export const stickyWays = (): Promise<boolean> => threeLevers(stickyWays3);
+async function stickyWays3(): Promise<boolean> {
   const F = family('sticky-ways: a quiet mission plays three ways, a press each from its row — all shown, the fog, the fog and cameras the mission hands you');
   const onWas = STICKY.on, qWas = QF.QUIETFOG.on, rnd = Math.random, G = globalThis as any, hadLs = 'localStorage' in G, lsWas = G.localStorage;
   try {

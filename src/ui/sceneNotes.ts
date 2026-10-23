@@ -279,7 +279,7 @@ export const SCENE_NOTES: Record<string, string> = {
   'FOG.litAo': 'how much of that fill a corner, the foot of a wall or the floor under a table loses (0 = none, and no rays asked) and how far a box shuts it out from (m)',
   'FOG.litAoM': 'how much of that fill a corner, the foot of a wall or the floor under a table loses (0 = none, and no rays asked) and how far a box shuts it out from (m)',
   'FOG.litCut': 'a lamp that would add less than this, as displayed, at a pixel is not traced (one under twice it is faded in: no line where a lamp\'s reach ends)',
-  'FOG.lastSeen': 'WHERE HE WAS LAST SEEN: a living enemy who has gone out of the team\'s sight keeps a fading \'?\' on the spot he was last seen at for this many seconds (the HUD\'s alone: lastSeen() below — nothing in the game reads it). 0 = no mark, as it…',
+  'FOG.lastSeen': 'WHERE HE WAS LAST SEEN: a living enemy who has gone out of the team\'s sight keeps a fading \'?\' on the spot he was last seen at for this many seconds (the HUD\'s alone: lastSeen() below — nothing in the game reads it). 0 (as it ships) = the…',
   'S.flashlightRadius': 'emitter radius used for torches / the rail light (m): a real bezel is ~0.015-0.02; larger = softer torch shadows',
   'S.airEvery': 'sixtieths of a second between its steps (1 = 60 Hz whatever the page draws at; 2 halves its cost and its turbulence\'s time resolution)',
 };
