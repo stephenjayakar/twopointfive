@@ -308,6 +308,13 @@ export function skyFaces(g: Game, index: number): number {
     if (sky * 2 > SKY_OFF.length * SKY_ALONG.length) n++; }
   memo.set(index, n); return n;
 }
+/** `fn` asked aside (a question of the picture's — orders.ts hover): what it adds to the game's memo of sky faces is taken out again, so a wall is in it only
+ *  once the simulation has asked of it (the answer is the same: the asker pays for it again) */
+export function skyAside<T>(g: Game, fn: () => T): T {
+  const memo = skyMemo.get(g.col), n = memo ? memo.size : 0;
+  try { return fn(); }
+  finally { const now = skyMemo.get(g.col); if (!memo) { if (now) skyMemo.delete(g.col); } else if (now === memo && memo.size > n) { let i = 0; for (const k of [...memo.keys()]) if (i++ >= n) memo.delete(k); } }
+}
 /** IS STRUCTURE STATIC `index` AN OUTER WALL A CHARGE CUTS (WALLCHARGE.outer; wallAt has already found it a full-height unrotated wall in a wall's stuff):
  *  not steel, no thicker than outerThick, at least outerMinLen long, something the engine can take on (wallbreak.ts adoptable: it lights nothing, carries no
  *  fixture) — and the open sky over one face of it, or over both with outerYard. */
