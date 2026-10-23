@@ -300,7 +300,7 @@ const compass = (yaw: number) => COMPASS[((Math.round(yaw / (Math.PI / 4)) % 8) 
  *  order book. `hov` = the last answer while the cursor rests; `cam` = the camera it was asked under (hintView asks again when that has moved). It is outside
  *  the rollback snapshot: after a restore it can hold an answer from the time line left behind, used only if the clock comes back into its tenth of a
  *  second with the cursor on the same pixel. */
-export interface HoverKept { hov: { x: number; y: number; t: number; v: OrderTarget } | null; cam: number[] }
+export interface HoverKept { hov: { x: number; y: number; t: number; v: OrderTarget } | null; cam: number[]; /** the tables the pick's rays are asked on (Collision.aside, BoxWorld.rayAside), made at the first ask */ pick?: { s?: object; q?: object; w?: object } }
 /** a store for one asker (the page's, a check's) */
 export function hoverStore(): HoverKept { return { hov: null, cam: [] }; }
 /** What the menu was opened on. `man`: the reticle was on that teammate — the order is his alone. */
@@ -917,13 +917,15 @@ export class SquadOrders {
   }
   /** what the cursor is on (null: no squad, or before the first frame) — the HUD's lines under the squad block; the simulation never reads it. Kept while the
    *  cursor has not moved, for a tenth of a second (the page asks every frame) — in the ASKER'S store (`HoverKept`), never on the order book. With no store
-   *  nothing is kept and every ask looks again. (A read is still not free of the game's state: the pick under it stamps the collision world's query
-   *  tables and hud() fills the room clear drill's memo — docs/agents/squad.md.) */
+   *  nothing is kept and every ask looks again. The pick under it is asked ASIDE: its rays stamp the asker's own tables (`kept.pick`; a throwaway set
+   *  with no store), never the collision world's, and the things to be worked are read without the game's kept list being made anew
+   *  (workthings.ts askAside) — tools/qa/hoverpick-check.ts. */
   hover(kept?: HoverKept): OrderTarget | null {
     const v = this.view; if (!v.input || !v.cam || !v.canvas || !this.active) return null;
     const c = kept?.hov, x = v.input.mouseX, y = v.input.mouseY, t = this.g.time;
     if (c && c.x === x && c.y === y && t >= c.t && t - c.t < 0.1) return c.v;
-    const out = this.targetUnder(v.input, v.cam, v.canvas); if (kept) kept.hov = { x, y, t, v: out }; return out;
+    const g = this.g, own = kept ? (kept.pick ??= {}) : {}, input = v.input, cam = v.cam, canvas = v.canvas;
+    const out = g.work.askAside(() => g.col.aside(own, () => g.engine.world.rayAside(own, () => this.targetUnder(input, cam, canvas)))); if (kept) kept.hov = { x, y, t, v: out }; return out;
   }
   /** the order the quick key gives on a target: its first row (null: none fits) */
   defaultFor(t: OrderTarget): OrderDef | null { return this.rowsFor(t).find(d => !d.opens) ?? null; }

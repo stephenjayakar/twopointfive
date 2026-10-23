@@ -346,6 +346,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own wiring (`overlay.ts`, `ui/cmdring.ts` passing the one store) is held by no check and the page was not driven. STILL OPEN, not held by that line and not this module's: a HUD read
   still writes the room clear drill's memo of its two men (`nightbreach.ts drillOf`, a getter that keeps its answer) and the collision world's query
   stamps under the cursor's pick (`game.col.stamp`, `world.rgStamp`), so the whole state still differs (the line prints where). Never seen on a GPU.
+  (Both since mended: the drill's memo by its own module, the pick's stamps by the last bullet of this file.)
 - **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
   `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
   one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
@@ -942,3 +943,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   search fills in turns `state` red on the stand that has the rule, and the line prints the table's name: add it to `TICK_KEPT`, or to
   `Collision.aside` when it is the collision's own. NOT COVERED: `squad40Plans` (the 40 mm's picture) was not looked at; `orders.hud()` read with no
   menu up writes `orders.hov` (a drawn game differs from an undrawn one there too, digest equal). Never seen in a page.
+- **The cursor's pick, read for the picture, writes nothing of the game's** (no switch: nothing a player reads, and the run digest never moved).
+  `SquadOrders.hover(kept?)` is what the HUD's lines and the ring's hint read every frame. Its answer was already kept in the asker's store; the
+  pick under it (`targetUnder`) still cast its rays on the game's own tables and remade a kept list, so a game whose cursor is read and the same
+  game never read differed in whole state on EVERY frame, run digest equal (measured: `world.rgStamp`, `rgRay`, `rcBest`, `rcBi`, `rcBn` on the
+  frozen stand; on the shipped stand also `game.col.stamp`, `stampId`, `cellStamp` and `game.work.cache.t`). Now the pick runs inside
+  `Collision.aside` (the collision's query stamps, cell caches and path scratch swapped for the asker's, as for the throw page), the new
+  `BoxWorld.rayAside` (`src/scene/boxes.ts`: the world's ray grid stamps and counter swapped, its last-hit scratch put back) and the new
+  `WorkThings.askAside` (`workthings.ts`: where the kept list of things to be worked is stale it is made afresh for the asker, NOT kept, and no
+  hand record is dropped), on `HoverKept.pick`, or on a throwaway store when none is handed in. ONLY the read is aside: the pick the simulation
+  makes for itself on a key or a click (`orders.ts` update, `planmode.ts`) is the game's own and unchanged; `host/handsoff.ts` (the hands-off
+  driver) still asks it straight.
+  CHECK `probes.ts hoverpick` (`tools/qa/hoverpick-check.ts`; families squadorders), the squad mission on the office, seed 11, six seconds, the
+  cursor carried round Sam, onto a teammate and onto a door: ask (ONE game, the state hashed before and after each read, with the store and
+  with none, and the module variables looked at: 0 of 360 frames, with floor, a teammate and a door all picked), state (read every frame against
+  never read: whole state and digest equal), same (the pick aside is the pick straight on all 360 frames). `HOVERPICK_BREAK=1` (the pick asked
+  straight) fails ask and state on both stands. One seed, one level; no man of the other side was under the cursor. STILL OPEN, not the pick and
+  not this module's: on the shipped stand the HUD's own ROW LIST (`SquadOrders.hud`) fills the wall charge's memo of digitless rows
+  (`wallcharge.ts standIns`, a table hung off the object, so `asMemo` does not take it out of the state) the first time it lists a floor's rows,
+  so a game whose whole HUD is read still differs there from one never read until a menu is first opened. The store is outside the rollback
+  snapshot (it holds only scratch). Never seen in a page.

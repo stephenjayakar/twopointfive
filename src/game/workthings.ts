@@ -144,6 +144,10 @@ export class WorkThings {
    *  has taken is not ticked: his hand comes off by itself) */
   private hands = new Map<Character, { push: DoorPush; until: number; seen: number; verb: WorkVerb; t0: number; need: number }>();
   private cache: { key: string; t: number; list: WorkThing[] } | null = null;
+  /** a question of the picture's (the cursor's pick under a HUD read — orders.ts hover): the list is read, and where the kept one is stale it is made afresh
+   *  for the asker and NOT kept, and no record is dropped — what the game keeps and drops is the simulation's own doing, the same drawn or not */
+  private asking = false;
+  askAside<T>(fn: () => T): T { const was = this.asking; this.asking = true; try { return fn(); } finally { this.asking = was; } }
   log: { t: number; who: string; what: string }[] = [];
 
   constructor(private g: Game) {
@@ -164,7 +168,7 @@ export class WorkThings {
     const B = g.level.breaker, bo = g.blackout, M = g.level.mission, drive = g.mission.stage === 'drive' && !g.quietUtility && !g.puppet, W = drive ? quietWords(g) : null;
     const key = `${B ? B.pos.join(',') : ''}|${B && !(bo.active && bo.permanent)}|${drive && M?.rack ? M.rack.front.join(',') : ''}|${W ? W.holder : ''}|${g.defuse?.key ?? ''}`;
     if (this.cache && this.cache.key === key && g.time >= this.cache.t && g.time - this.cache.t < 1) return this.cache.list;
-    this.prune();
+    if (!this.asking) this.prune();
     const list: WorkThing[] = [];
     if (B && !(bo.active && bo.permanent)) { const { face, n } = panelFace(g); list.push({ kind: 'breaker', face, n, stand: standFor(g, B.pos, n), name: 'the breaker' }); }
     if (drive && M?.rack) {   // the mission's thing: the rack's LED face looks +z on the plain night; a quiet mission's holder faces wherever a man can stand, in its room
@@ -175,7 +179,7 @@ export class WorkThings {
       list.push({ kind: 'objective', face: [rf[0], y, rf[2]], n, stand, name: W ? W.holder : 'the rack' });
     }
     for (const d of g.defuse?.armed() ?? []) list.push({ kind: 'device', face: d.face, n: d.n, stand: standFor(g, d.face, d.n), name: d.name, dev: d.i });   // a defuse mission's live charges (defuse.ts)
-    this.cache = { key, t: g.time, list }; return list;
+    if (!this.asking) this.cache = { key, t: g.time, list }; return list;
   }
   /** records of men who are no longer at it: down, off the roster (a new cast), or since ordered elsewhere — and hands with no living owner on the roster */
   private prune() {

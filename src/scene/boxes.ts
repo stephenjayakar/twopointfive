@@ -258,6 +258,16 @@ export class BoxWorld {
   private rgFill = new Uint32Array(WORLD.gridW * WORLD.gridH); private rgRanges = new Int32Array(0);
   private rgStamp = new Uint32Array(0); private rgRay = 0;
   private rcBest = 0; private rcBi = -1; private rcBn: Vec3 = [0, 1, 0];
+  /** A RAY ASKED BY THE PICTURE (the cursor's pick under a HUD read — game/orders.ts hover): `fn` with the ray grid's stamps the asker's own (`own.w`, kept
+   *  between asks) and the last ray's scratch put back after, so it writes nothing a snapshot of the game holds. Not to be nested. */
+  rayAside<T>(own: { w?: object }, fn: () => T): T {
+    type Q = { stamp: Uint32Array<ArrayBuffer>; ray: number };
+    let q = own.w as Q | undefined; if (!q || q.stamp.length < this.rgStamp.length) q = { stamp: new Uint32Array(this.rgStamp.length), ray: 0 };   // (boxes added since: an empty table is a clean one)
+    const mine = { stamp: this.rgStamp, ray: this.rgRay, best: this.rcBest, bi: this.rcBi, bn: this.rcBn };
+    this.rgStamp = q.stamp; this.rgRay = q.ray;
+    try { return fn(); }
+    finally { own.w = { stamp: this.rgStamp, ray: this.rgRay } satisfies Q; this.rgStamp = mine.stamp; this.rgRay = mine.ray; this.rcBest = mine.best; this.rcBi = mine.bi; this.rcBn = mine.bn; }
+  }
   /** the ray grid's shape, for the panel / the differential test */
   rayGridStats = { statics: 0, globals: 0, items: 0 };
   // ---- MARKINGS (scene/markings.ts): the table of packed records lives in the TAIL of matBuf, from vec4 row maxBoxes × MAT_STRIDE / 4 (common.wgsl MARK_BASE) —
