@@ -488,7 +488,7 @@ export const ordersNightBreach = guarded(async () => {
     const beat = (w: string) => { const b = NB.drill?.beats.find((x: any) => x.what === w); return b ? b.t : NaN; };
     R.step(60);
     R.key('KeyF'); const set = R.until(() => NB.state === 'set', 30); const stS = men.map((m: any) => O.statusOf(m));
-    verdict(set && stS.every((s: string) => /^set · F/.test(s)), 'F stacks the pair as before, and the HUD\'s squad block says so', `night breach ${NB.state} · "${stS.join('" / "')}"`);
+    verdict(set && stS.every((s: string) => /^set · press F/.test(s)), 'F stacks the pair as before, and the HUD\'s squad block says so', `night breach ${NB.state} · "${stS.join('" / "')}"`);
     const dS = R.door('server_manager'); const tS = { kind: 'door', at: [dS.frameCentre[0], 0, dS.frameCentre[2]], door: dS, side: 1 };   // (the keypad door, from the far side of the floor: nobody can get to that face — and with ORDERS.workOut off, no floor at either jamb on it)
     const greyS = O.whyNot(O.defs.find((d: any) => d.id === 'stack'), tS); const whyS = O.give('stack', tS); R.step(30);
     verdict(!!greyS && !!whyS && NB.state === 'set' && O.log.length === 0, 'an order that cannot be carried out (a stack with no room at the door) is greyed on the menu with the reason, and trying it does not call the breach off', `the stack row on that door: "${greyS}" · give('stack') → ${whyS} · night breach ${NB.state}`);
