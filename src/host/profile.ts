@@ -447,6 +447,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ROOMCLEAR.fresh = q.get('freshstart') !== '0';   // a room clear that names no placement seed deals a fresh one each visit, off the game's own die's seed (game/roomclear.ts): ON in the page; ?freshstart=0 = the authored placement on every load, as before (a row that pins its seed — the Training lessons — is never touched)
   SAMESTART.on = q.get('samestart') !== '0';   // every mission starts the same way on every try (game/samestart.ts): a room clear's defenders on the level's own marks each load and each restart, a rescue's roamers and clock as written, a quiet mission the first of its lists — ON in the page; ?samestart=0 = every staging dealt as before (the line above, the restart's next placement, the quiet deal off the die)
   { const w = q.get('way'); ROOMCLEAR.way = w === 'any' ? -1 : w !== null && /^\d+$/.test(w) ? +w : 0; }   // …and the way in (ROOMCLEAR.way; the mission sheet's 'Way in' row writes it on the link): absent or ?way=1 = the level's own start, ?way=2 … = its other ones, ?way=any = dealt off this visit's die with the marks
+  HOLD.disarm = q.get('disarm') !== '0';   // the grab disarms him (game/disarm.ts): Sam's right hand takes the gun out of the man's as the arm goes round him and lets it down beside them, with voices of its own for the catch, the strip and the gun on the floor — ON in the page; ?disarm=0 = knocked out of his hand on the first frame, as it was
   HOLD.dropGun = !q.has('nogundrop');   // a man taken in the arm drops the gun he had in his hand: it lies on the floor like any dropped gun (game/player.ts startGrab)
   BACKKEY.tab = q.get('tabback') !== '0';   // Esc is only the pause; Tab backs out of the order menu, the Space list, a running verb, the launcher's arc (game/backkey.ts): ON in the page; ?tabback=0 = Esc backs out first, as it did
   HOLD.oneFacing = q.get('holdyaw') !== '0';   // a man in the arm faces where the hold faces him — nothing else turns him (game/nightbreach.ts: the calm defenders' marks)
@@ -542,6 +543,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HAULHOME.on': 'TPS_HAULHOME=1',
   'GUNHOLD.on': 'TPS_GUNHOLD=1',
   'HOLD.dropGun': 'TPS_HOLDDROP=1',
+  'HOLD.disarm': 'TPS_DISARM=1',
   'HOLD.oneFacing': 'TPS_HOLDYAW=1',
   'BACKKEY.tab': 'TPS_TABBACK=1',
   'WALLSHOT.on': 'TPS_WALLSHOT=1',

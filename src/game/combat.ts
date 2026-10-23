@@ -62,6 +62,7 @@ import { recapRound } from './deathrecap';
 import { wallReport } from './blastFeel';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { ffLive, ffBody, ffSide, ffUnpressed, ffNote, ffPast } from './friendlyfire';   // (called inside fireWeapon only)
+import { disarmHand } from './disarm';   // (called inside handProps only)
 import { holdFireShot } from './holdfire';   // (called inside fireWeapon only)
 import { sneakSuit } from './cast';   // (called inside handProps only: the sneaking suit's rifle is drawn black)
 
@@ -435,7 +436,7 @@ function handPropsRaw(g: Game, out: Box[]) {
   const heldNow: ThrowKind | null = pl.down || busy || !kindSel || pl.holstered || pl.dragging || pl.sprinting ? null
     : an.inThrow ? (an.throwing ? (pl.pendingThrow ? pl.pendingThrow.kind : THROW_BY.on && an.throwTime >= THROW_RELEASE ? null : kindSel) : null)   // (THROW_BY: the can is out of the fist the frame it is in the air — `throwing` runs three frames past the release, and the fist used to show the next can under the one just thrown; a wind-up called off before that keeps its can, as ever)
     : g.throwCount(kindSel) > 0 ? kindSel : null;
-  const knifeNow = (!!pl.holding && pl.holding.variant === 'arm' && !pl.down && !an.holdGunSide) || (an.knifeShown && !pl.down && !pl.holding && !pistolUpNow);   // a man held with the hands empty: the knife is out, in the fist at his throat (character.ts holdLayer poses it) — for exactly as long as the hold lasts, sheathed again the frame it ends however it ends; swapped mid-hold (E) the old tool leaves the fist on the key's frame (the variant / Player.holstered change there) and the other arrives half way through the animator's hand-over, the fist then back behind the man's shoulder (holdGunSide) — never the two in one fist
+  const knifeNow = (!!pl.holding && pl.holding.variant === 'arm' && !pl.down && !an.holdGunSide && !disarmHand(pl.holding)) || (an.knifeShown && !pl.down && !pl.holding && !pistolUpNow);   // a man held with the hands empty: the knife is out, in the fist at his throat (character.ts holdLayer poses it) — for exactly as long as the hold lasts, sheathed again the frame it ends however it ends; swapped mid-hold (E) the old tool leaves the fist on the key's frame (the variant / Player.holstered change there) and the other arrives half way through the animator's hand-over, the fist then back behind the man's shoulder (holdGunSide) — never the two in one fist
   // the FN2000: in both hands (selected and off the sling, hands not busy on a lock or a man, not hauling a body — the animator's long gun then, player.ts), else slung across
   // his back for as long as the kit has it; gone from a downed man's hands if that is where the round found it (hitPlayer dropped the item), still on his back if it was there.
   // One place a frame.

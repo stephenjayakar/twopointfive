@@ -15,6 +15,7 @@ import { gunLookOf } from './gunlook';   // (called inside armRifle only)
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
 import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand, WORK_TURN } from './handwork';
 import { WORKSTOW, samStowTick, samStowing } from './workstow';
+import { disarmBegin, disarmPose, DISARM_GAIN, type Strip } from './disarm';
 import type { SamWork } from './handwork';
 import { tread } from './floor';
 import { samLoadPace, loadGait, loadHeard } from './kitload';   // what his card weighs: his legs' pace and his footfall (as asked with its switch off)
@@ -126,6 +127,8 @@ export const HOLD_FIRE_CD = 0.7, HOLD_SPREAD = 0.09;
  *  man to finish — his word on the key he has just pocketed (takeKey) — put up the first frame the answer is down and no question is going up, dropped by
  *  whatever kills a pending question (cancelAsk) or by the next question beating it to the air (askHeld); null when none waits. */
 export interface Hold { g: Guard; variant: HoldVariant; phase: HoldPhase; t: number; since: number; windT: number; swapT: number; remarked: boolean; gunOut: number; fireQueued: boolean; shotT: number; ask: { t: number; dur: number } | null; after: { text: string; id: string } | null;
+  /** the grab's disarm while it runs (disarm.ts: begun by startGrab, moved on once a frame by disarmTick, gone when the hand is back on him) */
+  strip?: Strip;
 }
 
 /** IN A DOOR FRAME HE IS AS WIDE AS HIS SHOULDERS. BODY_R is a margin for his arms and his gun, 0.84 m across; a real door (scene/doorSize.ts) leaves 0.83 m
@@ -1476,15 +1479,16 @@ export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
   gd.char.anim.lookYawExtra = 0; gd.sweep = 0;
   gd.lightLitAtLoss = gd.flashlight.enabled;   // (the grab: was the torch burning as it left his hand — attachFlashlight's floor sputter shows only what was lit)
   if (inHand(gd) === 'torch') { gd.dropped = dropFromHand(g, gd.char, 'torch', gd.beamDir, [0, 0, 0], false, true); gd.torchLostAt = g.time; }   // the torch is knocked out of his hand as the arm goes round: it clatters down quietly and dies on the floor like a dropped torch does (guards.ts) — his hands come up empty
-  else if (HOLD.dropGun && inHand(gd) === 'weapon') { gd.dropped = dropFromHand(g, gd.char, gd.weapon.def.drop, gd.char.gunDir, [0, 0, 0], gd.weapon.def.suppressed, true); gd.gunLostAt = g.time; }   // (HOLD.dropGun) …and so is the gun, if that is what the hand had: it lies where it fell like any dropped gun, and he is held with empty hands
+  else if (HOLD.dropGun && !HOLD.disarm && inHand(gd) === 'weapon') { gd.dropped = dropFromHand(g, gd.char, gd.weapon.def.drop, gd.char.gunDir, [0, 0, 0], gd.weapon.def.suppressed, true); gd.gunLostAt = g.time; }   // (HOLD.dropGun) …and so is the gun, if that is what the hand had: it lies where it fell like any dropped gun, and he is held with empty hands
   if (kind && !gd.civ && closeSeated(g, gd)) closeUnseat(g, gd);   // (hauled out of the chair: the sitting clip comes off as the arm goes round)
   gd.held = { by: 'player', since: g.time, variant, phase: 'grab', reverse: false };
   if (gd.civ) civilianGrabbed(g, gd);   // (a civilian: whatever she was doing stops, and she cannot scream with a forearm across her throat — civilians.ts)
   if (g.aiEnabled) gd.witness.wasHeld++; gd.talk.heldSince = g.time;   // his own record of it (the dialogue reads both: how long he has been held, whether this is the second time) — nothing is remembered with the AI off, like every other witness write
   pl.holding = { g: gd, variant, phase: 'grab', t: 0, since: g.time, windT: -1, swapT: Infinity, remarked: false, gunOut: 0, fireQueued: false, shotT: -1, ask: null, after: null };
+  disarmBegin(g);   // (disarm.ts, HOLD.disarm: the gun he still has in his hand is Sam's right hand's to take, a beat from now — nothing with the switch off)
   if (kind) closeTook(g, gd, 'grab', kind, b0, r0);
   pl.fireCd = Math.max(pl.fireCd, HOLD.secs.grab);   // (no round leaves the gun on its way round him)
-  g.audio.play('grabScuffle', v3.add(gd.char.pos, [0, 1.4, 0]), 0.4);   // the arm going round him: sleeve over his shoulder, chest into his back, the breath he snatches choked off
+  g.audio.play(HOLD.disarm ? 'grabCatch' : 'grabScuffle', v3.add(gd.char.pos, [0, 1.4, 0]), HOLD.disarm ? DISARM_GAIN.catch : 0.4);   // the arm going round him: sleeve over his shoulder, chest into his back, the breath he snatches choked off
   g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: GRAB_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, GRAB_NOISE); chronGrab(g, gd);   // a scuffle the room hears inside a few metres, not the floor
 }
 
@@ -1620,11 +1624,12 @@ function holdTail(g: Game, dt: number, speed: number) {
   c.anim.speed = speed; c.anim.crouchTarget = 0; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.lookYawExtra = 0;
   const low = H ? takeLower(g) : 0;   // (the choke's lowering: both poses or neither)
   const kill = H ? takeKill(g) : false, beats = H ? takeBeats(g) : false, haul = H ? takeHaul(g) : false;   // (takedown.ts TAKEDOWN.kill / chokeBeats, fed with the pose as `low` is: the animator reads this frame's, not its module's one-frame-late fallback)
-  c.anim.holdPose = H ? { phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats, haul } : null;
+  const strip = H?.strip ? disarmPose(H.strip) : undefined;   // (disarm.ts: both poses or neither)
+  c.anim.holdPose = H ? { phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats, haul, strip } : null;
   if (H) {
     const gd = H.g, hc = gd.char, an = hc.anim;
     an.speed = speed; an.reverse = pl.backpedal; an.crouchTarget = 0; an.upper = 'none'; an.stance = 'none'; an.lookYawExtra = 0; an.deliberate = 0;
-    an.heldPose = { phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon', low, kill, beats, haul };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
+    an.heldPose = { phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon', low, kill, beats, haul, strip: strip ? { t: strip.t } : undefined };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
     if (gd.held) gd.held.phase = H.phase;
     // where his torch points: nowhere useful — up over Sam's arm at the ceiling, wandering with the struggle (torchCarryDir reads his aim yaw / pitch; the pistol, if
     // that is what he has out, just rides the raised hand). The yaw share stays small and eased — it is also his chest's twist, and his neck must stay on the arm.

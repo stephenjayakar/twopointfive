@@ -319,6 +319,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.FOG as { squadDoors?: boolean } | undefined)?.squadDoors !== 'boolean') FOG.squadDoors = false;   // (a file from before a door the squad works was seen: its leaves stood as the eyes last had them)
   if (typeof (k.tables.FOG as { squadFire?: boolean } | undefined)?.squadFire !== 'boolean') FOG.squadFire = false;   // (a file from before a man the squad shoots at was in the picture: the reticle took only the men the fog's eyes had)
   if (typeof (k.tables.HOLD as { dropGun?: boolean } | undefined)?.dropGun !== 'boolean') HOLD.dropGun = false;   // (a file from before a held man dropped his gun: its men kept it in the fist through the hold)
+  if (typeof (k.tables.HOLD as { disarm?: boolean } | undefined)?.disarm !== 'boolean') HOLD.disarm = false;   // (a file from before the grab disarmed him: the gun left his hand on the grab's first frame, thrown clear)
   if (typeof (k.tables.HOLD as { oneFacing?: boolean } | undefined)?.oneFacing !== 'boolean') HOLD.oneFacing = false;   // (a file from before a held man kept the hold's facing: a calm defender in the arm was turned to his mark each frame)
   if (!k.tables.GUNHOLD) GUNHOLD.on = false;   // (a file from before the pistol in a hold sent men to cover: its men walked the ring in the open and held every round)
   if (!k.tables.HAULHOME) HAULHOME.on = false;   // (a file from before a hauling man brought his furniture the last hand to the door: its men gave it up the frame they stopped)
