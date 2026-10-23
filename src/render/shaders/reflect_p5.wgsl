@@ -86,7 +86,7 @@ fn emitTraceK(rough: f32) -> f32 { return 1.0 - smoothstep(0.2, 0.3, rough); }
  *  emission + albedo and the IRRADIANCE there (the part worth a history: the one-shadow-ray light pick at an off-screen hit is what flickers), reflHitFinish
  *  puts them together and applies the segment's glass and the bound. Called back to back with the irradiance untouched they compute exactly shadeReflHit. */
 struct HitParts { Le: vec3f, albedo: vec3f, Eh: vec3f, segT: f32, solid: bool, onScreen: bool };   // solid = an opaque surface was hit (Eh / albedo meaningful); onScreen = its direct light came off this frame's denoised textures
-fn reflHitParts(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32) -> HitParts {
+fn reflHitParts(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> HitParts {
   var h: HitParts; h.Le = vec3f(0.0); h.albedo = vec3f(0.0); h.Eh = vec3f(0.0); h.segT = RT_TMAX; h.solid = false; h.onScreen = false;
   if (hit.idx < 0) {
     h.Le = skyRadiance(dir) + frame.weatherB.xyz;                         // (weatherB.rgb = what a lightning stroke's lit sky adds this frame; 0 otherwise)
@@ -106,7 +106,7 @@ fn reflHitParts(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32) -> HitParts {
       let od = directOnScreen(Ph, hit.n, 0u);
       if (od.w > 0.0) { h.Eh += od.xyz; h.onScreen = true; } else { h.Eh += directAtPoint(Ph, hit.n, 0u); }
     }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && bounceHitMan(hit)) { h.Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit)); } else { h.Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { h.Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { h.Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
   } else { h.segT = 0.0; }
   return h;
 }
@@ -131,7 +131,7 @@ fn reflHitFinish(h: HitParts, Po: vec3f, dir: vec3f) -> vec3f {
 // The whole hit shading in ONE function, main's statements verbatim — the path every tier takes with the phase-5 bits down. (reflHitParts + reflHitFinish above compute the same
 // thing in two halves for the reuse path; keeping this body whole keeps the off path's generated code what it was: composing it from the halves moved one output cell in one
 // view at ultra by a last-bit difference.) Keep the three in step.
-fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32) -> vec3f {
+fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> vec3f {
   var L = vec3f(0.0);
   var segT = RT_TMAX;
   if (hit.idx < 0) {
@@ -151,7 +151,7 @@ fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32) -> vec3f {
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && bounceHitMan(hit)) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
     L += albedo * Eh * (1.0 / PI);
   } else { segT = 0.0; }
   if (glassCount() > 0u) {
@@ -348,6 +348,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let rays = min(u32(frame.rtCfg.y), 4u);
   let lamV = smithLambda(Ve, ax, ay);
   let kEmit = emitTraceK(rough);                                            // area-lit fixtures: traced on a polish, analytic (rtGlints) on a rough finish, one panel either way
+  let reflWalls = select(0u, 0x100u | owner, REFL_WALLS && metalness > 0.25);   // REFL WALLS, as reflect.wgsl: a metal's rays take the walled read at every hit (0 = the read as it was, else bit 8 and this pixel's owner)
   // ---- phase 5 (frame.p5Cfg.z bit 2): last frame's hit record at this surface point's reprojected texel — the reflecting floors are statics, so the camera's reprojection with both TAAU
   // jitters taken back out lands a still pixel on its own record whatever the jitter does (the gather's reservoirs use the same mapping) ----
   let reuse = (frame.p5Cfg.z & 2u) != 0u;
@@ -385,7 +386,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     if (k == 0u) { hitT0 = select(RT_TMAX, hit.t, hit.idx >= 0); }
     var Li: vec3f;
     if (reuse) {
-      var hp = reflHitParts(hit, Po, dir, kEmit);
+      var hp = reflHitParts(hit, Po, dir, kEmit, reflWalls);
       // hit-lighting reuse: a STATIC opaque hit whose direct light was the one-ray estimate (an on-screen hit already carries this frame's settled light) takes the record's irradiance
       // into a running mean when the record's point lies within the lobe's own footprint of it on the same face — a history keyed on where the ray WENT, not on the pixel, so the
       // R2-scattered rays of consecutive frames refine one estimate of the light on that patch instead of each flickering its own light pick
@@ -402,7 +403,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
       }
       Li = reflHitFinish(hp, Po, dir);
     } else {
-      Li = shadeReflHit(hit, Po, dir, kEmit);
+      Li = shadeReflHit(hit, Po, dir, kEmit, reflWalls);
     }
     let Fr = F0 + (vec3f(1.0) - F0) * pow5(1.0 - clamp(dot(Ve, H), 0.0, 1.0));
     let wG = (1.0 + lamV) / (1.0 + lamV + smithLambda(Ls, ax, ay));      // G2 / G1(v), height-correlated: the VNDF estimator's remaining weight

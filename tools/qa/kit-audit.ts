@@ -44,7 +44,7 @@ for (const s of ALL_MISSIONS as any[]) {
   const sizes = (squadChoices(s) as { n: number; ok: boolean }[]).filter(c => c.ok).map(c => (c.n ? `+${c.n}` : 'alone')).join(' ');
   const block = sc.issue?.members as Record<string, Card> | undefined;
   const own = [block ? `issue block: ${Object.entries(block).map(([i, c]) => `${MEN[+i]} ${JSON.stringify(c)}`).join('; ')}${!Object.keys(block).length ? '(names nobody: every man in the plain issue)' : ''}` : '', typeof rc.wallCharges === 'number' && rc.wallCharges > 0 ? `${rc.wallCharges} wall charge${rc.wallCharges === 1 ? '' : 's'} of its own` : ''].filter(Boolean).join(' · ') || 'none';
-  const cards = s.group === 'tutorial' ? 'none: a lesson is played as issued' : block ? 'none: the mission issues its own' : s.kind === 'quiet' && s.squad === 0 ? 'yours' : 'all who come';
+  const cards = s.group === 'tutorial' && !K.kitPacks(s) /* (the one lesson he packs for has its cards: kit.ts ISSUE.picked) */ ? 'none: a lesson is played as issued' : block ? 'none: the mission issues its own' : s.kind === 'quiet' && s.squad === 0 ? 'yours' : 'all who come';
   const locked = doors.filter(x => x.locked).length, steel = doors.filter(x => x.steel).length;
   const noFrag = s.kind === 'rescue' ? 'refused near a hostage' : sc.snatch || rc.snatch || /snatch/.test(s.id) ? 'refused near the man you came for' : (d.civilians ?? sc.civilians)?.length ? 'refused near a civilian' : 'yes';
   const ways = Math.max(1, (s.ways ?? []).length), kv = (sc.kitView?.ways ?? []).length;

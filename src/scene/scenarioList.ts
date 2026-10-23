@@ -156,7 +156,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'You\'re on your own. Get past a sentry, a machine gun and a locked door, clear a room, and get back out.',
     scene: 'The people who hit the convoy keep their code book at a fuel stop down the valley. You\'re going in alone to get it, and nobody expects it to stay quiet.',
     teaches: ['Move, sprint and stay low', 'Take cover on a wall and lean out', 'Use your rifle, its launcher and your pistol', 'Throw smoke, a frag and a stun grenade', 'Blow a locked door with a charge'] },
-  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
+  // (packs: the one lesson whose kit is the player's to plan — its Team & kit step walks him through reading this street and packing for it, ui/kitPlan.ts;
+  //  one frag is his whatever he packs: the men behind the sandbags are held down until his lands)
+  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial', packs: { frags: 1 },
     // (its own hour and sky: the post was lit for the night — the street the player stands in is dark, the gates the picket comes through are under lamps
     //  the photocell puts out by day — and measured dry and still)
     hour: 'night', weather: 'clear',

@@ -100,6 +100,7 @@ import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfi
 import { silentOnMan } from './silent';   // (called inside tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint, autoPick } from './autopilot';   // (read inside input(), hud() and show() only)
 import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringPin, ringHoldSecs, ringLatch, ringSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { loneKey } from './ringlone';
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
@@ -1071,7 +1072,7 @@ export class SquadOrders {
     } else if (wheel) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
     // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
     // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
-    const want0 = ringWant(R, input, digit, g.time), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
+    const want0 = ringWant(R, input, digit, g.time, loneKey(() => this.ringKeys())), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
     if (want && want !== R.lit) {
       const rows = this.menu!.rows, seat = this.seats(this.menu!, R), i = seat.row[want] ?? -1, first = this.menu!.page === null && !R.more;
       if (first && want === 1) R.lit = 1;
@@ -1193,8 +1194,16 @@ export class SquadOrders {
       const d = Math.hypot(sx - input.mouseX, sy - input.mouseY); if (d < bd) { bd = d; best = k; } });
     return best;
   }
+  /** the digits the ring has a wedge on, a bit each (bit 1 the first; 0: no ring): what ringView draws, less every word of it — all the game reads of a
+   *  ring's picture (cmdring.ts ringWant `lone`: a ring of one row is a pill, and the cursor on its place is on that row) */
+  ringKeys(): number {
+    const R = this.cmdRing, M = this.menu; if (!R || !M) return 0;
+    const seat = this.seats(M, R); let keys = 0;
+    for (let d = 1; d <= CMDRING.wedges; d++) if (d === seat.more || (M.page === null && !R.more && d === 1 ? !!this.quickWords(M.target) : seat.row[d] >= 0 && !!M.rows[seat.row[d]])) keys |= 1 << d;
+    return keys;
+  }
   /** What the ring shows this frame (null: no ring): where it is, the lit wedge, whose colour it wears, and the wedge on each digit — the first page's
-   *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it. */
+   *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it (ringKeys is what it reads). */
   ringView(): RingView | null {
     const R = this.cmdRing, M = this.menu; if (!R || !M) return null;
     const mt = this.menuTarget()!, wedges: { key: number; text: string; off: boolean; opens: boolean }[] = [];

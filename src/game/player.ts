@@ -13,7 +13,8 @@ import { ThrowSolution } from './throwables';
 import { rigLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose, sc20kLauncherMuzzle, modelGrip, modelMuzzleAhead } from './rigProps';
 import { gunLookOf } from './gunlook';   // (called inside armRifle only)
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
-import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand } from './handwork';
+import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand, WORK_TURN } from './handwork';
+import { WORKSTOW, samStowTick, samStowing } from './workstow';
 import type { SamWork } from './handwork';
 import { tread } from './floor';
 import { samLoadPace, loadGait, loadHeard } from './kitload';   // what his card weighs: his legs' pace and his footfall (as asked with its switch off)
@@ -249,6 +250,8 @@ function setHolstered(g: Game, on: boolean, quiet = false) {
   if (pl.slot === 'rifle') pl.equipT = RIFLE_EQUIP_SECS;
   if (!quiet) { g.msg(on ? (pl.rifleSel ? 'slung' : 'holstered') : itemName(pl)); g.audio.play('equip', null, 0.45); }
 }
+/** workstow.ts samStowTick's way to his holster: quiet (no line, no click of its own) */
+const stowHolster = (g: Game, on: boolean) => setHolstered(g, on, true);
 /** every gun's reload in hand abandoned (the takedown, the grab, the lock, the kick: the hands are wanted) */
 function cancelReloads(pl: Player) { pl.pistol.cancelReload(); pl.rifle.cancelReload(); pl.char.anim.cancelReload(); }
 /** A MAN WHO IS LOW (AIM.player.low, on in the page; 0 = as it was). The reticle takes a man by his POSED chest, but the round and the gun's pitch went to
@@ -379,6 +382,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (input.hit('F5')) g.saves.askSave();   // a save by hand (savestate.ts): asked for by the key — the recording's own input — and written at the end of this update, or refused there with its reason on the message line
   if (STEALTHPOSE.on || c.anim.stealth) stealthFeed(g);
   samBigTailTick(g, dt);   // (bigkit.ts, BIGSLOT.moves: the tool going back onto him after its beat, his legs his own — or dropped at once when anything else has his hands)
+  if (WORKSTOW.on || pl.workStow) samStowTick(g, stowHolster);   // (workstow.ts: a charge going on by his own hands — what he holds is put away first and brought back after; asked ahead of every state below, so a job that ended under one of them is settled too)
   if (pl.down) { if (pl.wanding) wandDrop(pl); if (pl.kitWas !== undefined || c.anim.kitBusy) kitTick(g); releaseWall(g); if (pl.holding) freeHeld(g, 'shot'); c.vel = [0, 0, 0]; pl.light.enabled = false; pl.throwPreview = null; c.anim.lockpick = false; c.anim.longGun = false; c.update(dt); g.bodyThud(c); return; }   // (down with a man in his arm — god mode off, hitPlayer has normally let go already: he goes free; the rifle, in the hands or not, is no longer held: it left them or lies under him on its sling)
   const rifle = pl.rifle;
   gun.update(dt); rifle.update(dt); pl.ocp.update(dt); rifle.ringCd = Math.max(0, rifle.ringCd - dt); pl.equipT = Math.max(0, pl.equipT - dt);
@@ -397,7 +401,10 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (pl.kick) { updateKick(g, dt); return; }              // rooted square to the leaf until the foot is back down (the door goes at KICK_IMPACT)
   if (pl.picking) { updatePicking(g, dt, input); return; }  // planted at the lock, on its own clock (a step / Space / Esc breaks off: interact.ts)
   if (pl.wanding) { updateWanding(g, dt); return; }         // on his knee at a shut door with the optical wand under it (wand.ts; a step / Space / Esc pulls it out: interact.ts)
-  { const W = samWork(g); if (W && !(input.lmbHit() && samWorkLetGo(g, W))) { updateWorkPlant(g, dt, W); return; } }   // hands at work on a thing (handwork.ts: the breaker's lever, the drive, a wall charge): stood at it and squared to it while the verb runs; the trigger lets go of the drive / the charge and is his to shoot with (the lever's half second is committed)
+  { const W = samWork(g), on = !!W && !(input.lmbHit() && samWorkLetGo(g, W));
+    if (W && !on && pl.workStow) samStowTick(g, stowHolster);   // (workstow.ts: the trigger let go of his charge on this frame — the gun starts back up on it)
+    if (on) { if (samStowing(g) && (KITANIM.on || pl.kitWas !== undefined)) kitTick(g);   // (…and the hand that carries it there is kit handling's: its errand starts here, the work waiting on it)
+      updateWorkPlant(g, dt, W!); return; } }   // hands at work on a thing (handwork.ts: the breaker's lever, the drive, a wall charge): stood at it and squared to it while the verb runs; the trigger lets go of the drive / the charge and is his to shoot with (the lever's half second is committed)
   if (pl.coding) { updateCodingPlant(g, dt); return; }     // at the keypad, feet still, squared to the plate while the code goes in (devices.ts updateCoding times it; a fresh key / Space / Esc breaks off — interact.ts)
   c.anim.lockpick = false;                                   // (whatever ended a pick, the hands come off the tools)
   // equipment selection / toggles — the digits are KIT_ORDER's (1 pistol · 2 rifle · 3 smoke · 4 stun; there is no other way to change items). Pressed to a wall his
@@ -1993,7 +2000,7 @@ function updateWorkPlant(g: Game, dt: number, W: SamWork) {
   c.vel = [0, 0, 0]; const x0 = c.pos[0], z0 = c.pos[2]; const yaw = workStand(c, W.p, W.n, dt, samWorkHand(g)); collidePlayer(g, 1.0); keepOffGuards(g, dt, 1.0);
   if (W.at) { W.at[0] += c.pos[0] - x0; W.at[2] += c.pos[2] - z0; }   // (the spot he must not shift from goes with the step HE IS WALKED here, and only that: anything else that moves him — a shove, a blast — still breaks the work off)
   const stepV = dt > 0 ? Math.hypot(c.pos[0] - x0, c.pos[2] - z0) / dt : 0;   // (his legs take the step he is walked)
-  c.bodyYaw = approachAngle(c.bodyYaw, yaw, 10 * dt); c.aimYaw = c.bodyYaw;
+  c.bodyYaw = approachAngle(c.bodyYaw, yaw, WORK_TURN * dt); c.aimYaw = c.bodyYaw;
   c.aimPitch = damp(c.aimPitch, 0, 8, dt); pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false; c.anim.speed = stepV > 0.2 ? Math.min(stepV, 1.7) : 0; c.anim.upper = 'none'; c.anim.lockpick = false;
   armRifle(g, pl.rifleUp, 'lowLong'); c.update(dt); poseGunLight(g);
 }

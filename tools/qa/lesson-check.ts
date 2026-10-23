@@ -15,6 +15,7 @@ const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/le
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { LESSON_MISSIONS, ALL_MISSIONS, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`);
+const { kitPacks } = await import(`${ROOT}/src/game/kit.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { LESSON, checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
@@ -37,7 +38,7 @@ for (const name of list) {
   const line0 = String(L.steps[0].line).replace(/\[([^\]]+)\]/g, '$1');   // (the small row reads a line without the brackets a rails line puts round its keys)
   const rows = (LESSON_MISSIONS as any[]).filter(e => e.level === `${name}.json`);   // (the tutorial's rows: scenarioList.ts)
   verdict(rows.length > 0 && rows.every(e => e.group === 'tutorial'), `the missions list has it under Tutorial (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
-  verdict(rows.every(e => kitAsIssued(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'tutorial')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued), and no other row is');
+  verdict(rows.every(e => kitAsIssued(e) || kitPacks(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'tutorial')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued) unless it is a lesson the player packs for (kit.ts ISSUE.picked, the row\'s `packs`), and no other row is');
   { const W = await stand(), faults: string[] = checkLesson(W.game); verdict(!faults.length, 'the block against the built floor: every test names a kind, a door, a light and an area this floor has', faults.join(' · ')); }
   // (not a verdict: a rows list that names an act and withholds the one that puts it back — game/rails.ts rowsWithheld; its author's to judge)
   { const { rowsWithheld } = await import(`${ROOT}/src/game/rails.ts`); for (const n of rowsWithheld(JSON.parse(readFileSync(file, 'utf8')).scenarios?.lesson) as string[]) console.log(`  NOTE  ${n}`); }

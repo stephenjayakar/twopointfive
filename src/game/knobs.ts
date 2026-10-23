@@ -142,6 +142,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'THROWBACK',
   // his own charge goes off from his own actions, not the squad's key (ownblow.ts OWNBLOW): a recording made with it on replays its interaction-key row as the blast, one from before the squad's key as it was
   'OWNBLOW',
+  // the gun is put away for a two-handed job (workstow.ts WORKSTOW): a recording made with it on replays a charge's longer clock and the draw after it, one from before the gun in the hand as it was
+  'WORKSTOW',
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
@@ -238,6 +240,7 @@ import { DOORFORCE } from './doorforce';
 import { SLOTSETUP } from './slotsetup';
 import { AIMCOST } from './aimcost';
 import { HANDWORK } from './handwork';
+import { WORKSTOW } from './workstow';
 import { TAKEDOWN } from './takedown';
 import { STEALTHPOSE } from './stealthpose';
 import { GEAR } from './gear';
@@ -403,6 +406,8 @@ export function knobRegistry(): Record<string, object> {
     RESPONSE,
     // hands that do the work (handwork.ts): the keypad's, the breaker's and the drive's clocks and Sam's plant at them read its switch
     HANDWORK,
+    // the gun is put away for a two-handed job (workstow.ts): the switch, a teammate's beats down and up
+    WORKSTOW,
     TAKEDOWN,
     STEALTHPOSE,
     // the default look (scene/look.ts): which FILE a level with a second file is loaded from, and the men's kit — look only (no run differs by it), here so a stand's dump and the page's __knobs say which look it was

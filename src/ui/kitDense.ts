@@ -99,6 +99,7 @@ ${P} .kc-gear .kc-line button:nth-of-type(2) { grid-column: 3; grid-row: 1; widt
 ${P} .kc-gear .kc-val, ${P} .kc-gear .kc-val.num { grid-column: 1 / -1; grid-row: 2; padding: 0 3px; min-width: 0; text-align: center; font-size: 12px; line-height: 22px; letter-spacing: 0.06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 ${P} .kc-gear .kc-val:not(.num) { white-space: normal; overflow: visible; line-height: 1.2; }   /* (a long name — the big slot's — takes a second line) */
 ${P} .kc-gear .kc-val.num { font-size: 19px; }
+${P} .kc-gear .kc-row.lent .kc-val.num { font-size: 12px; letter-spacing: 0.02em; }   /* (a count with the mission's word beside it is read whole in a narrow tile, never cut) */
 ${P} .kc-gear .kc-label { grid-column: 1 / -1; grid-row: 3; padding: 0 4px; text-align: center; font-size: 9px; line-height: 1.3; letter-spacing: 0.12em; white-space: normal; overflow: visible; }
 /* the colours and the sets: a strip under the kit */
 ${P} .kc-look { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
