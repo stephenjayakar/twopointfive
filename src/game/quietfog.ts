@@ -57,9 +57,9 @@ export type QuietRung = 'off' | FogRung;
 /** the rungs of the lever on a quiet mission's row, from the bottom up: the words beside each say what it does THERE (a man alone, or with one partner) */
 export const QUIET_RUNGS: { id: QuietRung; label: string; words: string }[] = [
   { id: 'off', label: 'off', words: 'no fog of war: the whole floor and every guard on it is drawn' },
-  { id: 'team', label: 'all round', words: 'you see all round you, and round your partner where you have one: the rest of the floor is drawn as you last saw it' },
-  { id: 'cones', label: 'cones', words: 'you see only the cone you look down, and your partner\'s where you have one: the floor behind your back is dark' },
-  { id: 'own', label: 'own eyes', words: 'only the cone you look down yourself lifts the fog: what a partner sees he calls to you' },
+  { id: 'team', label: 'all round', words: 'you see all around you, and around your partner if you have one. The rest of the floor is drawn as you last saw it' },
+  { id: 'cones', label: 'cones', words: "you see only the cone you're looking down, and your partner's if you have one. The floor behind your back is dark" },
+  { id: 'own', label: 'own eyes', words: "only the cone you're looking down lifts the fog, and a partner calls out what he sees" },
 ];
 const isRung = (v: unknown): v is QuietRung => typeof v === 'string' && QUIET_RUNGS.some(r => r.id === v);
 /** the line beside the lever for a rung ('' = none) */

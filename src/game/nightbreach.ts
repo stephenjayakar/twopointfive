@@ -281,7 +281,7 @@ export class NightBreach {
     issueStage(g);   // a mission that issues its own wall charges (issue.ts): after the kit, so the cards' own count is known; a level without the field = nothing
     teamStartsFallenIn(g, this.ops);   // the team starts fallen in (startfile.ts): the menu's own 'fall in', unspoken — F's drill takes its pair off it as it always took an ordered man
     this.note('staged');
-    g.msg(this.layout?.stagedLine?.() ?? `night breach — ${NUMBER[this.marks.length] ?? this.marks.length} armed men hold the ${NB?.room ?? 'room'}. ${drilled ? 'F: stack up · X: orders' : this.ops.length ? 'X: your orders (door tools on any door)' : 'You are alone'}`);
+    g.msg(this.layout?.stagedLine?.() ?? `night breach. ${NUMBER[this.marks.length] ?? this.marks.length} armed enemies hold the ${NB?.room ?? 'room'}. ${drilled ? 'Press F to stack up, or X for orders' : this.ops.length ? 'X for your orders (door tools on any door)' : "You're alone"}`);
   }
   /** a place for a man of the second pair: the free floor nearest a stride behind `lead` (the way they face: `yaw` — east on the office, so west of him), a
    *  body's room clear of everybody in `taken` and walkable from him */
@@ -304,7 +304,7 @@ export class NightBreach {
     if (this.live.orders === 0) { this.live.orders = 1; this.note('order:stack'); this.g.msg('you: stack up — side door'); return 'stack'; }
     if (this.live.orders === 1) { this.live.orders = 2; this.note('order:go'); holdFireDrill(this.g);   // (holdfire.ts: his word sends them in — the fight has started for everybody)
 
-      if (this.live.stun) { if (this.g.doorTools.take('bang')) this.bangTaken = true; else { this.live.stun = false; this.g.msg('no bangs left — they go in without one'); } }   // (the drill's stun canister is one of the squad's counted ones: doortools.ts)
+      if (this.live.stun) { if (this.g.doorTools.take('bang')) this.bangTaken = true; else { this.live.stun = false; this.g.msg("no flashbangs left, so they'll go in without one"); } }   // (the drill's stun canister is one of the squad's counted ones: doortools.ts)
       this.g.msg(isNaN(D.tSet) ? 'you: go on set' : 'you: go'); return 'go'; }
     return null;
   }
@@ -350,16 +350,16 @@ export class NightBreach {
     });
     D?.tick(dt);
     if (own) this.blindRounds = g.fight.blindRounds; else if (this.blind) this.blindFire();
-    if (!D) { if (!this.layout && this.hostiles.length && this.hostiles.every(h => h.state === 'dead' || runnerFled(h))) this.once('clear', 'room clear. Shift+Enter stages it again'); return; }   // (no breach plan on this level, or fewer than two teammates: no drill — the team is the order menu's, the layout keeps the score; the break room alone says its own end)
+    if (!D) { if (!this.layout && this.hostiles.length && this.hostiles.every(h => h.state === 'dead' || runnerFled(h))) this.once('clear', 'room clear. press Shift+Enter to restart'); return; }   // (no breach plan on this level, or fewer than two teammates: no drill — the team is the order menu's, the layout keeps the score; the break room alone says its own end)
     for (; this.beatsSeen < D.beats.length; this.beatsSeen++) this.note(D.beats[this.beatsSeen].what);
     switch (this.state) {
-      case 'set': this.once('set', 'stacked and set. F: go'); break;
-      case 'clear': if (!this.layout) this.once('clear', 'room clear. Shift+Enter stages it again'); break;
+      case 'set': this.once('set', 'stacked and set. press F to send them in'); break;
+      case 'clear': if (!this.layout) this.once('clear', 'room clear. press Shift+Enter to restart'); break;
       case 'recalled':   // (one of Sam's menu orders took a man out of the room mid-clear — orders.ts: the drill is over; a man it did not order is left as below)
       case 'failed':
         for (const o of this.drillOps) if (o.state !== 'dead' && o.script && !g.orders.has(o)) { endGuardScript(o, 'search'); o.hold = true; o.pinned = true; }   // (the drill is over with a man still up — the point man fell before the door went in: he is the fight AI's now, holding where he stands with his own eyes and ears, not a statue on a script)
-        if (this.state === 'recalled') this.once('recalled', `breach called off — the ${this.ops.length > 2 ? 'squad' : 'pair'} takes your orders (X). Shift+Enter stages it again`);
-        else if (!this.layout) this.once('failed', `${this.drillOps.every(o => o.state === 'dead') ? (this.ops.length > 2 ? 'the red pair down' : 'both men down') : 'point man down at the door'} — the room is yours to take${this.ops.length > 2 && this.ops.some(o => o.state !== 'dead') ? ' (the rest take your orders, X)' : ''}, or Shift+Enter stages it again`);
+        if (this.state === 'recalled') this.once('recalled', `breach called off, and the ${this.ops.length > 2 ? 'squad' : 'pair'} takes your orders now (X). press Shift+Enter to restart`);
+        else if (!this.layout) this.once('failed', `${this.drillOps.every(o => o.state === 'dead') ? (this.ops.length > 2 ? 'the red pair is down' : 'both teammates are down') : 'your point man is down at the door'}, so you'll have to take the room yourself${this.ops.length > 2 && this.ops.some(o => o.state !== 'dead') ? ' (the rest take your orders with X)' : ''}, or press Shift+Enter to restart`);
         break;
     }
   }
@@ -381,7 +381,7 @@ export class NightBreach {
     const g = this.g, P = g.level.breach, room = P?.room ?? 'room';
     const taken = this.hostiles.every(h => h.state === 'dead' || runnerFled(h));
     if (this.objOf && this.objOf.taken === taken) return this.objOf.o;
-    const o = { text: taken ? `${room} taken — shift+enter stages it again` : `objective ▸ take the ${room}`, pos: taken ? null : (P ? g.doors.byName(P.door)?.frameCentre ?? null : null) };
+    const o = { text: taken ? `${room} taken — press shift+enter to restart` : `objective ▸ take the ${room}`, pos: taken ? null : (P ? g.doors.byName(P.door)?.frameCentre ?? null : null) };
     this.objOf = { taken, o }; return o;
   }
   private objOf: { taken: boolean; o: { text: string; pos: Vec3 | null } } | null = null;

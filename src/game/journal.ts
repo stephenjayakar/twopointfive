@@ -290,6 +290,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const rw = k.tables.REARWATCH as Partial<typeof REARWATCH> | undefined; if (rw && rw.roomLast === undefined) REARWATCH.roomLast = false; }   // (a file from before a room keeper waited for the men on their way out of the room: freed the moment they had come by him)
   if (!k.tables.GUNWALL) GUNWALL.on = false;   // (a file from before a raised gun came down at a wall: its men kept theirs up, and fired or did not by that)
   if ((k.tables.WORDS as Partial<typeof WORDS> | undefined)?.doors === undefined) WORDS.doors = false;   // (a file from before a level could name its own doors: every door called what it was)
+  if ((k.tables.WORDS as Partial<typeof WORDS> | undefined)?.guide === undefined) WORDS.guide = false;   // (a file from before the writing guide read the spoken lines: every bubble as it was said, and as long)
   if ((k.tables.WORDS as Partial<typeof WORDS> | undefined)?.radioHome === undefined) WORDS.radioHome = false;   // (a file from before the handler kept to the office: she speaks wherever she spoke)
   if (!k.tables.CMDRING) CMDRING.on = false;   // (a file from before the orders ring: its key was nobody's)
   if (typeof (k.tables.CMDRING as { hint?: boolean } | undefined)?.hint !== 'boolean') CMDRING.hint = false;   // (… and one from before its hint: nothing drawn at the cursor before the key)

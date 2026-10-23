@@ -14,15 +14,15 @@
 export type TabDoes = 'off' | 'run' | 'who' | 'keys';
 export const TAB_CHOICES: { v: TabDoes; label: string; line: string }[] = [
   { v: 'off', label: 'Nothing', line: 'Tab does nothing.' },
-  { v: 'run', label: 'Run so far', line: 'Tab pauses on the run so far: the map with your path, what has happened and the score as it stands. Tab again goes back to the game.' },
-  { v: 'who', label: 'Order who', line: 'Tab steps who takes your next order (everyone, a pair, one man). T still does the same. Only matters with a squad.' },
-  { v: 'keys', label: 'Controls', line: 'Tab pauses on the list of keys. Tab again goes back to the game.' },
+  { v: 'run', label: 'Run so far', line: 'Press Tab to pause and see the run so far, with the map of your path, what\'s happened and the score as it stands. Press Tab again to go back to the game.' },
+  { v: 'who', label: 'Order who', line: 'Press Tab to change who takes your next order (everyone, a pair or one teammate). T still does the same. This only matters with a squad.' },
+  { v: 'keys', label: 'Controls', line: 'Press Tab to pause on the list of keys. Press Tab again to go back to the game.' },
 ];
 /** `does` = what Tab does now · `kept` = what this machine has kept (a `?tab=` visit never writes it) · `url` = this visit's flag chose */
 export const TABKEY: { does: TabDoes; kept: TabDoes; url: boolean } = { does: 'off', kept: 'off', url: false };
 /** the choices as Options ▸ Game shows them. While Tab is the back key (game/backkey.ts; the flag is handed in, so this file still imports nothing) 'Nothing'
  *  is not true of the key: the first choice then says what Tab still does, and the others that backing out comes before them. A fresh list each call. */
-export const TAB_BACK_LINE = 'In the fight Tab backs out: a list, the order menu, a thing under way.';
+export const TAB_BACK_LINE = 'In a fight, press Tab to back out of a list, the order menu or an action in progress.';
 export function tabChoices(back: boolean): { v: TabDoes; label: string; line: string }[] {
   return TAB_CHOICES.map(c => !back ? { ...c } : c.v === 'off' ? { ...c, label: 'Nothing more', line: `${TAB_BACK_LINE} Nothing more.` } : { ...c, line: `${c.line} Backing out comes first.` });
 }

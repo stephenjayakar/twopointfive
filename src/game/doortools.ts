@@ -96,7 +96,7 @@ import type { RoomClearPlan } from '../scene/level';
 import { FloorSeen } from './floorseen';
 import { DOORMANNERS, DOORMANNERS_STATS, doorwayInWay, doorwayClearNear, doorwayLane } from './doorway';
 import { GLASSPEN } from './glasspen';   // (DOORWAY.kickGlass: read in bootSpot, at order time only)
-import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { STACKROOM, stackRoomFix, stackRoomHas, stackRoomKeeps, stackViewReach, stackViewOpen } from './stackroom';
 import { SAMSTUN, dazzlePlayer } from './samstun';
 import { rearHolds, rearLast, rearWatcher } from './rearwatch';
@@ -779,7 +779,7 @@ export class DoorTools {
       only: (_S, men, t) => this.heldPlain(t, men) ? this.heldMen(men, t) : men,
       valid: (_S, t, men) => { if (this.heldPlain(t, men)) return this.canThresholdThen('bang', t, men);
         if (this.bangs <= 0) return 'no bangs left.';
-        const who = t.kind === 'door' ? this.canBehind(t.door, t.side, men) : null; if (who) return who === 'you' ? 'you are behind that door.' : `${who} is behind that door.`;   // (the squad of four: nobody bangs a room his own men stand in — nor, behindSam, the one Sam stands in)
+        const who = t.kind === 'door' ? this.canBehind(t.door, t.side, men) : null; if (who) return who === 'you' ? wg("you're behind that door.", 'you are behind that door.') : `${who} is behind that door.`;   // (the squad of four: nobody bangs a room his own men stand in — nor, behindSam, the one Sam stands in)
         return stackable(t, men); },
       issue: (_S, men, t, o) => this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord('bang', men, t) : this.thresholdThen('bang', men, t)) : this.issue('bangClear', men, t, !!o?.onWord) });
     S.register({ id: 'charge', page: TOOLS_PAGE, label: t => t.kind === 'door' && this.looseOn(t) ? 'stand off · in behind the charge' : t.kind === 'door' && this.chargeOn(t.door) ? `blow the charge${OWNCHARGE.on ? this.closeWords(this.chargeOn(t.door)!) : ''}` : `breach with a charge · ${this.charges} left`, targets: ['door'], ack: ['copy.', 'on it.'],
@@ -802,7 +802,7 @@ export class DoorTools {
     S.register({ id: 'fragClear', page: TOOLS_PAGE, hotKey: FRAG.orderKey, pageOnly: true, label: () => `frag and clear · ${this.frags} left`, targets: ['door'], ack: ['frag and clear.', 'copy, fragging it.'], onWord: true,
       valid: (_S, t, men) => { if (!FRAG.on) return 'no frags in this kit.'; if (this.frags <= 0) return 'no frags left.';
         if (g.rescue?.hostages.some(h => h.state !== 'dead')) return 'not with hostages on the floor.';   // (a frag spares nobody: with hostages anywhere on the floor it stays on the belt — said whether or not they are behind THIS door, so the row gives nothing away)
-        const mate = t.kind === 'door' ? this.fragBehind(t.door, t.side, men) : null; if (mate) return mate === 'you' ? 'you are behind that door.' : `${mate} is behind that door.`;
+        const mate = t.kind === 'door' ? this.fragBehind(t.door, t.side, men) : null; if (mate) return mate === 'you' ? wg("you're behind that door.", 'you are behind that door.') : `${mate} is behind that door.`;
         return stackable(t, men); },
       issue: (_S, men, t, o) => { this.fragNext = true; try { return this.issue('bangClear', men, t, !!o?.onWord); } finally { this.fragNext = false; } } });
     // A THRESHOLD HELD ON THE DOOR (by men the menu's orders go to): row 5 of the door's own menu is WHAT NEXT, standing in for the tools' row for as long
@@ -821,12 +821,12 @@ export class DoorTools {
       // ONE ORDER, NO PAGE (the maintainer, 10-11: "it should just clear externally w/o the additional orders of what to do after … one level of external
       // clearance and then you have to give a second order for them to go in"): row 4 of the door's tools holds the door from outside until told; going in
       // is this page's own rows 1 and 2 while they hold it (the constructor's rows), F is still the word, and 'fall in' / 'stack up' take them off it
-      S.register({ id: 'thresholdHold', page: TOOLS_PAGE, label: t => this.heldPlain(t, S.recipients(t)) ? 'clear from outside · holding it' : 'clear from outside', targets: ['door'], ack: ['on the jambs. your call after.', 'copy, holding it for you.'], onWord: true,
+      S.register({ id: 'thresholdHold', page: TOOLS_PAGE, label: t => this.heldPlain(t, S.recipients(t)) ? 'clear from outside · holding it' : 'clear from outside', targets: ['door'], ack: ['on the jambs. your call after.', 'copy, holding it for you.'], ackNow: ['on the jambs. your call.', 'copy, holding it for you.'], onWord: true,
         valid: (_S, t, men) => this.heldPlain(t, men) ? 'already holding it.' : this.canThreshold(t, men), issue: (_S, men, t, o) => this.thresholdHold(men, t, !!o?.onWord) }, 'fragClear');
       this.thrKey = undefined; return;
     }
     S.register({ id: THR_PAGE, page: TOOLS_PAGE, label: 'work it from the threshold', targets: ['door'], opens: THR_PAGE, issue: () => { } }, 'fragClear');
-    const hold = () => S.register({ id: 'thresholdHold', page: THR_PAGE, label: 'hold the door until I say', targets: ['door'], ack: ['on the jambs. your call after.', 'copy, holding it for you.'], onWord: true,
+    const hold = () => S.register({ id: 'thresholdHold', page: THR_PAGE, label: 'hold the door until I say', targets: ['door'], ack: ['on the jambs. your call after.', 'copy, holding it for you.'], ackNow: ['on the jambs. your call.', 'copy, holding it for you.'], onWord: true,
       valid: (_S, t, men) => this.canThreshold(t, men), issue: (_S, men, t, o) => this.thresholdHold(men, t, !!o?.onWord) });
     const step = () => S.register({ id: 'threshold', page: THR_PAGE, label: 'step in once it goes quiet', targets: ['door'], ack: ['on the jambs, then in.', 'copy, working it.'], onWord: true,
       valid: (_S, t, men) => this.canThreshold(t, men), issue: (_S, men, t, o) => this.threshold(men, t, !!o?.onWord) });
@@ -887,9 +887,9 @@ export class DoorTools {
         if (big) g.orders.register({ id: BIG_ORDER, page: TOOLS_PAGE, hotKey: BIG_KEY, label: t => `${this.bigWord(t, g.orders.recipients(t))} and clear`, targets: ['door'], ack: ['on it.', 'breaching.'], onWord: true,
           valid: (_S, t, men) => { if (t.kind !== 'door') return false; if (isOpen(t.door)) return "it's open."; if (t.door.def.steel) return 'steel. no way through.';
             if (!men.some(m => carriesHammer(m) || (SHOTGUN.on && m.state !== 'dead' && kitBig(m) === 'shotgun'))) return 'nobody here carries one.';
-            if (SILENT.kicks && !SILENT.toolsLoud && squadSilent(g) && !silentUrgent(g)) return 'not while we are silent.';   // (with SILENT.toolsLoud the row is one of silent.ts LOUD_ROWS: marked LOUD, and picking it is the squad going loud)
+            if (SILENT.kicks && !SILENT.toolsLoud && squadSilent(g) && !silentUrgent(g)) return wg("not while we're silent.", 'not while we are silent.');   // (with SILENT.toolsLoud the row is one of silent.ts LOUD_ROWS: marked LOUD, and picking it is the squad going loud)
             // (a wedge is nothing the menu reads before a hand has tried the door: only the shotgun to hand and a wedge nobody knows of, the row stands and the lead's hand finds it — haltAt)
-            if (t.door.locked && t.door.lockId.startsWith('wedge:') && !men.some(m => carriesHammer(m)) && (!DOORTOOLS.testDoor || this.knownShut(t.door, t.side))) return 'wedged. no shell shifts it.';
+            if (t.door.locked && t.door.lockId.startsWith('wedge:') && !men.some(m => carriesHammer(m)) && (!DOORTOOLS.testDoor || this.knownShut(t.door, t.side))) return wg("it's wedged. a shell won't open it.", 'wedged. no shell shifts it.');
             return this.stackable(t, men); },
           issue: (_S, men, t, o) => { this.bigNext = true; try { return this.issue('openClear', men, t, !!o?.onWord); } finally { this.bigNext = false; } } }, 'fragClear'); } }
     const S = g.orders, thrKey = goKey === null ? DOORTOOLS.blowKey : goKey;
@@ -897,8 +897,8 @@ export class DoorTools {
       S.register({ id: 'thrWord', page: HELD_PAGE, head: WORD_HEAD, hotKey: thrKey || undefined, targets: ['door'],
         label: t => { if (!S.big) return silentNoCans(g) || this.wordQuiet() ? 'go · step in · no bang' : 'go · bang the blind pockets, step in'; const w = this.waitingWords(S.recipients(t)); return w ? `go · ${w}` : 'go'; },
         only: (_S, men, t) => S.big ? this.waitingMen(men) : this.heldMen(men, t),
-        valid: (_S, t, men) => this.heldOn(t, men).some(op => !op.word) || 'nobody is holding that door.',
-        issue: (_S, men) => (S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody is waiting on your word.') ?? undefined }); }
+        valid: (_S, t, men) => this.heldOn(t, men).some(op => !op.word) || wg("nobody's holding that door.", 'nobody is holding that door.'),
+        issue: (_S, men) => (S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody\'s waiting for you to say go.') ?? undefined }); }
   }
   /** a fresh run: the counts back, nothing set, nothing under way (a can already in the air goes off on its own short fuse) */
   reset() {
@@ -1181,10 +1181,10 @@ export class DoorTools {
       this.beat(op, `on the word · ${what === 'step' ? 'step in, no bang' : 'bang, then step in'}`); }
   }
   canThresholdThen(what: 'step' | 'bang' | 'leave', t: OrderTarget | null, men: Guard[]): true | string {
-    const ops = this.thresholdHeld(men, t?.kind === 'door' ? t.door : null); if (!ops.length) return 'nobody is holding that door.';
+    const ops = this.thresholdHeld(men, t?.kind === 'door' ? t.door : null); if (!ops.length) return wg("nobody's holding that door.", 'nobody is holding that door.');
     if (what !== 'bang') return true;
     if (this.bangs <= 0) return 'no bangs left.';
-    for (const op of ops) { const who = this.canBehind(op.door, op.side, op.men); if (who) return who === 'you' ? 'you are behind that door.' : `${who} is behind that door.`; }   // (the squad of four: nobody bangs a room his own men stand in — nor, behindSam, the one Sam stands in)
+    for (const op of ops) { const who = this.canBehind(op.door, op.side, op.men); if (who) return who === 'you' ? wg("you're behind that door.", 'you are behind that door.') : `${who} is behind that door.`; }   // (the squad of four: nobody bangs a room his own men stand in — nor, behindSam, the one Sam stands in)
     return true;
   }
   /** the step in, from the jambs: at once — or, on a word that has other doors to wait for, with them (wordTick sends an order waiting in 'wait' in) */
@@ -1459,7 +1459,7 @@ export class DoorTools {
     if (!this.take('charge')) { g.msg('no charges left'); return; }
     this.samSpent++;
     this.set.push({ door: d, side: s.side, t: g.time, by: SAM_BY }); g.audio.play('lockPick', d.pos, 0.6);
-    g.msg(`charge set on the ${doorWords(d)}${blowTail(!OWNBLOW.on, K.blowKey.replace('Key', ''), ' — ')}`);
+    g.msg(`charge set on the ${doorWords(d)}${blowTail(!OWNBLOW.on, K.blowKey.replace('Key', ''), '. ')}`);
     this.note(`charge set by hand on ${d.def.name}`);
   }
   /** the charges that stand set: drawn, and one whose door has come open (or off its hinges) is off it — back in the count */
@@ -1469,7 +1469,7 @@ export class DoorTools {
       const gone = OWNCHARGE.on && c.door.off;   // (blown off its hinges by something else: the same — owncharge.ts; without it the charge stood on in the air)
       if (gone || isOpen(c.door)) {
         this.set.splice(this.set.indexOf(c), 1); this.refund('charge'); if (c.by === SAM_BY) this.samSpent = Math.max(0, this.samSpent - 1);
-        g.msg(gone ? `the ${doorWords(c.door)} is off its hinges — the charge is off it` : `the ${doorWords(c.door)} came open — the charge is off it`); this.note(`charge off ${c.door.def.name}: the door ${gone ? 'is gone' : 'opened'}`); continue;
+        g.msg(gone ? `the ${doorWords(c.door)} is off its hinges, so the charge came off with it` : `the ${doorWords(c.door)} came open, so the charge came off`); this.note(`charge off ${c.door.def.name}: the door ${gone ? 'is gone' : 'opened'}`); continue;
       }
       this.drawCharge(c);
     }
@@ -1777,7 +1777,7 @@ export class DoorTools {
    *  order given 'on my word' is let go, a pair holding outside a door goes in, a set charge is blown — and they cross their thresholds on the same frame:
    *  the loud ones (a bang, a charge) begin at once, the quiet ones do not touch their doors until the last bang's blind burst has run dry (or `wordIn`
    *  seconds). Null when something went; else why not. */
-  go(who: Who = 'all'): string | null { this.sync(); const men = this.g.orders.men(who); if (!this.g.orders.big) return this.wordOnHold(men) ? null : 'nobody is waiting on your word.'; const r = this.goMen(men); return r !== null && this.wordEarly(men) ? null : r; }
+  go(who: Who = 'all'): string | null { this.sync(); const men = this.g.orders.men(who); if (!this.g.orders.big) return this.wordOnHold(men) ? null : 'nobody\'s waiting for you to say go.'; const r = this.goMen(men); return r !== null && this.wordEarly(men) ? null : r; }
   /** the word at this held door is 'step in, no can': told so ('on my word · step in'), or never told what the word is under DOORTOOLS.wordNoCan (a hold
    *  given to be HELD — a plain threshold's own word, which cuts its count short, bangs its pockets as it did; a word told 'bang' stays a bang) */
   /** every door held on the word is one the word steps into with no can (wordNoCan): what the pair's go row says */
@@ -1837,7 +1837,7 @@ export class DoorTools {
     if (DOORTOOLS.fragHold) {   // (THE WORD AGAIN while it is held for men who ran from a grenade: Sam's call — it waits for nobody)
       const held = this.fragHeld(men);
       if (held.length) { for (const o of held) { this.beat(o, 'the word again'); this.fragOn(o); } this.wordTick(); if (!(only ?? this.waitingAny(men)).length) return null; } }   // (others of these men still waiting for their FIRST word: it is given below)
-    const list = only ?? this.waitingAny(men); if (!list.length) return 'nobody is waiting on your word.';   // (`only`: the small squad's word — its plain stacks, nothing else)
+    const list = only ?? this.waitingAny(men); if (!list.length) return 'nobody\'s waiting for you to say go.';   // (`only`: the small squad's word — its plain stacks, nothing else)
     holdFireOrder(g, 'go');   // (holdfire.ts: the word, by whatever road it came — what waited on it lifted nothing until now)
     const w: Word = { t0: g.time, go1: NaN }; this.words.push(w); this.stats.words++;
     for (const x of list) { const op = 'stack' in x ? this.fromStack(x.men, x.stack) : x; if (!op) continue;
@@ -1908,7 +1908,7 @@ export class DoorTools {
       if (this.frameHeld(d, op.side) && this.frameAnswer(op)) return;   // it opens toward them: the frame is behind the leaf and a boot will not shift it (doors.ts DOORWAY.frameHolds) — a cylinder is picked, loud squad or not; anything else wants a charge, and the order ends here as it does on steel
       const stuck = this.pickable(d) ? null : d.lockId.startsWith('wedge:') ? 'wedged from inside' : 'keypad, no code';   // (no pick opens it — steel has gone above)
       const boot = stuck ? silentBoot(g, d) : null;   // (silent.ts: a COMPROMISED silent squad boots the door nothing quiet opens — and stays silent)
-      if (!boot && silentNoBoot(g)) { g.say(lead, stuck && SILENT.bootWedged ? `${stuck}. no quiet way in. go loud and we boot it.` : 'locked. no boot while we are silent.'); this.end(op, 'locked · silent: no boot'); return; }   // (silent.ts: the boot is a loud tool, and nobody picked one)
+      if (!boot && silentNoBoot(g)) { g.say(lead, stuck && SILENT.bootWedged ? `${stuck}. no quiet way in. go loud and we boot it.` : wg("locked. can't kick it while we're silent.", 'locked. no boot while we are silent.')); this.end(op, 'locked · silent: no boot'); return; }   // (silent.ts: the boot is a loud tool, and nobody picked one)
       if (!boot && this.toGun(op)) return;   // (shotgun.ts: a man of the stack with a breaching shotgun takes the lock from beside the frame — the 'kick' stage, gunStep)
       const ks = this.bootSpot(d, op.side);
       op.kick = { pos: ks.pos, yaw: ks.yaw, t: NaN }; op.phase = 'kick'; op.t0 = t;
@@ -2209,10 +2209,10 @@ export class DoorTools {
         if (op.frag) {   // asked again as it is about to leave the hand (the row asked when it was given: a word, or a long walk to the stack, later somebody may be in there)
           const who = g.rescue?.hostages.some(h => h.state !== 'dead') ? 'hostages' : this.fragBehind(d, op.side, op.men);
           if (who) {   // (the door is open and the room knows: the grenade goes back on his belt and they go in without it — an order is not dropped at an open doorway)
-            g.say(lead, who === 'hostages' ? 'hostages — no frag. going in.' : who === 'you' ? 'you are in there — no frag. going in.' : `${who} is in there — no frag. going in.`);
+            g.say(lead, who === 'hostages' ? 'hostages — no frag. going in.' : who === 'you' ? wg("you're in there — no frag. going in.", 'you are in there — no frag. going in.') : `${who} is in there — no frag. going in.`);
             op.bangHeld = false; op.frag = false; this.refund('frag'); this.beat(op, 'frag held'); this.note(`frag held on ${d.def.name}: ${who} in its reach — in without it`); this.enter(op); break; }
         } else if (this.samBehind(d, op.side)) {   // (behindSam — false with the switch off: the can is asked about Sam again as it is about to leave the hand, as the frag is. The row asked when it was given; 'on my word', or a long walk to the stack, later he may have gone in by another door. The can goes back in the kit and they go in without it)
-          g.say(lead, 'you are in there — no bang. going in.');
+          g.say(lead, wg("you're in there — no bang. going in.", 'you are in there — no bang. going in.'));
           op.bangHeld = false; this.refund('bang'); this.beat(op, 'no bang · you are in there'); this.note(`bang held on ${d.def.name}: you in its reach — in without it`);
           if (op.word) { op.phase = 'wait'; op.hold = 2; break; }   // (on a word with another door: in step with it — wordTick sends them in together, as behind a bang)
           this.enter(op); break;
@@ -2235,7 +2235,7 @@ export class DoorTools {
             const what = op.frag ? 'frag' : 'bang', tag = op.frag ? 'frag' : 'can';   // (a beat that starts 'bang' is the burst itself: the stun's waiting and held beats say 'can')
             if (op.fragWayT === undefined) { op.fragWayT = t; this.beat(op, `${tag} waits: the door is in the way (${d.angle.toFixed(2)} rad)`); }
             if (t - op.fragWayT < K.fragWayWait) break;
-            g.say(th, `door is in the way — no ${what}. going in.`);
+            g.say(th, wg(`the door's in the way — no ${what}. going in.`, `door is in the way — no ${what}. going in.`));
             op.bangHeld = false; op.frag = false; this.refund(what); this.beat(op, `${tag} held`); this.note(`${what} held on ${d.def.name}: the leaf is in its way (${d.angle.toFixed(2)} rad) — in without it`); this.enter(op); break; }
         }
         op.bangHeld = false;
@@ -2346,7 +2346,7 @@ export class DoorTools {
         if (!this.chargeOn(d)) { if (isOpen(d)) this.stayHands(op); this.end(op, 'the charge is gone'); break; }
         { const near = op.men.filter(gd => flat(gd.char.pos, d.frameCentre) < K.backblastM + 0.05);   // (… and every one of them OUT of the backblast, not merely counted in on a mark a stride outside it: 'arrived' is said a foot short of the mark — so a man still inside it is waited on for as long as he is still walking, up to `stackCap`)
           if (!op.men.every(gd => this.arrived(op, gd)) ? this.waiting(op, el) : near.length > 0 && el < K.stackCap && (el < K.stillSecs || near.some(gd => g.time - op.mine.get(gd)!.movedT < K.stillSecs))) break; }
-        g.say(lead, 'stood off. your call.'); g.msg(`charge set on the ${name} — ${K.blowKey.replace('Key', '')} blows it`);
+        g.say(lead, 'stood off. your call.'); g.msg(`charge set on the ${name}. press ${K.blowKey.replace('Key', '')} to blow it`);
         op.phase = 'armed'; op.t0 = t; this.beat(op, 'armed'); if (op.word) op.hold = 1;
         break;
       }
@@ -2461,7 +2461,7 @@ export class DoorTools {
           if (!(Math.abs(d.angle) >= K.fragWayOpen || (d.angle * away >= K.fragWayAjar && d.vel * away > 0))) {
             if (T.shutT === undefined) { const locked = this.lockedOut(d, op.side); T.shutT = locked ? -1e9 : t; this.beat(op, `can waits: the door has come shut (${d.angle.toFixed(2)} rad)`); if (!locked) this.shove(op); }
             if (t - T.shutT < K.fragWayWait) break;
-            g.say(th, 'door is in the way — no bang. going in.'); this.beat(op, 'can held'); T.shutT = undefined; this.toStep(op); break;
+            g.say(th, wg("the door's in the way — no bang. going in.", 'door is in the way — no bang. going in.')); this.beat(op, 'can held'); T.shutT = undefined; this.toStep(op); break;
           }
           T.shutT = undefined;
         }
@@ -3252,7 +3252,7 @@ export class DoorTools {
     // hurts is decided below, by which side of the door he is on
     const it = g.items.spawn('flash', doorPt(d, W * 0.7, 0.2, into, 0.5), [0, 0, 0], { fuse: 99, who: PLAYER_ID }); it.fired = true;
     const all = g.guards, last = g.messages[g.messages.length - 1]; g.guards = []; try { detonateStun(g, it, true); } finally { g.guards = all; }
-    const m = g.messages[g.messages.length - 1]; if (m && m !== last && /canister/.test(m.text)) g.messages.pop();   // ('stun canister went off': this was not one)
+    const m = g.messages[g.messages.length - 1]; if (m && m !== last && /flashbang/.test(m.text)) g.messages.pop();   // ('flashbang went off': this was not one)
     const ii = g.items.items.indexOf(it); if (ii >= 0) g.items.items.splice(ii, 1);   // (nor is there a spent can to leave on the floor)
     let knocked = 0, stunned = 0, backblast = 0, samToo = false;
     const leaves = g.col.dynamicBoxes; g.col.dynamicBoxes = leaves.filter(b => b !== d.box);   // (walls and every OTHER shut door stop it; this leaf is what is coming apart)
@@ -3743,7 +3743,7 @@ export class DoorTools {
       const rest = this.stackWords(S.men()); return rest ? [CMDRING.only ? `${rest} waiting` : `${rest} waiting · ${T}, then ${F}`] : [];   // (cmdring.ts only: the who key is nobody's)
     }
     const F = DOORTOOLS.blowKey.replace('Key', ''), T = S.knobs.whoKey.replace('Key', ''), key = DOORTOOLS.wordOnKey;
-    const mine = this.waitingWords(this.wordMen()); if (mine) return [key ? { key: F, text: `go · ${mine} waiting` } : `${mine} waiting on your word`];
+    const mine = this.waitingWords(this.wordMen()); if (mine) return [key ? { key: F, text: `go · ${mine} waiting` } : `${mine} waiting for you to say go`];
     const rest = [...new Set(this.waitingAny(S.men()).filter(x => 'stack' in x || !this.chargeOn(x.door)).map(x => S.whoWords(x.men.filter(m => m.state !== 'dead'))))].join(' + ');
     return rest ? [CMDRING.only ? `${rest} waiting` : `${rest} waiting · ${T}, then ${key ? F : 'go'}`] : [];
   }
