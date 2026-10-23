@@ -46,6 +46,11 @@ export function disarmBegin(g: Game): void {
   const gd = H.g; if (inHand(gd) !== 'weapon') return;
   H.strip = { t: 0, kind: gd.weapon.def.drop, supp: gd.weapon.def.suppressed, at: handOf(gd), item: null, rap: H.variant === 'gun', gone: false, yaw: v3.yawOf(gd.char.gunDir) };
 }
+/** the grab's first voice (player.ts startGrab, every grab): the catch with the move's two keys on, the scuffle it always was without — so one condition
+ *  decides all three voices. Its rate is pinned: the beat does not wander */
+export function disarmCatch(g: Game, at: Vec3): void {
+  if (HOLD.disarm && HOLD.dropGun) g.audio.play('grabCatch', at, DISARM_GAIN.catch, { rate: 1 }); else g.audio.play('grabScuffle', at, 0.4);
+}
 /** what both figures' hold layers are told of it this frame (player.ts holdTail) */
 export function disarmPose(S: Strip): StripPose { return { t: S.t, at: S.at }; }
 /** Sam's right fist is the gun's, not yet the knife's (combat.ts handProps: no blade is drawn in it) */

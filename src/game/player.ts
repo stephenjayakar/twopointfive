@@ -15,7 +15,7 @@ import { gunLookOf } from './gunlook';   // (called inside armRifle only)
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
 import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand, WORK_TURN } from './handwork';
 import { WORKSTOW, samStowTick, samStowing } from './workstow';
-import { disarmBegin, disarmPose, DISARM_GAIN, type Strip } from './disarm';
+import { disarmBegin, disarmCatch, disarmPose, type Strip } from './disarm';
 import type { SamWork } from './handwork';
 import { tread } from './floor';
 import { samLoadPace, loadGait, loadHeard } from './kitload';   // what his card weighs: his legs' pace and his footfall (as asked with its switch off)
@@ -1497,7 +1497,7 @@ export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
   disarmBegin(g);   // (disarm.ts, HOLD.disarm: the gun he still has in his hand is Sam's right hand's to take, a beat from now — nothing with the switch off)
   if (kind) closeTook(g, gd, 'grab', kind, b0, r0);
   pl.fireCd = Math.max(pl.fireCd, HOLD.secs.grab);   // (no round leaves the gun on its way round him)
-  g.audio.play(HOLD.disarm ? 'grabCatch' : 'grabScuffle', v3.add(gd.char.pos, [0, 1.4, 0]), HOLD.disarm ? DISARM_GAIN.catch : 0.4);   // the arm going round him: sleeve over his shoulder, chest into his back, the breath he snatches choked off
+  disarmCatch(g, v3.add(gd.char.pos, [0, 1.4, 0]));   // the arm going round him: sleeve over his shoulder, chest into his back, the breath he snatches choked off
   g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: GRAB_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, GRAB_NOISE); chronGrab(g, gd);   // a scuffle the room hears inside a few metres, not the floor
 }
 
