@@ -364,8 +364,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     none, the read-out asked of a fresh game, two restores with the host not told, the host's put-back with a blast live); `SNOWBLASTBOOK_BREAK=1` fails
     it. NOT DONE, and whose: the drip lines are found again only when the COUNT of statics changes (furniture blown away in its own slot keeps its drip
     points: an older rule of the rain's, the reviewer measured nine such points in the office), and each book tells a put-back it was not told of by its
-    own sign (the kicks and the blasts by a count gone back, the rain by the ring's count) where one signal from the snapshot would serve all. Never
-    seen on a GPU: nobody has looked at rain on the frame after a load.
+    own sign (the kicks and the blasts by a count gone back, the rain by the ring's count) where one signal from the snapshot would serve all. ON A PAGE
+    (headless Chromium, the software adapter, very low quality): the office's storm, 118 pipelines, none failed — raining with 973 drip lines; a save kept
+    in memory loaded: a fresh book on the next frame with the same 973 lines, the ring begun again from 55 drops; a restart the same. The pass, 119
+    pipelines: one blast marked, 28 wisps and 180 flakes filed on its frame; the save taken then and loaded: a fresh book filed the 28 and the 180 again,
+    and the blast was let go by the game's own clock (no row left twenty frames on). No console, page or GPU error. Never seen on a real GPU: nobody has
+    looked at rain, or at a blast's powder, on the frame after a load.
   - **The rain is as it was**: no rain number, shader path or still changes on a page that is not a snow level (the `WX_SNOW` branches are compile-time false there).
   - **Check**: `bun run tools/qa/snow-check.ts` (`probes.ts snow`, in `weather`), 12 lines — born / off / others / row / senses / same / flakes ×2 / book / walls / save / old; 12 of 12 on BOTH stands
     (10-23), `SNOW_BREAK=1` (the switch never raised) fails 9 of 12 on both. `same` is five PLAYED runs of the pass's room clear (`playthrough.ts --one pass-four:<seed>`, `PT_DIGEST=1`, a process
