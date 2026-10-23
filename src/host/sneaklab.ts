@@ -35,6 +35,8 @@ const NUMS = (): Num[] => [
   { t: STALK, name: 'STALK', key: 'riseBy', label: 'he is that far up by m', min: 0.6, max: 2.5, step: 0.05, tip: 'the distance behind the man by which Sam is as far out of the crouch as the row above says' },
   { t: STALK, name: 'STALK', key: 'catchSecs', label: 'the step into the grab, s', min: 0, max: 0.45, step: 0.01, tip: 'the grab closes the last of the gap in one eased step this long. 0 = the grab\'s own snap' },
   { t: STALK, name: 'STALK', key: 'catchStride', label: 'his legs in that step, m/s', min: 0, max: 3, step: 0.1, tip: 'the most walking speed his legs are given for the step in' },
+  { t: STALK, name: 'STALK', key: 'yank', label: 'he is hauled back, m', min: 0, max: 0.6, step: 0.02, tip: 'once the step in has landed the man is pulled this far straight back, Sam going with him. 0 = held where he stood' },
+  { t: STALK, name: 'STALK', key: 'yankRoom', label: 'room kept behind the pair, m', min: 0.2, max: 1, step: 0.05, tip: 'the haul back stops this far short of anything solid behind Sam' },
   { t: STALK, name: 'STALK', key: 'cornerM', label: 'at a corner he is taken inside m', min: 0.8, max: 2.5, step: 0.05, tip: 'waiting on a wall with the button held: how close the man must pass' },
   { t: STALK, name: 'STALK', key: 'cornerDeg', label: 'at a corner, how far past you he must be, degrees', min: 30, max: 150, step: 5, tip: 'how far round from his nose Sam must be before the wait takes him: 90 = level with his shoulder, more = he has gone further past' },
   { t: CLOSE, name: 'CLOSE', key: 'modeM', label: 'it can begin inside m', min: 1.5, max: 7, step: 0.1, tip: 'the close-in range: inside it the sneak holds its pose and a press on a man begins the creep' },

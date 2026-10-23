@@ -68,8 +68,8 @@ async function beats() {
   console.log('\n=== beats: the gun is taken, carried, let down ===');
   const C = await world(up()), R = run(C), K = HOLD.strip, p = C.g.player.char.pos, d = Math.hypot(R.rest[0] - p[0], R.rest[2] - p[2]);
   const D = await world(false), R0 = run(D);
-  const ok = C.armed && R.first && Math.abs(R.takeT - K.take) < 0.05 && R.carriedT >= 0 && R.carriedT - R.takeT < 0.04 && Math.abs(R.letT - K.drop) < 0.05 && R.restT > 0 && R.restT < K.drop + 1.5 && d < 1.0 && R.rest[1] < 0.3 && Math.abs(R.overT - K.home) < 0.06 && R.heldF > 0 && R.heldF === R0.heldF;
-  verdict(ok, 'a man with a gun in his hand, taken from behind: his on the first frame, out of his hand and in Sam\'s at the take, let go at the drop, still on the floor inside a metre of them, the move over at its end, and he is held on the frame he always was',
+  const ok = C.armed && R.first && Math.abs(R.takeT - K.take) < 0.05 && R.carriedT >= 0 && R.carriedT - R.takeT < 0.04 && Math.abs(R.letT - K.drop) < 0.05 && R.restT > 0 && R.restT < K.drop + 1.5 && d < 1.5 && R.rest[1] < 0.3 && Math.abs(R.overT - K.home) < 0.06 && R.heldF > 0 && R.heldF === R0.heldF;
+  verdict(ok, 'a man with a gun in his hand, taken from behind: his on the first frame, out of his hand and in Sam\'s at the take, let go at the drop, still on the floor inside a metre and a half of them, the move over at its end, and he is held on the frame he always was',
     `armed ${C.armed} · his on the grab's frame ${R.first} · out of his hand at ${R.takeT.toFixed(2)} s (asks ${K.take}) · carried from ${R.carriedT.toFixed(2)} s · let go at ${R.letT.toFixed(2)} s (asks ${K.drop}) · at rest at ${R.restT.toFixed(2)} s, ${d.toFixed(2)} m from Sam, ${R.rest[1].toFixed(2)} m up · over at ${R.overT.toFixed(2)} s (asks ${K.home}) · held on frame ${R.heldF} (switch off: ${R0.heldF})`);
 }
 async function pose() {

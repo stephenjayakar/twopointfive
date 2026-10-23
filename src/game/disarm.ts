@@ -103,8 +103,11 @@ function letGo(g: Game, it: Item, by: Character): void {
   it.carried = false; it.settled = false; it.spin = push > 0 ? K.spin : 0; it.tumbleRate = 0;   // (thrown: it turns flat as it goes — a fixed rate, no dice; stopped at a wall: dead, as it was)
   it.vel = [by.vel[0] - Math.cos(y) * push, -K.push[1], by.vel[2] + Math.sin(y) * push];
 }
+/** how high a bounce can be and still be the floor's (m: the gun's own half thickness and change) */
+const GUN_FLOOR = 0.25;
 /** the gun on the floor: one dull knock, the first time it lands (Item.onBounce — it keeps nothing of its own but the item's count) */
 function gunDown(sp: number, p: Vec3, g: Game, it: Item): void {
+  if (p[1] > GUN_FLOOR) return;   // (thrown, it may touch a wall or a table's edge on its way: the knock is the FLOOR's — the one beat that falls at the same moment every time)
   if (sp < 0.7 || (it.clatters = (it.clatters ?? 0) + 1) > 1) return;
   g.audio.play('gunDown', p, DISARM_GAIN.down * Math.min(1, 0.5 + sp / 8), { rate: long(it.kind) ? DISARM_GAIN.long : 1 });
 }

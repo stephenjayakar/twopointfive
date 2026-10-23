@@ -49,17 +49,21 @@ export const STALK = {
    *  crouch (`rise` of the way to his feet by `riseBy` m — the grab itself stands him up the rest). Both run straight by the distance. Because it is the distance's, letting go of the button holds
    *  the pose where it is — a frame of the move, paused — and the next press goes on from it; his own keys behind the same man show the same body. What the men
    *  see and hear of him is the crouch's, as it was. `tell` off = the tell in reach alone, as before the stalk. */
-  tell: true, reachFrom: 2.6, reach: 1, riseFrom: 2.3, riseBy: 1.05, rise: 0.7,
-  /** THE STEP IN: the grab a stalk ends in closes the last of the gap in one eased step over `catchSecs` (never longer than the grab itself, HOLD.secs.grab) —
-   *  the grab's own way in covers most of it in its first three frames. His legs are given the step, at no more than `catchStride` m/s. 0 = the grab's own. */
-  catchSecs: 0.36, catchStride: 1.5,
+  tell: true, reachFrom: 2.9, reach: 1, riseFrom: 2.3, riseBy: 1.05, rise: 0.7,
+  /** THE STEP IN: the grab a stalk ends in closes the last of the gap in one step over `catchSecs` (never longer than the grab itself, HOLD.secs.grab) —
+   *  a lunge: off the mark over its first three frames, most of the way inside a third of it, landing gently (stepEase). The grab's own way in covers a
+   *  fifth of the gap in its first FRAME. His legs are given the step, at no more than `catchStride` m/s. 0 = the grab's own.
+   *  THE YANK: once the step has landed the man is hauled `yank` m straight back the way he was facing from — Sam going back with him — over what is left of
+   *  the grab: movement across the floor is what the game's camera shows of a grab (the pose's share: character.ts HOLD.yank). Less where something solid
+   *  stands behind the pair (`yankRoom` m kept clear behind Sam); 0 = he is held where he stood. */
+  catchSecs: 0.3, catchStride: 1.5, yank: 0.28, yankRoom: 0.4,
   /** THE SAME AT A CORNER (the maintainer: "curious if we can make this language work for working corners. like when you're at a corner you can either grab
    *  or CQC with the right timing"). With his back on a wall (the wall hold, not the stack) and his hands empty, the left button HELD is a man lying in wait:
    *  nothing moves, and the moment a man who is not onto him is inside `cornerM` with Sam at least `cornerDeg`° round from his nose — he has come past the
-   *  corner — Sam comes off the wall onto him: the grab, by the same eased step in. Pressed too soon it simply waits; let go, nothing happens; a man who comes
+   *  corner, most of a pace — Sam comes off the wall onto him: the grab, by the same eased step in. Pressed too soon it simply waits; let go, nothing happens; a man who comes
    *  round FACING him is not taken (the right button's knockout is still the player's own timing, as off a wall). `corner` off = the button on a wall does
    *  nothing, as before. The page: ?stalkcorner=0. */
-  corner: true, cornerM: 1.35, cornerDeg: 75,
+  corner: true, cornerM: 1.35, cornerDeg: 110,
 };
 /** tallies for the checks and the page's hook (begun = presses that took a man; out = why each ended without a grab) */
 export const STALK_STATS = { begun: 0, grabs: 0, corner: 0, out: { let: 0, far: 0, turned: 0, wall: 0, him: 0, hands: 0, keys: 0 }, last: '' };
@@ -155,3 +159,10 @@ export function stalkGrab(g: Game): Guard | null { const S = STATE.get(g); retur
 export function stalkOn(g: Game): Guard | null { return STATE.get(g)?.on ?? null; }
 /** a reset of the floor's men (game.ts resetGuards), a load: nothing is stalked */
 export function stalkReset(g: Game) { const S = STATE.get(g); if (S) { S.on = null; S.grab = null; S.t = -1; } }
+
+/** the step in's ease (STALK.catchSecs), 0‥1 → 0‥1: he is off the mark over the first `P` of it (a quadratic, so the first frame is no snap) and from there
+ *  it is a cubic ease-out, joined with one slope: some three fifths of the way inside a third of the time, landing gently */
+export function stepEase(u: number): number {
+  const v = clamp(u, 0, 1), P = 0.15, B = 1 / ((1 - P) * (1 - P) * (1 + 0.5 * P)), A = 3 * B * (1 - P) * (1 - P) / (2 * P);
+  return v < P ? A * v * v : 1 - B * (1 - v) ** 3;
+}

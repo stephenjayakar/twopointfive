@@ -135,10 +135,11 @@ async function stepIn() {
   console.log('\n=== stepin: the grab a stalk ends in closes the gap in one eased step, not a snap ===');
   const C = await world(true, SEEDS[0], 2.4, 0), was = STALK.catchSecs; if (BREAK) STALK.catchSecs = 0;
   const pl = C.g.player.char, t = holdToGrab(C, 6), H = C.g.player.holding; let p0: P3 = [...pl.pos] as P3, first = -1, peak = 0, n = 0; const from = H?.from ? Math.hypot(H.from[0] - C.A.char.pos[0], H.from[2] - C.A.char.pos[2]) : -1;
+  const a0: P3 = [...C.A.char.pos] as P3;
   for (let i = 0; i < 30 && C.g.player.holding?.phase === 'grab'; i++) { C.step(); const d = Math.hypot(pl.pos[0] - p0[0], pl.pos[2] - p0[2]); if (first < 0) first = d; peak = Math.max(peak, d / DT); p0 = [...pl.pos] as P3; n++; }
-  const end = C.gap(); STALK.catchSecs = was;
-  verdict(isFinite(t) && from > 0.5 && first >= 0 && first < 0.02 && peak < 4.5 && end < 0.5, 'in the arm from most of a metre out: the first frame of the way in moves him under 2 cm (the old snap: a fifth of the gap), he is never over 4.5 m/s, and he ends at the hold\'s own distance',
-    `${isFinite(t) ? `in his arm in ${f2(t)} s` : 'never grabbed'} · grabbed from ${f2(from)} m · the first frame moved him ${first.toFixed(3)} m · top speed ${f2(peak)} m/s over ${n} frames · he ends ${f2(end)} m off the man`);
+  const end = C.gap(), back = Math.hypot(C.A.char.pos[0] - a0[0], C.A.char.pos[2] - a0[2]); STALK.catchSecs = was;
+  verdict(isFinite(t) && from > 0.5 && first >= 0 && first < 0.04 && peak < 7 && end < 0.5 && (BREAK || (back > 0.6 * STALK.yank && back < STALK.yank + 0.02)), 'in the arm from most of a metre out: the first frame of the way in moves him under 4 cm (the old snap: a fifth of the gap), he is never over 7 m/s, he ends at the hold\'s own distance, and the man has been hauled back most of STALK.yank by the time he is held',
+    `${isFinite(t) ? `in his arm in ${f2(t)} s` : 'never grabbed'} · grabbed from ${f2(from)} m · the first frame moved him ${first.toFixed(3)} m · top speed ${f2(peak)} m/s over ${n} frames · he ends ${f2(end)} m off the man · the man hauled back ${f2(back)} m (the yank ${f2(STALK.yank)})`);
 }
 /** Sam put on the nearest wall of the lobby with his hands empty (the wall hold, [Q]) and the man set walking past him along it, a metre out: the context, the
  *  wall's normal and the way he walks along it (he starts `back` m short of level with Sam) — or null if no wall took him */
@@ -172,7 +173,7 @@ async function corner() {
   };
   const A = await pass(true, up()), B = await pass(false, true), O = await pass(true, false);
   if (!A || !B || !O) { verdict(false, 'the lobby has a wall Sam can put his back on', 'no wall took him: the check could not stand its scene'); return; }
-  verdict(A.held && !A.early && A.at.d < STALK.cornerM + 0.05 && A.from && !A.wall && A.n === 1, 'on a wall with empty hands and the button held from the start, a man walking past a pace out is in his arm — not before Sam is 75° round from his nose, inside the corner\'s reach, off the wall by the eased step in',
+  verdict(A.held && !A.early && A.at.d < STALK.cornerM + 0.05 && A.from && !A.wall && A.n === 1, 'on a wall with empty hands and the button held from the start, a man walking past a pace out is in his arm — not before Sam is STALK.cornerDeg round from his nose (he is past), inside the corner\'s reach, off the wall by the step in',
     `in his arm ${A.held}${A.held ? ` with Sam ${A.at.deg.toFixed(0)}° round from his nose, ${f2(A.at.d)} m off` : ''} · the step in ${A.from} · still on the wall ${A.wall} · corner grabs ${A.n}`);
   verdict(!B.held && B.n === 0 && !O.held && O.n === 0, 'the button never pressed, the same man walks past and nobody is grabbed; nor with STALK.corner off and the button held', `no press: in his arm ${B.held} · the corner off: in his arm ${O.held}`);
   const S = await onWall(SEEDS[0], 1.0);   // a man who stands a pace short of him along the wall, facing him

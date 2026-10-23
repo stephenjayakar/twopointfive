@@ -937,19 +937,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The way in shows on his body, and ends in one step (`STALK.tell`, `STALK.catchSecs`; `stalk.ts stalkTell`, `close.ts closeTick`, `character.ts
   READY_BARE`).** The maintainer, 10-23: "we want very very smooth transitions from regular crouching to the closer than ever state. then, once you click and
   hold its very smooth to gradually shift the animation until you end on a grab, and you can be interrupted any time". With the stalk on, Sam's pose behind a
-  man he could stalk is the DISTANCE's: from `reachFrom` (2.6 m) the reach comes in straight by distance to whole at `grabM`, and from `riseFrom` (2.3 m) he
+  man he could stalk is the DISTANCE's: from `reachFrom` (2.9 m) the reach comes in straight by distance to whole at `grabM`, and from `riseFrom` (2.3 m) he
   comes up out of the crouch, `rise` (0.7) of the way by `riseBy` (1.05 m). Pose only: `anim.readyAmt` and `anim.rise`; the crouch the men see and hear is
   untouched, though his head bone is higher (their sight lines read bones). Let go, the pose stands where it is. With no knife (`noKnife`) the reach is two
-  hands for one target (`READY_BARE`: left out ahead of its shoulder at neck height and never more than 0.2 m over it, right nearly level, both elbows
-  down), and it is not dropped when the grab begins: it is let go over 0.25 to 0.8 of the grab's reach (`READY_BARE.out`), the right hand's share by 0.3
-  (the disarm needs that hand at 0.2 s). The grab a stalk ends in walks him the last of the gap in one eased step over `catchSecs` (0.36 s, `Hold.from`,
-  `player.ts`), his legs given the step at up to `catchStride`; 0 = the grab's own snap (a fifth of the gap in the first frame). `STALK.tell` off = the pose
-  in reach alone. CHECK: `stalk-check.ts` lines `tell` and `stepin` (BREAK fails both), both stands. Judged on CPU stills only (`close-stills.ts --scene stalk
+  hands for one target (`READY_BARE`: left out ahead of its shoulder at neck height, never more than 0.3 m over it and never nearer than 0.32 m to the neck, right level
+  with it, both elbows down), and it is not dropped when the grab begins: it is let go over 0.25 to 0.8 of the grab's reach (`READY_BARE.out`), the right hand's share by 0.3
+  when there is a gun to take (the disarm needs that hand at 0.2 s). The grab a stalk ends in closes the last of the gap in one lunge over `catchSecs`
+  (0.3 s, `Hold.from`, `player.ts`, `stalk.ts stepEase`: off the mark over three frames, three fifths of the way in a third of the time), his legs given
+  the step at up to `catchStride`; 0 = the grab's own snap (a fifth of the gap in the first frame). THE YANK (`STALK.yank` 0.28 m): once the step has
+  landed the man is hauled that far straight back, Sam going back with him, over the rest of the grab (less where a ray finds something solid within
+  `yankRoom` behind the pair; not a civilian): real positions, so it is the stalk's alone and off wherever the stalk is; the pose's share is
+  `HOLD.yank` (the man's chest back 11 degrees more and Sam sat 9 cm into it for a quarter second) and, with no knife, `HOLD.bareArch` (he is hauled
+  back onto the arm 11 degrees, elbows down, where upright Sam hid him from the game's camera). `STALK.tell` off = the pose
+  in reach alone. CHECK: `stalk-check.ts` lines `tell` and `stepin` (the first frame under 4 cm, never over 7 m/s, the man hauled back; BREAK fails both), both stands. Judged on CPU stills only (`close-stills.ts --scene stalk
   | stalk-rifle | stalk-pause`) and by a reviewer reading them; never seen on a GPU, never played.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
-  left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (75) degrees round from
-  his nose, with nothing solid between, the grab fires (`startGrab` takes him off the wall; the same eased step in). Pressed early it waits; a man who
+  left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
+  his nose (he is most of a pace past; at 75 it fired level with him and Sam swung round him), with nothing solid between, the grab fires (`startGrab` takes him off the wall; the same eased step in). Pressed early it waits; a man who
   comes round facing him is not taken; the right click's knockout in reach is the player's own timing, as off a wall. Before this the button did nothing on a
   wall with empty hands, and with `STALK.only` no row grabbed from a wall at all. Rides `STALK.on` (so off on the frozen stand and in a recording from before
   the stalk); the page: `?stalkcorner=0`; the lab has its toggle and both numbers. CHECK: `stalk-check.ts` line `corner` (a man walking past is taken once
@@ -960,8 +965,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TPS_DISARM=1` with `TPS_HOLDDROP=1`): Sam's right hand takes the gun out of the man's hand 0.2 s into the grab and lets it go at 0.5 s; its voices are
   `docs/agents/sounds.md`'s. Judged on stills, the first pass set the gun down at his thigh (it slid down his leg and lay under his foot) and the held man's
   open right hand waved over the pair. Now the gun is torn out to a straight arm at Sam's right (`strip.low`), his chest going with it (`strip.yaw` -16),
-  and thrown from there (`strip.push` 1.3 m/s out, `strip.spin`): it lands clear of the pair at the same moment as before, so the sounds' beats stand
-  (`grabvoice` green). With no knife in the hold the man's right hand is on the arm across his throat from the start (`HeldPose.bare`, `HOLD.bareGrip`
+  and thrown from there (`strip.push` 1.3 m/s out, `strip.spin`). Third pass: let go earlier (`strip.drop` 0.42 s, was 0.5) from a LEVEL arm with the gun
+  level, the arm held out `strip.follow` 0.1 s after it; it lands a metre clear on the same beat as before (0.83 s; `grabvoice` green), and the knock is
+  the floor's alone (`disarm.ts GUN_FLOOR`: a thrown gun may touch a wall on its way, which moved the beat). With no knife in the hold the man's right hand is on the arm across his throat from the start (`HeldPose.bare`, `HOLD.bareGrip`
   0.9) instead of half up and open beside his head. CHECK: `tools/qa/disarm-check.ts` (probe `disarm`; beats, pose, ends, off, harness; `DISARM_BREAK=1`
   fails), both stands. Where the gun lands is the item's own physics and was read off stills in one open room; never seen on a GPU.
 - **The close-in poses as pictures with no Blender: `tools/qa/close-stills.ts` + `tools/qa/pose-mesh-raster.py`.** `close-stills.ts [--scene approach-crouch |
