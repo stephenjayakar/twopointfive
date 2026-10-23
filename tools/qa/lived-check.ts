@@ -63,6 +63,9 @@ const BASE_REVS = ['636e5eaef', '3046a115e', 'c069ca16f', 'd13650f85', '0d3a1807
  *  still meet). A look twin (`<name>-gwot.json`) with no row of its own is held to the plain level's. A level with no row is held to BASE_REVS above, as it
  *  was; a level BASE_REVS does not carry must have one. */
 const LEVEL_BASE: Record<string, string> = {
+  // the ground melted round the brazier laid round: two ten-sided patches of five slabs each where two squares lay (eight boxes more, in the level's own part)
+  'pass.json': '5d2bfc3f0',
+
   // the lesson taken out of the yard (the seven Training lessons went 2026-10-23; the yard stays as a stage for checks)
   'train-move.json': 'd5893130e',
 
@@ -80,12 +83,13 @@ const LEVEL_BASE: Record<string, string> = {
   // door, light or prop moved
   'tut-plan.json': '1955e5c1e',
 
-  // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
-  'tut-quiet.json': '87c7cebef',
+  // the ledger's store teaches the rifle's launcher: the chest beam moved to the hall man's back, the hand-to-hand step gone and six in its place (the laser
+  // named inside the door, the rifle, the swap's card, a mark to shoot from, the shot, the hands' key), its own card for the player, a sixth checkpoint
+  'tut-quiet.json': 'f9a3f60e0',
 
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
-  // brazier's melt patch laid round (eight turned slabs where two square ones were)
-  'tut-sky.json': '26fa53ede',
+  // brazier's melt patch laid round (eight turned slabs where two square ones were); the mission takes the flat ring (its lesson's rails.flatRing)
+  'tut-sky.json': '30f2f52a2',
 
   // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, the moon behind the shop; then the inner wall and its wooden
   // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round
@@ -103,15 +107,15 @@ const LEVEL_BASE: Record<string, string> = {
  *  the orders that only decide WHICH of those lines shows). Decided 10-22, when four re-bases in a day were each a lesson's words. Furniture cannot touch
  *  one, none names a place and none is a rule: a reworded lesson plays the same. What reads them: the loader (each a string or a card of strings),
  *  tools/qa/lesson-check.ts (the first line is the objective row's) and the player's own eyes; no check holds the wording, on purpose. */
-const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'planLine', 'noTap', 'explain', 'after'], rails: [] as string[] };
+const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'flatLine', 'planLine', 'noTap', 'explain', 'after'], rails: [] as string[] };
 /** HELD, each a one-line move of the level's own row: the steps themselves (their number and order), a step's `id`, its `done` test and `hold`, every PLACE
  *  (`at`, `atMan`, `toward`, `eye`, the frame's `sky`), what the frame does (`cue`, `checkpoint`, `fog`, `onWay`, `respawn`, `lasers`) and WHAT IT OFFERS —
- *  a step's `allow` / `deny`, the frame's `allow`, `orders` and `rows`. Those lists are rules, not wording: one more word in an `allow` opens a key a step
+ *  a step's `allow` / `deny`, the frame's `allow`, `orders`, `rows` and `flatRing` (which ring the mission has). Those lists are rules, not wording: one more word in an `allow` opens a key a step
  *  early and nothing else is red (a scripted player only shows a key that is MISSING), so they were free for one step (10-22) and are held again: with a
  *  row a level, a list changed on purpose is its owner's one line. A mark moved to make room for a desk is the damage this check is for. A key of a
  *  lesson that is in NEITHER table is a red line until it is put in one: the choice is made in the open, by whoever adds the key. */
 const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'settle', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
-  rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows'] };
+  rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows', 'flatRing'] };
 /** today's value for every free key, the base's for every other, in today's key order (the loaded Levels are compared as text); `n` counts the free keys that moved */
 function readFree(now: any, then: any, keys: string[], n: { v: number }): any { const t: any = {};
   for (const k of Object.keys(now)) { if (keys.includes(k)) { t[k] = now[k]; if (JSON.stringify(now[k]) !== JSON.stringify(then[k])) n.v++; } else if (k in then) t[k] = then[k]; }

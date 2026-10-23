@@ -983,6 +983,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     (`tools/qa/tut-plan-page.cjs`, real keys, the software adapter, the page held between frames): 36 lines pass to the end card; one still of the
     opening drawn there has the four's shadows long across the yard and the plan picture's rings on them. NOT DONE: nobody has played it at dusk and nothing of it has been seen on a GPU; the lesson's marks and plan mode's picture over a
     long shadow were not judged by eye at every step.
+  - **Two of its cards wait for the fight to go quiet** (2026-10-23; `explain.quiet: true` on the cards of 'hall' and 'gates', the frame's
+    `RAILS.cardBeat`, `?cardbeat=0`). The maintainer: a card "should happen a beat after something happens on screen". Those two cards follow a
+    fight he only watches (the guardroom taken, the hall taken), so each is held until his squad's fight has been still for two seconds, to the
+    frame's cap of nine; the cards of 'pick' and 'all' follow an order and a pick and take the plain beat (1.2 s). Lesson prose only: no list, mark
+    or box changed and the level's lived row stands. MEASURED (`lesson-run tut-plan`, the page's stand, with the beat on): 17 of 17 on seeds 1 to 4
+    and hard seed 1, 109.9 to 110.0 s, the wrong plan on seed 1 in 93.7 s. On every one of those runs the two cards come up on the same tick with
+    the mark as without it ('hall' 2.5 s and 'gates' 2.5 s after their rooms' words are logged): by the time a room counts as taken its fight has
+    already been still, so the mark changes nothing the scripted player can show. It is there for a play where the shooting runs on past the take.
+    `tutplan-check` on both stands, `lesson-gate`, `rails-check` and `level-needs --run` on both stands and the real page with real keys (36
+    lines, the software adapter, held between frames) pass. NOT DONE: nobody has played it; a play where a card was in fact held longer was not
+    found or staged, so the held case is the frame's own check's and not this mission's.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
@@ -1711,6 +1722,49 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A SMALL FLAW IT TURNED UP, not this change's and not mended: creeping up behind the hall's man the scripted player's footfall was filed on seven
   frames running (0.1 s) at 1.1 m, and seven crouched steps on stone at that range take a calm man to suspicious; the same approach six seconds
   earlier in the same run files one. It looks like the walk cycle's phase crossing its half back and forth (`player.ts`, the footstep's edge test).
+- **The ledger teaches the sponge round and the swap of the launcher's load** (2026-10-23; `tools/levels/tut-quiet.ts`, THE SPONGE ROUND at its head;
+  level data, a level's own card and one new card key, no switch of its own). The maintainer, taking both out of the solo loud mission: "we can introduce
+  sponge rounds + swapping secondaries later when we have a stealth tutorial". The store's old `strike` step (the hall's man taken by hand) is gone; in its
+  place, six: `corner` ("Stay back in the dark, because there's a laser right behind him", up the moment he is a stride inside the back door; `nook` is
+  now only "Go inside"), `rifle` ("Press [2] to take out your rifle"), `load` (its card "Using the rifle's launcher" says what the launcher fires and
+  where the load shows, that the "HE" on the kit strip is the grenade, and to swap it to stay quiet; the line is "Press [2] twice to load a sponge
+  round" under the gun's setup and "Press [2] again…" without it), `behind` ("Step out to where you can see him through the doorway", a mark on the
+  floor), `sponge` ("Hold the right mouse button, aim at him, and let go") and `sling` ("Press [E] to put your rifle away": the hands' key, which the
+  next man needs). 24 steps now, and a sixth checkpoint, 'the doorway', on `under`: a beam broken there no longer puts him back before the shot. WHY GRABBING IS NOT THE ANSWER: the chest beam (`TQ.beamHigh`) is moved to 0.45 m behind the hall man's heels, so a man
+  who comes up behind him breaks it, crouched or not (the reaching arm on the page's stand, the grab's own stance on the frozen one); a sponge round
+  breaks no beam (`devices.ts`: only the player's own body, a dragged body and a thrown can do). He keeps his back to the store, so the lesson does not
+  rest on what the page's meter reads there. WHERE THE SHOT IS MADE FROM: the dark corner (`TQ.nook`) has no line to him (the doorway's own wall; a round let
+  go from there does not reach him: on the real page one left the tube and he turned to the knock, suspicious; in the harness on the page's stand
+  none left it, on the frozen stand one did); so the corner is where the rifle comes out and the load is swapped, and `behind` marks the floor on the doorway's
+  line (`TQ.shot`, 2.6 m behind him, a clear line from anywhere within half a metre). That floor is in the doorway's light (the harness reads 0.74
+  there): the dark floor with a line to him is a strip under half a metre wide along the light's edge, measured on a 0.3 m grid, too thin to send a
+  player to. THE KIT: the level issues its own card (`scenarios.issue.members.0`: the rifle, one grenade, five sponge rounds, no cans and no frag),
+  dealt whole on the page. THE NEW KEY, `loaded: 'ring' | 'he40'` on that card (`scene/scenarios.ts IssueCard`, parsed in `levelData.ts`, read in
+  `kit.ts kitPlayer` on the player's own card only; `docs/level-format.md`): the load the launcher COMES UP ON. Absent it is the sponge round wherever
+  he carries one, as before, so no other level changes. Here it is the grenade, so the swap is done for a reason and not only said. THE LOCKS: from
+  `nook` both mouse buttons are shut; `corner` shuts `use`, because the frame gives a held left click to the stalk wherever the interaction key is his
+  and his hands are empty, whatever a step denies (`rails.ts gate`; a reviewer's run took the man that way with `fire` denied); `rifle` opens
+  `slot:rifle`;
+  `load` opens the frame's `load` (the load's row alone: a right click held before the swap sends nothing); `sponge` opens `alt`; `sling` opens `hands`;
+  `under` gives back the left button, the right and `use`, and shuts the rifle's key, the load and the hands' key again. The interaction key stays his on `nook` (the back door needs it), so the held click is shut from his first stride inside and not before. With
+  `alt` open the load's row is open too (the frame's rule), so from `sponge` he can swap back and fire the grenade: at 2.6 m it does not arm, and the
+  man is staggered and alerted; no data of a level can shut that. NEVER STUCK: `sponge` also passes when the launcher has no sponge round left (`lesson.ts ringsOut`). CHECKS
+  (2026-10-23, no GPU): `lesson-run tut-quiet` plays 24 of 24 on both stands (`TPS_RAILS=1` in front on the frozen one), seeds 1 to 4 on the shipped
+  stand, two of them with `--pace 6`: a left click held on the man from the doorway's line stalks nobody, a right click held there before the swap
+  sends nothing, a straight line to his head is blocked from the corner and clear from the mark (asked of the level's own collision), then one sponge round spent, the man out cold (the chronicle's `ko` by `ring`), no beam
+  broken, the man at the table on patrol with awareness 0.00, GHOST at the end. Its BREAK PATHS: `TQSMOKE_BREAK=hands` (he goes for the man by hand after all,
+  crouched; on the frozen stand, which has no reaching hand and no row to grab by on that line, he then stands up behind him) fails the run on both
+  stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him 1.35 m).
+  `lesson-check` and `rails-check` on both stands, `lesson-gate tut-quiet`, `level-needs tut-quiet --run` on both, `issue-check`, `issuewhole`,
+  `kit-audit`, `writing-check`, the `pouches` family, `handring-check` and `smokebreak-check` on both stands, `solofog`, `attentionway`, `radiohome`:
+  green. `lesson-check`'s kit lines that staged this mission as "a lesson that issues no kit of its own" now stage `tut-sky` (the comment there says
+  which rows issue or pack; no tutorial mission played alone is left without a card, so `standRow`'s `kitSolo` line is not walked). `lived-check`'s row
+  for this level is moved to the commit that carries this. ON THE REAL PAGE: `tools/qa/tut-quiet-page.cjs` (headless Chromium, the software adapter,
+  real keys and real mouse buttons; staged to the store and stood on each spot, not walked) reads the lines and their key caps, the card, the kit
+  strip before and after the swap ("HE ×1" to "SPONGE ×5"), both locks from the doorway's line, the shot from the mark and the hands' key. `levelData.ts` refuses a `loaded` the card carries none of. NOBODY HAS SEEN OR PLAYED
+  IT ON A GPU. The maintainer's to judge: the shot is taken from the doorway's light and not from the dark; whether the beam reads as "right behind
+  him" from the store; whether a first-time player fires the one grenade once the right button opens (he cannot before the swap; after it he can swap
+  back); the card's words; five sponge rounds.
 - **A man told to have a smoke lights one** (2026-10-22; `src/game/smokebreak.ts SMOKEBREAK` / `updateSmokeBreak`, called from `game.ts` beside the
   breath in the cold; the order is `director.ts OrderPatch.smoke` → `GuardScript.smoke`; the arm is `character.ts smokeLayer`, its numbers `SMOKEARM`
   in that file). The maintainer: "cigarette break animation (with real smoke!) would be sick". THE SWITCH: `SMOKEBREAK.on`, ON in the page
@@ -1990,7 +2044,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   airfoil; the weapon light; the light jammer (OCP) on a camera and a beam; cameras; dragging and hiding a body; a key taken from a man; parking a partner
   and 'watch him'. CHECKS MOVED TO A TUTORIAL LEVEL OR ROW: `stayask` (d) → `tut-plan`; `solo-fog`'s lesson line, `quietfog`'s lesson cases, `verdict`'s
   row and `pouch-wall`'s lesson level → `tut-quiet`; `sticky-ways`' lesson line → the first quiet tutorial row played alone (`tut-solo`); `lesson-check`'s
-  kit lines → `tut-quiet` and `tut-plan` (two that issue no kit of their own and are played as issued); `quickthrow` (5) reads the steps of every tutorial row's level; `levers` and
+  kit lines → `tut-sky` and `tut-plan` since 10-23 (two that issue no kit of their own and are played as issued; before, `tut-quiet`, which now has its own card); `quickthrow` (5) reads the steps of every tutorial row's level; `levers` and
   `loadbrief` count tutorial rows. DROPPED WITH THEIR SUBJECT: `fresh-start`'s "every Training room clear names its seed", `writing-check`'s held count
   for the Training lines, `keybinds-check`'s two lesson lines (the wall line is kept on the yard), `aimcost`'s `train-lights` leg, `carlamps`'
   `train-hands` row, and the Training rows of `second-way`, `wallfurn` and `kitview-plan`. MEASURED on the build of 2026-10-23 with the corner panel in it, FROZEN and SHIPPED alike unless said (one seed, each check's own): both
@@ -2148,3 +2202,47 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT DONE: Tab's objectives card and the small objective row still read the done step's ask while it settles; an order given in the beat still snaps
   to the done step's mark. The other missions' cards are plain (the beat): which of them follow a fight he only watches is their parts' to mark.
   Never seen on a GPU; nobody has played it.
+- **The pass: the ground melted round the brazier is round** (10-23; the maintainer, of a close shot of the burning drum on his GPU: a hard grey square
+  of ground round a round drum, plain once the fire's lamp stood at the flame). Level data, no switch. `tools/levels/pass.ts cleared('brazier', …)` laid two
+  axis-aligned squares under the drum (slush 1.7 m, earth 1.0 m); `melted('brazier', 19.6, 13.6, 0.5, 0.3)` lays each paint as a regular TEN-sided patch:
+  five slabs through the drum's centre, 36° apart, each tan 18° as deep as it is long (their union is the decagon exactly: 5 % out of round, a square is
+  41), the earth turned half a side from the slush, all solid as `cleared`'s are. Slush reaches 0.80‥0.84 m, earth 0.50‥0.53. Tops stepped 0.7 mm a slab
+  (slush 4.0 down to 1.2 mm, earth 8.8 down to 6.0), so no two lie in one plane and the earth's lowest is 2 mm over the slush's highest. NOT THE KIT'S
+  OCTAGON, on purpose: four equal slabs 45° apart with stepped tops is how a round THING is written — `scene/round.ts octagonAt` stands it up as a cylinder
+  and the cut shader draws a drum's rolled rim on its lid — and four such slabs the rule does NOT take (level tops) fail `round-check` line 1 ('a ring of
+  four the rule left'). Anyone laying a round patch of GROUND: not four equal slabs at 45°. The footstep zone `brazier` is the square it was. WHAT MOVES:
+  eight boxes more (653); every box index after 197 moves by eight and the level's fingerprint with it, so a checkpoint or a recording of the pass from
+  before does not load; `lived-check` has a row for `pass.json` (the commit that carries the patch). The tunnel station (`tut-sky`) had the same squares
+  and is mended on its own (not in this step). CHECK: `pass-check` line 12 (each paint
+  reaches the same distance from the fire on 72 bearings within 7 %, the slush shows all round the earth, the drum stands inside the earth, no slab taken
+  for a round thing), both stands; `PASS_BREAK=1` lays the two squares back and the line fails.
+  RUN (10-23, on the build head of that evening, both stands unless said): `export pass --check`, `map-check pass --no-runs`, `level-lint`, `level-needs
+  pass` (no FAIL; its two NOTEs are the row's 'untuned' and the lived-in road and back, as before), `lived-check` 393, `knobs-check`, both typechecks; the
+  probes that stand the pass up — `pass round fire standfire underfoot holebase holesnow snow snowglow snowlook wxwind bouncewalls menclear kitdeal-cards
+  cardreplay carlamps holdturn scenetweak picture findme missions-list` — all green, `round-check`'s row for the pass unmoved ([8, 19]: the patch is not
+  taken for a round thing); `ships.ts --scn pass-four --seeds 1-2` on the shipped stand: both ended, none stalled. Every box but the patch's ten is the
+  box it was, key for key (a scratch compare of the two files), and so is every other key of the file. RED AND NOT THIS STEP'S: `probes.ts
+  thresholdmenu-held` on the SHIPPED stand fails its row for The pass ('back held, then X, 5, F … DID NOT HOLD THE STACK') — the same line, word for
+  word, on the build head without this step (run side by side); green on the frozen stand. SEEN: one page run on the software adapter (`fire-page.cjs`,
+  low quality, 119 of 119 programs, no page error), two stills of the drum from above and close: no square at the drum's foot, a soft round dark patch
+  about it (most of that dark is the drum's own shadow under the fire's lamp; the earth's brown was not told apart in it). No before still was taken.
+  NEVER SEEN ON A GPU, and the maintainer's shot was a GPU's: whether the patch reads as melt or as a stain there is his to say.
+- **A tutorial mission may take the flat ring (2026-10-23, the maintainer on the first mission's wall charge, the ring then [5] then a second ring of
+  one row under a line asking for [3]: "weird after hitting 5")**. A level's `lesson.rails.flatRing: true` gives that mission the ring the rest of the
+  game has (`cmdring.ts CMDRING.flat`; `orders.ts flatRing` asks `Rails.flatRing`), with the level's `rails.orders` its only rows, and a step's line
+  while that ring is up is its `flatLine` (absent: `menuLine`). `tut-sky` takes it: on the wall the ring is "1 move there · 2 breach with a wall
+  charge" and the line is "Press [2] for a charge" (was "Press [5], then [3] for a charge", then "Press [3] for a charge"). Its `menuLine` and
+  `pageLine` are kept for the pages. The other missions have the pages still: each is its part's to move, one line of level data and its lines.
+  SWITCH `RAILS.flatRing`: ON in the page (`?railflat=0`; `?ringflat=0` puts the whole flat tree off, here too), OFF in the module and on the frozen
+  stand (`TPS_RAILFLAT=1`, which acts only with `TPS_RAILS=1 TPS_QRING=1 TPS_QONLY=1 TPS_RINGFLAT=1`), off for a recording from before the key.
+  CHECK `tools/qa/rails-check.ts`, the first play's notes line, both stands (the frozen one raises the tree itself): the ring is flat, nothing is
+  behind a 'more', the digit `flatLine` names is the wedge 'wallCharge' is on, that digit gives the charge, and with the switch off the pages and
+  their two lines are back. `RAILS_BREAK=1` fails it on both. The scripted player presses the digit the step's `flatLine` names.
+  WITH THE ORDER OUT the line over a flat ring is what the men are doing, never the digit again: the wedge that set the charge is the one that
+  blows it. After `afterSecs` with nothing done the ask is back, as on the pages. `railsFaults` asks that a flat mission's `menuLine` has a
+  `flatLine` beside it and that no other mission carries one; `ringflat-check`'s control has the third case (a level that takes the ring).
+  MEASURED on the page's stand: the scripted mission ends on seeds 1, 2 and 3 with the one ring and on seed 1 with `TPS_RAILFLAT=0` (the pages);
+  `rails-check` 29 of 29 on shipped, on frozen, and on frozen raised by its own words (no destruction there, so no charge row: the ring and its
+  line are what is asked); `ringflat-check` 14 on both; mission 1 played to the breaker step on the real page with real keys on the software
+  adapter: one ring, one key cap in the line, [2] gives the charge and no second ring comes up.
+  NOT DONE: the digit in a `flatLine` is hand-written, and only tut-sky's is held by a check. Never seen on a GPU; nobody has played it.

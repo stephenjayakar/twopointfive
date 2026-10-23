@@ -66,7 +66,8 @@ import { FRAG } from './frag';
 import { GUNWALL } from './gunwall';
 import { REARWATCH } from './rearwatch';
 import { CLOSE } from './close';
-import { FOOTFALL, TWOGEARS } from './player';
+import { FOOTFALL, TWOGEARS, CROUCHRUN } from './player';
+import { SAMLOOK } from './samlook';
 import { STALK, stalkPolish } from './stalk';
 import { KITANIM } from './kitanim';
 import { WORK } from './workthings';
@@ -385,6 +386,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.yankWith === undefined) { STALK.yankWith = false; HOLD.catchShape = false; }   // (…one from before its eighth pass: the man was yanked back into Sam, who chased him and stepped clear on the hold's first frame; the arm came round past his ear, and the two stood upright in the hold. Before the next line: a file from before the fourth pass has neither key and gets all of the polish down)
     if (T.turnIn === undefined) stalkPolish(false); }   // (…and one from before its fourth pass: he turned to the man's back in the step's first frames, a long step took no longer, and the wait at a corner was the wall stance alone)
   { const T = k.tables.HOLD as { hitShape?: boolean } | undefined; if (!T || T.hitShape === undefined) { HOLD.hitShape = false; HOLD.layAhead = 0; } }   // (a file from before the stalk's ninth pass: the body landed with no beat of its own, and the choked man was laid down where he knelt, his legs under Sam's boots — whatever the file's stalk table says: the lay is of every choke's end)
+  if (!k.tables.CROUCHRUN) CROUCHRUN.on = false;   // (a file from before Shift in a crouch stayed down: it stood him up into the sprint)
+  if (!k.tables.SAMLOOK) SAMLOOK.on = SAMLOOK.slip = false;   // (a file from before his head went to a man or he gave one room: neither pose)
   if (!k.tables.TWOGEARS) TWOGEARS.on = false;   // (a file from before two gears: the wheel was his pace and the crouch-walk the tune's)
   if (!k.tables.FOOTFALL) FOOTFALL.once = FOOTFALL.owed = false; else if ((k.tables.FOOTFALL as Partial<typeof FOOTFALL>).owed === undefined) FOOTFALL.owed = false;   // (a file from before one footfall a step: every crossing of the walk cycle's half filed one, a rocking cycle one a frame — and one from before a footfall the legs owe: only an edge filed one)
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
@@ -420,6 +423,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.RAILS) RAILS.on = false;
   else { const R = k.tables.RAILS as Record<string, unknown>; if (R.snapPx === undefined) RAILS.snapPx = 0; if (R.keep === undefined) RAILS.keep = 0; if (R.keepDeep === undefined) { RAILS.keepDeep = 1; RAILS.keepUp = 0; } if (R.wayM === undefined) RAILS.wayM = 0; if (R.afterSecs === undefined) RAILS.afterSecs = 0; if (R.shiftTap === undefined) RAILS.shiftTap = false; if (R.lineClear === undefined) RAILS.lineClear = false; if (R.eyeFirst === undefined) RAILS.eyeFirst = false; if (R.eyeView === undefined) RAILS.eyeView = false; if (R.wayRun === undefined) RAILS.wayRun = false; if (R.skyPlan === undefined) RAILS.skyPlan = false; if (R.planWalk === undefined) RAILS.planWalk = false; if (R.planDown === undefined) RAILS.planDown = false; if (R.skyUp === undefined) RAILS.skyUp = false; }   // (a tutorial run recorded before the ring was the place and the mark was kept in the picture)   // (a file from before a tutorial mission had a frame: nothing in its ticks was locked)
   { const R = k.tables.RAILS as Record<string, unknown> | undefined; if (R && R.cardBeat === undefined) RAILS.cardBeat = false; }   // (a tutorial run recorded before the step before a card settled: each of its steps came up the tick the deed before it was done, and its ticks are those)
+  { const R = k.tables.RAILS as Record<string, unknown> | undefined; if (R && R.flatRing === undefined) RAILS.flatRing = false; }   // (a tutorial run recorded before a mission could take the flat ring: its digits were pressed on the menu's pages)
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
@@ -451,6 +455,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.HANDRING as { turn?: boolean } | undefined)?.turn !== 'boolean') HANDRING.turn = false;   // (…nor before a row at a wall switch turned him to it)
   if (typeof (k.tables.HANDRING as { bare?: boolean } | undefined)?.bare !== 'boolean') HANDRING.bare = false;   // (…nor before it lost its line of words: the picture only)
   if (typeof (k.tables.HANDRING as { lone?: boolean } | undefined)?.lone !== 'boolean') HANDRING.lone = false;   // (…nor before a ring with one row was a pill: the picture only)
+  if (typeof (k.tables.HANDRING as { loneWrap?: boolean } | undefined)?.loneWrap !== 'boolean') HANDRING.loneWrap = false;   // (…nor before a pill's long label took two lines: the picture, and the place the cursor is read on)
   if (!k.tables.HANDRING) HANDRING.on = false;   // (a file from before his own actions were a ring that stays: its held presses opened the list, and its rows had no whistle)
   if (!k.tables.HANDSLOT) HANDSLOT.on = false;   // (a file from before empty hands were a slot: a 0 pressed in it was no key of the game's)
   if (!k.tables.SAVETIMELINE) SAVETIMELINE.on = false;   // (a file from before the saves rolled: three autosaves, and none with a team on the floor — its Enter once down found what that build kept)
