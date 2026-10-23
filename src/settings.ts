@@ -103,6 +103,11 @@ export interface RenderSettings {
    *  guards and teammates see by (render/shaders/probe.wgsl reads the cache's dice) reads the same shadow whatever the graphics setting, and no ladder step swaps the cache under a
    *  mission. false = low and verylow on their coarser 32 × 3 × 22 grid, as it was. Read when a preset is applied. */
   oneCacheGrid: boolean;
+  /** the smoke keeps High's look down the ladder (ui/quality.ts SMOKE KEEP; ?smokekeep=0|1|2; Tab ▸ Frame): 1 = on the presets under high the smoke march stays at half size
+   *  with high's lights a step and step length, on the preset's own (froxel) path — the ladder's render scale pays for it; 2 = high's whole volumetric path there too (the
+   *  per-pixel march for haze and smoke, high's beam steps); 0 = each preset's own smoke rows, as it was. verylow, the floor, keeps its own at every value. Read when a
+   *  preset is applied. */
+  smokeKeep: number;
   dnSpecIters: number; dnSpecCap: number; dnSpecClampK: number; dnSpecSigmaL: number; dnSpecRough: number;
   dnDepthK: number; dnNormalPow: number; dnMotionVectors: boolean;
   keepHistories: boolean;   // a change of internal size (a scale step, a preset's cap, the window) RESAMPLES the screen-space temporal histories (direct light per class + its depth, the indirect, the
@@ -357,7 +362,7 @@ export const defaultSettings = (): RenderSettings => ({
   dnGiIters: 4, dnGiCap: 24, dnGiClampK: 1.0, dnGiSigmaL: 4, dnGiFast: 3, dnGiFirefly: 0,   // (k 1.0 / fast 3: the sweep in docs/internal/p3-denoise.md §3 — 10 % of a lights-off in 16 frames vs legacy's 14, at half its torch-hotspot boil)
   giFullRes: false, giFullIters: 4, giYoungRays: 1, giYoungCap: 0.08, giYoungLen: 4,   // GI in motion: both OFF by default until a preset places them (ui/quality.ts Preset.dn.giFull / giYoungK); Tab ▸ Indirect light rows
   dnGiClampCut: 0, dnGiYoungWiden: 0,                                                     // (D): off until measured (Tab ▸ Denoiser rows)
-  ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, oneCacheGrid: true,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
+  ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, oneCacheGrid: true, smokeKeep: 1,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
   dnSpecIters: 1, dnSpecCap: 16, dnSpecClampK: 1.0, dnSpecSigmaL: 2, dnSpecRough: 0.08,
   dnDepthK: 0.004, dnNormalPow: 12, dnMotionVectors: true,
   flags: FrameFlags.Direct | FrameFlags.Indirect | FrameFlags.Volumetrics | FrameFlags.Smoke | FrameFlags.RcVisWeight | FrameFlags.SmokeShadows | FrameFlags.Bounce | FrameFlags.Dither | FrameFlags.SoftShadow | FrameFlags.Temporal,
