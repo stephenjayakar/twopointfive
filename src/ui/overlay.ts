@@ -416,7 +416,7 @@ export class Overlay implements HudLike {
     const far = op ? v3.distXZ(op, game.player.char.pos) : 0, od = op ? (skySeat || game.rails.arrow() ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
     const floor = game.mission.stage === 'drive' && game.hover?.kind !== 'objective' ? 0.35 : 0;   // the rack has no marker of its own: keep a faint diamond on it until the cursor finds it (doors have their own dot / reticle)
     const alpha = op ? Math.max(floor, Math.min(0.9, (od - 1.6) / 1.5)) : 0;
-    if (!op || alpha < 0.03 || rail?.watch) this.objMark.style.display = 'none';   // (a line that asks for nothing marks no place to press on: rails.ts prompt)
+    if (!op || alpha < 0.03 || rail?.watch || rail?.ringUp) this.objMark.style.display = 'none';   // (a line that asks for nothing marks no place to press on: rails.ts prompt — and a mark under the squad's ring, up on that very place, only hides the ring's digits: RAILS.markClear)
     else {
       const vp = cam.viewProj; const cw = vp[3] * op[0] + vp[7] * op[1] + vp[11] * op[2] + vp[15];
       let nx = vp[0] * op[0] + vp[4] * op[1] + vp[8] * op[2] + vp[12], ny = vp[1] * op[0] + vp[5] * op[1] + vp[9] * op[2] + vp[13];

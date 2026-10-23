@@ -89,9 +89,10 @@ const at = (page, p) => page.evaluate(p => { const c = document.getElementById('
       check(T.o === o0 && !!T.note, 'on the hold\'s step a tap of the command key gives no order and words come up under the line', `orders ${o0} → ${T.o} · line "${T.line}" · under it "${T.note}"`);
       log('picture', await shot('91-tap'));
       await point(s.at); await page.keyboard.down('KeyQ'); await run(page, 30); await page.keyboard.up('KeyQ'); await run(page, 3);
-      const U = await page.evaluate(() => ({ menu: !!window.__orders.menu, flat: !!window.__orders.menu?.flat, line: document.querySelector('#railprompt .line')?.textContent || '', keys: [...document.querySelectorAll('#railprompt .line kbd')].map(k => k.textContent) }));
+      const U = await page.evaluate(() => ({ mark: [...document.querySelectorAll('.objmark')].some(e => getComputedStyle(e).display !== 'none'), menu: !!window.__orders.menu, flat: !!window.__orders.menu?.flat, line: document.querySelector('#railprompt .line')?.textContent || '', keys: [...document.querySelectorAll('#railprompt .line kbd')].map(k => k.textContent) }));
       if (U.flat) check(U.menu && U.keys.length === 1 && /^[1-5]$/.test(U.keys[0]), 'held, the ring is up and stays with the key let go: one ring, and the line names its one digit', `ring ${U.menu}, flat ${U.flat} · line "${U.line}" · keys ${JSON.stringify(U.keys)}`);
       else check(U.menu && /5/.test(U.line) && /3/.test(U.line), 'held, the ring is up and stays with the key let go, and the line names the two digits', `ring ${U.menu} · line "${U.line}"`);
+      check(!U.mark, 'the step\'s mark is not drawn under the ring that is up on its place', `mark drawn ${U.mark}`);
       log('picture', await shot('92-ring'));
       if (U.flat) { await tap('Digit' + U.keys[0]); const V = await page.evaluate(() => ({ menu: !!window.__orders.menu, last: window.__game.orders.log[window.__game.orders.log.length - 1]?.order ?? null })); check(!V.menu && V.last === 'wallCharge', 'that one digit gives the wall charge and the ring is gone: no second ring', `ring up ${V.menu} · the last order '${V.last}'`); }
       else { await tap('Digit5'); await tap('Digit3'); }

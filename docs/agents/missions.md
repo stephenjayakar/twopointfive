@@ -2215,4 +2215,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `rails-check` 29 of 29 on shipped, on frozen, and on frozen raised by its own words (no destruction there, so no charge row: the ring and its
   line are what is asked); `ringflat-check` 14 on both; mission 1 played to the breaker step on the real page with real keys on the software
   adapter: one ring, one key cap in the line, [2] gives the charge and no second ring comes up.
+  THE STEP'S MARK GIVES WAY TO THE RING (`RAILS.markClear`, `?markclear=0`; picture only, a knob of the frame's table like `lineClear`, so on every
+  tutorial mission and for the pages too): the mark sits on the spot the ring opens on, and in the first picture of this ring its orange circle
+  lay over the second wedge's digit. `Rails.prompt()` says `ringUp` while the step's ring is up and `ui/overlay.ts` draws no mark then; the
+  first play's line of `rails-check` asks it (no ring: no; ring up: yes; knob off: no) and `tools/qa/tut-page.cjs` asks the page's own element.
   NOT DONE: the digit in a `flatLine` is hand-written, and only tut-sky's is held by a check. Never seen on a GPU; nobody has played it.

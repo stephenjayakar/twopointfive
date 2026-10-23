@@ -92,6 +92,10 @@ export const RAILS = { on: false,
   shiftTap: true,
   /** the big line goes to the bottom edge from over the player and his teammates where they stand under it (ui/railclear.ts; picture only) */
   lineClear: true,
+  /** the step's mark is not drawn while the squad's ring is up on the step's own place (ui/overlay.ts; picture only): the mark is on the spot the
+   *  ring opens on, so its circle lay over the ring's middle and the digits of its inner wedges — and by then the place is found, and the line
+   *  says what to press (`?markclear=0`) */
+  markClear: true,
   /** a step's own eye is never the one the fog of war has no place for: with the places full (four men up and the seat's lookout) it takes the last
    *  (fogofwar.ts update; before, it was the one dropped, and the squad's own wall charge went off unseen) */
   eyeFirst: true,
@@ -487,7 +491,7 @@ export class Rails {
 
   // ---------------------------------------------------------------- the prompt
   /** the one line on screen (null: no rails, every step done, the run over) */
-  prompt(): { line: string; n: number; of: number; note?: string; watch?: boolean } | null {
+  prompt(): { line: string; n: number; of: number; note?: string; watch?: boolean; ringUp?: boolean } | null {
     const S = this.lesson(), of = S?.L.steps.length ?? 0; if (!S || !of) return null;
     // (every step done and the mission not yet over — the last metre to an exit, the last man of a fight: the last line stays up until the mission's own
     //  end. The small row it would fall back to is the one a tutorial mission never shows)
@@ -513,7 +517,7 @@ export class Rails {
     // (a line that asks for nothing — what the men are doing, or a step that only waits for the level's script — is drawn as something to watch, with no
     //  ring on its place. Never a step's own line that merely names no key: 'Get out of the light' is an ask, and its mark is where to go)
     const watch = (!ring || flatAft) && !plan && (!!aft || (S.i < of && T.done?.is === 'cue')) && !/\[[^\]]+\]/.test(line);
-    return { line, n: i + 1, of, ...(note ? { note } : null), ...(watch ? { watch: true } : null) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
+    return { line, n: i + 1, of, ...(note ? { note } : null), ...(watch ? { watch: true } : null), ...(on && RAILS.markClear && !BREAK ? { ringUp: true } : null) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 
   // ---------------------------------------------------------------- nobody is lost
