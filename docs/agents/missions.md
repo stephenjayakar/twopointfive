@@ -1907,5 +1907,5 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on SHIPPED and its static pass, `lived-check` 393, `lesson-gate tut-quiet` on SHIPPED all pass. ON THE PAGE (`tut-quiet`, the software adapter, the
   real solver, the court's man told to smoke where he stands): one thread filed in eight seconds and one on the solver, its stamp the current frame;
   the solver cleared, none two frames on, and sixty frames later a second filing and one on the solver; no page error. SEEN ELSEWHERE: `snowBreath.ts` kept the same word in its table (`stats.why`, `steam`, `steaming`, a man's `steam`; its owner
-  moved that book to the host the same day, `engine.breathShown`), which is why the check reads this file's rows out one by one: the whole-state diff
-  stopped at that table. NEVER SEEN ON A GPU: the thread itself has not been looked at by anybody, before or after.
+  moved that book to the host the same day, today `engine.hostBooks.breath`), which is why the check first read this file's rows out one by one: the
+  whole-state diff stopped at that table. NEVER SEEN ON A GPU: the thread itself has not been looked at by anybody, before or after.
