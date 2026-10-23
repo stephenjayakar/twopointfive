@@ -2557,7 +2557,8 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
     const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
     if (dist > l.range || dist < 1e-3) continue;
     const Lx = dx / dist, Ly = dy / dist, Lz = dz / dist;
-    let att = lightWindow(dist, l.range) / Math.max(dist2, l.radius * l.radius);
+    const lr = sp ? sp.radius : l.radius;   // (… and the size the level gave it)
+    let att = lightWindow(dist, l.range) / Math.max(dist2, lr * lr);
     if (l.kind === 1) {
       const cd = -(Lx * l.dir[0] + Ly * l.dir[1] + Lz * l.dir[2]); const cosOuter = Math.cos(l.outerDeg * DEG), cosInner = Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG);
       if (cd < cosOuter) continue;
@@ -2571,7 +2572,7 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
     const c = l.color, I = sp ? sp.intensity : l.intensity;
     if (Math.max(c[0], c[1], c[2]) * I * att < 0.002) continue;                                    // (the probe's own floor for a light worth a shadow ray)
     const lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * I * att;
-    const tmax = dist - l.radius - 0.02;
+    const tmax = dist - lr - 0.02;
     if (tmax > 0.05 && g.col.segmentBlocked(P, [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax])) continue;   // a wall, a partition, a desk, a shut leaf between him and it: dark from that one
     for (let k = 0; k < 6; k++) { const N = METER_NORMALS[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += lum * cs; }
   }
