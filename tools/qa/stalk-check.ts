@@ -24,6 +24,7 @@ import { standUp, ROOT } from './headless.ts';
 
 const { STALK, STALK_STATS, stalkOn } = await import(`${ROOT}/src/game/stalk.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const PR = await import(`${ROOT}/src/host/profile.ts`);
 const JR = await import(`${ROOT}/src/game/journal.ts`);
 const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
@@ -172,25 +173,48 @@ async function corner() {
   console.log('\n=== corner: with his back on a wall the held button lies in wait, and the man who comes past is grabbed as he passes ===');
   const pass = async (hold: boolean, on: boolean) => {
     const S = await onWall(SEEDS[0], 2.6); if (!S) return null; const { C, t } = S, g = C.g, pl = g.player, A = C.A; STALK.corner = on; const c0 = STALK_STATS.corner;
-    let at = { deg: -1, d: -1 }, early = false, from = false;
+    CLOSE.noKnife = true;   // (the wait's pose is a bare-handed one: the frozen stand has the knife, and every stand-up writes this again)
+    let at = { deg: -1, d: -1 }, early = false, from = false, coil = 0, low = 0, r0 = -1, r1 = 0;   // (the wait's pose: how far he is sunk — asked, and shown —, and the lead hand's reach at the start and at its most)
     for (let i = 0; i < 5 * 60 && !C.held(); i++) {
       A.char.pos[0] += t[0] * 1.15 * DT; A.char.pos[2] += t[2] * 1.15 * DT; A.char.vel = [t[0] * 1.15, 0, t[2] * 1.15];
       const b = Math.atan2(pl.char.pos[0] - A.char.pos[0], pl.char.pos[2] - A.char.pos[2]) - A.char.bodyYaw, deg = Math.abs(Math.atan2(Math.sin(b), Math.cos(b))) * 180 / Math.PI, d = C.gap();
       if (hold) { C.W.input.buttons |= 1; if (i === 0) C.W.input.clicked |= 1; }
       C.W.step(DT); pl.visibility = 0.02;
       if (C.held()) { at = { deg, d }; early = deg < STALK.cornerDeg - 3; from = !!pl.holding?.from; }
+      else { const an = pl.char.anim; coil = Math.max(coil, an.coil); if (i > 30) low = Math.max(low, an.crouch); if (an.ready === 'grab' && an.coil > 0) { if (r0 < 0) r0 = an.readyAmt; r1 = Math.max(r1, an.readyAmt); } }
     }
-    return { held: C.held(), at, early, from, wall: !!pl.wall, n: STALK_STATS.corner - c0 };
+    return { held: C.held(), at, early, from, wall: !!pl.wall, n: STALK_STATS.corner - c0, coil, low, r0, r1 };
   };
   const A = await pass(true, up()), B = await pass(false, true), O = await pass(true, false);
   if (!A || !B || !O) { verdict(false, 'the lobby has a wall Sam can put his back on', 'no wall took him: the check could not stand its scene'); return; }
   verdict(A.held && !A.early && A.at.d < STALK.cornerM + 0.05 && A.from && !A.wall && A.n === 1, 'on a wall with empty hands and the button held from the start, a man walking past a pace out is in his arm — not before Sam is STALK.cornerDeg round from his nose (he is past), inside the corner\'s reach, off the wall by the step in',
     `in his arm ${A.held}${A.held ? ` with Sam ${A.at.deg.toFixed(0)}° round from his nose, ${f2(A.at.d)} m off` : ''} · the step in ${A.from} · still on the wall ${A.wall} · corner grabs ${A.n}`);
+  verdict(A.coil > 0.15 && A.low > Math.max(B.low, O.low) + 0.1 && A.r0 >= 0 && A.r1 > A.r0 + 0.1 && B.coil === 0 && O.coil === 0, 'while he waits he is seen to wait: sunk a little lower, the lead hand out toward the man and further out as the man comes on — and not with the button up, nor with the corner off',
+    `the button held: asked to sink ${f2(A.coil)}, his crouch as shown ${f2(A.low)}, the reach from ${f2(A.r0)} to ${f2(A.r1)} · no press: ${f2(B.coil)}, shown ${f2(B.low)} · the corner off: ${f2(O.coil)}, shown ${f2(O.low)}`);
   verdict(!B.held && B.n === 0 && !O.held && O.n === 0, 'the button never pressed, the same man walks past and nobody is grabbed; nor with STALK.corner off and the button held', `no press: in his arm ${B.held} · the corner off: in his arm ${O.held}`);
   const S = await onWall(SEEDS[0], 1.0);   // a man who stands a pace short of him along the wall, facing him
   if (S) { const { C } = S, pl = C.g.player.char; S.C.A.char.bodyYaw = S.C.A.char.aimYaw = Math.atan2(pl.pos[0] - C.A.char.pos[0], pl.pos[2] - C.A.char.pos[2]); STALK.corner = true;
     for (let i = 0; i < 120; i++) { C.W.input.buttons |= 1; C.W.step(DT); C.g.player.visibility = 0.02; }
     verdict(!C.held(), 'a man who stands a pace off FACING him is not taken, the button held two seconds', `in his arm ${C.held()} · ${f2(C.gap())} m off`); }
+}
+async function shape() {
+  console.log('\n=== shape: the grab a stalk ends in has a spring before the lunge, and the bare hold shows two heads ===');
+  const run = async (on: boolean) => {
+    const was = { dip: HOLD.lunge.dip, side: HOLD.apart.side, tip: HOLD.apart.tip, m: HOLD.sway.m };
+    try {
+      const C = await world(true, SEEDS[0], 2.4, 0), pl = C.g.player.char, A = C.A.char; CLOSE.noKnife = true; HOLD.sway.m = 0; if (!on) HOLD.lunge.dip = HOLD.apart.side = HOLD.apart.tip = 0;
+      if (!isFinite(holdToGrab(C, 6))) return null; C.lift();
+      const hips: number[] = []; for (let i = 0; i < 8; i++) { C.step(); hips.push(pl.bones.hips[1]); }
+      for (let i = 0; i < 80; i++) C.step();   // (the grab over, the hold settled)
+      let gap = 0; const N = 120; for (let i = 0; i < N; i++) { C.step(); const a = pl.bones.head, b = A.bones.head, y = A.bodyYaw; gap += Math.abs((a[0] - b[0]) * Math.cos(y) - (a[2] - b[2]) * Math.sin(y)) / N; }
+      return { hips, gap, held: C.held() };
+    } finally { HOLD.lunge.dip = was.dip; HOLD.apart.side = was.side; HOLD.apart.tip = was.tip; HOLD.sway.m = was.m; }
+  };
+  const A = await run(up()), B = await run(false);
+  if (!A || !B) { verdict(false, 'the stalk ends in the grab', 'never grabbed: the check could not stand its scene'); return; }
+  const dip = Math.max(...A.hips.map((y, i) => B.hips[i] - y)), at = A.hips.findIndex((y, i) => B.hips[i] - y === dip);
+  verdict(A.held && dip > 0.035 && at < 5 && A.gap > B.gap + 0.025, 'bare hands: within five frames of the step in his hips have dipped 3.5 cm or more below where they are with HOLD.lunge at 0, and in the hold the two heads are 2.5 cm or more further apart across the pair than with HOLD.apart at 0',
+    `the dip ${(dip * 100).toFixed(1)} cm at frame ${at + 1} · heads apart across the pair ${(A.gap * 100).toFixed(1)} cm, with HOLD.apart at 0 ${(B.gap * 100).toFixed(1)} cm · still held ${A.held}`);
 }
 async function off() {
   console.log('\n=== off: the key down ===');
@@ -215,7 +239,7 @@ async function harness() {
 /** the whole card (probes.ts 'stalk'): true = every check passed. The switches are put back as they were found. */
 export async function stalkCheck(): Promise<boolean> {
   const was = { ...STALK }, close = JSON.parse(JSON.stringify(CLOSE)), rnd = Math.random; allPass = true; found = STALK.on;
-  try { await grab(); await still(); await steer(); await letGo(); await walkPress(); await out(); await tell(); await stepIn(); await corner(); await off(); Object.assign(STALK, was); await harness(); }
+  try { await grab(); await still(); await steer(); await letGo(); await walkPress(); await out(); await tell(); await stepIn(); await shape(); await corner(); await off(); Object.assign(STALK, was); await harness(); }
   finally { Object.assign(STALK, was); Object.assign(CLOSE, close); Math.random = rnd; }
   console.log(`\n=== stalk: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }

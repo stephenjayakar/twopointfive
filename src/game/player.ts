@@ -133,7 +133,7 @@ export interface Hold { g: Guard; variant: HoldVariant; phase: HoldPhase; t: num
   /** the stalk's grab (stalk.ts, game.ts): where Sam stood as it fired. The way in is then ONE step from there over STALK.catchSecs, where the grab's own
    *  is a snap (a fifth of the gap in its first frame). Unset = the grab as it was. `hitAt` = the game's time as that step landed (the yank's clock, for
    *  both poses); `yankM` / `yanked` = how far the man is hauled back after it (STALK.yank, less where there is no room) and how much of that is done */
-  from?: Vec3; hitAt?: number; yankM?: number; yanked?: number; stepE?: number;
+  from?: Vec3; hitAt?: number; yankM?: number; yanked?: number; stepE?: number; stepM?: number; yaw0?: number; coil0?: number;
 }
 
 /** IN A DOOR FRAME HE IS AS WIDE AS HIS SHOULDERS. BODY_R is a margin for his arms and his gun, 0.84 m across; a real door (scene/doorSize.ts) leaves 0.83 m
@@ -1533,13 +1533,15 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
   if (!g.onFloor(gd) || gd.state === 'dead' || gd.held?.by !== 'player') { dropHold(g); c.update(dt); return; }   // reset from under the arm (P, the panel), or put down in it by somebody's round: nothing left to hold
   H.t += dt; H.swapT += dt; pl.fireCd -= dt;
   const K = HOLD.secs;
-  let speed = 0, own = -1;   // (own: Sam's legs alone, where they differ from the pair's — the stalk's step in)
+  let speed = 0, own = -1, stepU = -1;   // (own: Sam's legs alone, where they differ from the pair's — the stalk's step in; stepU: how far through it)
   if (H.phase === 'grab') {
     // easing in to HOLD.dist behind him on HIS facing (he has not been turned yet), squaring up to his back — through Sam's own collision: squeezed behind a man by a
     // wall, the arm goes round him from as close as the wall allows and the hold proper settles the rest
     const yaw = hc.bodyYaw; const want: Vec3 = [hc.pos[0] - Math.sin(yaw) * HOLD.dist, 0, hc.pos[2] - Math.cos(yaw) * HOLD.dist];
     if (H.from && STALK.catchSecs > 0) {   // (stalk.ts: the step in — his legs take it, at no more than a walk's stride — and then the yank)
-      const T = Math.min(STALK.catchSecs, K.grab), u = clamp(H.t / T, 0, 1), was = c.pos; let to = want;
+      // (a longer way in — off a wall, the wait at a corner — takes a little longer, never so long that the haul back has no time left)
+      if (H.stepM === undefined) { H.stepM = Math.hypot(want[0] - H.from[0], want[2] - H.from[2]); H.yaw0 = c.bodyYaw; }
+      const T = Math.min(STALK.catchSecs * clamp(H.stepM / Math.max(0.1, STALK.catchM), 1, STALK.catchLong), K.grab - 0.08), u = clamp(H.t / T, 0, 1), was = c.pos; let to = want; stepU = u;
       if (u >= 1 && STALK.yank > 0 && !gd.civ) {   // landed: the man comes back with him, as far as there is room behind the pair
         if (H.hitAt === undefined) { H.hitAt = g.time; const hit = g.col.raycast([want[0], 1.0, want[2]], [-Math.sin(yaw), 0, -Math.cos(yaw)], STALK.yank + STALK.yankRoom); H.yankM = hit ? Math.max(0, hit.t - STALK.yankRoom) : STALK.yank; H.yanked = 0; }
         const v = clamp((H.t - T) / Math.max(0.05, K.grab - T), 0, 1), y = H.yankM! * (1 - (1 - v) * (1 - v)), d = y - H.yanked!;
@@ -1551,7 +1553,9 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
       c.pos = u >= 1 ? v3.lerp(c.pos, to, 1 - Math.exp(-14 * dt)) : [c.pos[0] + d0[0], c.pos[1], c.pos[2] + d0[2]];
       own = Math.min(STALK.catchStride, Math.hypot(c.pos[0] - was[0], c.pos[2] - was[2]) / Math.max(dt, 1e-4)); c.vel = [0, 0, 0]; collidePlayer(g, 1.7); }
     else { c.vel = [0, 0, 0]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, 1.7); }
-    c.bodyYaw = approachAngle(c.bodyYaw, yaw, 14 * dt); c.aimYaw = approachAngle(c.aimYaw, c.bodyYaw, 12 * dt); c.aimPitch = damp(c.aimPitch, 0, 8, dt);   // (the chest untwists over the reach, not in a frame)
+    // (the stalk's step in: he comes round to the man's back THROUGH the step, not in its first four frames — off a wall that was a quarter turn on the spot)
+    if (STALK.turnIn && stepU >= 0 && stepU < 1 && H.yaw0 !== undefined) { const e = clamp(stepU / 0.85, 0, 1); c.bodyYaw = H.yaw0 + wrapAngle(yaw - H.yaw0) * e * e * (3 - 2 * e); } else c.bodyYaw = approachAngle(c.bodyYaw, yaw, 14 * dt);
+    c.aimYaw = approachAngle(c.aimYaw, c.bodyYaw, 12 * dt); c.aimPitch = damp(c.aimPitch, 0, 8, dt);   // (the chest untwists over the reach, not in a frame)
     gd.speed = 0; hc.vel = [0, 0, 0];
     if (H.t >= K.grab) {
       setPhase(g, 'held'); H.since = g.time; if (gd.held) gd.held.since = g.time; gd.talk.heldSince = g.time; c.bodyYaw = c.aimYaw = hc.bodyYaw;   // (the dialogue's held clock and the hold's are one)
@@ -1648,7 +1652,7 @@ function holdTail(g: Game, dt: number, speed: number, own = -1) {
   const kill = H ? takeKill(g) : false, beats = H ? takeBeats(g) : false, haul = H ? takeHaul(g) : false;   // (takedown.ts TAKEDOWN.kill / chokeBeats, fed with the pose as `low` is: the animator reads this frame's, not its module's one-frame-late fallback)
   const strip = H?.strip ? disarmPose(H.strip) : undefined;   // (disarm.ts: both poses or neither)
   const yank = H && H.hitAt !== undefined && g.time - H.hitAt < 1 ? g.time - H.hitAt : undefined;   // (character.ts HOLD.yank: both poses or neither)
-  c.anim.holdPose = H ? { yank, phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats, haul, strip } : null;
+  c.anim.holdPose = H ? { yank, step: H.from && H.phase === 'grab' ? H.t : undefined, phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats, haul, strip } : null;
   if (H) {
     const gd = H.g, hc = gd.char, an = hc.anim;
     an.speed = speed; an.reverse = pl.backpedal; an.crouchTarget = 0; an.upper = 'none'; an.stance = 'none'; an.lookYawExtra = 0; an.deliberate = 0;

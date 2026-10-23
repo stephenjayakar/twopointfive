@@ -1004,6 +1004,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the man a step nearer the back door, and a body within 1.3 m of a hand at the lock takes the tap from the door's row (the level's own note on that
   spot). `stealthpose-creep` joins `GRAB_ROW_AS_IT_WAS`: the stretch it reads (behind a man, out of reach, the free hand low) is the way in's now.
   Measured: `stalk-check`, `noknife-check`, `sneaklab-check`, `disarm-check` and the lessons on both stands, headless. Never played, never seen on a GPU.
+- **The stalk's fourth pass: the way in has a shape (10-23; `character.ts` `READY_BARE.way`, `HOLD.lunge` / `sway` / `apart`, `stalk.ts`
+  `stalkWait`, `close.ts`).** No URL word of its own: the stalk's parts ride `STALK.on` (`turnIn`, `cornerShow`, `catchLong`), the pose's ride
+  bare hands (`CLOSE.noKnife`) and `HOLD.wayShape`, so `?stalk=0` or `?noknife=0` puts the matching part back; the frozen stand has both off.
+  A recording from before it replays as it was (journal.ts: no `STALK.turnIn` = no turn through the step, no longer step, no wait pose; no
+  `HOLD.wayShape` = the old way in, no dip, sway or room between the heads, the old arch: the head's bone is where ears and eyes are read).
+  (1) Fed a PART of the reach (the tell's `readyAmt` under 1) the pose was the whole reach at part weight: both arms up from two metres off.
+  Now the weight is whole by `way.by` of the amount and the pose itself goes by it: the lead hand starts low (`way.low` / `near`) and comes up
+  to the neck over `way.lift`, the right hand has no share before `way.right[0]` and sits by his ribs (`READY_BARE.R.at`), fingers nearly
+  open. A stalk that is broken off drops the arms at `way.drop` /s. (2) `HOLD.lunge`: his hips dip 6 cm over the first three frames of the
+  step in (not by the hold layer's weight, which is a third there). `HOLD.yank.arch` is -5 (was -11). `HOLD.apart` carries Sam's head
+  `side` degrees further out the way `N.side` already does and tips the held man's neck `tip` the other way, eased with the gun's share and
+  the haul: the head joints are 10.2 cm apart across the pair, 4.9 with it at 0. (3) `HOLD.sway`: in the bare hold both men's weight goes
+  from foot to foot every `secs` and he twists against the arm with his agitation; it is let go of at `sway.out` /s when the hold becomes a
+  choke or a gun hold. (4) THE WAIT AT A CORNER SHOWS (bare hands): `stalkWait` (the wait's own gate, the button down) has closeTick feed a
+  tucked lead hand toward the nearest man he could take (`cornerReach`, growing from `cornerSee` m in) and `anim.coil` (`cornerCoil` of the
+  way into the crouch, which is Sam's eye height in fogofwar.ts too); he comes up out of it over `cornerRise` s of the step in. (5) The step
+  in off a wall turns him THROUGH the step (`Hold.yaw0`), not in its first four frames; a step longer than `catchM` may take up to `catchLong`
+  of `catchSecs` (more and the haul back, which has what is left of the grab, went over 7 m/s). CHECKS: stalk-check has `shape` (the dip and
+  the heads against the same run with both at 0) and a line in `corner` for the wait as asked and as shown; both stands, `STALK_BREAK=1`
+  fails them. Three seeds for the grab lines as before, one for these. The lab has rows for `catchM`, `catchLong`, `cornerSee`,
+  `cornerCoil`, `cornerRise`. Stills: `close-stills.ts --scene stalk-turn` is the broken-off stalk. Judged on CPU stills by a visual
+  reviewer over two looks; never seen on a GPU, never played. Not done from the review: a staggered stance at the launch, a flinch when he
+  turns round, the elbow under the chin, a slower fall for the gun that is taken, the still pose of a paused creep.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
