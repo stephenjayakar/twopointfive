@@ -178,7 +178,7 @@ export interface PlayerSnap {
   ocpCharge: number; hasRifle: boolean; rifleGone: boolean; ocpHinted: boolean; equipT: number;
   /** the close-in mode's held gait under his walk (character.ts heldGaitSnap: its clock, weight, pace, and the mode) — written only inside the mode and under SAVETIMELINE.holds; absent = it begins from nothing, as it did */ heldGait?: number[];
   /** …and the man the mode is held on, by character id (close.ts closeModeSnapshot) */ closeOn?: number;
-  ripU?: number; bashAt?: number; bashLean?: number; stagU?: number; hurtAt?: number; dazU?: number; dazAt?: number[]; aw?: number[]; keys: string[]; codes: string[]; hitsLeft: number; nv: boolean; pace: number; lastFireT: number; fireCd: number; noise: number; visibility: number; stepPhase: number; animPhase: number;
+  ripU?: number; bashAt?: number; bashLean?: number; stagU?: number; hurtAt?: number; dazU?: number; dazAt?: number[]; aw?: number[]; keys: string[]; codes: string[]; hitsLeft: number; nv: boolean; pace: number; lastFireT: number; fireCd: number; noise: number; visibility: number; stepPhase: number; stepTravel?: number; animPhase: number;
   wet: V3;   // coat, beads, rain
   bubble: Bubble | null;
 }
@@ -491,7 +491,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     ...(aimWeightSnapshot(pl) ? { aw: aimWeightSnapshot(pl) } : {}),   // (aimweight.ts: only while his gun is mid-swing onto the cursor)
     ...(pl.doorRipUntil > g.time ? { ripU: pl.doorRipUntil } : {}), ...(sprintDoorTurning(g, pl) ? { bashAt: pl.doorBashAt, bashLean: pl.doorBashLean } : {}),   // (sprintdoor.ts: only while one is running)
     ...(pl.staggerUntil > g.time ? { stagU: pl.staggerUntil } : {}), ...(pl.hurtAt >= 0 ? { hurtAt: pl.hurtAt } : {}), ...(pl.dazzledUntil > g.time ? { dazU: pl.dazzledUntil, dazAt: pl.dazzledAt ? [...pl.dazzledAt] : undefined } : {}),   // (samstun.ts: only while one is running)
-    keys: [...pl.keys], codes: [...pl.codes], hitsLeft: pl.hitsLeft, nv: pl.nv, pace: pl.pace, lastFireT: pl.lastFireT, fireCd: pl.fireCd, noise: pl.noise, visibility: pl.visibility, stepPhase: pl.stepPhase, animPhase: pc.anim.phase, ...(SAVETIMELINE.holds && pc.anim.heldGaitSnap() ? { heldGait: pc.anim.heldGaitSnap(), ...(closeModeSnapshot(g) !== undefined ? { closeOn: closeModeSnapshot(g) } : {}) } : {}),
+    keys: [...pl.keys], codes: [...pl.codes], hitsLeft: pl.hitsLeft, nv: pl.nv, pace: pl.pace, lastFireT: pl.lastFireT, fireCd: pl.fireCd, noise: pl.noise, visibility: pl.visibility, stepPhase: pl.stepPhase, ...(pl.stepTravel !== 1 ? { stepTravel: pl.stepTravel } : {}), animPhase: pc.anim.phase, ...(SAVETIMELINE.holds && pc.anim.heldGaitSnap() ? { heldGait: pc.anim.heldGaitSnap(), ...(closeModeSnapshot(g) !== undefined ? { closeOn: closeModeSnapshot(g) } : {}) } : {}),
     wet: [pc.wet, pc.beads, pc.wetRain], bubble: pl.bubble ? { ...pl.bubble } : null,
   };
   // ---- the men
@@ -672,7 +672,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     pl.doorKickTail = false; pl.doorRipUntil = fin(P.ripU ?? -1, -1); pl.doorBashAt = fin(P.bashAt ?? -10, -10); pl.doorBashLean = P.bashLean === 1 || P.bashLean === -1 ? P.bashLean : 0;
     pl.staggerUntil = fin(P.stagU ?? -1, -1); pl.hurtAt = fin(P.hurtAt ?? -1, -1); pl.dazzledUntil = fin(P.dazU ?? -1, -1); pl.dazzledAt = Array.isArray(P.dazAt) && P.dazAt.length === 3 ? [fin(P.dazAt[0], 0), fin(P.dazAt[1], 0), fin(P.dazAt[2], 0)] : null;
     pl.keys = new Set(P.keys ?? []); pl.codes = new Set(P.codes ?? []); pl.hitsLeft = Math.max(1, Math.min(Player.MAX_HITS, P.hitsLeft | 0)); pl.nv = !!P.nv; pl.nvAmount = pl.nv ? 1 : 0; pl.pace = Math.max(0.2, Math.min(1, fin(P.pace, 1)));
-    pl.lastFireT = fin(P.lastFireT, -10); pl.fireCd = fin(P.fireCd); pl.noise = fin(P.noise); pl.visibility = fin(P.visibility); pl.irradiance = 0; pl.stepPhase = fin(P.stepPhase);   // (visibility: the meter as it stood — the probe overwrites it on the first frame that answers; headless it is the script's knob and stays)
+    pl.lastFireT = fin(P.lastFireT, -10); pl.fireCd = fin(P.fireCd); pl.noise = fin(P.noise); pl.visibility = fin(P.visibility); pl.irradiance = 0; pl.stepPhase = fin(P.stepPhase); pl.stepTravel = fin(P.stepTravel ?? 1, 1);   // (visibility: the meter as it stood — the probe overwrites it on the first frame that answers; headless it is the script's knob and stays)
     pc.wet = fin(P.wet?.[0]); pc.beads = fin(P.wet?.[1]); pc.wetRain = fin(P.wet?.[2]);
     pl.bubble = P.bubble ? { ...P.bubble } : null;
     pc.update(0);
