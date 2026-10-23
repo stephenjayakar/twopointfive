@@ -161,9 +161,10 @@ if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-che
   try {
     await withDom('', async () => {
       K.kitLoad(st, ''); const set = K.kitSet(0, 'weapon', 'pistol') && K.kitSet(1, 'light', false); const st0 = m.get(K.KIT_LS);   // (this machine keeps a card with no rifle — the card that left a lesson's 'press 2' unpassable — and a teammate with no weapon light)
-      // (staged on two tutorial missions whose levels issue no kit of their own — tut-solo and tut-pair do, scenarios.issue, and the kept card never shows on those:
-      // one played alone, one with the team)
-      const alone: any = rowOf('tut-quiet'), pair: any = rowOf('tut-plan');
+      // (staged on two tutorial missions whose levels issue no kit of their own — tut-solo, tut-quiet and tut-pair do, scenarios.issue, and the kept card never
+      // shows on those; tut-squad is packed for, ISSUE.picked, and stages the kept cards on its own page. Both are played with the team: no tutorial mission
+      // played alone is left without a card of its own, so standRow's kitSolo line is not walked here)
+      const alone: any = rowOf('tut-sky'), pair: any = rowOf('tut-plan');
       // the plant is real: off a lesson's page that start wears the kept card
       const P = await standRow(alone); const plainRifle = P.g.player.hasRifle;
       K.kitIssuedPage(true);   // (main.ts on a lesson level's load)

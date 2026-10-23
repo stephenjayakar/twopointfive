@@ -25,9 +25,11 @@
 //                   long way round, along the walk on the wall's other side, to where the sound was, and stands looking at it with his back to the wall's
 //                   end. Round the end, a grab from the dark; he is asked, and gives the strongroom's code; then the choice: out cold, or the knife.
 //   the back door   a lock picked in the long wall's shadow, the court's lamp and fire a wall away and nobody left to watch.
-//   the store       the dark corner beside a lit doorway: the hall's man stands a stride inside it with his back turned. On a knee, out of the dark into
-//                   the light behind him: the knife. A walking step he would hear; a crouched one he does not.
-//   the hall        a beam at the chest (under it on a knee), a beam at the shins across the counting room's doorway (nothing goes under that): the mains.
+//   the store       the dark corner beside a lit doorway: the hall's man stands a stride inside it with his back turned, and the chest beam runs across
+//                   the hall at his back, between him and the doorway: nobody stands up behind him without breaking it. So the rifle comes off his
+//                   back, its launcher's grenade is swapped for a sponge round, and the man is put out from the store, through the doorway (see THE
+//                   SPONGE ROUND below). The rifle goes away again: the rest is hands.
+//   the hall        the same beam (under it on a knee), a beam at the shins across the counting room's doorway (nothing goes under that): the mains.
 //   the set piece   night vision, the box: every lamp and the shin beam die. The clerk is the nearest man to the box and has the longest walk to it,
 //                   round the counter's far end: ten seconds of him coming, in green, his light ahead of him. The player is in the niche by the doorway,
 //                   behind its stub of wall; the man comes through, walks past it to the box and works there with his back to it (this level's box
@@ -39,6 +41,28 @@
 // WHY EACH TIMED BEAT IS BUILT AS IT IS: a line is read before it is obeyed. A beat with a clock (a man coming) has its whole instruction in the line that
 // is up BEFORE the clock starts ('whistle here, then hide'; 'the box, then behind the wall'), and the man's walk is long enough for the next line to be read
 // while he is on his way: the long wall in the lane, the long counter in the shop. Nothing asks for a reaction inside two seconds.
+//
+// THE SPONGE ROUND, AND THE SWAP OF THE LAUNCHER'S LOAD (the maintainer, of the solo mission's launcher card: "we can also not teach swapping secondaries
+// at this point and only have 40mm. we can introduce sponge rounds + swapping secondaries later when we have a stealth tutorial"). This is that mission.
+//   WHAT HE CARRIES (scenarios.issue): the rifle with one grenade and five sponge rounds on its launcher, and the launcher comes up on the GRENADE
+//                   (`loaded`). The swap is then a thing he needs, with its reason in plain sight: a grenade would wake the street. No cans and no frag
+//                   are on him: nothing on the kit strip that no line of this mission uses.
+//   WHO             the hall's man. Of the three he is the one a second pair of hands was spent on (the first man is grabbed for the code, the clerk is
+//                   taken at the box), and he is the one a wall hides the player from: the shot is let go from the store, at his back.
+//   WHY NOT HANDS   the chest beam is 0.45 m behind his heels. A man on his feet behind him stands in it (devices.ts: the player's own body breaks a
+//                   beam, at any capsule). The frame says the same: from the store's first line to the shot no button of the close-in mode is his —
+//                   the right button and the trigger from `nook`, and from `corner` (the first line inside the door) the interaction key as well, because the held left click that
+//                   stalks a man is the frame's wherever that key is his and his hands are empty (rails.ts gate), whatever a step denies.
+//   WHERE FROM      the dark corner he is sent to has no line to the man (the doorway's own wall is in the way, and a launcher with no line sends
+//                   nothing and says nothing). So the corner is where the rifle comes out and the load is swapped, and a line of its own then puts a
+//                   mark on the floor where the shot can be made: on the doorway's line, 2.6 m behind his back. That floor is in the doorway's light
+//                   (the hall's bulb through it); the dark floor with a line to him is a strip under half a metre wide along the light's edge, too thin
+//                   to send a player to. Nobody is looking that way: the man has his back to it and a wall stands between it and the table.
+//   THE STEPS       inside, and at once the line that names the laser and sends him to the dark corner · rifle (2) · the card, then the swap (the frame's action `load`: the setup's load row alone, the right button still shut) · the
+//                   step out to the mark · the shot (the right button held, the arc, let go) · the rifle put away (the hands' own key: the next
+//                   man is taken by hand).
+//   NEVER STUCK     five sponge rounds, and a launcher with none left passes the shot's line (lesson.ts `ringsOut`): the lesson goes on with him
+//                   on his feet, and what that costs is the mission's to say, not a line that can no longer be done.
 //
 // THREE MEN, each with one beat. A fourth (inside the front door) was taken out: seven metres from the box through an open doorway he heard the clerk go
 // down and turned his light on the player, and nothing in the room could hide that.
@@ -53,7 +77,7 @@
 // WHAT IS KEPT FROM THE FIRST BUILD, to the centimetre: the shop's walls and doors, the low walls, both lamps, the beams, the box, the pad, the safe and
 // every mark the lesson and its scripted player name (TQ). What is new is the place they stand in.
 import type { Vec3 } from '../../src/math/vec';
-import type { LessonData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
+import type { IssueData, LessonData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
 import type { DeviceDef, Level, LevelDoorDef } from '../../src/scene/level';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { BoxFlag } from '../../src/scene/boxes';
@@ -63,7 +87,7 @@ import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../s
 import { WORLD } from '../../src/scene/world';
 
 export const NAME = 'tut-quiet';
-export const NOTES = 'The tutorial\'s quiet mission, the ledger: a money changer\'s shop off a bazaar street on a snowing night, alone. One line: out of the porch lamp and along the trodden path in the lane, a man whistled from his fire round a wall the player stands behind and taken from behind for the strongroom\'s code, a picked back door, a knife from the dark into a lit room, a beam passed on a knee, then the mains: the clerk comes round his counter to the box in the dark and is taken at it, and the code opens the strongroom. Generated by tools/levels/tut-quiet.ts.';
+export const NOTES = 'The tutorial\'s quiet mission, the ledger: a money changer\'s shop off a bazaar street on a snowing night, alone. One line: out of the porch lamp and along the trodden path in the lane, a man whistled from his fire round a wall the player stands behind and taken from behind for the strongroom\'s code, a picked back door, a man in a lit room put out from the dark with a sponge round off the rifle\'s launcher, a beam passed on a knee, then the mains: the clerk comes round his counter to the box in the dark and is taken at it, and the code opens the strongroom. Generated by tools/levels/tut-quiet.ts.';
 export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
 
 const HALF = Math.PI / 2;
@@ -90,6 +114,7 @@ export const TQ = {
                                           // the back door's lock: a man put down nearer lies in reach of a hand at the lock, and a body's row comes before a door's.
                                           // 30.6, not 30.3: a man grabbed from the creep is hauled a step back onto the arm — stalk.ts STALK.yank — toward that door)
   backDoor: [27.9, 0, 17.2] as P3,        // the court side of the back door
+  inside: [27.9, 0, 15.6] as P3,          // a stride inside the back door
   nook: [26.1, 0, 14.15] as P3,           // the store's dark corner beside the lit doorway to the hall
   under: [23.2, 0, 12.4] as P3,            // past the chest beam
   box: [22.1, 1.35, 16.2] as P3,          // the mains box: on the hall's own wall, two strides inside the counting room's doorway
@@ -97,7 +122,10 @@ export const TQ = {
   wait: [20.45, 0, 13.85] as P3,         // in the niche by the doorway: the man sent to the box walks PAST its wall and stops with his back to its end
   pad: [16.635, 1.3, 11.3] as P3,
   safeFront: [14.5, 1.0, 9.48] as P3,
-  beamHigh: 23.6,
+  // THE CHEST BEAM runs behind the hall's man, between him and the store's doorway (he stands at x 24.0; it was in front of him, at 23.6): to stand up
+  // behind him is to stand in it. A ring from the store goes through it (nothing but the player's own body, a body he hauls and a thrown can breaks one)
+  beamHigh: 24.45,
+  shot: [26.6, 0, 12.7] as P3,            // in the store, on the doorway's line, 2.6 m behind the hall's man: a clear line to his head from anywhere within half a metre of it
 };
 /** the yard inside the street wall and the back walls */
 const YARD: Rect = { x0: 8, x1: 32, z0: 6, z1: 22 };
@@ -447,7 +475,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('devices');
   const devices: DeviceDef[] = [
     { kind: 'keypad', name: 'pad_strong', pos: TQ.pad, yaw: HALF, door: 'strong', code: '4213' },
-    // a beam at the chest across the hall, on its own battery: under it on a knee
+    // a beam at the chest across the hall, on its own battery, at the back of the hall's man: under it on a knee
     { kind: 'laser', name: 'beam_high', from: [TQ.beamHigh, 1.3, 8.64], to: [TQ.beamHigh, 1.3, 16.36], mains: false, alarm: 'alarm' },
     // a beam at the shins across the counting room's doorway, on the mains: nothing goes under it
     { kind: 'laser', name: 'beam_low', from: [20.0, 0.35, 14.82], to: [20.0, 0.35, 15.68], mains: true, alarm: 'alarm' },
@@ -457,7 +485,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // each walks a stride or two to his place and stands the night out there, facing the way he walked
   const post = (name: string, from: [number, number], to: [number, number]) => ({ name, points: [[from[0], 0, from[1]], [to[0], 0, to[1]]] as P3[], wait: [0, 3600], keys: [] as string[] });
   const routes = [
-    post('hall', [24.9, 12.6], [23.9, 12.6]),          // the hall's man: a stride inside the store's doorway, his back to it, his eyes on the beam and the far door
+    post('hall', [24.9, 12.6], [23.9, 12.6]),          // the hall's man: a stride inside the store's doorway, his back to it and to the beam, his eyes on the far door
     post('court', [26.2, 20.8], [27.2, 20.0]),         // the back court's man (the second on the roll: the one who talks soonest): under the court's lamp, the long wall between him and the lane
     post('table', [17.2, 10.2], [18.4, 10.2]),         // the clerk, at the counting table: the nearest man to the mains box
   ];
@@ -471,6 +499,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     exits: [EXIT_W],
     patrols: [['hall', 'court', 'table']],
   };
+  // WHAT HE CARRIES (game/kit.ts kitIssue: a mission's own card for him is the whole kit, on the page and on the scripted run): the rifle, one grenade
+  // and five sponge rounds for its launcher, the launcher up on the grenade. Nothing else a line of this mission does not use
+  const issue: IssueData = { members: { '0': { weapon: 'rifle', shells: 1, rings: 5, loaded: 'he40', smoke: 0, bangs: 0, frags: 0 } } };
   const down = (n: number) => ({ is: 'men', down: n });
   const did = (what: string) => ({ is: 'did', what });
   const any = (...of: object[]) => ({ is: 'any', of });
@@ -525,10 +556,33 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'pick', line: 'Press [Space] at the lock to pick it', explain: { title: 'Picking a lock', text: 'This door is locked. Stand at the lock and press [Space] to pick it.\nPicking a lock, entering a code or opening a safe takes a few seconds. If you move or press [Space] again, you stop.\nThe lock clicks while you work on it, and a guard close by can hear it.' },
         done: PICKED, at: mark(TQ.backDoor) },
       // ---- the store: a man in the light, the player in the dark ----
-      { id: 'nook', line: 'Go inside and stay in the dark', cue: 'store', done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
-      { id: 'strike', line: 'Stay low so he doesn\'t hear you, then {take him out}', checkpoint: 'the store', done: down(2), at: [24.9, 1, 12.6] },
+      // (no button of the close-in mode is his from here to the shot: the man ahead is not taken by hand — see THE SPONGE ROUND at the head. The right
+      //  button and the trigger go here. The interaction key is still his on this line: the back door needs it)
+      { id: 'nook', line: 'Go inside', cue: 'store', deny: ['fire', 'alt'], done: any({ is: 'in', area: { x0: 25.62, x1: 30.38, z0: 8.62, z1: 16.0 } }, down(2)), at: mark(TQ.inside) },
+      // ---- the store: the rifle's launcher. A man nobody can stand behind, put out from the dark ----
+      // (the line says what to do and why, the moment he is through the door and before he can reach for the man: `use` goes here, because the frame
+      //  gives the left button to the stalk wherever the interaction key is his and his hands are empty, and no line from here to the shot needs that
+      //  key — the back door is behind him. It is his again at `under`)
+      { id: 'corner', line: 'Stay back in the dark, because there\'s a laser right behind him', deny: ['use'], done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
+      // (the rifle's own key is his from here; its trigger is not, at any step)
+      { id: 'rifle', line: 'Press [2] to take out your rifle', allow: ['slot:rifle'], checkpoint: 'the store',
+        done: any({ is: 'slot', slot: 'rifle', drawn: true }, down(2)), atMan: 'hall', at: [24.0, 1, 12.6] },
+      // (the card comes up with the rifle in his hands and its load on the kit strip: what the launcher fires, and where the load shows. The keys are the
+      //  line's. THE SWAP IS DONE, not only said: the launcher came up on the grenade — `loaded`, above — and the load's row is his from this step, with
+      //  the right button still shut, so nothing leaves the tube before the sponge round is on it)
+      { id: 'load', line: 'Press [2] again to load a sponge round', setupLine: 'Press [2] twice to load a sponge round', allow: ['load'],
+        explain: { title: 'Using the rifle\'s launcher', text: 'Your rifle\'s launcher fires grenades that kill, or sponge rounds that knock a guard out. Look next to your ammo at the bottom left to see which one is loaded.\nIt says HE right now, which is the grenade. Swap it for a sponge round so you stay quiet.' },
+        done: any({ is: 'launcher', on: 'ring' }, down(2)), atMan: 'hall', at: [24.0, 1, 12.6] },
+      // (the corner has no line to him — WHERE FROM at the head — so the place the shot can be made from is a mark on the floor and a line of its own)
+      { id: 'behind', line: 'Step out to where you can see him through the doorway', done: any(near(TQ.shot, 0.45), down(2)), hold: 0.2, at: mark(TQ.shot) },
+      // (the right button is his again here, and with the rifle up it is the launcher's. The mark rides on the man: which him. A launcher with no sponge
+      //  round left passes the line: a step never becomes impossible)
+      { id: 'sponge', line: 'Hold the right mouse button, aim at him, and let go', allow: ['alt'], done: any(down(2), { is: 'flag', flag: 'ringsOut' }), atMan: 'hall', at: [24.0, 1, 12.6] },
+      // (the next man is taken by hand, and a hand on a rifle takes nobody: the hands' own key, taught here. `[E]` is that key wherever the board has
+      //  put it — host/keymap.ts: the backtick on the page. The rifle's key and its load's row are shut again from the next line)
+      { id: 'sling', line: 'Press [E] to put your rifle away', allow: ['hands'], done: { is: 'flag', flag: 'holstered' } },
       // ---- the hall: two beams and the mains ----
-      { id: 'under', line: 'Stay low and go under the laser beam', done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
+      { id: 'under', line: 'Stay low and go under the laser beam', checkpoint: 'the doorway', allow: ['fire', 'alt', 'use'], deny: ['slot:rifle', 'load', 'hands'], done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
       // ---- the set piece: the mains ----
       { id: 'nv', line: 'Press [N] to turn on night vision', allow: ['nvg'], checkpoint: 'the hall', done: any({ is: 'flag', flag: 'nv' }, down(3)) },
       { id: 'box', line: 'Press [Space] at the breaker box, then hide behind the wall', done: any(did('act:breakerOff'), down(3)), at: mark(TQ.boxAt) },
@@ -559,6 +613,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // WHAT IS UNDERFOOT (game/floor.ts; the six it has; first match wins): the rooms are 'stone'; the court, the street, the alley and the trodden paths are
   // 'asphalt' (the nearest the six have to hard ground); everything else is fresh snow, 'grass' (the soft, quiet one)
   const surfaces: SurfacesData = { building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'grass', outside: 'grass', verge: 'grass', zones };
-  const scenarios: LevelScenarios = { quiet, lesson, places: PLACES, doorNames: [{ door: 'gate_w', name: 'street gate' }, { door: 'front', name: 'front door' }, { door: 'back', name: 'back door' }, { door: 'strong', name: 'strongroom door' }] };
+  const scenarios: LevelScenarios = { quiet, lesson, issue, places: PLACES, doorNames: [{ door: 'gate_w', name: 'street gate' }, { door: 'front', name: 'front door' }, { door: 'back', name: 'back door' }, { door: 'strong', name: 'strongroom door' }] };
   return { level, scenarios, groups: trace.groups, surfaces };
 }

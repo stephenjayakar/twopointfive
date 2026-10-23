@@ -7,8 +7,12 @@ import { CLOSE } from '../../../src/game/close';
 import { HANDRING } from '../../../src/game/handring';
 import { TQ } from '../../levels/tut-quiet';
 import { handCarry } from '../../../src/game/guards';
+import { HANDSLOT, HANDSLOT_KEY } from '../../../src/game/handslot';
+import { kitTreeOn } from '../../../src/game/kit';
 
 export const query = '?quiet';
+// he wears what the mission's page deals him (the level's own card: one grenade and five sponge rounds on the launcher, the grenade up): the swap's line leans on it
+export const pageKit = true;
 // the moon on his meter (lesson-run's --moon): the CPU's light estimate leaves it out, and the lane is lit by nothing else
 export const mode = { moon: true };
 
@@ -23,7 +27,8 @@ const REACT = Number((globalThis as any).process?.env?.TPS_REACT ?? 0.6);
  *  of these has the player do what a man with eyes and ears would catch, and the run must FAIL on it:
  *  TQSMOKE_BREAK=front    after the whistle he stands on the walk, in front of the gap the man comes to
  *  TQSMOKE_BREAK=beam     he stays on the whistle's own mark, where the man's light is put
- *  TQSMOKE_BREAK=upright  he hides, then walks up behind the smoking man on his feet instead of crouched */
+ *  TQSMOKE_BREAK=upright  he hides, then walks up behind the smoking man on his feet instead of crouched
+ *  TQSMOKE_BREAK=hands    in the store he goes for the hall's man by hand after all: the chest beam at the man's back is broken */
 const WRONG = String((globalThis as any).process?.env?.TQSMOKE_BREAK ?? '');
 const flat = (a: ArrayLike<number>, b: ArrayLike<number>) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const at = (p: ArrayLike<number>) => `${p[0].toFixed(1)}, ${p[2].toFixed(1)}`;
@@ -52,6 +57,15 @@ function tap(B: Bot, kind: string, verb: string, aim?: number[]): boolean {
   if (has() && lit && (lit.kind !== kind || lit.verb !== verb)) B.fail(`a tap of Space here does '${lit.verb}', and the line means '${verb}'`);
   return B.verb(kind, verb, aim);
 }
+/** a slot's key, and the half second the thing takes to come into the hand */
+const take = (B: Bot, code: string) => { B.press(code, 5); B.until(() => B.g.player.equipT <= 0, 3); B.step(3); };
+/** a mouse button pressed, held on a world point for `secs` and let go (with the rifle up the right one shows the arc): Input's bits are 1 left · 2 middle · 4 right */
+const holdButton = (B: Bot, bit: number, p: number[], secs = 0.5) => { B.aim(p); B.step(); B.I.clicked |= bit; for (let i = 0; i < secs * 60; i++) { B.aim(p); B.I.buttons |= bit; B.step(); } B.I.buttons &= ~bit; B.aim(p); B.step(3); };
+const leftHold = (B: Bot, p: number[], secs = 0.5) => holdButton(B, 1, p, secs), rightHold = (B: Bot, p: number[], secs = 0.5) => holdButton(B, 4, p, secs);
+const head = (x: any): number[] => x.char.bones?.head ?? [x.char.pos[0], 1.6, x.char.pos[2]];
+const loadName = (a: string | null) => a === 'ring' ? 'the sponge round' : a === 'he40' ? 'the grenade' : String(a);
+/** how many times a beam has been broken this run */
+const trips = (B: Bot): number => (B.g.devices?.lasers ?? []).reduce((n: number, l: any) => n + l.trips, 0);
 function unseen(B: Bot, n0: number, gd: any, where: string) { if (seen(B) > n0 || gd.state === 'alert') B.fail(`${gd.callsign} noticed the player ${where} (${gd.state}, aware ${gd.awareness.toFixed(2)})`); }
 
 export const steps: Record<string, (B: Bot) => void> = {
@@ -138,32 +152,89 @@ export const steps: Record<string, (B: Bot) => void> = {
     if (!B.until(() => !B.door('back').locked, 14)) B.fail('the back door did not pick');
   },
   nook: B => {
-    const H = man(B, 'hall'), n0 = seen(B);
     if (!B.openDoor('back')) B.fail('the back door did not open');
     B.until(() => !B.door('back').isClosed(), 4);
-    B.go([27.9, 0, 15.7], 15); B.go(TQ.nook, 10, { near: 0.12 }); B.wait(0.4);
+    B.go([27.9, 0, 15.7], 15);
+  },
+  // the first line inside the door names the laser and takes the interaction key: the dark corner, on a knee
+  corner: B => {
+    const H = man(B, 'hall'), n0 = seen(B);
+    // (the break: the man gone for by hand after all, his hands empty, on a knee the whole way. On the page's stand the hand that reaches for him is in the
+    //  beam; where no hand comes up by itself — the frozen stand has no creep, and the grab's row is not his on this line — he stands up behind the man)
+    if (WRONG === 'hands') { const t0 = trips(B); closeIn(B, H, [25.3, 0, 12.7]); B.step(20);
+      if (trips(B) === t0 && B.verb('guard', 'grab', [H.char.pos[0], 1.35, H.char.pos[2]])) { B.until(() => trips(B) > t0, 3); B.say(`  the grab's row taken: ${B.g.player.holding ? 'he is held' : 'nobody held'}`); }
+      if (trips(B) === t0) { B.crouch(false); B.step(40); B.say('  no row to grab him by: he stands up behind the man'); }
+      B.say(`  by hand: ${trips(B) > t0 ? 'the chest beam broken' : 'the beam not broken'} from ${at(B.pos())}, ${flat(B.pos(), H.char.pos).toFixed(2)} m behind him; he ${H.state}`);
+      if (trips(B) > t0) B.fail('the chest beam at his back is broken by a man who comes up behind him'); }
+    B.go(TQ.nook, 10, { near: 0.12 }); B.wait(0.4);
     B.say(`  in the corner: lit ${lit(B)}; ${H.callsign} ${H.state}, aware ${H.awareness.toFixed(2)}, ${flat(B.pos(), H.char.pos).toFixed(1)} m off`);
     unseen(B, n0, H, 'coming into the store');
   },
-  // out of the dark, through the doorway into the hall's light at his back, on a knee the whole way: the LEFT button
-  strike: B => {
+  // THE RIFLE'S LAUNCHER (the level file's head: THE SPONGE ROUND). The rifle off his back by its own key
+  rifle: B => {
+    const P = B.g.player, rf = P.rifle;
+    B.say(`  on him: ${rf.shells} grenade, ${rf.rings} sponge rounds, the launcher up on ${loadName(rf.attachment)}; ${P.canisters} smoke, ${P.flashbangs} stun, ${P.frags} frag`);
+    if (rf.attachment !== 'he40' || rf.shells !== 1 || rf.rings !== (kitTreeOn() ? 5 : rf.rings)) B.fail(`the mission's card is not on him: the launcher is up on ${loadName(rf.attachment)} with ${rf.shells} grenade and ${rf.rings} sponge rounds (one grenade, five sponge rounds, the grenade up)`);
+    // (his hands are empty and the man is in reach of a held left click: the frame gives that click to the stalk wherever the interaction key is his, so
+    //  this line takes the key with it — the level file's head, WHY NOT HANDS. Held from the doorway's line, where a stalk would have a way to him)
+    { const H = man(B, 'hall'), t0 = trips(B); B.crouch(true); B.go(TQ.shot, 10, { near: 0.15 }); const from = B.pos().slice(); leftHold(B, [H.char.pos[0], 1.2, H.char.pos[2]], 1.5);
+      if (P.holding || trips(B) > t0 || flat(B.pos(), from) > 0.1) B.fail(`a left click held on the hall's man took him or walked the player at him (held ${!!P.holding}, moved ${flat(B.pos(), from).toFixed(2)} m, the beam ${trips(B) > t0 ? 'broken' : 'whole'})`);
+      B.say(`  a left click held on him from the doorway's line: nobody stalked, nobody held`); B.go(TQ.nook, 10, { near: 0.15 }); }
+    take(B, 'Digit2');
+    if (!P.rifleUp) B.fail('the rifle\'s key did not bring it into his hands');
+  },
+  // the swap: 2 with the rifle up steps what is on the right button (the setup's load row where the setup is a mode). The right button is not his yet:
+  // held on the man before the swap, nothing leaves the tube. (Tried from the doorway's line, where the launcher HAS a line to him: from the corner it
+  // sends nothing whatever the frame says, and the check passed with the frame's locks broken. Then back to the corner for the swap)
+  load: B => {
+    const P = B.g.player, rf = P.rifle, H = man(B, 'hall'), had = `${rf.shells}/${rf.rings}`;
+    B.crouch(true); B.go(TQ.shot, 10, { near: 0.15 }); rightHold(B, head(H)); B.wait(0.5);
+    if (`${rf.shells}/${rf.rings}` !== had || H.state !== 'patrol') B.fail(`the right button fired on the line that swaps the load (${had} → ${rf.shells}/${rf.rings}; ${H.callsign} ${H.state})`);
+    B.go(TQ.nook, 10, { near: 0.15 });
+    B.press('Digit2', 20); if (rf.attachment !== 'ring') B.press('Digit2', 10);
+    B.say(`  the launcher: ${loadName(rf.attachment)} up (a right click held on him from the doorway's line before the swap sent nothing)`);
+    if (rf.attachment !== 'ring') B.fail(`the rifle's key did not put the sponge round up (${loadName(rf.attachment)})`);
+  },
+  // out of the corner to the mark on the doorway's line, crouched: the corner itself has no line to him (from it the launcher sends nothing)
+  // (the reason this line exists is asked of the level itself, with no round spent: from the corner a straight line to his head meets a wall, from the
+  //  mark it does not. The page's stand sends nothing down a blocked line; the frozen stand would send the round into the wall)
+  behind: B => {
     const H = man(B, 'hall'), n0 = seen(B);
-    B.say(`  ${H.callsign} ${H.state} at ${at(H.char.pos)}, facing ${H.char.bodyYaw.toFixed(2)}`);
-    if (!closeIn(B, H, [26.3, 0, 12.9])) B.fail(`could not get behind the hall's man (${flat(B.pos(), H.char.pos).toFixed(2)} m off, he stands at ${at(H.char.pos)}, ${H.state})`);
-    B.say(`  at his back: lit ${lit(B)}; he ${H.state}, aware ${H.awareness.toFixed(2)}`);
-    unseen(B, n0, H, 'coming up behind him in the light');
-    B.click(CLOSE.on && CLOSE.noKnife ? 2 : 1);   // (close.ts CLOSE.noKnife: no knife — the line says the right click's knockout, and that is the blow)
-    if (!B.until(() => H.state === 'dead', 4)) B.fail(`the click did not put the hall's man down (${flat(B.pos(), H.char.pos).toFixed(2)} m off, ${H.state})`);
-    B.wait(1);
+    const line = (from: number[]) => { const to = head(H), p = [from[0], 1.0, from[2]], d = [to[0] - p[0], to[1] - p[1], to[2] - p[2]], len = Math.hypot(d[0], d[1], d[2]), dir = d.map(v => v / len);
+      return !B.g.col.raycast(p, dir, len - 0.3) && !B.g.props.raycast(p, dir, len - 0.3); };
+    if (line(TQ.nook) || !line(TQ.shot)) B.fail(`the corner ${line(TQ.nook) ? 'has' : 'has no'} line to his head and the mark ${line(TQ.shot) ? 'has one' : 'has none'}: the line that sends him out of the corner rests on the first having none and the second having one`);
+    B.say(`  ${H.callsign} ${H.state} at ${at(H.char.pos)}, facing ${H.char.bodyYaw.toFixed(2)}, the chest beam ${(TQ.beamHigh - H.char.pos[0]).toFixed(2)} m behind him; no line to his head from the corner, a clear one from the mark`);
+    B.crouch(true); B.go(TQ.shot, 10, { near: 0.15 }); B.step(10);
+    B.say(`  on the doorway's line: lit ${lit(B)}, ${flat(B.pos(), H.char.pos).toFixed(1)} m behind him; he ${H.state}, aware ${H.awareness.toFixed(2)}`);
+    unseen(B, n0, H, 'stepping out to the doorway\'s line');
+  },
+  // the ring let go at the back of his head
+  sponge: B => {
+    const rf = B.g.player.rifle, H = man(B, 'hall'), C = man(B, 'table'), n0 = seen(B), trips0 = trips(B), had = rf.rings;
+    rightHold(B, head(H));
+    if (rf.rings !== had - 1) B.fail(`the right button let no sponge round go (${rf.rings} left of ${had})`);
+    if (!B.until(() => H.state === 'dead', 3)) B.fail(`the sponge round did not put the hall's man out (${H.state}, aware ${H.awareness.toFixed(2)})`);
+    B.wait(1.5);
+    if (trips(B) > trips0) B.fail('the ring broke the chest beam');
+    const ko = B.g.chronicle.events.some((e: any) => e.kind === 'ko' && e.data?.method === 'ring');
+    if (!ko) B.fail('the hall\'s man is down and the night\'s record has no man put out by a ring');
+    if (seen(B) > n0) B.fail('the shift had eyes on him at the shot');
     const up = B.g.guards.filter((x: any) => x.state !== 'dead' && x.state !== 'patrol');
     if (up.length) B.fail(`${up.map((x: any) => `${x.callsign} ${x.state}`).join(', ')} after the hall's man went down`);
-    B.say(`  down at ${at(H.char.pos)}; the clerk at his table`);
+    B.say(`  out cold at ${at(H.char.pos)}; ${C.callsign} at his table (${C.state}, aware ${C.awareness.toFixed(2)}); the beam unbroken`);
+  },
+  // the rifle away again: the hands' own key (the page's backtick gives the slot's code; E's old code where the slot is off)
+  sling: B => {
+    const P = B.g.player;
+    B.press(HANDSLOT.on ? HANDSLOT_KEY : 'KeyE', 10); B.until(() => P.holstered, 3);
+    if (!P.holstered) B.fail('the hands\' key did not put the rifle away');
   },
   // through the doorway into the lit hall and under the chest beam on a knee
   under: B => {
-    const trips = () => B.g.chronicle.events.filter((e: any) => e.kind === 'alarm').length, t0 = trips();
+    const alarms = () => B.g.chronicle.events.filter((e: any) => e.kind === 'alarm').length, a0 = alarms(), t0 = trips(B);
     B.crouch(true); B.go([26.2, 0, 12.6], 10); B.go([24.4, 0, 13.0], 10); B.go(TQ.under, 10, { near: 0.2 });
-    if (trips() > t0) B.fail('the chest beam was tripped on a knee');
+    if (alarms() > a0 || trips(B) > t0) B.fail('the chest beam was tripped on a knee');
+    B.say(`  under the beam on a knee, past the man on the floor: not broken`);
   },
   nv: B => { B.press('KeyN', 20); },
   // along the hall to the box on its wall, a stride inside the counting room's doorway

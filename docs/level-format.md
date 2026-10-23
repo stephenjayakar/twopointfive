@@ -231,6 +231,8 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   On the player's card alone, and only a card with the rifle, a block may also name `rings`: the launcher's sponge rounds, a whole number 0‥5. A mission
   whose block names your card hands NOTHING over it (`ISSUE.whole`, on in the page; `?issuelend` = the mission's sponge rounds, cameras and wand land
   over it as before), so `rings` is how such a mission puts sponge rounds on the tube; with any, the launcher comes up on them.
+  The same card may name `loaded` (`'ring'` | `'he40'`): the load the launcher comes up on, where he carries any of it. Absent = the sponge rounds
+  where he has any. `levels/tut-quiet.json` names the grenade: its lesson is the swap to the sponge round.
 - `response` — THIS LEVEL HAS A RESPONSE TEAM (`game/qrf.ts`, switch `RESPONSE`; `scene/scenarios.ts ResponseData`): who comes when the place goes loud, by
   which ways, and what they are called on the net. A LEVEL DESIGN DECISION, NOT A DEFAULT: a level carries the block only where somebody would plausibly
   come (a post with a radio room and a picket down the road, a street under curfew, a border company's lines) and `why` says so in a sentence — the
