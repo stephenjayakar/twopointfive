@@ -1264,9 +1264,19 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   foot is down under it), and the plant right after it, which the first key swallows, lays none either: a gap of one print at such a turn; never
   seen on a GPU. A FIRST CUT, thrown out in review: the count ran from the last footfall FILED and was kept through a stop. After one about-turn
   every later footfall of a steady walk was filed a fifth of a turn before the foot came down (the first key swallowed each plant and the count
-  never met the feet again), and a debt from before a stop was paid a few frames into the next nudge. Do not go back to it. NOT DONE: never heard in
-  a page; nobody has played it; what a shaking hand on a mouse does to the cycle was staged with the cursor put square ahead and square behind, not
-  recorded from a hand; the keypad plant and the kick are covered by the takedown's line by reading (the same early return), not staged.
+  never met the feet again), and a debt from before a stop was paid a few frames into the next nudge. Do not go back to it. A SAVE does not
+  carry the count or its stamp (`Player.stepOwed`, `stepAt`: `savestate.ts` sets them 0 and -1 on a load, and the card's stand line holds that a
+  checkpoint does not name them), so a load and the game continued are not the same in those two fields. It costs no footfall: a load is a standing
+  start whatever these fields are (staged once, not a card: both keys raised on the frozen stand, one seed, 80 saves made mid-walk, plain and with
+  the cursor across him every 10, 12 and 15 frames: 1.55 m/s at the save and 0 after the load, so the loaded game never filed the continued one's
+  footfalls with or without the debt), and with the debt put back by hand after the load the three seconds after it filed the same footfalls on
+  the same frames in 80 of 80, because he is under 0.4 m/s on the first frame, which clears the count. Should a save ever carry his speed, these
+  two fields go with it. The rollback snapshot walks every field of the player (`rollback.ts`), by reading. NOT DONE: never heard in a page;
+  nobody has played it; what a shaking hand on a mouse does to the cycle was staged with the cursor put square ahead and square behind, not
+  recorded from a hand; the keypad plant and the kick are covered by the takedown's line by reading (the same early return), not staged. IN A
+  PAGE (headless Chromium, the software adapter, the solo night): the key reads on, and off with `?footfallowed=0`; 31 frames of a shaken walk
+  drawn with no page or console error; stepped with no picture, three seconds from the same spot and foot filed 6 footfalls on a plain walk
+  with the key on or off (the same frames), and with the cursor across him every 10, 12 and 15 frames 6, 7 and 6 with it on against 3, 4 and 3.
 - **Two gears, not a dial (`TWOGEARS`, player.ts; the maintainer: "let's start by just removing the pace wheel entirely with the faster crouch sneak").** With the
   key up the mouse wheel does nothing to his pace (`wheelPace` returns; a notch a checkpoint or an older visit left on him is put back to 1 at the top of
   `updatePlayer`), and the crouch-walk goes at `TWOGEARS.crouch` 1.45 m/s where the tune's `playerCrouch` is 1.3 (walk 1.55, sprint 4.7, a patrol's walk 1.15).
@@ -1297,3 +1307,93 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   turns has 10 % less time to catch him crossing, and Sam has 10 % less time behind a man who stops), no tour, no soak, no tutorial mission's scripted run;
   the walk at 1.55 is now 7 % quicker than the sneak and four times as loud, which may leave the walk little to do; nobody has played it and it has never
   been seen on a GPU.
+- **Four ring notes: one row is a pill, no line under his ring, his ring stands on its thing, a switch's row turns him** (2026-10-23; four fields of
+  `HANDRING`, handring.ts, each with its own page word and all four off under `?handring=0` too; all four off in the module and on the frozen stand and raised there by the hands ring's own
+  word, `TPS_HANDRING=1` (no new stand word), each a `FROZEN_HOLDS` row, each off for a recording from before its key). CHECK: `handring`, both
+  stands, a line for each of rules 1, 3 + 2 and 4; `HANDRING_BREAK=1` fails all three. The maintainer's words are in handring.ts.
+  1. `lone`, `?lonepill=0` (`game/ringlone.ts` the shape, `ui/cmdring.ts RingDraw` draws it, `index.html .cmdring .lone / .ch`): a ring with ONE row
+     draws no slice: a small ring round the middle (the wheel's hole) and a pill out the way that row's wedge lay, the digit at the end by the
+     middle, the words inside, set to the width counted for them (6.6 px a letter, `textLength`; never measured). BOTH RINGS (the squad's is the
+     same drawing). And the pointing, both rings (`cmdring.ts ringWant`'s `lone`): the cursor anywhere on the pill is that row. A wedge is a fifth
+     of a turn and a pill over the middle is wider, so its digit lay in the next wedge's fifth and a key let go there gave nothing. No other way
+     out lights it: a row is still chosen, never fallen into. THE GAME READS NO WORDS OF A RING: it reads which digits have a wedge (`ringKeys`,
+     orders.ts and interact.ts, a bit each) and, for a pill, a PLACE as long as the longest pill (`pillBox`, `LONE.max` 20 letters) whatever the
+     row says, so a recorded cursor lights the same row after a label is reworded. The pill drawn is always inside that place (a longer label is
+     drawn tighter); a cursor just past a short pill's end is still on its row. WHERE ONE ROW COMES UP (read
+     headless on the page's stand, each tutorial mission at its first and last step): on tut-sky EVERY squad ring ('1 stack up' on a door, '1 go'
+     elsewhere: its frame names six orders); on tut-pair his ring at a door ('1 push it open', '1 keypad'); on tut-solo his ring at the gate;
+     anywhere, his ring on open floor (the whistle, wedge 5). NOT DONE, the squad ring's own rows: a ring whose only order is also the quick
+     order shows it twice (tut-pair '1 fall in · 3 fall in'; a man's ring '1 fall in · 3 fall in · …'), two slices for one choice.
+  2. `bare`, `?ringbare=0`: no line of words under HIS ring (`interact.ts handRingView`'s caption is empty; 'RACK 6 · THE DRIVE · PULL THE DRIVE —
+     STAY ON IT' under the wedges was "too busy"). The lit row's long words, 'stay on it' with them, are the corner's line still; the whistle's
+     'one guard will come to look' is said nowhere now. With it, a wall switch's and the mains' wedge is no longer drawn faint because the lights are
+     off (those things' `off` says how they stand, not that the row cannot be given: `STATE_OFF`). The squad ring's line (who the order goes to,
+     what it was opened on) is not touched: it says which pair, and the wedges do not.
+  3. `onThing`, `?ringonthing=0`: HIS ring comes up with its middle on the thing its TOP row is about (`ringSpot`: the first row with a wedge, the
+     tap's own; not the lit one, or it would hop between two things as the highlight moved), on his own body a metre up where no row is about a
+     thing (the whistle alone) or the thing is more than 3.5 m off (his own set charge's row is given from anywhere), whole inside the view's
+     edge (`ringPin`, `CMDRING.edgeX / edgeY`), and stays on it as the view moves (the page draws it from the picture's own camera:
+     `ui/cmdring.ts pinned`). On his body it GOES WITH HIM as he walks under it (a frame behind his feet); a thing that moves (a man in his arm,
+     a body he drags) takes it along; and when its rows change under it (he walked up to a thing, or off it) it stands on what the top row is
+     now about. The cursor may be anywhere when it comes up, so (`ringWant`'s `shapes`, `RingState.clear`) the cursor ON a drawn wedge, its
+     fifth of the wheel from the hole out over its words to the ring's own box (`RING_BOX`: pointing at a row's words is pointing at the row)
+     or the pill's place, lights it with no visit to the middle, but only once it has been off every drawn wedge since the ring last changed
+     under it (a place of the wheel with no wedge is not one), and never while the hand is still: a cursor resting where a slice came up
+     lights nothing and the key let go there leaves the ring standing, and only a wedge the HAND put the cursor on is pointed at
+     (`RingState.pt`: the lit wedge sliding under a resting cursor is not). Outside the box a direction counts only from the middle, as
+     before. The far-charge and moving-thing cases are by reading the code, no run. Digits, a click, the key again: as they were. THE SQUAD'S RING IS NOT MOVED: it is opened on the place
+     the order goes to, which is where the cursor is, and stays on it already (`CMDRING.pin`).
+  4. `turn`, `?ringturn=0` (`lightswitch.ts plants / turnSecs / switchHand`, `handwork.ts samWork` kind `switch`): a row given at a WALL SWITCH with his back
+     to it (the ring up, he had turned with the cursor) flipped the lights and left him as he was: the hand's 0.3 s pose had nothing to reach
+     with. Now the lights still go on the press; then he is stood at the plate and squared to it as at the mains lever (feet planted, the step in
+     to arm's length, the trigger does not let go of it), and the hand's move is given the turn's time on top of its own (at most `turnMax`,
+     0.45 s; the plant's own turn rate, `handwork.ts WORK_TURN`). The hand that goes to the plate is the free one (his left with the pistol or
+     the rifle up: `samHand`, as at the mains). COST: his feet are not his for 0.3 s facing it, up to 0.75 s from a half turn away (0.60 s
+     measured from 180° off, W held throughout). It is a FOLLOW-THROUGH, NOT A VERB: nothing waits on it, A CLICK LETS GO OF IT and so does any row given (the
+     lights are out, the trigger and his hands are his: `switchLetGo`, from `player.ts` and `interact.ts give`; the plate's own row is on
+     offer under it and a second tap flips the room back, as it always could), a save inside it does not keep it, and it breaks off
+     as the mains lever's does (down, a man or a body in hand, folded by a blast, moved off the plate). NOT FROM A WALL HOLD: pressed to
+     the wall beside the plate he reaches it from where he is, as he did (a plant would take him off the wall). Nothing without hands at work
+     (`HANDWORK.on`). A tap's row and a ring's row alike. THE OTHER ROWS already turned him, by
+     reading the code, not by a run: a door's leaf (hands.ts: he faces the spot his hand goes to), a lock, a pad, a kick, the wand (planted and
+     squared), the mains, the rack, a charge, a timed charge (handwork.ts), a man or a body (close.ts, the haul).
+  MEASURED: the check's own lines on both stands (die 1, the office; the pill's shape for 40 pills). NOT MEASURED: no fight or stealth tally was
+  run with these on. NOT DRIVEN headless in a mission: the squad ring with one row (its pointing is the same function, asked directly). Never
+  seen on a GPU; the before and after pictures of the wedges were drawn by the page's own drawing code and stylesheet over a flat backdrop.
+- **The gun is put away for a charge, and brought back after** (`src/game/workstow.ts WORKSTOW.on`, 10-23; the maintainer: "characters should fully
+  unequip their weapon when planting door charges, etc. -- they can reequip after they're done"). A charge went on with the gun still in the man's
+  hands: the player set one with his left while the pistol stayed in his right, and a teammate pressed his on one-handed with the carbine in the
+  other, free to fire all two seconds. With it on, BY THE PLAYER'S HANDS (a door charge and a wall charge, `doortools.ts` / `wallcharge.ts samTick`):
+  what he holds is put away first (`player.ts setHolstered`, carried by kit handling's own errand where that is on; `samStowing` holds the job's clock
+  until his hands are free of it, `downMax` 1.6 s at most), BOTH hands go on the charge (`character.ts workLayer`), and it is brought back when the
+  charge is set or he lets go of it; no round leaves it until it is up (`Player.equipT`: kit handling's draw, the rifle's own beat, `samUp` 0.3 s at
+  least). Hands empty at the start stay empty. A job begun pressed to a wall takes over what the hold owed back to his hand (`WallHold.drawn`); a job
+  that ended under a state that wants his hands empty (down, a man in his arm, a body, a lock, the wand) leaves it away. A save waits for the gun
+  (`savestate.ts playerBusy`). BY A TEAMMATE ON ORDER (the 'place' stage of both tools): his gun hangs from the frame he is on the job (`Guard.workStow`;
+  `combat.ts guardKit`'s `hang`: the long gun down his front on its sling, a sidearm on his thigh, as for the hammer), both hands go on the charge
+  `mateDown` 0.3 s later, and it is his again `mateUp` 0.45 s after the job ends. NO ROUND LEAVES IT meanwhile: `gunslots.ts sideLocked`, the one lock
+  every trigger a teammate has asks (roomfight.ts, coverfire.ts, the fight AI's fire site), answers for it, his fire clock is held, and `fireWeapon`
+  puts a hung gun back in his hands should a round leave it by any other road. A TEAMMATE THE FIGHT HAS DROPS THE JOB (`stowFight`: his order yielded
+  to it, he is blind or doubled over, or the room fight has brought his gun onto a man): the charge is not set, nothing is spent, the gun comes up,
+  and he starts over when it lets him go, or after `fightCap` 8 s of it at a stretch with it still on him (door tools' own cap for a lock under fire).
+  Enemies set no charges. Needs the hands that do the work (`HANDWORK.on`): with those off nothing is put away. WHAT IT COSTS, measured headless on
+  the office, one seed each: the player's door charge with kit handling on, as the page ships, is 2.57 s from the row with the pistol up (hands free
+  0.57 s in; it was 2.0) and 3.07 s with the rifle up (1.08 s in), and a round may leave the gun 0.43 s (pistol) or 0.72 s (rifle) after the charge is
+  set; with kit handling off 2.05 s, and 0.32 / 0.47 s. A teammate's charge is set 2.30 s after he comes onto it (it was 2.0) and his gun is his
+  again 0.50 s after; with a man 3 m off in his view half way through he drops it, shoots him with the gun back up and has the charge set 4.05 s
+  after he first came onto it (2.0 s with the switch off, the round fired with a hand on the charge). ON in the page (`?noworkstow`), OFF in the
+  module and on the frozen stand (`FROZEN_HOLDS`, `TPS_WORKSTOW=1`, pinned in `host/standup.ts`; `TPS_WORKSTOW=0` holds it off on the shipped stand);
+  in the knob registry and `JOURNAL_KNOBS` (a recording from before the table replays with it off); a box, two sliders and a tally in the debugger's
+  'Hands at work' section. Off, nothing in the module is called. CHECK `bun run tools/qa/probes.ts workstow` (`workstow-check.ts [sam|mate|wall|off]`,
+  27 lines, both stands; it raises the switch itself): by the player's hands with kit handling off and on, the pistol and the rifle (away from the row
+  to the charge set, both wrists within 0.3 m of the charge, back after, the click on the frame it is set fires nothing, the trigger his once it is
+  up), hands empty, a step and the trigger breaking it off; a teammate (hung and locked every frame, the wrists, the two clocks, the net), blinded
+  half way, a man put in his view; a wall charge by hand, begun from a wall hold, and on order; off (by hand, on order, with the hands off, the digest
+  of a run with no charge, an old recording, the registry). `WORKSTOW_BREAK=1` fails 15 on both stands. RUN WITH IT ON, the shipped stand, green:
+  the families owncharge, ownblow, wallcharge, outerwall, handwork, hands, kitanim, wand, gunslots, roomclear, and the scripted runs of tut-solo,
+  tut-squad, tut-sky and tut-plan (the same verdict with it held off; the solo run is 0.6 s longer). `door-grenade`'s charge line now times the plant
+  from the setter's own return to the lock (`Run.lockT`): the charge's later clock moves that probe's grenade, all four run, and 'the men are back' is
+  said when the LAST is, with the charge already going on. STILLS: `node tools/qa/workstow-look.cjs <dir>
+  [noworkstow]` (the page on the software adapter). NOT HERE, other owners' two-handed jobs: a timed charge on its bench and its defusing, the drive
+  out of the rack, the optical wand, a lock being picked, a thing a teammate works (`workthings.ts`); the big slot's hammer already puts the gun away;
+  a keypad and the breaker's lever are one hand. NOT DONE: no tour, no soak, no fight tallies with it on; never seen on a GPU; nobody has played it.

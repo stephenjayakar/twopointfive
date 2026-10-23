@@ -15,6 +15,7 @@ import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClear
 import { sideLocal } from './packside';   // (a leaf)
 import { sideHung } from './gunslots';   // (called inside handProps only)
 import { voiceOf, flameOf } from './gunlook';   // (called inside fireWeapon only)
+import { stowHang, stowFired } from './workstow';   // (called inside guardProps / fireWeapon only)
 import { bigCarried, bigFired } from './bigkit';   // (called inside handProps only: the big slot's tool a man carries — null with its switch off)
 import { tally } from './mission';
 import { chronShot, chronLightShot, chronDown, chronHit } from './chronicle';
@@ -111,6 +112,7 @@ function aiWide(g: Game, sg: Guard | null, shooter: Character, def: WeaponDef): 
 }
 export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) {
   const sg = isPlayer ? null : g.guards.find(x => x.char === shooter) ?? null;   // the guard whose round this is (null: Sam, or a stray in a harness)
+  if (sg?.workStow) stowFired(sg);   // (workstow.ts: a round out of a gun let go of for a two-handed job — it is in his hands at once; the fire site's own gate keeps this from happening)
   if (!isPlayer && shooter.anim.bigTool) bigFired(g, shooter);   // (bigkit.ts, BIGSLOT.moves: a teammate with the hammer out who fires — it is on his back at once)
   const sgTeam: Team = isPlayer ? 'player' : sg?.team ?? 'guard';
   const def = o.weapon ?? firearmOf(g, shooter, isPlayer).def; let spread = o.spread ?? 0;
@@ -469,10 +471,11 @@ export function hammerSide(c: Game['player']['char']): { o: Vec3; z: Vec3 } | nu
 /** what ONE guard / unit carries and wears, as boxes (handPropsRaw's row for him — it only reads him) */
 function guardProps(g: Game, gd: Guard, out: Box[]) {
   const big = bigCarried(g, gd.char);   // (bigkit.ts: a teammate's big slot — null for everybody else and with the switch off: his row as it always was)
-  if (!big) { guardKit(g, gd, out, false); hungSide(g, gd, out); return; }
+  const stow = stowHang(g, gd);   // (workstow.ts: his gun is out of his hands for a two-handed job — hung as for the hammer; false with the switch off)
+  if (!big) { guardKit(g, gd, out, stow); hungSide(g, gd, out); return; }
   const an = gd.char.anim, alive = gd.state !== 'dead';
   an.bigSide = big === 'hammer' ? hammerSide(gd.char) : null;
-  guardKit(g, gd, out, alive && an.bigTool !== null && an.hideHeldItem);   // (the hammer in his hands: his own gun hangs down his front — the animator's own word for when his hands are off it)
+  guardKit(g, gd, out, stow || (alive && an.bigTool !== null && an.hideHeldItem));   // (the hammer in his hands: his own gun hangs down his front — the animator's own word for when his hands are off it)
   // … then the tool itself, LAST of his boxes (the motion keys of the parts above are their ordinals). The shotgun OUT (bigkit.ts gunUp) is already the gun in his
   // hands, drawn above as his weapon: the gun he put down for it hangs down his front, and no second shotgun rides his back
   if (big === 'shotgun' && alive && gd.slung?.out) { const own = gd.slung.own.def.rig; if (own === 'carbine' || own === 'sc20k') hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); else hungSide(g, gd, out); return; }
@@ -483,7 +486,7 @@ function guardProps(g: Game, gd: Guard, out: Box[]) {
 function freeCan(g: Game, gd: Guard, out: Box[]) { if (GUNHAND.on && GUNHAND.throwFree && gd.char.anim.throwOff && fragInFist(g, gd)) freeCanBoxes(gd.char, 'frag', out); }
 /** gunslots.ts: a teammate with his sidearm out — the long gun he let go of hangs down his front on its sling */
 function hungSide(g: Game, gd: Guard, out: Box[]) { const own = sideHung(gd); if (own) hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); }
-/** … his row without the big slot's tool. `hang` (never without one): his own gun is out of his hands for it — a long gun on its sling down his front, a sidearm on his thigh, no lit lens, no laser */
+/** … his row without the big slot's tool. `hang` (the tool in his hands, or a two-handed job — workstow.ts): his own gun is out of his hands for it — a long gun on its sling down his front, a sidearm on his thigh, no lit lens, no laser */
 function guardKit(g: Game, gd: Guard, out: Box[], hang: boolean) {
   gd.char.inHand = null;   // (inhand.ts: said below on the rows that put a pistol, a torch or a long gun in his hands)
   const HO = INHAND.on && sideOfTeam(gd.team, gd.trained) === 'defender' ? INHAND.holsterOut : 0, HR = HO ? { ...RIG.holster, out: RIG.holster.out + HO } : undefined;   // (inhand.ts: a defender's holster clear of his long shirt)

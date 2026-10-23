@@ -45,6 +45,7 @@
 import type { Game } from './game';
 import type { Input } from './input';
 import type { Vec3 } from '../math/vec';
+import { onPill, RING_BOX, RING_HOLE } from './ringlone';
 
 export const CMDRING = {
   /** the ring's key puts the order menu up as a ring at the cursor and, let go, gives the lit wedge (false: the key is nobody's, as it was) */
@@ -203,7 +204,9 @@ export interface RingState { ax: number; ay: number; z: number; t0: number; lit:
   /** (CMDRING.stay) the press that opened it has come up and it stands by itself: ringLatch */ free?: boolean;
   /** (CMDRING.only) it shows the rows its page has no wedge for: ringSeats `over` */ more?: boolean;
   /** (CMDRING.pin) the place it was opened on, and how far from that place's own px its middle stood (CSS px) · the cursor as the ring last read it */
-  at?: Vec3; ox?: number; oy?: number; mx?: number; my?: number }
+  at?: Vec3; ox?: number; oy?: number; mx?: number; my?: number;
+  /** (ringWant `shapes`) the cursor has been off every wedge's shape since the ring last changed under it: on a shape now, it lights it */ clear?: boolean;
+  /** (interact.ts, a ring on its thing) the wedge the hand last put the cursor on: a ring that slides under a resting cursor points at no other */ pt?: number }
 /** what a ring shows (orders.ts ringView, interact.ts handRingView → ui/cmdring.ts): where, how much larger than its px, the lit wedge, whose colour, the
  *  words under it, and the wedge on each digit */
 export interface RingView { x: number; y: number; zoom: number; lit: number; tone: string | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] }
@@ -223,12 +226,24 @@ export function ringPin(R: RingState, sx: number, sy: number, w: number, h: numb
   R.ax = cl(sx + (R.ox ?? 0), C.edgeX * R.z, w); R.ay = cl(sy + (R.oy ?? 0), C.edgeY * R.z, h);
 }
 /** The wedge this frame asks for (0: none): a digit's own — which disarms the cursor — else the one the cursor is out of the ring's middle toward, once
- *  the key has been down `tapSecs` and the cursor has been in the middle since the ring last changed under it (a page, a digit, a man, new rows) */
-export function ringWant(R: RingState, input: Input, digit: number, time: number): number {
-  const C = CMDRING, dx = input.mouseX - R.ax, dy = input.mouseY - R.ay, out = Math.hypot(dx, dy) >= C.flickPx * R.z, early = time - R.t0 < C.tapSecs - 1e-6;
+ *  the key has been down `tapSecs` and the cursor has been in the middle since the ring last changed under it (a page, a digit, a man, new rows).
+ *  `lone`: the digit of the ring's one row where it has one and is drawn as a pill (ringlone.ts loneKey; 0 = the wheel) — the cursor on that pill's
+ *  place is on that row. Only the digit: the game reads no words of a ring.
+ *  `shapes` (a ring that did not come up under the cursor: handring.ts `onThing`): the digits that have a wedge, a bit each (0 = by direction only, as
+ *  above). The cursor ON a drawn wedge — its fifth of the wheel from the hole out as far as its words may lie (the ring's own box, RING_BOX: a row is
+ *  pointed at on its words as well as on its slice), or the pill's place — is on that wedge with no visit to the middle, once it has been off every
+ *  drawn wedge since the ring last changed under it; a place of the wheel with no wedge is not one, nor anywhere outside the ring's box. */
+export function ringWant(R: RingState, input: Input, digit: number, time: number, lone = 0, shapes = 0): number {
+  const C = CMDRING, dx = input.mouseX - R.ax, dy = input.mouseY - R.ay, d = Math.hypot(dx, dy), out = d >= C.flickPx * R.z, early = time - R.t0 < C.tapSecs - 1e-6;
+  const pill = lone > 0 && onPill(lone, C.wedges, dx / R.z, dy / R.z), at = wedgeAt(dx, dy, C.wedges);
+  const on = shapes !== 0 && (lone ? pill : d >= RING_HOLE * R.z && Math.abs(dx) <= RING_BOX.x * R.z && Math.abs(dy) <= RING_BOX.y * R.z && (shapes >> at & 1) === 1);
+  if (shapes && !on) R.clear = true;
   if (early) { if (out) R.armed = false; } else if (!out) R.armed = true;
-  if (digit) { R.armed = false; return digit <= C.wedges ? digit : 0; }
-  return !early && out && R.armed ? wedgeAt(dx, dy, C.wedges) : 0;
+  if (digit) { R.armed = false; R.clear = false; return digit <= C.wedges ? digit : 0; }
+  if (early) return 0;
+  if (on && R.clear) return lone || at;
+  if (!out || !R.armed) return 0;
+  return pill ? lone : at;
 }
 
 /** a menu row as the seats read it (orders.ts OrderDef) */

@@ -578,6 +578,8 @@
     .cmdring .cn { font: 700 12px/1 var(--h-mono); fill: currentColor; text-anchor: middle; } .cmdring .lit .cn { fill: var(--h-base); }
     .cmdring .ct { font: 700 10px/1 var(--h-mono); letter-spacing: 0.06em; text-transform: uppercase; fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }
     .cmdring .off { opacity: 0.38; } .cmdring .lit .ct { fill: #fff; }
+    .cmdring .ch { fill: none; stroke: currentColor; stroke-width: 1.2; opacity: 0.5; }   /* a ring with one row (game/ringlone.ts): the middle's own ring, and the row a pill beside it with its words inside */
+    .cmdring .lone .ct { stroke: none; } .cmdring .lone.lit .ct { fill: var(--h-base); }
     .cmdring .cc { font: 600 9.5px/1 var(--h-mono); letter-spacing: 0.08em; text-transform: uppercase; text-anchor: middle; fill: currentColor; opacity: 0.8; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }
     /* … and the hint before the key (ui/cmdring.ts updateHint): the thing the ring would open on outlined on the floor, a glyph for its kind beside the cursor */
     .cmdhint { color: #f2cf6b; } .cmdhint.t-red { color: #ff9a8a; } .cmdhint.t-blue { color: #9cc8ff; } .cmdhint.k-foe { color: #ff7a6a; }
