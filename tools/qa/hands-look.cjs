@@ -37,7 +37,7 @@ const PLAY = ({ secs, keys, tap }) => {
   const errors = [];
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 600)));
   page.on('console', m => { if (m.type() === 'error' && !/smoke|storage textures|Failed to load resource/i.test(m.text())) errors.push(m.text().slice(0, 300)); });
-  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&levelFile=train-move.json&quiet&difficulty=hard${extra ? '&' + extra : ''}`;
+  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&levelFile=train-move.json&quiet&quietfog=off&difficulty=hard${extra ? '&' + extra : ''}`;
   log('goto', url); await page.goto(url);
   await page.evaluate(async () => { await window.__ready; window.__testVisible = true; });
   await page.evaluate(async () => { const P = window.__cut?.programs, r = P?.swap ? P.ready : null; if (r) await Promise.race([Promise.resolve(r).catch(() => 0), new Promise(d => setTimeout(d, 300000))]); });

@@ -47,18 +47,10 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'vault': ['Wire Act', 'Night Shift'],                    // tripwires
   'crossing': ['Undertow', 'Night Shift'],                 // two sentries across a lit road: slow, three against four
   'quiet-relay': ['Wire Act', 'Paper Walls'],
-  'lights-out': ['Paper Walls', 'Night Shift'],            // (the lesson that teaches it, train-lights, plays the same two)
+  'lights-out': ['Paper Walls', 'Night Shift'],
   'quiet-yard': ['Night Shift', 'Paper Walls'],
-  // ---- training, played in a row: no two lessons running open on the same piece
-  'train-move': ['Night Shift', 'Paper Walls'],
-  'train-hands': ['Undertow', 'Night Shift'],
-  'train-lights': ['Paper Walls', 'Night Shift'],
-  'train-kit': ['Wire Act', 'Night Shift'],
-  'train-orders': ['Dead Freight', 'Wire Act'],
-  'train-pairs': ['Cold Storage', 'Wire Act'],
   'tut-squad': ['Dead Freight', 'Wire Act'],
   'tut-plan': ['Wire Act', 'Undertow'],                    // the plan mode mission: led from the gate, the squad mission's second piece first
-  'train-silent': ['Night Shift', 'Wire Act'],
 };
 /** a level with no row of its own */
 export const SETLIST_ELSE: readonly string[] = ['Night Shift', 'Wire Act'];

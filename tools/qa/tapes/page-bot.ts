@@ -1,5 +1,5 @@
 // The scripted player of tools/qa/lesson-run.ts, standing on the REAL PAGE (tools/qa/sound-tapes.cjs bundles this file and puts it in the page): the same
-// Bot the Training scripts under tools/qa/lessons/ are written against, over the page's own hooks (__game, __input, __cam, __runFrames), so a run made
+// Bot the lesson scripts under tools/qa/lessons/ are written against, over the page's own hooks (__game, __input, __cam, __runFrames), so a run made
 // here is recorded by the page's run tape and plays back in the engine player (src/replay/engineplay.ts) on any machine.
 //
 // What differs from the headless runner, and why: EVERYTHING THE RUN DEPENDS ON MUST BE ON THE TAPE. The tape carries the input, the camera and every
@@ -7,16 +7,8 @@
 //   - a row is chosen with the keys (Space held, the arrows, Space let go), never by Game.selectVerb, which writes the highlight from outside a step;
 //   - Sam's light meter is fed as an ANSWER OF THE PROBE (the CPU estimate planted under his two keys before each step), never written on the Player.
 // Nothing is drawn while it runs (the caller stubs the renderer), so no other GPU answer exists: every other reader takes its own stand-in.
-import * as move from '../lessons/train-move';
-import * as hands from '../lessons/train-hands';
-import * as lights from '../lessons/train-lights';
-import * as kit from '../lessons/train-kit';
-import * as orders from '../lessons/train-orders';
-import * as pairs from '../lessons/train-pairs';
-import * as silent from '../lessons/train-silent';
 import * as officeLoud from './office-loud';
 import * as wallCharge from './wall-charge';
-import * as whip from './whip';
 import * as chairs from './chairs';
 import * as reloads from './reloads';
 import * as doors from './doors';
@@ -24,9 +16,10 @@ import type { Bot } from '../lesson-run';
 
 type Vec = number[];
 interface Script { query?: string; mode?: { unseen?: boolean; god?: boolean; noAi?: boolean; /** lesson-run's own (the moon on the CPU's meter): the page has the real meter */ moon?: boolean }; idleOk?: string[]; steps?: Record<string, (B: Bot) => void>; finish?: (B: Bot) => void; ended?: (g: any) => boolean; free?: (B: Bot) => void; level?: string; title?: string }
-const LESSONS: Record<string, Script> = { 'train-move': move, 'train-hands': hands, 'train-lights': lights, 'train-kit': kit, 'train-orders': orders, 'train-pairs': pairs, 'train-silent': silent };
+/** lesson scripts by level name: none today (the seven Training lessons' scripts went with the lessons, 2026-10-23; a tutorial mission's script joins here when its replay is recorded) */
+const LESSONS: Record<string, Script> = {};
 /** scripts that are no lesson: one function over the same Bot, on a level and query of their own */
-const FREE: Record<string, Script> = { 'office-loud': officeLoud, 'wall-charge': wallCharge, whip, chairs, reloads, doors };
+const FREE: Record<string, Script> = { 'office-loud': officeLoud, 'wall-charge': wallCharge, chairs, reloads, doors };
 
 const DT = 1 / 60, flat = (a: Vec, b: Vec) => Math.hypot(a[0] - b[0], a[2] - b[2]), at = (p: Vec) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
 const Wn = window as any;
