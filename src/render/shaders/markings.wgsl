@@ -104,11 +104,34 @@ fn markTaps(m: MarkRec, x: f32, y: f32, wT: vec2f) -> vec3f {
 /** cheap reject: does the bitmap (± the filter's reach) contain cell position (x, y)? */
 fn markNear(m: MarkRec, x: f32, y: f32, wT: vec2f) -> bool { let r = max(wT, vec2f(1.0)); return x > -r.x && y > -r.y && x < f32(m.W) + r.x && y < f32(m.H) + r.y; }
 
+fn mkHash(p: vec2f) -> f32 { let q = fract(p * vec2f(0.1031, 0.1030)); let r = q + dot(q, q.yx + 33.33); return fract((r.x + r.y) * r.x); }
+fn mkNoise(p: vec2f) -> f32 { let i = floor(p); let f = p - i; let u = f * f * (3.0 - 2.0 * f); return mix(mix(mkHash(i), mkHash(i + vec2f(1.0, 0.0)), u.x), mix(mkHash(i + vec2f(0.0, 1.0)), mkHash(i + vec2f(1.0, 1.0)), u.x), u.y); }
+/** THE LOOK PROTOTYPE (soft > 0 only on that page: gbuffer.wgsl hands lookMarkSoft()): a marking drawn as PAINT, not as cells. The bitmap is read as a soft
+ *  picture a cell wide (markTaps at a one-cell footprint: a bilinear ramp between cell centres) and cut back at half cover along a line the brush left ragged,
+ *  so a staircase of cells is a slanted stroke, a lone cell a dab, a corner round; between two colours the stronger takes the pixel; the paint is thin in
+ *  patches where it was rubbed. An entry that BURNS keeps its cells (an LED is a square). `w` = the crisp weights; returns the weights to use. */
+fn markSoft(m: MarkRec, x: f32, y: f32, wT: vec2f, w: vec3f, soft: f32, salt: f32) -> vec3f {
+  let ws = markTaps(m, x, y, max(wT, vec2f(1.0)));
+  let s = ws.x + ws.y + ws.z;
+  let foot = max(wT.x, wT.y); let near = 1.0 - smoothstep(0.75, 1.75, foot);      // (far off it is the plain coverage again: a tint, never noise)
+  let amt = min(soft, 1.0) * near;
+  if (s <= 0.0) { return w * (1.0 - amt); }
+  let eg = clamp(0.5 * foot, 0.07, 0.5);
+  let rag = (mkNoise(vec2f(x, y) * 2.3 + vec2f(salt, 1.7)) - 0.5) * 0.3 + (mkNoise(vec2f(x, y) * 0.45 + vec2f(7.0, salt)) - 0.5) * 0.18;
+  let cover = smoothstep(0.5 - eg, 0.5 + eg, s + rag * near);
+  let p4 = ws * ws * ws * ws; let share = p4 / max(p4.x + p4.y + p4.z, 1e-6);
+  let thin = 1.0 - 0.4 * near * smoothstep(0.55, 0.8, 0.6 * mkNoise(vec2f(x, y) * 0.21 + vec2f(3.0, 9.0 + salt)) + 0.4 * mkNoise(vec2f(x, y) * 1.1 + vec2f(salt, 5.0)));
+  var o = share * cover * thin;
+  for (var k = 0u; k < 3u; k++) { if (((m.emask >> k) & 1u) != 0u) { o[k] = w[k]; } }
+  o = mix(w, o, amt);
+  let tot = o.x + o.y + o.z; if (tot > 1.0) { o /= tot; }
+  return o;
+}
 struct MarkGB { albedo: vec3f, rough: f32 };
 /** THE G-BUFFER's evaluation at the primary hit: every record of the box's list on this fragment's face, composited in order over the albedo / roughness the
  *  fragment has so far (contrast = frame.markCfg.y lerps entry albedos from the pixel's own). dwx / dwy = the world position's screen derivatives (fsBox takes
  *  them in uniform control flow); slot = the 1-based first row. */
-fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f, albedoIn: vec3f, roughIn: f32) -> MarkGB {
+fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f, albedoIn: vec3f, roughIn: f32, soft: f32) -> MarkGB {
   var o: MarkGB; o.albedo = albedoIn; o.rough = roughIn;
   let g = boxGeo[bi]; let q = boxRot(bi); let qi = vec4f(-q.xyz, q.w);
   let lp = quatRotate(qi, wp - g.c); let ln = quatRotate(qi, n);
@@ -123,7 +146,8 @@ fn markSurfaceGB(slot: u32, bi: u32, wp: vec3f, n: vec3f, dwx: vec3f, dwy: vec3f
       let wT = vec2f(abs(du.x) + abs(dv.x), abs(du.y) + abs(dv.y));
       let x = uv.x - f32(m.U0); let y = uv.y - f32(m.V0);
       if (markNear(m, x, y, wT)) {
-        let w = markTaps(m, x, y, wT);
+        var w = markTaps(m, x, y, wT);
+        if (soft > 0.0) { w = markSoft(m, x, y, wT, w, soft, f32((bi * 7u + k) % 61u)); }
         let sum = w.x + w.y + w.z;
         if (sum > 0.0) {
           var alb = o.albedo * (1.0 - sum); var rgh = o.rough * (1.0 - sum);

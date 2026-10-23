@@ -621,9 +621,48 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   slot with the mesh's creases; here each slot is drawn as the stuff it is, in his BIND pose (nothing swims as he moves), by his side and a number of
   his own: cloth (thread from the cloth map round each limb, folds that ring the limb and gather at knee, hip, ankle and elbow as a relief the lamps
   light, an operator's print cut from his own colour, dust on the knees, age), webbing (rows of tape, rubbed edges), helmet (cover, chips), metal
-  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth), and on a snow level snow on shoulders, arms and helmet and
-  caked on the boots. Carried by one float: `vsSkin` packs slot + 16 x side into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
+  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth), and on a snow level snow as a CAP on what faces the sky (helmet crown, shoulder tops; one sheet with
+  a ragged edge: the first try gated it by noise over every upward-leaning face and the flecks read as a white camouflage) and caked on the boots. Carried by one float: `vsSkin` packs slot + 16 x side into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
   main.ts with the look), where the build keeps 1. Amount: the panel's Men row (`look=men:0` = the men as the build draws them; `window.__look.set({
   men })` for a scripted picture). KNOWN GAPS: the tilted normal is stored as a man's normal always was (alpha 1), so the working-size passes read
   the folds too: on a GPU look for crawl on cloth under the denoiser; the print and folds are noise, which is the "procedural" he named, so authored
   maps for the men are the next round; nothing here has been seen on a GPU.
+- **THE MEN, ROUND TWO: TAILORING** (`shaders/look.wgsl manCut` and the slots' own blocks in `lookMan`; amount `lookCfg.g.y`, the panel's Kit detail row,
+  `look=tailor:0` = round one alone). Round one was print, folds and wear, all of it noise, and he had called the page "a bit procedural": round two
+  draws what a person CUT AND SEWED, placed by hand on the body in the bind pose. The cast stands in a T: an arm runs out along x round (y 1.435,
+  z -0.068) from |x| 0.22 to 0.70, a leg up along y round (|x| 0.093, z -0.045 at the shin to 0.01 at the thigh), an operator's helmet is y 1.65 to 1.86,
+  his boots y 0.03 to 0.27, his knee pads y 0.47 to 0.60 (measured from the cast, not guessed: see the preview below). OPERATORS: a combat shirt (the
+  body under the plates plain knit, only the sleeves printed; collar and short zip), a sleeve pocket with its flap and a loop field carrying a patch
+  and a tape, doubled elbows and knees and seat, the out seam stitched twice, cuffs and hems; the webbing's tape sewn down every 38 mm (a bar tack in
+  colour and relief: this is what makes a vest read as load-bearing kit); a helmet cover with four seams from the crown, a band with two cat's eyes at
+  the back, loop squares on the sides and a rubber rim; sand-coloured rough-out boots with laces between eyelets, a padded collar and a welt (side 0
+  only: the dark suit keeps dark boots and gloves); knee pads as hard caps scraped pale; gloves with a sand back, a dark palm and a knuckle bar. THE
+  OTHER SIDE: a shirt's placket with buttons, collar band and cuffs; loose trousers and the shirt's skirt hang in long vertical folds (relief); the
+  waistcoat is wool in a twill; headgear is felted wool. The shader has slot and side but NOT the part, so a shawl or scarf in `cloth_plain` gets the
+  shirt's lines too, and every hat is "wool": a part id in `fin` is the next step if that shows. WGSL TRAP: `patch` and `loop` are reserved words.
+  A PREVIEW WITHOUT THE PAGE made this round possible (a still of the men costs ten minutes here): rasterise the cast in its bind pose under bun
+  (`tools/qa/headless.ts loadCastCharacter`, `charMaterials.ts charSlots`) into point / normal / slot / cavity buffers for a front, back, side and top
+  view, then shade them with a numpy stand-in of `lookMan` (two seconds a man); design there, port to WGSL after. The stand-in is not in the repo (it
+  would drift): the shader is the truth. Never seen on a GPU; on the page only the software renderer has drawn it.
+- **BIG HAND-MADE RELIEF: STONE, MUD BRICK, PLANKS, DAUBED MUD** (`render/lookTex.ts`; the look page only; the maintainer, 10-23, sent two stills of a
+  2005 stealth game, a stone stairwell and a dark brick room, as the materials reference: "this looks pretty good and it's pretty much all materials,
+  right?"). What those stills have that noise does not: FEATURES A PERSON CAN NAME, each a few centimetres to half a metre, under one raking light.
+  So the maps were redrawn as things, not spectra: `wood` = eight rough-sawn boards of their own widths with wandering gaps, raised hard grain, knots
+  with swirl, checks from the butts, saw strokes on some, grey boards beside brown, nails with rust runs; `mud` = hand daubs with finger strokes and lap
+  ridges, a flaked last coat with a crisp ragged edge, one long crack net and fine crazing, straw, pebbles and the holes they left. Two NEW layers, 11
+  `field stone` (a jittered lattice of stones each proud by 2 to 5 cm with its own lean, clefts, chips, four rock colours, lichen) and 12 `mud brick`
+  (sixteen courses, a wandering bond, washed-out joints, crumbled and missing bricks). They are on no class: `look.wgsl lookSurface` lays them INTO a
+  mud wall that stands on the ground and is taller than 0.8 m (the MASONRY block): a plinth of field stone to a wandering line about 0.35 m up with a
+  drip shadow under the render's lip, and mud brick showing in ragged holes where the render has fallen, more of them low on the wall, each with a
+  lit lip. Panel row Stonework (`look=stone:0` = plain mud walls). `LookCfg` grew to 7 vec4 (f.w stone, g.x marks); `LOOK_ROUGH` is read for the first
+  eleven layers only (the two new ones carry their base roughness in the block). TRAPS: a coursed map must never sit on a layer `untile` reads twice
+  (the second read is turned 0.61 rad: courses cross); the plinth's line is in world y, so a mud wall on a slope would step. A map can be judged
+  without the page: bake `lookLayer(n)` under bun and shade it flat, raked and top-lit (2 s a layer) before any still is asked for. Nothing here has
+  been seen on a GPU.
+- **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
+  stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
+  cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line
+  (noise by box and marking, so two signs do not share an edge), the shares sharpened so two colours meet in a line and not a blur, and thin rubbed
+  patches let the surface through. An emissive entry keeps its cells (a lamp's face must not lose light), and past about 1.75 cells a pixel it is the
+  plain coverage again (nothing to draw). Panel row Painted marks (`look=marks:0` = square cells). The bitmaps themselves are still the level's: a
+  mark that is a coarse picture stays a coarse picture with soft edges, so authored marks at a finer cell are the round after. Never seen on a GPU.

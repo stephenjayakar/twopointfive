@@ -79,9 +79,9 @@ export function dressFront(level: { boxes: Box[] }): number {
   plank(13.42, 0.95, 0.5, 78, WOOD_C, 0.06, 0.024); plank(14.52, 1.08, 0.5, -27, WOOD_C, 0.055, 0.024);   // one hangs by its last nail, one was nailed across the others
 
   // ---- the second window: one shutter shut, one swung out, split wood stacked under it ----
-  add(box([19.66, 1.375, Z + 0.016], [0.46, 0.5, 0.014], of(GREEN_PAINT, 0.9), { rough: 0.8 }));
-  add(box([19.66, 1.66, Z + 0.034], [0.44, 0.035, 0.006], of(GREEN_PAINT, 0.6), { flags: BoxFlag.NoShadow })); add(box([19.66, 1.1, Z + 0.034], [0.44, 0.035, 0.006], of(GREEN_PAINT, 0.6), { flags: BoxFlag.NoShadow }));
-  { const a = 62 * D, hx = 21.02, len = 0.45; add(box([hx + Math.cos(a) * len, 1.375, Z + 0.01 + Math.sin(a) * len], [len, 0.5, 0.014], of(GREEN_PAINT, 0.98), { yaw: -a, rough: 0.8 })); }
+  add(box([19.66, 1.375, Z + 0.016], [0.46, 0.5, 0.014], of(GREEN_PAINT, 0.62), { rough: 0.8 }));
+  add(box([19.66, 1.66, Z + 0.034], [0.44, 0.035, 0.006], of(GREEN_PAINT, 0.56), { flags: BoxFlag.NoShadow })); add(box([19.66, 1.1, Z + 0.034], [0.44, 0.035, 0.006], of(GREEN_PAINT, 0.56), { flags: BoxFlag.NoShadow }));
+  { const a = 62 * D, hx = 21.02, len = 0.45; add(box([hx + Math.cos(a) * len, 1.375, Z + 0.01 + Math.sin(a) * len], [len, 0.5, 0.014], of(GREEN_PAINT, 0.7), { yaw: -a, rough: 0.8 })); }
   const stack: [number, number, number, number][] = [   // x, row, r, how far it stands out from the wall
     [19.36, 0, 0.085, 0.02], [19.54, 0, 0.075, 0.05], [19.7, 0, 0.09, 0.0], [19.89, 0, 0.07, 0.04], [20.05, 0, 0.085, 0.02], [20.23, 0, 0.08, 0.06], [20.4, 0, 0.07, 0.01], [20.56, 0, 0.09, 0.03], [20.75, 0, 0.075, 0.05],
     [19.45, 1, 0.08, 0.04], [19.62, 1, 0.07, 0.0], [19.79, 1, 0.085, 0.05], [19.98, 1, 0.08, 0.02], [20.15, 1, 0.07, 0.06], [20.32, 1, 0.085, 0.01], [20.5, 1, 0.075, 0.04],

@@ -167,7 +167,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   let wetK = floor(frame.rtCfg.z * 0.5) * 0.1;                           // WET GROUND (detail.wgsl wetGround; settings.wetBreakup rides rtCfg.z as 2 × tenths — 0 = nothing here runs)
   if (wetK > 0.0 && wetG && select(n.y, gn.y, LOOK) > 0.9) { rough = wetGround(v.wp, rough, wetK); }
   if (v.mark != 0u && !cap) {                                             // MARKINGS (markings.wgsl): the pixel-art signifiers on this box's faces — albedo + roughness only, after the wear, before the encounter's marks
-    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough);
+    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft());
     albedo = mk.albedo; rough = mk.rough;
   }
   if (SNOW_SURF && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) {   // THE SNOW'S SURFACE (snow.wgsl; a snow level with its look on — dead code on every other page): the ground and every snow-painted box of the level file are shaded off the level's snow field, after the markings, before the encounter's marks

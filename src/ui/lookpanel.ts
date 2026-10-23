@@ -15,7 +15,10 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['snow', 'Snow that clings', 'a snow level: blown against wall feet, lying on what was left out', 1.5],
   ['ground', 'Snow relief', '× the depth of lying snow\'s drifts, wind ridges and prints (1 = as the game draws it)', 3],
   ['crust', 'Snow crust', 'wind-glazed streaks of snow that hold a lamp\'s sheen', 1.5],
+  ['stone', 'Stonework', 'a plinth of field stone under the mud walls and mud brick showing where the render has fallen', 1.5],
+  ['marks', 'Painted marks', 'signs, stripes and rugs drawn as brushed, rubbed paint in place of square cells', 1],
   ['men', 'Men', 'the men drawn as cloth, webbing, steel and skin: a print on the uniforms, folds, scuffs, snow on their shoulders', 1.5],
+  ['tailor', 'Kit detail', 'what was cut and sewn on the men: seams, pockets and patches, a combat shirt, bar tacks on the webbing, sand boots, knee pads, buttons', 1],
   ['air', 'Air', '× the haze that shows a lamp in the air', 4],
   ['size', 'Map size', '× the 2 m a map covers', 2],
 ];

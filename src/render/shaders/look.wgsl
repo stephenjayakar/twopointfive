@@ -7,6 +7,7 @@
 //             side of a board or a sheet, and in the box's own frame for cloth, bare metal and old paint (a sack carries its weave with it).
 //   UNTILE    the four that have no courses (mud, plaster, earth, gravel) are read twice, the second turned and shifted, and cross-faded by a slow noise and
 //             by height, so a 2 m map does not print its repeat on a 40 m yard.
+//   MASONRY   a mud wall's stone plinth and the mud brick where its render has fallen: two more maps, laid by the wall's own height and length.
 //   WEATHER   what follows the BUILDING, not the map: damp and dirt climbing a wall's foot to a ragged line, a bleached head and the runs under it, slow blotches;
 //             on the ground the level's own traffic map (render/wear.ts) — walked earth packed pale and smooth, dirt and stones gathered where nobody walks,
 //             against the walls.
@@ -19,7 +20,7 @@
 @group(1) @binding(11) var lookA: texture_2d_array<f32>;
 @group(1) @binding(12) var lookB: texture_2d_array<f32>;
 @group(1) @binding(13) var lookSamp: sampler;
-struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f };   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c, d, e.xyz = the eleven layers' base roughness · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust
+struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f, g: vec4f };   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c, d, e.xyz = the eleven layers' base roughness · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust, f.z = the men, f.w = the masonry · g.x = markings as paint (markings.wgsl markSoft), g.y = the men's tailoring · g.zw free
 @group(1) @binding(14) var<uniform> lookCfg: LookCfg;
 
 const LOOK_TILE: f32 = 2.0;        // metres a map covers (render/lookTex.ts LOOK_TILE)
@@ -29,6 +30,8 @@ const LOOK_METAL: u32 = 10u;       // bare iron, rusted
 const LOOK_PAINT: u32 = 11u;       // old paint on steel or boards: drums, gates, a truck
 const LOOK_MIN_TILT: f32 = 0.02;   // … and under this the pixel is the face, unmarked (a flat stretch of a map costs no second light score)
 
+/** how far a box's markings are drawn as brushed paint in place of square cells (the panel's Painted marks row) */
+fn lookMarkSoft() -> f32 { return lookCfg.g.x; }
 struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
 struct LookTap { a: vec4f, b: vec4f };
 fn lookTap(layer: i32, st: vec2f, dx: vec2f, dy: vec2f) -> LookTap {
@@ -87,6 +90,34 @@ fn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, alb
       tp.a = mix(tp.a, t2.a, w); tp.b = mix(tp.b, t2.b, w);
     }
     var mult = tp.a.rgb * 2.0; var cav = tp.b.a; var dr = tp.b.z - lookBase(layer);
+    // ---- MASONRY: what the wall is MADE of, laid by the wall's own height and length and never by a tile's repeat. A mud wall that stands on the ground has a
+    // plinth of field stone (lookTex.ts 'field stone', in the wall's metres from the ground up) to a line that wanders along it, the render lapping down over the
+    // stones' heads with a rounded lip; and where the render has let go, in patches that gather above the plinth, the mud brick under it ('mud brick'), a
+    // finger's depth back behind a broken edge. Big, specific relief with hard edges: what one low lamp along a wall picks out.
+    let km = lookCfg.f.w;
+    if (km > 0.0 && cls == SURF_MUD && !lying && max(b.h.x, b.h.z) > 0.3 && b.h.y > 0.12) {   // (any piece of a wall, so a patch does not stop at the seam where two boxes of one wall meet; the plinth is by world height)
+      let sv = lookTap(11, st + vec2f(0.13, 0.0), dx, dy);
+      let line = (0.34 + 0.4 * detailNoise(vec2f(uv.x * 0.31, 7.7)) + 0.1 * detailNoise(vec2f(uv.x * 1.9, 2.2))) * min(km, 1.0);
+      let e = wp.y - line - 0.09 * (sv.a.a - 0.5);                              // under 0: stone (the render's edge follows the stones' heads)
+      let stone = 1.0 - smoothstep(-0.012, 0.0, e);
+      if (stone > 0.0) {
+        mult = mix(mult, sv.a.rgb * 2.0 * (1.0 - 0.3 * smoothstep(-0.05, -0.012, e)), stone);   // (in the lip's shadow)
+        tn = mix(tn, sv.b.xy * 2.0 - 1.0, stone); cav = mix(cav, sv.b.a, stone); dr = mix(dr, sv.b.z - 0.95, stone);
+      }
+      tn.y -= 0.85 * smoothstep(-0.004, 0.01, e) * (1.0 - smoothstep(0.01, 0.034, e));           // the lip, turned down onto the stones
+      let pq = uv * vec2f(1.3, 1.6) + vec2f(3.1, 8.6);                                        // (patches up to half a metre: at 2 m a cell a whole wall was bare brick or none of it)
+      let thr = 0.75 - 0.04 * min(km, 1.5) - 0.1 * (1.0 - smoothstep(0.2, 1.1, e));             // (most just above the plinth, where the splash works on it)
+      let pm = lookSlow(pq) + 0.1 * (tp.a.a - 0.5) + 0.06 * (detailNoise(uv * 11.0) - 0.5);       // ragged by the render's own lumps
+      if (pm > thr - 0.04 && stone < 1.0) {
+        let bv = lookTap(12, st + vec2f(0.0, 0.031), dx, dy);
+        let hole = smoothstep(thr, thr + 0.01, pm) * (1.0 - stone);
+        let g = vec2f(lookSlow(pq + vec2f(0.04, 0.0)) - lookSlow(pq - vec2f(0.04, 0.0)), lookSlow(pq + vec2f(0.0, 0.04)) - lookSlow(pq - vec2f(0.0, 0.04))) * vec2f(1.3, 1.6);
+        let rim = smoothstep(thr - 0.035, thr, pm) * (1.0 - smoothstep(thr, thr + 0.01, pm)) * (1.0 - stone);
+        mult = mix(mult, bv.a.rgb * 2.0 * (0.72 + 0.2 * smoothstep(thr + 0.01, thr + 0.06, pm)), hole);   // (darker under the broken edge)
+        tn = mix(tn, bv.b.xy * 2.0 - 1.0, hole); cav = mix(cav, bv.b.a, hole); dr = mix(dr, bv.b.z - 0.95, hole);
+        tn += g / max(length(g), 1e-5) * 0.8 * rim; mult *= 1.0 + 0.14 * rim;                    // the render's edge: a finger thick, facing into the hole, its break paler
+      }
+    }
     // ---- WEATHER on the ground: the level's traffic map (r = walked, g = close to a wall)
     if (k.w > 0.0 && lying && n.y > 0.0 && wp.y < 0.25) {
       let wuv = (wp.xz - WORLD_MIN.xz) / (vec2f(f32(GRID_W), f32(GRID_H)) * GRID_CELL);
@@ -262,6 +293,9 @@ fn lookGround(wp: vec3f, nIn: vec3f, roughIn: f32, fp: f32) -> LookGround {
 //   METAL     rubbed bright on its edges, an oiled sheen between
 //   BOOTS     scuffed toes, a leather sheen under the dust
 //   SKIN      a tone of his own, the cold in his cheeks, nose and ears on a snow level, a day's growth on some
+//   TAILORING what was cut and sewn (manCut and the slots' own blocks below): seams, doubled knees and elbows, a sleeve pocket with its patches, the plain body
+//             of a combat shirt, bar tacks on the webbing, a helmet cover's seams, band and cat's eyes, sand boots with laces, knee pads, gloves; on the other
+//             side a shirt's placket and buttons, long folds in loose trousers, a wool waistcoat and cap
 //   SNOW      on a snow level, lying on what faces up and caked on the boots and hems to a ragged line; most on the men who came in from the weather
 // lookCfg.f.z = how much of it (the panel's Men row; 0 = the men as the build draws them). Derivatives are taken by the caller: nothing below needs uniform flow.
 struct LookMan { albedo: vec3f, n: vec3f, rough: f32, gain: f32 };
@@ -287,19 +321,89 @@ fn manCamo(p: vec3f, base: vec3f, seed: f32, fp: f32) -> vec3f {
 }
 /** the relief of a man's kit at a bind-pose point (m): cloth's folds, the webbing's rows. Each part is gone before the picture is too coarse to hold it */
 fn manArm(p: vec3f) -> bool { return abs(p.x) > 0.21 && p.y > 1.3; }
-fn manHeight(slot: u32, p: vec3f, fp: f32) -> f32 {
+// ---- TAILORING (the panel's Kit detail row, lookCfg.g.y): what a person CUT AND SEWED, drawn where it sits on the body in the bind pose (the cast's T pose: an arm
+// runs out along x round (y 1.435, z −0.068), a leg up along y round (|x| 0.093, z −0.045 at the shin to 0.01 at the thigh)). Lines are a few millimetres: each is
+// soft to the pixel and gone before it is much finer than one.
+fn manLine(d: f32, w: f32, fp: f32) -> f32 { return (1.0 - smoothstep(w, w + max(fp, 0.0012), abs(d))) * (1.0 - smoothstep(3.0 * w, 9.0 * w, fp)); }
+fn manBox(d: vec2f, h: vec2f, fp: f32) -> f32 { let aa = max(fp, 0.0012); return (1.0 - smoothstep(h.x, h.x + aa, abs(d.x))) * (1.0 - smoothstep(h.y, h.y + aa, abs(d.y))); }
+fn manFrame(d: vec2f, h: vec2f, w: f32, fp: f32) -> f32 { return clamp(manBox(d, h + vec2f(w), fp) - manBox(d, h - vec2f(w), fp), 0.0, 1.0) * (1.0 - smoothstep(3.0 * w, 9.0 * w, fp)); }
+/** the cut of a man's cloth at a bind-pose point: seam = a stitched line (drawn darker), dark = a doubled or rubbed panel, sewn = something sewn or stuck on (rgb, cover) */
+struct ManCut { seam: f32, dark: f32, sewn: vec4f };
+fn manCut(slot: u32, side: u32, p: vec3f, fp: f32) -> ManCut {
+  var o: ManCut; o.seam = 0.0; o.dark = 0.0; o.sewn = vec4f(0.0);
+  let ax = abs(p.x); let arm = manArm(p);
+  let az = p.z + 0.068; let ay = p.y - 1.435;
+  let lx = ax - 0.093; let lz = p.z - (-0.045 + 0.055 * smoothstep(0.3, 0.6, p.y));
+  if (side == 0u || side == 4u) {
+    if (arm) {
+      // a sleeve: the shoulder seam, a pocket on the upper arm with its flap, a loop field on it carrying a patch and a tape, a doubled elbow, the cuff
+      let top = smoothstep(0.0, 0.02, ay);
+      var s = manLine(ax - 0.232, 0.0012, fp);
+      s = max(s, manFrame(vec2f(ax - 0.352, az), vec2f(0.058, 0.05), 0.0011, fp) * top);
+      s = max(s, manLine(ax - 0.318, 0.0011, fp) * top * step(abs(az), 0.05));
+      var d = 0.42 * manBox(vec2f(ax - 0.362, az), vec2f(0.036, 0.036), fp) * top * (0.85 + 0.3 * manNoise(p * 700.0));
+      let fd = vec2f(ax - 0.348, az - 0.012);
+      let flag = manBox(fd, vec2f(0.014, 0.02), fp) * top;
+      if (flag > 0.5) { o.sewn = vec4f(vec3f(0.11, 0.12, 0.085) * (1.0 + 0.9 * manFrame(fd, vec2f(0.014, 0.02), 0.0012, fp)), flag); }
+      let tape = manBox(vec2f(ax - 0.384, az + 0.004), vec2f(0.008, 0.028), fp) * top;
+      if (tape > 0.5) { o.sewn = vec4f(0.2, 0.185, 0.14, tape); }
+      let under = 1.0 - smoothstep(-0.02, 0.01, az);                                        // the back of the arm, where an elbow lands
+      d = max(d, 0.16 * (1.0 - smoothstep(0.075, 0.075 + max(fp, 0.0012), abs(ax - 0.52))) * under);
+      s = max(s, max(manLine(ax - 0.445, 0.0011, fp), manLine(ax - 0.595, 0.0011, fp)) * under);
+      d = max(d, 0.14 * smoothstep(0.662, 0.666, ax)); s = max(s, manLine(ax - 0.664, 0.0012, fp));
+      o.seam = s; o.dark = d;
+    } else if (p.y < 0.97) {
+      // trousers: a doubled knee on the front, a doubled seat, the out seam stitched twice, the in seam, the hem
+      let front = smoothstep(-0.01, 0.02, lz); let back = 1.0 - smoothstep(-0.05, -0.02, lz);
+      let kband = smoothstep(0.395, 0.4, p.y) * (1.0 - smoothstep(0.68, 0.685, p.y));
+      var s = max(manLine(p.y - 0.398, 0.0012, fp), manLine(p.y - 0.683, 0.0012, fp)) * front;
+      s = max(s, manLine(lz, 0.0011, fp) * kband * step(0.03, abs(lx)));
+      s = max(s, manLine(p.y - 0.742, 0.0012, fp) * back);
+      s = max(s, step(0.03, lx) * max(manLine(lz - 0.004, 0.0009, fp), manLine(lz + 0.004, 0.0009, fp)));
+      s = max(s, step(lx, -0.03) * manLine(lz, 0.001, fp));
+      o.seam = max(s, manLine(p.y - 0.312, 0.0012, fp));
+      o.dark = max(0.15 * kband * front, 0.12 * smoothstep(0.74, 0.745, p.y) * back);
+    } else {
+      o.seam = max(manLine(p.y - 1.492, 0.0012, fp), manLine(p.x, 0.0022, fp) * step(0.02, p.z) * smoothstep(1.36, 1.365, p.y));   // the collar, its short zip
+    }
+  } else if (slot == 2u) {
+    // a shirt: cuffs and shoulder seams; down the chest a placket with its buttons; the collar band
+    if (arm) { o.seam = max(manLine(ax - 0.657, 0.0012, fp), manLine(ax - 0.232, 0.0012, fp)); o.dark = 0.08 * smoothstep(0.655, 0.659, ax); }
+    else if (p.y > 0.97) {
+      let fr = step(0.03, p.z);
+      let s = max(manLine(ax - 0.016, 0.001, fp) * step(1.2, p.y) * step(p.y, 1.52) * fr, manLine(p.y - 1.2, 0.001, fp) * step(ax, 0.016) * fr);
+      o.seam = max(s, manLine(p.y - 1.5, 0.0012, fp));
+      let by = (p.y - 1.24) / 0.075; let bd = length(vec2f(p.x, (by - round(by)) * 0.075));
+      let but = (1.0 - smoothstep(0.0045, 0.0045 + max(fp, 0.001), bd)) * fr * step(1.2, p.y) * step(p.y, 1.5) * (1.0 - smoothstep(0.004, 0.012, fp));
+      if (but > 0.5) { o.sewn = vec4f(0.36, 0.34, 0.3, but); }
+    }
+  }
+  return o;
+}
+fn manHeight(slot: u32, side: u32, p: vec3f, fp: f32) -> f32 {
+  let T = min(lookCfg.g.y, 1.0);
   if (slot == 1u || slot == 2u) {
     let arm = manArm(p);
     let big = 1.0 - smoothstep(0.02, 0.06, fp); let fine = 1.0 - smoothstep(0.005, 0.016, fp);
+    var hang = 0.0; var hung = 0.0;
+    if (T > 0.0 && side == 1u && slot == 2u && !arm && p.y < 0.97) {                         // loose trousers and a long shirt's skirt hang in long folds
+      let drape = manNoise(p * vec3f(26.0, 2.2, 26.0) + vec3f(3.0, 3.0, 9.0)); let d2 = manNoise(p * vec3f(60.0, 5.0, 60.0) + vec3f(4.0, 1.0, 1.0));
+      hang = 0.016 * big * abs(drape - 0.5) * 2.0 * smoothstep(0.1, 0.5, p.y) + 0.004 * fine * d2; hung = T;
+    }
     let ax = select(vec3f(1.0, 3.6, 1.0), vec3f(3.6, 1.0, 1.0), arm);                     // a fold rings its limb
     var j = max(max(manBump(p.y, 0.5, 0.16), manBump(p.y, 0.93, 0.14)), manBump(p.y, 0.1, 0.12));   // the knee, the hip, the trouser bunched on the boot
     if (arm) { j = max(manBump(abs(p.x), 0.5, 0.13), manBump(abs(p.x), 0.25, 0.08)); }               // the elbow, the armpit
     let a = manNoise(p * ax * 5.0 + vec3f(3.3, 1.7, 9.1)); let b = manNoise(p * ax * 11.0 + vec3f(8.1, 4.4, 2.6));
-    return 0.011 * big * (0.5 + 0.5 * j) * abs(a - 0.5) * 2.0 + 0.004 * fine * (0.35 + 0.65 * j) * abs(b - 0.5) * 2.0;
+    return mix(0.011 * big * (0.5 + 0.5 * j) * abs(a - 0.5) * 2.0 + 0.004 * fine * (0.35 + 0.65 * j) * abs(b - 0.5) * 2.0, hang, hung);
   }
   if (slot == 3u) {
-    let f = fract(p.y / 0.045);
-    return 0.0022 * (1.0 - smoothstep(0.004, 0.012, fp)) * smoothstep(0.0, 0.12, f) * (1.0 - smoothstep(0.56, 0.68, f));
+    let f = fract(p.y / 0.045); let on = 1.0 - smoothstep(0.004, 0.012, fp); let band = smoothstep(0.0, 0.12, f) * (1.0 - smoothstep(0.56, 0.68, f));
+    var h = 0.0022 * on * band;
+    if (T > 0.0) {                                                                          // the tape is sewn down every inch and a half: flat at the bar tack, proud between
+      let ft = fract(select(p.x, p.z, abs(p.x) > 0.15) / 0.038); let sn = sin(3.14159265 * ft);
+      h = h * (1.0 - 0.75 * T * (1.0 - smoothstep(0.035, 0.075, min(ft, 1.0 - ft)))) + 0.0006 * T * on * band * sn * sn;
+    }
+    return h;
   }
   return 0.0;
 }
@@ -309,6 +413,7 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
   var o: LookMan; o.albedo = albedoIn; o.n = nIn; o.rough = roughIn; o.gain = gainIn;
   let K = min(lookCfg.f.z, 1.5); if (K <= 0.0) { return o; }
   let slot = code & 15u; let side = code >> 4u;
+  let T = min(lookCfg.g.y, 1.0) * min(K, 1.0); let op = side == 0u || side == 4u;
   let seed = f32(owner) * 0.618; let own = fract(seed); let own2 = fract(f32(owner) * 0.3819 + 0.27);
   let ridge = max(-cavity, 0.0);
   let cold = SNOW_SURF && snowCfg.p[1].z > 0.5;
@@ -321,19 +426,34 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
     if (slot == 3u) {
       let f = fract(mp.y / 0.045); let rows = (1.0 - smoothstep(0.004, 0.012, fp)) * (1.0 - smoothstep(0.0, 0.12, f) * (1.0 - smoothstep(0.56, 0.68, f)));
       alb *= 1.0 - 0.32 * K * rows;
+      if (T > 0.0) { let ft = fract(select(mp.x, mp.z, abs(mp.x) > 0.15) / 0.038); alb *= 1.0 - 0.3 * T * (1.0 - smoothstep(0.035, 0.075, min(ft, 1.0 - ft))) * (1.0 - smoothstep(0.004, 0.012, fp)) * smoothstep(0.0, 0.12, f) * (1.0 - smoothstep(0.56, 0.68, f)); }
       alb = mix(alb, alb * 1.35 + vec3f(0.01), 0.5 * K * ridge);
     } else {
-      if (side == 0u && slot == 1u) { alb = mix(alb, manCamo(mp, alb, seed, fp), K); }
+      if (side == 0u && slot == 1u) {
+        var print = manCamo(mp, alb, seed, fp);
+        if (!manArm(mp) && mp.y > 0.97) { print = mix(print, alb * vec3f(0.74, 0.8, 0.62), T); }   // a combat shirt: the body under the plates is plain knit, only the sleeves are printed
+        alb = mix(alb, print, K);
+      }
+      if (!op && slot == 1u && T > 0.0) {                                                    // a waistcoat: wool in a twill
+        let tw = 0.5 + 0.5 * sin((mp.x + mp.y + mp.z) * (6.2831853 / 0.006));
+        alb *= (1.0 + 0.16 * T * (tw - 0.5) * (1.0 - smoothstep(0.0015, 0.004, fp))) * (1.0 + T * 0.16 * (manNoise(mp * 240.0) - 0.5));
+      }
       let age = manNoise(mp * 3.1 + vec3f(seed * 7.0, 2.0, seed));                         // slow blotches: washed, sweated, sat in
       alb *= 1.0 + K * (0.26 * (age - 0.5) + 0.16 * (own2 - 0.5));
       alb = mix(alb, vec3f(dot(alb, vec3f(0.2126, 0.7152, 0.0722))) * vec3f(1.04, 1.0, 0.93), K * (0.1 + 0.22 * own) * smoothstep(1.25, 1.5, mp.y));   // bleached across the shoulders
+      if (T > 0.0) {
+        let cut = manCut(slot, side, mp, fp);
+        alb *= (1.0 - T * cut.dark) * (1.0 - 0.5 * T * cut.seam);
+        alb = mix(alb, cut.sewn.rgb, T * cut.sewn.a);
+      }
       let knee = manBump(mp.y, 0.5, 0.11) * smoothstep(0.0, 0.07, mp.z) * step(mp.y, 0.9);
       alb = mix(alb, dust.xyz, 0.4 * K * knee * (0.4 + 0.6 * manNoise(mp * 30.0 + vec3f(seed))));
     }
     // the relief, stood on the skinned normal by the steps of the bind-pose point and of the world point across this pixel
-    let h0 = manHeight(slot, mp, fp); let dBs = manHeight(slot, mp + dmx, fp) - h0; let dBt = manHeight(slot, mp + dmy, fp) - h0;
+    let h0 = manHeight(slot, side, mp, fp); let dBs = manHeight(slot, side, mp + dmx, fp) - h0; let dBt = manHeight(slot, side, mp + dmy, fp) - h0;
     let R1 = cross(dwy, nIn); let R2 = cross(nIn, dwx); let det = dot(dwx, R1);
-    let seam = manArm(mp) != manArm(mp + dmx) || manArm(mp) != manArm(mp + dmy);          // (the folds turn where the sleeve starts: a step across that line is no slope)
+    let skirt = side == 1u && slot == 2u && ((mp.y < 0.97) != (mp.y + dmx.y < 0.97) || (mp.y < 0.97) != (mp.y + dmy.y < 0.97));   // (the long folds start at the waist: the same)
+    let seam = skirt || manArm(mp) != manArm(mp + dmx) || manArm(mp) != manArm(mp + dmy);          // (the folds turn where the sleeve starts: a step across that line is no slope)
     if (abs(det) > 1e-12 && !seam) {
       var nn = normalize(abs(det) * nIn - (dBs * R1 + dBt * R2) * (sign(det) * K));
       let c = dot(nn, nIn); if (c < 0.8) { nn = normalize(nIn * 0.8 + normalize(nn - nIn * c) * 0.6); }
@@ -343,6 +463,19 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
     if (side == 0u) { alb = mix(alb, manCamo(mp * 1.15, alb, seed + 3.0, fp), 0.8 * K); }
     let chip = smoothstep(0.62, 0.7, manNoise(mp * 70.0 + vec3f(seed)) * 0.55 + ridge * 0.9) * (1.0 - smoothstep(0.006, 0.02, fp));
     alb = mix(alb, alb * 1.9 + vec3f(0.03), 0.6 * K * max(chip, 0.5 * ridge));
+    if (T > 0.0 && op) {
+      // a cloth cover: four seams from the crown, a band round it with two cat's eyes at the back, loop squares on the sides, a rubber rim
+      let r = length(mp.xz) + 1e-6; let ang = atan2(mp.x, mp.z + 1e-6); var sm = 0.0;
+      for (var i = 0; i < 4; i++) { let da = ang - (0.785398 + 1.570796 * f32(i)); sm = max(sm, manLine(r * sin(da), 0.0012, fp) * step(0.0, cos(da))); }
+      sm *= smoothstep(1.72, 1.73, mp.y) * smoothstep(0.025, 0.035, r);
+      let band = smoothstep(1.688, 1.691, mp.y) * (1.0 - smoothstep(1.713, 1.716, mp.y));
+      alb *= 1.0 - 0.45 * T * sm;
+      alb = mix(alb, alb * vec3f(0.5, 0.52, 0.42), T * band);
+      alb = mix(alb, vec3f(0.42, 0.46, 0.2), T * band * step(mp.z, -0.09) * manBox(vec2f(abs(mp.x) - 0.03, mp.y - 1.702), vec2f(0.011, 0.007), fp));
+      alb *= 1.0 - 0.4 * T * manBox(vec2f(mp.z + 0.01, mp.y - 1.755), vec2f(0.03, 0.022), fp) * step(0.085, abs(mp.x)) * (0.8 + 0.4 * manNoise(mp * 700.0));
+      alb = mix(alb, vec3f(0.03, 0.03, 0.028), T * (1.0 - smoothstep(1.656, 1.662, mp.y)));
+    }
+    if (T > 0.0 && side == 1u) { alb *= mix(1.0, (0.86 + 0.28 * manNoise(mp * 330.0)) * (1.0 + 0.18 * (manNoise(mp * 40.0) - 0.5)), T); rough = mix(rough, 0.97, T); gain *= 1.0 - 0.6 * T; }   // wool, felted
     let sc = manNoise(mp * 24.0 + vec3f(seed * 2.0));
     rough = clamp(rough + K * 0.2 * (sc - 0.5), 0.05, 1.0); gain *= 1.0 + K * 0.6 * (0.5 - sc);
   } else if (slot == 6u) {
@@ -350,8 +483,23 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
     rough = clamp(mix(rough, 0.3, 0.6 * K) + 0.15 * K * (manNoise(mp * 40.0) - 0.5), 0.05, 1.0);
     gain = max(gain, K * (0.9 + ridge));
   } else if (slot == 4u) {
-    alb = mix(alb, vec3f(0.12, 0.1, 0.08), 0.6 * K * ridge);
-    rough = mix(rough, 0.38, 0.5 * K * (1.0 - dust.w)); gain = max(gain, 0.5 * K * (1.0 - dust.w));
+    let alb0 = mix(alb, vec3f(0.12, 0.1, 0.08), 0.6 * K * ridge); let rough0 = mix(rough, 0.38, 0.5 * K * (1.0 - dust.w)); let gain0 = max(gain, 0.5 * K * (1.0 - dust.w));   // round one's boot
+    if (T > 0.0 && side == 0u) {
+      // desert boots: rough-out leather the colour of sand, a padded collar, laces up the front between their eyelets, a welt, scuffed dark at the toe
+      let nap = manNoise(mp * 260.0) * 0.6 + manNoise(mp * 60.0 + vec3f(3.0)) * 0.4;
+      var b = vec3f(0.25, 0.185, 0.115) * (0.8 + 0.4 * nap) * (1.0 - 0.35 * max(cavity, 0.0));
+      let lz = mp.z + 0.045; let lx = abs(mp.x) - 0.093; let near = 1.0 - smoothstep(0.004, 0.012, fp);
+      b = mix(b, b * vec3f(0.62, 0.66, 0.6), smoothstep(0.236, 0.24, mp.y));
+      let tongue = (1.0 - smoothstep(0.022, 0.026, abs(lx))) * step(0.03, lz) * smoothstep(0.085, 0.09, mp.y);
+      let fl = fract((mp.y - 0.09) / 0.02);
+      b = mix(b, b * 0.72, tongue * 0.5); b = mix(b, vec3f(0.2, 0.17, 0.12), (1.0 - smoothstep(0.16, 0.26, abs(fl - 0.5))) * tongue * near);
+      b = mix(b, vec3f(0.05), (1.0 - smoothstep(0.003, 0.0045, abs(abs(lx) - 0.027))) * (1.0 - smoothstep(0.2, 0.3, abs(fl - 0.5))) * step(0.03, lz) * smoothstep(0.085, 0.09, mp.y) * near);
+      b *= 1.0 - 0.5 * max(manLine(mp.y - 0.238, 0.0012, fp), manLine(mp.y - 0.047, 0.002, fp));
+      b = mix(b, b * 0.6, 0.6 * smoothstep(0.07, 0.13, lz) * (1.0 - smoothstep(0.05, 0.1, mp.y)) * manNoise(mp * 45.0));
+      b *= (1.0 - 0.16 * (1.0 - smoothstep(-0.07, -0.04, lz)) * (1.0 - smoothstep(0.1, 0.12, mp.y))) * (1.0 - 0.4 * manLine(mp.y - 0.118, 0.001, fp) * step(lz, -0.03));
+      b = mix(b, dust.xyz, 0.5 * dust.w);
+      alb = mix(alb0, b, T); rough = mix(rough0, 0.95, T); gain = mix(gain0, 0.4 * gain, T);
+    } else { alb = alb0; rough = rough0; gain = gain0; }
   } else if (slot == 0u) {
     alb *= mix(vec3f(1.0), vec3f(0.86 + 0.28 * own) * mix(vec3f(1.04, 1.0, 0.94), vec3f(0.97, 1.0, 1.05), own2), K);
     let face = smoothstep(0.03, 0.08, mp.z) * step(1.52, mp.y);
@@ -364,13 +512,27 @@ fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f,
     let strand = manNoise(mp * vec3f(130.0, 16.0, 130.0) + vec3f(seed)) * (1.0 - smoothstep(0.004, 0.012, fp)) + 0.5 * smoothstep(0.004, 0.012, fp);
     alb *= 1.0 + K * 0.5 * (strand - 0.5);
     alb = mix(alb, alb * 1.6 + vec3f(0.02), 0.4 * K * ridge);
+    if (T > 0.0 && side == 0u && mp.y < 0.8) {
+      // a knee pad: a hard cap, scraped pale where it meets the ground, dust in its grooves
+      let scr = smoothstep(0.6, 0.78, manNoise(mp * vec3f(40.0, 240.0, 40.0) + vec3f(5.0)) * 0.6 + manNoise(mp * 90.0) * 0.4) * manBump(mp.y, 0.53, 0.06);
+      var pc = vec3f(0.05, 0.047, 0.042) * (1.0 - 0.3 * max(cavity, 0.0));
+      pc = mix(pc, vec3f(0.2, 0.19, 0.17), 0.7 * scr); pc = mix(pc, dust.xyz, 0.5 * max(cavity, 0.0));
+      alb = mix(alb, pc, T); rough = mix(rough, 0.36 + 0.4 * scr, T); gain = max(gain, 1.1 * T);
+    } else if (T > 0.0 && side == 0u && abs(mp.x) > 0.66 && mp.y > 1.2 && mp.y < 1.55) {
+      // gloves: a sand-coloured back, a dark palm, a hard bar over the knuckles
+      let topg = smoothstep(-0.006, 0.006, mp.y - 1.43);
+      var gc = mix(vec3f(0.035, 0.032, 0.03), vec3f(0.2, 0.16, 0.105) * (0.85 + 0.3 * manNoise(mp * 400.0)), topg);
+      gc = mix(gc, vec3f(0.03), (1.0 - smoothstep(0.012, 0.012 + max(fp, 0.0012), abs(abs(mp.x) - 0.8))) * topg);
+      gc *= (1.0 - 0.4 * manLine(abs(mp.x) - 0.705, 0.0015, fp)) * (1.0 - 0.3 * max(cavity, 0.0));
+      alb = mix(alb, gc, T); rough = mix(rough, 0.85, T);
+    }
   }
   if (cold && lookCfg.e.w > 0.0 && slot != 0u && slot != 8u && slot != 10u) {
     let ks = min(lookCfg.e.w, 1.5) * K * select(0.45, 1.0, side == 0u || side == 4u);
     let coarse = smoothstep(0.006, 0.02, fp);
     let g = mix(manNoise(mp * 55.0 + vec3f(seed)), 0.5, coarse); let g2 = manNoise(mp * 17.0 + vec3f(4.0 + seed, 1.0, seed));
-    let up = smoothstep(0.45, 0.85, nIn.y) * smoothstep(1.25, 1.4, mp.y);               // on his shoulders, arms and helmet as he stood in it (a man on his back is not a drift)
-    let lie = up * smoothstep(0.62 - 0.12 * ks, 0.72 - 0.08 * ks, 0.55 * g + 0.45 * g2);
+    let top = nIn.y + 0.2 * (0.55 * g + 0.45 * g2 - 0.5) - 0.08 * own;                   // a cap where he faces the sky, its edge ragged (one sheet, not a spatter: flecks all over him read as a camouflage)
+    let lie = smoothstep(0.8 - 0.1 * ks, 0.9 - 0.08 * ks, top) * smoothstep(1.25, 1.4, mp.y);   // on his shoulders and helmet as he stood in it (a man on his back is not a drift)
     let cake = (1.0 - smoothstep(0.08, 0.2 + 0.12 * g2, mp.y)) * smoothstep(0.42, 0.6, 0.5 * g + 0.5 * g2 + 0.12);
     let s = clamp(max(lie, 0.9 * cake) * ks, 0.0, 1.0);
     alb = mix(alb, snowCfg.p[2].xyz, s); rough = mix(rough, 0.9, s); gain *= 1.0 - s;

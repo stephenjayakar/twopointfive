@@ -184,7 +184,7 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     albedo = sf.albedo; n = sf.n; rough = sf.rough;
   }
   if (v.mark != 0u && !cap && (own < 0 || side)) {
-    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough);
+    let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough, lookMarkSoft());
     albedo = mk.albedo; rough = mk.rough;
   }
   var snowA = 0.0;
