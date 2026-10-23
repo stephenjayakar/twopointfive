@@ -579,8 +579,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     behind him (it was on none of the 4 before: the runs part company long before the nest, so this is the dice, not the window). It is true there too; tucking the mark at the
     wall's end farther behind the wall would take the corner man's eyes off the gun, and nobody has asked. FOUND ON THE WAY: the frag's survivor, hurt, stays on a knee under the
     bags and no rifle outside them finds him (71 s on one die before the scripted player learnt the open side); the level's script still holds him 40 s as a man on his feet.
-    NOT RUN: map-check's 48 runs, tour, soak. NOBODY HAS SEEN any of it: not the line or the wave on a page, not the tall bags from the game's camera (the strip is behind them
-    and in front of a wall), not the glass breaking at 0.8 m. Never on a GPU.
+    ON THE JOIN with the build of that morning the same 16 finish and read the same. ONE STILL of the real page each way (software adapter, the lowest preset, the player
+    stood at the scripted spot with the step up): the window is drawn, the man by it stands with the cursor on him, the far man shows; and in BOTH the player himself cannot be
+    made out, in the black between the bags and the hall's wall (his light meter reads 0 there): the taller bags did not make that, and nobody has said whether it is wanted.
+    NOT RUN: map-check's 48 runs, tour, soak. NOBODY HAS SEEN the line or the wave on a page, the shot through the glass from 0.8 m, or any of it moving. Never on a GPU.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
     not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.
