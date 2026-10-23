@@ -2,7 +2,7 @@
 // stood beside it and a camera pinned on the two of them — stills as the game runs, with the fire (the page as it opens) and with ?fire=0 (the glowing lid and
 // the steady lamp), the same frames of the same game. With the fire it also MEASURES what the game reads of it: the player's light meter frame by frame beside
 // the drum and a few metres off (its least, most and mean, against the steady lamp's), and smoke sight lines asked of the game's own sensors across the plume
-// at the heights a standing man's eyes and chest are (the light each line keeps: a line starts to count smoke under 0.8).
+// and along the wind through it, at the heights of a standing man's chest, eyes and helmet (the light each line keeps: a line starts to count smoke under 0.8).
 //   node tools/qa/fire-page.cjs [fire] [off]      default: fire alone (two pages at once halve each other's pace)
 //   env: PORT (the dev server's, default 5199 — `PORT=5199 bun run tools/serve.ts` from this checkout) · OUT (the folder the stills go to) · LEVEL (default
 //        pass.json; its brazier is found by the game's own rule) · QUALITY (default low) · STILLS (default 6) · GAP (frames of 1/30 s between stills, default 4) ·
@@ -70,8 +70,13 @@ async function one(browser, name) {
   const read = METER <= 0 ? { meter: {}, lines: {}, answered: {}, skipped: true } : await page.evaluate(async ({ n, at, stand }) => { const yieldM = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
     const g = window.__game, S = g.sensors, out = { meter: {}, lines: {}, answered: {} };
     const dir = [Math.sin(stand.yaw + Math.PI), Math.cos(stand.yaw + Math.PI)];   // from the fire toward where he stands
-    const lines = {}; for (const y of [1.2, 1.5, 1.7, 2.1, 2.6]) lines['across_' + y] = [[at[0] - dir[1] * 1.5, y, at[2] + dir[0] * 1.5], [at[0] + dir[1] * 1.5, y, at[2] - dir[0] * 1.5]];
-    lines.eyeOverIt = [[at[0] + dir[0] * 3, 1.62, at[2] + dir[1] * 3], [at[0] - dir[0] * 3, 1.3, at[2] - dir[1] * 3]];
+    // across the plume at the heights of a standing man's chest, eyes and the top of his helmet, over the drum and where the wind has carried it; ALONG the wind
+    // through all of it (the longest way through a thin haze, and the first to fall); and over a man's head, to see the smoke is there at all
+    const wv = g.wind.at([at[0], 1.6, at[2]]), wl = Math.hypot(wv[0], wv[2]), wx = wl > 0.05 ? wv[0] / wl : dir[1], wz = wl > 0.05 ? wv[2] / wl : -dir[0];
+    const lines = {}; for (const y of [1.3, 1.5, 1.7, 1.9]) for (const dn of [0, 0.8, 2]) { const cx = at[0] + wx * dn, cz = at[2] + wz * dn; lines[`across_${y}_down${dn}`] = [[cx - wz * 1.5, y, cz + wx * 1.5], [cx + wz * 1.5, y, cz - wx * 1.5]]; }
+    for (const y of [1.3, 1.6, 1.9]) lines[`along_${y}`] = [[at[0] - wx * 2, y, at[2] - wz * 2], [at[0] + wx * 6, y, at[2] + wz * 6]];
+    for (const y of [2.6, 3.4]) lines[`overhead_${y}`] = [[at[0] + wx * 0.8 - wz * 1.5, y, at[2] + wz * 0.8 + wx * 1.5], [at[0] + wx * 0.8 + wz * 1.5, y, at[2] + wz * 0.8 - wx * 1.5]];
+    out.wind = +wl.toFixed(2);
     for (const key in lines) { out.lines[key] = 1; out.answered[key] = 0; }
     for (const d of [1.25, 3, 5]) { const p = [at[0] + dir[0] * d, 0, at[2] + dir[1] * d]; window.__stage(window.__firePin, { player: { pos: p, yaw: stand.yaw, holstered: true } });
       let lo = 9, hi = -9, sum = 0, m = 0, elo = 9, ehi = -9;
@@ -85,10 +90,10 @@ async function one(browser, name) {
   log(`${name}: read`, JSON.stringify(read));
   await page.close();
   const booted = boot.pipes.failed === 0 && boot.pipes.done === boot.pipes.total;
-  const least = Math.min(...Object.entries(read.lines).filter(([k]) => /1\.5|1\.7|eyeOverIt/.test(k)).map(([, v]) => v));
+  const least = Math.min(...Object.entries(read.lines).filter(([k]) => !/^overhead/.test(k)).map(([, v]) => v));   // (every line a standing man could look along: 1.9 m and under)
   const unanswered = Object.entries(read.answered).filter(([, n]) => !n).map(([k]) => k);
   const ok = name === 'fire' ? booted && boot.on && rows.every(r => r.drawn > 0) && (read.skipped || (unanswered.length === 0 && least > 0.8)) : booted && !boot.on && rows.every(r => r.drawn === 0);
-  console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${name}: ${boot.pipes.done} of ${boot.pipes.total} pipelines, ${boot.pipes.failed} failed · the switch ${boot.on} · ${read.summary} · meter ${JSON.stringify(read.meter)} · sight lines keep ${JSON.stringify(read.lines)} (least a standing man looks along: ${least}${unanswered.length ? '; NEVER ANSWERED: ' + unanswered.join(', ') : ''}) · pool ${read.pool}${read.skipped ? ' · METER=0: the meter and the sight lines were NOT read' : ''}${errs.length ? ' · page errors: ' + errs.join(' | ') : ''}`);
+  console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${name}: ${boot.pipes.done} of ${boot.pipes.total} pipelines, ${boot.pipes.failed} failed · the switch ${boot.on} · ${read.summary} · meter ${JSON.stringify(read.meter)} · sight lines keep ${JSON.stringify(read.lines)} (wind ${read.wind} m/s; least a standing man looks along: ${least}${unanswered.length ? '; NEVER ANSWERED: ' + unanswered.join(', ') : ''}) · pool ${read.pool}${read.skipped ? ' · METER=0: the meter and the sight lines were NOT read' : ''}${errs.length ? ' · page errors: ' + errs.join(' | ') : ''}`);
   return ok && !errs.length;
 }
 (async () => {
