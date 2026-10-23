@@ -654,8 +654,9 @@ fn beamAir(ro: vec3f, D: vec3f, tMax: f32, cpix: f32) -> vec3f {
   return L;
 }
 /** THE OPEN FIRES over what the pixel shows (game/fire.ts; fire.wgsl fireAir): each fire's flame and embers along the pixel's ray as far as its surface, the
- *  one this ray meets last drawn first (by where the ray enters each one's bound: right for this pixel, whatever order the list came in). Not over ground
- *  the fog of war hides (the fog's own rule for what is live: smoke, flakes). `c` in, `c` with the fires out. */
+ *  one this ray meets last drawn first (by where the ray enters each one's bound: right for this pixel, whatever order the list came in). UNDER THE FOG OF WAR a fire is part of the
+ *  place and is drawn as the team last saw it (game/fire.ts FIRE.fog says which, a record at a time: wherever it stands, only where the team sees its coals, or
+ *  only where it does not; the fog pass then dims it with the ground it stands on). `c` in, `c` with the fires out. */
 fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   var col = c;
   let n = min(beams.fireN.x, 4u);
@@ -673,7 +674,7 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
     if (pick > 3u) { break; }
     at[pick] = -1.0;
     let F = beams.fire[pick];
-    if (fogSeenAt(F.a.xyz, vec3f(0.0)) < 0.5) { continue; }
+    if (F.d.y > 0.5) { let seen = fogSeenAt(F.a.xyz, vec3f(0.0)) >= 0.5; if (seen != (F.d.y < 1.5)) { continue; } }
     let fa = fireAir(F, frame.camPos, rd, tMax, beamPix(), jit);
     col = col * fa.a + fa.rgb;
   }

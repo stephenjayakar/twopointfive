@@ -74,7 +74,7 @@ import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
 import { updateSmokeBreak } from './smokebreak';
 import { showWhyTick, resetShowWhy } from './showwhy';
-import { updateFire } from './fire';
+import { updateFire, fireDraws } from './fire';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
@@ -103,7 +103,7 @@ import type { SearchPlan, Pieing, Standoff } from './guards';
 import type { Clearing } from './squad';
 import { updatePlayer, startTakedown, updateAim, launchCancel } from './player';
 import { closeSeatTick, closeReset, closeLethal, closeBare } from './close';
-import { stalkHas, stalkGrab, stalkReset } from './stalk';
+import { stalkHas, stalkGrab, stalkKeyCan, stalkKeyTook, stalkReset } from './stalk';
 import type { CloseKind } from './close';
 import { doorMoveBegin, doorMoveTick, haulSetDown, teamDoorHand } from './hands';
 import type { Haul, DoorMove } from './hands';
@@ -1718,6 +1718,7 @@ export class Game {
     this.shards.update(dt);       // … and what let go this frame: plates that landed hard come apart, due landings tinkle / leave litter / are heard (shards.ts — nothing to do while no glass is in play)
     // characters → GPU skin instances + RT proxies
     this.fogOfWar.update(dt);   // FOG OF WAR (fogofwar.ts): who of the others the team sees this frame, now that everybody has moved — before the lists below leave the unseen out; a return on its first line while it is off
+    fireDraws(this);            // … and the open fires as the picture draws them under it (fire.ts): this frame's word on each fire's lamp, not last frame's
     const all: Character[] = [this.player.char, ...this.guards.map(g => g.char), ...civiliansShown(this).map(c => c.char)];   // (civilians last: past the renderer's eight-figure shadow-capsule budget it is they who go without, never the shift — civilians.ts)
     const statured = this.stepFxAndDynBoxes(all, dt, cam, canvas);
     this.smokeWake(all);
@@ -2015,7 +2016,7 @@ export class Game {
       const stalked = stalkGrab(this);   // (stalk.ts: the held click has walked him in to the man's back — the grab it ends in is the row's own)
       if (stalked && free) { startGrab(this, stalked); if (pl.holding?.g === stalked) pl.holding.from = [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]; }   // (the way in is read where he stands: behind him, or behind his chair)
       else if (viaClick && free) startTakedown(this, viaClick, clicked!.close, two && knife && !viaClick.civ);   // (close: the way in his row offered — close.ts, undefined with its switch off)
-      else if (act?.kind === 'guard' && verb === 'grab' && act.guard && free) startGrab(this, act.guard, act.close);
+      else if (act?.kind === 'guard' && verb === 'grab' && act.guard && free) { const keyed = stalkKeyCan(this, act.guard); startGrab(this, act.guard, act.close); if (keyed && pl.holding?.g === act.guard) { stalkKeyTook(this); pl.holding.from = [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]; } }   // (stalk.ts STALK.key: the row's key finishes a stalk — the grab is the stalk's own, the step in and all)
     }
     // A door in reach, one row per thing it can be made to do: shut → 'push it open' (Doors.use: away from you, its creak) / 'ease it open — silent' (started
     // here, run below: Doors.crack a few degrees a second until it stands open at EASE_MAX, or a step / Space / Esc stops it where it is — interact.ts); open →

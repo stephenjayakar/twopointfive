@@ -90,7 +90,7 @@ for (const name of list) {
   // line may name neither the key that grabbed nor the blade. lessonLine turns the level's words by PATTERN, so a line reworded in the level could keep
   // naming one and nothing else would say so: every line and card is read through it here. LESSON_BREAK=words leaves the two rules off: it must fail
   // on a level that teaches the grab.
-  { const was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife], up = process.env.LESSON_BREAK !== 'words'; STALK.on = STALK.only = CLOSE.on = CLOSE.noKnife = up;
+  { const was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife], key = STALK.key, up = process.env.LESSON_BREAK !== 'words'; STALK.on = STALK.only = CLOSE.on = CLOSE.noKnife = up; STALK.key = false;   // (stalk.ts `key`, the key as the grab's finish, names the key again and truly: this rule is of the held click as the whole grab)
     // (every text of a step, as the level wrote it; a card is one screen, so its title and words are read together too. The page writes every one out
     //  through lessonLine but a card's TITLE, which rails.ts card() shows as written)
     const texts: { id: string; raw: string; page: string }[] = (L.steps as any[]).flatMap(T => { const E = T.explain, out: { id: string; raw: string; page: string }[] = [];
@@ -98,7 +98,7 @@ for (const name of list) {
       if (typeof E?.title === 'string') { out.push({ id: T.id, raw: E.title, page: E.title }); if (typeof E.text === 'string') out.push({ id: T.id, raw: `${E.title}\n${E.text}`, page: `${E.title}\n${lessonLine(E.text)}` }); }
       return out; });
     const said: [string, string][] = texts.map(t => [t.id, t.page]), wrote: [string, string][] = texts.map(t => [t.id, t.raw]);
-    [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife] = was;
+    [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife] = was; STALK.key = key;
     const bad = said.filter(([, w]) => namesOld(w) || /[{}]/.test(w));   // (…and no brace is left in what the page says: a token lessonLine does not know would be shown, braces and all)
     verdict(!bad.length, `with the held click the only way to a man and no knife, no line or card names the key to grab or the knife (${said.length} read through lessonLine)`, bad.map(([id, w]) => `'${id}': ${w}`).join(' · '));
     // (the level's own words, before lessonLine: a move is named by its token and never by a key — a level that still owes the change is a note, by name)

@@ -70,11 +70,11 @@ function lessonTexts(name: string, L: any): Text[] {
 
 /** a lesson's line or card as the page writes it out, on each of the four ways the stalk and the knife can stand (game/lesson.ts lessonLine): the
  *  distinct sentences a player can be shown for one written text. The two switches are put back as they were found. */
-interface Writer { lessonLine: (s: string) => string; STALK: { on: boolean; only: boolean }; CLOSE: { on: boolean; noKnife: boolean } }
+interface Writer { lessonLine: (s: string) => string; STALK: { on: boolean; only: boolean; key: boolean }; CLOSE: { on: boolean; noKnife: boolean } }
 function writtenOut(W: Writer, text: string): string[] {
-  const { STALK, CLOSE } = W, was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife] as const, out = new Set<string>();
-  try { for (const k of [0, 1, 2, 3]) { STALK.on = STALK.only = !!(k & 1); CLOSE.on = CLOSE.noKnife = !!(k & 2); out.add(W.lessonLine(text)); } }
-  finally { [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife] = was; }
+  const { STALK, CLOSE } = W, was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife, STALK.key] as const, out = new Set<string>();
+  try { for (const k of [0, 1, 2, 3, 5, 7]) { STALK.on = STALK.only = !!(k & 1); CLOSE.on = CLOSE.noKnife = !!(k & 2); STALK.key = !!(k & 4); out.add(W.lessonLine(text)); } }
+  finally { [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife, STALK.key] = was; }
   return [...out];
 }
 /** …and a list of texts with every line and card replaced by what is written out of it (a title, a row and a list entry are shown as written) */

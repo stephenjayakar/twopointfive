@@ -43,7 +43,7 @@ export async function issueWhole(): Promise<boolean> {
     // ── the file: the one level that names your card today
     { const block = JSON.parse(text()).scenarios?.issue?.members?.['0'] ?? null;
       verdict(!!block && (block.rings === undefined || (Number.isInteger(block.rings) && block.rings >= 0 && block.rings <= K.RINGS_MAX)) && (validateLevelData(JSON.parse(text())) as string[]).length === 0 && K.kitIssueWhole({ '0': block }) === (K.ISSUE.whole && !BROKEN) && !K.kitIssueWhole({}) && !K.kitIssueWhole(null),
-        'THE FILE: the solo tutorial\'s block names your card (and, since its lines teach the swap, its own sponge rounds: `rings`); a block that names no card for you is not this rule\'s', `card ${J(block)}`); }
+        'THE FILE: the solo tutorial\'s block names your card (it named its own sponge rounds, `rings`, while its lines taught the swap: none now); a block that names no card for you is not this rule\'s', `card ${J(block)}`); }
 
     { const errs = (c0: unknown, c1?: unknown) => { const d = JSON.parse(text()); d.scenarios.issue = { members: { '0': c0, ...(c1 ? { '1': c1 } : {}) } }; return (validateLevelData(d) as string[]).filter(e => /issue/.test(e)); };
       const takes = [0, 2, K.RINGS_MAX].every(n => errs({ weapon: 'rifle', rings: n }).length === 0) && errs({ rings: 1 }).length === 0;
@@ -56,7 +56,7 @@ export async function issueWhole(): Promise<boolean> {
         const s = await hushed(() => startFromQuery(g, `?levelFile=${FILE}&quiet`)); why = s?.why ?? ''; K.kitSoloIf(g, false); for (let i = 0; i < 5; i++) W.step(1 / 60); r = held(g);
       } catch (x) { why = String((x as Error).message); } finally { K.kitIssuedPage(false); K.KIT_SOLO.on = false; }
       return { r, why }; };
-    { const off = await page(false), on = await page(true), a = off.r, b = on.r, own: number = JSON.parse(text()).scenarios?.issue?.members?.['0']?.rings ?? 0;   // (the card's own sponge rounds: the mission's owner put two on it for the line that has him swap to the grenade)
+    { const off = await page(false), on = await page(true), a = off.r, b = on.r, own: number = JSON.parse(text()).scenarios?.issue?.members?.['0']?.rings ?? 0;   // (the card's own sponge rounds: two while the mission taught the swap to the grenade, none since it carries the grenade alone)
       verdict(!off.why && !on.why && !!a && !!b && a.rings === Math.max(own, KITTREE.lend) && a.load === 'ring' && b.rings === own && b.cams === 0 && !b.wand && b.load === (own ? 'ring' : 'he40') && `${b.smoke}/${b.stun}/${b.frags}/${b.shells}` === '2/2/2/3' && `${a.smoke}/${a.stun}/${a.frags}/${a.shells}` === '2/2/2/3',
         'THE SOLO TUTORIAL ON ITS PAGE: off, the launcher comes up on the lent sponge rounds, more than its block names (the build before); on, he carries the block and nothing else: the sponge rounds it names and no more, the right button on them where it names any and on the grenades where it names none', `off ${J(a)}${off.why ? ` (${off.why})` : ''} · on ${J(b)}${on.why ? ` (${on.why})` : ''}`); }
 
