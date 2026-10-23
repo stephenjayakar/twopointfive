@@ -118,9 +118,13 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const modeUp = async () => { if (!(await read()).plan) await mode(); };
   /** THE WALK TO A MARKED SPOT: Tab puts the mode away (in it the walk keys are the view's), then the walk keys along the game's own path to the spot — which
    *  key is which way is the picture's (the camera's across and up), two keys together for a slant, as a hand does */
-  const walkTo = async (s, what) => { await seen(s, `${what}'s mark`);
-    let r = await read(); const was = r.plan; if (r.plan) { await tap('Tab'); await run(20); r = await read(); }
+  const walkTo = async (s, what) => {
+    let r = await read(); const was = r.plan; if (r.plan) { await tap('Tab'); await run(80); r = await read(); }
     if (was) check(!r.plan && !r.crouch, `step '${s.id}': Tab on the real keyboard puts plan mode away and he stands`, `mode ${r.plan} · on a knee ${r.crouch}`);
+    // (the view has come back to him: the ring he is to walk to is on the picture, or the page has pinned the step's mark to the picture's edge on that side
+    //  with the metres to it — ui/overlay.ts, the objective's mark — so the line never points at nothing)
+    { const q = await at(s.at), m = await page.evaluate(() => { const e = document.querySelector('.objmark'); return e ? { on: getComputedStyle(e).display !== 'none' && +getComputedStyle(e).opacity > 0.2, edge: e.classList.contains('edge'), x: Math.round(parseFloat(e.style.left)), y: Math.round(parseFloat(e.style.top)), text: e.textContent } : null; });
+      check(!!m && m.on && (q.vis ? !m.edge : m.edge), `step '${s.id}': with plan mode closed, ${what}'s ring is on the picture, or its mark is pinned to the picture's edge on that side`, `the ring at ${Math.round(q.x)}, ${Math.round(q.y)} of 1280 x 720 (${q.vis ? 'on the picture' : 'off it'}) · the mark ${m ? `${m.on ? 'shown' : 'NOT shown'} at ${m.x}, ${m.y}${m.edge ? ', pinned to the edge' : ''} "${m.text}"` : 'missing'}`); }
     const goal = [s.at[0], 0, s.at[2]], from = r.sam, path = await page.evaluate(([a, b]) => window.__game.col.nav.findPath(a, b, 8000) ?? [], [[from[0], 0, from[1]], goal]); path.push(goal);
     let stuck = false;
     for (let n = 0; n < path.length && !stuck; n++) { const wp = path[n], near = n === path.length - 1 ? 0.35 : 0.55; let best = 1e9, since = 0;

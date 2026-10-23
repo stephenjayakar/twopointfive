@@ -69,9 +69,9 @@ const LEVEL_BASE: Record<string, string> = {
   // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
   'tut-pair.json': '9048a2e01',
 
-  // the plan mission's yard has its ground (three walked ways of gravel, a pad under the dish and the generator, six stains, six scatters of stones), the
-  // hall's lookout is back on the word's own step (a step's `eye`), and a card stands on the step that picks all four again
-  'tut-plan.json': '6833cb33b',
+  // the plan mission gives him his feet (the frame's `allow` gains `move`: plan mode's view stays near him only where they are his) and three walk steps
+  // between its plans; the gates' view point moved inside the view's reach from the last of them. No box, door, light or prop moved
+  'tut-plan.json': '39b9c09a2',
 
   // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
   'tut-quiet.json': '87c7cebef',

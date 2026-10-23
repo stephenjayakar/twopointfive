@@ -7,6 +7,8 @@ import { CMDRING } from '../../../src/game/cmdring';
 import { DOORTOOLS } from '../../../src/game/doortools';
 
 export const query = '?roomclear=1&squad4';
+/** the frozen stand's arm of the gate: the lines name the back key (Tab closes the mode) and every plan is laid inside the view held near him */
+export const raises = { TPS_TABBACK: '1', TPS_PLANNEAR: '1' };
 export const ended = (g: any) => g.lesson.finished;
 /** `TUTPLAN_ALONE=1`: the wrong plan, played on purpose — all four on the hall's front door and the word. The steps still end (the room taken is every
  *  step's other way), and the line printed says what it cost: the men the gun put on a knee. It takes the hall on the step before the one that asks for the word */
@@ -69,9 +71,13 @@ function reached(B: Bot) {
 /** the mode put away with the back key, and the walk keys to a spot: in the mode they are the view's */
 function walkTo(B: Bot, p: number[], what: string) {
   if (P(B).up) { B.press('Tab', 3); if (P(B).up) B.fail('the back key did not put plan mode away'); }
+  // (the mode down, the view comes back to him: where the ring he is asked to walk to is then. Off the picture, the page pins the step's mark to the
+  //  picture's edge on that side with the metres to it — ui/overlay.ts, the objective's mark — and that it does is the page run's to see)
+  B.wait(1.2); const [x, y] = px(B, p), w = B.W.canvas.clientWidth, h = B.W.canvas.clientHeight, edge = Math.min(x, y, w - x, h - y);
+  if (B.g.objectivePos?.() && Math.hypot(B.g.objectivePos()[0] - p[0], B.g.objectivePos()[2] - p[2]) > 0.1) B.fail(`${what}: the step's mark is not the place the walk is to`);
   const s0 = [...B.g.player.char.pos], t0 = B.t();
   if (!B.go(p, 40, { noDoors: true, near: 0.5 })) B.fail(`he did not walk to ${what}: stopped at (${B.g.player.char.pos[0].toFixed(1)}, ${B.g.player.char.pos[2].toFixed(1)})`);
-  B.say(`  walked ${Math.hypot(p[0] - s0[0], p[2] - s0[2]).toFixed(1)} m to ${what} in ${(B.t() - t0).toFixed(1)} s`);
+  B.say(`  walked ${Math.hypot(p[0] - s0[0], p[2] - s0[2]).toFixed(1)} m to ${what} in ${(B.t() - t0).toFixed(1)} s (when he closed the mode its ring was ${edge >= 0 ? `${edge.toFixed(0)} px inside the picture` : `${(-edge).toFixed(0)} px past the picture's edge: the mark pinned to the edge points the way`})`);
 }
 /** the left button dragged from one corner of a box on the picture to the other */
 function boxPx(B: Bot, a: number[], b: number[]) {
