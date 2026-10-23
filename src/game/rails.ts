@@ -42,6 +42,7 @@ import { HANDRING } from './handring';
 import { STALK } from './stalk';   // (read inside gate() only)
 import { choosable, runningVerb } from './interact';   // (both read inside gate() only)
 import { INTERACT_KEY } from './consts';
+import { teamOfId } from './teams';   // (called inside tick() only)
 
 export const RAILS = { on: false,
   /** the sky seat: metres a second the walk keys shift the view at the default zoom, and how far from the squad it may go */
@@ -95,6 +96,21 @@ export const RAILS = { on: false,
    *  one more of the team's (as it was: with a step's lookout in a hall the squad then entered, the stack at its door threw its last can at a man nobody
    *  of the team had seen, and went in three seconds after the pair at the back) */
   eyeView: true,
+  /** A CARD LANDS A BEAT AFTER WHAT WAS ON SCREEN ("we show the modals too quickly. like it should happen a beat after something happens on screen … my squad
+   *  covered the gate but then seeing them shoot the bad guys got interrupted by the modal"): a card pauses the world the tick its step comes up, and a
+   *  step comes up the tick the deed before it is done — the middle of whatever that deed set off. So THE STEP BEFORE A CARD SETTLES: its deed done, the
+   *  lesson stays on it (lesson.ts tick asks `settles`) for `cardBeatSecs` seconds. Then the next step comes up with its card, as it always did: its
+   *  keys, its cue, its checkpoint and its mark with it, nothing ahead of the card (so all of them are that beat later than the deed: THIS MOVES TICKS).
+   *  Meanwhile the done step's line is what there is to watch — its own line where the step only waited for the level's script, else what its men are
+   *  doing (its `after` line, when that asks for no key) — or nothing at all. What he does in the beat is the done step's: the next step counts from
+   *  the tick it comes up, as every step does. The beat is the step's whether or not the page then shows the card (one read already, ?cards=0, a run
+   *  with no page). TWO WORDS ARE THE CARD'S OWN: `explain.quiet` — the deed before this card sets off a fight he
+   *  is there to watch (his squad sent at a gate, into a room), so the card also waits while that fight is on: a round of his own or his squad's, a
+   *  blast, a door kicked in or a man going down in the last `cardQuiet` seconds, never past `cardMax` seconds from the deed; and `explain.now` — a card
+   *  that must cut in, no beat at all. The fight's wait is asked for and not the rule: where he is the one shooting and the next step is his next
+   *  move in that fight, a card held for his own rounds held its keys and its cue with it. OFF here and on the frozen stand, where the next step comes
+   *  up the tick the deed is done, as it was (TPS_CARDBEAT=1 raises it there, with the frame); ON in the page (profile.ts; ?cardbeat=0) */
+  cardBeat: false, cardBeatSecs: 1.2, cardQuiet: 2, cardMax: 9,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
 export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
@@ -127,6 +143,8 @@ const LOOKOUT_ID = 199, STEP_EYE_ID = 198;
 const NOTE_SECS = 2.6;
 /** metres from the step's mark the squad's ring may be opened and still be the step's ring (its `menuLine`) */
 const MENU_M = 6;
+/** a step's `after` line as its order stands: given (1), or given and waiting on his word (2) */
+const said = (A: { line?: string; word?: string }, gave: number): string | undefined => gave === 2 ? A.word ?? A.line : A.line;
 /** the most a step's card may say (its `explain.text`): three short sentences */
 const CARD_CHARS = 260;
 function lookoutEye(id: number, e: { at: Vec3; yaw: number; fov?: number }): FogEye { return { id, pos: e.at, look: [Math.sin(e.yaw), 0, Math.cos(e.yaw)], at: e.at, fov: e.fov ?? 120, near: 0 }; }
@@ -186,6 +204,17 @@ export class Rails {
   private wayNv = -1;
   /** the step whose `after` line is up · 1 its order has gone out, 2 the word after it · the game's clock then (prompt(): the page's, nothing reads it back) */
   private gaveStep = -1; private gave = 0; private gaveT = -1e9; private gave0 = -1e9;
+  /** the game's clock at the last moment of HIS fight (RAILS.cardBeat; `fight`): a round of his own or his squad's, a blast, a door kicked in, a man going down */
+  private actT = -1e9;
+  /** …read off this tick's events and the men: asked every tick on a level that has a card marked `quiet` (tick), and again by `settles`, which the
+   *  lesson asks before the frame's own tick. His side's rounds, not the other's: a level's staged fire and a gun nest that never stops are no fight
+   *  of his to watch, and a step held for them would be held to the cap every time — what the men of the other side do to his shows as a blast or a
+   *  man going down. A living man's `diedAt` is below zero and is no moment at all */
+  private fight(): number { const g = this.g;
+    for (const e of g.events) if (e.time > this.actT && (e.kind === 'kick' || e.kind === 'bang' || (e.kind === 'prop' && e.loud)
+      || ((e.kind === 'shot' || e.kind === 'guardShot') && !!e.weapon && (e.kind === 'shot' || teamOfId(g, e.who ?? -1) === 'operative')))) this.actT = e.time;
+    for (const gd of g.guards) if (gd.diedAt >= 0 && gd.diedAt > this.actT && gd.diedAt <= g.time) this.actT = gd.diedAt;
+    return this.actT; }
   log: string[] = [];
   constructor(private g: Game) {}
 
@@ -217,6 +246,12 @@ export class Rails {
   /** THE CARD of the step that is up (its `explain`) — the step's own data and nothing else: which cards have been read is the page's to keep
    *  (ui/railcard.ts, which draws it; main.ts holds the world still under it), so nothing here is in a snapshot or a recording */
   card(): { title?: string; text: string } | null { const S = this.lesson(), T = S?.L.steps[S.i]; return BREAK || !T?.explain || this.g.lesson.over() ? null : { title: T.explain.title, text: lessonLine(T.explain.text) }; }   // (lessonLine: the card says the key the build has, as the step's line does)
+  /** DOES THE STEP WHOSE DEED IS DONE STAY UP A LITTLE LONGER (RAILS.cardBeat; lesson.ts tick asks every tick from the one its deed was done on, `doneT`):
+   *  only a step whose next one opens on a card, for the card's beat — and, for a card marked `quiet`, while a fight of his is still on, to the cap */
+  settles(L: LessonData, i: number, doneT: number): boolean {
+    const E = L.steps[i + 1]?.explain; if (BREAK || !RAILS.cardBeat || !this.live || !E || E.now) return false;
+    const t = this.g.time - doneT; return t >= 0 && (t < RAILS.cardBeatSecs || (!!E.quiet && t < RAILS.cardMax && this.g.time - this.fight() < RAILS.cardQuiet));
+  }
   /** THE ARROW the step's mark is drawn as (its `toward`): where it points — null: the ring */
   arrow(): Vec3 | null { const S = this.lesson(), T = S?.L.steps[S.i]; return BREAK || !T?.at || !T.toward || this.g.lesson.over() ? null : T.toward; }
 
@@ -227,7 +262,7 @@ export class Rails {
   /** the step that is up teaches the hold (the squad panel's row for the tap is not offered: orders.ts) */
   teachesHold(): boolean { const S = this.lesson(); return !BREAK && !!S?.L.steps[S.i]?.noTap; }
   /** a run begun, or a checkpoint put back: what the frame keeps for the page and for one step is as at a start */
-  private clean() { this.tapT = -1e9; this.wayNv = -1; this.stepLook = null; this.gaveStep = -1; this.gave = 0; this.gaveT = this.gave0 = -1e9; }
+  private clean() { this.tapT = -1e9; this.wayNv = -1; this.stepLook = null; this.gaveStep = -1; this.gave = 0; this.gaveT = this.gave0 = -1e9; this.actT = -1e9; }
   /** an order went out (the tick's own read of the order book): on a step with an `after` line, what the men are doing now is the line for a while */
   private noteGiven(o: string) {
     const S = this.lesson(), A = S?.L.steps[S.i]?.after; if (!S || !A) return;
@@ -386,6 +421,8 @@ export class Rails {
       this.startProgram('checkpoint'); this.answered = -1; this.answer(S, true); }
     if (this.skyOn && !this.sky.parked) this.park(S.L.rails!);
     if (this.answered !== S.i) this.answer(S, false);
+    // (RAILS.cardBeat · the last moment of HIS fight is kept up to date wherever a card ahead waits for one to go quiet: events are kept half a second)
+    if (RAILS.cardBeat && S.L.steps.some((T, k) => k > S.i && T.explain?.quiet)) this.fight();
     // every order the player gives is told to the level's program (a beat waits on it: c.on('signal', 'order:move'))
     { const L = g.orders?.log; if (L) { if (L.length < this.ordersSeen) this.ordersSeen = L.length; for (; this.ordersSeen < L.length; this.ordersSeen++) { const o = L[this.ordersSeen].order; if (!(this.skyOn && o === 'fallIn')) { this.moved = true; this.noteGiven(o); g.director?.signal(`order:${o}`); } } } }
     // (…and while a man is still on his way under it, the step's `after` line stays: its seconds count from the last of them standing where he was sent)
@@ -434,10 +471,13 @@ export class Rails {
     // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it — on its first page `menuLine`, on a page under it `pageLine`)
     const T = S.L.steps[i], M = S.i < of ? this.g.orders?.menu : null, on = !!M && (!T.at || Math.hypot(M.target.at[0] - T.at[0], M.target.at[2] - T.at[2]) < MENU_M);
     const ring = on ? (M!.page === null ? T.menuLine : T.pageLine ?? T.menuLine) : undefined;
+    // (RAILS.cardBeat · the step's deed is done and it settles before the next step's card: what its men are doing, or nothing — never the ask again,
+    //  whatever is open, and never a line that asks for a key: a step may be done by more than the press its `after` line goes on to ask for)
+    if (S.i < of && this.g.lesson.settling) { const w = T.done?.is === 'cue' ? stepLine(T) : T.after && this.gaveStep === S.i && this.gave ? lessonLine(said(T.after, this.gave) ?? '') : ''; return { line: /\[[^\]]+\]/.test(w) ? '' : w, n: i + 1, of, watch: true }; }
     const d = this.g.time - this.tapT, note = S.i < of && T.noTap && !M && d >= 0 && d < NOTE_SECS ? lessonLine(T.noTap) : undefined;
     // (the order the step asks for has gone out: the line is what the men are doing — never the ask again while they do it; `afterSecs` on, the step asks again)
     const since = this.g.time - this.gaveT, A = S.i < of && !BREAK && this.gaveStep === S.i && this.gave && RAILS.afterSecs > 0 && since >= 0 && since < RAILS.afterSecs && this.g.time - this.gave0 < RAILS.afterMax ? T.after : undefined;
-    const aft = A ? (this.gave === 2 ? A.word ?? A.line : A.line) : undefined;
+    const aft = A ? said(A, this.gave) : undefined;
     // (a step done in plan mode, and the mode is down — a checkpoint put back, the mode put away by hand: the line is what puts it up again, its `planLine`)
     const plan = S.i < of && T.planLine && !this.g.orders?.plan.up ? T.planLine : undefined;
     const line = ring ? lessonLine(ring) : plan ? lessonLine(plan) : aft ? lessonLine(aft) : stepLine(T);

@@ -270,7 +270,7 @@ export function build() {
       // (no ring on the nest while the line says shoot: a ring is where to GO. The gunner is in the picture through the fog, and his rounds say where he is)
       { id: 'gun', line: 'There\'s a gunner ahead. Shoot back to make him duck', explain: CARDS.gun, done: or({ is: 'did', what: 'event:shot', n: 3 }, taken('nest')), cue: 'gun' },
       { id: 'blocks', line: 'While he\'s down, run to the blocks', done: or(near(BLOCKS, 1.3), taken('nest')), at: BLOCKS, cue: 'ducks' },
-      { id: 'frag', line: 'Press [5], then left-click to throw a frag over the sandbags', explain: CARDS.frag, done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'], cue: 'atblocks' },
+      { id: 'frag', line: 'Press [5], then left-click to throw a frag over the sandbags', explain: { ...CARDS.frag, now: true }, done: or({ is: 'threw', kind: 'frag' }, taken('nest')), at: [32.0, 1, 13.8], allow: ['slot:frag'], cue: 'atblocks' },   // (now: the script keeps the gunner down from this step's cue, and a cue comes with its card — no beat here, rails.ts RAILS.cardBeat)
       { id: 'nest', line: 'Take the gun nest', done: taken('nest'), at: [32.0, 1, 13.8], cue: 'fragged' },
       // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A LOCK IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
       //     leaf is kicked in, and it is the way in
@@ -283,7 +283,8 @@ export function build() {
       // 5 · MORE COME, AND NOT ALL BY ONE WAY: one man at the road gate holds your eyes while two walk round to the back gate
       { id: 'bags', line: 'More are coming. Get behind the sandbags', done: or(near(BAGS, 1.6), taken('road')), at: BAGS, checkpoint: 'the bags' },
       { id: 'front', line: 'Hold the road gate', done: or({ is: 'cue', name: 'flank' }, taken('road')), at: [35.0, 1, 14.0], cue: 'picket' },
-      { id: 'back', line: 'They\'re behind you! [X] on the alley, then press [2]', explain: CARDS.back, noTap: 'Keep [B] held down', done: or(gave('cover'), taken('road')), at: MOUTH },
+      { id: 'back', line: 'They\'re behind you! [X] on the alley, then press [2]', explain: { ...CARDS.back, now: true },   // (now: this card's news is the fight that is on — the step before it does not settle first, rails.ts RAILS.cardBeat)
+        noTap: 'Keep [B] held down', done: or(gave('cover'), taken('road')), at: MOUTH },
       { id: 'hold', line: 'Finish off the rest of them', done: taken('road'), at: [35.0, 1, 14.0], cue: 'covered' },
     ],
   } as LessonData;
