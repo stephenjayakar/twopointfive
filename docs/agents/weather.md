@@ -922,9 +922,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   **WHOSE** (the step after the fire's host book, same pattern): the run digest could not tell, but the STATE could — `snowBreath.states` kept, per
   man, whether this breath was steam and which source rode his mouth, and its counts and its `why` followed the solver's word, the view's focus and
   the particle pool. A snapshot or a state hash is the game's alone, and those three are the host's. Now the game's table keeps what the game decides
-  (the rhythm, who shows, breaths begun: `BreathCount`) and the rest is `engine.breathShown` (`snowBreath.ts BreathShown`, declared in
+  (the rhythm, who shows, breaths begun: `BreathCount`) and the rest is `engine.hostBooks.breath` (`snowBreath.ts BreathShown`, a member of the one bag of host books declared in
   `host/api.ts`): how the breath is shown this frame, per man the breath that was asked and its live source, the sources and puff records filed.
-  THE BOOK IS DROPPED when a save is put back (`host/putback.ts`), by `seedBreath`, with the breath switched off or off a snow level, and by itself
+  THE BOOK IS DROPPED when a save is put back (with the whole bag: `host/putback.ts`'s one line), by `seedBreath`, with the breath switched off or off a snow level, and by itself
   where the game's frame count is not the one after the book's last (a snapshot put back by a road that does not tell the host: the harness's). A
   RESTART or a file's load keeps the frame count and builds the men anew under their old ids, so a row is bound to the Character it was written for
   (`who`): a fresh man starts a fresh row (found in review: without it a restart a moment after a man's first breath took his next breath 1 for

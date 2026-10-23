@@ -228,7 +228,7 @@ export async function breathSteamCheck(): Promise<boolean> {
           for (let i = 0; i < 900 && !sv.ems.length; i++) { W1.step(1); sv.tick(); } for (let i = 0; i < 20; i++) { W1.step(1); sv.tick(); }
           const old = W1.g.player.char; await quiet(() => W1.g.restartEncounter()); again.fresh = W1.g.player.char !== old && W1.g.player.char.id === old.id;
           W1.g.aiEnabled = false; (W1.g.engine as any).viewFocus = cam(); const n0 = sv.ems.length, b0 = breathStats(W1.g).breaths;
-          const strays = (): number => { const live = new Set([W1.g.player.char, ...W1.g.guards.map((x: any) => x.char)]); return [...((W1.g.engine as any).breathShown?.men.values() ?? [])].filter((h: any) => !live.has(h.who)).length; };
+          const strays = (): number => { const live = new Set([W1.g.player.char, ...W1.g.guards.map((x: any) => x.char)]); return [...((W1.g.engine as any).hostBooks?.breath?.men.values() ?? [])].filter((h: any) => !live.has(h.who)).length; };
           W1.step(1); sv.tick(); again.held = strays();
           for (let i = 1; i < 600; i++) { W1.step(1); sv.tick(); } again.gone = strays(); again.filed = sv.ems.length - n0; again.breaths = breathStats(W1.g).breaths - b0;
         } finally { W1.g.smoke = was; } }
