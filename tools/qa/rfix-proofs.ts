@@ -29,7 +29,7 @@ async function boot(c: Cdp, query: string) {
 async function r101() {
   const c = await Cdp.launch({ port });
   try {
-    await boot(c, 'quality=high');
+    await boot(c, 'quality=high&onegrid=0');   // (ONE CACHE GRID off: high ↔ low must cross probe grids for this proof to swap a parked one in — with it on no preset hop does)
     // Sam where the bounce is a real share of his meter (the lobby, lit stone), a fixed probe point beside him; guards' torches out so nothing moving lights him
     const trace = await c.eval(`(async () => {
       seed(7); calm({ look: [9.0, 0, 17.0], yaw: 0.6, pitch: -1.0, dist: 9 }, { pos: [9.0, 0, 17.0], yaw: 0 }); await step(40);
