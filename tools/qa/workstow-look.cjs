@@ -24,12 +24,14 @@ const DRAW = async (n) => {
   c2.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(fr.data.buffer), fr.w, fr.h), 0, 0);
   return { w: fr.w, h: fr.h, url: c2.toDataURL('image/png') };
 };
-// the page's own loop for `secs`, undrawn; a Space tap first when asked
-const PLAY = ({ secs, tap }) => {
+// the page's own loop for `secs`, undrawn; a Space tap first when asked; the cursor held on a world point when given
+const PLAY = ({ secs, tap, cursor }) => {
   const e = window.__engine, real = e.render; e.render = () => {};
+  const aim = () => { if (!cursor) return; const cv = document.querySelector('#view'), [sx, sy] = window.__cam.project(cursor, cv.clientWidth, cv.clientHeight); window.__mouse(sx, sy); };
   try {
+    aim();
     if (tap) { window.__input.pressed.add('Space'); window.__runFrames(1, 1 / 60, ['Space']); window.__runFrames(1, 1 / 60); }
-    for (let i = 0, n = Math.max(0, Math.round(secs * 60)); i < n; i++) window.__runFrames(1, 1 / 60);
+    for (let i = 0, n = Math.max(0, Math.round(secs * 60)); i < n; i++) { aim(); window.__runFrames(1, 1 / 60); }
   } finally { e.render = real; }
   const g = window.__game, pl = g.player, wi = pl.char.anim.workInfo(), m = window.__wsLead;
   return { t: +g.time.toFixed(2), you: pl.pistolUp ? 'pistol' : pl.rifleUp ? 'rifle' : pl.holstered ? 'nothing' : String(pl.slot), work: wi.pose ? `${wi.pose.kind} w ${wi.w.toFixed(2)} two ${wi.two}` : null, charging: !!pl.charging, put: pl.workStow ? JSON.stringify(pl.workStow) : null,
@@ -49,7 +51,7 @@ const PLAY = ({ secs, tap }) => {
   log('ready', JSON.stringify(await page.evaluate(() => ({ workstow: window.__knobs?.registry?.().WORKSTOW?.on, handwork: window.__knobs?.registry?.().HANDWORK?.on, kitanim: window.__knobs?.registry?.().KITANIM?.on }))));
   await page.evaluate(() => { window.__menu.close(); window.__smoke.params.enabled = false; const g = window.__game; g.godMode = true; });
   const still = async (name) => { const cap = await page.evaluate(DRAW, 2); if (cap.url) fs.writeFileSync(path.join(outDir, name + '.png'), Buffer.from(cap.url.split(',')[1], 'base64')); log('still', name, cap.err || ''); };
-  const play = async (secs, tap) => { const r = await page.evaluate(PLAY, { secs, tap }); log('  play', secs, JSON.stringify(r)); return r; };
+  const play = async (secs, tap, cursor) => { const r = await page.evaluate(PLAY, { secs, tap, cursor }); log('  play', secs, JSON.stringify(r)); return r; };
   // the camera low and close on a spot at hand height, off to one side of the line out of the thing's face (n: toward the man), from the first side and
   // distance with a clear line from the lens to the spot
   const pin = (p, n, turn = 1.3, dist = 1.9, pitch = 0.32) => page.evaluate(({ p, n, turn, dist, pitch }) => { const col = window.__game.col, look = [p[0] + n[0] * 0.3, p[1] - 0.05, p[2] + n[2] * 0.3], y0 = Math.atan2(n[0], n[2]); let pick = [turn, dist];
@@ -63,7 +65,7 @@ const PLAY = ({ secs, tap }) => {
     window.__lamp = L.flash(at, [1, 0.95, 0.85], 10, 7, 600, 0); window.__lamp.radius = 0.18; return at; }, { p, n, turn });
   // the shut, latched, wooden doors by how near Sam's start they are: for each, the lock at hand height and the face he came from
   const doors = await page.evaluate(() => { const g = window.__game, home = [...g.player.char.pos], out = [];
-    for (const d of g.doors.list) { if (d.off || !d.isClosed() || !d.latched || d.def.steel) continue; const u = d.dir(), [hx, hz] = d.def.hinge, w = d.def.width, mid = [hx + u[0] * w * 0.5, 0, hz + u[1] * w * 0.5];
+    for (const d of g.doors.list) { if (d.off || !d.isClosed() || !d.latched || d.locked || d.def.steel) continue; const u = d.dir(), [hx, hz] = d.def.hinge, w = d.def.width, mid = [hx + u[0] * w * 0.5, 0, hz + u[1] * w * 0.5];
       const sides = [1, -1].map(s => ({ n: [u[1] * s, 0, -u[0] * s], at: [mid[0] + u[1] * s * 0.75, 0, mid[2] - u[0] * s * 0.75] })).filter(s => !g.col.nav.isBlocked(s.at[0], s.at[2])).sort((a, b) => Math.hypot(a.at[0] - home[0], a.at[2] - home[2]) - Math.hypot(b.at[0] - home[0], b.at[2] - home[2]));
       if (!sides.length) continue; const s = sides[0];
       out.push({ name: d.def.name, dist: Math.hypot(mid[0] - home[0], mid[2] - home[2]), at: s.at, n: s.n, lock: [hx + u[0] * (w - 0.22), 1.05, hz + u[1] * (w - 0.22)], mid: [mid[0], 1.05, mid[2]] }); }
@@ -73,16 +75,17 @@ const PLAY = ({ secs, tap }) => {
   if (ONLY.includes('you') && doors[0]) {   // ---- a door charge by your own hands
     const d = doors[0];
     await page.evaluate(({ at }) => { const g = window.__game, pl = g.player; g.aiEnabled = false; g.teleportPlayer(at); pl.slot = 'rifle'; pl.holstered = false; pl.equipT = 0; }, d);
-    await lamp(d.lock, d.n, await pin(d.lock, d.n)); await play(1.2); await still('you-0-gun-in-hands');
+    await lamp(d.lock, d.n, await pin(d.lock, d.n)); await play(1.2, false, d.lock); await still('you-0-gun-in-hands');
     const ok = await page.evaluate(() => window.__game.selectVerb('door', 'charge')); log('row', ok);
-    await play(1.9, true); await still('you-1-both-hands-on-it');
+    await play(1.9, true, d.lock); await still('you-1-both-hands-on-it');
     for (let i = 0; i < 80; i++) { const r = await page.evaluate(() => !!window.__game.player.charging); if (!r) break; await play(0.1); }
-    await play(0.9); await still('you-2-gun-back');
+    await play(0.9, false, d.lock); await still('you-2-gun-back');
     await page.evaluate(() => { window.__game.aiEnabled = true; });
   }
-  if (ONLY.includes('mate') && doors[1]) {   // ---- a teammate sent to charge the next door
-    const d = doors[1];
-    const why = await page.evaluate(({ mid, at, n }) => { const g = window.__game, O = window.__orders; g.teleportPlayer([at[0] + n[0] * 3, 0, at[2] + n[2] * 3]); return O.give('charge', O.targetAt([mid[0], 0, mid[2]])) ?? 'taken'; }, d); log('the order', why);
+  if (ONLY.includes('mate') && doors.length > 1) {   // ---- a teammate sent to charge the next door
+    let d = null, why = '';   // (the first other door the squad takes the order on)
+    for (const x of doors.slice(1)) { why = await page.evaluate(({ mid, at, n }) => { const g = window.__game, O = window.__orders; g.teleportPlayer([at[0] + n[0] * 3, 0, at[2] + n[2] * 3]); return O.give('charge', O.targetAt([mid[0], 0, mid[2]])) ?? 'taken'; }, x); log('the order on', x.name, why); if (why === 'taken') { d = x; break; } }
+    if (!d) { log('no door took the order'); await browser.close(); process.exit(1); }
     let on = false; for (let i = 0; i < 400 && !on; i++) { on = await page.evaluate(() => { const D = window.__doortools, op = D.ops[0]; window.__wsLead = op?.lead ?? null; return !!op && op.phase === 'place' && !isNaN(op.setT); }); if (!on) await play(0.15); }
     log('on the job', on);
     if (on) { await lamp(d.lock, d.n, await pin(d.lock, d.n)); await play(1.1); await still('mate-1-both-hands-on-it');
