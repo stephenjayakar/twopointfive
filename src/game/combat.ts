@@ -403,7 +403,7 @@ export function hitPlayer(g: Game, fromDir: Vec3) {
     pl.pistol.cancelReload(); pl.rifle.cancelReload(); pl.char.anim.cancelReload(); pl.throwHeld = false; pl.pendingThrow = null;
     if (inHand) { dropFromHand(g, pl.char, inHand.def.drop, pl.char.gunDir, fromDir, inHand.def.suppressed); if (inHand === pl.rifle) pl.rifleGone = true; }   // what was in the hand leaves it — the Five-seveN can and all, or the whole FN2000 (its own item body: 'rifle' fill 1); a holstered pistol stays on the thigh, a slung rifle on his back
     pl.char.ragdollize(g.col, fromDir, false);            // thrown along the round, like the guards; the thud plays when the trunk lands (updatePlayer)
-    { const ck = g.saves?.newest(true, g.mission.stats.elapsed); g.msg(ck && g.saves.isThisRun(ck) ? "you're down. press Enter to go back to the last checkpoint, or Shift+Enter to restart the mission" : "you're down. press Enter to restart"); }   // (game/savestate.ts: the down card's default is that checkpoint too)
+    { const ck = g.saves?.newest(true, g.mission.stats.elapsed); g.msg(ck && g.saves.isThisRun(ck) ? "you're down. press Enter to go back to the last checkpoint, or Shift+Enter to restart the mission" : "you're down. press Enter to restart the mission"); }   // (game/savestate.ts: the down card's default is that checkpoint too)
   } else g.msg(pl.hitsLeft === 1 ? 'hit — one more and you are down' : 'you were hit');
 }
 

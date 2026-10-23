@@ -282,7 +282,7 @@ export const roomclearEnds = guarded(async () => {
         for (let i = 0; i < 4 && !g.player.down; i++) hitPlayer(g, [1, 0, 0]);
         R.step(2);
         const kill = on ? `${h.callsign} down` : 'guard down — dead', cut = `${on ? op.callsign : 'guard'}: man down.`;
-        const end = on ? /^you're down\. press Enter to restart$/ : /^team wiped — player down\. press Enter to restart$/, obj = on ? /^player down — press enter to restart/ : /^team wiped — press enter to restart/;
+        const end = on ? /^the mission is over\. press Enter to restart$/ : /^team wiped — player down\. press Enter to restart$/, obj = on ? /^player down — press enter to restart/ : /^team wiped — press enter to restart/;
         verdict(mine.includes(kill) && R.said.includes(cut) && R.heard(end) === 1 && obj.test(g.objectiveText()) && up(NB.ops) === 1 && RC.end === 'wiped' && RC.endWhy === 'player down',
           `words ${on ? 'on' : 'off'}: the player's kill, a teammate's cut-off line and Sam down with a man still up read ${on ? 'by name, and as what happened' : 'as they did'}`,
           `want '${kill}' · '${cut}' · ${end} · row ${obj} — said: ${R.said.slice(1).join(' | ')} · row '${g.objectiveText()}' · pair ${up(NB.ops)}/2`);
