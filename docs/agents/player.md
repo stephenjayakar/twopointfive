@@ -1335,8 +1335,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
      of a turn and a pill over the middle is wider, so its digit lay in the next wedge's fifth and a key let go there gave nothing. No other way
      out lights it: a row is still chosen, never fallen into. THE GAME READS NO WORDS OF A RING: it reads which digits have a wedge (`ringKeys`,
      orders.ts and interact.ts, a bit each) and, for a pill, a PLACE as long as the longest pill (`pillBox`, `LONE.max` 20 letters) whatever the
-     row says, so a recorded cursor lights the same row after a label is reworded. The pill drawn is always inside that place (a longer label is
-     drawn tighter); a cursor just past a short pill's end is still on its row. WHERE ONE ROW COMES UP (read
+     row says, so a recorded cursor lights the same row after a label is reworded. The pill drawn is always inside that place (a longer label takes two lines under `loneWrap`, the bullet
+     below; without it, it is drawn tighter); a cursor just past a short pill's end is still on its row. WHERE ONE ROW COMES UP (read
      headless on the page's stand, each tutorial mission at its first and last step): on tut-sky EVERY squad ring ('1 stack up' on a door, '1 go'
      elsewhere: its frame names six orders); on tut-pair his ring at a door ('1 push it open', '1 keypad'); on tut-solo his ring at the gate;
      anywhere, his ring on open floor (the whistle, wedge 5). NOT DONE, the squad ring's own rows: a ring whose only order is also the quick
@@ -1377,6 +1377,31 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   MEASURED: the check's own lines on both stands (die 1, the office; the pill's shape for 40 pills). NOT MEASURED: no fight or stealth tally was
   run with these on. NOT DRIVEN headless in a mission: the squad ring with one row (its pointing is the same function, asked directly). Never
   seen on a GPU; the before and after pictures of the wedges were drawn by the page's own drawing code and stylesheet over a flat backdrop.
+- **A lone pill's long label takes two lines** (2026-10-23; `HANDRING.loneWrap`, `?lonewrap=0`, off with `?lonepill=0` and `?handring=0`; off in
+  the module and on the frozen stand, raised there by `TPS_HANDRING=1` with the rest of the ring (no new stand word); a `FROZEN_HOLDS` row; off for
+  a recording from before the key). The maintainer, 10-23, with a shot of a wall's second ring in plan mode, one row, 'breach with a wall charge ·
+  3 left': "weird after hitting 5". A pill is drawn for at most `LONE.max` 20 letters and a longer label was set to that width (`textLength`), so
+  34 letters stood in the room of 20 and ran into each other. THE RULE (`game/ringlone.ts loneLines`, `lonePill`; `ui/cmdring.ts RingDraw.place`
+  writes the lines as two `tspan`s, once): a label longer than 20 letters takes two lines. It breaks at its ' · ' where both halves then fit in 20
+  ('BANG AND CLEAR' / '3 LEFT', 'STAND OFF' / 'IN BEHIND THE CHARGE'; the dot is dropped, the line break says it), else at the space that leaves
+  its longer line shortest ('BREACH WITH A WALL' / 'CHARGE · 3 LEFT'), never leaving the '▸' by itself. The pill is two lines tall (34
+  px: `LONE.lead` 12 px taller, its lines that far apart) and grows AWAY from the middle, so its edge by the middle's ring is where a one-line pill's is. Each line is
+  set to its own counted width: a letter is squeezed only where the best break still leaves a line over 20 (no space at all, over 40 letters, or
+  words that will not split evenly: 'support hand grip' / 'point (arrows only) ▸' is 17 and 21). A label of 20 letters or fewer is the pill as it
+  was, to the last figure. WHAT THE GAME READS: the pill's place (`pillBox`) is two lines tall under the rule whatever the row says, so the pill
+  drawn is still always inside it and a recorded cursor never turns on a label's wording. So a SHORT pill's place gains a 12 px band too, away
+  from the middle, where the cursor is on the row (less than the room the place already keeps past a short pill's end). CHECK: `handring`, its line
+  'a lone pill's label longer than the pill…', both stands: 19 labels on five wedges (the lines, the door tools' own long rows by name, every word
+  kept, full letter width wherever a break can give it, inside the place, clear of the middle, inside the ring's box), every short label against
+  the pill of before the rule written out again (and every label against it with the rule off), the cursor on a tall pill's far line, the page's three words, an old recording, the stand's word;
+  `HANDRING_BREAK=loneWrap` fails that line alone, `HANDRING_BREAK=1` and `=lone` fail it too. SEEN: the page's own drawing code and stylesheet in
+  Chromium, before and after, nine cases, and on the real page (tut-sky, the software adapter) with the row of his shot handed to the page's ring:
+  each line's measured width against the width it is set to (1.71 times too wide before, 1.00 after), both lines inside the pill. Never seen on a
+  GPU, though nothing here is the renderer's: it is SVG text over the picture. NOT DONE: nobody drove to that wall's row by hand (the step of the
+  mission in his shot was not found), and nobody has played it. NOT MEASURED: no tally moves (the frozen stand holds it off; on the page it changes
+  what a cursor in that 12 px band lights and no more), so no seeds were run. KNOWN: Firefox does not set a `tspan`'s `textLength`, so there a
+  line still over 20 letters runs long (the page asks for Chrome, Edge or Safari); the squad ring's rows are still worded long enough to need two
+  lines, and shorter labels are Commanding's and the writing pass's.
 - **The corner panel is three things: the objective, his key's line, the squad key's line** (2026-10-23; `HANDRING.corner`, `?corner=0`, off under
   `?handring=0` too; off in the module and on the frozen stand, raised there by `TPS_HANDRING=1`, a `FROZEN_HOLDS` row, off for a recording from
   before its key; the maintainer's five lines are in handring.ts). The panel at the top left was a heading and a row for his key ('DOOR · OPEN' over
