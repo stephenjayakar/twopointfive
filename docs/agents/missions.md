@@ -220,10 +220,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   short sentences on that card, against the three a card is meant to be: his note asks for five things.
   THE MOON STANDS BEHIND THE SHOP (10-23, level data; the level's row in `lived-check`'s `LEVEL_BASE` moved to it). The line 'Shoot out the light so
   you can hide in the dark' stood him against the shop's front in the moon: with the lamp out the runner's meter, the moon and the night sky's own
-  light on it (`lesson-run --sky`), read 31 beside the door, over the scripted player's own bar of 25, and the page read 42. The moon's direction is
+  light on it (`lesson-run --sky`), read 31 beside the door, over the scripted player's own bar of 25, and the page read 28 (42 on a build before the one light-cache grid at every preset). The moon's direction is
   turned about the road's line (`[-0.62, -0.5, -0.6]`, from over the back lots), so the shop's front, the door he blows and the wall he waits
   against, is in the shop's own shadow and the lamp over the door is the one light on him there. Measured: the runner 10 (the bar held with no
-  `mode.glow: false` in the script); the page on the software adapter, lamp out, 24 as he arrives and 13 settled. Every shadow in the yard falls the
+  `mode.glow: false` in the script); the page on the software adapter, lamp out, 24 as he arrives and 14 settled, against 28 settled with the moon turned back on the same page. Every shadow in the yard falls the
   other way; no line, mark or fight moved, and `tut-solo-check` is green on both stands, two seeds, all eight ways. The menu picture is its own
   light and did not change. Never seen on a GPU: how the yard reads with the shadows turned is by eye there.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
