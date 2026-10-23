@@ -20,6 +20,7 @@ import { simRandom } from '../math/dice';   // the simulation's die (math/dice.t
 import { PICTURE, PICTURE_STATS, ideasOf, exposedAt } from './picture';
 import { wallMenLive, thinLine, topEnergy, WALLPEN_STATS } from './wallpen';
 import { flinchRound, flinchScale, flinchInside } from './flinch';
+import { runnerMute } from './runner';   // (asked inside a tick only: false with its switch off)
 
 /** Every number of the model and of the guards' reactions, in one place (panel-tunable; the QA probes read them rather than copy them). */
 export const SUPPRESSION = {
@@ -161,6 +162,7 @@ const SUP_LINES: Record<SupMoment, Partial<Record<string, string[]>>> = {
 export function watchYourFire(g: Game, gd: Guard): boolean { return supBark(g, gd, 'friendly'); }
 function supBark(g: Game, gd: Guard, moment: SupMoment, force = false): boolean {
   const S = SUPPRESSION, sup = gd.sup, now = g.time;
+  if (runnerMute(gd)) return false;   // (runner.ts nobody: a man who has given up says nothing about the fire)
   const held = (!force && (now - sup.barkT < S.barkSecs || now - (floorBarkT.get(g) ?? -100) < S.floorBarkSecs)) || (!!gd.bubble?.radio && now - gd.bubble.t < 2.5);
   if (held) { if (moment !== 'recover' && RANK[moment] > (sup.pending ? RANK[sup.pending] : -1)) { sup.pending = moment; sup.pendingT = now; } return false; }   // (a worse moment replaces a milder one waiting — its two seconds run from the moment itself, not from the retries; 'that all you've got' is now or never)
   const M = SUP_LINES[moment]; let pool = [...(M[temperamentOf(gd)] ?? []), ...(M['*'] ?? [])];
@@ -202,8 +204,8 @@ export function updateSuppression(g: Game, dt: number) {
       }
       if (band === 2) {   // over the pinned line: the line (past his own clock if his flinch line was a couple of seconds back) — and a second man pinned within pairSecs of another makes it the floor's
         sup.pinnedAt = g.time; sup.wasPinned = true;
-        const other = g.guards.find(o => o !== gd && o.state !== 'dead' && g.time - o.sup.pinnedAt < S.pairSecs && (!WORDS.on || o.team === gd.team));   // ('us' is two men of ONE side: words.ts)
-        if (other && g.time - (floorLineT.get(g) ?? -100) > S.floorLineSecs) { floorLineT.set(g, g.time); sup.barkT = g.time; sup.barkWas = 'pinned'; floorBarkT.set(g, g.time); g.say(gd, WORDS.on && gd.team !== 'guard' ? 'they\'ve got us pinned!' : 'he\'s got us pinned!', true); }
+        const other = g.guards.find(o => o !== gd && o.state !== 'dead' && g.time - o.sup.pinnedAt < S.pairSecs && (!WORDS.on || o.team === gd.team) && !runnerMute(o));   // ('us' is two men of ONE side: words.ts — and never a man who has given up: runner.ts nobody)
+        if (other && !runnerMute(gd) && g.time - (floorLineT.get(g) ?? -100) > S.floorLineSecs) { floorLineT.set(g, g.time); sup.barkT = g.time; sup.barkWas = 'pinned'; floorBarkT.set(g, g.time); g.say(gd, WORDS.on && gd.team !== 'guard' ? 'they\'ve got us pinned!' : 'he\'s got us pinned!', true); }
         else supBark(g, gd, friendly ? 'friendly' : 'pinned', sup.barkWas === 'flinch' && g.time - sup.barkT > 1.5);   // (over his own clock only to top a 'taking fire' of a moment ago with the worse news — never pinned on pinned)
         SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} PINNED at ${sup.v.toFixed(2)}`);
       }
