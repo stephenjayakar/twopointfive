@@ -110,6 +110,7 @@ import { STARTLE } from './startle';
 import { ROWSET } from './rowset';
 import { SMOKEBREAK } from './smokebreak';
 import { SHOWWHY } from './showwhy';
+import { FIRE } from './fire';
 import { FLINCH } from './flinch';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
@@ -451,6 +452,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.darkRead === undefined) MORALE.darkRead = 'place';   // (…and one from before the dark had a second reading: where he stands, as it was read)
   if (!k.tables.SMOKEBREAK) SMOKEBREAK.on = false;   // (a file from before a man told to smoke lit anything: he stood there with his hands as they were)
   if (!k.tables.SHOWWHY) SHOWWHY.on = false;   // (a file from before a teammate showed why he was not acting: nobody waved, squeezed, raised a fist or said what held him)
+  if (!k.tables.FIRE) FIRE.on = false;   // (a file from before a brazier burned: its lamp was steady, and its meters read a steady light)
   if (!k.tables.ROWSET) ROWSET.on = false;   // (a file from before a row had an hour and weather of its own: it was started at its query's)
   if (!k.tables.STARTLE) STARTLE.on = false;   // (a file from before a calm man started at the first sight of you: its men went for their guns the frame they knew, and none ran from it)
   if (!k.tables.FLINCH) FLINCH.on = false;   // (a file from before a man ducked at every close round: nobody ducked but on the suppression model's edge, and no green man broke under fire)

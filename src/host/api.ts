@@ -20,6 +20,7 @@ import type { RigFit } from '../render/sdfrig';
 import type { Decals } from '../render/decals';
 import type { ProbeLike } from '../game/sensors';
 import type { Vec3 } from '../math/vec';
+import type { FireRecord } from '../render/passes';
 
 export interface HostApi {
   // ---- per frame
@@ -47,6 +48,8 @@ export interface HostApi {
   readonly effectiveScale: number;
   /** the view's look-at point as of the last render (the smoke solver spends its pool by distance from it; wind.ts reads it) */
   viewFocus?: Vec3;
+  /** the open fires to draw this frame (game/fire.ts writes the list; the engine hands it to the composite — render/passes.ts setFires). Absent on a stand-in */
+  fires?: FireRecord[];
   /** the light rig swapped wholesale (day ↔ night): the radiance cache re-primes (game/lighting.ts calls it `?.()`) */
   invalidateWorldCache?(): void;
   /** the level was put back to its start under the picture (game/cleanrestart.ts): every temporal history and the radiance cache start from nothing, as on a boot's

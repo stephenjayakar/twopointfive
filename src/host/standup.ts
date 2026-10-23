@@ -101,6 +101,7 @@ import { STARTLE } from '../game/startle';
 import { ROWSET } from '../game/rowset';
 import { SMOKEBREAK } from '../game/smokebreak';
 import { SHOWWHY } from '../game/showwhy';
+import { FIRE } from '../game/fire';
 import { FLINCH } from '../game/flinch';
 import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
@@ -344,6 +345,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_LOUDCARD')) VERDICT.loudCard = String((globalThis as any).process?.env?.TPS_LOUDCARD ?? '') === '1';   // a mission that leans loud is not graded as a sneak (src/game/verdict.ts loudRow): off, so every card the stealth game stands on carries its rating, as every frozen probe reads it; TPS_LOUDCARD=1 raises it
     if (pinned('TPS_SMOKEBREAK')) SMOKEBREAK.on = String((globalThis as any).process?.env?.TPS_SMOKEBREAK ?? '') === '1';   // a man told to have a smoke (src/game/smokebreak.ts): off, so he stands where the script sent him with his hands as they were
     if (pinned('TPS_SHOWWHY')) SHOWWHY.on = String((globalThis as any).process?.env?.TPS_SHOWWHY ?? '') === '1';   // a teammate shows why he is not acting (src/game/showwhy.ts): off, so no man of the squad signals or says anything of what holds him, as every frozen run had it
+    if (pinned('TPS_FIRE')) FIRE.on = String((globalThis as any).process?.env?.TPS_FIRE ?? '') === '1';   // an open fire burns (src/game/fire.ts): off, so a brazier is its glowing lid and its steady lamp, and the light meter beside it reads a steady light
     if (pinned('TPS_ROWSET')) ROWSET.on = String((globalThis as any).process?.env?.TPS_ROWSET ?? '') === '1';   // a mission row's own hour and weather (src/game/rowset.ts): off, so a row that names one starts at the query's, as every row did
     if (pinned('TPS_STARTLE')) STARTLE.on = String((globalThis as any).process?.env?.TPS_STARTLE ?? '') === '1';   // enemies startle when they first see you (src/game/startle.ts): off, so a man who sees you goes for his gun the frame he knows, as in every frozen probe, tally and digest; `TPS_STARTLE=1` turns it on (the shipped default)
     if (pinned('TPS_FLINCH')) FLINCH.on = String((globalThis as any).process?.env?.TPS_FLINCH ?? '') === '1';   // a man flinches when fire comes close (src/game/flinch.ts): off, so nobody ducks but on the suppression model's own edge and no green man breaks under fire, as in every frozen probe, tally and digest; `TPS_FLINCH=1` turns it on (the shipped default)

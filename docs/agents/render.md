@@ -370,3 +370,53 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   board 1.4 → 0.3; the indirect view is the same to the digit at every point (the diffuse is not touched). What stays, the same with the switch either way, is a warm
   streak on the front edges of the top two boards: read as the desk lamp's own highlight (inferred, not traced). No step or dark patch showed in that one view. Never
   seen on a GPU: the picture in motion, the cost, and steel anywhere but this unit.
+- **An open fire burns (`src/game/fire.ts FIRE`, `render/shaders/fire.wgsl`; 2026-10-23, the maintainer: "we gotta improve our fire! we have barrels with fire on them …
+  great fire with smoke and crackles and dynamic lighting would look sick").** Until now such a drum was a glowing lid and a steady lamp. A level light whose id starts
+  with `brazier` is a fire (`pass.json` and `tut-sky.json` have one each; `docs/level-format.md`, the lights row). SWITCH: `FIRE.on`, ON in the page (`?fire=0` = the
+  lid and the steady lamp), OFF in the module and on the frozen stand (`TPS_FIRE=1`); its table rides the journal and a recording from before the key replays with it off.
+  THE FLUID SOLVER IS USED FOR THE SMOKE AND NOT FOR THE FLAME: a flame is 40 cm across and changes shape in a tenth of a second, the solver's cells are 5.5 cm and it
+  publishes density, not heat, to the picture — a flame made of it would be seven cells wide, cost bricks at every preset and still need a shader to colour it; smoke is
+  what the solver is for (it climbs, leans in the wind, pools under a roof, is lit by every lamp and shadowed).
+  THE LIGHT is the level's own lamp, no new light: its strength × `fireFlicker` (smooth noise at five rates 0.43‥8.3 Hz + a kick with each crack of the wood: 0.69 to
+  1.37 of the authored 9 over twenty seconds, mean 0.985, RMS about 0.15, never under `least` 0.6 or over `most` 1.6), its place lifted `lift` 0.2 m into the flame (the
+  level hangs it 16 cm over a lid 58 cm wide: from there the lid is lit white and a flame is lost on it) and wandering 6 cm. WHO READS IT: the light meter of a man
+  beside it, and nothing else — `lightEstimateAt(…, steadyOnly)` (the calm torch, the dark-floor and dark-door rules) is handed the AUTHORED lamp where the level hung
+  it through `RtLight.steady` (one line of guards.ts), the same number every frame as with the switch off (the check's `steady` line, bit for bit).
+  THE FLAME, THE BED OF COALS AND THE EMBERS are drawn by the composite (`fireOver`, beside the lasers' light in the air; records in the beams uniform, `passes.ts
+  setFires`, four fires at most, the nearest the view): a marched volume 18 steps deep, thin (`FIRE_SIGMA` 8 /m) so its heart is bright and yellow and its rim red; a
+  disc of char and glowing gaps over the lid; ten embers climbing and six thrown by each crack, closed forms of the game's clock (nothing kept between frames: a replay
+  draws the same fire). PICTURE ONLY; hidden over ground the fog of war hides (and the fog's remembered lamp is the authored one, where the level hung it: fogofwar.ts `litBlock`); not in the ray-traced reflections; the level's glowing lid under it is dimmed to
+  `coals` 0.42 of its authored glow (its bounce is that much less).
+  THE SMOKE is a `look` source on the coarse lattice (`FIRE.smoke`), filed every second while the solver draws and the fire is within `viewR` 18 m of the view.
+  LEARNT IN THE PAGE: a source two cells wide does NOT climb whatever its heat (temp 2.6 to 30: it hung within 0.3 to 0.6 m of where it was filed, an invisible haze
+  at head height that cut a line along the wind at 1.6 m to 0.26); one five cells wide (radius 0.26, temp 30) climbs — so it is as wide as the drum and its FOOT is
+  over a standing man's head (2.05 m; the check holds 1.9). MEASURED IN THE PAGE (`fire-page.cjs`, the pass, the software adapter at Low, the yard's 0.5 to 0.8 m/s of
+  wind at the drum, a plume fifteen seconds old; the light each line keeps, a line starts to count smoke under 0.8): across the plume at 1.3, 1.5 and 1.7 m, over
+  the drum and 0.8 and 2 m downwind, 1.00 every one; at 1.9 m 0.94 over the drum, 1.00 downwind; ALONG the wind (2 m upwind to 6 m down) 0.98 at 1.3 m, 1.00 at
+  1.6 m, 0.92 at 1.9 m; overhead 0.55 at 2.6 m and 0.23 at 3.4 m (the smoke is there); with `?fire=0` every one of them 1.00. ONE wind, one level, open sky: a fire
+  under a low roof or in still air may pool lower, and nobody measured that. `?firesmoke=0` (`FIRE.smoke.on`) is the fire with no smoke.
+  THE SOUND: `fireBed` (a 7 s loop held as a follow voice, handed on every 12 s, asked again when a fire is lit again) and `fireCrack` with each pop — the mixer's
+  alone, no event: nobody in the game hears a fire.
+  WHAT IT COSTS, by the model and timed on no GPU: no light is added. The flame, coals and embers run in the composite, a render pass the cost model has no row for
+  (`ui/quality.ts RENDER_PASSES`): only pixels inside a fire's bound pay (a cylinder 1.3 m round it, a tenth to a fifth of the screen at the play camera from 13 m; inside
+  it up to 34 ember tests a pixel, and 18 flame samples where the ray crosses the flame itself, about a hundredth of the screen), so it follows the internal pixels
+  like the rest of the composite — against High's 1000 rows: Ultra × 1.44, Medium × 0.81, Low × 0.52, Very low × 0.36. The model's nearest row is the whole-screen
+  smoke march (`REF.vol2D` 0.3 ms at High): expect a fraction of that, a guess. THE SMOKE IS THE REAL COST and the same at every preset: the solver stays awake while a
+  fire is within 18 m of the view — the plume alone holds about 1,100 bricks after twenty seconds when the solver is only
+  stepped (497, 942, 1,119, 1,216 at 5, 10, 15 and 20 s, against 110 to 140 with the fire off) and the DRAWN page's pool read 2,242 fifteen seconds in against 901 with
+  the fire off (the pass's own cold-weather smoke), so about 1,300 bricks: by the solver's own figures on the maintainer's Mac (0.39 µs a stepping brick, and 0.43
+  ms for being awake at all on a level where nothing else smokes) 0.5 ms on the pass and about 0.95 ms where the fire is the only smoke. The plume was still
+  growing slowly at twenty seconds. `?firesmoke=0` is the same fire without it, to weigh that on a GPU.
+  CHECK: `bun run tools/qa/probes.ts fire` (`tools/qa/fire-check.ts`, families `render`, `all`; twelve lines, both stands; `FIRE_BREAK=1` fails ten): the lamp's swing
+  and place, a second game the same frame for frame, the bed and the cracks, out and lit again, a checkpoint load, the smoke's sources (look-only, coarse, foot over
+  heads; none without a solver or with the smoke put off), the steady readers, the CPU estimate (1.25 m off: steady 3.350, burning 2.06 to 4.37, mean −6.9 %; 3 m: 0.533 against 0.35 to 0.72,
+  mean −2.6 %), off = the build as it was, an old recording. THE SHADER ALONE: `node tools/qa/fire-lab.cjs` (seconds; where the look was set). THE REAL PAGE:
+  `node tools/qa/fire-page.cjs` (software adapter, minutes): it boots with the switch either way (119 of 119 pipelines, no page error) and
+  the stills are on the fire's page (rebuild/fire/): a flame on a bed of coals with the man beside it, the wall and the snow lit warm, a pale plume leaning downwind — against
+  a white lid. THE GPU METER there, the same sixteen frames of the same game with the fire and without (the player's `visibility`): at 1.25 m 0.941 to 0.949
+  burning against 0.952 to 0.955 steady; 3 m 0.635 to 0.717 against 0.605 to 0.631; 5 m 0.375 to 0.674 against 0.398 to 0.608 (the storm's lightning is in both). Half
+  a second a stand: enough to say the flicker moves the meter by hundredths, not to give its swing.
+  NOT DONE, KNOWN: the flame's clock wraps
+  every 68 minutes (one frame's jump in its shape); `brazier*` is a name rule, not a level key; a brazier can still be shot out or jammed and the flame dies with
+  its lamp. NEVER SEEN ON A GPU OR HEARD: the flame in motion through the temporal resolve (its 18-step dither, one-pixel embers under the clip), the flicker's
+  feel on the yard, the plume, the sound, and every cost above.

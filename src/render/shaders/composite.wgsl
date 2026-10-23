@@ -600,7 +600,7 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
 // along than across, with the DOT where it lands (seg.b.w) and a glint at the device. Picture only: nothing the game reads. a = start + drawn half-width,
 // b = end + dot, e = the box's (dimmed) emissive + the air's share.
 struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };
-struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8> };
+struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8>, fireN: vec4u, fire: array<FireRec, 4> };   // (… and, behind the segments, THE OPEN FIRES: passes.ts setFires — fire.wgsl FireRec, fireN.x of them; the reflection pass's own struct stops at the segments)
 @group(1) @binding(15) var<uniform> beams: Beams;
 const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
@@ -653,6 +653,32 @@ fn beamAir(ro: vec3f, D: vec3f, tMax: f32, cpix: f32) -> vec3f {
   }
   return L;
 }
+/** THE OPEN FIRES over what the pixel shows (game/fire.ts; fire.wgsl fireAir): each fire's flame and embers along the pixel's ray as far as its surface, the
+ *  one this ray meets last drawn first (by where the ray enters each one's bound: right for this pixel, whatever order the list came in). Not over ground
+ *  the fog of war hides (the fog's own rule for what is live: smoke, flakes). `c` in, `c` with the fires out. */
+fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
+  var col = c;
+  let n = min(beams.fireN.x, 4u);
+  var at = array<f32, 4>(-1.0, -1.0, -1.0, -1.0); var any = false;
+  for (var i = 0u; i < n; i++) {
+    let cb = fireBound(beams.fire[i], frame.camPos, rd);   // (nothing of this fire is on a ray that misses it)
+    if (cb.x > cb.y || cb.y < 0.0 || cb.x > tMax) { continue; }
+    at[i] = max(cb.x, 0.0); any = true;
+  }
+  if (!any) { return col; }
+  let jit = fract(ign(pixf) + f32(frame.frameIdx & 63u) * 0.61803399);
+  for (var k = 0u; k < n; k++) {
+    var far = -1.0; var pick = 4u;
+    for (var i = 0u; i < n; i++) { if (at[i] > far) { far = at[i]; pick = i; } }
+    if (pick > 3u) { break; }
+    at[pick] = -1.0;
+    let F = beams.fire[pick];
+    if (fogSeenAt(F.a.xyz, vec3f(0.0)) < 0.5) { continue; }
+    let fa = fireAir(F, frame.camPos, rd, tMax, beamPix(), jit);
+    col = col * fa.a + fa.rgb;
+  }
+  return col;
+}
 fn compositePixel(pixf: vec2f) -> vec3f {
   let pix = vec2i(pixf);
   var pin = pixf; if (SHARP) { pin = pixf * inOverOut() + frame.sharpCfgC.xy; }   // this pixel on the INTERNAL raster (the stochastic terms' texel maps; + the decoupled jitter that raster carries, 0 without it)
@@ -664,6 +690,7 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     let Pfar = worldFromDepth(pixf, 1.0);
     color = skyRadiance(normalize(Pfar - frame.camPos));
     if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, normalize(Pfar - frame.camPos), 1e4, beamPix()); }
+    if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, normalize(Pfar - frame.camPos), 1e4); }
     if (dbg == 0u || dbg == 5u) {
       if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, 1e4); color = color * vol.a + vol.rgb; }   // (view 5 keeps the sky under the volumetrics here, as the old path always did)
       else {
@@ -817,6 +844,7 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     else if (dbg == 16u) { color = Ei; }                            // phase 5: the resampling gather's reservoir state (fgather.wgsl mainGi writes it into the indirect, through the diffuse denoiser): r = confidence M ÷ cap, g = temporal history taken, b = spatial taps accepted ÷ k — the plain indirect with resampling off
     else if (dbg == 17u) { color = select(vec3f(0.0), upsampleRefl(pixf), frame.rtCfg.w >= 1.0); }   // phase 5: the reflection pass's raw output as the composite fetches it (no cutoff fade / gloss-keep) — the mesh hits and the hit-lighting reuse are judged here
     if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, normalize(worldFromDepth(pixf, 0.5) - frame.camPos), zg, beamPix()); }
+    if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, normalize(worldFromDepth(pixf, 0.5) - frame.camPos), zg); }
     if (dbg == 0u || dbg == 5u) {
       if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { wxAirT = wxAirTEst(pixf, zg); } } }
       if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, zg); color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u); }   // (the fog along the PIXEL's ray to its own surface — zg — whatever a bend read)
