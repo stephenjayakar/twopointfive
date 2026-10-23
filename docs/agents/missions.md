@@ -583,6 +583,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     stood at the scripted spot with the step up): the window is drawn, the man by it stands with the cursor on him, the far man shows; and in BOTH the player himself cannot be
     made out, in the black between the bags and the hall's wall (his light meter reads 0 there): the taller bags did not make that, and nobody has said whether it is wanted.
     NOT RUN: map-check's 48 runs, tour, soak. NOBODY HAS SEEN the line or the wave on a page, the shot through the glass from 0.8 m, or any of it moving. Never on a GPU.
+    HOW LIT HE IS AT THE GLASS, AND WHY NO LAMP WAS HUNG THERE (asked after the still; hard die 1, the page's stand, read each quarter second while he stands on the scripted
+    spot): direct light on him 0.00 (`lightEstimateAt`: the hall's own shadow from the moon, no lamp in reach), his meter 0.15; the far man has eye contact with him through the
+    glass (5.3 m, in his cone, both alert and script-held) and `sightGain` on him is 0.12 a second, where 0.25 is the licence to shoot (roomfight, morale, runner): the spot is
+    safe because it is dark. By the same formula the licence comes at a meter of about 0.25. A lamp over the window tried in a scratch copy (a point light of intensity 1 at
+    2.2 m on the hall's wall: direct 0.43, his meter 0.62) put the far man's gain at 1.2 to 1.4. So no light that changes the picture there leaves the far man without his
+    shot: one model for the picture and the AI. What lights him in a run today is his own squad: a following teammate's weapon light crossing the strip read 2.9 on him for a
+    quarter second. Whether he should read at the glass (a lamp and the far man held a beat past his mate's fall; a rim on the player that is not light; or dark as it is) is
+    the maintainer's call, not made. The page's own meter (software adapter, the lowest preset, six drawn frames) read 0.00 on him at the spot, and the still after them
+    is the same black. That still is no judge of a real card: seven drawn frames carry none of the bounce a played minute gathers.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
     not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.
