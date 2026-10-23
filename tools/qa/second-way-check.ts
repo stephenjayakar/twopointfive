@@ -35,7 +35,7 @@
 // its breaking glass away (ONEWAY=0, QA_EXITSOUT=1, GLASSFX=off, GLASSBREAK=off …) is not the game the question is about: the check says so and exits 2.
 // LIMITS: who stands where and where the team starts are taken together over a level's mission kinds (only the office has more than one, and it has no
 // room to mend); a window counts only where glass breaks (the page as shipped: chaos over 0, the glass switches on).
-// A NEW LEVEL is checked the day it has a row in scenarioList.ts (SCENARIOS / TRAINING_MISSIONS, squad rows); before that: `second-way-check.ts <file>.json`.
+// A NEW LEVEL is checked the day it has a row in scenarioList.ts (SCENARIOS, squad rows); before that: `second-way-check.ts <file>.json`.
 // THE MENDS, when a room fails: hang one of its doors — one that leads to floor the squad reaches — to open OUT of it (`swing` on the level's door: no wedge
 // inside holds it, and a wedge the neighbours set on it stops only the walk INTO their room), or give it a window a man steps through (an opening from under WINDOW_SILL up to WINDOW_HEAD
 // or over — and under 1.9 m, or door-size.ts reads it as a doorway without a leaf — glass 'whole', wide enough not to be laminated: the kill house's `port`).
@@ -69,7 +69,7 @@ export async function secondWay(o: { levels?: string[]; walls?: boolean; nolists
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-  const { SCENARIOS, TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+  const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const { scenarioQuery, squadBarricade } = await import(`${ROOT}/src/scene/scenarios.ts`);
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
   const { wallAt, WALLCHARGE } = await import(`${ROOT}/src/game/wallcharge.ts`);
@@ -77,7 +77,7 @@ export async function secondWay(o: { levels?: string[]; walls?: boolean; nolists
   const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
   const { glassBreakLive } = await import(`${ROOT}/src/game/glassbreak.ts`);
   const BREAK = process.env.SECONDWAY_BREAK === '1', OPEN = 2400, K = DIGIN.wedges as number;
-  const rows: any[] = [...SCENARIOS, ...TRAINING_MISSIONS].filter((e: any) => e.kind !== 'quiet');
+  const rows: any[] = [...SCENARIOS].filter((e: any) => e.kind !== 'quiet');
   // every KIND of squad mission a level has is staged (the office: night breach, room clear, rescue), each at its largest squad: who stands where differs
   const byLevel = new Map<string, any[]>();
   for (const e of rows) { const f = e.level ?? 'office.json', L = byLevel.get(f) ?? []; const i = L.findIndex(w => w.kind === e.kind); if (i < 0) L.push(e); else if ((e.squad ?? 0) > (L[i].squad ?? 0)) L[i] = e; byLevel.set(f, L); }

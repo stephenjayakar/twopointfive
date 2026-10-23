@@ -103,7 +103,7 @@ import { WALLSNAP } from './wallsnap';
 import { cutConfig } from '../scene/cut';   // (the cut-pieces switch: not a game module, no cycle)
 
 /** the names a recording carries and a replay applies, in the order journal.ts has always written them (a session file's `knobs.tables` keys) */
-export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'FRIENDLYFIRE', 'FIRELINE', 'LIGHTSWITCH', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'KITDEAL', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'FOOTFALL', 'TWOGEARS', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
+export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'FRIENDLYFIRE', 'FIRELINE', 'LIGHTSWITCH', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'KITDEAL', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'TOLD', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'FOOTFALL', 'TWOGEARS', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
@@ -126,6 +126,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'ROWSET',
   // a man a level's script told to have a smoke (smokebreak.ts): the lit end's light is the meter's too, so a recording made with it on carries it
   'SMOKEBREAK',
+  // a teammate shows why he is not acting (showwhy.ts): a recording made with it on replays its men's signals and lines; one from before has nobody show anything
+  'SHOWWHY',
   // an open fire burns (fire.ts): its lamp flickers in the light meter too, so a recording made with it on carries it; one from before has the steady lamp
   'FIRE',
   // a man flinches when fire comes close (flinch.ts): a recording made with it on replays its men's ducks and the green man who broke under fire; one from before has nobody duck but on the suppression model's own edge
@@ -149,6 +151,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'OWNBLOW',
   // the gun is put away for a two-handed job (workstow.ts WORKSTOW): a recording made with it on replays a charge's longer clock and the draw after it, one from before the gun in the hand as it was
   'WORKSTOW',
+  // the squad reaches you and the quick key says why (squadnet.ts SQUADNET): a recording made with it on replays the reason a man answers with and the honest room call, one from before the lines as they were
+  'SQUADNET',
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
@@ -192,6 +196,7 @@ import { START } from './startfile';
 import { SAMESTART } from './samestart';
 import { TAKE } from './takecheck';
 import { QUIETFOG } from './quietfog';
+import { TOLD } from './told';
 import { TORCH } from './calmtorch';
 import { BACKKEY } from './backkey';
 import { FIXEDSTEP } from '../host/loop';
@@ -202,6 +207,7 @@ import { RUNNER } from './runner';
 import { STARTLE } from './startle';
 import { ROWSET } from './rowset';
 import { SMOKEBREAK } from './smokebreak';
+import { SHOWWHY } from './showwhy';
 import { FIRE } from './fire';
 import { FLINCH } from './flinch';
 import { DARKDOOR } from './darkdoor';
@@ -248,6 +254,7 @@ import { SLOTSETUP } from './slotsetup';
 import { AIMCOST } from './aimcost';
 import { HANDWORK } from './handwork';
 import { WORKSTOW } from './workstow';
+import { SQUADNET } from './squadnet';
 import { TAKEDOWN } from './takedown';
 import { STEALTHPOSE } from './stealthpose';
 import { GEAR } from './gear';
@@ -328,6 +335,8 @@ export function knobRegistry(): Record<string, object> {
     GLASSREAL,
     // quiet missions under the fog of war (quietfog.ts): whether a quiet mission's query is read for a rung of the fog lever — a run tape's start reads it
     QUIETFOG,
+    // how much you're told (told.ts): the fourth difficulty lever's switch, its rung and the seconds a last-seen mark stays on each, and the squad fog lever's bottom rung — what the HUD marks and whether a squad mission's start raises the fog read them
+    TOLD,
     // the dialogue pass (words.ts): which words every mouth has — a bubble's time is its length, and who is still talking gates the calm floor's small talk
     WORDS,
     // kit animations (kitanim.ts; character.ts KIT): the switch, the magazine changes' beats and the lengths of the draws — when a round may leave a gun coming up reads them
@@ -379,6 +388,8 @@ export function knobRegistry(): Record<string, object> {
     ROWSET,
     // a man told to have a smoke (smokebreak.ts): the switch, his clock, the lights and the smoke's numbers
     SMOKEBREAK,
+    // a teammate shows why he is not acting (showwhy.ts): the switch, each case's own, and the clocks of the wave, the squeeze, the fist and the lines
+    SHOWWHY,
     // an open fire (fire.ts): the switch, the flame's size, the light's flicker, the cracks, the embers, the smoke's and the sound's numbers
     FIRE,
     // a man flinches when fire comes close (flinch.ts): how close a round ducks him, how much by training, and how long under fire breaks a green man alone — reads these
@@ -419,6 +430,8 @@ export function knobRegistry(): Record<string, object> {
     HANDWORK,
     // the gun is put away for a two-handed job (workstow.ts): the switch, a teammate's beats down and up
     WORKSTOW,
+    // the squad reaches you and the quick key says why (squadnet.ts): the three switches, where a far line is drawn, its click and a man down's
+    SQUADNET,
     TAKEDOWN,
     STEALTHPOSE,
     // the default look (scene/look.ts): which FILE a level with a second file is loaded from, and the men's kit — look only (no run differs by it), here so a stand's dump and the page's __knobs say which look it was

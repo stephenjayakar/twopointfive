@@ -11,8 +11,7 @@ import { scenarioQuery, type ScenarioEntry } from './scenarios';
 import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from '../game/loadout';   // (pure: the loadout's size, its words and its query key — nothing of the game)
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
-// two' by its team, a rescue is 'on the clock' and any other squad's mission a 'raid'. A training level is a row with `group: 'training'` in
-// TRAINING_MISSIONS below. (A comment over a row below that says group 'ideas' or 'more' is of the groups before 10-11: the row's own field is the fact.)
+// two' by its team, a rescue is 'on the clock' and any other squad's mission a 'raid'. (A comment over a row below that says group 'ideas' or 'more' is of the groups before 10-11: the row's own field is the fact.)
 export const SCENARIOS: ScenarioEntry[] = [
   // the office (the bundled level). The night breach stays here: it was built and tuned on this floor and its idea is picking your entry. The other three are
   // the office versions of what the levels below were made for, kept beside them
@@ -134,34 +133,7 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
     place: 'A walled yard, a bunkhouse, a store', lean: 'quiet', defenders: 3,
     blurb: 'It\'s the same yard, with a silent partner who follows you and stays low. With X on a guard you can send him around behind, and F tells him to go.' },
 ];
-// THE TRAINING GROUP (game/lesson.ts), in a table of its own for the same reason: short levels, each a real mission of its kind (quiet alone, quiet as two, a
-// room clear with a pair or the four) whose file also carries a `scenarios.lesson` block — steps on the objective row, each naming its key, each moving on when
-// the player has done the thing. A row here is `group: 'training'` and nothing else special: the page starts it like any row of its kind. Not in SCENARIOS or
-// QUIET_MISSIONS, so the squad's and the quiet tools' walks are what they were; tools/qa/lesson-check.ts and lesson-run.ts are this table's.
-export const TRAINING_MISSIONS: ScenarioEntry[] = [
-  { id: 'train-move', title: '1 · Moving unseen', kind: 'quiet', squad: 0, level: 'train-move.json', group: 'training',
-    place: 'The motor pool: three lamps, one guard', lean: 'quiet', defenders: 1,
-    blurb: 'Read the light and sound meters, keep to the dark, and take the vehicle log from behind a guard\'s back.' },
-  { id: 'train-hands', title: '2 · Hands', kind: 'quiet', squad: 0, level: 'train-hands.json', group: 'training',
-    place: 'The kitchen court: a cook, a baker, a watchman', lean: 'quiet', defenders: 3,
-    blurb: 'Take down three guards in a kitchen court one at a time with your bare hands. You\'ll whistle, grab, question, knock out and hide.' },
-  { id: 'train-lights', title: '3 · Lights, locks and devices', kind: 'quiet', squad: 0, level: 'train-lights.json', group: 'training',
-    place: 'The generator yard: a camera, a beam, a keypad', lean: 'quiet', defenders: 1,
-    blurb: 'Everything that can see you runs on something. Learn the lights, locks, keypad, camera and beam, and the power behind all of them.' },
-  { id: 'train-kit', title: '4 · Guns and the kit', kind: 'quiet', squad: 0, level: 'train-kit.json', group: 'training',
-    place: 'The range: five slots, two men behind a lit door', lean: 'loud', defenders: 2,
-    blurb: 'Try every slot on the range, starting with the quiet ones. Then fight two enemies through a lit door, in the dark you made.' },
-  { id: 'train-orders', title: '5 · Orders and door tools', kind: 'roomclear', squad: 2, level: 'train-orders.json', seed: 1, group: 'training',
-    place: 'The quarters: a dark street of four one-room houses', lean: 'loud', defenders: 4, squads: true,
-    blurb: 'Lead a pair down a dark street with the move, cover, hold, fall in and stack up orders. Then take four doors four different ways.' },
-  { id: 'train-pairs', title: '6 · Two pairs, two doors, one word', kind: 'roomclear', squad: 4, level: 'train-pairs.json', seed: 1, group: 'training',
-    place: 'The white house: two doors, and its grain store', lean: 'loud', defenders: 3, squads: true,
-    blurb: 'Lead four teammates as two pairs. Put them all on one door, then put a pair on each door of the white house and send both in at once.' },
-  { id: 'train-silent', title: '7 · Quiet, as two', kind: 'quiet', squad: 1, level: 'train-silent.json', group: 'training',
-    place: 'The well court: a well, a lantern, a back gate', lean: 'quiet', defenders: 3,
-    blurb: 'Work with a silent partner in the dark. Park him, set him up behind a guard, and take down two guards at the same moment under one lantern.' },
-];
-/** EVERY MISSION THE LIST HOLDS: the squad's, the quiet ones, the training group — what the missions screen draws, what a query is read back to, what the pause card names */
+/** EVERY MISSION THE LIST HOLDS: the tutorial's, the squad's, the quiet ones — what the missions screen draws, what a query is read back to, what the pause card names */
 /** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
  *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
@@ -206,9 +178,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     scene: 'The ledger shows payments to a truck park at the edge of town, and the convoy\'s fuel went through it. Two of you are going in to get the manifest from the office, and nobody can know.',
     teaches: ['A partner who follows you quietly', 'Send him around behind a guard', 'Take down two guards at once', 'Have him cut the power while your hands are full', 'Move through the dark together'] },
 ];
-/** every row that is a lesson: the tutorial's missions, then the Training levels */
-export const LESSON_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...TRAINING_MISSIONS];
-export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS, ...TRAINING_MISSIONS];
+/** every row that is a lesson: the tutorial's missions (the seven older Training lessons were taken out 2026-10-23) */
+export const LESSON_MISSIONS: ScenarioEntry[] = TUTORIAL_MISSIONS;
+export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS];
 
 /** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
  *  (`?level=` is NOT: a scenario on the

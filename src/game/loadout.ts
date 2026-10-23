@@ -59,8 +59,8 @@ export interface SquadChoice { n: SquadSize; ok: boolean;
 export type LoadoutKind = 'nightbreach' | 'roomclear' | 'rescue' | 'quiet' | 'solo';
 const SOLO_ONLY = 'The solo night is yours alone: nobody else is on the roster.';
 const QUIET_ONLY = 'A quiet mission is for one or two: you, or you and one partner.';
-/** a Training row (scenarioList.ts TRAINING_MISSIONS: `group: 'training'`) is its own size and no other: its lines name that team's keys */
-const LESSON_ONLY = 'A training lesson is taught at its own size.';
+/** a lesson's row (scenarioList.ts LESSON_MISSIONS: the tutorial's missions) is its own size and no other: its lines name that team's keys */
+const LESSON_ONLY = 'A tutorial mission is played at its own size.';
 /** …and with the kit AS ISSUED, whatever this machine keeps: its steps ask for the issue kit's own things (the rifle on 2, a frag on 5, the launcher's rounds,
  *  the squad's cans and charges), and a kept card without one would leave a step that can never pass. The page reads the kit table without the store on a
  *  Training row's load (main.ts) and the loadout screen shows no cards for one (ui/loadout.ts). (Your own four counts in a lesson are what a Player is built

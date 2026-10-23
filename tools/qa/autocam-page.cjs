@@ -6,6 +6,9 @@
 //   frames   with the mode on the mouse carried across the screen moves the look-at nowhere; with it off the look-at follows the cursor as it always did
 //   off      the key held + a real drag of the mouse gives the view back (the store keeps nothing) and that drag turns the view
 //   walk     on again by the double tap; the key held with a walk key down gives it back too
+//   sway     the mode on and a walk across the view: the yaw leans that way frame by frame, never faster than its cap, and is home again when he stops
+//            (AUTOCAM.sway; the lines above run with it parked off, and this one with nobody counted as in his line, so that a guard who happens to stand
+//            in the open at the start decides nothing)
 //   kept     the row flipped on is kept over a reload; Reset to defaults puts it off
 //   THE CAMERA'S KEY is read from the page (`__keys.camCap()`), as findme-page.cjs reads it. exit 0 = all of it with no page error · 1 = otherwise.
 //   The verdict is the page's DOM, its store and the camera's numbers: nothing here judges a picture, and none of it has been seen on a GPU.
@@ -22,7 +25,9 @@ const OPEN = () => { window.__menu.open('pause'); const b = [...document.querySe
 const ROWS = () => Object.fromEntries([...document.querySelectorAll('#options .op-row')].map(r => [r.querySelector('.op-label').textContent, r.querySelector('.op-switch') ? r.querySelector('.op-switch').textContent : '']));
 const FLIP = (label) => { const r = [...document.querySelectorAll('#options .op-row')].find(x => x.querySelector('.op-label').textContent === label); if (!r) return `no row ${label}`; r.querySelector('.op-switch').click(); return ''; };
 const RESET = () => { const b = document.querySelector('#options [data-act="reset"]'); if (!b) return 'no Reset'; b.click(); return ''; };
-const SHUT = () => { document.querySelector('#options [data-act="back"]')?.click(); window.__menu.close(); if (window.__smoke) window.__smoke.params.enabled = false; window.__game.godMode = true; window.__game.aiEnabled = false; };
+const SHUT = () => { document.querySelector('#options [data-act="back"]')?.click(); window.__menu.close(); if (window.__smoke) window.__smoke.params.enabled = false; window.__game.godMode = true; window.__game.aiEnabled = false; const K = window.__knobs.registry().AUTOCAM; window.__swayWas = K.sway; K.sway = false; };
+// in the page: n frames one at a time with these keys held, and how the yaw went
+const SWAY = ([keys, n]) => { const c = window.__cam, y0 = c.yaw; let most = 0, far = 0, prev = y0; for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 60, keys, i % 60 === 59 ? false : 'none'); most = Math.max(most, Math.abs(c.yaw - prev)); far = Math.max(far, Math.abs(c.yaw - y0)); prev = c.yaw; } return { yaw: c.yaw, most, far }; };
 const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasis().fwd, a = g.player.char.aimYaw, p = g.player.char.pos;
   return { yaw: c.yaw, aim: a, dot: f[0] * Math.sin(a) + f[2] * Math.cos(a), lead: Math.hypot(c.desired[0] - p[0], c.desired[2] - p[2]), look: [c.desired[0], c.desired[2]], kept: localStorage.getItem('twopointsix.autocam'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
 
@@ -65,8 +70,17 @@ const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasi
     let w0 = v1; for (let tries = 0; tries < 3 && w0.kept !== '1'; tries++) w0 = await twice();
     await page.keyboard.down(KEY); await page.evaluate(WALK, 30); await page.keyboard.up(KEY); await page.evaluate(STEP, 2); const w1 = await page.evaluate(VIEW);
     check(w0.kept === '1' && w1.kept === null, `on again by the double tap; ${cap} held with a walk key down gives the view back too`, `kept ${w0.kept} → ${w1.kept}`);
+    // sway: on again, the sway as the page had it, a walk across the view and a stop
+    const K = await page.evaluate(() => { const K = window.__knobs.registry().AUTOCAM; K.sway = window.__swayWas; K.fightM = 0; K.turn = false; return { sway: K.sway, cap: K.swayRate / 60, move: K.swayMove }; });
+    let s0 = w1; for (let tries = 0; tries < 3 && s0.kept !== '1'; tries++) s0 = await twice();
+    const s1 = await page.evaluate(SWAY, [['KeyD'], 150]), s2 = await page.evaluate(SWAY, [[], 540]);
+    check(K.sway === true && s0.kept === '1' && s1.far > 0.04 && s1.far <= K.move + 1e-6 && s1.most <= K.cap + 1e-9 && s2.most <= K.cap + 1e-9 && Math.abs(s2.yaw - s0.yaw) < 1e-3,
+      'the mode on and a walk across the view: the yaw leans that way frame by frame, never faster than its cap, and is home again nine seconds after he stops',
+      `the page opens with the sway ${K.sway ? 'on' : 'OFF'} · two and a half seconds across the view: the yaw leans ${(s1.far * 180 / Math.PI).toFixed(1)}° at the most, ${(s1.most / K.cap * 100).toFixed(0)}% of the cap in a frame · stopped: ${(Math.abs(s2.yaw - s0.yaw) * 180 / Math.PI).toFixed(4)}° from where it was`);
+    await page.evaluate(() => { const K = window.__knobs.registry().AUTOCAM; K.fightM = 22; K.turn = true; });
     // kept: the row, a reload, Reset
     e = await page.evaluate(OPEN); if (e) throw new Error(e); e = await page.evaluate(FLIP, 'Auto camera'); if (e) throw new Error(e);
+    if ((await page.evaluate(ROWS))['Auto camera'] !== 'On') { e = await page.evaluate(FLIP, 'Auto camera'); if (e) throw new Error(e); }   // (the walk above left the mode on: the first click put it off)
     const r1 = await page.evaluate(ROWS), k1 = await page.evaluate(k => localStorage.getItem(k), LS);
     log('reloading'); await boot(true); e = await page.evaluate(OPEN); if (e) throw new Error(e);
     const r2 = await page.evaluate(ROWS), k2 = await page.evaluate(k => localStorage.getItem(k), LS);

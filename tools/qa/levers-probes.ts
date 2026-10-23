@@ -28,6 +28,7 @@ const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
 const { QUIETFOG } = await import(`${ROOT}/src/game/quietfog.ts`);   // (a quiet row's fog lever is live while that rule is on: the page, the shipped stand)
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
+const { threeLevers } = await import('./told-check.ts');   // (the fourth lever and the squad's fog-off rung are held down here: these lines count three levers — told-check.ts has them up)
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
@@ -47,7 +48,8 @@ async function withStore<T>(init: Record<string, string> | null, fn: (m: Map<str
 function fresh() { D.difficultyHere(''); D.setConeVisit(null); D.setDifficulty('standard', false); FOG.own = false; }
 
 // ───────────────────────────────────────────────────────────── rules ─────────────────────────────────────────────────────────────
-export async function leversRules(): Promise<boolean> {
+export const leversRules = (): Promise<boolean> => threeLevers(leversRules3);
+async function leversRules3(): Promise<boolean> {
   const F = family('levers-rules: the difficulty levers as rules — a level puts every lever on its rung, a lever moved alone writes its own rows and no other\'s');
   const ownWas = FOG.own;
   try {
@@ -183,15 +185,16 @@ export async function leversRules(): Promise<boolean> {
 const leverRowsOf = (root: El) => root.all(e => !!e.attrs['data-lever'] && e.attrs['data-lever'] !== 'cams').map(r => ({ key: r.attrs['data-lever'], el: r, na: r.cls.has('na'), moved: r.cls.has('moved'),
   btns: r.all(e => e.tagName === 'BUTTON'), lit: r.all(e => e.tagName === 'BUTTON' && e.cls.has('on')).map(b => b.attrs['data-rung']).join(','), note: r.all(e => e.tagName === 'SPAN').at(-1)?.textContent ?? '' }));
 const press = (root: El, key: string, rung: string) => { const b = leverRowsOf(root).find(r => r.key === key)?.btns.find(b => b.attrs['data-rung'] === rung); if (!b?.onclick) throw new Error(`no ${key}:${rung} button`); b.onclick(); };
-export async function leversScreens(): Promise<boolean> {
+export const leversScreens = (): Promise<boolean> => threeLevers(leversScreens3);
+async function leversScreens3(): Promise<boolean> {
   const F = family('levers-screens: the lever rows on the mission sheet and the loadout screen (the real screens on a fake DOM)');
   const SEARCH = '?quality=high&mute', G = globalThis as any, ownWas = FOG.own;
   try {
     await withStore({}, async store => { await withDom(SEARCH, async () => {
       G.location.pathname = '/'; G.location.hash = ''; const loads: string[] = []; G.location.assign = (u: string) => { loads.push(u); }; G.location.reload = () => { loads.push('(reload)'); };
-      const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { SCENARIOS, TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+      const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { SCENARIOS, LESSON_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
       fresh(); M.MISSIONS.onPick = null;
-      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), solo = M.SOLO_NIGHT, quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'training' && m.scenario.group !== 'tutorial')   /* (a tutorial mission's fog is its frame's, game/rails.ts: its lever is greyed, as a lesson's) */, lessonM = list.find(m => m.scenario?.group === 'training');
+      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), solo = M.SOLO_NIGHT, quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'tutorial')   /* (a tutorial mission's fog is its frame's, game/rails.ts: its lever is greyed, as a lesson's) */, lessonM = list.find(m => m.scenario?.group === 'tutorial');
       // ---- the mission sheet
       const S = M.openMissions({ root: host, select: four.id, search: SEARCH, onPick: () => {} }), root = S.root as unknown as El;
       const rows0 = leverRowsOf(root), href0 = S.hrefOf(four);
@@ -242,16 +245,17 @@ export async function leversScreens(): Promise<boolean> {
         F.verdict(mixed && n4.includes('Your own mix') && nS === '' && nQ === '', 'a squad mix kept on the machine: its line under a squad mission\'s lever rows, none under the solo night\'s or a quiet mission\'s (the mix does not act there)',
           `squad '${n4}' · solo '${nS}' · ${quietM ? `${quietM.id} '${nQ}'` : '(no quiet mission on this build)'}`); }
       const Ls = UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }); const soloLR = leverRowsOf(Ls.root as unknown as El), soloL = soloLR.length, soloFog = QUIETFOG.on && QUIETFOG.solo; Ls.close();
-      const lesson = (TRAINING_MISSIONS as any[])[0]; let lessonL = -1; if (lesson) { const Lt = UI.openLoadout(lesson, { host, deploy: () => {}, back: () => {} }); lessonL = leverRowsOf(Lt.root as unknown as El).length; Lt.close(); }
+      const lesson = (LESSON_MISSIONS as any[])[0]; let lessonL = -1; if (lesson) { const Lt = UI.openLoadout(lesson, { host, deploy: () => {}, back: () => {} }); lessonL = leverRowsOf(Lt.root as unknown as El).length; Lt.close(); }
       F.verdict((soloFog ? soloLR.map(r => r.key).join(',') === 'fog,ai,kit' && soloLR.every(r => (r.key === 'fog') !== r.na) : soloL === 0) && lessonL <= 0,
-        'the solo night\'s loadout and a Training lesson\'s carry no lever rows (where game/quietfog.ts QUIETFOG.solo is up the solo night\'s carries the three, the fog\'s alone live)', `solo ${soloL} rows${soloFog ? ` (${soloLR.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ')})` : ''} · lesson ${lesson ? `${lesson.id} ${lessonL} rows` : '(none on this build)'}`);
+        'the solo night\'s loadout and a tutorial mission\'s carry no lever rows (where game/quietfog.ts QUIETFOG.solo is up the solo night\'s carries the three, the fog\'s alone live)', `solo ${soloL} rows${soloFog ? ` (${soloLR.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ')})` : ''} · lesson ${lesson ? `${lesson.id} ${lessonL} rows` : '(none on this build)'}`);
     }); });
   } finally { fresh(); FOG.own = ownWas; }
   return F.done();
 }
 
 // ───────────────────────────────────────────────────────────── run ─────────────────────────────────────────────────────────────
-export async function leversRun(): Promise<boolean> {
+export const leversRun = (): Promise<boolean> => threeLevers(leversRun3);
+async function leversRun3(): Promise<boolean> {
   const F = family('levers-run: the levers in a run — the fog lever in a Game built after it, the enemy kit playing with the AI on standard');
   const ownWas = FOG.own;
   try {

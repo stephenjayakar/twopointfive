@@ -63,8 +63,14 @@ const BASE_REVS = ['636e5eaef', '3046a115e', 'c069ca16f', 'd13650f85', '0d3a1807
  *  still meet). A look twin (`<name>-gwot.json`) with no row of its own is held to the plain level's. A level with no row is held to BASE_REVS above, as it
  *  was; a level BASE_REVS does not carry must have one. */
 const LEVEL_BASE: Record<string, string> = {
+  // the lesson taken out of the yard (the seven Training lessons went 2026-10-23; the yard stays as a stage for checks)
+  'train-move.json': 'd5893130e',
+
   // Training 5's kitchen step is done by 'bang and clear' given at the held door too (the word spends no can: the lesson asks for the can)
-  'train-orders.json': '2b733c042',
+  'train-orders.json': '18d63085f',
+
+  // the lesson taken out of the yard, as train-move's
+  'train-silent.json': 'd5893130e',
 
   // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
   'tut-pair.json': '9048a2e01',

@@ -24,7 +24,7 @@ export type Stance = 'none' | 'highReady' | 'lowReady' | 'stack' | 'wall';
 export type LongStance = 'patrolLong' | 'lowLong' | 'shoulder' | 'portLong';
 export const LONG_STANCES: LongStance[] = ['patrolLong', 'lowLong', 'shoulder', 'portLong'];
 /** Left-hand signals (CharacterAnimator.signal). */
-export type SignalKind = 'hold' | 'go' | 'rally' | 'squeeze';
+export type SignalKind = 'hold' | 'go' | 'rally' | 'squeeze' | 'aside';
 /** The idle tells of a man about to leave his route for a need (CharacterAnimator.tell — game/needs.ts): a look at his watch, a rub at the back of his neck. */
 export type TellKind = 'watch' | 'neck';
 /** the takedown strike's clip (strike): 'cross' = Punch_Cross, the rear hand — the blow there always was; 'jab' = Punch_Jab, the lead hand (a man taken from the front) */
@@ -919,7 +919,7 @@ export const SNEAK = {
 const KICK_DUR = 1.0; export const KICK_IMPACT = 0.38;
 /** the swing foot is back on the floor by this time */
 const KICK_PLANT = 0.72;
-const SIGNAL_DUR: Record<SignalKind, number> = { hold: 0.9, go: 0.95, rally: 1.3, squeeze: 0.9 };
+const SIGNAL_DUR: Record<SignalKind, number> = { hold: 0.9, go: 0.95, rally: 1.3, squeeze: 0.9, aside: 1.15 };
 /** the tells' lengths (s): the watch comes up, is read ~0.6 s, goes down; the neck rub takes a little longer (game/needs.ts keys its telegraph off neither: they are looks, not events) */
 export const TELL_DUR: Record<TellKind, number> = { watch: 1.05, neck: 1.35 };
 /** THE READY POSES (readyLayer) — looks, read from a camera 55° overhead with the figure ~40 px tall: what counts is an arm out ahead of the body or an elbow out to
@@ -1491,7 +1491,7 @@ export class CharacterAnimator {
    *  eyes are on his sights, so a muzzle put down past a friend's back does not take his look down with it. 0 with the switch off, and whenever nothing is dipped.
    *  It is the dip longArms ASKED for: a layer that takes the trigger arm afterwards (the reload clip, a hit) shows another bore, and the lift is then off by that much. */
   sightsLift = 0;
-  private kickT = -1; private kickHit = false; private sigT = -1; private sigKind: SignalKind = 'hold';
+  private kickT = -1; private kickHit = false; private sigT = -1; private sigKind: SignalKind = 'hold'; private sigSide = 1;
   /** the idle tells (tell / tellLayer): the clock of the one playing (−1 none), which it is, and the arm envelope it showed last frame (0‥1 — read back by the QA
    *  probes as 'the tell is on him', game/needs.ts never reads it) */
   private tellT = -1; private tellK: TellKind = 'watch'; tellShown = 0;
@@ -1936,9 +1936,18 @@ export class CharacterAnimator {
   /** true for exactly one update — the one in which the sole reached the door: swing the door / play the crack on this */
   get kickImpact() { return this.kickHit; }
   /** Left-hand signal, ~1 s, left arm only (the gun hand is untouched, so it layers over any carry or aim): 'hold' fist up beside the head, 'go' knife hand raised
-   *  then chopped forward to point the way, 'rally' open hand circling above the head. Ignored while one is still playing. */
-  signal(kind: SignalKind) { if (kind === 'squeeze' && !mvOn('squeeze')) kind = 'hold'; if (this.sigT < 0) { this.sigT = 0; this.sigKind = kind; } }
+   *  then chopped forward to point the way, 'rally' open hand circling above the head, 'aside' the open hand pushed twice at chest height
+   *  ("off my line": showwhy.ts) — out to his own left, or with `side` -1 across his front to his right: the way he wants the man gone. Ignored while one is
+   *  still playing. */
+  signal(kind: SignalKind, side: 1 | -1 = 1) { if (kind === 'squeeze' && !mvOn('squeeze')) kind = 'hold'; if (this.sigT < 0) { this.sigT = 0; this.sigKind = kind; this.sigSide = side; } }
   get signalling() { return this.sigT >= 0; }
+  /** His left hand is his own this frame: what leaves the gun arm its own (gunArmOwn below: no signal or tell still playing, no throw, reload, hit, blow,
+   *  hold, lock, kit, wound), no kick or flash in his eyes, and none of the left hand's own layers out (showwhy.ts asks before it has him signal: a gesture
+   *  is never laid over hands at work). */
+  get signalFree(): boolean {
+    return this.gunArmOwn && this.kickT < 0 && !this.dazzle && this.reloadAt < 0 && this.rlT < 0   // (… nor a magazine change on the game's own clock, which is no clip of this file's)
+      && this.rx.w.x < 0.02 && this.wk.wL.x < 0.02 && this.dp.wL.x < 0.02 && !this.nv?.hand;   // (… nor the hand on the handset, at work on a thing, out to a door leaf, or at the goggles)
+  }
   /** An idle tell, the LEFT arm and the head only (the right hand keeps the torch / the pistol grip, so it layers over the calm carry like a signal does): 'watch' —
    *  the forearm comes up across the chest, turned over, and the head drops to read it (~1 s); 'neck' — the hand goes to the back of the neck and works at it, the
    *  chest lifting a little into the stretch, the head tipping away (~1.3 s). Ignored while one is still playing (or a signal is: they share the arm). game/needs.ts
@@ -3734,6 +3743,15 @@ export class CharacterAnimator {
       const sq = bump(t, 0.3, 0.36, 0.4, 0.47) + bump(t, 0.52, 0.58, 0.62, 0.69);
       hand = [sh[0] - 0.1, sh[1] + 0.04 - 0.012 * sq, sh[2] + 0.5 + 0.008 * sq]; handRot = this.handRot(0, [-0.15, -0.3, 1], [0.1, 1, 0.3]); pole = [0.8, -0.6, -0.1]; clav = 3;
       curl = [0.3 + 0.4 * sq, 0.34 + 0.4 * sq, 0.38 + 0.4 * sq, 0.42 + 0.4 * sq]; thumb = 0.15 + 0.5 * sq; spread = 0.2;
+    } else if (kind === 'aside') {
+      // "off my line": the open hand comes off the fore-end to chest height in front of him, palm turned the way he wants the man gone, and pushes that way
+      // twice (there by 0.36 s and again by 0.72), then goes back to the gun — the gun hand keeps the gun where it was, low. To his own left the arm goes
+      // out wide to his side (the camera is overhead: a hand that only turns at the wrist is not seen from there); to his right it sweeps across his front.
+      const push = bump(t, 0.22, 0.36, 0.42, 0.56) + bump(t, 0.6, 0.72, 0.78, 0.94);
+      if (this.sigSide >= 0) { hand = [sh[0] + 0.02 + 0.4 * push, sh[1] - 0.12 + 0.05 * push, sh[2] + 0.3 - 0.14 * push]; handRot = this.handRot(0, [0.2 + 0.35 * push, 0.8, 0.55], [-1, 0.1, 0.2]); pole = [0.9, -0.7, -0.1]; }
+      else { hand = [sh[0] - 0.02 - 0.3 * push, sh[1] - 0.1 + 0.04 * push, sh[2] + 0.36 + 0.04 * push]; handRot = this.handRot(0, [-0.2 - 0.3 * push, 0.8, 0.55], [1, 0.1, 0.2]); pole = [0.8, -0.8, 0]; }
+      clav = 3;
+      curl = [0.04, 0.06, 0.08, 0.12]; thumb = 0.25; spread = 0.3;
     } else {
       // open hand goes up over the head and circles (≈2.2 Hz, the forearm coning from the elbow), then comes down
       const circ = bump(t, 0.16, 0.32, D - 0.42, D - 0.26); const ph = (t - 0.16) * 2.2 * Math.PI * 2;

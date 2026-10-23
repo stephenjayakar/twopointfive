@@ -72,6 +72,7 @@ import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
 import { updateSmokeBreak } from './smokebreak';
+import { showWhyTick, resetShowWhy } from './showwhy';
 import { updateFire } from './fire';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
@@ -152,6 +153,7 @@ import { leversFog } from './difficulty';   // (called in the constructor only: 
 import { FogOfWar, fogFlags } from './fogofwar';
 import { RoomFight } from './roomfight';
 import { Cues } from './cues';
+import { SquadNet } from './squadnet';
 import { Cover } from './cover';
 import { rearWatchTick } from './rearwatch';
 import { EntryPoints } from './entrypoints';
@@ -1066,6 +1068,8 @@ export class Game {
   fight!: RoomFight;
   /** what the defenders decide, told to the player: the radio strip's rows and the cue lines (cues.ts — it only reads the game) */
   cues!: Cues;
+  /** the squad's own lines where the player cannot see the man who says them, and a teammate down (squadnet.ts — it only reads the game) */
+  squadNet!: SquadNet;
   /** unasked cover (cover.ts): the openings round the squad, dealt to the men who follow or hold with nothing ordered to watch */
   cover!: Cover;
   /** entry points off uncleared openings (entrypoints.ts): which side of which opening the squad has been on, and the door tools' points moved off the rest */
@@ -1297,7 +1301,7 @@ export class Game {
     this.roomClear = new RoomClearScenario(this);   // the room clear (roomclear.ts): the same playtest on a four-room structure — inert until started
     this.orders = new SquadOrders(this);        // squad orders (orders.ts): inert with no operative on the floor
     this.fight = new RoomFight(this);
-    this.cues = new Cues(this);
+    this.cues = new Cues(this); this.squadNet = new SquadNet(this);
     this.cover = new Cover(this);               // unasked cover (cover.ts): what the squad's free men watch — inert with nobody following or holding
     this.entry = new EntryPoints(this);         // entry points off uncleared openings (entrypoints.ts): inert with no squad on the floor
     this.cleared = new ClearedRooms(this);      // cleared rooms (cleared.ts): where the team has stood — the way an order walks a man keeps to it; inert with no squad on the floor
@@ -1545,7 +1549,7 @@ export class Game {
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise
     const light = this.player.light;
     this.player = new Player(this.ch, v3.copy(this.level.playerSpawn), this.fn2000); this.player.light = light; kitFresh(this); this.player.char.update(0);   // pose + bones exist before this frame's capsule upload
-    this.cues?.reset(); holdFireReset(this);   // (holdfire.ts: a fresh encounter — nothing has started the fight)
+    this.cues?.reset(); this.squadNet?.reset(); holdFireReset(this); resetShowWhy(this);   // (holdfire.ts: a fresh encounter — nothing has started the fight)
     dialogue.ambientRestart(this);   // (the staff's ambient chat: its first-chat clock runs from this restart, not from the page's first frame)
     this.fogOfWar?.reset();   // (fog of war: its memory of who was seen and its turn at the probe belong to the encounter that just ended)
     this.resetGuards(); if (clean) { if (this.messages[this.messages.length - 1]?.text === 'guards reset') this.messages.pop(); if (freshLights(this)) CLEANRESTART_STATS.relit++; } else this.repairLights(); this.resetLevelState(); lightSwitchReset(this); this.props.reset(); for (const r of this.rolls) r.voice = 0; this.rolls.length = 0; this.events.length = 0; this.useDoor = null; this.calledIn = false; this.stoodDown = false;   // (resetGuards also stands the floor down: escalation 0, no episode, no lockdown duties)
@@ -1655,6 +1659,7 @@ export class Game {
     powerOutTick(this, dt);  // the lights go out and somebody goes to put them back on (powerout.ts): the defenders' word when it is due, each man out for the breaker a step on — before the room fight, which would plant a man whose leg has ended; a return on its first line with the switch off
     rescueCheckTick(this, dt);  // the rescue's men check in (rescuecheck.ts): their radio check when it is due, the man out for a silent post a step on — a return on its first line with its switch off or no rescue on the floor
     this.fight.tick(dt);   // the room fight (roomfight.ts): what every hostile / operative unit watches, fears and shoots at this frame — a return on its first lines while none stands or a show has the floor
+    showWhyTick(this);   // a teammate shows why he is not acting (showwhy.ts): read off what the orders, the door tools and the room fight have just decided — his free hand and a short line, nobody's feet, gun or eyes; a return on its first line with the switch off
     moraleTick(this, dt);   // shaken (morale.ts): the blasts since last frame read for who they shook, each man's dread and rung, a broken man's sequence a step on — before anybody moves; a return on its first line with the switch off
     flinchTick(this, dt);   // flinch at close fire (flinch.ts): a green man alone kept under close fire long enough is handed to the runner below
     runnerTick(this, dt);   // drops it and runs (runner.ts): a broken man alone, dry, with an enemy in his eyes at arm's length shouts it, lets the weapon go and runs; every man in a run a step on — a return on its first line with the switch off
@@ -1719,6 +1724,7 @@ export class Game {
     this.lightMeter(dt);
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt * 3);
     this.act = null;   // (this frame's Space verb has been read by everyone who reads it)
+    this.squadNet.tick();   // the squad's net (squadnet.ts): a teammate down this frame, and the click a line from off the screen arrives with
     this.cues.tick();   // the defenders' cues (cues.ts): read off the frame as everybody now stands — it writes nothing the simulation reads
     teamTallyTick(this);   // a partner's men are on the card (teamtally.ts): the defenders he put down this step, tallied as the player's are — a return on its first line while off
     this.saves.tick(this, dt);   // checkpoints (savestate.ts): the autosave triggers off the frame as it now stands, and a waiting request written once the gates pass — the last thing, so a save is the whole settled frame

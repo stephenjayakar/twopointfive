@@ -26,6 +26,7 @@ const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const SAVE = await import(`${ROOT}/src/game/savestate.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
+const { threeLevers } = await import('./told-check.ts');   // (the fourth lever and the squad's fog-off rung are held down here: these lines count three levers — told-check.ts has them up)
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
@@ -54,7 +55,8 @@ const rowsOf = (root: El) => root.all(e => !!e.attrs['data-lever']).map(r => { c
   shown: btns.filter(b => (b as any).style.display !== 'none').map(b => b.attrs['data-rung']).join(','), lit: btns.filter(b => b.cls.has('on') && (b as any).style.display !== 'none').map(b => b.attrs['data-rung']).join(','), note: r.all(e => e.tagName === 'SPAN').at(-1)?.textContent ?? '' }; });
 const press = (root: El, key: string, rung: string) => { const b = rowsOf(root).find(r => r.key === key)?.btns.find(b => b.attrs['data-rung'] === rung); if (!b?.onclick) throw new Error(`no ${key}:${rung} button`); b.onclick(); };
 
-export async function quietfogCheck(): Promise<boolean> {
+export const quietfogCheck = (): Promise<boolean> => threeLevers(quietfogCheck3);
+async function quietfogCheck3(): Promise<boolean> {
   const F = family('quietfog: a quiet mission can be played under the fog of war — the fog lever\'s rungs, asked with all shown as where a quiet mission starts');
   const BREAK = process.env.QUIETFOG_BREAK === '1', onWas = QF.QUIETFOG.on, defWas = QF.QUIETFOG.def, soloWas = QF.QUIETFOG.solo, ownWas = FOG.own, rnd = Math.random;
   // the rungs are asked with the bottom rung as the quiet missions' default, as they were written (QUIETFOG.def 'off': the frozen stand's); the page's own default — the fog all round — is sticky-check.ts's `default` family
@@ -68,7 +70,7 @@ export async function quietfogCheck(): Promise<boolean> {
       const cases: [string, boolean, string][] = [
         ['levelFile=bazaar.json&quiet', false, 'a quiet mission, no rung'], ['levelFile=bazaar.json&quiet&quietfog=team', true, 'all round'], ['levelFile=bazaar.json&quiet=3&quietfog=cones', true, 'cones'],
         ['levelFile=quiet-yard.json&quiet&squad=1&quietfog=own', true, 'own eyes, as two'], ['levelFile=bazaar.json&quiet&quietfog=off', false, 'the off rung named'], ['levelFile=bazaar.json&quiet&quietfog=thick', false, 'a rung nobody knows'],
-        ['levelFile=bazaar.json&quiet&quietfog=0', false, 'the switch\'s own word'], ['levelFile=train-move.json&quiet&quietfog=cones', false, 'a Training lesson'], ['levelFile=bazaar.json&quiet&quietfog=cones&nofow', false, '?nofow beside it'],
+        ['levelFile=bazaar.json&quiet&quietfog=0', false, 'the switch\'s own word'], ['levelFile=tut-quiet.json&quiet&quietfog=cones', false, 'a tutorial mission'], ['levelFile=bazaar.json&quiet&quietfog=cones&nofow', false, '?nofow beside it'],
         ['quietfog=cones', false, 'the solo night'], ['solo&quietfog=own', false, '?solo'], ['roomclear&quietfog=cones', true, 'a room clear (its own fog)'], ['nightbreach&quietfog=cones', false, 'the night breach'], ['levelFile=bazaar.json&quiet&fow', true, '?fow beside a quiet mission, as ever'],
       ];
       const got = cases.map(([q, want, name]) => ({ name, q, want, is: fogOfQuery(Q(q)) })), bad = got.filter(c => c.is !== c.want);
@@ -80,12 +82,12 @@ export async function quietfogCheck(): Promise<boolean> {
       raise(); fresh(); D.initDifficulty(Q(''));
       const squadLever = `${J(D.leversSet())} fog ${fog()}`, pick0 = QF.quietFog(), bare = QF.quietFogHref('/?quality=high&levelFile=bazaar.json&quiet', true);
       QF.setQuietFog('cones'); const kept = store.get('twopointsix.quietfog'), levers = store.get('twopointsix.levers');
-      const quiet = QF.quietFogHref('/?quality=high&levelFile=bazaar.json&quiet', true), squad = QF.quietFogHref('/?quality=high&roomclear&quietfog=own', false), lesson = QF.quietFogHref('/?levelFile=train-move.json&quiet&quietfog=team', false);
+      const quiet = QF.quietFogHref('/?quality=high&levelFile=bazaar.json&quiet', true), squad = QF.quietFogHref('/?quality=high&roomclear&quietfog=own', false), lesson = QF.quietFogHref('/?levelFile=tut-quiet.json&quiet&quietfog=team', false);
       const stale = QF.quietFogHref('/?levelFile=bazaar.json&quiet&quietfog=own', true), zero = QF.quietFogHref('/?quietfog=0&levelFile=bazaar.json&quiet', true), only = QF.quietFogHref('/?quietfog=own', false);
       QF.quietFogForget(); const reread = QF.quietFog();
       QF.setQuietFog('off'); const gone = store.has('twopointsix.quietfog'), after = QF.quietFogHref('/?quality=high&levelFile=bazaar.json&quiet&quietfog=cones', true);
       F.verdict(pick0 === 'off' && bare === '/?quality=high&levelFile=bazaar.json&quiet' && kept === 'cones' && levers === '{"fog":"own"}' && J(D.leversSet()) === '{"fog":"own"}'
-        && quiet === '/?quality=high&levelFile=bazaar.json&quiet&quietfog=cones' && squad === '/?quality=high&roomclear' && lesson === '/?levelFile=train-move.json&quiet' && stale === '/?levelFile=bazaar.json&quiet&quietfog=cones'
+        && quiet === '/?quality=high&levelFile=bazaar.json&quiet&quietfog=cones' && squad === '/?quality=high&roomclear' && lesson === '/?levelFile=tut-quiet.json&quiet' && stale === '/?levelFile=bazaar.json&quiet&quietfog=cones'
         && zero === '/?quietfog=0&levelFile=bazaar.json&quiet&quietfog=cones' && only === '/' && reread === 'cones' && !gone && after === '/?quality=high&levelFile=bazaar.json&quiet',
         'the pick is the quiet missions\' own: a machine that keeps the squad lever on own eyes starts its quiet missions off; moved, it is kept under its own key, a quiet link carries it and no other link does, a stale rung is taken off, and off again keeps nothing',
         `squad lever ${squadLever} · quiet pick at first ${pick0} · kept '${kept}' beside levers ${levers} · quiet ${quiet} · squad ${squad} · lesson ${lesson} · stale → ${stale} · read again ${reread} · off → kept ${gone}, ${after}`);
@@ -100,7 +102,7 @@ export async function quietfogCheck(): Promise<boolean> {
       raise(); fresh();
       const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { QUIET_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
       const SEARCH = '?quality=high&mute', pickWas = M.MISSIONS.onPick; M.MISSIONS.onPick = null;
-      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), quietM = list.find(m => m.id === 'bazaar-quiet'), twoM = list.find(m => m.id === 'quiet-yard-two'), lessonM = list.find(m => m.scenario?.group === 'training');
+      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), quietM = list.find(m => m.id === 'bazaar-quiet'), twoM = list.find(m => m.id === 'quiet-yard-two'), lessonM = list.find(m => m.scenario?.group === 'tutorial' && m.scenario.kind === 'quiet');
       const S = M.openMissions({ root: host, select: quietM.id, search: SEARCH, onPick: () => { } }), root = S.root as unknown as El;
       const q0 = rowsOf(root), href0 = S.hrefOf(quietM);
       F.verdict(q0[0]?.key === 'fog' && !q0[0].na && q0[0].shown === 'off,team,cones,own' && q0[0].lit === 'off' && !q0[0].moved && /no fog of war/.test(q0[0].note) && q0.filter(r => r.key === 'ai' || r.key === 'kit').length === 2 && q0.filter(r => r.key !== 'fog' && r.key !== 'cams').every(r => r.na) && !/quietfog/.test(href0),   // (the Sticky cameras row — stickycam.ts, shown on a quiet row while STICKY is on, so on the shipped stand — is not a difficulty lever: sticky-check holds it)
