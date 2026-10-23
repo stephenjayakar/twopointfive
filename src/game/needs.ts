@@ -25,7 +25,7 @@ import { isDaylight } from './lighting';
 import { chronicle } from './chronicle';
 import { hearPath } from './weather';
 import { dozeAsleep } from './doze';
-import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, w, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 
 // ================================================================ the kinds and their places (TODO(LevelData): NEED_SPOTS belongs in the level file beside routes / chokepoints — like qrf.ts
 // QRF_MARKS it is checked headlessly against levels/office.json: free nav cells, reachable from every route, the loop's legs walkable, out of every leaf's sweep)
@@ -261,7 +261,7 @@ function announce(g: Game, gd: Guard, T: Trip) {
   T.told = true; NEEDS_STATS.told++;
   const P = partnerFor(g, gd);
   if (P) {
-    T.partner = P; T.replyAt = g.time + NEEDS.replyAfter; T.line = pickLine((g.level.scenarios?.quiet ? NEEDS_LINES.announceOwn[T.kind] : undefined) ?? NEEDS_LINES.announce[T.kind] ?? NEEDS_LINES.announce.coffee, gd, 'announce');   // (a level with places of its own — quiet.ts — hears no 'fire door', no 'lobby')
+    T.partner = P; T.replyAt = g.time + NEEDS.replyAfter; { const was = (g.level.scenarios?.quiet ? NEEDS_LINES.announceOwn[T.kind] : undefined) ?? NEEDS_LINES.announce[T.kind] ?? NEEDS_LINES.announce.coffee; T.line = pickLine(wg(was.map(t => NEEDS_LINES.now[t] ?? t), was), gd, 'announce'); }   // (a level with places of its own — quiet.ts — hears no 'fire door', no 'lobby')
     g.say(gd, T.line);
     log(g, gd, `tells ${P.callsign} (${v3.distXZ(P.char.pos, gd.char.pos).toFixed(1)} m): "${T.line}"`);
   } else {

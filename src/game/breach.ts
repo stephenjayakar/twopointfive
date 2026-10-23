@@ -19,7 +19,7 @@ import { KICK_IMPACT } from './character';
 import { fireWeapon, killGuard, detonateStun } from './combat';
 import { kickDustFx } from './particleFx';
 import { shotEnergy } from './glasspen';
-import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { runnerFled } from './runner';   // (asked inside the ending check only: false with its switch off)
 
 /** the approach: a run with the rifles at the LOW ready — both hands on the gun, muzzle down (the runner's stance 'lowReady' → the long gun's 'lowLong'
@@ -57,6 +57,8 @@ export interface BreachLive { orders: number; lights: boolean; loudBoot: boolean
 /** live play: what the pair says where the show's line would state what the drill does not know (a body count: Sam's rounds count too) … */
 const LIVE_LINES: Record<string, string> = { clear1: 'right side — clear.', clear2: 'left clear. i have the door.', roomClear1: 'room clear.' };
 /** … said by the man it is true of (words.ts): #1's hold is the gun on the room's north door (plan.flow[0].hold), #2's is the far corner */
+/** (WORDS.guide) …and as the writing guide has them */
+const LIVE_GUIDE: Record<string, string | undefined> = { clear1: "right side — clear. i've got the door." };
 const LIVE_NOW: Record<string, string> = { clear1: 'right side — clear. i have the door.', clear2: 'left clear.' };
 /** … or promise a charge nobody is carrying */
 const LIVE_NO_CHARGE: Record<string, string> = { stack1: 'stack on me — side door. on my boot.', stack2: 'set.' };
@@ -108,7 +110,7 @@ export class BreachDrill {
   /** is there a stun charge in this entry: always in the show; live, only with the knob on and #2 alive to carry it (a dead man chops nothing and throws nothing) */
   private get charge(): boolean { return !this.live || (this.live.stun && this.b.state !== 'dead'); }
   private say(gd: Guard, key: string, text: string, radio = false) {
-    if (this.live) text = (this.charge ? undefined : LIVE_NO_CHARGE[key]) ?? (WORDS.on ? LIVE_NOW[key] : undefined) ?? LIVE_LINES[key] ?? text;
+    if (this.live) text = (this.charge ? undefined : LIVE_NO_CHARGE[key]) ?? (WORDS.on ? wg(LIVE_GUIDE[key], undefined) ?? LIVE_NOW[key] : undefined) ?? LIVE_LINES[key] ?? text;
     if (text && this.once('say:' + key) && gd.state !== 'dead') this.g.say(gd, text, radio);
   }
   private route(gd: Guard, wps: Vec3[], pts: readonly Vec3[], patch: Parameters<typeof order>[1] = {}) { wps.length = 0; for (const p of pts) wps.push(v3.copy(p)); order(gd, { ...patch, goal: wps[0] ?? null }); }

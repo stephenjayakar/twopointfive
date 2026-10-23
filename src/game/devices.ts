@@ -372,7 +372,7 @@ export function denyPad(g: Game, d: Door) {
   const K = g.devices?.padOf(d); if (!K) return;
   g.audio.play('deny', K.def.pos, 0.45);
   g.events.push({ kind: 'door', pos: [K.def.pos[0], 0, K.def.pos[2]], time: g.time, loud: false, level: DENY_LEVEL, who: PLAYER_ID }); g.player.noise = Math.max(g.player.noise, DENY_LEVEL);
-  g.msg(`the ${padDoorName(K)} pad wants a code you don't have — somebody on this floor knows it`);
+  g.msg(`the ${padDoorName(K)} pad needs a code you don't have, but somebody on this floor knows it`);
   g.devices.note(g, { device: K.def.name, what: 'deny', where: roomOf(g.player.char.pos, g.level), sent: null });
 }
 export function stopCoding(g: Game) { const pl = g.player; if (!pl.coding) return; pl.coding = null; pl.codeT = 0; }

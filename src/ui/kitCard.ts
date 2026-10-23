@@ -73,10 +73,10 @@ export interface MemberCardOpts {
   floor?: () => number;
 }
 /** what an idle tile says in its value's place, and its tooltip (MemberCardOpts.idle) */
-export const IDLE_WORD = 'no use here', IDLE_WHY = 'no fog of war on this mission: every room is already shown, so it has nothing to look into. It still takes its pouch.';
+export const IDLE_WORD = 'no use here', IDLE_WHY = 'There\'s no fog of war on this mission, so every room is already shown and it has nothing to look into. It still takes up its pouch.';
 /** what a lent tile says in its value's place, and its tooltip (MemberCardOpts.lent), and the switch (`?nokitlent` = off: every tile reads the card alone,
  *  as it did — UI only: nothing in the game reads it) */
-export const LENT_WORD = 'mission\u2019s', LENT_WHY = 'issued for this mission: takes none of your pouches';
+export const LENT_WORD = 'mission\u2019s', LENT_WHY = 'issued for this mission, so it takes none of your pouches';
 export const KIT_LENT = { on: true };
 try { if (new URLSearchParams(location.search).has('nokitlent')) KIT_LENT.on = false; } catch { /* no page (the harness) */ }
 /** THE SUPPRESSOR SHOWS ON THE CARD (the maintainer on a quiet mission's Team & kit screen, 10-17: 'quiet missions should have different gear screen stuff';
@@ -220,9 +220,9 @@ function lookOf(m: MemberKit): { suit: string | null; trim: string | null } {
   return { suit: m.suit === 'issued' ? null : tintCss(SUITS[m.suit].tint), trim: m.trim === 'issued' ? null : tintCss(TRIMS[m.trim].tint) };
 }
 
-const LOAD_TIP = { mob: 'mobility — the notch is his issue', con: 'concealment — the notch is his issue' };
-const POUCH_TIP = 'what he carries of the breaching tools and the throwables comes out of these: one grenade-sized thing to a pouch, two pouches for a big thing';
-const POUCH_TIP_BIG = 'one grenade-sized thing to a pouch; one big thing — a shotgun, a hammer, a wall charge — in the big slot';
+const LOAD_TIP = { mob: 'mobility (the notch shows his issued kit)', con: 'concealment (the notch shows his issued kit)' };
+const POUCH_TIP = 'his breaching tools and throwables go in these. A grenade-sized thing takes one pouch and a big thing takes two';
+const POUCH_TIP_BIG = 'each pouch holds one grenade-sized thing, and the big slot holds one big thing like a shotgun, a hammer or a wall charge';
 const UP = new Set(['KeyW', 'ArrowUp', 'w', 'W']), DOWN = new Set(['KeyS', 'ArrowDown', 's', 'S']), LEFT = new Set(['KeyA', 'ArrowLeft', 'a', 'A']), RIGHT = new Set(['KeyD', 'ArrowRight', 'd', 'D']);
 const OK = new Set(['Enter', 'NumpadEnter', 'Space', ' ', 'Spacebar']), BACK = new Set(['Escape', 'Esc']);
 /** by the key's PLACE on the board where the event says it (game/input.ts reads e.code: W A S D are where they are on any layout), else by its name */
@@ -236,7 +236,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
   const rows = kitRows(i), def = () => kitShown(i);   // (the card as he wears it: kit.ts KITDEAL shares a named kit out over a team of three or four)
   /** the card as a tree (game/kittree.ts KITTREE: its rows say what hangs under which gun): the guns' tiles are boxes with their things under them, a row
    *  the card has not got as it stands is not drawn and the keys step over it, and the sets are the one reset (the squad's row has the named kits) */
-  const tree = rows.some(r => r.under !== undefined), presets = tree ? KIT_PRESETS.filter(p => p.id === 'issued').map(p => ({ ...p, label: 'Reset', line: 'this man as he is issued' })) : KIT_PRESETS;   // (not 'As issued' a second time: that is a kit of the squad's row)
+  const tree = rows.some(r => r.under !== undefined), presets = tree ? KIT_PRESETS.filter(p => p.id === 'issued').map(p => ({ ...p, label: 'Reset', line: 'go back to the issued kit' })) : KIT_PRESETS;   // (not 'As issued' a second time: that is a kit of the squad's row)
   const guns: Partial<Record<GunSlot, { kids: HTMLElement; pop?: HTMLElement; why?: HTMLElement }>> = {};
   /** a row's thing against the mission the card is shown for: `idle` — carried, and of no use on it: the tile says so itself —; `handed` / `lent` — the
    *  mission hands him more of it than his card carries: the tile shows what he will have (never on an idle tile, and only a count or a yes / no) */
@@ -260,7 +260,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
   const who = el('div', 'kc-who'), title = el('div', 'kc-title', (opts.name ?? kitName(i)).title), sub = el('div', 'kc-sub', (opts.name ?? kitName(i)).sub);
   // … and his pouches: a pip each, the full ones lit, 'n / m' (nothing while the rule is off)
   const pouch = el('div', 'kc-pouch'), pips = el('span', 'kc-pips'), pouchN = el('b', ''), squadN = el('span', 'kc-squad');
-  squadN.title = 'what the teammates who come carry between them: one more on his card is one fewer on another';
+  squadN.title = 'what your teammates carry between them. One more on his card means one fewer on someone else\'s';
   pouch.append(el('span', '', 'Pouches'), pouchN, squadN, pips); pouch.title = POUCH_TIP;
   // … and what the card weighs (game/kitload.ts): a bar each for mobility and concealment — its fill up to the issued card's notch in grey, what the card has
   // gained on the notch in green or lost under it in amber, and the highlighted row outlined: what it takes (drop it and the bar grows to there), or, on a
@@ -404,9 +404,9 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     setEls.forEach((b, k) => { const why = SLOTS.on ? kitPresetWhy(i, presets[k].id) : '', is = presets[k].id === base; b.classList.toggle('on', is && !lone); b.classList.toggle('pick', k === pick); b.classList.toggle('off', !!why || (is && lone)); b.title = why || presets[k].line; });
     if (clipEls) { const C = KIT_CLIP.card, p = C ? kitPastePeek(i, C) : null, same = !!p && !p.changed.length, why = p && !same ? p.why : '', whose = i ? 'his' : 'your';   // (Copy lit: this card IS the copied kit; Paste dim: nothing copied, nothing it would change, or no room)
       clipEls[0].classList.toggle('on', same); clipEls[0].title = `copy ${whose} kit (C)`;
-      clipEls[1].classList.toggle('off', !C || same || !!why); clipEls[1].title = why || (!C ? 'nothing copied yet' : same ? `${i ? 'he wears' : 'you wear'} the copied kit` : `the copied kit onto ${i ? 'him' : 'you'}, ${whose} colours kept (V)`); }
+      clipEls[1].classList.toggle('off', !C || same || !!why); clipEls[1].title = why || (!C ? 'nothing copied yet' : same ? `${i ? 'he wears' : 'you wear'} the copied kit` : `paste the copied kit onto ${i ? 'him' : 'you'} and keep ${whose} colors (V)`); }
     const noSet = said && said.k === rows.length ? said.why : dense && said && !popAt && isGun(rows[said.k]) ? said.why : ''; words.classList.toggle('refused', !!noSet);   // (the dense card: a gun's tile has no line of its own — a step it refused is said on the card's)
-    words.textContent = noSet || (i === 0 && !tree ? `${kitWords(0)}. ${m.weapon === 'rifle' ? 'Both your guns are suppressed' : m.weapon === 'shotgun' ? 'Your pistol is suppressed, the shotgun is not' : 'Your pistol is suppressed'}; your light is ${lightKeys() === 'on L' ? 'on L' : 'on ' + lightKeys()}, your goggles on N.` : kitWords(i)) + (KIT_NOTE[i] ? ` ${gearText(KIT_NOTE[i])}` : '');
+    words.textContent = noSet || (i === 0 && !tree ? `${kitWords(0)}. ${m.weapon === 'rifle' ? 'Both your guns are suppressed' : m.weapon === 'shotgun' ? 'Your pistol is suppressed but the shotgun isn\'t' : 'Your pistol is suppressed'}. Your light is ${lightKeys() === 'on L' ? 'on L' : 'on ' + lightKeys()} and your goggles are on N.` : kitWords(i)) + (KIT_NOTE[i] ? ` ${gearText(KIT_NOTE[i])}` : '');
     root.classList.toggle('focus', focused);
   }
   /** the dense card's own: each gun's tile wears what rides on it as chips (lit: fitted or carried, with a count; faint: not, or of no use on this

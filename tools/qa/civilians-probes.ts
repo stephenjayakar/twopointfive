@@ -177,7 +177,7 @@ export async function civiliansPhone() {
   console.log(`    control: ${control.map(m => `"${m.slice(7, 90)}…"`).join(' / ') || '—'} · sent: ${sent.map((g: any) => g.callsign).join(', ') || 'nobody'} · rows ${rows.length} · calls counted ${CIV_STATS.phoned}`);
   let ok = verdict(/runs for/.test(note) && /phone/.test(target) && phoneAt > 2 && phoneAt < 25, 'she runs (not walks) to the nearer phone and is on it within 25 s', `${target}, ${f2(phoneAt)} s`);
   ok = verdict(phonedAt > 0 && Math.abs(phonedAt - phoneAt - CIV.phoneSecs) < 0.1, `the call takes ${CIV.phoneSecs} s on the line`, `${f2(phonedAt - phoneAt)} s`) && ok;
-  ok = verdict(control.length === 1 && /rang in|rang it in/.test(control[0]) && rows.length === 1, "control puts it out ONCE on the radio strip ('… rang in a prowler …') and the card gets one 'rang it in' row", `${control.length} control line(s), ${rows.length} row(s)`) && ok;
+  ok = verdict(control.length === 1 && /rang in|rang it in|called in|called it in/.test(control[0]) && rows.length === 1, "control puts it out ONCE on the radio strip ('… rang in a prowler …') and the card gets one 'rang it in' row", `${control.length} control line(s), ${rows.length} row(s)`) && ok;
   ok = verdict(sent.length === 1 && S.tap.lines.some(l => l.radio && /copy, control — on my way/.test(l.text)), "exactly one calm man is sent to the spot and says so on the net ('copy, control — on my way')", sent.map((g: any) => g.callsign).join(', ') || 'nobody') && ok;
   const phonedN = S.clog.filter(l => /rang it in/.test(l)).length;
   ok = verdict(phonedN === 1 && cowerAt > phonedAt, 'one call per fright however long she stands there, then she cowers', `${phonedN} call(s), cower ${f2(cowerAt)}`) && ok;
