@@ -38,9 +38,9 @@ export async function keybindsCheck(): Promise<boolean> {
   const quiet = async <T>(f: () => T | Promise<T>): Promise<T> => { console.log = console.error = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.error = err; console.warn = warn; } };
   const asBuilt = () => K.setKeys(BRK ? { KeyW: 'KeyI' } : {});
   const BOARD = [...K.KEY_ACTS.flatMap((a: any) => a.codes), 'KeyI', 'KeyJ', 'KeyK', 'KeyM', 'KeyO', 'KeyU', 'KeyY', 'KeyP', 'Digit6', 'Digit0', 'Minus', 'Backslash', 'Quote', 'Slash', 'Backspace', 'Numpad1', 'Escape', 'Enter', 'Tab', 'ArrowUp', 'ArrowDown', 'F5', 'F7', 'ControlLeft', 'AltLeft', 'MetaLeft', 'BracketLeft', 'BracketRight', 'CapsLock'];
-  const WORDS = ['empty — press R', 'click — empty (R to reload)', 'stacked and set. F: go', 'setting the charge… — Space or a step breaks it off', 'slung · E', 'L LIGHT', 'N NIGHT VISION', 'the wall is in the way — step out past its end, or off it', 'Q / away / Shift lets go',
+  const WORDS = ['empty — press R', 'click — empty (R to reload)', 'stacked and set. F: go', 'setting the charge… — Space or a step breaks it off', 'slung · E', 'L LIGHT', 'N NIGHT VISION', 'the wall is in the way — step out past its end, or off it', 'Q, a step away or Shift lets go',
     'breach called off — the squad takes your orders (X). Shift+Enter stages it again', 'failed — spotted · shift+enter stages it again', 'on the east door · WATCHED by Red One · F: go anyway', 'W A S D', '1 2 3 4 5', 'X · B · T · F', 'Z · R', 'L · N · V', 'Esc · `',
-    'A checkpoint is written by itself', 'room B is clear', '3 of 4 left · X on a spot of floor, G, then 3', 'hostage rescue — you and Red. nobody knows you are here yet. F: stack up, F: go · X: orders', 'KEY · VAULT', 'DOWN — ENTER'];
+    'The game saves a checkpoint by itself', 'room B is clear', '3 of 4 left · X on a spot of floor, G, then 3', 'hostage rescue — you and Red. nobody knows you are here yet. F: stack up, F: go · X: orders', 'KEY · VAULT', 'DOWN — ENTER'];
   try {
     // ---- the table
     { K.setKeys({ KeyW: 'KeyI', KeyR: 'KeyK' });   // the module as a tool, the editor and the viewer load it: off, whatever the machine has kept
@@ -137,7 +137,7 @@ export async function keybindsCheck(): Promise<boolean> {
       walk = false; K.bindKey('KeyC', 'KeyK'); K.bindKey('KeyC', 'KeyC'); walk = true; const stays = K.gameCode('KeyQ') === 'KeyQ' && (store.get('twopointsix.keys') ?? '') === kept;   // (a spell with the walk-in off, a key moved and put back there: his Q is still his)
       K.keysBoot(new URLSearchParams('qfree=0&slotsetup=0&qonly=0')); K.bindKey('KeyC', 'KeyK'); K.bindKey('KeyC', 'KeyC'); boot(''); const visit = K.gameCode('KeyQ') === 'KeyQ';   // (…and a visit on the board as it was)
       K.resetKeys(); const reset = K.gameCode('KeyQ') === '' && !store.has('twopointsix.keys');
-      K.bindKey('KeyQ', 'KeyK'); const onK = K.gameCode('KeyK') === 'KeyQ' && K.gameCode('KeyQ') === '' && K.keyCap('Q') === 'K' && K.keyText('Q / away / Shift lets go') === 'K / away / Shift lets go'; K.unbindKey('KeyQ'); const none = !K.keysChanged() && K.gameCode('KeyK') === 'KeyK' && K.gameCode('KeyQ') === ''; K.resetKeys();
+      K.bindKey('KeyQ', 'KeyK'); const onK = K.gameCode('KeyK') === 'KeyQ' && K.gameCode('KeyQ') === '' && K.keyCap('Q') === 'K' && K.keyText('Q, a step away or Shift lets go') === 'K, a step away or Shift lets go'; K.unbindKey('KeyQ'); const none = !K.keysChanged() && K.gameCode('KeyK') === 'KeyK' && K.gameCode('KeyQ') === ''; K.resetKeys();
       const r2 = K.bindKey('KeyR', 'KeyQ'), took = r2.ok && !r2.swapped && K.gameCode('KeyQ') === 'KeyR' && K.gameCode('KeyR') === '' && !K.keysOf('KeyQ').length && K.keyText('empty — press R') === 'empty — press Q';
       const r3 = K.bindKey('KeyQ', 'KeyQ'), left = K.keysOf('KeyR').length, swap = r3.swapped === 'KeyR' && !left && K.gameCode('KeyQ') === 'KeyQ'; K.resetKeys();
       K.setKeys({ KeyR: 'KeyQ', KeyQ: 'KeyR' }); const old1 = K.gameCode('KeyQ') === 'KeyR' && K.gameCode('KeyR') === 'KeyQ';   // kept on the board as it was: Reload and the wall swapped

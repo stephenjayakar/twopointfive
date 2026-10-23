@@ -95,14 +95,14 @@ export function findMeRows(K: RowKit, body: HTMLElement): () => void {
     const k = typeof key === 'string' ? () => key : key;
     K.range(body, label, 0, max, step, () => Math.round(FINDME[k()] * 100), v => setFindMe(k(), v / 100), v => zero && !v ? 'None' : `${v.toFixed(0)} %`, describe); };
   K.sec(body, 'Finding yourself · trying out');
-  K.flip(body, 'Ring at your feet', () => FINDME.ring, v => setFindMe('ring', v), 'The gold ring the orders menu puts at your feet, there all the time.', ['On', 'Off']);
-  K.flip(body, 'Outline in the dark', () => FINDME.outline, v => setFindMe('outline', v), 'A rim round you, and round each teammate, while he stands in the dark.', ['On', 'Off']);
+  K.flip(body, 'Ring at your feet', () => FINDME.ring, v => setFindMe('ring', v), 'Keep the gold ring from the orders menu at your feet all the time.', ['On', 'Off']);
+  K.flip(body, 'Outline in the dark', () => FINDME.outline, v => setFindMe('outline', v), 'Draw a rim around you and each teammate while you\'re standing in the dark.', ['On', 'Off']);
   pct('Outline width', 'width', FINDME_WIDTH.max * 100, 5, true, 'How wide your rim is.');
   pct('Outline strength', 'opacity', 100, 5, true, 'How strongly the rims are drawn.');
-  K.seg(body, 'Outline fades by', FADES, () => FINDME.picture ? 'pic' : 'meter', v => setFindMe('picture', v === 'pic'), () => 'By how dark each part of the man looks on the screen, or by the light meter\'s one number for him.');
+  K.seg(body, 'Outline fades by', FADES, () => FINDME.picture ? 'pic' : 'meter', v => setFindMe('picture', v === 'pic'), () => 'Fade it by how dark each part of the character looks on screen, or by the light meter\'s single number for him.');
   pct('Outline shows under light', () => FINDME.picture ? 'picLit' : 'lit', 100, 2, false, 'A rim starts to show under this much light.');   // (the pair of whichever the row above says: each keeps its own numbers)
   pct('Outline full under light', () => FINDME.picture ? 'picDark' : 'dark', 100, 2, false, 'A rim is at its full under this much light.');
-  pct('Teammate outline width', 'mates', FINDME_MATES.max * 100, 10, true, 'How wide the rim round each teammate is, against yours. At none they have no rim.');
+  pct('Teammate outline width', 'mates', FINDME_MATES.max * 100, 10, true, 'How wide the rim around each teammate is compared with yours. At none, they have no rim.');
   pct('Outline colour', 'colour', 100, 5, true, 'How much colour the rims have: yellow for you, red and blue for your teammates.');
   K.sec(body, 'Camera · trying out');
   pct('Aim pan', 'pan', 100, 10, true, 'How far the view leans toward where you aim. At none you stay in the middle of the screen.');

@@ -12,10 +12,10 @@ import { handlingOf, type WeaponDef } from '../game/weapons';
 
 export type GunStat = 'reach' | 'volume' | 'handling' | 'quiet';
 export const GUN_STATS: { id: GunStat; label: string; tip: string }[] = [
-  { id: 'reach', label: 'Reach', tip: 'reach — how far it holds a group on a man' },
-  { id: 'volume', label: 'Volume', tip: 'volume — the rounds it puts out in ten seconds, reloads and all' },
-  { id: 'handling', label: 'Handling', tip: 'handling — how quickly it comes round in the hands' },
-  { id: 'quiet', label: 'Quiet', tip: 'quiet — how little of it the floor hears' },
+  { id: 'reach', label: 'Reach', tip: 'reach is how far it can keep its shots on an enemy' },
+  { id: 'volume', label: 'Volume', tip: 'volume is how many rounds it fires in ten seconds, reloads included' },
+  { id: 'handling', label: 'Handling', tip: 'handling is how quickly you can swing it around' },
+  { id: 'quiet', label: 'Quiet', tip: 'quiet is how little the floor hears of it' },
 ];
 /** the scales: metres of reach and rounds in the window that fill a bar, the window's seconds, half a man's width, the handling that is an empty bar */
 const SCALE = { reachM: 20, rounds: 100, secs: 10, half: 0.25, handling0: 0.4, can: 0.2, quiet: 0.8 };

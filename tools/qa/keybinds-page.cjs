@@ -62,7 +62,7 @@ async function screen(browser) {
       `after Tab: [${a.c}] '${d.slice(0, 50)}' · after ↑: [${a2.c}] · after Esc: '${b.t}' [${b.c}], screen up ${S.up}`); }
   { await key('Enter'); await key('Backspace'); const q = (await page.evaluate(CAPS)).KeyQ, small = await page.evaluate(() => [...document.querySelectorAll('#options .op-krow')].find(r => r.querySelector('[data-key="KeyQ"]'))?.querySelector('small')?.textContent ?? '');
     await page.click('#options button.op-key[data-key="KeyR"]'); await key('2'); const caps = await page.evaluate(CAPS), S = await page.evaluate(SCREEN);
-    check(q.t === '—' && /none/.test(q.c) && /; a step away lets go/.test(small) && !/Q|—/.test(small) && caps.KeyR.t === '2' && caps.Digit2.t === 'R' && S.tab === 'controls', 'Backspace leaves the wall with no key, marked, and the words beside it say so; a digit pressed for a waiting cap is its key (the rifle\'s row takes R in exchange), never the screen\'s tab',
+    check(q.t === '—' && /none/.test(q.c) && /, then step away to let go/.test(small) && !/Q|—/.test(small) && caps.KeyR.t === '2' && caps.Digit2.t === 'R' && S.tab === 'controls', 'Backspace leaves the wall with no key, marked, and the words beside it say so; a digit pressed for a waiting cap is its key (the rifle\'s row takes R in exchange), never the screen\'s tab',
       `wall '${q.t}' [${q.c}] · '${small}' · reload '${caps.KeyR.t}', rifle '${caps.Digit2.t}', tab ${S.tab}`); await still(page, 'controls-moved.png'); }
   { const before = await page.evaluate(CAPS); await page.reload({ waitUntil: 'domcontentloaded' });
     await openControls(page); const after = await page.evaluate(CAPS), diff = Object.keys(before).filter(k => before[k].t !== after[k]?.t);
@@ -77,7 +77,7 @@ async function screen(browser) {
     const a = await row(), kept0 = await page.evaluate(KEPT);
     await page.evaluate(() => document.querySelector('#options button.op-key[data-key="KeyQ"]').click()); await page.waitForTimeout(80); await key('q'); const b = await row(), kept = await page.evaluate(KEPT);
     await page.click('#options [data-act="reset"]'); await page.waitForTimeout(80); const c = await row(), kept2 = await page.evaluate(KEPT);
-    check(a.t === '—' && /none/.test(a.c) && !/moved/.test(a.c) && /walk into it/.test(a.what) && !/Q/.test(a.small) && kept0 === null
+    check(a.t === '—' && /none/.test(a.c) && !/moved/.test(a.c) && /Walk into a wall/.test(a.what) && !/Q/.test(a.small) && kept0 === null
       && b.t === 'Q' && /moved/.test(b.c) && /Q or a step away/.test(b.small) && kept === '{"KeyQ":"KeyQ"}' && c.t === '—' && !/moved/.test(c.c) && kept2 === null,
       'the page\'s own board: the wall hold\'s cap is a dashed —, not marked as moved, its words say walk into it; a click and Q puts it on Q (marked, kept); Reset is — again and nothing kept',
       `as it opens '${a.t}' [${a.c}] '${a.what}' '${a.small}' kept ${kept0} · after Q '${b.t}' [${b.c}] '${b.small}' kept ${kept} · after Reset '${c.t}' [${c.c}] kept ${kept2}`); await still(page, 'controls-no-wall-key.png'); }
