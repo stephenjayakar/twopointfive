@@ -9,8 +9,9 @@
 //                   the reason and the man who answers says it: an enemy the team can see inside, a room nobody has been in, the last stun kept back for a
 //                   room they know is held, a door they know is shut. A plain open says nothing more. No press waits on any of it.
 //   SQUADNET.clear  'CLEAR' MEANS CLEAR. A room was called clear when no enemy stood in it, with floor the search never saw. With the rule the call is made
-//                   only when the search left no floor unseen; with floor unseen and nobody in sight there, the lead says the room is quiet and that they
-//                   did not see all of it.
+//                   only when the search ended by its own bar (DOORTOOLS.deadCells: less floor unseen than sends a man on); with a search cut short and
+//                   nobody in sight there, the lead says the room is quiet and that they did not see all of it. An entry onto open floor has no search
+//                   and is called as it was.
 // WHAT IT COSTS: the first is the page's alone (where a line is drawn, a click): no man's state, no die, no digest. The second and third change WORDS a man
 // says, so the length of his bubble, which bark clocks read: a run with either on is not the run with it off by digest once such a line is said.
 // SWITCHES: ?squadnet=0 · ?qwhy=0 · ?honestclear=0 on the address; the frozen stand holds all three off (TPS_SQUADNET=1 · TPS_QWHY=1 · TPS_HONESTCLEAR=1 raise
@@ -27,12 +28,12 @@ export const SQUADNET = {
   on: false,
   /** the quick key's row and the man who answers it say why the pick is not a plain open */
   why: false,
-  /** a room is called clear only when the search left no floor unseen */
+  /** a room is called clear only when its search was not cut short */
   clear: false,
   /** how far from you a line from off the screen is drawn, as a share of the view's shorter side */
   near: 0.24,
-  /** the click a line from off the screen arrives with (gain; 0 = silent) */
-  click: 0.3,
+  /** the click a line from off the screen arrives with (gain; 0 = silent), pitched up off the defenders' net's own squelch (cues.ts plays the same voice at rate 1) */
+  click: 0.3, clickRate: 1.3,
   /** a teammate down: the same click, louder and pitched down (gain; rate) */
   downGain: 0.7, downRate: 0.55,
   /** seconds a 'down' row stands */
@@ -40,7 +41,7 @@ export const SQUADNET = {
 };
 
 /** a row of the squad's net that no living man's bubble carries (a man down): where it came from, and until when */
-export interface NetRow { text: string; who: string; at: Vec3; t: number; dur: number }
+export interface NetRow { text: string; at: Vec3; t: number; dur: number }
 const newStats = () => ({ lines: 0, downs: 0, whys: 0, quiets: 0, clears: 0 });
 
 export class SquadNet {
@@ -50,23 +51,25 @@ export class SquadNet {
   constructor(private g: Game) { }
   reset() { this.rows = []; this.down = []; this.seeded = false; this.clickDue = this.downDue = false; this.stats = newStats(); }
 
-  /** a teammate said a line with his head off your screen (guards.ts say): the net clicks */
-  line(gd: Guard) { if (!SQUADNET.on || !this.g.orders.mine(gd)) return; this.stats.lines++; this.clickDue = true; }
+  /** a teammate said a line with his head off your screen (guards.ts say asks, with the switch on): the net clicks */
+  line() { this.stats.lines++; this.clickDue = true; }
 
   /** once a frame, after everybody has moved: who went down this frame, rows that have had their time, and the one sound owed */
   tick() {
     const g = this.g, K = SQUADNET, t = g.time;
     if (t < this.lastT) this.reset(); this.lastT = t;
-    for (const gd of g.orders.squad()) {
+    const squad = g.orders.squad();
+    if (this.down.length) this.down = this.down.filter(c => squad.some(gd => gd.callsign === c && gd.state === 'dead'));   // (a roster stood up again under the same names: its men have not been called)
+    for (const gd of squad) {
       if (gd.state !== 'dead' || this.down.includes(gd.callsign)) continue;
       this.down.push(gd.callsign);
       if (!K.on || !this.seeded) continue;   // (down before the run was watched: a checkpoint's dead are not called again)
-      const p = gd.char.pos; this.rows.push({ text: `${gd.callsign} is down.`, who: gd.callsign, at: [p[0], p[1], p[2]], t, dur: K.downSecs }); this.stats.downs++; this.downDue = true;
+      const p = gd.char.pos; this.rows.push({ text: `${gd.callsign} is down.`, at: [p[0], p[1], p[2]], t, dur: K.downSecs }); this.stats.downs++; this.downDue = true;
     }
     this.seeded = true;
     if (this.rows.length && t - this.rows[0].t > this.rows[0].dur) this.rows = this.rows.filter(r => t - r.t <= r.dur);
     if (this.downDue) { if (K.downGain > 0) g.audio.play('radio', null, K.downGain, { rate: K.downRate }); }
-    else if (this.clickDue && K.click > 0) g.audio.play('radio', null, K.click);
+    else if (this.clickDue && K.click > 0) g.audio.play('radio', null, K.click, { rate: K.clickRate });
     this.clickDue = this.downDue = false;
   }
 }
@@ -78,16 +81,17 @@ export function whyWords(P: AutoPick): { row: string; ack: string } | null {
   if (P.id === 'bangClear' && P.why === 'contact') return { row: 'they see one inside', ack: 'banging it. i see one in there.' };
   if (P.id === 'bangClear' && P.why === 'unknown') return { row: "nobody's been in there", ack: "banging it. nobody's been in there." };
   if (P.id === 'charge' && P.why === 'shut') return { row: "they can't open it", ack: "we can't open it. setting a charge." };
-  if (P.id === 'openClear' && P.kept) return { row: 'saving the last bang', ack: "going in. i'm saving the last bang." };
+  if (P.id === 'openClear' && P.kept) return { row: "they're saving the last bang", ack: "going in. i'm saving the last bang." };
   return null;
 }
 
-/** the call a lead makes when an entry is over (doortools.ts): `left` = floor of the room its search never saw, `inside` = a living enemy stands in the
- *  room, `seen` = one of them the team has in sight. Null: nothing is said. */
+/** the call a lead makes when an entry is over (doortools.ts): `left` = floor of the room its search was cut short of (0 where it ended by its own bar, and
+ *  where the entry had no search of its own: open floor), `inside` = a living enemy stands in the room, `seen` = one of them the team has in sight. Null:
+ *  nothing is said. */
 export function roomCall(g: Game, name: string, left: number, inside: boolean, seen: boolean): string | null {
   if (!SQUADNET.clear) return inside ? null : `${name} clear.`;
   const S = g.squadNet.stats;
   if (!inside && left <= 0) { S.clears++; return `${name} clear.`; }
-  if (left > 0 && !seen) { S.quiets++; return `${name}'s quiet. we didn't see all of it.`; }
+  if (left > 0 && !seen) { S.quiets++; return `${name}${/[^s]s$/.test(name) ? ' are' : "'s"} quiet. we didn't see all of it.`; }   // ('bunks are quiet', 'server room's quiet')
   return null;
 }

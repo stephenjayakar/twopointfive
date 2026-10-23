@@ -2818,6 +2818,9 @@ export const bubbleSecs = (text: string) => Math.min(4, Math.max(2, 1.5 + text.l
 /** A guard says something: a bubble over his head if he is on screen, otherwise (or if it went out over the radio) a line in the log. A man held in Sam's arm has
  *  no voice of his own — whatever the floor's logic would have him bark or radio is dropped (the callers that matter pick somebody else: spokesman, radioCaller,
  *  pickChecker skip him) — except his answers to Sam, which come `force`d (Game.interrogate) and go to the log under his name. */
+/** his head, or where it would be (what a line is on or off the screen by: say() below and ui/bubbles.ts ask the same point) */
+export const headOf = (gd: Guard): Vec3 => gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0]);
+
 export function say(g: Game, gd: Guard, text: string, radio = false, force = false, row = true) {   // (`row` false = the bubble alone: no log row even out of sight)
   if (gd.held && !force) return;
   const net = radio || silentHush(g, gd);   // (a SILENT teammate calls nothing out: his line goes over the net — silent.ts)
@@ -2826,8 +2829,8 @@ export function say(g: Game, gd: Guard, text: string, radio = false, force = fal
   if (!net && row) g.cues?.overheard(gd, text);   // a shout from a man the fog hides, where an ear of the team's really gets it: a row of its own on the strip, his words alone (cues.ts, behind CUES.overheard — off: nothing asked)
   if (radio && gd.unit) g.cues.heard(gd, text);   // a room fight's defenders' net reaches the strip (cues.ts: ranked, rate-limited; nothing here reads it back)
   if (radio) chronRadio(g, gd, text);   // the debrief's row: what went over their net (the routine radio check is dropped there)
-  if (row && (radio || g.fogOfWar.hidden(gd) || !onScreen(g, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0])))) g.msg((net ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
-  if (SQUADNET.on && g.orders?.mine(gd) && !onScreen(g, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0]))) g.squadNet?.line(gd);   // (squadnet.ts: a teammate's line said off your screen clicks in your ear, and the page draws it near you; nothing asked with its switch off)
+  if (row && (radio || g.fogOfWar.hidden(gd) || !onScreen(g, headOf(gd)))) g.msg((net ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
+  if (SQUADNET.on && g.orders?.mine(gd) && !onScreen(g, headOf(gd))) g.squadNet?.line();   // (squadnet.ts: a teammate's line said off your screen clicks in your ear, and the page draws it near you; nothing asked with its switch off)
 }
 
 /** Fresh guards at the start of their routes (keeps their flashlight lights and tints). Spawned units (teams: the showcase's operatives and hostiles) are not the

@@ -3,8 +3,8 @@
 //   why    the room clear on the office with its squad of four, stacked on a door whose far room nobody has stood in: the quick key's row ends on the reason
 //          (a room nobody has been in · the last stun kept back · an enemy in sight inside), says nothing more of a plain open (a silent squad), and the man
 //          who answers the press says the reason in place of the row's own answer.
-//   clear  the lead's call at an entry's end: 'clear' only of a room whose search saw all of its floor and that nobody stands in; 'quiet' of floor unseen
-//          with nobody in sight; nothing with an enemy in sight. Then the entry itself: what the lead said is what its search found.
+//   clear  the lead's call at an entry's end: 'clear' only of a room whose search was not cut short and that nobody stands in; 'quiet' of floor unseen
+//          with nobody in sight; nothing with an enemy in sight. (The entry itself is in `why`: what the lead said is what its search found.)
 //   net    a teammate's line said with his head off the screen clicks (a defender's does not, a teammate's on the screen does not); a teammate going down is
 //          a row of its own for its time, with the lower click, once; a man already down when the run starts is not called. The run with the rule on is the
 //          run with it off, by digest: it is the page's alone.
@@ -23,7 +23,7 @@ const { knobRegistry, JOURNAL_KNOBS } = await import(`${ROOT}/src/game/knobs.ts`
 const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
 const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 const { SQUADNET, whyWords, roomCall } = SN;
-const { AUTOPILOT, autoPick, autoEntries, autoWhy } = AP;
+const { AUTOPILOT, autoPick, autoEntries } = AP;
 /** the three switches as this stand stood them when the harness loaded (the shipped stand's boot has run by now; nothing here has written them yet) */
 const STOOD = [SQUADNET.on, SQUADNET.why, SQUADNET.clear];
 
@@ -97,7 +97,7 @@ export async function squadnetWhy(): Promise<boolean> {
     T.bangs = 3; const three = R.hudQ(at), p3 = autoPick(g, O.targetAt(at), false);
     T.bangs = 1; const one = R.hudQ(at), p1 = autoPick(g, O.targetAt(at), false);
     T.bangs = 0; const none = R.hudQ(at);
-    F.verdict(S.set && /bang and clear/.test(three) && tail(three) === "nobody's been in there" && whyWords(p3)?.row === "nobody's been in there" && /and clear/.test(one) && !/bang and/.test(one) && tail(one) === 'saving the last bang' && p1.kept === true && !/nobody|saving/.test(none),
+    F.verdict(S.set && /bang and clear/.test(three) && tail(three) === "nobody's been in there" && whyWords(p3)?.row === "nobody's been in there" && /and clear/.test(one) && !/bang and/.test(one) && tail(one) === "they're saving the last bang" && p1.kept === true && !/nobody|saving/.test(none),
       'a room nobody has been in: the row says so; with one stun left it says the last is kept; with none it says nothing more', `stacked ${S.set} · 3 stuns: "${three}" · 1 stun: "${one}" · none: "${none}"`);
     // 2. an enemy the team has in sight inside (a staged sight, as autopilot-check stages it)
     { const foe = g.guards.find((o: any) => o.state !== 'dead' && o.team !== 'operative' && o.team !== 'civilian' && o.team !== 'player'); let seen = '', inRoom = false, why = '';
@@ -107,7 +107,7 @@ export async function squadnetWhy(): Promise<boolean> {
         Fg.seen = seen0; Fg.on = on0; foe.char.pos[0] = was[0]; foe.char.pos[1] = was[1]; foe.char.pos[2] = was[2]; }
       F.verdict(!!foe && inRoom && why === 'contact' && /bang and clear/.test(seen) && tail(seen) === 'they see one inside', 'an enemy in sight inside: the last stun goes, and the row says they see one', `staged ${!!foe}${inRoom ? '' : ' (NOT in the room)'} · why ${why} · "${seen}"`); }
     // 3. a plain open says nothing more: a silent squad
-    { T.bangs = 3; SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); const silent = SIL.squadSilent(g), quiet = R.hudQ(at), w = autoWhy(g, O.targetAt(at)); SIL.setSilent(g, false); R.step(2);
+    { T.bangs = 3; SIL.SILENT.on = true; SIL.setSilent(g, true); R.step(2); const silent = SIL.squadSilent(g), quiet = R.hudQ(at), w = whyWords(autoPick(g, O.targetAt(at), false))?.row ?? null; SIL.setSilent(g, false); R.step(2);
       F.verdict(silent && !/nobody|saving|they see/.test(quiet) && w === null, 'a plain open says nothing more (a silent squad opens it quietly)', `silent ${silent} · "${quiet}" · reason ${w}`); }
     // 4. the press: the man who answers says the reason
     { T.bangs = b0 > 1 ? b0 : 3; const RC = g.roomClear; let emptied = 0; for (const x of g.guards) if (x.state !== 'dead' && x.team === 'hostile' && g.cleared.roomAt(x.char.pos) === far) { x.state = 'dead'; emptied++; }   // (the room beyond is emptied, so that the call at the entry's end is the search's alone)
@@ -132,6 +132,8 @@ export async function squadnetClear(): Promise<boolean> {
     F.verdict(a === 'mess clear.' && b === "mess's quiet. we didn't see all of it." && c === b && d === null && e === null && f === null,
       'all of the floor seen and nobody in it: clear · floor unseen and nobody in sight: quiet · an enemy in sight, or one standing on floor they saw: nothing', `seen all, empty: ${a} · 3 unseen, empty: ${b} · 3 unseen, one inside unseen: ${c} · 3 unseen, one in sight: ${d} · seen all, one in sight: ${e} · seen all, one inside: ${f}`);
     F.verdict(g.squadNet.stats.clears === 1 && g.squadNet.stats.quiets === 2, 'the calls are counted', `clear ${g.squadNet.stats.clears} · quiet ${g.squadNet.stats.quiets}`);
+    const pl = roomCall(g, 'bunks', 9, false, false), sg = roomCall(g, 'mess', 9, false, false);
+    F.verdict(pl === "bunks are quiet. we didn't see all of it." && sg === "mess's quiet. we didn't see all of it.", 'a room named in the plural is called as you would say it', `${pl} · ${sg}`);
   });
   return F.done();
 }
@@ -144,7 +146,7 @@ export async function squadnetNet(): Promise<boolean> {
     // (the harness has no camera of its own: a view is staged over Sam by hand — every head within a couple of metres is on it, nothing else is)
     const vp0 = g.viewProj, pl = g.player.char.pos;
     const view = (on: boolean) => { g.viewProj = on ? [0.5, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, -0.5 * pl[0], -0.5 * pl[2], 0, 1] : vp0; };
-    const clicks = () => R.play.filter((p: any) => p.name === 'radio' && p.rate === undefined && Math.abs(p.gain - SQUADNET.click) < 1e-6).length;
+    const clicks = () => R.play.filter((p: any) => p.name === 'radio' && p.rate === SQUADNET.clickRate && Math.abs(p.gain - SQUADNET.click) < 1e-6).length;
     const was = [...mate.char.pos], head0 = mate.char.bones.head ? [...mate.char.bones.head] : null;
     const put = (p: number[]) => { mate.char.pos[0] = p[0]; mate.char.pos[2] = p[2]; if (mate.char.bones.head) { mate.char.bones.head[0] = p[0]; mate.char.bones.head[2] = p[2]; } };
     view(true);
@@ -161,8 +163,11 @@ export async function squadnetNet(): Promise<boolean> {
     const m2 = R.team[1], d0 = R.play.length; m2.god = false; m2.state = 'dead'; R.step();
     const row = N.rows[0], low = R.play.slice(d0).filter((p: any) => p.name === 'radio' && p.rate === SQUADNET.downRate && Math.abs(p.gain - SQUADNET.downGain) < 1e-6).length;
     R.step(60); const again = N.stats.downs, rows1 = N.rows.length; R.step(Math.round((SQUADNET.downSecs + 0.2) * 60) - 60); const gone = N.rows.length;
-    F.verdict(row?.text === `${m2.callsign} is down.` && row?.who === m2.callsign && dist(row.at, m2.char.pos) < 0.01 && low === 1 && again === 1 && rows1 === 1 && gone === 0, 'a teammate down: his row from where he fell, the lower click, once, gone after its time',
+    F.verdict(row?.text === `${m2.callsign} is down.` && dist(row.at, m2.char.pos) < 0.01 && low === 1 && again === 1 && rows1 === 1 && gone === 0, 'a teammate down: his row from where he fell, the lower click, once, gone after its time',
       `row "${row?.text ?? 'none'}" · lower clicks ${low} · called ${again} · rows a second on ${rows1}, after ${SQUADNET.downSecs} s ${gone}`);
+    // (the roster stood up again under the same names: the man who was down is up, and is called when he goes down again)
+    m2.state = 'patrol'; R.step(2); m2.state = 'dead'; R.step(2); const twice = N.stats.downs;
+    F.verdict(twice === 2, 'a man stood up again under the same name is called when he goes down again', `called ${twice}`);
     // 5. a run that starts with a man already down does not call him
     N.reset(); R.step(3); F.verdict(N.rows.length === 0 && N.stats.downs === 0, 'a man already down when the run starts is not called', `rows ${N.rows.length} · called ${N.stats.downs}`);
   });
@@ -185,7 +190,7 @@ export async function squadnetOff(): Promise<boolean> {
     F.verdict(/bang and clear/.test(row) && !/nobody|saving|they see/.test(row) && !/banging it\. nobody/.test(ans) && own && g.squadNet.stats.whys === 0, 'why off: the row and the answer are the row\'s own', `"${row}" · answered by the row's own line ${own}`);
     const a = roomCall(g, 'mess', 3, false, false), b = roomCall(g, 'mess', 0, true, true);
     F.verdict(a === 'mess clear.' && b === null && g.squadNet.stats.quiets === 0, 'clear off: a room nobody stands in is called clear whatever the search saw, as it was', `3 unseen, empty: ${a} · one inside: ${b}`);
-    const mate = R.team[0], l0 = g.squadNet.stats.lines; g.viewProj = null; g.say(mate, 'moving.'); const m2 = R.team[1]; m2.god = false; m2.state = 'dead'; R.step(2);
+    const mate = R.team[0], l0 = g.squadNet.stats.lines; g.viewProj = null; g.say(mate, 'moving.');   // (no view: his head is off the screen) const m2 = R.team[1]; m2.god = false; m2.state = 'dead'; R.step(2);
     F.verdict(g.squadNet.stats.lines === l0 && g.squadNet.rows.length === 0 && g.squadNet.stats.downs === 0 && !R.play.some((p: any) => p.name === 'radio' && p.rate === SQUADNET.downRate), 'net off: no line is counted, no man down is called, no lower click', `lines ${g.squadNet.stats.lines - l0} · rows ${g.squadNet.rows.length}`);
     // the wiring: the registry, a recording from before the keys, the frozen stand's rows
     SQUADNET.on = SQUADNET.why = SQUADNET.clear = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), rides = snap.tables?.SQUADNET?.on === true && snap.tables.SQUADNET.why === true && snap.tables.SQUADNET.clear === true; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.SQUADNET;
