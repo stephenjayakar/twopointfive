@@ -3,6 +3,8 @@
 // button dragged round men, the right button on a door or the floor (clicked, or dragged for a way to face), and the word. Game state is READ to time a
 // press and to find where a thing is on the picture, never to do the deed.
 import type { Bot } from '../lesson-run';
+import { CMDRING } from '../../../src/game/cmdring';
+import { DOORTOOLS } from '../../../src/game/doortools';
 
 export const query = '?roomclear=1&squad4';
 export const ended = (g: any) => g.lesson.finished;
@@ -11,10 +13,11 @@ export const ended = (g: any) => g.lesson.finished;
 const ALONE = process.env.TUTPLAN_ALONE === '1';
 /** TWO STACKS ON ONE WORD GO IN TOGETHER, and the run FAILS when they do not: the first men of two stacks more than a second apart into the room, or a
  *  teammate dazzled by the team's own can — what a player's tape showed of this mission (10-22: one pair was in and done before the other opened its door,
- *  and the late pair's can went off on the first). Both are the squad's own entry rules (cmdring.ts `planOne`, doortools.ts `tossMate`), and the bar became
- *  the run's own with the build that has them. `TUTPLAN_LOOSE=1`: the line is only said (a run with either rule put off).
+ *  and the late pair's can went off on the first). Both are the squad's own entry rules (cmdring.ts `planOne`, doortools.ts `tossMate`), and the bar is
+ *  the run's own wherever both are on (the page; a frozen run without `TPS_PLANONE=1 TPS_TOSSMATE=1` only says the line). `TUTPLAN_LOOSE=1`: only said, anywhere.
+ *  A room that fell BEFORE the word (a stack that did not wait for it) fails the run too: nothing could be measured, and that is the break the bar is for.
  *  `TUTPLAN_POSTB=x,z`: the barrier's order is clicked there instead of on its mark (a hand does not land on the mark: where it may land is swept with this) */
-const STRICT = process.env.TUTPLAN_LOOSE !== '1', POSTB = process.env.TUTPLAN_POSTB ? ((a: number[]) => [a[0], 0, a[1]])(process.env.TUTPLAN_POSTB.split(',').map(Number)) : null;
+const LOOSE = process.env.TUTPLAN_LOOSE === '1', POSTB = process.env.TUTPLAN_POSTB ? ((a: number[]) => [a[0], 0, a[1]])(process.env.TUTPLAN_POSTB.split(',').map(Number)) : null;
 export const idleOk = ALONE ? ['all2', 'word2'] : [];
 
 const WALL = [13.9, 0, 9.25], POST_A = [29.25, 0, 10.25], POST_B = [24.0, 0, 10.3], GATE_E = [35.0, 0, 10.0], GATE_N = [22.0, 0, 5.0];
@@ -107,7 +110,7 @@ const setOn = (B: Bot, doors: string[]) => doors.every(d => squad(B).some(m => s
 /** the word, once every stack stands on its door; again while the room is not theirs */
 function word(B: Bot, doors: string[], room: string) {
   if (!B.until(() => setOn(B, doors) || cleared(B, room), 60)) B.say('  the stacks never all stood on their doors: the word anyway');
-  if (cleared(B, room)) return;
+  if (cleared(B, room)) { if (!ALONE) B.fail(`${room} fell before the word: a stack went in without it, and nothing of the word could be measured`); return; }
   // ONE press: every chain that waited on the word is through its door after it (the wrong plan has one chain, and may press again)
   B.wait(0.4); const waited = P(B).chains.filter((c: any) => c.phase === 'wait').length;
   const stacks: Record<string, any[]> = {}; for (const d of doors) stacks[d] = squad(B).filter(m => stackedOn(B, m) === d);
@@ -115,7 +118,7 @@ function word(B: Bot, doors: string[], room: string) {
   const still = P(B).chains.filter((c: any) => c.phase === 'wait').length;
   if (!ALONE && (waited < doors.length || still)) B.fail(`one word did not send every stack: ${waited} chains waited on it (${doors.length} doors), ${still} still wait after it`);
   // what the word did, said (a player's tape, 10-22: one stack was in and done before the other opened its door, and the late stack's can went off on the first):
-  // when the first man of each stack was inside the room, and the teammates a can dazzled after the word
+  // when the first man of each stack was inside the room, and the teammates dazzled after the word (nobody on the other side throws anything here: a dazzled teammate is the team's own can)
   const t0 = B.t(), inAt: Record<string, number> = {}, daz0 = new Map(squad(B).map(m => [m, m.dazzledUntil as number])), hit = new Set<string>();
   const R = B.g.roomClear.rooms.find((r: any) => r.def.id === room)?.def.bounds, inside = (m: any) => !!R && m.char.pos[0] > R.x0 + 0.2 && m.char.pos[0] < R.x1 - 0.2 && m.char.pos[2] > R.z0 + 0.2 && m.char.pos[2] < R.z1 - 0.2;
   const watch = () => { for (const d of doors) if (!(d in inAt) && (stacks[d] ?? []).some(inside)) inAt[d] = B.t() - t0; for (const [m, u] of daz0) if (m.dazzledUntil > u + 1e-6) hit.add(m.callsign); return false; };
@@ -123,8 +126,8 @@ function word(B: Bot, doors: string[], room: string) {
   // (a stack that never went in has no time: nothing is said of how far apart they were, and the run FAILS — every stack through its door is the mission's own
   //  claim, whatever the squad's entry rules are)
   const ts = doors.map(d => inAt[d]), out = doors.filter((_, i) => ts[i] === undefined), apart = doors.length > 1 && !out.length ? Math.max(...ts) - Math.min(...ts) : NaN;
-  const said = `the word at ${room}: ${doors.map((d, i) => `${d} ${ts[i] === undefined ? 'NOBODY IN' : `first man in at ${ts[i].toFixed(1)} s`}`).join(' · ')}${doors.length < 2 ? '' : out.length ? ' · not together: a stack never went in' : ` · ${apart.toFixed(1)} s apart`} · teammates their own can dazzled: ${hit.size}${hit.size ? ` (${[...hit].join(', ')})` : ''}`;
-  if (!ALONE && (out.length || (STRICT && (apart > 1 || hit.size)))) B.fail(said);
+  const said = `the word at ${room}: ${doors.map((d, i) => `${d} ${ts[i] === undefined ? 'NOBODY IN' : `first man in at ${ts[i].toFixed(1)} s`}`).join(' · ')}${doors.length < 2 ? '' : out.length ? ' · not together: a stack never went in' : ` · ${apart.toFixed(1)} s apart`} · teammates dazzled as they went in: ${hit.size}${hit.size ? ` (${[...hit].join(', ')})` : ''}`;
+  if (!ALONE && (out.length || (!LOOSE && CMDRING.planOne && DOORTOOLS.tossMate && (apart > 1 || hit.size)))) B.fail(said);
   B.say(`  ${said}`);
   for (let k = 0; k < 2 && !cleared(B, room); k++) { B.wait(0.6); B.press('KeyF', 3); B.until(() => cleared(B, room), 40); }
 }

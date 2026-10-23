@@ -62,10 +62,10 @@ export function build() {
   G.ground(0, 12.6, 5, 15.4, 'gravel'); G.ground(35, 8.6, 40, 11.4, 'gravel');   // the track in, the road out
   G.ground(8, 11.4, 24, 16.4, 'gravel', 0.006);                                  // the yard's worn middle, gate to hall
   // THE GROUND AS THE POST IS USED (a yard of one dirt read as a floor plan from above): the track runs on through its gate to the worn middle; a walked
-  // way of gravel from the road gate past the bags and the barrier, and another down from the back gate to meet it at the guardroom's side door; and the
+  // way of gravel from the road gate, which the post has since shut with its bags laid across it, on past the barrier, and another down from the back gate to meet it at the guardroom's side door; and the
   // relay's dish and its generator stand on a poured pad of their own. The stains and the stones that go with them are with the yard's things below
   G.ground(5, 12.6, 8, 15.4, 'gravel', 0.006);
-  G.ground(21.3, 9.0, 35, 11.0, 'gravel', 0.006); G.ground(21.3, 5.1, 22.7, 9.0, 'gravel', 0.006);
+  G.ground(24, 9.0, 35, 11.0, 'gravel', 0.006); G.ground(21.3, 5.1, 22.7, 9.0, 'gravel', 0.006); G.ground(21.3, 9.0, 24, 11.4, 'gravel', 0.006);   // (the last is where the three ways meet, down to the worn middle)
   G.ground(33.1, 15.2, 34.9, 19.3, 'slab', 0.006);
   grp('walls.yard');
   const gateW = [{ a: 13.4, b: 14.6, y0: 0, y1: 2.2 }], gateE = [{ a: 9.4, b: 10.6, y0: 0, y1: 2.2 }], gateN = [{ a: 21.4, b: 22.6, y0: 0, y1: 2.2 }];
@@ -148,13 +148,13 @@ export function build() {
   // a bed somebody carried out into the cool, the runner's motorbike by the track gate
   G.satDish(34.1, 16.0, HALF, 2.4); G.generator(34.45, 18.4, HALF); G.wire(32.5, 16.4, 34.1, 16.0, 2.5); G.jerryCan(34.3, 20.0, 0.4);
   G.tandoor(11.2, 6.5); G.sacks(9.4, 6.2, 0.2, 3); G.washLine(16.4, 21.7, 20.2, 21.7, 4); G.charpoy(22.3, 16.4, HALF); G.motorbike(6.7, 10.2, 1.2);
-  // what the ground carries of all that (the ground need: no 40 m² of the yard is one bare sheet): oil under the two engines, water thrown out of the hall's
+  // what the ground carries of all that (the ground need: no 40 m² of the yard is one bare sheet): oil under the generator on its pad and where the motorbike drips into the dirt (soaked in: the dark of damp, since oil's own paint is no darker than dirt), water thrown out of the hall's
   // back door and off the cooking corner, drips under the washing, the pit behind the hall where the post burns its rubbish, and field stones along the
-  // foot of the yard wall where nobody sweeps. Every patch is darker than the dirt it lies on (STYLE.md); the stones are under 0.19 m, stepped over
-  G.patch(34.2, 18.3, 1.2, 1.0, 'oil', 0.2); G.patch(6.9, 10.0, 1.1, 0.8, 'oil', 0.4);
+  // foot of the yard wall where nobody sweeps. Every patch is darker than the ground it lies on and none under a third of it (STYLE.md); the stones are under 0.19 m, stepped over, and clear of the wall's face
+  G.patch(34.2, 18.3, 1.2, 1.0, 'oil', 0.2); G.patch(6.9, 10.0, 1.1, 0.8, 'damp', 0.4);
   G.patch(29.2, 20.3, 2.0, 1.3, 'damp', -0.3); G.patch(8.3, 8.3, 1.8, 1.2, 'damp', 0.6); G.patch(18.3, 21.9, 3.2, 0.8, 'damp', 0.05);
   G.patch(25.8, 21.9, 1.7, 1.3, 'damp', 0.5); G.rubble(25.8, 21.9, 0.55, 6, 'mudDark');
-  G.rubble(31.6, 22.2, 0.8, 7); G.rubble(29.6, 6.0, 0.8, 7); G.rubble(7.0, 7.6, 0.6, 5); G.rubble(8.6, 21.6, 0.9, 8); G.rubble(6.3, 17.4, 0.5, 5);
+  G.rubble(31.6, 21.8, 0.8, 7); G.rubble(29.6, 6.3, 0.8, 7); G.rubble(7.0, 7.6, 0.6, 5); G.rubble(8.6, 21.6, 0.9, 8); G.rubble(6.3, 17.4, 0.5, 5);
   G.skirt('x', 23, 5, 35, -1); G.skirt('x', 5, 5, 21.3, 1); G.skirt('x', 5, 22.7, 35, 1);   // (the band stops at the back gate's jambs)
 
   // ---- outside the two gates: a blast wall across each way in, as a checkpoint has. Nothing inside the yard sees past them, the men who wait there least of all ----
@@ -203,6 +203,7 @@ export function build() {
   // (a door's mark is 0.2 m off the leaf's middle, on the side the squad stands: the frame puts an order given near the ring on the door itself)
   const D_GUARD: Vec3 = [17.8, 1, 11.2], D_SIDE: Vec3 = [21.2, 1, 8.4], D_HALL: Vec3 = [26.0, 1, 12.8], D_BACK: Vec3 = [30.6, 1, 19.2];
   const GUARD_VIEW: Vec3 = [17.5, 0, 9.5], HALL_VIEW: Vec3 = [28.0, 0, 15.5], GATES_VIEW: Vec3 = [27.0, 0, 9.5];
+  const HALL_EYE = { at: [28.4, 1.9, 16.0] as Vec3, yaw: 0, fov: 360 };   // the hall's lookout: the player sees the gunner from the card to the go
   // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = the frame keeps one as it
   // comes up. A key is written by the game's own code letter in brackets: the page draws the player's key ([B] is the squad's command key).
   // PLAN MODE IS THE ONLY THING HE HAS (game/rails.ts `plan`: Shift with the command key, and with the mode up its own Shift, walk keys and buttons): no
@@ -222,21 +223,21 @@ export function build() {
       { id: 'pick2', line: 'Now drag a box around the other two', done: or({ is: 'picked', n: 2, free: true }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
       { id: 'door2', line: 'Right click the side door to stack them on it', done: or(stacks(['guard', 'guard_side'], true), taken('guardroom')), at: D_SIDE },
       // (the word's key sends the stacks of the men who are PICKED — planmode.ts chainsOf — and the last box picked two: a click on bare ground is everyone again)
-      { id: 'all', line: 'Left click on empty ground to pick your whole squad again', explain: { title: 'Pick everyone again', text: "When you press [F], only the teammates you've picked will go. Pick all four again so both pairs go in together." }, done: or({ is: 'picked', n: 4 }, taken('guardroom')) },
+      { id: 'all', line: 'Left click on empty ground to pick your whole squad again', explain: { title: 'Pick everyone again', text: "When you send them in, only the teammates you've picked will go. Pick all four again so both pairs go in together." }, done: or({ is: 'picked', n: 4 }, taken('guardroom')) },
       { id: 'word', line: 'Press [F] to send both pairs in at once', done: taken('guardroom'), at: [18.0, 1, 8.75], allow: ['word'] },
       // 2 · THE ROOM ONE STACK LOSES: the gun looks down the hall at the front door. A pair on each door, and it is turned to the wrong one
       { id: 'hall', line: 'Move the view to the hall', explain: { title: 'A gunner watching the door', text: "There's a gunner at the far end of the hall, and he's aiming at the front door. If your squad only goes in that way, they'll walk right into his fire.\nThe back door is behind him, so put a pair on each door." },
-        done: or({ is: 'planView', at: HALL_VIEW, r: 3.5 }, taken('hall')), at: [28.4, 1, 16.0], eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 }, checkpoint: 'the hall' },
-      { id: 'front', line: 'Pick two teammates and right click the front door', done: or(stacks(['hall']), taken('hall')), at: D_HALL, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
-      { id: 'back', line: 'Pick the other two and right click the back door', done: or(stacks(['hall', 'hall_back'], true), taken('hall')), at: D_BACK, eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },
+        done: or({ is: 'planView', at: HALL_VIEW, r: 3.5 }, taken('hall')), at: [28.4, 1, 16.0], eye: HALL_EYE, checkpoint: 'the hall' },
+      { id: 'front', line: 'Pick two teammates and right click the front door', done: or(stacks(['hall']), taken('hall')), at: D_HALL, eye: HALL_EYE },
+      { id: 'back', line: 'Pick the other two and right click the back door', done: or(stacks(['hall', 'hall_back'], true), taken('hall')), at: D_BACK, eye: HALL_EYE },
       // (the cue says a stack stands on EACH door: from here whichever leaf moves first, the gun is on the wrong one — levels/tut-plan.script.ts)
-      { id: 'all2', line: 'Left click on empty ground to pick your whole squad again', done: or({ is: 'picked', n: 4 }, taken('hall')), eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 }, cue: 'breach' },
-      { id: 'word2', line: 'Press [F] to send them in through both doors', done: taken('hall'), at: [28.4, 1, 16.0], eye: { at: [28.4, 1.9, 16.0], yaw: 0, fov: 360 } },   // (the lookout stays up through the word: a frame's eye is the player's picture alone — rails.ts RAILS.eyeView — so the squad picks its entry by what its own men have seen. Before that rule the eye was in the squad's fog too, the gunner seen through it made the stack given the word first take a can, and this step went without its lookout for a few builds)
+      { id: 'all2', line: 'Left click on empty ground to pick your whole squad again', done: or({ is: 'picked', n: 4 }, taken('hall')), eye: HALL_EYE, cue: 'breach' },
+      { id: 'word2', line: 'Press [F] to send them in through both doors', done: taken('hall'), at: [28.4, 1, 16.0], eye: HALL_EYE },   // (the lookout stays up through the word: a frame's eye is the player's picture alone — rails.ts RAILS.eyeView — so the squad picks its entry by what its own men have seen. Before that rule the eye was in the squad's fog too, the gunner seen through it made the stack given the word first take a can, and this step went without its lookout for a few builds)
       // 3 · WHICH WAY THEY FACE: more come by two gates at once. A right click dragged is a place and a way to look
       { id: 'gates', line: 'Move the view to the two gates', explain: { title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nRight click and drag to send teammates to a spot and choose which way they'll face." },
         done: or({ is: 'planView', at: GATES_VIEW, r: 2.5 }, taken('road'), taken('lane')), at: [27.0, 1, 9.5], checkpoint: 'the gates' },
       { id: 'faceA', line: 'Pick two, then right click behind the sandbags and drag toward the road gate', done: or(and({ is: 'squad', area: area(POST_A, 2.6), n: 1 }, { is: 'did', what: 'order:cover' }), taken('road')), at: POST_A, toward: GATE_E },
-      { id: 'faceB', line: 'Now put the other two behind the barrier, facing the back gate', done: or(and({ is: 'squad', area: area(POST_B, 2.6), n: 1 }, { is: 'squad', area: area(POST_A, 2.6), n: 1 }, { is: 'did', what: 'order:cover' }), taken('lane')), at: POST_B, toward: GATE_N },
+      { id: 'faceB', line: 'Now do the same with the other two from the barrier toward the back gate', done: or(and({ is: 'squad', area: area(POST_B, 2.6), n: 1 }, { is: 'squad', area: area(POST_A, 2.6), n: 1 }, { is: 'did', what: 'order:cover' }), taken('lane')), at: POST_B, toward: GATE_N },
       { id: 'hold', line: 'Watch your squad hold both gates', done: and(taken('road'), taken('lane')), at: [27.0, 1, 9.5], cue: 'gates' },
       // 4 · and back: a right click on himself is 'on me'
       { id: 'back-in', line: 'Right click on yourself to call your squad back', done: or({ is: 'following' }, { is: 'did', what: 'order:fallIn' }, { is: 'squad', area: area(SAM, 5), n: 3 }), at: [SAM[0], 1, SAM[2]] },
