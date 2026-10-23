@@ -369,7 +369,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     four men up it never got one: at the blow's step the fog had eyes 20 21 22 23 199 and the wall's face was not seen. That is the frame's to mend for a
     mission that keeps its fog; this one shows the whole floor. `rails-check`'s line on the ring now holds that every man on the road and in the rooms is
     drawn (it held the lookout's road and nobody in a room); `tut-sky-check` has a tenth line, the wall's face in the live picture on the blow's step,
-    red with the fog put back (`TUT_SKY_BREAK=1`: "fog of war on, 5 eyes · the wall's face HIDDEN"). Nobody has seen the blast on a GPU since.
+    red with the fog put back (`TUT_SKY_BREAK=1`: "fog of war on, 5 eyes · the wall's face HIDDEN"). Nobody has seen the blast on a GPU since. THE BRAZIER'S MELT PATCH IS ROUND (10-23; the
+    maintainer's close shot of a burning drum, where the patch read as a hard grey square tile under the fire's light): `melted()` in the generator lays
+    each of the two layers as four slabs through one centre 45 degrees apart, a little unequal and turned off the walls' lines. Six more boxes (824), the
+    level's fingerprint moves (old checkpoints and recordings of it are refused), `lived-check`'s row for the level moved. Never seen on a GPU.
     MEASURED: the scripted player ends all fifteen steps on the page's stand on seeds 1 to 7 in 129 to 140 s of play; the first man with a
     torch is hit two to three and a half seconds after the bunkhouse says it is coming, by the lorry's tail; the second often stays behind the lorry and is
     the last room's fight. `PORT=<port> node tools/qa/tut-page.cjs` (software adapter, a hand's own keys and mouse) played all fifteen steps to the
@@ -932,6 +935,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     there. NOT DONE: nobody has played it and nothing of it has been seen on a GPU; the mission that teaches opening and closing the mode (the
     fourth) is the tutorial frame's; a right click far outside the walls is a floor order the men may not be able to walk; with the mode's view
     off (`?nocmdrts`) the seat falls back to mission 1's view and pan.
+  - **The mission opens at dusk, not at midday** (2026-10-23; the row `tut-plan` in `scenarioList.ts`: `hour: 'dusk'`, the `ROWSET` rule writes it over any
+    link). The maintainer, of a shot of the mission as played: "this tutorial level just looks really *flat*". What he saw was the row's midday (sun 56
+    degrees up, strength 6.0): block and render walls near white, the ground two flat tones, shadows a sliver at the walls' feet; both floodlights are
+    out at midday (the photocell), so the lamps played no part. Stills of one view at the four hours, drawn by the graphics lane on the software
+    adapter: dusk reads best (sun 22 degrees up from bearing 255, strength 2.2: a wall throws a shadow two and a half times its height, lit faces warm
+    and below white), then dawn, then the level's own night; midday is the only flat one. At dusk the outside lamps burn as authored, so `flood_gate`
+    and `flood_road` are lit in the mission now; they are left as they are (the level's night with both lit is not flat either). No box, light or
+    lesson key changed: the level file is the same, its lived row stands. The row's old reason for midday (every yard and door in plain sight from
+    above) is kept by eye only: in the dusk stills the doors, drums and barriers are plain, and long shadows cover some ground. NO SWITCH: a row's
+    hour is data (`?rowset=0&hour=midday` on the page, or `ROWSET_BREAK=1` in front of a headless tool with `&hour=` in its query, is the mission at
+    midday again; the scripted player reads `TUTPLAN_HOUR` for that). MEASURED at dusk (`lesson-run tut-plan`, the page's stand, which starts it at the row's hour): 17 of 17 steps on
+    seeds 1 to 4 and on hard seed 1, 107.2 to 107.6 s, the guardroom's first men 0.1 s apart and the hall's 0.0 s, nobody dazzled, no teammate put on
+    a knee; the wrong plan on seed 1 still ends with four put on a knee: the same numbers as at midday, to the tenth of a second. `tutplan-check`
+    (9 lines) on both stands, `lesson-gate tut-plan`, `level-needs --run` and `rails-check` on both stands, `rowset-check` on both stands,
+    `lived-check`, `lesson-check`, `writing-check`, `picker-list`, both typechecks: all pass. ON THE PAGE at dusk
+    (`tools/qa/tut-plan-page.cjs`, real keys, the software adapter, the page held between frames): 36 lines pass to the end card; one still of the
+    opening drawn there has the four's shadows long across the yard and the plan picture's rings on them. NOT DONE: nobody has played it at dusk and nothing of it has been seen on a GPU; the lesson's marks and plan mode's picture over a
+    long shadow were not judged by eye at every step.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
@@ -1660,6 +1681,49 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A SMALL FLAW IT TURNED UP, not this change's and not mended: creeping up behind the hall's man the scripted player's footfall was filed on seven
   frames running (0.1 s) at 1.1 m, and seven crouched steps on stone at that range take a calm man to suspicious; the same approach six seconds
   earlier in the same run files one. It looks like the walk cycle's phase crossing its half back and forth (`player.ts`, the footstep's edge test).
+- **The ledger teaches the sponge round and the swap of the launcher's load** (2026-10-23; `tools/levels/tut-quiet.ts`, THE SPONGE ROUND at its head;
+  level data, a level's own card and one new card key, no switch of its own). The maintainer, taking both out of the solo loud mission: "we can introduce
+  sponge rounds + swapping secondaries later when we have a stealth tutorial". The store's old `strike` step (the hall's man taken by hand) is gone; in its
+  place, six: `corner` ("Stay back in the dark, because there's a laser right behind him", up the moment he is a stride inside the back door; `nook` is
+  now only "Go inside"), `rifle` ("Press [2] to take out your rifle"), `load` (its card "Using the rifle's launcher" says what the launcher fires and
+  where the load shows, that the "HE" on the kit strip is the grenade, and to swap it to stay quiet; the line is "Press [2] twice to load a sponge
+  round" under the gun's setup and "Press [2] again…" without it), `behind` ("Step out to where you can see him through the doorway", a mark on the
+  floor), `sponge` ("Hold the right mouse button, aim at him, and let go") and `sling` ("Press [E] to put your rifle away": the hands' key, which the
+  next man needs). 24 steps now, and a sixth checkpoint, 'the doorway', on `under`: a beam broken there no longer puts him back before the shot. WHY GRABBING IS NOT THE ANSWER: the chest beam (`TQ.beamHigh`) is moved to 0.45 m behind the hall man's heels, so a man
+  who comes up behind him breaks it, crouched or not (the reaching arm on the page's stand, the grab's own stance on the frozen one); a sponge round
+  breaks no beam (`devices.ts`: only the player's own body, a dragged body and a thrown can do). He keeps his back to the store, so the lesson does not
+  rest on what the page's meter reads there. WHERE THE SHOT IS MADE FROM: the dark corner (`TQ.nook`) has no line to him (the doorway's own wall; a round let
+  go from there does not reach him: on the real page one left the tube and he turned to the knock, suspicious; in the harness on the page's stand
+  none left it, on the frozen stand one did); so the corner is where the rifle comes out and the load is swapped, and `behind` marks the floor on the doorway's
+  line (`TQ.shot`, 2.6 m behind him, a clear line from anywhere within half a metre). That floor is in the doorway's light (the harness reads 0.74
+  there): the dark floor with a line to him is a strip under half a metre wide along the light's edge, measured on a 0.3 m grid, too thin to send a
+  player to. THE KIT: the level issues its own card (`scenarios.issue.members.0`: the rifle, one grenade, five sponge rounds, no cans and no frag),
+  dealt whole on the page. THE NEW KEY, `loaded: 'ring' | 'he40'` on that card (`scene/scenarios.ts IssueCard`, parsed in `levelData.ts`, read in
+  `kit.ts kitPlayer` on the player's own card only; `docs/level-format.md`): the load the launcher COMES UP ON. Absent it is the sponge round wherever
+  he carries one, as before, so no other level changes. Here it is the grenade, so the swap is done for a reason and not only said. THE LOCKS: from
+  `nook` both mouse buttons are shut; `corner` shuts `use`, because the frame gives a held left click to the stalk wherever the interaction key is his
+  and his hands are empty, whatever a step denies (`rails.ts gate`; a reviewer's run took the man that way with `fire` denied); `rifle` opens
+  `slot:rifle`;
+  `load` opens the frame's `load` (the load's row alone: a right click held before the swap sends nothing); `sponge` opens `alt`; `sling` opens `hands`;
+  `under` gives back the left button, the right and `use`, and shuts the rifle's key, the load and the hands' key again. The interaction key stays his on `nook` (the back door needs it), so the held click is shut from his first stride inside and not before. With
+  `alt` open the load's row is open too (the frame's rule), so from `sponge` he can swap back and fire the grenade: at 2.6 m it does not arm, and the
+  man is staggered and alerted; no data of a level can shut that. NEVER STUCK: `sponge` also passes when the launcher has no sponge round left (`lesson.ts ringsOut`). CHECKS
+  (2026-10-23, no GPU): `lesson-run tut-quiet` plays 24 of 24 on both stands (`TPS_RAILS=1` in front on the frozen one), seeds 1 to 4 on the shipped
+  stand, two of them with `--pace 6`: a left click held on the man from the doorway's line stalks nobody, a right click held there before the swap
+  sends nothing, a straight line to his head is blocked from the corner and clear from the mark (asked of the level's own collision), then one sponge round spent, the man out cold (the chronicle's `ko` by `ring`), no beam
+  broken, the man at the table on patrol with awareness 0.00, GHOST at the end. Its BREAK PATHS: `TQSMOKE_BREAK=hands` (he goes for the man by hand after all,
+  crouched; on the frozen stand, which has no reaching hand and no row to grab by on that line, he then stands up behind him) fails the run on both
+  stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him 1.35 m).
+  `lesson-check` and `rails-check` on both stands, `lesson-gate tut-quiet`, `level-needs tut-quiet --run` on both, `issue-check`, `issuewhole`,
+  `kit-audit`, `writing-check`, the `pouches` family, `handring-check` and `smokebreak-check` on both stands, `solofog`, `attentionway`, `radiohome`:
+  green. `lesson-check`'s kit lines that staged this mission as "a lesson that issues no kit of its own" now stage `tut-sky` (the comment there says
+  which rows issue or pack; no tutorial mission played alone is left without a card, so `standRow`'s `kitSolo` line is not walked). `lived-check`'s row
+  for this level is moved to the commit that carries this. ON THE REAL PAGE: `tools/qa/tut-quiet-page.cjs` (headless Chromium, the software adapter,
+  real keys and real mouse buttons; staged to the store and stood on each spot, not walked) reads the lines and their key caps, the card, the kit
+  strip before and after the swap ("HE ×1" to "SPONGE ×5"), both locks from the doorway's line, the shot from the mark and the hands' key. `levelData.ts` refuses a `loaded` the card carries none of. NOBODY HAS SEEN OR PLAYED
+  IT ON A GPU. The maintainer's to judge: the shot is taken from the doorway's light and not from the dark; whether the beam reads as "right behind
+  him" from the store; whether a first-time player fires the one grenade once the right button opens (he cannot before the swap; after it he can swap
+  back); the card's words; five sponge rounds.
 - **A man told to have a smoke lights one** (2026-10-22; `src/game/smokebreak.ts SMOKEBREAK` / `updateSmokeBreak`, called from `game.ts` beside the
   breath in the cold; the order is `director.ts OrderPatch.smoke` → `GuardScript.smoke`; the arm is `character.ts smokeLayer`, its numbers `SMOKEARM`
   in that file). The maintainer: "cigarette break animation (with real smoke!) would be sick". THE SWITCH: `SMOKEBREAK.on`, ON in the page
@@ -1939,7 +2003,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   airfoil; the weapon light; the light jammer (OCP) on a camera and a beam; cameras; dragging and hiding a body; a key taken from a man; parking a partner
   and 'watch him'. CHECKS MOVED TO A TUTORIAL LEVEL OR ROW: `stayask` (d) → `tut-plan`; `solo-fog`'s lesson line, `quietfog`'s lesson cases, `verdict`'s
   row and `pouch-wall`'s lesson level → `tut-quiet`; `sticky-ways`' lesson line → the first quiet tutorial row played alone (`tut-solo`); `lesson-check`'s
-  kit lines → `tut-quiet` and `tut-plan` (two that issue no kit of their own and are played as issued); `quickthrow` (5) reads the steps of every tutorial row's level; `levers` and
+  kit lines → `tut-sky` and `tut-plan` since 10-23 (two that issue no kit of their own and are played as issued; before, `tut-quiet`, which now has its own card); `quickthrow` (5) reads the steps of every tutorial row's level; `levers` and
   `loadbrief` count tutorial rows. DROPPED WITH THEIR SUBJECT: `fresh-start`'s "every Training room clear names its seed", `writing-check`'s held count
   for the Training lines, `keybinds-check`'s two lesson lines (the wall line is kept on the yard), `aimcost`'s `train-lights` leg, `carlamps`'
   `train-hands` row, and the Training rows of `second-way`, `wallfurn` and `kitview-plan`. MEASURED on the build of 2026-10-23 with the corner panel in it, FROZEN and SHIPPED alike unless said (one seed, each check's own): both
@@ -2050,3 +2114,50 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the solver cleared, none two frames on, and sixty frames later a second filing and one on the solver; no page error. SEEN ELSEWHERE: `snowBreath.ts` kept the same word in its table (`stats.why`, `steam`, `steaming`, a man's `steam`; its owner
   moved that book to the host the same day, today `engine.hostBooks.breath`), which is why the check first read this file's rows out one by one: the
   whole-state diff stopped at that table. NEVER SEEN ON A GPU: the thread itself has not been looked at by anybody, before or after.
+- **The step before a card settles (2026-10-23; `RAILS.cardBeat`, `rails.ts settles`, `lesson.ts tick` / `settling`; every tutorial mission).** The
+  maintainer, off mission 1's Doors card over the fight at the gate: "we show the modals too quickly. like it should happen a beat after something happens
+  on screen. in this case my squad covered the gate but then seeing them shoot the bad guys got interrupted by the modal. i've noticed this as a consistent
+  theme". A card pauses the world the tick its step comes up, and a step came up the tick the deed before it was done: the middle of whatever that deed
+  set off. Now a step whose NEXT step opens on a card stays up after its deed is done (`StepSeen.doneT`: the deed is done once and never asked for
+  again) for `cardBeatSecs` (1.2 s). Then the next step comes up exactly as it always did: its card, keys, cue, checkpoint and mark on one tick, nothing
+  of it ahead of its card. Meanwhile the done step's big line is something to watch (`prompt()`): its own line where the step only waited for the
+  level's script (mission 1's "They're holding the gate"), else what its men are doing (its `after` line, where its order went out and the line asks
+  for no key), else no line at all (`index.html #railprompt .line:empty`), and its mark is not drawn. What he does in the beat is the done step's:
+  the next step counts from the tick it comes up, as every step always has (an afternoon's cut carried those deeds forward, and a step could then be
+  done before its card was read, its cue a tick after the last one's). A step moved by hand (`Lesson.i` set by a tool) drops a latch, and a held
+  time, that were another step's (`doneI`).
+  TWO WORDS ARE THE CARD'S OWN, in the level (`scenarios.ts explain`, `levelData.ts`, `docs/level-format.md`):
+  `explain.quiet: true` — the deed before this card sets off a fight he is there to WATCH, so the card also waits while that fight is on: a round of
+  his own or his squad's, a blast, a door kicked in or a man going down in the last `cardQuiet` 2 s, never past `cardMax` (9 s) from the deed. Rounds
+  of the other side alone hold nothing (a level's staged fire never stops: mission 1's opening files five a second). Mission 1 marks all three of its
+  cards after the first (Doors after the gate's fight, Walls after the kitchen, Light after the wall is blown): there he is in the sky and the fight is
+  the squad's. `explain.now: true` — no beat at all: the squad mission's 'back' ("They're behind you!"), whose news is the fight, and its 'frag',
+  whose cue keeps the gunner down from the tick he reaches the blocks. A card with both words is a fault of the level (`levelData.ts`).
+  WHY THE FIGHT'S WAIT IS ASKED FOR AND NOT THE RULE (it was the rule for an afternoon, and a review took it apart): where he is the one shooting and
+  the next step is his next move in that fight (the squad mission's blocks, then the frag), a card held for his own rounds held its keys and its cue
+  with it for up to nine seconds with no line on screen. The first cut of all held only the card's picture (the step up, its card, line and mark
+  withheld): a step finished inside the wait lost its card for the run, and the step's cue ran ahead of its card.
+  THIS MOVES TICKS: on a tutorial mission a step that opens on a card, and with it the level script's cue and the step's checkpoint, comes 1.2 s after
+  the deed (a `quiet` card: up to 9 s). A script that needs its cue on the deed's tick marks the card `now` or puts the cue on the step before. The
+  beat is the step's whether or not the page then shows the card (one read already on this page, `?cards=0`, a run with no page): a second pass meets
+  the same pause with no card after it. He can go down inside the beat: the deed is then not kept by a checkpoint and is done again.
+  SWITCH: `RAILS.cardBeat`, OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'RAILS.cardBeat': `TPS_CARDBEAT=1` raises it there, and it acts
+  only with the frame up, `TPS_RAILS=1`: a frozen run that raises the frame alone plays every step the tick the deed is done, as its fixtures were
+  recorded), ON in the page and on the shipped stand; `?cardbeat=0` (headless: `TPS_CARDBEAT=0`) = the next step the tick the deed is done;
+  `journal.ts applyKnobs` puts it off for a recording from before the key.
+  CHECK: `rails-check`, the line "the step before a card settles", which raises the rule itself (a plain card on a quiet floor and under his squad's
+  fire, a deed of his in the beat not carried on, the script's own line kept, a step moved by hand; a quiet card on a quiet floor, his squad firing,
+  the other side alone, his fight begun after the deed, the cap, a man down; `now`, a step with no card after it, the switch, how each stand comes
+  up, the word, an older recording); `RAILS_BREAK=1` fails it on both stands. `lesson-run` (and the tapes' copy of its loop) waits a settling step
+  out after the script's own half second, and its "went by with nothing done" guard also stops on a step found settling; `rails-check` line 14 reads
+  the step after the whistle a beat later.
+  MEASURED (the shipped stand, the scripted player, seeds 1 to 3 of each of the six missions, on the join with build step 999): all eighteen runs end
+  with every step done. Every step before a plain card settles 1.2 s (mission 2: four steps; the solo mission: 'sprint' and 'rifle', and 'shop' its
+  own 1.5 s `settle`; the squad mission: six; the ledger: two; the pair: three). Mission 1's quiet cards: the gate 2.0 s on two seeds and 1.2 s on
+  the third, the kitchen and the blown wall 1.2 s on all three (those two fights are over before the step is done). `lesson-gate` on that tree: 36
+  of 36, with each mission's four dice (two at six seconds a line). On the real page (headless Chromium, the software adapter, real keys,
+  `tut-page.cjs tut-sky`): mission 1 played to its end, its three cards up and closed, 24 lines and no fault — on the tree before the last mends
+  (the deeds carried forward then, and the rule was on in the module), not run again after them.
+  NOT DONE: Tab's objectives card and the small objective row still read the done step's ask while it settles; an order given in the beat still snaps
+  to the done step's mark. The other missions' cards are plain (the beat): which of them follow a fight he only watches is their parts' to mark.
+  Never seen on a GPU; nobody has played it.

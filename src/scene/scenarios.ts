@@ -269,8 +269,11 @@ export interface LessonStep {
    *  The picture's alone: the squad knows nothing through it (rails.ts RAILS.eyeView) */
   eye?: { at: Vec3; yaw: number; fov?: number };
   /** A CARD that pauses the page when the step comes up (ui/railcard.ts): a heading and a few sentences on a rule of the game no key press shows — a new
-   *  line in `text` is a new paragraph, a key in brackets is drawn as a key. Closed with Enter or a click; then the step's line is what to try. Once a run */
-  explain?: { title?: string; text: string };
+   *  line in `text` is a new paragraph, a key in brackets is drawn as a key. Closed with Enter or a click; then the step's line is what to try. Once a run.
+   *  A card lands a beat after the deed before it (rails.ts RAILS.cardBeat: the step before it settles, and this step's cue, checkpoint and keys come with
+   *  the card). `quiet`: the deed before this card sets off a fight the player is there to watch (his squad sent at a gate, into a room) — the card also
+   *  waits until that fight has gone quiet, to a cap. `now`: no beat at all, for a card whose news is the fight itself ('They're behind you') */
+  explain?: { title?: string; text: string; quiet?: boolean; now?: boolean };
   /** an ARROW on the ground in place of the ring: from the step's `at` it points at this place ('walk into the wall': which way) */
   toward?: Vec3;
   /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no
@@ -328,7 +331,10 @@ export interface ParData { gold: number; silver: number; bronze: number; lossSec
 export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed?: boolean; light?: boolean; nvg?: boolean; bangs?: number; charges?: number; smoke?: number; frags?: number; walls?: number; shells?: number;
   /** yours alone, on a card with the rifle: the launcher's sponge rounds, 0‥5 (game/kit.ts RINGS_MAX). A mission that names your card hands none over it
    *  (kit.ts ISSUE.whole), so one that wants them on the tube says how many: with any, the launcher comes up on them, the grenades its next load */
-  rings?: number }
+  rings?: number;
+  /** yours alone, on a card with the rifle: the load the launcher COMES UP ON, where he carries any of it (absent: the sponge rounds where he has any,
+   *  as above). The stealth tutorial names the grenade, so that its lesson is the swap to the sponge round before the right button is his */
+  loaded?: 'ring' | 'he40' }
 export interface IssueData { members: { [place: string]: IssueCard } }
 /** A SNATCH (game/snatch.ts — an overlay on a level's ROOM CLEAR, as a lesson is one on a mission): ONE unarmed man the team has to take alive. He is a
  *  civilian of the usual make (game/civilians.ts: his eyes, his ears, his run, his hands on his head), put on the floor at every staging of the room clear;

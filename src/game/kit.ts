@@ -1186,7 +1186,7 @@ const pageFrags = (): number => (lessonRow && kitPacks(lessonRow) ? lessonRow.pa
 export const kitIssueWhole = (members?: { [place: string]: unknown } | null): boolean => ISSUE.whole && !WHOLE_BREAK && !!members?.['0'];
 function kitIssue(g: Game, f: () => void): boolean {
   const D = ISSUE.on && !issuing ? g.level.scenarios?.issue : undefined; if (!D) return false;
-  asIssued(() => { issuing = 'own'; for (const [k, c] of Object.entries(D.members)) if (KIT.members[+k]) Object.assign(KIT.members[+k], c); f(); });
+  asIssued(() => { issuing = 'own'; for (const [k, c] of Object.entries(D.members)) if (KIT.members[+k]) { const { loaded: _tube, ...card } = c; Object.assign(KIT.members[+k], card); } f(); });   // (`loaded` is no row of a card: the tube's first load, read at the staging below)
   return true;
 }
 function asIssued(f: () => void) {
@@ -1281,6 +1281,9 @@ export function kitPlayer(g: Game) {
     if (!m.light) { pl.rifle.lightOn = false; pl.pistol.lightOn = false; }
     if (!m.nvg) pl.nv = false;
   }
+  // (a mission's own card may say which load the tube comes up on — scenarios.ts IssueCard.loaded — where he carries any of it: the stealth tutorial's
+  //  launcher comes up on the grenade, and its lesson is the swap to the sponge round)
+  if (issuing === 'own') { const up = g.level.scenarios?.issue?.members['0']?.loaded, rf = pl.rifle, k = up ? rf.attachments.indexOf(up) : -1; if (up && k >= 0 && rf.left(up) > 0) rf.attIdx = k; }
   pl.wand = (m.wand && wandRow()) || (lent && WAND.on && quietWand(g));   // (the optical wand in a pouch: wand.ts — a card as issued carries none, so nothing changes on him; quietfog.ts: a quiet mission under the fog that hands out cameras hands him one too — even on a card whose gun has no launcher for them)
   if (m.suit !== 'issued') pl.char.tint = [...SUITS[m.suit].tint] as Vec3;
   if (m.trim !== 'issued') pl.char.tint2 = [...TRIMS[m.trim].tint] as Vec3;
