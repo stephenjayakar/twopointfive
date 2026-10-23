@@ -2960,6 +2960,7 @@ if (on('laststand-callout', 'laststand', 'all')) await run('laststand-callout', 
 if (on('laststand-regroup', 'laststand', 'all')) await run('laststand-regroup', async () => (await import('./laststand-probes.ts')).lastStandRegroup());
 if (on('laststand-keep', 'laststand', 'all')) await run('laststand-keep', async () => (await import('./laststand-probes.ts')).lastStandKeep());
 if (on('laststand-few', 'laststand', 'all')) await run('laststand-few', async () => (await import('./laststand-probes.ts')).lastStandFew());
+if (on('laststand-fled', 'laststand', 'all')) await run('laststand-fled', async () => (await import('./laststand-probes.ts')).lastStandFled());
 // a friend in a teammate's line of fire (game/clearline.ts — one switch, off as shipped): tools/qa/lineoffire-probes.ts
 if (on('lineoffire-planted', 'lineoffire', 'all')) await run('lineoffire-planted', async () => (await import('./lineoffire-probes.ts')).lineoffirePlanted());
 if (on('lineoffire-walk', 'lineoffire', 'all')) await run('lineoffire-walk', async () => (await import('./lineoffire-probes.ts')).lineoffireWalk());
