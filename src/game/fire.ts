@@ -82,7 +82,8 @@ export interface FireShown { smoked: number; smokes: number; bedded: number; bed
 const states = new SideMap<Game, FireStats>('fire.states');
 const fresh = (): FireStats => ({ fires: 0, lit: 0, frames: 0, cracks: 0, lo: Infinity, hi: -Infinity, sum: 0, n: 0 });
 function stateOf(g: Game) { let s = states.get(g); if (!s) { s = fresh(); states.set(g, s); } return s; }
-/** the counts a probe or the panel reads (a game the fire has not run in: a blank row, and none is made for it) */
+/** the counts a probe or the panel reads, to read now and not to keep: a game the fire has not run in yet gets a blank row of its own, and none is made for it
+ *  (a reader must not add a row to the game's state) */
 export function fireStats(g: Game): FireStats { return states.get(g) ?? fresh(); }
 /** the host's side of it, for the panel's line and the tools; undefined before the first frame a fire burns in, and behind a load */
 export function fireShown(g: Game): Readonly<FireShown> | undefined { return g.engine.fireShown; }

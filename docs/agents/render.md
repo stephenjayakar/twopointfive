@@ -453,7 +453,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   preset or a solver moves no state hash through the fire (the fire check's line 'the host's, not the game's': the game that smoked for twelve seconds and the
   one nothing drew differ in no row of the fire's, and the lamp and the coals are the same to the bit). The book is dropped when a save is put back
   (`host/putback.ts`, and a load's or a restart's own paint): the smoke is filed and the bed asked for on the next frame, where before a load into an earlier
-  twelve seconds left a burning fire silent until the next mark (the check's second load line; red with the drop taken out). A page replay under another preset
+  twelve seconds left a burning fire silent until the next mark (the check's second load line, which runs the host's own `hostAfterPutBack`; red with the paint's drop taken out, and `FIREBOOK_BREAK=1` undoes the put-back's line and fails it). A page replay under another preset
   still files other look sources (the men's breath kept its own word for the solver in the game's state until the step after: its book is the host's too now, `engine.breathShown`, `weather.md`). NOT DONE: the
   other look sources (the men's breath, the cigarette) still wake the solver on verylow, so on a level with them the shed saves the plume's bricks (0.5 ms) and not
   the 0.43 ms of being awake; `settings.fireSmoke` is written when a preset is put on, so the switch moved by hand on a running page waits for the next preset.

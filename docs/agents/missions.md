@@ -788,9 +788,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     error: Tab puts the mode away and he stands, the walk keys walk him to each spot, the line after a walk is the one that puts the mode up again, and with the mode
     closed each next ring is on the picture (the first and third) or its mark is pinned to the picture's edge with the metres to it (the second, 12 m off: the
     objective mark's own rule, `ui/overlay.ts`).
-    KNOWN, NOT MENDED: (1) Shift with the command key does nothing while a walk key is held (`rails.ts` gate and `planShift`: out of a walk it is the sprint's side),
-    and here sprint and the key's own order are both locked, so a hand that arrives in a ring still holding a walk key and presses for the mode gets nothing until it
-    lets go: the frame's and the squad's rule, claimed to their owners. (2) The box shrinks as the camera comes in and turns with it; the hall's and the gates' view
+    KNOWN: (1) Shift with the command key did nothing while a walk key was held (`rails.ts` gate and `planShift`: out of a walk it is the sprint's side),
+    and here sprint and the key's own order are both locked, so a hand that arrived in a ring still holding a walk key and pressed for the mode got nothing until it
+    let go. MENDED the same day by the frame's own rule (`RAILS.planWalk`, `?planwalk=0` = as it was; its bullet "Plan mode opens on the move" below), and the page
+    run asks it at step 'pick'. NOT MENDED: (2) The box shrinks as the camera comes in and turns with it; the hall's and the gates' view
     tests were tried turned and zoomed by a reviewer and held, but a player zoomed far in has to zoom out or walk nearer, and no line says so. (3) With `?tabback=0` the
     back key is Esc and the walk lines still say Tab (as the solo mission's does); Shift with the command key closes the mode too. (4) He can walk into a room nobody
     has taken and be shot there: he has no trigger, and nothing but the lines keeps him on his spots. (5) A ring is 0.9 m either way and its mark fades inside 1.6 m, as
@@ -1862,3 +1863,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   walk the pair with a walk key still down puts the mode up and him on his knee, 20 lines pass and the page has no error; with `URL_ADD='&planwalk=0'`
   that one line fails. NOT DONE: nobody has played it or seen it on a GPU; the scripted player of mission 2 stands still for the pair, so its runs do
   not pass through this rule.
+- **The cigarette's book is the host's (2026-10-23; `smokebreak.ts SmokeShown`, `engine.smokeShown`).** A man's row in the smoke break's table kept
+  `thread` (his thread's source is on the smoke solver) and `left` / `gap` (puffs still to file), and the counts `threads` and `records`: all of it written by
+  `g.smoke.drawing()` and by whether the host has a particle pool. So the solver's word was in the game's state: two games that differed only in their
+  picture differed in the table, and a save put back (`host/putback.ts` empties the solver) came back saying the thread was still on it, so the thread
+  was never filed again. The open fire had the same and moved its book to the host; this is that mend for the cigarette. NOW: those five live on
+  `engine.smokeShown` (a man by his character's id), which no snapshot carries. AND THE BOOK IS NOT TAKEN AT ITS WORD, which a list of places that drop it
+  would be (the first cut of this mend listed three and a review found four more: an encounter restarted, a file loaded, a script's clear, the panel's;
+  and the solver drops a source whose `ttl` ran out, or the first look-only one off a full list, with no word to anybody). The solver asks every source
+  it holds where it is, every step, so the thread's own track stamps the book, and a thread nobody has asked after for `SMOKEBREAK.threadGone` frames (30)
+  with a solver drawing is filed again; each filing has a number and an older one answers 'gone', so there is never more than one. `putback.ts` still
+  drops the book (the puffs owed were the abandoned moment's, and the thread is back at once), as does the switch going off. The game's side keeps the
+  clock, the lights (the meter reads those) and the counts that hang on nothing of the host's; `smokeBreakStats` no longer makes a row by being read, and
+  `resetSmokeBreak`, which nothing called, is gone. No switch: no rule of play changes and nothing reads the book back. CHECK: `smokebreak-check`, whose
+  stand-in solver now asks its sources every step as the real one does, two new lines: the game that smoked on a solver for twenty seconds and the one
+  nothing drew differ in no row of the table (58 rows read, the man's own among them); and one thread rides his hand again, never two, after the solver
+  is cleared, after the source is dropped without a word, after the book is dropped, and after `restartEncounter` with the order given again. Before the
+  mend the first failed on `stats.threads`. MEASURED, seed 7: 10 of 10 on FROZEN and on SHIPPED, `SMOKEBREAK_BREAK=1` fails 8 on both; `rollback-check`
+  on SHIPPED and its static pass, `lived-check` 393, `lesson-gate tut-quiet` on SHIPPED all pass. ON THE PAGE (`tut-quiet`, the software adapter, the
+  real solver, the court's man told to smoke where he stands): one thread filed in eight seconds and one on the solver, its stamp the current frame;
+  the solver cleared, none two frames on, and sixty frames later a second filing and one on the solver; no page error. SEEN ELSEWHERE, NOT MINE: `snowBreath.ts` keeps the same word in its table
+  (`stats.why`, `steam`, `steaming`, a man's `steam`), which is why the check reads this file's rows out one by one: the whole-state diff stops at that
+  table. NEVER SEEN ON A GPU: the thread itself has not been looked at by anybody, before or after.

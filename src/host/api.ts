@@ -23,6 +23,7 @@ import type { BreathShown } from '../game/snowBreath';
 import type { Vec3 } from '../math/vec';
 import type { FireRecord } from '../render/passes';
 import type { FireShown } from '../game/fire';
+import type { SmokeShown } from '../game/smokebreak';
 
 export interface HostApi {
   // ---- per frame
@@ -59,6 +60,9 @@ export interface HostApi {
   /** the fires' book of what was filed with the smoke solver and asked of the mixer (game/fire.ts FireShown): the host's, so in no snapshot. Dropped (set
    *  undefined) when a save in memory is put back (host/putback.ts) and by a load's own paint: the smoke and the bed are then asked for afresh */
   fireShown?: FireShown;
+  /** a smoke break's book of what was filed with the smoke solver and the particle pool (game/smokebreak.ts SmokeShown): the host's, so in no snapshot.
+   *  Dropped when a save in memory is put back (host/putback.ts) and when the switch goes off; a thread the solver let go is filed afresh either way */
+  smokeShown?: SmokeShown;
   /** the light rig swapped wholesale (day ↔ night): the radiance cache re-primes (game/lighting.ts calls it `?.()`) */
   invalidateWorldCache?(): void;
   /** the level was put back to its start under the picture (game/cleanrestart.ts): every temporal history and the radiance cache start from nothing, as on a boot's
