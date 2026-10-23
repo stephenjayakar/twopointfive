@@ -65,6 +65,8 @@ const CSS = `
 #missions.one .mstep { padding: 8px 0 7px; font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--m-dim); background: none; border: 0; border-radius: 0; cursor: pointer; }
 #missions.one .mstep:hover { color: var(--m-text); }
 #missions.one .mstep.on { color: var(--m-bright); cursor: default; }
+/* (a mission played with the kit as issued has one step: the head names no second, and the rail has no row that leads to it) */
+#missions.one.nokit .msteps .mstep[data-step="loadout"], #missions.one.nokit .msteps span, #missions.one.nokit .mteam { display: none; }
 #missions.one .mbody { grid-template-columns: clamp(250px, 25vw / var(--tz, 1), 330px) minmax(0, 1fr); }
 /* the rows: words only, one line each; the highlighted one bright with the bar (the last 14 px track of a row is kept EMPTY: room at its right end) */
 #missions.one .mlist { display: flex; flex-direction: column; padding: 4px 0 30px; background: none; border-right: 1px solid var(--line); scrollbar-width: none; -webkit-mask-image: linear-gradient(#000 calc(100% - 30px), transparent); mask-image: linear-gradient(#000 calc(100% - 30px), transparent); }
@@ -428,14 +430,20 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     return (!pickEntry(p) || d === (p.difficulty ?? 'standard') || (!p.oneDifficulty && (d === 'standard' || d === 'hard'))) && M.hourNow === (p.hour ?? 'night') && M.weather === (p.weather ?? null) && !/[?&]way=/.test(M.hrefOf(m)) ? p : null; };   // (a way in picked on the sheet is not the short list's: the row's own link carries it)
   const baseOf = (m: Mission): string => { const p = asPick(m), d = quietFogAside(() => leversMixed() ? leversBase() : difficultyNow()), h = p && pickHref(p, search, undefined, undefined, pickEntry(p) && (d === 'standard' || d === 'hard') ? d : undefined); return h ? quietFogAside(() => leversHref(h)) : M.hrefOf(m); };
   const WHAT: Record<Pane, string> = { list: 'W S mission · Enter team and kit · Esc back', loadout: 'W S A D change · Enter deploy · Esc back' };
+  /** THE HIGHLIGHTED MISSION HAS NO KIT STEP (a mission played with the kit as issued): its TEAM & KIT pane has nothing on it to pick, so nothing on the
+   *  page leads there — Enter on its row is Deploy, as the block under it says, and the head's second step is not offered (.nokit, below) */
+  const noKit = () => !!L && kitAsIssued(L.entry);
+  /** from the rows on to the next step: the kit, or for a mission with none straight in (Enter on a row, the block, the head's step, the rail's team row) */
+  const onward = () => { if (noKit()) { L!.deploy(); return; } setPane('loadout'); mount(); };
   // the Mission step's own block, on the loadout's bar after its Deploy: the way the page draws him is mission, then team and kit, then Deploy
   const next = el('button', 'lo-btn sp-next', 'Team & kit ›'); next.setAttribute('type', 'button'); next.setAttribute('data-act', 'kit');
-  next.addEventListener('click', () => { setPane('loadout'); mount(); });
+  next.addEventListener('click', onward);
   const say = () => { const bar = host.querySelector?.('[data-row="actions"]') as HTMLElement | null; if (!bar) return;
-    bar.setAttribute('data-what', (pane === 'loadout' && KIT_CLIP.on && L?.card ? WHAT.loadout.replace('change', 'change · C copy · V paste') : WHAT[pane]).replace('Esc back', pane === 'loadout' && kbrief?.map ? 'M map · Esc back' : 'Esc back')); if (next.parentElement !== bar) bar.appendChild(next);   // (copy and paste of a man's kit — ui/kitCard.ts KIT_CLIP — where there are cards to copy)
-    root.classList.toggle('nokit', !!L && kitAsIssued(L.entry)); root.classList.toggle('quiet', !!L && quietGear(L.entry.kind, search)); };
+    bar.setAttribute('data-what', (pane === 'loadout' && KIT_CLIP.on && L?.card ? WHAT.loadout.replace('change', 'change · C copy · V paste') : pane === 'list' && noKit() ? WHAT.list.replace('team and kit', 'deploy') : WHAT[pane]).replace('Esc back', pane === 'loadout' && kbrief?.map ? 'M map · Esc back' : 'Esc back')); if (next.parentElement !== bar) bar.appendChild(next);   // (copy and paste of a man's kit — ui/kitCard.ts KIT_CLIP — where there are cards to copy)
+    root.classList.toggle('nokit', noKit()); root.classList.toggle('quiet', !!L && quietGear(L.entry.kind, search)); };
   const steps: [Pane, HTMLElement][] = [];
-  const setPane = (p: Pane) => { const was = pane; pane = p; root.classList.toggle('pane-loadout', p === 'loadout'); root.classList.toggle('pane-list', p === 'list');
+  const setPane = (p: Pane) => { if (p === 'loadout' && noKit()) p = 'list';   // (no kit step to stand on: a link that opens a mission on its kit — ?loadout= — opens this one on its rows)
+    const was = pane; pane = p; root.classList.toggle('pane-loadout', p === 'loadout'); root.classList.toggle('pane-list', p === 'list');
     for (const [k, b] of steps) { b.classList.toggle('on', k === p); if (k === p) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); }
     if (was !== p) kbrief?.setBig(false);
     if (was !== p && sheetEl) sheetEl.scrollTop = 0;   // (the sheet folds or unfolds under the keys: it is read from its top again)
@@ -494,6 +502,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
       onDeploy: to => { kguide?.deployed(); kview?.close(); kview = null; try { globalThis.localStorage?.setItem('twopointsix.mission', m.id); } catch { /* no store */ }   // (the row the page opens on next time, however it was deployed)
         if (p && pickOfQuery(to)) notePicked(p); count.textContent = 'loading…'; } });   // (played = started AS the short list's row: a team size of the player's own is not it)
     say(); paintTeam(); paintFigure(L); kguide?.paint(guideOn());
+    if (pane === 'loadout' && noKit()) { setPane('list'); say(); }   // (onto a mission with no kit step from the kit of another: its rows, not an empty pane)
   };
   /** out of the kit, back on the rows (Esc there, the Mission step): the size picked is kept for the mission */
   const toList = () => { if (L) squads.set(L.entry.id, L.squad); setPane('list'); mount(); };
@@ -513,7 +522,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   };
 
   M = openMissions({ root: opts.root, list, keep: true, planPx: GROUPS_UI.on ? 640 : 1320, select: opts.select, first: PICKS_UI.on ? PICKS[0]?.mission : undefined, fold: GROUPS_UI.on, tiles: GROUPS_UI.on, heads: GROUPS_UI.on ? undefined : first > 0 && first < list.length ? { [first]: 'Every other mission' } : {},   // (the groups, folded — ui/missions.ts groupHeads / `fold`; a visit that names no row opens on the short list's first, wherever its group stands; ?nogroups = the short list on top and the one heading it had)
-    onPick: () => { setPane('loadout'); mount(); },
+    onPick: onward,
     onPaint: () => { if (ready) onPaint(); },
     onClose: () => { shut = true; if (L?.open) L.close(); L = null; fig?.close(); fig = null; kview?.close(); kview = null; kguide?.close(); kguide = null; kbrief?.close(); kbrief = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
       root.removeEventListener?.('click', onClick, true); for (const v of vals) if (v.lit) clearTimeout(v.lit);
@@ -547,7 +556,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
       const point = () => tell(v.lab.textContent ?? '', rowNote(v.src)), away = () => { if (armed === v) { armed = null; v.val.textContent = 'Custom'; v.btn.classList.remove('armed'); } tell(base[0], base[1]); };
       btn.addEventListener('mouseenter', point); btn.addEventListener('focus', point); btn.addEventListener('mouseleave', away); btn.addEventListener('blur', away);
       rail.appendChild(btn); store.appendChild(r); }
-    team.addEventListener('click', () => { setPane('loadout'); mount(); });
+    team.addEventListener('click', () => { if (!noKit()) onward(); });
     rail.append(rule, team, read);
     sheet.insertBefore(brief, sheet.firstChild); sheet.insertBefore(rail, brief.nextSibling); sheet.appendChild(store);
     if (GROUPS_UI.on) sheet.insertBefore(map, rail.nextSibling);   // (the tiles' cards are pictures: the map sheet stands under the rail, in the room it leaves)
@@ -559,7 +568,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   let stepsBar: HTMLElement | null = null;
   if (title?.parentElement) { const bar = stepsBar = el('div', 'msteps');
     for (const [k, words] of [['list', 'Mission'], ['loadout', 'Team & kit']] as [Pane, string][]) { const b = el('button', 'mstep', words); b.setAttribute('type', 'button'); b.setAttribute('data-step', k);
-      b.addEventListener('click', () => { if (pane === k) return; if (k === 'list') toList(); else { setPane('loadout'); mount(); } });
+      b.addEventListener('click', () => { if (pane === k) return; if (k === 'list') toList(); else if (!noKit()) onward(); });
       if (steps.length) bar.appendChild(el('span', undefined, '›')); bar.appendChild(b); steps.push([k, b]); }
     title.parentElement.insertBefore(bar, title.nextSibling); }
   if (foot) foot.textContent = '';   // (the keys are on the rail's rows and on the Deploy bar now)

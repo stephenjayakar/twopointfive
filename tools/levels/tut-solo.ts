@@ -64,6 +64,12 @@ export const CORNER: Vec3 = [8.9, 1.2, AXIS - 0.6];
 export const SENTRY: Vec3 = [13.9, 0, AXIS];
 /** beside the blue gate, out of the gun's cone (steps 'arch', 'crouch') */
 export const JAMB: Vec3 = [15.1, 0, 11.7];
+/** THE INNER DOOR (step 'door'): a wall shuts the gate's corner of the truck court off from the way to the arch, and its one door is wooden and locked. Where
+ *  the wall stands, the door's middle along it, and where he stands square on to the leaf to shoot it out (a round that clips a jamb is not counted) */
+export const INNER_X = 12.5, INNER_Z = 9.25, INNER_FROM: Vec3 = [10.7, 0, INNER_Z];
+/** …and it opens TOWARD him (the gate's side): a sprint into a locked door is a kick, and a leaf's frame holds a boot from the face it opens toward, so the run
+ *  a new player tries first stops on it and the line's trigger is the way through (the scripted player's `jamb` way runs at it, and fails with this turned) */
+const SWING_INNER = 1;
 /** the far end of the sandbags (step 'low') */
 export const BAGS_END: Vec3 = [20.2, 0, 13.6];
 /** where the smoke goes: the gap itself, on the gun's line to it. On floor he can see from behind the sandbags' end: the ring is the place to click */
@@ -101,21 +107,22 @@ export const EXIT = { name: 'the road', door: 'gate_w', x: 8.2, z: AXIS, out: [-
 
 /** THE TUTORIAL FRAME'S KEYS, a step each: `allow` turns actions on for the rest of the mission (from the first step he can walk, and turn and zoom the view as the first mission taught him: `rails.allow`),
  *  `cue` goes to the level's script as the step comes up ('lesson:<cue>'), `checkpoint` names the one save of a beat. Four checkpoints, each where he has
- *  just finished a fight and nobody alive can see him: the gate (the sentry is down), the gun (the nest is out), the shop (its man is down), the store (the
+ *  just finished a fight and nobody alive can see him: the gate (the sentry is down, the inner door is out and the rifle is full again), the gun (the nest is out), the shop (its man is down), the store (the
  *  building is his). */
 export const FRAME: Record<string, { allow?: string[]; deny?: string[]; cue?: string; checkpoint?: string }> = {
   move: { cue: 'road' }, ready: { allow: ['slot:rifle'] }, sprint: { allow: ['sprint'] }, wall: { allow: ['wall'], cue: 'cease' }, peek: { allow: ['aim'] }, fire: { allow: ['fire'] },
-  reload: { allow: ['reload'], checkpoint: 'the gate' }, tab: { deny: ['slot:rifle', 'fire', 'reload'] }, auto: { allow: ['mode', 'slot:rifle', 'fire', 'reload'] }, arch: { cue: 'gun' }, crouch: { allow: ['crouch'], cue: 'bags' },
+  tab: { deny: ['slot:rifle', 'fire'] }, auto: { allow: ['mode', 'slot:rifle', 'fire'] }, door: { allow: ['reload'] }, reload: { cue: 'way' }, arch: { cue: 'gun', checkpoint: 'the gate' }, crouch: { allow: ['crouch'], cue: 'bags' },
   smoke: { allow: ['slot:smoke'], cue: 'gap' }, cross: { cue: 'blind' }, frag: { allow: ['slot:frag'] },
   pistol: { allow: ['slot:pistol'], checkpoint: 'the gun' }, charge: { allow: ['use'] }, blow: { allow: ['word'] }, shop: { cue: 'shop' },
   stun: { allow: ['slot:flash'], cue: 'room', checkpoint: 'the shop' }, store: {},
-  take: { checkpoint: 'the store' }, leave: { allow: ['load'] }, behind: { cue: 'trucks' }, launch: { allow: ['alt'] }, last: { cue: 'loose' },
+  take: { checkpoint: 'the store' }, behind: { cue: 'trucks' }, launch: { allow: ['alt'] }, last: { cue: 'loose' },
 };
 
 const SHOP: Rect = { x0: FRONT_X, x1: PART_X, z0: ROOM_Z0, z1: ROOM_Z1 }, STORE: Rect = { x0: PART_X, x1: YARD.x1, z0: ROOM_Z0, z1: ROOM_Z1 };
 
-/** HIS KIT (game/kit.ts kitIssue): one of each can the steps ask for and one to spare of what a first throw may waste */
-export const ISSUE: IssueData = { members: { '0': { weapon: 'rifle', smoke: 2, bangs: 2, frags: 2, shells: 3, rings: 2, charges: 1 } } };
+/** HIS KIT (game/kit.ts kitIssue): one of each can the steps ask for and one to spare of what a first throw may waste. The launcher has the grenade and
+ *  nothing else (the maintainer: "we can also not teach swapping secondaries at this point and only have 40mm": no sponge rounds on this card) */
+export const ISSUE: IssueData = { members: { '0': { weapon: 'rifle', smoke: 2, bangs: 2, frags: 2, shells: 3, charges: 1 } } };
 
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
@@ -195,6 +202,15 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- the truck court: the sentry's post, a barrier across the gate's line, the parked truck the gun finds ----
   grp('court.truck');
   G.jersey(12.5, AXIS, 2, HALF);
+  // THE INNER DOOR. The gate's corner of the court is walled off from the way to the arch: a wall north from the barrier's end with one wooden door in it,
+  // locked, and a second barrier from the first one's other end to the arch. The way to the blue gate is through that door, and a rifle on full auto is
+  // what opens it (the maintainer: "weird to reload after a single shot in tutorial 3. maybe we can have a moment where we teach (1) switching to full
+  // auto, (2) mag dumping on a door to break it, and then (3) teaching a reload"). What a round through the leaf goes on to is the arch's wall
+  G.yardWallZ(INNER_X, YARD.z0, 12.2, 'mudLight', [{ a: INNER_Z - 0.6, b: INNER_Z + 0.6, y0: 0, y1: 2.2 }]); G.pier(INNER_X, 12.0);
+  // (it opens toward the gate's corner, the face he comes to it from: a sprint into a locked door is a kick, and a frame holds a boot from the face its
+  //  door opens toward — doors.ts DOORWAY.frameHolds — so running at it is no way through)
+  doors.push({ name: 'inner', hinge: [INNER_X, INNER_Z - 0.58], closedDir: HALF, width: 1.16, locked: true, swing: SWING_INNER, closer: false });
+  G.jersey(14.1, 16.55, 2, 0);
   G.pickup(12.6, 19.2, 0.25, 'truckWhite', { load: 'drums' });
   G.drums(10.2, 21.6, 4); G.tyres(15.2, 21.8, 4); G.crates(10.0, 6.4, 0.1, 3); G.gasBottle(11.0, 6.2); G.gasBottle(11.4, 6.5);
   G.sacks(14.6, 6.5, 0.2, 4); G.patch(12.4, 18.8, 4.2, 2.6, 'oil', 0.3, 0.019);
@@ -294,7 +310,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('dress.road');     // the roadside: a melon stall by the forecourt, scrub along the verge
   G.stall(1.9, 21.8, 0.12, 2.2, 'tarpBlue'); G.bush(1.1, 17.4); G.bush(0.9, 24.4, 0.8); G.bush(8.2, 22.2, 0.9); G.tyres(7.6, 19.8, 2);
   grp('dress.truck');    // the truck court's north corner: where the gate's men sit out a watch
-  G.charpoy(10.7, 8.6, 0.12); G.lowTable(11.9, 9.5, 0.3); G.plasticChair(12.4, 10.4, 2.6); G.jerryCan(13.6, 8.4, 0.2);
+  G.charpoy(10.6, 7.5, 0.12); G.lowTable(10.6, 16.7, 0.3); G.plasticChair(11.3, 17.1, 2.6); G.jerryCan(15.5, 7.3, 0.2);   // (nothing between the inner door and where he shoots it from, nor in a round's way past it)
   grp('dress.shop');     // the shop is the room they live in: a stove, a floor mattress and tea, a rug under the table, a hanging on the wall
   G.rug(27.5, 16.2, 3.2, 1.9, 'afghan'); G.toshak(29.3, 16.95, 1.9, 0); G.lowTable(29.2, 16.1, 0.1); G.stove(28.4, 11.15);
   G.wallHanging('x', ROOM_Z0, 27.6, 1, 'baluch', 1.4, 0.9); G.gasBottle(30.0, 12.6);
@@ -362,60 +378,67 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // (the peek is the lesson, the shot its reward: he is at the corner the sentry was firing past a moment ago. The trigger is still locked here, so the
       //  lean is the only way on: a man who walks into the opening instead is shot at by nobody, the sentry's fire having stopped at the line before)
       { id: 'peek', line: 'Slide along to the gate, then aim past the corner to lean out', done: { is: 'flag', flag: 'lean' }, at: CORNER },
-      { id: 'fire', line: 'Left-click to shoot the sentry', done: DOWN(1), at: [SENTRY[0], 1.2, SENTRY[2]] },
+      // (`settle`, here and on every step that ends in a shot, a blast or a man going down — the maintainer: "should only move through the tutorial after it
+      //  \"settles\"": the next line or card comes up once the moment has played out, not over it)
+      { id: 'fire', line: 'Left-click to shoot the sentry', done: DOWN(1), settle: 1.5, at: [SENTRY[0], 1.2, SENTRY[2]] },
       // THE TRUCK COURT
-      { id: 'reload', line: 'Press [R] to reload', done: { is: 'reload' } },
       // (the gun's own setup, met early and in a quiet moment)
       // (the maintainer: "the timer is bad. we should just have it switch a mode. and we should teach earlier that tab exits out of menus": the setup is
       //  opened and shut before anything is picked in it; its rows stay locked until the next line, and for the Tab line alone the rifle's own key,
-      //  the trigger and the reload are taken back (each of them puts the setup away too, and the line would pass with Tab never pressed), so Tab is
-      //  the one way out here. The sentry is down and nobody else is on the floor yet: nothing is lost with the trigger for one line)
-      { id: 'setup', line: 'Press [2] again to open the rifle\'s setup', done: { is: 'flag', flag: 'setup' },
-        explain: { title: 'Setting up your gun', text: 'Press your gun\'s key again while you\'re holding it to open its setup above the kit strip. You can switch between single shots and full auto, turn on its light, and swap loads if it has more than one. It\'ll stay open until you pick a row or close it.' } },
+      //  and the trigger are taken back (each of them puts the setup away too, and the line would pass with Tab never pressed; so does the reload, which
+      //  is not his until the door's line), so Tab is the one way out here. The sentry is down and nobody else is on the floor yet: nothing is lost with the trigger for one line)
+      { id: 'setup', line: 'Press [2] again to open your rifle\'s setup menu', done: { is: 'flag', flag: 'setup' },
+        explain: { title: 'Setting up your gun', text: 'When you\'re holding a gun, press its key again to open its setup menu above the kit strip. You can switch between single shots and full auto, or turn on its light. It\'ll stay open until you pick a row or close it.' } },
       { id: 'tab', line: 'Press [Tab] to close it, like any other menu', done: { is: 'flag', flag: 'setupShut' } },
-      { id: 'auto', line: 'Press [Z] to switch to full auto', setupLine: 'Press [2], then [1], to switch to full auto', done: { is: 'any', of: [{ is: 'flag', flag: 'auto' }, DOWN(2)] } },
-      { id: 'arch', line: 'Move up beside the blue gate', done: { is: 'near', at: JAMB, r: 1.3 }, hold: 1, at: JAMB },   // (a second there: the gun opens on the truck before the next line, whenever he came)
+      { id: 'auto', line: 'Press [Z] to switch to full auto', setupLine: 'Press [2] and then [1] to switch to full auto', done: { is: 'any', of: [{ is: 'flag', flag: 'auto' }, DOWN(2)] } },
+      // THE INNER DOOR: full auto has a use at once, and the reload comes after a magazine has really been fired. The leaf goes on the twelfth rifle round
+      // (game/doorblast.ts DOORSHOT); where that rule is off, or his rounds find the jambs, the twentieth round he fires on this line ends it and the level's
+      // script throws the door open as the next line comes up (cue 'way'), so the way on never hangs on a switch. The reload's line waits for the gun to be
+      // FULL again (the maintainer: "also weird that the next modal shows up before the reload completes"), and a gun he ran dry has already started
+      // its own reload (game/autoreload.ts): the line is then already being done, and goes by when it is
+      // (two lines, each one thing he can do where he stands: the walk to the door, then the trigger held on it)
+      { id: 'inner', line: 'Go through the gate to the wooden door', done: { is: 'near', at: [INNER_X - 0.9, 0, INNER_Z], r: 1.5 }, at: [INNER_X, 1.1, INNER_Z] },   // (anywhere before the leaf, up to it)
+      { id: 'door', line: 'Hold the left mouse button to shoot the wooden door until it breaks', done: { is: 'any', of: [{ is: 'door', door: 'inner', state: 'open' }, { is: 'did', what: 'event:shot', n: 20 }] }, settle: 1, at: [INNER_X, 1.1, INNER_Z] },
+      { id: 'reload', line: 'Press [R] to reload', done: { is: 'loaded' }, settle: 0.8 },
+      { id: 'arch', line: 'Go through the doorway and move up beside the blue gate', done: { is: 'near', at: JAMB, r: 1.3 }, hold: 1, at: JAMB },   // (a second there: the gun opens on the truck before the next line, whenever he came)
       { id: 'crouch', line: 'Press [C] to crouch, and the shots will go over you', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: JAMB, r: 1.9 }] }, at: JAMB },
       // THE GUN COURT
       { id: 'low', line: 'Stay low and follow the sandbags', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: BAGS_END, r: 1.1 }] }, at: BAGS_END },
       { id: 'smoke', line: 'Press [3], then click the ring to throw smoke there', done: { is: 'any', of: [{ is: 'threw', kind: 'smoke', area: SMOKED }, DOWN(2)] }, hold: 2.5, at: GAP },
       { id: 'cross', line: 'Cross behind the smoke', done: { is: 'in', area: BEHIND }, at: BARRIER },
-      { id: 'frag', line: 'Press [5], then click the ring to throw a frag at the gun', done: DOWN(2), at: NEST },
+      { id: 'frag', line: 'Press [5], then click the ring to throw a frag at the gun', done: DOWN(2), settle: 1.5, at: NEST },
       // THE SHOP
       // (what the pistol is for: its shot is the one nobody takes for gunfire, and a lamp is a thing to shoot. The lamp lights where the next line stands him)
       { id: 'pistol', line: 'Press [1] to switch to your pistol, because it\'s much quieter', done: { is: 'any', of: [{ is: 'slot', slot: 'pistol', drawn: true }, DOWN(5)] } },
-      { id: 'lamp', line: 'Shoot out the light so you can hide in the dark', done: { is: 'any', of: [{ is: 'target', name: 'lamp_shop', on: false }, DOWN(3)] }, at: LAMP },
+      { id: 'lamp', line: 'Shoot out the light so you can hide in the dark', done: { is: 'any', of: [{ is: 'target', name: 'lamp_shop', on: false }, DOWN(3)] }, settle: 0.8, at: LAMP },
       { id: 'charge', line: 'Hold [Space] on the door and pick the charge', done: { is: 'any', of: [{ is: 'door', door: 'shop', state: 'charged' }, { is: 'door', door: 'shop', state: 'open' }] }, at: SHOP_DOOR },
       { id: 'back', line: 'Stand clear with your back to the wall beside the door', done: { is: 'near', at: BACK, r: 0.6 }, at: BACK },
       // (`blowLine`: his own charge is a row of his own actions where that rule is on — game/ownblow.ts — and stood clear it is the only row, so a tap gives it)
-      { id: 'blow', line: 'Press [F] to blow the door', blowLine: 'Press [Space] to blow the door', done: { is: 'door', door: 'shop', state: 'open' }, at: SHOP_DOOR },
-      { id: 'shop', line: 'Lean in and shoot the guard inside', done: DOWN(3), at: [SHOP_MAN[0], 1.0, SHOP_MAN[2]] },
+      { id: 'blow', line: 'Press [F] to blow the door', blowLine: 'Press [Space] to blow the door', done: { is: 'door', door: 'shop', state: 'open' }, settle: 0.6, at: SHOP_DOOR },
+      { id: 'shop', line: 'Lean in and shoot the guard inside', done: DOWN(3), settle: 1.5, at: [SHOP_MAN[0], 1.0, SHOP_MAN[2]] },
       // THE STORE
       // (the maintainer: "do flashbangs take line of sight into account? i flashed myself in the solo loud tutorial level even though it went into the other
       //  room". They do — combat.ts detonateStun: a clear line from the burst to a head inside its reach, his own included — and the store's doorway has no
       //  leaf and stands in line with the shop's door, so a man who throws from inside the shop is looking down that line. Said before the throw, on a
       //  card, with the one thing to do about it in the line; a man who stays is blinded for a few seconds, which is the rule and now no surprise)
-      { id: 'stun', line: 'Press [4], then click the ring to throw a stun grenade, and get behind the wall', done: { is: 'any', of: [{ is: 'threw', kind: 'flash', area: STORE }, DOWN(5)] }, at: STUN_AT,   // (it passes on the bang itself, in the store: the next line is up while they are still folded)
+      { id: 'stun', line: 'Press [4], then click the ring to throw a stun grenade, and get behind the wall', done: { is: 'any', of: [{ is: 'threw', kind: 'flash', area: STORE }, DOWN(5)] }, settle: 0.4, at: STUN_AT,   // (it passes on the bang itself, in the store: the next line is up while they are still folded)
         explain: { title: 'Throwing a stun grenade', text: 'A stun grenade blinds anyone nearby who can see it go off, and that includes you. Walls and closed doors block the flash, but an open doorway doesn\'t. Throw it through the doorway, then move to the side so you\'re behind the wall when it goes off.' } },
-      { id: 'store', line: 'Go in and shoot them both', done: DOWN(5), at: [33.6, 1.0, AXIS] },
+      { id: 'store', line: 'Go in and shoot them both', done: DOWN(5), settle: 1.5, at: [33.6, 1.0, AXIS] },
       { id: 'take', line: 'Press [Space] to take the code book', done: { is: 'stage', stage: 'exfil' }, at: front },
       // THE WAY OUT
-      { id: 'rifle', line: 'Press [2] to switch back to your rifle', done: { is: 'slot', slot: 'rifle', drawn: true } },
-      // (the maintainer: "for 2 we probably need to explain secondary attachments for the rifle in a modal" "and where to see it in the UI, swap between
-      //  secondaries, etc.": said here, with the rifle back in his hands and its load on the kit strip, in the quiet before the two it is for come out.
-      //  THE SWAP IS DONE, not only said: his card names two sponge rounds (`rings`), the launcher comes up on them, and the load's row is his from this
-      //  card on (`leave: allow load`), so "press 2 twice" works the moment he has read it. The right button itself stays shut until the line that fires)
+      { id: 'rifle', line: 'Press [2] to switch back to your rifle', done: { is: 'slot', slot: 'rifle', drawn: true }, settle: 0.8 },
+      // (the maintainer: "for 2 we probably need to explain secondary attachments for the rifle in a modal" "and where to see it in the UI": said here,
+      //  with the rifle back in his hands and its grenades on the kit strip, in the quiet before the two it is for come out. And, later: "we can also not
+      //  teach swapping secondaries at this point and only have 40mm. we can introduce sponge rounds + swapping secondaries later when we have a stealth
+      //  tutorial": his card carries the grenade alone, so there is nothing to swap and no line for it. The right button stays shut until the line that fires)
       { id: 'leave', line: 'Go back to the blue gate', done: { is: 'any', of: [{ is: 'near', at: ARCH_MOUTH, r: 0.8 }, DOWN(7)] }, at: ARCH_MOUTH,
-        explain: { title: 'Using the rifle\'s launcher', text: 'Your rifle\'s launcher fires sponge rounds that stun or HE grenades that kill. Look next to your ammo at the bottom left to see which is loaded. Press [2] twice to swap them. Hold the right mouse button to aim, then let go to fire. HE won\'t go off up close.' } },
-      // (the maintainer: "weird that we're told to load the grenade long before being told to do anything about it": the two it is for come out first, on a
-      //  line that only asks him to look (the frame draws a line with no key and a cue for its end as something to watch); the script ends that line
-      //  once they stand in the doorway, so the shot is asked for with men in it. THE LOAD'S LINE is the swap from the sponge round to the grenade; it is
-      //  already true, and goes by, for a man who tried the swap when the card told him how and left the grenade up)
+        explain: { title: 'Using the rifle\'s launcher', text: 'Your rifle has a grenade launcher under the barrel. You can see how many grenades you\'ve got next to your ammo at the bottom left. Hold the right mouse button to aim and let go to fire. A grenade won\'t go off if it lands too close to you.' } },
+      // (the two it is for come out first, on a line that only asks him to look (the frame draws a line with no key and a cue for its end as something to
+      //  watch); the script ends that line once they stand in the doorway, so the shot is asked for with men in it)
       { id: 'behind', line: 'Turn around and watch the shop doorway for two more enemies', done: { is: 'cue', name: 'trucks' } },
-      { id: 'load', line: 'Press [2] again to load the grenade', setupLine: 'Press [2] twice to load the grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, DOWN(7)] } },
-      { id: 'launch', line: 'Hold the right mouse button, aim at the doorway, and let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
-      { id: 'last', line: 'Shoot the rest', done: DOWN(7), at: LAST_COVER },
-      { id: 'out', line: 'Sprint out through the gate you came in by', done: { is: 'stage', stage: 'done' }, at: [EXIT.x, 0, EXIT.z] },
+      { id: 'launch', line: 'Hold the right mouse button, aim at the doorway, and let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, settle: 1.5, at: LAST_COVER },
+      { id: 'last', line: 'Shoot the rest', done: DOWN(7), settle: 1.5, at: LAST_COVER },
+      { id: 'out', line: 'Sprint back out through the gate you came in', done: { is: 'stage', stage: 'done' }, at: [EXIT.x, 0, EXIT.z] },
     ] as LessonStep[]).map(T => ({ ...T, ...FRAME[T.id] })),
   };
 
@@ -436,6 +459,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     mission: { serverRoom: { x0: SHOP.x0, x1: STORE.x1, z0: SHOP.z0, z1: SHOP.z1 }, entryDoor: 'shop', rack: { index: 0, front, halfW: 0.3 }, exfilDoor: 'gate_w', exfilX: EXIT.x, exfilZ: EXIT.z, exfilOut: EXIT.out },
   };
   const surfaces: SurfacesData = { building: { ...YARD }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt', zones };
-  const scenarios: LevelScenarios = { quiet, lesson, issue: ISSUE, doorNames: [{ door: 'gate_w', name: 'yard gate' }, { door: 'shop', name: 'shop door' }, { door: 'store', name: 'back door' }] };
+  const scenarios: LevelScenarios = { quiet, lesson, issue: ISSUE, doorNames: [{ door: 'gate_w', name: 'yard gate' }, { door: 'inner', name: 'inner door' }, { door: 'shop', name: 'shop door' }, { door: 'store', name: 'back door' }] };
   return { level, scenarios, groups: trace.groups, surfaces };
 }
