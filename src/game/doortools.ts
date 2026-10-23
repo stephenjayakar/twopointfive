@@ -86,6 +86,7 @@ import { doorPlan } from './roomclear';
 import { NIGHTBREACH } from './nightbreach';
 import { PLAYER_ID } from './consts';
 import { chargeHands } from './handwork';
+import { samStowing, mateStow, mateStowLead, stowFight } from './workstow';   // (called inside samTick and the 'place' stage only)
 import { COVER } from './cover';
 import { NVG, nvgDown, nvgWorn, nvgBlack, nvgPlaceLight, tubeVis } from './nvg';
 import { irShowsAt } from './irlight';
@@ -632,6 +633,8 @@ export interface DoorOp {
   openT: number; can: Item | null; tossT: number; landT: number; bangT: number; bangAt: Vec3 | null;
   /** the men still to be sent in, and when · the charge's clock at the door */
   queue: { gd: Guard; at: number; pod: { pos: Vec3; face: number } }[]; setT: number;
+  /** (workstow.ts stowFight) since when the fight has had the setter off his charge, this stretch of it */
+  stowOffT?: number;
   /** each man's point of domination once he has been sent in, and when he got onto it */
   pod: Map<Guard, { pos: Vec3; face: number }>; onPod: Map<Guard, number>;
   /** clear from outside: each man's stations, the one he is on, and since when he has held it with nobody in his sight */
@@ -1452,6 +1455,7 @@ export class DoorTools {
     if (!OWNCHARGE.on || pl.down || pl.sprinting || !!pl.dragging || !!pl.holding || !!pl.takedown || !!pl.kick || g.puppet || d.off || isOpen(d) || this.chargeOn(d)
       || this.ops.some(o => o.kind === 'charge' && o.door === d)   // (the squad ordered onto this door with a charge of its own: theirs goes on, never two)
       || offOf(d, p, s.side) <= 0 || flat(p, s.at) > SAM_SHIFT || (act && !(mine && act.door === d))) { this.cancelSam(); return; }
+    if (samStowing(g)) { s.t0 = g.time; return; }   // (workstow.ts: what was in his hand is still on its way to where it lives — the charge's clock starts with his hands free)
     const J = this.samJob!;
     chargeHands(g, pl.char, J.p, J.n, g.time - s.t0, K.setSecs, pl.pistolUp ? 0 : undefined);
     if (g.time - s.t0 < K.setSecs) return;
@@ -2330,9 +2334,11 @@ export class DoorTools {
           if (P && g.orders.big) this.assign(op, lead, { post: P.pos, face: P.face, watch: [d.frameCentre[0], 1.05, d.frameCentre[2]], stance: 'highReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, stackSide: P.stackSide, going: 'standing off', there: `stood off · ${name}` });
           this.stayHands(op); this.end(op, 'the door opened'); break; }
         const A = op.mine.get(lead)!;
-        if (isNaN(op.setT)) { if (A.arrived && flat(lead.char.pos, d.frameCentre) < 1.6) op.setT = t; else if (!this.waiting(op, el)) { g.say(lead, "can't get on that door."); this.end(op, 'never made the door'); } break; }
+        if (stowFight(g, lead, A, op)) { op.setT = NaN; op.t0 = t; break; }   // (workstow.ts: the fight has him — his hands are not on a charge; not set, nothing spent, and he starts over when it lets him go, `fightCap` at most at a stretch)
+        if (isNaN(op.setT)) { if (A.arrived && flat(lead.char.pos, d.frameCentre) < 1.6) op.setT = t + mateStowLead(); else if (!this.waiting(op, el)) { g.say(lead, "can't get on that door."); this.end(op, 'never made the door'); } break; }
         if (flat(lead.char.pos, d.frameCentre) > 1.6) { op.setT = NaN; break; }   // (walked off it: not set)
-        { const o = doorPt(d, 0, 0, op.side), n1 = doorPt(d, 0, 1, op.side); chargeHands(g, lead.char, doorPt(d, d.def.width - 0.22, 0.025, op.side, 1.05), [n1[0] - o[0], 0, n1[2] - o[2]], t - op.setT, K.setSecs); }   // (handwork.ts: his hands on it while it goes on)
+        mateStow(g, lead);   // (workstow.ts: his gun is out of his hands for it — the charge's clock began `mateDown` after he came onto it)
+        if (t >= op.setT) { const o = doorPt(d, 0, 0, op.side), n1 = doorPt(d, 0, 1, op.side); chargeHands(g, lead.char, doorPt(d, d.def.width - 0.22, 0.025, op.side, 1.05), [n1[0] - o[0], 0, n1[2] - o[2]], t - op.setT, K.setSecs); }   // (handwork.ts: his hands on it while it goes on)
         if (t - op.setT < K.setSecs) break;
         if (!this.take('charge')) { g.say(lead, 'no charges left.'); this.end(op, 'no charges'); break; }
         this.set.push({ door: d, side: op.side, t, by: lead.callsign }); g.audio.play('lockPick', d.pos, 0.6);

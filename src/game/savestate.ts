@@ -448,7 +448,7 @@ export function playerBusy(g: Game): string | null {
   if (pl.breakerMove) return 'at the breaker';
   if (pl.easing) return 'easing a door';
   if (pl.doorMove) return 'working a door';
-  if (g.wallCharge?.setting || pl.charging) return 'setting a charge';
+  if (g.wallCharge?.setting || pl.charging || pl.workStow) return 'setting a charge';   // (workStow — workstow.ts: his gun put away for one and not back in his hand yet)
   if (g.defuse?.working) return 'at a charge';
   if (pl.kick || (pl.doorKickTail && pl.char.anim.kicking)) return 'kicking a door';   // (doorKickTail — sprintdoor.ts: his legs are his own again while the leg of a boot at the run is still coming down, and the animator's kick clock is not in a file)
   if (pl.pendingThrow || pl.throwHeld || pl.char.anim.inThrow) return 'throwing';

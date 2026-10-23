@@ -73,6 +73,7 @@ import { CMDRING } from '../game/cmdring';
 import { STACKROOM } from '../game/stackroom';
 import { HANDLE } from '../game/handleside';
 import { HANDWORK } from '../game/handwork';
+import { WORKSTOW } from '../game/workstow';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { GEAR } from '../game/gear';
@@ -425,6 +426,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_FOOTFALL')) FOOTFALL.once = String((globalThis as any).process?.env?.TPS_FOOTFALL ?? '') === '1';   // one footfall a step (src/game/player.ts): off, so every crossing of the walk cycle's half files one, as on every frozen recording
     if (pinned('TPS_STEALTHPOSE')) STEALTHPOSE.on = String((globalThis as any).process?.env?.TPS_STEALTHPOSE ?? '') === '1';   // stealth poses (src/game/stealthpose.ts): off, so his arms and head are where every stored digest has them
     if (pinned('TPS_HANDWORK')) HANDWORK.on = String((globalThis as any).process?.env?.TPS_HANDWORK ?? '') === '1';   // hands that do the work (src/game/handwork.ts): off, so the breaker flips on the frame, a code runs on its old clock and Sam is not planted at the rack — as every frozen probe and digest read them; `TPS_HANDWORK=1` turns it on
+    if (pinned('TPS_WORKSTOW')) WORKSTOW.on = String((globalThis as any).process?.env?.TPS_WORKSTOW ?? '') === '1';   // the gun is put away for a two-handed job (src/game/workstow.ts): off, so a charge goes on with the gun still in the man's hand and its clock is what every probe has; `TPS_WORKSTOW=1` raises it
     if (pinned('TPS_HANDS')) HANDS.on = String((globalThis as any).process?.env?.TPS_HANDS ?? '') === '1';   // hands on the world (src/game/hands.ts): off, so a body is the ankle drag on its old clock and a door row flings the leaf, as every frozen probe and digest read them; `TPS_HANDS=1` turns it on (the shipped default)
     if (pinned('TPS_WORDS')) WORDS.on = String((globalThis as any).process?.env?.TPS_WORDS ?? '') === '1';   // the dialogue pass (src/game/words.ts): off, so every man says what he said in every frozen probe, digest and session fixture (a bubble's time is its length); `TPS_WORDS=1` turns it on (the shipped default)
     if (pinned('TPS_DOORNAMES')) WORDS.doors = String((globalThis as any).process?.env?.TPS_DOORNAMES ?? '') === '1';   // a door called what its level calls it (src/game/doornames.ts, scenarios.doorNames): off, so every frozen probe's row and call names a door as it did; `TPS_DOORNAMES=1` raises it
