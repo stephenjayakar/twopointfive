@@ -135,21 +135,22 @@ const states = new SideMap<Game, State>('squadthrow.states');
  *  scribbles on while it looks are the ASKER's, not the game's: its kept answer, its verdict of who is caught, the walk search's marks, and the tables the
  *  rays and the path searches write (Collision.aside). One a game, made by who draws (ui/squadthrowviz.ts, the floor plan's store); with none handed in
  *  nothing is kept past the one ask. */
-export interface SquadThrowKept { /** the game it was last asked of: asked of another, it starts empty */ g?: Game; kept: State['kept']; caught: State['caught']; scratch: Scratch | null; col: { s?: object; q?: object } }
-export function squadThrowKept(): SquadThrowKept { return { kept: new Map(), caught: null, scratch: null, col: {} }; }
+export interface SquadThrowKept { /** the game it was last asked of: asked of another, it starts empty */ g?: Game; kept: State['kept']; caught: State['caught']; scratch: Scratch | null; col: { s?: object; q?: object }; orders: { r?: object }; duck: typeof duckMates }
+export function squadThrowKept(): SquadThrowKept { return { kept: new Map(), caught: null, scratch: null, col: {}, orders: {}, duck: null }; }
 /** other modules' answers OF THE TICK that a throw search fills in (a blast's wall openings, the seen-walk's eyes: each a table by game, made anew when the
  *  clock has moved). The game's own stand aside while the picture asks — it makes its own, and they are thrown away — and are put back as they were. By
  *  name: the tables are those modules' own. One that is gone, or a new one of the kind, turns tools/qa/throwview-check.ts red on the stand that has the rule. */
 const TICK_KEPT: readonly string[] = ['frag.WALLS_FOR', 'seenwalk.shared'];
-/** `fn` asked aside: the three things a search keeps in the game's state stand in from the asker's store while it runs, and are put back after */
+/** `fn` asked aside: what a search keeps in the game's state (its answer, who is caught, the walk search's marks, the duck's mates, the walks the orders were
+ *  asked about) stands in from the asker's store while it runs, and the game's own is put back after */
 function aside<T>(g: Game, s: State, V: SquadThrowKept, fn: () => T): T {
-  if (V.g !== g) { V.g = g; V.kept = new Map(); V.caught = null; V.scratch = null; V.col = {}; }   // (a store that outlives its game, as a page's overlay does: nothing of the last game answers for this one)
-  const mine = { kept: s.kept, caught: s.caught, scratch: s.scratch };
+  if (V.g !== g) { V.g = g; V.kept = new Map(); V.caught = null; V.scratch = null; V.col = {}; V.orders = {}; V.duck = null; }   // (a store that outlives its game, as a page's overlay does: nothing of the last game answers for this one)
+  const mine = { kept: s.kept, caught: s.caught, scratch: s.scratch, duck: duckMates };
   const tick = sideRegistry().tables.filter(t => TICK_KEPT.includes(t.sideName!)) as SideMap<Game, unknown>[], had = tick.map(t => t.get(g));
-  s.kept = V.kept; s.caught = V.caught; s.scratch = V.scratch; for (const t of tick) t.delete(g);
-  try { return g.col.aside(V.col, fn); }
+  s.kept = V.kept; s.caught = V.caught; s.scratch = V.scratch; duckMates = V.duck; for (const t of tick) t.delete(g);
+  try { return g.orders.askAside(V.orders, () => g.col.aside(V.col, fn)); }
   finally {
-    V.caught = s.caught; V.scratch = s.scratch; s.kept = mine.kept; s.caught = mine.caught; s.scratch = mine.scratch;
+    V.caught = s.caught; V.scratch = s.scratch; V.duck = duckMates; s.kept = mine.kept; s.caught = mine.caught; s.scratch = mine.scratch; duckMates = mine.duck;
     tick.forEach((t, i) => { if (had[i] === undefined) t.delete(g); else t.set(g, had[i]); });
   }
 }

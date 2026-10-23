@@ -920,11 +920,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not drawn differed in whole state, run digest equal. Now the preview is asked ASIDE: its kept answer, its verdict of who is caught and the walk
   search's marks live in the asker's store (ui/squadthrowviz.ts keeps one a game, the floor plan's `PlanKept.throws` carries one; a store asked of another game starts empty; with none handed in nothing
   is kept and every ask is a whole search), the rays and path searches run on the asker's tables (`Collision.aside` swaps the query stamps, the segment
-  scratch, the cos / sin cache and the walk grid's search tables), and two answers OF THE TICK that other modules keep by game (`frag.WALLS_FOR`,
-  `seenwalk.shared`, named in `TICK_KEPT`) stand aside while it asks and are put back. Not a switch: the picture is the same (the check's `same`
+  scratch, the cos / sin cache and the walk grid's search tables, and holds off the sound routes' cache: `SoundPaths.asking`), the walks the orders are
+  asked about are kept in the store too (`SquadOrders.askAside` swaps `reached`), the duck's memo (`duckMates`) is put back as it was, and two answers OF
+  THE TICK that other modules keep by game (`frag.WALLS_FOR`, `seenwalk.shared`, named in `TICK_KEPT`) stand aside while it asks and are put back. Not a switch: the picture is the same (the check's `same`
   line) and no run digest moves. CHECK: `bun run tools/qa/throwview-check.ts` (probe `throwview`, family squadthrow), both stands,
-  `THROWVIEW_BREAK=1` must fail `state`: a frag and a stun, worked-out throws on and off, one seed, thirty frames of the page each; lines state, none,
-  same, plan (the floor plan asked on its own store), kept (1 or 2 searches in the thirty frames with a store, 30 with none). A NEW cache a
+  `THROWVIEW_BREAK=1` must fail `state` and `ask`: a frag and a stun, worked-out throws on and off, one seed; lines state (two games, thirty frames of
+  the page), ask (ONE game with a fight on and the men shifted about, 150 frames: the state hashed before and after each ask, the module variables
+  looked at — before the mend an ask wrote `orders.reached` on 4 to 11 of them), none, same, plan (the floor plan asked on its own store), kept (1 or
+  2 searches in the thirty frames with a store, 30 with none). One break for all the swaps: it does not prove each apart; the sound cache and the
+  duck memo were mended from a review's reading and were never seen writing in a run. A NEW cache a
   search fills in turns `state` red on the stand that has the rule, and the line prints the table's name: add it to `TICK_KEPT`, or to
   `Collision.aside` when it is the collision's own. NOT COVERED: `squad40Plans` (the 40 mm's picture) was not looked at; `orders.hud()` read with no
   menu up writes `orders.hov` (a drawn game differs from an undrawn one there too, digest equal). Never seen in a page.

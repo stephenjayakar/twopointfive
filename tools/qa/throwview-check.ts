@@ -4,18 +4,23 @@
 // the worked-out throws on and off, a frag and a stun, on a spot nobody has a throw to from where he stands:
 //   state     two games of one seed, the throw page up on the same spot, thirty frames: one is asked for its plans every frame (the overlay's question, its
 //             own store), the other never — the whole state hashes the same and so does the run digest, and a preview was drawn.
+//   ask       one game with a fight on and the men shifted about under the page, a hundred and fifty frames: the game's state is hashed before each ask of the
+//             picture and after it, and the module variables looked at — never a difference (this is the line that sees an answer kept for a walk, a
+//             sound's route, a memo of the tick: what the two games of `state`, standing still, both fill in the same way).
 //   none      the same with no store handed in (a tool's one-off read): the same verdict.
 //   same      the preview is the one the page's question gave before it was asked aside: the same man, the same floor, the same rest.
 //   plan      the floor plan asked every frame with its own store (floorplan.ts PlanKept carries the throw's): the same verdict, and the plan shows the throw.
 //   kept      the store keeps: thirty frames of the page ask no more searches than a tenth of what thirty asks with no store do.
-// THROWVIEW_BREAK=1 = the drawn game is asked the old way (the page's question straight on the game's state): `state` must FAIL.   exit 0 = all hold · 1 = one does not
+// THROWVIEW_BREAK=1 = the drawn game is asked the old way (the page's question straight on the game's state): `state` and `ask` must FAIL. (One break
+// for all the swaps: it does not prove each of them apart.)   exit 0 = all hold · 1 = one does not
 import { ROOT } from './headless.ts';
-import { rig } from './squadthrow-check.ts';
+import { rig, place } from './squadthrow-check.ts';
 
 const ST: any = await import(`${ROOT}/src/game/squadthrow.ts`);
 const RB: any = await import(`${ROOT}/src/game/rollback.ts`);
 const DG: any = await import(`${ROOT}/src/game/digest.ts`);
 const FP: any = await import(`${ROOT}/src/game/floorplan.ts`);
+const SD: any = await import(`${ROOT}/src/math/side.ts`);
 const { SQUADTHROW, SQUADTHROW_STATS } = ST;
 type Kind = 'frag' | 'stun';
 const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -27,7 +32,7 @@ export async function throwviewCheck(): Promise<boolean> {
   const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   console.log(`\n=== throwview: the throw page's picture writes nothing of the game's${BREAK ? ' (THROWVIEW_BREAK: asked the old way)' : ''} ===`);
   try {
-    const rows: Record<'state' | 'none' | 'same' | 'plan' | 'kept', string[]> = { state: [], none: [], same: [], plan: [], kept: [] }, bad = { state: 0, none: 0, same: 0, plan: 0, kept: 0 }; let drawn = 0;
+    const rows: Record<'state' | 'ask' | 'none' | 'same' | 'plan' | 'kept', string[]> = { state: [], ask: [], none: [], same: [], plan: [], kept: [] }, bad = { state: 0, ask: 0, none: 0, same: 0, plan: 0, kept: 0 }; let drawn = 0;
     Object.assign(FP.PLAN, { on: true, throws: true });
     for (const lob of [false, true]) for (const kind of ['stun', 'frag'] as Kind[]) {
       const name = `${lob ? 'worked-out throws' : 'straight throws'}, ${kind}`, mk = () => quiet(() => rig(SEED, true, { walk: true, lob }));
@@ -49,6 +54,20 @@ export async function throwviewCheck(): Promise<boolean> {
       const old = (R: any) => { const M = R.O.menu, th = ST.squadThrowPlan(R.game, M.men, M.target.at, kind, false, true); return th ? [{ preview: true, gd: th.gd, from: th.post ?? th.gd.char.pos, land: th.rest }] : []; };
       const store = ST.squadThrowKept();
       const never = await run(null), kept = await run(BREAK ? old : R => ST.squadThrowPlans(R.game, store)), none = await run(R => ST.squadThrowPlans(R.game)), before = await run(old);
+      { // ask: one game, a fight on, the men shifted about: the state before each ask against the state after it
+        const R: any = await quiet(() => rig(SEED, true, { walk: true, lob, keep: true, live: true })), g = R.game, mine = ST.squadThrowKept(), V = SD.sideRegistry().vars;
+        R.pageAt(at); { const M = R.O.menu, i = M.rows.findIndex((r: any) => r.id === (kind === 'frag' ? ST.FRAG_THERE : ST.STUN_THERE)); if (i >= 0) M.sel = i; }
+        let wrote = 0, vars = 0, drew = 0; const names = new Set<string>(); let what = '';
+        for (let i = 0; i < 150; i++) {
+          const h0 = RB.stateHash(g, true, true) as string, v0 = V.map((v: any) => v.get()), f0 = i % 10 === 0 ? RB.stateFlat(g, true, true) : null;
+          if ((BREAK ? old(R) : ST.squadThrowPlans(g, mine)).some((p: any) => p.preview)) drew++;
+          if (RB.stateHash(g, true, true) !== h0) { wrote++; if (f0 && !what) what = (RB.flatDiff(f0, RB.stateFlat(g, true, true), 3) as string[]).map(l => l.split(': ')[0]).join(', '); }
+          V.forEach((v: any, k: number) => { if (v.get() !== v0[k]) { vars++; names.add(v.name); } });
+          R.step(); if (i % 6 === 5) for (const m of R.team) place(m, [m.char.pos[0] + (Math.floor(i / 48) % 2 ? -0.3 : 0.3), m.char.pos[1], m.char.pos[2]], m.char.bodyYaw);
+        }
+        if (!(wrote === 0 && vars === 0 && drew >= 30)) bad.ask++;
+        rows.ask.push(`${name}: the ask changed the game's state on ${wrote} of 150 frames${what ? ` (${what})` : ''}, a module variable on ${vars}${names.size ? ` (${[...names].join(', ')})` : ''} · the picture was there on ${drew}`);
+      }
       const pk = FP.planKept(); let shown = 0;
       const planned = await run(R => { shown = Math.max(shown, FP.floorPlan(R.game, pk).throws.length); return []; });
       if (!(planned.hash === never.hash && planned.dig === never.dig && shown >= 1)) bad.plan++;
@@ -67,6 +86,7 @@ export async function throwviewCheck(): Promise<boolean> {
       rows.kept.push(`${name}: searches in the thirty frames — never asked ${never.searches}, asked with a store ${kept.searches}, asked with none ${none.searches}`);
     }
     verdict(bad.state === 0 && drawn === 4, 'state: a game asked for the page\'s picture every frame and the same game never asked hold the same whole state and the same run digest, and the picture was there', rows.state.join('\n    '));
+    verdict(bad.ask === 0, 'ask: with a fight on and the men shifted about, no ask of the picture changes the game\'s state or a module variable', rows.ask.join('\n    '));
     verdict(bad.none === 0, 'none: the same with no store handed in', rows.none.join('\n    '));
     verdict(bad.same === 0, 'same: the preview is the one the page\'s question gave before it was asked aside', rows.same.join('\n    '));
     verdict(bad.plan === 0, 'plan: the floor plan asked every frame, on its own store, writes nothing either and shows the throw', rows.plan.join('\n    '));

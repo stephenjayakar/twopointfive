@@ -129,7 +129,7 @@ export class StaticCollision {
    *  and those are < the length the array was sized with. */
   private stamp: Int32Array; private stampId = 0;
   /** A QUESTION ASKED BY THE PICTURE (an overlay, a check's own read): `fn` run with the query stamps and the walk grid's search tables swapped for the asker's
-   *  own (`own`: an empty object the asker keeps, one a game), so the rays and the searches it makes write nothing of the game's — a game that is drawn and
+   *  own (`own`: an empty object the asker keeps, one a game), and no sound's route kept (SoundPaths.asking), so the rays and the searches it makes write nothing of the game's — a game that is drawn and
    *  the same game not drawn hold the same state. Not to be nested, and `fn` must add no box. */
   aside<T>(own: { s?: object; q?: object }, fn: () => T): T {
     type Q = { stamp: Int32Array; id: number; cell: Int32Array<ArrayBuffer>; seg: Int32Array<ArrayBuffer>; yaw: Float64Array; cos: Float64Array; sin: Float64Array };
@@ -138,9 +138,9 @@ export class StaticCollision {
       q = { stamp: new Int32Array(this.stamp.length), id: q?.id ?? 0, cell: q?.cell ?? new Int32Array(this.cellStamp.length), seg: q?.seg ?? new Int32Array(this.segCells.length), yaw: new Float64Array(n).fill(NaN), cos: new Float64Array(n), sin: new Float64Array(n) }; }
     const mine: Q = { stamp: this.stamp, id: this.stampId, cell: this.cellStamp, seg: this.segCells, yaw: this.trigYaw, cos: this.trigCos, sin: this.trigSin };
     const put = (t: Q) => { this.stamp = t.stamp; this.stampId = t.id; this.cellStamp = t.cell; this.segCells = t.seg; this.trigYaw = t.yaw; this.trigCos = t.cos; this.trigSin = t.sin; };
-    put(q);
+    put(q); this.sound.asking = true;
     try { return this.nav.aside(own, fn); }
-    finally { own.q = { stamp: this.stamp, id: this.stampId, cell: this.cellStamp, seg: this.segCells, yaw: this.trigYaw, cos: this.trigCos, sin: this.trigSin } satisfies Q; put(mine); }
+    finally { this.sound.asking = false; own.q = { stamp: this.stamp, id: this.stampId, cell: this.cellStamp, seg: this.segCells, yaw: this.trigYaw, cos: this.trigCos, sin: this.trigSin } satisfies Q; put(mine); }
   }
   /** segmentBlocked's own: a grid cell already scanned (or passed as nowhere near) by this query (the stamp's id), and each static's cos / sin beside the exact yaw they were taken at */
   /** statics appended after the bake (a wall's standing pieces) get trig slots too; a slot is keyed by the yaw it was filled for, so a re-used index is never stale */
@@ -444,6 +444,8 @@ export interface Propagation {
 }
 export class SoundPaths {
   private cache = new Map<string, { t: number; r: Propagation }>(); private now = 0;
+  /** up while a picture asks (Collision.aside): no answer is kept, whatever the asker says — the cache is left as it was found */
+  asking = false;
   constructor(private col: StaticCollision) {}
   tick(time: number) { this.now = time; if (this.cache.size > 512) this.cache.clear(); }
   /** the level changed under the cached routes (a wall holed, cover gone — game/wallbreak.ts): every answer is asked afresh */
@@ -490,7 +492,7 @@ export class SoundPaths {
       const muffle = doorInWay ? 0.85 : 0.35;
       r = { direct: false, routed: true, pathLen: L, via, apparent: [dst[0] + dir[0] * L, src[1], dst[2] + dir[2] * L], muffle, carry: 1 - muffle * 0.8 };
     }
-    if (keep) this.cache.set(key, { t: this.now, r }); return r;
+    if (keep && !this.asking) this.cache.set(key, { t: this.now, r }); return r;
   }
 }
 

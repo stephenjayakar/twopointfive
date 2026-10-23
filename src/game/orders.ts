@@ -2291,6 +2291,12 @@ export class SquadOrders {
     const R = this.route(gd, to, null, null, true), kept = { t, why: R.why, lock: R.lock }; this.reached.set(key, kept); return kept;
   }
   private reached = new Map<string, { t: number; why: string | null; lock?: { door: Door; side: 1 | -1 } }>();
+  /** A QUESTION ASKED BY THE PICTURE (squadthrow.ts: the throw page's preview): `fn` with the walks it asks about kept in the asker's own table (`own.r`), not
+   *  in `reached` — a game drawn and the same game not drawn keep the same answers, and the menu never reads one the picture asked for */
+  askAside<T>(own: { r?: object }, fn: () => T): T {
+    const mine = this.reached; this.reached = (own.r as typeof mine | undefined) ?? new Map();
+    try { return fn(); } finally { own.r = this.reached; this.reached = mine; }
+  }
   /** Has he a line to cover it from where he stands: to a door, the way to it clear at eye height; 'that way', nothing in his face for the first two metres */
   hasLine(gd: Guard, t: OrderTarget): boolean {
     const p = gd.char.pos, d = flat(p, t.at); if (d < 0.6) return true;
