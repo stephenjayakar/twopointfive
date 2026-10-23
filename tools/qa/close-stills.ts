@@ -12,6 +12,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const { standUp, ROOT } = await import('./headless.ts');
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
 const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { handProps } = await import(`${ROOT}/src/game/combat.ts`);
@@ -145,6 +146,11 @@ async function stalk(scene: string, who: 'calm' | 'rifle', pause: boolean, hit =
   const marks = pause ? [2.4, 1.9, 1.4] : hit ? [1.0] : [2.5, 2.1, 1.8, 1.5, 1.3, 1.12, 1.0];
   for (const d of marks) { while (S.gap() > d && !g.player.holding && n++ < 1200) S.step(1); if (!g.player.holding) R.snap(`creeping · ${S.gap().toFixed(2)} m`); }
   if (pause) { lift(); for (const t of [0.15, 0.5, 1.2]) { S.step(Math.round(t * 60) - (t === 0.15 ? 0 : t === 0.5 ? 9 : 30)); R.snap(`let go ${t.toFixed(2)} s · ${S.gap().toFixed(2)} m`); } press(); for (const d of [1.2, 1.0]) { while (S.gap() > d && !g.player.holding && n++ < 2400) S.step(1); if (!g.player.holding) R.snap(`pressed again · ${S.gap().toFixed(2)} m`); } }
+  if (STALK.key) {   // (the key finishes it: he eases to a stop in reach and waits; the row's key is the grab)
+    const pc = g.player.char; let still = 0; while (still < 12 && n++ < 2400) { S.step(1); still = Math.hypot(pc.vel[0], pc.vel[2]) < 0.02 ? still + 1 : 0; }
+    if (!hit) R.snap(`in reach, waiting · ${S.gap().toFixed(2)} m`);
+    if (g.selectVerb('guard', 'grab')) W.input.pressed.add('Space');
+  }
   while (!g.player.holding && n++ < 2400) S.step(1);
   if (!g.player.holding) { console.log(`  [${scene}] THE GRAB NEVER CAME (gap ${S.gap().toFixed(2)} m)`); return R; }
   // (still: the cursor at his own feet, inside the hold's 0.6 m — a point six metres ahead is picked a little off his line through this harness's camera, and the pair came round to it a few degrees a frame: a quarter turn by the last still that no player's mouse asked for)

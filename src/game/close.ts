@@ -228,7 +228,7 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
   const where = !o.win ? '' : o.win.kind === 'front' ? ' · facing you' : o.win.kind === 'side' ? ' · side on' : '';
   const it: Interactable = { kind: 'guard', pos: v3.add(gp, [0, seated ? 1.05 : 1.35, 0]), line1: `guard${alert ? ' · alert' : seated ? ' · seated' : ''}${alert ? '' : where}`, line2: o.why, inReach: o.can, off: false, guard: gd, close: kind };
   const sneak = STALK.on && !busy && stalkCould(g, gd);   // (stalk.ts: the left button held on him walks Sam in to the grab)
-  if (sneak && !o.can) it.line2 = 'LMB  hold to sneak up and grab him';
+  if (sneak && !o.can) it.line2 = STALK.key ? 'LMB  hold to sneak up on him' : 'LMB  hold to sneak up and grab him';   // (STALK.key: the hold walks him in, the row's key grabs)
   const verbs: Interactable[] = [];
   if (o.can && !busy) {
     const empty = pl.holstered, gun = grabVariant(g) === 'gun';
@@ -238,7 +238,7 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
       : (two && sneak) || bare ? 'RMB  knock him out'   // (behind him the left button is the stalk's: it grabs him)
       : two ? 'LMB  knife — lethal  ·  RMB  knock him out'
       : kind === 'behind' ? 'LMB  takedown — silent' : kind === 'seat' ? 'LMB  put him out where he sits — silent' : kind === 'side' ? 'LMB  strike — quiet' : `LMB  strike — he gets a sound out`;
-    const only = STALK.on && STALK.only && !gd.civ;   // (stalk.ts: the held click is the one way to him — no row grabs a staff man)
+    const only = STALK.on && STALK.only && !STALK.key && !gd.civ;   // (stalk.ts: the held click is the one way to him — no row grabs a staff man)
     if (o.grab && only) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, inReach: true,
       line2: empty ? `LMB  hold to grab him${two && o.strike ? '  ·  RMB  knock him out' : ''}` : `E  ${pl.rifleUp ? 'sling it' : 'holster'}, then hold LMB to grab him` });
     else if (o.grab) {
@@ -302,13 +302,15 @@ export function closeTick(g: Game) {
   // grab's own reach at a part weight; a chair's haul keeps its own pose, and whatever stands the tell down in reach — hands at work, the switch — stands this down)
   const T = STALK.on && CLOSE.ready && r?.kind !== 'seat' && !samWork(g) && !(pl.coding && handworkOn('work')) ? stalkTell(g) : null, best = S.t === g.time ? S.best : null;
   // (in reach of ANOTHER man the tell is that man's, as it was)
-  if (T && (!r || !best || best.guard === T.gd)) { an.ready = 'grab'; an.readyAt = T.at; an.readyUp = CLOSE.reachUp ? 1 : 0; an.readyAmt = T.reach; an.rise = T.rise; }
-  else { an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null; an.readyUp = r && CLOSE.reachUp ? 1 : 0; an.readyAmt = 1; an.rise = 0; }
+  if (T && (!r || !best || best.guard === T.gd)) { an.ready = 'grab'; an.readyAt = T.at; an.readyUp = CLOSE.reachUp ? 1 : 0; an.readyAmt = T.reach; an.rise = T.rise; an.low = T.low; if (T.low > 0) { const L = an.lowShape; L[0] = STALK.lowDrop; L[1] = STALK.lowBack; L[2] = STALK.lowLean; } }
+  else { an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null; an.readyUp = r && CLOSE.reachUp ? 1 : 0; an.readyAmt = 1; an.rise = 0; an.low = 0; }
   // (stalk.ts STALK.corner: lying in wait on a wall he is coiled — sunk a little, both hands up, more as the man comes)
   const CW = STALK.on && CLOSE.ready && !r && closeBare(g) ? stalkWait(g) : null;   // (bare hands only: with a knife the pose's right hand is on the hilt, and the wait can only grab)
   if (CW) { an.ready = 'grab'; an.readyAt = CW.at; an.readyUp = 0; an.readyAmt = CW.reach; an.coil = CW.coil; }
   else { const H = pl.holding;   // (…and he comes up out of it THROUGH the step in, not in its first frame)
     if (H && H.from && H.phase === 'grab' && an.coil > 0) { H.coil0 ??= an.coil; an.coil = STALK.cornerRise > 0 ? H.coil0 * (1 - smoothstep(0, STALK.cornerRise, H.t)) : 0; } else an.coil = 0; }
+  // (stalk.ts STALK.low: his hands are down wherever the carriage would raise them, and a stalk's grab is the spring up out of the low creep)
+  { const H = pl.holding, low = STALK.on && STALK.low; an.handsDown = low ? STALK.lowHands : 0; an.spring = low && H && H.from && H.phase === 'grab' ? Math.max(1, STALK.lowSpring * smoothstep(0, STALK.lowWind, H.t)) : 0; }   // (…a rate that winds up over `lowWind` s: he leaves the floor slowly and arrives fast, where a plain ease would jump in its first frame)
   if (r) CLOSE_STATS.readyFrames++;
   const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)
   an.creep = !!m;

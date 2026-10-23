@@ -9,6 +9,7 @@ import type { Game, Guard } from '../game/game';
 import type { Panel } from '../ui/panel';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
+import { keyCap } from './keymap';
 import { STALK, STALK_STATS, stalkOn } from '../game/stalk';
 import { CLOSE, closeSeat, closeUnseat, closeSeated } from '../game/close';
 import { TWOGEARS } from '../game/player';
@@ -47,6 +48,18 @@ const NUMS = (): Num[] => [
   { t: STALK, name: 'STALK', key: 'cornerSee', label: 'at a corner his hand goes out from m', min: 1.5, max: 5, step: 0.1, tip: 'waiting on a wall with the button held: how far off the man is when the lead hand starts out toward him' },
   { t: STALK, name: 'STALK', key: 'cornerCoil', label: 'at a corner, how low he waits', min: 0, max: 1, step: 0.05, tip: 'how far he sinks while he waits with the button held. 0 = stood as he was' },
   { t: STALK, name: 'STALK', key: 'cornerDeg', label: 'at a corner, how far past you he must be, degrees', min: 30, max: 150, step: 5, tip: 'how far round from his nose Sam must be before the wait takes him: 90 = level with his shoulder, more = he has gone further past' },
+  { t: STALK, name: 'STALK', key: 'lowFrom', label: 'he starts to go lower from m', min: 1.2, max: 5, step: 0.05, tip: 'with "he goes lower, hands down" on: how far from the man he starts to sink' },
+  { t: STALK, name: 'STALK', key: 'lowBy', label: 'he is all the way down by m', min: 0.95, max: 3, step: 0.05, tip: 'how far from the man he is as low as he goes' },
+  { t: STALK, name: 'STALK', key: 'lowDrop', label: 'how much lower his hips go, m', min: 0, max: 0.25, step: 0.01, tip: 'all the way down, his hips are this much lower than the creep\'s own carriage' },
+  { t: STALK, name: 'STALK', key: 'lowLean', label: 'how much flatter his back goes, degrees', min: 0, max: 30, step: 1, tip: 'all the way down, his back is bowed this much more' },
+  { t: STALK, name: 'STALK', key: 'lowHands', label: 'how far his hands come down', min: 0, max: 1, step: 0.05, tip: '1 = his hands are low by his knees, as in a plain crouch. 0 = held up ahead of him, as the creep had them' },
+  { t: STALK, name: 'STALK', key: 'lowK', label: 'extra closing speed per metre, when lower', min: 0, max: 2, step: 0.05, tip: 'with "he goes lower, hands down" on, this replaces the extra closing speed per metre: less is a more deliberate creep' },
+  { t: STALK, name: 'STALK', key: 'lowBack', label: 'how much further back his hips sit, m', min: 0, max: 0.15, step: 0.01, tip: 'all the way down, his hips sit this much further back over his heels' },
+  { t: STALK, name: 'STALK', key: 'lowSpring', label: 'how fast he springs up into the grab', min: 6, max: 40, step: 1, tip: 'how fast he comes up out of the crouch once you press the key. 10 is how he stands up anywhere else' },
+  { t: STALK, name: 'STALK', key: 'lowBeginM', label: 'when lower, it can begin inside m', min: 3, max: 8, step: 0.1, tip: 'with "he goes lower, hands down" on, a press on a man begins the creep from this far off' },
+  { t: STALK, name: 'STALK', key: 'lowOutM', label: 'and it lets go past m', min: 3.6, max: 10, step: 0.1, tip: 'with "he goes lower, hands down" on, the creep ends when he is further off than this' },
+  { t: STALK, name: 'STALK', key: 'lowWind', label: 'and how long the spring takes to wind up, s', min: 0, max: 0.3, step: 0.01, tip: '0 = he jumps up at once. More = he leaves the floor slowly and arrives fast' },
+  { t: STALK, name: 'STALK', key: 'keyM', label: 'he waits for the key m behind him', min: 0.6, max: 0.94, step: 0.01, tip: 'with "you press the key to finish the grab" on: how far behind the man he stops and waits. It has to be inside the grab\'s reach' },
   { t: CLOSE, name: 'CLOSE', key: 'modeM', label: 'it can begin inside m', min: 1.5, max: 7, step: 0.1, tip: 'the close-in range: inside it the sneak holds its pose and a press on a man begins the creep' },
   { t: CLOSE, name: 'CLOSE', key: 'modeOutM', label: 'it lets go past m', min: 2, max: 9, step: 0.1, tip: 'he got too far away: the creep ends past this' },
   { t: TWOGEARS, name: 'TWOGEARS', key: 'crouch', label: 'your own crouch walk m/s', min: 0.8, max: 2.2, step: 0.05, tip: 'the speed you arrive at before the creep takes over' },
@@ -88,13 +101,15 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.toggleBox(cr, 'holding the click creeps in', () => STALK.on, v => { STALK.on = v; }, 'off = the build before it: your own keys all the way, and the grab on its key');
   panel.toggleBox(cr, 'his body shows how close he is', () => STALK.tell, v => { STALK.tell = v; }, 'the arm comes up and he comes out of the crouch as he closes on the man\'s back, by distance, so a pause holds the pose. Off = the pose in reach alone');
   panel.toggleBox(cr, 'on a wall, holding the click waits for him', () => STALK.corner, v => { STALK.corner = v; }, 'with your back on a wall [Q] and empty hands, hold the left button: the man who walks past the corner is grabbed as he passes. Off = the button on a wall does nothing');
+  panel.toggleBox(cr, 'you press the key to finish the grab', () => STALK.key, v => { STALK.key = v; }, 'on: holding the click only sneaks you up behind him, and you press the action key to grab. Off = the hold ends in the grab by itself');
+  panel.toggleBox(cr, 'he goes lower, hands down', () => STALK.low, v => { STALK.low = v; }, 'on: no arm comes up and he sinks lower and slower as he closes, then springs up into the grab. Off = the arm comes up and he rises as he closes');
   panel.toggleBox(cr, 'the click is the only way to grab', () => STALK.only, v => { STALK.only = v; }, 'off = the grab\'s row is back beside the held click');
   for (const n of nums) panel.slider(cr, n.label, n.min, n.max, n.step, () => n.t[n.key] as number, v => { n.t[n.key] = v; }, n.tip);
   for (const a of ARCS) panel.slider(cr, a.label, 60, 180, 1, () => deg(STALK[a.key]), v => { STALK[a.key] = cosOf(v); }, a.tip);
   const out = panel.section('Hand the numbers back', { open: true });
   panel.buttons(out, 'numbers', [{ text: 'copy them', run: () => { copied = asText(); try { void navigator.clipboard?.writeText(copied); } catch { /* no clipboard here: the line below shows them */ } }, title: 'the numbers as they stand, as one line of text on the clipboard (and shown below)' }]);
   panel.text(out, () => copied || 'Move the sliders until it feels right, then copy the numbers and paste them where you send notes.');
-  game.objectiveText = () => 'sneak lab ▸ hold left click on a man from behind';   // (the level has no mission of its own: the HUD's line says what the floor is for)
+  game.objectiveText = () => STALK.on && STALK.key ? `sneak lab ▸ hold left click behind a man to sneak up, then press ${keyCap('Space')} to grab him` : 'sneak lab ▸ hold left click on a man from behind';   // (the level has no mission of its own: the HUD's line says what the floor is for)
   hands(game); sneakLabFrame(game);
   panel.show(SNEAKLAB_SYSTEM);
 }

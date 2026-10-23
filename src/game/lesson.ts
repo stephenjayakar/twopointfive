@@ -60,7 +60,7 @@ const TOKEN = /\{([A-Za-z][A-Za-z' ]*)\}/g, lower = (name: string) => name.charA
 /** is this name (the words between the braces, either capital) one lessonLine writes out? */
 export const lessonToken = (name: string): boolean => { const n = lower(name); if (!/^[A-Za-z]+(?: [A-Za-z']+)*$/.test(name)) return false;   // (the letters the writer-out reads, one space between words, none at an end)
   const hit = TOKENS.find(([re]) => re.test(n)); return !!hit && !/(^| )from( |$)/.test(hit[0].exec(n)![1]); };   // (…and a 'from' left in the man's words is a 'from behind' misspelt)
-const tokenLine = (line: string, held = STALK.on && STALK.only, bare = CLOSE.on && CLOSE.noKnife): string => line.indexOf('{') < 0 ? line : line.replace(TOKEN, (m, name: string) => {
+const tokenLine = (line: string, held = STALK.on && STALK.only && !STALK.key, bare = CLOSE.on && CLOSE.noKnife): string => line.indexOf('{') < 0 ? line : line.replace(TOKEN, (m, name: string) => {
   const n = lower(name); if (!lessonToken(name)) return m; for (const [re, say] of TOKENS) { const hit = re.exec(n); if (!hit) continue;
     const s = say(hit[1], held, bare); return n !== name ? s.charAt(0).toUpperCase() + s.slice(1) : s; }   // (the capital the author wrote, nothing guessed)
   return m; });
@@ -75,7 +75,7 @@ export function lessonTokenFaults(w: string, line: string, cap: number, row = 't
   return out;
 }
 /** a step's line as the HUD's row says it now */
-export const lessonLine = (written: string): string => { const line = tokenLine(written), s0 = STALK.on && STALK.only ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
+export const lessonLine = (written: string): string => { const line = tokenLine(written), s0 = STALK.on && STALK.only && !STALK.key ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
 import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)

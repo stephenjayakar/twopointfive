@@ -1110,6 +1110,10 @@ export interface BlowOpts { hit?: number; end?: number; live?: (() => [Vec3, Vec
 const CREEP = {
   in: 6, out: 5, gaitIn: 0.2, gaitOut: 0.4,
   drop: [0.09, 0.03], back: [0.03, 0.01], lean: [14, 6], round: 10, look: 0.85,
+  /** LOWER, HANDS DOWN (stalk.ts STALK.low feeds `low`, 0‥1 by the distance to the man's back): at 1 the pelvis is `drop` m lower still and `back` m further
+   *  back, the spine bowed `lean`° more, and `hands` of the carriage's raised hands is given up — the arms are the crouch's own, low by his knees. Nothing
+   *  at 0, which is all the animator has unless fed. */
+  low: { drop: 0.06, back: 0.03, lean: 6, crouchBy: 0.4, rate: 8, up: 24 },
   L: { at: [-0.05, -0.27, 0.3] as Vec3, atC: [0.0, -0.17, 0.3] as Vec3, pole: [0.7, -0.6, -0.5] as Vec3, fing: [-0.2, 0.35, 1] as Vec3, back: [0.7, 0.7, 0] as Vec3, curl: 0.32, thumb: 0.25, spread: 0.2 },
   R: { at: [0.05, -0.33, 0.27] as Vec3, atC: [0.0, -0.21, 0.28] as Vec3, pole: [-0.7, -0.6, -0.5] as Vec3, fing: [0.2, 0.3, 1] as Vec3, back: [-0.7, 0.7, 0] as Vec3, curl: 0.38, thumb: 0.3, spread: 0.15 },
 };
@@ -1630,6 +1634,10 @@ export class CharacterAnimator {
    *  with the DISTANCE to the man's back, so the way in is one move from the crouch's carriage to the grab — and stands where it is when he stops · `rise` 0‥1 =
    *  how far he is up out of his crouch for the man he is closing on (0 unless fed: the crouch as it was) */
   readyAmt = 1; rise = 0;
+  /** sunk this far below the carriage for the man he is closing on, 0‥1 (0 unless fed — stalk.ts's tell under STALK.low; CREEP.low is its shape) */
+  low = 0; private lowS = 0; /** its shape as fed: [drop m, back m, lean °] */ lowShape: [number, number, number] = [CREEP.low.drop, CREEP.low.back, CREEP.low.lean];
+  /** …and with it (STALK.low): this share of the carriage's raised hands is given up, at any distance — his hands stay down by his knees, the crouch's own (0 = the carriage as it was) */ handsDown = 0;
+  /** …and the SPRING out of it (close.ts closeTick, through a stalk's grab): the rate he comes up out of the crouch at (0 = the animator's own 10) */ spring = 0;
   /** sunk this far into the crouch whatever his stance (0 unless fed — stalk.ts's wait at a corner: a man coiled on a wall) */
   coil = 0;
   // the close-in mode (the caller sets `creep` each frame he is in it; `creepAt` = the nearest man's chest, for the head
@@ -2123,7 +2131,8 @@ export class CharacterAnimator {
     this.holdGunSide = this.hdGv.x >= 0.5;                        // which tool the hold's right hand has (the knife below ½, the pistol from there: they change hands behind the man's shoulder)
     const gunHold = wHd > 0.003 && this.holdGunSide;             // the pistol stays in the hand through this hold: drawn, lit if it was, and a shot's recoil is the hold layer's (not the two-handed aim clip's)
     this.hideHeldItem = wLp > 0.5 || wHl > 0.5 || (wHd > 0.5 && !gunHold) || (this.bigTool !== null && bigOff(this.bigTool));   // hands on the lock tools, or both on a held man: the pistol rides the thigh — or off his gun for the big slot's tool (BIGMOVE: never with bigTool null)
-    this.crouch = damp(this.crouch, Math.max(this.crouchTarget, clamp(this.coil, 0, 1), this.lockpick ? 1 : 0) * (1 - (this.lockpick ? 0 : clamp(this.rise, 0, 1))), 10, dt);   // (rise: 0 unless fed — stalk.ts's tell)
+    this.lowS = this.low > 0 || this.lowS > 1e-3 ? damp(this.lowS, clamp(this.low, 0, 1), this.low <= 0 && this.spring > 0 ? CREEP.low.up : CREEP.low.rate, dt) : 0;   // (CREEP.low: the shown share of it — eased, so a stalk taken up or let go by another man does not snap)
+    this.crouch = damp(this.crouch, Math.max(this.crouchTarget, clamp(this.coil, 0, 1), this.low > 0 ? clamp(this.lowS / CREEP.low.crouchBy, 0, 1) : 0, this.lockpick ? 1 : 0) * (1 - (this.lockpick ? 0 : clamp(this.rise, 0, 1))), this.spring > 0 ? this.spring : 10, dt);   // (rise: 0 unless fed — stalk.ts's tell)
     const s = Math.abs(this.speed) * (1 - wK);
     const crouchPose = this.bw || this.tk ? this.takePre(dt, this.crouch * (1 - wKslow)) : this.crouch * (1 - wKslow);   // the crouch actually shown (the kick stands him up; so does a takedown's own move, and the man it lands on sags)
     // ---- deliberate movement (`deliberate`, eased here) and the crouch's centre of gravity by pace — the shares everything below reads (sneakLayer):
@@ -4054,12 +4063,13 @@ export class CharacterAnimator {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, C = CREEP, cr = clamp(this.crouch, 0, 1);
     const ck = this.closeK >= 0 ? this.clK : -1, KC = KIT.close, cke = ck < 0 ? 0 : ck * ck * (3 - 2 * ck);   // (KIT.close: how close he is, eased — −1 = not dealt, the carriage as it was)
     const e = w * w * (3 - 2 * w) * (ck < 0 ? 1 : lerp(KC.far, 1, cke)), free = 1 - clamp(this.upperW.aim, 0, 1);
+    const lo = this.lowS, LS = this.lowShape; if (this.handsDown > 0) { const k = 1 - clamp(this.handsDown, 0, 1); wL *= k; wR *= k; }   // (CREEP.low: lower, and — at any distance — the raised hands let down)
     { this.fkPart(pA, this.fkLegs);
       const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-      this.shift(pA, nd.hips, [0, -lerp(C.drop[0], C.drop[1], cr) * e, -lerp(C.back[0], C.back[1], cr) * e * free]);
+      this.shift(pA, nd.hips, [0, -(lerp(C.drop[0], C.drop[1], cr) + LS[0] * lo) * e, -(lerp(C.back[0], C.back[1], cr) + LS[1] * lo) * e * free]);
       this.fkPart(pA, this.fkLegs);
       twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true); }
-    const lean = lerp(C.lean[0], C.lean[1], cr) * DEGR * e * free;
+    const lean = (lerp(C.lean[0], C.lean[1], cr) + LS[2] * lo) * DEGR * e * free;
     if (lean > 1e-5) {
       this.turn(pA, nd.spine1, qPitch(lean * 0.4)); this.turn(pA, nd.spine2, qPitch(lean * 0.35)); this.turn(pA, nd.spine3, qPitch(lean * 0.25));
       this.turn(pA, nd.neck, qPitch(-lean * 0.4)); this.turn(pA, nd.head, qPitch(-lean * 0.5));   // (a tenth of it left in the head: he looks out from under his brow)

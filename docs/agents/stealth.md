@@ -1188,7 +1188,46 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   straight out with the carbine gripped by its end; the choke has one visible beat; the settled hold reads as still from the camera;
   the choked man's arms lie in a T; the shirt's wedge; Sam's launch stance. Where the room is only good for half the lay his shins lie
   under Sam's boots as before. `tools/qa/stalk-pose.ts --set '<json>'` writes table keys after the polish, key by key (an unknown key,
-  or a value given for a table, is refused). Nobody has seen or played this pass; nothing of the stalk has been seen on a GPU.
+  or a value given for a table, is refused). Nobody has seen or played this pass. (The maintainer has played the eighth pass's lab on a
+  GPU; the tenth pass below is from that play.)
+- **The stalk's tenth pass: the key finishes it, and he goes lower with his hands down (10-23; `STALK.key`, `STALK.low`).** From the
+  maintainer's first play of the lab: "i do think having the hands up just doesn't look cool. in chaos theory sam starts regular
+  crouch walk, then goes lower to the ground and creeps much more deliberately (and that's where stopping just pauses the animation)
+  ... I think you should really have to hit E to finish the grab. it feels weird having it happen automatically. and then in chaos
+  theory, sam springs into action for the final grab", and "i think we can make the start radius a bit larger too". Two switches, each
+  ON in the page and OFF in the module and on the frozen stand, each a `FROZEN_HOLDS` row with its own word, both under `STALK.on`:
+  - **`STALK.key`** (`?stalkkey=0`, `TPS_STALKKEY=1`). The held click only brings him in. Inside `grabM` with the grab on offer he
+    eases to a stop `keyM` (0.8 m) behind the man and KEEPS STATION there: the man's own speed, plus or minus the last of the closing
+    speed by how far he is from `keyM`, his speed following closely (`StalkMove.keep`: the creep's own ease made him hunt back and
+    forth behind a man who walks). The grab is the row's own, `grab him` on the interaction's key (E in the page), back in the list
+    whatever `STALK.only` says, and it is taken AS the stalk's (`stalkKeyGrab`, game.ts: the step in from where he stood, the landing,
+    the haul back, one `STALK_STATS.grabs`), whether the click or his own keys walked him in. The hint row reads "hold to sneak up on
+    him". A corner's wait still takes its man by itself. A lesson's grab token reads as with the stalk off ("press [Space] to grab
+    him": `lesson.ts tokenLine`), which is true again.
+  - **`STALK.low`** (`?stalklow=0`, `TPS_STALKLOW=1`). No arm comes up and he does not rise (`stalkTell` gives reach 0, rise 0 and
+    `low`, 0 at `lowFrom` 2.6 m to 1 at `lowBy` 1.1 m). The animator (`anim.low`, eased; `CREEP.low`) sinks the pelvis `lowDrop` 6 cm,
+    sets it back `lowBack` 3 cm and bows the spine `lowLean` 6 degrees more, straight by the distance, so letting go holds it. The
+    creep's carriage gives up its raised hands at ANY distance (`anim.handsDown`, `lowHands`). Each metre beyond the reach adds `lowK`
+    0.35 m/s where it added `closeK` 0.6: slower all the way in. Through a stalk's grab he leaves the crouch at `lowSpring` 18 (the
+    animator's own is 10), a rate wound up over `lowWind` 0.12 s (`anim.spring`, fed by `closeTick`): the spring. And a press can begin
+    one from `lowBeginM` 4.2 m, kept out to `lowOutM` 5 m, where the mode's 3.0 and 3.6 m were the limit: from out there he comes on
+    at his plain crouch walk, and the mode's carriage and the sink come in inside it.
+  Carried by the journal (a recording from before either key replays with both down: `applyKnobs`); every number has its row in the
+  lab, and the lab's two toggles are the switches. THE CHECK is `stalk-check.ts` (`STALK_BREAK=1` reds them): card `key` (seven
+  seconds of hold behind a man who stands grab nobody and leave him still 0.81 m behind, the stalk still his and the row offered; the
+  key then is the stalk's grab; behind a man walking at 0.9 m/s he settles at 0.79 to 0.80 m within 0.04 m/s of the man's speed; on
+  his own keys the key's grab is the same one; off, the hold grabs by itself), card `low` (a press from 3.8 m begins it and with the
+  rule off does not; hips 5.2 cm lower in reach than at 2.9 m on the shipped stand and 3.3 on the frozen one, never coming back up;
+  neither hand ever within 22 cm of chest height; no reach, no rise; 4.5 s to close against 3.7 with it off; the pose holds when
+  let go; out of the wait his hips come up 45 cm in the grab against 20 with it off), and a harness line (rows, both stands, a
+  recording, the page's boot). One seed each: these are poses and distances, not tallies. Every card before these two writes both
+  keys DOWN in its world, so the first nine passes are still read as they were; `stalk-pose.ts` does the same. `STALK_ONLY=key,low`
+  runs cards alone for a quick look. Tools that held the click for the grab now press the key in reach: `lesson-run.ts` (verb),
+  `sneaklab-check.ts`, `close-stills.ts`, `stalk-page.cjs` (`ONLY=nokey` drives the page with both off). `lesson-check.ts` and
+  `noknife-check.ts` write `STALK.key` down where they read the held click's words. The three tutorial missions play through on the
+  shipped stand. NOT DONE: the wait at a corner has no key (its timing is the press); a guard who turns while Sam keeps station is
+  the old break-off; the low creep's arms are plain crouch arms, where the game it follows spreads them wide and low. LOOKED AT on
+  stills of the worn meshes only. Nobody has played this pass or seen it on a GPU.
 - **A lesson line names the move, not its key (`lesson.ts` `TOKENS`, `LESSON_TOKENS`, `lessonToken`; 10-23).** `{grab him}`,
   `{grab him from behind}`, `{knock him out}`, `{take him out}` in a lesson's text are written out by `lessonLine` in the build's own
   words: the held click with the stalk up (`STALK.on` and `.only`), the grab's key without, the knockout with bare hands, the knife

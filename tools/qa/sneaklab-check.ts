@@ -45,8 +45,11 @@ export async function sneaklabCheck(): Promise<boolean> {
     for (let f = 0; f < 120; f++) W.step(DT);   // (he has walked onto his mark and stands)
     const A = g.guards[0], yaw = A.char.bodyYaw; g.teleportPlayer([A.char.pos[0] - Math.sin(yaw) * 2.6, 0, A.char.pos[2] - Math.cos(yaw) * 2.6]); g.player.crouch = true;
     let t = Infinity; W.input.buttons |= 1; W.input.clicked |= 1;
-    for (let f = 0; f < 6 * 60; f++) { W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.input.buttons |= 1; W.step(DT); if (g.player.holding?.g === A) { t = (f + 1) * DT; break; } }
-    verdict(t < 6, 'empty hands, 2.6 m behind the man who stands, the left button held on him: he is in Sam\'s arm inside six seconds', isFinite(t) ? `in his arm in ${t.toFixed(2)} s` : `never grabbed (Sam ${flat(g.player.char.pos, A.char.pos).toFixed(2)} m from him, his state ${A.state})`); }
+    let keyed = false;   // (stalk.ts `key`: the held click brings him into reach and the row's key is the grab — pressed here the frame the row is offered)
+    for (let f = 0; f < 8 * 60; f++) { W.cursorAt([A.char.pos[0], 1.2, A.char.pos[2]]); W.input.buttons |= 1;
+      if (STALK.key && !keyed && Math.hypot(g.player.char.vel[0], g.player.char.vel[2]) < 0.02 && g.nearby.some((r: any) => r.kind === 'guard' && r.verb === 'grab' && r.guard === A) && g.selectVerb('guard', 'grab')) { W.input.pressed.add('Space'); keyed = true; }
+      W.step(DT); if (g.player.holding?.g === A) { t = (f + 1) * DT; break; } }
+    verdict(t < 8 && keyed === STALK.key, 'empty hands, 2.6 m behind the man who stands, the left button held on him (and, with the key the finish, the row\'s key once he has stopped in reach): he is in Sam\'s arm inside eight seconds', isFinite(t) ? `in his arm in ${t.toFixed(2)} s${keyed ? ', by the key' : ''}` : `never grabbed (Sam ${flat(g.player.char.pos, A.char.pos).toFixed(2)} m from him, his state ${A.state})`); }
 
   console.log('\n=== words: the lab names every number of the stalk ===');
   { const src = readFileSync(resolve(ROOT, 'src/host/sneaklab.ts'), 'utf8'), keys = Object.keys(STALK).filter(k => typeof (STALK as any)[k] === 'number');
