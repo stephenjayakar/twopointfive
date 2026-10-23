@@ -187,6 +187,20 @@ export function wheelPace(g: Game, wheel: number) { const pl = g.player; if (pl.
  *  standing still, on the move (any ground speed over `moveAt`), × crouched, × braced on the foregrip — which he now ALWAYS is with it in the hands (Player.braced:
  *  no brace input any more, so braceK is simply the rifle's in-hand steadiness and `still` × braceK the cone a standing round is drawn with) — then + the AUTO string's
  *  own growth off the row (weapons.ts AutoSpec) and + his suppression's (suppression.ts samSpread), as the pistol's rounds get. The pistol stays dead-on. */
+/** ONE FOOTFALL A STEP (`once`; off = every crossing of the cycle's half or its turn files one, as it always did). A footfall is filed when the walk cycle
+ *  crosses its half or turns over. The cycle runs BACKWARDS while he backpedals, and backpedalling is decided from where he aims against where he goes: when
+ *  that flips frame by frame the cycle rocks over the one edge, and every frame of it filed a footfall — seven running in a scripted creep up to a man's back,
+ *  which is seven crouched steps in a tenth of a second to the man's ears. On: a crossing files a footfall only when the cycle has TRAVELLED `travel` of a turn
+ *  (either way, added up) since the last footfall filed. A plain walk travels half a turn between its edges and files what it always did; a cycle rocking on
+ *  an edge files at twice a walk's rate at the most, not sixty a second; a turn about within an eighth of a cycle of an edge loses that one footfall. (A FIRST
+ *  CUT asked only 'is this the edge last crossed?': a man pacing, or waving the cursor across himself twice a second, then walked the whole floor in silence.) */
+export const FOOTFALL = { once: false, travel: 0.25 };
+/** FOOTFALL.once: the cycle's travel since the last footfall filed is added to (the short way round, so a turn-over is a small move), and true = it has not
+ *  come far enough for this crossing to be a footfall. With the key off: false, nothing kept. */
+function stepTravelled(pl: Player, prev: number, cur: number): void { if (!FOOTFALL.once) return; const d = Math.abs(cur - prev); pl.stepTravel = Math.min(1, pl.stepTravel + (d > 0.5 ? 1 - d : d)); }
+const sameFootfall = (pl: Player): boolean => FOOTFALL.once && pl.stepTravel < FOOTFALL.travel;
+/** a footfall has been filed: the travel starts over */
+function footfallFiled(pl: Player): void { if (FOOTFALL.once) pl.stepTravel = 0; }
 export const RIFLE_SPREAD = { still: 0.010, moving: 0.028, moveAt: 0.3, crouchK: 0.7, braceK: 0.45 };
 AIM_HOOKS.playerExternalK = (g: Game) => (g.player.braced ? RIFLE_SPREAD.braceK : 1);   // the foregrip brace steadies the aim model's cone too (aim.ts hook), not only the rifle's own hands term
 /** seconds the rifle takes coming off the sling into the hands (or going back, or the pistol coming out in its place): no round and no ring inside it */
@@ -686,8 +700,9 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   poseGunLight(g);   // sprinting: gun down, light dark; hands still coming off the lock tools: the gun (and its light) is on the thigh
   // footsteps (for audio + AI hearing): step events from the locomotion phase — walking, crouch-walking, sprinting, the sidle along a wall and the crouched haul of
   // a body all tread here; the level is the gait's × the floor's (floor.ts tread: carpet 0.6, stone 1.1 … — one number for the mixer, the guards and the meter)
-  const prevPhase = pl.stepPhase; pl.stepPhase = c.anim.phase;
-  if (speed > 0.4 && ((prevPhase < 0.5) !== (pl.stepPhase < 0.5))) {   // either crossing of the half-cycle: the cycle runs backwards while backpedalling
+  const prevPhase = pl.stepPhase; pl.stepPhase = c.anim.phase; stepTravelled(pl, prevPhase, pl.stepPhase);
+  if (speed > 0.4 && ((prevPhase < 0.5) !== (pl.stepPhase < 0.5)) && !sameFootfall(pl)) {   // either crossing of the half-cycle: the cycle runs backwards while backpedalling (FOOTFALL.once: not until the cycle has come a quarter turn since the last one filed)
+    footfallFiled(pl);
     const base = pl.sprinting ? 1 : pl.crouch ? 0.125 : loadGait(g, 'player', speed) > 2 ? 0.6 : 0.26;   // (crouch / walk per-step levels carry the clips' retiming — 0.72 / 1.06 m/s natural, so ~1.4x the steps per metre — at the old per-SECOND loudness: 0.18 x 0.69, 0.35 x 0.73; what a guard accumulates over a stretch of floor is unchanged)
     const loud = tread(g, c.pos, pl.sprinting ? base : base * loadHeard(g, 'player'), true);   // (kitload.ts: × what his card rattles and weighs; 1 with its switch off — and a flat-out sprint is boots on a floor whatever he carries)
     g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud }); pl.noise = Math.max(pl.noise, loud);
@@ -1586,8 +1601,9 @@ function holdTail(g: Game, dt: number, speed: number) {
   armRifle(g, false, null);   // (a hold is hands-on: the rifle went to the sling at the grab and E draws the PISTOL to his head, never the rifle)
   c.update(dt);
   poseGunLight(g);
-  const prevPhase = pl.stepPhase; pl.stepPhase = c.anim.phase;
-  if (speed > 0.4 && ((prevPhase < 0.5) !== (pl.stepPhase < 0.5))) {
+  const prevPhase = pl.stepPhase; pl.stepPhase = c.anim.phase; stepTravelled(pl, prevPhase, pl.stepPhase);
+  if (speed > 0.4 && ((prevPhase < 0.5) !== (pl.stepPhase < 0.5)) && !sameFootfall(pl)) {
+    footfallFiled(pl);
     const loud = tread(g, c.pos, 0.26 * loadHeard(g, 'player'), true);   // (the dragging shuffle: retimed like the walk, and on the floor it is on like every step)
     g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud }); pl.noise = Math.max(pl.noise, loud);
   }
