@@ -328,10 +328,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   for first and then those men (`thrFragHold`), each wait under its own cap. ON in the page (`?wordcuts=0` off; panel "clear from outside ▸
   the word waits for the cuts"), OFF in the module and on the frozen stand (`TPS_WORDCUTS=1`), a `FROZEN_HOLDS` row, carried by the
   journal. Check `word-cuts` (`tools/qa/wordcuts-check.ts`, family `doortools`; `WORDCUTS_BREAK=1` fails 3 on both stands), 7 of 7 on
-  both, the lesson played by its script to the hold and the word 1.5 s in, seeds 3 and 4: on the page's stand the pair lost 4 of 4 men
-  with the rule off and 0 with it on (his man down 2.0 s after the word, the cuts done and the step in at 5.1 s); the word again a
-  second later goes in at once; the cap at half a second goes in at half a second. One door, one room, two seeds in the check and
-  eight in the trace; who wins at the frame is the fight's dice. Not staged: a last warning, two doors on one word, a hold whose men
+  both. Its stage is that lesson's yard with NO lesson and no scripted player (the old Training lessons were being removed): the level stood
+  up as a room-clear floor, the other houses' men taken off, the hold given by code, the kitchen's man put on alert and pinned on his
+  mark as the pair sets on the jambs, the word 1.5 s later, seeds 2, 3 and 5. Rule off the pair lost 2 of 6 men on each stand, rule on
+  0 (page's stand: his man down 1.4 to 1.5 s after the word, the cuts done and the step in at 3.6 s); the word again a second later
+  goes in at once; the cap at half a second goes in at half a second. (Played through the lesson's own script before the restaging,
+  seeds 3 and 4 on the page's stand: 4 of 4 lost with the rule off, 0 with it on.) One door, one room, three seeds in the check and
+  eight in the trace; the defender is woken and pinned by hand; who wins at the frame is the fight's dice. Not staged: a last
+  warning, two doors on one word, a set charge on the word, the four, a hold whose men
   do not slice. Never seen on a GPU, nobody has played it.
 - **The word sends a small squad in from its stack** (`DOORTOOLS.wordSmall`: ON in the page, `?wordsmall=0`; off in the module and on the frozen
   stand, `TPS_WORDSMALL=1`; debugger row 'the word sends a small squad in from its stack'; journal: off when the key is absent). The maintainer, 10-21,
