@@ -52,7 +52,7 @@ import { CUES } from './cues';
 import { placeIn } from './dialogue';
 import { WORDS, wg } from './words';
 import { digInOrder, digInPhase, digInEntered, digInWedged, digInRelease } from './digin';
-import { runnerFled } from './runner';   // (asked inside lastStandTick only: false with its switch off)
+import { runnerFled, runnerOwns } from './runner';   // (both false with its switch off)
 import { NETQUIET, netQuietClosed } from './netquiet';
 
 export const LASTSTAND = {
@@ -169,13 +169,13 @@ export interface Hint { key: string; rooms: Set<string>; /** `places`: named pla
 const STATES = new SideMap<Game, State>('laststand.STATES');
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
-const alive = (D: Def) => D.gd.state !== 'dead';
+const alive = (D: Def) => D.gd.state !== 'dead' && !runnerOwns(D.gd);   // (runner.ts: a man who has broken and run is off the net from his shout on — he leads no check, answers none and is not one of the few)
 const pick = (st: State, r: [number, number]) => r[0] + roll(st.die) * (r[1] - r[0]);
 const cellOf = (g: Game, p: Vec3) => { const nav = g.col.nav; return nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell)); };
 const inRoom = (g: Game, R: Room | null, p: Vec3) => !!R && R.cells.has(cellOf(g, p));
 const note = (g: Game, F: RoomFight, gd: Guard | null, what: string) => { F.log.push({ t: g.time, who: gd ? gd.callsign : '-', what: `[last] ${what}` }); if (F.log.length > 600) F.log.splice(0, 200); };
 /** fit to speak or be spoken to: up, not held, his wits about him */
-const fitGd = (g: Game, gd: Guard) => gd.state !== 'dead' && !gd.held && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
+const fitGd = (g: Game, gd: Guard) => gd.state !== 'dead' && !gd.held && !runnerOwns(gd) && g.time >= gd.dazzledUntil && g.time >= gd.staggerUntil;
 const fit = (g: Game, D: Def) => fitGd(g, D.gd);
 /** … and nobody of the team in his sight these `quiet` seconds */
 const calm = (g: Game, D: Def) => fit(g, D) && g.time - D.gd.lastSeenT > LASTSTAND.quiet;
@@ -274,7 +274,7 @@ function teamKnown(g: Game, F: RoomFight, near: Vec3): { pts: Vec3[]; last: Vec3
     if (gd.lastKnown && gd.lastKnown !== D.pt && gd.lastSeenT > -50) { if (g.time - gd.lastSeenT < LASTSTAND.knownSecs) pts.push(gd.lastKnown); if (gd.lastSeenT > lt) { lt = gd.lastSeenT; last = gd.lastKnown; } }
     if (D.noiseAt) { if (g.time - D.noiseT < LASTSTAND.knownSecs) pts.push(D.noiseAt); if (D.noiseT > lt) { lt = D.noiseT; last = D.noiseAt; } }
   }
-  if (!last) { let bd = Infinity; for (const D of F.defs) if (!alive(D)) { const d = flat(D.gd.char.pos, near); if (d < bd) { bd = d; last = D.gd.char.pos; } } }
+  if (!last) { let bd = Infinity; for (const D of F.defs) if (D.gd.state === 'dead') { const d = flat(D.gd.char.pos, near); if (d < bd) { bd = d; last = D.gd.char.pos; } } }
   return { pts, last: v3.copy(last ?? near) };
 }
 /** a free spot of a room a couple of strides from its anchor (a man already in it, or its middle), off its doorways and off the spots already given out */
@@ -464,7 +464,7 @@ function decide(g: Game, F: RoomFight, st: State, C: Def, heard: Def[]) {
 }
 function tickMover(g: Game, F: RoomFight, st: State, S: Stand, m: Mover): boolean {
   const D = m.D, gd = D.gd, T = st.stats;
-  if (!alive(D) || !F.defs.includes(D)) { T.diedOnWay++; note(g, F, gd, 'down on the way'); return true; }
+  if (!alive(D) || !F.defs.includes(D)) { if (gd.state === 'dead' || !F.defs.includes(D)) { T.diedOnWay++; note(g, F, gd, 'down on the way'); } return true; }
   if (m.phase === 'beat') {
     if (g.time < m.goAt) return false;
     if (!S.room || !movable(g, D)) { T.dropped++; S.out.add(D); nameAt(g, st, D, spoken(g, gd.char.pos)); return true; }   // (his own trouble now, or nobody left to go to: he holds where he is)

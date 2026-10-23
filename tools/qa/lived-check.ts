@@ -77,8 +77,8 @@ const LEVEL_BASE: Record<string, string> = {
   // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
   'tut-quiet.json': '87c7cebef',
 
-  // the tunnel station, played with no fog of war (its lesson's rails.fog)
-  'tut-sky.json': 'f3ef62b01',
+  // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run)
+  'tut-sky.json': '34c71d8c3',
 
   // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, two sponge rounds on his card and the swap's own lists, the moon
   // behind the shop

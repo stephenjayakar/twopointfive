@@ -2,6 +2,7 @@
 // target, X, then the row's digit (5 turns a door's menu to its tools); B for the usual order; F for the word that blows a set charge (and, on the frozen
 // stand, the word at a held threshold).
 import type { Bot } from '../lesson-run';
+import { CMDRING } from '../../../src/game/cmdring';
 
 export const query = '?roomclear=1';
 /** a room clear ends when every room is taken (game/roomclear.ts): the mission's own stages stand still under it */
@@ -16,11 +17,14 @@ const cleared = (B: Bot, id: string) => !!B.g.roomClear.rooms.find((r: any) => r
 let plain = false;
 const last = (B: Bot) => { const l = B.g.orders.log; return l.length ? l[l.length - 1] : null; };
 
-/** the cursor on `p`, X, the menu must be up on the kind of thing meant */
+/** the cursor on `p`, the orders menu, and it must be up on the kind of thing meant. Where the squad's key kept down is a ring that stays (game/cmdring.ts:
+ *  the page's way, and what a line's X is drawn as there) the menu is opened that way; where there is no such ring, by its own key (X) */
 function menu(B: Bot, p: number[], kind: 'floor' | 'door') {
-  const O = B.g.orders;
-  B.aim(p); B.step(2); B.aim(p); B.press('KeyX', 2);
-  if (!O.menu) B.fail(`X opened no menu at (${p[0]}, ${p[2]})`);
+  const O = B.g.orders, ring = CMDRING.on && CMDRING.stay;
+  B.aim(p); B.step(2); B.aim(p);
+  if (ring) { B.I.pressed.add(CMDRING.key); B.hold([CMDRING.key], 1.5, () => !!O.menu); B.step(2); } else B.press('KeyX', 2);
+  B.say(`  the menu by ${ring ? "the squad's key kept down (the ring)" : 'its own key (X)'}`);
+  if (!O.menu) B.fail(`${ring ? "the squad's key kept down" : 'X'} opened no menu at (${p[0]}, ${p[2]})`);
   if (O.menu.target.kind !== kind) B.fail(`X at (${p[0]}, ${p[2]}) opened the menu on '${O.menu.target.kind}', not a ${kind}`);
 }
 /** …and the digits, one press each */
