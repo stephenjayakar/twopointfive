@@ -250,6 +250,15 @@
     body.onrails .objmark.arrow span { margin-top: 22px; }
     @keyframes railarrow { 0%, 60%, 100% { opacity: 0.3; } 20% { opacity: 1; } }
     @keyframes railbeat { 0% { outline: 3px solid var(--h-acc); outline-offset: 0; } 100% { outline: 3px solid transparent; outline-offset: 22px; } }
+    /* what Tab shows (ui/tabcard.ts, ui/tabkey.ts 'brief'): the objective in full and the squad, over a held game */
+    #tabcard { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-sizing: border-box; width: min(560px, 86vw / var(--tz, 1)); max-height: calc(82vh / var(--tz, 1)); overflow-y: auto; padding: 16px 20px 12px; background: rgba(var(--h-plate),0.94); border: 1px solid rgba(var(--h-edge),0.55); border-radius: 3px; box-shadow: 0 8px 40px rgba(0,0,0,0.6); font: 13px/1.4 var(--h-font); letter-spacing: 0.01em; color: var(--h-ink); z-index: 13; }   /* (over the HUD's own layers and a line being said; under the pause card and the lists) */
+    #tabcard.on { display: block; } #tabcard section + section { margin-top: 14px; }
+    #tabcard h4 { display: flex; justify-content: space-between; gap: 10px; margin: 0 0 6px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--h-acc); } #tabcard h4 em { font: 400 11px/1 var(--h-font); letter-spacing: 0.02em; text-transform: none; color: var(--h-dim); }
+    #tabcard p { margin: 0; color: var(--h-hi); } #tabcard ul { margin: 6px 0 0; padding: 0; list-style: none; columns: 2; column-gap: 18px; }
+    #tabcard li { position: relative; padding-left: 16px; break-inside: avoid; } #tabcard li::before { content: '○'; position: absolute; left: 0; color: var(--h-dim); } #tabcard li.done { color: var(--h-soft); } #tabcard li.done::before { content: '✓'; color: var(--h-acc); } #tabcard li.now { color: var(--h-hi); } #tabcard li.now::before { content: '▸'; color: var(--h-acc); }
+    #tabcard .man { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 10px; padding: 4px 0; border-top: 1px solid rgba(var(--h-edge),0.14); } #tabcard .man b { color: var(--h-hi); } #tabcard .man i { grid-column: 2; font-style: normal; font-size: 11px; color: var(--h-soft); } #tabcard .man.down b, #tabcard .man.down span { text-decoration: line-through; opacity: 0.6; }
+    #tabcard .carry { margin-top: 5px; font-size: 12px; color: var(--h-soft); } #tabcard .carry:first-of-type { padding-top: 6px; border-top: 1px solid rgba(var(--h-edge),0.14); }
+    #tabcard footer { margin-top: 14px; font-size: 11px; color: var(--h-dim); } #tabcard kbd { display: inline-block; margin: 0 2px; padding: 1px 5px 0; border-radius: 2px; background: rgba(var(--h-edge),0.8); color: var(--h-on); font: 700 9px/1.25 var(--h-mono); letter-spacing: 0.06em; vertical-align: 1px; }
     #objective:empty { display: none; } #objective.done { color: var(--h-hi); } #objective.failed { color: #f0a090; }
     /* alarm stage (Chaos-Theory-style): hidden at calm; ALARM I amber while the floor is heightened, ALARM II red on lockdown, with the level's clock and
        a pulsing pip while an alarm episode is actually running (someone is alert / searching) */
@@ -713,6 +722,7 @@
     <div id="meters"><div class="m light"><span class="lab">LIGHT</span><span class="num"></span><div class="bar"><div class="fill"></div><div class="ticks"></div></div></div><div class="m sound"><span class="lab">SOUND</span><span class="num"></span><div class="bar"><div class="fill"></div><div class="peak"></div><div class="ticks"></div></div></div></div>
     <div id="log"></div>
     <div id="objective"></div>
+    <div id="tabcard"></div>
     <div id="alarm"></div>
     <div id="checkpoint"><b></b>CHECKPOINT</div>
     <div id="journal"></div>
