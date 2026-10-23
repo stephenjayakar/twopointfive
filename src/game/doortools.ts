@@ -397,7 +397,7 @@ export const DOORTOOLS = {
    *  jamb men are still slicing the doorway, does not walk them off their cuts: the step in is OWED (the owed step a grenade's wait already uses), they
    *  finish the cuts — fighting whoever a cut shows from the frame, as the hold does — and step in on their own the moment the cuts are done, or after
    *  `wordCutsCap` seconds whatever is left. The word AGAIN (outside `wordTap`) pays it at once, as an owed step always could: the player's say stands.
-   *  Not under a captor's last warning, nor at a door that shares its word with another. From a lesson's sixteen runs on the page's stand (10-23): the
+   *  Not under a captor's last warning, nor at a door that shares its word with another, nor with a set charge on the same word. From a lesson's sixteen runs on the page's stand (10-23): the
    *  word a second and a half into a hold, a defender awake in the band neither jamb's diagonal shows, both men walked to the door's middle at once and
    *  were shot in its width before either had seen him, on ten; the same door left to finish its cuts found him and dropped him from the frame, on all. */
   wordCuts: false, wordCutsCap: 8,
@@ -1175,7 +1175,7 @@ export class DoorTools {
     for (const op of ops) {
       this.beat(op, `told · ${what === 'step' ? 'step in' : what === 'bang' ? 'bang and step in' : 'leave it'}`);
       if (what !== 'leave') { op.word = w; op.hold = 0; }
-      const owed = !!op.thr!.stepOwed; op.thr!.stepOwed = false;   // (the word's owed step in: his say here is the newer one)
+      const owed = !!op.thr!.stepOwed; op.thr!.stepOwed = false; op.thr!.cutOwed = false;   // (the word's owed step in: his say here is the newer one)
       if (what === 'bang') { op.thr!.force = true; if (op.thr!.first || op.thr!.wide) op.thr!.tossed = 0; this.toPockets(op); }   // (… and a can that went in first, unasked, is not the one he is asking for)
       else if (what === 'step') { if (owed) this.wordStepGo(op); else { this.heldBeat(op); this.toStep(op); } }   // (owed: 'the door waits' is answered — 'on without …')
       else {   // off the door: the order over, its men a plain stack on the marks they came to the door by — what 'stack up' leaves, for whatever is said next
@@ -1191,7 +1191,7 @@ export class DoorTools {
    *  in with no can, where the word alone bangs the pockets first; 'bang' is the word as it always was */
   private thenOnWord(what: 'step' | 'bang', men: Guard[], t: OrderTarget): string | void {
     const ok = this.canThresholdThen(what, t, men); if (ok !== true) return ok;
-    for (const op of this.thresholdHeld(men, t.kind === 'door' ? t.door : null)) { op.thr!.wordStep = what === 'step'; if (op.thr!.stepOwed) { op.thr!.stepOwed = false; op.thr!.fragT = undefined; op.thr!.fragSaid = false; }   // (a step in the last word owed: this is the newer order, and waits for the word again)
+    for (const op of this.thresholdHeld(men, t.kind === 'door' ? t.door : null)) { op.thr!.wordStep = what === 'step'; if (op.thr!.stepOwed) { op.thr!.stepOwed = false; op.thr!.cutOwed = false; op.thr!.fragT = undefined; op.thr!.fragSaid = false; }   // (a step in the last word owed: this is the newer order, and waits for the word again)
       this.beat(op, `on the word · ${what === 'step' ? 'step in, no bang' : 'bang, then step in'}`); }
   }
   canThresholdThen(what: 'step' | 'bang' | 'leave', t: OrderTarget | null, men: Guard[]): true | string {
@@ -1802,10 +1802,10 @@ export class DoorTools {
    *  row is his say there and then, and is not held. */
   private wordStepIn(op: DoorOp) {
     const T = op.thr!, t = this.g.time;
+    if (!T.stepOwed && this.cutsOwe(op)) {   // DOORTOOLS.wordCuts: the jamb men are still slicing — the step in is owed to the end of their cuts (asked before the grenade's wait: the cuts first, then wordOwed asks after the men who ran)
+      T.stepOwed = true; T.owedT = t; T.cutOwed = true; T.fragT = undefined; if (op.word) { op.word = null; op.worded = true; }
+      this.beat(op, 'the word waits for the cuts'); this.g.say(op.lead, 'checking the doorway first.'); return; }
     if (!T.stepOwed && this.thrFragWait(op)) { T.stepOwed = true; T.owedT = t; T.fragT = undefined; if (op.word) { op.word = null; op.worded = true; } return; }
-    if (!T.stepOwed && this.cutsOwe(op)) {   // DOORTOOLS.wordCuts: the jamb men are still slicing — the step in is owed to the end of their cuts
-      T.stepOwed = true; T.owedT = t; T.cutOwed = true; if (op.word) { op.word = null; op.worded = true; }
-      this.beat(op, 'the word waits for the cuts'); this.g.say(op.lead, 'Checking the doorway first.'); return; }
     if (T.stepOwed && t - (T.owedT ?? -1e9) < DOORTOOLS.wordTap) { if (op.word) { op.word = null; op.worded = true; } return; }   // (a second tap of the same word)
     this.wordStepGo(op);
   }
@@ -1817,7 +1817,7 @@ export class DoorTools {
   /** … the owed step in, once a tick of the hold: true while it is still waited on ('the door waits', said once; the wait counted into the order's one) */
   private wordOwed(op: DoorOp): boolean {
     const T = op.thr!, g = this.g, t = g.time;
-    if (T.cutOwed) { if (this.cutsOwe(op)) return true; T.cutOwed = false; this.beat(op, T.sliced ? 'the cuts are done · in' : `the cuts not done in ${DOORTOOLS.wordCutsCap} s · in`); }   // (DOORTOOLS.wordCuts: still cutting — the hold's tick goes on below it; done, or its cap spent: in, unless men who ran are still out)
+    if (T.cutOwed) { if (this.cutsOwe(op)) return true; T.cutOwed = false; this.beat(op, T.sliced ? 'the cuts are done · in' : t - (T.owedT ?? -1e9) >= DOORTOOLS.wordCutsCap ? `the cuts not done in ${DOORTOOLS.wordCutsCap} s · in` : 'the cuts are not waited for · in'); }   // (DOORTOOLS.wordCuts: still cutting — the hold's tick goes on below it; done, or its cap spent: in, unless men who ran are still out)
     if (!this.thrFragWait(op)) { this.wordStepGo(op); return false; }
     if (T.fragT !== undefined) T.handW = (T.handW ?? 0) + Math.min(t - T.fragT, 0.1); T.fragT = t;
     if (!T.fragSaid) { T.fragSaid = true; this.beat(op, `the door waits: ${[...T.fled!].map(m => m.callsign).join(', ')} not back`); g.say(op.men.find(m => !T.fled!.has(m)) ?? op.lead, 'hold — back on the door.'); }
@@ -3583,9 +3583,10 @@ export class DoorTools {
   /** DOORTOOLS.wordCuts: is the word's step in (no can) waiting for the jamb men's cuts — a hold whose men slice (thrPie), the cuts not yet called done
    *  ('sliced'), the rule's cap not spent since the word. Not asked under a captor's last warning, nor of a door that shares a word with another. */
   private cutsOwe(op: DoorOp): boolean {
-    const K = DOORTOOLS, T = op.thr!; if (!K.wordCuts || WORDCUTS_BREAK || !K.wordNoCan || T.sliced || op.phase !== 'thr') return false;
+    const K = DOORTOOLS, T = op.thr!; if (!K.wordCuts || WORDCUTS_BREAK || !K.wordNoCan || T.sliced || T.told || op.phase !== 'thr') return false;   // (`told`: they have said 'holding on the door' — the hold's own cap — and are not sent back to cuts)
     if (!T.jamb.some(m => !!op.slice.get(m)?.pie)) return false;   // (nobody on this door cuts: there is nothing to wait for)
     if (T.cutOwed && this.g.time - (T.owedT ?? -1e9) >= K.wordCutsCap) return false;
+    if (this.set.some(c => !this.onPendingWord(c) && this.keyIs(c))) return false;   // (a set charge goes on this same word: they go in behind its blast, not seconds after it)
     return !op.lastStack && !op.lastHold && !this.g.rescue.lastWarning(op.door) && !(op.word && this.ops.some(o => o !== op && o.word === op.word));
   }
   /** DOORTOOLS.thrFragHold: is the stage waiting for men who ran from a grenade — some are not back, and the order's one wait (`thrHandWait`, the can's

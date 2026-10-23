@@ -318,12 +318,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the lead first saw him 0.47 to 0.50 s after the word, the first man was down at 0.57 to 0.68 s and the second a tenth later, on five
   of eight. The same door left to finish its cuts (the word after "holding on the door") found him 2.6 to 3.0 s in and dropped him from
   the frame, nobody lost, on eight of eight. So the fault was the word cutting the slice short, and the rule is that it does not: the
-  word given while the jamb men are still slicing is taken ('the word waits for the cuts'; the lead says "Checking the doorway first."),
+  word given while the jamb men are still slicing is taken ('the word waits for the cuts'; the lead says "checking the doorway first."),
   the step in is OWED (the owed step a grenade's wait already uses), they finish the cuts, fighting whoever a cut shows from the frame
   as the hold does, and step in on their own the moment the cuts are done ('the cuts are done · in'), or after `wordCutsCap` 8 s
   whatever is left. The word AGAIN pays it at once, as an owed step always could: the player's say stands. No can, so `wordNoCan` (the
   maintainer, 10-16: "the men shouldn't throw a bang unless i tell them to") is untouched. Not under a captor's last warning, not at a
-  door that shares its word with another, not Sam's own 'step in' row. ON in the page (`?wordcuts=0` off; panel "clear from outside ▸
+  door that shares its word with another, not when a set charge goes on the same word (they go in behind its blast), not once they
+  have said "holding on the door", not Sam's own 'step in' row. Where men who ran from a grenade are also out, the cuts are waited
+  for first and then those men (`thrFragHold`), each wait under its own cap. ON in the page (`?wordcuts=0` off; panel "clear from outside ▸
   the word waits for the cuts"), OFF in the module and on the frozen stand (`TPS_WORDCUTS=1`), a `FROZEN_HOLDS` row, carried by the
   journal. Check `word-cuts` (`tools/qa/wordcuts-check.ts`, family `doortools`; `WORDCUTS_BREAK=1` fails 3 on both stands), 7 of 7 on
   both, the lesson played by its script to the hold and the word 1.5 s in, seeds 3 and 4: on the page's stand the pair lost 4 of 4 men
