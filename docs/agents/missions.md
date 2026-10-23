@@ -1526,9 +1526,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   level, software adapter, preset high) and read 0 here. By the sky's own numbers (`skyRadiance`: the zenith's colour, read live): pi times its luminance
   times how much sky the point has, five rays (the zenith's cap a quarter, four at 60 degrees three sixteenths each). On the pair's level, against the
   page at high: the lane's gap 0.034 here and 0.036 to 0.050 there; its east end 0.048 and 0.040 to 0.053; the low wall's mark LIGHT 50 and 47. Nothing
-  by day (an authored hour's sky is in the estimate). ONE PLACE THE TWO DISAGREE THE OTHER WAY: the pair's start on the road and the partner's start
-  read moonlit here (0.29, LIGHT 45 to 50) and dark on the page at both presets (0.02 to 0.04, LIGHT 2 to 8): the page has something between those
-  spots and the moon that the collision statics do not. Not found; nobody's yet. MEASURED with it (lesson-gate, build 897's head): mission 1, the plan, the
+  by day (an authored hour's sky is in the estimate). The pair's two start points on the road agree too (moonlit, LIGHT 45 to 50 here and 46 to 47 on the page with the men's own bodies skipped: a first
+  page reading there, 2 to 8, was taken inside the men standing on those spots and is struck). MEASURED with it (lesson-gate, build 897's head): mission 1, the plan, the
   squad, the ledger and the pair pass on both arms; THE SOLO MISSION DOES NOT: its `back` beat ("the dark is cover too", beside the shop's door with the
   lamp shot out) reads 31 over its own bar of 25 (the moon alone: 23). Its script holds the sky's light off (`mode.glow: false`, a HELD BAR with the
   reason over it) until its owner moves the spot or the claim. STILL NOT THE PAGE'S: the moon's bounce into a shadow beside lit
