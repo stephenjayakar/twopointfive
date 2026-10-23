@@ -286,20 +286,25 @@ export async function railsCheck(): Promise<boolean> {
       const c0 = { on: CMDRING.on, plan: CMDRING.plan }, sp0 = RAILS.skyPlan; let pic: any = null, off: any = 'unread';
       try { CMDRING.on = CMDRING.plan = true; pic = planView(g.orders); RAILS.skyPlan = false; off = planView(g.orders); } finally { CMDRING.on = c0.on; CMDRING.plan = c0.plan; RAILS.skyPlan = sp0; }
       const toned = pic ? pic.men.filter((m: any) => !!m.tone).length : 0;
-      verdict(g.rails.skyOn && !g.orders.plan.up && !!pic && pic.up === true && pic.men.length === men.length && men.length === 4 && toned === 4 && !pic.sam && !pic.drag && pic.chains.length === 0 && off === null,
+      verdict(g.rails.skyOn && !g.orders.plan.up && !!pic && pic.frame === true && pic.up === false && pic.men.length === men.length && men.length === 4 && toned === 4 && !pic.sam && !pic.drag && pic.chains.length === 0 && off === null,
         'the sky seat is drawn as plan mode is, with the mode down: its frame is up, each of the four men has his ring in his pair\'s colour, there is no mark for the parked player and no pick box; with RAILS.skyPlan off there is no such picture',
-        `the mode ${g.orders.plan.up ? 'UP' : 'down'} · the picture ${pic ? `up ${pic.up} · ${pic.men.length} rings, ${toned} in a pair's colour · player's mark ${pic.sam ? 'drawn' : 'none'}` : 'none'} · switch off: ${off === null ? 'none' : 'still drawn'}`);
+        `the mode ${g.orders.plan.up ? 'UP' : 'down'} · the picture ${pic ? `frame ${pic.frame}, says the mode is ${pic.up ? 'up' : 'down'} · ${pic.men.length} rings, ${toned} in a pair's colour · player's mark ${pic.sam ? 'drawn' : 'none'}` : 'none'} · switch off: ${off === null ? 'none' : 'still drawn'}`);
       // the way out: nobody runs before the order, every man sent to the trucks runs once it is given, none with the switch off, none at another step
       const ko = L.steps.findIndex((T: any) => T.id === 'out'), To = L.steps[ko], count = () => men.filter((m: any) => g.rails.runs(m)).length;
       g.lesson.i = L.steps.findIndex((T: any) => T.id === 'move'); R.run(0.3); R.command(YARD); R.run(5);   // (off the trucks first: a man holding beside the mark is under an order to it already)
       g.lesson.i = ko; R.run(0.3); const before = count();
       R.command(To.at as number[]); R.run(0.4); const told = count(); let top = 0; for (let i = 0; i < 150; i++) { R.run(1 / 60); for (const m of men) top = Math.max(top, m.speed); }
-      const wr = RAILS.wayRun; RAILS.wayRun = false; const offRun = count(); RAILS.wayRun = wr;
-      g.lesson.i = ko - 1; const elsewhere = count(); g.lesson.i = ko;
-      const paced = !!TEAMPACE.on;   // (the team's own pace is a newer rule: where the stand holds it off the legs keep their old cap, and only the frame's answer is asked)
-      verdict(To?.onWay?.run === true && before === 0 && told === men.length && (!paced || top >= TEAMPACE.runAt) && offRun === 0 && elsewhere === 0,
-        'the job done, the squad runs back: on the last step nobody runs before the order, every man sent to the trucks is told to run once it is given and (where the team\'s pace is the rule\'s) is at a run inside two and a half seconds; nobody with RAILS.wayRun off, nobody at another step',
-        `told to run: ${before} before the order · ${told} of ${men.length} after · top ${top.toFixed(1)} m/s${paced ? ` (a run is ${TEAMPACE.runAt})` : ' (the pace rule is off here)'} · switch off ${offRun} · at the step before ${elsewhere}`);
+      // (each asked on the tick after it is set: the frame says once a tick whether the step's order is out)
+      const wr = RAILS.wayRun; let offRun = -1; try { RAILS.wayRun = false; R.run(2 / 60); offRun = count(); } finally { RAILS.wayRun = wr; } R.run(2 / 60);
+      const r0 = To.onWay.run; let unasked = -1; try { To.onWay.run = false; R.run(2 / 60); unasked = count(); } finally { To.onWay.run = r0; } R.run(2 / 60);
+      const again = count(), paced = !!TEAMPACE.on;   // (the team's own pace is a newer rule: where the stand holds it off the legs keep their old cap, and only the frame's answer is asked)
+      // a man with somebody in his sights does not run (teampace.ts teamTold, as a run to cover): asked of the rule with the fight's answer forced
+      const { teamTold } = await import(`${ROOT}/src/game/teampace.ts`), own = Object.prototype.hasOwnProperty.call(g.fight, 'engaged'), e0 = g.fight.engaged; let free = -1, fought = -1;
+      try { free = men.filter((m: any) => teamTold(g, m) !== null).length; g.fight.engaged = () => true; fought = men.filter((m: any) => teamTold(g, m) !== null).length; } finally { if (own) g.fight.engaged = e0; else delete g.fight.engaged; }
+      // (a man the roadblock has in a fight on this floor is not given the run: at least one is)
+      verdict(To?.onWay?.run === true && before === 0 && told === men.length && again === men.length && (!paced || (top >= TEAMPACE.runAt && free >= 1 && fought === 0)) && offRun === 0 && unasked === 0,
+        'the job done, the squad runs back: on the last step nobody runs before the order, every man of the squad is told to run once it is given and (where the team\'s pace is the rule\'s) is at a run inside two and a half seconds, and none of them while he has a man in his sights; nobody with RAILS.wayRun off, nobody when the step does not ask',
+        `told to run: ${before} before the order · ${told} of ${men.length} after · top ${top.toFixed(1)} m/s${paced ? ` (a run is ${TEAMPACE.runAt}) · the rule gives a run to ${free}, to ${fought} with a man in his sights` : ' (the pace rule is off here)'} · switch off ${offRun} · the step not asking ${unasked}`);
     }
 
     // ---- the gate's beat is short (tut-sky): once the squad sets in the yard the roadblock's men come DOWN THE ROAD for the gate (the script's `direct`

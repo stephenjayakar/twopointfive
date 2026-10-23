@@ -2,7 +2,7 @@
 // always stood up on the shipped stand). Nobody on the floor is his: he has the view (the host's Ctrl + mouse and Ctrl + wheel, done here as the host does them,
 // and only when the frame has unlocked them), the walk keys that shift it, the squad's command key on a point under the cursor, and the word.
 import type { Bot } from '../lesson-run';
-import { TEAMPACE } from '../../../src/game/teampace';
+import { TEAMPACE, TEAMPACE_STATS } from '../../../src/game/teampace';
 import { RAILS } from '../../../src/game/rails';
 
 export const query = '?roomclear=1&squad4';
@@ -51,20 +51,24 @@ export const steps: Record<string, (B: Bot) => void> = {
     for (let k = 0; k < 3 && !set() && !taken(B, 'store'); k++) { B.aim(WALL); B.step(2); B.aim(WALL); B.I.pressed.add('KeyB'); B.hold(['KeyB'], 0.45); B.step(2); B.press('Digit5', 3); B.press('Digit3', 3);  B.until(set, 20); }
     B.until(clear, 20); B.wait(0.6); },
   blow: B => { B.wait(1); B.press('KeyF', 2); if (!B.until(() => taken(B, 'store'), 40)) breach(B, [22.2, 1.0, 7.25], 'store'); B.wait(2); },
-  // (the line says a buddy team goes: one man works the box and the other of his pair covers him from behind — asked of the order book a moment after the key)
+  // (the line says a buddy team goes: one man works the box and the other of his pair covers him from behind — asked of the order book on every try, once
+  //  the order is in it; a worker sent alone is a line that lies)
   breaker: B => { for (let k = 0; k < 3 && !B.g.blackout.active; k++) { command(B, BREAKER);
-      if (k === 0) { B.step(6); const O = B.g.orders, men = squad(B), w = men.find((m: any) => O.of(m)?.order === 'work'), mate = w && men.find((m: any) => m !== w && O.pairOf(m) === O.pairOf(w) && /^covering /.test(O.of(m)?.there ?? ''));
-        if (w && !mate) B.fail(`the mains box drew ${w.callsign} alone: the line says a buddy team goes`); if (w && mate) B.say(`  the mains box: ${w.callsign} works it, ${mate.callsign} covers him`); }
+      const O = B.g.orders, worker = () => squad(B).find((m: any) => O.of(m)?.order === 'work'); B.until(() => !!worker() || B.g.blackout.active, 1);
+      const w = worker(), mate = w && squad(B).find((m: any) => m !== w && O.pairOf(m) === O.pairOf(w) && /^covering /.test(O.of(m)?.there ?? ''));
+      if (w && !mate) B.fail(`the breaker box drew ${w.callsign} alone: the line says a buddy team goes`); if (w && mate) B.say(`  the breaker box: ${w.callsign} works it, ${mate.callsign} covers him`);
       B.until(() => B.g.blackout.active, 60); }
     B.wait(0.5); },
   nv: B => { B.press('KeyN', 3); },
   // nothing to press: the two with torches are the squad's to deal with (the step is done by the script's own word, with them down or after a while)
   torches: B => { B.until(() => B.g.lesson.step?.id !== 'torches', 40); B.wait(0.5); },
   bunk: B => { breach(B, BUNK_DOOR, 'bunk'); },
-  // (the job is done: they RUN back — the step's `onWay.run`, where the team's pace is the rule's and the frame's switch is on)
-  out: B => { const back = () => squad(B).every((m: any) => m.char.pos[0] < 11.5 && m.char.pos[2] > 20.6); let top = 0, ran = 0; const t0 = B.g.time;
-    for (let k = 0; k < 3 && !back(); k++) { command(B, TRUCKS); B.until(() => { const fast = squad(B).filter((m: any) => m.speed >= TEAMPACE.runAt); ran = Math.max(ran, fast.length); for (const m of squad(B)) top = Math.max(top, m.speed); return back(); }, 60); }
-    B.say(`  the way out: ${(B.g.time - t0).toFixed(1)} s · top ${top.toFixed(1)} m/s · ${ran} of ${squad(B).length} at a run at once`);
-    if (TEAMPACE.on && RAILS.wayRun && ran < 2) B.fail(`the squad walked back to the trucks (top ${top.toFixed(1)} m/s, a run is ${TEAMPACE.runAt}): the step tells them to run`);
+  // (the job is done: they RUN back — the step's `onWay.run`, counted by the team's own tally of runs it was TOLD to make, where the frame is live and the
+  //  team's pace is the rule's; a squad that is all hurt or quiet walks, and so does one with the roadblock still in its sights)
+  out: B => { const back = () => squad(B).every((m: any) => m.char.pos[0] < 11.5 && m.char.pos[2] > 20.6); let top = 0; const t0 = B.g.time, told0 = TEAMPACE_STATS.told;
+    for (let k = 0; k < 3 && !back(); k++) { command(B, TRUCKS); B.until(() => { for (const m of squad(B)) top = Math.max(top, m.speed); return back(); }, 60); }
+    const told = TEAMPACE_STATS.told - told0, asked = !!B.g.rails?.live && TEAMPACE.on && RAILS.wayRun;
+    B.say(`  the way out: ${(B.g.time - t0).toFixed(1)} s · top ${top.toFixed(1)} m/s · ${told} runs told`);
+    if (asked && told < 1) B.fail(`nobody was told to run back to the trucks (top ${top.toFixed(1)} m/s, a run is ${TEAMPACE.runAt}): the step tells them to`);
     B.wait(1.2); },
 };

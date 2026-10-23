@@ -1318,7 +1318,7 @@ export class SquadOrders {
         if (A.via.length) { if (flat(p, A.via[0]) < 0.9) A.via.shift(); A.goal = A.via[0] ?? v3.copy(A.post); }   // (the way round a locked door, a waypoint at a time)
         d = flat(p, mark); speed = A.pace ?? (d > K.briskIn ? K.brisk : stackLinePace(g, gd, A, d, K.brisk) ?? K.onto);
         if (A.pace !== undefined) teamFight(g, gd); else if (!A.thru && !A.via.length) speed = teamDash(g, gd, mark, d) ?? speed;   // (teampace.ts: an entry keeps its pace; a run to cover straight across floor a known man has a line on — nothing with its switch off)
-        if (A.pace === undefined) speed = teamTold(g, gd, d) ?? speed;   // (… and a leg a tutorial step tells them to run, round its corners too: rails.ts runs — nothing off a frame)
+        if (A.pace === undefined && d > K.briskIn) speed = teamTold(g, gd) ?? speed;   // (… and a leg a tutorial step tells them to run, round its corners too, walked in over its last metres as any leg is: rails.ts runs — nothing off a frame)
         { const sp = sneakPost(g, gd, A.order) ?? unseenPost(g, gd, A.order); if (sp !== null) { low = true; speed = Math.min(speed, sp); } }   // (sneak.ts: sent to a mark while the silent squad sneaks, he goes there low with Sam — nothing with its switch off)
         const short = g.fight.short(gd);   // (LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — his walk waits, and so do the clocks that would call a standing man stuck)
         if (short) { speed = 0; A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }

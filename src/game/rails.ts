@@ -177,8 +177,8 @@ export class Rails {
   get data(): RailsData | null { if (!RAILS.on) return null; return this.g.lesson?.data?.rails ?? null; }
   get live(): boolean { return !!this.data; }
   get skyOn(): boolean { return !!this.data?.sky; }
-  /** the sky seat is drawn as plan mode is (RAILS.skyPlan; planmode.ts planView asks) */
-  get planUp(): boolean { return !BREAK && RAILS.skyPlan && this.skyOn; }
+  /** the sky seat is drawn as plan mode is, the mode itself down (RAILS.skyPlan; planmode.ts planView asks) */
+  get planDrawn(): boolean { return !BREAK && RAILS.skyPlan && this.skyOn; }
   private lesson(): { L: LessonData; i: number } | null { const L = this.g.lesson?.data; return L?.rails && RAILS.on ? { L, i: Math.min(this.g.lesson.index, L.steps.length) } : null; }
 
   /** the actions that work now: the record's, each step's own from the moment it came up, less what a step took away — derived from the step that is up */
@@ -223,11 +223,15 @@ export class Rails {
     if (at && RAILS.wayM > 0 && !(O && this.squad().some(gd => { const P = O.of(gd)?.post; return !!P && Math.hypot(P[0] - at[0], P[2] - at[2]) < RAILS.wayM; }))) return;
     this.gave = 1; this.gaveT = this.gave0 = this.g.time;
   }
-  /** this man runs the leg he is on (a step's `onWay.run`, RAILS.wayRun; teampace.ts teamTold asks): he is of the squad and under an order to the step's mark */
+  /** this man runs the leg he is on (a step's `onWay.run`, RAILS.wayRun; teampace.ts teamTold asks): the step's order is out (`running`, said once a tick:
+   *  a man of the squad is under an order to the step's mark) and he is a man of the squad sent somewhere by an order — every man of it, whichever mark
+   *  the order dealt him: one order is one pace */
   runs(gd: Guard): boolean {
-    const S = this.lesson(), T = S?.L.steps[S.i], at = T?.at; if (BREAK || !RAILS.wayRun || !T?.onWay?.run || !at || !(RAILS.wayM > 0)) return false;
-    const P = this.g.orders?.of(gd)?.post; return !!P && Math.hypot(P[0] - at[0], P[2] - at[2]) < RAILS.wayM && this.squad().includes(gd);
+    if (!this.running || !gd.unit || gd.team !== 'operative' || gd.state === 'dead') return false;
+    const A = this.g.orders?.of(gd); return !!A && A.order !== 'fallIn' && A.order !== 'hold';
   }
+  /** the step that is up tells its men to run and its order has gone out (tick) */
+  private running = false;
   /** is a man of the squad under an order to the step's mark (the step's `onWay`: its order has been given and they are walking it) */
   private onWay(S: { L: LessonData; i: number } | null): boolean {
     const T = S?.L.steps[S.i], at = T?.at; if (BREAK || !T?.onWay || !at || !(RAILS.wayM > 0)) return false;
@@ -337,6 +341,7 @@ export class Rails {
   /** once a tick (game.ts, right after lesson.tick): the run's start, the step that came up answered, the spared men stood up */
   tick(dt: number) {
     const S = this.lesson(), g = this.g;
+    this.running = !BREAK && RAILS.wayRun && !!S?.L.steps[S.i]?.onWay?.run && this.onWay(S);
     if (!S) { if (this.sky.parked) this.unpark(); return; }
     if (this.run !== g.mission) { this.run = g.mission; this.answered = -1; this.back = false; this.spared.clear(); if (this.sky.parked) this.unpark(); this.sky.again = true; this.fresh = 3; this.lookout = null; this.sky.off = [0, 0, 0]; this.sky.mid = null; this.sky.midT = -1; this.log.length = 0; this.ordersSeen = g.orders?.log.length ?? 0; this.moved = false; this.clean(); this.startProgram('start'); }
     else if (this.fresh > 0) this.fresh--;

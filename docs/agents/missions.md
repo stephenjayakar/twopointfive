@@ -1648,18 +1648,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `PT_DESTR=1` set by hand in front of `lesson-run` is honoured as the script's own `raises` is (it was read only when the script had raised it).
 - **Mission 1, three play notes (2026-10-23)** (`levels/tut-sky.json`, `rails.ts`, `teampace.ts`, `planmode.ts`). (1) THE SKY SEAT IS DRAWN AS PLAN MODE IS
   ("first tutorial level should have the plan mode overlay"): `RAILS.skyPlan` (a knob of the frame's table, on with the frame; `?skyplan=0`; picture
-  only, so the journal has no row for it) → `Rails.planUp` → `planmode.ts planView` answers as with the mode up while the mode itself is down: the frame
-  round the view with its word, each man's ring in his pair's colour, the men the next order goes to drawn full; no mark for the parked player, no pick
-  box, nothing of plan mode taught (that is mission 2's). Needs plan mode on in the page (`?qplan=0` takes it away with the rest). THE READING TAKEN:
-  plan mode's own picture, not the floor plan's ways shown all the time (those still come with an order and with the menu, as in plan mode). (2) THE
-  MAINS BOX LINE says "A buddy team goes for the mains box": the order always sent a pair (`workthings.ts`: the nearest man works it, the other of his
-  pair covers from behind him); the line said one. The scripted player fails the step if the worker has no partner covering. (3) THE SQUAD RUNS BACK TO
-  THE TRUCKS ("the guys should sprint back to exfil when they're done"): a step's `onWay: { run: true }` (held by lived-check: tut-sky's row moved) →
-  `Rails.runs(gd)` for a man of the squad under an order to the step's mark → `teampace.ts teamTold`, one more reason to run (`'told'`, counted in
-  `TEAMPACE_STATS.told`) under the same leave as the others: a hurt man and a quiet one still walk, the last stride is walked, and with `TEAMPACE` off
-  nothing changes. `RAILS.wayRun` (on with the frame; `?wayrun=0`; `journal.ts applyKnobs` puts it off for a recording from before the key). The line
-  after the order reads "They run back to the trucks". MEASURED headless, seed 1, the page's stand: the leg takes 6.3 s with all four at 4.7 m/s.
-  CHECK: `rails-check` lines 'the sky seat is drawn as plan mode is' and 'the job done, the squad runs back' (28 lines green on both stands,
-  `RAILS_BREAK=1` fails 20 on both), `lesson-run tut-sky` (the two asserts above). NOT DONE: no fight or stealth tally was run for the new reason (it
-  is reached only from a tutorial step); a man running in carries his gun low and fires nothing, so a roadblock man still up at the trucks meets a
-  squad that cannot shoot until it stops. The picture was looked at on the software adapter only: never seen on a GPU, never played by a person.
+  only; off for a recording from before the key) → `Rails.planDrawn` → `planmode.ts planView` gives its picture with `frame` true and `up` false (the
+  mode itself is down): the frame round the view with its word, each man's ring in his pair's colour, the men the next order goes to drawn full; no
+  mark for the parked player, no pick box, nothing of plan mode taught (that is mission 2's). Needs plan mode on in the page (`?qplan=0` takes it away
+  with the rest). THE READING TAKEN: plan mode's own picture, not the floor plan's ways shown all the time (those still come with an order and with
+  the menu, as in plan mode). (2) THE BREAKER BOX LINE says "A buddy team goes for the breaker box": the order always sent a pair (`workthings.ts`: the
+  nearest man works it, the other of his pair covers from behind him — when a cover mark can be reached); the line said one. The step's two lines say
+  "breaker box" now (the word the writing rules ask for). The scripted player fails the step if the worker has no partner covering. (3) THE SQUAD RUNS
+  BACK TO THE TRUCKS ("the guys should sprint back to exfil when they're done"): a step's `onWay: { run: true }` (held by lived-check: tut-sky's row
+  moved) → once the step's order is out (`Rails.running`, said once a tick: a man of the squad is under an order to the step's mark) `Rails.runs(gd)`
+  is true of EVERY man of the squad an order has sent somewhere, whichever mark the order dealt him → `teampace.ts teamTold`, one more reason to run
+  (`'told'`, counted in `TEAMPACE_STATS.told`) under the same leave as the others: a hurt man and a quiet one still walk, A MAN WITH SOMEBODY IN HIS
+  SIGHTS DOES NOT RUN (`fight.engaged`, as a run to cover: a runner's gun is low and fires nothing), the last `ORDERS.briskIn` metres are walked in as
+  on any leg, and with `TEAMPACE` off nothing changes. `RAILS.wayRun` (on with the frame; `?wayrun=0`; `journal.ts applyKnobs` puts it off for a
+  recording from before the key). The line after the order still reads "They fall back to the trucks" (true with the switch off too). MEASURED
+  headless, seed 1, the page's stand: the leg takes 6.4 s, top 4.7 m/s, 5 runs told. CHECK: `rails-check` lines 'the sky seat is drawn as plan mode
+  is' and 'the job done, the squad runs back' (27 lines green on both stands, `RAILS_BREAK=1` fails 19 on both), `lesson-run tut-sky` (the two asserts
+  above). NOT DONE: no fight or stealth tally was run for the new reason (it is reached only from a tutorial step). The picture was looked at on the
+  software adapter only (the first step: frame, word and four rings, the word clear of the big line): never seen on a GPU, never played by a person.
