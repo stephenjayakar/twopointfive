@@ -1307,3 +1307,56 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   turns has 10 % less time to catch him crossing, and Sam has 10 % less time behind a man who stops), no tour, no soak, no tutorial mission's scripted run;
   the walk at 1.55 is now 7 % quicker than the sneak and four times as loud, which may leave the walk little to do; nobody has played it and it has never
   been seen on a GPU.
+- **Four ring notes: one row is a pill, no line under his ring, his ring stands on its thing, a switch's row turns him** (2026-10-23; four fields of
+  `HANDRING`, handring.ts, each with its own page word and all four off under `?handring=0` too; all four off in the module and on the frozen stand and raised there by the hands ring's own
+  word, `TPS_HANDRING=1` (no new stand word), each a `FROZEN_HOLDS` row, each off for a recording from before its key). CHECK: `handring`, both
+  stands, a line for each of rules 1, 3 + 2 and 4; `HANDRING_BREAK=1` fails all three. The maintainer's words are in handring.ts.
+  1. `lone`, `?lonepill=0` (`game/ringlone.ts` the shape, `ui/cmdring.ts RingDraw` draws it, `index.html .cmdring .lone / .ch`): a ring with ONE row
+     draws no slice: a small ring round the middle (the wheel's hole) and a pill out the way that row's wedge lay, the digit at the end by the
+     middle, the words inside, set to the width counted for them (6.6 px a letter, `textLength`; never measured). BOTH RINGS (the squad's is the
+     same drawing). And the pointing, both rings (`cmdring.ts ringWant`'s `lone`): the cursor anywhere on the pill is that row. A wedge is a fifth
+     of a turn and a pill over the middle is wider, so its digit lay in the next wedge's fifth and a key let go there gave nothing. No other way
+     out lights it: a row is still chosen, never fallen into. THE GAME READS NO WORDS OF A RING: it reads which digits have a wedge (`ringKeys`,
+     orders.ts and interact.ts, a bit each) and, for a pill, a PLACE as long as the longest pill (`pillBox`, `LONE.max` 20 letters) whatever the
+     row says, so a recorded cursor lights the same row after a label is reworded. The pill drawn is always inside that place (a longer label is
+     drawn tighter); a cursor just past a short pill's end is still on its row. WHERE ONE ROW COMES UP (read
+     headless on the page's stand, each tutorial mission at its first and last step): on tut-sky EVERY squad ring ('1 stack up' on a door, '1 go'
+     elsewhere: its frame names six orders); on tut-pair his ring at a door ('1 push it open', '1 keypad'); on tut-solo his ring at the gate;
+     anywhere, his ring on open floor (the whistle, wedge 5). NOT DONE, the squad ring's own rows: a ring whose only order is also the quick
+     order shows it twice (tut-pair '1 fall in · 3 fall in'; a man's ring '1 fall in · 3 fall in · …'), two slices for one choice.
+  2. `bare`, `?ringbare=0`: no line of words under HIS ring (`interact.ts handRingView`'s caption is empty; 'RACK 6 · THE DRIVE · PULL THE DRIVE —
+     STAY ON IT' under the wedges was "too busy"). The lit row's long words, 'stay on it' with them, are the corner's line still; the whistle's
+     'one guard will come to look' is said nowhere now. With it, a wall switch's and the mains' wedge is no longer drawn faint because the lights are
+     off (those things' `off` says how they stand, not that the row cannot be given: `STATE_OFF`). The squad ring's line (who the order goes to,
+     what it was opened on) is not touched: it says which pair, and the wedges do not.
+  3. `onThing`, `?ringonthing=0`: HIS ring comes up with its middle on the thing its TOP row is about (`ringSpot`: the first row with a wedge, the
+     tap's own; not the lit one, or it would hop between two things as the highlight moved), on his own body a metre up where no row is about a
+     thing (the whistle alone) or the thing is more than 3.5 m off (his own set charge's row is given from anywhere), whole inside the view's
+     edge (`ringPin`, `CMDRING.edgeX / edgeY`), and stays on it as the view moves (the page draws it from the picture's own camera:
+     `ui/cmdring.ts pinned`). On his body it GOES WITH HIM as he walks under it (a frame behind his feet); a thing that moves (a man in his arm,
+     a body he drags) takes it along; and when its rows change under it (he walked up to a thing, or off it) it stands on what the top row is
+     now about. The cursor may be anywhere when it comes up, so (`ringWant`'s `shapes`, `RingState.clear`) the cursor ON a drawn wedge, its
+     fifth of the wheel from the hole out over its words to the ring's own box (`RING_BOX`: pointing at a row's words is pointing at the row)
+     or the pill's place, lights it with no visit to the middle, but only once it has been off every drawn wedge since the ring last changed
+     under it (a place of the wheel with no wedge is not one), and never while the hand is still: a cursor resting where a slice came up
+     lights nothing and the key let go there leaves the ring standing, and only a wedge the HAND put the cursor on is pointed at
+     (`RingState.pt`: the lit wedge sliding under a resting cursor is not). Outside the box a direction counts only from the middle, as
+     before. The far-charge and moving-thing cases are by reading the code, no run. Digits, a click, the key again: as they were. THE SQUAD'S RING IS NOT MOVED: it is opened on the place
+     the order goes to, which is where the cursor is, and stays on it already (`CMDRING.pin`).
+  4. `turn`, `?ringturn=0` (`lightswitch.ts plants / turnSecs / switchHand`, `handwork.ts samWork` kind `switch`): a row given at a WALL SWITCH with his back
+     to it (the ring up, he had turned with the cursor) flipped the lights and left him as he was: the hand's 0.3 s pose had nothing to reach
+     with. Now the lights still go on the press; then he is stood at the plate and squared to it as at the mains lever (feet planted, the step in
+     to arm's length, the trigger does not let go of it), and the hand's move is given the turn's time on top of its own (at most `turnMax`,
+     0.45 s; the plant's own turn rate, `handwork.ts WORK_TURN`). The hand that goes to the plate is the free one (his left with the pistol or
+     the rifle up: `samHand`, as at the mains). COST: his feet are not his for 0.3 s facing it, up to 0.75 s from a half turn away (0.60 s
+     measured from 180° off, W held throughout). It is a FOLLOW-THROUGH, NOT A VERB: nothing waits on it, A CLICK LETS GO OF IT and so does any row given (the
+     lights are out, the trigger and his hands are his: `switchLetGo`, from `player.ts` and `interact.ts give`; the plate's own row is on
+     offer under it and a second tap flips the room back, as it always could), a save inside it does not keep it, and it breaks off
+     as the mains lever's does (down, a man or a body in hand, folded by a blast, moved off the plate). NOT FROM A WALL HOLD: pressed to
+     the wall beside the plate he reaches it from where he is, as he did (a plant would take him off the wall). Nothing without hands at work
+     (`HANDWORK.on`). A tap's row and a ring's row alike. THE OTHER ROWS already turned him, by
+     reading the code, not by a run: a door's leaf (hands.ts: he faces the spot his hand goes to), a lock, a pad, a kick, the wand (planted and
+     squared), the mains, the rack, a charge, a timed charge (handwork.ts), a man or a body (close.ts, the haul).
+  MEASURED: the check's own lines on both stands (die 1, the office; the pill's shape for 40 pills). NOT MEASURED: no fight or stealth tally was
+  run with these on. NOT DRIVEN headless in a mission: the squad ring with one row (its pointing is the same function, asked directly). Never
+  seen on a GPU; the before and after pictures of the wedges were drawn by the page's own drawing code and stylesheet over a flat backdrop.
