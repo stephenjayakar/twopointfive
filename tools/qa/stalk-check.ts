@@ -92,6 +92,17 @@ async function letGo() {
   verdict(on0 && moved > 0.2 && on1 === null && v < 0.05 && drift < 0.03 && free && t < 4, 'held for three quarters of a second he has closed on the man; let go, nothing is stalked the next frame, he is at rest inside half a second and stays put; pressed again it ends in the grab',
     `stalking ${on0}, closed ${f2(moved)} m · let go: stalked ${on1 ? 'still' : 'nobody'}, speed half a second on ${f2(v)} m/s, moved ${f2(drift)} m in the next second, nobody in his arm ${free} · pressed again: ${isFinite(t) ? `in his arm in ${f2(t)} s` : 'never grabbed'}`);
 }
+async function walkPress() {
+  console.log('\n=== armed: a press made while his own feet are still moving begins the creep as they stop, once ===');
+  const C = await world(up(), SEEDS[0], 2.7, 0), K = C.W.input.keys;
+  K.add('KeyD'); for (let i = 0; i < 6; i++) C.step(); C.press(); for (let i = 0; i < 6; i++) C.step(); const during = stalkOn(C.g);
+  K.delete('KeyD'); for (let i = 0; i < 3; i++) C.step(); const after = stalkOn(C.g) === C.A;
+  // …and a stalk broken off by his own key is not taken up again by a button that merely stayed down
+  K.add('KeyA'); for (let i = 0; i < 4; i++) C.step(); K.delete('KeyA'); for (let i = 0; i < 20; i++) C.step(); const again = stalkOn(C.g);
+  C.lift(); C.step();
+  verdict(during === null && after && again === null, 'the button pressed with a move key down takes nobody while the key is down, takes the man within three frames of the key coming up, and after his own key breaks that stalk off the button still down takes nobody',
+    `with the key down: ${during ? 'stalking' : 'nobody'} · three frames after it came up: ${after ? 'stalking him' : 'nobody'} · after his own key broke it off, the button still down: ${again ? 'stalking' : 'nobody'}`);
+}
 async function out() {
   console.log('\n=== out: what ends it with the button still down ===');
   const rows: string[] = []; let ok = true;
@@ -204,7 +215,7 @@ async function harness() {
 /** the whole card (probes.ts 'stalk'): true = every check passed. The switches are put back as they were found. */
 export async function stalkCheck(): Promise<boolean> {
   const was = { ...STALK }, close = JSON.parse(JSON.stringify(CLOSE)), rnd = Math.random; allPass = true; found = STALK.on;
-  try { await grab(); await still(); await steer(); await letGo(); await out(); await tell(); await stepIn(); await corner(); await off(); Object.assign(STALK, was); await harness(); }
+  try { await grab(); await still(); await steer(); await letGo(); await walkPress(); await out(); await tell(); await stepIn(); await corner(); await off(); Object.assign(STALK, was); await harness(); }
   finally { Object.assign(STALK, was); Object.assign(CLOSE, close); Math.random = rnd; }
   console.log(`\n=== stalk: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }

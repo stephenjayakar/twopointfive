@@ -5043,7 +5043,7 @@ export class CharacterAnimator {
     if (kG > 1e-4) { this.shift(pA, nd.hips, [0, -KL.sink * kG, KL.fwd * kG]); this.turn(pA, nd.hips, qPitch(KL.hip * kG * DEGR)); }
     const arch0 = (kOn ? lerp(lerp(lerp(K.arch, 2, limp), KL.arch, kW), 2, kL) : lerp(K.arch, 2, limp)) * DEGR * w * eIn + G.duck.pitch * DEGR * 0.5 * shot;
     const ykH = H.yank !== undefined && this.heldPose ? bump(H.yank, 0, K.yank.in, K.yank.in + K.yank.hold, K.yank.in + K.yank.hold + K.yank.out) : 0;
-    const archB = H.bare ? (K.bareArch * (1 - limp) * (1 - gv) * eIn * (hauled ? 1 - hu : 1) + K.yank.arch * ykH) * DEGR * w : 0;   // (HOLD.bareArch / yank: hauled back onto the arm — and gone as the haul lifts him: that arch is the haul's own, and the two together put his head in Sam's face)
+    const archB = H.bare ? (K.bareArch * (1 - limp) * (1 - gv) * eIn + K.yank.arch * ykH) * DEGR * w : 0;   // (HOLD.bareArch / yank: hauled back onto the arm. Under the lifted choke it STAYS: faded as the haul came in, his neck slid 5 cm along the forearm — so the two heads are 3 cm nearer at the haul's height than with a knife in the hand, 19 cm against 22)
     const arch = (hauled ? arch0 + HU.arch * hu * DEGR : arch0) + archB;     // arched back → the arch just gone as he goes (his neck stays in the crook of the arm: it is what holds him up — the head lolls over it, the knees give under it)
     const heave = -K.breath.pitch * br * DEGR;
     this.turn(pA, nd.spine1, quat.mul(qYaw(yawS * 0.3), qPitch(arch * 0.3))); this.turn(pA, nd.spine2, quat.mul(qYaw(yawS * 0.4), quat.mul(qRoll(roll * 0.4), qPitch(arch * 0.35 + heave * 0.4)))); this.turn(pA, nd.spine3, quat.mul(qYaw(yawS * 0.3), quat.mul(qRoll(roll * 0.6), qPitch(arch * 0.35 + heave * 0.6))));

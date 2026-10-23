@@ -74,7 +74,7 @@ type Why = keyof typeof STALK_STATS.out;
 interface St { on: Guard | null; grab: Guard | null; t: number; /** the button went down and has not come up or taken a man since: a stalk may begin */ armed?: boolean }
 const STATE = new SideMap<Game, St>('stalk.STATE');
 function stateOf(g: Game): St { let s = STATE.get(g); if (!s) { s = { on: null, grab: null, t: -1 }; STATE.set(g, s); } return s; }
-function end(S: St, why: Why) { S.armed = false; if (S.on) { S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } }
+function end(S: St, why: Why) { if (S.on) { S.armed = false; S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } }
 
 /** his bearing to a point, off his facing (0 = dead ahead of him) */
 const bearingOf = (gd: Guard, p: ArrayLike<number>): number => wrapAngle(Math.atan2(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]) - gd.char.bodyYaw);

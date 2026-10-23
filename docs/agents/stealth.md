@@ -951,6 +951,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   back onto the arm 11 degrees, elbows down, where upright Sam hid him from the game's camera). `STALK.tell` off = the pose
   in reach alone. CHECK: `stalk-check.ts` lines `tell` and `stepin` (the first frame under 4 cm, never over 7 m/s, the man hauled back; BREAK fails both), both stands. Judged on CPU stills only (`close-stills.ts --scene stalk
   | stalk-rifle | stalk-pause`) and by a reviewer reading them; never seen on a GPU, never played.
+- **The stalk after its review (10-23; `stalk.ts`, `player.ts`, `close.ts`, `rails.ts`).** What a reviewer found in the first three passes and what stands
+  now. (1) A press made with a move key still down used to be lost: the press ARMS the stalk (`St.armed`) and it begins on the frame his own keys come
+  up, the button still down; a button merely still down after a stalk ended takes no man (the `out` line holds that). (2) The step in moves him by the
+  step's own delta from where his collision last left him, and eases onto the hold's point once the lunge is over: it used to write the straight line's
+  point and could come out the far side of a thin wall behind the man. (3) Inside `grabM` on the man's flank (he turned a little, the grab's rear arc
+  not on offer) Sam walks on round to the point behind his back: he used to stand still with the button down. (4) Shift does not sprint him under a
+  stalk. (5) The wait at a corner asks what `startGrab` asks before it hands a man over (not folded by a blast, no hand on a breaker, room to stand): it
+  used to tally a grab every frame the game refused. (6) In reach of ANOTHER man the tell is that man's, not the stalked man's by distance. (7) With no
+  knife the choke's brace follows the choke again (`knE`), the held clicks and the held man's bare pose ask `closeBare` (never under a show), and `haul`
+  and `takedown-kill` join `KNIFE_AS_IT_WAS`: both were measured on a man held with the knife, and the bare hold's arch puts the two heads 19 cm apart at
+  the height of the lifted choke where `haul` asks 22 (fading the arch under the lift was tried: his neck slid 5 cm along the forearm).
+  (8) A tutorial step's CARD runs through `lessonLine` as its line does, and the left button reaches the game on a tutorial only on a step that allows
+  `use`. (9) THE STEALTH TUTORIAL'S SMOKE SPOT moved 0.3 m (`TQ.smoke` 30.3 to 30.6, and `SMOKE` in `levels/tut-quiet.script.ts`): the haul back puts
+  the man a step nearer the back door, and a body within 1.3 m of a hand at the lock takes the tap from the door's row (the level's own note on that
+  spot). `stealthpose-creep` joins `GRAB_ROW_AS_IT_WAS`: the stretch it reads (behind a man, out of reach, the free hand low) is the way in's now.
+  Measured: `stalk-check`, `noknife-check`, `sneaklab-check`, `disarm-check` and the lessons on both stands, headless. Never played, never seen on a GPU.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
