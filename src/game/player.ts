@@ -198,6 +198,14 @@ export function settlePlayer(g: Game) { const pl = g.player, p = pl.char.pos, s 
  *  hauled body keep tune.playerCrouch. ON in the page unless ?twogears=0 (src/host/profile.ts pageSwitches); off here and on the harness's frozen stand
  *  (src/host/standup.ts; TPS_TWOGEARS=1 turns it on there). */
 export const TWOGEARS = { on: false, crouch: 1.45 };
+/** SHIFT IN A CROUCH IS A FAST CROUCH WALK (the maintainer, 10-23: "we can make sprint when crouching a really fast crouch walk, but you have to stand up to sprint
+ *  properly"). With `on`, Shift held while he is crouched no longer stands him up into the sprint: he stays down and covers ground at `pace` (m/s; between
+ *  the walk's 1.55 and the run), each footfall at `loud` (the crouch walk's is 0.125, the walk's 0.26, a run's 0.6: quicker than walking and heard further
+ *  than walking, a good deal less than running), and it is no sneak (unseen.ts samSneaks). The sprint is the standing man's: [C] first. He is not
+ *  `sprinting` — his hands are still his own (a door, a switch, a grab) — and a hold on left click (stalk.ts) is the creep whatever Shift says, as before.
+ *  A body in tow is let go of, as a sprint's is. Not under a puppet or a tour (their Shift is the old one). Off = Shift stands him up, as it did.
+ *  The page turns it on (?crouchrun=0 puts it back); off here and on the frozen stand (TPS_CROUCHRUN=1). Its look: character.ts DASH. */
+export const CROUCHRUN = { on: false, pace: 2.5, loud: 0.34 };
 /** the crouch-walk's top speed: the sneak's own under TWOGEARS, else the tune's */
 export const crouchPace = (g: Game): number => TWOGEARS.on ? TWOGEARS.crouch : g.tune.playerCrouch;
 /** Walking pace on the wheel: PACE_MIN of the walk / crouch-walk speed at the slowest notch, 1 at the fastest, PACE_STEP a notch. */
@@ -380,6 +388,7 @@ export function reloadInHand(g: Game, sprinting = false, boltOnly = false): bool
 export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamera) {
   const pl = g.player; const c = pl.char; const T = g.tune; const gun = pl.pistol;
   if (TWOGEARS.on) pl.pace = 1;   // (two gears: a notch a checkpoint or an older visit left on him is nobody's)
+  pl.dash = false; c.anim.dash = 0;   // (CROUCHRUN: this frame's own, set below where his legs are his)
   cam.peekOffset = null;   // (set again below for the one case that wants it: peeking round the end of a wall)
   aimWeighBegin(pl);   // (aimweight.ts: nothing has weighed his aim this frame yet — only the plain aim branch below does)
   noShoveBegin(g);   // (noshove.ts: nobody has moved him yet this frame, and his own legs start from here — nothing with its switch off)
@@ -465,7 +474,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   nvKey(g, input, dt);
   const sprintKey = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
   // R, or the gun in his hands run dry with a magazine left (autoreload.ts: asked every frame, so a reload a sprint took out of his hands starts again) — one way in either way
-  if (input.hit('KeyR') || (pl.pistolUp && autoReloadDue(g, pl, gun)) || (pl.rifleUp && autoReloadDue(g, pl, pl.rifle))) reloadInHand(g, sprintKey);
+  if (input.hit('KeyR') || (pl.pistolUp && autoReloadDue(g, pl, gun)) || (pl.rifleUp && autoReloadDue(g, pl, pl.rifle))) reloadInHand(g, sprintKey && !(CROUCHRUN.on && pl.crouch && !g.puppet && !g.touring));   // (CROUCHRUN: Shift in a crouch is no sprint — his hands are his own, the gun's change with them)
   // movement input — none while the selector is open (Space held past a tap: he is choosing what to do, feet still; interact.ts)
   const { fwd, right } = cam.planarBasis();
   let mx = 0, mz = 0;
@@ -501,12 +510,14 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   const onWall = !!pl.wall && moveOnWall(g, dt, cam, mx, mz, ml);   // false: free (or let go this very frame — then he walks on from where he stands, below)
   if (!onWall) {
     if (wantSprint && pl.dragging) g.toggleDrag();          // breaking into a sprint lets go of the body
-    if (wantSprint && pl.crouch && canStand(g)) pl.crouch = false;   // (under a counter top Shift just crouch-walks on: no standing into the slab)
+    const dashes = CROUCHRUN.on && !g.puppet && !g.touring;
+    if (wantSprint && pl.crouch && canStand(g) && !dashes) pl.crouch = false;   // (under a counter top Shift just crouch-walks on: no standing into the slab)
     if (pl.dragging) pl.crouch = haulCrouch(g);   // (hauled along the floor: on his heels; carried on his shoulder: upright once it is half way up — hands.ts)
     pl.sprinting = wantSprint && !pl.crouch;
+    pl.dash = dashes && wantSprint && pl.crouch && !pl.dragging && !stalk;   // (CROUCHRUN: Shift in a crouch stays down and goes quickly)
     if (pl.sprinting && gun.reloading) { gun.cancelReload(); c.anim.cancelReload(); }
     if (pl.sprinting && rifle.reloading) { rifle.cancelReload(); c.anim.cancelReload(); }
-    let maxSpeed = ml === 0 ? 0 : pl.sprinting ? T.playerSprint : pl.dragging ? (pl.haul ? haulSpeed(g) : T.playerCrouch * 0.6) : (pl.crouch ? crouchPace(g) : T.playerWalk) * pl.pace;   // hauling 80 kg along the floor is slow; the wheel-set pace scales the walk and the crouch-walk alike (the rifle in the shoulder costs no pace: the aim model's moving / settle terms are what the move costs him)
+    let maxSpeed = ml === 0 ? 0 : pl.sprinting ? T.playerSprint : pl.dragging ? (pl.haul ? haulSpeed(g) : T.playerCrouch * 0.6) : pl.dash ? CROUCHRUN.pace : (pl.crouch ? crouchPace(g) : T.playerWalk) * pl.pace;   // hauling 80 kg along the floor is slow; the wheel-set pace scales the walk and the crouch-walk alike (the rifle in the shoulder costs no pace: the aim model's moving / settle terms are what the move costs him)
     if (g.puppet?.walk !== undefined && ml > 0) maxSpeed *= g.puppet.walk;
     maxSpeed = samLoadPace(g, maxSpeed, pl.sprinting);   // (kitload.ts: what his card weighs — a light one's legs are quicker, a heavy one's slower, a sprint by part of it; as asked with its switch off or no card on him)
     if (stalk) maxSpeed = ml === 0 ? 0 : stalk.pace;   // (stalk.ts: the man's own speed and a closing speed that eases off as he nears — the game's, whatever his card weighs)
@@ -618,7 +629,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
       if (Math.abs(off) > limit) c.bodyYaw = approachAngle(c.bodyYaw, (intoDoor ?? c.aimYaw) - Math.sign(off) * limit * 0.7, (byHand ? 12 : 7) * dt);
     }
   }
-  c.anim.speed = speed; c.anim.crouchTarget = pl.crouch ? 1 : 0;
+  c.anim.speed = speed; c.anim.crouchTarget = pl.crouch ? 1 : 0; c.anim.dash = pl.dash ? 1 : 0;
   if (pl.wall) { c.anim.stance = 'wall'; c.anim.stackSide = pl.wall.side; c.anim.wallPeek = pl.wall.peek; c.anim.wallYaw = wrapAngle(Math.atan2(pl.wall.n[0], pl.wall.n[2]) - c.bodyYaw); }   // back flat to the face whatever the legs do (the animator is told which way the wall faces off his front: square behind when parked, 55° round while the legs are turned to sidle), head / hands / lead foot toward the way he last went, leaning out with the peek (character.ts 'wall'; releaseWall takes it off — the tour's beats own the stance the rest of the time)
   c.anim.upper = pl.sprinting || pl.dragging ? 'none' : aiming ? 'aim' : gunUp ? 'relaxed' : 'none';
   { const dp = c.anim.doorPush; const inHands = rifleUp && !c.anim.hideHeldItem; armRifle(g, inHands, !inHands ? null : pl.sprinting ? 'lowLong' : dp && dp.w >= 1 && !aiming ? 'portLong' : 'shoulder'); }   // the FN2000 in both hands = the R1 long-gun solve, its carriage forced by what he is doing (armRifle: shouldered whenever it is in the hands, the low ready for the sprint, the port for a leaf under the hand); slung / no rifle = the pistol's numbers back. hideHeldItem: the lock tools' / a hold's layer still easing out for a few frames after it ended keeps the hands 'busy' — combat.ts handProps draws the rifle on his back by the same flag, so the arms let go of it for exactly those frames too
@@ -753,7 +764,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   // a body all tread here; the level is the gait's × the floor's (floor.ts tread: carpet 0.6, stone 1.1 … — one number for the mixer, the guards and the meter)
   const fall = footfallDue(g, dt, c.anim.phase, speed);
   if (fall) {   // (FOOTFALL: an edge of the cycle crossed at a footfall's speed, or a step's worth of leg with none)
-    const base = pl.sprinting ? 1 : pl.crouch ? 0.125 : loadGait(g, 'player', speed) > 2 ? 0.6 : 0.26;   // (crouch / walk per-step levels carry the clips' retiming — 0.72 / 1.06 m/s natural, so ~1.4x the steps per metre — at the old per-SECOND loudness: 0.18 x 0.69, 0.35 x 0.73; what a guard accumulates over a stretch of floor is unchanged)
+    const base = pl.sprinting ? 1 : pl.dash ? CROUCHRUN.loud : pl.crouch ? 0.125 : loadGait(g, 'player', speed) > 2 ? 0.6 : 0.26;   // (crouch / walk per-step levels carry the clips' retiming — 0.72 / 1.06 m/s natural, so ~1.4x the steps per metre — at the old per-SECOND loudness: 0.18 x 0.69, 0.35 x 0.73; what a guard accumulates over a stretch of floor is unchanged)
     const loud = tread(g, c.pos, pl.sprinting ? base : base * loadHeard(g, 'player'), true);   // (kitload.ts: × what his card rattles and weighs; 1 with its switch off — and a flat-out sprint is boots on a floor whatever he carries)
     g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud }); pl.noise = Math.max(pl.noise, loud);
     if (fall === 1) wetFootfall(g, pl.stepPhase < 0.5);   // in from the rain: a wet print under the foot that landed, for his next few steps (wet.ts — a decal, seen by the player only; nothing without decals or a dry man)

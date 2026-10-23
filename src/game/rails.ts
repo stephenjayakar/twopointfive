@@ -117,6 +117,13 @@ export const RAILS = { on: false,
    *  move in that fight, a card held for his own rounds held its keys and its cue with it. OFF here and on the frozen stand, where the next step comes
    *  up the tick the deed is done, as it was (TPS_CARDBEAT=1 raises it there, with the frame); ON in the page (profile.ts; ?cardbeat=0) */
   cardBeat: false, cardBeatSecs: 1.2, cardQuiet: 2, cardMax: 9,
+  /** A MISSION MAY TAKE THE FLAT RING (the maintainer, 10-23, of the first mission's wall charge — the ring, [5], and then a second ring of one row
+   *  under a line that asked for [3]: "weird after hitting 5"). A tutorial mission's ring was the menu's pages, because its lines name their digits;
+   *  one whose level says `rails.flatRing` has the ring the rest of the game has (cmdring.ts CMDRING.flat: every order of the thing on one ring, with
+   *  the level's `rails.orders` its only rows), and the step's line while that ring is up is its `flatLine`. false: the pages on every tutorial
+   *  mission, as built. Off here and on the frozen stand (`TPS_RAILFLAT=1`, which acts only with the frame and the flat tree up: `TPS_RAILS=1`
+   *  `TPS_QRING=1 TPS_QONLY=1 TPS_RINGFLAT=1`); the page raises it (`?railflat=0` off) */
+  flatRing: false,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
 export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
@@ -185,7 +192,10 @@ export function railsFaults(L: LessonData): string[] {
     // (a card's words and the frame's other lines are written out by lessonLine as a step's line is: a move's token in one is held the same way, by what the
     //  player reads — lesson.ts lessonTokenFaults — and a card's TITLE is shown as written, so a brace in it would be shown too)
     if (T.explain) { out.push(...lessonTokenFaults(`${w}.explain.text`, T.explain.text, CARD_CHARS)); if (/[{}]/.test(T.explain.title ?? '')) out.push(`${w}.explain.title has a brace: a card's title is shown as written, a move's token goes in its text`); }
-    for (const [k, l] of [['noTap', T.noTap], ['menuLine', T.menuLine], ['pageLine', T.pageLine], ['planLine', T.planLine], ['after.line', T.after?.line], ['after.word', T.after?.word]] as const) if (typeof l === 'string') out.push(...lessonTokenFaults(`${w}.${k}`, l, 96));
+    for (const [k, l] of [['noTap', T.noTap], ['menuLine', T.menuLine], ['pageLine', T.pageLine], ['flatLine', T.flatLine], ['planLine', T.planLine], ['after.line', T.after?.line], ['after.word', T.after?.word]] as const) if (typeof l === 'string') out.push(...lessonTokenFaults(`${w}.${k}`, l, 96));
+    // (a mission on the flat ring: a line that names the pages' digits has its one-ring line beside it, and a one-ring line is for such a mission only)
+    if (R.flatRing && T.menuLine !== undefined && T.flatLine === undefined) out.push(`${w}.menuLine names the menu's pages and rails.flatRing gives this mission one ring: the step wants a flatLine too`);
+    if (!R.flatRing && T.flatLine !== undefined) out.push(`${w}.flatLine: the lesson's rails.flatRing is not set, so no ring here is flat`);
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
   if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.length > 0 && R.rows.every(v => typeof v === 'string' && !!v))) out.push('rails.rows: a list of verbs, at least one (absent: every row)');
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
@@ -237,6 +247,8 @@ export class Rails {
   get skyOn(): boolean { return !!this.data?.sky; }
   /** the sky seat is drawn as plan mode is, the mode itself down (RAILS.skyPlan; planmode.ts planView asks) */
   get planDrawn(): boolean { return !BREAK && RAILS.skyPlan && this.skyOn; }
+  /** this mission's ring is the flat tree's (`rails.flatRing`, RAILS.flatRing; orders.ts flatRing asks, with the tree's own switches) */
+  get flatRing(): boolean { return !BREAK && RAILS.flatRing && !!this.data?.flatRing; }
   /** the sky seat holds plan mode up (`rails.sky.plan`, RAILS.skyUp; planmode.ts asks: no key takes the mode down, its view starts on the squad) */
   get planSeat(): boolean { return !BREAK && RAILS.skyUp && !!this.data?.sky?.plan; }
   /** …and the mode's own view is the picture's: the mode is up with a point of its own (CMDRING.planRts; without one the seat's view and its pan stand) */
@@ -495,9 +507,9 @@ export class Rails {
     //  end. The small row it would fall back to is the one a tutorial mission never shows)
     if (S.i >= of ? BREAK || this.g.lesson.over() : !this.g.lesson.objective()) return null;
     const i = Math.min(S.i, of - 1);
-    // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it — on its first page `menuLine`, on a page under it `pageLine`)
+    // (the squad's ring is up ON THE STEP'S MARK: the line is what to press in it — on its first page `menuLine`, on a page under it `pageLine`; a flat ring, RAILS.flatRing: `flatLine`)
     const T = S.L.steps[i], M = S.i < of ? this.g.orders?.menu : null, on = !!M && (!T.at || Math.hypot(M.target.at[0] - T.at[0], M.target.at[2] - T.at[2]) < MENU_M);
-    const ring = on ? (M!.page === null ? T.menuLine : T.pageLine ?? T.menuLine) : undefined;
+    const ring = on ? (M!.flat ? T.flatLine ?? T.menuLine : M!.page === null ? T.menuLine : T.pageLine ?? T.menuLine) : undefined;
     // (RAILS.cardBeat · the step's deed is done and it settles before the next step's card: what its men are doing, or nothing — never the ask again,
     //  whatever is open, and never a line that asks for a key: a step may be done by more than the press its `after` line goes on to ask for. A step
     //  that waits out its own `settle` with no card after it keeps its line as it was: that wait is the level's, and its line is the level's to judge)
@@ -508,10 +520,13 @@ export class Rails {
     const aft = A ? said(A, this.gave) : undefined;
     // (a step done in plan mode, and the mode is down — a checkpoint put back, the mode put away by hand: the line is what puts it up again, its `planLine`)
     const plan = S.i < of && T.planLine && !this.g.orders?.plan.up ? T.planLine : undefined;
-    const line = ring ? lessonLine(ring) : plan ? lessonLine(plan) : aft ? lessonLine(aft) : stepLine(T);
+    // (…and over a FLAT ring it is the line whatever is open: that ring's line names ONE digit, and with the order out the row on it may be the order's
+    //  next half — a charge on the wall, and the wedge that set it now blows it. The pages' two lines stay as they were built)
+    const flatAft = !!aft && !!M?.flat;
+    const line = ring && !flatAft ? lessonLine(ring) : plan ? lessonLine(plan) : aft ? lessonLine(aft) : stepLine(T);
     // (a line that asks for nothing — what the men are doing, or a step that only waits for the level's script — is drawn as something to watch, with no
     //  ring on its place. Never a step's own line that merely names no key: 'Get out of the light' is an ask, and its mark is where to go)
-    const watch = !ring && !plan && (!!aft || (S.i < of && T.done?.is === 'cue')) && !/\[[^\]]+\]/.test(line);
+    const watch = (!ring || flatAft) && !plan && (!!aft || (S.i < of && T.done?.is === 'cue')) && !/\[[^\]]+\]/.test(line);
     return { line, n: i + 1, of, ...(note ? { note } : null), ...(watch ? { watch: true } : null) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 

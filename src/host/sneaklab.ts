@@ -11,7 +11,9 @@ import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { STALK, STALK_STATS, stalkOn } from '../game/stalk';
 import { CLOSE, closeSeat, closeUnseat, closeSeated } from '../game/close';
-import { TWOGEARS } from '../game/player';
+import { TWOGEARS, CROUCHRUN } from '../game/player';
+import { SAMLOOK } from '../game/samlook';
+import { WATCH, DASH } from '../game/character';
 import { STALKVIZ } from '../ui/stalkviz';
 
 export const SNEAKLAB = { on: false, unseen: true, safe: true, clear: true };
@@ -64,6 +66,16 @@ const NUMS = (): Num[] => [
   { t: CLOSE, name: 'CLOSE', key: 'rmbTapSecs', label: 'right click: a tap is shorter than s', min: 0.08, max: 0.5, step: 0.01, tip: 'let go of the right button inside this and it is the knockout; keep it down past this behind a man and it is the choke' },
   { t: CLOSE, name: 'CLOSE', key: 'rmbLoud', label: 'right click: how much louder the knockout is', min: 0, max: 0.5, step: 0.01, tip: 'added to how loud the knockout is to the room. Each 0.1 is about 0.7 m further that a guard hears it in open air. The choke stays as quiet as it was' },
   { t: TWOGEARS, name: 'TWOGEARS', key: 'crouch', label: 'your own crouch walk m/s', min: 0.8, max: 2.2, step: 0.05, tip: 'the speed you arrive at before the creep takes over' },
+  { t: CROUCHRUN, name: 'CROUCHRUN', key: 'pace', label: 'Shift in a crouch: m/s', min: 1.6, max: 3.6, step: 0.05, tip: 'the fast crouch walk. Your walk is 1.55 and your sprint 4.7' },
+  { t: CROUCHRUN, name: 'CROUCHRUN', key: 'loud', label: 'Shift in a crouch: each footfall', min: 0.125, max: 0.7, step: 0.005, tip: 'the crouch walk is 0.125, the walk 0.26, a run 0.6. Each 0.1 is about 0.7 m further that a guard hears it' },
+  { t: DASH, name: 'DASH', key: 'stride', label: 'Shift in a crouch: how much longer the stride', min: 0, max: 0.6, step: 0.02, tip: 'longer steps and fewer of them. 0 = the crouch walk wound up fast' },
+  { t: DASH, name: 'DASH', key: 'lean', label: 'Shift in a crouch: lean °', min: 0, max: 16, step: 0.5, tip: 'how far over his knees he goes' },
+  { t: SAMLOOK, name: 'SAMLOOK', key: 'nearM', label: 'he looks at a man inside m', min: 3, max: 14, step: 0.5, tip: 'the head starts to go to a man here, and is fully on him a couple of metres nearer' },
+  { t: SAMLOOK, name: 'SAMLOOK', key: 'noticeM', label: 'a man noticing him counts as this much nearer m', min: 0, max: 8, step: 0.5, tip: 'so his head goes to the man who is starting to see him before a nearer one who is not' },
+  { t: WATCH, name: 'WATCH', key: 'yaw', label: 'how far his head turns °', min: 30, max: 90, step: 1, tip: 'off the line of his chest, to either side' },
+  { t: SAMLOOK, name: 'SAMLOOK', key: 'slipFrom', label: 'he gives a man room inside m', min: 1.4, max: 5, step: 0.1, tip: 'the lean away, the sink and the low arm begin here and are whole at arm\'s length' },
+  { t: WATCH, name: 'WATCH', key: 'lean', label: 'how far he tips away °', min: 0, max: 20, step: 0.5, tip: 'the trunk, away from the man he passes' },
+  { t: WATCH, name: 'WATCH', key: 'squeeze', label: 'how much lower he gets between two men', min: 0, max: 1.5, step: 0.05, tip: 'between two men he leans into neither and sinks this much more, as a share of the sink beside one man' },
 ];
 /** the two arcs are kept as cosines; the lab shows them as degrees off his nose */
 const ARCS: { key: 'beginCos' | 'outCos'; label: string; tip: string }[] = [
@@ -78,6 +90,21 @@ const nearest = (g: Game): Guard | null => { const p = g.player.char.pos; let be
 /** the man who stands (the first route of the lab's level), for the chair */
 const stander = (g: Game): Guard | null => g.guards.find(x => x.state !== 'dead' && !x.civ) ?? null;
 
+/** two of the walkers (the second and third beats) stood side by side `GAP` apart on the yard's open floor, their backs to the yard as the stander's is: a place to slip
+ *  between two men. Each is given a two-point beat of his own, half a metre long with a long wait at its end, so he walks the last step and stands facing it. */
+const GAP = 2.4;
+function gap(g: Game) {
+  const men = g.guards.filter(x => x.state !== 'dead' && !x.civ).slice(1, 3); if (men.length < 2) return;
+  const open = (x: number, z: number) => !g.col.nav.isBlocked(x, z);
+  const fits = (x: number, z: number) => { for (let dz = -1.5; dz <= 1.5; dz += 0.5) for (const dx of [-GAP / 2, 0, GAP / 2]) if (!open(x + dx, z + dz)) return false; return true; };
+  let at: [number, number] | null = null;   // (the open yard south of the long straight, under the west flood, clear of the man who stands)
+  for (let z = 18.5; z <= 19.5 && !at; z += 0.5) for (let x = 15; x >= 13.5 && !at; x -= 0.5) if (fits(x, z)) at = [x, z];
+  if (!at) return;
+  men.forEach((gd, i) => { const x = at![0] + (i === 0 ? -1 : 1) * GAP / 2;
+    gd.route = { name: 'gap', points: [[x, 0, at![1] - 0.5], [x, 0, at![1]]], wait: [0, 900] }; gd.wp = 1; gd.wait = 0; gd.path = []; gd.pathGoal = null;
+    gd.char.pos = [x, 0, at![1] - 0.5]; gd.char.vel = [0, 0, 0]; gd.char.bodyYaw = gd.char.aimYaw = 0; });
+}
+
 /** ONCE, after the panel is built: the lab's system, its rows, the panel open on it */
 export function sneakLabBoot(game: Game, panel: Panel) {
   SNEAKLAB.on = true; STALKVIZ.on = true;
@@ -90,12 +117,15 @@ export function sneakLabBoot(game: Game, panel: Panel) {
     const d = Math.hypot(p.pos[0] - gd.char.pos[0], p.pos[2] - gd.char.pos[2]), b = Math.atan2(p.pos[0] - gd.char.pos[0], p.pos[2] - gd.char.pos[2]) - gd.char.bodyYaw, round = Math.abs(Math.atan2(Math.sin(b), Math.cos(b))) * 180 / Math.PI;
     return `${game.player.holding ? 'you have him' : on ? 'creeping in' : 'not creeping'} · ${d.toFixed(2)} m from him · ${round.toFixed(0)}° round from his nose · you ${Math.hypot(p.vel[0], p.vel[2]).toFixed(2)} m/s, he ${Math.hypot(gd.char.vel[0], gd.char.vel[2]).toFixed(2)} m/s`; });
   panel.text(now, () => `${STALK_STATS.grabs} grabs from ${STALK_STATS.begun} holds · the last one ended with: ${WHY[STALK_STATS.last] ?? STALK_STATS.last}`);
+  const dark = new Set<Game['targets'][number]>();   // (the lamps the 'lights out' box put out: only those come back on)
   panel.buttons(now, 'the men', [
-    { text: 'put everyone back', run: () => { game.restart(); hands(game); }, title: 'every man back on his beat, you back at the gate with empty hands (also Shift+Enter)' },
+    { text: 'put everyone back', run: () => { dark.clear(); game.restart(); hands(game); }, title: 'every man back on his beat, you back at the gate with empty hands (also Shift+Enter)' },
     { text: 'sit one down / stand him up', run: () => { const gd = stander(game); if (!gd) return; if (closeSeated(game, gd)) closeUnseat(game, gd, true); else closeSeat(game, gd); }, title: 'the man who stands by the wall sits where he is, to try the creep on a seated man' },
+    { text: 'stand two men a gap apart', run: () => gap(game), title: 'two of the walkers stop side by side, a little over two metres apart and facing the same way, so you can slip between them ("put everyone back" sends them walking again)' },
   ]);
   panel.toggleBox(now, 'they can\'t notice you', () => SNEAKLAB.unseen, v => { SNEAKLAB.unseen = v; }, 'on: nobody sees or hears you, so you can work on the motion. Off: the real guards, and the creep ends when one is onto you');
   panel.toggleBox(now, 'nothing hurts you', () => SNEAKLAB.safe, v => { SNEAKLAB.safe = v; }, 'god mode while the lab is open');
+  panel.toggleBox(now, 'lights out', () => dark.size > 0, v => { if (v) { for (const t of game.targets) if (t.on && !t.broken) { t.on = false; dark.add(t); } } else { for (const t of dark) if (!t.broken) t.on = true; dark.clear(); } }, 'every lamp that is lit goes off, to try all of this in the dark (the moon stays). Off = those lamps come back on');
   panel.toggleBox(now, 'keep Sam clear of this panel', () => SNEAKLAB.clear, v => { SNEAKLAB.clear = v; }, 'the view slides over so Sam stands in the middle of what this panel leaves; off = the middle of the page, as the game has him');
   panel.toggleBox(now, 'draw the geometry on the floor', () => STALKVIZ.on, v => { STALKVIZ.on = v; }, 'round the nearest man: the ring it can begin inside and the one it lets go past, the edges of his rear arc, the point Sam is walked to, the ring the grab fires inside');
   const cr = panel.section('The creep', { open: true, reset: () => { nums.forEach((n, i) => { n.t[n.key] = was[i]; }); ARCS.forEach((a, i) => { STALK[a.key] = wasArc[i]; }); }, resetTitle: 'every number back to the build\'s' });
@@ -106,6 +136,9 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.toggleBox(cr, 'he goes lower, hands down', () => STALK.low, v => { STALK.low = v; }, 'on: no arm comes up and he sinks lower and slower as he closes, then springs up into the grab. Off = the arm comes up and he rises as he closes');
   panel.toggleBox(cr, 'the click is the only way to grab', () => STALK.only, v => { STALK.only = v; }, 'off = the grab\'s row is back beside the held click. It only matters with "you press the key to finish the grab" off: with that on the row is there and its key grabs');
   panel.toggleBox(cr, 'right click: tap to knock out, hold to choke', () => CLOSE.rmbHold, v => { CLOSE.rmbHold = v; }, 'on: a quick right click behind him is the knockout (fast, a little louder), and the right button kept down takes him into your arm and chokes him while you hold it (quiet, slow). Off = the right click is the knockout the moment you press');
+  panel.toggleBox(cr, 'his head goes to the man who matters', () => SAMLOOK.on, v => { SAMLOOK.on = v; }, 'he looks at the nearest man in front of him, and at a man who is starting to notice him before a nearer one. The cursor still aims. Off = his head stays where his body faces');
+  panel.toggleBox(cr, 'he gives a man room as he passes', () => SAMLOOK.slip, v => { SAMLOOK.slip = v; }, 'crouched beside a man: he tips away, sinks, and the arm on that side goes out low. Off = the plain crouch');
+  panel.toggleBox(cr, 'Shift in a crouch is a fast crouch walk', () => CROUCHRUN.on, v => { CROUCHRUN.on = v; }, 'on: Shift keeps you down and moves you quickly, and you stand up to sprint. Off = Shift stands you up into the sprint');
   for (const n of nums) panel.slider(cr, n.label, n.min, n.max, n.step, () => n.t[n.key] as number, v => { n.t[n.key] = v; }, n.tip);
   for (const a of ARCS) panel.slider(cr, a.label, 60, 180, 1, () => deg(STALK[a.key]), v => { STALK[a.key] = cosOf(v); }, a.tip);
   const out = panel.section('Hand the numbers back', { open: true });

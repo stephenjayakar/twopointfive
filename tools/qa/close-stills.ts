@@ -192,7 +192,31 @@ async function cornerWait(scene: string) {
   for (const s of [0.07, 0.14, 0.22, 0.34, 0.5, 0.95]) to(s, `grab ${s.toFixed(2)} s`);
   return R;
 }
+/** PASSING A MAN (samlook.ts): Sam at the crouch walks east down a lane `side` m off the man — who faces `facing` (EAST + that many degrees) — from 3.4 m short
+ *  of him to 2.4 m past: his head on the man, the lean away, the sink and the low arm as he comes level, and the head following as he goes by */
+async function pass(scene: string, facingDeg: number, side: number) {
+  const S = await lobby(7310), { W, g, A } = S; place(A, LOBBY, EAST + facingDeg * Math.PI / 180); const R = recorder(scene, g, A), c = g.player.char;
+  g.teleportPlayer([LOBBY[0] - 3.4, 0, LOBBY[2] + side]); g.player.crouch = true; c.bodyYaw = c.aimYaw = EAST;
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.pos[0] + 6, 1.0, c.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
+  step(40); R.snap('3.4 m short, at rest'); W.input.keys.add('KeyD'); let n = 0;
+  for (const x of [-2.4, -1.6, -0.9, -0.3, 0.3, 0.9, 1.6, 2.4]) { while (c.pos[0] - LOBBY[0] < x && n++ < 1500) step(1); R.snap(`${x < 0 ? (-x).toFixed(1) + ' m short of him' : x.toFixed(1) + ' m past him'}`); }
+  W.input.keys.delete('KeyD');
+  return R;
+}
+/** SHIFT IN A CROUCH (player.ts CROUCHRUN): the fast crouch walk, six moments of one stride */
+async function dash(scene: string) {
+  const S = await lobby(7311), { W, g, A } = S; const R = recorder(scene, g, A), c = g.player.char;
+  g.teleportPlayer([LOBBY[0] - 4, 0, LOBBY[2] + 2.2]); g.player.crouch = true; c.bodyYaw = c.aimYaw = EAST;
+  const step = (n = 1) => { for (let i = 0; i < n; i++) { W.cursorAt([c.pos[0] + 6, 1.0, c.pos[2]]); W.step(DT); g.player.visibility = 0.02; } };
+  step(30); W.input.keys.add('KeyD'); step(50); R.snap(`the crouch walk · ${Math.hypot(c.vel[0], c.vel[2]).toFixed(2)} m/s`);
+  W.input.keys.add('ShiftLeft'); step(45); for (let k = 0; k < 6; k++) { R.snap(`Shift held · ${Math.hypot(c.vel[0], c.vel[2]).toFixed(2)} m/s · crouched ${g.player.crouch}`); step(7); }
+  W.input.keys.delete('ShiftLeft'); W.input.keys.delete('KeyD');
+  return R;
+}
 const SCENES: Record<string, { title: string; run: (name: string) => Promise<any> }> = {
+  'pass': { title: 'passing a man who faces him, a metre off his side: the head, the lean away, the low arm', run: n => pass(n, 180, 1.15) },
+  'pass-back': { title: 'passing behind a man\'s back, a metre off', run: n => pass(n, -90, 1.15) },
+  'dash': { title: 'Shift in a crouch: the fast crouch walk', run: n => dash(n) },
   'disarm': { title: 'the grab disarms him: a drawn pistol stripped out of his hand and let down', run: n => disarm(n, 'pistol', false) },
   'disarm-rifle': { title: 'the grab disarms him: a carbine torn out of his hands', run: n => disarm(n, 'rifle', false) },
   'disarm-gun': { title: 'the grab with Sam\'s pistol drawn: the gun rapped out of his hand', run: n => disarm(n, 'pistol', true) },

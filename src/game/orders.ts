@@ -771,9 +771,9 @@ export class SquadOrders {
     const who = men ?? this.recipients(t), ins = on.filter(d => d.standsIn?.when(this, t, who)), out = new Set(ins.map(d => d.standsIn!.for));
     const all = on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)); return this.g.rails ? this.g.rails.orderRows(all) : all;
   }
-  /** (cmdring.ts CMDRING.flat) a ring put up now is one of the flat tree — never on a tutorial mission (rails.ts: its lines teach the menu's pages
-   *  and their digits, and it keeps them until those lines are written for this tree) */
-  private flatRing(): boolean { return CMDRING.flat && CMDRING.only && !this.g.rails?.live; }
+  /** (cmdring.ts CMDRING.flat) a ring put up now is one of the flat tree — on a tutorial mission only where its level says so (rails.ts flatRing:
+   *  a mission's lines teach the menu's pages and their digits until they are written for this tree) */
+  private flatRing(): boolean { return CMDRING.flat && CMDRING.only && (!this.g.rails?.live || !!this.g.rails.flatRing); }
   /** … and its rows: EVERY ORDER OF THE TARGET — the first page's, then each page's behind a row of it, in the menu's own order, the rows that open
    *  pages left out and no row twice — less what is not offered there at all (OrderDef.gone); and on a place the squad's own posture row after them
    *  (silent.ts: free, on no key, listed for the squad's own menu — on a door too, where the menu never listed it) */
