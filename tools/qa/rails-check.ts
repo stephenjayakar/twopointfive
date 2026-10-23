@@ -32,7 +32,7 @@
 //  THE FRAME'S EYES ARE THE PLAYER'S VIEW (fogofwar.ts update, RAILS.eyeFirst, RAILS.eyeView): a step's eye has a place among the fog's five, and a man
 //      only a frame's eye has is drawn, not seen: the squad's entry on his room's door is the one it would take with no eye there. RAILS_BREAK=1 reaches
 //      both lines through the step's eye (none is named under it).
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's, the big line's and the two of the step's eye must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's, the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -438,6 +438,45 @@ export async function railsCheck(): Promise<boolean> {
       verdict(at2 === 'whistle' && notYet && quick === 'grab' && slot1 === slot0 && named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && pick && !boot && shut.length === 0 && shut0.length > 0 && at === 'whistle' && early === 'whistle' && up && after === 'grab',
         'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere; and while Space itself is locked a thing in reach has no row at all. His own ring is worked with its own digit: the key kept down, then the last wedge, whistles; and the digit pressed inside the hold, before the ring is up, whistles too and draws nothing',
         `the list: ${named.join(' ')} · on the first step at the gate: ${shut.join(' ') || 'no row'} (without the list: ${shut0.join(' ') || 'no row'}) · at the back door with it: ${on.join(' ') || 'no row'} · without it: ${all0.join(' ') || 'no row'} · the ring: on step '${at}', the digit alone leaves '${early}', the key held puts the ring ${up ? 'up' : 'NOT up'}, then the digit: '${after}' · the digit 0.07 s into the hold (ring ${notYet ? 'not yet up' : 'UP'}): '${at2}' → '${quick}', in his hand ${slot0} → ${slot1}`); }
+    // ---- THE PLAN ON THE MOVE (RAILS.planWalk; levels/tut-plan.json, its first step given his feet as well as the mode — the mission gives them at 'up1',
+    //      and from there every plan is made at the end of a walk; seed 1): Shift with the command key puts the mode up with a walk key still down and
+    //      he stops there; the pair again takes it down and no tick of it is a run; the key kept down with no press holds nobody's feet. Rule off: the
+    //      pair does nothing while he walks. The word `?planwalk=0` and a recording from before the key. RAILS_BREAK=1: the gate is open, Shift with a
+    //      walk key is a sprint and the pair an order
+    { const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), J = await import(`${ROOT}/src/game/journal.ts`), PR = await import(`${ROOT}/src/host/profile.ts`);
+      const k0 = knobsCopy(); let on: any, off: any, authored = false, word = '', old = true, kept = false;
+      const walked = async (rule: boolean) => { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
+        let W: any; try { const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/tut-plan.json`, 'utf8'))), L = level.scenarios!.lesson! as any;
+          // (the level as authored: the mode and his feet are given, his sprint never — the ground this rule stands on)
+          const given = [...(L.rails?.allow ?? []), ...L.steps.flatMap((T: any) => T.allow ?? [])]; authored = given.includes('plan') && given.includes('move') && !given.includes('sprint');
+          for (const T of L.steps) if (T.allow?.includes('plan')) T.allow = [...T.allow, 'move'];
+          W = await standUp({ uploadEvery: 4, level, seed: 1 }); RAILS.on = true; RAILS.planWalk = rule;
+          Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planNear: true }); startFromQuery(W.game, '?levelFile=tut-plan.json&roomclear=1&squad4'); }
+        finally { console.log = log; console.warn = warn; console.error = err; }
+        const g = W.game, I = W.input, pl = g.player, P = g.orders.plan; let ran = false;
+        const run = (secs: number, keys: string[]) => { const p = [...pl.char.pos]; for (let i = 0; i < Math.round(secs * 60); i++) { for (const k of keys) I.keys.add(k); W.step(DT); ran ||= !!pl.sprinting; } for (const k of keys) I.keys.delete(k); return flat(pl.char.pos, p); };
+        const pair = (keys: string[]) => { for (const k of keys) I.keys.add(k); I.pressed.add('KeyB'); I.keys.add('KeyB'); W.step(DT); ran ||= !!pl.sprinting; I.keys.delete('KeyB'); };
+        const HELD = ['KeyS', 'ShiftLeft'];
+        // (each walk from where he starts, at pace: there is a wall two metres behind him)
+        run(0.5, []); const home = [...pl.char.pos], from = () => { g.teleportPlayer(home); run(0.4, ['KeyS']); };
+        from(); const walk = run(0.5, ['KeyS']); from(); const shifted = run(0.5, HELD);
+        // (the key down a tick before Shift, then both kept down: no press with Shift in it, so nothing toggles and his feet are his)
+        from(); pair(['KeyS']); const sloppy = run(0.5, [...HELD, 'KeyB']), sloppyUp = !!P.up;
+        from(); const d0 = RAILS_STATS.dropped; pair(HELD); const held = run(0.3, HELD), up = !!P.up, knee = !!pl.crouch, step = g.lesson.step?.id as string, dropped = RAILS_STATS.dropped - d0;
+        g.teleportPlayer(home); pair(HELD); run(0.3, HELD); const again = !!P.up;   // (rule on: the mode was up and comes down — rule off: it was never up, and the pair is dropped again)
+        // …and the back key takes it down the same way, Shift and the walk key still held (whichever key the stand's back key is)
+        run(0.3, []); pair(['ShiftLeft']); run(0.3, HELD); const reup = !!P.up; for (const k of HELD) I.keys.add(k); I.pressed.add('Escape'); I.pressed.add('Tab'); W.step(DT); ran ||= !!pl.sprinting; run(0.3, HELD); const backed = !P.up;
+        return { walk, shifted, sloppy, sloppyUp, ran, up, knee, step, held, dropped, again, reup, backed, locked: g.rails.locks('sprint') && !g.rails.locks('move'), g }; };
+      try { on = await walked(true); off = await walked(false);
+        const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(on.g)));
+        RAILS.planWalk = true; const was = snap(); delete was.tables.RAILS.planWalk; J.applyKnobs(on.g, was); old = RAILS.planWalk;
+        RAILS.planWalk = true; const now = snap(); RAILS.planWalk = false; J.applyKnobs(on.g, now); kept = RAILS.planWalk;
+        const read = (q: string) => { RAILS.planWalk = !RAILS.planWalk; PR.pageSwitches(new URLSearchParams(q)); return RAILS.planWalk; }; word = `${read('')}/${read('planwalk=0')}`;
+      } finally { knobsBack(k0); }
+      const said = (r: any) => `walked ${r.walk.toFixed(2)} m in half a second, ${r.shifted.toFixed(2)} m with Shift down, ${r.sloppy.toFixed(2)} m with the key kept down as well (mode ${r.sloppyUp ? 'UP' : 'down'})${r.ran ? ' · A TICK AT A RUN' : ''} · the pair: mode ${r.up ? 'up' : 'down'}${r.knee ? ', on a knee' : ''}, step '${r.step}', ${r.held.toFixed(2)} m after it, presses dropped ${r.dropped} · the pair again: mode ${r.again ? 'up' : 'down'} · up once more ${r.reup}, the back key takes it down ${r.backed}`;
+      verdict(authored && on.locked && on.walk > 0.5 && !on.ran && off.ran && on.sloppy > 0.5 && !on.sloppyUp && on.up && on.knee && on.held < 0.15 && on.step !== off.step && !on.again && on.reup && on.backed && !off.up && !off.again && off.dropped > 0 && off.held > 0.3 && old === false && kept === true && word === 'true/false',
+        'the plan on the move: with his feet and the mode his and his sprint locked, Shift with the command key puts the mode up while a walk key is down and he stops on his knee, the pair again or the back key takes it down, and no tick of any of it is a run; the key kept down with no press holds nobody\'s feet; with RAILS.planWalk off the pair does nothing until he stands still, and the tick the back key takes the mode down with Shift and a walk key held is a tick at a run, as it was. The page\'s word puts the rule off and a recording from before it replays without it',
+        `the level gives plan and move and never sprint: ${authored} · ${said(on)} · rule off: ${said(off)} · a recording from before the key: ${old ? 'ON' : 'off'}, one with it: ${kept ? 'on' : 'OFF'} · the page / ?planwalk=0: ${word}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

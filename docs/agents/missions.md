@@ -1837,3 +1837,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pattern in `lessonLine` wants its own words added to that line. STILL OPEN, the rails gate's (mine): with empty hands the left button is let through
   wherever `use` is allowed and a grab row is offered, also with a man in the arm; under `?noknife=0` that is a knife before the step that teaches it.
   The page as it opens has no knife, so default play is not touched. Shutting it is a rule on the rails and wants its own switch and `rails-check` line.
+- **Plan mode opens on the move (2026-10-23; `RAILS.planWalk`, `rails.ts gate`; mission 2).** The frame's gate held Shift with the command key back
+  while a walk key was down wherever a step gave the player his feet (a walk key with Shift is a sprint's, and `CMDRING.planRun` makes the pair the key's
+  own order there). Mission 2 gives him his feet and the mode and never his sprint, and from its step `up1` every plan is made at the end of a walk: a
+  hand that pressed the pair before it let go of the walk key got nothing at all, with a line on screen asking for exactly that pair. THE RULE: where
+  `move` and `plan` are allowed and `sprint` is not, Shift with the command key PRESSED passes with a walk key down too, and the walk keys are taken out
+  of that one tick. So the mode goes up (he takes his knee where he is) and the Shift that passes never meets a walk key to run with; Shift with a walk
+  key and no press of the command key is dropped as before, and the key kept down holds nobody's feet. The same tick the other way was an old flaw of the
+  gate: the pair or the back key that took the mode DOWN let Shift through (the mode was up when the tick began), and with a walk key held that tick was
+  a run on a mission that locks the sprint; the walk keys are out of that tick too. A step that allows `sprint` is untouched (the pair is the key's own
+  order at a run, as in any mission). Only `tut-plan` allows `plan` today. The gate takes the walk keys out because `planmode.ts planShift` reads a walk
+  key as a run: if that test moves, this rule moves with it. SWITCH: a knob of the frame's table, on in the module as the frame's other rules are and on
+  with the frame; `?planwalk=0` = as it was; no `FROZEN_HOLDS` row (the frame is off on the frozen stand, `TPS_RAILS=1` raises it and this with it);
+  `journal.ts applyKnobs` puts it off for a recording from before the key. CHECK: `rails-check`, the line 'the plan on the move' (`tut-plan`, seed 1,
+  its first step given `move` as well; the line also reads the level as authored: plan and move given, sprint never). `RAILS_BREAK=1` must fail it.
+  MEASURED, seed 1, FROZEN and SHIPPED alike: 0.75 m walked in half a second, the same with Shift down and with the key kept down as well; the pair
+  with the walk key down puts the mode up, on a knee, the step done, 0.07 m of slide after it; the pair again and the back key take it down, no tick at
+  a run. Rule off: the mode stays down and the press is dropped, and the back key's tick is a run. The word and the old recording read as said. The
+  break fails the line on both stands. ON THE PAGE (`tools/qa/tut-plan-page.cjs`, real keys, the software adapter, `STEPS=5`): at the end of the first
+  walk the pair with a walk key still down puts the mode up and him on his knee, 20 lines pass and the page has no error; with `URL_ADD='&planwalk=0'`
+  that one line fails. NOT DONE: nobody has played it or seen it on a GPU; the scripted player of mission 2 stands still for the pair, so its runs do
+  not pass through this rule.
