@@ -16,10 +16,9 @@
 //     --moon       the MOON on his meter too: the CPU's estimate leaves it out (guards.ts lightEstimateAt), so a mark in the open yard read 0 here and 56 % on the
 //                  page (a player's tape, 10-13: the scripted run went by unseen where he was spotted). One ray up the moon's own direction from his chest and his
 //                  head; unshadowed it adds the moon's direct light (0.54 on the meter, the page's 0.56 less its bounce). A script asks for it with `mode.moon`
-//     --sky        THE SKY'S LIGHT ON EVERY METER: --moon for his own, and the same sum (the CPU's estimate where the man is, plus the moon's or the sun's direct
-//                  light where nothing solid is up its direction) for every man an AI eye looks at and every man's own. ON BY DEFAULT FOR A TUTORIAL MISSION
-//                  (--nosky, or the script's `mode.sky: false` with why): its level is built for one hour, and by day the estimate without the sun plays
-//                  the night. Still not the page's: no bounce (a lane the page's meter calls lit by bounce reads dark here: --floor), no bodies' shadows,
+//     --sky        THE SKY'S LIGHT ON EVERY METER: --moon for his own, and the same sum (the CPU's estimate where the man is — an authored hour's sun and
+//                  sky are in it — plus the night's moon where nothing solid is up its direction) for every man an AI eye looks at and every man's own.
+//                  ON BY DEFAULT FOR A TUTORIAL MISSION (--nosky, or the script's `mode.sky: false` with why). Still not the page's: no bounce (a lane the page's meter calls lit by bounce reads dark here: --floor), no bodies' shadows,
 //                  no smoke between a light and a man
 //     --floor N    his meter never under N (0‥1): the bounce neither estimate has — a moon shadow in the open yard read 0.16 on the page, the walled wood store 0 to 0.06
 //                  (and every other meter with it — a unit's own, a body's: a partner reads the light on himself, and on the page that is the renderer's.
@@ -124,8 +123,9 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   const script = await import(scriptFile);
   if (script.mode && !o.plain) o = { ...o, unseen: o.unseen || !!script.mode.unseen, god: o.god || !!script.mode.god };
   if (script.mode?.moon) o = { ...o, moon: true };
-  // THE SKY'S LIGHT ON EVERY METER (--sky; the head). The CPU's estimate leaves every directional light out (guards.ts lightEstimateAt: the moon, a sun), and
-  // the page's meter does not: a scripted run played a darker floor than the page shows — by day it played the night — and its ALL PASS did not speak for
+  // THE SKY'S LIGHT ON EVERY METER (--sky; the head). The CPU's estimate has an authored hour's sun and sky (hours.ts hourLight) and NOTHING OF THE NIGHT'S
+  // MOON (guards.ts lightEstimateAt skips directional lights), and the page's meter has both: a scripted run by night played a darker floor than the page
+  // shows — and by day too when its stand did not apply the row's hour (lesson-gate's frozen arm, mended there) — and its ALL PASS did not speak for
   // what a player sees (a squad that never saw what the page's shot; a partner who followed down a lane the page's meter called lit). ON for a tutorial
   // mission unless its script says `mode.sky: false` and why, or --nosky; a Training row asks for it (`mode.sky`, --sky). --moon is then on too.
   const sky = o.sky ?? script.mode?.sky ?? tutorial(file); if (sky) o = { ...o, moon: true };
@@ -139,6 +139,7 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   if (tutorial(file) && process.env.TPS_PROFILE !== 'shipped' && process.env.TPS_RAILS !== '1') return { ...out, code: 2, why: 'a tutorial mission is the page\'s: run it under TPS_PROFILE=shipped' };
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
+  const { isHourSun } = await import(`${ROOT}/src/game/hours.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
   const { LESSON, checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
@@ -168,19 +169,20 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
   const pos = (): number[] => g.player.char.pos;
   /** the moon's direct light on a point (--moon): nothing solid up its own direction, and the meter's best face of it */
-  const moon = o.moon ? g.engine.lights.lights.find((l: any) => l.kind === 2 && l.enabled && l.intensity > 0) : null;
+  const moon = o.moon ? g.engine.lights.lights.find((l: any) => l.kind === 2 && l.enabled && l.intensity > 0 && !isHourSun(g, l)) : null;   // (an hour's own sun is in the estimate already: hours.ts hourLight — added here too it lit a midday man twice)
   const moonAt = (P: Vec3): number => { if (!moon) return 0; const d = moon.dir, c = moon.color;
     return g.col.segmentBlocked(P, [P[0] - d[0] * 60, P[1] - d[1] * 60, P[2] - d[2] * 60]) ? 0 : (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * moon.intensity * Math.max(Math.abs(d[0]), Math.abs(d[1]), Math.abs(d[2])); };
   // EVERY OTHER MAN'S METER, BY THE SAME ARITHMETIC AS THE PLAYER'S BELOW (--sky, --floor): each unit's own, a body's, a held man's, a civilian's (every probe
   // key but the player's, which is fed below, and a search light's). On the page those are the renderer's, sky and bounce and all (guards.ts meterOf), and a
   // partner reads his own before he sets off for a man's back (sneak.ts stalkAmbient); here they were the CPU's estimate, with no moon or sun and no bounce
   // in it — a mission whose partner hung back on a real GPU (lit, and a man had a line) went by on every seed. The probe's answer is stood in for: the
-  // estimate where it was asked about (as guards.ts falls back to it), plus the sky's light with --sky, never under the floor with --floor. ONE hook and
+  // estimate where it was asked about (as guards.ts falls back to it: an authored hour's sun and sky are in it), plus the moon with --sky, never under the
+  // floor with --floor. ONE hook and
   // one sum for him and for them: two models of one floor would let a man be lit to the squad and dark to himself.
   if (sky || o.floor) { const asked = new Map<string, Vec3>(), q0 = g.lightQuery.bind(g), a0 = g.lightAt.bind(g), f0 = g.lightForget.bind(g), Ef = o.floor ? g.tune.visFloor * Math.exp(o.floor / g.tune.visSlope) : 0;
     const mine = (k: string) => !k.startsWith('player') && !k.startsWith('srch:');
     g.lightQuery = (k: string, p: Vec3, skip?: number) => { if (mine(k)) asked.set(k, [p[0], p[1], p[2]]); q0(k, p, skip); };
-    g.lightAt = (k: string) => { const p = mine(k) ? asked.get(k) : undefined; return p ? Math.max(Ef, lightEstimateAt(g, p) + moonAt(p)) : a0(k); };
+    g.lightAt = (k: string) => { const p = mine(k) ? asked.get(k) : undefined; return p ? Math.max(Ef, lightEstimateAt(g, p) + (sky ? moonAt(p) : 0)) : a0(k); };   // (--nosky with a floor: the floor alone)
     g.lightForget = (k: string) => { asked.delete(k); f0(k); }; }
   const cap = Number(flag('--cap') ?? 600);
   function step(n = 1) {

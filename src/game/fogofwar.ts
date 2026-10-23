@@ -471,7 +471,7 @@ export class FogOfWar {
       const seen = lines.get(gd) === true;
       const since = g.time - r.t;   // (a record outlives nothing but its Guard object; a clock put back by a checkpoint load meets fresh men — and a stamp from an abandoned future is no sighting)
       const fired = !seen && this.firedOn(gd);
-      const framed = r.framed = !seen && !!view && !(r.smoked && frame - r.smokeF <= SMOKE_KEEP) && view.some(e => dead ? this.eyeOnBody(e, gd) : this.lineToMan(e, gd, gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.1, 0])));   // (walls and leaves only: no plume is asked along a frame eye's own line — but a man the team's eyes have just lost to smoke is not put back by the frame's)
+      const framed = r.framed = !seen && !!view && view.some(e => dead ? this.eyeOnBody(e, gd) : this.lineToMan(e, gd, gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.1, 0])));   // (walls and leaves only: no plume is asked along a frame eye's line)
       if (dead && (seen || fired || framed || this.shown.has(gd) || (since >= 0 && since < Math.max(FOG.linger, 0.5)))) r.body = true;   // seen lying there — or seen going down (under the squad's rounds too: FOG.squadFire)
       r.seen = seen; if (seen) { r.t = g.time; if (!dead) { const a = r.at ?? (r.at = [0, 0, 0]), p = gd.char.pos; a[0] = p[0]; a[1] = p[1]; a[2] = p[2]; } }   // (where he stood, kept in place whatever the knob says: a mark asked for later is never at an older spot than its time)
       if (seen) S.seen++;

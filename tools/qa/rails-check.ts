@@ -333,7 +333,7 @@ export async function railsCheck(): Promise<boolean> {
       const k = L.steps.findIndex((T: any) => T.id === 'charge'), T = L.steps[k]; g.lesson.i = k; R.run(0.4);
       const s = g.rails.stepEye(), at = (T.eye?.at ?? T.at) as number[], look = !!g.rails.eye(), men = R.squad().length, on = g.fogOfWar.on;
       const eyes1 = g.fogOfWar.eyes.length, in1 = !!s && g.fogOfWar.eyes.includes(s), seen1 = g.fogOfWar.spotSeen(at[0], at[2]);
-      RAILS.eyeFirst = false; R.run(0.4); const in0 = !!s && g.fogOfWar.eyes.includes(s), seen0 = g.fogOfWar.spotSeen(at[0], at[2]); RAILS.eyeFirst = true;
+      let in0 = false, seen0 = false; RAILS.eyeFirst = false; try { R.run(0.4); in0 = !!s && g.fogOfWar.eyes.includes(s); seen0 = g.fogOfWar.spotSeen(at[0], at[2]); } finally { RAILS.eyeFirst = true; }
       verdict(on && men === 4 && look && lookIn && lookSees && !!s && eyes1 === 5 && in1 && !in0 && seen1 && !seen0,
         'a step\'s own eye has a place among the fog\'s five: on a step with none the seat\'s lookout is one of them and its own ground is seen; with four men up, on the wall\'s step, the step\'s eye is one of them and where it looks is seen (and it is the one dropped, and the place in the fog, with the rule off, as it was)',
         `fog ${on ? 'on' : 'OFF'} · ${men} men up, the lookout ${look ? 'named' : 'absent'}, on the first step among the fog's eyes ${lookIn}, its ground ${lookSees ? 'seen' : 'not seen'} · the step's eye ${s ? 'named' : 'none'} · the fog's eyes ${eyes1}, the step's among them ${in1} (rule off: ${in0}) · where it looks ${seen1 ? 'seen' : 'not seen'} (rule off: ${seen0 ? 'seen' : 'not seen'})`); }

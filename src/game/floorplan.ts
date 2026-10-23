@@ -231,12 +231,11 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
     out.doors.push({ door, a: ja, b: jb, tone: tone([...e.men]), key: wordKey || e.set || e.drill || e.gate ? F : null, now, ready: set([...e.men]), why: e.why });
   }
   for (const c of wSet) out.doors.push({ door: null, a: wallPt(c.wall, -0.4, 0.03), b: wallPt(c.wall, 0.4, 0.03), tone: tone(S.squad().filter(m => alive(m) && m.callsign === c.by)), key: F, now: up && !pairFirst && !rowKey && wallFirst && c === wall, ready: true, why: 'wall' });
-  // ON RAILS A KEY IS NAMED ONLY ONCE ITS LESSON HAS OPENED IT (rails.ts locks): a stack that waits on the word, at a step before the word is taught, kept its
-  // cap — dark, the key struck out to the eye — and the player asked what the key was. While the step that is up holds the word shut the press does nothing,
-  // so no door names it: the bar across the doorway stays (the men ARE waiting), the cap goes. A charge set, or a wall's, keeps its cap while the step
-  // lets the key blow it (ownblow.ts reads the same two locks).
-  { const R = g.rails, noWord = !!R?.locks('word'), noBlow = noWord && !!R?.locks('blow');
-    if (noWord) for (const d of out.doors) if (d.why !== 'pair' && (noBlow || (d.why !== 'charge' && d.why !== 'wall'))) { d.key = null; d.now = false; } }
+  // ON RAILS A KEY IS NAMED ONLY ONCE ITS LESSON HAS OPENED IT (rails.ts hushes): a stack that waits on the word, at a step before the word is taught, kept its
+  // cap — dark, the key struck out to the eye — and the player asked what the key was. While the step that is up holds the word shut the press does nothing
+  // (rails.ts gate: the squad's key goes by under `word` and under nothing else, a set charge's blow and a wall's included), so no door names it: the bar
+  // across the doorway stays (the men ARE waiting), the cap goes.
+  if (g.rails?.hushes('word')) for (const d of out.doors) if (d.why !== 'pair') { d.key = null; d.now = false; }
 }
 
 /** The squad's plan as it stands this frame, for the overlay. Empty with the switch off, with no squad on the floor, and under any show. */

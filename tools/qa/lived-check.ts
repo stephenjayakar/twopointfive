@@ -190,7 +190,8 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
       if (g.status !== 0) { const kept = spawnSync('git', ['-C', ROOT, 'cat-file', '-e', `HEAD:levels/${name}`]).status === 0;
         if (rowed) fail(`${name}: its row's commit ${base} has no levels/${name} (a commit from before the level, or from before a rename: the row holds nothing)`);
         else if (kept && !allBase && (nLived.boxes || nLived.props || nLived.lights || nLived.switchables)) fail(`${name}: it carries lived things and has nothing to be held to — ${base} has no such level and LEVEL_BASE no row for it: give it one, the commit that carries the level as meant`);
-        else warn(`${name}: not in ${base} and not in a commit yet — nothing to hold it to. Once it is in a commit with furniture it needs its own LEVEL_BASE row (that commit, or a later one that carries the level as meant), or this check is red`); }
+        else if (!kept) warn(`${name}: not in ${base} and not in a commit yet — nothing to hold it to. Once it is in a commit with furniture it needs its own LEVEL_BASE row (that commit, or a later one that carries the level as meant), or this check is red`);
+        else console.log(`  (not in ${base}: nothing to hold it to)`); }
       else { const out: string[] = [];
         // (a lesson step's LINE is words on the objective row, reworded since the base by other work — 'drags it' became 'takes hold of him' when bodies came to be carried —
         //  and nothing furniture can touch: the base's lines are read as today's. So are the lines a step shows under a newer rule in place of that one —
