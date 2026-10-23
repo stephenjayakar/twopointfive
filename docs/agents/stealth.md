@@ -1027,6 +1027,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `cornerCoil`, `cornerRise`. Stills: `close-stills.ts --scene stalk-turn` is the broken-off stalk. Judged on CPU stills by a visual
   reviewer over two looks; never seen on a GPU, never played. Not done from the review: a staggered stance at the launch, a flinch when he
   turns round, the elbow under the chin, a slower fall for the gun that is taken, the still pose of a paused creep.
+- **The stalk's fifth pass: he shrinks back when the man breaks it off (10-23; `stalk.ts` `STALK.jolt`).** With a stalk on, the man who
+  turns off his back (out `turned`) makes Sam duck `jolt` (0.6) of the animator's SOFT duck (`flinchFrom(…, soft)`, the one a near round
+  gives: it leaves a hand's errand alone, so a pistol drawn the next instant keeps its draw and its click) and the man who is onto him (out
+  `him`) the whole of it; the other ways out give none, nor does the frame a stalk begins. The first try used the start (`startleFrom`):
+  it takes the hands for 0.45 s and ate the draw's early click, and is not used. Rides `STALK.on`: `?stalk=0` in the page, `TPS_STALK=1`
+  on the frozen stand, where the MOVES pass is down and the soft duck is nothing (not the old hit twitch either). A recording from before
+  the key replays with `jolt` 0 (journal.ts). CHECK: stalk-check `out` has the line on both paths of the MOVES pass and `harness` one for
+  the journal's clauses of this pass and the fourth; `STALK_BREAK=1` fails both, on both stands; one seed. The lab has a row for `jolt`.
+  Known: a quiet man's routine quarter turn also ends the stalk as `turned` and gets the duck (he has you at his shoulder); say if that
+  reads as a false alarm. Seen on CPU stills only (`close-stills.ts --scene stalk-turn`), never on a GPU, never played. STILL OPEN from the
+  tutorial frame: under `?noknife=0` on a tutorial a left click on a man in reach or in the arm is the knife before the step that teaches
+  it (rails.ts lets the button through for the grab); the mend wants its own switch, journal key and rails-check line, so it is not here.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
