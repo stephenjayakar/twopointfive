@@ -27,6 +27,14 @@ let fails = 0, checks = 0;
 const verdict = (ok: boolean, what: string, detail = '') => { checks++; if (!ok) fails++; console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what}${detail ? ` — ${detail}` : ''}`); };
 const log = console.log, warn = console.warn, err = console.error;
 async function quiet<T>(f: () => Promise<T> | T): Promise<T> { console.log = console.warn = console.error = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; console.error = err; } }
+/** a line that still names the knife, or a key to grab a man with (read sentence by sentence, the key before the word or after it, any wording of the
+ *  grab): what the page's rules have taken away. 'Cut the lights' is no knife and a key in another sentence is not the grab's */
+const KNIFE = /\b(kni(fe|fes|ves|fed|fing)|blades?|stab\w*)\b/i, GRAB = /\b(grab\w*|tak(e|es|ing) hold|chok\w*|seiz\w*)\b/i, GRAB_KEY = /\[(Space|E)\]|\bSpace\b/;
+const namesOld = (w: string): boolean => w.split(/[.!?\n]+/).some(q => KNIFE.test(q) || (GRAB.test(q) && GRAB_KEY.test(q)));
+if (!names.length) { console.log('\n=== lesson-check: the words the rules took away ===');
+  const old = ['Sneak up behind him and press [Space] to grab him', 'Grab him with [Space]', '[E] takes hold of him', 'Left click to use your blade', 'Stay low, then left click to knife him', 'Knives are quiet'].filter(w => !namesOld(w));
+  const fine = ['Hold left click on him from behind to grab him', 'Press [B] on the breaker box to cut the lights', 'When you grab yours, he\'ll take his. Press [Space] to open the door.', 'Right click to knock him out'].filter(namesOld);
+  verdict(!old.length && !fine.length, 'the reading knows a key to grab by in any order of the words, and the knife by any of its names, and leaves a held click, a cut light and a key in another sentence alone', [...old.map(w => `missed: ${w}`), ...fine.map(w => `wrongly caught: ${w}`)].join(' · ')); }
 for (const name of list) {
   console.log(`\n=== lesson-check ${name}.json ===`);
   const file = resolve(ROOT, 'levels', `${name}.json`);
@@ -45,10 +53,10 @@ for (const name of list) {
   // naming one and nothing else would say so: every line and card is read through it here. LESSON_BREAK=words leaves the two rules off: it must fail
   // on a level that teaches the grab.
   { const was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife], up = process.env.LESSON_BREAK !== 'words'; STALK.on = STALK.only = CLOSE.on = CLOSE.noKnife = up;
-    const said: [string, string][] = (L.steps as any[]).flatMap(T => [...Object.keys(T).filter(k => /[lL]ine$|^noTap$/.test(k)).map(k => T[k]), T.explain?.text, T.after?.line, T.after?.word]
+    const said: [string, string][] = (L.steps as any[]).flatMap(T => [...Object.keys(T).filter(k => /[lL]ine$|^noTap$/.test(k)).map(k => T[k]), T.explain?.title, T.explain?.text, T.after?.line, T.after?.word]
       .filter((w: unknown) => typeof w === 'string').map((w: string) => [T.id, lessonLine(w)] as [string, string]));
     [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife] = was;
-    const bad = said.filter(([, w]) => /\bkni(fe|ves)\b/i.test(w) || /(\[Space\]|\[E\]|\bSpace\b)[^.]*\bto grab\b/.test(w));
+    const bad = said.filter(([, w]) => namesOld(w));
     verdict(!bad.length, `with the held click the only way to a man and no knife, no line or card names the key to grab or the knife (${said.length} read through lessonLine)`, bad.map(([id, w]) => `'${id}': ${w}`).join(' · ')); }
   { const W = await stand(), faults: string[] = checkLesson(W.game); verdict(!faults.length, 'the block against the built floor: every test names a kind, a door, a light and an area this floor has', faults.join(' · ')); }
   // (not a verdict: a rows list that names an act and withholds the one that puts it back — game/rails.ts rowsWithheld; its author's to judge)
