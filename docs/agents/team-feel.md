@@ -857,6 +857,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are read in the module and not staged; an opening with no door in it has no frame for him to wait short of; the wait is at the order layer, so a man no order poses (a drill, the fight's own legs) is not
   held.
 
+- **A fourth reason to run, 'told' (2026-10-23)**: a tutorial step that tells its men to run a leg (`teamTold`, asked by orders.ts beside `teamDash`;
+  `rails.ts runs`, a step's `onWay.run`; `TEAMPACE_STATS.told`). Nothing off a tutorial's frame gives it. `docs/agents/missions.md`, *Mission 1, three play notes*.
 - **Teammates are slower than the player, and run only for a reason** (`src/game/teampace.ts`, table `TEAMPACE {on, k 0.8, followK 1.3, follow, behindM 1,
   fightSecs 2, backSecs 6, own, dashM 2.5, dashSeen 0.5, dashEvery 0.25, dashHot 6, runAt 2.7, accel 6, step 1, gap 1}`). REPLACES "teammates never sprint".
   The play note: the player at 1×, a teammate at 0.8×, so a man sent somewhere can always be caught up; followers sprint when the player sprints; a sprint
@@ -916,3 +918,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a teammate's sprint with his kit on has never been looked at, nor the gun going low into it; nobody has played it; 0.8, the follower's 1.3, the six
   seconds back from a grenade and the cover run's numbers are first numbers; the play-through tool's player never sprints, so the tallies show no follower's
   run (the staged check does); the cover run fired 20 times in 126 runs and nobody has watched one.
+- **The goggles' eyepiece edge is off** (10-23; the maintainer: "i think the NVG oval is a bit much since it obscures a lot of the screen. let's try
+  removing it."). A TRY, his word. The dark oval post.wgsl drew round the tube's picture (`radial` 0.62 → 0.95 to black) is now an amount,
+  `passes.nvOval` 0‥1 (`PostParams.nvOval`, the uniform's twelfth word), 0 as the page opens: the picture runs to the screen's edge. To compare:
+  `?nvoval=1` on the page's address, or the debugger's Look panel ▸ 'night vision eyepiece edge'. PICTURE ONLY, so no game switch, no stand row and
+  nothing for a recording to carry: nothing in `src/game` reads the edge (`nvg.ts tubeVis` copies the gain curve and the noise, and `nvg-sight`, which
+  pins those lines of the shader, reads the same). What still says the goggles are on: the white phosphor picture with its grain and scan lines, the
+  lit 'N NIGHT VISION' chip, the goggles down on Sam, the click and the log line. CHECKED: the page on the software adapter, the office at night,
+  goggles down — the default boot holds 0 and the left edge of the picture reads 152 of 255 where the oval left 7 (centre 187 both ways); `?nvoval=1`
+  boots with 1; no page error. NOT SEEN: never on a GPU; and with no dark rim behind them the HUD's grey labels at the screen's edge (CONDITION,
+  LIGHT, SOUND) sit on a bright picture and read worse in the still — the HUD's own to answer if the try is kept.

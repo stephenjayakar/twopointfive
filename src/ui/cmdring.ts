@@ -115,7 +115,7 @@ export class CmdRingViz {
     if (!V) { if (this.planWas) { this.planWas = ''; if (this.plan) this.plan.style.display = 'none'; } return; }
     const xy = (p: Vec3): [number, number] | null => { const [x, y, front] = cam.project(p, w, h, Infinity, NEAR_W); return front ? [x, y] : null; };
     const tone = (t: string | undefined) => t && t !== 'gold' ? ` t-${t}` : '';
-    let s = V.up ? `<rect class="pf" x="3" y="3" width="${(w - 6).toFixed(0)}" height="${(h - 6).toFixed(0)}" rx="4"/><text class="pt" x="${(w / 2).toFixed(0)}" y="${(h - 14).toFixed(0)}">PLAN</text>` : '';
+    let s = V.frame ? `<rect class="pf" x="3" y="3" width="${(w - 6).toFixed(0)}" height="${(h - 6).toFixed(0)}" rx="4"/><text class="pt" x="${(w / 2).toFixed(0)}" y="${(h - 14).toFixed(0)}">PLAN</text>` : '';
     for (const m of V.men) { const out: string[] = [];
       for (let i = 0; i < HINT_N; i++) { const t = i / HINT_N * 2 * Math.PI, q = xy([m.at[0] + Math.cos(t) * CMDRING.hintManM, m.at[1], m.at[2] + Math.sin(t) * CMDRING.hintManM]); if (!q) { out.length = 0; break; } out.push(`${q[0].toFixed(1)},${q[1].toFixed(1)}`); }
       if (out.length) s += `<path class="pm${tone(m.tone)}${m.picked ? ' picked' : ''}" d="M${out.join('L')}Z"/>`; }
