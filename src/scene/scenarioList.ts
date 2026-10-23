@@ -170,7 +170,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     place: 'A money changer\'s shop on a snowy night', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
     blurb: 'You go in alone. Slip through the dark to the strongroom, then leave the way you came in.',
     scene: 'The post was paid through a money changer\'s shop in town, and his ledger shows who paid. The ledger is in the strongroom. Nobody can know you were there.',
-    teaches: ['Stay low and out of the light', 'Whistle to lure a guard', 'Grab a guard from behind', 'Locks, the breaker box and night vision', 'Leave the way you came in'] },
+    teaches: ['Stay low and out of the light', 'Whistle to lure a guard, then grab him', 'Knock a guard out with a sponge round', 'Locks, the breaker box and night vision', 'Leave the way you came in'] },
   // quiet, as two (tools/levels/tut-pair.ts): one partner under the pair rules, and each stretch of a truck park is one thing a second man makes possible
   { id: 'tut-pair', title: 'The truck park, as two', kind: 'quiet', squad: 1, level: 'tut-pair.json', group: 'tutorial',
     place: 'A walled truck park, at night', lean: 'quiet', defenders: 4,

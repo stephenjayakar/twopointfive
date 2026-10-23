@@ -240,6 +240,9 @@ export interface LessonStep {
   menuLine?: string;
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
+  /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, game/rails.ts RAILS.flatRing:
+   *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` (tools/qa/rails-check.ts asks) */
+  flatLine?: string;
   /** the line while plan mode is DOWN on a step that is done in the mode (a checkpoint put back, the mode put away by hand: what puts it up again —
    *  absent: `line`) */
   planLine?: string;
@@ -308,6 +311,10 @@ export interface RailsData {
   /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
    *  not there, on the ring or under the quick key. Absent: every row the game has */
   orders?: string[];
+  /** the squad's ring on this mission is the game's flat tree (game/cmdring.ts CMDRING.flat: every order of the thing on one ring, no pages), as it
+   *  is off the tutorial — and a step that names a digit of it says so in `flatLine` (game/rails.ts RAILS.flatRing; absent: the menu's pages, whose
+   *  digits `menuLine` and `pageLine` name) */
+  flatRing?: boolean;
   /** the verbs Space offers on this level (an Interactable row's `verb`: 'grab', 'pick', 'code'…): a thing in reach whose verb is not here has
    *  no row, so a tap never lands on something no step taught (absent: every row, as on any level) */
   rows?: string[];
@@ -331,7 +338,10 @@ export interface ParData { gold: number; silver: number; bronze: number; lossSec
 export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed?: boolean; light?: boolean; nvg?: boolean; bangs?: number; charges?: number; smoke?: number; frags?: number; walls?: number; shells?: number;
   /** yours alone, on a card with the rifle: the launcher's sponge rounds, 0‥5 (game/kit.ts RINGS_MAX). A mission that names your card hands none over it
    *  (kit.ts ISSUE.whole), so one that wants them on the tube says how many: with any, the launcher comes up on them, the grenades its next load */
-  rings?: number }
+  rings?: number;
+  /** yours alone, on a card with the rifle: the load the launcher COMES UP ON, where he carries any of it (absent: the sponge rounds where he has any,
+   *  as above). The stealth tutorial names the grenade, so that its lesson is the swap to the sponge round before the right button is his */
+  loaded?: 'ring' | 'he40' }
 export interface IssueData { members: { [place: string]: IssueCard } }
 /** A SNATCH (game/snatch.ts — an overlay on a level's ROOM CLEAR, as a lesson is one on a mission): ONE unarmed man the team has to take alive. He is a
  *  civilian of the usual make (game/civilians.ts: his eyes, his ears, his run, his hands on his head), put on the floor at every staging of the room clear;

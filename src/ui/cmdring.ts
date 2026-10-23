@@ -16,7 +16,7 @@ import { handRingView } from '../game/interact';
 import { planView } from '../game/planmode';
 import { hoverKept } from './hoverkept';
 import { HANDRING } from '../game/handring';
-import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type RingPlace } from '../game/ringlone';
+import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type LonePill, type RingPlace } from '../game/ringlone';
 
 const NS = 'http://www.w3.org/2000/svg';
 /** a line from one point of the layer to another with a head on its far end (too short to read: nothing) */
@@ -68,16 +68,20 @@ class RingDraw {
     const hub = this.hub = document.createElementNS(NS, 'circle') as SVGCircleElement; hub.setAttribute('class', 'ch'); hub.setAttribute('r', String(RING_HOLE)); hub.style.display = 'none'; g.appendChild(hub);
     const cap = this.cap = document.createElementNS(NS, 'text') as SVGTextElement; cap.setAttribute('class', 'cc'); cap.setAttribute('y', String(RC)); g.appendChild(cap);
   }
-  /** a wedge's outline, digit and words put where `at` says (its own place on the wheel, or a pill's: `as` names which), written only when that changes;
-   *  `len`: the width its words are set to (a pill's: the game reads the same pill — ringlone.ts) */
-  private place(e: WedgeEls, at: RingPlace, as: string, len = 0) {
-    if (e.as === as) return; e.as = as; const f = (v: number) => v.toFixed(1);
+  /** a wedge's outline and digit put where `at` says (its own place on the wheel, or a pill's: `as` names which), written only when that changes. A
+   *  pill's words are written here too, each line set to the width counted for it (the game reads the same pill — ringlone.ts): one line, or a long
+   *  label's two (loneLines), with the whole label kept as the element's name */
+  private place(e: WedgeEls, at: RingPlace | LonePill, as: string, words = '') {
+    if (e.as === as) return; e.as = as; const f = (v: number) => v.toFixed(1), lines = 'lines' in at ? at.lines : null, one = lines?.length === 1 ? lines[0] : null;
     e.path.setAttribute('d', at.d); e.num.setAttribute('x', f(at.nx)); e.num.setAttribute('y', f(at.ny)); e.text.setAttribute('x', f(at.tx)); e.text.setAttribute('y', f(at.ty)); e.text.setAttribute('text-anchor', at.anchor);
-    if (len > 0) e.text.setAttribute('textLength', f(len)); else e.text.removeAttribute('textLength');
+    if (one) e.text.setAttribute('textLength', f(one.w)); else e.text.removeAttribute('textLength');
+    if (lines && !one) e.text.setAttribute('aria-label', words); else e.text.removeAttribute('aria-label');
+    if (one) e.text.textContent = one.s;
+    else if (lines) e.text.replaceChildren(...lines.map(l => { const t = document.createElementNS(NS, 'tspan'); t.textContent = l.s; t.setAttribute('x', f(at.tx)); t.setAttribute('y', f(l.y)); t.setAttribute('textLength', f(l.w)); return t; }));
   }
   draw(V: RingView | null, tz: number) {
     if (!V) { if (this.was) { this.was = ''; if (this.g) this.g.style.display = 'none'; } return; }
-    const sc = V.zoom / tz, key = `${V.x.toFixed(0)},${V.y.toFixed(0)},${sc.toFixed(2)}|${V.lit}|${V.tone ?? ''}|${V.caption}|${HANDRING.lone}|${V.wedges.map(w => `${w.key}${w.off ? '-' : ''}${w.opens ? '>' : ''}${w.text}`).join('|')}`;
+    const sc = V.zoom / tz, key = `${V.x.toFixed(0)},${V.y.toFixed(0)},${sc.toFixed(2)}|${V.lit}|${V.tone ?? ''}|${V.caption}|${HANDRING.lone}${HANDRING.loneWrap}|${V.wedges.map(w => `${w.key}${w.off ? '-' : ''}${w.opens ? '>' : ''}${w.text}`).join('|')}`;
     if (key === this.was) return; this.was = key;
     if (!this.g || this.els.length !== CMDRING.wedges) { this.g?.remove(); this.els = []; this.build(CMDRING.wedges); }
     const g = this.g!; g.style.display = ''; g.setAttribute('transform', `translate(${(V.x / tz).toFixed(1)},${(V.y / tz).toFixed(1)}) scale(${sc.toFixed(3)})`);
@@ -87,8 +91,9 @@ class RingDraw {
     this.els.forEach((e, k) => { const w = V.wedges.find(x => x.key === k + 1);
       e.g.style.display = w ? '' : 'none'; if (!w) return;
       e.g.setAttribute('class', `${V.lit === w.key ? 'lit' : ''}${w.off ? ' off' : ''}${one ? ' lone' : ''}`.trim());
-      const words = wedgeWords(w); e.text.textContent = words;
-      if (one) { const P = lonePill(w, this.els.length); this.place(e, P, `pill ${words}`, P.textW); } else this.place(e, e.home, 'wheel'); });
+      const words = wedgeWords(w);
+      if (one) { const as = `pill|${HANDRING.loneWrap ? 2 : 1}|${words}`; if (e.as !== as) this.place(e, lonePill(w, this.els.length), as, words); }   // (the pill is worked out only when its words change)
+      else { e.text.textContent = words; this.place(e, e.home, 'wheel'); } });
   }
 }
 

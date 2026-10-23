@@ -45,6 +45,11 @@ export const HANDRING = {
    *  the same pointing: cmdring.ts ringWant). Off in the module and on the frozen stand (`TPS_HANDRING=1` raises it with the rest); on in the page
    *  with its own word, `?lonepill=0` (the slice, and only its own fifth of a turn). A recording from before the key replays with it off */
   lone: false,
+  /** …and a pill whose label is longer than it is drawn on TWO LINES at full letter width, never squeezed into one (ringlone.ts loneLines; the
+   *  maintainer, 10-23, of a wall's second ring with the one row 'breach with a wall charge · 3 left': "weird after hitting 5"), the place the
+   *  cursor is read on two lines tall with it. Off in the module and on the frozen stand (`TPS_HANDRING=1` raises it with the rest); on in the
+   *  page with its own word, `?lonewrap=0` (one line, drawn tighter, as it was), and off with `lone`. A recording from before the key replays with it off */
+  loneWrap: false,
   /** HIS RING STANDS ON THE THING IT IS ABOUT, never where the cursor happened to be (the maintainer, 10-23: "radial menu should always be near the
    *  player, probably on the most relevant option (like the rack in this caes)"): its middle on the thing its first row is about (the row lit as it
    *  opens), on his own body where no row is about a thing (the whistle alone), whole inside the view's edge as any ring (cmdring.ts edgeX / edgeY),

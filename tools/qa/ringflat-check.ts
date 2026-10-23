@@ -16,7 +16,8 @@
 //   5. stacked on a door, wedge 1 is the squad's own entry and the row with the same words is not drawn again.
 //   6. not offered at all: a charge and the big slot's tool on a steel door, a wall charge the squad never carried — and one carried is on 'more',
 //      and is given from it.
-//   7. CONTROL — a tutorial mission (rails live) keeps the menu's pages: its lines name the digits of the tree as it was.
+//   7. CONTROL — a tutorial mission (rails live) keeps the menu's pages: its lines name the digits of the tree as it was. One whose level takes the
+//      flat ring (rails.ts Rails.flatRing) has the flat tree.
 //   7b. flatSeats by itself: more rows than wedges (the posture row gives up its place first), one row left over (it sits on the last wedge, no
 //      second ring), gaps in the fixed wedges filled, the word's row never seated.
 //   9. the squad's cursor mark is not drawn at all (bareHint; the maintainer, at a wall with the ring up: "the line and circle are weird, don't need
@@ -123,9 +124,10 @@ export async function ringflatCheck(): Promise<boolean> {
     // ---- 7
     { const rails0 = g.rails; K.flat = true;
       g.rails = { live: true }; const taught = (O as any).flatRing();
+      g.rails = { live: true, flatRing: true }; const took = (O as any).flatRing();
       g.rails = { live: false }; const plain = (O as any).flatRing();
       g.rails = rails0; const here = (O as any).flatRing(); K.only = false; const noOnly = (O as any).flatRing(); K.only = true; K.flat = !BREAK;
-      line(taught === false && plain === true && here === true && noOnly === false, 'CONTROL — a tutorial mission keeps the menu\'s pages (its lines teach them); any other level takes the flat tree, and only while the ring carries every order', `on a tutorial mission: ${taught} · off one: ${plain} · this level: ${here} · the ring not carrying every order: ${noOnly}`); }
+      line(taught === false && took === true && plain === true && here === true && noOnly === false, 'CONTROL — a tutorial mission keeps the menu\'s pages (its lines teach them) unless its level takes the flat ring; any other level takes the flat tree, and only while the ring carries every order', `on a tutorial mission: ${taught} · on one whose level takes the flat ring: ${took} · off one: ${plain} · this level: ${here} · the ring not carrying every order: ${noOnly}`); }
     // ---- 7b (the seating by itself: what no kit on this floor shows)
     { const R = (id: string, o: any = {}) => ({ id, targets: ['floor'], ...o }), post = R('silent', { free: true, targets: ['floor', 'none'] }), base = [R('move'), R('cover'), R('fallIn'), R('hold')];
       const five = flatSeats([...base, R('a'), R('b'), R('c'), R('d'), R('e'), post], 'floor', 'KeyF', 0), names5 = five.over.length;
