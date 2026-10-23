@@ -740,7 +740,8 @@ export class FogOfWar {
     }
     const pick = this.lampPick; let n = this.lampN;
     if (n > FOG_LIGHTS) { pick.length = n; pick.sort((a, b) => a.d - b.d); n = FOG_LIGHTS; }
-    for (let i = 0; i < n; i++) packLight(F.lights, F.lightsU, i * 16, pick[i].l, pick[i].I, pick[i].l.kind, 0, 0);
+    for (let i = 0; i < n; i++) { const l = pick[i].l, live = l.pos; if (l.steady) l.pos = l.steady.pos;   // (a fire's lamp wanders with its flames, game/fire.ts: the fog has it where the level hung it)
+      packLight(F.lights, F.lightsU, i * 16, l, pick[i].I, l.kind, 0, 0); l.pos = live; }
     F.lightCount = S.lights = n;
   }
 

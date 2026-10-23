@@ -13,7 +13,8 @@ export type SfxName =
   | 'grabCatch' | 'gunStrip' | 'gunDown'   // the grab as three beats: the catch, the gun twisted out of his hand, the gun let down onto the floor
   | 'mk12Suppressed' | 'mp7Suppressed' | 'mk46Report' | 'm1014Report' | 'm870Report' | 'hk45Suppressed' | 'g18Report'   // the guns a card's two slots offer, each its own report (game/gunlook.ts), and the pump gun's
   | 'beltCoverUp' | 'beltBoxOff' | 'beltBoxOn' | 'beltLay' | 'beltCoverDown' | 'chargeLmg' | 'shellIn' | 'boltDrop'   // how they are fed: a belt under a feed cover, shells one at a time (game/gunreload.ts)
-  | 'chairRoll';   // a chair coasting on its castors (game/props.ts CASTOR): looped between ROLL_LOOP's two marks for as long as it rolls
+  | 'chairRoll'   // a chair coasting on its castors (game/props.ts CASTOR): looped between ROLL_LOOP's two marks for as long as it rolls
+  | 'fireBed' | 'fireCrack';   // an open fire (game/fire.ts): its low bed, looped between FIRE_LOOP's two marks for as long as it burns, and one crack of the wood
 
 type Gen = (t: number, i: number, sr: number, rnd: () => number, state: Float32Array) => number;
 
@@ -66,6 +67,7 @@ export const HEARD: Partial<Record<SfxName, number>> = {
   // (the guns of the two slots and their feeding: no table before them to keep a level from — each set by hand against the four reports and the handling voices above:
   //  the two shotguns a little over the bare pistol, the belt gun and the Glock 18 a little under it (their rounds stack), the MP7 and the HK45 under every other gun)
   mk12Suppressed: 0.118, mp7Suppressed: 0.086, mk46Report: 0.268, m1014Report: 0.31, m870Report: 0.3, hk45Suppressed: 0.08, g18Report: 0.268,
+  fireBed: 0.03, fireCrack: 0.075,   // (an open fire, game/fire.ts: set by hand under a footstep on a hard floor — the bed is a thing you notice when you stop, a crack turns no head)
   beltCoverUp: 0.09, beltBoxOff: 0.075, beltBoxOn: 0.11, beltLay: 0.09, beltCoverDown: 0.15, chargeLmg: 0.17, shellIn: 0.105, boltDrop: 0.18,
   // (the grab's three beats: no table before them either — set by hand against the hold's voices at the gains they are played at (0.5, 0.45, 0.4): the catch over the
   //  scuffle it stands in for and under the whip, the strip and the knock each under the catch)
@@ -112,12 +114,14 @@ export function voiced(ctx: SfxContext, as: number, dur: number, seed: number, f
  *  chair coasts (audio.ts `follow`). Played once from its start — the listening page, the lanes' 'again' — it comes up over the first mark's length and dies away after
  *  the second. */
 export const ROLL_LOOP = { start: 0.12, end: 2.12 };
+/** the stretch of the open fire's bed that repeats while it burns (game/fire.ts): long, so that nothing in it is heard coming round */
+export const FIRE_LOOP = { start: 0.12, end: 7.12 };
 /** a steady take cut to that shape: the stretch between the marks is `raw` from 0.1 s with its first quarter second crossed (equal power) with what follows its end, so
  *  its last sample runs into its first; ahead of it the stretch's own tail coming up, after it the stretch's own head going down. A take too short for that (every other
  *  voice's build hands the table a one-sample buffer for this row: `only`) is handed back as it is. */
-function rollLoop(ctx: SfxContext, raw: SfxBuffer): SfxBuffer {
+function rollLoop(ctx: SfxContext, raw: SfxBuffer, span: { start: number; end: number } = ROLL_LOOP): SfxBuffer {
   const sr = raw.sampleRate, x = raw.getChannelData(0);
-  const h = Math.round(ROLL_LOOP.start * sr), N = Math.round(ROLL_LOOP.end * sr) - h, xf = Math.round(0.25 * sr), x0 = Math.round(0.1 * sr), tl = Math.round(0.35 * sr);
+  const h = Math.round(span.start * sr), N = Math.round(span.end * sr) - h, xf = Math.round(0.25 * sr), x0 = Math.round(0.1 * sr), tl = Math.round(0.35 * sr);
   if (x.length < x0 + N + xf) return raw;
   const S = new Float32Array(N);
   for (let i = 0; i < N; i++) { if (i >= xf) S[i] = x[x0 + i]; else { const w = i / xf; S[i] = x[x0 + i] * Math.sqrt(w) + x[x0 + N + i] * Math.sqrt(1 - w); } }
@@ -735,6 +739,23 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       for (let t = 0.01; t < 2.58; t += 0.022 + 0.05 * v.u()) knock(v, t, 900, 3200, 0.0015 + 0.0015 * v.u(), 0.035 + 0.05 * v.u());
       for (let t = 0.15; t < 2.5; t += 0.28 + 0.3 * v.u()) knock(v, t, 500, 1500, 0.006, 0.07 + 0.07 * v.u());
     }))),
+    // an open fire in a drum (game/fire.ts): the bed — the draught's low breath, the flames' flutter over it, the wood ticking now and then — STEADY from end to end and cut to its
+    // own long loop (FIRE_LOOP); and one crack of the wood: a hard snap, the split's two or three smaller ones behind it, a little of the drum's own ring
+    fireBed: lazy(() => rollLoop(ctx, make(ctx, 'fireBed', 7.6, 223, v => {
+      const r = v.layer(); v.hiss(0, 45, 260, 0.03, 200, 1.0, r);
+      for (let i = 0; i < r.length; i++) { const t = i / v.sr; r[i] *= 1 + 0.3 * Math.sin(5.9 * t) + 0.22 * Math.sin(13.7 * t + 0.8) + 0.12 * Math.sin(31.0 * t + 2.1); }
+      v.add(r);
+      const m = v.layer(); v.hiss(0, 300, 1300, 0.03, 200, 0.42, m);
+      for (let i = 0; i < m.length; i++) { const t = i / v.sr; m[i] *= 0.55 + 0.45 * Math.sin(8.3 * t + 1.1) * Math.sin(21.0 * t); }
+      v.add(m);
+      v.hiss(0, 1500, 4200, 0.03, 200, 0.05);
+      for (let t = 0.05; t < 7.55; t += 0.08 + 0.5 * v.u()) knock(v, t, 1800, 6500, 0.001 + 0.002 * v.u(), 0.02 + 0.06 * v.u() * v.u());
+    }), FIRE_LOOP)),
+    fireCrack: make(ctx, 'fireCrack', 0.3, 227, v => {
+      knock(v, 0.002, 1400, 7000, 0.004, 1.0); knock(v, 0.003, 500, 1600, 0.012, 0.5);
+      for (let k = 0; k < 3; k++) knock(v, 0.025 + 0.03 * k + 0.02 * v.u(), 2200, 8000, 0.002, 0.3 * (1 - k / 4) * (0.5 + v.u()));
+      v.ring(0.002, [[410, 0.05, 0.25], [690, 0.035, 0.15]], 0.002, 0.18);
+    }),
     // ---- the hold (player.ts startGrab → the questions → chokeOut / whipOut; freeHeld when a round takes Sam down under him): close, quiet body sounds a metre from
     //      the listener — cloth, breath, a throat, one hard knock. The voiced bits of the three KEPT ones (grabScuffle, chokeLimp, shove) are a glottal pulse train (phase-accumulated in st[3],
     //      jittered) rounded off by the low-pass and gating a band of breath noise; chokeStrain, murmur and heldProtest are synth.ts's throat. No words: a stand-in for

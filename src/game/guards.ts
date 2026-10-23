@@ -2553,7 +2553,8 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
     const l = lights[i];
     if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) continue;
     if (steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l))) continue;   // (LIGHTS.litMan asks what the PLACE lights: a round's impact flash, a tracer's lamp, a stun charge, a stroke of lightning, a blackout beacon sweeping past are nobody's lamp)
-    const dx = l.pos[0] - P[0], dy = l.pos[1] - P[1], dz = l.pos[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
+    const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos;   // (a fixture somebody flickers — an open fire, fire.ts — is its authored self, where the level hung it, to who asks what the PLACE lights)
+    const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
     if (dist > l.range || dist < 1e-3) continue;
     const Lx = dx / dist, Ly = dy / dist, Lz = dz / dist;
     let att = lightWindow(dist, l.range) / Math.max(dist2, l.radius * l.radius);
@@ -2567,7 +2568,7 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
       att *= ce;
     }
     if (att <= 0) continue;
-    const c = l.color, I = l.intensity;
+    const c = l.color, I = sp ? sp.intensity : l.intensity;
     if (Math.max(c[0], c[1], c[2]) * I * att < 0.002) continue;                                    // (the probe's own floor for a light worth a shadow ray)
     const lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * I * att;
     const tmax = dist - l.radius - 0.02;
