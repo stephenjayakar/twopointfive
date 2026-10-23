@@ -3,8 +3,9 @@
 // What the headless lesson run cannot see: that the bundle boots the level and its script on the frame (game/rails.ts), that the one big line is up with the
 // player's own key on a key cap, that what the mission has not taught yet is locked against a real key, that a hand gets through the two easy rooms, that the
 // next line walks him out to the street in front of the workshop, that the workshop's man is there on the screen, in the picture under the fog on his open doorway, that
-// the authored checkpoint comes back on its step with the level's script running again, and that the squad's key on the side door's ring, the walk round and
-// the key again take the workshop.
+// the authored checkpoint comes back on its step with the level's script running again, and that PLAN MODE is opened there with the pair (a tap of the
+// squad's key alone gives nothing while that step is up), its right button on the side door's ring sends the four, the back key puts it away, and the
+// walk round and the squad's key on the door take the workshop.
 // Then its two menu steps, each put up by hand: the line's caps, the squad's key kept down (the ring), and the digit that gives the order.
 //   PORT=5231 node tools/qa/tut-squad-page.cjs        (a dev server on that port: PORT=5231 bun run tools/serve.ts)
 //   env: QUALITY (default verylow) · OUT (a folder for the pictures; default a temp folder) · SHOTS=0 (no pictures: each is about a minute here)
@@ -35,6 +36,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
         return { fog: !!F.active, drawn: !!m && F.drawn(m), held: !!m?.script, up: !!m && m.state !== 'dead', door: d ? +d.angle.toFixed(2) : null, screen: !!sc && sc[0] > 40 && sc[0] < v.width - 40 && sc[1] > 40 && sc[1] < v.height - 40 }; })(),
       ringOn: (() => { const at = g.lesson.step?.at; if (!at) return false; const v = document.getElementById('view').getBoundingClientRect(), sc = window.__cam.project(at, v.width, v.height, 1); return sc[0] > 20 && sc[0] < v.width - 20 && sc[1] > 20 && sc[1] < v.height - 20; })(),
       set: (() => { const m = g.orders.men('all'); return m.length > 0 && m.every(x => g.orders.of(x)?.arrived); })(),
+      plan: !!g.orders.plan?.up, look: g.orders.plan?.up && g.orders.plan.look ? [+g.orders.plan.look[0].toFixed(1), +g.orders.plan.look[2].toFixed(1)] : null, note: el?.querySelector('.note')?.textContent ?? '', onSide: g.orders.men('all').filter(x => { const A = g.orders.of(x); return A?.order === 'stack' && A.door?.def.name === 'workshop_side'; }).length,
       orders: g.orders.log.length, last: g.orders.log.length ? `${g.orders.log[g.orders.log.length - 1].order} ${g.orders.log[g.orders.log.length - 1].target}` : '', menu: !!window.__orders?.menu, frags: g.player.frags, slot: g.player.slot ?? null, t: +g.time.toFixed(1) }; });
   // (a picture, as tut-page.cjs takes one: the frame is drawn and read back in the page and stood under the HUD as a still)
   const shot = async tag => { if (process.env.SHOTS === '0') return '(no picture asked)'; const f = path.join(OUT, `tut-squad-${tag}.png`);
@@ -110,25 +112,41 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   //      picture under the fog (the page runs the fog of war: a run with it off fails this line, on purpose)
   const out = async () => { for (const p of [[10.85, 0, 17.9], [10.85, 0, 15.2], [12.6, 0, 13.2], VIEW]) await walk(p, 30); return until(x => x.i >= 6, 10); };
   const shown = x => x.shop.up && x.shop.held && Math.abs(x.shop.door) > 1 && x.shop.fog && x.shop.drawn;
-  R = await out(); check(R.i === 6 && R.id === 'side', 'out on the street in front of the workshop: the side door is the step', `step ${R.i + 1} '${R.id}' · "${R.line}" keys [${R.keys}] at ${R.at}`);
+  R = await out(); check(R.i === 6 && R.id === 'mode' && R.keys.join(',') === 'Shift,Q', 'out on the street in front of the workshop: the step asks for plan mode, Shift and the squad\'s key on key caps', `step ${R.i + 1} '${R.id}' · "${R.line}" keys [${R.keys}] at ${R.at}`);
   await run(120); await card(); R = await read();
-  check(cards.some(c => c.h === 'An enemy watching a doorway' && c.closed), 'the side door\'s step opened on its card, and Enter closed it', JSON.stringify(cards));
-  check(shown(R) && R.shop.screen && R.ringOn, "the workshop's man holds his open doorway, is in the picture under the fog, and he and the side door's ring are both on the screen from where the player stands", `${JSON.stringify(R.shop)} · the step's ring on the screen ${R.ringOn}`);
-  log('picture', await shot('6-side'));
-  // (the squad's key on the step's ring: the view eases to keep the ring on the screen, so the cursor is put on it again once it has settled)
-  const order = async () => { await point(SIDE); await run(40); await point(SIDE); await tap('KeyQ'); };
+  check(cards.some(c => c.h === 'An enemy watching a doorway' && c.closed), 'the plan step opened on the doorway\'s card, and Enter closed it', JSON.stringify(cards));
+  check(shown(R) && R.shop.screen && !R.ringOn, "the workshop's man holds his open doorway, is in the picture under the fog and on the screen from where the player stands; the step that asks for the pair has no ring (a ring is where to go, and this is a key pressed where he stands)", `${JSON.stringify(R.shop)} · a ring on the step ${R.ringOn}`);
+  log('picture', await shot('6-mode'));
+  // PLAN MODE BY HAND: the squad's key alone first (the step teaches the pair: the tap gives no order), then Shift held over a tap of it — the first time
+  // with a walk key still down, as a hand that never stopped walking presses it (his sprint is locked for the step, so that is the mode and no sprinting
+  // tap) — the cursor on the next step's ring (the view eases to keep the ring on the screen, so the cursor is put on it again once it has settled), and
+  // the right button
+  const rclick = async () => { await page.mouse.down({ button: 'right' }); await run(2); await page.mouse.up({ button: 'right' }); await run(3); };
+  const planUp = async walk => { if (walk) { await page.keyboard.down(walk); await run(6); } await page.keyboard.down('ShiftLeft'); await run(2); await tap('KeyQ'); await page.keyboard.up('ShiftLeft'); if (walk) await page.keyboard.up(walk); await run(3); return read(); };
+  let tapped = false;
+  const order = async () => {
+    const first = !tapped;
+    if (!tapped) { tapped = true; await point(SIDE); await run(40); await point(SIDE); const n = (await read()).orders; await tap('KeyQ'); const a = await read();
+      check(a.orders === n && a.i === 6 && !a.plan, "a tap of the squad's key alone on the side door: no order goes out, the step stays", `orders ${n} → ${a.orders} · step ${a.i + 1} '${a.id}' · note "${a.note}" · "${a.line}"`); }
+    let a = await planUp(first ? 'KeyD' : null); a = await until(x => x.i >= 7 || x.plan, 3);
+    check(a.plan && a.i === 7 && a.id === 'side' && /Right-click the side door/.test(a.line), `Shift and the squad's key${first ? ', a walk key still down' : ''}: plan mode is up and the next line asks for the right button on the side door`, `plan ${a.plan} · step ${a.i + 1} '${a.id}' · "${a.line}" · the view's point ${JSON.stringify(a.look)} · he is at ${a.at}`);
+    await point(SIDE); await run(40); await point(SIDE); a = await read(); check(a.ringOn, "in plan mode the side door's ring is on the screen from where he stands", `ring on the screen ${a.ringOn} · the view's point ${JSON.stringify(a.look)}`);
+    log('picture', await shot('7-plan')); await rclick(); };
+  const sent = x => x.i >= 8 && x.onSide > 0;
   if (mine) {
-    await order(); const before = await until(x => x.i >= 7, 20);
-    check(before.i >= 7 && /stack door:workshop_side/.test(before.last), "the squad's key on the step's ring: they are sent to the side door", `step ${before.i + 1} '${before.id}' · last order ${before.last}`);
+    await order(); const before = await until(sent, 20);
+    check(sent(before), "plan mode's right button on the step's ring: they are sent to the side door", `step ${before.i + 1} '${before.id}' · ${before.onSide} of the four on a stack up on it · last order ${before.last}`);
     const why = await page.evaluate(k => window.__game.saves.load(window.__game, k), mine.key); await run(90); R = await read();
     check(!why && R.id === 'out' && R.script && R.men === 8 && shown(R), 'the checkpoint put back: its own step, the script running again, eight defenders, the man on his doorway and shown', `was step ${before.i + 1} '${before.id}' → step ${R.i + 1} '${R.id}' at ${R.at} · script ${R.script} · ${R.men} defenders · ${JSON.stringify(R.shop)} ${why || ''}`);
-    R = await out(); check(R.i === 6, 'out to the street again: the side door is the step', `step ${R.i + 1} '${R.id}' at ${R.at}`);
+    R = await out(); check(R.i === 6 && !R.plan, 'out to the street again: the plan step is the step, the mode down', `step ${R.i + 1} '${R.id}' at ${R.at}`);
   }
-  // ---- by hand: the key on the side door, the walk round by the street, the key again
-  await order(); R = await until(x => x.i >= 7, 20); check(R.i >= 7 && /stack door:workshop_side/.test(R.last), 'the key on the side door: the squad is sent to it and the next line is up', `step ${R.i + 1} '${R.id}' · "${R.line}" · last order ${R.last}`);
+  // ---- by hand: plan mode's right button on the side door, the back key, the walk round by the street, the squad's key on the door
+  await order(); R = await until(sent, 20); check(sent(R) && R.plan && /close plan mode/.test(R.line) && R.keys.includes('Tab'), "the right button on the side door: the squad is sent to it and the next line asks for the back key, on a key cap", `step ${R.i + 1} '${R.id}' · "${R.line}" keys [${R.keys}] · ${R.onSide} on the side door · last order ${R.last}`);
+  check(cards.some(c => c.h === 'Plan from where you stand' && c.closed), 'the walk\'s step opened on the card that says the view stays near him, and Enter closed it', JSON.stringify(cards.slice(-2)));
+  await tap('Tab'); R = await read(); check(!R.plan && /^\s*Go around with them\s*$/.test(R.line) && !R.keys.length, 'the back key: plan mode is away and the line only says where to walk', `plan ${R.plan} · "${R.line}" keys [${R.keys}]`);
   for (const p of [[21.4, 0, 12.3], [22.8, 0, 11.6], ALLEY]) await walk(p, 30);
-  R = await until(x => x.i >= 8, 40); check(R.i >= 8 && R.shop.up && R.shop.held, "walked round by the street: in the alley, the man still the script's, on his doorway", `step ${R.i + 1} '${R.id}' at ${R.at} · ${JSON.stringify(R.shop)}`);
-  const took = x => x.men <= 7 && x.i >= 9;   // ('follow', the first menu step, is index 9)
+  R = await until(x => x.i >= 9, 40); check(R.i >= 9 && R.shop.up && R.shop.held, "walked round by the street: in the alley, the man still the script's, on his doorway", `step ${R.i + 1} '${R.id}' at ${R.at} · ${JSON.stringify(R.shop)}`);
+  const took = x => x.men <= 7 && x.i >= 10;   // ('follow', the first menu step, is index 10)
   R = await until(x => x.set, 40); check(R.set, 'the four stand on the side door', `set ${R.set} at ${R.t} s`); await run(30); await point(SIDE); await tap('KeyQ'); R = await until(took, 40); if (!took(R)) { await tap('KeyF'); R = await until(took, 40); }
   check(took(R), 'the key again: in at his back, the workshop is taken', `${R.men} defenders left · step ${R.i + 1} '${R.id}' at ${R.t} s · last order ${R.last}`);
   // ---- the two menu steps, each put up BY HAND (lesson.i set from here: nothing walked or fought to them, and the frame answers the step as it would a
@@ -145,8 +163,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
         const t = await page.evaluate(() => { const t = window.__game.orders.targetUnder(window.__input, window.__cam, document.getElementById('view')); return { kind: t.kind, man: !!t.man }; });
         if (t.kind === 'floor' && !t.man) return true; }
       return false; };
-    R = await setStep(9);
-    check(R.id === 'follow' && /^Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,3' && !/—/.test(R.line), "step 10's line reads Hold Q, 3, both on key caps", `"${R.line}" keys [${R.keys}] · ${R.sum}`);
+    R = await setStep(10);
+    check(R.id === 'follow' && /^Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.join(',') === 'Q,3' && !/—/.test(R.line), "step 11's line reads Hold Q, 3, both on key caps", `"${R.line}" keys [${R.keys}] · ${R.sum}`);
     let floor = await onFloor(), M = await more(); await tap('KeyQ'); let A = await more();
     check(floor && A.n === M.n && !A.menu, "a quick tap of the squad's key gives no order while the step teaches the key held", `floor under the cursor ${floor} · orders ${M.n} → ${A.n} · ${JSON.stringify(A)}`);
     await tap('KeyX'); A = await more();
@@ -155,8 +173,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     check(A.menu && A.ring && !A.man, "the squad's key kept down: the menu is up as a ring, on no man, and stays", JSON.stringify(A));
     await tap('Digit3'); let Z = await more();
     check(Z.n === M.n + 1 && Z.last === 'fallIn' && !Z.menu, '3: fall in is given and the ring is away', `${JSON.stringify(M)} → ${JSON.stringify(Z)}`);
-    R = await setStep(21);
-    check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.slice(0, 2).join(',') === 'Q,2' && !/—/.test(R.line), "step 22's line reads Hold Q … then 2, both on key caps (a third cap is the frame's own words for a tap, still up from the tap this check made)", `"${R.line}" keys [${R.keys}]`);
+    R = await setStep(22);
+    check(R.id === 'back' && /Hold\s*Q/.test(R.line.replace(/\s+/g, ' ')) && R.keys.slice(0, 2).join(',') === 'Q,2' && !/—/.test(R.line), "step 23's line reads Hold Q … then 2, both on key caps (a third cap is the frame's own words for a tap, still up from the tap this check made)", `"${R.line}" keys [${R.keys}]`);
     floor = await onFloor(); M = await more(); await holdQ(); A = await more();
     check(floor && A.menu && A.ring && A.kind === 'floor' && !A.man, 'the key kept down with the cursor on the ground: the ring is up on that place', JSON.stringify(A));
     await tap('Digit2'); Z = await more();

@@ -504,3 +504,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   review found 9 things; mended: the hour, the pool, the colour, the red path's hold on each test, a wrong pointer and the pale wall's measure in the
   skill; said and left: the one-line wall test, the plan and lamp list built again per need. On that build the `leak` need notes 29 of 39 levels
   (four training levels have left the tree). Nothing here was seen on a GPU.
+  CORRECTED the same evening: the cause above is wrong in one thing, and the skill and the need's words said it too. A mission row's own hour is
+  written over the link (`game/rowset.ts rowSettings`; `?rowset=0` is the link as written), so the maintainer's shot of `tut-plan` was MIDDAY and both
+  floodlights were out on the photocell: nobody has seen the two floods wash that yard, and its night has not been drawn. What the pictures carry
+  (the graphics work's stills on the software renderer, the same frame): at midday, the sun 56 degrees up, a pale wash with or without materials; at
+  dusk, 22 degrees, long shadows and walls that hold below white. So in the skill the rule on a low key and the rules on white walls and value steps
+  are the seen ones, "one key light a court" is judgement, and a rule is added in front of them: judge a level's light at the hour its row plays at,
+  and read which lights are lit. The `key` need's line now says that a link opens at the row's hour too. Its measure is as it was.
+

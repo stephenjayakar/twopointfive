@@ -75,10 +75,10 @@ const LEVEL_BASE: Record<string, string> = {
   // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
   'tut-pair.json': '9048a2e01',
 
-  // the plan mission gives him his feet from its first walk step on (that step's `allow` gains `move`: plan mode's view stays near him only where they
-  // are his) and three walk steps between its plans; the gates' view point moved inside the view's reach from the last of them, and the last step lost
-  // its mark and its after line. No box, door, light or prop moved
-  'tut-plan.json': '8b6778b0d',
+  // the plan mission has nobody of the player's on the floor: its frame gives `plan` and a sky seat that holds the mode up, the step that opened the
+  // mode, the three walk steps and the step that called the squad back are out (17 steps), and the gates' view point is back where it was. No box,
+  // door, light or prop moved
+  'tut-plan.json': '1955e5c1e',
 
   // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
   'tut-quiet.json': '87c7cebef',
@@ -91,8 +91,9 @@ const LEVEL_BASE: Record<string, string> = {
   'tut-solo.json': 'bd7b25a26',
 
   // the squad mission: the hall's street window moved to the corner men's line and narrowed, the bags behind the gun over a man's head and longer, the can
-  // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two)
-  'tut-squad.json': '988465e1c',
+  // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two); then its steps at the workshop, where plan
+  // mode is opened and closed (three steps where one was: no box moved)
+  'tut-squad.json': 'bfcd83ace',
 };
 /** WHAT OF A LESSON ITS OWNER MAY CHANGE WITH NO NEW BASE (scenarios.lesson; scene/scenarios.ts LessonData, LessonStep, RailsData): its WORDS, read from
  *  today's file and never held to the base — the lesson's `title`; a step's `line` and the lines that stand in for it (`setupLine`, `ringLine`, `blowLine`,
