@@ -552,10 +552,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   normal by is added back onto the round; such a pixel is never marked as a tilted normal (`common.wgsl lookGeoN` would snap it to a box axis). The
   silhouette, the shadow and every ray keep the twelve flat faces. The snow hook knows a round about y only. On the pass: 19 octagons (drums, tyres, two stoves, the oven), so 57 fewer boxes for a ray to meet.
   A BROKEN WALL TOP (`breakWallTops`): a yard wall (a plain upright box, 3.4 m or longer, with a coping slab of its own length on it) gets one bite
-  where nothing tall stands against it and no lamp hangs: the wall and coping are split at the bite and three cut boxes with slanted tops, each a step off its
+  where nothing tall stands against it and no lamp hangs: the wall and coping are split at the bite and five cut boxes with slanted tops, each a step off its
   neighbour, fill it; the level's snow caps on the coping are cut back to both sides of it; five picture-only lumps lie at the foot. The pieces are `Box.cutOld`
   (512 in the core row's w): on the look page their cut faces take the look's paint as a face of the core's stuff, and the snow lies on the ones
-  that look up. A blast's fresh cut never sets it. A bite's middle stops at 2.0 m and its lowest edge at 1.94 m: no standing eye gains a line, and the
+  that look up. A blast's fresh cut never sets it. A bite's middle stops at 2.0 m and its lowest edge at 1.98 m: no standing eye gains a line, and the
   wall still stands over the 2 m line a sound is carried across (`collision.ts`). On the pass: two bites, both in the
   road wall. New boxes are APPENDED (nothing is removed), so `levelFileOf(level).boxes` is shorter than `level.boxes` on that page.
   Known wrong: what pushes against a box meets the UNCUT box, so a man slides round a drum's square, a hand's width out from the round at its four

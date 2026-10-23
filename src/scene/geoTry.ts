@@ -5,7 +5,7 @@
 //     a regular TWELVE-sided prism (the box's four faces + eight planes: the record's whole room), marked ROUND (Box.cutRound) so the picture shades its sides with
 //     one turning normal; the other three are left in the list (a level file's box indices are names) as specks no pass and no ray meets.
 //   A BROKEN WALL TOP. A yard wall (a long thin box with a coping slab along its top) loses a bite out of its top: the wall is split at the bite, and the gap is
-//     three boxes whose tops are cut on a slant, each at its own height, so the line is ragged and the shadow it throws is too. The coping stops at the break, the
+//     five boxes whose tops are cut on a slant, each at its own height, so the line is ragged and the shadow it throws is too. The coping stops at the break, the
 //     snow lying on it is cut back, and the faces of the break show the wall's core. No bite goes lower than a standing man's eyes.
 // What pushes against a box still meets the UNCUT box: a man slides round the prism's square, a hand's width out from the round at its four corners.
 import { BoxFlag, type Box } from './boxes';
@@ -88,7 +88,7 @@ export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[] = [
     // the wall and its coping, either side of the bite (the first stretch keeps the box's place in the list)
     boxes.push(span(w, s1, u1), span(cp, s1, u1));
     Object.assign(w, span(w, u0, s0)); Object.assign(cp, span(cp, u0, s0));
-    // the bite: three stretches, each a box of the wall's section whose top is one slanted plane — from height ya at ta to yb at tb (t = 0‥1 along the bite),
+    // the bite: five stretches, each a box of the wall's section whose top is one slanted plane — from height ya at ta to yb at tb (t = 0‥1 along the bite),
     // leaning `tz` across the wall. Each starts a step off where its neighbour ended: that is the ragged line
     const at = (t: number) => flip ? s1 - t * W : s0 + t * W;
     const piece = (ta: number, tb: number, ya: number, yb: number, tz: number) => {
@@ -97,9 +97,11 @@ export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[] = [
       const b: Box = { ...w, c, h, cut: [cutPlane(n, n[A] * (ua - c[A]) + (ya - c[1]))], cutCore: [core[0], core[1], core[2]], cutOld: true };
       if (fitCutBox(b)) boxes.push(b);
     };
-    piece(0, 0.42, H - 0.03, H - 0.8 * D, 0.35);
-    piece(0.42, 0.62, H - D, H - 0.85 * D, -0.5);
-    piece(0.62, 1, H - 0.55 * D, H - 0.08 * D, 0.25);
+    piece(0, 0.22, H - 0.03, H - 0.45 * D, 0.12);
+    piece(0.22, 0.4, H - 0.6 * D, H - 0.9 * D, -0.18);
+    piece(0.4, 0.58, H - D, H - 0.82 * D, 0.2);
+    piece(0.58, 0.78, H - 0.62 * D, H - 0.4 * D, -0.12);
+    piece(0.78, 1, H - 0.22 * D, H - 0.05 * D, 0.1);
     // the snow lying on the coping (the level's own cap boxes) is cut back to the break
     for (let i = 0; i < n0; i++) {
       const o = boxes[i];
