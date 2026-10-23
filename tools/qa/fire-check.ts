@@ -138,7 +138,10 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
       verdict(B.sw && mine(B).length === 0, 'smoke — … and with no solver drawing, no source at all', `${mine(B).length} sources`);
       // … and the book of the smoke is the host's (fire.ts FireShown, on the engine): the game that smoked for twelve seconds and the one nothing drew are the same game
       { const RB = await import(`${ROOT}/src/game/rollback.ts`); B.step(6 * 60);
-        const all: string[] = RB.stateDiff(A.g, B.g, 64), own = all.filter(d => d.startsWith('fire.')), cut = all.some(d => d.startsWith('(the shapes part')) || all.length >= 64, P = fireShown(A.g), Q = fireShown(B.g);
+        const all: string[] = RB.stateDiff(A.g, B.g, 64, false, true), own = all.filter(d => d.startsWith('fire.')), cut = all.some(d => d.startsWith('(the shapes part')) || all.length >= 64, P = fireShown(A.g), Q = fireShown(B.g);
+        // (the two games stand in ONE process: compared by their OWN state, stateDiff's fifth word, without the modules' variables both share. The compare walks on
+        //  past a value that differs and past a shape that holds nothing new; where the two walks fall out of step it says so in a '(the shapes part here …' line and
+        //  nothing after is compared — read here as NOT PROVEN, and so is a list cut at its 64 rows)
         // (what the fire writes outside its own table, asked by name: the lamp, its place, what the steady readers are told, the coals. Another module's own word for the solver is its own: named, not judged)
         const la = A.t.light, lb = B.t.light, ba = A.t.boxes.length ? A.g.engine.world.statics[A.t.boxes[0]] : null, bb = B.t.boxes.length ? B.g.engine.world.statics[B.t.boxes[0]] : null;
         const lamp = la.intensity === lb.intensity && la.pos.every((v: number, i: number) => v === lb.pos[i]) && la.steady?.intensity === lb.steady?.intensity && (!ba || !bb || ba.emissive.every((v: number, i: number) => v === bb.emissive[i]));
