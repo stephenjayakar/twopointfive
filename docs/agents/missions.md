@@ -1832,8 +1832,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pattern where a rule changes a key ('press [Space] … to grab him' is the held left click under `STALK.only`; the knife's lines are the knockout's under
   `CLOSE.noKnife`; `docs/agents/stealth.md`). A line reworded in a level could keep naming the old key and nothing would say so. So `lesson-check` reads
   every line, card, `noTap` and after-line of a level through `lessonLine` with both rules on and fails on one that still names the knife or a key to grab.
+  The reading is by sentence (`namesOld`): the knife by any of its names (knife, knives, blade, stab), and a word for the grab (grab, take hold, choke,
+  seize) with `[Space]`, `[E]` or the word Space in the same sentence, the key before the word or after it; a card's title is read as well. A line of its
+  own at the top of the check holds the reading to six lines it must catch ('Grab him with [Space]', 'your blade') and four it must leave alone (a held
+  click, 'cut the lights', a key in the next sentence). Before that it knew only 'knife' and '[Space] … to grab', and a reworded line passed it.
   No switch (a check, no rule of play). `LESSON_BREAK=words` leaves the two rules off and must fail on a level that teaches the grab: it fails on
-  `tut-quiet` (four) and `tut-pair` (two) and passes `tut-solo`, which teaches none. Measured: `lesson-check` ALL PASS (68) on FROZEN and on SHIPPED. A new
+  `tut-quiet` and `tut-pair` and passes `tut-solo`, which teaches none. Measured: `lesson-check` ALL PASS (69) on FROZEN and on SHIPPED. A new
   pattern in `lessonLine` wants its own words added to that line. STILL OPEN, the rails gate's (mine): with empty hands the left button is let through
   wherever `use` is allowed and a grab row is offered, also with a man in the arm; under `?noknife=0` that is a knife before the step that teaches it.
   The page as it opens has no knife, so default play is not touched. Shutting it is a rule on the rails and wants its own switch and `rails-check` line.
