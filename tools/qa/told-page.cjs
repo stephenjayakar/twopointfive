@@ -74,9 +74,9 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
             for (const [dx, dz] of [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2], [0.9, 0.9], [-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9]]) { const p = [hp[0] + dx, 0, hp[2] + dz]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.5, p[2]], [hp[0], 1.5, hp[2]])) { near = p; break; } }
             const sight = () => { const o = { seen: false, lost: false, marks: 0, dom: 0, text: '', opacity: '' }; g.teleportPlayer(near); window.__runFrames(20, 1 / 60, [], false); o.seen = g.fogOfWar.seen(h); g.teleportPlayer(start); g.spectate = g.guards.indexOf(h); window.__runFrames(60, 1 / 60, [], false); o.lost = g.fogOfWar.hidden(h);
               o.marks = g.fogOfWar.lastSeen().length; const els = [...document.querySelectorAll('.marker.lastseen')].filter(e => e.style.display !== 'none'); o.dom = els.length; o.text = els[0]?.textContent ?? ''; o.opacity = els[0]?.style.opacity ?? ''; return o; };
-            if (near) { Object.assign(out, sight());
-              // …and the same sighting with the lever put on Bare in the page (a boot on the software adapter is minutes: one load serves both rungs)
-              if (K && K.TOLD && K.TOLD.on) { const was = K.TOLD.rung; K.TOLD.rung = 'bare'; out.bare = sight(); K.TOLD.rung = was; } } }
+            // the lever put on Bare in the page first (a boot on the software adapter is minutes: one load serves both rungs), then the link's own rung, so the still is of the mark
+            if (near) { if (K && K.TOLD && K.TOLD.on) { const was = K.TOLD.rung; K.TOLD.rung = 'bare'; out.bare = sight(); K.TOLD.rung = was; }
+              Object.assign(out, sight()); } }
           out.time = +g.time.toFixed(2); return out; });
         if (shot) await pg.screenshot({ path: path.join(outDir, shot) });
       } catch (e) { why = String(e).slice(0, 300); }
