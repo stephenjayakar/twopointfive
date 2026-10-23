@@ -1033,7 +1033,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The squad reaches you, and the quick key says why** (`src/game/squadnet.ts`, table `SQUADNET`, one `SquadNet` on the Game as `game.squadNet`;
   drawn by `src/ui/bubbles.ts`; Tab ▸ 'Squad net'). The maintainer picked it from the AI legibility doc: "The squad reaches you, and Q says why.
   Off-screen teammate lines arrive near you with a radio click, a man down has its own sound, the Q row says 'Bang and clear. Nobody's been in
-  there.', and 'clear' means clear." Three rules from that pick and a fourth found while building it, a switch each, all ON in the page and OFF in the
+  there.', and 'clear' means clear." Three rules from that pick, a fourth found while building it and a fifth from his first play note, a switch each, all ON in the page and OFF in the
   module and on the frozen stand.
   FAR LINES (`SQUADNET.on`, `?squadnet=0`, `TPS_SQUADNET=1`): a bubble was drawn only over a head on the screen, so a teammate's line said two
   rooms off was said to nobody. With the rule his bubble is drawn NEAR YOU (`SQUADNET.near` × the view's shorter side from you, toward where he
@@ -1046,6 +1046,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   writes a `Guard.bubble`: the run with it on is the run with it off by digest (the check holds it). A man already down when a run starts or a
   checkpoint loads is not called; a roster stood up again under the same names is. NOT DONE: a line said on the screen whose man the camera
   then leaves moves to the near place with no click; a cue's own bubble (`cues.aside`) on a far teammate is drawn near and does not click.
+  AT THE EDGE (`SQUADNET.edge`, `?netedge=0`, `TPS_NETEDGE=1`): his note on playing the first rule, "the off screen 'red two: moving' is nice,
+  but it should be more towards the edge of the screen". `squadnet.ts netPlace()` is the one place `bubbles.ts` asks where a far line goes:
+  with the rule, where the straight way from you (the middle of the view while you are off it) to the man leaves the view, `SQUADNET.edgeIn`
+  (0.04 of the view's shorter side, a slider under Tab ▸ 'Squad net') inside the border with the line's own box kept whole, or at him where
+  he is inside that; off, `near` out from you and up a row from a taken one, as it was. Where you stand out by the border yourself the way is
+  laid from a point 0.15 of the shorter side further in, so a man past your border does not put the line on you and it does not jump as his
+  bearing crosses straight up. A spot that lies on something moves ALONG THE BORDER it is at, the nearest free place first: up or down a row
+  at a side border; at the top or the bottom a row or two in (two men off the same way read as a list), then sideways. What it keeps clear
+  of: the far lines already drawn, the HUD's cards, and with the rule your own figure (a box about it) and the objective's mark (its diamond
+  and metres, read off the mark's own element). A teammate behind the eye's plane (far down the screen with the view zoomed in) was dropped
+  with no line though the net had clicked: with the rule he is called at the edge his way (off: dropped, as it was). The page's alone: no run
+  reads it. A man-down row off the screen goes by it too. NOT SEEN: any of it on a GPU or in play; the objective's mark and a far line
+  together; a line for a man behind the eye; a view zoomed by the text size setting. A line whose edge place is under a wide card can end
+  several rows or a line's width from where the way to him leaves the view.
   WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`): `squadnet.ts whyWords(pick)` gives the reason when the autopilot's pick on a door the men wait
   on is not a plain open: at the end of the quick key's row (`orders.ts hud()`, one `autoPick` a frame for the words and the reason) and in the
   answer of the man who takes the order (`GiveOpts.ack`, in place of the row's own; `autoQuick` and a plan's `quickFor` both pass it):
@@ -1073,7 +1087,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   head it was merged on). The pre-existing named call has no such guard: a response team that ends an entry in a listed room of a room clear
   would call it by name, as it did before any of this (not seen, not changed here).
   CHECK `bun run tools/qa/squadnet-check.ts` (also `probes.ts squadnet`: why · clear · end · net · off; `end` runs under `doortools` too;
-  `SQUADNET_BREAK=1` fails all five), both stands, the room clear on the office with four, seeds 5, 7 and 11, and the response team on seed
+  `SQUADNET_BREAK=1` fails all five; `net` holds where a far line is put by `netPlace`: eight ways out, you out by the border, a spot under a card or on another line, 960 placings none off the view), both stands, the room clear on the office with four, seeds 5, 7 and 11, and the response team on seed
   41. It reads what a man SAID off his bubble, a frame at a time. MEASURED on the office (the squad of four, the quick key's own pick, the
   defenders of the room beyond left as dealt, every switch on): entries into the room clear's four listed rooms, seeds 1–4 on the shipped
   stand, 16 of 16 called by name (all `clear`; floor unseen 0 or 1 cell, under the bar); entries into the conference room, which is on no
@@ -1085,7 +1099,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   no-name call. ON THE PAGE (`PORT=<port> node
   tools/qa/squadnet-look.cjs <dir>`, software adapter): the far lines and the down row are read off the HUD's own elements with where they lie
   against you and against the man; `ENTRY=1` in front of it drives an entry into the conference room and read `↑ Red Two: room clear.` as a
-  far line near you (the lead off the screen), counted once, no page or console errors. Never seen on a GPU, never played, never heard: the click's level and pitch and the pitched-down click for a
+  far line near you (the lead off the screen; read before the edge rule), counted once, no page or console errors. THE EDGE, read the same way
+  on a 960 by 540 view: with the squad off the bottom of the view two lines sat at the bottom edge, one a row in from the other (712, 494 and
+  673, 468; rule off 655, 386 and 638, 419, about 100 px from you), and the man-down row at 679, 494 (off: 658, 425); with the squad off the
+  bottom left corner, where the kit card stands, the two sat side by side on the bottom edge to the right of the card (303, 494 and 489, 494;
+  off 535, 333 and 533, 303). No page or console errors either way. Never seen on a GPU, never played, never heard: the click's level and pitch and the pitched-down click for a
   man down are guesses. The words are lower case like the rows and answers beside them. OPEN: where the reason sits on the quick key's row is
   the commanding work's to settle (its flat wheel and the corner panel draw that row); the reason for a charge is not on the HUD's line (the
   hint does not ask the lock, so it shows the open it will not do).
