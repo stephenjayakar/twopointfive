@@ -24,6 +24,7 @@ import { SideMap } from '../math/side';
 import { Vec3, wrapAngle, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import { CLOSE, closeAt, closeLive, closeSubject, closeClear } from './close';
+import { holdPolish } from './character';
 import { samStaggered } from './samstun';
 import { canStand } from './player';
 
@@ -67,17 +68,19 @@ export const STALK = {
    *  nothing, as before. The page: ?stalkcorner=0. */
   corner: true, cornerM: 1.35, cornerDeg: 110,
   /** BROKEN OFF BY THE MAN (stalkStep): `jolt` = how much of the animator's duck (character.ts flinchFrom, soft) Sam gives when the man turns off his back with
-   *  the stalk on — the whole of it when the man is onto him. 0 = none: the stalk ends and he sinks back into the crouch, as it was.
+   *  the stalk on AND comes on round to face him (Sam inside `joltFace`° of his nose within `joltSecs` s: a patrol's quarter turn is not that) — the whole of it,
+   *  at once, when the man is onto him. 0 = none: the stalk ends and he sinks back into the crouch, as it was. joltFace 180 = at any turn that ends the stalk.
    *  THE WAIT SHOWS (closeTick): on the wall with the button held he coils — sunk `cornerCoil` of the way into the crouch, the lead hand tucked toward the man at `cornerReach[0]`
    *  of the grab's reach, growing to `cornerReach[1]` as the nearest man he could take comes from `cornerSee` m to `cornerM`; he comes up out of the coil over
    *  `cornerRise` s of the step in. `cornerShow` off = the wall stance alone, as it was */
-  jolt: 0.6, cornerShow: true, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,
+  jolt: 0.6, joltFace: 50, joltSecs: 0.6, cornerShow: true, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,
 };
 /** tallies for the checks and the page's hook (begun = presses that took a man; out = why each ended without a grab) */
 export const STALK_STATS = { begun: 0, grabs: 0, corner: 0, out: { let: 0, far: 0, turned: 0, wall: 0, him: 0, hands: 0, keys: 0 }, last: '' };
 type Why = keyof typeof STALK_STATS.out;
 
-interface St { on: Guard | null; grab: Guard | null; t: number; /** on a wall with the button held and nothing in the way of a grab: he is lying in wait */ wait?: boolean; /** the button went down and has not come up or taken a man since: a stalk may begin */ armed?: boolean }
+interface St { on: Guard | null; grab: Guard | null; t: number; /** on a wall with the button held and nothing in the way of a grab: he is lying in wait */ wait?: boolean; /** the button went down and has not come up or taken a man since: a stalk may begin */ armed?: boolean;
+  /** the man who broke a stalk off by turning, and when: if he comes round to FACE Sam inside STALK.joltSecs, Sam ducks */ broke?: { gd: Guard; t: number; /** where Sam stood */ at: Vec3 } | null }
 const STATE = new SideMap<Game, St>('stalk.STATE');
 function stateOf(g: Game): St { let s = STATE.get(g); if (!s) { s = { on: null, grab: null, t: -1 }; STATE.set(g, s); } return s; }
 function end(S: St, why: Why) { if (S.on) { S.armed = false; S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } }
@@ -127,12 +130,31 @@ function cornerMan(g: Game): Guard | null {
   }
   return best;
 }
+/** the animator's SOFT duck (character.ts flinchFrom): it leaves a hand's errand alone — a pistol he draws the next instant keeps its draw and its click */
+function duck(g: Game, gd: Guard, k: number) { const p = g.player.char.pos; g.player.char.anim.flinchFrom([gd.char.pos[0] - p[0], 0, gd.char.pos[2] - p[2]], k, true); }
+/** the man who turned off his back with a stalk on (St.broke): if HE comes on round until where Sam stood is inside `joltFace` degrees of his nose — or he is
+ *  onto him — inside `joltSecs`, Sam ducks: part of the duck for the turn, the whole for a man onto him. A man who only turned a quarter (a patrol's corner)
+ *  never gets there. Only while Sam's hands are still empty and idle, nobody else is being stalked, he has not gone a pace from where he was caught, and
+ *  nothing solid is between them. */
+function brokeDuck(g: Game, S: St) {
+  const b = S.broke; if (!b) return; const p = g.player.char.pos;
+  if (g.time - b.t > STALK.joltSecs || S.on || !free(g) || !closeSubject(g, b.gd) || Math.hypot(p[0] - b.at[0], p[2] - b.at[2]) > 1) { S.broke = null; return; }
+  if (!closeClear(g, b.gd.char.pos, p)) return;
+  if (b.gd.state === 'alert') { duck(g, b.gd, 1); S.broke = null; }
+  else if (Math.abs(bearingOf(b.gd, b.at)) <= STALK.joltFace * Math.PI / 180) { duck(g, b.gd, STALK.jolt); S.broke = null; }
+}
+/** THE POLISH, UP OR DOWN TOGETHER (the page's ?stalkpolish=0, and journal.ts for a recording from before the fourth pass): the turn through the step, the longer
+ *  long step, the wait's pose at a corner, the duck when the man turns round — and the hold's share (character.ts holdPolish). Up = the tables' own numbers. */
+const POLISH_UP = { catchLong: STALK.catchLong, jolt: STALK.jolt } as const;   // (this file's own table, as the module has it)
+export function stalkPolish(up: boolean) {
+  STALK.turnIn = STALK.cornerShow = up; STALK.catchLong = up ? POLISH_UP.catchLong : 1; STALK.jolt = up ? POLISH_UP.jolt : 0; holdPolish(up);
+}
 /** what the stalk asks of his feet this frame: the unit direction, the speed, and the point he faces (the man's chest) */
 export interface StalkMove { mx: number; mz: number; pace: number; at: Vec3 }
 /** ONCE A FRAME from updatePlayer, before his keys become a step: the left button held / pressed this frame, and whether a move key of his own is down.
  *  null = his feet and his aim are his own. */
 export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boolean): StalkMove | null {
-  const S = stateOf(g); S.t = g.time; S.grab = null; S.wait = false;
+  const S = stateOf(g); S.t = g.time; S.grab = null; S.wait = false; brokeDuck(g, S);
   if (!free(g)) { end(S, 'hands'); if (lmb || lmbHit) { S.wait = cornerGate(g); const gd = cornerMan(g); if (gd) { S.grab = gd; STALK_STATS.grabs++; STALK_STATS.corner++; STALK_STATS.last = 'corner'; } } return null; }
   if (lmbHit) S.armed = true; else if (!lmb) S.armed = false;
   // (a press made with a move key still down waits for the key: the button held on him begins it the frame his own feet stop — once a press)
@@ -142,9 +164,9 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
   if (!lmb && !lmbHit) { end(S, 'let'); return null; }
   if (ownKeys) { end(S, 'keys'); return null; }
   const p = g.player.char.pos, why = outOf(g, gd, p, false);
-  if (why) {   // (STALK.jolt: broken off by the man himself — he has turned off his back, or he is onto him — Sam shrinks back off him: the animator's SOFT duck, which leaves a hand's errand alone (a pistol he draws the next instant keeps its draw and its click); not on the frame a stalk began)
-    if (had === gd && STALK.jolt > 0 && (why === 'turned' || why === 'him')) g.player.char.anim.flinchFrom([gd.char.pos[0] - p[0], 0, gd.char.pos[2] - p[2]], why === 'him' ? 1 : STALK.jolt, true);
-    end(S, why); return null; }
+  if (why) {   // (STALK.jolt: broken off by the man himself, Sam shrinks back off him — at once when the man is onto him, and when he has turned off his back only if he comes on round to face Sam: brokeDuck; not on the frame a stalk began)
+    if (had === gd && STALK.jolt > 0) { if (why === 'him') duck(g, gd, 1); else if (why === 'turned') S.broke = { gd, t: g.time, at: [p[0], p[1], p[2]] }; }
+    end(S, why); brokeDuck(g, S); return null; }
   const gp = gd.char.pos, at: Vec3 = [gp[0], gp[1] + 1.2, gp[2]], dist = Math.hypot(p[0] - gp[0], p[2] - gp[2]);
   if (dist < STALK.grabM) {
     const o = closeAt(g, gd, p);
@@ -187,7 +209,7 @@ export function stalkGrab(g: Game): Guard | null { const S = STATE.get(g); retur
 /** the man being stalked right now, for the picture and the checks */
 export function stalkOn(g: Game): Guard | null { return STATE.get(g)?.on ?? null; }
 /** a reset of the floor's men (game.ts resetGuards), a load: nothing is stalked */
-export function stalkReset(g: Game) { const S = STATE.get(g); if (S) { S.on = null; S.grab = null; S.t = -1; S.wait = false; S.armed = false; } }
+export function stalkReset(g: Game) { const S = STATE.get(g); if (S) { S.on = null; S.grab = null; S.t = -1; S.wait = false; S.armed = false; S.broke = null; } }
 
 /** the step in's ease (STALK.catchSecs), 0‥1 → 0‥1: he is off the mark over the first `P` of it (a quadratic, so the first frame is no snap) and from there
  *  it is a cubic ease-out, joined with one slope: some three fifths of the way inside a third of the time, landing gently */

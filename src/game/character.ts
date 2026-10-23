@@ -266,6 +266,13 @@ const WHIP_WIND = 0.36, WHIP_STRIKE = 0.42, WHIP_THRU = 0.14;
 const SWAP_RATE = 14;
 /** which of takedown.ts's hold halves the two layers show where the pose itself does not say (HoldPose / HeldPose .kill / .beats, which win): takedownTick writes
  *  them once a frame — a frame late, and one table for every Game — the kill from the hold as a move of its own · the choke's beats. Off = that phase drawn as it was. */
+/** the stalk's polish in the hold's table (the fourth pass: the shaped way in, the spring before the lunge, the sway, the room between the heads, the shallower
+ *  arch), put DOWN — the numbers a recording from before it gets (journal.ts) and the page's ?stalkpolish=0 (stalk.ts stalkPolish) — or back UP to the table's own */
+const HOLD_POLISH_UP = { wayShape: HOLD.wayShape, dip: HOLD.lunge.dip, back: HOLD.lunge.back, m: HOLD.sway.m, twist: HOLD.sway.twist, side: HOLD.apart.side, tip: HOLD.apart.tip, arch: HOLD.yank.arch };
+export function holdPolish(up: boolean) {
+  const U = HOLD_POLISH_UP; HOLD.wayShape = up && U.wayShape; HOLD.lunge.dip = up ? U.dip : 0; HOLD.lunge.back = up ? U.back : 0; HOLD.sway.m = up ? U.m : 0; HOLD.sway.twist = up ? U.twist : 0;
+  HOLD.apart.side = up ? U.side : 0; HOLD.apart.tip = up ? U.tip : 0; HOLD.yank.arch = up ? U.arch : -11;
+}
 export const HOLD_SHOW = { kill: false, beats: false };
 rollbackRoot('character.HOLD_SHOW', HOLD_SHOW);   // (written by takedownTick once a frame, read by the hold's layers on the next)
 /** the kill's eased clock (hdKc / heKc): after the hold's own by a spring this stiff, its target led by the spring's lag so the cut lands where HOLD.kill.hit

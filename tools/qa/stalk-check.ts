@@ -122,19 +122,22 @@ async function out() {
   }
   verdict(ok, 'each of five things ends the stalk on the frame it happens, and a button merely still down neither grabs him nor takes him again', rows.join('\n    '));
   // STALK.jolt: broken off by the man, Sam shrinks back off him (the animator's soft duck) — with the MOVES pass up, and nothing with it down (the frozen stand's own)
-  const duck = async (moves: number, how: (C: Ctx) => void, press = true) => {
+  const duck = async (moves: number, how: (C: Ctx) => void, press = true, later?: [number, (C: Ctx) => void]) => {
     const C = await world(true, SEEDS[0], 2.8, 0), an = C.g.player.char.anim; MOVES.on = moves; if (BREAK) STALK.jolt = 0;   // (every stand-up writes the pass again)
-    if (press) C.press(); for (let i = 0; i < 30; i++) C.step(); how(C); let shown = 0, hands = false, hit = false;
+    if (press) C.press(); for (let i = 0; i < 30; i++) C.step(); const on0 = stalkOn(C.g) === C.A; how(C); let shown = 0, hands = false, hit = false, early = 0;
+    if (later) { for (let i = 0; i < later[0]; i++) { C.step(); early = Math.max(early, an.flinchShown); } later[1](C); }   // (…and what he does some frames on)
     for (let i = 0; i < 12; i++) { C.step(); shown = Math.max(shown, an.flinchShown); hands ||= an.startleShown > 0; hit ||= (an as any).hitT >= 0 && (an as any).hitT < 0.2; }
-    return { shown, hands, hit };
+    return { shown, hands, hit, early, out: on0 && stalkOn(C.g) === null };
   };
   const mv = MOVES.on, jolt = STALK.jolt;
   try {
-    const turn = (C: Ctx) => { C.A.char.bodyYaw = C.A.char.aimYaw = -EAST; }, onto = (C: Ctx) => { C.A.state = 'alert'; };
-    const T = await duck(1, turn), H = await duck(1, onto), F = await duck(1, C => { C.A.char.pos[0] += 5; }), N = await duck(1, turn, false), D = await duck(0, turn);
-    verdict(T.shown > 0.1 && H.shown > T.shown && !T.hands && !H.hands && F.shown === 0 && N.shown === 0 && D.shown === 0 && !D.hit,
-      'with the stalk on, the man who turns off his back makes Sam duck inside a fifth of a second and the man who is onto him more — the soft duck, never the start that takes his hands; a man who is merely far gives none, nor does the same turn with no stalk on; with the MOVES pass down nothing shows, not the old hit twitch either',
-      `the duck shown: he turns ${f2(T.shown)} · he is onto Sam ${f2(H.shown)} · he is five metres off ${f2(F.shown)} · he turns, the button never pressed ${f2(N.shown)} · MOVES down ${f2(D.shown)}, a hit twitch ${D.hit} · a start that takes the hands ${T.hands || H.hands}`);
+    const turn = (C: Ctx) => { C.A.char.bodyYaw = C.A.char.aimYaw = -EAST; }, onto = (C: Ctx) => { C.A.state = 'alert'; }, quarter = (C: Ctx) => { C.A.char.bodyYaw = C.A.char.aimYaw = 0; };   // (a quarter turn: Sam at his shoulder — the stalk ends, he is not faced)
+    const T = await duck(1, turn), H = await duck(1, onto), F = await duck(1, C => { C.A.char.pos[0] += 5; }), N = await duck(1, turn, false), D = await duck(0, turn), Q = await duck(1, quarter);
+    const L = await duck(1, quarter, true, [12, turn]), X = await duck(1, quarter, true, [Math.ceil(STALK.joltSecs * 60) + 6, turn]), O = await duck(1, quarter, true, [12, onto]);   // (the quarter turn, then: round to face him a fifth of a second on · the same after joltSecs · onto him a fifth of a second on)
+    const W2 = await duck(1, quarter, true, [12, C => { C.g.col.solidBlocked = () => true; turn(C); }]);   // (…round to face him with something solid between them)
+    verdict(T.shown > 0.1 && H.shown > T.shown && !T.hands && !H.hands && F.shown === 0 && N.shown === 0 && D.shown === 0 && !D.hit && Q.shown === 0 && Q.out && L.early === 0 && L.shown > 0.1 && X.shown === 0 && O.shown > L.shown && W2.shown === 0,
+      'with the stalk on, the man who turns round to face him makes Sam duck inside a fifth of a second and the man who is onto him more — the soft duck, never the start that takes his hands; a quarter turn ends the stalk and gives none — until he comes on round to face him inside joltSecs (the duck), or is onto him (the whole of it), and not after joltSecs nor with something solid between them; a man who is merely far gives none, nor does the same turn with no stalk on; with the MOVES pass down nothing shows, not the old hit twitch either',
+      `the duck shown: he turns to face him ${f2(T.shown)} · a quarter turn ${f2(Q.shown)} (the stalk ended ${Q.out}), then round to face him ${f2(L.shown)} (before that ${f2(L.early)}), the same too late ${f2(X.shown)}, onto him ${f2(O.shown)}, a wall between ${f2(W2.shown)} · he is onto Sam ${f2(H.shown)} · he is five metres off ${f2(F.shown)} · he turns, the button never pressed ${f2(N.shown)} · MOVES down ${f2(D.shown)}, a hit twitch ${D.hit} · a start that takes the hands ${T.hands || H.hands}`);
   } finally { MOVES.on = mv; STALK.jolt = jolt; }
 }
 async function tell() {
@@ -244,17 +247,21 @@ async function harness() {
   const W: any = await quiet(() => standUp()), stood = STALK.on, foundOk = !shipped || word !== undefined || found === want;
   const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))), had = !!snap.tables.STALK && 'on' in snap.tables.STALK;
   STALK.on = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); STALK.on = false; JR.applyKnobs(W.game, snapUp); const kept = STALK.on;
-  const before = JSON.parse(JSON.stringify(snapUp)); if (!BREAK) { for (const k of ['jolt', 'turnIn', 'cornerShow', 'catchLong']) delete before.tables.STALK[k]; delete before.tables.HOLD.wayShape; }   // (the break: the keys left in, so nothing is put down)
-  JR.applyKnobs(W.game, before); const pass = { jolt: STALK.jolt, turnIn: STALK.turnIn, show: STALK.cornerShow, long: STALK.catchLong, way: HOLD.wayShape, dip: HOLD.lunge.dip, apart: HOLD.apart.side }; JR.applyKnobs(W.game, snapUp);
-  const back = STALK.jolt > 0 && STALK.turnIn === true && HOLD.wayShape === true && HOLD.lunge.dip > 0;
+  const before = JSON.parse(JSON.stringify(snapUp)); if (!BREAK) { for (const k of ['jolt', 'joltFace', 'turnIn', 'cornerShow', 'catchLong']) delete before.tables.STALK[k]; delete before.tables.HOLD.wayShape; }   // (the break: the keys left in, so nothing is put down)
+  const vals = () => ({ jolt: STALK.jolt, turnIn: STALK.turnIn, show: STALK.cornerShow, long: STALK.catchLong, way: HOLD.wayShape, dip: HOLD.lunge.dip, back: HOLD.lunge.back, m: HOLD.sway.m, twist: HOLD.sway.twist, side: HOLD.apart.side, tip: HOLD.apart.tip, arch: HOLD.yank.arch });
+  JR.applyKnobs(W.game, before); const pass = vals(), face = STALK.joltFace; JR.applyKnobs(W.game, snapUp);
+  const mid = JSON.parse(JSON.stringify(snapUp)); if (!BREAK) delete mid.tables.STALK.joltFace; JR.applyKnobs(W.game, mid); const face5 = STALK.joltFace, jolt5 = STALK.jolt; JR.applyKnobs(W.game, snapUp);   // (a recording of the fifth pass: the duck, at any turn)
+  PR.pageSwitches(new URLSearchParams(BREAK ? '' : 'stalkpolish=0')); const pol = vals(); PR.pageSwitches(new URLSearchParams('')); const plain = vals(); JR.applyKnobs(W.game, snapUp);   // (the word, then a plain address after it: by the same function, both ways)
+  const back = STALK.jolt > 0 && STALK.joltFace < 180 && STALK.turnIn === true && HOLD.wayShape === true && HOLD.lunge.dip > 0;
   delete snap.tables.STALK; STALK.on = true; JR.applyKnobs(W.game, snap); const old = STALK.on;
   const read = (q: string) => { STALK.on = !STALK.on; PR.pageSwitches(new URLSearchParams(q)); return STALK.on; }, plainQ = read(''), offQ = read('stalk=0');
   verdict((STAND_ENV as string[]).includes('TPS_STALK') && PR.FROZEN_HOLDS['STALK.on'] === 'TPS_STALK=1' && stood === want && foundOk && had && kept === true && old === false && plainQ === true && offQ === false,
     'the key is a row of the two stands\' list with its word, stands up on the shipped stand and down on the frozen one, rides a recording\'s tables, a recording from before it replays with it down, and the page\'s boot writes it on for a plain address and off for ?stalk=0',
     `STAND_ENV ${(STAND_ENV as string[]).includes('TPS_STALK')} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['STALK.on']} · found ${found}, stood up ${stood}, wanted ${want} · in the tables ${had} · recorded up ${kept} · an old recording ${old} · plain ${plainQ} · ?stalk=0 ${offQ}`);
-  verdict((pass.jolt === 0 && pass.turnIn === false && pass.show === false && pass.long === 1 && pass.way === false && pass.dip === 0 && pass.apart === 0) && back,
-    'a recording from before the fourth and fifth passes (no jolt, turnIn, cornerShow or catchLong in its stalk table, no wayShape in the hold\'s) replays with every one of them down, and one made with them replays with them up',
-    `from before: jolt ${pass.jolt} · turnIn ${pass.turnIn} · cornerShow ${pass.show} · catchLong ${pass.long} · wayShape ${pass.way} · the dip ${pass.dip} · apart ${pass.apart} · from after: all up ${back}`);
+  verdict(face5 === 180 && jolt5 > 0 && face === 180 && JSON.stringify(pol) === JSON.stringify(pass) && pass.jolt === 0 && pass.turnIn === false && pass.show === false && pass.long === 1 && pass.way === false && pass.dip === 0 && pass.side === 0 && pass.arch === -11
+    && plain.jolt > 0 && plain.turnIn === true && plain.way === true && plain.dip > 0 && plain.side > 0 && back,
+    'a recording from before the fourth and fifth passes (no jolt, turnIn, cornerShow or catchLong in its stalk table, no wayShape in the hold\'s) replays with every one of them down, one of the fifth (the duck, no joltFace) replays with the duck at any turn, one made with them all replays with them up, the page\'s ?stalkpolish=0 puts the same twelve numbers down as the first, and a plain address after it puts them up again',
+    `from before: ${JSON.stringify(pass)}, joltFace ${face} · of the fifth: jolt ${jolt5}, joltFace ${face5} · from after: all up ${back} · ?stalkpolish=0: ${JSON.stringify(pol) === JSON.stringify(pass) ? 'the same twelve' : JSON.stringify(pol)} · a plain address after it: jolt ${plain.jolt}, turnIn ${plain.turnIn}, wayShape ${plain.way}, the dip ${plain.dip}`);
 }
 
 /** the whole card (probes.ts 'stalk'): true = every check passed. The switches are put back as they were found. */

@@ -1035,10 +1035,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the frozen stand, where the MOVES pass is down and the soft duck is nothing (not the old hit twitch either). A recording from before
   the key replays with `jolt` 0 (journal.ts). CHECK: stalk-check `out` has the line on both paths of the MOVES pass and `harness` one for
   the journal's clauses of this pass and the fourth; `STALK_BREAK=1` fails both, on both stands; one seed. The lab has a row for `jolt`.
-  Known: a quiet man's routine quarter turn also ends the stalk as `turned` and gets the duck (he has you at his shoulder); say if that
-  reads as a false alarm. Seen on CPU stills only (`close-stills.ts --scene stalk-turn`), never on a GPU, never played. STILL OPEN from the
+  A quiet man's routine quarter turn got the duck too: the sixth pass, below, mends that. Seen on CPU stills only (`close-stills.ts --scene stalk-turn`), never on a GPU, never played. STILL OPEN from the
   tutorial frame: under `?noknife=0` on a tutorial a left click on a man in reach or in the arm is the knife before the step that teaches
   it (rails.ts lets the button through for the grab); the mend wants its own switch, journal key and rails-check line, so it is not here.
+- **The stalk's sixth pass: the duck waits for him to face Sam, and one word puts the polish down (10-23; `stalk.ts` `brokeDuck`,
+  `stalkPolish`, `character.ts` `holdPolish`, `profile.ts`).** (1) The fifth pass ducked Sam at ANY turn that ended a stalk, a patrol's
+  quarter turn included. Now the out `turned` only remembers the man and where Sam stood (`St.broke`); Sam ducks when that man has come on
+  round until that spot is within `STALK.joltFace` (50) degrees of his nose, or is onto him (the whole duck), inside `joltSecs` (0.6 s),
+  and only while Sam's hands are still empty and idle, he stalks nobody else, he has not gone a pace from the spot and nothing solid is
+  between them; else never. The man who is onto him while the stalk is on (out `him`) still gets the whole duck at once. A recording of the
+  fifth pass (a `jolt`, no `joltFace`) replays with 180: at any turn, on that frame. (2) `?stalkpolish=0` on the page puts the fourth to
+  sixth passes' numbers down together, by `stalkPolish(false)`: the same function journal.ts calls for a recording from before them
+  (`turnIn`, `cornerShow` off, `catchLong` 1, `jolt` 0, and `holdPolish`: `HOLD.wayShape` off, the dip, the sway and the room between the
+  heads at 0, the arch -11). A plain address writes them up again (the tables' own numbers as the modules have them, so the page's boot
+  also undoes a lab slider on these). They ride the journal's tables: a recording made with the word replays with it. No frozen row and no
+  word for each pass alone: all of it sits under `STALK.on` (`TPS_STALK=1` on the frozen stand) and bare hands; with `TPS_STALK=1` and
+  the MOVES pass raised the frozen stand gets it. Say if a pass wants its own word. CHECK: stalk-check `out` (the turn to face him ducks; a
+  quarter turn does not, then does once he comes round or is onto him, not after `joltSecs`, not through a wall) and `harness` (the three
+  ages of recording, the word against the first of them over all twelve numbers, a plain address after it), both stands, `STALK_BREAK=1`
+  fails both, one seed; `ONLY=polish node tools/qa/stalk-page.cjs` reads the word on the real page. The lab has rows for `joltFace` and
+  `joltSecs`. Seen on CPU stills only, never on a GPU, never played.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
