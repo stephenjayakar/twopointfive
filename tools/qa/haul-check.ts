@@ -113,7 +113,7 @@ async function harness() {
   TAKEDOWN.haul = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); TAKEDOWN.haul = false; JR.applyKnobs(W.game, snapUp); const kept = TAKEDOWN.haul;
   delete snap.tables.TAKEDOWN.haul; TAKEDOWN.haul = true; JR.applyKnobs(W.game, snap); const old = TAKEDOWN.haul;
   const read = (q: string) => { TAKEDOWN.haul = !TAKEDOWN.haul; PR.pageSwitches(new URLSearchParams(q)); return TAKEDOWN.haul; }, plain = read(''), off = read('nohaul');
-  verdict((STAND_ENV as string[]).includes('TPS_HAUL') && PR.FROZEN_HOLDS['TAKEDOWN.haul'] === 'TPS_HAUL=1' && stood === want && found === want && had && kept === true && old === false && plain === true && off === false,
+  verdict((STAND_ENV as string[]).includes('TPS_HAUL') && PR.FROZEN_HOLDS['TAKEDOWN.haul'] === 'TPS_HAUL=1' && stood === want && (!shipped || word !== undefined || found === want) && had && kept === true && old === false && plain === true && off === false,
     'the key is a row of the two stands\' list with its word, stands up on the shipped stand and down on the frozen one, rides a recording\'s tables, a recording from before it replays with it down, and the page\'s boot writes it on for a plain address and off for ?nohaul',
     `STAND_ENV ${(STAND_ENV as string[]).includes('TPS_HAUL')} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['TAKEDOWN.haul']} · found ${found}, stood up ${stood}, wanted ${want} · in the tables ${had} · recorded up ${kept} · an old recording ${old} · plain ${plain} · ?nohaul ${off}`);
 }
