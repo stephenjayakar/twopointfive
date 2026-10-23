@@ -38,6 +38,8 @@
 //   mode?: { unseen?: boolean; god?: boolean; moon?: boolean; sky?: boolean; glow?: boolean; floor?: number }   the arm this lesson's run needs when no flag says otherwise (said why in the script; --plain overrides unseen / god; --floor N overrides floor)
 //   raises?: Record<string, string>   words raised for this lesson's run alone on the frozen stand, put back after it (a switch the level's one way on rides on)
 //                                       (PT_DESTR: '1' among them raises the destruction's one switch for the run, which no stand word reaches)
+//   pageKit?: boolean                 the run wears what the mission's own page deals him (kit.ts kitIssuedPage, then the solo card as main.ts deals it after
+//                                     the start): for a mission whose lines lean on its own card. Without it he is the Player as built, on either stand
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';
@@ -116,7 +118,14 @@ export async function runLesson(name: string, o: LessonRunOpts = {}): Promise<Le
   const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`), destr = DESTRUCTION.on, loud = process.env.PT_DESTR === '1' /* (the script's `raises`, or a hand's) */; if (loud) DESTRUCTION.on = true;
   try { return await playLesson(name, o, loud); } finally { for (const k of up) delete process.env[k]; DESTRUCTION.on = destr; }
 }
+/** A mission whose lines lean on its own card is played wearing what its page deals (`pageKit` in the scripted player's file). The page's kit and the solo
+ *  card's flag (kitSoloIf raises KIT_SOLO.on) are module state every later game in this process would wear: both are put back after the run */
 async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Promise<LessonRunOut> {
+  const scriptFile = resolve(import.meta.dir, 'lessons', `${name}.ts`), K = existsSync(scriptFile) && (await import(scriptFile)).pageKit === true ? await import(`${ROOT}/src/game/kit.ts`) : null;
+  const solo = K?.KIT_SOLO.on; K?.kitIssuedPage(true);
+  try { return await playLessonAs(name, o, loud); } finally { if (K) { K.kitIssuedPage(false); K.KIT_SOLO.on = !!solo; } }
+}
+async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): Promise<LessonRunOut> {
   const lines: string[] = [], out: LessonRunOut = { code: 0, why: '', lines, steps: [], secs: 0 };
   const file = resolve(ROOT, 'levels', `${name}.json`), scriptFile = resolve(import.meta.dir, 'lessons', `${name}.ts`);
   if (!existsSync(file)) return { ...out, code: 2, why: `no levels/${name}.json` };
@@ -158,6 +167,7 @@ async function playLesson(name: string, o: LessonRunOpts = {}, loud = false): Pr
   g.godMode = !!o.god; if (loud) g.tune.chaos = 0.5;   // (…and with the switch, the page's chaos: the harness stands a frozen game up at 0, where nothing breaks)
   hush(); const started = startFromQuery(g, `?levelFile=${name}.json&${String(script.query ?? '?quiet').replace(/^\?/, '')}`); unhush();
   if (!started.spec || started.why) return { ...out, code: 1, why: `the mission did not start: ${started.why ?? 'the script\'s query names no scenario'}` };
+  if (script.pageKit === true) (await import(`${ROOT}/src/game/kit.ts`)).kitSoloIf(g, false);   // (main.ts, straight after the page's start: a quiet mission alone wears its card)
   const L = g.level.scenarios?.lesson;
   if (!L) return { ...out, code: 2, why: 'the level carries no scenarios.lesson block' };
   { const faults = checkLesson(g); if (faults.length) return { ...out, code: 1, why: `lesson-check: ${faults.join(' · ')}` }; }

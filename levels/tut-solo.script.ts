@@ -121,7 +121,7 @@ const script: LevelScriptFn = D => {
       for (const u of men) if (c.query.alive(u)) c.release(u, 'alert');
     });
 
-    // THE WAY OUT: he is back at the arch with the code book and the launcher loaded when two more come out through the building behind him and stand in the
+    // THE WAY OUT: he is back at the arch with the code book when two more come out through the building behind him and stand in the
     // shop's doorway, shooting the head of the arch's wall over him: a doorway with two men in it, 8.5 m and more off, which is what the grenade is for. They
     // are the AI's once one of them is down.
     P.beat('loose', function* (c) { c.flag.loose = true; yield c.frames(1); });
@@ -130,10 +130,11 @@ const script: LevelScriptFn = D => {
       yield c.wait(0.4);
       // (found by name first: a beat starts clean from its cue, and nobody is spawned twice. Each keeps his own place and his own piece of wall)
       const men = LAST_IN.map((p, k) => { const name = ['Brandt', 'Marsh'][k]; return { k, u: c.unit(name) ?? c.spawn(rifleman, p, { yaw: -Math.PI / 2, callsign: name }) }; }).filter(m => c.query.alive(m.u));
-      if (!men.length) return;
+      if (!men.length) { c.signal('done:trucks'); return; }
       const all = men.length, up = () => men.filter(m => c.query.alive(m.u)).length;
       for (const m of men) c.order(m.u, { goal: LAST_MEN[m.k], speed: 3.4, aimAt: ARCH_HEAD[m.k][0], upper: 'aim', hot: true });
       yield c.any(c.until((q: Query) => men.every(m => !q.alive(m.u) || q.arrived(m.u)), 'in the doorway'), c.wait(6));
+      c.signal('done:trucks');   // the line that had him look goes by: the shot is asked for with the two standing in the doorway
       // the show: until one of them is hit or the line has gone by ('loose'), however long he takes over the launcher
       for (let i = 0; up() === all && !c.flag.loose; i++) {
         const shots = men.map(m => { const at = ARCH_HEAD[m.k][i % ARCH_HEAD[m.k].length]; c.order(m.u, { aimAt: at, face: D.util.yawTo(c.query.pos(m.u), at) }); return c.stimulus.burst(m.u, at, 4, { cadence: 0.14, spread: 0.008 }); });

@@ -179,11 +179,11 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     teaches: ['Plan mode', 'Give each pair its own door', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Choose which way a pair faces'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
-  { id: 'tut-solo', title: 'The fuel halt, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial',
-    place: 'A walled fuel halt on a dust road', lean: 'loud', defenders: 5,
-    blurb: 'On your own feet: a sentry, a gun, a locked door, a room, and the way back out.',
-    scene: 'The men who hit the convoy keep their code book at a fuel halt down the valley. You go in for it alone, and nobody expects it to stay quiet.',
-    teaches: ['Move, sprint, stay low', 'A wall at your back, and leaning out', 'Rifle and pistol, and a gun\'s setup', 'Smoke, a frag, a stun, the launcher', 'A charge on a locked door'] },
+  { id: 'tut-solo', title: 'The fuel stop, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial',
+    place: 'A walled fuel stop on a dust road', lean: 'loud', defenders: 5,
+    blurb: 'You\'re on your own. Get past a sentry, a machine gun and a locked door, clear a room, and get back out.',
+    scene: 'The people who hit the convoy keep their code book at a fuel stop down the valley. You\'re going in alone to get it, and nobody expects it to stay quiet.',
+    teaches: ['Move, sprint and stay low', 'Take cover on a wall and lean out', 'Use your rifle, its launcher and your pistol', 'Throw smoke, a frag and a stun grenade', 'Blow a locked door with a charge'] },
   { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
     // (its own hour and sky: the post was lit for the night — the street the player stands in is dark, the gates the picket comes through are under lamps
     //  the photocell puts out by day — and measured dry and still)
