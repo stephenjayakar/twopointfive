@@ -46,8 +46,8 @@ const SPEC: Record<string, { dur: [number, number]; note: string }> = {
   murmur: { dur: [0.2, 0.32], note: "Sam's question: three quiet breathy syllables, ~250 ms" },
   heldProtest: { dur: [0.7, 0.9], note: 'muffled syllables, starting 0.3 s in' },
   grabCatch: { dur: [0.26, 0.34], note: 'the grab, beat one: a whip of sleeve, ONE thump (100–500 Hz), a breath cut off' },
-  gunStrip: { dur: [0.17, 0.25], note: 'beat two, 0.18 s on: a dry snap, a rattle, one small click; bright (also at rate 0.8)' },
-  gunDown: { dur: [0.26, 0.34], note: 'beat three, 0.6 s on: one dull knock on the floor and a short settle (also at rate 0.8)' },
+  gunStrip: { dur: [0.17, 0.25], note: 'beat two, 0.22 s on: a dry snap, a rattle, one small click; bright (also at rate 0.8)' },
+  gunDown: { dur: [0.26, 0.34], note: 'beat three, 0.8 s on: one dull knock on the floor and a short settle (also at rate 0.8)' },
 };
 const NEW = Object.keys(SPEC);   // (the hold's seven, and the grab's three beats)
 const REFS = ['bodyHit', 'bodyFall', 'propScrape', 'footSoft', 'doorLatch', 'radio'];
@@ -176,7 +176,7 @@ if (WAV_DIR) {
   for (const n of names) writeFileSync(resolve(WAV_DIR, `${n}.wav`), wav16(table[n].getChannelData(0), SR));
   // the hold in order, at the game's gains: what a player will hear in the page, minus the room (no HRTF / reverb / occlusion here)
   const cues: [number, string, number][] = [
-    [0.3, 'grabScuffle', GAME_GAIN.grabScuffle], [0.75, 'heldProtest', GAME_GAIN.heldProtest],                       // the grab; the hold locks 0.45 s later and he makes his first sound (0.3 s into that buffer)
+    [0.3, 'grabCatch', GAME_GAIN.grabCatch], [0.75, 'heldProtest', GAME_GAIN.heldProtest],                       // the grab; the hold locks 0.45 s later and he makes his first sound (0.3 s into that buffer)
     [2.5, 'murmur', GAME_GAIN.murmur], [2.5, 'heldProtest', 0.2],                                                     // a question and its answer
     [5.0, 'bodyHit', 0.3],                                                                                            // the elbow closing (startChoke's own thud, rate 0.55 in the game) …
     ...Array.from({ length: 4 }, (_, k): [number, string, number] => [5.0 + k * 0.4, 'chokeStrain', GAME_GAIN.chokeStrain]),   // … 1.5 s of choke …

@@ -4,7 +4,7 @@
 //   bun run tools/qa/grab-sounds-render.ts [outDir] [--shape]
 //     outDir   48 kHz mono 16-bit WAVs written there: each take alone at its game gain (catch|strip|down-game|new1|new2.wav), grab-old.wav (what the grab was:
 //              the scuffle, the knocked-out pistol's borrowed magazine drop, his muffled protest), grab-new-pistol.wav and grab-new-carbine.wav (catch at 0, strip
-//              at 0.18 s, the protest at 0.45, the gun down at 0.62; the carbine = strip and down at rate 0.8)
+//              at 0.22 s, the protest at 0.47, the gun down at 0.82, as tools/qa/grabvoice-check.ts measures them; the carbine = strip and down at rate 0.8)
 //     --shape  each take's envelope too, 10 ms a column (dB under its own peak, a digit per 6 dB: 0 = within 6 dB of the peak, 9 = 54 dB under or more)
 //   exit 0 = every take rendered finite, unclipped and no mix went over full scale; 1 otherwise
 import { resolve } from 'node:path';
@@ -13,13 +13,16 @@ import { gameSfx } from '../../src/audio/audio';
 import { altSay, altTake, altTakes } from '../../src/audio/sfxAlt';
 import { sfxContext, type SfxBuffer } from '../../src/audio/backend';
 import { heard, loudest } from '../../src/audio/synth';
+import { SOUNDS } from '../../src/sounds/catalog';
 
 const SR = 48000, ctx = sfxContext(SR);
 const args = process.argv.slice(2), SHAPE = args.includes('--shape'), OUT = args.find(a => !a.startsWith('--')) ?? null;
-/** the gains and times the grab plays them at (seconds after the catch); the carbine's rate on the two that are the gun */
-const GRAB = { catch: { name: 'grabCatch', gain: 0.5, at: 0 }, strip: { name: 'gunStrip', gain: 0.45, at: 0.18 }, down: { name: 'gunDown', gain: 0.4, at: 0.62 }, protest: { name: 'heldProtest', gain: 0.18, at: 0.45 }, carbine: 0.8 } as const;
-/** what plays today */
-const OLD: [name: string, gain: number, rate: number, at: number][] = [['grabScuffle', 0.4, 1, 0], ['magDrop', 0.25, 0.72, 0.45], ['heldProtest', 0.18, 1, 0.45]];
+/** the gains and times the grab plays them at (seconds after the catch) and the carbine's rate on the two that are the gun: the listening page's own 'whole grab'
+ *  rows (sounds/catalog.ts), which tools/qa/grabvoice-check.ts holds to the game's beats */
+const WHOLE = SOUNDS.grabCatch.also!, cueOf = (n: string) => { const l = WHOLE[0].plus!.find(x => x.name === n)!; return { name: n, gain: l.gain, at: l.after ?? 0 }; };
+const GRAB = { catch: { name: 'grabCatch', gain: SOUNDS.grabCatch.gain, at: 0 }, strip: cueOf('gunStrip'), down: cueOf('gunDown'), protest: cueOf('heldProtest'), carbine: WHOLE[1].plus!.find(x => x.name === 'gunStrip')!.rate ?? 1 };
+/** about what the grab was (the knocked-out gun was thrown on the dice: when and how hard it landed differed from grab to grab) */
+const OLD: [name: string, gain: number, rate: number, at: number][] = [['grabScuffle', 0.4, 1, 0], ['heldProtest', 0.18, 1, 0.47], ['magDrop', 0.5, 0.72, 0.6], ['magDrop', 0.15, 0.72, 0.78]];
 
 const table = gameSfx(ctx) as Record<string, SfxBuffer>;
 const data = (b: SfxBuffer) => b.getChannelData(0);

@@ -801,8 +801,8 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       const sole = ts > 0 ? (lp(m, st, 2, 0.05) * 1.3 + (lp(m, st, 3, 0.3) - lp(m, st, 4, 0.08)) * 0.3) * env(ts, 0.005, 0.045) : 0;
       return peel + sole;
     }, 227),
-    // ---- THE GRAB AS THREE BEATS (played by name in place of grabScuffle and the knocked-out gun's borrowed magDrop: the catch as the arm lands, the strip 0.18 s
-    //      after it at his gun hand, the gun let down about 0.6 s after it at the floor — low thump, bright snap, dull knock). FIRST TAKES, written blind: nobody has
+    // ---- THE GRAB AS THREE BEATS (played by name in place of grabScuffle and the knocked-out gun's borrowed magDrop: the catch as the arm lands, the strip 0.22 s
+    //      after it at his gun hand, the gun let down about 0.8 s after it at the floor — low thump, bright snap, dull knock). FIRST TAKES, written blind: nobody has
     //      heard one. Other takes of each: audio/sfxAlt.ts.
     // the catch: Sam's sleeve whipping round the man's neck (cloth swelling for a fortieth of a second and STOPPED by what it lands on), then one firm thump of a chest
     // into a back 28 ms in — its weight between 100 and 500 Hz so a laptop's speakers carry it, the slap of a rig on a jacket over it, one buckle — and the breath
