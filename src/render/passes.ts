@@ -100,7 +100,7 @@ const TAAU_PARAM_BYTES = 144;   // struct TaauParams in taau.wgsl: mat4 (64) + 3
 /** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
 const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 128, FIRE_AT = BEAM_SEG_BYTES, BEAM_BYTES = FIRE_AT + 16 + FIRE_MAX * FIRE_REC;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 8 vec4f — fire.wgsl FireRec, setFires)
 /** one open fire as the composite draws it (game/fire.ts makes them; shaders/fire.wgsl FireRec) */
-export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; embers: number; pops: ArrayLike<number> }
+export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; embers: number; pops: ArrayLike<number>; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
 /** composite.wgsl as bundled (the scene tweak panel lists its constants off it: render/shaderTune.ts shaderConsts) */
@@ -376,7 +376,7 @@ export class LightingPasses implements CutSwappable {
       F[o] = r.pos[0]; F[o + 1] = r.pos[1]; F[o + 2] = r.pos[2]; F[o + 3] = r.r;
       F[o + 4] = r.h; F[o + 5] = r.heat; F[o + 6] = r.seed; F[o + 7] = r.time;
       F[o + 8] = r.wind[0]; F[o + 9] = r.wind[1]; F[o + 10] = r.flick; F[o + 11] = r.embers;
-      F[o + 12] = 0; F[o + 13] = 0; F[o + 14] = 0; F[o + 15] = 0;
+      F[o + 12] = r.bed ?? 0; F[o + 13] = 0; F[o + 14] = 0; F[o + 15] = 0;
       for (let k = 0; k < 4; k++) { F[o + 16 + k * 4] = r.pops[k * 3] ?? -1; F[o + 17 + k * 4] = r.pops[k * 3 + 1] ?? 0; F[o + 18 + k * 4] = r.pops[k * 3 + 2] ?? 0; F[o + 19 + k * 4] = 0; } }
     this.fireN = n; this.device.queue.writeBuffer(this.beamBuf, FIRE_AT, F.buffer, 0, 16 + n * FIRE_REC);
   }

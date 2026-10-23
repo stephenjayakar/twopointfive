@@ -1,10 +1,10 @@
 // ---- AN OPEN FIRE, DRAWN (game/fire.ts FIRE; the composite adds it to the picture: composite.wgsl, beside the lasers' light in the air) ----
-// A drum of burning wood is three things in the picture and this file is two of them: the FLAME, a small volume of light marched where the pixel's ray crosses
-// it, and the EMBERS, bright points on closed-form paths. (The third, the smoke, is real gas in the smoke solver and comes back through the volumetric pass.)
+// A drum of burning wood is four things in the picture and this file is three of them: the FLAME, a small volume of light marched where the pixel's ray crosses
+// it, the BED OF COALS it stands on (a disc over the drum's mouth: char and glowing wood, breathing) and the EMBERS, bright points on closed-form paths. (The third, the smoke, is real gas in the smoke solver and comes back through the volumetric pass.)
 // Nothing here reads the scene: a record per fire and the pixel's ray in, light and how much of what is behind is kept out — so the same text runs alone on a
 // plain stage (tools/qa/fire-lab.cjs), where its look was set. Picture only: the game reads none of it (the fire's LIGHT is an engine light like any lamp's).
 //   a = where the coals are (the middle of the drum's mouth) + the mouth's radius (m)      b = flame height (m) · heat 0‥1 · the fire's own seed 0‥1 · its clock (s)
-//   c = the wind at the flame (x, z; m/s) · the light's flicker this frame (about 1) · embers in the air at once      d = spare
+//   c = the wind at the flame (x, z; m/s) · the light's flicker this frame (about 1) · embers in the air at once      d = the bed of coals' radius (m; 0 = none drawn)
 //   pop = the last four cracks of the wood: seconds since (under 0 = none) · how hard 0‥1 · its own seed 0‥1
 struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f, pop: array<vec4f, 4> };
 
@@ -139,6 +139,19 @@ fn fireEmbers(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32) -> vec3f {
 
 /** ONE FIRE along the ray ro + t·rd, 0 < t < tMax (the surface the pixel shows) → rgb = its light toward the eye, a = how much of what is behind it is kept.
  *  `cpix` = metres across a pixel per metre of distance, `jit` = 0‥1 per pixel and frame (the march's start offset). */
+/** THE BED OF COALS at a point of the drum's mouth (q: metres from its middle): what it glows, rgb. Lumps of char with fire in the gaps between them, the
+ *  whole breathing slowly and with the light — the level's glowing lid alone is one flat bright plate. */
+fn fireCoals(F: FireRec, q: vec2f) -> vec3f {
+  let t = F.b.w; let s = F.b.z * 37.0;
+  let lump = fireN(vec3f(q.x * 34.0 + s, q.y * 34.0 - s, 0.5));                                   // a lump is a hand's width
+  let fine = fireN(vec3f(q.x * 90.0 - s, q.y * 90.0 + s, t * 0.9));
+  let breath = 0.5 + 0.5 * sin(t * 1.3 + 6.2831853 * fireN(vec3f(q.x * 11.0, q.y * 11.0, s)));     // each patch of it brightens and dims in its own time
+  let gap = smoothstep(0.42, 0.7, lump + 0.25 * (fine - 0.5));                                     // 0 on a lump's back, 1 down between two
+  let heat = F.b.y * (0.55 + 0.45 * breath) * (0.6 + 0.4 * F.c.z);
+  let glow = gap * gap * heat;
+  let char = vec3f(0.035, 0.012, 0.006) * (0.4 + fine) * (1.0 + 6.0 * heat * smoothstep(0.2, 0.45, lump));   // a lump's back: black, its edges catching red
+  return char + fireColor(0.25 + 0.6 * glow) * (2.4 * glow);
+}
 fn fireAir(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, jit: f32) -> vec4f {
   let heat = F.b.y;
   if (heat <= 0.0) { return vec4f(0.0, 0.0, 0.0, 1.0); }
@@ -161,6 +174,16 @@ fn fireAir(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, jit: f32) -> 
       if (T < 0.02) { break; }
     }
     acc = acc * T + emb;   // (an ember behind the flame is seen through it; the few in front lose nothing by this that the eye can find)
+  }
+  // the bed of coals, seen from above through whatever flame stands on it: it hides the lid it lies on
+  let Rb = F.d.x;
+  if (Rb > 0.0 && rd.y < -1e-4 && ro.y > F.a.y) {
+    let tb = (F.a.y + 0.004 - ro.y) / rd.y;
+    if (tb > 0.0 && tb < tMax + 0.02) {
+      let q = (ro + rd * tb).xz - F.a.xz; let r = length(q);
+      let cover = 1.0 - smoothstep(Rb - max(2.0 * cpix * tb, 0.006), Rb, r);
+      if (cover > 0.0) { acc += T * cover * fireCoals(F, q); T *= 1.0 - cover; }
+    }
   }
   return vec4f(acc, T);
 }

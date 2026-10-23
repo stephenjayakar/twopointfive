@@ -32,14 +32,20 @@ export const FIRE = {
   on: false,
   /** a level light whose name starts with one of these is an open fire */
   names: ['brazier'] as string[],
-  /** THE FLAME: its height over the coals (m, a calm flame's tallest tongue is about twice this) and its width as a share of the glowing box's half-width */
-  height: 0.75, mouth: 0.87,
+  /** THE FLAME: its height over the coals (m, a calm flame's tallest tongue is about twice this) and its radius as a share of the glowing box's half-width (the box is a
+   *  plate in the middle of a drum's lid: the fire fills the drum's mouth) */
+  height: 0.75, mouth: 1.15,
   /** THE COALS: the glowing box the level hung on the lamp keeps this share of its authored glow while a flame stands on it (the lid alone was authored bright
    *  enough to be the whole fire: under a flame it clips to white and the flame is lost on it), and breathes with the light by `coalSwing` of the swing */
   coals: 0.42, coalSwing: 0.6,
+  /** … and THE BED OF COALS the picture lays over that box (render/shaders/fire.wgsl fireCoals): its radius as a share of the box's half-width (0.27 m on a
+   *  0.29 m drum: all of its lid but the rim — the lid is lit white by its own lamp, and the bed is what hides that) */
+  bedR: 1.42,
   /** THE LIGHT: how far its strength swings either side of the authored one (0.22 = between about 0.8 and 1.2 of it), the four rates it swings at (Hz; firelight on a yard is slower than
-   *  the flames that make it: their flutter is the picture's own, render/shaders/fire.wgsl), how far its place wanders (m, across and up), and what a crack adds for `kickSecs` */
-  depth: 0.22, rates: [1.3, 2.7, 4.9, 8.3] as number[], weights: [0.9, 0.7, 0.45, 0.2] as number[], wander: 0.06, wanderUp: 0.04, kick: 0.25, kickSecs: 0.12,
+   *  the flames that make it: their flutter is the picture's own, render/shaders/fire.wgsl), how far its place wanders (m, across and up) about a point `lift` m over where the level hung it
+   *  (a level hangs the lamp a hand over the lid; the light of a fire comes from the body of its flame, and from there the drum's own shadow on the ground is
+   *  half as wide), and what a crack adds for `kickSecs` */
+  depth: 0.22, rates: [1.3, 2.7, 4.9, 8.3] as number[], weights: [0.9, 0.7, 0.45, 0.2] as number[], wander: 0.06, wanderUp: 0.04, lift: 0.2, kick: 0.25, kickSecs: 0.12,
   /** THE WOOD CRACKS: on average this often (a second), each of the clock's `popSlot`-second slots asked once */
   popRate: 0.55, popSlot: 0.2,
   /** THE EMBERS in the air at once that the fire lets go of by itself (a crack throws its own; render/shaders/fire.wgsl) */
@@ -100,10 +106,10 @@ export function fireFlicker(seed: number, time: number): number {
 }
 
 /** where the fire's mouth is and how wide: the glowing box the level hung on the lamp, or failing one a hand under the lamp */
-function mouthOf(g: Game, t: LightTarget): { pos: Vec3; r: number } {
+function mouthOf(g: Game, t: LightTarget): { pos: Vec3; r: number; lid: number } {
   const b = t.boxes.length ? g.engine.world.statics[t.boxes[0]] : null;
-  if (b) return { pos: [b.c[0], b.c[1] + b.h[1], b.c[2]], r: Math.min(b.h[0], b.h[2]) * FIRE.mouth };
-  return { pos: [t.pos[0], t.pos[1] - 0.16, t.pos[2]], r: 0.19 * FIRE.mouth };
+  if (b) return { pos: [b.c[0], b.c[1] + b.h[1], b.c[2]], r: Math.min(b.h[0], b.h[2]) * FIRE.mouth, lid: Math.min(b.h[0], b.h[2]) };
+  return { pos: [t.pos[0], t.pos[1] - 0.16, t.pos[2]], r: 0.19 * FIRE.mouth, lid: 0 };   // (no lid: no bed of coals either, only the flame)
 }
 
 /** the lamp back as the level hung it: where, and nothing said to the steady readers (its strength is updateTargets' own again the frame it paints) */
@@ -136,7 +142,7 @@ export function updateFire(g: Game, dt: number) {
     l.intensity = l.steady.intensity * fl;
     l.pos[0] = t.pos[0] + K.wander * Math.sin(TAU * (0.83 * time + h01(si + 5))) * Math.sin(TAU * (2.9 * time + h01(si + 6)));
     l.pos[2] = t.pos[2] + K.wander * Math.sin(TAU * (0.71 * time + h01(si + 7))) * Math.sin(TAU * (3.3 * time + h01(si + 8)));
-    l.pos[1] = t.pos[1] + K.wanderUp * (fl - 1) / Math.max(K.depth, 1e-6);
+    l.pos[1] = t.pos[1] + K.lift + K.wanderUp * (fl - 1) / Math.max(K.depth, 1e-6);
     { const ck = t.factor * K.coals * (1 + K.coalSwing * (fl - 1)); for (const bi of t.boxes) { const bx = g.engine.world.statics[bi]; if (bx) bx.emissive = [t.baseEmissive[0] * ck, t.baseEmissive[1] * ck, t.baseEmissive[2] * ck]; } }   // (updateTargets painted it at its authored glow a moment ago, and does again the frame the switch goes off)
     if (dt > 0) { T.lo = Math.min(T.lo, fl); T.hi = Math.max(T.hi, fl); T.sum += fl; T.n++; }
     const wv = g.wind.at([M.pos[0], M.pos[1] + K.height * 0.6, M.pos[2]]), wl = Math.hypot(wv[0], wv[2]), wk = wl > K.windMax ? K.windMax / wl : 1;
@@ -156,7 +162,7 @@ export function updateFire(g: Game, dt: number) {
         const sk = wl > 8 ? 8 / wl : 1, dir: Vec3 = [wv[0] * sk * B.lean, 1, wv[2] * sk * B.lean];
         g.smoke.emit({ pos: [M.pos[0], M.pos[1] + K.height * B.up, M.pos[2]], dir, speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density * heat, temperature: B.temp * heat, ttl: B.every, age: 0, kind: 'cloud',
           push: B.push, jitter: B.jitter, lattice: 'coarse', look: true }); } }
-    if (d < K.drawR) list.push({ pos: M.pos, r: M.r, h: K.height, heat, seed, time: time % 4096, wind, flick: fl, embers: K.embers, pops: rec, d });
+    if (d < K.drawR) list.push({ pos: M.pos, r: M.r, h: K.height, heat, seed, time: time % 4096, wind, flick: fl, embers: K.embers, pops: rec, bed: M.lid * K.bedR, d });
   }
   T.fires = fires; T.lit = lit; if (dt > 0) S.lit = mask;
   const cap = Math.max(0, Math.min(4, Math.floor(K.max)));

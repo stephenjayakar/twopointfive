@@ -11,7 +11,7 @@
 // record the renderer is given, the sources it would file with the solver, the mixer's calls) and what the CPU's light estimate reads beside the drum — never
 // a flame seen or a crack heard. tools/qa/fire-page.cjs looks at the page.
 //   burns     the pass, switch on, twenty seconds: its brazier is found, the lamp's strength swings about the authored one (its mean within a twentieth of
-//             it) and its place wanders by no more than the table says, and the renderer is handed one fire at the drum's mouth
+//             it) and its place is the table's lift over where the level hung it and wanders by no more than the table says, and the renderer is handed one fire at the drum's mouth
 //   same      … the swing is a closed form of the game's clock: a second game stood the same way has the same strength every frame, and the lamp is what
 //             fireFlicker says for that time
 //   sound     one bed voice held at a time (handed on every FIRE.bedSecs), and a crack for each pop of the wood, about as often as the table says
@@ -74,10 +74,10 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           far = Math.max(far, Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]));
           off = Math.max(off, Math.abs(l.intensity - base * t.factor * fireFlicker(fireSeed(t), A.g.time))); });
         const fires = A.g.engine.fires ?? [], F = fires[0], box = t.boxes.length ? A.g.engine.world.statics[t.boxes[0]] : null, T = fireStats(A.g);
-        const atMouth = !!F && !!box && Math.hypot(F.pos[0] - box.c[0], F.pos[2] - box.c[2]) < 0.01 && Math.abs(F.pos[1] - (box.c[1] + box.h[1])) < 0.01 && F.r > 0.05 && F.r <= Math.min(box.h[0], box.h[2]);
-        verdict(A.stood === A.sw && T.lit === 1 && lo < 1 - K.depth * 0.5 && hi > 1 + K.depth * 0.5 && lo > 0.4 && hi < 2 && Math.abs(sum / n - 1) < 0.05 && far > 0.005 && far <= Math.hypot(K.wander, K.wander, K.wanderUp * 4) && fires.length === 1 && atMouth,
+        const atMouth = !!F && !!box && Math.hypot(F.pos[0] - box.c[0], F.pos[2] - box.c[2]) < 0.01 && Math.abs(F.pos[1] - (box.c[1] + box.h[1])) < 0.01 && Math.abs(F.r - Math.min(box.h[0], box.h[2]) * K.mouth) < 1e-9 && Math.abs((F.bed ?? 0) - Math.min(box.h[0], box.h[2]) * K.bedR) < 1e-9;
+        verdict(A.stood === A.sw && T.lit === 1 && lo < 1 - K.depth * 0.5 && hi > 1 + K.depth * 0.5 && lo > 0.4 && hi < 2 && Math.abs(sum / n - 1) < 0.05 && far > 0.005 && far >= K.lift - K.wanderUp * 4 && far <= Math.hypot(K.wander, K.wander, K.lift + K.wanderUp * 4) && fires.length === 1 && atMouth,
           'burns — the pass\'s brazier: the lamp swings about the authored strength and wanders a little, and the renderer is handed one fire at the drum\'s mouth',
-          `the stand stood the switch ${A.stood ? 'on' : 'off'} · ${T.lit} of ${T.fires} burning · the lamp ${lo.toFixed(2)} to ${hi.toFixed(2)} of the authored ${base} (mean ${(sum / n).toFixed(3)}), at most ${(far * 100).toFixed(1)} cm from where the level hung it · ${fires.length} handed on${F ? `: at ${F.pos.map((v: number) => v.toFixed(2)).join(', ')}, mouth ${F.r.toFixed(3)} m, flame ${F.h} m, ${F.embers} embers` : ''}`);
+          `the stand stood the switch ${A.stood ? 'on' : 'off'} · ${T.lit} of ${T.fires} burning · the lamp ${lo.toFixed(2)} to ${hi.toFixed(2)} of the authored ${base} (mean ${(sum / n).toFixed(3)}), at most ${(far * 100).toFixed(1)} cm from where the level hung it (the table lifts it ${K.lift * 100} cm into the flame) · ${fires.length} handed on${F ? `: at ${F.pos.map((v: number) => v.toFixed(2)).join(', ')}, mouth ${F.r.toFixed(3)} m, bed of coals ${(F.bed ?? 0).toFixed(3)} m, flame ${F.h} m, ${F.embers} embers` : ''}`);
         const B = await rig(true, false), seqB: number[] = []; if (B.t) B.step(20 * 60, () => seqB.push(B.t.light.intensity));
         let diff = 0; for (let i = 0; i < seq.length; i++) if (seq[i] !== seqB[i]) diff++;
         verdict(A.sw && seqB.length === seq.length && diff === 0 && off < 1e-9, 'same — the swing is a closed form of the clock: a second game has the same lamp every frame',
