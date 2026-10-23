@@ -18,6 +18,7 @@
 // (tools/qa wind-identity). Knobs WIND below (Tab ▸ Weather ▸ wind rows, kept per machine with the master: localStorage twopointsix.wind).
 import { Vec3, v3 } from '../math/vec';
 import { hashStr } from '../math/dice';
+import { HostOwned } from '../math/side';
 import type { Game } from './game';
 import type { Door } from './doors';
 import type { VentDef } from '../scene/level';
@@ -132,11 +133,16 @@ export interface WindSource extends WindGpuSource { why: WindWhy; base: number; 
 export const WIND_STATS = { frames: 0, active: 0, toParticles: 0, toSmoke: 0, doorGusts: 0, stormFrames: 0, atCalls: 0 };
 const DEG = Math.PI / 180;
 
+class PoolList extends HostOwned { readonly list: WindSource[] = []; }
+
 export class Wind {
   /** every source the level can have (vents, one storm, one per exterior door), built once; `active` = the ones blowing this frame (speed > 0), rebuilt in place each update */
   readonly all: WindSource[] = []; readonly active: WindSource[] = [];
-  /** what went to the particles this frame (nearest the view first, ≤ WIND_GPU_MAX) — the solver gets `active` and culls it itself */
-  readonly forParticles: WindSource[] = [];
+  /** what went to the particles this frame (nearest the view first, ≤ WIND_GPU_MAX) — the solver gets `active` and culls it itself. THE HOST'S, not the game's
+   *  (math/side.ts HostOwned): it is filled only where a particle pool is, by distance from where the view looks, and rebuilt every frame — so no snapshot or
+   *  state hash holds it, and a game with a pool and one without are one state */
+  private readonly toPool = new PoolList();
+  get forParticles(): WindSource[] { return this.toPool.list; }
   private storm: WindSource; private scratch: Vec3 = [0, 0, 0]; private scratchW: Vec3 = [0, 0, 0];
   /** the level's own roofs as the weather last told them (reroof; null = the office's two) — what the storm record's `roofs` is while WX_OWN.wind is on */
   private lvRoofs: readonly (readonly number[])[] | null = null;

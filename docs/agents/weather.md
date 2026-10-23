@@ -153,7 +153,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `jetVel` / `stormVel` in wind.ts repeat it on the CPU — `windAt(g, p)`, the moths, `__wind.at`). `Wind.update(dt)` (game.ts after weather + wet) folds each source's
   state into ONE speed a frame — vent = authored × `WIND.ventK` × spin `on` (its cycle; the MAINS: `g.blackout.active` spins every mains vent down over `rampDown` 4 s,
   the restrike back over `rampUp` 3) × gust (1 ± `gustAmp` 0.25 on a value noise of the game clock keyed by the name's hash) × tune.wind — and hands the SAME records
-  to (1) the particles: `Particles.setWind(≤ WIND_GPU_MAX 8 nearest the view + the storm, knobs)` → packed as ImpulseRec read another way BEHIND the frame's
+  to (1) the particles: `Particles.setWind(≤ WIND_GPU_MAX 8 nearest the view + the storm, knobs)` (that list, `wind.forParticles`, is the HOST'S, a `math/side.ts HostOwned` holder since 10-23: it is filled only where a particle pool is, by distance from the view's focus, and rebuilt every frame, so no snapshot or state hash holds it — `probes.ts breathsteam`'s `pool` line, red with the holder made a plain object; never seen on a GPU, nothing drawn changes) → packed as ImpulseRec read another way BEHIND the frame's
   impulses in the same 16 slots (impulses first — a bang is never short; `flags` bits 16‥20 = numWinds; a jet = pos+reach · axis+speed · (tanSpread, r0, dMax) ·
   floorY · kinds · iflags 2, the storm = interior rect / annex rect / wind, iflags 6; the four knobs as f16 pairs in seed / spare); `particles.wgsl windAir` sums the
   air at the particle (a RESTING one hands its own surface as the floor, so the desk turns the jet too) and the update takes drag AGAINST THE MOVING AIR — dust /
@@ -923,7 +923,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   breath. **Switch**: `SNOW_LOOK.steam` — ON in the page (`?breathsteam=0` = the puffs as they were), OFF in the module and on the frozen stand
   (`TPS_BREATHSTEAM=1`); a `FROZEN_HOLDS` row; the journal carries `SNOW_LOOK`, and a recording from before the key replays with it off. The numbers
   are `BREATHSTEAM` (authored data like `SNOWBREATH`, not player switches: `__snow.steam` on the console, twelve rows on the debugger's Breath layer).
-  **Check**: `bun run tools/qa/probes.ts breathsteam` (families `snow`, `weather`), 10 lines on both stands; `BREATHSTEAM_BREAK=1` (the switch never
+  **Check**: `bun run tools/qa/probes.ts breathsteam` (families `snow`, `weather`), 11 lines on both stands; `BREATHSTEAM_BREAK=1` (the switch never
   raised) fails 8 on both. Its `digest` line: 300 frames of the pass's room clear stepped by the game with the sources handed over and with none,
   one run digest, and the same with the senses on the CPU. **MEASURED in the page on the software adapter**
   (`node tools/qa/breathsteam-page.cjs`: the pass's room clear, verylow, 640 wide, the player in the gateway under `lamp_gate`, five men steaming,
@@ -952,11 +952,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   **WHOSE** (the step after the fire's host book, same pattern): the run digest could not tell, but the STATE could — `snowBreath.states` kept, per
   man, whether this breath was steam and which source rode his mouth, and its counts and its `why` followed the solver's word, the view's focus and
   the particle pool. A snapshot or a state hash is the game's alone, and those three are the host's. Now the game's table keeps what the game decides
-  (the rhythm, who shows, breaths begun: `BreathCount`) and the rest is `engine.breathShown` (`snowBreath.ts BreathShown`, declared in
+  (the rhythm, who shows, breaths begun: `BreathCount`) and the rest is `engine.hostBooks.breath` (`snowBreath.ts BreathShown`, a member of the one bag of host books declared in
   `host/api.ts`): how the breath is shown this frame, per man the breath that was asked and its live source, the sources and puff records filed.
-  THE BOOK IS DROPPED when a save is put back (`host/putback.ts`), by `seedBreath`, with the breath switched off or off a snow level, and by itself
+  THE BOOK IS DROPPED when a save is put back (with the whole bag: `host/putback.ts`'s one line), by `seedBreath`, with the breath switched off or off a snow level, and by itself
   where the game's frame count is not the one after the book's last (a snapshot put back by a road that does not tell the host: the harness's). A
-  RESTART or a file's load keeps the frame count and builds the men anew under their old ids, so a row is bound to the Character it was written for
+  RESTART drops the whole bag too (`game.ts restartEncounter`, since the smoke break's step). A restart or a file's load also keeps the frame count
+  and builds the men anew under their old ids, so, whoever drops what, a row is bound to the Character it was written for
   (`who`): a fresh man starts a fresh row (found in review: without it a restart a moment after a man's first breath took his next breath 1 for
   filed, and it went out with no steam). Behind a drop a breath in the air is asked for afresh on its next record, so a man in mid breath can file a
   second source at his mouth for what is left of it (look only). NOT COVERED: a solver emptied under the same men with the book kept (a script's or
@@ -965,15 +966,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `steam`, `by`) run from the book's opening, so behind a drop they start again while `breaths` goes on (the panel's line can read more breaths than
   records). The check's `whose` line, on both stands: the pass stood plainly twice; stepped 900 frames by the game's own step with a drawing solver
   and the view on the player, and with a solver that draws nothing and the view 400 m off, the two are ONE STATE HASH (`rollback.ts stateHash`);
-  the same with a particle pool that takes the breath's puffs and one that takes none of them (both have a pool: with one against none,
-  `game.wind.forParticles` differs, the wind's own book of what it handed a pool, told to the merge); the second dealt off another seed, the hash
-  parts. Run against the module as it was, the line is red and names the old rows (`stats.why`, `stats.steam`, `stats.steaming`, a man's `steam`;
-  with the pool `stats.records`, `births`, `by`). By hash and not by `stateDiff`'s row walk because the walk holds both states flat: 6.4 GB on the
-  shipped stand as first written, 650 MB now; `BREATHSTEAM_WHY=1` on a red run asks the walk for the rows. By the game's own
+  the same with a particle pool that takes the breath's puffs and one that takes none of them; the second dealt off another seed, the hash parts.
+  Run against the module as it was, the line is red and names the old rows (`stats.why`, `stats.steam`, `stats.steaming`, a man's `steam`; with
+  the pool `stats.records`, `births`, `by`). The compares pass `own` (two games stood in one process, without what the modules share), and a red
+  run asks `stateDiff` for the rows (light since the walk was rebuilt; the line first held 6.4 GB on the shipped stand through the old walk). Its
+  `pool` line: a game with a particle pool against one with NONE, ten seconds: no row of the breath's parts them and none of the wind's (below);
+  what else parts them is printed and not judged (the falling snow's `why` words, with its owner). By the game's own
   roads: a snapshot of the filing frame put back at once with the host's real hook run files the breath's source again (red with the hook's line
   taken out), a snapshot from before the breath put back with no hook plays the breath again WITH its source (red with the frame-count test taken
   out), and a real restart a third of a second after a man's first source leaves 3 sources for the 3 breaths of the next ten seconds (2 with the
-  row's binding taken out). The line also found the check's own old red on the shipped stand (the `digest` line, red there since the open fire
+  row's binding taken out), and the book keeps no row for a man who is gone: a row whose man was not asked about this frame is struck, so the men of
+  the game before a restart are let go on its first frame (1 row held there before this was added). `breathStats` read on a game nobody has
+  breathed in makes no state row (it did; by reading, no check). The put-back road runs through `tools/qa/putback-host.ts`. The line also found the check's own old red on the shipped stand (the `digest` line, red there since the open fire
   landed): its solver stand-in counted the fire's plume, one source a second, as breaths; it counts `kind: 'breath'` alone now. No rule read any of
   this and no digest moved: nothing a player sees changes but a breath refiled behind a put back. IN THE PAGE on the software adapter after the move
   (`breathsteam-page.cjs`, 16 steps): 119 of 119 pipelines, no console error, five breaths all steam, no puff record, the panel's row read as before.
