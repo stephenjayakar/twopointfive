@@ -13,6 +13,7 @@ export function hostAfterPutBack(game: Game) {
   game.decals.touch();   // (the ring's list went back; its 'unchanged since the last frame' with it)
   game.smoke?.clearAll?.();   // (the solver's fields are the GPU's: a cloud of the abandoned moment is nobody's — a can that was venting at the save lies there without its smoke, as after a file's load)
   engine.particles?.clear();
+  game.engine.breathShown = undefined;   // (the breath's book of whose steam rides whose mouth in that solver and which puffs went to that pool, game/snowBreath.ts: asked for afresh)
   game.engine.fireShown = undefined;   // (the open fires' book of the smoke filed with that solver and the bed voices asked of the mixer, game/fire.ts: both were the abandoned moment's, and are asked for afresh)
   game.engine.smokeShown = undefined;   // (… and a smoke break's book, game/smokebreak.ts: the puffs still owed were the abandoned moment's, and the thread is filed afresh at once rather than when the solver's silence is noticed)
   game.rehand();   // (lying snow, the wind's map of what stands, the dust under the roofs: each handed over only when it changed, and it changed BACK)

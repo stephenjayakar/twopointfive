@@ -893,8 +893,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   breath. **Switch**: `SNOW_LOOK.steam` — ON in the page (`?breathsteam=0` = the puffs as they were), OFF in the module and on the frozen stand
   (`TPS_BREATHSTEAM=1`); a `FROZEN_HOLDS` row; the journal carries `SNOW_LOOK`, and a recording from before the key replays with it off. The numbers
   are `BREATHSTEAM` (authored data like `SNOWBREATH`, not player switches: `__snow.steam` on the console, twelve rows on the debugger's Breath layer).
-  **Check**: `bun run tools/qa/probes.ts breathsteam` (families `snow`, `weather`), 9 lines on both stands; `BREATHSTEAM_BREAK=1` (the switch never
-  raised) fails 7 on both. Its `digest` line: 300 frames of the pass's room clear stepped by the game with the sources handed over and with none,
+  **Check**: `bun run tools/qa/probes.ts breathsteam` (families `snow`, `weather`), 10 lines on both stands; `BREATHSTEAM_BREAK=1` (the switch never
+  raised) fails 8 on both. Its `digest` line: 300 frames of the pass's room clear stepped by the game with the sources handed over and with none,
   one run digest, and the same with the senses on the CPU. **MEASURED in the page on the software adapter**
   (`node tools/qa/breathsteam-page.cjs`: the pass's room clear, verylow, 640 wide, the player in the gateway under `lamp_gate`, five men steaming,
   breaths made five times as frequent as in play for the stills; `REST=90` then runs the game's own rhythm): 119 of 119 pipelines, none failed, no
@@ -919,3 +919,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is the way back, `reach` the lever (and `radius`: bricks go with the cloud's size). NOT SEEN: on a GPU, against a dark background, moving, a man walking through another's breath (the head's shove is checked by what it
   asks of the solver, not by a picture), a blown man's breath, a quality above verylow, a level other than the pass. No tally over seeds: the game
   cannot tell by digest, so none was run.
+  **WHOSE** (the step after the fire's host book, same pattern): the run digest could not tell, but the STATE could — `snowBreath.states` kept, per
+  man, whether this breath was steam and which source rode his mouth, and its counts and its `why` followed the solver's word, the view's focus and
+  the particle pool. A snapshot or a state hash is the game's alone, and those three are the host's. Now the game's table keeps what the game decides
+  (the rhythm, who shows, breaths begun: `BreathCount`) and the rest is `engine.breathShown` (`snowBreath.ts BreathShown`, declared in
+  `host/api.ts`): how the breath is shown this frame, per man the breath that was asked and its live source, the sources and puff records filed.
+  THE BOOK IS DROPPED when a save is put back (`host/putback.ts`), by `seedBreath`, with the breath switched off or off a snow level, and by itself
+  where the game's frame count is not the one after the book's last (a snapshot put back by a road that does not tell the host: the harness's). A
+  RESTART or a file's load keeps the frame count and builds the men anew under their old ids, so a row is bound to the Character it was written for
+  (`who`): a fresh man starts a fresh row (found in review: without it a restart a moment after a man's first breath took his next breath 1 for
+  filed, and it went out with no steam). Behind a drop a breath in the air is asked for afresh on its next record, so a man in mid breath can file a
+  second source at his mouth for what is left of it (look only). NOT COVERED: a solver emptied under the same men with the book kept (a script's or
+  the panel's clear) costs the rest of the one breath in the air; a breath's source lives half a second, so it is not asked after each step as the
+  cigarette's ten-minute thread is. `breathStats(g)` still answers every reader with one merged row, a copy; the host's counts (`records`, `births`,
+  `steam`, `by`) run from the book's opening, so behind a drop they start again while `breaths` goes on (the panel's line can read more breaths than
+  records). The check's `whose` line, on both stands: the pass stood plainly twice; stepped 900 frames by the game's own step with a drawing solver
+  and the view on the player, and with a solver that draws nothing and the view 400 m off, the two differ in NO state row (`rollback.ts stateDiff`);
+  the same with a particle pool that takes the puffs and with none (no row of the breath's; other modules' rows do differ there, and the walk stops
+  at one of them: not the breath's to mend, told to the merge); dealt off another seed the walk finds 9 rows of the breath's. By the game's own
+  roads: a snapshot of the filing frame put back at once with the host's real hook run files the breath's source again (red with the hook's line
+  taken out), a snapshot from before the breath put back with no hook plays the breath again WITH its source (red with the frame-count test taken
+  out), and a real restart a third of a second after a man's first source leaves 3 sources for the 3 breaths of the next ten seconds (2 with the
+  row's binding taken out). The line also found the check's own old red on the shipped stand (the `digest` line, red there since the open fire
+  landed): its solver stand-in counted the fire's plume, one source a second, as breaths; it counts `kind: 'breath'` alone now. No rule read any of
+  this and no digest moved: nothing a player sees changes but a breath refiled behind a put back. IN THE PAGE on the software adapter after the move
+  (`breathsteam-page.cjs`, 16 steps): 119 of 119 pipelines, no console error, five breaths all steam, no puff record, the panel's row read as before.
+  NOT SEEN: on a GPU; a save put back or a restart
+  in the page with men breathing (the roads are the game's own, run headless over a recording stand-in for the solver); a file's load (by reading:
+  it builds the men anew like a restart).
