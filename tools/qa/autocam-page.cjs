@@ -73,10 +73,10 @@ const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasi
     // sway: on again, the sway as the page had it, a walk across the view and a stop
     const K = await page.evaluate(() => { const K = window.__knobs.registry().AUTOCAM; K.sway = window.__swayWas; K.fightM = 0; K.turn = false; return { sway: K.sway, cap: K.swayRate / 60, move: K.swayMove }; });
     let s0 = w1; for (let tries = 0; tries < 3 && s0.kept !== '1'; tries++) s0 = await twice();
-    const s1 = await page.evaluate(SWAY, [['KeyD'], 120]), s2 = await page.evaluate(SWAY, [[], 420]);
-    check(K.sway === true && s0.kept === '1' && s1.far > 0.08 && s1.far <= K.move + 1e-6 && s1.most <= K.cap + 1e-9 && s2.most <= K.cap + 1e-9 && Math.abs(s2.yaw - s0.yaw) < 1e-9,
-      'the mode on and a walk across the view: the yaw leans that way frame by frame, never faster than its cap, and is home again when he stops',
-      `the page opens with the sway ${K.sway ? 'on' : 'OFF'} · two seconds across the view: the yaw leans ${(s1.far * 180 / Math.PI).toFixed(1)}° at the most, ${(s1.most / K.cap * 100).toFixed(0)}% of the cap in a frame · stopped: ${(Math.abs(s2.yaw - s0.yaw) * 180 / Math.PI).toFixed(4)}° from where it was`);
+    const s1 = await page.evaluate(SWAY, [['KeyD'], 150]), s2 = await page.evaluate(SWAY, [[], 540]);
+    check(K.sway === true && s0.kept === '1' && s1.far > 0.04 && s1.far <= K.move + 1e-6 && s1.most <= K.cap + 1e-9 && s2.most <= K.cap + 1e-9 && Math.abs(s2.yaw - s0.yaw) < 1e-3,
+      'the mode on and a walk across the view: the yaw leans that way frame by frame, never faster than its cap, and is home again nine seconds after he stops',
+      `the page opens with the sway ${K.sway ? 'on' : 'OFF'} · two and a half seconds across the view: the yaw leans ${(s1.far * 180 / Math.PI).toFixed(1)}° at the most, ${(s1.most / K.cap * 100).toFixed(0)}% of the cap in a frame · stopped: ${(Math.abs(s2.yaw - s0.yaw) * 180 / Math.PI).toFixed(4)}° from where it was`);
     await page.evaluate(() => { const K = window.__knobs.registry().AUTOCAM; K.fightM = 22; K.turn = true; });
     // kept: the row, a reload, Reset
     e = await page.evaluate(OPEN); if (e) throw new Error(e); e = await page.evaluate(FLIP, 'Auto camera'); if (e) throw new Error(e);

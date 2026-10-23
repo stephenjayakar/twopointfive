@@ -1555,21 +1555,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page (`?autosway=0` = the turn rule of the bullet above, only at rest), OFF in the module and on the frozen stand (`FROZEN_HOLDS['AUTOCAM.sway']`,
   `TPS_AUTOSWAY=1`); a key of the `AUTOCAM` table, so a recording from before it replays with it off (`journal.ts applyKnobs`). Nothing with the mode off.
   THE RULE: the yaw the hand left the view at is the anchor (`cam.yaw − A.sway`); the sway is a lean round it, a function of the moment and not a sum of
-  turns. It leans toward the middle of the hostile men in his line, so the fight comes up the screen where the picture is longest (`swayFight`, 0.6 of the
-  angle to them, 38° at the most; kept `swayLinger`, 1.5 s, after the last of them leaves his line, so a man stepping in and out of cover does not rock the
-  view; a fight behind the lens keeps the side it took), and toward the side he moves to ("moment" was read as movement: `swayMove`, 14° at 2.5 m/s across
-  the view; straight up or down the screen leans nowhere), 45° in all. SMOOTH: the goal is asked ten times a second and the yaw goes to it by a critically
-  damped spring (`swayHz`) whose speed is capped (`swayRate`, about 26° a second), so it starts from rest and never steps. REVERSIBLE: the cause gone, it
-  comes back to the hand's yaw, to the bit. It stops (its speed decays over a fifth of a second) while a mouse button is down or his hands are at something
-  the view serves, never goes to a yaw that puts a wall between the lens and him or a man in his line where the hand's own view has none, and is dropped
-  where it stands by a turn by hand, the double tap's come-round and a turn at rest. NOTHING CARRIES HIS AIM through it: the view turns slowly under a live
-  cursor, and a held walk key bends his path at the same slow rate, as in any game whose camera follows.
-  CHECK: `autocam` lines 14 to 16 (14 from made-up scenes: the lean, its first step a tenth of the cap, never past the cap, the linger, home to the bit,
-  the button, the wall, the switch off; 15 a real hostile man to one side through `stepFrame` on the fixed step, and the same with the sway off: the yaw
-  never moves; 16 the stand words and the journal). ALL PASS on both stands; `AUTOSWAY_BREAK=1` fails 14 and 15 on both. Lines 1 to 13 run with the sway
-  off: they are the rule as it was. Real page: `autocam-page.cjs` walks across the view with the mode on (the lean, the cap, home). One floor, one seed.
-  NOBODY HAS SEEN OR PLAYED IT, NEVER ON A GPU: whether a view that turns under a held walk key and a live cursor is welcome in a fight is the
-  maintainer's to say, and every number is a first guess.
+  turns. It leans toward the middle of the MEN OF THE FIGHT, so the fight comes up the screen where the picture is longest (`swayFight`, 0.6 of the angle to
+  them, 38° at the most; a man of the fight is a hostile man the picture shows who was in his line within `swayLinger`, 2 s, so one stepping in and out of
+  cover does not rock the view; men gone round behind the lens to the other side do not flip the side it took; their middle within 1.5 m of him leans
+  nothing), and, while no fight asks for a lean, toward the side he moves to ("moment" was read as movement: `swayMove`, 14° at 2.5 m/s across the view;
+  straight up or down the screen leans nowhere), 45° in all. SMOOTH IS THE BAR (his one hard rule): what the scene asks for is worked out ten times a second
+  and eased (`swayEase`), the yaw goes to it by a critically damped spring (`swayHz`) whose speed is capped (`swayRate`, 11.5° a second), and every stop or
+  change of mind goes through that spring or a decay: a mouse button down (its speed dies away over a fifth of a second, and it stays stopped 0.6 s after the
+  button comes up, so tapped shots are one stop), a wall (it never goes to a yaw that puts a wall between the lens and him or a man in his line where the
+  hand's own view has none; the share the walls allow falls at once and comes back only after a second clear), the view gone to plan mode or a show (it
+  coasts to a stop and is where it was when the view is his again). REVERSIBLE: the cause gone, it comes back to the hand's yaw, to the bit; a turn the hand
+  made meanwhile is kept. A come-round (the double tap) takes the view from it at once, and a turn at rest waits for it to be home. NOTHING CARRIES HIS AIM
+  through it: the view turns slowly under a live cursor, and a held walk key bends his path at the same slow rate, as in any game whose camera follows.
+  CHECK: `autocam` lines 14 to 16. 14, from made-up scenes: the lean and its first step (a seventh of the cap), home to the bit, the walk, a button and ten
+  tapped shots, a wall and a wall that flickers, the kept side, one of two men in and out each second (3.5° of movement, the worst case: longer out than the
+  linger), the men's middle beside him, a turn by hand mid-lean kept, the switch off; and over ALL of it no step past the cap and no step that differs from
+  the one before by more than the spring can make it. 15: a real hostile man to one side through `stepFrame` on the fixed step (the lean, a second behind a
+  wall and still a man of the fight, home when the fog hides him), and the same with the sway off: the yaw never moves. 16: the stand words and the journal.
+  ALL PASS on both stands; `AUTOSWAY_BREAK=1` fails 14 and 15 on both. Lines 1 to 13 run with the sway off: they are the rule as it was. A second reader
+  simulated the first cut and found a 2.9° jump at the snap home after a hand's tremor, rocking when one of several men peeked and a stutter under tapped
+  fire: all mended, and the rate came down from 26° to 11.5° a second on that reading. Real page: `autocam-page.cjs` walks across the view with the mode on
+  (the lean, the cap, home). One floor, one seed. NOBODY HAS SEEN OR PLAYED IT, NEVER ON A GPU: whether a view that turns under a held walk key and a live
+  cursor is welcome in a fight is the maintainer's to say, and every number is a first guess.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
   notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the

@@ -75,15 +75,17 @@ export const AUTOCAM = {
   hidM: 1.5, clearM: 2.5, probeM: 0.5,
   /** how fast a turn of its own comes round (1/s: the share of what is left taken each second) */
   turnRate: 5,
-  /** THE SWAY (off = the view turns by itself only at rest): the share of the angle to the middle of the men he could shoot that the yaw leans, and the
-   *  most of it (rad) · men gone further round than this to the OTHER side (rad) do not flip the side it took · the lean toward the side he moves to (rad) at this speed across the view
-   *  (m/s) · the most of both together (rad) · never faster than this (rad/s) · the spring's rate (1/s) · how fast it stops under a button (1/s) */
-  sway: false, swayFight: 0.6, swayFightMax: 38 * Math.PI / 180, swayBehind: 110 * Math.PI / 180, swayMove: 14 * Math.PI / 180, swayMps: 2.5,
-  swayMax: 45 * Math.PI / 180, swayRate: 0.45, swayHz: 2.2, swayStop: 12,
-  /** …and how long the lean toward a fight is kept after the last man he could shoot is gone from his line (s: a man stepping in and out of cover does not rock the view) */
-  swayLinger: 1.5,
-  /** …and how long after a button comes up it stays stopped (s: shots tapped one after another are one stop, not a stop for each) */
-  swayAfter: 0.6,
+  /** THE SWAY (off = the view turns by itself only at rest): the share of the angle to the middle of the men of the fight that the yaw leans, and the
+   *  most of it (rad) · men gone further round than this to the OTHER side (rad) do not flip the side it took · that middle nearer him than `swayNearM`
+   *  leans nothing, and counts in full `swayFadeM` further out (m) · a man of the fight is one the picture shows who was in his line within `swayLinger`
+   *  (s: a man stepping in and out of cover does not rock the view) */
+  sway: false, swayFight: 0.6, swayFightMax: 38 * Math.PI / 180, swayBehind: 110 * Math.PI / 180, swayNearM: 1.5, swayFadeM: 4, swayLinger: 2,
+  /** …the lean toward the side he moves to (rad) at this speed across the view (m/s): only while no fight asks for one · the most of both (rad) */
+  swayMove: 14 * Math.PI / 180, swayMps: 2.5, swayMax: 45 * Math.PI / 180,
+  /** …how it gets there: what is asked for is eased (s) before the spring sees it · the spring's rate (1/s) · never faster than this (rad/s) · under a
+   *  button its speed dies away at this rate (1/s), and it stays stopped this long after the button comes up (s: shots tapped one after another are one
+   *  stop) · a view a wall forbade is tried again only after this long clear (s) */
+  swayEase: 0.6, swayHz: 2.2, swayRate: 0.2, swayStop: 12, swayAfter: 0.6, swayClear: 1,
   /** THE HAND TAKES IT BACK: the camera's key held this long with a walk key down (s: longer than a tap) · or the mouse moved this far under it (px: less is
    *  a hand's tremor on the key, host/findme.ts TAPTWICE.driftPx) inside `handSecs` */
   holdSecs: 0.25, handPx: 12, handSecs: 0.4,
@@ -102,8 +104,8 @@ export interface AutoScene {
   hold: boolean;
   /** his feet are still this tick · nothing stands in a turn's way but the clocks (no man held, no arc up, no wall taken, the camera not locked) */
   still: boolean; free: boolean;
-  /** how fast he moves over the floor (X, Z: m/s) */
-  vel: [number, number];
+  /** how fast he moves over the floor (X, Z: m/s) · the men of the fight (the sway's: shown, and in his line within `swayLinger`) */
+  vel: [number, number]; fight: Vec3[];
   /** hostile men the picture shows in his line within `fightM`, or within `nearM` in his line or not (no turn of its own while there is one) · the zoom is the mode's to move (no lesson holds it) */
   shown: number; zoomFree: boolean;
   /** seconds since he fired */
@@ -134,22 +136,30 @@ export interface AutoCam {
   seen: Vec3[]; seenT: number;
   /** the sway: how far the yaw stands from the hand's own (rad), how fast it is going (rad/s), where it is going, and how long since that was asked (s) */
   sway: number; swayV: number; swayGoal: number; swayT: number;
-  /** …and the hand's own yaw as the sway left it (it comes back to this, to the bit) · the lean a fight last asked for and how long since a man was in his line (s) */
-  swayHome: number; swayFight: number; swayLost: number;
-  /** how long since a button was down, or his hands at something the view serves (s) */
-  swayCalm: number;
+  /** …the hand's own yaw as the sway left it (it comes back to this, to the bit) · what the fight last asked for, and that and the walk's share as eased */
+  swayHome: number; swayRaw: number; swayFight: number; swayMove: number;
+  /** …how long since a button was down (s) · the share of the lean the walls allow, and how long a larger share has been clear (s) */
+  swayCalm: number; swayK: number; swayKT: number;
+  /** when each hostile man was last in his line, and the men of the fight as last asked */
+  lineT: Map<object, number>; fight: Vec3[];
   /** the last scene read (the check's and the debugger's look) */
   scene: AutoScene | null;
 }
 export function autoCam(): AutoCam {
-  return { off: [0, 0], base: NaN, goal: NaN, stillT: 0, turnT: 1e9, heldT: 0, handPx: 0, handT: 1e9, space: null, cell: -1, spaceT: -1e9, mid: null, shown: 0, ops: new Map(), way: null, seen: [], seenT: -1e9, sway: 0, swayV: 0, swayGoal: 0, swayT: 1e9, swayHome: 0, swayFight: 0, swayLost: 1e9, swayCalm: 1e9, scene: null };
+  return { off: [0, 0], base: NaN, goal: NaN, stillT: 0, turnT: 1e9, heldT: 0, handPx: 0, handT: 1e9, space: null, cell: -1, spaceT: -1e9, mid: null, shown: 0, ops: new Map(), way: null, seen: [], seenT: -1e9, sway: 0, swayV: 0, swayGoal: 0, swayT: 1e9, swayHome: 0, swayRaw: 0, swayFight: 0, swayMove: 0, swayCalm: 1e9, swayK: 1, swayKT: 0, lineT: new Map(), fight: [], scene: null };
 }
 /** the mode came on: the zoom as it stands is the hand's own, and nothing of an earlier run is kept */
-export function autoBegin(A: AutoCam, cam: FollowCamera): void { A.off[0] = A.off[1] = 0; A.base = cam.desiredDistance; A.goal = NaN; A.stillT = 0; A.turnT = 1e9; A.heldT = 0; A.handPx = 0; A.way = null; A.ops.clear(); A.space = null; A.cell = -1; swayDrop(A); AUTOCAM_STATS.on++; }
+export function autoBegin(A: AutoCam, cam: FollowCamera): void { A.off[0] = A.off[1] = 0; A.base = cam.desiredDistance; A.goal = NaN; A.stillT = 0; A.turnT = 1e9; A.heldT = 0; A.handPx = 0; A.way = null; A.ops.clear(); A.space = null; A.cell = -1; A.lineT.clear(); A.fight.length = 0; swayDrop(A); AUTOCAM_STATS.on++; }
 /** the view is somebody else's for now (plan mode, a show, a pin): nothing is leaned, and it starts from his feet when it is his again */
-export function autoRest(A: AutoCam): void { A.off[0] = A.off[1] = 0; A.stillT = 0; A.way = null; swayDrop(A); }
-/** the yaw as it stands is the hand's own from here: a turn by hand, a come-round, or the view gone to somebody else */
-export function swayDrop(A: AutoCam): void { A.sway = 0; A.swayV = 0; A.swayGoal = 0; A.swayT = 1e9; A.swayFight = 0; A.swayLost = 1e9; }
+export function autoRest(A: AutoCam): void { A.off[0] = A.off[1] = 0; A.stillT = 0; A.way = null; }
+/** the yaw as it stands is the hand's own from here: the mode put off, or a come-round begun */
+export function swayDrop(A: AutoCam): void { A.sway = 0; A.swayV = 0; A.swayGoal = 0; A.swayT = 1e9; A.swayRaw = 0; A.swayFight = 0; A.swayMove = 0; A.swayK = 1; A.swayKT = 0; }
+/** the sway stopping where it is — a button down, or the view gone to somebody else for now: its speed dies away, with no step. The turn to give the camera */
+export function swayCoast(A: AutoCam, dt: number): number {
+  if (!A.swayV) return 0;
+  A.swayV *= Math.exp(-AUTOCAM.swayStop * dt); if (Math.abs(A.swayV) < 1e-4) A.swayV = 0;
+  const d = A.swayV * dt; A.sway += d; A.swayGoal = A.sway; A.swayT = 0.1; return d;
+}
 /** the hand zoomed under the camera's key with the mode on: that is the hand's own distance now */
 export function autoZoom(A: AutoCam, cam: FollowCamera, delta: number): void { if (!(A.base > 0)) A.base = cam.desiredDistance; A.base = Math.max(6, Math.min(40, A.base * Math.exp(delta * 0.0012))); A.goal = NaN; }
 
@@ -182,11 +192,12 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
   const K = AUTOCAM, pl = g.player, c = pl.char, p = c.pos, now = g.time; AUTOCAM_STATS.reads++;
   // ---- the men he could shoot: hostile, on their feet, in the picture (the fog's word) and in his line — asked ten times a second
   if (now - A.seenT >= 0.1 || now < A.seenT) {
-    A.seenT = now; A.seen.length = 0; A.shown = 0; const eye: Vec3 = [p[0], 1.5, p[2]], fog = g.fogOfWar;
+    A.seenT = now; A.seen.length = 0; A.fight.length = 0; A.shown = 0; if (A.lineT.size > g.guards.length) A.lineT.clear(); const eye: Vec3 = [p[0], 1.5, p[2]], fog = g.fogOfWar;
     for (const gd of g.guards) {
       if (gd.state === 'dead' || gd.held || !isHostile('player', gd.team)) continue;
       const q = gd.char.pos; if (flat(p, q) > K.fightM || fog?.hidden(gd)) continue;
-      const inLine = !g.col.segmentBlocked(eye, [q[0], 1.3, q[2]]); if (inLine) A.seen.push([q[0], 0, q[2]]);
+      const inLine = !g.col.segmentBlocked(eye, [q[0], 1.3, q[2]]); if (inLine) { A.seen.push([q[0], 0, q[2]]); A.lineT.set(gd, now); }
+      const last = A.lineT.get(gd); if (last !== undefined && now >= last && now - last <= K.swayLinger) A.fight.push([q[0], 0, q[2]]);   // (a man of the fight: the sway's)
       if (inLine || flat(p, q) <= K.nearM) A.shown++;   // (behind cover but this near: a step puts him in the line)
     }
   }
@@ -236,7 +247,7 @@ export function autoRead(A: AutoCam, g: Game, input: Input, dt: number): AutoSce
   const sky = !g.weather?.underRoof(p[0], p[2]);
   const zoomK = (closeMode(g) ? K.closeK : inRoom ? K.roomK : sky ? K.skyK : 1) * (pl.sup.v > K.fireAt ? K.fireK : 1);
   const free = !pl.holding && !pl.dragging && !pl.throwPreview && !pl.launchHeld && !pl.wall && !g.rails?.locks('camera') && g.lesson?.step?.done?.is !== 'view';
-  return A.scene = { sam: [p[0], p[1], p[2]], threats: A.seen, beat, door, room, zoomK, hold: input.buttons !== 0, still, free, vel: [c.vel[0], c.vel[2]], shown: A.shown, zoomFree: !g.rails?.locks('zoom'), firedAgo: now - pl.lastFireT };
+  return A.scene = { sam: [p[0], p[1], p[2]], threats: A.seen, beat, door, room, zoomK, hold: input.buttons !== 0, still, free, vel: [c.vel[0], c.vel[2]], fight: A.fight, shown: A.shown, zoomFree: !g.rails?.locks('zoom'), firedAgo: now - pl.lastFireT };
 }
 
 /** how far the floor shows from the look-at at one metre of distance: to a side, up the screen and down it */
@@ -303,38 +314,42 @@ export function turnGoal(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number
   return null;
 }
 
-/** ONE STEP OF THE SWAY (AUTOCAM.sway), asked once a camera step when no turn of another kind is under way: the turn to give the camera now (rad). The
- *  hand's own yaw is `cam.yaw − A.sway`; the goal is asked ten times a second and the yaw goes to it by a critically damped spring, its speed capped. */
+/** ONE STEP OF THE SWAY (AUTOCAM.sway), asked once a camera step when no come-round is under way: the turn to give the camera now (rad). The hand's own
+ *  yaw is `cam.yaw − A.sway`; what the scene asks for is worked out ten times a second and eased, and the yaw goes to it by a critically damped spring
+ *  whose speed is capped. Nothing in it steps: every way it stops or changes its mind goes through the spring or a decay. */
 export function autoSway(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number, blocked: (a: Vec3, b: Vec3) => boolean): number {
   const K = AUTOCAM; if (!(dt > 0)) return 0;
   if (!K.sway) { if (A.sway || A.swayV) swayDrop(A); return 0; }
-  A.swayCalm = S.hold || !S.free ? 0 : A.swayCalm + dt;
-  if (A.swayCalm < K.swayAfter) {   // a button down (or just up), or his hands at something the view serves: it stops, quickly and without a step, where it is
-    A.swayV *= Math.exp(-K.swayStop * dt); if (Math.abs(A.swayV) < 1e-4) A.swayV = 0; A.swayT = 1e9;
-    const d = A.swayV * dt; A.sway += d; A.swayGoal = A.sway; return d;
-  }
   if (!A.sway && !A.swayV) A.swayHome = cam.yaw;
+  A.swayCalm = S.hold || !S.free ? 0 : A.swayCalm + dt;
+  if (A.swayCalm < K.swayAfter) return swayCoast(A, dt);   // a button down (or just up), or his hands at something the view serves
   const home = cam.yaw - A.sway, p = S.sam; A.swayT += dt;
   if (A.swayT >= 0.1) {
-    const asked = Math.min(A.swayT, 1); A.swayT = 0; let goal = 0;
-    if (S.threats.length) {
-      let x = 0, z = 0; for (const t of S.threats) { x += t[0]; z += t[2]; } x = x / S.threats.length - p[0]; z = z / S.threats.length - p[2]; A.swayLost = 0;
-      if (Math.hypot(x, z) > 1.5) {
-        const off = wrap(Math.atan2(x, z) + Math.PI - home), kept = A.swayFight !== 0 && Math.sign(off) !== Math.sign(A.swayFight) && Math.abs(off) > K.swayBehind;   // (a fight gone round behind the lens to the other side: the side it took is kept, the long way being the short one)
-        A.swayFight = kept ? Math.sign(A.swayFight) * K.swayFightMax : Math.sign(off) * Math.min(K.swayFightMax, K.swayFight * Math.abs(off));
+    const asked = Math.min(A.swayT, 0.5), ease = 1 - Math.exp(-asked / K.swayEase); A.swayT = 0;
+    // the fight: the middle of its men, up the screen
+    let raw = 0;
+    if (S.fight.length) {
+      let x = 0, z = 0; for (const t of S.fight) { x += t[0]; z += t[2]; } x = x / S.fight.length - p[0]; z = z / S.fight.length - p[2]; const d = Math.hypot(x, z);
+      if (d > K.swayNearM) {
+        const off = wrap(Math.atan2(x, z) + Math.PI - home), kept = A.swayRaw !== 0 && Math.sign(off) !== Math.sign(A.swayRaw) && Math.abs(off) > K.swayBehind;   // (gone round behind the lens to the other side: the side it took is kept)
+        raw = (kept ? Math.sign(A.swayRaw) * K.swayFightMax : Math.sign(off) * Math.min(K.swayFightMax, K.swayFight * Math.abs(off))) * Math.min(1, (d - K.swayNearM) / K.swayFadeM);
       }
-    } else if ((A.swayLost += asked) > K.swayLinger) A.swayFight = 0;
-    goal += A.swayFight;
-    const speed = Math.hypot(S.vel[0], S.vel[1]);
-    if (speed > 0.3) goal += K.swayMove * Math.max(-1, Math.min(1, Math.sin(wrap(Math.atan2(S.vel[0], S.vel[1]) + Math.PI - home)) * speed / K.swayMps));
-    goal = Math.abs(goal) < 1e-3 ? 0 : Math.max(-K.swayMax, Math.min(K.swayMax, goal));
-    // …and never to a view that hides him, or a man he could shoot, behind a wall the hand's own view does not
-    if (Math.abs(goal) > 0.05) {
-      const shows = (q: Vec3, y: number) => clearOf(q, y, blocked) >= K.hidM || clearOf(q, home, blocked) < K.hidM;
-      const ok = (y: number) => { if (!shows(p, y)) return false; for (let i = 0; i < S.threats.length && i < 4; i++) if (!shows(S.threats[i], y)) return false; return true; };
-      let k = 1; while (k > 0 && !ok(home + goal * k)) k -= 1 / 3; goal *= Math.max(0, k);
     }
-    A.swayGoal = goal;
+    A.swayRaw = raw; A.swayFight += (raw - A.swayFight) * ease; if (!raw && Math.abs(A.swayFight) < 1e-4) A.swayFight = 0;
+    // the walk: the side he moves to, while no fight asks for a lean of its own
+    const speed = Math.hypot(S.vel[0], S.vel[1]), lat = speed > 0.3 && !raw ? Math.max(-1, Math.min(1, Math.sin(wrap(Math.atan2(S.vel[0], S.vel[1]) + Math.PI - home)) * speed / K.swayMps)) : 0;
+    A.swayMove += (K.swayMove * lat - A.swayMove) * ease; if (!lat && Math.abs(A.swayMove) < 1e-4) A.swayMove = 0;
+    let goal = Math.max(-K.swayMax, Math.min(K.swayMax, A.swayFight + A.swayMove)); if (Math.abs(goal) < 1e-3) goal = 0;
+    // …and never to a view that hides him, or a man in his line, behind a wall the hand's own view does not: the share the walls allow falls at once and
+    // comes back only after `swayClear` clear (a pillar passed on a walk does not rock the view)
+    let k = 1;
+    if (Math.abs(goal) > 0.05) {
+      const pts: Vec3[] = [p]; for (let i = 0; i < S.threats.length && i < 4; i++) pts.push(S.threats[i]);
+      const open = pts.filter(q => clearOf(q, home, blocked) >= K.hidM), ok = (y: number) => open.every(q => clearOf(q, y, blocked) >= K.hidM);
+      while (k > 1e-6 && !ok(home + goal * k)) k -= 1 / 3; k = Math.max(0, k);
+    }
+    if (k < A.swayK) { A.swayK = k; A.swayKT = 0; } else if (k > A.swayK) { if ((A.swayKT += asked) >= K.swayClear) { A.swayK = k; A.swayKT = 0; } } else A.swayKT = 0;
+    A.swayGoal = goal * A.swayK;
   }
   let turn = 0;
   for (let left = dt; left > 1e-9;) {   // (a long frame in short steps: the spring is stepped as it would be at the fixed step)
@@ -342,6 +357,8 @@ export function autoSway(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number
     A.swayV += (-2 * K.swayHz * A.swayV - K.swayHz * K.swayHz * (A.sway - A.swayGoal)) * h; A.swayV = Math.max(-K.swayRate, Math.min(K.swayRate, A.swayV));
     A.sway += A.swayV * h; turn += A.swayV * h;
   }
-  if (!A.swayGoal && Math.abs(A.sway) < 1e-4 && Math.abs(A.swayV) < 1e-4) { turn = A.swayHome - cam.yaw; A.sway = 0; A.swayV = 0; }   // (home: to the bit)
+  if (!A.swayGoal && Math.abs(A.sway) < 1e-4 && Math.abs(A.swayV) < 1e-4) {   // home — to the bit where nothing else has turned the view since it left
+    const was = A.sway - turn, back = A.swayHome - cam.yaw; turn = Math.abs(back + was) < 1e-9 ? back : -was; A.sway = 0; A.swayV = 0;   // (`was`: the lean before this step's share of it, which the camera has not been given yet)
+  }
   return turn;
 }
