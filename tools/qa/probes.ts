@@ -3274,6 +3274,8 @@ if (on('planplus', 'squadorders', 'all')) await run('planplus', async () => (awa
 if (on('onesignal', 'squadorders', 'all')) await run('onesignal', async () => (await import('./onesignal-check.ts')).onesignalCheck());
 // plan mode's view stays a few metres from the player: a room's worth, not the level's (CMDRING.planNear) — plannear-check.ts
 if (on('plannear', 'squadorders', 'all')) await run('plannear', async () => (await import('./plannear-check.ts')).plannearCheck());
+// the squad's ring two rings deep, no glyph at the cursor (CMDRING.flat / plainHint) — ringflat-check.ts
+if (on('ringflat', 'squadorders', 'all')) await run('ringflat', async () => (await import('./ringflat-check.ts')).ringflatCheck());
 // X is where the plan is laid: an order picked with 'wait for my word' on is laid — nobody moves — F sends the plan, a restart puts it back (planlay-check.ts; PLANLAY.on)
 if (on('planlay', 'squadorders', 'all')) await run('planlay', async () => (await import('./planlay-check.ts')).planlayCheck());
 // ---------------------------------------------------------------- the BREACHING SHOTGUN (shotgun-probes.ts; game/shotgun.ts, weapons.ts row 'm870', doortools.ts toGun / gunStep, kit.ts 'shotgun'): 'shotgun' = the family

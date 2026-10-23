@@ -69,6 +69,12 @@ export const PLAN = {
    *  it stands on his place and the press sends them now (PlanDoor.ready). false: the cap only on the door the key would send now, on its plate,
    *  the same whether or not its men are there. Picture only */
   keyLit: true,
+  /** … AND ON A DOOR HELD FROM OUTSIDE IT IS LIVE ONLY ONCE THE MEN HAVE SAID SO (squad sense's finding, 10-23: on a held door the key pressed
+   *  before the men's 'holding · on your word' — six or seven seconds into the hold — cuts their slice of the room short, and the cap was lit the
+   *  moment their feet were on the jambs, asking for exactly that press): the cap of a door whose men hold its threshold on the word stays DARK
+   *  until they have made that call (doortools.ts `thr.told`), then lights. The key itself does what it did. false: lit with their feet on their
+   *  places, as it was. Picture only, on on both stands (`?thrtold=0` off) */
+  thrTold: true,
   /** seconds an order just given is drawn at full strength — its men ringed, its ways bright */
   freshSecs: 2.5,
   /** how strong a way is drawn after that, while he still walks it · a mark and a fan under a man who stands */
@@ -186,16 +192,16 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
   const F = keyCap(DOORTOOLS.blowKey), wordKey = !big || DOORTOOLS.wordOnKey;
   type Why = PlanDoor['why'];
   const RANK: Record<Why, number> = { stack: 0, pair: 0, tool: 1, thr: 2, drill: 2, charge: 3, wall: 3 };
-  interface Wait { men: Set<Guard>; why: Why; /** something here of the addressed men's goes on the word */ word: boolean; set: SetCharge | null; drill: boolean; /** the rescue's entry, held for its second word */ gate: boolean }
+  interface Wait { men: Set<Guard>; why: Why; /** a hold of its threshold on the word has not been called yet ('holding · on your word': PLAN.thrTold) */ untold: boolean; /** something here of the addressed men's goes on the word */ word: boolean; set: SetCharge | null; drill: boolean; /** the rescue's entry, held for its second word */ gate: boolean }
   const by = new Map<Door, Wait>();
   const put = (door: Door, men: Guard[], why: Why, word: boolean): Wait => {
-    let e = by.get(door); if (!e) by.set(door, e = { men: new Set(), why, word: false, set: null, drill: false, gate: false });
+    let e = by.get(door); if (!e) by.set(door, e = { men: new Set(), why, untold: false, word: false, set: null, drill: false, gate: false });
     for (const m of men) e.men.add(m); if (RANK[why] > RANK[e.why]) e.why = why; if (word) e.word = true; return e;
   };
   for (const op of T.ops) {
     if (op.word) continue;
     const held = !!op.thr && op.phase === 'thr';
-    if (held || (big && (op.onWord || op.phase === 'held' || op.phase === 'armed' || op.phase === 'standoff' || op.phase === 'place'))) { const men = op.men.filter(alive); put(op.door, men, held ? 'thr' : op.kind === 'charge' ? 'charge' : 'tool', men.some(m => addr.has(m))); }
+    if (held || (big && (op.onWord || op.phase === 'held' || op.phase === 'armed' || op.phase === 'standoff' || op.phase === 'place'))) { const men = op.men.filter(alive), e = put(op.door, men, held ? 'thr' : op.kind === 'charge' ? 'charge' : 'tool', men.some(m => addr.has(m))); if (held && op.thr!.hold && !op.thr!.told) e.untold = true; }
   }
   if (big) for (const gd of S.squad()) { const A = S.of(gd); if (alive(gd) && A && A.order === 'stack' && A.door && A.post && A.there.startsWith('stacked')) put(A.door, [gd], 'stack', addr.has(gd)); }
   else { for (const x of T.stackWaits(S.squad())) for (const gd of x.men) put(x.stack, [gd], 'stack', false);   // (DOORTOOLS.wordSmall: one or two teammates on a plain stack wait on the key too —
@@ -239,7 +245,7 @@ function waitsOnKey(g: Game, out: FloorPlan, toneOf: (gd: Guard) => Tone | null)
       if ((e.word && wordKey) || (e.gate && last) || (e.drill && drillNow)) now = true;
       else if (e.set && free.includes(e.set)) now = big ? !anyWord && e.set === nearSet : anyWord || e.set === nearSet;
     }
-    out.doors.push({ door, a: ja, b: jb, tone: tone([...e.men]), key: wordKey || e.set || e.drill || e.gate ? F : null, now, ready: set([...e.men]), why: e.why });
+    out.doors.push({ door, a: ja, b: jb, tone: tone([...e.men]), key: wordKey || e.set || e.drill || e.gate ? F : null, now, ready: set([...e.men]) && !(PLAN.thrTold && e.untold), why: e.why });
   }
   for (const c of wSet) out.doors.push({ door: null, a: wallPt(c.wall, -0.4, 0.03), b: wallPt(c.wall, 0.4, 0.03), tone: tone(S.squad().filter(m => alive(m) && m.callsign === c.by)), key: F, now: up && !pairFirst && !rowKey && wallFirst && c === wall, ready: true, why: 'wall' });
   // ON RAILS A KEY IS NAMED ONLY ONCE ITS LESSON HAS OPENED IT (rails.ts hushes): a stack that waits on the word, at a step before the word is taught, kept its

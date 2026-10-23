@@ -412,8 +412,7 @@ export async function cmdringCheck(): Promise<boolean> {
     // the last line. what the cursor is on is kept by whoever reads the HUD, not on the order book (orders.ts HoverKept): two runs of one seed, one whose
     // HUD lines and ring hint are read every frame (with the asker's own store; once more with none) and one never read — the digest is the same, the
     // store holds the answer, and NO FIELD OF THE ORDER BOOK is another value after a read than before it (each own field: the same thing, and where it is
-    // a list or a record of plain values, the same values). THE WHOLE STATE IS NOT HELD HERE: a read still writes the room clear drill's memo of its two
-    // men (nightbreach.ts drillOf) and the collision world's query stamps (the cursor's pick) — printed, not judged.
+    // a list or a record of plain values, the same values). The whole state is printed beside it, not judged here.
     {
       const plain = (v: any) => v === null || typeof v !== 'object';
       const shot = (O: any) => Object.keys(O).map(k => { const v = O[k]; return [k, v, v && typeof v === 'object' && Object.values(v).every(plain) ? JSON.stringify(v) : ''] as [string, unknown, string]; });

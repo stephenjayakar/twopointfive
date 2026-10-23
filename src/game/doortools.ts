@@ -783,6 +783,7 @@ export class DoorTools {
         return stackable(t, men); },
       issue: (_S, men, t, o) => this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord('bang', men, t) : this.thresholdThen('bang', men, t)) : this.issue('bangClear', men, t, !!o?.onWord) });
     S.register({ id: 'charge', page: TOOLS_PAGE, label: t => t.kind === 'door' && this.looseOn(t) ? 'stand off · in behind the charge' : t.kind === 'door' && this.chargeOn(t.door) ? `blow the charge${OWNCHARGE.on ? this.closeWords(this.chargeOn(t.door)!) : ''}` : `breach with a charge · ${this.charges} left`, targets: ['door'], ack: ['copy.', 'on it.'],
+      gone: (_S, t) => t.kind === 'door' && !!t.door.def.steel && !this.chargeOn(t.door),   // (orders.ts OrderDef.gone: a steel door takes no charge — the flat ring does not offer one)
       valid: (_S, t, men) => {
         if (t.kind !== 'door') return false;
         if (this.looseOn(t)) return this.standoffFits(men, t, true);   // (owncharge.ts: a charge the player set by hand, from its own face: they stand off on it)
@@ -885,6 +886,7 @@ export class DoorTools {
     { const big = BIGSLOT.on && BIGSLOT.shut && this.roster.some(m => carriesHammer(m) || (m.state !== 'dead' && kitBig(m) === 'shotgun'));
       if (big !== this.bigRow) { this.bigRow = big; g.orders.unregister(BIG_ORDER);
         if (big) g.orders.register({ id: BIG_ORDER, page: TOOLS_PAGE, hotKey: BIG_KEY, label: t => `${this.bigWord(t, g.orders.recipients(t))} and clear`, targets: ['door'], ack: ['on it.', 'breaching.'], onWord: true,
+          gone: (_S, t) => t.kind === 'door' && (isOpen(t.door) || !!t.door.def.steel),   // (orders.ts OrderDef.gone: nothing to breach, or no way through — the flat ring does not offer it)
           valid: (_S, t, men) => { if (t.kind !== 'door') return false; if (isOpen(t.door)) return "it's open."; if (t.door.def.steel) return 'steel. no way through.';
             if (!men.some(m => carriesHammer(m) || (SHOTGUN.on && m.state !== 'dead' && kitBig(m) === 'shotgun'))) return 'nobody here carries one.';
             if (SILENT.kicks && !SILENT.toolsLoud && squadSilent(g) && !silentUrgent(g)) return wg("not while we're silent.", 'not while we are silent.');   // (with SILENT.toolsLoud the row is one of silent.ts LOUD_ROWS: marked LOUD, and picking it is the squad going loud)

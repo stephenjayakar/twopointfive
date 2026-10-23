@@ -410,6 +410,7 @@ export class WallCharge {
   constructor(private g: Game) {
     this.opener = { id: WALL_PAGE, label: 'wall tools', targets: ['floor'], listed: [], opens: WALL_PAGE, key: 5, issue: () => { } };
     this.row = { id: WALL_ORDER, label: t => { const c = this.chargeOnTarget(t); return c ? `blow the charge${this.closeWords(c)}` : this.rowWords(); }, targets: ['floor'], listed: [], ack: ['copy.', 'on it.'],
+      gone: (_S, t) => this.brought === 0 && !this.chargeOnTarget(t),   // (orders.ts OrderDef.gone: the squad never carried one — the flat ring does not offer it)
       can: (_S, gd, t) => this.canOf(gd, t), valid: (_S, t, men) => this.valid(t, men), issue: (_S, men, t) => this.issue(men, t) };
     g.orders.notes.push(() => this.hudNotes());
   }
