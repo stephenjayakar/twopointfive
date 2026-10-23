@@ -115,6 +115,15 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         `${S.length} sources in twelve seconds (${A.sources.length} filed in all by the game) · coarse lattice: ${S.every((e: any) => e.lattice === 'coarse')} · thickest ${Math.max(0, ...S.map((e: any) => e.density))} against the table's ${K.smoke.density}${S[0] && F ? ` · ${(S[0].pos[1] - F.pos[1]).toFixed(2)} m over the coals, its foot ${(S[0].pos[1] - S[0].radius).toFixed(2)} m over the floor, ${S[0].radius} m in radius` : ''}`);
       const B = await rig(true, false); B.step(6 * 60);
       verdict(B.sw && mine(B).length === 0, 'smoke — … and with no solver drawing, no source at all', `${mine(B).length} sources`);
+      // … and by the graphics preset on (ui/quality.ts FIRE SMOKE SHED): the REAL Quality over this game's own settings, a preset put on by hand as the menu does
+      { const { Quality } = await import(`${ROOT}/src/ui/quality.ts`); const D = await rig(true, true), S = D.g.engine.settings;
+        S.fireSmokeShed = process.env.FIRESHED_BREAK !== '1';   // (FIRESHED_BREAK=1: the rule's switch off, and this line must FAIL)
+        const E = { settings: S, rc: { cfg: { ...(D.g.engine.rc?.cfg ?? {}) } }, rebuildRc(c: any) { E.rc.cfg = c; }, gpu: { canvas: { clientHeight: 900, clientWidth: 1600 } }, capScale: 1, effectiveScale: 1, timer: { enabled: false, results: new Map<string, number>(), total: () => 0, unionMs: () => 0 } };
+        const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
+        q.pin('verylow'); D.step(4 * 60); const none = mine(D).length, drawn = (D.g.engine.fires ?? []).length;
+        q.pin('low'); D.step(1); const atOnce = mine(D).length - none; D.step(3 * 60); const after = mine(D).length - none;
+        verdict(D.sw && none === 0 && drawn === 1 && atOnce === 1 && after >= 3, 'smoke — … and on the graphics preset that sheds it (verylow put on: settings.fireSmoke), the fire burns and files no source; low put on, it smokes the same frame',
+          `verylow: ${none} sources in four seconds, ${drawn} fire handed to the renderer · low: ${atOnce} source the frame it was put on, ${after} three seconds on`); }
       K.smoke.on = false;
       try { const C = await rig(true, true); C.step(4 * 60); const drawn = (C.g.engine.fires ?? []).length;
         verdict(C.sw && mine(C).length === 0 && drawn === 1, 'smoke — … and with the smoke alone put off (the page\'s ?firesmoke=0), the fire burns and files no source', `${mine(C).length} sources · ${drawn} fire handed to the renderer`); }

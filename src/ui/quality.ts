@@ -197,7 +197,7 @@ export const IQ_OFF: IqTier = { sharp: false, decouple: false, gbaa: false, hist
 export const IQ_C3J: IqTier = { sharp: true, decouple: true, gbaa: true, histSharp: 0.5 };
 // (The SDF character rig has no tier: the fitted round cones are every ray's character test at every preset — measured free, −0.3 … +0.5 ms at high, docs/internal/sdf-characters.md §8 —
 // and its two extras, the smooth-union closest hit in reflections and the drawn character shadows, are rows no preset touches: engine settings sdfRigSmooth / charSoftShadow.)
-export interface Preset { restir: RestirTier; rt: RtTier; p5: P5Tier; dn: Dn; iq: IqTier /* the resolve configuration for the tier (IMAGE-QUALITY program: sharp direct + decoupled jitter + GBAA + the history de-blur — IqTier above; ?sharp / ?nosharp / ?noiq force it for the visit) */; scale: number /* the render scale the preset starts at UNDER TAAU, relative to its cap (ultra 1.0 = TAA only … verylow 0.5 = a 2× upscale per axis); with TAAU off every preset starts at 1.0 as before — maxH is the preset's OUTPUT resolution either way; the ladder / the Tab slider trim below it */; taau: Taau; maxH: number; volSteps: number; rc: { nx: number; ny: number; nz: number }; rcCoarse?: { nx: number; ny: number; nz: number } /* the row's cache grid with ONE CACHE GRID off (rcGridOf below the table) */; smokeOwn?: boolean /* SMOKE KEEP leaves this row's smoke alone (withSmoke below the table) */; cascades: number; rbIters: number; ds: [number, number, number]; hist: number; mesh: boolean | 'near'; cards: boolean; lossy: Lossy; caps: Caps; froxel: FroxelTier; }   // cards = settings.torchBounceCards (the carried spots' footprints as analytic one-bounce emitters, docs/internal/perf-2026-08-10.md: +0.13 ms gather at high, +0.27 at ultra, and the torch's first bounce off a wall comes back at its physical level instead of 4–15 % of it — a LOOK change, so on where it was eyeballed: ultra + high); ds = direct-light shadow samples [strongest light, other leaders, adaptive stop] — measured: 8/4/3 → 1/1/2 halves the direct pass (7.2 → 3.8 ms at 1600×1000), so the cheaper presets spend fewer rays as well as fewer pixels; hist = settings.directHistory (temporal reuse of the direct estimate: 0.5 = the default ≈ 2 frames, 0.7 ≈ 3 — verylow leans on it to hide its one-ray penumbra grain)
+export interface Preset { restir: RestirTier; rt: RtTier; p5: P5Tier; dn: Dn; iq: IqTier /* the resolve configuration for the tier (IMAGE-QUALITY program: sharp direct + decoupled jitter + GBAA + the history de-blur — IqTier above; ?sharp / ?nosharp / ?noiq force it for the visit) */; scale: number /* the render scale the preset starts at UNDER TAAU, relative to its cap (ultra 1.0 = TAA only … verylow 0.5 = a 2× upscale per axis); with TAAU off every preset starts at 1.0 as before — maxH is the preset's OUTPUT resolution either way; the ladder / the Tab slider trim below it */; taau: Taau; maxH: number; volSteps: number; rc: { nx: number; ny: number; nz: number }; rcCoarse?: { nx: number; ny: number; nz: number } /* the row's cache grid with ONE CACHE GRID off (rcGridOf below the table) */; smokeOwn?: boolean /* the floor's row: SMOKE KEEP leaves this row's smoke alone (withSmoke below the table), and FIRE SMOKE SHED draws an open fire without its smoke on it (fireSmokeOf) */; cascades: number; rbIters: number; ds: [number, number, number]; hist: number; mesh: boolean | 'near'; cards: boolean; lossy: Lossy; caps: Caps; froxel: FroxelTier; }   // cards = settings.torchBounceCards (the carried spots' footprints as analytic one-bounce emitters, docs/internal/perf-2026-08-10.md: +0.13 ms gather at high, +0.27 at ultra, and the torch's first bounce off a wall comes back at its physical level instead of 4–15 % of it — a LOOK change, so on where it was eyeballed: ultra + high); ds = direct-light shadow samples [strongest light, other leaders, adaptive stop] — measured: 8/4/3 → 1/1/2 halves the direct pass (7.2 → 3.8 ms at 1600×1000), so the cheaper presets spend fewer rays as well as fewer pixels; hist = settings.directHistory (temporal reuse of the direct estimate: 0.5 = the default ≈ 2 frames, 0.7 ≈ 3 — verylow leans on it to hide its one-ray penumbra grain)
 const RC_WHOLE = [1, 1, 1, 1] as const;   // every cascade level whole every frame
 const ALL_OFF: Lossy = { checkerDirect: false, gatherThird: false, rcHalfRate: false, volQuarter: false, dimRays: false, dimBelow: 0.01, fireflyK: 0, rcPeriods: RC_WHOLE };
 const FIREFLY_K = 4;   // the bound every preset but ultra runs the gather with (was the engine-wide default)
@@ -240,6 +240,27 @@ export const PRESETS: Record<QualityName, Preset> = {
  *  at medium. Price: one pair more (two dispatches over the live bricks) a solver step on medium, low and verylow, one fewer on ultra — the cost model does not price the solver
  *  (it lands in the measured fixed part) and nobody has timed it. How far a plume's shape moved between 3, 4 and 5 pairs was never measured either. */
 export function rbItersOf(p: Preset, one: boolean): number { return one ? PRESETS.high.rbIters : p.rbIters; }
+/** FIRE SMOKE SHED (settings.fireSmokeShed, default on, `?fireshed=0`; off = every preset keeps an open fire's smoke, as it was). An open fire (game/fire.ts) files a hot
+ *  smoke source on the solver every second while it is near the view, so near a fire the solver is awake and steps the plume's bricks: by the solver's figures on the
+ *  maintainer's Mac (0.43 ms awake + 0.39 µs a stepping brick, 10-10) and the fire's own brick count (about 1,300, software adapter) 0.5 ms where other smoke already runs
+ *  and 0.95 ms where the fire is the only smoke — the same at every preset, and fixed: the render scale does not shrink it. Against the model's rungs that is 3.5 to 6.5 %
+ *  of high and 6 to 11 % of medium, which the scale pays; 11 to 20 % of low, which the scale pays where other smoke already runs and cannot where the fire is the only smoke
+ *  (a machine that only just holds low goes to the floor beside such a fire); and 17 to 32 % of verylow, whose whole per-pixel part is 1.0 model-ms on the scale floor: it
+ *  cannot be paid there. So the rung that keeps its own smoke (`smokeOwn`: verylow, the floor, where the smoke is the last thing the ladder sheds — SMOKE KEEP below) draws the
+ *  fire without its smoke; every rung above keeps it and the scale pays. NOT a game rule: the source is look-only and its foot is over a standing man's head (the fire's notes:
+ *  lines at 1.7 m and under kept all their light with the plume and without), but in the page a sight line over 1.9 m beside a fire reads the plume on low and up and none on
+ *  verylow. None of it timed on a GPU.
+ *  UP FROM THE FLOOR THE SHED STANDS ONE RUNG (fireSmokeFor): the hop verylow → low is priced off a frame measured with no fire smoke, so a low that put the smoke back
+ *  would find itself 0.5 to 0.95 ms short beside a fire, fall to the floor, find room again and hop — the plume coming and going each time. So while AUTO moves the
+ *  preset, the rung straight above a shedding one keeps the shed it arrived with; the smoke is back from the rung above that (medium, where the scale has the room) or
+ *  when a preset is put on by hand. A machine that came DOWN to low keeps its smoke there. */
+export function fireSmokeOf(p: Preset, shed: boolean): boolean { return !(shed && !!p.smokeOwn); }
+/** … for preset `name` as it is put on: `auto` = the ladder is moving the preset, `now` = settings.fireSmoke as it stands (false = shed on the rung being left) */
+export function fireSmokeFor(name: QualityName, shed: boolean, auto: boolean, now: boolean | undefined): boolean {
+  if (!fireSmokeOf(PRESETS[name], shed)) return false;
+  const i = AUTO_LADDER.indexOf(name);
+  return !(auto && now === false && i >= 1 && !fireSmokeOf(PRESETS[AUTO_LADDER[i - 1]], shed));
+}
 /** ONE CACHE GRID (settings.oneCacheGrid, default on, `?onegrid=0`; off = low and verylow on their `rcCoarse`, as it was). The light meter the guards and teammates see by is the
  *  shadowed direct light PLUS the cache's dice (render/shaders/probe.wgsl), read trilinearly at the asked point — so the probe lattice is part of the reading. On the coarser lattice
  *  (1.25 m cells, three layers up the wall against 1 m and four) the same tight shadow read two to three times darker on low and verylow than on medium and up (a night yard's low
@@ -507,6 +528,7 @@ export class Quality {
   /** ONE CACHE GRID as the engine has it (a stub engine without the setting counts as on — the default) */
   private oneGrid(): boolean { return this.engine.settings.oneCacheGrid !== false; }
   private oneSolve(): boolean { return this.engine.settings.oneSmokeSolve !== false; }
+  private fireShed(): boolean { return this.engine.settings.fireSmokeShed !== false; }
   /** SMOKE KEEP as the engine has it, 0 ‥ 2 (a stub engine without the setting counts as the default) */
   private smokeKeep(): number { return smokeKeepOf(this.engine.settings.smokeKeep); }
   /** The label for menus: 'auto (high)' or the pinned preset. */
@@ -544,6 +566,7 @@ export class Quality {
     const cur = this.engine.rc.cfg, grid = rcGridOf(p, this.oneGrid());   // (ONE CACHE GRID: the same lattice under every preset, so the light meter's reading is not the setting's)
     if (cur.nx !== grid.nx || cur.ny !== grid.ny || cur.nz !== grid.nz || cur.cascades !== p.cascades) this.engine.rebuildRc({ ...defaultRcConfig, ...grid, cascades: p.cascades, interval0: cur.interval0 });
     this.smoke.params.rbIters = rbItersOf(p, this.oneSolve());   // (ONE SMOKE SOLVE: the same pressure pairs under every preset, so what smoke hides is not the setting's)
+    S.fireSmoke = fireSmokeFor(name, this.fireShed(), this.auto, S.fireSmoke);   // (FIRE SMOKE SHED: the floor rung draws an open fire without its smoke, and auto's first rung up from it keeps that — game/fire.ts reads it)
     this.climbed = []; this.roomy = 0; this.sinceClimb = 0; this.failed.clear(); this.failCount.clear(); this.dipping = 0;   // (the climb's rungs and failures were the previous preset's: this one starts from its own rows)
     if (this.motionCalm) this.applyMotionCalm(true);   // (the opt-in motion-calm rows ride over the preset's own while the switch is on)
     this.lastChange = `preset ${name}`; this.cooldown = 3; this.slow = this.fast = 0;
