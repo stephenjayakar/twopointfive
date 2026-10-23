@@ -107,6 +107,7 @@ import type { Haul, DoorMove } from './hands';
 import type { Wanding } from './wand';
 import { samBigStart } from './bigkit';
 import { sideTick } from './gunslots';   // (called inside the update only)
+import { mateStowTick } from './workstow';   // (the same)
 import { gunLookOf, gunLookOn } from './gunlook';   // (called inside the update only)
 import { feedDeal } from './gunreload';   // (the same)
 import type { StickyCam } from './stickycam';
@@ -418,6 +419,9 @@ export class Player {
   /** a door charge going on by his own hands (doortools.ts samTick; owncharge.ts): the door, the face he is on, when it began, where he stood. Not saved:
    *  savestate.ts playerBusy refuses a plain save while it runs */
   charging: { door: Door; side: 1 | -1; t0: number; at: Vec3 } | null = null;
+  /** what was in his hand is put away for a charge going on by his own hands (workstow.ts samStowTick): `drew` = something was, and comes back when the job is
+   *  over; `t` when the job began; `down` = his hands are free of it (the job's clock runs). null = no such job. Not saved: no save is written inside one. */
+  workStow: { drew: boolean; t: number; down: boolean } | null = null;
   /** back to the wall (player.ts, Q): the static face he is pressed against and slides along — null when free. For the HUD / camera: n (unit normal out of the
    *  wall into the room), along (unit tangent: his right when his back is flat to it), atEdge (parked at an OPEN end of the face — an outside corner, a door jamb —
    *  −1 / +1 = which end along `along`, 0 = not at one or the way on is walled), peek (0‥1, eased in while he keeps pushing into that open end), crouched. The
@@ -429,6 +433,10 @@ export class Player {
   /** how far the walk cycle has come since the last footfall filed, in turns, either way added up, 1 at the most (player.ts FOOTFALL.once; 1 = far enough,
    *  which is where it starts, and where it stays while the key has never been on) */
   stepTravel = 1;
+  /** how far the walk cycle has come at a footfall's speed since the last edge of it passed or footfall filed, in turns, either way added up (player.ts
+   *  FOOTFALL.owed: at half a turn a footfall is owed; 0 where it starts, when he slows, after frames the footfall test was not asked, and while the key
+   *  is down), and the game clock the test was last asked at with the key up (-1: never) */
+  stepOwed = 0; stepAt = -1;
   constructor(ch: GltfCharacter, pos: Vec3, hasRifle = true) {
     this.char = new Character(ch, { id: PLAYER_ID, tint: [0.05, 0.06, 0.07], tint2: [0.1, 0.32, 0.18], pos, yaw: Math.PI });
     this.char.muzzleAhead = this.pistol.def.muzzleAhead;   // (the row's: where the round, the flash and the rail light's beam start along the gun)
@@ -671,6 +679,9 @@ export class Guard {
   /** BIGSLOT.moves (bigkit.ts hammerOut): the hammer off a teammate's back and in his hands for a door — the game time his hands left his gun for it, when each
    *  blow lands and when he began putting it back, both on that clock (end −1: not yet), and the point struck. null = on his back. Not saved: a load finds it there. */
   bigOut: { t0: number; blows: number[]; end: number; at: Vec3 } | null = null;
+  /** a teammate's gun let go of for a two-handed job (workstow.ts mateStow / mateStowTick): the game time his hands left it, the time it is back up (−1: the job
+   *  still runs) and whether the job fed it this frame. null = it is in his hands. Not saved: a load finds it there. */
+  workStow: { upT: number; fed: boolean } | null = null;
   /** was his light burning the moment it left his hand (killed / grabbed)? a dark weapon light must not sputter ON as it tumbles (review 08-10 #7: the breach hostiles' unlit lights swept the sunlit room the frame each died) */
   lightLitAtLoss = true;
   dazzledAt: Vec3 | null = null;   // where the charge that blinded him went off (the motion pass turns him away from it — character.ts MOVES; not saved)
@@ -1322,8 +1333,8 @@ export class Game {
       case 'unlock': this.audio.play('lockOpen', e.pos, 0.4 + 1.3 * e.level); break;   // the picked cylinder snapping over (0.3 → 0.8), or a key turning it (0.12 → 0.56: the same bolt, drawn gently)
       case 'kick': { this.audio.play('doorBash', e.pos, 1.0, { rate: 0.9 }); this.audio.play('lockBreak', e.pos, 0.95);   // the slam of the leaf, lower and harder than a shoulder, under the keep splintering out of the jamb
         const kicker = e.who === PLAYER_ID ? this.player.char : this.guards.find(x => x.char.id === e.who)?.char; kickDustFx(this, e.door, kicker?.pos ?? e.pos); if (e.door.lockBroken) lockSplinterFx(this, e.door, kicker?.pos ?? e.pos); this.destr?.thud(e.pos, 1.2, e.who); break; }   // …and the plaster and splinters that come out with it (GPU particles; nothing with them off), and the litter at the threshold jumping with the slam (destruction.ts impulses, behind chaos)
-      case 'thud': this.audio.play('doorBash', e.pos, 1.0, { rate: 0.8 }); if (e.who === PLAYER_ID && !this.player.kick?.tool) this.msg('it opens toward you — the frame took the boot. that was loud'); break;   // a boot at the face a shut door opens toward (doors.ts DOORWAY.frameHolds): the slam of it, nothing splintered
-      case 'clang': this.audio.play('doorBash', e.pos, 1.0, { rate: 0.7 }); this.audio.play('stairDoor', e.pos, 0.55, { rate: 1.3 }); if (e.who === PLAYER_ID) this.msg("steel fire door — it doesn't give. that was loud"); break;   // a boot on the steel stair door (doors.ts DoorDef.steel): the ring of it, no keep to splinter
+      case 'thud': this.audio.play('doorBash', e.pos, 1.0, { rate: 0.8 }); if (e.who === PLAYER_ID && !this.player.kick?.tool) this.msg('it opens toward you, so the frame took the kick. that was loud'); break;   // a boot at the face a shut door opens toward (doors.ts DOORWAY.frameHolds): the slam of it, nothing splintered
+      case 'clang': this.audio.play('doorBash', e.pos, 1.0, { rate: 0.7 }); this.audio.play('stairDoor', e.pos, 0.55, { rate: 1.3 }); if (e.who === PLAYER_ID) this.msg("it's a steel fire door, so it won't give. that was loud"); break;   // a boot on the steel stair door (doors.ts DoorDef.steel): the ring of it, no keep to splinter
     }
     // heard (guards.ts hearingCheck): a kick is its own kind — floor-wide, answered like a shot; everything else is a 'door' noise with a level, placed at the leaf (the
     // clang of a boot on steel that held is a slam's worth of door noise: the men within earshot come and look, the floor is not told 'someone's inside')
@@ -1612,7 +1623,7 @@ export class Game {
     this.doorTools.bigKey(input);   // (the big slot's 'hammer and clear' / 'shotgun and clear' row is on H with a door's menu up — doortools.ts; a flag read and a return unless a man of the squad carries one)
     if (squadThrowKey(this, input)) this.player.throwEaten = true;   // (the squad's 'throw' page is on G with a floor menu up — squadthrow.ts: frag there / bang there; a map read and a return with the switch never on)   // (the squad's 'smoke there' row is on H with a floor menu up — squadsmoke.ts: a map read and a return unless this staging's cards brought smoke)
     squad40Tick(this);   // (a teammate's 40 mm on order — squad40.ts: its row on the throws' page kept in step, a man turning to his shot; a map read and a return unless a teammate's card brought a round)
-    updateInteract(this, dt, input, canvas);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
+    updateInteract(this, dt, input, canvas, cam);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
     trackPlayer(this, dt);   // the aim-settle model, Sam's half (aim.ts): what the reticle is on is known now; his feet are last frame's, a frame is nothing to a 0.8 s settle — the fire sites in updatePlayer / updateHold read it below
     this.threatTick();
     updateSuppression(this, dt);   // everybody's suppression decays, and the guards' flinch / pinned edges fire, ahead of the player and the guards who read it (the rounds they fire below add to it for next frame)
@@ -1750,6 +1761,7 @@ export class Game {
         if (!gd.unit) gd.carbine = deal === 'all' || (deal === 'reyes' && gd.callsign === 'Reyes');
         const want: WeaponId = gd.carbine ? 'aks74u' : (gd.route.weapon ?? 'guard9mm');
         if (gd.state !== 'dead' && gd.weapon.def.id !== want) { gd.weapon = new Firearm(WEAPONS[want]); gd.reloadT = -1; }
+        if (gd.workStow) mateStowTick(this, gd);   // (workstow.ts: a gun let go of for a two-handed job comes back up once the job stops)
         if (gd.second) sideTick(this, gd, dt);   // (gunslots.ts: a teammate's sidearm goes back once nobody is in front of him)
         const long = longRigOf(gd), cb = long !== null; const an = gd.char.anim; const def = gd.weapon.def;   // (long: WHICH long gun — the FN2000 in an operative's hands has its own grip point and muzzle, guards.ts longRigOf)
         if (an.longGun !== cb) { an.longGun = cb; an.longSteady = long === 'sc20k' ? 1 : 0; gd.char.muzzleAhead = long === 'sc20k' ? sc20kMuzzleAhead() : cb && def.rig !== 'carbine' ? carbineMuzzleAhead() : def.muzzleAhead; }   // (longSteady: a man handed Sam's bullpup — the breach's operatives — carries it as player.ts armRifle has Sam carry it, the gun riding his shoulders' mean line at a run instead of pumping with the run clip's arms (character.ts LONG_STEADY); the carbine men keep theirs as the poses pass left them, 0 — carbine-probes (4) places the trigger hand by the unsteadied carriage)
@@ -2004,8 +2016,8 @@ export class Game {
       if (verb === 'push' || verb === 'pull' || verb === 'unlock') { if (!doorMoveBegin(this, d)) { pl.doorMove = null; this.doors.use(d, pc.pos, PLAYER_ID, pl.keys); } }   // (hands.ts, its switch on: the leaf comes round under his hand, him stepped clear of it — else flung / pulled to as ever)
       else if (verb === 'ease') { if (!this.doors.lockedOut(d, pc.pos, pl.keys)) { pl.doorMove = null; pl.easing = d; pl.easeStallT = 0; pl.easeBest = Math.abs(d.angle); } }
       else if (verb === 'pick') { if (this.doors.lockedOut(d, pc.pos, pl.keys)) startPicking(this, d); }
-      else if (verb === 'kick') { if (this.doors.bootHolds(d, pc.pos)) this.msg('it opens toward you — a boot will not shift it'); else startKick(this, d); }   // (doors.ts DOORWAY.frameHolds: the row is greyed there — player.ts)
-      else if (verb === 'rattle') { this.doors.rattle(d, PLAYER_ID); this.msg(d.def.steel ? 'the stair door: bolted from the landing side, no keyway on this face — not the way out tonight' : 'locked — pick it (quiet, slow) or kick it in (loud)'); }
+      else if (verb === 'kick') { if (this.doors.bootHolds(d, pc.pos)) this.msg("it opens toward you, so a kick won't move it"); else startKick(this, d); }   // (doors.ts DOORWAY.frameHolds: the row is greyed there — player.ts)
+      else if (verb === 'rattle') { this.doors.rattle(d, PLAYER_ID); this.msg(d.def.steel ? "the stair door is bolted from the landing side with no keyhole on this side, so it's not your way out tonight" : "it's locked. pick it (quiet, slow) or kick it in (loud)"); }
       else if (verb === 'code') startCoding(this, d);   // a keypad door whose code he knows: key it in (devices.ts — sustained, four beeps, then it swings like a keyed door)
       else if (verb === 'nocode') denyPad(this, d);     // …and one whose code he does not: the pad refuses (a deny tone, a word)
       else if (verb === 'breach' || verb === 'hammer') samBigStart(this, d);   // the big slot's tool on a lock (bigkit.ts — committed like a kick: the shotgun's shell, the hammer's two blows)

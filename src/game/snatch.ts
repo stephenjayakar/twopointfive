@@ -135,8 +135,8 @@ export class Snatch {
     // ---- won: he is in the van (snatchout.ts, where the level has one and the rule is up) — or, as it was, the house is the team's and he is in hand
     const van = this.out.ruled;
     if (van) { if (this.out.tick(dt)) return; }
-    else if (g.roomClear.end === 'taken' && this.inHand) { this.end = 'won'; this.why = `${name} taken alive`; this.times.end = g.time; this.note('WON'); g.msg(`MISSION COMPLETE — ${name} taken alive and the house is yours. Shift+Enter stages it again`); return; }
-    if (gd.state === 'dead') { if (!this.saidOut) { this.saidOut = true; this.note('out cold'); g.msg(van ? `${name} is out cold — breathing, and yours. carry him to ${N.van!.name}` : g.roomClear.end === 'taken' ? `${name} is out cold — breathing, and yours` : `${name} is out cold — breathing, and yours. now the rest of the house`); } return; }
+    else if (g.roomClear.end === 'taken' && this.inHand) { this.end = 'won'; this.why = `${name} taken alive`; this.times.end = g.time; this.note('WON'); g.msg(`MISSION COMPLETE — ${name} taken alive and the house is yours. press Shift+Enter to restart`); return; }
+    if (gd.state === 'dead') { if (!this.saidOut) { this.saidOut = true; this.note('out cold'); g.msg(van ? `${name} is out cold but breathing, and he's yours. carry him to ${N.van!.name}` : g.roomClear.end === 'taken' ? `${name} is out cold but breathing, and he's yours` : `${name} is out cold but breathing, and he's yours. now clear the rest of the house`); } return; }
     if (gd.held) { this.handsUp = false; this.seen = v3.copy(c.pos); return; }   // (in Sam's arm: the civilians' own rows)
     // tied stays tied: Sam's arm letting go of him, or his own 'stay down' row with its clock, sets nobody running
     if (this.tied) { if (C.state !== 'cower' || !C.complied || C.complyUntil !== Infinity) civilianTie(g, gd); return; }
@@ -196,19 +196,19 @@ export class Snatch {
     this.note('tied');
     const mate = g.guards.find(x => x.char === by);
     if (mate) g.say(mate, `${name} secured.`, true);
-    g.msg(this.out.ruled ? `${name} is secured — get him to ${this.data!.van!.name}` : g.roomClear?.end === 'taken' ? `${name} is secured` : `${name} is secured — now the rest of the house`);
+    g.msg(this.out.ruled ? `${name} is secured. now get him to ${this.data!.van!.name}` : g.roomClear?.end === 'taken' ? `${name} is secured` : `${name} is secured. now clear the rest of the house`);
   }
   /** snatchout.ts: he is in the van */
   win(why: string) {
     const g = this.g;
-    this.end = 'won'; this.why = why; this.times.end = g.time; this.note('WON'); g.msg(`MISSION COMPLETE — ${why}. Shift+Enter stages it again`);
+    this.end = 'won'; this.why = why; this.times.end = g.time; this.note('WON'); g.msg(`MISSION COMPLETE — ${why}. press Shift+Enter to restart`);
   }
   private lose(how: 'gone' | 'dead', why: string) {
     const g = this.g, m = g.mission;
     this.end = 'lost'; this.lost = how; this.why = why; this.times.end = g.time; this.note(`LOST — ${why}`);
     this.out.letGo();   // (snatchout.ts: nothing of its ticks after an end — the men it planted go back to the file here)
     if (m.stage !== 'failed' && m.stage !== 'done' && !g.player.down) { m.stage = 'failed'; m.driveT = -1; m.downCardAt = g.missionInTour ? -1 : g.time + DOWN_CARD_SECS; }
-    g.msg(`MISSION FAILED — ${why}. Enter restarts`);
+    g.msg(`MISSION FAILED — ${why}. press Enter to restart`);
   }
 
   /** mission.ts objectiveText / objectivePos: his line and marker while he is loose (or it is over); null = the room clear's own. A live row leads with
@@ -220,9 +220,9 @@ export class Snatch {
     if (this.end === 'lost') return { text: `mission failed — ${this.why}`, pos: null };
     if (this.g.roomClear?.end === 'wiped') return null;
     if (this.inHand) return this.out.objective();   // (snatchout.ts: where to take him — null where the house is what is left)
-    if (this.handsUp) return { text: `objective ▸ ${name} has his hands up — get a man to him before he runs again`, pos: v3.copy(gd.char.pos) };
+    if (this.handsUp) return { text: `objective ▸ ${name} has his hands up, so get someone to him before he runs again`, pos: v3.copy(gd.char.pos) };
     const loud = gd.civ!.state !== 'work' && gd.civ!.state !== 'startled';
-    return { text: loud ? `objective ▸ ${name} is running — take him alive` : `objective ▸ take ${name} alive — he runs for ${N.exits[0].name} the moment it goes loud`, pos: v3.copy(this.seen ?? N.man.pos) };
+    return { text: loud ? `objective ▸ ${name} is running — take him alive` : `objective ▸ take ${name} alive. he'll run for ${N.exits[0].name} the moment it goes loud`, pos: v3.copy(this.seen ?? N.man.pos) };
   }
   summary(): string {
     const gd = this.man; if (!gd || !this.data) return 'snatch: none on this level';

@@ -79,7 +79,7 @@ import { roomKept } from './rearwatch';
 import { gunFileCost, gunFileRanks } from './gunroles';   // (called inside pair only)
 import { pairUp } from './pairup';
 import { spottedFeet } from './spotted';
-import { wallTarget, wallRows, wallPt } from './wallcharge';
+import { wallTarget, wallRows, wallPt, skyAside } from './wallcharge';
 import type { WallSpot } from './wallcharge';
 import { workNear, workOn, workRows } from './workthings';
 import type { WorkThing } from './workthings';
@@ -91,7 +91,7 @@ import { handleHeld } from './handleside';
 import { clearLineFeet, clearLineLive } from './clearline';
 import { fireLineFeet, fireLineLive, fireLineTick } from './fireline';
 import { fitSpots, fitGroups, fitTick, type Fit } from './roomfit';   // (used inside the 'move' order only: nothing of roomfit.ts is touched at load)
-import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { watchedPlace } from './dialogue';   // (read inside an order's issue only: a cover's row names the place watched)
 import { doorSaidName } from './doornames';   // (a leaf: a shorthand door id's said name)
 import { propGap } from './roomclear';   // (used inside workedMarks only: nothing of roomclear.ts is touched at load)
@@ -99,12 +99,13 @@ import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewO
 import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { silentOnMan } from './silent';   // (called inside tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint, autoPick } from './autopilot';   // (read inside input(), hud() and show() only)
-import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringPin, ringHoldSecs, ringLatch, ringSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringPin, ringHoldSecs, ringLatch, ringSeats, flatSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { loneKey } from './ringlone';
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
 import { planTorn, planLoaded, planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, planShift, planEscape, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
-import { teamFollow, teamDash, teamFight } from './teampace';   // (read inside update only)
+import { teamFollow, teamDash, teamFight, teamTold } from './teampace';   // (read inside update only)
 import { noShoveOwn } from './noshove';   // (read inside update only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
@@ -286,6 +287,10 @@ export const ORDERS = {
    *  and they were never together) · `sameApartM`: two ways further apart than this at some point are two ways · `sameLong`: the mate's way is taken only
    *  where it is at most this many times his own + SAME_PLUS_M */
   sameWay: false, sameNearM: 5, sameApartM: 6, sameLong: 1.5,
+  /** A FOLLOWER GOES BY THE DOORS SAM TOOK (trailWay below; the page: on — `?traildoors=0` — false here and on the frozen harness stand,
+   *  `TPS_TRAILDOORS=1`; a FROZEN_HOLDS row; false = his own short way to his place, as it was). `trailReachM`: he is on the trail while a crumb of it
+   *  is within this of him with a straight walk to it. `trailLong`: the walk is taken only where it is at most this many times his own + SAME_PLUS_M */
+  trailDoors: false, trailReachM: 3, trailLong: 1.5,
 };
 const WHEEL_STEP = 60;   // px of wheel travel a row (interact.ts)
 /** the highest digit a row is ever put on: the number row as far as the left hand reaches off W A S D (the head comment) */
@@ -300,7 +305,7 @@ const compass = (yaw: number) => COMPASS[((Math.round(yaw / (Math.PI / 4)) % 8) 
  *  order book. `hov` = the last answer while the cursor rests; `cam` = the camera it was asked under (hintView asks again when that has moved). It is outside
  *  the rollback snapshot: after a restore it can hold an answer from the time line left behind, used only if the clock comes back into its tenth of a
  *  second with the cursor on the same pixel. */
-export interface HoverKept { hov: { x: number; y: number; t: number; v: OrderTarget } | null; cam: number[] }
+export interface HoverKept { hov: { x: number; y: number; t: number; v: OrderTarget } | null; cam: number[]; /** what the pick is asked on, made at the first ask and anew for another game: the tables its rays stamp (Collision.aside, BoxWorld.rayAside) and its kept list of things to be worked (WorkThings.askAside) */ pick?: { g?: object; s?: object; q?: object; w?: object; c?: object } }
 /** a store for one asker (the page's, a check's) */
 export function hoverStore(): HoverKept { return { hov: null, cam: [] }; }
 /** What the menu was opened on. `man`: the reticle was on that teammate — the order is his alone. */
@@ -358,6 +363,8 @@ export interface OrderDef {
   tick?: (S: SquadOrders, gd: Guard, A: Assignment) => void;
   /** what the man who takes it says (one of, in turn) */
   ack?: string[];
+  /** (WORDS) the same lines as they are said now, place for place (read where a man answers) */
+  ackNow?: string[];
   /** it can be given ON THE WORD (GiveOpts.onWord means something to its issue): with the menu's 'wait for my word' row on, its row says so and gives it that way */
   onWord?: boolean;
   /** it moves nobody (the squad's posture: silent.ts): no drill that owns a man is asked to let go of him for it, and it is not logged as an order (a
@@ -370,6 +377,10 @@ export interface OrderDef {
    *  it stands in for (and seated again with it if that row is registered again). `men`: who the menu's orders go to. The menu re-reads its list the frame
    *  a stand-in comes or goes, and a page OPENED by one every frame */
   standsIn?: { for: string; when: (S: SquadOrders, t: OrderTarget, men: Guard[]) => boolean };
+  /** (cmdring.ts CMDRING.flat) the ring does not offer it on this target AT ALL — not greyed: it is for kit the squad never carried, or a tool this
+   *  door never takes (steel, a leaf already open). What is off only for now — nothing left of it, no line or no throw from here — is `valid`'s: greyed,
+   *  with the reason. The menu's pages never ask it */
+  gone?: (S: SquadOrders, t: OrderTarget, men: Guard[]) => boolean;
 }
 /** the menu's header over the rows that are about the WORD rather than the target (doortools.ts's 'go' row, the 'wait for my word' row) */
 export const WORD_HEAD = 'on your word';
@@ -460,7 +471,9 @@ interface Menu { target: OrderTarget; men: Guard[]; rows: OrderDef[]; why: (stri
   wordRow: boolean; onWord: boolean;
   /** a door, the squad of four: the face of it `men` will work from (forMen — path searches, so kept: asked again only when `sideKey`, the men + Sam's own
    *  face, changes) — null: Sam's own face (the pair build; not a door) */
-  menSide: 1 | -1 | null; sideKey: string; }
+  menSide: 1 | -1 | null; sideKey: string;
+  /** (cmdring.ts CMDRING.flat) it is a ring of the flat tree: `rows` are every order of the target (flatRows), `page` stays null */
+  flat?: boolean; }
 /** The fight layer's lease on a man under orders (SquadOrders.fight — the head comment's seam, made explicit). */
 export interface FightLease {
   /** he is still fighting: leave him to it (absent: the built-in test — eyes / a shot / the hand-over inside coldSecs, or mid-reload) */
@@ -577,7 +590,7 @@ export class SquadOrders {
       release: gd => { const NB = g.nightBreach; return NB?.active && NB.drillOps.includes(gd) ? NB.callOff() : null; },   // (the drill is the pair's: letting go of one man ends it for both — the other is handed to the fight AI, nightbreach.ts)
       status: gd => { const NB = g.nightBreach; if (!NB?.active || !NB.ops.includes(gd)) return null;
         if (!NB.drillOps.includes(gd)) return NB.state === 'off' ? null : 'standing by';
-        switch (NB.state) { case 'staged': return 'waiting'; case 'stacking': return 'stacking · the breach'; case 'set': return 'set · F sends them in'; case 'going': case 'inside': return 'breaching';
+        switch (NB.state) { case 'staged': return 'waiting'; case 'stacking': return 'stacking · the breach'; case 'set': return 'set · press F to send them in'; case 'going': case 'inside': return 'breaching';
           case 'clear': return 'holding the room'; default: return 'holding'; } },
     });
   }
@@ -757,6 +770,23 @@ export class SquadOrders {
     const who = men ?? this.recipients(t), ins = on.filter(d => d.standsIn?.when(this, t, who)), out = new Set(ins.map(d => d.standsIn!.for));
     const all = on.filter(d => d.standsIn ? ins.includes(d) : !out.has(d.id)); return this.g.rails ? this.g.rails.orderRows(all) : all;
   }
+  /** (cmdring.ts CMDRING.flat) a ring put up now is one of the flat tree — never on a tutorial mission (rails.ts: its lines teach the menu's pages
+   *  and their digits, and it keeps them until those lines are written for this tree) */
+  private flatRing(): boolean { return CMDRING.flat && CMDRING.only && !this.g.rails?.live; }
+  /** … and its rows: EVERY ORDER OF THE TARGET — the first page's, then each page's behind a row of it, in the menu's own order, the rows that open
+   *  pages left out and no row twice — less what is not offered there at all (OrderDef.gone); and on a place the squad's own posture row after them
+   *  (silent.ts: free, on no key, listed for the squad's own menu — on a door too, where the menu never listed it) */
+  private flatRows(t: OrderTarget, men?: Guard[]): OrderDef[] {
+    const out: OrderDef[] = [], seen = new Set<string>(), who = men ?? this.recipients(t);
+    const walk = (page: string | null) => { const rows = this.rowsFor(t, page, men);   // (a page's own rows first — the first page's first is what a tap gives — then the pages behind its rows)
+      for (const d of rows) if (!d.opens && !out.some(x => x.id === d.id) && !d.gone?.(this, t, who)) out.push(d);   // (by id: a wall's menu lists a row of the floor's as a copy with no digit — wallcharge.ts undigit)
+      for (const d of rows) if (d.opens && !seen.has(d.opens)) { seen.add(d.opens); walk(d.opens); } };
+    walk(null);
+    if (t.kind !== 'none') for (const d of this.rowsFor({ kind: 'none', at: t.at }, null, men)) if (d.free && !d.opens && !d.hotKey && d.targets.includes(t.kind) && !out.some(x => x.id === d.id)) out.push(d);
+    return out;
+  }
+  /** the rows of a menu that is up, read afresh: its page's — a flat ring's: every order of its target */
+  private menuRows(M: Menu, t: OrderTarget): OrderDef[] { return M.flat ? this.flatRows(t, M.men) : this.rowsFor(t, M.page, M.men); }
   /** a stand-in row put where the row it stands in for is: that row's digit and page, the next place in the table */
   private seat(def: OrderDef, stood: OrderDef) { def.key = stood.key; def.hotKey = stood.hotKey; def.page = stood.page; this.defs.splice(this.defs.indexOf(stood) + 1, 0, def); }
   /** is the 'wait for my word' row offered under these rows (a door, the squad of four, a row among them that can wait) */
@@ -806,7 +836,7 @@ export class SquadOrders {
     // (Sam's own words, not the menu row's: he does not read out the stock count, the mark is HIS, and a door with no name of its own is not named)
     const said = WORDS.on ? label.replace(/ · (\d+ left|uses .+)$/, '').replace('on your mark', 'on my mark') : label;
     g.msg(`you: ${this.whoWords(men)} — ${said}${t.kind === 'door' && !(WORDS.on && doorWords(t.door) === 'door') ? ` · ${doorWords(t.door)}` : ''}`);
-    if (def.ack?.length) { const k = this.acks++; g.say(men[k % men.length], def.ack[Math.floor(k / men.length) % def.ack.length]); }   // (the men take turns answering, each through the lines in turn)
+    if (def.ack?.length) { const k = this.acks++, A = wg(def.ackNow ?? def.ack, def.ack); g.say(men[k % men.length], A[Math.floor(k / men.length) % A.length]); }   // (the men take turns answering, each through the lines in turn)
     this.posture?.given(def);
     holdFireOrder(g, def.id, { waits: !!opts?.onWord && this.big, silent: wasSilent });   // (holdfire.ts: an order that means fire starts the fight for a squad nobody has found — a return on its first line with the switch off)
     return null;
@@ -844,10 +874,10 @@ export class SquadOrders {
   /** the page's Esc went to the pause (backkey.ts: Esc is only the pause): that press is nobody's in the tick */
 
   /** Open the menu on a target (X / the middle button over the cursor's; the console, a probe): it stays up until pick() or close(). False: no squad to order. */
-  open(target: OrderTarget = this.targetAt(this.g.aimPoint)): boolean {
+  open(target: OrderTarget = this.targetAt(this.g.aimPoint), flat = false): boolean {
     if (!this.active || this.g.player.down) return false;
-    const rows = this.rowsFor(target);
-    this.menu = { target, men: [], rows, why: [], sel: 0, wheelAcc: 0, readT: -1, page: null, wordRow: this.wordRowOf(target, rows), onWord: false, menSide: null, sideKey: '' }; this.refresh();   // (the highlight starts on the first row — the target's own order: the button twice gives it)
+    const rows = flat ? this.flatRows(target) : this.rowsFor(target);   // (`flat`: ringUp's, under cmdring.ts CMDRING.flat — every order of the target, no pages)
+    this.menu = { target, men: [], rows, why: [], sel: 0, wheelAcc: 0, readT: -1, page: null, wordRow: this.wordRowOf(target, rows), onWord: false, menSide: null, sideKey: '', flat: flat || undefined }; this.refresh();   // (the highlight starts on the first row — the target's own order: the button twice gives it)
     if (this.menu && PLANLAY.on && PLANLAY.sticky && this.menu.wordRow && this.lay.laid.length) this.menu.onWord = true;   // (planlay.ts: a plan is being laid — the next order is for it too)
     return !!this.menu;
   }
@@ -903,27 +933,33 @@ export class SquadOrders {
     const mt = this.menuTarget()!;
     // (a row that stands in for another while something lasts — OrderDef.standsIn — comes and goes with it: the page's list is re-read with the rest, the
     // highlight kept on its row, or on the row now on that row's digit)
-    const rows = this.rowsFor(mt, M.page, M.men);
+    const rows = this.menuRows(M, mt);
     if (rows.length !== M.rows.length || rows.some((d, i) => d !== M.rows[i])) { const was = M.rows[M.sel]; M.rows = rows; M.wordRow = this.wordRowOf(M.target, rows);
-      const i = was ? rows.findIndex(d => d === was || (d.key !== undefined && d.key === was.key)) : -1; M.sel = i >= 0 ? i : Math.min(M.sel, rows.length + (M.wordRow ? 1 : 0)); }
-    M.why = M.rows.map(d => { const o = d.only ? d.only(this, M.men, mt) : M.men; return this.whyNot(d, mt, o.length ? o : M.men); }); M.readT = this.g.time;   // (an order for some of them only: as give() asks it)
+      const i = !was ? -1 : M.flat ? rows.indexOf(was) : rows.findIndex(d => d === was || (d.key !== undefined && d.key === was.key)); M.sel = i >= 0 ? i : Math.min(M.sel, rows.length + (M.wordRow ? 1 : 0)); }   // (a flat ring's rows are of several pages: a digit is not one row's)
+    // (a flat ring: the rows behind 'more' are asked why-not only while that ring is the one up — as a page's rows always were, asked when the page was opened)
+    const later = M.flat && !this.cmdRing?.more ? new Set(this.seats(M, null).over) : null;
+    M.why = M.rows.map((d, i) => { if (later?.has(i)) return null; const o = d.only ? d.only(this, M.men, mt) : M.men; return this.whyNot(d, mt, o.length ? o : M.men); }); M.readT = this.g.time;   // (an order for some of them only: as give() asks it)
   }
   /** is the open menu's list stale NOW, not at the next re-read: a stand-in row (OrderDef.standsIn) has come or gone on its page — or the page itself was
    *  opened by one, and its rows live and die with what that row stands for (re-read every frame: no path search is behind them) */
   private due(M: Menu): boolean {
     if (M.page !== null && this.defs.some(d => d.opens === M.page && !!d.standsIn)) return true;
-    const rows = this.rowsFor(this.menuTarget()!, M.page, M.men);
+    const rows = this.menuRows(M, this.menuTarget()!);
     return rows.length !== M.rows.length || rows.some((d, i) => d !== M.rows[i]);
   }
   /** what the cursor is on (null: no squad, or before the first frame) — the HUD's lines under the squad block; the simulation never reads it. Kept while the
    *  cursor has not moved, for a tenth of a second (the page asks every frame) — in the ASKER'S store (`HoverKept`), never on the order book. With no store
-   *  nothing is kept and every ask looks again. (A read is still not free of the game's state: the pick under it stamps the collision world's query
-   *  tables and hud() fills the room clear drill's memo — docs/agents/squad.md.) */
+   *  nothing is kept and every ask looks again. The pick under it is asked ASIDE: its rays stamp the asker's own tables (`kept.pick`; a throwaway set
+   *  with no store), never the collision world's; its list of things to be worked is the asker's own (workthings.ts askAside); and what it makes anew
+   *  of a swung leaf's kept centre (doors.ts Door.posAside) or adds to the memo of sky faces (wallcharge.ts skyAside) is put back —
+   *  tools/qa/hoverpick-check.ts. */
   hover(kept?: HoverKept): OrderTarget | null {
     const v = this.view; if (!v.input || !v.cam || !v.canvas || !this.active) return null;
     const c = kept?.hov, x = v.input.mouseX, y = v.input.mouseY, t = this.g.time;
     if (c && c.x === x && c.y === y && t >= c.t && t - c.t < 0.1) return c.v;
-    const out = this.targetUnder(v.input, v.cam, v.canvas); if (kept) kept.hov = { x, y, t, v: out }; return out;
+    const g = this.g, own = !kept ? {} : kept.pick?.g === g ? kept.pick : (kept.pick = { g }), input = v.input, cam = v.cam, canvas = v.canvas;
+    const out = g.doors.posAside(() => skyAside(g, () => g.work.askAside(own, () => g.col.aside(own, () => g.engine.world.rayAside(own, () => this.targetUnder(input, cam, canvas))))));
+    if (kept) kept.hov = { x, y, t, v: out }; return out;
   }
   /** the order the quick key gives on a target: its first row (null: none fits) */
   defaultFor(t: OrderTarget): OrderDef | null { return this.rowsFor(t).find(d => !d.opens) ?? null; }
@@ -1061,11 +1097,12 @@ export class SquadOrders {
     } else if (wheel) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
     // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
     // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
-    const want0 = ringWant(R, input, digit, g.time), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
+    const want0 = ringWant(R, input, digit, g.time, loneKey(() => this.ringKeys())), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
     if (want && want !== R.lit) {
       const rows = this.menu!.rows, seat = this.seats(this.menu!, R), i = seat.row[want] ?? -1, first = this.menu!.page === null && !R.more;
-      if (first && want === 1) R.lit = 1;
-      else if (want === seat.more) { R.more = true; R.lit = 0; R.armed = false; CMDRING_STATS.pages++; turned = true; }   // ('more': the rest of this page's rows, a ring of their own)
+      if (first && (want === 1 || (!!digit && seat.same[want] >= 0))) R.lit = 1;   // (the digit of a row that says what wedge 1 says: wedge 1)
+      else if (want === seat.more) { R.more = true; R.lit = 0; R.armed = false; CMDRING_STATS.pages++; turned = true;
+        if (this.menu!.flat) { this.refresh(); if (!this.menu) { this.cmdRing = null; return true; } } }   // (the flat tree: its rows' why-nots are asked now that they are the ring)   // ('more': the rest of this page's rows, a ring of their own)
       else if (i >= 0 && rows[i].opens) { this.turn(rows[i].opens!); CMDRING_STATS.pages++; turned = true; if (!this.menu) { this.cmdRing = null; return true; } }
       else if (i >= 0) R.lit = want;
       this.ringSel();
@@ -1091,7 +1128,7 @@ export class SquadOrders {
   private ringDigit(input: Input): boolean { for (let d = 1; d <= CMDRING.wedges; d++) if (input.pressed.has(`Digit${d}`)) return true; return false; }
   /** the order menu put up on `t` as a ring at the cursor (false: no menu opened there). `t0`: the clock its tap guard counts from */
   private ringUp(t: OrderTarget, input: Input, canvas: View, t0: number, cam?: FollowCamera): boolean {
-    if (!this.open(t)) return false;
+    if (!this.open(t, this.flatRing())) return false;   // (cmdring.ts flat: every order of the thing, two rings deep)
     this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
     // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
     const R = this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, t0); this.ringSel(); CMDRING_STATS.opened++;
@@ -1118,7 +1155,7 @@ export class SquadOrders {
    *  kind of thing, where the glyph goes — beside the cursor, or in the middle of a ring that is up, whose target it then is — how much larger than its px it
    *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
    *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
-  hintView(kept?: HoverKept): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null } | null {
+  hintView(kept?: HoverKept): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null; /** the kind's glyph is drawn (cmdring.ts plainHint: false — the outline alone) */ glyph: boolean } | null {
     const v = this.view; if ((!CMDRING.on && !CMDRING.hint) || !this.active || !v.input || !v.cam || !v.canvas) return null;   // (`hint` is a setting of its own: the mark is drawn with the ring off too)
     if (!CMDRING.hint && !this.cmdRing && !this.cmdPress) return null;   // (before the key it is drawn only when asked for — `hint`; with the key down it is the press seen to land, and the ring's own middle)
     const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
@@ -1139,14 +1176,20 @@ export class SquadOrders {
       case 'floor': case 'thing': ring = at((t as OrderTarget & { kind: 'floor' }).at, C.hintSpotM); break;
       case 'squad': break;
     }
-    return { kind, x: R ? R.ax : v.input.mouseX, y: R ? R.ay : v.input.mouseY, zoom: R ? R.z : ringZoom(v.canvas.clientWidth, v.canvas.clientHeight), held: !!R || !!P, press: !!P, tone: this.toneOf(R ? M!.men : this.recipients(t)), seg, ring };
+    return { kind, x: R ? R.ax : v.input.mouseX, y: R ? R.ay : v.input.mouseY, zoom: R ? R.z : ringZoom(v.canvas.clientWidth, v.canvas.clientHeight), held: !!R || !!P, press: !!P, tone: this.toneOf(R ? M!.men : this.recipients(t)), seg, ring, glyph: !CMDRING.plainHint };
   }
   /** the menu's own highlight follows the lit wedge (what reads the highlighted row — a throw's arc on the floor — reads the ring's) */
   private ringSel() { const M = this.menu, R = this.cmdRing; if (!M || !R || !R.lit) return; const i = this.seats(M, R).row[R.lit] ?? -1; if (i >= 0) M.sel = i; }
   /** the open menu's rows by wedge (cmdring.ts ringSeats): its page's own — or, the ring on 'more' (`R.more`), the rest of them from wedge 1 */
-  private seats(M: Menu, R: RingState | null): { row: number[]; more: number; over: number[] } {
-    const s = ringSeats(M.rows, M.target.kind !== 'none', ORDERS.waitAlt, M.page === null); if (!R?.more) return s;
-    const row = new Array<number>(CMDRING.wedges + 1).fill(-1); s.over.forEach((i, n) => { row[n + 1] = i; }); return { row, more: 0, over: s.over };
+  private seats(M: Menu, R: RingState | null): { row: number[]; more: number; over: number[]; same: number[] } {
+    const s = M.flat ? flatSeats(M.rows, M.target.kind, ORDERS.waitAlt, M.rows.length ? 0 : -1) : ringSeats(M.rows, M.target.kind !== 'none', ORDERS.waitAlt, M.page === null);
+    const same = new Array<number>(CMDRING.wedges + 1).fill(-1);
+    if (R?.more) { const row = new Array<number>(CMDRING.wedges + 1).fill(-1); s.over.forEach((i, n) => { row[n + 1] = i; }); return { row, more: 0, over: s.over, same }; }
+    // the flat tree's first ring: a row that says what wedge 1 says (what a tap gives there) has NO wedge of its own — nothing is drawn twice and the
+    // cursor lights nothing there — and its digit is wedge 1's (`same`: fingers keep 3 for fall in on the squad's own ring)
+    const q = M.flat ? this.quickWords(M.target) : null, mt = q ? this.menuTarget() : null;
+    if (q && mt) for (let d = 2; d <= CMDRING.wedges; d++) { const i = s.row[d]; if (i >= 0 && d !== s.more && this.labelOf(M.rows[i], mt) === q) { same[d] = i; s.row[d] = -1; } }
+    return { ...s, same };
   }
   /** a TAP's order on `t` (the quick key, the ring's key let go inside its hold) — nothing where a tutorial step teaches the key HELD and the hold is there
    *  to be had (rails.ts tapOff: the step says so under its line). A wedge of the ring that gives the same order is not a tap: it goes to quickGive itself */
@@ -1183,8 +1226,16 @@ export class SquadOrders {
       const d = Math.hypot(sx - input.mouseX, sy - input.mouseY); if (d < bd) { bd = d; best = k; } });
     return best;
   }
+  /** the digits the ring has a wedge on, a bit each (bit 1 the first; 0: no ring): what ringView draws, less every word of it — all the game reads of a
+   *  ring's picture (cmdring.ts ringWant `lone`: a ring of one row is a pill, and the cursor on its place is on that row) */
+  ringKeys(): number {
+    const R = this.cmdRing, M = this.menu; if (!R || !M) return 0;
+    const seat = this.seats(M, R); let keys = 0;
+    for (let d = 1; d <= CMDRING.wedges; d++) if (d === seat.more || (M.page === null && !R.more && d === 1 ? !!this.quickWords(M.target) : seat.row[d] >= 0 && !!M.rows[seat.row[d]])) keys |= 1 << d;
+    return keys;
+  }
   /** What the ring shows this frame (null: no ring): where it is, the lit wedge, whose colour it wears, and the wedge on each digit — the first page's
-   *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it. */
+   *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it (ringKeys is what it reads). */
   ringView(): RingView | null {
     const R = this.cmdRing, M = this.menu; if (!R || !M) return null;
     const mt = this.menuTarget()!, wedges: { key: number; text: string; off: boolean; opens: boolean }[] = [];
@@ -1257,7 +1308,7 @@ export class SquadOrders {
       if (A.post === null) {   // fall in: his place back along the trail; a fresh leg whenever it has moved half a metre
         const p = gd.char.pos, toSam = flat(p, sam.pos), stopped = this.samStopped;
         const backM = this.backOf(A.follow) + (stopped ? this.clearBack(A.follow) : 0);
-        let slot = this.slot(backM);
+        let slot = this.slot(backM); const onTrail = slot;
         const onWall = sneaking(g, gd) || roomKept(g, gd) ? null : unseenWallSlot(g, gd, backM, followers); if (onWall) slot = onWall;   // (unseen.ts: Sam on a wall and nobody has found the squad — his place is along that face behind Sam, not back down the trail; null with its switch off)
         const off = stopped || DOORMANNERS.laneMove ? doorwayOffLane(g, slot, p, A.follow, this.ahead(gd, A)) : null; if (off) { slot = off; if (onWall) unseenWallLost(gd); }   // (doorway.ts STAND, the lane: no place in the file is where a man beyond a door standing open shoots straight down — through the frame on Sam's trail, then off it)
         let spread = false; if (K.fileSpread && stopped && !off && !onWall) { const q = this.apartSlot(gd, A, slot); spread = q !== slot; slot = q; }   // (two places on one spot: his is dealt again, a body's room from the men ahead of him)
@@ -1273,16 +1324,17 @@ export class SquadOrders {
           ? pictureStep(g, gd, A, nearP() ? p : slot, q => !(this.inFrame(q) || doorwayInWay(g, q) || !!doorwayLane(g, q)), g.fight.busy(gd, 0.5)) : null;
         const st = ps?.at ?? st0;
         const near = !st && nearP();
-        if (st) { if (flat(st, A.goal) > 0.05) A.goal = [st[0], 0, st[2]]; }
-        else if (near) { if (flat(p, A.goal) > 0.4) A.goal = [p[0], 0, p[2]]; }
+        if (st) { if (flat(st, A.goal) > 0.05) A.goal = [st[0], 0, st[2]]; if (K.trailDoors && A.via.length) A.via.length = 0; }   // (ORDERS.trailDoors: where he stands is his place — a corner of a way he was on is dropped, or restClear below, which leaves a man on a way alone, would leave him in a leaf's swing for as long as Sam stands)
+        else if (near) { if (flat(p, A.goal) > 0.4) A.goal = [p[0], 0, p[2]]; if (K.trailDoors && A.via.length) A.via.length = 0; }
         else { let want = aside ?? slot;
           // (ORDERS.cleared: a follower a walk away from his place does not cut through a room nobody has been in — round it, a corner at a time, until his place has moved on)
-          if (K.cleared && !aside) {
+          if ((K.cleared || K.trailDoors) && !aside) {
             // (asked when he is a walk from his place — or a wall is between them — and again when his place has moved on from the one the corners were for, or
             // every few seconds while he walks them: never more than twice a second a man)
             const since = g.time - (A.viaT ?? -1e9), had = A.via.length > 0;
             if (had ? !A.viaFor || (flat(A.viaFor, slot) > 2.5 && since > 0.5) || since > 3 : since > 0.75 && (flat(p, slot) > 3 || !g.col.nav.walkable(p, slot))) {
-              A.viaT = g.time; A.via = this.roundRooms(gd, slot); A.viaFor = [slot[0], 0, slot[2]]; if (A.via.length && !had) g.cleared.stats.round++; }
+              A.viaT = g.time; A.via = this.roundRooms(gd, slot); A.viaFor = [slot[0], 0, slot[2]]; if (A.via.length && !had) g.cleared.stats.round++;
+              if (!A.via.length && K.trailDoors && !onWall) A.via = this.trailWay(gd, slot, onTrail, this.slotCrumb(backM)); }   // (no room to go round: the doors Sam took, where his own short way would take others)
             if (A.via.length && flat(p, A.via[0]) < 0.9) A.via.shift();
             if (A.via.length) want = A.via[0];
           } else if (A.via.length) A.via.length = 0;
@@ -1318,6 +1370,7 @@ export class SquadOrders {
         if (A.via.length) { if (flat(p, A.via[0]) < 0.9) A.via.shift(); A.goal = A.via[0] ?? v3.copy(A.post); }   // (the way round a locked door, a waypoint at a time)
         d = flat(p, mark); speed = A.pace ?? (d > K.briskIn ? K.brisk : stackLinePace(g, gd, A, d, K.brisk) ?? K.onto);
         if (A.pace !== undefined) teamFight(g, gd); else if (!A.thru && !A.via.length) speed = teamDash(g, gd, mark, d) ?? speed;   // (teampace.ts: an entry keeps its pace; a run to cover straight across floor a known man has a line on — nothing with its switch off)
+        if (A.pace === undefined && d > K.briskIn) speed = teamTold(g, gd) ?? speed;   // (… and a leg a tutorial step tells them to run, round its corners too, walked in over its last metres as any leg is: rails.ts runs — nothing off a frame)
         { const sp = sneakPost(g, gd, A.order) ?? unseenPost(g, gd, A.order); if (sp !== null) { low = true; speed = Math.min(speed, sp); } }   // (sneak.ts: sent to a mark while the silent squad sneaks, he goes there low with Sam — nothing with its switch off)
         const short = g.fight.short(gd);   // (LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — his walk waits, and so do the clocks that would call a standing man stuck)
         if (short) { speed = 0; A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }
@@ -2245,6 +2298,45 @@ export class SquadOrders {
       if (len(path) > len(plain) * ORDERS.roundCap + ROUND_PLUS_M) return []; }   // (ORDERS.roundCap: nor a way round far longer than the short way — the short way, as with no way round)
     return path.slice(0, -1).map(q => [q[0], 0, q[2]] as Vec3);
   }
+  /** the crumb of the trail that a place `back` metres behind the player (slot above, the same walk) lies just past, going the player's way: the index
+   *  of the older end of the stretch it is on. -1 off the trail's end. By the walk, not by what is near: where the player turned about and came back
+   *  over his own steps two passes of the trail lie on one line */
+  private slotCrumb(back: number): number {
+    const sam = this.g.player.char, T = this.trail; let prev: Vec3 = [sam.pos[0], 0, sam.pos[2]], left = back;
+    for (let i = T.length - 1; i >= 0; i--) { const seg = flat(prev, T[i]); if (seg < 1e-4) continue; if (seg >= left) return i; left -= seg; prev = T[i]; }
+    return -1;
+  }
+  /** ORDERS.trailDoors — A FOLLOWER GOES BY THE DOORS SAM TOOK. A follower's goal is his place on Sam's trail and his walk to it is the short one, which is
+   *  the trail while he keeps up. A man who lost his turn at a door (he gave way to its leaf, or to the men behind him) finds Sam a room on, and where that
+   *  room has two ways in his short way is the other one: he walks round a room the file went through, apart from his partner. So, asked with the way
+   *  round an uncleared room (the same times, never more than twice a second a man): where his place is on the trail (as the trail has it, before a lane
+   *  moved it a step) and out of a straight walk, a crumb of it short of his place is within `trailReachM` of him with a straight walk to it, and his own
+   *  short way to his place ends through other doors than the trail does from there on (a door gone through and back is no door; an opening with no door
+   *  in it is not counted), he walks the trail: its corners, handed out as a way round is (`via`). Not through a lock he is kept out of, and not a walk
+   *  more than `trailLong` times his own + SAME_PLUS_M. With the trail run out behind Sam (`trailM`), or his place off it (a wall), his own way as ever.
+   *  One search a call (his own way); the trail is measured as Sam walked it. `j`: the crumb his place lies just past (slotCrumb), `onTrail` his place
+   *  as the trail has it, before a lane or a spread moved it a step. */
+  private trailWay(gd: Guard, slot: Vec3, onTrail: Vec3, j: number): Vec3[] {
+    if (TRAILDOORS_BREAK) return [];
+    const g = this.g, nav = g.col.nav, K = ORDERS, T = this.trail, at = gd.char.pos; if (T.length < 4) return [];
+    const from: Vec3 = nav.isBlocked(at[0], at[2]) ? this.freeSpot(at) ?? at : at; if (nav.walkable(from, slot)) return [];   // (his place is a straight walk off: that is his way)
+    let k = -1; for (let i = j - 1; i >= 0; i--) if (flat(from, T[i]) < K.trailReachM && nav.walkable(from, T[i])) { k = i; break; }   // (the newest crumb he can step straight onto)
+    if (j < 0 || k < 0 || j - k < 3) return [];
+    const own = nav.findPath(from, slot); if (!own) return [];
+    const way: Vec3[] = [from, ...T.slice(k, j + 1), onTrail, slot], mine: Vec3[] = [from, ...own, slot];   // (a path ends on a cell's centre, which by a leaf can be the far side of a frame from the place itself)
+    const len = (w: Vec3[]) => { let m = 0; for (let i = 1; i < w.length; i++) m += flat(w[i - 1], w[i]); return m; };
+    // the doors a walk ends on the far side of (through one and back is no door). A corner of a walk that lies ON a door's line is stepped over: the two
+    // legs that meet there each miss the door (crossesDoor wants a point either side), and a path's corners are cell centres, which some levels' frames lie on
+    const doorsOn = (w: Vec3[]) => { const D = new Set<Door>();
+      for (const d of g.doors.list) { const h = d.def.hinge, nx = -Math.sin(d.def.closedDir), nz = Math.cos(d.def.closedDir), off = (q: Vec3) => (q[0] - h[0]) * nx + (q[2] - h[1]) * nz;
+        let a: Vec3 | null = null; for (const b of w) { if (Math.abs(off(b)) < 1e-6) continue; if (a && crossesDoor(a, b, d)) { if (!D.delete(d)) D.add(d); } a = b; } }
+      return D; };
+    const A = doorsOn(mine), B = doorsOn(way); if (A.size === B.size && [...A].every(d => B.has(d))) return [];   // (the same doors: his own way is the trail's)
+    if (len(way) > len(mine) * K.trailLong + SAME_PLUS_M) return [];
+    const ring = this.ring(); for (let i = 1; i < way.length; i++) for (const d of g.doors.list) if (d.locked && d.latched && crossesDoor(way[i - 1], way[i], d) && g.doors.lockedOut(d, way[i - 1], ring)) return [];
+    const mid: Vec3[] = []; { let a = from; for (let i = k; i < j - 1; i++) if (!nav.walkable(a, T[i + 1]) || flat(a, T[i + 1]) > 3) { mid.push([T[i][0], 0, T[i][2]]); a = T[i]; } }   // (the trail's corners: a crumb is kept where the next cannot be walked to straight, and every few metres)
+    return mid;
+  }
   reach(gd: Guard, to: Vec3): string | null { return this.asked(gd, to).why; }
   /** ORDERS.walkTries: the door his walk to `to` would be refused for, where nobody of the team has tried it on the face he comes to it by (doortools.ts
    *  untried: only where DOORTOOLS.testDoor is on) — null: the key is off, the walk is not refused for a lock, or the team knows that door. Sam's squad only. */
@@ -2416,6 +2508,7 @@ const OFF_M = 0.3, ROUND_ITER = 30000, MOUTH_M = 0.8;
 /** ORDERS.sameWay: the metres a mate's way may cost over `sameLong` times his own */
 const SAME_PLUS_M = 2;
 const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SAMEWAY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
+const TRAILDOORS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TRAILDOORS_BREAK === '1';   // (QA: ORDERS.trailDoors' own check must fail with this set)
 /** ORDERS.sameWay: how far way `a` gets from way `b` (each a walk's corners, in order), asked every half metre of `a`, and where on `a` that is */
 function farOff(a: Vec3[], b: Vec3[]): { d: number; at: Vec3 } {
   const off = (x: number, z: number) => { let m = Infinity;

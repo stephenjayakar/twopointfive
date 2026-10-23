@@ -29,7 +29,7 @@ import { DARKDOOR, darkDoorGate, darkDoorLook } from './darkdoor';
 import { netQuietAsked, netQuietBody, netQuietPose } from './netquiet';
 import { pairSmoke, fightLive, lampGlare, closeLane, ROOMFIGHT } from './roomfight';
 import { roomName, updateAmbient, isOffice, temperamentOf } from './dialogue';
-import { WORDS, w } from './words';
+import { WORDS, w, wg } from './words';
 import { CUES } from './cues';
 import { SUPPRESSION, headDown, endDisplace, holdingCover, guardFireMods, flinching } from './suppression';
 import { trackGuard, aimReady, feetSettled, guardRound, handsCone, aimBrake, noteBore, boreFouled, AIM_DEBUG } from './aim';
@@ -996,6 +996,12 @@ const STANDOFF_LINES: Record<StandoffMoment, Partial<Record<Temperament | '*', s
   lost: { '*': ['lost them — where\'d he take {him}?', 'I\'ve lost sight — moving up'], nervy: ['where— where did they go—'] },
   hitHim: { '*': ['…christ— I hit {him}. I hit {held}—'], nervy: ['no— no no no— {held}—'], hard: ['…{held}\'s hit. that\'s on him. keep on him—'] },
 };
+/** (WORDS) a standoff line as it is said now, by the line it stands for (read in standoffBark, where the pool is built) */
+const STANDOFF_NOW: Record<string, string> = {
+  '{held}, stay loose — I\'m coming round': '{held}, stay loose — I\'m coming around', '{held}! —I can\'t— I haven\'t got a line—': '{held}! —I can\'t— I don\'t have a shot—',
+  'I have him.': 'I\'ve got him.', 'I— I think I have him—': 'I— I think I\'ve got him—',
+  'can\'t get round him — hold what you\'ve got': 'can\'t get around him — hold what you\'ve got', 'no way round. {held}, hang on': 'no way around. {held}, hang on',
+};
 /** … and the moments whose every line names him, for a man in the arm whose own side has no name to say (teams.ts spokenName: a scenario's defender) */
 const STANDOFF_NAMELESS: Partial<Record<StandoffMoment, string>> = { dropped: 'he\'s dropped {him} — TAKE HIM', freed: 'he\'s loose — get clear!', hitHim: '…christ— I hit {him}—' };
 /** One standoff line from this man if the clocks allow (his own BARK_SECS, the floor's FLOOR_SECS, and never over his own radio call) — `force` skips the two
@@ -1007,6 +1013,7 @@ function standoffBark(g: Game, gd: Guard, moment: StandoffMoment, force: boolean
   if (force !== 'always' && gd.bubble?.radio && now - gd.bubble.t < 3) return;
   const M = STANDOFF_LINES[moment]; let pool = [...(M[temperamentOf(gd)] ?? []), ...(M['*'] ?? [])];   // (temperamentOf: a staff man's own, a unit's the hard man's under the dialogue pass — the same voice the hold gives him)
   if (held && spokenName(held) === null) { pool = pool.filter(l => !l.includes('{held}')); const l = STANDOFF_NAMELESS[moment]; if (!pool.length && l) pool = [l]; }   // (never with the words switch off)
+  pool = wg(pool.map(l => STANDOFF_NOW[l] ?? l), pool);
   if (!pool.length) return;
   let i = Math.floor(simRandom() * pool.length) % pool.length; if (pool.length > 1 && pool[i] === lastBark.get(gd)) i = (i + 1) % pool.length;
   const text = pool[i].replace(/\{held\}/g, held?.callsign ?? 'him').replace(/\{him\}/g, w(held?.civ?.her, undefined) ?? 'him').replace(/\{he\}/g, w(held?.civ?.she, undefined) ?? 'he');
@@ -1896,7 +1903,7 @@ function pickNextSpot(g: Game, gd: Guard, P: SearchPlan) {
   P.current = best; P.phase = best >= 0 ? 'walk' : 'done'; P.phaseT = 0;
   gd.path = []; gd.pathGoal = null; gd.stallRef = null;
   if (best >= 0 && !P.said && !(gd.bubble && g.time - gd.bubble.t < 2.5) && !g.guards.some(o => o !== gd && o.state === 'search' && o.searchPlan?.said && g.time - o.searchPlan.builtAt < 30)) {   // (one man says it for a search, not each of them a second apart)
-    P.said = true; g.say(gd, P.spots[best].dark > 0.6 ? (defenderWords(gd) ? "they'll have gone somewhere dark — check the corners" : "he'll have gone somewhere dark — check the corners") : P.spots.some(s => s.kind === 'prop') ? (WORDS.on && !isOffice(g.level) ? `check the corners — low, behind anything ${defenderWords(gd) ? 'they' : 'he'} could get behind` : 'check the corners — under the desks, behind the chairs') : 'check the corners');
+    P.said = true; g.say(gd, P.spots[best].dark > 0.6 ? (defenderWords(gd) ? wg("they must've gone somewhere dark — check the corners", "they'll have gone somewhere dark — check the corners") : wg("he must've gone somewhere dark — check the corners", "he'll have gone somewhere dark — check the corners")) : P.spots.some(s => s.kind === 'prop') ? (WORDS.on && !isOffice(g.level) ? `check the corners — low, behind anything ${defenderWords(gd) ? 'they' : 'he'} could get behind` : 'check the corners — under the desks, behind the chairs') : 'check the corners');
   }
 }
 /** One line for the panel / debugging: phase, the spot he is on, how many looked into, the top few by score with their readings. */
@@ -2111,7 +2118,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         let n = 0, cold = 0, hurt = 0; for (const x of g.guards) if (x.state === 'dead' && !x.found && (x === o || (v3.distXZ(bodyPos(x), body) < 3 && !g.col.segmentBlocked(eye, v3.add(bodyPos(x), [0, 0.3, 0]))))) { x.found = true; tally(g, 'bodies'); chronBodyFound(g, x, gd); tacticsBodyFound(g, gd, x); n++; if (isBreathing(x)) cold++; if (x.wound) hurt++; }   // (tacticsBodyFound: one lying in a doorway makes it a kill zone for his side, tactics.ts)   // a body counts once, however many find it — and men lying together in his sight are found together (one call, one script, not a second 'man down' the moment the first one's ends; one hidden through the wall stays hidden)
         if (gd.state === 'patrol' || gd.state === 'search') { gd.state = 'suspicious'; gd.searchT = 0; gd.path = []; gd.pathGoal = null; }   // (a searcher too: he has something concrete to stand over now)
         // what he calls in says what he found: a man shot dead, or one put out cold and left breathing (isBreathing: the takedown) — the floor treats both alike, the words do not
-        const inHere = WORDS.on && !isOffice(g.level) ? "someone's about" : "someone's in here", who = spokenName(o) ?? 'one of ours';   // (words.ts: a yard, a street, a crossing is no 'in here')
+        const inHere = WORDS.on && !isOffice(g.level) ? wg("someone's here", "someone's about") : "someone's in here", who = spokenName(o) ?? 'one of ours';   // (words.ts: a yard, a street, a crossing is no 'in here')
         g.say(gd, hurt ? (n > 1 ? `${n} men down — ${hurt === n ? 'shot, still breathing' : 'one\'s shot and breathing'}. ${inHere} — radioing it in` : `it's ${who} — he's shot, still breathing. ${inHere} — radioing it in`)
           : n > 1 ? (cold === n ? `${n} men down — out cold, ${n > 2 ? 'all' : 'both'} breathing. ${inHere} — radioing it in` : `${n} men down! — radioing it in`)
           : cold ? `it's ${who} — he's down, out cold but breathing. someone dropped him — radioing it in` : 'man down! — radioing it in', true); g.audio.play('radio', eye, 0.9);
@@ -2253,7 +2260,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         const D = gd.bodyDuty;     // body the floor knows about ever calls it 'nothing' / 'clear' (that read as the men cycling platitudes over a dead colleague); once alarmed, nothing is 'nothing'
         gd.state = 'patrol'; gd.path = []; gd.pathGoal = null; gd.bodyDuty = null;
         if (gd.foe === 'player' && g.player.down) { if (!g.stoodDown) { g.stoodDown = true; g.say(gd, gd.unit && CUES.on ? "he's down — hold where you are" : 'back to your posts', true); } }   // (a scenario's defenders go back nowhere: they hold where the fight left them — cues.ts)
-        else if (D) { if (!D.body.bodyClosed && D.body.bodyVisits > 0 && v3.distXZ(c.pos, bodyPos(D.body)) < 12) { D.body.bodyClosed = true; g.say(gd, isBreathing(D.body) ? `no sign of him. ${D.body.callsign} is breathing, he'll keep — whoever dropped him is still close` : "no sign of him — eyes open, he's close"); } }   // (once, by a man thereabouts, and only if anybody got to the body at all — a called man giving up two rooms off says nothing; over a man out cold it says so)
+        else if (D) { if (!D.body.bodyClosed && D.body.bodyVisits > 0 && v3.distXZ(c.pos, bodyPos(D.body)) < 12) { D.body.bodyClosed = true; g.say(gd, isBreathing(D.body) ? `no sign of him. ${D.body.callsign} is breathing, he'll ${wg('be okay', 'keep')} — whoever dropped him is still close` : "no sign of him — eyes open, he's close"); } }   // (once, by a man thereabouts, and only if anybody got to the body at all — a called man giving up two rooms off says nothing; over a man out cold it says so)
         else if (!staff) { /* a unit calms without the staff's platitudes (his 'clear.' was said when the fight ended, teams) */ }
         else if (!nearKnownBody(g, c.pos, 4) && !(gd.bubble?.radio && g.time - gd.bubble.t < 4) && !attentionTold(g, gd)) g.say(gd, lvl >= 1 ? 'clear here — staying on it' : 'must have been nothing');   // (and not on top of his own radio line of a moment ago — 'not at his post', 'checking the breaker': that said it)
       }
@@ -2349,7 +2356,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         // is who a round from in front finds first, combat.ts fireWeapon), and the same beat is kept in hand for when he is out of it.
         const shield = T.muzzleDiscipline && shieldUp(g);
         if (shield) gd.fireCd = Math.max(gd.fireCd, SHIELD_RELEASE_BEAT_MIN + dt);   // (+dt as in standoffAlert: measured from the frame the man leaves the arm, not this one)
-        if (sideLocked(g, gd)) { /* (gunslots.ts: his hands are between his two guns — no round, no magazine) */ }
+        if (sideLocked(g, gd)) { /* (gunslots.ts: his hands are between his two guns, or off his gun for a charge — no round, no magazine) */ }
         else if (gd.reloadT >= 0) tickReloadBeat(g, gd, dt);
         else if (gd.weapon.def.burst) burstTrigger(g, gd, dt, aimAt, !shield && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && aimReady(g, gd), !shield && !twisted && !poked && !gd.muzzleDown);   // the carbine: short bursts through the same gates — all of them to begin one (aimReady among them: a burst is gated on the track at its START, not round by round — aim.ts), the per-round ones (the shield, a colleague in the line, poked, twisted) to let each round of it go (rifles, burstTrigger)
         else if (!shield && gd.fireCd <= 0 && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && !roundPastColleague(g, gd, aimAt) && aimReady(g, gd) && gd.weapon.fire()) {   // (muzzleDown: the pistol is not even up — a colleague is, or a beat ago was, in the line; roundPastColleague: the bore's own line this frame, the last look in a scrum; aimReady: lined up on him — the aim model's first-shot gate, aim.ts, always true with it off; weapon.fire last: the round is only cycled out of the gun once everything else has said yes)
@@ -2893,9 +2900,9 @@ export function raiseEscalation(g: Game, to: 1 | 2, except: Guard | null = null,
   const again = g.time - g.alarm.raisedAt < 1.5; g.alarm.raisedAt = g.time;
   if (again && lvl <= prev && cause !== 'body') return;   // just raised (a searcher finding a body ends his hunt, and with it the episode, in the very frame the body raised the floor): the clock is re-armed, nothing else is new — no 'still nothing' on top of 'man down', no re-deal (a body always re-plans: the rooms round HIM)
   const sp = spokesman(g, g.alarm.placed ? g.alarm.pos : null, except);
-  const line = lvl <= prev ? (cause === 'body' ? `${another ? 'another man down' : 'man down confirmed'} — stay locked down, clear everything round him` : cause === 'missing' ? "and a man we can't raise — it stays locked down, find him" : cause === 'hostage' ? 'copy — he has one of ours. it stays locked down: get round him, nobody fires till he has him clean' : cause === 'device' ? 'copy, control — it stays locked down, get to it' : cause === 'civilian' ? w('copy — another one saw him. stay on it, get over there', 'copy — another one saw him. stay on it, get to where she says') : 'still nothing — it stays locked down')
-    : lvl >= 2 ? (cause === 'hostage' ? 'he has one of ours — lock it down: weapons out, everyone to him, box him in and hold your fire' : `${cause === 'body' ? (another ? 'another man down — ' : 'man down — ') : cause === 'missing' ? "a man missing on top of it — " : cause === 'device' ? 'copy, control — ' : cause === 'civilian' ? "copy — that's a witness. " : ''}lock it down: pairs, weapons out, nobody wanders`)
-    : cause === 'body' ? 'we have a man down — weapons out, everyone sharp' : cause === 'missing' ? "a man off the net and not on his route — weapons out, eyes open for him, treat it as real" : cause === 'device' ? 'copy, control — weapons out, everyone sharp, somebody get eyes on it' : cause === 'civilian' ? (WORDS.on && !isOffice(g.level) ? "copy — somebody's here who shouldn't be. weapons out, treat it as real" : "copy — somebody's on the floor who shouldn't be. weapons out, treat it as real") : 'nothing here — stay sharp, check your corners';
+  const line = lvl <= prev ? (cause === 'body' ? `${another ? 'another man down' : 'man down confirmed'} — stay locked down, clear everything ${wg('around', 'round')} him` : cause === 'missing' ? "and a man we can't raise — it stays locked down, find him" : cause === 'hostage' ? wg("copy — he's got one of ours. stay locked down. box him in. no shot unless it's clean", 'copy — he has one of ours. it stays locked down: get round him, nobody fires till he has him clean') : cause === 'device' ? 'copy, control — it stays locked down, get to it' : cause === 'civilian' ? w('copy — another one saw him. stay on it, get over there', 'copy — another one saw him. stay on it, get to where she says') : 'still nothing — it stays locked down')
+    : lvl >= 2 ? (cause === 'hostage' ? wg("he's got one of ours — lock it down. weapons out, everyone box him in and hold your fire", 'he has one of ours — lock it down: weapons out, everyone to him, box him in and hold your fire') : `${cause === 'body' ? (another ? 'another man down — ' : 'man down — ') : cause === 'missing' ? "a man missing on top of it — " : cause === 'device' ? 'copy, control — ' : cause === 'civilian' ? "copy — that's a witness. " : ''}lock it down: pairs, weapons out, nobody wanders`)
+    : cause === 'body' ? 'we have a man down — weapons out, everyone sharp' : cause === 'missing' ? wg("we've got a man off the net and off his route — weapons out, treat it as real", "a man off the net and not on his route — weapons out, eyes open for him, treat it as real") : cause === 'device' ? 'copy, control — weapons out, everyone sharp, somebody get eyes on it' : cause === 'civilian' ? (WORDS.on && !isOffice(g.level) ? "copy — somebody's here who shouldn't be. weapons out, treat it as real" : "copy — somebody's on the floor who shouldn't be. weapons out, treat it as real") : 'nothing here — stay sharp, check your corners';
   if (sp) { g.say(sp, line, true); g.audio.play('radio', sp.char.bones.head ?? sp.char.pos, 0.7); }
   if (lvl >= 2) { assignLockdown(g, prev >= 2, except); if (cause !== 'hostage') planClears(g, false, cause === 'device' || cause === 'civilian' ? 'search' : cause); }   // (re-dealt on a re-arm too: they have just converged on a new fix, so pair whoever is together now and post the spare man by IT) — and the pair clears the rooms nearest that fix (more of them, and whatever they were on dropped, for a body)
 }
@@ -2986,12 +2993,12 @@ function advanceCheckOn(g: Game, gd: Guard) {
   K.left--;
   if (K.left <= 0 || !pts.length) { checkOnDone(g, gd, K.who, false); return; }
   K.wp = (K.wp + 1) % pts.length; K.pos = v3.copy(pts[K.wp]); gd.lastKnown = v3.copy(K.pos); gd.searchT = 0; gd.path = []; gd.pathGoal = null; gd.stallRef = null;
-  if (K.left === Math.floor(pts.length / 2)) { g.say(gd, `halfway round — nothing yet. ${K.who.callsign}, if you can hear this, sound off`, true); g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.4, { rate: 1.05 }); }
+  if (K.left === Math.floor(pts.length / 2)) { g.say(gd, `halfway ${wg('around', 'round')} — nothing yet. ${K.who.callsign}, if you can hear this, sound off`, true); g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.4, { rate: 1.05 }); }
 }
 /** The walk is over without him: the line, and — once per missing man — the floor goes up a step on it (raiseEscalation 'missing'; the alarm's place is his post). */
 function checkOnDone(g: Game, gd: Guard, M: Guard, capped: boolean) {
   gd.task = null; gd.searchT = 0; gd.awareness = clamp(gd.awareness, 0.2, 0.3);   // (he lets it go from here like any suspicion: 'clear here — staying on it' once the floor is up)
-  g.say(gd, capped ? `been round most of it — no sign of ${M.callsign}. he's not at his post` : `walked his whole route — ${M.callsign} is not at his post, no sign of him anywhere`, true);
+  g.say(gd, capped ? `${wg('walked', 'been round')} most of it — no sign of ${M.callsign}. he's not at his post` : `walked his whole route — ${M.callsign} is not at his post, no sign of him anywhere`, true);
   g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.7);
   if (!M.missingRaised) {
     M.missingRaised = true;
@@ -3055,8 +3062,8 @@ export function updateRollcall(g: Game, dt: number) {
         if (el > ROLLCALL_SEND_GIVEUP_SECS) { R.stage = 'idle'; R.nextAt = g.time + ROLLCALL_BUSY_RETRY_SECS; }
         return;
       }
-      if (R.caller && R.caller !== checker) { g.say(R.caller, `nothing from ${M.callsign}. ${checker.callsign}, go round his route — check on him`, true); g.audio.play('radio', R.caller.char.bones.head ?? R.caller.char.pos, 0.55); }
-      sendCheckOn(g, checker, M, R.caller === checker ? `nothing from ${M.callsign} — going round his route to check on him` : `copy — going to check on ${M.callsign}`);
+      if (R.caller && R.caller !== checker) { g.say(R.caller, `nothing from ${M.callsign}. ${checker.callsign}, ${wg('go walk his route and', 'go round his route —')} check on him`, true); g.audio.play('radio', R.caller.char.bones.head ?? R.caller.char.pos, 0.55); }
+      sendCheckOn(g, checker, M, R.caller === checker ? `nothing from ${M.callsign} — ${wg('going to walk his route and', 'going round his route to')} check on him` : `copy — going to check on ${M.callsign}`);
       R.stage = 'idle'; R.nextAt = g.time + rollcallInterval(g);
       return;
     }
@@ -3079,7 +3086,7 @@ function partnerWatch(g: Game, gd: Guard) {
   if (!g.aiEnabled || unseen < PARTNER_UNSEEN_SECS || (!atSpot && unseen < 2 * PARTNER_UNSEEN_SECS)) return;   // (AI off: he keeps track, he just does nothing about it)
   gd.leaderSeenT = g.time;   // (whatever comes of it, not again for another spell)
   if (!offNet(L)) {   // alive and free to answer, just long out of his sight and well away: he asks, the man answers, they close up (superviseLockdown re-deals a split pair anyway)
-    g.say(gd, `${L.callsign}, where've you got to?`, true); g.say(L, `${gd.callsign} — on me, close up`, true); g.audio.play('radio', eye, 0.5);
+    g.say(gd, `${L.callsign}, ${wg("where'd you go?", "where've you got to?")}`, true); g.say(L, `${gd.callsign} — on me, close up`, true); g.audio.play('radio', eye, 0.5);
     return;
   }
   // dead — or held in Sam's arm somewhere out of his sight: either way nothing comes back, and he reports him

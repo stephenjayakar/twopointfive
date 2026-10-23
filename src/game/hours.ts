@@ -60,20 +60,20 @@ export interface HourDef {
 }
 /** The hours to try. Numbers chosen by the meter's arithmetic and by software-rendered stills (rebuild/weather-and-hours/hours): nobody has seen one on a GPU. */
 export const HOURS: Record<Exclude<HourId, 'night'>, HourDef> = {
-  dawn: { id: 'dawn', label: 'Dawn', clock: '06:40', words: 'early light: a low orange sun out of the east, long shadows across the yard, the lamps still burning',
+  dawn: { id: 'dawn', label: 'Dawn', clock: '06:40', words: 'early light, with a low orange sun, long shadows across the yard and the lights still on',
     sun: { bearingDeg: 105, elevDeg: 22, color: [1.0, 0.62, 0.38], intensity: 2.6, radius: 0.02, volumetric: 1.2 },
     sky: { zenith: [0.16, 0.22, 0.38], horizon: [0.56, 0.42, 0.34] }, haze: 0.05, exposure: 1.9, lamps: true },
-  midday: { id: 'midday', label: 'Midday', clock: '12:30', words: 'a high white sun: hard short shadows, every yard in plain sight, the rooms dark by contrast',
+  midday: { id: 'midday', label: 'Midday', clock: '12:30', words: 'a high white sun, with hard short shadows, every yard in plain sight and the rooms dark by contrast',
     sun: { bearingDeg: 195, elevDeg: 56, color: [1.0, 0.97, 0.9], intensity: 6.0, radius: 0.012, volumetric: 0.6 },
     sky: { zenith: [0.3, 0.45, 0.8], horizon: [0.7, 0.76, 0.84] }, haze: 0.03, exposure: 1.7, lamps: false },
-  overcast: { id: 'overcast', label: 'Grey day', clock: '15:30', words: 'an overcast afternoon: flat grey light and no shadows to speak of, nothing to hide in outdoors',
+  overcast: { id: 'overcast', label: 'Grey day', clock: '15:30', words: 'an overcast afternoon, with flat gray light, almost no shadows and nothing to hide in outdoors',
     sun: { bearingDeg: 240, elevDeg: 50, color: [0.92, 0.95, 1.0], intensity: 1.0, radius: 0.25, volumetric: 0 },
     sky: { zenith: [0.55, 0.58, 0.63], horizon: [0.6, 0.62, 0.65] }, haze: 0.045, exposure: 2.0, lamps: false, cloud: 0.9 },
-  dusk: { id: 'dusk', label: 'Dusk', clock: '17:00', words: 'late light: a red sun low in the west, the lamps coming on, the yard half in shadow',
+  dusk: { id: 'dusk', label: 'Dusk', clock: '17:00', words: 'late light, with a low red sun, the lights coming on and the yard half in shadow',
     sun: { bearingDeg: 255, elevDeg: 22, color: [1.0, 0.5, 0.26], intensity: 2.2, radius: 0.02, volumetric: 1.2 },
     sky: { zenith: [0.13, 0.18, 0.36], horizon: [0.6, 0.38, 0.24] }, haze: 0.045, exposure: 2.0, lamps: true },
 };
-const NIGHT = { label: 'Night', clock: '02:00', words: 'the level as it was made: the moon, the lamps outside, the storm' };
+const NIGHT = { label: 'Night', clock: '02:00', words: 'the level as it was built, with the moon, the lights outside and the storm' };
 export function hourLabel(id: HourId): string { return id === 'night' ? NIGHT.label : HOURS[id].label; }
 export function hourClock(id: HourId): string { return id === 'night' ? NIGHT.clock : HOURS[id].clock; }
 export function hourWords(id: HourId): string { return id === 'night' ? NIGHT.words : HOURS[id].words; }

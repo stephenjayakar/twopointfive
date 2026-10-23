@@ -19,6 +19,7 @@ import { gunShut, throwRest, thingDist } from '../game/player';
 import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 import { HANDSLOT } from '../game/handslot';
 import { HANDRING, EMPTY_WORD, EMPTY_WHY, EMPTY_SHOW_SECS } from '../game/handring';
+import { cornerRows, cornerOn } from './corner';
 import { emptyThing, emptyWord } from '../game/interact';
 /** the reticle's ONE word: the 40 mm's arc is too short to arm (the plain 'RMB  OCP' / 'RMB  RING' / 'RMB  40 MM' words went on the 10-11 play note: "we can remove
  *  the RMB overlay on the cursor" — what the right button holds is read on the kit column's rows) */
@@ -65,7 +66,8 @@ const MAX_ROWS = 5;     // …at most this many blocks, then '+N more' (player.t
  *  shown only on the first row of a thing — `cont` marks the rows of the same thing under it), the key → action pair plus hint lines (`opts`; key '' = a
  *  status / hint line such as 'picking… 40%' or 'or sprint into it'), whether it is within reach (else greyed, with `dist` in metres when known), `off` (a
  *  thrown breaker), and `progress` 0‥1 for a bar (a lock being picked, the drive coming out, the leaf easing round). */
-export interface InteractRow { kind: Interactable['kind']; label: string; opts: { key: string; text: string; tone?: string; /** a squad man lost (deathrecap.ts lostLive) · his line as drawn: struck, with an arrow turned this many degrees ('' = no direction known; ' n' after it = fresh) */ gone?: boolean; lost?: LostMan; mark?: string }[]; inReach: boolean; off: boolean; dist?: number; progress?: number; cont?: boolean; /** the squad's element this row is about (orders.ts Tone: gold / red / blue) — #interact .t-<tone> */ tone?: string; }
+export interface InteractRow { kind: Interactable['kind']; label: string; opts: { key: string; text: string; tone?: string; /** a squad man lost (deathrecap.ts lostLive) · his line as drawn: struck, with an arrow turned this many degrees ('' = no direction known; ' n' after it = fresh) */ gone?: boolean; lost?: LostMan; mark?: string }[]; inReach: boolean; off: boolean; dist?: number; progress?: number; cont?: boolean; /** the squad's element this row is about (orders.ts Tone: gold / red / blue) — #interact .t-<tone> */ tone?: string;
+  /** (ui/corner.ts, HANDRING.corner) a block under no heading: a line a key gives, or the lines no key gives (its label alone where it has none) · the objective's section · the clock in front of the objective */ one?: boolean; sec?: boolean; note?: string; /** … and the mission's stage, for its colour */ stage?: string }
 
 /** The marker text is authored as 'key␠␠action  ·  key␠␠action  ·  hint' (player.ts buildInteractables): split it back into rows. 'F or sprint into it  kick…'
  *  keeps F as the key and puts the alternative on a hint line under it. (Until Interactable carries structured options this is the one place that knows the convention.) */
@@ -141,7 +143,9 @@ export class Overlay implements HudLike {
   private hint: HTMLElement; private hintKey = '';                                  // the one word beside the ring: the 40 mm's too-close warning (HE40_SHORT)
   private aimPx = 16; private aimStyled = false;                                     // the aim ring's eased diameter under the aim model (px), and whether its inline size / tint are on it (taken off again for the interaction ring / the model off)
   private iaEl = document.getElementById('interact')!; private iaKey = '';         // interaction panel (top-left): rebuilt when its rows change, distance / progress patched in place
-  private iaLive: { em: HTMLElement; bar: HTMLElement | null; d: string; p: string }[] = [];
+  private iaLive: { em: HTMLElement; bar: HTMLElement | null; d: string; p: string; /** (ui/corner.ts: the objective's words, set in place — a clock in them ticks) */ txt?: HTMLElement | null; t?: string }[] = [];
+  /** (HANDRING.corner) setInteractions drew the objective's section this frame: the line at the top says nothing */
+  private cornerObj = false;
   private menuEl = document.getElementById('menu')!;                               // start / pause / debrief card up ('on'): no interaction panel behind it
   private objEl = document.getElementById('objective')!; private objKey = '\0';   // the mission's one line (top-centre)
   private alarmEl = document.getElementById('alarm')!; private alarmKey = '';       // alarm stage under it (hidden at calm)
@@ -386,7 +390,7 @@ export class Overlay implements HudLike {
       //  step down and has a higher top, and the rows stood in its first row of words)
       { const log = s > 0 && this.railRest ? `${(h - this.railRest.t - s + 6).toFixed(0)}px` : '';
         if (log !== this.railLog) { this.railLog = log; const st = document.body.style; if (log) st?.setProperty?.('--raillog', log); else st?.removeProperty?.('--raillog'); } } }
-    const ot = rail ? '' : keyText(game.objectiveText());
+    const ot = rail || this.cornerObj ? '' : keyText(game.objectiveText());   // (HANDRING.corner: the objective is a section of the corner panel, not a line up here)
     if (ot !== this.objKey) { this.objKey = ot; const W = 'objective ▸', cut = ot.indexOf(W);   // the line's own word is set apart as its label (a par clock in front of it is not part of it); the text read back is unchanged
       if (cut < 0) this.objEl.textContent = ot; else this.objEl.innerHTML = `${esc(ot.slice(0, cut))}<b>${W}</b>${esc(ot.slice(cut + W.length))}`;
       this.objEl.className = game.mission.stage; }
@@ -463,22 +467,27 @@ export class Overlay implements HudLike {
    *  the cancel row is among the rows). The DOM is rebuilt only when the rows' text / reach / kind change; the distance and the progress bar are patched in
    *  place every frame. Hidden when there is nothing to list or a menu card is up. update() feeds it from the game's rows (deriveInteractions). */
   setInteractions(rows: InteractRow[], primary = -1, more = 0, open = false, hint = `let go to do it · wheel / ↑↓ chooses · ${backName()} backs out`, cancel = 'cancel — let go, do nothing') {
+    this.cornerObj = rows.some(r => r.sec) && !this.menuEl.classList.contains('on');   // (the objective is drawn here this frame: update()'s line at the top says nothing)
     if (!rows.length || this.menuEl.classList.contains('on')) { if (this.iaKey) { this.iaKey = ''; this.iaEl.className = ''; this.iaEl.textContent = ''; this.iaLive = []; } return; }
-    const key = rows.map(r => `${r.kind}|${r.label}|${r.cont ? 1 : 0}|${r.tone ?? ''}|${r.opts.map(o => `${o.key}>${o.text}>${o.tone ?? ''}${o.mark !== undefined ? `~${o.mark}` : ''}`).join('/')}|${r.inReach ? 1 : 0}${r.off ? 1 : 0}${r.dist !== undefined ? 1 : 0}${r.progress !== undefined ? 1 : 0}`).join('\n') + `#${primary}#${more}#${open ? `1${hint}` : 0}#${cancel}#${KEYMAP.rev}`;
+    const key = rows.map(r => r.sec ? `sec|${r.label}|${r.stage ?? ''}|${r.label || r.note ? 1 : 0}` : `${r.kind}|${r.label}|${r.cont ? 1 : 0}|${r.tone ?? ''}|${r.opts.map(o => `${o.key}>${o.text}>${o.tone ?? ''}${o.mark !== undefined ? `~${o.mark}` : ''}`).join('/')}|${r.inReach ? 1 : 0}${r.off ? 1 : 0}${r.dist !== undefined ? 1 : 0}${r.progress !== undefined ? 1 : 0}${r.one ? 'o' : ''}`).join('\n') + `#${primary}#${more}#${open ? `1${hint}` : 0}#${cancel}#${KEYMAP.rev}`;
     if (key !== this.iaKey) {
       this.iaKey = key;
+      const soft = (o: InteractRow['opts'][number]) => o.mark !== undefined ? `<div class="hint lost${o.tone ? ` t-${o.tone}` : ''}"><s>${esc(keyText(o.text))}</s>${o.mark ? `<b${o.mark.endsWith(' n') ? ' class="n"' : ''} style="transform:rotate(${parseInt(o.mark, 10)}deg)">→</b>` : ''}</div>` : `<div class="hint${o.tone ? ` t-${o.tone}` : ''}">${esc(keyText(o.text))}</div>`;   // (a line no key gives; a squad man lost: struck, with the way it came from)
       this.iaEl.innerHTML = (open ? `<div class="selhint">${esc(keyText(hint))}</div>` : '') + rows.map((r, i) =>
         r.kind === 'cancel' ? `<div class="it k-cancel${i === primary ? ' primary' : ''}"><div class="opt"><kbd>×</kbd>${esc(keyText(cancel))}</div></div>`
+        : r.sec ? `<div class="it sec${r.stage ? ` ${esc(r.stage)}` : ''}">${r.label || r.note ? `<div class="what"><span>${esc(r.label)}</span><em></em></div>` : ''}<div class="opt"></div></div>`   // (ui/corner.ts: the objective — its words and its clock are set below, in place)
+        : r.one ? `<div class="it one k-${r.kind}${i === primary ? ' primary' : ''}${r.inReach ? '' : ' far'}${r.off ? ' off' : ''}">${r.opts.length ? r.opts.map(o => o.key ? `<div class="opt"><kbd>${esc(keyCap(o.key).toUpperCase())}</kbd>${esc(keyText(o.text))}</div>` : soft(o)).join('') : `<div class="what"><span>${esc(keyText(r.label))}</span><em></em></div>`}${r.progress !== undefined ? '<div class="prog"><b></b></div>' : ''}</div>`   // (… and a block under no heading)
         : `<div class="it k-${r.kind}${i === primary ? ' primary' : ''}${r.inReach ? '' : ' far'}${r.off ? ' off' : ''}${r.cont ? ' cont' : ''}${r.tone ? ` t-${r.tone}` : ''}">${r.cont ? '<div class="what"><em></em></div>' : `<div class="what"><span>${esc(r.label)}</span><em></em></div>`}`
-        + r.opts.map((o, j) => o.key ? `<div class="opt${j === 0 && /^space$/i.test(o.key) ? ' verb' : ''}${o.tone ? ` t-${o.tone}` : ''}"><kbd>${esc(keyCap(o.key).toUpperCase())}</kbd>${esc(keyText(o.text))}</div>` : o.mark !== undefined ? `<div class="hint lost${o.tone ? ` t-${o.tone}` : ''}"><s>${esc(keyText(o.text))}</s>${o.mark ? `<b${o.mark.endsWith(' n') ? ' class="n"' : ''} style="transform:rotate(${parseInt(o.mark, 10)}deg)">→</b>` : ''}</div>` : `<div class="hint${o.tone ? ` t-${o.tone}` : ''}">${esc(keyText(o.text))}</div>`).join('')   // (.verb: the row's own Space verb — lit only on the highlighted row; the hint keys under it, LMB / E, are always live and never dimmed)
+        + r.opts.map((o, j) => o.key ? `<div class="opt${j === 0 && /^space$/i.test(o.key) ? ' verb' : ''}${o.tone ? ` t-${o.tone}` : ''}"><kbd>${esc(keyCap(o.key).toUpperCase())}</kbd>${esc(keyText(o.text))}</div>` : soft(o)).join('')   // (.verb: the row's own Space verb — lit only on the highlighted row; the hint keys under it, LMB / E, are always live and never dimmed)
         + (r.progress !== undefined ? '<div class="prog"><b></b></div>' : '') + '</div>').join('') + (more > 0 ? `<div class="more">+${more} more</div>` : '');
-      this.iaEl.className = open ? 'on open' : 'on';
+      this.iaEl.className = (open ? 'on open' : 'on') + (rows.some(r => r.one || r.sec) ? ' corner' : '');
       const blocks = [...this.iaEl.querySelectorAll('.it')] as HTMLElement[];
-      this.iaLive = rows.map((_, i) => { const el = blocks[i]; return { em: el.querySelector('.what em') as HTMLElement, bar: el.querySelector('.prog b') as HTMLElement | null, d: '', p: '' }; });
+      this.iaLive = rows.map((_, i) => { const el = blocks[i]; return { em: el.querySelector('.what em') as HTMLElement, bar: el.querySelector('.prog b') as HTMLElement | null, d: '', p: '', txt: rows[i].sec ? el.querySelector('.opt') as HTMLElement | null : null, t: '' }; });
     }
     rows.forEach((r, i) => {
       const L = this.iaLive[i];
-      const d = r.dist !== undefined ? `${r.dist < 10 ? r.dist.toFixed(1) : Math.round(r.dist)}m` : ''; if (L.em && d !== L.d) { L.d = d; L.em.textContent = d; }
+      const d = r.sec ? r.note ?? '' : r.dist !== undefined ? `${r.dist < 10 ? r.dist.toFixed(1) : Math.round(r.dist)}m` : ''; if (L.em && d !== L.d) { L.d = d; L.em.textContent = d; }
+      if (L.txt) { const t = r.opts[0]?.text ?? ''; if (t !== L.t) { L.t = t; L.txt.textContent = t; } }
       if (L.bar) { const p = `${(Math.round(Math.min(1, Math.max(0, r.progress ?? 0)) * 200) / 2).toFixed(1)}%`; if (p !== L.p) { L.p = p; L.bar.style.width = p; } }   // half-percent steps, like the ring
     });
   }
@@ -504,8 +513,11 @@ export class Overlay implements HudLike {
       if (!HANDRING.near) { const m = game.messages[game.messages.length - 1]; if (m?.text === EMPTY_WORD && young(m.t)) rows.push({ kind: 'wall', label: EMPTY_WORD, opts: [], inReach: false, off: false }); }
       else if (S.word && young(S.wordT)) { const T = emptyThing(game);
         if (emptyWord(game, T) === S.word) rows.push({ kind: T ? T.it.kind : 'wall', label: S.word, opts: [], inReach: false, off: false, dist: T && T.why === EMPTY_WHY.far ? T.d : undefined }); } }
-    rows.push(...sq.status);   // … and otherwise the squad's block under the Space rows: who the orders go to, what each man is doing (nothing without a squad)
     const primary = hv ? list.indexOf(hv) : -1;
+    if (cornerOn(!!game.puppet)) {   // (ui/corner.ts: the objective, his key's line, the squad key's line — and what the block and a door's heading said that it would lose: doortools.ts cornerNotes, a key's line kept back where the mission's frame keeps the squad's notes back, a warning never)
+      const C = cornerRows(rows, primary, sq.status, game.rails.prompt() ? '' : keyText(game.objectiveText()), game.doorTools.cornerNotes().filter(o => !o.key || (game.orders.active && !game.rails.locks('menu'))), game.mission.stage);
+      return { rows: C.rows, primary: C.primary, more: 0, open: false }; }
+    rows.push(...sq.status);   // … and otherwise the squad's block under the Space rows: who the orders go to, what each man is doing (nothing without a squad)
     return { rows, primary: primary >= 0 && primary < cap ? primary : -1, more: Math.max(0, list.length - cap), open: game.player.listOpen };   // (up as a ring — cmdring.ts CMDRING.hands — the panel's list is the list at rest)
   }
 
@@ -539,7 +551,7 @@ export class Overlay implements HudLike {
     const cond = mk('div', 'cond' + (pl.down ? ' down' : '') + (game.godMode ? ' god' : ''));
     if (game.godMode) cond.appendChild(mk('span', 'g on', 'GOD MODE'));
     else { cond.appendChild(mk('span', 'g', pl.down ? 'DOWN — ENTER' : 'CONDITION')); const pips = mk('span', 'pips'); for (let i = 0; i < Player.MAX_HITS; i++) pips.appendChild(mk('i', i < pl.hitsLeft ? '' : 'lost')); cond.appendChild(pips); }
-    if (pl.keys.size) { const named = [...pl.keys].filter(k => k !== FLOOR_KEY); const tag = mk('span', 'keytag', named.length ? `KEY · ${named.join(' · ').toUpperCase()}` : 'KEY'); tag.title = 'taken off a man you questioned: the keyed doors open to you'; cond.appendChild(tag); }
+    if (pl.keys.size) { const named = [...pl.keys].filter(k => k !== FLOOR_KEY); const tag = mk('span', 'keytag', named.length ? `KEY · ${named.join(' · ').toUpperCase()}` : 'KEY'); tag.title = 'taken from a guard you questioned, so the keyed doors will open for you'; cond.appendChild(tag); }
     el.appendChild(cond);
     /** a gun's row body: a pip per round the magazine holds, the chambered round, the count, a little box per spare drawn as full as it is. THE PIPS ARE DRAWN ON A
      *  LINE OF THEIR OWN under the row (index.html `#equip .slot .rounds`: the Mk 18's thirty made the row too long — the 10-11 play note); the element stays
@@ -556,7 +568,7 @@ export class Overlay implements HudLike {
     const s1 = mk('div', 'slot' + selCls('pistol'));
     s1.appendChild(mk('span', 'key', '1')); s1.appendChild(mk('span', 'name', gun.reloading ? `${gun.def.short} · reloading` : gun.def.short));
     gunRow(s1, gun);
-    { const oc = mk('span', 'tag ocp' + (pl.ocp.ready() ? ' on' : ''), 'OCP'); const bar = mk('span', 'ocpbar'); const bb = mk('b'); bb.style.width = `${Math.round(pl.ocp.charge * 100)}%`; bar.appendChild(bb); oc.appendChild(bar); oc.title = 'the OCP on the pistol: right click with it out knocks out the light the reticle is on for a few seconds (or the torch of the man it is on); recharges'; s1.appendChild(oc); }
+    { const oc = mk('span', 'tag ocp' + (pl.ocp.ready() ? ' on' : ''), 'OCP'); const bar = mk('span', 'ocpbar'); const bb = mk('b'); bb.style.width = `${Math.round(pl.ocp.charge * 100)}%`; bar.appendChild(bb); oc.appendChild(bar); oc.title = 'the OCP on the pistol. With the pistol out, right-click to knock out the light under the reticle for a few seconds, or the flashlight of the guard under it. Then it recharges'; s1.appendChild(oc); }
     el.appendChild(s1);
     // 2: the FN2000 — its short name and the selector's position (SEMI / AUTO off Z: what the LEFT button fires, always), thirty slim pips, the chamber, the count,
     // the spare boxes; then its launcher's two loads for the RIGHT button: RING ×n and 40MM ×n, the one that is UP lit (2 again with it in the hands flips them), the
@@ -567,12 +579,12 @@ export class Overlay implements HudLike {
       s2.appendChild(mk('span', 'name', rf.reloading ? `${rf.def.short} · reloading` : rf.def.short));
       s2.appendChild(mk('span', 'tag on', rf.mode.toUpperCase()));   // (Z: the selector — always lit: the left button always fires rounds)
       gunRow(s2, rf);
-      if (rf.attachments.includes('ring')) { const rg = mk('span', 'tag rings' + (rf.attachment === 'ring' ? ' on' : ''), `${ringTag()} ×${rf.rings}`); rg.title = gearText(`ring airfoils: lit = the load on the right button (2 again with the rifle up ${rf.attachments.includes('cam') ? 'steps to the next load' : 'flips to the 40 mm and back'}); a right click fires one, held it shows the arc first — head = out cold, body = staggered; spent, not retrievable`); s2.appendChild(rg); }   // (the shotgun in this slot has no launcher: no tag)
-      if (rf.attachments.includes('he40')) { const sg = mk('span', 'tag rings shells' + (rf.attachment === 'he40' ? ' on' : ''), `${shellTag()} ×${rf.shells}`); sg.title = gearText('40 mm high-explosive grenades: 2 again with the rifle up puts them on the right button (lit) in place of the RING, a right click fires one, held it shows the arc first — it goes off on what it hits with a frag grenade\'s blast, but only past its arming distance (nearer: a dud); spent, not retrievable'); s2.appendChild(sg); }
-      if (rf.attachments.includes('cam')) { const cg = mk('span', 'tag rings cams' + (rf.attachment === 'cam' ? ' on' : ''), `CAM ×${rf.cams}`); cg.title = 'sticky cameras: 2 again with the rifle up puts them on the right button (lit); a right click sends one to the first wall past the cursor, held it shows the arc first — it lifts the fog of war round what it watches'; s2.appendChild(cg); }   // (stickycam.ts: only on a rifle that was issued some)
+      if (rf.attachments.includes('ring')) { const rg = mk('span', 'tag rings' + (rf.attachment === 'ring' ? ' on' : ''), `${ringTag()} ×${rf.rings}`); rg.title = gearText(`ring airfoils. When the tag is lit, they're loaded on right-click (press 2 again with the rifle up to ${rf.attachments.includes('cam') ? 'step to the next load' : 'switch to the 40 mm and back'}). Right-click to fire one, or hold it to see the arc first. A hit to the head knocks an enemy out and a hit to the body staggers him. You can't pick them back up`); s2.appendChild(rg); }   // (the shotgun in this slot has no launcher: no tag)
+      if (rf.attachments.includes('he40')) { const sg = mk('span', 'tag rings shells' + (rf.attachment === 'he40' ? ' on' : ''), `${shellTag()} ×${rf.shells}`); sg.title = gearText('40 mm high-explosive grenades. Press 2 again with the rifle up to put them on right-click (lit) in place of the RING. Right-click to fire one, or hold it to see the arc first. It goes off on what it hits with a frag grenade\'s blast, but only past its arming distance. Any closer and it\'s a dud. You can\'t pick them back up'); s2.appendChild(sg); }
+      if (rf.attachments.includes('cam')) { const cg = mk('span', 'tag rings cams' + (rf.attachment === 'cam' ? ' on' : ''), `CAM ×${rf.cams}`); cg.title = 'sticky cameras. Press 2 again with the rifle up to put them on right-click (lit). Right-click to send one to the first wall past the cursor, or hold it to see the arc first. It lifts the fog of war around what it watches'; s2.appendChild(cg); }   // (stickycam.ts: only on a rifle that was issued some)
       el.appendChild(s2);
     } else {
-      const s2 = mk('div', 'slot absent'); s2.appendChild(mk('span', 'key', '2')); s2.appendChild(mk('span', 'name', rf.def.short)); s2.appendChild(mk('span', '', 'not in this kit')); s2.title = 'the start card / pause menu puts the rifle in the kit'; el.appendChild(s2);
+      const s2 = mk('div', 'slot absent'); s2.appendChild(mk('span', 'key', '2')); s2.appendChild(mk('span', 'name', rf.def.short)); s2.appendChild(mk('span', '', 'not in this kit')); s2.title = 'add the rifle to your kit from the start card or the pause menu'; el.appendChild(s2);
     }
     // 3 / 4: smoke and stun canisters. Where the quick throw is on (quickthrow.ts: not in the page) "G" marks the one its key will use (the throwable selected last)
     const gKind = !QUICKTHROW.on ? '' : pl.throwKind === 'flash' && pl.flashbangs > 0 ? 'flash' : pl.canisters > 0 ? 'smoke' : pl.flashbangs > 0 ? 'flash' : '';

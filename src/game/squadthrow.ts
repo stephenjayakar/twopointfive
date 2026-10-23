@@ -60,7 +60,7 @@ import { FRAG, exposedTo, fleeMates, fleeSpot } from './frag';
 import { FLASH, flashFuse } from './combat';
 import { fightLive } from './roomfight';
 import { SAMSTUN } from './samstun';
-import { WORDS } from './words';
+import { WORDS, wg } from './words';
 import { squadArcTo, squadHandFree } from './squadsmoke';
 import { workHand } from './workthings';
 import { teamBlastPace } from './teampace';
@@ -386,7 +386,7 @@ export function squadFragCatches(g: Game, rest: Vec3, at: Vec3, moved?: { gd: Gu
 }
 function fragCatches(g: Game, rest: Vec3, at: Vec3, moved: { gd: Guard; at: Vec3 } | undefined, sam: boolean, burst?: { reach: number; no: string }): string | null {
   const pts = fragPts(rest, at), inIt = (p: Vec3) => fragIn(g, pts, p, undefined, burst?.reach);
-  if ((sam || samNear(g, pts)) && !g.player.down && inIt(g.player.char.pos)) return 'you are in it.';
+  if ((sam || samNear(g, pts)) && !g.player.down && inIt(g.player.char.pos)) return wg("you're in it.", 'you are in it.');
   // (… a man is told of it when it is within FRAG.seeM of him: one far from the hand it leaves hears late, by the slowest pace it is thrown at)
   const K = SQUADTHROW, taken: Vec3[] = [], on = (gd: Guard) => { const p = moved && moved.gd === gd ? moved.at : gd.char.pos; return inIt(p) && !(!burst && fragClears(g, gd, p, pts, moved?.gd === gd ? K.duckThrowSecs : moved ? Math.max(0, flat(moved.at, p) - FRAG.seeM) / 5 : 0, taken)); };   // (duck: … and cannot be off its line before it bursts)
   const mate = g.guards.find(gd => gd.team === 'operative' && (gd.state !== 'dead' ? on(gd) : isBreathing(gd) && inIt(bodyPos(gd))));   // (a teammate down and breathing — wounded, out cold — is still one of ours)
@@ -524,7 +524,7 @@ export function squadThrowPlans(g: Game, V?: SquadThrowKept): SquadThrowPlan[] {
     out.push({ gd: W.gd, from: W.post, points: W.arc.sol.points, land: W.arc.rest, kind: W.kind, walk: flat(p, W.post) > 0.4 ? [v3.copy(p), ...L.slice(bi + 1), W.post] : undefined });
   }
   const M = g.orders.menu, id = M?.rows[M.sel]?.id;
-  if (M && M.page === THROW_PAGE && M.target.kind === 'floor' && (id === FRAG_THERE || id === STUN_THERE)) aside(g, s, V ?? squadThrowKept(), () => {   // (the highlighted row's throw and no other: what is drawn is what the next pick gives)
+  if (M && (M.page === THROW_PAGE || M.flat) && M.target.kind === 'floor' && (id === FRAG_THERE || id === STUN_THERE)) aside(g, s, V ?? squadThrowKept(), () => {   // (the highlighted row's throw and no other: what is drawn is what the next pick gives)
     const t = M.target, kind: SquadThrowKind = id === STUN_THERE ? 'stun' : 'frag';
     const th = left(g, kind) > 0 ? squadThrowPlan(g, M.men, t.at, kind, false, true) : null;   // (the picture's own kept answer: it never stands in for the menu's or the order's)
     if (th && !(kind === 'frag' && squadFragCatches(g, th.rest, t.at, { gd: th.gd, at: th.post ?? th.gd.char.pos }, !samCalls(), true))) {   // (the row's own question, word for word: drawn where the row is live)

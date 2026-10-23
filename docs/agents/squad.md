@@ -336,6 +336,62 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the other time line). STILL OPEN, not this module's: with the THROW PAGE up `floorPlan` reads `squadthrow.ts squadThrowPlans`, whose `view`
   question keeps its answer in that module's own table and searches on the game's, so a game drawn and one not drawn still differ in the whole
   state there (digest equal); line 9 does not play the throw page. Never seen on a GPU.
+- **Plan mode reaches one room, not the level** (`CMDRING.planNear`, `planNearSideM` 6.5 / `planNearAwayM` 4.5 / `planNearBackM` 6;
+  `planmode.ts pan / planNear`; ON in the page with the mode and its RTS view, `?plannear=0`; off in the module and on the frozen stand,
+  `TPS_PLANNEAR=1` beside `TPS_QRING=1 TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan
+  mode ▸ the view stays near you'). The maintainer, 2026-10-23: "balancing plan mode: it's too easy to just play this like an RTS. we should instead
+  make it so you can only move a bounded amount from the player. like maybe the player has to roughly be on screen but can be in a corner. the mental
+  model is that it should be good for clearing one room but not the whole level. and we should design things so there's not always a safe place for
+  the player to hide and command, it's really a situational thing."
+  WAS: the view's point went `planPanReachM` (25 m) outside the box Sam AND the men stand in, so it followed the men down the level. NOW: it stays
+  where SAM IS STILL ON THE SCREEN: a box round him in the camera's own basis, at the camera's own distance 6.5 m to either side, 4.5 m with the view
+  pushed up the screen (he is at the bottom) and 6 m with it pulled down (he is at the top). He is parked while the mode is up, so the box does not
+  move; at an edge the view stops going out and slides along it, and in a corner of the box he is in a corner of the screen (the harness's 1600 x
+  1000 view: his feet 92 px in and 99 px up at the bottom corners, 97 px down at the top). ZOOMED IN the box shrinks with the camera's distance
+  (less 1.4 m kept for his own height at the top edge), so he stays on the screen; ZOOMED OUT it does not grow. A view found outside the box (a
+  file from before, a frame's lock let go) is walked in at twice the pan's speed, never jumped. No mark is drawn for the edge. To plan further
+  on he puts the mode down and walks. NOT HELD where a tutorial frame has taken his feet (rails `move` locked: he cannot walk nearer), so the plan
+  mission (`tut-plan`, led from the gate with no feet) plays as it did: 19 of 19 steps by its scripted player on the page's stand with the rule
+  on. That mission's hall and two gates are 19 m from where he is parked and its guardroom view asks for 5.5 m, so to hold the bound it would
+  have to walk him or move him between its parts, and until it does the lesson teaches a reach the game no longer has (its thread's, and the
+  maintainer's call). SINCE 10-23 IT WALKS HIM (the maintainer's pick, "You walk to each spot, then plan"): three walk steps, his feet from the first
+  of them, and the bound holds there from that step on (`docs/agents/missions.md`, the plan mission's "He walks to three spots"). NOT BOUNDED: where an order may be given (anything on the screen takes a right click: from an edge about 15 m from him at
+  the camera's own distance, about 22 m zoomed all the way out), chains already laid (they walk on and the word still frees them wherever they
+  wait) and a mark of the plan outside the view (it is off the screen). CHECK `probes.ts plannear` (9 lines, both stands, one deal: the rule has
+  no die in it; `PLANNEAR_BREAK=1` fails lines 1, 2, 3, 4 and 6 on both): a walk key for five seconds and a second key to the corner; all eight
+  ways out with his feet and head on the screen; the camera at 12 and at 40; the men put 30 m off; the frame's lock and the walk back in; a view
+  filed further out; a right click from a corner and the ease back; the journal; the stands. `planmode-check`'s rig holds the rule off (its lines
+  19 and 21 ask the reach as first built), so `planmode` and `planplus` do not play it. THE LEVEL HALF of his note (no place that is always safe
+  to command from) is not built here: it is level design, for the level skill and the missions. Nobody has played it; never seen on a GPU.
+- **The squad's ring is two rings deep and nothing rides the cursor** (2026-10-23; `CMDRING.flat` / `plainHint`; `cmdring.ts flatSeats`,
+  `FLAT_TOP`, `FLAT_LEFT`; `orders.ts flatRows`, `menuRows`, `seats`, `hintView`, `OrderDef.gone`). The maintainer: "radial menu tree needs some
+  work, way too nested"; "loud and quiet should be an option on squad wheel"; "let's remove the icons on mouse position from squad orders
+  entirely". BOTH: ON in the page (`flat` with `only`), `?ringflat=0` / `?plainhint=0`; off in the module and on the frozen stand,
+  `TPS_RINGFLAT=1` (beside `TPS_QRING=1 TPS_QONLY=1`) / `TPS_PLAINHINT=1`; a tick each in the debugger; a recording from before the keys replays
+  with them off. THE TREE (`flat`): the ring holds every order of the thing under the cursor, never a page. Floor, wall, a thing: 1 what a tap
+  gives · 2 cover that way · 3 fall in · 4 hold position · 5 more (frag there · bang there · a wall charge when the squad carries one · go
+  silent). A door: 1 what a tap gives · 2 cover this door · 3 open and clear · 4 bang and clear · 5 more (charge, or shut that door · clear from
+  outside · shotgun and clear · frag and clear · go silent); fall in and hold position are NOT on a door's ring. The squad's own ring (on a man,
+  on Sam, on nothing): 1 fall in · 4 hold position · 5 go silent. An enemy: no ring, as before. Rules: a row that says what wedge 1 says has no
+  wedge of its own and its digit is wedge 1's (`seats().same`: 3 is still fall in on the squad's own ring; stacked on a door the entry the squad
+  would pick is on 1 only); no ring has one row (a lone left-over sits on wedge 5 itself); a row for kit the squad never carried or a tool this
+  door never takes is not offered (`gone`: a wall charge with none brought, a charge or the big slot's tool on steel, the big slot's tool on an
+  open door), one off only for now stays greyed; the posture row is the last of every second ring and gives up its place first when rows
+  overflow. No key sets loud or quiet, before or now. A TUTORIAL MISSION (rails live) KEEPS THE PAGED TREE: its lines name the old digits
+  ("[X], then press [3]", "Press [5], then [3]"), the tutorial's own to move. THE CURSOR (`plainHint`): the outline on the floor of what the
+  key orders on, no glyph beside the cursor or in the ring's middle. THE SQUAD'S CORNER cut down to its key lines (his same notes) is NOT here:
+  it is the page's own layer's, which reads `orders.hud()` whole, so the order book's lines are as they were. CHECK `probes.ts ringflat`
+  (family squadorders; 12 lines, both stands, one deal seed 3: the rules have no die in them; `RINGFLAT_BREAK=1` fails lines 1 to 6 and 9 on
+  both). `qonly-check` holds `flat` off in its rig (its lines ask the ring by the menu's pages). Neighbours' files touched for it:
+  `wallcharge.ts`, `doortools.ts` (the `gone` rows), `squadthrow.ts` (the throw's arc on a flat ring), `ui/cmdring.ts` (one line, the glyph),
+  `ui/options.ts` (the hint's words). Nobody has played it; never seen on a GPU.
+- **A held door's key lights when the men say so** (2026-10-23; `PLAN.thrTold`, `floorplan.ts waitsOnKey` / `PlanDoor.ready`; picture only, on on
+  both stands like `PLAN.keyLit`, `?thrtold=0`, a tick in the debugger). Found by the squad's own behaviour work: on a door held from outside the
+  word pressed before the men's "holding · on your word" call cuts their slice of the room short, and the key's cap was lit from the moment their
+  feet were on the jambs. Now that cap is dark until `thr.told`, then lit; the key does what it did. CHECK `tools/qa/plan-check.ts`, the last
+  line, both stands (one deal, the conference door: dark with feet on the jambs, lit 3.5 to 4.5 s later at the call; `THRTOLD_BREAK=1` red on
+  both). NOT covered: the HUD's own word line (`doortools.ts wordNote`, "go · … waiting") still shows from the stack, and several doors on one
+  word (`planOne`) wait for every stack to FORM, not for a call. Never seen on a GPU.
 - **What the cursor is on is kept by whoever reads the HUD** (2026-10-23; `orders.ts hover / hud / hintView`, `HoverKept`, `ui/hoverkept.ts`; picture
   only, no switch). `hover()`'s answer, kept a tenth of a second while the cursor rests, and the camera it was asked under were fields of the order
   book (`orders.hov`, `orders.hovCam`): a game whose HUD was read each frame differed in the whole state from one never read. Now `hud(kept)` and
@@ -346,6 +402,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own wiring (`overlay.ts`, `ui/cmdring.ts` passing the one store) is held by no check and the page was not driven. STILL OPEN, not held by that line and not this module's: a HUD read
   still writes the room clear drill's memo of its two men (`nightbreach.ts drillOf`, a getter that keeps its answer) and the collision world's query
   stamps under the cursor's pick (`game.col.stamp`, `world.rgStamp`), so the whole state still differs (the line prints where). Never seen on a GPU.
+  (Both since mended: the drill's memo by its own module, the pick's stamps by the last bullet of this file.)
 - **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
   `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
   one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
@@ -942,3 +999,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   search fills in turns `state` red on the stand that has the rule, and the line prints the table's name: add it to `TICK_KEPT`, or to
   `Collision.aside` when it is the collision's own. NOT COVERED: `squad40Plans` (the 40 mm's picture) was not looked at; `orders.hud()` read with no
   menu up writes `orders.hov` (a drawn game differs from an undrawn one there too, digest equal). Never seen in a page.
+- **The cursor's pick, read for the picture, writes nothing of the game's** (no switch: nothing a player reads, and the run digest never moved).
+  `SquadOrders.hover(kept?)` is what the HUD's lines and the ring's hint read every frame. Its answer was already kept in the asker's store; the
+  pick under it (`targetUnder`) still wrote the game's own state, so a game whose cursor is read and the same game never read differed in whole
+  state on EVERY frame, run digest equal. Measured writers: `world.rgStamp`, `rgRay`, `rcBest`, `rcBi`, `rcBn` (frozen stand); on the shipped
+  stand also `game.col.stamp`, `stampId`, `cellStamp`, `game.work.cache.t`, and with a leaf swinging `doors.list[].posAngle` / `posAt`. Found by
+  a review's reading, never seen written in a run: `wallcharge.skyMemo` (the simulation's own ask of the aim point usually fills it first).
+  Now the read runs the pick inside five wrappers, on `HoverKept.pick` (made anew for another game), or on a throwaway store when none is handed
+  in: `Collision.aside` (the collision's query stamps, cell caches and path scratch, as for the throw page); the new `BoxWorld.rayAside`
+  (`src/scene/boxes.ts`: the world's ray grid stamps and counter swapped, its last-hit scratch put back); the new `WorkThings.askAside`
+  (`workthings.ts`: the list of things to be worked is kept in the asker's store for its second, the game's own kept list put back, no hand
+  record dropped); the new `Door.posAside` / `Doors.posAside` (`doors.ts`: each leaf's kept centre put back); the new `skyAside`
+  (`wallcharge.ts`: what the ask adds to the memo of sky faces taken out again). ONLY the read is aside: the pick the simulation makes for
+  itself on a key or a click (`orders.ts` update, `planmode.ts`) is the game's own and unchanged; `host/handsoff.ts` (the hands-off driver)
+  still asks it straight. IN THE PAGE this changes two small things nobody has looked at: a key press no longer finds a list of things to be
+  worked that the HUD made up to a second before (it makes its own), and stale hand records are dropped only on the simulation's own asks.
+  CHECK `probes.ts hoverpick` (`tools/qa/hoverpick-check.ts`; families squadorders), the squad mission on the office, seed 11, eight seconds,
+  the cursor carried round Sam, onto a teammate, onto a door and (shipped stand) onto a wall a charge might go on, moved after the step so the
+  read comes before the simulation's own ask of the point, a door swung twice; the cursor's points are found on a game of their own. Lines: ask
+  (ONE game, the state hashed before and after each read, with the store and with none, and the module variables looked at: 0 of 480 frames),
+  state (read every frame against never read: whole state and digest equal), same (the pick aside on the kept store is the pick straight on all
+  480 frames: kind, place, door and side, man, wall, thing). `HOVERPICK_BREAK=1` (the pick asked straight) fails ask and state on both stands:
+  one break for all five wrappers, it does not prove each apart. One seed, one level. NOT ON THE CURSOR'S WAY: a man of the other side, a
+  thing to be worked, a leaf drawn in the fog of war, the room seen through a doorway. THE HUD'S ROW LIST IS HELD TOO (10-23): on the
+  shipped stand `SquadOrders.hud` filled the wall charge's memo of digitless rows (`wallcharge.ts standIns`) the first time it listed a
+  floor's rows; that memo is a module `SideMap` marked `asMemo()` now (the charges' own mend), and the check's read asks `hud(kept)` every
+  frame after the pick, so `ask` and `state` stand for the whole HUD read. The store is outside the rollback snapshot (scratch and a list a
+  second old). Never seen in a page.

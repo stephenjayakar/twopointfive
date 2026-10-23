@@ -310,6 +310,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   SPENDS NO CAN (`WORDNOCAN_BREAK=1` fails it; the same doors with the rule off must throw), both stands; the stand, journal and boot lines are in
   `probes.ts bangs`. EVERY OTHER staging in `tools/qa/threshold-probes.ts` holds the rule off on both stands: those lines ask what the word's can does
   (the kit, the pockets, Sam behind the door). Nobody has played it.
+- **The word that spends no can waits for the cuts** (`DOORTOOLS.wordCuts`, doortools.ts `cutsOwe` / `wordStepIn` / `wordOwed`, acting with
+  `wordNoCan` and `thrPie`; 10-23, from the orders lesson's kitchen on the page's stand: the bare word at its held door got both teammates
+  shot on ten of sixteen runs). Traced on eight seeds at a floor of 0.25: the script gave the word 1.5 s into the hold, about five
+  seconds before the men's own "holding on the door"; neither knew of the defender (awake, aimed at the door, in the band neither jamb's
+  diagonal shows); on the word both left their cuts for the door's middle at once, still short of the frame and shoulder to shoulder,
+  the lead first saw him 0.47 to 0.50 s after the word, the first man was down at 0.57 to 0.68 s and the second a tenth later, on five
+  of eight. The same door left to finish its cuts (the word after "holding on the door") found him 2.6 to 3.0 s in and dropped him from
+  the frame, nobody lost, on eight of eight. So the fault was the word cutting the slice short, and the rule is that it does not: the
+  word given while the jamb men are still slicing is taken ('the word waits for the cuts'; the lead says "checking the doorway first."),
+  the step in is OWED (the owed step a grenade's wait already uses), they finish the cuts, fighting whoever a cut shows from the frame
+  as the hold does, and step in on their own the moment the cuts are done ('the cuts are done · in'), or after `wordCutsCap` 8 s
+  whatever is left. The word AGAIN pays it at once, as an owed step always could: the player's say stands. No can, so `wordNoCan` (the
+  maintainer, 10-16: "the men shouldn't throw a bang unless i tell them to") is untouched. Not under a captor's last warning, not at a
+  door that shares its word with another, not when a set charge goes on the same word (they go in behind its blast), not once they
+  have said "holding on the door", not Sam's own 'step in' row. Where men who ran from a grenade are also out, the cuts are waited
+  for first and then those men (`thrFragHold`), each wait under its own cap. ON in the page (`?wordcuts=0` off; panel "clear from outside ▸
+  the word waits for the cuts"), OFF in the module and on the frozen stand (`TPS_WORDCUTS=1`), a `FROZEN_HOLDS` row, carried by the
+  journal. Check `word-cuts` (`tools/qa/wordcuts-check.ts`, family `doortools`; `WORDCUTS_BREAK=1` fails 3 on both stands), 7 of 7 on
+  both. Its stage is that lesson's yard with NO lesson and no scripted player (the old Training lessons were being removed): the level stood
+  up as a room-clear floor, the other houses' men taken off, the hold given by code, the kitchen's man put on alert and pinned on his
+  mark as the pair sets on the jambs, the word 1.5 s later, seeds 2, 3 and 5. Rule off the pair lost 2 of 6 men on each stand, rule on
+  0 (page's stand: his man down 1.4 to 1.5 s after the word, the cuts done and the step in at 3.6 s); the word again a second later
+  goes in at once; the cap at half a second goes in at half a second. (Played through the lesson's own script before the restaging,
+  seeds 3 and 4 on the page's stand: 4 of 4 lost with the rule off, 0 with it on.) One door, one room, three seeds in the check and
+  eight in the trace; the defender is woken and pinned by hand; who wins at the frame is the fight's dice. Not staged: a last
+  warning, two doors on one word, a set charge on the word, the four, a hold whose men
+  do not slice. Never seen on a GPU, nobody has played it.
 - **The word sends a small squad in from its stack** (`DOORTOOLS.wordSmall`: ON in the page, `?wordsmall=0`; off in the module and on the frozen
   stand, `TPS_WORDSMALL=1`; debugger row 'the word sends a small squad in from its stack'; journal: off when the key is absent). The maintainer, 10-21,
   off his own play: "Q on a door stacks but doesn't have the F command for entering?". The word after a plain 'stack up' was built for the squad of four

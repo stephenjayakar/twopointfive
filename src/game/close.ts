@@ -65,6 +65,15 @@ export const CLOSE = {
    *  light meter read, is about 0.19 m higher while the tell is up. ON in the page unless ?noreachup (src/host/profile.ts pageSwitches); off
    *  here and on the harness's frozen stand (src/host/standup.ts; TPS_REACHUP=1 turns it on there). Off = the tell as it was. */
   reachUp: false,
+  /** CROUCHED, HIS HANDS STAY LOW UNTIL THE MOVE (closeReady): crouched in reach behind a standing man the grab's tell held the open hand out for his neck, and
+   *  from the game's camera — above and behind — a hand held up over a kneeling man's own head, half a metre short of anybody, reads as a hand put up, not as a
+   *  reach (the maintainer, of a still from the pair's mission: 'the weirdness in this case was his hand'). Up: crouched, the tell is the hand on the knife
+   *  alone, as it is from a side; the grab's own rise carries the arm when he takes him. The rows, the reach and the grab itself are what they were; on his
+   *  feet the tell is the grab's, and a seated man's and the pistol's are untouched. With this up `reachUp` has nothing to raise. ON in the page unless
+   *  ?handslow=0 (src/host/profile.ts pageSwitches); off here and on the harness's frozen stand (src/host/standup.ts; TPS_HANDSLOW=1 turns it on there). */
+  handsLow: false,
+  /** m: …and only under a neck this high off his own floor (a man on his feet: 1.44; one cowering or sat on the floor is under it and keeps the level reach) */
+  handsLowNeckM: 1.15,
   /** m: Sam is in the mode this near a man (centre to centre, nothing solid between) · and out of it again past this */
   modeM: 3.0, modeOutM: 3.6,
   /** the light on Sam (his meter, 0‥1) under which the near-sight floor is nothing · from which it is the build's whole · m: inside this of a man who has
@@ -175,7 +184,7 @@ export function closeAt(g: Game, gd: Guard, p: ArrayLike<number>): CloseOffer {
   const alert = gd.state === 'alert';
   const catchable = !cv || (cv.state !== 'flee' && cv.state !== 'evacuate' && cv.state !== 'report');
   const grab = win.grab && !alert && catchable, strike = win.strike && catchable && (!alert || CLOSE.alertStrike);
-  if (!grab && !strike) { o.why = cv ? `not while ${cv.she} is ${cv.state === 'report' ? 'with a guard' : 'running'}` : 'not while he is onto you'; return o; }
+  if (!grab && !strike) { o.why = cv ? `not while ${cv.she}'s ${cv.state === 'report' ? 'with a guard' : 'running'}` : "not while he's onto you"; return o; }
   if (pl.sprinting) { o.why = 'stop sprinting'; return o; }
   o.inReach = dist < win.reach;
   if (!o.inReach) { o.why = 'get closer'; return o; }
@@ -218,7 +227,7 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
       const text = kind === 'seat' ? (gun ? 'haul him out of the chair — pistol to his head' : 'haul him out of the chair')
         : gun ? 'grab him — pistol to his head' : pl.rifleUp ? 'grab him — the rifle goes on your back' : 'grab him';
       verbs.push(row(it, 'grab', text, click));
-    } else if (o.strike) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, line2: `${click}  ·  ${o.win?.grab ? 'no grab while he is onto you' : 'the grab is from behind'}`, inReach: true });
+    } else if (o.strike) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, line2: `${click}  ·  ${o.win?.grab ? "you can't grab him while he's onto you" : 'the grab is from behind'}`, inReach: true });
     noteBest(g, o);
   }
   offer(it, verbs);
@@ -247,6 +256,7 @@ export function closeReady(g: Game): { kind: ReadyKind; at: Vec3 } | null {
   const kind = closeKindOf(o);
   if (pl.pistolUp) return o.grab ? { kind: 'grabGun', at } : null;   // the pistol stays on him; only the free hand says anything
   if (!o.grab) return { kind: 'strike', at };
+  if (CLOSE.handsLow && pl.crouch && kind !== 'seat' && at[1] - gd.char.pos[1] > CLOSE.handsLowNeckM) return { kind: 'strike', at };   // (crouched under a man on his feet: the hand on the knife says it — no open hand held up over his own head; a man low himself keeps the level reach)
   return { kind: kind === 'seat' ? 'seat' : 'grab', at };
 }
 /** THE MODE: the man Sam is close to (the nearest living one inside `modeM` with nothing solid between; once in, kept out to `modeOutM`), or null. Not with the

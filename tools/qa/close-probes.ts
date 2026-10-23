@@ -53,6 +53,7 @@ const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { CLOSE, CLOSE_STATS, closeWindows, closeAt, closeMarks, closeReady, closeSummary, closeSeat, closeSeated, closeNoise, CLOSE_DEFAULTS, closeMode, closeTick, closeNearK, closeLethal, closeSubject } = await import(`${ROOT}/src/game/close.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
+const { TWOGEARS } = await import(`${ROOT}/src/game/player.ts`);
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
@@ -175,7 +176,7 @@ export async function closeOffer(): Promise<boolean> { return keepClose(async ()
   { A.state = 'alert'; const fails: string[] = [], rows: string[] = [];
     for (const [b, id] of table) { const o = closeAt(g, A, off(A, b, 0.7)); rows.push(`${b}° grab ${o.grab} strike ${o.strike}`); if (o.win?.id !== id || o.grab || !o.strike || !o.can) fails.push(`${b}°: grab ${o.grab} strike ${o.strike} can ${o.can}`); }
     CLOSE.alertStrike = false; const whys: string[] = [];
-    for (const [b] of table) { const o = closeAt(g, A, off(A, b, 0.7)); whys.push(o.why); if (o.grab || o.strike || o.can || o.inReach || o.why !== 'not while he is onto you') fails.push(`alertStrike off, ${b}°: can ${o.can} why '${o.why}'`); }
+    for (const [b] of table) { const o = closeAt(g, A, off(A, b, 0.7)); whys.push(o.why); if (o.grab || o.strike || o.can || o.inReach || o.why !== "not while he's onto you") fails.push(`alertStrike off, ${b}°: can ${o.can} why '${o.why}'`); }
     CLOSE.alertStrike = true; A.state = 'patrol';
     verdict(!fails.length, 'an ALERT man: no grab from anywhere, the strike from every window; with alertStrike off nothing, \'not while he is onto you\'', `${rows.join(' · ')}\n    alertStrike off: ${[...new Set(whys)].join(' | ')}${bad(fails)}`); }
   { // a wall between: the south outer wall, the man half a metre off its outside face with his back to it; the spot behind him inside his reach is beyond the wall
@@ -390,7 +391,7 @@ export async function closeMelee(): Promise<boolean> { return keepClose(async ()
     verdict(!fails.length, `an ALERT man facing Sam, the ${button === 1 ? 'left' : 'right'} click (alertStrike on): struck all the same, and louder (${CLOSE.noise.front} + ${CLOSE.alertNoise})`, blowLine(r) + bad(fails)); }
   { const S = await stage(1104, { ai: false }), { g, A } = S; A.state = 'alert'; A.awareness = 1; CLOSE.alertStrike = false; const fails: string[] = [], rows: string[] = [];
     for (const [b, button] of [[0, 4], [0, 1], [180, 4], [180, 1]] as const) { const r = blow(S, b, 0.75, button); rows.push(`${b}° ${button === 1 ? 'left' : 'right'}: ${r.td0 ? 'a blow' : 'nothing'}`); if (r.td0 || r.dead || r.row || r.knifeBlows || r.koBlows) fails.push(`${b}° button ${button}: blow ${!!r.td0}, down ${r.dead}, a row in reach ${!!r.row}`); }
-    const why = markerOf(g, A)?.line2; if (why !== 'not while he is onto you') fails.push(`his marker reads "${why}"`); CLOSE.alertStrike = true;
+    const why = markerOf(g, A)?.line2; if (why !== "not while he's onto you") fails.push(`his marker reads "${why}"`); CLOSE.alertStrike = true;
     verdict(!fails.length, 'CLOSE.alertStrike off: an alert man is refused — no row in reach, neither button starts a blow, \'not while he is onto you\'', rows.join(' · ') + bad(fails)); }
   { const S = await stage(1104, {}), { g } = S; CLOSE.lethal = false; const fails: string[] = []; const right = blow(S, 180, 0.8, 4); const line = right.row?.line2 ?? '';
     if (right.td0 || right.dead || right.koBlows || right.knifeBlows) fails.push(`the right click: blow ${!!right.td0}, down ${right.dead}`); if (!/LMB  takedown — silent$/.test(line) || /RMB|knife/.test(line)) fails.push(`the row reads "${line}"`); if (closeLethal(g)) fails.push('closeLethal true');
@@ -587,7 +588,9 @@ export async function closeDark(): Promise<boolean> { return keepClose(async () 
     verdict(!fails.length, 'his torch burning, Sam down his side 1.2 m off, out of the beam: unnoticed with the rule, noticed without it', `rule on:  ${line(a)}\n    rule off: ${line(b)}${bad(fails)}`); }
   { const a = await slither(true), b = await slither(false), fails: string[] = []; const say = (r: any) => `${r.done ? 'through' : 'TIMED OUT'} in ${r.f} frames · ${r.seen || 'nobody noticed'} · awareness at most ${r.maxAw.map(f2).join(' / ')} (${r.names.join(', ')}) · nearest ${r.minD.map(f2).join(' / ')} m · the light on Sam inside 3 m at most ${f3(r.maxVis)} · in the mode ${r.modeF} frames · stood frozen ${r.heldF} frames, the stride held to ${r.phMoved.toExponential(1)}`;
     if (!a.done) fails.push('rule on: Sam never got through'); if (a.seen || a.maxAw.some((x: number) => x >= 0.3)) fails.push(`rule on: ${a.seen || 'awareness past 0.3'}`); if (a.minD.filter((d: number) => d < 1.8).length < 2) fails.push(`staging: Sam passed inside 1.8 m of ${a.minD.filter((d: number) => d < 1.8).length} men`);
-    if (!b.seen) fails.push('rule off: nobody noticed'); if (a.heldF < 30 || a.phMoved > 1e-6) fails.push(`the freeze: ${a.heldF} frames at rest, the phase moved ${a.phMoved.toExponential(1)}`);
+    // (the freeze is a hundred frames from the frame he is told to stop: his root coasts to rest for about seventy of them from the old crouch-walk and two more from
+    //  the sneak's pace of two gears — player.ts TWOGEARS — so with that key up the bar on frames AT REST is 25; with it down it is the 30 it was. With the key up the staging's own slow pace is nobody's either: he threads them at the sneak's pace, which is what the page does)
+    if (!b.seen) fails.push('rule off: nobody noticed'); if (a.heldF < (TWOGEARS.on ? 25 : 30) || a.phMoved > 1e-6) fails.push(`the freeze: ${a.heldF} frames at rest, the phase moved ${a.phMoved.toExponential(1)}`);
     verdict(!fails.length, 'THE EXHIBIT — three men in the dark break room, torches burning, Sam threading between them inside arm\'s reach and freezing mid-stride while one turns: nobody notices with the rule; without it somebody does', `rule on:  ${say(a)}\n    rule off: ${say(b)}${bad(fails)}`); }
   return allPass;
 }); }

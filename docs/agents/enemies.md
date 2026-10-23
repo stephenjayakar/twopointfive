@@ -1393,3 +1393,62 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   team's way and one careful run the other; not shown to be more than noise at this size, but the direction to expect is the team's, because an untrained body's duck is bigger and longer than a drilled one's.
   NOT DONE / NOT SEEN: never seen on a GPU and never played; the duck is the animator's older one, not re-posed; every number is a first number. Left out: civilians, a friend's round, anything for a green man who
   has a mate, any cost to a trained man beyond the dip itself.
+- **A man who has run leads no radio check** (10-23, from a kept run on the block: the last three defenders, one of them broke, dropped his gun and
+  went low in a corner; four seconds on HE called "radio check — who's still up? sound off!" and nine seconds after that counted himself among the
+  three). laststand.ts counted the few with `runnerFled` (line 572, the 10-13 join) but its own `alive` and `fitGd` asked only for a man not dead, so
+  the runner was still a man of the stand: he could call the check, answer it, be asked for by name and be sent to regroup. Both now ask
+  `runnerOwns` (off the net from the shout on, as netquiet.ts and enemysquads.ts have it); the two places that mean a BODY (the fallback fix "a man of
+  theirs lies here", the mover's "down on the way" tally) ask `state === 'dead'` as before. NO SWITCH: `runnerOwns` is false with `RUNNER.on` off, so
+  the frozen stand cannot move; ON THE PAGE'S STAND IT CHANGES any run where a man has fled — who leads the check and the count that is spoken.
+  CHECK: `probes.ts laststand-fled` (family laststand; the block, seed 2, three left, one made to run by `runnerBreak`, forty seconds): the check is
+  called by one of the two who fight, `up0` 2, the runner says nothing and is not named, no count above 2 — green on both stands (the frozen one with
+  `RUNNER` / `MORALE` raised by hand after the stand is up), and RED before the mend on the page's stand ("Tango 6: radio check …", his lines 2,
+  count 3). There is no `_BREAK` word: there is no switch to put off. STILL OPEN, read from the code only, none exercised — the same miss elsewhere,
+  each its owner's: cues.ts `squadVoice` / `fit` (he can be his squad's mouth); guards.ts `offNet`, `radioCaller`, `spokesman`, `assignLockdown`,
+  `planClears` (the night staff's net: a fled staff man is the calmest man on it) and the "he's down — clear." line's `left`; pressure.ts `alive`
+  (Hard: he can be sent on a press, lead "we go and look", or be the mate that keeps the true last man from being last); suppression.ts `reacts`
+  (barks "taking fire"); fogofwar.ts `tellCalls` (a teammate calls contact on a man no gun will engage); doortools.ts's "<room> clear." line (held
+  back while he cowers in it though the count says clear); morale.ts `hasMate` and darkdoor.ts `mateBy` (he is company, so the man left with him is
+  never alone); needs.ts `partnerFor`; qrf.ts `staffVoice` / `silentNet`; buddy.ts `alive`; digin.ts keeps his record. In the same kept run the
+  runner took the corner with a clear way out because the run is planned from his picture, which had an enemy guessed into the doorway (a 'fix' on a
+  sound) and a dead man told of at the other door: the runner's rule, its owner's. NOT SEEN, NOT PLAYED: nothing on a GPU or in the page; the
+  laststand family is the only tally run.
+- **A man who has dropped his gun runs for it no matter what** (`src/game/runner.ts`, `RUNNER.anyway`; 10-23, from a recorded game on the block and the maintainer's
+  words on it: 'i think in this case he could have pathed to the exit?' — 'if a guy gives up he should drop his gun (including pistol) and just run for it no
+  matter what'; his note on the recording: only men giving up and trying to run out of the level are modelled, never a surrender). SWITCH: ON in the page
+  (`?runanyway=0` = as it was), OFF in the module and on the frozen stand (`TPS_RUNANYWAY=1` raises it, and it acts only with `TPS_MORALE=1 TPS_RUNNER=1`
+  beside it; on the page's stand `TPS_RUNANYWAY=0` holds it off). Row in `FROZEN_HOLDS`, the table is the registered `RUNNER`, `journal.ts applyKnobs` puts it
+  off for a recording from before the key; debugger, Enemy nerve: '… no matter what, both guns down'. WHAT WAS WRONG: the floor a runner may reach was walled
+  off (`flood`, `shyM`) round EVERY enemy he knew of alike — a man in his eyes, a sound he had placed in a doorway, a mate's word about a man since shot — so
+  one idea on the only door between him and the outside sent him to the corner, and after `retries` runs he stayed there, face to the wall, which read as a
+  surrender (the recorded man: the fire exit two shut, unlocked doors and 13 m away, a stale 'fix' on the first doorway and a 'told' place of a dead man by the
+  other). WHAT IT DOES: (1) the way round every enemy he knows of is still his first choice, planned as before; with NO such way out, he looks once more with
+  nobody as a wall (`planOut`: a second `flood` with no enemies, asked only when the first was refused a cell — `shied`) and runs the way that finds
+  (`Run.bold`, `RUNNER_STATS.bold`): the enemies stay dear to the path (`route`'s own 20x) and minded in the pick of the outside cell, and a man stepping into
+  his way is no longer a reason to think again (`wayBarred` is not asked of a bold run). (2) HE NEVER SETTLES: a man gone low looks again every `retrySecs` with
+  no `retries` to run out of, so only a floor that gives him no way at all (a door that will not open) keeps him in a corner, and only for as long as it does.
+  (3) BOTH GUNS: a rifleman's sidearm goes to the floor with his rifle (`dropFromHand` from his thigh, `Run.bare`, `runnerBare`; `combat.ts guardKit` draws the
+  thigh empty, alive and on the body). A pistol man already dropped his only gun. The runner's checkpoint slice carries `bold` and `bare`. Page hook:
+  `window.__runner` (`.knobs`, `.stats`, `.of(i)`, `.break(i)`).
+  CHECK: `bun run tools/qa/probes.ts runanyway` (families runner, ai; 10 lines on BOTH stands; `RUNANYWAY_BREAK=1` = 5 FAIL on both): the recorded man's
+  place and picture staged on the block — off the corner, on out by the room's door and the fire exit and gone about ten seconds on; two enemies TRULY in the
+  way (the run planned on the true places) the same; an idea off his way and nobody in the way = the same run on and off, never the second look; low with every
+  try spent he stays with the key off and is gone with it on; both guns and the drawn thigh; the checkpoint slice; the journal; the page flag and the stand's
+  word. The real page: `PORT=<port> node tools/qa/runanyway-page.cjs` (software adapter; the block's room clear, his picture handed the two ideas through `window.__picture.tell`, the man broken through `window.__runner.break` — as the page opens both guns are on the floor and he is gone about twelve seconds on; under `?runanyway=0` the rifle alone and the corner; no page error). `runner-check.ts` holds the key off after every stand-up (its
+  lines count one weapon on the floor and are the rule under this one).
+  MEASURED (headless, 10-23): THE RECORDED GAME ITSELF, walked to the moment before the drop (`replay-at.ts --rerun --eval`, the walk matching
+  the page to 0.01 m over 14749 steps) and stepped on with no input: with the key off he goes low at (35.3, 5.8) and is there forty seconds on, one rifle on
+  the floor; with it on he is out at (38.3, 14.3) and gone 11.7 s on, a rifle and a pistol on the floor. ROOM FIGHTS (the page's stand, the compound, seeds 1
+  to 30, rush and careful, 60 runs an arm; off = `TPS_RUNANYWAY=0`): the two arms are the SAME 60 runs, to the tenth of a second and the man standing — rush
+  taken / wiped / stalled 10 / 16 / 4, careful 28 / 1 / 1 — because one man in the 60 dropped his gun at all (careful, seed 4) and he had a careful way out;
+  the second look was never taken. So this is a rule for the cornered man of a recorded game, and the room-fight tally says nothing about how often a player
+  meets it. GATES on the tree before the join: runner, morale, picture, laststand, flinch, startle, enemysquads, netquiet, roomfight — all nine green on the
+  frozen stand; on the page's stand eight green and `runner` red on its two old (2) lines (mates in another room), the same two with `TPS_RUNANYWAY=0`.
+  `lesson-run tut-squad` and `tut-plan` on the page's stand: all steps, the same length of play with the key on and off (seed 1; neither run routed a last
+  man).
+  NOT DONE / NOT SEEN: never seen on a GPU and never played. The sidearm leaves his thigh as an item with the same small toss a dropped gun has; nothing is
+  posed for it. A runner on the second look goes past armed men within arm's reach: the team's guns pass over a man who has dropped his, as before, and the player's own gun does not. A man
+  on a floor with no way out at all still crouches in a corner between looks (every two seconds, for good), which is the old picture; what he should look like
+  there is not decided. The tutorials' scripted last man (`c.rout` in tut-squad and tut-plan) is this same run: he now drops both guns and, cornered by the
+  team, runs past it for the nearest outside; no lesson run here routed one, so that is unplayed and unmeasured. Other modules that still take a man who has
+  run for a calm living one (who speaks on the net, who counts as company) are not touched here: more men running through a level will meet them more often.

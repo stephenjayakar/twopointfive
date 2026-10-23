@@ -67,6 +67,9 @@
     #interact .it.k-cancel { padding-top: 3px; padding-bottom: 4px; background: rgba(var(--h-plate),0.6); border-color: rgba(var(--h-edge),0.3); }
     #interact .it.k-cancel .opt { margin-top: 0; color: var(--h-soft); } #interact .it.k-cancel kbd { background: rgba(var(--h-edge),0.3); color: var(--h-hi); }
     #interact .it.k-cancel.primary { border-color: var(--h-hi); box-shadow: 0 0 10px rgba(0,0,0,0.4); } #interact .it.k-cancel.primary::before { background: var(--h-hi); box-shadow: 0 0 6px rgba(0,0,0,0.5); } #interact .it.k-cancel.primary kbd { background: var(--h-hi); color: var(--h-on); }
+    #interact.corner { width: 230px; } #interact .it.one { margin-bottom: 3px; padding: 3px 8px 4px 8px; } #interact .it.one .opt, #interact .it.one .hint { margin-top: 0; } #interact .it.one .hint + .hint, #interact .it.one .opt + .hint { margin-top: 3px; }   /* the corner as three things (ui/corner.ts, HANDRING.corner): a block under no heading … */
+    #interact .it.one.primary kbd { background: var(--h-acc); } #interact .it.one.primary.far kbd { background: var(--h-faint); } #interact .it.one.off .opt { color: var(--h-faint); } #interact .it.one.off kbd { background: var(--h-faint); }   /* … its lit line's key as a row's was, a line that cannot be given now faint */
+    #interact .it.sec { margin-bottom: 6px; border-color: rgba(var(--h-edge),0.55); } #interact .it.sec .what { color: var(--h-acc); } #interact .it.sec .opt { color: var(--h-ink); } #interact .it.sec .what + .opt { margin-top: 3px; } #interact .it.sec > .opt:first-child { margin-top: 0; } #interact .it.sec.done .opt { color: var(--h-hi); } #interact .it.sec.failed .opt { color: #f0a090; }   /* … under the objective's section (the stage's colours as the top line had them) */
     #interact .prog { margin-top: 5px; height: 3px; border: 1px solid rgba(var(--h-edge),0.45); background: rgba(var(--h-plate),0.5); }
     #interact .prog b { display: block; width: 0; height: 100%; background: var(--h-ink); }
     #interact .it.k-door .prog b { background: #bfe6ff; }
@@ -380,7 +383,7 @@
     #missions .mst { font: 300 28px/1.1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.06em; color: var(--m-bright); }
     #missions .mplace { font: 11px ui-monospace, Menlo, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-accent); }
     #missions .mblurb { font-size: 14px; color: var(--m-text); max-width: 62ch; }
-    #missions .mfacts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    #missions .mfacts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; } #missions .mfacts.nodef { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     #missions .mfact { padding: 6px 9px 7px; background: rgba(var(--m-base-rgb),0.55); border: 1px solid rgba(var(--m-edge),0.22); border-radius: 3px; min-width: 0; }
     #missions .mfact i { display: block; font-style: normal; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--m-dim); }
     #missions .mfact b { display: block; margin-top: 1px; font-size: 13px; font-weight: 600; color: var(--m-bright); }
@@ -578,6 +581,8 @@
     .cmdring .cn { font: 700 12px/1 var(--h-mono); fill: currentColor; text-anchor: middle; } .cmdring .lit .cn { fill: var(--h-base); }
     .cmdring .ct { font: 700 10px/1 var(--h-mono); letter-spacing: 0.06em; text-transform: uppercase; fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }
     .cmdring .off { opacity: 0.38; } .cmdring .lit .ct { fill: #fff; }
+    .cmdring .ch { fill: none; stroke: currentColor; stroke-width: 1.2; opacity: 0.5; }   /* a ring with one row (game/ringlone.ts): the middle's own ring, and the row a pill beside it with its words inside */
+    .cmdring .lone .ct { stroke: none; } .cmdring .lone.lit .ct { fill: var(--h-base); }
     .cmdring .cc { font: 600 9.5px/1 var(--h-mono); letter-spacing: 0.08em; text-transform: uppercase; text-anchor: middle; fill: currentColor; opacity: 0.8; paint-order: stroke; stroke: rgba(var(--h-plate),0.8); stroke-width: 3px; stroke-linejoin: round; }
     /* … and the hint before the key (ui/cmdring.ts updateHint): the thing the ring would open on outlined on the floor, a glyph for its kind beside the cursor */
     .cmdhint { color: #f2cf6b; } .cmdhint.t-red { color: #ff9a8a; } .cmdhint.t-blue { color: #9cc8ff; } .cmdhint.k-foe { color: #ff7a6a; }

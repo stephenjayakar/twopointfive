@@ -54,6 +54,7 @@ import { canSee, canSeeChar } from './guards';
 import { isHostile, teamOfId } from './teams';
 import { order } from './squad';
 import { NETFEED, netFeedTake, netFeedHold } from './netquietfeed';
+import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { runnerOwns } from './runner';   // (asked inside calls only: false with its switch off)
 
 type Def = RoomFight['defs'][number];
@@ -104,8 +105,10 @@ const LINES: Record<LineKind, string[]> = {
   alone: ['that\'s my whole squad quiet. it\'s just me in here.', 'nobody left in here but me.', 'it\'s gone quiet in here. i\'m on my own.'],
   ask: ['all posts, answer up.', 'anyone on this net, come in.', 'who\'s still up? sound off.'],
 };
-/** this file's lines — every kind's, or one kind's (the check: a line said came from the right pool; bubble length and the originality blocklist) */
-export function netQuietLines(kind?: LineKind): string[] { return (kind ? [LINES[kind]] : Object.values(LINES)).flat(); }
+/** (WORDS) a line as it is said now, by the line it stands for (read where the line is picked) */
+const LINES_NOW: Record<string, string> = { 'that\'s another of you quiet. come on.': 'that\'s another one of you not answering. come on.', 'that\'s my whole squad quiet. it\'s just me in here.': 'my whole squad\'s quiet. it\'s just me in here.' };
+/** this file's lines — every kind's, or one kind's, with a line's wording of now beside it (the check: a line said came from the right pool; bubble length and the originality blocklist) */
+export function netQuietLines(kind?: LineKind): string[] { const L = (kind ? [LINES[kind]] : Object.values(LINES)).flat(); return [...L, ...wg(L.filter(t => LINES_NOW[t]).map(t => LINES_NOW[t]), [])]; }
 
 /** the last man's act: nothing · his line is out and the beat runs · backing to the spot · low on it · said, and no room of his to work (nothing more) */
 const NONE = 0, SAID = 1, BACK = 2, LOW = 3, DONE = 4;
@@ -147,7 +150,7 @@ function pay(g: Game, gd: Guard, N: Mind, id: number, amount: number) { const ha
 /** a line owed `after` seconds from now (a later one replaces an earlier one not yet said: the worse call is the one he makes) */
 function owe(N: Mind, kind: LineKind, name: string, after: number) { N.say = KINDS.indexOf(kind); N.sayT = after; N.sayName = name; }
 function speak(g: Game, gd: Guard, N: Mind, kind: LineKind, name: string, radio: boolean) {
-  const pool = LINES[kind], text = pool[Math.floor(simRandom() * pool.length) % pool.length].replace(/\{name\}/g, name);
+  const pool = wg(LINES[kind].map(t => LINES_NOW[t] ?? t), LINES[kind]), text = pool[Math.floor(simRandom() * pool.length) % pool.length].replace(/\{name\}/g, name);
   g.say(gd, text, radio); N.bark = 0; N.lastKind = KINDS.indexOf(kind);
   NETQUIET_STATS.lines++; NETQUIET_LOG.push({ id: gd.char.id, t: g.time, kind, text, radio }); if (NETQUIET_LOG.length > 64) NETQUIET_LOG.shift();
 }

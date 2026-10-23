@@ -14,7 +14,8 @@ import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { PLAN } from '../game/floorplan';
 import { camCap } from '../host/keymap';
-import { FINDME, FINDME_WIDTH, FINDME_MATES, setFindMe, resetFindMe, outlineWant, outlineInk, OUTLINE_LOOK } from '../host/findme';
+import { FINDME, FINDME_WIDTH, FINDME_MATES, AUTOVIEW, setAutoView, setFindMe, resetFindMe, outlineWant, outlineInk, OUTLINE_LOOK } from '../host/findme';
+import { AUTOCAM } from '../host/autocam';
 import { makeOutlineMan, type OutlineFrame, type OutlineMan } from '../render/outline';
 
 /** where the ring would be drawn for the seat's own man (its centre on the floor), null = none: the row off, or he is down */
@@ -95,18 +96,19 @@ export function findMeRows(K: RowKit, body: HTMLElement): () => void {
     const k = typeof key === 'string' ? () => key : key;
     K.range(body, label, 0, max, step, () => Math.round(FINDME[k()] * 100), v => setFindMe(k(), v / 100), v => zero && !v ? 'None' : `${v.toFixed(0)} %`, describe); };
   K.sec(body, 'Finding yourself · trying out');
-  K.flip(body, 'Ring at your feet', () => FINDME.ring, v => setFindMe('ring', v), 'The gold ring the orders menu puts at your feet, there all the time.', ['On', 'Off']);
-  K.flip(body, 'Outline in the dark', () => FINDME.outline, v => setFindMe('outline', v), 'A rim round you, and round each teammate, while he stands in the dark.', ['On', 'Off']);
+  K.flip(body, 'Ring at your feet', () => FINDME.ring, v => setFindMe('ring', v), 'Keep the gold ring from the orders menu at your feet all the time.', ['On', 'Off']);
+  K.flip(body, 'Outline in the dark', () => FINDME.outline, v => setFindMe('outline', v), 'Draw a rim around anyone on your team, including you, who\'s standing in the dark.', ['On', 'Off']);
   pct('Outline width', 'width', FINDME_WIDTH.max * 100, 5, true, 'How wide your rim is.');
   pct('Outline strength', 'opacity', 100, 5, true, 'How strongly the rims are drawn.');
-  K.seg(body, 'Outline fades by', FADES, () => FINDME.picture ? 'pic' : 'meter', v => setFindMe('picture', v === 'pic'), () => 'By how dark each part of the man looks on the screen, or by the light meter\'s one number for him.');
+  K.seg(body, 'Outline fades by', FADES, () => FINDME.picture ? 'pic' : 'meter', v => setFindMe('picture', v === 'pic'), () => 'Fade it by how dark each part of the character looks on screen, or by the light meter\'s single number for him.');
   pct('Outline shows under light', () => FINDME.picture ? 'picLit' : 'lit', 100, 2, false, 'A rim starts to show under this much light.');   // (the pair of whichever the row above says: each keeps its own numbers)
   pct('Outline full under light', () => FINDME.picture ? 'picDark' : 'dark', 100, 2, false, 'A rim is at its full under this much light.');
-  pct('Teammate outline width', 'mates', FINDME_MATES.max * 100, 10, true, 'How wide the rim round each teammate is, against yours. At none they have no rim.');
+  pct('Teammate outline width', 'mates', FINDME_MATES.max * 100, 10, true, 'How wide the rim around each teammate is compared with yours. At none, they have no rim.');
   pct('Outline colour', 'colour', 100, 5, true, 'How much colour the rims have: yellow for you, red and blue for your teammates.');
   K.sec(body, 'Camera · trying out');
   pct('Aim pan', 'pan', 100, 10, true, 'How far the view leans toward where you aim. At none you stay in the middle of the screen.');
   K.seg(body, 'Turn direction', TURNS, () => FINDME.turn < 0 ? 'rev' : 'as', v => setFindMe('turn', v === 'rev' ? -1 : 1), () => `Which way the view turns when you hold ${camCap()} and move the mouse.`);
-  K.flip(body, `Double tap ${camCap()}`, () => FINDME.behind, v => setFindMe('behind', v), `Tap ${camCap()} twice and the view turns to put what you are facing ahead of you.`, ['On', 'Off']);   // (the camera's key as the board has it: host/keymap.ts camCap)
-  return resetFindMe;
+  if (AUTOCAM.on) K.flip(body, 'Auto camera', () => AUTOVIEW.on, v => setAutoView(v), `Tap ${camCap()} twice and the camera frames things for you. Hold ${camCap()} and move the mouse to take it back.`, ['On', 'Off']);   // (host/autocam.ts: the double tap is the mode's, and it turns the view as the row below did)
+  else K.flip(body, `Double tap ${camCap()}`, () => FINDME.behind, v => setFindMe('behind', v), `Tap ${camCap()} twice and the view turns to put what you are facing ahead of you.`, ['On', 'Off']);   // (the camera's key as the board has it: host/keymap.ts camCap)
+  return () => { resetFindMe(); if (AUTOCAM.on) setAutoView(false); };   // (the row above is not one of FINDME's: its start is Off)
 }

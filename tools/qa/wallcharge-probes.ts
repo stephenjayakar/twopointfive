@@ -257,7 +257,7 @@ async function probeSquad(scn: string): Promise<boolean> {
     `${lead.callsign} at ${setAt} (${f2(setOff)} m off his spot) · charges ${c0} → ${D.charges} · ${R.beats(op)}`);
   const armed = R.until(() => op.phase === 'armed', 45);
   const dists = R.up.map((m: any) => ({ m, d: flat(m.char.pos, cp), off: wallOff(W, m.char.pos) }));
-  F.verdict(armed && dists.every(x => x.d >= WALLCHARGE.standoff[WALLCHARGE.standoff.length - 1] - 0.35 && x.off > 0) && R.spoke.some(s => s.text === 'stood off. your call.') && R.said.some(s => /charge set on the wall — F blows it/.test(s)),
+  F.verdict(armed && dists.every(x => x.d >= WALLCHARGE.standoff[WALLCHARGE.standoff.length - 1] - 0.35 && x.off > 0) && R.spoke.some(s => s.text === 'stood off. your call.') && R.said.some(s => /charge set on the wall\. press F to blow it/.test(s)),
     'the squad stands off: every man on the charge\'s side of the wall, two metres or more from it, and says so', `${dists.map(x => `${x.m.callsign} ${f2(x.d)} m`).join(' · ')} · ${f2(game.time - tSet)} s after it was set`);
   // nothing happens until Sam's word
   R.step(60 * 8);
@@ -331,7 +331,7 @@ async function probeSam(scn: string): Promise<boolean> {
     F.verdict(a1 && off1 && a2 && off2 && busy === 'setting a charge' && C.set.length === 0 && D.charges === DOORTOOLS.charges, 'Space again breaks it off, and so does Esc; while he is at it a checkpoint sees him busy', `started ${a1} → Space: ${off1 ? 'off' : 'STILL ON'} · started ${a2} → Esc: ${off2 ? 'off' : 'STILL ON'} · busy "${busy}" · set ${C.set.length} · charges ${D.charges}`); }
   game.teleportPlayer(foot); R.aim(P.top); game.selectVerb('wall', 'charge'); R.press('Space'); const t0 = game.time;
   const done = R.until(() => C.set.length === 1, DOORTOOLS.setSecs + 1);
-  F.verdict(done && Math.abs(game.time - t0 - DOORTOOLS.setSecs) < 0.2 && D.charges === DOORTOOLS.charges - WALLCHARGE.cost && input.keys.size === 0 && R.said.some(s => /charge set on the wall — F blows it/.test(s)) && C.stats.bySam === 1, 'stood on it for setSecs with no key held: the charge is on the wall, one out of the bag, and he is told F blows it',
+  F.verdict(done && Math.abs(game.time - t0 - DOORTOOLS.setSecs) < 0.2 && D.charges === DOORTOOLS.charges - WALLCHARGE.cost && input.keys.size === 0 && R.said.some(s => /charge set on the wall\. press F to blow it/.test(s)) && C.stats.bySam === 1, 'stood on it for setSecs with no key held: the charge is on the wall, one out of the bag, and he is told F blows it',
     `set after ${f2(game.time - t0)} s (setSecs ${DOORTOOLS.setSecs}) · charges ${D.charges} · keys held ${input.keys.size} · "${R.said.slice(-1)[0]}"`);
   R.step(60 * 5); F.verdict(C.set.length === 1 && !C.holeAt(C.set[0].wall) && R.pathLen(a, b) === before, 'five seconds on: nothing has happened', `set ${C.set.length} · route ${f2(R.pathLen(a, b))} m`);
   const Wc = C.set[0].wall; game.teleportPlayer(wallPt(Wc, 3.0, 0.8)); R.step(3); R.press('KeyF');
@@ -621,7 +621,7 @@ async function probeCost(scn: string): Promise<boolean> {
     const kit = R.staged;   // (what the kit's slots rule staged on this stand before the rig put it aside: null where the rule is off)
     F.verdict(kit === null ? C.carried === WALLCHARGE.carried && C.carried === null : C.carried === kit, 'a restart puts the carried count back to the knob (unset): the kit sets it again at each staging', `carried ${C.carried}${kit === null ? '' : ` · the kit stages ${kit}`}`); }
   { const R = await rig(scn, 21); const { O, D, C } = R; const P = place(R); R.gather(P.near, 75, P.p); C.setCarried(0); R.step(2); const n0 = R.spoke.length, why0 = O.give(WALL_ORDER, O.targetAt(P.p), 'all');
-    F.verdict(why0 === 'no wall charge carried.' && R.spoke.slice(n0).some(s => s.text === 'no wall charge carried.') && D.charges === 2 && C.ops.length === 0, 'none carried: no wall, said aloud, the bag untouched', `"${why0}" · charges ${D.charges}`); }
+    F.verdict((why0 === 'no wall charge carried.' || why0 === 'nobody brought a wall charge.') && R.spoke.slice(n0).some(s => s.text === why0) && D.charges === 2 && C.ops.length === 0, 'none carried: no wall, said aloud, the bag untouched', `"${why0}" · charges ${D.charges}`); }
   // unset = the cost rule, by digest
   { const run = async (unset: boolean) => { const R = await rig(scn, 21); const P = place(R); R.gather(P.near, 75, P.p); if (unset) R.C.setCarried(null); R.O.give(WALL_ORDER, R.O.targetAt(P.p), 'all'); R.until(() => R.C.ops[0]?.phase === 'armed', 60); R.step(30); return hashDigest(digestGame(R.game, true)); };
     const a = await run(false), b = await run(true);

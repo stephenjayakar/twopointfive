@@ -278,6 +278,8 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
   };
 
   const idleOk = new Set<string>(script.idleOk ?? []), fightOk = new Set<string>(script.fightOk ?? []);
+  // (two gears — player.ts TWOGEARS — gives the wheel to nobody, so a step that asks for a pace has nothing to ask for and goes by, as lesson.ts says: it is run all the same)
+  if ((await import(`${ROOT}/src/game/player.ts`)).TWOGEARS.on) for (const T of L.steps) if (T.done?.is === 'pace') idleOk.add(T.id);
   try {
     step(20);   // the start's first frames (poses, the deal's lines)
     for (let i = 0; i < L.steps.length; i++) {

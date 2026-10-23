@@ -267,7 +267,7 @@ export class RoomClearScenario {
     this.layout = { name: 'room clear', defenders: () => this.deal(), staged: () => this.onStaged(),
       get budget() { const n = self.structure?.maxMen ? self.structure.rooms.reduce((k, r) => k + r.garrison, 0) : 0; return n > 5 ? 5 + n : undefined; },   // (a structure with maxMen: Sam, the four and its men)
       get team() { return self.startNow() ?? undefined; },   // (the structure's own start, where it gives one: a level with no breach plan has no approach marks to stand the team on — or the other way in this start took, ROOMCLEAR.way)
-      stagedLine: () => `room clear — ${this.placement.length} armed men hold ${this.rooms.length} rooms: ${this.rooms.map(r => r.def.name).join(', ')}. ${!this.g.nightBreach.noDrill ? `F: stack up on the ${this.drillRoom()?.name ?? 'door'} · X: orders (door tools on any door)` : this.g.nightBreach.ops.length ? 'X: your orders (door tools on any door)' : 'You are alone'}` };   // (noDrill: a level with no breach plan, or a loadout of fewer than two — game/loadout.ts)
+      stagedLine: () => `room clear. ${this.placement.length} armed enemies hold ${this.rooms.length} rooms: ${this.rooms.map(r => r.def.name).join(', ')}. ${!this.g.nightBreach.noDrill ? `Press F to stack up on the ${this.drillRoom()?.name ?? 'door'}, or X for orders (door tools on any door)` : this.g.nightBreach.ops.length ? 'X for your orders (door tools on any door)' : "You're alone"}` };   // (noDrill: a level with no breach plan, or a loadout of fewer than two — game/loadout.ts)
   }
   /** up: the night breach is staged on THIS scenario's floor */
   get active(): boolean { const nb = this.g.nightBreach; return !!nb && nb.active && nb.layout === this.layout; }
@@ -351,15 +351,15 @@ export class RoomClearScenario {
       if (K.announce && left > 0 && !this.end) g.msg(`${said} — ${left} room${left > 1 ? 's' : ''} to go`);
     }
     const pairUp = nb.ops.filter(o => o.state !== 'dead').length, play = !this.end && !g.player.down && live.length > 0;
-    if (!this.pairSaid && pairUp === 0 && nb.ops.length) { this.pairSaid = true; this.note('pair:down'); if (!K.pairOnly && play) g.msg(`${nb.ops.length > 2 ? 'the whole squad' : nb.ops.length > 1 ? 'both men' : 'your man'} down — the rest is yours`); }
-    if (!this.entrySaid && nb.state === 'failed') { this.entrySaid = true; if (pairUp > 0 && play) g.msg(`point man down at the door — the ${this.drillRoom()?.name ?? 'room'} is yours to take`); }   // (the drill's entry is off with a man still up: he holds where he stands — nightbreach.ts)
+    if (!this.pairSaid && pairUp === 0 && nb.ops.length) { this.pairSaid = true; this.note('pair:down'); if (!K.pairOnly && play) g.msg(`${nb.ops.length > 2 ? 'the whole squad is' : nb.ops.length > 1 ? 'both teammates are' : 'your teammate is'} down, so the rest is up to you`); }
+    if (!this.entrySaid && nb.state === 'failed') { this.entrySaid = true; if (pairUp > 0 && play) g.msg(`your point man is down at the door, so you'll have to take the ${this.drillRoom()?.name ?? 'room'} yourself`); }   // (the drill's entry is off with a man still up: he holds where he stands — nightbreach.ts)
     if (this.end) return;
     if (g.player.down) this.finish('wiped', 'player down');   // (first: the last defender and Sam down inside one frame is no win — the mission has failed and the down card is coming)
     else if (g.rails?.endsNow()) this.finish('taken', 'the mission is done');   // (a tutorial mission — rails.ts — is over when its last step is, whoever is still in a room)
     else if (g.rails?.holdsEnd()) { if (pairUp === 0 && nb.ops.length && (K.pairOnly || g.rails.skyOn)) this.finish('wiped', nb.ops.length > 2 ? 'the squad down' : 'the pair down'); }   // …and not before it (the men of a later beat are not on the floor yet) — but a team that is all down has still lost
     else if (live.length === 0 && !responseUp(g)) this.finish('taken', `${this.rooms.length} rooms clear, ${nb.ops.length ? `${pairUp} of ${nb.ops.length} teammates up` : 'alone'}`);
     else if (K.pairOnly && pairUp === 0 && nb.ops.length) this.finish('wiped', nb.ops.length > 2 ? 'the squad down' : 'the pair down');
-    else if (live.length === 0 && !this.teamSaid) { this.teamSaid = true; this.obj = null; this.note('team-up'); if (K.announce) g.msg(`rooms clear — ${responseTeam(g)} still on the ground`); }   // (qrf.ts RESPONSE.raid: the place is not taken while the team it called is up — said once, and it stays on the objective row)
+    else if (live.length === 0 && !this.teamSaid) { this.teamSaid = true; this.obj = null; this.note('team-up'); if (K.announce) g.msg(`the rooms are clear, but ${responseTeam(g)} is still on the ground`); }   // (qrf.ts RESPONSE.raid: the place is not taken while the team it called is up — said once, and it stays on the objective row)
   }
   /** A man the night breach adopted after the staging (stress.ts — extra enemies) is this structure's too: a row of the placement and a man of his room, so the
    *  room is not clear and the structure not taken while he is up. After nightBreach.adopt, the same frame (tick holds while the two lists differ in length). */
@@ -375,8 +375,8 @@ export class RoomClearScenario {
     this.endSay = w(end === 'wiped' && this.g.player.down && this.g.nightBreach.ops.some(o => o.state !== 'dead') ? 'player down' : 'team wiped', 'team wiped');
     const loose = end === 'taken' && this.g.snatch?.active && this.g.snatch.owes ? this.g.snatch.objective()?.text.replace(/^objective ▸ /, '') : null;   // (a snatch level, snatch.ts: the house is the team's and the man is not — it is not over)
     // (a defuse mission whose charge has gone off stays FAILED — defuse.ts: the house taken after that is said as what it is, never as a win)
-    if (end === 'taken' && this.g.defuse?.active && this.g.defuse.end === 'failed') { this.g.msg(`the house is taken, too late — a charge went off: the mission stays failed. Shift+Enter stages it again`); return; }
-    this.g.msg(loose ? `structure taken — ${why}. not over: ${loose}` : end === 'taken' ? `structure taken — ${why}. Shift+Enter stages it again` : this.endSay === 'player down' ? 'player down. Enter stages it again' : `team wiped — ${why}. ${this.g.player.down ? 'Enter' : 'Shift+Enter'} stages it again`);
+    if (end === 'taken' && this.g.defuse?.active && this.g.defuse.end === 'failed') { this.g.msg(`you took the house too late. a charge went off, so you still failed the mission. press Shift+Enter to restart`); return; }
+    this.g.msg(loose ? `structure taken — ${why}. it's not over yet: ${loose}` : end === 'taken' ? `structure taken — ${why}. press Shift+Enter to restart` : this.endSay === 'player down' ? 'the mission is over. press Enter to restart' : `team wiped — ${why}. press ${this.g.player.down ? 'Enter' : 'Shift+Enter'} to restart`);
   }
 
   /** where it stands, in one word */
@@ -395,8 +395,8 @@ export class RoomClearScenario {
     const said = (r: RoomState) => !!hint && !r.cleared && hint.rooms.has(r.def.id);
     const next = (this.rooms.find(said) ?? (hint?.spots.length ? null : this.firstOpen()))?.def.bounds;
     const spot = next ? null : hint?.spots[0] ?? null;   // (laststand.ts `places`: nobody named a room still held, and one of them named a place that is no room of the list — the marker goes there)
-    const text = this.end === 'taken' ? 'structure taken — shift+enter stages it again'
-      : this.end === 'wiped' ? `${this.endSay} — ${this.g.player.down ? 'enter' : 'shift+enter'} stages it again`
+    const text = this.end === 'taken' ? 'structure taken — press shift+enter to restart'
+      : this.end === 'wiped' ? `${this.endSay} — press ${this.g.player.down ? 'enter' : 'shift+enter'} to restart`
       : 'objective ▸ clear the structure: ' + this.rooms.map(r => (ticks && r.cleared ? '✓ ' : '') + (said(r) ? `[${r.def.name}]` : r.def.name)).join(' · ') + (hint?.spots ?? []).map(s => ` · [${s.name}]`).join('') + (this.teamSaid ? ` · [${responseTeam(this.g)}]` : '');
     this.obj = { text, pos: this.end ? null : next ? [(next.x0 + next.x1) / 2, 0, (next.z0 + next.z1) / 2] : spot ? [spot.pos[0], 0, spot.pos[2]] : null, ticks, hint: hk };
     return this.obj;

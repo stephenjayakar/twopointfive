@@ -319,6 +319,8 @@ export class LightingPasses implements CutSwappable {
   private bgDiffBlur: GPUBindGroup[] = [];
   /** post look: bloom strength (fraction of the blurred frame added back) and AgX look saturation */
   bloom = 0.06; saturation = 1.15; grain = 0.022; nvPhosphor = 0.09;
+  /** the goggles' dark eyepiece edge over the picture: 0 = none (the default: it hid too much of the screen), 1 = the oval as it was (`?nvoval=1`, or the Look panel's row) */
+  nvOval = 0;
   /** how strongly smoke blurs what stands behind it in the final blit (post.wgsl SMOKE DIFFUSION; set by the Tab row / ?nosmokediffuse; 0 = the blit as it was, the chain not dispatched) */
   smokeDiffuse = 1.0;
   /** how many of the smoke's bounds this frame's shaders walk (frame.numSmoke, mirrored by the engine). 0 = the volumetric pass writes a smoke transmittance of exactly 1 into every
@@ -609,7 +611,7 @@ export class LightingPasses implements CutSwappable {
       if (cutSwap.enabled && cutSwap.ready && (hadS !== !!this.pCompS || hadUE !== !!this.pSharpUE)) void cutSwap.ready.then(ok => ok ? this.buildCut() : undefined).catch(e => console.error('[cut programs] the sharp path\'s cut twins did not compile', e));   // (CUT BOXES: a TRACING kernel just made is the boot's — the second set gets its twin, once the set itself is in: a build still under way may have looked before this one existed)
       if (mask && !this.pEdge) this.pEdge = device.createComputePipeline({ label: 'sharpEdge', layout: device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lEdge] }), compute: { module: makeShader(device, pre + sharpEdgeSrc, 'sharpEdge'), entryPoint: 'main' } });
     };
-    this.postParams = makeBuffer(device, 32, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'postParams');   // (+ the OUTPUT size's reciprocal: post runs at the output resolution under TAAU, where frame.invScreen is the internal one)
+    this.postParams = makeBuffer(device, 48, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'postParams');   // (+ the OUTPUT size's reciprocal: post runs at the output resolution under TAAU, where frame.invScreen is the internal one)
     this.taauParams = makeBuffer(device, TAAU_PARAM_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'taauParams');
     this.fxaaParams = makeBuffer(device, 32, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'fxaaParams');
     this.den = new Denoiser(device, sceneLayout);
@@ -1264,7 +1266,7 @@ export class LightingPasses implements CutSwappable {
   resetClocks() { this.grainSeed = 0; }
   private grainSeed = 0;
   /** the final blit's numbers: the OUTPUT texel size, its mode (0 plain · 1 FXAA · 2 the RCAS sharpen TAAU ends with — FXAA after a temporal resolve would only blur it), grain, seed, sharpen strength */
-  private fxaaData = new Float32Array(8); private postData = new Float32Array(8); private postBits = new Uint32Array(this.postData.buffer); private postSent = new Uint32Array(8);   // (rewritten every frame in place — review R1.4)
+  private fxaaData = new Float32Array(8); private postData = new Float32Array(12); private postBits = new Uint32Array(this.postData.buffer); private postSent = new Uint32Array(12);   // (rewritten every frame in place — review R1.4)
   private writeFxaaParams() { const ow = this.ow || this.width, oh = this.oh || this.height; const d = this.fxaaData; d[0] = 1 / ow; d[1] = 1 / oh; d[2] = this.taauOn ? 2 : this.fxaaEnabled ? 1 : 0; d[3] = this.grain; d[4] = this.grainSeed; d[5] = this.taauSharpen; d[6] = 0; d[7] = 0; this.device.queue.writeBuffer(this.fxaaParams, 0, d); }
   /** Per frame from engine.render (TAAU on): pack the resolve's uniform (struct TaauParams in taau.wgsl). The reset flag raised since the last frame is consumed here. */
   setTaauFrame(f: TaauFrame) {
@@ -1640,7 +1642,7 @@ export class LightingPasses implements CutSwappable {
       p.dispatchWorkgroups(Math.ceil(this.ow / 8), Math.ceil(this.oh / 8)); p.end();
     }
     {
-      { const d = this.postData; d[0] = this.bloom; d[1] = this.saturation; d[2] = this.smokeDiffuse; d[3] = this.nvPhosphor; d[4] = 1 / (this.ow || this.width); d[5] = 1 / (this.oh || this.height); d[6] = this.smokeDiffuseBilinear ? 1 : 0; d[7] = this.smokeDiffuseTau0; writeWordsIfChanged(this.device, this.postParams, 0, this.postBits, this.postSent); }
+      { const d = this.postData; d[0] = this.bloom; d[1] = this.saturation; d[2] = this.smokeDiffuse; d[3] = this.nvPhosphor; d[4] = 1 / (this.ow || this.width); d[5] = 1 / (this.oh || this.height); d[6] = this.smokeDiffuseBilinear ? 1 : 0; d[7] = this.smokeDiffuseTau0; d[8] = this.nvOval; writeWordsIfChanged(this.device, this.postParams, 0, this.postBits, this.postSent); }
       this.grainSeed = (this.grainSeed + 1) % 4096; this.writeFxaaParams();   // grain animates per frame and is applied after FXAA / the sharpen
       const p = enc.beginComputePass({ label: 'bloom', timestampWrites: ts('bloom') });
       p.setBindGroup(0, sceneBG);

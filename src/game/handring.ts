@@ -40,6 +40,45 @@ export const HANDRING = {
    *  stealth mission, an open door at his elbow: "nothing in reach to close the door?"): a door a tutorial mission has no row for, a door a stride out
    *  of reach. On and off with `on`, as `empty` is (the same address word and stand word; a recording from before the key replays with it off) */
   near: false,
+  /** a ring with ONE row draws that row as a pill beside its middle, never as a lone slice of a wheel, and the cursor on that pill is on that row
+   *  (ringlone.ts; the maintainer, 10-23: "they look weird when they just have one option"). Both rings' (the squad's ring is the same drawing and
+   *  the same pointing: cmdring.ts ringWant). Off in the module and on the frozen stand (`TPS_HANDRING=1` raises it with the rest); on in the page
+   *  with its own word, `?lonepill=0` (the slice, and only its own fifth of a turn). A recording from before the key replays with it off */
+  lone: false,
+  /** HIS RING STANDS ON THE THING IT IS ABOUT, never where the cursor happened to be (the maintainer, 10-23: "radial menu should always be near the
+   *  player, probably on the most relevant option (like the rack in this caes)"): its middle on the thing its first row is about (the row lit as it
+   *  opens), on his own body where no row is about a thing (the whistle alone), whole inside the view's edge as any ring (cmdring.ts edgeX / edgeY),
+   *  and it stays on that point as the view moves (the squad ring's own rule: cmdring.ts ringPin). The cursor may be anywhere when it comes up, so
+   *  the cursor ON a wedge's own shape lights it once it has been off every shape (cmdring.ts ringWant `shapes`: a cursor that was resting where a
+   *  wedge came up lights nothing until it has left and come back, and a cursor at rest lights nothing); out past the ring, a direction still
+   *  counts only from the middle, as before. Digits, a click and the key again are as they were. The squad's ring is not moved: it is opened on
+   *  the place the order goes to, which is where the cursor is, and it stays on that place already. Off in the module and on the frozen stand
+   *  (`TPS_HANDRING=1`); on in the page, `?ringonthing=0` (at the cursor, as it was). A recording from before the key replays with it off */
+  onThing: false,
+  /** …and no line of words under it (the maintainer, 10-23, of 'RACK 6 · THE DRIVE · PULL THE DRIVE — STAY ON IT' under the ring: "this is too
+   *  busy, should just be the radial menu"): the wedges' own words are the ring's words. What the line said of the lit row is the corner's line
+   *  still (ui/overlay.ts: the thing's name and the row's long words, 'stay on it' with them); the whistle's 'one guard will come to look' is said
+   *  nowhere now. The picture only. On and off as `onThing` is; `?ringbare=0` puts the line back */
+  bare: false,
+  /** A ROW GIVEN AT A WALL SWITCH TURNS HIM TO IT (the maintainer, 10-23: "if you do the radial menu, turn around, and then hit the lights, player
+   *  doesn't turn back to the light and do the animation"). The lights still go on the press, as they did; then he is stood at the plate and squared
+   *  to it the way he is at the mains lever (handwork.ts samWork: his feet planted, the step in to arm's length), and his hand's move at the plate
+   *  is given the time the turn takes on top of its own (lightswitch.ts: 0.3 s, and up to `turnMax` more), so the hand arrives after the turn. A
+   *  tap's row and a ring's row alike. Every other row at a thing already turned him: a door's leaf (hands.ts), a lock, a pad, a kick, the wand,
+   *  the mains, the rack, a charge (handwork.ts), a man or a body (close.ts and the haul). Off in the module and on the frozen stand
+   *  (`TPS_HANDRING=1`), and nothing without hands at work (`HANDWORK.on`); on in the page, `?ringturn=0`. A recording from before the key replays
+   *  with it off */
+  turn: false,
+  /** s more than the hand's own time that a turn may add (a half turn at the plant's 10 rad/s is 0.31 s, the step in the rest) */
+  turnMax: 0.45,
+  /** THE CORNER PANEL IS THREE THINGS (the maintainer, 10-23, of the panel at the top left: "i think we can make this more compact and it should always
+   *  just show the thing that will happen if you quick press E" · "squad one should just be the same for Q (and you can have both sections)" · "i
+   *  think we can remove the per man status tbh, doesn't add much to gameplay" · "we'd also remove the title "squad loud ..." entirely from top left
+   *  menu, it'd just be Q and E stuff when appropriate" · "objectives should move to a section in the top left menu panel"). With it the panel is:
+   *  the objective as a section (the line at the top middle of the screen is gone), then one line a key — what his own key does now, with no
+   *  heading over it; what the squad's key does now — and nothing else: no line per man, no counts of what the squad carries, no title. The
+   *  reduction is ui/corner.ts; the picture only (the rows, the squad's block and the objective's words are made as they were). */
+  corner: false,
 };
 /** the word an empty tap files, how long before it is filed again (s), and how long the corner shows it (s) */
 export const EMPTY_WORD = 'nothing in reach', EMPTY_AGAIN_SECS = 3, EMPTY_SHOW_SECS = 1.6;

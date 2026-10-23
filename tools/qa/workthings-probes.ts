@@ -135,7 +135,7 @@ export const workBreaker = () => keep(async () => {
   const lab = R.rows()[0] ? labelOf(R, R.rows()[0]) : ''; R.press('KeyX'); if (O.menu) O.close();
   const n0 = O.log.length; R.press('KeyB'); R.aim = null;
   const back = R.until(() => !g.blackout.active, 30);
-  verdict(lab === 're-arm the mains' && O.log.length === n0 + 1 && R.last().order === 'work' && back, 'dark, the row reads "re-arm the mains"; B on the panel gives it and the mains come back', `row "${lab}" · log +${O.log.length - n0} ${JSON.stringify(R.last())} · blackout ${g.blackout.active}`);
+  verdict(lab === 'turn the power back on' && O.log.length === n0 + 1 && R.last().order === 'work' && back, 'dark, the row reads "turn the power back on"; B on the panel gives it and the mains come back', `row "${lab}" · log +${O.log.length - n0} ${JSON.stringify(R.last())} · blackout ${g.blackout.active}`);
   // --- a wrecked breaker is nobody's
   g.setBlackout(Infinity, 'shot'); R.step(2); R.aim = panel(g); R.step(2); R.press('KeyX');
   verdict(!R.rows().some((d: any) => d.id === 'work'), 'a breaker a round has wrecked is no thing to work (Sam has no row for it either)', menuWords(R));

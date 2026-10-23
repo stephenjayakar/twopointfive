@@ -5,6 +5,7 @@ import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
+const { crouchPace } = await import(`${ROOT}/src/game/player.ts`);
 const { sightGain } = guardsMod;
 
 type Vec3 = [number, number, number];
@@ -257,7 +258,7 @@ export async function missing() {
         for (const l of lines.splice(0)) {
           if (tCall < 0 && /^radio check/.test(l.text)) tCall = l.t;
           const m = /^(\w+)\? … \1, sound off/.exec(l.text); if (m) asked.push(m[1]);
-          if (/going round his route|going to check on/.test(l.text)) sends++; if (/still nothing from/.test(l.text)) stillNothing++;   // (the checker's own line, whether or not he was also the caller)
+          if (/going round his route|going to walk his route|going to check on/.test(l.text)) sends++; if (/still nothing from/.test(l.text)) stillNothing++;   // (the checker's own line, whether or not he was also the caller)
           if (/sound off|route|check on|not at his post|man down|it's \w+ — he's down|lock it down|weapons out/.test(l.text)) transcript.push({ t: l.t, s: `${l.who}${l.radio ? ' (radio)' : ''}: ${l.text}` });
         }
       }
@@ -344,7 +345,7 @@ export async function motionTable(opts: { vis?: number[]; legacyToo?: boolean } 
     game.player.char.bodyYaw = game.player.char.aimYaw = -Math.PI / 2;
     // oscillate about S: half-amplitude A along the chosen axis, turning about at the ends (the puppet's direction flips at once; speedSm carries the pace through)
     const A = pace.sprint ? 1.15 : 1.0; const axis: Vec3 = dir === 'radial' ? [1, 0, 0] : [0, 0, 1]; let sgn = 1;
-    const walkScale = pace.v <= 0 ? 0 : pace.sprint ? pace.v / game.tune.playerSprint : pace.crouch ? pace.v / game.tune.playerCrouch : pace.v / game.tune.playerWalk;
+    const walkScale = pace.v <= 0 ? 0 : pace.sprint ? pace.v / game.tune.playerSprint : pace.crouch ? pace.v / crouchPace(game) : pace.v / game.tune.playerWalk;
     game.puppet = { goal: pace.v > 0 ? v3.mad(S, axis, A) : null, aim: [G[0], 1.3, G[2]], crouch: pace.crouch, walk: walkScale };
     if (pace.sprint) input.keys.add('ShiftLeft');
     let tS = -1, tA = -1, letGo = false; let rateSum = 0, rateN = 0; const t0 = game.time; let sawSusp = false;

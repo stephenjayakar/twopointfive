@@ -45,6 +45,7 @@
 import type { Game } from './game';
 import type { Input } from './input';
 import type { Vec3 } from '../math/vec';
+import { onPill, RING_BOX, RING_HOLE } from './ringlone';
 
 export const CMDRING = {
   /** the ring's key puts the order menu up as a ring at the cursor and, let go, gives the lit wedge (false: the key is nobody's, as it was) */
@@ -152,8 +153,41 @@ export const CMDRING = {
    *  it was built — the stack that needs no can, or forms sooner, is inside before the other's can lands. Off here; the page raises it with the
    *  mode (`?planone=0` off) */
   planOne: false,
+  /** PLAN MODE REACHES ONE ROOM, NOT THE LEVEL (the maintainer, 10-23: "balancing plan mode: it's too easy to just play this like an RTS. we should
+   *  instead make it so you can only move a bounded amount from the player. like maybe the player has to roughly be on screen but can be in a corner.
+   *  the mental model is that it should be good for clearing one room but not the whole level"): with the mode up the view's point stays where SAM
+   *  IS STILL ON THE SCREEN — a box round him in the camera's own basis (below), whichever way the men have gone — in place of `planPanReachM`
+   *  outside the box he and the men stand in, which walked the view down the level behind them. At an edge the view stops going out and slides
+   *  along it; in a corner of the box he is in a corner of the screen. A view found outside the box (a file from before, a frame's lock let go) is
+   *  walked in at twice the pan's speed, not jumped. He is parked while the mode is up, so to plan further on he puts it down and walks. NOT
+   *  where a tutorial frame has taken his feet (rails `move` locked: he cannot walk nearer, so the frame's view is the old one). false: the reach as
+   *  it was built. Off here; the page raises it with the mode (`?plannear=0` off) */
+  planNear: false,
+  /** … that box, metres from him to the view's point AT THE CAMERA'S OWN DISTANCE (21): to either side · with the view pushed away from the camera
+   *  (he is then at the bottom of the screen) · with it pulled toward the camera (he is at the top). Zoomed IN the box shrinks with the camera's
+   *  distance, so he stays on the screen; zoomed out it does not grow (a room's worth is metres, not a screen's). At the camera's tilt the ground on a
+   *  16:10 screen runs 8.4 m to either side of its middle (7.4 along its bottom edge), 5.5 m toward the camera and 7.8 m away: these leave his body
+   *  on it. What is drawn from an edge then runs to about 15 m from him */
+  planNearSideM: 6.5, planNearAwayM: 4.5, planNearBackM: 6,
   /** … how long the view's point takes to come back to him (s) */
   planBackSecs: 0.7,
+  /** THE TREE IS TWO RINGS DEEP (the maintainer, 10-23, at a wall with three rings between him and one greyed row: "radial menu tree needs some
+   *  work, way too nested"; "loud and quiet should be an option on squad wheel"). With `only`: the ring is not the menu's pages any more — it holds
+   *  every order of the thing it was opened on (orders.ts flatRows: the first page's rows and the rows of every page behind it), seated by flatSeats:
+   *  wedge 1 what a tap gives there, wedges 2 to 4 the same orders on every thing of that kind (FLAT_TOP), wedge 5 'more', ONE ring of the rest — or,
+   *  with the rest fitting the wedges left, no 'more' at all (a ring never has one row: that row is on a wedge of the first). A row for kit the squad
+   *  never carried, or for a tool this door never takes, is not offered (OrderDef.gone); one that is off only for now stays, greyed. The squad's
+   *  posture row (go silent / go loud) closes every second ring, and is on the first where the ring is the squad's own (fall in stays on wedge 3 and
+   *  hold position on 4 there, as fingers have them; a row that says what wedge 1 says has no wedge of its own, and its digit is wedge 1's:
+   *  orders.ts seats `same`). Not on a tutorial mission (rails live: its lines name the digits of the tree as it was, "[X], then press [3]"; the tutorial's own
+   *  to move). false: the menu's pages, as built. Off here and on the frozen
+   *  stand (`TPS_RINGFLAT=1` beside `TPS_QRING=1 TPS_QONLY=1`); the page raises it with `only` (`?ringflat=0` off) */
+  flat: false,
+  /** NO GLYPH AT THE CURSOR (the maintainer, 10-23: "let's remove the icons on mouse position from squad orders entirely"): the mark of what the
+   *  key orders on is the thing's own outline on the floor and nothing else — no glyph beside the cursor, none in the ring's middle (orders.ts
+   *  hintView `glyph`; a picture only). false: the glyph, as built. Off here and on the frozen stand (`TPS_PLAINHINT=1`); the page raises it
+   *  (`?plainhint=0` off) */
+  plainHint: false,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has
@@ -187,7 +221,9 @@ export interface RingState { ax: number; ay: number; z: number; t0: number; lit:
   /** (CMDRING.stay) the press that opened it has come up and it stands by itself: ringLatch */ free?: boolean;
   /** (CMDRING.only) it shows the rows its page has no wedge for: ringSeats `over` */ more?: boolean;
   /** (CMDRING.pin) the place it was opened on, and how far from that place's own px its middle stood (CSS px) · the cursor as the ring last read it */
-  at?: Vec3; ox?: number; oy?: number; mx?: number; my?: number }
+  at?: Vec3; ox?: number; oy?: number; mx?: number; my?: number;
+  /** (ringWant `shapes`) the cursor has been off every wedge's shape since the ring last changed under it: on a shape now, it lights it */ clear?: boolean;
+  /** (interact.ts, a ring on its thing) the wedge the hand last put the cursor on: a ring that slides under a resting cursor points at no other */ pt?: number }
 /** what a ring shows (orders.ts ringView, interact.ts handRingView → ui/cmdring.ts): where, how much larger than its px, the lit wedge, whose colour, the
  *  words under it, and the wedge on each digit */
 export interface RingView { x: number; y: number; zoom: number; lit: number; tone: string | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] }
@@ -207,12 +243,24 @@ export function ringPin(R: RingState, sx: number, sy: number, w: number, h: numb
   R.ax = cl(sx + (R.ox ?? 0), C.edgeX * R.z, w); R.ay = cl(sy + (R.oy ?? 0), C.edgeY * R.z, h);
 }
 /** The wedge this frame asks for (0: none): a digit's own — which disarms the cursor — else the one the cursor is out of the ring's middle toward, once
- *  the key has been down `tapSecs` and the cursor has been in the middle since the ring last changed under it (a page, a digit, a man, new rows) */
-export function ringWant(R: RingState, input: Input, digit: number, time: number): number {
-  const C = CMDRING, dx = input.mouseX - R.ax, dy = input.mouseY - R.ay, out = Math.hypot(dx, dy) >= C.flickPx * R.z, early = time - R.t0 < C.tapSecs - 1e-6;
+ *  the key has been down `tapSecs` and the cursor has been in the middle since the ring last changed under it (a page, a digit, a man, new rows).
+ *  `lone`: the digit of the ring's one row where it has one and is drawn as a pill (ringlone.ts loneKey; 0 = the wheel) — the cursor on that pill's
+ *  place is on that row. Only the digit: the game reads no words of a ring.
+ *  `shapes` (a ring that did not come up under the cursor: handring.ts `onThing`): the digits that have a wedge, a bit each (0 = by direction only, as
+ *  above). The cursor ON a drawn wedge — its fifth of the wheel from the hole out as far as its words may lie (the ring's own box, RING_BOX: a row is
+ *  pointed at on its words as well as on its slice), or the pill's place — is on that wedge with no visit to the middle, once it has been off every
+ *  drawn wedge since the ring last changed under it; a place of the wheel with no wedge is not one, nor anywhere outside the ring's box. */
+export function ringWant(R: RingState, input: Input, digit: number, time: number, lone = 0, shapes = 0): number {
+  const C = CMDRING, dx = input.mouseX - R.ax, dy = input.mouseY - R.ay, d = Math.hypot(dx, dy), out = d >= C.flickPx * R.z, early = time - R.t0 < C.tapSecs - 1e-6;
+  const pill = lone > 0 && onPill(lone, C.wedges, dx / R.z, dy / R.z), at = wedgeAt(dx, dy, C.wedges);
+  const on = shapes !== 0 && (lone ? pill : d >= RING_HOLE * R.z && Math.abs(dx) <= RING_BOX.x * R.z && Math.abs(dy) <= RING_BOX.y * R.z && (shapes >> at & 1) === 1);
+  if (shapes && !on) R.clear = true;
   if (early) { if (out) R.armed = false; } else if (!out) R.armed = true;
-  if (digit) { R.armed = false; return digit <= C.wedges ? digit : 0; }
-  return !early && out && R.armed ? wedgeAt(dx, dy, C.wedges) : 0;
+  if (digit) { R.armed = false; R.clear = false; return digit <= C.wedges ? digit : 0; }
+  if (early) return 0;
+  if (on && R.clear) return lone || at;
+  if (!out || !R.armed) return 0;
+  return pill ? lone : at;
 }
 
 /** a menu row as the seats read it (orders.ts OrderDef) */
@@ -237,6 +285,39 @@ export function ringSeats(rows: readonly SeatRow[], place: boolean, wordKey: str
   if (row[more] >= 0) { over.unshift(row[more]); row[more] = -1; }
   for (const d of spare) row[d] = over.shift()!;
   return { row, more, over: over.slice(0, W) };
+}
+
+/** a row as the flat tree reads it (orders.ts OrderDef) */
+export interface FlatRow extends SeatRow { id: string }
+/** (CMDRING.flat) THE FIRST RING'S OWN ORDERS, by the kind of thing it was opened on: each on the same wedge on every thing of that kind — 'fall in'
+ *  is 3 and 'hold position' 4 wherever the ring has them, as the menu's digits always had them (a row the level leaves out leaves its wedge empty for
+ *  the rest) */
+export const FLAT_TOP: Readonly<Record<string, Readonly<Record<string, number>>>> = { floor: { cover: 2, fallIn: 3, hold: 4 }, door: { cover: 2, openClear: 3, bangClear: 4 }, none: { fallIn: 3, hold: 4 }, foe: {} };
+/** … and the orders a kind's ring does not carry: they are not about the thing (on a door 'fall in' and 'hold position' gave their wedges to the two
+ *  entries; they are on every ring that is not a door's) */
+export const FLAT_LEFT: Readonly<Record<string, readonly string[]>> = { door: ['fallIn', 'hold'] };
+/** WHICH ROW IS ON WHICH WEDGE OF THE FLAT TREE (CMDRING.flat; the shape ringSeats gives). `rows`: every order of the thing, no row that opens a
+ *  page among them · `lead`: the row a tap gives (wedge 1; -1 none — and on its own wedge too where FLAT_TOP names it: on the squad's own ring 3 is
+ *  still 'fall in'). FLAT_TOP's rows on their wedges. The rest: where they fit the wedges left, on them — the squad's posture rows (free, the
+ *  squad's own menu's) from the last wedge back, so 'go silent' is 5 where the ring has room; else the wedges short of the last take the first of
+ *  them and the last is 'more', ONE ring of what remains from wedge 1, the posture row its last. A 'more' never has one row (that row is on the
+ *  last wedge itself), and with more left than a ring holds the posture row gives up its place first (it is on the squad's own ring), then the last
+ *  tools. The word's own rows are left out (`wordKey`: its key gives them) */
+export function flatSeats(rows: readonly FlatRow[], kind: string, wordKey: string, lead: number): { row: number[]; more: number; over: number[] } {
+  const W = CMDRING.wedges, row = new Array<number>(W + 1).fill(-1), top = FLAT_TOP[kind] ?? {}, left = FLAT_LEFT[kind] ?? [], rest: number[] = [], last: number[] = [];
+  if (lead >= 0) row[1] = lead;
+  rows.forEach((r, i) => {
+    if (r.opens || r.hotKey === wordKey || left.includes(r.id)) return;
+    const k = top[r.id] ?? 0; if (k >= 2 && k <= W && row[k] < 0) { row[k] = i; return; }
+    if (i === lead) return;
+    (r.free && !r.hotKey && (r.listed ?? r.targets).includes('none') ? last : rest).push(i);   // (the squad's own: its posture — as ringSeats tells them)
+  });
+  const spare: number[] = []; for (let d = 2; d <= W; d++) if (row[d] < 0) spare.push(d);
+  if (rest.length + last.length <= spare.length) { rest.forEach((i, n) => { row[spare[n]] = i; }); last.forEach((i, n) => { row[spare[spare.length - last.length + n]] = i; }); return { row, more: 0, over: [] }; }
+  for (const d of spare) if (d < W && rest.length) row[d] = rest.shift()!;   // (wedges a level's own list left empty: the first of the rest)
+  const over = rest.length + last.length > W ? rest.slice(0, W) : [...rest, ...last];
+  if (over.length === 1) { row[W] = over[0]; return { row, more: 0, over: [] }; }
+  return { row, more: over.length ? W : 0, over };
 }
 
 /** how long the key is kept down before its ring goes up (s): `stayHoldSecs` for a ring that stays, `holdSecs` for one that goes with its key */
