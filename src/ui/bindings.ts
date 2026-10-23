@@ -101,6 +101,7 @@ import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
 import { CARLAMPS } from '../game/carlamps';
+import { ROUND } from '../scene/round';
 import { FIRELINE } from '../game/fireline';
 import { START } from '../game/startfile';
 import { HOLDFIRE, holdFireSummary } from '../game/holdfire';
@@ -2153,6 +2154,8 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.toggleBox(pd, 'G quick throw', () => QUICKTHROW.on, v => { QUICKTHROW.on = v; }, 'G throws a canister at the cursor without selecting it first (also ?quickthrow on the address = on). Off as shipped: a can is thrown from its own slot, 3 / 4 / 5, with a click')
   panel.toggleBox(pd, 'no aim ring on teammates', () => FRIENDS.noSnap, v => { FRIENDS.noSnap = v; }, 'the reticle never snaps to a man of your own side: no ring on a teammate, and the aim stays where the cursor is (also ?friendsnap on the address = off). Off = it takes any man near the cursor, as it did');
   panel.toggleBox(pd, 'light switches', () => LIGHTSWITCH.on, v => { LIGHTSWITCH.on = v; }, 'a switch on the wall beside a door of every room with lights of its own: Space at it puts the room out or back, and a calm defender who saw it go dark comes and puts it back (also ?lightswitch=0 on the address = off). Off = no plates, as it was');
+  panel.toggleBox(pd, 'round things are round (reloads)', () => ROUND.on, v => { if (typeof location === 'undefined') { game.msg('round things: in the page only (?round=0)'); return; } const q = new URLSearchParams(location.search); if (v) q.delete('round'); else q.set('round', '0'); location.search = q.toString(); },
+    'a drum, a stack of tyres, a stove and an oven are one round shape each: to the picture, to light and shadow, to a round, to sight and to what walks against them. The round things are found when a level is stood up, so this reloads the page with ?round=0 on the address (off = the octagons of four slabs, as they were) or without it');
   panel.toggleBox(pd, 'car lamps break (reloads)', () => CARLAMPS.on, v => { if (typeof location === 'undefined') { game.msg('car lamps: in the page only (?carlamps=0)'); return; } const q = new URLSearchParams(location.search); if (v) q.delete('carlamps'); else q.set('carlamps', '0'); location.search = q.toString(); },
     'a parked vehicle\'s head and tail lamps can be shot out, lit or not: the glass breaks and a lit one goes dark. The lamps are found when a level is stood up, so this reloads the page with ?carlamps=0 on the address (off = no lamp is a target, as it was) or without it');
   panel.toggleBox(pd, 'friendly fire', () => FRIENDLYFIRE.on, v => { FRIENDLYFIRE.on = v; }, 'your rounds hit your own teammates, and theirs would hit you: they do not fire with you or a mate anywhere their round could go (also ?nofriendlyfire on the address = off). Off = rounds pass through your own side, as they did');

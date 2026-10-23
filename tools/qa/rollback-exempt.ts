@@ -234,6 +234,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/math/side.ts sortedMemos': 'CACHE · (math/side.ts\'s own bookkeeping: how many memo marks the registry was last built at)',
   'src/math/side.ts sorted': 'CACHE · (math/side.ts\'s own bookkeeping: how many names the registry was last sorted at)',
   'src/scene/cut.ts CUT_CLIP': 'SCRATCH · the clip test\'s answer (cut.ts:237, on its `return true`), read by the caller straight after (boxes.ts:894-899, collision.ts:30)',
+  'src/scene/round.ts ROUND_STATS': 'TALLY · counted in round.ts roundLevel as a level is stood up; no read in src/game, src/scene or src/anim',
   'src/scene/cut.ts cutConfig': 'CONFIG · written by cutBoxesInit from the URL / store (cut.ts:44-47) and the knob roads; read by boxes.ts, wallpen.ts',
   'src/scene/gwotPalette.ts simByAlbedo': 'CACHE · built once from the palettes (constants) on first ask (gwotPalette.ts:113-123)',
   'src/scene/level.ts bootedLocalLevel': 'CONFIG · written by the boot\'s level load (level.ts:210-219); read by main.ts',
