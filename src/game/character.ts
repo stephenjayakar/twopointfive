@@ -1512,6 +1512,9 @@ export class CharacterAnimator {
   // OUT, in the right fist, this frame (combat.ts draws it off this): only inside a LETHAL blow (strike(kind, true)), from
   // the frame it leaves the sheath to the frame it is back. Never set / never thrown = the animator as it was, bit for bit.
   creep = false; creepAt: Vec3 | null = null; creepShown = 0; knifeShown = false; reachShown = 0;
+  /** Input: he carries no knife (close.ts CLOSE.noKnife, set by combat.ts each frame for the player): no hand goes to a hilt in the tell or the close-in carriage,
+   *  the reaching arm waits on nothing, and with a man in his arm the right hand is clamped on the man's shoulder (the choke's own station) from the first. */
+  noKnife = false;
   private crT = 0; private crV = 0; private crPace = 0; private crW = 0;   // the held gait's clock (0‥1, linear) · the root's own travel speed this frame · the crouch pace it holds at a stop · the stance's eased weight
   private crPh: [number, number] | null = null;                           // the cycle's phase (mod ½) with both feet down and widest apart: the walk's, the crouch-walk's (creepPlant)
   private bw: BlowRun | null = null; private tk: { style: TakenStyle; t: number; delay: number; off: number } | null = null; private kbSlash = false; private kbBack = false; private bwRise = 0;   // a takedown's own move under way (blow()) · what is being done to him (taken()) · the knife's keys are the slash's
@@ -2278,7 +2281,7 @@ export class CharacterAnimator {
       if (this.ready) { this.readyK = this.ready; this.rdAt = this.readyAt; }
       this.readyW = Math.abs(want - this.readyW) < 0.01 ? want : this.readyW + (want - this.readyW) * Math.min(1, dt * (want ? 10 : busy ? 8 : 8 / (1 + READY_UP.slow * this.rd[RD.up])));   // (READY_UP: a hand that went up has further to come down when he steps out of reach — 8 unless fed, and 8 when a move takes the arms: the grab's own clocks are what they were)
       // the reach's clock: on with a live pose whose right hand is free for the knife — and kept on THROUGH the knife's own blow (the hand comes back to the hilt it left); off with anything else: a plain blow takes the hand off the hilt empty
-      { const on = (want > 0 && READY[this.readyK].knife && !this.grip[1]) || (this.strikeT >= 0 && this.strikeLeth && !held && !!this.ready);
+      { const on = (want > 0 && READY[this.readyK].knife && !this.noKnife && !this.grip[1]) || (this.strikeT >= 0 && this.strikeLeth && !held && !!this.ready);
         this.rcT = clamp(this.rcT + (on ? dt / REACH.in : -dt / REACH.out), 0, 1); }
       if (this.readyW > 0.003 || this.rcT > 0) this.readyLayer(this.readyW, this.readyK, want > 0, dt, y, -p * 0.35); else { this.readyShown = this.reachShown = 0; this.rdLive = false; if (!this.ready) this.rdAt = null; }
     }
@@ -3931,7 +3934,7 @@ export class CharacterAnimator {
       m[nd.shoulderL] = m[nd.upperArmL] = wUp * lw; m[nd.forearmL] = wFore * lw; setSub(nd.handL, wHand * lw); }
     if (wR > 0.003) { const H = C.R;
       let at = v3.add(sr, sq(v3.add(v3.lerp(H.at, H.atC, cr), drift(2.1)))), rot = this.handRot(1, sq(H.fing), sq(H.back)), pole = sq(H.pole), curl = H.curl;
-      if (ck >= 0 && !this.grip[1]) {   // the knife hand by distance: from its guard up across the chest to hover off the hilt — where the reach (readyLayer) closes it on the handle
+      if (ck >= 0 && !this.grip[1] && !this.noKnife) {   // the knife hand by distance: from its guard up across the chest to hover off the hilt — where the reach (readyLayer) closes it on the handle
         const S = this.sheathFist(0, KC.hover);
         { const cp = cke + (ck - cke) * 0.5; at = v3.add(v3.mad(v3.lerp(at, S.at, cp), sq(KC.bow), Math.sin(Math.PI * cke)), v3.scale(sq(drift(2.1)), cke)); }   // (the travel half-eased: an eased-only one sat still over the first metre in, and the hand must be seen to go with every step)
         rot = quat.slerp(rot, S.rot, cke); pole = v3.lerp(pole, S.pole, cke); curl = lerp(H.curl, KC.curl, cke);
@@ -4245,7 +4248,7 @@ export class CharacterAnimator {
     const wUp = smoothstep(0, 0.75, w), wFore = smoothstep(0.08, 0.88, w), wHand = smoothstep(0.16, 1, w);
     const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
     let lg = 1;   // KIT.close: the left arm's move for the man waits for the right hand to be on the hilt (a pistol in that hand: no wait — the reach is all the tell there is)
-    if (this.closeK >= 0 && K.knife) { const KC = KIT.close; if (!this.rdLive) this.clL = 0; this.clL = clamp(this.clL + (live && u >= KC.leftAt ? dt / (KC.leftIn * (1 + READY_UP.slow * c[RD.up])) : -dt / KC.leftOut), 0, 1);   /* (READY_UP: the longer way up takes that much longer — 1 unless fed) */ lg = this.clL * this.clL * (3 - 2 * this.clL); }
+    if (this.closeK >= 0 && K.knife && !this.noKnife) { const KC = KIT.close; if (!this.rdLive) this.clL = 0; this.clL = clamp(this.clL + (live && u >= KC.leftAt ? dt / (KC.leftIn * (1 + READY_UP.slow * c[RD.up])) : -dt / KC.leftOut), 0, 1);   /* (READY_UP: the longer way up takes that much longer — 1 unless fed) */ lg = this.clL * this.clL * (3 - 2 * this.clL); }
     m[nd.shoulderL] = wUp * lg; m[nd.upperArmL] = wUp * lg; m[nd.forearmL] = wFore * lg; setSub(nd.handL, wHand * lg);
     this.reachShown = smoothstep(0.16, 1, u);
     if (u > 0) { m[nd.shoulderR] = m[nd.upperArmR] = smoothstep(0, 0.75, u); m[nd.forearmR] = smoothstep(0.08, 0.88, u); setSub(nd.handR, this.reachShown); }
@@ -4783,7 +4786,7 @@ export class CharacterAnimator {
     const gv = clamp(this.hdGv.x, 0, 1);
     const ug = ph === 'grab' ? clamp(t / K.secs.grab, 0, 1) : 1;                              // the reach, 0 → 1
     const ck = ph === 'choke' && !gunV ? smoothstep(0, K.secs.choke * 0.75, t) : 0;           // the elbow closing
-    const kn = clamp(this.hdKn.step(ph === 'choke' ? 1 : 0, ph === 'choke' ? 6 / N.offSecs : 3 / N.offSecs, dt), 0, 1);   // the blade coming off him for the choke (and back, slower, off an aborted one) — never on in a gun hold, which has no choke
+    const kn = this.noKnife ? 1 : clamp(this.hdKn.step(ph === 'choke' ? 1 : 0, ph === 'choke' ? 6 / N.offSecs : 3 / N.offSecs, dt), 0, 1);   // the blade coming off him for the choke (and back, slower, off an aborted one) — never on in a gun hold, which has no choke
     const fight = kn * (ph === 'choke' ? 1 - smoothstep(F.fadeFrom, F.fadeTo, t / K.secs.choke) : 1);                  // what Sam braces against: the man's fight (heldLayer's envelope, near enough), spent as he goes — carried on kn so easing off lets it down gently
     const wnd = ph === 'whip' ? smoothstep(0, WHIP_WIND, t) : 0;                                                     // the whip: cocked back (and it stays cocked under the strike's blend: wind → hit is one straight whip of the hand)…
     const stk = ph === 'whip' ? (t < WHIP_STRIKE ? 0 : hermite(t, WHIP_STRIKE, 0, 0, K.secs.whip, 1, 7)) : 0;      // …brought down, ARRIVING fast (≈ 2 m/s at the bone)…

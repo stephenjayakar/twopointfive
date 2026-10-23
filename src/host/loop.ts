@@ -187,7 +187,8 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
       const want = spect && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH; if (!ds || ds.handedOver) cam.pitch += (want - cam.pitch) * Math.min(1, cdt * 3);   // and drop to a low three-quarter angle up close (from the usual height the ceiling panels sit between the eye and a man six metres off) — a showcase's shots key the pitch themselves (until it hands over: then the follow camera is the player's again)
       const aim = shot || game.spectate >= 0 || (game.orders.plan.up && game.orders.plan.look) ? null : game.aimPoint;   // (plan mode, planmode.ts: the view is the hand's — it leans toward nothing)
-      if (tick) cam.step(cdt, shot ?? follow, aim); else cam.update(cdt, shot ?? follow, aim);
+      const hs = cam.hostShift, at: Vec3 = shot ?? (hs ? [follow[0] + hs[0], follow[1], follow[2] + hs[2]] : follow);   // (hostShift: a page with a panel over one side of the view — host/sneaklab.ts)
+      if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
     };
     if (!fixed) {

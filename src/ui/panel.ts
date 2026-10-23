@@ -209,6 +209,8 @@ export class Panel {
     this.applyFilter(); this.refresh();
     const y = this.state.scroll?.[sys.name] ?? 0; this.body.scrollTop = this.searching ? 0 : y;
   }
+  /** open the panel on the system of this name (a page that is about one system — the sneak lab — opens on it) */
+  show(name: string) { const s = this.systems.find(x => x.name === name); if (!s) return; if (!this.visible) this.toggle(); this.go(s, false); }
   /** the rail's neighbour in direction ±1 (wrapping) */
   private step(dir: number) { if (!this.systems.length) return; const i = Math.max(0, this.systems.indexOf(this.activeSys!)); this.go(this.systems[(i + dir + this.systems.length) % this.systems.length]); }
   /** 'System ▸ Section' of a section body handed out by section() (the inventory probe and the search results word rows by it) */

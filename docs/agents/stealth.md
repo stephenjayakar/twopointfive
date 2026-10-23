@@ -877,6 +877,60 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   harness. One staging, no seeds, and no line stages a low man (the neck bar is read from the code alone). Pictures: `close-stills.ts --scene stops-crouch` with and without `--set '{"CLOSE":{"handsLow":false}}'`. WHAT IT COSTS:
   crouched, nothing on Sam's body now says "the grab is on" before he presses; the row says it. NOT MENDED: the grab still takes him from the crouch to
   upright against the man's back in about 0.12 s. Seen only as CPU mesh stills; never in the page, never on a GPU.
+- **The stalk: the last three metres to a man's back are one held click (`STALK`, `src/game/stalk.ts`).** The maintainer's design, 10-23: "when you're close
+  enough to an enemy (like entering the closer than ever state) you can click and hold on an enemy and sam will creep toward him · click, let go to stop, and
+  click again to continue · the game also controls the trajectory and speed and makes things smooth. it ends with you grabbing him · you get kicked out of the
+  mode if he gets too far away, turns around, goes through a door in a way that doesn't make sense", and then "we should get rid of E to grab then. lmb is the
+  only way". Hands empty, a living man who is not onto him, inside `CLOSE.modeM` (3.0 m) with nothing solid between, Sam at least 104.5° round from the
+  man's nose (`beginCos`): the LEFT button pressed on him (the reticle's man, or the cursor within `cursorM` 1.1 m of his feet) takes him. While it stays down
+  `updatePlayer` walks Sam: crouched, toward the point `stationM` (0.55 m) behind the man's back, at the man's own speed plus a closing speed
+  (`closeMin` 0.3 m/s at the grab, `closeK` 0.6 more a metre out, never over `pace` 1.6), his speed eased in at `easeUp` 4 /s and out at `easeDown` 9 /s,
+  facing the man. Inside `grabM` (0.95 m) with the grab on offer (`closeAt`), `game.ts` calls `startGrab` on that frame. It ENDS, with nothing stalked until
+  a fresh press: the button up · past `CLOSE.modeOutM` (3.6 m) · a wall or a leaf between them · he has turned until Sam is less than 93° round (`outCos`)
+  · he is dead, held, out of the picture or onto Sam · Sam's hands are busy or no longer empty · a move key of the player's own. The click that begins or
+  carries a stalk is no blow (`stalkHas`). `STALK.only` (on with the stalk; `?stalkonly=0` puts the row back): a staff man has NO 'grab him' row in
+  `closeRows` — his line says `LMB  hold to grab him`, or `E  holster, then hold LMB to grab him` with a gun out, so the pistol's hold is reached from the arm
+  hold's own draw row. A civilian keeps her row, and so does everybody under a show (`closeLive` is false there) and with `CLOSE.on` off. THE RAILS: where a
+  mission's rows offer 'grab' and his hands are empty the left button is let through (`rails.ts gate`), and `lesson.ts lessonLine` turns 'press [Space] …
+  to grab him' into 'hold left click on him … to grab him' (the level files are untouched). `tools/qa/lesson-run.ts`'s `verb('guard', 'grab')` holds the
+  left button on the nearest man when there is no such row. Switch: ON in the page (`?stalk=0` off; Tab ▸ Closer than ever ▸ 'the stalk ▸ …'), OFF in
+  the module and on the frozen stand (`FROZEN_HOLDS` 'STALK.on': `TPS_STALK=1`; `TPS_STALK=0` holds it off on the shipped stand), in the journal's tables
+  (`JOURNAL_KNOBS`), and a recording from before the table replays with it off. Its state is a `SideMap` per game, reset with the guards and on a load;
+  `STALK_STATS` is a tally (rollback-exempt). CHECK: `bun run tools/qa/stalk-check.ts` (probe `stalk`, family stealth), both stands; `STALK_BREAK=1` must
+  fail grab, still, steer and let. Measured there, three seeds: 2.6 m behind a man walking away at 1.15 m/s he is in the arm in 4.22 s, top speed 1.60 m/s,
+  the largest change of speed in a frame 0.15 m/s; behind a man who stands, 2.48 s; begun 60° off dead astern it ends 42.6° off. Older probes that read the
+  grab's row or its key run with the stalk held off (`probes.ts` `GRAB_ROW_AS_IT_WAS`). WHAT IT COSTS: no grab with a gun out in one press; an alert man
+  cannot be stalked (nor grabbed before it); the creep makes the crouch's own footfalls and moves under their eyes as any crouched Sam does. NOT DONE: the
+  pose does not yet change over the creep (the arm comes up at the grab, as before); nothing at a corner. Driven in the real page on the software adapter
+  (`tools/qa/stalk-page.cjs`); never played by a person, never seen on a GPU.
+- **No knife (`CLOSE.noKnife`, `src/game/close.ts`).** The maintainer, 10-23: "remove the knife, only rmb for non lethal CQC when nothing equipped … then we
+  also remove the knife from interrogation. you can still select nothing equipped or the pistol, but there's only rmb to choke out". With the key up and the
+  close-in mode on (never under a show: `closeBare`): empty hands, the LEFT click is no blow (behind a man it is the stalk's) and the RIGHT click is the
+  knockout from any side, whatever `CLOSE.lethal` says; with a man in the arm (`CLOSE.heldClicks`) the left click does nothing and the right click chokes;
+  nothing draws or names a blade — no sheath on his chest (`combat.ts handProps`), no knife in the fist of an arm hold, the animator's `noKnife` (no hand to
+  a hilt in the tell or the close-in carriage, the reaching arm waits on nothing, the hold's right hand clamped on the man's shoulder from the first: the
+  choke's own station), no row or status line with the word, none of Sam's 'knife' lines (`dialogue.ts`), and the three lesson lines that teach it say the
+  knockout (`lesson.ts lessonLine`; the level files are untouched). Switch: ON in the page (`?noknife=0` off; Tab ▸ Closer than ever ▸ 'no knife ▸ …'), OFF
+  in the module and on the frozen stand (`FROZEN_HOLDS` 'CLOSE.noKnife': `TPS_NOKNIFE=1`), in the journal's `CLOSE` table, and a recording from before the
+  key replays with it off. CHECK: `bun run tools/qa/noknife-check.ts` (probe `noknife`, families stealth / takedown), both stands; `NOKNIFE_BREAK=1` must
+  fail blow, hold, draw and words. One staging each, no seeds. Older probes that read the knife run with the key held off (`probes.ts`
+  `KNIFE_AS_IT_WAS`). WHAT IT COSTS: no silent kill with empty hands at all (a body always wakes or is found breathing); `lesson.ts`'s `downed: knife`
+  test can no longer come true (no shipped step asks it). NOT MENDED, other owners': a grabbed civilian's 'he had a KNIFE at me' line (`dialogue.ts`), the
+  knife as an item of kit (`character.ts KitItem`, `kitanim.ts`: never asked for with the key up), the debrief's 'the knife' wording for old runs. The
+  bare-handed tell and hold are seen only as CPU mesh stills; never in the page by a person, never on a GPU.
+- **The sneak lab (`/sneaklab` on the dev server = `?levelFile=sneak-lab.json&solo&sneaklab`; `src/host/sneaklab.ts`, `tools/levels/sneak-lab.ts`).** The
+  maintainer, 10-23: "can you make a debug level / workbench where we can play with this and tweak it? … make it workbench like where we can tweak things
+  live". The level is the kit yard's floor, lit, with six men each walking one case (a man who stands · a long straight beat · a loop round a block · through
+  the bunkhouse's two doors · down an alley and round a corner · inside the store). The word `sneaklab` gives the panel its own system, open from the first
+  frame: every number of `STALK` and the few of `CLOSE` / `TWOGEARS` it leans on as live sliders (the two arcs in degrees), the build's numbers back by the
+  section's reset, 'copy them' (one line of JSON on the clipboard and in the panel), 'put everyone back' (`game.restart()`), 'sit one down', 'they can't
+  notice you' (`playerInvisible`) and 'nothing hurts you' (god mode), both on to begin with and written every page step, a line that says what the stalk is
+  doing and why the last one ended (`STALK_STATS.last`), and the stalk's geometry on the floor (`src/ui/stalkviz.ts`, `STALKVIZ.on`: the two range rings, the
+  arc's edges, the station point, the grab's ring, Sam's line). Not a row of the start card, no mission of its own (the plain night on that floor). CHECK:
+  `bun run tools/qa/sneaklab-check.ts` (probe `sneaklab`; the file is its generator's, six men of whom five walk and all stay calm over 40 s, the held click
+  takes the man who stands in 2.52 s with the real guards running, every number of `STALK` has its row); `SNEAKLAB_BREAK=1` must fail men and creep. The
+  page: `tools/qa/stalk-page.cjs`. `map-check.ts sneak-lab` says FAIL for the missing room clear, as it does of `quiet-yard`. Never played by a person; its
+  two floods are bare lights and its light has never been seen on a GPU.
 - **The close-in poses as pictures with no Blender: `tools/qa/close-stills.ts` + `tools/qa/pose-mesh-raster.py`.** `close-stills.ts [--scene approach-crouch |
   approach-stand | stops-crouch | stops-stand | hold] [--out dir] [--set '{"CLOSE":{"reachUp":false}}']` stages the real game headless (the page's stand unless
   `TPS_PROFILE` says otherwise), runs the game's own entry points, and at each moment skins BOTH men's worn meshes on the CPU into one PLY in the taken man's

@@ -125,7 +125,7 @@ function handsOff(an: Character['anim']): boolean { return an.bigTool && bigWeig
 export function kitInHand(g: Game): KitItem | null {
   const pl = g.player, an = pl.char.anim;
   if (pl.down) return null;
-  if (pl.holding) return pl.holding.variant === 'arm' && !an.holdGunSide ? 'knife' : pl.pistolUp ? 'pistol' : null;
+  if (pl.holding) return pl.holding.variant === 'arm' && !an.holdGunSide && !an.noKnife ? 'knife' : pl.pistolUp ? 'pistol' : null;
   if (handsOff(an)) return null;
   if (samBigCarry(g)) return null;   // (bigkit.ts BIGSLOT.weight: the big slot's tool is asked for — his gun goes to its place by hand before the hand goes for the tool)
   if (pl.pistolUp) return 'pistol';

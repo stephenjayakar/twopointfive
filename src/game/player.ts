@@ -65,6 +65,7 @@ import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
 import { rescueEndRows } from './rescueend';
 import { snatchOutRows } from './snatchout';
+import { STALK, stalkStep } from './stalk';
 import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat } from './close';
 import { feedDeal, feedPlan, feedPlay, shellPlan } from './gunreload';
 import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
@@ -464,6 +465,10 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (input.down('KeyD')) { mx += right[0]; mz += right[2]; }
     if (input.down('KeyA')) { mx -= right[0]; mz -= right[2]; }
   }
+  // the stalk (stalk.ts): the left button held on a man he is close behind walks him in to the grab — the direction, the pace and the facing are the game's; a
+  // move key of his own ends it
+  const stalk = STALK.on ? stalkStep(g, input.lmb(), input.lmbHit(), mx !== 0 || mz !== 0) : null;
+  if (stalk) { mx = stalk.mx; mz = stalk.mz; pl.crouch = true; }
   if (g.puppet) {   // scripted movement: straight at the goal (the tour picks goals with a clear line), stop within 10 cm
     mx = 0; mz = 0; const gl = g.puppet.goal;
     if (gl) { const dx = gl[0] - c.pos[0], dz = gl[2] - c.pos[2]; const dl = Math.hypot(dx, dz); if (dl > 0.1) { mx = dx / dl; mz = dz / dl; } }
@@ -481,7 +486,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (rooted) { /* folded: no reaching for a wall, no pushing off one */ }
   else if (input.hit('KeyQ')) { if (pl.wall) wallStepOff(g, mx, mz, ml, 'q'); else if (!wantSprint) { const why = { blocked: false }; if (!wallSnap(g, cam, why) && !wallSnapLater(g, ml, why)) g.msg(pl.dragging ? 'hands full' : why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); } }   // (at a run there is no taking hold: Shift is one of the ways off it; blocked: a face in reach but furniture standing against it where he would go)
   else if (WALLSNAP.on) wallSnapPending(g, dt, cam, wantSprint);   // (Q a moment before the face came into reach: taken as it does)
-  if (WALLSNAP.on && WALLSNAP.press && !rooted && !g.rails?.locksWall()) wallPress(g, dt, input, cam, mx, mz, ml, wantSprint);   // (…and with no Q at all: a move key held into the wall he is up against)
+  if (WALLSNAP.on && WALLSNAP.press && !rooted && !stalk && !g.rails?.locksWall()) wallPress(g, dt, input, cam, mx, mz, ml, wantSprint);   // (…and with no Q at all: a move key held into the wall he is up against)
   if (pl.wall && wantSprint) wallStepOff(g, mx, mz, ml, 'run');
   const onWall = !!pl.wall && moveOnWall(g, dt, cam, mx, mz, ml);   // false: free (or let go this very frame — then he walks on from where he stands, below)
   if (!onWall) {
@@ -494,8 +499,9 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     let maxSpeed = ml === 0 ? 0 : pl.sprinting ? T.playerSprint : pl.dragging ? (pl.haul ? haulSpeed(g) : T.playerCrouch * 0.6) : (pl.crouch ? crouchPace(g) : T.playerWalk) * pl.pace;   // hauling 80 kg along the floor is slow; the wheel-set pace scales the walk and the crouch-walk alike (the rifle in the shoulder costs no pace: the aim model's moving / settle terms are what the move costs him)
     if (g.puppet?.walk !== undefined && ml > 0) maxSpeed *= g.puppet.walk;
     maxSpeed = samLoadPace(g, maxSpeed, pl.sprinting);   // (kitload.ts: what his card weighs — a light one's legs are quicker, a heavy one's slower, a sprint by part of it; as asked with its switch off or no card on him)
+    if (stalk) maxSpeed = ml === 0 ? 0 : stalk.pace;   // (stalk.ts: the man's own speed and a closing speed that eases off as he nears — the game's, whatever his card weighs)
     if (pl.sprinting) maxSpeed *= sprintDoorPace(g, pl);   // (sprintdoor.ts: his hand is ripping a door round toward him — the run waits for it; 1 otherwise)
-    pl.speedSm = damp(pl.speedSm, maxSpeed, maxSpeed > pl.speedSm ? 6 : 12, dt);
+    pl.speedSm = damp(pl.speedSm, maxSpeed, stalk ? (maxSpeed > pl.speedSm ? STALK.easeUp : STALK.easeDown) : maxSpeed > pl.speedSm ? 6 : 12, dt);   // (stalk.ts: the creep takes up its speed more gently than a walk)
     if (ml > 0) { c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; } else { c.vel = v3.scale(c.vel, Math.exp(-14 * dt)); }
     c.pos = v3.mad(c.pos, c.vel, dt);
     const headroom = pl.crouch ? 1.0 : 1.7;
@@ -504,7 +510,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   }
   const speed = Math.hypot(c.vel[0], c.vel[2]);
   // aim
-  const ap = g.aimPoint; const toAim: Vec3 = [ap[0] - c.pos[0], 0, ap[2] - c.pos[2]];
+  const ap = stalk ? stalk.at : g.aimPoint; const toAim: Vec3 = [ap[0] - c.pos[0], 0, ap[2] - c.pos[2]];   // (stalking, he faces the man: the cursor is free once the button is down)
   const aimDist = Math.hypot(toAim[0], toAim[2]);
   pl.aimHeld = false;   // (RMB is the OCP now; the gun comes up on firing, with the rail light, or from the ready carry — see `aiming`)
   const recentlyFired = g.time - pl.lastFireT < 1.6;
@@ -1543,7 +1549,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     // ---- the two buttons with him in the arm (close.ts CLOSE.heldClicks; the knife's hold only, never a civilian, never under a show, not while the hand is between
     //      tools or a choke is already chosen): the LEFT click is the knife — committed from this frame — the RIGHT click the choke, chosen as its row chooses it
     //      (a click an order menu was up for is gone from the frame before this: Game.step runs orders.input first, and it takes the right click's bit out always and the left click's with a man in the arm — the click that shuts the menu is never the knife)
-    const clk = CLOSE.heldClicks && H.phase === 'held' && !gun && !swapping && H.windT < 0 && !gd.civ && !g.touring ? (input.lmbHit() ? (input.rmbHit() ? null : 'kill') : input.rmbHit() ? 'choke' : null) : null;   // (both buttons in one frame choose nothing: the knife cannot be taken back)
+    const clk = CLOSE.heldClicks && H.phase === 'held' && !gun && !swapping && H.windT < 0 && !gd.civ && !g.touring ? (input.lmbHit() && !CLOSE.noKnife ? (input.rmbHit() ? null : 'kill') : input.rmbHit() ? 'choke' : null) : null;   // (both buttons in one frame choose nothing: the knife cannot be taken back)
     if (clk === 'kill') startKill(g);
     if (H.phase === 'held') {
       if (act === 'comply' && gd.civ && !swapping) { if (civilianComply(g)) { holdTail(g, dt, 0); return; } }   // 'stay down, stay quiet': a civilian let go into a crouch where she stands, told (civilians.ts) — the one way out of the arm on your feet by his choice, and hers alone
@@ -2183,7 +2189,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     const cv = gd.civ;   // a CIVILIAN in the arm (civilians.ts): her rows — what she knows / 'stay down, stay quiet' (lets her go) / the choke; the whip with the pistol out; every civilian on the floor by his hand costs him
     const base: Interactable = { kind: 'held', pos: [head[0], head[1] + 0.3, head[2]], line1: cv ? `${gd.callsign} · the ${cv.label} · ${gun ? `your pistol at ${WORDS.on && cv.she === 'he' ? 'his' : cv.her} head` : 'in your arm'}` : `${gd.callsign} · ${gun ? 'your pistol at his head' : 'in your arm'}`, line2: '', inReach: true, off: false, guard: gd };
     if (H.phase === 'grab') rows.push(status(base, cv ? `getting hold of ${cv.her}…` : 'getting hold of him…'));
-    else if (H.phase === 'held' && H.swapT < K.swap) rows.push(status(base, gun ? 'the pistol coming up to his head…' : 'holstering it — the knife back at his throat…'));   // E's hand-over: nothing starts while the hand is between tools
+    else if (H.phase === 'held' && H.swapT < K.swap) rows.push(status(base, gun ? 'the pistol coming up to his head…' : CLOSE.noKnife ? 'holstering it — both hands on him again…' : 'holstering it — the knife back at his throat…'));   // E's hand-over: nothing starts while the hand is between tools
     else if (H.phase === 'choke' || (H.windT >= 0 && !gun)) rows.push(running(base, 'choke', 'choking him out… — Space or a step and he breathes again', H.phase === 'choke' ? H.t / K.choke : 0));
     else if (holdKilling(H)) rows.push(status(base, 'the knife…'));   // (close.ts CLOSE.heldClicks, the left click: committed — a status line, nothing stops it)
     else if (H.phase === 'whip' || (H.windT >= 0 && gun)) rows.push(running(base, 'whip', 'pistol-whip… — Space or a step checks it', H.phase === 'whip' ? H.t / K.whip : 0));
@@ -2200,7 +2206,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       const q = promptFor(g, gd), tk = heldTalk(g, H); const verb = q.spent ? "he's said his piece — ask anyway" : `“${q.text}”`;
       const ask = tk.asking ? "you're asking — he answers in a beat" : tk.samUp ? `${verb} — once you're done talking` : !tk.ready ? "he's answering — tap to cut it short" : `${verb}${tk.settled ? '' : ' — cuts in'}`;   // (samUp without asking: a remark of Sam's is in the air — his word on the key he has just pocketed — and he is never cut)
       rows.push(row(base, 'question', ask));
-      rows.push(row(base, 'choke', 'choke him out — quiet', `${CLOSE.heldClicks && !g.touring ? 'LMB  knife — lethal  ·  RMB  choke him out  ·  ' : ''}${HANDSLOT.on ? '1' : 'E'}  draw — gun to his head`));   // (the two buttons in the arm, close.ts CLOSE.heldClicks: the marks worded as the standing blow's are)
+      rows.push(row(base, 'choke', 'choke him out — quiet', `${CLOSE.heldClicks && !g.touring ? `${CLOSE.noKnife ? '' : 'LMB  knife — lethal  ·  '}RMB  choke him out  ·  ` : ''}${HANDSLOT.on ? '1' : 'E'}  draw — gun to his head`));   // (the two buttons in the arm, close.ts CLOSE.heldClicks: the marks worded as the standing blow's are)
     }
     list.push({ ...base, line2: rows.map(r => r.line2).join('  ·  '), progress: rows[0]?.progress });   // the marker (the ring sits on it; its text = the rows')
     for (const d of g.doors.list) {

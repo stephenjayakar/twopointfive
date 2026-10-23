@@ -63,6 +63,7 @@ import { GUNHOLD } from '../game/gunhold';
 import { HOLD, THROW_BY, HARDBREATH } from '../game/character';
 import { CLOSE } from '../game/close';
 import { FOOTFALL, TWOGEARS } from '../game/player';
+import { STALK } from '../game/stalk';
 import { PLAN } from '../game/floorplan';
 import { KITANIM } from '../game/kitanim';
 import { HANDS } from '../game/hands';
@@ -365,7 +366,10 @@ export function pageSwitches(q: URLSearchParams): void {
   CLOSE.on = !q.has('noclose');   // closer than ever (game/close.ts): the windows round a man drawn on the floor, the ready pose, the ways in from his sides, his front and over a chair — ON in the page; ?noclose = one way in, from behind, in words, as it was
   CLOSE.heldClicks = !q.has('noheldclicks');   // with a man in his arm the two buttons (game/close.ts, player.ts updateHold): left click the knife — he is dead — right click the choke; the arm hold only — ON in the page; ?noheldclicks = neither click does anything there, as it was
   CLOSE.handsLow = q.get('handslow') !== '0';   // crouched in reach behind a standing man his hands stay low until the move: the tell is the hand on the knife, not an open hand held up over his own head (game/close.ts closeReady). ON in the page; ?handslow=0 = the grab's tell reaches from the crouch, as it was
+  CLOSE.noKnife = q.get('noknife') !== '0';   // no knife: empty hands knock a man out on the right click and the left click is no blow; nothing draws or names a blade (game/close.ts). ON in the page; ?noknife=0 = the two buttons as they were
   CLOSE.reachUp = !q.has('noreachup');   // crouched behind a standing man the grab's reach goes UP for his neck and the trunk comes up with it (game/close.ts, character.ts READY_UP): ON in the page; ?noreachup = the hand at the small of his back, as it was
+  STALK.only = q.get('stalkonly') !== '0';   // …and it is the only way to a staff man: his 'grab him' row is gone (?stalkonly=0 puts the row back beside the stalk)
+  STALK.on = q.get('stalk') !== '0';   // the stalk (game/stalk.ts): the left button held on a man he is close behind walks Sam in to the grab. ON in the page; ?stalk=0 = the last metres are his own keys, as they were
   TWOGEARS.on = q.get('twogears') !== '0';   // two gears, not a dial (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch-walk is the sneak, at its own quicker pace. ON in the page; ?twogears=0 = the wheel's six notches and the tune's crouch-walk, as it was
   FOOTFALL.once = q.get('footfallonce') !== '0';   // one footfall a step (game/player.ts FOOTFALL): a footfall is filed only once the walk cycle has come a quarter of a turn since the last one filed, so a cycle rocking over one edge (backpedal flipping frame by frame: forwards and backwards keys by turns, or a man walked in the arm) is one footfall and not one a frame. ON in the page; ?footfallonce=0 = every crossing files one, as it always did
   FOOTFALL.owed = q.get('footfallowed') !== '0';   // …and under it, a footfall the legs owe (FOOTFALL.owed): a cycle turned about again and again (the cursor shaken across him) rocks between its edges or crosses one with too little travel to count, and with the first key alone that walk files a third to two thirds of a plain walk's footfalls; on = a step's worth of the cycle walked since the last edge passed files one. ON in the page; ?footfallowed=0 = only an edge files a footfall
@@ -554,9 +558,11 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CLOSE.heldClicks': 'TPS_HELDCLICKS=1',
   'CLOSE.reachUp': 'TPS_REACHUP=1',
   'CLOSE.handsLow': 'TPS_HANDSLOW=1',
+  'CLOSE.noKnife': 'TPS_NOKNIFE=1',
   'FOOTFALL.once': 'TPS_FOOTFALL=1',
   'FOOTFALL.owed': 'TPS_FOOTOWED=1 (acts only under FOOTFALL.once: with TPS_FOOTFALL=1)',
   'TWOGEARS.on': 'TPS_TWOGEARS=1',
+  'STALK.on': 'TPS_STALK=1',
   'GUARD_EYE.far': 'TPS_FARSIGHT=1',
   'GUARD_EYE.farCalm': 'TPS_FARCALM=1',
   'KITANIM.on': 'TPS_KITANIM=1',

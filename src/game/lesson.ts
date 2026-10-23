@@ -30,13 +30,21 @@ import { hostileTo } from './teams';
 import { WORLD } from '../scene/world';
 import { HANDRING } from './handring';
 import { CMDRING } from './cmdring';
+import { STALK } from './stalk';
+import { CLOSE } from './close';
 /** a step's line that names the whistle's old key, and what it says while the whistle is the ring's last wedge (handring.ts): the page's words turn
  *  'Space' into the key the interaction is on */
 const WHISTLE_LINE = /\bV whistles\b/g;
 /** …and one that names the held list's wheel (the second row of a locked door is its second wedge) */
 const WHEEL_LINE = /\bHold Space, wheel to kick, let go\b/g, WHEEL_RING = 'Hold Space, then 2 kicks it';
+/** …and one that names the grab's key, while the held click is the only way to a man (stalk.ts `only`): 'press [Space] behind him to grab him' is the hold */
+const GRAB_BEHIND = /\b([Pp])ress \[?Space\]? behind (him|the near guard) to grab him\b/g, GRAB_KEY = /\b([Pp])ress \[?Space\]? to grab him\b/g;
+const stalkLine = (line: string): string => line.replace(GRAB_BEHIND, (_m, p: string, who: string) => `${p === 'P' ? 'H' : 'h'}old left click on ${who} from behind to grab him`).replace(GRAB_KEY, (_m, p: string) => `${p === 'P' ? 'H' : 'h'}old left click on him to grab him`);
+/** …and one that names the knife, while there is none (close.ts CLOSE.noKnife): the right click's knockout is the blow */
+const KNIFE_OR = /\bRight click to knock him out, or left click to use the knife\b/g, KNIFE_HIM = /\bleft click to knife him\b/g, KNIFE_KILL = /\bleft-click to kill him with the knife\b/g;
+const bareLine = (line: string): string => line.replace(KNIFE_OR, 'Right click to knock him out').replace(KNIFE_HIM, 'right click to knock him out').replace(KNIFE_KILL, 'right-click to knock him out');
 /** a step's line as the HUD's row says it now */
-export const lessonLine = (line: string): string => HANDRING.on ? line.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : line;
+export const lessonLine = (line: string): string => { const s0 = STALK.on && STALK.only ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
 import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)

@@ -44,6 +44,7 @@ import type { Firearm } from '../game/weapons';
 import { WindViz } from './windviz';
 import { SquadThrowViz } from './squadthrowviz';
 import { AttentionViz } from './attentionviz';
+import { StalkViz } from './stalkviz';
 import { PictureViz } from './pictureviz';
 import { menuTheme } from './theme';
 import { textZoom } from './textsize';
@@ -99,6 +100,7 @@ export class Overlay implements HudLike {
   private squadThrow!: SquadThrowViz;
   private attention!: AttentionViz;
   private picture!: PictureViz;
+  private stalk!: StalkViz;
   /** closer than ever (game/close.ts closeMarks): the windows round a man near Sam, each a floor polygon with its words — pooled path + text pairs in the throw arc's svg */
   private closeG!: SVGGElement; private closeEls: { path: SVGPathElement; text: SVGTextElement }[] = []; private closeShown = 0;
   private equipKey = '';
@@ -185,6 +187,7 @@ export class Overlay implements HudLike {
     this.squadThrow = new SquadThrowViz(this.traj, this.trajPath);   // (a squad throw's ring, walk and arc: over the floor's marks, under his own throw arc)
     this.attention = new AttentionViz(this.traj, this.traj.firstChild as Element | null);   // (where a guard's attention is — game/attention.ts: a thread and a ring on the floor, under everything else drawn there)
     this.picture = new PictureViz(this.traj, this.traj.firstChild as Element | null);   // (one man's picture of the fight — game/picture.ts: a debug view, nothing unless PICTURE.show asks)
+    this.stalk = new StalkViz(this.traj, this.traj.firstChild as Element | null);   // (the stalk's geometry — game/stalk.ts: a tuning view, nothing unless STALKVIZ.on asks)
     this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none';
   }
   /** The close-in windows on the floor (game/close.ts): every window of every man near Sam as its outline projected through the camera — the one he stands in
@@ -431,6 +434,7 @@ export class Overlay implements HudLike {
     this.squadThrow.update(game, cam, w, h, EDGE);
     this.attention.update(game, cam, w, h, EDGE);
     this.picture.update(game, cam, w, h, EDGE);
+    this.stalk.update(game, cam, w, h, EDGE);
     // throw preview
     const pv = game.player.throwPreview;
     if (pv && pv.points.length > 1) {

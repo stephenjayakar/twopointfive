@@ -39,6 +39,7 @@ import { CMDRING } from './cmdring';   // (read inside gate() only: src/game is 
 import { stepLine, lessonLine } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 import { slotSetupLeft, setupRows } from './slotsetup';   // (asked inside gate() only)
 import { HANDRING } from './handring';
+import { STALK } from './stalk';   // (read inside gate() only)
 import { choosable, runningVerb } from './interact';   // (both read inside gate() only)
 import { INTERACT_KEY } from './consts';
 
@@ -252,6 +253,7 @@ export class Rails {
     const shift = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
     const enter = input.keys.has('Enter') || input.pressed.has('Enter') || input.keys.has('NumpadEnter') || input.pressed.has('NumpadEnter');   // (Shift+Enter stages the mission again: Shift rides with it)
     const handUp = A.has('use') && !!g.player.sel?.open;   // (the player's own ring or list, up: its digits and its clicks are its own)
+    if (STALK.on && g.player.holstered && this.offers('grab')) buttons |= 1;   // (stalk.ts: the held click is how a man is grabbed — where the mission teaches the grab and his hands are empty, the left button is that and nothing else)
     if (menuUp || handUp) buttons |= 1; if (handUp) buttons |= 4;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
     // PLAN MODE IS ITS OWN ACTION (`plan`; planmode.ts): the command key with Shift opens it whether or not the key's own order has been taught, and while it
     // is up its hands are its own — Shift (a stop added, a man added), the walk keys (they move the view: he is on a knee) and both buttons (the left
