@@ -4,6 +4,7 @@
 //
 //   bun run tools/qa/fire-check.ts [--verbose]      exit 0 = all pass, 1 = a FAIL line
 //   FIRE_BREAK=1 …   = the switch never raised and the same lines asked: must fail
+//   FIREBOOK_BREAK=1 … = the host's put-back run with its line for the fire's book undone: the second load line must fail
 //   bun run tools/qa/probes.ts fire
 //   Run it on BOTH stands (TPS_PROFILE=shipped in front for the page's): it puts the switch where each line needs it by the stand's own word, TPS_FIRE.
 //
@@ -36,7 +37,7 @@ const DT = 1 / 60;
 export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-  const { FIRE, fireStats, fireShown, fireFlicker, fireSeed, isFire, updateFire } = await import(`${ROOT}/src/game/fire.ts`);
+  const { FIRE, fireStats, fireShown, fireFlicker, fireSeed, isFire } = await import(`${ROOT}/src/game/fire.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const J = await import(`${ROOT}/src/game/journal.ts`);
   const BREAK = process.env.FIRE_BREAK === '1';
@@ -109,10 +110,16 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         { const log = A.W.audioLog as any[], asked = (from: number) => log.slice(from).filter(c => c.name === 'fireBed').length, held = () => log.filter(c => c.name === 'fireBed' && !!c.opts?.follow?.()).length;
           const hLoad = held(); let n = log.length; A.step(1); const b1 = asked(n), h1 = held();   // (the checkpoint just put back above painted the fire with dt 0)
           n = log.length; A.step(3); const idle = asked(n);
-          n = log.length; A.g.engine.fireShown = undefined; const hDrop = held(); A.step(1); const b2 = asked(n), h2 = held();   // (host/putback.ts's own line)
+          // (the host's REAL put-back, host/putback.ts, as the page's `saves.onPutBack` calls it. The harness's engine has no GPU books to forget: the calls it lacks are
+          //  stood in as no-ops for this one call, and FIREBOOK_BREAK=1 runs it with the fire's line undone, which must fail this line)
+          const { hostAfterPutBack } = await import(`${ROOT}/src/host/putback.ts`);
+          const lacking: string[] = [], E: any = A.g.engine, G: any = A.g, noop = () => { };
+          for (const [o, k] of [[E.world, 'forgetSent'], [E.lights, 'forgetSent'], [G.chars, 'forgetSent'], [G.decals, 'touch'], [G, 'rehand'], [E, 'resetTaa'], [E, 'invalidateWorldCache']] as [any, string][]) if (o && typeof o[k] !== 'function') { o[k] = noop; lacking.push(k); }
+          n = log.length; const book = E.fireShown; hostAfterPutBack(A.g); if (process.env.FIREBOOK_BREAK === '1') E.fireShown = book;
+          const hDrop = held(); A.step(1); const b2 = asked(n), h2 = held();
           verdict(A.sw && hLoad === 0 && b1 === 1 && h1 === 1 && idle === 0 && hDrop === 0 && b2 === 1 && h2 === 1,
             'load — … and the host\'s book of the bed is dropped with it: the voice of the abandoned moment lets go and one bed is asked for on the next frame (a checkpoint\'s or a restart\'s own paint; a save in memory put back by the host)',
-            `the checkpoint put back: ${hLoad} held, ${b1} asked for on the next frame (${h1} held), ${idle} more in the three frames after · the host's put-back line: ${hDrop} held the moment the book is dropped, ${b2} asked for on the next frame (${h2} held)`); }
+            `the checkpoint put back: ${hLoad} held, ${b1} asked for on the next frame (${h1} held), ${idle} more in the three frames after · the host's own put-back (host/putback.ts hostAfterPutBack${lacking.length ? `; ${lacking.length} GPU books the harness lacks stood in` : ''}): ${hDrop} held the moment after, ${b2} asked for on the next frame (${h2} held)`); }
       }
     }
     // ---- smoke through a solver
