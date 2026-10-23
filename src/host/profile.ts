@@ -99,6 +99,7 @@ import { RUNNER } from '../game/runner';
 import { STARTLE } from '../game/startle';
 import { ROWSET } from '../game/rowset';
 import { SMOKEBREAK } from '../game/smokebreak';
+import { SHOWWHY } from '../game/showwhy';
 import { FLINCH } from '../game/flinch';
 import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
@@ -277,7 +278,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
-  AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0';   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
+  AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0'; AUTOCAM.sway = q.get('autosway') !== '0';   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
   OWNBLOW.on = q.get('ownblow') !== '0';   // a charge his own hands set goes off from his own actions — a row of his list, a wedge of his ring — and the squad's key no longer blows it (game/ownblow.ts); `?ownblow=0` = the squad's key blows any set charge, as it did
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
@@ -334,6 +335,7 @@ export function pageSwitches(q: URLSearchParams): void {
   moraleFromQuery(q);   // shaken (game/morale.ts): a blast makes the men near it duck, and breaks a man alone in the dark — down, back off the hole, a burst into the dust, a call nobody answers: ON in the page; ?nomorale = every man as steady as he was. With it who is green and how brittle they all are: ?training=green|mixed|trained (absent: by the squad's own key and the difficulty), ?nerve=brittle|steady — and a choice made by hand in the debugger's Enemy nerve section, kept for the visit
   VERDICT.loudCard = q.get('loudcard') !== '0';   // a mission that leans loud is not graded as a sneak (game/verdict.ts loudRow): its end card shows no rating word, no score, no badges, and the sneak's numbers stand untoned — ON in the page; ?loudcard=0 = the stealth game's rating on every card it stands on, as it was
   SMOKEBREAK.on = q.get('smokebreak') !== '0';   // a man a level's script told to have a smoke lights one (game/smokebreak.ts: his left hand to his mouth, the lit end, real smoke) — ON in the page; ?smokebreak=0 = he stands there with his hands as they were (one level's one man today: the ledger's)
+  SHOWWHY.on = q.get('showwhy') !== '0';   // a teammate shows why he is not acting (game/showwhy.ts): the player in his line gets a wave of his free hand and "you're in my line." for as long as it is true, a stack that is made and waiting passes the squeeze up the file and its lead raises a fist, a man held at a doorway the player stands in raises one and says "after you.", a man a blast hurt says so once, and the man kept on a taken room's far door says he has it — ON in the page; ?showwhy=0 = none of it, as it was (his hands and his words only: nobody's feet, gun or eyes)
   ROWSET.on = q.get('rowset') !== '0';   // a mission row's own hour and weather (game/rowset.ts): a row that names one is always started in it, over the link's — ON in the page; ?rowset=0 = the link's hour and weather as ever (no row names one: nothing to see either way)
   STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
   FLINCH.on = q.get('flinch') !== '0'; FLINCH.run = q.get('flinchrun') !== '0';   // a man flinches when fire comes close (game/flinch.ts): every close round of the other side ducks a man, the player's own included, by how near it was and how drilled he is; a green man alone kept under it drops his gun and runs: ON in the page; ?flinch=0 = nobody ducks but on the suppression model's own edge, as it was; ?flinchrun=0 = the duck alone, nobody runs from fire
@@ -550,6 +552,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HANDRING.corner': 'TPS_HANDRING=1',
   'THROWBACK.on': 'TPS_THROWBACK=1',
   'AUTOCAM.on': 'TPS_AUTOCAM=1 (the mode itself is the seat\'s, off until the camera\'s key is tapped twice: read only by a tool that steps through host/loop.ts stepFrame)',
+  'AUTOCAM.sway': 'TPS_AUTOSWAY=1 (the mode\'s slow turn in a fight and on the move; nothing with the mode off)',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
   'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
   'GUNWALL.on': 'TPS_GUNWALL=1',
@@ -599,6 +602,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STARTLE.on': 'TPS_STARTLE=1',
   'ROWSET.on': 'TPS_ROWSET=1',
   'SMOKEBREAK.on': 'TPS_SMOKEBREAK=1',
+  'SHOWWHY.on': 'TPS_SHOWWHY=1',
   'FLINCH.on': 'TPS_FLINCH=1',
   'FLINCH.run': 'TPS_FLINCHRUN=1',
   'VERDICT.loudCard': 'TPS_LOUDCARD=1',

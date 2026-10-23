@@ -108,6 +108,7 @@ import { RUNNER } from './runner';
 import { STARTLE } from './startle';
 import { ROWSET } from './rowset';
 import { SMOKEBREAK } from './smokebreak';
+import { SHOWWHY } from './showwhy';
 import { FLINCH } from './flinch';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
@@ -418,8 +419,9 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CARLAMPS) CARLAMPS.on = false;   // (a file from before a vehicle's lamps were light targets: its floor has none)
   if (!k.tables.CLEANRESTART) CLEANRESTART.on = false;   // (a file from before a restart gave a clean level: its restarts mended the mains by the breaker's own road and kept the last try's lines and clocks)
   if (!k.tables.THROWBACK) THROWBACK.on = false;   // (a file from before a can in the wind-up went back on the belt: its cans froze through a kick or a pick and left his hand after)
-  if (!k.tables.WORKSTOW) WORKSTOW.on = false;   // (a file from before the gun was put away for a two-handed job: a charge went on with it in the hand, on the shorter clock)
   if (!k.tables.AUTOCAM) AUTOCAM.on = false;   // (a file from before the camera could run itself: its double tap was the Options row's)
+  if ((k.tables.AUTOCAM as Partial<typeof AUTOCAM> | undefined)?.sway === undefined) AUTOCAM.sway = false;   // (…and one from before it could turn in a fight)
+  if (!k.tables.WORKSTOW) WORKSTOW.on = false;   // (a file from before the gun was put away for a two-handed job: a charge went on with it in the hand, on the shorter clock)
   if (!k.tables.SQUADNET) SQUADNET.on = SQUADNET.why = SQUADNET.clear = false;   // (a file from before the squad's far lines reached the player and the quick key said why: the answers and the room call as they were)
   if (!k.tables.OWNBLOW) OWNBLOW.on = false;   // (a file from before his own charge went off from his own actions: the squad's key blew it)
   if (typeof (k.tables.HANDRING as { early?: boolean } | undefined)?.early !== 'boolean') HANDRING.early = false;   // (…and one from before a digit inside the hold was the ring's: there it drew the slot)
@@ -444,6 +446,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.training === undefined) { MORALE.training = 'none'; MORALE.nerve = 'normal'; MORALE.fanStep = 0; }   // (…and one from before a man was green or steady: every man the first slice's — broken alone in the dark only, folded when he was, and scrabbling straight back with no fan to find him a way (fanStep 0 shuts it). A recording that carries the keys keeps its own: assignDeep takes a string row as it takes a number)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.darkRead === undefined) MORALE.darkRead = 'place';   // (…and one from before the dark had a second reading: where he stands, as it was read)
   if (!k.tables.SMOKEBREAK) SMOKEBREAK.on = false;   // (a file from before a man told to smoke lit anything: he stood there with his hands as they were)
+  if (!k.tables.SHOWWHY) SHOWWHY.on = false;   // (a file from before a teammate showed why he was not acting: nobody waved, squeezed, raised a fist or said what held him)
   if (!k.tables.ROWSET) ROWSET.on = false;   // (a file from before a row had an hour and weather of its own: it was started at its query's)
   if (!k.tables.STARTLE) STARTLE.on = false;   // (a file from before a calm man started at the first sight of you: its men went for their guns the frame they knew, and none ran from it)
   if (!k.tables.FLINCH) FLINCH.on = false;   // (a file from before a man ducked at every close round: nobody ducked but on the suppression model's edge, and no green man broke under fire)

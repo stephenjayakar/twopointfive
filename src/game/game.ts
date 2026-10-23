@@ -73,6 +73,7 @@ import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
 import { updateSmokeBreak } from './smokebreak';
+import { showWhyTick, resetShowWhy } from './showwhy';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
@@ -1549,7 +1550,7 @@ export class Game {
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise
     const light = this.player.light;
     this.player = new Player(this.ch, v3.copy(this.level.playerSpawn), this.fn2000); this.player.light = light; kitFresh(this); this.player.char.update(0);   // pose + bones exist before this frame's capsule upload
-    this.cues?.reset(); this.squadNet?.reset(); holdFireReset(this);   // (holdfire.ts: a fresh encounter — nothing has started the fight)
+    this.cues?.reset(); this.squadNet?.reset(); holdFireReset(this); resetShowWhy(this);   // (holdfire.ts: a fresh encounter — nothing has started the fight)
     dialogue.ambientRestart(this);   // (the staff's ambient chat: its first-chat clock runs from this restart, not from the page's first frame)
     this.fogOfWar?.reset();   // (fog of war: its memory of who was seen and its turn at the probe belong to the encounter that just ended)
     this.resetGuards(); if (clean) { if (this.messages[this.messages.length - 1]?.text === 'guards reset') this.messages.pop(); if (freshLights(this)) CLEANRESTART_STATS.relit++; } else this.repairLights(); this.resetLevelState(); lightSwitchReset(this); this.props.reset(); for (const r of this.rolls) r.voice = 0; this.rolls.length = 0; this.events.length = 0; this.useDoor = null; this.calledIn = false; this.stoodDown = false;   // (resetGuards also stands the floor down: escalation 0, no episode, no lockdown duties)
@@ -1659,6 +1660,7 @@ export class Game {
     powerOutTick(this, dt);  // the lights go out and somebody goes to put them back on (powerout.ts): the defenders' word when it is due, each man out for the breaker a step on — before the room fight, which would plant a man whose leg has ended; a return on its first line with the switch off
     rescueCheckTick(this, dt);  // the rescue's men check in (rescuecheck.ts): their radio check when it is due, the man out for a silent post a step on — a return on its first line with its switch off or no rescue on the floor
     this.fight.tick(dt);   // the room fight (roomfight.ts): what every hostile / operative unit watches, fears and shoots at this frame — a return on its first lines while none stands or a show has the floor
+    showWhyTick(this);   // a teammate shows why he is not acting (showwhy.ts): read off what the orders, the door tools and the room fight have just decided — his free hand and a short line, nobody's feet, gun or eyes; a return on its first line with the switch off
     moraleTick(this, dt);   // shaken (morale.ts): the blasts since last frame read for who they shook, each man's dread and rung, a broken man's sequence a step on — before anybody moves; a return on its first line with the switch off
     flinchTick(this, dt);   // flinch at close fire (flinch.ts): a green man alone kept under close fire long enough is handed to the runner below
     runnerTick(this, dt);   // drops it and runs (runner.ts): a broken man alone, dry, with an enemy in his eyes at arm's length shouts it, lets the weapon go and runs; every man in a run a step on — a return on its first line with the switch off

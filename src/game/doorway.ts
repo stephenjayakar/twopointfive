@@ -132,6 +132,8 @@ export const STACK_OWN = { leaf: 0, mark: 0, fur: 0, back: 0 };
 interface St {
   t: number;                 // the last frame the gate was asked (a gap = he has been doing something else: clocks afresh)
   heldT: number; pass: number;
+  /** who he is held for this frame ('Player', or a man's callsign), as the gate's own log says it (showwhy.ts reads it) */
+  by?: string;
   /** stepped off to a jamb: the place, the door and face it is on */
   spot: Vec3 | null; door: Door | null; side: 1 | -1; path: Vec3[] | null; noSpot: number; roundT: number;
   /** FIGHT: seconds planted in an opening; the step under way, its deadline; no step before */
@@ -348,6 +350,7 @@ export function doorwayGate(g: Game, gd: Guard, dt: number, speed: number): numb
   }
   const held = scale < 0.2 || (waiting && hold);   // (a man at a jamb is held as long as the frame is not his, however far off it his place is)
   if (held) {
+    st.by = who;
     if (st.heldT === 0) { DOORMANNERS_STATS.held++; DOORMANNERS_DEBUG.log?.(`${t.toFixed(2)} ${gd.callsign} at ${pos[0].toFixed(1)},${pos[2].toFixed(1)} held for ${who}${X ? ` at ${X.d.def.name}` : ''}${hold ? ' (short of the frame)' : ''}${stay ? ' (his place is by him)' : ''}`); }
     st.heldT += dt;
     if (st.heldT >= patience) { st.heldT = 0; st.pass = t + K.rest; DOORMANNERS_STATS.passed++; DOORMANNERS_DEBUG.log?.(`${t.toFixed(2)} ${gd.callsign} held ${patience}s by ${X?.d.def.name ?? 'a man ahead'}: goes anyway`); if (waiting) release(true); return speed; }
@@ -421,6 +424,8 @@ export function doorwayInWay(g: Game, p: Vec3): boolean {
   for (const d of g.doors.list) { if (flat(p, d.frameCentre) > d.def.width + 1) continue; if (inOpening(d, p) || inSweep(d, p)) return true; }
   return false;
 }
+/** who the PASS gate has `gd` held for this frame: 'Player', a man's callsign, or null when he is not held short of a man */
+export function doorwayHeldBy(g: Game, gd: Guard): string | null { const st = states.get(gd); return st && g.time - st.t <= 0.25 && g.time >= st.t && st.heldT > 0 ? st.by ?? null : null; }
 /** REST: the PASS gate has `gd` held this frame — short of a frame for a man in it, or stepped off to a jamb */
 export function doorwayHeld(g: Game, gd: Guard): boolean { const st = states.get(gd); return !!st && g.time - st.t <= 0.25 && g.time >= st.t && (st.heldT > 0 || !!st.spot); }
 /** REST / MARKS: the nearest floor to `p`, within `clearM`, that is not `bad` — floor a man can stand on and walk straight to from `p`, never through a
