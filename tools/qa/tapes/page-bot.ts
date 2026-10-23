@@ -144,11 +144,12 @@ function run(name: string, o: { cap?: number; pace?: number } = {}): TapeRun {
         const T = L.steps[i];
         if (g.lesson.i !== i) throw new Stop(`step ${i + 1} '${T.id}' is not the step that is up (the lesson is on ${g.lesson.i + 1}: ${g.lesson.summary()})`);
         step(30);
-        if (g.lesson.i !== i && !idleOk.has(T.id)) throw new Stop(`step ${i + 1} '${T.id}' went by with nothing done`);
+        if ((g.lesson.i !== i || g.lesson.settling) && !idleOk.has(T.id)) throw new Stop(`step ${i + 1} '${T.id}' went by with nothing done`);
         if (pace > 0) step(Math.round(pace * 60));
         say(`step ${i + 1}/${L.steps.length} '${T.id}': ${T.line}`);
         script.steps![T.id](B);
         step(30);
+        if (g.lesson.i <= i && g.lesson.settling) until(() => g.lesson.i > i, 12);   // (a step before a card settles — rails.ts RAILS.cardBeat, as lesson-run.ts waits)
         if (g.lesson.i <= i) throw new Stop(`step ${i + 1} '${T.id}' did not go by after its script (player at ${at(pos())}, stage ${g.mission.stage}; test ${JSON.stringify(T.done)})`);
         out.steps.push({ id: T.id, t: Number(t.toFixed(2)) });
         if (g.player.down) throw new Stop(`the player went down in step '${T.id}'`);

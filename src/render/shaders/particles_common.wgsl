@@ -327,3 +327,16 @@ fn sparkRadiance(u: f32, hold: f32, brightness: f32) -> vec3f {
 // peak opacity, and it rises where a puff of dust settles. Every other record carries 255 there: 1 from this, and nothing of theirs is changed.
 fn steamIs(color: u32) -> bool { return (color >> 24u) != 255u; }
 fn steamOf(color: u32) -> f32 { return select(1.0, f32(color >> 24u) * (1.0 / 254.0), steamIs(color)); }
+// EMBER (game/fire.ts; render/particles.ts EmitOpts.ember): a SPARK whose colour word's top byte is under 255 is an ember off an open fire — that byte ÷ 254 is ×
+// its light. It rides the fire's hot air up (EMBER_LIFT over its own weight, against the kind's drag: about two metres a second at most), wanders as it goes
+// (EMBER_SWIRL) and goes with the wind, where a spark flies and falls; and it cools slowly, yellow off the fire, then orange, then a red that dies. Every other
+// spark carries 255 there and is as it was.
+const EMBER_LIFT: f32 = 3.2;     // m/s²
+const EMBER_SWIRL: f32 = 1.4;    // m/s² across, turning
+fn emberIs(kind: u32, color: u32) -> bool { return kind == P_SPARK && (color >> 24u) != 255u; }
+fn emberRadiance(u: f32, color: u32, brightness: f32, seed: u32, age: f32) -> vec3f {
+  let ph = f32(seed & 1023u) * 0.00614;
+  let tw = 0.65 + 0.35 * sin(age * 31.0 + ph * 3.0);                                   // (no two alike, and none steady)
+  let e = brightness * SPARK_EMISSIVE * (f32(color >> 24u) * (1.0 / 254.0)) * pow(max(1.0 - u, 0.0), 1.6) * tw;
+  return e * mix(mix(vec3f(1.0, 0.5, 0.09), vec3f(1.0, 0.24, 0.02), smoothstep(0.0, 0.35, u)), vec3f(0.8, 0.07, 0.004), smoothstep(0.3, 0.9, u));
+}
