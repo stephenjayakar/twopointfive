@@ -39,6 +39,7 @@ import { SPOTTED, spottedMode, spottedBy, spottedTake, spottedGripped } from './
 import { HOSTILE } from './teams';
 import { partnerBegin, partnerCancel, partnerFall } from './takedown';   // the partner's takedown as a move, and the man it lands on (takedown.ts): poses only
 import { WORD_HEAD, type Assignment, type OrderDef, type SquadOrders } from './orders';
+import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
 
 export const PAIR = {
   /** THE SWITCH: the quiet orders for one partner (off: the game as it was) */
@@ -179,7 +180,7 @@ export class PairOrders {
   private lastPaces(J: Job, gd: Guard): boolean { const p = gd.char.pos, c = J.foe.char.pos;
     return J.going && !J.watcher && J.waitT < 0 && flat(p, c) < PAIR.heelRing && !this.g.col.solidBlocked([p[0], 1.0, p[2]], [c[0], 1.0, c[2]]); }
   /** why a man an order pointed at is no longer one (null: he still is) */
-  private gone(h: Guard): string | null { return h.state === 'dead' || !this.g.guards.includes(h) ? "he's down already." : h.held ? "he's in your arm." : this.g.fogOfWar.hidden(h) ? 'lost sight of him.' : null; }
+  private gone(h: Guard): string | null { return h.state === 'dead' || !this.g.guards.includes(h) ? "he's down already." : h.held ? w("you've already got him.", "he's in your arm.") : this.g.fogOfWar.hidden(h) ? 'lost sight of him.' : null; }
   /** a clear line from a teammate's eyes to a man's chest (glass passes, as for any eye) */
   private sees(gd: Guard, h: Guard): boolean { const a = gd.char.pos, b = h.char.pos; return !this.g.col.segmentBlocked([a[0], 1.5, a[2]], [b[0], 1.2, b[2]]); }
   /** is `p` in the half of the floor behind the way `h` is looking right now — or (`mostly`) the way he mostly faces, which is the back `behind` goes for (a hand's width of grace) */
@@ -195,9 +196,9 @@ export class PairOrders {
       // a one-man job takes one man: the nearest of those addressed who has a way to him
       only: (S, men, t) => { if (t.kind !== 'foe') return []; const to = this.stage(t.foe);
         return men.filter(gd => S.reach(gd, to) === null).sort((a, b) => flat(a.char.pos, t.foe.char.pos) - flat(b.char.pos, t.foe.char.pos)).slice(0, 1); },
-      can: (S, gd, t) => { if (t.kind !== 'foe') return 'no man there.'; const to = this.behind(t.foe), spot = S.freeSpot(to) ?? to;
-        return !this.backOpen(t.foe, spot) || !this.rear(t.foe, spot, true) ? 'no room at his back.' : S.reach(gd, this.stage(t.foe)) ?? true; },
-      valid: (S, t) => t.kind !== 'foe' ? false : this.gone(t.foe) ?? (this.noticed(t.foe) ? "he's fighting. no hands." : this.caught(S) ? "they're onto us. no hands." : loud() ?? true),
+      can: (S, gd, t) => { if (t.kind !== 'foe') return w('nobody there.', 'no man there.'); const to = this.behind(t.foe), spot = S.freeSpot(to) ?? to;
+        return !this.backOpen(t.foe, spot) || !this.rear(t.foe, spot, true) ? w('no room behind him.', 'no room at his back.') : S.reach(gd, this.stage(t.foe)) ?? true; },
+      valid: (S, t) => t.kind !== 'foe' ? false : this.gone(t.foe) ?? (this.noticed(t.foe) ? w("he's fighting. can't grab him.", "he's fighting. no hands.") : this.caught(S) ? w("they're onto us. can't grab him.", "they're onto us. no hands.") : loud() ?? true),
       issue: (S, men, t) => {
         if (t.kind !== 'foe') return 'no man there';
         this.quietFirst();
@@ -226,7 +227,7 @@ export class PairOrders {
       take('pairTake', 'now', 5, 'take him now', ['on him.', 'moving up on him.']),
       { id: 'pairDark', key: 1, label: 'move there · hold in the dark', targets: ['floor'], ack: ['moving.', 'on it.'],
         standsIn: { for: 'move', when: () => this.up && squadSilent(g) },
-        can: (S, gd, t) => { const d = this.darkSpot(t.at), w = S.reach(gd, d ?? t.at); return w !== null ? w : d || !PAIR.darkRefuse ? true : 'nowhere dark there.'; },   // (no way there is said before no dark there: it is the nearer reason)
+        can: (S, gd, t) => { const d = this.darkSpot(t.at), w = S.reach(gd, d ?? t.at); return w !== null ? w : d || !PAIR.darkRefuse ? true : WORDS.on ? 'no dark spot there.' : 'nowhere dark there.'; },   // (no way there is said before no dark there: it is the nearer reason)
         issue: (S, men, t) => {
           const sam = g.player.char.pos, face = flat(sam, t.at) > 0.3 ? yawTo(sam, t.at) : g.player.char.bodyYaw, d = this.darkSpot(t.at), to = d ?? t.at;
           const spots = men.length > 1 ? S.spotsAt(to, face, men.length) : [to];
@@ -241,7 +242,7 @@ export class PairOrders {
   private goRow(): OrderDef {
     return { id: 'pairGo', head: WORD_HEAD, hotKey: 'KeyF', free: true, targets: ['floor', 'door', 'none', 'foe'],
       label: () => { const W = this.waiting(); return W.length ? `mark · ${W.map(([gd, J]) => `${gd.callsign} takes ${nameOf(J.foe)}${J.watcher ? ' anyway' : ''}`).join(' · ')}` : 'mark'; },
-      only: () => this.waiting().map(([gd]) => gd), valid: () => this.waiting().length > 0 || 'nobody is waiting on your mark.',
+      only: () => this.waiting().map(([gd]) => gd), valid: () => this.waiting().length > 0 || w("nobody's waiting on your mark.", 'nobody is waiting on your mark.'),
       issue: () => { this.mark('row'); } };
   }
   /** a row here given while the squad is loud: silent first, with the squad's own line for it */
@@ -385,7 +386,7 @@ export class PairOrders {
       S.assign(gd, { order: 'fallIn', post: null, follow: 0, face: null, stance: 'lowReady', upper: 'none', going: 'falling in', there: 'with you' }); return true; };
     if (foe.state === 'dead' || !g.guards.includes(foe)) { if (J.handed && foe.killerId === gd.char.id) { PAIRUP_STATS.finishes++; this.note(`finish:${gd.callsign} on ${name}`); }   // (pairup.ts 'hands': the job blown at his back, finished by spotted.ts's hands)
       if (rejoin()) this.note('off:down'); else off('down', "he's down.", false); return; }   // (somebody else dropped him: the job is done all the same)
-    if (foe.held) { off('held', 'he is yours.', false); return; }   // (Sam has that man in his arm)
+    if (foe.held) { off('held', w("he's yours.", 'he is yours.'), false); return; }   // (Sam has that man in his arm)
     const on = J.t0 >= 0;   // (his hands are on the man already: a struggle is not undone by the man starting at it)
     // BLOWN AT ARM'S LENGTH (pairup.ts 'hands'; spotted.ts on): the man has roused with this one a pace or two from his back. Stopping there with a gun on him is the
     // worst of both — spotted.ts's hands (the same takedown, the same reach, the same refusals: loud in his ears, a quiet gun, an alert man out of contact) finish it,
@@ -410,14 +411,14 @@ export class PairOrders {
         if (g.time - J.seenT > 0.4 && J.cued && !J.backSaid) { g.say(gd, "he'll look back. your call."); J.backSaid = true; this.note(`lookback:${name} by ${nameOf(w)}`); }
         J.backT = g.time;   // (still held, and F still sends him: waiting() reads it)
         A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `on ${name} · ${nameOf(w)} will look back · press F to go anyway`;
-        if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', "he's watched. no clean moment.", false); }
+        if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', WORDS.on ? "someone's watching him. no clean moment." : "he's watched. no clean moment.", false); }
         return;
       }
       if (!J.watcher) { if (g.time - J.seenT > 2) J.watchT = g.time; PAIR_STATS.watched++; this.note(`watched:${name} by ${nameOf(w)}`);
         if (g.time - J.cueT > 8) { g.say(gd, `hold. ${nameOf(w)} has eyes on him.`); J.cueT = g.time; J.cueBy = w; J.cued = true; } }
       J.watcher = w; J.seenT = g.time;
       A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `on ${name} · WATCHED by ${nameOf(w)} · press F to go anyway`;
-      if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', "he's watched. no clean moment.", false); }
+      if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', WORDS.on ? "someone's watching him. no clean moment." : "he's watched. no clean moment.", false); }
       return;
     }
     if (J.watcher && !J.force && g.time - J.seenT < 0.4) return;   // (a head that turned away this frame may be on its way back: he gives it a moment)
@@ -439,7 +440,7 @@ export class PairOrders {
     J.t0 = -1;   // (he stepped off before the hands were on him: they start again)
     const staging = !J.go;
     // a job that is not getting done ends in words, not in a man 'moving up' for ever (a back in a corner; a spot the floor does not reach) — a man SET and waiting is waiting on Sam
-    if (!(staging && J.set) && g.time - J.born > PAIR.takeSecs) { PAIR_STATS.called++; off('time', "can't get to his back.", false); return; }
+    if (!(staging && J.set) && g.time - J.born > PAIR.takeSecs) { PAIR_STATS.called++; off('time', w("can't get behind him.", "can't get to his back."), false); return; }
     if (g.time - J.checkT < PAIR.stalkEvery && A.post) return;
     J.checkT = g.time;
     const want = staging ? this.stage(foe) : this.behind(foe), spot = S.freeSpot(want) ?? want;
@@ -450,7 +451,7 @@ export class PairOrders {
     if ((way.exposed && !J.force) || !this.backOpen(foe, spot)) {   // (told to go whoever is looking — a second mark, Sam's own hands: eyes on the way no longer stop him)
       if (J.waitT < 0) J.waitT = g.time;
       J.set = false; A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = !way.exposed || J.force ? `waiting · no room at ${name}'s back` : !way.by ? `waiting · no way to ${name} unseen` : way.by === foe ? `waiting · ${name} is facing this way` : `waiting · ${nameOf(way.by)} is looking across the way to ${name}`;
-      if (g.time - J.waitT > PAIR.stalkWait) { PAIR_STATS.called++; off('noway', !way.exposed || J.force ? 'no room at his back.' : 'no way to his back unseen.', false); }
+      if (g.time - J.waitT > PAIR.stalkWait) { PAIR_STATS.called++; off('noway', !way.exposed || J.force ? w('no room behind him.', 'no room at his back.') : w("can't get behind him unseen.", 'no way to his back unseen.'), false); }
       return;
     }
     J.waitT = -1;

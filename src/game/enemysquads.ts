@@ -67,7 +67,7 @@ import { laneHolds, laneWarns } from './lanes';
 import { digInPhase } from './digin';
 import { lastStandMan } from './laststand';
 import { wayName } from './dialogue';
-import { WORDS } from './words';
+import { WORDS, w } from './words';
 import { netFeedAsked, netFeedBody, netFeedHolds } from './netquietfeed';   // (a leaf: netquiet.ts itself is not to be imported from here — see that file's head)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { STAYASK, stayAskHere } from './stayask';   // (squads that stay in their rooms still miss a room that goes silent: read at staging and in netSend)
@@ -688,7 +688,7 @@ function decide(g: Game, st: State, Q: Squad) {
     g.say(go[0].gd, `${Q.name}: moving to ${ally ? ally.name : 'them'} — ${go.length} of us!`, true);
   } else if (choice === 'flank') {
     go.forEach((D, i) => send(D, 'flank', ways[i]));
-    g.say(go[0].gd, `${Q.name}: ${COUNT[go.length] ?? go.length} going round — ${lost ? 'cut them off' : 'keep them there'}!`, true);
+    g.say(go[0].gd, `${Q.name}: ${COUNT[go.length] ?? go.length} going ${w('around', 'round')} — ${lost ? 'cut them off' : 'keep them there'}!`, true);
     why += ` (by ${[...new Set(ways.map(w => w.door ? w.door.def.name : 'the long way'))].join(' and ')})`;
   }
   // whoever stays gets ready: the net's word is what digin.ts acts on
@@ -771,7 +771,7 @@ function back(g: Game, Q: Squad, s: Sent, D: Def) {
     run(g, X, x.from, null, 0.3); names.push(x.gd.callsign);
   }
   if (!names.length) return;
-  g.say(gd, gone ? `${Q.name}: ${s.ally!.name} is not answering — back on our doors!` : `${Q.name}: they've left it — back on our doors!`, true);
+  g.say(gd, gone ? `${Q.name}: ${s.ally!.name} ${w("isn't", 'is not')} answering — back on our doors!` : `${Q.name}: they've left it — back on our doors!`, true);
   event(g, Q, 'back', `${names.join(' and ')} leave${names.length > 1 ? '' : 's'} ${door}: ${gone ? `${s.ally!.name} is not answering` : `the team was heard ${flat(at, s.aim ?? gd.char.pos).toFixed(0)} m off, going on`}, ${(g.time - (s.setT ?? s.t0)).toFixed(1)} s after setting`, gd);
 }
 /** A DRILLED GARRISON (SQUADS.drillLook, with PRESSURE.sweep): GO AND LOOK — once a tick, after every squad has had its own say. The word is kept from
@@ -817,7 +817,7 @@ function lookOut(g: Game, st: State) {
   }
   if (!best) return;
   W.done = W.t; W.saidT = g.time; W.call = { Q: best.Q, go: best.go, at: v3.copy(W.at), goT: g.time + K.sweepBeat, w: W.t };
-  g.say(best.go[0].gd, `${best.Q.name}: gone quiet — ${COUNT[best.go.length] ?? best.go.length} of us go and look!`, true);
+  g.say(best.go[0].gd, w(`${best.Q.name}: it's gone quiet — ${COUNT[best.go.length] ?? best.go.length} of us are going to look!`, `${best.Q.name}: gone quiet — ${COUNT[best.go.length] ?? best.go.length} of us go and look!`), true);
 }
 /** is that place in or within three metres of the room a holding man's door leads to (the room the team took): a noise in its other doorway, in the corridor
  *  along its wall or heard a few metres off through the wall is still the fight for THAT room — the team working it from its other door has not moved on */
@@ -997,7 +997,7 @@ function radioCheck(g: Game, Q: Squad, busy: boolean): { at: Vec3; room: Structu
         const coming = st.squads.flatMap(S => S.rc?.look.filter(L => L.about === Q && !L.all && !L.back) ?? []);
         if (coming.length) {   // (men are on their way to him already: this post is theirs to look at too — he does not call for help twice)
           for (const L of coming) (L.stops ??= []).push(v3.copy(r.at));
-          onNet(g, me, `${Q.name}: nothing from ${mate(who)} either — his post too!`, 2);
+          onNet(g, me, `${Q.name}: nothing from ${mate(who)} either — ${w('check his post too', 'his post too')}!`, 2);
           event(g, Q, 'net help', `${me.callsign}, the last of ${Q.name} at home, has ${who.callsign} missing too: ${coming.map(L => L.gd.callsign).join(' and ')}, on their way to him, look at that post as well`, me);
           C.looked.add(who); (C.asked ??= new Set()).add(who); return idle(checkBeat(Q, C.die));
         }
@@ -1489,7 +1489,7 @@ export function squadsTick(g: Game) {
             if (e >= 0) { D.ev[e] = Math.max(D.ev[e], 1.5); D.watch = D.want = e; D.home = v3.copy(D.room!.entries[e].at); } else if (s.aim) { D.watch = D.want = -1; D.home = v3.copy(s.aim); }
             D.pt[0] = D.home[0]; D.pt[2] = D.home[2]; if (!seen) gd.lastKnown = D.pt;
           }
-          if (there && !seen) { s.there = g.time; g.say(gd, `${Q.name}: in position — we have the door!`, true); event(g, Q, 'in position', `${gd.callsign}${s.door ? ' holding ' + s.door.def.name : ''}, ${(g.time - s.t0).toFixed(1)} s after the word`, gd); }
+          if (there && !seen) { s.there = g.time; g.say(gd, `${Q.name}: in position — ${w("we've got", 'we have')} the door!`, true); event(g, Q, 'in position', `${gd.callsign}${s.door ? ' holding ' + s.door.def.name : ''}, ${(g.time - s.t0).toFixed(1)} s after the word`, gd); }
           else event(g, Q, 'met', `${gd.callsign} has them in sight ${there ? 'from his spot' : 'on his way'}${s.door ? (there ? ' at ' : ' to ') + s.door.def.name : ''} and holds where he is, ${(g.time - s.t0).toFixed(1)} s after the word`, gd);
           continue; }
         s.phase = 'loose'; if (D.mode !== 'free') loose(g, D, s.fixAt);

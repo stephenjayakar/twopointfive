@@ -184,3 +184,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `away`), both stands: the office hears the blackout pair, `tut-quiet` / `quiet-yard` / `lights-out` hear nothing in twelve seconds with the key up and the
   pair with it down. One staged night a level, no seeds varied. The lines themselves are untouched (whether to rewrite or drop them is the maintainer's call).
   NOBODY HAS SEEN IT ON A GPU; the radio strip is not drawn headless (the game's message list is what was read).
+- **Spoken lines read by the writing guide** (10-22; `docs/agents/writing.md` rule 7). About 150 spoken and radio lines reworded: "round" for "around",
+  a missing contraction, "a man" for somebody of his own side, a line clipped until it was unclear. No new switch: every new wording rides `WORDS.on`
+  (frozen stand: the old words, `TPS_WORDS=1` raises them; page: on, `?oldwords` = as it was). How a table carries one: a row's `now` (SAM_LINES,
+  cues.ts, laststand.ts, morale.ts `now` pool), `INTEL_NOW`, `CIV_LINES.now` (report / control / greetCiv / greetGuard, place for place), a `Beat`'s
+  `samNow`, a handler row's `hNow`, an order row's `ackNow` (orders.ts reads it where a man answers), or a small old-line → new-line table applied
+  where the line is picked (`NEEDS_LINES.now`, guards.ts `STANDOFF_NOW`, gunhold.ts `GUNHOLD_NOW`, netquiet.ts `LINES_NOW`, sneak.ts `LINES_NOW`,
+  squad.ts `BODY_LINES_NOW`, whistle.ts `TWICE_NOW`); a line in a say call is `w(now, was)` there. `shapedIntelText` now reads through `intelTable`.
+  cues.ts `CLASSES` knows the new words beside the old (going around, moving around, get around, coming up behind, ready for them). A refusal an
+  order returns is said by a man AND printed on its greyed menu row: both follow the switch. HELD for the maintainer: the office night staff's
+  British voice (the held man's lines, his scripts, the pairs) and `SNATCH_LINES`. Checks that named old words take both wordings now.
+  Checked: typecheck; `words` and `dialogue` on both stands (the one red, `words-routes`, is red without this change too); `roomclear` on the frozen
+  stand. On the shipped stand a bubble's length is its time on screen, so runs there can play out differently: not measured, no seeds run.
+  Read, not heard; NOBODY HAS SEEN IT ON A GPU or played it.

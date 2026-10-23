@@ -110,7 +110,7 @@ const LINES: Record<LineKind, { cls: number; say: string[]; /** the same lines, 
   checkStand: { cls: 4, say: ['anyone else out there? we\'re holed up in {the} — get to us!', 'any post still up — we\'re in {the}. sound off!'] },
   checkLoneAt: { cls: 4, say: ['anybody? anybody still up? I\'m still {at}.', 'if anyone\'s left — I\'m still {at}. sound off!'] },
   ansAt: { cls: 3, say: ['still up — {at}.', 'here — holding {the}.', 'still here — {at}.'] },
-  ansFreeAt: { cls: 3, say: ['still up — after them, {at}.', 'here — on them, {at}.'] },
+  ansFreeAt: { cls: 3, say: ['still up — after them, {at}.', 'here — on them, {at}.'], now: ['still up — going after them, {at}.', 'here — I\'m on them, {at}.'] },
   fewAt: { cls: 3, say: ['that\'s only {n} of us — I\'m {at}. stay on your doors!', '{n} of us left — I\'m {at}. nobody opens a door!'],
     now: ['that\'s only {n} of us — I\'m {at}.', '{n} of us left — I\'m {at}.'] },   // (the count and where he is, no order with it: the men who answered may be out after the team, or on a post with no door)
   lastAt: { cls: 3, say: ['nobody\'s answering — if anyone can hear me, I\'m {at}!', 'no answer… it\'s just me. if anyone\'s left, I\'m {at}!'] },

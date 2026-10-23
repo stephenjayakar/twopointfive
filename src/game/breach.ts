@@ -57,7 +57,7 @@ export interface BreachLive { orders: number; lights: boolean; loudBoot: boolean
 /** live play: what the pair says where the show's line would state what the drill does not know (a body count: Sam's rounds count too) … */
 const LIVE_LINES: Record<string, string> = { clear1: 'right side — clear.', clear2: 'left clear. i have the door.', roomClear1: 'room clear.' };
 /** … said by the man it is true of (words.ts): #1's hold is the gun on the room's north door (plan.flow[0].hold), #2's is the far corner */
-const LIVE_NOW: Record<string, string> = { clear1: 'right side — clear. i have the door.', clear2: 'left clear.' };
+const LIVE_NOW: Record<string, string> = { clear1: "right side — clear. i've got the door.", clear2: 'left clear.' };
 /** … or promise a charge nobody is carrying */
 const LIVE_NO_CHARGE: Record<string, string> = { stack1: 'stack on me — side door. on my boot.', stack2: 'set.' };
 interface OpFlow {

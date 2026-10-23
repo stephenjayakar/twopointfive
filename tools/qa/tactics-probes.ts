@@ -192,7 +192,7 @@ export async function tacticsFlank() {
   const tA = presser ? arriveT.get(presser) : undefined, tB = flanker ? arriveT.get(flanker) : undefined;
   if (tA === undefined || tB === undefined) fails.push(`arrivals: presser ${tA === undefined ? 'never' : f1(tA)}, flanker ${tB === undefined ? 'never' : f1(tB)}`);
   else if (Math.abs(tA - tB) > 2.5) fails.push(`they arrived ${f2(Math.abs(tA - tB))} s apart (want ≤ 2.5)`);
-  if (!radio.some(r => /moving round/.test(r))) fails.push('nobody radioed "moving round"');
+  if (!radio.some(r => /moving a?round/.test(r))) fails.push('nobody radioed "moving round" / "moving around"');
   if (!radio.some(r => /: "set/.test(r))) fails.push('the flanker never radioed "set"');
   if (!radio.some(r => /go go go|pushing, go/.test(r))) fails.push('nobody gave the "go"');
   if (goT >= 0 && holdStart >= 0 && goT < holdStart) fails.push('the go came before the presser was at his corner');

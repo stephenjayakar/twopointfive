@@ -621,7 +621,7 @@ async function probeCost(scn: string): Promise<boolean> {
     const kit = R.staged;   // (what the kit's slots rule staged on this stand before the rig put it aside: null where the rule is off)
     F.verdict(kit === null ? C.carried === WALLCHARGE.carried && C.carried === null : C.carried === kit, 'a restart puts the carried count back to the knob (unset): the kit sets it again at each staging', `carried ${C.carried}${kit === null ? '' : ` · the kit stages ${kit}`}`); }
   { const R = await rig(scn, 21); const { O, D, C } = R; const P = place(R); R.gather(P.near, 75, P.p); C.setCarried(0); R.step(2); const n0 = R.spoke.length, why0 = O.give(WALL_ORDER, O.targetAt(P.p), 'all');
-    F.verdict(why0 === 'no wall charge carried.' && R.spoke.slice(n0).some(s => s.text === 'no wall charge carried.') && D.charges === 2 && C.ops.length === 0, 'none carried: no wall, said aloud, the bag untouched', `"${why0}" · charges ${D.charges}`); }
+    F.verdict((why0 === 'no wall charge carried.' || why0 === 'nobody brought a wall charge.') && R.spoke.slice(n0).some(s => s.text === why0) && D.charges === 2 && C.ops.length === 0, 'none carried: no wall, said aloud, the bag untouched', `"${why0}" · charges ${D.charges}`); }
   // unset = the cost rule, by digest
   { const run = async (unset: boolean) => { const R = await rig(scn, 21); const P = place(R); R.gather(P.near, 75, P.p); if (unset) R.C.setCarried(null); R.O.give(WALL_ORDER, R.O.targetAt(P.p), 'all'); R.until(() => R.C.ops[0]?.phase === 'armed', 60); R.step(30); return hashDigest(digestGame(R.game, true)); };
     const a = await run(false), b = await run(true);

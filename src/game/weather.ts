@@ -108,7 +108,7 @@ const SKY_FLASH_K = 0.045;
 const FLASH_MEAN_GAP = 11;
 const THUNDER_LINES = ['lovely night for it.', 'that one was close.', "glad I'm not out in that.", "it's really coming down.", 'storm\'s right on top of us.'];
 /** in place of "glad I'm not out in that." from a man who IS out in it (words.ts) */
-const THUNDER_OUT = 'no let-up, is there.';
+const THUNDER_OUT = "it's not letting up, is it.";
 const BARK_COOLDOWN = 45;        // seconds between any two weather remarks on the floor
 const BARK_CHANCE = 0.35;        // per thunder loud enough to remark on
 
