@@ -3272,6 +3272,8 @@ if (on('planmode', 'squadorders', 'all')) await run('planmode', async () => (awa
 if (on('planplus', 'squadorders', 'all')) await run('planplus', async () => (await import('./planplus-check.ts')).planplusCheck());
 // one word, two doors of a plan on one signal (CMDRING.planOne); no squad can into a room teammates already hold (DOORTOOLS.tossMate) — onesignal-check.ts
 if (on('onesignal', 'squadorders', 'all')) await run('onesignal', async () => (await import('./onesignal-check.ts')).onesignalCheck());
+// plan mode's view stays a few metres from the player: a room's worth, not the level's (CMDRING.planNear) — plannear-check.ts
+if (on('plannear', 'squadorders', 'all')) await run('plannear', async () => (await import('./plannear-check.ts')).plannearCheck());
 // X is where the plan is laid: an order picked with 'wait for my word' on is laid — nobody moves — F sends the plan, a restart puts it back (planlay-check.ts; PLANLAY.on)
 if (on('planlay', 'squadorders', 'all')) await run('planlay', async () => (await import('./planlay-check.ts')).planlayCheck());
 // ---------------------------------------------------------------- the BREACHING SHOTGUN (shotgun-probes.ts; game/shotgun.ts, weapons.ts row 'm870', doortools.ts toGun / gunStep, kit.ts 'shotgun'): 'shotgun' = the family
