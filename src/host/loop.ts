@@ -233,7 +233,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         return shot;
       }
       if (auto && !frozen && auto.turnV) { auto.turnV = 0; ctx.behind = null; }   // (an eased turn under way as the view goes to somebody else — plan mode, the sky seat, a show: it ends there)
-      if (auto && !frozen) { autoRest(auto); if (auto.swayV) { const t = AUTOVIEW.on ? swayCoast(auto, cdt) : 0; if (t) cam.rotate(t); } }   // (a card up is not somebody else's view: the frame is where it was when the card lifts; a lean under way as the view goes to somebody else dies away, and is where it was when the view is his again)
+      if (auto && !frozen) { autoRest(auto, cam); if (auto.swayV) { const t = AUTOVIEW.on ? swayCoast(auto, cdt) : 0; if (t) cam.rotate(t); } }   // (a card up is not somebody else's view: the frame is where it was when the card lifts; a lean under way as the view goes to somebody else dies away, and is where it was when the view is his again)
       const at: Vec3 = shot ?? (hs ? [follow[0] + hs[0], follow[1], follow[2] + hs[2]] : follow);
       if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
