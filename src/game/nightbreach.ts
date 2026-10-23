@@ -148,8 +148,7 @@ export class NightBreach {
   drill: BreachDrill | null = null;
   ops: Guard[] = []; hostiles: Guard[] = [];
   /** the two men F's drill moves: the pair itself, or — of four — the first (Red) pair. The rest of `ops` are never the drill's: they stand by until ordered. */
-  get drillOps(): Guard[] { if (this.noDrill) return NONE; const c = this.drillOf; if (c && c.of === this.ops && c.n === this.ops.length) return c.two; const two = this.ops.slice(0, 2); this.drillOf = { of: this.ops, n: this.ops.length, two }; return two; }
-  private drillOf: { of: Guard[]; n: number; two: Guard[] } | null = null;   // (asked several times a frame: the two are found once per staging)
+  get drillOps(): Guard[] { return this.noDrill ? NONE : this.ops.slice(0, 2); }   // (found on each ask and kept nowhere: the HUD asks every frame, and an answer kept here made a game whose HUD was read differ in state from one never read)
   /** the bigger floor this run was started on (start(layout); roomclear.ts) — null = the break room alone */
   layout: NightBreachLayout | null = null;
   /** every defender's mark as staged, in `hostiles` order (the breach plan's three, or the layout's) */
