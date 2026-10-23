@@ -66,10 +66,12 @@ export const STALK = {
    *  round FACING him is not taken (the right button's knockout is still the player's own timing, as off a wall). `corner` off = the button on a wall does
    *  nothing, as before. The page: ?stalkcorner=0. */
   corner: true, cornerM: 1.35, cornerDeg: 110,
-  /** THE WAIT SHOWS (closeTick): on the wall with the button held he coils — sunk `cornerCoil` of the way into the crouch, the lead hand tucked toward the man at `cornerReach[0]`
+  /** BROKEN OFF BY THE MAN (stalkStep): `jolt` = how much of the animator's duck (character.ts flinchFrom, soft) Sam gives when the man turns off his back with
+   *  the stalk on — the whole of it when the man is onto him. 0 = none: the stalk ends and he sinks back into the crouch, as it was.
+   *  THE WAIT SHOWS (closeTick): on the wall with the button held he coils — sunk `cornerCoil` of the way into the crouch, the lead hand tucked toward the man at `cornerReach[0]`
    *  of the grab's reach, growing to `cornerReach[1]` as the nearest man he could take comes from `cornerSee` m to `cornerM`; he comes up out of the coil over
    *  `cornerRise` s of the step in. `cornerShow` off = the wall stance alone, as it was */
-  cornerShow: true, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,
+  jolt: 0.6, cornerShow: true, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,
 };
 /** tallies for the checks and the page's hook (begun = presses that took a man; out = why each ended without a grab) */
 export const STALK_STATS = { begun: 0, grabs: 0, corner: 0, out: { let: 0, far: 0, turned: 0, wall: 0, him: 0, hands: 0, keys: 0 }, last: '' };
@@ -134,11 +136,15 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
   if (!free(g)) { end(S, 'hands'); if (lmb || lmbHit) { S.wait = cornerGate(g); const gd = cornerMan(g); if (gd) { S.grab = gd; STALK_STATS.grabs++; STALK_STATS.corner++; STALK_STATS.last = 'corner'; } } return null; }
   if (lmbHit) S.armed = true; else if (!lmb) S.armed = false;
   // (a press made with a move key still down waits for the key: the button held on him begins it the frame his own feet stop — once a press)
+  const had = S.on;
   if (!S.on && S.armed && !ownKeys) { const gd = pressed(g); if (gd) { S.on = gd; S.armed = false; STALK_STATS.begun++; } }
   const gd = S.on; if (!gd) return null;
   if (!lmb && !lmbHit) { end(S, 'let'); return null; }
   if (ownKeys) { end(S, 'keys'); return null; }
-  const p = g.player.char.pos, why = outOf(g, gd, p, false); if (why) { end(S, why); return null; }
+  const p = g.player.char.pos, why = outOf(g, gd, p, false);
+  if (why) {   // (STALK.jolt: broken off by the man himself — he has turned off his back, or he is onto him — Sam shrinks back off him: the animator's SOFT duck, which leaves a hand's errand alone (a pistol he draws the next instant keeps its draw and its click); not on the frame a stalk began)
+    if (had === gd && STALK.jolt > 0 && (why === 'turned' || why === 'him')) g.player.char.anim.flinchFrom([gd.char.pos[0] - p[0], 0, gd.char.pos[2] - p[2]], why === 'him' ? 1 : STALK.jolt, true);
+    end(S, why); return null; }
   const gp = gd.char.pos, at: Vec3 = [gp[0], gp[1] + 1.2, gp[2]], dist = Math.hypot(p[0] - gp[0], p[2] - gp[2]);
   if (dist < STALK.grabM) {
     const o = closeAt(g, gd, p);

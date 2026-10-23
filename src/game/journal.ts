@@ -374,7 +374,9 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.haul === undefined) TAKEDOWN.haul = false;   // (…from before the choke hauled him up and back: both men stood where the hold had them)
     if (T.kill === undefined) TAKEDOWN.kill = false; }   // (…and from before the kill from the hold was a move: the phase was drawn as the hold, and he fell as the knife from behind dropped him)
   if (!k.tables.STALK) STALK.on = false;   // (a file from before the stalk: a held click on a man walked nobody anywhere)
-  else if ((k.tables.STALK as Partial<typeof STALK>).turnIn === undefined) { STALK.turnIn = STALK.cornerShow = false; STALK.catchLong = 1; }   // (…and one from before its fourth pass: he turned to the man's back in the step's first frames, a long step took no longer, and the wait at a corner was the wall stance alone)
+  else { const T = k.tables.STALK as Partial<typeof STALK>;
+    if (T.jolt === undefined) STALK.jolt = 0;   // (a file from before he shrank back off the man who turned round on him: the stalk ended and he sank back into the crouch)
+    if (T.turnIn === undefined) { STALK.turnIn = STALK.cornerShow = false; STALK.catchLong = 1; } }   // (…and one from before its fourth pass: he turned to the man's back in the step's first frames, a long step took no longer, and the wait at a corner was the wall stance alone)
   if (!k.tables.TWOGEARS) TWOGEARS.on = false;   // (a file from before two gears: the wheel was his pace and the crouch-walk the tune's)
   if (!k.tables.FOOTFALL) FOOTFALL.once = FOOTFALL.owed = false; else if ((k.tables.FOOTFALL as Partial<typeof FOOTFALL>).owed === undefined) FOOTFALL.owed = false;   // (a file from before one footfall a step: every crossing of the walk cycle's half filed one, a rocking cycle one a frame — and one from before a footfall the legs owe: only an edge filed one)
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
