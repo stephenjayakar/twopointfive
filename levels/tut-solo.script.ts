@@ -33,7 +33,7 @@ const ARCH_HEAD: Vec3[][] = [[[16.0, 2.2, 12.5], [16.0, 2.1, 12.0], [16.0, 2.25,
 const SHOP_DOORWAY: Vec3 = [25.4, 1.2, 14.25], PART_DOORWAY: Vec3 = [30.5, 1.2, 14.25];
 
 const script: LevelScriptFn = D => {
-  const backDoor = D.door('store');
+  const backDoor = D.door('store'), innerDoor = D.door('inner');
   const shopLine = D.volume('shop_line'), shopIn = D.volume('shop_in'), storeIn = D.volume('store_in');
   const roadEast = D.volume('road_east'), roadNose = D.volume('road_nose');
   const rifleman = D.loadout('rifleman', { team: 'guard', weapon: 'akms' });
@@ -45,7 +45,7 @@ const script: LevelScriptFn = D => {
 
   D.program('tutorial', P => {
     P.onStart('hold');
-    for (const cue of ['road', 'cease', 'gun', 'bags', 'gap', 'blind', 'shop', 'room', 'trucks', 'loose']) P.onSignal(`lesson:${cue}`, cue);
+    for (const cue of ['road', 'cease', 'way', 'gun', 'bags', 'gap', 'blind', 'shop', 'room', 'trucks', 'loose']) P.onSignal(`lesson:${cue}`, cue);
 
     // every man on his mark, his gun on the way the player will come, until his own beat lets him go (a man a beat has ordered is the program's until it lets
     // him go, fails or stops: this beat's end hands nobody back)
@@ -71,6 +71,10 @@ const script: LevelScriptFn = D => {
       }
       yield c.until(q => !q.alive(s), 'the sentry is down');
     });
+
+    // THE INNER DOOR: the line that has him shoot it out has gone by. Its leaf is off wherever gunfire splinters a door; where that rule is off, or his
+    // rounds found the jambs, the lesson let the line go after a long burst and the door is thrown open here, so the way to the arch never hangs on it
+    P.beat('way', function* (c) { if (!c.query.door(innerDoor).open) { c.doors.lock(innerDoor, false); c.doors.open(innerDoor, 1.5, { hold: true }); } yield c.frames(1); });
 
     // THE GUN: one man on a belt-fed gun in the far corner of the next court. What he shoots at is the lesson of the step that is up.
     P.beat('gun', function* (c) {

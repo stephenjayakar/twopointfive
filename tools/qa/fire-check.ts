@@ -29,6 +29,10 @@
 //   size      while it burns the lamp is as big as the flame (FIRE.size × the mouth) and the steady readers still take it for the size the level gave it, a hand
 //             from the lamp where the two sizes differ most; the level's size back the frame the switch goes off; `size` 0 (the page's ?firesize=0) = the level's
 //             size burning; a recording from before the key replays with it 0
+//   fog       under the fog of war a fire is drawn as the team last saw it: its record says wherever it stands while it burns and is known to; only where the
+//             team sees when the fog has its lamp as one lit unseen (RtLight.fog 1, said by hand); with the fog itself raised and the squad at its start,
+//             the frame the fire is put out its record is one at full heat for where the team does not see (the lamp's ghost up, the lamp itself as the
+//             level hung it); with FIRE.fog off (?firefog=0) only where the team sees and no ghost; a recording from before the key replays with it off
 //   off       switch off: the lamp steady at the authored strength where the level hung it, nothing handed to the renderer, the solver or the mixer
 //   old       a recording from before the key replays with it off (journal.ts applyKnobs)
 import { standUp, ROOT } from './headless.ts';
@@ -40,7 +44,8 @@ const DT = 1 / 60;
 export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-  const { FIRE, fireStats, fireShown, fireFlicker, fireSeed, isFire } = await import(`${ROOT}/src/game/fire.ts`);
+  const { FIRE, fireStats, fireShown, fireFlicker, fireSeed, isFire, fireDraws } = await import(`${ROOT}/src/game/fire.ts`);
+  const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const J = await import(`${ROOT}/src/game/journal.ts`);
   const BREAK = process.env.FIRE_BREAK === '1';
@@ -206,6 +211,30 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
             `the level made it ${authored} m · burning ${small.toFixed(3)} to ${big.toFixed(3)} m, the steady readers told ${told} · a hand from the lamp the steady reader reads ${nearLo.toFixed(3)} to ${nearHi.toFixed(3)} burning, ${offNear.toFixed(3)} off · size 0: ${pin} m, put back: ${back.toFixed(3)} · switch off: ${off} m, the steady record ${kept ? 'kept' : 'dropped'} · its own snapshot put back: size ${own} · one without the key: ${old}`);
         }
       } finally { FIRE.size = size0; }
+    }
+    // ---- fog
+    {
+      const fog0 = FIRE.fog, full0 = FOG.full;
+      try {
+        const A = await rig(true, false), t = A.t, E = A.g.engine, FW = A.g.fogOfWar, fw0 = FW.on, rec = () => (E.fires ?? []).map((f: any) => `${f.fog ?? 0}@${f.heat.toFixed(2)}`).join(',') || 'none';
+        if (!t) verdict(false, 'fog — the pass has a fire', 'none found');
+        else {
+          const l = t.light; FIRE.fog = true; A.step(30); const plainly = rec();
+          l.fog = 1; fireDraws(A.g); const relit = rec(); l.fog = 0;   // (the fog's word for a lamp lit where nobody saw, said by hand: the squad cannot be walked to look here)
+          FIRE.fog = false; fireDraws(A.g); const offLit = rec(); FIRE.fog = true;
+          // the fog itself raised, the squad where the mission starts it: nobody sees the yard
+          FW.on = true; FOG.full = true; A.step(2); const known = rec();
+          t.on = false; t.broken = true; A.step(1); const ghost = rec(), lamp = l.fogGhost ?? 0, far = Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]), told = l.steady !== undefined;
+          A.step(60); const ghost2 = rec();
+          FIRE.fog = false; fireDraws(A.g); const offGhost = rec(); FIRE.fog = true;
+          FW.on = fw0; FOG.full = full0; A.step(2); const out = rec(); t.on = true; t.broken = false;
+          const k = (J as any).knobsSnapshot(A.g); FIRE.fog = false; (J as any).applyKnobs(A.g, k); const own = FIRE.fog;
+          const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.fog; FIRE.fog = true; (J as any).applyKnobs(A.g, k2); const old = FIRE.fog;
+          verdict(/^0@/.test(plainly) && /^1@/.test(relit) && /^1@/.test(offLit) && /^0@/.test(known) && ghost === '2@1.00' && ghost2 === '2@1.00' && lamp > 0 && far === 0 && !told && offGhost === 'none' && out === 'none' && own === true && old === false,
+            'fog — under the fog of war a fire is drawn as the team last saw it: wherever it stands while known to burn, only where seen when lit unseen, still burning where nobody sees from the frame it is put out unseen; off, never over unseen ground',
+            `burning (mode@heat): ${plainly} · the fog has its lamp as lit unseen: ${relit} · FIRE.fog off: ${offLit} · the fog raised, nobody sees the yard: ${known} · put out, that frame: ${ghost} (the lamp's ghost ${lamp}, the lamp ${far} m from its place, steady record ${told ? 'kept' : 'none'}), a second on: ${ghost2} · the same with FIRE.fog off: ${offGhost} · the fog put off again: ${out} · its own snapshot put back: ${own ? 'on' : 'off'} · one without the key: ${old ? 'on' : 'off'}`);
+        }
+      } finally { FIRE.fog = fog0; FOG.full = full0; }
     }
     // ---- off
     {

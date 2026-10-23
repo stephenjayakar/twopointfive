@@ -74,7 +74,7 @@ import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
 import { updateSmokeBreak } from './smokebreak';
 import { showWhyTick, resetShowWhy } from './showwhy';
-import { updateFire } from './fire';
+import { updateFire, fireDraws } from './fire';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
@@ -1718,6 +1718,7 @@ export class Game {
     this.shards.update(dt);       // … and what let go this frame: plates that landed hard come apart, due landings tinkle / leave litter / are heard (shards.ts — nothing to do while no glass is in play)
     // characters → GPU skin instances + RT proxies
     this.fogOfWar.update(dt);   // FOG OF WAR (fogofwar.ts): who of the others the team sees this frame, now that everybody has moved — before the lists below leave the unseen out; a return on its first line while it is off
+    fireDraws(this);            // … and the open fires as the picture draws them under it (fire.ts): this frame's word on each fire's lamp, not last frame's
     const all: Character[] = [this.player.char, ...this.guards.map(g => g.char), ...civiliansShown(this).map(c => c.char)];   // (civilians last: past the renderer's eight-figure shadow-capsule budget it is they who go without, never the shift — civilians.ts)
     const statured = this.stepFxAndDynBoxes(all, dt, cam, canvas);
     this.smokeWake(all);
