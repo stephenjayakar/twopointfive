@@ -112,6 +112,11 @@ and a teammate sounds like a present-day American soldier, not a narrator.
 
 - **The tutorial's big line**: one short sentence that starts with a verb or with "Press" / "Hold" and the key. About twelve words
   at most, because it is read at a glance in the middle of a fight. It says what to do; the card says why.
+- **A move the keys can change is named by a token, not by its key** (`game/lesson.ts TOKENS`): `{grab him}`, `{grab him from behind}`,
+  `{knock him out}`, `{take him out}`, with any words for "him" (`{grab the near guard}`). The build writes the token out by the keys it has
+  ("press [Space] to grab him" or "hold left click on him to grab him"; "right click to knock him out", with or without the knife), and
+  `lesson-check` refuses a line that spells the grab's key out. So write the sentence around the token and read it aloud each way it can
+  come out: "When he stops, sneak up behind him and {grab him}". A capital inside the braces begins a sentence (`{Knock him out}`).
 - **A card**: a title that says what the card is about ("Picking a lock", "Whistle to lure a guard") and two or three sentences. Say
   what is about to happen, what to do about it, and which key does it.
 - **An opening scene**: two sentences, written like someone briefing you: where you are and what you're there to do.
@@ -133,12 +138,12 @@ raise the cap in the open and say that you did. Never squeeze the sentence.
 block (the big line and its other lines, the after lines, the cards) and every mission row (blurb, opening scene, the "You will learn" rows). It is red on
 a key cap followed by a colon, a sentence that opens on a key cap, a colon in a lesson's line or card, a line that opens on a bare "In." / "To the …" /
 "Out by …" / "Where …" or on a participle, a verbless phrase after a comma, the British and stiff words of rule 5, "a man" / "men" for an enemy in a
-lesson, and a pronoun with its verb left uncontracted. The seven Training lessons (`train-*`) are counted apart (`HELD`, `HELD_MAX`): they were swept
-on 10-22 and one line is left, train-orders' "The armoury is locked", which says the room's own name (a room's name is in a frozen run digest, so it
-cannot move bare); the count may only fall. They write a key as a bare letter, which the page rewrites in running text (`host/keymap.ts keyText`), so
-the two key rules cannot see their keys and their lines rest on the other rules and on the review. It also reads the sentences this guide was written from and must catch every one of them and pass
-their rewrites; `WRITING_BREAK=1` reads the old sentences as a level's and must fail. It cannot read text built in code (menus, HUD rows, spoken lines):
-those rest on the review below.
+lesson, and a pronoun with its verb left uncontracted. (The seven Training lessons it once counted apart were removed on 10-23.) It also reads the sentences this guide was written from and must catch every one of them and pass
+their rewrites; `WRITING_BREAK=1` reads the old sentences as a level's and must fail. A LESSON'S LINE OR CARD IS READ AS THE PAGE WRITES IT OUT (since
+10-23): each goes through `lessonLine` on the four ways the held click and the knife can stand, so a token is checked as the sentence the player reads
+and never as its name, and the four tokens are written out of "him" on their own too (a token changed to "[Space]: grab him" is red with no level using
+it; the break word writes the grab out that way and must fail on it). It cannot read text built in code (menus, HUD rows, spoken lines): those rest on
+the review below.
 
 ## Review
 
