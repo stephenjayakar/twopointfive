@@ -62,6 +62,7 @@ import { lastStandMan } from './laststand';
 import { buddyOwns } from './buddy';
 import { runnerFled } from './runner';
 import { netQuietHolds } from './netquiet';
+import { w } from './words';   // (a leaf: the dialogue pass's one switch)
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nopowerout = the garrison stands in the dark, as it did)
  *  and by the shipped stand; the harness's frozen stand leaves it off (TPS_POWEROUT=1 turns it on). UNTUNED by play: nobody has played against it. */
@@ -273,7 +274,7 @@ function decide(g: Game, st: State, defs: Def[]) {
   if (live.some(D => roused(D.gd) || loudHeard(D.gd) > 0 || D.gd.witness.alertedBy !== null)) return stay("power's out — that's them! Stay on your doors!", 'a man of theirs is roused or has heard the team: nobody walks out to mend a fuse', true);
   if (g.rescue.captor()) return stay("power's out — that's them! Stay on your doors!", 'men holding hostages take the dark for the assault (rescue.ts: every one of them has learned of the team by it)', true);
   if (st.lost) return stay("power's out again — nobody goes. Stay on your doors!", 'the last men sent for the lights did not all come back', true);
-  if (st.parties >= POWEROUT.parties) return stay("power's out again — that's no fault. Stay on your doors!", `the lights have gone ${st.parties + 1} times this fight`, true);
+  if (st.parties >= POWEROUT.parties) return stay(w("power's out again — that's no accident. Stay on your doors!", "power's out again — that's no fault. Stay on your doors!"), `the lights have gone ${st.parties + 1} times this fight`, true);
   const lever = leverSpot(g), free = live.filter(D => powerOutKept(g, D) === null);
   // the breaker in a defender's own room: its nearest man, alone, without leaving it
   const R = g.fight.roomAt(lever);

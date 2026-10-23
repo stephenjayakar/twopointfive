@@ -88,8 +88,8 @@ const CLASSES: [RegExp, number][] = [
   [/fall(ing)? back|fell back|is lost|out the back|get back|behind me|i'm coming to you/i, 5],
   [/still out there/i, 6],
   [/hold where you are|lost them|quiet now|standing down|gone quiet|covering him|not answering — going back/i, 2],
-  [/going round|moving round|moving to|moved on — after them|coming to you|coming at|with you|get round|hit the others|on that door|get in there|in position|^set\b|go go go|go — go|go, go|pushing|on my way|two on this room|everybody, go|stand and fight|charge first|moving up behind|coming in — i|bang out|move up|putting fire|covering — move|^moving!/i, 1],   // (… and Hard's own men on the move: stand to's word, the block's charge, the rescue crew's two — pressure.ts, tactics.ts, rescue.ts; a covered lane's tells — the can going at its guns, the men moving up once it is found empty, fire from a corner and, with `pinGo`, the run-in under it: lanes.ts)
-  [/lock the doors|on the doors|back on our doors|stay on your doors|digging in|getting ready|room ready|staying on my door|holding my room|staying on my post|holding my post|let them come|not coming out|holding my corner|holding here|i've got this door|on my own/i, 3],
+  [/going round|going around|moving round|moving around|moving to|moved on — after them|coming to you|coming at|coming up behind|with you|get round|get around|hit the others|on that door|get in there|in position|^set\b|go go go|go — go|go, go|pushing|on my way|two on this room|everybody, go|stand and fight|charge first|moving up behind|coming in — i|bang out|move up|putting fire|covering — move|^moving!/i, 1],   // (… and Hard's own men on the move: stand to's word, the block's charge, the rescue crew's two — pressure.ts, tactics.ts, rescue.ts; a covered lane's tells — the can going at its guns, the men moving up once it is found empty, fire from a corner and, with `pinGo`, the run-in under it: lanes.ts)
+  [/lock the doors|on the doors|back on our doors|stay on your doors|digging in|getting ready|ready for them|room ready|staying on my door|holding my room|staying on my post|holding my post|let them come|not coming out|holding my corner|holding here|i've got this door|on my own/i, 3],
 ];
 export function cueClass(text: string): number { for (const [re, c] of CLASSES) if (re.test(text)) return c; return 4; }
 
@@ -109,8 +109,8 @@ const LINES: Record<CueKind, { cls: number; say: string[]; now?: string[] }> = {
   squadStays: { cls: 3, say: ['{sq}: still on the doors — nobody goes'] },
   squadHears: { cls: 4, say: ['{sq}: heard that — stand by'] },
   squadCopies: { cls: 4, say: ['{sq}: copy, {ally} — stand by'] },
-  squadWaits: { cls: 3, say: ['{sq}: hold — let them come in. Wait for my word!'], now: ['{sq}: hold — let them come in. wait for my word!'] },   // (enemysquads.ts drillNet: a drilled garrison's squad that could go, holding on purpose — its word comes later than a 'stand by' squad's, and may be a pair going round)
-  squadCopiesWaits: { cls: 3, say: ['{sq}: copy, {ally} — hold, let them come in. Wait for my word!'], now: ['{sq}: copy, {ally} — hold, let them come in. wait for my word!'] },
+  squadWaits: { cls: 3, say: ['{sq}: hold — let them come in. Wait for my word!'], now: ['{sq}: hold — let them come in. wait for my call!'] },   // (enemysquads.ts drillNet: a drilled garrison's squad that could go, holding on purpose — its word comes later than a 'stand by' squad's, and may be a pair going round)
+  squadCopiesWaits: { cls: 3, say: ['{sq}: copy, {ally} — hold, let them come in. Wait for my word!'], now: ['{sq}: copy, {ally} — hold, let them come in. wait for my call!'] },
   fellBack: { cls: 5, say: ['{the} is lost — falling back', 'falling back — {the} is lost'] },
   planted: { cls: 5, say: ['fell back — set {at}'] },
   pinnedIn: { cls: 5, say: ["can't get out — fell back to cover {at}"] },

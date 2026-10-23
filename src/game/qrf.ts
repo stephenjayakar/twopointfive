@@ -389,8 +389,8 @@ export function requestQrf(g: Game, reason: QrfReason): boolean {
   const Q = g.qrf, M0 = marksOf(g);
   if (Q.state !== 'idle') {
     if (g.time - Q.refusedAt > 20) { Q.refusedAt = g.time;
-      control(g, !RESPONSE.on || !M0 ? (Q.state === 'deployed' ? "negative, two-six — the response team is already on your floor. that's everyone we've got tonight" : 'negative — QRF is already rolling to you. one team, one lift; hold what you have')
-        : Q.state === 'deployed' ? `negative, ${M0.site} — ${M0.team} is already with you. that's everyone we've got tonight` : `negative — ${M0.team} is already on its way to you. there is no second one; hold what you have`);
+      control(g, !RESPONSE.on || !M0 ? (Q.state === 'deployed' ? "negative, two-six — the response team is already on your floor. that's everyone we've got tonight" : w("negative — QRF is already rolling to you. one team, one elevator. hold what you've got", 'negative — QRF is already rolling to you. one team, one lift; hold what you have'))
+        : Q.state === 'deployed' ? `negative, ${M0.site} — ${M0.team} is already with you. that's everyone we've got tonight` : w(`negative — ${M0.team} is already on its way to you. there's no second team. hold what you've got`, `negative — ${M0.team} is already on its way to you. there is no second one; hold what you have`));
       note(Q, g, 'refused'); }
     return false;
   }
@@ -500,8 +500,8 @@ export function updateQrf(g: Game, dt: number) {
     note(Q, g, 'control');
   }
   if ((Q.state === 'inbound' || Q.state === 'requested') && !Q.said30 && Q.arriveAt - g.time <= CALL30) { Q.said30 = true; if (Q.arriveAt - Q.requestedAt > CALL30 + 5 && !quiet) {
-    control(g, !own ? (Q.reason === 'silent' ? 'all stations — QRF is thirty seconds out from two-six, coming up the west stairs' : 'two-six, QRF is thirty seconds out — coming up the west stairs. check your fire that end')
-      : Q.reason === 'silent' ? `all stations — ${M!.team} is thirty seconds out from ${M!.site}, ${M!.coming}` : `${M!.site}, ${M!.team} is thirty seconds out — ${M!.coming}. check your fire that end`);
+    control(g, !own ? (Q.reason === 'silent' ? 'all stations — QRF is thirty seconds out from two-six, coming up the west stairs' : w('two-six, QRF is thirty seconds out — coming up the west stairs. check your fire on that side', 'two-six, QRF is thirty seconds out — coming up the west stairs. check your fire that end'))
+      : Q.reason === 'silent' ? `all stations — ${M!.team} is thirty seconds out from ${M!.site}, ${M!.coming}` : `${M!.site}, ${M!.team} is thirty seconds out — ${M!.coming}. check your fire ${w('on that side', 'that end')}`);
     note(Q, g, 'thirty'); } }
   if ((Q.state === 'inbound' || Q.state === 'requested') && Q.arriveAt - g.time <= CALL10) arriving(g, Q, quiet);
   if (Q.state === 'arriving' && g.time >= Q.arriveAt) deploy(g, Q, quiet);
@@ -529,10 +529,10 @@ function arriving(g: Game, Q: Qrf, quiet: boolean) {
   }
   Q.bangs = Q.men.length;
   if (n < want) note(Q, g, `capped:${Q.men.length}/${want}`);
-  if (!Q.men.length) { Q.state = 'deployed'; Q.deployedAt = g.time; if (!quiet) control(g, !own ? 'two-six — QRF is held below, nobody is coming through that door. you are on your own up there' : `${M.site} — ${M.team} is held up, nobody is coming. you are on your own`); note(Q, g, 'nobody'); return; }   // (the character budget went between the request and now: the wave is spent, honestly)
+  if (!Q.men.length) { Q.state = 'deployed'; Q.deployedAt = g.time; if (!quiet) control(g, !own ? w("two-six — QRF is held below, nobody's coming through that door. you're on your own up there", 'two-six — QRF is held below, nobody is coming through that door. you are on your own up there') : w(`${M.site} — ${M.team} is held up, nobody's coming. you're on your own`, `${M.site} — ${M.team} is held up, nobody is coming. you are on your own`)); note(Q, g, 'nobody'); return; }   // (the character budget went between the request and now: the wave is spent, honestly)
   if (!own) { if (door) g.audio.play('stairBoots', [door.frameCentre[0] - 1.2, 0.3, door.frameCentre[2]], 0.75); }
   else if (M.stairs) g.audio.play('stairBoots', [M.muster[0][0], 0.3, M.muster[0][2]], 0.75);
-  if (!quiet) radio(g, Q.men[0], !own ? `QRF on the stairs — ${Q.men.length} of us, ten seconds. we come in the west stair door: nobody west of the lobby arch, check your fire`
+  if (!quiet) radio(g, Q.men[0], !own ? w(`QRF on the stairs — ${Q.men.length} of us, ten seconds. we're coming in the west stair door. nobody west of the lobby arch, check your fire`, `QRF on the stairs — ${Q.men.length} of us, ten seconds. we come in the west stair door: nobody west of the lobby arch, check your fire`)
     : `${M.tag} at ${M.name} — ${Q.men.length} of us, ten seconds.${M.clear ? ` ${M.clear},` : ''} check your fire`);
   note(Q, g, `ten:${Q.men.length}`);
   Q.phase = 'landing'; Q.phaseT = 0;
@@ -869,7 +869,7 @@ function phaseMove(g: Game, Q: Qrf, el: Guard[], dt: number) {
   const eta = 60;
   if (arrived || Q.phaseT > eta) {
     if (T.kind === 'room' && flat(lp, T.plan!.stack[0]) < 4) { if (!(g.tune.qrfSquad && startDrill(g, Q, el))) startStack(g, Q, el); }
-    else if (T.kind === 'room') { radio(g, lead, `can't get onto the ${T.room} from here — next`); Q.cleared.set(T.room, g.time - RECLEAR_SECS + 30); hold360(g, Q, el); }
+    else if (T.kind === 'room') { radio(g, lead, `can't get ${w('into', 'onto')} the ${T.room} from here — next`); Q.cleared.set(T.room, g.time - RECLEAR_SECS + 30); hold360(g, Q, el); }
     else hold360(g, Q, el);
   }
 }
@@ -1061,7 +1061,7 @@ function phaseDrill(g: Game, Q: Qrf, el: Guard[]) {
     Q.drillsIn++; Q.phase = 'called'; Q.phaseT = 0; Q.cleared.set(T.room, g.time); g.clearedAt.set(T.room, g.time);   // (the shift's pair reads the same ledger — phaseFlow)
     radio(g, el[0], `${T.room} clear — negative contact. ${Q.bangs > 0 ? 'moving on' : 'no bangs left, moving on'}`);
     note(Q, g, `clear:${T.room}`);
-  } else { radio(g, el[0], why === 'too long' ? `${T.room} is taking too long — leave it, next` : `can't get onto the ${T.room} from here — next`); Q.cleared.set(T.room, g.time - RECLEAR_SECS + 30); hold360(g, Q, el); }
+  } else { radio(g, el[0], why === 'too long' ? `${T.room} is taking too long — leave it, next` : `can't get ${w('into', 'onto')} the ${T.room} from here — next`); Q.cleared.set(T.room, g.time - RECLEAR_SECS + 30); hold360(g, Q, el); }
 }
 
 // ---------------------------------------------------------------- contact: the fight is the AI's; the element re-forms when it goes cold
@@ -1154,7 +1154,7 @@ export function callPerimeter(g: Game, why = 'panel'): boolean {
   if (onDrill) hold360(g, Q, alive(Q, g));
   const names = P.men.map(p => p.gd.callsign);
   if (P.men.length) radio(g, P.men[0].gd, `${names.join(', ')} — going outside. ${P.men.map(p => p.post.name).join(' and ')}, from the outside, lights on the doors`);
-  else control(g, 'no outside team to be had — the lamps are all you get. watch the exits from inside');
+  else control(g, w("there's no outside team — the lights are all you get. watch the exits from inside", 'no outside team to be had — the lamps are all you get. watch the exits from inside'));
   note(Q, g, `perimeter:${why}:${P.spawned}s+${P.peeled}p`);
   return true;
 }
@@ -1192,7 +1192,7 @@ function tickPerimeter(g: Game, Q: Qrf, dt: number) {
       P.state = 'set'; P.setAt = g.time;
       const up = P.men.filter(p => p.gd.state !== 'dead' && p.arrivedAt >= 0);
       if (up.length) radio(g, up[0].gd, `perimeter set — eyes on ${up.map(p => p.post.name).join(' and ')}. lights are up outside; nobody walks out of here`);
-      else control(g, 'perimeter is what it is — lamps up, no eyes outside. hold the exits from inside');
+      else control(g, w('perimeter is what it is — lights up, no eyes outside. hold the exits from inside', 'perimeter is what it is — lamps up, no eyes outside. hold the exits from inside'));
       note(Q, g, `perimeter-set:${up.length}`);
     }
   }

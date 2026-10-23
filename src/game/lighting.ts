@@ -11,7 +11,7 @@ import { lightFromDef } from '../render/lights';
 import type { RtLight } from '../render/lights';
 import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
 import { isHostile } from './teams';
-import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
 import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
 import { powerOut, powerOutMan } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
 import { carLampPaint, deadLamp } from './carlamps';   // a broken vehicle lamp's paint; a dark lens breaking is no light going out (a leaf)
@@ -81,7 +81,7 @@ export function updateTargets(g: Game, dt: number) {
     g.breakerFixT = near ? g.breakerFixT + dt : 0;
     const fumble = g.level.breaker.fumble ?? 2.2;   // (the level's own number where it gives one: a panel a man is long at)
     if (near) leverHands(g, near.char, g.breakerFixT, fumble);   // (handwork.ts: his hand on the lever while he fumbles with it)
-    if (g.breakerFixT > fumble && near) { g.say(near, "breaker's back in", true); g.endBlackout(); }
+    if (g.breakerFixT > fumble && near) { g.say(near, w("breaker's back on", "breaker's back in"), true); g.endBlackout(); }
   }
   // emergency beacons: spin up ~0.8 s after the trip, keep turning for a second after power returns; each is slaved to its dome fixture
   const beaconsOn = bo.active ? time - bo.since > 0.8 : time - bo.restoredAt < 1.2;

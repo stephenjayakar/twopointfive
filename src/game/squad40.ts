@@ -48,6 +48,7 @@ import { LAUNCHER40 } from './weapons';
 import { squadHandFree } from './squadsmoke';
 import { THROW_OPEN, THROW_PAGE, handsBusy, mayWalk, squadFragCatches, squadHandBack, squadLend, squadLogRow, type Lent } from './squadthrow';
 import { isHostile } from './teams';
+import { w } from './words';   // (a leaf: the dialogue pass's one switch)
 
 export const SQUAD40 = {
   on: false,
@@ -168,7 +169,7 @@ function plan(g: Game, men: Guard[], at: Vec3, asker: Asker | null): { a: Shot; 
     return keep(a);
   }
   // (the words: these men carry none · the men who do have no launcher in a free hand, or are not ours to turn · the round would not arm · no arc)
-  return dirty ? keep(dirty.a, dirty.who) : keep(!any ? 'none with them.' : !asked ? 'not ready.' : close ? 'too close to arm.' : 'no shot from here.');
+  return dirty ? keep(dirty.a, dirty.who) : keep(!any ? w("nobody's carrying one.", 'none with them.') : !asked ? 'not ready.' : close ? 'too close to arm.' : 'no shot from here.');
 }
 
 /** the round leaves his tube */

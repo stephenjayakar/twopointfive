@@ -23,6 +23,7 @@ import { kickScuff } from './marks';
 import { DOORMANNERS, doorwayGate } from './doorway';
 import { silentStep } from './silent';
 import { handleGate } from './handleside';
+import { w } from './words';   // (a leaf: the dialogue pass's one switch)
 
 /** Within this of the goal the nav path is dropped and he settles straight onto the exact spot (paths end on half-metre cell centres, and a
  *  choreographer's marks — a kicking distance off a door, a shoulder on a jamb — are not on cell centres). */
@@ -234,7 +235,7 @@ export class RoomClear {
   private say(key: keyof RoomClearPlan['lines'], gd: Guard, radio = false) {
     if (!this.once(key)) return;
     const B = BODY_LINES[key] ? this.bodyHere(gd) : null;
-    this.g.say(gd, B ? (isBreathing(B) ? BODY_LINES_COLD[key] : BODY_LINES[key]) ?? this.plan.lines[key] : this.plan.lines[key], radio);
+    this.g.say(gd, B ? (isBreathing(B) ? w(BODY_LINES_COLD_NOW[key] ?? BODY_LINES_COLD[key], BODY_LINES_COLD[key]) : w(BODY_LINES_NOW[key] ?? BODY_LINES[key], BODY_LINES[key])) ?? this.plan.lines[key] : this.plan.lines[key], radio);
   }
   /** a found colleague lying in this room (inside its bounds when the plan has them) within a few metres of the man, in his plain sight — not one out in the corridor through the wall */
   private bodyHere(gd: Guard): Guard | null {
@@ -423,6 +424,9 @@ const BODY_LINES: Partial<Record<keyof RoomClearPlan['lines'], string>> = {
   under2: 'checking under… just him.', nothing2: 'nothing else down here.', corner1: "corner's clear. only him.",
   empty2: "room's clear — nobody but him.",
 };
+/** (WORDS) the two tables' lines as they are said now, where one changed (read in RoomClear.say) */
+const BODY_LINES_NOW: Partial<Record<keyof RoomClearPlan['lines'], string>> = { side2: 'door side clear — except for him.' };
+const BODY_LINES_COLD_NOW: Partial<Record<keyof RoomClearPlan['lines'], string>> = { nothing2: 'nothing else down here. he took a hard hit.' };
 /** …or put out cold and left breathing (isBreathing: the takedown) — the same steps, the words of men stepping round a colleague who will wake up sore */
 const BODY_LINES_COLD: Partial<Record<keyof RoomClearPlan['lines'], string>> = {
   side1: "my side's clear. …he's here — still breathing.", side2: "door side clear — just him, out cold.",
@@ -545,7 +549,7 @@ export class Clearing {
       for (const gd of this.men()) breakOff(gd, gd.task ? 0.42 : 0.34, gd.task ? gd.task.pos : null);
       this.stage = 'done'; return false;
     }
-    if (this.total > this.cap) { this.say(`that's long enough — back on the corridor${b ? ', stay paired' : ''}`); this.cancel(); return false; }
+    if (this.total > this.cap) { this.say(`that's long enough — back ${w('to', 'on')} the corridor${b ? ', stay paired' : ''}`); this.cancel(); return false; }
     switch (this.stage) {
       case 'approach': {
         if (this.readDoors()) break;   // a door on the way gave the intruder away: remarked, and (if it changed where they go first) the walk re-planned — pick it up next frame
@@ -654,7 +658,7 @@ export class Clearing {
   private nextRoom(cleared = true): boolean {
     if (cleared && this.cur) this.g.clearedAt.set(this.name(this.cur), this.g.time);
     this.roomI++;
-    if (!this.rooms[this.roomI]) { this.say(`${this.rooms.length > 1 ? "that's the near rooms done" : 'room done'} — back on the corridor${this.b ? ', stay paired' : ''}`); this.cancel(); return false; }
+    if (!this.rooms[this.roomI]) { this.say(`${this.rooms.length > 1 ? "that's the near rooms done" : 'room done'} — back ${w('to', 'on')} the corridor${this.b ? ', stay paired' : ''}`); this.cancel(); return false; }
     this.approach(); this.say(`${this.roomI === this.rooms.length - 1 ? 'last one — ' : 'moving to '}the ${this.name(this.cur)}`); return true;
   }
 }

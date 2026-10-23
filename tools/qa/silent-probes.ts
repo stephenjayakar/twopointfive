@@ -213,7 +213,7 @@ export const silentDoors = guarded(async () => {
     return { R, Md, locked, w, op, kicked: R.kicks > 0, broken: !!Md.lockBroken, ended: op?.ended as string | undefined, held: SLM.SILENT_STATS.locked - k0 }; };
   const A = await run(false, 'openClear'), B = await run(true, 'openClear');
   verdict(A.locked && A.w === null && A.kicked && A.broken, 'loud, a locked door, "open and clear": the lead boots it (as ever)', `kicks ${A.R.kicks} · lock broken ${A.broken} · ${A.R.beats(A.op)}`);
-  verdict(B.locked && B.w === null && !B.kicked && !B.broken && B.Md.latched && /silent: no boot/.test(B.ended ?? '') && B.R.said.some((t: string) => /locked\. no boot while we are silent/.test(t)) && B.held > 0 && A.held === 0,
+  verdict(B.locked && B.w === null && !B.kicked && !B.broken && B.Md.latched && /silent: no boot/.test(B.ended ?? '') && B.R.said.some((t: string) => /locked\. no boot while we(?: are|'re) silent/.test(t)) && B.held > 0 && A.held === 0,
     'silent with the pick switched off, the same order: no boot — the lead says it is locked (on the net) and the order ends on the door, the leaf still shut', `kicks ${B.R.kicks} · latched ${B.Md.latched} · ended: ${B.ended} · said: ${B.R.said.filter((t: string) => /locked/.test(t)).join(' / ')}`);
   // the unlocked door: the shove
   const shove = async (silent: boolean) => { const R = await rig(7, { empty: true }); const { D, W } = R; const d = R.door('breakroom_w');
@@ -338,7 +338,7 @@ export const silentBoot = guarded(async () => {
   verdict(P.R.kicks === 0 && P.booted === 0 && !P.Md.lockBroken && !P.Md.locked && line(P, /locked\. picking/).length === 1, 'compromised at a door with a keyway: still the pick, no boot', `kicks ${P.R.kicks} · booted ${P.booted} · picks ${P.R.D.stats.picks} · said: ${line(P, /locked|wedged/).join(' / ')}`);
   // the switch off: held, whatever has reached them — the old line
   const F = await run({ prep: wedge, hot: true, knobs: { bootWedged: false } });
-  verdict(F.R.kicks === 0 && F.Md.locked && F.booted === 0 && /silent: no boot/.test(F.ended ?? '') && line(F, /locked\. no boot while we are silent/).length === 1 && line(F, /go loud|booting/).length === 0,
+  verdict(F.R.kicks === 0 && F.Md.locked && F.booted === 0 && /silent: no boot/.test(F.ended ?? '') && line(F, /locked\. no boot while we(?: are|'re) silent/).length === 1 && line(F, /go loud|booting/).length === 0,
     'the switch off (SILENT.bootWedged): compromised or not, no boot and the old line', `kicks ${F.R.kicks} · ended: ${F.ended} · said: ${line(F, /wedged|locked/).join(' / ')}`);
   // said once per door
   const G = await run({ prep: wedge, hot: true, again: true });

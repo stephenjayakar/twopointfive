@@ -55,6 +55,7 @@ import { FRAG, fragFlee, fragReady, fragThrowAt, fragWinding, fragAway, armRound
 import { placeName } from './dialogue';
 import { CUES } from './cues';
 import { doorwayInWay } from './doorway';
+import { w } from './words';   // (a leaf: the dialogue pass's one switch)
 import { gunKeepsPost } from './gunroles';   // (called inside laneHolds only)
 
 export const LANES = {
@@ -500,12 +501,12 @@ function round(g: Game, st: State, L: Lane, at: Guard[]) {
     st.held.delete(gd); st.flank.set(gd, g.time + Math.min(60, ways[i].len / 2 + 10));
     if (ways[i].pin && stop) {   // its end too long in their sight to walk: as far as where the guns would first see him, to hold the lane from that side
       st.flankOf.set(gd, { lane: L.id, phase: 'walk', at: stop, t: g.time, n: 0 }); gd.path = []; gd.pathGoal = null; legTo(g, D, stop, null, 0); gd.lastKnown = v3.copy(L.from); st.stats.round++;
-      if (i === 0) { g.say(gd, 'going round — keep them looking your way!', true); st.saidT = g.time; }
+      if (i === 0) { g.say(gd, w('going around — keep them looking your way!', 'going round — keep them looking your way!'), true); st.saidT = g.time; }
       note(g, gd, `lane ${L.id}: goes round, ${ways[i].len.toFixed(0)} m, as far as (${stop[0].toFixed(1)}, ${stop[2].toFixed(1)}) on its other side`);
       continue;
     }
     loose(g, D, L.from); gd.lastKnown = v3.copy(L.from); st.stats.round++;   // (his way stays priced — the way round — but nothing here stops him short of the guns he was sent at)
-    if (i === 0) { g.say(gd, 'going round — keep them looking your way!', true); st.saidT = g.time; }
+    if (i === 0) { g.say(gd, w('going around — keep them looking your way!', 'going round — keep them looking your way!'), true); st.saidT = g.time; }
     note(g, gd, `lane ${L.id}: goes round, ${ways[i].len.toFixed(0)} m`);
   }
   L.roundAt = g.time + K.roundGap;

@@ -258,7 +258,7 @@ export async function dialogueIntel() {
       if (item?.known) fails.push(`A, held since ${A.talk.heldSince.toFixed(0)} s (order at ${B.task.t0.toFixed(0)} s), KNOWS the errand`);
       if (heldGive?.kind === 'checkOn') fails.push(`held A would give the errand: "${heldGive.text}"`);
       const selfCtx = D.gather(game, B); const selfGive = D.intelFor(selfCtx, B.talk);
-      if (selfGive?.kind !== 'checkOn' || !/I was sent round/.test(selfGive.text) || !selfGive.text.includes(C.callsign)) fails.push(`the checker's own useful thing: ${JSON.stringify(selfGive)} (want checkOn in his own words naming ${C.callsign})`);
+      if (selfGive?.kind !== 'checkOn' || !/I was sent (round|to walk)/.test(selfGive.text) || !selfGive.text.includes(C.callsign)) fails.push(`the checker's own useful thing: ${JSON.stringify(selfGive)} (want checkOn in his own words naming ${C.callsign})`);
       A.talk.heldSince = -1;   // let go and grabbed afresh after the order went out: now he heard it
       const freeCtx = D.gather(game, A); const freeGive = D.intelFor(freeCtx, A.talk);
       if (freeGive?.kind !== 'checkOn' || !freeGive.text.includes(B.callsign) || !freeGive.text.includes(C.callsign)) fails.push(`A grabbed after the order: ${JSON.stringify(freeGive)} (want checkOn naming ${B.callsign} and ${C.callsign})`);

@@ -188,7 +188,7 @@ export const pairDark = guarded(async () => {
   // refused: nothing dark in reach — greyed on the menu, and said when given by the quick key
   const m3 = R.menu(lit); R.esc(); const p3 = [...mate.char.pos], n3 = O.log.length;
   R.cursor(lit); R.press(ORDERS.quickKey); R.step(60 * 2);
-  verdict(m3.rows[0]?.off && m3.rows[0].text.includes('nowhere dark there.') && O.log.length === n3 && R.said.includes(`[${mate.callsign}] nowhere dark there.`) && flat(mate.char.pos, p3) < 0.3 && O.of(mate)?.order === 'pairDark',
+  verdict(m3.rows[0]?.off && /nowhere dark there\.|no dark spot there\./.test(m3.rows[0].text) && O.log.length === n3 && (R.said.includes(`[${mate.callsign}] nowhere dark there.`) || R.said.includes(`[${mate.callsign}] no dark spot there.`)) && flat(mate.char.pos, p3) < 0.3 && O.of(mate)?.order === 'pairDark',
     'on lit floor with no dark in reach the row is greyed with the reason — and given by B it is refused in his own words; he stays on the order he had', `menu: ${show(m3.rows.slice(0, 1))} · said: ${R.said.slice(-1).join('')} · moved ${f2(flat(mate.char.pos, p3))} m · ${R.status()}`);
   // refused: no way there
   const t5 = R.tango(5), inRoom = [t5.char.pos[0] + 0.6, 0, t5.char.pos[2] + 0.6], w4 = O.give('pairDark', { kind: 'floor', at: inRoom });
@@ -260,7 +260,7 @@ export const pairMark = guarded(async () => {
     verdict(w1 !== null && /locked/.test(w1) && R.said.includes(`[${mate.callsign}] ${w1}`) && !P.jobOf(mate) && flat(mate.char.pos, p0) < 0.2, 'a man behind a locked door: refused, the partner says why, and he has not moved', `give → ${w1} · said: ${R.said.slice(-1).join('')}`);
     R.put(t1, AISLE_MID, EAST); R.put(mate, AISLE_W, EAST); R.step(20);
     t1.awareness = 0.9; const m = R.menu(R.chest(t1)); R.esc(); const w2 = O.give('pairMark', R.foe(t1)), w2b = O.give('pairTake', R.foe(t1)); t1.awareness = 0;
-    verdict(m.rows[0]?.off && m.rows[0].text.includes("he's fighting. no hands.") && m.rows[4]?.off && w2 === "he's fighting. no hands." && w2b === w2 && !m.rows[1].off, 'a man who has already noticed: both take rows greyed with the reason (watch him is not), and given anyway they are refused in those words', `menu: ${show(m.rows)} · give → ${w2}`);
+    verdict(m.rows[0]?.off && /he's fighting\. (no hands|can't grab him)\./.test(m.rows[0].text) && m.rows[4]?.off && /^he's fighting\. (no hands|can't grab him)\.$/.test(String(w2)) && w2b === w2 && !m.rows[1].off, 'a man who has already noticed: both take rows greyed with the reason (watch him is not), and given anyway they are refused in those words', `menu: ${show(m.rows)} · give → ${w2}`);
     const stale = R.foe(t1); killGuard(game, t1, [0, 0, 1], true); R.step(10); const w3 = O.give('pairMark', stale), tk = O.targetAt(t1.char.pos).kind;
     verdict(w3 === "he's down already." && tk !== 'foe', 'a man already down is no target, and an order still pointing at him is refused: he\'s down already', `targetAt(the body) → ${tk} · give → ${w3}`); }
   // called off under way with a cue: the man rouses before the hands are on him
@@ -273,7 +273,7 @@ export const pairMark = guarded(async () => {
   // … or there is no way to that back without crossing somebody's eyes (the staging's own man, his back to a wall and his face to the door)
   { const R = await rig({ pair: { stalkWait: 4 } }); const { O, P } = R; const mate = R.mate, foe = R.tango(1);
     const w = O.give('pairMark', R.foe(foe)); const waited = R.until(() => /no way to/.test(R.status()), 40), aw = foe.awareness; const off = R.until(() => !P.jobOf(mate), 30); R.step(30);
-    verdict(w === null && waited && off && R.said.includes(`[${mate.callsign}] no way to his back unseen.`) && PM.PAIR_LOG.some((x: any) => x.what === 'off:noway') && foe.state !== 'dead' && R.roused().length === 0 && R.opShots === 0 && O.of(mate)?.order === 'hold',
+    verdict(w === null && waited && off && (R.said.includes(`[${mate.callsign}] no way to his back unseen.`) || R.said.includes(`[${mate.callsign}] can't get behind him unseen.`)) && PM.PAIR_LOG.some((x: any) => x.what === 'off:noway') && foe.state !== 'dead' && R.roused().length === 0 && R.opShots === 0 && O.of(mate)?.order === 'hold',
       'the only way to his back lies across his eyes: the partner WAITS short of it (his line on the squad block says so), and after a few seconds of no way says it and holds — nobody roused, no round', `give → ${w} · said: ${R.said.filter(s => s.startsWith(`[${mate.callsign}]`)).slice(-2).join(' / ')} · ${foe.callsign} awareness ${f2(aw)} · ${R.log()} · ${R.status()}`); }
   return done();
 });
@@ -318,7 +318,7 @@ export const pairWatched = guarded(async () => {
     PM.PAIR.takeSecs = 3; R.press('KeyF'); R.step(60 * 6); const held = foe.state !== 'dead' && P.jobOf(mate)?.watcher === w, n0 = R.said.length;
     w.__yaw = Math.PI / 2; const down = R.until(() => foe.state === 'dead', 8), said = R.said.slice(n0);
     PM.PAIR.takeSecs = keep;
-    verdict(held && down && !said.some((x: string) => /can't get to his back/.test(x)), "held up for longer than the job's own time limit, then clear: he takes the man — the wait is not counted against the job", `held ${held} · down ${down} · said: ${said.join(' / ')}`);
+    verdict(held && down && !said.some((x: string) => /can't get (to his back|behind him)\./.test(x)), "held up for longer than the job's own time limit, then clear: he takes the man — the wait is not counted against the job", `held ${held} · down ${down} · said: ${said.join(' / ')}`);
   }
   // Sam's own hands as the mark, the partner set: he goes whoever is looking (the beat is not missed) …
   { const { R, foe, mate } = await staged(); const { P } = R;
@@ -364,7 +364,7 @@ export const pairWatched = guarded(async () => {
     const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(5);
     R.O.give('pairTake', R.foe(foe), 'all'); const n0 = R.said.length;
     R.step(60 * 40); const said = R.said.slice(n0);
-    verdict(foe.state !== 'dead' && !P.jobOf(mate) && R.opShots === 0 && said.some((x: string) => /no clean moment|no way to his back unseen/.test(x)), 'take him now, with a watcher who never looks away: no hands — he calls it off in words and holds', `${foe.callsign} ${foe.state} · said: ${said.filter((x: string) => x.startsWith('[')).join(' / ')}`);
+    verdict(foe.state !== 'dead' && !P.jobOf(mate) && R.opShots === 0 && said.some((x: string) => /no clean moment|no way to his back unseen|can't get behind him unseen/.test(x)), 'take him now, with a watcher who never looks away: no hands — he calls it off in words and holds', `${foe.callsign} ${foe.state} · said: ${said.filter((x: string) => x.startsWith('[')).join(' / ')}`);
   }
   return done();
 });
