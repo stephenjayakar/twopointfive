@@ -80,6 +80,9 @@ function modeUp(B: Bot, walk?: string) {
 }
 /** the mode's right button on a door (the button down as well as its edge: the mode reads both) */
 function rclick(B: Bot, door: string) { onDoor(B, door); B.step(3); B.I.clicked |= 4; B.I.buttons |= 4; B.step(); B.I.buttons &= ~4; B.step(3); }
+/** TUT_SQUAD_FRAG=wide: the frag lands on the road past the nest and both of its men outlive it — the way round the nest, past the hall's window,
+ *  with a gun still up and the line still 'Take the gun nest' (what a first throw often is) */
+const FRAG_WIDE = process.env.TUT_SQUAD_FRAG === 'wide', WIDE = [36.8, 1.0, 12.0];
 /** TUT_SQUAD_INSIDE=1: the room is taken from INSIDE plan mode (a second right click on the stacked door is the entry), which the walk's step must not
  *  pass on with the mode still up: its line is the key that puts the mode away, and it holds until that key */
 const INSIDE = process.env.TUT_SQUAD_INSIDE === '1';
@@ -110,11 +113,24 @@ function reload(B: Bot) { const r = B.g.player.rifle; if (r && r.mag === 0 && !r
 const chest = (ch: { pos: number[]; bones?: { chest?: number[] } }): number[] => ch.bones?.chest ?? [ch.pos[0], 1.25, ch.pos[2]];
 /** the rifle at whoever of a room's men still stands, a press at a time, until the room is clear or the seconds are up (he aims at the man: where he is
  *  is read off the room's own list, as eyes would) */
-function shootMen(B: Bot, room: string, secs: number) {
+function shootMen(B: Bot, room: string, secs: number, seen = false) {
   const R = rooms(B).find(r => r.def.id === room) as unknown as { defenders: { state: string; char: { pos: number[]; bones?: { chest?: number[] } } }[] } | undefined, t0 = B.t();
   // (the nearest of them: a hand shoots the man in front of it, not the first on the roster, who may be two walls off)
-  const near = () => { const me = B.pos(); return R?.defenders.filter(x => x.state !== 'dead').sort((a, b) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0]; };
+  // (`seen`: only a man he has a line to, as a hand at a window shoots — the hall's two walk into its line, and a round at a man still behind the wall is a round in the wall)
+  const line = (x: { char: { pos: number[]; bones?: { chest?: number[] } } }) => { const me = B.pos(); return !(B.g as unknown as { col: { segmentBlocked(a: number[], b: number[]): boolean } }).col.segmentBlocked([me[0], 1.5, me[2]], chest(x.char)); };
+  const near = () => { const me = B.pos(); return R?.defenders.filter(x => x.state !== 'dead' && (!seen || line(x))).sort((a, b) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0]; };
   while (!cleared(B, room) && B.t() - t0 < secs) { const m = near(); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, chest(m.char)); B.wait(0.2); }
+}
+/** THE HALL IS ITS OWN STEPS': its two wait out of the window's line until the window's step is up (its cue; the level's script, beat 'hall'), so
+ *  nobody's rifle finds them while another line is on the screen. A man of them down BEFORE that step came up is the failure — the window's, the door's
+ *  and the lock's lines then go by unread, and the runner calls a step that went by the fight's — so it is asked at 'window' and again at 'hall', the
+ *  first step after them that cannot go by. (Down AFTER it came up, to a teammate at the glass while a slow reader reads, is the squad doing what the
+ *  line says: said, not failed.) TUT_SQUAD_HALL=any: not held */
+function hallEarly(B: Bot) {
+  if (process.env.TUT_SQUAD_HALL === 'any') return;
+  const up = parseFloat(((B.g as unknown as { lesson: { log: string[] } }).lesson.log.find(l => /done \d+\/\d+ 'nest'/.test(l)) ?? 'NaN'));
+  const men = (rooms(B).find(r => r.def.id === 'hall') as unknown as { defenders: { state: string; callsign: string; diedAt: number }[] } | undefined)?.defenders.filter(x => x.state === 'dead' && !(x.diedAt >= up)) ?? [];
+  if (men.length) B.fail(`${men.map(m => `${m.callsign} (at ${m.diedAt.toFixed(1)} s)`).join(' and ')} of the hall went down before the window's step came up (${Number.isFinite(up) ? `${up.toFixed(1)} s` : 'it never did'}): the hall's lines went by with nobody having read them`);
 }
 /** how many of the nest's two are down by a round that was not the player's own (character id 1: consts.ts PLAYER_ID) */
 const nestTaken = (B: Bot) => (rooms(B).find(r => r.def.id === 'nest') as unknown as { defenders: { state: string; killerId: number }[] } | undefined)?.defenders.filter(x => x.state === 'dead' && x.killerId !== 1).length ?? 0;
@@ -201,7 +217,7 @@ const RAW: Record<string, (B: Bot) => void> = {
     if (B.g.player.frags < 1) B.fail('no frag to throw'); if (FRAG_WAIT > 0) B.wait(FRAG_WAIT);
     // (the lesson is HIS throw: a nest the squad has already shot a man out of is the lesson gone by, whatever the step's test says)
     { const n = nestTaken(B); if (n) B.fail(`the squad shot ${n} of the nest's two before the frag was thrown (${FRAG_WAIT} s at the blocks)`); }
-    B.press('Digit5', 10); B.click(1, NEST); B.wait(3.5); B.press('Digit2', 10);
+    B.press('Digit5', 10); B.click(1, FRAG_WIDE ? WIDE : NEST); B.wait(3.5); B.press('Digit2', 10);
   },
   // (a man left behind the bags cannot be hit from the blocks: round the nest's open side, as a player would walk)
   // (from where he stands; then from the far end of the strip behind the nest; then from its open side, in between the arms of the bags: the frag can
@@ -211,8 +227,11 @@ const RAW: Record<string, (B: Bot) => void> = {
     if (!B.until(() => cleared(B, 'nest'), 30)) B.fail('the nest was not taken'); },
   // the hall: its men shot through a street window from outside
   window: B => {
+    hallEarly(B); if (cleared(B, 'hall')) B.say("  the hall fell to the squad at the glass while the window's line was being read");
     if (SKY) B.say(`  the sky on every meter: ${skyReads(B)} readings so far`); B.wait(1.5);
-    if (!B.go(WINDOW, 60, { stop: () => cleared(B, 'hall') })) B.say(`  did not reach the window: at ${B.pos().map(v => v.toFixed(1))}`); shootMen(B, 'hall', 40); if (!B.until(() => cleared(B, 'hall'), 60)) B.fail('the hall was not cleared'); hallBy(B); },
+    // (square on to the glass, as the ring puts a player: a pace along the wall the rifle's line is the jamb, and a gun at a wall is not fired)
+    if (!B.go(WINDOW, 60, { stop: () => cleared(B, 'hall'), near: 0.18 }) && !cleared(B, 'hall')) B.say(`  did not reach the window: at ${B.pos().map(v => v.toFixed(1))}`);
+    shootMen(B, 'hall', 40, true); if (!B.until(() => cleared(B, 'hall'), 60)) B.fail('the hall was not cleared'); hallBy(B); },
   // the hall's door: round to the passage, square on to the leaf, and the boot (a frame that held it is kicked again)
   door: B => { hallBy(B); B.go(HALL_SIDE, 60, { noDoors: true }); },
   lock: B => {
@@ -222,6 +241,7 @@ const RAW: Record<string, (B: Bot) => void> = {
     if (d.isClosed() && !d.lockBroken) B.fail(`the hall door would not give to a boot (locked ${d.locked})`);
   },
   hall: B => {
+    hallEarly(B);
     B.go([31.0, 0, 19.75], 30); },
   // the picket: behind the bags, the road gate held, the squad turned to the alley
   // (where the page keeps saves of a squad's run — in memory, the shipped stand — the checkpoint this step wrote as it came up is LOADED before anything is

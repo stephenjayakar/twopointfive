@@ -291,7 +291,7 @@ export function build() {
       { id: 'nest', line: 'Take the gun nest', done: taken('nest'), at: [32.0, 1, 13.8], cue: 'fragged' },
       // 4 · A ROOM CAN BE CLEARED FROM OUTSIDE, AND A LOCK IS NOT A WALL: the men who wait inside the door are shot through a window; then the locked
       //     leaf is kicked in, and it is the way in
-      { id: 'window', line: 'Two enemies are waiting inside. Shoot them through the window', explain: CARDS.window, done: taken('hall'), at: [WIN_X, 1.4, 16.9], checkpoint: 'the hall' },
+      { id: 'window', line: 'Two enemies are waiting inside. Shoot them through the window', explain: CARDS.window, done: taken('hall'), at: [WIN_X, 1.4, 16.9], checkpoint: 'the hall', cue: 'window' },   // (the cue: the hall's two walk to their places on it and not before — the level's script, beat 'hall')
       //     (the walk to the door is a step of its own: from the window the leaf is edge on, and a player told to open it tried from there. And the first
       //      way through a lock anybody is shown is the boot: rounds through a door are for a door nobody can walk up to)
       { id: 'door', line: 'The door is locked. Go around to it', done: or(near(HALL_FRONT, 1.7), HALL_OPEN), at: [HALL_FRONT[0], 1, HALL_FRONT[2]] },
