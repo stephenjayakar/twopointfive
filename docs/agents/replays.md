@@ -287,7 +287,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shelf beside it), a rollback ring will have to. THE SENSORS' TAPE DOES NOT GO BACK EITHER (`sensors.ts SensorStream`, the host's): right for a save loaded
   in play — the game goes back, the recording goes on — but a ring that undoes eight ticks and plays them again under a recording files them twice, and
   under a replay is served the wrong frames: whoever builds the ring winds the tape itself. The check never runs under a recording or a replay
-  (`journalload-check.ts` does). A
+  (`journalload-check.ts` does). THE BOOKS OF WHAT WAS LAST SENT ARE IN THE STATE (measured 10-23, the pass, thirty frames in): a snapshot put back
+  gives the saved moment's hash, and the host's own put-back (`host/putback.ts`) then moves it at 9095 values by forgetting them — `world.visibleSent`
+  7711, `world.gbSent` 4608, `game.chars.instSent` 744, the box world's epochs and counts, `game.chars.matDirty`, `game.snowLookWas` — and three frames on
+  the game still stands 3978 values from a twin that never put back (the harness uploads nothing). So a hash to hold against another host's is taken
+  BEFORE the host is told, or these become the host's inside their objects (`HostOwned`, as the light meter's plumbing is): not done. A HOST BOOK IN THE
+  GAME'S STATE is the same fault from the other side — a table that follows the pool, the solver or the view; the fires', the smoke break's, the breath's
+  and the falling snow's are in `engine.hostBooks` / on the engine now, and `docs/agents/weather.md` ("Whose the recycler's table is") lists what was
+  measured still to go (a blast's owed snow, the air's row, the wind's scratch, the rain's recycler; the wind's pool list went to the host the same day). AN OLD RED, found 10-23
+  by running the check where it had not been run: `--scn pass-four` on the SHIPPED stand fails `fresh game` at 3 of 14 moments (the first at frame 809,
+  tick 2), the same before the snow's book as after; `--why` shows the other game pressing other prints (`game.snowTracks.prints` 186 against 191, and
+  the map, the marks forming and the kicks after them). Read, not proved: the feet's memory is a module variable keyed by the man
+  (`snowTracks.feetOf`), and the other game's men are other objects. Frozen, and every other line on shipped, pass there. A
   showcase beat of the Director's is a generator: a snapshot across a running show cannot be put back (no save is taken beside one).
   A GPU BUFFER MADE ANEW between a save and its load goes back as the old, destroyed one (a field that holds a GPU object is put back like any field): one can be,
   `BoxWorld.itemBuf`, when the grid's list passes 32,768 entries — compound-four and block-squads use about 4,500, so it does not happen today. The game objects

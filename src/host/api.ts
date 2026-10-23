@@ -23,13 +23,15 @@ import type { BreathShown } from '../game/snowBreath';
 import type { Vec3 } from '../math/vec';
 import type { FireRecord } from '../render/passes';
 import type { FireShown } from '../game/fire';
+import type { SnowShown } from '../game/snowFx';
 import type { SmokeShown } from '../game/smokebreak';
 
 /** the host books, one member a module (see `hostBooks` below): `fire` = game/fire.ts FireShown, the open fires' smoke filed and bed voices asked for ·
  *  `smokeBreak` = game/smokebreak.ts SmokeShown, a smoke break's thread filed with the solver and puffs owed to the pool (dropped too when its switch goes off;
  *  a thread the solver let go is filed afresh whoever dropped it) · `breath` = game/snowBreath.ts BreathShown, what a breath was shown as (steam through the
- *  solver or puffs, whose source rides whose mouth, the records filed) */
-export interface HostBooks { fire?: FireShown; smokeBreak?: SmokeShown; breath?: BreathShown }
+ *  solver or puffs, whose source rides whose mouth, the records filed) · `snow` = game/snowFx.ts SnowShown, the falling snow's whole recycler (what the ring
+ *  took of flakes, wisps and grains, the record seeds, the kicks taken, the read-outs) */
+export interface HostBooks { fire?: FireShown; smokeBreak?: SmokeShown; breath?: BreathShown; snow?: SnowShown }
 export interface HostApi {
   // ---- per frame
   /** the CPU box world: statics, dynamics, raycasts, upload (scene/boxes.ts) — host-neutral */

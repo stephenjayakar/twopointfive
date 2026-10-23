@@ -313,9 +313,38 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     broad phase, no glint, nothing refracted, lit by the lamps that reach it AND by the sky's dome (a white scatterer shows against a dark yard; a drop of water does not) (`particles.wgsl rainStep`, `particles_draw.wgsl rainFragment`, all under `snowNow()`: dead code on every other page). `SNOWFX` holds the
     numbers (`__snow.fx` live on the console; `__snow.stats / .ring / .summary()`). No moths fly in it. `?norain2` / the panel's particle-rain box put
     the flakes off with the ring they ride. One make-up fill waits on the ring at a time (an undrawn tick, two ticks to a frame under `?fixedstep`), never more than the ring has room for.
+  - **Whose the recycler's table is** (10-23; no switch: it changes what a snapshot holds, nothing a player sees but the frame after a save is put back): the
+    HOST's, `engine.hostBooks.snow` (`snowFx.ts SnowShown`, in `host/api.ts HostBooks` beside the fires' and the smoke break's). It was `snowFx.states`, a table in
+    the game's state, and every field of it follows the particle pool (what the ring took, whether there is one), the view the update is handed and the
+    render settings. MEASURED before the move: twins on the pass, seed 7, 300 frames, one with a stand-in pool and one with none, parted at 22 rows of it
+    and nowhere else of the snow's (`stateDiff` with `own`). NO RULE READS IT: its readers are the module, the panel's layers (`ui/sceneLayers.ts`,
+    `ui/sweepSnow.ts`), the page's `__snow` hook and the checks. THE BOOK IS DROPPED, with the ring emptied in the same call, by a save in memory put back
+    (`host/putback.ts`) and by a restart or a load (`game.ts restartEncounter`): the next frame begins a fresh book over an empty ring and fills the air through
+    the slab's whole height at once, as on a level's first frame; the curtains' drift starts from nothing, the record seeds from their first, and a seed set
+    by `__snow.seed(n)` is gone with the book. Flakes in the air are never wound back (nothing on the GPU is). THE KICKS went the same way: the pool's path
+    sorted and cut the game's own list (`SnowTracks.kicks`), so a game over a pool and the same game without parted at it on every frame a boot met snow
+    (found on the shipped stand by the new line: two kicks listed after two frames of the stood game). The list is only read now: each kick carries its number
+    (`n`, `SnowTracks.kicked`, never wound back by a restart), the book keeps the last it saw and those waiting (`kickSeen`, `kickQ`), and only time, a
+    restart and the cap empty the list. The cap went 64 to 256 with it (`snowTracks.ts KICKS_MOST`): the list is now a quarter second's kicks, filed or not,
+    where it was one frame's backlog. Where the game's count stands behind the book's (the harness's put-back, which tells no host) the book files none of the
+    listed kicks. CHECKS, both stands: `snow-check` line `book` (the game's state hash before any snow frame, after sixty over a pool, after a snapshot of
+    frame thirty put back, and sixty frames on: one word each side of the host's put-back; the book dropped, the ring emptied, one make-up fill on the next
+    frame) and `snowmarks-check` line `kickbook` (nine marks: owed 9, 6, 3, 0 over the frames, nine records at nine places, the game's list and state hash
+    as they were). `SNOWBOOK_BREAK=1` fails each (the book hung on the game; the list cut as the pool's path once did). NOT YET THE WHOLE OF THE SNOW, by
+    measurement on the shipped stand: the same update's pool path still writes what a blast owes the pool (`snowBlast.states`: `puffLeft`, `flakeLeft`,
+    `turn`, and after one blast `stats.puffs` 28 against 0 and `stats.thrown` 180 against 0 for good) and the air's row (`airSim.states`: it exists only where a
+    field does, `want`, `stats.why`, `puffs`); the wind keeps two scratch vectors the pool's path writes (`game.wind.scratch`, `scratchP`; its list for the pool,
+    `forParticles`, went to the host the same day); the rain's own recycler (`rainFx.states`) is the table this one was, not measured. `book` passes because it flies no blast and has no air
+    field. ALSO MEASURED, the snapshot's own: the host's put-back moves the game's state hash by itself, because the books of what was last sent to the GPU
+    are in the state (`world.visibleSent` 7711 values and `gbSent` 4608, `game.chars.instSent` 744, the epochs, `game.snowLookWas`): a hash taken after
+    `hostAfterPutBack` is not the saved moment's (`docs/agents/replays.md`, the rollback snapshot's KNOWN LIMITS). ON A PAGE (headless Chromium, the software
+    adapter, very low quality, the pass's room clear with four, 40 frames): 119 pipelines, none failed; snowing with 800 of 800 flakes reckoned in the air after
+    ten frames; a save kept in memory loaded — a fresh book on the next frame, 640 flakes laid at once, 800 of 800 eight frames on, and the kicks the game
+    still listed thrown up again (14 to 33 filed across the load); a restart the same; no console, page or GPU error. Never seen on a real GPU, and
+    nobody has looked at the frame after a load on a snow level.
   - **The rain is as it was**: no rain number, shader path or still changes on a page that is not a snow level (the `WX_SNOW` branches are compile-time false there).
-  - **Check**: `bun run tools/qa/snow-check.ts` (`probes.ts snow`, in `weather`), 10 lines — born / off / others / row / senses / same / flakes ×2 / save / old; 10 of 10 on BOTH stands,
-    `SNOW_BREAK=1` (the switch never raised) fails 7 of 10 on both. `same` is five PLAYED runs of the pass's room clear (`playthrough.ts --one pass-four:<seed>`, `PT_DIGEST=1`, a process
+  - **Check**: `bun run tools/qa/snow-check.ts` (`probes.ts snow`, in `weather`), 12 lines — born / off / others / row / senses / same / flakes ×2 / book / walls / save / old; 12 of 12 on BOTH stands
+    (10-23), `SNOW_BREAK=1` (the switch never raised) fails 9 of 12 on both. `same` is five PLAYED runs of the pass's room clear (`playthrough.ts --one pass-four:<seed>`, `PT_DIGEST=1`, a process
     each): seeds 1 and 2, one digest every half second in snow and under Overcast with the switch off (frozen, the level as committed: 124 s and 127 s, both taken; shipped: 90 s and 105 s, both taken), and a different
     one for seed 1 in fog (the control — a 40 s run with nobody ordered anywhere, the first cut of this line, had one digest under EVERY weather and proved nothing).
   - **A file made in other weather** is refused on a snow level (`Weather.refuses`), and `restore` takes none of its rain, wind or wet: a checkpoint made on the pass with the switch
@@ -726,7 +755,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     (fogofwar.ts 4d, as a hidden man's boots): a thing on floor the team does not see (`fog.spotSeen`) marks nothing while it is there, and is not caught up.
     Kicks: the hardest `puffRecs` (3) a frame are filed, each a particle record of the frame's twelve; one outside 0.7 of the view's disc is dropped (the flakes'
     wrap would raise its puff from bare floor); one still unfiled `puffKeep` (0.25 s) after it was queued is dropped (`formSnowTracks` ages them: with the
-    flakes off it is never thrown up late at an old place). Check `snowmarks` (13 lines; `SNOWMARKS_BREAK=1` fails 8) on both stands; the game's digest is
+    flakes off it is never thrown up late at an old place). The list is the game's and the pool only reads it (10-23: which kicks were taken is the host's
+    book, see "Whose the recycler's table is" above). Check `snowmarks` (14 lines with `kickbook`; `SNOWMARKS_BREAK=1` fails 9) on both stands; the game's digest is
     one with it on and off over 242 frames with a chair shoved across the yard. **Never seen on a GPU, never seen moving**: the forming's timing, the kick's size
     and whether three or four flakes off a walker's boot read at all, a furrow under a real push (the pass's chairs stand indoors: he pushed one out).
   - **THROWN THINGS BOG DOWN IN LYING SNOW — PLAY, NOT PICTURE** (`SNOWBOG.on`, `game/snowBog.ts`; `?snowbog=0`, frozen `TPS_SNOWBOG=1`; in the knob registry and
