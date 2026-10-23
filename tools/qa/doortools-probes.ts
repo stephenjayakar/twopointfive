@@ -287,7 +287,7 @@ export const doortoolsCounts = guarded(async () => {
   { const R = await rig(7, { stage: 'nb', knobs: { bangs: 0 }, nb: { blindFire: false } }); const { NB, D } = R;
     R.press('KeyF'); R.until(() => NB.drill?.phase === 'stack' && !isNaN(NB.drill.tSet), 40); R.press('KeyF'); R.until(() => NB.drill?.phase === 'done' || NB.drill?.beats.some((b: any) => /^in/.test(b.what)), 25);
     const tossed = NB.drill.beats.some((b: any) => /^toss/.test(b.what));
-    verdict(D.bangs === 0 && !tossed && R.bangs.length === 0 && R.said.some(t => /no bangs left/.test(t)), 'the night breach\'s F drill takes its can from the same count: with none left the pair goes in without one, and says so', `bangs ${D.bangs} · a toss ${tossed} · blasts ${R.bangs.length} · said: ${R.said.filter(t => /bang/.test(t)).join(' / ')}`); }
+    verdict(D.bangs === 0 && !tossed && R.bangs.length === 0 && R.said.some(t => /no flashbangs left/.test(t)), 'the night breach\'s F drill takes its can from the same count: with none left the pair goes in without one, and says so', `bangs ${D.bangs} · a toss ${tossed} · blasts ${R.bangs.length} · said: ${R.said.filter(t => /bang/.test(t)).join(' / ')}`); }
   { const R = await rig(7, { stage: 'nb', nb: { blindFire: false } }); const { NB, D } = R; const b0 = D.bangs;
     R.press('KeyF'); R.until(() => NB.drill?.phase === 'stack' && !isNaN(NB.drill.tSet), 40); R.press('KeyF'); R.until(() => R.bangs.length > 0, 25);
     verdict(b0 === DOORTOOLS.bangs && D.bangs === b0 - 1 && R.bangs.length === 1, '… and with some left it spends one', `bangs ${b0} → ${D.bangs} · blasts ${R.bangs.length}`); }

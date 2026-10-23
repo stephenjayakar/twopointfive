@@ -11,7 +11,7 @@ import { lightFromDef } from '../render/lights';
 import type { RtLight } from '../render/lights';
 import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
 import { isHostile } from './teams';
-import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
 import { powerOut, powerOutMan } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
 import { carLampPaint, deadLamp } from './carlamps';   // a broken vehicle lamp's paint; a dark lens breaking is no light going out (a leaf)
@@ -81,7 +81,7 @@ export function updateTargets(g: Game, dt: number) {
     g.breakerFixT = near ? g.breakerFixT + dt : 0;
     const fumble = g.level.breaker.fumble ?? 2.2;   // (the level's own number where it gives one: a panel a man is long at)
     if (near) leverHands(g, near.char, g.breakerFixT, fumble);   // (handwork.ts: his hand on the lever while he fumbles with it)
-    if (g.breakerFixT > fumble && near) { g.say(near, "breaker's back in", true); g.endBlackout(); }
+    if (g.breakerFixT > fumble && near) { g.say(near, wg("breaker's back on", "breaker's back in"), true); g.endBlackout(); }
   }
   // emergency beacons: spin up ~0.8 s after the trip, keep turning for a second after power returns; each is slaved to its dome fixture
   const beaconsOn = bo.active ? time - bo.since > 0.8 : time - bo.restoredAt < 1.2;
@@ -117,7 +117,7 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
   if (!bo.active) bo.since = g.time;
   bo.active = true; bo.permanent = permanent; bo.until = permanent ? Infinity : Math.max(bo.until, g.time + seconds);
   g.audio.play('powerDown', g.level.breaker.pos, 1.0); g.audio.play('powerDown', null, 0.35);
-  g.msg(cause === 'shot' ? 'breaker destroyed — mains gone for good' : cause === 'hand' ? 'breaker thrown — emergency lighting until someone resets it' : 'mains tripped — emergency lighting');
+  g.msg(cause === 'shot' ? 'breaker destroyed — power gone for good' : cause === 'hand' ? 'breaker thrown — emergency lighting until someone resets it' : 'power is out — emergency lighting');
   if (cause !== 'debug' && missionLive(g)) { g.mission.stats.blackout = true; chronBlackout(g, cause); }   // the player's own doing (OCP / round / his hand on it), not the panel button or the tour — and a row + pin for the debrief
   // guards: everyone gets edgy; the nearest one goes to check the breaker
   let best: Guard | null = null, bd = 1e9;
@@ -138,7 +138,7 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
 export function endBlackout(g: Game) {
   const bo = g.blackout; if (!bo.active) return;
   bo.active = false; bo.permanent = false; bo.until = -1; bo.restoredAt = g.time; g.breakerFixT = 0;
-  g.audio.play('powerUp', g.level.breaker.pos, 1.0); g.audio.play('powerUp', null, 0.3); g.msg('mains restored');
+  g.audio.play('powerUp', g.level.breaker.pos, 1.0); g.audio.play('powerUp', null, 0.3); g.msg('power is back on');
   for (const gd of g.guards) if (gd.task?.kind === 'breaker') gd.task = null;
 }
 
@@ -173,8 +173,8 @@ export function ocp(g: Game, t: LightTarget | null) {
   }
   if (t.kind === 'breaker') {
     const eye = g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]);
-    if (g.col.segmentBlocked(eye, v3.add(t.pos, [0, 0, -0.18]))) { g.msg('OCP: no line of sight to the breaker'); g.audio.play('deny', null, 0.5); return; }
-    if (g.blackout.active) { g.msg('mains already down'); g.audio.play('deny', null, 0.5); return; }
+    if (g.col.segmentBlocked(eye, v3.add(t.pos, [0, 0, -0.18]))) { g.msg("the OCP can't see the breaker from here"); g.audio.play('deny', null, 0.5); return; }
+    if (g.blackout.active) { g.msg('power is already off'); g.audio.play('deny', null, 0.5); return; }
     o.use(); g.audio.play('ocp', g.player.char.muzzle, 1); g.setBlackout(g.tune.ocpDuration * 2.5, 'ocp'); return;
   }
   if (t.factor <= 0) { g.msg(`OCP: ${t.name} already off`); return; }

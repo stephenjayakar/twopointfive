@@ -176,7 +176,7 @@ export async function closeOffer(): Promise<boolean> { return keepClose(async ()
   { A.state = 'alert'; const fails: string[] = [], rows: string[] = [];
     for (const [b, id] of table) { const o = closeAt(g, A, off(A, b, 0.7)); rows.push(`${b}° grab ${o.grab} strike ${o.strike}`); if (o.win?.id !== id || o.grab || !o.strike || !o.can) fails.push(`${b}°: grab ${o.grab} strike ${o.strike} can ${o.can}`); }
     CLOSE.alertStrike = false; const whys: string[] = [];
-    for (const [b] of table) { const o = closeAt(g, A, off(A, b, 0.7)); whys.push(o.why); if (o.grab || o.strike || o.can || o.inReach || o.why !== 'not while he is onto you') fails.push(`alertStrike off, ${b}°: can ${o.can} why '${o.why}'`); }
+    for (const [b] of table) { const o = closeAt(g, A, off(A, b, 0.7)); whys.push(o.why); if (o.grab || o.strike || o.can || o.inReach || o.why !== "not while he's onto you") fails.push(`alertStrike off, ${b}°: can ${o.can} why '${o.why}'`); }
     CLOSE.alertStrike = true; A.state = 'patrol';
     verdict(!fails.length, 'an ALERT man: no grab from anywhere, the strike from every window; with alertStrike off nothing, \'not while he is onto you\'', `${rows.join(' · ')}\n    alertStrike off: ${[...new Set(whys)].join(' | ')}${bad(fails)}`); }
   { // a wall between: the south outer wall, the man half a metre off its outside face with his back to it; the spot behind him inside his reach is beyond the wall
@@ -391,7 +391,7 @@ export async function closeMelee(): Promise<boolean> { return keepClose(async ()
     verdict(!fails.length, `an ALERT man facing Sam, the ${button === 1 ? 'left' : 'right'} click (alertStrike on): struck all the same, and louder (${CLOSE.noise.front} + ${CLOSE.alertNoise})`, blowLine(r) + bad(fails)); }
   { const S = await stage(1104, { ai: false }), { g, A } = S; A.state = 'alert'; A.awareness = 1; CLOSE.alertStrike = false; const fails: string[] = [], rows: string[] = [];
     for (const [b, button] of [[0, 4], [0, 1], [180, 4], [180, 1]] as const) { const r = blow(S, b, 0.75, button); rows.push(`${b}° ${button === 1 ? 'left' : 'right'}: ${r.td0 ? 'a blow' : 'nothing'}`); if (r.td0 || r.dead || r.row || r.knifeBlows || r.koBlows) fails.push(`${b}° button ${button}: blow ${!!r.td0}, down ${r.dead}, a row in reach ${!!r.row}`); }
-    const why = markerOf(g, A)?.line2; if (why !== 'not while he is onto you') fails.push(`his marker reads "${why}"`); CLOSE.alertStrike = true;
+    const why = markerOf(g, A)?.line2; if (why !== "not while he's onto you") fails.push(`his marker reads "${why}"`); CLOSE.alertStrike = true;
     verdict(!fails.length, 'CLOSE.alertStrike off: an alert man is refused — no row in reach, neither button starts a blow, \'not while he is onto you\'', rows.join(' · ') + bad(fails)); }
   { const S = await stage(1104, {}), { g } = S; CLOSE.lethal = false; const fails: string[] = []; const right = blow(S, 180, 0.8, 4); const line = right.row?.line2 ?? '';
     if (right.td0 || right.dead || right.koBlows || right.knifeBlows) fails.push(`the right click: blow ${!!right.td0}, down ${right.dead}`); if (!/LMB  takedown — silent$/.test(line) || /RMB|knife/.test(line)) fails.push(`the row reads "${line}"`); if (closeLethal(g)) fails.push('closeLethal true');

@@ -109,7 +109,7 @@ export class Par {
    *  the room clear's own words; at the end the result */
   objective(text: string): string {
     const R = this.result(); if (!R) return this.row() + text;
-    return `structure taken · ${this.shown!.replace(/^par ▸ /, '')} — shift+enter stages it again`;
+    return `structure taken · ${this.shown!.replace(/^par ▸ /, '')} — press shift+enter to restart`;
   }
   /** what leads the row while the run is on ('' = nothing: no par live, or the run is over) */
   row(): string {

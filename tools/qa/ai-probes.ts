@@ -258,7 +258,7 @@ export async function missing() {
         for (const l of lines.splice(0)) {
           if (tCall < 0 && /^radio check/.test(l.text)) tCall = l.t;
           const m = /^(\w+)\? … \1, sound off/.exec(l.text); if (m) asked.push(m[1]);
-          if (/going round his route|going to check on/.test(l.text)) sends++; if (/still nothing from/.test(l.text)) stillNothing++;   // (the checker's own line, whether or not he was also the caller)
+          if (/going round his route|going to walk his route|going to check on/.test(l.text)) sends++; if (/still nothing from/.test(l.text)) stillNothing++;   // (the checker's own line, whether or not he was also the caller)
           if (/sound off|route|check on|not at his post|man down|it's \w+ — he's down|lock it down|weapons out/.test(l.text)) transcript.push({ t: l.t, s: `${l.who}${l.radio ? ' (radio)' : ''}: ${l.text}` });
         }
       }

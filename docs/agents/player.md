@@ -1238,7 +1238,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   WHY: the dial bought nothing a player could find. A footfall's level is stance times floor and nothing else (crouched 0.125 of a sprint's, the wheel never
   moved it), and behind a walking man the old crouch closed at 0.15 m/s. Two speeds are left to learn: on his feet, and crouched and quiet. The wall sidle and
   a hauled body keep the tune's 1.3; the teammates' pace is untouched (the partner's sneak cap `UNSEEN.lowPace` 1.45 is now Sam's own crouch pace). The Controls
-  list says "move · Shift sprint · C crouch (slower, and quiet)", and the options page drops its Wheel row and the pace ticks while the key is up. Switch: ON in
+  list says "move · Shift sprint · C crouch (slower and quiet)", and the options page drops its Wheel row and the pace ticks while the key is up. Switch: ON in
   the page (`?twogears=0` off; Tab ▸ Detection & movement ▸ 'two gears, not a dial', with a slider for the sneak's m/s), OFF in the module and on the frozen
   stand (`FROZEN_HOLDS` 'TWOGEARS.on': `TPS_TWOGEARS=1`; `TPS_TWOGEARS=0` holds it off on the shipped stand), its own table in knobs.ts and `JOURNAL_KNOBS`, and a
   recording from before the table replays with it off. CHECK: `bun run tools/qa/twogears-check.ts` (probe `twogears`, families twogears / player), both

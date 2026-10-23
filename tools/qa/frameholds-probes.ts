@@ -201,7 +201,7 @@ export const frameholdsTools = guarded(async () => {
   // (b') a SILENT squad with its picks switched off (silent.ts SILENT.picks): the frame's rule does not hand it the pick — silent's own answer, no boot, no pick
   { const quietRun = async (on: boolean) => { const R = await rig(7, on, { silent: { picks: false } }); R.give2('silent'); R.step(5); const { d } = faceTeam(R, 'manager', true);
       const w = R.give('openClear', 'manager'); const op = R.D.ops[0]; R.until(() => R.D.ops.length === 0, 60); R.step(30);
-      return { R, d, w, silent: squadSilent(R.game) as boolean, picks: R.D.stats.picks as number, ended: op?.ended as string | undefined, said: R.said.filter((t: string) => /no boot while we are silent/.test(t)).length }; };
+      return { R, d, w, silent: squadSilent(R.game) as boolean, picks: R.D.stats.picks as number, ended: op?.ended as string | undefined, said: R.said.filter((t: string) => /(?:no boot|can't kick it) while we(?: are|'re) silent/.test(t)).length }; };
     const A = await quietRun(true), B = await quietRun(false);
     F.verdict(A.silent && A.w === null && A.picks === 0 && A.R.kicks === 0 && A.R.thuds === 0 && !A.d.lockBroken && A.d.locked && A.said === 1 && B.picks === 0 && B.R.kicks === 0 && B.said === 1,
       'a silent squad with its picks switched off, at a cylinder lock on the face the door opens toward: silent\'s own answer — "no boot while we are silent" — no pick, no boot, in both arms', `on: silent ${A.silent} · picks ${A.picks} · boots ${A.R.kicks} · said ${A.said} · ended: ${A.ended} · off: picks ${B.picks} · boots ${B.R.kicks} · said ${B.said} · ended: ${B.ended}`); }
@@ -255,9 +255,9 @@ export const frameholdsSam = guarded(async () => {
   };
   const A = await stage(true, true), B = await stage(false, true), P = await stage(true, false);
   const line = (r: any) => r ? `${r.off ? '(off) ' : ''}${r.line2}` : 'no row';
-  F.verdict(!!A.kick && A.kick.off && /opens toward you: a boot will not shift it/.test(A.kick.line2) && !/sprint/.test(A.kick.line2) && !!A.pick && !A.pick.off && !!B.kick && !B.kick.off && /kick it in — LOUD/.test(B.kick.line2),
+  F.verdict(!!A.kick && A.kick.off && /it opens toward you, so that won't work/.test(A.kick.line2) && !/sprint/.test(A.kick.line2) && !!A.pick && !A.pick.off && !!B.kick && !B.kick.off && /kick it in — LOUD/.test(B.kick.line2),
     'his kick row at that door is greyed and says why; the pick row beside it is live (off: the kick row live, "or sprint into it")', `on: ${line(A.kick)} | ${line(A.pick)}\n    off: ${line(B.kick)}`);
-  F.verdict(A.tap.had && !A.tap.kicked && !A.tap.broken && A.tap.open < 0.01 && A.said.some(t => /a boot will not shift it/.test(t)) && A.thuds === 0 && A.kicks === 0 && B.tap.had && B.tap.kicked && B.tap.broken,
+  F.verdict(A.tap.had && !A.tap.kicked && !A.tap.broken && A.tap.open < 0.01 && A.said.some(t => /a kick won't move it/.test(t)) && A.thuds === 0 && A.kicks === 0 && B.tap.had && B.tap.kicked && B.tap.broken,
     'a tap on the greyed row: a word, no kick thrown, no noise, the lock whole (off: the kick, the keep torn out)', `on: kick started ${A.tap.kicked} · keep broken ${A.tap.broken} · said: ${A.said.filter(t => /boot/.test(t)).join(' / ')}\n    off: kick started ${B.tap.kicked} · keep broken ${B.tap.broken} · open ${f2(B.tap.open)}`);
   F.verdict(A.ran === 1 && !A.sprintKick && !A.d.lockBroken && B.ran === 1 && B.sprintKick, 'a sprint into that face starts no kick: he stops on it as on any locked door (off: the sprint is a kick)', `on: ran at it ${A.sprint}, a kick started ${A.sprintKick} · off: ran at it ${B.sprint}, a kick started ${B.sprintKick}`);
   F.verdict(A.picking && A.picked && !A.d.lockBroken, 'and the pick opens it from there as from any face', `pick started ${A.picking} · unlocked ${A.picked}`);
