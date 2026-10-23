@@ -86,9 +86,10 @@ const LEVEL_BASE: Record<string, string> = {
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run)
   'tut-sky.json': '34c71d8c3',
 
-  // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, two sponge rounds on his card and the swap's own lists, the moon
-  // behind the shop
-  'tut-solo.json': 'bd7b25a26',
+  // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, the moon behind the shop; then the inner wall and its wooden
+  // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round
+  // on his card or swap among his lines
+  'tut-solo.json': '0ada3bc09',
 
   // the squad mission: the hall's street window moved to the corner men's line and narrowed, the bags behind the gun over a man's head and longer, the can
   // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two)

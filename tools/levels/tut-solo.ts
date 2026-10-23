@@ -67,6 +67,9 @@ export const JAMB: Vec3 = [15.1, 0, 11.7];
 /** THE INNER DOOR (step 'door'): a wall shuts the gate's corner of the truck court off from the way to the arch, and its one door is wooden and locked. Where
  *  the wall stands, the door's middle along it, and where he stands square on to the leaf to shoot it out (a round that clips a jamb is not counted) */
 export const INNER_X = 12.5, INNER_Z = 9.25, INNER_FROM: Vec3 = [10.7, 0, INNER_Z];
+/** …and it opens TOWARD him (the gate's side): a sprint into a locked door is a kick, and a leaf's frame holds a boot from the face it opens toward, so the run
+ *  a new player tries first stops on it and the line's trigger is the way through (the scripted player's `jamb` way runs at it, and fails with this turned) */
+const SWING_INNER = 1;
 /** the far end of the sandbags (step 'low') */
 export const BAGS_END: Vec3 = [20.2, 0, 13.6];
 /** where the smoke goes: the gap itself, on the gun's line to it. On floor he can see from behind the sandbags' end: the ring is the place to click */
@@ -204,7 +207,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // what opens it (the maintainer: "weird to reload after a single shot in tutorial 3. maybe we can have a moment where we teach (1) switching to full
   // auto, (2) mag dumping on a door to break it, and then (3) teaching a reload"). What a round through the leaf goes on to is the arch's wall
   G.yardWallZ(INNER_X, YARD.z0, 12.2, 'mudLight', [{ a: INNER_Z - 0.6, b: INNER_Z + 0.6, y0: 0, y1: 2.2 }]); G.pier(INNER_X, 12.0);
-  doors.push({ name: 'inner', hinge: [INNER_X, INNER_Z - 0.58], closedDir: HALF, width: 1.16, locked: true, closer: false });
+  // (it opens toward the gate's corner, the face he comes to it from: a sprint into a locked door is a kick, and a frame holds a boot from the face its
+  //  door opens toward — doors.ts DOORWAY.frameHolds — so running at it is no way through)
+  doors.push({ name: 'inner', hinge: [INNER_X, INNER_Z - 0.58], closedDir: HALF, width: 1.16, locked: true, swing: SWING_INNER, closer: false });
   G.jersey(14.1, 16.55, 2, 0);
   G.pickup(12.6, 19.2, 0.25, 'truckWhite', { load: 'drums' });
   G.drums(10.2, 21.6, 4); G.tyres(15.2, 21.8, 4); G.crates(10.0, 6.4, 0.1, 3); G.gasBottle(11.0, 6.2); G.gasBottle(11.4, 6.5);
@@ -380,20 +385,20 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // (the gun's own setup, met early and in a quiet moment)
       // (the maintainer: "the timer is bad. we should just have it switch a mode. and we should teach earlier that tab exits out of menus": the setup is
       //  opened and shut before anything is picked in it; its rows stay locked until the next line, and for the Tab line alone the rifle's own key,
-      //  the trigger and the reload are taken back (each of them puts the setup away too, and the line would pass with Tab never pressed), so Tab is
-      //  the one way out here. The sentry is down and nobody else is on the floor yet: nothing is lost with the trigger for one line)
+      //  and the trigger are taken back (each of them puts the setup away too, and the line would pass with Tab never pressed; so does the reload, which
+      //  is not his until the door's line), so Tab is the one way out here. The sentry is down and nobody else is on the floor yet: nothing is lost with the trigger for one line)
       { id: 'setup', line: 'Press [2] again to open your rifle\'s setup menu', done: { is: 'flag', flag: 'setup' },
         explain: { title: 'Setting up your gun', text: 'When you\'re holding a gun, press its key again to open its setup menu above the kit strip. You can switch between single shots and full auto, or turn on its light. It\'ll stay open until you pick a row or close it.' } },
       { id: 'tab', line: 'Press [Tab] to close it, like any other menu', done: { is: 'flag', flag: 'setupShut' } },
       { id: 'auto', line: 'Press [Z] to switch to full auto', setupLine: 'Press [2] and then [1] to switch to full auto', done: { is: 'any', of: [{ is: 'flag', flag: 'auto' }, DOWN(2)] } },
       // THE INNER DOOR: full auto has a use at once, and the reload comes after a magazine has really been fired. The leaf goes on the twelfth rifle round
-      // (game/doorblast.ts DOORSHOT); where that rule is off, or his rounds find the jambs, a string of twenty on one trigger ends the line and the level's
+      // (game/doorblast.ts DOORSHOT); where that rule is off, or his rounds find the jambs, the twentieth round he fires on this line ends it and the level's
       // script throws the door open as the next line comes up (cue 'way'), so the way on never hangs on a switch. The reload's line waits for the gun to be
       // FULL again (the maintainer: "also weird that the next modal shows up before the reload completes"), and a gun he ran dry has already started
       // its own reload (game/autoreload.ts): the line is then already being done, and goes by when it is
       // (two lines, each one thing he can do where he stands: the walk to the door, then the trigger held on it)
-      { id: 'inner', line: 'Go through the gate to the wooden door', done: { is: 'near', at: INNER_FROM, r: 1.3 }, at: [INNER_X, 1.1, INNER_Z] },
-      { id: 'door', line: 'Hold the left mouse button to shoot the wooden door until it breaks', done: { is: 'any', of: [{ is: 'door', door: 'inner', state: 'open' }, { is: 'burst', n: 20 }] }, settle: 1, at: [INNER_X, 1.1, INNER_Z] },
+      { id: 'inner', line: 'Go through the gate to the wooden door', done: { is: 'near', at: [INNER_X - 0.9, 0, INNER_Z], r: 1.5 }, at: [INNER_X, 1.1, INNER_Z] },   // (anywhere before the leaf, up to it)
+      { id: 'door', line: 'Hold the left mouse button to shoot the wooden door until it breaks', done: { is: 'any', of: [{ is: 'door', door: 'inner', state: 'open' }, { is: 'did', what: 'event:shot', n: 20 }] }, settle: 1, at: [INNER_X, 1.1, INNER_Z] },
       { id: 'reload', line: 'Press [R] to reload', done: { is: 'loaded' }, settle: 0.8 },
       { id: 'arch', line: 'Go through the doorway and move up beside the blue gate', done: { is: 'near', at: JAMB, r: 1.3 }, hold: 1, at: JAMB },   // (a second there: the gun opens on the truck before the next line, whenever he came)
       { id: 'crouch', line: 'Press [C] to crouch, and the shots will go over you', done: { is: 'all', of: [{ is: 'flag', flag: 'crouch' }, { is: 'near', at: JAMB, r: 1.9 }] }, at: JAMB },
@@ -431,7 +436,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // (the two it is for come out first, on a line that only asks him to look (the frame draws a line with no key and a cue for its end as something to
       //  watch); the script ends that line once they stand in the doorway, so the shot is asked for with men in it)
       { id: 'behind', line: 'Turn around and watch the shop doorway for two more enemies', done: { is: 'cue', name: 'trucks' } },
-      { id: 'launch', line: 'Hold the right mouse button, aim at the doorway, and let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, at: LAST_COVER },
+      { id: 'launch', line: 'Hold the right mouse button, aim at the doorway, and let go', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'threw', kind: 'he40' }, DOWN(6)] }, DOWN(7)] }, settle: 1.5, at: LAST_COVER },
       { id: 'last', line: 'Shoot the rest', done: DOWN(7), settle: 1.5, at: LAST_COVER },
       { id: 'out', line: 'Sprint back out through the gate you came in', done: { is: 'stage', stage: 'done' }, at: [EXIT.x, 0, EXIT.z] },
     ] as LessonStep[]).map(T => ({ ...T, ...FRAME[T.id] })),

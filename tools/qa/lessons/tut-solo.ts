@@ -24,7 +24,7 @@ export const needs = 'rails';
 /** THE LESSONS CAN BE FAILED THE WAY THEIR LINES SAY (each of these runs must end with the player down; tools/qa/tut-solo-check.ts asks it):
  *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Four more words are mistakes that must cost
  *  nothing: `east` stands on the road east of the van in the sentry's line, `piers` stands at each pier of the arch under the last two's fire, `dud` fires the
- *  first grenade from too close, `jamb` empties a long burst into the wall beside the inner door, which must still leave him a way through.
+ *  first grenade from too close, `jamb` runs at the inner door (it must hold) and then puts his rounds into the wall beside it, which must still leave him a way through.
  *  And one mistake that must cost what its card says: `flash` throws the stun grenade down the store's doorway and stays on that line, and his own can blinds him */
 const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : (globalThis as { __TUT_SOLO_ARM?: string }).__TUT_SOLO_ARM) ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
 /** THE DOOR'S LINE TEACHES HIS OWN CHARGE, and it is the one row the level lets that door offer (`rails.rows`: no pick, no boot). A stand that holds his own
@@ -32,11 +32,11 @@ const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO
  *  raises the frame (TPS_OWNCHARGE=0 in front shows the door with nothing to offer) */
 /** …AND THE INNER DOOR'S LINE TEACHES A DOOR SHOT OUT (game/doorblast.ts DOORSHOT, held off on the frozen stand, and it lives only where walls break: the
  *  destruction's one switch, PT_DESTR): both raised for this run alone too. With either off the line still goes by, on a long burst, and the level's
- *  script opens the door (played so on the frozen stand with `TPS_DOORSHOT=0` in front; the way `jamb` plays that road on either stand) */
+ *  script opens the door (played so with `TPS_DOORSHOT=0` in front on either stand; the way `jamb` plays that road with the switches as they are) */
 export const raises = { TPS_OWNCHARGE: '1', TPS_DOORSHOT: '1', PT_DESTR: '1' };
 /** the last men may already be down when 'Shoot the rest' comes up (the grenade took both) */
 /** …and where the gun has no setup (the switch off: the frozen stand) the two lines that open and shut it have nothing to ask and go by */
-export const idleOk = ['last', 'setup', 'tab'];
+export const idleOk = ['last', 'setup', 'tab', 'door', 'reload'];   // ('door', 'reload': the way `jamb` leaves the door standing for the script to open, and a gun no reload would help)
 /** the run wears what the mission's page deals him (lesson-run.ts): his own card, whole on the page's stand (the launcher on its grenade, three of them), the
  *  lent five sponge rounds over it on the frozen one. Without it every way below was played with a kit the page never deals */
 export const pageKit = true;
@@ -163,25 +163,33 @@ export const steps: Record<string, (B: Bot) => void> = {
   // `jamb` puts a long burst into the wall beside it instead: the line goes by on the burst and the script opens the door as the next line comes up
   inner: B => { if (B.g.player.wall) B.press('KeyQ', 10); B.go([9.9, 0, AXIS], 10); B.go(INNER_FROM, 20, { near: 0.6 }); },
   door: B => {
-    const g = B.g, d = g.doors.byName('inner')!, at = [INNER_X, 1.1, INNER_Z], miss = brk() === 'jamb', r0 = gun(B).roundsReady;
+    const g = B.g, d = g.doors.byName('inner')!, at = [INNER_X, 1.1, INNER_Z], r0 = gun(B).roundsReady, splinters = doorShotOn() && wallsBreak(B);
     if (!d.locked || !d.isClosed()) B.fail('the inner door is open or unlocked before the line that shoots it out');
-    B.go(INNER_FROM, 6, { near: 0.3 });
-    if (miss) { trigger(B, () => [INNER_X, 1.1, INNER_Z - 1.6], 4, () => !stepIs(B, 'door'));
-      if (stepIs(B, 'door')) B.fail(`jamb: ${r0 - gun(B).roundsReady} rounds into the wall beside the door on one trigger and the line is still up`);
+    if (brk() === 'jamb') {
+      // (first the other thing a new player tries: a run at it. A sprint into a locked door is a kick, and this one opens toward him, so its frame holds)
+      if ((g.doors as unknown as { frameRule?: boolean }).frameRule) { B.go([INNER_X - 2.6, 0, INNER_Z], 6, { near: 0.3 }); B.go([INNER_X + 0.5, 0, INNER_Z], 2.5, { sprint: true, noDoors: true }); B.until(() => !g.player.kick, 3); B.step(30);
+        if (!d.locked || !d.isClosed()) B.fail('jamb: a sprint into the inner door opened it (the lesson of the line is the trigger)'); B.say('  jamb: a sprint into the door did not open it'); }
+      B.go(INNER_FROM, 6, { near: 0.3 });
+      trigger(B, () => [INNER_X, 1.1, INNER_Z - 1.6], 8, () => !stepIs(B, 'door') || !!g.lesson.settling);
+      if (stepIs(B, 'door') && !g.lesson.settling) B.fail(`jamb: ${r0 - gun(B).roundsReady} rounds into the wall beside the door and the line is still up`);
       if ((d as unknown as { off?: boolean }).off) B.fail('jamb: the leaf is off its hinges with every round in the wall beside it');
-      B.until(() => !d.isClosed(), 4); if (d.isClosed()) B.fail('jamb: the line went by on the burst and the door was not opened for him');
-      B.say(`  jamb: ${r0 - gun(B).roundsReady} rounds into the wall, the line went by on the burst and the door was opened for him`); return; }
+      B.until(() => !d.isClosed(), 4); if (d.isClosed()) B.fail('jamb: the line went by on his rounds and the door was not opened for him');
+      B.say(`  jamb: ${r0 - gun(B).roundsReady} rounds into the wall, the line went by and the door was opened for him`); return; }
+    B.go(INNER_FROM, 6, { near: 0.3 });
+    // (where gunfire does not splinter a door — the switch off, or walls that do not break — the twentieth round ends the line and the script opens it)
+    if (!splinters) { trigger(B, () => at, 10, () => !stepIs(B, 'door') || !!g.lesson.settling);
+      if (stepIs(B, 'door') && !g.lesson.settling) B.fail(`gunfire does not splinter a door on this stand, and ${r0 - gun(B).roundsReady} rounds did not end the line`);
+      B.say(`  the inner door: ${r0 - gun(B).roundsReady} round(s) and the line went by (gunfire does not splinter a door on this stand)`); return; }
     trigger(B, () => at, 6, () => !d.isClosed());
-    const n = r0 - gun(B).roundsReady; B.say(`  the inner door: ${d.isClosed() ? 'still standing' : 'out'} after ${n} round(s)${doorShotOn() && wallsBreak(B) ? '' : ' (gunfire does not splinter a door on this stand)'}`);
-    const splinters = doorShotOn() && wallsBreak(B);
-    if (splinters && (d.isClosed() || n > 14)) B.fail(`the inner door took ${n} rounds square on and is ${d.isClosed() ? 'still standing' : 'out'} (it stands twelve)`);
-    if (!splinters && stepIs(B, 'door')) B.fail(B.g.player.rifle.mode !== 'semi' ? 'with no door splintering here a long burst did not end the line' : 'the inner door cannot be shot out on this stand and the rifle is on single shots: this way cannot be played here');
+    const n = r0 - gun(B).roundsReady; B.say(`  the inner door: ${d.isClosed() ? 'still standing' : 'out'} after ${n} round(s)`);
+    if (d.isClosed() || n > 14) B.fail(`the inner door took ${n} rounds square on and is ${d.isClosed() ? 'still standing' : 'out'} (it stands twelve)`);
     if (downed(B) !== 1) B.fail(`${downed(B)} men are down after the door: a round through the leaf found somebody`);
     B.step(40); if (!stepIs(B, 'door')) B.fail('the reload\'s line came up within a second of the door going: the moment did not settle');
   },
-  // the reload, and the line stays up until the gun is full again (the next one came up over the reload: the maintainer's note)
+  // the reload, and the line stays up until it has run to its end (the next one came up over the reload: the maintainer's note)
   reload: B => {
     const w = gun(B), full = () => !w.reloading && w.roundsReady >= w.def.magCapacity;
+    if (!stepIs(B, 'reload')) return;   // (a gun with nothing to gain from a reload: the line has gone by)
     B.until(() => !B.g.doors.byName('inner')!.isClosed(), 2); if (B.g.doors.byName('inner')!.isClosed()) B.fail('the reload\'s line is up and the inner door still stands: the script did not open it');
     if (!full() && !w.reloading) B.press('KeyR', 6);
     if (!w.reloading && !full()) B.fail(`R did not start a reload (${w.roundsReady} ready, ${w.spare.length} spare)`);
@@ -213,8 +221,9 @@ export const steps: Record<string, (B: Bot) => void> = {
   // the lamp on its pole by the shop's front, from behind the barrier: a round a press until it is dark
   lamp: B => {
     const T = B.g.targets.find((t: any) => t.name === 'lamp_shop'); if (!T) B.fail('no lamp_shop among the light targets');
-    for (let i = 0; i < 10 && stepIs(B, 'lamp'); i++) { for (let k = 0; k < 20; k++) { B.aim(LAMP); B.step(); } B.click(1, LAMP); B.step(12); if (gun(B).roundsReady === 0) { B.press('KeyR'); B.until(() => !gun(B).reloading, 5); } }
-    if (stepIs(B, 'lamp')) B.fail('ten pistol rounds at the lamp and it is still lit');
+    const lit = () => !!T && T.on && !T.broken && T.factor > 0.05;
+    for (let i = 0; i < 10 && lit(); i++) { for (let k = 0; k < 20; k++) { B.aim(LAMP); B.step(); } B.click(1, LAMP); B.step(12); if (gun(B).roundsReady === 0) { B.press('KeyR'); B.until(() => !gun(B).reloading, 5); } }
+    if (lit()) B.fail('ten pistol rounds at the lamp and it is still lit');
     B.say(`  the lamp is out: the light on him ${Math.round((B.g.player.visibility ?? 0) * 100)}`);
   },
   // the door's rows by the held key (a list on the page, a ring where that is switched on): its charge where his card carries one, the boot where it does not
@@ -309,6 +318,6 @@ export const steps: Record<string, (B: Bot) => void> = {
   // back by the way he came: the arch, the inner doorway, the yard gate
   out: B => { B.go([INNER_X + 1.0, 0, INNER_Z], 40, { sprint: true }); B.go(INNER_FROM, 10, { sprint: true }); B.go([EXIT.x - 1.6, 0, EXIT.z], 20, { sprint: true }); },
 };
-/** the steps whose line stays up a beat after it is done (the level's `settle`: the man falls, the blast clears, the reload ends): each waits that beat out,
- *  as a player does, before the runner asks whether the line has gone by */
-for (const id of ['fire', 'door', 'reload', 'frag', 'lamp', 'blow', 'shop', 'stun', 'store', 'rifle', 'last']) { const f = steps[id]; steps[id] = B => { f(B); B.until(() => !stepIs(B, id), 4); }; }
+/** A line stays up a beat after it is done where the level says so (a step's `settle`: the man falls, the blast clears, the reload ends): each step waits
+ *  that out, as a player does, before the runner asks whether the line has gone by */
+for (const id of Object.keys(steps)) { const f = steps[id]; steps[id] = B => { f(B); if (stepIs(B, id) && B.g.lesson.settling) B.until(() => !stepIs(B, id), 6); }; }
