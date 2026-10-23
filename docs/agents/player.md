@@ -1375,7 +1375,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   key's, a plan's go, a wall charge to blow; and `doortools.ts cornerNotes`, what the block and a door's heading said that the corner would
   lose: a set door charge as the squad's key's line while that key by itself blows it, with who it would catch; a set charge that key does not
   blow so (his own, or one that goes with the word) only while it would catch somebody, as a warning under no key, shown whatever a lesson's frame
-  keeps back; the small squad held at a threshold), then A MAN LOST, struck as he was
+  keeps back; the small squad held at a threshold, only once the men have called it), then A MAN LOST, struck as he was
   (deathrecap.ts: the line and its arrow are the same; kept because nothing else on the screen says who is gone; it is the one line a man has).
   Each is there only while it has something to say; with none the panel is not drawn. GONE FROM THE SCREEN with it, and said nowhere else yet:
   what each living man of the squad is doing, loud or quiet, who the orders go to, the squad's charges, bangs and frags, the plain notes of the
