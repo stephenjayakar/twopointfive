@@ -178,6 +178,9 @@ export class Rails {
   }
   /** is this action locked right now (the host asks for `camera` and `zoom`, which it turns itself — host/loop.ts) */
   locks(action: string): boolean { const A = this.allowed(); return !!A && !A.has(action); }
+  /** IS THIS ACTION'S KEY KEPT OFF THE PICTURE (game/floorplan.ts waitsOnKey): the step that is up holds it shut, so the press does nothing and nothing on the
+   *  floor names the key. One question for every reader that draws a key */
+  hushes(action: string): boolean { return !BREAK && this.locks(action); }
   /** A MISSION THAT TEACHES THE WALL (a step of it allows `wall`) keeps a walk into one from taking it until that line. The walk has no key for the gate to
    *  drop (player.ts wallPress asks here); a mission that never names the wall leaves it as the page has it. */
   locksWall(): boolean { if (BREAK) return false; const A = this.allowed(), S = this.lesson(); return !!A && !!S && !A.has('wall') && S.L.steps.some(T => T.allow?.includes('wall')); }
@@ -285,7 +288,7 @@ export class Rails {
 
   /** THE MENU'S ROWS on a tutorial mission (orders.ts rowsFor): only the orders the level names — a row nobody taught is not on the ring */
   orderRows<T extends { id: string }>(rows: T[]): T[] { const L = this.live && !BREAK ? this.data?.orders : undefined; return L ? rows.filter(d => L.includes(d.id)) : rows; }
-  /** the sky seat's lookout (fogofwar.ts update: one more of the team's eyes): null without one */
+  /** the sky seat's lookout (fogofwar.ts update: one more eye of the picture's, and of the team's only with RAILS.eyeView off): null without one */
   eye(): FogEye | null {
     const e = this.data?.sky?.eye; if (!e) return null;
     return this.lookout ??= lookoutEye(LOOKOUT_ID, e);

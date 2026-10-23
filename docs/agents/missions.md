@@ -57,7 +57,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (3) EVERY STEP DONE ASKS FOR A CHECKPOINT (`lesson.ts advance` -> `g.saves.request(g, 'lesson', 'training N/M')`; the autosave's gates still decide), so
   a down costs a step or two, never the lesson: the floor's own triggers can stay silent for minutes on a one-yard level. (3b) NO LINE BEFORE IT IS TRUE: 'he
   has given up' waits on its own step, done by the lesson test `{ is: 'calm', route? }` (every hostile man on his feet, or the one of that route, in 'patrol'). (4) a lesson level's new door
-  keeps lived things 1.1 m off its line (`lived-check` holds it), and a level changed on purpose adds its commit to `lived-check.ts BASE_REVS`.
+  keeps lived things 1.1 m off its line (`lived-check` holds it), and a level changed on purpose moves its own row in `lived-check.ts LEVEL_BASE` (`levels.md`, *The furniture check holds each level to its own base*).
   (5) THE TWO SQUAD LESSONS (train-orders, train-pairs) set `scenarios.roomClear.digIn: false` (roomfight.ts tickDef): read at six seconds a line, their men
   always had the minute to set on the door. And at a door the lesson HOLDS (threshold hold, then the word), the garrison's marks stand in the middle of the
   back wall, in the band neither jamb man's diagonal reaches (the two stand a metre out and half a metre wide of the jambs): a defender on either diagonal,
@@ -1481,7 +1481,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   floor of 0.2 is what his GPU shows past the gap, the red of the beacons over the whole yard and whether the lamps going out reads as the moment it is
   meant to be are his to judge.
 - **The frame's eyes are the player's view, not the squad's knowledge** (2026-10-22; `RAILS.eyeView`, a knob of the frame's table: on with the frame, off for
-  a recording from before the key, `journal.ts applyKnobs`; no word of its own, `RAILS_BREAK=1` is its break path). A MEND OF THE STEP BEFORE IT (`eyeFirst`):
+  a recording from before the key, `journal.ts applyKnobs`; `?eyeview=0` puts it off in the page, as `?eyefirst=0` and `?lineclear=0` do the frame's two
+  other late rules; on the frozen stand the frame itself is off and `TPS_RAILS=1` raises all of it; `RAILS_BREAK=1` is its break path). A MEND OF THE STEP BEFORE IT (`eyeFirst`):
   the seat's lookout (`rails.sky.eye`) and a step's `eye` were one more of the TEAM's eyes, so a man in one was in the fog's `seen()`, which the squad's own
   choices read. On the plan mission a step's lookout stood inside the hall; once `eyeFirst` gave it a place with the list full, the hall's gunner was "the
   team's contact", and the stack at the front door (`autopilot.ts contactBehind`) threw its last can and re-formed three seconds while the pair at the back
@@ -1496,4 +1497,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   by the rig, a man of the other side stood 1.5 m down the step's eye in room 3 is on lit floor, drawn, not hidden, not seen, with no sighting, and the entry
   on his room's door with one can left is open and clear; with the knob off he is seen and the entry is bang and clear, "contact": the regression as it was);
   `RAILS_BREAK=1` 16 red on both. NOT CHECKED: a teammate's eye displaced from the picture by a step's eye still answering `seen()` (mission 1 in the sky
-  seat has four eyes and room for the step's); smoke between a frame's eye and a man; anything on a GPU.
+  seat has four eyes and room for the step's); smoke between a frame's eye and a man (he is drawn through it: a guard that borrowed the team's own smoke verdict was tried and taken out — it went
+  stale when the team lost its line and let one teammate's smoked line hide a man the lookout saw clear, and nothing headless can reach smoke; the mend is
+  the probe asked along the frame eye's own line, with a switch); anything on a GPU. THE THREE LATE RULES ARE KNOBS OF THE FRAME'S TABLE, not switches of
+  their own: on in the module, inert with the frame off (the frozen stand), carried by the journal, each with a page word; no `FROZEN_HOLDS` row.
+  OTHER OWNERS' READERS that still ask `seen()` for a thing of the picture's, and so treat a man only the lookout has as unseen: a laser's dot on him
+  (`combat.ts`), the floor plan's sight line to him (`floorplan.ts`), the calls about him (`tellCalls`). Theirs to move to `drawn()` if it shows.
+- **A key is named on the floor only once its lesson has opened it** (2026-10-22; `floorplan.ts waitsOnKey`, `rails.ts hushes`; on rails only: `?rails=0`
+  is the build as it was). The floor plan put the squad's key on every door that waits on it, dark until the men stand there. On mission 1 the stack's
+  step comes before the word is taught, and on the pair's mission the player asked what the key over his partner was. While the step that is up holds the
+  word shut the press does nothing (`rails.ts gate`: the squad's key goes by under `word` and nothing else, a set charge's blow included), so no door
+  carries the cap: the bar across the doorway stays (the men are waiting), the key goes. `Rails.hushes(action)` is the one question a reader that draws a
+  key asks. The quiet pair's own mark is the pair mission's rule in the same file. NOT MOVED TO IT: a laid plan's cap and the squad panel's "F go" note
+  (they are shut by `menu`, and no level has a step with the menu open and the word shut). CHECKED, both stands: `rails-check` (at the stack's step the
+  door reads `stack` with no key; at the first later step that opens the word, the key; `RAILS_BREAK=1` red on that line on both). Never seen on a GPU.
+- **The scripted players play in the page's own direct light, and the plain lesson check walks the tutorial too** (2026-10-22; tools only: `lesson-run.ts`,
+  `lesson-gate.ts`, `lesson-check.ts`; A CHANGED BAR for all six tutorial missions). THREE GAPS between a scripted run and the page. (1) The CPU's light
+  estimate has an authored hour's sun and sky (`hours.ts hourLight`) and nothing of the NIGHT's moon (`guards.ts lightEstimateAt` skips directional
+  lights), and the page's meter has both: `--moon` put it on the player's own meter alone, and only where a script asked. So by night the squad mission's
+  men "never saw what the page's shot", and the pair's partner followed down a lane in runs that the page's meter called lit. NOW `lesson-run --sky` is ON
+  BY DEFAULT FOR A TUTORIAL MISSION (`--nosky`, or the script's `mode.sky: false` with why, puts it off; a Training row asks for it): `--moon` for the
+  player, and ONE hook on `g.lightQuery` / `g.lightAt` / `g.lightForget` that answers every other man's meter (a unit's own, a body's, a held man's, a
+  civilian's) by the SAME SUM as the player's: the estimate where he is, plus the moon where nothing solid is up its direction (an hour's own sun is
+  never added again: at midday that lit a man twice). `--floor N` (the pair mission's, `mode.floor`) is the same hook's lower bound: the bounce neither
+  has; with `--nosky` it is the floor alone. Two models of one floor would let a man be lit to the squad and dark to himself. This is also what every
+  caller of `runLesson` gets (`tut-solo-check`'s arms). STILL NOT THE PAGE'S: no bounce but that floor,
+  no bodies' shadows, no smoke between a light and a man, no flicker. (2) `lesson-gate`'s frozen arm of a tutorial mission was given the frame's word and
+  not the row's own hour and weather (`TPS_ROWSET=1`): a mission laid by day was played there at night. It is given both now. (3) `lesson-check` with no
+  name walked Training's seven levels: every "ALL PASS (73)" had covered no tutorial level, and a rows note (`rowsWithheld`) never printed. It walks
+  `LESSON_MISSIONS` now: 13 levels, 129 checks, green on both stands. `lesson-gate` with no name is still Training's (a tutorial mission is gated by name). Also: a
+  `PT_DESTR=1` set by hand in front of `lesson-run` is honoured as the script's own `raises` is (it was read only when the script had raised it).
