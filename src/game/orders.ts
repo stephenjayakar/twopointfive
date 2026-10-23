@@ -696,7 +696,7 @@ export class SquadOrders {
     for (const d of g.doors.list) { const m = Math.min(flat(d.frameCentre, at), flat(d.pos, at)); if (m < dd) { dd = m; door = d; } }
     let man: Guard | null = null, dm = K.manM;
     for (const gd of this.squad()) { const m = flat(gd.char.pos, at); if (gd.state !== 'dead' && m < dm) { dm = m; man = gd; } }
-    const ds = flat(sam, at);
+    const ds = g.rails?.planSeat ? Infinity : flat(sam, at);   // (a tutorial's seat with plan mode held up: nobody of his is on the floor, and where he is parked is no target)
     const fo = this.people?.near(at) ?? null;   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
     if (fo && !(door && dd < fo.d) && !(man && dm < fo.d) && !(ds < K.selfM && ds < fo.d)) return { kind: 'foe', at: [fo.gd.char.pos[0], 0, fo.gd.char.pos[2]], foe: fo.gd };
     const wk = workNear(g, at);   // (workthings.ts: a thing a teammate can work — the breaker, the mission's thing — nearer the point than a door, a teammate or Sam himself; null with its switch off)
@@ -1147,7 +1147,7 @@ export class SquadOrders {
    *  (planShift: out of a run it is not, CMDRING.planRun). With that mode off Shift is only his sprint, and the key orders as it does at a walk */
   private ringFree(input: Input): boolean { return !planShift(this, input) && this.backFree(); }
   /** plan mode is up and the back key takes it down (planmode.ts, CMDRING.planRun): Game.backable */
-  planBack(): boolean { return CMDRING.plan && CMDRING.planRun && this.plan.up; }
+  planBack(): boolean { return CMDRING.plan && CMDRING.planRun && this.plan.up && !this.g.rails?.planSeat; }   // (…never in a tutorial's seat that holds the mode up: rails.ts RAILS.skyUp)
   /** … and the page's Esc doing it (Game.escape, last: everything nearer backs out first) */
   planEscape(): boolean { if (!planEscape(this)) return false; this.escUsed = true; return true; }
   /** the ring's key is free: no menu up and nothing the key backs out of instead (backkey.ts: a Space list, a running verb, the launcher's arc) */
@@ -1157,7 +1157,7 @@ export class SquadOrders {
    *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
    *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
   hintView(kept?: HoverKept): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null; /** the kind's glyph is drawn (cmdring.ts plainHint: false — the outline alone) */ glyph: boolean } | null {
-    const v = this.view; if ((!CMDRING.on && !CMDRING.hint) || !this.active || !v.input || !v.cam || !v.canvas) return null;   // (`hint` is a setting of its own: the mark is drawn with the ring off too)
+    const v = this.view; if (CMDRING.bareHint || (!CMDRING.on && !CMDRING.hint) || !this.active || !v.input || !v.cam || !v.canvas) return null;   // (`hint` is a setting of its own: the mark is drawn with the ring off too)
     if (!CMDRING.hint && !this.cmdRing && !this.cmdPress) return null;   // (before the key it is drawn only when asked for — `hint`; with the key down it is the press seen to land, and the ring's own middle)
     const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
     if (!R && !this.cmdPress && !this.ringFree(v.input)) return null;

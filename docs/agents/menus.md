@@ -1914,3 +1914,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   neighbour's file); the break reaching the list and the page lines (both are fixed inputs: a break there would be by fiat). NOT DONE: a
   lesson's frame does not teach or lock it (the frame's key locks do not know Tab's card); nobody tracks what a man himself has left (the pool is the squad's), so a man's counts stay
   what he started with; a run's end line still says to press Enter while the card holds the game (Tab or Esc first). Never seen on a GPU. NOBODY HAS PLAYED IT.
+- **Enter deploys a mission that has no kit step (2026-10-23; `ui/startpage.ts` `noKit` / `onward`).** The maintainer: "bug for tutorial 1 where hitting
+  enter (rather than clicking deploy) goes to an empty loadout screen rather than starting". A mission played with the kit as issued (`kitAsIssued`: a
+  tutorial mission with no kit plan of its own, `.nokit` on the page) draws Deploy as the block on the MISSION step, but Enter on its row still stepped
+  into TEAM & KIT, where there is nothing to pick. Now nothing on the page leads there for such a mission: Enter or Space on its row is Deploy, the key
+  line under the list reads "Enter deploy", the head names one step, the rail has no Team & kit row, and `setPane` itself refuses the kit step, so
+  `?loadout=<that mission>` opens on its rows. A mission with a kit steps into it as before. No switch (a page's navigation; nothing a run reads).
+  CHECK: `tools/qa/startpage-look.cjs`, two lines ("a mission with no kit to pick", "a mission WITH a kit still steps into it"), on the real page with no
+  adapter under it; the look's group name 'Training' was stale since the old lessons went and reads 'Tutorial' now. Nobody has pressed it on a GPU page.

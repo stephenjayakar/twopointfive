@@ -5,12 +5,15 @@
 //   hold    2.6 m behind him, the left button pressed on him and kept down (the mouse's own events on the canvas): he is in Sam's arm inside six seconds.
 //   let     the same, let go after two thirds of a second: nobody stalked, Sam at rest; pressed again: in his arm.
 //   slider  the lab's first slider moved by its own input event writes the stalk's top speed.
+//   (with the key the finish, stalk.ts `key`, as a plain address has it: `key` is that E takes him from in reach, and `hold` / `let` that the held button
+//    brings him to a stop in reach with nobody grabbed, and E then takes him.)
+// ONLY=nokey: the lab under ?stalkkey=0&stalklow=0 — the four scenes as written above.
 // ONLY=polish: the lab under ?stalkpolish=0 — the polish's numbers are down and the held click still ends in the grab.
 // ONLY=off: a plain night under ?stalk=0 instead — the switch is off, the list offers the grab on its key and the key grabs him.
 //   PORT=5231 node tools/qa/stalk-page.cjs        (a dev server on that port: PORT=5231 bun run tools/serve.ts)     SHOT=<file.png>: one drawn frame of the lab kept
 // exit 0 = all hold with no page error · 1 = otherwise.   What this cannot say: how any of it LOOKS or FEELS (the software adapter draws it; nobody plays it here).
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OFF = process.env.ONLY === 'off', POLISH = process.env.ONLY === 'polish', SHOT = process.env.SHOT || '';
+const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OFF = process.env.ONLY === 'off', POLISH = process.env.ONLY === 'polish', NOKEY = process.env.ONLY === 'nokey', SHOT = process.env.SHOT || '';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
 (async () => {
@@ -18,11 +21,11 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); const errors = []; page.setDefaultTimeout(900000);
   page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
-  await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&levelFile=sneak-lab.json&solo${OFF ? '&stalk=0' : '&sneaklab'}${POLISH ? '&stalkpolish=0' : ''}`);
+  await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&levelFile=sneak-lab.json&solo${OFF ? '&stalk=0' : '&sneaklab'}${POLISH ? '&stalkpolish=0' : ''}${NOKEY ? '&stalkkey=0&stalklow=0' : ''}`);
   const rows = []; const say = (ok, text) => { rows.push(ok); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); };
   const boot = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; window.__menu.close(); await window.__runFrames(5, 1 / 60, [], 'none');
     const g = window.__game, S = window.__knobs.registry().STALK; g.godMode = true; g.playerInvisible = true;
-    return { fatal: document.getElementById('fatal')?.textContent || '', on: !!S.on, only: !!S.only, men: g.guards.filter(x => x.state !== 'dead' && !x.civ).length, holstered: !!g.player.holstered,
+    return { fatal: document.getElementById('fatal')?.textContent || '', on: !!S.on, only: !!S.only, key: !!S.key, low: !!S.low, men: g.guards.filter(x => x.state !== 'dead' && !x.civ).length, holstered: !!g.player.holstered,
       sys: document.querySelector('#panel .prail .sys.on')?.getAttribute('title') || '', panel: !document.getElementById('panel').classList.contains('hidden'), sliders: document.querySelectorAll('#panel input[type=range]').length }; });
   /** Sam `gap` m dead behind the first man, crouched, hands empty; the frames run so the list is this frame's */
   const behind = gap => page.evaluate(async gap => { const g = window.__game, A = g.guards[0], yaw = A.char.bodyYaw; if (g.player.holding) { g.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); }
@@ -30,8 +33,9 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
     await window.__runFrames(20, 1 / 60, [], 'none'); }, gap);
   /** the first man's chest on the page, in the mouse's own coordinates */
   const chest = () => page.evaluate(() => { const g = window.__game, A = g.guards[0], v = document.getElementById('view'), r = v.getBoundingClientRect(), [x, y] = window.__cam.project([A.char.pos[0], 1.2, A.char.pos[2]], r.width, r.height); return [r.left + x, r.top + y]; });
-  const frames = (n, until) => page.evaluate(async ([n, until]) => { const g = window.__game; let f = 0; for (; f < n; f++) { await window.__runFrames(1, 1 / 60, [], 'none'); if (until && g.player.holding) break; }
-    const c = g.player.char; return { f, held: !!g.player.holding, speed: Math.hypot(c.vel[0], c.vel[2]), gap: Math.hypot(c.pos[0] - g.guards[0].char.pos[0], c.pos[2] - g.guards[0].char.pos[2]), list: g.nearby.map(r => Object.values(r).filter(v => typeof v === 'string').join(' ')).join(' | '), page: document.body.innerText.replace(/\s+/g, ' ') }; }, [n, until]);
+  const frames = (n, until) => page.evaluate(async ([n, until]) => { const g = window.__game; let f = 0; for (; f < n; f++) { await window.__runFrames(1, 1 / 60, [], 'none'); if (until && g.player.holding) break;
+      if (until === 'reach' && f > 30) { const c = g.player.char, A = g.guards[0].char.pos; if (Math.hypot(c.vel[0], c.vel[2]) < 0.02 && Math.hypot(c.pos[0] - A[0], c.pos[2] - A[2]) < 0.95) break; } }   // ('reach': …or he has come to a stop inside the grab's reach — the key the finish)
+    const c = g.player.char; return { f, held: !!g.player.holding, speed: Math.hypot(c.vel[0], c.vel[2]), gap: Math.hypot(c.pos[0] - g.guards[0].char.pos[0], c.pos[2] - g.guards[0].char.pos[2]), list: g.nearby.map(r => Object.values(r).filter(v => typeof v === 'string').join(' ')).join(' | '), marks: g.interactables.filter(r => r.kind === 'guard' && r.guard === g.guards[0]).map(r => r.line2).join(' | '), page: document.body.innerText.replace(/\s+/g, ' ') }; }, [n, until]);
   const tap = async code => { await page.keyboard.down(code); await frames(3); await page.keyboard.up(code); await frames(20); };
   await page.evaluate(() => window.__runFrames(150, 1 / 60, [], 'none'));   // (the man who stands is on his mark)
   if (OFF) {
@@ -43,15 +47,29 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       `the lab: stalk ${boot.on ? 'on' : 'OFF'}, the click the only way ${boot.only}, ${boot.men} men, empty hands ${boot.holstered}, the panel ${boot.panel ? 'open' : 'SHUT'} on '${boot.sys.slice(0, 20)}' with ${boot.sliders} sliders${boot.fatal ? ' · FATAL ' + boot.fatal : ''}`);
     { const v = await page.evaluate(() => { const R = window.__knobs.registry(), S = R.STALK, H = R.HOLD; return { jolt: S.jolt, turnIn: S.turnIn, show: S.cornerShow, way: H.wayShape, dip: H.lunge.dip, apart: H.apart.side }; }), up = v.jolt > 0 && v.turnIn && v.show && v.way && v.dip > 0 && v.apart > 0, down = v.jolt === 0 && !v.turnIn && !v.show && !v.way && v.dip === 0 && v.apart === 0;
       say(POLISH ? down : up, `${POLISH ? '?stalkpolish=0: the polish is down' : 'a plain address: the polish is up'} (the duck ${v.jolt}, the turn through the step ${v.turnIn}, the wait's pose ${v.show}, the shaped way in ${v.way}, the dip ${v.dip}, the heads apart ${v.apart})`); }
-    // (one DRAWN frame before the page is read: the corner's rows are written by the draw)
-    await behind(0.8); await page.evaluate(() => window.__runFrames(1)); const before = await frames(0); await tap('KeyE'); await tap('Space'); const k = await frames(30, true);
-    say(!k.held && /hold to grab him/.test(before.list) && /hold to grab him/i.test(before.page), `0.8 m behind him a tap of E and of Space grabs nobody (in his arm ${k.held}), the man's rows say the click (${/hold to grab him/.test(before.list)}) and so does the page (${/hold to grab him/i.test(before.page)})`);
-    if (SHOT) { await page.evaluate(() => window.__runFrames(1)); await page.screenshot({ path: SHOT }); }
-    await behind(2.6); let [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const h = await frames(360, true); await page.mouse.up(); await frames(5);
-    say(h.held, `2.6 m behind him, the left button pressed on him and kept down: ${h.held ? `in his arm after ${(h.f / 60).toFixed(2)} s` : `never grabbed (still ${h.gap.toFixed(2)} m off)`}`);
-    await behind(2.6); [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const a = await frames(40, true); await page.mouse.up(); const b = await frames(40);
-    await page.mouse.down(); const c = await frames(360, true); await page.mouse.up(); await frames(5);
-    say(!a.held && a.gap < 2.5 && !b.held && b.speed < 0.02 && c.held, `let go after two thirds of a second (${a.gap.toFixed(2)} m off, closing): at rest ${b.speed.toFixed(2)} m/s with nobody in his arm; pressed again: in his arm ${c.held}`);
+    say(boot.key === !NOKEY && boot.low === !NOKEY, `${NOKEY ? '?stalkkey=0&stalklow=0: both are down' : 'a plain address: the key finishes the grab and he goes lower'} (the key ${boot.key}, lower ${boot.low})`);
+    if (boot.key) {   // (stalk.ts `key`: the held click brings him in and stops; the interaction's key is the grab)
+      await behind(0.85); await page.evaluate(() => window.__runFrames(1)); const before = await frames(0); await tap('KeyE'); const k = await frames(30, true);
+      say(k.held && /grab him/.test(before.list), `0.85 m behind him the man's row offers the grab (${/grab him/.test(before.list)}), and a tap of E takes him (in his arm ${k.held})`);
+      await behind(3.0); const farRow = await frames(2); await behind(1.8); const nearRow = await frames(2);   // (the one line that says what the click does, out to where a press begins it)
+      say(/hold to sneak up on him/.test(farRow.marks) === boot.low && /hold to sneak up on him/.test(nearRow.marks) && !/grab him/.test(nearRow.list), `the line over the man, 'hold to sneak up on him', is there 3 m behind him (past the rows' 2.4 m) (${/hold to sneak up on him/.test(farRow.marks)}, with the lower creep ${boot.low}) and 1.8 m behind him (${/hold to sneak up on him/.test(nearRow.marks)}), where no row grabs yet`);
+      if (SHOT) { await page.evaluate(() => window.__runFrames(1)); await page.screenshot({ path: SHOT }); }
+      const from = boot.low ? 3.0 : 2.2; await behind(from); let [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const h = await frames(900, 'reach'), w = await frames(60, true); await tap('KeyE'); const e = await frames(40, true); await page.mouse.up();   // (a TAP: the key held past a tap opens his own ring instead) await frames(5);
+      say(!h.held && !w.held && w.gap < 0.95 && w.speed < 0.02 && e.held, `${from} m behind him, the left button pressed on him and kept down: after ${(h.f / 60).toFixed(2)} s he has stopped ${w.gap.toFixed(2)} m behind him and a second on nobody is grabbed (in his arm ${h.held || w.held}); E then: in his arm ${e.held}`);
+      await behind(2.6); [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const a = await frames(40, true); await page.mouse.up(); const b = await frames(40);
+      await page.mouse.down(); const c = await frames(600, 'reach'); await tap('KeyE'); const c2 = await frames(40, true); await page.mouse.up(); await frames(5);
+      say(!a.held && a.gap < 2.5 && !b.held && b.speed < 0.02 && !c.held && c2.held, `let go after two thirds of a second (${a.gap.toFixed(2)} m off, closing): at rest ${b.speed.toFixed(2)} m/s with nobody in his arm; pressed again he comes in to ${c.gap.toFixed(2)} m, and E: in his arm ${c2.held}`);
+    } else {
+      // (one DRAWN frame before the page is read: the corner's rows are written by the draw)
+      await behind(0.8); await page.evaluate(() => window.__runFrames(1)); const before = await frames(0); await tap('KeyE'); await tap('Space'); const k = await frames(30, true);
+      say(!k.held && /hold to grab him/.test(before.list) && /hold to grab him/i.test(before.page), `0.8 m behind him a tap of E and of Space grabs nobody (in his arm ${k.held}), the man's rows say the click (${/hold to grab him/.test(before.list)}) and so does the page (${/hold to grab him/i.test(before.page)})`);
+      if (SHOT) { await page.evaluate(() => window.__runFrames(1)); await page.screenshot({ path: SHOT }); }
+      await behind(2.6); let [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const h = await frames(360, true); await page.mouse.up(); await frames(5);
+      say(h.held, `2.6 m behind him, the left button pressed on him and kept down: ${h.held ? `in his arm after ${(h.f / 60).toFixed(2)} s` : `never grabbed (still ${h.gap.toFixed(2)} m off)`}`);
+      await behind(2.6); [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const a = await frames(40, true); await page.mouse.up(); const b = await frames(40);
+      await page.mouse.down(); const c = await frames(360, true); await page.mouse.up(); await frames(5);
+      say(!a.held && a.gap < 2.5 && !b.held && b.speed < 0.02 && c.held, `let go after two thirds of a second (${a.gap.toFixed(2)} m off, closing): at rest ${b.speed.toFixed(2)} m/s with nobody in his arm; pressed again: in his arm ${c.held}`);
+    }
     const s = await page.evaluate(() => { const S = window.__knobs.registry().STALK, was = S.pace, el = [...document.querySelectorAll('#panel .row')].find(r => /top speed/.test(r.textContent))?.querySelector('input[type=range]'); if (!el) return { was, now: was, found: false };
       el.value = '1.2'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); const now = S.pace; S.pace = was; return { was, now, found: true }; });
     say(s.found && Math.abs(s.now - 1.2) < 1e-6, `the lab's 'top speed' slider moved to 1.2 writes the stalk's top speed (${s.was} → ${s.now})`);

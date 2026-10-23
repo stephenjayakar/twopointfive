@@ -75,10 +75,10 @@ const LEVEL_BASE: Record<string, string> = {
   // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
   'tut-pair.json': '9048a2e01',
 
-  // the plan mission gives him his feet from its first walk step on (that step's `allow` gains `move`: plan mode's view stays near him only where they
-  // are his) and three walk steps between its plans; the gates' view point moved inside the view's reach from the last of them, and the last step lost
-  // its mark and its after line. No box, door, light or prop moved
-  'tut-plan.json': '8b6778b0d',
+  // the plan mission has nobody of the player's on the floor: its frame gives `plan` and a sky seat that holds the mode up, the step that opened the
+  // mode, the three walk steps and the step that called the squad back are out (17 steps), and the gates' view point is back where it was. No box,
+  // door, light or prop moved
+  'tut-plan.json': '1955e5c1e',
 
   // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
   'tut-quiet.json': '87c7cebef',
@@ -86,13 +86,15 @@ const LEVEL_BASE: Record<string, string> = {
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run)
   'tut-sky.json': '34c71d8c3',
 
-  // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, two sponge rounds on his card and the swap's own lists, the moon
-  // behind the shop
-  'tut-solo.json': 'bd7b25a26',
+  // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, the moon behind the shop; then the inner wall and its wooden
+  // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round
+  // on his card or swap among his lines
+  'tut-solo.json': 'f469ec380',
 
   // the squad mission: the hall's street window moved to the corner men's line and narrowed, the bags behind the gun over a man's head and longer, the can
-  // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two)
-  'tut-squad.json': '988465e1c',
+  // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two); then its steps at the workshop, where plan
+  // mode is opened and closed (three steps where one was: no box moved)
+  'tut-squad.json': 'bfcd83ace',
 };
 /** WHAT OF A LESSON ITS OWNER MAY CHANGE WITH NO NEW BASE (scenarios.lesson; scene/scenarios.ts LessonData, LessonStep, RailsData): its WORDS, read from
  *  today's file and never held to the base — the lesson's `title`; a step's `line` and the lines that stand in for it (`setupLine`, `ringLine`, `blowLine`,
@@ -107,7 +109,7 @@ const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine',
  *  early and nothing else is red (a scripted player only shows a key that is MISSING), so they were free for one step (10-22) and are held again: with a
  *  row a level, a list changed on purpose is its owner's one line. A mark moved to make room for a desk is the damage this check is for. A key of a
  *  lesson that is in NEITHER table is a red line until it is put in one: the choice is made in the open, by whoever adds the key. */
-const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
+const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'settle', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
   rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows'] };
 /** today's value for every free key, the base's for every other, in today's key order (the loaded Levels are compared as text); `n` counts the free keys that moved */
 function readFree(now: any, then: any, keys: string[], n: { v: number }): any { const t: any = {};

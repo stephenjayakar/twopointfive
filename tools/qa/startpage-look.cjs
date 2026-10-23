@@ -79,7 +79,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 }); await page.waitForTimeout(500);
   const s0 = await stateOf(page);
   const first = ['compound-four', 'rescue-registry', 'warehouse-four', 'depot-four', 'barracks-four', 'night-breach', 'solo-night'];
-  const GROUPS = ['Training', 'Raids', 'Strongholds', 'On the clock', 'Quiet, alone', 'Quiet, as two'], inGroup = (s, h) => s.rows.filter(id => s.under[id] === h);
+  const GROUPS = ['Tutorial', 'Raids', 'Strongholds', 'On the clock', 'Quiet, alone', 'Quiet, as two'], inGroup = (s, h) => s.rows.filter(id => s.under[id] === h);
   check(s0.up && s0.heads.join('|') === GROUPS.join('|') && s0.rows.length > first.length && new Set(s0.rows).size === s0.rows.length && s0.rows.every(id => GROUPS.includes(s0.under[id]))
     && GROUPS.every((h, k) => s0.counts[k] === inGroup(s0, h).length && s0.counts[k] >= 1 && s0.counts[k] <= 8) && GROUPS.every(h => { const g = inGroup(s0, h), p = first.filter(id => g.includes(id)); return p.every((id, i) => g[i] === id); }),
     'the page lists every mission once, each under one of six headings that are all drawn with how many they hold (eight at most); inside a group the short list\'s missions come first, in play order', `${s0.heads.map((h, k) => `${h} ${s0.counts[k]}`).join(' / ')} · ${s0.rows.length} rows: ${s0.rows.join(', ')}`);
@@ -90,7 +90,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   // ---- the filled block leads on: 'Team & kit' on the Mission step (Deploy a quiet word beside it), Deploy on the Team & kit step; a lesson (no kit to pick) has Deploy on both
   { const urlK = page.url(); await page.click('#missions #loadout [data-act="kit"]'); await page.waitForTimeout(250); const k1 = await stateOf(page);
     await page.click('#missions .mstep[data-step="list"]'); await page.waitForTimeout(250); const k2 = await stateOf(page);
-    const lesson = s0.rows.find(r => /^train-/.test(r)); let k3 = null;
+    const lesson = s0.rows.find(r => /^train-/.test(r)) ?? s0.rows.find(r => r === 'tut-sky'); let k3 = null;   // (the Training lessons are out: the first tutorial mission is the one played with the kit as issued)
     if (lesson) { await goRow(lesson); await page.waitForTimeout(300); k3 = await stateOf(page); await goRow(s0.sel); await page.waitForTimeout(300); }
     const k4 = await stateOf(page);
     check(s0.loadout?.kitShown && s0.loadout.filled.join() === 'kit' && k1.pane === 'loadout' && !k1.loadout.kitShown && k1.loadout.filled.join() === 'deploy' && k1.loadout.deployInView && k2.pane === 'list' && k2.loadout.filled.join() === 'kit'
@@ -121,9 +121,9 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
     && g2.sel === g0.rows[gEnd] && g2.open.join() === g0.open.join() && g2.shown.join() === g0.shown.join(),
     'S off the last row of a group is the first row of the next, which opens as the one left folds (every heading still drawn); W goes back the same way', `${g0.sel} '${g0.open}' → S × ${gEnd - gi + 1} → ${g1.sel} '${g1.open}' (${g1.shown.length} rows drawn) → W → ${g2.sel} '${g2.open}'`);
   await page.click('#missions .msec[data-head="Quiet, as two"]'); await page.waitForTimeout(200); const g3 = await stateOf(page);
-  await page.click('#missions .msec[data-head="Training"]'); await page.waitForTimeout(200); const g4 = await stateOf(page);
-  check(g3.open.join() === 'Quiet, as two' && g3.sel === inGroup(g3, 'Quiet, as two')[0] && g3.shown.join() === inGroup(g3, 'Quiet, as two').join() && g3.loadout?.title === g3.title && g4.open.join() === 'Training' && g4.sel === inGroup(g4, 'Training')[0] && g4.pane === 'list',
-    'a click on a heading puts the cursor on that group\'s first row: the group opens, its mission is the one on the sheet', `'Quiet, as two' → ${g3.sel} ('${g3.title}') · 'Training' → ${g4.sel}`);
+  await page.click('#missions .msec[data-head="Tutorial"]'); await page.waitForTimeout(200); const g4 = await stateOf(page);
+  check(g3.open.join() === 'Quiet, as two' && g3.sel === inGroup(g3, 'Quiet, as two')[0] && g3.shown.join() === inGroup(g3, 'Quiet, as two').join() && g3.loadout?.title === g3.title && g4.open.join() === 'Tutorial' && g4.sel === inGroup(g4, 'Tutorial')[0] && g4.pane === 'list',
+    'a click on a heading puts the cursor on that group\'s first row: the group opens, its mission is the one on the sheet', `'Quiet, as two' → ${g3.sel} ('${g3.title}') · 'Tutorial' → ${g4.sel}`);
   // (the groups as tiles, their missions as cards: every card of the open group is whole inside the grid, each has its picture, and no title or heading is cut short)
   const room = await page.evaluate(() => { const R = document.getElementById('missions'), G = R.querySelector('.mgrid'), gb = G.getBoundingClientRect(), cards = [...G.querySelectorAll('.mrow:not(.shut)')];
     return { n: cards.length, out: cards.filter(c => { const b = c.getBoundingClientRect(); return b.top < gb.top - 0.5 || b.bottom > gb.bottom + 0.5 || b.left < gb.left - 0.5 || b.right > gb.right + 0.5; }).map(c => c.getAttribute('data-mission')),
@@ -178,9 +178,30 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   const u5w = query(page.url());
   check(u5w.some(k => /^weather=/.test(k)) && u5w.includes('hour=midday') && u5w.some(k => /^levelFile=barracks/.test(k)) && !u5w.some(k => /^pick=/.test(k)), 'J on a short-list row: the deploy carries that weather and the row\'s hour, as the mission\'s own link (no pick=)', new URL(page.url()).search);
 
+  // ---- a mission with NO KIT STEP (played with the kit as issued: the first tutorial mission): nothing on the page leads to an empty TEAM & KIT — the
+  //      head names one step, the rail has no team row, the key line says what Enter does, and Enter on its row is in the game
+  //      ("hitting enter (rather than clicking deploy) goes to an empty loadout screen rather than starting")
+  await open();
+  if (!(await stateOf(page)).rows.includes('tut-sky')) check(false, 'the first tutorial mission is a row of the page', 'no row tut-sky');
+  else {
+    await goRow('tut-sky'); await page.waitForTimeout(300);
+    const look = () => page.evaluate(() => { const R = document.getElementById('missions'), vis = e => { if (!e) return false; const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && getComputedStyle(e).display !== 'none'; };
+      return { nokit: R.classList.contains('nokit'), pane: R.classList.contains('pane-loadout') ? 'loadout' : 'list', what: R.querySelector('[data-row="actions"]')?.getAttribute('data-what') ?? '', step: vis(R.querySelector('.mstep[data-step="loadout"]')), team: vis(R.querySelector('.mteam')) }; });
+    const n0 = await look(), before = page.url();
+    const went = await Promise.all([deployed(), page.keyboard.press('Enter')]).then(() => true, () => false), un = query(page.url()), n1 = went ? null : await look();
+    check(n0.nokit && n0.pane === 'list' && /Enter deploy/.test(n0.what) && !/team and kit/.test(n0.what) && !n0.step && !n0.team && went && un.includes('levelFile=tut-sky.json'),
+      'a mission with no kit to pick: its key line says Enter deploys, the head and the rail name no second step, and Enter on its row is ONE page load into the mission',
+      `nokit ${n0.nokit} · '${n0.what}' · step shown ${n0.step} · team row shown ${n0.team} · Enter: ${went ? new URL(page.url()).search : `no load (pane ${n1.pane}, ${before === page.url() ? 'same page' : 'moved'})`}`);
+    // …a mission WITH a kit still steps into it, and the link that opens a mission on its kit (?loadout=) opens this one on its rows
+    await open(); await goRow('compound-four'); await page.waitForTimeout(200); await page.keyboard.press('Enter'); await page.waitForTimeout(300); const m0 = await look();
+    await boot(Q + '&loadout=tut-sky'); await page.waitForTimeout(300); const m1 = await look(), sm = await stateOf(page);
+    check(m0.pane === 'loadout' && !m0.nokit && /Enter deploy/.test(m0.what) && sm.up && sm.sel === 'tut-sky' && m1.pane === 'list' && m1.nokit,
+      'a mission WITH a kit still steps into it on Enter; ?loadout= on the tutorial\'s mission opens on its rows, never on an empty kit', `compound: pane ${m0.pane} · ?loadout=tut-sky: up ${sm.up}, ${sm.sel}, pane ${m1.pane}, nokit ${m1.nokit}`);
+  }
+
   // ---- a mission that is not on the short list: its own link, through the same loadout
   await open();
-  const other = s0.rows.find(id => !first.includes(id) && s0.under[id] !== 'Training') ?? s0.rows[s0.rows.length - 1];
+  const other = s0.rows.find(id => !first.includes(id) && s0.under[id] !== 'Tutorial') ?? s0.rows[s0.rows.length - 1];
   await goRow(other); await page.waitForTimeout(300); const s6 = await stateOf(page);
  
   await page.keyboard.press('Enter'); await page.waitForTimeout(500); await Promise.all([deployed(), page.keyboard.press('Enter')]);

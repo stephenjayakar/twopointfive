@@ -1,15 +1,17 @@
 // The scripted player for the tutorial's plan mode mission (levels/tut-plan.json; tools/qa/lesson-run.ts runs it as the page opens it: a tutorial mission is
-// always stood up on the shipped stand). He has no trigger here: Shift with the command key, the mode's own walk keys on the view, the left button dragged
-// round men, the right button on a door or the floor (clicked, or dragged for a way to face), the word — and, from the first walk step on, the back key to
-// put the mode away and the walk keys to the next marked spot. Game state is READ to time a press and to find where a thing is on the picture, never to do
-// the deed. The spots and the points the view is asked to are the lesson's own, read from the level.
+// always stood up on the shipped stand). Nobody on the floor is his: the frame's sky seat holds plan mode up (rails.ts RAILS.skyUp) and he has the mode's
+// own hands and nothing else — its walk keys on the view, the left button dragged round men, the right button on a door or the floor (clicked, or dragged
+// for a way to face), the word. Game state is READ to time a press and to find where a thing is on the picture, never to do the deed. The points the
+// view is asked to are the lesson's own, read from the level.
 import type { Bot } from '../lesson-run';
 import { CMDRING } from '../../../src/game/cmdring';
 import { DOORTOOLS } from '../../../src/game/doortools';
+import { planView } from '../../../src/game/planmode';
 
 export const query = '?roomclear=1&squad4';
-/** the frozen stand's arm of the gate: the lines name the back key (Tab closes the mode) and every plan is laid inside the view held near him */
-export const raises = { TPS_TABBACK: '1', TPS_PLANNEAR: '1' };
+/** the frozen stand's arm of the gate: the mission is played in plan mode, which that stand holds off — the mode's own words (the gate gives them to a
+ *  level whose STEPS allow `plan`; here the frame allows it for the whole mission) */
+export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_PLANLOOK: '1', TPS_PLANWAITS: '1', TPS_PLANKNEE: '1' };
 export const ended = (g: any) => g.lesson.finished;
 /** `TUTPLAN_ALONE=1`: the wrong plan, played on purpose — all four on the hall's front door and the word. The steps still end (the room taken is every
  *  step's other way), and the line printed says what it cost: the men the gun put on a knee. It takes the hall on the step before the one that asks for the word */
@@ -31,12 +33,8 @@ const cursor = (B: Bot, s: number[]) => { B.I.mouseX = s[0]; B.I.mouseY = s[1]; 
 const stackedOn = (B: Bot, m: any): string | null => { const A = O(B).of(m); return A?.order === 'stack' && A.door ? A.door.def.name : null; };
 const cleared = (B: Bot, id: string) => !!B.g.roomClear.rooms.find((r: any) => r.def.id === id)?.cleared;
 
-/** the mode up (Shift held over a tap of the command key), if it is not */
-function modeUp(B: Bot) {
-  if (P(B).up) return;
-  B.hold(['ShiftLeft'], 2 / 60); B.I.pressed.add('KeyB'); B.hold(['ShiftLeft', 'KeyB'], 2 / 60); B.hold(['ShiftLeft'], 2 / 60); B.step(2);
-  if (!P(B).up) B.fail('Shift + the command key did not put plan mode up');
-}
+/** the mode is up: the seat holds it (nothing of his puts it up, and nothing takes it down) */
+function modeUp(B: Bot) { if (!P(B).up) B.fail(`plan mode is not up on step '${B.g.lesson.step?.id}': the seat holds it up from the first tick (rails.ts RAILS.skyUp)`); }
 /** the mode's walk keys until every one of the places is on the picture, clear of its edges and of the panels (as a hand would before clicking) */
 function panTo(B: Bot, ...ps: number[][]) {
   modeUp(B);
@@ -47,26 +45,23 @@ function panTo(B: Bot, ...ps: number[][]) {
     if (!ks.length) break;
     B.hold(ks, 2 / 60);
   }
-  // (the view stays near him — planmode.ts planNear — so a place may stop short of the picture's middle; a place that cannot be brought ONTO the picture
-  //  from where he stands is the mission's own break: a line asked for a click he cannot make from the spot it walked him to)
-  reach(B);
+  // (a place that cannot be brought onto the picture is the mission's own break: a line asked for a click nobody can make)
   const off = ps.filter(p => { const [x, y] = px(B, p); return x < 40 || x > w - 40 || y < 40 || y > h - 40; });
-  if (off.length) { const s = B.g.player.char.pos; B.fail(`from (${s[0].toFixed(1)}, ${s[2].toFixed(1)}) the view cannot bring ${off.map(p => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`).join(' and ')} onto the picture`); }
+  if (off.length) B.fail(`the view cannot bring ${off.map(p => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`).join(' and ')} onto the picture`);
   B.step(30);
 }
-/** THE VIEW STAYS NEAR HIM (cmdring.ts `planNear`, the squad's own rule; it holds only where the frame leaves him his feet — planmode.ts planNear): how far
- *  the view's point has been from him is kept, said at the end, and the run fails when the rule is on and the view went further than its box's far corner */
-let far = 0, downs: string[] = [];
-/** he has no trigger here: a spot the mission walks him to is one no round puts him down on (one round does: asked after each walk, before a checkpoint is put back over it, and at the end) */
-function up(B: Bot, when: string) { if (B.g.player.down && !downs.includes(when)) downs.push(when); }
-function reach(B: Bot) { const L = P(B).look, s = B.g.player.char.pos; if (P(B).up && L) far = Math.max(far, Math.hypot(L[0] - s[0], L[2] - s[2])); }
-function reached(B: Bot) {
-  const K = CMDRING as any, on = !!K.planNear, corner = Math.hypot(K.planNearSideM ?? 0, Math.max(K.planNearAwayM ?? 0, K.planNearBackM ?? 0)), held = on && !B.g.rails.locks('move');
-  if (on && !held) B.fail("the view's rule is on and does not hold here: the frame has taken his feet (planmode.ts planNear)");
-  if (held && far > corner + 0.3) B.fail(`the view went ${far.toFixed(1)} m from him: its box's far corner is ${corner.toFixed(1)} m`);
-  up(B, 'at the end'); if (downs.length) B.fail(`a round put him down on a spot the lines walked him to: ${downs.join(' · ')}`);
-  B.say('  he was never put down on his spots (asked after each walk, before the checkpoint is put back, and at the end)');
-  B.say(`  the view's point was never more than ${far.toFixed(1)} m from him (the view held near him: ${held ? `on, a box whose far corner is ${corner.toFixed(1)} m` : 'off'})`);
+/** NOBODY OF HIS IS ON THE FLOOR, AND THE MODE CANNOT BE PUT DOWN: asked once the first plan is under way and again at the end. The player stands parked
+ *  where the level says, unseen; the pair, the back key and Esc are pressed as a hand would try them, and the mode is still up with no order gone out */
+let seatAsked = 0;
+function seat(B: Bot, when: string) {
+  const R = B.g.rails, park = B.g.level.scenarios.lesson.rails.sky?.park as number[] | undefined, s = B.g.player.char.pos, n0 = (O(B).log as unknown[]).length;
+  if (!R.planSeat || !R.skyOn || !park) B.fail(`${when}: the seat that holds plan mode up is not on (rails.sky.plan, RAILS.skyUp)`);
+  if (Math.hypot(s[0] - park![0], s[2] - park![2]) > 0.3 || !B.g.playerInvisible) B.fail(`${when}: the player is not parked out of the picture: at (${s[0].toFixed(1)}, ${s[2].toFixed(1)}), unseen ${B.g.playerInvisible}`);
+  B.hold(['ShiftLeft'], 2 / 60); B.I.pressed.add('KeyB'); B.hold(['ShiftLeft', 'KeyB'], 2 / 60); B.hold(['ShiftLeft'], 2 / 60); B.step(2); const pair = P(B).up;
+  B.press('Tab', 3); const tab = P(B).up; B.press('Escape', 3); const esc = P(B).up;
+  if (!pair || !tab || !esc || (O(B).log as unknown[]).length !== n0) B.fail(`${when}: a key took the mode down or gave an order: after Shift + the command key ${pair ? 'up' : 'DOWN'}, after Tab ${tab ? 'up' : 'DOWN'}, after Esc ${esc ? 'up' : 'DOWN'}, orders ${(O(B).log as unknown[]).length - n0}`);
+  if (planView(O(B))?.sam) B.fail(`${when}: the mode's picture still marks the player`);
+  seatAsked++; B.say(`  ${when}: the player parked at (${s[0].toFixed(1)}, ${s[2].toFixed(1)}), unseen and unmarked · Shift + the command key, Tab and Esc leave the mode up and give no order`);
 }
 /** a step of the lesson by its id · the place its mark stands on · the point its view test wants the view near */
 const stepOf = (B: Bot, id: string): any => (B.g.level.scenarios.lesson.steps as any[]).find(T => T.id === id);
@@ -74,20 +69,7 @@ const find = (t: any, is: string): any => !t ? null : t.is === is ? t : (t.of ??
 /** the mode's walk keys until the step that asks for the view is done: toward the point its own test names */
 function viewTo(B: Bot, id: string) {
   const at: number[] = find(stepOf(B, id).done, 'planView').at; panTo(B, at);
-  for (let i = 0; i < 300 && B.g.lesson.step?.id === id; i++) { const L = P(B).look, k = [L[0] < at[0] - 0.4 ? 'KeyD' : L[0] > at[0] + 0.4 ? 'KeyA' : '', L[2] < at[2] - 0.4 ? 'KeyS' : L[2] > at[2] + 0.4 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); reach(B); }
-}
-/** the mode put away with the back key, and the walk keys to the spot the step marks: in the mode they are the view's */
-function walkTo(B: Bot, id: string, what: string) {
-  const at = stepOf(B, id).at as number[], p = [at[0], 0, at[2]];
-  if (P(B).up) { B.press('Tab', 3); if (P(B).up) B.fail('the back key did not put plan mode away'); }
-  // (the mode down, the view comes back to him: where the ring he is asked to walk to is then. Off the picture, the page pins the step's mark to the
-  //  picture's edge on that side with the metres to it — ui/overlay.ts, the objective's mark — and that it does is the page run's to see)
-  B.wait(1.2); const [x, y] = px(B, p), w = B.W.canvas.clientWidth, h = B.W.canvas.clientHeight, edge = Math.min(x, y, w - x, h - y);
-  if (B.g.objectivePos?.() && Math.hypot(B.g.objectivePos()[0] - p[0], B.g.objectivePos()[2] - p[2]) > 0.1) B.fail(`${what}: the step's mark is not the place the walk is to`);
-  const s0 = [...B.g.player.char.pos], t0 = B.t();
-  if (!B.go(p, 40, { noDoors: true, near: 0.5 })) B.fail(`he did not walk to ${what}: stopped at (${B.g.player.char.pos[0].toFixed(1)}, ${B.g.player.char.pos[2].toFixed(1)})`);
-  up(B, `at ${what}`);
-  B.say(`  walked ${Math.hypot(p[0] - s0[0], p[2] - s0[2]).toFixed(1)} m to ${what} in ${(B.t() - t0).toFixed(1)} s (when he closed the mode its ring was ${edge >= 0 ? `${edge.toFixed(0)} px inside the picture` : `${(-edge).toFixed(0)} px past the picture's edge: the mark pinned to the edge points the way`})`);
+  for (let i = 0; i < 300 && B.g.lesson.step?.id === id; i++) { const L = P(B).look, k = [L[0] < at[0] - 0.4 ? 'KeyD' : L[0] > at[0] + 0.4 ? 'KeyA' : '', L[2] < at[2] - 0.4 ? 'KeyS' : L[2] > at[2] + 0.4 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); }
 }
 /** the left button dragged from one corner of a box on the picture to the other */
 function boxPx(B: Bot, a: number[], b: number[]) {
@@ -201,7 +183,7 @@ function checkpoints(B: Bot) {
   B.say(`  authored checkpoints written: ${wrote.join(' · ') || "none (this stand keeps no save of a squad's run)"}`);
 }
 /** the checkpoint 'the gates', LOADED as its step comes up and before anything is done: the same step must be up, the script's program running again, the men
- *  outside in its hand, both gates shut and locked, the mode put down (a plan nobody finished laying is not kept) */
+ *  outside in its hand, both gates shut and locked — and the mode up again at once (a save put back takes it down: the seat puts it up on the next tick) */
 function putBack(B: Bot) {
   B.step(3); const slot = B.g.saves.slots().find((x: { label: string }) => x.label === 'the gates');
   if (!slot) { if (process.env.TPS_PROFILE === 'shipped') B.fail(`no checkpoint 'the gates' was written as its step came up (slots: ${B.g.saves.slots().map((x: { label: string }) => x.label).join(' · ') || 'none'})`); return; }
@@ -209,29 +191,25 @@ function putBack(B: Bot) {
   const held = ['Tango 5', 'Tango 6', 'Tango 7', 'Tango 8'].map(cs => (B.g.guards as any[]).find(x => x.callsign === cs)).filter(x => x && x.state !== 'dead'), gates = [B.door('gate_e'), B.door('gate_n')];
   if (why || B.g.lesson.i !== i || B.g.director.running !== 'tutorial' || held.length !== 4 || !held.every(x => x.script) || !gates.every(d => d.locked && d.isClosed()))
     B.fail(`the checkpoint 'the gates' did not come back whole: ${why ?? ''} step ${B.g.lesson.i + 1} (was ${i + 1}), program ${B.g.director.running}, the men outside in hand ${held.filter(x => x.script).length} of ${held.length}, gates locked ${gates.map(d => d.locked)}`);
-  B.say(`  loaded the checkpoint 'the gates': the same step, the script running again, the four outside held, both gates shut (plan mode ${P(B).up ? 'still up' : 'down'})`);
+  if (!P(B).up) B.fail("after the checkpoint 'the gates' was put back plan mode is down: the seat holds it up");
+  B.say("  loaded the checkpoint 'the gates': the same step, the script running again, the four outside held, both gates shut, plan mode up");
 }
 export const steps: Record<string, (B: Bot) => void> = {
-  mode: B => { far = 0; downs = []; modeUp(B); },
-  view: B => viewTo(B, 'view'),
+  view: B => { seatAsked = 0; modeUp(B); viewTo(B, 'view'); },
   send: B => { rclick(B, WALL); B.until(() => B.g.lesson.step?.id !== 'send', 40); B.wait(1.5); },
-  up1: B => walkTo(B, 'up1', 'the spot behind his squad'),
-  pick: B => { boxMen(B, twoOf(B, [16, 0, 12])); },
+  pick: B => { seat(B, 'with the squad at the guardroom wall'); boxMen(B, twoOf(B, [16, 0, 12])); },
   door1: B => { rdoor(B, 'guard'); },
   pick2: B => { boxMen(B, free(B)); },
   door2: B => { rdoor(B, 'guard_side'); B.until(() => B.g.lesson.step?.id !== 'door2', 60); },
   all: B => allAgain(B),
   word: B => { word(B, ['guard', 'guard_side'], 'guardroom'); B.wait(1.5); },
-  up2: B => walkTo(B, 'up2', 'the spot beside the hall'),
   hall: B => viewTo(B, 'hall'),
   front: B => { if (ALONE) { allAgain(B); rdoor(B, 'hall'); return; } boxMen(B, twoOf(B, [26, 0, 12])); rdoor(B, 'hall'); },
   back: B => { if (ALONE) { B.until(() => setOn(B, ['hall']), 60); const n0 = B.g.rails.log.length; word(B, ['hall'], 'hall'); told(B, n0); return; } boxMen(B, free(B)); rdoor(B, 'hall_back'); B.until(() => B.g.lesson.step?.id !== 'back', 70); },
   all2: B => allAgain(B),
   word2: B => { const n0 = B.g.rails.log.length; word(B, ['hall', 'hall_back'], 'hall'); told(B, n0); B.wait(1.5); },
-  up3: B => walkTo(B, 'up3', 'the spot in the hall'),
-  gates: B => { up(B, 'in the hall, before its checkpoint is put back'); putBack(B); viewTo(B, 'gates'); },
+  gates: B => { putBack(B); viewTo(B, 'gates'); },
   faceA: B => { pairA = twoOf(B, POST_A); boxMen(B, pairA); rdrag(B, POST_A, GATE_E); B.until(() => B.g.lesson.step?.id !== 'faceA', 60); facing(B, pairA, 'the bags', true); },
   faceB: B => { const men = squad(B).filter(m => !pairA.includes(m)); boxMen(B, men); rdrag(B, POSTB ?? POST_B, GATE_N); B.until(() => B.g.lesson.step?.id !== 'faceB', 60); facing(B, men, 'the barrier', !POSTB); },
-  hold: B => { B.until(() => cleared(B, 'road') && cleared(B, 'lane'), 120); B.wait(1); },
-  'back-in': B => { checkpoints(B); reached(B); modeUp(B); boxPx(B, [3, 3], [5, 5]); const s = B.g.player.char.pos; rclick(B, [s[0], 1.0, s[2]]); B.until(() => B.g.lesson.finished, 30); },
+  hold: B => { checkpoints(B); seat(B, 'with both gates covered'); if (seatAsked !== 2) B.fail(`the seat was asked ${seatAsked} times, not twice`); B.until(() => (cleared(B, 'road') && cleared(B, 'lane')) || B.g.lesson.finished, 120); B.wait(1); },
 };

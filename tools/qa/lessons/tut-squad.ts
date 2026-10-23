@@ -20,7 +20,7 @@ const skyReads = (B: Bot) => (B.g as { __sky?: { reads: number } }).__sky?.reads
 /** THE HALL'S STREET WINDOW IS GLASS, and the frozen stand stands the glass's parts at off (a pane is a wall to a round there: host/standup.ts): the
  *  window's step cannot be done on it. The runner raises the parts for this run alone; the page's stand has them. (GLASSPARTS and not GLASSFX: that
  *  word is read by game/glass.ts as the module loads, which is before any runner can raise it) */
-export const raises = { GLASSPARTS: 'on' };
+export const raises = { GLASSPARTS: 'on', TPS_TABBACK: '1', TPS_PLANNEAR: '1' };   // (and the back key that closes plan mode and the mode's near view, which the page has and the frozen run's plan words leave out)
 /** its steps are a tutorial mission's (game/rails.ts): TPS_RAILS=1 on the frozen stand, or the shipped stand */
 export const needs = 'rails';
 
@@ -66,6 +66,23 @@ function goIn(B: Bot, door: string, room: string) {
   else B.say(`  B: ${l?.order} on ${l?.target}`);
   if (!B.until(() => cleared(B, room), 60)) B.fail(`${room} was not cleared`);
 }
+
+/** plan mode (game/planmode.ts): its state · the door a man is on a stack up on · how far the mode's view is from the player */
+const plan = (B: Bot) => (B.g.orders as unknown as { plan: { up: boolean; look: number[] | null } }).plan;
+const stackedOn = (B: Bot, m: Man): string | null => { const A = O(B).of(m) as { order?: string; door?: { def: { name: string } } } | undefined; return A?.order === 'stack' && A.door ? A.door.def.name : null; };
+const viewOff = (B: Bot) => { const L = plan(B).look, s = B.pos(); return L ? Math.hypot(L[0] - s[0], L[2] - s[2]) : 0; };
+/** the mode up (Shift held over a tap of the command key), if it is not. `walk`: with a walk key held, as a hand that never stopped walking presses it */
+function modeUp(B: Bot, walk?: string) {
+  if (plan(B).up) return;
+  const k = walk ? [walk] : [];
+  B.hold(['ShiftLeft', ...k], 2 / 60); B.I.pressed.add('KeyB'); B.hold(['ShiftLeft', 'KeyB', ...k], 2 / 60); B.hold(['ShiftLeft', ...k], 2 / 60); B.step(2);
+  if (!plan(B).up) B.fail(`Shift + the command key${walk ? ' with a walk key held' : ''} did not put plan mode up`);
+}
+/** the mode's right button on a door (the button down as well as its edge: the mode reads both) */
+function rclick(B: Bot, door: string) { onDoor(B, door); B.step(3); B.I.clicked |= 4; B.I.buttons |= 4; B.step(); B.I.buttons &= ~4; B.step(3); }
+/** TUT_SQUAD_INSIDE=1: the room is taken from INSIDE plan mode (a second right click on the stacked door is the entry), which the walk's step must not
+ *  pass on with the mode still up: its line is the key that puts the mode away, and it holds until that key */
+const INSIDE = process.env.TUT_SQUAD_INSIDE === '1';
 
 const raised = (B: Bot, name: string): boolean => !!B.g.director.signalled(name);
 const man = (B: Bot, callsign: string) => B.g.guards.find((x: { callsign: string }) => x.callsign === callsign) as { state: string; script: unknown; char: { pos: number[] } } | undefined;
@@ -132,7 +149,8 @@ const RAW: Record<string, (B: Bot) => void> = {
   // (the staged moment itself is held to have happened: a round of his out of the doorway, the man in the script's hand, standing in the line the level
   //  keeps the team's feet out of and, where the fog of war runs, drawn)
   out: B => { B.go(SHOP_VIEW, 30); },
-  side: B => {
+  // PLAN MODE, opened and closed (the mission's own lesson of it): the pair from the street, the mode's right button on the side door, the back key, the walk
+  mode: B => {
     if (!cleared(B, 'workshop')) {
       if (!B.until(() => raised(B, 'done:shop') || cleared(B, 'workshop'), 14)) B.fail("the workshop's man never fired out of his doorway (no 'done:shop')");
       const m = man(B, 'Tango 4'), F = B.g.fogOfWar;
@@ -145,10 +163,34 @@ const RAW: Record<string, (B: Bot) => void> = {
         if (Math.abs(cs * px - sn * pz) > V.h[0] + 0.5 || Math.abs(sn * px + cs * pz) > V.h[2]) B.fail(`the workshop's man fires from ${m.char.pos.map((v: number) => v.toFixed(2))}, off the line the level's 'shop_line' volume watches`);
       }
       const d = B.door('workshop'); if (d.isClosed()) B.fail("the workshop's lane door is shut: nobody can see him or his rounds");
+      // (a tap of the squad's key first, as a hand that learnt the two rooms before this would: the step teaches the pair, and the tap gives nothing.
+      //  Then the pair with a walk key still down: his sprint is locked for the step, so that is the mode too and never a sprinting tap)
+      { const n = O(B).log.length; onDoor(B, 'workshop_side'); B.press('KeyB', 4); if (O(B).log.length !== n) B.fail(`a tap of the squad's key on the side door gave ${last(B)?.order} while the step asks for plan mode`); }
+      modeUp(B, 'KeyD');
     }
-    stack(B, 'workshop_side');
   },
-  round: B => { B.go(ALLEY, 60, { noDoors: true }); },
+  side: B => {
+    if (cleared(B, 'workshop')) return;
+    modeUp(B);   // (the mode put away by hand: the line then asks for it again)
+    const d = B.door('workshop_side'), c = d.frameCentre as number[], w = B.W.canvas.clientWidth, h = B.W.canvas.clientHeight, [x, y] = B.W.cam.project([c[0], 1, c[2]], w, h);
+    if (x < 40 || x > w - 40 || y < 40 || y > h - 40) B.fail(`from the street the side door is not on the picture in plan mode (${x.toFixed(0)}, ${y.toFixed(0)} of ${w} x ${h}): the line asks for a click he cannot make`);
+    rclick(B, 'workshop_side');
+    if (!O(B).men('all').some(m => stackedOn(B, m) === 'workshop_side')) B.fail(`plan mode's right button on the side door put nobody on it (the last order: ${last(B) ? `${last(B)!.order} on ${last(B)!.target}` : 'none'})`);
+    B.say(`  plan mode: the right button on the side door, from (${B.pos()[0].toFixed(1)}, ${B.pos()[2].toFixed(1)}); the view's point ${viewOff(B).toFixed(1)} m from him`);
+  },
+  round: B => {
+    if (INSIDE && plan(B).up && !cleared(B, 'workshop')) {
+      if (!B.until(() => set(B) || cleared(B, 'workshop'), 40)) B.fail("the squad never stood on 'workshop_side'");
+      rclick(B, 'workshop_side');
+      if (!B.until(() => cleared(B, 'workshop'), 60)) B.fail('a second right click on the stacked side door, in plan mode, did not take the workshop');
+      const P = B.g.rails.prompt() as { line: string; n: number } | null;
+      if (!plan(B).up) B.fail('plan mode went down by itself while the room was taken from inside it');
+      if (!P || !/close plan mode/.test(P.line)) B.fail(`the workshop taken from inside plan mode, the mode still up, and the line is '${P?.line}' (step ${P?.n}): nothing tells him to put the mode away`);
+      B.say(`  the workshop taken from inside plan mode: the line is still '${P?.line}'`);
+    }
+    if (plan(B).up) { B.press('Tab', 3); if (plan(B).up) B.fail('the back key did not put plan mode away'); B.say('  the back key put plan mode away'); }
+    if (!cleared(B, 'workshop')) B.go(ALLEY, 60, { noDoors: true });
+  },
   shop: B => { goIn(B, 'workshop_side', 'workshop'); },
   // the nest: the squad called in, the wall's end, rounds at the gun, the blocks, a grenade over the bags
   follow: B => { menu(B, { ground: B.pos() }, 3); if (!gave(B, 'fallIn')) B.fail(`the menu's 3 gave ${last(B)?.order}`); },
@@ -217,7 +259,7 @@ export const steps: Record<string, (B: Bot) => void> = Object.fromEntries(Object
  *  rule (runner.ts), and he opens his own locked door on the way out, so the door's lines go by with nobody kicking it (seen on one die of twelve).
  *  'frag' IS NOT ONE OF THEM: the gun is the script's until the frag is thrown, so a nest that falls before that step's throw is the squad taking the
  *  lesson out of the player's hand (the first play on the page), and the run fails on it */
-export const fightOk = ['go-store', 'out', 'side', 'round', 'shop', 'gun', 'blocks', 'nest', 'window', 'door', 'lock', 'front', 'back', 'hold'];
+export const fightOk = ['go-store', 'out', 'mode', 'side', 'round', 'shop', 'gun', 'blocks', 'nest', 'window', 'door', 'lock', 'front', 'back', 'hold'];
 /** a room clear's own end: every defender down ('structure taken') */
 export const ended = (g: { roomClear: { end: string } }) => g.roomClear.end === 'taken';
 export function finish(B: Bot) {

@@ -5,7 +5,8 @@
 //   node tools/qa/fire-lab.cjs            a sheet of frames 1/15 s apart from the play camera's distance and from close by, into OUT
 //   env: OUT (folder, default a temp one) · DIST (m, default 5) · PITCH (degrees, default 55) · WIND (x,z m/s, default 0,0) · ALB (the ground's albedo, default 0.5) · T0 (s, default 3) · N (frames a
 //        row, default 8) · DT (s between frames, default 1/15) · W / H (a frame's size, default 320 × 360) · HEAT (default 1) · POP (age of a crack at the
-//        first frame, s; default 0.05) · BED (the bed of coals' radius, m; default 0.27, 0 = the lid bare)
+//        first frame, s; default 0.05) · BED (the bed of coals' radius, m; default 0.27, 0 = the lid bare) · LAMP, SIZE (the stage's lamp: metres over the coals and its
+//        radius; default 0.41 and 0.24, the game's)
 // Headless Chromium on the software adapter. Exit 0 = the shader compiled, the pipeline was made and every frame was written with no error on the page (what is IN a
 // frame is for the eye); 1 otherwise.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -15,6 +16,7 @@ const DIST = +(process.env.DIST || 5), PITCH = +(process.env.PITCH ?? 55), T0 = 
 const W = +(process.env.W || 320), H = +(process.env.H || 360), HEAT = +(process.env.HEAT ?? 1), POP = +(process.env.POP ?? 0.05);
 const WIND = (process.env.WIND || '0,0').split(',').map(Number);
 const ALB = +(process.env.ALB ?? 0.5);   // how much of the fire's light the ground gives back (0.5 = packed earth; 0.85 = snow, the hardest ground to see a flame against)
+const LAMP = +(process.env.LAMP ?? 0.41), SIZE = +(process.env.SIZE ?? 0.24);   // the stage's lamp: metres over the coals (the level hangs it 0.16 up, FIRE.lift 0.25 more) and its radius (FIRE.size; 0 = a pinpoint and a drawn shadow)
 const BED = +(process.env.BED ?? 0.27);   // the bed of coals' radius (0 = the bare lid, as the game lights it: clipped white by the lamp a hand above it)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const fire = fs.readFileSync(path.join(__dirname, '../../src/render/shaders/fire.wgsl'), 'utf8');
@@ -38,10 +40,14 @@ fn agx(cin: vec3f) -> vec3f {
   let F = lab.fire; let base = F.a.xyz; let flick = F.c.z;
   // the stage: ground at y = 0, a drum under the coals (radius 0.29, its mouth at the coals' height)
   var tS = 1e30; var col = vec3f(0.0);
-  let lightP = base + vec3f(0.0, 0.37, 0.0); let Li = vec3f(1.0, 0.5, 0.2) * (9.0 * flick * F.b.y);
+  let lightP = base + vec3f(0.0, ${LAMP.toFixed(3)}, 0.0); let Li = vec3f(1.0, 0.5, 0.2) * (9.0 * flick * F.b.y);
   if (rd.y < 0.0) { let t = -ro.y / rd.y; let P = ro + rd * t; let d = lightP - P; let d2 = dot(d, d); tS = t;
-    let sh = fireCyl(P, normalize(d), base - vec3f(0.0, base.y, 0.0), 0.29, 0.0, base.y);   // the drum's own shadow
-    let lit = select(1.0, 0.0, sh.x <= sh.y && sh.y > 0.0);
+    var lit = 0.0;   // the drum's own shadow, from a lamp as big as the flame: sixteen points of its ball, turned by the pixel (the same sixteen everywhere drew sixteen stacked edges)
+    let turn = 6.2831853 * fireHu(u32(fp.x) + u32(fp.y) * 4099u);
+    for (var k = 0.0; k < 16.0; k += 1.0) { let z = 1.0 - (2.0 * k + 1.0) / 16.0; let rr = sqrt(max(1.0 - z * z, 0.0)); let ph = k * 2.399963 + turn;
+      let dk = lightP + vec3f(rr * cos(ph), z, rr * sin(ph)) * ${SIZE.toFixed(3)} - P;
+      let sh = fireCyl(P, normalize(dk), base - vec3f(0.0, base.y, 0.0), 0.29, 0.0, base.y);
+      lit += select(1.0, 0.0, sh.x <= sh.y && sh.y > 0.0) / 16.0; }
     col = vec3f(${ALB}, ${(ALB * 0.96).toFixed(3)}, ${(ALB * 0.92).toFixed(3)}) * (Li * (lit * max(d.y, 0.0) / (d2 * sqrt(d2))) + vec3f(0.004, 0.005, 0.008)) / 3.14159; }
   let dc = fireCyl(ro, rd, base - vec3f(0.0, base.y, 0.0), 0.29, 0.0, base.y);
   if (dc.x <= dc.y && dc.x > 0.0 && dc.x < tS) { tS = dc.x; let P = ro + rd * dc.x;

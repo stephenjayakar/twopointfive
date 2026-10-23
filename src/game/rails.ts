@@ -63,6 +63,12 @@ export const RAILS = { on: false,
    *  ringed in his pair's colour, the men the next order goes to drawn full (planmode.ts planView, drawn by ui/cmdring.ts; needs plan mode on in the page).
    *  Picture only: the mode itself is not up, and nothing of it is taught here. false: no such picture in that seat, as it was */
   skyPlan: true,
+  /** THE SKY SEAT WITH PLAN MODE UP (`rails.sky.plan`; the maintainer of the plan mode mission, 10-23: "i think having the 2nd tutorial is fine, but we
+   *  should remove the player character"): the mode is up from the first tick with nobody of his on the floor, its view starts on the squad and is the
+   *  walk keys' as the mode has it, and neither the pair, the back key nor Esc puts it down (planmode.ts `seat`; putting the mode up and down is another
+   *  mission's lesson). false: that seat is the plain sky seat — the mode down and only drawn — and a mission that asks for a box or a right click
+   *  there cannot be played */
+  skyUp: true,
   /** SHIFT WITH THE COMMAND KEY ON THE MOVE: where a step gives him his feet and plan mode but not his sprint, a walk key held is no sprint's — so Shift
    *  with the command key, pressed, is the mode's there too, and the walk keys are out of that one tick (the Shift that gets through never meets a walk
    *  key to run with). false: with a walk key down the pair did nothing at all until he stood still, as it was */
@@ -160,6 +166,8 @@ export function railsFaults(L: LessonData): string[] {
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
   if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.length > 0 && R.rows.every(v => typeof v === 'string' && !!v))) out.push('rails.rows: a list of verbs, at least one (absent: every row)');
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
+  // (the seat that holds plan mode up: the mode's hands are the frame's `plan`, from the first step to the last, or the mode is up with no button and no view key)
+  if (R.sky?.plan) { if (!(R.allow ?? []).includes('plan')) out.push("rails.sky.plan: the seat holds plan mode up, so rails.allow gives 'plan' (the mode's buttons and its view keys)"); L.steps.forEach((T, i) => { if (T.deny?.includes('plan')) out.push(`steps[${i}] '${T.id}'.deny: 'plan' cannot be taken away where rails.sky.plan holds the mode up`); }); }
   if (R.orders !== undefined && !(Array.isArray(R.orders) && R.orders.length > 0 && R.orders.every(x => typeof x === 'string'))) out.push('rails.orders: a list of order ids (at least one)');
   if (R.sky?.eye && !(Array.isArray(R.sky.eye.at) && R.sky.eye.at.length === 3 && typeof R.sky.eye.yaw === 'number' && (R.sky.eye.fov === undefined || (R.sky.eye.fov > 0 && R.sky.eye.fov <= 360)))) out.push('rails.sky.eye: { at: a Vec3, yaw: radians, fov?: degrees up to 360 }');
   return out;
@@ -195,6 +203,10 @@ export class Rails {
   get skyOn(): boolean { return !!this.data?.sky; }
   /** the sky seat is drawn as plan mode is, the mode itself down (RAILS.skyPlan; planmode.ts planView asks) */
   get planDrawn(): boolean { return !BREAK && RAILS.skyPlan && this.skyOn; }
+  /** the sky seat holds plan mode up (`rails.sky.plan`, RAILS.skyUp; planmode.ts asks: no key takes the mode down, its view starts on the squad) */
+  get planSeat(): boolean { return !BREAK && RAILS.skyUp && !!this.data?.sky?.plan; }
+  /** …and the mode's own view is the picture's: the mode is up with a point of its own (CMDRING.planRts; without one the seat's view and its pan stand) */
+  private get seatView(): boolean { const P = this.g.orders?.plan; return this.planSeat && !!P?.up && !!P.look; }
   private lesson(): { L: LessonData; i: number } | null { const L = this.g.lesson?.data; return L?.rails && RAILS.on ? { L, i: Math.min(this.g.lesson.index, L.steps.length) } : null; }
 
   /** the actions that work now: the record's, each step's own from the moment it came up, less what a step took away — derived from the step that is up */
@@ -315,7 +327,8 @@ export class Rails {
       return FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || ((handUp || handKey) && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight')); };
     let dropped = 0;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
-    if (this.skyOn) { if (A.has('pan')) this.pan(input, cam, dt); this.keep(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
+    // (…but with plan mode held up in that seat — RAILS.skyUp — they are the mode's own, which moves its view by them: planmode.ts pan)
+    if (this.skyOn && !(planUp && this.seatView)) { if (A.has('pan')) this.pan(input, cam, dt); this.keep(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
     for (const k of [...input.pressed]) if (!ok(k)) { input.pressed.delete(k); dropped++; }
     for (const k of [...input.keys]) if (!ok(k)) input.keys.delete(k);
     // the command key held is the ring, and with Shift the plan: each its own action over `order`
@@ -505,6 +518,7 @@ export class Rails {
   /** where the view looks in the sky seat (Game.followPos; null: not that seat): the middle of the men still up, eased, plus the hand's own shift */
   look(): Vec3 | null {
     if (!this.skyOn) return null;
+    if (this.seatView) return null;   // (plan mode held up in the seat: the view is the mode's own point — planmode.ts planLook)
     const men = this.squad(), g = this.g;
     if (men.length) { const c: Vec3 = [0, 0, 0]; for (const m of men) { c[0] += m.char.pos[0] / men.length; c[2] += m.char.pos[2] / men.length; }
       const m = this.sky.mid; if (!m || this.sky.midT !== g.time) { if (!m) this.sky.mid = c; else { const dt = Math.max(0, g.time - this.sky.midT), a = 1 - Math.exp(-dt * 2.5); m[0] += (c[0] - m[0]) * a; m[2] += (c[2] - m[2]) * a; } this.sky.midT = g.time; } }

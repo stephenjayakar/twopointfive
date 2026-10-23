@@ -241,8 +241,10 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
       if (g.nearby.some((r: any) => r.kind === kind && r.verb === v) && g.selectVerb(kind, v)) { I.pressed.add('Space'); step(2); say(`  Space: ${kind} ▸ ${v}`); return true; } }
     if (kind === 'guard' && v === 'grab' && !g.player.holding) {   // (stalk.ts: with the held click the only way to a man there is no such row — the left button held on the nearest man is the grab)
       let gd: any = null, bd = 4; for (const x of g.guards) { if (x.state === 'dead' || x.civ) continue; const d = flat(pos(), x.char.pos); if (d < bd) { gd = x; bd = d; } }
-      if (gd) { for (let i = 0; i < 300 && !g.player.holding; i++) { const c = gd.char.pos; aim([c[0], 1.2, c[2]]); I.buttons |= 1; if (i === 0) I.clicked |= 1; step(); }
-        I.buttons &= ~1; if (g.player.holding) { say(`  left button held: the stalk ▸ grab`); return true; } }
+      let keyed = false;   // (…and with the key the finish, stalk.ts `key`, the held button only brings him into reach: the row is back there, and its key is the grab)
+      if (gd) { for (let i = 0; i < 300 && !g.player.holding; i++) { const c = gd.char.pos; aim([c[0], 1.2, c[2]]); I.buttons |= 1; if (i === 0) I.clicked |= 1;
+          if (g.nearby.some((r: any) => r.kind === kind && r.verb === v && r.guard === gd) && g.selectVerb(kind, v)) { I.pressed.add('Space'); keyed = true; } step(); }
+        I.buttons &= ~1; if (g.player.holding) { say(keyed ? `  left button held, then Space: the stalk ▸ grab` : `  left button held: the stalk ▸ grab`); return true; } }
     }
     say(`  no '${kind} ▸ ${v}' row (rows: ${g.nearby.map((r: any) => `${r.kind}:${r.verb}`).join(' ') || 'none'})`); return false;
   }
