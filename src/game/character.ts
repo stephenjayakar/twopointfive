@@ -103,12 +103,13 @@ export const HOLD = {
    *  either side of Sam's head). `bareArch`° more arch over the spine while he has his feet, his elbows carried down (`bareElbow` of the way to hanging). And
    *  THE YANK (HoldPose / HeldPose.yank = seconds since Sam's step in landed, fed by player.ts with the stalk's grab): for `in` s his chest goes back `arch`°
    *  further and Sam sits `sink` m into it, held `hold` s, let out over `out` s — the pose's share of the haul back (stalk.ts STALK.yank moves the pair). */
-  bareArch: -11, bareElbow: 0.6, yank: { arch: -5, sink: 0.09, in: 0.07, hold: 0.05, out: 0.32 },
+  bareArch: -11, bareElbow: 0.6, yank: { arch: -11, sink: 0.09, in: 0.07, hold: 0.05, out: 0.32 },
   /** THE SPRING BEFORE THE LUNGE (the fourth pass; `HoldPose.step` = seconds into the stalk's step in): his hips dip `dip` m and sit `back` m for a few
    *  frames as the step begins — [in, hold, out] s — so the lunge comes off something. And THE HOLD IS ALIVE (bare hands only): once he is held the pair
    *  shifts its weight from foot to foot, `sway.m` m at the hips each way every `sway.secs` s, the held man a little more and `sway.twist`° through his
-   *  shoulders against the arm, scaled up by his agitation. */
-  lunge: { dip: 0.06, back: 0.035, t: [0.035, 0.03, 0.1] as [number, number, number] }, sway: { m: 0.014, secs: 1.9, twist: 2.4, his: 1.5, in: 0.6, out: 8 }, apart: { side: 7, tip: 8 }, wayShape: true,
+   *  shoulders against the arm, scaled up by his agitation. (The stalk's polish: DOWN in this table — dip, back, sway.m, sway.twist, apart, wayShape, and
+   *  yank.arch at the bare arch's own — and written up by holdPolish below with the page's numbers.) */
+  lunge: { dip: 0, back: 0, t: [0.035, 0.03, 0.1] as [number, number, number] }, sway: { m: 0, secs: 1.9, twist: 0, his: 1.5, in: 0.6, out: 8 }, apart: { side: 0, tip: 0 }, wayShape: false,
   /** THE GRAB DISARMS HIM (game rule and pose; the rule is game/disarm.ts, begun by player.ts startGrab). With `dropGun` on, the gun in his hand is no longer
    *  knocked out of it on the grab's first frame: as the left arm goes round his throat Sam's right hand goes to it, has it out of his fist `strip.take` seconds
    *  in, tears it out and down to his own right side and lets it fall from a low hand at `strip.drop`: it lands dead, where Sam put it, beside the pair. The
@@ -267,11 +268,12 @@ const SWAP_RATE = 14;
 /** which of takedown.ts's hold halves the two layers show where the pose itself does not say (HoldPose / HeldPose .kill / .beats, which win): takedownTick writes
  *  them once a frame — a frame late, and one table for every Game — the kill from the hold as a move of its own · the choke's beats. Off = that phase drawn as it was. */
 /** the stalk's polish in the hold's table (the fourth pass: the shaped way in, the spring before the lunge, the sway, the room between the heads, the shallower
- *  arch), put DOWN — the numbers a recording from before it gets (journal.ts) and the page's ?stalkpolish=0 (stalk.ts stalkPolish) — or back UP to the table's own */
-const HOLD_POLISH_UP = { wayShape: HOLD.wayShape, dip: HOLD.lunge.dip, back: HOLD.lunge.back, m: HOLD.sway.m, twist: HOLD.sway.twist, side: HOLD.apart.side, tip: HOLD.apart.tip, arch: HOLD.yank.arch };
+ *  arch), put DOWN — the numbers a recording from before it gets (journal.ts) and the page's ?stalkpolish=0 (stalk.ts stalkPolish), and what the table itself and the frozen stand have — or UP, to the page's */
+const HOLD_POLISH_UP = { wayShape: true, dip: 0.06, back: 0.035, m: 0.014, twist: 2.4, side: 7, tip: 8, arch: -5 } as const;   // (THE PAGE'S NUMBERS — a tuned one goes here, not in the table: HOLD itself has them down, as the frozen stand does)
+const HOLD_POLISH_DOWN = { wayShape: HOLD.wayShape, dip: HOLD.lunge.dip, back: HOLD.lunge.back, m: HOLD.sway.m, twist: HOLD.sway.twist, side: HOLD.apart.side, tip: HOLD.apart.tip, arch: HOLD.yank.arch } as const;   // (the table's own, read once as this file loads: the one place the down numbers are written)
 export function holdPolish(up: boolean) {
-  const U = HOLD_POLISH_UP; HOLD.wayShape = up && U.wayShape; HOLD.lunge.dip = up ? U.dip : 0; HOLD.lunge.back = up ? U.back : 0; HOLD.sway.m = up ? U.m : 0; HOLD.sway.twist = up ? U.twist : 0;
-  HOLD.apart.side = up ? U.side : 0; HOLD.apart.tip = up ? U.tip : 0; HOLD.yank.arch = up ? U.arch : -11;
+  const U = up ? HOLD_POLISH_UP : HOLD_POLISH_DOWN; HOLD.wayShape = U.wayShape; HOLD.lunge.dip = U.dip; HOLD.lunge.back = U.back; HOLD.sway.m = U.m; HOLD.sway.twist = U.twist;
+  HOLD.apart.side = U.side; HOLD.apart.tip = U.tip; HOLD.yank.arch = U.arch;
 }
 export const HOLD_SHOW = { kill: false, beats: false };
 rollbackRoot('character.HOLD_SHOW', HOLD_SHOW);   // (written by takedownTick once a frame, read by the hold's layers on the next)
@@ -1091,6 +1093,13 @@ const READY_BARE = {
    *  man's neck by the step in and the hold's arm closes it across the throat from there; the right hand's share is gone by `outR` of the reach (the disarm
    *  has that hand on the gun at HOLD.strip.take). */
   out: [0.25, 0.8] as [number, number], outR: 0.3,
+};
+/** …and the two hands AS THEY FIRST STOOD, before the fourth pass shaped them (the lead hand's pole, fingers, curl and spread; the right hand's place, pole,
+ *  fingers and curl): what HOLD.wayShape off draws — the polish down (holdPolish), so the page's ?stalkpolish=0 and the frozen stand show the reach they had.
+ *  The bare-handed reach wherever it shows, a stalk on or not. tools/qa/stalk-check.ts holds these eight to the letter. */
+export const READY_BARE_WAS = {
+  L: { ...READY_BARE.L, pole: [0.5, -0.85, -0.2] as Vec3, fing: [-0.2, 0.12, 1] as Vec3, curl: 0.3, spread: 0.12 },
+  R: { ...READY_BARE.R, at: [0.07, 0, 0.4] as Vec3, pole: [-0.5, -0.85, -0.25] as Vec3, fing: [0.15, 0.05, 1] as Vec3, curl: 0.34 },
 };
 /** THE REACH GOES UP (CharacterAnimator.readyUp, fed by game/close.ts CLOSE.reachUp; 0 = every pose as it was). A crouched Sam behind a STANDING man: the
  *  grab's reach is measured off his own shoulder, which at the crouch is at the man's belt — the open hand went to the small of his back and Sam's face to
@@ -4328,10 +4337,10 @@ export class CharacterAnimator {
           : frame([0, clamp(R.frac * up + R.bias, R.dy[0], lerp(R.dy[1], READY_UP.dy, q)), clamp(R.frac * h, lerp(R.r[0], READY_UP.r[0], q), lerp(R.r[1], READY_UP.r[1], q))], az);
         const l = v3.len(oL), cap = READY_REACH * arm; if (l > cap) oL = v3.scale(oL, cap / l);
       } else oL = frame(K.L.at!, az);   // (a fixed spot is still turned to face him: the guard's lead hand is out toward the man)
-      const B = bare ? READY_BARE.L : K.L;
+      const B = bare ? (HOLD.wayShape ? READY_BARE.L : READY_BARE_WAS.L) : K.L;
       ease3(RD.l, oL); ease3(RD.lPole, frame(B.pole, az)); ease3(RD.lFing, frame(c[RD.up] > 1e-4 ? [B.fing[0], B.fing[1] + READY_UP.fing * c[RD.up], B.fing[2]] : B.fing, az)); ease3(RD.lBack, frame(B.back, az));
       ease(RD.lCurl, B.curl); ease(RD.lThumb, B.thumb); ease(RD.lSpread, B.spread);
-      if (bare) { const R2 = READY_BARE.R, kr = c[RD.wR] < 1e-3 ? 1 : k;   // (the right hand's numbers snap when it had no share: it comes in from the arm as it is, by the weight)
+      if (bare) { const R2 = HOLD.wayShape ? READY_BARE.R : READY_BARE_WAS.R, kr = c[RD.wR] < 1e-3 ? 1 : k;   // (the right hand's numbers snap when it had no share: it comes in from the arm as it is, by the weight)
         ease3(RD.r, frame(R2.at, az), kr); ease3(RD.rPole, frame(R2.pole, az), kr); ease3(RD.rFing, frame(R2.fing, az), kr); ease3(RD.rBack, frame(R2.back, az), kr); ease(RD.rCurl, R2.curl, kr); ease(RD.rThumb, R2.thumb, kr); }
       ease(RD.wR, bare ? 1 : 0);
     }
@@ -4920,7 +4929,8 @@ export class CharacterAnimator {
     const yk = H.yank !== undefined && this.holdPose ? bump(H.yank, 0, K.yank.in, K.yank.in + K.yank.hold, K.yank.in + K.yank.hold + K.yank.out) : 0;   // (HOLD.yank: he sits into the haul)
     const LG = K.lunge, dipW = H.step !== undefined && this.holdPose && ph === 'grab' ? bump(H.step, 0, LG.t[0], LG.t[0] + LG.t[1], LG.t[0] + LG.t[1] + LG.t[2]) : 0;   // (HOLD.lunge: the spring before it)
     const swS = (this.hdSw = this.noKnife && this.holdPose && ph === 'held' ? Math.sin(t / K.sway.secs * 2 * Math.PI) * smoothstep(0, K.sway.in, t) : damp(this.hdSw, 0, K.sway.out, dt)) * (1 - gv) * w;   // (HOLD.sway: weight from foot to foot — let go of over a few frames when the hold becomes something else, never dropped)
-    if (lo > 1e-4 || kA > 1e-4 || yk > 1e-4 || dipW > 1e-4 || Math.abs(swS) > 1e-4) {   // he sinks with him: pelvis down over feet pinned where they stand, knees out to either side of the man (the kill: a hand's breadth, to let him down)
+    const swOn = K.sway.m !== 0 && (1 - gv) * w > 1e-4 && (this.noKnife && this.holdPose && ph === 'held' ? smoothstep(0, K.sway.in, t) > 1e-4 : Math.abs(this.hdSw) > 1e-4);   // (the sway is ON, whatever its sine reads this tick: asked by the sine's own value, the leg solve below dropped out for the one tick in each half swing that lands on zero, and a knee jumped 3 cm and back)
+    if (lo > 1e-4 || kA > 1e-4 || yk > 1e-4 || ((LG.dip !== 0 || LG.back !== 0) && dipW > 1e-4) || swOn) {   // (a clock with nothing to move enters nothing: with the polish down the legs are as they were)   // he sinks with him: pelvis down over feet pinned where they stand, knees out to either side of the man (the kill: a hand's breadth, to let him down)
       fk.run(pA);
       const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
       this.shift(pA, nd.hips, kA > 1e-4 ? [0, -LW.samSink * lo * lw - KL.samSink * kA * w, LW.samFwd * lo * lw] : [K.sway.m * swS, -LW.samSink * lo * lw - K.yank.sink * yk * w - LG.dip * dipW, LW.samFwd * lo * lw - LG.back * dipW]); fk.run(pA);

@@ -48,7 +48,7 @@ import { HARD } from '../game/difficulty';
 import { GUNHOLD } from '../game/gunhold';
 import { CLOSE } from '../game/close';
 import { FOOTFALL, TWOGEARS } from '../game/player';
-import { STALK } from '../game/stalk';
+import { STALK, stalkPolish } from '../game/stalk';
 import { KITANIM } from '../game/kitanim';
 import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
@@ -447,6 +447,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_TAKEDOWN')) TAKEDOWN.on = String((globalThis as any).process?.env?.TPS_TAKEDOWN ?? '') === '1';   // takedowns as moves (src/game/takedown.ts): off, so a man taken down falls and lies as every stored digest has him
     if (pinned('TPS_HAUL')) TAKEDOWN.haul = String((globalThis as any).process?.env?.TPS_HAUL ?? '') === '1';   // the choke's haul (character.ts HOLD.haul; a half of TAKEDOWN with a switch of its own): off, so the choke is posed as it was
     if (pinned('TPS_STALK')) STALK.on = String((globalThis as any).process?.env?.TPS_STALK ?? '') === '1';   // the stalk (src/game/stalk.ts): off, so a held click on a man walks nobody anywhere, as on every frozen recording
+    if (pinned('TPS_STALKPOLISH')) stalkPolish(String((globalThis as any).process?.env?.TPS_STALKPOLISH ?? '') === '1');   // …and the stalk's polish (stalk.ts stalkPolish, with the hold's share in character.ts): down, so a frozen run raised with TPS_STALK=1 is the stalk as it first stood; acts only under STALK.on
     if (pinned('TPS_TWOGEARS')) TWOGEARS.on = String((globalThis as any).process?.env?.TPS_TWOGEARS ?? '') === '1';   // two gears, not a dial (src/game/player.ts TWOGEARS): off, so the wheel is his pace and the crouch-walk the tune's, as on every frozen recording
     if (pinned('TPS_FOOTFALL')) FOOTFALL.once = String((globalThis as any).process?.env?.TPS_FOOTFALL ?? '') === '1';   // one footfall a step (src/game/player.ts): off, so every crossing of the walk cycle's half files one, as on every frozen recording
     if (pinned('TPS_FOOTOWED')) FOOTFALL.owed = String((globalThis as any).process?.env?.TPS_FOOTOWED ?? '') === '1';   // a footfall the legs owe (src/game/player.ts; under the first key, so a frozen run that wants it raises both words): off, so only an edge of the walk cycle files one

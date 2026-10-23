@@ -12,7 +12,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 
-const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
+const { STALK, stalkPolish } = await import(`${ROOT}/src/game/stalk.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -40,7 +40,7 @@ export async function sneaklabCheck(): Promise<boolean> {
       `men ${men.length} · start free ${spawnFree} · furthest each got from where he began: ${far.map((d: number) => d.toFixed(1)).join(' · ')} m · all calm ${calm}`); }
 
   console.log('\n=== creep: the held click takes the man who stands, with the real guards running ===');
-  { const W: any = await quiet(() => standUp({ level: level(), seed: 7 } as any)), g = W.game; CLOSE.on = true; STALK.on = !BREAK; g.godMode = true; g.playerInvisible = true;
+  { const W: any = await quiet(() => standUp({ level: level(), seed: 7 } as any)), g = W.game; CLOSE.on = true; STALK.on = !BREAK; stalkPolish(true); g.godMode = true; g.playerInvisible = true;   // (the stalk as the page has it: the frozen stand's pin puts its polish down at every stand-up)
     g.player.slot = 'pistol'; g.player.holstered = true; g.player.crouch = true;
     for (let f = 0; f < 120; f++) W.step(DT);   // (he has walked onto his mark and stands)
     const A = g.guards[0], yaw = A.char.bodyYaw; g.teleportPlayer([A.char.pos[0] - Math.sin(yaw) * 2.6, 0, A.char.pos[2] - Math.cos(yaw) * 2.6]); g.player.crouch = true;

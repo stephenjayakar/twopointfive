@@ -20,6 +20,8 @@
 // a civilian's own grab row. With `only` (below) a staff man's 'grab him' row is gone: the held click is the one way to him. The left click that began or carries a stalk is no blow (game.ts asks `stalkHas`).
 // ON in the page unless ?stalk=0 (src/host/profile.ts pageSwitches); off here and on the harness's frozen stand (src/host/standup.ts; TPS_STALK=1 turns it on
 // there). Off = the build as it was. Check: tools/qa/stalk-check.ts (STALK_BREAK=1 must fail).
+// ITS POLISH (the fourth to sixth passes: stalkPolish below) is a hold of its own: down in this table and on the frozen stand, so a frozen run raised with
+// TPS_STALK=1 is the stalk as it first stood; TPS_STALKPOLISH=1 raises it there, the page has it up unless ?stalkpolish=0.
 import { SideMap } from '../math/side';
 import { Vec3, wrapAngle, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -59,7 +61,7 @@ export const STALK = {
    *  THE YANK: once the step has landed the man is hauled `yank` m straight back the way he was facing from — Sam going back with him — over what is left of
    *  the grab: movement across the floor is what the game's camera shows of a grab (the pose's share: character.ts HOLD.yank). Less where something solid
    *  stands behind the pair (`yankRoom` m kept clear behind Sam); 0 = he is held where he stood. */
-  catchSecs: 0.3, catchM: 0.75, catchLong: 1.1, turnIn: true, catchStride: 1.5, yank: 0.28, yankRoom: 0.4,
+  catchSecs: 0.3, catchM: 0.75, catchLong: 1, turnIn: false, catchStride: 1.5, yank: 0.28, yankRoom: 0.4,
   /** THE SAME AT A CORNER (the maintainer: "curious if we can make this language work for working corners. like when you're at a corner you can either grab
    *  or CQC with the right timing"). With his back on a wall (the wall hold, not the stack) and his hands empty, the left button HELD is a man lying in wait:
    *  nothing moves, and the moment a man who is not onto him is inside `cornerM` with Sam at least `cornerDeg`° round from his nose — he has come past the
@@ -70,10 +72,12 @@ export const STALK = {
   /** BROKEN OFF BY THE MAN (stalkStep): `jolt` = how much of the animator's duck (character.ts flinchFrom, soft) Sam gives when the man turns off his back with
    *  the stalk on AND comes on round to face him (Sam inside `joltFace`° of his nose within `joltSecs` s: a patrol's quarter turn is not that) — the whole of it,
    *  at once, when the man is onto him. 0 = none: the stalk ends and he sinks back into the crouch, as it was. joltFace 180 = at any turn that ends the stalk.
+   *  `joltAtOnce` = the duck for a turn on the out's own frame with none of brokeDuck's tests: the fifth pass as it was, raised only by journal.ts for a recording of it.
    *  THE WAIT SHOWS (closeTick): on the wall with the button held he coils — sunk `cornerCoil` of the way into the crouch, the lead hand tucked toward the man at `cornerReach[0]`
    *  of the grab's reach, growing to `cornerReach[1]` as the nearest man he could take comes from `cornerSee` m to `cornerM`; he comes up out of the coil over
-   *  `cornerRise` s of the step in. `cornerShow` off = the wall stance alone, as it was */
-  jolt: 0.6, joltFace: 50, joltSecs: 0.6, cornerShow: true, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,
+   *  `cornerRise` s of the step in. `cornerShow` off = the wall stance alone, as it was.
+   *  (Of the polish, so DOWN here: `jolt` 0 and `cornerShow` off — and above, `catchLong` 1 and `turnIn` off. stalkPolish(true) writes POLISH_UP's.) */
+  jolt: 0, joltFace: 50, joltSecs: 0.6, joltAtOnce: false, cornerShow: false, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,
 };
 /** tallies for the checks and the page's hook (begun = presses that took a man; out = why each ended without a grab) */
 export const STALK_STATS = { begun: 0, grabs: 0, corner: 0, out: { let: 0, far: 0, turned: 0, wall: 0, him: 0, hands: 0, keys: 0 }, last: '' };
@@ -144,10 +148,12 @@ function brokeDuck(g: Game, S: St) {
   else if (Math.abs(bearingOf(b.gd, b.at)) <= STALK.joltFace * Math.PI / 180) { duck(g, b.gd, STALK.jolt); S.broke = null; }
 }
 /** THE POLISH, UP OR DOWN TOGETHER (the page's ?stalkpolish=0, and journal.ts for a recording from before the fourth pass): the turn through the step, the longer
- *  long step, the wait's pose at a corner, the duck when the man turns round — and the hold's share (character.ts holdPolish). Up = the tables' own numbers. */
-const POLISH_UP = { catchLong: STALK.catchLong, jolt: STALK.jolt } as const;   // (this file's own table, as the module has it)
+ *  long step, the wait's pose at a corner, the duck when the man turns round — and the hold's share (character.ts holdPolish). Up = POLISH_UP's numbers, as
+ *  the page has them; down = the tables' own, as the frozen stand has them (src/host/standup.ts: TPS_STALKPOLISH=1 raises them on a frozen run). */
+const POLISH_UP = { turnIn: true, cornerShow: true, catchLong: 1.1, jolt: 0.6 } as const;   // (THE PAGE'S NUMBERS — a tuned one goes here, not in the table, which has them down)
+const POLISH_DOWN = { turnIn: STALK.turnIn, cornerShow: STALK.cornerShow, catchLong: STALK.catchLong, jolt: STALK.jolt } as const;   // (the table's own, read once as this file loads)
 export function stalkPolish(up: boolean) {
-  STALK.turnIn = STALK.cornerShow = up; STALK.catchLong = up ? POLISH_UP.catchLong : 1; STALK.jolt = up ? POLISH_UP.jolt : 0; holdPolish(up);
+  const U = up ? POLISH_UP : POLISH_DOWN; STALK.turnIn = U.turnIn; STALK.cornerShow = U.cornerShow; STALK.catchLong = U.catchLong; STALK.jolt = U.jolt; holdPolish(up);
 }
 /** what the stalk asks of his feet this frame: the unit direction, the speed, and the point he faces (the man's chest) */
 export interface StalkMove { mx: number; mz: number; pace: number; at: Vec3 }
@@ -165,7 +171,7 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
   if (ownKeys) { end(S, 'keys'); return null; }
   const p = g.player.char.pos, why = outOf(g, gd, p, false);
   if (why) {   // (STALK.jolt: broken off by the man himself, Sam shrinks back off him — at once when the man is onto him, and when he has turned off his back only if he comes on round to face Sam: brokeDuck; not on the frame a stalk began)
-    if (had === gd && STALK.jolt > 0) { if (why === 'him') duck(g, gd, 1); else if (why === 'turned') S.broke = { gd, t: g.time, at: [p[0], p[1], p[2]] }; }
+    if (had === gd && STALK.jolt > 0) { if (why === 'him') duck(g, gd, 1); else if (why === 'turned') { if (STALK.joltAtOnce) duck(g, gd, STALK.jolt); else S.broke = { gd, t: g.time, at: [p[0], p[1], p[2]] }; } }   // (joltAtOnce, which only journal.ts raises: the fifth pass's rule to the letter — at any turn, on this frame, whatever stands between them — for a recording of that pass)
     end(S, why); brokeDuck(g, S); return null; }
   const gp = gd.char.pos, at: Vec3 = [gp[0], gp[1] + 1.2, gp[2]], dist = Math.hypot(p[0] - gp[0], p[2] - gp[2]);
   if (dist < STALK.grabM) {
