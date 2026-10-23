@@ -29,6 +29,7 @@ import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { cancelDrive } from './mission';
 import { quietOf } from './quiet';
 import { breakerResetNear } from './lighting';
+import { switchHand } from './lightswitch';
 import { samStaggered } from './samstun';
 import { INHAND, BELT_TORCH } from './inhand';
 
@@ -83,7 +84,10 @@ function handThere(pl: Player, dt: number, p: Vec3, n: Vec3): boolean {
 /** WHICH OF SAM'S HANDS works a thing — the one rule, for the step in (workStand) and the pose (as the hint: the animator cannot tell a pistol in a hand that
  *  a plant has lowered): the left while the right has the pistol, the rifle's grip or a can in its fist, else the right */
 export const samWorkHand = (g: Game): 0 | 1 => { const pl = g.player; return pl.pistolUp || pl.rifleUp || pl.char.anim.grip[1] ? 0 : 1; };
-const samHand = (g: Game): 0 | undefined => samWorkHand(g) ? undefined : 0;
+/** …as workAt is told it: the off hand named where his own is full (a plant puts his gun's pose away, so the picture cannot tell by itself) */
+export const samHand = (g: Game): 0 | undefined => samWorkHand(g) ? undefined : 0;
+/** rad/s: how fast a plant squares him to the thing (player.ts updateWorkPlant; lightswitch.ts counts his turn's time by it) */
+export const WORK_TURN = 10;
 
 // ---------------------------------------------------------------- the keypad
 /** where the pad's keys are on its face, m right / up of its centre as he sees it (devices.ts draws the block: three across, four down — 1 2 3 / 4 5 6 / 7 8 9 / * 0 #) */
@@ -115,7 +119,7 @@ export function chargeHands(g: Game, c: Character, p: Vec3, n: Vec3, t: number, 
 }
 
 // ---------------------------------------------------------------- Sam's plants: the breaker, the drive, a wall charge
-export interface SamWork { kind: 'breaker' | 'drive' | 'wall' | 'door' | 'defuse'; p: Vec3; n: Vec3; /** where the verb's owner thinks he stands (the wall charge breaks off if he shifts from it): kept on him as he is walked in */ at?: Vec3 }
+export interface SamWork { kind: 'breaker' | 'drive' | 'wall' | 'door' | 'defuse' | 'switch'; p: Vec3; n: Vec3; /** where the verb's owner thinks he stands (the wall charge breaks off if he shifts from it): kept on him as he is walked in */ at?: Vec3 }
 /** the face of the breaker panel toward a man: the panel box's thin axis when it has one, else the axis nearest him */
 function breakerFace(g: Game, from: Vec3): { p: Vec3; n: Vec3 } {
   const B = g.level.breaker, b: Box | undefined = g.engine.world.statics[B.boxes[0]];
@@ -140,6 +144,7 @@ export function samWork(g: Game): SamWork | null {
   const J = g.wallCharge?.samJob; if (J) return { kind: 'wall', p: J.p, n: J.n, at: J.at };
   const D = g.doorTools?.samJob; if (D) return { kind: 'door', p: D.p, n: D.n, at: D.at };   // (a door charge by hand: owncharge.ts)
   const C = g.defuse?.samJob; if (C) return { kind: 'defuse', p: C.p, n: C.n, at: C.at };   // (a timed charge on its bench: defuse.ts, only on a level that carries them)
+  const S = switchHand(g); if (S) return { kind: 'switch', ...S };   // (a room's wall switch: handring.ts `turn` — the lights went on the press, he is turned to the plate for his hand's move)
   return null;
 }
 
@@ -165,7 +170,7 @@ export function breakerTick(g: Game, dt: number) {
 }
 /** player.ts: a click while a plant runs lets go of it (the click is then his to shoot with) — the drive and a wall charge; the breaker's half second is
  *  COMMITTED like a kick (its row's deed was filed on the tap — the lessons, the chronicle — so the mains must follow it): false = not let go of */
-export function samWorkLetGo(g: Game, W: SamWork): boolean { if (W.kind === 'breaker') return false; if (W.kind === 'drive') cancelDrive(g); else if (W.kind === 'defuse') g.defuse?.cancel(); else if (W.kind === 'door') g.doorTools?.cancelSam(); else g.wallCharge?.cancel(); return true; }
+export function samWorkLetGo(g: Game, W: SamWork): boolean { if (W.kind === 'breaker' || W.kind === 'switch') return false; if (W.kind === 'drive') cancelDrive(g); else if (W.kind === 'defuse') g.defuse?.cancel(); else if (W.kind === 'door') g.doorTools?.cancelSam(); else g.wallCharge?.cancel(); return true; }
 /** lighting.ts: a guard at the thrown breaker, re-arming it — his hand on the lever for the `dur` he fumbles, the throw at the end */
 export function leverHands(g: Game, c: Character, t: number, dur: number) { if (!live('work')) return; const F = breakerFace(g, c.pos); workAt(c, 'lever', F.p, F.n, t, dur, { dir: -1 }); }
 

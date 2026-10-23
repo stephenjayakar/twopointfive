@@ -1,7 +1,7 @@
 // The orders ring at the cursor (game/cmdring.ts says WHEN, orders.ts `ringView` says WHAT; this file draws it): a wedge a digit, clockwise from the top,
 // the lit one filled, a greyed one for a row that cannot be given now, its words outside it, the middle left open so what is pointed at shows through.
 // Under it, small, who the order goes to and what the ring was opened on. Sam's own ring (Space, CMDRING.hands — interact.ts `handRingView`) is the same
-// drawing in his own colour, the thing's name under it.
+// drawing in his own colour, the thing's name under it. A ring with ONE row draws it as a pill beside a small ring round the middle (game/ringlone.ts).
 // Before the key, with CMDRING.hint, a small glyph beside the cursor and an outline on the floor say what the ring would open on (orders.ts `hintView`).
 // Plan mode (game/planmode.ts `planView`): a frame round the view while it is up, a circle at each man's feet (bright: picked), the box being dragged, and
 // each chain as a line from its men through its stops with the word's key drawn where it is still to be pressed.
@@ -11,10 +11,12 @@
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
-import { CMDRING, ringPin, type RingHint, type RingView } from '../game/cmdring';
+import { CMDRING, ringPin, type RingHint, type RingState, type RingView } from '../game/cmdring';
 import { handRingView } from '../game/interact';
 import { planView } from '../game/planmode';
 import { hoverKept } from './hoverkept';
+import { HANDRING } from '../game/handring';
+import { RING_BOX, RING_HOLE, RING_RIM, lonePill, loneWedge, wedgeMid, wedgeWords, type RingPlace } from '../game/ringlone';
 
 const NS = 'http://www.w3.org/2000/svg';
 /** a line from one point of the layer to another with a head on its far end (too short to read: nothing) */
@@ -24,7 +26,7 @@ function arrow(x0: number, y0: number, x1: number, y1: number, cls: string): str
   const ax = x1 - (ux * 0.87 - uy * 0.5) * h, ay = y1 - (uy * 0.87 + ux * 0.5) * h, bx = x1 - (ux * 0.87 + uy * 0.5) * h, by = y1 - (uy * 0.87 - ux * 0.5) * h;
   return `<path class="${cls}" d="M${f(x0)},${f(y0)}L${f(x1)},${f(y1)}M${f(ax)},${f(ay)}L${f(x1)},${f(y1)}L${f(bx)},${f(by)}"/>`;
 }
-const R0 = 17, R1 = 44, RN = 30.5, RT = 53, RC = 86;   // px: the hole, the rim, where a digit sits, where a wedge's words start, how far under the middle the caption sits
+const R0 = RING_HOLE, R1 = RING_RIM, RN = 30.5, RT = 53, RC = 86;   // px: the hole, the rim, where a digit sits, where a wedge's words start, how far under the middle the caption sits
 const GAP = 3;   // degrees left open each side of a wedge
 
 const HINT_OFF = 15, HINT_N = 28, NEAR_W = 0.5;   // px: how far up and right of the cursor the glyph rides (the other way at the view's edge) · points on a floor ring · a point this near the camera's plane is not drawn
@@ -38,12 +40,14 @@ const GLYPH: Record<RingHint, string> = {
   foe: 'M0,-6l6,11h-12z',
   squad: 'M-6.4,2a1.9,1.9 0 1 0 3.8,0a1.9,1.9 0 1 0 -3.8,0 M2.6,2a1.9,1.9 0 1 0 3.8,0a1.9,1.9 0 1 0 -3.8,0 M-1.9,-3a1.9,1.9 0 1 0 3.8,0a1.9,1.9 0 1 0 -3.8,0',
 };
-interface WedgeEls { g: SVGGElement; path: SVGPathElement; num: SVGTextElement; text: SVGTextElement }
+/** a wedge's elements, its place on the wheel, and what it is placed as now ('': nothing yet) */
+interface WedgeEls { g: SVGGElement; path: SVGPathElement; num: SVGTextElement; text: SVGTextElement; home: RingPlace; as: string }
 
 /** one ring's elements, built when it is first shown */
 class RingDraw {
   private g: SVGGElement | null = null;
   private cap: SVGTextElement | null = null;
+  private hub: SVGCircleElement | null = null;   // the middle's own ring, drawn with a lone pill (ringlone.ts)
   private els: WedgeEls[] = [];
   private was = '';
   constructor(private svg: SVGSVGElement) { }
@@ -52,29 +56,39 @@ class RingDraw {
     const at = (r: number, deg: number) => { const a = deg * Math.PI / 180; return `${(r * Math.cos(a)).toFixed(2)},${(r * Math.sin(a)).toFixed(2)}`; };
     const step = 360 / n;
     for (let k = 0; k < n; k++) {
-      const mid = -90 + k * step, a0 = mid - step / 2 + GAP, a1 = mid + step / 2 - GAP, c = Math.cos(mid * Math.PI / 180), s = Math.sin(mid * Math.PI / 180);
+      const rad = wedgeMid(k + 1, n), mid = rad * 180 / Math.PI, a0 = mid - step / 2 + GAP, a1 = mid + step / 2 - GAP, c = Math.cos(rad), s = Math.sin(rad);
       const w = document.createElementNS(NS, 'g') as SVGGElement;
       const path = document.createElementNS(NS, 'path') as SVGPathElement; path.setAttribute('class', 'cw');
-      path.setAttribute('d', `M${at(R1, a0)} A${R1},${R1} 0 0 1 ${at(R1, a1)} L${at(R0, a1)} A${R0},${R0} 0 0 0 ${at(R0, a0)} Z`);
-      const num = document.createElementNS(NS, 'text') as SVGTextElement; num.setAttribute('class', 'cn'); num.setAttribute('x', (RN * c).toFixed(1)); num.setAttribute('y', (RN * s + 4).toFixed(1)); num.textContent = String(k + 1);
-      const text = document.createElementNS(NS, 'text') as SVGTextElement; text.setAttribute('class', 'ct'); text.setAttribute('x', (RT * c).toFixed(1)); text.setAttribute('y', (RT * s + (s < -0.5 ? -2 : s > 0.5 ? 9 : 3)).toFixed(1));
-      text.setAttribute('text-anchor', Math.abs(c) < 0.2 ? 'middle' : c > 0 ? 'start' : 'end');
-      w.append(path, num, text); g.appendChild(w); this.els.push({ g: w, path, num, text });
+      const num = document.createElementNS(NS, 'text') as SVGTextElement; num.setAttribute('class', 'cn'); num.textContent = String(k + 1);
+      const text = document.createElementNS(NS, 'text') as SVGTextElement; text.setAttribute('class', 'ct');
+      const home: RingPlace = { d: `M${at(R1, a0)} A${R1},${R1} 0 0 1 ${at(R1, a1)} L${at(R0, a1)} A${R0},${R0} 0 0 0 ${at(R0, a0)} Z`, nx: RN * c, ny: RN * s + 4, tx: RT * c, ty: RT * s + (s < -0.5 ? -2 : s > 0.5 ? 9 : 3), anchor: Math.abs(c) < 0.2 ? 'middle' : c > 0 ? 'start' : 'end' };
+      const e: WedgeEls = { g: w, path, num, text, home, as: '' }; this.place(e, home, 'wheel');
+      w.append(path, num, text); g.appendChild(w); this.els.push(e);
     }
+    const hub = this.hub = document.createElementNS(NS, 'circle') as SVGCircleElement; hub.setAttribute('class', 'ch'); hub.setAttribute('r', String(RING_HOLE)); hub.style.display = 'none'; g.appendChild(hub);
     const cap = this.cap = document.createElementNS(NS, 'text') as SVGTextElement; cap.setAttribute('class', 'cc'); cap.setAttribute('y', String(RC)); g.appendChild(cap);
+  }
+  /** a wedge's outline, digit and words put where `at` says (its own place on the wheel, or a pill's: `as` names which), written only when that changes;
+   *  `len`: the width its words are set to (a pill's: the game reads the same pill — ringlone.ts) */
+  private place(e: WedgeEls, at: RingPlace, as: string, len = 0) {
+    if (e.as === as) return; e.as = as; const f = (v: number) => v.toFixed(1);
+    e.path.setAttribute('d', at.d); e.num.setAttribute('x', f(at.nx)); e.num.setAttribute('y', f(at.ny)); e.text.setAttribute('x', f(at.tx)); e.text.setAttribute('y', f(at.ty)); e.text.setAttribute('text-anchor', at.anchor);
+    if (len > 0) e.text.setAttribute('textLength', f(len)); else e.text.removeAttribute('textLength');
   }
   draw(V: RingView | null, tz: number) {
     if (!V) { if (this.was) { this.was = ''; if (this.g) this.g.style.display = 'none'; } return; }
-    const sc = V.zoom / tz, key = `${V.x.toFixed(0)},${V.y.toFixed(0)},${sc.toFixed(2)}|${V.lit}|${V.tone ?? ''}|${V.caption}|${V.wedges.map(w => `${w.key}${w.off ? '-' : ''}${w.opens ? '>' : ''}${w.text}`).join('|')}`;
+    const sc = V.zoom / tz, key = `${V.x.toFixed(0)},${V.y.toFixed(0)},${sc.toFixed(2)}|${V.lit}|${V.tone ?? ''}|${V.caption}|${HANDRING.lone}|${V.wedges.map(w => `${w.key}${w.off ? '-' : ''}${w.opens ? '>' : ''}${w.text}`).join('|')}`;
     if (key === this.was) return; this.was = key;
     if (!this.g || this.els.length !== CMDRING.wedges) { this.g?.remove(); this.els = []; this.build(CMDRING.wedges); }
     const g = this.g!; g.style.display = ''; g.setAttribute('transform', `translate(${(V.x / tz).toFixed(1)},${(V.y / tz).toFixed(1)}) scale(${sc.toFixed(3)})`);
     g.setAttribute('class', `cmdring${V.tone && V.tone !== 'gold' ? ` t-${V.tone}` : ''}`);
     if (this.cap) this.cap.textContent = V.caption;
+    const one = loneWedge(V); if (this.hub) this.hub.style.display = one ? '' : 'none';
     this.els.forEach((e, k) => { const w = V.wedges.find(x => x.key === k + 1);
       e.g.style.display = w ? '' : 'none'; if (!w) return;
-      e.g.setAttribute('class', `${V.lit === w.key ? 'lit' : ''}${w.off ? ' off' : ''}`.trim());
-      e.text.textContent = w.opens ? `${w.text} ▸` : w.text; });
+      e.g.setAttribute('class', `${V.lit === w.key ? 'lit' : ''}${w.off ? ' off' : ''}${one ? ' lone' : ''}`.trim());
+      const words = wedgeWords(w); e.text.textContent = words;
+      if (one) { const P = lonePill(w, this.els.length); this.place(e, P, `pill ${words}`, P.textW); } else this.place(e, e.home, 'wheel'); });
   }
 }
 
@@ -99,7 +113,7 @@ export class CmdRingViz {
       if (out.length) d += `M${out.join('L')}Z`; }
     // (the glyph: in the ring's middle once it is up; before, up and right of the cursor — clear of the reticle's own words — and the other way where the view ends)
     const mid = H.held && !H.press;   // (the ring up: the glyph is its middle · the key down and no ring yet: it stays beside the cursor)
-    const P = mid ? this.pinned(game, cam, w, h, tz) : null, s = H.zoom / tz, off = HINT_OFF * s, cx = (P ? P[0] : H.x) / tz, cy = (P ? P[1] : H.y) / tz;
+    const P = mid ? this.pinned(CMDRING.pin ? game.orders.cmdRing : null, cam, w, h, tz) : null, s = H.zoom / tz, off = HINT_OFF * s, cx = (P ? P[0] : H.x) / tz, cy = (P ? P[1] : H.y) / tz;
     const gx = mid ? cx : cx + (cx + 2 * off > w ? -off : off), gy = mid ? cy : cy + (cy - 2 * off < 0 ? off : -off);
     const key = `${H.kind}|${H.tone ?? ''}|${H.held}|${gx.toFixed(0)},${gy.toFixed(0)},${s.toFixed(2)}|${d}`;
     if (key === this.hintWas) return; this.hintWas = key;
@@ -144,8 +158,8 @@ export class CmdRingViz {
   }
   /** A ring that stays on its point (CMDRING.pin), where THIS picture's camera puts it, in the view's px: the game's own place for it (RingState.ax / ay) was
    *  worked out before the tick's camera step, and a ring drawn there swims a few px against the floor while the view moves. null = the game's place stands */
-  private pinned(game: Game, cam: FollowCamera, w: number, h: number, tz: number): [number, number] | null {
-    const R = game.orders.cmdRing; if (!CMDRING.pin || !R?.at) return null;
+  private pinned(R: RingState | null, cam: FollowCamera, w: number, h: number, tz: number): [number, number] | null {
+    if (!R?.at) return null;
     const [sx, sy, front] = cam.project(R.at, w * tz, h * tz); if (!front) return null;
     const c = { ...R }; ringPin(c, sx, sy, w * tz, h * tz); return [c.ax, c.ay];
   }
@@ -153,8 +167,8 @@ export class CmdRingViz {
   update(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
     this.updatePlan(game, cam, w, h, tz);
     this.updateHint(game, cam, w, h, tz);
-    const V0 = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, P = V0 ? this.pinned(game, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
-    const H = game.player.sel.ring ? handRingView(game) : null;
+    const V0 = CMDRING.on || game.orders.cmdRing ? game.orders.ringView() : null, P = V0 && CMDRING.pin ? this.pinned(game.orders.cmdRing, cam, w, h, tz) : null, V = V0 && P ? { ...V0, x: P[0], y: P[1] } : V0;
+    const H0 = game.player.sel.ring ? handRingView(game) : null, HP = H0 ? this.pinned(game.player.sel.ring, cam, w, h, tz) : null, H = H0 && HP ? { ...H0, x: HP[0], y: HP[1] } : H0;   // (his own ring on its thing: handring.ts onThing)
     this.orders.draw(V, tz); this.hands.draw(H, tz); this.clear(V, H, tz);
   }
   private overKey = '';
@@ -169,12 +183,12 @@ export class CmdRingViz {
     const key = V || H ? `${k(V)}|${k(H)}|${rail?.classList.contains('on') ? rail.textContent?.length : ''}|${innerHeight}` : ''; if (key === this.overKey) return; this.overKey = key;
     const s = key ? this.svg.getBoundingClientRect() : null;
     /** a ring's words as a box of the window: wider than tall, and down to under its caption when `cap` */
-    const box = (R: RingView, cap: boolean) => { const cx = s!.left + R.x / tz, cy = s!.top + R.y / tz, z = R.zoom / tz; return { l: cx - 190 * z, r: cx + 190 * z, t: cy - 80 * z, b: cy + (cap ? RC + 14 : 80) * z }; };
+    const box = (R: RingView, cap: boolean) => { const cx = s!.left + R.x / tz, cy = s!.top + R.y / tz, z = R.zoom / tz; return { l: cx - RING_BOX.x * z, r: cx + RING_BOX.x * z, t: cy - RING_BOX.y * z, b: cy + (cap ? RC + 14 : RING_BOX.y) * z }; };
     const col = V ? document.getElementById('interact')?.getBoundingClientRect() : null, v = V && col && col.width > 0 && col.height > 0 ? box(V, false) : null;
     document.body.classList.toggle('ringover', !!v && v.l < col!.right && v.r > col!.left && v.t < col!.bottom && v.b > col!.top);
     let shift = 0;
     if (rail?.classList.contains('on')) { const b = rail.getBoundingClientRect(), cur = new DOMMatrixReadOnly(getComputedStyle(rail).transform).m42 * tz, top = b.top - cur, bottom = b.bottom - cur;   // (where the line is at rest: measured less the step it is on now — it may be part way there)
-      for (const R of [V, H]) { if (!R) continue; const q = box(R, true); if (!(b.width > 0 && q.l < b.right && q.r > b.left && q.t < bottom && q.b > top)) continue;
+      for (const R of [V, H]) { if (!R) continue; const q = box(R, !!R.caption); if (!(b.width > 0 && q.l < b.right && q.r > b.left && q.t < bottom && q.b > top)) continue;
         const down = q.b + 8 - top, up = q.t - 8 - bottom; shift = bottom + down <= innerHeight - 8 ? down : up; break; } }
     if (shift !== this.railShift) { this.railShift = shift; const el = document.getElementById('railprompt'); if (el) el.style.setProperty('--railshift', `${(shift / tz).toFixed(1)}px`); }
   }

@@ -13,7 +13,7 @@ import { ThrowSolution } from './throwables';
 import { rigLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose, sc20kLauncherMuzzle, modelGrip, modelMuzzleAhead } from './rigProps';
 import { gunLookOf } from './gunlook';   // (called inside armRifle only)
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
-import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand } from './handwork';
+import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand, WORK_TURN } from './handwork';
 import type { SamWork } from './handwork';
 import { tread } from './floor';
 import { samLoadPace, loadGait, loadHeard } from './kitload';   // what his card weighs: his legs' pace and his footfall (as asked with its switch off)
@@ -1968,7 +1968,7 @@ function updateWorkPlant(g: Game, dt: number, W: SamWork) {
   c.vel = [0, 0, 0]; const x0 = c.pos[0], z0 = c.pos[2]; const yaw = workStand(c, W.p, W.n, dt, samWorkHand(g)); collidePlayer(g, 1.0); keepOffGuards(g, dt, 1.0);
   if (W.at) { W.at[0] += c.pos[0] - x0; W.at[2] += c.pos[2] - z0; }   // (the spot he must not shift from goes with the step HE IS WALKED here, and only that: anything else that moves him — a shove, a blast — still breaks the work off)
   const stepV = dt > 0 ? Math.hypot(c.pos[0] - x0, c.pos[2] - z0) / dt : 0;   // (his legs take the step he is walked)
-  c.bodyYaw = approachAngle(c.bodyYaw, yaw, 10 * dt); c.aimYaw = c.bodyYaw;
+  c.bodyYaw = approachAngle(c.bodyYaw, yaw, WORK_TURN * dt); c.aimYaw = c.bodyYaw;
   c.aimPitch = damp(c.aimPitch, 0, 8, dt); pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false; c.anim.speed = stepV > 0.2 ? Math.min(stepV, 1.7) : 0; c.anim.upper = 'none'; c.anim.lockpick = false;
   armRifle(g, pl.rifleUp, 'lowLong'); c.update(dt); poseGunLight(g);
 }
