@@ -16,10 +16,11 @@
 //   6. BUDGET: boxes ≤ 900 a level (a warning past it), lights ≤ 64.
 // `--sheet` prints, per `lived.<room>` group, what the room got (solids, drawn-only clutter, floor pieces, props, lights, paints) and which of the level's
 // own named rooms got nothing. Lines are `- PASS — …` / `- FAIL — …` (tools/qa/gate.sh counts them); exit 0 = all pass, 1 = a check failed, 2 = bad usage.
-// With no file named: every level that carries a lived thing (none = NO VERDICT, exit 0).
+// With no file named: every level that carries a lived thing or has a row of its own in LEVEL_BASE (none = NO VERDICT, exit 0).
 // THE CHECK'S OWN BREAK PATH (in memory, no file is written): `LIVED_BREAK=1` moves each level's first own box half a metre and stands its first lived solid in
 // its first door — the damage furniture work can do — and must be red on line 1 and on the doors' line of every level; `LIVED_BREAK=lesson` changes every HELD
-// key of each lesson's first marked step and of its frame (LESSON_HELD) and must be red on every level with a lesson; `LIVED_BREAK=words` changes EVERY key
+// key of each lesson's first marked step and of its frame (LESSON_HELD) and must be red on every level with a lesson; `LIVED_BREAK=lists` adds a word to every
+// step's `allow` and to the frame's `allow`, `orders` and `rows` and nothing else, and must be red on every level with a lesson; `LIVED_BREAK=words` changes EVERY key
 // of the LESSON_FREE table on every step, the lesson and its frame, and must stay green: what a lesson's owner may change with no new base is that table.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
@@ -74,24 +75,27 @@ const LEVEL_BASE: Record<string, string> = {
   // the tunnel station, played with no fog of war (its lesson's rails.fog)
   'tut-sky.json': 'f3ef62b01',
 
+  // the fuel stop, alone: its ground re-laid, the gun's setup its own beat, his own charge on his own key
+  'tut-solo.json': '86c882d26',
+
   // the squad mission after a first play: the hall's street window glazed, a step given a cue
   'tut-squad.json': 'be980f1e1',
 };
-/** WHAT OF A LESSON ITS OWNER MAY CHANGE WITH NO NEW BASE (scenarios.lesson; scene/scenarios.ts LessonData, LessonStep, RailsData): its WORDS and its LISTS,
- *  read from today's file and never held to the base. Decided 10-22, when four re-bases in a day were each a lesson's words:
- *   · words the player reads — the lesson's `title`; a step's `line` and the lines that stand in for it (`setupLine`, `ringLine`, `blowLine`, `menuLine`,
- *     `pageLine`, `planLine`), its `noTap` words, its card (`explain`) and its line once the order is given (`after`: the line, the word's line, the orders it waits on);
- *   · lists of what the frame offers — a step's `allow` / `deny`, the frame's `allow`, `orders` and `rows`.
- *  Furniture cannot touch one and none names a place. What holds them instead: tools/qa/lesson-check.ts (plain run: every Training and tutorial level) reads
- *  the block against the floor, and tools/qa/lesson-gate.ts <level> plays the mission through (its plain run is Training's levels: a tutorial mission is
- *  gated BY NAME, so an owner who changes a list runs it on his level). */
-const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'planLine', 'noTap', 'explain', 'after', 'allow', 'deny'],
-  rails: ['allow', 'orders', 'rows'] };
-/** STILL HELD, each a one-line move of the level's own row: the steps themselves (their number and order), a step's `id`, its `done` test and `hold`, every PLACE
- *  (`at`, `atMan`, `toward`, `eye`, the frame's `sky`) and what the frame does (`cue`, `checkpoint`, `fog`, `onWay`, `respawn`, `lasers`): a mark moved to
- *  make room for a desk is the damage this check is for. A key of a lesson that is in NEITHER table is a red line until it is put in one: the choice is made
- *  in the open, by whoever adds the key. */
-const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay'], rails: ['respawn', 'fog', 'sky', 'lasers'] };
+/** WHAT OF A LESSON ITS OWNER MAY CHANGE WITH NO NEW BASE (scenarios.lesson; scene/scenarios.ts LessonData, LessonStep, RailsData): its WORDS, read from
+ *  today's file and never held to the base — the lesson's `title`; a step's `line` and the lines that stand in for it (`setupLine`, `ringLine`, `blowLine`,
+ *  `menuLine`, `pageLine`, `planLine`), its `noTap` words, its card (`explain`) and its line once the order is given (`after`: the line, the word's line, and
+ *  the orders that only decide WHICH of those lines shows). Decided 10-22, when four re-bases in a day were each a lesson's words. Furniture cannot touch
+ *  one, none names a place and none is a rule: a reworded lesson plays the same. What reads them: the loader (each a string or a card of strings),
+ *  tools/qa/lesson-check.ts (the first line is the objective row's) and the player's own eyes; no check holds the wording, on purpose. */
+const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'planLine', 'noTap', 'explain', 'after'], rails: [] as string[] };
+/** HELD, each a one-line move of the level's own row: the steps themselves (their number and order), a step's `id`, its `done` test and `hold`, every PLACE
+ *  (`at`, `atMan`, `toward`, `eye`, the frame's `sky`), what the frame does (`cue`, `checkpoint`, `fog`, `onWay`, `respawn`, `lasers`) and WHAT IT OFFERS —
+ *  a step's `allow` / `deny`, the frame's `allow`, `orders` and `rows`. Those lists are rules, not wording: one more word in an `allow` opens a key a step
+ *  early and nothing else is red (a scripted player only shows a key that is MISSING), so they were free for one step (10-22) and are held again: with a
+ *  row a level, a list changed on purpose is its owner's one line. A mark moved to make room for a desk is the damage this check is for. A key of a
+ *  lesson that is in NEITHER table is a red line until it is put in one: the choice is made in the open, by whoever adds the key. */
+const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
+  rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows'] };
 /** today's value for every free key, the base's for every other, in today's key order (the loaded Levels are compared as text); `n` counts the free keys that moved */
 function readFree(now: any, then: any, keys: string[], n: { v: number }): any { const t: any = {};
   for (const k of Object.keys(now)) { if (keys.includes(k)) { t[k] = now[k]; if (JSON.stringify(now[k]) !== JSON.stringify(then[k])) n.v++; } else if (k in then) t[k] = then[k]; }
@@ -121,7 +125,7 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
   const sheet = flags.has('--sheet'), quiet = flags.has('--quiet');
   if (named === '') { console.error('lived-check: --base wants a revision, or none'); process.exit(2); }
   const allBase = named ?? '', BREAK = process.env.LIVED_BREAK ?? '';
-  if (!['', '1', 'lesson', 'words'].includes(BREAK)) { console.error(`lived-check: LIVED_BREAK=${BREAK}? (1, lesson, words)`); process.exit(2); }
+  if (!['', '1', 'lesson', 'lists', 'words'].includes(BREAK)) { console.error(`lived-check: LIVED_BREAK=${BREAK}? (1, lesson, lists, words)`); process.exit(2); }
   { const one = allBase || BASE_REV, dup = (['lesson', 'step', 'rails'] as const).flatMap(k => LESSON_FREE[k].filter(x => LESSON_HELD[k].includes(x)).map(x => `${k}.${x}`));
     if (one !== 'none' && spawnSync('git', ['-C', ROOT, 'cat-file', '-e', `${one}^{commit}`]).status !== 0) { console.error(`lived-check: no commit ${one} in this checkout (a shallow clone? --base <rev> or --base none)`); process.exit(2); }   // (a base that is not there used to read as 'a new level' and pass)
     if (dup.length) { console.error(`lived-check: ${dup.join(', ')} in both LESSON_FREE and LESSON_HELD`); process.exit(2); } }
@@ -130,7 +134,7 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
   const hasLived = (d: any) => d.boxes.some((b: any) => isLived(b.group)) || [d.props, d.lights, d.switchables].some((l: any[]) => (l ?? []).some(x => isLived(x.id)));
   let list = files.map(fileOf);
   if (!list.length) list = readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json')).map(f => resolve(ROOT, 'levels', f))
-    .filter(f => { try { return hasLived(JSON.parse(readFileSync(f, 'utf8'))); } catch { return false; } });
+    .filter(f => { try { return !!rowOf(basename(f)) || hasLived(JSON.parse(readFileSync(f, 'utf8'))); } catch { return false; } });   // (…and every level with a row of its own, furniture or none: a row holds a lesson's rules too)
   if (!list.length) { console.log('lived-check: no level carries a lived thing yet — nothing to check'); return null; }
 
   let ok = true, checks = 0;
@@ -165,10 +169,12 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
         for (const k of LESSON_HELD.step) if (k !== 'id' && k in s) { s[k] = mut(s[k]); did++; }
         if (L.rails) for (const k of LESSON_HELD.rails) if (k in L.rails) { L.rails[k] = mut(L.rails[k]); did++; }
         if (!did) s.hold = 1; }
+      // (the lists alone, each as a rule would be loosened: one more word in every step's `allow` and in the frame's three)
+      if (BREAK === 'lists' && L) { for (const s of L.steps) s.allow = [...(s.allow ?? []), 'x']; if (L.rails) for (const k of ['allow', 'orders', 'rows']) L.rails[k] = [...(L.rails[k] ?? []), 'x']; }
       // (every free key, there or not, on every step, the lesson and its frame
       //  — each as the loader will take it: a word, a card, a list; a free key of another shape wants its line in `as`)
-      if (BREAK === 'words' && L) { const word = (v: any) => (v ?? 'Words') + tail, list = (v: any) => [...(v ?? []), 'x'];
-        const as: Record<string, (v: any) => any> = { explain: v => ({ ...v, text: word(v?.text) }), after: v => ({ ...v, line: word(v?.line) }), allow: list, deny: list, orders: list, rows: list };
+      if (BREAK === 'words' && L) { const word = (v: any) => (v ?? 'Words') + tail;
+        const as: Record<string, (v: any) => any> = { explain: v => ({ ...v, text: word(v?.text) }), after: v => ({ ...v, line: word(v?.line) }) };
         const all = (o: any, keys: string[]) => { for (const k of keys) o[k] = (as[k] ?? word)(o[k]); };
         all(L, LESSON_FREE.lesson); for (const s of L.steps) all(s, LESSON_FREE.step); if (L.rails) all(L.rails, LESSON_FREE.rails); } }
     console.log(`\n${name}`);
