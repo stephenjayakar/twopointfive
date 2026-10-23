@@ -32,9 +32,9 @@ export function countWords(n: number): string { return WORDS[n] ?? 'many'; }
 export function wordsOf(line: string): string { return line.replace(/\d+/g, n => countWords(Number(n))); }
 export function needCells(n: PlaceNeeds | null, rescue: boolean): [string, string, string][] {
   const out: [string, string, string][] = [];
-  if (rescue) out.push(['Hostages', n && n.hostages > 0 ? countWords(n.hostages) : 'inside', 'a frag thrown onto their floor is theirs too']);
-  if (n && n.locked > 0) out.push(['Locked doors', countWords(n.locked), 'a door charge, the breaching shotgun, the hammer or a pick is the way through a locked door']);
-  if (n && n.steel > 0) out.push(['Steel', countWords(n.steel), 'the hammer and the shotgun do not take a steel door: a charge or a pick does']);
+  if (rescue) out.push(['Hostages', n && n.hostages > 0 ? countWords(n.hostages) : 'inside', 'a frag thrown onto their floor will hit them too']);
+  if (n && n.locked > 0) out.push(['Locked doors', countWords(n.locked), 'you can get through a locked door with a door charge, the breaching shotgun, the hammer or a pick']);
+  if (n && n.steel > 0) out.push(['Steel', countWords(n.steel), 'the hammer and the shotgun won\'t open a steel door, but a charge or a pick will']);
   return out;
 }
 
@@ -136,7 +136,7 @@ export function mountKitBrief(root: HTMLElement, sheet: HTMLElement): KitBrief |
       void placeNeeds(m).then(n => { if (shut || shown !== m.id) return; needs = n; draw(m); told(); }); },
     get needs() { return needs; }, get big() { return big; },
     get map() { return mapOn(); },
-    setBig(on) { const to = on && mapOn(), moved = to !== big; big = to; root.classList.toggle('kb-big', big); if (moved) { pin(); told(); } if (map) map.title = !onStep() ? hadTitle : big ? 'M or a click: back' : 'M or a click: the map, large'; },   // (the sheet is the Mission step's too: there it says what it said)
+    setBig(on) { const to = on && mapOn(), moved = to !== big; big = to; root.classList.toggle('kb-big', big); if (moved) { pin(); told(); } if (map) map.title = !onStep() ? hadTitle : big ? 'press M or click to go back' : 'press M or click for the large map'; },   // (the sheet is the Mission step's too: there it says what it said)
     key(code, repeat) { if (shut || !(big || mapOn())) return false;
       if (code === 'KeyM') { if (!repeat) api.setBig(!big); return true; }
       if (big && (code === 'Escape' || code === 'Enter' || code === 'NumpadEnter' || code === 'Space')) { if (!repeat) api.setBig(false); return true; }   // (large, it is a sheet laid over the step: the keys that leave a card leave it)

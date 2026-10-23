@@ -117,18 +117,18 @@ export function build() {
     steps: [
       // the simple thing first: all four on one door, one word
       { id: 'up', line: 'Walk to the mark, short of the grain store', done: or({ is: 'in', area: { ...UP } }, taken('store')), at: [UP_AT[0], 1, UP_AT[2]] },
-      { id: 'stack-all', line: 'B on the grain store\'s door: all four stack up', done: or({ is: 'stackOn', who: 'all', door: 'store_n' }, taken('store')), at: [28.0, 1, 16.5] },
-      { id: 'word-all', line: 'F gives the word: all four go in', done: or({ is: 'word', doors: 1 }, taken('store')) },
+      { id: 'stack-all', line: 'Press B on the grain store\'s door to stack all four up', done: or({ is: 'stackOn', who: 'all', door: 'store_n' }, taken('store')), at: [28.0, 1, 16.5] },
+      { id: 'word-all', line: 'Press F to send all four in', done: or({ is: 'word', doors: 1 }, taken('store')) },
       { id: 'post', line: 'Walk back to the mark by the white house', done: or({ is: 'in', area: { ...POST } }, taken('hut')), at: [POST_AT[0], 1, POST_AT[2]] },
-      { id: 'fall-in', line: 'When they call clear: X on the ground, then 3', done: or(and(taken('store'), { is: 'following' }), taken('hut')) },
+      { id: 'fall-in', line: 'When they call clear, X on the ground, then press 3 to have them fall in', done: or(and(taken('store'), { is: 'following' }), taken('hut')) },
       // then the lesson's name: a pair a door, and the LAST key is the one word that sends both in. T with the cursor on a teammate addresses that one man
       // (and never reaches RED): the lines say where the cursor goes
-      { id: 'red', line: 'Cursor on bare ground, then T: RED takes your orders', done: or({ is: 'orderTo', who: 'red' }, taken('hut')) },
-      { id: 'stack-red', line: 'X on the red door, then 1: RED stacks up', done: or({ is: 'stackOn', who: 'red', door: 'hut_w' }, taken('hut')), at: [16.5, 1, 11.6] },
-      { id: 'blue', line: 'T again, off the men: BLUE', done: or({ is: 'orderTo', who: 'blue' }, taken('hut')) },
-      { id: 'stack-blue', line: 'B on the blue door: BLUE stacks up', done: or(and({ is: 'stackOn', who: 'blue', door: 'hut_s' }, { is: 'pairsOn', doors: 2 }), taken('hut')), at: [20.4, 1, 14.5] },
-      { id: 'gold', line: 'Not F yet. T, off the men: GOLD, the whole squad', done: or(and({ is: 'orderTo', who: 'all' }, { is: 'pairsOn', doors: 2 }), taken('hut')) },
-      { id: 'word', line: 'F gives the word: both pairs go in together', done: or({ is: 'word', doors: 2 }, taken('hut')) },
+      { id: 'red', line: 'Point at bare ground and press T to give your orders to RED', done: or({ is: 'orderTo', who: 'red' }, taken('hut')) },
+      { id: 'stack-red', line: 'X on the red door, then press 1 to stack RED up', done: or({ is: 'stackOn', who: 'red', door: 'hut_w' }, taken('hut')), at: [16.5, 1, 11.6] },
+      { id: 'blue', line: 'Point away from the squad and press T again to pick BLUE', done: or({ is: 'orderTo', who: 'blue' }, taken('hut')) },
+      { id: 'stack-blue', line: 'Press B on the blue door to stack BLUE up', done: or(and({ is: 'stackOn', who: 'blue', door: 'hut_s' }, { is: 'pairsOn', doors: 2 }), taken('hut')), at: [20.4, 1, 14.5] },
+      { id: 'gold', line: 'Don\'t press F yet. Point away from the squad and press T for GOLD, the whole squad', done: or(and({ is: 'orderTo', who: 'all' }, { is: 'pairsOn', doors: 2 }), taken('hut')) },
+      { id: 'word', line: 'Press F to send both pairs in together', done: or({ is: 'word', doors: 2 }, taken('hut')) },
     ],
   } as LessonData;
   const front: Vec3 = [22.5, 1.0, 11.6];

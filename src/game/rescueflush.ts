@@ -36,7 +36,7 @@ import { runnerFled, runnerOwns } from './runner';
 import { moraleOwns } from './morale';
 import { laneCovers, laneHolds, laneWarns } from './lanes';
 import { rescueCheckOwns } from './rescuecheck';
-import { w } from './words';
+import { w, wg } from './words';
 
 export const RESCUEFLUSH = {
   on: false,
@@ -198,7 +198,7 @@ export class RescueFlush {
     R.note(`flush:${goal}:${h.callsign}`);
     if (n > 0) return;   // (a man's second errand is not announced: one line a man)
     g.say(h, goal === 'room' ? w('it\'s gone quiet in there — I\'m going in for them!', 'it\'s gone quiet in there — i\'m going in for them!')
-      : goal === 'side' ? w('going round — I\'ll take the other door!', 'going round — i\'ll take the other door!')
+      : goal === 'side' ? w(wg('going around — I\'ll take the other door!', 'going round — I\'ll take the other door!'), 'going round — i\'ll take the other door!')
       : goal === 'out' ? 'on the way out — they don\'t leave with the hostages!'
       : 'moving on that noise — keep them boxed in!', true);
   }

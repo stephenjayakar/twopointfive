@@ -160,30 +160,30 @@ export function build() {
     steps: [
       // (a step whose deed can be made impossible — the man shot before he is grabbed, choked before he gives his key, knifed where the blow was asked —
       //  also passes on the men being down all the same, so the lesson always reaches its end)
-      { id: 'draw', line: '1 draws the pistol', done: { is: 'flag', flag: 'gun' } },
-      { id: 'holster', line: 'E puts it away. A grab needs empty hands', done: { is: 'flag', flag: 'holstered' } },
+      { id: 'draw', line: 'Press 1 to draw the pistol', done: { is: 'flag', flag: 'gun' } },
+      { id: 'holster', line: 'Press E to put the pistol away. You need empty hands to grab someone', done: { is: 'flag', flag: 'holstered' } },
       // the whistle is tied to the PLACE, not the stance: run headless, a crouched whistle at the hatch brings the cook as surely as a standing one (the yard
       // wall is open to the sky: it carries over the top), but one blown back at the gate reaches nobody. A man who whistled and took him early passes all three
       { id: 'window', line: 'Go in quietly. Stop at the hatch in the wall', done: { is: 'any', of: [{ is: 'near', at: HATCH, r: 1.0 }, down(1)] }, hold: 0.3, at: [13.0, 1, 11.0] },
-      { id: 'whistle', line: 'V whistles the cook out. Then hide at once, at the mark', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'did', what: 'event:whistle' }, { is: 'near', at: HATCH, r: 1.3 }] }, { is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, down(1)] }, at: [13.0, 1, 11.0] },
-      { id: 'clear', line: 'Hide at the mark now: he comes round by the gate', done: { is: 'any', of: [{ is: 'in', area: { x0: 10.2, x1: 12.3, z0: 6.2, z1: 9.3 } }, { is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, down(1)] }, at: [HIDE[0], 1, HIDE[2]] },
+      { id: 'whistle', line: 'Press V to whistle the cook out, then hide at the mark right away', ringLine: 'Hold Space and press 5 to whistle the cook out, then hide at the mark right away', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'did', what: 'event:whistle' }, { is: 'near', at: HATCH, r: 1.3 }] }, { is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, down(1)] }, at: [13.0, 1, 11.0] },
+      { id: 'clear', line: 'Hide at the mark now. The cook is coming around through the gate', done: { is: 'any', of: [{ is: 'in', area: { x0: 10.2, x1: 12.3, z0: 6.2, z1: 9.3 } }, { is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, down(1)] }, at: [HIDE[0], 1, HIDE[2]] },
       // (no line before it is true: 'he gives up' came up the moment the player hid, twenty seconds before the cook had — a player trusted it, went, and was shot.
       //  The wait is its own step, done when the cook is calm again; a man who took him early passes both)
-      { id: 'wait', line: 'Keep still. He comes to the hatch and looks', done: { is: 'any', of: [{ is: 'calm', route: 'north' }, { is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, down(1)] }, at: [HIDE[0], 1, HIDE[2]] },
-      { id: 'grab', line: 'He has given up. Round behind him: Space at his back', done: { is: 'any', of: [{ is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, down(1)] }, at: [12.4, 1, 11.6] },
-      { id: 'question', line: 'Space asks him. Keep asking until he gives up his key', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'did', what: 'chron:interrogated' }, { is: 'did', what: 'chron:keyTaken' }] }, down(1)] } },
+      { id: 'wait', line: 'Stay still. The cook will come to the hatch and take a look', done: { is: 'any', of: [{ is: 'calm', route: 'north' }, { is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, down(1)] }, at: [HIDE[0], 1, HIDE[2]] },
+      { id: 'grab', line: 'The cook gave up looking. Go around behind him and press Space to grab him', done: { is: 'any', of: [{ is: 'did', what: 'chron:grab' }, { is: 'flag', flag: 'holding' }, down(1)] }, at: [12.4, 1, 11.6] },
+      { id: 'question', line: 'Press Space to question him. Keep asking until he gives up his key', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'did', what: 'chron:interrogated' }, { is: 'did', what: 'chron:keyTaken' }] }, down(1)] } },
       // (the deed, not the way to it: with a man in the arm the right button chokes — close.ts CLOSE.heldClicks, on in the page — and the row's way still does)
-      { id: 'choke', line: 'Right button chokes him out. Then keep still', done: { is: 'any', of: [{ is: 'downed', how: 'choke' }, down(1)] } },
+      { id: 'choke', line: 'Right-click to choke him out, then stay still', done: { is: 'any', of: [{ is: 'downed', how: 'choke' }, down(1)] } },
       // (drag, hide: the body may already lie in the wood store — carried there by whatever the drag is tonight — and both steps then pass)
-      { id: 'drag', line: 'Space at the body takes hold of him', done: { is: 'any', of: [{ is: 'flag', flag: 'dragging' }, { is: 'body', area: { ...DARK } }] } },
-      { id: 'hide', line: 'Get him into the wood store, out of sight. Space lets him go', done: { is: 'body', area: { ...DARK } }, at: [11.8, 1, 8.0] },
-      { id: 'knockout', line: 'At the tandoor: Right button at his back knocks him out', done: down(2), at: [OVEN[0] - 2.0, 1, OVEN[1]] },
+      { id: 'drag', line: 'Press Space at the body to grab it', done: { is: 'any', of: [{ is: 'flag', flag: 'dragging' }, { is: 'body', area: { ...DARK } }] } },
+      { id: 'hide', line: 'Drag the body into the woodshed, out of sight, and press Space to let go', done: { is: 'body', area: { ...DARK } }, at: [11.8, 1, 8.0] },
+      { id: 'knockout', line: 'Sneak up behind the guard at the tandoor and right-click to knock him out', done: down(2), at: [OVEN[0] - 2.0, 1, OVEN[1]] },
       // the last man faces the only way in: he is brought through it. The wall hold is a wall of the dark corner (the marker stands in it)
-      { id: 'wall', line: 'The last man watches the gap. Back to the wall in the dark corner beside it', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'flag', flag: 'wall' }, { is: 'near', at: NOOK, r: 1.0 }] }, down(3)] }, at: [NOOK[0], 1, NOOK[2]] },
-      { id: 'lure', line: 'V whistles him over. Keep still: let him come through', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'did', what: 'event:whistle' }, { is: 'near', at: GAP, r: 2.6 }] }, down(3)] } },
-      { id: 'knife', line: 'As he comes through, step in: Left button. The knife kills', done: down(3) },
-      { id: 'unlock', line: 'The store is locked. Space at its door', done: { is: 'any', of: [{ is: 'did', what: 'act:unlock' }, { is: 'door', door: 'hut', state: 'open' }] }, at: [23.0, 1, 9.6] },
-      { id: 'take', line: 'Tap Space at the blue trunk, then keep still', done: { is: 'stage', stage: 'exfil' }, at: front },
+      { id: 'wall', line: 'The last guard is watching the gap. Put your back to the wall in the dark corner beside it', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'flag', flag: 'wall' }, { is: 'near', at: NOOK, r: 1.0 }] }, down(3)] }, at: [NOOK[0], 1, NOOK[2]] },
+      { id: 'lure', line: 'Press V to whistle the guard over. Stay still and let him come through', ringLine: 'Hold Space and press 5 to whistle the guard over. Stay still and let him come through', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'did', what: 'event:whistle' }, { is: 'near', at: GAP, r: 2.6 }] }, down(3)] } },
+      { id: 'knife', line: 'When the guard comes through, step in and left-click to kill him with the knife', done: down(3) },
+      { id: 'unlock', line: 'The storeroom is locked. Press Space at its door to unlock it', done: { is: 'any', of: [{ is: 'did', what: 'act:unlock' }, { is: 'door', door: 'hut', state: 'open' }] }, at: [23.0, 1, 9.6] },
+      { id: 'take', line: 'Tap Space at the blue trunk, then stay still', done: { is: 'stage', stage: 'exfil' }, at: front },
     ],
   };
   const out = T.finish({

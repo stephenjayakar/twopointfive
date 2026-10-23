@@ -456,7 +456,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   const choices = (r: HTMLElement) => (Array.from(r.querySelectorAll?.('.dbtn') ?? []) as HTMLButtonElement[]).filter(b => b.style.display !== 'none' && !b.disabled);
   const stepVal = (v: Val, dir: number) => { const bs = choices(v.src); if (bs.length < 2 && bs[0]?.classList.contains('on')) return;
     const i = bs.findIndex(b => b.classList.contains('on')), n = i < 0 ? (dir > 0 ? 0 : bs.length - 1) : (i + dir + bs.length) % bs.length;
-    if (i < 0 && !v.lever && armed !== v && bs[n]) { armed = v; const to = bs[n].textContent ?? ''; v.val.textContent = `Custom → ${to}`; v.btn.classList.add('armed'); tell(v.label, `Press again: ${to}`); return; }   // (a level over levers moved by hand: one press would throw the mix away, so the first only says so)
+    if (i < 0 && !v.lever && armed !== v && bs[n]) { armed = v; const to = bs[n].textContent ?? ''; v.val.textContent = `Custom → ${to}`; v.btn.classList.add('armed'); tell(v.label, `Press again for ${to}`); return; }   // (a level over levers moved by hand: one press would throw the mix away, so the first only says so)
     armed = null; acting = v; try { bs[n]?.click(); } finally { acting = null; } };
   const paintTeam = () => { teamVal.textContent = L ? sizeWords(L.squad) : ''; };
   /** the rail read off the rows as the list just painted them (`fresh`: another mission came up — nothing was 'last changed') */

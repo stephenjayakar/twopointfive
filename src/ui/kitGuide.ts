@@ -66,20 +66,20 @@ export interface GuideScript { id: string; ls: string; again: string; auto: bool
 /** THE STEP'S OWN WALKTHROUGH, for any mission whose kit can be picked — kept for comparing, played only when asked for (`?kitguide=1`) */
 export const GENERIC: GuideScript = { id: 'generic', ls: KITGUIDE_LS, again: 'How to pick', auto: false, beats: [
   { id: 'job', row: 'map', done: (_was, now) => now.mapSeen && !now.mapBig,
-    words: ({ needs }) => ({ title: 'The job', text: `Read it before you pick: who holds the floor, and the map${needs?.marked ? ', with a dot where you go in' : ''}.\n[M] or a click opens the map. Again puts it back.` }) },
+    words: ({ needs }) => ({ title: 'The job', text: `Read this before you pick. It shows who holds the floor, and the map${needs?.marked ? ', with a dot where you go in' : ''}.\nPress [M] or click to open the map, and again to close it.` }) },
   { id: 'team', row: 'squad', done: (was, now) => now.squad !== was.squad,
-    words: ({ own }) => ({ title: 'Who comes', text: `[A] [D] or a click sets how many come with you.\nThis mission is built for ${sizeWords(own)}.` }) },
+    words: ({ own }) => ({ title: 'Who comes', text: `Press [A] or [D], or click, to set how many come with you.\nThis mission is built for ${sizeWords(own)}.` }) },
   { id: 'kit', row: 'squadkit', done: (was, now) => now.kit !== was.kit && now.kit !== '',   // (a named kit put on — not a card changed by hand, which leaves none lit)
     words: ({ needs, rescue, now }) => { const asks: string[] = [];
-      if (rescue) asks.push('Hostages inside: a frag on their floor is theirs too.');
-      if (needs && needs.locked > 0) asks.push(`${needs.locked === 1 ? 'One locked door' : `${cap(countWords(needs.locked))} locked doors`} here: keep a way through.`);
-      return { title: now.squad ? 'A kit for the squad' : 'A named kit', text: `${now.squad ? 'One press deals a named kit over every man.' : 'One press puts a named kit on your card.'} [A] [D] choose, [Enter] puts it on.${asks.length ? `\n${asks.join(' ')}` : ''}` }; } },
+      if (rescue) asks.push('There are hostages inside, and a frag on their floor will hit them too.');
+      if (needs && needs.locked > 0) asks.push(`${needs.locked === 1 ? 'One locked door' : `${cap(countWords(needs.locked))} locked doors`} here, so bring a way through.`);
+      return { title: now.squad ? 'A kit for the squad' : 'A named kit', text: `${now.squad ? 'One press gives everyone a named kit.' : 'One press puts a named kit on your card.'} Press [A] or [D] to pick one and [Enter] to put it on.${asks.length ? `\n${asks.join(' ')}` : ''}` }; } },
   { id: 'man', row: 'members', done: (was, now) => now.member !== was.member,
-    words: () => ({ title: 'Each man', text: '[A] [D] or a click picks a man. His own card opens under the row.' }) },
+    words: () => ({ title: 'Each man', text: 'Press [A] or [D], or click, to pick a teammate. His card opens under the row.' }) },
   { id: 'card', row: 'kit', wears: true, done: (was, now) => now.member === was.member && now.squad === was.squad && now.worn !== was.worn && (now.kit === was.kit || now.kit === ''),   // (his card changed by hand: the named kit that was on is then a mix of his own — another named kit put on is not it)
-    words: () => ({ title: 'His card', text: 'Change one thing he carries: [W] [A] [S] [D] and [Enter], or a click.\nFour pouches a man, and what he carries shows on Mobility and Concealment.' }) },
+    words: () => ({ title: 'His card', text: 'Use [W] [A] [S] [D] and [Enter], or click, to change one thing he carries.\nEach teammate has four pouches, and what he carries shows on Mobility and Concealment.' }) },
   { id: 'go', row: 'actions',
-    words: () => ({ title: 'Go', text: '[Enter] on Deploy starts it with this team. [Esc] steps back to the mission.' }) },
+    words: () => ({ title: 'Go', text: 'Press [Enter] on Deploy to start with this team, or [Esc] to go back to the mission.' }) },
 ] };
 /** the walkthrough of a mission's step: the plan written for that mission (ui/kitPlan.ts), else the step's own where it was asked for, else none */
 export function guideFor(missionId: string): GuideScript | null { return KIT_PLANS[missionId]?.guide ?? (KITGUIDE.again ? GENERIC : null); }
@@ -159,7 +159,7 @@ export function mountKitGuide(root: HTMLElement, brief: KitBrief | null, head: H
   if (!KITGUIDE.on) return null;
   styles();
   const card = document.createElement('div'); card.className = 'kg-card'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-live', 'polite'); root.appendChild(card);
-  const again = document.createElement('button'); again.className = 'kg-again'; again.setAttribute('type', 'button'); again.title = 'the walkthrough of this step, again'; head?.appendChild?.(again);
+  const again = document.createElement('button'); again.className = 'kg-again'; again.setAttribute('type', 'button'); again.title = 'show the walkthrough of this step again'; head?.appendChild?.(again);
   let S: LoadoutScreen | null = null, script: GuideScript | null = null, at = -1, was: GuideState | null = null, lit: HTMLElement | null = null, running = false, shut = false, busy = false, mapSeen = false, drawn = '';
   const did = new Set<string>();   // the beats this visit's walkthrough has been through (the pips)
   const over = new Set<string>();   // the walkthroughs ended on this visit (finished, skipped, deployed under): not played again unasked however the page was opened

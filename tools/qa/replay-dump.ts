@@ -111,11 +111,11 @@ export function momentsOf(F: ReplayFile, f7: { r: number; why?: string }[] = [])
   //  was is on the HUD's line of the same instant where the game says one ('taking the vehicle log — stay on it', 'exfiltrated — 2:31 · GHOST 94'). So rows
   //  of one room inside OBJ_FOLD of each other, in one run, are ONE row carrying those lines, and the run's end is a row of its own, said in the game's words.
   //  THE END LINES are the game's own (roomclear.ts, rescue.ts, snatch.ts, defuse.ts, nightbreach.ts, mission.ts): every one but the quiet game's 'exfiltrated —'
-  //  and the defuse win says how to stage it again. NOT an end, though they read like one: 'structure taken — …. not over: <the man still loose / the charges>',
-  //  'the house is taken — the charges are still live', 'breach called off — …', '<men> down — the room is yours to take'.)
-  const OBJ_FOLD = 20, ENDS = /stages it again|^exfiltrated —|mission failed|every charge safe, the house is yours/i, LIVE = /not over:|still live|called off|yours to take/i;
-  const WON = /^(structure taken|exfiltrated|MISSION COMPLETE|CLEAN —|COSTLY —|room clear\.)|every charge safe, the house is yours/i, LOST = /^(sam|player) down/i;
-  const STUNNED = /, stunned\b|— you are blinded|you were too close/i, NEWRUN = /^(restart|a checkpoint|an F10 recording)/i;
+  //  and the defuse win says how to restart (a file from before the lines were reworded says 'stages it again': both are read). NOT an end, though they read like one: 'structure taken — …. it's not over yet: <the man still loose / the charges>',
+  //  'the house is taken, but the charges are still live', 'breach called off, and …', '<who> is down, so you'll have to take the room yourself'.)
+  const OBJ_FOLD = 20, ENDS = /to restart$|stages it again|^exfiltrated —|mission failed|every charge is safe and the house is yours|every charge safe, the house is yours/i, LIVE = /not over(?: yet)?:|still live|called off|have to take the|yours to take/i;
+  const WON = /^(structure taken|exfiltrated|MISSION COMPLETE|CLEAN —|COSTLY —|room clear\.)|every charge is safe and the house is yours|every charge safe, the house is yours/i, LOST = /^(sam|player) down/i;
+  const STUNNED = /, stunned\b|blinded you$|— you are blinded|you were too close/i, NEWRUN = /^(restart|a checkpoint|an F10 recording)/i;
   const over = (t: string) => ENDS.test(t) && !LIVE.test(t);
   /** a teammate's own line filed on the log under his name ('Blue One: holding. it's lit and he's looking.'): his wait, said — never an order refused */
   const ownWait = (t: string) => { const m = /^([^:]{1,24}): (.+)$/.exec(t); return !!m && WAIT_SAID.test(m[2]) && cast.some((c, ci) => c.name === m[1] && side(ci) === 'operative'); };
