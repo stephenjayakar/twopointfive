@@ -51,7 +51,7 @@ const namesByKey = (raw: string, honest: ReadonlySet<string> = HONEST): boolean 
   return KNIFE.test(w) || beside(w, GRAB, key) || w.split(/[.!?\n]+/).some(x => BLOW.test(x) && key(x)); };
 /** the steps whose lines still name a move by its key, by level, each with who owes the change: a NOTE there and not a FAIL. Only these steps are let
  *  off (another step of the same level is held), and a step named here that no longer names a key is a note to take it off: the list only shrinks */
-const OWES_TOKENS: Record<string, { steps: string[]; who: string }> = { 'tut-pair': { steps: ['hands', 'sleep', 'hold', 'drop'], who: 'its mission\'s thread (Press [Space] behind him to grab him; Right-click to knock him out)' } };
+const OWES_TOKENS: Record<string, { steps: string[]; who: string }> = {};   // (none today: tut-pair's 'hands', 'sleep', 'hold' and 'drop' were here until its lines moved to tokens)
 if (!names.length) { console.log('\n=== lesson-check: the words the rules took away ===');
   const old = ['Sneak up behind him and press [Space] to grab him', 'Press [Space] behind him to grab him, and your partner will take his', 'Press [Space] behind the far guard to grab him', 'Press [Space] when you are close enough to him to grab him',
     'Grab him with [Space]', 'To grab him, press [Space]', 'When he stops, grab him: press [Space]', 'Grab him by pressing and holding [Space]', '[E] takes hold of him', 'Press [Space]! Grab him.', '[Space], and you\'ve got hold of him',
