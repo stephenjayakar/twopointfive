@@ -3242,6 +3242,8 @@ if (on('squadsmoke-restart', 'squadsmoke', 'kit', 'all')) await run('squadsmoke-
 if (on('squadthrow', 'squadorders', 'all')) await run('squadthrow', async () => (await import('./squadthrow-check.ts')).squadthrowCheck());
 // a man with no throw from where he stands walks to one, throws, walks back; the picture's plans (squadthrow-walk-check.ts; SQUADTHROW.walk)
 if (on('squadthrow-walk', 'squadthrow', 'squadorders', 'all')) await run('squadthrow-walk', async () => (await import('./squadthrow-walk-check.ts')).squadthrowWalkCheck());
+// the throw page's picture asks aside: a game drawn and the same game not drawn hold the same whole state (throwview-check.ts; squadthrow.ts SquadThrowKept, Collision.aside)
+if (on('throwview', 'squadthrow', 'squadorders', 'all')) await run('throwview', async () => (await import('./throwview-check.ts')).throwviewCheck());
 // a man with no straight arc works a throw out — other paces, a bank — and a frag is thrown where the men can duck (squadthrow-lob-check.ts; SQUADTHROW.lob / duck / samCall)
 if (on('squadthrow-lob', 'squadthrow', 'squadorders', 'all')) await run('squadthrow-lob', async () => (await import('./squadthrow-lob-check.ts')).squadthrowLobCheck());
 // a teammate whose card carries 40 mm grenades fires one on order (squad40-check.ts; game/squad40.ts — X on the floor, G, then 3): also in family 'squadorders'

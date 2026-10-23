@@ -46,7 +46,7 @@
 // warning as last read. None of it is in a checkpoint — none is taken with a unit on the floor, and all of it is seconds old at most. No dice of its own:
 // the thrown thing draws the game's die as any thrown item does (throwables.ts spawn). 'Nobody of ours in it' is asked AT THE THROW, of where each stands then.
 // Check: tools/qa/squadthrow-check.ts (`probes.ts squadthrow`).
-import { SideMap, rollbackVar } from '../math/side';
+import { SideMap, rollbackVar, sideRegistry } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import { v3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -131,6 +131,28 @@ interface State { last: WeakMap<Guard, number>; noted: unknown; shown: { t: numb
   /** (lob) the men each row's search was last asked of, by `only`: the row's own question is put to the same men (rows, `ask`) */ asked: Map<SquadThrowKind, { key: string; men: Guard[] }>;
   walks: Map<Guard, Walk>; kept: Map<string, { key: string; t: number; th: SquadThrower | null; line: Vec3[] | null }>; scratch: Scratch | null; }
 const states = new SideMap<Game, State>('squadthrow.states');
+/** THE PICTURE'S OWN STORE (`squadThrowPlans`): the page's preview is a whole search (flights, walks, who a frag would catch), and what it keeps and what it
+ *  scribbles on while it looks are the ASKER's, not the game's: its kept answer, its verdict of who is caught, the walk search's marks, and the tables the
+ *  rays and the path searches write (Collision.aside). One a game, made by who draws (ui/squadthrowviz.ts, the floor plan's store); with none handed in
+ *  nothing is kept past the one ask. */
+export interface SquadThrowKept { /** the game it was last asked of: asked of another, it starts empty */ g?: Game; kept: State['kept']; caught: State['caught']; scratch: Scratch | null; col: { s?: object; q?: object } }
+export function squadThrowKept(): SquadThrowKept { return { kept: new Map(), caught: null, scratch: null, col: {} }; }
+/** other modules' answers OF THE TICK that a throw search fills in (a blast's wall openings, the seen-walk's eyes: each a table by game, made anew when the
+ *  clock has moved). The game's own stand aside while the picture asks — it makes its own, and they are thrown away — and are put back as they were. By
+ *  name: the tables are those modules' own. One that is gone, or a new one of the kind, turns tools/qa/throwview-check.ts red on the stand that has the rule. */
+const TICK_KEPT: readonly string[] = ['frag.WALLS_FOR', 'seenwalk.shared'];
+/** `fn` asked aside: the three things a search keeps in the game's state stand in from the asker's store while it runs, and are put back after */
+function aside<T>(g: Game, s: State, V: SquadThrowKept, fn: () => T): T {
+  if (V.g !== g) { V.g = g; V.kept = new Map(); V.caught = null; V.scratch = null; V.col = {}; }   // (a store that outlives its game, as a page's overlay does: nothing of the last game answers for this one)
+  const mine = { kept: s.kept, caught: s.caught, scratch: s.scratch };
+  const tick = sideRegistry().tables.filter(t => TICK_KEPT.includes(t.sideName!)) as SideMap<Game, unknown>[], had = tick.map(t => t.get(g));
+  s.kept = V.kept; s.caught = V.caught; s.scratch = V.scratch; for (const t of tick) t.delete(g);
+  try { return g.col.aside(V.col, fn); }
+  finally {
+    V.caught = s.caught; V.scratch = s.scratch; s.kept = mine.kept; s.caught = mine.caught; s.scratch = mine.scratch;
+    tick.forEach((t, i) => { if (had[i] === undefined) t.delete(g); else t.set(g, had[i]); });
+  }
+}
 export const SQUADTHROW_STATS = { thrown: 0, frags: 0, stuns: 0, refused: 0, walks: 0, walked: 0, gaveUp: 0, searches: 0, arcs: 0, ducks: 0, cells: 0 };
 /** every one thrown on the order, newest last (QA; capped) */
 export const SQUADTHROW_LOG: { t: number; kind: SquadThrowKind; who: string; from: Vec3; at: Vec3; land: Vec3; rest: Vec3 }[] = [];
@@ -490,9 +512,10 @@ function walkTick(g: Game, S: SquadOrders, gd: Guard, A: Assignment) {
 
 /** WHAT THE PICTURE DRAWS (and what a module that draws the squad's plan may read): one entry per throw on its way — `gd` who throws, `from` the floor he
  *  throws from, `points` the arc, `land` where the thing comes to rest, `walk` his way there from where he is (absent: he throws where he stands) — live from
- *  the order until the thing leaves his hand, plus a `preview` entry for the highlighted row while the throw page is up. Empty otherwise. Reads only. */
+ *  the order until the thing leaves his hand, plus a `preview` entry for the highlighted row while the throw page is up. Empty otherwise. READS ONLY, and
+ *  that is held to the whole state (tools/qa/throwview-check.ts): the preview's search is asked aside, on the asker's store `V` (SquadThrowKept). */
 export interface SquadThrowPlan { gd: Guard; from: Vec3; points: Vec3[]; land: Vec3; kind: SquadThrowKind; preview?: true; walk?: Vec3[] }
-export function squadThrowPlans(g: Game): SquadThrowPlan[] {
+export function squadThrowPlans(g: Game, V?: SquadThrowKept): SquadThrowPlan[] {
   const s = states.get(g), out: SquadThrowPlan[] = []; if (!s || !SQUADTHROW.on) return out;
   for (const W of s.walks.values()) {
     if (W.thrownT >= 0 || W.gd.state === 'dead' || g.orders.of(W.gd) !== W.A || !g.guards.includes(W.gd)) continue;   // (a walk somebody else's order has ended is swept at the next key read: never drawn meanwhile)
@@ -500,7 +523,7 @@ export function squadThrowPlans(g: Game): SquadThrowPlan[] {
     out.push({ gd: W.gd, from: W.post, points: W.arc.sol.points, land: W.arc.rest, kind: W.kind, walk: flat(p, W.post) > 0.4 ? [v3.copy(p), ...L.slice(bi + 1), W.post] : undefined });
   }
   const M = g.orders.menu, id = M?.rows[M.sel]?.id;
-  if (M && M.page === THROW_PAGE && M.target.kind === 'floor' && (id === FRAG_THERE || id === STUN_THERE)) {   // (the highlighted row's throw and no other: what is drawn is what the next pick gives)
+  if (M && M.page === THROW_PAGE && M.target.kind === 'floor' && (id === FRAG_THERE || id === STUN_THERE)) aside(g, s, V ?? squadThrowKept(), () => {   // (the highlighted row's throw and no other: what is drawn is what the next pick gives)
     const t = M.target, kind: SquadThrowKind = id === STUN_THERE ? 'stun' : 'frag';
     const th = left(g, kind) > 0 ? squadThrowPlan(g, M.men, t.at, kind, false, true) : null;   // (the picture's own kept answer: it never stands in for the menu's or the order's)
     if (th && !(kind === 'frag' && squadFragCatches(g, th.rest, t.at, { gd: th.gd, at: th.post ?? th.gd.char.pos }, !samCalls(), true))) {   // (the row's own question, word for word: drawn where the row is live)
@@ -508,7 +531,7 @@ export function squadThrowPlans(g: Game): SquadThrowPlan[] {
       if (th.post) { const c = s.kept.get('v' + kind + (SQUADTHROW.lob && M.men.length === 1 ? '1' : '')); walk = c && c.th === th ? (c.line ??= walkLine(g, th.gd, th.post)) : walkLine(g, th.gd, th.post); }
       out.push({ gd: th.gd, from: th.post ?? [th.gd.char.pos[0], 0, th.gd.char.pos[2]], points: th.sol.points, land: th.rest, kind, preview: true, walk });
     }
-  }
+  });
   return out;
 }
 

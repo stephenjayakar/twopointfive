@@ -39,9 +39,9 @@
 // PLAN.on: on on every stand (it is picture only: with nobody asking `floorPlan` nothing runs; asked, a run's digest is the same — tools/qa/plan-check.ts);
 // `?noplan` in the page = nothing drawn, the HUD as it was. IT KEEPS NOTHING OF ITS OWN: the nav grid's answer for a leg, kept between asks, lives with
 // whoever asks (`PlanKept`: the overlay's own table in ui/planfloor.ts, a check's own Map — attention.ts attentionWay's rule), and the grid is searched
-// on the asker's tables too (`kept.nav`, NavGrid.findPathAside), so asking for the men's ways and the laid orders writes nothing of the game's. STILL
-// THE GAME'S: the throw page's preview is read through squadthrow.ts `squadThrowPlans` (its `view` question), which keeps its own answer in that
-// module's table and searches on the game's — with the throw page up, a game drawn and the same game not drawn still differ there.
+// on the asker's tables too (`kept.nav`, NavGrid.findPathAside), so asking for the men's ways and the laid orders writes nothing of the game's. The
+// throw page's preview, read through squadthrow.ts `squadThrowPlans`, is asked aside in the same way, on the store this one carries for it
+// (`kept.throws`, squadthrow.ts SquadThrowKept; tools/qa/throwview-check.ts).
 import type { Vec3 } from '../math/vec';
 import { v3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -50,7 +50,7 @@ import type { Door } from './doors';
 import type { SetCharge } from './doortools';
 import { DOORTOOLS } from './doortools';   // (both read inside functions only: src/game is one import cycle)
 import { wallPt } from './wallcharge';
-import { squadThrowPlans } from './squadthrow';
+import { squadThrowPlans, squadThrowKept, type SquadThrowKept } from './squadthrow';
 import { FRAG } from './frag';
 import { AUTOPILOT, showSecsOf } from './autopilot';   // (read inside floorPlan only)
 import { PLANLAY, layMen, layPoint, layKey, layPending } from './planlay';   // (the same)
@@ -136,7 +136,7 @@ export function planTag(callsign: string): string {
 /** the nav grid's answer for one leg of a man's way, kept PLAN.reaskSecs */
 export interface PlanLeg { key: string; t: number; pts: Vec3[] | null; /** where the leg was asked from */ from: Vec3 }
 /** WHERE THE KEPT LEGS LIVE: with the one who asks, never in the game (see the head). `nav` = the tables the grid is searched on, made at the first search */
-export interface PlanKept { get(gd: Guard): PlanLeg[] | undefined; set(gd: Guard, L: PlanLeg[]): unknown; nav: { s?: object } }
+export interface PlanKept { get(gd: Guard): PlanLeg[] | undefined; set(gd: Guard, L: PlanLeg[]): unknown; nav: { s?: object }; /** the throw page's preview, kept for squadthrow.ts (made at the first ask) */ throws?: SquadThrowKept }
 /** a store for one asker (a check, a tool) of ONE game: its own Map, gone with it (it holds its men: make one a game, never one for many) */
 export function planKept(): PlanKept { const m = new Map<Guard, PlanLeg[]>(); return { get: gd => m.get(gd), set: (gd, L) => m.set(gd, L), nav: {} }; }
 function leg(g: Game, kept: PlanKept, gd: Guard, k: number, a: Vec3, b: Vec3, iters = 3000): PlanLeg {
@@ -304,7 +304,7 @@ export function floorPlan(g: Game, kept: PlanKept = planKept()): FloorPlan {
   }
   if (PLAN.throws) {
     const ours = new Set(S.squad());
-    for (const T of squadThrowPlans(g)) {
+    for (const T of squadThrowPlans(g, kept.throws ??= squadThrowKept())) {
       if (!ours.has(T.gd) || T.gd.state === 'dead' || T.points.length < 2) continue;
       const walked = !T.preview && out.men.some(m => m.gd === T.gd && m.path.length > 1);   // (ordered: his way is already his order's, above)
       out.throws.push({ gd: T.gd, tag: planTag(T.gd.callsign), tone: toneOf(T.gd), kind: T.kind, preview: !!T.preview, from: [T.from[0], 0, T.from[2]],

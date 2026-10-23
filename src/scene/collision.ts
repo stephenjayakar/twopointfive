@@ -128,6 +128,20 @@ export class StaticCollision {
    *  every prop substep). The queries never nest (none calls another that stamps), so one counter serves them all; only indices baked into `cells` are ever stamped,
    *  and those are < the length the array was sized with. */
   private stamp: Int32Array; private stampId = 0;
+  /** A QUESTION ASKED BY THE PICTURE (an overlay, a check's own read): `fn` run with the query stamps and the walk grid's search tables swapped for the asker's
+   *  own (`own`: an empty object the asker keeps, one a game), so the rays and the searches it makes write nothing of the game's — a game that is drawn and
+   *  the same game not drawn hold the same state. Not to be nested, and `fn` must add no box. */
+  aside<T>(own: { s?: object; q?: object }, fn: () => T): T {
+    type Q = { stamp: Int32Array; id: number; cell: Int32Array<ArrayBuffer>; seg: Int32Array<ArrayBuffer>; yaw: Float64Array; cos: Float64Array; sin: Float64Array };
+    let q = own.q as Q | undefined;   // (a table shorter than the game's: boxes added since — an empty one is a clean one, for any id above 0 and any yaw)
+    if (!q || q.stamp.length < this.stamp.length || q.yaw.length < this.trigYaw.length) { const n = this.trigYaw.length;
+      q = { stamp: new Int32Array(this.stamp.length), id: q?.id ?? 0, cell: q?.cell ?? new Int32Array(this.cellStamp.length), seg: q?.seg ?? new Int32Array(this.segCells.length), yaw: new Float64Array(n).fill(NaN), cos: new Float64Array(n), sin: new Float64Array(n) }; }
+    const mine: Q = { stamp: this.stamp, id: this.stampId, cell: this.cellStamp, seg: this.segCells, yaw: this.trigYaw, cos: this.trigCos, sin: this.trigSin };
+    const put = (t: Q) => { this.stamp = t.stamp; this.stampId = t.id; this.cellStamp = t.cell; this.segCells = t.seg; this.trigYaw = t.yaw; this.trigCos = t.cos; this.trigSin = t.sin; };
+    put(q);
+    try { return this.nav.aside(own, fn); }
+    finally { own.q = { stamp: this.stamp, id: this.stampId, cell: this.cellStamp, seg: this.segCells, yaw: this.trigYaw, cos: this.trigCos, sin: this.trigSin } satisfies Q; put(mine); }
+  }
   /** segmentBlocked's own: a grid cell already scanned (or passed as nowhere near) by this query (the stamp's id), and each static's cos / sin beside the exact yaw they were taken at */
   /** statics appended after the bake (a wall's standing pieces) get trig slots too; a slot is keyed by the yaw it was filled for, so a re-used index is never stale */
   private growTrig() {
@@ -520,9 +534,11 @@ export class NavGrid {
 
   /** findPath for a PICTURE's question (game/attention.ts attentionWay, asked by an overlay): the same search on the ASKER'S tables (`own.s`, made at its first
    *  search and kept by it), the grid's own left as they were — so a game that is drawn and the same game not drawn hold the same state, word for word. */
-  findPathAside(own: { s?: object }, a: Vec3, b: Vec3, maxIter = 6000): Vec3[] | null {
+  findPathAside(own: { s?: object }, a: Vec3, b: Vec3, maxIter = 6000): Vec3[] | null { return this.aside(own, () => this.findPath(a, b, maxIter)); }
+  /** `fn` with every search of it on the asker's own tables (`own.s`, kept between asks) and none of the grid's: what a picture asks writes nothing of the game's */
+  aside<T>(own: { s?: object }, fn: () => T): T {
     const mine = this.scratch; this.scratch = (own.s as NavScratch | undefined) ?? null;
-    try { return this.findPath(a, b, maxIter); } finally { own.s = this.scratch ?? undefined; this.scratch = mine; }
+    try { return fn(); } finally { own.s = this.scratch ?? undefined; this.scratch = mine; }
   }
   /** A* from a to b (world coords). Returns world-space waypoints (cell centers), smoothed by greedy line-of-walk.
    *  `penalty` (optional): a cost MULTIPLIER for stepping INTO cell (ix, iz) — 1 = plain floor, 6 = six times dearer to walk through, 20 = all but a wall
