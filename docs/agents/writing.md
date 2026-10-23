@@ -162,3 +162,23 @@ a sentence nobody would say.
   the ring's way of picking who. CHECKS: `lesson-check` on the seven, both stands; `writing-check` and its break word; `lesson-gate` (train-orders'
   shipped run fails "the kitchen was not cleared after the word" on dice 1, 3 and 4, before this change as after). Nobody has played a lesson with
   these lines; never seen on a GPU, and not read off the real page (the drawn lines come from `keyText` under the page's key map, staged in a script).
+
+## The second reader's pass (10-23)
+
+- **A second reader read every reworded line aloud and 117 were changed again** (the Training lessons, the menus, the HUD's toasts and rows, the
+  spoken lines). What it was for: a line that stands alone names who it is about ("the cook", "the guard", "your partner", "the pistol", never a
+  bare "he" or "it"); "stay still", "through" a door or a gate (not "by" it), gray, colors, readout, keyhole, "pick" and "switch" for the one act
+  each; a key never acts by itself ("press Esc to keep the old one"); two things that are both true are two sentences, not one with a "so" or a
+  "because" bolted on ("it's locked. pick it (quiet, slow) or kick it in (loud)"); one wording for "press Enter to restart". THREE MEANINGS PUT
+  BACK: train-move's crouch says "slower" again; the rim in the dark is around whoever of the team stands in the dark; the rescue's one flashbang
+  goes in through one door "and the teammates at the other door will go in after it". THE FLASHBANG: a sentence a player reads says "flashbang"
+  (the lessons, the rescue's and the night breach's toasts, "flashbang went off", "a flashbang blinded you", "no flashbangs left", hard's words).
+  NOT RENAMED, the maintainer's call: the kit rows ("Stun canisters", "stun"), the HUD's item name ("stun canister ×2 — goes off …"), the kit
+  page's tooltips and notes, the order rows and their refusals ("bang and clear", "no bangs left."), the defenders' "stun charge". So key 4 still
+  reads "stun canister ×2" with some in the pouch and "no flashbangs left" with none. SWITCHES: none for the lessons, menus and HUD (no line of
+  them is in a run digest); the spoken lines changed on the new-words side only (`WORDS.on`, words.ts), so with the switch off every line is the
+  line it was. `cues.ts` classes the lockdown reply by its new words ("locked down. box him in", row 1, as "get around him" was). ALSO LEFT: the
+  door notes' "… on your word" (several checks read it), "boot" in the frame rule's spoken lines, the objective row's "player down — press enter
+  to restart" (the verdict's word), train-orders' "armoury" (as above). CHECKS: `writing-check`, `lesson-check` on the seven, `export --check`
+  on the five regenerated levels and `words-lint`, both stands, green; the probes that name a changed string were moved with it and not run
+  here (the full queue is run on the commit). Nobody has played with these lines; never seen on a GPU or in a browser.

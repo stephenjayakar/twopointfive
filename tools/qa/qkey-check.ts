@@ -103,9 +103,9 @@ export async function qkeyCheck(): Promise<boolean> {
     }
     // 3. the words
     {
-      boot(''); const a = K.keyText("B on the yellow house's door: the pair stacks up beside it"), b = K.keyText('X · B · T · F', true), c = K.keyText('with a team — X (or middle click) for orders · B for the usual order · T for who gets it'), d = K.keyText('room B is clear'), e = K.keyText('Vault B'), f = K.keyText('Q, a step away or Shift lets go'), cap = K.keyCap('B');
+      boot(''); const a = K.keyText("B on the yellow house's door: the pair stacks up beside it"), b = K.keyText('X · B · T · F', true), c = K.keyText('with a team — X (or middle click) for orders · B for the usual order · T for who gets it'), d = K.keyText('room B is clear'), e = K.keyText('Vault B'), f = K.keyText('press Q or Shift, or step away, to let go'), cap = K.keyCap('B');
       boot('bkey'); const asWas = K.keyText('B on the blue door: BLUE stacks up'); boot('');
-      line(a.startsWith('Q on the yellow') && b === (K.KEYMAP.qOnly ? `${K.NONE} · Q · ${K.NONE} · F` : 'X · Q · T · F') && c.includes('· Q for the usual order ·') && d === 'room B is clear' && e === 'Vault B' && f === 'Q, a step away or Shift lets go' && cap === 'Q' && asWas === 'B on the blue door: BLUE stacks up',
+      line(a.startsWith('Q on the yellow') && b === (K.KEYMAP.qOnly ? `${K.NONE} · Q · ${K.NONE} · F` : 'X · Q · T · F') && c.includes('· Q for the usual order ·') && d === 'room B is clear' && e === 'Vault B' && f === 'press Q or Shift, or step away, to let go' && cap === 'Q' && asWas === 'B on the blue door: BLUE stacks up',
         'a line written with the old cap names Q; a place\'s letter is left alone; under ?bkey it reads as it did', `'${a.slice(0, 24)}…' · '${b}' · '${d}' · '${e}' · the cap handed 'B': '${cap}' · ?bkey: '${asWas}'`);
     }
     // 4. his own keys

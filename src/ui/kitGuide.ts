@@ -61,9 +61,9 @@ export function beatWords(b: BeatId, { own, squad, needs, rescue }: BeatAsk): Be
     case 'job': return { title: 'The job', text: `Read this before you pick. It shows who holds the floor, and the map${dot ? ', with a dot where you go in' : ''}.\nPress [M] or click to open the map, and again to close it.` };
     case 'team': return { title: 'Who comes', text: `Press [A] or [D], or click, to set how many come with you.\nThis mission is built for ${sizeWords(own)}.` };
     case 'kit': { const asks: string[] = [];
-      if (rescue) asks.push('Hostages are inside, and a frag on their floor will hit them too.');
+      if (rescue) asks.push('There are hostages inside, and a frag on their floor will hit them too.');
       if (needs && needs.locked > 0) asks.push(`${needs.locked === 1 ? 'One locked door' : `${cap(countWords(needs.locked))} locked doors`} here, so bring a way through.`);
-      return { title: squad ? 'A kit for the squad' : 'A named kit', text: `${squad ? 'One press gives everyone a named kit.' : 'One press puts a named kit on your card.'} Press [A] or [D] to choose and [Enter] to put it on.${asks.length ? `\n${asks.join(' ')}` : ''}` }; }
+      return { title: squad ? 'A kit for the squad' : 'A named kit', text: `${squad ? 'One press gives everyone a named kit.' : 'One press puts a named kit on your card.'} Press [A] or [D] to pick one and [Enter] to put it on.${asks.length ? `\n${asks.join(' ')}` : ''}` }; }
     case 'man': return { title: 'Each man', text: 'Press [A] or [D], or click, to pick a teammate. His card opens under the row.' };
     case 'card': return { title: 'His card', text: 'Use [W] [A] [S] [D] and [Enter], or click, to change one thing he carries.\nEach teammate has four pouches, and what he carries shows on Mobility and Concealment.' };
     case 'go': return { title: 'Go', text: 'Press [Enter] on Deploy to start with this team, or [Esc] to go back to the mission.' };

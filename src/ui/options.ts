@@ -49,10 +49,10 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
 const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it and look around its end, then press Q or step away to let go';
 const E_WHAT = 'Holster or draw';
 /** the empty hands' own slot (game/handslot.ts; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
-const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'put away what you\'re holding, then press a digit to draw again'];
+const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'put away what you\'re holding, then press a number to draw again'];
 /** the action key's row and the whistle's while his own actions are a ring that stays (game/handring.ts): the list's wheel is gone, the whistle is a wedge */
 const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
-const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard comes to look, and it\'s on the ring';
+const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
 const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
@@ -65,12 +65,12 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   ] },
   { group: 'Hands', rows: [
     [['Space'], ACT_WHAT, 'hold it to pick another with the wheel, then let go to do it'],
-    [['V'], WHISTLE_WHAT, 'the nearest guard comes to look'],
+    [['V'], WHISTLE_WHAT, 'the nearest guard will come to look'],
     [['N'], 'Night vision'],
   ] },
   { group: 'Weapons', rows: [
     [['Mouse'], 'Aim', 'the ring snaps to an enemy near the cursor, or a light under it'],
-    [['LMB'], 'Fire, or throw the can in your hand', 'with empty hands behind an enemy, it\'s a silent takedown'],
+    [['LMB'], 'Fire, or throw the can in your hand', 'it\'s a silent takedown if you\'re behind an enemy with empty hands'],
     [['RMB'], 'Pistol: OCP a light. Rifle: its launcher', 'hold it to see the launcher\'s arc, then let go to fire'],
     [['R'], 'Reload'],
     [['Z'], 'Rifle semi / auto'],
@@ -79,7 +79,7 @@ const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   ] },
   { group: 'Kit', rows: [
     [['1'], 'Pistol'],
-    [['2'], 'Rifle', 'press 2 again to change what its launcher fires'],
+    [['2'], 'Rifle', 'press 2 again to switch what its launcher fires'],
     [['3'], 'Smoke'],
     [['4'], 'Stun'],
     [['5'], 'Frag'],
@@ -285,7 +285,7 @@ function render(S: Screen) {
       'This is the exposure before the tone map. Raise it if your display crushes the dark rooms, or lower it if the lights blow out. Each mission sets its own for its hour, so this only changes the mission you\'re in.');
     textRow();
     const ro = (globalThis as unknown as { __readout?: { on: boolean; set(v: boolean): void } }).__readout;
-    if (ro) flip(body, 'Show frame rate', () => ro.on, v => ro.set(v), 'Show the read-out in the top-left corner, with the frame rate, the GPU\'s milliseconds per pass, the counts, your light meter and each character\'s state.');
+    if (ro) flip(body, 'Show frame rate', () => ro.on, v => ro.set(v), 'Show the readout in the top-left corner, with the frame rate, the GPU\'s milliseconds per pass, the counts, your light meter and each character\'s state.');
     const pinned = (() => { try { const q = new URLSearchParams(globalThis.location?.search ?? '').get('quality'); return TIERS.find(t => t.v === q && t.v !== 'auto')?.v as QualityName | undefined; } catch { return undefined; } })();   // (`?quality=` pins this visit's tier: Reset puts THAT back)
     reset = () => { if (TEXTSIZE.on) setTextStep(null); quality.adaptive = true; if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (pinned) { quality.auto = false; quality.apply(pinned); } else quality.setAuto(); };   // (apply, not pin: a URL's tier is this visit's, never written as this machine's choice)
   } else if (S.tab === 'audio') {
@@ -302,16 +302,16 @@ function render(S: Screen) {
     sec(body, 'Play');
     flip(body, 'Autosave checkpoints', () => game.saves.enabled, v => { game.saves.setEnabled(v); },
       'The game saves a checkpoint by itself when the mission moves on, when you first enter a room, when you hide a body, and after every minute and a half of quiet play. It never saves while anyone is onto you. Press Enter when you\'re down to load the newest one.');
-    flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `Show faint dots on what ${capNow('Space')} and the right button can act on, like lights, doors and bodies.`);
-    if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back against it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back against it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back against it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
+    flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
+    if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
     flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText('Show a small mark beside the cursor and an outline on the floor for what B would order there.'));
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key (trying out)', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
     sec(body, 'Cheats');
-    flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'They still see you and shoot you, but hits don\'t hurt. This is remembered on this machine.', ['On', 'Off']);
-    flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stands where they are, and nobody patrols, hears or sees. This is remembered on this machine.', ['On', 'Off']);
-    flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. Remembered on this machine.'), ['On', 'Off']);
+    flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
+    flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
+    flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. This is saved on this machine.'), ['On', 'Off']);
     reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; setTabKey('off'); TABKEY.kept = 'off'; TABKEY.url = false; keep(); findReset();
       if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
   }
@@ -323,7 +323,7 @@ function render(S: Screen) {
     S.rows.forEach((R, i) => R.el.classList.toggle('sel', i === S.sel));
     const R = S.rows[S.sel]; desc.innerHTML = '';
     if (R) { desc.appendChild(el('b', '', R.label)); desc.appendChild(document.createTextNode(R.desc())); }
-    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? gearText(HANDRING.on ? `You don't need to hold anything down for long. Hold ${capNow('Space')} a moment for the ring of your actions, ${camCap()} to turn the view, and the rifle's launcher to see its arc.` : `You only need to hold down ${capNow('Space')} to choose between actions, and the rifle's launcher to see its arc.`) : ''));
+    else desc.appendChild(document.createTextNode(S.tab === 'controls' ? gearText(HANDRING.on ? `You don't need to hold anything down for long. Hold ${capNow('Space')} a moment for the ring of your actions, ${camCap()} to turn the view, and the rifle's launcher to see its arc.` : `You only need to hold down ${capNow('Space')} to pick an action, and the rifle's launcher to see its arc.`) : ''));
   };
   S.paint();
 }
@@ -348,7 +348,7 @@ export function walkInNow(): boolean {
  *  build's own board) · 'none' = neither: he took its key off and switched the walk-in off. The Controls list keeps the row whichever it is, its cap the
  *  dashed — a click puts on a key, and writes the row's words to suit; the start card's list does the same (ui/menu.ts controlRows) */
 export function wallWay(): 'key' | 'walk' | 'none' { return keysOf('KeyQ').length ? 'key' : WALLSNAP.on && walkInNow() ? 'walk' : 'none'; }
-const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Walk into a wall to put your back to it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it and look around its end, then step away to let go' : 'no key yet, so click the cap to give it one') : s; };
+const wallLine = (s: string) => { const w = wallWay(); return w === 'key' ? s : s === WALL_WHAT ? (w === 'walk' ? 'Walk into a wall to put your back to it' : s) : s === WALL_SMALL ? (w === 'walk' ? 'slide along it and look around its end, then step away to let go' : 'no key yet. click the cap to give it one') : s; };
 /** THE GUN'S SETUP (game/slotsetup.ts), with its switch on: the two rows it took the keys of say where the thing is set now (while they have no key),
  *  and a gun's own row says what its key does pressed again */
 const SETUP_SMALL: Record<string, string> = { Z: 'the gun\'s key again, then 1', L: 'the gun\'s key again, then 3', '1': 'again: its setup', '2': 'again: its setup' };

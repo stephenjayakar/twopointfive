@@ -217,7 +217,7 @@ export class Defuse {
   /** handwork.ts samWork: the charge's face he is planted at and squared to while he works it (`at` = the spot he must not shift from, walked in with him) */
   get samJob(): { p: Vec3; n: Vec3; at: Vec3 } | null { const s = this.sam, D = this.data; if (!s || !D || !this.mine) return null; const d = D.devices[s.dev]; return { p: [d.pos[0], d.pos[1], d.pos[2]], n: n3(d), at: s.at }; }
   /** Space again, Esc or a step: let go, the work starts over (true: there was one to let go of) */
-  cancel(): boolean { if (!this.sam) return false; this.sam = null; this.g.msg('you let go, and the charge is still live'); return true; }
+  cancel(): boolean { if (!this.sam) return false; this.sam = null; this.g.msg('you let go, so the charge is still live'); return true; }
   /** player.ts buildInteractables: the one row while he is at it */
   runningRow(running: (base: Interactable, verb: Verb, text: string, progress: number) => Interactable): Interactable {
     const s = this.sam!, D = this.data!, d = D.devices[s.dev], k = (this.g.time - s.t0) / this.workSecs;

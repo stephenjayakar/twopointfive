@@ -1060,7 +1060,7 @@ export class WallCharge {
     messWall(g, wallPt(W, hole ? hole.du : 0, 0, 0), wallN(W), T, !!hole);   // …and what it leaves on the floor (floormess.ts CHAOS.mess: nothing with the rule off)
     const it = g.items.spawn('flash', wallPt(W, 0, 0.15, 0.5), [0, 0, 0], { fuse: 99, who: PLAYER_ID }); it.fired = true;
     const all = g.guards, last = g.messages[g.messages.length - 1]; g.guards = []; try { detonateStun(g, it, true); } finally { g.guards = all; }
-    const m = g.messages[g.messages.length - 1]; if (m && m !== last && /canister/.test(m.text)) g.messages.pop();   // ('stun canister went off': this was not one)
+    const m = g.messages[g.messages.length - 1]; if (m && m !== last && /flashbang/.test(m.text)) g.messages.pop();   // ('flashbang went off': this was not one)
     const ii = g.items.items.indexOf(it); if (ii >= 0) g.items.items.splice(ii, 1);
     let knocked = 0, stunned = 0, backblast = 0;
     const R = safeRadius(g, W), nearSecs = (d: number) => WALLCHARGE.safe ? lerp(WALLCHARGE.safeSecs[0], WALLCHARGE.safeSecs[1], clamp(d / R.reach, 0, 1)) : K.backblastSecs;   // (the charge's own side: the safety radius — off, the door charge's two numbers)

@@ -113,8 +113,8 @@ export function drivePulled(g: Game) {
   for (const t of g.rackTargets) t.on = false;
   g.audio.play('rack', rf, 0.5, { rate: 0.7 }); g.audio.play('lightOff', rf, 0.7);
   g.events.push({ kind: 'prop', pos: [rf[0], 0, rf[2]], time: g.time, loud: false, level: 0.35, who: PLAYER_ID }); g.player.noise = Math.max(g.player.noise, 0.35);   // heard like a knocked chair: a look if he is close, no alarm
-  if (W) { g.msg(`${W.bare} out. leave by ${W.outs}`); return; }
-  g.msg(`the drive is out and rack ${M.rack.index + 1} is dark. leave by the fire exit`);
+  if (W) { g.msg(`${W.bare} out. leave through ${W.outs}`); return; }
+  g.msg(`the drive is out and rack ${M.rack.index + 1} is dark. leave through the fire exit`);
   handlerBeat(g, 'drive', 1.5);   // 'drive shows dark on my board' — his knees answer
 }
 
@@ -161,10 +161,10 @@ export function objectiveText(g: Game): string {
   const m = g.mission; const s = m.stage; const n = g.level.mission.rack.index + 1;
   const W = quietWords(g);
   if (W && s === 'infiltrate') return `objective ▸ reach ${W.place}`;
-  if (W && s === 'drive') return m.driveT >= 0 ? `objective ▸ taking ${W.thing}… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ take ${W.thing} from ${W.holder} (press Space at its face, then stay on it)`;
-  if (W && s === 'exfil') return `objective ▸ get out by ${W.outs}`;
+  if (W && s === 'drive') return m.driveT >= 0 ? `objective ▸ taking ${W.thing}… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ take ${W.thing} from ${W.holder} (press Space in front of it, then stay on it)`;
+  if (W && s === 'exfil') return `objective ▸ get out through ${W.outs}`;
   if (s === 'infiltrate') return 'objective ▸ reach the server room';
-  if (s === 'drive') return m.driveT >= 0 ? `objective ▸ pulling the drive… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ pull the drive from rack ${n} (press Space at its face, then stay on it)`;
+  if (s === 'drive') return m.driveT >= 0 ? `objective ▸ pulling the drive… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ pull the drive from rack ${n} (press Space in front of it, then stay on it)`;
   if (s === 'exfil') return 'objective ▸ get out through the fire exit';
   if (s === 'done') { let t = doneLine.get(m); if (!t) { const D = debriefOf(g); t = ['mission complete — ' + fmtClock(m.stats.elapsed), D.grade].filter(Boolean).join(' · '); doneLine.set(m, t); } return t; }   // (worked out once per finished run, not sixty times a second: nothing on it can change any more)
   return 'mission failed — press enter to restart';

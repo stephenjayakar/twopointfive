@@ -218,7 +218,7 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
       const text = kind === 'seat' ? (gun ? 'haul him out of the chair — pistol to his head' : 'haul him out of the chair')
         : gun ? 'grab him — pistol to his head' : pl.rifleUp ? 'grab him — the rifle goes on your back' : 'grab him';
       verbs.push(row(it, 'grab', text, click));
-    } else if (o.strike) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, line2: `${click}  ·  ${o.win?.grab ? "no grab while he's onto you" : 'the grab is from behind'}`, inReach: true });
+    } else if (o.strike) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, line2: `${click}  ·  ${o.win?.grab ? "you can't grab him while he's onto you" : 'the grab is from behind'}`, inReach: true });
     noteBest(g, o);
   }
   offer(it, verbs);

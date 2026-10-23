@@ -117,7 +117,7 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
   if (!bo.active) bo.since = g.time;
   bo.active = true; bo.permanent = permanent; bo.until = permanent ? Infinity : Math.max(bo.until, g.time + seconds);
   g.audio.play('powerDown', g.level.breaker.pos, 1.0); g.audio.play('powerDown', null, 0.35);
-  g.msg(cause === 'shot' ? 'breaker destroyed — power gone for good' : cause === 'hand' ? 'breaker thrown — emergency lighting until someone resets it' : 'power tripped — emergency lighting');
+  g.msg(cause === 'shot' ? 'breaker destroyed — power gone for good' : cause === 'hand' ? 'breaker thrown — emergency lighting until someone resets it' : 'power is out — emergency lighting');
   if (cause !== 'debug' && missionLive(g)) { g.mission.stats.blackout = true; chronBlackout(g, cause); }   // the player's own doing (OCP / round / his hand on it), not the panel button or the tour — and a row + pin for the debrief
   // guards: everyone gets edgy; the nearest one goes to check the breaker
   let best: Guard | null = null, bd = 1e9;

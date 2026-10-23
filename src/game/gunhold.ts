@@ -278,8 +278,8 @@ export const GUNHOLD_DEFENDER_LINES: Record<keyof typeof LINES, string[]> = {
 };
 /** (WORDS) a line of either table as it is said now, by the line it stands for (read in bark, where the line is said; cues.ts classes the new words as it classed the old) */
 export const GUNHOLD_NOW: Record<string, string> = {
-  'shots! get off his line — go round him!': 'shots! get off his line — go around him!', 'going round him — keep him talking': 'going around him — keep him talking',
-  'he\'s drawn from the hold — get behind something!': 'he\'s pulled a pistol — get behind something!', 'rounds from the hold — get off it, go round him!': 'he\'s shooting — get off his line and go around him!',
+  'shots! get off his line — go round him!': 'shots! get out of his line of fire — go around him!', 'going round him — keep him talking': 'going around him — keep him talking',
+  'he\'s drawn from the hold — get behind something!': 'he\'s pulled a pistol — get behind something!', 'rounds from the hold — get off it, go round him!': 'he\'s shooting — get out of his line of fire, go around him!',
   'going round behind him — keep his eyes on you': 'going around behind him — keep his eyes on you', 'coming at his back. hold him where he is': 'coming up behind him. keep him where he is',
   'he\'s moved — nobody where we left them!': 'he\'s moved — they\'re not where we left them!',
 };

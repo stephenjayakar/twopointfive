@@ -338,11 +338,11 @@ const INTEL_NOW: Partial<Record<IntelKind, Partial<Record<IntelKey, string>>>> =
   // (the writing guide: 'a man' for somebody of his own, 'round', a clause with no verb)
   rollcallLive: { '*': "That's a check now. If one of us doesn't answer, {caller} sends someone over.", hard: "That's the check. If I don't answer, {caller} sends somebody here." },
   blackout: { hard: 'If the lights go out, somebody goes to the breaker in {breakerRoom}. Armed.' },
-  rollcall: { hard: 'Radio check {checkEta}. Silence gets somebody sent. Do the math.' },
+  rollcall: { hard: 'Radio check {checkEta}. No answer, they send somebody. Do the math.' },
   drive: { hard: "Your rack went dark on the board. Somebody's on his way to it." } };
 const intelTable = (kind: IntelKind): Partial<Record<IntelKey, string>> => w({ ...INTEL_TEXT[kind], ...INTEL_NOW[kind] }, INTEL_TEXT[kind]);
 /** (WORDS) 'drive' off the office: what was taken there is no rack and hangs on no board (gather swaps it in) */
-const DRIVE_AWAY: Partial<Record<Temperament | '*', string>> = { '*': "It's been missed already. Somebody's been sent to look.", hard: "It's been missed. Somebody's on his way to look." };
+const DRIVE_AWAY: Partial<Record<Temperament | '*', string>> = { '*': "They already know it's gone. Somebody's been sent to look.", hard: "They know it's gone. Somebody's on his way to look." };
 /** the text a man of temperament t and knowledge k gives for `kind` (the most specific variant written) — the plain fact, no shape */
 export function intelText(kind: IntelKind, t: Temperament, k: Knowledge): string { const T = intelTable(kind); return T[`${t}:${k}`] ?? T[t] ?? T[`*:${k}`] ?? T['*'] ?? ''; }
 /** the script's own / the shape-voiced variant of `kind` for a hold playing script `sc`, or null when none is written (then the plain fact is said, with the shape's / the man's lead) */
@@ -1904,7 +1904,7 @@ export const CIV_LINES = {
     intelPad: "The door with the pad — I've seen them do it. {code}.",
     intel: ['{n} of them tonight. Walking around. All night.'],
     samAsk: 'Quietly. Who else is here tonight?',
-    foundCold: "control, {cs} — it's {name}, the {label} — {she}'s DOWN. out cold, breathing. someone's around",
+    foundCold: "control, {cs} — it's {name}, the {label} — {she}'s DOWN. out cold, breathing. someone's here",
   },
   /** words.ts — reworded on every level: not every spot she reaches a man at has a desk, and the late worker is no cleaning staff */
   now: { guardAck: 'Okay. Get down somewhere and stay put.', qrf: 'control to all — response team inbound. get the civilians OFF that floor. now',

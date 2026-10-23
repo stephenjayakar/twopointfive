@@ -201,7 +201,7 @@ export const frameholdsTools = guarded(async () => {
   // (b') a SILENT squad with its picks switched off (silent.ts SILENT.picks): the frame's rule does not hand it the pick — silent's own answer, no boot, no pick
   { const quietRun = async (on: boolean) => { const R = await rig(7, on, { silent: { picks: false } }); R.give2('silent'); R.step(5); const { d } = faceTeam(R, 'manager', true);
       const w = R.give('openClear', 'manager'); const op = R.D.ops[0]; R.until(() => R.D.ops.length === 0, 60); R.step(30);
-      return { R, d, w, silent: squadSilent(R.game) as boolean, picks: R.D.stats.picks as number, ended: op?.ended as string | undefined, said: R.said.filter((t: string) => /no boot while we(?: are|'re) silent/.test(t)).length }; };
+      return { R, d, w, silent: squadSilent(R.game) as boolean, picks: R.D.stats.picks as number, ended: op?.ended as string | undefined, said: R.said.filter((t: string) => /(?:no boot|can't kick it) while we(?: are|'re) silent/.test(t)).length }; };
     const A = await quietRun(true), B = await quietRun(false);
     F.verdict(A.silent && A.w === null && A.picks === 0 && A.R.kicks === 0 && A.R.thuds === 0 && !A.d.lockBroken && A.d.locked && A.said === 1 && B.picks === 0 && B.R.kicks === 0 && B.said === 1,
       'a silent squad with its picks switched off, at a cylinder lock on the face the door opens toward: silent\'s own answer — "no boot while we are silent" — no pick, no boot, in both arms', `on: silent ${A.silent} · picks ${A.picks} · boots ${A.R.kicks} · said ${A.said} · ended: ${A.ended} · off: picks ${B.picks} · boots ${B.R.kicks} · said ${B.said} · ended: ${B.ended}`); }

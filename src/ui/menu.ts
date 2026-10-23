@@ -31,12 +31,12 @@ import { SLOTSETUP } from '../game/slotsetup';
 import { keyText, keysOf, slotNow, camKey } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 
-const E_ROW: [string, string] = ['E', 'holster or draw the selected item (on a wall, choose what you\'ll draw next)'];
+const E_ROW: [string, string] = ['E', 'holster or draw the selected item (on a wall, pick what you\'ll draw next)'];
 /** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
-const SLOT_ROW: [string, string] = ['0', 'empty your hands · press a digit to draw again'];
+const SLOT_ROW: [string, string] = ['0', 'empty your hands · press a number to draw again'];
 /** the action key's row, and it and the whistle's while his own actions are a ring that stays (game/handring.ts) */
 const SPACE_ROW: [string, string] = ['Space', 'do the highlighted action (top-left) · hold it and use the wheel or ↑↓ to pick another, then let go · long actions keep going until you move or tap again'];
-const RING_ROW: [string, string] = ['Space', 'do the action shown top-left · hold it a moment for a ring of everything you can do here (pick with 1 to 5 or a click, and the whistle is on it) · long actions keep going until you move or tap again'];
+const RING_ROW: [string, string] = ['Space', 'do the action shown top-left · hold it a moment for a ring of everything you can do here, including the whistle (pick with 1 to 5 or a click) · long actions keep going until you move or tap again'];
 const LN_ROW: [string, string] = ['L · N', 'weapon light · night vision'];
 const N_ROW: [string, string] = ['N', 'night vision'];
 /** the camera's row, and it while its key is the Space bar (host/keymap.ts camKey): that cap is written as it is — in a list of keys 'Space' is the action's
@@ -44,15 +44,15 @@ const N_ROW: [string, string] = ['N', 'night vision'];
 const CAM_ROW: [string, string] = ['Ctrl + mouse / wheel', 'orbit the camera / zoom (or pinch)'];
 const CAM_SPACE: [string, string] = ['Space + mouse / wheel', CAM_ROW[1]];
 const keyCol = (k: string) => k === CAM_SPACE[0] ? k : keyText(k, true);
-const Q_ROW: [string, string] = ['Q', 'put your back to the wall beside you, then slide and peek around its end · Q, a step away or Shift lets go'];
-const KIT_ROW: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 (press 2 again to flip its launcher, RING / 40 mm) · smoke · stun · frag'];
+const Q_ROW: [string, string] = ['Q', 'put your back to the wall beside you, then slide and peek around its end · press Q or Shift, or step away, to let go'];
+const KIT_ROW: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 (press 2 again to switch its launcher, RING / 40 mm) · smoke · stun · frag'];
 const ZR_ROW: [string, string] = ['Z · R', 'FN2000 semi / auto · reload'];
-const LNV_ROW: [string, string] = ['L · N · V', 'weapon light · night vision · whistle (the nearest guard comes to look)'];
+const LNV_ROW: [string, string] = ['L · N · V', 'weapon light · night vision · whistle (the nearest guard will come to look)'];
 /** the same three rows with the gun's setup on (game/slotsetup.ts): a gun's key again is its setup, and the selector and the light are rows of it (a key
  *  the player gave either one back keeps its old row) */
 const KIT_SET: [string, string] = ['1 2 3 4 5', 'Five-seveN · FN2000 · smoke · stun · frag · press a gun\'s key again for its setup (key 1 semi / auto · key 2 its launcher · key 3 its light)'];
 const R_ROW: [string, string] = ['R', 'reload'];
-const NV_ROW: [string, string] = ['N · V', 'night vision · whistle (the nearest guard comes to look)'];
+const NV_ROW: [string, string] = ['N · V', 'night vision · whistle (the nearest guard will come to look)'];
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
   ['W A S D', 'move · Shift sprint · C crouch · wheel = walking pace (slower is quieter)'],
   ['Mouse', 'aim, and the ring snaps to an enemy near the cursor or a light under it'],
@@ -67,12 +67,12 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   ['X · B · T · F', 'with a team — X (or middle click) for orders · B for the usual order · T for who gets it · F to start the drill, say go or blow a charge'],
   ['H · G', 'with the orders up — the big tool on a door, smoke on the floor · frag and clear'],
   ['F5', 'save'],
-  ['Enter', 'go back to the last checkpoint when you\'re down · Shift+Enter restarts the run any time'],
+  ['Enter', 'go back to the last checkpoint when you\'re down · press Shift+Enter to restart any time'],
   CAM_ROW,
   ['Esc · `', 'pause & settings · the debugger (every knob)'],
 ];
 /** the list as the board is (ui/options.ts wallWay): the wall hold's row with no key is the row of walking into one; with no key and no walk-in, no row */
-const WALL_ROW: [string, string] = ['Wall', 'walk into one to put your back to it, then slide and peek around its end · a step away or Shift lets go'];
+const WALL_ROW: [string, string] = ['Wall', 'walk into one to put your back to it, then slide and peek around its end · step away or press Shift to let go'];
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
   if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return [camKey() ? CAM_SPACE : r];
   if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
@@ -84,7 +84,7 @@ const TAGLINE = 'a ray-traced stealth sandbox where every light, shadow and wisp
 const TITLE_LINE = 'Squad tactics and stealth. Every light, shadow and wisp of smoke is live.';
 const TITLE_FOOT = 'W S choose · Enter select · Esc back · ` the debugger';
 const START_NOTES = [
-  'MISSIONS lists every scenario and the solo night. START drops you straight into the solo night, where you reach the server room, pull the drive from the marked rack and leave by the fire exit.'];
+  'MISSIONS lists every scenario and the solo night. START drops you straight into the solo night. Reach the server room, pull the drive from the marked rack and leave through the fire exit.'];
 /** the note under the buttons when the card opens on the short list (ui/picks.ts): the rows above are the way in, the two buttons are everything else */
 /** the card's one button to the one starting page (ui/startpage.ts) */
 const PLAY = 'Play ›';
@@ -346,7 +346,7 @@ export class Menu {
     { const view = this.d.replay?.() ?? null; if (view) { const b = button('Replay', () => { if (performance.now() - shown >= 500) view(); }, 'replay'); b.title = 'watch this run again in the game'; actions.push(b); } }   // (the maintainer: "would be nice to be able to open the replay immediately here")
     this.body = el('div', 'body'); card.appendChild(this.body);
     renderDebrief(this.body, g, actions);
-    const foot = el('div', 'foot'); foot.textContent = keyText(down ? (ck && mine ? 'Enter goes back to the checkpoint · Shift+Enter restarts the encounter · Esc closes this' : 'Esc closes this · Enter or Shift+Enter restarts') : 'Esc keeps playing · Shift+Enter restarts any time · Esc ▸ Run so far shows this for a run in progress'); card.appendChild(foot);
+    const foot = el('div', 'foot'); foot.textContent = keyText(down ? (ck && mine ? 'Press Enter to go back to the checkpoint · press Shift+Enter to restart the mission · press Esc to close this' : 'Press Esc to close this · press Enter or Shift+Enter to restart') : 'Press Esc to keep playing · press Shift+Enter to restart any time · Esc ▸ Run so far shows this for a run in progress'); card.appendChild(foot);
     setTimeout(() => (lead ?? (ck && mine ? ck : primary)).focus(), 0);
   }
   /** 'Restart from checkpoint (40 s ago)' for the newest stored checkpoint (this run's for choice), or null when there is none / no loader is wired: loads it
@@ -417,8 +417,8 @@ export class Menu {
     // Deploy would — a start is a page load, and the switch has just been kept. Any other refusal stays said.
     const stuck = !game.aiEnabled && !!this.d.scenario?.refused?.();
     const box = (label: string, key: 'god' | 'noAi' | 'ammo', get: () => boolean, set: (v: boolean) => void, title: string) => { const l = el('label') as HTMLLabelElement; l.title = title; const i = el('input') as HTMLInputElement; i.type = 'checkbox'; i.checked = get(); i.onchange = () => { set(i.checked); saveSandbox(game, key); if (key === 'noAi' && stuck && game.aiEnabled && typeof location !== 'undefined') location.reload(); }; l.appendChild(i); l.appendChild(document.createTextNode(' ' + label)); row.appendChild(l); };
-    box('god mode', 'god', () => game.godMode, v => { game.godMode = v; }, 'they still see you and shoot you, but hits don\'t hurt');
-    box('no AI', 'noAi', () => !game.aiEnabled, v => { game.aiEnabled = !v; }, 'the guards stand where they are, and nobody sees, hears or thinks');
+    box('god mode', 'god', () => game.godMode, v => { game.godMode = v; }, 'enemies still see you and shoot you, but hits don\'t hurt');
+    box('no AI', 'noAi', () => !game.aiEnabled, v => { game.aiEnabled = !v; }, 'the guards stay where they are, and nobody sees, hears or thinks');
     box('unlimited ammo', 'ammo', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; }, gearText('bottomless magazines (rounds still cycle and reload), smoke and stun canisters, ring airfoils, wall charges'));
     card.appendChild(row);
   }

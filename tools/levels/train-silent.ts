@@ -175,9 +175,9 @@ export function build() {
         done: all({ is: 'in', area: { ...YARD_A } }, { is: 'mate', area: { ...YARD_A } }), hold: 0.3, at: [11.5, 1, 14] },
       { id: 'loud', line: 'X on the ground, then press 5 to have him go loud',
         done: { is: 'flag', flag: 'silent', value: false } },
-      { id: 'silent', line: 'X on the ground, then press 5 again to go silent. He\'ll hold his fire',
+      { id: 'silent', line: 'X on the ground, then press 5 again to go silent. Your partner will hold his fire',
         done: { is: 'flag', flag: 'silent' } },
-      { id: 'round', line: 'Press C to crouch, and lead him around the end of the wall',
+      { id: 'round', line: 'Press C to crouch, and lead your partner around the end of the wall',
         done: { is: 'in', area: { ...ROUND_B } }, at: [16.6, 1, 20.2] },
       { id: 'send', line: 'X on dark ground ahead, then press 1 to have him wait there',
         done: any(all({ is: 'did', what: 'order:pairDark' }, { is: 'mate', area: { ...DARK_B }, away: 2.5 }), alone), hold: 0.5, at: [20.5, 1, 18.6] },
@@ -187,7 +187,7 @@ export function build() {
         done: any({ is: 'did', what: 'order:pairMark' }, down(1), alone), at: at1(POST) },
       { id: 'set', line: 'Wait until he says "set"',
         done: any({ is: 'pair', what: 'set' }, { is: 'pair', what: 'go' }, down(1), alone), at: at1(POST) },
-      { id: 'go', line: 'Press F and he\'ll take the guard down',
+      { id: 'go', line: 'Press F and your partner will take the guard down',
         done: any(all({ is: 'pair', what: 'go:F' }, { is: 'pair', what: 'down' }), down(1), alone), at: at1(POST) },
       { id: 'back', line: 'X on the ground, then press 3 to have him fall in behind you',
         done: any(all({ is: 'did', what: 'order:fallIn' }, { is: 'mate', by: 3 }), alone), hold: 0.3 },
@@ -199,9 +199,9 @@ export function build() {
         done: any({ is: 'pair', what: 'set' }, { is: 'pair', what: 'go' }, down(2), alone), at: [24.1, 1, 14.9] },
       // (the partner's man down is `men down 2`, not the pair's own 'down' row: a man who turns at the last pace is finished off under another row; a grab made
       //  BEFORE "set" was its own mark a step ago, so a man in his arm with two down is the same deed done early)
-      { id: 'hands', line: 'Press Space behind him to grab him. Your partner will take the other one down',
+      { id: 'hands', line: 'Press Space behind the near guard to grab him. Your partner will take the other one down',
         done: any(all({ is: 'pair', what: 'go:hands' }, down(2)), all({ is: 'flag', flag: 'holding' }, down(2)), down(3), alone), at: at1(DOOR) },
-      { id: 'sleep', line: 'Right-click to choke him out, then keep still',
+      { id: 'sleep', line: 'Right-click to choke him out, then stay still',
         done: any(down(3), alone) },
     ],
   };

@@ -364,7 +364,7 @@ export const pairWatched = guarded(async () => {
     const w = witness(R, foe, -Math.PI / 2); calm(R, w); R.step(5);
     R.O.give('pairTake', R.foe(foe), 'all'); const n0 = R.said.length;
     R.step(60 * 40); const said = R.said.slice(n0);
-    verdict(foe.state !== 'dead' && !P.jobOf(mate) && R.opShots === 0 && said.some((x: string) => /no clean moment|no way to his back unseen|can't get behind him unseen/.test(x)), 'take him now, with a watcher who never looks away: no hands — he calls it off in words and holds', `${foe.callsign} ${foe.state} · said: ${said.filter((x: string) => x.startsWith('[')).join(' / ')}`);
+    verdict(foe.state !== 'dead' && !P.jobOf(mate) && R.opShots === 0 && said.some((x: string) => /no clean moment|no opening|no way to his back unseen|can't get behind him unseen/.test(x)), 'take him now, with a watcher who never looks away: no hands — he calls it off in words and holds', `${foe.callsign} ${foe.state} · said: ${said.filter((x: string) => x.startsWith('[')).join(' / ')}`);
   }
   return done();
 });

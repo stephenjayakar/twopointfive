@@ -305,7 +305,7 @@ export class NightBreach {
     if (this.live.orders === 0) { this.live.orders = 1; this.note('order:stack'); this.g.msg('you: stack up — side door'); return 'stack'; }
     if (this.live.orders === 1) { this.live.orders = 2; this.note('order:go'); holdFireDrill(this.g);   // (holdfire.ts: his word sends them in — the fight has started for everybody)
 
-      if (this.live.stun) { if (this.g.doorTools.take('bang')) this.bangTaken = true; else { this.live.stun = false; this.g.msg("no bangs left, so they'll go in without one"); } }   // (the drill's stun canister is one of the squad's counted ones: doortools.ts)
+      if (this.live.stun) { if (this.g.doorTools.take('bang')) this.bangTaken = true; else { this.live.stun = false; this.g.msg("no flashbangs left, so they'll go in without one"); } }   // (the drill's stun canister is one of the squad's counted ones: doortools.ts)
       this.g.msg(isNaN(D.tSet) ? 'you: go on set' : 'you: go'); return 'go'; }
     return null;
   }

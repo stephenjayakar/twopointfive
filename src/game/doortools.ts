@@ -891,7 +891,7 @@ export class DoorTools {
         label: t => { if (!S.big) return silentNoCans(g) || this.wordQuiet() ? 'go · step in · no bang' : 'go · bang the blind pockets, step in'; const w = this.waitingWords(S.recipients(t)); return w ? `go · ${w}` : 'go'; },
         only: (_S, men, t) => S.big ? this.waitingMen(men) : this.heldMen(men, t),
         valid: (_S, t, men) => this.heldOn(t, men).some(op => !op.word) || w("nobody's holding that door.", 'nobody is holding that door.'),
-        issue: (_S, men) => (S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody is waiting on your word.') ?? undefined }); }
+        issue: (_S, men) => (S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody\'s waiting for you to say go.') ?? undefined }); }
   }
   /** a fresh run: the counts back, nothing set, nothing under way (a can already in the air goes off on its own short fuse) */
   reset() {
@@ -1759,7 +1759,7 @@ export class DoorTools {
    *  order given 'on my word' is let go, a pair holding outside a door goes in, a set charge is blown — and they cross their thresholds on the same frame:
    *  the loud ones (a bang, a charge) begin at once, the quiet ones do not touch their doors until the last bang's blind burst has run dry (or `wordIn`
    *  seconds). Null when something went; else why not. */
-  go(who: Who = 'all'): string | null { this.sync(); const men = this.g.orders.men(who); if (!this.g.orders.big) return this.wordOnHold(men) ? null : 'nobody is waiting on your word.'; const r = this.goMen(men); return r !== null && this.wordEarly(men) ? null : r; }
+  go(who: Who = 'all'): string | null { this.sync(); const men = this.g.orders.men(who); if (!this.g.orders.big) return this.wordOnHold(men) ? null : 'nobody\'s waiting for you to say go.'; const r = this.goMen(men); return r !== null && this.wordEarly(men) ? null : r; }
   /** the word at this held door is 'step in, no can': told so ('on my word · step in'), or never told what the word is under DOORTOOLS.wordNoCan (a hold
    *  given to be HELD — a plain threshold's own word, which cuts its count short, bangs its pockets as it did; a word told 'bang' stays a bang) */
   /** every door held on the word is one the word steps into with no can (wordNoCan): what the pair's go row says */
@@ -1819,7 +1819,7 @@ export class DoorTools {
     if (DOORTOOLS.fragHold) {   // (THE WORD AGAIN while it is held for men who ran from a grenade: Sam's call — it waits for nobody)
       const held = this.fragHeld(men);
       if (held.length) { for (const o of held) { this.beat(o, 'the word again'); this.fragOn(o); } this.wordTick(); if (!(only ?? this.waitingAny(men)).length) return null; } }   // (others of these men still waiting for their FIRST word: it is given below)
-    const list = only ?? this.waitingAny(men); if (!list.length) return 'nobody is waiting on your word.';   // (`only`: the small squad's word — its plain stacks, nothing else)
+    const list = only ?? this.waitingAny(men); if (!list.length) return 'nobody\'s waiting for you to say go.';   // (`only`: the small squad's word — its plain stacks, nothing else)
     holdFireOrder(g, 'go');   // (holdfire.ts: the word, by whatever road it came — what waited on it lifted nothing until now)
     const w: Word = { t0: g.time, go1: NaN }; this.words.push(w); this.stats.words++;
     for (const x of list) { const op = 'stack' in x ? this.fromStack(x.men, x.stack) : x; if (!op) continue;
@@ -1886,7 +1886,7 @@ export class DoorTools {
       if (this.frameHeld(d, op.side) && this.frameAnswer(op)) return;   // it opens toward them: the frame is behind the leaf and a boot will not shift it (doors.ts DOORWAY.frameHolds) — a cylinder is picked, loud squad or not; anything else wants a charge, and the order ends here as it does on steel
       const stuck = this.pickable(d) ? null : d.lockId.startsWith('wedge:') ? 'wedged from inside' : 'keypad, no code';   // (no pick opens it — steel has gone above)
       const boot = stuck ? silentBoot(g, d) : null;   // (silent.ts: a COMPROMISED silent squad boots the door nothing quiet opens — and stays silent)
-      if (!boot && silentNoBoot(g)) { g.say(lead, stuck && SILENT.bootWedged ? `${stuck}. no quiet way in. go loud and we boot it.` : w("locked. no boot while we're silent.", 'locked. no boot while we are silent.')); this.end(op, 'locked · silent: no boot'); return; }   // (silent.ts: the boot is a loud tool, and nobody picked one)
+      if (!boot && silentNoBoot(g)) { g.say(lead, stuck && SILENT.bootWedged ? `${stuck}. no quiet way in. go loud and we boot it.` : w("locked. can't kick it while we're silent.", 'locked. no boot while we are silent.')); this.end(op, 'locked · silent: no boot'); return; }   // (silent.ts: the boot is a loud tool, and nobody picked one)
       if (!boot && this.toGun(op)) return;   // (shotgun.ts: a man of the stack with a breaching shotgun takes the lock from beside the frame — the 'kick' stage, gunStep)
       const ks = this.bootSpot(d, op.side);
       op.kick = { pos: ks.pos, yaw: ks.yaw, t: NaN }; op.phase = 'kick'; op.t0 = t;
@@ -3222,7 +3222,7 @@ export class DoorTools {
     // hurts is decided below, by which side of the door he is on
     const it = g.items.spawn('flash', doorPt(d, W * 0.7, 0.2, into, 0.5), [0, 0, 0], { fuse: 99, who: PLAYER_ID }); it.fired = true;
     const all = g.guards, last = g.messages[g.messages.length - 1]; g.guards = []; try { detonateStun(g, it, true); } finally { g.guards = all; }
-    const m = g.messages[g.messages.length - 1]; if (m && m !== last && /canister/.test(m.text)) g.messages.pop();   // ('stun canister went off': this was not one)
+    const m = g.messages[g.messages.length - 1]; if (m && m !== last && /flashbang/.test(m.text)) g.messages.pop();   // ('flashbang went off': this was not one)
     const ii = g.items.items.indexOf(it); if (ii >= 0) g.items.items.splice(ii, 1);   // (nor is there a spent can to leave on the floor)
     let knocked = 0, stunned = 0, backblast = 0, samToo = false;
     const leaves = g.col.dynamicBoxes; g.col.dynamicBoxes = leaves.filter(b => b !== d.box);   // (walls and every OTHER shut door stop it; this leaf is what is coming apart)
@@ -3713,7 +3713,7 @@ export class DoorTools {
       const rest = this.stackWords(S.men()); return rest ? [CMDRING.only ? `${rest} waiting` : `${rest} waiting · ${T}, then ${F}`] : [];   // (cmdring.ts only: the who key is nobody's)
     }
     const F = DOORTOOLS.blowKey.replace('Key', ''), T = S.knobs.whoKey.replace('Key', ''), key = DOORTOOLS.wordOnKey;
-    const mine = this.waitingWords(this.wordMen()); if (mine) return [key ? { key: F, text: `go · ${mine} waiting` } : `${mine} waiting on your word`];
+    const mine = this.waitingWords(this.wordMen()); if (mine) return [key ? { key: F, text: `go · ${mine} waiting` } : `${mine} waiting for you to say go`];
     const rest = [...new Set(this.waitingAny(S.men()).filter(x => 'stack' in x || !this.chargeOn(x.door)).map(x => S.whoWords(x.men.filter(m => m.state !== 'dead'))))].join(' + ');
     return rest ? [CMDRING.only ? `${rest} waiting` : `${rest} waiting · ${T}, then ${key ? F : 'go'}`] : [];
   }

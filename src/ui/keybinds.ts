@@ -47,7 +47,7 @@ export function keyCapEl(cap: string, what: string, host: KeyHost, seen: Set<str
   if (waiting?.id === a.id) waiting.el = b;   // (the list drawn again under a waiting cap)
   const i = host.rows.length;
   const go = () => { if (waiting?.id === a.id) keyStop(); else { waiting = { id: a.id, el: b }; refused = ''; } host.select(i); };
-  host.rows.push({ el: b, label: what, desc: () => waiting?.id !== a.id ? 'Click it, then press its new key.' : refused === a.id ? 'The page needs that key. Press another · Esc keeps it' : 'Press its new key · Backspace for none · Esc keeps it', left() {}, right() {}, press: go });
+  host.rows.push({ el: b, label: what, desc: () => waiting?.id !== a.id ? 'Click it, then press its new key.' : refused === a.id ? 'The page needs that key. Press another · press Esc to keep the old one' : 'Press its new key · press Backspace for no key · press Esc to keep the old one', left() {}, right() {}, press: go });
   b.onclick = e => { e.stopPropagation(); go(); };
   b.addEventListener?.('mouseenter', () => { if (!waiting) host.select(i); });
   host.paints.push(() => {

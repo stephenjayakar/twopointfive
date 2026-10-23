@@ -96,7 +96,7 @@ export function findMeRows(K: RowKit, body: HTMLElement): () => void {
     K.range(body, label, 0, max, step, () => Math.round(FINDME[k()] * 100), v => setFindMe(k(), v / 100), v => zero && !v ? 'None' : `${v.toFixed(0)} %`, describe); };
   K.sec(body, 'Finding yourself · trying out');
   K.flip(body, 'Ring at your feet', () => FINDME.ring, v => setFindMe('ring', v), 'Keep the gold ring from the orders menu at your feet all the time.', ['On', 'Off']);
-  K.flip(body, 'Outline in the dark', () => FINDME.outline, v => setFindMe('outline', v), 'Draw a rim around you and each teammate while you\'re standing in the dark.', ['On', 'Off']);
+  K.flip(body, 'Outline in the dark', () => FINDME.outline, v => setFindMe('outline', v), 'Draw a rim around anyone on your team, including you, who\'s standing in the dark.', ['On', 'Off']);
   pct('Outline width', 'width', FINDME_WIDTH.max * 100, 5, true, 'How wide your rim is.');
   pct('Outline strength', 'opacity', 100, 5, true, 'How strongly the rims are drawn.');
   K.seg(body, 'Outline fades by', FADES, () => FINDME.picture ? 'pic' : 'meter', v => setFindMe('picture', v === 'pic'), () => 'Fade it by how dark each part of the character looks on screen, or by the light meter\'s single number for him.');

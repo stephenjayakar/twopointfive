@@ -1986,7 +1986,7 @@ export class Game {
       else if (verb === 'ease') { if (!this.doors.lockedOut(d, pc.pos, pl.keys)) { pl.doorMove = null; pl.easing = d; pl.easeStallT = 0; pl.easeBest = Math.abs(d.angle); } }
       else if (verb === 'pick') { if (this.doors.lockedOut(d, pc.pos, pl.keys)) startPicking(this, d); }
       else if (verb === 'kick') { if (this.doors.bootHolds(d, pc.pos)) this.msg("it opens toward you, so a kick won't move it"); else startKick(this, d); }   // (doors.ts DOORWAY.frameHolds: the row is greyed there — player.ts)
-      else if (verb === 'rattle') { this.doors.rattle(d, PLAYER_ID); this.msg(d.def.steel ? "the stair door is bolted from the landing side with no keyway on this side, so it's not your way out tonight" : "it's locked, so pick it (quiet, slow) or kick it in (loud)"); }
+      else if (verb === 'rattle') { this.doors.rattle(d, PLAYER_ID); this.msg(d.def.steel ? "the stair door is bolted from the landing side with no keyhole on this side, so it's not your way out tonight" : "it's locked. pick it (quiet, slow) or kick it in (loud)"); }
       else if (verb === 'code') startCoding(this, d);   // a keypad door whose code he knows: key it in (devices.ts — sustained, four beeps, then it swings like a keyed door)
       else if (verb === 'nocode') denyPad(this, d);     // …and one whose code he does not: the pad refuses (a deny tone, a word)
       else if (verb === 'breach' || verb === 'hammer') samBigStart(this, d);   // the big slot's tool on a lock (bigkit.ts — committed like a kick: the shotgun's shell, the hammer's two blows)

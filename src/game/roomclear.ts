@@ -375,8 +375,8 @@ export class RoomClearScenario {
     this.endSay = w(end === 'wiped' && this.g.player.down && this.g.nightBreach.ops.some(o => o.state !== 'dead') ? 'player down' : 'team wiped', 'team wiped');
     const loose = end === 'taken' && this.g.snatch?.active && this.g.snatch.owes ? this.g.snatch.objective()?.text.replace(/^objective ▸ /, '') : null;   // (a snatch level, snatch.ts: the house is the team's and the man is not — it is not over)
     // (a defuse mission whose charge has gone off stays FAILED — defuse.ts: the house taken after that is said as what it is, never as a win)
-    if (end === 'taken' && this.g.defuse?.active && this.g.defuse.end === 'failed') { this.g.msg(`you took the house too late. a charge went off, so the mission is still failed. press Shift+Enter to restart`); return; }
-    this.g.msg(loose ? `structure taken — ${why}. it's not over yet: ${loose}` : end === 'taken' ? `structure taken — ${why}. press Shift+Enter to restart` : this.endSay === 'player down' ? 'player down. press Enter to restart' : `team wiped — ${why}. press ${this.g.player.down ? 'Enter' : 'Shift+Enter'} to restart`);
+    if (end === 'taken' && this.g.defuse?.active && this.g.defuse.end === 'failed') { this.g.msg(`you took the house too late. a charge went off, so you still failed the mission. press Shift+Enter to restart`); return; }
+    this.g.msg(loose ? `structure taken — ${why}. it's not over yet: ${loose}` : end === 'taken' ? `structure taken — ${why}. press Shift+Enter to restart` : this.endSay === 'player down' ? 'you\'re down. press Enter to restart' : `team wiped — ${why}. press ${this.g.player.down ? 'Enter' : 'Shift+Enter'} to restart`);
   }
 
   /** where it stands, in one word */

@@ -200,7 +200,7 @@ export class PairOrders {
         return !this.backOpen(t.foe, spot) || !this.rear(t.foe, spot, true) ? w('no room behind him.', 'no room at his back.') : S.reach(gd, this.stage(t.foe)) ?? true; },
       valid: (S, t) => t.kind !== 'foe' ? false : this.gone(t.foe) ?? (this.noticed(t.foe) ? w("he's fighting. can't grab him.", "he's fighting. no hands.") : this.caught(S) ? w("they're onto us. can't grab him.", "they're onto us. no hands.") : loud() ?? true),
       issue: (S, men, t) => {
-        if (t.kind !== 'foe') return 'no man there';
+        if (t.kind !== 'foe') return 'nobody there';
         this.quietFirst();
         for (const gd of men) { const foe = t.foe, p = this.stage(foe);
           const was = this.jobs.get(gd), wasFollowing = was ? was.wasFollowing : S.of(gd)?.post === null;   // (a second order on top of a first keeps what he was before either)
@@ -216,7 +216,7 @@ export class PairOrders {
         can: (_S, gd, t) => (t.kind === 'foe' && this.sees(gd, t.foe)) || 'no line from here.',
         valid: (_S, t) => t.kind !== 'foe' ? false : this.gone(t.foe) ?? true,
         issue: (S, men, t) => {
-          if (t.kind !== 'foe') return 'no man there';
+          if (t.kind !== 'foe') return 'nobody there';
           for (const gd of men) { const p = gd.char.pos, c = t.foe.char.pos, words = `watching ${nameOf(t.foe)}`; this.jobs.delete(gd);
             S.assign(gd, { order: 'pairWatch', post: [p[0], 0, p[2]], face: yawTo(p, c), watch: [c[0], 1.1, c[2]], foe: t.foe, stance: 'none', upper: 'aim', going: words, there: words }); }
         },
@@ -411,14 +411,14 @@ export class PairOrders {
         if (g.time - J.seenT > 0.4 && J.cued && !J.backSaid) { g.say(gd, "he'll look back. your call."); J.backSaid = true; this.note(`lookback:${name} by ${nameOf(w)}`); }
         J.backT = g.time;   // (still held, and F still sends him: waiting() reads it)
         A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `on ${name} · ${nameOf(w)} will look back · press F to go anyway`;
-        if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', WORDS.on ? "someone's watching him. no clean moment." : "he's watched. no clean moment.", false); }
+        if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', WORDS.on ? "someone's watching him. no opening." : "he's watched. no clean moment.", false); }
         return;
       }
       if (!J.watcher) { if (g.time - J.seenT > 2) J.watchT = g.time; PAIR_STATS.watched++; this.note(`watched:${name} by ${nameOf(w)}`);
         if (g.time - J.cueT > 8) { g.say(gd, `hold. ${nameOf(w)} has eyes on him.`); J.cueT = g.time; J.cueBy = w; J.cued = true; } }
       J.watcher = w; J.seenT = g.time;
       A.post = here; A.goal = [here[0], 0, here[2]]; A.via.length = 0; A.face = yawTo(p, fc.pos); A.going = A.there = `on ${name} · WATCHED by ${nameOf(w)} · press F to go anyway`;
-      if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', WORDS.on ? "someone's watching him. no clean moment." : "he's watched. no clean moment.", false); }
+      if (J.mode === 'now' && g.time - J.watchT > PAIR.heelWait) { PAIR_STATS.called++; off('watched', WORDS.on ? "someone's watching him. no opening." : "he's watched. no clean moment.", false); }
       return;
     }
     if (J.watcher && !J.force && g.time - J.seenT < 0.4) return;   // (a head that turned away this frame may be on its way back: he gives it a moment)

@@ -206,7 +206,7 @@ export async function guardKey() {
     if (pushedAt < 0 || throughAt < 0) fails.push(`walking into it: unlatched at ${pushedAt >= 0 ? f2(pushedAt) : 'never'}, through at ${throughAt >= 0 ? f2(throughAt) : 'never'} (Sam at ${posS(game.player.char.pos)}) — the leaf walled him`);
     if (game.player.kick || game.player.picking) fails.push('walking into it started a kick / pick');
     notes.push(`walk-in → unlatched +${pushedAt >= 0 ? f2(pushedAt) : '—'} s, through +${throughAt >= 0 ? f2(throughAt) : '—'} s`);
-    if (msgs.some((m: any) => m.t >= tTap && /kicked it in|picking the lock|locked, so pick it/.test(m.text))) fails.push(`a lock line reached the log with the key in his pocket: ${msgs.filter((m: any) => m.t >= tTap).map((m: any) => m.text).join(' | ')}`);
+    if (msgs.some((m: any) => m.t >= tTap && /kicked it in|picking the lock|locked\. pick it/.test(m.text))) fails.push(`a lock line reached the log with the key in his pocket: ${msgs.filter((m: any) => m.t >= tTap).map((m: any) => m.text).join(' | ')}`);
     verdict(fails.length === 0, '(b) keyed: the server door offers unlock + ease; a tap (unlock highlighted) = the key\'s clack + the creak and it swings (lock still thrown, nothing loud, no pick / kick), through, and it latches locked behind him (the closer — or, where doors stay where they are left, his own hand pulling it to); the ease row on the storage door takes it round in silence; walked into, the leaf gives',
       notes.join(' · '), fails);
   }

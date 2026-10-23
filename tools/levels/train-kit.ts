@@ -167,25 +167,25 @@ export function build() {
       { id: 'fire', line: 'Left-click to fire at the cursor. Shoot out the light', done: { is: 'all', of: [{ is: 'target', name: 'lamp_range', on: false }, { is: 'any', of: [{ is: 'did', what: 'chron:lightShot' }, { is: 'did', what: 'chron:shot' }] }] }, at: LAMP },   // (shot out before the step came up: one more round at it lets him on. The OCP's spell alone does not: the lamp would come back)
       { id: 'reload', line: 'Press R to reload', done: { is: 'reload' } },
       { id: 'light', line: 'Press L to turn on the weapon light. Enemies can see it too', setupLine: 'Press 1, then 3 to turn on the weapon light. Enemies can see it too', done: { is: 'flag', flag: 'light' } },
-      { id: 'dark', line: 'Press L again to turn it off. The dark you made is your cover', setupLine: 'Press 1, then 3 again to turn it off. The dark you made is your cover', done: { is: 'flag', flag: 'light', value: false } },
-      { id: 'holster', line: 'Press E to put it away', done: { is: 'flag', flag: 'holstered' } },
+      { id: 'dark', line: 'Press L again to turn it off. The dark you made will hide you', setupLine: 'Press 1, then 3 again to turn it off. The dark you made will hide you', done: { is: 'flag', flag: 'light', value: false } },
+      { id: 'holster', line: 'Press E to put the pistol away', done: { is: 'flag', flag: 'holstered' } },
       { id: 'smoke', line: 'Press 3 for smoke, then left-click to throw it into the pit', done: { is: 'any', of: [{ is: 'threw', kind: 'smoke' }, BOTH, ON] }, at: PIT },
       // the two loud cans are NAMED here, in the fist, and kept: thrown, either one brings the men (a bang is heard through the whole compound)
-      { id: 'stun', line: 'Press 4 for the stun can. It blinds, but it\'s loud, so don\'t throw it yet', done: { is: 'any', of: [{ is: 'slot', slot: 'flash' }, BOTH] } },
+      { id: 'stun', line: 'Press 4 for the flashbang. It blinds enemies, but it\'s loud, so don\'t throw it yet', done: { is: 'any', of: [{ is: 'slot', slot: 'flash' }, BOTH] } },
       { id: 'frag', line: 'Press 5 for the frag. It kills, and it can kill you too, so don\'t throw it yet', done: { is: 'any', of: [{ is: 'slot', slot: 'frag' }, BOTH] } },
       { id: 'rifle', line: 'Press 2 to switch to the rifle', done: { is: 'any', of: [{ is: 'slot', slot: 'rifle', drawn: true }, BOTH] } },
       { id: 'ring', line: 'Right-click to fire the rifle\'s launcher. A hit to the head will knock an enemy out', done: { is: 'any', of: [{ is: 'launcher', on: 'ring', fired: true }, { is: 'flag', flag: 'ringsOut' }, BOTH] }, at: TARGET },   // (the launcher is on the right button from the draw; no ring left: the honest way past)
       { id: 'grenade', line: 'Press 2 again to switch the launcher to its grenade', setupLine: 'Press 2, then 2 again to switch the launcher to its grenade', done: { is: 'any', of: [{ is: 'launcher', on: 'he40' }, { is: 'flag', flag: 'shellsOut' }, BOTH] } },
       { id: 'auto', line: 'Stay behind the sandbags and press Z to set the rifle to auto', setupLine: 'Stay behind the sandbags and press 2, then 1 to set the rifle to auto', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: POINT }, { is: 'flag', flag: 'auto' }] }, BOTH] }, at: FIRE },
       // the loud ones, last, in rising order. The first says what it does before he presses it. (A burst passes it too: out of grenades, the rifle is the noise.)
-      { id: 'he40', line: 'Right-click to fire the grenade at the far wall. It\'s loud, so they\'ll hear it', done: { is: 'any', of: [{ is: 'threw', kind: 'he40' }, { is: 'burst', n: 3 }, BOTH] }, at: FAR },
+      { id: 'he40', line: 'Right-click to fire the grenade at the far wall. It\'s loud, so the enemies will hear it', done: { is: 'any', of: [{ is: 'threw', kind: 'he40' }, { is: 'burst', n: 3 }, BOTH] }, at: FAR },
       // ONE line for the burst and the fight: the grenade puts the two men on their guard where they stand, and it is his first rifle round that brings them through
       // the door, seven to eleven seconds behind it. As two steps ('a burst, at the lit door', then 'shoot both men') a player who took more than about six seconds
       // over the second line was shot reading it; now nothing is left to read once the rounds that call them are fired
-      { id: 'men', line: 'Hold left-click to fire a burst at the lit door. Both enemies will come out, so shoot them', done: BOTH, at: DOOR },
+      { id: 'men', line: 'Hold left-click to fire a burst at the lit door, then shoot both enemies when they come out', done: BOTH, at: DOOR },
       // nobody is left to hear: the two loud cans, thrown (from the firing point the pit is past a frag's reach, and its baskets stand between). A can already
       // spent: the mission's own next stage lets him by
-      { id: 'stun-throw', line: 'Press 4, then left-click to throw the stun can into the pit', done: { is: 'any', of: [{ is: 'threw', kind: 'flash' }, ON] }, at: PIT },
+      { id: 'stun-throw', line: 'Press 4, then left-click to throw the flashbang into the pit', done: { is: 'any', of: [{ is: 'threw', kind: 'flash' }, ON] }, at: PIT },
       { id: 'frag-throw', line: 'Press 5, then left-click to throw the frag into the pit. Stay back', done: { is: 'any', of: [{ is: 'threw', kind: 'frag' }, ON] }, at: PIT },
     ],
   };

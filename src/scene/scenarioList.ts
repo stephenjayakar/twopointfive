@@ -105,10 +105,10 @@ export const SCENARIOS: ScenarioEntry[] = [
 export const QUIET_MISSIONS: ScenarioEntry[] = [
   { id: 'bazaar-quiet', title: 'The bazaar row', kind: 'quiet', squad: 0, level: 'bazaar.json', untuned: true,
     place: 'A shuttered bazaar under curfew: two blocks, one passage', lean: 'quiet', defenders: 5,
-    blurb: 'A patrol circles each block, and both use the one passage. Move behind their flashlights or cut through the shops. Take the sat phone and leave by any gate.' },
+    blurb: 'A patrol circles each block, and both use the one passage. Move behind their flashlights or cut through the shops. Take the sat phone and leave through any gate.' },
   { id: 'police-post-quiet', title: 'The police post', kind: 'quiet', squad: 0, level: 'police-post.json', untuned: true,
     place: 'A walled district police post', lean: 'quiet', defenders: 5,
-    blurb: 'The desk sergeant carries the keys, and the guards know the armory code. Grab one and ask, or pick a lock. Take the case file and leave by a side gate.' },
+    blurb: 'The desk sergeant carries the keys, and the guards know the armory code. Grab one and ask, or pick a lock. Take the case file and leave through a side gate.' },
   // (tools/levels/vault.ts: a quiet level built round the devices — a lens on each gate and one on a keypad door, as the bazaar and the police post have them, and two tripwire beams, which no level but the office had; tools/qa/vault-run.ts plays it, probe `vault`)
   { id: 'vault-quiet', title: 'The counting house', kind: 'quiet', squad: 0, level: 'vault.json', untuned: true, group: 'quiet-alone',
     place: "A money changer's house in a walled yard", lean: 'quiet', defenders: 3,

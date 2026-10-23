@@ -817,7 +817,7 @@ function lookOut(g: Game, st: State) {
   }
   if (!best) return;
   W.done = W.t; W.saidT = g.time; W.call = { Q: best.Q, go: best.go, at: v3.copy(W.at), goT: g.time + K.sweepBeat, w: W.t };
-  g.say(best.go[0].gd, w(`${best.Q.name}: it's gone quiet — ${COUNT[best.go.length] ?? best.go.length} of us are going to look!`, `${best.Q.name}: gone quiet — ${COUNT[best.go.length] ?? best.go.length} of us go and look!`), true);
+  g.say(best.go[0].gd, w(`${best.Q.name}: gone quiet — ${COUNT[best.go.length] ?? best.go.length} of us going to look!`, `${best.Q.name}: gone quiet — ${COUNT[best.go.length] ?? best.go.length} of us go and look!`), true);
 }
 /** is that place in or within three metres of the room a holding man's door leads to (the room the team took): a noise in its other doorway, in the corridor
  *  along its wall or heard a few metres off through the wall is still the fight for THAT room — the team working it from its other door has not moved on */

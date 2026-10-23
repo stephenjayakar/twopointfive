@@ -15,7 +15,7 @@ export const GUN_STATS: { id: GunStat; label: string; tip: string }[] = [
   { id: 'reach', label: 'Reach', tip: 'reach is how far it can keep its shots on an enemy' },
   { id: 'volume', label: 'Volume', tip: 'volume is how many rounds it fires in ten seconds, reloads included' },
   { id: 'handling', label: 'Handling', tip: 'handling is how quickly you can swing it around' },
-  { id: 'quiet', label: 'Quiet', tip: 'quiet is how little the floor hears of it' },
+  { id: 'quiet', label: 'Quiet', tip: 'quiet is how little noise it makes' },
 ];
 /** the scales: metres of reach and rounds in the window that fill a bar, the window's seconds, half a man's width, the handling that is an empty bar */
 const SCALE = { reachM: 20, rounds: 100, secs: 10, half: 0.25, handling0: 0.4, can: 0.2, quiet: 0.8 };

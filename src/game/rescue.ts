@@ -513,7 +513,7 @@ export class Rescue {
     if (why.length || !ops.length) g.msg(`the hostage room: ${why.join(' · ') || 'nobody to take it'}`);
     if (!ops.length) return null;
     const cans = ops.filter(e => e.op.kind === 'bangClear').length;
-    if (RESCUE.stun && cans < ops.length) g.msg(cans ? `one bang left, so it'll go in by the ${ops.find(e => e.op.kind === 'bangClear')!.side ? 'side' : isOffice(g.level) ? 'corridor' : 'main'} door and the other door will go in behind it` : "no bangs left, so they'll go in without one");
+    if (RESCUE.stun && cans < ops.length) g.msg(cans ? `one flashbang left, so it'll go in through the ${ops.find(e => e.op.kind === 'bangClear')!.side ? 'side' : isOffice(g.level) ? 'corridor' : 'main'} door and the teammates at the other door will go in after it` : "no flashbangs left, so they'll go in without one");
     const taken = ops.flatMap(e => e.op.men), split = !!this.bounds && RESCUE.twoDoor && (ops.some(e => e.side) || taken.length === 1);
     this.entry = { ops, gate, men: taken, split, setT: NaN, goT: NaN, inT: NaN }; this.said.delete('set');
     if (split) this.note(`split:${ops.map(e => `${e.side ? 'side' : 'front'}=${e.op.men.map(m => m.callsign).join('+')}`).join(',')}`);
@@ -972,7 +972,7 @@ export class Rescue {
     if (RESCUEEND.on) { const how = this.ending.won(); if (how) { this.end('rescued', how === 'out' ? `${alive} of ${this.hostages.length} hostages out` : `${alive} of ${this.hostages.length} hostages alive · building cleared`); return; } }   // (rescueend.ts: the two ways it is won — the hold below ends nothing)
     const kept = RESCUEEND.on && !isNaN(this.securedAt) && (!theirs || !this.hostages.some(h => h.state !== 'dead' && inBounds(h.char.pos, B)));   // (the rule on: a room taken stays taken while nobody of theirs is back in it with the hostages — the team may walk out of it with them, and leave them anywhere)
     if ((!theirs && ours) || kept) {
-      if (isNaN(this.securedAt)) { this.securedAt = g.time; this.note('secured'); g.msg(RESCUEEND.on ? 'hostage room secured. now bring them out or clear the building' : `hostage room secured. hold it for ${Math.round(K.holdSecs)} s`);
+      if (isNaN(this.securedAt)) { this.securedAt = g.time; this.note('secured'); g.msg(RESCUEEND.on ? 'hostage room secured. now bring them out or clear the building' : `hostage room secured. hold it for ${Math.round(K.holdSecs)} seconds`);
         if (WORDS.on && !this.said.has('h:secured')) { this.said.add('h:secured'); const h = this.hostages.find(x => x.state !== 'dead'); if (h && hostageSay(g, h, 'secured')) this.ackAt = g.time + 2.4; } }
       else if (!RESCUEEND.on && g.time - this.securedAt >= K.holdSecs) this.end('rescued', `${alive} of ${this.hostages.length} hostages alive`);
     } else if (!isNaN(this.securedAt)) { this.securedAt = NaN; this.note('unsecured'); g.msg(theirs ? "contact in the hostage room, so it isn't yours yet" : 'nobody is holding the hostage room'); }

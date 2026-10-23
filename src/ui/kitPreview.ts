@@ -40,7 +40,7 @@ export function kitPreviewOpen() {
   cards = Array.from({ length: KIT_MEMBERS }, (_x, i) => { const h = mk('div', 'kp-card'); h.setAttribute('data-member', String(i)); row.appendChild(h); return memberCard(h, i, { onBack: kitPreviewClose, onChange: redraw, onFocus: k => { cur = k; for (const c of cards) if (c.member !== k) c.blur(); } }); });
   const foot = mk('div', 'kp-foot'); pool = mk('span', 'kp-pool', poolWords());
   foot.append(pool, mk('span', '', 'W S move · A D change · Enter press · Tab next member · Esc done'));
-  box.append(top, mk('div', 'kp-s', KIT.on ? `Choose what each of you brings and wears. It's saved on this machine and put on the next time a scenario stages its team.${SLOTS.on ? '' : (SLOTS.ok ? ' Pouches rule off (?noslots): every row is free.' : ' Pouches rule off (the cost table was refused — see the console): every row is free.')}` : 'Switched off for this visit (?nokit), so everyone uses their issued kit whatever the cards say.'), row, foot);
+  box.append(top, mk('div', 'kp-s', KIT.on ? `Choose what each of you brings and wears. It's saved on this machine, and everyone will have it the next time you start a mission.${SLOTS.on ? '' : (SLOTS.ok ? ' Pouches rule off (?noslots): every row is free.' : ' Pouches rule off (the cost table was refused — see the console): every row is free.')}` : 'Switched off for this visit (?nokit), so everyone uses their issued kit no matter what the cards say.'), row, foot);
   root.appendChild(box); document.body.appendChild(root);
   cards[cur = 0].focus();
 }

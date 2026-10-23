@@ -390,7 +390,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   // (the wheel — walking pace down / up — is read in interact.ts wheelPace: while Space is down it scrolls the selector instead)
   if (input.hit('Digit3')) { if (pl.canisters > 0) { pl.slot = 'smoke'; pl.throwKind = 'smoke'; draw(`smoke canister ×${pl.canisters}`); } else g.msg('no smoke canisters left'); }
   if (input.hit('Digit5')) { if (!FRAG.on) g.msg('no fragmentation grenades in this kit'); else if (pl.frags > 0) { pl.slot = 'frag'; draw(`frag grenade ×${pl.frags} — click throws it; it goes off ${FRAG.fuse}s after it leaves your hand`); } else g.msg('no frag grenades left'); }   // 5: the fragmentation grenade (frag.ts) — in the fist like a can; G's quick-throw (where it is on) stays smoke / stun
-  if (input.hit('Digit4')) { if (pl.flashbangs > 0) { pl.slot = 'flash'; pl.throwKind = 'flash'; draw(`stun canister ×${pl.flashbangs} — goes off ${flashFuse(g)}s after it lands`); } else g.msg('no stun canisters left'); }
+  if (input.hit('Digit4')) { if (pl.flashbangs > 0) { pl.slot = 'flash'; pl.throwKind = 'flash'; draw(`stun canister ×${pl.flashbangs} — goes off ${flashFuse(g)}s after it lands`); } else g.msg('no flashbangs left'); }
   { const nowIn = pl.gunInHand(); if (nowIn !== wasIn && (nowIn === rifle || wasIn === rifle)) { pl.equipT = RIFLE_EQUIP_SECS; if (wasIn === rifle && rifle.reloading) { rifle.cancelReload(); c.anim.cancelReload(); } if (wasIn === gun && gun.reloading) { gun.cancelReload(); c.anim.cancelReload(); } } }   // the rifle came off the sling or went back on it (a digit / E): the beat with nothing to fire, and a reload in the hand that changed is abandoned
   if (KITANIM.on || pl.kitWas !== undefined || c.anim.closeK >= 0) kitTick(g);   // (kitanim.ts: the hands' errands when what he carries changed — on the key's own frame — and the close-in mode's distance; let go of once the switch is off)
   if (KITANIM.on || pl.kitOwed >= 0) kitClick(g, input);   // (kitanim.ts: a click made in the last moments of a draw is kept for the frame the gun is up)
@@ -1478,7 +1478,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     if (H.t >= K.grab) {
       setPhase(g, 'held'); H.since = g.time; if (gd.held) gd.held.since = g.time; gd.talk.heldSince = g.time; c.bodyYaw = c.aimYaw = hc.bodyYaw;   // (the dialogue's held clock and the hold's are one)
       g.audio.play('heldProtest', v3.add(hc.pos, [0, 1.5, 0]), 0.18);   // his first sound in the arm, muffled under it (the buffer carries its own 0.3 s: it lands as the hold settles)
-      if (gd.civ) g.msg(gun ? `got ${gd.callsign}, the ${gd.civ.label}. press Space to tell ${gd.civ.her} to stay down and quiet (lets ${gd.civ.her} go) · hold Space for the pistol-whip · press E to holster and question ${gd.civ.her}` : `got ${gd.callsign}, the ${gd.civ.label}. press Space to ask what ${gd.civ.she} knows · hold Space for 'stay down, stay quiet' or the choke · a civilian on the floor costs you`);
+      if (gd.civ) g.msg(gun ? `got ${gd.callsign}, the ${gd.civ.label}. press Space to tell ${gd.civ.her} to stay down and quiet (lets ${gd.civ.her} go) · hold Space for the pistol-whip · press E to holster and question ${gd.civ.her}` : `got ${gd.callsign}, the ${gd.civ.label}. press Space to ask what ${gd.civ.she} knows · hold Space for 'stay down, stay quiet' or the choke · knocking out a civilian will cost you`);
       else g.msg(gun ? `got ${gd.callsign} with the pistol at his head. click to fire past him, press Space to pistol-whip him, or E to holster it and question him` : `got ${gd.callsign}. press Space to make him talk, hold Space for the choke, or press ${HANDSLOT.on ? '1' : 'E'} to put the gun to his head`);
     }
   } else {
@@ -1495,7 +1495,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     if (clk === 'kill') startKill(g);
     if (H.phase === 'held') {
       if (act === 'comply' && gd.civ && !swapping) { if (civilianComply(g)) { holdTail(g, dt, 0); return; } }   // 'stay down, stay quiet': a civilian let go into a crouch where she stands, told (civilians.ts) — the one way out of the arm on your feet by his choice, and hers alone
-      if (act === 'question' && !swapping) { if (gun) g.msg(`press E to holster the gun first, then Space to ask ${gd.callsign}`); else askHeld(g); }
+      if (act === 'question' && !swapping) { if (gun) g.msg(`press E to holster the gun first, then Space to question ${gd.callsign}`); else askHeld(g); }
       if (!swapping && ((act === 'choke' && !gun) || (act === 'whip' && gun) || clk === 'choke')) H.windT = 0;   // chosen: the arm closes / the pistol comes off his head HOLD.secs.chokeHold from now — the commit beat the held key used to be (the rows are a status line under a swap: nothing is chosen while the hand is between tools)
       if (H.windT >= 0 && !swapping) { H.windT += Math.min(dt, 0.05); if (H.windT >= K.chokeHold) { H.windT = -1; if (gun) startWhip(g); else startChoke(g); } }   // (a frame hitch must not swallow the beat)
     }
@@ -1851,7 +1851,7 @@ function dropHold(g: Game) {
  *  the beat on its own from here; a step, a Space tap or Esc breaks off (interact.ts cancelSustained → stopPicking). */
 export function startPicking(g: Game, d: Door) {
   const pl = g.player, c = pl.char; if (pl.down || pl.takedown || pl.kick) return;
-  if (d.def.steel) { g.msg("the stair door has no keyway on this side, so you can't pick it"); return; }   // (the row is never offered for it; a script asking anyway gets the reason)
+  if (d.def.steel) { g.msg("the stair door has no keyhole on this side, so you can't pick it"); return; }   // (the row is never offered for it; a script asking anyway gets the reason)
   releaseWall(g); if (pl.dragging) g.toggleDrag();
   cancelReloads(pl); pl.throwHeld = false; pl.throwPreview = null; pl.sprinting = false; pl.easing = null; wandDrop(pl);
   pl.picking = d; pl.crouch = true;   // you work a lock on your knee — and stay down there afterwards
@@ -2023,7 +2023,7 @@ export function bodyDist(g: Game, gd: Guard, within = Infinity): number {
 export function throwOrigin(g: Game): Vec3 { const c = g.player.char; const f = c.forward(); return [c.pos[0] + f[0] * 0.32, c.pos[1] + (g.player.crouch ? 1.05 : 1.5), c.pos[2] + f[2] * 0.32]; }
 
 export function doThrow(g: Game, sol: ThrowSolution, kind: ThrowKind) {
-  const pl = g.player; if (g.throwCount(kind) <= 0) { g.msg(kind === 'frag' ? 'no frag grenades left' : kind === 'flash' ? 'no stun canisters left' : 'no smoke canisters left'); return; }
+  const pl = g.player; if (g.throwCount(kind) <= 0) { g.msg(kind === 'frag' ? 'no frag grenades left' : kind === 'flash' ? 'no flashbangs left' : 'no smoke canisters left'); return; }
   if (pl.pendingThrow) return;                                   // one in the air per wind-up (double-tap G would otherwise eat a canister)
   if (kind === 'frag') pl.frags--; else if (kind === 'flash') pl.flashbangs--; else pl.canisters--;   // (always counted at the wind-up so a cancel's refund stays exact; under unlimited ammo the can comes BACK at release — the pendingThrow branch in update)
   pl.char.anim.throwItem(v3.distXZ(pl.char.pos, sol.land), Math.hypot(sol.v0[0], sol.v0[2])); pl.pendingThrow = { t: THROW_RELEASE, sol, kind };   // it leaves the hand as the arm comes over the top (character.ts throwLayer), along the arc previewed at the click
@@ -2139,7 +2139,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     else if (cv && gun) { rows.push(row(base, 'comply', `“stay down, stay quiet” — lets ${cv.her} go, cowering`)); rows.push(row(base, 'whip', `pistol-whip ${cv.her} — knocks ${cv.her} out, but a CIVILIAN costs −10 on the card`, `E  holster — to question ${cv.her}`)); }
     else if (cv) {
       const tk = heldTalk(g, H); const dry = gd.talk.stage >= 1 && cv.intelN >= (CIV_LINES.intel[cv.def.kind]?.length ?? 0);   // (fear first, then the two or three things she knows, then nothing)
-      const ask = tk.asking ? `you're asking — ${cv.she} answers in a beat` : tk.samUp ? "once you've had your say" : !tk.ready ? `${cv.she}'s answering — tap to cut it short` : dry ? `${cv.she}'s told you everything — ask anyway` : gd.talk.stage === 0 ? `ask what ${cv.she} knows — quietly` : `press ${cv.her} — what else`;
+      const ask = tk.asking ? `you're asking — ${cv.she} answers in a beat` : tk.samUp ? "once you're done talking" : !tk.ready ? `${cv.she}'s answering — tap to cut it short` : dry ? `${cv.she}'s told you everything — ask anyway` : gd.talk.stage === 0 ? `ask what ${cv.she} knows — quietly` : `press ${cv.her} — what else`;
       rows.push(row(base, 'question', ask));
       rows.push(row(base, 'comply', `“stay down, stay quiet” — lets ${cv.her} go, cowering; ${cv.she} tells nobody`));
       rows.push(row(base, 'choke', `choke ${cv.her} out — quiet, but a CIVILIAN costs −10 on the card`, `${HANDSLOT.on ? '1' : 'E'}  draw — gun to ${WORDS.on && cv.she === 'he' ? 'his' : 'her'} head`));   // (Civ.her is the object's 'him': whose head wants 'his')
@@ -2147,7 +2147,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     else if (gun) rows.push(row(base, 'whip', 'pistol-whip him — quick, a thud', `LMB  ${pl.pistol.roundsReady > 0 ? 'fire past him' : 'fire past him (empty)'}  ·  E  holster — to question him`));
     else {
       const q = promptFor(g, gd), tk = heldTalk(g, H); const verb = q.spent ? "he's said his piece — ask anyway" : `“${q.text}”`;
-      const ask = tk.asking ? "you're asking — he answers in a beat" : tk.samUp ? `${verb} — once you've had your say` : !tk.ready ? "he's answering — tap to cut it short" : `${verb}${tk.settled ? '' : ' — cuts in'}`;   // (samUp without asking: a remark of Sam's is in the air — his word on the key he has just pocketed — and he is never cut)
+      const ask = tk.asking ? "you're asking — he answers in a beat" : tk.samUp ? `${verb} — once you're done talking` : !tk.ready ? "he's answering — tap to cut it short" : `${verb}${tk.settled ? '' : ' — cuts in'}`;   // (samUp without asking: a remark of Sam's is in the air — his word on the key he has just pocketed — and he is never cut)
       rows.push(row(base, 'question', ask));
       rows.push(row(base, 'choke', 'choke him out — quiet', `${CLOSE.heldClicks && !g.touring ? 'LMB  knife — lethal  ·  RMB  choke him out  ·  ' : ''}${HANDSLOT.on ? '1' : 'E'}  draw — gun to his head`));   // (the two buttons in the arm, close.ts CLOSE.heldClicks: the marks worded as the standing blow's are)
     }
@@ -2182,7 +2182,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
         if (!reach) it.line2 = pl.sprinting && near && !held ? (steel ? "run into it  (it won't give)" : 'run into it  kick it in (LOUD)') : 'step closer';
         else if (!busy) {
           if (!steel) verbs.push(row(it, 'pick', d.pick > 0 ? `pick the lock — quiet, ${pct} done` : 'pick the lock — quiet, 4 s'));
-          if (pl.crouch || pl.dragging || steel) verbs.push(row(it, 'rattle', steel ? 'try the bar — no keyway this side' : 'try the handle'));
+          if (pl.crouch || pl.dragging || steel) verbs.push(row(it, 'rattle', steel ? 'try the bar — no keyhole this side' : 'try the handle'));
           if (!pl.dragging && (!pl.crouch || canStand(g))) verbs.push(held ? row(it, 'kick', NO_BOOT, '', { off: true }) : row(it, 'kick', steel ? "kick it — LOUD, and steel won't give" : 'kick it in — LOUD', pl.crouch ? '' : 'or sprint into it'));
         }
       } else if (g.doors.keyOpens(d, p, pl.keys)) {   // against you but for the key in your pocket (takeKey): it turns like a guard's — a small clack and it swings, or eased round in silence
