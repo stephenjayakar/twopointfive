@@ -59,6 +59,8 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
   places beside the frame, the walk, the beat's clock and its tail — the pose is character.ts `bigTool`, the prop rigProps.ts `bigBoxes`; the card rule is kit.ts `BIGSLOT`) ·
   lightswitch.ts (a room's lights have a switch on the wall by its door: the plates found from the level, Sam's row, a defender who puts a room back —
   `docs/agents/stealth.md`, 'Wall switches') ·
+  scene/round.ts (round things are round: the kit's four-slab octagons made one round box as a level is stood up, for the picture, every ray and
+  what walks against it — `docs/agents/levels.md`, 'Round things are round') ·
   carlamps.ts (a parked vehicle's head and tail lamps found in the level's boxes and made light targets a round breaks, lit or not —
   `docs/agents/stealth.md`, 'A parked vehicle's lamps') ·
   cleanrestart.ts (the switch and tally of the clean restart: what `Game.restartEncounter` and the player's `Game.restart` do with it up —

@@ -147,9 +147,9 @@ interface SnowState { seed: number; serial: number; birthAcc: number; pop: numbe
  *  as on a level's first frame (the make-up below; the table, kept through a restart, found the ring empty and did the same), the curtains' drift starts from
  *  nothing and the record seeds from their first — the flakes that were in the air are gone, not wound back (nothing on the GPU is). A seed set by seedSnow
  *  is the book's and goes with it.
- *  NOT YET THE WHOLE OF IT: this update's pool path still writes two tables of the game's — what a blast owes the pool (snowBlast.ts `puffLeft`, `flakeLeft`,
- *  `turn`, three counts) and the air's `want` and its row (airSim.ts airWant) — so a game with a blast in the snow, or an air field, still parts from its
- *  twin on a host without. */
+ *  What a blast in the snow owes the pool is the host's as well, in a book of its own (snowBlast.ts SnowBlastShown). NOT YET THE WHOLE OF IT: with an air
+ *  field this update's pool path still writes the air's `want` and its row (airSim.ts airWant), so a game on a host with an air field still parts from its twin
+ *  on a host without. */
 export type SnowShown = SnowState;
 const freshBook = (): SnowState => ({ seed: 0x5a0f1a4e, serial: 1, birthAcc: 0, pop: 0, lastEmitted: -1, fillAt: -1, wasActive: false, bandOff: [0, 0], stats: { active: false, why: 'never run', radius: 0, centre: [0, 0], areaOut: 0, target: 0, capped: false, pop: 0, births: 0, totalBirths: 0, frames: 0 },
     wSerial: 1, wAcc: 0, flakeFiled: 0, wisps: { active: false, why: 'never run', target: 0, blow: 0, births: 0, totalBirths: 0, records: 0 },

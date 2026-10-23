@@ -10,13 +10,18 @@
 //            (AUTOCAM.sway; the lines above run with it parked off, and this one with nobody counted as in his line, so that a guard who happens to stand
 //            in the open at the start decides nothing)
 //   kept     the row flipped on is kept over a reload; Reset to defaults puts it off
+//   tune     (AUTOCAM.tune; the lines above run under `?autotune=0`, the camera as built, where the section must not be) the page as it opens: a real
+//            double tap's swing comes round eased, frame by frame; Options >
+//            Game has the auto camera's own section, Gentle lit with nothing kept and the table on gentle's numbers; Free clicked is the numbers as built
+//            and is kept; a row slid is the player's own over the mode (it stays lit and its line says so) and is kept; both hold over a reload; Reset puts Gentle back and keeps nothing.
+//            ONLY=tune runs this part alone.
 //   THE CAMERA'S KEY is read from the page (`__keys.camCap()`), as findme-page.cjs reads it. exit 0 = all of it with no page error · 1 = otherwise.
 //   The verdict is the page's DOM, its store and the camera's numbers: nothing here judges a picture, and none of it has been seen on a GPU.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5241, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-const LS = 'twopointsix.autocam';
+const LS = 'twopointsix.autocam', LS_TUNE = 'twopointsix.autotune', ONLY = process.env.ONLY || '';
 
 const STEP = (n) => window.__runFrames(n, 1 / 60, [], false);
 const WALK = (n) => window.__runFrames(n, 1 / 60, ['KeyW'], false);
@@ -27,7 +32,16 @@ const FLIP = (label) => { const r = [...document.querySelectorAll('#options .op-
 const RESET = () => { const b = document.querySelector('#options [data-act="reset"]'); if (!b) return 'no Reset'; b.click(); return ''; };
 const SHUT = () => { document.querySelector('#options [data-act="back"]')?.click(); window.__menu.close(); if (window.__smoke) window.__smoke.params.enabled = false; window.__game.godMode = true; window.__game.aiEnabled = false; const K = window.__knobs.registry().AUTOCAM; window.__swayWas = K.sway; K.sway = false; };
 // in the page: n frames one at a time with these keys held, and how the yaw went
-const SWAY = ([keys, n]) => { const c = window.__cam, y0 = c.yaw; let most = 0, far = 0, prev = y0; for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 60, keys, i % 60 === 59 ? false : 'none'); most = Math.max(most, Math.abs(c.yaw - prev)); far = Math.max(far, Math.abs(c.yaw - y0)); prev = c.yaw; } return { yaw: c.yaw, most, far }; };
+const SWAY = ([keys, n]) => { const c = window.__cam, y0 = c.yaw; let most = 0, far = 0, prev = y0, first = 0; for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 60, keys, i % 60 === 59 ? false : 'none'); const s = Math.abs(c.yaw - prev); if (!first && s > 0) first = s; most = Math.max(most, s); far = Math.max(far, Math.abs(c.yaw - y0)); prev = c.yaw; } return { yaw: c.yaw, most, far, first }; };
+// the auto camera's own section as Options shows it, and the table and the store under it
+const TUNE = () => { const K = window.__knobs.registry().AUTOCAM, rows = [...document.querySelectorAll('#options .op-row')], by = l => rows.find(x => x.querySelector('.op-label').textContent === l), val = l => { const r = by(l); return r ? r.querySelector('.op-val').textContent : null; }, seg = by('Camera turning'), last = by('Stay on the squad');
+  // (the pointer onto the mode's row from another: the foot shows its line as it now reads)
+  if (last) last.dispatchEvent(new Event('mouseenter')); if (seg) seg.dispatchEvent(new Event('mouseenter')); const line = (document.querySelector('#options .op-desc') || {}).textContent || '';
+  let seen = false; if (last) { last.scrollIntoView({ block: 'center' }); const b = last.getBoundingClientRect(); seen = b.height > 0 && b.top >= 0 && b.bottom <= window.innerHeight; }
+  return { labels: rows.map(r => r.querySelector('.op-label').textContent), secs: [...document.querySelectorAll('#options .op-sec')].map(x => x.textContent), lit: seg ? [...seg.querySelectorAll('.op-opt.on')].map(b => b.textContent).join() : null, speed: val('Turn speed'), fight: val('Turn in a fight'), wall: by('Turn when a wall hides you') ? by('Turn when a wall hides you').querySelector('.op-switch').textContent : null,
+    line, swingSpeed: val('Swing speed'), tune: K.tune, cap: K.turnCap, swingCap: K.swingCap, ahead: K.restAhead, fightMax: K.swayFightMax, move: K.swayMove, kept: localStorage.getItem('twopointsix.autotune'), seen }; };
+const PICK = (word) => { const r = [...document.querySelectorAll('#options .op-row')].find(x => x.querySelector('.op-label').textContent === 'Camera turning'); const b = r && [...r.querySelectorAll('.op-opt')].find(x => x.textContent === word); if (!b) return `no ${word} on Camera turning`; b.click(); return ''; };
+const SLIDE = ([label, v]) => { const r = [...document.querySelectorAll('#options .op-row')].find(x => x.querySelector('.op-label').textContent === label), i = r && r.querySelector('input.op-range'); if (!i) return `no slider on ${label}`; i.value = String(v); i.dispatchEvent(new Event('input', { bubbles: true })); return ''; };
 const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasis().fwd, a = g.player.char.aimYaw, p = g.player.char.pos;
   return { yaw: c.yaw, aim: a, dot: f[0] * Math.sin(a) + f[2] * Math.cos(a), lead: Math.hypot(c.desired[0] - p[0], c.desired[2] - p[2]), look: [c.desired[0], c.desired[2]], kept: localStorage.getItem('twopointsix.autocam'), fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
 
@@ -37,17 +51,18 @@ const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasi
   const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
   page.setDefaultTimeout(900000); page.setDefaultNavigationTimeout(900000);   // (a boot on the software adapter is minutes, and the reload is a second one)
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
-  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, wait = ms => new Promise(r => setTimeout(r, ms));
-  const boot = async (again) => { if (again) await page.reload(); else await page.goto(url); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 20); };
+  const plain = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, url = `${plain}&autotune=0`, wait = ms => new Promise(r => setTimeout(r, ms));   // (`url`: the camera as built, for the lines as built)
+  const boot = async (again, to = url) => { if (again) await page.reload(); else await page.goto(to); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 20); };
   const dist = (a, b) => Math.hypot(a.look[0] - b.look[0], a.look[1] - b.look[1]);
   try {
+   if (ONLY !== 'tune') {
     log(url); await boot(false); log('booted');
     const cap = await page.evaluate(() => (window.__keys && window.__keys.camCap ? window.__keys.camCap() : 'Ctrl')), KEY = cap === 'Ctrl' ? 'Control' : cap;
     const twice = async () => { await wait(500); await page.keyboard.press(KEY, { delay: 40 }); await wait(60); await page.keyboard.press(KEY, { delay: 40 }); await page.evaluate(STEP, 90); return page.evaluate(VIEW); };
     // row
     let e = await page.evaluate(OPEN); if (e) throw new Error(e);
     const a = await page.evaluate(ROWS), k0 = await page.evaluate(k => localStorage.getItem(k), LS);
-    check(a['Auto camera'] === 'Off' && !(`Double tap ${cap}` in a) && k0 === null, 'Options > Game has the Auto camera row, Off with nothing kept, and no row for the double tap of its own', `Auto camera: ${a['Auto camera']} · kept ${k0} · the camera's key ${cap}`);
+    check(a['Auto camera'] === 'Off' && !(`Double tap ${cap}` in a) && k0 === null && !('Camera turning' in a), 'Options > Game has the Auto camera row, Off with nothing kept, no row for the double tap of its own, and under ?autotune=0 none of the tuning\'s', `Auto camera: ${a['Auto camera']} · kept ${k0} · the camera's key ${cap} · a Camera turning row ${'Camera turning' in a ? 'IS THERE' : 'is not there'}`);
     await page.evaluate(SHUT); await page.evaluate(STEP, 10);
     // frames, the mode off: the look-at follows the cursor
     await page.mouse.move(150, 300); await page.evaluate(STEP, 60); const f0 = await page.evaluate(VIEW);
@@ -87,6 +102,35 @@ const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasi
     e = await page.evaluate(RESET); if (e) throw new Error(e); const r3 = await page.evaluate(ROWS), k3 = await page.evaluate(k => localStorage.getItem(k), LS);
     check(r1['Auto camera'] === 'On' && k1 === '1' && r2['Auto camera'] === 'On' && k2 === '1' && r3['Auto camera'] === 'Off' && k3 === null, 'the row flipped on is kept over a reload; Reset to defaults puts it off',
       `flipped: ${r1['Auto camera']}, kept ${k1} · after a reload: ${r2['Auto camera']}, kept ${k2} · after Reset: ${r3['Auto camera']}, kept ${k3}`);
+   }
+    // tune: the page as it opens
+    { const D = 180 / Math.PI, near = (a, b) => Math.abs(a - b) < 1e-6, WANT = ['Camera turning', 'Turn when a wall hides you', 'Turn to face the door ahead', 'Turn speed', 'Wait before it turns', 'Time between turns', 'Turn in a fight', 'Lean when you move sideways', 'Lean speed', 'Swing when you double tap', 'Swing speed', 'Framing', 'Framing speed', 'Zoom', 'Zoom speed', 'Stay on the squad'];
+      log(plain); await boot(false, plain); log('booted, the page as it opens');
+      // …and its double tap: the swing eased, frame by frame
+      { const cap = await page.evaluate(() => (window.__keys && window.__keys.camCap ? window.__keys.camCap() : 'Ctrl')), KEY = cap === 'Ctrl' ? 'Control' : cap;
+        let e0 = await page.evaluate(OPEN); if (e0) throw new Error(e0);   // (as the lines above begin: the pause card's Options, then both put away — whatever card the page opened under is gone, and the camera's key is the camera's)
+        const top = await page.evaluate(() => { document.querySelector('#options [data-act="back"]')?.click(); window.__menu.close(); if (window.__smoke) window.__smoke.params.enabled = false; window.__game.godMode = true; window.__game.aiEnabled = false; return window.__knobs.registry().AUTOCAM.swingCap / 60; });
+        await page.evaluate(STEP, 10);
+        await page.mouse.move(300, 520); await page.evaluate(STEP, 40); const hs = await page.evaluate(VIEW);
+        let sw = null, v = hs; for (let tries = 0; tries < 3 && v.kept !== '1'; tries++) { await wait(500); await page.keyboard.press(KEY, { delay: 40 }); await wait(60); await page.keyboard.press(KEY, { delay: 40 }); sw = await page.evaluate(SWAY, [[], 300]); v = await page.evaluate(VIEW); }
+        check(hs.kept === null && v.kept === '1' && sw && top > 0 && sw.first > 0 && sw.first < 0.1 * top && sw.most <= top * (1 + 1e-6) && v.dot > 0.98,
+          `the page as it opens: a real double tap of ${cap} puts the mode on and the view comes round to where he looks eased, from rest and never over the swing's top speed in a frame`,
+          sw ? `the view was ${(Math.acos(Math.max(-1, Math.min(1, hs.dot))) * D).toFixed(0)}° off his facing, now ${(Math.acos(Math.max(-1, Math.min(1, v.dot))) * D).toFixed(1)}° · the first frame ${(sw.first / top * 100).toFixed(1)}% of the top speed's step (${(top * 60 * D).toFixed(0)}° a second), the most ${(sw.most / top * 100).toFixed(0)}%` : 'the double tap was not taken'); }
+      let e2 = await page.evaluate(OPEN); if (e2) throw new Error(e2); const t0 = await page.evaluate(TUNE), missing = WANT.filter(l => !t0.labels.includes(l));
+      check(!missing.length && t0.secs.includes('Auto camera · trying out') && t0.lit === 'Gentle' && t0.tune === true && near(t0.cap * D, 30) && t0.ahead === false && near(t0.fightMax * D, 15) && t0.move === 0 && t0.speed === '30° a second' && t0.swingSpeed === '180° a second' && near(t0.swingCap * D, 180) && t0.fight === '15°' && t0.wall === 'On' && t0.kept === null && t0.seen && /leans a little toward a fight/.test(t0.line),
+        'the page as it opens: Options > Game has the auto camera\'s own section, Gentle lit with nothing kept, the table on gentle\'s numbers, and its last row can be scrolled to',
+        `rows missing: ${missing.join(', ') || 'none'} (${t0.labels.length} rows on the tab) · lit: ${t0.lit} · turn speed '${t0.speed}' (${(t0.cap * D).toFixed(1)}° a second in the table), in a fight '${t0.fight}', for a wall ${t0.wall}, for the door ahead ${t0.ahead} · kept ${t0.kept} · the last row on screen once scrolled to ${t0.seen}`);
+      e2 = await page.evaluate(PICK, 'Free'); if (e2) throw new Error(e2); const t1 = await page.evaluate(TUNE);
+      e2 = await page.evaluate(SLIDE, ['Turn in a fight', 20]); if (e2) throw new Error(e2); e2 = await page.evaluate(SLIDE, ['Turn speed', 40]); if (e2) throw new Error(e2);
+      const t2 = await page.evaluate(TUNE);
+      check(t1.lit === 'Free' && t1.cap === 0 && t1.ahead === true && t1.speed === 'Quick' && /"mode":"free"/.test(t1.kept || '') && near(t2.fightMax * D, 20) && near(t2.cap * D, 40) && t2.lit === 'Free' && /You've changed some of the settings/.test(t2.line) && t2.speed === '40° a second' && t2.fight === '20°' && /swayFightMax/.test(t2.kept || '') && /turnCap/.test(t2.kept || ''),
+        'Free clicked is the numbers as built and is kept; two rows slid are the player\'s own over it (the mode\'s line says so) and are kept',
+        `Free: lit ${t1.lit}, turn speed '${t1.speed}', for the door ahead ${t1.ahead}, kept ${t1.kept} · slid: in a fight '${t2.fight}', turn speed '${t2.speed}', lit '${t2.lit}', its line '${t2.line}', kept ${t2.kept}`);
+      log('reloading'); await boot(true); e2 = await page.evaluate(OPEN); if (e2) throw new Error(e2); const t3 = await page.evaluate(TUNE);
+      e2 = await page.evaluate(RESET); if (e2) throw new Error(e2); const t4 = await page.evaluate(TUNE);
+      check(near(t3.fightMax * D, 20) && near(t3.cap * D, 40) && t3.ahead === true && t3.lit === 'Free' && /You've changed some of the settings/.test(t3.line) && t3.fight === '20°' && t4.lit === 'Gentle' && !/You've changed/.test(t4.line) && near(t4.cap * D, 30) && t4.ahead === false && near(t4.fightMax * D, 15) && t4.kept === null,
+        'the mode and the rows hold over a reload; Reset to defaults puts Gentle back and keeps nothing',
+        `after a reload: in a fight '${t3.fight}', turn speed '${t3.speed}', for the door ahead ${t3.ahead}, lit '${t3.lit}' · after Reset: lit ${t4.lit}, turn speed '${t4.speed}', in a fight '${t4.fight}', kept ${t4.kept}`); }
     const fatal = (await page.evaluate(VIEW)).fatal;
     check(!errs.length && !fatal, 'no page error, no console error, nothing on the fatal card', errs.length ? errs.slice(0, 4).join(' | ') : fatal);
   } catch (err) { red++; console.log(`- FAIL — the run stopped: ${String(err).slice(0, 400)}`); }

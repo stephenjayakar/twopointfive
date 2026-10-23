@@ -1845,8 +1845,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   half here): A LINE NAMES THE MOVE BY A TOKEN, `{grab him}`, `{grab him from behind}`, `{knock him out}`, `{take him out}` (the man may be other words;
   a capital begins a sentence; the words each writes are in `stealth.md`, "A lesson line names the move, not its key"), and `lessonLine` writes it out
   for the keys the build has. `tut-quiet`'s grab line, its card, 'drop' and 'strike' are tokens now, and what the page says is word for word what it
-  said, on all four of stalk and knife. `tut-pair`'s 'hands', 'hold', 'sleep' and 'drop' still say the key and are owed by that mission's thread: the
-  check's `OWES_TOKENS` names those four steps and why, prints a NOTE, holds every other step of the level, and notes a step to take off once it is mended. THREE THINGS HOLD A TOKEN: (1) `rails.ts
+  said, on all four of stalk and knife. `tut-pair`'s 'hands', 'hold', 'sleep' and 'drop' moved the same evening (its thread's change), so the
+  check's `OWES_TOKENS`, the list of steps let off by name while a level's owner still owed the change, is empty and every tutorial level is held.
+  KNOWN AND LEFT: under `?noknife=0` `{Knock him out}` adds "or left click to use the knife", and `tut-pair`'s 'sleep' and 'drop' open only the right
+  button, so on that off-switch those two rows name a click the step keeps shut (the page as it opens is right). A token does not read a step's
+  allow list; the mend, if wanted, is the plain "Right-click to knock him out" back on those two steps with a row in the check's `HONEST` list.
+  THREE THINGS HOLD A TOKEN: (1) `rails.ts
   railsFaults` (so `checkLesson`, on any stand) runs `lessonTokenFaults` over a card's text (to the card's 260), a `noTap`, `menuLine`, `pageLine`,
   `planLine` and both `after` lines as `checkLesson` does over a step's four lines, and refuses a brace in a card's TITLE, which `rails.ts card()` shows
   as written; (2) `lesson-check` fails a brace left in anything the page says; (3) `lesson-check` reads the level's own words with every token taken

@@ -20,11 +20,25 @@
 //  11 others'    a pin, a spectated man, plan mode: the mode frames nothing and the view is theirs
 //  12 reads      the scene read every frame of a run and never used: the same game (CONTROL)
 //  13 plumbing   the two stands by their words, the FROZEN_HOLDS row, a recording from before the key (CONTROL)
-// AUTOCAM_BREAK=1 = the switch left off: lines 8, 9, 10 and 11 must FAIL.   exit 0 = all hold · 1 = one does not
+// THE HAND'S OWN TUNING (AUTOCAM.tune; lines 1 to 16 run with it off, on the numbers as built):
+//  17 modes      off = every number the module's whatever is chosen; on = the gentle mode where nobody has chosen, each mode its numbers, a row moved is
+//                the player's own and put back is the mode's again, a table written from outside is not shown as the mode's, what is kept reads back
+//                held to what a row can be put to (and a line that is not one is refused whole), reset
+//  18 calmer     gentle makes no turn at rest for a thing on the lens's side and still makes one for a wall, and each reason has its own row; an eased
+//                turn starts from rest, never passes its top speed, has no step in it, lands on the yaw asked without going past, every notch of its
+//                speed is a quicker turn, a goal gone to the other side or a faster turn handed on is braked without a step, and one ended midway dies
+//                away; a lean speed over the one as built is reached, and a fight's lean at none leans nothing for his walk; the frame's share and the
+//                zoom's share scale the lean and the travel, to none
+//  19 the loop   the whole Game: with the swing off the double tap puts the mode on and turns nothing, with it on the view comes round eased, and a
+//                shot ends a slow swing where it is; a wall hiding him brings the view round by the eased turn, tick by tick under its top speed,
+//                though the mouse moves; a walk key ends it without a step, and the next turn waits out the gap from there
+//  20 plumbing   the two stands by their words, the FROZEN_HOLDS rows, a recording from before the key (CONTROL)
+// AUTOCAM_BREAK=1 = the switch left off: lines 8, 9, 10, 11 (and 15, 19) must FAIL.   AUTOTUNE_BREAK=1 = the tuning left off: 17, 18 and 19 must FAIL.
+// exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
 
 export async function autocamCheck(): Promise<boolean> {
-  const BREAK = process.env.AUTOCAM_BREAK === '1', SWAYBREAK = process.env.AUTOSWAY_BREAK === '1';
+  const BREAK = process.env.AUTOCAM_BREAK === '1', SWAYBREAK = process.env.AUTOSWAY_BREAK === '1', TUNEBREAK = process.env.AUTOTUNE_BREAK === '1';
   const { stepFrame, FIXEDSTEP } = await import(`${ROOT}/src/host/loop.ts`);
   const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const { mulberry32: seeded } = await import(`${ROOT}/src/math/dice.ts`);
@@ -38,12 +52,13 @@ export async function autocamCheck(): Promise<boolean> {
   const { AUTOCAM: K, AUTOCAM_STATS: ST } = A, { AUTOVIEW, FINDME } = F;
   let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
-  console.log(`\n=== autocam: the camera's key tapped twice and the camera frames things itself${BREAK ? ' (the switch left off: 8, 9, 10, 11 and 15 must fail)' : ''}${SWAYBREAK ? ' (the sway left off: 14 and 15 must fail)' : ''} ===`);
+  console.log(`\n=== autocam: the camera's key tapped twice and the camera frames things itself${BREAK ? ' (the switch left off: 8, 9, 10, 11, 15 and 19 must fail)' : ''}${SWAYBREAK ? ' (the sway left off: 14 and 15 must fail)' : ''}${TUNEBREAK ? ' (the tuning left off: 17, 18 and 19 must fail)' : ''} ===`);
   const knobs0 = knobsCopy(), rnd0 = Math.random, fixedWas = FIXEDSTEP.on, viewWas = AUTOVIEW.on, behindWas = FINDME.behind, found = K.on;
   const DT = 1 / 60, f2 = (v: number) => v.toFixed(2), deg = (r: number) => (r * 180 / Math.PI).toFixed(1), wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
-  const stand = async (seed: number) => { Math.random = seeded(1); const W: any = await standUp({ seed }); W.game.godMode = true; W.game.aiEnabled = false; if (stoodSway === null) stoodSway = K.sway; K.sway = false; return W; };   // (the sway is off for every line but its own: 1 to 13 are the turn rule as it was built)
+  const stand = async (seed: number) => { Math.random = seeded(1); const W: any = await standUp({ seed }); W.game.godMode = true; W.game.aiEnabled = false; if (stoodSway === null) stoodSway = K.sway; K.sway = false; if (stoodTune === null) stoodTune = K.tune; K.tune = false; A.autoTuneApply(); return W; };   // (the sway is off for every line but its own: 1 to 13 are the turn rule as it was built)
+  let stoodTune: boolean | null = null; const tune0 = JSON.parse(JSON.stringify(A.AUTOTUNE));   // (the tuning is off for every line but its own, 17 to 20; the mode and rows as found are put back at the end)
   let stoodSway: boolean | null = null;   // (as the first stand of the run left it: this stand's own word)
   try {
     const STOOD = { on: false }; { await stand(5); STOOD.on = K.on; }
@@ -243,8 +258,118 @@ export async function autocamCheck(): Promise<boolean> {
       line(had && before === false && kept === true && stoodSway === want && (STAND_ENV as string[]).includes('TPS_AUTOSWAY') && typeof row === 'string' && row.startsWith('TPS_AUTOSWAY=1'),
         `16 CONTROL — this stand (${shipped ? 'the page\'s' : 'frozen'}) stands the sway ${want ? 'on' : 'off'} by its words, FROZEN_HOLDS carries its row, and a recording from before the key replays with it off`,
         `stood ${stoodSway} (wanted ${want}) · row: '${row}' · a recording carries the key ${had} · from before the key: ${before} · recorded on: ${kept}`); }
+    // ------------------------------------------------------------ the hand's own tuning (AUTOCAM.tune)
+    const R = Math.PI / 180, tuned = () => JSON.stringify(A.AUTO_KEYS.map(k => K[k]));
+    // 17 modes and rows
+    { K.tune = false; A.setAutoMode('never'); const offNever = tuned(); A.setAutoMode('free'); const asBuilt = tuned(); A.setAutoMode(A.AUTOTUNE_START);
+      K.tune = !TUNEBREAK; A.resetAutoTune(); const start = A.autoTuneOwn() ? 'not the start\'s numbers' : A.AUTOTUNE.mode, G = { ahead: K.restAhead, rest: K.rest, cap: K.turnCap, swingCap: K.swingCap, fight: K.swayFightMax, move: K.swayMove, rate: K.swayRate, swing: K.swing }, gentleAll = tuned();
+      A.setAutoMode('rest'); const Rm = { rest: K.rest, ahead: K.restAhead, fight: K.swayFightMax, move: K.swayMove };
+      A.setAutoMode('never'); const N = { rest: K.rest, ahead: K.restAhead, fight: K.swayFightMax, move: K.swayMove };
+      A.setAutoMode('free'); const free = tuned();
+      A.setAutoMode('gentle'); A.setAutoTune('swayMove', 10 * R); const own = A.autoTuneOwn(), moved = K.swayMove, others = K.turnCap === G.cap && K.restAhead === G.ahead; A.setAutoTune('swayMove', (0 * 180 / Math.PI) / (180 / Math.PI)); const again = A.autoTuneOwn();
+      A.setAutoTune('swayFightMax', (15 / (180 / Math.PI))); const notch = A.autoTuneOwn();   // (the mode's own notch, come at through the row's unit)
+      K.lean = 4; const foreign = A.autoTuneOwn(); A.autoTuneApply(); const mended = !A.autoTuneOwn();   // (a table written by something else — a recording being played — is not shown as the mode's)
+      A.setAutoMode('rest'); A.setAutoTune('turnCap', 50 * R); A.setAutoTune('swing', false); const kept = JSON.parse(JSON.stringify(A.AUTOTUNE));
+      A.resetAutoTune(); const reset = A.AUTOTUNE.mode === A.AUTOTUNE_START && !A.autoTuneOwn() && tuned() === gentleAll;
+      A.autoTuneLoad({ ...kept, over: { ...kept.over, nonsense: 3, rest: 'yes', gap: null, still: 'NaN' } }); A.autoTuneApply(); const read = A.AUTOTUNE.mode === 'rest' && Math.abs(K.turnCap - 50 * R) < 1e-9 && K.swing === false && K.rest === true && Object.keys(A.AUTOTUNE.over).sort().join() === 'swing,turnCap';
+      A.autoTuneLoad({ mode: 'sideways', over: { swing: true, gap: 9 } }); A.autoTuneLoad({ mode: 'constructor' }); A.autoTuneLoad('junk'); A.autoTuneLoad(null); const refused = A.AUTOTUNE.mode === 'rest' && Object.keys(A.AUTOTUNE.over).sort().join() === 'swing,turnCap';
+      A.autoTuneLoad({ mode: 'free', over: { gap: 99, zoomRate: -3, turnCap: 1e-6, swayFightMax: 2, swingCap: 0 } }); A.autoTuneApply(); const heldTo = { gap: K.gap, zoom: K.zoomRate, cap: K.turnCap, fight: K.swayFightMax, swing: K.swingCap }; A.resetAutoTune();
+      const inRange = heldTo.gap === A.AUTO_RANGE.gap[1] && heldTo.zoom === A.AUTO_RANGE.zoomRate[0] && Math.abs(heldTo.cap - A.AUTO_RANGE.turnCap[0]) < 1e-12 && heldTo.fight === K.swayMax && heldTo.swing === 0;
+      line(offNever === asBuilt && free === asBuilt && start === 'gentle' && G.ahead === false && G.rest === true && G.swing === true && Math.abs(G.cap - 30 * R) < 1e-9 && Math.abs(G.swingCap - 180 * R) < 1e-9 && Math.abs(G.fight - 15 * R) < 1e-9 && G.move === 0 && Math.abs(G.rate - 6 * R) < 1e-9
+        && Rm.rest && !Rm.ahead && Rm.fight === 0 && Rm.move === 0 && !N.rest && !N.ahead && N.fight === 0 && N.move === 0 && own && Math.abs(moved - 10 * R) < 1e-9 && others && !again && !notch && foreign && mended && reset && read && refused && inRange,
+        '17 the tuning: off, every number is the module\'s whatever is chosen; on, nobody has chosen gentle; each mode has its numbers; a row moved is the player\'s own and put back is the mode\'s; what is kept reads back held to what a row can be put to, and a line that is not one is refused whole',
+        `off with 'never' chosen: ${offNever === asBuilt ? 'the numbers as built' : 'CHANGED ✗'} · on: '${start}' (a turn for the thing on the lens's side ${G.ahead}, for a wall ${G.rest}, top speed ${deg(G.cap)}° a second, the swing's ${deg(G.swingCap)}°, in a fight ${deg(G.fight)}°, for his walk ${deg(G.move)}°, the lean ${deg(G.rate)}° a second) · 'rest': fight ${deg(Rm.fight)}° · 'never': a turn at rest ${N.rest || N.ahead} · 'free': ${free === asBuilt ? 'the numbers as built' : 'NOT as built ✗'}`
+        + `\n    a row moved: the player's own ${own}, ${deg(moved)}°, the other rows the mode's ${others}; put back: own ${again}; the mode's notch through the row's unit: own ${notch} · the table written from outside: own ${foreign}, applied again ${mended ? 'the mode\'s' : 'NOT the mode\'s ✗'} · reset ${reset} · kept ${JSON.stringify(kept)} read back with four bad keys beside it ${read}`
+        + `\n    a mode this build has not (with rows), 'constructor', a string and nothing: ${refused ? 'refused whole' : 'TAKEN ✗'} · out of range (a gap of 99, a zoom speed of -3, a top speed of a millionth, 115° in a fight): ${heldTo.gap} s, ${heldTo.zoom}, ${deg(heldTo.cap)}° a second, ${deg(heldTo.fight)}° ${inRange ? '' : '✗'}`); }
+    // 18 calmer
+    { K.tune = !TUNEBREAK; K.turn = true; A.setAutoMode('gentle');
+      const cam = cam0(), open = () => false, sx = Math.sin(cam.yaw), cz = Math.cos(cam.yaw), wall = (a: number[], b: number[]) => { const dx = b[0] - a[0], dz = b[2] - a[2], d = Math.hypot(dx, dz); return d > 0.9 && (dx * sx + dz * cz) / d > 0.9; };
+      const ask = (S: any, blocked: any) => { const st = begin(cam); let g: number | null = null; for (let i = 0; i < 90 && g == null; i++) g = A.turnGoal(st, S, cam, DT, blocked); return g; };
+      const behind = scene({ door: { at: up(cam, -6), w: 1 }, still: true }), gAhead = ask(behind, open), gWall = ask(scene({ still: true }), wall);
+      A.setAutoMode('never'); const nWall = ask(scene({ still: true }), wall); A.setAutoTune('restAhead', true); const nAhead = ask(behind, open), nWall2 = ask(scene({ still: true }), wall);   // (each reason on its own row: the door's with the wall's off)
+      A.setAutoMode('free'); const fAhead = ask(behind, open); A.setAutoTune('rest', false); const fWall = ask(scene({ still: true }), wall), fAhead2 = ask(behind, open); A.setAutoMode('gentle');
+      // an eased turn of 120°: from rest, under its top speed, no step in it, there without going past; as built the first step was the largest
+      const ease = (goal: number, capR: number) => { const st = A.autoCam(), cap = capR * DT, w = capR / K.turnLand, jerkCap = Math.max(capR / K.turnRamp, 2 * w * capR) * DT * DT + 1e-12; let yaw = 0, first = 0, most = 0, jerk = 0, prev = 0, past = false, n = 0, done = false, back = false;
+        for (; n < 60 * 30 && !done; n++) { const s = A.turnEase(st, yaw, goal, DT, capR); if (!n) first = s.turn; done = s.done; if (!done) { most = Math.max(most, Math.abs(s.turn)); jerk = Math.max(jerk, Math.abs(s.turn - prev)); if (s.turn < -1e-12) back = true; } prev = s.turn; yaw += s.turn; if (yaw > goal + 1e-9) past = true; }
+        return { first: first / cap, most: most / cap, jerk: jerk / jerkCap, past, back, landed: done && Math.abs(yaw - goal) < 1e-9, secs: n / 60 }; };
+      const E = ease(120 * R, K.turnCap), built = F.behindStep(0, 120 * R, DT, K.turnRate).turn / (K.turnCap * DT), fine = (e: ReturnType<typeof ease>) => e.first > 0 && e.first < 0.05 && e.most <= 1 + 1e-9 && e.jerk <= 1 && !e.past && !e.back && e.landed;
+      // …the top speed is what a turn goes at: every notch of the row is a quicker 45° than the one before, and the swing at its own speeds lands the same way
+      const notches = [10, 20, 30, 40, 60, 80, 100, 120].map(c => ({ c, e: ease(45 * R, c * R) })), quicker = notches.every((x, i) => !i || x.e.secs < notches[i - 1].e.secs * 0.95), allFine = notches.every(x => fine(x.e)), atTop = notches.filter(x => x.c <= 40).every(x => x.e.most > 0.95);
+      const swings = [30, 180, 210].map(c => ({ c, e: ease(180 * R, c * R) })), swingFine = swings.every(x => fine(x.e) && x.e.most > 0.95);
+      // …a goal gone round to the other side a second in, and a faster turn handed to a slower top speed: braked, never a step
+      const turnAbout = (cap1: number, cap2: number, goal2: number) => { const st = A.autoCam(), brake = 2 * (cap2 / K.turnLand) * cap2 * DT * DT + 1e-12; let y = 0, prev = 0, worst = 0, n = 0, done = false, over = 0; for (let i = 0; i < 60; i++) { const s = A.turnEase(st, y, 120 * R, DT, cap1); y += s.turn; prev = s.turn; }
+        for (; n < 60 * 30 && !done; n++) { const s = A.turnEase(st, y, goal2, DT, cap2); done = s.done; if (!done) { worst = Math.max(worst, Math.abs(s.turn - prev) / brake); if (n > 90) over = Math.max(over, Math.abs(s.turn) / (cap2 * DT)); } prev = s.turn; y += s.turn; } return { worst, landed: done && Math.abs(wrap(y - goal2)) < 1e-9, over }; };
+      const about = turnAbout(30 * R, 30 * R, -60 * R), tapBack = turnAbout(30 * R, 180 * R, -150 * R), handed = turnAbout(120 * R, 30 * R, 120 * R), aboutFine = [about, tapBack, handed].every(x => x.worst <= 1 && x.landed && x.over <= 1 + 1e-9);
+      // …one ended a second in: its speed dies away
+      const st2 = A.autoCam(); let y2 = 0, last = 0; for (let i = 0; i < 60; i++) { const s = A.turnEase(st2, y2, 120 * R, DT); y2 += s.turn; last = s.turn; } let coast = 0, c0 = -1, rising = false, pv = last; for (let i = 0; i < 120; i++) { const t = A.turnCoast(st2, DT); if (c0 < 0) c0 = t; if (t > pv + 1e-12) rising = true; pv = t; coast += t; }
+      // the sway: a lean speed over the one as built is reached (the spring is that much stiffer); a fight whose lean is at none leans nothing for his walk either
+      const lean1 = (rate: number, fightMax: number, move: number, vel: [number, number]) => { K.sway = true; A.setAutoTune('swayRate', rate); A.setAutoTune('swayFightMax', fightMax); A.setAutoTune('swayMove', move); const c = cam0(), st = begin(c), B = c.planarBasis(), side: [number, number, number] = [20 + B.right[0] * 9 + B.fwd[0] * 2, 0, 14 + B.right[2] * 9 + B.fwd[2] * 2];
+        const S = scene({ threats: [side], fight: [side], vel }); let top = 0, far = 0, y = c.yaw; for (let i = 0; i < 60 * 8; i++) { const t = A.autoSway(st, S, c, DT, open); c.rotate(t); top = Math.max(top, Math.abs(t) / DT); far = Math.max(far, Math.abs(wrap(c.yaw - y))); } K.sway = false; return { top, far }; };
+      const slow = lean1(11.46 * R, 38 * R, 0, [0, 0]), fast = lean1(20 * R, 38 * R, 0, [0, 0]), cB = cam0().planarBasis(), noneWalk = lean1(11.46 * R, 0, 14 * R, [cB.right[0] * 3, cB.right[2] * 3]);
+      A.setAutoMode('gentle');
+      // the frame's share and the zoom's
+      const lean = (k: number) => { A.setAutoTune('leanK', k); const c = cam0(), look = settle(scene({ door: { at: up(c, 3), w: 1 } }), c, begin(c)), B = c.planarBasis(); return (look[0] - 20) * B.fwd[0] + (look[2] - 14) * B.fwd[2]; };
+      const l1 = lean(1), l5 = lean(0.5), l0 = lean(0); A.setAutoTune('leanK', 1);
+      const zoom = (k: number) => { A.setAutoTune('zoomAmt', k); const c = cam0(); settle(scene({ zoomK: 0.9 }), c, begin(c), 8); return c.desiredDistance; };
+      const z1 = zoom(1), z5 = zoom(0.5), z0 = zoom(0); A.setAutoTune('zoomAmt', 1);
+      line(gAhead == null && gWall != null && Math.abs(Math.abs(wrap(gWall! - cam.yaw)) - Math.PI / 4) < 1e-6 && nWall == null && nAhead != null && nWall2 == null && fAhead != null && fWall == null && fAhead2 != null
+        && fine(E) && E.secs > 3 && E.secs < 14 && built > 20 * E.first && quicker && allFine && atTop && swingFine && aboutFine
+        && c0 > 0 && c0 <= last + 1e-12 && c0 > 0.5 * last && !rising && coast > 0 && coast < K.turnCap / K.swayStop * 1.2 && st2.turnV === 0
+        && fast.top > slow.top * 1.3 && fast.top <= 20 * R + 1e-9 && slow.top <= 11.46 * R + 1e-9 && slow.far > 0.3 && noneWalk.far < 1e-9
+        && Math.abs(l1 - K.door * 3) < 0.02 && Math.abs(l5 - l1 / 2) < 0.02 && Math.abs(l0) < 1e-9 && Math.abs(z1 - 21 * 0.9) < 0.05 && Math.abs(z5 - 21 * 0.95) < 0.05 && Math.abs(z0 - 21) < 1e-9,
+        '18 gentle: no turn at rest for the thing on the lens\'s side, one for a wall, and each of the two on its own row; an eased turn starts from rest, stays under its top speed with no step in it and lands without going past, every notch of its speed is a quicker turn, and one ended midway dies away; a faster lean is reached and a fight\'s lean at none leans nothing for his walk; the frame\'s and the zoom\'s shares scale them to none',
+        `the thing framed on the lens's side: gentle ${gAhead == null ? 'no turn' : 'TURNS ✗'}, free ${fAhead != null ? 'turns' : 'NO turn ✗'} · a wall a metre toward the lens: gentle ${gWall == null ? 'NO turn ✗' : `${deg(wrap(gWall - cam.yaw))}°`}, never ${nWall == null ? 'no turn' : 'TURNS ✗'} · never with the door's row on: the door ${nAhead != null ? 'turns' : 'NO turn ✗'}, the wall ${nWall2 == null ? 'no turn' : 'TURNS ✗'} · free with the wall's row off: the wall ${fWall == null ? 'no turn' : 'TURNS ✗'}, the door ${fAhead2 != null ? 'turns' : 'NO turn ✗'}`
+        + `\n    120° eased: the first step ${(E.first * 100).toFixed(1)}% of the top speed's (as built the first step was ${(built / Math.max(1e-12, E.first)).toFixed(0)} times it), the most ${(E.most * 100).toFixed(0)}%, the most one step differs from the one before ${(E.jerk * 100).toFixed(0)}% of what the ramp or the brake could make it, ${E.past ? 'goes PAST ✗' : 'never past'}, ${E.back ? 'turns BACK ✗' : 'never back'}, ${E.landed ? `there in ${E.secs.toFixed(1)} s` : 'NOT there ✗'}`
+        + `\n    45° at ${notches.map(x => `${x.c}`).join(' / ')}° a second: ${notches.map(x => `${x.e.secs.toFixed(1)}`).join(' / ')} s, reaching ${notches.map(x => `${(x.e.most * 100).toFixed(0)}`).join(' / ')}% of the top speed ${quicker && allFine ? '' : '✗'} · a half turn of the swing at ${swings.map(x => x.c).join(' / ')}° a second: ${swings.map(x => `${x.e.secs.toFixed(1)}`).join(' / ')} s ${swingFine ? '' : '✗'}`
+        + `\n    the goal gone round to the other side a second in / a double tap the other way in the middle of a turn / a turn at 120° a second handed to a top speed of 30: the most one step differs from the one before ${[about, tapBack, handed].map(x => `${(x.worst * 100).toFixed(0)}`).join(' / ')}% of what the brake could make it, ${aboutFine ? 'each lands' : 'NOT all land ✗'}`
+        + `\n    ended a second in (at ${deg(last / DT)}° a second): the next step ${(c0 / Math.max(1e-12, last) * 100).toFixed(0)}% of the last, ${rising ? 'RISES ✗' : 'falling from there'}, ${deg(coast)}° more in all · a lean toward a fight to one side at 11 / 20° a second: its fastest ${deg(slow.top)} / ${deg(fast.top)}° a second · the fight's lean at none and a walk across the view: ${deg(noneWalk.far)}°`
+        + `\n    the frame's share at 100 / 50 / 0 %: ${f2(l1)} / ${f2(l5)} / ${f2(l0)} m toward a door 3 m up · the zoom's, in a room that asks for 90% of 21 m: ${f2(z1)} / ${f2(z5)} / ${f2(z0)}`); }
+    // 19 through the loop
+    { const rows: string[] = []; let ok = true;
+      for (const fixed of [false, true]) {
+        // the tap that puts the mode on (the mode 'never', so nothing else turns the view): with the swing off it turns nothing; with it on the view comes round eased
+        const tapOn = async (swing: boolean) => { F.setAutoView(false); F.setFindMe('behind', false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T); K.on = !BREAK; K.tune = !TUNEBREAK; A.setAutoMode('never'); A.setAutoTune('swing', swing); run(ctx, 10);
+          const y0 = W.cam.yaw, want = F.behindYaw(W.game.player.char.aimYaw), off0 = Math.abs(wrap(y0 - want)); T.tap(); let most = 0, first = -1, prev = y0; const each = () => { const s = Math.abs(wrap(W.cam.yaw - prev)); if (first < 0 && s > 0) first = s; most = Math.max(most, s); prev = W.cam.yaw; };
+          run(ctx, 60 * 6, each); each(); return { on: AUTOVIEW.on, moved: Math.abs(wrap(W.cam.yaw - y0)), there: Math.abs(wrap(W.cam.yaw - want)) < 1e-6, off0, most: most / (K.swingCap * DT), first: first / (K.swingCap * DT) }; };
+        const quiet = await tapOn(false), swung = await tapOn(true);
+        // …and a shot in the middle of the swing ends it where it is, without a step
+        const shot = await (async () => { F.setAutoView(false); F.setFindMe('behind', false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), I = W.input; K.on = !BREAK; K.tune = !TUNEBREAK; A.setAutoMode('never'); A.setAutoTune('swingCap', 30 * R); run(ctx, 10);
+          const want = F.behindYaw(W.game.player.char.aimYaw); T.tap(); run(ctx, 20); let pv = 0, y = W.cam.yaw; stepFrame(ctx, DT); pv = Math.abs(wrap(W.cam.yaw - y)); const before = pv, left0 = Math.abs(wrap(W.cam.yaw - want)); I.clicked = 1; I.buttons = 1;
+          let stepUp = false, after = 0; for (let i = 0; i < 120; i++) { y = W.cam.yaw; stepFrame(ctx, DT); if (i === 2) I.buttons = 0; const s = Math.abs(wrap(W.cam.yaw - y)); if (s > pv + 1e-9) stepUp = true; pv = s; after += s; } return { before, left0, stepUp, after, still: pv < 1e-9, short: Math.abs(wrap(W.cam.yaw - want)) > 0.05 }; })();
+        // a wall hides him (one the level does not have, a metre toward the lens): the view comes round by the eased turn, the mouse moved in the middle of it
+        F.setAutoView(false); FIXEDSTEP.on = fixed; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char, I = W.input; K.on = !BREAK; K.turn = true; K.tune = !TUNEBREAK; A.setAutoMode('gentle'); A.setAutoTune('swing', false);
+        for (const o of g.guards) { o.char.pos[0] = 1; o.char.pos[2] = 1; } run(ctx, 10); T.tap(); run(ctx, 5);
+        const fake = (yaw: number) => { const sx = Math.sin(yaw), cz = Math.cos(yaw); return (a: number[], b: number[]) => { const dx = b[0] - a[0], dz = b[2] - a[2], d = Math.hypot(dx, dz); return a[1] === 1.3 && b[1] === 1.3 && Math.hypot(a[0] - c.pos[0], a[2] - c.pos[2]) < 1e-6 ? d > 0.9 && (dx * sx + dz * cz) / d > 0.9 : sb.call(g.col, a, b); }; };
+        const y0 = W.cam.yaw, sb = g.col.segmentBlocked, turns0 = ST.turns; g.col.segmentBlocked = fake(y0);
+        const cap = K.turnCap * DT + 1e-12; let most = 0, prev = y0, jerk = 0, ps = 0, f = 0, atMouse = -1; const each = () => { const s = Math.abs(wrap(W.cam.yaw - prev)); most = Math.max(most, s); jerk = Math.max(jerk, Math.abs(s - ps)); ps = s; prev = W.cam.yaw; if (atMouse < 0 && Math.abs(wrap(W.cam.yaw - y0)) > 0.15) { atMouse = f; I.mouseX += 240; I.mouseY += 60; } f++; };   // (the hand moves the mouse a fifth of the way round)
+        run(ctx, 60 * 10, each); each(); const round = Math.abs(wrap(W.cam.yaw - y0)), turns = ST.turns - turns0;
+        // …again, and a walk key a second into it
+        g.col.segmentBlocked = sb; g.teleportPlayer([c.pos[0], 0, c.pos[2]]); const y1 = W.cam.yaw; g.col.segmentBlocked = fake(y1);
+        let began = -1; for (let i = 0; i < 60 * 6 && began < 0; i++) { run(ctx, 1, each); if (Math.abs(wrap(W.cam.yaw - y1)) > 1e-4) began = i; } run(ctx, 45, each); const mid = Math.abs(wrap(W.cam.yaw - y1)), v = ps;
+        I.keys.add('KeyW'); let stepUp = false, pv = v, after = 0, c1 = -1; for (let i = 0; i < 90; i++) { const yb = W.cam.yaw; stepFrame(ctx, DT); const s = Math.abs(wrap(W.cam.yaw - yb)); if (c1 < 0) c1 = s; if (s > pv + 1e-9) stepUp = true; pv = s; after += s; } I.keys.clear(); const stopped = pv < 1e-6;
+        // …and he stops again, still hidden: the next turn waits out the gap from where that one ended, not from where it began
+        const y2 = W.cam.yaw; let next = -1; for (let i = 0; i < 60 * 6 && next < 0; i++) { stepFrame(ctx, DT); if (Math.abs(wrap(W.cam.yaw - y2)) > 1e-4) next = i; } g.col.segmentBlocked = sb;
+        const good = quiet.on && quiet.moved < 1e-9 && quiet.off0 > 0.2 && swung.on && swung.there && swung.most <= 1 + 1e-9 && swung.first < 0.05 && shot.before > 0 && shot.left0 > 0.1 && !shot.stepUp && shot.still && shot.short && shot.after > 0 && shot.after < 0.1
+          && Math.abs(round - Math.PI / 4) < 0.01 && atMouse > 0 && turns === 1 && most <= cap && most > 0.5 * cap && jerk <= cap * 0.2 && began >= 0 && mid > 0.02 && mid < Math.PI / 4 - 0.05 && v > 0 && !stepUp && c1 > 0.5 * v && stopped && after > 0.003 && after < 0.1
+          && next >= 60 && next < 60 * (K.gap + 0.2); if (!good) ok = false;
+        rows.push(`${fixed ? 'fixed' : 'free'} step: the swing off, tapped twice: ${quiet.on ? 'the mode on' : 'OFF ✗'} and the view ${quiet.moved < 1e-9 ? 'does not move' : `MOVES ${deg(quiet.moved)}° ✗`} (it was ${deg(quiet.off0)}° off where he looks); the swing on: ${swung.there ? 'it comes round' : 'does NOT come round ✗'}, its first step ${(swung.first * 100).toFixed(1)}% and its most ${(swung.most * 100).toFixed(0)}% of the swing's top speed; a shot in the middle of a slow swing: ${shot.stepUp ? 'a step UP ✗' : 'each step smaller than the last'}, ${deg(shot.after)}° more, ${shot.still && shot.short ? 'then still, short of where he looks' : 'NOT ended ✗'}`
+          + ` · a wall hides him: the view comes ${deg(round)}° round with the mouse moved ${atMouse} frames in, ${(most / cap * 100).toFixed(0)}% of its top speed at the most in a step, the most one step differs from the one before ${(jerk / cap * 100).toFixed(1)}% of that, ${turns} turn${turns === 1 ? '' : 's ✗'} in ten seconds`
+          + ` · a walk key ${deg(mid)}° into the next: the step after ${(c1 / Math.max(1e-12, v) * 100).toFixed(0)}% of the one before, ${stepUp ? 'a step UP ✗' : 'each smaller than the last'}, ${deg(after)}° more, then ${stopped ? 'still' : 'MOVING ✗'} · stopped again and still hidden: the next turn ${next < 0 ? 'NEVER begins ✗' : `begins ${(next / 60).toFixed(1)} s after he stops`} (the gap is ${K.gap} s)`); }
+      line(ok, '19 the whole Game: with the swing off the double tap puts the mode on and turns nothing, and with it on the view comes round eased; a wall hiding him brings the view round under the eased turn\'s top speed with no step in it though the mouse moves; a walk key ends that turn without a step, and the next waits out the gap from there', rows.join('\n    ')); }
+    // 20 the tuning's plumbing
+    { const W = await stand(5), g = W.game, E = process.env, shipped = E.TPS_PROFILE === 'shipped', row = FROZEN_HOLDS['AUTOCAM.tune'], want = E.TPS_AUTOTUNE !== undefined ? E.TPS_AUTOTUNE === '1' : shipped;
+      const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g)));
+      const isOn = (): boolean => K.tune;
+      K.tune = true; A.setAutoMode('gentle'); const old = snap(), had = old.tables.AUTOCAM?.tune === true && old.tables.AUTOCAM?.restAhead === false;
+      for (const k of ['tune', 'rest', 'restAhead', 'turnCap', 'turnLand', 'turnRamp', 'swing', 'swingCap', 'leanK', 'zoomAmt']) delete old.tables.AUTOCAM[k]; old.tables.AUTOCAM.swayFightMax = 0.5;   // (a recording from before the key has none of its numbers, and the ones it does carry are its own)
+      J.applyKnobs(g, old); const before = isOn(), asBuilt = K.restAhead === true && K.turnCap === 0 && K.swingCap === 0 && K.leanK === 1, carried = K.swayFightMax === 0.5;
+      K.tune = true; A.autoTuneApply(); const on = snap(); K.tune = false; A.autoTuneApply(); J.applyKnobs(g, on); const kept = isOn() && K.restAhead === false && K.turnCap > 0;
+      const rowsHeld = ['restAhead', 'turnCap', 'swingCap', 'swayFightMax', 'swayMove', 'swayRate'].filter(k => !String(FROZEN_HOLDS[`AUTOCAM.${k}`] ?? '').startsWith('TPS_AUTOTUNE=1'));
+      line(had && before === false && asBuilt && carried && kept && stoodTune === want && (STAND_ENV as string[]).includes('TPS_AUTOTUNE') && typeof row === 'string' && row.startsWith('TPS_AUTOTUNE=1') && !rowsHeld.length,
+        `20 CONTROL — this stand (${shipped ? 'the page\'s' : 'frozen'}) stands the tuning ${want ? 'on' : 'off'} by its words, FROZEN_HOLDS carries its row and one for each number gentle moves, and a recording from before the key replays on the numbers as built with the ones it carries left alone`,
+        `stood ${stoodTune} (wanted ${want}) · row: '${row}' · numbers with no row: ${rowsHeld.join(', ') || 'none'} · a recording carries the key and the gentle numbers ${had} · from before the key: tune ${before}, the numbers as built ${asBuilt}, its own lean in a fight kept ${carried} · recorded on: ${kept}`); }
   } finally {
-    knobsBack(knobs0); Math.random = rnd0; FIXEDSTEP.on = fixedWas; F.setAutoView(viewWas); F.setFindMe('behind', behindWas);
+    A.autoTuneLoad(tune0); knobsBack(knobs0); Math.random = rnd0; FIXEDSTEP.on = fixedWas; F.setAutoView(viewWas); F.setFindMe('behind', behindWas);
   }
   console.log(`=== autocam: ${all ? 'ALL PASS' : 'FAIL'} ===`);
   return all;

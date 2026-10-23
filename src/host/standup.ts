@@ -10,6 +10,7 @@ import type { SmokeSystemLike } from '../smoke/types';
 import type { GameAudioLike } from '../game/audio_iface';
 import { buildLevel } from '../scene/level';
 import { UNDERFOOT } from '../scene/collision';
+import { ROUND, roundLevel } from '../scene/round';
 import { lightFromDef } from '../render/lights';
 import { loadGltfCharacter } from '../anim/gltf';
 import { Game } from '../game/game';
@@ -93,7 +94,7 @@ import { TOLD } from '../game/told';
 import { TORCH } from '../game/calmtorch';
 import { BACKKEY } from '../game/backkey';
 import { FIXEDSTEP } from './loop';
-import { AUTOCAM } from './autocam';
+import { AUTOCAM, autoTuneApply } from './autocam';
 import { TWEEN } from './tween';
 import { MORALE } from '../game/morale';
 import { RUNNER } from '../game/runner';
@@ -196,6 +197,7 @@ export function nullSmoke(): SmokeSystemLike & { params?: Record<string, unknown
 
 /** the level's statics into the host's box world and its lights into the light set — the two loops main.ts and headless.ts ran before `new Game` */
 export function populateHost(host: HostApi, level: Level): void {
+  roundLevel(level.boxes, ROUND.on, level.markTexel);   // ROUND THINGS (scene/round.ts): the kit's octagons as one round box each, or every box put back as its file has it — before a box goes to the world and before the Game's collision is built from the list
   for (const b of level.boxes) host.world.addStatic(b);
   for (const ld of level.lights) host.lights.add(lightFromDef(ld));
 }
@@ -215,6 +217,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   let ch = opts.ch;
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }
   const smoke = opts.smoke ?? nullSmoke();
+  if (opts.harness && pinned('TPS_ROUND')) ROUND.on = String((globalThis as any).process?.env?.TPS_ROUND ?? '') === '1';   // round things are round (src/scene/round.ts; read as the level's boxes go to the world, so written before that): off, so a drum is the kit's octagon of four slabs to every ray and every foot, as when every frozen digest and tally was recorded
   if (opts.populate !== false) populateHost(host, level);
   if (opts.harness && pinned('TPS_OPENING')) OPENING.on = String((globalThis as any).process?.env?.TPS_OPENING ?? '') === '1';   // THE NIGHT'S OPENING (src/game/opening.ts): off, so every man of the shift starts on his route's first waypoint as when every frozen digest, tally and session fixture was recorded — set before the Game exists (its constructor places them); `TPS_OPENING=1` runs any harness tool with it on, tools/qa/solo-night.ts raises it for its as-shipped stand (the shipped default is ON)
   if (opts.harness && pinned('TPS_GEAR')) GEAR.on = String((globalThis as any).process?.env?.TPS_GEAR ?? '') === '1';   // the 2010s issue kit (src/game/gear.ts): off, so the kit's names in every frozen probe's HUD, message and debrief text are the ones they were written against, and Sam's pistol holds the ten it held; `TPS_GEAR=1` turns it on (the shipped default). Words, drawn boxes and the Glock's fifteen-round magazines — set before the Game exists (its constructor loads Sam's pistol)
@@ -269,6 +272,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_THROWBACK')) THROWBACK.on = String((globalThis as any).process?.env?.TPS_THROWBACK ?? '') === '1';   // a can in the wind-up goes back on the belt when another beat begins (game/throwback.ts): off, so the frozen stand's throws are as every probe has them; `TPS_THROWBACK=1` raises it
     if (pinned('TPS_AUTOCAM')) AUTOCAM.on = String((globalThis as any).process?.env?.TPS_AUTOCAM ?? '') === '1';   // the camera running itself (src/host/autocam.ts): off, so the camera's key tapped twice is the Options row's on the frozen stand; `TPS_AUTOCAM=1` raises it
     if (pinned('TPS_AUTOSWAY')) AUTOCAM.sway = String((globalThis as any).process?.env?.TPS_AUTOSWAY ?? '') === '1';   // …and its slow turn in a fight and on the move (AUTOCAM.sway): off = it turns only at rest; `TPS_AUTOSWAY=1` raises it
+    if (pinned('TPS_AUTOTUNE')) { AUTOCAM.tune = String((globalThis as any).process?.env?.TPS_AUTOTUNE ?? '') === '1'; autoTuneApply(); }   // …and the player's own tuning of it (AUTOCAM.tune: the gentle mode and the Options rows): off = every number the module's; `TPS_AUTOTUNE=1` raises it
     if (pinned('TPS_OWNBLOW')) OWNBLOW.on = String((globalThis as any).process?.env?.TPS_OWNBLOW ?? '') === '1';   // his own charge goes off from his own actions, not the squad's key (game/ownblow.ts): off, so the frozen stand's charges by hand blow on the key as every probe has them; `TPS_OWNBLOW=1` raises it
     if (pinned('TPS_HANDRING')) HANDRING.corner = HANDRING.turn = HANDRING.bare = HANDRING.onThing = HANDRING.lone = HANDRING.near = HANDRING.empty = HANDRING.early = HANDRING.on = String((globalThis as any).process?.env?.TPS_HANDRING ?? '') === '1';   // his own actions are a ring that stays (game/handring.ts): off, so the frozen stand's Space list, its rows and the whistle's key are as every probe has them; `TPS_HANDRING=1` raises it
     if (pinned('TPS_LIGHTWALL')) LIGHTWALL.on = String((globalThis as any).process?.env?.TPS_LIGHTWALL ?? '') === '1';   // a weapon light stops at the wall its carrier is pressed to (src/game/lighting.ts lensClear): off, so every carried light is at its lens — and the CPU light estimate reads what it read in every frozen digest and tally; `TPS_LIGHTWALL=1` turns it on (the shipped default)

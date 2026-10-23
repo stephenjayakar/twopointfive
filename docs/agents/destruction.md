@@ -430,7 +430,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TPS_BLASTPACE=old` in front of a headless tool = all of it on the blast frame, as it was; play is the same either way by run digest, so the switch is on knobs-check's
   `UNREGISTERED` list as picture-only): (1) `game.ts reachChanged(rect)` only NOTES the rect; `reachTick` reads the wall raster one frame later (`reachRead`) and decides masks from
   the frame after — masks land exactly 2 frames later (`reachPending` counts the notes too; `REACH_PACE.whole` and a null rect = a reset still read at once); (2) `rainFx.ts` re-finds
-  the drip lines `dripSamples` edge samples a frame (`dripWalk`, a generator; an indoor sample costs 1/16) once the statics' count and `geomSerial` have stood still `dripHold` frames,
+  the drip lines `dripSamples` edge samples a frame (`dripWalk` over a `DripJob` of plain numbers, in the host's book since 10-23: `docs/agents/weather.md`; an indoor sample costs 1/16) once the statics' count and `geomSerial` have stood still `dripHold` frames,
   the old lines dripping meanwhile (`rainDripPending`; `rainDripPoints` finishes a walk whole); (3) `destr.furn.warm()` makes the furniture index when a wall charge is SET
   (wallcharge.ts, both set sites) — other blast sources still make it on their first blast. Exact and unswitched: `roomfight.ts roomAt`'s flood allocates nothing per cell.
   `bun run tools/qa/blast-pace-check.ts` = reach masks (turning beacons aside: a beacon's mask is of the frame it is decided), drip lines and the digest equal between the two paces

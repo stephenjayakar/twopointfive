@@ -59,7 +59,7 @@ const ALLOW: [RegExp, string][] = [
   [/^game\.glassBreak\.(log|ext)\b/, 'the glass log and the panes\' extents, found on first use'],
   [/^game\.(saves\.(log|stats)|sensors\.stats)\b/, 'tallies'],
   [/^dialogue\.ambientByGame\{[^}]*\}\.(played|count)\b/, 'which idle chatter has been heard: kept through a restart on purpose (dialogue.ts)'],
-  [/^(dialogue\.(ownRects|roomRects)|frag\.TORN|glasspen\.states|handleside\.faces|lighting\.LENS_FROM|wallcharge\.skyMemo|rainFx\.states)\{/, 'a table\'s entry made the first time it is asked for'],
+  [/^(dialogue\.(ownRects|roomRects)|frag\.TORN|glasspen\.states|handleside\.faces|lighting\.LENS_FROM|wallcharge\.skyMemo)\{/, 'a table\'s entry made the first time it is asked for'],
   [/^(fixtureBreak\.STATE\{[^}]*\}\.keys|coverfire\.states\{[^}]*\}\.serial|lightswitch\.states\{[^}]*\}\.serial)\b/, 'a table\'s own serial or count of keys seen'],
   [/^game\.sparks\.pool\[\d+\]\.(?!alive\b)/, 'a dead spark\'s last numbers (the pool is all dead in both: `alive` is compared)'],
   [/^game\.moths\.moths\[\d+\]\.box\.rot\b/, 'a moth\'s heading on the restart\'s own tick, turned from the one it flew the tick before (the same a tick later; where it is is compared)'],
