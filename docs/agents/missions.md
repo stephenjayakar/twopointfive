@@ -67,7 +67,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in), not for F. With the old line (F at the held door) the pair stepped in dry on that awake man and BOTH died on 10 of 16 shipped dice (seeds 1 to 8,
   read at six seconds a line and at the script's pace), which was lesson-gate's shipped red (seen on every build looked at, back some hundred steps); with `TPS_WORDNOCAN=0` the
   same sixteen passed with nobody lost, and so do the sixteen on the new line (one can each). F still ends the step. The scripted player gives the can
-  where the hold is the one order (`outsidePlain`) and F where it is the old page (the frozen stand). Headless only: never seen on a GPU, never played
+  where the hold is the one order (`outsidePlain`) and F where it is the old page (the frozen stand), and opens every menu the page's way where the ring
+  stays (`CMDRING.stay`: the squad's key kept down, then the digits), so the ring is driven on a door the pair already holds. The line says "X on it",
+  never "Press X": `keymap.ts keyText` draws the orders key as "hold Q" and folds the word only after "hold" or "with" ("Press hold Q" was printed). Headless only: never seen on a GPU, never played
   by a person. Re-run eight shipped dice (four
   `--hard`) and count `Blue …: → dead` / `Red …: → dead` lines after ANY change to the door tools or these marks: the lesson passes with a man lost. Where the pairs go straight in
   on the word with no can (train-pairs' white house), no defender sees OUT of a door: a man in a far corner with his gun down the room shot the first of each
@@ -232,6 +234,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `mode.glow: false` in the script); the page on the software adapter, lamp out, 24 as he arrives and 14 settled, against 28 settled with the moon turned back on the same page. Every shadow in the yard falls the
   other way; no line, mark or fight moved, and `tut-solo-check` is green on both stands, two seeds, all eight ways. The menu picture is its own
   light and did not change. Never seen on a GPU: how the yard reads with the shadows turned is by eye there.
+  HIS OWN STUN GRENADE (10-23, a lesson's prose and its scripted player; no rule changed). The maintainer: "do flashbangs take line of sight into
+  account? i flashed myself in the solo loud tutorial level even though it went into the other room". THE RULE, as `combat.ts detonateStun` has it
+  in the night game (this mission is one): a head within `bang.dazzleRadius` (8 m) of the burst with a clear line from it (`col.segmentBlocked`, from
+  0.3 m over the burst) is blinded, 6 s close in to 2 s at the edge; walls and shut leaves block, an open doorway does not; facing counts for
+  nothing, nothing goes round a corner, and the player gets it by `samstun.ts` (on in the page) as a guard does. A room fight adds the bang with no
+  line (the same air within `FLASH.concussM`, half) and spares the thrower's side unless on top of it. HERE the store's doorway has no leaf and
+  stands in line with the shop's door, so a man who throws from inside the shop looks down that line: traced with the scripted player, thrown from
+  x 28.5 on the axis the can rolls to x 35.6 and blinds him 2.4 s (7.2 m), from 29.8 3.0 s; the scripted player stood at 26.8, 8.8 m off, and
+  never caught it. THE MEND is the lesson's: a card on the step `stun` ('Throwing a stun grenade': who it blinds, what blocks it, throw and move
+  to the side) and the line ends 'and get behind the wall'. The scripted player throws and steps aside and fails if his own can blinds him;
+  `tut-solo-check` plays a ninth way, `flash` (thrown from nearer, the line not left: the can must blind him where SAMSTUN is on, and every step
+  still goes by). The level's own base row did not move (prose). Nobody has thrown it by hand since.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
@@ -1677,3 +1691,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A level file's fingerprint moves with its words, so a checkpoint saved on an older build of a tutorial mission is refused. `tools/qa/writing-check.ts`
   (`probes.ts writing`) holds every lesson's text and every mission row to the guide's patterns; `WRITING_BREAK=1` must fail. Read on the page by nobody
   yet; never seen on a GPU.
+- **Mission 1, three play notes (2026-10-23)** (`levels/tut-sky.json`, `rails.ts`, `teampace.ts`, `planmode.ts`). (1) THE SKY SEAT IS DRAWN AS PLAN MODE IS
+  ("first tutorial level should have the plan mode overlay"): `RAILS.skyPlan` (a knob of the frame's table, on with the frame; `?skyplan=0`; picture
+  only; off for a recording from before the key) → `Rails.planDrawn` → `planmode.ts planView` gives its picture with `frame` true and `up` false (the
+  mode itself is down): the frame round the view with its word, each man's ring in his pair's colour, the men the next order goes to drawn full; no
+  mark for the parked player, no pick box, nothing of plan mode taught (that is mission 2's). Needs plan mode on in the page (`?qplan=0` takes it away
+  with the rest). THE READING TAKEN: plan mode's own picture, not the floor plan's ways shown all the time (those still come with an order and with
+  the menu, as in plan mode). (2) THE BREAKER BOX LINE says "A buddy team is going for the breaker box": the order always sent a pair (`workthings.ts`: the
+  nearest man works it, the other of his pair covers from behind him — when a cover mark can be reached); the line said one. The scripted player fails the step if the worker has no partner covering. (3) THE SQUAD RUNS
+  BACK TO THE TRUCKS ("the guys should sprint back to exfil when they're done"): a step's `onWay: { run: true }` (held by lived-check: tut-sky's row
+  moved) → once the step's order is out (`Rails.running`, said once a tick: a man of the squad is under an order to the step's mark) `Rails.runs(gd)`
+  is true of EVERY man of the squad an order has sent somewhere, whichever mark the order dealt him → `teampace.ts teamTold`, one more reason to run
+  (`'told'`, counted in `TEAMPACE_STATS.told`) under the same leave as the others: a hurt man and a quiet one still walk, A MAN WITH SOMEBODY IN HIS
+  SIGHTS DOES NOT RUN (`fight.engaged`, as a run to cover: a runner's gun is low and fires nothing), the last `ORDERS.briskIn` metres are walked in as
+  on any leg, and with `TEAMPACE` off nothing changes. `RAILS.wayRun` (on with the frame; `?wayrun=0`; `journal.ts applyKnobs` puts it off for a
+  recording from before the key). The line after the order is as it was ("They're falling back to the trucks": true with the switch off too). MEASURED
+  headless, seed 1, the page's stand: the leg takes 6.4 s, top 4.7 m/s, 5 runs told. CHECK: `rails-check` lines 'the sky seat is drawn as plan mode
+  is' and 'the job done, the squad runs back' (27 lines green on both stands, `RAILS_BREAK=1` fails 19 on both), `lesson-run tut-sky` (the two asserts
+  above). NOT DONE: no fight or stealth tally was run for the new reason (it is reached only from a tutorial step). The picture was looked at on the
+  software adapter only (the first step: frame, word and four rings, the word clear of the big line): never seen on a GPU, never played by a person.

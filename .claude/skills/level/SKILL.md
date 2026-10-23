@@ -109,6 +109,15 @@ did not.
   with 40mm"; "weird that it doesn't let me use a wall charge here". **check** `bun run tools/qa/wallfurn-check.ts`,
   `probes.ts blasthole`.
 
+- **No door has an always-safe spot to command it from.** Plan mode's view stays with the player (6.5 m to either
+  side of him, 4.5 m up the screen and 6 m down; `?plannear=0` is the view as it was), so he orders an entry from
+  beside the room, and the level decides whether that spot is safe. For each door a stack forms on, look at the ground
+  inside that box that sees the door. If one pocket of it is out of every defender's line and off every roamer's
+  path on every deal, every entry will be commanded from there. Give the pocket a second line into it (a window, a far
+  door, a roamer's turn) or take its view of the door away. Situational, not a ban: some doors may keep one. **seen**
+  the maintainer asked that there is not always a safe place to hide and command from. **By eye** per door; no check
+  yet (it wants the defenders' lines on each deal). Never played.
+
 ## 4. Rooms that are lived in
 
 The maintainer: "the office level is awesome and it has a lot of personality per room, we should makes sure all levels are
@@ -160,6 +169,22 @@ like that."
   and is left dark by its defenders. **seen** "we should have light switches for rooms!"; two rooms of 176 keep a
   circuit no plate was found for. **check** `bun run tools/qa/probes.ts lightswitch` (every level file: each plate on
   plain wall with floor in a hand's reach). Never seen on a GPU.
+- **`leak` · Bare metal against the wall of a dark room shows the lamp behind that wall.** The picture keeps bounced
+  light in probes a metre apart. A traced reflection shades what it hits with the probes round a point a metre along
+  that face's normal, and nothing asks whether a wall stands between. A shelf board's top, an upright's side or the
+  floor within half a metre of a wall is read partly from the room behind it. Smooth bare metal reflects with its whole
+  colour, so a steel unit glows with the next room's lamp; paint, wood and card reflect a few hundredths and do not
+  show it. It is the renderer's to mend, not a level's. Until it is mended a level shows it where three things meet: a
+  room shipped dark, a thing of bare metal smoother than 0.55 on the shared wall (a metal paint: `metal`, the look
+  files' `galv`, `tin` and `iron`; or a box marked `metal` itself), and a bright lamp within a few metres behind it. Where all three meet, look at it
+  before you ship and say in the level's notes that you did. Another wall for the unit, a rougher finish or a lamp
+  further off is a way round, never a rule. **seen** "some weird light leakage on bookshelf?": the manager's steel
+  shelves against the lit store. **check** `leak` (a NOTE where a thing of such metal stands so, with the rooms and
+  lamps; every other finish is counted and passes; 28 of 42 levels are noted today, so where to look and never a pass
+  mark; it does not see a frame in the wall itself, nor a wooden thing a steel one beside it reflects), then **by
+  eye** in a real browser on the ultra preset (high traces no reflection above 0.45, medium above 0.35, low none)
+  with the near room dark: the debugger's specular view (the cache irradiance view blends through every wall and
+  proves nothing). Never seen on a GPU here.
 - **Starts are dark and unseen**: nobody sees the team on its start marks, through a pane either; the first stack is in no
   roamer's line. **seen** a start on the road in front of the glass, in six marks' sight.
 - **The headless light meter has no moon and no bounce.** A mark "dark" headless can be 57 % lit on the page. Hide marks
