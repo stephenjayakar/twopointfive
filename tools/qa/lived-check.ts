@@ -107,7 +107,7 @@ const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine',
  *  early and nothing else is red (a scripted player only shows a key that is MISSING), so they were free for one step (10-22) and are held again: with a
  *  row a level, a list changed on purpose is its owner's one line. A mark moved to make room for a desk is the damage this check is for. A key of a
  *  lesson that is in NEITHER table is a red line until it is put in one: the choice is made in the open, by whoever adds the key. */
-const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
+const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'settle', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
   rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows'] };
 /** today's value for every free key, the base's for every other, in today's key order (the loaded Levels are compared as text); `n` counts the free keys that moved */
 function readFree(now: any, then: any, keys: string[], n: { v: number }): any { const t: any = {};

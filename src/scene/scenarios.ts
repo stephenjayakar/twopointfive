@@ -246,6 +246,9 @@ export interface LessonStep {
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
+  /** seconds the step waits AFTER it has counted before the next one comes up, whether or not the test stays true: the moment plays out (the man falls,
+   *  the blast clears) before the next line or card is over it (absent: none) */
+  settle?: number;
   /** where the HUD's marker points while the step is up (absent: no marker) */
   at?: Vec3;
   /** the marker rides on a MAN instead: the one on the patrol route of this name, while he is on his feet (then `at`, if the step has one) — 'come up

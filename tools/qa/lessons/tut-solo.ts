@@ -3,13 +3,20 @@
 // does what the line says.
 import { OWNBLOW } from '../../../src/game/ownblow';
 import type { Bot } from '../lesson-run';
-import { AXIS, VAN, WALL, CORNER, JAMB, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, STUN_AT, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
+import { AXIS, VAN, WALL, CORNER, JAMB, INNER_X, INNER_Z, INNER_FROM, BAGS_END, GAP, BARRIER, BACK, NEST, LAMP, SHOP_DOOR, STORE_DOORWAY, STUN_AT, TRUNK, ARCH_MOUTH, LAST_MEN, EXIT } from '../../levels/tut-solo';
 import { SLOTSETUP } from '../../../src/game/slotsetup';
 import { SAMSTUN } from '../../../src/game/samstun';
+import { DOORSHOT } from '../../../src/game/doorblast';
+import { DESTRUCTION as DESTR_HERE } from '../../../src/game/destructionSwitch';
+import { ISSUE as ISSUE_HERE } from '../../../src/game/kit';
 
 /** is the gun's setup switched on IN THE GAME THIS RUN PLAYS: on a page the script is its own bundle, with its own copy of the table (the page's is `__knobs`) */
 const pageOn = (name: string, here: boolean): boolean => (globalThis as { __knobs?: { registry?: () => Record<string, { on?: boolean }> } }).__knobs?.registry?.()[name]?.on ?? here;
-const setupOn = (): boolean => pageOn('SLOTSETUP', SLOTSETUP.on), blowOn = (): boolean => pageOn('OWNBLOW', OWNBLOW.on), samStunOn = (): boolean => pageOn('SAMSTUN', SAMSTUN.on);
+/** is his card the whole kit in this game (kit.ts ISSUE.whole: the page's stand) */
+const K_WHOLE = (): boolean => ((globalThis as { __knobs?: { registry?: () => Record<string, { whole?: boolean }> } }).__knobs?.registry?.().ISSUE?.whole) ?? ISSUE_HERE.whole;
+const setupOn = (): boolean => pageOn('SLOTSETUP', SLOTSETUP.on), blowOn = (): boolean => pageOn('OWNBLOW', OWNBLOW.on), samStunOn = (): boolean => pageOn('SAMSTUN', SAMSTUN.on), doorShotOn = (): boolean => pageOn('DOORSHOT', DOORSHOT.on);
+/** …and do rounds reach a leaf at all here (wallbreak.ts wallBreakOn: the destruction's switch) */
+const wallsBreak = (B: Bot): boolean => pageOn('DESTRUCTION', DESTR_HERE.on) && (B.g as unknown as { tune: { wallBreak?: boolean } }).tune.wallBreak !== false;
 
 export const query = '?quiet';
 /** the level's fights are its script's, which the tutorial frame starts: on a stand without the frame this lesson cannot be played */
@@ -17,17 +24,20 @@ export const needs = 'rails';
 /** THE LESSONS CAN BE FAILED THE WAY THEIR LINES SAY (each of these runs must end with the player down; tools/qa/tut-solo-check.ts asks it):
  *  TUT_SOLO_ARM=stand walks the sandbags standing, TUT_SOLO_ARM=nosmoke crosses the gap with no smoke up. Four more words are mistakes that must cost
  *  nothing: `east` stands on the road east of the van in the sentry's line, `piers` stands at each pier of the arch under the last two's fire, `dud` fires the
- *  first grenade from too close, `sponge` holds the right button on the two before the grenade is loaded, which must fire nothing (it asks something only where he carries sponge rounds).
+ *  first grenade from too close, `jamb` empties a long burst into the wall beside the inner door, which must still leave him a way through.
  *  And one mistake that must cost what its card says: `flash` throws the stun grenade down the store's doorway and stays on that line, and his own can blinds him */
 const brk = (): string => (typeof process !== 'undefined' ? process.env.TUT_SOLO_ARM : (globalThis as { __TUT_SOLO_ARM?: string }).__TUT_SOLO_ARM) ?? '';   // (read as the step runs: tools/qa/tut-solo-check.ts plays all three in one process)
 /** THE DOOR'S LINE TEACHES HIS OWN CHARGE, and it is the one row the level lets that door offer (`rails.rows`: no pick, no boot). A stand that holds his own
  *  charges off (the frozen one) has no row there at all and the lesson cannot be done on it: the runner raises them for this run alone, as a run there
  *  raises the frame (TPS_OWNCHARGE=0 in front shows the door with nothing to offer) */
-export const raises = { TPS_OWNCHARGE: '1' };
+/** …AND THE INNER DOOR'S LINE TEACHES A DOOR SHOT OUT (game/doorblast.ts DOORSHOT, held off on the frozen stand, and it lives only where walls break: the
+ *  destruction's one switch, PT_DESTR): both raised for this run alone too. With either off the line still goes by, on a long burst, and the level's
+ *  script opens the door (played so on the frozen stand with `TPS_DOORSHOT=0` in front; the way `jamb` plays that road on either stand) */
+export const raises = { TPS_OWNCHARGE: '1', TPS_DOORSHOT: '1', PT_DESTR: '1' };
 /** the last men may already be down when 'Shoot the rest' comes up (the grenade took both) */
 /** …and where the gun has no setup (the switch off: the frozen stand) the two lines that open and shut it have nothing to ask and go by */
-export const idleOk = ['last', 'setup', 'tab', 'load'];   // ('load': the load's row is his from the launcher's card on, and a man who left the grenade up then has done the line)
-/** the run wears what the mission's page deals him (lesson-run.ts): his own card, whole on the page's stand (two sponge rounds and the launcher on them, three grenades behind), the
+export const idleOk = ['last', 'setup', 'tab'];
+/** the run wears what the mission's page deals him (lesson-run.ts): his own card, whole on the page's stand (the launcher on its grenade, three of them), the
  *  lent five sponge rounds over it on the frozen one. Without it every way below was played with a kit the page never deals */
 export const pageKit = true;
 
@@ -65,8 +75,10 @@ const landed = (B: Bot, kind: string, secs: number) => { let seen = false; for (
  *  beat again from its first line: every fight has to start clean from its cue. */
 const once = new Set<string>();
 const stepIs = (B: Bot, id: string) => B.g.lesson.step?.id === id;
+/** the checkpoint 'the gate' is kept with the inner door already out and the rifle on full auto and full: put back, none of that is asked again */
+const againDoor = (B: Bot) => { const d = B.g.doors.byName('inner')!, w = B.g.player.rifle;
+  if (d.isClosed()) B.fail('again: the checkpoint at the gate put the inner door back on its hinges'); if (w.roundsReady < w.def.magCapacity) B.fail(`again: the checkpoint at the gate left the rifle at ${w.roundsReady} rounds`); };
 /** play these lines again, each when it is the one that is up */
-const SETUP = () => setupOn() ? ['setup', 'tab'] : [];
 const replay = (B: Bot, ids: string[]) => { for (const id of ids) {
   // (a line that may be true as it comes up — `idleOk` — has gone by when the lesson is already past it)
   const gone = () => idleOk.includes(id) && B.g.lesson.i > B.g.level.scenarios.lesson.steps.findIndex((T: { id: string }) => T.id === id);
@@ -123,8 +135,9 @@ export const steps: Record<string, (B: Bot) => void> = {
     const r0 = gun(B).roundsReady;
     if (!fight(B, 1, 20)) B.fail(`the sentry did not drop (line ${line(B, s)}, he is ${s.state}, ${r0 - gun(B).roundsReady} rounds left the gun)`);
     B.say(`  the sentry is down from the corner: ${r0 - gun(B).roundsReady} round(s)`);
+    // (the next line and its card wait for him to fall: the step's `settle`)
+    B.step(45); if (!stepIs(B, 'fire')) B.fail('the next line came up within a second of the sentry going down: the moment did not settle');
   },
-  reload: B => { B.press('KeyR'); B.until(() => !gun(B).reloading, 5); },
   // the rifle's selector: its own key on the stand from before the gun's setup, the setup's first row where that is up (the rifle's digit, then 1: a digit
   // that is the pistol's slot anywhere else, and the pistol has no line yet). The run as the lines say stays on full auto, as a player is left; the arms that are each about one mistake go back to single
   // shots, which their fights were measured on
@@ -142,20 +155,50 @@ export const steps: Record<string, (B: Bot) => void> = {
     const flip = () => { if (setupOn()) { B.press('Digit2', 12); B.press('Digit1', 12); } else B.press('KeyZ', 12); };
     flip(); if (stepIs(B, 'auto')) B.fail(`the selector did not move (the rifle is on ${B.g.player.rifle.mode}, the hands hold ${B.g.player.slot}, its setup is ${B.g.player.setup ? 'up' : 'shut'}, reloading ${gun(B).reloading})`);
     if (B.g.player.slot !== 'rifle') B.fail(`the selector's digit took the ${B.g.player.slot} into his hands`);
-    if (brk() === '') return;
+    if (brk() === '' || brk() === 'jamb') return;
     B.step(100); flip(); B.step(100);   // (past the setup's own clock, so the next press of the rifle's digit opens it afresh)
     if (B.g.player.rifle.mode !== 'semi') B.fail(`the selector did not come back to single shots (${B.g.player.rifle.mode})`);
   },
-  // in by the gate, round the barrier's far end, up beside the blue gate; then down, as the gun starts along the sandbags
-  arch: B => { if (B.g.player.wall) B.press('KeyQ', 10); B.go([10.6, 0, 11.2], 20); B.go(JAMB, 20); },
+  // THE INNER DOOR: in by the gate, square on to the leaf, and the trigger held until it is off its hinges (twelve rifle rounds: doorblast.ts). The way
+  // `jamb` puts a long burst into the wall beside it instead: the line goes by on the burst and the script opens the door as the next line comes up
+  inner: B => { if (B.g.player.wall) B.press('KeyQ', 10); B.go([9.9, 0, AXIS], 10); B.go(INNER_FROM, 20, { near: 0.6 }); },
+  door: B => {
+    const g = B.g, d = g.doors.byName('inner')!, at = [INNER_X, 1.1, INNER_Z], miss = brk() === 'jamb', r0 = gun(B).roundsReady;
+    if (!d.locked || !d.isClosed()) B.fail('the inner door is open or unlocked before the line that shoots it out');
+    B.go(INNER_FROM, 6, { near: 0.3 });
+    if (miss) { trigger(B, () => [INNER_X, 1.1, INNER_Z - 1.6], 4, () => !stepIs(B, 'door'));
+      if (stepIs(B, 'door')) B.fail(`jamb: ${r0 - gun(B).roundsReady} rounds into the wall beside the door on one trigger and the line is still up`);
+      if ((d as unknown as { off?: boolean }).off) B.fail('jamb: the leaf is off its hinges with every round in the wall beside it');
+      B.until(() => !d.isClosed(), 4); if (d.isClosed()) B.fail('jamb: the line went by on the burst and the door was not opened for him');
+      B.say(`  jamb: ${r0 - gun(B).roundsReady} rounds into the wall, the line went by on the burst and the door was opened for him`); return; }
+    trigger(B, () => at, 6, () => !d.isClosed());
+    const n = r0 - gun(B).roundsReady; B.say(`  the inner door: ${d.isClosed() ? 'still standing' : 'out'} after ${n} round(s)${doorShotOn() && wallsBreak(B) ? '' : ' (gunfire does not splinter a door on this stand)'}`);
+    const splinters = doorShotOn() && wallsBreak(B);
+    if (splinters && (d.isClosed() || n > 14)) B.fail(`the inner door took ${n} rounds square on and is ${d.isClosed() ? 'still standing' : 'out'} (it stands twelve)`);
+    if (!splinters && stepIs(B, 'door')) B.fail(B.g.player.rifle.mode !== 'semi' ? 'with no door splintering here a long burst did not end the line' : 'the inner door cannot be shot out on this stand and the rifle is on single shots: this way cannot be played here');
+    if (downed(B) !== 1) B.fail(`${downed(B)} men are down after the door: a round through the leaf found somebody`);
+    B.step(40); if (!stepIs(B, 'door')) B.fail('the reload\'s line came up within a second of the door going: the moment did not settle');
+  },
+  // the reload, and the line stays up until the gun is full again (the next one came up over the reload: the maintainer's note)
+  reload: B => {
+    const w = gun(B), full = () => !w.reloading && w.roundsReady >= w.def.magCapacity;
+    B.until(() => !B.g.doors.byName('inner')!.isClosed(), 2); if (B.g.doors.byName('inner')!.isClosed()) B.fail('the reload\'s line is up and the inner door still stands: the script did not open it');
+    if (!full() && !w.reloading) B.press('KeyR', 6);
+    if (!w.reloading && !full()) B.fail(`R did not start a reload (${w.roundsReady} ready, ${w.spare.length} spare)`);
+    while (w.reloading) { B.step(); if (!stepIs(B, 'reload')) B.fail('the next line came up while the rifle was still being reloaded'); }
+    B.step(30); if (!stepIs(B, 'reload')) B.fail('the next line came up within half a second of the reload: the moment did not settle');
+    B.say(`  reloaded: ${w.roundsReady} ready`);
+  },
+  // through the doorway and up beside the blue gate; then down, as the gun starts along the sandbags
+  arch: B => { if (B.g.player.wall) B.press('KeyQ', 10); B.go([INNER_X + 1.0, 0, INNER_Z], 20); B.go(JAMB, 20); },
   crouch: B => { B.wait(1.2); B.crouch(true); },
   // crouched through the arch and along behind the sandbags
   low: B => {
-    if (brk() === 'again' && !once.has('low')) { once.add('low'); downAndBack(B, () => { B.crouch(false); B.go([16.9, 0, 13.3], 12, { stop: () => B.g.player.down }); B.go(BAGS_END, 15, { stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', ...SETUP(), 'auto', 'arch', 'crouch']); B.until(() => stepIs(B, 'low'), 4); }
+    if (brk() === 'again' && !once.has('low')) { once.add('low'); downAndBack(B, () => { B.crouch(false); B.go([16.9, 0, 13.3], 12, { stop: () => B.g.player.down }); B.go(BAGS_END, 15, { stop: () => B.g.player.down }); }, 'arch'); againDoor(B); replay(B, ['arch', 'crouch']); B.until(() => stepIs(B, 'low'), 4); }
     if (brk() === 'stand') B.crouch(false); B.go([16.9, 0, 13.3], 12); B.go(BAGS_END, 15); if (brk() === 'stand') { B.wait(2.5); B.fail('BREAK stand: he walked the sandbags standing and was not hit'); }
   },
   smoke: B => {
-    if (brk() === 'again' && !once.has('smoke')) { once.add('smoke'); downAndBack(B, () => { B.go(BARRIER, 10, { near: 0.5, stop: () => B.g.player.down }); }, 'reload'); replay(B, ['reload', ...SETUP(), 'auto', 'arch', 'crouch', 'low']); B.until(() => stepIs(B, 'smoke'), 4); B.step(30); }
+    if (brk() === 'again' && !once.has('smoke')) { once.add('smoke'); downAndBack(B, () => { B.go(BARRIER, 10, { near: 0.5, stop: () => B.g.player.down }); }, 'arch'); againDoor(B); replay(B, ['arch', 'crouch', 'low']); B.until(() => stepIs(B, 'smoke'), 4); B.step(30); }
     if (brk() === 'nosmoke') { B.go(BARRIER, 10, { near: 0.5 }); B.wait(2.5); B.fail('BREAK nosmoke: he crossed the gap with no smoke up and was not hit'); } take(B, 'Digit3'); B.click(1, GAP); landed(B, 'smoke', 4); B.wait(2.8);
   },
   // when the plume is up: across the gap, behind the barrier
@@ -236,25 +279,21 @@ export const steps: Record<string, (B: Bot) => void> = {
     const men = B.g.guards.slice(5).filter(up), off = men.filter((x: any, k: number) => Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) > 0.8);
     if (men.length < 2 || off.length) B.fail(`the shot is asked for before the two stand in the doorway (${men.length} up, ${off.length} still on the way)`);
   },
-  // 2 with the rifle up steps what is on the right button (the setup's load row where the setup is a mode); a kit that came loaded has nothing to do
-  load: B => { if (B.g.player.rifle.attachment === 'he40') { if (brk() === 'sponge') B.fail('sponge: the launcher came up on the grenade, so this way asked nothing'); return; }
-    // (he carries two loads on the page and the launcher is on the sponge round: the right button stays shut until the grenade is on, so a round he did not
-    //  mean cannot go at the two in the doorway. The maintainer, of his first play: "i first accidentally sponged the guys")
-    if (brk() === 'sponge') { const x = B.g.guards.slice(5).find(up); if (!x) B.fail('sponge: nobody stands in the doorway on the line that loads the grenade'); const had = B.g.player.rifle.rings; rightHold(B, chest(x)); B.wait(1);
-      if (B.g.player.rifle.rings !== had) B.fail(`sponge: the right button fired a sponge round on the line that loads the grenade (${had} → ${B.g.player.rifle.rings})`); }
-    B.press('Digit2', 20); if (stepIs(B, 'load')) B.press('Digit2', 10); },
   // the two in the shop's doorway behind him: the grenade into it, once both stand there (8.5 m and more: armed)
   launch: B => {
     const men = () => B.g.guards.slice(5);
     B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
     if (brk() === 'again' && !once.has('launch')) { once.add('launch');
       handBack(B, 'take'); if (men().length) B.fail(`again: ${men().length} of the last men are on the floor before their line (the checkpoint is from before they came)`);
-      replay(B, ['take', 'rifle', 'leave', 'behind', 'load']); B.until(() => stepIs(B, 'launch'), 4); B.step(30);
+      replay(B, ['take', 'rifle', 'leave', 'behind']); B.until(() => stepIs(B, 'launch'), 4); B.step(30);
       B.until(() => men().length >= 2 && men().every((x: any, k: number) => !up(x) || Math.hypot(x.char.pos[0] - LAST_MEN[k][0], x.char.pos[2] - LAST_MEN[k][2]) < 0.8), 12);
       if (men().length !== 2) B.fail(`again: ${men().length} last men after the checkpoint (two come, once)`); }
     const x = men().find(up); if (!x) B.fail('nobody came out through the shop');
     // (they come by the store's back door, from the lane outside: it was shut and locked on him until now)
     if (!(Math.abs(B.g.doors.byName('store')!.angle) > 1)) B.fail('the last two are in the doorway and the store\'s back door is not open: they did not come by it');
+    // (his card has no sponge round and the launcher comes up on its grenade. A stand where the card is not the whole kit lends him sponge rounds and puts
+    //  the launcher on them: there, and there alone, he swaps by the rifle's own key before he fires — no line asks it, because no page deals it)
+    if (B.g.player.rifle.attachment !== 'he40') { if (K_WHOLE()) B.fail(`the launcher is on '${B.g.player.rifle.attachment}' where his card is the whole kit: the lesson has no line that swaps it`); B.press('Digit2', 20); if (B.g.player.rifle.attachment !== 'he40') B.press('Digit2', 20); }
     // (two ways a new player gets this wrong, each of which must cost him nothing: tools/qa/tut-solo-check.ts)
     if (brk() === 'piers') for (const z of [AXIS - 1.25, AXIS + 1.3]) { B.go([ARCH_MOUTH[0] + 0.1, 0, z], 6, { near: 0.25 }); B.wait(4); if (B.g.player.wall) B.press('KeyQ', 10); B.go([ARCH_MOUTH[0], 0, AXIS], 6); }   // (the page takes the pier as a wall: off it, and back to the mouth, before the launcher)
     if (brk() === 'dud') { B.go([20.4, 0, AXIS], 8); rightHold(B, chest(x)); B.wait(3);
@@ -267,5 +306,9 @@ export const steps: Record<string, (B: Bot) => void> = {
     const g = B.g;
     fight(B, 7, 60, () => { const x = g.guards.find(up); if (!x) return; const p = x.char.pos; if (Math.hypot(p[0] - B.pos()[0], p[2] - B.pos()[2]) > 14) B.go([p[0], 0, p[2]], 1.5, { stop: () => line(B, x) }); else B.step(10); });
   },
-  out: B => { B.go([10.6, 0, 11.6], 40, { sprint: true }); B.go([EXIT.x - 1.6, 0, EXIT.z], 20, { sprint: true }); },
+  // back by the way he came: the arch, the inner doorway, the yard gate
+  out: B => { B.go([INNER_X + 1.0, 0, INNER_Z], 40, { sprint: true }); B.go(INNER_FROM, 10, { sprint: true }); B.go([EXIT.x - 1.6, 0, EXIT.z], 20, { sprint: true }); },
 };
+/** the steps whose line stays up a beat after it is done (the level's `settle`: the man falls, the blast clears, the reload ends): each waits that beat out,
+ *  as a player does, before the runner asks whether the line has gone by */
+for (const id of ['fire', 'door', 'reload', 'frag', 'lamp', 'blow', 'shop', 'stun', 'store', 'rifle', 'last']) { const f = steps[id]; steps[id] = B => { f(B); B.until(() => !stepIs(B, id), 4); }; }

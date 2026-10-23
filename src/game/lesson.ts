@@ -124,6 +124,8 @@ const downed = (x: Guard) => x.state === 'dead';
 /** the one partner of a quiet pair (the first operative unit on his feet; null: none) */
 const partnerOf = (g: Game): Guard | null => g.guards.find(x => !!x.unit && x.team === 'operative' && x.state !== 'dead') ?? null;
 /** what a `pair` test may count (the first words of pairorders.ts PAIR_LOG rows) */
+/** the key, among a step's counts, of the seconds it has waited since it counted (LessonStep.settle) */
+const SETTLING = '~settle';
 const PAIR_WHATS = ['mark', 'now', 'set', 'go', 'go:F', 'go:hands', 'down'];
 
 /** the flags a `flag` test can read off the player (and the team's posture): each true while it holds */
@@ -204,6 +206,9 @@ export const LESSON_TESTS: Record<string, TestKind> = {
   // -- (the lights', locks' and devices' rows)
 
   // -- (the guns' and the kit's rows)
+  // loaded: the gun in his hands is full again and out of the reload's beat (a magazine's worth ready: one reloaded from dry has no round over it) — what
+  // 'press R to reload' waits for when the next line must not come up over the reload; true at once of a gun that was never fired
+  loaded: { ok: g => { const p = who(g), w = p.pistolUp ? p.pistol : p.rifleUp ? p.rifle : null; return !!w && !w.reloading && w.roundsReady >= w.def.magCapacity; }, check: () => null },
   // reload: the gun in his hands is being reloaded (R) — true for the beat's length
   reload: { ok: g => { const p = who(g); return (p.pistolUp && p.pistol.reloading) || (p.rifleUp && p.rifle.reloading); }, check: () => null },
   // launcher: what the rifle's right button fires (2 again, with the rifle up, flips it): on 'ring' | 'he40' ('none' was a selection once: now it is true only of a long gun with no launcher, the shotgun); `fired` = …and the tube has just sent one (true while it cycles)
@@ -330,9 +335,15 @@ export class Lesson {
     const S = this.seen ??= this.fresh(1e-6);   // (the run's first step, or the first after a load: this frame's own deeds are in)
     this.count(S);
     const T = L.steps[this.i];
+    // (`settle`: a step that has counted waits its seconds out before the next comes up — kept in the step's own counts, so a step without the key is
+    //  the step it always was)
+    const st = T.settle ?? 0, won = st > 0 ? S.n.get(SETTLING) : undefined;
+    if (won !== undefined) { if (won + dt >= st) this.advance(L, T); else S.n.set(SETTLING, won + dt); return; }
     if (passes(g, T.done, S)) { S.held += dt;   // (an unknown kind never passes: checkLesson names it)
-      if (S.held > (T.hold ?? 0) || !(T.hold ?? 0)) this.advance(L, T); } else S.held = 0;
+      if (S.held > (T.hold ?? 0) || !(T.hold ?? 0)) { if (st > 0) S.n.set(SETTLING, 0); else this.advance(L, T); } } else S.held = 0;
   }
+  /** the step that is up has counted and is waiting its `settle` out (the frame's to read: nothing more is asked of him) */
+  get settling(): boolean { return this.seen?.n.has(SETTLING) ?? false; }
   private advance(L: LessonData, T: LessonStep) {
     const g = this.g; this.doneAt.set(T.id, g.time); this.i++; this.seen = this.fresh(); LESSON_STATS.steps++;   // (the next step counts from THIS frame's end: a deed on its first frame is its own)
     this.note(`done ${this.i}/${L.steps.length} '${T.id}'`);
