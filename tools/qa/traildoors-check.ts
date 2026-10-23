@@ -42,7 +42,7 @@ async function held(on: boolean, set: Record<string, unknown> = {}): Promise<Hel
   try { await walk(4, (g: any, men: any[]) => {
     const sam = g.player.char.pos, O = g.orders;
     if (!H.g) { H.g = g; H.stood = !!ORDERS.trailDoors; ORDERS.trailDoors = on; Object.assign(ORDERS, set);
-      const tw = O.trailWay.bind(O); O.trailWay = (gd: any, slot: number[], onTrail: number[]) => { const r = tw(gd, slot, onTrail); if (r.length && gd === lead && phase === 2) H.took++; return r; }; }
+      const tw = O.trailWay.bind(O); O.trailWay = (...a: any[]) => { const r = tw(...a); if (r.length && a[0] === lead && phase === 2) H.took++; return r; }; }
     if (phase === 0 && inRoom(sam, COPY)) { phase = 1; lead = men.find((m: any) => O.of(m)?.follow === 0) ?? men[0]; H.who = lead.callsign; pin = [...lead.char.pos]; H.from = [...pin]; }
     if (phase === 1) { const c = lead.char; c.pos[0] = pin![0]; c.pos[2] = pin![2]; c.vel[0] = c.vel[2] = 0; H.heldS += 1 / 60;
       if (inRoom(sam, HALL) && sam[0] > HALL.x0 + 1.5) { phase = 2; t1 = g.time; } }
@@ -63,7 +63,7 @@ export const trailDoorsCheck = guarded(async () => {
     const on = await held(true);
     F.verdict(on.heldS > 1 && on.inCopy > 30 && on.took >= 1 && on.gap < 5.5, 'rule on, the same: he is handed Sam\'s trail, walks through the copy room, and ends with Sam', say(on));
     { let asks = 0, took = 0, G: any = null; console.log = () => { };
-      const w = await walk(4, (g: any) => { if (!G) { G = g; ORDERS.trailDoors = true; const O = g.orders, tw = O.trailWay.bind(O); O.trailWay = (gd: any, a: number[], b: number[]) => { asks++; const r = tw(gd, a, b); if (r.length) took++; return r; }; } });
+      const w = await walk(4, (g: any) => { if (!G) { G = g; ORDERS.trailDoors = true; const O = g.orders, tw = O.trailWay.bind(O); O.trailWay = (...a: any[]) => { asks++; const r = tw(...a); if (r.length) took++; return r; }; } });
       console.log = log;
       const spaces = Object.keys(REGISTRY_ROOMS), miss = w.theirs.map((t: Set<string>) => spaces.filter(s => w.sam.has(s) && !t.has(s)).join('+') || '—');
       F.verdict(w.alive && !w.short && miss.every((k: string) => k === '—') && w.end.every((d: number) => d < 5.5) && w.doorway.length === 0 && asks > 0 && took <= 3, 'rule on, the whole walk with nobody held: every man enters every space Sam does and ends with him; the trail way is asked for and is a rare thing',

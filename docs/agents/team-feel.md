@@ -283,9 +283,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that lies on a frame's line is not counted as a side), he is handed the trail's corners as a way round is (`via`). Never where he
   has a straight walk to his place, never through a lock he is kept out of, never a walk more than `trailLong` 1.5 times his own + 2 m,
   not for a place on a wall (`unseen.ts`), and nothing once the trail (`trailM` 10 m) has run out behind Sam: then his own way, as
-  ever. His place on the trail is the NEWEST crumb there (Sam in and out of a room by one door walks the same steps twice), and a way
-  left over when he stops or is close is dropped, so the rest rules still read him. What it does not see: an opening with no door in
-  it is no way of its own, and the crumb he joins at may be a step behind him. ON in the page (`?traildoors=0` off; panel toggle "a follower goes by the doors you took"), OFF in the module and on
+  ever. His place on the trail is found by the walk back from Sam (`slotCrumb`, the same walk as `slot`), not by what is near (Sam
+  in and out of a room by one door walks the same steps twice), and a way left over when he stops or is close is dropped, so the rest
+  rules still read him. What it does not see: an opening with no door in it is no way of its own; the crumb he joins at may be a step
+  behind him; his own way is the plain short path, not the one a covered lane would price; and in a room longer than the trail kept
+  behind his place (5 to 9 m) the trail can run out under him part way, and he turns once for his own way. ON in the page (`?traildoors=0` off; panel toggle "a follower goes by the doors you took"), OFF in the module and on
   the frozen stand (`TPS_TRAILDOORS=1`), a `FROZEN_HOLDS` row, carried by the journal, pinned off in the three digest lists beside
   `sameWay`. Check `trail-doors` (`tools/qa/traildoors-check.ts`, family `registry`; `TRAILDOORS_BREAK=1` fails 2 on the page's stand
   and 1 on the frozen), 7 of 7 on both: the lead follower HELD at the copy room's door for 4 s and let go with Sam in the hall goes
