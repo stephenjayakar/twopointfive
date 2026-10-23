@@ -199,7 +199,12 @@ function word(S: SquadOrders, input: Input): void {
   const mine = chainsOf(S), waiting = mine.filter(c => c.phase === 'wait' || c.phase === 'held');
   if (waiting.length) {
     input.pressed.delete(key); P.showT = S.g.time; PLAN_STATS.words++;
+    const DT = S.g.doorTools, had = CMDRING.planOne ? new Set(DT.ops) : null;
     for (const C of waiting) { if (C.phase === 'wait') enter(S, C); else next(S, C); }
+    if (had) {   // (planOne: the entries this one press started go on one word, the door tools' own — nobody makes a sound until every stack is formed, and they step in together)
+      const fresh = DT.ops.filter(o => !had.has(o) && !o.word && !o.onWord && !o.gate && o.phase === 'stack' && (o.kind === 'openClear' || o.kind === 'bangClear'));
+      if (fresh.length > 1) DT.oneWord(fresh);
+    }
     return;
   }
   // (men still walking to a door they are chained to, and nothing else the key could mean — no charge set, nobody stood waiting on it, no plan laid

@@ -201,7 +201,7 @@ export interface EnvSnap { debrisCap: number; emissiveScale: number; flashlightR
   destruction?: { on: boolean };
   /** scene/lived.ts as the recording ran (absent = off): the level was loaded with its lived-in rooms' furniture, so a replay loads it the same way */
   lived?: boolean; }
-export interface KnobsSnap { tune: Record<string, unknown>; flags: { godMode: boolean; aiEnabled: boolean; infiniteAmmo: boolean; playerInvisible: boolean; fn2000: boolean; autosave: boolean; fog?: boolean; stalkAmbient?: boolean; roundCap?: number; behindSam?: boolean }; tables: Record<string, unknown>; }
+export interface KnobsSnap { tune: Record<string, unknown>; flags: { godMode: boolean; aiEnabled: boolean; infiniteAmmo: boolean; playerInvisible: boolean; fn2000: boolean; autosave: boolean; fog?: boolean; stalkAmbient?: boolean; roundCap?: number; behindSam?: boolean; tossMate?: boolean }; tables: Record<string, unknown>; }
 /** the whole session (JSON): see the head for what each block is */
 export interface SessionFile {
   v: number; game: 'twopointsix'; recordedAt: string; commit?: string; note?: string;
@@ -241,7 +241,7 @@ export function applyEnvSettings(settings: Record<string, unknown>, env: EnvSnap
 export function applyEnvGame(g: Game, env: EnvSnap): void { for (const t of g.targets) { const s = env.stagger[t.name]; if (typeof s === 'number' && Number.isFinite(s)) t.stagger = s; } }
 export function knobsSnapshot(g: Game): KnobsSnap {
   const tables: Record<string, unknown> = {}; for (const [k, T] of Object.entries(knobTables())) tables[k] = JSON.parse(JSON.stringify(T));
-  return { tune: JSON.parse(JSON.stringify(g.tune)), flags: { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo, playerInvisible: g.playerInvisible, fn2000: g.fn2000, autosave: !!g.saves?.enabled, fog: !!g.fogOfWar?.on, stalkAmbient: SNEAK.stalkAmbient, roundCap: ORDERS.roundCap, behindSam: DOORTOOLS.behindSam }, tables };   // (autosave: the controller writes chronicle rows — state, even if the digest leaves them out)
+  return { tune: JSON.parse(JSON.stringify(g.tune)), flags: { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo, playerInvisible: g.playerInvisible, fn2000: g.fn2000, autosave: !!g.saves?.enabled, fog: !!g.fogOfWar?.on, stalkAmbient: SNEAK.stalkAmbient, roundCap: ORDERS.roundCap, behindSam: DOORTOOLS.behindSam, tossMate: DOORTOOLS.tossMate }, tables };   // (autosave: the controller writes chronicle rows — state, even if the digest leaves them out)
 }
 export function applyKnobs(g: Game, k: KnobsSnap): void {
   assignDeep(g.tune as unknown as Record<string, unknown>, k.tune);
@@ -302,7 +302,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.CMDRING as { tapNow?: boolean } | undefined)?.tapNow !== 'boolean') CMDRING.tapNow = false;   // (… and from before a press already up in its own tick was given on that tick: it was given on the next)
   if (typeof (k.tables.CMDRING as { planRun?: boolean } | undefined)?.planRun !== 'boolean') CMDRING.planRun = false;   // (… and from before a sprint's Shift was not the mode's: Shift + the key was always the mode's)
   if (typeof (k.tables.CMDRING as { only?: boolean } | undefined)?.only !== 'boolean') CMDRING.only = false;   // (… and from before the ring carried every order: its wedges were the rows on digits, the letters worked beside it)
-  for (const key of ['planLook', 'planWaits', 'planKnee'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before plan mode's right drag, its own waits and the knee at the radio: a right press was a click or the ring, the pauses were the build's, he stood)
+  for (const key of ['planLook', 'planWaits', 'planKnee', 'planOne'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before plan mode's right drag, its own waits and the knee at the radio: a right press was a click or the ring, the pauses were the build's, he stood)
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
   if (!k.tables.KITANIM) KITANIM.on = false;   // (a file from before the kit animations: its draws were instant and its reloads the row's one beat)
@@ -518,6 +518,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (dt?.haltBack === undefined) DOORTOOLS.haltBack = false;   // (…and from before a pair halted on a door the other pair is charging stepped back off it: it stays stacked where it halted, as it was. A recording that carries the key keeps its own.)
     if (typeof k.flags.behindSam === 'boolean') DOORTOOLS.behindSam = k.flags.behindSam;   // (a recording's own tables did not carry DOORTOOLS then either: this key rides with the flags too, so a recording made with it on replays on)
     else if (dt?.behindSam === undefined) DOORTOOLS.behindSam = false;   // (…and a file from before Sam beyond a door kept the squad's own stun can in the kit: the word at a held door banged its pockets wherever he stood)
+    if (typeof k.flags.tossMate === 'boolean') DOORTOOLS.tossMate = k.flags.tossMate;   // (… and the can asked about teammates again as it leaves the hand: with the flags, as behindSam)
+    else if ((dt as { tossMate?: boolean } | undefined)?.tossMate === undefined) DOORTOOLS.tossMate = false;   // (…a file from before the key: the row asked when it was given and never again)
     if (dt?.threatFirst === undefined) DOORTOOLS.threatFirst = false; if (dt?.openAir === undefined) DOORTOOLS.openAir = false; if (dt?.flowMax === undefined) DOORTOOLS.flowMax = 0;
     if (dt?.bangWay === undefined) DOORTOOLS.bangWay = false; if (dt?.threatStuck === undefined) DOORTOOLS.threatStuck = 0;   // (…and from before the stun canister's look at the leaf existed; a recording that carries the key replays its own value)
     if (dt?.openHand === undefined) DOORTOOLS.openHand = false; if ((dt as { gateHand?: boolean } | undefined)?.gateHand === undefined) DOORTOOLS.gateHand = false;
@@ -527,9 +529,11 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if ((dt as { fragHold?: boolean } | undefined)?.fragHold === undefined) DOORTOOLS.fragHold = false; }   // (…and from before a door order waited for its men who ran from a grenade)   // (…and from before a threshold's can waited for a hand at the door)   // (…and from before an entry's points kept out of other doors' frames)   // (…and from before a bang / frag order on an open door kept every man on his own side of it)
   if ((k.tables.DOORWAY as { kickGlass?: boolean } | undefined)?.kickGlass === undefined) DOORWAY.kickGlass = false;   // (…and from before that boot was kept from in front of a pane)
   if ((k.tables.DOORWAY as { sideKick?: boolean } | undefined)?.sideKick === undefined) DOORWAY.sideKick = false;   // (…and from before a boot could be thrown from beside the door)
+  if ((k.tables.DOORWAY as { solid?: boolean } | undefined)?.solid === undefined) DOORWAY.solid = false;   // (…and from before a pulled leaf was solid to the player: it passes him, as it was recorded)
   if ((k.tables.FURN as { mouth?: unknown } | undefined)?.mouth === undefined) FURN.mouth.on = false;   // (a file from before a blown hole was cleared of what stood in its mouths: it stood there)
   if ((k.tables.FURN as { mouth?: { snow?: unknown } } | undefined)?.mouth?.snow === undefined) FURN.mouth.snow = false;   // (a file from before lying snow in a blown hole's mouths went with the blast: the bank stood)
   if ((k.tables.FURN as { mouth?: { base?: unknown } } | undefined)?.mouth?.base === undefined) FURN.mouth.base = false;   // (a file from before the bottom layer of a blown pile went with it: the layer lay in the hole)
+  if ((k.tables.SNEAK as { byEye?: boolean } | undefined)?.byEye === undefined) SNEAK.byEye = false;   // (…and from before a lit step was read by the eye that has the line)
   if ((k.tables.ROOMFIGHT as { coverKeep?: boolean } | undefined)?.coverKeep === undefined) ROOMFIGHT.coverKeep = false;   // (…and from before a man told to cover kept his angle)
   if ((k.tables.ROOMFIGHT as { doorEars?: boolean } | undefined)?.doorEars === undefined) ROOMFIGHT.doorEars = false;   // (…and from before a teammate looked at a door an enemy's hand opens in his sight)
   if (!k.tables.AIR_SIM) AIR_SIM.on = false;   // (a file from before the air was a simulated field: no field is fed — a picture only, the run is the same either way)
