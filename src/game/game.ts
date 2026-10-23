@@ -1558,7 +1558,7 @@ export class Game {
     // anything still in the air or still venting belongs to the encounter that just ended: an armed stun canister landing into the new one would
     // dazzle the fresh guards and alert the floor from a throw the restarted player never made, and a deployed can's 30 s screen would go on
     // degrading their line of sight (its emitter tracks the item and is priority-pinned, so dropping the item alone does not stop it)
-    this.clearAftermath(); this.smoke.clearAll?.();
+    this.clearAftermath(); this.smoke.clearAll?.(); if (this.engine.hostBooks) this.engine.hostBooks.fire = undefined;   // (… and with that solver's smoke, the open fires' book of what they filed with it and asked of the mixer: fire.ts FireShown — asked for afresh on the next frame)
     this.hover = null; this.interactables = []; this.nearby = []; this.act = null;   // (like useDoor above) this frame's cursor state still names the guards / bodies of the encounter that just ended: when the restart
                                                   // came from updatePlayer (Shift+Enter), the Space handlers later in the same update() must not grab, take down or drag any of them
     if (clean) this.cleanSlate();
