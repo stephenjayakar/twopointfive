@@ -65,9 +65,15 @@ export const RAILS = { on: false,
   skyPlan: true,
   /** SHIFT WITH THE COMMAND KEY ON THE MOVE: where a step gives him his feet and plan mode but not his sprint, a walk key held is no sprint's — so Shift
    *  with the command key, pressed, is the mode's there too, and the walk keys are out of that one tick (the Shift that gets through never meets a walk
-   *  key to run with: nor on the tick the mode comes down). false: with a walk key down the pair did nothing at all until he stood still, and the tick
-   *  the mode came down with Shift and a walk key held was a tick at a run, as it was */
+   *  key to run with). false: with a walk key down the pair did nothing at all until he stood still, as it was */
   planWalk: true,
+  /** THE TICK THE MODE COMES DOWN: with the mode up the gate lets through what is the mode's (Shift, both buttons, the walk keys that move its view), and
+   *  the mode can come down inside that same tick, by the pair, the back key, or any other road — and then what was let through was his feet's, his
+   *  sprint's and his trigger's for what was left of the tick, on a step that locks them. So right after the orders have read the tick (`afterOrders`),
+   *  a mode that was up and is down takes back what only it was given. false: that tick was his (3.5 cm with a walk key on locked feet, a tick at a
+   *  run on a locked sprint), and — as the first cut of `planWalk` had it — the gate guessed the pair's and the back key's tick from the keys alone and
+   *  took the walk keys out of it where his sprint was locked: a recording made on that cut replays so */
+  planDown: true,
   /** a step's `after`: seconds its line stands in for the step's own once the order it asks for has gone out and its men stand where it sent them (while one
    *  is still walking the line stays) — then the step asks again: the men could not do it, or it was the wrong place, and a line that only ever says 'they
    *  are on it' is a player left waiting. 0: never shown */
@@ -249,8 +255,20 @@ export class Rails {
    *  there is no row either while Space itself is locked: a prompt for a key that does nothing is a lie in the corner of the screen */
   offers(verb: string): boolean { const R = this.data?.rows; return !R || BREAK || (R.includes(verb) && !this.locks('use')); }
 
+  /** what the gate let through this tick only because plan mode was up when the tick began, as what he may have without the mode (his own buttons, his
+   *  Shift, his walk keys): set by `gate`, read and dropped by `afterOrders` in the same tick, so no snapshot between ticks ever holds one */
+  private planTick: { buttons: number; shift: boolean; walk: boolean } | null = null;
+  /** RIGHT AFTER THE ORDERS HAVE READ THE TICK (Game.step; RAILS.planDown): the mode was up when the gate ran and is down now — the pair, the back key,
+   *  the squad gone, a chain's own end: whichever road — so what was the mode's goes out of the tick before his feet, his sprint or his trigger read it */
+  afterOrders(input: Input) {
+    const T = this.planTick; this.planTick = null; if (!T || this.g.orders?.plan.up) return;
+    input.buttons &= T.buttons; input.clicked &= T.buttons;
+    if (!T.shift) for (const k of ['ShiftLeft', 'ShiftRight']) { input.keys.delete(k); input.pressed.delete(k); }
+    if (!T.walk) for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); }
+  }
   /** THE GATE (Game.step, right after the tick's record is loaded into the seat's input): whatever the step has not unlocked is taken out of the tick */
   gate(input: Input, cam: FollowCamera, dt: number) {
+    this.planTick = null;
     const A = this.allowed(); if (!A || BREAK) return;
     const keys = new Set<string>(); let buttons = 0, wheel = false;
     for (const a of A) { const act = ACTS[a]; if (!act) continue; for (const k of act.keys ?? []) keys.add(k); buttons |= act.buttons ?? 0; wheel ||= !!act.wheel; }
@@ -266,14 +284,14 @@ export class Rails {
     // (only where the page HAS the mode — `?qplan=0` and the frozen stand do not, and there the key with Shift is the key's own order, which stays locked. A walk
     //  key held is a sprint's only where his feet are his: on a mission that never gives them it cannot stand between Shift and the key)
     const WALK = ACTS.move.keys!, planOn = A.has('plan') && CMDRING.plan, planUp = planOn && !!g.orders?.plan.up, walking = A.has('move') && WALK.some(k => input.keys.has(k));
-    if (planUp) { buttons |= 5; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
-    // (RAILS.planWalk · …and where his feet are his and his sprint is not, a walk key held is nobody's sprint: the pair PRESSED is the mode's with a walk key
-    //  down too, and the walk keys leave that one tick with it — planmode.ts planShift, under `planRun`, reads a walk key as a run, and a Shift that
-    //  reached his feet would be one. The same tick the other way: the pair or the back key that takes the mode DOWN lets Shift through because the
-    //  mode was up when the tick began, and with a walk key in it he ran for that tick. Only on the press: the key kept down toggles nothing)
-    const cmdKey = input.pressed.has('KeyB') || input.keys.has('KeyB');
-    const toggles = input.pressed.has('KeyB') || (planUp && (input.pressed.has('Escape') || input.pressed.has('Tab')));
-    const halt = RAILS.planWalk && planOn && walking && shift && toggles && !A.has('sprint');
+    if (planUp) { if (RAILS.planDown) this.planTick = { buttons, shift: A.has('sprint') || enter, walk: A.has('move') }; buttons |= 5; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
+    // (RAILS.planWalk · …and where his feet are his and his sprint is not, a walk key held is nobody's sprint: the pair PRESSED with the mode down is the
+    //  mode's with a walk key down too, and the walk keys leave that one tick with it — planmode.ts planShift, under `planRun`, reads a walk key as a
+    //  run, and a Shift that reached his feet would be one. Only on a press planInput would take: no ring up, nothing nearer for the key to back out of.
+    //  The tick the mode comes DOWN is `afterOrders`'s, RAILS.planDown; without that rule it was guessed here, from the keys, as the first cut did)
+    const cmdKey = input.pressed.has('KeyB') || input.keys.has('KeyB'), pair = shift && input.pressed.has('KeyB');
+    const halt = RAILS.planWalk && planOn && walking && !A.has('sprint') && (RAILS.planDown ? !planUp && pair && !!g.orders && !g.orders.cmdRing && g.orders.backFree()
+      : shift && (input.pressed.has('KeyB') || (planUp && (input.pressed.has('Escape') || input.pressed.has('Tab')))));
     if (halt) for (const k of WALK) { input.keys.delete(k); input.pressed.delete(k); }
     if (planOn && (planUp || ((!walking || halt) && cmdKey))) { keys.add('ShiftLeft'); keys.add('ShiftRight'); if (shift) keys.add('KeyB'); }
     // THE SETUP OF THE GUN IN HIS HANDS, up (slotsetup.ts): a row's digit is the row's there, whatever slot that digit is anywhere else, so it is let through

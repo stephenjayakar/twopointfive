@@ -27,14 +27,28 @@ let fails = 0, checks = 0;
 const verdict = (ok: boolean, what: string, detail = '') => { checks++; if (!ok) fails++; console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what}${detail ? ` — ${detail}` : ''}`); };
 const log = console.log, warn = console.warn, err = console.error;
 async function quiet<T>(f: () => Promise<T> | T): Promise<T> { console.log = console.warn = console.error = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; console.error = err; } }
-/** a line that still names the knife, or a key to grab a man with (read sentence by sentence, the key before the word or after it, any wording of the
- *  grab): what the page's rules have taken away. 'Cut the lights' is no knife and a key in another sentence is not the grab's */
-const KNIFE = /\b(kni(fe|fes|ves|fed|fing)|blades?|stab\w*)\b/i, GRAB = /\b(grab\w*|tak(e|es|ing) hold|chok\w*|seiz\w*)\b/i, GRAB_KEY = /\[(Space|E)\]|\bSpace\b/;
-const namesOld = (w: string): boolean => w.split(/[.!?\n]+/).some(q => KNIFE.test(q) || (GRAB.test(q) && GRAB_KEY.test(q)));
+/** a line that still names the knife, or a key to grab a man with: what the page's rules have taken away. A NET THAT ERRS TOWARD CATCHING, not a reader of
+ *  English: the knife by its names, and a word for the grab with one of the old keys in the same sentence or the one beside it, the key before the word or
+ *  after it, whatever lies between. A wrong catch costs a look and a row in HONEST; a miss is a dead key on the player's screen. (Three cuts tried to tell
+ *  'grab him with [Space]' from 'grab him, then press [E] to swap' by the words between: each one let a reworded old line through.) The line below holds it
+ *  to the cases it was taught on, and a new miss goes there first */
+const KNIFE = /\b(kni(fe|fes|ves|fed|fing)|blades?|stab(s|bed|bing)?)\b/i, GRAB_KEY = /\[(?:Space|E)\]|\bSpace\b/;
+const GRAB = /\b(?:grab\w*|(?:tak(?:e|es|ing)|took|gets?|got|getting) hold|chok(?!e points?\b)\w*|seiz(?:e|es|ed|ing))\b/i;
+/** HONEST LINES THE NET CATCHES, word for word as the page says them (after lessonLine): a line here names a key beside a grab and the key is another act's.
+ *  None today. Add one only after reading it on the page with both rules on */
+const HONEST: ReadonlySet<string> = new Set<string>([]);
+const namesOld = (w: string, honest: ReadonlySet<string> = HONEST): boolean => { if (honest.has(w)) return false; if (KNIFE.test(w)) return true;
+  const q = w.split(/[.!?\n]+/); return q.some((x, i) => GRAB.test(x) && (GRAB_KEY.test(x) || GRAB_KEY.test(q[i - 1] ?? '') || GRAB_KEY.test(q[i + 1] ?? ''))); };
 if (!names.length) { console.log('\n=== lesson-check: the words the rules took away ===');
-  const old = ['Sneak up behind him and press [Space] to grab him', 'Grab him with [Space]', '[E] takes hold of him', 'Left click to use your blade', 'Stay low, then left click to knife him', 'Knives are quiet'].filter(w => !namesOld(w));
-  const fine = ['Hold left click on him from behind to grab him', 'Press [B] on the breaker box to cut the lights', 'When you grab yours, he\'ll take his. Press [Space] to open the door.', 'Right click to knock him out'].filter(namesOld);
-  verdict(!old.length && !fine.length, 'the reading knows a key to grab by in any order of the words, and the knife by any of its names, and leaves a held click, a cut light and a key in another sentence alone', [...old.map(w => `missed: ${w}`), ...fine.map(w => `wrongly caught: ${w}`)].join(' · ')); }
+  const old = ['Sneak up behind him and press [Space] to grab him', 'Press [Space] behind him to grab him, and your partner will take his', 'Press [Space] behind the far guard to grab him', 'Press [Space] when you are close enough to him to grab him',
+    'Grab him with [Space]', 'To grab him, press [Space]', 'When he stops, grab him: press [Space]', 'Grab him by pressing and holding [Space]', '[E] takes hold of him', 'Press [Space]! Grab him.', '[Space], and you\'ve got hold of him',
+    'Press [Space] to put him in a chokehold', 'Left click to use your blade', 'Stay low, then left click to knife him', 'Knives are quiet', 'Left click stabs him'].filter(w => !namesOld(w));
+  const fine = ['Hold left click on him from behind to grab him', 'Press [B] on the breaker box to cut the lights', 'When you grab yours, he\'ll take his. Wait for the light to pass. Press [Space] to open the door.', 'Right click to knock him out',
+    'Keep the stable door shut', 'Press [E] at the choke point'].filter(w => namesOld(w));
+  // (a key that is another act's, beside a grab: caught, by design, until its line is in the list — word for word, so a reworded one is caught again)
+  const other = 'Hold left click to grab him, then press [E] to swap to your gun', listed = namesOld(other) && !namesOld(other, new Set([other])) && namesOld(other + '.', new Set([other]));
+  verdict(!old.length && !fine.length && listed, 'the net knows a key to grab by, before the word or after it and across a stop, and the knife by any of its names; it leaves alone a held click, a cut light, a stable door and a choke point; and a key that is another act\'s beside a grab is caught until that line, word for word, is listed as honest',
+    [...old.map(w => `missed: ${w}`), ...fine.map(w => `wrongly caught: ${w}`), listed ? '' : 'the honest list does not work as said'].filter(Boolean).join(' · ')); }
 for (const name of list) {
   console.log(`\n=== lesson-check ${name}.json ===`);
   const file = resolve(ROOT, 'levels', `${name}.json`);

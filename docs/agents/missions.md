@@ -1833,10 +1833,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pattern where a rule changes a key ('press [Space] … to grab him' is the held left click under `STALK.only`; the knife's lines are the knockout's under
   `CLOSE.noKnife`; `docs/agents/stealth.md`). A line reworded in a level could keep naming the old key and nothing would say so. So `lesson-check` reads
   every line, card, `noTap` and after-line of a level through `lessonLine` with both rules on and fails on one that still names the knife or a key to grab.
-  The reading is by sentence (`namesOld`): the knife by any of its names (knife, knives, blade, stab), and a word for the grab (grab, take hold, choke,
-  seize) with `[Space]`, `[E]` or the word Space in the same sentence, the key before the word or after it; a card's title is read as well. A line of its
-  own at the top of the check holds the reading to six lines it must catch ('Grab him with [Space]', 'your blade') and four it must leave alone (a held
-  click, 'cut the lights', a key in the next sentence). Before that it knew only 'knife' and '[Space] … to grab', and a reworded line passed it.
+  The reading (`namesOld`) is a net that errs toward catching, not a reader of English: the knife by its names (knife, knives, blade, stab, not
+  'stable'), and a word for the grab (grab, take or get hold, choke and chokehold but not 'choke point', seize) with `[Space]`, `[E]` or the word Space in
+  the same sentence or the one beside it, the key before the word or after it. A card's title is read as well. A wrong catch costs a look and a row in
+  the check's `HONEST` list (the line word for word, as the page says it; none today); a miss is a dead key on the player's screen. A line of its own at
+  the top of the check holds the net to sixteen lines it must catch and six it must leave alone, each one a miss or a false catch somebody found, and
+  shows the list working: a new one goes there first. The cuts before it, each let through by a review: 'knife' and '[Space] … to grab' only; one
+  sentence at a time (missed 'Press [Space]! Grab him.'); the key within four words or the same clause (missed 'Press [Space] behind the far guard to
+  grab him' and 'To grab him, press [Space]'). THE REAL MEND IS NOT THIS NET: `lessonLine` turns a level's words by exact pattern, so any rewording keeps
+  the old key and only the net stands in its way. A line that named the act with a token `lessonLine` expands, and a check that refuses a literal
+  `[Space]` on a step that teaches the grab, would need no reading of English: the close-in thread's file, said to it.
   No switch (a check, no rule of play). `LESSON_BREAK=words` leaves the two rules off and must fail on a level that teaches the grab: it fails on
   `tut-quiet` and `tut-pair` and passes `tut-solo`, which teaches none. Measured: `lesson-check` ALL PASS (69) on FROZEN and on SHIPPED. A new
   pattern in `lessonLine` wants its own words added to that line. STILL OPEN, the rails gate's (mine): with empty hands the left button is let through
@@ -1850,13 +1856,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of that one tick. So the mode goes up (he takes his knee where he is) and the Shift that passes never meets a walk key to run with; Shift with a walk
   key and no press of the command key is dropped as before, and the key kept down holds nobody's feet. The same tick the other way was an old flaw of the
   gate: the pair or the back key that took the mode DOWN let Shift through (the mode was up when the tick began), and with a walk key held that tick was
-  a run on a mission that locks the sprint; the walk keys are out of that tick too. A step that allows `sprint` is untouched (the pair is the key's own
+  a run on a mission that locks the sprint. THE TICK THE MODE COMES DOWN IS ITS OWN RULE NOW, `RAILS.planDown` (`?plandown=0`; same standing as
+  `planWalk`; `rails.afterOrders`, called from `Game.step` right after `orders.input`): the gate notes what it let through only because the mode was up
+  (the buttons, Shift, the walk keys, each as he may have them without the mode), and if the mode is down once the orders have read the tick, by the
+  pair, the back key or any road no key is on (the squad gone, a chain's end), those go out of the tick before his feet, his sprint or his trigger read
+  them. On mission 2's first step, which locks his feet, that tick was 3.5 cm with a walk key and Shift (1.2 cm with the walk key alone) and a held
+  button was his. The first cut guessed that tick in the gate from the keys (the pair's and the back key's only, and only where his feet were his):
+  that guess is kept behind `planDown` off, so a recording made on steps 960 to 967 replays as it ran. The pair that puts the mode UP is still read in
+  the gate, and only on a press `planInput` would take (no ring up, nothing nearer for the key to back out of). A step that allows `sprint` is untouched (the pair is the key's own
   order at a run, as in any mission). Only `tut-plan` allows `plan` today. The gate takes the walk keys out because `planmode.ts planShift` reads a walk
   key as a run: if that test moves, this rule moves with it. SWITCH: a knob of the frame's table, on in the module as the frame's other rules are and on
-  with the frame; `?planwalk=0` = as it was; no `FROZEN_HOLDS` row (the frame is off on the frozen stand, `TPS_RAILS=1` raises it and this with it);
+  with the frame; `?planwalk=0` = as it was; no `FROZEN_HOLDS` row (the frame is off on the frozen stand, `TPS_RAILS=1` raises it and this with it: a
+  review asked for a row, and it has none because no frozen digest, tally or fixture is recorded with the frame up, `lesson-run` refuses a rails mission
+  on that stand, and the frame's other rules stand the same way; a frozen recording with the frame would want a word for each of the seven);
   `journal.ts applyKnobs` puts it off for a recording from before the key. CHECK: `rails-check`, the line 'the plan on the move' (`tut-plan`, seed 1,
   its first step given `move` as well; the line also reads the level as authored: plan and move given, sprint never). `RAILS_BREAK=1` must fail it.
-  MEASURED, seed 1, FROZEN and SHIPPED alike: 0.75 m walked in half a second, the same with Shift down and with the key kept down as well; the pair
+  MEASURED, seed 1, FROZEN and SHIPPED alike (feet locked, the mode taken down with a walk key held: 0.00 cm by the pair, by the back key and by
+  another road, and a held button not his; both rules off: 3.54, 1.17 and 3.54 cm and the button his; `planWalk` alone, as the first cut: 1.17 cm by
+  the back key): 0.75 m walked in half a second, the same with Shift down and with the key kept down as well; the pair
   with the walk key down puts the mode up, on a knee, the step done, 0.07 m of slide after it; the pair again and the back key take it down, no tick at
   a run. Rule off: the mode stays down and the press is dropped, and the back key's tick is a run. The word and the old recording read as said. The
   break fails the line on both stands. ON THE PAGE (`tools/qa/tut-plan-page.cjs`, real keys, the software adapter, `STEPS=5`): at the end of the first
@@ -1882,6 +1899,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   mend the first failed on `stats.threads`. MEASURED, seed 7: 10 of 10 on FROZEN and on SHIPPED, `SMOKEBREAK_BREAK=1` fails 8 on both; `rollback-check`
   on SHIPPED and its static pass, `lived-check` 393, `lesson-gate tut-quiet` on SHIPPED all pass. ON THE PAGE (`tut-quiet`, the software adapter, the
   real solver, the court's man told to smoke where he stands): one thread filed in eight seconds and one on the solver, its stamp the current frame;
-  the solver cleared, none two frames on, and sixty frames later a second filing and one on the solver; no page error. SEEN ELSEWHERE, NOT MINE: `snowBreath.ts` keeps the same word in its table
-  (`stats.why`, `steam`, `steaming`, a man's `steam`), which is why the check reads this file's rows out one by one: the whole-state diff stops at that
-  table. NEVER SEEN ON A GPU: the thread itself has not been looked at by anybody, before or after.
+  the solver cleared, none two frames on, and sixty frames later a second filing and one on the solver; no page error. SEEN ELSEWHERE: `snowBreath.ts` kept the same word in its table (`stats.why`, `steam`, `steaming`, a man's `steam`; its owner
+  moved that book to the host the same day, `engine.breathShown`), which is why the check reads this file's rows out one by one: the whole-state diff
+  stopped at that table. NEVER SEEN ON A GPU: the thread itself has not been looked at by anybody, before or after.
