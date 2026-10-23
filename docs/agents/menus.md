@@ -1513,6 +1513,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the page while the board leaves it spare (`KEYMAP.camSpace`, docs/agents/player.md); under `?camspace=0` it is Ctrl as it was, and there a double
   tap is two more presses of it: on Windows Ctrl then W still closes the tab. NEVER SEEN ON A GPU by anyone here; how fast the view should come round,
   whether 250 / 300 ms is the right tap and 10 px the right let-go are first guesses in `BEHIND`, `TAPTWICE` and `CARRY`.
+- **The camera runs itself: a double tap of the camera's key puts it on, the key held with the mouse or a walk key gives the view back** (`src/host/autocam.ts`,
+  `AUTOCAM.on`, 10-23; the maintainer: "double tap space just turns on auto camera mode, and then space + movement disables to go to manual mode", and "the
+  squad AI is already magical and just tapping Q feels amazing. i think we can do the same for the camera"). SWITCH: on in the page (`?autocam=0` = the page as it
+  was; `?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms), OFF in the module and on the frozen stand (`FROZEN_HOLDS['AUTOCAM.on']`,
+  `TPS_AUTOCAM=1`), in the knob registry and `JOURNAL_KNOBS` (a recording from before the key replays with it off). The MODE is not the switch: `AUTOVIEW.on`
+  (`host/findme.ts`), off until the key is tapped twice, kept per machine (`localStorage` `twopointsix.autocam`), also the row "Auto camera" in Options > Game,
+  which stands where "Double tap Space" stood (Reset puts it off). With the switch on and the mode never put on the game and the view are the build's, by run
+  digest, on the free and the fixed step.
+  WHAT MOVED: the double tap was the Options row "look where he looks" (`FINDME.behind`, off at the start). Now the tap puts the mode on AND brings the view
+  round as that row did; with the mode on, a tap twice brings it round again. Under `?autocam=0` the old row is back.
+  THE RULE (all in `autoRead` / `autoFrame` / `turnGoal`, called from `host/loop.ts camStep`, which only a tool that steps through `stepFrame` reaches):
+  the look-at is his feet moved toward, in rising order, the middle of the room he is in, the door under his hand or the way out he walks at (and the floor
+  past it), the squad's beat for a few seconds (a door order changing phase, a post newly given), the enemies he could shoot (hostile, in the picture, a clear
+  line: never one `fogOfWar.hidden` says is hidden). It is held inside a box on the screen so he never leaves the middle (`sideM` / `awayM` / `backM`, scaled
+  by the zoom), eased, and frozen while a mouse button is down. NOTHING LEANS ON THE CURSOR (the maintainer had already put the aim pan at none). The zoom is
+  the hand's own, a little tighter in a room and in close-in, wider under the sky and in a fight, and out to fit what is framed; it never zooms in on a fight;
+  the wheel under the key still zooms and that becomes the base. THE TURN: the view is the seat's input (walk keys and the aim ray are read through it), so the
+  view turns by itself only with his feet still for half a second, no button down, no hostile man shown in his line (or within `nearM`, 9 m, in his line or
+  not), no shot for three seconds, and at most once every 2.5 s, for two reasons: a wall stands between the lens and him, or what is framed lies on the lens's side of him. A walk key, a click, the hand taking the cursor back, or anything that would have stopped it
+  beginning ends such a turn where it is. His aim goes round with the view (`AimCarry`); a long turn looks at his point past walls it did not look past before, so `carryStep` takes
+  an `aimOf` and, where the cursor's ray would land off his line, puts the cursor on another point of that line (`CARRY.tries`, `CARRY.heights`): measured on
+  a 141° turn beside a door, 0.01° off at the end and at the most on the way (it was 8° to 38° mid-turn before that). GIVING IT BACK (`autoHand`): the key
+  held and the mouse moved more than 12 px inside 0.4 s, or the key held over a quarter second with a walk key down; two quick taps with a walk key held still
+  put it ON. Going off, the zoom goes back to the hand's own. IT STANDS DOWN, the mode still on, under a pin, a show, a spectated man, plan mode's look point, the sky seat, a puppet, and with him down; it
+  starts no turn while a lesson locks the camera or teaches the view. Sounds are NOT used: the sound list is every sound on the floor, enemy footsteps
+  included, and a camera that leaned toward them would point at men the fog hides.
+  CHECK: `bun run tools/qa/probes.ts autocam` (`tools/qa/autocam-check.ts`, 13 lines: the frame and the turn from made-up scenes; the mode on and off
+  through `stepFrame`; a real door walked at and stood by; a real hostile man shown and fog-hidden; the stand-downs; three CONTROL lines: switch on and mode
+  never on = the same digest and view, the scene read every frame and never used = the same game, the stand words and the journal). ALL PASS on both stands;
+  `AUTOCAM_BREAK=1` (the switch left off) fails four of them on both. On the real page, software adapter: `PORT=… node tools/qa/autocam-page.cjs` (the row,
+  a real double tap, the look-at no longer following the mouse, the key + a real drag, the key + a walk key, kept over a reload, Reset).
+  `findme-page.cjs` now opens the page with `autocam=0` and `findme-check.ts` stands the switch off: their subject is the old row's double tap. One floor (the office), one seed. NOBODY HAS SEEN OR PLAYED
+  IT, AND NEVER ON A GPU: every number in `AUTOCAM` is a first guess (how far it leans, how long it lingers on the squad, the turn's speed and its 2.5 s
+  gap, the zoom range). KNOWN: with the mouse held still, a frame that leans or zooms slides the floor under the cursor, so his aim drifts a little toward
+  where the frame went (worst with the cursor near his feet); the frame freezes under a held button for that reason. No HUD mark says the mode is on: the
+  view coming round is the answer to the tap.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
   notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the

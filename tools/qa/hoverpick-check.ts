@@ -12,8 +12,9 @@
 //   same      the pick asked aside ON THE KEPT STORE is the pick asked straight: the same target (kind, place, door and side, man, wall, thing),
 //             on every frame.
 // HOVERPICK_BREAK=1 = the read asks the pick the old way (targetUnder straight on the game's tables): `ask` and `state` must FAIL.   exit 0 = all hold · 1 = one does not
-// NOT HELD HERE: the HUD's own row list (SquadOrders.hud) — on the shipped stand it still fills a memo of the wall charge's (wallcharge.ts standIns);
-// a man of the other side under the cursor, a thing to be worked under it, a leaf drawn in the fog of war (none is on the cursor's way here).
+// THE HUD'S OWN ROW LIST (SquadOrders.hud) is read each frame beside the pick: its one writer, the wall charge's memo of digitless rows
+// (wallcharge.ts standIns), is a module memo now, so the whole HUD read is held here, not the pick alone.
+// NOT HELD HERE: a man of the other side under the cursor, a thing to be worked under it, a leaf drawn in the fog of war (none is on the cursor's way here).
 import { ROOT } from './headless.ts';
 import { rig } from './squadthrow-check.ts';
 
@@ -54,7 +55,7 @@ export async function hoverpickCheck(): Promise<boolean> {
       return { R, swung, hash: RB.stateHash(g, true, true) as string, dig: DG.hashDigest(DG.digestGame(g, true)) as string };
     };
     const old = (R: any) => { const v = R.O.view; return v.input && v.cam && v.canvas ? R.O.targetUnder(v.input, v.cam, v.canvas) : null; };
-    const page = (R: any, kept: any) => { if (BREAK) return old(R); const t = R.O.hover(kept); R.O.hover(); return t; };   // (as the HUD's lines and the ring's hint ask it, and with no store)
+    const page = (R: any, kept: any) => { if (BREAK) return old(R); const t = R.O.hover(kept); R.O.hover(); R.O.hud(kept); return t; };   // (as the HUD's lines and the ring's hint ask it, with no store, and the HUD's whole row list after them)
 
     // ask: the state before each read against the state after it
     let wrote = 0, vars = 0, on = 0, what = ''; const names = new Set<string>(), kinds = new Map<string, number>(), V = SD.sideRegistry().vars;
@@ -65,12 +66,12 @@ export async function hoverpickCheck(): Promise<boolean> {
       V.forEach((v: any, k: number) => { if (v.get() !== v0[k]) { vars++; names.add(v.name); } });
     });
     const want = ['floor', 'man', 'door', ...(P.outer ? ['wall'] : [])];
-    verdict(wrote === 0 && vars === 0 && on >= FRAMES - 10 && want.every(k => (kinds.get(k) ?? 0) >= 10) && one.swung >= 10, `ask: no read of what the cursor is on changes the game's state or a module variable, with the cursor on ${want.join(', ')} and a leaf swinging`,
+    verdict(wrote === 0 && vars === 0 && on >= FRAMES - 10 && want.every(k => (kinds.get(k) ?? 0) >= 10) && one.swung >= 10, `ask: no read of what the cursor is on, nor of the HUD's rows for it, changes the game's state or a module variable, with the cursor on ${want.join(', ')} and a leaf swinging`,
       `the read changed the game's state on ${wrote} of ${FRAMES} frames${what ? ` (${what})` : ''}, a module variable on ${vars}${names.size ? ` (${[...names].join(', ')})` : ''} · an answer on ${on} · ${[...kinds].map(([k, n]) => `${k} ${n}`).join(', ')} · the leaf moved on ${one.swung} frames${P.outer ? '' : ' · no outer walls to charge on this stand: no wall asked for'}`);
 
     // state: read every frame against never read
     const never = await run(null), diff = one.hash === never.hash ? '' : ' · ' + [...new Set((RB.stateDiff(one.R.game, never.R.game, 4000, true) as string[]).map(l => l.split(': ')[0].replace(/\[\d+\]/g, '[]')))].slice(0, 8).join(', ');
-    verdict(one.hash === never.hash && one.dig === never.dig, 'state: a game whose cursor is read every frame and the same game never read hold the same whole state and the same run digest',
+    verdict(one.hash === never.hash && one.dig === never.dig, 'state: a game whose cursor and HUD rows are read every frame and the same game never read hold the same whole state and the same run digest',
       `state ${one.hash === never.hash ? 'equal' : 'DIFFERS'}, digest ${one.dig === never.dig ? 'equal' : 'DIFFERS'}${diff}`);
     one.R = never.R = null; Bun.gc(true);
 

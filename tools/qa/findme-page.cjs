@@ -13,6 +13,8 @@
 //   THE CAMERA'S KEY is read from the page (`__keys.camCap()`, host/keymap.ts: Space while the board leaves it spare, else Ctrl; a page from before the key
 //   could move has no such word and is Ctrl): the last row is looked for under that name and the hand's lines press that key, so the page is checked as it opens.
 //   WHICH key the page opens on is not this check's to say (keybinds-page.cjs pins it): this one follows whatever the page names, and says it in its first line.
+//   THE PAGE IS OPENED WITH `autocam=0`: the twelfth row here is the double tap as a row of its own. The page as it opens gives that tap to the camera that runs
+//   itself (host/autocam.ts) and shows its row instead: that page is autocam-page.cjs's.
 //   exit 0 = all of it with no page error · 1 = otherwise. The verdict is the page's DOM and the game's numbers: nothing here judges a picture. With an
 //   outDir it also keeps two pictures (the ring; the outline at full strength) (the software adapter's frame with the page's own overlay laid on it) for a person to look at, never for the verdict.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -63,7 +65,7 @@ const DOT = (a) => { const f = window.__cam.planarBasis().fwd; return f[0] * Mat
   const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
   page.setDefaultNavigationTimeout(900000);   // (a boot on the software adapter is minutes, and the reload is a second one)
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
-  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, wait = ms => new Promise(r => setTimeout(r, ms));
+  const url = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&autocam=0`, wait = ms => new Promise(r => setTimeout(r, ms));
   const boot = async (again) => { if (again) await page.reload(); else await page.goto(url); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 20); };
   const still = async (name, full = 0) => { if (!outDir && !full) return; const u = await page.evaluate(DRAW, [full ? 10 : 4, full]);   // (the outline's picture is given the frames the resolve takes to bring a new line up)
     if (!u || !outDir) return;

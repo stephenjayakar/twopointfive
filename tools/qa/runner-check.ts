@@ -90,7 +90,7 @@ export async function runnerCheck(): Promise<boolean> {
     draws = 0; { const die = seeded(seed); Math.random = () => { draws++; return die(); }; }
     MORALE.on = false; RUNNER.on = false; Object.assign(RUNNER, was.runner, { on: false }); SQUADS.on = squads;
     const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }));
-    const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; MORALE.on = true; RUNNER.on = on; first();
+    const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; MORALE.on = true; RUNNER.on = on; RUNNER.anyway = false; first();   // (anyway: the later rule — both guns down, the run past a known enemy — has its own check, runanyway-check; these lines are the rule under it)
     startFromQuery(g, `levelFile=compound.json&roomclear${squad ? '&squad4' : ''}`); g.godMode = true;
     const gone: any[] = [];
     let vis = 0.05; const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = vis; wipe(g, gone); W.step(DT); } };
@@ -297,7 +297,7 @@ export async function runnerCheck(): Promise<boolean> {
 
     // (10) a man of the night staff, and the game's own checkpoint · (11) a bare night breach
     { MORALE.on = false; RUNNER.on = false; Object.assign(RUNNER, was.runner, { on: false }); SQUADS.on = was.squads; Math.random = seeded(41);
-      const W: any = await quiet(() => standUp({})); const g = W.game; MORALE.on = true; RUNNER.on = true; first(); g.godMode = true;
+      const W: any = await quiet(() => standUp({})); const g = W.game; MORALE.on = true; RUNNER.on = true; RUNNER.anyway = false; first(); g.godMode = true;
       const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; wipe(g); W.step(DT); } };
       step(30);
       const staff = g.guards.filter((x: any) => x.team === 'guard' && x.state !== 'dead'), T = staff[0], idx = g.guards.indexOf(T), n0 = g.guards.length, units = g.guards.filter((x: any) => x.unit).length;
@@ -316,7 +316,7 @@ export async function runnerCheck(): Promise<boolean> {
       } catch (e) { snapWhat = `the checkpoint threw: ${e instanceof Error ? e.message : String(e)}`; }
       line(snapOk, '(10) the game\'s own checkpoint (savestate.ts): his run comes back fled, the same phase, the same place to tell, still held, still empty-handed', snapWhat); }
     { MORALE.on = false; RUNNER.on = false; Object.assign(RUNNER, was.runner, { on: false }); Math.random = seeded(42);
-      const W: any = await quiet(() => standUp({})); const g = W.game; MORALE.on = true; RUNNER.on = true; first(); g.godMode = true;
+      const W: any = await quiet(() => standUp({})); const g = W.game; MORALE.on = true; RUNNER.on = true; RUNNER.anyway = false; first(); g.godMode = true;
       const gone: any[] = [], step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; wipe(g, gone); W.step(DT); } };
       const why = (await startFromQuery(g, 'nightbreach'))?.why ?? null; step(20);
       const nb = g.nightBreach, H = nb.hostiles.find((h: any) => h.state !== 'dead'); if (H) gone.push(H);
@@ -343,7 +343,7 @@ export async function runnerCheck(): Promise<boolean> {
     { const lostRun = async (seed: number, fall: boolean) => {
         MORALE.on = false; RUNNER.on = false; Object.assign(RUNNER, was.runner, { on: false }); SQUADS.on = false; Math.random = seeded(seed);
         const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', 'compound.json'), 'utf8'))) }));
-        const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; MORALE.on = true; RUNNER.on = true; first(); MORALE.training = 'mixed';
+        const g = W.game; DOORBLAST.on = true; DESTRUCTION.on = true; FRAG.doorStun = true; g.tune.chaos = 0.5; MORALE.on = true; RUNNER.on = true; RUNNER.anyway = false; first(); MORALE.training = 'mixed';
         startFromQuery(g, 'levelFile=compound.json&roomclear'); g.godMode = true;
         let vis = 0.05; const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = vis; wipe(g); W.step(DT); } };
         step(10);
