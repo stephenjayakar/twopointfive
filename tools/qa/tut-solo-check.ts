@@ -6,6 +6,8 @@
 //   · six seconds on the road EAST OF THE VAN, in the sentry's line, before anything else → every step still goes by (he holds his fire for a man there)
 //   · stood at each PIER of the arch under the last two's fire, and the first grenade a DUD from too close → every step still goes by (a show of fire is
 //     aimed at places, never at him; a dud lets nobody go and leaves the line up)
+//   · the RIGHT BUTTON held on the last two before the grenade is loaded → it fires nothing (the launcher is on a sponge round until he swaps, and a
+//     round at the two lets them go), then the swap and the grenade → every step still goes by
 //   · the four CHECKPOINTS                  → down at the sandbags and again at the gap, Enter puts him back at the gate each time; the other three are put
 //     back by the harness a step after each is kept; every beat played again from its first line, the last two men spawned once → every step goes by
 // The two lessons that are about not getting shot are only lessons if they can be failed: a mission where the wrong way also works teaches nothing.
@@ -31,7 +33,7 @@ const ARMS: { word: string; say: string; downAt?: string; after?: string }[] = [
   { word: 'east', say: 'six seconds on the road east of the van, in the sentry\'s line' },
   { word: 'piers', say: 'four seconds at each pier of the arch under the last two\'s fire' },
   { word: 'dud', say: 'the first grenade fired from too close (a dud), the second from the arch' },
-  { word: 'loaded', say: 'the grenade already on the launcher before its line: the line goes by and the last two still come' },
+  { word: 'sponge', say: 'the right button held on the last two before the grenade is loaded (it fires nothing), then the swap and the grenade' },
   { word: 'again', say: 'down twice and back by Enter, the other checkpoints put back by hand, each beat played again' },
 ];
 const faults: string[] = [];
@@ -46,25 +48,26 @@ for (const seed of seeds) for (const A of ARMS) {
 delete process.env.TUT_SOLO_ARM;
 
 // THE PAGE'S KIT: a lesson's page plays the plain issue (kit.ts kitIssuedPage, raised here as main.ts raises it for a row of the tutorial) — but this level
-// carries its own card (two smoke, two stun, two frags, three rounds, one door charge: what its lines have him use, and one spare can), and that is what
+// carries its own card (two smoke, two stun, two frags, three grenades, two sponge rounds, one door charge: what its lines have him use, and one spare can), and that is what
 // he must have on him there. The door charge is his card's only where his own charges are switched on (the page's stand).
 { const { readFileSync } = await import('node:fs'), { resolve } = await import('node:path'), ROOT = resolve(import.meta.dir, '../..');
   const { standUp } = await import('./headless');
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), K = await import(`${ROOT}/src/game/kit.ts`), { OWNCHARGE } = await import(`${ROOT}/src/game/owncharge.ts`);
+  const CARD: any = (await import(`${ROOT}/tools/levels/tut-solo.ts`)).ISSUE.members['0'];   // (the generator's own card: this line follows it)
   const log = console.log, warn = console.warn, err = console.error; console.log = console.warn = console.error = () => { };
   let held = '', charges = -1, why = '', lampLit = -1, lampOut = -1;
   try { K.kitIssuedPage(true); const W: any = await standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels/tut-solo.json'), 'utf8'))), seed: 1 }), g = W.game;
     const r = startFromQuery(g, '?levelFile=tut-solo.json&quiet'); why = r.why ?? ''; K.kitSoloIf(g, false);   // (main.ts, straight after the page's start: a quiet mission alone wears a card)
     for (let i = 0; i < 5; i++) W.step(1 / 60);
-    held = `${g.player.canisters}/${g.player.flashbangs}/${g.player.frags}/${g.player.rifle.shells}`; charges = g.doorTools.charges;
+    held = `${g.player.canisters}/${g.player.flashbangs}/${g.player.frags}/${g.player.rifle.shells}/${g.player.rifle.rings} ${g.player.rifle.attachment}`; charges = g.doorTools.charges;
     // the shop's lamp, by the CPU's estimate (no moon, no bounce: the page's meter reads higher both times)
     const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`), { BACK } = await import(`${ROOT}/tools/levels/tut-solo.ts`);
     const meter = () => Math.round(g.visibilityOf(Math.max(lightEstimateAt(g, [BACK[0], 1.2, BACK[2]]), lightEstimateAt(g, [BACK[0], 1.6, BACK[2]]))) * 100);
     const lamp = g.engine.lights.lights.find((l: any) => l.name === 'lamp_shop'); lampLit = meter(); if (lamp) { const was = lamp.intensity; lamp.intensity = 0; lampOut = meter(); lamp.intensity = was; }
   } catch (x) { why = String((x as Error).message); } finally { K.kitIssuedPage(false); console.log = log; console.warn = warn; console.error = err; }
-  const ok = !why && held === '2/2/2/3' && (!OWNCHARGE.on || charges === 1);
-  console.log(`  ${ok ? 'PASS' : 'FAIL'}  on its page he carries the level's own card: smoke/stun/frags/40 mm ${held}${OWNCHARGE.on ? `, door charges ${charges}` : ' (his own charges are off on this stand: the door charge is not asked)'}${why ? ` — ${why}` : ''}`);
+  const ok = !why && held === `${CARD.smoke}/${CARD.bangs}/${CARD.frags}/${CARD.shells}/${K.ISSUE.whole ? CARD.rings : Math.max(CARD.rings, (await import(`${ROOT}/src/game/kittree.ts`)).KITTREE.lend)} ring` && (!OWNCHARGE.on || charges === 1);
+  console.log(`  ${ok ? 'PASS' : 'FAIL'}  on its page he carries the level's own card, the launcher on a sponge round so the grenade is a load he swaps to (two of them where his card is the whole kit, the lent five where it is not): smoke/stun/frags/40 mm/sponge ${held}${OWNCHARGE.on ? `, door charges ${charges}` : ' (his own charges are off on this stand: the door charge is not asked)'}${why ? ` — ${why}` : ''}`);
   if (!ok) faults.push(`the page's kit is not the level's card (${held}, door charges ${charges}${why ? `, ${why}` : ''})`);
   const lampOk = lampLit >= 50 && lampOut >= 0 && lampOut <= 20;
   console.log(`  ${lampOk ? 'PASS' : 'FAIL'}  the ground beside the shop's door is lit by the shop's lamp and dark without it: ${lampLit} with it, ${lampOut} with it out`);

@@ -76,8 +76,9 @@ const LEVEL_BASE: Record<string, string> = {
   // the tunnel station, played with no fog of war (its lesson's rails.fog)
   'tut-sky.json': 'f3ef62b01',
 
-  // the fuel stop, alone: its ground re-laid, the gun's setup its own beat, his own charge on his own key
-  'tut-solo.json': '86c882d26',
+  // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, two sponge rounds on his card and the swap's own lists, the moon
+  // behind the shop
+  'tut-solo.json': 'bd7b25a26',
 
   // the squad mission after a first play: the hall's street window glazed, a step given a cue
   'tut-squad.json': 'be980f1e1',
