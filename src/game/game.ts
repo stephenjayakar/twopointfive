@@ -2004,7 +2004,7 @@ export class Game {
       const bare = closeBare(this), two = closeLethal(this) && !bare, knife = !bare && input.lmbHit() && !stalkHas(this), blow = knife || ((two || bare) && input.rmbHit());   // (close.ts CLOSE.noKnife: no knife — the left click is no blow, the right click the knockout)   // (close.ts: with the two-button blow live the left click is the knife and the right click the knockout; else the left click is the knockout and the right nothing)
       const clicked = pl.holstered && blow ? (this.nearby.find(it => it.kind === 'guard' && it.inReach && !(it.guard && (this.rescue?.isHostage(it.guard) || this.snatch?.out.owns(it.guard)))) ?? null) : null, viaClick = clicked?.guard ?? null;   // click, hands empty: the man in reach
       const stalked = stalkGrab(this);   // (stalk.ts: the held click has walked him in to the man's back — the grab it ends in is the row's own)
-      if (stalked && free) startGrab(this, stalked);   // (the way in is read where he stands: behind him, or behind his chair)
+      if (stalked && free) { startGrab(this, stalked); if (pl.holding?.g === stalked) pl.holding.from = [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]; }   // (the way in is read where he stands: behind him, or behind his chair)
       else if (viaClick && free) startTakedown(this, viaClick, clicked!.close, two && knife && !viaClick.civ);   // (close: the way in his row offered — close.ts, undefined with its switch off)
       else if (act?.kind === 'guard' && verb === 'grab' && act.guard && free) startGrab(this, act.guard, act.close);
     }

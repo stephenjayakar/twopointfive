@@ -130,6 +130,9 @@ export const HOLD_FIRE_CD = 0.7, HOLD_SPREAD = 0.09;
 export interface Hold { g: Guard; variant: HoldVariant; phase: HoldPhase; t: number; since: number; windT: number; swapT: number; remarked: boolean; gunOut: number; fireQueued: boolean; shotT: number; ask: { t: number; dur: number } | null; after: { text: string; id: string } | null;
   /** the grab's disarm while it runs (disarm.ts: begun by startGrab, moved on once a frame by disarmTick, gone when the hand is back on him) */
   strip?: Strip;
+  /** the stalk's grab (stalk.ts, game.ts): where Sam stood as it fired. The way in is then ONE eased step from there over STALK.catchSecs — it leaves gently and
+   *  lands gently — where the grab's own is a snap (most of the gap in its first frames). Unset = the grab as it was */
+  from?: Vec3;
 }
 
 /** IN A DOOR FRAME HE IS AS WIDE AS HIS SHOULDERS. BODY_R is a margin for his arms and his gun, 0.84 m across; a real door (scene/doorSize.ts) leaves 0.83 m
@@ -1529,12 +1532,13 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
   if (!g.onFloor(gd) || gd.state === 'dead' || gd.held?.by !== 'player') { dropHold(g); c.update(dt); return; }   // reset from under the arm (P, the panel), or put down in it by somebody's round: nothing left to hold
   H.t += dt; H.swapT += dt; pl.fireCd -= dt;
   const K = HOLD.secs;
-  let speed = 0;
+  let speed = 0, own = -1;   // (own: Sam's legs alone, where they differ from the pair's — the stalk's step in)
   if (H.phase === 'grab') {
     // easing in to HOLD.dist behind him on HIS facing (he has not been turned yet), squaring up to his back — through Sam's own collision: squeezed behind a man by a
     // wall, the arm goes round him from as close as the wall allows and the hold proper settles the rest
     const yaw = hc.bodyYaw; const want: Vec3 = [hc.pos[0] - Math.sin(yaw) * HOLD.dist, 0, hc.pos[2] - Math.cos(yaw) * HOLD.dist];
-    c.vel = [0, 0, 0]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, 1.7);
+    if (H.from && STALK.catchSecs > 0) { const u = clamp(H.t / Math.min(STALK.catchSecs, K.grab), 0, 1), e = u * u * u * (u * (u * 6 - 15) + 10), was = c.pos; c.pos = v3.lerp(H.from, want, e); own = Math.min(STALK.catchStride, Math.hypot(c.pos[0] - was[0], c.pos[2] - was[2]) / Math.max(dt, 1e-4)); c.vel = [0, 0, 0]; collidePlayer(g, 1.7); }   // (stalk.ts: the step in — his legs take it, at no more than a walk's stride)
+    else { c.vel = [0, 0, 0]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, 1.7); }
     c.bodyYaw = approachAngle(c.bodyYaw, yaw, 14 * dt); c.aimYaw = approachAngle(c.aimYaw, c.bodyYaw, 12 * dt); c.aimPitch = damp(c.aimPitch, 0, 8, dt);   // (the chest untwists over the reach, not in a frame)
     gd.speed = 0; hc.vel = [0, 0, 0];
     if (H.t >= K.grab) {
@@ -1620,14 +1624,14 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     if (gd.held) gd.held.reverse = pl.backpedal;
   }
   pl.sprinting = false; pl.crouch = false;
-  holdTail(g, dt, speed);
+  holdTail(g, dt, speed, own);
 }
 /** the end of a hold frame, Sam's side, shared with the frames that end the hold: both animators told the beat (the man's is baked later, in updateGuard's held
  *  branch; Sam's here), the rail light (arm variant: off — the pistol rides the thigh while both hands are on him, hideHeldItem; gun variant: lit if L has it on,
  *  posed off the gun hand up beside his head like any carry), Sam's step events at the pair's pace (his tread is what the room hears of the pair) */
-function holdTail(g: Game, dt: number, speed: number) {
+function holdTail(g: Game, dt: number, speed: number, own = -1) {
   const pl = g.player, c = pl.char, H = pl.holding;
-  c.anim.speed = speed; c.anim.crouchTarget = 0; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.lookYawExtra = 0;
+  c.anim.speed = own >= 0 ? own : speed; c.anim.crouchTarget = 0; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.lookYawExtra = 0;
   const low = H ? takeLower(g) : 0;   // (the choke's lowering: both poses or neither)
   const kill = H ? takeKill(g) : false, beats = H ? takeBeats(g) : false, haul = H ? takeHaul(g) : false;   // (takedown.ts TAKEDOWN.kill / chokeBeats, fed with the pose as `low` is: the animator reads this frame's, not its module's one-frame-late fallback)
   const strip = H?.strip ? disarmPose(H.strip) : undefined;   // (disarm.ts: both poses or neither)

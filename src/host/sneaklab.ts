@@ -28,6 +28,10 @@ const NUMS = (): Num[] => [
   { t: STALK, name: 'STALK', key: 'stationM', label: 'aims for this far behind his back m', min: 0.2, max: 1.2, step: 0.05, tip: 'the point the game walks Sam toward, straight behind the man: nearer swings Sam in tighter behind him' },
   { t: STALK, name: 'STALK', key: 'grabM', label: 'the grab fires inside m', min: 0.5, max: 1.05, step: 0.05, tip: 'the hold becomes the grab this close (the grab itself reaches 1.05)' },
   { t: STALK, name: 'STALK', key: 'cursorM', label: 'how near him the cursor must be m', min: 0.3, max: 4, step: 0.1, tip: 'the press counts as on him when the cursor is this near his feet (or right on him)' },
+  { t: STALK, name: 'STALK', key: 'reachFrom', label: 'his arm starts to come up at m', min: 1.0, max: 3.5, step: 0.05, tip: 'from this far behind the man Sam\'s left arm begins to come up for his neck; it is all the way up as the grab fires' },
+  { t: STALK, name: 'STALK', key: 'reach', label: 'how far the arm is up at the grab', min: 0, max: 1, step: 0.05, tip: '1 = the whole reach held out as the grab fires, 0 = no arm before the grab at all' },
+  { t: STALK, name: 'STALK', key: 'riseFrom', label: 'he starts to come up out of the crouch at m', min: 1.0, max: 3.5, step: 0.05, tip: 'from this far behind a man on his feet Sam begins to stand up into him' },
+  { t: STALK, name: 'STALK', key: 'rise', label: 'how far up he is at the grab', min: 0, max: 1, step: 0.05, tip: '0 = still in the full crouch when the grab fires (the grab stands him up in one go), 1 = on his feet by then' },
   { t: CLOSE, name: 'CLOSE', key: 'modeM', label: 'it can begin inside m', min: 1.5, max: 7, step: 0.1, tip: 'the close-in range: inside it the sneak holds its pose and a press on a man begins the creep' },
   { t: CLOSE, name: 'CLOSE', key: 'modeOutM', label: 'it lets go past m', min: 2, max: 9, step: 0.1, tip: 'he got too far away: the creep ends past this' },
   { t: TWOGEARS, name: 'TWOGEARS', key: 'crouch', label: 'your own crouch walk m/s', min: 0.8, max: 2.2, step: 0.05, tip: 'the speed you arrive at before the creep takes over' },
@@ -67,6 +71,7 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.toggleBox(now, 'draw the geometry on the floor', () => STALKVIZ.on, v => { STALKVIZ.on = v; }, 'round the nearest man: the ring it can begin inside and the one it lets go past, the edges of his rear arc, the point Sam is walked to, the ring the grab fires inside');
   const cr = panel.section('The creep', { open: true, reset: () => { nums.forEach((n, i) => { n.t[n.key] = was[i]; }); ARCS.forEach((a, i) => { STALK[a.key] = wasArc[i]; }); }, resetTitle: 'every number back to the build\'s' });
   panel.toggleBox(cr, 'holding the click creeps in', () => STALK.on, v => { STALK.on = v; }, 'off = the build before it: your own keys all the way, and the grab on its key');
+  panel.toggleBox(cr, 'his body shows how close he is', () => STALK.tell, v => { STALK.tell = v; }, 'the arm comes up and he comes out of the crouch as he closes on the man\'s back, by distance, so a pause holds the pose. Off = the pose in reach alone');
   panel.toggleBox(cr, 'the click is the only way to grab', () => STALK.only, v => { STALK.only = v; }, 'off = the grab\'s row is back beside the held click');
   for (const n of nums) panel.slider(cr, n.label, n.min, n.max, n.step, () => n.t[n.key] as number, v => { n.t[n.key] = v; }, n.tip);
   for (const a of ARCS) panel.slider(cr, a.label, 60, 180, 1, () => deg(STALK[a.key]), v => { STALK[a.key] = cosOf(v); }, a.tip);

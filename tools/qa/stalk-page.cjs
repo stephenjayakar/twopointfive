@@ -40,8 +40,9 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
   } else {
     say(!boot.fatal && boot.on && boot.only && boot.men === 6 && boot.holstered && boot.panel && /^Sneak lab/.test(boot.sys) && boot.sliders >= 12,
       `the lab: stalk ${boot.on ? 'on' : 'OFF'}, the click the only way ${boot.only}, ${boot.men} men, empty hands ${boot.holstered}, the panel ${boot.panel ? 'open' : 'SHUT'} on '${boot.sys.slice(0, 20)}' with ${boot.sliders} sliders${boot.fatal ? ' · FATAL ' + boot.fatal : ''}`);
-    await behind(0.8); const before = await frames(2); await tap('KeyE'); await tap('Space'); const k = await frames(30, true);
-    say(!k.held && /hold to grab him/.test(before.list) && /hold to grab him/.test(before.page), `0.8 m behind him a tap of E and of Space grabs nobody (in his arm ${k.held}), the man's rows say the click (${/hold to grab him/.test(before.list)}) and so does the page (${/hold to grab him/.test(before.page)})`);
+    // (one DRAWN frame before the page is read: the corner's rows are written by the draw)
+    await behind(0.8); await page.evaluate(() => window.__runFrames(1)); const before = await frames(0); await tap('KeyE'); await tap('Space'); const k = await frames(30, true);
+    say(!k.held && /hold to grab him/.test(before.list) && /hold to grab him/i.test(before.page), `0.8 m behind him a tap of E and of Space grabs nobody (in his arm ${k.held}), the man's rows say the click (${/hold to grab him/.test(before.list)}) and so does the page (${/hold to grab him/i.test(before.page)})`);
     if (SHOT) { await page.evaluate(() => window.__runFrames(1)); await page.screenshot({ path: SHOT }); }
     await behind(2.6); let [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const h = await frames(360, true); await page.mouse.up(); await frames(5);
     say(h.held, `2.6 m behind him, the left button pressed on him and kept down: ${h.held ? `in his arm after ${(h.f / 60).toFixed(2)} s` : `never grabbed (still ${h.gap.toFixed(2)} m off)`}`);

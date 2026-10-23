@@ -42,6 +42,17 @@ export const STALK = {
   pace: 1.6, closeMin: 0.3, closeK: 0.6,
   /** 1/s: how quickly his speed takes up what the stalk asks, speeding up · and slowing (his own walk's are 6 and 12: gentler in, so the creep starts like a breath) */
   easeUp: 4, easeDown: 9,
+  /** THE BODY SAYS HOW CLOSE (the maintainer: "we want very very smooth transitions from regular crouching to the closer than ever state. then, once you click
+   *  and hold its very smooth to gradually shift the animation until you end on a grab, and you can be interrupted any time"). Behind a man he could stalk, or
+   *  stalking him, Sam's pose is a function of the DISTANCE to that man's back and of nothing else: from `reachFrom` m in, the left arm comes up for his neck
+   *  (the tell's own reach, character.ts readyLayer, at a weight that is `reach` by the time the grab fires), and from `riseFrom` m in he comes up out of the
+   *  crouch (`rise` of the way to his feet at the grab — the grab itself stands him up the rest). Because it is the distance's, letting go of the button holds
+   *  the pose where it is — a frame of the move, paused — and the next press goes on from it; his own keys behind the same man show the same body. What the men
+   *  see and hear of him is the crouch's, as it was. `tell` off = the tell in reach alone, as before the stalk. */
+  tell: true, reachFrom: 2.3, reach: 0.9, riseFrom: 1.9, rise: 0.55,
+  /** THE STEP IN: the grab a stalk ends in closes the last of the gap in one eased step over `catchSecs` (never longer than the grab itself, HOLD.secs.grab) —
+   *  the grab's own way in covers most of it in its first three frames. His legs are given the step, at no more than `catchStride` m/s. 0 = the grab's own. */
+  catchSecs: 0.36, catchStride: 1.5,
 };
 /** tallies for the checks and the page's hook (begun = presses that took a man; out = why each ended without a grab) */
 export const STALK_STATS = { begun: 0, grabs: 0, out: { let: 0, far: 0, turned: 0, wall: 0, him: 0, hands: 0, keys: 0 }, last: '' };
@@ -101,6 +112,17 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
   const yaw = gd.char.bodyYaw, bx = gp[0] - Math.sin(yaw) * STALK.stationM - p[0], bz = gp[2] - Math.cos(yaw) * STALK.stationM - p[2], bl = Math.hypot(bx, bz) || 1;
   const pace = Math.min(STALK.pace, Math.hypot(gd.char.vel[0], gd.char.vel[2]) + STALK.closeMin + clamp(dist - STALK.grabM, 0, 4) * STALK.closeK);
   return { mx: bx / bl, mz: bz / bl, pace, at };
+}
+/** THE TELL BY DISTANCE (close.ts closeTick, once a frame after stalkStep): the man Sam's body speaks of — the one stalked, else the nearest he could begin on —
+ *  the point the arm goes for (his neck), and how much of the reach and of the rise the distance asks for. null = none of it (the tell as close.ts has it). */
+export function stalkTell(g: Game): { at: Vec3; reach: number; rise: number } | null {
+  if (!STALK.tell || !free(g)) return null;
+  const p = g.player.char.pos; let gd = STATE.get(g)?.on ?? null, bd = Infinity;
+  if (!gd) for (const x of g.guards) { const d = Math.hypot(p[0] - x.char.pos[0], p[2] - x.char.pos[2]); if (d < bd && d < CLOSE.modeM && outOf(g, x, p, true) === null) { gd = x; bd = d; } }
+  if (!gd) return null;
+  const gp = gd.char.pos, d = Math.hypot(p[0] - gp[0], p[2] - gp[2]), neck = gd.char.bones.neck ?? gd.char.bones.head, at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : [gp[0], gp[1] + 1.45, gp[2]];
+  const by = (from: number) => { const u = clamp((from - d) / Math.max(0.05, from - STALK.grabM), 0, 1); return u * u * (3 - 2 * u); };
+  return { at, reach: STALK.reach * by(STALK.reachFrom), rise: at[1] - gp[1] > 1.2 ? STALK.rise * by(STALK.riseFrom) : 0 };   // (a man sat or bent low: nothing to come up for)
 }
 /** a man is being stalked, or the stalk has just become a grab: this frame's left click is the stalk's, no blow */
 export function stalkHas(g: Game): boolean { const S = STATE.get(g); return !!S && S.t === g.time && (!!S.on || !!S.grab); }

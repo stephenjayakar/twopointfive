@@ -505,8 +505,9 @@ export class Overlay implements HudLike {
     const dist = (it: Interactable) => thingDist(it, p);   // doors: leaf or doorway centre, as the reach test measures it
     // (handring.ts: the corner shows ONE line, what the key would do now — the highlighted row, or a running verb's own; none while the ring's lit wedge
     // is the whistle — and nothing where it does nothing; the rest of what is on offer is the ring's. A line no key gives stays under it)
-    const hint = (): Interactable[] => game.nearby.filter(r => !r.verb && r !== hv).slice(0, 1);   // (a line no key gives: the status of a committed move, or what the two clicks do to the man in reach — close.ts)
-    const list: Interactable[] = !HANDRING.on || game.puppet ? game.nearby : hv && hv.kind !== 'cancel' && (hv.verb || hv.running) && !game.player.sel.ring?.whistle ? [hv, ...hint()] : hint();
+    const lead = hv && hv.kind !== 'cancel' && (hv.verb || hv.running) && !game.player.sel.ring?.whistle ? hv : null;
+    const hint = (): Interactable[] => game.nearby.filter(r => !r.verb && r !== lead).slice(0, 1);   // (a line no key gives: the status of a committed move, or what the clicks do to the man in reach — close.ts. It is drawn when it is the ONLY row too: with the held click the one way to a man (stalk.ts) his line stands alone, and the highlight resting on it took it off the page)
+    const list: Interactable[] = !HANDRING.on || game.puppet ? game.nearby : lead ? [lead, ...hint()] : hint();
     const thing = (it: Interactable) => `${it.kind}:${it.door?.def.name ?? it.guard?.callsign ?? ''}`;
     const cap = MAX_ROWS + (list.some(it => it.kind === 'cam') ? 1 : 0);   // (stickycam.ts: a stuck camera's 'take it back' is one row past every row the list had before it — it is always drawn)
     const rows = list.slice(0, cap).map((it, i): InteractRow => { const d = dist(it); return { kind: it.kind, label: it.line1, opts: it.kind === 'cancel' ? [] : parseOpts(it.line2), inReach: it.inReach, off: it.off, dist: it.inReach || it.kind === 'light' || it.kind === 'cancel' ? undefined : d, progress: it.progress, cont: i > 0 && it.kind !== 'cancel' && thing(list[i - 1]) === thing(it) }; });

@@ -34,7 +34,7 @@ import { canStand, grabVariant } from './player';
 import { civilianSeated, civiliansShown, SIT_ADVANCE } from './civilians';
 import type { ReadyKind } from './character';
 import { handworkOn, samWork } from './handwork';
-import { STALK, stalkCould } from './stalk';
+import { STALK, stalkCould, stalkTell } from './stalk';
 
 const DEGR = Math.PI / 180;
 export const CLOSE = {
@@ -298,7 +298,11 @@ function modeNow(g: Game, S: State): Guard | null {
 export function closeTick(g: Game) {
   const pl = g.player, an = pl.char.anim; const S = stateOf(g);
   const r = closeReady(g);
-  an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null; an.readyUp = r && CLOSE.reachUp ? 1 : 0;
+  // (stalk.ts STALK.tell: behind a man he could stalk the pose is the distance's — the arm coming up and the body coming out of the crouch as he closes, the
+  // grab's own reach at a part weight; a chair's haul keeps its own pose, and whatever stands the tell down in reach — hands at work, the switch — stands this down)
+  const T = STALK.on && CLOSE.ready && r?.kind !== 'seat' && !samWork(g) && !(pl.coding && handworkOn('work')) ? stalkTell(g) : null;
+  if (T) { an.ready = 'grab'; an.readyAt = T.at; an.readyUp = CLOSE.reachUp ? 1 : 0; an.readyAmt = T.reach; an.rise = T.rise; }
+  else { an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null; an.readyUp = r && CLOSE.reachUp ? 1 : 0; an.readyAmt = 1; an.rise = 0; }
   if (r) CLOSE_STATS.readyFrames++;
   const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)
   an.creep = !!m;

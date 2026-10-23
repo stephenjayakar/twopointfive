@@ -1045,6 +1045,15 @@ const CREEP = {
   R: { at: [0.05, -0.33, 0.27] as Vec3, atC: [0.0, -0.21, 0.28] as Vec3, pole: [-0.7, -0.6, -0.5] as Vec3, fing: [0.2, 0.3, 1] as Vec3, back: [-0.7, 0.7, 0] as Vec3, curl: 0.38, thumb: 0.3, spread: 0.15 },
 };
 const READY_RATE = 12, READY_REACH = 0.85, READY_AZ: [number, number] = [0.5, 0.9];
+/** THE WAY IN WITH BARE HANDS (readyLayer's 'grab' when nothing of his is a knife — noKnife, game/close.ts CLOSE.noKnife; fed by distance under stalk.ts's tell).
+ *  With no hilt for the right hand the pose was one straight arm and whatever the crouch left the other doing: two open hands held out at a man's back. This is
+ *  a man about to take somebody: the LEFT arm cocked to go round a throat — the elbow carried out level to his left where a camera overhead sees it, the hand
+ *  cupped, not splayed — and the RIGHT hand low and ahead of his own hip, palm in, where the man's gun hand hangs (the grab's disarm starts from it:
+ *  HOLD.strip). Vectors as READY's; `R.at` is off the right shoulder. */
+const READY_BARE = {
+  L: { pole: [1, -0.2, -0.1] as Vec3, fing: [-0.35, 0.1, 0.95] as Vec3, back: [0.75, 0.6, -0.2] as Vec3, curl: 0.3, thumb: 0.28, spread: 0.12 },
+  R: { at: [0.03, -0.4, 0.27] as Vec3, pole: [-0.7, -0.45, -0.55] as Vec3, fing: [0.2, -0.25, 1] as Vec3, back: [-0.9, 0.35, 0.1] as Vec3, curl: 0.34, thumb: 0.3 },
+};
 /** THE REACH GOES UP (CharacterAnimator.readyUp, fed by game/close.ts CLOSE.reachUp; 0 = every pose as it was). A crouched Sam behind a STANDING man: the
  *  grab's reach is measured off his own shoulder, which at the crouch is at the man's belt — the open hand went to the small of his back and Sam's face to
  *  his seat. With the point more than `over` m ([none, all of it]) above the left shoulder: the trunk comes UP out of its crouched bow by `rise` degrees over
@@ -1528,6 +1537,10 @@ export class CharacterAnimator {
   ready: ReadyKind | null = null; readyAt: Vec3 | null = null; readyShown = 0;
   /** the reach goes up for a man who stands over him (READY_UP; game/close.ts feeds it — 0, as a man nobody feeds has it: every pose as it was) */
   readyUp = 0;
+  /** HOW MUCH OF THE POSE IS ASKED FOR (1 = all of it, as a caller who feeds nothing has it). game/close.ts feeds it under stalk.ts's tell: the arm comes up
+   *  with the DISTANCE to the man's back, so the way in is one move from the crouch's carriage to the grab — and stands where it is when he stops · `rise` 0‥1 =
+   *  how far he is up out of his crouch for the man he is closing on (0 unless fed: the crouch as it was) */
+  readyAmt = 1; rise = 0;
   // the close-in mode (the caller sets `creep` each frame he is in it; `creepAt` = the nearest man's chest, for the head
   // and trunk to attend to): `creepShown` = the eased weight in the pose. THE KNIFE: `reachShown` = the eased weight of
   // the right hand on the sheathed knife's hilt (the tell: a ready pose with the hands empty; ≥ 0.9 a quarter second after
@@ -2010,7 +2023,7 @@ export class CharacterAnimator {
     this.holdGunSide = this.hdGv.x >= 0.5;                        // which tool the hold's right hand has (the knife below ½, the pistol from there: they change hands behind the man's shoulder)
     const gunHold = wHd > 0.003 && this.holdGunSide;             // the pistol stays in the hand through this hold: drawn, lit if it was, and a shot's recoil is the hold layer's (not the two-handed aim clip's)
     this.hideHeldItem = wLp > 0.5 || wHl > 0.5 || (wHd > 0.5 && !gunHold) || (this.bigTool !== null && bigOff(this.bigTool));   // hands on the lock tools, or both on a held man: the pistol rides the thigh — or off his gun for the big slot's tool (BIGMOVE: never with bigTool null)
-    this.crouch = damp(this.crouch, Math.max(this.crouchTarget, this.lockpick ? 1 : 0), 10, dt);
+    this.crouch = damp(this.crouch, Math.max(this.crouchTarget, this.lockpick ? 1 : 0) * (1 - (this.lockpick ? 0 : clamp(this.rise, 0, 1))), 10, dt);   // (rise: 0 unless fed — stalk.ts's tell)
     const s = Math.abs(this.speed) * (1 - wK);
     const crouchPose = this.bw || this.tk ? this.takePre(dt, this.crouch * (1 - wKslow)) : this.crouch * (1 - wKslow);   // the crouch actually shown (the kick stands him up; so does a takedown's own move, and the man it lands on sags)
     // ---- deliberate movement (`deliberate`, eased here) and the crouch's centre of gravity by pace — the shares everything below reads (sneakLayer):
@@ -2300,7 +2313,7 @@ export class CharacterAnimator {
     if (this.bw) this.blowLegs(this.bw);   // (a takedown's own move stands him into the man: the lunge's rear foot drawn in, the knees near straight)
     if (this.ready || this.readyW > 0 || this.rcT > 0) {   // the ready pose (Sam in an open hands-on window): over the carries and the aim clip — 'grabGun' takes the support hand OFF a pistol that is up, so the aim does not veto it — under the one-shots below; stood down, eased, by whatever has the arms: a hold either way, lock work, the kick, a throw, the strike itself, a flinch, a reload, a signal, a tell, a MOVES reaction or toss
       const held = wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || kt >= 0 || this.throwT >= 0 || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.mvHands || this.mvs.tsT >= 0;   // (what has the arms, the blow apart)
-      const busy = held || this.strikeT >= 0 || this.bw !== null, want = this.ready && !busy ? 1 : 0;
+      const busy = held || this.strikeT >= 0 || this.bw !== null, want = this.ready && !busy ? clamp(this.readyAmt, 0, 1) : 0;   // (readyAmt: 1 unless fed)
       if (this.ready) { this.readyK = this.ready; this.rdAt = this.readyAt; }
       this.readyW = Math.abs(want - this.readyW) < 0.01 ? want : this.readyW + (want - this.readyW) * Math.min(1, dt * (want ? 10 : busy ? 8 : 8 / (1 + READY_UP.slow * this.rd[RD.up])));   // (READY_UP: a hand that went up has further to come down when he steps out of reach — 8 unless fed, and 8 when a move takes the arms: the grab's own clocks are what they were)
       // the reach's clock: on with a live pose whose right hand is free for the knife — and kept on THROUGH the knife's own blow (the hand comes back to the hilt it left); off with anything else: a plain blow takes the hand off the hilt empty
@@ -4238,6 +4251,7 @@ export class CharacterAnimator {
     if (c[RD.clav] * e > 1e-4) { this.turn(pB, nd.shoulderL, qYaw(-c[RD.clav] * e)); fk.run(pB); }
     const sl = v3.copy(fk.pos[nd.upperArmL]), sr = v3.copy(fk.pos[nd.upperArmR]);
     let fx = -(sl[2] - sr[2]), fz = sl[0] - sr[0]; { const L = hyp2(fx, fz) || 1; fx /= L; fz /= L; }   // forward, square to the shoulder line (his left = (fz, 0, −fx))
+    const bare = this.noKnife && kind === 'grab' && !this.grip[1];   // (READY_BARE: nothing of his is a knife — both hands are the move's)
     if (live) {
       const arm = v3.dist(sl, fk.pos[nd.forearmL]) + v3.dist(fk.pos[nd.forearmL], fk.pos[nd.handL]);
       let az = 0, h = 0, up = 0, oL: Vec3; const R = K.L.reach;
@@ -4249,13 +4263,23 @@ export class CharacterAnimator {
         oL = frame([0, clamp(R.frac * up + R.bias, R.dy[0], lerp(R.dy[1], READY_UP.dy, q)), clamp(R.frac * h, lerp(R.r[0], READY_UP.r[0], q), lerp(R.r[1], READY_UP.r[1], q))], az);
         const l = v3.len(oL), cap = READY_REACH * arm; if (l > cap) oL = v3.scale(oL, cap / l);
       } else oL = frame(K.L.at!, az);   // (a fixed spot is still turned to face him: the guard's lead hand is out toward the man)
-      ease3(RD.l, oL); ease3(RD.lPole, frame(K.L.pole, az)); ease3(RD.lFing, frame(c[RD.up] > 1e-4 ? [K.L.fing[0], K.L.fing[1] + READY_UP.fing * c[RD.up], K.L.fing[2]] : K.L.fing, az)); ease3(RD.lBack, frame(K.L.back, az));
-      ease(RD.lCurl, K.L.curl); ease(RD.lThumb, K.L.thumb); ease(RD.lSpread, K.L.spread);
+      const B = bare ? READY_BARE.L : K.L;
+      ease3(RD.l, oL); ease3(RD.lPole, frame(B.pole, az)); ease3(RD.lFing, frame(c[RD.up] > 1e-4 ? [B.fing[0], B.fing[1] + READY_UP.fing * c[RD.up], B.fing[2]] : B.fing, az)); ease3(RD.lBack, frame(B.back, az));
+      ease(RD.lCurl, B.curl); ease(RD.lThumb, B.thumb); ease(RD.lSpread, B.spread);
+      if (bare) { const R2 = READY_BARE.R, kr = c[RD.wR] < 1e-3 ? 1 : k;   // (the right hand's numbers snap when it had no share: it comes in from the arm as it is, by the weight)
+        ease3(RD.r, frame(R2.at, az), kr); ease3(RD.rPole, frame(R2.pole, az), kr); ease3(RD.rFing, frame(R2.fing, az), kr); ease3(RD.rBack, frame(R2.back, az), kr); ease(RD.rCurl, R2.curl, kr); ease(RD.rThumb, R2.thumb, kr); }
+      ease(RD.wR, bare ? 1 : 0);
     }
+    else if (!this.rdLive) c[RD.wR] = 0;
     twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(sl, get3(RD.l)), get3(RD.lPole), 0.85, this.handRot(0, get3(RD.lFing), get3(RD.lBack)));
     { const q = c[RD.lCurl]; this.hand(pB, 0, [q, q + 0.04, q + 0.08, q + 0.12], c[RD.lThumb], c[RD.lSpread]); }
     // ---- the right hand on the knife (REACH): u = the reach's clock, the arm's share its alone (not the pose's weight: the hand that leaves the hilt is seen
     //      leaving it after the rest of the pose has gone). The fist closes on the sheathed handle where rigProps draws it; the knife stays where it is.
+    const wRb = this.rcT > 0 ? 0 : c[RD.wR];
+    if (wRb > 1e-3) {   // (READY_BARE: the right hand low and ahead of his hip — never under a hand that is on a hilt)
+      twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.add(sr, get3(RD.r)), get3(RD.rPole), 0.85, this.handRot(1, get3(RD.rFing), get3(RD.rBack)));
+      const q = c[RD.rCurl]; this.hand(pB, 1, [q, q + 0.04, q + 0.08, q + 0.12], c[RD.rThumb]);
+    }
     const u = this.rcT;
     if (u > 0) {
       const S = this.sheathFist();
@@ -4275,6 +4299,7 @@ export class CharacterAnimator {
     m[nd.shoulderL] = wUp * lg; m[nd.upperArmL] = wUp * lg; m[nd.forearmL] = wFore * lg; setSub(nd.handL, wHand * lg);
     this.reachShown = smoothstep(0.16, 1, u);
     if (u > 0) { m[nd.shoulderR] = m[nd.upperArmR] = smoothstep(0, 0.75, u); m[nd.forearmR] = smoothstep(0.08, 0.88, u); setSub(nd.handR, this.reachShown); }
+    else if (wRb > 1e-3) { m[nd.shoulderR] = m[nd.upperArmR] = wUp * wRb; m[nd.forearmR] = wFore * wRb; setSub(nd.handR, wHand * wRb); }
     blendPose(pA, pB, 1, m, pA);
     this.readyShown = w; this.rdLive = true;
   }
