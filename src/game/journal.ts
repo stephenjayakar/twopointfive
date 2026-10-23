@@ -156,6 +156,7 @@ import { THROWBACK } from './throwback';
 import { AUTOCAM } from '../host/autocam';
 import { OWNBLOW } from './ownblow';
 import { WORKSTOW } from './workstow';
+import { SQUADNET } from './squadnet';
 import { WALLREACT } from './wallreact';
 import { COVERFIRE } from './coverfire';
 import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
@@ -416,6 +417,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.THROWBACK) THROWBACK.on = false;   // (a file from before a can in the wind-up went back on the belt: its cans froze through a kick or a pick and left his hand after)
   if (!k.tables.WORKSTOW) WORKSTOW.on = false;   // (a file from before the gun was put away for a two-handed job: a charge went on with it in the hand, on the shorter clock)
   if (!k.tables.AUTOCAM) AUTOCAM.on = false;   // (a file from before the camera could run itself: its double tap was the Options row's)
+  if (!k.tables.SQUADNET) SQUADNET.on = SQUADNET.why = SQUADNET.clear = false;   // (a file from before the squad's far lines reached the player and the quick key said why: the answers and the room call as they were)
   if (!k.tables.OWNBLOW) OWNBLOW.on = false;   // (a file from before his own charge went off from his own actions: the squad's key blew it)
   if (typeof (k.tables.HANDRING as { early?: boolean } | undefined)?.early !== 'boolean') HANDRING.early = false;   // (…and one from before a digit inside the hold was the ring's: there it drew the slot)
   if (typeof (k.tables.HANDRING as { empty?: boolean } | undefined)?.empty !== 'boolean') HANDRING.empty = false;   // (…nor before an empty tap said so)

@@ -1,3 +1,8 @@
+// A CHECK'S STAGE, NOT A MISSION: this yard was a Training lesson's level. The seven Training lessons were taken out 2026-10-23 (the tutorial's six missions
+// replaced them); the lesson's steps, its row on the mission list and its scripted player are gone. The yard stays because checks owned elsewhere are
+// staged on its floor (tools/qa: teamtally-check, takecheck-check, carlamps-check, torch-leak-stills; their row for it is tools/qa/yards.ts). Nothing on a menu
+// loads it. What follows describes the floor as it was built for the lesson.
+//
 // TRAIN-SILENT — Training 7, "Quiet, as two": a quiet mission WITH ONE PARTNER (game/quiet.ts squad 1: the pair rules and the silent posture held on for the
 // run). THE WELL COURT AND THE BACK GATE, the darkest corner of the compound: the moon, one lamp over the pump, one lantern on the watch's tea table.
 // Each of the quiet pair's orders done once: he follows low in your steps, the squad's posture (loud and back to silent), a spot in the dark, 'watch him',
@@ -16,24 +21,16 @@
 //
 //   bun run tools/levels/export.ts train-silent [--check]      → levels/train-silent.json
 //   bun run tools/qa/quiet-check.ts train-silent.json          the quiet block against the built floor
-//   bun run tools/qa/lesson-check.ts train-silent              the lesson block against the built floor
-//   bun run tools/qa/lesson-run.ts train-silent                the scripted player through every step to the debrief
-//   page: ?levelFile=train-silent.json&quiet&squad=1     (&nolesson: the same level as its mission alone)
-import type { KitViewData, LessonData, LessonTest, QuietData, Rect } from '../../src/scene/scenarios';
+//   page: ?levelFile=train-silent.json&quiet&squad=1
+import type { KitViewData, QuietData } from '../../src/scene/scenarios';
 import { trainGround, TRAIN_MATERIALS, EXIT_W, EXIT_E, HALF } from './train-ground';
 import { yardGateShell } from './train-ground-kitview';
 import { livedTrain } from './lived-train';
 
 export const NAME = 'train-silent';
-export const NOTES = 'Training 7, quiet as two: the well court and the back gate. A walled yard in three parts (a garden, the well with its pump, the watch house by the back gate), three guards on posts with their backs to the dark, the last two in one lantern\'s light. One partner under the pair rules. Regenerate: bun run tools/levels/export.ts train-silent';
+export const NOTES = 'A stage for checks (once Training 7): the well court and the back gate. A walled yard in three parts (a garden, the well with its pump, the watch house by the back gate), three guards on posts with their backs to the dark, the last two in one lantern\'s light. One partner under the pair rules. Regenerate: bun run tools/levels/export.ts train-silent';
 export const MATERIALS = TRAIN_MATERIALS;
 
-/** the first yard, inside the west gate: nobody looks into it */
-const YARD_A: Rect = { x0: 8.6, x1: 14.6, z0: 6.6, z1: 21.6 };
-/** the dark south of the middle yard, behind the first guard */
-const DARK_B: Rect = { x0: 16.2, x1: 23.0, z0: 15.0, z1: 21.6 };
-/** …and the strip of it round the first wall's south end */
-const ROUND_B: Rect = { x0: 15.4, x1: 23.0, z0: 18.2, z1: 21.6 };
 
 /** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): a bespoke set on the yard's west gate
  *  (train-ground-kitview.ts). From the gate as it stands the picture's column holds the garden's bean row and no more. So the well court is brought up to it:
@@ -162,56 +159,13 @@ export function build() {
     exits: [EXIT_E, EXIT_W],
     patrols: [['post', 'door', 'gate']],
   };
-  // every step from the first order on has a way through for a player who did it another way: a man put down early, by his own hands or anybody's (`men
-  // down N`), and — the partner lost (`mate` is false for ever with nobody on his feet, and no `pair` row comes), or the watch simply walked round — the
-  // watch house reached (`stage drive`): the row is then the mission's own again
-  const down = (n: number): LessonTest => ({ is: 'men', down: n }), alone: LessonTest = { is: 'stage', stage: 'drive' };
-  const any = (...of: LessonTest[]): LessonTest => ({ is: 'any', of }), all = (...of: LessonTest[]): LessonTest => ({ is: 'all', of });
-  const at1 = (p: number[]): [number, number, number] => [p[0], 1, p[2]];
-  const lesson: LessonData = {
-    title: 'Quiet, as two',
-    steps: [
-      { id: 'follow', line: 'Your partner will follow you. Lead him in through the gate',
-        done: all({ is: 'in', area: { ...YARD_A } }, { is: 'mate', area: { ...YARD_A } }), hold: 0.3, at: [11.5, 1, 14] },
-      { id: 'loud', line: 'X on the ground, then press 5 to have him go loud',
-        done: { is: 'flag', flag: 'silent', value: false } },
-      { id: 'silent', line: 'X on the ground, then press 5 again to go silent. Your partner will hold his fire',
-        done: { is: 'flag', flag: 'silent' } },
-      { id: 'round', line: 'Press C to crouch, and lead your partner around the end of the wall',
-        done: { is: 'in', area: { ...ROUND_B } }, at: [16.6, 1, 20.2] },
-      { id: 'send', line: 'X on dark ground ahead, then press 1 to have him wait there',
-        done: any(all({ is: 'did', what: 'order:pairDark' }, { is: 'mate', area: { ...DARK_B }, away: 2.5 }), alone), hold: 0.5, at: [20.5, 1, 18.6] },
-      { id: 'watch', line: 'X on the guard at the pump, then press 2 to have your partner watch him',
-        done: any({ is: 'did', what: 'order:pairWatch' }, down(1), alone), at: at1(POST) },
-      { id: 'mark', line: 'X on the guard, then press 1 to have your partner sneak up behind him',
-        done: any({ is: 'did', what: 'order:pairMark' }, down(1), alone), at: at1(POST) },
-      { id: 'set', line: 'Wait until he says "set"',
-        done: any({ is: 'pair', what: 'set' }, { is: 'pair', what: 'go' }, down(1), alone), at: at1(POST) },
-      { id: 'go', line: 'Press F and your partner will take the guard down',
-        done: any(all({ is: 'pair', what: 'go:F' }, { is: 'pair', what: 'down' }), down(1), alone), at: at1(POST) },
-      { id: 'back', line: 'X on the ground, then press 3 to have him fall in behind you',
-        done: any(all({ is: 'did', what: 'order:fallIn' }, { is: 'mate', by: 3 }), alone), hold: 0.3 },
-      { id: 'hold', line: 'X on the ground, then press 4 to have him hold. Go on alone',
-        done: any(all({ is: 'did', what: 'order:hold' }, { is: 'mate', away: 4 }), alone), at: [26.2, 1, 19.8] },
-      { id: 'mark2', line: 'One guard is watching the other\'s back. X on the far one, then press 1',
-        done: any({ is: 'did', what: 'order:pairMark' }, down(2), alone), at: at1(GATE) },
-      { id: 'set2', line: 'Wait for "set" in the dark behind the near one',
-        done: any({ is: 'pair', what: 'set' }, { is: 'pair', what: 'go' }, down(2), alone), at: [24.1, 1, 14.9] },
-      // (the partner's man down is `men down 2`, not the pair's own 'down' row: a man who turns at the last pace is finished off under another row; a grab made
-      //  BEFORE "set" was its own mark a step ago, so a man in his arm with two down is the same deed done early)
-      { id: 'hands', line: 'Press Space behind the near guard to grab him. Your partner will take the other one down',
-        done: any(all({ is: 'pair', what: 'go:hands' }, down(2)), all({ is: 'flag', flag: 'holding' }, down(2)), down(3), alone), at: at1(DOOR) },
-      { id: 'sleep', line: 'Right-click to choke him out, then stay still',
-        done: any(down(3), alone) },
-    ],
-  };
   // the fuse box on the INSIDE of the east wall: the shell's default sits where the man sent to it walks out of the gate and round the wall
   T.breakerAt(31.84, 8.0, 'w');
 
   const out = T.finish({
     spawn: [5.2, 0, 14.0], routes,
     mission: { serverRoom: { ...HUT }, entryDoor: 'hut', rack: { index: 0, front, halfW: 0.3 }, exfilDoor: 'gate_e', exfilX: EXIT_E.x, exfilZ: EXIT_E.z, exfilOut: EXIT_E.out },
-    scenarios: { quiet, lesson, kitView: SILENT_KITVIEW },
+    scenarios: { quiet, kitView: SILENT_KITVIEW },
   });
   furnish(T);
   return out;

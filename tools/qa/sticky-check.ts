@@ -602,7 +602,7 @@ export async function stickyDefault(): Promise<boolean> {
   const onWas = STICKY.on, qWas = QF.QUIETFOG.on, rnd = Math.random, G = globalThis as any, hadLs = 'localStorage' in G, lsWas = G.localStorage;
   const under = () => { STICKY.on = true; QF.QUIETFOG.on = true; QF.QUIETFOG.def = BREAK ? 'off' : 'team'; };
   try {
-    const { QUIET_MISSIONS, TRAINING_MISSIONS, SCENARIOS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { quitScenario, fogOfQuery, quietRungOfQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+    const { QUIET_MISSIONS, LESSON_MISSIONS, SCENARIOS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { quitScenario, fogOfQuery, quietRungOfQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
     const { withDom, El } = await import('./scenario-picker-probes.ts'), LV = await import(`${ROOT}/src/ui/levers.ts`);
     const store = memStore(); G.localStorage = store; under(); QF.quietFogForget();
     const soloWas = K.KIT_SOLO.on;
@@ -629,10 +629,10 @@ export async function stickyDefault(): Promise<boolean> {
       F.verdict(!shown.fog && shown.at0 === 'ring,he40' && bare.fog && bare.at0 === 'ring,he40' && cones.fog && cones.rows === 'cone' && cones.at0 === withCams && own.fog && own.rows === 'cone/own' && own.at0 === 'ring,he40,cam ×1' && !nofow.fog && nofow.at0 === 'ring,he40',
         'the other ways are a key each: quietfog=off = every guard shown and no camera, cams=0 = the fog alone, another rung keeps the cameras, cams=N hands N, the plain ?nofow = no fog and so no camera',
         `quietfog=off: fog ${shown.fog}, ${shown.at0} · cams=0: fog ${bare.fog}, ${bare.at0} · quietfog=cones: fog ${cones.fog} (${cones.rows}), ${cones.at0} · quietfog=own&cams=1: fog ${own.fog} (${own.rows}), ${own.at0} · nofow: fog ${nofow.fog}, ${nofow.at0}`);
-      const les = (TRAINING_MISSIONS as any[]).find(e => e.level === 'train-move.json'), lq = pickSearch(les, ''), L = await start(les.level, lq);
+      const les = (LESSON_MISSIONS as any[]).find(e => e.kind === 'quiet' && e.squad === 0), lq = pickSearch(les, ''), L = await start(les.level, lq);
       const sq = (SCENARIOS as any[]).find(e => e.kind === 'roomclear'), sqHref = QF.quietFogHref(`/${pickSearch(sq, '')}`, false);
       F.verdict(!L.fog && L.at0 === 'ring,he40' && quietRungOfQuery(new URLSearchParams(lq)) === 'off' && !has(sqHref) && !has(QF.quietFogHref(`/${lq}`, false)),
-        'a Training lesson is as it was (every guard shown, no camera), and neither its link nor a squad row\'s carries a key', `${les.id}: fog ${L.fog}, ${L.at0}, rung ${quietRungOfQuery(new URLSearchParams(lq))} · squad row ${sq.id}: ${sqHref}`);
+        'a tutorial mission played alone is as it was (every guard shown, no camera), and neither its link nor a squad row\'s carries a key', `${les.id}: fog ${L.fog}, ${L.at0}, rung ${quietRungOfQuery(new URLSearchParams(lq))} · squad row ${sq.id}: ${sqHref}`);
     });
     F.verdict(K.KIT_SOLO.on === soloWas, 'the starts above put your card on Sam (the page\'s own order) and leave the solo kit flag as they found it for whatever runs next', `KIT_SOLO.on ${soloWas} → ${K.KIT_SOLO.on}`);
     // the links and the lever say only what differs from the default

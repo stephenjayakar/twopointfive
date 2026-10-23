@@ -144,6 +144,7 @@ import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
 import { HANDWORK } from '../game/handwork';
 import { WORKSTOW } from '../game/workstow';
+import { SQUADNET } from '../game/squadnet';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { GEAR, gearFromQuery } from '../game/gear';
@@ -383,6 +384,9 @@ export function pageSwitches(q: URLSearchParams): void {
   STEALTHPOSE.on = !q.has('nostealthpose');   // stealth poses (game/stealthpose.ts): the crouch's hanging arms and sway, the crouch walk's arms, the back unrolling as he stands, the creep's leading hand, the squat at a door with the wand; ?nostealthpose = as it was
   HANDWORK.on = !q.has('nohandwork');   // hands that do the work (game/handwork.ts): a finger on the keypad, hands on a charge, the breaker's lever and the drive; a hand to the radio; a guard's torch ↔ sidearm swap as a move — ON in the page; ?nohandwork = all three on the frame, as they were
   WORKSTOW.on = !q.has('noworkstow');   // the gun is put away for a two-handed job (game/workstow.ts): a charge going on a door or a wall has both of the man's hands — yours, what you held put away first and brought back after; a teammate's gun hung on its sling, no round until it is back up, the job dropped while the fight has him. `?noworkstow` = a charge set with the gun still in the hand, as it was
+  SQUADNET.on = q.get('squadnet') !== '0';   // the squad reaches you (game/squadnet.ts): a teammate's line said off your screen is drawn near you on his side with a click, and a teammate going down is called with a sound of its own: ON in the page; ?squadnet=0 = a line over a head off the screen is not drawn, as it was
+  SQUADNET.why = q.get('qwhy') !== '0';   // the quick key says why (game/squadnet.ts): its row ends on the reason when the squad's pick is not a plain open, and the man who answers says it: ON in the page; ?qwhy=0 = the row and the answer as they were
+  SQUADNET.clear = q.get('honestclear') !== '0';   // 'clear' means clear (game/squadnet.ts): a room is called clear only when its search left no floor unseen, and called quiet otherwise: ON in the page; ?honestclear=0 = the call as it was
   HANDS.on = !q.has('nohands');   // hands on the world (game/hands.ts): a body is taken up from the end he is at with both hands and laid down again, a door comes round under his hand with him stepped clear of it — ON in the page; ?nohands = bodies snap to the ankle drag and doors are flung, as they were
   OWNCHARGE.on = !q.has('noowncharge');   // the player's own charges (game/owncharge.ts): charge rows on YOUR kit card, 'set a charge' on a shut door, a man alone carries his card's charges only. ?noowncharge = as it was
   GUNSLOTS.on = !q.has('nogunslots');   // a primary and a secondary for every man (game/gunslots.ts): the card's one gun row is two — Primary and Secondary — and a teammate carries both, going to his sidearm when the primary runs dry on a man close in front of him. ?nogunslots = one gun row, and nobody but you has a second gun
@@ -760,6 +764,9 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HANDLE.toolNear': 'TPS_TOOLNEAR=1',
   'HANDWORK.on': 'TPS_HANDWORK=1',
   'WORKSTOW.on': 'TPS_WORKSTOW=1',
+  'SQUADNET.on': 'TPS_SQUADNET=1',
+  'SQUADNET.why': 'TPS_QWHY=1',
+  'SQUADNET.clear': 'TPS_HONESTCLEAR=1',
   'TAKEDOWN.on': 'TPS_TAKEDOWN=1',
   'TAKEDOWN.haul': 'TPS_HAUL=1',
   'STEALTHPOSE.on': 'TPS_STEALTHPOSE=1',

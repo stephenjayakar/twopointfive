@@ -365,7 +365,7 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
   else say('mission', true, rows.map(e => `${e.id}${e.offList ? ' (off the list)' : ''}`).join(', '));
   for (const e of rows) {
     const bad: string[] = [], len = (what: string, s: string | undefined, [lo, hi]: readonly [number, number]) => { if (!s) { if (!e.offList) bad.push(`no \`${what}\``); } else if (s.length < lo || s.length > hi) bad.push(`\`${what}\` is ${s.length} characters, the lists hold it to ${lo}‥${hi}`); };
-    len('place', e.place, WORDS.place); len('blurb', e.blurb, e.kind !== 'quiet' && e.group !== 'training' ? WORDS.squadBlurb : WORDS.blurb);
+    len('place', e.place, WORDS.place); len('blurb', e.blurb, e.kind !== 'quiet' ? WORDS.squadBlurb : WORDS.blurb);
     if ((e.defenders ?? 0) > DEFENDERS_MAX) bad.push(`${e.defenders} defenders, the cap is ${DEFENDERS_MAX}`);
     if (name !== 'office') {
       const starts = e.kind === 'roomclear' ? S.roomClear?.starts?.length ?? 0 : 0, want = starts ? starts + 1 : 0;

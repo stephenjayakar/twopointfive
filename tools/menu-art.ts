@@ -36,7 +36,6 @@ interface Mood {
 }
 const NIGHT: Mood = { key: [0.5, 0.66, 1], keyK: 1.5, keyAz: 215, keyEl: 34, keySoft: 0.02, zen: [0.02, 0.035, 0.075], hor: [0.05, 0.065, 0.1], skyK: 1.6, lampK: 1, haze: 1, expo: 1, tint: [0.05, 0.07, 0.12], tintK: 0.5, rim: 3.2 };
 const MOODS: Record<string, Mood> = {
-  training: { ...NIGHT, key: [1, 0.85, 0.62], keyK: 5.5, keyEl: 24, keySoft: 0.03, zen: [0.1, 0.15, 0.26], hor: [0.5, 0.38, 0.26], skyK: 2.2, lampK: 0.5, haze: 0.8, tint: [0.1, 0.08, 0.08], tintK: 0.3 },   // early morning: a pale sun, long shadows, the one group by day
   raids: NIGHT,
   strongholds: { ...NIGHT, key: [1, 0.42, 0.2], keyK: 3.4, keyEl: 11, keySoft: 0.03, zen: [0.035, 0.035, 0.09], hor: [0.3, 0.12, 0.07], skyK: 1.5, lampK: 1.2, expo: 1.15, tint: [0.09, 0.05, 0.1], tintK: 0.3, rimC: [0.42, 0.6, 1], rim: 5 },   // last light: ember on the wall tops, the rest gone violet
   clock: { ...NIGHT, key: [0.42, 0.7, 0.86], keyK: 1.3, zen: [0.012, 0.04, 0.06], hor: [0.03, 0.075, 0.09], expo: 1.3, tint: [0.03, 0.09, 0.1], tintK: 0.75 },   // a harder, greener night
@@ -72,7 +71,6 @@ const PIN: Record<string, Pin> = {
   'snatch-four': { at: [26.9, 0, 11.6], ops: [[26.9, 0, 9.6], [27.8, 0, 12.2], [27.8, 0, 9.0]], aim: [26.0, 10.75], look: [25.6, 1, 10.6], yaw: 90, dist: 13, pitch: 54, lampK: 0.5, ajar: { side: 0.9 } },   // the man by his lantern, the team on his side door
   'defuse-four': { at: [8.5, 0, 8.6], work: [0], lampK: 0.05, skyK: 0.4, expo: 0.7, ops: [[7.4, 0, 10.9], [10.9, 0, 12.0], [6.9, 0, 12.3], [10.2, 0, 9.4]], aim: [8.5, 7.65], pitch: 44 },   // a man's hands on charge 1
   'compound-four': { at: [2.4, 0, 14.9], ops: [[2.4, 0, 16.1], [1.6, 0, 15.5], [1.6, 0, 16.6], [2.5, 0, 13.6]], aim: [10, 14.9], ajar: { gate_w: 1.2 }, look: [3.8, 1, 15.3], yaw: -62, pitch: 36, dist: 13 },   // the west gate, the lit yard beyond it
-  'train-move': { at: [5.6, 0, 14.7], aim: [7.6, 14.1], keyAz: 95, keyEl: 18, look: [6.3, 1, 14.2], yaw: -40, pitch: 30, dist: 10 },   // in the wall's long shadow, the sun through the gate
   'quiet-relay-two': { at: [16.77, 0, 15.15], ops: [[15.3, 0, 15.9]], aim: [16.77, 14.5], look: [17.6, 1, 15.6], yaw: -78, pitch: 24, dist: 8 },   // at the lock of the hut's door, under its lamp
   'solo-night': { lead: 0.2, flip: true },
   'vault-quiet': { at: [27.55, 0, 12.1], aim: [24.4, 14.6], look: [26, 1, 13], yaw: -35, pitch: 50, dist: 9.5, rim: 5 },   // the court's beam at the shin, between him and the back door
@@ -81,11 +79,7 @@ const PIN: Record<string, Pin> = {
   'quiet-yard-alone': { at: [21.2, 0, 16.9], aim: [27, 13.5], guards: [[27.5, 12.6, 20, 13]], pitch: 34, rim: 7 },   // the lamp's pool, a man in it, from the dark corner
   'quiet-yard-two': { at: [17.8, 0, 19.4], ops: [[19.2, 0, 19.7]], aim: [20, 14], guards: [[20.5, 13.8, 12, 13.8]], pitch: 28 },
   'lights-out-two': { at: [19, 0, 18.5], ops: [[18, 0, 19.3]], aim: [21, 16.2], ajar: { front: 0.9 }, pitch: 40 },   // the hall's four beams through its open door
-  'train-hands': { guards: [[20.2, 16.9, 20.25, 15.5]], at: [18.7, 0, 18.3], aim: [20.2, 16.9], look: [19.7, 1, 16.7], yaw: 8, pitch: 30, dist: 9 },   // behind a man at the embers
-  'train-lights': { at: [22.3, 0, 18.9], aim: [24, 18.9], look: [23.2, 1, 18.4], yaw: -10, pitch: 40, dist: 9, rim: 6 },   // the alley's beam
   'police-post-quiet': { at: [26, 0, 20.3], aim: [21.2, 20.6], guards: [[21.2, 20.6, 14, 21]], look: [23.5, 1, 20.6], yaw: 120, pitch: 34, dist: 11 },   // the gate's lamp and the man under it, from the hut's dark side
-  'train-kit': { at: [12.6, 0, 17.6], aim: [22, 17.6], armed: true, pitch: 30 },   // on the range
-  'train-silent': { at: [25.2, 0, 12.4], ops: [[27.6, 0, 12.2]], aim: [26.8, 10.6], pitch: 34 },
 };
 
 // ───────────────────────────────────────────────────────────────────────── the scene ─────────────────────────────────────────────────────────────────────────
