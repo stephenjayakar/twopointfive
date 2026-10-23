@@ -3769,6 +3769,20 @@ export class DoorTools {
     for (const w of this.words) if (isNaN(w.go1)) { const late = this.ops.filter(o => o.word === w && o.hold < 1); if (late.length) out.push(`word given · waiting for ${[...new Set(late.map(o => S.whoWords(o.men.filter(m => m.state !== 'dead'))))].join(' + ')}`); }
     return out;
   }
+  /** (ui/corner.ts, HANDRING.corner: the corner panel keeps of the squad only a line a key gives, and has no heading over a door's row) what
+   *  hudNotes and a door's heading say that the corner would otherwise lose, each as a key and what a press of it does now, or under no key (''):
+   *  a set charge while the squad's key by itself blows it, with who it would catch; a set charge that key does not blow so (his own, or one that
+   *  goes with the word) only while it would catch somebody, as the warning it is; the small squad's men held at a threshold, once they have called it. A separate reader,
+   *  not a change to hudNotes: the block's strings stay what every stand's checks read. Read by the page's panel only. */
+  cornerNotes(): { key: string; text: string }[] {
+    const out: { key: string; text: string }[] = [], S = this.g.orders, F = DOORTOOLS.blowKey.replace('Key', '');
+    const word = DOORTOOLS.wordOnKey && S.big && this.waitingAny(this.wordMen()).length > 0;
+    for (const c of this.set) { const close = OWNCHARGE.on ? this.closeWords(c).replace('too close:', 'TOO CLOSE:').replace('behind the door:', 'BEHIND THE DOOR:') : '';
+      if (!word && !this.onPendingWord(c) && this.keyIs(c)) out.push({ key: F, text: `blow the charge · ${doorWords(c.door)}${close}` });
+      else if (close) out.push({ key: '', text: `charge set · ${doorWords(c.door)}${close}` }); }
+    if (!S.big) for (const op of this.ops) if (op.thr?.hold && op.phase === 'thr' && op.thr.told) out.push({ key: F, text: `go · ${S.whoWords(op.men)} waiting · ${doorWords(op.door)}` });   // (only once they have called: a key's line while they still work the threshold invites the press before their call)
+    return out;
+  }
   /** … and the word, while somebody is waiting on it: the key that gives it, to whom — or, with the orders going to somebody else, who to turn to (a set
    *  charge is left out of that: it has its own line, and its own key) */
   wordNote(): OrderNote[] {

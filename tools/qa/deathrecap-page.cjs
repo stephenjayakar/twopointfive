@@ -110,12 +110,12 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       return { fatal: document.getElementById('fatal')?.textContent || '', lost: true, frames, who: A.callsign, sam: !!sam, before, known: !!(L && L.from), want,
         struck: !!s && s.textContent.includes(A.callsign) && /line-through/.test(getComputedStyle(s).textDecorationLine), arrow: b ? b.textContent : '', turn, colour: b ? getComputedStyle(b).color : '',
         marks: marks.length, mark: marks[0] ? { w: marks[0].style.width, t: marks[0].style.transform, o: marks[0].style.opacity } : null,
-        names: hs.map(x => x.callsign).filter(n => panel.includes(n)), card: !!document.querySelector('#menu.on .db'), samDown: g.player.down, plain: rowHtml().find(x => x.includes(A.callsign)) || '' };
+        corner: document.getElementById('interact').classList.contains('corner'), names: hs.map(x => x.callsign).filter(n => panel.includes(n)), card: !!document.querySelector('#menu.on .db'), samDown: g.player.down, plain: rowHtml().find(x => x.includes(A.callsign)) || '' };
     });
     const ok = !R.fatal && !errors.length && R.lost && !R.card && !R.samDown && R.names.length === 0 && (want === 'arrows'
       ? R.before === 0 && R.sam && R.known && R.struck && R.arrow === '→' && R.want.includes(R.turn) && /240, 145, 46/.test(R.colour) && R.marks === 1
       : want === 'plain' ? R.before === 0 && R.sam && R.known && R.struck && !R.arrow && R.marks === 0
-      : !R.struck && !R.arrow && R.marks === 0 && /class="hint( t-[a-z]+)?"/.test(R.plain));
+      : !R.struck && !R.arrow && R.marks === 0 && (R.corner ? !R.plain : /class="hint( t-[a-z]+)?"/.test(R.plain)));   // (the corner panel — ui/corner.ts — has no line per man: with the live rule off a lost man has none either)
     if (!ok) failed = true;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${name}: ${!R.lost ? `no teammate was lost in ${R.frames} frames (${R.why})` : `${R.who} lost after ${R.frames} frames, Sam ${R.samDown ? 'DOWN' : 'up'}${R.sam ? ' and looking at him' : ''} · his line ${R.struck ? 'struck' : 'not struck'}, ${R.arrow ? `arrow "${R.arrow}" turned ${R.turn}° (the game's direction on this camera: ${R.want.join('° or ')}°, ${R.colour})` : `no arrow (the way ${R.known ? 'known' : 'NOT known'})`} · ${R.marks} stroke(s) on the ground${R.mark ? ` (${R.mark.w}, ${R.mark.t}, opacity ${R.mark.o})` : ''} · defenders named in the panel: ${R.names.length} · card ${R.card ? 'UP' : 'not up'}`}${R.fatal ? ` · FATAL ${R.fatal.slice(0, 200)}` : ''}${errors.length ? ` · ${errors.length} console error(s): ${errors[0]}` : ''}`);
     if (want === 'off') console.log(`    his line with the rule off: ${R.plain}`);

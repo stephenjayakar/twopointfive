@@ -420,6 +420,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.HANDRING as { empty?: boolean } | undefined)?.empty !== 'boolean') HANDRING.empty = false;   // (…nor before an empty tap said so)
   if (typeof (k.tables.HANDRING as { near?: boolean } | undefined)?.near !== 'boolean') HANDRING.near = false;   // (…nor before that word named the thing he stood beside)
   if (typeof (k.tables.HANDRING as { onThing?: boolean } | undefined)?.onThing !== 'boolean') HANDRING.onThing = false;   // (…nor before his ring stood on the thing it is about: at the cursor)
+  if (typeof (k.tables.HANDRING as { corner?: boolean } | undefined)?.corner !== 'boolean') HANDRING.corner = false;   // (…nor before the corner panel was the objective and a line a key: the picture only)
   if (typeof (k.tables.HANDRING as { turn?: boolean } | undefined)?.turn !== 'boolean') HANDRING.turn = false;   // (…nor before a row at a wall switch turned him to it)
   if (typeof (k.tables.HANDRING as { bare?: boolean } | undefined)?.bare !== 'boolean') HANDRING.bare = false;   // (…nor before it lost its line of words: the picture only)
   if (typeof (k.tables.HANDRING as { lone?: boolean } | undefined)?.lone !== 'boolean') HANDRING.lone = false;   // (…nor before a ring with one row was a pill: the picture only)
