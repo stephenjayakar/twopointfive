@@ -67,7 +67,7 @@ const LEVEL_BASE: Record<string, string> = {
   'train-move.json': 'd5893130e',
 
   // Training 5's kitchen step is done by 'bang and clear' given at the held door too (the word spends no can: the lesson asks for the can)
-  'train-orders.json': '2b733c042',
+  'train-orders.json': '18d63085f',
 
   // the lesson taken out of the yard, as train-move's
   'train-silent.json': 'd5893130e',
