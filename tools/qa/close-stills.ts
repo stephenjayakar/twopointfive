@@ -78,8 +78,8 @@ async function lobby(seed: number) {
   for (let i = 0; i < 5; i++) W.step(DT);
   const [A, ...rest] = g.guards; rest.forEach((gd: any, i: number) => { gd.hold = true; gd.pinned = true; place(gd, [37.5, 0, 6 + i * 1.5], EAST); gd.heardUpTo = 1e12; }); place(A, LOBBY, EAST); A.wp = 1; A.hold = true; A.pinned = true;
   W.cam.yaw = 0; W.cam.rebuild?.();
-  const look = { ahead: false };   // (the cursor on the man — or, with him in the arm, a point ahead of Sam: the hold turns to the cursor)
-  const aim = () => { const c = g.player.char; W.cursorAt(look.ahead ? [c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6] : [A.char.pos[0], 1.2, A.char.pos[2]]); };
+  const look = { ahead: false, still: false };   // (the cursor on the man — or, with him in the arm, a point ahead of Sam: the hold turns to the cursor)
+  const aim = () => { const c = g.player.char; W.cursorAt(look.ahead && look.still ? [c.pos[0], 0.45, c.pos[2]] : look.ahead ? [c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6] : [A.char.pos[0], 1.2, A.char.pos[2]]); };
   const step = (n = 1) => { for (let i = 0; i < n; i++) { aim(); W.step(DT); g.player.visibility = 0.02; } };
   const samAt = (d: number, crouch: boolean) => { g.teleportPlayer([A.char.pos[0] - d, 0, A.char.pos[2]]); g.player.crouch = crouch; const pl = g.player.char; pl.bodyYaw = pl.aimYaw = EAST; step(30); };
   const gap = () => A.char.pos[0] - g.player.char.pos[0];
@@ -147,7 +147,8 @@ async function stalk(scene: string, who: 'calm' | 'rifle', pause: boolean) {
   if (pause) { lift(); for (const t of [0.15, 0.5, 1.2]) { S.step(Math.round(t * 60) - (t === 0.15 ? 0 : t === 0.5 ? 9 : 30)); R.snap(`let go ${t.toFixed(2)} s · ${S.gap().toFixed(2)} m`); } press(); for (const d of [1.2, 1.0]) { while (S.gap() > d && !g.player.holding && n++ < 2400) S.step(1); if (!g.player.holding) R.snap(`pressed again · ${S.gap().toFixed(2)} m`); } }
   while (!g.player.holding && n++ < 2400) S.step(1);
   if (!g.player.holding) { console.log(`  [${scene}] THE GRAB NEVER CAME (gap ${S.gap().toFixed(2)} m)`); return R; }
-  lift(); S.look.ahead = true; R.snap('the grab · frame 0'); let f = 0; const to = (t: number, label: string) => { const k = Math.round(t * 60); if (k > f) { S.step(k - f); f = k; } R.snap(label); };
+  // (still: the cursor at his own feet, inside the hold's 0.6 m — a point six metres ahead is picked a little off his line through this harness's camera, and the pair came round to it a few degrees a frame: a quarter turn by the last still that no player's mouse asked for)
+  lift(); S.look.ahead = S.look.still = true; R.snap('the grab · frame 0'); let f = 0; const to = (t: number, label: string) => { const k = Math.round(t * 60); if (k > f) { S.step(k - f); f = k; } R.snap(label); };
   for (const t of [0.07, 0.14, 0.22, 0.34, 0.5, 0.7, 0.95, 1.5]) to(t, `grab ${t.toFixed(2)} s`);
   return R;
 }

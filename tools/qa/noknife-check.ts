@@ -85,6 +85,21 @@ async function words() {
   CLOSE.on = true; CLOSE.noKnife = up(); const now = LINES.map(l => lessonLine(l)); CLOSE.noKnife = false; const asWas = LINES.map(l => lessonLine(l));
   verdict(now.every((l: string) => !/knife/i.test(l) && /knock him out/.test(l)) && asWas.every((l: string, i: number) => l === LINES[i]),
     'each of the three lesson lines that teach the knife says the knockout and no knife, and with the key down reads as written', now.map((l: string) => `'${l}'`).join(' · '));
+  // …and a line that names the move by a token (lesson.ts TOKENS) says the build's key however the sentence around it is worded: the four ways the two keys stand
+  const { STALK } = await import(`${ROOT}/src/game/stalk.ts`), { LESSON_TOKENS, lessonToken, lessonTokenFaults } = await import(`${ROOT}/src/game/lesson.ts`), sw = [STALK.on, STALK.only];
+  try {
+    const T = 'When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}', T2 = '{Grab the near guard from behind}, then {grab yours}.', read = (held: boolean, bare: boolean) => { STALK.on = STALK.only = held; CLOSE.noKnife = bare; return lessonLine(T) as string; };
+    const hb = read(true, up()), kb = read(false, up()), hk = read(true, false), kk = read(false, false); STALK.on = STALK.only = true; const who = lessonLine(T2) as string; STALK.on = false; const whoOff = lessonLine(T2) as string;
+    const known = LESSON_TOKENS.every((n: string) => lessonToken(n)) && lessonToken('Grab the near guard from behind') && !lessonToken('open the door') && !lessonToken('him');
+    // …and the lesson's own check (checkLesson) refuses a name in braces that is no token, a brace left open, and a line that fits as written and not as read
+    const pad = 'x'.repeat(70), faults = (l: string) => (lessonTokenFaults('t', l, 96) as string[]).length, refused = faults('{grab him from behnd}') + faults('{knock-him-out} now') + faults('grab him}') + faults(`${pad} {grab him from behind}`), clean = faults('{Grab yours}, then wait.') + faults('No braces here.') + faults('Creep in and {grab him}.'), far = faults('{grab guard 2}') + faults('{grab him }') + faults('{take the  man out}');   // (far: a digit, a space at the end, two spaces — names the writer-out would leave as written)
+    verdict(hb === 'When he lights up, creep in and hold left click on him from behind to grab him. Right click to knock him out if he turns, or right click to knock him out. Hold left click on him to grab him now. {open the door}'
+      && !/Space|knife/.test(hb) && /press \[Space\] behind him to grab him/.test(kb) && !/knife/.test(kb) && /Left click to knife him/.test(hk) && /or left click to use the knife/.test(hk) && !/Space/.test(hk)
+      && /press \[Space\] behind him/.test(kk) && /Press \[Space\] to grab him now/.test(kk) && /Left click to knife him/.test(kk) && LESSON_TOKENS.length === 4 && known
+      && who === 'Hold left click on the near guard from behind to grab him, then hold left click on yours to grab him.' && whoOff === 'Press [Space] behind the near guard to grab him, then press [Space] to grab yours.' && refused === 4 && far === 3 && clean === 0,
+      'a line that names the move by its token says the held click and the knockout in the page\'s words, the grab\'s key with the stalk off and the knife with the knife back, a capital where the token has one, any words for the man, and leaves a name it does not know as written — which the lesson\'s check refuses, with a brace left open and a line too long once written out',
+      `the page: '${hb}' · the stalk off: '${kb}' · the knife back: '${hk}' · both: '${kk}' · another man: '${who}', the stalk off '${whoOff}' · tokens: ${LESSON_TOKENS.join(', ')}, known ${known} · refused ${refused} of 4 bad lines and ${far} of 3 more, faulted ${clean} of 3 good ones`);
+  } finally { [STALK.on, STALK.only] = sw; }
 }
 async function off() {
   console.log('\n=== off: the key down ===');

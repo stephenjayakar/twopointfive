@@ -43,8 +43,39 @@ const stalkLine = (line: string): string => line.replace(GRAB_BEHIND, (_m, p: st
 /** …and one that names the knife, while there is none (close.ts CLOSE.noKnife): the right click's knockout is the blow */
 const KNIFE_OR = /\bRight click to knock him out, or left click to use the knife\b/g, KNIFE_HIM = /\bleft click to knife him\b/g, KNIFE_KILL = /\bleft-click to kill him with the knife\b/g;
 const bareLine = (line: string): string => line.replace(KNIFE_OR, 'Right click to knock him out').replace(KNIFE_HIM, 'right click to knock him out').replace(KNIFE_KILL, 'right-click to knock him out');
+/** A LINE NAMES THE MOVE, NOT ITS KEY: a token in braces is written out in the build's own words — the held click or the grab's key, the knockout or the
+ *  knife — so a level's sentence can be reworded freely and still say the key the build has (the patterns above turn only the exact old sentences).
+ *  `{grab him}` · `{grab him from behind}` · `{knock him out}` (the blow in reach) · `{take him out}` (the silent blow from behind). `him` may be any words
+ *  for the man (`{grab the near guard from behind}`, `{grab yours}`): letters and apostrophes, one space between words. A capital first letter begins a sentence. A name in braces that is none of these is
+ *  left as written, and checkLesson refuses one (lessonTokenFaults, below). */
+const TOKENS: [RegExp, (who: string, held: boolean, bare: boolean) => string][] = [
+  [/^grab (.+) from behind$/, (who, held) => held ? `hold left click on ${who} from behind to grab him` : `press [Space] behind ${who} to grab him`],
+  [/^grab (.+)$/, (who, held) => held ? `hold left click on ${who} to grab him` : `press [Space] to grab ${who}`],
+  [/^knock (.+) out$/, (who, _h, bare) => bare ? `right click to knock ${who} out` : `right click to knock ${who} out, or left click to use the knife`],
+  [/^take (.+) out$/, (who, _h, bare) => bare ? `right click to knock ${who} out` : `left click to knife ${who}`],
+];
+/** the four, as a level writes them of 'him' */
+export const LESSON_TOKENS: readonly string[] = ['grab him', 'grab him from behind', 'knock him out', 'take him out'];
+const TOKEN = /\{([A-Za-z][A-Za-z' ]*)\}/g, lower = (name: string) => name.charAt(0).toLowerCase() + name.slice(1);
+/** is this name (the words between the braces, either capital) one lessonLine writes out? */
+export const lessonToken = (name: string): boolean => { const n = lower(name); if (!/^[A-Za-z]+(?: [A-Za-z']+)*$/.test(name)) return false;   // (the letters the writer-out reads, one space between words, none at an end)
+  const hit = TOKENS.find(([re]) => re.test(n)); return !!hit && !/(^| )from( |$)/.test(hit[0].exec(n)![1]); };   // (…and a 'from' left in the man's words is a 'from behind' misspelt)
+const tokenLine = (line: string, held = STALK.on && STALK.only, bare = CLOSE.on && CLOSE.noKnife): string => line.indexOf('{') < 0 ? line : line.replace(TOKEN, (m, name: string) => {
+  const n = lower(name); if (!lessonToken(name)) return m; for (const [re, say] of TOKENS) { const hit = re.exec(n); if (!hit) continue;
+    const s = say(hit[1], held, bare); return n !== name ? s.charAt(0).toUpperCase() + s.slice(1) : s; }   // (the capital the author wrote, nothing guessed)
+  return m; });
+/** what checkLesson asks of a line with a brace in it: every name in braces is a token (a misspelt one would be shown, braces and all), and written out the
+ *  longest of the four ways the two keys can stand it still fits the row — the cap is of what the player reads, not of what the level wrote */
+export function lessonTokenFaults(w: string, line: string, cap: number): string[] {
+  if (line.indexOf('{') < 0 && line.indexOf('}') < 0) return [];
+  const out: string[] = [], rest = line.replace(/\{([^{}]*)\}/g, (m, name: string) => { if (!lessonToken(name)) out.push(`${w} has {${name}}, which is no move's token (${LESSON_TOKENS.join(', ')})`); return ''; });
+  if (/[{}]/.test(rest)) out.push(`${w} has a brace that closes nothing or is never closed`);
+  const long = Math.max(...[0, 1, 2, 3].map(k => tokenLine(line, !!(k & 1), !!(k & 2)).length));
+  if (!out.length && line.length <= cap && long > cap) out.push(`${w} is ${long} characters with its tokens written out: the objective row holds about ${cap}`);
+  return out;
+}
 /** a step's line as the HUD's row says it now */
-export const lessonLine = (line: string): string => { const s0 = STALK.on && STALK.only ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
+export const lessonLine = (written: string): string => { const line = tokenLine(written), s0 = STALK.on && STALK.only ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
 import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)
@@ -378,6 +409,7 @@ export function checkLesson(g: Game): string[] {
     if (T.line.length > 96) out.push(`${w}.line is ${T.line.length} characters: the objective row holds about 96`);
     if (T.setupLine && T.setupLine.length > 96) out.push(`${w}.setupLine is ${T.setupLine.length} characters: the objective row holds about 96`);
     if (T.blowLine && T.blowLine.length > 96) out.push(`${w}.blowLine is ${T.blowLine.length} characters: the objective row holds about 96`);
+    for (const k of ['line', 'setupLine', 'blowLine', 'ringLine'] as const) { const l = T[k]; if (l) out.push(...lessonTokenFaults(`${w}.${k}`, l, 96)); }
     if (T.at && !(T.at[0] > WORLD.min[0] && T.at[0] < WORLD.max[0] && T.at[2] > WORLD.min[2] && T.at[2] < WORLD.max[2])) out.push(`${w}.at (${T.at[0]}, ${T.at[2]}) is outside the world`); });
   return out;
 }
