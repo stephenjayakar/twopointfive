@@ -1681,6 +1681,49 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A SMALL FLAW IT TURNED UP, not this change's and not mended: creeping up behind the hall's man the scripted player's footfall was filed on seven
   frames running (0.1 s) at 1.1 m, and seven crouched steps on stone at that range take a calm man to suspicious; the same approach six seconds
   earlier in the same run files one. It looks like the walk cycle's phase crossing its half back and forth (`player.ts`, the footstep's edge test).
+- **The ledger teaches the sponge round and the swap of the launcher's load** (2026-10-23; `tools/levels/tut-quiet.ts`, THE SPONGE ROUND at its head;
+  level data, a level's own card and one new card key, no switch of its own). The maintainer, taking both out of the solo loud mission: "we can introduce
+  sponge rounds + swapping secondaries later when we have a stealth tutorial". The store's old `strike` step (the hall's man taken by hand) is gone; in its
+  place, six: `corner` ("Stay back in the dark, because there's a laser right behind him", up the moment he is a stride inside the back door; `nook` is
+  now only "Go inside"), `rifle` ("Press [2] to take out your rifle"), `load` (its card "Using the rifle's launcher" says what the launcher fires and
+  where the load shows, that the "HE" on the kit strip is the grenade, and to swap it to stay quiet; the line is "Press [2] twice to load a sponge
+  round" under the gun's setup and "Press [2] again…" without it), `behind` ("Step out to where you can see him through the doorway", a mark on the
+  floor), `sponge` ("Hold the right mouse button, aim at him, and let go") and `sling` ("Press [E] to put your rifle away": the hands' key, which the
+  next man needs). 24 steps now, and a sixth checkpoint, 'the doorway', on `under`: a beam broken there no longer puts him back before the shot. WHY GRABBING IS NOT THE ANSWER: the chest beam (`TQ.beamHigh`) is moved to 0.45 m behind the hall man's heels, so a man
+  who comes up behind him breaks it, crouched or not (the reaching arm on the page's stand, the grab's own stance on the frozen one); a sponge round
+  breaks no beam (`devices.ts`: only the player's own body, a dragged body and a thrown can do). He keeps his back to the store, so the lesson does not
+  rest on what the page's meter reads there. WHERE THE SHOT IS MADE FROM: the dark corner (`TQ.nook`) has no line to him (the doorway's own wall; a round let
+  go from there does not reach him: on the real page one left the tube and he turned to the knock, suspicious; in the harness on the page's stand
+  none left it, on the frozen stand one did); so the corner is where the rifle comes out and the load is swapped, and `behind` marks the floor on the doorway's
+  line (`TQ.shot`, 2.6 m behind him, a clear line from anywhere within half a metre). That floor is in the doorway's light (the harness reads 0.74
+  there): the dark floor with a line to him is a strip under half a metre wide along the light's edge, measured on a 0.3 m grid, too thin to send a
+  player to. THE KIT: the level issues its own card (`scenarios.issue.members.0`: the rifle, one grenade, five sponge rounds, no cans and no frag),
+  dealt whole on the page. THE NEW KEY, `loaded: 'ring' | 'he40'` on that card (`scene/scenarios.ts IssueCard`, parsed in `levelData.ts`, read in
+  `kit.ts kitPlayer` on the player's own card only; `docs/level-format.md`): the load the launcher COMES UP ON. Absent it is the sponge round wherever
+  he carries one, as before, so no other level changes. Here it is the grenade, so the swap is done for a reason and not only said. THE LOCKS: from
+  `nook` both mouse buttons are shut; `corner` shuts `use`, because the frame gives a held left click to the stalk wherever the interaction key is his
+  and his hands are empty, whatever a step denies (`rails.ts gate`; a reviewer's run took the man that way with `fire` denied); `rifle` opens
+  `slot:rifle`;
+  `load` opens the frame's `load` (the load's row alone: a right click held before the swap sends nothing); `sponge` opens `alt`; `sling` opens `hands`;
+  `under` gives back the left button, the right and `use`, and shuts the rifle's key, the load and the hands' key again. The interaction key stays his on `nook` (the back door needs it), so the held click is shut from his first stride inside and not before. With
+  `alt` open the load's row is open too (the frame's rule), so from `sponge` he can swap back and fire the grenade: at 2.6 m it does not arm, and the
+  man is staggered and alerted; no data of a level can shut that. NEVER STUCK: `sponge` also passes when the launcher has no sponge round left (`lesson.ts ringsOut`). CHECKS
+  (2026-10-23, no GPU): `lesson-run tut-quiet` plays 24 of 24 on both stands (`TPS_RAILS=1` in front on the frozen one), seeds 1 to 4 on the shipped
+  stand, two of them with `--pace 6`: a left click held on the man from the doorway's line stalks nobody, a right click held there before the swap
+  sends nothing, a straight line to his head is blocked from the corner and clear from the mark (asked of the level's own collision), then one sponge round spent, the man out cold (the chronicle's `ko` by `ring`), no beam
+  broken, the man at the table on patrol with awareness 0.00, GHOST at the end. Its BREAK PATHS: `TQSMOKE_BREAK=hands` (he goes for the man by hand after all,
+  crouched; on the frozen stand, which has no reaching hand and no row to grab by on that line, he then stands up behind him) fails the run on both
+  stands with the beam broken; `RAILS_BREAK=1` fails it at the held left click (the stalk walks him 1.35 m).
+  `lesson-check` and `rails-check` on both stands, `lesson-gate tut-quiet`, `level-needs tut-quiet --run` on both, `issue-check`, `issuewhole`,
+  `kit-audit`, `writing-check`, the `pouches` family, `handring-check` and `smokebreak-check` on both stands, `solofog`, `attentionway`, `radiohome`:
+  green. `lesson-check`'s kit lines that staged this mission as "a lesson that issues no kit of its own" now stage `tut-sky` (the comment there says
+  which rows issue or pack; no tutorial mission played alone is left without a card, so `standRow`'s `kitSolo` line is not walked). `lived-check`'s row
+  for this level is moved to the commit that carries this. ON THE REAL PAGE: `tools/qa/tut-quiet-page.cjs` (headless Chromium, the software adapter,
+  real keys and real mouse buttons; staged to the store and stood on each spot, not walked) reads the lines and their key caps, the card, the kit
+  strip before and after the swap ("HE ×1" to "SPONGE ×5"), both locks from the doorway's line, the shot from the mark and the hands' key. `levelData.ts` refuses a `loaded` the card carries none of. NOBODY HAS SEEN OR PLAYED
+  IT ON A GPU. The maintainer's to judge: the shot is taken from the doorway's light and not from the dark; whether the beam reads as "right behind
+  him" from the store; whether a first-time player fires the one grenade once the right button opens (he cannot before the swap; after it he can swap
+  back); the card's words; five sponge rounds.
 - **A man told to have a smoke lights one** (2026-10-22; `src/game/smokebreak.ts SMOKEBREAK` / `updateSmokeBreak`, called from `game.ts` beside the
   breath in the cold; the order is `director.ts OrderPatch.smoke` → `GuardScript.smoke`; the arm is `character.ts smokeLayer`, its numbers `SMOKEARM`
   in that file). The maintainer: "cigarette break animation (with real smoke!) would be sick". THE SWITCH: `SMOKEBREAK.on`, ON in the page
@@ -1960,7 +2003,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   airfoil; the weapon light; the light jammer (OCP) on a camera and a beam; cameras; dragging and hiding a body; a key taken from a man; parking a partner
   and 'watch him'. CHECKS MOVED TO A TUTORIAL LEVEL OR ROW: `stayask` (d) → `tut-plan`; `solo-fog`'s lesson line, `quietfog`'s lesson cases, `verdict`'s
   row and `pouch-wall`'s lesson level → `tut-quiet`; `sticky-ways`' lesson line → the first quiet tutorial row played alone (`tut-solo`); `lesson-check`'s
-  kit lines → `tut-quiet` and `tut-plan` (two that issue no kit of their own and are played as issued); `quickthrow` (5) reads the steps of every tutorial row's level; `levers` and
+  kit lines → `tut-sky` and `tut-plan` since 10-23 (two that issue no kit of their own and are played as issued; before, `tut-quiet`, which now has its own card); `quickthrow` (5) reads the steps of every tutorial row's level; `levers` and
   `loadbrief` count tutorial rows. DROPPED WITH THEIR SUBJECT: `fresh-start`'s "every Training room clear names its seed", `writing-check`'s held count
   for the Training lines, `keybinds-check`'s two lesson lines (the wall line is kept on the yard), `aimcost`'s `train-lights` leg, `carlamps`'
   `train-hands` row, and the Training rows of `second-way`, `wallfurn` and `kitview-plan`. MEASURED on the build of 2026-10-23 with the corner panel in it, FROZEN and SHIPPED alike unless said (one seed, each check's own): both
