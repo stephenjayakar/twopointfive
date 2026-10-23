@@ -186,7 +186,7 @@ export async function devicesKeypad() {
     if (!game.doors.lockedOut(sd, game.player.char.pos, game.player.keys)) fails.push('lockedOut false from the office side');
     // the deny
     game.selectVerb('door', 'nocode'); W.input.pressed.add(IK); W.step(DT); W.step(DT);
-    if (!msgs.some(m => /pad wants a code you don't have/.test(m.text)) || (W.audioCounts.get('deny') ?? 0) < 1) fails.push('the refusing pad: no word / no deny tone');
+    if (!msgs.some(m => /pad needs a code you don't have/.test(m.text)) || (W.audioCounts.get('deny') ?? 0) < 1) fails.push('the refusing pad: no word / no deny tone');
     if (!sd.latched || !sd.locked) fails.push('the deny opened something');
     // walking into it: a wall
     game.puppet = { goal: [21.0, 0, 8.6], aim: null }; steps(W, 3); game.puppet = null;

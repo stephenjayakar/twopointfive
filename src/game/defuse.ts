@@ -123,10 +123,10 @@ export class Defuse {
     if (this.end === 'safe' && !this.wonSaid && g.roomClear.end === 'taken') { this.wonSaid = true; DEFUSE_STATS.won++; this.note('won'); }
     if (this.end) { this.sam = null; return; }
     if (pl.down || g.roomClear.end === 'wiped') { this.end = 'over'; this.tEnd = g.time; this.sam = null; this.note('end: over — the run ended first'); return; }
-    if (!this.tookSaid && g.roomClear.end === 'taken') { this.tookSaid = true; g.msg(this.started ? `the house is taken — the charges are still live, ${mmss(this.left)} left` : 'the house is taken — the charges are still live'); }
+    if (!this.tookSaid && g.roomClear.end === 'taken') { this.tookSaid = true; g.msg(this.started ? `the house is taken, but the charges are still live with ${mmss(this.left)} left` : 'the house is taken, but the charges are still live'); }
     if (!this.started) {   // the clock waits for the team's first move
       const lg = g.orders?.log ?? [], moved = !!this.from && flat(p, this.from) > DEFUSE.startM, told = lg.length > 0 && lg[lg.length - 1] !== this.lastOrder;
-      if (moved || told) { this.t0 = g.time; DEFUSE_STATS.started++; this.note(`clock: ${told ? 'an order' : 'the player moved'}`); g.msg(`the clock is running — ${mmss(D.secs)} for ${D.devices.length === 2 ? 'both charges' : 'every charge'}`); }
+      if (moved || told) { this.t0 = g.time; DEFUSE_STATS.started++; this.note(`clock: ${told ? 'an order' : 'the player moved'}`); g.msg(`the clock is running, and you have ${mmss(D.secs)} for ${D.devices.length === 2 ? 'both charges' : 'every charge'}`); }
     }
     this.samTick(D);
     if (!this.started) return;
@@ -142,9 +142,9 @@ export class Defuse {
     this.states[i] = 'safe'; this.safeBy[i] = name; DEFUSE_STATS.safe++; if (by === 'Player') DEFUSE_STATS.bySam++;
     g.audio.play('click', d.pos, 0.9); this.note(`safe: ${d.id} by ${name} with ${this.left.toFixed(1)} s left`);
     const live = this.states.filter(s => s === 'armed').length;
-    if (live > 0) { g.msg(`${d.name} is safe — ${live === 1 ? 'one' : live} to go, ${mmss(this.left)} left`); return; }
+    if (live > 0) { g.msg(`${d.name} is safe, with ${live === 1 ? 'one' : live} to go and ${mmss(this.left)} left`); return; }
     this.end = 'safe'; this.tEnd = g.time; this.sam = null;
-    g.msg(g.roomClear.end === 'taken' ? `${d.name} is safe — every charge safe, the house is yours` : `${d.name} is safe — every charge safe with ${mmss(this.left)} left. take the house`);
+    g.msg(g.roomClear.end === 'taken' ? `${d.name} is safe. every charge is safe and the house is yours` : `${d.name} is safe. every charge is safe with ${mmss(this.left)} left. now take the house`);
     this.note('end: safe');
   }
   /** the clock at zero: every charge still live goes off — the game's own blast, in its room */
@@ -158,7 +158,7 @@ export class Defuse {
         destr: { radius: B.radius ?? DEFUSE.radius, power: B.power ?? DEFUSE.power } });
       this.note(`blown: ${d.id} — ${R.killed} killed, ${R.wounded} wounded${R.player ? `, the player ${R.player}` : ''}`);
     });
-    g.msg(`${gone.join(' and ')} went off — mission failed. Shift+Enter stages it again`);
+    g.msg(`${gone.join(' and ')} went off — mission failed. press Shift+Enter to restart`);
     this.note('end: failed');
   }
 
@@ -217,7 +217,7 @@ export class Defuse {
   /** handwork.ts samWork: the charge's face he is planted at and squared to while he works it (`at` = the spot he must not shift from, walked in with him) */
   get samJob(): { p: Vec3; n: Vec3; at: Vec3 } | null { const s = this.sam, D = this.data; if (!s || !D || !this.mine) return null; const d = D.devices[s.dev]; return { p: [d.pos[0], d.pos[1], d.pos[2]], n: n3(d), at: s.at }; }
   /** Space again, Esc or a step: let go, the work starts over (true: there was one to let go of) */
-  cancel(): boolean { if (!this.sam) return false; this.sam = null; this.g.msg('let go — the charge is still live'); return true; }
+  cancel(): boolean { if (!this.sam) return false; this.sam = null; this.g.msg('you let go, and the charge is still live'); return true; }
   /** player.ts buildInteractables: the one row while he is at it */
   runningRow(running: (base: Interactable, verb: Verb, text: string, progress: number) => Interactable): Interactable {
     const s = this.sam!, D = this.data!, d = D.devices[s.dev], k = (this.g.time - s.t0) / this.workSecs;
@@ -232,18 +232,18 @@ export class Defuse {
     const g = this.g;
     if (this.end === 'safe' || this.end === 'over') return null;
     if (who(g).down || g.roomClear.end === 'wiped') return null;   // (the run is over another way: the room clear's own word)
-    if (this.end === 'failed') return { text: `objective ▸ FAILED — ${D.devices.filter((_, i) => this.states[i] === 'blown').map(d => d.name).join(' and ')} went off · shift+enter stages it again`, pos: null };
+    if (this.end === 'failed') return { text: `objective ▸ FAILED — ${D.devices.filter((_, i) => this.states[i] === 'blown').map(d => d.name).join(' and ')} went off · press shift+enter to restart`, pos: null };
     const live = D.devices.flatMap((d, i) => this.states[i] === 'armed' ? [{ d, i, by: this.onIt(i) }] : []), p = who(g).char.pos;
     if (!live.length) return null;   // (every charge settled and the end not yet written: the tick writes it this frame)
     // (the HUD's marker carries ONE place: the live charge nobody is at or on his way to — the one that needs a decision — else the nearest)
     const open = live.filter(x => !x.by), mark = (open.length ? open : live).reduce((a, b) => flat(p, b.d.pos) < flat(p, a.d.pos) ? b : a).d;
     const safe = D.devices.filter((_, i) => this.states[i] === 'safe').map(d => `${d.name} is safe`);
-    const clock = this.started ? `${mmss(this.left)} on the clock` : `${mmss(D.secs)} on the clock, starts when you move`;
+    const clock = this.started ? `${mmss(this.left)} on the clock` : `${mmss(D.secs)} on the clock, and it starts when you move`;
     // (one line of the HUD, kept short. Nobody at a charge yet: 'make both charges safe' and the how-to; once somebody is, each live charge by name with
     //  who is on it — '· Red One on it' — or that nobody is)
     const what = live.some(x => x.by) ? live.map(x => `${x.d.name} · ${x.by ?? 'nobody on it'}`).join(' · ')
       : !safe.length && live.length > 1 ? `make ${live.length === 2 ? 'both' : `all ${live.length}`} charges safe` : `make ${live.map(x => x.d.name).join(' and ')} safe`;
-    const how = safe.length || live.some(x => x.by) ? '' : ` · Space at one${WORK.on && g.orders?.active ? ', or X on it' : ''}`;
+    const how = safe.length || live.some(x => x.by) ? '' : ` · press Space at one${WORK.on && g.orders?.active ? ', or X on it' : ''}`;
     return { text: `objective ▸ ${clock} · ${what}${safe.length ? ` · ${safe.join(' · ')}` : ''}${how}`, pos: [mark.pos[0], mark.pos[1], mark.pos[2]] };
   }
   /** who is at charge i or on his way to it by an order, as the row says it (null: nobody) */

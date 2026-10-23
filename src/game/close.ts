@@ -175,7 +175,7 @@ export function closeAt(g: Game, gd: Guard, p: ArrayLike<number>): CloseOffer {
   const alert = gd.state === 'alert';
   const catchable = !cv || (cv.state !== 'flee' && cv.state !== 'evacuate' && cv.state !== 'report');
   const grab = win.grab && !alert && catchable, strike = win.strike && catchable && (!alert || CLOSE.alertStrike);
-  if (!grab && !strike) { o.why = cv ? `not while ${cv.she} is ${cv.state === 'report' ? 'with a guard' : 'running'}` : 'not while he is onto you'; return o; }
+  if (!grab && !strike) { o.why = cv ? `not while ${cv.she}'s ${cv.state === 'report' ? 'with a guard' : 'running'}` : "not while he's onto you"; return o; }
   if (pl.sprinting) { o.why = 'stop sprinting'; return o; }
   o.inReach = dist < win.reach;
   if (!o.inReach) { o.why = 'get closer'; return o; }
@@ -218,7 +218,7 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
       const text = kind === 'seat' ? (gun ? 'haul him out of the chair — pistol to his head' : 'haul him out of the chair')
         : gun ? 'grab him — pistol to his head' : pl.rifleUp ? 'grab him — the rifle goes on your back' : 'grab him';
       verbs.push(row(it, 'grab', text, click));
-    } else if (o.strike) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, line2: `${click}  ·  ${o.win?.grab ? 'no grab while he is onto you' : 'the grab is from behind'}`, inReach: true });
+    } else if (o.strike) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, line2: `${click}  ·  ${o.win?.grab ? "no grab while he's onto you" : 'the grab is from behind'}`, inReach: true });
     noteBest(g, o);
   }
   offer(it, verbs);

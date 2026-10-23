@@ -921,7 +921,7 @@ function windUp(g: Game, B: DefBook, C: Carrier, head: Vec3, from: Vec3, aim: Ve
   const shouts = w(SHOUTS.slice(1), SHOUTS);   // ('frag out!' is the team's own drill word: not in a defender's mouth — words.ts)
   g.say(gd, shouts[Math.floor(hash01(c.id, k) * shouts.length) % shouts.length]);
   const pc = g.player.char, pr = g.col.sound.propagate(head, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]));   // the cue, where Sam is in earshot of it
-  if (!g.player.down && pr.pathLen <= F.cueM * 1.5 && pr.muffle < 0.75) { g.msg('they are shouting — a grenade is coming'); FRAG_STATS.cues++; }
+  if (!g.player.down && pr.pathLen <= F.cueM * 1.5 && pr.muffle < 0.75) { g.msg("they're shouting because a grenade is coming"); FRAG_STATS.cues++; }
   for (const o of g.guards) {   // …and the team's, the same shout in the same ears: for the next few seconds they are looking for it
     if (o.state === 'dead' || o.team === gd.team || sameSide(o.team, gd.team)) continue;
     const po = g.col.sound.propagate(head, o.char.bones.head ?? v3.add(o.char.pos, [0, 1.6, 0])); if (po.pathLen <= F.cueM * 1.5 && po.muffle < 0.75) warned.set(o, g.time + F.defWind + F.defFuse + 1);

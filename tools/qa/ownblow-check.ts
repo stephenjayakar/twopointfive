@@ -56,7 +56,7 @@ export async function ownBlowCheck(): Promise<boolean> {
     { const A = await alone(true), { R, g, D, d } = A; const at = rows(g), i = at.indexOf('charge:blow'), line = (g.nearby as any[]).filter(r => r.kind === 'door').map(r => r.line1).join(' | '), said = R.said.filter((t: string) => /charge set on/.test(t)).pop() ?? '';
       A.off(); const far = rows(g), row = (g.nearby as any[])[0];
       verdict(A.set && D.set[0]?.by === 'Sam' && i > 0 && i < CMDRING.wedges - 1 && at.slice(0, i).every(r => r.startsWith('door:')) && far.join() === 'charge:blow' && /blow the charge/.test(row?.line2 ?? '') && /^charge set/.test(row?.line1 ?? '')
-        && /charge set$/.test(line) && /charge set on the manager door$/.test(said) && !/blows it/.test(line + said),
+        && /charge set$/.test(line) && /charge set on the manager door$/.test(said) && !/to blow it/.test(line + said),
         'a charge of his own on a door: at the door \'blow the charge\' comes after the door\'s rows, never past the fourth; stood off it is the only row, on the interaction key; no line names a key for it (its row has one)',
         `set by hand ${A.set} (by ${D.set[0]?.by}) · at the door: ${at.join(' ')} · stood off: ${far.join(' ') || 'no row'} · its row: "${row?.line1}" / "${row?.line2}" · the door's line: ${line} · said: ${said}`);
       // ---- the key
@@ -105,11 +105,11 @@ export async function ownBlowCheck(): Promise<boolean> {
       const held = C.set.length === 1 && !C.holeAt(Wc) && !g.player.down, word = R.said.slice(s0).filter((t: string) => /too close to your own charge/.test(t)).length;
       g.teleportPlayer(wallPt(Wc ?? P.W, 3, 0.8)); R.step(4); const far = rows(g); R.press('KeyF'); R.step(4); const kept = C.set.length === 1 && !C.holeAt(Wc);
       R.input.pressed.add('Space'); R.input.keys.add('Space'); R.step(); R.input.keys.delete('Space'); R.step(5); const hole = !!C.holeAt(Wc);
-      verdict(set && C.stats.bySam === 1 && fh === 'charge:blow' && (!god || !godGrey) && grey && held && word === 1 && far.includes('charge:blow') && !/blows it/.test(said) && kept && hole && C.set.length === 0, 'a wall charge by his own hands: at its foot, where it would kill him, the row is greyed and a bare tap is refused; stood off, the squad\'s key leaves it, his row is there, and a tap opens the wall',
+      verdict(set && C.stats.bySam === 1 && fh === 'charge:blow' && (!god || !godGrey) && grey && held && word === 1 && far.includes('charge:blow') && !/to blow it/.test(said) && kept && hole && C.set.length === 0, 'a wall charge by his own hands: at its foot, where it would kill him, the row is greyed and a bare tap is refused; stood off, the squad\'s key leaves it, his row is there, and a tap opens the wall',
         `set ${set} · said: ${said} · at its foot: ${foot0.join(' ') || 'no row'}, highlighted ${fh}, greyed ${grey} (a player nothing can hurt: ${god ? `greyed ${godGrey}` : 'not this rig'}); a tap there: ${held ? 'the charge stands, he is up' : 'IT WENT'}, the word ${word} · stood off: ${far.join(' ') || 'no row'} · after the squad's key: ${kept ? 'still set, the wall whole' : 'GONE'} · after the tap: ${hole ? 'a hole' : 'NO HOLE'}, set ${C.set.length}`); }
     // ---- off
     { const A = await alone(false), { R, g, D, d } = A; OWNBLOW.on = false; R.step(2); const at = rows(g), line = (g.nearby as any[]).filter(r => r.kind === 'door').map(r => r.line1).join(' | '); A.off(); const far = rows(g), b0 = D.stats.blown; tap(R); const mid = D.stats.blown; R.press('KeyF'); R.step(3);
-      verdict(A.set && !at.includes('charge:blow') && far.length === 0 && /charge set · F blows it/.test(line) && mid === b0 && D.stats.blown === b0 + 1 && opened(d), 'the switch off: no row of his, the door\'s line names the squad\'s key, and that key blows his charge, as it did',
+      verdict(A.set && !at.includes('charge:blow') && far.length === 0 && /charge set · press F to blow it/.test(line) && mid === b0 && D.stats.blown === b0 + 1 && opened(d), 'the switch off: no row of his, the door\'s line names the squad\'s key, and that key blows his charge, as it did',
         `at the door: ${at.join(' ')} · stood off: ${far.join(' ') || 'no row'} · the door's line: ${line} · a tap of the interaction key: blown ${mid - b0} · the squad's key: blown ${D.stats.blown - b0}`); }
     // ---- recordings
     { const A = await alone(true), g = A.g; OWNBLOW.on = !BRK; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), rides = snap.tables?.OWNBLOW?.on === true; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.OWNBLOW;
