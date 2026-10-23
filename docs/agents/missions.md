@@ -1828,3 +1828,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   holds a tutorial mission's end while a step is up; `loadbrief-page.cjs`'s tutorial job reads the scene and what it teaches, which a tutorial row draws in
   place of the job's line and the three cells); the comments across `src/` that say "a Training lesson" for what is now any lesson level were left (about
   thirty).
+- **A lesson's words are checked as the page says them (2026-10-23; `tools/qa/lesson-check.ts`).** `lesson.ts lessonLine` turns a level's words by
+  pattern where a rule changes a key ('press [Space] … to grab him' is the held left click under `STALK.only`; the knife's lines are the knockout's under
+  `CLOSE.noKnife`; `docs/agents/stealth.md`). A line reworded in a level could keep naming the old key and nothing would say so. So `lesson-check` reads
+  every line, card, `noTap` and after-line of a level through `lessonLine` with both rules on and fails on one that still names the knife or a key to grab.
+  No switch (a check, no rule of play). `LESSON_BREAK=words` leaves the two rules off and must fail on a level that teaches the grab: it fails on
+  `tut-quiet` (four) and `tut-pair` (two) and passes `tut-solo`, which teaches none. Measured: `lesson-check` ALL PASS (68) on FROZEN and on SHIPPED. A new
+  pattern in `lessonLine` wants its own words added to that line. STILL OPEN, the rails gate's (mine): with empty hands the left button is let through
+  wherever `use` is allowed and a grab row is offered, also with a man in the arm; under `?noknife=0` that is a knife before the step that teaches it.
+  The page as it opens has no knife, so default play is not touched. Shutting it is a rule on the rails and wants its own switch and `rails-check` line.
