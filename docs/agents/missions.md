@@ -2197,3 +2197,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   low quality, 119 of 119 programs, no page error), two stills of the drum from above and close: no square at the drum's foot, a soft round dark patch
   about it (most of that dark is the drum's own shadow under the fire's lamp; the earth's brown was not told apart in it). No before still was taken.
   NEVER SEEN ON A GPU, and the maintainer's shot was a GPU's: whether the patch reads as melt or as a stain there is his to say.
+- **A tutorial mission may take the flat ring (2026-10-23, the maintainer on the first mission's wall charge, the ring then [5] then a second ring of
+  one row under a line asking for [3]: "weird after hitting 5")**. A level's `lesson.rails.flatRing: true` gives that mission the ring the rest of the
+  game has (`cmdring.ts CMDRING.flat`; `orders.ts flatRing` asks `Rails.flatRing`), with the level's `rails.orders` its only rows, and a step's line
+  while that ring is up is its `flatLine` (absent: `menuLine`). `tut-sky` takes it: on the wall the ring is "1 move there · 2 breach with a wall
+  charge" and the line is "Press [2] for a charge" (was "Press [5], then [3] for a charge", then "Press [3] for a charge"). Its `menuLine` and
+  `pageLine` are kept for the pages. The other missions have the pages still: each is its part's to move, one line of level data and its lines.
+  SWITCH `RAILS.flatRing`: ON in the page (`?railflat=0`; `?ringflat=0` puts the whole flat tree off, here too), OFF in the module and on the frozen
+  stand (`TPS_RAILFLAT=1`, which acts only with `TPS_RAILS=1 TPS_QRING=1 TPS_QONLY=1 TPS_RINGFLAT=1`), off for a recording from before the key.
+  CHECK `tools/qa/rails-check.ts`, the first play's notes line, both stands (the frozen one raises the tree itself): the ring is flat, nothing is
+  behind a 'more', the digit `flatLine` names is the wedge 'wallCharge' is on, that digit gives the charge, and with the switch off the pages and
+  their two lines are back. `RAILS_BREAK=1` fails it on both. The scripted player presses the digit the step's `flatLine` names.
+  WITH THE ORDER OUT the line over a flat ring is what the men are doing, never the digit again: the wedge that set the charge is the one that
+  blows it. After `afterSecs` with nothing done the ask is back, as on the pages. `railsFaults` asks that a flat mission's `menuLine` has a
+  `flatLine` beside it and that no other mission carries one; `ringflat-check`'s control has the third case (a level that takes the ring).
+  MEASURED on the page's stand: the scripted mission ends on seeds 1, 2 and 3 with the one ring and on seed 1 with `TPS_RAILFLAT=0` (the pages);
+  `rails-check` 29 of 29 on shipped, on frozen, and on frozen raised by its own words (no destruction there, so no charge row: the ring and its
+  line are what is asked); `ringflat-check` 14 on both; mission 1 played to the breaker step on the real page with real keys on the software
+  adapter: one ring, one key cap in the line, [2] gives the charge and no second ring comes up.
+  NOT DONE: the digit in a `flatLine` is hand-written, and only tut-sky's is held by a check. Never seen on a GPU; nobody has played it.
