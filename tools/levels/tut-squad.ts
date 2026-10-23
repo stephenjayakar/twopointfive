@@ -223,6 +223,8 @@ export function build() {
   const taken = (room: string) => ({ is: 'taken', room }), or = (...of: object[]) => ({ is: 'any', of }), and = (...of: object[]) => ({ is: 'all', of });
   const ENTRY = ['openClear', 'bangClear', 'charge'];   // (the orders that send a stacked squad in: a second 'stack' on the same door is not one)
   const near = (at: Vec3, r = 1.5) => ({ is: 'near', at, r }), gave = (order: string, on?: string) => ({ is: 'did', what: `order:${order}`, ...(on ? { on } : {}) });
+  /** the squad sent to a door it has not stacked on yet: a man of them on a stack up on it, however the order reached him (the squad's key, plan mode's right button) */
+  const stackedOn = (door: string) => ({ is: 'stacks', doors: [door] });
   const ALLEY: Rect = { x0: 22.2, x1: 27.0, z0: 5.3, z1: 10.6 };
   const HALL_FRONT: Vec3 = [34.0, 0, 19.75], HALL_OPEN = or({ is: 'door', door: 'hall', state: 'open' }, { is: 'door', door: 'hall', state: 'unlocked' });   // (the passage, square on to the leaf)
   // THE CARDS (the frame's `explain`: the page stops on one as its step comes up, Enter closes it, and then the line, the ring and the cue). One for each
@@ -231,7 +233,8 @@ export function build() {
   // modal that pauses the game and explains it", and the window's card is his own sentence)
   const CARDS = {
   entry: { title: 'Two ways in', text: "Once they're stacked on a door, they'll wait until you say go.\nPress [B] on that door again and they'll choose how to go in, with a flashbang first if they have one to spare.\nPress [F] to send them straight in with no flashbang." },
-    side: { title: 'An enemy watching a doorway', text: 'An enemy who\'s watching a doorway will shoot anyone who steps into it.\nMost rooms have another door, so send the squad to the one behind him.' },
+    side: { title: 'An enemy watching a doorway', text: 'An enemy who\'s watching a doorway will shoot anyone who steps into it.\nMost rooms have another door, so send the squad to the one behind him.\nYou can use plan mode down here too, and it\'ll show you both doors.' },
+    near: { title: 'Plan from where you stand', text: 'The view in plan mode stays close to you, so you can only plan what\'s nearby.\nWhen you want to plan further on, close plan mode and walk there first.' },
     follow: { title: "The squad's ring", text: 'Tap [B] to give the usual order for whatever you\'re pointing at.\nHold the same key down to open a ring with the rest of the orders.' },
     gun: { title: 'Suppression', text: 'An enemy who\'s being shot at will keep his head down, and then he can\'t shoot back.\nShoot at the gunner, then move while he\'s down.' },
     frag: { title: 'Grenades', text: 'Sandbags will stop rifle rounds, but a grenade goes over them.\nA grenade hurts you as much as it hurts them, so throw it from cover and not too close.' },
@@ -259,8 +262,22 @@ export function build() {
       //     from there the room is above him and BOTH its doors are on the screen. The answer is the other door: the squad sent to it from where he
       //     stands (the ring is the door: an order pointed at the ring is an order on it), the walk round after them, and in at the man's back
       { id: 'out', line: 'Those shots came from outside. Get out to the street', done: or(near(SHOP_VIEW, 1.5), taken('workshop')), at: [SHOP_VIEW[0], 1, SHOP_VIEW[2]], cue: 'shop', checkpoint: 'the street', eye: SHOP_EYE },
-      { id: 'side', line: 'He\'s watching that doorway. Press [B] on the side door', explain: CARDS.side, done: or(gave('stack', 'workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
-      { id: 'round', line: 'Go around with them', done: or({ is: 'in', area: ALLEY }, taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
+      // (PLAN MODE, OPENED AND CLOSED BY HIM: the maintainer's call is that this mission teaches the pair that puts the mode up and the back key that
+      //  puts it away, here, where a plan is what the moment asks for — a man on one doorway, another door behind him, both on the screen from the
+      //  street — and that the plan mission before it is to plan with nobody of his on the floor. The mode's right button sends the four to the side
+      //  door; its view stays near him (planmode.ts planNear), so the mode is put away to walk round after them, and the card that says so comes up
+      //  with that step. A TAP of the squad's key gives nothing while the two plan steps are up — the frame's `noTap` — or the old habit would send
+      //  the four round with the mode never met. HIS SPRINT IS LOCKED for the two steps: Shift is the pair's first key, and with a sprint to be had
+      //  the pair pressed on the move is a sprinting tap, not the mode (planmode.ts planRun; rails.ts planWalk is the rule that makes it the mode
+      //  where the sprint is not his). No ring on 'mode': a ring is where to GO, and the step is a key pressed where he stands. 'round' needs the
+      //  mode DOWN: a second right click on the stacked door takes the room from inside the mode, and a step passed with it up would leave him on a
+      //  line that walks while his walk keys move the view. `planLine`: the line while the mode is down on a step that has one)
+      { id: 'mode', line: 'He\'s watching that doorway. Hold [Shift] and tap [B] to open plan mode', explain: CARDS.side, noTap: 'Hold [Shift] first, then tap [B]',
+        done: or({ is: 'flag', flag: 'plan' }, stackedOn('workshop_side'), taken('workshop')), eye: SHOP_EYE, allow: ['plan'], deny: ['sprint'] },
+      { id: 'side', line: 'Right-click the side door to send your squad to it', planLine: 'Hold [Shift] and tap [B] to open plan mode again', noTap: 'Right-click the door in plan mode',
+        done: or(stackedOn('workshop_side'), taken('workshop')), at: D_SIDE, eye: SHOP_EYE },
+      { id: 'round', line: 'Press [Tab] to close plan mode, then go around with them', planLine: 'Go around with them', explain: CARDS.near,
+        done: and({ is: 'flag', flag: 'plan', value: false }, or({ is: 'in', area: ALLEY }, taken('workshop'))), at: D_SIDE, eye: SHOP_EYE, allow: ['sprint'] },
       { id: 'shop', line: 'Press [B] on the door again to go in behind him', after: { line: 'They\'re going in behind him', on: ENTRY, word: 'They\'re going in behind him' }, done: taken('workshop'), at: D_SIDE },
       // 3 · A GUN ON THE STREET: fire puts its head down, and a man moves while it is down. A grenade over the bags ends it
       // (the held key is its own step, and a TAP of the squad's key gives nothing while it is up — the frame's `noTap`: tapped at the old one line, the

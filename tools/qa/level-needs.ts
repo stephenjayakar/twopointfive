@@ -324,8 +324,8 @@ export function leakLine(F: LevelFile): { note: boolean; text: string } { const 
   return { note: mirrors.length > 0, text: mirrors.length ? `${mirrors.length} thing${mirrors.length === 1 ? '' : 's'} of mirror metal where the lamp behind the wall outweighs the room's own light, so a reflection can show the light cache read through the wall: ${top.slice(0, LEAK.list).map(([k, p]) => `${p.n} in ${k}, as ${p.at.id} at [${p.at.x.toFixed(1)}, ${p.at.z.toFixed(1)}]`).join('; ')}${top.length > LEAK.list ? ` and ${top.length - LEAK.list} more rooms` : ''}; ${all}`
     : `${all}, none of those mirror metal` }; }
 /** KEY: two lights that face each other across the same ground. From above the ground is most of the picture, and what models it is the shadow a thing
- *  throws on it; two spots of like strength looking at each other each light what the other shadows, and the ground between them is one wash (the plan
- *  tutorial's yard as its file opens at night: two of the kit's floodlights at its two gates). THE MEASURE, in plan, from the file alone: two spot
+ *  throws on it; two spots of like strength looking at each other each light what the other shadows, and the ground between them is one wash (judgement, not
+ *  seen: the plan tutorial's file has two of the kit's floodlights at its two gates, and its row plays at midday with both out). THE MEASURE, in plan, from the file alone: two spot
  *  lights that burn as authored, neither `fill` of the other's strength or less (strength by the colour's luminance), each heading within 60 degrees
  *  of the line to the other and the two headings more than 120 apart (`face`), each one's pool reaching the middle of the ground between them (the
  *  pool: as far along the floor as its range and its cone's far edge go from its height), and nothing ceiling-high (the leak's cut of a wall) on the
@@ -439,7 +439,7 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
     say('leak', own.note ? 'note' : true, own.text); if (other && other.text !== own.text) say('leak', other.note ? 'note' : true, 'look twin: ' + other.text); }
   // ---- two lights that face each other across the same ground
   { const day = rows.length > 0 && rows.every(e => e.hour && e.hour !== 'night' && !HOURS[e.hour]?.lamps), hours = [...new Set(rows.map(e => e.hour))].join(' and ');
-    const line = (F: LevelFile) => { const pairs = facingLights(F); return { note: pairs.length > 0, text: pairs.length ? `${pairs.length} pair${pairs.length === 1 ? '' : 's'} of spot lights of like strength face each other across the same ground, so each fills the other's shadows: ${pairs.map(p => `${p.a} and ${p.b} (${p.apart.toFixed(0)} m apart${p.photocell && day ? `; both on the photocell, so out at ${hours}, the hour ${rows.map(e => e.id).join(', ')} plays at: this is the file's own night, as a link with no hour opens it` : ''})`).join('; ')}` : 'no two spot lights of like strength face each other across the same ground' }; };
+    const line = (F: LevelFile) => { const pairs = facingLights(F); return { note: pairs.length > 0, text: pairs.length ? `${pairs.length} pair${pairs.length === 1 ? '' : 's'} of spot lights of like strength face each other across the same ground, so each fills the other's shadows: ${pairs.map(p => `${p.a} and ${p.b} (${p.apart.toFixed(0)} m apart${p.photocell && day ? `; both on the photocell, so out at ${hours}, the hour ${rows.map(e => e.id).join(', ')} plays at and a link to the level opens at (the row's hour is written over the link): only the file's own night, ?rowset=0, has them lit` : ''})`).join('; ')}` : 'no two spot lights of like strength face each other across the same ground' }; };
     const own = line(L), other = twin ? line(twin) : null;
     say('key', own.note ? 'note' : true, own.text); if (other && other.text !== own.text) say('key', other.note ? 'note' : true, 'look twin: ' + other.text); }
   // ---- lamps and the moon

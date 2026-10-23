@@ -30,7 +30,7 @@ import { hostileTo } from './teams';
 import { WORLD } from '../scene/world';
 import { HANDRING } from './handring';
 import { CMDRING } from './cmdring';
-import { STALK } from './stalk';
+import { stalkClickOnly } from './stalk';
 import { CLOSE } from './close';
 /** a step's line that names the whistle's old key, and what it says while the whistle is the ring's last wedge (handring.ts): the page's words turn
  *  'Space' into the key the interaction is on */
@@ -42,7 +42,7 @@ const GRAB_BEHIND = /\b([Pp])ress \[?Space\]? behind (him|the near guard) to gra
 const stalkLine = (line: string): string => line.replace(GRAB_BEHIND, (_m, p: string, who: string) => `${p === 'P' ? 'H' : 'h'}old left click on ${who} from behind to grab him`).replace(GRAB_KEY, (_m, p: string) => `${p === 'P' ? 'H' : 'h'}old left click on him to grab him`);
 /** …and one that names the knife, while there is none (close.ts CLOSE.noKnife): the right click's knockout is the blow */
 const KNIFE_OR = /\bRight click to knock him out, or left click to use the knife\b/g, KNIFE_HIM = /\bleft click to knife him\b/g, KNIFE_KILL = /\bleft-click to kill him with the knife\b/g;
-const bareLine = (line: string): string => line.replace(KNIFE_OR, 'Right click to knock him out').replace(KNIFE_HIM, 'right click to knock him out').replace(KNIFE_KILL, 'right-click to knock him out');
+const bareLine = (line: string): string => line.replace(KNIFE_OR, 'Right-click to knock him out').replace(KNIFE_HIM, 'right-click to knock him out').replace(KNIFE_KILL, 'right-click to knock him out');   // (the click as a verb takes its hyphen, as every other line of the game writes it: docs/agents/writing.md)
 /** A LINE NAMES THE MOVE, NOT ITS KEY: a token in braces is written out in the build's own words — the held click or the grab's key, the knockout or the
  *  knife — so a level's sentence can be reworded freely and still say the key the build has (the patterns above turn only the exact old sentences).
  *  `{grab him}` · `{grab him from behind}` · `{knock him out}` (the blow in reach) · `{take him out}` (the silent blow from behind). `him` may be any words
@@ -51,8 +51,8 @@ const bareLine = (line: string): string => line.replace(KNIFE_OR, 'Right click t
 const TOKENS: [RegExp, (who: string, held: boolean, bare: boolean) => string][] = [
   [/^grab (.+) from behind$/, (who, held) => held ? `hold left click on ${who} from behind to grab him` : `press [Space] behind ${who} to grab him`],
   [/^grab (.+)$/, (who, held) => held ? `hold left click on ${who} to grab him` : `press [Space] to grab ${who}`],
-  [/^knock (.+) out$/, (who, _h, bare) => bare ? `right click to knock ${who} out` : `right click to knock ${who} out, or left click to use the knife`],
-  [/^take (.+) out$/, (who, _h, bare) => bare ? `right click to knock ${who} out` : `left click to knife ${who}`],
+  [/^knock (.+) out$/, (who, _h, bare) => bare ? `right-click to knock ${who} out` : `right-click to knock ${who} out, or left-click to use the knife`],   // (the click as a verb is hyphened; "hold left click on him" above is the button being held, and is not)
+  [/^take (.+) out$/, (who, _h, bare) => bare ? `right-click to knock ${who} out` : `left-click to knife ${who}`],
 ];
 /** the four, as a level writes them of 'him' */
 export const LESSON_TOKENS: readonly string[] = ['grab him', 'grab him from behind', 'knock him out', 'take him out'];
@@ -60,22 +60,22 @@ const TOKEN = /\{([A-Za-z][A-Za-z' ]*)\}/g, lower = (name: string) => name.charA
 /** is this name (the words between the braces, either capital) one lessonLine writes out? */
 export const lessonToken = (name: string): boolean => { const n = lower(name); if (!/^[A-Za-z]+(?: [A-Za-z']+)*$/.test(name)) return false;   // (the letters the writer-out reads, one space between words, none at an end)
   const hit = TOKENS.find(([re]) => re.test(n)); return !!hit && !/(^| )from( |$)/.test(hit[0].exec(n)![1]); };   // (…and a 'from' left in the man's words is a 'from behind' misspelt)
-const tokenLine = (line: string, held = STALK.on && STALK.only, bare = CLOSE.on && CLOSE.noKnife): string => line.indexOf('{') < 0 ? line : line.replace(TOKEN, (m, name: string) => {
+const tokenLine = (line: string, held = stalkClickOnly(), bare = CLOSE.on && CLOSE.noKnife): string => line.indexOf('{') < 0 ? line : line.replace(TOKEN, (m, name: string) => {
   const n = lower(name); if (!lessonToken(name)) return m; for (const [re, say] of TOKENS) { const hit = re.exec(n); if (!hit) continue;
     const s = say(hit[1], held, bare); return n !== name ? s.charAt(0).toUpperCase() + s.slice(1) : s; }   // (the capital the author wrote, nothing guessed)
   return m; });
 /** what checkLesson asks of a line with a brace in it: every name in braces is a token (a misspelt one would be shown, braces and all), and written out the
  *  longest of the four ways the two keys can stand it still fits the row — the cap is of what the player reads, not of what the level wrote */
-export function lessonTokenFaults(w: string, line: string, cap: number): string[] {
+export function lessonTokenFaults(w: string, line: string, cap: number, row = 'the objective row', always = false): string[] {
   if (line.indexOf('{') < 0 && line.indexOf('}') < 0) return [];
   const out: string[] = [], rest = line.replace(/\{([^{}]*)\}/g, (m, name: string) => { if (!lessonToken(name)) out.push(`${w} has {${name}}, which is no move's token (${LESSON_TOKENS.join(', ')})`); return ''; });
   if (/[{}]/.test(rest)) out.push(`${w} has a brace that closes nothing or is never closed`);
   const long = Math.max(...[0, 1, 2, 3].map(k => tokenLine(line, !!(k & 1), !!(k & 2)).length));
-  if (!out.length && line.length <= cap && long > cap) out.push(`${w} is ${long} characters with its tokens written out: the objective row holds about ${cap}`);
+  if (!out.length && (always || line.length <= cap) && long > cap) out.push(`${w} is ${long} characters with its tokens written out: ${row} holds about ${cap}`);   // (`row`: what the cap is of, for the message · `always`: a field with no cap of its own as written — without it a line already over the cap as written is its own check's to refuse, and is not said twice)
   return out;
 }
 /** a step's line as the HUD's row says it now */
-export const lessonLine = (written: string): string => { const line = tokenLine(written), s0 = STALK.on && STALK.only ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
+export const lessonLine = (written: string): string => { const line = tokenLine(written), s0 = stalkClickOnly() ? stalkLine(line) : line, s = CLOSE.on && CLOSE.noKnife ? bareLine(s0) : s0; return HANDRING.on ? s.replace(WHISTLE_LINE, `Space held, then ${CMDRING.wedges}, whistles`).replace(WHEEL_LINE, WHEEL_RING) : s; };
 import { railsFaults, RAILS } from './rails';   // (railsFaults is called inside checkLesson only, the switch read inside `data`)
 import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)
@@ -88,7 +88,7 @@ export const LESSON = { on: true };
 export const LESSON_STATS = { started: 0, steps: 0, finished: 0 };
 
 /** what a step has seen since it came up (the deeds): counts by `what` */
-interface StepSeen { t0: number; n: Map<string, number>; chron: number; heard: WeakSet<object>; held: number;
+interface StepSeen { t0: number; n: Map<string, number>; chron: number; heard: WeakSet<object>; held: number; /** the clock the step's deed was done at (LessonStep.settle waits from it) · …and it was already done as the step came up */ doneT?: number; idle?: boolean;
   /** where the step began in the logs that are TRIMMED from the front (orders.log, pairorders.ts PAIR_LOG): the last row there was then, by identity */
   lastOrder: object | null; lastPair: object | null;
   /** the chronicle row the step began at, and the row G was first seen held at (-1: not yet) — the kit's `threw` */
@@ -204,6 +204,11 @@ export const LESSON_TESTS: Record<string, TestKind> = {
   // -- (the lights', locks' and devices' rows)
 
   // -- (the guns' and the kit's rows)
+  // loaded: a reload of the gun in his hands has run to its end since the step came up, or one would gain him nothing (weapons.ts startReload's own
+  // refusal: a round up the pipe and no fuller magazine to seat, or nothing spare at all) — what 'press R to reload' waits for when the next line must
+  // not come up over the reload. A gun he ran dry reloads itself (autoreload.ts): that reload counts, R pressed or not
+  loaded: { ok: (g, _t, S) => { const w = who(g).gunInHand(); if (!w) return false; if (w.reloading) { S.n.set('loaded:began', 1); return false; }
+      return !!S.n.get('loaded:began') || !w.spare.length || (w.chamber === 1 && (w.mag ?? 0) >= Math.min(Math.max(...w.spare), w.magRoom)); }, check: () => null },
   // reload: the gun in his hands is being reloaded (R) — true for the beat's length
   reload: { ok: g => { const p = who(g); return (p.pistolUp && p.pistol.reloading) || (p.rifleUp && p.rifle.reloading); }, check: () => null },
   // launcher: what the rifle's right button fires (2 again, with the rifle up, flips it): on 'ring' | 'he40' ('none' was a selection once: now it is true only of a long gun with no launcher, the shotgun); `fired` = …and the tube has just sent one (true while it cycles)
@@ -330,9 +335,17 @@ export class Lesson {
     const S = this.seen ??= this.fresh(1e-6);   // (the run's first step, or the first after a load: this frame's own deeds are in)
     this.count(S);
     const T = L.steps[this.i];
-    if (passes(g, T.done, S)) { S.held += dt;   // (an unknown kind never passes: checkLesson names it)
-      if (S.held > (T.hold ?? 0) || !(T.hold ?? 0)) this.advance(L, T); } else S.held = 0;
+    // THE DEED IS DONE ONCE (`doneT`: the clock it was done at) and the step then waits its `settle` out before the next comes up, whatever its test does
+    // meanwhile — the man falls, the blast clears, the reload ends, and only then is the next line or card over it. A step with no `settle` moves on the
+    // tick its deed is done, as it always did; so does one whose test was already true as it came up (nothing happened that needs to play out)
+    if (S.doneT === undefined) {
+      if (passes(g, T.done, S)) { S.held += dt;   // (an unknown kind never passes: checkLesson names it)
+        if (S.held > (T.hold ?? 0) || !(T.hold ?? 0)) { S.doneT = g.time; if (g.time - S.t0 <= dt * 1.5) S.idle = true; } } else S.held = 0;
+    }
+    if (S.doneT !== undefined && !(!S.idle && g.time - S.doneT < (T.settle ?? 0))) this.advance(L, T);
   }
+  /** the step that is up has done its deed and is waiting for the moment to play out (the frame's to read: nothing more is asked of him) */
+  get settling(): boolean { return this.seen?.doneT !== undefined; }
   private advance(L: LessonData, T: LessonStep) {
     const g = this.g; this.doneAt.set(T.id, g.time); this.i++; this.seen = this.fresh(); LESSON_STATS.steps++;   // (the next step counts from THIS frame's end: a deed on its first frame is its own)
     this.note(`done ${this.i}/${L.steps.length} '${T.id}'`);
