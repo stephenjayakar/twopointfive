@@ -277,7 +277,8 @@ export function pageSwitches(q: URLSearchParams): void {
   RELOAD.lastMag = !q.has('nolastmag');   // the last magazine, seated and not racked, can still be reloaded (game/autoreload.ts): ON in the page; ?nolastmag = that gun never fires again, as it was
   HANDSLOT.on = q.get('handslot') !== '0';   // empty hands are a slot (game/handslot.ts): its key puts away whatever is up and is never the way back, a digit draws; on the page's board it is backtick, the debugger is on backslash and E is spare (host/keymap.ts SLOT) — ON in the page; ?handslot=0 = E puts away and draws, as it was
   HANDRING.near = HANDRING.empty = HANDRING.early = q.get('handring') !== '0';   // …and a digit pressed inside the hold is the ring's wedge at once, never the weapon slot (handring.ts `early`)
-  HANDRING.lone = HANDRING.near && q.get('lonepill') !== '0';   // a ring with one row is a pill, on both rings, and the cursor on the pill is on the row (game/ringlone.ts) — these four go with ?handring=0 too, as the rest of his ring does
+  HANDRING.lone = HANDRING.near && q.get('lonepill') !== '0';   // a ring with one row is a pill, on both rings, and the cursor on the pill is on the row (game/ringlone.ts) — these four, and loneWrap under them, go with ?handring=0 too, as the rest of his ring does
+  HANDRING.loneWrap = HANDRING.lone && q.get('lonewrap') !== '0';   // …and a pill's long label takes two lines at full letter width (ringlone.ts loneLines): ?lonewrap=0 = one line drawn tighter, as it was
   HANDRING.onThing = HANDRING.near && q.get('ringonthing') !== '0'; HANDRING.bare = HANDRING.near && q.get('ringbare') !== '0'; HANDRING.turn = HANDRING.near && q.get('ringturn') !== '0'; HANDRING.corner = HANDRING.near && q.get('corner') !== '0';   // his ring stands on the thing its first row is about (or on him), and has no line of words under it
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
@@ -561,6 +562,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HANDRING.empty': 'TPS_HANDRING=1',
   'HANDRING.near': 'TPS_HANDRING=1',
   'HANDRING.lone': 'TPS_HANDRING=1',
+  'HANDRING.loneWrap': 'TPS_HANDRING=1',
   'HANDRING.onThing': 'TPS_HANDRING=1',
   'HANDRING.bare': 'TPS_HANDRING=1',
   'HANDRING.turn': 'TPS_HANDRING=1',
