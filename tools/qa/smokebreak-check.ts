@@ -21,6 +21,7 @@
 //   off       switch off, the same order: no light, no source, no puff, the hand never asked — and the game's digest is the one of a man never told to smoke
 //   old       a recording from before the key replays with it off (journal.ts applyKnobs)
 import { standUp, ROOT } from './headless.ts';
+import { hostPutBack } from './putback-host.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -29,7 +30,7 @@ const DT = 1 / 60;
 export async function smokeBreakCheck(o: { verbose?: boolean } = {}): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-  const { SMOKEBREAK, smokeBreakStats, smoking, updateSmokeBreak } = await import(`${ROOT}/src/game/smokebreak.ts`);
+  const SB = await import(`${ROOT}/src/game/smokebreak.ts`), { SMOKEBREAK, smokeBreakStats, smoking, updateSmokeBreak } = SB, smokeShown = (g: any) => (SB as any).smokeShown?.(g) as { threads: number; records: number } | undefined;
   const { order, endGuardScript } = await import(`${ROOT}/src/game/squad.ts`);
   const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const J = await import(`${ROOT}/src/game/journal.ts`);
@@ -51,12 +52,17 @@ export async function smokeBreakCheck(o: { verbose?: boolean } = {}): Promise<bo
     g.aiEnabled = false;   // (nobody's eyes or ears are this file's question: the men stand)
     const gd = g.guards.find((x: any) => x.route?.name === 'court') ?? g.guards[1];
     const sources: any[] = [], puffs: any[] = [];
-    const emit0 = g.smoke.emit?.bind(g.smoke); g.smoke.emit = (e: any) => { sources.push(e); emit0?.(e); };
+    // (the stand-in keeps what the real solver keeps: every source it was handed, asked where it is every step and dropped when a confined one says
+    //  'gone' — smoke/smoke.ts update — and emptied by clearAll, with no word to whoever filed anything)
+    const held: any[] = [];
+    const emit0 = g.smoke.emit?.bind(g.smoke); g.smoke.emit = (e: any) => { sources.push(e); if (solver) held.push(e); emit0?.(e); };
+    const clear0 = g.smoke.clearAll?.bind(g.smoke); g.smoke.clearAll = () => { held.length = 0; clear0?.(); };
+    const asks = () => { for (let i = held.length - 1; i >= 0; i--) { const e = held[i]; if (e.track && !e.track() && e.confined) held.splice(i, 1); } };
     if (solver) g.smoke.drawing = () => true;
     const fx = { emit: (kind: string, pos: number[], dir: number[], n: number, opts: any) => { puffs.push({ kind, pos: [...pos], n, opts }); return n; } };
-    const step = (n = 1, each?: () => void) => { for (let i = 0; i < n; i++) { SMOKEBREAK.on = sw; W.step(DT); each?.(); } };
+    const step = (n = 1, each?: () => void) => { for (let i = 0; i < n; i++) { SMOKEBREAK.on = sw; W.step(DT); asks(); each?.(); } };
     const flashes = () => g.engine.lights.lights.filter((l: any) => l.group === 'transient' && l.owner === gd.char.id);
-    return { W, g, gd, step, stood, sw, sources, puffs, flashes, fx };
+    return { W, g, gd, step, stood, sw, sources, puffs, flashes, fx, held };
   }
 
   try {
@@ -102,6 +108,32 @@ export async function smokeBreakCheck(o: { verbose?: boolean } = {}): Promise<bo
         && !!t0 && !!hand && Math.hypot(t0.pos[0] - hand[0], t0.pos[1] - hand[1], t0.pos[2] - hand[2]) < 0.2 && !!o0 && !!head && Math.hypot(o0.pos[0] - head[0], o0.pos[1] - head[1], o0.pos[2] - head[2]) < 0.25 && A.puffs.length === 0;
       verdict(ok, 'smoke — with a solver drawing: one thread that rides his hand and a breath of smoke after each draw, every source look-only',
         `${threads.length} thread${t0 && hand ? ` (${Math.hypot(t0.pos[0] - hand[0], t0.pos[1] - hand[1], t0.pos[2] - hand[2]).toFixed(2)} m off his left wrist now)` : ''}, ${outs.length} breathed out${o0 && head ? ` (the last ${Math.hypot(o0.pos[0] - head[0], o0.pos[1] - head[1], o0.pos[2] - head[2]).toFixed(2)} m off his head joint)` : ''} · look-only, fine lattice, confined: ${S.every(e => e.look === true && e.lattice === 'fine' && e.confined === true)} · thickest ${Math.max(0, ...S.map(e => e.density))} · ${A.puffs.length} puff records`);
+      // … and what remembers the smoke filed with a solver is the HOST'S (smokebreak.ts SmokeShown, on the engine): the game whose man smoked on a solver for
+      // twenty seconds and the one nothing drew are the same game, row for row of this file's table
+      { const RB = await import(`${ROOT}/src/game/rollback.ts`), B = await rig(true, false); B.step(10); order(B.gd, { goal: null, upper: 'torch', smoke: true }); B.step(20 * 60);
+        // (the two games gone through value for value, rollback.ts stateAlike: it pairs what stands in the same place and goes on past a thing that differs, so
+        //  another module's row cannot hide this one's — and it lays neither state out flat, which was two whole games' rows held as text. That it READS this
+        //  file's rows is shown, not supposed: one number of his row changed by hand in one game must come back as a line of this file's, and no line once put back)
+        const mine = (): string[] => (RB.stateAlike(A.g, B.g, 400) as string[]).filter(l => l.includes('smokebreak'));
+        const own = mine(), { sideRegistry } = await import(`${ROOT}/src/math/side.ts`), tab: any = (sideRegistry().tables as any[]).find(t => t.sideName === 'smokebreak.states'), row: any = tab?.get(A.g)?.men.get(A.gd.char), T: any = smokeBreakStats(A.g);
+        let cut = true; if (row && typeof row.emberT === 'number') { const e = row.emberT; row.emberT = e + 1; T.breaths++; const seen = mine(); row.emberT = e; T.breaths--; cut = !seen.some(l => l.includes('emberT')) || !seen.some(l => l.includes('breaths')) || mine().length !== own.length; }
+        const P = smokeShown(A.g), Q = smokeShown(B.g);
+        verdict(A.sw && B.sw && own.length === 0 && !cut && P?.threads === 1 && Q?.threads === 0 && smokeBreakStats(A.g).breaths === smokeBreakStats(B.g).breaths && smokeBreakStats(B.g).breaths >= 2,
+          'smoke — … and what remembers the smoke on the solver is the host\'s, not the game\'s: after twenty seconds the game whose man smoked on a solver and the one nothing drew differ in nothing of the smoke break\'s',
+          `rows of the smoke break's that differ: ${own.length ? own.slice(0, 6).join(' · ') : 'none'}${cut ? ' (HIS OWN ROW OR THE COUNTS WERE NOT READ: a number changed by hand in each gave no line)' : ' (a number changed by hand in his row and in the counts gives a line each, and none once put back)'} · the host's book: ${P?.threads ?? '-'} thread against ${Q?.threads ?? '-'} · breaths counted ${smokeBreakStats(A.g).breaths} and ${smokeBreakStats(B.g).breaths}`); }
+      // … and the book is never taken at its word: the solver lets a source go without telling whoever filed it, and the thread is filed again
+      { const C = await rig(true, true), smoke = { goal: null, upper: 'torch', smoke: true }; C.step(10); order(C.gd, smoke); C.step(8 * 60);
+        const th = () => C.sources.filter(e => e.kind === 'breath' && e.tint && e.ttl > 60), up = () => C.held.filter((e: any) => e.ttl > 60 && !!e.track()).length, one = () => `${th().length} filed, ${up()} on the solver`;
+        const t0 = one(), ok0 = th().length === 1 && up() === 1;
+        C.g.smoke.clearAll(); C.step(2); const none = up(); C.step(60); const t1 = one(), ok1 = none === 0 && th().length === 2 && up() === 1;   // (a script's clear, the panel's: the men as they were)
+        C.held.length = 0; C.step(60); const t2 = one(), ok2 = th().length === 3 && up() === 1;   // (its ttl run out, or dropped off a full list)
+        // (the host's REAL put-back, host/putback.ts, as the page calls it: run headless by putback-host.ts, the one stand-in list every such check shares — at once, and the old one answers 'gone')
+        await hostPutBack(C.g); const put = smokeShown(C.g) === undefined; C.step(2); const t3 = one(), ok3 = put && th().length === 4 && up() === 1 && th().slice(0, 3).every(e => e.track() === null);
+        C.g.restartEncounter(); const gone = smokeShown(C.g) === undefined, gd = C.g.guards.find((x: any) => x.route?.name === 'court') ?? C.g.guards[1]; C.step(10); order(gd, smoke); C.step(8 * 60); const t4 = one(), ok4 = gone && th().length === 5 && up() === 1;   // (the same man's id, a fresh man, an emptied solver: the old man's rows are nobody's)
+        // … and nothing live shows in the fog: the thread filed in view is let go while he is hidden, and one rides his hand again when he is seen
+        const F: any = C.g.fogOfWar; F.hidden = () => true; C.step(3); const fogged = up(); delete F.hidden; C.step(3); const t5 = one(), ok5 = fogged === 0 && th().length === 6 && up() === 1;
+        verdict(ok0 && ok1 && ok2 && ok3 && ok4 && ok5, 'smoke — … and the host\'s book is never taken at its word: the solver emptied, the source dropped without a word, the host\'s own put-back, the encounter restarted (the book dropped with it), the man gone into the fog and seen again — each time one thread rides his hand again, and never two',
+          `lit: ${t0} · the solver cleared: ${none} on it two frames on, then ${t1} · the source dropped: ${t2} · the host's put-back (book dropped ${put}): ${t3} · the encounter restarted (book dropped ${gone}) and the order given again: ${t4} · hidden: ${fogged} on the solver, seen again: ${t5}`); }
       endGuardScript(A.gd, 'patrol'); A.step(2);
       verdict(threads.length === 1 && threads[0].track() === null, 'smoke — … and the thread is dropped the frame his script lets him go', `its track says ${threads.length === 1 && threads[0].track() === null ? 'gone' : 'still there'}`);
     }

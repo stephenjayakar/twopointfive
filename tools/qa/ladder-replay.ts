@@ -435,6 +435,23 @@ function selftest(): boolean {
     check(QUALITY_NAMES.every(n => off[n] === PRESETS[n].rbIters) && off.ultra !== off.medium, `the switch off = the rows as they were: ${QUALITY_NAMES.map(n => `${n} ${off[n]}`).join(' · ')}`);
     check(QUALITY_NAMES.every(n => bare[n] === H), 'a settings object with no such key (a tool\'s mock) solves as the page does');
   }
+  console.log('\nThe floor rung sheds an open fire\'s smoke (settings.fireSmokeShed: the solver need not stay awake for a brazier on verylow; every rung above keeps it):');
+  {
+    const ON = process.env.FIRESHED_BREAK !== '1';   // FIRESHED_BREAK=1: the walks run with the switch off and the first two lines must FAIL
+    /** the presets of `path` put on in turn, by hand (auto off) or as the ladder does (auto on): what settings.fireSmoke says after each */
+    const walk = (on: boolean | undefined, auto: boolean, path: QualityName[]) => {
+      store.clear(); const E = mkEngine(w, on === undefined ? {} : { fireSmokeShed: on }); if (on === undefined) { delete E.settings.fireSmokeShed; delete E.settings.fireSmoke; }
+      const q: any = new Quality(E as never, { params: { rbIters: 0 } } as never); q.auto = auto; if (on !== undefined) E.settings.fireSmoke = true;   // (the constructor's own first preset is not this walk's)
+      return path.map(n => { q.apply(n); return E.settings.fireSmoke as boolean | undefined; });
+    };
+    const hand: QualityName[] = [...QUALITY_NAMES, ...[...QUALITY_NAMES].reverse()], climb: QualityName[] = ['medium', 'low', 'verylow', 'low', 'low', 'medium', 'low'];
+    const row = (path: QualityName[], s: (boolean | undefined)[]) => path.map((n, i) => `${n} ${s[i] ? 'smoke' : 'none'}`).join(' → ');
+    const byHand = walk(ON, false, hand), up = walk(ON, true, climb), offHand = walk(false, false, hand), offUp = walk(false, true, climb), bare = walk(undefined, false, hand);
+    check(hand.every((n, i) => byHand[i] === (n !== 'verylow')), `put on by hand, verylow draws a fire without its smoke and every other preset with it, down the ladder and back up: ${row(hand.slice(0, 5), byHand)}`);
+    check(up.join() === [true, true, false, false, false, true, true].join(), `moved by auto, the first rung up from the floor keeps the shed (the hop was priced without the smoke), the rung above it has the smoke back, and coming down to low keeps it: ${row(climb, up)}`);
+    check(offHand.every(v => v === true) && offUp.every(v => v === true), `the switch off = every preset keeps the fire's smoke, as it was, by hand and under auto: ${row(climb, offUp)}`);
+    check(hand.every((n, i) => bare[i] === (n !== 'verylow')), 'a settings object with no such key (a tool\'s mock) sheds as the page does');
+  }
   console.log('\nThe smoke keeps high\'s look down the ladder (settings.smokeKeep: under high the march stays at half size with high\'s lights; the rung sheds everything else):');
   {
     const BREAK = process.env.SMOKEKEEP_BREAK === '1';   // SMOKEKEEP_BREAK=1: the 'on' walks run with the switch at 0 and the first two lines must FAIL

@@ -1004,6 +1004,162 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the man a step nearer the back door, and a body within 1.3 m of a hand at the lock takes the tap from the door's row (the level's own note on that
   spot). `stealthpose-creep` joins `GRAB_ROW_AS_IT_WAS`: the stretch it reads (behind a man, out of reach, the free hand low) is the way in's now.
   Measured: `stalk-check`, `noknife-check`, `sneaklab-check`, `disarm-check` and the lessons on both stands, headless. Never played, never seen on a GPU.
+- **The stalk's fourth pass: the way in has a shape (10-23; `character.ts` `READY_BARE.way`, `HOLD.lunge` / `sway` / `apart`, `stalk.ts`
+  `stalkWait`, `close.ts`).** No URL word of its own: the stalk's parts ride `STALK.on` (`turnIn`, `cornerShow`, `catchLong`), the pose's ride
+  bare hands (`CLOSE.noKnife`) and `HOLD.wayShape`, so `?stalk=0` or `?noknife=0` puts the matching part back; the frozen stand has both off.
+  A recording from before it replays as it was (journal.ts: no `STALK.turnIn` = no turn through the step, no longer step, no wait pose; no
+  `HOLD.wayShape` = the old way in, no dip, sway or room between the heads, the old arch: the head's bone is where ears and eyes are read).
+  (1) Fed a PART of the reach (the tell's `readyAmt` under 1) the pose was the whole reach at part weight: both arms up from two metres off.
+  Now the weight is whole by `way.by` of the amount and the pose itself goes by it: the lead hand starts low (`way.low` / `near`) and comes up
+  to the neck over `way.lift`, the right hand has no share before `way.right[0]` and sits by his ribs (`READY_BARE.R.at`), fingers nearly
+  open. A stalk that is broken off drops the arms at `way.drop` /s. (2) `HOLD.lunge`: his hips dip 6 cm over the first three frames of the
+  step in (not by the hold layer's weight, which is a third there). `HOLD.yank.arch` is -5 (was -11). `HOLD.apart` carries Sam's head
+  `side` degrees further out the way `N.side` already does and tips the held man's neck `tip` the other way, eased with the gun's share and
+  the haul: the head joints are 10.2 cm apart across the pair, 4.9 with it at 0. (3) `HOLD.sway`: in the bare hold both men's weight goes
+  from foot to foot every `secs` and he twists against the arm with his agitation; it is let go of at `sway.out` /s when the hold becomes a
+  choke or a gun hold. (4) THE WAIT AT A CORNER SHOWS (bare hands): `stalkWait` (the wait's own gate, the button down) has closeTick feed a
+  tucked lead hand toward the nearest man he could take (`cornerReach`, growing from `cornerSee` m in) and `anim.coil` (`cornerCoil` of the
+  way into the crouch, which is Sam's eye height in fogofwar.ts too); he comes up out of it over `cornerRise` s of the step in. (5) The step
+  in off a wall turns him THROUGH the step (`Hold.yaw0`), not in its first four frames; a step longer than `catchM` may take up to `catchLong`
+  of `catchSecs` (more and the haul back, which has what is left of the grab, went over 7 m/s). CHECKS: stalk-check has `shape` (the dip and
+  the heads against the same run with both at 0) and a line in `corner` for the wait as asked and as shown; both stands, `STALK_BREAK=1`
+  fails them. Three seeds for the grab lines as before, one for these. The lab has rows for `catchM`, `catchLong`, `cornerSee`,
+  `cornerCoil`, `cornerRise`. Stills: `close-stills.ts --scene stalk-turn` is the broken-off stalk. Judged on CPU stills by a visual
+  reviewer over two looks; never seen on a GPU, never played. Not done from the review: a staggered stance at the launch, a flinch when he
+  turns round, the elbow under the chin, a slower fall for the gun that is taken, the still pose of a paused creep.
+- **The stalk's fifth pass: he shrinks back when the man breaks it off (10-23; `stalk.ts` `STALK.jolt`).** With a stalk on, the man who
+  turns off his back (out `turned`) makes Sam duck `jolt` (0.6) of the animator's SOFT duck (`flinchFrom(…, soft)`, the one a near round
+  gives: it leaves a hand's errand alone, so a pistol drawn the next instant keeps its draw and its click) and the man who is onto him (out
+  `him`) the whole of it; the other ways out give none, nor does the frame a stalk begins. The first try used the start (`startleFrom`):
+  it takes the hands for 0.45 s and ate the draw's early click, and is not used. Rides `STALK.on`: `?stalk=0` in the page, `TPS_STALK=1`
+  on the frozen stand, where the MOVES pass is down and the soft duck is nothing (not the old hit twitch either). A recording from before
+  the key replays with `jolt` 0 (journal.ts). CHECK: stalk-check `out` has the line on both paths of the MOVES pass and `harness` one for
+  the journal's clauses of this pass and the fourth; `STALK_BREAK=1` fails both, on both stands; one seed. The lab has a row for `jolt`.
+  A quiet man's routine quarter turn got the duck too: the sixth pass, below, mends that. Seen on CPU stills only (`close-stills.ts --scene stalk-turn`), never on a GPU, never played. STILL OPEN from the
+  tutorial frame: under `?noknife=0` on a tutorial a left click on a man in reach or in the arm is the knife before the step that teaches
+  it (rails.ts lets the button through for the grab); the mend wants its own switch, journal key and rails-check line, so it is not here.
+- **The stalk's sixth pass: the duck waits for him to face Sam, and one word puts the polish down (10-23; `stalk.ts` `brokeDuck`,
+  `stalkPolish`, `character.ts` `holdPolish`, `profile.ts`).** (1) The fifth pass ducked Sam at ANY turn that ended a stalk, a patrol's
+  quarter turn included. Now the out `turned` only remembers the man and where Sam stood (`St.broke`); Sam ducks when that man has come on
+  round until that spot is within `STALK.joltFace` (50) degrees of his nose, or is onto him (the whole duck), inside `joltSecs` (0.6 s),
+  and only while Sam's hands are still empty and idle, he stalks nobody else, he has not gone a pace from the spot and nothing solid is
+  between them; else never. The man who is onto him while the stalk is on (out `him`) still gets the whole duck at once. A recording of the
+  fifth pass (a `jolt`, no `joltFace`) replays at any turn, on that frame (by `joltAtOnce` since the seventh pass, below). (2) `?stalkpolish=0` on the page puts the fourth to
+  sixth passes' numbers down together, by `stalkPolish(false)`: the same function journal.ts calls for a recording from before them
+  (`turnIn`, `cornerShow` off, `catchLong` 1, `jolt` 0, and `holdPolish`: `HOLD.wayShape` off, the dip, the sway and the room between the
+  heads at 0, the arch -11). A plain address writes them up again (since the seventh pass, below: `POLISH_UP`'s and `HOLD_POLISH_UP`'s
+  numbers, the tables themselves being down; the page's boot also undoes a lab slider on these). They ride the journal's tables: a recording made with the word replays with it. No word for each
+  pass alone (say if a pass wants its own); the frozen stand's hold came with the seventh pass, below. CHECK: stalk-check `out` (the turn to face him ducks; a
+  quarter turn does not, then does once he comes round or is onto him, not after `joltSecs`, not through a wall) and `harness` (the three
+  ages of recording, the word against the first of them over all twelve numbers, a plain address after it), both stands, `STALK_BREAK=1`
+  fails both, one seed; `ONLY=polish node tools/qa/stalk-page.cjs` reads the word on the real page. The lab has rows for `joltFace` and
+  `joltSecs`. Seen on CPU stills only, never on a GPU, never played.
+- **The stalk's seventh pass: the polish is a hold of its own, down is the stalk as it first stood, and the fifth pass's recording ducks
+  on its frame (10-23; `stalk.ts`, `character.ts`, `standup.ts`, `profile.ts`).** Mends from two reviews, nothing new to see on the page
+  with the polish up. (1) THE HOLD. The fourth to sixth
+  passes were up in the modules and only rode `STALK.on`, so a frozen run raised with `TPS_STALK=1` got them and no word held them off.
+  Now the twelve numbers are DOWN in the tables (`STALK.turnIn`, `cornerShow` off, `catchLong` 1, `jolt` 0; `HOLD.wayShape` off,
+  `lunge.dip`, `lunge.back`, `sway.m`, `sway.twist`, `apart.side`, `apart.tip` 0, `yank.arch` -11) and the page's numbers live in
+  `POLISH_UP` (stalk.ts) and `HOLD_POLISH_UP` (character.ts): a tuned number from the lab's 'copy them' line goes THERE. SWITCH:
+  `stalkPolish(true)` at the page's boot unless `?stalkpolish=0`. FROZEN: down, twelve `FROZEN_HOLDS` rows with the one word
+  `TPS_STALKPOLISH=1` (each acts only under the stalk or, for the hold's pose and the bare reach, bare hands: `TPS_STALK=1`,
+  `TPS_NOKNIFE=1`; a frozen run with `TPS_NOKNIFE=1` alone therefore draws the first bare hands again); so `TPS_STALK=1` alone on a
+  frozen run is the stalk as it first stood. SHIPPED: up; `TPS_STALKPOLISH=0` puts it down there. A headless
+  tool that raises `STALK.on` itself on the frozen stand and means the stalk as the page has it also calls `stalkPolish(true)` after
+  every stand-up (stalk-check does); close-stills runs on the shipped stand. (2) THE REPLAY. The sixth pass sent every out `turned`
+  through `brokeDuck`, whose wall test the fifth pass never had: a fifth-pass recording (a `jolt`, `joltFace` read as 180) whose man
+  turned on the very frame something solid came between them would not duck where it had. journal.ts now raises `STALK.joltAtOnce` for such a recording (a boolean
+  nothing else raises; off in the table, and off for a sixth-pass recording, which has `joltFace` and not the key): the duck is given at
+  once on the out's frame, with no test, as the fifth pass did. `joltFace` 180 alone, the top of the lab's slider, is still any turn by
+  `brokeDuck`'s own tests. CHECK: stalk-check `harness` (the twelve stand down on frozen and
+  up on shipped, the rows carry the word, either word has the say) and `out` (with `joltAtOnce` a quarter turn with a wall between ducks on
+  that frame, 0.23 against 0.00 with the mend taken out; at `joltFace` 180 alone it does not), both stands, `STALK_BREAK=1` fails both, one seed; shipped-check holds the two
+  stands to exactly the listed rows. (3) DOWN IS THE STALK AS IT FIRST STOOD, BONE FOR BONE. It was not, since the fourth pass: the
+  spring's clock and the sway's still ran with their numbers at 0 and let the hold's leg solve in (feet pinned, a knee up to 7 cm off
+  through the step in, knife or bare), and the fourth pass's retuned bare hands (`READY_BARE.L` / `.R`) were drawn whatever the switch.
+  Now a clock enters the leg block only with a number to move (`HOLD.lunge.dip` / `.back`, `HOLD.sway.m` not 0), and `HOLD.wayShape`
+  off draws `READY_BARE_WAS`, the two hands as they were. So `?stalkpolish=0`, a frozen run and a recording from before the fourth pass
+  all show the first stalk; a recording made between the fourth pass and this one with the polish DOWN (the page's word) replays with
+  the legs and hands of this build, which moves no bone the game reads (shins, hands). The down numbers have one home, the tables: `POLISH_DOWN` and
+  `HOLD_POLISH_DOWN` read them as the files load. CHECK: stalk-check `legs` (polish down, the grab and 3 s of the bare hold: the shins
+  where they are with the two clocks stopped, 0.000 mm; `STALK_BREAK=1`: 62 mm), and `tools/qa/stalk-pose.ts`, new: it writes every
+  named bone of both men for one fixed stalk, grab and hold, from whatever tree it is run in, and `--diff` compares two such files.
+  Run in a copy of the tree from before the fourth pass and in this one with `--down`: THE SAME, 411 frames, 44 bones, no bone 0.1 mm
+  apart, bare hands and with the knife (before these mends: the right hand 36 cm off, a shin 6.5 cm). That comparison is by hand, on
+  the shipped stand, one scene; what stands is stalk-check `legs`, which also holds `READY_BARE_WAS`'s eight numbers to the letter and
+  that `HOLD.wayShape` off draws them (at the tell's whole reach, where the way in's shape is spent, the right hand is 36.2 cm from
+  the fourth pass's on both stands; 0.0 with the choice taken out). (4) A KNEE TWITCH IN THE HOLD, in
+  the page since the fourth pass: the leg solve was asked for by the sway's sine itself, so on the one tick in each half swing where
+  the sine reads zero (every 0.95 s at 60 Hz) it dropped out and his right knee jumped 3 cm and back. It is asked for by the sway being
+  on now (`swOn`). With the polish up, stalk-pose against the build before this pass differs on exactly those ticks (three in four
+  seconds of hold) and nowhere else; stalk-check `legs` holds it (three seconds of the settled bare hold: no shin moves 5 mm in a
+  frame, 1.5 mm measured, 32 mm with the old gate; the break drops the solve for one tick). STILL THERE, older than the stalk: the leg
+  solve is on or off, never eased, so where it starts or stops (the gun swapped in with a man in the arm, the hold ending, the haul's
+  end) a knee still moves about 2 cm in one frame, once. sneaklab-check now raises the polish with the stalk, as the rule above asks.
+  Nobody has seen or played anything of this pass; nothing of the stalk has been seen on a GPU.
+- **The stalk's eighth pass: the catch has a shape (10-23; `STALK.yankWith`, `HOLD.catchShape` and its numbers `HOLD.catch`;
+  `player.ts`, `character.ts` `holdLayer` / `heldLayer` / `catchFix`).** Measured first, frame by frame (`tools/qa/stalk-pose.ts`): the
+  man was hauled 11 cm INTO Sam (the haul moved him alone), Sam's root jumped 7 cm on the hold's first frame, his legs went from idle
+  to a walk mid-stride as the haul began and back as it ended, and his lead hand swung past the man's face at brow height, 21 cm
+  ahead of him. With the two keys up: (1) Sam goes back WITH the man (the gap is `HOLD.dist` from the landing on), his own stride
+  stops once he has landed and his feet STEP the haul, the rear one first (`catch.samFeet`, `HoldPose.pull`; slid with his root they
+  skated 28 cm at one height); the pair's turn to the cursor eases in over 0.45 s from a quarter second after the landing, whatever
+  the hold's phase by then. (2) The lead hand starts from where it
+  was DRAWN the frame before (the reach's hand, kept by `catchFix`, which also solves that arm last, after the crouch and reach
+  layers have moved the shoulder), goes over the man's left shoulder and round his throat with the elbow tucked (`catch.via`, `.over`,
+  both carried with the man by `HoldPose.man`, across and ahead, while Sam is still coming in). (3) The man is seen to be hit: both hands fly out, one
+  higher than the other, hang a tenth of a second and come onto the arm one after the other (`catch.fling`; a gun hand is the
+  disarm's as before), a short jolt of chest and head (`catch.jolt`), and his feet lag the haul and step back one after the other
+  (`catch.feet`, `HeldPose.pull`). (4) THE HOLD: he sits back onto Sam, hips down and forward, knees bent, heels out in front
+  (`catch.sink`, `.hips`, `.heels`), Sam's rear foot stepped back and out, his hips back and to the side, his head above and beside
+  the man's (`catch.brace`, `.seat`). The seat gives way to the lowering, the haul on the head and a gun's share, which have their own
+  fitted places: to the gun by `gv`, its eased share (keyed off the variant it dropped whole on the frame of a swap: Sam's hips 10 cm,
+  the man's 18). The FEET do not give way: where the seat set Sam's rear foot and the man's heels they stay through the lowering, the
+  haul and his going limp (`seatF`, `sitF`; given up with the rest they slid 19 and 12 cm as he was let down, which takedown-lower
+  caught). A hold dropped mid-reach lets the arm go with the layer's weight (held whole on its frozen key the hand hung, then
+  jumped 70 cm). `catchFix` lets go of the hand over the first 0.4 s of the held that follows the catch (`catch.settle`). The leg
+  solve's knee swivel eases in and out under the key. SWITCH: both keys are of the polish: up by
+  `stalkPolish(true)` at the page's boot, `?stalkpolish=0` puts them down with the other twelve; `HOLD.catchShape` acts only in a
+  bare-handed hold (not with Sam's pistol drawn, not with the knife back by `?noknife=0`), `STALK.yankWith` in any stalk's grab.
+  `HOLD.catch`'s numbers are the same on both stands and do nothing with the key down. FROZEN: down, two more `FROZEN_HOLDS` rows with
+  `TPS_STALKPOLISH=1` (fourteen now). SHIPPED: up. A recording from before this pass (no `yankWith` in its stalk table) replays with
+  both down (`journal.ts`). No new module state (`hdFrom`, `rdHandL`, `hdFix` are the animator's, drawn only). CHECK: stalk-check
+  `catch`, four lines, each against the same grab with the two keys down: the gap 0.27 to 0.27 m for 40 frames from the landing (0.16
+  with them down), Sam 0.28 m back, a foot 10.6 cm up at its highest and no foot on the floor moving more than 1.8 cm in a frame; the
+  lead hand at most 2.6 cm over the man's head bone and 11.5 cm ahead of him (4.6 and 25.0), and with the man taken out of the arm 14
+  frames into the reach the hand moves no further in a frame than with the keys down (22.0 cm both, Sam's own step in it); the man's
+  hands 78 cm apart for 9 frames on end (0); in the settled hold, the sway up, his feet 15.0 cm ahead of where he stands and his hips
+  15.9 cm ahead of his head (-7.0, 1.0), Sam's shins at most 0.7 mm a frame, the same again after a second's walk, and the gun
+  swapped in from there moves no hip, head or foot of either man more than 2.3 cm in a frame (0.8 with the keys down). `harness`: the fourteen rows, and a
+  seventh-pass recording replays with these two down and the rest up. Both stands, `STALK_BREAK=1` fails all five on both, one seed.
+  takedown-lower's '30 cm below standing' now adds the seat's 12 cm to the choke that does not lower him (he no longer ends it
+  standing): 40.0 cm by that, both stands green. `legs`' knee-twitch line now runs with `HOLD.catchShape` down (the seat asks for the leg solve too and hid its break). DOWN IS AS
+  IT WAS: stalk-pose `--down` in this tree against the build before it, bare hands and with the knife: THE SAME, 411 frames, 44 bones,
+  none 0.1 mm apart (by hand, shipped stand, one scene). With the polish up and the KNIFE back, Sam goes back with the man too, his
+  feet step it and the turn eases in: `STALK.yankWith`'s share, the changes outside bare hands. `catchFix` mends the LEFT hand only:
+  the right hand and every hand after the settle are still solved before the layers that move the trunk. LOOKED AT: close-stills sheets (`stalk`, `stalk-rifle`, `hold`, `choke`) on the shipped stand, three
+  passes with a visual reviewer between them; close-stills' `stalk` scene now keeps the cursor at Sam's feet after the grab so the
+  pair does not turn under the camera. STILL WRONG, known: the man's long shirt tents into a wedge beside his legs in the hold; the
+  rifle hangs for a tenth of a second while the support hand is out, then swings through both bodies on its way to Sam's hand (the
+  disarm's own timing, not touched); nothing moves in the settled hold but the sway; the chest-and-head jolt is too small to see from
+  the game's camera. Nobody has seen or played this pass; nothing of the stalk has been seen on a GPU.
+- **A lesson line names the move, not its key (`lesson.ts` `TOKENS`, `LESSON_TOKENS`, `lessonToken`; 10-23).** `{grab him}`,
+  `{grab him from behind}`, `{knock him out}`, `{take him out}` in a lesson's text are written out by `lessonLine` in the build's own
+  words: the held click with the stalk up (`STALK.on` and `.only`), the grab's key without, the knockout with bare hands, the knife
+  with `?noknife=0`. Any words may stand for `him`; a capital first letter begins a sentence; a name in braces that is none of the
+  four is left as written. No switch: a line with no token reads as before, and the old exact-sentence patterns still turn the old
+  lines. `checkLesson` refuses, in a step's `line`, `setupLine`, `blowLine` and `ringLine`: a name in braces that is no token (a
+  digit, a doubled or trailing space, a `from` left in the man's words), a brace left open, and a line that fits the row's 96
+  characters as written and not once written out the longest of the four ways (`lessonTokenFaults`). A token in a card's
+  text, a `noTap`, a plan, menu or after line is held the same way by `rails.ts railsFaults` since the same day, and a brace in a card's title
+  refused (`missions.md`, "A lesson's words are checked as the page says them"). `tut-quiet` and `tut-pair` use tokens, and `lesson-check` holds every tutorial level to them. CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
+  stands, its break by `NOKNIFE_BREAK=1`. Read on the page on `tut-quiet` (the software adapter), the stalk and the knife each way; never on a GPU.
+- **The knife's own probe puts the knife back (`tools/qa/hold-pose-probes.ts` `holdKnife`, probe `hold-knife`; 10-23).** It was red on the shipped
+  stand from the day the no-knife rule went on there (three lines: no knife in the arm hold, twice no knife boxes), because the probe wants the thing the
+  rule takes away. It is the check of `?noknife=0`'s build, so while it runs every stage writes `CLOSE.noKnife` down and gives it back after; its third
+  line now wants the drawn man's fist EMPTY a second and a half in when the grab disarms him (`HOLD.disarm` under `HOLD.dropGun`, both on in the page)
+  and full when it does not. `HOLDKNIFE_BREAK=1` writes the rule up (with `CLOSE.on`, which it needs) and three lines fail on either stand. Measured:
+  4 of 4 on both stands, the `hold-pose` family 7 of 7 on both, the break 3 FAIL on both. A check's change only: no game file, no switch.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from

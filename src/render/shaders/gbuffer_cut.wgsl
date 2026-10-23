@@ -74,10 +74,13 @@ struct BoxCutVOut {
     }
   }
   o.wpPrev = wpPrev;
-  o.mark = select(markSlotOf(b.flags), 0u, vi >= 36u);      // markings live on the box's own faces; a cut face shows the bare material
+  o.mark = select(markSlotOf(b.flags), 0u, vi >= 36u && !cutIsRound(bi));   // markings live on the box's own faces; a cut face shows the bare material (a ROUND's prism faces are one face: its marks run round it)
   o.lc = lc; o.hf = vec4f(h, select(face, -1.0, cap));
   return o;
 }
+
+/** ROUND THINGS (scene/round.ts; the core row's w carries ROUND_CORE_W): this record is the prism the picture stands round a round box — no ray reads it */
+fn cutIsRound(bi: u32) -> bool { return (u32(max(cutCoreRow(bi).w, 0.0)) & 128u) != 0u; }
 
 /** GBAA across a cut: one edge candidate — a line where `coord` (some linear function of the box-local position, screen gradient g per pixel) reaches `edge`.
  *  boxEdgeOffset's arithmetic per candidate: the perpendicular distance in pixels picks the nearest, which is stored along its major screen axis. */
@@ -119,7 +122,20 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
   // toward a grazing view (a sheet seen edge-on mirrors) — inside a rim, which with the cut faces and the box's side faces shows the core: the bright edge of sheet
   // glass. The pattern is per pixel, stepped along the TAAU jitter's cycle when asked, so the resolve averages the door to a tint. Picture only.
   let core = cutCoreRow(bi); let cw = u32(max(core.w, 0.0));
-  var edge = own >= 0;
+  // ROUND THINGS (scene/round.ts): the prism's faces round the box's own y are ONE round face to the picture. Their normal points straight out from the axis at
+  // the fragment (the silhouette keeps the prism's twelve flats; every ray meets the cylinder inside it — common.wgsl isectRound), marks read them as the box
+  // face that normal leans to, and the lid gets the rolled rim of a drum's. Picture only.
+  var side = false;
+  if ((cw & 128u) != 0u && !cap) {
+    let q = boxRot(bi); let ln = quatRotate(vec4f(-q.xyz, q.w), n);
+    let rl = length(v.lc.xz);
+    if (abs(ln.y) < 0.5 && rl > 1e-4) { side = true; n = quatRotate(q, vec3f(v.lc.x, 0.0, v.lc.z) / rl); }
+    else if (ln.y > 0.5) {
+      let d = h.x - rl;                                      // metres in from the round's edge
+      albedo *= 1.0 - 0.45 * smoothstep(0.012, 0.02, d) * (1.0 - smoothstep(0.03, 0.042, d));
+    }
+  }
+  var edge = own >= 0 && !side;
   if ((cw & 2u) != 0u && own < 0 && !cap) {
     if (fax != 2 || best < f32(cw >> 3u) * 0.25) { edge = true; }
     else {
@@ -141,11 +157,11 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     }
   }
   if (edge && (cw & 1u) != 0u) { albedo = core.rgb; rough = 1.0; metal = 0.0; }
-  if (frame.matCfg.w > 0.0 && !cap && own < 0) {            // (the detail layer reads the box's own faces — edge wear, the skirting band: a cut face shows the bare material)
+  if (frame.matCfg.w > 0.0 && !cap && own < 0 && !side) {   // (the detail layer reads the box's own faces — edge wear, the skirting band: a cut face shows the bare material, and so does a round's side)
     let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w);
     albedo = dt.albedo; rough = dt.rough; metal = dt.metal;
   }
-  if (v.mark != 0u && !cap) {
+  if (v.mark != 0u && !cap && (own < 0 || side)) {
     let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough);
     albedo = mk.albedo; rough = mk.rough;
   }

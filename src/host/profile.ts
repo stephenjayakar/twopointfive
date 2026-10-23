@@ -63,7 +63,7 @@ import { GUNHOLD } from '../game/gunhold';
 import { HOLD, THROW_BY, HARDBREATH } from '../game/character';
 import { CLOSE } from '../game/close';
 import { FOOTFALL, TWOGEARS } from '../game/player';
-import { STALK } from '../game/stalk';
+import { STALK, stalkPolish } from '../game/stalk';
 import { PLAN } from '../game/floorplan';
 import { KITANIM } from '../game/kitanim';
 import { HANDS } from '../game/hands';
@@ -159,9 +159,10 @@ import { LOOK, lookOfQuery, suitOfQuery } from '../scene/look';
 import { MUSIC } from '../audio/pieces';
 import { LIVED, livedOfQuery } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';
+import { ROUND } from '../scene/round';
 import { ROOMCLEAR } from '../game/roomclear';
 import { FIXEDSTEP } from './loop';
-import { AUTOCAM } from './autocam';
+import { AUTOCAM, autoTuneApply } from './autocam';
 import { TWEEN } from './tween';
 
 export type Profile = 'frozen' | 'shipped';
@@ -218,6 +219,7 @@ export function pageSwitches(q: URLSearchParams): void {
   PAIR.steady = q.get('pairsteady') !== '0';   // a partner on his way to a man's back does not turn about: never back to a corner he has passed, and a short wait on a watched way does not square him to the man (game/pairorders.ts takeTick): ?pairsteady=0 = as it was
   COVER.rearRead = q.get('rearread') !== '0';   // a rear man on a mark with no door (a wall charge's stand-off, the mate covering a man at work) watches what the ground round him offers — a way in, a long run of floor — not the spot he stood on when the order came (game/cover.ts readRear over roomfit.ts watchablesAt): ON in the page; ?rearread=0 = 'the way he came', as it was
   COVER.backTurn = q.get('backturn') !== '0';   // a man walking backwards whose opening the deal lets go of comes out of it on his feet: the path kept, his body turning to the way he goes (game/cover.ts turnOut): ?backturn=0 = he walks forward along a body still turned to the rear, a quarter of a metre the wrong way, as he did
+  ROUND.on = q.get('round') !== '0';   // round things are round (scene/round.ts): a level's drums, tyres, stoves and ovens are stood up as one round shape each — to the picture, every ray, sight and what walks against them — in place of the kit's octagon of four slabs: ON in the page; ?round=0 = the octagons, as they were (main.ts puts it down too when the cut switch, whose pipeline draws a round, is off)
   UNDERFOOT.on = q.get('underfoot') !== '0';   // what the walk grid calls floor, feet cross (scene/collision.ts): a walker is stopped by what the grid's bake calls blocked and by nothing lower — the bottom layer of a pile of sacks a wall charge left in its own hole no longer holds the men ordered through it: ?underfoot=0 = a thing 0.2 m high stops feet the grid routes across
   SNEAK.byEye = q.get('byeye') !== '0'; { const n = Number(q.get('seenrate')); if (q.has('seenrate') && Number.isFinite(n) && n > 0) SNEAK.seenRate = Math.min(1, n); }   // a lit step with a line is SEEN only where that defender's eye would gain on a man there (src/game/sneak.ts; `?seenrate=<n>`: the rate that counts, the guards' own floor 0.05 by default)
   SNEAK.stalkAmbient = q.get('stalkambient') !== '0';   // the partner's way to a man's back is read by the light his OWN meter shows on him over the CPU's estimate (the moon, the bounce), as Sam's crumbs carry Sam's (game/sneak.ts sneakWalk): ON in the page; ?stalkambient=0 = the estimate alone, as it was — a moonlit yard read as dark
@@ -280,7 +282,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
-  AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0'; AUTOCAM.sway = q.get('autosway') !== '0';   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
+  AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0'; AUTOCAM.sway = q.get('autosway') !== '0'; AUTOCAM.tune = q.get('autotune') !== '0'; autoTuneApply();   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
   OWNBLOW.on = q.get('ownblow') !== '0';   // a charge his own hands set goes off from his own actions — a row of his list, a wedge of his ring — and the squad's key no longer blows it (game/ownblow.ts); `?ownblow=0` = the squad's key blows any set charge, as it did
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
@@ -290,7 +292,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SLOTSETUP.draw = q.get('setupdraw') !== '0';   // …and a gun's digit pressed again while it is still coming to his hands opens the setup at once (slotsetup.ts `draw`): 2 2 off the pistol is the rifle and its setup — ON in the page; ?setupdraw=0 = a double-tapped digit is the draw and no more
   DOORFORCE.on = q.get('doorforce') !== '0';   // an alerted man does not wait at a shut door (game/doorforce.ts): a defender who is sure an enemy is at its far face fires through a wooden leaf and, free to move, ends by booting it in — ON in the page; ?doorforce=0 = he rests his gun on it or goes to its handle, as he did
   RAILS.on = q.get('rails') !== '0';   // a tutorial mission's frame (game/rails.ts): on a level whose lesson carries a rails record, only what the step that is up has unlocked works, the level's script is cued by the steps, the checkpoints are the authored ones and a teammate is never lost — ON in the page; ?rails=0 = such a level plays as a plain lesson
-  RAILS.eyeView = q.get('eyeview') !== '0'; RAILS.eyeFirst = q.get('eyefirst') !== '0'; RAILS.lineClear = q.get('lineclear') !== '0'; RAILS.wayRun = q.get('wayrun') !== '0'; RAILS.skyPlan = q.get('skyplan') !== '0';   // five rules of that frame, each with its own word off (rails.ts RAILS): ?wayrun=0 = men a step tells to run a leg walk it; ?skyplan=0 = the sky seat is not drawn as plan mode is; ?eyeview=0 = a mission's lookout is one more of the team's eyes, as it was (the squad then knows what only the lookout has); ?eyefirst=0 = a step's lookout takes the last free place among the picture's eyes, not the first; ?lineclear=0 = the big line lies where it lies, over your own men too. On the frozen stand the frame itself is off (TPS_RAILS=1 raises it, these five with it)
+  RAILS.eyeView = q.get('eyeview') !== '0'; RAILS.eyeFirst = q.get('eyefirst') !== '0'; RAILS.lineClear = q.get('lineclear') !== '0'; RAILS.wayRun = q.get('wayrun') !== '0'; RAILS.skyPlan = q.get('skyplan') !== '0'; RAILS.planWalk = q.get('planwalk') !== '0'; RAILS.planDown = q.get('plandown') !== '0';   // seven rules of that frame, each with its own word off (rails.ts RAILS): ?plandown=0 = the tick plan mode comes down is his own, on a step that locks his feet, his sprint or his trigger too; ?planwalk=0 = Shift with the command key does nothing while a walk key is down, on a mission that gives his feet and plan mode and not his sprint (the two words together = the gate as it was before either); ?wayrun=0 = men a step tells to run a leg walk it; ?skyplan=0 = the sky seat is not drawn as plan mode is; ?eyeview=0 = a mission's lookout is one more of the team's eyes, as it was (the squad then knows what only the lookout has); ?eyefirst=0 = a step's lookout takes the last free place among the picture's eyes, not the first; ?lineclear=0 = the big line lies where it lies, over your own men too. On the frozen stand the frame itself is off (TPS_RAILS=1 raises it, these seven with it)
   NOSHOVE.on = q.get('noshove') !== '0';   // teammates falling in never shove the player (game/noshove.ts): a follower whose way lies through him goes round or stops short, and a shove from anybody is not read as his walking — ON in the page; ?noshove=0 = shouldered aside by his own file, as it was
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
   AIMWEIGHT.on = !q.has('noaimweight');   // the player's aim has weight (game/aimweight.ts): his gun turns at a limited rate and the aiming circle trails the cursor, shots going where the circle is — ON in the page; ?noaimweight = the gun eased onto the cursor as it was
@@ -384,6 +386,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CLOSE.reachUp = !q.has('noreachup');   // crouched behind a standing man the grab's reach goes UP for his neck and the trunk comes up with it (game/close.ts, character.ts READY_UP): ON in the page; ?noreachup = the hand at the small of his back, as it was
   STALK.only = q.get('stalkonly') !== '0';   // …and it is the only way to a staff man: his 'grab him' row is gone (?stalkonly=0 puts the row back beside the stalk)
   STALK.corner = q.get('stalkcorner') !== '0';   // …and with his back on a wall the held button lies in wait: the man who comes past the corner is grabbed (?stalkcorner=0 = the button on a wall does nothing, as it was)
+  stalkPolish(q.get('stalkpolish') !== '0');   // …and the stalk's fourth to sixth passes of polish, up in the page and down on the frozen stand (TPS_STALKPOLISH=1 raises them there); ?stalkpolish=0 puts them down together for a look at the move without them (the way in at a part weight, no spring before the lunge, the turn in the step's first frames, no sway and no room between the heads in the hold, the wall stance alone at a corner, no duck when the man turns) — the numbers journal.ts gives a recording from before them, by the same function
   STALK.on = q.get('stalk') !== '0';   // the stalk (game/stalk.ts): the left button held on a man he is close behind walks Sam in to the grab. ON in the page; ?stalk=0 = the last metres are his own keys, as they were
   TWOGEARS.on = q.get('twogears') !== '0';   // two gears, not a dial (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch-walk is the sneak, at its own quicker pace. ON in the page; ?twogears=0 = the wheel's six notches and the tune's crouch-walk, as it was
   FOOTFALL.once = q.get('footfallonce') !== '0';   // one footfall a step (game/player.ts FOOTFALL): a footfall is filed only once the walk cycle has come a quarter of a turn since the last one filed, so a cycle rocking over one edge (backpedal flipping frame by frame: forwards and backwards keys by turns, or a man walked in the arm) is one footfall and not one a frame. ON in the page; ?footfallonce=0 = every crossing files one, as it always did
@@ -560,6 +563,13 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'THROWBACK.on': 'TPS_THROWBACK=1',
   'AUTOCAM.on': 'TPS_AUTOCAM=1 (the mode itself is the seat\'s, off until the camera\'s key is tapped twice: read only by a tool that steps through host/loop.ts stepFrame)',
   'AUTOCAM.sway': 'TPS_AUTOSWAY=1 (the mode\'s slow turn in a fight and on the move; nothing with the mode off)',
+  'AUTOCAM.tune': 'TPS_AUTOTUNE=1 (the mode\'s numbers are the player\'s: a mode and rows on Options, the gentle mode where nobody has chosen; nothing with the mode off)',
+  'AUTOCAM.restAhead': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, no turn at rest for the thing on the lens\'s side: host/autocam.ts AUTO_MODES)',
+  'AUTOCAM.turnCap': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, a turn of its own eased under a top speed: host/autocam.ts AUTO_MODES)',
+  'AUTOCAM.swingCap': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the double tap\'s swing eased under a top speed: host/autocam.ts AUTO_MODES)',
+  'AUTOCAM.swayFightMax': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the fight\'s lean smaller: host/autocam.ts AUTO_MODES)',
+  'AUTOCAM.swayMove': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, no lean for the way he walks: host/autocam.ts AUTO_MODES)',
+  'AUTOCAM.swayRate': 'TPS_AUTOTUNE=1 (the gentle mode\'s own number, the lean slower: host/autocam.ts AUTO_MODES)',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
   'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
   'GUNWALL.on': 'TPS_GUNWALL=1',
@@ -589,6 +599,20 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FOOTFALL.owed': 'TPS_FOOTOWED=1 (acts only under FOOTFALL.once: with TPS_FOOTFALL=1)',
   'TWOGEARS.on': 'TPS_TWOGEARS=1',
   'STALK.on': 'TPS_STALK=1',
+  'STALK.turnIn': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'STALK.cornerShow': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'STALK.catchLong': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'STALK.jolt': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'STALK.yankWith': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'HOLD.wayShape': 'TPS_STALKPOLISH=1 (acts only with bare hands, wherever the reach shows: with TPS_NOKNIFE=1)',
+  'HOLD.catchShape': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.lunge.dip': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'HOLD.lunge.back': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'HOLD.sway.m': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.sway.twist': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.apart.side': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.apart.tip': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.yank.arch': 'TPS_STALKPOLISH=1 (acts only with bare hands on a stalk: with TPS_STALK=1 and TPS_NOKNIFE=1)',
   'GUARD_EYE.far': 'TPS_FARSIGHT=1',
   'GUARD_EYE.farCalm': 'TPS_FARCALM=1',
   'KITANIM.on': 'TPS_KITANIM=1',
@@ -685,6 +709,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'COVER.rearRead': 'TPS_REARREAD=1',
   'COVER.backTurn': 'TPS_BACKTURN=1',
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
+  'ROUND.on': 'TPS_ROUND=1',
   'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
   'SNEAK.byEye': 'TPS_BYEYE=1',
   'SNEAK.noiseWalk': 'TPS_NOISEWALK=1',

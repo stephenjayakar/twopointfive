@@ -1558,7 +1558,7 @@ export class Game {
     // anything still in the air or still venting belongs to the encounter that just ended: an armed stun canister landing into the new one would
     // dazzle the fresh guards and alert the floor from a throw the restarted player never made, and a deployed can's 30 s screen would go on
     // degrading their line of sight (its emitter tracks the item and is priority-pinned, so dropping the item alone does not stop it)
-    this.clearAftermath(); this.smoke.clearAll?.();
+    this.clearAftermath(); this.smoke.clearAll?.(); this.engine.hostBooks = undefined;   // (… and with that solver's smoke, every host book of what was filed with it and asked of the mixer, host/api.ts HostBooks: the open fires', fire.ts FireShown, and a smoke break's, whose rows are by a man's id and would be the fresh man's — asked for afresh on the next frame)
     this.hover = null; this.interactables = []; this.nearby = []; this.act = null;   // (like useDoor above) this frame's cursor state still names the guards / bodies of the encounter that just ended: when the restart
                                                   // came from updatePlayer (Shift+Enter), the Space handlers later in the same update() must not grab, take down or drag any of them
     if (clean) this.cleanSlate();
@@ -1623,6 +1623,7 @@ export class Game {
     this.time += dt; this.ocpCooldown = Math.max(0, this.ocpCooldown - dt); this.col.sound.tick(this.time);
     updateAim(this, input, cam, canvas);   // (builds the interaction rows too: player.ts buildInteractables)
     this.orders.input(dt, input, cam, canvas);   // the squad's command menu (orders.ts): X / B / T / the middle button, and the open menu's wheel / arrows / digits / clicks / Space / Esc taken out of the frame's input before the selector and the player read them — with no squad, one pass over the guard list and a return
+    this.rails.afterOrders(input);   // (rails.ts RAILS.planDown: a plan mode that came down inside that read takes back what the gate let through for it)
     if (this.doorTools.menuKey(input)) this.player.throwEaten = true;   // (the door tools' 'frag and clear' row is on G with its page up — doortools.ts: taken here, before the player's quick-throw reads the key)
     squadSmokeKey(this, input);
     wandOrderKey(this, input);   // (a teammate's look under a door, on order: its row's key, and its lens put away when the fight or another order has him — wandorder.ts; nothing unless one is carried)

@@ -340,7 +340,7 @@ fn traceClosestProf(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     if (tCell > tmax || cell.x < 0 || cell.y < 0 || cell.x >= GRID_W || cell.y >= GRID_H) { break; }
   }
   pc[P_EXIT_ITER_SUM - 16u] += iters;
-  if (found) { if (code > 6.5) { hit.inside = true; hit.n = -rd; } else { hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx)); } } else { hit.idx = -1; hit.t = tmaxIn; }
+  if (found) { if (code > 6.5) { hit.inside = true; hit.n = -rd; } else { hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx)); if (ROUND_BOXES) { if (code < ROUND_SIDE + 0.5) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } } } } else { hit.idx = -1; hit.t = tmaxIn; }
   var ansC = false;
   if (scene.numCapsules > 0u) {
     for (var ch = 0u; ch < scene.numChars; ch++) {

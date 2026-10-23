@@ -15,13 +15,15 @@
 //             man's head and the gas only climbs from there: a line at 1.9 m or under keeps its light (a line starts to count smoke under 0.8 of it; measured
 //             in the page, docs/agents/render.md). Two things learnt setting it: a source two cells wide does not climb in the solver whatever its heat (it
 //             hung where it was filed, a haze at head height that cut a line along the wind to a quarter), one five cells wide does. Only for a fire near the
-//             view (FIRE.smoke.viewR), only while the solver draws: while one is, the solver is awake (the same file has what that costs).
+//             view (FIRE.smoke.viewR), only while the solver draws, and not on the graphics preset that sheds it (the floor rung: settings.fireSmoke, written by
+//             ui/quality.ts FIRE SMOKE SHED): while one is, the solver is awake (the same file has what that costs).
 //   THE SOUND a low bed that follows the fire's heat, and a crack with each pop of the wood — the same pop that throws embers and kicks the light. The mixer's
 //             alone: no event is filed, nobody in the game hears a fire.
 //   WHEN OUT  the lamp's own target says (shot out, the pistol's jammer, a level that starts it cold): no light, so no flame, smoke or sound either.
 // NOBODY reads any of it but the light meter — and of the meter, only who asks how lit a MAN is now. A rule that asks for a place's STEADY light (guards.ts
 // lightEstimateAt, `steadyOnly`: is this room lit enough to work in, is that floor dark) is told the authored lamp (RtLight.steady), as before. Its clock is the game's (`g.time`): every number here is a closed form of it, nothing is kept between frames but the
-// counts the probes read — a replay, a restart or a rollback draws the same fire. Its dice are its own hash (never Math.random, never the game's die).
+// counts the probes read — a replay, a restart or a rollback draws the same fire. What hangs on the HOST (is a solver drawing, the graphics preset, where
+// the view looks, the bed's voice in the mixer) is kept on the host (`engine.hostBooks.fire`): no snapshot or state hash carries it. Its dice are its own hash (never Math.random, never the game's die).
 // THE SWITCH: FIRE.on — ON in the page (`?fire=0` puts it off), OFF in the module and on the frozen stand (FROZEN_HOLDS; TPS_FIRE=1 raises it there). Off = the
 // glowing lid and the steady lamp, the build as it was. tools/qa/fire-check.ts (FIRE_BREAK=1 fails it). The look was set on the software adapter's stills
 // (tools/qa/fire-lab.cjs, fire-page.cjs): NEVER SEEN ON A GPU.
@@ -67,14 +69,29 @@ export const FIRE = {
 /** what the renderer is handed for one fire: render/passes.ts FireRecord (setFires → shaders/fire.wgsl FireRec); `pops` = four cracks, each seconds since (−1 =
  *  none), how hard, its seed */
 export type FireDraw = FireRecord;
-export interface FireStats { fires: number; lit: number; drawn: number; frames: number; smokes: number; cracks: number; beds: number; /** the light's swing this run: least and most of the authored strength, and their sum and count */ lo: number; hi: number; sum: number; n: number }
-/** `lit`: a bit a fire (its place among the level's), up while it burned last frame — a fire that comes back from being out asks for its bed again */
-/** lit, smoked = a bit a fire: it burned, and its smoke was being filed, the frame before (so one lit again asks for its bed at once, and one that comes within
- *  the view's reach starts to smoke at once, not at the next second's mark) */
-const states = new SideMap<Game, { stats: FireStats; lit: number; smoked: number }>('fire.states');
-const fresh = (): FireStats => ({ fires: 0, lit: 0, drawn: 0, frames: 0, smokes: 0, cracks: 0, beds: 0, lo: Infinity, hi: -Infinity, sum: 0, n: 0 });
-function stateOf(g: Game) { let s = states.get(g); if (!s) { s = { stats: fresh(), lit: 0, smoked: 0 }; states.set(g, s); } return s; }
-export function fireStats(g: Game): FireStats { return stateOf(g).stats; }
+export interface FireStats { fires: number; lit: number; frames: number; cracks: number; /** the light's swing this run: least and most of the authored strength, and their sum and count */ lo: number; hi: number; sum: number; n: number }
+/** WHAT OF A FIRE IS THE HOST'S AND NOT THE GAME'S: whether its smoke is filed hangs on a solver drawing, on the graphics preset on (settings.fireSmoke) and on
+ *  where the view looks, and its bed is a voice the mixer holds — none of which a recording or a snapshot carries. So the book of what was filed and asked for
+ *  is kept on the HOST, beside the list the renderer is handed (`engine.hostBooks.fire`, host/api.ts HostBooks; `Game.engine` is in no snapshot): two games that differ only in
+ *  their picture are the same game. WHO ABANDONS THE MOMENT SAYS SO: the book is dropped where the solver is emptied and
+ *  the encounter ends — a restart, and with it a file's or a checkpoint's load (game.ts restartEncounter), and a save in memory put back (host/putback.ts, which drops every host book as one) —
+ *  and a fresh one is begun on the next frame that moves the clock: the smoke is filed and the bed asked for on that frame, and the abandoned moment's voice
+ *  lets go. (Also when the clock has gone BACK on the book, `time`: a rollback on a host that says nothing, the harness.) A frame that moves no clock (`dt` 0:
+ *  the kit page's still, a card's frozen still, a load's own paint) neither reads nor writes it.
+ *  `bed`, `smoke` = by a fire's place among the level's, the frame (`n`, counted in this book) it last burned with its bed asked for, and last had its smoke
+ *  filed: the frame before = it goes on, anything else = it starts now — so a fire that comes within the view's reach, or whose preset starts to draw it,
+ *  smokes at once and not at the next second's mark, and one lit again asks for its bed at once; `smokes`, `beds` = how many this run. No rule reads any of
+ *  it back. NOT KNOWN TO IT: whether the mixer still holds the bed — a page frozen past the mixer's own hold (audio.ts FOLLOW_SECS) resumes with no bed until
+ *  the next `bedSecs` mark. */
+export interface FireShown { n: number; time: number; bed: number[]; smoke: number[]; smokes: number; beds: number }
+const states = new SideMap<Game, FireStats>('fire.states');
+const fresh = (): FireStats => ({ fires: 0, lit: 0, frames: 0, cracks: 0, lo: Infinity, hi: -Infinity, sum: 0, n: 0 });
+function stateOf(g: Game) { let s = states.get(g); if (!s) { s = fresh(); states.set(g, s); } return s; }
+/** the counts a probe or the panel reads, to read now and not to keep: a game the fire has not run in yet gets a blank row of its own, and none is made for it
+ *  (a reader must not add a row to the game's state) */
+export function fireStats(g: Game): FireStats { return states.get(g) ?? fresh(); }
+/** the host's side of it, for the panel's line and the tools; undefined before the first frame a fire burns in, and from a restart or a load until the clock next moves */
+export function fireShown(g: Game): Readonly<FireShown> | undefined { return g.engine.hostBooks?.fire; }
 
 /** integer hash → [0, 1) */
 function h01(x: number): number { x = Math.imul((x ^ 0x2545F491) >>> 0, 0x9E3779B1) >>> 0; x ^= x >>> 15; x = Math.imul(x, 0x85EBCA77) >>> 0; x ^= x >>> 13; return (x >>> 8) / 16777216; }
@@ -127,21 +144,23 @@ function plain(t: LightTarget) { const l = t.light!; l.pos[0] = t.pos[0]; l.pos[
 export function updateFire(g: Game, dt: number) {
   const E = g.engine;
   if (!FIRE.on) {
-    if (states.get(g)) { for (const t of g.targets) if (isFire(t)) plain(t); states.delete(g); if (E.fires?.length) E.fires = []; }   // (put off in a running page: the lamp back where the level hung it, its strength is updateTargets' again)
+    if (states.get(g)) { for (const t of g.targets) if (isFire(t)) plain(t); states.delete(g); if (E.fires?.length) E.fires = []; if (E.hostBooks) E.hostBooks.fire = undefined; }   // (put off in a running page: the lamp back where the level hung it, its strength is updateTargets' again)
     return;
   }
   let any = false; for (const t of g.targets) if (isFire(t)) { any = true; break; }
   if (!any) { if (E.fires?.length) E.fires = []; return; }   // (nothing of this file runs on a floor with no fire)
-  const S = stateOf(g), T = S.stats, K = FIRE, time = g.time, was = time - Math.max(dt, 0);
-  const focus = g.engine.viewFocus ?? g.player.char.pos, drawing = g.smoke.drawing?.() === true;
-  const list: (FireDraw & { d: number })[] = []; let fires = 0, lit = 0, mask = 0, smoked = 0;
-  if (dt > 0) T.frames++;
+  const T = stateOf(g), K = FIRE, time = g.time, was = time - Math.max(dt, 0);
+  const moved = dt > 0; let P: FireShown | null = null;   // (the host's book, on a frame that moves the clock only)
+  if (moved) { P = E.hostBooks?.fire ?? null; if (!P || was < P.time - 1e-9) P = (E.hostBooks ??= {}).fire = { n: 0, time: 0, bed: [], smoke: [], smokes: 0, beds: 0 }; P.n++; P.time = time; }
+  const focus = g.engine.viewFocus ?? g.player.char.pos, drawing = g.smoke.drawing?.() === true && g.engine.settings?.fireSmoke !== false;   // (… and the graphics preset on draws a fire's smoke: the floor rung does not, ui/quality.ts FIRE SMOKE SHED)
+  const list: (FireDraw & { d: number })[] = []; let fires = 0, lit = 0;
+  if (moved) T.frames++;
   for (const t of g.targets) {
     if (!isFire(t)) continue;
-    const bit = fires < 31 ? 1 << fires : 0; fires++;
+    const ix = fires++;
     const l = t.light!, heat = Math.max(0, Math.min(1, t.factor));
     if (!(heat > 0.001) || !l.enabled) { plain(t); continue; }
-    lit++; mask |= bit;
+    lit++;
     const seed = fireSeed(t), fl = fireFlicker(seed, time), M = mouthOf(g, t), si = Math.floor(seed * 65535);
     // the light: the authored lamp × the flicker, its place wandering with the flames; what a reader of the place's STEADY light takes it for is the authored lamp
     if (!l.steady) l.steady = { intensity: 0, pos: [t.pos[0], t.pos[1], t.pos[2]] };
@@ -151,33 +170,34 @@ export function updateFire(g: Game, dt: number) {
     l.pos[2] = t.pos[2] + K.wander * Math.sin(TAU * (0.71 * time + h01(si + 7))) * Math.sin(TAU * (3.3 * time + h01(si + 8)));
     l.pos[1] = t.pos[1] + K.lift + K.wanderUp * (fl - 1) / Math.max(K.depth, 1e-6);
     { const ck = t.factor * K.coals * (1 + K.coalSwing * (fl - 1)); for (const bi of t.boxes) { const bx = g.engine.world.statics[bi]; if (bx) bx.emissive = [t.baseEmissive[0] * ck, t.baseEmissive[1] * ck, t.baseEmissive[2] * ck]; } }   // (updateTargets painted it at its authored glow a moment ago, and does again the frame the switch goes off)
-    if (dt > 0) { T.lo = Math.min(T.lo, fl); T.hi = Math.max(T.hi, fl); T.sum += fl; T.n++; }
+    if (moved) { T.lo = Math.min(T.lo, fl); T.hi = Math.max(T.hi, fl); T.sum += fl; T.n++; }
     const wv = g.wind.at([M.pos[0], M.pos[1] + K.height * 0.6, M.pos[2]]), wl = Math.hypot(wv[0], wv[2]), wk = wl > K.windMax ? K.windMax / wl : 1;
     const wind: [number, number] = [wv[0] * wk, wv[2] * wk];
     const dx = M.pos[0] - focus[0], dz = M.pos[2] - focus[2], d = Math.hypot(dx, dz);
     // the cracks: the last four for the picture, and the one that fell in this frame for the ear
     const pops = firePops(seed, time, 1.5), rec: number[] = [-1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0];
     for (let i = 0; i < pops.length && i < 4; i++) { rec[i * 3] = time - pops[i].at; rec[i * 3 + 1] = pops[i].hard; rec[i * 3 + 2] = pops[i].seed; }
-    if (dt > 0) for (const p of pops) if (p.at > was && p.at <= time) { T.cracks++; g.audio.play('fireCrack', M.pos, K.crack * (0.5 + 0.5 * p.hard) * heat, { rate: 0.8 + 0.5 * p.seed }); }
+    if (moved) for (const p of pops) if (p.at > was && p.at <= time) { T.cracks++; g.audio.play('fireCrack', M.pos, K.crack * (0.5 + 0.5 * p.hard) * heat, { rate: 0.8 + 0.5 * p.seed }); }
     // the bed: one held voice, asked for when the fire starts to burn (the first frame, lit again after being out) and handed on every `bedSecs`
-    if (dt > 0) { const slot = Math.floor(time / K.bedSecs);
-      if (slot !== Math.floor(was / K.bedSecs) || was <= 0 || !(S.lit & bit)) { T.beds++; const end = (slot + 1) * K.bedSecs + 0.35, me = t, at = M.pos;
-        g.audio.play('fireBed', at, K.bed, { follow: () => FIRE.on && g.time < end && g.time >= end - K.bedSecs - 0.4 && me.factor > 0.001 ? { pos: at, k: BED_K * Math.min(1, me.factor), t: g.time } : null }); } }
+    if (P) { const slot = Math.floor(time / K.bedSecs), goes = P.bed[ix] === P.n - 1; P.bed[ix] = P.n;
+      if (slot !== Math.floor(was / K.bedSecs) || !goes) { P.beds++; const book = P, end = (slot + 1) * K.bedSecs + 0.35, me = t, at = M.pos;
+        g.audio.play('fireBed', at, K.bed, { follow: () => FIRE.on && E.hostBooks?.fire === book && g.time < end && g.time >= end - K.bedSecs - 0.4 && me.factor > 0.001 ? { pos: at, k: BED_K * Math.min(1, me.factor), t: g.time } : null }); } }
     // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
-    if (dt > 0 && drawing && K.smoke.on && d < K.smoke.viewR) { const B = K.smoke, slot = Math.floor(time / B.every); smoked |= bit;
-      if (slot !== Math.floor(was / B.every) || !(S.smoked & bit)) { T.smokes++;
+    if (P && drawing && K.smoke.on && d < K.smoke.viewR) { const B = K.smoke, slot = Math.floor(time / B.every), goes = P.smoke[ix] === P.n - 1; P.smoke[ix] = P.n;
+      if (slot !== Math.floor(was / B.every) || !goes) { P.smokes++;
         const sk = wl > 8 ? 8 / wl : 1, dir: Vec3 = [wv[0] * sk * B.lean, 1, wv[2] * sk * B.lean];
         g.smoke.emit({ pos: [M.pos[0], M.pos[1] + K.height * B.up, M.pos[2]], dir, speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density * heat, temperature: B.temp * heat, ttl: B.every, age: 0, kind: 'cloud',
           push: B.push, jitter: B.jitter, lattice: 'coarse', look: true }); } }
     if (d < K.drawR) list.push({ pos: M.pos, r: M.r, h: K.height, heat, seed, time: time % 4096, wind, flick: fl, embers: K.embers, pops: rec, bed: M.lid * K.bedR, d });
   }
-  T.fires = fires; T.lit = lit; if (dt > 0) { S.lit = mask; S.smoked = smoked; }
+  T.fires = fires; T.lit = lit;
   const cap = Math.max(0, Math.min(4, Math.floor(K.max)));
   if (list.length > cap) { list.sort((a, b) => a.d - b.d); list.length = cap; }   // (which ones, not in what order: the composite orders them ray by ray)
-  T.drawn = list.length; E.fires = list;
+  E.fires = list;
 }
 /** one line for the panel / the probes */
 export function fireSummary(g: Game): string {
-  const T = stateOf(g).stats;
-  return FIRE.on ? `fire ▸ ${T.lit} of ${T.fires} burning, ${T.drawn} drawn · light ${T.n ? `${T.lo.toFixed(2)}‥${T.hi.toFixed(2)} (mean ${(T.sum / T.n).toFixed(3)})` : '—'} · ${T.cracks} cracks, ${T.smokes} smoke sources, ${T.beds} bed voices` : 'fire: the switch is off';
+  if (!FIRE.on) return 'fire: the switch is off';
+  const T = fireStats(g), P = g.engine.hostBooks?.fire;
+  return `fire ▸ ${T.lit} of ${T.fires} burning, ${g.engine.fires?.length ?? 0} drawn · light ${T.n ? `${T.lo.toFixed(2)}‥${T.hi.toFixed(2)} (mean ${(T.sum / T.n).toFixed(3)})` : '—'} · ${T.cracks} cracks, ${P?.smokes ?? 0} smoke sources, ${P?.beds ?? 0} bed voices`;
 }

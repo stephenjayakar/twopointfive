@@ -511,10 +511,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       //  that he doesn't notice the footprints. maybe we should make him stop a bit further away and then turn around for a cigarette break"; "he can stop
       //  further off so long as he's covered the spot with his flashlight". So he looks from the far side of the cross wall and then smokes with his back to
       //  its gap: the level's script, TQ.look and TQ.smoke. The `held` cue tells that script the man is the player's now)
-      { id: 'grab', line: 'When he lights a smoke, sneak up behind him and press [Space] to grab him', explain: { title: 'Whistle to lure a guard', text: 'He heard that, and he\'s coming to look. Stay behind the wall, out of his light.\nHe\'ll check out the sound and then stop for a smoke, with his back to you. Come around the wall, go up behind him, and press [Space] to grab him.' },
+      { id: 'grab', line: 'When he lights a smoke, sneak up behind him and {grab him}', explain: { title: 'Whistle to lure a guard', text: 'He heard that, and he\'s coming to look. Stay behind the wall, out of his light.\nHe\'ll check out the sound and then stop for a smoke, with his back to you. Come around the wall, go up behind him, and {grab him}.' },
         done: any(...held, down(1)), atMan: 'court' },
       { id: 'ask', line: 'Press [Space] to ask him for the code', cue: 'held', done: any(did('chron:codeLearned'), down(1)) },
-      { id: 'drop', line: 'Right click to knock him out, or left click to use the knife', allow: ['fire', 'alt'], done: down(1) },
+      { id: 'drop', line: '{Knock him out}', allow: ['fire', 'alt'], done: down(1) },
       // ---- the back door: a lock ----
       // (the same play, at one line — "[Space] at the lock. Then keep still": "'E at the lock' isn't sufficient. we need to introduce the lock picking system
       //  (like via the modal), tell the user they're going to do it, and then show them the controls for doing so"; and of the safe's line: "weird to say
@@ -526,7 +526,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
         done: PICKED, at: mark(TQ.backDoor) },
       // ---- the store: a man in the light, the player in the dark ----
       { id: 'nook', line: 'Go inside and stay in the dark', cue: 'store', done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
-      { id: 'strike', line: 'Stay low so he doesn\'t hear you, then left click to knife him', checkpoint: 'the store', done: down(2), at: [24.9, 1, 12.6] },
+      { id: 'strike', line: 'Stay low so he doesn\'t hear you, then {take him out}', checkpoint: 'the store', done: down(2), at: [24.9, 1, 12.6] },
       // ---- the hall: two beams and the mains ----
       { id: 'under', line: 'Stay low and go under the laser beam', done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
       // ---- the set piece: the mains ----

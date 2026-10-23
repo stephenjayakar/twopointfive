@@ -427,3 +427,54 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   leaf, for `doors` carry no finish in this tool; a prop), and the weaker share of the same blend in the diffuse gather and on presets with no
   traced reflections, which the named and strong counts are the place to look for. A mend for the reflections was being handed in when this was
   written; this number will not move with it.
+- **Round things are round** (`ROUND`, `src/scene/round.ts`, 10-23; the maintainer's pick on the geometry trial: round drums and tyres into the
+  game). ON in the page, `?round=0` puts it off; OFF in the module and on the frozen stand, `TPS_ROUND=1`; a `FROZEN_HOLDS` row; in the knob
+  registry and the journal. THE SWITCH IS READ ONCE, AS A LEVEL IS STOOD UP (`host/standup.ts populateHost`, before the boxes go to the world and
+  before `new Game`): a recording from before the table has it put down before its level stands (`roundTape`, called by `replay/engineplay.ts
+  tables()` and `tools/qa/rerun.ts tables()`; `applyKnobs` says the same afterwards; `tools/qa/replay.ts` says the file's word for its one
+  stand-up), and the debugger's row 'round things are round (reloads)' reloads the page with the word on the address. The level files are not
+  touched. The kit (`gwotKit.ts round`, radius 0.2 m or more: drums, tyres, stoves, the oven, the water tank) and three older generators (round
+  table tops and drums in lived-in rooms) write a round thing as FOUR slabs through one centre, 45° apart, their tops stepped 2 or 3 mm;
+  `findOctagons` finds them by that shape, and `roundLevel` makes the first slab ONE box with `Box.round` (the cylinder about the box's own y,
+  radius `h[0]` = 1.026 × the slabs' half length, the circle with the octagon's area, which is 0.985 of the radius the kit was asked for; half
+  height `h[1]`; yaw 0) and the other three specks that carry NoPrimary | NoShadow, so every box keeps its index. What each box was is kept on
+  it (`Box.was`), `roundLevel(…, false)` puts every box back, and the level's fingerprint is taken over the boxes as authored (`authoredC /
+  authoredH`).
+  ONE MODEL: CPU rays and segments (`boxes.ts rayBoxRound` behind `rayBox`, `collision.ts lineBox`, and the two fast paths in `segmentBlocked`
+  and the dynamic walk hand a round box to them), MOVEMENT (`collideCircle` pushes a body straight out from the axis, `circleTouches` asks circle
+  against circle, so the walk grid is baked round too), GPU rays (`common.wgsl isectRound`, called from `isectBox` behind the scene prelude's
+  `const ROUND_BOXES` on a box whose flags word carries `GEO_ROUND`; the side answers the code `ROUND_SIDE` and the closest-hit walks ask
+  `roundNormalAt`), and the picture (the g-buffer's cut pass draws a twelve-sided prism standing round the cylinder, shaded with one turning
+  normal, its marks run round it, a rolled rim on the lid: `gbuffer_cut.wgsl`, the ROUND block). Round wins over a cut record in every one of
+  them; nothing gives a round box one. THE GPU HALF RIDES THE CUT TABLE AND THE CUT PIPELINE BUT NOT THE CUT RULE: `roundConfig.gpu` is set at
+  boot (`main.ts`: the switch AND the cut switch); a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
+  table with `ROUND_CORE_W` in the core row, it is listed at the cut list's picture-only end, and `BoxWorld.cutTraced` does not count it, so the
+  cut swap (`render/cutSwap.ts`, "a calm room pays nothing") is as it was and every ray program holds the round rule from boot. `GEO_ROUND` is
+  bit 3 of the GPU flags word, which is the CPU's `Dynamic`: no shader reads that bit, and it is masked out of the word only while the round's
+  GPU half is up, so with it down the words are as they were. THE SWITCH IS THE SIMULATION'S: a picture setting may not move it. On a page with
+  `?nocutboxes` (or if the cut pipeline fails to compile) a round thing is DRAWN, and traced by the GPU, as the square box round it, while the
+  game still meets the cylinder.
+  WHAT STILL MEETS THE BOX ROUND IT (a square of side twice the radius, along the world's axes): the trace grid's registration (a superset), a
+  shoved prop's, a ragdoll's and a piece of debris's own contact (up to 0.41 of the radius of air at a corner), the smoke solver's obstacle
+  bake, the replay's map, and a blast, which takes a round thing as that box (`furnblast.ts`: its footprint for grouping is the square, and what
+  flies is cut from it). UNDER FIRE (`wallbreak.ts`): a round thing in a paint the wall engine chews is ONE breakable of ONE cell where the
+  octagon was four of one each, so it goes whole on one cell's damage and never stands as pieces of the square (32 of the 343: 30 drums in a
+  paint read as wood, and the compound's cardboard drum in its two files, which was four cells a slab). THAT MOVES A TALLY nobody has measured in a fight: such
+  a drum is cover for about a quarter as long. Snow caps on a drum's lid and on tyres are still the level's squares. Round things under 0.2 m
+  (the kit's two crossed squares) are left alone. CHECKPOINTS ACROSS THE SWITCH: the fingerprint is the same, so a save loads with the switch
+  the other way as long as it names no part of a round thing as broken; one that does (a blast took a drum, rounds shot one out) is refused by
+  `canLoad` with the static's name, in both directions — also a save from before this rule, loaded on the page as it opens.
+  CHECK: `tools/qa/round-check.ts` (`probes.ts round`; `ROUND_BREAK=1` must fail) on BOTH stands: every level file's count against a pinned
+  table (282 across 18 files as the files have them, 343 across 28 with lived-in rooms; add a row when a level gains a round thing; a ring of
+  four slabs the rule did not take is red), each made one round box and three specks and put back box for box; `rayBox`, `lineBox` and the
+  shader's rule put into TypeScript over f32 against a point-in-cylinder reference (4800 seeded rays, the GPU rule within 0.2 mm and on the
+  same kind of face); at the pass's brazier 64 lines of sight just inside the radius all stopped and 64 just outside all free (the octagon: 56
+  and 48), a pushed body at one distance all the way round (the octagon: 0.578 to 0.601 m), Sam put inside it stood outside at one distance, a
+  round stopped on the curve; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
+  round's walk grid a disc; ten seconds of the pass with the switch down the same run by digest on a level that was rounded and put back;
+  fingerprint, stands, an old recording; the box world's words, rows and lists with the GPU half up and down. PAGE: `node
+  tools/qa/round-page.cjs --root . --out <dir>` boots the pass twice on the software adapter (`round=0` and as it opens), wants every pipeline
+  compiled and no console or GPU error, and writes a still of the brazier from each.
+  NOT MEASURED, NOT SEEN: no tour, soak or mission tally was run with the switch up (the office, which those run on, has no round thing; the
+  check's ten seconds of the pass meet none); nobody has played it; NEVER SEEN ON A GPU — the stills are the software adapter's at the lowest
+  preset, so motion, a round's edge against bright ground, the marks' seams round a drum and what the round branch costs a frame are unknown.

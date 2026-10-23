@@ -187,7 +187,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   back into the same objects (identities stand; the Game's host fields stay as they are NOW); `restoreSnapshot(s, other)` puts the state into ANOTHER Game on the same
   level, walked side by side: an object the two games share (a module's constant row) stands for itself and is not written, a function is the other game's own closure
   of the same code where one stands in the same slot (one function of the snapshot's is one function there), a field that is COMPUTED (a getter) is left to compute.
-  `stateHash` / `stateDiff` / `stateAlike` fold or compare every value by its raw bits in one fixed order. NOT IN A SNAPSHOT: the host (`Game.engine` but for its CPU
+  `stateHash` / `stateDiff` / `stateAlike` fold or compare every value by its raw bits in one fixed order. WHICH OF THE THREE: `stateHash(g)` for "the same or
+  not" (a word; nothing kept); `stateDiff(a, b, max, full, own)` for WHERE, a line a place (`path: this | that`); `stateAlike` for two games value for value
+  where WHICH object stands where is not asked. `stateDiff` is `flatDiff` of two `stateFlat`: a state laid out as rows of thirteen bytes over a tree of
+  its paths, a string once a state, a typed array as its bytes — it was a token and a joined path string for every value, a typed array's every element
+  among them, 2 GB and seven seconds for two squad games on the page's stand (a check that asked twice was killed for memory); measured now on the same
+  two games, a quarter of a second and 30 to 55 MB over the process as it stood (three runs), about 13 MB kept a state for 2.3 million values by its own count. A flat state holds no object of the game, so a tool keeps one of
+  a frame it cannot keep the game of; its `toks` / `paths` are the old two arrays for a tool that reads them (made on the first ask and kept: as heavy
+  as they were). WHERE THE WALK GOES ON AND WHERE IT ENDS: a VALUE that differs (a number, a text, a flag, null where a number was, which object a
+  field points at) leaves the two walks in step — a flag or a null ended the compare before. A SHAPE that differs (an array of another length, an object
+  with another key) is one line; where what is left of that one value holds NO object first met there, in either state, it is passed over in both
+  ('… (the rest of it is not compared)') and the compare goes on, since the two walks still number their objects alike. Where it does hold one, or the
+  two stand at different places (one has a side table's row the other has not: no count stands before those), the compare ENDS as it always did, with
+  '(the shapes part here: nothing after it is compared; the second stands at …)': a check that asks "no line of mine" must read that line as NOT
+  PROVEN (`fire-check` and `breathsteam-check` do, by its first words). Going on quietly past such a place was tried and taken out: by the review, it
+  hid rows (a container's unequal remainder, other tables' rows folded into one line) from exactly those checks. TWO GAMES VALUE FOR VALUE past a shape
+  is `stateAlike(a, b, max)`: it pairs what stands in the same place, gives up only the one thing that differs, and its lines name side-table rows the
+  same way (`name{where the key was met}`). TWO GAMES IN ONE PROCESS are compared with `own` (the
+  fifth word of `stateDiff`, the third of `stateFlat` and `stateHash`): a module's registered variable is ONE for both games (the first limit below),
+  so the whole state of each reads it at another place in its walk. Run, two games stood on the pass with a mission started on each: the whole
+  states part at `nightbreach.applied: an object | the object at game.level.scenarios.roomClear.team` (the variable holds the SECOND game's level's
+  row; a table under a module's root holds the second game's props) and the compare ends there; with `own` they differ in no line. Check `tools/qa/statediff-check.ts` (probe `statediff`, family checkpoints; `STATEDIFF_BREAK=1` must fail; both stands): a state against
+  itself, the old arrays a row a value (and, once, by hand against the code from before: the same 2.4 million rows, statics and all), the weight by its
+  own count, each kind of value and of safe shape changed by hand with a number changed far later still found, and each place the compare must END (an
+  array one object longer, a side table's row only one state has, a last row only one has) ending it out loud. The checks that ask it (`fire`, `smokebreak`, `breathsteam`,
+  `attentionway`) pass on both stands as before. One game, the office, one seed. NOT IN A SNAPSHOT: the host (`Game.engine` but for its CPU
   box world and light set, the mixer, the smoke solver's GPU fields, the GPU light meter's buffers and its readings in flight, the session journal), the character file, what a closure
   captured, a MEMO table, and it is references, not bytes (it cannot be sent to another process as it is).
   THE HOST'S OWN INSIDE A GAME OBJECT IS A `HostOwned` (`math/side.ts`; a class that extends it is held as it is: never copied, never put back, never compared, and
@@ -208,7 +232,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   keeps where it stands as plain numbers on its record, never a `function*` held between ticks, whose place in its own code no snapshot can reach (the rain's drip
   lines found again in shares, `rainFx.ts` `DripJob`, were one: a save put back after the walk had ended called the spent generator, got nothing, and the update
   threw — the shipped stand's check was red on it at build step 730; it is a box, an edge and a sample index now, the same lines on the same frames, but for a box
-  whose flags or yaw are written in place while the walk stands on it: the generator went on with the box as it had read it, the record reads it again). The static
+  whose flags or yaw are written in place while the walk stands on it: the generator went on with the box as it had read it, the record reads it again; the record is in the host's book since 10-23, so a put-back drops it
+  and the walk starts over). The static
   pass refuses a field, variable or parameter typed `Generator` / `Iterator` / `IterableIterator` (one listed, `GENERATOR_OK`: a showcase beat of the Director's,
   which no save is taken beside); it does not see one typed through an alias or not typed at all. A DIE KEPT IN STATE IS A `Die`
   (`math/dice.ts`: `dieOf(seed)`, `roll(die)`, or a `rnd: rollOn` method beside a `dice` field — the same numbers as `mulberry32(seed)`), never a `mulberry32`
@@ -260,7 +285,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   out-parameter, a class's `static` field. A SAVE IS A SIDE EFFECT OUTSIDE THE SNAPSHOT: the controller's shelf of saves in memory is deliberately not in one
   (`savestate.ts memShelf`: a load must not take the later saves away), so the same ticks played again after a put back write an autosave a second time, into the
   next slot, and the slot's name is in the state — whoever rolls a game back puts the shelf back with it: the check does (every snapshot it takes remembers the
-  shelf beside it), a rollback ring will have to. A
+  shelf beside it), a rollback ring will have to. THE SENSORS' TAPE DOES NOT GO BACK EITHER (`sensors.ts SensorStream`, the host's): right for a save loaded
+  in play — the game goes back, the recording goes on — but a ring that undoes eight ticks and plays them again under a recording files them twice, and
+  under a replay is served the wrong frames: whoever builds the ring winds the tape itself. The check never runs under a recording or a replay
+  (`journalload-check.ts` does). THE BOOKS OF WHAT WAS LAST SENT ARE IN THE STATE (measured 10-23, the pass, thirty frames in): a snapshot put back
+  gives the saved moment's hash, and the host's own put-back (`host/putback.ts`) then moves it at 9095 values by forgetting them — `world.visibleSent`
+  7711, `world.gbSent` 4608, `game.chars.instSent` 744, the box world's epochs and counts, `game.chars.matDirty`, `game.snowLookWas` — and three frames on
+  the game still stands 3978 values from a twin that never put back (the harness uploads nothing). So a hash to hold against another host's is taken
+  BEFORE the host is told, or these become the host's inside their objects (`HostOwned`, as the light meter's plumbing is): not done. A HOST BOOK IN THE
+  GAME'S STATE is the same fault from the other side — a table that follows the pool, the solver or the view; the fires', the smoke break's, the breath's,
+  the falling snow's, a snow blast's owed snow and the particle rain's are in `engine.hostBooks` / on the engine now, and `docs/agents/weather.md` ("Whose
+  the recycler's table is", "Whose the rain's table and a blast's owed snow are") says what each put-back does and what was measured still to go (the air's
+  row). A HOST'S QUESTION OF THE COLLISION WORLD is the same fault by another door: its rays and gathers write the query stamps (`game.col.stamp`,
+  `cellStamp`), which are in the state, so picture work that asks on one host and not on another parts them (the rain's drip walk did, 649 values); it
+  asks `col.aside` with stamps of its own. The bag is dropped WHOLE at a put-back, which suits a save loaded or a restart; a ring that plays ticks again
+  many times a second would pay the rain's drip walk each time (7 ms on the office) and wants books that outlive a put-back, told of it by one signal. AN OLD RED, found 10-23
+  by running the check where it had not been run: `--scn pass-four` on the SHIPPED stand fails `fresh game` at 3 of 14 moments (the first at frame 809,
+  tick 2), the same before the snow's book as after; `--why` shows the other game pressing other prints (`game.snowTracks.prints` 186 against 191, and
+  the map, the marks forming and the kicks after them). Read, not proved: the feet's memory is a module variable keyed by the man
+  (`snowTracks.feetOf`), and the other game's men are other objects. Frozen, and every other line on shipped, pass there. A
   showcase beat of the Director's is a generator: a snapshot across a running show cannot be put back (no save is taken beside one).
   A GPU BUFFER MADE ANEW between a save and its load goes back as the old, destroyed one (a field that holds a GPU object is put back like any field): one can be,
   `BoxWorld.itemBuf`, when the grid's list passes 32,768 entries — compound-four and block-squads use about 4,500, so it does not happen today. The game objects

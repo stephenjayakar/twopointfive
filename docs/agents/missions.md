@@ -797,9 +797,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     error: Tab puts the mode away and he stands, the walk keys walk him to each spot, the line after a walk is the one that puts the mode up again, and with the mode
     closed each next ring is on the picture (the first and third) or its mark is pinned to the picture's edge with the metres to it (the second, 12 m off: the
     objective mark's own rule, `ui/overlay.ts`).
-    KNOWN, NOT MENDED: (1) Shift with the command key does nothing while a walk key is held (`rails.ts` gate and `planShift`: out of a walk it is the sprint's side),
-    and here sprint and the key's own order are both locked, so a hand that arrives in a ring still holding a walk key and presses for the mode gets nothing until it
-    lets go: the frame's and the squad's rule, claimed to their owners. (2) The box shrinks as the camera comes in and turns with it; the hall's and the gates' view
+    KNOWN: (1) Shift with the command key did nothing while a walk key was held (`rails.ts` gate and `planShift`: out of a walk it is the sprint's side),
+    and here sprint and the key's own order are both locked, so a hand that arrived in a ring still holding a walk key and pressed for the mode got nothing until it
+    let go. MENDED the same day by the frame's own rule (`RAILS.planWalk`, `?planwalk=0&plandown=0` = as it was; its bullet "Plan mode opens on the move" below), and the page
+    run asks it at step 'pick'. NOT MENDED: (2) The box shrinks as the camera comes in and turns with it; the hall's and the gates' view
     tests were tried turned and zoomed by a reviewer and held, but a player zoomed far in has to zoom out or walk nearer, and no line says so. (3) With `?tabback=0` the
     back key is Esc and the walk lines still say Tab (as the solo mission's does); Shift with the command key closes the mode too. (4) He can walk into a room nobody
     has taken and be shot there: he has no trigger, and nothing but the lines keeps him on his spots. (5) A ring is 0.9 m either way and its mark fades inside 1.6 m, as
@@ -1837,3 +1838,100 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   holds a tutorial mission's end while a step is up; `loadbrief-page.cjs`'s tutorial job reads the scene and what it teaches, which a tutorial row draws in
   place of the job's line and the three cells); the comments across `src/` that say "a Training lesson" for what is now any lesson level were left (about
   thirty).
+- **A lesson's words are checked as the page says them (2026-10-23; `tools/qa/lesson-check.ts`).** `lesson.ts lessonLine` turns a level's words by
+  pattern where a rule changes a key ('press [Space] … to grab him' is the held left click under `STALK.only`; the knife's lines are the knockout's under
+  `CLOSE.noKnife`; `docs/agents/stealth.md`). A line reworded in a level could keep naming the old key and nothing would say so. So `lesson-check` reads
+  every line, card, `noTap` and after-line of a level through `lessonLine` with both rules on and fails on one that still names the knife or a key to grab.
+  The reading (`namesOld`) is a net that errs toward catching, not a reader of English: the knife by its names (knife, knives, blade, stab, not
+  'stable'), and a word for the grab (grab, take or get hold, choke and chokehold but not 'choke point', seize) with `[Space]`, `[E]`, the word space or spacebar in any case, or a
+  capital E alone, in the same sentence or the one beside it, the key before the word or after it. A card's title is read alone and together with its
+  words (one screen). A wrong catch costs a look and a row in
+  the check's `HONEST` list (the line word for word, as the page says it, one row for each stand's wording where they differ; none today); a miss is a dead key on the player's screen. A line of its own at
+  the top of the check holds the net to twenty-two lines it must catch and eight it must leave alone, each one a miss or a false catch somebody found, and
+  shows the list working: a new one goes there first. The cuts before it, each let through by a review: 'knife' and '[Space] … to grab' only; one
+  sentence at a time (missed 'Press [Space]! Grab him.'); the key within four words or the same clause (missed 'Press [Space] behind the far guard to
+  grab him' and 'To grab him, press [Space]'). THE REAL MEND CAME THE SAME DAY (the sneak hold thread's half in `lesson.ts`, this file's
+  half here): A LINE NAMES THE MOVE BY A TOKEN, `{grab him}`, `{grab him from behind}`, `{knock him out}`, `{take him out}` (the man may be other words;
+  a capital begins a sentence; the words each writes are in `stealth.md`, "A lesson line names the move, not its key"), and `lessonLine` writes it out
+  for the keys the build has. `tut-quiet`'s grab line, its card, 'drop' and 'strike' are tokens now, and what the page says is word for word what it
+  said, on all four of stalk and knife. `tut-pair`'s 'hands', 'hold', 'sleep' and 'drop' moved the same evening (its thread's change), so the
+  check's `OWES_TOKENS`, the list of steps let off by name while a level's owner still owed the change, is empty and every tutorial level is held.
+  KNOWN AND LEFT: under `?noknife=0` `{Knock him out}` adds "or left click to use the knife", and `tut-pair`'s 'sleep' and 'drop' open only the right
+  button, so on that off-switch those two rows name a click the step keeps shut (the page as it opens is right). A token does not read a step's
+  allow list; the mend, if wanted, is the plain "Right-click to knock him out" back on those two steps with a row in the check's `HONEST` list.
+  THREE THINGS HOLD A TOKEN: (1) `rails.ts
+  railsFaults` (so `checkLesson`, on any stand) runs `lessonTokenFaults` over a card's text (to the card's 260), a `noTap`, `menuLine`, `pageLine`,
+  `planLine` and both `after` lines as `checkLesson` does over a step's four lines, and refuses a brace in a card's TITLE, which `rails.ts card()` shows
+  as written; (2) `lesson-check` fails a brace left in anything the page says; (3) `lesson-check` reads the level's own words with every token taken
+  out (`namesByKey`) and fails the knife, a grab beside ANY input (a key in brackets, a click, a mouse button, space, a press, a hold or a tap, a
+  capital letter alone), or the blow with an input in its own sentence: 'Hold left click on him to grab him' is true today and false with `?stalk=0`,
+  'Right-click to knock him out' leaves the knife out under `?noknife=0`, and only a token says both. A card's title and words are read as one
+  screen, the title as written. `HONEST` frees a line word for word (none today). A line at the top plants a bad token in each place `railsFaults`
+  holds and wants each back. The net above stays as the backstop for what the page says. ON THE PAGE
+  (`tut-quiet`, the software adapter): at 'grab', 'drop' and 'strike' the row and the card read "…sneak up behind him and hold left click on him to
+  grab him", "Right click to knock him out", "…then right click to knock him out", no brace anywhere, no page error but the icon's 404.
+  No switch (a check, no rule of play). `LESSON_BREAK=words` leaves the two rules off and must fail on a level that teaches the grab: it fails on
+  `tut-quiet` and `tut-pair` and passes `tut-solo`, which teaches none. Measured: `lesson-check` ALL PASS on FROZEN and on SHIPPED (69 checks then; 77 with the token lines below). A new
+  pattern in `lessonLine` wants its own words added to that line. STILL OPEN, the rails gate's (mine): with empty hands the left button is let through
+  wherever `use` is allowed and a grab row is offered, also with a man in the arm; under `?noknife=0` that is a knife before the step that teaches it.
+  The page as it opens has no knife, so default play is not touched. Shutting it is a rule on the rails and wants its own switch and `rails-check` line.
+- **Plan mode opens on the move (2026-10-23; `RAILS.planWalk`, `rails.ts gate`; mission 2).** The frame's gate held Shift with the command key back
+  while a walk key was down wherever a step gave the player his feet (a walk key with Shift is a sprint's, and `CMDRING.planRun` makes the pair the key's
+  own order there). Mission 2 gives him his feet and the mode and never his sprint, and from its step `up1` every plan is made at the end of a walk: a
+  hand that pressed the pair before it let go of the walk key got nothing at all, with a line on screen asking for exactly that pair. THE RULE: where
+  `move` and `plan` are allowed and `sprint` is not, Shift with the command key PRESSED passes with a walk key down too, and the walk keys are taken out
+  of that one tick. So the mode goes up (he takes his knee where he is) and the Shift that passes never meets a walk key to run with; Shift with a walk
+  key and no press of the command key is dropped as before, and the key kept down holds nobody's feet. The same tick the other way was an old flaw of the
+  gate: the pair or the back key that took the mode DOWN let Shift through (the mode was up when the tick began), and with a walk key held that tick was
+  a run on a mission that locks the sprint. THE TICK THE MODE COMES DOWN IS ITS OWN RULE NOW, `RAILS.planDown` (`?plandown=0`; same standing as
+  `planWalk`; `rails.afterOrders`, called from `Game.step` right after `orders.input`): the gate notes what it let through only because the mode was up
+  (the buttons, Shift, the walk keys, each as he may have them without the mode), and if the mode is down once the orders have read the tick, by the
+  pair, the back key or any road no key is on (the squad no longer his to order, nobody left to order, a save loaded), those go out of the tick before his feet, his sprint or his trigger read
+  them. On mission 2's first step, which locks his feet, that tick was 3.5 cm with a walk key and Shift (1.2 cm with the walk key alone) and a held
+  button was his. The first cut guessed that tick in the gate from the keys (the pair's and the back key's only, and only where his feet were his):
+  that guess is kept behind `planDown` off, so a recording made on steps 960 to 967 replays as it ran. The pair that puts the mode UP is still read in
+  the gate, and only on a press `planInput` would take (no ring up, nothing nearer for the key to back out of). A step that allows `sprint` is untouched (the pair is the key's own
+  order at a run, as in any mission). Only `tut-plan` allows `plan` today. The gate takes the walk keys out because `planmode.ts planShift` reads a walk
+  key as a run: if that test moves, this rule moves with it. SWITCH: a knob of the frame's table, on in the module as the frame's other rules are and on
+  with the frame; `?planwalk=0` = the pair does nothing while he walks (with `planDown` still on the tick the mode comes down is cleaned all the same: `?planwalk=0&plandown=0` = as it was before either); no `FROZEN_HOLDS` row (the frame is off on the frozen stand, `TPS_RAILS=1` raises it and this with it: a
+  review asked for a row, and it has none because no frozen digest, tally or fixture is recorded with the frame up, `lesson-run` refuses a rails mission
+  on that stand, and the frame's other rules stand the same way; a frozen recording with the frame would want a word for each of the seven);
+  `journal.ts applyKnobs` puts it off for a recording from before the key. CHECK: `rails-check`, the line 'the plan on the move' (`tut-plan`, seed 1,
+  its first step given `move` as well; the line also reads the level as authored: plan and move given, sprint never). `RAILS_BREAK=1` must fail it.
+  MEASURED, seed 1, FROZEN and SHIPPED alike (feet locked, the mode taken down with a walk key held: 0.00 cm by the pair, by the back key and by
+  another road, which in the check is the mode put down as a loaded save puts it, `planLoaded`, before the orders read the tick, and a held button not his; both rules off: 3.54, 1.17 and 3.54 cm and the button his; `planWalk` alone, as the first cut: 1.17 cm by
+  the back key): 0.75 m walked in half a second, the same with Shift down and with the key kept down as well; the pair
+  with the walk key down puts the mode up, on a knee, the step done, 0.07 m of slide after it; the pair again and the back key take it down, no tick at
+  a run. Both rules off: the mode stays down and the press is dropped, and the back key's tick is a run. `planWalk` off alone: the pair is dropped the same and no tick is a run. `planWalk` alone with his feet his (the first cut, a recording's): as with both on. The word and the old recording read as said. The
+  break fails the line on both stands. ON THE PAGE (`tools/qa/tut-plan-page.cjs`, real keys, the software adapter, `STEPS=5`): at the end of the first
+  walk the pair with a walk key still down puts the mode up and him on his knee, 20 lines pass and the page has no error; with `URL_ADD='&planwalk=0'`
+  that one line fails. NOT DONE: nobody has played it or seen it on a GPU; the scripted player of mission 2 stands still for the pair, so its runs do
+  not pass through this rule.
+- **The cigarette's book is the host's (2026-10-23; `smokebreak.ts SmokeShown`, `engine.hostBooks.smokeBreak`).** A man's row in the smoke break's table kept
+  `thread` (his thread's source is on the smoke solver) and `left` / `gap` (puffs still to file), and the counts `threads` and `records`: all of it written by
+  `g.smoke.drawing()` and by whether the host has a particle pool. So the solver's word was in the game's state: two games that differed only in their
+  picture differed in the table, and a save put back (`host/putback.ts` empties the solver) came back saying the thread was still on it, so the thread
+  was never filed again. The open fire had the same and moved its book to the host; this is that mend for the cigarette. NOW: those five live on
+  `engine.hostBooks.smokeBreak` (a man by his character's id; first a member of its own, `engine.smokeShown`, moved into the one bag of host books that
+  `host/putback.ts` drops whole, and `game.ts restartEncounter` now drops the whole bag too: the rows are by id, and a fresh man with the old id took
+  the old man's puffs still owed), which no snapshot carries. THE THREAD ALSO LETS GO IN THE FOG (no switch: the picture's only, no state row or digest
+  moves): filed in view, it rode his hand on after he was hidden, against 'nothing live shows in the fog'; its track now answers 'gone' while
+  `fogOfWar.hidden` has him and one is filed again when he is seen. The smoke already in the air stays the solver's. Checked by the same line
+  (`smokebreak-check`, the host's real put-back, the restart, hidden and seen again); never seen on a GPU. AND THE BOOK IS NOT TAKEN AT ITS WORD, which a list of places that drop it
+  would be (the first cut of this mend listed three and a review found four more: an encounter restarted, a file loaded, a script's clear, the panel's;
+  and the solver drops a source whose `ttl` ran out, or the first look-only one off a full list, with no word to anybody). The solver asks every source
+  it holds where it is, every step, so the thread's own track stamps the book, and a thread nobody has asked after for `SMOKEBREAK.threadGone` frames (30)
+  with a solver drawing is filed again; each filing has a number and an older one answers 'gone', so there is never more than one. `putback.ts` still
+  drops the book (the puffs owed were the abandoned moment's, and the thread is back at once), as does the switch going off. The game's side keeps the
+  clock, the lights (the meter reads those) and the counts that hang on nothing of the host's; `smokeBreakStats` no longer makes a row by being read, and
+  `resetSmokeBreak`, which nothing called, is gone. No switch: no rule of play changes and nothing reads the book back. CHECK: `smokebreak-check`, whose
+  stand-in solver now asks its sources every step as the real one does, two new lines: the game that smoked on a solver for twenty seconds and the one
+  nothing drew differ in no line of the table's (read by `rollback.ts stateAlike` since the lighter compare: the check's peak fell from 1.1 GB to
+  0.36 GB; that the man's row and the counts ARE read is shown by changing a number in each by hand, which must give a line); and one thread rides his hand again, never two, after the solver
+  is cleared, after the source is dropped without a word, after the book is dropped, and after `restartEncounter` with the order given again. Before the
+  mend the first failed on `stats.threads`. MEASURED, seed 7: 10 of 10 on FROZEN and on SHIPPED, `SMOKEBREAK_BREAK=1` fails 8 on both; `rollback-check`
+  on SHIPPED and its static pass, `lived-check` 393, `lesson-gate tut-quiet` on SHIPPED all pass. ON THE PAGE (`tut-quiet`, the software adapter, the
+  real solver, the court's man told to smoke where he stands): one thread filed in eight seconds and one on the solver, its stamp the current frame;
+  the solver cleared, none two frames on, and sixty frames later a second filing and one on the solver; no page error. SEEN ELSEWHERE: `snowBreath.ts` kept the same word in its table (`stats.why`, `steam`, `steaming`, a man's `steam`; its owner
+  moved that book to the host the same day, today `engine.hostBooks.breath`), which is why the check first read this file's rows out one by one: the
+  whole-state diff stopped at that table. NEVER SEEN ON A GPU: the thread itself has not been looked at by anybody, before or after.
