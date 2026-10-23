@@ -271,8 +271,9 @@ export interface LessonStep {
   /** an ARROW on the ground in place of the ring: from the step's `at` it points at this place ('walk into the wall': which way) */
   toward?: Vec3;
   /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no
-   *  longer kept in the picture), and `nv: false` puts the night vision up for the walk out */
-  onWay?: { nv?: boolean };
+   *  longer kept in the picture), `nv: false` puts the night vision up for the walk out, and `run: true` has the men run the leg (the job is done: they
+   *  go back at a sprint — teampace.ts teamTold, RAILS.wayRun) */
+  onWay?: { nv?: boolean; run?: boolean };
   /** (rails) THE LINE ONCE THE ORDER IS GIVEN: while the men carry out what the step asks for, the line says what they are doing and never asks again
    *  (`line`, for RAILS.afterSecs after an order — one of `on`, or any but the word — went out on this step; `word`: the line once the word has been given) */
   after?: { line?: string; on?: string[]; word?: string };

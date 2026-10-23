@@ -672,7 +672,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     pl.doorKickTail = false; pl.doorRipUntil = fin(P.ripU ?? -1, -1); pl.doorBashAt = fin(P.bashAt ?? -10, -10); pl.doorBashLean = P.bashLean === 1 || P.bashLean === -1 ? P.bashLean : 0;
     pl.staggerUntil = fin(P.stagU ?? -1, -1); pl.hurtAt = fin(P.hurtAt ?? -1, -1); pl.dazzledUntil = fin(P.dazU ?? -1, -1); pl.dazzledAt = Array.isArray(P.dazAt) && P.dazAt.length === 3 ? [fin(P.dazAt[0], 0), fin(P.dazAt[1], 0), fin(P.dazAt[2], 0)] : null;
     pl.keys = new Set(P.keys ?? []); pl.codes = new Set(P.codes ?? []); pl.hitsLeft = Math.max(1, Math.min(Player.MAX_HITS, P.hitsLeft | 0)); pl.nv = !!P.nv; pl.nvAmount = pl.nv ? 1 : 0; pl.pace = Math.max(0.2, Math.min(1, fin(P.pace, 1)));
-    pl.lastFireT = fin(P.lastFireT, -10); pl.fireCd = fin(P.fireCd); pl.noise = fin(P.noise); pl.visibility = fin(P.visibility); pl.irradiance = 0; pl.stepPhase = fin(P.stepPhase); pl.stepTravel = fin(P.stepTravel ?? 1, 1);   // (visibility: the meter as it stood — the probe overwrites it on the first frame that answers; headless it is the script's knob and stays)
+    pl.lastFireT = fin(P.lastFireT, -10); pl.fireCd = fin(P.fireCd); pl.noise = fin(P.noise); pl.visibility = fin(P.visibility); pl.irradiance = 0; pl.stepPhase = fin(P.stepPhase); pl.stepTravel = fin(P.stepTravel ?? 1, 1); pl.stepOwed = 0; pl.stepAt = -1;   // (visibility: the meter as it stood — the probe overwrites it on the first frame that answers; headless it is the script's knob and stays)
     pc.wet = fin(P.wet?.[0]); pc.beads = fin(P.wet?.[1]); pc.wetRain = fin(P.wet?.[2]);
     pl.bubble = P.bubble ? { ...P.bubble } : null;
     pc.update(0);

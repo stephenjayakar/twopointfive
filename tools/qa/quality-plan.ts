@@ -7,7 +7,7 @@
 // 0.05 grid), and what the model says each pick really costs; then the fixed points behind the 'does an M1-class GPU hold the budget on low' question. No GPU
 // involved: the absolute numbers are only as good as REF / FACTOR, which the lead corrects from measured pass timings — the point is the decision logic and the ratios.
 //   bun run tools/qa/quality-plan.ts [--budget 15] [--k 4.5 --css 1440x900 --dpr 2]   (the flags add one machine of your own to the table)
-import { plan, COST, PRESETS, QUALITY_NAMES, REF, SCALE_FLOOR, SCALE_STEP, AUTO_LADDER as LADDER_NAMES, type QualityName, type Plan, PLAN_BUDGET_MS, presetCost } from '../../src/ui/quality.ts';
+import { plan, COST, PRESETS, QUALITY_NAMES, REF, SCALE_FLOOR, SCALE_STEP, AUTO_LADDER as LADDER_NAMES, type QualityName, type Plan, PLAN_BUDGET_MS, presetCost, withSmoke, SMOKE_KEEP_DEFAULT } from '../../src/ui/quality.ts';
 
 const argv = process.argv.slice(2);
 const arg = (k: string, d: string) => { const i = argv.indexOf(k); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
@@ -52,7 +52,7 @@ const f1 = (v: number) => v.toFixed(1).padStart(5), f2 = (v: number) => v.toFixe
 console.log(`Cost model (src/ui/quality.ts COST): modelled compute ms on the reference M4 Max at ${REF.mpx} Mpx internal, per preset — per-pixel passes | fixed part | ratios plan() uses`);
 console.log(`  preset    direct softbl gather tempor volume bloom | cascad probe |  pixel (rel)   fixed (rel)   what it switches`);
 for (const n of QUALITY_NAMES) {
-  const c = COST[n], P = c.passes, p = PRESETS[n], L = p.lossy;
+  const c = COST[n], P = c.passes, p = withSmoke(PRESETS[n], SMOKE_KEEP_DEFAULT), L = p.lossy;   // (the rows as the page runs them: SMOKE KEEP)
   const sw = [`${p.ds.join('/')} rays`, `hist ${p.hist}`, `maxH ${p.maxH}`, `scale ${p.scale}`, ...(['checkerDirect', 'gatherThird', 'rcHalfRate', 'volQuarter', 'dimRays'] as const).filter(k => L[k]).map(k => k === 'dimRays' ? `dimRays<${L.dimBelow}` : k)].join(', ');
   console.log(`  ${n.padEnd(8)} ${f1(P.direct)}  ${f1(P.softblur)}  ${f1(P.gather)}  ${f1(P.temporal)}  ${f1(P.volumetrics)} ${f1(P.bloom)} | ${f1(P.rc)}  ${f1(P.probe)} | ${f1(c.pixel)} (${f2(c.pixel / COST.ultra.pixel)})  ${f1(c.fixed)} (${f2(c.fixed / COST.ultra.fixed)})   ${sw}`);
 }

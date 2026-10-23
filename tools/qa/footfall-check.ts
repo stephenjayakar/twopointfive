@@ -21,6 +21,26 @@
 //   harness   the key is a row of the two stands' list with its word, off on the frozen stand and on in the page (`?footfallonce=0` puts it off), rides a
 //             recording's tables, a recording from before it replays with it off, and a checkpoint carries the travel only once the key has been on.
 // FOOTFALL_BREAK=1 = the key left down where `rock`, `held` and `ears` ask for it up: each must FAIL.   exit 0 = all hold · 1 = one does not
+//
+// A FOOTFALL THE LEGS OWE (FOOTFALL.owed, the card's second key, UNDER the first: every arm above has it up wherever the first key is up, as the page has
+// them). A cycle turned about again and again rocks between the edges or crosses one with too little travel behind it, and the first key alone lets a
+// shaken walk go on a third to two thirds of a plain walk's footfalls.
+//   shake     the forward key held and the cursor put in front of him and behind him by turns of 10, 12 and 15 frames for ten seconds, crouched and standing
+//             (the 10 on three seeds). The first key alone: nine in ten of a plain walk's footfalls or fewer on every row, seven in ten or fewer at 10
+//             frames. Both up: 85 in 100 of a plain walk's or more, no more than a third over, never two nearer than 12 frames. First key down: the
+//             second changes nothing.
+//   walk 2    the steady gaits, the sprint put on and off, the crouch taken and left under way and walks with stops in them, on three
+//             seeds (six seconds each): the second key up files what it does down, frame for frame, and the runs digest the same. Then what it costs a walk with the cycle
+//             turned about in it (a square, the cursor swept once round him, a walk begun backwards): the same footfalls or one or two more.
+//   feet      one about-turn in a steady walk, begun at nine places in the cycle on two seeds: from two seconds after it every footfall is back on the
+//             frame a foot comes down (a first cut of this key kept filing a fifth of a turn early for the rest of the walk).
+//   nudge     a walk let go at eleven places in the cycle, four seconds stood, the key for a fifth of a second: nothing the key down does not file (a
+//             first cut paid a debt from before the stop a few frames into the nudge). And a beat that roots him without asking the footfall test
+//             (a takedown's, begun with a debt on the legs and the key held through it): the debt is not carried through it.
+//   held 2    a man walked steadily in the arm: the second key files what the first alone does.
+//   harness 2 the second key's rows on the two stands, its word (TPS_FOOTOWED=1), a recording with it, with the first key only and from before both, the
+//             page's `?footfallowed=0`, and a checkpoint that does not carry `stepOwed` (a load is a standing start).
+// FOOTOWED_BREAK=1 = the second key left down where `shake` asks for it up: its 'both keys up' line must FAIL.
 import { standUp, ROOT } from './headless.ts';
 
 const { FOOTFALL, startGrab } = await import(`${ROOT}/src/game/player.ts`);
@@ -32,8 +52,8 @@ const JR = await import(`${ROOT}/src/game/journal.ts`);
 const { STAND_ENV } = await import(`${ROOT}/src/host/standEnv.ts`);
 
 type P3 = number[];
-const BREAK = process.env.FOOTFALL_BREAK === '1', DT = 1 / 60, START: P3 = [5.2, 0, 19.5], SEEDS = [4411, 1, 2], FWD = 'KeyD', BACK = 'KeyA';   // (east along the lobby: some 17 m of clear floor)
-let allPass = true, found = false;
+const BREAK = process.env.FOOTFALL_BREAK === '1', BREAK_OWED = process.env.FOOTOWED_BREAK === '1', DT = 1 / 60, START: P3 = [5.2, 0, 19.5], SEEDS = [4411, 1, 2], FWD = 'KeyD', BACK = 'KeyA';   // (east along the lobby: some 17 m of clear floor)
+let allPass = true, found = false, foundOwed = false;
 const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 async function quiet<T>(fn: () => Promise<T>): Promise<T> { const log = console.log; console.log = () => {}; try { return await fn(); } finally { console.log = log; } }
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -42,8 +62,8 @@ interface Fall { f: number; level: number }
 interface Ctx { W: any; g: any; f: number; falls: Fall[]; step(aim: 'ahead' | 'behind' | P3): void; keys(...k: string[]): void; A: any; moved(): number }
 /** the lobby's open floor, the floor's men parked far off but one (`near`: stood 1.8 m in front of where the walk begins, his back to it); a walk is keys held
  *  and the cursor put 4 m ahead of his travel, 4 m behind it, or on a point, each frame. Every footfall filed is noted with the frame it was filed on. */
-async function world(once: boolean, crouch: boolean, seed: number, near = false): Promise<Ctx> {
-  Math.random = seeded(seed); const W: any = await quiet(() => standUp({ seed } as any)), g = W.game; FOOTFALL.once = once;
+async function world(once: boolean, crouch: boolean, seed: number, near = false, owed = once): Promise<Ctx> {
+  Math.random = seeded(seed); const W: any = await quiet(() => standUp({ seed } as any)), g = W.game; FOOTFALL.once = once; FOOTFALL.owed = owed;   // (`owed`: the second key, which is under the first: up wherever the first is, as the page has them, unless an arm asks)
   g.godMode = true; g.aiEnabled = false; g.playerInvisible = true;
   const [A, ...rest] = g.guards; rest.forEach((gd: any, i: number) => { gd.char.pos = [37.5, 0, 6 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; });
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([...START]); g.player.crouch = crouch;
@@ -97,7 +117,7 @@ async function slow() {
   verdict(bad === 0, 'ten seconds of rocking with legs of 2, 4 and 10 frames: the key up files half the key down\'s footfalls or fewer, never two nearer than 12 frames, no more than twice a plain walk\'s, and not none', rows.join('\n    '));
 }
 async function plain(once: boolean, crouch: boolean, keys: string[], aim: 'ahead' | 'behind', seed: number, frames = 240) {
-  const C = await world(once, crouch, seed); C.keys(...keys); let d = '';
+  const C = await world(once, crouch, seed, false, false); C.keys(...keys); let d = '';   // (the first key alone: a walk begun backwards turns the cycle about as it starts, and what the second key files of that is `walk 2`'s to say)
   for (let i = 0; i < frames; i++) { C.step(aim); if (i % 30 === 29) d += hashDigest(digestGame(C.g, true)) + ' '; }
   return { falls: C.falls, d, travel: C.g.player.stepTravel as number, m: C.moved() };
 }
@@ -116,7 +136,7 @@ async function turns() {
   console.log('\n=== turns: pacing, and the cursor across him, are not a silent walk ===');
   const rows: string[] = []; let bad = 0;
   const pace = async (once: boolean, crouch: boolean, leg: number) => { const C = await world(once, crouch, SEEDS[0]); const far: P3 = [START[0] + 12, 1.0, START[2]]; for (let i = 0; i < 600; i++) { C.keys(Math.floor(i / leg) % 2 ? BACK : FWD); C.step(far); } return C; };
-  const wave = async (once: boolean, crouch: boolean, every: number) => { const C = await world(once, crouch, SEEDS[0]); C.keys(FWD); for (let i = 0; i < 480; i++) C.step(Math.floor(i / every) % 2 ? 'behind' : 'ahead'); return C; };
+  const wave = async (once: boolean, crouch: boolean, every: number) => (await shaken(once, once, crouch, every, SEEDS[0], 480)).C;
   for (const [name, run] of [['pacing 30 frames a leg, crouched', (o: boolean) => pace(o, true, 30)], ['pacing 50, crouched', (o: boolean) => pace(o, true, 50)], ['pacing 40, standing', (o: boolean) => pace(o, false, 40)],
     ['the cursor across him every 15 frames, crouched', (o: boolean) => wave(o, true, 15)], ['every 25, crouched', (o: boolean) => wave(o, true, 25)], ['every 35, standing', (o: boolean) => wave(o, false, 35)]] as [string, (o: boolean) => Promise<Ctx>][]) {
     const a = await run(false), b = await run(true), want = apart(a.falls);
@@ -131,7 +151,7 @@ async function held() {
     const C = await world(false, true, SEEDS[0], true), g = C.g, A = C.A; CLOSE.on = true; A.pinned = true;
     g.teleportPlayer([A.char.pos[0] - 0.8, 0, A.char.pos[2]]); for (let i = 0; i < 40; i++) C.step([A.char.pos[0], 1.2, A.char.pos[2]]);
     startGrab(g, A); for (let i = 0; i < 90; i++) C.step([A.char.pos[0] + 3, 1.2, A.char.pos[2]]);
-    const holding = !!g.player.holding; FOOTFALL.once = once; C.falls.length = 0;
+    const holding = !!g.player.holding; FOOTFALL.once = FOOTFALL.owed = once; C.falls.length = 0;
     const R = rockRun(C, 20, 200, BACK, FWD); return { holding, R, falls: C.falls.slice(), still: !!g.player.holding, after: C.falls.filter(x => x.f > R.from + 20).length };
   };
   const a = await run(false), b = await run(!BREAK);
@@ -144,6 +164,131 @@ async function ears() {
     const R = rockRun(C, 8, -45); return { peak, state: C.A.state as string, n: R.inRock, d: Math.hypot(R.at[0] - C.A.char.pos[0], R.at[2] - C.A.char.pos[2]) }; };
   const a = await run(false), b = await run(!BREAK);
   verdict(b.n <= 1 && a.n >= 5 && a.peak > b.peak + 0.02 && a.d < 1.6 && Math.abs(a.d - b.d) < 1e-9, 'a calm man with his back to it, a stride in front: eight frames of rocking are in his ears with the key down, and are not with it up', `key down: ${a.n} footfalls in it ${a.d.toFixed(2)} m behind him, his awareness peaks ${a.peak.toFixed(3)}, he ends ${a.state} · key up: ${b.n} at ${b.d.toFixed(2)} m, peak ${b.peak.toFixed(3)}, ${b.state}`);
+}
+// ---- A FOOTFALL THE LEGS OWE (FOOTFALL.owed, under FOOTFALL.once) ----
+const sameFalls = (a: Fall[], b: Fall[]) => a.length === b.length && a.every((x, i) => x.f === b[i].f && x.level === b[i].level);
+/** a walk with the forward key held and the cursor put in front of him and behind him by turns of `every` frames, for `frames` */
+async function shaken(once: boolean, owed: boolean, crouch: boolean, every: number, seed: number, frames = 600) {
+  const C = await world(once, crouch, seed, false, owed); C.keys(FWD); const f0 = C.f;
+  for (let i = 0; i < frames; i++) C.step(Math.floor(i / every) % 2 ? 'behind' : 'ahead');
+  const F = C.falls.filter(x => x.f > f0); return { C, F, n: F.length, gap: leastGap(F), m: C.moved() };
+}
+async function shake() {
+  console.log('\n=== shake: the cursor across him, the cycle turned about again and again ===');
+  const rows: string[] = []; let fewer = 0, half = 0, mended = 0, n = 0, under = 0, pairs = 0;
+  for (const [name, crouch] of [['crouched', true], ['standing', false]] as [string, boolean][]) {
+    const base = (await plain(true, crouch, [FWD], 'ahead', SEEDS[0], 600)).falls.filter(x => x.f > 30).length;
+    for (const [every, seed] of [[10, SEEDS[0]], [10, SEEDS[1]], [10, SEEDS[2]], [12, SEEDS[0]], [15, SEEDS[0]]]) {
+      const a = await shaken(true, false, crouch, every, seed), b = await shaken(true, !BREAK_OWED, crouch, every, seed); let none = '';
+      if (every === 12) { const z = await shaken(false, false, crouch, every, seed), y = await shaken(false, true, crouch, every, seed); pairs++; if (sameFalls(z.F, y.F)) under++; none = `both keys down ${z.n} · `; }
+      n++; if (a.n <= base * 0.9) fewer++; if (every === 10 && a.n <= base * 0.7) half++; if (b.n >= base * 0.85 && b.n <= base * 1.35 && b.gap >= 12 && Math.abs(a.m - b.m) < 1e-9) mended++;
+      rows.push(`${name}, the cursor across him every ${every} frames, seed ${seed}: ${none}the first key alone ${a.n} footfalls over ${a.m.toFixed(1)} m · both up ${b.n}, never nearer than ${b.gap} frames (a plain walk of the ten seconds: ${base})`);
+    }
+  }
+  verdict(fewer === n && half === 6, '(the flaw) the first key alone: a walk with the cursor shaken across him files nine in ten of a plain walk\'s footfalls or fewer on every row, and seven in ten or fewer on every row of the 10-frame shake', rows.join('\n    ') + `\n    fewer on ${fewer} of ${n}, seven in ten or fewer on ${half} of the 6 rows at 10 frames`);
+  verdict(mended === n, 'both keys up: the same walk over the same floor files 85 in 100 of a plain walk\'s footfalls or more, no more than a third over it, and never two nearer than 12 frames', `${mended} of ${n} rows`);
+  verdict(under === pairs && pairs === 2, 'the second key is under the first: with the first down it changes no footfall of the shaken walk', `${under} of ${pairs} rows the same frames and levels`);
+}
+const STEADY = ['crouched', 'standing', 'sprinting', 'sprint on and off', 'up and down', 'stop and go', 'crouch stop and go'], TURNED = ['round a square', 'a slow sweep of the cursor', 'backwards'];
+/** six seconds of an ordinary walk by name, the first key up: the steady gaits, the gait changed under way, walks with stops in them, and three with the cycle turned about */
+async function named(owed: boolean, name: string, seed: number, digest: boolean) {
+  const C = await world(true, name.startsWith('crouch'), seed, false, owed), pl = C.g.player; let d = '', top = 0;
+  for (let i = 0; i < 360; i++) {
+    if (name === 'sprinting') C.keys(FWD, 'ShiftLeft');
+    else if (name === 'stop and go') C.keys(...(i % 80 < 55 ? [FWD] : []));
+    else if (name === 'crouch stop and go') C.keys(...(i % 70 < 45 ? [FWD] : []));
+    else if (name === 'sprint on and off') C.keys(FWD, ...(i % 120 < 60 ? ['ShiftLeft'] : []));
+    else if (name === 'round a square') C.keys([FWD, 'KeyS', BACK, 'KeyW'][Math.floor(i / 90) % 4]);
+    else C.keys(FWD);
+    if (name === 'up and down' && i % 90 === 45) pl.crouch = !pl.crouch;
+    if (name === 'a slow sweep of the cursor') { const a = i / 360 * Math.PI * 2, p = pl.char.pos; C.step([p[0] + Math.cos(a) * 4, 1.0, p[2] + Math.sin(a) * 4]); } else C.step(name === 'backwards' ? 'behind' : 'ahead');
+    top = Math.max(top, pl.stepOwed); if (digest && i % 30 === 29) d += hashDigest(digestGame(C.g, true)) + ' ';
+  }
+  return { falls: C.falls, d, top, m: C.moved() };
+}
+async function walkOwed() {
+  console.log('\n=== walk, the second key: a steady walk comes to its edge first ===');
+  const rows: string[] = [], rows2: string[] = []; let bad = 0, bad2 = 0, more = 0;
+  for (const seed of SEEDS) for (const name of STEADY) {
+    const a = await named(false, name, seed, true), b = await named(true, name, seed, true), same = sameFalls(a.falls, b.falls);
+    if (!(same && a.d === b.d && a.falls.length >= 3 && a.top === 0 && b.top > 0.4 && b.top <= 0.5 && a.m > 1)) bad++;
+    rows.push(`seed ${seed}, ${name}: ${a.falls.length} footfalls key down, ${b.falls.length} key up over ${a.m.toFixed(1)} m, ${same ? 'the same frames and levels' : 'DIFFERENT'} · digests ${a.d === b.d ? 'equal' : 'DIFFER'} · the most the legs came to between edges ${b.top.toFixed(3)} of a turn`);
+  }
+  verdict(bad === 0, 'crouched, standing, sprinting, the sprint put on and off, the crouch taken and left under way, and walks with stops in them, six seconds each on three seeds: the second key up files its footfalls frame for frame and level for level as with it down, the runs digest the same, and the key down keeps nothing', rows.join('\n    '));
+  for (const seed of SEEDS) for (const name of TURNED) {
+    const a = await named(false, name, seed, false), b = await named(true, name, seed, false), extra = b.falls.length - a.falls.length; more += extra;
+    if (!(extra >= 0 && extra <= 2 && longest(b.falls) <= 1 && leastGap(b.falls) >= 8 && a.falls.length >= 3)) bad2++;
+    rows2.push(`seed ${seed}, ${name}: ${a.falls.length} footfalls key down, ${b.falls.length} key up over ${a.m.toFixed(1)} m, never nearer than ${leastGap(b.falls)} frames`);
+  }
+  verdict(bad2 === 0, '(what it costs an ordinary walk) one walked round a square, one with the cursor swept once round him and one begun backwards: the key up files the key down\'s footfalls or one or two more in the six seconds, none on frames running', rows2.join('\n    ') + `\n    ${more} more in all, over ${SEEDS.length * TURNED.length} walks`);
+}
+/** ONE about-turn in a steady crouched walk (the cursor behind him for 22 frames from frame `at`, then ahead for good): `after` = the footfalls from two
+ *  seconds past the turn on, `near` = those of the turn and the two seconds after it */
+async function oneTurn(owed: boolean, at: number, seed: number) {
+  const C = await world(true, true, seed, false, owed); C.keys(FWD); const f0 = C.f;
+  for (let i = 0; i < 540; i++) C.step(i >= at && i < at + 22 ? 'behind' : 'ahead');
+  return { near: C.falls.filter(x => x.f > f0 + at && x.f <= f0 + at + 142), after: C.falls.filter(x => x.f > f0 + at + 142) };
+}
+async function feet() {
+  console.log('\n=== feet: after a footfall owed mid-stride the footfalls come back onto the feet ===');
+  let back = 0, moved = 0, n = 0; const rows: string[] = [];
+  for (const seed of SEEDS.slice(0, 2)) for (let at = 40; at < 76; at += 4) {
+    const a = await oneTurn(false, at, seed), b = await oneTurn(true, at, seed), same = sameFalls(a.after, b.after), differs = !sameFalls(a.near, b.near);
+    n++; if (same && a.after.length >= 8) back++; if (differs) moved++;
+    if (differs || !same) rows.push(`seed ${seed}, the turn at frame ${at}: in the turn and the two seconds after it ${a.near.length} footfalls key down, ${b.near.length} key up · from then on ${a.after.length} and ${b.after.length}, ${same ? 'the same frames' : 'DIFFERENT FRAMES'}`);
+  }
+  verdict(back === n && moved >= 3, 'one about-turn in a steady crouched walk, begun at nine places in the cycle on two seeds: from two seconds after it every footfall is on the frame it has with the key down (a foot coming down), and the turn itself is filed differently on three of the eighteen or more (the line has something to hold)', rows.join('\n    ') + `\n    back on the feet ${back} of ${n} · the turn filed differently on ${moved}`);
+}
+async function nudge() {
+  console.log('\n=== nudge: no debt is kept while he stands, and a jump of the cycle is not travel ===');
+  let same = 0, n = 0, most = 0;
+  for (let at = 60; at < 104; at += 4) {
+    const run = async (owed: boolean) => { const C = await world(true, true, SEEDS[0], false, owed); let debt = 0;
+      for (let i = 0; i < at + 300; i++) { C.keys(...(i < at || (i >= at + 240 && i < at + 252) ? [FWD] : [])); C.step('ahead'); if (i === at + 239) debt = C.g.player.stepOwed; }
+      return { F: C.falls, debt }; };
+    const a = await run(false), b = await run(true); n++; if (sameFalls(a.F, b.F) && b.debt === 0) same++; most = Math.max(most, b.debt);
+  }
+  verdict(same === n, 'a crouched walk let go at eleven places in the cycle, four seconds stood, then the key for a fifth of a second: the second key up files what it does down, frame for frame, and the legs owe nothing while he stands', `${same} of ${n} · the most owed after the four seconds stood ${most}`);
+  // a beat that roots him without the footfall test (the takedown's 0.62 s; the man is put down first, so the beat moves and kills nothing), begun with
+  // 0.42 of a turn or more on the legs and the forward key held through it
+  const beat = async (owed: boolean, at = -1) => { const C = await world(true, true, SEEDS[0], true, owed), g = C.g, pl = g.player, A = C.A; A.char.pos = [37.5, 0, 4.5]; C.keys(FWD); let began = -1, debt = 0, ended = -1;
+    for (let i = 0; i < 600 && (ended < 0 || C.f <= ended + 60); i++) {
+      if (began < 0 && (at >= 0 ? C.f === at : i > 40 && pl.stepOwed >= 0.42 && pl.stepOwed < 0.5)) { began = C.f; debt = pl.stepOwed; A.state = 'dead'; pl.takedown = { g: A, t: 0 }; }
+      const had = !!pl.takedown; C.step(began < 0 ? (Math.floor(i / 10) % 2 ? 'behind' : 'ahead') : [pl.char.pos[0] + 4, 1.0, pl.char.pos[2]]);
+      if (began >= 0 && ended < 0 && had && !pl.takedown) ended = C.f;
+    }
+    return { began, debt, ended, F: C.falls.filter(x => x.f >= began) }; };
+  const b = await beat(true), a = await beat(false, b.began);
+  verdict(b.began > 0 && b.ended > b.began + 20 && a.ended === b.ended && b.debt >= 0.42 && sameFalls(a.F, b.F) && a.F.length >= 2, 'a beat that roots him without the footfall test, begun with 0.42 of a turn or more on the legs and the key held through it: once he walks again the second key up files what it does down (the debt is not carried through the beat)', `the beat from frame ${b.began} to ${b.ended}, ${b.debt.toFixed(3)} of a turn on the legs as it began · after it ${a.F.length} footfalls key down, ${b.F.length} key up${sameFalls(a.F, b.F) ? ' on the same frames' : `: frames ${a.F.map(x => x.f)} against ${b.F.map(x => x.f)}`}`);
+}
+async function heldOwed() {
+  console.log('\n=== held, the second key: a man walked in the arm ===');
+  const run = async (owed: boolean) => {
+    const C = await world(true, true, SEEDS[0], true, owed), g = C.g, A = C.A; CLOSE.on = true; A.pinned = true;
+    g.teleportPlayer([A.char.pos[0] - 0.8, 0, A.char.pos[2]]); for (let i = 0; i < 40; i++) C.step([A.char.pos[0], 1.2, A.char.pos[2]]);
+    startGrab(g, A); for (let i = 0; i < 90; i++) C.step([A.char.pos[0] + 3, 1.2, A.char.pos[2]]);
+    const holding = !!g.player.holding, m0 = C.moved(); C.falls.length = 0; const far: P3 = [START[0] + 12, 1.2, START[2]];
+    C.keys(BACK); for (let i = 0; i < 180; i++) C.step(far);
+    return { holding: holding && !!g.player.holding, falls: C.falls.slice(), m: C.moved() - m0 };
+  };
+  const a = await run(false), b = await run(true), same = sameFalls(a.falls, b.falls);
+  verdict(a.holding && b.holding && same && a.falls.length >= 2 && a.m > 1.5, 'a man walked steadily in the arm for three seconds (the second place a footfall is filed): the second key up files what it does down, frame for frame', `holding ${a.holding} / ${b.holding} · ${a.falls.length} footfalls key down, ${b.falls.length} key up over ${a.m.toFixed(1)} m, ${same ? 'the same frames and levels' : 'DIFFERENT'}`);
+}
+async function harnessOwed() {
+  console.log('\n=== harness, the second key ===');
+  const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_FOOTOWED, want = word !== undefined ? word === '1' : shipped;
+  if (!shipped) FOOTFALL.owed = !want; else FOOTFALL.owed = foundOwed;
+  const W: any = await quiet(() => standUp()), stood = FOOTFALL.owed, foundOk = !shipped || word !== undefined || foundOwed === want;
+  const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))), had = !!snap.tables.FOOTFALL && 'owed' in snap.tables.FOOTFALL;
+  const onceWas = FOOTFALL.once; FOOTFALL.once = FOOTFALL.owed = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); FOOTFALL.once = FOOTFALL.owed = false; JR.applyKnobs(W.game, snapUp); const kept = FOOTFALL.owed;
+  const before = JSON.parse(JSON.stringify(snapUp)); delete before.tables.FOOTFALL.owed; delete before.tables.FOOTFALL.owe; FOOTFALL.once = false; FOOTFALL.owed = true; JR.applyKnobs(W.game, before); const old = FOOTFALL.owed, onceKept = FOOTFALL.once; FOOTFALL.once = onceWas;
+  delete snap.tables.FOOTFALL; FOOTFALL.owed = true; JR.applyKnobs(W.game, snap); const older = FOOTFALL.owed;
+  const read = (q: string) => { FOOTFALL.owed = !FOOTFALL.owed; PR.pageSwitches(new URLSearchParams(q)); return FOOTFALL.owed; }, plainQ = read(''), off = read('footfallowed=0');
+  W.game.player.stepOwed = 0.375; W.game.player.stepAt = 5; const S2 = saveState(W.game), named2 = JSON.stringify(S2).includes('"stepOwed"'); W.restore(S2); const back = W.game.player.stepOwed, at = W.game.player.stepAt;
+  const row = PR.FROZEN_HOLDS['FOOTFALL.owed'];
+  verdict((STAND_ENV as string[]).includes('TPS_FOOTOWED') && typeof row === 'string' && row.startsWith('TPS_FOOTOWED=1') && row.includes('TPS_FOOTFALL=1') && stood === want && foundOk && had && kept === true && old === false && onceKept === true && older === false && plainQ === true && off === false && !named2 && back === 0 && at === -1,
+    'the second key is a row of the two stands\' list with its word and the word it needs beside it, stands up on the shipped stand and down on the frozen one, rides a recording\'s tables, a recording from before it (with the first key up, or from before both) replays with it down, the page\'s boot writes it on for a plain address and off for ?footfallowed=0, and a checkpoint does not carry what the legs owe: a load is a standing start',
+    `STAND_ENV ${(STAND_ENV as string[]).includes('TPS_FOOTOWED')} · FROZEN_HOLDS ${row} · found ${foundOwed}, stood up ${stood}, wanted ${want} · in the tables ${had} · recorded up ${kept} · a recording with the first key only ${old} (its first key kept ${onceKept}) · one from before both ${older} · plain ${plainQ} · ?footfallowed=0 ${off} · a checkpoint of a man the legs owe 0.375 names it ${named2}, and loaded he owes ${back} (asked at ${at})`);
 }
 async function harness() {
   console.log('\n=== harness: off on the frozen stand, on in the page, in a recording and in a checkpoint ===');
@@ -162,8 +307,8 @@ async function harness() {
 
 /** the whole card (probes.ts 'footfall'): true = every check passed. The switches are put back as they were found. */
 export async function footfallCheck(): Promise<boolean> {
-  const was = { ...FOOTFALL }, close = { ...CLOSE }, rnd = Math.random; allPass = true; found = FOOTFALL.once;
-  try { await rock(); await slow(); await walk(); await turns(); await held(); await ears(); Object.assign(FOOTFALL, was); Object.assign(CLOSE, close); await harness(); }
+  const was = { ...FOOTFALL }, close = { ...CLOSE }, rnd = Math.random; allPass = true; found = FOOTFALL.once; foundOwed = FOOTFALL.owed;
+  try { await rock(); await slow(); await walk(); await turns(); await held(); await ears(); await shake(); await walkOwed(); await feet(); await nudge(); await heldOwed(); Object.assign(FOOTFALL, was); Object.assign(CLOSE, close); await harness(); Object.assign(FOOTFALL, was); await harnessOwed(); }
   finally { Object.assign(FOOTFALL, was); Object.assign(CLOSE, close); Math.random = rnd; }
   console.log(`\n=== footfall: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }
