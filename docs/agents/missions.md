@@ -62,7 +62,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   always had the minute to set on the door. And at a door the lesson HOLDS (threshold hold, then the word), the garrison's marks stand in the middle of the
   back wall, in the band neither jamb man's diagonal reaches (the two stand a metre out and half a metre wide of the jambs): a defender on either diagonal,
   awake and aimed, meets one of them alone and wins — the shover crossing (west back, the tape), or the hinge-jamb man once HANDLE.toolNear took the shover
-  out of the opening (east back, 7 of 8 dice). In the middle they set, the can goes in and they meet him in its flash. Re-run eight shipped dice (four
+  out of the opening (east back, 7 of 8 dice). In the middle they set, the can goes in and they meet him in its flash. THE CAN IS THE LESSON'S OWN ORDER SINCE THE WORD SPENDS NONE
+  (`DOORTOOLS.wordNoCan`, on in the page): train-orders' kitchen step asks for 'bang and clear' given to the men holding the door (X, 5, 2: one can, then
+  in), not for F. With the old line (F at the held door) the pair stepped in dry on that awake man and BOTH died on 10 of 16 shipped dice (seeds 1 to 8,
+  read at six seconds a line and at the script's pace), which was lesson-gate's shipped red (seen on every build looked at, back some hundred steps); with `TPS_WORDNOCAN=0` the
+  same sixteen passed with nobody lost, and so do the sixteen on the new line (one can each). F still ends the step. The scripted player gives the can
+  where the hold is the one order (`outsidePlain`) and F where it is the old page (the frozen stand). Headless only: never seen on a GPU, never played
+  by a person. Re-run eight shipped dice (four
   `--hard`) and count `Blue …: → dead` / `Red …: → dead` lines after ANY change to the door tools or these marks: the lesson passes with a man lost. Where the pairs go straight in
   on the word with no can (train-pairs' white house), no defender sees OUT of a door: a man in a far corner with his gun down the room shot the first of each
   pair as he crossed his opening (1 to 3 men on most paced dice). Each stands in the pocket behind the open leaf of the door he watches.
@@ -1638,3 +1644,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   name walked Training's seven levels: every "ALL PASS (73)" had covered no tutorial level, and a rows note (`rowsWithheld`) never printed. It walks
   `LESSON_MISSIONS` now: 13 levels, 129 checks, green on both stands. `lesson-gate` with no name is still Training's (a tutorial mission is gated by name). Also: a
   `PT_DESTR=1` set by hand in front of `lesson-run` is honoured as the script's own `raises` is (it was read only when the script had raised it).
+
+<!-- added 2026-10-22 -->
+- **The tutorial's words were rewritten on 2026-10-22** (the writing guide: `docs/agents/writing.md`). A line, a card or a list row quoted in a bullet above
+  is the text as it was when that bullet was written; the level files and `scenarioList.ts` hold today's. Only words moved: no step id, deed, mark, key,
+  `allow` / `deny` or order of steps. Tools that matched the old words were moved with them: `rails-check` (the stack's after line, the gate's line),
+  `tut-sky-check` (the light card says flashlights), `tut-squad-page.cjs` (the after lines and the side door card's heading, now "An enemy watching a doorway").
+  A level file's fingerprint moves with its words, so a checkpoint saved on an older build of a tutorial mission is refused. `tools/qa/writing-check.ts`
+  (`probes.ts writing`) holds every lesson's text and every mission row to the guide's patterns; `WRITING_BREAK=1` must fail. Read on the page by nobody
+  yet; never seen on a GPU.

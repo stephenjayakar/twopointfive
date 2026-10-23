@@ -29,9 +29,9 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const WANT: Record<string, number> = { help: 1, stay: 3, stayOurs: 3, huntOver: 2, calm: 2, cover: 2, still: 6, fellBack: 5, planted: 5, pinnedIn: 5, squadHears: 4, squadCopies: 4, squadWaits: 3, squadCopiesWaits: 3, squadStays: 3, squadQuiet: 2, surprised: 0, flinch: 0 };
 /** the defenders' existing radio lines, as the 48 logged runs heard them, and the row of the ranking each belongs in */
 const OLD: [string, number][] = [
-  ['moving round — coming at him from the mess', 1], ['set', 1], ['go go go', 1], ['Bravo: two going round — keep them there!', 1], ['Bravo: moving to Alpha — 3 of us!', 1], ["can't wait — pushing, go", 1],
+  ['moving round — coming at him from the mess', 1], ['going around — coming at him from the mess', 1], ["copy — he's got one of ours. stay locked down. box him in. no shot unless it's clean", 1], ['Bravo: two going around — keep them there!', 1], ['coming up behind him. keep him where he is', 1], ["they're coming out — get around them, go!", 1], ['set', 1], ['go go go', 1], ['Bravo: two going round — keep them there!', 1], ['Bravo: moving to Alpha — 3 of us!', 1], ["can't wait — pushing, go", 1],
   ["he's down — hold where you are", 2],
-  ['Charlie: holding — lock the doors, let them come!', 3], ["heard. they'll find this room ready.", 3], ['we hear it. getting ready for them here.', 3],
+  ['Charlie: holding — lock the doors, let them come!', 3], ["heard. they'll find this room ready.", 3], ["copy. we'll be ready for them.", 3], ['we hear it. getting ready for them here.', 3],
   ['Alpha: contact — mess!', 4], ['shots fired! on me!', 4], ['that was a shot — find him!', 4], ["he's moved — the mess", 4],
 ];
 

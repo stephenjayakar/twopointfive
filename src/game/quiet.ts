@@ -264,7 +264,7 @@ export class QuietMission {
     this.staged++; this.cut = true;
     this.note(`staged: ${this.summary()}`);
     const P = this.spot!;
-    g.msg(`${P.place} — ${this.thing} is in ${P.holder}. ${this.squad ? 'Your partner is on you, silent · X: his orders' : 'You are alone'}`);
+    g.msg(`${P.place} — ${this.thing} is in ${P.holder}. ${this.squad ? 'Your partner is with you and staying silent. X for his orders' : "You're alone"}`);
   }
   /** the free floor nearest a stride behind Sam, walkable from him */
   private behind(S: QuietStart): Vec3 {

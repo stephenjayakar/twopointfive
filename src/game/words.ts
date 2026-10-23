@@ -19,10 +19,17 @@
 /** `radioHome`: the handler's radio asides (dialogue.ts handlerBeat: her dry lines and his answers about the drive, the rack, the floor's lights) belong to the
  *  office night they were written for, and are said nowhere else: not on a tutorial mission, not on another level's quiet night. ON in the page
  *  (`?handlerall` = everywhere a solo night runs, as before), OFF here and on the frozen stand (`TPS_RADIOHOME=1` raises it). */
-export const WORDS = { on: false, doors: false, radioHome: false };
+/** `guide`: the spoken and radio lines as the writing guide has them (docs/agents/writing.md rule 7: 'around' for 'round', contractions, 'somebody' for 'a man' of
+ *  his own side, a line clipped until it was unclear). A key of its own under `on`, because a bubble's time on screen is its length and its text is in the run
+ *  digest: a recording made on the page before the key replays with it off, every line as that page said it. Read through `wg(now, was)`, which wants `on` AND
+ *  `guide`: on with the guide off = the dialogue pass's words as they were. ON in the page (`?noguide` puts it off), OFF here and on the frozen stand
+ *  (`TPS_GUIDEWORDS=1` raises it; it says nothing new without `TPS_WORDS=1`). */
+export const WORDS = { on: false, doors: false, radioHome: false, guide: false };
 
 /** the page's one rule for the switch: on unless the address says `?oldwords` */
-export function wordsFromQuery(q: URLSearchParams) { WORDS.on = !q.has('oldwords'); WORDS.doors = q.get('doornames') !== '0'; WORDS.radioHome = !q.has('handlerall'); }
+export function wordsFromQuery(q: URLSearchParams) { WORDS.on = !q.has('oldwords'); WORDS.doors = q.get('doornames') !== '0'; WORDS.radioHome = !q.has('handlerall'); WORDS.guide = !q.has('noguide'); }
 
 /** a line (or a pool, or any value a line is picked by) as the pass has it — `was` with the switch off */
 export function w<T>(now: T, was: T): T { return WORDS.on ? now : was; }
+/** a line as the writing guide has it — `was` (the line as the dialogue pass left it, or as it always was) unless the pass AND the guide's key are both on */
+export function wg<T>(now: T, was: T): T { return WORDS.on && WORDS.guide ? now : was; }

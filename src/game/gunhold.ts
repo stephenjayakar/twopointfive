@@ -41,6 +41,7 @@ import { followPath, stepAlongPath, notGettingAnywhere } from './guards';
 import { SUPPRESSION, flinching } from './suppression';
 import { simRandom } from '../math/dice';
 import { defenderWords } from './teams';
+import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 
 export const GUNHOLD = {
   /** the whole rule. Module default OFF (the frozen stand); the page raises it (src/host/profile.ts pageSwitches; `?nogunhold` holds it off) */
@@ -275,11 +276,18 @@ export const GUNHOLD_DEFENDER_LINES: Record<keyof typeof LINES, string[]> = {
   round: ['going round behind him — keep his eyes on you', 'coming at his back. hold him where he is'],
   gone: ['he\'s moved — nobody where we left them!'],
 };
+/** (WORDS) a line of either table as it is said now, by the line it stands for (read in bark, where the line is said; cues.ts classes the new words as it classed the old) */
+export const GUNHOLD_NOW: Record<string, string> = {
+  'shots! get off his line — go round him!': 'shots! get out of his line of fire — go around him!', 'going round him — keep him talking': 'going around him — keep him talking',
+  'he\'s drawn from the hold — get behind something!': 'he\'s pulled a pistol — get behind something!', 'rounds from the hold — get off it, go round him!': 'he\'s shooting — get out of his line of fire, go around him!',
+  'going round behind him — keep his eyes on you': 'going around behind him — keep his eyes on you', 'coming at his back. hold him where he is': 'coming up behind him. keep him where he is',
+  'he\'s moved — nobody where we left them!': 'he\'s moved — they\'re not where we left them!',
+};
 /** The pool a man draws one of the four moments from: a defender's own where the dialogue pass is on, else the staff's. */
 export function gunHoldPool(gd: Guard, kind: keyof typeof LINES): string[] { const own = defenderWords(gd) ? GUNHOLD_DEFENDER_LINES[kind] : null; return own && own.length ? own : LINES[kind]; }
 function bark(g: Game, gd: Guard, K: Known, kind: keyof typeof LINES, radio = false): boolean {
   if (g.time - K.saidT < 1.5) return false; K.saidT = g.time;
-  const pool = gunHoldPool(gd, kind); g.say(gd, pool[Math.floor(simRandom() * pool.length) % pool.length], radio); return true;
+  const pool = gunHoldPool(gd, kind), was = pool[Math.floor(simRandom() * pool.length) % pool.length]; g.say(gd, wg(GUNHOLD_NOW[was] ?? was, was), radio); return true;
 }
 
 // ---------------------------------------------------------------- his feet
