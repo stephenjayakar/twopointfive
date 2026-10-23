@@ -218,6 +218,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `issuewhole-check`'s two lines on this level follow the card's own `rings`. KNOWN: the card has one text, written for the setup as the page has
   it; with `?slotsetup=0` the rifle's key steps the load at once and "twice" is one press too many (the step's own line has both wordings). Five
   short sentences on that card, against the three a card is meant to be: his note asks for five things.
+  THE MOON STANDS BEHIND THE SHOP (10-23, level data; the level's row in `lived-check`'s `LEVEL_BASE` moved to it). The line 'Shoot out the light so
+  you can hide in the dark' stood him against the shop's front in the moon: with the lamp out the runner's meter, the moon and the night sky's own
+  light on it (`lesson-run --sky`), read 31 beside the door, over the scripted player's own bar of 25, and the page read 42. The moon's direction is
+  turned about the road's line (`[-0.62, -0.5, -0.6]`, from over the back lots), so the shop's front, the door he blows and the wall he waits
+  against, is in the shop's own shadow and the lamp over the door is the one light on him there. Measured: the runner 10 (the bar held with no
+  `mode.glow: false` in the script); the page on the software adapter, lamp out, 24 as he arrives and 13 settled. Every shadow in the yard falls the
+  other way; no line, mark or fight moved, and `tut-solo-check` is green on both stands, two seeds, all eight ways. The menu picture is its own
+  light and did not change. Never seen on a GPU: how the yard reads with the shadows turned is by eye there.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
