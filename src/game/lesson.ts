@@ -42,6 +42,7 @@ import { camCap } from '../host/keymap';
 import { wallPt } from './wallcharge';   // (called inside a flag only)
 import { OWNBLOW } from './ownblow';   // (read inside lineOf only)
 import { SLOTSETUP, slotSetupOpen } from './slotsetup';   // (slotSetupOpen is called inside a flag only)
+import { TWOGEARS } from './player';   // (read inside a step's test only)
 
 /** the switch: off = a lesson level plays as its scenario alone, no lines (and nothing here runs) */
 export const LESSON = { on: true };
@@ -128,7 +129,8 @@ export const LESSON_TESTS: Record<string, TestKind> = {
   // -- what he is doing / carrying
   flag: { ok: (g, t) => FLAGS[t.flag as string](g) === ((t.value as boolean | undefined) ?? true), check: (_g, t) => FLAGS[t.flag as string] ? null : `flag: one of ${Object.keys(FLAGS).join(', ')}` },
   slot: { ok: (g, t) => { const p = who(g); return p.slot === t.slot && (t.drawn === undefined || !p.holstered === t.drawn); }, check: (_g, t) => ['pistol', 'rifle', 'smoke', 'flash', 'frag'].includes(t.slot as string) ? null : 'slot: pistol, rifle, smoke, flash or frag' },
-  pace: { ok: (g, t) => band(who(g).pace, t), check: (_g, t) => bandCheck(t) },
+  // (with two gears — player.ts TWOGEARS — the wheel is nobody's pace and there is nothing to ask for: the line goes by, as `setup` does where a gun has none)
+  pace: { ok: (g, t) => TWOGEARS.on || band(who(g).pace, t), check: (_g, t) => bandCheck(t) },
   meter: { ok: (g, t) => band(t.which === 'noise' ? who(g).noise : who(g).visibility, t), check: (_g, t) => t.which !== 'light' && t.which !== 'noise' ? "which: 'light' or 'noise'" : bandCheck(t) },
 
   // -- the world

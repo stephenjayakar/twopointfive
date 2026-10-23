@@ -30,6 +30,8 @@ export const steps: Record<string, (B: Bot) => void> = {
   reach: B => {
     if (B.g.player.wall) B.press('KeyQ', 20);
     B.go([21.5, 0, 16.2], 40);
+    // (a man already at the gate is about to leave it: wait for his NEXT visit, so the walk to the hut always has the same part of his round whatever pace brought Sam here)
+    B.until(() => guard(B).char.pos[0] <= 28.5, 40);
     B.until(() => guard(B).char.pos[0] > 28.5, 40);
     B.go([22.0, 0, 9.6], 30); B.go([24.6, 0, 9.6], 30, { doorVerb: 'ease' });
   },

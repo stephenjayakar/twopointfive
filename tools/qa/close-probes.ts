@@ -53,6 +53,7 @@ const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { CLOSE, CLOSE_STATS, closeWindows, closeAt, closeMarks, closeReady, closeSummary, closeSeat, closeSeated, closeNoise, CLOSE_DEFAULTS, closeMode, closeTick, closeNearK, closeLethal, closeSubject } = await import(`${ROOT}/src/game/close.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
+const { TWOGEARS } = await import(`${ROOT}/src/game/player.ts`);
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
@@ -587,7 +588,9 @@ export async function closeDark(): Promise<boolean> { return keepClose(async () 
     verdict(!fails.length, 'his torch burning, Sam down his side 1.2 m off, out of the beam: unnoticed with the rule, noticed without it', `rule on:  ${line(a)}\n    rule off: ${line(b)}${bad(fails)}`); }
   { const a = await slither(true), b = await slither(false), fails: string[] = []; const say = (r: any) => `${r.done ? 'through' : 'TIMED OUT'} in ${r.f} frames · ${r.seen || 'nobody noticed'} · awareness at most ${r.maxAw.map(f2).join(' / ')} (${r.names.join(', ')}) · nearest ${r.minD.map(f2).join(' / ')} m · the light on Sam inside 3 m at most ${f3(r.maxVis)} · in the mode ${r.modeF} frames · stood frozen ${r.heldF} frames, the stride held to ${r.phMoved.toExponential(1)}`;
     if (!a.done) fails.push('rule on: Sam never got through'); if (a.seen || a.maxAw.some((x: number) => x >= 0.3)) fails.push(`rule on: ${a.seen || 'awareness past 0.3'}`); if (a.minD.filter((d: number) => d < 1.8).length < 2) fails.push(`staging: Sam passed inside 1.8 m of ${a.minD.filter((d: number) => d < 1.8).length} men`);
-    if (!b.seen) fails.push('rule off: nobody noticed'); if (a.heldF < 30 || a.phMoved > 1e-6) fails.push(`the freeze: ${a.heldF} frames at rest, the phase moved ${a.phMoved.toExponential(1)}`);
+    // (the freeze is a hundred frames from the frame he is told to stop: his root coasts to rest for about seventy of them from the old crouch-walk and two more from
+    //  the sneak's pace of two gears — player.ts TWOGEARS — so with that key up the bar on frames AT REST is 25; with it down it is the 30 it was. With the key up the staging's own slow pace is nobody's either: he threads them at the sneak's pace, which is what the page does)
+    if (!b.seen) fails.push('rule off: nobody noticed'); if (a.heldF < (TWOGEARS.on ? 25 : 30) || a.phMoved > 1e-6) fails.push(`the freeze: ${a.heldF} frames at rest, the phase moved ${a.phMoved.toExponential(1)}`);
     verdict(!fails.length, 'THE EXHIBIT — three men in the dark break room, torches burning, Sam threading between them inside arm\'s reach and freezing mid-stride while one turns: nobody notices with the rule; without it somebody does', `rule on:  ${say(a)}\n    rule off: ${say(b)}${bad(fails)}`); }
   return allPass;
 }); }

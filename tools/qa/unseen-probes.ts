@@ -5,6 +5,7 @@
 import { ROOT } from './headless.ts';
 import { Run } from './pairsneak.ts';
 const U: any = await import(`${ROOT}/src/game/unseen.ts`);
+const { TWOGEARS } = (await import(`${ROOT}/src/game/player.ts`)) as any;
 const { FRIENDS } = (await import(`${ROOT}/src/game/friends.ts`)) as any;
 const HF: any = await import(`${ROOT}/src/game/holdfire.ts`);
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -52,9 +53,10 @@ async function follow(tag: string, query: string, level?: string) {
     check(/sneaking/.test(g.orders.posture.word()), `${tag}: the squad line says so ('${g.orders.posture.word()}')`);
     R.crouch(false); R.wait(U.UNSEEN.linger + 1); const up2 = phase(R, 2, D); console.log(`   upright again: ${words(up2)}`);
     check(up2.live === 0 && up2.low === 0, `${tag}: Sam stands and walks on — they stand too after the linger`);
+    const gears = TWOGEARS.on; TWOGEARS.on = false;   // (the wheel's own rule — slow on the wheel, upright, they slow with him — is nobody's with two gears, player.ts TWOGEARS: held off for these two lines and put back)
     R.pl.pace = 0.48; const wh = phase(R, 4, B, 1.5); console.log(`   pace wheel at 0.48: ${words(wh)}`);
     check(wh.live === 1 && wh.low === 0 && wh.vmax <= U.UNSEEN.cap + 0.12, `${tag}: Sam slow on the wheel, upright — they slow with him, upright (fastest ${wh.vmax.toFixed(2)})`);
-    R.pl.pace = 1; R.crouch(true); R.wait(1.5);
+    R.pl.pace = 1; TWOGEARS.on = gears; R.crouch(true); R.wait(1.5);
     check(U.unseenLive(g), `${tag}: crouched again — sneaking again`);
     // (the question is what a shot does to the sneak, not where the file stands: on the shipped stand Sam's gun comes down off a teammate in his line —
     //  friends.ts — and this walk has turned him back on his own file, so that rule is held off for the one round)
