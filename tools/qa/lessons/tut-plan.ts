@@ -20,6 +20,7 @@ const ALONE = process.env.TUTPLAN_ALONE === '1';
 const LOOSE = process.env.TUTPLAN_LOOSE === '1', POSTB = process.env.TUTPLAN_POSTB ? ((a: number[]) => [a[0], 0, a[1]])(process.env.TUTPLAN_POSTB.split(',').map(Number)) : null;
 export const idleOk = ALONE ? ['all2', 'word2'] : [];
 
+const UP1 = [12.3, 0, 11.1], UP2 = [23.5, 0, 15.3], UP3 = [31.0, 0, 15.9];
 const WALL = [13.9, 0, 9.25], POST_A = [29.25, 0, 10.25], POST_B = [24.0, 0, 10.3], GATE_E = [35.0, 0, 10.0], GATE_N = [22.0, 0, 5.0];
 const O = (B: Bot) => B.g.orders, P = (B: Bot) => B.g.orders.plan;
 const squad = (B: Bot): any[] => O(B).men('all');
@@ -44,7 +45,33 @@ function panTo(B: Bot, ...ps: number[][]) {
     if (!ks.length) break;
     B.hold(ks, 2 / 60);
   }
+  // (the view stays near him — planmode.ts planNear — so a place may stop short of the picture's middle; a place that cannot be brought ONTO the picture
+  //  from where he stands is the mission's own break: a line asked for a click he cannot make from the spot it walked him to)
+  reach(B);
+  const off = ps.filter(p => { const [x, y] = px(B, p); return x < 40 || x > w - 40 || y < 40 || y > h - 40; });
+  if (off.length) { const s = B.g.player.char.pos; B.fail(`from (${s[0].toFixed(1)}, ${s[2].toFixed(1)}) the view cannot bring ${off.map(p => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`).join(' and ')} onto the picture`); }
   B.step(30);
+}
+/** THE VIEW STAYS NEAR HIM (cmdring.ts `planNear`, the squad's own rule; it holds only where the frame leaves him his feet — planmode.ts planNear): how far
+ *  the view's point has been from him is kept, said at the end, and the run fails when the rule is on and the view went further than its box's far corner */
+let far = 0, hits0: number | null = null;
+function reach(B: Bot) { const L = P(B).look, s = B.g.player.char.pos; if (P(B).up && L) far = Math.max(far, Math.hypot(L[0] - s[0], L[2] - s[2])); }
+function reached(B: Bot) {
+  const K = CMDRING as any, on = !!K.planNear, corner = Math.hypot(K.planNearSideM ?? 0, Math.max(K.planNearAwayM ?? 0, K.planNearBackM ?? 0)), held = on && !B.g.rails.locks('move');
+  if (on && !held) B.fail("the view's rule is on and does not hold here: the frame has taken his feet (planmode.ts planNear)");
+  if (held && far > corner + 0.3) B.fail(`the view went ${far.toFixed(1)} m from him: its box's far corner is ${corner.toFixed(1)} m`);
+  // (he has no trigger here: a spot the mission walks him to is one no round finds him on)
+  const took = hits0 === null ? 0 : hits0 - B.g.player.hitsLeft;
+  if (took > 0 || B.g.player.down) B.fail(`${took} round(s) found him on the spots the lines walked him to${B.g.player.down ? ', and he is down' : ''}`);
+  B.say(`  rounds that found him on his three spots: ${took}`);
+  B.say(`  the view's point was never more than ${far.toFixed(1)} m from him (the view held near him: ${held ? `on, a box whose far corner is ${corner.toFixed(1)} m` : 'off'})`);
+}
+/** the mode put away with the back key, and the walk keys to a spot: in the mode they are the view's */
+function walkTo(B: Bot, p: number[], what: string) {
+  if (P(B).up) { B.press('Tab', 3); if (P(B).up) B.fail('the back key did not put plan mode away'); }
+  const s0 = [...B.g.player.char.pos], t0 = B.t();
+  if (!B.go(p, 40, { noDoors: true, near: 0.5 })) B.fail(`he did not walk to ${what}: stopped at (${B.g.player.char.pos[0].toFixed(1)}, ${B.g.player.char.pos[2].toFixed(1)})`);
+  B.say(`  walked ${Math.hypot(p[0] - s0[0], p[2] - s0[2]).toFixed(1)} m to ${what} in ${(B.t() - t0).toFixed(1)} s`);
 }
 /** the left button dragged from one corner of a box on the picture to the other */
 function boxPx(B: Bot, a: number[], b: number[]) {
@@ -169,23 +196,26 @@ function putBack(B: Bot) {
   B.say(`  loaded the checkpoint 'the gates': the same step, the script running again, the four outside held, both gates shut (plan mode ${P(B).up ? 'still up' : 'down'})`);
 }
 export const steps: Record<string, (B: Bot) => void> = {
-  mode: B => { modeUp(B); },
-  view: B => { panTo(B, [17.5, 0, 9.5]); for (let i = 0; i < 200 && B.g.lesson.step?.id === 'view'; i++) { const L = P(B).look, k = [L[0] < 17.2 ? 'KeyD' : L[0] > 17.8 ? 'KeyA' : '', L[2] < 9.2 ? 'KeyS' : L[2] > 9.8 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); } },
+  mode: B => { hits0 = B.g.player.hitsLeft; modeUp(B); },
+  view: B => { panTo(B, [17.5, 0, 9.5]); for (let i = 0; i < 200 && B.g.lesson.step?.id === 'view'; i++) { const L = P(B).look, k = [L[0] < 17.2 ? 'KeyD' : L[0] > 17.8 ? 'KeyA' : '', L[2] < 9.2 ? 'KeyS' : L[2] > 9.8 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); reach(B); } },
   send: B => { rclick(B, WALL); B.until(() => B.g.lesson.step?.id !== 'send', 40); B.wait(1.5); },
+  up1: B => walkTo(B, UP1, 'the spot behind his squad'),
   pick: B => { boxMen(B, twoOf(B, [16, 0, 12])); },
   door1: B => { rdoor(B, 'guard'); },
   pick2: B => { boxMen(B, free(B)); },
   door2: B => { rdoor(B, 'guard_side'); B.until(() => B.g.lesson.step?.id !== 'door2', 60); },
   all: B => allAgain(B),
   word: B => { word(B, ['guard', 'guard_side'], 'guardroom'); B.wait(1.5); },
-  hall: B => { panTo(B, [28.0, 0, 15.5]); for (let i = 0; i < 300 && B.g.lesson.step?.id === 'hall'; i++) { const L = P(B).look, k = [L[0] < 27.6 ? 'KeyD' : L[0] > 28.4 ? 'KeyA' : '', L[2] < 15.1 ? 'KeyS' : L[2] > 15.9 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); } },
+  up2: B => walkTo(B, UP2, 'the spot beside the hall'),
+  hall: B => { panTo(B, [28.0, 0, 15.5]); for (let i = 0; i < 300 && B.g.lesson.step?.id === 'hall'; i++) { const L = P(B).look, k = [L[0] < 27.6 ? 'KeyD' : L[0] > 28.4 ? 'KeyA' : '', L[2] < 15.1 ? 'KeyS' : L[2] > 15.9 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); reach(B); } },
   front: B => { if (ALONE) { allAgain(B); rdoor(B, 'hall'); return; } boxMen(B, twoOf(B, [26, 0, 12])); rdoor(B, 'hall'); },
   back: B => { if (ALONE) { B.until(() => setOn(B, ['hall']), 60); const n0 = B.g.rails.log.length; word(B, ['hall'], 'hall'); told(B, n0); return; } boxMen(B, free(B)); rdoor(B, 'hall_back'); B.until(() => B.g.lesson.step?.id !== 'back', 70); },
   all2: B => allAgain(B),
   word2: B => { const n0 = B.g.rails.log.length; word(B, ['hall', 'hall_back'], 'hall'); told(B, n0); B.wait(1.5); },
-  gates: B => { putBack(B); panTo(B, [27.0, 0, 9.5]); for (let i = 0; i < 300 && B.g.lesson.step?.id === 'gates'; i++) { const L = P(B).look, k = [L[0] < 26.6 ? 'KeyD' : L[0] > 27.4 ? 'KeyA' : '', L[2] < 9.1 ? 'KeyS' : L[2] > 9.9 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); } },
+  up3: B => walkTo(B, UP3, 'the spot in the hall'),
+  gates: B => { putBack(B); panTo(B, [27.5, 0, 11.5]); for (let i = 0; i < 300 && B.g.lesson.step?.id === 'gates'; i++) { const L = P(B).look, k = [L[0] < 27.1 ? 'KeyD' : L[0] > 27.9 ? 'KeyA' : '', L[2] < 11.1 ? 'KeyS' : L[2] > 11.9 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); reach(B); } },
   faceA: B => { pairA = twoOf(B, POST_A); boxMen(B, pairA); rdrag(B, POST_A, GATE_E); B.until(() => B.g.lesson.step?.id !== 'faceA', 60); facing(B, pairA, 'the bags', true); },
   faceB: B => { const men = squad(B).filter(m => !pairA.includes(m)); boxMen(B, men); rdrag(B, POSTB ?? POST_B, GATE_N); B.until(() => B.g.lesson.step?.id !== 'faceB', 60); facing(B, men, 'the barrier', !POSTB); },
   hold: B => { B.until(() => cleared(B, 'road') && cleared(B, 'lane'), 120); B.wait(1); },
-  'back-in': B => { checkpoints(B); modeUp(B); boxPx(B, [3, 3], [5, 5]); const s = B.g.player.char.pos; rclick(B, [s[0], 1.0, s[2]]); B.until(() => B.g.lesson.finished, 30); },
+  'back-in': B => { checkpoints(B); reached(B); modeUp(B); boxPx(B, [3, 3], [5, 5]); const s = B.g.player.char.pos; rclick(B, [s[0], 1.0, s[2]]); B.until(() => B.g.lesson.finished, 30); },
 };

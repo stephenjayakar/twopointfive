@@ -1,7 +1,8 @@
 // THE PLAN MODE MISSION PLAYED ON THE REAL PAGE WITH REAL KEYS AND A REAL MOUSE: headless Chromium on the software WebGPU adapter (tools/qa/tut-page.cjs's
 // recipe — SwiftShader, no GPU). What the headless lesson run cannot see: that the bundle boots the level and its script, that Shift + the command key
 // reaches the game through the page's own listeners and the frame's gate, that a left drag is a box and a right click an order (and no browser menu),
-// that a right drag gives a way to face, and that each thing a line points at is on the picture when the line is up.
+// that a right drag gives a way to face, that Tab puts the mode away and the walk keys then walk him to each marked spot, and that each thing a line
+// points at is on the picture when the line is up — with the view held near him (?plannear=0 is the page without that rule).
 //   PORT=5199 node tools/qa/tut-plan-page.cjs        (a dev server on that port: PORT=5199 bun run tools/serve.ts)
 //   env: QUALITY (default verylow) · OUT (a folder for pictures; default a temp folder) · STEPS (stop after this many steps) · SHOTS=0 (no pictures: each
 //        is minutes on the software adapter) · PICS=send,all (pictures at these step ids only; default send,all,word2,hold) · CDP=<port> (a browser
@@ -113,14 +114,32 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const free = men => men.filter(m => m.stack === null).map(m => m.cs);
   const seen = async (s, what) => { if (!s.at) return; const q = await at(s.at); check(q.vis, `step '${s.id}': ${what} is on the picture when the hand acts`, `at ${Math.round(q.x)}, ${Math.round(q.y)} of 1280 x 720`); };
   let pairA = [];
+  /** the mode up, if a walk left it down (a hand reads the line that says how, and does it) */
+  const modeUp = async () => { if (!(await read()).plan) await mode(); };
+  /** THE WALK TO A MARKED SPOT: Tab puts the mode away (in it the walk keys are the view's), then the walk keys along the game's own path to the spot — which
+   *  key is which way is the picture's (the camera's across and up), two keys together for a slant, as a hand does */
+  const walkTo = async (s, what) => { await seen(s, `${what}'s mark`);
+    let r = await read(); const was = r.plan; if (r.plan) { await tap('Tab'); await run(20); r = await read(); }
+    if (was) check(!r.plan && !r.crouch, `step '${s.id}': Tab on the real keyboard puts plan mode away and he stands`, `mode ${r.plan} · on a knee ${r.crouch}`);
+    const goal = [s.at[0], 0, s.at[2]], from = r.sam, path = await page.evaluate(([a, b]) => window.__game.col.nav.findPath(a, b, 8000) ?? [], [[from[0], 0, from[1]], goal]); path.push(goal);
+    let stuck = false;
+    for (let n = 0; n < path.length && !stuck; n++) { const wp = path[n], near = n === path.length - 1 ? 0.35 : 0.55; let best = 1e9, since = 0;
+      for (let k = 0; k < 500; k++) {
+        const d = await page.evaluate(wp => { const c = window.__game.player.char.pos, B = window.__cam.planarBasis(), dx = wp[0] - c[0], dz = wp[2] - c[2], l = Math.hypot(dx, dz) || 1; return { l, f: (dx * B.fwd[0] + dz * B.fwd[2]) / l, r: (dx * B.right[0] + dz * B.right[2]) / l }; }, wp);
+        if (d.l < near) break; if (d.l < best - 0.05) { best = d.l; since = 0; } else if (++since > 40) { stuck = true; break; }
+        const ks = [d.f > 0.38 ? 'KeyW' : d.f < -0.38 ? 'KeyS' : '', d.r > 0.38 ? 'KeyD' : d.r < -0.38 ? 'KeyA' : ''].filter(Boolean);
+        for (const c of ks) await page.keyboard.down(c); await run(3); for (const c of ks) await page.keyboard.up(c); } }
+    await run(20); const a = await read(), left = Math.hypot(a.sam[0] - goal[0], a.sam[1] - goal[2]);
+    check(!stuck && left < 0.6 && !a.plan, `step '${s.id}': the walk keys on the real keyboard walk him to ${what}`, `from (${from}) to (${a.sam}), ${left.toFixed(2)} m from the mark's middle${stuck ? ' · STUCK on the way' : ''} · mode ${a.plan}`); };
 
-  // ---- locked: before the mode, a hand on the keys and the mouse does nothing
+  // ---- before the mode: his feet are his, and nothing else is
   { const b = await read(); await page.mouse.move(700, 330);
-    for (const k of ['KeyQ', 'KeyF', 'KeyW', 'KeyD', 'KeyX']) { await page.keyboard.down(k); await run(6); await page.keyboard.up(k); await run(2); }
+    for (const k of ['KeyQ', 'KeyF', 'KeyX']) { await page.keyboard.down(k); await run(6); await page.keyboard.up(k); await run(2); }
     await page.mouse.down(); await run(3); await page.mouse.up(); await run(3); await page.mouse.down({ button: 'right' }); await run(3); await page.mouse.up({ button: 'right' }); await run(3);
-    const a = await read();
-    check(a.orders === b.orders && a.shots === b.shots && Math.hypot(a.sam[0] - b.sam[0], a.sam[1] - b.sam[1]) < 0.05 && !a.plan && a.i === 0, 'before the mode, the command key alone, the word, the walk keys and both buttons do nothing',
-      `orders ${b.orders} → ${a.orders} · shots ${b.shots} → ${a.shots} · he moved ${Math.hypot(a.sam[0] - b.sam[0], a.sam[1] - b.sam[1]).toFixed(2)} m · mode ${a.plan} · ${a.sum}`); }
+    const a = await read(); await page.keyboard.down('KeyW'); await run(24); await page.keyboard.up('KeyW'); await run(4); const w = await read(); await page.keyboard.down('KeyS'); await run(24); await page.keyboard.up('KeyS'); await run(4);
+    const walked = Math.hypot(w.sam[0] - a.sam[0], w.sam[1] - a.sam[1]);
+    check(a.orders === b.orders && a.shots === b.shots && Math.hypot(a.sam[0] - b.sam[0], a.sam[1] - b.sam[1]) < 0.05 && !a.plan && a.i === 0 && walked > 0.2 && !w.plan && w.i === 0, 'before the mode, the command key alone, the word and both buttons do nothing, and a walk key walks him',
+      `orders ${b.orders} → ${a.orders} · shots ${b.shots} → ${a.shots} · mode ${a.plan} · W held: he walked ${walked.toFixed(2)} m · ${a.sum}`); }
 
   const hand = {
     mode: async () => { await mode(); const s = await read(); check(s.plan && s.crouch, 'Shift + Q on the real keyboard puts plan mode up and him on his knee', `mode ${s.plan} · on a knee ${s.crouch}`); },
@@ -128,7 +147,10 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     send: async s => { const b = await read(); await seen(s, 'the wall\'s mark'); await rclick(s.at); const a = await read();
       check(a.orders === b.orders + 1 && a.chains === 1, 'a right click on the real mouse is one order to all four (and no browser menu took it)', `orders ${b.orders} → ${a.orders} (${a.last}) · chains ${a.chains}`);
       await until(x => x.id !== 'send', 40); await run(90); },
-    pick: async () => { const got = await box(await twoOf([16, 0, 12])); check(got.length === 2, 'a left drag on the real mouse is a box that picks two men', `picked ${got.join(', ') || 'nobody'}`); },
+    up1: async s => { const r = await read(); check(r.keys.includes('Tab'), "the first walk's line names the key that closes plan mode on a key cap", `"${r.line}" keys [${r.keys}]`); await walkTo(s, 'the spot behind his squad'); },
+    pick: async s => { const d = await read(); await modeUp(); const u = await read();
+      check(!d.plan && /plan mode again/.test(d.line) && d.keys.includes('Shift') && u.plan && u.line === s.line, 'after a walk the mode is down on a step done in it, and the line is what puts it up again; up, the step\'s own line is back', `down: "${d.line}" keys [${d.keys}] · up: "${u.line}"`);
+      const got = await box(await twoOf([16, 0, 12])); check(got.length === 2, 'a left drag on the real mouse is a box that picks two men', `picked ${got.join(', ') || 'nobody'}`); },
     door1: async s => { await panTo(s.at); await seen(s, 'the door\'s mark'); await rclick(s.at); },
     pick2: async () => { const s = await read(); await box(free(s.men)); },
     door2: async s => { await panTo(s.at); await seen(s, 'the side door\'s mark'); await rclick(s.at); await until(x => x.id !== 'door2', 60); },
@@ -136,16 +158,15 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     word: async () => { const b = await chains(); await tap('KeyF'); await run(6); const a = await chains();
       check(b.length === 2 && b.every(x => x === 'wait') && a.every(x => x !== 'wait'), 'the line asks for the word when both stacks wait on it, and ONE press of F sends both', `chains before ${b.join(', ')} · after ${a.join(', ')}`);
       await fight(x => x.id !== 'word', 40); await run(90); },
-    hall: async s => { // (the mode put down by hand on a step that is done in it: the line says what puts it up again)
-      await mode(); const d = await read(); await mode(); const u = await read();
-      check(!d.plan && /plan mode again/.test(d.line) && d.keys.includes('Shift') && u.plan && u.line === s.line, 'with the mode put down on a step done in it, the line is what puts it up again; up, the step\'s own line is back', `down: "${d.line}" keys [${d.keys}] · up: "${u.line}"`);
-      await viewTo([28.0, 0, 15.5], 'hall'); },
+    up2: async s => { await walkTo(s, 'the spot beside the hall'); },
+    hall: async s => { await modeUp(); await viewTo([28.0, 0, 15.5], 'hall'); },
     front: async s => { await box(await twoOf([26, 0, 12])); await panTo(s.at); await seen(s, 'the front door\'s mark'); await rclick(s.at); },
     back: async s => { const r = await read(); await box(free(r.men)); await panTo(s.at); await seen(s, 'the back door\'s mark'); await rclick(s.at); await until(x => x.id !== 'back', 70); },
     all2: async () => { await ground(); },
     word2: async () => { const c = await chains(), b = await read(); await tap('KeyF'); await run(6); const c2 = await chains(); const a = await fight(x => x.id !== 'word2', 40);
       check(c.length === 2 && c.every(x => x === 'wait') && c2.every(x => x !== 'wait'), 'the hall: one press of F sends both stacks', `chains before ${c.join(', ')} · after ${c2.join(', ')} · word at t ${b.t}, the hall taken by t ${a.t}`); await run(90); },
-    gates: async s => { await viewTo([27.0, 0, 9.5], 'gates'); },
+    up3: async s => { await walkTo(s, 'the spot in the hall'); },
+    gates: async s => { await modeUp(); await viewTo([27.5, 0, 11.5], 'gates'); },
     faceA: async s => { pairA = await twoOf(s.at); await box(pairA); await seen(s, 'the bags\' arrow'); const d = await rdrag(s.at, s.toward); log(`  right drag: ${d.toFixed(0)} px on the picture`); await until(x => x.id !== 'faceA', 60); },
     faceB: async s => { const r = await read(); await box(r.men.filter(m => !pairA.includes(m.cs)).map(m => m.cs)); await seen(s, 'the barrier\'s arrow'); await rdrag(s.at, s.toward); await until(x => x.id !== 'faceB', 60); },
     hold: async () => { await fight(x => x.id !== 'hold', 120); await run(60); },
