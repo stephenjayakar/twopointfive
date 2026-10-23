@@ -170,12 +170,12 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Your squad is pinned down on the road. Lead them from above, through the gate and then door by door.',
     scene: 'A fuel convoy drove into the tunnel and never came out, and your squad ran straight into a roadblock at the station by the tunnel\'s mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',
     teaches: ['Turn, zoom and move the view', 'Order the squad with one key', 'Stack the squad up on a door, then send them in', 'Put a charge on a wall', 'Cut the lights and fight in the dark'] },
-  // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): he stays at the gate with the handset, and every stop is a thing one order to all
+  // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): he leads with the handset and never fires, moving up behind the four from spot to spot, and every stop is a thing one order to all
   // four cannot do and a plan can
   { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', hour: 'midday', weather: 'clear',   // (a plan is laid by day: every yard and door in plain sight from above)
     place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
-    blurb: "You'll stay at the gate with the radio and plan what your squad will do. Hit two doors at once, beat a gunner, and cover two gates.",
-    scene: "The enemies who hit the convoy use this relay post to talk to each other. You'll take your squad to the gate, then stay there and lead them over the radio.",
+    blurb: "You'll stay behind your squad with the radio and plan what they'll do. Hit two doors at once, beat a gunner, and cover two gates.",
+    scene: "The enemies who hit the convoy use this relay post to talk to each other. You'll send your squad in ahead of you, follow behind, and lead them over the radio.",
     teaches: ['Plan mode', 'Give each pair its own door', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Choose which way a pair faces'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
@@ -184,7 +184,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'You\'re on your own. Get past a sentry, a machine gun and a locked door, clear a room, and get back out.',
     scene: 'The people who hit the convoy keep their code book at a fuel stop down the valley. You\'re going in alone to get it, and nobody expects it to stay quiet.',
     teaches: ['Move, sprint and stay low', 'Take cover on a wall and lean out', 'Use your rifle, its launcher and your pistol', 'Throw smoke, a frag and a stun grenade', 'Blow a locked door with a charge'] },
-  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
+  // (packs: the one lesson whose kit is the player's to plan — its Team & kit step walks him through reading this street and packing for it, ui/kitPlan.ts;
+  //  one frag is his whatever he packs: the men behind the sandbags are held down until his lands)
+  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial', packs: { frags: 1 },
     // (its own hour and sky: the post was lit for the night — the street the player stands in is dark, the gates the picket comes through are under lamps
     //  the photocell puts out by day — and measured dry and still)
     hour: 'night', weather: 'clear',

@@ -152,6 +152,7 @@ import { SAVETIMELINE } from './savestate';
 import { HANDSLOT } from './handslot';
 import { HANDRING } from './handring';
 import { THROWBACK } from './throwback';
+import { AUTOCAM } from '../host/autocam';
 import { OWNBLOW } from './ownblow';
 import { WORKSTOW } from './workstow';
 import { WALLREACT } from './wallreact';
@@ -307,6 +308,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.CMDRING as { planRun?: boolean } | undefined)?.planRun !== 'boolean') CMDRING.planRun = false;   // (… and from before a sprint's Shift was not the mode's: Shift + the key was always the mode's)
   if (typeof (k.tables.CMDRING as { only?: boolean } | undefined)?.only !== 'boolean') CMDRING.only = false;   // (… and from before the ring carried every order: its wedges were the rows on digits, the letters worked beside it)
   for (const key of ['planLook', 'planWaits', 'planKnee', 'planOne', 'planNear'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before plan mode's right drag, its own waits and the knee at the radio: a right press was a click or the ring, the pauses were the build's, he stood)
+  for (const key of ['flat', 'plainHint'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before the flat tree, the outline with no glyph and the squad's corner down to its keys: the menu's pages, the glyph, the block)
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
   if (!k.tables.KITANIM) KITANIM.on = false;   // (a file from before the kit animations: its draws were instant and its reloads the row's one beat)
@@ -342,6 +344,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
   else if ((k.tables.KITDEAL as Partial<typeof KITDEAL>).more === undefined) KITDEAL.more = false;   // (…and from before a team of three or four as issued was lent a big tool each pair: every man came with his big slot empty, and the Quiet kit's fourth man with his pistol alone)
   if ((k.tables.KITDEAL as Partial<typeof KITDEAL> | undefined)?.stealth === undefined) KITDEAL.stealth = false;   // (…and from before a stealth mission's kit was your card's own: its sponge rounds, cameras and wand were handed over the card at the staging, and a sponge round cost a pouch)
+  if ((k.tables.ISSUE as Partial<typeof ISSUE> | undefined)?.picked === undefined) ISSUE.picked = false;   // (a file from before a lesson could be packed for: the tutorial's squad mission was played with the kit as issued, as every lesson was)
   if ((k.tables.ISSUE as Partial<typeof ISSUE> | undefined)?.whole === undefined) ISSUE.whole = false;   // (a file from before a mission's own card for you was the whole kit: the mission's sponge rounds, cameras and wand were handed over it)
   if (!k.tables.PLANLAY) PLANLAY.on = false;   // (a file from before an order could be laid for the word: 'wait for my word' was the four's door tools' row, and they walked to the door at once)
   if (!k.tables.CONDITION) CONDITION.on = false;   // (a file from before a blast left a man hurt: nobody in it ever was)
@@ -411,11 +414,13 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CLEANRESTART) CLEANRESTART.on = false;   // (a file from before a restart gave a clean level: its restarts mended the mains by the breaker's own road and kept the last try's lines and clocks)
   if (!k.tables.THROWBACK) THROWBACK.on = false;   // (a file from before a can in the wind-up went back on the belt: its cans froze through a kick or a pick and left his hand after)
   if (!k.tables.WORKSTOW) WORKSTOW.on = false;   // (a file from before the gun was put away for a two-handed job: a charge went on with it in the hand, on the shorter clock)
+  if (!k.tables.AUTOCAM) AUTOCAM.on = false;   // (a file from before the camera could run itself: its double tap was the Options row's)
   if (!k.tables.OWNBLOW) OWNBLOW.on = false;   // (a file from before his own charge went off from his own actions: the squad's key blew it)
   if (typeof (k.tables.HANDRING as { early?: boolean } | undefined)?.early !== 'boolean') HANDRING.early = false;   // (…and one from before a digit inside the hold was the ring's: there it drew the slot)
   if (typeof (k.tables.HANDRING as { empty?: boolean } | undefined)?.empty !== 'boolean') HANDRING.empty = false;   // (…nor before an empty tap said so)
   if (typeof (k.tables.HANDRING as { near?: boolean } | undefined)?.near !== 'boolean') HANDRING.near = false;   // (…nor before that word named the thing he stood beside)
   if (typeof (k.tables.HANDRING as { onThing?: boolean } | undefined)?.onThing !== 'boolean') HANDRING.onThing = false;   // (…nor before his ring stood on the thing it is about: at the cursor)
+  if (typeof (k.tables.HANDRING as { corner?: boolean } | undefined)?.corner !== 'boolean') HANDRING.corner = false;   // (…nor before the corner panel was the objective and a line a key: the picture only)
   if (typeof (k.tables.HANDRING as { turn?: boolean } | undefined)?.turn !== 'boolean') HANDRING.turn = false;   // (…nor before a row at a wall switch turned him to it)
   if (typeof (k.tables.HANDRING as { bare?: boolean } | undefined)?.bare !== 'boolean') HANDRING.bare = false;   // (…nor before it lost its line of words: the picture only)
   if (typeof (k.tables.HANDRING as { lone?: boolean } | undefined)?.lone !== 'boolean') HANDRING.lone = false;   // (…nor before a ring with one row was a pill: the picture only)

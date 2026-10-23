@@ -156,6 +156,7 @@ import { LIVED, livedOfQuery } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';
 import { ROOMCLEAR } from '../game/roomclear';
 import { FIXEDSTEP } from './loop';
+import { AUTOCAM } from './autocam';
 import { TWEEN } from './tween';
 
 export type Profile = 'frozen' | 'shipped';
@@ -270,10 +271,11 @@ export function pageSwitches(q: URLSearchParams): void {
   HANDSLOT.on = q.get('handslot') !== '0';   // empty hands are a slot (game/handslot.ts): its key puts away whatever is up and is never the way back, a digit draws; on the page's board it is backtick, the debugger is on backslash and E is spare (host/keymap.ts SLOT) — ON in the page; ?handslot=0 = E puts away and draws, as it was
   HANDRING.near = HANDRING.empty = HANDRING.early = q.get('handring') !== '0';   // …and a digit pressed inside the hold is the ring's wedge at once, never the weapon slot (handring.ts `early`)
   HANDRING.lone = HANDRING.near && q.get('lonepill') !== '0';   // a ring with one row is a pill, on both rings, and the cursor on the pill is on the row (game/ringlone.ts) — these four go with ?handring=0 too, as the rest of his ring does
-  HANDRING.onThing = HANDRING.near && q.get('ringonthing') !== '0'; HANDRING.bare = HANDRING.near && q.get('ringbare') !== '0'; HANDRING.turn = HANDRING.near && q.get('ringturn') !== '0';   // his ring stands on the thing its first row is about (or on him), and has no line of words under it
+  HANDRING.onThing = HANDRING.near && q.get('ringonthing') !== '0'; HANDRING.bare = HANDRING.near && q.get('ringbare') !== '0'; HANDRING.turn = HANDRING.near && q.get('ringturn') !== '0'; HANDRING.corner = HANDRING.near && q.get('corner') !== '0';   // his ring stands on the thing its first row is about (or on him), and has no line of words under it
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
+  AUTOCAM.on = q.get('autocam') !== '0'; AUTOCAM.turn = q.get('autoturn') !== '0'; AUTOCAM.zoom = q.get('autozoom') !== '0';   // the camera's key tapped twice and the camera frames things itself (host/autocam.ts: the door ahead, the squad's orders, the men he could shoot; the key held with the mouse moved, or with a walk key, takes it back): ON in the page; `?autocam=0` = the double tap is the Options row's, as it was (`?autoturn=0` = it never turns the view, `?autozoom=0` = it never zooms)
   OWNBLOW.on = q.get('ownblow') !== '0';   // a charge his own hands set goes off from his own actions — a row of his list, a wedge of his ring — and the squad's key no longer blows it (game/ownblow.ts); `?ownblow=0` = the squad's key blows any set charge, as it did
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
@@ -364,6 +366,7 @@ export function pageSwitches(q: URLSearchParams): void {
   if (q.has('picture')) PICTURE.show = q.get('picture') === 'all' ? 'all' : 'cursor';   // (?picture = the floor shows the picture of the man under the cursor; ?picture=all = every teammate's ideas)
   PLAN.on = !q.has('noplan');   // the squad's plan drawn on the floor (game/floorplan.ts): picture only, on on both stands; `?noplan` = nothing drawn
   PLAN.keyLit = q.get('keylit') !== '0';   // …and the key's cap on a door says whether it is live: dark while its men are still on their way or the press would not send it, lit once they stand there and it would (picture only, on on both stands; `?keylit=0` = the cap only on the door the key would send now, the same either way)
+  PLAN.thrTold = q.get('thrtold') !== '0';   // …and on a door held from outside the cap lights only once the men have called 'holding · on your word': pressed before that the key cuts their slice short (picture only, on on both stands; `?thrtold=0` = lit with their feet on the jambs, as it was)
   CLOSE.on = !q.has('noclose');   // closer than ever (game/close.ts): the windows round a man drawn on the floor, the ready pose, the ways in from his sides, his front and over a chair — ON in the page; ?noclose = one way in, from behind, in words, as it was
   CLOSE.heldClicks = !q.has('noheldclicks');   // with a man in his arm the two buttons (game/close.ts, player.ts updateHold): left click the knife — he is dead — right click the choke; the arm hold only — ON in the page; ?noheldclicks = neither click does anything there, as it was
   CLOSE.handsLow = q.get('handslow') !== '0';   // crouched in reach behind a standing man his hands stay low until the move: the tell is the hand on the knife, not an open hand held up over his own head (game/close.ts closeReady). ON in the page; ?handslow=0 = the grab's tell reaches from the crouch, as it was
@@ -402,6 +405,8 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.planOne = CMDRING.plan && q.get('planone') !== '0';   // …one word that frees two or more doors of a plan puts their entries on one signal: the doors open together and two cans wait each other's burst (`?planone=0` = each chain's entry on its own clock, as it was)
   CMDRING.planNear = CMDRING.plan && CMDRING.planRts && q.get('plannear') !== '0';   // …the view of plan mode stays within a few metres of Sam, a room's worth and not the level's (`?plannear=0` = the reach as it was: 25 m past him and every teammate)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
+  CMDRING.flat = CMDRING.only && q.get('ringflat') !== '0';   // …and the ring is two rings deep at most: every order of the thing it was opened on, wedge 5 the one ring of the rest, the squad's posture row on it (`?ringflat=0` = the menu's pages as they were)
+  CMDRING.plainHint = q.get('plainhint') !== '0';   // …no glyph beside the cursor or in the ring's middle: the mark of what the key orders on is the thing's own outline (a picture only; `?plainhint=0` = the glyph as it was)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
   SQUAD40.on = !q.has('nosquad40');   // a teammate whose card carries 40 mm grenades fires one where he points (game/squad40.ts): X on a spot of floor, G, then 3. ON in the page, ?nosquad40 = no such row; off on the frozen stand (TPS_SQUAD40=1 raises it). Nothing at all while no teammate's card carries a round
@@ -417,6 +422,7 @@ export function pageSwitches(q: URLSearchParams): void {
   KITDEAL.on = !q.has('nokitdeal');   // the squad's kit dealt over the men who come (game/kit.ts KITDEAL): with three or four teammates the issued kit and every named squad kit are shared out among them — a charge and a stun to each pair — where the first two carried it all and the others showed empty pouches. The squad's count is the same at every size (but for the one canister of its key `more`, below), so a run is the run it was. ?nokitdeal = the cards as they were
   KITDEAL.more = !q.has('nokitmore');   // (…and of 10-18, the maintainer's pick "a tool each pair": three or four as issued are lent the breaching shotgun on Red Two and, of four, the hammer on Blue Two — each pair's second man, so its first goes in with a gun up — in big slots that stood empty, and a man a kit leaves with nothing counted is handed a stun canister — the Quiet kit's fourth man; ?nokitmore = big slots empty as issued, that man with his pistol alone)
   KITDEAL.stealth = !q.has('nokitstealth');   // (…and of 10-20, the maintainer's "that should just be defaults": a stealth mission's sponge rounds, cameras and wand are what your stealth card is issued as — rows you change, priced like any other, the sponge rounds five to a pouch — and nothing is handed over a card or written on a tile as the mission's)
+  ISSUE.picked = q.get('kitpack') !== '0';   // a lesson the player packs for (game/kit.ts ISSUE.picked; the maintainer, 10-23, of the kit step's walkthrough: "we should attach it to a tutorial mission (and make it bespoke and explain how to plan)"): ON in the page — the tutorial's squad mission shows its cards on Team & kit and its page stages what he packed; ?kitplan=0 = that row as issued too, no card, as before
   ISSUE.whole = !q.has('issuelend');   // (…and of 10-22, the maintainer's play of the solo tutorial: a mission whose level names your card hands nothing over it — that card is the whole kit, so a loud mission of the quiet kind no longer comes up on five sponge rounds; ?issuelend = the hand-overs land over the card again)
   BIGSLOT.moves = !q.has('nobigmoves');   // (…and of 10-15 evening: the hammer rides on a man's back, his gun is put away for it, it is wound up and swung as one move, and you take the row from where a stack stands and WALK to a free place beside either jamb — ?nobigmoves = the tools as they stood that morning)
   BIGSLOT.snug = !q.has('nobigsnug');   // (…and with the moves: his gun and the tool each stay in a hand while they are off him — the gun let go as his hands leave it, the tool changing between his back and his fist while the fist is there; ?nobigsnug = the first-pass shares, the tool drawn part way between the two. Looks, and how long your own gun and its light are away: about a sixth of a second more)
@@ -531,7 +537,9 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HANDRING.onThing': 'TPS_HANDRING=1',
   'HANDRING.bare': 'TPS_HANDRING=1',
   'HANDRING.turn': 'TPS_HANDRING=1',
+  'HANDRING.corner': 'TPS_HANDRING=1',
   'THROWBACK.on': 'TPS_THROWBACK=1',
+  'AUTOCAM.on': 'TPS_AUTOCAM=1 (the mode itself is the seat\'s, off until the camera\'s key is tapped twice: read only by a tool that steps through host/loop.ts stepFrame)',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
   'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
   'GUNWALL.on': 'TPS_GUNWALL=1',
@@ -674,6 +682,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planOne': 'TPS_PLANONE=1 (needs TPS_QPLAN=1)',
   'CMDRING.planNear': 'TPS_PLANNEAR=1 (needs TPS_QPLAN=1)',
+  'CMDRING.flat': 'TPS_RINGFLAT=1 (needs TPS_QRING=1 TPS_QONLY=1)',
+  'CMDRING.plainHint': 'TPS_PLAINHINT=1',
   'CMDRING.only': 'TPS_QONLY=1 (needs TPS_QRING=1)',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
   'SEENWALK.on': 'TPS_SEENWALK=1',
@@ -734,6 +744,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'KITDEAL.more': 'TPS_KITMORE=1 (reads only with the deal and the big slot on: TPS_KITDEAL=1, TPS_BIGSLOT=1)',
   'KITDEAL.stealth': 'TPS_KITSTEALTH=1 (reads only under the card as a tree: TPS_KITTREE=1 and what it needs)',
   'ISSUE.whole': 'TPS_ISSUEWHOLE=1 (the sponge rounds are a row of the card as a tree: TPS_KITTREE=1 and what it needs)',
+  'ISSUE.picked': 'TPS_KITPACK=1 (the page\'s and a recording\'s rule: no headless lesson run raises the issued page)',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',
   'SQUAD40.on': 'TPS_SQUAD40=1',
   'AUTOPILOT.on': 'TPS_AUTOPILOT=1',
