@@ -495,7 +495,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   14 m costs 0.048 off and nothing on; and THE FOLLOWER, in the office's corridor with one defender looking down it and every meter
   never under 0.16, Sam low 8.7 m from him: off, the partner hangs back 5.3 m behind Sam for all of the 20 s Sam stands ("waiting
   on eyes"); on, he comes up to 2.0 m behind Sam, 10.7 m from the eye, and the defender's awareness stays at 0. The pair lesson
-  with Sam's meter never under 0.2 (`lesson-run.ts --floor`) plays to its end with it on. That lesson's level, as it was when this
+  with Sam's meter never under 0.27 (`lesson-run.ts --floor`; the page's meter depends on the graphics preset, and a low wall's
+  night shadow reads about 0.25 on the high one) plays to its end with it on. That lesson's level, as it was when this
   was written, had lines on the partner's way: with a floor of 0.16 or 0.2 the run did not end with the switch off (the partner
   waited on the light 44 s) and played with it on, and with a floor of 0.27 it failed both ways, as by the guards' own arithmetic it
   should (at 27 a guard gains on a crouched man out to 12 m); the level was rebuilt the same night so that no way of his has a
