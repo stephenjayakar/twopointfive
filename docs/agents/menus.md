@@ -1261,10 +1261,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   thing is DONE or on its 'Next': **Plan it first** (the map opened and put back — large, it names the street's rooms, the machine gun and the locked
   hall as words pinned on the sheet, `.kb-pin`, placed through the sheet's own projection: `planArt.ts sheetView`, `missions.ts sheetSpots`; and the
   line under it says what to look for) · **Pack for the rooms** (Stun heavy put on: the squad throws one into a room first when it has one to spare,
-  the street has four rooms, and the card counts what they carry now — the step's own 'Squad carries' line stays in view under the row) · **The machine
+  it is sent into three rooms on that street by the lesson's own door lines, and the card counts what they carry now, three as issued, so nothing to
+  spare — the step's own 'Squad carries' line stays in view under the row) · **The machine
   gun** (your own card opened: a frag goes over sandbags; Stun heavy took yours, so a smoke canister is traded for a frag grenade — or, with one
   carried, 'keep it') · **The four** (a teammate's card opened) · **That's a plan** (Deploy; packed with no frag it says one will be handed over, which
-  the page does: `kit.ts kitLessonPage`). A beat whose row the step does not have, or whose thing is already so (Stun heavy on), is left out. THE WORDS
+  the page does, `kit.ts kitLessonPage`, and his card's frag tile reads '1 · mission's' on that step: `loadout.ts lentNow`). A beat whose row the step does not have, or whose thing is already so (Stun heavy on), is left out. THE WORDS
   follow the writing rules (`docs/agents/writing.md`): to "you", who presses the key; a count in a sentence is written out; no digit, no compass word.
   ENTER UNDER A CARD IS THE CARD'S 'NEXT' wherever it would otherwise deploy (every row but the named kits, the man's card and Deploy's own): a first
   press of Enter on a card never starts the mission. 'Skip' on every card, or Esc: the first Esc is the walkthrough's, the next is the step's own.

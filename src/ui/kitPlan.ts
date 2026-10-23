@@ -39,7 +39,7 @@ const say = (n: number): string => SAID[n] ?? 'a lot of';
 const SQUAD_ROOMS = 3;
 const SQUAD_BEATS: readonly Beat[] = [
   { id: 'read', row: 'map', done: (_was, now) => now.mapSeen && !now.mapBig,
-    words: () => ({ title: 'Plan it first', text: 'Before every mission, read the job and the map, then pack for what you see.\nPress [M] to open the map of the post, and press it again to close it.' }) },
+    words: () => ({ title: 'Plan it first', text: 'Before every mission, read the job and the map, and then pack for what you see.\nPress [M] to open the map of the post, and press it again to close it.' }) },
   // (asked while the squad carries no more stun grenades than the street has rooms for them, and Stun heavy is on the row to put on)
   { id: 'squad', row: 'squadkit', has: ({ now }) => now.kits.includes('stun') && now.kit !== 'stun' && now.bangs <= SQUAD_ROOMS, done: (_was, now) => now.kit === 'stun',
     words: ({ now }) => ({ title: 'Pack for the rooms', text: `Your squad throws a stun grenade into a room before they go in, if they have one to spare. They'll go into ${say(SQUAD_ROOMS)} rooms on this street, and right now they ${now.bangs >= SQUAD_ROOMS ? `carry ${say(now.bangs)}, so there's nothing to spare` : now.bangs ? `only carry ${say(now.bangs)}` : 'don\'t carry any'}.\nPress [A] or [D] to choose Stun heavy, then press [Enter] to put it on.` }) },
