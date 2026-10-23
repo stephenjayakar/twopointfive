@@ -110,14 +110,16 @@ export async function smokeBreakCheck(o: { verbose?: boolean } = {}): Promise<bo
       // … and what remembers the smoke filed with a solver is the HOST'S (smokebreak.ts SmokeShown, on the engine): the game whose man smoked on a solver for
       // twenty seconds and the one nothing drew are the same game, row for row of this file's table
       { const RB = await import(`${ROOT}/src/game/rollback.ts`), B = await rig(true, false); B.step(10); order(B.gd, { goal: null, upper: 'torch', smoke: true }); B.step(20 * 60);
-        // (this file's own rows of the two states, taken out and laid side by side: the whole-state diff stops at the first table whose shape differs, and
-        //  when this was written the breath in the cold, snowBreath.ts, kept the solver's word in its own table: read row by row, another table's shape cannot hide this one's)
-        const rows = (g: any) => { const F = RB.stateFlat(g); return F.paths.map((p: string, i: number) => [p, F.toks[i]] as [string, unknown]).filter(([p]: [string, unknown]) => p.includes('smokebreak.')); };   // (the men's own rows are filed as 'the table at smokebreak.states…')
-        const ra = rows(A.g), rb = rows(B.g), own = ra.length !== rb.length ? [`${ra.length} rows against ${rb.length}`] : ra.flatMap(([p, t]: [string, unknown], i: number) => p === rb[i][0] && t === rb[i][1] ? [] : [`${p}: ${t} | ${rb[i][1]}`]);
-        const cut = !ra.some(([p]: [string, unknown]) => p.endsWith('.emberT')) || !ra.some(([p]: [string, unknown]) => p.endsWith('.stats.breaths')), P = smokeShown(A.g), Q = smokeShown(B.g);
+        // (the two games gone through value for value, rollback.ts stateAlike: it pairs what stands in the same place and goes on past a thing that differs, so
+        //  another module's row cannot hide this one's — and it lays neither state out flat, which was two whole games' rows held as text. That it READS this
+        //  file's rows is shown, not supposed: one number of his row changed by hand in one game must come back as a line of this file's, and no line once put back)
+        const mine = (): string[] => (RB.stateAlike(A.g, B.g, 400) as string[]).filter(l => l.includes('smokebreak'));
+        const own = mine(), { sideRegistry } = await import(`${ROOT}/src/math/side.ts`), tab: any = (sideRegistry().tables as any[]).find(t => t.sideName === 'smokebreak.states'), row: any = tab?.get(A.g)?.men.get(A.gd.char), T: any = smokeBreakStats(A.g);
+        let cut = true; if (row && typeof row.emberT === 'number') { const e = row.emberT; row.emberT = e + 1; T.breaths++; const seen = mine(); row.emberT = e; T.breaths--; cut = !seen.some(l => l.includes('emberT')) || !seen.some(l => l.includes('breaths')) || mine().length !== own.length; }
+        const P = smokeShown(A.g), Q = smokeShown(B.g);
         verdict(A.sw && B.sw && own.length === 0 && !cut && P?.threads === 1 && Q?.threads === 0 && smokeBreakStats(A.g).breaths === smokeBreakStats(B.g).breaths && smokeBreakStats(B.g).breaths >= 2,
           'smoke — … and what remembers the smoke on the solver is the host\'s, not the game\'s: after twenty seconds the game whose man smoked on a solver and the one nothing drew differ in nothing of the smoke break\'s',
-          `rows of the smoke break's that differ: ${own.length ? own.slice(0, 6).join(' · ') : 'none'} of ${ra.length}${cut ? ' (HIS OWN ROWS OR THE COUNTS WERE NOT READ)' : ''} · the host's book: ${P?.threads ?? '-'} thread against ${Q?.threads ?? '-'} · breaths counted ${smokeBreakStats(A.g).breaths} and ${smokeBreakStats(B.g).breaths}`); }
+          `rows of the smoke break's that differ: ${own.length ? own.slice(0, 6).join(' · ') : 'none'}${cut ? ' (HIS OWN ROW OR THE COUNTS WERE NOT READ: a number changed by hand in each gave no line)' : ' (a number changed by hand in his row and in the counts gives a line each, and none once put back)'} · the host's book: ${P?.threads ?? '-'} thread against ${Q?.threads ?? '-'} · breaths counted ${smokeBreakStats(A.g).breaths} and ${smokeBreakStats(B.g).breaths}`); }
       // … and the book is never taken at its word: the solver lets a source go without telling whoever filed it, and the thread is filed again
       { const C = await rig(true, true), smoke = { goal: null, upper: 'torch', smoke: true }; C.step(10); order(C.gd, smoke); C.step(8 * 60);
         const th = () => C.sources.filter(e => e.kind === 'breath' && e.tint && e.ttl > 60), up = () => C.held.filter((e: any) => e.ttl > 60 && !!e.track()).length, one = () => `${th().length} filed, ${up()} on the solver`;
