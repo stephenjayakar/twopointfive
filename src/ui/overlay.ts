@@ -148,7 +148,7 @@ export class Overlay implements HudLike {
   private recEl = document.getElementById('journal'); private recKey = '';            // the session journal's REC tag (game.journal.hudText(): 'REC f=1234 · 38 KB' / why it waits) — journal.ts, F10 in main.ts; absent on a page without the element
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private skyWas = false;
-  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
+  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railLog = ''; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
   private card: RailCard;                                                          // a tutorial step's card, up in the middle with the world held (ui/railcard.ts)
   /** a tutorial mission's card is up (main.ts holds the world still under it) */
   get cardUp(): boolean { return this.card.up; }
@@ -379,8 +379,11 @@ export class Overlay implements HudLike {
             const hw = Math.max(18, 0.32 * Math.hypot(fx - hx, fy - hy)), q = B[n] ?? (B[n] = { l: 0, r: 0, t: 0, b: 0 }); n++; q.l = Math.min(fx, hx) - hw; q.r = Math.max(fx, hx) + hw; q.t = Math.min(fy, hy); q.b = Math.max(fy, hy) + 8; }
           B.length = n; s = railClear(this.railRest, B, h, this.railMan > 0); } }
       else if (!rail) O[0] = '\0';
-      if (s !== this.railMan) { this.railMan = s; E.style.setProperty?.('--railman', `${s.toFixed(0)}px`); const st = document.body.style;
-        if (s > 0 && this.railRest) st?.setProperty?.('--raillog', `${(h - this.railRest.t - s + 6).toFixed(0)}px`); else st?.removeProperty?.('--raillog'); } }
+      if (s !== this.railMan) { this.railMan = s; E.style.setProperty?.('--railman', `${s.toFixed(0)}px`); }
+      // (the rows' place is the line's own top at the bottom edge: written when IT changes — the line is hung from its bottom, so a taller line keeps the same
+      //  step down and has a higher top, and the rows stood in its first row of words)
+      { const log = s > 0 && this.railRest ? `${(h - this.railRest.t - s + 6).toFixed(0)}px` : '';
+        if (log !== this.railLog) { this.railLog = log; const st = document.body.style; if (log) st?.setProperty?.('--raillog', log); else st?.removeProperty?.('--raillog'); } } }
     const ot = rail ? '' : keyText(game.objectiveText());
     if (ot !== this.objKey) { this.objKey = ot; const W = 'objective ▸', cut = ot.indexOf(W);   // the line's own word is set apart as its label (a par clock in front of it is not part of it); the text read back is unchanged
       if (cut < 0) this.objEl.textContent = ot; else this.objEl.innerHTML = `${esc(ot.slice(0, cut))}<b>${W}</b>${esc(ot.slice(cut + W.length))}`;
