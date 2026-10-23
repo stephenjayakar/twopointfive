@@ -2,7 +2,8 @@
 // THE SPONGE ROUND) — headless Chromium on the software WebGPU adapter (tools/qa/tut-page.cjs's recipe: the page is ?paused and stepped by __runFrames with
 // nothing drawn, every input a DOM event from Playwright's keyboard and mouse).
 // What the headless lesson run (tools/qa/lessons/tut-quiet.ts) cannot see: that the bundle boots the level with its own card (the launcher up on the grenade),
-// that each line is up with the player's own key on a key cap, that the card comes up with the rifle in his hands and closes, that the gun's setup takes the
+// that each line is up with the player's own key on a key cap, that the interaction key still works the back door from inside the store (open, then shut:
+// the first build took that key there), that the card comes up with the rifle in his hands and closes, that the gun's setup takes the
 // swap from two real presses of the rifle's key, that neither button does anything to the man until the sponge round is on (both tried from the doorway's
 // line, where there IS a way to him), that the right button then fires it from the mark, and that the hands' key is drawn as the board has it.
 // STAGED, NOT PLAYED, up to the store's doorway: the lesson is put on the line that sends him in, the court's man is marked down and the player stood a stride
@@ -34,7 +35,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const read = () => page.evaluate(() => { const g = window.__game, el = document.getElementById('railprompt'), P = g.player, rf = P.rifle, eq = document.getElementById('equip'), card = document.getElementById('railcard');
     const hall = g.guards.find(x => !x.unit && x.route?.name === 'hall'), box = g.guards.find(x => !x.unit && x.route?.name === 'table');
     return { i: g.lesson.i, id: g.lesson.step?.id ?? null, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none',
-      fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, slot: P.slot, away: !!P.holstered, setup: P.setup ? P.setup.gun : '', load: rf.attachment, shells: rf.shells, rings: rf.rings,
+      fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, slot: P.slot, away: !!P.holstered, setup: P.setup ? P.setup.gun : '', load: rf.attachment, shells: rf.shells, rings: rf.rings, back: (d => d ? +d.angle.toFixed(3) : null)(g.doors.list.find(d => d.def.name === 'back')), ring: !!P.sel?.open,
       strip: (eq?.textContent ?? '').replace(/\s+/g, ' ').trim(), words: eq?.querySelector('.hb-st')?.textContent ?? '', rows: [...(eq?.querySelectorAll('.hp kbd:not(.x)') ?? [])].map(k => k.textContent),
       card: { on: !!card && card.classList.contains('on'), h: card?.querySelector('h2')?.textContent ?? '', p: [...(card?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / ') },
       hall: hall ? { state: hall.state, how: hall.down?.how ?? hall.downHow ?? '', at: [+hall.char.pos[0].toFixed(2), +hall.char.pos[2].toFixed(2)], aw: +(hall.awareness ?? 0).toFixed(2) } : null, other: box ? box.state : '',
@@ -56,6 +57,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const head = () => page.evaluate(() => { const g = window.__game, h = g.guards.find(x => !x.unit && x.route?.name === 'hall'); return h.char.bones?.head ? [...h.char.bones.head] : [h.char.pos[0], 1.6, h.char.pos[2]]; });
   const right = async frames => { await page.mouse.down({ button: 'right' }); await run(frames); await page.mouse.up({ button: 'right' }); await run(3); };
   const key = async (k, frames = 3) => { await page.keyboard.press(k); await run(frames); };
+  // (the physical key the board has put a game code on — host/keymap.ts: the first of `codes` that the board reads as one of `games`)
+  const keyFor = (codes, games) => page.evaluate(([codes, games]) => { const K = window.__keys; return K ? codes.find(c => games.includes(K.gameCode(c))) ?? null : null; }, [codes, games]);
   const s = r => `step '${r.id}' · "${r.line}" [${r.keys}] · ${r.slot}${r.away ? ' (away)' : ''} · launcher ${r.load}, ${r.shells} grenade(s), ${r.rings} sponge round(s) · setup '${r.setup}'`;
 
   const url = `http://localhost:${PORT}/?levelFile=tut-quiet.json&quiet&paused&quality=${QUALITY}&mute&nocutboxes`;
@@ -77,7 +80,16 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const I0 = await read();
   log('picture', await shot('0-inside'));
   check(I0.id === 'corner' && same(I0.line, step('corner').line) && I0.keys.length === 0 && I0.hall?.state !== 'dead', 'a stride inside the back door the line names the laser behind the man and sends him to the dark', `${s(I0)} · the hall's man ${JSON.stringify(I0.hall)} · he stands at ${I0.at}`);
-  await stand(NOOK); await run(40); R = await read();
+  // the interaction key is his on that line, his hands empty: a tap opens the back door from inside and a second tap shuts it behind him. Held on open
+  // floor it puts no ring up (the whistle is not his in the store: it would bring the man round to him)
+  const useKey = await keyFor(['KeyE', 'Space', 'KeyF'], ['Space']);
+  if (useKey) await key(useKey, 150); const I1 = await read(); if (useKey) await key(useKey, 150); const I2 = await read();
+  check(!!useKey && I1.back !== I0.back && Math.abs(I2.back - I0.back) < Math.abs(I1.back - I0.back) - 0.3 && I2.id === 'corner' && I2.hall?.state === I0.hall?.state, 'the interaction key works the back door from inside on that line: a tap opens the leaf and a second tap shuts it behind him',
+    `the key pressed: ${useKey} · the leaf ${I0.back} → ${I1.back} → ${I2.back} · ${s(I2)} · the hall's man ${JSON.stringify(I2.hall)}`);
+  await stand(NOOK); await run(40);
+  if (useKey) { await page.keyboard.down(useKey); await run(40); } const K0 = await read(); if (useKey) { await page.keyboard.up(useKey); await run(6); } if (K0.ring) await key('Escape', 6);
+  check(!!useKey && !K0.ring, 'the interaction key held on open floor in the store puts no ring up: there is no whistle to pick here', `ring up: ${K0.ring} · ${s(K0)}`);
+  R = await read();
   log('picture', await shot('1-rifle-line'));
   check(R.id === 'rifle' && R.keys.join() === '2' && same(R.line, step('rifle').line) && R.hall?.state !== 'dead', 'in the store\'s dark corner the line names the rifle\'s key on a key cap',
     `${s(R)} · the hall's man ${JSON.stringify(R.hall)} · he stands at ${R.at}`);
@@ -119,7 +131,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     `${s(H)} · him ${JSON.stringify(H.hall)} · out cold by: ${H.ko || 'nothing'} · beams broken ${H.trips - trips0} · the other man: ${H.other}`);
 
   // ---- the hands' key, as the board has it
-  const hands = await page.evaluate(() => { const K = window.__keys; if (!K) return null; for (const code of ['Backquote', 'KeyE', 'Digit0']) { const g = K.gameCode(code); if (g === 'Digit0' || g === 'KeyE') return { code, cap: K.keyCap('E') }; } return null; });
+  const handsCode = await keyFor(['Backquote', 'KeyE', 'Digit0'], ['Digit0', 'KeyE']), hands = handsCode ? { code: handsCode, cap: await page.evaluate(() => window.__keys.keyCap('E')) } : null;
   const label = c => c === 'Backquote' ? '`' : c.replace(/^Key|^Digit/, ''), cap = H.keys.join(); if (hands) await key(hands.code, 60); const E = await read();
   log('picture', await shot('6-under'));
   check(!!hands && E.away && E.id === 'under' && cap === hands.cap && cap.toLowerCase() === label(hands.code).toLowerCase(), 'the line names the hands\' key on a key cap as this board has it, and the key with that cap puts the rifle away',

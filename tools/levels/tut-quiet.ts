@@ -45,14 +45,16 @@
 // THE SPONGE ROUND, AND THE SWAP OF THE LAUNCHER'S LOAD (the maintainer, of the solo mission's launcher card: "we can also not teach swapping secondaries
 // at this point and only have 40mm. we can introduce sponge rounds + swapping secondaries later when we have a stealth tutorial"). This is that mission.
 //   WHAT HE CARRIES (scenarios.issue): the rifle with one grenade and five sponge rounds on its launcher, and the launcher comes up on the GRENADE
-//                   (`loaded`). The swap is then a thing he needs, with its reason in plain sight: a grenade would wake the street. No cans and no frag
+//                   (`loaded`). The swap is then a thing he needs, with its reason in plain sight: the grenade is the loud one. No cans and no frag
 //                   are on him: nothing on the kit strip that no line of this mission uses.
 //   WHO             the hall's man. Of the three he is the one a second pair of hands was spent on (the first man is grabbed for the code, the clerk is
 //                   taken at the box), and he is the one a wall hides the player from: the shot is let go from the store, at his back.
 //   WHY NOT HANDS   the chest beam is 0.45 m behind his heels. A man on his feet behind him stands in it (devices.ts: the player's own body breaks a
-//                   beam, at any capsule). The frame says the same: from the store's first line to the shot no button of the close-in mode is his —
-//                   the right button and the trigger from `nook`, and from `corner` (the first line inside the door) the interaction key as well, because the held left click that
-//                   stalks a man is the frame's wherever that key is his and his hands are empty (rails.ts gate), whatever a step denies.
+//                   beam, at any capsule). The frame keeps the game from walking him into it: from `nook` to the beam the right button, the trigger
+//                   and the held left click that stalks a man (`stalk`, rails.ts gate) are not his, and neither is the whistle, which would bring
+//                   the man round to the store. The interaction key is his on every line. (The first build shut the held click by taking that key
+//                   from the first line inside: a tap at the open back door then did nothing and said nothing.) The grab's own row is still his
+//                   close behind the man, and the hand that takes him breaks the beam: the room says no, not a dead key.
 //   WHERE FROM      the dark corner he is sent to has no line to the man: the doorway's own wall is in the way. A round let go from there does not
 //                   reach him (on the real page one left the tube and he turned to the knock; in the harness on the page's stand none left it, on the
 //                   frozen stand one did). So the corner is where the rifle comes out and the load is swapped, and a line of its own then puts a
@@ -557,14 +559,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'pick', line: 'Press [Space] at the lock to pick it', explain: { title: 'Picking a lock', text: 'This door is locked. Stand at the lock and press [Space] to pick it.\nPicking a lock, entering a code or opening a safe takes a few seconds. If you move or press [Space] again, you stop.\nThe lock clicks while you work on it, and a guard close by can hear it.' },
         done: PICKED, at: mark(TQ.backDoor) },
       // ---- the store: a man in the light, the player in the dark ----
-      // (no button of the close-in mode is his from here to the shot: the man ahead is not taken by hand — see THE SPONGE ROUND at the head. The right
-      //  button and the trigger go here. The interaction key is still his on this line: the back door needs it)
-      { id: 'nook', line: 'Go inside', cue: 'store', deny: ['fire', 'alt'], done: any({ is: 'in', area: { x0: 25.62, x1: 30.38, z0: 8.62, z1: 16.0 } }, down(2)), at: mark(TQ.inside) },
+      // (the man ahead is not taken by hand — see THE SPONGE ROUND at the head. Four things go here and come back at `under`: the right button, the
+      //  trigger, the held left click that walks him up behind a man (`stalk`: the frame's word for it, which leaves the interaction key alone) and the
+      //  whistle, which would bring the man round to him. The interaction key is his on every line: the back door shuts behind him like any door)
+      { id: 'nook', line: 'Go inside', cue: 'store', deny: ['fire', 'alt', 'whistle', 'stalk'], done: any({ is: 'in', area: { x0: 25.62, x1: 30.38, z0: 8.62, z1: 16.0 } }, down(2)), at: mark(TQ.inside) },
       // ---- the store: the rifle's launcher. A man nobody can stand behind, put out from the dark ----
-      // (the line says what to do and why, the moment he is through the door and before he can reach for the man: `use` goes here, because the frame
-      //  gives the left button to the stalk wherever the interaction key is his and his hands are empty, and no line from here to the shot needs that
-      //  key — the back door is behind him. It is his again at `under`)
-      { id: 'corner', line: 'Stay back in the dark, because there\'s a laser right behind him', deny: ['use'], done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
+      // (the line says what to do and why, the moment he is through the door and before he can reach for the man)
+      { id: 'corner', line: 'Stay back in the dark, because there\'s a laser right behind him', done: any(near(TQ.nook, 0.8), down(2)), hold: 0.3, at: mark(TQ.nook) },
       // (the rifle's own key is his from here; its trigger is not, at any step)
       { id: 'rifle', line: 'Press [2] to take out your rifle', allow: ['slot:rifle'], checkpoint: 'the store',
         done: any({ is: 'slot', slot: 'rifle', drawn: true }, down(2)), atMan: 'hall', at: [24.0, 1, 12.6] },
@@ -583,7 +584,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       //  put it — host/keymap.ts: the backtick on the page. The rifle's key and its load's row are shut again from the next line)
       { id: 'sling', line: 'Press [E] to put your rifle away', allow: ['hands'], done: { is: 'flag', flag: 'holstered' } },
       // ---- the hall: two beams and the mains ----
-      { id: 'under', line: 'Stay low and go under the laser beam', checkpoint: 'the doorway', allow: ['fire', 'alt', 'use'], deny: ['slot:rifle', 'load', 'hands'], done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
+      { id: 'under', line: 'Stay low and go under the laser beam', checkpoint: 'the doorway', allow: ['fire', 'alt', 'whistle', 'stalk'], deny: ['slot:rifle', 'load', 'hands'], done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
       // ---- the set piece: the mains ----
       { id: 'nv', line: 'Press [N] to turn on night vision', allow: ['nvg'], checkpoint: 'the hall', done: any({ is: 'flag', flag: 'nv' }, down(3)) },
       { id: 'box', line: 'Press [Space] at the breaker box, then hide behind the wall', done: any(did('act:breakerOff'), down(3)), at: mark(TQ.boxAt) },

@@ -156,17 +156,30 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.until(() => !B.door('back').isClosed(), 4);
     B.go([27.9, 0, 15.7], 15);
   },
-  // the first line inside the door names the laser and takes the interaction key: the dark corner, on a knee
+  // the first line inside the door names the laser: the dark corner, on a knee
   corner: B => {
     const H = man(B, 'hall'), n0 = seen(B);
+    // (the interaction key is his on this line: the back door, open behind him, has its row from inside and the row moves the leaf. The first build took
+    //  the key here to shut the stalk's click, and a tap at this door did nothing and said nothing. Not asked on the break's run: he goes for the man there)
+    if (!WRONG) { const d = B.door('back'), a0 = d.angle, AIM = [27.9, 1.0, 16.5];
+      for (let i = 0; i < 20; i++) { B.aim(AIM); B.step(); }
+      const row = B.g.nearby.find((r: any) => r.kind === 'door' && r.verb && r.inReach !== false);
+      if (!row) B.fail(`no row for the open back door from inside it (rows: ${B.g.nearby.map((r: any) => `${r.kind}:${r.verb ?? '-'}`).join(' | ') || 'none'}): the interaction key is dead on this line`);
+      else { B.verb('door', row.verb, AIM); B.until(() => Math.abs(d.angle - a0) > 0.1, 4); B.step(60);   // (how far it swings is the stand's: a hand walks it shut on the page's, he stands in its way on the frozen one)
+        if (Math.abs(d.angle - a0) < 0.1) B.fail(`the back door's row '${row.verb}' did not move the leaf from inside (${a0.toFixed(2)} → ${d.angle.toFixed(2)})`);
+        B.say(`  inside the back door: '${row.verb}' moves the leaf (${a0.toFixed(2)} → ${d.angle.toFixed(2)}, ${d.isClosed() ? 'shut behind him' : 'not shut'})`); } }
     // (the break: the man gone for by hand after all, his hands empty, on a knee the whole way. On the page's stand the hand that reaches for him is in the
-    //  beam; where no hand comes up by itself — the frozen stand has no creep, and the grab's row is not his on this line — he stands up behind the man)
+    //  beam; where no hand comes up by itself and no row takes him, he stands up behind the man)
     if (WRONG === 'hands') { const t0 = trips(B); closeIn(B, H, [25.3, 0, 12.7]); B.step(20);
       if (trips(B) === t0 && B.verb('guard', 'grab', [H.char.pos[0], 1.35, H.char.pos[2]])) { B.until(() => trips(B) > t0, 3); B.say(`  the grab's row taken: ${B.g.player.holding ? 'he is held' : 'nobody held'}`); }
       if (trips(B) === t0) { B.crouch(false); B.step(40); B.say('  no row to grab him by: he stands up behind the man'); }
       B.say(`  by hand: ${trips(B) > t0 ? 'the chest beam broken' : 'the beam not broken'} from ${at(B.pos())}, ${flat(B.pos(), H.char.pos).toFixed(2)} m behind him; he ${H.state}`);
       if (trips(B) > t0) B.fail('the chest beam at his back is broken by a man who comes up behind him'); }
     B.go(TQ.nook, 10, { near: 0.12 }); B.wait(0.4);
+    // (the interaction key held on open floor: with the whistle not his here the hand's ring has no wedge and does not come up, and a click whistles nobody round)
+    { const n = () => B.g.events.filter((e: any) => e.kind === 'whistle').length, w0 = n(); B.hold(['Space'], 0.6); const ring = !!B.g.player.sel?.open; B.click(1, [H.char.pos[0], 1.2, H.char.pos[2]]); B.step(20);
+      if (ring || n() > w0) B.fail(`the interaction key held in the store ${ring ? 'put the hand\'s ring up' : 'whistled'} (the whistle would bring the hall's man round to him)`);
+      if (B.g.player.sel?.open) B.press('Escape', 3); }
     B.say(`  in the corner: lit ${lit(B)}; ${H.callsign} ${H.state}, aware ${H.awareness.toFixed(2)}, ${flat(B.pos(), H.char.pos).toFixed(1)} m off`);
     unseen(B, n0, H, 'coming into the store');
   },
@@ -175,8 +188,8 @@ export const steps: Record<string, (B: Bot) => void> = {
     const P = B.g.player, rf = P.rifle;
     B.say(`  on him: ${rf.shells} grenade, ${rf.rings} sponge rounds, the launcher up on ${loadName(rf.attachment)}; ${P.canisters} smoke, ${P.flashbangs} stun, ${P.frags} frag`);
     if (rf.attachment !== 'he40' || rf.shells !== 1 || rf.rings !== (kitTreeOn() ? 5 : rf.rings)) B.fail(`the mission's card is not on him: the launcher is up on ${loadName(rf.attachment)} with ${rf.shells} grenade and ${rf.rings} sponge rounds (one grenade, five sponge rounds, the grenade up)`);
-    // (his hands are empty and the man is in reach of a held left click: the frame gives that click to the stalk wherever the interaction key is his, so
-    //  this line takes the key with it — the level file's head, WHY NOT HANDS. Held from the doorway's line, where a stalk would have a way to him)
+    // (his hands are empty, the interaction key is his and the man is in reach of a held left click: the frame gives that click to the stalk unless a
+    //  step denies `stalk`, and `nook` does — the level file's head, WHY NOT HANDS. Held from the doorway's line, where a stalk would have a way to him)
     { const H = man(B, 'hall'), t0 = trips(B); B.crouch(true); B.go(TQ.shot, 10, { near: 0.15 }); const from = B.pos().slice(); leftHold(B, [H.char.pos[0], 1.2, H.char.pos[2]], 1.5);
       if (P.holding || trips(B) > t0 || flat(B.pos(), from) > 0.1) B.fail(`a left click held on the hall's man took him or walked the player at him (held ${!!P.holding}, moved ${flat(B.pos(), from).toFixed(2)} m, the beam ${trips(B) > t0 ? 'broken' : 'whole'})`);
       B.say(`  a left click held on him from the doorway's line: nobody stalked, nobody held`); B.go(TQ.nook, 10, { near: 0.15 }); }
