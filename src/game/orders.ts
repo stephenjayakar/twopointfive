@@ -696,7 +696,7 @@ export class SquadOrders {
     for (const d of g.doors.list) { const m = Math.min(flat(d.frameCentre, at), flat(d.pos, at)); if (m < dd) { dd = m; door = d; } }
     let man: Guard | null = null, dm = K.manM;
     for (const gd of this.squad()) { const m = flat(gd.char.pos, at); if (gd.state !== 'dead' && m < dm) { dm = m; man = gd; } }
-    const ds = flat(sam, at);
+    const ds = g.rails?.planSeat ? Infinity : flat(sam, at);   // (a tutorial's seat with plan mode held up: nobody of his is on the floor, and where he is parked is no target)
     const fo = this.people?.near(at) ?? null;   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)
     if (fo && !(door && dd < fo.d) && !(man && dm < fo.d) && !(ds < K.selfM && ds < fo.d)) return { kind: 'foe', at: [fo.gd.char.pos[0], 0, fo.gd.char.pos[2]], foe: fo.gd };
     const wk = workNear(g, at);   // (workthings.ts: a thing a teammate can work — the breaker, the mission's thing — nearer the point than a door, a teammate or Sam himself; null with its switch off)
@@ -1147,7 +1147,7 @@ export class SquadOrders {
    *  (planShift: out of a run it is not, CMDRING.planRun). With that mode off Shift is only his sprint, and the key orders as it does at a walk */
   private ringFree(input: Input): boolean { return !planShift(this, input) && this.backFree(); }
   /** plan mode is up and the back key takes it down (planmode.ts, CMDRING.planRun): Game.backable */
-  planBack(): boolean { return CMDRING.plan && CMDRING.planRun && this.plan.up; }
+  planBack(): boolean { return CMDRING.plan && CMDRING.planRun && this.plan.up && !this.g.rails?.planSeat; }   // (…never in a tutorial's seat that holds the mode up: rails.ts RAILS.skyUp)
   /** … and the page's Esc doing it (Game.escape, last: everything nearer backs out first) */
   planEscape(): boolean { if (!planEscape(this)) return false; this.escUsed = true; return true; }
   /** the ring's key is free: no menu up and nothing the key backs out of instead (backkey.ts: a Space list, a running verb, the launcher's arc) */

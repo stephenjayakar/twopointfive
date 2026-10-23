@@ -292,7 +292,11 @@ export interface RailsData {
    *  knows nothing through it — rails.ts RAILS.eyeView) */
   sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number };
     /** the squad holds ON A KNEE where the mission stood it until its first order (men behind their trucks under fire), not at the low ready on its feet */
-    low?: boolean };
+    low?: boolean;
+    /** PLAN MODE IS UP IN THIS SEAT, from the first tick to the last, and no key puts it down (rails.ts RAILS.skyUp, planmode.ts): the mission teaches the
+     *  mode's own orders — the box, the right click, the word — with nobody of the player's on the floor. Its view starts on the squad and the walk keys
+     *  move it as the mode moves it (`reach` is not read) */
+    plan?: boolean };
   /** false: no teammate shows an aiming laser on this level, red or infrared (game/irlaser.ts laserOn) */
   lasers?: boolean;
   /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
