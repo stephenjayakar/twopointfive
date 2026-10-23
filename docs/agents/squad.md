@@ -363,6 +363,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   filed further out; a right click from a corner and the ease back; the journal; the stands. `planmode-check`'s rig holds the rule off (its lines
   19 and 21 ask the reach as first built), so `planmode` and `planplus` do not play it. THE LEVEL HALF of his note (no place that is always safe
   to command from) is not built here: it is level design, for the level skill and the missions. Nobody has played it; never seen on a GPU.
+- **The squad's ring is two rings deep and nothing rides the cursor** (2026-10-23; `CMDRING.flat` / `plainHint`; `cmdring.ts flatSeats`,
+  `FLAT_TOP`, `FLAT_LEFT`; `orders.ts flatRows`, `menuRows`, `seats`, `hintView`, `OrderDef.gone`). The maintainer: "radial menu tree needs some
+  work, way too nested"; "loud and quiet should be an option on squad wheel"; "let's remove the icons on mouse position from squad orders
+  entirely". BOTH: ON in the page (`flat` with `only`), `?ringflat=0` / `?plainhint=0`; off in the module and on the frozen stand,
+  `TPS_RINGFLAT=1` (beside `TPS_QRING=1 TPS_QONLY=1`) / `TPS_PLAINHINT=1`; a tick each in the debugger; a recording from before the keys replays
+  with them off. THE TREE (`flat`): the ring holds every order of the thing under the cursor, never a page. Floor, wall, a thing: 1 what a tap
+  gives · 2 cover that way · 3 fall in · 4 hold position · 5 more (frag there · bang there · a wall charge when the squad carries one · go
+  silent). A door: 1 what a tap gives · 2 cover this door · 3 open and clear · 4 bang and clear · 5 more (charge, or shut that door · clear from
+  outside · shotgun and clear · frag and clear · go silent); fall in and hold position are NOT on a door's ring. The squad's own ring (on a man,
+  on Sam, on nothing): 1 fall in · 4 hold position · 5 go silent. An enemy: no ring, as before. Rules: a row that says what wedge 1 says has no
+  wedge of its own and its digit is wedge 1's (`seats().same`: 3 is still fall in on the squad's own ring; stacked on a door the entry the squad
+  would pick is on 1 only); no ring has one row (a lone left-over sits on wedge 5 itself); a row for kit the squad never carried or a tool this
+  door never takes is not offered (`gone`: a wall charge with none brought, a charge or the big slot's tool on steel, the big slot's tool on an
+  open door), one off only for now stays greyed; the posture row is the last of every second ring and gives up its place first when rows
+  overflow. No key sets loud or quiet, before or now. A TUTORIAL MISSION (rails live) KEEPS THE PAGED TREE: its lines name the old digits
+  ("[X], then press [3]", "Press [5], then [3]"), the tutorial's own to move. THE CURSOR (`plainHint`): the outline on the floor of what the
+  key orders on, no glyph beside the cursor or in the ring's middle. THE SQUAD'S CORNER cut down to its key lines (his same notes) is NOT here:
+  it is the page's own layer's, which reads `orders.hud()` whole, so the order book's lines are as they were. CHECK `probes.ts ringflat`
+  (family squadorders; 12 lines, both stands, one deal seed 3: the rules have no die in them; `RINGFLAT_BREAK=1` fails lines 1 to 6 and 9 on
+  both). `qonly-check` holds `flat` off in its rig (its lines ask the ring by the menu's pages). Neighbours' files touched for it:
+  `wallcharge.ts`, `doortools.ts` (the `gone` rows), `squadthrow.ts` (the throw's arc on a flat ring), `ui/cmdring.ts` (one line, the glyph),
+  `ui/options.ts` (the hint's words). Nobody has played it; never seen on a GPU.
+- **A held door's key lights when the men say so** (2026-10-23; `PLAN.thrTold`, `floorplan.ts waitsOnKey` / `PlanDoor.ready`; picture only, on on
+  both stands like `PLAN.keyLit`, `?thrtold=0`, a tick in the debugger). Found by the squad's own behaviour work: on a door held from outside the
+  word pressed before the men's "holding · on your word" call cuts their slice of the room short, and the key's cap was lit from the moment their
+  feet were on the jambs. Now that cap is dark until `thr.told`, then lit; the key does what it did. CHECK `tools/qa/plan-check.ts`, the last
+  line, both stands (one deal, the conference door: dark with feet on the jambs, lit 3.5 to 4.5 s later at the call; `THRTOLD_BREAK=1` red on
+  both). NOT covered: the HUD's own word line (`doortools.ts wordNote`, "go · … waiting") still shows from the stack, and several doors on one
+  word (`planOne`) wait for every stack to FORM, not for a call. Never seen on a GPU.
 - **What the cursor is on is kept by whoever reads the HUD** (2026-10-23; `orders.ts hover / hud / hintView`, `HoverKept`, `ui/hoverkept.ts`; picture
   only, no switch). `hover()`'s answer, kept a tenth of a second while the cursor rests, and the camera it was asked under were fields of the order
   book (`orders.hov`, `orders.hovCam`): a game whose HUD was read each frame differed in the whole state from one never read. Now `hud(kept)` and

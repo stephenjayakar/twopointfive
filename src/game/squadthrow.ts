@@ -524,7 +524,7 @@ export function squadThrowPlans(g: Game, V?: SquadThrowKept): SquadThrowPlan[] {
     out.push({ gd: W.gd, from: W.post, points: W.arc.sol.points, land: W.arc.rest, kind: W.kind, walk: flat(p, W.post) > 0.4 ? [v3.copy(p), ...L.slice(bi + 1), W.post] : undefined });
   }
   const M = g.orders.menu, id = M?.rows[M.sel]?.id;
-  if (M && M.page === THROW_PAGE && M.target.kind === 'floor' && (id === FRAG_THERE || id === STUN_THERE)) aside(g, s, V ?? squadThrowKept(), () => {   // (the highlighted row's throw and no other: what is drawn is what the next pick gives)
+  if (M && (M.page === THROW_PAGE || M.flat) && M.target.kind === 'floor' && (id === FRAG_THERE || id === STUN_THERE)) aside(g, s, V ?? squadThrowKept(), () => {   // (the highlighted row's throw and no other: what is drawn is what the next pick gives)
     const t = M.target, kind: SquadThrowKind = id === STUN_THERE ? 'stun' : 'frag';
     const th = left(g, kind) > 0 ? squadThrowPlan(g, M.men, t.at, kind, false, true) : null;   // (the picture's own kept answer: it never stands in for the menu's or the order's)
     if (th && !(kind === 'frag' && squadFragCatches(g, th.rest, t.at, { gd: th.gd, at: th.post ?? th.gd.char.pos }, !samCalls(), true))) {   // (the row's own question, word for word: drawn where the row is live)
