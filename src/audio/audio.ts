@@ -25,7 +25,7 @@ interface Voice { v: BackendVoice; positional: boolean; /** made by `again()`: t
 export type FollowSrc = () => { pos: Vec3; k: number; t: number } | null;
 interface Follow { src: FollowSrc; name: string; gain: number; rate: number; occ: number; lastT: number; /** the mixer's clock when the game's last moved */ seen: number; }
 /** the stretch of a followed voice's buffer that repeats while it is held (seconds; a take shorter than the stretch loops whole) */
-const FOLLOW_LOOPS: Record<string, { start: number; end: number }> = { chairRoll: ROLL_LOOP };
+const FOLLOW_LOOPS: Record<string, { start: number; end: number }> = { chairRoll: ROLL_LOOP, fireBed: ROLL_LOOP };
 const MAX_FOLLOW = 4, FOLLOW_SECS = 45, FOLLOW_FADE_MS = 140;   // followed voices at once · the longest one is held · its fade when the thing stops
 
 

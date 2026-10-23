@@ -72,6 +72,7 @@ import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
 import { updateSmokeBreak } from './smokebreak';
+import { updateFire } from './fire';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
@@ -1681,6 +1682,7 @@ export class Game {
     this.events = this.events.filter(e => this.time - e.time < 0.5);
     lightSwitchTick(this);   // a room's wall switch (lightswitch.ts — a return on its first line with its switch off): a defender at one puts a room back, before the fixtures are written
     updateTargets(this, dt);
+    updateFire(this, dt);               // AN OPEN FIRE (fire.ts): a brazier's lamp flickered about its authored strength — here, straight behind the lamps' own paint, so every reader of this frame's lights has the same one — and its flame, embers, smoke and sound; nothing on a floor with none, or with its switch off
     updateDevices(this, dt);   // the level's cameras / tripwires / the code being keyed (devices.ts): after the targets (this frame's power / OCP / broken state) and everybody's movement
     this.weather.update(dt, cam.yaw);   // the storm (weather.ts): strokes into / out of the light set, thunder due, the wet lot, the frame's rain numbers — after the fixtures, before the meter's queries below
     takedownTick(this);                 // takedowns (takedown.ts): who is out cold and breathes — the picture's joints only

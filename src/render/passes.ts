@@ -20,6 +20,7 @@ import { dustLookVol } from './dustLookVol';
 import { DUST_DRAW } from '../smoke/dustTint';
 import volCommon from './shaders/vol_common.wgsl' with { type: 'text' };
 import compositeSrc from './shaders/composite.wgsl' with { type: 'text' };
+import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame and embers (game/fire.ts): compiled into the composite, ahead of its own text
 import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
 import softblurSrc from './shaders/softblur.wgsl' with { type: 'text' };
 import temporalSrc from './shaders/temporal.wgsl' with { type: 'text' };
@@ -97,7 +98,9 @@ export interface TaauFrame { prevViewProjU: Mat4; jitter: [number, number]; bypa
 const TAAU_PARAM_BYTES = 144;   // struct TaauParams in taau.wgsl: mat4 (64) + 3 vec2 + 11 scalars → 132, rounded to the struct's 16-byte alignment
 /** restir.wgsl RestirU ahead of prevLights: cfg (16) + cfg2 (16) + jitter (16) + mot (16) + fwd (64) + inv (64) = 192 B (was 176 before the MOTION vec4 — direct-motion lane) */
 /** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
-const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_BYTES = BEAM_HEAD + BEAM_MAX * 48;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams`)
+const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 128, FIRE_AT = BEAM_SEG_BYTES, BEAM_BYTES = FIRE_AT + 16 + FIRE_MAX * FIRE_REC;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 8 vec4f — fire.wgsl FireRec, setFires)
+/** one open fire as the composite draws it (game/fire.ts makes them; shaders/fire.wgsl FireRec) */
+export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; embers: number; pops: ArrayLike<number> }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
 /** composite.wgsl as bundled (the scene tweak panel lists its constants off it: render/shaderTune.ts shaderConsts) */
@@ -333,7 +336,7 @@ export class LightingPasses implements CutSwappable {
   /** LASERS / TRACERS IN THE REFLECTIONS: those boxes are NoShadow (no ray meets one), so the reflection pass is handed the nearest BEAM_MAX of them as line segments
    *  (reflect.wgsl / reflect_p5.wgsl `beams`, group 1 binding 11: count, then per segment from + half-width · to · emitted rgb) and adds their mirror image analytically.
    *  Picture only: read off the list the picture is drawn from (what the fog of war hid or an infrared beam nobody's tube shows is not in it). Count 0 = the pass as it was. */
-  private beamBuf!: GPUBuffer; private beamData = new Float32Array(BEAM_BYTES / 4); private beamN = -1;
+  private beamBuf!: GPUBuffer; private beamData = new Float32Array(BEAM_SEG_BYTES / 4); private beamN = -1;
   /** …and, `opts.air` given (settings.beamAir), THE SQUAD'S WEAPON LASERS AS LIGHT IN THE AIR: a line `opts.air` knows (thinline.ts thinAirOf → its bead or null) is handed over
    *  with the air's share `opts.A` in e.w and whether it ends on a dot in b.w, composite.wgsl `beamAir` adds it to the picture as a thin additive line + dot, and the line and bead
    *  boxes are RETURNED so the raster leaves them out this frame (BoxWorld.hidePrimary). Lasers go first inside the cap; one past it stays a box. Header: n · flags (1 = mirror
@@ -361,6 +364,21 @@ export class LightingPasses implements CutSwappable {
     U[0] = n; U[1] = (opts.reflect ? 1 : 0) | (opts.air ? 2 : 0); F[4] = opts.rain; F[5] = opts.wet; F[6] = 0; F[7] = 0;
     this.beamN = n; this.device.queue.writeBuffer(this.beamBuf, 0, F.buffer, 0, BEAM_HEAD + n * 48);
     return hide.size ? hide : null;
+  }
+  /** THE OPEN FIRES (game/fire.ts → engine.fires): the nearest FIRE_MAX as records behind the beam segments, in the same uniform — the composite's fireOver draws
+   *  each one's flame and embers along the pixel's ray (shaders/fire.wgsl). Picture only. None = a zero count, written once: the composite as it was. */
+  private fireData = new Float32Array((16 + FIRE_MAX * FIRE_REC) / 4); private fireN = -1;
+  setFires(list: readonly FireRecord[] | null | undefined) {
+    const n = Math.min(list?.length ?? 0, FIRE_MAX);
+    if (n === 0 && this.fireN === 0) return;
+    const F = this.fireData; new Uint32Array(F.buffer)[0] = n;
+    for (let i = 0; i < n; i++) { const r = list![i], o = 4 + i * (FIRE_REC / 4);
+      F[o] = r.pos[0]; F[o + 1] = r.pos[1]; F[o + 2] = r.pos[2]; F[o + 3] = r.r;
+      F[o + 4] = r.h; F[o + 5] = r.heat; F[o + 6] = r.seed; F[o + 7] = r.time;
+      F[o + 8] = r.wind[0]; F[o + 9] = r.wind[1]; F[o + 10] = r.flick; F[o + 11] = r.embers;
+      F[o + 12] = 0; F[o + 13] = 0; F[o + 14] = 0; F[o + 15] = 0;
+      for (let k = 0; k < 4; k++) { F[o + 16 + k * 4] = r.pops[k * 3] ?? -1; F[o + 17 + k * 4] = r.pops[k * 3 + 1] ?? 0; F[o + 18 + k * 4] = r.pops[k * 3 + 2] ?? 0; F[o + 19 + k * 4] = 0; } }
+    this.fireN = n; this.device.queue.writeBuffer(this.beamBuf, FIRE_AT, F.buffer, 0, 16 + n * FIRE_REC);
   }
   private lRefl: GPUBindGroupLayout; private pRefl!: GPUComputePipeline; private bgRefl: GPUBindGroup | null = null;   // main's reflection pass, untouched (every tier with the phase-5 bits down)
   private lReflP5: GPUBindGroupLayout; private pReflP5!: GPUComputePipeline; private bgReflP5: (GPUBindGroup | null)[] = [null, null];   // phase 5's variant (reflect_p5.wgsl): + the hit records, per parity (reads reflHit[1−p], writes reflHit[p]); dispatched instead while frame.p5Cfg.z ≠ 0 (`rtP5`, engine.render mirrors it)
@@ -579,7 +597,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 2, visibility: CS, buffer: { type: 'uniform' } },
     ] });
     this.restirU = makeBuffer(device, this.restirUData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'restirU');
-    this.compText = (sharp: boolean, refr = false, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\nconst GLASS_REFRACT: bool = ${refr};\n` + refractCommonSrc + tuned(compositeSrc);   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
+    this.compText = (sharp: boolean, refr = false, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\nconst GLASS_REFRACT: bool = ${refr};\n` + refractCommonSrc + fireSrc + tuned(compositeSrc);   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
     this.buildGbaa = () => { this.pGbaa = device.createComputePipeline(this.gbaaDesc()); };   // (on first use, unless init({ gbaa }) prepared it)
     this.buildSharp = (edge: boolean, mask: boolean) => {   // SHARP DIRECT's pipelines, on first use (ensureSharp) unless init({ sharp }) prepared the first three: the composite's compute twin, sharpU (EDGE_RAYS false — no tracer compiled in — and, only once a ray user asks for it, true; the mask kernel only once the edge rays themselves are on), the 1 : 1 resolve
       const hadS = !!this.pCompS, hadUE = !!this.pSharpUE;

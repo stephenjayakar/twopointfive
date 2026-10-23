@@ -113,6 +113,8 @@ export const SOUNDS: Record<SfxName, Sound> = {
   powerDown: { group: 'things', what: 'the mains go out', gain: 1, plus: [{ name: 'powerDown', gain: 0.35, flat: true }] },
   powerUp: { group: 'things', what: 'the mains come back', gain: 1, plus: [{ name: 'powerUp', gain: 0.3, flat: true }] },
   propScrape: { group: 'things', what: 'furniture shoved', gain: 0.5 },
+  fireBed: { group: 'things', what: 'a fire burning in an oil drum (looped for as long as it burns)', gain: 0.5 },
+  fireCrack: { group: 'things', what: 'the wood in the fire cracking', gain: 0.4, rate: [0.8, 1.3] },
   chairRoll: { group: 'things', what: 'an office chair rolling on its castors (looped for as long as it coasts)', gain: 0.5 },
   propThud: { group: 'things', what: 'furniture knocked over', gain: 0.7, also: [{ what: 'a ceiling tile lands (with a slowed magazine drop)', gain: 0.9, rate: 0.75, plus: [{ name: 'magDrop', gain: 0.35, rate: 0.5 }] }, { what: 'a monitor knocked off a desk', gain: 1, rate: 0.6, plus: [{ name: 'lightBreak', gain: 0.45, rate: 0.8 }] }] },
   alarmChirp: { group: 'things', what: 'a tripwire trips', gain: 0.7 },
