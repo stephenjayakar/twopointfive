@@ -1900,7 +1900,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clock, the lights (the meter reads those) and the counts that hang on nothing of the host's; `smokeBreakStats` no longer makes a row by being read, and
   `resetSmokeBreak`, which nothing called, is gone. No switch: no rule of play changes and nothing reads the book back. CHECK: `smokebreak-check`, whose
   stand-in solver now asks its sources every step as the real one does, two new lines: the game that smoked on a solver for twenty seconds and the one
-  nothing drew differ in no row of the table (58 rows read, the man's own among them); and one thread rides his hand again, never two, after the solver
+  nothing drew differ in no line of the table's (read by `rollback.ts stateAlike` since the lighter compare: the check's peak fell from 1.1 GB to
+  0.36 GB; that the man's row and the counts ARE read is shown by changing a number in each by hand, which must give a line); and one thread rides his hand again, never two, after the solver
   is cleared, after the source is dropped without a word, after the book is dropped, and after `restartEncounter` with the order given again. Before the
   mend the first failed on `stats.threads`. MEASURED, seed 7: 10 of 10 on FROZEN and on SHIPPED, `SMOKEBREAK_BREAK=1` fails 8 on both; `rollback-check`
   on SHIPPED and its static pass, `lived-check` 393, `lesson-gate tut-quiet` on SHIPPED all pass. ON THE PAGE (`tut-quiet`, the software adapter, the
