@@ -1,5 +1,5 @@
 // THE SQUAD REACHES YOU, AND THE QUICK KEY SAYS WHY (src/game/squadnet.ts — SQUADNET.on · .why · .clear), headless:
-//   bun run tools/qa/squadnet-check.ts [why|clear|end|net|off]  (probes.ts squadnet; SQUADNET_BREAK=1 = the four switches left off: must fail)
+//   bun run tools/qa/squadnet-check.ts [why|clear|end|net|off]  (probes.ts squadnet; SQUADNET_BREAK=1 = the five switches left off: must fail)
 //   why    the room clear on the office with its squad of four, stacked on a door whose far room nobody has stood in: the quick key's row ends on the reason
 //          (a room nobody has been in · the last stun kept back · an enemy in sight inside), says nothing more of a plain open (a silent squad), and the man
 //          who answers the press says the reason in place of the row's own answer.
@@ -11,8 +11,8 @@
 //          a row of its own for its time, with the lower click, once; a man already down when the run starts is not called. The run with the rule on is the
 //          run with it off, by digest: it is the page's alone.
 //   off    the switches off = the lines as they were; the registry, a recording from before the keys, the frozen stand's rows.
-// Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the four switches and the autopilot itself. Where a far line is DRAWN (ui/bubbles.ts)
-// is not looked at here: no picture is.
+// Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the five switches and the autopilot itself. Where a far line is DRAWN (ui/bubbles.ts)
+// is not looked at here, no picture is; where it is PUT is (squadnet.ts netPlace, the one place bubbles.ts asks), in `net`.
 import { standUp, ROOT } from './headless.ts';
 
 const SN: any = await import(`${ROOT}/src/game/squadnet.ts`);
@@ -24,10 +24,10 @@ const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { knobRegistry, JOURNAL_KNOBS } = await import(`${ROOT}/src/game/knobs.ts`);
 const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`);
 const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-const { SQUADNET, whyWords, roomCall, plainCall } = SN;
+const { SQUADNET, whyWords, roomCall, plainCall, netPlace } = SN;
 const { AUTOPILOT, autoPick, autoEntries } = AP;
-/** the four switches as this stand stood them when the harness loaded (the shipped stand's boot has run by now; nothing here has written them yet) */
-const STOOD = [SQUADNET.on, SQUADNET.why, SQUADNET.clear, SQUADNET.endCall];
+/** the five switches as this stand stood them when the harness loaded (the shipped stand's boot has run by now; nothing here has written them yet) */
+const STOOD = [SQUADNET.on, SQUADNET.why, SQUADNET.clear, SQUADNET.endCall, SQUADNET.edge];
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -43,8 +43,8 @@ async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
   const was = { sn: { ...SQUADNET }, ap: { ...AUTOPILOT }, sil: SIL.SILENT.on, squad: NIGHTBREACH.squad, rnd: Math.random };
   try { return await fn(); } finally { Object.assign(SQUADNET, was.sn); Object.assign(AUTOPILOT, was.ap); SIL.SILENT.on = was.sil; NIGHTBREACH.squad = was.squad; Math.random = was.rnd; }
 }
-/** the four switches as a line asks for them (all left off under SQUADNET_BREAK) */
-const raise = (on = true, why = true, clear = true, endCall = true) => { SQUADNET.on = on && !BREAK; SQUADNET.why = why && !BREAK; SQUADNET.clear = clear && !BREAK; SQUADNET.endCall = endCall && !BREAK; };
+/** the five switches as a line asks for them (all left off under SQUADNET_BREAK) */
+const raise = (on = true, why = true, clear = true, endCall = true, edge = true) => { SQUADNET.on = on && !BREAK; SQUADNET.why = why && !BREAK; SQUADNET.clear = clear && !BREAK; SQUADNET.endCall = endCall && !BREAK; SQUADNET.edge = edge && !BREAK; };
 /** a line that calls an entry's end */
 const isCall = (x: string) => (/ clear\.$/.test(x) && !/ and clear\.$/.test(x)) || / quiet\. |^clear so far\.$/.test(x);   // (not an order's own answer: 'bang and clear.')
 
@@ -221,6 +221,38 @@ export async function squadnetNet(): Promise<boolean> {
     // 5. a run that starts with a man already down does not call him
     N.reset(); R.step(3); F.verdict(N.rows.length === 0 && N.stats.downs === 0, 'a man already down when the run starts is not called', `rows ${N.rows.length} · called ${N.stats.downs}`);
   });
+  // where a far line is put (netPlace, the one place ui/bubbles.ts asks): at the view's edge on his side with the rule, a short way out from you without
+  await kept(() => {
+    raise(); const w = 960, h = 540, px = 470, py = 300, bw = 150, bh = 22, m = Math.min(w, h), pad = SQUADNET.edgeIn * m, x0 = bw / 2 + 6, x1 = w - bw / 2 - 6, y0 = bh + 12, y1 = h - 12, free = () => false;
+    const dirs: [string, number, number][] = [['right', 1, 0], ['down right', 1, 1], ['down', 0, 1], ['down left', -1, 1], ['left', -1, 0], ['up left', -1, -1], ['up', 0, -1], ['up right', 1, -1]];
+    /** how far inside the kept box's border the point lies, on the nearest border of his side */
+    const gap = (x: number, y: number, dx: number, dy: number) => Math.min(dx > 0 ? x1 - x : dx < 0 ? x - x0 : Infinity, dy > 0 ? y1 - y : dy < 0 ? y - y0 : Infinity);
+    const far = (dx: number, dy: number) => netPlace(w, h, px, py, px + dx * 4000, py + dy * 4000, bw, bh, free) as [number, number];
+    const on = dirs.map(([n, dx, dy]) => { const [x, y] = far(dx, dy), L = Math.hypot(dx, dy), vx = x - px, vy = y - py, D = Math.hypot(vx, vy); return { n, x, y, gap: gap(x, y, dx, dy), D, straight: Math.abs(vx * dy - vy * dx) / L < 0.01 && vx * dx + vy * dy > 0 }; });
+    const here = netPlace(w, h, px, py, px + 40, py, bw, bh, free), none = netPlace(w, h, px, py, px, py, bw, bh, free);
+    SQUADNET.edge = false; const off = dirs.map(([, dx, dy]) => { const [x, y] = far(dx, dy); return Math.hypot(x - px, y - py); });
+    const [ox, oy] = far(1, 0), up = netPlace(w, h, px, py, px + 4000, py, bw, bh, (_x: number, y: number) => y === oy) as [number, number]; SQUADNET.edge = !BREAK;
+    const atEdge = on.every(o => Math.abs(o.gap - pad) < 0.01 && o.straight), further = on.every((o, i) => o.D > off[i] + 20), wasNear = off.every(d => Math.abs(d - SQUADNET.near * m) < 0.01);
+    F.verdict(atEdge && further && wasNear && !!here && Math.abs(here[0] - (px + 40)) < 0.01 && Math.abs(here[1] - py) < 0.01 && none === null && up[0] === ox && up[1] === oy - 26,
+      'a far line is put at the edge of the view on his side, straight his way from you; with the rule off, a short way out from you and up a row from a taken one', `${w} x ${h}, you at ${px}, ${py} · kept ${pad.toFixed(1)} px in · ${on.map(o => `${o.n} ${o.x.toFixed(0)},${o.y.toFixed(0)} (${o.gap.toFixed(1)} in, ${o.D.toFixed(0)} out)`).join(' · ')} · off: ${off.map(d => d.toFixed(0)).join(' ')} out, a taken row: ${up.map(v => v.toFixed(0))} · a man 40 px away: ${here?.map((v: number) => v.toFixed(0))} · a man on you: ${none}`);
+    // you out by the border yourself: a man past that border does not put the line on you, and it does not jump as his bearing crosses straight up
+    { const W = 1280, H = 720, ux = 150, uy = 360, lw = 298, M = Math.min(W, H), P = SQUADNET.edgeIn * M, bx0 = lw / 2 + 6 + P, by0 = bh + 12 + P;
+      const l = netPlace(W, H, ux, uy, ux - 5, -4000, lw, bh, free) as [number, number], r = netPlace(W, H, ux, uy, ux + 5, -4000, lw, bh, free) as [number, number];
+      const you = (x: number, y: number) => x + lw / 2 > ux - 16 && x - lw / 2 < ux + 16 && y > uy - 30 && y - bh < uy + 34, past = netPlace(W, H, ux, uy, -4000, uy, lw, bh, you) as [number, number];
+      F.verdict([l, r].every(q => Math.abs(q[1] - by0) < 0.01 && Math.hypot(q[0] - ux, q[1] - uy) > 100) && Math.abs(l[0] - r[0]) < 5 && Math.abs(past[0] - bx0) < 0.01 && !you(past[0], past[1]),
+        'you out by the border yourself: a man off the top is called at the top whichever side of straight up he is, and a man past your border is called on that border clear of you', `${W} x ${H}, you at ${ux}, ${uy}, a ${lw} px line · off the top a hair left ${l.map(v => v.toFixed(0))} · a hair right ${r.map(v => v.toFixed(0))} · past the left border at your height ${past.map(v => v.toFixed(0))}`); }
+    // a spot that hits something moves along the border it is at; never off the view
+    { const A = 156 * Math.PI / 180, qx = 653, qy = 292, by0 = y0 + pad, by1 = y1 - pad, over = (r: number[], x: number, y: number) => x + bw / 2 > r[0] && x - bw / 2 < r[1] && y > r[2] && y - bh < r[3] + 4, card = [0, 250, 350, 540];
+      const bare = netPlace(w, h, qx, qy, qx + Math.cos(A) * 4000, qy + Math.sin(A) * 4000, bw, bh, free) as [number, number], low = netPlace(w, h, qx, qy, qx + Math.cos(A) * 4000, qy + Math.sin(A) * 4000, bw, bh, (x: number, y: number) => over(card, x, y)) as [number, number];
+      const top = netPlace(w, h, px, py, px + 300, py - 4000, bw, bh, free) as [number, number], second = netPlace(w, h, px, py, px + 320, py - 4000, bw, bh, (x: number, y: number) => Math.abs(y - top[1]) < 25.5 && Math.abs(x - top[0]) < bw + 4) as [number, number];
+      const right = far(1, 0), under = netPlace(w, h, px, py, px + 4000, py, bw, bh, (_x: number, y: number) => y === right[1]) as [number, number], full = netPlace(w, h, px, py, px + 4000, py, bw, bh, () => true) as [number, number];
+      let out = 0, n = 0;
+      for (const lw of [100, 300, 900, 1200]) for (const [sx, sy] of [[470, 300], [10, 10], [950, 530], [480, 5], [5, 270]]) for (let k = 0; k < 16; k++) for (const hit of [free, () => true, (x: number, y: number) => over(card, x, y)]) {
+        const q = netPlace(w, h, sx, sy, sx + Math.cos(k * Math.PI / 8) * 3000, sy + Math.sin(k * Math.PI / 8) * 3000, lw, bh, hit) as [number, number], a = lw / 2 + 6, b = Math.max(a, w - lw / 2 - 6); n++;
+        if (!(q[0] >= a - 0.01 && q[0] <= b + 0.01 && q[1] >= y0 - 0.01 && q[1] <= y1 + 0.01)) out++; }
+      F.verdict(Math.abs(bare[1] - by1) < 0.01 && bare[0] < 250 && Math.abs(low[1] - by1) < 0.01 && low[0] - bw / 2 >= 250 && low[0] - bare[0] < 26 * 7 && Math.abs(second[1] - (by0 + 26)) < 0.01 && Math.abs(under[0] - right[0]) < 0.01 && Math.abs(under[1] - (right[1] - 26)) < 0.01 && full[0] === right[0] && full[1] === right[1] && out === 0,
+        'a spot that lies on something moves along the border it is at, the nearest free place first; never off the view', `at the bottom, under a card ${card.slice(0, 2).join(' to ')} wide: ${bare.map(v => v.toFixed(0))} moves to ${low.map(v => v.toFixed(0))} · a second man off the top: ${top.map(v => v.toFixed(0))} then ${second.map(v => v.toFixed(0))} · at the right border on a taken row: ${right.map(v => v.toFixed(0))} moves to ${under.map(v => v.toFixed(0))} · nothing free: ${full.map(v => v.toFixed(0))} · ${n} placings, ${out} off the view`); }
+  });
   // 6. the page's alone: the run with the rule on is the run with it off, by digest
   await kept(async () => {
     const run = async (on: boolean) => { const S: any = await stackedOn(5, false, () => { SQUADNET.on = on; SQUADNET.why = SQUADNET.clear = false; }), R = S.R; const g = R.game; R.step(120); const m = R.team[3]; m.god = false; m.state = 'dead'; R.step(120); return { h: hashDigest(digestGame(g, true)) as string, lines: g.squadNet.stats.lines, downs: g.squadNet.stats.downs }; };
@@ -234,7 +266,7 @@ export async function squadnetOff(): Promise<boolean> {
   const F = family('squadnet-off: the switches off = the lines as they were; the registry, an old recording, the frozen stand');
   await kept(async () => {
     const S: any = await stackedOn(5); if (S.why) { F.verdict(false, 'the squad stacks on a door with an unknown room behind it', S.why); return; }
-    const { R, D, at } = S, g = R.game, O = R.O, T = g.doorTools; SQUADNET.on = SQUADNET.why = SQUADNET.clear = SQUADNET.endCall = false; T.bangs = 3;
+    const { R, D, at } = S, g = R.game, O = R.O, T = g.doorTools; SQUADNET.on = SQUADNET.why = SQUADNET.clear = SQUADNET.endCall = SQUADNET.edge = false; T.bangs = 3;
     const row = R.hudQ(at), n0 = R.said.length; aimOf(R, D); R.W.input.pressed.add(ORDERS.quickKey); R.step(); R.step(2);
     const ans = R.said.slice(n0).join(' | '), def = O.defs.find((d: any) => d.id === 'bangClear'), own = (def.ackNow ?? def.ack).concat(def.ack).some((a: string) => ans.includes(a)) || R.team.some((m: any) => (def.ackNow ?? def.ack).concat(def.ack).includes(m.bubble?.text));
     F.verdict(/bang and clear/.test(row) && !/nobody|saving|they see/.test(row) && !/banging it\. nobody/.test(ans) && own && g.squadNet.stats.whys === 0, 'why off: the row and the answer are the row\'s own', `"${row}" · answered by the row's own line ${own}`);
@@ -245,20 +277,21 @@ export async function squadnetOff(): Promise<boolean> {
     const mate = R.team[0], l0 = g.squadNet.stats.lines; g.viewProj = null; g.say(mate, 'moving.');   // (no view: his head is off the screen) const m2 = R.team[1]; m2.god = false; m2.state = 'dead'; R.step(2);
     F.verdict(g.squadNet.stats.lines === l0 && g.squadNet.rows.length === 0 && g.squadNet.stats.downs === 0 && !R.play.some((p: any) => p.name === 'radio' && p.rate === SQUADNET.downRate), 'net off: no line is counted, no man down is called, no lower click', `lines ${g.squadNet.stats.lines - l0} · rows ${g.squadNet.rows.length}`);
     // the wiring: the registry, a recording from before the keys, the frozen stand's rows
-    SQUADNET.on = SQUADNET.why = SQUADNET.clear = SQUADNET.endCall = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), rides = snap.tables?.SQUADNET?.on === true && snap.tables.SQUADNET.why === true && snap.tables.SQUADNET.clear === true && snap.tables.SQUADNET.endCall === true; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.SQUADNET;
-    const mid = JSON.parse(JSON.stringify(snap)); delete mid.tables.SQUADNET.endCall;   // (a file from the build that had the first three and not the fourth)
-    const both = await hushed(() => { applyKnobs(g, old); const off = !SQUADNET.on && !SQUADNET.why && !SQUADNET.clear && !SQUADNET.endCall; SQUADNET.endCall = true; applyKnobs(g, mid); const three = SQUADNET.on && SQUADNET.why && SQUADNET.clear && !SQUADNET.endCall; applyKnobs(g, snap); return [off, SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall, three]; });
-    F.verdict(rides && both[0] && both[1] && both[2], 'a recording carries the four switches; one from before the keys replays with all off, one from before the fourth with the fourth off', `rides ${rides} · old file: off ${both[0]} · a file with three: the fourth off ${both[2]} · its own: on ${both[1]}`);
+    SQUADNET.on = SQUADNET.why = SQUADNET.clear = SQUADNET.endCall = SQUADNET.edge = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), rides = snap.tables?.SQUADNET?.on === true && snap.tables.SQUADNET.why === true && snap.tables.SQUADNET.clear === true && snap.tables.SQUADNET.endCall === true && snap.tables.SQUADNET.edge === true; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.SQUADNET;
+    const mid = JSON.parse(JSON.stringify(snap)); delete mid.tables.SQUADNET.endCall; delete mid.tables.SQUADNET.edge;   // (a file from the build that had the first three and neither of the later two)
+    const mid2 = JSON.parse(JSON.stringify(snap)); delete mid2.tables.SQUADNET.edge;   // (…and one from the build that had four)
+    const both = await hushed(() => { applyKnobs(g, old); const off = !SQUADNET.on && !SQUADNET.why && !SQUADNET.clear && !SQUADNET.endCall && !SQUADNET.edge; SQUADNET.endCall = SQUADNET.edge = true; applyKnobs(g, mid); const three = SQUADNET.on && SQUADNET.why && SQUADNET.clear && !SQUADNET.endCall && !SQUADNET.edge; SQUADNET.endCall = SQUADNET.edge = true; applyKnobs(g, mid2); const four = SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall && !SQUADNET.edge; applyKnobs(g, snap); return [off, SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall && SQUADNET.edge, three, four]; });
+    F.verdict(rides && both[0] && both[1] && both[2] && both[3], 'a recording carries the five switches; one from before the keys replays with all off, one from before a later key with that key off', `rides ${rides} · old file: off ${both[0]} · a file with three: the later two off ${both[2]} · a file with four: the fifth off ${both[3]} · its own: on ${both[1]}`);
     const reg = knobRegistry() as Record<string, unknown>, H = FROZEN_HOLDS as Record<string, string>;
-    F.verdict(reg.SQUADNET === SQUADNET && (JOURNAL_KNOBS as string[]).includes('SQUADNET') && H['SQUADNET.on'] === 'TPS_SQUADNET=1' && H['SQUADNET.why'] === 'TPS_QWHY=1' && H['SQUADNET.clear'] === 'TPS_HONESTCLEAR=1' && H['SQUADNET.endCall'] === 'TPS_ENDCALL=1',
-      'the table is in the knob registry; the frozen stand holds the four off under their words', `registry ${reg.SQUADNET === SQUADNET} · journal ${(JOURNAL_KNOBS as string[]).includes('SQUADNET')} · holds ${H['SQUADNET.on']} · ${H['SQUADNET.why']} · ${H['SQUADNET.clear']} · ${H['SQUADNET.endCall']}`);
+    F.verdict(reg.SQUADNET === SQUADNET && (JOURNAL_KNOBS as string[]).includes('SQUADNET') && H['SQUADNET.on'] === 'TPS_SQUADNET=1' && H['SQUADNET.why'] === 'TPS_QWHY=1' && H['SQUADNET.clear'] === 'TPS_HONESTCLEAR=1' && H['SQUADNET.endCall'] === 'TPS_ENDCALL=1' && H['SQUADNET.edge'] === 'TPS_NETEDGE=1',
+      'the table is in the knob registry; the frozen stand holds the five off under their words', `registry ${reg.SQUADNET === SQUADNET} · journal ${(JOURNAL_KNOBS as string[]).includes('SQUADNET')} · holds ${H['SQUADNET.on']} · ${H['SQUADNET.why']} · ${H['SQUADNET.clear']} · ${H['SQUADNET.endCall']} · ${H['SQUADNET.edge']}`);
   });
   // the stand as it was stood up: off on the frozen stand, on on the shipped one (unless a word was given)
   await kept(async () => {
-    const shipped = process.env.TPS_PROFILE === 'shipped', given = ['TPS_SQUADNET', 'TPS_QWHY', 'TPS_HONESTCLEAR', 'TPS_ENDCALL'].some(k => process.env[k] !== undefined);
+    const shipped = process.env.TPS_PROFILE === 'shipped', given = ['TPS_SQUADNET', 'TPS_QWHY', 'TPS_HONESTCLEAR', 'TPS_ENDCALL', 'TPS_NETEDGE'].some(k => process.env[k] !== undefined);
     // (the shipped stand: the page's own boot wrote them as the harness loaded. The frozen one: every game stood up pins them off, whatever they were)
-    Object.assign(SQUADNET, { on: true, why: true, clear: true, endCall: true }); await hushed(() => standUp()); const got = shipped ? STOOD : [SQUADNET.on, SQUADNET.why, SQUADNET.clear, SQUADNET.endCall], kept2 = shipped ? SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall : true;
-    F.verdict(given || (got.every(x => x === shipped) && kept2), `this stand (${shipped ? 'shipped' : 'frozen'}) stands the four ${shipped ? 'on, and a game stood up leaves them on' : 'off: a game stood up pins them off'}`, `on ${got[0]} · why ${got[1]} · clear ${got[2]} · every entry ${got[3]}${given ? ' (a word was given in the environment: not held)' : ''}`);
+    Object.assign(SQUADNET, { on: true, why: true, clear: true, endCall: true, edge: true }); await hushed(() => standUp()); const got = shipped ? STOOD : [SQUADNET.on, SQUADNET.why, SQUADNET.clear, SQUADNET.endCall, SQUADNET.edge], kept2 = shipped ? SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall && SQUADNET.edge : true;
+    F.verdict(given || (got.every(x => x === shipped) && kept2), `this stand (${shipped ? 'shipped' : 'frozen'}) stands the five ${shipped ? 'on, and a game stood up leaves them on' : 'off: a game stood up pins them off'}`, `on ${got[0]} · why ${got[1]} · clear ${got[2]} · every entry ${got[3]} · edge ${got[4]}${given ? ' (a word was given in the environment: not held)' : ''}`);
   });
   if (BREAK) { F.verdict(false, 'SQUADNET_BREAK', 'the break path: this family holds with the switches off, so it is failed by hand'); }
   return F.done();

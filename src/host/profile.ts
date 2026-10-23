@@ -343,6 +343,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SMOKEBREAK.on = q.get('smokebreak') !== '0';   // a man a level's script told to have a smoke lights one (game/smokebreak.ts: his left hand to his mouth, the lit end, real smoke) — ON in the page; ?smokebreak=0 = he stands there with his hands as they were (one level's one man today: the ledger's)
   SHOWWHY.on = q.get('showwhy') !== '0';   // a teammate shows why he is not acting (game/showwhy.ts): the player in his line gets a wave of his free hand and "you're in my line." for as long as it is true, a stack that is made and waiting passes the squeeze up the file and its lead raises a fist, a man held at a doorway the player stands in raises one and says "after you.", a man a blast hurt says so once, and the man kept on a taken room's far door says he has it — ON in the page; ?showwhy=0 = none of it, as it was (his hands and his words only: nobody's feet, gun or eyes)
   FIRE.on = q.get('fire') !== '0';   // an open fire burns (game/fire.ts: a level's brazier gets a flame, embers, smoke off the solver, a crackle, and its lamp flickers — in the light meter too) — ON in the page; ?fire=0 = the glowing lid and the steady lamp as they were
+  if (q.get('firesize') === '0') FIRE.size = 0;   // … its lamp the pinpoint the level made it, not the flame's size: the drum's shadow on the ground with a drawn edge, as it was (to compare on a GPU)
   FIRE.smoke.on = q.get('firesmoke') !== '0';   // … and its smoke, which keeps the smoke solver awake near a fire (picture only): ?firesmoke=0 = the fire with no smoke, to weigh what the smoke costs
   ROWSET.on = q.get('rowset') !== '0';   // a mission row's own hour and weather (game/rowset.ts): a row that names one is always started in it, over the link's — ON in the page; ?rowset=0 = the link's hour and weather as ever (no row names one: nothing to see either way)
   STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
@@ -402,6 +403,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SQUADNET.why = q.get('qwhy') !== '0';   // the quick key says why (game/squadnet.ts): its row ends on the reason when the squad's pick is not a plain open, and the man who answers says it: ON in the page; ?qwhy=0 = the row and the answer as they were
   SQUADNET.clear = q.get('honestclear') !== '0';   // 'clear' means clear (game/squadnet.ts): a room is called clear only when its search left no floor unseen, and called quiet otherwise: ON in the page; ?honestclear=0 = the call as it was
   SQUADNET.endCall = q.get('endcall') !== '0';   // every entry ends with a call (game/squadnet.ts): the lead calls a room the mission has no name for too ('room clear.', 'clear so far.' of open floor): ON in the page; ?endcall=0 = such an entry ends with nothing said, as it was
+  SQUADNET.edge = q.get('netedge') !== '0';   // a far line sits at the edge of the screen (game/squadnet.ts): a teammate's line from off the screen is drawn at the view's edge on his side: ON in the page; ?netedge=0 = a short way out from you, as it was
   HANDS.on = !q.has('nohands');   // hands on the world (game/hands.ts): a body is taken up from the end he is at with both hands and laid down again, a door comes round under his hand with him stepped clear of it — ON in the page; ?nohands = bodies snap to the ankle drag and doors are flung, as they were
   OWNCHARGE.on = !q.has('noowncharge');   // the player's own charges (game/owncharge.ts): charge rows on YOUR kit card, 'set a charge' on a shut door, a man alone carries his card's charges only. ?noowncharge = as it was
   GUNSLOTS.on = !q.has('nogunslots');   // a primary and a secondary for every man (game/gunslots.ts): the card's one gun row is two — Primary and Secondary — and a teammate carries both, going to his sidearm when the primary runs dry on a man close in front of him. ?nogunslots = one gun row, and nobody but you has a second gun
@@ -428,6 +430,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   CMDRING.flat = CMDRING.only && q.get('ringflat') !== '0';   // …and the ring is two rings deep at most: every order of the thing it was opened on, wedge 5 the one ring of the rest, the squad's posture row on it (`?ringflat=0` = the menu's pages as they were)
   CMDRING.plainHint = q.get('plainhint') !== '0';   // …no glyph beside the cursor or in the ring's middle: the mark of what the key orders on is the thing's own outline (a picture only; `?plainhint=0` = the glyph as it was)
+  CMDRING.bareHint = q.get('barehint') !== '0';   // …and no outline either: nothing of the squad's cursor mark is drawn, the corner's line on the key says what a tap orders (a picture only; `?barehint=0` = the outline, as it was)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
   SQUAD40.on = !q.has('nosquad40');   // a teammate whose card carries 40 mm grenades fires one where he points (game/squad40.ts): X on a spot of floor, G, then 3. ON in the page, ?nosquad40 = no such row; off on the frozen stand (TPS_SQUAD40=1 raises it). Nothing at all while no teammate's card carries a round
@@ -736,6 +739,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planNear': 'TPS_PLANNEAR=1 (needs TPS_QPLAN=1)',
   'CMDRING.flat': 'TPS_RINGFLAT=1 (needs TPS_QRING=1 TPS_QONLY=1)',
   'CMDRING.plainHint': 'TPS_PLAINHINT=1',
+  'CMDRING.bareHint': 'TPS_BAREHINT=1',
   'CMDRING.only': 'TPS_QONLY=1 (needs TPS_QRING=1)',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
   'SEENWALK.on': 'TPS_SEENWALK=1',
@@ -813,6 +817,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SQUADNET.why': 'TPS_QWHY=1',
   'SQUADNET.clear': 'TPS_HONESTCLEAR=1',
   'SQUADNET.endCall': 'TPS_ENDCALL=1',
+  'SQUADNET.edge': 'TPS_NETEDGE=1',
   'TAKEDOWN.on': 'TPS_TAKEDOWN=1',
   'TAKEDOWN.haul': 'TPS_HAUL=1',
   'STEALTHPOSE.on': 'TPS_STEALTHPOSE=1',
