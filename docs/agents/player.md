@@ -1307,6 +1307,23 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   turns has 10 % less time to catch him crossing, and Sam has 10 % less time behind a man who stops), no tour, no soak, no tutorial mission's scripted run;
   the walk at 1.55 is now 7 % quicker than the sneak and four times as loud, which may leave the walk little to do; nobody has played it and it has never
   been seen on a GPU.
+- **Shift in a crouch is a fast crouch walk (10-23; `CROUCHRUN`, player.ts; its look `DASH`, character.ts; `?crouchrun=0`, `TPS_CROUCHRUN=1`).** The maintainer:
+  "we can make sprint when crouching a really fast crouch walk, but you have to stand up to sprint properly". ON in the page, OFF in the module and on the
+  frozen stand, a `FROZEN_HOLDS` row, its own table and `DASH` in knobs.ts and `JOURNAL_KNOBS` (a recording from before the table replays with it off). With the key up,
+  Shift held in a crouch no longer stands him up: `pl.dash` is set where `sprinting` is, he stays down and goes at `pace` 2.5 m/s (the crouch walk 1.45, the
+  walk 1.55, the sprint 4.7), each footfall filed at `loud` 0.34 (the crouch walk's 0.125, the walk's 0.26, a run's 0.6, the sprint's 1), and it is no sneak
+  (`samSneaks`). He is not `sprinting`: doors, switches, the grab and a reload are still his hands'. A door or a chair he
+  runs into at this pace is bumped as a walking man bumps it, not as a creeping one. The sprint is the standing man's ([C], then Shift). A body in tow
+  is let go of as a sprint's is; a held click on a man is the creep whatever Shift says; a puppet's or a tour's Shift is the old one. THE LOOK: by
+  `anim.dash` (eased at 7 /s) the crouch cycle's stride is 30 % longer and its cadence that much lower, the pelvis 3 cm lower, the trunk 7° further over,
+  the head level (`sneakLayer`). `tools/qa/gait.ts` (two new rows): at 2.5 m/s 2.68 steps a second on a 1.87 m stride with 0.067 m/s of foot slip, where the
+  cycle unstretched would take 3.48 on 1.44 m with 0.156. THE CHECK is `crouchrun-check.ts` (`probes.ts crouchrun`, the player and stealth families;
+  `CROUCHRUN_BREAK=1` reds five of its seven lines), both stands: stays (down, not sprinting, 2.50 m/s), heard (a step 0.374 on the lobby's floor against
+  0.138 crouched, 0.286 walking, 1.100 sprinting), sneak, look (the stride's share whole with Shift and gone a second after; 2.67 steps a second where its
+  own stride would take 3.45), stand ([C] with Shift held stands him up into 4.70 m/s), off, harness. One seed: these are speeds on a flat floor. The
+  debugger has the toggle and both numbers under Detection & movement; the sneak lab has them and the stride and lean. `close-stills.ts` has a scene
+  `dash`. NOT DONE: the Controls list still says "Shift sprint · C crouch (slower and quiet)"; no sound of its own; teammates following a crouched Sam
+  keep their sneak pace (they speed up only for a real sprint). Nobody has played it or seen it on a GPU.
 - **Four ring notes: one row is a pill, no line under his ring, his ring stands on its thing, a switch's row turns him** (2026-10-23; four fields of
   `HANDRING`, handring.ts, each with its own page word and all four off under `?handring=0` too; all four off in the module and on the frozen stand and raised there by the hands ring's own
   word, `TPS_HANDRING=1` (no new stand word), each a `FROZEN_HOLDS` row, each off for a recording from before its key). CHECK: `handring`, both
