@@ -1841,11 +1841,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the top of the check holds the net to twenty-two lines it must catch and eight it must leave alone, each one a miss or a false catch somebody found, and
   shows the list working: a new one goes there first. The cuts before it, each let through by a review: 'knife' and '[Space] … to grab' only; one
   sentence at a time (missed 'Press [Space]! Grab him.'); the key within four words or the same clause (missed 'Press [Space] behind the far guard to
-  grab him' and 'To grab him, press [Space]'). THE REAL MEND IS NOT THIS NET: `lessonLine` turns a level's words by exact pattern, so any rewording keeps
-  the old key and only the net stands in its way. A line that named the act with a token `lessonLine` expands, and a check that refuses a literal
-  `[Space]` on a step that teaches the grab, would need no reading of English: the close-in thread's file, said to it.
+  grab him' and 'To grab him, press [Space]'). THE REAL MEND CAME THE SAME DAY (the sneak hold thread's half in `lesson.ts`, this file's
+  half here): A LINE NAMES THE MOVE BY A TOKEN, `{grab him}`, `{grab him from behind}`, `{knock him out}`, `{take him out}` (the man may be other words;
+  a capital begins a sentence; the words each writes are in `stealth.md`, "A lesson line names the move, not its key"), and `lessonLine` writes it out
+  for the keys the build has. `tut-quiet`'s grab line, its card, 'drop' and 'strike' are tokens now, and what the page says is word for word what it
+  said, on all four of stalk and knife. `tut-pair`'s 'hands', 'hold', 'sleep' and 'drop' moved the same evening (its thread's change), so the
+  check's `OWES_TOKENS`, the list of steps let off by name while a level's owner still owed the change, is empty and every tutorial level is held.
+  KNOWN AND LEFT: under `?noknife=0` `{Knock him out}` adds "or left click to use the knife", and `tut-pair`'s 'sleep' and 'drop' open only the right
+  button, so on that off-switch those two rows name a click the step keeps shut (the page as it opens is right). A token does not read a step's
+  allow list; the mend, if wanted, is the plain "Right-click to knock him out" back on those two steps with a row in the check's `HONEST` list.
+  THREE THINGS HOLD A TOKEN: (1) `rails.ts
+  railsFaults` (so `checkLesson`, on any stand) runs `lessonTokenFaults` over a card's text (to the card's 260), a `noTap`, `menuLine`, `pageLine`,
+  `planLine` and both `after` lines as `checkLesson` does over a step's four lines, and refuses a brace in a card's TITLE, which `rails.ts card()` shows
+  as written; (2) `lesson-check` fails a brace left in anything the page says; (3) `lesson-check` reads the level's own words with every token taken
+  out (`namesByKey`) and fails the knife, a grab beside ANY input (a key in brackets, a click, a mouse button, space, a press, a hold or a tap, a
+  capital letter alone), or the blow with an input in its own sentence: 'Hold left click on him to grab him' is true today and false with `?stalk=0`,
+  'Right-click to knock him out' leaves the knife out under `?noknife=0`, and only a token says both. A card's title and words are read as one
+  screen, the title as written. `HONEST` frees a line word for word (none today). A line at the top plants a bad token in each place `railsFaults`
+  holds and wants each back. The net above stays as the backstop for what the page says. ON THE PAGE
+  (`tut-quiet`, the software adapter): at 'grab', 'drop' and 'strike' the row and the card read "…sneak up behind him and hold left click on him to
+  grab him", "Right click to knock him out", "…then right click to knock him out", no brace anywhere, no page error but the icon's 404.
   No switch (a check, no rule of play). `LESSON_BREAK=words` leaves the two rules off and must fail on a level that teaches the grab: it fails on
-  `tut-quiet` and `tut-pair` and passes `tut-solo`, which teaches none. Measured: `lesson-check` ALL PASS (69) on FROZEN and on SHIPPED. A new
+  `tut-quiet` and `tut-pair` and passes `tut-solo`, which teaches none. Measured: `lesson-check` ALL PASS on FROZEN and on SHIPPED (69 checks then; 77 with the token lines below). A new
   pattern in `lessonLine` wants its own words added to that line. STILL OPEN, the rails gate's (mine): with empty hands the left button is let through
   wherever `use` is allowed and a grab row is offered, also with a man in the arm; under `?noknife=0` that is a knife before the step that teaches it.
   The page as it opens has no knife, so default play is not touched. Shutting it is a rule on the rails and wants its own switch and `rails-check` line.

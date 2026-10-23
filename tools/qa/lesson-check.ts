@@ -38,8 +38,20 @@ const GRAB = /\b(?:grab\w*|(?:tak(?:e|es|ing)|took|gets?|got|getting) hold|chok(
  *  None today. Add one only after reading it on the page with both rules on; a line lessonLine words differently on the two stands (a key the hand ring
  *  moved) wants a row for each wording */
 const HONEST: ReadonlySet<string> = new Set<string>([]);
-const namesOld = (w: string, honest: ReadonlySet<string> = HONEST): boolean => { if (honest.has(w)) return false; if (KNIFE.test(w)) return true;
-  const q = w.split(/[.!?\n]+/).filter(x => x.trim()), key = (x = '') => GRAB_KEY.test(x) || GRAB_E.test(x); return q.some((x, i) => GRAB.test(x) && (key(x) || key(q[i - 1]) || key(q[i + 1]))); };
+/** a word of `act` with a `key` in the same sentence or the one beside it (blank sentences are no sentence) */
+const beside = (w: string, act: RegExp, key: (x?: string) => boolean): boolean => { const q = w.split(/[.!?\n]+/).filter(x => x.trim()); return q.some((x, i) => act.test(x) && (key(x) || key(q[i - 1]) || key(q[i + 1]))); };
+const namesOld = (w: string, honest: ReadonlySet<string> = HONEST): boolean => !honest.has(w) && (KNIFE.test(w) || beside(w, GRAB, (x = '') => GRAB_KEY.test(x) || GRAB_E.test(x)));
+/** AND THE LEVEL'S OWN WORDS NAME THE MOVE, NOT ITS KEY (lesson.ts tokens: `{grab him}`, `{knock him out}` …, written out in the build's words). Read as the
+ *  level wrote them, with every token taken out: what is left may not name the knife, nor a grab beside ANY input (a key in brackets, a click, a mouse
+ *  button, the word space, a press, a hold or a tap, a capital letter alone), nor the blow with an input in its own sentence — 'Hold left click on him
+ *  to grab him' is true today and false with the stalk off, 'Right-click to knock him out' leaves the knife out when there is one, and only a token says
+ *  both. No list of old keys. The same HONEST list frees a line, word for word as the level wrote it ('Press [Space] to grab the ledger' would want a row) */
+const INPUT = /\[[^\]\n]+\]|\bclick\w*|\bmouse\b|\bbuttons?\b|\b[lr]mb\b|\bspace(?:bar)?\b|\b(?:press|hold|tap)(?:s|es|ed|ing)?\b/i, LETTER = /\b[B-HJ-Z]\b/, BLOW = /\bknock\w*\b.*\bout\b|\btak(?:e|es|ing) (?:him|her|them|the \w+(?: \w+)?) out\b/i;
+const namesByKey = (raw: string, honest: ReadonlySet<string> = HONEST): boolean => { if (honest.has(raw)) return false; const w = raw.replace(/\{[^{}]*\}/g, ' '), key = (x = '') => INPUT.test(x) || LETTER.test(x);
+  return KNIFE.test(w) || beside(w, GRAB, key) || w.split(/[.!?\n]+/).some(x => BLOW.test(x) && key(x)); };
+/** the steps whose lines still name a move by its key, by level, each with who owes the change: a NOTE there and not a FAIL. Only these steps are let
+ *  off (another step of the same level is held), and a step named here that no longer names a key is a note to take it off: the list only shrinks */
+const OWES_TOKENS: Record<string, { steps: string[]; who: string }> = {};   // (none today: tut-pair's 'hands', 'sleep', 'hold' and 'drop' were here until its lines moved to tokens)
 if (!names.length) { console.log('\n=== lesson-check: the words the rules took away ===');
   const old = ['Sneak up behind him and press [Space] to grab him', 'Press [Space] behind him to grab him, and your partner will take his', 'Press [Space] behind the far guard to grab him', 'Press [Space] when you are close enough to him to grab him',
     'Grab him with [Space]', 'To grab him, press [Space]', 'When he stops, grab him: press [Space]', 'Grab him by pressing and holding [Space]', '[E] takes hold of him', 'Press [Space]! Grab him.', '[Space], and you\'ve got hold of him',
@@ -48,6 +60,16 @@ if (!names.length) { console.log('\n=== lesson-check: the words the rules took a
     'Keep the stable door shut', 'Press [E] at the choke point', 'Press [E] at the chokepoint', 'Press [E] at the choke-point'].filter(w => namesOld(w));
   // (a key that is another act's, beside a grab: caught, by design, until its line is in the list — word for word, so a reworded one is caught again)
   const other = 'Hold left click to grab him, then press [E] to swap to your gun', listed = namesOld(other) && !namesOld(other, new Set([other])) && namesOld(other + '.', new Set([other]));
+  const keyed = ['Hold left click on him to grab him', 'Press [Space] behind him to grab him', 'Grab him. Right click.', 'Left click to knife him', 'Stay low, then {take him out} with the knife', 'Hold the left mouse button on him to grab him', 'Hold LMB on him to grab him', 'Press F to grab him', 'Hold [Left Mouse Button] on him to grab him',
+    'Right-click to knock him out', 'Stay low, then right click to knock him out', 'Left click to take him out', 'Grab him from behind\nSneak up behind him and hold left click on him.'].filter(w => !namesByKey(w));
+  const named = ['When he lights a smoke, sneak up behind him and {grab him}', '{Knock him out}', '{Grab the near guard from behind}, and your partner will take his', 'When you grab yours, he\'ll take his.', 'Press [Space] to ask him for the code', 'I knocked on the door and went out. Press [Space].', 'A guard you knock out stays out'].filter(w => namesByKey(w));
+  const freed = 'Press [Space] to grab the ledger', rawListed = namesByKey(freed) && !namesByKey(freed, new Set([freed]));
+  verdict(!keyed.length && !named.length && rawListed, 'a level\'s own words: a grab beside any input, the blow with an input in its sentence, or the knife, written outside a token, is caught (a card\'s title and words read as one screen); a move named by its token, a grab or a blow with no input by it and another act\'s key are left alone; a line listed as honest is freed, word for word', [...keyed.map(w => `missed: ${w}`), ...named.map(w => `wrongly caught: ${w}`), rawListed ? '' : 'the honest list does not free a line as written'].filter(Boolean).join(' · '));
+  // (rails.ts railsFaults holds a token wherever the frame writes one out, and a card's title, which it does not: each planted, each must come back)
+  { const { railsFaults } = await import(`${ROOT}/src/game/rails.ts`), step = (x: object) => ({ rails: {}, steps: [{ id: 's', line: 'x', done: { is: 'never' }, ...x }] }) as any, has = (x: object, re: RegExp) => (railsFaults(step(x)) as string[]).some(f => re.test(f));
+    const planted = [has({ explain: { text: 'Sneak up and {grab him from behnd}.' } }, /explain\.text has \{grab him from behnd\}/), has({ explain: { title: '{Grab him}', text: 'x' } }, /explain\.title has a brace/), has({ noTap: '{knock him owt}' }, /noTap has \{knock him owt\}/), has({ menuLine: 'now {grab him' }, /menuLine has a brace/), has({ after: { line: '{take them}', word: 'x' } }, /after\.line has \{take them\}/)];
+    const clean = !(railsFaults(step({ explain: { title: 'Grab him', text: 'Sneak up and {grab him}.' }, noTap: '{Knock him out}', planLine: 'x', after: { line: 'x', word: '{Grab the near guard from behind}' } })) as string[]).length;
+    verdict(planted.every(Boolean) && clean, 'a token is held wherever the frame writes one out: a misspelt one in a card\'s text, a noTap, a menu line or an after line and a brace in a card\'s title each come back as a fault, and good ones give none', `planted faults found: ${planted.map(x => x ? 'yes' : 'NO').join(' ')} · the good block clean: ${clean}`); }
   verdict(!old.length && !fine.length && listed, 'the net knows a key to grab by, before the word or after it and across a stop, and the knife by any of its names; it leaves alone a held click, a cut light, a stable door and a choke point; and a key that is another act\'s beside a grab is caught until that line, word for word, is listed as honest',
     [...old.map(w => `missed: ${w}`), ...fine.map(w => `wrongly caught: ${w}`), listed ? '' : 'the honest list does not work as said'].filter(Boolean).join(' · ')); }
 for (const name of list) {
@@ -59,7 +81,8 @@ for (const name of list) {
   verdict(!errs.length && !!L, `the file validates and carries a lesson${L ? `: '${L.title}', ${L.steps.length} steps` : ''}`, errs.slice(0, 3).join(' · '));
   if (!L) continue;
   const stand = async () => { const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(file, 'utf8'))), seed: 1 })); if (L.rails) RAILS.on = true; return W; };   // (a tutorial mission's lesson is live only on its frame — rails.ts —, which the frozen stand holds off: raised here, after the stand-up put it down)
-  const line0 = String(L.steps[0].line).replace(/\[([^\]]+)\]/g, '$1');   // (the small row reads a line without the brackets a rails line puts round its keys)
+  const line0 = String(L.steps[0].line).replace(/\[([^\]]+)\]/g, '$1');   // (a token on a first step would want this written out as the row writes it: none has one, and the brace test below says so if one does)
+  if (/[{}]/.test(L.steps[0].line)) verdict(false, 'the first step\'s line carries a token: this check compares it as written against the row (lesson-check.ts line0), write it out there first');   // (the small row reads a line without the brackets a rails line puts round its keys)
   const rows = (LESSON_MISSIONS as any[]).filter(e => e.level === `${name}.json`);   // (the tutorial's rows: scenarioList.ts)
   verdict(rows.length > 0 && rows.every(e => e.group === 'tutorial'), `the missions list has it under Tutorial (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
   verdict(rows.every(e => kitAsIssued(e) || kitPacks(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'tutorial')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued) unless it is a lesson the player packs for (kit.ts ISSUE.picked, the row\'s `packs`), and no other row is');
@@ -68,11 +91,21 @@ for (const name of list) {
   // naming one and nothing else would say so: every line and card is read through it here. LESSON_BREAK=words leaves the two rules off: it must fail
   // on a level that teaches the grab.
   { const was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife], up = process.env.LESSON_BREAK !== 'words'; STALK.on = STALK.only = CLOSE.on = CLOSE.noKnife = up;
-    const said: [string, string][] = (L.steps as any[]).flatMap(T => [...Object.keys(T).filter(k => /[lL]ine$|^noTap$/.test(k)).map(k => T[k]), T.explain?.title, T.explain?.text, T.explain?.title && T.explain?.text ? `${T.explain.title}\n${T.explain.text}` : null /* (a card is one screen: its title and words read together too) */, T.after?.line, T.after?.word]
-      .filter((w: unknown) => typeof w === 'string').map((w: string) => [T.id, lessonLine(w)] as [string, string]));
+    // (every text of a step, as the level wrote it; a card is one screen, so its title and words are read together too. The page writes every one out
+    //  through lessonLine but a card's TITLE, which rails.ts card() shows as written)
+    const texts: { id: string; raw: string; page: string }[] = (L.steps as any[]).flatMap(T => { const E = T.explain, out: { id: string; raw: string; page: string }[] = [];
+      for (const w of [...Object.keys(T).filter(k => /[lL]ine$|^noTap$/.test(k)).map(k => T[k]), E?.text, T.after?.line, T.after?.word]) if (typeof w === 'string') out.push({ id: T.id, raw: w, page: lessonLine(w) });
+      if (typeof E?.title === 'string') { out.push({ id: T.id, raw: E.title, page: E.title }); if (typeof E.text === 'string') out.push({ id: T.id, raw: `${E.title}\n${E.text}`, page: `${E.title}\n${lessonLine(E.text)}` }); }
+      return out; });
+    const said: [string, string][] = texts.map(t => [t.id, t.page]), wrote: [string, string][] = texts.map(t => [t.id, t.raw]);
     [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife] = was;
-    const bad = said.filter(([, w]) => namesOld(w));
-    verdict(!bad.length, `with the held click the only way to a man and no knife, no line or card names the key to grab or the knife (${said.length} read through lessonLine)`, bad.map(([id, w]) => `'${id}': ${w}`).join(' · ')); }
+    const bad = said.filter(([, w]) => namesOld(w) || /[{}]/.test(w));   // (…and no brace is left in what the page says: a token lessonLine does not know would be shown, braces and all)
+    verdict(!bad.length, `with the held click the only way to a man and no knife, no line or card names the key to grab or the knife (${said.length} read through lessonLine)`, bad.map(([id, w]) => `'${id}': ${w}`).join(' · '));
+    // (the level's own words, before lessonLine: a move is named by its token and never by a key — a level that still owes the change is a note, by name)
+    const lit = wrote.filter(([, w]) => namesByKey(w)), owed = OWES_TOKENS[name], let_off = new Set(owed?.steps ?? []), held = lit.filter(([id]) => !let_off.has(id)), still = [...new Set(lit.map(([id]) => id))].filter(id => let_off.has(id));
+    if (still.length) console.log(`  NOTE  ${name} still names a move by its key on ${still.map(id => `'${id}'`).join(', ')}: owed by ${owed!.who}`);
+    for (const id of owed?.steps ?? []) if (!still.includes(id)) console.log(`  NOTE  ${name} '${id}' names no move by its key any more: take it off OWES_TOKENS (tools/qa/lesson-check.ts)`);
+    verdict(!held.length, `its own words name a grab or a blow by its token, never by a key (${wrote.length} read as written${still.length ? `; ${still.length} step${still.length === 1 ? '' : 's'} let off by name, owed` : ''})`, held.map(([id, w]) => `'${id}': ${w}`).join(' · ')); }
   { const W = await stand(), faults: string[] = checkLesson(W.game); verdict(!faults.length, 'the block against the built floor: every test names a kind, a door, a light and an area this floor has', faults.join(' · ')); }
   // (not a verdict: a rows list that names an act and withholds the one that puts it back — game/rails.ts rowsWithheld; its author's to judge)
   { const { rowsWithheld } = await import(`${ROOT}/src/game/rails.ts`); for (const n of rowsWithheld(JSON.parse(readFileSync(file, 'utf8')).scenarios?.lesson) as string[]) console.log(`  NOTE  ${n}`); }
