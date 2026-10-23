@@ -62,8 +62,8 @@
 //        class 2, 'only where it does not': a lamp that is OUT but that the team last saw lit (4f's memory — lampKnown) is still lit in the picture of the room
 //                 nobody has looked into since; a lamp that is LIT but remembered out is class 1. The mains follow at once (told to the whole floor).
 //        no class: the level's own lamps as they stand, the sun, the moon and the lightning, the team's own lights.
-//      WHAT IS NOT LIGHT goes by the same table: the picture's march of the smoke takes no density over floor the team does not see (common.wgsl fogSmoke —
-//      volumetrics.wgsl and its dust twin), and a spark, a puff, a chip, a case, a sheet or a shard there is not drawn (particles_draw.wgsl; the weather's
+//      WHAT IS NOT LIGHT goes by the same table: with FOG.air off the picture's march of the smoke takes no density over floor the team does not see
+//      (common.wgsl fogSmoke — volumetrics.wgsl and its dust twin; with it on, as the page has it, a plume is drawn wherever it stands), and a spark, a puff, a chip, a case, a sheet or a shard there is not drawn (particles_draw.wgsl; the weather's
 //      drops stay: the same everywhere). Shadow rays and the game's readings take the smoke as it is.
 //      The game's own readings of light (the meter's direct term, the guards' eyes — probe.wgsl) take the lights as they ARE. NOT PICTURE ONLY ON A GPU,
 //      though: the BOUNCE the meter adds is read from the picture's cascades, which hold class 1 as the picture has it — a torch on a wall nobody on the team
@@ -213,6 +213,14 @@ export const FOG = {
    *  not see there cut where the renderer evaluates them — `flat` and `lit` are then not what draws the fog. false = `flat` / `lit` as they were (?fogfull=0; the
    *  frozen stand pins it off — src/host/standup.ts, `TPS_FOGFULL=1`). ON in the page since 10-14. Never seen on a GPU */
   full: true,
+  /** THE AIR IS THE PLACE (the picture only; under `full` alone — it rides the sight table): true = the solver's smoke is drawn over floor the team does not see
+   *  too, dimmed with the ground behind it on the screen — a fire's plume, a grenade's cloud (the maintainer, 10-23, on a fire with no flame in the fog:
+   *  'I think we should at least show everything in the environment visible at the start of the level all the time?'). What a hidden MAN breathes, smokes or fires
+   *  is not filed with the solver at all (snowBreath.ts, smokebreak.ts and combat.ts ask the fog at the source — airHides below), and a hidden light still gives
+   *  a plume nothing (lightFogK). The puffs the PARTICLES draw (a blast's dust ring, a round's chip of plaster) are still cut there: particles_draw.wgsl. false = the
+   *  march takes no density over unseen floor, as it was (common.wgsl fogSmoke). ON in the page since 10-23 (?fogair=0 puts it off; the frozen stand pins it
+   *  off — src/host/standup.ts, `TPS_FOGAIR=1`). Never seen on a GPU */
+  air: true,
   /** … a fill added on top of the dimmed frame: this share of `flat`'s level, corner-shaped by `litAo` / `litAoM` (0 = none — a dark room is dark in the fog) */
   fullFill: 0,
   /** THE FOG'S SOFT EDGE (the maintainer, 10-15, on the pass level: 'fog of war edges shouldn't be so sharp'; the picture only; under `full` alone — it reads the
@@ -268,13 +276,13 @@ export const FOG_EDGE_ON = 0.5;
 /** ?fogown / ?fogown=0 · ?fogcalls=0 — the two options for a visit, over the kept rows (the Game's constructor, right after teamfeel.ts has read those back;
  *  no page — the harness — nothing) */
 export function fogFlags() { try { const q = new URLSearchParams(location.search); if (q.has('fogown')) FOG.own = q.get('fogown') !== '0'; if (q.has('fogcalls')) FOG.calls = q.get('fogcalls') !== '0';
-  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; } catch { /* no page */ } }
-/** THE FOG'S LOOK ON THIS PAGE (`desat`, `edge`: the picture alone), as the module ships it and the address words change it (fogFlags) — never what a tape's knob
+  if (q.has('fogflat')) { const v = parseFloat(q.get('fogflat') ?? ''); FOG.flat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_FLAT_ON; } if (q.has('foglit')) { const v = parseFloat(q.get('foglit') ?? ''); FOG.lit = Number.isFinite(v) ? Math.min(4, Math.max(0, v)) : FOG_LIT_ON; } if (q.has('fogfull')) FOG.full = q.get('fogfull') !== '0'; if (q.has('fogair')) FOG.air = q.get('fogair') !== '0'; if (q.has('fogdesat')) { const v = parseFloat(q.get('fogdesat') ?? ''); FOG.desat = Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : FOG_DESAT_WAS; } if (q.has('fogedge')) { const v = parseFloat(q.get('fogedge') ?? ''); FOG.edge = Number.isFinite(v) ? Math.min(1.5, Math.max(0, v)) : FOG_EDGE_ON; } if (q.has('fogthings')) FOG.things = q.get('fogthings') !== '0'; if (q.has('squaddoors')) FOG.squadDoors = q.get('squaddoors') !== '0'; if (q.has('squadfire')) FOG.squadFire = q.get('squadfire') !== '0'; if (q.has('fogdesat')) FOG_PAGE.desat = FOG.desat; if (q.has('fogedge')) FOG_PAGE.edge = FOG.edge; if (q.has('fogair')) FOG_PAGE.air = FOG.air; } catch { /* no page */ } }
+/** THE FOG'S LOOK ON THIS PAGE (`desat`, `edge`, `air`: the picture alone), as the module ships it and the address words change it (fogFlags) — never what a tape's knob
  *  tables laid over FOG. THE ENGINE REPLAY SHOWS A TAPE UNDER THIS, not under the look the tape was recorded with (FogOfWar.pageLook, which it alone calls):
  *  the maintainer judged both on a replay, and a recording from before either would otherwise show the old fog for ever. The tape's own values still ride its
  *  knobs — the harness replays them as recorded (journal.ts applyKnobs: a file from before `edge` replays with the hard line). A tape from before the full
  *  picture (FOG.full off in its tables: no sight table) keeps its hard line and takes the colour only: `full` is not the picture alone, so it is the tape's. */
-const FOG_PAGE = { desat: FOG.desat, edge: FOG.edge };
+const FOG_PAGE = { desat: FOG.desat, edge: FOG.edge, air: FOG.air };
 /** a leaf this far (rad) from where the picture has it counts as moved */
 const DOOR_EPS = 0.01;
 /** THINGS (rule 4d). The low bits of a key that number the PARTS of one thing, per keyed system (scene/boxes.ts MKEY: a prop's parts are id × 16 + part, an
@@ -493,13 +501,13 @@ export class FogOfWar {
       if (Math.abs(d.angle - r.shown) <= DOOR_EPS || this.doorSeen(d, r.shown)) r.shown = d.angle; else this.doorsHeld++;
     } else if (this.doorRecs.size) this.doorRecs.clear();
     // ---- the renderer's block
-    if (this.lookFrames > 0) { this.lookFrames--; FOG.desat = FOG_PAGE.desat; FOG.edge = FOG_PAGE.edge; }
+    if (this.lookFrames > 0) { this.lookFrames--; FOG.desat = FOG_PAGE.desat; FOG.edge = FOG_PAGE.edge; FOG.air = FOG_PAGE.air; }
     F.on = true; F.count = pic.length; F.dim = FOG.dim; F.desat = FOG.desat; F.topPad = FOG.topPad; F.edge = Math.max(0, FOG.edge);
     const fov = fieldDeg(), near = fieldNear();
     const full = fov >= 360; const cosHalf = full ? -2 : Math.cos(Math.max(1, fov) * 0.5 * DEG);
     // (the picture's soft edges are the cone's alone: a plain fovDeg wedge keeps its hard line — the block's three rows 0 = the kernel's old answer, bit for bit)
     const soft = FOG.cone && !full ? Math.max(0, Math.min(FOG.coneSoftDeg, fov, 360 - fov)) : 0;
-    F.full = this.fullBlock(F); F.flat = Math.max(0, FOG.flat); this.litBlock(F);
+    F.full = this.fullBlock(F); F.flat = Math.max(0, FOG.flat); this.litBlock(F); F.air = FOG.air;
     F.softIn = soft > 0 ? Math.cos(Math.max(0, fov * 0.5 - soft * 0.5) * DEG) : 0; F.softOut = soft > 0 ? Math.cos(Math.min(180, fov * 0.5 + soft * 0.5) * DEG) : 0;
     F.nearSoft = FOG.cone && !full ? Math.max(0, FOG.coneNearSoftM) : 0;
     for (let k = 0; k < FOG_EYES; k++) {
@@ -885,6 +893,10 @@ export class FogOfWar {
   }
   /** left out of the picture this frame (what combat.ts handProps, the HUD's markers and the bubbles ask) — false for everybody while it is off */
   hidden(gd: Guard): boolean { return !this.bared && this.hiddenChars.size > 0 && this.hiddenChars.has(gd.char); }
+  /** WHAT A HIDDEN MAN PUTS INTO THE AIR IS NOT FILED (FOG.air: smoke is drawn under the fog, so the gas of a shot nobody on the team sees fired would hang
+   *  at his muzzle and ride it): true = `c` is out of the picture and what he would hand the smoke solver now is left out — as his breath and his cigarette
+   *  already are. False with FOG.air off: the march cuts all smoke there, and the solver gets everything, as it was */
+  airHides(c: Character): boolean { return FOG.air && !this.bared && this.hiddenChars.size > 0 && this.hiddenChars.has(c); }
   /** the characters to draw, of the frame's list: the list itself while nobody is hidden */
   filter(all: Character[]): Character[] { return this.hiddenChars.size ? all.filter(c => !this.hiddenChars.has(c)) : all; }
   /** …and for a viewer's picture without the fog: everybody, the men the fog leaves out LAST (the men it draws keep their places in the draw list) */

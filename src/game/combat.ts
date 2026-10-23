@@ -141,7 +141,7 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   const track = () => ({ pos: shooter.muzzle, dir: shooter.gunDir });
   const port = () => ({ pos: v3.add(v3.mad(shooter.bones.handR ?? shooter.muzzle, shooter.gunDir, 0.06), [0, 0.06, 0]), dir: [0, 1, 0] as Vec3 });
   const gpu = gpuFx(g);   // GPU particles on: the powder sparks go to the GPU (muzzleSparksFx below, the same effects.ts numbers) instead of the box pool; the gas and the light are the same either way
-  if (lead) for (const L of fx.spawnShot(g.smoke, gpu ? null : g.sparks, muzzle, dir, { seed: g.fxSeed++, lightGain: M.lightGain * (def.suppressed ? fx.shot.suppressedGain : 1), lightRange: M.lightRange, track, eject: port }))
+  if (lead) for (const L of fx.spawnShot(g.smoke, gpu ? null : g.sparks, muzzle, dir, { seed: g.fxSeed++, lightGain: M.lightGain * (def.suppressed ? fx.shot.suppressedGain : 1), lightRange: M.lightRange, track, eject: port, gas: !g.fogOfWar.airHides(shooter) }))
     g.engine.lights.flash(L.pos, L.color, L.intensity, L.range, L.ttl, shooter.id);
   if (gpu && lead) { muzzleSparksFx(g, muzzle, dir, shooter); casingFx(g, shooter, def); }   // + the spent case out of the port (heard landing half a second on: particleFx.ts)
   if (lead) g.audio.play(voiceOf(def), muzzle, 1);   // (gunlook.ts: … and a voice of its own)
