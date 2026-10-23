@@ -935,6 +935,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     there. NOT DONE: nobody has played it and nothing of it has been seen on a GPU; the mission that teaches opening and closing the mode (the
     fourth) is the tutorial frame's; a right click far outside the walls is a floor order the men may not be able to walk; with the mode's view
     off (`?nocmdrts`) the seat falls back to mission 1's view and pan.
+  - **The mission opens at dusk, not at midday** (2026-10-23; the row `tut-plan` in `scenarioList.ts`: `hour: 'dusk'`, the `ROWSET` rule writes it over any
+    link). The maintainer, of a shot of the mission as played: "this tutorial level just looks really *flat*". What he saw was the row's midday (sun 56
+    degrees up, strength 6.0): block and render walls near white, the ground two flat tones, shadows a sliver at the walls' feet; both floodlights are
+    out at midday (the photocell), so the lamps played no part. Stills of one view at the four hours, drawn by the graphics lane on the software
+    adapter: dusk reads best (sun 22 degrees up from bearing 255, strength 2.2: a wall throws a shadow two and a half times its height, lit faces warm
+    and below white), then dawn, then the level's own night; midday is the only flat one. At dusk the outside lamps burn as authored, so `flood_gate`
+    and `flood_road` are lit in the mission now; they are left as they are (the level's night with both lit is not flat either). No box, light or
+    lesson key changed: the level file is the same, its lived row stands. The row's old reason for midday (every yard and door in plain sight from
+    above) is kept by eye only: in the dusk stills the doors, drums and barriers are plain, and long shadows cover some ground. NO SWITCH: a row's
+    hour is data (`?rowset=0&hour=midday` on the page, or `ROWSET_BREAK=1` in front of a headless tool with `&hour=` in its query, is the mission at
+    midday again; the scripted player reads `TUTPLAN_HOUR` for that). MEASURED at dusk (`lesson-run tut-plan`, the page's stand, which starts it at the row's hour): 17 of 17 steps on
+    seeds 1 to 4 and on hard seed 1, 107.2 to 107.6 s, the guardroom's first men 0.1 s apart and the hall's 0.0 s, nobody dazzled, no teammate put on
+    a knee; the wrong plan on seed 1 still ends with four put on a knee: the same numbers as at midday, to the tenth of a second. `tutplan-check`
+    (9 lines) on both stands, `lesson-gate tut-plan`, `level-needs --run` and `rails-check` on both stands, `rowset-check` on both stands,
+    `lived-check`, `lesson-check`, `writing-check`, `picker-list`, both typechecks: all pass. ON THE PAGE at dusk
+    (`tools/qa/tut-plan-page.cjs`, real keys, the software adapter, the page held between frames): 36 lines pass to the end card; one still of the
+    opening drawn there has the four's shadows long across the yard and the plan picture's rings on them. NOT DONE: nobody has played it at dusk and nothing of it has been seen on a GPU; the lesson's marks and plan mode's picture over a
+    long shadow were not judged by eye at every step.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
