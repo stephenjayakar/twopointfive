@@ -1150,10 +1150,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   four is left as written. No switch: a line with no token reads as before, and the old exact-sentence patterns still turn the old
   lines. `checkLesson` refuses, in a step's `line`, `setupLine`, `blowLine` and `ringLine`: a name in braces that is no token (a
   digit, a doubled or trailing space, a `from` left in the man's words), a brace left open, and a line that fits the row's 96
-  characters as written and not once written out the longest of the four ways (`lessonTokenFaults`). NOT checked: a token in a card's
-  text, a `noTap`, a plan or menu line, which `lessonLine` writes out all the same. No level uses a token yet (the tutorial's lines
-  are its owner's to move). CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
-  stands, its break by `NOKNIFE_BREAK=1`. Nobody has read a token's line on the page.
+  characters as written and not once written out the longest of the four ways (`lessonTokenFaults`). A token in a card's
+  text, a `noTap`, a plan, menu or after line is held the same way by `rails.ts railsFaults` since the same day, and a brace in a card's title
+  refused (`missions.md`, "A lesson's words are checked as the page says them"). `tut-quiet` uses tokens; `tut-pair`'s lines are owed by its thread. CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
+  stands, its break by `NOKNIFE_BREAK=1`. Read on the page on `tut-quiet` (the software adapter), the stalk and the knife each way; never on a GPU.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from

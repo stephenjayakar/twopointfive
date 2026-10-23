@@ -36,7 +36,7 @@ import type { FogEye } from './fogofwar';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
 import { CMDRING } from './cmdring';   // (read inside gate() only: src/game is one import cycle)
-import { stepLine, lessonLine } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
+import { stepLine, lessonLine, lessonTokenFaults } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 import { slotSetupLeft, setupRows } from './slotsetup';   // (asked inside gate() only)
 import { HANDRING } from './handring';
 import { STALK } from './stalk';   // (read inside gate() only)
@@ -153,6 +153,10 @@ export function railsFaults(L: LessonData): string[] {
   const cues = new Set<string>();
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
     if (T.explain && (T.explain.text.length > CARD_CHARS || (T.explain.title?.length ?? 0) > 40)) out.push(`${w}.explain: a card is a heading of at most 40 characters and at most ${CARD_CHARS} of text (it is ${T.explain.title?.length ?? 0} and ${T.explain.text.length}): a card nobody reads teaches nothing`);
+    // (a card's words and the frame's other lines are written out by lessonLine as a step's line is: a move's token in one is held the same way, by what the
+    //  player reads — lesson.ts lessonTokenFaults — and a card's TITLE is shown as written, so a brace in it would be shown too)
+    if (T.explain) { out.push(...lessonTokenFaults(`${w}.explain.text`, T.explain.text, CARD_CHARS)); if (/[{}]/.test(T.explain.title ?? '')) out.push(`${w}.explain.title has a brace: a card's title is shown as written, a move's token goes in its text`); }
+    for (const [k, l] of [['noTap', T.noTap], ['menuLine', T.menuLine], ['pageLine', T.pageLine], ['planLine', T.planLine], ['after.line', T.after?.line], ['after.word', T.after?.word]] as const) if (typeof l === 'string') out.push(...lessonTokenFaults(`${w}.${k}`, l, 96));
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
   if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.length > 0 && R.rows.every(v => typeof v === 'string' && !!v))) out.push('rails.rows: a list of verbs, at least one (absent: every row)');
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
