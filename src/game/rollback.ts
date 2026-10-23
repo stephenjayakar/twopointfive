@@ -11,6 +11,7 @@
 //                              object standing in the same place there (the other game's own level, its own closures, its own host), and one with no counterpart
 //                              (a man spawned since) is made anew.
 //   stateHash(g) / stateDiff(a, b)   every value of the state in one fixed order, to the raw bit, folded into a word / compared with the paths that differ:
+//                              (stateDiff keeps a state as rows over a tree of its paths, not as strings; where it goes on and where it ends: flatDiff)
 //                              what tools/qa/rollback-check.ts holds 'play goes on exactly as the unbroken run' with.
 // WHAT IS NOT IN IT (and must not be reached for on the way back): the host — `Game.engine` but for its CPU box world and light set, the mixer, the smoke solver
 // (its fields live on the GPU), the session journal, and inside a game object whatever is a `HostOwned` (the GPU light meter's buffers; its last answers and this
@@ -467,13 +468,17 @@ export function snapshotBytes(s: Snapshot, since?: Snapshot): { bytes: number; o
 
 // ---- the state in one fixed order, to the bit: a word of it (stateHash), or two games' side by side with the paths that differ (stateDiff)
 const F64 = new Float64Array(1), U32 = new Uint32Array(F64.buffer);
-const PROTO_ID = new Map<object | null, number>();
+const PROTO_ID = new Map<object | null, number>(), PROTO_NAME = new Map<number, string>();
 const strHash = new Map<string, number>();
 function hashStr(s: string): number { let h = strHash.get(s); if (h === undefined) { h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } if (strHash.size < 50000) strHash.set(s, h); } return h; }
 
-interface Sink { word(w: number): void; num(x: number): void; str(s: string): void; path: string[] | null; note(what: string): void;
+/** where the walk stands, kept by the sink: an array of the steps down, or anything that takes them the same way (stateFlat keeps a tree, not strings) */
+interface PathLike { push(step: string): unknown; pop(): unknown; join(sep: string): string }
+interface Sink { word(w: number): void; num(x: number): void; str(s: string): void; path: PathLike | null; note(what: string): void;
   /** a typed array's elements, when the sink would rather take its bytes than each number */ typed?(o: Typed): void;
-  /** a function met (kept as it is: what it has captured is in no snapshot) */ fn?(f: Function): void }
+  /** a function met (kept as it is: what it has captured is in no snapshot) */ fn?(f: Function): void;
+  /** the word that says what KIND of value comes next (TAG_NAMES), when the sink tells it from a count or a number; `word` takes it otherwise */ tag?(t: number): void;
+  /** an object met for the first time (the walk stands at it) · the object the NEXT word is the number of */ met?(o: object): void; ref?(o: object): void }
 
 /** every value of `g`'s state through `sink`, in an order that depends on the state alone. `full`: the statics too. `own`: without the modules' registered variables
  *  and containers — what every game in the process shares — so only what THIS game reaches from itself and through the side tables */
@@ -482,42 +487,43 @@ function canon(g: Game, full: boolean, sink: Sink, own = false): void {
   const idx = new Map<object, number>(), found: Table[] = [], path = sink.path, where = new Map<object, string>();
   for (const o of fieldsOf(g, HOST_FIELDS)) idx.set(o, -1);
   if (!full) for (const o of fieldsOf(g, STATIC_FIELDS)) idx.set(o, -2);
+  const tag = sink.tag ?? sink.word;   // (no sink's `word` reads `this`)
   const value = (v: unknown): void => {
     switch (typeof v) {
-      case 'number': sink.word(1); sink.num(v); return;
-      case 'string': sink.word(2); sink.str(v); return;
-      case 'boolean': sink.word(v ? 3 : 4); return;
-      case 'undefined': sink.word(5); return;
-      case 'function': sink.word(6); if (sink.fn) sink.fn(v as Function); return;
-      case 'bigint': sink.word(7); sink.str(String(v)); return;
-      case 'symbol': sink.word(8); return;
+      case 'number': tag(1); sink.num(v); return;
+      case 'string': tag(2); sink.str(v); return;
+      case 'boolean': tag(v ? 3 : 4); return;
+      case 'undefined': tag(5); return;
+      case 'function': tag(6); if (sink.fn) sink.fn(v as Function); return;
+      case 'bigint': tag(7); sink.str(String(v)); return;
+      case 'symbol': tag(8); return;
     }
-    if (v === null) { sink.word(9); return; }
+    if (v === null) { tag(9); return; }
     const o = v as object, seenAt = idx.get(o);
-    if (seenAt !== undefined) { sink.word(10); sink.word(seenAt); return; }
-    if (o.constructor === Game && o !== g) { sink.word(22); return; }   // (another game, through a module's memo: not this game's state)
-    idx.set(o, idx.size); if (path) where.set(o, path.join(''));
-    if (Array.isArray(o)) { sink.word(11); sink.word(o.length);
+    if (seenAt !== undefined) { tag(10); if (sink.ref) sink.ref(o); sink.word(seenAt); return; }
+    if (o.constructor === Game && o !== g) { tag(22); return; }   // (another game, through a module's memo: not this game's state)
+    idx.set(o, idx.size); if (path) where.set(o, path.join('')); if (sink.met) sink.met(o);
+    if (Array.isArray(o)) { tag(11); sink.word(o.length);
       for (let i = 0; i < o.length; i++) { if (path) path.push(`[${i}]`); value(o[i]); if (path) path.pop(); } return; }
-    if (ArrayBuffer.isView(o)) { if (!isTyped(o)) { sink.word(12); return; } sink.word(13); sink.str(o.constructor.name); sink.word(o.length);
+    if (ArrayBuffer.isView(o)) { if (!isTyped(o)) { tag(12); return; } tag(13); sink.str(o.constructor.name); sink.word(o.length);
       if (sink.typed) sink.typed(o); else for (let i = 0; i < o.length; i++) { if (path) path.push(`[${i}]`); sink.num(o[i]); if (path) path.pop(); }
       return; }
     const kind = protoKind(o);
     switch (kind) {
       case K_OBJ: { const p = Object.getPrototypeOf(o) as object | null; let id = PROTO_ID.get(p);
-        if (id === undefined) PROTO_ID.set(p, id = hashStr(p === null ? '(null)' : (p.constructor as { name?: string } | undefined)?.name ?? '?'));
-        sink.word(14); sink.word(id);
+        if (id === undefined) { const name = p === null ? '(null)' : (p.constructor as { name?: string } | undefined)?.name ?? '?'; PROTO_ID.set(p, id = hashStr(name)); PROTO_NAME.set(id, name); }
+        tag(14); sink.word(id);
         const ck = wallClockKeys(o);
         for (const k in o) { if (ck !== undefined && ck.includes(k)) continue;   // (a reading of the wall clock, marked where its holder is made: math/side.ts wallClock)
           sink.str(k); if (path) path.push('.' + k); value((o as Rec)[k]); if (path) path.pop(); }
-        sink.word(15); return; }
-      case K_MAP: { sink.word(16); sink.word((o as Map<unknown, unknown>).size); let n = 0;
+        tag(15); return; }
+      case K_MAP: { tag(16); sink.word((o as Map<unknown, unknown>).size); let n = 0;
         for (const [k, x] of o as Map<unknown, unknown>) { if (path) path.push(`<key ${n}>`); value(k); if (path) { path.pop(); path.push(`<${isObj(k) ? n : String(k)}>`); } value(x); if (path) path.pop(); n++; } return; }
-      case K_SET: { sink.word(17); sink.word((o as Set<unknown>).size); let n = 0; for (const x of o as Set<unknown>) { if (path) path.push(`<member ${n++}>`); value(x); if (path) path.pop(); } return; }
-      case K_BUF: { sink.word(18); const b = new Uint8Array(o as ArrayBuffer); sink.word(b.length); for (let i = 0; i < b.length; i++) sink.word(b[i]); return; }
-      case K_SIDEMAP: case K_SIDESET: sink.word(19); if ((o as Table).sideName === undefined) found.push(o as Table); return;
-      case K_RAWWEAK: sink.word(20); sink.note(`a plain WeakMap / WeakSet at ${path ? path.join('') : '(run stateDiff for the path)'}`); return;
-      default: sink.word(21);
+      case K_SET: { tag(17); sink.word((o as Set<unknown>).size); let n = 0; for (const x of o as Set<unknown>) { if (path) path.push(`<member ${n++}>`); value(x); if (path) path.pop(); } return; }
+      case K_BUF: { tag(18); const b = new Uint8Array(o as ArrayBuffer); sink.word(b.length); for (let i = 0; i < b.length; i++) sink.word(b[i]); return; }
+      case K_SIDEMAP: case K_SIDESET: tag(19); if ((o as Table).sideName === undefined) found.push(o as Table); return;
+      case K_RAWWEAK: tag(20); sink.note(`a plain WeakMap / WeakSet at ${path ? path.join('') : '(run stateDiff for the path)'}`); return;
+      default: tag(21);
     }
   };
   const root = (name: string, v: unknown): void => { if (path) path.push(name); sink.str(name); value(v); if (path) path.pop(); };
@@ -537,7 +543,7 @@ function canon(g: Game, full: boolean, sink: Sink, own = false): void {
       moved = true;
       hit.sort((a, b) => idx.get(a)! - idx.get(b)!);
       const name = t.sideName ?? (path ? `the table at ${where.get(t) ?? '?'}` : `table#${idx.get(t)}`), map = t instanceof SideMap ? t : null;
-      for (const k of hit.slice()) { if (path) path.push(`${name}{${where.get(k) ?? 'a host or static object'}}`); sink.str(name); sink.word(idx.get(k)!); if (map) value(map.get(k)); if (path) path.pop(); }
+      for (const k of hit.slice()) { if (path) path.push(`${name}{${where.get(k) ?? 'a host or static object'}}`); sink.str(name); if (sink.ref) sink.ref(k); sink.word(idx.get(k)!); if (map) value(map.get(k)); if (path) path.pop(); }
     }
     if (nFound < found.length) moved = true;
   }
@@ -580,7 +586,7 @@ export function stateAlike(a: Game, b: Game, max = 12): string[] {
   const first = new Map<object, object>(), more = new Map<object, Set<object>>(), back = new Map<object, object>(), where = new Map<object, string>();
   const skip = new Set<object>([...fieldsOf(a, HOST_FIELDS), ...fieldsOf(a, STATIC_FIELDS)]), found: [Table, Table][] = [];
   let pairs = 0;
-  const show = (v: unknown): string => typeof v === 'number' ? (F64[0] = v, `${v} (${U32[1].toString(16).padStart(8, '0')}${U32[0].toString(16).padStart(8, '0')})`) : typeof v === 'string' ? JSON.stringify(v).slice(0, 60)
+  const show = (v: unknown): string => typeof v === 'number' ? (F64[0] = v, numText(U32[0], U32[1])) : typeof v === 'string' ? JSON.stringify(v).slice(0, 60)
     : isObj(v) ? (Array.isArray(v) ? `an array of ${v.length}` : `a ${(v.constructor as { name?: string } | undefined)?.name ?? 'thing'}`) : String(v);
   const say = (what: string): void => { const line = `${path.join('') || '(root)'}: ${what}`; if (out.length < max && !out.includes(line)) out.push(line); };
   const keysOf = (o: object): string[] => { const ks: string[] = [], ck = wallClockKeys(o); for (const k in o) if (ck === undefined || !ck.includes(k)) ks.push(k); return ks; };
@@ -636,25 +642,126 @@ export function stateAlike(a: Game, b: Game, max = 12): string[] {
   return out;
 }
 
-/** a state laid out flat: every value in the fixed order with the path it sits at (stateDiff's two sides; a tool keeps one of a frame it cannot keep the game of) */
-export interface FlatState { toks: (number | string)[]; paths: string[] }
-export function stateFlat(g: Game, full = false, own = false): FlatState {
-  const toks: (number | string)[] = [], paths: string[] = [], path: string[] = [];
-  const at = (): string => path.join('');
-  canon(g, full, { path, word(w) { toks.push(w); paths.push(at()); }, num(x) { F64[0] = x; toks.push(`${x} (${U32[1].toString(16).padStart(8, '0')}${U32[0].toString(16).padStart(8, '0')})`); paths.push(at()); }, str(s) { toks.push('"' + s + '"'); paths.push(at()); }, note() {} }, own);
-  return { toks, paths };
-}
-/** where two flat states differ, as paths (at most `max`; after the first place their shapes part, the walk is out of step and stops). Empty = the same to the bit */
-export function flatDiff(A: FlatState, B: FlatState, max = 12): string[] {
-  const out: string[] = [], n = Math.min(A.toks.length, B.toks.length);
-  for (let i = 0; i < n && out.length < max; i++) {
-    if (A.toks[i] === B.toks[i]) continue;
-    out.push(`${A.paths[i] || '(root)'}: ${A.toks[i]} | ${B.toks[i]}`);
-    const text = i > 0 && A.toks[i - 1] === 2 && B.toks[i - 1] === 2;   // (a string VALUE: the walk stays in step past it; a key or a tag that differs does not)
-    if (typeof A.toks[i] !== 'string' || typeof B.toks[i] !== 'string' || A.paths[i] !== B.paths[i] || (String(A.toks[i])[0] === '"' && !text)) { out.push('(the shapes part here: nothing after it is compared)'); return out; }
+// ---- a state laid out flat, and two of them side by side
+//
+// It was two arrays a state, a token and a freshly joined path STRING for every value, a typed array's every element among them: 2.3 million of each for one
+// squad game on the page's stand, two games of it 2 GB, and a check that asked twice was killed for memory. Now a value is thirteen bytes: its kind, its two
+// words and the NODE of a tree of the steps down (a path is put together only for a value that is asked about); a string once a state; a typed array its bytes.
+const T_WORD = 0, T_TAG = 1, T_NUM = 2, T_STR = 3, T_TYPED = 4;
+/** what canon's tags say comes next (11 to 21 but 15, the end of an object's keys: an object, which takes a number in the walk) */
+const TAG_NAMES = ['', 'a number', 'a string', 'true', 'false', 'undefined', 'a function', 'a bigint', 'a symbol', 'null', 'a reference', 'an array', 'a DataView', 'a typed array', 'an object', 'no more keys', 'a Map', 'a Set',
+  'a buffer', 'a side table', 'a plain WeakMap / WeakSet', 'a thing held as it is', 'another game'];
+const numText = (lo: number, hi: number): string => { U32[0] = lo; U32[1] = hi; return `${F64[0]} (${(hi >>> 0).toString(16).padStart(8, '0')}${(lo >>> 0).toString(16).padStart(8, '0')})`; };
+const aThing = (name: string | undefined): string => name === undefined || name === '?' ? 'a thing' : name === 'Object' || name === '(null)' ? 'an object' : `a ${name}`;
+const grown = <T extends Int32Array | Uint8Array>(a: T): T => { const b = new (a.constructor as new (n: number) => T)(a.length * 2); b.set(a); return b; };
+
+/** a state laid out flat: every value in the fixed order, with where it sits (stateDiff's two sides; a tool keeps one of a frame it cannot keep the game of —
+ *  it holds no object of the game). `toks` / `paths` are the old two arrays, a typed array's every element a row: made on the first ask and KEPT, and as
+ *  heavy as they ever were — ask `flatDiff` instead where that will do. */
+export class FlatState {
+  /** the rows: a typed array is one · the values: its every element is one */
+  n = 0; values = 0;
+  kind = new Uint8Array(1 << 16); lo = new Int32Array(1 << 16); hi = new Int32Array(1 << 16); node = new Int32Array(1 << 16);
+  strs: string[] = []; typed: Typed[] = [];
+  /** the row that is the NUMBER of an object met before → the node it was first met at (none: a thing of the host's or a static) */
+  refs = new Map<number, number>();
+  /** the steps down as a tree: a node's parent and its step's text (node 0 = the top) */
+  nodes = 1; parent = new Int32Array(1 << 14); seg = new Int32Array(1 << 14); segs: string[] = [''];
+  private old: { toks: (number | string)[]; paths: string[] } | null = null;
+  row(kind: number, lo: number, hi: number, node: number): void {
+    if (this.n === this.kind.length) { this.kind = grown(this.kind); this.lo = grown(this.lo); this.hi = grown(this.hi); this.node = grown(this.node); }
+    const i = this.n++; this.kind[i] = kind; this.lo[i] = lo; this.hi[i] = hi; this.node[i] = node; this.values++;
   }
-  if (!out.length && A.toks.length !== B.toks.length) out.push(`one state is longer: ${A.toks.length} values against ${B.toks.length}`);
+  down(from: number, seg: number): number { if (this.nodes === this.parent.length) { this.parent = grown(this.parent); this.seg = grown(this.seg); } const n = this.nodes++; this.parent[n] = from; this.seg[n] = seg; return n; }
+  pathOf(node: number): string { const steps: string[] = []; for (let n = node; n > 0; n = this.parent[n]) steps.push(this.segs[this.seg[n]]); return steps.reverse().join(''); }
+  /** is row i the tag t */
+  tagAt(i: number, t: number): boolean { return i >= 0 && this.kind[i] === T_TAG && this.lo[i] === t; }
+  /** is row i the number of an object met before (after the tag 'a reference', or a side table's key) */
+  refAt(i: number): boolean { return this.kind[i] === T_WORD && (this.refs.has(i) || this.tagAt(i - 1, 10)); }
+  /** row i for a reader: a tag as the value it opens */
+  say(i: number): string {
+    const lo = this.lo[i];
+    switch (this.kind[i]) {
+      case T_NUM: return numText(lo, this.hi[i]);
+      case T_STR: return '"' + this.strs[lo] + '"';
+      case T_TYPED: return `a typed array of ${this.typed[lo].length}`;
+      case T_TAG:
+        if (lo === 1 || lo === 2 || lo === 10) return this.say(i + 1);
+        if (lo === 11 || lo === 16 || lo === 17 || lo === 18) return `${TAG_NAMES[lo]} of ${this.lo[i + 1]}`;
+        if (lo === 13) return `a ${this.strs[this.lo[i + 1]]} of ${this.lo[i + 2]}`;
+        if (lo === 14) return aThing(PROTO_NAME.get(this.lo[i + 1]));
+        return TAG_NAMES[lo] ?? String(lo);
+    }
+    if (!this.refAt(i)) {   // a count or a class after its tag, said as the value it belongs to
+      const t = i > 0 && this.kind[i - 1] === T_TAG ? this.lo[i - 1] : 0;
+      return t === 11 || t === 16 || t === 17 || t === 18 ? `${TAG_NAMES[t]} of ${lo}` : t === 14 ? aThing(PROTO_NAME.get(lo)) : this.tagAt(i - 2, 13) ? `a ${this.strs[this.lo[i - 1]]} of ${lo}` : String(lo);
+    }
+    const at = this.refs.get(i); return at !== undefined ? `the object at ${this.pathOf(at) || '(root)'}` : lo === -1 ? 'a thing of the host\'s' : lo === -2 ? 'a static' : `object ${lo}`;
+  }
+  private rows(): { toks: (number | string)[]; paths: string[] } {
+    if (this.old) return this.old;
+    const toks: (number | string)[] = [], paths: string[] = [];
+    for (let i = 0; i < this.n; i++) { const k = this.kind[i], p = this.pathOf(this.node[i]);
+      if (k === T_TYPED) { const t = this.typed[this.lo[i]]; for (let e = 0; e < t.length; e++) { F64[0] = t[e]; toks.push(numText(U32[0], U32[1])); paths.push(`${p}[${e}]`); } }
+      else { toks.push(k === T_NUM ? numText(this.lo[i], this.hi[i]) : k === T_STR ? '"' + this.strs[this.lo[i]] + '"' : this.lo[i]); paths.push(p); } }
+    return this.old = { toks, paths };
+  }
+  get toks(): (number | string)[] { return this.rows().toks; }
+  get paths(): string[] { return this.rows().paths; }
+}
+
+export function stateFlat(g: Game, full = false, own = false): FlatState {
+  const F = new FlatState(), strId = new Map<string, number>(), segId = new Map<string, number>([['', 0]]), met = new Map<object, number>();
+  let cur = 0;
+  const path: PathLike = {
+    push(step) { let id = segId.get(step); if (id === undefined) { id = F.segs.length; F.segs.push(step); segId.set(step, id); } cur = F.down(cur, id); },
+    pop() { cur = F.parent[cur]; }, join() { return F.pathOf(cur); } };
+  canon(g, full, { path, note() {},
+    word(w) { F.row(T_WORD, w, 0, cur); }, tag(t) { F.row(T_TAG, t, 0, cur); }, num(x) { F64[0] = x; F.row(T_NUM, U32[0], U32[1], cur); },
+    str(s) { let id = strId.get(s); if (id === undefined) { id = F.strs.length; F.strs.push(s); strId.set(s, id); } F.row(T_STR, id, 0, cur); },
+    typed(o) { F.typed.push(o.slice() as Typed); F.row(T_TYPED, F.typed.length - 1, 0, cur); F.values += o.length - 1; },
+    met(o) { met.set(o, cur); }, ref(o) { const at = met.get(o); if (at !== undefined) F.refs.set(F.n, at); } }, own);
+  return F;
+}
+
+/** where two flat states differ, a line a place: `path: this | that`, at most `max`; empty = the same to the bit.
+ *  A VALUE that differs (a number, a text, a flag, null where a number was, which object a field points at) leaves the two walks in step and the next is
+ *  compared. A SHAPE that differs (an array of another length, an object with another key) is one line; where what is left of that one value holds NO object
+ *  first met there, in either state, it is passed over in both ('… (the rest of it is not compared)') and the compare goes on, for the two walks still number
+ *  their objects alike. Where it does hold one, or the two stand at different places (one has a side table's row the other has not), the walks are out of
+ *  step and the compare is over: '(the shapes part here: nothing after it is compared …)' — a caller that asks "no line of mine" must read that line as "not
+ *  proven". Two games value for value PAST such a place: stateAlike, which pairs what stands in the same place and gives up only the one thing that differs. */
+export function flatDiff(A: FlatState, B: FlatState, max = 12): string[] {
+  const out: string[] = []; let i = 0, j = 0;
+  const within = (F: FlatState, n: number, top: number): boolean => { while (n > top) n = F.parent[n]; return n === top; };   // (a child's node is made after its parent's)
+  /** the row after what is left of the value at row k's node, or -1 where an object is first met in it (one the walk gives a number) */
+  const rest = (F: FlatState, k: number): number => { const top = F.node[k]; for (; k < F.n && within(F, F.node[k], top); k++) if (F.kind[k] === T_TAG && F.lo[k] >= 11 && F.lo[k] <= 21 && F.lo[k] !== 15) return -1; return k; };
+  const over = (pb: string): string[] => { out.push(`(the shapes part here: nothing after it is compared; the second stands at ${pb || '(root)'})`); return out; };
+  while (i < A.n && j < B.n && out.length < max) {
+    const ka = A.kind[i], kb = B.kind[j];
+    if (ka === kb) {
+      if (ka === T_TYPED) {
+        const ta = A.typed[A.lo[i]], tb = B.typed[B.lo[j]];
+        if (ta.length === tb.length && ta.constructor === tb.constructor) {
+          const ua = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength), ub = new Uint8Array(tb.buffer, tb.byteOffset, tb.byteLength), w = ta.BYTES_PER_ELEMENT; let p: string | null = null;
+          for (let q = 0; q < ua.length && out.length < max; q++) { if (ua[q] === ub[q]) continue;
+            const e = q / w | 0; F64[0] = ta[e]; const lo = U32[0], hi = U32[1]; F64[0] = tb[e]; const lo2 = U32[0], hi2 = U32[1];
+            if (lo !== lo2 || hi !== hi2) out.push(`${p ??= A.pathOf(A.node[i])}[${e}]: ${numText(lo, hi)} | ${numText(lo2, hi2)}`);
+            q = (e + 1) * w - 1; }
+          i++; j++; continue; }
+      } else if (ka === T_STR ? A.strs[A.lo[i]] === B.strs[B.lo[j]] : A.lo[i] === B.lo[j] && A.hi[i] === B.hi[j]) { i++; j++; continue; }
+    }
+    const pa = A.pathOf(A.node[i]), pb = B.pathOf(B.node[j]), said = `${pa || '(root)'}: ${A.say(i)} | ${B.say(j)}`;
+    if (pa !== pb) { out.push(said); return over(pb); }
+    if (ka === kb && (ka === T_NUM || (ka === T_STR && A.tagAt(i - 1, 2) && B.tagAt(j - 1, 2)) || (ka === T_WORD && A.refAt(i) && B.refAt(j)))) { out.push(said); i++; j++; continue; }   // a value: in step
+    const whole = ka === T_TAG && kb === T_TAG, i2 = rest(A, i), j2 = rest(B, j);   // (whole: the two rows open the value, and `said` shows all of it where it is not an object)
+    if (i2 < 0 || j2 < 0) { out.push(said); return over(pb); }
+    out.push(whole ? said : said + ' (the rest of it is not compared)'); i = i2; j = j2;
+  }
+  if (out.length < max && (i < A.n) !== (j < B.n)) { const F = i < A.n ? A : B, k = i < A.n ? i : j;   // (a side table's rows have no count before them: a last row only one state has ends here)
+    out.push(`${F.pathOf(F.node[k]) || '(root)'}: ${i < A.n ? 'here | nothing' : 'nothing | here'} (one state is longer: ${A.values} values against ${B.values})`); }
   return out;
 }
-/** where two games' states differ (flatDiff of the two) */
-export function stateDiff(a: Game, b: Game, max = 12, full = false): string[] { return flatDiff(stateFlat(a, full), stateFlat(b, full), max); }
+/** where two games' states differ (flatDiff of the two). `full`: the statics too. `own`: without what every game in the process shares — the modules' registered
+ *  variables and containers — which is what two games stood in ONE process are compared by (a module's variable is one for both: canon) */
+export function stateDiff(a: Game, b: Game, max = 12, full = false, own = false): string[] { return flatDiff(stateFlat(a, full, own), stateFlat(b, full, own), max); }
