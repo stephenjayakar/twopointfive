@@ -44,7 +44,7 @@ for (const s of ALL_MISSIONS as any[]) {
   const sizes = (squadChoices(s) as { n: number; ok: boolean }[]).filter(c => c.ok).map(c => (c.n ? `+${c.n}` : 'alone')).join(' ');
   const block = sc.issue?.members as Record<string, Card> | undefined;
   const own = [block ? `issue block: ${Object.entries(block).map(([i, c]) => `${MEN[+i]} ${JSON.stringify(c)}`).join('; ')}${!Object.keys(block).length ? '(names nobody: every man in the plain issue)' : ''}` : '', typeof rc.wallCharges === 'number' && rc.wallCharges > 0 ? `${rc.wallCharges} wall charge${rc.wallCharges === 1 ? '' : 's'} of its own` : ''].filter(Boolean).join(' · ') || 'none';
-  const cards = s.group === 'training' || s.group === 'tutorial' ? 'none: a lesson is played as issued' : block ? 'none: the mission issues its own' : s.kind === 'quiet' && s.squad === 0 ? 'yours' : 'all who come';
+  const cards = s.group === 'tutorial' ? 'none: a lesson is played as issued' : block ? 'none: the mission issues its own' : s.kind === 'quiet' && s.squad === 0 ? 'yours' : 'all who come';
   const locked = doors.filter(x => x.locked).length, steel = doors.filter(x => x.steel).length;
   const noFrag = s.kind === 'rescue' ? 'refused near a hostage' : sc.snatch || rc.snatch || /snatch/.test(s.id) ? 'refused near the man you came for' : (d.civilians ?? sc.civilians)?.length ? 'refused near a civilian' : 'yes';
   const ways = Math.max(1, (s.ways ?? []).length), kv = (sc.kitView?.ways ?? []).length;
@@ -52,7 +52,7 @@ for (const s of ALL_MISSIONS as any[]) {
   if (s.kind === 'rescue') notes.push(`${s.title}: the two frags of the issued kit cannot be ordered into a room with a hostage in it.`);
   if (locked > 2 && s.kind !== 'quiet') notes.push(`${s.title}: ${locked} locked doors and two door charges as issued; the rest are the pick's, the boot's or a big-slot tool's${MORE ? ': of three or four as issued Red Two carries the breaching shotgun and, of four, Blue Two the hammer; a pair is issued neither' : ', and nobody is issued one'}.`);
   if (steel) notes.push(`${s.title}: ${steel} steel door${steel === 1 ? '' : 's'}: no hammer or shotgun opens one.`);
-  if (s.kind === 'quiet' && s.squad > 0 && s.group !== 'training' && s.group !== 'tutorial') notes.push(`${s.title}: a quiet mission whose partner comes as issued, with ${partner} on his card.`);
+  if (s.kind === 'quiet' && s.squad > 0 && s.group !== 'tutorial') notes.push(`${s.title}: a quiet mission whose partner comes as issued, with ${partner} on his card.`);
 }
 out.push('', '## Read off the two tables', '');
 for (const [kit, at] of Object.entries(bareAt)) out.push(`- ${kit}: a man comes with nothing at ${at.join('; ')}.`);

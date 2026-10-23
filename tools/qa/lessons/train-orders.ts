@@ -1,3 +1,5 @@
+// KEPT AS A CHECK'S STAGE (2026-10-23): Training 5 is off the mission list with the other six lessons; this script and the level's lesson block stay for
+// tools/qa/wordcuts-check.ts, which plays the lesson to its held kitchen door (tools/levels/train-orders.ts says the rest).
 // The scripted player for Training 5 (levels/train-orders.json; tools/qa/lesson-run.ts runs it): a pair commanded through the input only — the cursor on the
 // target, X, then the row's digit (5 turns a door's menu to its tools); B for the usual order; F for the word that blows a set charge (and, on the frozen
 // stand, the word at a held threshold).

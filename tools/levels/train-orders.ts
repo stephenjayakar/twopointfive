@@ -1,3 +1,8 @@
+// A CHECK'S STAGE, NOT A MISSION: this was Training 5. The seven Training lessons were taken out 2026-10-23 (the tutorial's six missions replaced them):
+// its row on the mission list is gone and nothing on a menu loads it. The level, ITS LESSON BLOCK and its scripted player (tools/qa/lessons/train-orders.ts)
+// are kept because checks owned elsewhere stand on them: wordcuts-check plays the lesson by its script up to the held kitchen door; thrpie-check,
+// savetimeline-check and lesson-check's kit lines are staged on its floor. The lesson goes when wordcuts-check is staged without it.
+//
 // TRAIN-ORDERS — Training 5, "Orders and door tools": commanding a pair. The orders menu on the ground (move, cover, hold, fall in), the usual order on a
 // door (stack up), then the door tools on four houses, one each: open and clear · bang and clear · the door held from
 // outside, then a can and in · a charge on a locked door, blown on the word.

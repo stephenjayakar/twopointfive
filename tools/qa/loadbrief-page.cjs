@@ -28,7 +28,7 @@ const JOBS = [
   { name: 'room clear', query: 'levelFile=depot.json&roomclear&squad4', id: 'depot-four', title: 'The depot', map: 'depot.json', how: 'click' },
   { name: 'rescue', query: 'levelFile=registry.json&rescue', id: 'rescue-registry', title: 'The registry', how: 'early' },
   { name: 'quiet', query: 'levelFile=vault.json&quiet', id: 'vault-quiet', title: 'The counting house', map: 'vault.json', how: 'space' },
-  { name: 'training', query: 'levelFile=train-move.json&quiet', id: 'train-move', title: '1 · Moving unseen', map: 'train-move.json', how: 'controls' },
+  { name: 'tutorial', query: 'levelFile=tut-quiet.json&quiet', id: 'tut-quiet', title: 'The ledger', map: 'tut-quiet.json', how: 'controls' },   // (until 2026-10-23 a Training lesson's row; not run on a page since the swap)
   { name: 'solo night', query: 'solo', id: 'solo-night', title: 'Solo night', map: 'office.json', how: 'script' },
   { name: 'off', query: 'loadbrief=0&levelFile=depot.json&roomclear&squad4', off: true },
   { name: 'paused', query: 'paused&mute&nightbreach', paused: true },

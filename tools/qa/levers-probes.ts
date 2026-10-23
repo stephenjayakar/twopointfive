@@ -189,9 +189,9 @@ export async function leversScreens(): Promise<boolean> {
   try {
     await withStore({}, async store => { await withDom(SEARCH, async () => {
       G.location.pathname = '/'; G.location.hash = ''; const loads: string[] = []; G.location.assign = (u: string) => { loads.push(u); }; G.location.reload = () => { loads.push('(reload)'); };
-      const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { SCENARIOS, TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+      const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { SCENARIOS, LESSON_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
       fresh(); M.MISSIONS.onPick = null;
-      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), solo = M.SOLO_NIGHT, quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'training' && m.scenario.group !== 'tutorial')   /* (a tutorial mission's fog is its frame's, game/rails.ts: its lever is greyed, as a lesson's) */, lessonM = list.find(m => m.scenario?.group === 'training');
+      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), solo = M.SOLO_NIGHT, quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'tutorial')   /* (a tutorial mission's fog is its frame's, game/rails.ts: its lever is greyed, as a lesson's) */, lessonM = list.find(m => m.scenario?.group === 'training');
       // ---- the mission sheet
       const S = M.openMissions({ root: host, select: four.id, search: SEARCH, onPick: () => {} }), root = S.root as unknown as El;
       const rows0 = leverRowsOf(root), href0 = S.hrefOf(four);
@@ -242,9 +242,9 @@ export async function leversScreens(): Promise<boolean> {
         F.verdict(mixed && n4.includes('Your own mix') && nS === '' && nQ === '', 'a squad mix kept on the machine: its line under a squad mission\'s lever rows, none under the solo night\'s or a quiet mission\'s (the mix does not act there)',
           `squad '${n4}' · solo '${nS}' · ${quietM ? `${quietM.id} '${nQ}'` : '(no quiet mission on this build)'}`); }
       const Ls = UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }); const soloLR = leverRowsOf(Ls.root as unknown as El), soloL = soloLR.length, soloFog = QUIETFOG.on && QUIETFOG.solo; Ls.close();
-      const lesson = (TRAINING_MISSIONS as any[])[0]; let lessonL = -1; if (lesson) { const Lt = UI.openLoadout(lesson, { host, deploy: () => {}, back: () => {} }); lessonL = leverRowsOf(Lt.root as unknown as El).length; Lt.close(); }
+      const lesson = (LESSON_MISSIONS as any[])[0]; let lessonL = -1; if (lesson) { const Lt = UI.openLoadout(lesson, { host, deploy: () => {}, back: () => {} }); lessonL = leverRowsOf(Lt.root as unknown as El).length; Lt.close(); }
       F.verdict((soloFog ? soloLR.map(r => r.key).join(',') === 'fog,ai,kit' && soloLR.every(r => (r.key === 'fog') !== r.na) : soloL === 0) && lessonL <= 0,
-        'the solo night\'s loadout and a Training lesson\'s carry no lever rows (where game/quietfog.ts QUIETFOG.solo is up the solo night\'s carries the three, the fog\'s alone live)', `solo ${soloL} rows${soloFog ? ` (${soloLR.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ')})` : ''} · lesson ${lesson ? `${lesson.id} ${lessonL} rows` : '(none on this build)'}`);
+        'the solo night\'s loadout and a tutorial mission\'s carry no lever rows (where game/quietfog.ts QUIETFOG.solo is up the solo night\'s carries the three, the fog\'s alone live)', `solo ${soloL} rows${soloFog ? ` (${soloLR.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ')})` : ''} · lesson ${lesson ? `${lesson.id} ${lessonL} rows` : '(none on this build)'}`);
     }); });
   } finally { fresh(); FOG.own = ownWas; }
   return F.done();

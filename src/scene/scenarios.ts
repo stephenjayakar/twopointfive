@@ -521,10 +521,9 @@ export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: Str
  *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A
  *  group is a KIND OF PLAY, every mission is under exactly one, and none holds more than eight (probes.ts missions-list). SHOW, NOT TELL: a heading is a
  *  word or two; `line` is its tooltip, never drawn. A group with no row draws nothing. */
-export type MissionGroup = 'tutorial' | 'training' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
+export type MissionGroup = 'tutorial' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
 export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[] = [
   { id: 'tutorial', title: 'Tutorial', line: 'The game, a mission at a time' },   // (game/rails.ts: missions on rails — one thing at a time, everything not yet met switched off)
-  { id: 'training', title: 'Training', line: 'One family of systems at a time' },
   { id: 'raids', title: 'Raids', line: 'Small buildings, up to seven defenders' },   // (where a squad's mission that names no group falls: ui/missions.ts groupOf)
   { id: 'strongholds', title: 'Strongholds', line: 'Eight to eleven defenders' },
   { id: 'clock', title: 'On the clock', line: 'A hostage, a runner, a charge or a par time' },
@@ -532,8 +531,8 @@ export const MISSION_GROUPS: { id: MissionGroup; title: string; line: string }[]
   { id: 'quiet-two', title: 'Quiet, as two', line: 'You and one partner, silent from the start' },
 ];
 
-/** a row of a LESSON group (the tutorial's missions, the Training levels): its own team size and no other, the kit as issued, no levers, no verdict kept */
-export const lessonGroup = (g: string | undefined): boolean => g === 'training' || g === 'tutorial';
+/** a row of the LESSON group (the tutorial's missions; the older Training group was taken out 2026-10-23): its own team size and no other, the kit as issued, no levers, no verdict kept */
+export const lessonGroup = (g: string | undefined): boolean => g === 'tutorial';
 
 /** One row of a scenario list (what a picker shows and a URL starts): which kind, how many teammates, on which level file. THE SMALLEST SHAPE — nothing reads it
  *  in the game yet; `scenarioQuery` is how a row becomes the page's query string. */

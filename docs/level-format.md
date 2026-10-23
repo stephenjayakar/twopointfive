@@ -196,7 +196,8 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   out, a door can come open another way): give such a step an `any` with the honest alternative. The lesson only READS the game: the
   level under it is a real mission of its kind (it needs a `quiet` or `roomClear` block) and the same keys play the same run with `?nolesson`. After the last
   step the mission's own objective has the row back and ends the run. Generators stand on `tools/levels/train-ground.ts` (`trainGround()`: the compound, `hut`,
-  `lamp`, `finish`); `tools/levels/train-move.ts` is the worked example; the seven are `train-move` · `train-hands` · `train-lights` · `train-kit` (quiet, alone), `train-orders`
+  `lamp`, `finish`); (THE SEVEN TRAINING LESSONS WERE TAKEN OUT 2026-10-23: `docs/agents/missions.md`; a tutorial mission's generator, `tools/levels/tut-quiet.ts`, is the worked example now)
+  `tools/levels/train-move.ts` was the worked example; the seven were `train-move` · `train-hands` · `train-lights` · `train-kit` (quiet, alone), `train-orders`
   (a room clear with the pair), `train-pairs` (with the four), `train-silent` (quiet as two). A Training row deploys at ITS OWN size only (`loadout.ts
   squadChoices`: the Loadout screen greys the others). Checks: `bun run tools/qa/lesson-check.ts <name>` (the block against the file, the
   floor and the list), `tools/qa/lesson-run.ts <name>` (a scripted player — `tools/qa/lessons/<name>.ts`, input only — through every step to the debrief; a

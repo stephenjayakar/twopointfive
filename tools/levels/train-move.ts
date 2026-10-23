@@ -1,3 +1,7 @@
+// A CHECK'S STAGE, NOT A MISSION: this yard was a Training lesson's level. The seven Training lessons were taken out 2026-10-23 (the tutorial's six missions
+// replaced them); the lesson's steps, its row on the mission list and its scripted player are gone. The yard stays because checks owned elsewhere are
+// staged on its floor (tools/qa: the hands probes, hands-strip, hands-look, solofog-check, savetimeline-check, sticky-check). Nothing on a menu loads it. What follows describes the floor as it was built for the lesson.
+//
 // TRAIN-MOVE — Training 1, "Moving unseen": THE MOTOR POOL. Walking, the action key, sprinting (loud, and under a lamp: both meters up), then crouching, the
 // wheel and the dark bring both down; back to the wall, the lean, night vision — then past one guard to the dispatcher's hut, the vehicle log out of a trunk,
 // and out by the east gate across three metres of light while the guard has his back to it. A quiet mission (game/quiet.ts) alone, with a
@@ -14,17 +18,15 @@
 //   z 22 └─────────────dark lane────────────╨───────────────────┘
 //
 //   bun run tools/levels/export.ts train-move [--check]      → levels/train-move.json
-//   bun run tools/qa/lesson-check.ts train-move.json         the lesson block against the built floor
-//   bun run tools/qa/lesson-run.ts train-move                the scripted player through every step to the debrief
-//   page: ?levelFile=train-move.json&quiet       (&nolesson: the same level as its mission alone)
-import type { KitViewData, LessonData, QuietData, Rect } from '../../src/scene/scenarios';
+//   page: ?levelFile=train-move.json&quiet  
+import type { KitViewData, QuietData, Rect } from '../../src/scene/scenarios';
 import type { Paint } from '../../src/scene/gwotKit';
 import { trainGround, TRAIN_MATERIALS, EXIT_E, HALF } from './train-ground';
 import { yardGateShell } from './train-ground-kitview';
 import { livedTrain } from './lived-train';
 
 export const NAME = 'train-move';
-export const NOTES = 'Training 1, moving unseen: the motor pool. A lit pool to get out of, a container and a dark lane, one guard between his tea and the lit east gate, the dispatcher\'s hut with the vehicle log. Regenerate: bun run tools/levels/export.ts train-move';
+export const NOTES = 'A stage for checks (once Training 1): the motor pool. A lit pool to get out of, a container and a dark lane, one guard between his tea and the lit east gate, the dispatcher\'s hut with the vehicle log. Regenerate: bun run tools/levels/export.ts train-move';
 export const MATERIALS = TRAIN_MATERIALS;
 
 /** the lamp's pool inside the west gate: where the sprint is asked for (loud AND lit) */
@@ -181,32 +183,10 @@ export function build() {
     exits: [EXIT_E],
     patrols: [['yard']],
   };
-  const lesson: LessonData = {
-    title: 'Moving unseen',
-    steps: [
-      // done only INSIDE THE REACH OF THE LEAF (1.35 m of its centre, player.ts): the next line says 'what the prompt shows', so the prompt must be up when it
-      // is read. (His tape: the old area ended the step two metres short and north of the gate; no prompt showed, and he searched the wall for 18 s)
-      { id: 'walk', line: 'Walk with W A S D and follow the track to the gate', done: { is: 'in', area: { x0: 7.0, x1: 8, z0: 13.3, z1: 14.7 } }, at: [7.2, 1, 14] },
-      // a DEED, so Space is taught; the `in` arm is the gate opened some other way (a shoulder, a sprint) and walked through
-      { id: 'gate', line: 'Press Space to do what the prompt shows. Open the gate', done: { is: 'any', of: [{ is: 'did', what: 'act:push' }, { is: 'did', what: 'act:ease' }, { is: 'did', what: 'act:pull' }, { is: 'in', area: { ...POOL } }] }, at: [8, 1, 14] },
-      { id: 'sprint', line: 'Hold Shift to sprint to the light. Sprinting is loud, so watch the sound meter', done: { is: 'all', of: [{ is: 'flag', flag: 'sprint' }, { is: 'meter', which: 'noise', above: 0.6 }, { is: 'in', area: { ...POOL } }] }, at: [11.2, 1, 14.6] },
-      { id: 'crouch', line: 'You\'re lit up and loud. Press C to crouch. You\'ll be slower, but quieter and harder to see', done: { is: 'flag', flag: 'crouch' } },
-      { id: 'pace', line: 'Roll the mouse wheel down to creep, or up to walk faster', done: { is: 'pace', below: 0.9 } },
-      { id: 'dark', line: 'Follow the mark into the dark. Watch the light meter', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: { ...LANE_END } }, { is: 'meter', which: 'light', below: 0.3 }] }, { is: 'near', at: [17.8, 0, 21.1], r: 0.8 }] }, hold: 0.4, at: [17.8, 1, 21.1] },   // (the `near` arm: the page's meter has bounce in it and may never read under 0.3 — standing on the mark is enough)
-      { id: 'wall', line: 'Walk into the container and keep walking to put your back to it', done: { is: 'all', of: [{ is: 'flag', flag: 'wall' }, { is: 'in', area: { ...FACE } }] }, at: [18.4, 1, 20.3] },
-      { id: 'peek', line: 'Slide to the marked corner and keep pushing to lean out', done: { is: 'flag', flag: 'peek' }, at: [19.1, 1, 20.3] },
-      { id: 'nv', line: 'Press N to turn on night vision, then find the guard through the broken wall', done: { is: 'flag', flag: 'nv' } },
-      { id: 'reach', line: 'When the guard walks away, go to the hut\'s door', done: { is: 'stage', stage: 'drive' }, at: [23, 1, 9.6] },
-      { id: 'take', line: 'Tap Space at the gray trunk, then stay still', done: { is: 'stage', stage: 'exfil' }, at: front },
-      // the closer: the only moment the two meters pull against each other. (The `door` arms: he went straight for the gate — the lesson does not hold him)
-      { id: 'wait', line: 'The guard will come take a look. Go out the back door and into the dark', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: { ...BEHIND } }, { is: 'meter', which: 'light', below: 0.3 }] }, { is: 'door', door: 'gate_e', state: 'open' }] }, hold: 0.4, at: [28.7, 1, 10.0] },
-      { id: 'go', line: 'When the guard isn\'t looking, cross the light. Walk, because he\'ll hear you sprint', done: { is: 'door', door: 'gate_e', state: 'open' }, at: [32, 1, 14] },
-    ],
-  };
   const out = T.finish({
     spawn: [2.6, 0, 14.0], routes,
     mission: { serverRoom: { ...HUT }, entryDoor: 'hut', rack: { index: 0, front, halfW: 0.3 }, exfilDoor: 'gate_e', exfilX: EXIT_E.x, exfilZ: EXIT_E.z, exfilOut: EXIT_E.out },
-    scenarios: { quiet, lesson, kitView: MOVE_KITVIEW },
+    scenarios: { quiet, kitView: MOVE_KITVIEW },
   });
   furnish(T);
   return out;

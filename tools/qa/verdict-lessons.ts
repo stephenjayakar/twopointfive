@@ -1,6 +1,6 @@
-// Every Training level ends on a verdict: the scripted player of tools/qa/lesson-run.ts plays a lesson to its end (input only), and the run it ends must be
+// Every tutorial mission ends on a verdict: the scripted player of tools/qa/lesson-run.ts plays a lesson to its end (input only), and the run it ends must be
 // one `Game.verdict` names — a result, won, with the end card due (the stealth mission's own card for a quiet lesson, `takeDue()` for a room clear).
-//   bun run tools/qa/verdict-lessons.ts [name …]      (default: all seven, ~1.5 min)        exit 0 = every lesson ends on a verdict · 1 = one does not
+//   bun run tools/qa/verdict-lessons.ts [name …]      (default: the six tutorial missions)        exit 0 = every lesson ends on a verdict · 1 = one does not
 //   VERDICT_BREAK=1 must fail (the switch off: no run is named).
 // Both stands: plain = FROZEN, `TPS_PROFILE=shipped` in front = the page's. The card itself is the page's to raise: `verdict-look.cjs <dir> lesson` sees it there.
 import { resolve } from 'node:path';
@@ -8,7 +8,7 @@ import { runLesson } from './lesson-run';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const { Game } = await import(`${ROOT}/src/game/game.ts`);
-const { TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+const { LESSON_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { VERDICT } = await import(`${ROOT}/src/game/verdict.ts`);
 
 // the game the runner builds (it hands none back): the last one stepped
@@ -17,7 +17,7 @@ const step0 = Game.prototype.step;
 Game.prototype.step = function (this: unknown, ...a: unknown[]) { G = this; return step0.apply(this, a); };
 
 if (process.env.VERDICT_BREAK === '1') VERDICT.on = false;   // the break: no verdict at a run's end — every line must fail
-const names = process.argv.slice(2).length ? process.argv.slice(2) : (TRAINING_MISSIONS as { id: string }[]).map(m => m.id);
+const names = process.argv.slice(2).length ? process.argv.slice(2) : (LESSON_MISSIONS as { id: string }[]).map(m => m.id);
 let bad = 0;
 for (const name of names) {
   G = null;

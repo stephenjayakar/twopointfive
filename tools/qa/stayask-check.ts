@@ -18,7 +18,7 @@
 // THE HARNESS HAS NO GPU: a line on the net is a string, a boot is an event. Nobody has seen or heard any of this in play.
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
-const STAY = ['block-four', 'mousehole-four'], LEAVES = 'warehouse-four', LESSON = 'train-orders', LEAD_S = 1.5;
+const STAY = ['block-four', 'mousehole-four'], LEAVES = 'warehouse-four', LESSON = 'tut-plan', LEAD_S = 1.5;
 const ROLL = /\(radio\): [^:]+: all squads — radio check/, GOES = /\(radio\): [^:]+: nothing from ([^—]+) — one moving to their rooms!/;
 /** the net's ask for a SQUAD by name (a squad's own ask for a man reads the same but for the name: held to the squad the word that one goes names) */
 const askFor = (squad: string) => new RegExp(`\\(radio\\): [^:]+: ${squad.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\? … [^,]+, sound off`);

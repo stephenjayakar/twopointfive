@@ -21,8 +21,9 @@ const JOBS = {
   down: { query: KILLHOUSE, end: 'down', seed: true },
   solo: { query: 'solo', end: 'out', seed: false },
   off: { query: KILLHOUSE + '&noverdict', end: 'win', seed: true },
-  // a Training lesson's room clear (the fifth's is the same rule): it ends on the card too, with nothing graded and the next lesson leading
-  lesson: { query: 'levelFile=train-pairs.json&roomclear=1&squad4&difficulty=hard', end: 'win', seed: false },
+  // a tutorial mission's room clear: it ends on the card too, with nothing graded and the next mission leading (until 2026-10-23 this was Training 6; the
+  // swap to the tutorial's row has not been run on a page)
+  lesson: { query: 'levelFile=tut-squad.json&roomclear=1&squad4&difficulty=hard', end: 'win', seed: false },
 };
 const report = { checks: [], errors: [] };
 const check = (ok, label, detail) => { report.checks.push({ ok: !!ok, label, detail }); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -84,11 +85,11 @@ const CARD = () => { const m = document.getElementById('menu'), q = s => [...m.q
         check(c.hidden.every(v => !v) && !c.t1, 'win: the stealth game\'s rating, numbers and timeline are not on a squad\'s card', `rating / stats / timeline shown: ${c.hidden.join(' / ')}`);
         check(!!moved2 && moved2.n === 3 && moved2.s === 0 && moved2.w?.doors?.tries === 3 && !moved2.w.doors.clean && !!moved2.w.quiet, 'win: kept on this machine — three tries, the doors won at the third with a man lost, the old way untouched', JSON.stringify(moved2 ?? rec));
       } else if (name === 'lesson') {
-        check(c.db && c.word === 'CLEAR' && /^\d:\d\d$/.test(c.time || '') && /vd-squad/.test(c.cls), 'lesson: a Training room clear ends on the card by itself', `${c.word} ${c.time} · ${c.cls}`);
-        check(c.pips.length === 0 && c.tries === 0 && !c.gold && (c.kept === null || !/train-/.test(c.kept)), 'lesson: nothing graded and nothing kept — no ways, no tries, no record of the lesson on this machine', `pips ${c.pips.length} · ticks ${c.tries} · kept ${c.kept}`);
-        check(c.next.length === 1 && /^Next: 7 · /.test(c.next[0]) && c.lead === c.next[0] && c.focus === c.next[0], 'lesson: the next lesson leads the card (the first button, the focus)', `next ${JSON.stringify(c.next)} · primary '${c.lead}' · focus '${c.focus}'`);
+        check(c.db && c.word === 'CLEAR' && /^\d:\d\d$/.test(c.time || '') && /vd-squad/.test(c.cls), 'lesson: a tutorial room clear ends on the card by itself', `${c.word} ${c.time} · ${c.cls}`);
+        check(c.pips.length === 0 && c.tries === 0 && !c.gold && (c.kept === null || !/tut-/.test(c.kept)), 'lesson: nothing graded and nothing kept — no ways, no tries, no record of the lesson on this machine', `pips ${c.pips.length} · ticks ${c.tries} · kept ${c.kept}`);
+        check(c.next.length === 1 && /^Next: The ledger/.test(c.next[0]) && c.lead === c.next[0] && c.focus === c.next[0], 'lesson: the next lesson leads the card (the first button, the focus)', `next ${JSON.stringify(c.next)} · primary '${c.lead}' · focus '${c.focus}'`);
         const href = await page.evaluate(() => document.querySelector('#menu .db .btn.next')?.dataset.href ?? null);
-        check(/levelFile=train-silent\.json/.test(href || '') && !/train-pairs|roomclear|squad4/.test(href || ''), 'lesson: the button is the next row\'s own page load', String(href));
+        check(/levelFile=tut-quiet\.json/.test(href || '') && !/tut-squad|roomclear|squad4/.test(href || ''), 'lesson: the button is the next row\'s own page load', String(href));
       } else if (name === 'down') {
         check(c.db && c.word === 'DOWN' && c.tries === 3 && c.win === 0 && c.pips.filter(p => / won/.test(p)).length === 1 && !c.pips.some(p => / now/.test(p)), 'down: the card says DOWN, three ticks and none a win, the pips as they were', `${c.word} ${c.time} · ticks ${c.tries} · ${c.pips.join(' | ')}`);
         check(c.men[0] === 'Player:dead' && c.fell === 1 && !!moved2 && moved2.n === 3 && moved2.s === 3 && !moved2.w?.doors, 'down: his row ends where he fell; the try is counted and no way is won', `${c.men.join(' · ')} · ${JSON.stringify(moved2)}`);
@@ -126,15 +127,15 @@ const CARD = () => { const m = document.getElementById('menu'), q = s => [...m.q
         const read = () => page.evaluate(() => { const R = document.getElementById('missions'), rows = [...R.querySelectorAll('.mrow[data-mission]')], vis = e => !!e && e.getClientRects().length > 0;
           const of = id => { const r = R.querySelector(`.mrow[data-mission="${id}"]`), p = r?.querySelector(':scope > .vpips'); return p ? { cls: p.className, won: p.querySelectorAll('.vpip.won').length, one: p.querySelectorAll('.v1.on').length, all: p.querySelectorAll('.vall.on').length } : null; };
           const fit = rows.filter(vis).every(r => { const p = r.querySelector(':scope > .vpips'); if (!p) return true; const a = r.getBoundingClientRect(), b = p.getBoundingClientRect(); return b.left >= a.left - 0.5 && b.right <= a.right + 0.5 && b.bottom <= a.bottom + 0.5 && [...r.children].every(c => c === p || !vis(c) || c.classList.contains('mthumb') || c.getBoundingClientRect().right <= b.left + 0.5 || c.getBoundingClientRect().bottom <= b.top + 0.5); });
-          return { rows: rows.length, strips: R.querySelectorAll('.mrow > .vpips').length, twice: rows.filter(r => r.querySelectorAll(':scope > .vpips').length > 1).length, train: rows.filter(r => /^train-/.test(r.getAttribute('data-mission')) && r.querySelector('.vpips')).length,
-            lessons: rows.filter(r => /^train-/.test(r.getAttribute('data-mission'))).length, compound: of('compound-four'), warehouse: of('warehouse-four'), depot: of('depot-four'), fit,
+          return { rows: rows.length, strips: R.querySelectorAll('.mrow > .vpips').length, twice: rows.filter(r => r.querySelectorAll(':scope > .vpips').length > 1).length, train: rows.filter(r => /^tut-/.test(r.getAttribute('data-mission')) && r.querySelector('.vpips')).length,
+            lessons: rows.filter(r => /^tut-/.test(r.getAttribute('data-mission'))).length, compound: of('compound-four'), warehouse: of('warehouse-four'), depot: of('depot-four'), fit,
             // (the menus' two rules for anything on a card: it does not change the card's height, and it takes no pointer — the card under it is the link)
             tall: Object.fromEntries(rows.filter(vis).map(r => [r.getAttribute('data-mission'), Math.round(r.getBoundingClientRect().height * 10) / 10])),
             inert: rows.filter(vis).every(r => { const p = r.querySelector(':scope > .vpips'); if (!p || !vis(p)) return true; const b = p.getBoundingClientRect(), hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return getComputedStyle(p).pointerEvents === 'none' && p.tabIndex < 0 && !(hit && p.contains(hit)); }),
             inset: (() => { const r = R.querySelector('.mgrid .mrow[data-mission="compound-four"]'), p = r?.querySelector(':scope > .vpips'); return r && p && vis(p) ? Math.round((r.getBoundingClientRect().right - p.getBoundingClientRect().right) * 10) / 10 : null; })() }; });
         const c = await read(); log(name, JSON.stringify(c));
         if (name === 'cards') {
-          check(c.strips === c.rows - c.lessons && c.twice === 0 && c.train === 0 && c.lessons > 0, 'cards: every mission\'s card carries one strip of pips; the training lessons none', `${c.strips} strips on ${c.rows} rows (${c.lessons} lessons)`);
+          check(c.strips === c.rows - c.lessons && c.twice === 0 && c.train === 0 && c.lessons > 0, 'cards: every mission\'s card carries one strip of pips; the tutorial missions none', `${c.strips} strips on ${c.rows} rows (${c.lessons} lessons)`);
           check(c.compound && /gold/.test(c.compound.cls) && c.compound.won === 2 && c.compound.one === 1 && c.compound.all === 1 && c.warehouse?.won === 3 && c.depot && c.depot.won === 0 && /none/.test(c.depot.cls), 'cards: what is kept is what is lit — two ways and gold on the compound (one at the first try, one with nobody lost), three on the warehouse, four dim marks on a mission tried and never won', JSON.stringify({ compound: c.compound, warehouse: c.warehouse, depot: c.depot }));
           check(c.fit, 'cards: on every card drawn the strip sits inside the card and over nothing else on its line', `fit ${c.fit}`);
           tallOn = c.tall; check(c.inert, 'cards: the strip takes no pointer and no focus — a click on it lands on the card', `inert ${c.inert}, ${c.inset} px from the card\'s right edge`);
