@@ -1152,7 +1152,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   digit, a doubled or trailing space, a `from` left in the man's words), a brace left open, and a line that fits the row's 96
   characters as written and not once written out the longest of the four ways (`lessonTokenFaults`). A token in a card's
   text, a `noTap`, a plan, menu or after line is held the same way by `rails.ts railsFaults` since the same day, and a brace in a card's title
-  refused (`missions.md`, "A lesson's words are checked as the page says them"). `tut-quiet` uses tokens; `tut-pair`'s lines are owed by its thread. CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
+  refused (`missions.md`, "A lesson's words are checked as the page says them"). `tut-quiet` and `tut-pair` use tokens, and `lesson-check` holds every tutorial level to them. CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
   stands, its break by `NOKNIFE_BREAK=1`. Read on the page on `tut-quiet` (the software adapter), the stalk and the knife each way; never on a GPU.
 - **The knife's own probe puts the knife back (`tools/qa/hold-pose-probes.ts` `holdKnife`, probe `hold-knife`; 10-23).** It was red on the shipped
   stand from the day the no-knife rule went on there (three lines: no knife in the arm hold, twice no knife boxes), because the probe wants the thing the
