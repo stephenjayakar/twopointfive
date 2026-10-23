@@ -2,7 +2,7 @@
 //   bun run tools/qa/lesson-check.ts <name>[.json] …        (no name: every row of scene/scenarioList.ts LESSON_MISSIONS — the tutorial's missions.
 //                                                             The seven Training lessons it was written for were taken out 2026-10-23)
 // PASS / FAIL lines: the file validates · the block against the floor (game/lesson.ts checkLesson: every test's kind and fields, its doors, lights and areas) ·
-// a row of LESSON_MISSIONS names the level under the Tutorial group · that row's own query starts its mission with the lesson live on step 1 · with the
+// no line names the grab's key or the knife once the page's rules turn it · a row of LESSON_MISSIONS names the level under the Tutorial group · that row's own query starts its mission with the lesson live on step 1 · with the
 // switch off the same start has no lesson and the scenario's own objective · a checkpoint carries the step that is up (a quiet run alone) · a restart puts the
 // lesson back on step 1.
 // exit 0 = all pass · 1 = a FAIL · 2 = no such level
@@ -17,7 +17,9 @@ const { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`);
 const { kitPacks } = await import(`${ROOT}/src/game/kit.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { LESSON, checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
+const { LESSON, checkLesson, lessonLine } = await import(`${ROOT}/src/game/lesson.ts`);
+const { STALK } = await import(`${ROOT}/src/game/stalk.ts`);
+const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
 const names = process.argv.slice(2).filter(a => !a.startsWith('--')).map(a => a.replace(/\.json$/, ''));
 const list: string[] = names.length ? names : [...new Set((LESSON_MISSIONS as any[]).map(e => String(e.level).replace(/\.json$/, '')))];
@@ -38,6 +40,16 @@ for (const name of list) {
   const rows = (LESSON_MISSIONS as any[]).filter(e => e.level === `${name}.json`);   // (the tutorial's rows: scenarioList.ts)
   verdict(rows.length > 0 && rows.every(e => e.group === 'tutorial'), `the missions list has it under Tutorial (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
   verdict(rows.every(e => kitAsIssued(e) || kitPacks(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'tutorial')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued) unless it is a lesson the player packs for (kit.ts ISSUE.picked, the row\'s `packs`), and no other row is');
+  // THE WORDS AS THE PAGE SAYS THEM (lesson.ts lessonLine): with the held click the only way to a man (stalk.ts `only`) and no knife (close.ts `noKnife`) a
+  // line may name neither the key that grabbed nor the blade. lessonLine turns the level's words by PATTERN, so a line reworded in the level could keep
+  // naming one and nothing else would say so: every line and card is read through it here. LESSON_BREAK=words leaves the two rules off: it must fail
+  // on a level that teaches the grab.
+  { const was = [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife], up = process.env.LESSON_BREAK !== 'words'; STALK.on = STALK.only = CLOSE.on = CLOSE.noKnife = up;
+    const said: [string, string][] = (L.steps as any[]).flatMap(T => [...Object.keys(T).filter(k => /[lL]ine$|^noTap$/.test(k)).map(k => T[k]), T.explain?.text, T.after?.line, T.after?.word]
+      .filter((w: unknown) => typeof w === 'string').map((w: string) => [T.id, lessonLine(w)] as [string, string]));
+    [STALK.on, STALK.only, CLOSE.on, CLOSE.noKnife] = was;
+    const bad = said.filter(([, w]) => /\bkni(fe|ves)\b/i.test(w) || /(\[Space\]|\[E\]|\bSpace\b)[^.]*\bto grab\b/.test(w));
+    verdict(!bad.length, `with the held click the only way to a man and no knife, no line or card names the key to grab or the knife (${said.length} read through lessonLine)`, bad.map(([id, w]) => `'${id}': ${w}`).join(' · ')); }
   { const W = await stand(), faults: string[] = checkLesson(W.game); verdict(!faults.length, 'the block against the built floor: every test names a kind, a door, a light and an area this floor has', faults.join(' · ')); }
   // (not a verdict: a rows list that names an act and withholds the one that puts it back — game/rails.ts rowsWithheld; its author's to judge)
   { const { rowsWithheld } = await import(`${ROOT}/src/game/rails.ts`); for (const n of rowsWithheld(JSON.parse(readFileSync(file, 'utf8')).scenarios?.lesson) as string[]) console.log(`  NOTE  ${n}`); }
