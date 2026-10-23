@@ -85,6 +85,8 @@ interface Run {
   ajar?: number;
   /** the order's lead as the grenade landed was one of those who ran */
   leadRan: boolean;
+  /** a charge: when its setter was last back on the lock after the grenade (the order's own clock for the charge started anew — NaN: it never stopped) */
+  lockT: number;
   /** a second door on the same word (`pairDoor`): its beats, and when ITS leaf first moved */
   other?: { door: string; beats: { t: number; what: string }[]; goT: number; ended: string };
 }
@@ -94,7 +96,7 @@ const has = (r: Run, re: RegExp) => r.beats.some(b => re.test(b.what));
 
 export async function doorRun(scn: string, door: string, kind: string, when: When, K: Knobs, pairDoor: string | null = null, cap = 75): Promise<Run> {
   const R = await stage(scn, 1, K), g = R.g, D = R.D, O = R.O;
-  const out: Run = { scn, door, kind, when, why: null, n: 0, alive: 0, ended: '', beats: [], fragT: NaN, ran: [], goT: NaN, offAtGo: [], worst: 0, runAtGo: [], toss: [], leadRan: false };
+  const out: Run = { scn, door, kind, when, why: null, n: 0, alive: 0, ended: '', beats: [], fragT: NaN, ran: [], goT: NaN, offAtGo: [], worst: 0, runAtGo: [], toss: [], leadRan: false, lockT: NaN };
   const d = g.doors.list.find((x: any) => x.def.name === door), d2 = pairDoor ? g.doors.list.find((x: any) => x.def.name === pairDoor) : null;
   if (!d || (pairDoor && !d2)) { out.why = `no door '${!d ? door : pairDoor}'`; return out; }
   // the commander: put on open floor a few metres off the door, on the face the team is nearer (a ghost — he is put there, he does not walk)
@@ -125,7 +127,7 @@ export async function doorRun(scn: string, door: string, kind: string, when: Whe
   // which its burst would take the leaf out of the frame itself (doorblast.ts DOORBLAST.tearM), which would be the grenade opening the door and not the order.
   // Nobody that far off: the floor FAR m from the frame on the line to him
   const FAR = 2.3;
-  let lead0: any = null;
+  let lead0: any = null, offLock = false;
   const drop = () => { out.fragT = g.time; a0 = d.angle; lead0 = op.lead; for (const o of [op, op2]) if (o) for (const m of o.men) if (m.state !== 'dead') { god.set(m, !!m.god); m.god = true; }
     const rear = [...op.men].sort((a: any, b: any) => flat(b.char.pos, fc) - flat(a.char.pos, fc))[0].char.pos, far = flat(rear, fc), k = far >= FAR ? 1 : FAR / Math.max(far, 0.3);
     let at = [fc[0] + (rear[0] - fc[0]) * k, 0.6, fc[2] + (rear[2] - fc[2]) * k]; if (nav.isBlocked(at[0], at[2])) at = [fc[0] + nx * FAR, 0.6, fc[2] + nz * FAR];
@@ -143,6 +145,7 @@ export async function doorRun(scn: string, door: string, kind: string, when: Whe
     if (onWord && !said && !isNaN(readyT) && t - readyT >= LEAD) { said = true; const w = word(); if (w) out.why = `the word: ${w}`; }
     if (when === 'word2' && said && !said2 && t - readyT >= LEAD + AGAIN) { said2 = true; const w = word(); if (w) out.why = `the word again: ${w}`; }
     if (G && !G.go && !isNaN(readyT) && t - readyT >= LEAD) G.go = true;
+    if (kind === 'charge' && !isNaN(out.fragT) && op.phase === 'place') { const on = !isNaN(op.setT); if (on && offLock) out.lockT = t; offLock = !on; }
     if (!isNaN(out.fragT)) { for (const o of [op, op2]) if (o) for (const m of o.men) if (m.state !== 'dead' && FR.fragRunning(g, m) && !out.ran.includes(m.callsign)) out.ran.push(m.callsign);
       if (god.size && t - out.fragT > FUSE + 0.5) { for (const [m, was] of god) m.god = was; god.clear(); } }
     const went = !isNaN(op.openT) || (kind === 'charge' && (op.phase === 'armed' || op.phase === 'wait' || op.phase === 'enter'));
@@ -220,8 +223,8 @@ export const doorGrenade = guarded(async () => {
   // ---- the charge
   { const cOff: Run[] = [], cOn: Run[] = [];
     for (const [scn, door] of CHARGE) { cOff.push(await doorRun(scn, door, 'charge', 'set', off)); cOn.push(await doorRun(scn, door, 'charge', 'set', on)); }
-    verdict(cOn.every(r => !r.why && r.ran.length >= 1 && has(r, RAN) && has(r, /^set$/) && (r.leadRan ? tOf(r.beats, /^set$/) - tOf(r.beats, BACK2) >= DOORTOOLS.setSecs - 0.6 : has(r, WAIT)) && has(r, /^armed/) && tOf(r.beats, /^armed/) >= tOf(r.beats, BACK2) && r.offAtGo.length === 0 && r.runAtGo.length === 0 && !/^end: never made the door/.test(r.beats[r.beats.length - 1]?.what ?? '')),
-      "THE CHARGE, the grenade as it is going on the door: where the man setting it runs he is not given up on, and it goes on only once he is back at the lock for its full time; where he does not (the grenade behind him) he sets it, and the others who ran are waited for before anybody stands off — either way 'armed' is said with nobody running and every living man on his mark (who ran is printed; the rule off beside it)", [...cOff.map(r => `off · ${tell(r)}`), ...cOn.map(r => `on  · ${r.leadRan ? 'the man setting it ran' : 'the man setting it stayed'} · ${tell(r)}`)].join('\n    ')); }
+    verdict(cOn.every(r => !r.why && r.ran.length >= 1 && has(r, RAN) && has(r, /^set$/) && (r.leadRan ? tOf(r.beats, /^set$/) - r.lockT >= DOORTOOLS.setSecs - 0.05 : has(r, WAIT)) && has(r, /^armed/) && tOf(r.beats, /^armed/) >= tOf(r.beats, BACK2) && r.offAtGo.length === 0 && r.runAtGo.length === 0 && !/^end: never made the door/.test(r.beats[r.beats.length - 1]?.what ?? '')),
+      "THE CHARGE, the grenade as it is going on the door: where the man setting it runs he is not given up on, and it goes on only once he is back at the lock for its full time; where he does not (the grenade behind him) he sets it, and the others who ran are waited for before anybody stands off — either way 'armed' is said with nobody running and every living man on his mark (who ran is printed; the rule off beside it)", [...cOff.map(r => `off · ${tell(r)}`), ...cOn.map(r => `on  · ${r.leadRan ? `the man setting it ran, and was back on the lock ${f1(tOf(r.beats, /^set$/) - r.lockT)} s before it was set` : 'the man setting it stayed'} · ${tell(r)}`)].join('\n    ')); }   // (the full time is counted from the setter's own return to the lock: where all four ran, 'the men are back' is said when the LAST of them is, with the charge already going on)
 
   // ---- one word, two doors
   { const [scn, a, b] = PAIR, pOff = await doorRun(scn, a, 'openClear', 'word', off, b), pOn = await doorRun(scn, a, 'openClear', 'word', on, b);

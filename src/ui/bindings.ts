@@ -133,6 +133,7 @@ import { PACKSIDE } from '../game/packside';
 import { KIT, THROW_BY } from '../game/character';
 import { HANDS, handsSummary } from '../game/hands';
 import { HANDWORK, HANDWORK_STATS } from '../game/handwork';
+import { WORKSTOW, WORKSTOW_STATS } from '../game/workstow';
 import { TAKEDOWN, TAKEDOWN_STATS } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { WAND, wandSummary } from '../game/wand';
@@ -1892,6 +1893,10 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.slider(hw, 'breaker move (s)', 0.3, 1.2, 0.05, () => HANDWORK.leverSecs, v => { HANDWORK.leverSecs = v; }, 'how long his hand is on the lever; the mains go over 0.3 s in (a tenth before the end of a shorter move)');
     panel.slider(hw, 'stand-off (m)', 0.4, 0.7, 0.01, () => HANDWORK.standM, v => { HANDWORK.standM = v; }, 'how far off a thing he is stood to work at it');
     panel.text(hw, () => `asked for: work ${HANDWORK_STATS.work} · levers ${HANDWORK_STATS.levers} · radio ${HANDWORK_STATS.radio} · swaps ${HANDWORK_STATS.swaps}`);
+    panel.toggleBox(hw, 'gun put away for a charge', () => WORKSTOW.on, v => { WORKSTOW.on = v; }, 'a charge going on a door or a wall has both hands (also ?noworkstow on the address). On: what you hold is put away before the charge goes on and brought back after, and no round leaves it until it is up; a teammate\'s gun hangs on its sling while he sets one, he fires nothing until it is back in his hands, and he drops the job while the fight has him. Off = a charge set with the gun still in the hand, as it was');
+    panel.slider(hw, 'teammate: gun down (s)', 0, 0.8, 0.05, () => WORKSTOW.mateDown, v => { WORKSTOW.mateDown = v; }, 'from his gun let go of to both hands on the charge');
+    panel.slider(hw, 'teammate: gun back up (s)', 0.1, 1.2, 0.05, () => WORKSTOW.mateUp, v => { WORKSTOW.mateUp = v; }, 'from the job\'s end to his gun up again: no round leaves it sooner');
+    panel.text(hw, () => `guns put away: yours ${WORKSTOW_STATS.samDown} (back ${WORKSTOW_STATS.samUp}, kept away ${WORKSTOW_STATS.samKept}) · teammates ${WORKSTOW_STATS.mateDown} (back ${WORKSTOW_STATS.mateUp})`);
   }
   // (game/takedown.ts: close-up takedowns as moves — the chop, the palm heel, the hand over the mouth, the slash; the partner's blow and the man it lands on; the fall by the blow; a man out cold breathes; on in the page, ?notakedown)
   { const tk = panel.section('Takedowns (the blow, the fall, out cold)', { open: false, summary: () => TAKEDOWN.on ? 'on' : 'off' });

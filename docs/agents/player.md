@@ -1360,3 +1360,40 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   MEASURED: the check's own lines on both stands (die 1, the office; the pill's shape for 40 pills). NOT MEASURED: no fight or stealth tally was
   run with these on. NOT DRIVEN headless in a mission: the squad ring with one row (its pointing is the same function, asked directly). Never
   seen on a GPU; the before and after pictures of the wedges were drawn by the page's own drawing code and stylesheet over a flat backdrop.
+- **The gun is put away for a charge, and brought back after** (`src/game/workstow.ts WORKSTOW.on`, 10-23; the maintainer: "characters should fully
+  unequip their weapon when planting door charges, etc. -- they can reequip after they're done"). A charge went on with the gun still in the man's
+  hands: the player set one with his left while the pistol stayed in his right, and a teammate pressed his on one-handed with the carbine in the
+  other, free to fire all two seconds. With it on, BY THE PLAYER'S HANDS (a door charge and a wall charge, `doortools.ts` / `wallcharge.ts samTick`):
+  what he holds is put away first (`player.ts setHolstered`, carried by kit handling's own errand where that is on; `samStowing` holds the job's clock
+  until his hands are free of it, `downMax` 1.6 s at most), BOTH hands go on the charge (`character.ts workLayer`), and it is brought back when the
+  charge is set or he lets go of it; no round leaves it until it is up (`Player.equipT`: kit handling's draw, the rifle's own beat, `samUp` 0.3 s at
+  least). Hands empty at the start stay empty. A job begun pressed to a wall takes over what the hold owed back to his hand (`WallHold.drawn`); a job
+  that ended under a state that wants his hands empty (down, a man in his arm, a body, a lock, the wand) leaves it away. A save waits for the gun
+  (`savestate.ts playerBusy`). BY A TEAMMATE ON ORDER (the 'place' stage of both tools): his gun hangs from the frame he is on the job (`Guard.workStow`;
+  `combat.ts guardKit`'s `hang`: the long gun down his front on its sling, a sidearm on his thigh, as for the hammer), both hands go on the charge
+  `mateDown` 0.3 s later, and it is his again `mateUp` 0.45 s after the job ends. NO ROUND LEAVES IT meanwhile: `gunslots.ts sideLocked`, the one lock
+  every trigger a teammate has asks (roomfight.ts, coverfire.ts, the fight AI's fire site), answers for it, his fire clock is held, and `fireWeapon`
+  puts a hung gun back in his hands should a round leave it by any other road. A TEAMMATE THE FIGHT HAS DROPS THE JOB (`stowFight`: his order yielded
+  to it, he is blind or doubled over, or the room fight has brought his gun onto a man): the charge is not set, nothing is spent, the gun comes up,
+  and he starts over when it lets him go, or after `fightCap` 8 s of it at a stretch with it still on him (door tools' own cap for a lock under fire).
+  Enemies set no charges. Needs the hands that do the work (`HANDWORK.on`): with those off nothing is put away. WHAT IT COSTS, measured headless on
+  the office, one seed each: the player's door charge with kit handling on, as the page ships, is 2.57 s from the row with the pistol up (hands free
+  0.57 s in; it was 2.0) and 3.07 s with the rifle up (1.08 s in), and a round may leave the gun 0.43 s (pistol) or 0.72 s (rifle) after the charge is
+  set; with kit handling off 2.05 s, and 0.32 / 0.47 s. A teammate's charge is set 2.30 s after he comes onto it (it was 2.0) and his gun is his
+  again 0.50 s after; with a man 3 m off in his view half way through he drops it, shoots him with the gun back up and has the charge set 4.05 s
+  after he first came onto it (2.0 s with the switch off, the round fired with a hand on the charge). ON in the page (`?noworkstow`), OFF in the
+  module and on the frozen stand (`FROZEN_HOLDS`, `TPS_WORKSTOW=1`, pinned in `host/standup.ts`; `TPS_WORKSTOW=0` holds it off on the shipped stand);
+  in the knob registry and `JOURNAL_KNOBS` (a recording from before the table replays with it off); a box, two sliders and a tally in the debugger's
+  'Hands at work' section. Off, nothing in the module is called. CHECK `bun run tools/qa/probes.ts workstow` (`workstow-check.ts [sam|mate|wall|off]`,
+  27 lines, both stands; it raises the switch itself): by the player's hands with kit handling off and on, the pistol and the rifle (away from the row
+  to the charge set, both wrists within 0.3 m of the charge, back after, the click on the frame it is set fires nothing, the trigger his once it is
+  up), hands empty, a step and the trigger breaking it off; a teammate (hung and locked every frame, the wrists, the two clocks, the net), blinded
+  half way, a man put in his view; a wall charge by hand, begun from a wall hold, and on order; off (by hand, on order, with the hands off, the digest
+  of a run with no charge, an old recording, the registry). `WORKSTOW_BREAK=1` fails 15 on both stands. RUN WITH IT ON, the shipped stand, green:
+  the families owncharge, ownblow, wallcharge, outerwall, handwork, hands, kitanim, wand, gunslots, roomclear, and the scripted runs of tut-solo,
+  tut-squad, tut-sky and tut-plan (the same verdict with it held off; the solo run is 0.6 s longer). `door-grenade`'s charge line now times the plant
+  from the setter's own return to the lock (`Run.lockT`): the charge's later clock moves that probe's grenade, all four run, and 'the men are back' is
+  said when the LAST is, with the charge already going on. STILLS: `node tools/qa/workstow-look.cjs <dir>
+  [noworkstow]` (the page on the software adapter). NOT HERE, other owners' two-handed jobs: a timed charge on its bench and its defusing, the drive
+  out of the rack, the optical wand, a lock being picked, a thing a teammate works (`workthings.ts`); the big slot's hammer already puts the gun away;
+  a keypad and the breaker's lever are one hand. NOT DONE: no tour, no soak, no fight tallies with it on; never seen on a GPU; nobody has played it.
