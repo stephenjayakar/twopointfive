@@ -124,7 +124,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     // (the view has come back to him: the ring he is to walk to is on the picture, or the page has pinned the step's mark to the picture's edge on that side
     //  with the metres to it — ui/overlay.ts, the objective's mark — so the line never points at nothing)
     { const q = await at(s.at), m = await page.evaluate(() => { const e = document.querySelector('.objmark'); return e ? { on: getComputedStyle(e).display !== 'none' && +getComputedStyle(e).opacity > 0.2, edge: e.classList.contains('edge'), x: Math.round(parseFloat(e.style.left)), y: Math.round(parseFloat(e.style.top)), text: e.textContent } : null; });
-      check(!!m && m.on && (q.vis ? !m.edge : m.edge), `step '${s.id}': with plan mode closed, ${what}'s ring is on the picture, or its mark is pinned to the picture's edge on that side`, `the ring at ${Math.round(q.x)}, ${Math.round(q.y)} of 1280 x 720 (${q.vis ? 'on the picture' : 'off it'}) · the mark ${m ? `${m.on ? 'shown' : 'NOT shown'} at ${m.x}, ${m.y}${m.edge ? ', pinned to the edge' : ''} "${m.text}"` : 'missing'}`); }
+      const inside = q.x > 36 && q.y > 36 && q.x < 1280 - 36 && q.y < 720 - 36;   // (the overlay pins its mark once the place is past a 36 px inset of the view)
+      check(!!m && m.on && m.edge === !inside, `step '${s.id}': with plan mode closed, ${what}'s ring is on the picture, or its mark is pinned to the picture's edge on that side`, `the ring at ${Math.round(q.x)}, ${Math.round(q.y)} of 1280 x 720 (${inside ? 'on the picture' : 'off it, or at its rim'}) · the mark ${m ? `${m.on ? 'shown' : 'NOT shown'} at ${m.x}, ${m.y}${m.edge ? ', pinned to the edge' : ''} "${m.text}"` : 'missing'}`); }
     const goal = [s.at[0], 0, s.at[2]], from = r.sam, path = await page.evaluate(([a, b]) => window.__game.col.nav.findPath(a, b, 8000) ?? [], [[from[0], 0, from[1]], goal]); path.push(goal);
     let stuck = false;
     for (let n = 0; n < path.length && !stuck; n++) { const wp = path[n], near = n === path.length - 1 ? 0.35 : 0.55; let best = 1e9, since = 0;
@@ -136,14 +137,13 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     await run(20); const a = await read(), left = Math.hypot(a.sam[0] - goal[0], a.sam[1] - goal[2]);
     check(!stuck && left < 0.6 && !a.plan, `step '${s.id}': the walk keys on the real keyboard walk him to ${what}`, `from (${from}) to (${a.sam}), ${left.toFixed(2)} m from the mark's middle${stuck ? ' · STUCK on the way' : ''} · mode ${a.plan}`); };
 
-  // ---- before the mode: his feet are his, and nothing else is
+  // ---- locked: before the mode, a hand on the keys and the mouse does nothing (his feet come with the first walk step)
   { const b = await read(); await page.mouse.move(700, 330);
-    for (const k of ['KeyQ', 'KeyF', 'KeyX']) { await page.keyboard.down(k); await run(6); await page.keyboard.up(k); await run(2); }
+    for (const k of ['KeyQ', 'KeyF', 'KeyW', 'KeyD', 'KeyX']) { await page.keyboard.down(k); await run(6); await page.keyboard.up(k); await run(2); }
     await page.mouse.down(); await run(3); await page.mouse.up(); await run(3); await page.mouse.down({ button: 'right' }); await run(3); await page.mouse.up({ button: 'right' }); await run(3);
-    const a = await read(); await page.keyboard.down('KeyW'); await run(24); await page.keyboard.up('KeyW'); await run(4); const w = await read(); await page.keyboard.down('KeyS'); await run(24); await page.keyboard.up('KeyS'); await run(4);
-    const walked = Math.hypot(w.sam[0] - a.sam[0], w.sam[1] - a.sam[1]);
-    check(a.orders === b.orders && a.shots === b.shots && Math.hypot(a.sam[0] - b.sam[0], a.sam[1] - b.sam[1]) < 0.05 && !a.plan && a.i === 0 && walked > 0.2 && !w.plan && w.i === 0, 'before the mode, the command key alone, the word and both buttons do nothing, and a walk key walks him',
-      `orders ${b.orders} → ${a.orders} · shots ${b.shots} → ${a.shots} · mode ${a.plan} · W held: he walked ${walked.toFixed(2)} m · ${a.sum}`); }
+    const a = await read();
+    check(a.orders === b.orders && a.shots === b.shots && Math.hypot(a.sam[0] - b.sam[0], a.sam[1] - b.sam[1]) < 0.05 && !a.plan && a.i === 0, 'before the mode, the command key alone, the word, the walk keys and both buttons do nothing',
+      `orders ${b.orders} → ${a.orders} · shots ${b.shots} → ${a.shots} · he moved ${Math.hypot(a.sam[0] - b.sam[0], a.sam[1] - b.sam[1]).toFixed(2)} m · mode ${a.plan} · ${a.sum}`); }
 
   const hand = {
     mode: async () => { await mode(); const s = await read(); check(s.plan && s.crouch, 'Shift + Q on the real keyboard puts plan mode up and him on his knee', `mode ${s.plan} · on a knee ${s.crouch}`); },

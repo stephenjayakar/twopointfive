@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "tut-plan",
-  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/tut-plan.ts build → tools/levels/export.ts", "notes": "The tutorial's plan mode mission: a walled post led from the gate on the radio. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-plan" },
+  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/tut-plan.ts build → tools/levels/export.ts", "notes": "The tutorial's plan mode mission: a walled post led on the radio, from the gate and then from three spots walked to behind the squad. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-plan" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
   ],
@@ -622,12 +622,12 @@
     },
     "lesson": {
       "title": "On the radio",
-      "rails": { "allow": ["move", "camera", "zoom"], "respawn": 5, "lasers": false },
+      "rails": { "allow": ["camera", "zoom"], "respawn": 5, "lasers": false },
       "steps": [
         { "id": "mode", "line": "Hold [Shift] and tap [B] to open plan mode", "explain": { "title": "Plan mode", "text": "You'll lead this one over the radio and stay out of the fight.\nIn plan mode you tell each teammate what to do, and nobody will go through a door until you say go." }, "done": { "is": "flag", "flag": "plan" }, "allow": ["plan"], "checkpoint": "the gate" },
         { "id": "view", "line": "Use [W] [A] [S] [D] to move the view over to the guardroom", "done": { "is": "any", "of": [{ "is": "planView", "at": [17.5, 0, 9.5], "r": 4.5 }, { "is": "taken", "room": "guardroom" }] }, "at": [18, 1, 8.75], "planLine": "Hold [Shift] and tap [B] to open plan mode again" },
         { "id": "send", "line": "Right-click next to the guardroom wall to send your squad there", "done": { "is": "any", "of": [{ "is": "squad", "area": { "x0": 12.2, "x1": 14.9, "z0": 6, "z1": 12.6 }, "n": 3 }, { "is": "stacks", "doors": ["guard"] }, { "is": "stacks", "doors": ["guard_side"] }, { "is": "taken", "room": "guardroom" }] }, "at": [13.9, 0, 9.25], "planLine": "Hold [Shift] and tap [B] to open plan mode again", "after": { "line": "Your squad is on the way" } },
-        { "id": "up1", "line": "Press [Tab] to close plan mode, then walk to the marked spot by your squad", "explain": { "title": "Move up with your squad", "text": "The view in plan mode stays close to you, so you'll follow your squad from one spot to the next.\nWhen plan mode is closed, use [W] [A] [S] [D] to walk instead of moving the view." }, "done": { "is": "in", "area": { "x0": 11.4, "x1": 13.200000000000001, "z0": 10.2, "z1": 12 } }, "at": [12.3, 1, 11.1] },
+        { "id": "up1", "line": "Press [Tab] to close plan mode, then walk to the marked spot by your squad", "explain": { "title": "Move up with your squad", "text": "The view in plan mode stays close to you, so you'll follow your squad from one spot to the next.\nWhen plan mode is closed, use [W] [A] [S] [D] to walk instead of moving the view." }, "done": { "is": "in", "area": { "x0": 11.4, "x1": 13.200000000000001, "z0": 10.2, "z1": 12 } }, "at": [12.3, 1, 11.1], "allow": ["move"] },
         { "id": "pick", "line": "Hold the left mouse button and drag a box around two teammates", "explain": { "title": "Hit two doors at once", "text": "The guardroom has two doors, and the guards inside can't watch both.\nPut two teammates on each door, then send them all in at once." }, "done": { "is": "any", "of": [{ "is": "picked", "n": 2 }, { "is": "stacks", "doors": ["guard", "guard_side"] }, { "is": "taken", "room": "guardroom" }] }, "at": [13.9, 1, 8.75], "planLine": "Hold [Shift] and tap [B] to open plan mode again" },
         { "id": "door1", "line": "Right-click the marked door to stack those two on it", "done": { "is": "any", "of": [{ "is": "stacks", "doors": ["guard"] }, { "is": "taken", "room": "guardroom" }] }, "at": [17.8, 1, 11.2], "planLine": "Hold [Shift] and tap [B] to open plan mode again", "after": { "line": "They're stacking up on the door" } },
         { "id": "pick2", "line": "Now drag a box around the other two", "done": { "is": "any", "of": [{ "is": "picked", "n": 2, "free": true }, { "is": "stacks", "doors": ["guard", "guard_side"] }, { "is": "taken", "room": "guardroom" }] }, "at": [13.9, 1, 8.75], "planLine": "Hold [Shift] and tap [B] to open plan mode again" },
@@ -645,7 +645,7 @@
         { "id": "faceA", "line": "Pick two, then right-click behind the sandbags in the yard and drag toward the road gate", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "squad", "area": { "x0": 26.65, "x1": 31.85, "z0": 7.65, "z1": 12.85 }, "n": 1 }, { "is": "did", "what": "order:cover" }] }, { "is": "taken", "room": "road" }] }, "at": [29.25, 0, 10.25], "toward": [35, 0, 10], "planLine": "Hold [Shift] and tap [B] to open plan mode again", "after": { "line": "They're going to the sandbags to watch the road gate" } },
         { "id": "faceB", "line": "Now do the same with the other two, from the barrier toward the back gate", "done": { "is": "any", "of": [{ "is": "all", "of": [{ "is": "squad", "area": { "x0": 21.4, "x1": 26.6, "z0": 7.700000000000001, "z1": 12.9 }, "n": 1 }, { "is": "squad", "area": { "x0": 26.65, "x1": 31.85, "z0": 7.65, "z1": 12.85 }, "n": 1 }, { "is": "did", "what": "order:cover" }] }, { "is": "taken", "room": "lane" }] }, "at": [24, 0, 10.3], "toward": [22, 0, 5], "planLine": "Hold [Shift] and tap [B] to open plan mode again", "after": { "line": "They're going to the barrier to watch the back gate" } },
         { "id": "hold", "line": "Watch your squad hold both gates", "done": { "is": "all", "of": [{ "is": "taken", "room": "road" }, { "is": "taken", "room": "lane" }] }, "at": [27, 1, 9.5], "cue": "gates" },
-        { "id": "back-in", "line": "Right-click on yourself to call your squad back", "done": { "is": "any", "of": [{ "is": "following" }, { "is": "did", "what": "order:fallIn" }] }, "planLine": "Hold [Shift] and tap [B] to open plan mode again", "after": { "line": "They're coming back to you" } }
+        { "id": "back-in", "line": "Right-click on yourself to call your squad back", "done": { "is": "any", "of": [{ "is": "following" }, { "is": "did", "what": "order:fallIn" }] }, "planLine": "Hold [Shift] and tap [B] to open plan mode again" }
       ]
     },
     "doorNames": [

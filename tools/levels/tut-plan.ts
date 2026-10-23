@@ -3,7 +3,8 @@
 // Nobody could say that of another level: here the player has no trigger, only his feet between plans and, in the mode, the view and the two buttons.
 // HE MOVES UP BEHIND THEM (10-23): the mode's view stays near him (cmdring.ts `planNear`, a room's worth), so each plan is laid from a marked spot beside
 // the thing planned — the first from the gate, then from behind the squad at the guardroom's blind wall, from beside the hall's blind wall, and from
-// inside the hall once it is theirs. Until then he never left the gate, the frame held his feet, and the view rule did not hold here at all.
+// inside the hall once it is theirs. Before that day he never left the gate, the frame held his feet, and the view rule did not hold here at all; it
+// still does not on the first three steps, at the gate, where his feet are held until the first walk.
 //
 //        x 5     9  11    15        21 22  24.5              32.5  35
 //   z 5  ┌────────────────────── back gate ───────────────────────┐
@@ -42,7 +43,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 
 export const NAME = 'tut-plan';
-export const NOTES = 'The tutorial\'s plan mode mission: a walled post led from the gate on the radio. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-plan';
+export const NOTES = 'The tutorial\'s plan mode mission: a walled post led on the radio, from the gate and then from three spots walked to behind the squad. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-plan';
 export const MATERIALS = GWOT_MATERIALS;
 
 const HALF = Math.PI / 2;
@@ -215,11 +216,12 @@ export function build() {
   const HALL_EYE = { at: [28.4, 1.9, 16.0] as Vec3, yaw: 0, fov: 360 };   // the hall's lookout: the player sees the gunner from the card to the go
   // WHAT EACH STEP TEACHES is its line; `cue` starts the level script's beat of that name as the step comes up; `checkpoint` = the frame keeps one as it
   // comes up. A key is written by the game's own code letter in brackets: the page draws the player's key ([B] is the squad's command key).
-  // PLAN MODE AND HIS FEET ARE ALL HE HAS (game/rails.ts `plan`: Shift with the command key, and with the mode up its own Shift, walk keys and buttons;
-  // `move` for the frame, because the view's rule holds only where his feet are his): no trigger, no sprint, not the command key's own order — he met that one from above in the mission before this, and here a tap of it would undo a plan.
+  // PLAN MODE AND, FROM HIS FIRST WALK, HIS FEET ARE ALL HE HAS (game/rails.ts `plan`: Shift with the command key, and with the mode up its own Shift, walk
+  // keys and buttons; `move` from the step 'up1' on, and from there the view's rule holds: it does only where his feet are his): no trigger, no sprint,
+  // not the command key's own order — he met that one from above in the mission before this, and here a tap of it would undo a plan.
   const lesson = {
     title: 'On the radio',
-    rails: { allow: ['move', 'camera', 'zoom'], respawn: 5, lasers: false },
+    rails: { allow: ['camera', 'zoom'], respawn: 5, lasers: false },
     steps: [
       // 1 · THE MODE, AND ONE PLAN: the view is the hand's, a right-click is an order, a box picks men, one word sends every stack that waits on it
       { id: 'mode', line: 'Hold [Shift] and tap [B] to open plan mode', explain: { title: 'Plan mode', text: "You'll lead this one over the radio and stay out of the fight.\nIn plan mode you tell each teammate what to do, and nobody will go through a door until you say go." },
@@ -227,9 +229,11 @@ export function build() {
       { id: 'view', line: 'Use [W] [A] [S] [D] to move the view over to the guardroom', done: or({ is: 'planView', at: GUARD_VIEW, r: 4.5 }, taken('guardroom')), at: [18.0, 1, 8.75] },
       { id: 'send', line: 'Right-click next to the guardroom wall to send your squad there', done: or({ is: 'squad', area: { x0: 12.2, x1: 14.9, z0: 6.0, z1: 12.6 }, n: 3 }, stacks(['guard']), stacks(['guard_side']), taken('guardroom')), at: WALL },
       // (… AND HE MOVES UP BEHIND THEM: the mode's view stays near him — planmode.ts planNear, which holds wherever the frame leaves him his feet — so each plan
-      //  is laid from a spot beside the thing planned. The mode is put away to walk: in it the walk keys are the view's)
+      //  is laid from a spot beside the thing planned. The mode is put away to walk: in it the walk keys are the view's. HIS FEET COME WITH THIS STEP and not
+      //  before: with them from the first tick he could walk into the guardroom before the mode was ever up, the four following him, and the squad's walk
+      //  after him would do the step before this one for him. So the first plan is laid from the gate with his feet held, as it always was)
       { id: 'up1', line: 'Press [Tab] to close plan mode, then walk to the marked spot by your squad', explain: { title: 'Move up with your squad', text: "The view in plan mode stays close to you, so you'll follow your squad from one spot to the next.\nWhen plan mode is closed, use [W] [A] [S] [D] to walk instead of moving the view." },
-        done: spot(UP1), at: [UP1[0], 1, UP1[2]] },
+        done: spot(UP1), at: [UP1[0], 1, UP1[2]], allow: ['move'] },
       { id: 'pick', line: 'Hold the left mouse button and drag a box around two teammates', explain: { title: 'Hit two doors at once', text: "The guardroom has two doors, and the guards inside can't watch both.\nPut two teammates on each door, then send them all in at once." },
         done: or({ is: 'picked', n: 2 }, stacks(['guard', 'guard_side']), taken('guardroom')), at: [13.9, 1, 8.75] },
       { id: 'door1', line: 'Right-click the marked door to stack those two on it', done: or(stacks(['guard']), taken('guardroom')), at: D_GUARD },
@@ -266,8 +270,8 @@ export function build() {
     send: { line: 'Your squad is on the way' }, door1: { line: "They're stacking up on the door" }, door2: { line: "They'll stack up and wait until you say go" },
     word: { word: 'Both pairs are going in together' }, front: { line: "They're stacking up on the front door" }, back: { line: "They're going around to the back door" },
     word2: { word: 'The pair at the back door is coming in behind the gunner' }, faceA: { line: "They're going to the sandbags to watch the road gate" },
-    faceB: { line: "They're going to the barrier to watch the back gate" }, 'back-in': { line: "They're coming back to you" },
-  };
+    faceB: { line: "They're going to the barrier to watch the back gate" },
+  };   // (no line after the last step's order: the right one, 'on me', ends the lesson at once, and with no mark on the step any other order would have put it up)
   for (const t of lesson.steps) if (AFTER[t.id]) t.after = AFTER[t.id];
 
   for (const d of doors) doorFrame(d);

@@ -1,7 +1,8 @@
 // The scripted player for the tutorial's plan mode mission (levels/tut-plan.json; tools/qa/lesson-run.ts runs it as the page opens it: a tutorial mission is
-// always stood up on the shipped stand). He has no feet and no trigger here: Shift with the command key, the mode's own walk keys on the view, the left
-// button dragged round men, the right button on a door or the floor (clicked, or dragged for a way to face), and the word. Game state is READ to time a
-// press and to find where a thing is on the picture, never to do the deed.
+// always stood up on the shipped stand). He has no trigger here: Shift with the command key, the mode's own walk keys on the view, the left button dragged
+// round men, the right button on a door or the floor (clicked, or dragged for a way to face), the word — and, from the first walk step on, the back key to
+// put the mode away and the walk keys to the next marked spot. Game state is READ to time a press and to find where a thing is on the picture, never to do
+// the deed. The spots and the points the view is asked to are the lesson's own, read from the level.
 import type { Bot } from '../lesson-run';
 import { CMDRING } from '../../../src/game/cmdring';
 import { DOORTOOLS } from '../../../src/game/doortools';
@@ -22,7 +23,6 @@ const ALONE = process.env.TUTPLAN_ALONE === '1';
 const LOOSE = process.env.TUTPLAN_LOOSE === '1', POSTB = process.env.TUTPLAN_POSTB ? ((a: number[]) => [a[0], 0, a[1]])(process.env.TUTPLAN_POSTB.split(',').map(Number)) : null;
 export const idleOk = ALONE ? ['all2', 'word2'] : [];
 
-const UP1 = [12.3, 0, 11.1], UP2 = [23.5, 0, 15.3], UP3 = [31.0, 0, 15.9];
 const WALL = [13.9, 0, 9.25], POST_A = [29.25, 0, 10.25], POST_B = [24.0, 0, 10.3], GATE_E = [35.0, 0, 10.0], GATE_N = [22.0, 0, 5.0];
 const O = (B: Bot) => B.g.orders, P = (B: Bot) => B.g.orders.plan;
 const squad = (B: Bot): any[] => O(B).men('all');
@@ -56,20 +56,29 @@ function panTo(B: Bot, ...ps: number[][]) {
 }
 /** THE VIEW STAYS NEAR HIM (cmdring.ts `planNear`, the squad's own rule; it holds only where the frame leaves him his feet — planmode.ts planNear): how far
  *  the view's point has been from him is kept, said at the end, and the run fails when the rule is on and the view went further than its box's far corner */
-let far = 0, hits0: number | null = null;
+let far = 0, downs: string[] = [];
+/** he has no trigger here: a spot the mission walks him to is one no round puts him down on (one round does: asked after each walk, before a checkpoint is put back over it, and at the end) */
+function up(B: Bot, when: string) { if (B.g.player.down && !downs.includes(when)) downs.push(when); }
 function reach(B: Bot) { const L = P(B).look, s = B.g.player.char.pos; if (P(B).up && L) far = Math.max(far, Math.hypot(L[0] - s[0], L[2] - s[2])); }
 function reached(B: Bot) {
   const K = CMDRING as any, on = !!K.planNear, corner = Math.hypot(K.planNearSideM ?? 0, Math.max(K.planNearAwayM ?? 0, K.planNearBackM ?? 0)), held = on && !B.g.rails.locks('move');
   if (on && !held) B.fail("the view's rule is on and does not hold here: the frame has taken his feet (planmode.ts planNear)");
   if (held && far > corner + 0.3) B.fail(`the view went ${far.toFixed(1)} m from him: its box's far corner is ${corner.toFixed(1)} m`);
-  // (he has no trigger here: a spot the mission walks him to is one no round finds him on)
-  const took = hits0 === null ? 0 : hits0 - B.g.player.hitsLeft;
-  if (took > 0 || B.g.player.down) B.fail(`${took} round(s) found him on the spots the lines walked him to${B.g.player.down ? ', and he is down' : ''}`);
-  B.say(`  rounds that found him on his three spots: ${took}`);
+  up(B, 'at the end'); if (downs.length) B.fail(`a round put him down on a spot the lines walked him to: ${downs.join(' · ')}`);
+  B.say('  he was never put down on his spots (asked after each walk, before the checkpoint is put back, and at the end)');
   B.say(`  the view's point was never more than ${far.toFixed(1)} m from him (the view held near him: ${held ? `on, a box whose far corner is ${corner.toFixed(1)} m` : 'off'})`);
 }
-/** the mode put away with the back key, and the walk keys to a spot: in the mode they are the view's */
-function walkTo(B: Bot, p: number[], what: string) {
+/** a step of the lesson by its id · the place its mark stands on · the point its view test wants the view near */
+const stepOf = (B: Bot, id: string): any => (B.g.level.scenarios.lesson.steps as any[]).find(T => T.id === id);
+const find = (t: any, is: string): any => !t ? null : t.is === is ? t : (t.of ?? []).map((x: any) => find(x, is)).find(Boolean) ?? null;
+/** the mode's walk keys until the step that asks for the view is done: toward the point its own test names */
+function viewTo(B: Bot, id: string) {
+  const at: number[] = find(stepOf(B, id).done, 'planView').at; panTo(B, at);
+  for (let i = 0; i < 300 && B.g.lesson.step?.id === id; i++) { const L = P(B).look, k = [L[0] < at[0] - 0.4 ? 'KeyD' : L[0] > at[0] + 0.4 ? 'KeyA' : '', L[2] < at[2] - 0.4 ? 'KeyS' : L[2] > at[2] + 0.4 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); reach(B); }
+}
+/** the mode put away with the back key, and the walk keys to the spot the step marks: in the mode they are the view's */
+function walkTo(B: Bot, id: string, what: string) {
+  const at = stepOf(B, id).at as number[], p = [at[0], 0, at[2]];
   if (P(B).up) { B.press('Tab', 3); if (P(B).up) B.fail('the back key did not put plan mode away'); }
   // (the mode down, the view comes back to him: where the ring he is asked to walk to is then. Off the picture, the page pins the step's mark to the
   //  picture's edge on that side with the metres to it — ui/overlay.ts, the objective's mark — and that it does is the page run's to see)
@@ -77,6 +86,7 @@ function walkTo(B: Bot, p: number[], what: string) {
   if (B.g.objectivePos?.() && Math.hypot(B.g.objectivePos()[0] - p[0], B.g.objectivePos()[2] - p[2]) > 0.1) B.fail(`${what}: the step's mark is not the place the walk is to`);
   const s0 = [...B.g.player.char.pos], t0 = B.t();
   if (!B.go(p, 40, { noDoors: true, near: 0.5 })) B.fail(`he did not walk to ${what}: stopped at (${B.g.player.char.pos[0].toFixed(1)}, ${B.g.player.char.pos[2].toFixed(1)})`);
+  up(B, `at ${what}`);
   B.say(`  walked ${Math.hypot(p[0] - s0[0], p[2] - s0[2]).toFixed(1)} m to ${what} in ${(B.t() - t0).toFixed(1)} s (when he closed the mode its ring was ${edge >= 0 ? `${edge.toFixed(0)} px inside the picture` : `${(-edge).toFixed(0)} px past the picture's edge: the mark pinned to the edge points the way`})`);
 }
 /** the left button dragged from one corner of a box on the picture to the other */
@@ -202,24 +212,24 @@ function putBack(B: Bot) {
   B.say(`  loaded the checkpoint 'the gates': the same step, the script running again, the four outside held, both gates shut (plan mode ${P(B).up ? 'still up' : 'down'})`);
 }
 export const steps: Record<string, (B: Bot) => void> = {
-  mode: B => { hits0 = B.g.player.hitsLeft; modeUp(B); },
-  view: B => { panTo(B, [17.5, 0, 9.5]); for (let i = 0; i < 200 && B.g.lesson.step?.id === 'view'; i++) { const L = P(B).look, k = [L[0] < 17.2 ? 'KeyD' : L[0] > 17.8 ? 'KeyA' : '', L[2] < 9.2 ? 'KeyS' : L[2] > 9.8 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); reach(B); } },
+  mode: B => { far = 0; downs = []; modeUp(B); },
+  view: B => viewTo(B, 'view'),
   send: B => { rclick(B, WALL); B.until(() => B.g.lesson.step?.id !== 'send', 40); B.wait(1.5); },
-  up1: B => walkTo(B, UP1, 'the spot behind his squad'),
+  up1: B => walkTo(B, 'up1', 'the spot behind his squad'),
   pick: B => { boxMen(B, twoOf(B, [16, 0, 12])); },
   door1: B => { rdoor(B, 'guard'); },
   pick2: B => { boxMen(B, free(B)); },
   door2: B => { rdoor(B, 'guard_side'); B.until(() => B.g.lesson.step?.id !== 'door2', 60); },
   all: B => allAgain(B),
   word: B => { word(B, ['guard', 'guard_side'], 'guardroom'); B.wait(1.5); },
-  up2: B => walkTo(B, UP2, 'the spot beside the hall'),
-  hall: B => { panTo(B, [28.0, 0, 15.5]); for (let i = 0; i < 300 && B.g.lesson.step?.id === 'hall'; i++) { const L = P(B).look, k = [L[0] < 27.6 ? 'KeyD' : L[0] > 28.4 ? 'KeyA' : '', L[2] < 15.1 ? 'KeyS' : L[2] > 15.9 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); reach(B); } },
+  up2: B => walkTo(B, 'up2', 'the spot beside the hall'),
+  hall: B => viewTo(B, 'hall'),
   front: B => { if (ALONE) { allAgain(B); rdoor(B, 'hall'); return; } boxMen(B, twoOf(B, [26, 0, 12])); rdoor(B, 'hall'); },
   back: B => { if (ALONE) { B.until(() => setOn(B, ['hall']), 60); const n0 = B.g.rails.log.length; word(B, ['hall'], 'hall'); told(B, n0); return; } boxMen(B, free(B)); rdoor(B, 'hall_back'); B.until(() => B.g.lesson.step?.id !== 'back', 70); },
   all2: B => allAgain(B),
   word2: B => { const n0 = B.g.rails.log.length; word(B, ['hall', 'hall_back'], 'hall'); told(B, n0); B.wait(1.5); },
-  up3: B => walkTo(B, UP3, 'the spot in the hall'),
-  gates: B => { putBack(B); panTo(B, [27.5, 0, 11.5]); for (let i = 0; i < 300 && B.g.lesson.step?.id === 'gates'; i++) { const L = P(B).look, k = [L[0] < 27.1 ? 'KeyD' : L[0] > 27.9 ? 'KeyA' : '', L[2] < 11.1 ? 'KeyS' : L[2] > 11.9 ? 'KeyW' : ''].filter(Boolean); if (k.length) B.hold(k, 2 / 60); else B.step(); reach(B); } },
+  up3: B => walkTo(B, 'up3', 'the spot in the hall'),
+  gates: B => { up(B, 'in the hall, before its checkpoint is put back'); putBack(B); viewTo(B, 'gates'); },
   faceA: B => { pairA = twoOf(B, POST_A); boxMen(B, pairA); rdrag(B, POST_A, GATE_E); B.until(() => B.g.lesson.step?.id !== 'faceA', 60); facing(B, pairA, 'the bags', true); },
   faceB: B => { const men = squad(B).filter(m => !pairA.includes(m)); boxMen(B, men); rdrag(B, POSTB ?? POST_B, GATE_N); B.until(() => B.g.lesson.step?.id !== 'faceB', 60); facing(B, men, 'the barrier', !POSTB); },
   hold: B => { B.until(() => cleared(B, 'road') && cleared(B, 'lane'), 120); B.wait(1); },
