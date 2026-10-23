@@ -66,7 +66,7 @@ import { COVER } from './cover';
 import { isHostile } from './teams';
 import { PLAYER_ID } from './consts';
 import { PACE } from './guards';
-import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { SAMSTUN, dazzlePlayer } from './samstun';
 import { chargeHands } from './handwork';
 import { moraleBlast } from './morale';
@@ -308,6 +308,13 @@ export function skyFaces(g: Game, index: number): number {
     if (sky * 2 > SKY_OFF.length * SKY_ALONG.length) n++; }
   memo.set(index, n); return n;
 }
+/** `fn` asked aside (a question of the picture's — orders.ts hover): what it adds to the game's memo of sky faces is taken out again, so a wall is in it only
+ *  once the simulation has asked of it (the answer is the same: the asker pays for it again) */
+export function skyAside<T>(g: Game, fn: () => T): T {
+  const memo = skyMemo.get(g.col), n = memo ? memo.size : 0;
+  try { return fn(); }
+  finally { const now = skyMemo.get(g.col); if (!memo) { if (now) skyMemo.delete(g.col); } else if (now === memo && memo.size > n) { let i = 0; for (const k of [...memo.keys()]) if (i++ >= n) memo.delete(k); } }
+}
 /** IS STRUCTURE STATIC `index` AN OUTER WALL A CHARGE CUTS (WALLCHARGE.outer; wallAt has already found it a full-height unrotated wall in a wall's stuff):
  *  not steel, no thicker than outerThick, at least outerMinLen long, something the engine can take on (wallbreak.ts adoptable: it lights nothing, carries no
  *  fixture) — and the open sky over one face of it, or over both with outerYard. */
@@ -359,7 +366,7 @@ export function wallAt(g: Game, at: Vec3, from: Vec3 = g.player.char.pos): WallS
     }
     const d = Math.hypot(dx, dz) - (B ? 1e-3 : 0); if (d >= bd) continue;
     const outer = !part && (B ? K.outer : outerWall(g, i));   // (an outer wall takes a charge: WALLCHARGE.outer — one already holed is the engine's by now, and still it)
-    if (K.outer && !part && !outer && !/^steel/.test(why) && thin <= K.outerThick) why = long < K.outerMinLen ? 'too short a stretch of wall for a charge.' : /^outer/.test(why) ? "a charge won't cut that one." : why;   // (with outer walls taking a charge, 'outer wall' is no reason)
+    if (K.outer && !part && !outer && !/^steel/.test(why) && thin <= K.outerThick) why = long < K.outerMinLen ? wg("that wall's too short for a charge.", 'too short a stretch of wall for a charge.') : /^outer/.test(why) ? "a charge won't cut that one." : why;   // (with outer walls taking a charge, 'outer wall' is no reason)
     const alongX = sx >= sz, c = alongX ? b.c[0] : b.c[2], L = long / 2, m = Math.min(K.endM, L);
     const perp = alongX ? from[2] - b.c[2] : from[0] - b.c[0];
     bd = d; best = { index: i, box: b, alongX, u: clamp(alongX ? at[0] : at[2], c - L + m, c + L - m), side: perp >= 0 ? 1 : -1, ok: part || outer, why: part || outer ? '' : why, ...(outer ? { outer } : null) };
@@ -453,7 +460,7 @@ export class WallCharge {
   /** the row's words (the squad's menu and Sam's own) · the refusal's, with none to set */
   private rowWords(): string { const n = this.g.doorTools.charges, p = this.price;
     return this.carried !== null ? `breach with a wall charge · ${this.carried} left` : p <= 1 ? `breach with a charge · ${n} left` : p === 2 && n === 2 ? 'breach the wall · uses both charges' : `breach the wall · uses ${p} of ${n} charges`; }
-  private noneWords(): string { return this.carried !== null ? (this.brought === 0 ? 'no wall charge carried.' : 'no wall charge left.') : this.price > 1 && this.g.doorTools.charges > 0 ? 'not enough charge for a wall.' : 'no charges left.'; }
+  private noneWords(): string { return this.carried !== null ? (this.brought === 0 ? wg('nobody brought a wall charge.', 'no wall charge carried.') : 'no wall charge left.') : this.price > 1 && this.g.doorTools.charges > 0 ? 'not enough charge for a wall.' : 'no charges left.'; }
   /** one set on a wall: paid out of the carried ones, else out of the bag (all `cost` of it or none). The price paid, or −1 = there was none to set */
   private take(): number { const g = this.g; this.freeSet = false;
     // UNLIMITED AMMO (the sandbox row; the maintainer, 10-14: "unlimited ammo doesn't apply to wall charges"): with one to set, it is set and none is spent
@@ -942,7 +949,7 @@ export class WallCharge {
         if (op.owes && flat(lead.char.pos, wallPt(W, 0, 0)) >= WALLKILL.nearM) { op.owes = false; g.say(lead, 'charge set.'); }   // (a man who cannot get that far says only the call below)
         if (!op.men.every(gd => op.mine.get(gd)!.arrived) && this.waiting(op, el)) break;
         // (WALLCHARGE.safe: said by the man who calls it, once, where the floor left them inside the radius)
-        g.say(lead, (op.close || WALLCHARGE.safe) && op.men.some(m => this.blastShare(W, m.char.pos, undefined, false) > 0) ? "can't get clear of it. your call." : 'stood off. your call.'); g.msg(`charge set on the wall — ${DOORTOOLS.blowKey.replace('Key', '')} blows it`);
+        g.say(lead, (op.close || WALLCHARGE.safe) && op.men.some(m => this.blastShare(W, m.char.pos, undefined, false) > 0) ? "can't get clear of it. your call." : 'stood off. your call.'); g.msg(`charge set on the wall. press ${DOORTOOLS.blowKey.replace('Key', '')} to blow it`);
         op.phase = 'armed'; op.t0 = t; this.beat(op, 'armed');
         break;
       }
@@ -1060,7 +1067,7 @@ export class WallCharge {
     messWall(g, wallPt(W, hole ? hole.du : 0, 0, 0), wallN(W), T, !!hole);   // …and what it leaves on the floor (floormess.ts CHAOS.mess: nothing with the rule off)
     const it = g.items.spawn('flash', wallPt(W, 0, 0.15, 0.5), [0, 0, 0], { fuse: 99, who: PLAYER_ID }); it.fired = true;
     const all = g.guards, last = g.messages[g.messages.length - 1]; g.guards = []; try { detonateStun(g, it, true); } finally { g.guards = all; }
-    const m = g.messages[g.messages.length - 1]; if (m && m !== last && /canister/.test(m.text)) g.messages.pop();   // ('stun canister went off': this was not one)
+    const m = g.messages[g.messages.length - 1]; if (m && m !== last && /flashbang/.test(m.text)) g.messages.pop();   // ('flashbang went off': this was not one)
     const ii = g.items.items.indexOf(it); if (ii >= 0) g.items.items.splice(ii, 1);
     let knocked = 0, stunned = 0, backblast = 0;
     const R = safeRadius(g, W), nearSecs = (d: number) => WALLCHARGE.safe ? lerp(WALLCHARGE.safeSecs[0], WALLCHARGE.safeSecs[1], clamp(d / R.reach, 0, 1)) : K.backblastSecs;   // (the charge's own side: the safety radius — off, the door charge's two numbers)
@@ -1197,7 +1204,7 @@ export class WallCharge {
     if (this.openAt(s.wall) || this.chargeOn(s.wall)) return;
     const paid = this.take(); if (paid < 0) { g.msg(this.noneWords().replace(/\.$/, '')); return; }
     this.set.push({ wall: s.wall, t: g.time, by: SAM_BY, paid, ...(this.freeSet ? { free: true } : {}) }); this.stats.bySam++; g.audio.play('lockPick', wallPt(s.wall, 0, 0, K.height), 0.6); g.destr.furn.warm();
-    g.msg(`charge set on the wall${blowTail(!OWNBLOW.on, DOORTOOLS.blowKey.replace('Key', ''), ' — ')}`); this.note(`set by the player on wall ${s.wall.index}`);
+    g.msg(`charge set on the wall${blowTail(!OWNBLOW.on, DOORTOOLS.blowKey.replace('Key', ''), '. ')}`); this.note(`set by the player on wall ${s.wall.index}`);
   }
   /** is Sam setting one right now — a sustained verb (interact.ts runningVerb / cancelSustained, savestate.ts playerBusy, player.ts's running row) */
   get setting(): boolean { return !!this.sam; }

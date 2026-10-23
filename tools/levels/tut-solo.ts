@@ -391,7 +391,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'blow', line: 'Press [F] to blow the door', blowLine: 'Press [Space] to blow the door', done: { is: 'door', door: 'shop', state: 'open' }, at: SHOP_DOOR },
       { id: 'shop', line: 'Lean in and shoot the guard inside', done: DOWN(3), at: [SHOP_MAN[0], 1.0, SHOP_MAN[2]] },
       // THE STORE
-      { id: 'stun', line: 'Press [4], then click the ring to throw a stun grenade', done: { is: 'any', of: [{ is: 'threw', kind: 'flash', area: STORE }, DOWN(5)] }, at: STUN_AT },   // (it passes on the bang itself, in the store: the next line is up while they are still folded)
+      // (the maintainer: "do flashbangs take line of sight into account? i flashed myself in the solo loud tutorial level even though it went into the other
+      //  room". They do — combat.ts detonateStun: a clear line from the burst to a head inside its reach, his own included — and the store's doorway has no
+      //  leaf and stands in line with the shop's door, so a man who throws from inside the shop is looking down that line. Said before the throw, on a
+      //  card, with the one thing to do about it in the line; a man who stays is blinded for a few seconds, which is the rule and now no surprise)
+      { id: 'stun', line: 'Press [4], then click the ring to throw a stun grenade, and get behind the wall', done: { is: 'any', of: [{ is: 'threw', kind: 'flash', area: STORE }, DOWN(5)] }, at: STUN_AT,   // (it passes on the bang itself, in the store: the next line is up while they are still folded)
+        explain: { title: 'Throwing a stun grenade', text: 'A stun grenade blinds anyone nearby who can see it go off, and that includes you. Walls and closed doors block the flash, but an open doorway doesn\'t. Throw it through the doorway, then move to the side so you\'re behind the wall when it goes off.' } },
       { id: 'store', line: 'Go in and shoot them both', done: DOWN(5), at: [33.6, 1.0, AXIS] },
       { id: 'take', line: 'Press [Space] to take the code book', done: { is: 'stage', stage: 'exfil' }, at: front },
       // THE WAY OUT

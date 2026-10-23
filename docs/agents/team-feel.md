@@ -272,6 +272,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   worst spot the two got 9.6 m apart → 2.0 m and both stand on their marks (16 s either way on the page's stand; 9.7 → 1.4 m frozen). KNOWN: two men more than 5 m apart
   when told are left alone; the lock, own-door and uncleared-room bounds have no staging in the check (the walk cap and the 5 m have). No tally of
   fights was run. Never seen on a GPU, nobody has played it.
+- **A follower goes by the doors Sam took** (`ORDERS.trailDoors`, orders.ts `trailWay`, asked with the way round an uncleared room, never
+  more than twice a second a man; 10-23, from a red on the registry walk after door leaves became solid on the page). A follower's goal
+  is his place on Sam's trail and his walk to it is the short one, which is the trail while he keeps up. On the registry level the lead
+  follower gave way to the copy room's leaf at its gallery door, the three behind him went in past him, and by his turn Sam was out of
+  the room's far door: his place was in the hall, the hall is nearer by the gallery, and he walked round the room the file went
+  through, about five seconds apart from his partner (the maintainer, 10-22: "buddy teams should try to stay together"). Now, where
+  his place is on the trail, a crumb of it short of his place is within `trailReachM` 3 m of him with a straight walk to it, and his own
+  short way ends through other doors than the trail does from there (a door gone through and back counts as none; a path's corner
+  that lies on a frame's line is not counted as a side), he is handed the trail's corners as a way round is (`via`). Never where he
+  has a straight walk to his place, never through a lock he is kept out of, never a walk more than `trailLong` 1.5 times his own + 2 m,
+  not for a place on a wall (`unseen.ts`), and nothing once the trail (`trailM` 10 m) has run out behind Sam: then his own way, as
+  ever. His place on the trail is found by the walk back from Sam (`slotCrumb`, the same walk as `slot`), not by what is near (Sam
+  in and out of a room by one door walks the same steps twice), and a way left over when he stops or is close is dropped, so the rest
+  rules still read him. What it does not see: an opening with no door in it is no way of its own; the crumb he joins at may be a step
+  behind him; his own way is the plain short path, not the one a covered lane would price; and in a room longer than the trail kept
+  behind his place (5 to 9 m) the trail can run out under him part way, and he turns once for his own way. ON in the page (`?traildoors=0` off; panel toggle "a follower goes by the doors you took"), OFF in the module and on
+  the frozen stand (`TPS_TRAILDOORS=1`), a `FROZEN_HOLDS` row, carried by the journal, pinned off in the three digest lists beside
+  `sameWay`. Check `trail-doors` (`tools/qa/traildoors-check.ts`, family `registry`; `TRAILDOORS_BREAK=1` fails 2 on the page's stand
+  and 1 on the frozen), 7 of 7 on both: the lead follower HELD at the copy room's door for 4 s and let go with Sam in the hall goes
+  round with the rule off (0 s in the copy room) and through it with the rule on (2.8 s in it, the trail handed to him once), 2.2 m
+  from Sam at the end either way, and round again with the rule on and `trailLong` 0 (the length cap refuses it); over the whole walk with nobody held every man enters every space Sam does, and the trail way is
+  handed out once in 267 asks (175 s; the copy room's door) on the page's stand and never on the frozen. `registry-walk` on the page's
+  stand: the red ("spaces a man never entered: copy") is green. One level, one seed, the script's Sam at a walk; no tally; no locked door on the trail was staged (the walk unlocks them all). Never seen
+  on a GPU, nobody has played it.
 - **A teammate's light is dark into the wall at his muzzle** (`LIGHTS.wallOff`, `src/game/guards.ts wallDark`; 10-22, the maintainer off the first
   tutorial mission: "weird that they are shining the flashlight on the wall immediately in front of them"). The other light rules decide whether a
   teammate WANTS a light (walking to a mark, searching, a shot just heard); the light points where the gun points, so a man walking up to a stack along
@@ -833,6 +857,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are read in the module and not staged; an opening with no door in it has no frame for him to wait short of; the wait is at the order layer, so a man no order poses (a drill, the fight's own legs) is not
   held.
 
+- **A fourth reason to run, 'told' (2026-10-23)**: a tutorial step that tells its men to run a leg (`teamTold`, asked by orders.ts beside `teamDash`;
+  `rails.ts runs`, a step's `onWay.run`; `TEAMPACE_STATS.told`). Nothing off a tutorial's frame gives it. `docs/agents/missions.md`, *Mission 1, three play notes*.
 - **Teammates are slower than the player, and run only for a reason** (`src/game/teampace.ts`, table `TEAMPACE {on, k 0.8, followK 1.3, follow, behindM 1,
   fightSecs 2, backSecs 6, own, dashM 2.5, dashSeen 0.5, dashEvery 0.25, dashHot 6, runAt 2.7, accel 6, step 1, gap 1}`). REPLACES "teammates never sprint".
   The play note: the player at 1×, a teammate at 0.8×, so a man sent somewhere can always be caught up; followers sprint when the player sprints; a sprint
@@ -892,3 +918,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a teammate's sprint with his kit on has never been looked at, nor the gun going low into it; nobody has played it; 0.8, the follower's 1.3, the six
   seconds back from a grenade and the cover run's numbers are first numbers; the play-through tool's player never sprints, so the tallies show no follower's
   run (the staged check does); the cover run fired 20 times in 126 runs and nobody has watched one.
+- **The goggles' eyepiece edge is off** (10-23; the maintainer: "i think the NVG oval is a bit much since it obscures a lot of the screen. let's try
+  removing it."). A TRY, his word. The dark oval post.wgsl drew round the tube's picture (`radial` 0.62 → 0.95 to black) is now an amount,
+  `passes.nvOval` 0‥1 (`PostParams.nvOval`, the uniform's twelfth word), 0 as the page opens: the picture runs to the screen's edge. To compare:
+  `?nvoval=1` on the page's address, or the debugger's Look panel ▸ 'night vision eyepiece edge'. PICTURE ONLY, so no game switch, no stand row and
+  nothing for a recording to carry: nothing in `src/game` reads the edge (`nvg.ts tubeVis` copies the gain curve and the noise, and `nvg-sight`, which
+  pins those lines of the shader, reads the same). What still says the goggles are on: the white phosphor picture with its grain and scan lines, the
+  lit 'N NIGHT VISION' chip, the goggles down on Sam, the click and the log line. CHECKED: the page on the software adapter, the office at night,
+  goggles down — the default boot holds 0 and the left edge of the picture reads 152 of 255 where the oval left 7 (centre 187 both ways); `?nvoval=1`
+  boots with 1; no page error. NOT SEEN: never on a GPU; and with no dark rim behind them the HUD's grey labels at the screen's edge (CONDITION,
+  LIGHT, SOUND) sit on a bright picture and read worse in the still — the HUD's own to answer if the try is kept.
