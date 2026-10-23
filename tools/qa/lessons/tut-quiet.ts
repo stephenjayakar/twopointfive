@@ -9,6 +9,7 @@ import { TQ } from '../../levels/tut-quiet';
 import { handCarry } from '../../../src/game/guards';
 import { HANDSLOT, HANDSLOT_KEY } from '../../../src/game/handslot';
 import { kitTreeOn } from '../../../src/game/kit';
+import { WHISTLE_STATS } from '../../../src/game/whistle';
 
 export const query = '?quiet';
 // he wears what the mission's page deals him (the level's own card: one grenade and five sponge rounds on the launcher, the grenade up): the swap's line leans on it
@@ -163,7 +164,7 @@ export const steps: Record<string, (B: Bot) => void> = {
     //  the key here to shut the stalk's click, and a tap at this door did nothing and said nothing. Not asked on the break's run: he goes for the man there)
     if (!WRONG) { const d = B.door('back'), a0 = d.angle, AIM = [27.9, 1.0, 16.5];
       for (let i = 0; i < 20; i++) { B.aim(AIM); B.step(); }
-      const row = B.g.nearby.find((r: any) => r.kind === 'door' && r.verb && r.inReach !== false);
+      const row = B.g.nearby.find((r: any) => r.kind === 'door' && r.door === d && r.verb && r.inReach !== false);
       if (!row) B.fail(`no row for the open back door from inside it (rows: ${B.g.nearby.map((r: any) => `${r.kind}:${r.verb ?? '-'}`).join(' | ') || 'none'}): the interaction key is dead on this line`);
       else { B.verb('door', row.verb, AIM); B.until(() => Math.abs(d.angle - a0) > 0.1, 4); B.step(60);   // (how far it swings is the stand's: a hand walks it shut on the page's, he stands in its way on the frozen one)
         if (Math.abs(d.angle - a0) < 0.1) B.fail(`the back door's row '${row.verb}' did not move the leaf from inside (${a0.toFixed(2)} → ${d.angle.toFixed(2)})`);
@@ -176,9 +177,10 @@ export const steps: Record<string, (B: Bot) => void> = {
       B.say(`  by hand: ${trips(B) > t0 ? 'the chest beam broken' : 'the beam not broken'} from ${at(B.pos())}, ${flat(B.pos(), H.char.pos).toFixed(2)} m behind him; he ${H.state}`);
       if (trips(B) > t0) B.fail('the chest beam at his back is broken by a man who comes up behind him'); }
     B.go(TQ.nook, 10, { near: 0.12 }); B.wait(0.4);
-    // (the interaction key held on open floor: with the whistle not his here the hand's ring has no wedge and does not come up, and a click whistles nobody round)
-    { const n = () => B.g.events.filter((e: any) => e.kind === 'whistle').length, w0 = n(); B.hold(['Space'], 0.6); const ring = !!B.g.player.sel?.open; B.click(1, [H.char.pos[0], 1.2, H.char.pos[2]]); B.step(20);
-      if (ring || n() > w0) B.fail(`the interaction key held in the store ${ring ? 'put the hand\'s ring up' : 'whistled'} (the whistle would bring the hall's man round to him)`);
+    // (the whistle is not his in the store: it would bring the man round to him. Its own code does nothing — the gate takes it, on either stand — and where
+    //  his actions are a ring, the interaction key held on open floor puts none up, with no wedge to pick, and a click whistles nobody)
+    { const w0 = WHISTLE_STATS.blown; B.press('KeyV', 6); B.hold(['Space'], 0.6); const ring = !!B.g.player.sel?.open; B.click(1, [H.char.pos[0], 1.2, H.char.pos[2]]); B.step(20);
+      if (ring || WHISTLE_STATS.blown > w0) B.fail(`in the store ${WHISTLE_STATS.blown > w0 ? 'he whistled' : 'the interaction key held put the hand\'s ring up'} (a whistle would bring the hall's man round to him)`);
       if (B.g.player.sel?.open) B.press('Escape', 3); }
     B.say(`  in the corner: lit ${lit(B)}; ${H.callsign} ${H.state}, aware ${H.awareness.toFixed(2)}, ${flat(B.pos(), H.char.pos).toFixed(1)} m off`);
     unseen(B, n0, H, 'coming into the store');

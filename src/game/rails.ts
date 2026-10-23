@@ -254,10 +254,11 @@ export class Rails {
   locks(action: string): boolean { const A = this.allowed(); return !!A && !A.has(action); }
   /** HAS A STEP TAKEN THIS BACK (`stalk`, the one action that is open unless a step denies it): the last step up to this one that names the action
    *  denies it. An action no step names is not shut — unlike `locks`, which shuts whatever nobody gave — so a level that never says the word plays
-   *  as it did. The set is derived here too, never kept */
+   *  as it did. The set is derived here too, never kept. The gate below keeps the left button from the stalk on it, and stalk.ts asks it of its own
+   *  gate (`free`), so the click is shut whatever else owns the button and no hint offers it */
   shuts(action: string): boolean {
     const S = this.lesson(); if (!S || BREAK) return false; let off = false;
-    for (let k = 0; k <= S.i && k < S.L.steps.length; k++) { const T = S.L.steps[k]; if (T.deny?.includes(action)) off = true; if (T.allow?.includes(action)) off = false; }
+    for (let k = 0; k <= S.i && k < S.L.steps.length; k++) { const T = S.L.steps[k]; if (T.allow?.includes(action)) off = false; if (T.deny?.includes(action)) off = true; }   // (a step's deny after its allow, as `allowed` folds them)
     return off;
   }
   /** IS THIS ACTION'S KEY KEPT OFF THE PICTURE (game/floorplan.ts waitsOnKey): the step that is up holds it shut, so the press does nothing and nothing on the
@@ -583,7 +584,7 @@ export class Rails {
   summary(): string {
     const S = this.lesson(); if (!S) return this.g.level.scenarios?.lesson?.rails ? (RAILS.on ? 'off · this level carries the record (start its mission)' : 'off · switched off') : 'off · this level carries none';
     const A = this.allowed()!;
-    return `step ${Math.min(S.i + 1, S.L.steps.length)}/${S.L.steps.length} · unlocked: ${[...A].join(' ') || '—'}${this.skyOn ? ' · sky seat' : ''}${this.spared.size ? ` · spared ${this.spared.size}` : ''}`;
+    return `step ${Math.min(S.i + 1, S.L.steps.length)}/${S.L.steps.length} · unlocked: ${[...A].filter(a => a !== 'stalk').join(' ') || '—'}${this.shuts('stalk') ? ' · stalk shut' : ''}${this.skyOn ? ' · sky seat' : ''}${this.spared.size ? ` · spared ${this.spared.size}` : ''}`;
   }
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 80) this.log.splice(0, 40); }
 }

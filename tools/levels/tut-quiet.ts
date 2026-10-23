@@ -50,9 +50,9 @@
 //   WHO             the hall's man. Of the three he is the one a second pair of hands was spent on (the first man is grabbed for the code, the clerk is
 //                   taken at the box), and he is the one a wall hides the player from: the shot is let go from the store, at his back.
 //   WHY NOT HANDS   the chest beam is 0.45 m behind his heels. A man on his feet behind him stands in it (devices.ts: the player's own body breaks a
-//                   beam, at any capsule). The frame keeps the game from walking him into it: from `nook` to the beam the right button, the trigger
-//                   and the held left click that stalks a man (`stalk`, rails.ts gate) are not his, and neither is the whistle, which would bring
-//                   the man round to the store. The interaction key is his on every line. (The first build shut the held click by taking that key
+//                   beam, at any capsule). The frame keeps the game from walking him into it: from `nook` to the beam the trigger and the held
+//                   left click that stalks a man (`stalk`, rails.ts gate) are not his, nor the whistle, which would bring the man round to the
+//                   store, nor the right button until the shot's own line. The interaction key stays his through the store. (The first build shut the held click by taking that key
 //                   from the first line inside: a tap at the open back door then did nothing and said nothing.) The grab's own row is still his
 //                   close behind the man, and the hand that takes him breaks the beam: the room says no, not a dead key.
 //   WHERE FROM      the dark corner he is sent to has no line to the man: the doorway's own wall is in the way. A round let go from there does not
@@ -561,7 +561,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // ---- the store: a man in the light, the player in the dark ----
       // (the man ahead is not taken by hand — see THE SPONGE ROUND at the head. Four things go here and come back at `under`: the right button, the
       //  trigger, the held left click that walks him up behind a man (`stalk`: the frame's word for it, which leaves the interaction key alone) and the
-      //  whistle, which would bring the man round to him. The interaction key is his on every line: the back door shuts behind him like any door)
+      //  whistle, which would bring the man round to him; the shot's own line gives the right button back early. The interaction key stays his
+      //  through the store: the back door shuts behind him like any door)
       { id: 'nook', line: 'Go inside', cue: 'store', deny: ['fire', 'alt', 'whistle', 'stalk'], done: any({ is: 'in', area: { x0: 25.62, x1: 30.38, z0: 8.62, z1: 16.0 } }, down(2)), at: mark(TQ.inside) },
       // ---- the store: the rifle's launcher. A man nobody can stand behind, put out from the dark ----
       // (the line says what to do and why, the moment he is through the door and before he can reach for the man)

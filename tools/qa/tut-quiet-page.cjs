@@ -35,7 +35,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   const read = () => page.evaluate(() => { const g = window.__game, el = document.getElementById('railprompt'), P = g.player, rf = P.rifle, eq = document.getElementById('equip'), card = document.getElementById('railcard');
     const hall = g.guards.find(x => !x.unit && x.route?.name === 'hall'), box = g.guards.find(x => !x.unit && x.route?.name === 'table');
     return { i: g.lesson.i, id: g.lesson.step?.id ?? null, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none',
-      fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, slot: P.slot, away: !!P.holstered, setup: P.setup ? P.setup.gun : '', load: rf.attachment, shells: rf.shells, rings: rf.rings, back: (d => d ? +d.angle.toFixed(3) : null)(g.doors.list.find(d => d.def.name === 'back')), ring: !!P.sel?.open,
+      fatal: document.getElementById('fatal')?.textContent || '', rails: g.rails.live, slot: P.slot, away: !!P.holstered, setup: P.setup ? P.setup.gun : '', load: rf.attachment, shells: rf.shells, rings: rf.rings, back: (d => d ? +d.angle.toFixed(3) : null)(g.doors.list.find(d => d.def.name === 'back')), ring: !!P.sel?.open, hints: g.nearby.filter(r => r.kind === 'guard').map(r => `${r.line2 ?? ''}`).join(' | '),
       strip: (eq?.textContent ?? '').replace(/\s+/g, ' ').trim(), words: eq?.querySelector('.hb-st')?.textContent ?? '', rows: [...(eq?.querySelectorAll('.hp kbd:not(.x)') ?? [])].map(k => k.textContent),
       card: { on: !!card && card.classList.contains('on'), h: card?.querySelector('h2')?.textContent ?? '', p: [...(card?.querySelectorAll('p') ?? [])].map(x => x.textContent).join(' / ') },
       hall: hall ? { state: hall.state, how: hall.down?.how ?? hall.downHow ?? '', at: [+hall.char.pos[0].toFixed(2), +hall.char.pos[2].toFixed(2)], aw: +(hall.awareness ?? 0).toFixed(2) } : null, other: box ? box.state : '',
@@ -96,8 +96,8 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   // neither button is his yet: tried from the doorway's line, 2.6 m behind him, where a held left click would stalk him and the launcher has a line
   await stand(SHOT); const at0 = (await read()).at; await point(await head()); await page.mouse.down(); await run(90); await page.mouse.up(); await run(3); await right(30); const L0 = await read();
   const moved = Math.hypot(L0.at[0] - at0[0], L0.at[1] - at0[1]);
-  check(L0.rings === R.rings && L0.shells === R.shells && L0.hall?.state === R.hall?.state && L0.id === 'rifle' && moved < 0.1 && !L0.holding && L0.trips === R.trips, 'from the doorway\'s line, hands empty: the left button held on the man stalks nobody and the right button does nothing',
-    `${s(L0)} · moved ${moved.toFixed(2)} m · holding ${L0.holding} · beams broken ${L0.trips - R.trips} · him ${JSON.stringify(L0.hall)}`);
+  check(L0.rings === R.rings && L0.shells === R.shells && L0.hall?.state === R.hall?.state && L0.id === 'rifle' && moved < 0.1 && !L0.holding && L0.trips === R.trips && !/LMB|sneak/i.test(L0.hints), 'from the doorway\'s line, hands empty: the left button held on the man stalks nobody, no row offers that click, and the right button does nothing',
+    `${s(L0)} · moved ${moved.toFixed(2)} m · holding ${L0.holding} · beams broken ${L0.trips - R.trips} · the man's rows say: "${L0.hints || 'nothing'}" · him ${JSON.stringify(L0.hall)}`);
   await stand(NOOK);
 
   // ---- the rifle, and the card
