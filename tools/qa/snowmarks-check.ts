@@ -19,6 +19,8 @@
 //   forms     a mark is not whole at once: just pressed, its floor is under its depth and what it threw is not there; it only ever deepens; formed, it is byte
 //             for byte the mark the switch-off build presses at once; a harder mark forms faster
 //   kick      a mark kicks loose snow up: flake records at the mark, more of them the harder it was made, none with the switch off
+//   kickbook  the pool only READS the game's list of kicks (which were taken is the host's book): nine marks are filed once each, three a frame, and the
+//             game's list and state hash stand as they were (SNOWBOOK_BREAK=1 cuts the list as the pool's path once did: must fail)
 //   off       the switch off: a shoved chair and a landing leave the map as it was, a print is whole on its frame, nothing is forming, nothing is kicked
 //   same      the same shove in two fresh games: the same bytes
 //   digest    the game does not know: 240 stepped frames of the pass with a chair shoved over the snow, on and off — one game digest
@@ -209,10 +211,10 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
     // ---- kick
     { const A = await rig(true); const T = A.g.snowTracks; seedSnow(A.g, 1); const pool = mk(); A.step(2); draw(A, pool); A.set();
       for (let i = 0; i < 60; i++) draw(A, pool);   // (the first fill of the falling snow is in: the frame's births have room again)
-      const n0 = pool.recs.filter(isKick).length;
+      const n0 = pool.recs.filter(isKick).length, q0 = T.kicks.length;   // (q0: the stood game's own first kicks are still listed — only time empties the list, and this block steps no clock)
       ST.stampMark(T, 0.45, (b: any) => ST.pressGroove(b, YARD[0], YARD[1], YARD[0], YARD[1], 0.06, 0.06, 1, 0), { x: YARD[0], z: YARD[1], dx: 1, dz: 0, wide: 0.1 });
       ST.stampMark(T, 1.2, (b: any) => ST.pressGroove(b, YARD[0] + 2, YARD[1], YARD[0] + 2, YARD[1], 0.06, 0.06, 1, 0), { x: YARD[0] + 2, z: YARD[1], dx: 1, dz: 0, wide: 0.1 });
-      const queued = T.kicks.length, owed0 = kicksOwed(A.g); draw(A, pool); const k = pool.recs.filter(isKick).slice(n0), owed1 = kicksOwed(A.g), listed = T.kicks.length;   // (the game's list is only read: the pool's taking is the host's book, snowFx.ts kicksOwed — the list is time's to empty)
+      const queued = T.kicks.length - q0, owed0 = kicksOwed(A.g); draw(A, pool); const k = pool.recs.filter(isKick).slice(n0), owed1 = kicksOwed(A.g), listed = T.kicks.length - q0;   // (the game's list is only read: the pool's taking is the host's book, snowFx.ts kicksOwed — the list is time's to empty)
       const walk = k.find((r: any) => Math.abs(r.pos[0] - YARD[0]) < 0.01), run = k.find((r: any) => Math.abs(r.pos[0] - YARD[0] - 2) < 0.01);
       const B = await rig(false); seedSnow(B.g, 1); const poolB = mk(); B.step(2); for (let i = 0; i < 60; i++) draw(B, poolB); B.set();
       ST.stampMark(B.g.snowTracks, 1.2, (b: any) => ST.pressGroove(b, YARD[0], YARD[1], YARD[0], YARD[1], 0.06, 0.06, 1, 0), { x: YARD[0], z: YARD[1], dx: 1, dz: 0, wide: 0.1 }); const qB = B.g.snowTracks.kicks.length; draw(B, poolB);
@@ -223,6 +225,21 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
       verdict(n0 === 0 && queued === 2 && owed0 === 2 && owed1 === 0 && listed === 2 && waiting === 1 && stale === 0 && late === 0 && !!walk && !!run && walk.count >= 2 && run.count > walk.count * 2 && run.opts.speed > walk.opts.speed && run.dir[0] > 0.2 && T.kicks.length === 0 && qB === 0 && poolB.recs.filter(isKick).length === 0 && marksKicked() > 0,
         'kick — a mark kicks loose snow up: flakes born at it, more and faster the harder it was made; none with the switch off',
         `two marks queued ${queued} kicks · a walker's boot: ${walk ? `${walk.count} flakes going up at ${walk.opts.speed.toFixed(1)} m/s` : 'NONE'} · a sprinter's: ${run ? `${run.count} at ${run.opts.speed.toFixed(1)} m/s, leaning the way he runs` : 'NONE'} · after the frame: ${owed1} still owed of ${owed0}, the game's own list untouched at ${listed} · one left unfiled for half a second: ${waiting} queued → ${stale}, filed late: ${late} · the switch off: ${qB} queued, ${poolB.recs.filter(isKick).length} filed`); }
+    // ---- kickbook: the pool only READS the game's list — which kicks it took and which wait is the host's book (engine.hostBooks.snow, snowFx.ts markKicks)
+    { const RB = await import(`${ROOT}/src/game/rollback.ts`);
+      const A = await rig(true); const T = A.g.snowTracks; seedSnow(A.g, 1); const pool = mk(); A.step(2); draw(A, pool); A.set();
+      for (let i = 0; i < 60; i++) draw(A, pool);
+      const n0 = pool.recs.filter(isKick).length;
+      // nine marks in a row, each harder than the last: three are filed a frame (SNOWTRACKS.puffRecs), the rest wait their turn
+      for (let i = 0; i < 9; i++) { const x = YARD[0] + i * 0.4; ST.stampMark(T, 0.5 + i * 0.08, (b: any) => ST.pressGroove(b, x, YARD[1], x, YARD[1], 0.06, 0.06, 1, 0), { x, z: YARD[1], dx: 1, dz: 0, wide: 0.1 }); }
+      const list0 = JSON.stringify(T.kicks), h0 = RB.stateHash(A.g, false, true), owed: number[] = [kicksOwed(A.g)];
+      for (let i = 0; i < 4; i++) { draw(A, pool); if (process.env.SNOWBOOK_BREAK === '1') { T.kicks.sort((a: any, b: any) => b.force - a.force); T.kicks.length = Math.max(0, T.kicks.length - 3); }   // (the break: the list sorted and cut by the pool's path, as it was)
+        owed.push(kicksOwed(A.g)); }
+      const k = pool.recs.filter(isKick).slice(n0), at = new Set(k.map((r: any) => Math.round(r.pos[0] * 100)));
+      const same = JSON.stringify(T.kicks) === list0, h1 = RB.stateHash(A.g, false, true);
+      verdict(owed.join(' ') === '9 6 3 0 0' && k.length === 9 && at.size === 9 && same && h1 === h0,
+        'kickbook — the pool only reads the game\'s list of kicks: each is filed once, the waiting ones in their turn, and the game\'s state does not move',
+        `nine marks: owed after each drawn frame ${owed.join(' → ')} · ${k.length} kick records at ${at.size} places · the game's list as it was: ${same} (${T.kicks.length} listed) · the game's state hash ${h0} before, ${h1} after${process.env.SNOWBOOK_BREAK === '1' ? ' (SNOWBOOK_BREAK=1: the list sorted and cut as the pool\'s path once did — this line must fail)' : ''}`); }
 
     // ---- off, digest
     { const run = async (on: boolean) => { const R = await rig(on); const p = chairOut(R); R.step(2); const h0 = hash(R.g); const T = R.g.snowTracks;

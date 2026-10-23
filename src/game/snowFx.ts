@@ -142,10 +142,14 @@ interface SnowState { seed: number; serial: number; birthAcc: number; pop: numbe
  *  render settings (particleRain, particleRainDensity, particleRainCount): two games that differ only in their picture are the same game, and the same game on a
  *  host with no pool (a server, the harness) keeps none of it. It was a table in the game's state until 10-23 (`snowFx.states`): a twin with a pool and a twin
  *  without then parted at every row of it. NO RULE READS IT: its readers are this module, the page's panel and `__snow` hook, and the checks.
- *  A SAVE IN MEMORY PUT BACK (host/putback.ts) drops every host book and empties the ring in the same call, so the next frame that moves the clock begins a
- *  fresh book over an empty ring: the air is filled through the slab's whole height at once, as on a level's first frame (the make-up below), the curtains'
- *  drift starts from nothing and the record seeds from their first — the flakes that were in the air are gone, not wound back (nothing on the GPU is). A seed
- *  set by seedSnow is the book's and goes with it. A restart or a file's load leaves the book be, as it left the table. */
+ *  A SAVE IN MEMORY PUT BACK (host/putback.ts) and A RESTART (game.ts restartEncounter, and with it a file's or a checkpoint's load) each drop every host book
+ *  and empty the ring in the same call, so the next frame begins a fresh book over an empty ring: the air is filled through the slab's whole height at once,
+ *  as on a level's first frame (the make-up below; the table, kept through a restart, found the ring empty and did the same), the curtains' drift starts from
+ *  nothing and the record seeds from their first — the flakes that were in the air are gone, not wound back (nothing on the GPU is). A seed set by seedSnow
+ *  is the book's and goes with it.
+ *  NOT YET THE WHOLE OF IT: this update's pool path still writes two tables of the game's — what a blast owes the pool (snowBlast.ts `puffLeft`, `flakeLeft`,
+ *  `turn`, three counts) and the air's `want` and its row (airSim.ts airWant) — so a game with a blast in the snow, or an air field, still parts from its
+ *  twin on a host without. */
 export type SnowShown = SnowState;
 const freshBook = (): SnowState => ({ seed: 0x5a0f1a4e, serial: 1, birthAcc: 0, pop: 0, lastEmitted: -1, fillAt: -1, wasActive: false, bandOff: [0, 0], stats: { active: false, why: 'never run', radius: 0, centre: [0, 0], areaOut: 0, target: 0, capped: false, pop: 0, births: 0, totalBirths: 0, frames: 0 },
     wSerial: 1, wAcc: 0, flakeFiled: 0, wisps: { active: false, why: 'never run', target: 0, blow: 0, births: 0, totalBirths: 0, records: 0 },
@@ -330,9 +334,8 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
  *  save put back: the ring was emptied with it) takes every kick the game still lists as new. */
 function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: number, sizeJit: number, cx: number, cz: number, R: number): number {
   const T = g.snowTracks; if (!T) return 0;
-  if (T.kicked < st.kickSeen) st.kickSeen = 0;   // (the game's count went back under the book: a snapshot put back by a road that does not tell the host — the harness's)
-  const Q = st.kickQ.filter(k => T.kicks.includes(k)); for (const k of T.kicks) if (k.n > st.kickSeen) Q.push(k);
-  st.kickQ = Q; st.kickSeen = T.kicked;
+  if (!T.kicks.length) { st.kickQ.length = 0; st.kickSeen = T.kicked; return 0; }   // (nearly every frame)
+  const Q = kicksDue(T, st); st.kickQ = Q; st.kickSeen = T.kicked;
   if (!Q.length) return 0;
   const K = SNOWTRACKS, near = R * 0.7; let filed = 0, recs = 0;
   Q.sort((a, b) => b.force - a.force || a.serial - b.serial);
@@ -350,8 +353,17 @@ function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: nu
   return filed;
 }
 let markKicked = 0;
-/** the kicks the game lists that no pool has taken or dropped yet: the new ones and the ones waiting (a check; with no book yet, all of them) */
-export function kicksOwed(g: Game): number { const T = g.snowTracks, B = g.engine.hostBooks?.snow; if (!T) return 0; if (!B || T.kicked < B.kickSeen) return T.kicks.length; return B.kickQ.filter(k => T.kicks.includes(k)).length + T.kicks.filter(k => k.n > B.kickSeen).length; }
+/** the kicks of the game's list this book has still to deal with, the waiting ones first: those it has seen and kept waiting that the game still lists, then
+ *  those numbered past the last it saw. Where the game's count stands BEHIND the book's (a snapshot put back by a road that does not tell the host — the
+ *  harness's; the page's put-back drops the book), none: the book cannot tell which of the listed kicks it filed in the moment abandoned, and that road left
+ *  their flakes in the ring. Reads only. */
+function kicksDue(T: { kicks: SnowKick[]; kicked: number }, B: { kickSeen: number; kickQ: SnowKick[] }): SnowKick[] {
+  if (T.kicked < B.kickSeen) return [];
+  const Q = B.kickQ.filter(k => T.kicks.includes(k)); for (const k of T.kicks) if (k.n > B.kickSeen) Q.push(k);
+  return Q;
+}
+/** how many kicks the game lists that no pool has taken or dropped yet (a check; with no book yet, all of them) */
+export function kicksOwed(g: Game): number { const T = g.snowTracks, B = g.engine.hostBooks?.snow; return !T ? 0 : B ? kicksDue(T, B).length : T.kicks.length; }
 /** flakes kicked up off marks so far (the page's `__snow.markStats`, a check) */
 export const marksKicked = () => markKicked;
 /** how a wisp filed now is drawn, in the colour word's fourth byte (particles_draw.wgsl wispVertex): SNOWWISPS.motes × 16 + SNOWWISPS.sparkle, in sixteenths */

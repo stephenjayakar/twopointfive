@@ -122,6 +122,9 @@ export type Stamp = Pick<SnowTracks, 'data' | 'w' | 'h' | 'dirty'>;
  *  `sink`), else the mark's own floor and bank (the floor sinks over `sink`) */
 interface Forming { x0: number; z0: number; w: number; h: number; goal: Uint8Array; age: number; delay: number; sink: number; thrown: boolean }
 /** loose snow thrown up at (x, z): along the unit (dx, dz) if it has one (0, 0 = straight up), by a mark of `force`, over a disc `wide` m across */
+/** the most kicks the list holds (the oldest dropped). It was 64 while a pool emptied the list every frame; the list is now every kick of the last `puffKeep` s,
+ *  filed or not, so the room is that many frames' worth */
+const KICKS_MOST = 256;
 export interface SnowKick { x: number; z: number; dx: number; dz: number; force: number; wide: number; serial: number; t: number; n: number }   // (t: s since it was queued — formSnowTracks ages it; n: its number among all this map has queued, SnowTracks.kicked)
 /** where the map carries `SNOWTRACKS.mess` (× 100) for the shader: the first texel of the middle row past the plan */
 export const messAt = (T: SnowTracks) => (T.h - 2) * T.w;
@@ -179,7 +182,7 @@ export function stampMark(T: SnowTracks, force: number, fn: (body: Stamp, thrown
   }
   if (kick && SNOW_LOOK.marks && K.puff > 0) {
     T.kicks.push({ x: kick.x, z: kick.z, dx: kick.dx ?? 0, dz: kick.dz ?? 0, force: f, wide: kick.wide ?? 0.12, serial: T.prints + T.hollows + T.craters + T.marks, t: 0, n: ++T.kicked });
-    if (T.kicks.length > 64) T.kicks.splice(0, T.kicks.length - 64);
+    if (T.kicks.length > KICKS_MOST) T.kicks.splice(0, T.kicks.length - KICKS_MOST);
   }
 }
 /** Once a frame (game.ts stepSnowTracks, AFTER the frame's own marks were pressed — a mark starts forming the frame it is made): the marks still forming come on by `dt`. A mark's own floor sinks from the level of the snow (the
