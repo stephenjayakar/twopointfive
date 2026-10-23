@@ -96,6 +96,11 @@ export const STALK = {
   /** …its shape, all the way down (fed to the animator, whose CREEP.low has the same numbers until it is): the pelvis this much lower (m) and further back
    *  (m) and the spine bowed this many degrees more; the share of the carriage's raised hands given up; the spring's rate, and the seconds of the grab it winds up to it over */
   lowDrop: 0.06, lowBack: 0.03, lowLean: 6, lowHands: 1, lowSpring: 18, lowWind: 0.12,
+  /** ARMS OUT (under `low`, bare hands, in his crouch). Closing on a man from behind, his hands are not by his knees: each is out `wideOut` m to its own
+   *  side of its shoulder, `wideDown` m under it and `wideFwd` m ahead of it, open, palm to the floor. It comes with the sink (all of it once he is `wideBy`
+   *  of the way down), slowly, and lets go fast (the animator's CREEP.wide rates); it holds for as long as he waits behind the man ("that's where stopping
+   *  just pauses the animation"), and goes with the carriage when there is no man in front of him. OFF HERE and on the frozen stand: his hands by his knees, as it was. The page: ?stalkwide=0. */
+  wide: false, wideOut: 0.3, wideDown: 0.2, wideFwd: 0.16, wideBy: 0.35,
   /** …and with it a press can begin one from further off ("i think we can make the start radius a bit larger too"): inside `lowBeginM`, kept out to `lowOutM`,
    *  where close.ts's mode range (3.0 and 3.6 m) was the limit. From out there he comes on at his plain crouch walk; the mode's carriage and the sink come in inside it */
   lowBeginM: 4.2, lowOutM: 5,

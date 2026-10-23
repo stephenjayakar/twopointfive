@@ -1328,6 +1328,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   past, not before; no press or the switch off and he walks by; a man facing him is not taken; `STALK_BREAK=1` fails it), both stands. LIMITS: no pose of
   its own while he waits (the wall stance), no hint on screen until the man is in the grab's own reach, and whether a guard notices him first is the guard's
   sight as ever. One scene, one seed, the AI off; stills `--scene stalk-corner`; never seen on a GPU, never played.
+- **The disarm leads the grab (10-23; `HOLD.stripFirst`, `HOLD.first`; `disarm.ts lead`; `?stripfirst=0`, `TPS_STRIPFIRST=1`).** The
+  maintainer: "sam springs into action for the final grab ... you really want a disarm and then a grab, right?" In the footage he works
+  from, the rifle is the first thing to move, out of the man's hands before the arm is round his neck (which lands 0.22 to 0.33 s in).
+  TIMED FIRST (the E grab from the low creep's station on a rifleman, the page's stand): Sam is upright by frame 12, his left hand is
+  at the man's neck on frame 16 (0.27 s), the pair go back and down from frame 19, all inside the footage's counts already. What did
+  not match was the order: the gun left the man's hand on frame 13, three frames before the arm, with the catch's voice on frame 0. ON
+  in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row, under `HOLD.disarm`; a recording from before the key
+  replays with it off (`applyKnobs`). THE RULE: the move's own clock (`Strip.t`) runs ahead of the hold's until the gun is let go, so
+  the take falls `first.take` 0.16 s in and the let-go at `first.drop` 0.3 where `strip.take` 0.2 and `strip.drop` 0.42 had them, and
+  the hand comes home at its old pace from there (the move is over 0.12 s sooner). Both figures' poses read that clock, so nothing in
+  character.ts changed. The hold's own clock is untouched: he is `held` on the frame he was. The catch's voice (`grabCatch`) is kept
+  for the arm's landing, `first.catch` 0.26 s in (`Strip.owed`, played by `disarmTick`), behind the strip's. Only for a grab with a gun
+  to take and an empty right hand: a man with his torch has the catch on the grab's frame, and the pistol hold's rap comes with the
+  frame as it did. Why not sooner: at 0.12 s Sam's hand is still 23 cm short of the gun (he is rising out of the squat), at 0.16 it is
+  13. THE CHECK is `stripfirst-check.ts` (`probes.ts stripfirst`, the grab and stealth families; `STRIPFIRST_BREAK=1` reds three of
+  its five lines), both stands: lead (out of his hand at 0.17 s and let go at 0.32, against 0.22 and 0.43 with the key down; held on
+  frame 28 either way), voices (the strip at 0.17 s, the catch at 0.27; key down the catch at 0 and the strip at 0.22), arm (the gun
+  leaves him on frame 10 and the hand is at his neck on frame 16: six frames between, three with the key down), others, harness.
+  `disarm-check.ts` writes the key down in its worlds: it reads the two beats as they were. The lab has the toggle and both moments.
+  One seed: a fixed staging. Nobody has seen it on a GPU or heard it.
+- **Arms out wide and low in the creep (10-23; `STALK.wide`, `wideOut` / `wideDown` / `wideFwd` / `wideBy`; `CREEP.wide`;
+  `?stalkwide=0`, `TPS_STALKWIDE=1`).** The maintainer: "having the hands up just doesn't look cool", and the low creep's answer (hands
+  down by his knees) read as a man picking something up. In the footage he works from, the man creeping has both arms out to his sides
+  with open hands. THE RULE (`close.ts` feeds the animator, `character.ts creepLayer` draws it): under `STALK.low`, bare hands, in his
+  crouch, closing on a man from behind, each hand is 0.3 m outside its own shoulder, 0.2 m under it and 0.16 m ahead of it, open, palm
+  to the floor, elbows out and back. It comes with the sink (all of it once he is `wideBy` 0.35 of the way down, about 2.1 m from the
+  man), in at 4 1/s and out at 14. It is by distance, not by the click: it holds while he waits behind the man and goes with the
+  carriage when no man is in front of him. Upright it is nothing. The stealth pose layer gives the left arm back to the creep by the
+  share shown (it owned that arm through the creep: with it the left hand stayed by his knee and only the right went out). ON in the
+  page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row; a recording from before the key replays with it off. The lab
+  has the toggle and the four numbers. THE CHECK is `stalkwide-check.ts` (`probes.ts stalkwide`, the grab and stealth families;
+  `STALKWIDE_BREAK=1` reds two of its five lines), both stands: out (his hands 1.0 m apart under two metres against 0.6 with the key
+  down, the same before he sinks, neither hand above his neck), waits (still out two seconds after the click is let go; the plain
+  crouch's half a second after the man is taken away), upright, grab (held on frame 29 either way), harness. Judged on CPU stills
+  (`close-stills.ts` scene `stalk-rifle`, the page's stand): it reads as a prowl from the game's camera, and it is wide. One seed: a
+  fixed staging. Nobody has seen it on a GPU.
 - **The grab's disarm, second pass (`HOLD.strip`, `HOLD.bareGrip`; `disarm.ts`, `character.ts`).** The move itself is `HOLD.disarm` (`?disarm=0`,
   `TPS_DISARM=1` with `TPS_HOLDDROP=1`): Sam's right hand takes the gun out of the man's hand 0.2 s into the grab and lets it go at 0.5 s; its voices are
   `docs/agents/sounds.md`'s. Judged on stills, the first pass set the gun down at his thigh (it slid down his leg and lay under his foot) and the held man's
