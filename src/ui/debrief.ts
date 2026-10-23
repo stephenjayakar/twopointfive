@@ -7,6 +7,7 @@
 import { gearText } from '../game/gear';
 import type { Game } from '../game/game';
 import { mountRecap } from './recap';
+import { MYSTERY } from './missions';
 import { quietWords } from '../game/quiet';
 import { debriefOf, fmtEvent, fmtMMSS, pinned, PIN, roomOf, indoors, roomsOf, ROOMS, eventText } from '../game/chronicle';
 import type { Debrief, ChronEvent } from '../game/chronicle';
@@ -69,7 +70,7 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   st('alarms', c.alarms, tone(c.alarms ? 'bad' : 'good'), 'times someone went on alert when nobody else was'); st('floor up', c.esc1 + c.esc2 ? `×${c.esc1 + c.esc2}` : '0', tone(c.esc2 ? 'bad' : c.esc1 ? 'warn' : 'good'), 'times the floor went to heightened / lockdown');
   st('bodies found', c.bodies, tone(c.bodies ? 'warn' : '')); st('KOs', c.kos, '', gearText('enemies you knocked out with a takedown, a choke, a pistol-whip or a ring to the head')); st('kills', c.kills, tone(c.kills ? 'bad' : 'good'));
   st('shots', c.shots, '', `${c.shotsNearMen} of them into or near an enemy`); st('OCP', c.ocps); st('lights shot', c.lightsShot);
-  st('doors kicked', c.kicked, tone(c.kicked ? 'warn' : '')); st('locks picked', c.picked); st('keys', c.keys); st('intel', c.intel, '', `${c.questioned} of ${c.roster} enemies questioned`); st('called in', c.devices, tone(c.devices ? 'warn' : ''), 'a camera or a tripwire radioed you in');
+  st('doors kicked', c.kicked, tone(c.kicked ? 'warn' : '')); st('locks picked', c.picked); st('keys', c.keys); st('intel', c.intel, '', MYSTERY.on ? `${c.questioned} ${c.questioned === 1 ? 'enemy' : 'enemies'} questioned` : `${c.questioned} of ${c.roster} enemies questioned`); /* (the roster is the floor's head count: ui/missions.ts MYSTERY) */ st('called in', c.devices, tone(c.devices ? 'warn' : ''), 'a camera or a tripwire radioed you in');
   if (c.thrown) st('thrown', c.thrown, '', 'smoke and stun canisters, frag grenades, and 40 mm grenades off the launcher'); if (c.hits) st('hits taken', c.hits, 'bad'); if (c.loads) st('checkpoint loads', c.loads, tone('warn')); if (c.blackout) st('blackout', 'used');
   if (c.civSeen || c.civReported || c.civKO || c.civKilled || c.civComplied) { st('civilians saw you', c.civSeen, tone(c.civSeen ? 'warn' : 'good'), 'times the cleaner or the late worker saw you (or you grabbed them)'); st('…and told them', c.civReported, tone(c.civReported ? 'bad' : 'good'), 'a civilian\'s reports that reached the guards, whether she told a guard, called it in, or control called the floor after she got out'); if (c.civComplied) st('told to stay down', c.civComplied); if (c.civKO) st('civilian KOs', c.civKO, 'bad', 'civilians you knocked out, which costs you a lot'); if (c.civKilled) st('CIVILIANS KILLED', c.civKilled, 'bad'); }   // (the civilians' block only on a run that met one — civilians.ts)
   // badges

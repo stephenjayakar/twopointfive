@@ -66,7 +66,7 @@ export interface GuideScript { id: string; ls: string; again: string; auto: bool
 /** THE STEP'S OWN WALKTHROUGH, for any mission whose kit can be picked — kept for comparing, played only when asked for (`?kitguide=1`) */
 export const GENERIC: GuideScript = { id: 'generic', ls: KITGUIDE_LS, again: 'How to pick', auto: false, beats: [
   { id: 'job', row: 'map', done: (_was, now) => now.mapSeen && !now.mapBig,
-    words: ({ needs }) => ({ title: 'The job', text: `Read this before you pick. It shows who holds the floor, and the map${needs?.marked ? ', with a dot where you go in' : ''}.\nPress [M] or click to open the map, and again to close it.` }) },
+    words: ({ needs }) => ({ title: 'The job', text: `Look at the map before you pick${needs?.marked ? '. The dot is where you go in' : ''}.\nPress [M] or click to open it and read the job, and again to close it.` }) },
   { id: 'team', row: 'squad', done: (was, now) => now.squad !== was.squad,
     words: ({ own }) => ({ title: 'Who comes', text: `Press [A] or [D], or click, to set how many come with you.\nThis mission is built for ${sizeWords(own)}.` }) },
   { id: 'kit', row: 'squadkit', done: (was, now) => now.kit !== was.kit && now.kit !== '',   // (a named kit put on — not a card changed by hand, which leaves none lit)

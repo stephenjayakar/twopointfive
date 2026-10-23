@@ -175,7 +175,7 @@ const inside = (a, w) => !!a && a.l >= -0.5 && a.t >= -0.5 && a.r <= w.w + 0.5 &
     await open(page, 'loadout=hostage-rescue&kitguide=0'); g = await read(page);
     check(g.facts.some(f => /^Hostages 2$/i.test(f)) && g.facts.some(f => /^Locked doors 4$/i.test(f)), `${at}: the office's rescue: two hostages, and four locked doors (its staging unlocks the side door)`, g.facts.join(' | ') || 'none');
     await open(page, 'loadout=warehouse-four&kitguide=0'); g = await read(page);
-    check(g.facts.length > 0 && !g.facts.some(f => /[6-9]|\d\d/.test(f)), `${at}: no digit above 5 among the facts (eleven defenders are written out)`, g.facts.join(' | ') || 'none');
+    check(!g.facts.some(f => /[6-9]|\d\d/.test(f)), `${at}: no digit above 5 among the facts (a count past five is written out; the Defenders cell is not drawn: ui/missions.ts MYSTERY)`, g.facts.join(' | ') || 'none');
     if (short) { await open(page, 'loadout=rescue-registry&kitbrief=0&kitguide=0'); const was = await read(page);
       check(kitTop <= was.kitTop + 0.5, `${at}: a short window: the brief takes no height from the kit (it starts where it did under the name alone)`, `the kit starts at ${kitTop.toFixed(0)} px with the brief, ${was.kitTop.toFixed(0)} px without`); }
     await ctx.close();

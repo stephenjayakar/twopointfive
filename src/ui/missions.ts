@@ -45,9 +45,18 @@ export interface Mission {
   /** the group it is listed under (scene/scenarios.ts MISSION_GROUPS: the list draws a heading per group, in that table's order) */
   group: MissionGroup;
   place: string; blurb: string; lean: Lean; untuned: boolean;
-  /** the sheet's 'defenders' cell, in words ('11', '3 holding hostages', '3, and 2 civilians'; '—' where the row does not say) */
+  /** the sheet's 'defenders' cell, in words ('11', '3 holding hostages', '3, and 2 civilians'; '—' where the row does not say). No screen draws it while
+   *  MYSTERY is on: a screen asks defendersShown(), never this */
   defenders: string;
 }
+/** HOW MANY ARE INSIDE IS A MYSTERY. The maintainer, 10-23: "we should also remove all defender counts from the menus, etc., it should be a mystery!" The
+ *  sheet's Defenders cell, the same cell on the Team & kit step (ui/kitBrief.ts) and on the mission's load page (ui/loadbrief.ts) are not drawn, and the
+ *  run tally's intel cell no longer says how many there were to question (ui/debrief.ts). A row's `defenders` is untouched: it is what the stand-up and
+ *  the probes count against. On in the page; `?mystery=0` = the cells as they were. UI only: nothing under src/game reads it and no recording carries it. */
+export const MYSTERY = { on: true };
+try { if (new URLSearchParams(location.search).get('mystery') === '0') MYSTERY.on = false; } catch { /* no page (the harness) */ }
+/** the Defenders cell's words: '—' (which every screen reads as "no cell") while the count is a mystery */
+export function defendersShown(m: Mission): string { return MYSTERY.on ? '—' : m.defenders; }
 export type PickFn = (m: Mission, href: string) => void;
 /** the seams other screens set once: `onPick` replaces the page load (the loadout screen's way in), `startSolo` is the start card's Start (set by ui/menu.ts
  *  only while the real start card is up), `pickLabel` is the sheet's button */
@@ -323,7 +332,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     secs.forEach((x, k) => { const on = k === secOf[sel]; x.h.className = `msec${x.at ? ' rest' : ''}${on ? ' open' : ''}`; x.h.setAttribute('aria-expanded', on ? 'true' : 'false'); x.h.setAttribute('data-count', String((secs[k + 1]?.at ?? list.length) - x.at)); });
     title.textContent = m.title; untuned.style.display = unplayed(m) ? '' : 'none';   // (a mission on the short list does not wear the hand-set label — scene/picks.ts; ?nopicks = as it was)
     place.textContent = m.place; blurb.textContent = m.blurb;
-    fTeam.textContent = teamWordsOf(m); fDef.textContent = m.defenders; fLean.textContent = leanWords(m.lean); fLevel.textContent = m.scenario?.level ? levelWords(m.scenario) : 'office';
+    fTeam.textContent = teamWordsOf(m); fDef.textContent = defendersShown(m); if (fDef.parentElement) fDef.parentElement.style.display = MYSTERY.on ? 'none' : ''; facts.className = MYSTERY.on ? 'mfacts nodef' : 'mfacts';   /* (the cell out of the row: three cells on the old sheet, no row at all where it was the only one — index.html, ui/startpage.ts, ui/kitBrief.ts) */ fLean.textContent = leanWords(m.lean); fLevel.textContent = m.scenario?.level ? levelWords(m.scenario) : 'office';
     for (const [lv, b] of dbtns) { b.className = now === lv ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', now === lv ? 'true' : 'false'); }
     diff.className = diffLive(m) ? 'mdiff' : 'mdiff na';   // (greyed where the pick changes nothing: the solo night, and a quiet mission — its shift is the level's own)
     dnote.textContent = m.scenario?.kind === 'quiet' ? 'a quiet mission uses the level\'s own shift on either setting' : m.scenario ? quietFogAside(() => difficultyWords(now!, squadsHeld(m.scenario))) : 'the night shift is the same on either setting';
