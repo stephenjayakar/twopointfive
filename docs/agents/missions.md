@@ -67,7 +67,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in), not for F. With the old line (F at the held door) the pair stepped in dry on that awake man and BOTH died on 10 of 16 shipped dice (seeds 1 to 8,
   read at six seconds a line and at the script's pace), which was lesson-gate's shipped red (seen on every build looked at, back some hundred steps); with `TPS_WORDNOCAN=0` the
   same sixteen passed with nobody lost, and so do the sixteen on the new line (one can each). F still ends the step. The scripted player gives the can
-  where the hold is the one order (`outsidePlain`) and F where it is the old page (the frozen stand). Headless only: never seen on a GPU, never played
+  where the hold is the one order (`outsidePlain`) and F where it is the old page (the frozen stand), and opens every menu the page's way where the ring
+  stays (`CMDRING.stay`: the squad's key kept down, then the digits), so the ring is driven on a door the pair already holds. The line says "X on it",
+  never "Press X": `keymap.ts keyText` draws the orders key as "hold Q" and folds the word only after "hold" or "with" ("Press hold Q" was printed). Headless only: never seen on a GPU, never played
   by a person. Re-run eight shipped dice (four
   `--hard`) and count `Blue …: → dead` / `Red …: → dead` lines after ANY change to the door tools or these marks: the lesson passes with a man lost. Where the pairs go straight in
   on the word with no can (train-pairs' white house), no defender sees OUT of a door: a man in a far corner with his gun down the room shot the first of each

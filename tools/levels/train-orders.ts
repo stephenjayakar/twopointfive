@@ -151,7 +151,7 @@ export function build() {
       // them in too, but with no can since DOORTOOLS.wordNoCan, and this room's man is awake, aimed and where neither jamb sees him: sixteen shipped dice
       // on the word, both teammates dead on ten; on the can, nobody lost on sixteen. F still ends the step (a player who knows the key is not held up)
       { id: 'thr', line: 'The kitchen. X on its door, 5, then 4: hold at the door', done: or(gave('thresholdHold', 'hut_d'), taken('d')), at: doorD },
-      { id: 'word', line: "They're holding the door. Press X on it, 5, then 2 to send a stun can in first", done: or(gave('bangClear', 'hut_d'), { is: 'word' }, taken('d')), at: doorD },
+      { id: 'word', line: "They're holding the door. X on it, 5, then 2 to send a stun can in first", done: or(gave('bangClear', 'hut_d'), { is: 'word' }, taken('d')), at: doorD },
       { id: 'in3', line: 'When they call clear, walk in', done: and(taken('d'), { is: 'in', area: { ...D } }), at: [16.0, 1, 18.6] },
       // the closer: the one lit door on the street. The marker moves to the barrier once the charge is ordered: the place to watch it from
       { id: 'charge', line: 'The armoury is locked. X on its door, 5, then 3: a charge', done: or(gave('charge', 'hut_c'), taken('c')), at: doorC },
