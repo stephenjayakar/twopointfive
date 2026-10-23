@@ -953,6 +953,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     (`tools/qa/tut-plan-page.cjs`, real keys, the software adapter, the page held between frames): 36 lines pass to the end card; one still of the
     opening drawn there has the four's shadows long across the yard and the plan picture's rings on them. NOT DONE: nobody has played it at dusk and nothing of it has been seen on a GPU; the lesson's marks and plan mode's picture over a
     long shadow were not judged by eye at every step.
+  - **Two of its cards wait for the fight to go quiet** (2026-10-23; `explain.quiet: true` on the cards of 'hall' and 'gates', the frame's
+    `RAILS.cardBeat`, `?cardbeat=0`). The maintainer: a card "should happen a beat after something happens on screen". Those two cards follow a
+    fight he only watches (the guardroom taken, the hall taken), so each is held until his squad's fight has been still for two seconds, to the
+    frame's cap of nine; the cards of 'pick' and 'all' follow an order and a pick and take the plain beat (1.2 s). Lesson prose only: no list, mark
+    or box changed and the level's lived row stands. MEASURED (`lesson-run tut-plan`, the page's stand, with the beat on): 17 of 17 on seeds 1 to 4
+    and hard seed 1, 109.9 to 110.0 s, the wrong plan on seed 1 in 93.7 s. On every one of those runs the two cards come up on the same tick with
+    the mark as without it ('hall' 2.5 s and 'gates' 2.5 s after their rooms' words are logged): by the time a room counts as taken its fight has
+    already been still, so the mark changes nothing the scripted player can show. It is there for a play where the shooting runs on past the take.
+    `tutplan-check` on both stands, `lesson-gate`, `rails-check` and `level-needs --run` on both stands and the real page with real keys (36
+    lines, the software adapter, held between frames) pass. NOT DONE: nobody has played it; a play where a card was in fact held longer was not
+    found or staged, so the held case is the frame's own check's and not this mission's.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
