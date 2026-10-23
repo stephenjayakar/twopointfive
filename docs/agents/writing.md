@@ -176,8 +176,9 @@ a sentence nobody would say.
   NOT RENAMED, the maintainer's call: the kit rows ("Stun canisters", "stun"), the HUD's item name ("stun canister ×2 — goes off …"), the kit
   page's tooltips and notes, the order rows and their refusals ("bang and clear", "no bangs left."), the defenders' "stun charge". So key 4 still
   reads "stun canister ×2" with some in the pouch and "no flashbangs left" with none. SWITCHES: none for the lessons, menus and HUD (no line of
-  them is in a run digest); the spoken lines changed on the new-words side only (`WORDS.on`, words.ts), so with the switch off every line is the
-  line it was. `cues.ts` classes the lockdown reply by its new words ("locked down. box him in", row 1, as "get around him" was). ALSO LEFT: the
+  them is in a run digest); the spoken lines sit behind their own key (`WORDS.guide`, words.ts `wg(now, was)`; `?noguide` off in the page, off on the frozen stand,
+  `TPS_GUIDEWORDS=1` raises it; `guidewords-check`, `GUIDEWORDS_BREAK=1`), so with the key off every line is the line it was and a recording from
+  before the key replays with it off. `cues.ts` classes the lockdown reply by its new words ("locked down. box him in", row 1, as "get around him" was). ALSO LEFT: the
   door notes' "… on your word" (several checks read it), "boot" in the frame rule's spoken lines, the objective row's "player down — press enter
   to restart" (the verdict's word), train-orders' "armoury" (as above). CHECKS: `writing-check`, `lesson-check` on the seven, `export --check`
   on the five regenerated levels and `words-lint`, both stands, green; the probes that name a changed string were moved with it and not run
