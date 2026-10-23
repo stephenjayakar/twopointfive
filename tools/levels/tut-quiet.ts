@@ -495,7 +495,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // (…and a step never becomes impossible: a renderer whose snow reads brighter than the one this was measured on must not hold him at step 2, so a
       //  player well down the lane has passed it whatever the meter says)
       { id: 'dark', line: 'Get out of the light', done: any(all(near(TQ.dark, 1.6), { is: 'meter', which: 'light', below: 0.45 }), near(DEEP, 1.0), down(1)), hold: 0.4, at: mark(TQ.dark) },
-      { id: 'creep', line: 'Stay in the shadow', cue: 'lane', done: any(near(TQ.whistle, 0.7), ...held, down(1)), at: mark(TQ.whistle) },
+      { id: 'creep', line: 'Stay in the shadows', cue: 'lane', done: any(near(TQ.whistle, 0.7), ...held, down(1)), at: mark(TQ.whistle) },
       // ---- the long wall: sound, then hands ----
       // (a beat with a clock: the whole instruction is in the line that is up BEFORE the clock starts, the mark on the place the line means now — his own
       // feet for the whistle; the moment it sounds the next line is up with the mark on the hide. A mark on the hide first sent a new player there to whistle.)
@@ -510,7 +510,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       //  that he doesn't notice the footprints. maybe we should make him stop a bit further away and then turn around for a cigarette break"; "he can stop
       //  further off so long as he's covered the spot with his flashlight". So he looks from the far side of the cross wall and then smokes with his back to
       //  its gap: the level's script, TQ.look and TQ.smoke. The `held` cue tells that script the man is the player's now)
-      { id: 'grab', line: 'When he lights a smoke, sneak up behind him and press [Space] to grab him', explain: { title: 'A whistle brings one man', text: 'He heard that, and he\'s coming to look. Stay behind the wall, out of his light.\nHe\'ll check out the sound and then stop for a smoke, with his back to you. Come around the wall, go up behind him, and press [Space] to grab him.' },
+      { id: 'grab', line: 'When he lights a smoke, sneak up behind him and press [Space] to grab him', explain: { title: 'Whistle to lure a guard', text: 'He heard that, and he\'s coming to look. Stay behind the wall, out of his light.\nHe\'ll check out the sound and then stop for a smoke, with his back to you. Come around the wall, go up behind him, and press [Space] to grab him.' },
         done: any(...held, down(1)), atMan: 'court' },
       { id: 'ask', line: 'Press [Space] to ask him for the code', cue: 'held', done: any(did('chron:codeLearned'), down(1)) },
       { id: 'drop', line: 'Right click to knock him out, or left click to use the knife', allow: ['fire', 'alt'], done: down(1) },
@@ -530,8 +530,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'under', line: 'Stay low and go under the laser beam', done: any({ is: 'in', area: { x0: 20.12, x1: 23.4, z0: 8.62, z1: 16.38 } }, did('act:breakerOff')), at: mark(TQ.under) },
       // ---- the set piece: the mains ----
       { id: 'nv', line: 'Press [N] to turn on night vision', allow: ['nvg'], checkpoint: 'the hall', done: any({ is: 'flag', flag: 'nv' }, down(3)) },
-      { id: 'box', line: 'Press [Space] at the fuse box, then hide behind the wall', done: any(did('act:breakerOff'), down(3)), at: mark(TQ.boxAt) },
-      { id: 'boxman', line: 'Stay hidden until he\'s working at the fuse box, then take him from behind', done: down(3), at: mark(TQ.wait) },
+      { id: 'box', line: 'Press [Space] at the breaker box, then hide behind the wall', done: any(did('act:breakerOff'), down(3)), at: mark(TQ.boxAt) },
+      { id: 'boxman', line: 'Stay hidden until he\'s working at the breaker box, then take him from behind', done: down(3), at: mark(TQ.wait) },
       { id: 'code', line: 'Press [Space] at the keypad to enter his code', checkpoint: 'the counting room', done: any(did('chron:codeEntered'), { is: 'door', door: 'strong', state: 'open' }, { is: 'door', door: 'strong', state: 'broken' }), at: [17.3, 1, 10.6] },
       { id: 'safe', line: 'Press [Space] at the safe to take the ledger', done: { is: 'stage', stage: 'exfil' }, at: front },
       { id: 'out', line: 'Leave by the front door', done: any({ is: 'in', area: { x0: 8.12, x1: 12.3, z0: 11.0, z1: 18.0 } }, { is: 'stage', stage: 'done' }), at: [11.4, 1, 15.1] },

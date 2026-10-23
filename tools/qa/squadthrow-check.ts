@@ -161,7 +161,7 @@ export async function squadthrowCheck(): Promise<boolean> {
       const by = samSpot(R, spot, 4); if (by) R.sam(by); SAMSTUN.on = true;
       const ps = by && floorAt(R, spot) ? R.page(spot) : [], n2 = game.items.items.length; if (ps.length) { R.press('Digit1'); R.step(3); } R.esc();
       const forcedS = def && by ? def.issue(O, team, O.targetAt(spot)) : '—';
-      verdict(!!by && ps.length === 2 && ps[0].off && /you are in it/.test(ps[0].text) && game.items.items.length === n2 && game.doorTools.frags === 2 && forcedS === 'you are in it.' && !ps[1].off && /^bang there · 3 left · too close: you$/.test(ps[1].text),
+      verdict(!!by && ps.length === 2 && ps[0].off && /you(?: are|'re) in it/.test(ps[0].text) && game.items.items.length === n2 && game.doorTools.frags === 2 && /^you(?: are|'re) in it\.$/.test(String(forcedS)) && !ps[1].off && /^bang there · 3 left · too close: you$/.test(ps[1].text),
         'Sam stood four metres from the first spot with a line to it: the frag row is greyed "you are in it.", 1 throws nothing and `issue` called past the menu refuses and spends nothing; the stun row is live and says "· too close: you"',
         `Sam ${by ? p2(by) : 'no place'} · spot ${p2(spot)} · page: ${show(ps)} · forced: '${forcedS}' · frags ${game.doorTools.frags}`);
       SAMSTUN.on = false; R.step(2); const psOff = by ? R.pageAt(spot) : []; R.esc(); SAMSTUN.on = true;
@@ -215,7 +215,7 @@ export async function squadthrowCheck(): Promise<boolean> {
       for (const d of [2, 1.5, 2.5]) for (let k = 0; k < 16 && !spot; k++) { const a = k * Math.PI / 8, p = [hp[0] + Math.sin(a) * d, 0, hp[2] + Math.cos(a) * d], t = O.targetAt(p); if (t.kind === 'floor' && dist(t.at, p) < 0.3 && !game.col.solidBlocked([p[0], 0.9, p[2]], [hp[0], 1.1, hp[2]])) spot = t.at; }
       if (!spot) { verdict(false, 'a spot of floor two metres from a hostage with a line to her', 'none'); return; }
       const direct = ST.squadFragCatches(game, spot, spot);
-      const ours = [...team.map((m: any) => m.callsign), 'you'], oursIn = /you are in it|is in it/.test(direct ?? '');
+      const ours = [...team.map((m: any) => m.callsign), 'you'], oursIn = /you(?: are|'re) in it|is in it/.test(direct ?? '');
       // (who of ours is inside it is asked first: taken out of the question, the hostage is what is left)
       let alone = direct; if (oursIn) { const away = samSpot(R, spot, null); if (away) R.sam(away); for (const m of team) { const q = samSpot(R, spot, null); if (q) place(m, [q[0] + 0.8, 0, q[2]]); } alone = ST.squadFragCatches(game, spot, spot); }
       // …and through the order: a thrower with an arc is stood for it, if the floor has such a place more than nine metres off

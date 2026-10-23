@@ -730,6 +730,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WORDS.on': 'TPS_WORDS=1',
   'WORDS.doors': 'TPS_DOORNAMES=1',
   'WORDS.radioHome': 'TPS_RADIOHOME=1',
+  'WORDS.guide': 'TPS_GUIDEWORDS=1',
   'UNSEEN.on': 'TPS_UNSEEN=1',
   'HOLDFIRE.on': 'TPS_HOLDFIRE=1',
   'SILENT.stackSet': 'TPS_SILENTSET=1',
