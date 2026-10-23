@@ -196,12 +196,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that list, in the order a level is made (before you touch anything · the idea · the file · rooms, doors, walls · lived-in rooms · light, hour, weather ·
   the mission in the file · the team and its kit · what the player reads · measure it, then say it), every need with what was SEEN when it was learnt and
   the command that checks it; what no tool can ask is marked by eye or by play. `bun run tools/qa/level-needs.ts [name …] [--run] [--jobs 4] [--skip need,…]
-  [--quiet] [--md f] [--json f]` asks the seventeen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
-  kit picture · look · lived · floor · ground · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
+  [--quiet] [--md f] [--json f]` asks the eighteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
+  kit picture · look · lived · floor · ground · leak · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
   The floor itself stays `tools/qa/map-check.ts`'s (structure, size, nav, the scripted runs): `--run` runs that with `--no-runs` and the level's other own
   checks as they stand (export `--check`, level-lint, door-size, second-way-check, lived-check, kitview-plan, level-names-check, floor-order-check,
   quiet-check, lesson-check), four at a time: about 13 s for one level, 90 to 120 s for all. Exit 1 on a FAIL; a NOTE never fails. `NEEDS_BREAK=1` plants
-  gaps in fifteen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
+  gaps in sixteen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
   (exit 1; a MISSED one exits 0). THREE NEEDS ARE NEW CHECKS: `doorway` (a wall decal across a door's opening: the dado rule had no check), `roof` (a drawn
   slab in `weather.ts roofsOf`'s band: the floodlit shed's), `kit` (as issued, through the game's own cards and pouches, at every size the row offers, who
   comes with nothing but a gun; the team's size is set before a card is read, so an issue shared out over the men who come is read as shared). AS THE 36
@@ -379,3 +379,51 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   every step: green, and red as soon as a key is struck from the table (tried: `menuLine`, `noTap`). CHECKED 10-23: 437 lines green on both stands (the
   tool reads files and floors; the stand does not reach it); the six tutorial levels by name green, the ledger's with 21 words and lists off its row's commit.
   NOT DONE: `BASE_REVS` made one commit (after the branches that still write to it have joined); a base per level for the levels that have no row.
+- **The level skill names where light can be read through a wall (`leak`, the eighteenth need of `tools/qa/level-needs.ts`, 10-23).** The maintainer, on
+  shots of the solo night's manager's office, dark, its shelves warm against the wall of the lit store: "some weird light leakage on bookshelf?", "seems
+  like irradiance cache leak through wall? and showing up in specular?", then "we debugged something similar on pass -- i wonder if we should have a static
+  check we can do on levels that catches this and put that in the levels skill". The same shelves and wall as 08-12 (`docs/agents/render.md`, the gather's
+  bounce read; 10-20 on a man by a wall, `BOUNCE_WALLS`). THE MEASURE (`leakReads`, in plan, from the file alone): the cache's lattice (1 m, `render/rc.ts`),
+  walls cut as `tools/qa/bouncewalls-check.ts` cuts them (shadow-casting, floor to ceiling, long and thin; its numbers typed again, a turned wall kept)
+  and the line of each door the file does not hold open; lamps as the file burns them (a light not authored off; a flat fixture authored on that
+  `game.ts` stands an area light in for, its brightest channel times its face) and the sky where no roof is. A probe is lit by a lamp in range with no
+  wall between (a spot too: its bounce fills its room), or by the sky. For every box a ray can land on that is not the building's own, and every loose
+  prop: a point every 0.5 m on each side face and the top, the read point one spacing along the normal, its four probes with their shares; a probe
+  counts for a light when a wall parts it from the face (a hand's width short of the wall's ends), the light lights it, and the same light does not
+  reach the face. A thing is NAMED at a share of 0.25, by the lamp before the sky. It is STRONG when that lamp's figure there (share times strength
+  over distance squared, no unit) is 0.5 or more and more than the face has of its own from the lamps that reach it directly, a spot in its cone
+  only: a lamp close behind the wall and the room's own lamp looking elsewhere, which is the manager's shelves. The need is a NOTE when a level has a
+  strong one (the count, and the four room-and-lamp pairs with most of it), else a PASS that still says how many are named. WHAT IT FOUND, build
+  66bed95, both stands the same: over the 56 level files 6,982 things named (10 on `tut-pair` to 296 on `block-gwot`), 1,726 of them strong (117 on
+  `bazaar`); of 42 levels 39 are noted and 3 pass (`registry`, `test-rooms`, `train-pairs`); no look twin differs from its plain file. The solo office:
+  144 named, 54 strong, 18 of those the manager's unit by `storage_bulb` through the wall at x = 30 (0.12 m thick); the tool lists the break room's
+  things by the street lamp before it. So it is NOT A PASS MARK and not something a level dresses away: anything stood within a metre of a wall with
+  light behind it is named, which is how rooms are furnished, and a room shipped dark beside a lit one is strong. It says where to look; the mend is
+  the renderer's, and this number does not move when the shaders do (it reads no shader: `bouncewalls-check.ts` is the tool held to their text).
+  `NEEDS_BREAK=1` plants a shelf, a wall and a bulb, and asks 23 made rooms: named (a bulb behind the wall, a shut door, a spot either way, a panel
+  on, a wall's end, open sky behind, a bulb each side, a loose prop), not named (the room's own bulb, three metres off, an open gap, a door held open,
+  no light, out of range, authored off, a bulb seen round the wall's end, a roof over both sides, the same sky both sides), strong or not (a dark
+  room: strong; its own bulb nearer: not; a weak far bulb: not; its own spot looking away: strong). NOT HELD by the red path: a face shut in a wall.
+  NOT IN THE MEASURE: heights (a plan: a wall under the ceiling is no wall), a lamp the game switches on later, gloss, how bright either room is. Two
+  reviews found 23 things; left as they are: the wall rule and the footprint test are written a second time, and 0.5 is a first number. The cause of
+  the 10-23 shots was with the renderer's owner when this was written, and the rule may narrow to it. Nothing here was seen on a GPU.
+  NARROWED TO THE CAUSE the same morning (the renderer's owner, from the code and the level's numbers, with no GPU either): the read is the traced
+  reflections' (`reflect.wgsl shadeReflHit`: the cache one spacing along the HIT's normal, trilinear, no wall test), so the face that leaks is one a
+  mirror reflects within half a cell of a ceiling-high wall (a board's top, an upright's side, the floor at the wall's foot), and it shows on bare
+  metal, whose reflection carries its whole colour, and at a few hundredths on any other finish. So `LeakRead` has `mirror` (the box or its paint is
+  `metal`, and its roughness is under the widest `rt.maxRough` of the presets that trace, read from `ui/quality.ts`: 0.55, ultra) and the need
+  (`leakLine`) is a NOTE only where a STRONG thing is a MIRROR; every other count is in the PASS line, with the mirrors named by the sky alone (never
+  strong: the sky has no figure here) as "look by day". Both stands the same on build 66bed95: 238 strong mirrors over the 56 files (25 on
+  `barracks`, the most); 27 plain files are noted and `killhouse` by its look twin only, so 28 of 42 levels, and 14 pass (`defuse`, `kit-yard`,
+  `pass`, `quiet-yard`, `registry`, `test-rooms`, five `train-*`, `tut-pair`, `tut-plan`, `tut-solo`); 12 look twins read differently from their
+  plain files (the look's `galv`, `tin`, `iron`). The solo office: 10, 6 of them the manager's unit by `storage_bulb`. The red path asks 35 things
+  of made rooms now: a smooth steel shelf, one in a metal paint and one just under the cut are mirrors; no finish, rough metal, metal with no
+  roughness, smooth and not metal, just over the cut, a box that overrides its metal paint are not; and of the line itself, that a strong shelf
+  of no metal raises no note, a strong steel one does, and a steel one with its own bulb nearer does not (with the note put back on `strong` the
+  red path goes green, tried). A third review found 8 things; mended: the cut and the matte default are read, not typed; the line is held; the
+  skill names the preset to look on and a box marked metal itself. STILL NOT IN IT, and a NOTE-free level can show it: a thing of another finish
+  that a mirror beside it reflects (the hit is shaded whatever its finish: the review counted 770 strong things within 2 m of a mirror), mirror
+  metal the pass does not measure (the building's own groups, so every `glassFrame` in a wall and a door's frame; a drawn-only box; a steel door
+  leaf, for `doors` carry no finish in this tool; a prop), and the weaker share of the same blend in the diffuse gather and on presets with no
+  traced reflections, which the named and strong counts are the place to look for. A mend for the reflections was being handed in when this was
+  written; this number will not move with it.

@@ -26,6 +26,8 @@ const { stripRows } = await import(`${ROOT}/src/game/cues.ts`);
 const { placeIn } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { NETQUIET } = await import(`${ROOT}/src/game/netquiet.ts`);
+const { RUNNER, runnerBreak, runnerFled, runnerOf } = await import(`${ROOT}/src/game/runner.ts`);
+const { MORALE } = await import(`${ROOT}/src/game/morale.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -181,5 +183,28 @@ export async function lastStandFew(): Promise<boolean> {
     F.verdict(all.length === 8 && at3 === 0, 'eight staged, three up: nothing is said (three is more than a third)', `${all.length} staged · ${at3} lines or checks with three up`);
     F.verdict(at2[0]?.kind === 'check1' && lastStandReport(g).stats.up0 === 2, 'two up: the radio check goes out', at2.slice(0, 3).map(l => `${l.who}: ${l.text}`).join(' · '));
   } finally { Object.assign(LASTSTAND, was); }
+  return F.done();
+}
+
+/** A MAN WHO HAS DROPPED HIS GUN AND RUN IS NO MAN OF THE RADIO CHECK (laststand.ts alive / fitGd ask runner.ts runnerOwns). Found in a play session on the
+ *  block: a green man saw his leader shot, dropped his gun, was cornered in his room — and then LED the last stand's check and closed it counting himself.
+ *  Here: the block, eight staged, three left up by hand, one of the three made to run (runner.ts runnerBreak, with the runner and morale raised for the run
+ *  on a stand that holds them off). Two fighting men are then the last few: the check goes out, and the man who ran neither calls it, nor is asked for by
+ *  name, nor answers, nor is counted. */
+export async function lastStandFled(): Promise<boolean> {
+  const F = family('laststand-fled: a man who has dropped his gun and run is no man of the radio check');
+  const was = { ...LASTSTAND }, ron = RUNNER.on, mon = MORALE.on;
+  try {
+    const W = await rig(2, { regroup: true, callOut: true }, 'block'), g = W.game; RUNNER.on = MORALE.on = true; steps(W, 1);   // (after the stand has been raised: a frozen stand holds both off)
+    const all = g.nightBreach.hostiles.slice(); for (const h of all) if (up(g).length > 3 && h.state !== 'dead') killGuard(g, h, [1, 0, 0], true);
+    steps(W, 2); const before = said(g).length + lastStandReport(g).stats.checks;
+    const ran = up(g).find((h: any) => runnerBreak(g, h)) ?? null; steps(W, 40);
+    const R = lastStandReport(g), lines = said(g), name = ran?.callsign ?? '?', counts = lines.flatMap(l => [...l.text.matchAll(/(\d+) of us/g)].map(m => Number(m[1])));
+    const his = lines.filter(l => l.who === name), named = lines.filter(l => l.who !== name && l.text.includes(name));
+    F.verdict(!!ran && runnerFled(ran) && ran.state !== 'dead' && before === 0, 'three up and nothing said; one of them is made to run: his gun is out of his hand and he is not dead', `${name}: ${ran ? `phase ${runnerOf(ran)?.phase}, fled ${runnerFled(ran)}, ${ran.state}` : 'nobody would run'} · ${before} lines or checks before`);
+    F.verdict(R.stats.checks >= 1 && R.stats.up0 === 2 && lines[0]?.kind === 'check1' && lines[0].who !== name, 'the two who still fight are the last few: the check goes out, called by one of them', `checks ${R.stats.checks}, up at the start ${R.stats.up0} · ${lines.slice(0, 2).map(l => `${l.who}: ${l.text}`).join(' · ')}`);
+    F.verdict(his.length === 0 && named.length === 0 && !R.known.includes(name), 'the man who ran says nothing on the net, is not asked for by name and is not among the men known up', `his lines ${his.length}${his[0] ? ` ("${his[0].text}")` : ''} · lines naming him ${named.length}${named[0] ? ` ("${named[0].text}")` : ''} · known up: ${R.known.join(', ') || 'nobody'}`);
+    F.verdict(counts.every(n => n <= 2), 'no count spoken is more than the two who fight', counts.length ? `counts spoken: ${counts.join(', ')}` : 'no count was spoken in the forty seconds (nothing to hold)');
+  } finally { Object.assign(LASTSTAND, was); RUNNER.on = ron; MORALE.on = mon; }
   return F.done();
 }

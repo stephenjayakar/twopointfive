@@ -2,7 +2,7 @@
 // dither → LDR. Debug views that are not scene-referred (albedo, normals, depth, hints) pass straight through.
 @group(1) @binding(0) var hdrTex: texture_2d<f32>;
 @group(1) @binding(1) var bloomTex: texture_2d<f32>;     // half-res, top of the upsampled chain
-struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32 };   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
+struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32, nvOval: f32 };   // nvOval: how much of the tube's dark eyepiece edge is drawn (0 = none, the whole screen is picture; 1 = the oval; passes.nvOval)   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
 @group(1) @binding(2) var<uniform> post: PostParams;
 @group(1) @binding(3) var volTexP: texture_2d<f32>;    // the volumetric pass's react texture at half the internal size — .g = the SMOKE-ONLY transmittance of the pixel's ray (haze excluded: a far wall in clear air stays sharp)
 @group(1) @binding(4) var blur1Tex: texture_2d<f32>;   // this frame plainly box-downsampled to a quarter size then Gaussian-blurred there (passes.diffBlur[1]: energy-conserving, band-limited — its texel lattice cannot print through a bilinear read)
@@ -78,7 +78,7 @@ fn agx(cin: vec3f) -> vec3f {
   if ((frame.flags & FLAG_NIGHTVISION) != 0u && frame.post.x > 0.5) {
     // image-intensifier tube (after twopointfive): a single-channel photon counter with huge log gain — near-black detail
     // lifts into view, anything bright slams into the ceiling; scintillation noise loudest where the signal is weakest;
-    // faint row banding from the scan; white phosphor (P45) with a touch of green; hard eyepiece edge. Uses the bloomed
+    // faint row banding from the scan; white phosphor (P45) with a touch of green; an eyepiece edge only where post.nvOval asks for one. Uses the bloomed
     // HDR colour so light sources still flare.
     let lum = max(dot(color * frame.exposure, vec3f(0.2126, 0.7152, 0.0722)), 0.0);
     let g = max(frame.post.y, 1.0);
@@ -92,7 +92,7 @@ fn agx(cin: vec3f) -> vec3f {
     let hot = mix(vec3f(1.0), vec3f(0.55, 1.0, 0.65), phos);
     var col = phosphor * sig + hot * smoothstep(0.75, 1.0, sig) * 0.55;
     let radial = distance(pixf * post.invOut, vec2f(0.5)) * 2.0;
-    col = col * (1.0 - smoothstep(0.62, 0.95, radial));
+    col = col * (1.0 - clamp(post.nvOval, 0.0, 1.0) * smoothstep(0.62, 0.95, radial));
     c = linearToSrgb(clamp(col, vec3f(0.0), vec3f(1.0)));
   } else {
     c = agx(color * frame.exposure);   // (film grain is added after FXAA, in the final blit, so the AA does not smooth it away)
