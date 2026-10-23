@@ -462,6 +462,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.SHOWWHY) SHOWWHY.on = false;   // (a file from before a teammate showed why he was not acting: nobody waved, squeezed, raised a fist or said what held him)
   if (!k.tables.FIRE) FIRE.on = false;   // (a file from before a brazier burned: its lamp was steady, and its meters read a steady light)
   if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.fog === undefined) FIRE.fog = false;   // (… one from before a fire was drawn under the fog of war: no flame over ground nobody sees — the picture only)
+  if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.look === undefined) { FIRE.look.shimmer = 0; FIRE.look.plume = 0; FIRE.embers = 0; }   // (… one from before the flame's look had numbers: no shimmer over it, no smoke drawn off its tips, no particle embers — the picture only)
   if ((k.tables.FIRE as Partial<typeof FIRE> | undefined)?.size === undefined) FIRE.size = 0;   // (… and one from before its lamp was made as big as the flame: the size the level gave it — a meter's shadow ray stops that much short of the lamp)
   if (!k.tables.ROWSET) ROWSET.on = false;   // (a file from before a row had an hour and weather of its own: it was started at its query's)
   if (!k.tables.STARTLE) STARTLE.on = false;   // (a file from before a calm man started at the first sight of you: its men went for their guns the frame they knew, and none ran from it)
