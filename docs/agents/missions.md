@@ -788,9 +788,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     error: Tab puts the mode away and he stands, the walk keys walk him to each spot, the line after a walk is the one that puts the mode up again, and with the mode
     closed each next ring is on the picture (the first and third) or its mark is pinned to the picture's edge with the metres to it (the second, 12 m off: the
     objective mark's own rule, `ui/overlay.ts`).
-    KNOWN, NOT MENDED: (1) Shift with the command key does nothing while a walk key is held (`rails.ts` gate and `planShift`: out of a walk it is the sprint's side),
-    and here sprint and the key's own order are both locked, so a hand that arrives in a ring still holding a walk key and presses for the mode gets nothing until it
-    lets go: the frame's and the squad's rule, claimed to their owners. (2) The box shrinks as the camera comes in and turns with it; the hall's and the gates' view
+    KNOWN: (1) Shift with the command key did nothing while a walk key was held (`rails.ts` gate and `planShift`: out of a walk it is the sprint's side),
+    and here sprint and the key's own order are both locked, so a hand that arrived in a ring still holding a walk key and pressed for the mode got nothing until it
+    let go. MENDED the same day by the frame's own rule (`RAILS.planWalk`, `?planwalk=0` = as it was; its bullet "Plan mode opens on the move" below), and the page
+    run asks it at step 'pick'. NOT MENDED: (2) The box shrinks as the camera comes in and turns with it; the hall's and the gates' view
     tests were tried turned and zoomed by a reviewer and held, but a player zoomed far in has to zoom out or walk nearer, and no line says so. (3) With `?tabback=0` the
     back key is Esc and the walk lines still say Tab (as the solo mission's does); Shift with the command key closes the mode too. (4) He can walk into a room nobody
     has taken and be shot there: he has no trigger, and nothing but the lines keeps him on his spots. (5) A ring is 0.9 m either way and its mark fades inside 1.6 m, as
