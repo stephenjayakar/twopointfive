@@ -78,7 +78,7 @@ import { sideOut, sideSeen, sideLocked } from './gunslots';   // (called inside 
 import { gunString, gunStringGap, gunStringGrow, gunBlindGap } from './gunroles';   // (called inside tickOp only)
 import { AIMCOST, feetHold } from './aimcost';
 import { friendInCone, ffHeld } from './friendlyfire';
-import { w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** The module's switches and the few numbers that are not a side's. */
@@ -721,7 +721,7 @@ export class RoomFight {
     if (!h.weapon.fire()) return;
     fireWeapon(g, c, v3.mad(c.muzzle, c.gunDir, 8), false, { steady: true, spread: BLIND.spread, blind: true });
     this.blindRounds++;
-    if (!this.drillSaid && this.drilled()) { this.drillSaid = true; g.say(h, w('can\'t see — shoot through the doorway!', 'can\'t see — put it down the door!')); }   // (the cue, once a staging: the first drilled man to fire blind says what they are doing)
+    if (!this.drillSaid && this.drilled()) { this.drillSaid = true; g.say(h, wg('can\'t see — shoot through the doorway!', 'can\'t see — put it down the door!')); }   // (the cue, once a staging: the first drilled man to fire blind says what they are doing)
   }
   private drilled(): boolean { return drilledOn(this.g); }   // (DRILLED above)
   private drillSaid = false;
@@ -1016,7 +1016,7 @@ export class RoomFight {
         if (!this.called.has(best)) { this.called.add(best); const rel = wrapAngle(v3.yawTo(c.pos, best.char.pos) - c.bodyYaw); this.speak(O, rel > 0.5 ? 'contact left.' : rel < -0.5 ? 'contact right.' : 'contact front.', 0.4); }
         this.note(gd, `eyes on ${best.callsign}`);
       } else {
-        if (O.tgt && O.tgt.state === 'dead') { this.speak(O, O.tgt.wound ? (O.tgt.killerId === c.id ? w('he\'s hit — he\'s down and out of the fight.', 'he\'s hit — down, gun\'s out of it.') : 'he\'s down, breathing.') : O.tgt.killerId === c.id ? 'tango down.' : 'he\'s down.', 0.6); }
+        if (O.tgt && O.tgt.state === 'dead') { this.speak(O, O.tgt.wound ? (O.tgt.killerId === c.id ? wg('he\'s hit — he\'s down and out of the fight.', 'he\'s hit — down, gun\'s out of it.') : 'he\'s down, breathing.') : O.tgt.killerId === c.id ? 'tango down.' : 'he\'s down.', 0.6); }
         O.fell = !!O.tgt && O.tgt.state === 'dead'; O.lostAt = g.time; O.kept = O.tgt && O.tgt.state !== 'dead' ? { h: O.tgt, track: O.track, t: g.time } : null;
       }
       O.tgt = best; O.lineT = 0; O.blockT = 0;   // (how long a friend has stood in his line is counted per man he is on)

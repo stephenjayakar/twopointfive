@@ -41,7 +41,7 @@ import { followPath, stepAlongPath, notGettingAnywhere } from './guards';
 import { SUPPRESSION, flinching } from './suppression';
 import { simRandom } from '../math/dice';
 import { defenderWords } from './teams';
-import { w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 
 export const GUNHOLD = {
   /** the whole rule. Module default OFF (the frozen stand); the page raises it (src/host/profile.ts pageSwitches; `?nogunhold` holds it off) */
@@ -287,7 +287,7 @@ export const GUNHOLD_NOW: Record<string, string> = {
 export function gunHoldPool(gd: Guard, kind: keyof typeof LINES): string[] { const own = defenderWords(gd) ? GUNHOLD_DEFENDER_LINES[kind] : null; return own && own.length ? own : LINES[kind]; }
 function bark(g: Game, gd: Guard, K: Known, kind: keyof typeof LINES, radio = false): boolean {
   if (g.time - K.saidT < 1.5) return false; K.saidT = g.time;
-  const pool = gunHoldPool(gd, kind), was = pool[Math.floor(simRandom() * pool.length) % pool.length]; g.say(gd, w(GUNHOLD_NOW[was] ?? was, was), radio); return true;
+  const pool = gunHoldPool(gd, kind), was = pool[Math.floor(simRandom() * pool.length) % pool.length]; g.say(gd, wg(GUNHOLD_NOW[was] ?? was, was), radio); return true;
 }
 
 // ---------------------------------------------------------------- his feet

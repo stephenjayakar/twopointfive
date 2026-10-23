@@ -31,7 +31,7 @@ import type { OrderDef, OrderTarget, SquadOrders, Assignment } from './orders';
 import { doorWords } from './orders';
 import { WAND, wandFits, wandLens, wandFov, wandPanMax, wandThrough } from './wand';
 import { kitOf } from './kit';
-import { w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 
 export const WAND_ORDER = 'wandLook';
 /** looks ordered · lenses gone live · looks ended by the leaf moving */
@@ -69,8 +69,8 @@ function spotOn(g: Game, d: Door, side: 1 | -1) { return g.doors.workSpot(d, onF
 /** who of `men` takes it, and where he kneels: the nearest carrier who can walk to the door's face (the men's own, as the menu dealt it) */
 function pick(g: Game, S: SquadOrders, men: Guard[], t: OrderTarget): { gd: Guard; side: 1 | -1; spot: { pos: Vec3; yaw: number } } | string {
   if (t.kind !== 'door') return 'not a door.';
-  const d = t.door; if (d.off) return 'no door left.'; if (d.def.steel) return 'steel: no gap under it.'; if (!wandFits(d)) return w("it's not shut.", 'it is not shut.');
-  const has = men.filter(carries); if (!has.length) return w("nobody's carrying a wand.", 'no wand on them.');
+  const d = t.door; if (d.off) return 'no door left.'; if (d.def.steel) return 'steel: no gap under it.'; if (!wandFits(d)) return wg("it's not shut.", 'it is not shut.');
+  const has = men.filter(carries); if (!has.length) return wg("nobody's carrying a wand.", 'no wand on them.');
   const spot = spotOn(g, d, t.side);
   let best: Guard | null = null, bd = Infinity;
   for (const gd of has) { if (S.reach(gd, spot.pos) !== null) continue; const k = flat(gd.char.pos, spot.pos); if (k < bd) { bd = k; best = gd; } }
