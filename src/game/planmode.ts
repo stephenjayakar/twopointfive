@@ -444,10 +444,12 @@ export function planRestore(S: SquadOrders, s: PlanSnap | null | undefined): voi
   if (s.up && CMDRING.planRts) { const p = S.g.player.char.pos; P.look = s.look ? v3c(s.look) : [p[0], 0, p[2]]; P.aim = s.aim ? v3c(s.aim) : null; }   // (a file from before the view was the hand's: it starts on him)
 }
 
-/** the picture (null: nothing to draw — the mode down and no chain touched within `planShowSecs`) */
+/** the picture (null: nothing to draw — the mode down and no chain touched within `planShowSecs`). A tutorial mission's SKY SEAT is drawn as the mode up
+ *  (rails.ts planUp, RAILS.skyPlan: the frame, its word, every man's ring) with the mode itself down: no pick box, no mark for the parked player */
 export function planView(S: SquadOrders): PlanView | null {
   const P = S.plan, g = S.g; if (!CMDRING.plan || !CMDRING.on || !S.active || g.player.down) return null;
-  if (!P.up && !(P.chains.length && g.time - P.showT < CMDRING.planShowSecs)) return null;
+  const sky = !P.up && !!g.rails?.planUp;
+  if (!P.up && !sky && !(P.chains.length && g.time - P.showT < CMDRING.planShowSecs)) return null;
   const now = S.recipients(), at = (m: Guard): Vec3 => [m.char.pos[0], 0, m.char.pos[2]];
   const chains: PlanView['chains'] = [];
   for (const C of P.chains) {
@@ -461,6 +463,6 @@ export function planView(S: SquadOrders): PlanView | null {
     });
     chains.push({ tone: S.toneOf(men), from, stops });
   }
-  return { up: P.up, drag: P.up ? P.drag : null, sam: P.up && P.look ? [g.player.char.pos[0], 0, g.player.char.pos[2]] : null, men: P.up ? S.men('all').map(m => ({ at: at(m), tone: S.pairOf(m) ?? undefined, picked: now.includes(m) })) : [], chains, key: DOORTOOLS.blowKey.replace(/^Key/, ''),
+  return { up: P.up || sky, drag: P.up ? P.drag : null, sam: P.up && P.look ? [g.player.char.pos[0], 0, g.player.char.pos[2]] : null, men: P.up || sky ? S.men('all').map(m => ({ at: at(m), tone: S.pairOf(m) ?? undefined, picked: now.includes(m) })) : [], chains, key: DOORTOOLS.blowKey.replace(/^Key/, ''),
     aim: P.up && P.rdown?.drag ? { from: [P.rdown.t.at[0], 0, P.rdown.t.at[2]], to: [P.rdown.to[0], 0, P.rdown.to[2]] } : null };
 }

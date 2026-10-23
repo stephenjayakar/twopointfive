@@ -65,9 +65,9 @@ export const TEAMPACE = {
   /** two runs of one man this close together are one (s) */
   gap: 1,
 };
-export type RunWhy = 'follow' | 'blast' | 'cover';
+export type RunWhy = 'follow' | 'blast' | 'cover' | 'told';
 /** runs taken, by reason, and the seconds spent at them (read by the checks and the tallies; nothing in the game reads it) */
-export const TEAMPACE_STATS = { follow: 0, blast: 0, cover: 0, secs: 0 };
+export const TEAMPACE_STATS = { follow: 0, blast: 0, cover: 0, told: 0, secs: 0 };
 export const TEAMPACE_DEBUG: { log?: (s: string) => void } = {};
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TEAMPACE_BREAK ?? '') === '1'; } catch { return false; } })();
 
@@ -184,6 +184,13 @@ export function teamDash(g: Game, gd: Guard, to: Vec3, d: number): number | null
   if (was && same && t - was.t < T.dashEvery) yes = was.yes && d > 0.6;
   else { const on = !!was && same && was.yes; yes = teamDashNow(g, gd, to, d, on ? 0.6 : T.dashM, on); dash.set(gd, { t, x: to[0], z: to[2], yes }); }
   return yes && teamLeave(g, gd, 'cover', run) ? run : null;
+}
+/** A RUN THE MISSION TELLS HIM TO MAKE (orders.ts, of a man walking to the mark an order gave him; rails.ts runs: a tutorial step's `onWay.run` — the way
+ *  back to the trucks once the job is done): the pace to run the leg at, or null. One more reason, under the same leave as the others: `own` off, a quiet
+ *  man and a hurt one still walk, and the last stride onto the mark is walked */
+export function teamTold(g: Game, gd: Guard, d: number): number | null {
+  if (d <= 0.6 || !g.rails?.runs(gd) || !teamSlow(g, gd)) return null;
+  const run = g.tune.playerSprint; return teamLeave(g, gd, 'told', run) ? run : null;
 }
 /** the pace a teammate leaves a grenade at (frag.ts, squadthrow.ts — what teamCap gives a man fragRunning): the flee's own with the rule on and a run
  *  allowed him, the old cap without */
