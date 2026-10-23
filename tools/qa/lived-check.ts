@@ -80,8 +80,9 @@ const LEVEL_BASE: Record<string, string> = {
   // door, light or prop moved
   'tut-plan.json': '1955e5c1e',
 
-  // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
-  'tut-quiet.json': '87c7cebef',
+  // the ledger's store teaches the rifle's launcher: the chest beam moved to the hall man's back, the hand-to-hand step gone and six in its place (the laser
+  // named inside the door, the rifle, the swap's card, a mark to shoot from, the shot, the hands' key), its own card for the player, a sixth checkpoint
+  'tut-quiet.json': 'f9a3f60e0',
 
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
   // brazier's melt patch laid round (eight turned slabs where two square ones were)
