@@ -1044,17 +1044,59 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   round until that spot is within `STALK.joltFace` (50) degrees of his nose, or is onto him (the whole duck), inside `joltSecs` (0.6 s),
   and only while Sam's hands are still empty and idle, he stalks nobody else, he has not gone a pace from the spot and nothing solid is
   between them; else never. The man who is onto him while the stalk is on (out `him`) still gets the whole duck at once. A recording of the
-  fifth pass (a `jolt`, no `joltFace`) replays with 180: at any turn, on that frame. (2) `?stalkpolish=0` on the page puts the fourth to
+  fifth pass (a `jolt`, no `joltFace`) replays at any turn, on that frame (by `joltAtOnce` since the seventh pass, below). (2) `?stalkpolish=0` on the page puts the fourth to
   sixth passes' numbers down together, by `stalkPolish(false)`: the same function journal.ts calls for a recording from before them
   (`turnIn`, `cornerShow` off, `catchLong` 1, `jolt` 0, and `holdPolish`: `HOLD.wayShape` off, the dip, the sway and the room between the
-  heads at 0, the arch -11). A plain address writes them up again (the tables' own numbers as the modules have them, so the page's boot
-  also undoes a lab slider on these). They ride the journal's tables: a recording made with the word replays with it. No frozen row and no
-  word for each pass alone: all of it sits under `STALK.on` (`TPS_STALK=1` on the frozen stand) and bare hands; with `TPS_STALK=1` and
-  the MOVES pass raised the frozen stand gets it. Say if a pass wants its own word. CHECK: stalk-check `out` (the turn to face him ducks; a
+  heads at 0, the arch -11). A plain address writes them up again (since the seventh pass, below: `POLISH_UP`'s and `HOLD_POLISH_UP`'s
+  numbers, the tables themselves being down; the page's boot also undoes a lab slider on these). They ride the journal's tables: a recording made with the word replays with it. No word for each
+  pass alone (say if a pass wants its own); the frozen stand's hold came with the seventh pass, below. CHECK: stalk-check `out` (the turn to face him ducks; a
   quarter turn does not, then does once he comes round or is onto him, not after `joltSecs`, not through a wall) and `harness` (the three
   ages of recording, the word against the first of them over all twelve numbers, a plain address after it), both stands, `STALK_BREAK=1`
   fails both, one seed; `ONLY=polish node tools/qa/stalk-page.cjs` reads the word on the real page. The lab has rows for `joltFace` and
   `joltSecs`. Seen on CPU stills only, never on a GPU, never played.
+- **The stalk's seventh pass: the polish is a hold of its own, down is the stalk as it first stood, and the fifth pass's recording ducks
+  on its frame (10-23; `stalk.ts`, `character.ts`, `standup.ts`, `profile.ts`).** Mends from two reviews, nothing new to see on the page
+  with the polish up. (1) THE HOLD. The fourth to sixth
+  passes were up in the modules and only rode `STALK.on`, so a frozen run raised with `TPS_STALK=1` got them and no word held them off.
+  Now the twelve numbers are DOWN in the tables (`STALK.turnIn`, `cornerShow` off, `catchLong` 1, `jolt` 0; `HOLD.wayShape` off,
+  `lunge.dip`, `lunge.back`, `sway.m`, `sway.twist`, `apart.side`, `apart.tip` 0, `yank.arch` -11) and the page's numbers live in
+  `POLISH_UP` (stalk.ts) and `HOLD_POLISH_UP` (character.ts): a tuned number from the lab's 'copy them' line goes THERE. SWITCH:
+  `stalkPolish(true)` at the page's boot unless `?stalkpolish=0`. FROZEN: down, twelve `FROZEN_HOLDS` rows with the one word
+  `TPS_STALKPOLISH=1` (each acts only under the stalk or, for the hold's pose and the bare reach, bare hands: `TPS_STALK=1`,
+  `TPS_NOKNIFE=1`; a frozen run with `TPS_NOKNIFE=1` alone therefore draws the first bare hands again); so `TPS_STALK=1` alone on a
+  frozen run is the stalk as it first stood. SHIPPED: up; `TPS_STALKPOLISH=0` puts it down there. A headless
+  tool that raises `STALK.on` itself on the frozen stand and means the stalk as the page has it also calls `stalkPolish(true)` after
+  every stand-up (stalk-check does); close-stills runs on the shipped stand. (2) THE REPLAY. The sixth pass sent every out `turned`
+  through `brokeDuck`, whose wall test the fifth pass never had: a fifth-pass recording (a `jolt`, `joltFace` read as 180) whose man
+  turned on the very frame something solid came between them would not duck where it had. journal.ts now raises `STALK.joltAtOnce` for such a recording (a boolean
+  nothing else raises; off in the table, and off for a sixth-pass recording, which has `joltFace` and not the key): the duck is given at
+  once on the out's frame, with no test, as the fifth pass did. `joltFace` 180 alone, the top of the lab's slider, is still any turn by
+  `brokeDuck`'s own tests. CHECK: stalk-check `harness` (the twelve stand down on frozen and
+  up on shipped, the rows carry the word, either word has the say) and `out` (with `joltAtOnce` a quarter turn with a wall between ducks on
+  that frame, 0.23 against 0.00 with the mend taken out; at `joltFace` 180 alone it does not), both stands, `STALK_BREAK=1` fails both, one seed; shipped-check holds the two
+  stands to exactly the listed rows. (3) DOWN IS THE STALK AS IT FIRST STOOD, BONE FOR BONE. It was not, since the fourth pass: the
+  spring's clock and the sway's still ran with their numbers at 0 and let the hold's leg solve in (feet pinned, a knee up to 7 cm off
+  through the step in, knife or bare), and the fourth pass's retuned bare hands (`READY_BARE.L` / `.R`) were drawn whatever the switch.
+  Now a clock enters the leg block only with a number to move (`HOLD.lunge.dip` / `.back`, `HOLD.sway.m` not 0), and `HOLD.wayShape`
+  off draws `READY_BARE_WAS`, the two hands as they were. So `?stalkpolish=0`, a frozen run and a recording from before the fourth pass
+  all show the first stalk; a recording made between the fourth pass and this one with the polish DOWN (the page's word) replays with
+  the legs and hands of this build, which moves no bone the game reads (shins, hands). The down numbers have one home, the tables: `POLISH_DOWN` and
+  `HOLD_POLISH_DOWN` read them as the files load. CHECK: stalk-check `legs` (polish down, the grab and 3 s of the bare hold: the shins
+  where they are with the two clocks stopped, 0.000 mm; `STALK_BREAK=1`: 62 mm), and `tools/qa/stalk-pose.ts`, new: it writes every
+  named bone of both men for one fixed stalk, grab and hold, from whatever tree it is run in, and `--diff` compares two such files.
+  Run in a copy of the tree from before the fourth pass and in this one with `--down`: THE SAME, 411 frames, 44 bones, no bone 0.1 mm
+  apart, bare hands and with the knife (before these mends: the right hand 36 cm off, a shin 6.5 cm). That comparison is by hand, on
+  the shipped stand, one scene; what stands is stalk-check `legs`, which also holds `READY_BARE_WAS`'s eight numbers to the letter and
+  that `HOLD.wayShape` off draws them (at the tell's whole reach, where the way in's shape is spent, the right hand is 36.2 cm from
+  the fourth pass's on both stands; 0.0 with the choice taken out). (4) A KNEE TWITCH IN THE HOLD, in
+  the page since the fourth pass: the leg solve was asked for by the sway's sine itself, so on the one tick in each half swing where
+  the sine reads zero (every 0.95 s at 60 Hz) it dropped out and his right knee jumped 3 cm and back. It is asked for by the sway being
+  on now (`swOn`). With the polish up, stalk-pose against the build before this pass differs on exactly those ticks (three in four
+  seconds of hold) and nowhere else; stalk-check `legs` holds it (three seconds of the settled bare hold: no shin moves 5 mm in a
+  frame, 1.5 mm measured, 32 mm with the old gate; the break drops the solve for one tick). STILL THERE, older than the stalk: the leg
+  solve is on or off, never eased, so where it starts or stops (the gun swapped in with a man in the arm, the hold ending, the haul's
+  end) a knee still moves about 2 cm in one frame, once. sneaklab-check now raises the polish with the stalk, as the rule above asks.
+  Nobody has seen or played anything of this pass; nothing of the stalk has been seen on a GPU.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
