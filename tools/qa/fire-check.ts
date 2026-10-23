@@ -105,21 +105,26 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         verdict(A.sw && dI < 1e-9 && dp < 1e-9 && de < 1e-9 && Math.abs(A.g.time - at.time) < 1e-9 && at.I !== base,
           'load — a checkpoint put back: the lamp, its place and the coals are that moment\'s the frame it loads, not the steady lamp',
           `saved with the lamp at ${at.I.toFixed(3)} (authored ${base}); 91 frames later, loaded: the lamp ${l.intensity.toFixed(3)} (${dI.toExponential(1)} off), its place ${dp.toExponential(1)} m off, the coals ${de.toExponential(1)} off`);
-        // ---- … and the host's side of a load: the book of what was asked of the mixer is dropped (host/putback.ts's line for a save in memory; a file's load and a
-        //      restart drop it in their own paint, dt 0), so the bed is asked for again on the next frame and the voice of the abandoned moment lets go
+        // ---- … and the host's side of a load: who abandons the moment drops the book of what was asked of the mixer (game.ts restartEncounter, which a
+        //      checkpoint's load goes through; host/putback.ts for a save in memory), so the bed is asked for again on the next frame that moves the clock
+        //      and the voice of the abandoned moment lets go
         { const log = A.W.audioLog as any[], asked = (from: number) => log.slice(from).filter(c => c.name === 'fireBed').length, held = () => log.filter(c => c.name === 'fireBed' && !!c.opts?.follow?.()).length;
-          const hLoad = held(); let n = log.length; A.step(1); const b1 = asked(n), h1 = held();   // (the checkpoint just put back above painted the fire with dt 0)
+          const hLoad = held(); let n = log.length; A.step(1); const b1 = asked(n), h1 = held();   // (the checkpoint just put back above dropped the book: the abandoned moment's voice has let go already)
           n = log.length; A.step(3); const idle = asked(n);
           // (the host's REAL put-back, host/putback.ts, as the page's `saves.onPutBack` calls it. The harness's engine has no GPU books to forget: the calls it lacks are
           //  stood in as no-ops for this one call, and FIREBOOK_BREAK=1 runs it with the fire's line undone, which must fail this line)
           const { hostAfterPutBack } = await import(`${ROOT}/src/host/putback.ts`);
           const lacking: string[] = [], E: any = A.g.engine, G: any = A.g, noop = () => { };
           for (const [o, k] of [[E.world, 'forgetSent'], [E.lights, 'forgetSent'], [G.chars, 'forgetSent'], [G.decals, 'touch'], [G, 'rehand'], [E, 'resetTaa'], [E, 'invalidateWorldCache']] as [any, string][]) if (o && typeof o[k] !== 'function') { o[k] = noop; lacking.push(k); }
-          n = log.length; const book = E.fireShown; hostAfterPutBack(A.g); if (process.env.FIREBOOK_BREAK === '1') E.fireShown = book;
+          n = log.length; const books = E.hostBooks; hostAfterPutBack(A.g); if (process.env.FIREBOOK_BREAK === '1') E.hostBooks = books;
           const hDrop = held(); A.step(1); const b2 = asked(n), h2 = held();
           verdict(A.sw && hLoad === 0 && b1 === 1 && h1 === 1 && idle === 0 && hDrop === 0 && b2 === 1 && h2 === 1,
-            'load — … and the host\'s book of the bed is dropped with it: the voice of the abandoned moment lets go and one bed is asked for on the next frame (a checkpoint\'s or a restart\'s own paint; a save in memory put back by the host)',
-            `the checkpoint put back: ${hLoad} held, ${b1} asked for on the next frame (${h1} held), ${idle} more in the three frames after · the host's own put-back (host/putback.ts hostAfterPutBack${lacking.length ? `; ${lacking.length} GPU books the harness lacks stood in` : ''}): ${hDrop} held the moment after, ${b2} asked for on the next frame (${h2} held)`); }
+            'load — … and the host\'s book of the bed is dropped with it: the voice of the abandoned moment lets go and one bed is asked for on the next frame (a checkpoint put back; a save in memory put back by the host)',
+            `the checkpoint put back: ${hLoad} held before a frame has run, ${b1} asked for on the next frame (${h1} held), ${idle} more in the three frames after · the host's own put-back (host/putback.ts hostAfterPutBack${lacking.length ? `; ${lacking.length} GPU books the harness lacks stood in` : ''}): ${hDrop} held the moment after, ${b2} asked for on the next frame (${h2} held)`);
+          // ---- … and a frame that moves no clock is not a load: the page updates with dt 0 for the kit page's still, a card's frozen still and a pause
+          n = log.length; for (let i = 0; i < 3; i++) { FIRE.on = A.sw; A.W.step(0); } const hStill = held(); A.step(2); const b3 = asked(n), h3 = held();
+          verdict(A.sw && hStill === 1 && b3 === 0 && h3 === 1, 'still — three frames that move no clock (the kit page\'s still paint, a card\'s frozen still): the bed\'s voice is kept and none is asked for when the clock moves again',
+            `${hStill} held through the stills, ${b3} asked for in the two frames after (${h3} held)`); }
       }
     }
     // ---- smoke through a solver
@@ -133,7 +138,10 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
       verdict(B.sw && mine(B).length === 0, 'smoke — … and with no solver drawing, no source at all', `${mine(B).length} sources`);
       // … and the book of the smoke is the host's (fire.ts FireShown, on the engine): the game that smoked for twelve seconds and the one nothing drew are the same game
       { const RB = await import(`${ROOT}/src/game/rollback.ts`); B.step(6 * 60);
-        const all: string[] = RB.stateDiff(A.g, B.g, 64), own = all.filter(d => d.startsWith('fire.')), cut = all.some(d => d.startsWith('(the shapes part')) || all.length >= 64, P = fireShown(A.g), Q = fireShown(B.g);
+        const all: string[] = RB.stateDiff(A.g, B.g, 64, false, true), own = all.filter(d => d.startsWith('fire.')), cut = all.some(d => d.startsWith('(the shapes part')) || all.length >= 64, P = fireShown(A.g), Q = fireShown(B.g);
+        // (the two games stand in ONE process: compared by their OWN state, stateDiff's fifth word, without the modules' variables both share. The compare walks on
+        //  past a value that differs and past a shape that holds nothing new; where the two walks fall out of step it says so in a '(the shapes part here …' line and
+        //  nothing after is compared — read here as NOT PROVEN, and so is a list cut at its 64 rows)
         // (what the fire writes outside its own table, asked by name: the lamp, its place, what the steady readers are told, the coals. Another module's own word for the solver is its own: named, not judged)
         const la = A.t.light, lb = B.t.light, ba = A.t.boxes.length ? A.g.engine.world.statics[A.t.boxes[0]] : null, bb = B.t.boxes.length ? B.g.engine.world.statics[B.t.boxes[0]] : null;
         const lamp = la.intensity === lb.intensity && la.pos.every((v: number, i: number) => v === lb.pos[i]) && la.steady?.intensity === lb.steady?.intensity && (!ba || !bb || ba.emissive.every((v: number, i: number) => v === bb.emissive[i]));
@@ -146,8 +154,15 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
         q.pin('verylow'); D.step(4 * 60); const none = mine(D).length, drawn = (D.g.engine.fires ?? []).length;
         q.pin('low'); D.step(1); const atOnce = mine(D).length - none; D.step(3 * 60); const after = mine(D).length - none;
-        verdict(D.sw && none === 0 && drawn === 1 && atOnce === 1 && after >= 3, 'smoke — … and on the graphics preset that sheds it (verylow put on: settings.fireSmoke), the fire burns and files no source; low put on, it smokes the same frame',
-          `verylow: ${none} sources in four seconds, ${drawn} fire handed to the renderer · low: ${atOnce} source the frame it was put on, ${after} three seconds on`); }
+        for (let i = 0; i < 3; i++) { FIRE.on = D.sw; D.W.step(0); } D.step(2); const still = mine(D).length - none - after;   // (… and frames that move no clock file nothing, then or when it moves again)
+        verdict(D.sw && none === 0 && drawn === 1 && atOnce === 1 && after >= 3 && still === 0, 'smoke — … and on the graphics preset that sheds it (verylow put on: settings.fireSmoke), the fire burns and files no source; low put on, it smokes the same frame',
+          `verylow: ${none} sources in four seconds, ${drawn} fire handed to the renderer · low: ${atOnce} source the frame it was put on, ${after} three seconds on · ${still} more through three frames that move no clock and the two after`);
+        // … and a restart (the clock does not move with it; the solver is emptied) drops the book: a source and a bed on the next frame, the old voice let go
+        { const log = D.W.audioLog as any[], beds = () => log.filter(c => c.name === 'fireBed').length, held = () => log.filter(c => c.name === 'fireBed' && !!c.opts?.follow?.()).length;
+          D.step(20); const s0 = mine(D).length, b0 = beds(), h0 = held(), t0 = D.g.time; FIRE.on = D.sw; D.g.restart(); const tR = D.g.time, hR = held(); D.step(1);
+          const s1 = mine(D).length - s0, b1 = beds() - b0, h1 = held(); D.step(5); const s2 = mine(D).length - s0, b2 = beds() - b0;
+          verdict(D.sw && h0 === 1 && hR === 0 && s1 === 1 && b1 === 1 && h1 === 1 && s2 === 1 && b2 === 1, 'restart — the encounter restarted mid-second: the fire files its smoke and asks for its bed on the next frame, once, and the old voice lets go',
+            `the clock ${t0.toFixed(3)} before, ${tR.toFixed(3)} after · held ${h0} before, ${hR} the moment after · the next frame: ${s1} source, ${b1} bed asked for (${h1} held) · five frames on: ${s2} and ${b2}`); } }
       K.smoke.on = false;
       try { const C = await rig(true, true); C.step(4 * 60); const drawn = (C.g.engine.fires ?? []).length;
         verdict(C.sw && mine(C).length === 0 && drawn === 1, 'smoke — … and with the smoke alone put off (the page\'s ?firesmoke=0), the fire burns and files no source', `${mine(C).length} sources · ${drawn} fire handed to the renderer`); }

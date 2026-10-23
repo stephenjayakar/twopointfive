@@ -25,6 +25,10 @@ import type { FireRecord } from '../render/passes';
 import type { FireShown } from '../game/fire';
 import type { SmokeShown } from '../game/smokebreak';
 
+/** the host books, one member a module (see `hostBooks` below): `fire` = game/fire.ts FireShown, the open fires' smoke filed and bed voices asked for ·
+ *  `smokeBreak` = game/smokebreak.ts SmokeShown, a smoke break's thread filed with the solver and puffs owed to the pool (dropped too when its switch goes off;
+ *  a thread the solver let go is filed afresh whoever dropped it) */
+export interface HostBooks { fire?: FireShown; smokeBreak?: SmokeShown }
 export interface HostApi {
   // ---- per frame
   /** the CPU box world: statics, dynamics, raycasts, upload (scene/boxes.ts) — host-neutral */
@@ -57,12 +61,10 @@ export interface HostApi {
   breathShown?: BreathShown;
   /** the open fires to draw this frame (game/fire.ts writes the list; the engine hands it to the composite — render/passes.ts setFires). Absent on a stand-in */
   fires?: FireRecord[];
-  /** the fires' book of what was filed with the smoke solver and asked of the mixer (game/fire.ts FireShown): the host's, so in no snapshot. Dropped (set
-   *  undefined) when a save in memory is put back (host/putback.ts) and by a load's own paint: the smoke and the bed are then asked for afresh */
-  fireShown?: FireShown;
-  /** a smoke break's book of what was filed with the smoke solver and the particle pool (game/smokebreak.ts SmokeShown): the host's, so in no snapshot.
-   *  Dropped when a save in memory is put back (host/putback.ts) and when the switch goes off; a thread the solver let go is filed afresh either way */
-  smokeShown?: SmokeShown;
+  /** THE HOST BOOKS: what a game module remembers of the HOST's side of its work (what it filed with the smoke solver, asked of the mixer, handed to the
+   *  particle pool) — the host's, so in no snapshot. One bag, so that one line drops them all when a save in memory is put back (host/putback.ts): a module's
+   *  new book is a member of HostBooks, read as `engine.hostBooks?.x` and written as `(engine.hostBooks ??= {}).x = …`, and needs no line of its own there */
+  hostBooks?: HostBooks;
   /** the light rig swapped wholesale (day ↔ night): the radiance cache re-primes (game/lighting.ts calls it `?.()`) */
   invalidateWorldCache?(): void;
   /** the level was put back to its start under the picture (game/cleanrestart.ts): every temporal history and the radiance cache start from nothing, as on a boot's
