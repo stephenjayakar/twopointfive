@@ -801,6 +801,7 @@ export class DoorTools {
         return stackable(t, men); },
       issue: (_S, men, t, o) => this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord('bang', men, t) : this.thresholdThen('bang', men, t)) : this.issue('bangClear', men, t, !!o?.onWord) });
     S.register({ id: 'charge', page: TOOLS_PAGE, label: t => t.kind === 'door' && this.looseOn(t) ? 'stand off · in behind the charge' : t.kind === 'door' && this.chargeOn(t.door) ? `blow the charge${OWNCHARGE.on ? this.closeWords(this.chargeOn(t.door)!) : ''}` : `breach with a charge · ${this.charges} left`, targets: ['door'], ack: ['copy.', 'on it.'],
+      gone: (_S, t) => t.kind === 'door' && !!t.door.def.steel && !this.chargeOn(t.door),   // (orders.ts OrderDef.gone: a steel door takes no charge — the flat ring does not offer one)
       valid: (_S, t, men) => {
         if (t.kind !== 'door') return false;
         if (this.looseOn(t)) return this.standoffFits(men, t, true);   // (owncharge.ts: a charge the player set by hand, from its own face: they stand off on it)
@@ -903,6 +904,7 @@ export class DoorTools {
     { const big = BIGSLOT.on && BIGSLOT.shut && this.roster.some(m => carriesHammer(m) || (m.state !== 'dead' && kitBig(m) === 'shotgun'));
       if (big !== this.bigRow) { this.bigRow = big; g.orders.unregister(BIG_ORDER);
         if (big) g.orders.register({ id: BIG_ORDER, page: TOOLS_PAGE, hotKey: BIG_KEY, label: t => `${this.bigWord(t, g.orders.recipients(t))} and clear`, targets: ['door'], ack: ['on it.', 'breaching.'], onWord: true,
+          gone: (_S, t) => t.kind === 'door' && (isOpen(t.door) || !!t.door.def.steel),   // (orders.ts OrderDef.gone: nothing to breach, or no way through — the flat ring does not offer it)
           valid: (_S, t, men) => { if (t.kind !== 'door') return false; if (isOpen(t.door)) return "it's open."; if (t.door.def.steel) return 'steel. no way through.';
             if (!men.some(m => carriesHammer(m) || (SHOTGUN.on && m.state !== 'dead' && kitBig(m) === 'shotgun'))) return 'nobody here carries one.';
             if (SILENT.kicks && !SILENT.toolsLoud && squadSilent(g) && !silentUrgent(g)) return wg("not while we're silent.", 'not while we are silent.');   // (with SILENT.toolsLoud the row is one of silent.ts LOUD_ROWS: marked LOUD, and picking it is the squad going loud)
@@ -3768,6 +3770,20 @@ export class DoorTools {
     for (const op of this.ops) if (op.onWord && op.phase === 'ready') out.push(`${S.whoWords(op.men)} ready on your word · ${doorWords(op.door)}`);   // (what matters first: the panel clips a long line's tail)
     for (const op of this.ops) if (op.thr?.hold && op.phase === 'thr') out.push(`${S.whoWords(op.men)} ${op.thr.told ? 'holding on your word' : 'working the threshold'} · ${doorWords(op.door)}${S.big ? '' : ` — ${F} goes`}`);   // (the four's key line is the word's own: wordNote)
     for (const w of this.words) if (isNaN(w.go1)) { const late = this.ops.filter(o => o.word === w && o.hold < 1); if (late.length) out.push(`word given · waiting for ${[...new Set(late.map(o => S.whoWords(o.men.filter(m => m.state !== 'dead'))))].join(' + ')}`); }
+    return out;
+  }
+  /** (ui/corner.ts, HANDRING.corner: the corner panel keeps of the squad only a line a key gives, and has no heading over a door's row) what
+   *  hudNotes and a door's heading say that the corner would otherwise lose, each as a key and what a press of it does now, or under no key (''):
+   *  a set charge while the squad's key by itself blows it, with who it would catch; a set charge that key does not blow so (his own, or one that
+   *  goes with the word) only while it would catch somebody, as the warning it is; the small squad's men held at a threshold, once they have called it. A separate reader,
+   *  not a change to hudNotes: the block's strings stay what every stand's checks read. Read by the page's panel only. */
+  cornerNotes(): { key: string; text: string }[] {
+    const out: { key: string; text: string }[] = [], S = this.g.orders, F = DOORTOOLS.blowKey.replace('Key', '');
+    const word = DOORTOOLS.wordOnKey && S.big && this.waitingAny(this.wordMen()).length > 0;
+    for (const c of this.set) { const close = OWNCHARGE.on ? this.closeWords(c).replace('too close:', 'TOO CLOSE:').replace('behind the door:', 'BEHIND THE DOOR:') : '';
+      if (!word && !this.onPendingWord(c) && this.keyIs(c)) out.push({ key: F, text: `blow the charge · ${doorWords(c.door)}${close}` });
+      else if (close) out.push({ key: '', text: `charge set · ${doorWords(c.door)}${close}` }); }
+    if (!S.big) for (const op of this.ops) if (op.thr?.hold && op.phase === 'thr' && op.thr.told) out.push({ key: F, text: `go · ${S.whoWords(op.men)} waiting · ${doorWords(op.door)}` });   // (only once they have called: a key's line while they still work the threshold invites the press before their call)
     return out;
   }
   /** … and the word, while somebody is waiting on it: the key that gives it, to whom — or, with the orders going to somebody else, who to turn to (a set
