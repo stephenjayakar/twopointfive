@@ -275,9 +275,38 @@ export async function railsCheck(): Promise<boolean> {
         fire('keydown', { code: 'KeyW', key: 'w' }); const fresh = inp.pressed.has('KeyW');                               // (down again with no repeat in it: its key-up was lost)
         keysOk = held && kept && gone && mouse && rep && fresh; keysWhy = `held ${held} · kept while down ${kept} · let go by the next key ${gone} · by the mouse ${mouse} · a repeat is no press ${rep} · a key down again is one ${fresh}`;
       } catch (e) { keysWhy = `threw: ${String(e).slice(0, 120)}`; } finally { for (const n of names) { if (had[n] === undefined) delete G[n]; else G[n] = had[n]; } }
-      verdict(spread && off.length === 0 && on.includes('stack') && !!ask && !ask.watch && /stack/.test(ask.line) && wrongGiven && wrong?.line === ask.line && !wrong?.watch && !!plain && !plain.watch && !!aft?.watch && aft.line === 'They stack up on the door' && !!again && !again.watch && again.line === ask.line && !!gate?.watch && /hold the gate/.test(gate.line) && keysOk,
+      verdict(spread && off.length === 0 && on.includes('stack') && !!ask && !ask.watch && /stack/.test(ask.line) && wrongGiven && wrong?.line === ask.line && !wrong?.watch && !!plain && !plain.watch && !!aft?.watch && aft.line === "They're stacking up on the door" && !!again && !again.watch && again.line === ask.line && !!gate?.watch && /holding the gate/.test(gate.line) && keysOk,
         'the second play\'s notes hold: the roadblock\'s rounds land over many places and none by a man; Shift down with the command key on the door gives the stack order (and nothing with the rule off, as it was); the line then says what the men are doing, and asks again when nothing has come of it; the gate\'s line is one to watch; the page lets go of a Shift the system says is up',
         `the fire: ${marks.length} marks in 14 s over ${bins.size} metres, the busiest ${(100 * top / Math.max(1, marks.length)).toFixed(0)}% of them, the nearest to a man ${near.toFixed(1)} m · an order to the road on the door's step: the line "${wrong?.line}"${wrong?.watch ? ' (to watch)' : ''} · a keyless ask is ${plain?.watch ? 'a line to watch' : 'an ask'} · Shift + the key: rule off [${off.join(' ')}], on [${on.join(' ')}] · the line: "${ask?.line}" → "${aft?.line}"${aft?.watch ? ' (to watch)' : ''} → "${again?.line}" · the gate: "${gate?.line}"${gate?.watch ? ' (to watch)' : ''} · the keys: ${keysWhy}`); }
+    // ---- the third play's notes (tut-sky): the sky seat is drawn as plan mode is; the last step's men run back to the trucks
+    { const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, men = R.squad();
+      const { planView } = await import(`${ROOT}/src/game/planmode.ts`), { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), { TEAMPACE } = await import(`${ROOT}/src/game/teampace.ts`);
+      R.run(0.5);
+      // (plan mode is a switch of its own, held off on the frozen stand: raised here for the question, the mode itself never put up)
+      const c0 = { on: CMDRING.on, plan: CMDRING.plan }, sp0 = RAILS.skyPlan; let pic: any = null, off: any = 'unread';
+      try { CMDRING.on = CMDRING.plan = true; pic = planView(g.orders); RAILS.skyPlan = false; off = planView(g.orders); } finally { CMDRING.on = c0.on; CMDRING.plan = c0.plan; RAILS.skyPlan = sp0; }
+      const toned = pic ? pic.men.filter((m: any) => !!m.tone).length : 0;
+      verdict(g.rails.skyOn && !g.orders.plan.up && !!pic && pic.frame === true && pic.up === false && pic.men.length === men.length && men.length === 4 && toned === 4 && !pic.sam && !pic.drag && pic.chains.length === 0 && off === null,
+        'the sky seat is drawn as plan mode is, with the mode down: its frame is up, each of the four men has his ring in his pair\'s colour, there is no mark for the parked player and no pick box; with RAILS.skyPlan off there is no such picture',
+        `the mode ${g.orders.plan.up ? 'UP' : 'down'} · the picture ${pic ? `frame ${pic.frame}, says the mode is ${pic.up ? 'up' : 'down'} · ${pic.men.length} rings, ${toned} in a pair's colour · player's mark ${pic.sam ? 'drawn' : 'none'}` : 'none'} · switch off: ${off === null ? 'none' : 'still drawn'}`);
+      // the way out: nobody runs before the order, every man sent to the trucks runs once it is given, none with the switch off, none at another step
+      const ko = L.steps.findIndex((T: any) => T.id === 'out'), To = L.steps[ko], count = () => men.filter((m: any) => g.rails.runs(m)).length;
+      g.lesson.i = L.steps.findIndex((T: any) => T.id === 'move'); R.run(0.3); R.command(YARD); R.run(5);   // (off the trucks first: a man holding beside the mark is under an order to it already)
+      g.lesson.i = ko; R.run(0.3); const before = count();
+      R.command(To.at as number[]); R.run(0.4); const told = count(); let top = 0; for (let i = 0; i < 150; i++) { R.run(1 / 60); for (const m of men) top = Math.max(top, m.speed); }
+      // (each asked on the tick after it is set: the frame says once a tick whether the step's order is out)
+      const wr = RAILS.wayRun; let offRun = -1; try { RAILS.wayRun = false; R.run(2 / 60); offRun = count(); } finally { RAILS.wayRun = wr; } R.run(2 / 60);
+      const r0 = To.onWay.run; let unasked = -1; try { To.onWay.run = false; R.run(2 / 60); unasked = count(); } finally { To.onWay.run = r0; } R.run(2 / 60);
+      const again = count(), paced = !!TEAMPACE.on;   // (the team's own pace is a newer rule: where the stand holds it off the legs keep their old cap, and only the frame's answer is asked)
+      // a man with somebody in his sights does not run (teampace.ts teamTold, as a run to cover): asked of the rule with the fight's answer forced
+      const { teamTold } = await import(`${ROOT}/src/game/teampace.ts`), own = Object.prototype.hasOwnProperty.call(g.fight, 'engaged'), e0 = g.fight.engaged; let free = -1, fought = -1;
+      try { free = men.filter((m: any) => teamTold(g, m) !== null).length; g.fight.engaged = () => true; fought = men.filter((m: any) => teamTold(g, m) !== null).length; } finally { if (own) g.fight.engaged = e0; else delete g.fight.engaged; }
+      // (a man the roadblock has in a fight on this floor is not given the run: at least one is)
+      verdict(To?.onWay?.run === true && before === 0 && told === men.length && again === men.length && (!paced || (top >= TEAMPACE.runAt && free >= 1 && fought === 0)) && offRun === 0 && unasked === 0,
+        'the job done, the squad runs back: on the last step nobody runs before the order, every man of the squad is told to run once it is given and (where the team\'s pace is the rule\'s) is at a run inside two and a half seconds, and none of them while he has a man in his sights; nobody with RAILS.wayRun off, nobody when the step does not ask',
+        `told to run: ${before} before the order · ${told} of ${men.length} after · top ${top.toFixed(1)} m/s${paced ? ` (a run is ${TEAMPACE.runAt}) · the rule gives a run to ${free}, to ${fought} with a man in his sights` : ' (the pace rule is off here)'} · switch off ${offRun} · the step not asking ${unasked}`);
+    }
+
     // ---- the gate's beat is short (tut-sky): once the squad sets in the yard the roadblock's men come DOWN THE ROAD for the gate (the script's `direct`
     //      walk, through the gap in their own sandbags) and the fight is over in seconds. Left to the covered-lane price they go round the whole halt, which
     //      is what the maintainer sat through ("this beat is too long, unclear what to do"). On the floor the mission has now the road is the one way from the

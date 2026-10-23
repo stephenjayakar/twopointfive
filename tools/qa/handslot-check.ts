@@ -75,8 +75,8 @@ export async function handSlotCheck(): Promise<boolean> {
       const codes = () => `\` ${K.gameCode('Backquote') || '∅'} · \\ ${K.gameCode('Backslash') || '∅'} · E ${K.gameCode('KeyE') || '∅'} · 0 ${K.gameCode('Digit0') || '∅'}`;
       const on = K.gameCode('Backquote') === 'Digit0' && K.gameCode('Backslash') === 'Backquote' && K.gameCode('KeyE') === '' && K.gameCode('Digit0') === '' && BOARD.every(c => K.gameCode(c) === c);
       const caps = K.capNow('Digit0') === '`' && K.capNow('Backquote') === '\\' && K.keyCap('E') === '`';
-      const w1 = K.keyText('E puts it away. A grab needs empty hands'), w2 = K.keyText('no questions over a gun — E holsters it, then Space asks him'), w3 = K.keyText('Esc pauses · ` opens the debugger (every knob)'), w4 = K.keyText('E', true);
-      const words = w1 === '` puts it away. A grab needs empty hands' && w2 === 'no questions over a gun — ` holsters it, then Space asks him' && w3 === 'Esc pauses · \\ opens the debugger (every knob)' && w4 === '`';
+      const w1 = K.keyText('E puts it away. A grab needs empty hands'), w2 = K.keyText('press E to holster the gun first, then Space to question him'), w3 = K.keyText('Esc pauses · ` opens the debugger (every knob)'), w4 = K.keyText('E', true);
+      const words = w1 === '` puts it away. A grab needs empty hands' && w2 === 'press ` to holster the gun first, then Space to question him' && w3 === 'Esc pauses · \\ opens the debugger (every knob)' && w4 === '`';
       const seenOn = codes();
       const r = K.bindKey('Digit0', 'KeyK'), moved = r.ok && K.gameCode('KeyK') === 'Digit0' && K.gameCode('Backquote') === '' && K.capNow('Digit0') === 'K' && K.keyText('E puts it away') === 'K puts it away' && K.keysChanged();
       const kept = store.get('twopointsix.keys') ?? ''; K.resetKeys(); const reset = K.gameCode('Backquote') === 'Digit0' && !K.keysChanged() && store.get('twopointsix.keys') === undefined;

@@ -45,9 +45,18 @@ export interface Mission {
   /** the group it is listed under (scene/scenarios.ts MISSION_GROUPS: the list draws a heading per group, in that table's order) */
   group: MissionGroup;
   place: string; blurb: string; lean: Lean; untuned: boolean;
-  /** the sheet's 'defenders' cell, in words ('11', '3 holding hostages', '3, and 2 civilians'; '—' where the row does not say) */
+  /** the sheet's 'defenders' cell, in words ('11', '3 holding hostages', '3, and 2 civilians'; '—' where the row does not say). No screen draws it while
+   *  MYSTERY is on: a screen asks defendersShown(), never this */
   defenders: string;
 }
+/** HOW MANY ARE INSIDE IS A MYSTERY. The maintainer, 10-23: "we should also remove all defender counts from the menus, etc., it should be a mystery!" The
+ *  sheet's Defenders cell, the same cell on the Team & kit step (ui/kitBrief.ts) and on the mission's load page (ui/loadbrief.ts) are not drawn, and the
+ *  run tally's intel cell no longer says how many there were to question (ui/debrief.ts). A row's `defenders` is untouched: it is what the stand-up and
+ *  the probes count against. On in the page; `?mystery=0` = the cells as they were. UI only: nothing under src/game reads it and no recording carries it. */
+export const MYSTERY = { on: true };
+try { if (new URLSearchParams(location.search).get('mystery') === '0') MYSTERY.on = false; } catch { /* no page (the harness) */ }
+/** the Defenders cell's words: '—' (which every screen reads as "no cell") while the count is a mystery */
+export function defendersShown(m: Mission): string { return MYSTERY.on ? '—' : m.defenders; }
 export type PickFn = (m: Mission, href: string) => void;
 /** the seams other screens set once: `onPick` replaces the page load (the loadout screen's way in), `startSolo` is the start card's Start (set by ui/menu.ts
  *  only while the real start card is up), `pickLabel` is the sheet's button */
@@ -63,7 +72,7 @@ const LS = 'twopointsix.mission';   // the row last started on this machine: the
  *  but `?solo`, which only keeps the start card shut. The shift is three guards and two civilians (tools/qa missions probe counts them on a plain boot). */
 export const SOLO_KEY = 'solo';
 export const SOLO_NIGHT: Mission = { id: 'solo-night', title: 'Solo night', scenario: null, squad: 0, group: 'quiet-alone', place: 'The office, after dark', lean: 'quiet', untuned: false, defenders: '3, and 2 civilians',
-  blurb: 'Alone on the office floor: reach the server room, pull the drive from the marked rack, leave by the fire exit. Lights, noise and cameras are the game.' };
+  blurb: 'You\'re alone on the office floor. Reach the server room, pull the drive from the marked rack and leave through the fire exit. Watch out for lights, noise and cameras.' };
 
 const LEAN_OF_KIND: Record<ScenarioEntry['kind'], Lean> = { nightbreach: 'either', roomclear: 'loud', rescue: 'loud', quiet: 'quiet' };
 /** THE GROUP A ROW IS LISTED UNDER: its own (`group`), else by what it is — a quiet mission alone or as two, a rescue on the clock, and any other squad's
@@ -187,19 +196,19 @@ export function waySearch(href: string, way: number): string {
 }
 /** the Way in row's line under its buttons */
 export function wayNote(m: Mission, way: number): string {
-  const W = m.scenario?.ways; if (!W) return 'one way in on this one';
-  return way < 0 ? 'the visit deals one of them, with the defenders\' marks' : way > 1 ? 'another side: another first room, plan it again' : 'where the level was made to be opened from';
+  const W = m.scenario?.ways; if (!W) return 'this mission has one way in';
+  return way < 0 ? 'the game picks one for you each time, along with where the defenders start' : way > 1 ? 'this side has a different first room, so plan it again' : 'the level was built around this way in';
 }
 /** THE TWO ROWS TOGETHER (game/hours.ts, the weather over the hour): what the hour's line and the weather's say once the other row is not at its default */
 export function hourNote(h: HourId, wx: WeatherKind | null, own = false): string {   // (own: the weather is the mission's own — no Weather row is drawn below to pick it on)
-  return `${hourClock(h)} · ${h === 'night' && wx ? `the level as it was made, the moon and the lamps outside, in ${own ? 'the mission\'s own weather' : 'the weather picked below'}` : hourWords(h)}`;
+  return `${hourClock(h)} · ${h === 'night' && wx ? `the level as it was built, with the moon and the lights outside, in ${own ? 'the mission\'s own weather' : 'the weather picked below'}` : hourWords(h)}`;
 }
 export function weatherNote(wx: WeatherKind | null, h: HourId): string {
   if (h === 'night') return weatherWords(wx);
-  if (!wx) return 'no weather picked: a dry day (the level\'s own storm stays with its night)';
+  if (!wx) return 'no weather picked, so it\'s a dry day (the level\'s own storm stays with its night)';
   const c = WEATHER_PRESETS[wx].cloud, own = HOURS[h].cloud ?? 0;
-  const sky = c <= own || c < 0.15 ? '' : c >= 0.99 ? ' · by day no sun at all: a dim grey light, no shadows' : c >= 0.85 ? ' · by day the sun behind cloud: flat grey light, soft shadows' : c >= 0.5 ? ' · by day a pale sun through it' : ' · by day the sun a little dulled';
-  return weatherWords(wx).replace('; at night as clear', '') + sky;
+  const sky = c <= own || c < 0.15 ? '' : c >= 0.99 ? ' · by day there\'s no sun at all, just dim gray light and no shadows' : c >= 0.85 ? ' · by day the sun is behind clouds, with flat gray light and soft shadows' : c >= 0.5 ? ' · by day a pale sun comes through it' : ' · by day the sun is a little dimmer';
+  return weatherWords(wx).replace(". At night it's the same as clear", '') + sky;
 }
 export interface MissionsScreen { root: HTMLElement; list: Mission[]; readonly selected: Mission; readonly hourNow: HourId; /** the hour and the weather the highlighted row is STARTED in: its own where it names one (game/rowset.ts), a snow level's weather none, else the picks */ readonly startHour: HourId; readonly startWeather: WeatherKind | null; select(i: number | string): void; move(d: number): void; difficulty(lv: Difficulty): void; hour(id: HourId | number): void; readonly weather: WeatherKind | null; setWeather(k: WeatherKind | null): void; /** the highlighted row's way in: 0 = the level's own start, k ≥ 2 = its k-th, −1 = dealt */ readonly way: number; setWay(v: number | 'next' | 'prev'): void; pick(): void; close(): void; hrefOf(m: Mission): string }
 
@@ -259,7 +268,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
   // ---- the sheet of the highlighted row
   const sheet = el('div', 'msheet'); body.appendChild(sheet);
   const plan = el('canvas', 'mplan') as HTMLCanvasElement; plan.width = opts.planPx ?? 480; plan.height = Math.round(plan.width * PLAN_D / PLAN_W); sheet.appendChild(plan);
-  const top = el('div', 'mtop'); const title = el('span', 'mst'); const untuned = el('span', 'tag untuned'); untuned.textContent = 'untuned'; untuned.title = 'it runs; nobody has balanced it yet'; top.append(title, untuned); sheet.appendChild(top);
+  const top = el('div', 'mtop'); const title = el('span', 'mst'); const untuned = el('span', 'tag untuned'); untuned.textContent = 'untuned'; untuned.title = 'it runs, but nobody has balanced it yet'; top.append(title, untuned); sheet.appendChild(top);
   const place = el('div', 'mplace'); sheet.appendChild(place);
   const blurb = el('div', 'mblurb'); sheet.appendChild(blurb);
   const facts = el('div', 'mfacts'); sheet.appendChild(facts);
@@ -323,10 +332,10 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     secs.forEach((x, k) => { const on = k === secOf[sel]; x.h.className = `msec${x.at ? ' rest' : ''}${on ? ' open' : ''}`; x.h.setAttribute('aria-expanded', on ? 'true' : 'false'); x.h.setAttribute('data-count', String((secs[k + 1]?.at ?? list.length) - x.at)); });
     title.textContent = m.title; untuned.style.display = unplayed(m) ? '' : 'none';   // (a mission on the short list does not wear the hand-set label — scene/picks.ts; ?nopicks = as it was)
     place.textContent = m.place; blurb.textContent = m.blurb;
-    fTeam.textContent = teamWordsOf(m); fDef.textContent = m.defenders; fLean.textContent = leanWords(m.lean); fLevel.textContent = m.scenario?.level ? levelWords(m.scenario) : 'office';
+    fTeam.textContent = teamWordsOf(m); fDef.textContent = defendersShown(m); if (fDef.parentElement) fDef.parentElement.style.display = MYSTERY.on ? 'none' : ''; facts.className = MYSTERY.on ? 'mfacts nodef' : 'mfacts';   /* (the cell out of the row: three cells on the old sheet, no row at all where it was the only one — index.html, ui/startpage.ts, ui/kitBrief.ts) */ fLean.textContent = leanWords(m.lean); fLevel.textContent = m.scenario?.level ? levelWords(m.scenario) : 'office';
     for (const [lv, b] of dbtns) { b.className = now === lv ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', now === lv ? 'true' : 'false'); }
     diff.className = diffLive(m) ? 'mdiff' : 'mdiff na';   // (greyed where the pick changes nothing: the solo night, and a quiet mission — its shift is the level's own)
-    dnote.textContent = m.scenario?.kind === 'quiet' ? 'a quiet mission\'s shift is the level\'s own on either' : m.scenario ? quietFogAside(() => difficultyWords(now!, squadsHeld(m.scenario))) : 'the night shift is the same on either';
+    dnote.textContent = m.scenario?.kind === 'quiet' ? 'a quiet mission uses the level\'s own shift on either setting' : m.scenario ? quietFogAside(() => difficultyWords(now!, squadsHeld(m.scenario))) : 'the night shift is the same on either setting';
     dnote.title = dnote.textContent ?? '';   // (the sheet shows two lines of it: index.html .mdiff > .dn)
     { const fogOn = !!m.scenario && fogOfQuery(new URLSearchParams(hrefs[sel].replace(/^[^?]*\?/, '')));   // (the fog of war is up on a room clear and a rescue — game/scenarioRun.ts fogOfQuery: the lever is greyed where the mission has none; a Training lesson is taught on the level as it is — its page reads no lever, game/difficulty.ts initDifficulty)
       const quiet = m.scenario ? quietFogRow(m.scenario) : soloFogRow();   // (a quiet mission may be played under the fog — game/quietfog.ts: the lever is live there with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved)

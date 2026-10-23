@@ -48,7 +48,7 @@ export async function autoreloadCheck(): Promise<boolean> {
     // (4) nothing to seat
     { rf.cancelReload(); rf.chamber = 1; rf.mag = 1; rf.spare = []; msgs.length = 0; dry(rf); const at = waitReload(rf, 90);
       W.cursorAt(AIM); input.clicked |= 1; W.step(DT);
-      line(at === -1 && msgs.some(m => /empty — press R/.test(m)) && msgs.some(m => /is empty \(R\)/.test(m)), 'no magazine left: nothing starts, and the lines are the old ones', `${kit(rf)} · ${JSON.stringify(msgs)}`); }
+      line(at === -1 && msgs.some(m => /empty\. press R to reload/.test(m)) && msgs.some(m => /is empty \(R\)/.test(m)), 'no magazine left: nothing starts, and the lines are the old ones', `${kit(rf)} · ${JSON.stringify(msgs)}`); }
     // (5) a sprint breaks it; it starts again
     { rf.cancelReload(); rf.chamber = 0; rf.mag = 0; rf.spare = [30]; const a = waitReload(rf, 60); idle(5);
       input.keys.add('ShiftLeft'); input.keys.add('KeyD'); idle(25); const broken = !rf.reloading; input.keys.delete('ShiftLeft'); input.keys.delete('KeyD');
@@ -91,7 +91,7 @@ export async function autoreloadCheck(): Promise<boolean> {
     { RELOAD.auto = process.env.AUTORELOAD_BREAK === '1';
       gun.cancelReload(); gun.chamber = 1; gun.mag = 1; gun.spare = [10]; msgs.length = 0; idle(20); dry(gun); const at = waitReload(gun, 120);
       W.cursorAt(AIM); input.clicked |= 1; W.step(DT); const waited = [...msgs]; input.pressed.add('KeyR'); W.step(DT); const byR = gun.reloading; idle(140);
-      line(at === -1 && waited.includes('empty — press R') && waited.includes('click — empty (R to reload)') && byR && gun.chamber === 1, 'the switch off: the dry pistol waits two seconds, both old lines are said, and R reloads it', `auto ${at} · ${JSON.stringify(waited)} · R took ${byR} · ${kit(gun)}`); }
+      line(at === -1 && waited.includes("you're empty. press R to reload") && waited.includes('click — empty (R to reload)') && byR && gun.chamber === 1, 'the switch off: the dry pistol waits two seconds, both old lines are said, and R reloads it', `auto ${at} · ${JSON.stringify(waited)} · R took ${byR} · ${kit(gun)}`); }
   } finally { Object.assign(RELOAD, was); game.msg = orig; }
   console.log(`=== autoreload: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

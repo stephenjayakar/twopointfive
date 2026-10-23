@@ -41,7 +41,7 @@ export async function handRingCheck(): Promise<boolean> {
   const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`); const { handRingView } = await import(`${ROOT}/src/game/interact.ts`);
   const { WHISTLE_STATS, WHISTLE } = await import(`${ROOT}/src/game/whistle.ts`); const { BACKKEY } = await import(`${ROOT}/src/game/backkey.ts`);
   const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-  const K = await import(`${ROOT}/src/host/keymap.ts`);
+  const K = await import(`${ROOT}/src/host/keymap.ts`); const { TWOGEARS } = await import(`${ROOT}/src/game/player.ts`);
   const { playerBusy } = await import(`${ROOT}/src/game/savestate.ts`);
   const was = { on: HANDRING.on, early: HANDRING.early, empty: HANDRING.empty, near: HANDRING.near, back: BACKKEY.tab, slot: HANDSLOT.on, cmd: CMDRING.on, hands: CMDRING.hands, ws: WALLSNAP.on, press: WALLSNAP.press, kOn: K.KEYMAP.on, slotWhen: K.KEYMAP.slotWhen, handWhen: K.KEYMAP.handWhen, qFree: K.KEYMAP.qFree, qCmd: K.KEYMAP.qCmd };
   const log = console.log, err = console.error, warn = console.warn;
@@ -103,8 +103,9 @@ export async function handRingCheck(): Promise<boolean> {
       verdict(again === 1 && g1 && rmb && tab && tabDoor, 'the key again does the lit wedge; a right click and the back key put the ring away with nothing done',
         `the key again: whistled ${again}, gone ${g1} · right click: away, nothing done ${rmb} · Tab: away, nothing done ${tab} · Tab at the door: the leaf did not move, the top row is the tap's again ${tabDoor}`); }
     // ---- under it
-    { rule(true); atDoor(); stand(); const p0 = pl.pace; input.wheel = 100; step(1); input.wheel = 0; const paced = pl.pace < p0 && standing(), sq = g.orders.backFree(), sv = playerBusy(g) !== 'choosing an action', ch = !pl.choosing;
-      input.wheel = -100; step(1); input.wheel = 0; tap('Tab'); step(2);
+    { rule(true); atDoor(); stand(); const gears = TWOGEARS.on; TWOGEARS.on = false;   // (the wheel's own rule: two gears — player.ts TWOGEARS — gives the wheel to nobody, so it is held off for this line and put back)
+      const p0 = pl.pace; input.wheel = 100; step(1); input.wheel = 0; const paced = pl.pace < p0 && standing(), sq = g.orders.backFree(), sv = playerBusy(g) !== 'choosing an action', ch = !pl.choosing;
+      input.wheel = -100; step(1); input.wheel = 0; TWOGEARS.on = gears; tap('Tab'); step(2);
       verdict(paced && sq && sv && ch, 'a ring that merely stands is nothing in hand: the wheel is his pace, the squad\'s key is free, a save is allowed',
         `standing: the wheel took his pace ${p0.toFixed(2)} → down ${paced} · the squad's key free ${sq} · a save allowed ${sv} · not choosing ${ch}`); }
     // ---- a save in memory
@@ -127,9 +128,9 @@ export async function handRingCheck(): Promise<boolean> {
       const codes = () => `E ${K.gameCode('KeyE') || '∅'} · Space ${K.gameCode('Space') || '∅'} · V ${K.gameCode('KeyV') || '∅'}`;
       const REST = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR', 'KeyZ', 'KeyL', 'KeyN', 'KeyB', 'KeyF', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'ShiftLeft', 'KeyK'];
       const on = K.gameCode('KeyE') === 'Space' && K.gameCode('Space') === '' && K.gameCode('KeyV') === '' && K.gameCode('Backquote') === 'Digit0' && REST.every(c => K.gameCode(c) === c), seenOn = codes();
-      const w1 = K.keyText('Space  pull it shut'), w2 = K.keyText('E puts it away. A grab needs empty hands'), w3 = K.keyText('no questions over a gun — E holsters it, then Space asks him');
+      const w1 = K.keyText('Space  pull it shut'), w2 = K.keyText('E puts it away. A grab needs empty hands'), w3 = K.keyText('press E to holster the gun first, then Space to question him');
       const w4 = K.keyText('Space held, then 5, whistles the cook out'), w5 = K.keyText('V whistles him over');
-      const words = w4 === 'E held, then 5, whistles the cook out' && w5 === 'V whistles him over' && K.capNow('Space') === 'E' && K.keyCap('Space') === 'E' && w1 === 'E  pull it shut' && w2 === '` puts it away. A grab needs empty hands' && w3 === 'no questions over a gun — ` holsters it, then E asks him';
+      const words = w4 === 'E held, then 5, whistles the cook out' && w5 === 'V whistles him over' && K.capNow('Space') === 'E' && K.keyCap('Space') === 'E' && w1 === 'E  pull it shut' && w2 === '` puts it away. A grab needs empty hands' && w3 === 'press ` to holster the gun first, then E to question him';
       const b = K.bindKey('KeyV', 'KeyG'), bound = b.ok && K.gameCode('KeyG') === 'KeyV' && K.capNow('KeyV') === 'G'; K.resetKeys(); const reset = K.gameCode('KeyV') === '' && K.gameCode('KeyE') === 'Space';
       slot = false; const noSlot = codes(), plain = K.gameCode('KeyE') === 'KeyE' && K.gameCode('Space') === 'Space' && K.gameCode('KeyV') === '';
       slot = true; hand = false; const offCodes = codes(), off = !BRK && K.gameCode('KeyE') === '' && K.gameCode('Space') === 'Space' && K.gameCode('KeyV') === 'KeyV' && K.keyText('Space  pull it shut') === 'Space  pull it shut';

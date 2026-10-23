@@ -106,15 +106,15 @@ export type LeverKey = keyof Levers;
 export interface LeverDef { key: LeverKey; param: string; label: string; rungs: { id: string; label: string; words: string }[] }
 export const LEVERS: LeverDef[] = [
   { key: 'fog', param: 'fog', label: 'Fog of war', rungs: [
-    { id: 'team', label: 'all round', words: 'every man of your team sees all round him, and you see what they see' },
-    { id: 'cones', label: 'cones', words: 'each man of your team sees only the cone he looks down, and you see what they see: the floor behind every back is dark, and they call what you cannot see' },
-    { id: 'own', label: 'own eyes', words: 'only the cone you look down yourself lifts the fog: what your teammates see they call to you' } ] },
+    { id: 'team', label: 'all round', words: 'everyone on your team sees all around them, and you see what they see' },
+    { id: 'cones', label: 'cones', words: "each teammate sees only the cone he's looking down, and you see what they see. The floor behind everyone's back is dark, and they call out what you can't see" },
+    { id: 'own', label: 'own eyes', words: "only the cone you're looking down lifts the fog, and your teammates call out what they see" } ] },
   { key: 'ai', param: 'enemyai', label: 'Enemy AI', rungs: [
-    { id: 'standard', label: 'standard', words: 'the defenders as they were: a man who hears the fight comes at it on his own' },
-    { id: 'hard', label: 'hard', words: 'they work together: they come at a room you hit as one and round by a second door, stand to when they hear you early, and stand and fight where they meet you' } ] },
+    { id: 'standard', label: 'standard', words: 'the usual defenders. A defender who hears the fight will come to it on his own' },
+    { id: 'hard', label: 'hard', words: "they work together. When you hit a room they'll come at it as a group and around through a second door. They'll get ready if they hear you early, and they'll stand and fight where they meet you" } ] },
   { key: 'kit', param: 'enemykit', label: 'Enemy kit', rungs: [
     { id: 'none', label: 'guns', words: 'the defenders carry their guns and nothing else' },
-    { id: 'stuns', label: 'stuns', words: 'each defender carries a stun charge: it goes through the door first when he comes at a room you are in' } ] },
+    { id: 'stuns', label: 'stuns', words: "each defender carries a stun charge, and he'll throw it through the door first when he comes at a room you're in" } ] },
 ];
 /** the stun charges a defender carries on the kit lever's upper rung (The block's hard is the same one each — HARD_AT) */
 export const LEVER_STUNS = 1;
@@ -294,23 +294,23 @@ export function squadsHeld(e: { level?: string; squads?: boolean; kind?: string 
 /** what hard is on each squad map, in a sentence (enemysquads.ts DRILL_AT is the rows; record rebuild/hard-everywhere/round2-squad-maps.md),
  *  by level file and by structure name: the mission sheet knows the one, a running game the other */
 const SQUAD_HARD: { file: string; structure: string; words: string }[] = [
-  { file: 'block-squads.json', structure: 'the block, three squads', words: 'They do not run at the first noise: you hear them hold on the radio and let you commit to a room, then the pair that comes round is set at its other door while you are still going in' },
-  { file: 'compound.json', structure: 'the compound', words: 'A squad\'s men come quicker to a room of theirs you hit, and nobody walks into a room that is already lost: you hear them call it gone on the radio, and they are on their own doors when you get there' },
-  { file: 'barracks.json', structure: 'the barracks', words: 'A pair sent round to hold a lost room\'s other door does not stand out there once the squad it went for stops answering: you hear them call "back on our doors", and they are in their own rooms again, coming at you when you take the next one' },
+  { file: 'block-squads.json', structure: 'the block, three squads', words: "They don't run at the first noise. You'll hear them hold on the radio and let you commit to a room, and then the pair that comes around will be set at its other door while you're still going in" },
+  { file: 'compound.json', structure: 'the compound', words: "A squad gets to one of its rooms faster when you hit it, and nobody walks into a room that's already lost. You'll hear them call it gone on the radio, and they'll be on their own doors when you get there" },
+  { file: 'barracks.json', structure: 'the barracks', words: 'A pair sent around to hold a lost room\'s other door won\'t stay out there once the squad it went to help stops answering. You\'ll hear them call "back on our doors", and they\'ll be in their own rooms again and come at you when you take the next one' },
   { file: 'warehouse.json', structure: 'the warehouse', words: '' },
   { file: 'block.json', structure: 'the block', words: '' },   // (the rebuilt block: eight men, four stay-put squads of two, a room each. Scripted team, seeds 1–12 by the go-round route and 1–8 by the hall doors: hard is standard's run, save one where a man put his stun charge down a covered lane)
 ];
 /** `squads`: the level file or the structure's name of a squad map (false / '' = not one; true = one, not said which) */
 export function difficultyWords(level: Difficulty | 'custom' = difficultyNow(), squads: string | boolean = false): string {
   if (level === 'custom' && leversMixed()) return `your own mix: ${leversLine(true)}`;   // (levers moved by hand to no level's setting: each said by its rung)
-  const cone = HARD.cone ? 'under the fog of war each of your team sees only the cone he looks down: the floor behind every back is dark, and they call what you cannot see' : '';   // (the fog of war's cone: hard's on every level the fog is up on)
+  const cone = HARD.cone ? "under the fog of war each teammate sees only the cone he's looking down, so the floor behind everyone's back is dark, and they call out what you can't see" : '';   // (the fog of war's cone: hard's on every level the fog is up on)
   const Cone = cone && ` ${cone[0].toUpperCase()}${cone.slice(1)}`;
   if (squads && level === 'hard') { const w = SQUAD_HARD.find(x => x.file === squads || x.structure === squads)?.words;
     // (the kit a floor's hard carries is said on a squad map too — HARD_AT by the structure the level file stands for, or the one named, or the running game's:
     //  on the rebuilt block, eight men as four stay-put squads, it is the one thing of hard's that acts — the man who knows a way is covered puts his charge down it)
-    const at = typeof squads === 'string' ? structureOfLevel(squads) || squads : HERE, kit = HARD_AT[at]?.stuns ? '. Here each carries a stun charge, and throws it down a hallway he knows you hold' : '';   // (said as the men of such a floor use it today: nobody leaves his room on the block, so the charge goes down a lane that cost them — lanes.ts — not ahead of a man coming at you)
-    return w ? `hard: the squads are a drilled garrison. ${w}${kit}${Cone && '.' + Cone}` : w === '' ? `hard: the squads here are the standard ones: this floor is steep as it stands${kit}${Cone && '.' + Cone}` : `hard: the squads are a drilled garrison${kit}${Cone && '.' + Cone}`; }
-  return level === 'standard' ? 'standard: the defenders as they were' : level === 'hard' ? 'hard: the defenders come at you together and round by a second door, a far room\'s men as one, and stand and fight where they meet you in the open; heard before your first entry, they stand to; a room\'s last man slips out by another door before you reach his; on a floor that asks for it (the records office) the men a lost room draws hold its door from back off it, out of a stun canister\'s reach, and let you come out to them; on a hostage rescue the captor calls your assault on their radio and his two men act on it; on the night breach its three are drilled, half as shaken by a stun canister, and fire blind down the door they were watching' + (HARD_AT[HERE]?.stuns ? '; here each carries a stun charge, and puts it through a door before he comes in by it' : '') + (cone && `; ${cone}`) : 'custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)';
+    const at = typeof squads === 'string' ? structureOfLevel(squads) || squads : HERE, kit = HARD_AT[at]?.stuns ? ". Here each defender carries a stun charge, and he'll throw it down a hallway he knows you're holding" : '';   // (said as the men of such a floor use it today: nobody leaves his room on the block, so the charge goes down a lane that cost them — lanes.ts — not ahead of a man coming at you)
+    return w ? `hard: the squads are a drilled garrison. ${w}${kit}${Cone && '.' + Cone}` : w === '' ? `hard: the squads here are the standard ones, because this floor is hard enough as it is${kit}${Cone && '.' + Cone}` : `hard: the squads are a drilled garrison${kit}${Cone && '.' + Cone}`; }
+  return level === 'standard' ? 'standard: the usual defenders' : level === 'hard' ? "hard: the defenders come at you together and around through a second door, a far room's defenders come as a group, and they stand and fight where they meet you in the open. If they hear you before your first entry, they'll get ready. The last defender in a room will slip out through another door before you reach his door. At the records office, the defenders who come to a lost room will watch its door from out of a flashbang's reach and let you come out to them. On a hostage rescue the captor calls your assault on the radio and his guards act on it. On the night breach the defenders are drilled, half as shaken by a flashbang, and they'll fire blind through the door they were watching" + (HARD_AT[HERE]?.stuns ? ". Here each defender carries a stun charge, and he'll throw it through a door before he comes in" : '') + (Cone && '.' + Cone) : 'custom: rows under the switch were moved by hand (the Enemy AI page of the debugger)';
 }
 
 /** the rung of one lever in a line (its `words`; '' = it stands on none) — the screens' note beside a lever's buttons */

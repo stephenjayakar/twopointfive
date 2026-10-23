@@ -132,7 +132,7 @@ export async function squadthrowLobCheck(): Promise<boolean> {
     // ───────────── 5 · a frag that reaches the player alone is his call ─────────────
     await guard('his call', async () => {
       const R = await rig(11, true, { walk: true, lob: LOB }), { game } = R, team = R.team; rules(LOB);
-      const at = floor(R).find(q => { const th = ST.squadThrowPlan(game, team, q, 'frag', true); if (!th) return false; const mv = { gd: th.gd, at: th.post ?? th.gd.char.pos }; return ST.squadFragCatches(game, th.rest, q, mv, true) === 'you are in it.' && !ST.squadFragCatches(game, th.rest, q, mv, false); });
+      const at = floor(R).find(q => { const th = ST.squadThrowPlan(game, team, q, 'frag', true); if (!th) return false; const mv = { gd: th.gd, at: th.post ?? th.gd.char.pos }; return /^you(?: are|'re) in it\.$/.test(String(ST.squadFragCatches(game, th.rest, q, mv, true))) && !ST.squadFragCatches(game, th.rest, q, mv, false); });
       if (!at) { verdict(false, 'a spot whose frag reaches the player and nobody else of ours', 'none on the office floor'); return; }
       const on = R.pageAt(at)[0]; R.esc(); SQUADTHROW.samCall = false; R.step(90); const off = R.pageAt(at)[0]; R.esc(); SQUADTHROW.samCall = true;
       verdict(!!on && !on.off && / · too close: you$/.test(on.text) && !!off && off.off, 'the frag row on a spot only the player is in reach of: live and naming him; with samCall off, refused as it was',

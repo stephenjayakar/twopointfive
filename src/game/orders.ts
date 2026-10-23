@@ -91,7 +91,7 @@ import { handleHeld } from './handleside';
 import { clearLineFeet, clearLineLive } from './clearline';
 import { fireLineFeet, fireLineLive, fireLineTick } from './fireline';
 import { fitSpots, fitGroups, fitTick, type Fit } from './roomfit';   // (used inside the 'move' order only: nothing of roomfit.ts is touched at load)
-import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { watchedPlace } from './dialogue';   // (read inside an order's issue only: a cover's row names the place watched)
 import { doorSaidName } from './doornames';   // (a leaf: a shorthand door id's said name)
 import { propGap } from './roomclear';   // (used inside workedMarks only: nothing of roomclear.ts is touched at load)
@@ -104,7 +104,7 @@ import { handsBusy } from './interact';   // (read inside ringInput only: his ha
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
 import { planTorn, planLoaded, planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, planShift, planEscape, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
-import { teamFollow, teamDash, teamFight } from './teampace';   // (read inside update only)
+import { teamFollow, teamDash, teamFight, teamTold } from './teampace';   // (read inside update only)
 import { noShoveOwn } from './noshove';   // (read inside update only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
 /** where Sam 'stands' while the stack's makers are asked as if he were not there (ownMarkFirst): a place no mark is near */
@@ -362,6 +362,8 @@ export interface OrderDef {
   tick?: (S: SquadOrders, gd: Guard, A: Assignment) => void;
   /** what the man who takes it says (one of, in turn) */
   ack?: string[];
+  /** (WORDS) the same lines as they are said now, place for place (read where a man answers) */
+  ackNow?: string[];
   /** it can be given ON THE WORD (GiveOpts.onWord means something to its issue): with the menu's 'wait for my word' row on, its row says so and gives it that way */
   onWord?: boolean;
   /** it moves nobody (the squad's posture: silent.ts): no drill that owns a man is asked to let go of him for it, and it is not logged as an order (a
@@ -581,7 +583,7 @@ export class SquadOrders {
       release: gd => { const NB = g.nightBreach; return NB?.active && NB.drillOps.includes(gd) ? NB.callOff() : null; },   // (the drill is the pair's: letting go of one man ends it for both — the other is handed to the fight AI, nightbreach.ts)
       status: gd => { const NB = g.nightBreach; if (!NB?.active || !NB.ops.includes(gd)) return null;
         if (!NB.drillOps.includes(gd)) return NB.state === 'off' ? null : 'standing by';
-        switch (NB.state) { case 'staged': return 'waiting'; case 'stacking': return 'stacking · the breach'; case 'set': return 'set · F sends them in'; case 'going': case 'inside': return 'breaching';
+        switch (NB.state) { case 'staged': return 'waiting'; case 'stacking': return 'stacking · the breach'; case 'set': return 'set · press F to send them in'; case 'going': case 'inside': return 'breaching';
           case 'clear': return 'holding the room'; default: return 'holding'; } },
     });
   }
@@ -810,7 +812,7 @@ export class SquadOrders {
     // (Sam's own words, not the menu row's: he does not read out the stock count, the mark is HIS, and a door with no name of its own is not named)
     const said = WORDS.on ? label.replace(/ · (\d+ left|uses .+)$/, '').replace('on your mark', 'on my mark') : label;
     g.msg(`you: ${this.whoWords(men)} — ${said}${t.kind === 'door' && !(WORDS.on && doorWords(t.door) === 'door') ? ` · ${doorWords(t.door)}` : ''}`);
-    if (def.ack?.length) { const k = this.acks++; g.say(men[k % men.length], def.ack[Math.floor(k / men.length) % def.ack.length]); }   // (the men take turns answering, each through the lines in turn)
+    if (def.ack?.length) { const k = this.acks++, A = wg(def.ackNow ?? def.ack, def.ack); g.say(men[k % men.length], A[Math.floor(k / men.length) % A.length]); }   // (the men take turns answering, each through the lines in turn)
     this.posture?.given(def);
     holdFireOrder(g, def.id, { waits: !!opts?.onWord && this.big, silent: wasSilent });   // (holdfire.ts: an order that means fire starts the fight for a squad nobody has found — a return on its first line with the switch off)
     return null;
@@ -1327,6 +1329,7 @@ export class SquadOrders {
         if (A.via.length) { if (flat(p, A.via[0]) < 0.9) A.via.shift(); A.goal = A.via[0] ?? v3.copy(A.post); }   // (the way round a locked door, a waypoint at a time)
         d = flat(p, mark); speed = A.pace ?? (d > K.briskIn ? K.brisk : stackLinePace(g, gd, A, d, K.brisk) ?? K.onto);
         if (A.pace !== undefined) teamFight(g, gd); else if (!A.thru && !A.via.length) speed = teamDash(g, gd, mark, d) ?? speed;   // (teampace.ts: an entry keeps its pace; a run to cover straight across floor a known man has a line on — nothing with its switch off)
+        if (A.pace === undefined && d > K.briskIn) speed = teamTold(g, gd) ?? speed;   // (… and a leg a tutorial step tells them to run, round its corners too, walked in over its last metres as any leg is: rails.ts runs — nothing off a frame)
         { const sp = sneakPost(g, gd, A.order) ?? unseenPost(g, gd, A.order); if (sp !== null) { low = true; speed = Math.min(speed, sp); } }   // (sneak.ts: sent to a mark while the silent squad sneaks, he goes there low with Sam — nothing with its switch off)
         const short = g.fight.short(gd);   // (LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — his walk waits, and so do the clocks that would call a standing man stuck)
         if (short) { speed = 0; A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }

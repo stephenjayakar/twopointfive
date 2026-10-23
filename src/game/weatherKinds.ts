@@ -34,12 +34,12 @@ export interface WeatherPreset {
 /** The six to try. Central America: a dry-season night (clear / dust), the wet season (overcast → rain → a downpour with thunder), fog off the hills before dawn.
  *  Numbers judged on software-rendered stills only (see the page) — they are the maintainer's to move. */
 export const WEATHER_PRESETS: Record<WeatherKind, WeatherPreset> = {
-  clear:    { title: 'Clear',    words: 'dry and still: sound carries, nothing hides you but the dark', storm: 0, rain: 0, wind: [0.35, 0.15], cloud: 0.05, fog: null },
-  overcast: { title: 'Overcast', words: 'dry under a low sky; at night as clear', storm: 0, rain: 0, wind: [0.8, 0.3], cloud: 0.9, fog: null },
-  rain:     { title: 'Rain',     words: 'steady rain: footsteps and doors carry about half as far outdoors', storm: 0.25, rain: 0.55, wind: [1.1, 0.45], cloud: 0.95, fog: null },
-  downpour: { title: 'Downpour', words: 'a tropical downpour with thunder: small sounds drown, a stroke lights everyone up', storm: 1, rain: 1, wind: [2.6, 1.0], cloud: 1, fog: { sigma: 0.02, H: 6, leak: 0.15, tint: [0.85, 0.9, 1], gain: 0.75 } },
-  fog:      { title: 'Fog',      words: 'ground fog: nobody sees past about twenty metres outdoors', storm: 0, rain: 0, wind: [0.2, 0.1], cloud: 0.7, fog: { sigma: 0.113, H: 2.5, leak: 0.15, tint: [0.9, 0.95, 1], gain: 1 } },
-  dust:     { title: 'Dust',     words: 'dry wind and dust in the air: far sight dulls, beams stand out', storm: 0, rain: 0, wind: [3.2, 1.2], cloud: 0.25, fog: { sigma: 0.03, H: 8, leak: 0.3, tint: [1, 0.8, 0.55], gain: 1 } },
+  clear:    { title: 'Clear',    words: 'dry and still, so sound carries and nothing hides you but the dark', storm: 0, rain: 0, wind: [0.35, 0.15], cloud: 0.05, fog: null },
+  overcast: { title: 'Overcast', words: "dry under a low sky. At night it's the same as clear", storm: 0, rain: 0, wind: [0.8, 0.3], cloud: 0.9, fog: null },
+  rain:     { title: 'Rain',     words: 'steady rain, so footsteps and doors carry about half as far outdoors', storm: 0.25, rain: 0.55, wind: [1.1, 0.45], cloud: 0.95, fog: null },
+  downpour: { title: 'Downpour', words: 'a tropical downpour with thunder. It drowns out small sounds, and lightning lights everyone up', storm: 1, rain: 1, wind: [2.6, 1.0], cloud: 1, fog: { sigma: 0.02, H: 6, leak: 0.15, tint: [0.85, 0.9, 1], gain: 0.75 } },
+  fog:      { title: 'Fog',      words: 'ground fog, so nobody can see past about twenty meters outdoors', storm: 0, rain: 0, wind: [0.2, 0.1], cloud: 0.7, fog: { sigma: 0.113, H: 2.5, leak: 0.15, tint: [0.9, 0.95, 1], gain: 1 } },
+  dust:     { title: 'Dust',     words: "dry wind and dust in the air, so it's harder to see far and beams stand out", storm: 0, rain: 0, wind: [3.2, 1.2], cloud: 0.25, fog: { sigma: 0.03, H: 8, leak: 0.3, tint: [1, 0.8, 0.55], gain: 1 } },
   // SNOW: a level's own (SNOW_LEVELS). Every number the SIMULATION reads is Overcast's, to the digit: it plays as that level would under a low dry sky
   // (tools/qa/snow-check.ts holds a run in it to the same run in overcast). What it adds is drawn: `snow`, the flakes.
   snow:     { title: 'Snow',     words: 'snow falling on snow: the ground is bright, the air is quiet', storm: 0, rain: 0, wind: [0.8, 0.3], cloud: 0.9, fog: null, snow: 1.48 },

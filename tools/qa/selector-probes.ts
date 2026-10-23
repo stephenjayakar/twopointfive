@@ -249,14 +249,16 @@ export async function selectorInput() {
     verdict(fails.length === 0, 'hold + scroll + let go performs the scrolled-to row (an early scroll opens it); scrolled to cancel, letting go does nothing and the highlight is back on top; Esc while open backs out — the release does nothing, the next tap works', notes.join(' · '), fails);
   }
   {   // the wheel with Space up is the pace — free, and with a man in the arm (the pair's HOLD_PACE × pace); Space down but spent: neither
-    const fails: string[] = []; const notes: string[] = [];
-    { const { W, game } = await atShutDoor(231); const p0 = game.player.pace; W.input.wheel = 100; W.step(DT); const p1 = game.player.pace; W.input.wheel = -100; W.step(DT); const p2 = game.player.pace;
+    const fails: string[] = []; const notes: string[] = []; const gears = playerMod.TWOGEARS.on;   // (the rule this block holds is the wheel's: two gears — player.ts TWOGEARS, which gives the wheel to nobody — is held off for it AFTER each stand-up, which writes the key where its word is set, and put back below; tools/qa/twogears-check.ts holds the other)
+    try {
+    { const { W, game } = await atShutDoor(231); playerMod.TWOGEARS.on = false; const p0 = game.player.pace; W.input.wheel = 100; W.step(DT); const p1 = game.player.pace; W.input.wheel = -100; W.step(DT); const p2 = game.player.pace;
       if (Math.abs(p1 - (p0 - PACE_STEP)) > 1e-9 || Math.abs(p2 - p0) > 1e-9) fails.push(`free: pace ${p0} → ${p1} → ${p2} (want −${PACE_STEP} then back)`); notes.push(`free: ${f2(p0)}→${f2(p1)}→${f2(p2)}`); }
-    { const S = await holding(232, false); const { W, game } = S; const p0 = game.player.pace; W.input.wheel = 100; W.step(DT); W.input.wheel = 100; W.step(DT); const p1 = game.player.pace;
+    { const S = await holding(232, false); const { W, game } = S; playerMod.TWOGEARS.on = false; const p0 = game.player.pace; W.input.wheel = 100; W.step(DT); W.input.wheel = 100; W.step(DT); const p1 = game.player.pace;
       W.input.keys.add('KeyW'); let top = 0; for (let i = 0; i < 90; i++) { W.step(DT); top = Math.max(top, game.player.speedSm); } W.input.keys.delete('KeyW');
       if (Math.abs(p1 - (p0 - 2 * PACE_STEP)) > 1e-9) fails.push(`holding: pace ${p0} → ${p1} after two notches (want −${2 * PACE_STEP}: the wheel is live in a hold)`);
       if (top > 0.85 * p1 + 0.03 || top < 0.2) fails.push(`the pair walked at ${f2(top)} m/s (want ≤ HOLD_PACE × pace = ${f2(0.85 * p1)}, and moving)`);
       if (!game.player.holding) fails.push('the hold ended'); notes.push(`holding: ${f2(p0)}→${f2(p1)}, pair top speed ${f2(top)} m/s`); }
+    } finally { playerMod.TWOGEARS.on = gears; }
     verdict(fails.length === 0, 'the wheel is his pace whenever Space is up — with a man in the arm too, and the pair slows with it', notes.join(' · '), fails);
   }
   console.log(`=== selector-input: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
@@ -385,7 +387,7 @@ export async function selectorNoise() {
   { const { W, game, d } = await atLockedDoor(402, false); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'kick'); W.input.pressed.add(IK); collect(W, 120, ev, t0);
     check('kick', mine(ev), OLD_EVENTS.kick); if (!d.lockBroken) fails.push('kick: keep not torn out'); }
   { const { W, game, d } = await atLockedDoor(403, true); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'rattle'); W.input.pressed.add(IK); collect(W, 60, ev, t0);
-    check('rattle', mine(ev), OLD_EVENTS.rattle); if (!d.latched || game.player.picking || game.player.kick) fails.push('rattle: more than a rattle'); if (!game.messages.some((m: any) => /^locked — pick it/.test(m.text))) fails.push('rattle: no hint line'); }
+    check('rattle', mine(ev), OLD_EVENTS.rattle); if (!d.latched || game.player.picking || game.player.kick) fails.push('rattle: more than a rattle'); if (!game.messages.some((m: any) => /^it's locked\. pick it/.test(m.text))) fails.push('rattle: no hint line'); }
   { const { W, game, d } = await atLockedDoor(404, false, true); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'unlock'); W.input.pressed.add(IK); collect(W, 90, ev, t0);
     check('unlock', mine(ev), OLD_EVENTS.unlock); if (!d.locked || Math.abs(d.angle) < 0.5) fails.push(`unlock: locked ${d.locked} angle ${f2(d.angle)} (want the lock merely turned, the leaf swung)`); }
   { const { W, game, d } = await atLockedDoor(405, false, true); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'ease'); W.input.pressed.add(IK); collect(W, 120, ev, t0);

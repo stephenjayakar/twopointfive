@@ -28,7 +28,7 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 
 /** the lobby's open floor (close-stills.ts's staging): the shift parked, one man stood facing east, Sam hands empty behind him, the key as given */
 async function lobby(key: boolean) {
-  Math.random = seeded(7301); const W: any = await quiet(() => standUp()), g = W.game; CLOSE.on = true; CLOSE.reachUp = key;
+  Math.random = seeded(7301); const W: any = await quiet(() => standUp()), g = W.game; CLOSE.on = true; CLOSE.reachUp = key; CLOSE.handsLow = false;   // (the grab's tell from the crouch is what this card holds: `handsLow`, which leaves the crouch the knife hand alone, is held off for it — tools/qa/handslow-check.ts holds that one)
   g.godMode = true; g.aiEnabled = false; g.player.visibility = 0.02; g.player.slot = 'pistol'; g.player.holstered = true;
   for (let i = 0; i < 5; i++) W.step(DT);
   const place = (gd: any, p: P3) => { gd.char.pos = [...p]; gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = EAST; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.pinned = true; gd.char.update(0); gd.char.update(DT); };

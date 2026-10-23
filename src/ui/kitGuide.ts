@@ -58,15 +58,15 @@ export interface BeatAsk { own: number; squad: number; needs: PlaceNeeds | null;
 export function beatWords(b: BeatId, { own, squad, needs, rescue }: BeatAsk): BeatWords {
   const dot = !!needs?.marked;
   switch (b) {
-    case 'job': return { title: 'The job', text: `Read it before you pick: who holds the floor, and the map${dot ? ', with a dot where you go in' : ''}.\n[M] or a click opens the map. Again puts it back.` };
-    case 'team': return { title: 'Who comes', text: `[A] [D] or a click sets how many come with you.\nThis mission is built for ${sizeWords(own)}.` };
+    case 'job': return { title: 'The job', text: `Look at the map before you pick${dot ? '. The dot is where you go in' : ''}.\nPress [M] or click to open it and read the job, and again to close it.` };
+    case 'team': return { title: 'Who comes', text: `Press [A] or [D], or click, to set how many come with you.\nThis mission is built for ${sizeWords(own)}.` };
     case 'kit': { const asks: string[] = [];
-      if (rescue) asks.push('Hostages inside: a frag on their floor is theirs too.');
-      if (needs && needs.locked > 0) asks.push(`${needs.locked === 1 ? 'One locked door' : `${cap(countWords(needs.locked))} locked doors`} here: keep a way through.`);
-      return { title: squad ? 'A kit for the squad' : 'A named kit', text: `${squad ? 'One press deals a named kit over every man.' : 'One press puts a named kit on your card.'} [A] [D] choose, [Enter] puts it on.${asks.length ? `\n${asks.join(' ')}` : ''}` }; }
-    case 'man': return { title: 'Each man', text: '[A] [D] or a click picks a man. His own card opens under the row.' };
-    case 'card': return { title: 'His card', text: 'Change one thing he carries: [W] [A] [S] [D] and [Enter], or a click.\nFour pouches a man, and what he carries shows on Mobility and Concealment.' };
-    case 'go': return { title: 'Go', text: '[Enter] on Deploy starts it with this team. [Esc] steps back to the mission.' };
+      if (rescue) asks.push('There are hostages inside, and a frag on their floor will hit them too.');
+      if (needs && needs.locked > 0) asks.push(`${needs.locked === 1 ? 'One locked door' : `${cap(countWords(needs.locked))} locked doors`} here, so bring a way through.`);
+      return { title: squad ? 'A kit for the squad' : 'A named kit', text: `${squad ? 'One press gives everyone a named kit.' : 'One press puts a named kit on your card.'} Press [A] or [D] to pick one and [Enter] to put it on.${asks.length ? `\n${asks.join(' ')}` : ''}` }; }
+    case 'man': return { title: 'Each man', text: 'Press [A] or [D], or click, to pick a teammate. His card opens under the row.' };
+    case 'card': return { title: 'His card', text: 'Use [W] [A] [S] [D] and [Enter], or click, to change one thing he carries.\nEach teammate has four pouches, and what he carries shows on Mobility and Concealment.' };
+    case 'go': return { title: 'Go', text: 'Press [Enter] on Deploy to start with this team, or [Esc] to go back to the mission.' };
   }
 }
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -143,7 +143,7 @@ export function mountKitGuide(root: HTMLElement, brief: KitBrief | null, head: H
   if (!KITGUIDE.on) return null;
   styles();
   const card = document.createElement('div'); card.className = 'kg-card'; card.setAttribute('role', 'dialog'); card.setAttribute('aria-live', 'polite'); root.appendChild(card);
-  const again = document.createElement('button'); again.className = 'kg-again'; again.setAttribute('type', 'button'); again.textContent = 'How to pick'; again.title = 'the walkthrough of this step, again'; head?.appendChild?.(again);
+  const again = document.createElement('button'); again.className = 'kg-again'; again.setAttribute('type', 'button'); again.textContent = 'How to pick'; again.title = 'show the walkthrough of this step again'; head?.appendChild?.(again);
   let S: LoadoutScreen | null = null, at = -1, was: GuideState | null = null, lit: HTMLElement | null = null, running = KITGUIDE.again || (!KITGUIDE.driven && !kitGuideSeen()), shut = false, busy = false, mapSeen = false, drawn = '';
   const did = new Set<BeatId>();   // the beats this visit's walkthrough has been through (the pips)
   let tick: ReturnType<typeof setTimeout> | null = null, tickNext = 0;   // (a finished beat's card, ticked: the beat that comes when it goes)

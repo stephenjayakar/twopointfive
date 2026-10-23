@@ -64,6 +64,9 @@ export const wordsLint = guarded(async () => {
   const ghBad = kinds.flatMap(k => [...(GH[k].length ? [] : [`${k}: empty`]),
     ...GH[k].filter(t => t.length > D.AIM_CHARS || /[{}]/.test(t) || D.blockedPhrase(t) || staffLines.has(t) || /\b(one of ours|our man|ours)\b/i.test(t) || /\b(corridor|lift|fourth floor|desks?|cleaning staff|security|server room|guards?)\b/i.test(t)
       || (k === 'round' && cueClass(t) !== 1) || (k === 'gone' && [2, 5].includes(cueClass(t)))).map(t => `${k}: '${t}'`)]);
+  { const NOW: Record<string, string> = GM.GUNHOLD_NOW, all = new Set<string>([...kinds.flatMap(k => GH[k]), ...staffLines]);   // the lines as they are said now (the writing guide): each stands for a line of a pool, fits a bubble, and is classed on the net as the old one was
+    const nowBad = Object.entries(NOW).filter(([was, now]) => !all.has(was) || now.length > D.AIM_CHARS || /[{}]/.test(now) || D.blockedPhrase(now) || cueClass(now) !== cueClass(was)).map(([was, now]) => `'${was}' → '${now}'`);
+    F.verdict(!nowBad.length, 'the pistol-hold lines as they are said now: each stands for a pool line, fits a bubble and keeps its class on the net', nowBad.join(' · ') || `${Object.keys(NOW).length} lines`); }
   F.verdict(!ghBad.length, 'a defender has his own words for a pistol in a hold', ghBad.join(' · ') || kinds.map(k => `${k} ${GH[k].length}`).join(' · '));
   const pickOn: boolean = await withWords(true, async () => kinds.every(k => GM.gunHoldPool(foe, k) === GH[k] && GM.gunHoldPool(qrf, k) !== GH[k] && GM.gunHoldPool(staff, k) !== GH[k]));
   const pickOff: boolean = await withWords(false, async () => kinds.every(k => GM.gunHoldPool(foe, k) === GM.gunHoldPool(staff, k)));

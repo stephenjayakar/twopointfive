@@ -13,16 +13,21 @@
 //     band is no taller than the name alone was — the map a small mark, the name, the facts under it — and the job's sentence, for which
 //     there is no room without cutting it, is read there.
 //   · THE ELEMENTS ARE THE LIST'S: .mmap, .mcsum, .mfacts and .mblurb are shown on the kit step by the rules below and are otherwise untouched; the
-//     facts of this file's own are cells of the same .mfacts row, drawn on this step only. One of them is the list's Defenders cell AGAIN, a count past
-//     five written as a word ('eleven'): the list's own cell, which writes the digits, is not shown on this step.
+//     facts of this file's own are cells of the same .mfacts row, drawn on this step only. One of them WAS the list's Defenders cell again, a count past
+//     five written as a word ('eleven'). How many are inside is now a mystery (ui/missions.ts MYSTERY): neither cell is drawn unless `?mystery=0`.
+//   · A CLICK OFF THE LARGE MAP PUTS IT BACK (the maintainer, 10-23: "clicking outside the map should close it"): large, the sheet reads as a card laid
+//     over the step, and a card is left by a click beside it. That click does nothing else: the kit under the sheet does not take it. KITBRIEF.outside,
+//     `?mapout=0` = as it was (a click on the map, M, Esc, Enter or Space).
 //   · THE COUNTS ARE THE MISSION'S AS STAGED, not the file's alone: a rescue finds its side door unlocked (game/rescue.ts), so it is not counted there.
 //   · THE SWITCH: KITBRIEF.on — on in the page, `?kitbrief=0` = the step as it was (the name alone). UI only: nothing under src/game reads it, no
 //     recording carries it, and it is mounted only by the one starting page (ui/startpage.ts), which no headless stand opens.
 // Plain DOM and one style block, injected once. Nothing at module level uses another module's exports.
-import { placeNeeds, type Mission, type PlaceNeeds } from './missions';
+import { placeNeeds, defendersShown, type Mission, type PlaceNeeds } from './missions';
 
-export const KITBRIEF = { on: true };
-try { if (new URLSearchParams(location.search).get('kitbrief') === '0') KITBRIEF.on = false; } catch { /* no page (the harness) */ }
+export const KITBRIEF = { on: true,
+  /** a click anywhere off the large map puts it back, and does nothing else (`?mapout=0` = only the map itself, M and the keys that leave a card did) */
+  outside: true };
+try { const q = new URLSearchParams(location.search); if (q.get('kitbrief') === '0') KITBRIEF.on = false; if (q.get('mapout') === '0') KITBRIEF.outside = false; } catch { /* no page (the harness) */ }
 
 const WORDS = ['none', '1', '2', '3', '4', '5', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 /** a count as the menus write one: a digit up to five, a word past it */
@@ -32,12 +37,14 @@ export function countWords(n: number): string { return WORDS[n] ?? 'many'; }
 export function wordsOf(line: string): string { return line.replace(/\d+/g, n => countWords(Number(n))); }
 export function needCells(n: PlaceNeeds | null, rescue: boolean): [string, string, string][] {
   const out: [string, string, string][] = [];
-  if (rescue) out.push(['Hostages', n && n.hostages > 0 ? countWords(n.hostages) : 'inside', 'a frag thrown onto their floor is theirs too']);
-  if (n && n.locked > 0) out.push(['Locked doors', countWords(n.locked), 'a door charge, the breaching shotgun, the hammer or a pick is the way through a locked door']);
-  if (n && n.steel > 0) out.push(['Steel', countWords(n.steel), 'the hammer and the shotgun do not take a steel door: a charge or a pick does']);
+  if (rescue) out.push(['Hostages', n && n.hostages > 0 ? countWords(n.hostages) : 'inside', 'a frag thrown onto their floor will hit them too']);
+  if (n && n.locked > 0) out.push(['Locked doors', countWords(n.locked), 'you can get through a locked door with a door charge, the breaching shotgun, the hammer or a pick']);
+  if (n && n.steel > 0) out.push(['Steel', countWords(n.steel), 'the hammer and the shotgun won\'t open a steel door, but a charge or a pick will']);
   return out;
 }
 
+/** what a pointer does beside the large map: the click puts it back, the press before it goes nowhere */
+const OUT = ['pointerdown', 'mousedown', 'click'];
 const K = '#missions.one.kb.pane-loadout';
 const CSS = `
 /* THE KIT STEP'S BRIEF (ui/kitBrief.ts; root class 'kb'): the map sheet at the left of a band across the step's top, the mission's own words beside it */
@@ -55,6 +62,7 @@ ${K} .mcsum { display: block; }
 ${K} .mfacts { flex: 0 0 100%; display: flex; margin-top: 9px; }
 ${K} .mfact.kb { display: flex; }
 ${K} .mfact[data-fact="defenders"]:not(.kb) { display: none; }
+${K} .mfacts.nodef:not(:has(.mfact.kb)) { display: none; }
 ${K} .mblurb { flex: 0 0 100%; display: block; max-width: 74ch; margin-top: 9px; font-size: 13px; line-height: 1.45; }
 #missions .mfact.kb { display: none; }
 /* …large: the sheet over the step, on the menus' ground; the band keeps its place under it */
@@ -102,24 +110,30 @@ export function mountKitBrief(root: HTMLElement, sheet: HTMLElement): KitBrief |
   const draw = (m: Mission) => { for (const c of cells) c.remove?.(); cells.length = 0; if (!facts) return;
     const cell = (label: string, value: string, why: string, before: Element | null) => { const c = document.createElement('div'), l = document.createElement('i'), v = document.createElement('b');
       c.className = 'mfact kb'; c.setAttribute('data-fact', label.toLowerCase().replace(/\s+/g, '-')); if (why) c.title = why; l.textContent = label; v.textContent = value; c.append(l, v); facts.insertBefore(c, before); cells.push(c); };
-    if (m.defenders && m.defenders !== '—') cell('Defenders', wordsOf(m.defenders), '', facts.querySelector?.('.mfact[data-fact="defenders"]') ?? null);   // (the list's own cell writes the digits: on this step it is this one that shows)
+    const held = defendersShown(m); if (held && held !== '—') cell('Defenders', wordsOf(held), '', facts.querySelector?.('.mfact[data-fact="defenders"]') ?? null);   // (the list's own cell writes the digits: on this step it is this one that shows)
     for (const [label, value, why] of needCells(needs, m.scenario?.kind === 'rescue')) cell(label, value, why, null); };
   const told = () => { try { api.onChange?.(); } catch (e) { console.error('the kit brief: onChange threw', e); } };
   const onMap = (e: Event) => { if (shut || !root.classList.contains('pane-loadout')) return; e.stopPropagation(); api.setBig(!big); };
   map?.addEventListener?.('click', onMap);
+  // (in the capture phase, on the document: before any button of the step under the sheet hears it;
+  //  the press that begins the click is caught the same way, or a kit card under the pointer would take the keys and a figure would start to turn)
+  const off = (e: Event) => !shut && big && KITBRIEF.outside && !map?.contains?.(e.target as Node | null);
+  const onOut = (e: Event) => { if (!off(e)) return; if (!mapOn()) { api.setBig(false); return; }   // (the window was narrowed under it and the sheet is not drawn: nothing to leave, the click is the step's)
+    e.stopPropagation(); e.preventDefault(); if (e.type === 'click') api.setBig(false); };
+  for (const t of OUT) document.addEventListener?.(t, onOut, true);
   const api: KitBrief = {
     show(m) { if (shut || m.id === shown) return; shown = m.id; needs = null; api.setBig(false); draw(m);
       { cap.textContent = ''; const t = document.createElement('b'); t.textContent = m.title; cap.append(t, m.blurb || m.place || ''); }
       void placeNeeds(m).then(n => { if (shut || shown !== m.id) return; needs = n; draw(m); told(); }); },
     get needs() { return needs; }, get big() { return big; },
     get map() { return mapOn(); },
-    setBig(on) { const to = on && mapOn(), moved = to !== big; big = to; root.classList.toggle('kb-big', big); if (moved) told(); if (map) map.title = !onStep() ? hadTitle : big ? 'M or a click: back' : 'M or a click: the map, large'; },   // (the sheet is the Mission step's too: there it says what it said)
+    setBig(on) { const to = on && mapOn(), moved = to !== big; big = to; root.classList.toggle('kb-big', big); if (moved) told(); if (map) map.title = !onStep() ? hadTitle : big ? (KITBRIEF.outside ? 'press M or click anywhere to go back' : 'press M or click to go back') : 'press M or click for the large map'; },   // (the sheet is the Mission step's too: there it says what it said)
     key(code, repeat) { if (shut || !(big || mapOn())) return false;
       if (code === 'KeyM') { if (!repeat) api.setBig(!big); return true; }
       if (big && (code === 'Escape' || code === 'Enter' || code === 'NumpadEnter' || code === 'Space')) { if (!repeat) api.setBig(false); return true; }   // (large, it is a sheet laid over the step: the keys that leave a card leave it)
       return false; },
     onChange: null,
-    close() { shut = true; api.setBig(false); root.classList.remove('kb', 'kb-big'); map?.removeEventListener?.('click', onMap); if (map) map.title = hadTitle; cap.remove?.(); for (const c of cells) c.remove?.(); cells.length = 0; },
+    close() { shut = true; api.setBig(false); root.classList.remove('kb', 'kb-big'); map?.removeEventListener?.('click', onMap); for (const t of OUT) document.removeEventListener?.(t, onOut, true); if (map) map.title = hadTitle; cap.remove?.(); for (const c of cells) c.remove?.(); cells.length = 0; },
   };
   api.setBig(false);
   return api;
