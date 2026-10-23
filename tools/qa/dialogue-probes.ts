@@ -630,7 +630,7 @@ export async function dialogueExchange() {
       if (k && a3) { const endT = a3.t + a3.dur; if (k.t < endT - 1e-6 || k.t > endT + DT + 1e-6) fails.push(`the key remark went up ${(k.t - endT).toFixed(3)} s after the answer ended (want that frame)`); if (Math.abs(k.dur - samBeat(k.text.length)) > 1e-6) fails.push(`key remark held ${k.dur.toFixed(2)} s (samBeat ${samBeat(k.text.length).toFixed(2)})`); }
       if (!game.player.keys.has('floor') || A.keys.size) fails.push(`after the door was given: Player.keys [${[...game.player.keys].join(',')}], his belt [${[...A.keys].join(',')}] (want floor / empty)`);
       if (game.mission.stats.keys !== 1) fails.push(`mission stats.keys ${game.mission.stats.keys} (want 1)`);
-      if (!msgs.some(m => /^took Kowalski's key/.test(m.text))) fails.push(`no 'took Kowalski's key' line in the log`);
+      if (!msgs.some(m => /^you took Kowalski's key/.test(m.text))) fails.push(`no 'took Kowalski's key' line in the log`);
     }
     const sams = exch.filter(e => e.who === 'sam'), answers = exch.filter(e => e.who === 'guard');
     const cats = sams.map(e => catOfSam(e.id));

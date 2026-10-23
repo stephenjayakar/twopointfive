@@ -1756,7 +1756,7 @@ export function takeKey(g: Game, gd: Guard, rnd: () => number = simRandom) {
   for (const k of fresh) pl.keys.add(k);
   g.audio.play('lockPick', v3.add(gd.char.pos, [0, 1.0, 0]), 0.45, { rate: 1.6 });   // the key ring unclipped at his hip: the pick's tick, pitched up — small, bright, close
   tally(g, 'keys'); chronKey(g, gd);   // one for the card's count, one for the timeline
-  g.msg(`you took ${gd.callsign}'s key, so keyed doors open for you now with no pick or kick`);
+  g.msg(`you took ${gd.callsign}'s key. keyed doors will open for you now`);
   if (H && H.g === gd) { const line = samKeyLineFor(g, gd, H.variant, rnd); if (line) H.after = line; }
 }
 

@@ -199,7 +199,7 @@ export function weatherNote(wx: WeatherKind | null, h: HourId): string {
   if (!wx) return 'no weather picked, so it\'s a dry day (the level\'s own storm stays with its night)';
   const c = WEATHER_PRESETS[wx].cloud, own = HOURS[h].cloud ?? 0;
   const sky = c <= own || c < 0.15 ? '' : c >= 0.99 ? ' · by day there\'s no sun at all, just dim gray light and no shadows' : c >= 0.85 ? ' · by day the sun is behind clouds, with flat gray light and soft shadows' : c >= 0.5 ? ' · by day a pale sun comes through it' : ' · by day the sun is a little dimmer';
-  return weatherWords(wx).replace('; at night as clear', '') + sky;
+  return weatherWords(wx).replace(". At night it's the same as clear", '') + sky;
 }
 export interface MissionsScreen { root: HTMLElement; list: Mission[]; readonly selected: Mission; readonly hourNow: HourId; /** the hour and the weather the highlighted row is STARTED in: its own where it names one (game/rowset.ts), a snow level's weather none, else the picks */ readonly startHour: HourId; readonly startWeather: WeatherKind | null; select(i: number | string): void; move(d: number): void; difficulty(lv: Difficulty): void; hour(id: HourId | number): void; readonly weather: WeatherKind | null; setWeather(k: WeatherKind | null): void; /** the highlighted row's way in: 0 = the level's own start, k ≥ 2 = its k-th, −1 = dealt */ readonly way: number; setWay(v: number | 'next' | 'prev'): void; pick(): void; close(): void; hrefOf(m: Mission): string }
 
