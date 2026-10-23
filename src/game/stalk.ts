@@ -58,10 +58,10 @@ export const STALK = {
   /** THE STEP IN: the grab a stalk ends in closes the last of the gap in one step over `catchSecs` (a step longer than `catchM` takes up to `catchLong` times that: the haul back has what is left of HOLD.secs.grab; `turnIn`: he comes round to the man's back through the step, not in its first frames) —
    *  a lunge: off the mark over its first three frames, most of the way inside a third of it, landing gently (stepEase). The grab's own way in covers a
    *  fifth of the gap in its first FRAME. His legs are given the step, at no more than `catchStride` m/s. 0 = the grab's own.
-   *  THE YANK: once the step has landed the man is hauled `yank` m straight back the way he was facing from — Sam going back with him — over what is left of
+   *  THE YANK: once the step has landed the man is hauled `yank` m straight back the way he was facing from — Sam going back with him (`yankWith`; off, he stays where he landed and the man comes 11 cm into him) — over what is left of
    *  the grab: movement across the floor is what the game's camera shows of a grab (the pose's share: character.ts HOLD.yank). Less where something solid
    *  stands behind the pair (`yankRoom` m kept clear behind Sam); 0 = he is held where he stood. */
-  catchSecs: 0.3, catchM: 0.75, catchLong: 1, turnIn: false, catchStride: 1.5, yank: 0.28, yankRoom: 0.4,
+  catchSecs: 0.3, catchM: 0.75, catchLong: 1, turnIn: false, catchStride: 1.5, yank: 0.28, yankRoom: 0.4, yankWith: false,
   /** THE SAME AT A CORNER (the maintainer: "curious if we can make this language work for working corners. like when you're at a corner you can either grab
    *  or CQC with the right timing"). With his back on a wall (the wall hold, not the stack) and his hands empty, the left button HELD is a man lying in wait:
    *  nothing moves, and the moment a man who is not onto him is inside `cornerM` with Sam at least `cornerDeg`° round from his nose — he has come past the
@@ -76,7 +76,7 @@ export const STALK = {
    *  THE WAIT SHOWS (closeTick): on the wall with the button held he coils — sunk `cornerCoil` of the way into the crouch, the lead hand tucked toward the man at `cornerReach[0]`
    *  of the grab's reach, growing to `cornerReach[1]` as the nearest man he could take comes from `cornerSee` m to `cornerM`; he comes up out of the coil over
    *  `cornerRise` s of the step in. `cornerShow` off = the wall stance alone, as it was.
-   *  (Of the polish, so DOWN here: `jolt` 0 and `cornerShow` off — and above, `catchLong` 1 and `turnIn` off. stalkPolish(true) writes POLISH_UP's.) */
+   *  (Of the polish, so DOWN here: `jolt` 0 and `cornerShow` off — and above, `catchLong` 1, `turnIn` and `yankWith` off. stalkPolish(true) writes POLISH_UP's.) */
   jolt: 0, joltFace: 50, joltSecs: 0.6, joltAtOnce: false, cornerShow: false, cornerSee: 3.2, cornerReach: [0.25, 0.55] as [number, number], cornerCoil: 0.3, cornerRise: 0.24,
 };
 /** tallies for the checks and the page's hook (begun = presses that took a man; out = why each ended without a grab) */
@@ -150,10 +150,10 @@ function brokeDuck(g: Game, S: St) {
 /** THE POLISH, UP OR DOWN TOGETHER (the page's ?stalkpolish=0, and journal.ts for a recording from before the fourth pass): the turn through the step, the longer
  *  long step, the wait's pose at a corner, the duck when the man turns round — and the hold's share (character.ts holdPolish). Up = POLISH_UP's numbers, as
  *  the page has them; down = the tables' own, as the frozen stand has them (src/host/standup.ts: TPS_STALKPOLISH=1 raises them on a frozen run). */
-const POLISH_UP = { turnIn: true, cornerShow: true, catchLong: 1.1, jolt: 0.6 } as const;   // (THE PAGE'S NUMBERS — a tuned one goes here, not in the table, which has them down)
-const POLISH_DOWN = { turnIn: STALK.turnIn, cornerShow: STALK.cornerShow, catchLong: STALK.catchLong, jolt: STALK.jolt } as const;   // (the table's own, read once as this file loads)
+const POLISH_UP = { turnIn: true, cornerShow: true, yankWith: true, catchLong: 1.1, jolt: 0.6 } as const;   // (THE PAGE'S NUMBERS — a tuned one goes here, not in the table, which has them down)
+const POLISH_DOWN = { turnIn: STALK.turnIn, cornerShow: STALK.cornerShow, yankWith: STALK.yankWith, catchLong: STALK.catchLong, jolt: STALK.jolt } as const;   // (the table's own, read once as this file loads)
 export function stalkPolish(up: boolean) {
-  const U = up ? POLISH_UP : POLISH_DOWN; STALK.turnIn = U.turnIn; STALK.cornerShow = U.cornerShow; STALK.catchLong = U.catchLong; STALK.jolt = U.jolt; holdPolish(up);
+  const U = up ? POLISH_UP : POLISH_DOWN; STALK.turnIn = U.turnIn; STALK.cornerShow = U.cornerShow; STALK.yankWith = U.yankWith; STALK.catchLong = U.catchLong; STALK.jolt = U.jolt; holdPolish(up);
 }
 /** what the stalk asks of his feet this frame: the unit direction, the speed, and the point he faces (the man's chest) */
 export interface StalkMove { mx: number; mz: number; pace: number; at: Vec3 }

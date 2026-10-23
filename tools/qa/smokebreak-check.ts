@@ -21,6 +21,7 @@
 //   off       switch off, the same order: no light, no source, no puff, the hand never asked — and the game's digest is the one of a man never told to smoke
 //   old       a recording from before the key replays with it off (journal.ts applyKnobs)
 import { standUp, ROOT } from './headless.ts';
+import { hostPutBack } from './putback-host.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -126,9 +127,8 @@ export async function smokeBreakCheck(o: { verbose?: boolean } = {}): Promise<bo
         const t0 = one(), ok0 = th().length === 1 && up() === 1;
         C.g.smoke.clearAll(); C.step(2); const none = up(); C.step(60); const t1 = one(), ok1 = none === 0 && th().length === 2 && up() === 1;   // (a script's clear, the panel's: the men as they were)
         C.held.length = 0; C.step(60); const t2 = one(), ok2 = th().length === 3 && up() === 1;   // (its ttl run out, or dropped off a full list)
-        // (the host's REAL put-back, host/putback.ts, as the page calls it: the calls the harness's engine lacks stood in as no-ops for this one call — at once, and the old one answers 'gone')
-        const { hostAfterPutBack } = await import(`${ROOT}/src/host/putback.ts`); { const E: any = C.g.engine, G: any = C.g; for (const [o, k] of [[E.world, 'forgetSent'], [E.lights, 'forgetSent'], [G.chars, 'forgetSent'], [G.decals, 'touch'], [G, 'rehand'], [E, 'resetTaa'], [E, 'invalidateWorldCache']] as [any, string][]) if (o && typeof o[k] !== 'function') o[k] = () => { }; }
-        hostAfterPutBack(C.g); const put = smokeShown(C.g) === undefined; C.step(2); const t3 = one(), ok3 = put && th().length === 4 && up() === 1 && th().slice(0, 3).every(e => e.track() === null);
+        // (the host's REAL put-back, host/putback.ts, as the page calls it: run headless by putback-host.ts, the one stand-in list every such check shares — at once, and the old one answers 'gone')
+        await hostPutBack(C.g); const put = smokeShown(C.g) === undefined; C.step(2); const t3 = one(), ok3 = put && th().length === 4 && up() === 1 && th().slice(0, 3).every(e => e.track() === null);
         C.g.restartEncounter(); const gone = smokeShown(C.g) === undefined, gd = C.g.guards.find((x: any) => x.route?.name === 'court') ?? C.g.guards[1]; C.step(10); order(gd, smoke); C.step(8 * 60); const t4 = one(), ok4 = gone && th().length === 5 && up() === 1;   // (the same man's id, a fresh man, an emptied solver: the old man's rows are nobody's)
         // … and nothing live shows in the fog: the thread filed in view is let go while he is hidden, and one rides his hand again when he is seen
         const F: any = C.g.fogOfWar; F.hidden = () => true; C.step(3); const fogged = up(); delete F.hidden; C.step(3); const t5 = one(), ok5 = fogged === 0 && th().length === 6 && up() === 1;

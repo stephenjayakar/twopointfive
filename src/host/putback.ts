@@ -13,7 +13,6 @@ export function hostAfterPutBack(game: Game) {
   game.decals.touch();   // (the ring's list went back; its 'unchanged since the last frame' with it)
   game.smoke?.clearAll?.();   // (the solver's fields are the GPU's: a cloud of the abandoned moment is nobody's — a can that was venting at the save lies there without its smoke, as after a file's load)
   engine.particles?.clear();
-  game.engine.breathShown = undefined;   // (the breath's book of whose steam rides whose mouth in that solver and which puffs went to that pool, game/snowBreath.ts: asked for afresh)
   game.engine.hostBooks = undefined;   // (EVERY host book kept in the one bag, host/api.ts HostBooks — today the open fires' book of the smoke filed with that solver and the bed voices asked of the mixer, game/fire.ts: all were the abandoned moment's and are asked for afresh. A book kept there needs no line of its own here and cannot be forgotten)
   game.rehand();   // (lying snow, the wind's map of what stands, the dust under the roofs: each handed over only when it changed, and it changed BACK)
   (game.probe as { putBack?: () => void }).putBack?.();   // (the light meter: answers still out are the abandoned moment's and are dropped as they land. Its buffers and what it last sent never went back — render/probe.ts Plumbing is the host's inside a game object, math/side.ts HostOwned — so there is nothing to forget)
