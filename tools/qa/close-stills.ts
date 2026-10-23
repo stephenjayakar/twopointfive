@@ -151,6 +151,17 @@ async function stalk(scene: string, who: 'calm' | 'rifle', pause: boolean) {
   for (const t of [0.07, 0.14, 0.22, 0.34, 0.5, 0.7, 0.95, 1.5]) to(t, `grab ${t.toFixed(2)} s`);
   return R;
 }
+/** THE STALK BROKEN OFF (stalk.ts end): the creep from 2.9 m, and at 1.6 m the man turns round to face him — the frames after, as the reach and the rise let go */
+async function stalkTurn(scene: string) {
+  const S = await lobby(7307), { W, g, A } = S; g.tune.carbineGuards = 'none';
+  S.samAt(2.9, true); S.step(30); const R = recorder(scene, g, A);
+  W.input.buttons |= 1; W.input.clicked |= 1; S.step(1); let n = 0;
+  for (const d of [2.2, 1.6]) { while (S.gap() > d && !g.player.holding && n++ < 1200) S.step(1); R.snap(`creeping · ${S.gap().toFixed(2)} m`); }
+  const yaw0 = A.char.bodyYaw; let f = 0; const to = (t: number, label: string) => { const k = Math.round(t * 60); while (f < k) { const u = Math.min(1, (f + 1) / 36); A.char.bodyYaw = A.char.aimYaw = yaw0 + Math.PI * u * u * (3 - 2 * u); S.step(1); f++; } R.snap(label); };
+  for (const t of [0.15, 0.3, 0.45, 0.6, 0.8, 1.1, 1.6]) to(t, `he turns · ${t.toFixed(2)} s`);
+  W.input.buttons &= ~1; S.step(30); R.snap('button up, half a second on');
+  return R;
+}
 /** THE WAIT AT A CORNER (stalk.ts STALK.corner): Sam's back on the lobby's nearest wall, hands empty, the left button held — a man walks past along the wall a
  *  pace out: moments as he comes, then the grab off the wall, beat by beat */
 async function cornerWait(scene: string) {
@@ -181,6 +192,7 @@ const SCENES: Record<string, { title: string; run: (name: string) => Promise<any
   'stalk': { title: 'the stalk: the held click from 2.9 m, the arm and the rise by distance, into the grab', run: n => stalk(n, 'calm', false) },
   'stalk-rifle': { title: 'the stalk into a rifleman: the creep, then the grab that takes his carbine', run: n => stalk(n, 'rifle', false) },
   'stalk-corner': { title: 'the wait at a corner: back on a wall, the button held, a man walks past and is taken', run: n => cornerWait(n) },
+  'stalk-turn': { title: 'the stalk broken off: at 1.6 m he turns round, the button still down', run: n => stalkTurn(n) },
   'stalk-pause': { title: 'the stalk let go at 1.4 m (the pose held), then pressed again', run: n => stalk(n, 'calm', true) },
   'choke': { title: 'the choke from the hold, beat by beat', run: n => choke(n) },
   'approach-crouch': { title: 'coming up behind him at the crouch, stopping in reach', run: n => approach(n, true, 0.85) },

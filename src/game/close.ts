@@ -34,7 +34,7 @@ import { canStand, grabVariant } from './player';
 import { civilianSeated, civiliansShown, SIT_ADVANCE } from './civilians';
 import type { ReadyKind } from './character';
 import { handworkOn, samWork } from './handwork';
-import { STALK, stalkCould, stalkTell } from './stalk';
+import { STALK, stalkCould, stalkTell, stalkWait } from './stalk';
 
 const DEGR = Math.PI / 180;
 export const CLOSE = {
@@ -304,6 +304,11 @@ export function closeTick(g: Game) {
   // (in reach of ANOTHER man the tell is that man's, as it was)
   if (T && (!r || !best || best.guard === T.gd)) { an.ready = 'grab'; an.readyAt = T.at; an.readyUp = CLOSE.reachUp ? 1 : 0; an.readyAmt = T.reach; an.rise = T.rise; }
   else { an.ready = r ? r.kind : null; an.readyAt = r ? r.at : null; an.readyUp = r && CLOSE.reachUp ? 1 : 0; an.readyAmt = 1; an.rise = 0; }
+  // (stalk.ts STALK.corner: lying in wait on a wall he is coiled — sunk a little, both hands up, more as the man comes)
+  const CW = STALK.on && CLOSE.ready && !r && closeBare(g) ? stalkWait(g) : null;   // (bare hands only: with a knife the pose's right hand is on the hilt, and the wait can only grab)
+  if (CW) { an.ready = 'grab'; an.readyAt = CW.at; an.readyUp = 0; an.readyAmt = CW.reach; an.coil = CW.coil; }
+  else { const H = pl.holding;   // (…and he comes up out of it THROUGH the step in, not in its first frame)
+    if (H && H.from && H.phase === 'grab' && an.coil > 0) { H.coil0 ??= an.coil; an.coil = STALK.cornerRise > 0 ? H.coil0 * (1 - smoothstep(0, STALK.cornerRise, H.t)) : 0; } else an.coil = 0; }
   if (r) CLOSE_STATS.readyFrames++;
   const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)
   an.creep = !!m;
