@@ -187,7 +187,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   back into the same objects (identities stand; the Game's host fields stay as they are NOW); `restoreSnapshot(s, other)` puts the state into ANOTHER Game on the same
   level, walked side by side: an object the two games share (a module's constant row) stands for itself and is not written, a function is the other game's own closure
   of the same code where one stands in the same slot (one function of the snapshot's is one function there), a field that is COMPUTED (a getter) is left to compute.
-  `stateHash` / `stateDiff` / `stateAlike` fold or compare every value by its raw bits in one fixed order. NOT IN A SNAPSHOT: the host (`Game.engine` but for its CPU
+  `stateHash` / `stateDiff` / `stateAlike` fold or compare every value by its raw bits in one fixed order. WHICH OF THE THREE: `stateHash(g)` for "the same or
+  not" (a word; nothing kept); `stateDiff(a, b, max, full, own)` for WHERE, a line a place (`path: this | that`); `stateAlike` for two games value for value
+  where WHICH object stands where is not asked. `stateDiff` is `flatDiff` of two `stateFlat`: a state laid out as rows of thirteen bytes over a tree of
+  its paths, a string once a state, a typed array as its bytes — it was a token and a joined path string for every value, a typed array's every element
+  among them, 2 GB and seven seconds for two squad games on the page's stand (a check that asked twice was killed for memory); measured now on the same
+  two games, a quarter of a second and 30 to 55 MB over the process as it stood (three runs), about 13 MB kept a state for 2.3 million values by its own count. A flat state holds no object of the game, so a tool keeps one of
+  a frame it cannot keep the game of; its `toks` / `paths` are the old two arrays for a tool that reads them (made on the first ask and kept: as heavy
+  as they were). WHERE THE WALK GOES ON AND WHERE IT ENDS: a VALUE that differs (a number, a text, a flag, null where a number was, which object a
+  field points at) leaves the two walks in step — a flag or a null ended the compare before. A SHAPE that differs (an array of another length, an object
+  with another key) is one line; where what is left of that one value holds NO object first met there, in either state, it is passed over in both
+  ('… (the rest of it is not compared)') and the compare goes on, since the two walks still number their objects alike. Where it does hold one, or the
+  two stand at different places (one has a side table's row the other has not: no count stands before those), the compare ENDS as it always did, with
+  '(the shapes part here: nothing after it is compared; the second stands at …)': a check that asks "no line of mine" must read that line as NOT
+  PROVEN (`fire-check` and `breathsteam-check` do, by its first words). Going on quietly past such a place was tried and taken out: by the review, it
+  hid rows (a container's unequal remainder, other tables' rows folded into one line) from exactly those checks. TWO GAMES VALUE FOR VALUE past a shape
+  is `stateAlike(a, b, max)`: it pairs what stands in the same place, gives up only the one thing that differs, and its lines name side-table rows the
+  same way (`name{where the key was met}`). TWO GAMES IN ONE PROCESS are compared with `own` (the
+  fifth word of `stateDiff`, the third of `stateFlat` and `stateHash`): a module's registered variable is ONE for both games (the first limit below),
+  so the whole state of each reads it at another place in its walk. Run, two games stood on the pass with a mission started on each: the whole
+  states part at `nightbreach.applied: an object | the object at game.level.scenarios.roomClear.team` (the variable holds the SECOND game's level's
+  row; a table under a module's root holds the second game's props) and the compare ends there; with `own` they differ in no line. Check `tools/qa/statediff-check.ts` (probe `statediff`, family checkpoints; `STATEDIFF_BREAK=1` must fail; both stands): a state against
+  itself, the old arrays a row a value (and, once, by hand against the code from before: the same 2.4 million rows, statics and all), the weight by its
+  own count, each kind of value and of safe shape changed by hand with a number changed far later still found, and each place the compare must END (an
+  array one object longer, a side table's row only one state has, a last row only one has) ending it out loud. The checks that ask it (`fire`, `smokebreak`, `breathsteam`,
+  `attentionway`) pass on both stands as before. One game, the office, one seed. NOT IN A SNAPSHOT: the host (`Game.engine` but for its CPU
   box world and light set, the mixer, the smoke solver's GPU fields, the GPU light meter's buffers and its readings in flight, the session journal), the character file, what a closure
   captured, a MEMO table, and it is references, not bytes (it cannot be sent to another process as it is).
   THE HOST'S OWN INSIDE A GAME OBJECT IS A `HostOwned` (`math/side.ts`; a class that extends it is held as it is: never copied, never put back, never compared, and
@@ -260,7 +284,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   out-parameter, a class's `static` field. A SAVE IS A SIDE EFFECT OUTSIDE THE SNAPSHOT: the controller's shelf of saves in memory is deliberately not in one
   (`savestate.ts memShelf`: a load must not take the later saves away), so the same ticks played again after a put back write an autosave a second time, into the
   next slot, and the slot's name is in the state — whoever rolls a game back puts the shelf back with it: the check does (every snapshot it takes remembers the
-  shelf beside it), a rollback ring will have to. A
+  shelf beside it), a rollback ring will have to. THE SENSORS' TAPE DOES NOT GO BACK EITHER (`sensors.ts SensorStream`, the host's): right for a save loaded
+  in play — the game goes back, the recording goes on — but a ring that undoes eight ticks and plays them again under a recording files them twice, and
+  under a replay is served the wrong frames: whoever builds the ring winds the tape itself. The check never runs under a recording or a replay
+  (`journalload-check.ts` does). A
   showcase beat of the Director's is a generator: a snapshot across a running show cannot be put back (no save is taken beside one).
   A GPU BUFFER MADE ANEW between a save and its load goes back as the old, destroyed one (a field that holds a GPU object is put back like any field): one can be,
   `BoxWorld.itemBuf`, when the grid's list passes 32,768 entries — compound-four and block-squads use about 4,500, so it does not happen today. The game objects
