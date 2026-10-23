@@ -264,7 +264,7 @@ export class BoxWorld {
     type Q = { stamp: Uint32Array<ArrayBuffer>; ray: number };
     let q = own.w as Q | undefined; if (!q || q.stamp.length < this.rgStamp.length) q = { stamp: new Uint32Array(this.rgStamp.length), ray: 0 };   // (boxes added since: an empty table is a clean one)
     const mine = { stamp: this.rgStamp, ray: this.rgRay, best: this.rcBest, bi: this.rcBi, bn: this.rcBn };
-    this.rgStamp = q.stamp; this.rgRay = q.ray;
+    this.rgStamp = q.stamp; this.rgRay = q.ray; own.w = undefined;   // (an ask inside this one on the same store makes a table of its own: this one's ray ids are in use)
     try { return fn(); }
     finally { own.w = { stamp: this.rgStamp, ray: this.rgRay } satisfies Q; this.rgStamp = mine.stamp; this.rgRay = mine.ray; this.rcBest = mine.best; this.rcBi = mine.bi; this.rcBn = mine.bn; }
   }
