@@ -76,12 +76,14 @@ export const AUTOCAM = {
   /** how fast a turn of its own comes round (1/s: the share of what is left taken each second) */
   turnRate: 5,
   /** THE SWAY (off = the view turns by itself only at rest): the share of the angle to the middle of the men he could shoot that the yaw leans, and the
-   *  most of it (rad) · past this far round (rad) the side it took is kept · the lean toward the side he moves to (rad) at this speed across the view
+   *  most of it (rad) · men gone further round than this to the OTHER side (rad) do not flip the side it took · the lean toward the side he moves to (rad) at this speed across the view
    *  (m/s) · the most of both together (rad) · never faster than this (rad/s) · the spring's rate (1/s) · how fast it stops under a button (1/s) */
-  sway: false, swayFight: 0.6, swayFightMax: 38 * Math.PI / 180, swayBehind: 150 * Math.PI / 180, swayMove: 14 * Math.PI / 180, swayMps: 2.5,
+  sway: false, swayFight: 0.6, swayFightMax: 38 * Math.PI / 180, swayBehind: 110 * Math.PI / 180, swayMove: 14 * Math.PI / 180, swayMps: 2.5,
   swayMax: 45 * Math.PI / 180, swayRate: 0.45, swayHz: 2.2, swayStop: 12,
   /** …and how long the lean toward a fight is kept after the last man he could shoot is gone from his line (s: a man stepping in and out of cover does not rock the view) */
   swayLinger: 1.5,
+  /** …and how long after a button comes up it stays stopped (s: shots tapped one after another are one stop, not a stop for each) */
+  swayAfter: 0.6,
   /** THE HAND TAKES IT BACK: the camera's key held this long with a walk key down (s: longer than a tap) · or the mouse moved this far under it (px: less is
    *  a hand's tremor on the key, host/findme.ts TAPTWICE.driftPx) inside `handSecs` */
   holdSecs: 0.25, handPx: 12, handSecs: 0.4,
@@ -134,11 +136,13 @@ export interface AutoCam {
   sway: number; swayV: number; swayGoal: number; swayT: number;
   /** …and the hand's own yaw as the sway left it (it comes back to this, to the bit) · the lean a fight last asked for and how long since a man was in his line (s) */
   swayHome: number; swayFight: number; swayLost: number;
+  /** how long since a button was down, or his hands at something the view serves (s) */
+  swayCalm: number;
   /** the last scene read (the check's and the debugger's look) */
   scene: AutoScene | null;
 }
 export function autoCam(): AutoCam {
-  return { off: [0, 0], base: NaN, goal: NaN, stillT: 0, turnT: 1e9, heldT: 0, handPx: 0, handT: 1e9, space: null, cell: -1, spaceT: -1e9, mid: null, shown: 0, ops: new Map(), way: null, seen: [], seenT: -1e9, sway: 0, swayV: 0, swayGoal: 0, swayT: 1e9, swayHome: 0, swayFight: 0, swayLost: 1e9, scene: null };
+  return { off: [0, 0], base: NaN, goal: NaN, stillT: 0, turnT: 1e9, heldT: 0, handPx: 0, handT: 1e9, space: null, cell: -1, spaceT: -1e9, mid: null, shown: 0, ops: new Map(), way: null, seen: [], seenT: -1e9, sway: 0, swayV: 0, swayGoal: 0, swayT: 1e9, swayHome: 0, swayFight: 0, swayLost: 1e9, swayCalm: 1e9, scene: null };
 }
 /** the mode came on: the zoom as it stands is the hand's own, and nothing of an earlier run is kept */
 export function autoBegin(A: AutoCam, cam: FollowCamera): void { A.off[0] = A.off[1] = 0; A.base = cam.desiredDistance; A.goal = NaN; A.stillT = 0; A.turnT = 1e9; A.heldT = 0; A.handPx = 0; A.way = null; A.ops.clear(); A.space = null; A.cell = -1; swayDrop(A); AUTOCAM_STATS.on++; }
@@ -304,7 +308,8 @@ export function turnGoal(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number
 export function autoSway(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number, blocked: (a: Vec3, b: Vec3) => boolean): number {
   const K = AUTOCAM; if (!(dt > 0)) return 0;
   if (!K.sway) { if (A.sway || A.swayV) swayDrop(A); return 0; }
-  if (S.hold || !S.free) {   // a button down, or his hands at something the view serves: it stops, quickly and without a step, where it is
+  A.swayCalm = S.hold || !S.free ? 0 : A.swayCalm + dt;
+  if (A.swayCalm < K.swayAfter) {   // a button down (or just up), or his hands at something the view serves: it stops, quickly and without a step, where it is
     A.swayV *= Math.exp(-K.swayStop * dt); if (Math.abs(A.swayV) < 1e-4) A.swayV = 0; A.swayT = 1e9;
     const d = A.swayV * dt; A.sway += d; A.swayGoal = A.sway; return d;
   }
@@ -315,8 +320,8 @@ export function autoSway(A: AutoCam, S: AutoScene, cam: FollowCamera, dt: number
     if (S.threats.length) {
       let x = 0, z = 0; for (const t of S.threats) { x += t[0]; z += t[2]; } x = x / S.threats.length - p[0]; z = z / S.threats.length - p[2]; A.swayLost = 0;
       if (Math.hypot(x, z) > 1.5) {
-        const off = wrap(Math.atan2(x, z) + Math.PI - home), side = Math.abs(off) > K.swayBehind && A.swayFight ? Math.sign(A.swayFight) : Math.sign(off);   // (a fight behind the lens: the side it took)
-        A.swayFight = side * Math.min(K.swayFightMax, K.swayFight * Math.abs(off));
+        const off = wrap(Math.atan2(x, z) + Math.PI - home), kept = A.swayFight !== 0 && Math.sign(off) !== Math.sign(A.swayFight) && Math.abs(off) > K.swayBehind;   // (a fight gone round behind the lens to the other side: the side it took is kept, the long way being the short one)
+        A.swayFight = kept ? Math.sign(A.swayFight) * K.swayFightMax : Math.sign(off) * Math.min(K.swayFightMax, K.swayFight * Math.abs(off));
       }
     } else if ((A.swayLost += asked) > K.swayLinger) A.swayFight = 0;
     goal += A.swayFight;

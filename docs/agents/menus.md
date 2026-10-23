@@ -1531,6 +1531,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   gap, the zoom range). KNOWN: with the mouse held still, a frame that leans or zooms slides the floor under the cursor, so his aim drifts a little toward
   where the frame went (worst with the cursor near his feet); the frame freezes under a held button for that reason. No HUD mark says the mode is on: the
   view coming round is the answer to the tap.
+- **The auto camera may turn in a fight and on the move, smoothly: the sway** (`AUTOCAM.sway`, `src/host/autocam.ts autoSway`, 10-23; the maintainer, of
+  the bullet above: "i think we could play with auto camera moving during battle so long as it does so smoothly. bonus points for being correlated with
+  moment and reversible so it still feels somewhat connected to human control", and then "smoothness is the only thing that's mandatory"). SWITCH: on in the
+  page (`?autosway=0` = the turn rule of the bullet above, only at rest), OFF in the module and on the frozen stand (`FROZEN_HOLDS['AUTOCAM.sway']`,
+  `TPS_AUTOSWAY=1`); a key of the `AUTOCAM` table, so a recording from before it replays with it off (`journal.ts applyKnobs`). Nothing with the mode off.
+  THE RULE: the yaw the hand left the view at is the anchor (`cam.yaw − A.sway`); the sway is a lean round it, a function of the moment and not a sum of
+  turns. It leans toward the middle of the hostile men in his line, so the fight comes up the screen where the picture is longest (`swayFight`, 0.6 of the
+  angle to them, 38° at the most; kept `swayLinger`, 1.5 s, after the last of them leaves his line, so a man stepping in and out of cover does not rock the
+  view; a fight behind the lens keeps the side it took), and toward the side he moves to ("moment" was read as movement: `swayMove`, 14° at 2.5 m/s across
+  the view; straight up or down the screen leans nowhere), 45° in all. SMOOTH: the goal is asked ten times a second and the yaw goes to it by a critically
+  damped spring (`swayHz`) whose speed is capped (`swayRate`, about 26° a second), so it starts from rest and never steps. REVERSIBLE: the cause gone, it
+  comes back to the hand's yaw, to the bit. It stops (its speed decays over a fifth of a second) while a mouse button is down or his hands are at something
+  the view serves, never goes to a yaw that puts a wall between the lens and him or a man in his line where the hand's own view has none, and is dropped
+  where it stands by a turn by hand, the double tap's come-round and a turn at rest. NOTHING CARRIES HIS AIM through it: the view turns slowly under a live
+  cursor, and a held walk key bends his path at the same slow rate, as in any game whose camera follows.
+  CHECK: `autocam` lines 14 to 16 (14 from made-up scenes: the lean, its first step a tenth of the cap, never past the cap, the linger, home to the bit,
+  the button, the wall, the switch off; 15 a real hostile man to one side through `stepFrame` on the fixed step, and the same with the sway off: the yaw
+  never moves; 16 the stand words and the journal). ALL PASS on both stands; `AUTOSWAY_BREAK=1` fails 14 and 15 on both. Lines 1 to 13 run with the sway
+  off: they are the rule as it was. Real page: `autocam-page.cjs` walks across the view with the mode on (the lean, the cap, home). One floor, one seed.
+  NOBODY HAS SEEN OR PLAYED IT, NEVER ON A GPU: whether a view that turns under a held walk key and a live cursor is welcome in a fight is the
+  maintainer's to say, and every number is a first guess.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
   notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the
