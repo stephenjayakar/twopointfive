@@ -65,6 +65,8 @@ export interface HostApi {
   viewFocus?: Vec3;
   /** the open fires to draw this frame (game/fire.ts writes the list; the engine hands it to the composite — render/passes.ts setFires). Absent on a stand-in */
   fires?: FireRecord[];
+  /** the look's numbers every fire is drawn with (game/fire.ts) */
+  fireLook?: number[] | null;
   /** THE HOST BOOKS: what a game module remembers of the HOST's side of its work (what it filed with the smoke solver, asked of the mixer, handed to the
    *  particle pool) — the host's, so in no snapshot. One bag, so that one line drops them all when a save in memory is put back (host/putback.ts): a module's
    *  new book is a member of HostBooks, read as `engine.hostBooks?.x` and written as `(engine.hostBooks ??= {}).x = …`, and needs no line of its own there */

@@ -84,8 +84,9 @@ const LEVEL_BASE: Record<string, string> = {
   // named inside the door, the rifle, the swap's card, a mark to shoot from, the shot, the hands' key), its own card for the player, a sixth checkpoint
   'tut-quiet.json': 'f9a3f60e0',
 
-  // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run)
-  'tut-sky.json': '34c71d8c3',
+  // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
+  // brazier's melt patch laid round (eight turned slabs where two square ones were)
+  'tut-sky.json': '26fa53ede',
 
   // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, the moon behind the shop; then the inner wall and its wooden
   // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round

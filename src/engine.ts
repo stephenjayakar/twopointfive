@@ -54,8 +54,10 @@ export class Engine {
   sharpOn = false; frameBufOut: GPUBuffer; frameDataOut = new ArrayBuffer(FRAME_BYTES); sceneBGOut: GPUBindGroup | null = null;
   /** FOG OF WAR (game/fogofwar.ts fills it every frame; main.ts hands the game's object over once): null / `on` false = no pass, the frame as it was */
   fogFrame: FogFrame | null = null;
-  /** THE OPEN FIRES to draw this frame (game/fire.ts writes the list every update; empty = none): the composite adds each one's flame and embers (passes.setFires) */
+  /** THE OPEN FIRES to draw this frame (game/fire.ts writes the list every update; empty = none): the composite adds each one's flame, coals and the smoke off its tips (passes.setFires; its embers are particles) */
   fires: FireRecord[] = [];
+  /** the look's numbers every fire is drawn with (game/fire.ts fireDraws; fire.wgsl FireLook's twelve, in order); null = none said yet */
+  fireLook: number[] | null = null;
   /** the outline in the dark (render/outline.ts): the host's frame for it, null = never asked. Written by the host once a frame (ui/findme.ts findMeOutline);
    *  render() adds the box on the picture its own camera gives and the exposure */
   outline: OutlineFrame | null = null;
@@ -400,7 +402,8 @@ export class Engine {
       const A = air ? S.beamAirK * (0.03 + 0.09 * Math.min(2, S.hazeDensity / 0.035)) : 0;   // (0.12 at the default haze: the software adapter's stills put the line at the old box's level, clipped, at 0.4)
       this.world.hidePrimary = this.passes.setBeams(refl || air ? this.world.dynamics : null, thinIs, this.viewFocus, { reflect: refl, air: air ? thinAirOf : null, A, rain: this.weather.rain, wet: S.wetMirror && S.rtReflect ? 2 : 0 });
     }   // (lasers / tracers in the reflections: ≤ 8 segments in a small uniform; none = a zero count, the pass as it was)
-    this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames and embers (game/fire.ts), behind the beams in the same uniform
+    this.passes.setFireLook(this.fireLook);
+    this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (game/fire.ts), behind the beams in the same uniform
     this.passes.setRt(this.settings.rtReflect, this.settings.rtReflectDiv);   // (likewise before resize: the reflection targets' divisor — pooled + re-made on change like the gather's — and the switch that first allocates them at all)
     this.passes.setGi(this.settings.giResample !== 'off');   // (phase 5, likewise: the gather's reservoir pair exists from the first frame resampling is asked for — an off machine pays no memory)
     this.passes.setGiFull(!!this.settings.giFullRes && this.settings.denoiser !== 'legacy', this.settings.giFullIters);   // (GI in motion, likewise before resize: the diffuse client's INTERNAL-res set exists from the first frame it is asked for; the v3 core only)
