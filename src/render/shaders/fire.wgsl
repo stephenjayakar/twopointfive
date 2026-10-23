@@ -4,7 +4,7 @@
 // Nothing here reads the scene: a record per fire and the pixel's ray in, light and how much of what is behind is kept out — so the same text runs alone on a
 // plain stage (tools/qa/fire-lab.cjs), where its look was set. Picture only: the game reads none of it (the fire's LIGHT is an engine light like any lamp's).
 //   a = where the coals are (the middle of the drum's mouth) + the mouth's radius (m)      b = flame height (m) · heat 0‥1 · the fire's own seed 0‥1 · its clock (s)
-//   c = the wind at the flame (x, z; m/s) · the light's flicker this frame (about 1) · embers in the air at once      d = the bed of coals' radius (m; 0 = none drawn)
+//   c = the wind at the flame (x, z; m/s) · the light's flicker this frame (about 1) · embers in the air at once      d = the bed of coals' radius (m; 0 = none drawn) · under the fog of war: 0 = drawn wherever it stands, 1 = only where the team sees, 2 = only where it does not (the composite's test: fireOver)
 //   pop = the last four cracks of the wood: seconds since (under 0 = none) · how hard 0‥1 · its own seed 0‥1
 struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f, pop: array<vec4f, 4> };
 
