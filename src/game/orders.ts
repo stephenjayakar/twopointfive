@@ -281,6 +281,11 @@ export const ORDERS = {
    *  through the door they are to stack on (`round`); a pair was not, went round it only for the unknown floor beyond, and under the cap lost that way
    *  round — a pair behind the ordered door pulled it open and walked through it to stack on it. false = the cap as it was first made */
   cleared: true, clearedDear: 20, knownFace: true, ownDoor: true, roundCap: 0, roundOwn: true,
+  /** A PAIR GOES ROUND ONE WAY (sameWays below; the page: on — `?sameway=0` — false here and on the frozen harness stand, `TPS_SAMEWAY=1`; a FROZEN_HOLDS
+   *  row; false = each man his own short way, as it was). `sameNearM`: the two stand, and are sent, within this of each other (further apart at either end
+   *  and they were never together) · `sameApartM`: two ways further apart than this at some point are two ways · `sameLong`: the mate's way is taken only
+   *  where it is at most this many times his own + SAME_PLUS_M */
+  sameWay: false, sameNearM: 5, sameApartM: 6, sameLong: 1.5,
 };
 const WHEEL_STEP = 60;   // px of wheel travel a row (interact.ts)
 /** the highest digit a row is ever put on: the number row as far as the left hand reaches off W A S D (the head comment) */
@@ -787,6 +792,7 @@ export class SquadOrders {
     const wasSilent = holdFireSilent(g, def.id);   // (holdfire.ts: 'go loud' told to a squad that IS silent — asked before the row takes it out; false for every other row and with the switch off)
     const refused = def.issue(this, men, t, opts);
     if (typeof refused === 'string') { g.msg(`${this.whoWords(men)}: ${refused}`); return refused; }
+    if (ORDERS.sameWay && men.length > 1) this.sameWays(men);   // (a pair handed one order goes round a building by one side: a return on its first line for a man alone)
     if (flipped) g.cleared.stats.face++;
     const label = this.labelOf(def, t);
     if (!def.free) this.log.push({ t: g.time, order: id, who: men.map(gd => gd.callsign), target: t.kind === 'door' ? `door:${t.door.def.name}` : t.kind === 'floor' ? (t.thing ? `thing:${t.thing.kind}` : `floor:${t.at[0].toFixed(1)},${t.at[2].toFixed(1)}`) : t.kind === 'foe' ? `foe:${t.foe.callsign}` : 'none' }); if (this.log.length > 200) this.log.splice(0, 50);
@@ -2154,6 +2160,51 @@ export class SquadOrders {
     path = laneWay(path, pen) ?? path;   // (the way round a room or a lock, and off the lanes on it where that costs it nothing of either)
     return { why: null, via: path.slice(0, -1).map(q => [q[0], 0, q[2]] as Vec3), how };
   }
+  /** ORDERS.sameWay — A PAIR GOES ROUND ONE WAY (the maintainer, 10-22, the plan lesson's hall: the blue pair sent to its back door from in front of it, one
+   *  man walking round the hall by each side — "the guys shouldn't split up in situations like this -- buddy teams should try to stay together"). Each man's
+   *  way is his own short one (route), and from in front of a building the two ways round it are a tie that two men a step apart break differently. So, at
+   *  the end of a giving: the men it handed one order on one door (or on none) are taken a pair at a time — a pair's two men where both are among them, the
+   *  rest together. A man who stands within `sameNearM` of where the first of his lot stands and is sent within `sameNearM` of where that one is sent, and
+   *  whose own way is at some point more than `sameApartM` off his, goes by ONE of the two ways: the other man's corners and then his own mark (the care
+   *  route took over those corners is kept), whichever of the two costs its taker the fewer metres more — the first man's way where it is all one. Never
+   *  at a lock, through the door he is kept off (`shy`), through more uncleared room than his own way has, nor a walk more than `sameLong` times his own +
+   *  SAME_PLUS_M — and only where the walk that comes of it does keep within `sameApartM` of the other's. Else each his own way, as it was. Not the men
+   *  an entry sends in by a door (`thru`: one door, one way already) nor a man who follows (no way planned). The way is handed out as a way round is: its
+   *  corners (`via`), to both — the man led walks the corners the two were measured by, and the two keep one pace (a man on corners does not dash). A man
+   *  back from a fight is routed afresh from where it left him (tick), alone, as ever. Asked again for the second leg of a walk that tried a door (walkOn). */
+  private sameWays(men: Guard[]) {
+    if (SAMEWAY_BREAK) return;
+    const g = this.g, nav = g.col.nav, K = ORDERS, t = g.time;
+    const of = (gd: Guard) => { const A = this.asg.get(gd); return A && A.group === this.group && A.t0 === t && A.post && !A.thru && !A.follow && gd.char.alive ? A : null; };
+    const same = (A: Assignment, B: Assignment) => A.order === B.order && (A.door ?? null) === (B.door ?? null);
+    const paired = (gd: Guard, A: Assignment) => gd.unit?.pair != null && men.some(m => { if (m === gd || m.unit?.pair !== gd.unit!.pair) return false; const B = of(m); return !!B && same(A, B); });
+    const free = (p: Vec3) => nav.isBlocked(p[0], p[2]) ? this.freeSpot(p) ?? p : p;
+    const wayOf = (s: Vec3, mid: Vec3[], to: Vec3): Vec3[] | null => { const w: Vec3[] = [s]; let q = s; for (const v of [...mid, to]) { if (flat(q, v) < 0.05) continue; const leg = nav.findPath(q, v); if (!leg) return null; for (const c of leg) w.push(c); q = v; } return w; };
+    const len = (w: Vec3[]) => { let m = 0; for (let i = 1; i < w.length; i++) m += flat(w[i - 1], w[i]); return m; };
+    const corners = (w: Vec3[]) => w.slice(1, -1).map(q => [q[0], 0, q[2]] as Vec3);
+    const ring = this.ring(), C = g.cleared;
+    // B by A's way: A's own corners (the care route took over them is kept) and then his own mark — the walk and what it costs him over his own, or null
+    const join = (B: Assignment, mine: Vec3[], his: Vec3[]): { w: Vec3[]; more: number } | null => {
+      const from = mine[0], w = wayOf(from, corners(his), B.post!); if (!w || farOff(w, his).d > K.sameApartM || len(w) > len(mine) * K.sameLong + SAME_PLUS_M) return null;
+      let a: Vec3 = from; for (const b of w) { for (const d of g.doors.list) if (crossesDoor(a, b, d) && (d === B.shy || (d.locked && d.latched && g.doors.lockedOut(d, a, ring)))) return null; a = b; }
+      const unk = K.cleared ? C.dearFor(from, B.post!, K.clearedDear) : null; if (unk && C.dearAlong(from, w, unk) > Math.max(OFF_M, C.dearAlong(from, mine, unk))) return null;
+      return { w, more: len(w) - len(mine) }; };
+    const take = (B: Assignment, w: Vec3[]) => { B.via = corners(w); B.goal = B.via.length ? B.via[0] : v3.copy(B.post!); };
+    const led = new Set<Assignment>();   // (the men whose way somebody has taken, or who took one: theirs stands from then on)
+    for (let j = 1; j < men.length; j++) { const gd = men[j], B = of(gd); if (!B) continue;
+      const mine2 = paired(gd, B); let A: Assignment | null = null;
+      for (let i = 0; i < j && !A; i++) { const m = men[i], X = of(m); if (X && same(X, B) && (mine2 ? m.unit?.pair === gd.unit!.pair : !paired(m, X))) A = X; }
+      if (!A || flat(B.anchor, A.anchor) > K.sameNearM || flat(B.post!, A.post!) > K.sameNearM) continue;
+      const mine = wayOf(free(B.anchor), B.via, B.post!), his = wayOf(free(A.anchor), A.via, A.post!); if (!mine || !his) continue;
+      if (Math.max(farOff(his, mine).d, farOff(mine, his).d) <= K.sameApartM) continue;   // (one way already)
+      // (either man's way will do: the one that costs the other the fewer metres more — the first man's where it is all one, and his alone once it is somebody's)
+      const jb = join(B, mine, his), ja = led.has(A) ? null : join(A, his, mine);
+      if (jb && (!ja || jb.more <= ja.more + 0.5)) { take(B, jb.w); if (!A.via.length) take(A, his); }   // (… and the man led walks the corners the two were measured by)
+      else if (ja) { take(A, ja.w); if (!B.via.length) take(B, mine); }
+      else continue;
+      led.add(A); led.add(B);
+    }
+  }
   /** THE ORDERED DOOR (ORDERS.ownDoor): the way to a point inside for a man an entry sends in by `d` — null when the short way is the right one (he stands in
    *  that room already, or his short way crosses `d` over known floor: the man at the stack); else the corners of a walk to the door's mouth on the face
    *  away from the point — the room the point is in priced as uncleared whatever is known of it, so he does not come to its door through it — and a step
@@ -2227,6 +2278,7 @@ export class SquadOrders {
       if (N) this.walkSend(m, N, at, T.on);
       else if (why) { if (!said) g.say(m, why); said = true; stop(m); }
       else this.assign(m, T.on); }
+    if (ORDERS.sameWay && held.length > 1) this.sameWays(held);   // (the walk's second leg is a giving of its own: a pair goes on by one way)
   }
   /** what route() says of his walk there, for a menu (`whyOnly`): why not, and the lock that is about */
   private asked(gd: Guard, to: Vec3): { why: string | null; lock?: { door: Door; side: 1 | -1 } } {
@@ -2348,6 +2400,20 @@ const LANE_ORDERS = ['cover', 'stack', 'move', 'hold'];
 /** ORDERS.cleared: this much of a walk through an uncleared room is none (a corner clipped) · the search's cap when rooms are priced · ORDERS.ownDoor: how far
  *  either side of the frame line the two steps of 'through the ordered door' lie */
 const OFF_M = 0.3, ROUND_ITER = 30000, MOUTH_M = 0.8;
+/** ORDERS.sameWay: the metres a mate's way may cost over `sameLong` times his own */
+const SAME_PLUS_M = 2;
+const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SAMEWAY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
+/** ORDERS.sameWay: how far way `a` gets from way `b` (each a walk's corners, in order), asked every half metre of `a`, and where on `a` that is */
+function farOff(a: Vec3[], b: Vec3[]): { d: number; at: Vec3 } {
+  const off = (x: number, z: number) => { let m = Infinity;
+    for (let i = 1; i < b.length; i++) { const p = b[i - 1], q = b[i], ux = q[0] - p[0], uz = q[2] - p[2], L = ux * ux + uz * uz, k = L > 1e-9 ? Math.max(0, Math.min(1, ((x - p[0]) * ux + (z - p[2]) * uz) / L)) : 0;
+      m = Math.min(m, Math.hypot(x - p[0] - ux * k, z - p[2] - uz * k)); }
+    return m; };
+  let d = -1, at: Vec3 = a[0];
+  for (let i = 1; i < a.length; i++) { const p = a[i - 1], q = a[i], L = flat(p, q), n = Math.max(1, Math.ceil(L / 0.5));
+    for (let s = 1; s <= n; s++) { const x = p[0] + (q[0] - p[0]) * s / n, z = p[2] + (q[2] - p[2]) * s / n, o = off(x, z); if (o > d) { d = o; at = [x, 0, z]; } } }
+  return { d, at };
+}
 /** ORDERS.roundCap as the page plays it (src/host/profile.ts pageSwitches; the frozen stand's TPS_ROUNDCAP=1 raises it to the same): a way round an uncleared
  *  room at most this many times the short way · … and these metres over, so that a short walk is not held to a step more (a 2 m way may go 6.2 m round).
  *  Chosen between the ways round the checks hold to (the office's corridor: 11.5 to 13.1 m for 7.2 to 7.7 m short: 14.5 m allowed) and the tape's (28 to 36 m

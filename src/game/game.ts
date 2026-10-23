@@ -71,6 +71,7 @@ import { charLookFrame, charSides } from './charLook';
 import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
+import { updateSmokeBreak } from './smokebreak';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
@@ -127,7 +128,7 @@ import { wallReactTick, wallReactReset } from './wallreact';
 import { BLAST_PACE } from './destructionSwitch';
 import { loadTeamFeel } from './teamfeel';
 import { nvgTick } from './nvg';
-import { irLightTick } from './irlight';
+import { irLightTick, irFlags } from './irlight';
 import { silentTick, silentEase } from './silent';
 import { holdFireReset } from './holdfire';
 import { spottedTick } from './spotted';
@@ -246,7 +247,10 @@ export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'obj
   close?: CloseKind;
   /** a door's row that is listed PAST the list's cap, under the rows Space had before it (the big slot's tool on an unlocked door — bigkit.ts; a charge by hand
    *  is the other such row, known by its verb) */
-  past?: boolean; }
+  past?: boolean;
+  /** a MARKER whose every row the mission's frame kept back this frame (rails.ts `rows`; player.ts buildInteractables): the key does nothing on the
+   *  thing though it has rows — an empty tap in reach of it says so (interact.ts emptyWord) */
+  framed?: boolean; }
 /** Every verb a row can be (player.ts buildInteractables words them; game.ts updateDoors / player.ts updateHold / mission.ts act on Game.act): a shut door's
  *  push / ease (silent, sustained), an open one's pull, a lock's pick (sustained) / kick / rattle (the handle tried, crouched), a keyed lock's unlock; the grab
  *  of a man from behind; the held man's question / choke (sustained) / pistol-whip (sustained); a body's drag / drop; the rack's drive (sustained); the mains
@@ -377,6 +381,8 @@ export class Player {
    *  moved = the highlight was scrolled during this press (a press that scrolls is a choice, never a tap); wheelAcc = wheel travel toward the next row; runKey / moveLatch: which sustained verb was running
    *  last frame and the movement keys already down when it began (a step cancels a running verb — a key held into it does not until it has come up once). */
   sel = { downT: -1, open: false, moved: false, wheelAcc: 0, runKey: '', moveLatch: 0,
+    /** handring.ts `empty`: what the last tap that found no row said and when (the corner shows it for a moment), and when a line of it last went to the log */
+    word: '', wordT: -1e9, fileT: -1e9,
     /** the list up as a ring at the cursor (cmdring.ts CMDRING.hands — null: the list as it was): where, and whether the cursor may light a wedge yet; `key`: the rows it was last read over (Player.nearKey) */
     ring: null as (RingState & { key: string; /** handring.ts: the press that opened it has come up and it stands by itself */ free?: boolean; /** …the lit wedge is the whistle's, which is no row (interact.ts) */ whistle?: boolean }) | null };
   /** the selector open AS A LIST (feet still, a cancel row at its foot, the panel in its open look) — not up as a ring */
@@ -463,6 +469,9 @@ export interface GuardScript { goal: Vec3 | null; speed?: number; face?: number 
   /** his walk to `goal` is the script's own way: the short one, not priced by the lanes his side knows are covered (lanes.ts lanePenalty). A staged advance
    *  down a road the other side has guns on: without it he goes round, as a man left to himself would (director.ts OrderPatch). */
   direct?: boolean;
+  /** he is having a smoke where he stands (smokebreak.ts: the left hand to his mouth and back, the lit end, real smoke — a level script's order, director.ts
+   *  OrderPatch.smoke; nothing with that file's switch off) */
+  smoke?: boolean;
   /** his muzzle taken off the order by his own read of the fight (roomfight.ts): while set the runner aims at `aimAt` with the gun up — whatever aimAt / upper /
    *  stance the order holds, which are left exactly as ordered and take over again the frame this is cleared — and, `face` given, squares him up to it where he stands */
   over?: { aimAt: Vec3; face: number | null; walk?: boolean } | null; }
@@ -1109,7 +1118,7 @@ export class Game {
     try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
     loadQrfTune(this);   // …and so are the response team's knobs (qrf.ts: on/off, ETA, size, the perimeter tier's)
     loadTactics(this.tune);   // the pursuit tactics' four knobs, kept per machine like the aim rows (tactics.ts)
-    leversFog(loadTeamFeel); fogFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
+    leversFog(loadTeamFeel); fogFlags(); irFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
     loadNeeds(this.tune);     // …and the needs' switch + fairness knobs (needs.ts)
     loadChaos(this.tune);     // …and the destruction lane's chaos knob (destruction.ts)
     loadWind(this.tune);      // …and the wind's master + rows (wind.ts; the moths' switch rides with it)
@@ -1688,6 +1697,7 @@ export class Game {
     this.smokeWake(all);
     this.drawCharacters(all, statured);
     updateSnowBreath(this, dt);         // BREATH (snowBreath.ts): on a snow level the men's breath steams — picture only (here, after the fog of war has said who is hidden this frame), a return with SNOW_LOOK.breath off or on any other level
+    updateSmokeBreak(this, dt);         // A SMOKE (smokebreak.ts): a man a level's script told to have one — his hand, the lit end, the smoke; nothing where nobody was told, or with its switch off
     this.stepSnowTracks(dt);   // boots press the snow (snowTracks.ts): everybody is posed — picture only
     this.lightMeter(dt);
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt * 3);

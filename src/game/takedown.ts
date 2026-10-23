@@ -41,6 +41,7 @@ export const TAKEDOWN = {
   blow: true, victim: true, fall: true, partner: true, breathe: true,
   kill: true,            // the KILL FROM THE HOLD is a move of its own (character.ts HOLD.kill): the free hand over his mouth, the blade drawn across his throat and out wide, the man let down forward — off, the hold's 'kill' phase is drawn as the hold and he falls as the knife from behind always dropped him (the pose and the fall only: he is dead when the kill's own clock says)
   chokeBeats: true,      // the choke's BEATS, off the clips (character.ts HOLD.beats): both his hands clamp onto the forearm a quarter second in, come off it and fall BEFORE he is lowered, and his head tips to the side before it comes forward — off, the choke as it was (poses only)
+  haul: false,           // the choke HAULS him up and back (character.ts HOLD.haul): as the arm closes Sam leans back and lifts him off his feet onto his chest, the man arched back and kicking, and sets him down before he is lowered — off, the choke as it was. Its own switch: ON in the page (`?nohaul`), off here and on the frozen stand (`TPS_HAUL=1`, with TPS_TAKEDOWN=1)
   lower: true,           // the choke LOWERS him: as he goes limp Sam sinks with him and lays him toward the floor, where he used to hold him standing until he let go (the pose only: he is out when the choke's own clock says)
   /** the partner's blow: s after his hands start that it LANDS (the man is counted out at the takedown's own clock, as ever) · s the move lasts — never past the
    *  takedown's own 0.6 s (PARTNER_SECS): the game hands his arms back to his gun then */
@@ -55,7 +56,7 @@ const SAM_HIT = 0.28;
 /** QA: how often each was asked for (probes read them; nothing else does) */
 export const TAKEDOWN_STATS = { blows: 0, falls: 0, partner: 0, breathing: 0 };
 
-type Half = 'blow' | 'victim' | 'fall' | 'partner' | 'breathe' | 'lower' | 'kill' | 'chokeBeats';
+type Half = 'blow' | 'victim' | 'fall' | 'partner' | 'breathe' | 'lower' | 'kill' | 'chokeBeats' | 'haul';
 const live = (g: Game, half: Half) => TAKEDOWN.on && TAKEDOWN[half] && !g.touring;
 export const takedownOn = live;
 /** how much of the choke's lowering the hold's two poses show (player.ts holdTail feeds it to both animators): 0 = he is choked standing, as it was */
@@ -64,6 +65,8 @@ export const takeLower = (g: Game): number => live(g, 'lower') ? 1 : 0;
  *  them falls back on HOLD_SHOW, which takedownTick writes once a frame for whoever ran last) */
 export const takeKill = (g: Game): boolean => live(g, 'kill');
 export const takeBeats = (g: Game): boolean => live(g, 'chokeBeats');
+/** …and the choke's haul (HoldPose / HeldPose .haul) */
+export const takeHaul = (g: Game): boolean => live(g, 'haul');
 
 /** which move a blow is: by the side it comes from and the hand that does it (a man in a chair is taken from behind his chair: the rear moves) */
 export function blowStyle(kind: CloseKind | undefined, lethal: boolean): BlowStyle {

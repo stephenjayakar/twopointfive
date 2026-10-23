@@ -124,6 +124,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'STARTLE',
   // a mission row's own hour and weather (rowset.ts): a recording made on such a row with it on was started in them, one from before at its query's
   'ROWSET',
+  // a man a level's script told to have a smoke (smokebreak.ts): the lit end's light is the meter's too, so a recording made with it on carries it
+  'SMOKEBREAK',
   // a man flinches when fire comes close (flinch.ts): a recording made with it on replays its men's ducks and the green man who broke under fire; one from before has nobody duck but on the suppression model's own edge
   'FLINCH',
   // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
@@ -154,7 +156,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'GLASSREAL',
   // a mission that leans loud is not graded as a sneak (verdict.ts VERDICT.loudCard): the two lines the mission says at its end are worded by it, so a recording
   // made with it on replays them without the grade, and one from before the key (or the table) with it
-  'VERDICT', 'IR', 'LIGHTS'];
+  'VERDICT', 'IR', 'LIGHTS', 'PAIR', 'ROOMFIGHT'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -191,6 +193,7 @@ import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { STARTLE } from './startle';
 import { ROWSET } from './rowset';
+import { SMOKEBREAK } from './smokebreak';
 import { FLINCH } from './flinch';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
@@ -362,6 +365,8 @@ export function knobRegistry(): Record<string, object> {
     STARTLE,
     // a mission row's own hour and weather (rowset.ts): the one switch
     ROWSET,
+    // a man told to have a smoke (smokebreak.ts): the switch, his clock, the lights and the smoke's numbers
+    SMOKEBREAK,
     // a man flinches when fire comes close (flinch.ts): how close a round ducks him, how much by training, and how long under fire breaks a green man alone — reads these
     FLINCH,
     // not in there alone (darkdoor.ts): who stops at the doorway of a dark room, how dark is dark, how long he waits for a mate and when he goes in anyway

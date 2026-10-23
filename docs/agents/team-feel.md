@@ -255,6 +255,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sits beside it in `laserOn` and is not this switch. `ir-draw` was red before this change and is as red after it (block-four, block-squads,
   warehouse-four, and snatch-four on the page's stand: the same lines on the untouched build). Never seen on a GPU; nobody has played it. Open with
   the maintainer: whether Sam's own line should go too.
+- **A pair goes round one way** (`ORDERS.sameWay`, orders.ts `sameWays`, run at the end of a giving and of a tried door's second leg; the maintainer,
+  10-22, the plan lesson's hall, the blue pair sent to its back door and walking round the hall one man by each side: "the guys shouldn't split up in
+  situations like this -- buddy teams should try to stay together"). Cause: each man's way is his own short one (`route`), and from in front of a
+  building the two ways round it are a tie two men a step apart break differently. The rule: of the men one giving handed one order on one door, a
+  pair at a time (a pair's two where both are among them, the rest together), a man who stands within `sameNearM` (5 m) of the first of his lot and
+  is sent within 5 m of where that one is sent, and whose own way gets more than `sameApartM` (6 m) off his, goes by ONE of the two ways: the other
+  man's corners and then his own mark, whichever costs its taker the fewer metres more (the first man's where it is all one). Handed out as a way
+  round is (`via` corners), to both men, so the two keep one pace (a man on corners does not dash). Never at a lock, through the door he is kept off,
+  through more uncleared room than his own way, nor more than `sameLong` (1.5) times his own + 2 m; else each his own way, as it was. Not the men an
+  entry sends in by a door, nor a follower. A man back from a fight is routed afresh, alone.
+  ON in the page (`?sameway=0`), OFF in the module and on the frozen stand (`TPS_SAMEWAY=1`, `FROZEN_HOLDS`, the pin lists in threshold-probes,
+  nvg-probes and irlaser-probes); journal: a recording from before the key replays with it off. `probes.ts same-way` (family `ordereddoor`), both
+  stands, 9 of 9; `SAMEWAY_BREAK=1` fails 3 on both. Measured there (the lesson's level as its start deals it: the four, and its eight enemies at their posts): the pair stood at 30 spots along the
+  hall's front, the two ways over 6 m apart at 8 → 0 (the widest 8.8 → 3.4 m; 10 → 0 and 9.1 → 2.0 m on the level as it was before its yard was reworked the same day); the most a man walks more than his own way 3.3 m; walked from the
+  worst spot the two got 9.6 m apart → 2.0 m and both stand on their marks (16 s either way on the page's stand; 9.7 → 1.4 m frozen). KNOWN: two men more than 5 m apart
+  when told are left alone; the lock, own-door and uncleared-room bounds have no staging in the check (the walk cap and the 5 m have). No tally of
+  fights was run. Never seen on a GPU, nobody has played it.
 - **A teammate's light is dark into the wall at his muzzle** (`LIGHTS.wallOff`, `src/game/guards.ts wallDark`; 10-22, the maintainer off the first
   tutorial mission: "weird that they are shining the flashlight on the wall immediately in front of them"). The other light rules decide whether a
   teammate WANTS a light (walking to a mark, searching, a shot just heard); the light points where the gun points, so a man walking up to a stack along
@@ -269,8 +286,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's stand, 32 → 0 on the frozen one, never dark with a ray clear, never dark on a man in the beam. MEASURED (page's stand, the scripted player): the first tutorial mission's
   opening, men lit into something under a metre 42 of 56 samples → 0 of 14, and its stack 110 → 3; the tutorial's scripted
   run still plays through; registry rescue seeds 1 to 24 and night breach seeds 1 to 16, on against off: no seed differs in its end, the men standing
-  or the enemies down (the mean run is a tenth of a second shorter). It moves no fight there because a light on a wall at arm's length lights nothing
-  else by the CPU estimate. KNOWN: in a dim place a man whose light is off takes his goggles down (nvg.ts, as with every other reason his light is
+  or the enemies down (the mean run is a tenth of a second shorter). That is those forty runs' ends, not "it moves no fight": a light is in the
+  simulation (a lit man is seen sooner, a dark light in a dim place takes his goggles down), so a run with the rule on is another game from the first
+  light it puts out, and a long one drifts (the plan lesson's check, played twice over: a third enemy alerted with it on, none with it off). KNOWN: in a dim place a man whose light is off takes his goggles down (nvg.ts, as with every other reason his light is
   off) and raises them 0.7 s after it burns again; a checkpoint does not keep the 0.3 s clock (as with the other light clocks). A man facing a mate's
   back at arm's length is not a wall and stays lit. NEVER SEEN ON A GPU; nobody has played it.
 - **An IR light on the goggles** (`src/game/irlight.ts`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
@@ -399,6 +417,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   after this change, a tour, a soak, an entry tally. NEVER SEEN ON A GPU, and only a player can judge: whether the meter on his GPU reads that room
   as his picture shows it (if his light still burns there, lower 'floor min'), a light that comes on for the darker half of a room
   as he turns, and a torch beam crossing dark floor putting his light out for a moment.
+  **It turns itself down for what is close** (10-22, `IRLIGHT.near`, irlight.ts `nearK`; the maintainer, the stealth lesson, stood at the code pad a
+  pace from its wall, the wall a white blob in his goggles: "i still think the IR light is a bit too bright here. ideally it's just enough to be able
+  to see" · "but i like how it's realistic"). Cause: the flood falls off by the square of the distance, so a wall a pace from the lens takes fifty to
+  a hundred times what one five metres off takes, and through the tube that is white whatever `power` says (the tube's curve is a logarithm: halving
+  `power` takes a ninth of its range off). The rule, as a set with an automatic gain does it: three rays over the statics across the middle of the
+  flood; the nearest hit inside `nearM` (5) turns the light down by the square of the distance, so that thing reads as it would 5 m off (a wall face
+  on: about half the tube's range at power 8, by the shader's curve) and no brighter; never under `nearMin` (0.003); down at 12 a second, up at 3; a
+  light that comes on comes on turned down. Nothing inside `nearM`: full strength, as it was. Indoors the light is down most of the time, so the far
+  floor of a small room is dimmer than it was. Both stands' words: ON in the page (`?irnear=0`; `?irnear=<metres>` and `?irpower=<n>` set its two
+  numbers for a visit, read after the kept Team feel rows — irlight.ts `irFlags`), OFF in the module and on the frozen stand (`TPS_IRNEAR=1`,
+  `FROZEN_HOLDS`); two Team feel rows (kept); journal: a recording from before the key replays with it off. In the simulation: a goggled teammate
+  sees a man by the light as it burns (`irOnMan`), so a mate's light turned down at a wall shows less of a man beside that wall; `irShowsAt` still
+  asks by `power`. `probes.ts irl-near` (family `irlight`), both stands, 8 of 8; `IRNEAR_BREAK=1` fails 3 on both. Measured there: the wall
+  1.2 m off took 16 times what a point 5 m off takes → 0.96 times (0.5 m off on the frozen stand: 107 → 0.99); first frame of a light that comes on
+  at the wall 1.01; brought to the wall from the open, down in 15 frames. The other irlight probes hold it off. NEVER SEEN ON A GPU: 5 m is
+  arithmetic, not a look — whether "about half" is "just enough to see", and whether a small room is now too dim, are the maintainer's eye.
 - **Silent or loud, on Sam's word** (`src/game/silent.ts`, 10-07; the maintainer: "some way of telling the squad to be silent or not. silent implies walking
   quietly, no flashlight, etc."; scope page rebuild/silent-order/scope.md): the squad's POSTURE, one order — `go silent` on **X, 5** of the
   floor's menu and of a man's (under the header 'the whole squad'; a door's menu keeps 5 for the door tools; the order fits any target through `give`), the row
@@ -504,6 +538,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   keys replays with them off (`journal.ts applyKnobs`); not frozen-stand holds (`PAIR.on` is). Check: `probes.ts pair-watched` (the look-back scenes, each
   red with its fix out; green on both stands). Measured headless, scripted: relay station ways flips 3 to 5 a run down to 0 to 2 over 12 starts; the
   border hold 0.6 to 3.9 s up to tens of seconds on one F; relay quiet runs 5 of 18 done before and after. Never played, never seen on a GPU.
+- **A man told to cover keeps his angle** (`src/game/roomfight.ts`, switch `ROOMFIGHT.coverKeep`, `coverPasses`, 10-22; the maintainer's
+  note in his own recording of the plan lesson: "blue one doesn't watch his angle even though red team has it covered"). The recording,
+  read frame by frame: Blue One, told to cover up the lane through the back gate, swung a quarter turn to the road gate three times in
+  five seconds for men Red One and Red Two already had, with the lane's own men still coming. Nothing in the room fight knew of the way
+  he was told to watch: his eyes took any man they saw, and a mate's contact turned his look (the arc rule, `arcHalfDeg`, is a HOLD's,
+  and only for calls). Now a man stood at the post of a cover order passes over an enemy who is more than `coverHalfDeg` 45° off the
+  way he was given WHILE a mate's gun is on that man with a round at him: he is seen (the meter runs) and is not his, to his eyes or to
+  a call, a shot or a footfall, and a look he had begun at him is dropped. "Has him" is a gun on the man and a round to send: not
+  behind a jamb (`blockT`), not reloading, no friend in his line, his muzzle not down. The man is his again the moment no mate has
+  him, his muzzle comes onto this man (the room fight's own 0.35 rad), or he is inside `coverNearM` 6 m; and a man he is already ON he
+  hands over only to a mate past his own beat to fire, so there is no gap with nobody's rounds going. Not covered: `coverfire.ts`'s
+  rounds into cover at a man a mate knows of. ON in the page (`?coverkeep=0` puts it off; Team feel row "team ▸ a man told to cover
+  keeps his angle"), OFF in the module and on the frozen stand (`TPS_COVERKEEP=1`), a `FROZEN_HOLDS` row, pinned off in the digest
+  checks beside `doorEars`. `ROOMFIGHT` joined `JOURNAL_KNOBS` with it: a recording had not carried the table (so `doorEars` replayed
+  off whatever it was recorded with); one from before the key, or before the table, replays with it off. Check `cover-keep` (family
+  `roomfight`; `COVERKEEP_BREAK=1` fails it on both stands): the plan lesson's level with its yard gates stood open, Blue One covering
+  up the lane, Red One beside him covering the side, one enemy stood 10.7 m off at a quarter turn; nobody's round goes (the check holds
+  every first shot off, so the man is there for the whole four seconds) and the floor is hot. Off: his gun 89° off his way, on the man
+  232 of 240 frames. On: 0° off, never on him, Red One on him throughout. And he is his with his muzzle on Blue One, with no mate on
+  him, with Red One's gun behind a jamb, or 4.3 m off; a man he was on first is kept while Red One has only just seen him; a man in
+  the lane is taken frame for frame as before. 11 of 11 on both stands. Not shown: the hand-over to a mate who is ready (nobody fires
+  in the staging), a mate reloading or with a friend in his line (read, not run). One staging, one seed; no fight was run with it and no
+  tally: a covering man now leaves a far flank to his mates, which a fight's numbers would show. Never seen on a GPU, nobody has
+  played it.
+- **The partner does not turn about on his way** (`src/game/pairorders.ts`, switch `PAIR.steady`, 10-22; the maintainer, of the pair
+  mission: "partner seems to be very paranoid about always turning around to check the other guy"). Two causes, both in the walk to a
+  man's back, both found in the scripted run of `tut-pair` on hard. (1) The kept way (`PAIR.keepWay`) took up at its NEAREST corner, and
+  with that corner a pace behind him he was sent back to it and round again on the next reading 0.3 s on: two full turns in three
+  seconds. Now a corner he is already past along its own leg is dropped (`stalk()`), where the way on from the next is as plain and
+  as cheap a walk as any kept way must be; where it is not (a turn back round a wall's end) the nearest corner stands. (2) Each time the way read as watched he
+  stopped and at once squared to the man, then squared back when it read clear a beat later. Now he keeps the way he was facing for
+  `steadyFaceSecs` 1.2 s of a wait before he turns to the man. ON in the page (`?pairsteady=0` puts it off; Team feel row "pair ▸ does
+  not turn about on his way"), OFF in the module and on the frozen stand (`TPS_PAIRSTEADY=1`), a `FROZEN_HOLDS` row, carried by the
+  journal (`PAIR` joined `JOURNAL_KNOBS` with it: a recording had not carried the table before). Check `pair-steady` (family `pair`;
+  `PAIRSTEADY_BREAK=1` fails it on both stands): the scripted lesson, one seed, off against on: 4 about-turns, 2 steps back and 3
+  flinches in 3 waits → 0, 0, 0, and the lesson still plays to its end (141 → 138 s frozen, 142 → 139 s on the page's stand). One level,
+  one seed, the script's player; no tally. Never seen on a GPU, nobody has played it.
 - **Each man's own picture** (`src/game/picture.ts`, table `PICTURE`, 10-14; the maintainer, of two teammates who stood off a wall charge in a known
   enemy's line: "each actor has ideas of where other enemies are (which may be out of date), where is safe, what good cover points are"). Every fighter of
   both sides keeps an IDEA per enemy: the place he last saw him, heard him fire or was told of him, and when. It is never refreshed from the truth (a man

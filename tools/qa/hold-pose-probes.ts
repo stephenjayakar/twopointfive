@@ -10,6 +10,7 @@ const IK = 'Space';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const { startGrab, freeHeld } = await import(`${ROOT}/src/game/player.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
+const { TAKEDOWN } = await import(`${ROOT}/src/game/takedown.ts`);
 const { KNIFE_TAG } = await import(`${ROOT}/src/game/rigProps.ts`);
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
@@ -212,6 +213,9 @@ export async function holdStruggle() {
   }
   // ---- (b) the choke all the way: early window (0.3–1.1 s in) vs late (the last half second before he goes); on time; roots still; then the ragdoll takes him
   {
+    // (HELD OFF THE HAUL, TAKEDOWN.haul: its lift of his head in the first third of a second is in the `pre` window and reads here as restlessness; the haul's
+    //  own frames are haul-check.ts's)
+    const haulWas = TAKEDOWN.haul; TAKEDOWN.haul = false;
     const S = await stage(82); const { W, game, A } = S;
     grabSettle(W, game, A);
     const t0 = game.time; let chosen = false; const down = () => { if (!chosen) { chosen = true; game.selectVerb('held', 'choke'); W.input.pressed.add(IK); } };   // the choke's row tapped ONCE (the first frame); it runs on its own from there
@@ -221,7 +225,7 @@ export async function holdStruggle() {
     const late = track(W, game, A, Math.round(0.45 / DT), down);                                  // the last half second but a few frames
     let deadAt = -1; for (let i = 0; i < 60 && deadAt < 0; i++) { down(); W.step(DT); if (A.state === 'dead') deadAt = game.time - t0; }
     let slept = false; for (let i = 0; i < 60 * 8 && !slept; i++) { W.step(DT); slept = !!A.char.ragdoll?.sleeping; }
-    const nanAfter = nanBones(A.char, game.player.char);
+    const nanAfter = nanBones(A.char, game.player.char); TAKEDOWN.haul = haulWas;
     const fails: string[] = [];
     if (pre.nan + early.nan + mid.nan + late.nan + nanAfter) fails.push(`non-finite bones: ${pre.nan + early.nan + mid.nan + late.nan} during, ${nanAfter} after`);
     if (early.head < 0.002 || early.lat < 0.0012) fails.push(`no fight: head ${mm(early.head)} mm/frame early in the choke, ${mm(early.lat)} of it side to side (want > 2 / > 1.2)`);

@@ -884,3 +884,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the thread he set off with. One seed, one man a level. A TRAP MET ON THE WAY: a kept answer must not be started 'from the corner nearest him' (a way that
   doubles back passes near him again further on, and the thread then cuts the wall) — floorplan.ts `wayOf` still starts its kept leg that way. NOT SEEN: the
   overlay itself (no page was driven, nothing on a GPU): the dots at a corner, the thread across a door's leaf, a thread half out of the view.
+- **The choke hauls him up and back** (`TAKEDOWN.haul`, character.ts `HOLD.haul`, fed by player.ts `holdTail` as `haul` on both poses; the maintainer, 10-22,
+  off the stealth tutorial mission: "the choking animation needs to be more intense. in chaos theory sam has him in a chokehold and then lifts him up and back
+  out of the air a bit when choking"). The choke was posed standing: the elbow closed, Sam leaned back four degrees, the man sagged on his own two feet until
+  he was lowered. Now, a third of a second in, Sam leans 26° further back over planted feet with the arm going up and back with the man's neck, and the man is
+  tipped back onto him, hips ahead of his shoulders, both feet off the floor and kicking; he is set back on his feet as his hands come off the arm (done by half
+  way), before the lowering takes him down, so the lowering, the fall and the frame he goes out on are as they were. THE REFERENCE: the Chaos Theory clips the
+  takedown work was read from (the notes and beat tables under rebuild/takedowns-like-chaos-theory): Sam straightens a tenth of a second in and hauls him up,
+  the man's head forced back, and leans back through the squeeze. The man's FEET ARE OUT OF FRAME in every frame of them: 'off his feet' is the maintainer's
+  word, not something the clips show. SWITCH: its own key, ON in the page (`?nohaul` on the address, Tab ▸ Takedowns ▸ 'the choke hauls him up and back'), OFF
+  in the module and on the frozen stand (`TPS_HAUL=1`, with `TPS_TAKEDOWN=1`), a `FROZEN_HOLDS` row, rides a recording's tables, a recording from before the key
+  replays with it off; off is the build as it was (every changed expression is behind `hauled`; the hold scene's meshes byte for byte). POSE ONLY, no rule: the
+  roots do not move and he is out on the same frame, but both men's head and chest bones move (Sam's head some 15 cm back for a second), and sight lines and
+  the light meter read Sam's. CHECK `probes.ts haul` (tools/qa/haul-check.ts, families takedown and close; `HAUL_BREAK=1` fails `haul`), both stands, against
+  the same choke with the key down: his feet 11‥12 cm up, his head 8 cm up, Sam's neck 13.5 cm further back, the choking wrist where it was against his neck
+  to 1 cm and his hands against that wrist to 0.5 cm; the two heads never closer than with the key down (18.5 cm at the least, 26‥31 at its height); feet down
+  by 1.5 s and every joint the key down's from 1.6 s; no joint over 5 cm in a frame (4.8, a finger of his as his hands come off); the key put down mid-haul
+  brings his feet down at 1.2 cm a frame; the hold broken mid-haul and a man grabbed again a quarter of a second on moves nothing further than with the key
+  down. One seed, one man, the lobby's open floor. TRAPS MET: (1) lifted 11 cm with Sam's hips pushed forward under the lean, the man's cap went through Sam's
+  head (15.6 cm between the head bones where the key down has 18): Sam's head has to go back FURTHER than the man's. (2) Sam's knees must not go through the
+  lowering's pinned-feet branch for the haul: switching it snapped his knee 3.4 cm in a frame, twice a choke. (3) The haul kept from a hold broken mid-haul
+  came back whole on the next hold's first frame (13 cm): it is folded into the layer's weight on a fresh hold, as the lowering is. HELD OFF THE HAUL: the
+  older choke lines of takedown-check.ts (`chokeRun`) and hold-pose-probes.ts hold-struggle (b), whose windows the haul's own motion falls in; the haul's frames
+  are haul-check's. Pictures: `close-stills.ts --scene choke` (before: `--set '{"TAKEDOWN":{"haul":false}}'`). NOT SEEN: anything on a GPU or in the page; how
+  it reads from the game's camera at play size; the two men's clothes and the cap through each other (bones are read, not meshes); no tally was run.
