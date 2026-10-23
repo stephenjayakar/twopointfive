@@ -369,7 +369,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     four men up it never got one: at the blow's step the fog had eyes 20 21 22 23 199 and the wall's face was not seen. That is the frame's to mend for a
     mission that keeps its fog; this one shows the whole floor. `rails-check`'s line on the ring now holds that every man on the road and in the rooms is
     drawn (it held the lookout's road and nobody in a room); `tut-sky-check` has a tenth line, the wall's face in the live picture on the blow's step,
-    red with the fog put back (`TUT_SKY_BREAK=1`: "fog of war on, 5 eyes · the wall's face HIDDEN"). Nobody has seen the blast on a GPU since.
+    red with the fog put back (`TUT_SKY_BREAK=1`: "fog of war on, 5 eyes · the wall's face HIDDEN"). Nobody has seen the blast on a GPU since. THE BRAZIER'S MELT PATCH IS ROUND (10-23; the
+    maintainer's close shot of a burning drum, where the patch read as a hard grey square tile under the fire's light): `melted()` in the generator lays
+    each of the two layers as four slabs through one centre 45 degrees apart, a little unequal and turned off the walls' lines. Six more boxes (824), the
+    level's fingerprint moves (old checkpoints and recordings of it are refused), `lived-check`'s row for the level moved. Never seen on a GPU.
     MEASURED: the scripted player ends all fifteen steps on the page's stand on seeds 1 to 7 in 129 to 140 s of play; the first man with a
     torch is hit two to three and a half seconds after the bunkhouse says it is coming, by the lorry's tail; the second often stays behind the lorry and is
     the last room's fight. `PORT=<port> node tools/qa/tut-page.cjs` (software adapter, a hand's own keys and mouse) played all fifteen steps to the
@@ -932,6 +935,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     there. NOT DONE: nobody has played it and nothing of it has been seen on a GPU; the mission that teaches opening and closing the mode (the
     fourth) is the tutorial frame's; a right click far outside the walls is a floor order the men may not be able to walk; with the mode's view
     off (`?nocmdrts`) the seat falls back to mission 1's view and pan.
+  - **The mission opens at dusk, not at midday** (2026-10-23; the row `tut-plan` in `scenarioList.ts`: `hour: 'dusk'`, the `ROWSET` rule writes it over any
+    link). The maintainer, of a shot of the mission as played: "this tutorial level just looks really *flat*". What he saw was the row's midday (sun 56
+    degrees up, strength 6.0): block and render walls near white, the ground two flat tones, shadows a sliver at the walls' feet; both floodlights are
+    out at midday (the photocell), so the lamps played no part. Stills of one view at the four hours, drawn by the graphics lane on the software
+    adapter: dusk reads best (sun 22 degrees up from bearing 255, strength 2.2: a wall throws a shadow two and a half times its height, lit faces warm
+    and below white), then dawn, then the level's own night; midday is the only flat one. At dusk the outside lamps burn as authored, so `flood_gate`
+    and `flood_road` are lit in the mission now; they are left as they are (the level's night with both lit is not flat either). No box, light or
+    lesson key changed: the level file is the same, its lived row stands. The row's old reason for midday (every yard and door in plain sight from
+    above) is kept by eye only: in the dusk stills the doors, drums and barriers are plain, and long shadows cover some ground. NO SWITCH: a row's
+    hour is data (`?rowset=0&hour=midday` on the page, or `ROWSET_BREAK=1` in front of a headless tool with `&hour=` in its query, is the mission at
+    midday again; the scripted player reads `TUTPLAN_HOUR` for that). MEASURED at dusk (`lesson-run tut-plan`, the page's stand, which starts it at the row's hour): 17 of 17 steps on
+    seeds 1 to 4 and on hard seed 1, 107.2 to 107.6 s, the guardroom's first men 0.1 s apart and the hall's 0.0 s, nobody dazzled, no teammate put on
+    a knee; the wrong plan on seed 1 still ends with four put on a knee: the same numbers as at midday, to the tenth of a second. `tutplan-check`
+    (9 lines) on both stands, `lesson-gate tut-plan`, `level-needs --run` and `rails-check` on both stands, `rowset-check` on both stands,
+    `lived-check`, `lesson-check`, `writing-check`, `picker-list`, both typechecks: all pass. ON THE PAGE at dusk
+    (`tools/qa/tut-plan-page.cjs`, real keys, the software adapter, the page held between frames): 36 lines pass to the end card; one still of the
+    opening drawn there has the four's shadows long across the yard and the plan picture's rings on them. NOT DONE: nobody has played it at dusk and nothing of it has been seen on a GPU; the lesson's marks and plan mode's picture over a
+    long shadow were not judged by eye at every step.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
@@ -2050,3 +2071,50 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the solver cleared, none two frames on, and sixty frames later a second filing and one on the solver; no page error. SEEN ELSEWHERE: `snowBreath.ts` kept the same word in its table (`stats.why`, `steam`, `steaming`, a man's `steam`; its owner
   moved that book to the host the same day, today `engine.hostBooks.breath`), which is why the check first read this file's rows out one by one: the
   whole-state diff stopped at that table. NEVER SEEN ON A GPU: the thread itself has not been looked at by anybody, before or after.
+- **The step before a card settles (2026-10-23; `RAILS.cardBeat`, `rails.ts settles`, `lesson.ts tick` / `settling`; every tutorial mission).** The
+  maintainer, off mission 1's Doors card over the fight at the gate: "we show the modals too quickly. like it should happen a beat after something happens
+  on screen. in this case my squad covered the gate but then seeing them shoot the bad guys got interrupted by the modal. i've noticed this as a consistent
+  theme". A card pauses the world the tick its step comes up, and a step came up the tick the deed before it was done: the middle of whatever that deed
+  set off. Now a step whose NEXT step opens on a card stays up after its deed is done (`StepSeen.doneT`: the deed is done once and never asked for
+  again) for `cardBeatSecs` (1.2 s). Then the next step comes up exactly as it always did: its card, keys, cue, checkpoint and mark on one tick, nothing
+  of it ahead of its card. Meanwhile the done step's big line is something to watch (`prompt()`): its own line where the step only waited for the
+  level's script (mission 1's "They're holding the gate"), else what its men are doing (its `after` line, where its order went out and the line asks
+  for no key), else no line at all (`index.html #railprompt .line:empty`), and its mark is not drawn. What he does in the beat is the done step's:
+  the next step counts from the tick it comes up, as every step always has (an afternoon's cut carried those deeds forward, and a step could then be
+  done before its card was read, its cue a tick after the last one's). A step moved by hand (`Lesson.i` set by a tool) drops a latch, and a held
+  time, that were another step's (`doneI`).
+  TWO WORDS ARE THE CARD'S OWN, in the level (`scenarios.ts explain`, `levelData.ts`, `docs/level-format.md`):
+  `explain.quiet: true` — the deed before this card sets off a fight he is there to WATCH, so the card also waits while that fight is on: a round of
+  his own or his squad's, a blast, a door kicked in or a man going down in the last `cardQuiet` 2 s, never past `cardMax` (9 s) from the deed. Rounds
+  of the other side alone hold nothing (a level's staged fire never stops: mission 1's opening files five a second). Mission 1 marks all three of its
+  cards after the first (Doors after the gate's fight, Walls after the kitchen, Light after the wall is blown): there he is in the sky and the fight is
+  the squad's. `explain.now: true` — no beat at all: the squad mission's 'back' ("They're behind you!"), whose news is the fight, and its 'frag',
+  whose cue keeps the gunner down from the tick he reaches the blocks. A card with both words is a fault of the level (`levelData.ts`).
+  WHY THE FIGHT'S WAIT IS ASKED FOR AND NOT THE RULE (it was the rule for an afternoon, and a review took it apart): where he is the one shooting and
+  the next step is his next move in that fight (the squad mission's blocks, then the frag), a card held for his own rounds held its keys and its cue
+  with it for up to nine seconds with no line on screen. The first cut of all held only the card's picture (the step up, its card, line and mark
+  withheld): a step finished inside the wait lost its card for the run, and the step's cue ran ahead of its card.
+  THIS MOVES TICKS: on a tutorial mission a step that opens on a card, and with it the level script's cue and the step's checkpoint, comes 1.2 s after
+  the deed (a `quiet` card: up to 9 s). A script that needs its cue on the deed's tick marks the card `now` or puts the cue on the step before. The
+  beat is the step's whether or not the page then shows the card (one read already on this page, `?cards=0`, a run with no page): a second pass meets
+  the same pause with no card after it. He can go down inside the beat: the deed is then not kept by a checkpoint and is done again.
+  SWITCH: `RAILS.cardBeat`, OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'RAILS.cardBeat': `TPS_CARDBEAT=1` raises it there, and it acts
+  only with the frame up, `TPS_RAILS=1`: a frozen run that raises the frame alone plays every step the tick the deed is done, as its fixtures were
+  recorded), ON in the page and on the shipped stand; `?cardbeat=0` (headless: `TPS_CARDBEAT=0`) = the next step the tick the deed is done;
+  `journal.ts applyKnobs` puts it off for a recording from before the key.
+  CHECK: `rails-check`, the line "the step before a card settles", which raises the rule itself (a plain card on a quiet floor and under his squad's
+  fire, a deed of his in the beat not carried on, the script's own line kept, a step moved by hand; a quiet card on a quiet floor, his squad firing,
+  the other side alone, his fight begun after the deed, the cap, a man down; `now`, a step with no card after it, the switch, how each stand comes
+  up, the word, an older recording); `RAILS_BREAK=1` fails it on both stands. `lesson-run` (and the tapes' copy of its loop) waits a settling step
+  out after the script's own half second, and its "went by with nothing done" guard also stops on a step found settling; `rails-check` line 14 reads
+  the step after the whistle a beat later.
+  MEASURED (the shipped stand, the scripted player, seeds 1 to 3 of each of the six missions, on the join with build step 999): all eighteen runs end
+  with every step done. Every step before a plain card settles 1.2 s (mission 2: four steps; the solo mission: 'sprint' and 'rifle', and 'shop' its
+  own 1.5 s `settle`; the squad mission: six; the ledger: two; the pair: three). Mission 1's quiet cards: the gate 2.0 s on two seeds and 1.2 s on
+  the third, the kitchen and the blown wall 1.2 s on all three (those two fights are over before the step is done). `lesson-gate` on that tree: 36
+  of 36, with each mission's four dice (two at six seconds a line). On the real page (headless Chromium, the software adapter, real keys,
+  `tut-page.cjs tut-sky`): mission 1 played to its end, its three cards up and closed, 24 lines and no fault — on the tree before the last mends
+  (the deeds carried forward then, and the rule was on in the module), not run again after them.
+  NOT DONE: Tab's objectives card and the small objective row still read the done step's ask while it settles; an order given in the beat still snaps
+  to the done step's mark. The other missions' cards are plain (the beat): which of them follow a fight he only watches is their parts' to mark.
+  Never seen on a GPU; nobody has played it.

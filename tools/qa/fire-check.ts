@@ -1,4 +1,4 @@
-// AN OPEN FIRE BURNS (src/game/fire.ts FIRE / updateFire; the flame and the embers are render/shaders/fire.wgsl; the light is the level's own lamp).
+// AN OPEN FIRE BURNS (src/game/fire.ts FIRE / updateFire; the flame is render/shaders/fire.wgsl, the embers are GPU particles; the light is the level's own lamp).
 //
 // The maintainer, 10-23: "we gotta improve our fire! we have barrels with fire on them … great fire with smoke and crackles and dynamic lighting would look sick."
 //
@@ -29,9 +29,16 @@
 //   size      while it burns the lamp is as big as the flame (FIRE.size × the mouth) and the steady readers still take it for the size the level gave it, a hand
 //             from the lamp where the two sizes differ most; the level's size back the frame the switch goes off; `size` 0 (the page's ?firesize=0) = the level's
 //             size burning; a recording from before the key replays with it 0
+//   fog       under the fog of war a fire is drawn as the team last saw it: its record says wherever it stands while it burns and is known to; only where the
+//             team sees when the fog has its lamp as one lit unseen (RtLight.fog 1, said by hand); with the fog itself raised and the squad at its start,
+//             the frame the fire is put out its record is one at full heat for where the team does not see (the lamp's ghost up, the lamp itself as the
+//             level hung it); with FIRE.fog off (?firefog=0) only where the team sees and no ghost; a recording from before the key replays with it off
+//   look      the flame's numbers (FIRE.look) reach the renderer as they stand (engine.fireLook, twelve numbers); the embers are GPU particles: sparks flagged
+//             embers, filed over the coals with a seed made by hand from the host's own book, about as many as the table says; with no pool none are filed
+//             and the two games differ in nothing; FIRE.embers 0 = none; a recording from before the key replays with no shimmer, no drawn smoke, no embers
 //   off       switch off: the lamp steady at the authored strength where the level hung it, nothing handed to the renderer, the solver or the mixer
 //   old       a recording from before the key replays with it off (journal.ts applyKnobs)
-import { standUp, ROOT } from './headless.ts';
+import { standUp, ROOT, fake } from './headless.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -40,7 +47,8 @@ const DT = 1 / 60;
 export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-  const { FIRE, fireStats, fireShown, fireFlicker, fireSeed, isFire } = await import(`${ROOT}/src/game/fire.ts`);
+  const { FIRE, fireStats, fireShown, fireFlicker, fireSeed, isFire, fireDraws } = await import(`${ROOT}/src/game/fire.ts`);
+  const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const J = await import(`${ROOT}/src/game/journal.ts`);
   const BREAK = process.env.FIRE_BREAK === '1';
@@ -206,6 +214,61 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
             `the level made it ${authored} m · burning ${small.toFixed(3)} to ${big.toFixed(3)} m, the steady readers told ${told} · a hand from the lamp the steady reader reads ${nearLo.toFixed(3)} to ${nearHi.toFixed(3)} burning, ${offNear.toFixed(3)} off · size 0: ${pin} m, put back: ${back.toFixed(3)} · switch off: ${off} m, the steady record ${kept ? 'kept' : 'dropped'} · its own snapshot put back: size ${own} · one without the key: ${old}`);
         }
       } finally { FIRE.size = size0; }
+    }
+    // ---- fog
+    {
+      const fog0 = FIRE.fog, full0 = FOG.full;
+      try {
+        const A = await rig(true, false), t = A.t, E = A.g.engine, FW = A.g.fogOfWar, fw0 = FW.on, rec = () => (E.fires ?? []).map((f: any) => `${f.fog ?? 0}@${f.heat.toFixed(2)}`).join(',') || 'none';
+        if (!t) verdict(false, 'fog — the pass has a fire', 'none found');
+        else {
+          const l = t.light; FIRE.fog = true; A.step(30); const plainly = rec();
+          l.fog = 1; fireDraws(A.g); const relit = rec(); l.fog = 0;   // (the fog's word for a lamp lit where nobody saw, said by hand: the squad cannot be walked to look here)
+          FIRE.fog = false; fireDraws(A.g); const offLit = rec(); FIRE.fog = true;
+          // the fog itself raised, the squad where the mission starts it: nobody sees the yard
+          FW.on = true; FOG.full = true; A.step(2); const known = rec();
+          t.on = false; t.broken = true; A.step(1); const ghost = rec(), lamp = l.fogGhost ?? 0, far = Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]), told = l.steady !== undefined;
+          A.step(60); const ghost2 = rec();
+          FIRE.fog = false; fireDraws(A.g); const offGhost = rec(); FIRE.fog = true;
+          FW.on = fw0; FOG.full = full0; A.step(2); const out = rec(); t.on = true; t.broken = false;
+          const k = (J as any).knobsSnapshot(A.g); FIRE.fog = false; (J as any).applyKnobs(A.g, k); const own = FIRE.fog;
+          const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.fog; FIRE.fog = true; (J as any).applyKnobs(A.g, k2); const old = FIRE.fog;
+          verdict(/^0@/.test(plainly) && /^1@/.test(relit) && /^1@/.test(offLit) && /^0@/.test(known) && ghost === '2@1.00' && ghost2 === '2@1.00' && lamp > 0 && far === 0 && !told && offGhost === 'none' && out === 'none' && own === true && old === false,
+            'fog — under the fog of war a fire is drawn as the team last saw it: wherever it stands while known to burn, only where seen when lit unseen, still burning where nobody sees from the frame it is put out unseen; off, never over unseen ground',
+            `burning (mode@heat): ${plainly} · the fog has its lamp as lit unseen: ${relit} · FIRE.fog off: ${offLit} · the fog raised, nobody sees the yard: ${known} · put out, that frame: ${ghost} (the lamp's ghost ${lamp}, the lamp ${far} m from its place, steady record ${told ? 'kept' : 'none'}), a second on: ${ghost2} · the same with FIRE.fog off: ${offGhost} · the fog put off again: ${out} · its own snapshot put back: ${own ? 'on' : 'off'} · one without the key: ${old ? 'on' : 'off'}`);
+        }
+      } finally { FIRE.fog = fog0; FOG.full = full0; }
+    }
+
+    {
+      const look0 = { ...FIRE.look }, n0 = FIRE.embers;
+      try {
+        const A = await rig(true, false), B = await rig(true, false), E: any = A.g.engine, t = A.t;
+        if (!t) verdict(false, 'look — the pass has a fire', 'none found');
+        else {
+          // the page's own pool over the harness's stand-in device (particleFx.ts gpuFx hands it on), its emits listened to
+          const filed: any[] = [], set0 = E.settings, pool0 = E.particles;
+          const { Particles } = await import(`${ROOT}/src/render/particles.ts`);
+          const pool: any = new Particles(fake('device'), fake('sceneLayout')), emit0 = pool.emit.bind(pool);
+          pool.emit = (kind: string, pos: number[], dir: number[], n: number, opts: any) => { if (opts?.ember !== undefined) filed.push({ kind, n, opts, up: pos[1] - t.pos[1], out: Math.hypot(pos[0] - t.pos[0], pos[2] - t.pos[2]) }); return emit0(kind, pos, dir, n, opts); };
+          E.particles = pool;
+          E.settings = { ...(set0 ?? {}), gpuParticles: true };
+          FIRE.look.gain = 1.5; FIRE.look.shimmer = 0.02;
+          A.step(600); B.step(600);
+          const row: number[] = E.fireLook ?? [], PA = fireShown(A.g), PB = fireShown(B.g), sum = filed.reduce((a, f) => a + f.n, 0), cracks = fireStats(A.g).cracks;
+          const sparks = filed.length > 0 && filed.every(f => f.kind === 'spark' && f.opts.ember > 0 && f.opts.ember < 1 && typeof f.opts.seed === 'number' && f.up > 0 && f.out < 0.01), seeds = new Set(filed.map(f => f.opts.seed)).size;
+          const RB = await import(`${ROOT}/src/game/rollback.ts`);
+          const all: string[] = RB.stateDiff(A.g, B.g, 64, false, true), cut = all.some(d => d.startsWith('(the shapes part')) || all.length >= 64;
+          const steady = FIRE.embers / FIRE.emberLife * 10, thrown = filed.filter(f => f.n > 1), throwsOk = cracks > 0 && thrown.length === cracks && thrown.every(f => f.n >= Math.round(FIRE.emberCrack * 0.4) && f.n <= FIRE.emberCrack && f.opts.speed > FIRE.emberSpeed);
+          FIRE.embers = 0; const before = filed.length; A.step(60); const none = filed.length - before; FIRE.embers = n0;
+          E.settings = set0; E.particles = pool0;
+          const k = (J as any).knobsSnapshot(A.g); FIRE.look.shimmer = 0; (J as any).applyKnobs(A.g, k); const own = FIRE.look.shimmer;
+          const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.look; FIRE.look.shimmer = 0.02; FIRE.look.plume = 1; FIRE.embers = 24; (J as any).applyKnobs(A.g, k2); const old = [FIRE.look.shimmer, FIRE.look.plume, FIRE.embers];
+          verdict(row.length === 12 && row[0] === 1.5 && row[7] === 0.02 && sparks && seeds === filed.length && PA?.embers === sum && sum >= steady * 0.5 && sum <= steady * 1.2 + cracks * FIRE.emberCrack + 1 && throwsOk && (PB?.embers ?? 0) === 0 && all.length === 0 && !cut && none === 0 && own === 0.02 && old.every(v => v === 0),
+            'look — the flame\'s numbers reach the renderer as they stand, and its embers are particles filed by the host\'s own book: with a pool or with none the two games are the same game',
+            `the row handed on: ${row.length} numbers, gain ${row[0]}, shimmer ${row[7]} · ${sum} embers in ${filed.length} emits over ten seconds (about ${steady.toFixed(0)} steady, and ${thrown.length} throws of ${thrown.map(f => f.n).join(', ') || 'none'} for ${cracks} cracks, each harder than a steady one: ${throwsOk ? 'yes' : 'NO'}), every one a spark flagged an ember over the coals with a seed of its own: ${sparks && seeds === filed.length ? 'yes' : 'NO'} · the book says ${PA?.embers} · with no pool: ${PB?.embers ?? 0} · the two games differ in ${all.length} rows${cut ? ' (NOT PROVEN: the compare was cut)' : ''}${all.length ? ': ' + all.slice(0, 3).join(' | ') : ''} · FIRE.embers 0: ${none} more · its own snapshot put back: shimmer ${own} · one without the key: shimmer ${old[0]}, plume ${old[1]}, embers ${old[2]}`);
+        }
+      } finally { Object.assign(FIRE.look, look0); FIRE.embers = n0; }
     }
     // ---- off
     {

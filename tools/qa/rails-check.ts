@@ -32,7 +32,7 @@
 //  THE FRAME'S EYES ARE THE PLAYER'S VIEW (fogofwar.ts update, RAILS.eyeFirst, RAILS.eyeView): a step's eye has a place among the fog's five, and a man
 //      only a frame's eye has is drawn, not seen: the squad's entry on his room's door is the one it would take with no eye there. RAILS_BREAK=1 reaches
 //      both lines through the step's eye (none is named under it).
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's, the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the first play's notes', the second play's, the card's, the card's beat's, the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -222,6 +222,63 @@ export async function railsCheck(): Promise<boolean> {
       verdict(k > 0 && !none0 && !!owed && owed.text === T.explain.text && !!still && ran > 0.9 && !noneThere && pageOk && !ring0 && !!arrow && long && fine && wired,
         'a step\'s card and its arrow: the step that is up says its card and a step without one says none (a headless run is not held by it); on the page it is up with its words, Enter closes it only once it has been up a moment and is then no game key, another key is the game\'s, and a card read is not shown again on that page; a step with `toward` is drawn as an arrow and one without as the ring; a card too long to read is a fault of the level; the page holds the world under a card and a scripted page does not',
         `step '${T?.id}' "${T?.explain?.title}": said ${!!owed}, after 1 s ${!!still} (the clock ran ${ran.toFixed(2)} s) · step '${L.steps[other]?.id}' → ${noneThere ? 'a card' : 'none'} · the page: up ${page.up}, W taken ${page.other1}, Enter at once taken ${page.early} and still up ${page.upEarly}, Enter after ${CARD_ARM_MS} ms closes ${page.took && page.gone} (told ${closedN}), shown again ${page.again}, another card ${page.next} · arrow without the key ${!!ring0}, with ${!!arrow} · 400 characters a fault ${long}, as written ${!fine ? 'a fault' : 'none'} · wired ${wired}`); }
+    // ---- the card's beat (RAILS.cardBeat; "we show the modals too quickly. like it should happen a beat after something happens on screen"): THE STEP
+    //      BEFORE A CARD SETTLES. Its deed done, the lesson stays on it — no card, the next step's keys still shut, its line something to watch — for the
+    //      beat; then the next step comes up with its card. A fight holds a card only where the card asks (`explain.quiet`): there it waits while his
+    //      squad is still firing or a man has just gone down, until that has been quiet a couple of seconds, and `cardMax` ends any wait; the other
+    //      side's rounds alone hold nothing. A card marked `explain.now` and a step whose next one has no card wait for nothing. What he does while the
+    //      step settles is NOT the next step's (a step counts from the tick it comes up); a step that only waited for the script keeps its own line
+    //      while it settles; a step moved by hand under a done deed is not done by it. The word ?cardbeat=0, the stand's word TPS_CARDBEAT and a
+    //      recording from before the key: the rule is off in the module and on the frozen stand, and raised here for the question. Nobody's ears are on
+    //      (aiEnabled off) and the level's script is stopped: every round here is the check's own, filed as combat.ts files one. RAILS_BREAK=1: no
+    //      step settles.
+    { const J = await import(`${ROOT}/src/game/journal.ts`), PR = await import(`${ROOT}/src/host/profile.ts`), { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`), k0 = knobsCopy();
+      const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, stood = RAILS.cardBeat, holds = (PR.FROZEN_HOLDS as Record<string, string>)['RAILS.cardBeat']; g.aiEnabled = false; R.run(0.5); g.director?.stop?.(false); RAILS.cardBeat = true;
+      const k = L.steps.findIndex((T: any, i: number) => i > 1 && !!T.explain && !T.explain.now && !L.steps[i - 1].explain), plain = L.steps.findIndex((_: any, i: number) => i > 0 && i !== k - 1 && !!L.steps[i + 1] && !L.steps[i + 1].explain);
+      const title = 'the step before a card settles: its deed done, the lesson stays on it for a beat (the next step not up, no card, nothing asked) and then the card lands, his squad firing or not; a card marked quiet also waits while his squad is firing or a man has just gone down, until that has been quiet for a couple of seconds, and the longest wait is capped; the other side\'s rounds alone hold nothing; a card marked to cut in, a step with no card after it and the switch off wait for nothing; what he does while it settles is not the next step\'s; a step that only waited for the script keeps its line; a step moved by hand is not done by the last one\'s deed; the rule is on as the page stands and off on the frozen stand, and the word and an older recording put it off';
+      if (k < 2 || plain < 1) verdict(false, title, `this level has no card after a step without one (${k}) or no step without a card after it (${plain})`);
+      else { const T = L.steps[k], E = T.explain, tests = [L.steps[k - 1].done, L.steps[plain].done], marks = { quiet: E.quiet, now: E.now }, max = RAILS.cardMax;
+        try {
+          const mate = R.squad()[0], foe0 = g.guards.find((x: any) => x.team === 'hostile' && x.state !== 'dead');
+          /** a round as combat.ts files it: a teammate's (his side's fight), or a man of the other side's (a level's staged fire: nothing waits on it) */
+          const round = (who: any) => { g.events.push({ kind: 'guardShot', pos: [...who.char.pos], time: g.time, loud: true, level: 1, weapon: 'fn2000', from: [...who.char.pos], to: [...who.char.pos], who: who.char.id }); };
+          const fight = (secs: number, who: any = mate) => { for (let t = 0; t < secs - 1e-6; t += 0.25) { round(who); R.run(0.25); } };
+          /** step `i` is up with its deed not done · its deed is done (the level's own test stood in for: this line is about what comes after it) */
+          const put = (i: number) => { L.steps[i].done = { is: 'any', of: [] }; g.lesson.i = i; (g.lesson as any).seen = null; R.run(2 / 60); }, deed = (i: number) => { L.steps[i].done = { is: 'all', of: [] }; R.run(2 / 60); };
+          type Look = { at: number; settling: boolean; card: boolean; line: string | null; watch: boolean };
+          const look = (): Look => { const p = g.rails.prompt(); return { at: g.lesson.i, settling: g.lesson.settling, card: !!g.rails.card(), line: p?.line ?? null, watch: !!p?.watch }; };
+          const held = (x: Look) => x.at === k - 1 && x.settling && !x.card && x.watch && x.line === '', there = (x: Look) => x.at === k && !x.settling && x.card && !!x.line;
+          const B = RAILS.cardBeatSecs, Q = RAILS.cardQuiet;
+          // ---- a card with no word of its own: the beat, whatever is playing
+          delete E.quiet; delete E.now;
+          R.run(Q + 0.5); put(k - 1); const a0 = look(); deed(k - 1); const q0 = look(); R.run(B - 0.3); const q1 = look(); R.run(0.5); const q2 = look();   // a quiet floor
+          put(k - 1); fight(0.5); deed(k - 1); const b0 = look(); fight(B + 0.25); const b1 = look();   // his squad firing all the while: the beat and no more
+          // (a deed of his own while it settles — a whistle, filed as the game files one — is the next step's when it comes up)
+          R.run(Q + 0.5); put(k - 1); deed(k - 1); g.events.push({ kind: 'whistle', pos: [...g.player.char.pos], time: g.time, loud: false, level: 0.3, who: PLAYER_ID } as any); const own = L.steps[k - 1].done; L.steps[k - 1].done = { is: 'cue', name: 'none' }; const cue = g.rails.prompt(); L.steps[k - 1].done = own;   // (…and a step that only waited for the script keeps its own line while it settles)
+          R.run(B + 0.2); const carried = g.lesson.i === k ? (g.lesson as any).seen?.n.get('event:whistle') ?? 0 : -1;
+          // (the step moved by hand while one settles: the step put up is not done by the other's deed)
+          put(k - 1); deed(k - 1); L.steps[plain].done = { is: 'any', of: [] }; g.lesson.i = plain; R.run(4 / 60); const moved = { at: g.lesson.i, settling: g.lesson.settling };
+          // ---- a card marked quiet: the fight his deed set off is watched to its end
+          E.quiet = true;
+          R.run(Q + 0.5); put(k - 1); deed(k - 1); R.run(B - 0.3); const u1 = look(); R.run(0.5); const u2 = look();   // a quiet floor: still the beat alone
+          put(k - 1); fight(0.5); deed(k - 1); const f0 = look(); fight(2.5); const f1 = look(); R.run(Q - 0.5); const f2 = look(); R.run(0.6); const f3 = look();   // his squad firing as the deed is done
+          R.run(Q + 0.5); put(k - 1); fight(0.5, foe0); deed(k - 1); fight(B + 0.25, foe0); const e1 = look();   // the other side's rounds alone
+          R.run(Q + 0.5); put(k - 1); deed(k - 1); R.run(0.3); fight(B); const s0 = look(); R.run(Q + 0.1); const s1 = look();   // his fight begun after the deed
+          RAILS.cardMax = 3; put(k - 1); fight(0.5); deed(k - 1); fight(2.5); const c0 = look(); fight(1.0); const c1 = look(); RAILS.cardMax = max;   // the cap
+          R.run(Q + 0.5); put(k - 1); const foe = g.guards.find((x: any) => x.team === 'hostile' && x.state !== 'dead'); killGuard(g, foe, [1, 0, 0], false, 'shot', 'player'); R.run(0.1); deed(k - 1); R.run(B + 0.2); const d0 = look(); R.run(Q - B + 0.3); const d1 = look();   // a man going down
+          E.now = true; put(k - 1); fight(0.5); deed(k - 1); const n0 = look(); delete E.now;   // a card that cuts in, whatever else it says
+          R.run(Q + 0.5); put(plain); fight(0.5); deed(plain); const p0 = g.lesson.i;   // a step whose next one has no card
+          RAILS.cardBeat = false; put(k - 1); fight(0.5); deed(k - 1); const o0 = look(); RAILS.cardBeat = true;   // the switch off
+          const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g)));
+          const was = snap(); delete was.tables.RAILS.cardBeat; J.applyKnobs(g, was); const old = RAILS.cardBeat;
+          RAILS.cardBeat = true; const made = snap(); RAILS.cardBeat = false; J.applyKnobs(g, made); const kept = RAILS.cardBeat;
+          const read = (q: string) => { RAILS.cardBeat = !RAILS.cardBeat; PR.pageSwitches(new URLSearchParams(q)); return RAILS.cardBeat; }, word = `${read('')}/${read('cardbeat=0')}`;
+          const say = (x: Look) => x.at === k ? (x.card ? 'the card' : 'the next step, NO CARD') : x.settling ? `settles${x.line ? ` ("${x.line}")` : ''}` : 'its ask';
+          verdict(a0.at === k - 1 && !a0.settling && !!a0.line && !a0.watch && held(q0) && held(q1) && there(q2) && held(b0) && there(b1) && carried === 0 && !!cue?.watch && !!cue.line && stood === (process.env.TPS_PROFILE === 'shipped') && /TPS_CARDBEAT=1/.test(holds ?? '') && moved.at === plain && !moved.settling
+            && held(u1) && there(u2) && held(f0) && held(f1) && held(f2) && there(f3) && there(e1) && held(s0) && there(s1) && held(c0) && there(c1) && held(d0) && there(d1) && there(n0) && p0 > plain && there(o0) && old === false && kept === true && word === 'true/false',
+            title,
+            `'${L.steps[k - 1]?.id}' before '${T?.id}' "${E?.title}"${marks.quiet ? ' (the level marks it quiet)' : ''}, beat ${B} s, quiet ${Q} s · deed not done: ${say(a0)} · A PLAIN CARD, quiet floor: at once ${say(q0)}, ${(B - 0.3).toFixed(1)} s ${say(q1)}, ${(B + 0.2).toFixed(1)} s ${say(q2)} · his squad firing throughout: at once ${say(b0)}, ${(B + 0.25).toFixed(2)} s ${say(b1)} · a whistle of his while it settles: ${carried} counted by the next step · a step that waited for the script, settling: "${cue?.line}"${cue?.watch ? ' (to watch)' : ' (AN ASK)'} · as this stand comes up: ${stood ? 'on' : 'off'} (the frozen stand's word: ${holds ?? 'NONE'}) · the step moved by hand while one settles: step ${moved.at + 1} up, ${moved.settling ? 'SETTLING' : 'not done'} · A QUIET CARD, quiet floor: ${(B - 0.3).toFixed(1)} s ${say(u1)}, ${(B + 0.2).toFixed(1)} s ${say(u2)} · his squad firing: at once ${say(f0)}, 2.5 s of it ${say(f1)}, ${(Q - 0.25).toFixed(2)} s quiet ${say(f2)}, ${(Q + 0.35).toFixed(2)} s quiet ${say(f3)} · only the other side firing: ${say(e1)} · his fight begun after the deed: ${say(s0)}, then ${(Q + 0.1).toFixed(1)} s quiet ${say(s1)} · a cap of 3 s: at 2.5 s ${say(c0)}, at 3.5 s ${say(c1)} · a man down: ${(B + 0.3).toFixed(1)} s ${say(d0)}, ${(Q + 0.6).toFixed(1)} s ${say(d1)} · marked now: ${say(n0)} · '${L.steps[plain]?.id}', no card after it, his squad firing: ${p0 > plain ? 'on at once' : 'STILL UP'} · switch off: ${say(o0)} · older recording → ${old ? 'ON' : 'off'}, one made with it → ${kept ? 'on' : 'OFF'} · the word '' / cardbeat=0 → ${word}`);
+        } finally { L.steps[k - 1].done = tests[0]; L.steps[plain].done = tests[1]; if (marks.quiet === undefined) delete E.quiet; else E.quiet = marks.quiet; if (marks.now === undefined) delete E.now; else E.now = marks.now; RAILS.cardMax = max; knobsBack(k0); } } }
     // ---- the opening card: every tutorial mission's row says where we are and what it teaches, and the load brief draws both in place of the job's line
     { const { TUTORIAL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
       const bad: string[] = [];
@@ -419,6 +476,7 @@ export async function railsCheck(): Promise<boolean> {
       // …and his own actions' ring (handring.ts), up under the interaction key, is worked with its own keys: on the whistle's step (the fourth: a key, two
       // places stood on) the key kept down and then the last wedge's digit whistles, though no slot's digit is open
       const { HANDRING } = await import(`${ROOT}/src/game/handring.ts`), { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), ring0 = HANDRING.on, I = W.input, L = g.level.scenarios.lesson;
+      const BEAT = Math.ceil((RAILS.cardBeatSecs + 0.2) * 60);
       const run = (n: number) => { for (let i = 0; i < n; i++) W.step(DT); }, tap = (k: string) => { I.pressed.add(k); I.keys.add(k); W.step(DT); I.keys.delete(k); W.step(DT); };
       // (the two places stood on are the steps' own marks, read from the level: its marks have moved once already)
       const floorOf = (id: string): number[] => { const m = L.steps.find((s: any) => s.id === id)?.at ?? [0, 0, 0]; return [m[0], 0, m[2]]; }, DARK = floorOf('dark'), WHISTLE = floorOf('whistle');
@@ -427,13 +485,13 @@ export async function railsCheck(): Promise<boolean> {
       const on = verbs([27.9, 0, 17.2], DOOR); if (R) R.rows = undefined; const all0 = verbs(null, DOOR); if (R) R.rows = named;   // (Space is open from the whistle's step on)
       const extra = all0.filter(v => !named.includes(v)), pick = g.rails.offers('pick'), boot = g.rails.offers(extra[0] ?? 'pick'); g.teleportPlayer(WHISTLE); run(20);
       tap(digit); run(10); const early = L.steps[g.lesson.i]?.id;   // (no ring up: the digit is a slot's, and locked)
-      I.pressed.add('Space'); I.keys.add('Space'); run(Math.ceil((HANDRING.holdSecs + 0.1) * 60)); I.keys.delete('Space'); const up = !!g.player.sel.ring; run(2); tap(digit); run(10);
-      const after = L.steps[g.lesson.i]?.id;
+      I.pressed.add('Space'); I.keys.add('Space'); run(Math.ceil((HANDRING.holdSecs + 0.1) * 60)); I.keys.delete('Space'); const up = !!g.player.sel.ring; run(2); tap(digit); run(10 + BEAT);
+      const after = L.steps[g.lesson.i]?.id;   // (the step after the whistle opens on a card: the whistle's settles for the card's beat first — RAILS.cardBeat)
       // …and a digit pressed INSIDE the hold, before the ring is up (handring.ts `early`: what a hand does with "Hold E, then 5"), is the wedge too: the gate
       // lets it through to the ring and it is no slot's
       const early0 = HANDRING.early; HANDRING.early = true; g.restartEncounter(); run(30); tap('KeyC'); run(20); for (const p of [DARK, WHISTLE]) { g.teleportPlayer(p); run(90); }
       const at2 = L.steps[g.lesson.i]?.id, slot0 = `${g.player.slot}${g.player.holstered ? ' away' : ''}`;
-      I.pressed.add('Space'); I.keys.add('Space'); run(4); const notYet = !g.player.sel.ring; I.pressed.add(digit); I.keys.add(digit); W.step(DT); I.keys.delete(digit); run(2); I.keys.delete('Space'); run(10);
+      I.pressed.add('Space'); I.keys.add('Space'); run(4); const notYet = !g.player.sel.ring; I.pressed.add(digit); I.keys.add(digit); W.step(DT); I.keys.delete(digit); run(2); I.keys.delete('Space'); run(10 + BEAT);
       const quick = L.steps[g.lesson.i]?.id, slot1 = `${g.player.slot}${g.player.holstered ? ' away' : ''}`; HANDRING.on = ring0; HANDRING.early = early0;
       verdict(at2 === 'whistle' && notYet && quick === 'grab' && slot1 === slot0 && named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && pick && !boot && shut.length === 0 && shut0.length > 0 && at === 'whistle' && early === 'whistle' && up && after === 'grab',
         'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere; and while Space itself is locked a thing in reach has no row at all. His own ring is worked with its own digit: the key kept down, then the last wedge, whistles; and the digit pressed inside the hold, before the ring is up, whistles too and draws nothing',
