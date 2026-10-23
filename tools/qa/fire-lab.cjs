@@ -107,7 +107,7 @@ const html = `<!doctype html><body style="margin:0;background:#000"><canvas id="
       run(hdr.createView(), pipe, bg); lv.forEach((t, i) => run(t.createView(), pDown, downBg[i])); run(ctx.getCurrentTexture().createView(), pOut, outBg);
       dev.queue.submit([enc.finish()]); return dev.queue.onSubmittedWorkDone(); };
     return 'ok';
-  }, { code: fire + stage });
+  }, { code: fire + (/fn fireGas\(/.test(fire) ? '' : 'fn fireGas(p: vec3f) -> f32 { return 0.0; }\n') + stage });
   if (ok !== 'ok') { console.log('FAIL', ok, errs.join('\n')); await browser.close(); process.exit(1); }
   // the light's flicker and the cracks, as game/fire.ts makes them (kept in step with it by hand: this page is for looking)
   const flick = t => 1 + 0.22 * (0.9 * Math.sin(6.283 * 1.3 * t + 1) + 0.7 * Math.sin(6.283 * 2.7 * t + 2) + 0.45 * Math.sin(6.283 * 4.9 * t + 3) + 0.2 * Math.sin(6.283 * 8.3 * t + 4)) / 2.25;

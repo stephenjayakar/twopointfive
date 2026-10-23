@@ -6,7 +6,7 @@
 // runs alone on a plain stage (tools/qa/fire-lab.cjs), where its look was set. Picture only: the game reads none of it (the fire's LIGHT is an engine light).
 //   a = where the coals are (the middle of the drum's mouth) + the mouth's radius (m)      b = flame height (m) · heat 0‥1 · the fire's own seed 0‥1 · its clock (s)
 //   c = the wind at the flame (x, z; m/s) · the light's flicker this frame (about 1) · spare      d = the bed of coals' radius (m; 0 = none drawn) · under the fog of war: 0 = drawn wherever it stands, 1 = only where the team sees, 2 = only where it does not (the composite's test: fireOver)
-struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f };
+struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (c.w: how much of this fire's flame is the solver's gas, 0‥1 — fireFlame)
 // THE LOOK'S NUMBERS, the same for every fire (game/fire.ts FIRE.look, live in the page's fire lab):
 //   a = × the flame's light · × its white heart · how soon it hides what is behind it (1/m) · × how fast it climbs
 //   b = × its height · how torn it is 0‥2 · the smoke off its tips 0‥2 (0 = none) · the shimmer of the hot air over it (m the picture behind is pushed, 0 = none)
@@ -45,7 +45,7 @@ fn fireColor(hot: f32, core: f32) -> vec3f {
   return mix(c, vec3f(9.0, 4.3, 0.6) * core, smoothstep(0.84, 1.0, hot));
 }
 /** at P: x = how much flame (0‥1), y = how hot it is there (0‥1: its edge and its tips are the cool end), z = how much smoke (0‥1) */
-fn fireFlame(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
+fn fireFlameN(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
   let R = F.a.w; let H = F.b.x * K.b.x; let t = F.b.w; let s = F.b.z * 61.0;
   var q = P - F.a.xyz;
   if (q.y < -0.04 || q.y > H * FIRE_SMOKE_TOP) { return vec3f(0.0); }
@@ -92,6 +92,34 @@ fn fireFlame(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
     }
   }
   return vec3f(f, hot, sm);
+}
+/** THE FLAME AS GAS (game/fire.ts FIRE.gas): hot gas the smoke solver carries on its fine lattice, filed at the coals — what it lifts, curls and leans IS the
+ *  flame's shape. `fireGas(p)` is that lattice's density at p (the composite's: smoke_read.wgsl spgFine; a stand-alone build of this file gives it a 0).
+ *  At P: x = how much flame, y = how hot: by how dense the gas still is against the heart's (K.c.z) — it thins as it climbs and cools, so the tips and the skin
+ *  are the cool end with no rule saying so — and no flame under K.c.w of that. The lattice's cells are two centimetres: the tearing finer than a cell is the
+ *  noise's, climbing with the gas. */
+fn fireFlameG(F: FireRec, K: FireLook, P: vec3f) -> vec2f {
+  let H = F.b.x * K.b.x; let q = P - F.a.xyz;
+  if (q.y < -0.04 || q.y > H * FIRE_FLAME_TOP) { return vec2f(0.0); }
+  let d = fireGas(P);
+  if (d <= 0.0) { return vec2f(0.0); }
+  let s = F.b.z * 61.0; let up = F.b.w * FIRE_RISE * K.a.w;
+  let n = 0.6 * fireN(vec3f(q.x * 8.0, (q.y - up * 1.25) * 5.0, q.z * 8.0) + s) + 0.4 * fireN(vec3f(q.x * 19.0, (q.y - up * 1.7) * 11.0, q.z * 19.0) - s);
+  let dn = d / max(K.c.z, 1e-4) * (1.0 + (n - 0.5) * 0.8 * K.b.y);
+  let lo = K.c.w;
+  let f = smoothstep(lo, lo + 0.12, dn) * smoothstep(-0.01, 0.06, q.y) * (1.0 - smoothstep(FIRE_FLAME_TOP - 0.45, FIRE_FLAME_TOP, q.y / H));
+  return vec2f(f, clamp((dn - lo) / max(1.0 - lo, 1e-3), 0.0, 1.0));
+}
+/** at P: x = how much flame (0‥1), y = how hot it is there (0‥1: its edge and its tips are the cool end), z = how much drawn smoke (0‥1). A fire whose gas the
+ *  solver has (F.c.w, eased 0‥1 by the game) is the gas's flame, and its smoke is the solver's alone; any other is the flame of noise. */
+fn fireFlame(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
+  let gm = F.c.w;
+  var a = vec3f(0.0);
+  if (gm < 1.0) { a = fireFlameN(F, K, P); }
+  if (gm <= 0.0) { return a; }
+  let g = fireFlameG(F, K, P);
+  let wa = a.x * (1.0 - gm); let wg = g.x * gm; let f = wa + wg;
+  return vec3f(f, (wa * a.y + wg * g.y) / max(f, 1e-4), a.z * (1.0 - gm));
 }
 /** the smoke's own light at a height over the coals (y: × the flame's height): soot, lit from below by the fire it came off and dark above */
 fn fireSmokeColor(y: f32, glow: f32) -> vec3f { return vec3f(0.030, 0.026, 0.024) + vec3f(0.26, 0.06, 0.006) * (glow * exp(-max(y - 0.9, 0.0) * 2.2)); }

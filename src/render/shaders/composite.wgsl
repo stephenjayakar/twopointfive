@@ -680,6 +680,8 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   }
   return col;
 }
+/** the hot gas of a fire the smoke solver carries (fire.wgsl fireFlameG): the fine lattice's density */
+fn fireGas(p: vec3f) -> f32 { return spgFine(p); }
 /** THE SHIMMER OF THE HOT AIR OVER A FIRE (fire.wgsl fireShimmer; game/fire.ts FIRE.look.shimmer, `?fireheat=0`): how far, in pixels, this pixel reads the
  *  picture aside — the whole composite is a function of the pixel, so the picture behind a fire's column is that function a little off. Nothing nearer than
  *  the column is moved, and nothing nearer is read in its place (the depth here and the depth where it would read both say), and a fire the fog of war

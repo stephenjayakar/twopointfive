@@ -13,7 +13,7 @@ export const FIRELAB = { on: false, unseen: true, safe: true, stood: false };
 export const FIRELAB_SYSTEM = 'Fire lab';
 type Table = Record<string, unknown>;
 interface Num { t: () => Table; key: string; label: string; min: number; max: number; step: number; tip: string }
-const LOOK = () => FIRE.look as unknown as Table, TOP = () => FIRE as unknown as Table, SMOKE = () => FIRE.smoke as unknown as Table;
+const LOOK = () => FIRE.look as unknown as Table, TOP = () => FIRE as unknown as Table, SMOKE = () => FIRE.smoke as unknown as Table, GASES = () => FIRE.gas as unknown as Table;
 const FLAME: Num[] = [
   { t: LOOK, key: 'gain', label: 'how bright the whole flame is', min: 0, max: 3, step: 0.05, tip: 'times all of its light: up for a hotter, paler fire, down for a dim red one' },
   { t: LOOK, key: 'core', label: 'how white-hot its heart is', min: 0, max: 4, step: 0.05, tip: 'times the light of the hottest part only: this is what the bloom spreads into a glow' },
@@ -46,7 +46,16 @@ const DRIFT: Num[] = [
   { t: SMOKE, key: 'temp', label: 'how hot it leaves', min: 0, max: 80, step: 1, tip: 'hotter smoke climbs faster and higher before the wind takes it' },
   { t: SMOKE, key: 'speed', label: 'how fast it leaves, m/s', min: 0, max: 5, step: 0.1, tip: 'its speed up out of the flame' },
 ];
-const ALL = [...FLAME, ...EMBERS, ...LIGHT, ...DRIFT];
+const GAS: Num[] = [
+  { t: GASES, key: 'density', label: 'how much hot gas it lets out', min: 0.2, max: 6, step: 0.1, tip: 'more gas is a taller, fuller flame (and more for a sight line to lose light in)' },
+  { t: GASES, key: 'temp', label: 'how hot the gas leaves', min: 0, max: 40, step: 0.5, tip: 'hotter gas climbs faster: a taller, quicker flame' },
+  { t: GASES, key: 'speed', label: 'how fast it leaves the coals, m/s', min: 0, max: 4, step: 0.1, tip: 'its speed up out of the drum' },
+  { t: GASES, key: 'radius', label: 'how wide the coals let it out, m', min: 0.08, max: 0.3, step: 0.01, tip: 'the drum\'s mouth is 0.24 m' },
+  { t: GASES, key: 'jitter', label: 'how unsteady the source is', min: 0, max: 1.5, step: 0.05, tip: 'the gas leaves in uneven puffs: this is what makes the flame curl' },
+  { t: GASES, key: 'ref', label: 'gas this dense is white-hot', min: 0.05, max: 1, step: 0.01, tip: 'lower and more of the flame is white-hot; higher and only its heart is' },
+  { t: GASES, key: 'lo', label: 'no flame in gas thinner than this share', min: 0.02, max: 0.6, step: 0.01, tip: 'lower and the flame reaches higher before it turns to smoke' },
+];
+const ALL = [...FLAME, ...EMBERS, ...LIGHT, ...DRIFT, ...GAS];
 
 /** is this page the lab (the word on its address) */
 export const fireLabAsked = (q: URLSearchParams): boolean => q.has('firelab');
@@ -68,10 +77,10 @@ function stand(game: Game): boolean {
 /** ONCE, after the panel is built: the lab's system, its rows, the panel open on it */
 export function fireLabBoot(game: Game, panel: Panel) {
   FIRELAB.on = true;
-  const was = ALL.map(n => n.t()[n.key] as number), wasSmoke = FIRE.smoke.on;
+  const was = ALL.map(n => n.t()[n.key] as number), wasSmoke = FIRE.smoke.on, wasGas = FIRE.gas.on;
   let copied = '';
   const back = (rows: Num[]) => () => { for (const n of rows) n.t()[n.key] = was[ALL.indexOf(n)]; };
-  const asText = () => JSON.stringify({ look: { ...FIRE.look }, ...Object.fromEntries([...EMBERS, ...LIGHT, FLAME[FLAME.length - 1]].map(n => [n.key, n.t()[n.key]])), smoke: Object.fromEntries(DRIFT.map(n => [n.key, n.t()[n.key]])) });
+  const asText = () => JSON.stringify({ look: { ...FIRE.look }, ...Object.fromEntries([...EMBERS, ...LIGHT, FLAME[FLAME.length - 1]].map(n => [n.key, n.t()[n.key]])), smoke: Object.fromEntries(DRIFT.map(n => [n.key, n.t()[n.key]])), gas: { on: FIRE.gas.on, ...Object.fromEntries(GAS.map(n => [n.key, n.t()[n.key]])) } });
   panel.system(FIRELAB_SYSTEM, { icon: '♨', short: 'fire', title: 'stand by a fire and move its numbers while it burns' });
   const now = panel.section('Right now', { open: true });
   panel.text(now, () => fireSummary(game));
@@ -80,6 +89,9 @@ export function fireLabBoot(game: Game, panel: Panel) {
   panel.toggleBox(now, 'nothing hurts you', () => FIRELAB.safe, v => { FIRELAB.safe = v; }, 'god mode while the lab is open');
   const fl = panel.section('The flame', { open: true, reset: back(FLAME), resetTitle: 'the flame\'s numbers back to the build\'s' });
   for (const n of FLAME) panel.slider(fl, n.label, n.min, n.max, n.step, () => n.t()[n.key] as number, v => { n.t()[n.key] = v; }, n.tip);
+  const ga = panel.section('The flame as gas in the smoke solver', { open: true, reset: () => { back(GAS)(); FIRE.gas.on = wasGas; }, resetTitle: 'the gas\'s numbers back to the build\'s' });
+  panel.toggleBox(ga, 'the flame is gas the solver carries', () => FIRE.gas.on, v => { FIRE.gas.on = v; }, 'on: hot gas is let out at the coals into the smoke solver\'s fine cells and the flame is drawn from where that gas is, so it curls, leans and climbs as the solver moves it. Off: the flame of noise above. The rows above still colour it; how torn it is tears its skin');
+  for (const n of GAS) panel.slider(ga, n.label, n.min, n.max, n.step, () => n.t()[n.key] as number, v => { n.t()[n.key] = v; }, n.tip);
   const em = panel.section('Embers', { open: true, reset: back(EMBERS), resetTitle: 'the embers\' numbers back to the build\'s' });
   for (const n of EMBERS) panel.slider(em, n.label, n.min, n.max, n.step, () => n.t()[n.key] as number, v => { n.t()[n.key] = v; }, n.tip);
   const li = panel.section('Its light on the yard', { open: false, reset: back(LIGHT), resetTitle: 'the light\'s numbers back to the build\'s' });

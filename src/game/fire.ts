@@ -84,6 +84,16 @@ export const FIRE = {
    *  flame's height (its foot, a radius lower, stays over a standing man's head on a drum: tools/qa/fire-check.ts holds it), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
    *  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke (`?firesmoke=0`) */
   smoke: { on: true, up: 1.9, radius: 0.26, cells: 4, density: 2.2, temp: 30, speed: 1.5, push: 6, jitter: 0.5, every: 1, viewR: 18, lean: 0.12 },
+  /** THE FLAME AS GAS (the maintainer's pick, 10-23: "Drive it from our 3D smoke solver"; "i'm curious how far we can push our existing smoke solver … if we can
+   *  make the finer cells work well with our existing brick stuff"): a second LOOK source, on the solver's FINE lattice (2.2 cm cells, the breath's), filed at
+   *  the coals of a fire within `viewR` m of what the view looks at while the solver draws — hot gas the solver lifts, curls, leans in the wind and lets go
+   *  (the fine lattice forgets thin gas in a third of a second, which is what gives a flame its height). The picture draws the flame FROM THAT GAS (fire.wgsl
+   *  fireFlameG): white-hot where it is as dense as `ref`, cooling as it thins, no flame under `lo` of that; the noise only tears its skin. Its middle `up` of the
+   *  flame's height over the coals, `radius` m wide and `cells` at least, `density` and `temp` a second, leaving at `speed` m/s; filed afresh every `every` s;
+   *  a fire eases to it and back over 1 / `ease` s. While it burns so the DRAWN smoke is off (the gas is the smoke) and the gas is the game's own smoke in the
+   *  page: a sight line through the flame's heart loses light as through any smoke. `on` false = the flame of noise: the page's default until the gas has been
+   *  seen (`?firegas=1`; a row in the fire lab). NEVER SEEN ON A GPU. */
+  gas: { on: false, up: 0.1, radius: 0.17, cells: 6, density: 1.6, temp: 14, speed: 1.1, push: 8, jitter: 0.6, every: 0.5, viewR: 12, ref: 0.3, lo: 0.2, ease: 1.5 },
   /** THE SOUND: the bed's level at the fire and each crack's (× how hard the crack is), and how long one bed voice is held before the next takes over (the
    *  mixer lets a followed voice go after its own time, and one it never took — the mixer off, a page in the background — is asked for again then) */
   bed: 0.5, crack: 0.55, bedSecs: 12,
@@ -114,7 +124,7 @@ export interface FireStats { fires: number; lit: number; frames: number; cracks:
  *  smokes at once and not at the next second's mark, and one lit again asks for its bed at once; `smokes`, `beds` = how many this run. No rule reads any of
  *  it back. NOT KNOWN TO IT: whether the mixer still holds the bed — a page frozen past the mixer's own hold (audio.ts FOLLOW_SECS) resumes with no bed until
  *  the next `bedSecs` mark. */
-export interface FireShown { n: number; time: number; bed: number[]; smoke: number[]; smokes: number; beds: number; /** embers: what each fire still owes (a share of one), and how many were filed this run */ ember: number[]; embers: number }
+export interface FireShown { n: number; time: number; bed: number[]; smoke: number[]; smokes: number; beds: number; /** embers: what each fire still owes (a share of one), and how many were filed this run */ ember: number[]; embers: number; /** the gas: the frame each fire's source was last kept up, how far each has eased to its gas (0‥1), sources filed this run */ gas: number[]; gasMix: number[]; gases: number }
 const states = new SideMap<Game, FireStats>('fire.states');
 const fresh = (): FireStats => ({ fires: 0, lit: 0, frames: 0, cracks: 0, lo: Infinity, hi: -Infinity, sum: 0, n: 0 });
 function stateOf(g: Game) { let s = states.get(g); if (!s) { s = fresh(); states.set(g, s); } return s; }
@@ -176,7 +186,7 @@ function windAt(g: Game, mouth: Vec3): { wv: Vec3; wl: number; wind: [number, nu
   return { wv, wl, wind: [wv[0] * wk, wv[2] * wk] };
 }
 /** the look's numbers as the renderer takes them (fire.wgsl FireLook's twelve, in its order) */
-function lookRow(): number[] { const L = FIRE.look; return [L.gain, L.core, L.sigma, L.speed, L.tall, L.torn, L.plume, L.shimmer, L.soot, L.breathe, 0, 0]; }
+function lookRow(): number[] { const L = FIRE.look; return [L.gain, L.core, L.sigma, L.speed, L.tall, L.torn, L.plume, L.shimmer, L.soot, L.breathe, FIRE.gas.ref, FIRE.gas.lo]; }
 /** the lamp back as the level hung it: where, and nothing said to the steady readers (its strength is updateTargets' own again the frame it paints) */
 function plain(t: LightTarget) { const l = t.light!; l.pos[0] = t.pos[0]; l.pos[1] = t.pos[1]; l.pos[2] = t.pos[2]; if (l.steady !== undefined) { l.radius = l.steady.radius; l.steady = undefined; } }
 
@@ -192,7 +202,7 @@ export function updateFire(g: Game, dt: number) {
   if (!any) { if (E.fires?.length) E.fires = []; return; }   // (nothing of this file runs on a floor with no fire)
   const T = stateOf(g), K = FIRE, time = g.time, was = time - Math.max(dt, 0);
   const moved = dt > 0; let P: FireShown | null = null;   // (the host's book, on a frame that moves the clock only)
-  if (moved) { P = E.hostBooks?.fire ?? null; if (!P || was < P.time - 1e-9) P = (E.hostBooks ??= {}).fire = { n: 0, time: 0, bed: [], smoke: [], smokes: 0, beds: 0, ember: [], embers: 0 }; P.n++; P.time = time; }
+  if (moved) { P = E.hostBooks?.fire ?? null; if (!P || was < P.time - 1e-9) P = (E.hostBooks ??= {}).fire = { n: 0, time: 0, bed: [], smoke: [], smokes: 0, beds: 0, ember: [], embers: 0, gas: [], gasMix: [], gases: 0 }; P.n++; P.time = time; }
   const focus = E.viewFocus ?? g.player.char.pos, drawing = g.smoke.drawing?.() === true && g.engine.settings?.fireSmoke !== false;   // (… and the graphics preset on draws a fire's smoke: the floor rung does not, ui/quality.ts FIRE SMOKE SHED)
   let fires = 0, lit = 0;
   if (moved) T.frames++;
@@ -233,6 +243,13 @@ export function updateFire(g: Game, dt: number) {
         const sk = wl > 8 ? 8 / wl : 1, dir: Vec3 = [wv[0] * sk * B.lean, 1, wv[2] * sk * B.lean];
         g.smoke.emit({ pos: [M.pos[0], M.pos[1] + K.height * B.up, M.pos[2]], dir, speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density * heat, temperature: B.temp * heat, ttl: B.every, age: 0, kind: 'cloud',
           push: B.push, jitter: B.jitter, lattice: 'coarse', look: true }); } }
+    // the flame as gas: a short source on the solver's fine lattice at the coals, filed afresh every `every` s while the fire is near the view; the picture eases to it
+    if (P) { const G = K.gas, goes = drawing && G.on && d < G.viewR;
+      if (goes) { const slot = Math.floor(time / G.every), kept = P.gas[ix] === P.n - 1; P.gas[ix] = P.n;
+        if (slot !== Math.floor(was / G.every) || !kept) { P.gases++;
+          g.smoke.emit({ pos: [M.pos[0], M.pos[1] + K.height * G.up, M.pos[2]], dir: [0, 1, 0], speed: G.speed, radius: G.radius, minVoxels: G.cells, density: G.density * heat, temperature: G.temp * heat, ttl: G.every, age: 0, kind: 'cloud',
+            push: G.push, jitter: G.jitter, lattice: 'fine', look: true }); } }
+      P.gasMix[ix] = Math.min(1, Math.max(0, (P.gasMix[ix] ?? 0) + (goes ? dt : -dt) * G.ease)); }
   }
   T.fires = fires; T.lit = lit;
   fireDraws(g);
@@ -244,16 +261,18 @@ export function updateFire(g: Game, dt: number) {
 export function fireDraws(g: Game) {
   const E = g.engine, K = FIRE;
   if (!K.on) return;
-  const time = g.time, focus = E.viewFocus ?? g.player.char.pos, list: (FireDraw & { d: number })[] = [];
+  const time = g.time, focus = E.viewFocus ?? g.player.char.pos, list: (FireDraw & { d: number })[] = [], P = E.hostBooks?.fire;
+  let fires = 0;
   for (const t of g.targets) {
     if (!isFire(t)) continue;
+    const ix = fires++;
     const l = t.light!, lit = burns(t);
     // out, and nobody on the team saw it go out: where the team does not see, the fog's picture has its lamp lit still (the lamp's own ghost) and its flame on it
     if (!lit && !(K.fog && (l.fogGhost ?? 0) > 0)) continue;
     const M = mouthOf(g, t), d = Math.hypot(M.pos[0] - focus[0], M.pos[2] - focus[2]);
     if (!(d < K.drawR)) continue;
     const seed = fireSeed(t);
-    list.push({ pos: M.pos, r: M.r, h: K.height, heat: lit ? heatOf(t) : 1, seed, time: time % 4096, wind: windAt(g, M.pos).wind, flick: fireFlicker(seed, time), bed: M.lid * K.bedR, fog: !lit ? 2 : !K.fog || l.fog === 1 ? 1 : 0, d });
+    list.push({ pos: M.pos, r: M.r, h: K.height, heat: lit ? heatOf(t) : 1, seed, time: time % 4096, wind: windAt(g, M.pos).wind, flick: fireFlicker(seed, time), bed: M.lid * K.bedR, fog: !lit ? 2 : !K.fog || l.fog === 1 ? 1 : 0, gas: lit ? P?.gasMix[ix] ?? 0 : 0, d });
   }
   const cap = Math.max(0, Math.min(4, Math.floor(K.max)));
   if (list.length > cap) { list.sort((a, b) => a.d - b.d); list.length = cap; }   // (which ones, not in what order: the composite orders them ray by ray)
@@ -264,5 +283,5 @@ export function fireDraws(g: Game) {
 export function fireSummary(g: Game): string {
   if (!FIRE.on) return 'fire: the switch is off';
   const T = fireStats(g), P = g.engine.hostBooks?.fire;
-  return `fire ▸ ${T.lit} of ${T.fires} burning, ${g.engine.fires?.length ?? 0} drawn · light ${T.n ? `${T.lo.toFixed(2)}‥${T.hi.toFixed(2)} (mean ${(T.sum / T.n).toFixed(3)})` : '—'} · ${T.cracks} cracks, ${P?.smokes ?? 0} smoke sources, ${P?.embers ?? 0} embers, ${P?.beds ?? 0} bed voices`;
+  return `fire ▸ ${T.lit} of ${T.fires} burning, ${g.engine.fires?.length ?? 0} drawn · light ${T.n ? `${T.lo.toFixed(2)}‥${T.hi.toFixed(2)} (mean ${(T.sum / T.n).toFixed(3)})` : '—'} · ${T.cracks} cracks, ${P?.smokes ?? 0} smoke sources, ${P?.embers ?? 0} embers, ${P?.gases ?? 0} gas sources, ${P?.beds ?? 0} bed voices`;
 }
