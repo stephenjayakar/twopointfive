@@ -24,7 +24,7 @@
 import { standUp, ROOT } from './headless.ts';
 
 export async function autocamCheck(): Promise<boolean> {
-  const BREAK = process.env.AUTOCAM_BREAK === '1';
+  const BREAK = process.env.AUTOCAM_BREAK === '1', SWAYBREAK = process.env.AUTOSWAY_BREAK === '1';
   const { stepFrame, FIXEDSTEP } = await import(`${ROOT}/src/host/loop.ts`);
   const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const { mulberry32: seeded } = await import(`${ROOT}/src/math/dice.ts`);
@@ -38,17 +38,18 @@ export async function autocamCheck(): Promise<boolean> {
   const { AUTOCAM: K, AUTOCAM_STATS: ST } = A, { AUTOVIEW, FINDME } = F;
   let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
-  console.log(`\n=== autocam: the camera's key tapped twice and the camera frames things itself${BREAK ? ' (the switch left off: 8, 9, 10 and 11 must fail)' : ''} ===`);
+  console.log(`\n=== autocam: the camera's key tapped twice and the camera frames things itself${BREAK ? ' (the switch left off: 8, 9, 10, 11 and 15 must fail)' : ''}${SWAYBREAK ? ' (the sway left off: 14 and 15 must fail)' : ''} ===`);
   const knobs0 = knobsCopy(), rnd0 = Math.random, fixedWas = FIXEDSTEP.on, viewWas = AUTOVIEW.on, behindWas = FINDME.behind, found = K.on;
   const DT = 1 / 60, f2 = (v: number) => v.toFixed(2), deg = (r: number) => (r * 180 / Math.PI).toFixed(1), wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
   const ctxOf = (W: any, extra: Record<string, unknown> = {}): any => ({ game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra });
-  const stand = async (seed: number) => { Math.random = seeded(1); const W: any = await standUp({ seed }); W.game.godMode = true; W.game.aiEnabled = false; return W; };
+  const stand = async (seed: number) => { Math.random = seeded(1); const W: any = await standUp({ seed }); W.game.godMode = true; W.game.aiEnabled = false; if (stoodSway === null) stoodSway = K.sway; K.sway = false; return W; };   // (the sway is off for every line but its own: 1 to 13 are the turn rule as it was built)
+  let stoodSway: boolean | null = null;   // (as the first stand of the run left it: this stand's own word)
   try {
     const STOOD = { on: false }; { await stand(5); STOOD.on = K.on; }
     // ------------------------------------------------------------ the frame, from scenes handed to it
     const cam0 = () => { const c = new FollowCamera(); c.aspect = 1.6; c.target = [20, 0, 14]; c.desired = [20, 0, 14]; c.rebuild(); return c; };
-    const scene = (o: Partial<import('../../src/host/autocam.ts').AutoScene> = {}): import('../../src/host/autocam.ts').AutoScene => ({ sam: [20, 0, 14], threats: [], beat: null, door: null, room: null, zoomK: 1, hold: false, still: false, free: true, shown: 0, zoomFree: true, firedAgo: 100, ...o });
+    const scene = (o: Partial<import('../../src/host/autocam.ts').AutoScene> = {}): import('../../src/host/autocam.ts').AutoScene => ({ sam: [20, 0, 14], threats: [], beat: null, door: null, room: null, zoomK: 1, hold: false, still: false, free: true, vel: [0, 0], shown: 0, zoomFree: true, firedAgo: 100, ...o });
     const settle = (S: any, cam: any, st: any, secs = 4) => { let look: number[] = S.sam; for (let i = 0; i < secs * 60; i++) { look = A.autoFrame(st, S, cam, DT); cam.step(DT, look, null); } return look; };
     const begin = (cam: any) => { const st = A.autoCam(); A.autoBegin(st, cam); return st; };
     const up = (cam: any, m: number): [number, number, number] => { const B = cam.planarBasis(); return [20 + B.fwd[0] * m, 0, 14 + B.fwd[2] * m]; }, side = (cam: any, m: number): [number, number, number] => { const B = cam.planarBasis(); return [20 + B.right[0] * m, 0, 14 + B.right[2] * m]; };
@@ -175,6 +176,50 @@ export async function autocamCheck(): Promise<boolean> {
       line(had && before === false && kept === true && keptOff === false && STOOD.on === want && (STAND_ENV as string[]).includes('TPS_AUTOCAM') && typeof row === 'string' && row.startsWith('TPS_AUTOCAM=1') && (shipped || E.TPS_AUTOCAM !== undefined || found === false),
         `13 CONTROL — this stand (${shipped ? 'the page\'s' : 'frozen'}) stands the switch ${want ? 'on' : 'off'} by its words, FROZEN_HOLDS carries its row, and a recording from before the key replays with it off`,
         `stood ${STOOD.on} (wanted ${want}; the runner found ${found}) · row: '${row}' · a recording carries the table ${had} · from before the key: ${before} · recorded on: ${kept} · recorded off: ${keptOff}`); }
+    // ------------------------------------------------------------ the sway (AUTOCAM.sway)
+    // 14 from scenes handed to it
+    { const open = () => false, go = (S: any, cam: any, st: any, secs: number, blocked: (a: number[], b: number[]) => boolean = open) => { let most = 0, first = NaN; for (let i = 0; i < secs * 60; i++) { const t = A.autoSway(st, S, cam, DT, blocked as any); cam.rotate(t); cam.rebuild(); if (i === 0) first = Math.abs(t); most = Math.max(most, Math.abs(t)); } return { most, first }; };
+      K.sway = !SWAYBREAK; const cam = cam0(), st = begin(cam), y0 = cam.yaw, B0 = cam.planarBasis(), cap = K.swayRate * DT + 1e-12;
+      const man: [number, number, number] = [20 + (B0.fwd[0] * 0.5 + B0.right[0] * 0.866) * 8, 0, 14 + (B0.fwd[2] * 0.5 + B0.right[2] * 0.866) * 8];   // (sixty degrees round from up the screen)
+      const ahead = () => { const B = cam.planarBasis(); return ((man[0] - 20) * B.fwd[0] + (man[2] - 14) * B.fwd[2]) / 8; }, a0 = ahead();
+      const r1 = go(scene({ threats: [man] }), cam, st, 5), lean = Math.abs(wrap(cam.yaw - y0)), a1 = ahead();
+      const lingered = (go(scene({}), cam, st, 1), Math.abs(wrap(cam.yaw - y0)) > lean - 0.02); go(scene({}), cam, st, 10); const back = Math.abs(cam.yaw - y0) < 1e-12;   // (a second after the last of them is gone it has not let go: `swayLinger`)
+      const r3 = go(scene({ vel: [B0.right[0] * 2.5, B0.right[2] * 2.5] }), cam, st, 4), B2 = cam.planarBasis(), mv = Math.abs(wrap(cam.yaw - y0)), toward = B2.fwd[0] * B0.right[0] + B2.fwd[2] * B0.right[2];
+      go(scene({}), cam, st, 7); const back2 = Math.abs(cam.yaw - y0) < 1e-12;
+      const walkS = go(scene({ vel: [B0.fwd[0] * -2.5, B0.fwd[2] * -2.5] }), cam, st, 3).most;   // (straight down the screen: no side to lean to)
+      go(scene({ threats: [man] }), cam, st, 0.7); const yh = cam.yaw, r4 = go(scene({ threats: [man], hold: true }), cam, st, 2), drift = Math.abs(wrap(cam.yaw - yh)), still = go(scene({ threats: [man], hold: true }), cam, st, 1).most;
+      go(scene({}), cam, st, 10); const back3 = Math.abs(cam.yaw - y0) < 1e-12;
+      const wall = (a: number[], b: number[]) => Math.abs(wrap(Math.atan2(b[0] - a[0], b[2] - a[2]) - y0)) > 0.2;   // (a wall hides him from any view more than a fifth of a radian round)
+      go(scene({ threats: [man] }), cam, st, 5, wall); const walled = Math.abs(wrap(cam.yaw - y0));
+      go(scene({}), cam, st, 4); K.sway = false; const off = go(scene({ threats: [man] }), cam, st, 3).most; K.sway = !SWAYBREAK;
+      line(lean > 30 * Math.PI / 180 && lean < 38.5 * Math.PI / 180 && a1 > a0 + 0.3 && r1.most <= cap && r1.first < 0.2 * cap && lingered && back && mv > 0.15 && mv <= K.swayMove + 1e-6 && toward > 0.1 && r3.most <= cap && back2 && walkS === 0 && drift < 0.05 && r4.most <= cap && still === 0 && back3 && walled < 0.01 && off === 0,
+        '14 the sway: a fight to one side and the yaw leans toward it by a spring, never faster than its cap; the side he moves to, the same; both go back to the hand\'s yaw; a button stops it; no view that hides him',
+        `men 60° round: the yaw leans ${deg(lean)}° (they come from ${f2(a0)} to ${f2(a1)} up the screen), the first step ${(r1.first / cap * 100).toFixed(0)}% of the cap and the most ${(r1.most / cap * 100).toFixed(0)}%, then gone: ${lingered ? 'kept for a second' : 'let go AT ONCE ✗'} and then ${back ? 'home to the bit' : 'NOT home ✗'} · across the view at 2.5 m/s: ${deg(mv)}° ${toward > 0 ? 'toward that side' : 'AWAY ✗'}, then ${back2 ? 'home' : 'NOT home ✗'}; straight down the screen ${walkS === 0 ? 'nothing' : 'TURNS ✗'} · a button down mid-turn: ${deg(drift)}° more and then ${still === 0 ? 'still' : 'MOVING ✗'}, ${back3 ? 'home after' : 'NOT home ✗'} · a wall that would hide him: ${deg(walled)}° · the switch off: ${off === 0 ? 'nothing' : 'TURNS ✗'}`); }
+    // 15 a real man to one side, through the loop
+    { const rows: string[] = []; let ok = true;
+      for (const on of [true, false]) {
+        F.setAutoView(false); FIXEDSTEP.on = true; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), g = W.game, c = g.player.char; K.on = !BREAK; K.turn = false; K.sway = on && !SWAYBREAK; run(ctx, 10); T.tap(); run(ctx, 90);
+        const gd = g.guards.find((x: any) => x.state !== 'dead' && x.team !== 'operative' && x.team !== 'civilian'); let at: number[] | null = null;
+        for (let a = 0; a < 32 && !at; a++) { const q = [c.pos[0] + Math.sin(a * Math.PI / 16) * 6, 0, c.pos[2] + Math.cos(a * Math.PI / 16) * 6], round = Math.abs(wrap(Math.atan2(q[0] - c.pos[0], q[2] - c.pos[2]) + Math.PI - W.cam.yaw));
+          if (round > 0.7 && round < 2.2 && !g.col.nav.isBlocked(q[0], q[2]) && !g.col.segmentBlocked([c.pos[0], 1.5, c.pos[2]], [q[0], 1.3, q[2]])) at = q; }
+        if (!gd || !at) { ok = false; rows.push('no hostile man, or no clear six metres to one side of the view'); continue; }
+        for (const o of g.guards) if (o !== gd && o.state !== 'dead') { o.char.pos[0] = 1; o.char.pos[2] = 1; }
+        const y0 = W.cam.yaw, cap = K.swayRate * DT + 1e-12, up = () => { const B = W.cam.planarBasis(); return ((at![0] - c.pos[0]) * B.fwd[0] + (at![2] - c.pos[2]) * B.fwd[2]) / 6; }, u0 = up();
+        let most = 0, prev = y0; const hold = () => { gd.char.pos[0] = at![0]; gd.char.pos[2] = at![2]; most = Math.max(most, Math.abs(wrap(W.cam.yaw - prev))); prev = W.cam.yaw; };
+        run(ctx, 300, hold); const lean = Math.abs(wrap(W.cam.yaw - y0)), u1 = up(), seen = ctx.auto?.scene?.threats.length ?? 0;
+        const fog = g.fogOfWar, hidden0 = fog.hidden; fog.hidden = (x: any) => x === gd; run(ctx, 660, hold); fog.hidden = hidden0; const home = Math.abs(W.cam.yaw - y0) < 1e-9;
+        const good = on ? seen === 1 && lean > 0.17 && u1 > u0 + 0.05 && most <= cap && home && AUTOVIEW.on : most === 0 && lean === 0 && seen === 1; if (!good) ok = false;
+        rows.push(on ? `the sway on: ${gd.callsign ?? 'a guard'} six metres off to one side (${seen} in his line): the yaw leans ${deg(lean)}° toward him (from ${f2(u0)} to ${f2(u1)} up the screen), ${(most / cap * 100).toFixed(0)}% of the cap at the most in a tick · the fog hides him: ${home ? 'home' : 'NOT home ✗'}`
+          : `the sway off, the same man: the yaw ${most === 0 ? 'never moves' : 'MOVES ✗'}`); }
+      line(ok, '15 a hostile man to one side of the view: the yaw leans toward him tick by tick, never faster than the cap, and comes home when he is gone from the picture; with the sway off it never moves', rows.join('\n    ')); }
+    // 16 the sway's plumbing
+    { const W = await stand(5), g = W.game, E = process.env, shipped = E.TPS_PROFILE === 'shipped', row = FROZEN_HOLDS['AUTOCAM.sway'], want = E.TPS_AUTOSWAY !== undefined ? E.TPS_AUTOSWAY === '1' : shipped;
+      const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(g))), isOn = (): boolean => K.sway;
+      K.sway = true; const old = snap(), had = old.tables.AUTOCAM?.sway === true; delete old.tables.AUTOCAM.sway; J.applyKnobs(g, old); const before = isOn();
+      K.sway = true; const on = snap(); K.sway = false; J.applyKnobs(g, on); const kept = isOn();
+      line(had && before === false && kept === true && stoodSway === want && (STAND_ENV as string[]).includes('TPS_AUTOSWAY') && typeof row === 'string' && row.startsWith('TPS_AUTOSWAY=1'),
+        `16 CONTROL — this stand (${shipped ? 'the page\'s' : 'frozen'}) stands the sway ${want ? 'on' : 'off'} by its words, FROZEN_HOLDS carries its row, and a recording from before the key replays with it off`,
+        `stood ${stoodSway} (wanted ${want}) · row: '${row}' · a recording carries the key ${had} · from before the key: ${before} · recorded on: ${kept}`); }
   } finally {
     knobsBack(knobs0); Math.random = rnd0; FIXEDSTEP.on = fixedWas; F.setAutoView(viewWas); F.setFindMe('behind', behindWas);
   }

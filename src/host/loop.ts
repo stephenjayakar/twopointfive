@@ -37,7 +37,7 @@ import type { RenderSettings } from '../settings';
 import type { HudLike, BubblesLike, View, Chapters } from './hud';
 import { TWEEN, type Tween } from './tween';
 import { FINDME, AUTOVIEW, setAutoView, ctrlTurn, behindYaw, behindStep, aimCarry, carryStep, CARRY_KEYS, type AimCarry } from './findme';
-import { AUTOCAM, AUTOCAM_STATS, autoCam, autoBegin, autoRest, autoZoom, autoHand, autoFree, autoRead, autoFrame, turnGoal, walkKey, type AutoCam } from './autocam';
+import { AUTOCAM, AUTOCAM_STATS, autoCam, autoBegin, autoRest, autoSway, swayDrop, autoZoom, autoHand, autoFree, autoRead, autoFrame, turnGoal, walkKey, type AutoCam } from './autocam';
 import { camKey } from './keymap';
 import { slotSetupTakes } from '../game/slotsetup';
 
@@ -217,6 +217,8 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         const S = autoRead(auto!, game, input, cdt), look = autoFrame(auto!, S, cam, cdt), yaw = turnGoal(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b));
         if (ctx.behindAuto && ctx.behind != null && (S.shown || S.hold || !S.free)) ctx.behind = null;   // (a turn of its own under way ends where it is the moment it could not have begun)
         if (yaw != null && ctx.behind == null) { ctx.behind = yaw; ctx.behindAuto = true; auto!.turnT = 0; AUTOCAM_STATS.turns++; carryOn(); }   // (his aim goes round with the view, as the double tap's does)
+        // …and the sway (AUTOCAM.sway): a slow lean of the yaw round the hand's own, toward the fight and the way he moves — not while a turn of another kind is under way
+        if (ctx.behind != null || orbit) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
         if (tick) cam.step(cdt, look, null); else cam.update(cdt, look, null);
         return shot;
       }
