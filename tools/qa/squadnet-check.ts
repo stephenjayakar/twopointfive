@@ -46,7 +46,7 @@ async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
 /** the four switches as a line asks for them (all left off under SQUADNET_BREAK) */
 const raise = (on = true, why = true, clear = true, endCall = true) => { SQUADNET.on = on && !BREAK; SQUADNET.why = why && !BREAK; SQUADNET.clear = clear && !BREAK; SQUADNET.endCall = endCall && !BREAK; };
 /** a line that calls an entry's end */
-const isCall = (x: string) => / clear\.$| quiet\. |^clear so far\.$/.test(x);
+const isCall = (x: string) => (/ clear\.$/.test(x) && !/ and clear\.$/.test(x)) || / quiet\. |^clear so far\.$/.test(x);   // (not an order's own answer: 'bang and clear.')
 
 /** the room clear on the office with a squad of four under god mode, the autopilot on (autopilot-check's own staging); `play`: every call the mixer was asked for */
 async function rig(seed: number) {
@@ -121,7 +121,7 @@ export async function squadnetWhy(): Promise<boolean> {
       const row = O.log[O.log.length - 1], ans = R.said.slice(n0).find((x: string) => /banging it/.test(x)) ?? R.team.map((m: any) => m.bubble?.text).find((x: any) => /banging it/.test(x ?? '')) ?? '';
       F.verdict(want.id === 'bangClear' && row?.order === 'bangClear' && /banging it\. nobody's been in there\./.test(ans) && g.squadNet.stats.whys === w0 + 1, 'the press: they go in with a stun and the man who answers says why', `pick ${want.id} (${want.why}) · order ${row?.order} · answer "${ans}" · reasons given ${g.squadNet.stats.whys - w0}`);
       // 5. the entry's end: what the lead calls is what the search found
-      raise(); const n1 = R.bub.length; R.until(() => T.ops.length === 0, 60); R.step(30);
+      raise(true, true, true, false); const n1 = R.bub.length; R.until(() => T.ops.length === 0, 60); R.step(30);   // (the fourth switch left off: this line is the NAMED call's)
       const op = T.done[T.done.length - 1], left = op?.search ? op.search.left : NaN, calls = R.bub.slice(n1).filter(isCall);
       const ok = calls.every((x: string) => / clear\.$/.test(x) ? left === 0 : left > 0), room = RC.rooms.find((r: any) => r.def.id === RC.roomAt(R.team.find((m: any) => m.state !== 'dead').char.pos));
       F.verdict(!!op && calls.length === 1 && ok && g.squadNet.stats.clears + g.squadNet.stats.quiets === 1, 'the entry\'s end: \'clear\' only with all of the floor seen, \'quiet\' with floor unseen', `${emptied} defenders taken out of the room beyond first · they stand in ${room?.def.name ?? 'no named room'} · floor unseen ${left} of ${op?.search?.pts.length ?? '—'} · called ${JSON.stringify(calls)} · clear ${g.squadNet.stats.clears} · quiet ${g.squadNet.stats.quiets}`); }
@@ -160,7 +160,7 @@ export async function squadnetEnd(): Promise<boolean> {
     const { R, D } = S, g = R.game, O = R.O, T = g.doorTools, RC = g.roomClear;
     const tm = { ...S.t, side: O.of(R.team[0])?.post ? sideOf(D, O.of(R.team[0]).post) : S.t.side }, far = farRoom(g, tm); let emptied = 0;
     for (const x of g.guards) if (x.state !== 'dead' && x.team === 'hostile' && g.cleared.roomAt(x.char.pos) === far) { x.state = 'dead'; emptied++; }   // (the room beyond is emptied: the call is the search's alone)
-    T.bangs = 3; const n0 = R.bub.length, d0 = T.done.length; aimOf(R, D); R.W.input.pressed.add(ORDERS.quickKey); R.step(); R.step(2); R.until(() => T.ops.length === 0, 70); R.step(30);
+    T.bangs = 3; const d0 = T.done.length; aimOf(R, D); R.W.input.pressed.add(ORDERS.quickKey); R.step(); R.step(2); const n0 = R.bub.length; R.until(() => T.ops.length === 0, 70); R.step(30);   // (the window opens once the press has been answered)
     const op = T.done.length > d0 ? T.done[T.done.length - 1] : null, lead = op?.lead;
     return { set: S.set, door: D.def.name, emptied, went: !!op?.beats.some((b: any) => b.what === 'in'), named: !!lead && RC.rooms.some((r: any) => r.def.id === RC.roomAt(lead.char.pos)), left: op?.search ? op.search.left : NaN, calls: R.bub.slice(n0).filter(isCall) as string[], ends: g.squadNet.stats.ends as number };
   });
@@ -169,6 +169,22 @@ export async function squadnetEnd(): Promise<boolean> {
   const tell = (r: any) => `${r.door}: stacked ${r.set} · went in ${r.went} · the lead ends in ${r.named ? 'a NAMED room' : 'no named room'} · floor unseen ${r.left} · called ${JSON.stringify(r.calls)} · counted ${r.ends}`;
   F.verdict(on.set && on.went && !on.named && on.calls.length === 1 && /^room clear\.$|^room's quiet\. /.test(on.calls[0]) && on.ends === 1, 'on: the lead calls the room though the mission has no name for it', tell(on));
   F.verdict(off.set && off.went && !off.named && off.calls.length === 0 && off.ends === 0, 'off: the same entry ends with nothing said, as it was', tell(off));
+  // the response team runs the same door orders as a cast of its own: none of this is theirs (no call at an entry's end, no click on the squad's net)
+  await kept(async () => {
+    const { requestQrf } = await import(`${ROOT}/src/game/qrf.ts`);
+    const r = await hushed(async () => {
+      Math.random = seeded(41); const W: any = await standUp(), game = W.game; raise();
+      const hide = () => { game.teleportPlayer([37.5, 0, 26.5]); game.player.visibility = 0.02; game.playerInvisible = true; game.player.crouch = true; };
+      game.godMode = true; game.aiEnabled = true; Object.assign(game.tune, { qrf: true, qrfEta: 14, qrfSize: 4, perimeter: false, qrfSquad: true });
+      for (let i = 0; i < 20; i++) W.step(DT);
+      hide(); game.alarm.placed = true; game.alarm.pos = [8, 0, 8]; game.alarm.raisedAt = game.time; requestQrf(game, 'panel');
+      const seen = new Set<string>(), calls: string[] = []; let ins = 0;
+      for (let f = 0; f < 60 * 150 && ins < 2; f++) { hide(); W.step(DT); ins = game.qrf.log.filter((l: any) => l.what === 'drill:in').length;
+        for (const m of game.qrf.men ?? []) { const b = m.bubble, k = b ? `${m.callsign}|${b.t}|${b.text}` : ''; if (b && !seen.has(k)) { seen.add(k); if (isCall(b.text)) calls.push(b.text); } } }
+      return { ins, calls, ends: game.squadNet.stats.ends as number, lines: game.squadNet.stats.lines as number, squad: game.orders.squad().length as number, said: seen.size };
+    });
+    F.verdict(r.ins >= 2 && r.said > 0 && r.calls.length === 0 && r.ends === 0 && r.lines === 0, 'the response team\'s own entries are not called, and its lines do not click the squad\'s net', `its entries ${r.ins} · its lines ${r.said} · calls ${JSON.stringify(r.calls)} · counted ${r.ends} · clicks owed the squad's net ${r.lines} (Sam's squad: ${r.squad} men)`);
+  });
   return F.done();
 }
 
@@ -231,7 +247,7 @@ export async function squadnetOff(): Promise<boolean> {
     // the wiring: the registry, a recording from before the keys, the frozen stand's rows
     SQUADNET.on = SQUADNET.why = SQUADNET.clear = SQUADNET.endCall = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), rides = snap.tables?.SQUADNET?.on === true && snap.tables.SQUADNET.why === true && snap.tables.SQUADNET.clear === true && snap.tables.SQUADNET.endCall === true; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.SQUADNET;
     const mid = JSON.parse(JSON.stringify(snap)); delete mid.tables.SQUADNET.endCall;   // (a file from the build that had the first three and not the fourth)
-    const both = await hushed(() => { applyKnobs(g, old); const off = !SQUADNET.on && !SQUADNET.why && !SQUADNET.clear && !SQUADNET.endCall; applyKnobs(g, mid); const three = SQUADNET.on && SQUADNET.why && SQUADNET.clear && !SQUADNET.endCall; applyKnobs(g, snap); return [off, SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall, three]; });
+    const both = await hushed(() => { applyKnobs(g, old); const off = !SQUADNET.on && !SQUADNET.why && !SQUADNET.clear && !SQUADNET.endCall; SQUADNET.endCall = true; applyKnobs(g, mid); const three = SQUADNET.on && SQUADNET.why && SQUADNET.clear && !SQUADNET.endCall; applyKnobs(g, snap); return [off, SQUADNET.on && SQUADNET.why && SQUADNET.clear && SQUADNET.endCall, three]; });
     F.verdict(rides && both[0] && both[1] && both[2], 'a recording carries the four switches; one from before the keys replays with all off, one from before the fourth with the fourth off', `rides ${rides} · old file: off ${both[0]} · a file with three: the fourth off ${both[2]} · its own: on ${both[1]}`);
     const reg = knobRegistry() as Record<string, unknown>, H = FROZEN_HOLDS as Record<string, string>;
     F.verdict(reg.SQUADNET === SQUADNET && (JOURNAL_KNOBS as string[]).includes('SQUADNET') && H['SQUADNET.on'] === 'TPS_SQUADNET=1' && H['SQUADNET.why'] === 'TPS_QWHY=1' && H['SQUADNET.clear'] === 'TPS_HONESTCLEAR=1' && H['SQUADNET.endCall'] === 'TPS_ENDCALL=1',

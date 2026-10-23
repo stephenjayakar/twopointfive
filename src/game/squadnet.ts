@@ -15,7 +15,9 @@
 //   SQUADNET.endCall  EVERY ENTRY ENDS WITH A CALL. The lead called only a room the mission has a name for (the room clear's own rooms): an entry into any
 //                   other room (the office's conference room, a hall, every room of a mission with no room list) ended with nobody saying anything. With
 //                   the rule the lead calls those too, by the same rule and of the room fight's own flood: 'room clear.', 'room's quiet. we didn't see
-//                   all of it.', and of open floor, which nobody searches, 'clear so far.' while no enemy on it is in the team's sight.
+//                   all of it.', and of open floor, which nobody searches, 'clear so far.' while no enemy on it is in the team's sight. A lead who
+//                   ends outside every room of the mission's calls the named room the entry's own points are in. Sam's own squad only: the response
+//                   team runs the same door orders and says none of it.
 // WHAT IT COSTS: the first is the page's alone (where a line is drawn, a click): no man's state, no die, no digest. The second and third change WORDS a man
 // says, so the length of his bubble, which bark clocks read: a run with either on is not the run with it off by digest once such a line is said. The
 // fourth adds a line where there was none: the same.
@@ -27,6 +29,8 @@
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { AutoPick } from './autopilot';
+import type { Door } from './doors';
+import { doorCells } from './guards';   // (asked inside a call only)
 
 export const SQUADNET = {
   /** a teammate's line said off your screen is drawn near you, the net clicks, and a teammate going down is called */
@@ -110,4 +114,10 @@ export function plainCall(g: Game, open: boolean, left: number, inside: boolean,
   const call = open ? (seen ? null : 'clear so far.') : roomCall(g, 'room', left, inside, seen);   // (open floor: what they can see of it, and they say so)
   if (call) g.squadNet.stats.ends++;
   return call;
+}
+
+/** does a man at p stand in that room of the room fight's (its flood of nav cells) — a doorway of the room's own counted: a man in its far door is in it */
+export function inFlood(g: Game, R: { cells: Set<number>; entries: { door: Door }[] }, p: Vec3): boolean {
+  const nav = g.col.nav, c = nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell)); if (R.cells.has(c)) return true;
+  const d = doorCells(g).get(c); return !!d && R.entries.some(e => e.door === d);
 }

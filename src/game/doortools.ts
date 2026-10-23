@@ -98,7 +98,7 @@ import { FloorSeen } from './floorseen';
 import { DOORMANNERS, DOORMANNERS_STATS, doorwayInWay, doorwayClearNear, doorwayLane } from './doorway';
 import { GLASSPEN } from './glasspen';   // (DOORWAY.kickGlass: read in bootSpot, at order time only)
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { SQUADNET, plainCall, roomCall } from './squadnet';   // (called inside the entry's end only)
+import { SQUADNET, inFlood, plainCall, roomCall } from './squadnet';   // (called inside the entry's end only)
 import { inSight } from './autopilot';
 import { STACKROOM, stackRoomFix, stackRoomHas, stackRoomKeeps, stackViewReach, stackViewOpen } from './stackroom';
 import { SAMSTUN, dazzlePlayer } from './samstun';
@@ -2342,12 +2342,17 @@ export class DoorTools {
               if (g.col.segmentBlocked([p[0], 1.2, p[2]], w) || (K.otherDoorM > 0 && R.door)) continue;
               const yaw = yawTo(p, w), far = flat(p, w) + K.lastOutM; R.A.watch = [p[0] + Math.sin(yaw) * far, 1.2, p[2] + Math.cos(yaw) * far]; R.A.face = yaw; R.face = yaw; R.out = true;
               this.beat(op, `door · ${m.callsign}`); break; } } }
-        const RC = g.roomClear, room = RC?.active ? RC.rooms.find(r => r.def.id === RC.roomAt((WORDS.on ? lead : op.men[0]).char.pos)) : null;   // (the room the man who calls it stands in)
+        // WHO CALLS IT, AND OF WHAT: the room of the mission's own that the man who calls it stands in. squadnet.ts endCall (Sam's own squad: the response team
+        // runs these orders as a cast of its own and calls nothing): where he stands in none of them, the one the entry's own points are in, and with none there
+        // either the room fight's flood, called with no name. Off: `pod` is never asked and the lines below are the lines as they were.
+        const RC = g.roomClear, roomOf = (p: Vec3) => RC?.active ? RC.rooms.find(r => r.def.id === RC.roomAt(p)) : null;
+        const pod = SQUADNET.endCall && g.orders.sams ? op.pod.values().next().value : undefined;
+        const room = roomOf((WORDS.on ? lead : op.men[0]).char.pos) ?? (pod ? roomOf(pod.pos) : null);
         if (room) { const ins = g.guards.filter(x => x.state !== 'dead' && x.team === 'hostile' && !runnerNobody(x) && RC!.roomAt(x.char.pos) === room.def.id);
           // (squadnet.ts: with its switch on 'clear' is said only of a room whose search was not cut short — off, the call as it was)
           const call = roomCall(g, room.def.name, SR && SR.left >= K.deadCells ? SR.left : 0, ins.length > 0, ins.some(x => inSight(g, x))); if (call) g.say(lead, call); }   // (floor unseen under the search's own bar is floor no man could see: the search ended, it was not cut short)
-        else if (SQUADNET.endCall) { const R = this.roomIn(op);   // (squadnet.ts: a room the mission has no name for is called too, of the room fight's own flood — off, nothing is said of it, as it was)
-          if (R) { const ins = g.guards.filter(x => x.state !== 'dead' && x.team === 'hostile' && g.fight?.roomAt(x.char.pos) === R);
+        else if (pod) { const R = g.fight?.roomAt(pod.pos);
+          if (R) { const ins = g.guards.filter(x => x.state !== 'dead' && x.team === 'hostile' && !runnerNobody(x) && inFlood(g, R, x.char.pos));
             const call = plainCall(g, openFloor(g, R), SR && SR.left >= K.deadCells ? SR.left : 0, ins.length > 0, ins.some(x => inSight(g, x))); if (call) g.say(lead, call); } }
         // (the room is theirs: from here each man's eyes are spare for its other ways in — cover.ts deals them; his sector stands where it deals nothing)
         if (op.thr && K.otherDoorM > 0) this.otherDoors(op, true, true, K.thrDoors);   // (a threshold entry: what a man can take where he stands is dealt before anybody is walked to a door)
