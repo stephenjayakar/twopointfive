@@ -15,7 +15,7 @@
 import { saveSandbox } from '../game/sandbox';
 import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
-import { TABKEY, tabChoices, setTabKey, tabDoes } from './tabkey';
+import { TABKEY, tabChoices, setTabKey, tabSettle, tabKept, tabLoad } from './tabkey';
 import { BACKKEY } from '../game/backkey';
 import { TWOGEARS } from '../game/player';
 import { WALLSNAP } from '../game/wallsnap';
@@ -167,10 +167,10 @@ let deps: OptionsDeps | null = null, open: Screen | null = null;
 let turned = 1, wrote: number | null = null;
 
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; tab?: string; wallpress?: boolean; cmdhint?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
+function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; tab?: string; tabPicked?: boolean; wallpress?: boolean; cmdhint?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
 /** a page held silent (`?mute`, or the automation profile's kept flag: main.ts pins the master bus at 0 there): that 0 is the rig's, never the player's level */
 function muted(): boolean { try { return new URLSearchParams(globalThis.location?.search ?? '').has('mute') || globalThis.localStorage?.getItem('twopointsix.testMute') === '1'; } catch { return false; } }
-function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.overlay.showLightDots, ...(TABKEY.kept !== 'off' ? { tab: TABKEY.kept } : {}), ...(pressKept !== null ? { wallpress: pressKept } : {}), ...(hintKept !== null ? { cmdhint: hintKept } : {}) })); } catch { /* no store */ } }
+function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.overlay.showLightDots, ...tabKept(), ...(pressKept !== null ? { wallpress: pressKept } : {}), ...(hintKept !== null ? { cmdhint: hintKept } : {}) })); } catch { /* no store */ } }
 /** the wall taken without Q (game/wallsnap.ts `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
 let pressKept: boolean | null = null, pressUrl = false;
 /** the order's mark at the cursor before the key (game/cmdring.ts `hint`): what this machine has kept (null = never chosen: off), and whether this visit's `?cmdhint` chose */
@@ -188,7 +188,7 @@ export function setOptionsDeps(d: OptionsDeps | null) {
   hintKept = typeof k.cmdhint === 'boolean' ? k.cmdhint : null; try { const q = new URLSearchParams(globalThis.location?.search ?? ''); hintUrl = q.has('cmdhint') || q.has('nocmdhint'); } catch { hintUrl = false; }
   if (hintKept !== null && !hintUrl) CMDRING.hint = hintKept;   // (a `?cmdhint` visit holds its own)
   if (pressKept !== null && !pressUrl) WALLSNAP.press = pressKept;   // (a `?wallpress=` visit holds its own, and is never written as this machine's choice)
-  TABKEY.kept = tabDoes(k.tab) ?? 'off'; if (!TABKEY.url) setTabKey(TABKEY.kept);   // (what Tab does, on trial: ui/tabkey.ts — a `?tab=` visit holds its own)
+  tabLoad(k);   // (what Tab does, on trial: ui/tabkey.ts — a `?tab=` visit holds its own; where nobody has chosen, the page's first choice)
   if (open) render(open);
 }
 export function optionsOpen() { return !!open; }
@@ -308,13 +308,13 @@ function render(S: Screen) {
     if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
     flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText('Show a small mark beside the cursor and an outline on the floor for what B would order there.'));
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
-    seg(body, 'Tab key (trying out)', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
+    seg(body, 'Tab key (trying out)', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
     sec(body, 'Cheats');
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. This is saved on this machine.'), ['On', 'Off']);
-    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; setTabKey('off'); TABKEY.kept = 'off'; TABKEY.url = false; keep(); findReset();
+    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset();
       if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
   }
   if (reset) { const run = reset, b = el('button', 'op-btn', 'Reset to defaults') as HTMLButtonElement; b.dataset.act = 'reset'; b.onclick = () => { run(); S.paint(); }; foot.appendChild(b); }
@@ -337,6 +337,7 @@ function tabRow(): { group: string; after?: string; row: [string[], string, stri
     case 'who': return { group: 'Squad', after: 'T', row: [['Tab'], 'Who takes the next order, as T', on] };
     case 'run': return { group: 'Game', after: 'Esc', row: [['Tab'], 'Pause on the run so far, and back', on] };
     case 'keys': return { group: 'Game', after: 'Esc', row: [['Tab'], 'Pause on this list of keys, and back', on] };
+    case 'brief': return { group: 'Game', after: 'Esc', row: [['Tab'], 'Pause on your objectives and your squad, and back', 'Options, Game, Tab key'] };
     default: return null;
   }
 }

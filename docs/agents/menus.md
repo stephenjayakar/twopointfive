@@ -1708,3 +1708,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   caption, the Mission step and three load pages; the click beside the large map on a teammate's slot; each switch off; `MYSTERY_BREAK=1` must
   fail). SEEN: those two runs and stills of the three screens, on the software adapter. NOBODY has seen it on a GPU or played it, and the pause
   card's intel tooltip was read in the code only.
+
+- **Tab shows the objectives and the squad** (2026-10-23; `ui/tabkey.ts` choice `brief`, `ui/tabcard.ts`, `index.html #tabcard`; the maintainer, with
+  the corner panel cut down to what the two keys do: "if you don't have a menu open, tab opens up an objectives modal that also has your squad
+  equipment?"). With nothing to back out of (Tab is the back key first: `game/backkey.ts`) and no menu open, Tab HOLDS THE GAME (`main.ts frozen`,
+  as a pausing card does) on a card in the middle of the screen: the OBJECTIVE under its own word with the par or clock at the right, its sentence,
+  and where it lists (`objectiveList`: a room clear's rooms) each thing with a tick (taken), an arrow (the one being called) or a ring (to do); the
+  SQUAD, a line a man in the squad's order with what he is doing (`orders.statusOf`) and under it his kit's card in a line (`kit.ts kitWords`), a
+  man lost struck, then the block's plain notes (what the squad carries between them, a charge set, who waits on him); YOU, his own kit in a line.
+  Tab again goes back; Esc's pause card or any menu over it puts it away. Every word is one the game already makes; the card lays them out. It is
+  the home of what the corner panel stopped saying (`docs/agents/player.md`, the corner panel). THE SWITCH is the Tab key's row on Options, Game
+  ('Objectives', beside Nothing, Run so far, Order who, Controls): it is what Tab does where nobody has chosen (`TABKEY.first`, set by the page),
+  `?tab=off` = nothing for a visit, and a choice made on Options stands (`picked`: a kept 'off' from before this was written by every machine and
+  is no choice). OFF in the module, for anything headless and on a page a script drives (`navigator.webdriver`: the page tools press Tab for other
+  things; they pass `?tab=brief` to see it). No rule of the game reads it and nothing of it is in a recording: under a replay or a script that
+  steps the page the hold does not apply and the card is put away. CHECK: `tabcard` (family `menus`), both stands, `TABCARD_BREAK=1` red: the
+  choice and what settles it, the list, the card of a room clear with the squad of four (and a man lost), the page's wiring read as text. Driven
+  on the real page on the software adapter. MEASURED: nothing; it moves no tally. NOT DONE: a lesson's frame does not teach or lock it (the
+  frame's key locks do not know Tab's card); the kit line is the card as picked, not what a man has left. Never seen on a GPU. NOBODY HAS PLAYED IT.

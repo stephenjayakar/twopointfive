@@ -3,7 +3,8 @@ import { Menu, loadSandbox, bootCard } from './ui/menu';
 import { optionsOpen, openOptions, walkInNow } from './ui/options';
 import { LOADBRIEF, loadBrief } from './ui/loadbrief';
 import { CMDRING } from './game/cmdring';   // (a prototype: with the orders ring on, Tab is its key and nothing else's)
-import { TABKEY, tabFromQuery } from './ui/tabkey';
+import { TABKEY, tabFromQuery, tabSettle } from './ui/tabkey';
+import { tabCardOf, tabCardHtml } from './ui/tabcard';
 import { bootTextSize } from './ui/textsize';
 import { BACKKEY } from './game/backkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
@@ -454,7 +455,8 @@ async function main() {
   { let mx: number | null = null, my: number | null = null;   // (a real change of position: a still mouse can still deliver mousemove on focus and layout changes, and movementX is not reliable everywhere; the first event only takes the reading)
     let mAcc = 0, mT = 0;
     window.addEventListener('mousemove', e => { if (mx !== null && my !== null) { const dd = Math.abs(e.clientX - mx) + Math.abs(e.clientY - my); const now = performance.now(); mAcc = now - mT > 300 ? dd : mAcc + dd; mT = now; if (mAcc >= 3) { mAcc = 0; attract.poke(); } } mx = e.clientX; my = e.clientY; }, { capture: true, passive: true }); }   // (3 px inside 0.3 s: a sensor's 1 px jitter is not a person)
-  window.addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { if (benchOn()) { input.pressed.delete('Escape'); return; }   // (Esc is the benchmark's while it runs: it stops itself, and puts the picture back BEFORE its scene is stopped — ui/bench.ts finish. Out of the frame's keys too: on a floor opened straight in, the world runs again the frame after, and its tick is not to read the key)
+  window.addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { if (tabUp) { tabShow(false); input.pressed.delete('Escape'); e.preventDefault(); return; }   // (Tab's card, ui/tabcard.ts: Esc puts it away, and is that press's whole job)
+    if (benchOn()) { input.pressed.delete('Escape'); return; }   // (Esc is the benchmark's while it runs: it stops itself, and puts the picture back BEFORE its scene is stopped — ui/bench.ts finish. Out of the frame's keys too: on a floor opened straight in, the world runs again the frame after, and its tick is not to read the key)
     if (!menu.isOpen && panelWantsEsc()) { const a = document.activeElement as HTMLElement; a.dataset.esc = '1'; a.blur(); delete a.dataset.esc; return; }   // (the mark: a field that takes Esc as 'never mind' reads it in the change its blur fires)
     if (!menu.isOpen && (demo.active || game.director.showing || game.director.handedOver)) { endShow(); e.preventDefault(); return; } if (!menu.isOpen && !show() && !BACKKEY.tab && game.escape()) { e.preventDefault(); return; } if (BACKKEY.tab) input.pressed.delete('Escape'); menu.toggle(); e.preventDefault(); } }, { capture: true });   // (BACKKEY.tab, game/backkey.ts: Esc is only the pause — nothing backs out on it; Tab does that, in the tick)   // (Esc over a running tour ends it to the start card)   // (Esc first backs out of an open Space selector / stops a running verb — the leaf being eased, the pick, the choke, the drive: game/interact.ts — and only then pauses)
   const panelWantsEsc = () => { const a = document.activeElement; return !!a && (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && !!a.closest('#panel, #sndcard'); };   // first Esc just releases a focused tweak-panel control; controls inside the menu never block it
@@ -649,7 +651,7 @@ async function main() {
       vsDt = typeof ts === 'number' && lastTs >= 0 && ts > lastTs ? Math.min(1 / 20, (ts - lastTs) / 1000) * (window.__timeScale ?? 1) : -1; if (typeof ts === 'number') lastTs = ts;   // (the display's own frame time, for the fixed step: host/loop.ts)
       if (rawDt > 0) fpsSm = fpsSm * 0.95 + (1 / rawDt) * 0.05;   // HUD frame rate from wall-clock, not the clamped / time-scaled game dt
       if (quality.calibrating) { if (!bench.timing) quality.calibrateTick(rawDt); }                            // boot calibration reads GPU pass timings behind the start card (the live scene renders there)
-      else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !brief?.held && !overlay.cardUp && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
+      else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !brief?.held && !overlay.cardUp && !tabUp && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
         const fresh = engine.timer.resolved !== lastTimerResolved; lastTimerResolved = engine.timer.resolved;   // + the compute passes' GPU UNION of the last resolved frame — what the headroom-aware climb and auto's hop test read: 0 = 'no timings' (no timestamp queries), NaN = 'no verdict' (timings exist but no NEW readback resolved since the last sample — a stalled readback must neither feed the ladder a frozen number nor hand it the blind rule)
         quality.sample(rawDt, !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present']) : NaN);
       }
@@ -686,10 +688,16 @@ async function main() {
   const tween = new Tween(engine);
   let lastOfBurstNow = true;
   // Tab, while it is on trial (ui/tabkey.ts): 'run' = the pause card on 'Run so far' and back, 'keys' = Options ▸ Controls over a paused run and back. Never under a show.
-  tabFromQuery(q);
+  // 'brief' = a card of the objective in full and the squad over a held game, and back (ui/tabcard.ts) — what Tab does where nobody has chosen, on a page
+  // somebody sits at (a page a script drives keeps Tab as it was: its checks press the key for other things).
+  TABKEY.first = navigator.webdriver === true ? 'off' : 'brief'; tabFromQuery(q); tabSettle();
+  const tabEl = document.getElementById('tabcard'); let tabUp = false, tabHtml = '';
+  const tabPaint = () => { if (!tabEl) return; const html = tabCardHtml(tabCardOf(game)); if (html !== tabHtml) { tabHtml = html; tabEl.innerHTML = html; } };
+  const tabShow = (on: boolean) => { tabUp = on && !!tabEl; tabEl?.classList.toggle('on', tabUp); if (tabUp) tabPaint(); else tabHtml = ''; };   // (painted once: the game is held under it)
   const tabKey = (frozen: boolean) => {
     if (demo.active || game.director.showing || attract.live) return;
     const free = !frozen && !menu.isOpen;
+    if (TABKEY.does === 'brief') { if (tabUp) tabShow(false); else if (free && !game.backable()) tabShow(true); return; }   // (never over a list, the order menu or a running verb, whatever backs out of those)
     if (TABKEY.does === 'run') { if (free) menu.openRun(); else if (menu.mode === 'pause' && !optionsOpen() && !missionsBusy()) { if (menu.runOpen) menu.close(); else menu.openRun(); } }   // (from a pause card Esc opened: the run first, then back to the game)
     else if (TABKEY.does === 'keys') { if (free) menu.open('pause'); if (free || (menu.mode === 'pause' && !optionsOpen() && !missionsBusy())) openOptions({ tab: 'controls', onTab: () => menu.close() }); }   // (from a pause card — one Esc opened, or the one left when Esc put the list away — the list first, then back to the game)
   };
@@ -723,11 +731,12 @@ async function main() {
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
     beforeTick: dt => handsTick(dt),
     timeScale: () => window.__timeScale ?? 1,
-    frozen: () => (briefHolds() || (menu.isOpen && !attract.live) || perfsweep.freezing || bench.freezing || overlay.cardUp) && !scripted,   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card (only once its opening veil is fully up): then the patrols walk
+    frozen: () => (briefHolds() || (menu.isOpen && !attract.live) || perfsweep.freezing || bench.freezing || overlay.cardUp || tabUp) && !scripted,   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card (only once its opening veil is fully up): then the patrols walk
     present: () => !scripted || (lastOfBurstNow && !document.hidden),
     afterFreeze: (frozen) => { if (refreshStill) { refreshStill = false; if (frozen && canvas.clientWidth > 0 && canvas.clientHeight > 0) refreshFrozenStill(); } },   // (set by attract's onStop — refreshFrozenStill above; a stop that closed the card, i.e. the hand-over to the tour, needs none of it: that frame is live and under the tour's own veil)
     hotkeys: (frozen) => {
       if (bench.active) return;   // (hands off: P would quit its scene, F9 its recording)
+      if (tabUp && (menu.isOpen || optionsOpen() || scripted || TABKEY.does !== 'brief')) tabShow(false);   // (Tab's card, ui/tabcard.ts: a menu over it, or a script taking the page, puts it away)
       if (!frozen && input.hit('BracketLeft')) engine.settings.exposure /= 1.25;
       if (!frozen && input.hit('BracketRight')) engine.settings.exposure *= 1.25;
       if (TABKEY.does !== 'off' && !(CMDRING.on && CMDRING.key === 'Tab') && input.hit('Tab') && !(BACKKEY.tab && !frozen && game.backable())) {   // (…unless Tab is backing out of something this frame: game/backkey.ts)
