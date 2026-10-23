@@ -15,7 +15,8 @@
 //             man's head and the gas only climbs from there: a line at 1.9 m or under keeps its light (a line starts to count smoke under 0.8 of it; measured
 //             in the page, docs/agents/render.md). Two things learnt setting it: a source two cells wide does not climb in the solver whatever its heat (it
 //             hung where it was filed, a haze at head height that cut a line along the wind to a quarter), one five cells wide does. Only for a fire near the
-//             view (FIRE.smoke.viewR), only while the solver draws: while one is, the solver is awake (the same file has what that costs).
+//             view (FIRE.smoke.viewR), only while the solver draws, and not on the graphics preset that sheds it (the floor rung: settings.fireSmoke, written by
+//             ui/quality.ts FIRE SMOKE SHED): while one is, the solver is awake (the same file has what that costs).
 //   THE SOUND a low bed that follows the fire's heat, and a crack with each pop of the wood — the same pop that throws embers and kicks the light. The mixer's
 //             alone: no event is filed, nobody in the game hears a fire.
 //   WHEN OUT  the lamp's own target says (shot out, the pistol's jammer, a level that starts it cold): no light, so no flame, smoke or sound either.
@@ -133,7 +134,7 @@ export function updateFire(g: Game, dt: number) {
   let any = false; for (const t of g.targets) if (isFire(t)) { any = true; break; }
   if (!any) { if (E.fires?.length) E.fires = []; return; }   // (nothing of this file runs on a floor with no fire)
   const S = stateOf(g), T = S.stats, K = FIRE, time = g.time, was = time - Math.max(dt, 0);
-  const focus = g.engine.viewFocus ?? g.player.char.pos, drawing = g.smoke.drawing?.() === true;
+  const focus = g.engine.viewFocus ?? g.player.char.pos, drawing = g.smoke.drawing?.() === true && g.engine.settings?.fireSmoke !== false;   // (… and the graphics preset on draws a fire's smoke: the floor rung does not, ui/quality.ts FIRE SMOKE SHED)
   const list: (FireDraw & { d: number })[] = []; let fires = 0, lit = 0, mask = 0, smoked = 0;
   if (dt > 0) T.frames++;
   for (const t of g.targets) {

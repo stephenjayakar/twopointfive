@@ -38,11 +38,13 @@ fn fireFlame(F: FireRec, P: vec3f) -> vec2f {
   q.z -= F.c.y * bend + 0.035 * y * cos(t * 1.9 + s * 1.7);
   // it RISES: everything from here on is read in air that climbs, so the shapes travel up the flame and off its top
   let up = t * 1.7;
+  if (length(q.xz) > R * (1.1 + 0.8 * y)) { return vec2f(0.0); }   // (the wobble below moves a point 0.78 R y at most: from here it cannot come inside the rim, and beyond the rim there is no flame — none of the six reads is made)
   let w1 = fireN(vec3f(q.x * 4.5 + s, q.y * 3.2 - up, q.z * 4.5)) - 0.5;
   let w2 = fireN(vec3f(q.x * 4.5 - s, q.y * 3.2 - up + 7.3, q.z * 4.5 + 3.1)) - 0.5;
   q.x += w1 * 1.1 * R * y; q.z += w2 * 1.1 * R * y;
   let r = length(q.xz);
   let rim = clamp(1.0 - r / (R * 1.1), 0.0, 1.0);   // 1 on the axis, 0 at the drum's rim
+  if (rim <= 0.0) { return vec2f(0.0); }             // (beyond the rim the flame below comes out 0 whatever its noise says: the four reads it would take are not made — the march's cylinder is 1.9 R wide)
   // several flames stand side by side on the coals, each its own height, and trade places: the top of the fire is a field of peaks, and a peak is a point
   let tn = 0.7 * fireN(vec3f(q.x / R * 1.5 + s, t * 1.4, q.z / R * 1.5 - s)) + 0.3 * fireN(vec3f(q.x / R * 3.6 - s, t * 2.9 + 5.0, q.z / R * 3.6 + s));
   let h = H * (0.16 + 2.0 * pow(tn, 1.4)) * sqrt(rim) * (1.0 + 0.6 * (F.c.z - 1.0));
