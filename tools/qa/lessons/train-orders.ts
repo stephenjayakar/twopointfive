@@ -1,7 +1,8 @@
 // The scripted player for Training 5 (levels/train-orders.json; tools/qa/lesson-run.ts runs it): a pair commanded through the input only — the cursor on the
-// target, X, then the row's digit (5 turns a door's menu to its tools); B for the usual order; F for the word — on a held threshold, and the one that blows a
-// set charge.
+// target, X, then the row's digit (5 turns a door's menu to its tools); B for the usual order; F for the word that blows a set charge (and, on the frozen
+// stand, the word at a held threshold).
 import type { Bot } from '../lesson-run';
+import { CMDRING } from '../../../src/game/cmdring';
 
 export const query = '?roomclear=1';
 /** a room clear ends when every room is taken (game/roomclear.ts): the mission's own stages stand still under it */
@@ -12,13 +13,18 @@ const BAGS = [11.6, 0.02, 11.7], STREET = [17.0, 0.02, 14.0], GROUND = [13.0, 0.
 const BARRIER = [18.7, 0, 15.4];
 const DOOR_A = [16.6, 1.0, 11.6], DOOR_B = [25.2, 1.0, 11.6], DOOR_C = [23.0, 1.0, 16.4], DOOR_D = [16.0, 1.0, 16.4];
 const cleared = (B: Bot, id: string) => !!B.g.roomClear.rooms.find((r: any) => r.def.id === id)?.cleared;
+/** the hold was the one order of the door tools' row 4 (the page as it ships), not the old page of three: said by the 'thr' beat */
+let plain = false;
 const last = (B: Bot) => { const l = B.g.orders.log; return l.length ? l[l.length - 1] : null; };
 
-/** the cursor on `p`, X, the menu must be up on the kind of thing meant */
+/** the cursor on `p`, the orders menu, and it must be up on the kind of thing meant. Where the squad's key kept down is a ring that stays (game/cmdring.ts:
+ *  the page's way, and what a line's X is drawn as there) the menu is opened that way; where there is no such ring, by its own key (X) */
 function menu(B: Bot, p: number[], kind: 'floor' | 'door') {
-  const O = B.g.orders;
-  B.aim(p); B.step(2); B.aim(p); B.press('KeyX', 2);
-  if (!O.menu) B.fail(`X opened no menu at (${p[0]}, ${p[2]})`);
+  const O = B.g.orders, ring = CMDRING.on && CMDRING.stay;
+  B.aim(p); B.step(2); B.aim(p);
+  if (ring) { B.I.pressed.add(CMDRING.key); B.hold([CMDRING.key], 1.5, () => !!O.menu); B.step(2); } else B.press('KeyX', 2);
+  B.say(`  the menu by ${ring ? "the squad's key kept down (the ring)" : 'its own key (X)'}`);
+  if (!O.menu) B.fail(`${ring ? "the squad's key kept down" : 'X'} opened no menu at (${p[0]}, ${p[2]})`);
   if (O.menu.target.kind !== kind) B.fail(`X at (${p[0]}, ${p[2]}) opened the menu on '${O.menu.target.kind}', not a ${kind}`);
 }
 /** …and the digits, one press each */
@@ -59,20 +65,24 @@ export const steps: Record<string, (B: Bot) => void> = {
   thr: B => {
     B.go([20.2, 0, 13.6], 25);
     const n = B.g.orders.log.length; menu(B, DOOR_D, 'door'); B.press('Digit5', 2); B.press('Digit4', 2);
-    const paged = !!B.g.orders.menu; if (paged) B.press('Digit1', 2);
+    const paged = !!B.g.orders.menu; if (paged) B.press('Digit1', 2); plain = !paged;
     const l = last(B); if (B.g.orders.log.length === n || l.order !== 'thresholdHold') B.fail(`5, 4${paged ? ', 1' : ''} gave no 'thresholdHold' (the last order: ${l ? `${l.order} on ${l.target}` : 'none'})`);
     B.say(`  X 5 4${paged ? ' 1' : ''}: ${l.order} · ${l.who.join(', ')} · ${l.target}`);
   },
-  // … and once the pair is on the open door, the word: nothing but F here
+  // … and once the pair is on the open door, the second order. As the page ships it the word (F) steps them in with NO can (DOORTOOLS.wordNoCan), and the
+  // kitchen's man is awake, aimed and in the band neither jamb sees: over sixteen shipped dice the pair went in dry and both died on ten. So the lesson
+  // asks for the can ('bang and clear' given to the men holding: one can, then in), and so does this player. Where the hold is the old page (the frozen
+  // stand) the word still bangs the blind floor first: nothing but F there
   word: B => {
     const op = () => B.g.doorTools.ops.find((o: any) => o.door.def.name === 'hut_d' && o.kind === 'threshold');
     if (!B.until(() => op()?.phase === 'thr', 40)) B.fail(`the pair never held the kitchen's door (its order: ${op() ? op().phase : 'gone'})`);
     B.wait(1.5); if (B.g.orders.menu) B.fail('a menu is up before the word');
-    B.press('KeyF', 2);
     const o = op(), cans = B.g.doorTools.bangs;
-    if (!o?.beats.some((b: any) => b.what === 'the word')) B.fail('F was not taken as the word');
-    if (!B.until(() => cleared(B, 'd'), 60)) B.fail('the kitchen was not cleared after the word');
-    B.say(`  F: ${o.beats.map((b: any) => b.what).join(' → ')} · cans thrown ${cans - B.g.doorTools.bangs}`);
+    if (plain) { order(B, DOOR_D, 'door', [5, 2], 'bangClear'); if (!o?.beats.some((b: any) => /^told/.test(b.what))) B.fail('2 at the held door was not taken by the men holding it'); }
+    else { B.press('KeyF', 2); if (!o?.beats.some((b: any) => b.what === 'the word')) B.fail('F was not taken as the word'); }
+    if (!B.until(() => cleared(B, 'd'), 60)) B.fail(`the kitchen was not cleared after ${plain ? 'the can' : 'the word'}`);
+    const thrown = cans - B.g.doorTools.bangs; if (plain && thrown !== 1) B.fail(`'bang and clear' at the held door spent ${thrown} cans: one is the order`);
+    B.say(`  ${plain ? 'X 5 2' : 'F'}: ${o.beats.map((b: any) => b.what).join(' → ')} · cans thrown ${thrown}`);
   },
   // they call it clear (the word step waited for that): in through the kitchen's door
   in3: B => { if (!B.until(() => cleared(B, 'd'), 30)) B.fail('the kitchen was not cleared'); B.wait(1); B.go([16.0, 0, 18.6], 25); },

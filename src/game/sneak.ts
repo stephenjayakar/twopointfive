@@ -57,6 +57,7 @@ import { lightEstimateAt, GUARD_EYE, eyeContact, escalationOf, KEEN, type Eye } 
 import { hostileTo } from './teams';
 import { dozeAsleep } from './doze';
 import { workComing } from './workthings';
+import { wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { loadCross, loadSeen } from './kitload';   // (what the sneaking man's card makes of a crossing's price: his shape over his pace)
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 
@@ -160,6 +161,11 @@ const LINES = {
 };
 /** why he waits: a lit stretch somebody is looking at · a dark one at a looking defender's elbow · a lit one too long to cross with a line on it · no dark step short of Sam · the way on is in the line of a shut door Sam is about to open */
 type Why = keyof typeof LINES.wait;
+/** (WORDS) the lines above as they are said now, where one changed (read where the cue is given) */
+const LINES_NOW: { wait: Partial<Record<Why, string>>; nag: Partial<Record<Why, string>> } = {
+  wait: { open: "holding in the dark. you're standing in the light." },
+  nag: { near: "he's still facing me. waiting for him to turn.", open: "you're standing in the light. i'll hold in the dark." },
+};
 type Mode = 'walk' | 'wait' | 'cross' | 'stand' | 'back';
 interface Crumb { p: Vec3;
   /** its light as last read (0‥1), when, and for which posture */ lit: number; t: number; low: boolean;
@@ -586,13 +592,13 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
       // the words, and the tallies, on the change
       if (mode !== M.mode) {
         if (M.mode === 'wait') { SNEAK_STATS.waitS += g.time - M.waitT; if (mode === 'cross' && g.time - M.waitT > 1.5) cue(g, gd, M, LINES.go); M.waitT = -1; }
-        if (mode === 'wait') { M.why = why; M.waitT = g.time; M.nagged = false; SNEAK_STATS.waits++; note(g, gd, `waits (${why})`); cue(g, gd, M, LINES.wait[why]); }
+        if (mode === 'wait') { M.why = why; M.waitT = g.time; M.nagged = false; SNEAK_STATS.waits++; note(g, gd, `waits (${why})`); cue(g, gd, M, wg(LINES_NOW.wait[why] ?? LINES.wait[why], LINES.wait[why])); }
         if (mode === 'cross') { M.crossT = g.time; SNEAK_STATS.crossings++; note(g, gd, 'crosses'); }
         if (mode === 'stand') { SNEAK_STATS.shade++; if (side) SNEAK_STATS.asides++; note(g, gd, side ? 'steps aside, out of the line' : 'stands back in the dark'); }
         if (mode === 'back') { SNEAK_STATS.backOffs++; if (side) SNEAK_STATS.asides++; M.backT = g.time; note(g, gd, side ? 'backs off, aside' : 'backs off'); }
         M.mode = mode;
       } else if (mode === 'wait') M.why = why;
-      if (M.mode === 'wait' && !M.nagged && g.time - M.waitT >= K.nagSecs && !(g.time >= M.voiceT && g.time - M.voiceT < 3)) M.nagged = cue(g, gd, M, LINES.nag[M.why], true);   // (kept owing while spotted.ts has the net — and a breath after its own last word: said once the net is his again)
+      if (M.mode === 'wait' && !M.nagged && g.time - M.waitT >= K.nagSecs && !(g.time >= M.voiceT && g.time - M.voiceT < 3)) M.nagged = cue(g, gd, M, wg(LINES_NOW.nag[M.why] ?? LINES.nag[M.why], LINES.nag[M.why]), true);   // (kept owing while spotted.ts has the net — and a breath after its own last word: said once the net is his again)
     }
   }
   // his feet, by the plan — the way laid crumb by crumb (Sam's own steps, not the nav grid's cells: half a metre off his line is half a metre nearer a man)

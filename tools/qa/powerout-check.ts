@@ -104,7 +104,7 @@ export async function poweroutCheck(): Promise<boolean> {
       const n0 = ours(S).length; g.setBlackout(86400, 'hand'); let moved = 0;
       await runFor(S, 12, () => { for (const gd of men) if (off(S, gd) > 0.6) moved++; });
       const again = ours(S).slice(n0);
-      line(again.length === 1 && /no fault/.test(again[0].s) && moved === 0 && g.blackout.active && men.every(gd => powerOutWord(g, gd)), 'the lights go a second time: nobody walks out again — one line, and the word is out',
+      line(again.length === 1 && /no fault|no accident/.test(again[0].s) && moved === 0 && g.blackout.active && men.every(gd => powerOutWord(g, gd)), 'the lights go a second time: nobody walks out again — one line, and the word is out',
         `"${again.map(l => l.s).join(' | ') || '—'}" · frames a man was off his post ${moved} · mains still down ${g.blackout.active}`); }
 
     // (c) the garrison already knows

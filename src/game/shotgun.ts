@@ -116,7 +116,7 @@ export function fireShell(g: Game, shooter: Character, target: Vec3, isPlayer: b
   }
   if (leaves) for (const [d, n] of leaves) if (n >= B.need) {
     if (!g.doors.kickIn(d, muzzle, shooter.id, true)) continue;   // (steel: it rang and held — doors.ts; `true`: a breaching round destroys the LOCK — from the face the leaf opens toward the keep is gone and the leaf stands home, unlocked, for a hand to pull: doors.ts DOORWAY.frameHolds)
-    SHOTGUN_STATS.locks++; if (isPlayer) { g.msg('shot the lock off — the whole floor heard that'); chronDoor(g, 'doorKicked', d); }   // (the debrief's row and its price: the boot's — player.ts)
+    SHOTGUN_STATS.locks++; if (isPlayer) { g.msg('you shot the lock off, and the whole floor heard that'); chronDoor(g, 'doorKicked', d); }   // (the debrief's row and its price: the boot's — player.ts)
   }
 }
 

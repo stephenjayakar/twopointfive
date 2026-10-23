@@ -16,7 +16,8 @@
 //                one `fightSecs` ago; the leg through an ordered door (ORDERS.entry: the stun's seconds are counted on it); a step the
 //                room fight orders (off a doorway's opening, round a friend in his line); the breach drill; a man leaving a grenade who may not run;
 //                and a man a grenade took off his place, for `backSecs` after it (a door order waits for its men, and counts the seconds).
-//   A REASON     on his own (`own`) a teammate RUNS for one of two things, each written down as it is taken (TEAMPACE_STATS, TEAMPACE_DEBUG.log):
+//   A REASON     on his own (`own`) a teammate RUNS for one of two things — and for a third when a tutorial step tells him to (`told`: teamTold, at the
+//                foot of this file) — each written down as it is taken (TEAMPACE_STATS, TEAMPACE_DEBUG.log):
 //                  blast   he is running from a live grenade (frag.ts fragRunning) — at the pace the flee asks, as anybody's legs;
 //                  cover   loud has just reached him, he has no man in his sights, the floor he is on is in the line of a man he knows of, his mark is out
 //                          of it and in plain sight across `dashM` or more of the same floor: he runs the leg (teamDash) — never round a corner, never
@@ -65,9 +66,9 @@ export const TEAMPACE = {
   /** two runs of one man this close together are one (s) */
   gap: 1,
 };
-export type RunWhy = 'follow' | 'blast' | 'cover';
+export type RunWhy = 'follow' | 'blast' | 'cover' | 'told';
 /** runs taken, by reason, and the seconds spent at them (read by the checks and the tallies; nothing in the game reads it) */
-export const TEAMPACE_STATS = { follow: 0, blast: 0, cover: 0, secs: 0 };
+export const TEAMPACE_STATS = { follow: 0, blast: 0, cover: 0, told: 0, secs: 0 };
 export const TEAMPACE_DEBUG: { log?: (s: string) => void } = {};
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TEAMPACE_BREAK ?? '') === '1'; } catch { return false; } })();
 
@@ -184,6 +185,14 @@ export function teamDash(g: Game, gd: Guard, to: Vec3, d: number): number | null
   if (was && same && t - was.t < T.dashEvery) yes = was.yes && d > 0.6;
   else { const on = !!was && same && was.yes; yes = teamDashNow(g, gd, to, d, on ? 0.6 : T.dashM, on); dash.set(gd, { t, x: to[0], z: to[2], yes }); }
   return yes && teamLeave(g, gd, 'cover', run) ? run : null;
+}
+/** A RUN THE MISSION TELLS HIM TO MAKE (orders.ts, of a man walking to the mark an order gave him; rails.ts runs: a tutorial step's `onWay.run` — the way
+ *  back to the trucks once the job is done): the pace to run the leg at, or null. One more reason, under the same leave as the others: `own` off, a quiet
+ *  man and a hurt one still walk — and, as on a run to cover, a man with somebody in his sights does not turn his back and run with his gun low: he
+ *  fights at the fight's pace until it is over. The caller asks only outside the last metres of the leg (orders.ts ORDERS.briskIn): they are walked in */
+export function teamTold(g: Game, gd: Guard): number | null {
+  if (!g.rails?.runs(gd) || !teamSlow(g, gd) || g.fight.engaged(gd)) return null;
+  const run = g.tune.playerSprint; return teamLeave(g, gd, 'told', run) ? run : null;
 }
 /** the pace a teammate leaves a grenade at (frag.ts, squadthrow.ts — what teamCap gives a man fragRunning): the flee's own with the rule on and a run
  *  allowed him, the old cap without */

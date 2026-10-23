@@ -63,6 +63,9 @@ const BASE_REVS = ['636e5eaef', '3046a115e', 'c069ca16f', 'd13650f85', '0d3a1807
  *  still meet). A look twin (`<name>-gwot.json`) with no row of its own is held to the plain level's. A level with no row is held to BASE_REVS above, as it
  *  was; a level BASE_REVS does not carry must have one. */
 const LEVEL_BASE: Record<string, string> = {
+  // Training 5's kitchen step is done by 'bang and clear' given at the held door too (the word spends no can: the lesson asks for the can)
+  'train-orders.json': '2b733c042',
+
   // the pair mission's gate yard re-laid with ruts and stones, the partner's ways out of every line
   'tut-pair.json': '9048a2e01',
 
@@ -73,8 +76,8 @@ const LEVEL_BASE: Record<string, string> = {
   // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
   'tut-quiet.json': '87c7cebef',
 
-  // the tunnel station, played with no fog of war (its lesson's rails.fog)
-  'tut-sky.json': 'f3ef62b01',
+  // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run)
+  'tut-sky.json': '34c71d8c3',
 
   // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, two sponge rounds on his card and the swap's own lists, the moon
   // behind the shop

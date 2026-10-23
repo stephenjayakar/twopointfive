@@ -184,3 +184,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `away`), both stands: the office hears the blackout pair, `tut-quiet` / `quiet-yard` / `lights-out` hear nothing in twelve seconds with the key up and the
   pair with it down. One staged night a level, no seeds varied. The lines themselves are untouched (whether to rewrite or drop them is the maintainer's call).
   NOBODY HAS SEEN IT ON A GPU; the radio strip is not drawn headless (the game's message list is what was read).
+- **Spoken lines read by the writing guide (`WORDS.guide`, `words.ts wg`)** (10-22, the key 10-23; `docs/agents/writing.md` rule 7). About 150
+  spoken and radio lines reworded: "round" for "around", a missing contraction, "a man" for somebody of his own side, a line clipped until it
+  was unclear. The wordings have a KEY OF THEIR OWN, because a bubble's time on screen is its length and its text is in a run's digest:
+  `wg(now, was)` = `WORDS.on && WORDS.guide ? now : was`. ON in the page (`?noguide` puts it off), OFF in the module and on the frozen stand
+  (`TPS_GUIDEWORDS=1` raises it there; the shipped stand has it up); a `FROZEN_HOLDS` row, a `STAND_ENV` word, in the journal's `WORDS` table,
+  and `applyKnobs` holds it off for a recording from before the key. THREE STATES: the pass off = the first words · the pass on, the key off
+  = what the page said before the key, byte for byte · both on = the guide's words. The key alone says nothing. How a table carries one: a
+  row's `guide` beside its `now` (SAM_LINES, cues.ts, laststand.ts), `INTEL_GUIDE`, `CIV_LINES.guide` (report / control / greetCiv /
+  greetGuard place for place, and `own`), `DRIVE_AWAY_GUIDE`, `ROUTE_NAMES_GUIDE` / `DOOR_NAMES_GUIDE`, breach.ts `LIVE_GUIDE`, weather.ts
+  `THUNDER_OUT_GUIDE`, a `Beat`'s `samNow`, a handler row's `hNow`, an order row's `ackNow` (orders.ts reads it where a man answers), or a
+  small old-line → new-line table applied where the line is picked (`NEEDS_LINES.now`, guards.ts `STANDOFF_NOW`, gunhold.ts `GUNHOLD_NOW`,
+  netquiet.ts `LINES_NOW`, sneak.ts `LINES_NOW`, squad.ts `BODY_LINES_NOW`, whistle.ts `TWICE_NOW`); a line in a say call is `wg(now, was)`
+  there. A wording the pass already had is never edited in place: the guide's goes beside it. `shapedIntelText` reads through `intelTable`;
+  `needsLines()`, `civilianLines()`, the net-quiet, morale and whistle lists and `lineLengthReport()` carry the guide's lines while the key
+  is up. cues.ts `CLASSES` knows the new words beside the old (going around, moving around, get around, coming up behind, ready for them);
+  the last-stand answer is "here — I'm after them, {at}." so that no tool reads it as a claim to be on them. A refusal an order returns is
+  said by a man AND printed on its greyed menu row: both follow the key. HELD for the maintainer: the office night staff's British voice
+  (the held man's lines, his scripts, the pairs) and `SNATCH_LINES`. Checks that named old words take both wordings.
+  Check: `bun run tools/qa/guidewords-check.ts` (`probes.ts guidewords`, in the `words` and `dialogue` families), `GUIDEWORDS_BREAK=1` (the
+  key left up where it is asked down) must fail. With the key off, every line the game can list (about 2,950: the staff, needs, hostage,
+  snatch, net-quiet, morale, whistle and small bark lists, the defender net with its classes, every interrogation answer plain and as each
+  room script shapes it, the length report's rows, the gun-in-a-hold pools, route names) is counted and digested against pins taken from
+  the commit before the key, with the pass off and with it on; 13 wordings pair by pair; the pass's own wordings still in the source beside
+  the guide's; her lockdown aside sounded at the office in the three states; the stands, a recording, the page's flag. A LINE OF THOSE LISTS
+  CHANGED ON PURPOSE MOVES THE PIN (`GUIDEWORDS_PRINT=1` prints it). Not in the check: a line said from inside a function is listed by no
+  table, so only the source is read for those and none is played.
+  Measured: the check green on both stands and with `TPS_GUIDEWORDS=1` on the frozen one, red with its break word on both; typecheck,
+  `knobs-check`, `rollback-check --static`; `words` and `dialogue` on both stands (the one red, `words-routes`, is red without this change
+  too); `radiohome`. No run digests, no tour, no soak, no seeds: on the shipped stand a bubble's length is its time on screen, so runs there
+  can play out differently, and that is not measured. Read, not heard; NOBODY HAS SEEN IT ON A GPU or played it.

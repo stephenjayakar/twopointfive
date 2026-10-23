@@ -197,7 +197,7 @@ export const IQ_OFF: IqTier = { sharp: false, decouple: false, gbaa: false, hist
 export const IQ_C3J: IqTier = { sharp: true, decouple: true, gbaa: true, histSharp: 0.5 };
 // (The SDF character rig has no tier: the fitted round cones are every ray's character test at every preset — measured free, −0.3 … +0.5 ms at high, docs/internal/sdf-characters.md §8 —
 // and its two extras, the smooth-union closest hit in reflections and the drawn character shadows, are rows no preset touches: engine settings sdfRigSmooth / charSoftShadow.)
-export interface Preset { restir: RestirTier; rt: RtTier; p5: P5Tier; dn: Dn; iq: IqTier /* the resolve configuration for the tier (IMAGE-QUALITY program: sharp direct + decoupled jitter + GBAA + the history de-blur — IqTier above; ?sharp / ?nosharp / ?noiq force it for the visit) */; scale: number /* the render scale the preset starts at UNDER TAAU, relative to its cap (ultra 1.0 = TAA only … verylow 0.5 = a 2× upscale per axis); with TAAU off every preset starts at 1.0 as before — maxH is the preset's OUTPUT resolution either way; the ladder / the Tab slider trim below it */; taau: Taau; maxH: number; volSteps: number; rc: { nx: number; ny: number; nz: number }; rcCoarse?: { nx: number; ny: number; nz: number } /* the row's cache grid with ONE CACHE GRID off (rcGridOf below the table) */; cascades: number; rbIters: number; ds: [number, number, number]; hist: number; mesh: boolean | 'near'; cards: boolean; lossy: Lossy; caps: Caps; froxel: FroxelTier; }   // cards = settings.torchBounceCards (the carried spots' footprints as analytic one-bounce emitters, docs/internal/perf-2026-08-10.md: +0.13 ms gather at high, +0.27 at ultra, and the torch's first bounce off a wall comes back at its physical level instead of 4–15 % of it — a LOOK change, so on where it was eyeballed: ultra + high); ds = direct-light shadow samples [strongest light, other leaders, adaptive stop] — measured: 8/4/3 → 1/1/2 halves the direct pass (7.2 → 3.8 ms at 1600×1000), so the cheaper presets spend fewer rays as well as fewer pixels; hist = settings.directHistory (temporal reuse of the direct estimate: 0.5 = the default ≈ 2 frames, 0.7 ≈ 3 — verylow leans on it to hide its one-ray penumbra grain)
+export interface Preset { restir: RestirTier; rt: RtTier; p5: P5Tier; dn: Dn; iq: IqTier /* the resolve configuration for the tier (IMAGE-QUALITY program: sharp direct + decoupled jitter + GBAA + the history de-blur — IqTier above; ?sharp / ?nosharp / ?noiq force it for the visit) */; scale: number /* the render scale the preset starts at UNDER TAAU, relative to its cap (ultra 1.0 = TAA only … verylow 0.5 = a 2× upscale per axis); with TAAU off every preset starts at 1.0 as before — maxH is the preset's OUTPUT resolution either way; the ladder / the Tab slider trim below it */; taau: Taau; maxH: number; volSteps: number; rc: { nx: number; ny: number; nz: number }; rcCoarse?: { nx: number; ny: number; nz: number } /* the row's cache grid with ONE CACHE GRID off (rcGridOf below the table) */; smokeOwn?: boolean /* SMOKE KEEP leaves this row's smoke alone (withSmoke below the table) */; cascades: number; rbIters: number; ds: [number, number, number]; hist: number; mesh: boolean | 'near'; cards: boolean; lossy: Lossy; caps: Caps; froxel: FroxelTier; }   // cards = settings.torchBounceCards (the carried spots' footprints as analytic one-bounce emitters, docs/internal/perf-2026-08-10.md: +0.13 ms gather at high, +0.27 at ultra, and the torch's first bounce off a wall comes back at its physical level instead of 4–15 % of it — a LOOK change, so on where it was eyeballed: ultra + high); ds = direct-light shadow samples [strongest light, other leaders, adaptive stop] — measured: 8/4/3 → 1/1/2 halves the direct pass (7.2 → 3.8 ms at 1600×1000), so the cheaper presets spend fewer rays as well as fewer pixels; hist = settings.directHistory (temporal reuse of the direct estimate: 0.5 = the default ≈ 2 frames, 0.7 ≈ 3 — verylow leans on it to hide its one-ray penumbra grain)
 const RC_WHOLE = [1, 1, 1, 1] as const;   // every cascade level whole every frame
 const ALL_OFF: Lossy = { checkerDirect: false, gatherThird: false, rcHalfRate: false, volQuarter: false, dimRays: false, dimBelow: 0.01, fireflyK: 0, rcPeriods: RC_WHOLE };
 const FIREFLY_K = 4;   // the bound every preset but ultra runs the gather with (was the engine-wide default)
@@ -229,7 +229,7 @@ export const PRESETS: Record<QualityName, Preset> = {
   high:    { restir: { rays: 4, spatial: 3, history: 20, held: 4, motionMin: 0.35, motionTaps: 6 }, rt: { on: true, div: 2, rays: 1, maxRough: 0.45, atrous: 3 }, p5: P5_OFF, dn: { shIters: 3, shCap: 12, giIters: 4, giCap: 24, spIters: 1 }, iq: IQ_C3J, scale: 0.77, taau: { phases: 8,  clipGamma: 1.0,  sharpen: 0.25 }, maxH: 1000, volSteps: 20, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 4, ds: [8, 4, 3], hist: 0.7, mesh: 'near', cards: true, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: false, dimRays: true, dimBelow: 0.01, fireflyK: FIREFLY_K, rcPeriods: RC_WHOLE }, caps: { volK: 4, volEvery: 2, volStep: 1.5, births: 384, debris: 64, rain: 4000, marchLights: 3, vol: 'classic' }, froxel: { h: 135, d: 64, k: 4, hist: 0.93, topRays: 2 } },
   medium:  { restir: { rays: 4, spatial: 2, history: 20, held: 4, motionMin: 0.2, motionTaps: 6 }, rt: { on: true, div: 3, rays: 1, maxRough: 0.35, atrous: 3 }, p5: P5_OFF, dn: { shIters: 3, shCap: 10, giIters: 3, giCap: 16, spIters: 1 }, iq: IQ_C3J, scale: 0.67, taau: { phases: 16, clipGamma: 1.1,  sharpen: 0.4 }, maxH: 900,  volSteps: 14, rc: { nx: 40, ny: 4, nz: 28 }, cascades: 4, rbIters: 3, ds: [6, 3, 3], hist: 0.5, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.01, fireflyK: FIREFLY_K, rcPeriods: [1, 1, 2, 4] }, caps: { volK: 3, volEvery: 2, volStep: 1.5, births: 256, debris: 32, rain: 2500, marchLights: 2, vol: 'froxel' }, froxel: { h: 108, d: 48, k: 3, hist: 0.93, topRays: 2 } },
   low:     { restir: { rays: 3, spatial: 2, history: 20, held: 3, motionMin: 0.5, motionTaps: 6 }, rt: RT_OFF, p5: P5_OFF, dn: { shIters: 2, shCap: 8, giIters: 3, giCap: 12, spIters: 1 }, iq: IQ_C3J, scale: 0.6,  taau: { phases: 16, clipGamma: 1.2,  sharpen: 0.5 }, maxH: 720,  volSteps: 10, rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, ds: [4, 2, 2], hist: 0.5, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.02, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 3, 6] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 192, debris: 32, rain: 1500, marchLights: 0, vol: 'froxel' }, froxel: { h: 80, d: 32, k: 2, hist: 0.93, topRays: 1 } },
-  verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, p5: P5_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, cascades: 4, rbIters: 3, ds: [1, 1, 2], hist: 0.7, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.02, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, debris: 32, rain: 800, marchLights: 0, vol: 'froxel' }, froxel: { h: 64, d: 24, k: 2, hist: 0.93, topRays: 1 } },
+  verylow: { restir: { rays: 2, spatial: 1, history: 20, held: 2, motionMin: 1.0, motionTaps: 6 }, rt: RT_OFF, p5: P5_OFF, dn: { shIters: 2, shCap: 8, giIters: 2, giCap: 8, spIters: 1 }, iq: IQ_C3J, scale: 0.5,  taau: { phases: 16, clipGamma: 1.25, sharpen: 0.5 }, maxH: 600,  volSteps: 8,  rc: { nx: 40, ny: 4, nz: 28 }, rcCoarse: { nx: 32, ny: 3, nz: 22 }, smokeOwn: true, cascades: 4, rbIters: 3, ds: [1, 1, 2], hist: 0.7, mesh: false, cards: false, lossy: { checkerDirect: true, gatherThird: true, rcHalfRate: false, volQuarter: true,  dimRays: true, dimBelow: 0.02, fireflyK: FIREFLY_K, rcPeriods: [1, 2, 4, 8] }, caps: { volK: 2, volEvery: 2, volStep: 2.0, births: 128, debris: 32, rain: 800, marchLights: 0, vol: 'froxel' }, froxel: { h: 64, d: 24, k: 2, hist: 0.93, topRays: 1 } },
 };
 /** ONE CACHE GRID (settings.oneCacheGrid, default on, `?onegrid=0`; off = low and verylow on their `rcCoarse`, as it was). The light meter the guards and teammates see by is the
  *  shadowed direct light PLUS the cache's dice (render/shaders/probe.wgsl), read trilinearly at the asked point — so the probe lattice is part of the reading. On the coarser lattice
@@ -239,6 +239,28 @@ export const PRESETS: Record<QualityName, Preset> = {
  *  NOT make the read right: the meter still blends the cells around the man, some of them inside the wall beside him (docs/agents/render.md, BOUNCE WALLS 'not mended').
  *  Price: low and verylow trace 2.1 × the probes at their own refresh periods — in the cost model their fixed part 1.9 → 2.4 and 1.4 → 1.9 model-ms. */
 export const rcGridOf = (p: Preset, one: boolean) => one || !p.rcCoarse ? p.rc : p.rcCoarse;
+/** SMOKE KEEP (settings.smokeKeep, default 1, `?smokekeep=0|1|2`, Tab ▸ Frame; 0 = every preset's own smoke rows, as it was). The maintainer, with auto on medium (10-23): 'a ton
+ *  of the smoke became very blocky … the smoke looks so sick in our game that i'd rather we keep it closer to high but then tradeoff other things in the frame budget'. The
+ *  blocks are the quarter-size march (`lossy.volQuarter`: one march texel under 4 × 4 internal pixels, where high's half-size march has 2 × 2); under it medium and below also
+ *  light the march with fewer lights a step and, on low and verylow, a longer step that combs a plume's shadow edges. 1 = on medium and low the SMOKE's rows are the better of
+ *  its own and high's — the march at half size, high's lights a step (`caps.volK`, `caps.marchLights`), its shadow refresh and step length — on the preset's own path (the
+ *  froxel haze stays: beams are not the smoke); everything else on the rung is still shed, and the ladder's render scale pays the difference. 2 = high's whole volumetric path
+ *  too (`caps.vol` 'classic', high's beam steps): the smoke exactly as high draws it, at the preset's pixel count. The solver's iterations (`rbIters`) stay the preset's own.
+ *  A row with `smokeOwn` keeps its smoke at 1 and 2: verylow, the floor — the rung with nothing beneath it to pay, so the smoke is the LAST thing the ladder sheds.
+ *  Every reader takes the preset through withSmoke — the rows put on, the live preset and the cost tables — so 0 is the ladder as it was, prices included. */
+export const SMOKE_KEEP_DEFAULT = 1;
+/** settings.smokeKeep from a setting or a ?smokekeep= word: 0 ('0', 'off', 'false') · 2 · anything else that is said 1; nothing said = the default */
+export function smokeKeepOf(v: number | string | null | undefined): number {
+  if (v === null || v === undefined) return SMOKE_KEEP_DEFAULT;
+  if (typeof v === 'string') return v === '2' ? 2 : v === '0' || v === 'off' || v === 'false' ? 0 : 1;
+  return Math.max(0, Math.min(2, Math.round(v) || 0));
+}
+export function withSmoke(p: Preset, keep: number): Preset {
+  if (!(keep > 0) || p.smokeOwn) return p;
+  const H = PRESETS.high, K = p.caps, HK = H.caps, classic = keep >= 2 && HK.vol === 'classic';
+  return { ...p, volSteps: classic ? Math.max(p.volSteps, H.volSteps) : p.volSteps, lossy: { ...p.lossy, volQuarter: p.lossy.volQuarter && H.lossy.volQuarter },
+    caps: { ...K, volK: Math.max(K.volK, HK.volK), volEvery: Math.min(K.volEvery, HK.volEvery), volStep: Math.min(K.volStep, HK.volStep), marchLights: Math.max(K.marchLights, HK.marchLights), vol: classic ? 'classic' : K.vol } };
+}
 /** ?nortreflect (main.ts): the RT reflections held OFF for this visit whatever preset auto or a menu applies — the by-hand Tab row still works. Module state, so every Quality instance
  *  and every apply() honours it. */
 export const rtVeto = { on: false };
@@ -303,10 +325,17 @@ export function presetCost(p: Preset, oneGrid = true) {   // oneGrid: settings.o
   const pixel = direct + softblur + gather + temporal + vol + REF.bloom + reflect, fixed = rc + REF.probe + taau + froxel + sharp + mesh;
   return { pixel, fixed, passes: { direct, softblur, gather, temporal, volumetrics: vol, volFroxel: froxel, bloom: REF.bloom, reflect, rc, probe: REF.probe, taau, sharp, mesh } };
 }
-export const COST = Object.fromEntries(QUALITY_NAMES.map(n => [n, presetCost(PRESETS[n])])) as Record<QualityName, ReturnType<typeof presetCost>>;
-/** the same table with ONE CACHE GRID off: low and verylow priced on their coarse grid (the table as it was) */
-export const COST_COARSE = Object.fromEntries(QUALITY_NAMES.map(n => [n, presetCost(PRESETS[n], false)])) as typeof COST;
-export const costTable = (oneGrid: boolean) => oneGrid ? COST : COST_COARSE;
+/** the table for another setting of the two switches that move a preset's price: ONE CACHE GRID off prices low and verylow on their coarse grid, SMOKE KEEP 0 / 2 the smoke
+ *  rows as each preset has them / on high's path (both off = the table as it was) */
+type CostTable = Record<QualityName, ReturnType<typeof presetCost>>;
+const costTables = new Map<string, CostTable>();
+export function costTable(oneGrid = true, smokeKeep = SMOKE_KEEP_DEFAULT): CostTable {
+  const keep = smokeKeepOf(smokeKeep), key = `${oneGrid ? 1 : 0}/${keep}`;
+  let t = costTables.get(key); if (!t) { t = Object.fromEntries(QUALITY_NAMES.map(n => [n, presetCost(withSmoke(PRESETS[n], keep), oneGrid)])) as CostTable; costTables.set(key, t); }
+  return t;
+}
+/** the table of the page as it opens: one cache grid, SMOKE KEEP 1 */
+export const COST = costTable();
 
 export interface Plan { preset: QualityName; scale: number; predicted: number; note: string }
 /** The pure part of auto's boot decision (Quality.decide), exercised with synthetic numbers by tools/qa/quality-plan.ts: given the measured compute ms (total and its
@@ -315,8 +344,8 @@ export interface Plan { preset: QualityName; scale: number; predicted: number; n
  *  (PLAN_BUDGET_MS: 15 ms ≈ a presented 50–55 fps once the render passes, the CPU and vsync slop are added). Order of preference: high → medium → low at full scale; low
  *  with the scale solved for the budget (never under the floor); verylow at full scale; verylow solved down to the floor; and if even that misses, verylow at the floor
  *  flagged 'below target' (the runtime ladder has nothing cheaper either). */
-export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS, taauOn = true, oneGrid = true): Plan {
-  const table = costTable(oneGrid);   // (the grid the presets run: settings.oneCacheGrid)
+export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS, taauOn = true, oneGrid = true, smokeKeep = SMOKE_KEEP_DEFAULT): Plan {
+  const table = costTable(oneGrid, smokeKeep);   // (the grid and the smoke rows the presets run: settings.oneCacheGrid, settings.smokeKeep)
   const pixelMs = Math.max(0.5, gpuMs - fixedMs); const c0 = table[cur];
   const capOf = (p: Preset) => Math.min(1, p.maxH / Math.max(1, cssH * dpr));                            // the effective scale that preset's cap gives this window at render scale 1.0
   const fixedOf = (name: QualityName) => fixedMs * (table[name].fixed / c0.fixed);
@@ -371,12 +400,12 @@ export class Quality {
     const costOf = (c: ReturnType<typeof presetCost>, maxH: number, scale: number) => c.fixed + c.pixel * mpx(maxH, scale) / REF.mpx;
     // the CURRENT preset priced as it is being rendered — the live scale (climbed above the start or cut below it), the live lossy divisors, the live cap — not as its rows say
     const pc = PRESETS[cur]; const live: Preset = cur === this.current ? this.livePreset(cur) : pc;
-    const one = this.oneGrid(), table = costTable(one);   // (the grid the presets run: ONE CACHE GRID)
+    const one = this.oneGrid(), table = costTable(one, this.smokeKeep());   // (the grid and the smoke rows the presets run: ONE CACHE GRID, SMOKE KEEP)
     const curCost = costOf(cur === this.current ? presetCost(live, one) : table[cur], live.maxH, cur === this.current ? S.renderScale : startScale(pc, taauOn));
     return costOf(table[next], PRESETS[next].maxH, startScale(PRESETS[next], taauOn)) / Math.max(0.1, curCost);
   }
   /** preset `cur` (the current one) as it is being rendered: the live lossy divisors, cap and scale over its rows (scale + iq.sharp as they are: presetCost prices sharp direct by `iq.sharp && scale < 1`) */
-  private livePreset(cur: QualityName): Preset { const S = this.engine.settings; const pc = PRESETS[cur]; return { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale, iq: { ...pc.iq, sharp: !!S.sharpDirect && S.taau !== false } }; }
+  private livePreset(cur: QualityName): Preset { const S = this.engine.settings; const pc = withSmoke(PRESETS[cur], this.smokeKeep()); return { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale, iq: { ...pc.iq, sharp: !!S.sharpDirect && S.taau !== false } }; }
   /** the climb is allowed at all this visit: false under a `?quality=` pin (main.ts) — 'pins a preset' means the rows the harnesses and A/B pages measure stay put; a preset pinned from a MENU
    *  keeps the climb (spending a roomy machine's headroom is what it is for), and settings.ladderClimb is the by-hand switch either way */
   climbAllowed = true;
@@ -453,8 +482,23 @@ export class Quality {
     this.lastChange = `auto: starting at ${this.current}${sc !== null ? ` ×${this.engine.settings.renderScale.toFixed(2)}` : ''}${onLadder(remembered) ? ' (this machine\'s last pick)' : ''} — calibrating`;
   }
 
+  /** the smoke's rows of a preset, written to the settings: the march's size, its lights a step, shadow refresh and step length, the beam steps and the volumetric path — the ONE
+   *  writer, for a preset put on (apply) and for SMOKE KEEP moved by hand (resmoke) */
+  private putSmoke(p: Preset) {
+    const S = this.engine.settings, K = p.caps;
+    S.volSteps = p.volSteps; S.volQuarter = p.lossy.volQuarter; S.volLightCap = K.volK; S.volShadowEvery = K.volEvery; S.volStepVoxels = K.volStep; S.smokeMarchLights = K.marchLights;
+    S.froxelVol = froxelVeto.on ? false : froxelForce.on ? true : K.vol === 'froxel';   // the tier's volumetric path (Caps.vol above; ?nofroxel / ?froxel force it for the visit)
+  }
+  /** SMOKE KEEP moved by hand (the Tab row): the current preset's smoke rows put on again, nothing else of the preset touched. A 'volumetrics ¼ → ½' rung the climb had
+   *  standing is forgotten with it (the rows just written are the preset's start: undoing that rung later would put the march back at quarter size under a kept smoke). */
+  resmoke() {
+    if (!(this.current in PRESETS)) return;
+    this.putSmoke(withSmoke(PRESETS[this.current], this.smokeKeep())); this.climbed = this.climbed.filter(st => st.kind !== 'vol');
+  }
   /** ONE CACHE GRID as the engine has it (a stub engine without the setting counts as on — the default) */
   private oneGrid(): boolean { return this.engine.settings.oneCacheGrid !== false; }
+  /** SMOKE KEEP as the engine has it, 0 ‥ 2 (a stub engine without the setting counts as the default) */
+  private smokeKeep(): number { return smokeKeepOf(this.engine.settings.smokeKeep); }
   /** The label for menus: 'auto (high)' or the pinned preset. */
   get label() { return this.auto ? `auto (${this.current})` : this.current; }
 
@@ -464,9 +508,9 @@ export class Quality {
   setAuto() { try { localStorage.setItem(LS_MODE, 'auto'); } catch { /* */ } this.startAuto(); }
 
   apply(name: QualityName) {
-    const p = PRESETS[name]; const S = this.engine.settings; this.current = name; this.lastCut = null; this.upTrial = null;   // (a preset put on is nobody's cut to judge)
+    const p = withSmoke(PRESETS[name], this.smokeKeep()); const S = this.engine.settings; this.current = name; this.lastCut = null; this.upTrial = null;   // (a preset put on is nobody's cut to judge; SMOKE KEEP: its smoke rows are the better of its own and high's)
     const sc = startScale(p, S.taau !== false);   // (a stub engine without the setting counts as TAAU on — the default)
-    S.renderScale = sc; S.maxInternalHeight = p.maxH; S.volSteps = p.volSteps; this.maxScale = sc;
+    S.renderScale = sc; S.maxInternalHeight = p.maxH; this.maxScale = sc;
     S.taauPhases = p.taau.phases; S.taauClipGamma = p.taau.clipGamma; S.taauSharpen = p.taau.sharpen;   // the resolve's per-tier knobs (Tab ▸ Frame rows move them by hand until the next preset)
     S.rtReflect = p.rt.on && !rtVeto.on; S.rtReflectDiv = p.rt.div; S.rtRays = p.rt.rays; S.rtMaxRough = p.rt.maxRough; S.rtAtrous = p.rt.atrous;   // RT reflections per tier (RtTier above; ?nortreflect vetoes the switch, the Tab ▸ Materials rows move them by hand until the next preset)
     { const p5 = p5Veto.on ? P5_OFF : p.p5; S.giResample = p5.gi; S.giResampleRays = p5.giRays; S.rtMeshHits = p5.mesh; S.rtHitReuse = p5.reuse; }   // phase 5's ultra extras (P5Tier above): on in ultra, off everywhere else — the Tab rows move them by hand until the next preset; ?nop5 vetoes them
@@ -477,12 +521,12 @@ export class Quality {
     S.giFullRes = !!p.dn.giFull && !gimVeto.on; S.giFullIters = p.dn.giFullIters ?? 4; S.giYoungRays = gimVeto.on ? 1 : (p.dn.giYoungK ?? 1);   // GI in motion per tier (Dn above; ?nogim vetoes both for the visit; Tab ▸ Indirect light rows move them by hand until the next preset)
     S.directSamplesTop = p.ds[0]; S.directSamplesOther = p.ds[1]; S.directAdaptiveMin = p.ds[2]; S.directHistory = p.hist;
     S.restirRays = p.restir.rays; S.restirSpatial = p.restir.spatial; S.restirHistory = p.restir.history; S.heldRays = p.restir.held; S.restirMotionMin = p.restir.motionMin; S.restirMotionTaps = p.restir.motionTaps;   // ReSTIR DI's tier (settings.restir itself is not a preset's business: ?norestir / the Tab row own it)
-    const L = p.lossy; S.checkerDirect = L.checkerDirect; S.gatherThird = L.gatherThird; S.rcHalfRate = L.rcHalfRate; S.volQuarter = L.volQuarter; S.dimRays = L.dimRays; S.dimRaysBelow = L.dimBelow; S.rcPeriods = [...L.rcPeriods];   // plain settings writes = exactly what the pause-menu rows do (engine.render mirrors them into setDivisors / rc.halfRate / the frame flag / lossyCfg each frame); a row flipped by hand afterwards sticks until the next preset is applied — by hand or by auto's ladder
+    const L = p.lossy; S.checkerDirect = L.checkerDirect; S.gatherThird = L.gatherThird; S.rcHalfRate = L.rcHalfRate; S.dimRays = L.dimRays; S.dimRaysBelow = L.dimBelow; S.rcPeriods = [...L.rcPeriods];   // plain settings writes = exactly what the pause-menu rows do (engine.render mirrors them into setDivisors / rc.halfRate / the frame flag / lossyCfg each frame); a row flipped by hand afterwards sticks until the next preset is applied — by hand or by auto's ladder
     S.giFireflyK = L.fireflyK;   // the gather's relative firefly bound, the same way (lossyCfg.w; the Tab ▸ Indirect light slider is the by-hand row)
     S.meshShadows = !!p.mesh; S.meshShadowsNear = p.mesh === 'near';   // mesh-traced character shadows: ultra every ray (measured free at 2133×1200: direct 17.4 / 17.9 / 17.1 ms off / on / off), high for NEAR receivers only (the contact seam between a limb and its proxy's shadow: +0.13 ms mesh pass + a bounded share of the direct rays — docs/internal/render-defects-0812.md §1), the rest off; the engine still ANDs meshShadowsAvailable; the pause-menu / Tab rows are the by-hand switch
     S.torchBounceCards = p.cards; // torch bounce cards: ultra + high (docs/internal/perf-2026-08-10.md — cheap everywhere, placed where the look was checked); Tab ▸ Indirect light is the by-hand switch
-    const K = p.caps; S.volLightCap = K.volK; S.volShadowEvery = K.volEvery; S.volStepVoxels = K.volStep; S.smokeMarchLights = K.marchLights;
-    S.froxelVol = froxelVeto.on ? false : froxelForce.on ? true : K.vol === 'froxel';   // the tier's volumetric path (Caps.vol above; ?nofroxel / ?froxel force it for the visit)   // the worst-case caps (Caps above): the volumetric march / beams …
+    const K = p.caps; this.putSmoke(p);   // the smoke's rows — the march's size, lights a step, shadow refresh, step length, the beam steps, the volumetric path (putSmoke: one writer with the Tab row's resmoke)
+    // the worst-case caps (Caps above): the volumetric march / beams …
     const F = p.froxel; S.froxelH = F.h; S.froxelD = F.d; S.froxelK = F.k; S.froxelHistory = F.hist; S.froxelTopRays = F.topRays;    // … the froxel volume's grid / lights per froxel / history (FroxelTier above; settings.froxelVol itself is not the preset's: ?nofroxel / the Tab row own it) …
     S.particleBirths = K.births;                                                                           // … GPU particle births a frame (engine.render hands it to Particles.prepare; the queue carries the rest) …
     S.debrisCap = K.debris;                                                                                // … the destruction lane's rigid-debris pool (game/debris.ts reads it live: a full pool demotes new break-offs to particles) …
@@ -511,7 +555,7 @@ export class Quality {
     if (c.dts.length >= 54 || c.t > 3) this.decide();
   }
   /** The pure decision (module-level `plan`), kept on the instance for the console: `__quality.plan(58, 9, 'high', 1, 900, 2)`. */
-  plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS): Plan { return plan(gpuMs, fixedMs, cur, effNow, cssH, dpr, budgetMs, this.engine.settings.taau !== false, this.oneGrid()); }
+  plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: number, cssH: number, dpr: number, budgetMs = PLAN_BUDGET_MS): Plan { return plan(gpuMs, fixedMs, cur, effNow, cssH, dpr, budgetMs, this.engine.settings.taau !== false, this.oneGrid(), this.smokeKeep()); }
   private decide() {
     const c = this.calib; c.done = true;
     const med = (a: number[]) => { const b = [...a].sort((x, y) => x - y); return b.length ? b[Math.floor(b.length / 2)] : NaN; };

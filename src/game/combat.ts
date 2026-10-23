@@ -405,7 +405,7 @@ export function hitPlayer(g: Game, fromDir: Vec3) {
     pl.pistol.cancelReload(); pl.rifle.cancelReload(); pl.char.anim.cancelReload(); pl.throwHeld = false; pl.pendingThrow = null;
     if (inHand) { dropFromHand(g, pl.char, inHand.def.drop, pl.char.gunDir, fromDir, inHand.def.suppressed); if (inHand === pl.rifle) pl.rifleGone = true; }   // what was in the hand leaves it — the Five-seveN can and all, or the whole FN2000 (its own item body: 'rifle' fill 1); a holstered pistol stays on the thigh, a slung rifle on his back
     pl.char.ragdollize(g.col, fromDir, false);            // thrown along the round, like the guards; the thud plays when the trunk lands (updatePlayer)
-    { const ck = g.saves?.newest(true, g.mission.stats.elapsed); g.msg(ck && g.saves.isThisRun(ck) ? "you're down — Enter goes back to the last checkpoint (Shift+Enter restarts the encounter)" : "you're down — Enter to restart the encounter"); }   // (game/savestate.ts: the down card's default is that checkpoint too)
+    { const ck = g.saves?.newest(true, g.mission.stats.elapsed); g.msg(ck && g.saves.isThisRun(ck) ? "you're down. press Enter to go back to the last checkpoint, or Shift+Enter to restart the mission" : "you're down. press Enter to restart the mission"); }   // (game/savestate.ts: the down card's default is that checkpoint too)
   } else g.msg(pl.hitsLeft === 1 ? 'hit — one more and you are down' : 'you were hit');
 }
 
@@ -703,8 +703,8 @@ export function detonateStun(g: Game, it: Item, borrowed = false, sam?: { side?:
         else if (own && sam?.spare && !SAMSTUN.ownSeen) reach = false;
         if (reach) { if (!full) { if (d <= F.ownM) samSecs = F.ownSecs * k; } else { samSecs = lerp(F.secs[0], F.secs[1], u) * k; stag = lerp(F.stagger[0], F.stagger[1], u) * k; } } }
       if (samSecs > 0) { dazzlePlayer(g, samSecs, at); if (stag > 0) staggerPlayer(g, stag, v3.sub(g.player.char.pos, at)); } } }
-  g.msg(side === 'hostile' ? (n ? `their stun charge — ${n} dazzled` : 'their stun charge went off') : n ? `stun canister — ${n} guard${n > 1 ? 's' : ''} dazzled` : 'stun canister went off');   // (a defender's: pressure.ts PRESSURE.stuns)
-  if (samSecs > 0) g.msg(`${samSide === 'player' || samSide === 'operative' ? 'stun canister' : 'their stun charge'} — you are blinded`);
+  g.msg(side === 'hostile' ? (n ? `their stun charge — ${n} dazzled` : 'their stun charge went off') : n ? `flashbang — ${n} guard${n > 1 ? 's' : ''} dazzled` : 'flashbang went off');   // (a defender's: pressure.ts PRESSURE.stuns)
+  if (samSecs > 0) g.msg(`${samSide === 'player' || samSide === 'operative' ? 'a flashbang' : 'their stun charge'} blinded you`);
 }
 
 /** Sandbox / panel: drop an armed canister at `p` as if it had just landed there, thrown from where the player stands (short fuse, no inventory cost). */
