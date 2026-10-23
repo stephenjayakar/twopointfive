@@ -15,8 +15,15 @@
 //   7. A WALK KEY HELD DOES NOT SHUT THE MODE OUT: on a step with no feet, Shift with the command key puts the mode up with W still down;
 //   8. THE WORD'S LOCK HOLDS INSIDE THE MODE: four men stacked on a door before the word's step wait there — a second right click on that door is no
 //      entry, and the right button held gives no ring.
-// TUTPLAN_BREAK=1 = every step's `allow: ['plan']` is taken out of the lesson before the run: lines 3, 4, 6, 7 and 8 must fail (line 5 is excused the mode's
-// state under the break, and line 6's break is its own: the cue is not sent).   exit 0 = all hold · 1 = one does not
+//   9. HIS FEET COME WITH THE FIRST WALK, AND EVERY PLAN IS LAID FROM ITS SPOT WITH THE VIEW HELD NEAR HIM (cmdring.ts `planNear`, raised here as the page has
+//      it; it holds only where the frame leaves him his feet). The frame itself does not give `move`: the first step that does is a walk step, after the
+//      squad has been sent — before it the walk keys are dead (line 2) and a squad that follows him cannot do a step for him. Then he is stood on the gate's
+//      mark and on each spot a walk step asks for, in the lesson's own order and with the lesson on that step, and from there the walk keys take the view
+//      toward every place the steps up to the next walk point at: a step's mark, the end of its drag, the point its view test wants. Each mark must come onto
+//      the picture and each view test must pass; from the first walk on the view's rule must hold, and the view must stay inside its box.
+// TUTPLAN_BREAK=1 = every step's `allow: ['plan']` is taken out of the lesson before the run: lines 3, 4, 6, 7, 8 and 9 must fail (line 5 is excused the mode's
+// state under the break, and line 6's break is its own: the cue is not sent). TUTPLAN_BREAK=spots = line 9 never leaves the gate: it must fail (the three
+// spots are what puts each plan inside the view).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -27,7 +34,7 @@ const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
-const VERBOSE = process.argv.includes('--verbose'), BREAK = process.env.TUTPLAN_BREAK === '1', LEVEL = 'tut-plan', DT = 1 / 60;
+const VERBOSE = process.argv.includes('--verbose'), BREAK = process.env.TUTPLAN_BREAK === '1', AT_GATE = process.env.TUTPLAN_BREAK === 'spots', LEVEL = 'tut-plan', DT = 1 / 60;
 type V = number[];
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
@@ -39,7 +46,7 @@ async function rig(seed = 1) {
     if (BREAK) for (const T of level.scenarios!.lesson!.steps) if (T.allow) T.allow = T.allow.filter((a: string) => a !== 'plan');
     W = await standUp({ uploadEvery: 4, level, seed });
     // (the page's own: the frame, the ring on the command key and plan mode with its three later switches — the frozen stand holds each off)
-    RAILS.on = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true }); AUTOPILOT.on = true;
+    RAILS.on = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planNear: true }); AUTOPILOT.on = true;
     started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
   const g = W.game, I = W.input;
@@ -58,7 +65,7 @@ async function rig(seed = 1) {
 export async function tutplanCheck(): Promise<boolean> {
   let all = true; const keep = { on: RAILS.on, rnd: Math.random, knobs: knobsCopy(), ap: AUTOPILOT.on };
   const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  console.log(`the plan mode mission (levels/${LEVEL}.json)${BREAK ? ' — TUTPLAN_BREAK=1: no step allows `plan`, lines 3, 4, 6, 7 and 8 must fail' : ''}`);
+  console.log(`the plan mode mission (levels/${LEVEL}.json)${BREAK ? ' — TUTPLAN_BREAK=1: no step allows `plan`, lines 3, 4, 6, 7, 8 and 9 must fail' : AT_GATE ? ' — TUTPLAN_BREAK=spots: every plan is tried from the gate, line 9 must fail' : ''}`);
   try {
     const R = await rig(), g = R.g, I = R.I, O = g.orders, P = O.plan, L = g.level.scenarios.lesson, pl = g.player;
     // ---- 1
@@ -120,6 +127,41 @@ export async function tutplanCheck(): Promise<boolean> {
       const on = onDoor(); Q.I.clicked |= 4; Q.I.buttons |= 4; Q.run(0.8); const ring = !!QO.menu; Q.I.buttons &= ~4; Q.run(1.5); const held2 = waits() && shut();
       verdict(stacked && locked && again && held1 && on && !ring && held2, 'the word\'s lock holds inside the mode: four stacked on a door before the word\'s step wait there — a second right click on it is no entry, and the right button held gives no ring',
         `stacked and waiting ${stacked} (${QP.chains.map((C: any) => C.phase).join(',') || 'no chain'}) · word locked ${locked} · after a second right click: waiting ${held1} · the button held: ring ${ring}, waiting ${held2} · door shut ${shut()} · step '${qg.lesson.step?.id}'`); }
+    // ---- 9: his feet come with the first walk, and every plan is laid from its spot with the view held near him. The spots and the places are the lesson's own
+    { const N = await rig(), ng = N.g, NP = ng.orders.plan, np = ng.player, w = N.W.canvas.clientWidth, h = N.W.canvas.clientHeight, EDGE = 40, steps = ng.level.scenarios.lesson.steps as any[];
+      const find = (t: any, is: string): any => !t ? null : t.is === is ? t : (t.of ?? []).map((x: any) => find(x, is)).find(Boolean) ?? null;
+      const isWalk = (T: any) => !!find(T.done, 'in') && !find(T.done, 'planView') && !T.planLine;
+      const first = steps.findIndex(T => (T.allow ?? []).includes('move')), feet = !ng.level.scenarios.lesson.rails.allow.includes('move') && first > 0 && isWalk(steps[first]) && steps.slice(0, first).some(T => !!find(T.done, 'squad'));
+      type Ask = { i: number; from: string; spot: V; id: string; p: V; r?: number };
+      const asks: Ask[] = []; let spot: V = [...np.char.pos], from = 'the gate';
+      steps.forEach((T, i) => {
+        if (isWalk(T)) { const a = find(T.done, 'in').area; if (!AT_GATE) { spot = [(a.x0 + a.x1) / 2, 0, (a.z0 + a.z1) / 2]; from = `'${T.id}'`; } return; }
+        const view = find(T.done, 'planView'); if (view) asks.push({ i, from, spot, id: T.id, p: view.at, r: view.r ?? 5 });
+        if (T.at) asks.push({ i, from, spot, id: T.id, p: T.at });
+        if (T.at && T.toward) { const l = flat(T.at, T.toward); asks.push({ i, from, spot, id: T.id, p: [T.at[0] + (T.toward[0] - T.at[0]) / l * 3, 0, T.at[2] + (T.toward[2] - T.at[2]) / l * 3] }); }
+      });
+      // (he is stood there by the game's own hand, unseen and unhurt: in a fresh game the rooms he would be walked into are still held)
+      N.run(0.5); ng.playerInvisible = true; ng.godMode = true;
+      const bad: string[] = [], corner = Math.hypot(CMDRING.planNearSideM, Math.max(CMDRING.planNearAwayM, CMDRING.planNearBackM)); let tight = 1e9, tightAt = '', far = 0, held = 0, after = 0;
+      for (const a of asks) {
+        if (NP.up) N.press('KeyB', ['ShiftLeft']); ng.lesson.i = a.i; ng.teleportPlayer([a.spot[0], 0, a.spot[2]]); N.run(0.1); ng.lesson.i = a.i;
+        if (flat(np.char.pos, a.spot) > 0.3) { bad.push(`'${a.id}': he could not be stood on ${a.from}'s spot (${np.char.pos[0].toFixed(1)}, ${np.char.pos[2].toFixed(1)})`); continue; }
+        N.press('KeyB', ['ShiftLeft']); N.run(0.2); ng.lesson.i = a.i;
+        if (!NP.up || !NP.look) { bad.push(`'${a.id}': the mode did not come up`); break; }
+        const boxed = !ng.rails.locks('move'); if (a.i > first && first > 0) { after++; if (boxed) held++; }
+        // (the walk keys toward the place, by where it is on the picture, until it is in the middle or the view stops)
+        for (let i = 0, still = 0; i < 400 && still < 12; i++) { const [x, y] = N.px([a.p[0], 0, a.p[2]]), l0 = [...NP.look];
+          const keys = [x > w / 2 + 14 ? 'KeyD' : x < w / 2 - 14 ? 'KeyA' : '', y > h / 2 + 14 ? 'KeyS' : y < h / 2 - 14 ? 'KeyW' : ''].filter(Boolean); if (!keys.length) break;
+          N.run(2 / 60, keys); ng.lesson.i = a.i; still = flat(NP.look, l0) < 1e-3 ? still + 1 : 0; }
+        N.run(0.3); if (boxed) far = Math.max(far, flat(NP.look, np.char.pos));
+        const [x, y] = N.px(a.p), m = Math.min(x, y, w - x, h - y), off = a.r !== undefined ? flat(NP.look, a.p) : 0;
+        if (a.r !== undefined) { if (off >= a.r) bad.push(`'${a.id}' from ${a.from}: the view stops ${off.toFixed(1)} m from the point its test wants within ${a.r} m`); }
+        else { if (m < tight) { tight = m; tightAt = `'${a.id}' from ${a.from}`; } if (m < EDGE) bad.push(`'${a.id}' from ${a.from}: (${a.p[0].toFixed(1)}, ${a.p[2].toFixed(1)}) is ${m < 0 ? 'off the picture' : `${m.toFixed(0)} px from its edge`}`); }
+      }
+      const spots = new Set(asks.map(a => a.from)).size;
+      verdict(feet && asks.length >= 12 && (AT_GATE || spots >= 4) && !bad.length && held === after && after > 0 && far <= corner + 0.3,
+        'his feet come with the first walk, and every plan is laid from its spot with the view held near him: each mark comes onto the picture and each view test passes from the spot the lesson has walked him to',
+        `the frame gives no \`move\`, the first step that does is ${first < 0 ? 'NONE' : `'${steps[first].id}' (a walk step after the squad is sent: ${feet})`} · ${asks.length} places from ${spots} spots · the view's rule held on ${held} of ${after} asked after that step, the view's point never more than ${far.toFixed(1)} m from him there (the box's far corner: ${corner.toFixed(1)} m) · the tightest mark: ${tightAt}, ${tight.toFixed(0)} px inside the picture · ${bad.length ? bad.join(' · ') : 'none out of reach'}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; knobsBack(keep.knobs); AUTOPILOT.on = keep.ap; }
   console.log(`=== tutplan: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

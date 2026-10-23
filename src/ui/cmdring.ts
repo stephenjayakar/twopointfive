@@ -121,7 +121,7 @@ export class CmdRingViz {
       this.hintWorld = document.createElementNS(NS, 'path') as SVGPathElement; this.hintWorld.setAttribute('class', 'hw');
       this.hintGlyph = document.createElementNS(NS, 'path') as SVGPathElement; this.hintGlyph.setAttribute('class', 'hg'); g.append(this.hintWorld, this.hintGlyph); }
     const g = this.hint; g.style.display = ''; g.setAttribute('class', `cmdhint k-${H.kind}${H.held ? ' held' : ''}${H.tone && H.tone !== 'gold' ? ` t-${H.tone}` : ''}`);
-    this.hintWorld!.setAttribute('d', d); this.hintGlyph!.setAttribute('d', GLYPH[H.kind]); this.hintGlyph!.setAttribute('transform', `translate(${gx.toFixed(1)},${gy.toFixed(1)}) scale(${s.toFixed(3)})`);
+    this.hintWorld!.setAttribute('d', d); this.hintGlyph!.setAttribute('d', H.glyph ? GLYPH[H.kind] : ''); this.hintGlyph!.setAttribute('transform', `translate(${gx.toFixed(1)},${gy.toFixed(1)}) scale(${s.toFixed(3)})`);   // (cmdring.ts plainHint: no glyph, the outline alone)
   }
   /** plan mode's picture (planmode.ts planView): rebuilt only when what it shows has changed */
   private updatePlan(game: Game, cam: FollowCamera, w: number, h: number, tz: number) {
