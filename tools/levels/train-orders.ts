@@ -1,7 +1,9 @@
-// TRAIN-ORDERS — Training 5, "Orders and door tools": commanding a pair. The orders menu on the ground (move, cover, hold, fall in), the usual order on a
-// door (stack up), then the door tools on four houses, one each: open and clear · bang and clear · the door held from
-// outside, then a can and in · a charge on a locked door, blown on the word.
-// A ROOM CLEAR (game/roomclear.ts) for the pair, with a `scenarios.lesson` block (game/lesson.ts) whose steps name each key and move on when the thing is DONE.
+// A CHECK'S STAGE, NOT A MISSION: this was Training 5, "Orders and door tools". The seven Training lessons were taken out 2026-10-23 (the tutorial's six
+// missions replaced them): its row on the mission list, its lesson block and its scripted player are gone and nothing on a menu loads it. The level is kept
+// because checks stand on its floor: wordcuts-check (the held kitchen door, hut_d), thrpie-check, savetimeline-check and lesson-check's kit lines. Their row
+// for it is tools/qa/yards.ts.
+//
+// TRAIN-ORDERS: a room clear (game/roomclear.ts) for the pair on four houses, a door each: hut_a · hut_b (and its side door) · hut_d · hut_c, locked.
 //
 // THE PLACE: THE QUARTERS, a short gravel street of four one-room houses — the compound's fifth corner (west: the range's T-walls; east: the white house).
 // The street is dark and empty (the pair fights in it); the landmark is THE BLUE WATER TANK between the two north houses; each room is its own picture.
@@ -18,14 +20,12 @@
 //   z 22 └───────────└────────┘──└──────────┘───────────┘
 //
 // Four men hold the four houses, one each, and they STAY in them (a defender squad a house, `mayLeave: false`, no door of theirs to wedge): the street is the
-// player's to give orders in, and each fight is the one the lesson sends the pair into.
+// player's to give orders in, and each fight is one house's.
 //
 //   bun run tools/levels/export.ts train-orders [--check]    → levels/train-orders.json
 //   bun run map:check train-orders --no-runs                 the structure against the built floor
-//   bun run tools/qa/lesson-check.ts train-orders            the lesson block against the built floor
-//   bun run tools/qa/lesson-run.ts train-orders              the scripted player through every step to 'structure taken'
-//   page: ?levelFile=train-orders.json&roomclear=1    (&nolesson: the same level as its room clear alone)
-import type { LessonData, LessonTest, StructureData } from '../../src/scene/scenarios';
+//   page: ?levelFile=train-orders.json&roomclear=1
+import type { StructureData } from '../../src/scene/scenarios';
 import { BoxFlag } from '../../src/scene/boxes';
 import { trainGround, TRAIN_MATERIALS, EXIT_E, HALF, YARD } from './train-ground';
 import { livedTrain } from './lived-train';
@@ -125,49 +125,13 @@ export function build() {
     squads: [{ id: 'a', name: 'Alpha', rooms: ['a'], mayLeave: false, barricade: [] }, { id: 'b', name: 'Bravo', rooms: ['b'], mayLeave: false, barricade: [] }, { id: 'c', name: 'Charlie', rooms: ['c'], mayLeave: false, barricade: [] },
       { id: 'd', name: 'Delta', rooms: ['d'], mayLeave: false, barricade: [] }],
   };
-  // every deed names ITS door (`on`), so an order on the wrong hut moves nothing on; and every step from the first door on has a way through whatever the
-  // player did instead — its hut TAKEN some other way (no can or charge left in the kit, a door opened by another tool) passes the step that asked for the tool.
-  const taken = (room: string): LessonTest => ({ is: 'taken', room }), gave = (order: string, on: string): LessonTest => ({ is: 'did', what: `order:${order}`, on });
-  const or = (...of: LessonTest[]): LessonTest => ({ is: 'any', of }), and = (...of: LessonTest[]): LessonTest => ({ is: 'all', of });
-  const bags: [number, number, number] = [11.6, 1, 11.7], barrier: [number, number, number] = [18.7, 1, 15.4];
-  const lesson: LessonData = {
-    title: 'Orders and door tools',
-    steps: [
-      // the orders on the ground: the menu opened on the ground by the sandbags STAYS UP for the next line's digit (X again would put it away, and 1 with no
-      // menu is his pistol: the line says what to do then); the move passes however it was given (the digit, B, the wheel and Space). Then each line whole by
-      // itself (X, then the digit): guns down the street, hold, fall in
-      { id: 'menu', line: 'X on the ground by the sandbags to open the orders menu', done: { is: 'flag', flag: 'menu' }, at: bags },
-      { id: 'move', line: 'Press 1 to send the pair there. If the menu\'s gone, X on the ground again', done: { is: 'did', what: 'order:move' }, at: bags },
-      { id: 'cover', line: 'X down the street, then press 2 to have the pair cover that way', done: { is: 'did', what: 'order:cover' }, at: [17.0, 1, 14.0] },
-      { id: 'hold', line: 'X on the ground, then press 4 to have the pair hold', done: { is: 'did', what: 'order:hold' } },
-      { id: 'fallin', line: 'X on the ground, then press 3 to have the pair fall in behind you', done: { is: 'did', what: 'order:fallIn' } },
-      // four doors, four ways in
-      { id: 'stack', line: 'Press B on the yellow house\'s door to stack the pair up beside it', done: or(gave('stack', 'hut_a'), taken('a')), at: doorA },
-      { id: 'open', line: 'X on that door, then press 5, then 1 to open and clear', done: or(gave('openClear', 'hut_a'), taken('a')), at: doorA },
-      { id: 'in1', line: 'Stay out of the doorway. When they call clear, walk in', done: and(taken('a'), { is: 'in', area: { ...A } }), at: [16.5, 1, 9.4] },
-      { id: 'bang', line: 'Go to the green house. X on either door, then press 5, then 2 to bang and clear', done: or(gave('bangClear', 'hut_b'), gave('bangClear', 'hut_b_east'), taken('b')), at: doorB },
-      { id: 'in2', line: 'When they call clear, walk in', done: and(taken('b'), { is: 'in', area: { ...B } }), at: [25.2, 1, 9.4] },
-      // the kitchen is held from the door, then THE SECOND ORDER: 'bang and clear' given to the men holding it (one can, then in). The word alone (F) sends
-      // them in too, but with no can since DOORTOOLS.wordNoCan, and this room's man is awake, aimed and where neither jamb sees him: sixteen shipped dice
-      // on the word, both teammates dead on ten; on the can, nobody lost on sixteen. F still ends the step (a player who knows the key is not held up)
-      { id: 'thr', line: 'Go to the kitchen. X on its door, then press 5, then 4 to hold at the door', done: or(gave('thresholdHold', 'hut_d'), taken('d')), at: doorD },
-      { id: 'word', line: "They're holding the door. Press X on it, then 5, then 2 to throw a flashbang in first", done: or(gave('bangClear', 'hut_d'), { is: 'word' }, taken('d')), at: doorD },
-      { id: 'in3', line: 'When they call clear, walk in', done: and(taken('d'), { is: 'in', area: { ...D } }), at: [16.0, 1, 18.6] },
-      // the closer: the one lit door on the street. The marker moves to the barrier once the charge is ordered: the place to watch it from
-      { id: 'charge', line: 'The armoury is locked. X on its door, then press 5, then 3 to set a charge', done: or(gave('charge', 'hut_c'), taken('c')), at: doorC },
-      { id: 'blow', line: 'When the pair has backed away, press F to blow the charge', done: or({ is: 'door', door: 'hut_c', state: 'broken' }, taken('c')), at: barrier },
-      // the pay-off's line while the pair clears the black room (the room clear ends the frame it is called clear, and the row is then the scenario's own:
-      // the step still goes by when he walks in, and at once for a player already inside)
-      { id: 'in4', line: 'When they call clear, walk in', done: and(taken('c'), { is: 'in', area: { ...C } }), at: [23.0, 1, 18.6] },
-    ],
-  };
   const front: [number, number, number] = [25.5, 1.0, 19.7];
   const out = T.finish({
     spawn: [10.6, 0, 14.0],
     mission: { serverRoom: { ...C }, entryDoor: 'hut_c', rack: { index: 0, front, halfW: 0.3 }, exfilDoor: 'gate_e', exfilX: EXIT_E.x, exfilZ: EXIT_E.z, exfilOut: EXIT_E.out },
     // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the ground's west gate from the track outside it, the
-    // street beyond the wall. The lesson starts the pair a few steps INSIDE that gate, so `ref` says which side the picture is taken from.
-    scenarios: { roomClear, lesson, places: { areas: [{ name: 'street', bounds: { ...YARD } }] }, doorNames: [{ door: 'hut_a', name: 'yellow house door' }, { door: 'hut_b', name: 'green house door' }, { door: 'hut_c', name: 'armoury door' }, { door: 'hut_d', name: 'kitchen door' }, { door: 'hut_b_east', name: 'green house side door' }], kitView: { ways: [{ door: 'gate_w', ref: [5, 14.25] }] } },
+    // street beyond the wall. The pair starts a few steps INSIDE that gate, so `ref` says which side the picture is taken from.
+    scenarios: { roomClear, places: { areas: [{ name: 'street', bounds: { ...YARD } }] }, doorNames: [{ door: 'hut_a', name: 'yellow house door' }, { door: 'hut_b', name: 'green house door' }, { door: 'hut_c', name: 'armoury door' }, { door: 'hut_d', name: 'kitchen door' }, { door: 'hut_b_east', name: 'green house side door' }], kitView: { ways: [{ door: 'gate_w', ref: [5, 14.25] }] } },
   });
   furnish(T);
   return out;

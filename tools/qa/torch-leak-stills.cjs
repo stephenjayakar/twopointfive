@@ -26,14 +26,14 @@ const D = Math.PI / 180;
 const STAGINGS = {
   // levels/train-silent.json: the mud wall along x = 15 (z 6‥18, 0.24 thick, 2.4 high, open sky). lamp_west (11.4, 3.37, 8.4; a spot straight down, 90 cd, outer 52°) lights the floor WEST of it,
   // lamp_post (20.9, 3.37, 7.3) the floor east of it. The guard stands EAST of the wall, 1.3 m off its face, square on to it, beam toward −x: the cone's axis continues over lamp_west's pool.
-  face: { level: 'train-silent.json', q: 'quiet&difficulty=hard', guard: { pos: [16.4, 0, 8.6], yaw: -90 * D, aimPitch: -0.2 }, pin: { look: [14.2, 0, 8.6], yaw: 0, pitch: 65 * D, dist: 10 },
+  face: { level: 'train-silent.json', q: 'quiet&quietfog=off&difficulty=hard', guard: { pos: [16.4, 0, 8.6], yaw: -90 * D, aimPitch: -0.2 }, pin: { look: [14.2, 0, 8.6], yaw: 0, pitch: 65 * D, dist: 10 },
     far: { x0: 11.9, x1: 14.5, z0: 7.5, z1: 9.7 }, ctl: { x0: 11.9, x1: 14.5, z0: 10.6, z1: 12.2 }, park: [-40, 0, -40] },
   // the same wall, the beam meeting it at 45°: the cone's far edge runs along the far-side floor
-  skew: { level: 'train-silent.json', q: 'quiet&difficulty=hard', guard: { pos: [16.3, 0, 10.2], yaw: -135 * D, aimPitch: -0.2 }, pin: { look: [14.2, 0, 8.8], yaw: 0, pitch: 65 * D, dist: 10 },
+  skew: { level: 'train-silent.json', q: 'quiet&quietfog=off&difficulty=hard', guard: { pos: [16.3, 0, 10.2], yaw: -135 * D, aimPitch: -0.2 }, pin: { look: [14.2, 0, 8.8], yaw: 0, pitch: 65 * D, dist: 10 },
     far: { x0: 11.9, x1: 14.5, z0: 7.2, z1: 9.4 }, ctl: { x0: 11.9, x1: 14.5, z0: 10.6, z1: 12.2 }, park: [-40, 0, -40] },
   // (g) the OTHER light on the far-side floor is another CARRIED light: guard A east of the wall, his lens ~0.5 m off its face, square on; guard B west of the wall (the far side), his torch
   // burning in both runs, beam running north along x ≈ 12.6 over the floor A's occluded cone would land on. Compare A on vs A off.
-  pair: { level: 'train-silent.json', q: 'quiet&difficulty=hard', guard: { pos: [16.4, 0, 13.0], yaw: -90 * D, aimPitch: -0.2 }, guardB: { pos: [13.2, 0, 16.4], yaw: 180 * D, aimPitch: -0.2 },
+  pair: { level: 'train-silent.json', q: 'quiet&quietfog=off&difficulty=hard', guard: { pos: [16.4, 0, 13.0], yaw: -90 * D, aimPitch: -0.2 }, guardB: { pos: [13.2, 0, 16.4], yaw: 180 * D, aimPitch: -0.2 },
     pin: { look: [14.0, 0, 13.4], yaw: 0, pitch: 65 * D, dist: 10 }, far: { x0: 12.2, x1: 14.75, z0: 11.4, z1: 14.4 }, ctl: { x0: 12.2, x1: 14.75, z0: 14.6, z1: 15.3 }, park: [-40, 0, -40] },
 };
 const ST = STAGINGS[STAGING]; if (!ST) { console.error(`unknown --staging ${STAGING}: ${Object.keys(STAGINGS).join(' | ')}`); process.exit(2); }
