@@ -1577,6 +1577,60 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fire: all mended, and the rate came down from 26° to 11.5° a second on that reading. Real page: `autocam-page.cjs` walks across the view with the mode on
   (the lean, the cap, home). One floor, one seed. NOBODY HAS SEEN OR PLAYED IT, NEVER ON A GPU: whether a view that turns under a held walk key and a live
   cursor is welcome in a fight is the maintainer's to say, and every number is a first guess.
+- **The auto camera's numbers are the player's: a mode and rows on Options, gentle where nobody has chosen** (`AUTOCAM.tune`, the foot of
+  `src/host/autocam.ts`, the rows in `src/ui/findme.ts autoRows`, 10-23; the maintainer, of his first play of the mode: "I was getting a little bit
+  motion sick with my first test of the auto camera. I think it's from like having too much rotation ... come up with like a ton of different
+  options of like modes or like sliders to configure in the settings panel, then we can iterate on that"). WHAT WAS FOUND IN THE CODE: a turn of
+  the mode's own took a share of what was left each second (`turnRate` 5), so it BEGAN at its fastest: a quarter turn opened at about 450 degrees a
+  second, and the double tap's swing (`BEHIND.rate` 12) at more than twice that. A turn at rest for the thing framed on the lens's side is also
+  most of a half turn, each time he stops at a door the lens is past.
+  SWITCH: on in the page (`?autotune=0` = every number the module's, the camera of the two bullets above, and no rows), OFF in the module and on
+  the frozen stand (`FROZEN_HOLDS['AUTOCAM.tune']` and a row for each number gentle moves, `TPS_AUTOTUNE=1`; pinned in `host/standup.ts`). It
+  rides `AUTOCAM`: a recording from before the key replays with the switch off and the numbers it has no word for at the module's, the ones it
+  carries left alone (`autoTuneOld`, `journal.ts applyKnobs`). The view is the seat's input, so no recording and no digest can tell one tuning
+  from another.
+  THE MODES (`AUTO_MODES`; `AUTOTUNE.mode`): `free` = the numbers as built · `gentle` (THE START) = a turn at rest only for a wall that hides
+  him (`restAhead` off), every turn of its own EASED (`turnCap` 30 degrees a second) and the double tap's swing eased too (`swingCap` 180), the
+  fight's lean 15 degrees at 6 a second and none for the way he walks · `rest` = those turns and no lean · `never` = the view turns only by
+  the hand and by the double tap he asks it with (the frame and the zoom go on).
+  THE EASED TURN (`turnEase`, `host/loop.ts comeRound`): a critically damped spring with a top speed and a ramp up to it (`turnRamp` 0.6 s),
+  whose rate is the top speed over `turnLand` (0.24 rad), so it starts from rest, brakes over the same angle at any speed, and lands without
+  going past or stepping; a goal gone round to the other side, or a speed handed on from a faster turn, is braked no harder than a landing
+  brakes. One ended by a walk key, a button or the hand's own turn dies away (`turnCoast`); one under way as the view goes to somebody else
+  (plan mode, the sky seat, a show) ends there. Rules changed WITH it, and only where `turnCap` is over none: the hand's mouse does not end it
+  and his aim is not carried through it (it is seconds long, and slow enough for the hand to follow, as the sway is; a quick turn as built
+  still carries the aim and ends at the mouse); `gap` is counted from where an eased turn or swing is SEEN TO STOP (`turnSeen`, a degree a
+  second: from where it began, a turn stopped midway began again at once; the last of its settling is not waited out). The swing in the mode
+  goes by the same spring under `swingCap`: it keeps the aim carry (the tap is "look where I look"), a walk key does not end it (he may tap
+  on the run, and walks an arc while it turns), a shot does, and the hand taking the view back ends it.
+  THE ROWS, each read off the table and written through `setAutoTune`, a row over a mode kept only while it differs from the mode's own (the
+  mode stays lit and its line reads "This is Gentle with your own changes below"): turn when a wall hides you (`rest`) and turn to face the
+  door ahead (`restAhead`), each on its own; turn speed (`turnCap`; one notch past the fastest is "Quick", the share as built); wait before it
+  turns (`still`); time between turns (`gap`); turn in a fight (`swayFightMax`, to `swayMax`; at none a fight leans nothing for his walk
+  either); lean when you move sideways (`swayMove`); lean speed (`swayRate`; over the speed as built the sway's spring is that much stiffer, or
+  a small lean never reached it); swing when you double tap (`swing`: off, the tap that puts the mode on turns nothing); swing speed
+  (`swingCap`, "Quick" as above); framing (`leanK`, a share of every lean of the frame, to none); framing speed (`lean`); zoom (`zoomAmt`, a
+  share of how far the zoom leaves the hand's own, to none); zoom speed (`zoomRate`); stay on the squad (`beatSecs`). A slider's ends are
+  `AUTO_RANGE`, in the table's units; the notch a mode's own number shows as puts back that number.
+  KEPT PER MACHINE (localStorage `twopointsix.autotune`: the mode and the rows over it; nothing where it is the start), read once as the
+  module loads: a line whose mode this build has not is not read at all, a key of the wrong kind is dropped, a number is held to `AUTO_RANGE`.
+  Reset on Options puts the start back. `?autoturn=0`, `?autozoom=0` and `?autosway=0` still stand over all of it.
+  CHECK: `autocam` lines 17 to 20 (lines 1 to 16 run with the tuning off, on the numbers as built), both stands, `AUTOTUNE_BREAK=1` red on 17,
+  18 and 19: the modes, what is kept and what is refused; gentle's turns and each reason on its own row; the eased turn (from rest, under its
+  top speed, no step, there without going past, every notch a quicker turn, ended midway it dies away); the sway's two mends; the two shares;
+  and through the whole Game on the free and the fixed step: the swing off, the swing eased, a shot ending a slow swing, a wall's turn tick by
+  tick with the mouse moved in the middle of it, a walk key ending it, and the next turn waiting out the gap from there. Not in a line: a turn
+  under way as plan mode opens, and an eased turn meeting a lean of the sway's (lines 17 to 19 run with the sway parked off). `tools/qa/autocam-page.cjs` drives the real page:
+  its old lines under `?autotune=0`, then the page as it opens (a real double tap's swing frame by frame, the rows, a mode clicked, rows slid,
+  a reload, Reset; `ONLY=tune` for those alone).
+  MEASURED (one floor, one seed, headless): a wall's 45 degrees at 10 / 20 / 30 / 40 / 60 / 80 / 100 / 120 degrees a second takes 15.4 / 8.0 /
+  5.5 / 4.2 / 3.0 / 2.4 / 2.0 / 1.7 s, the last part of each a slow settle; its first step is 2.8% of the top speed's, where the turn as
+  built covered 10 degrees of a 120 degree turn in its first frame; a half turn of the swing at 180 degrees a second takes 2.0 s; a walk key
+  at 30 degrees a second leaves 2.5 degrees more.
+  NOT DONE: nothing on the HUD says the mode came on when the swing is off; the springs of the sway and of the turn are two copies of one
+  idea; a recording played back writes its own numbers into the table until the visit ends (the mode's line then says they are not the
+  mode's). The modes' numbers are FIRST GUESSES for his hand to settle (a row he settles on becomes a mode's own). Never seen on a GPU.
+  NOBODY HAS PLAYED IT: whether gentle is calm enough, and whether a slow turn that does not carry his aim reads right, are his to say.
 - **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
   the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
   notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the
