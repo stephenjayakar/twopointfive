@@ -1,6 +1,6 @@
-// WHAT TAB DOES, ON TRIAL: the key was freed when the debugger moved to backtick, and nothing in the game reads it. This is a short list of things it could do
-// for the player to try in play — each one something the game ALREADY has, put on Tab, never a new screen or a new verb — with 'nothing' the default (the build
-// as it was) and a fine place to end up. Chosen on Options ▸ Game ('Tab key'), kept per machine with that screen's other rows (ui/options.ts), or for one visit
+// WHAT TAB DOES: the key was freed when the debugger moved to backtick, and nothing in the game reads it. This is a short list of things it could do
+// for the player to try in play — each one something the game ALREADY has, put on Tab — with 'nothing' the module's own value (the build as it was, and
+// what anything headless has) and 'brief', the objectives card, what a played page gives it where nobody has chosen (`first`, below). Chosen on Options ▸ Game ('Tab key'), kept per machine with that screen's other rows (ui/options.ts), or for one visit
 // by `?tab=brief|run|who|keys|off`. The choices that lose come out again; this file is the one place they live.
 // SINCE: Tab is also the back key in the fight (game/backkey.ts, BACKKEY.tab): with a list up, a verb running or the launcher's arc held it backs out of
 // that, and a choice here gets the press only when there is nothing to back out of (main.ts asks Game.backable first).

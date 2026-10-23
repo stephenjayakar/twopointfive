@@ -420,6 +420,7 @@ async function main() {
   try { const v = localStorage.getItem('twopointsix.ocpNotice'); if (v === 'glance' || v === 'investigate') game.tune.ocpNotice = v; } catch { /* */ }   // the OCP'd-light rule (Tab ▸ Sandbox ▸ Detection) as this machine last left it
   let viewReplay: (() => void) | null = null;   // (the end card's Replay button: set once the replay key is made, below)
   let startBench: () => void = () => {};   // (set where the benchmark is built, below: ui/bench.ts)
+  TABKEY.first = navigator.webdriver === true ? 'off' : 'brief'; tabFromQuery(q); tabSettle();   // (what Tab does where nobody has chosen: before the menu is made, whose Options read it — ui/tabkey.ts, and the card's own lines below)
   const menu = new Menu({ engine, game, quality, audio, overlay, saveDue: () => savePending() && !game.saves.handNo(game), stopTour: () => { if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); }, focusGame: () => input.focusGame(), onStart: () => { attract.poke(); kitFresh(game); if (gestured) audio.start(); }, replay: () => viewReplay,
     startBench: () => startBench(), loadCheckpoint });
   window.__menu = menu;
@@ -691,10 +692,8 @@ async function main() {
   // Tab, while it is on trial (ui/tabkey.ts): 'run' = the pause card on 'Run so far' and back, 'keys' = Options ▸ Controls over a paused run and back. Never under a show.
   // 'brief' = a card of the objective in full and the squad over a held game, and back (ui/tabcard.ts) — what Tab does where nobody has chosen, on a page
   // somebody sits at (a page a script drives keeps Tab as it was: its checks press the key for other things).
-  TABKEY.first = navigator.webdriver === true ? 'off' : 'brief'; tabFromQuery(q); tabSettle();
-  const tabEl = document.getElementById('tabcard'); let tabUp = false, tabHtml = '';
-  const tabPaint = () => { if (!tabEl) return; const html = tabCardHtml(tabCardOf(game)); if (html !== tabHtml) { tabHtml = html; tabEl.innerHTML = html; } };
-  const tabShow = (on: boolean) => { tabUp = on && !!tabEl; tabEl?.classList.toggle('on', tabUp); if (tabUp) tabPaint(); else tabHtml = ''; };   // (painted once: the game is held under it)
+  const tabEl = document.getElementById('tabcard'); let tabUp = false;
+  const tabShow = (on: boolean) => { if (!tabEl) return; tabUp = on; tabEl.classList.toggle('on', on); if (on) tabEl.innerHTML = tabCardHtml(tabCardOf(game)); };   // (painted once: the game is held under it)
   const tabKey = (frozen: boolean) => {
     if (demo.active || game.director.showing || attract.live) return;
     const free = !frozen && !menu.isOpen;
@@ -737,13 +736,13 @@ async function main() {
     afterFreeze: (frozen) => { if (refreshStill) { refreshStill = false; if (frozen && canvas.clientWidth > 0 && canvas.clientHeight > 0) refreshFrozenStill(); } },   // (set by attract's onStop — refreshFrozenStill above; a stop that closed the card, i.e. the hand-over to the tour, needs none of it: that frame is live and under the tour's own veil)
     hotkeys: (frozen) => {
       if (bench.active) return;   // (hands off: P would quit its scene, F9 its recording)
-      if (tabUp && (menu.isOpen || optionsOpen() || scripted || TABKEY.does !== 'brief')) tabShow(false);   // (Tab's card, ui/tabcard.ts: a menu over it, or a script taking the page, puts it away)
+      if (tabUp && (menu.isOpen || optionsOpen() || overlay.cardUp || scripted || TABKEY.does !== 'brief')) tabShow(false);   // (Tab's card, ui/tabcard.ts: a menu or a lesson's card over it, or a script taking the page, puts it away)
       if (!frozen && input.hit('BracketLeft')) engine.settings.exposure /= 1.25;
       if (!frozen && input.hit('BracketRight')) engine.settings.exposure *= 1.25;
       if (TABKEY.does !== 'off' && !(CMDRING.on && CMDRING.key === 'Tab') && input.hit('Tab') && !(BACKKEY.tab && !frozen && game.backable())) {   // (…unless Tab is backing out of something this frame: game/backkey.ts)
         if (TABKEY.does === 'who') { if (!frozen) input.pressed.add(game.orders.knobs.whoKey); } else tabKey(frozen); }   // (what Tab does, on trial: ui/tabkey.ts — 'who' = a press of the orders' own key, handed to this frame's tick)
       if (!frozen && input.hit('Backquote')) panel.toggle();   // the debugger (the tweak panel) is on backtick's code: the backslash key while empty hands are a slot (host/keymap.ts SLOT); Tab is left to the game, and the debug views are a row on its Frame page (no key steps them)
-      if (frozen) { if (menu.mode === 'pause' && !missionsBusy() && !optionsOpen() && input.hit('F5') && input.saveKey?.()) { savePend = { m: game.mission, time: game.time }; menu.saveAsked(); } }   // (F5 on the pause card itself, no screen over it: the save by hand is written as play goes on — it is the recording's own input, so it goes through a tick like any press; a refusal is said on the feed there as ever)
+      if (frozen) { if ((menu.mode === 'pause' || tabUp) && !missionsBusy() && !optionsOpen() && input.hit('F5') && input.saveKey?.()) { savePend = { m: game.mission, time: game.time }; if (tabUp) tabShow(false); else menu.saveAsked(); } }   // (F5 on the pause card itself, no screen over it: the save by hand is written as play goes on — it is the recording's own input, so it goes through a tick like any press; a refusal is said on the feed there as ever)
       else if (savePend) { if (savePending()) input.pressed.add('F5'); else savePend = null; }   // (…handed over on every live frame until a tick has moved the clock: a frame with no tick keeps the press for the next one — host/loop.ts — and a card that came up again before any tick still has it)
       if (input.hit('F9')) perfrec.toggle();   // the perf recorder: works frozen or not (a pause-menu frame is data too)
       if (input.hit('F10')) sessionrec.toggle();   // the session journal: asks now, starts at the top of the next live update it may (a paused card holds it pending), stops at the end of one

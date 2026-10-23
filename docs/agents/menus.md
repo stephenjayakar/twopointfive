@@ -1752,17 +1752,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   middle of the screen: the OBJECTIVE under its own word with the par or clock at the right, its sentence, and where it lists (`objectiveList`,
   only under the word 'objective': a room clear's rooms) each thing with a tick (taken), an arrow (the one being called) or a ring (to do); the
   SQUAD with the block's own title note at the right (loud or quiet, the formation), a line a man in the squad's order with what he is doing
-  (`orders.statusOf`) and under it his kit in a line, a man lost struck, then the block's plain notes (what the squad carries between them, a
+  and what he covers (`orders.statusOf` and `cover.tail`, the block's own line past his name) and under it his kit in a line, a man lost struck, then the block's plain notes (what the squad carries between them, a
   charge set, who waits on him). A man's kit is the STAGED card (`kit.ts kitOf`, then `kitWords(i, m)`): what this run gave him, not this machine's
-  table. His own kit has no section (the slot bar shows it). Tab again or Esc goes back (Esc alone does not open the pause card over it); a menu,
-  Options or a script that steps the page puts it away. Every word is one the game already makes, through `keyText`; the card lays them out once
+  table; its counted things read 'started with 1 stun, 1 charge' (`tabcard.ts staged`), because throwables and charges are one squad
+  pool once the run is on and the live count is the note under the men. His own kit has no section (the slot bar shows it). Tab again or Esc goes back (Esc alone does not open the pause card over it); a menu,
+  Options, a lesson's card or a script that steps the page puts it away. F5 under it puts it away and saves by hand, as on the pause card. Every word is one the game already makes, through `keyText`; the card lays them out once
   as it comes up (not a live readout) and scales with the text size (`textsize.ts LAYERS`). It is the home of what the corner panel stopped saying
-  (`docs/agents/player.md`, the corner panel). THE SWITCH is the Tab key's row on Options, Game ('Objectives', beside Nothing, Run so far, Order
-  who, Controls): it is what Tab does where nobody has chosen (`TABKEY.first`, set by the page), `?tab=off` = nothing for a visit, and a choice
+  (`docs/agents/player.md`, the corner panel). THE SWITCH is the Tab key's row on Options, Game (the row is 'Tab key' now, no longer '(trying out)'; 'Objectives', beside Nothing, Run so far, Order
+  who, Controls): it is what Tab does where nobody has chosen (`TABKEY.first`, set by the page before its menu is made), `?tab=off` = nothing for a visit, and a choice
   made on Options stands, Nothing included (`picked`, kept with the choice: a kept 'off' from before this was written by every machine and is no
   choice). OFF in the module, for anything headless and on a page a script drives (`navigator.webdriver`: the page tools press Tab for other
   things; they pass `?tab=brief` to see it). No rule of the game reads it and nothing of it is in a recording: under a replay or a script that
-  steps the page (`__runFrames`) the hold does not apply and the card is put away on the next frame. CHECK: `tabcard` (family `menus`), both
+  steps the page (`__runFrames`) the hold does not apply and the card is put away on the next frame. CHECK: `tabcard` (family `ui`), both
   stands, `TABCARD_BREAK=1` red: the choice, what settles it and what is kept, the list, the card of a room clear with the squad of four (a
   staged kit, a man lost), the page's wiring read as text. DRIVEN on the real page on the software adapter (`tut-squad`, a room clear, four men,
   `?tab=brief`, no picture drawn): Tab put the card up at 560 x 422 in the middle with the six rooms, the four men each with his words and kit and
@@ -1770,6 +1771,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   card; the same page without the word showed nothing on Tab; no console errors. MEASURED: nothing; it moves no tally. DECLINED, from review: the card as one of
   `overlay.card`'s (those are a lesson's, with its own key and locks) or a page of `#menu` (the menu is the pause, with its own Tab); the
   objective handed over in parts by `mission.ts` (the line is the one source the top line, the corner and this card all read; the list is cut
-  from it only under 'objective'); a place in `bubbles.ts BLOCKER_IDS` (the card is above the bubbles by z-index and holds the game). NOT DONE: a
-  lesson's frame does not teach or lock it (the frame's key locks do not know Tab's card); the kit line is the card as staged, not what a man
-  has left; a run's end line still says to press Enter while the card holds the game (Tab or Esc first). Never seen on a GPU. NOBODY HAS PLAYED IT.
+  from it only under 'objective'); a place in `bubbles.ts BLOCKER_IDS` (the card is above the bubbles by z-index and holds the game); one page-level 'what holds the game' reader
+  for the load brief, a lesson's card, the menu and this card (a change to `main.ts` wider than this card; the check pins each site it added);
+  `picked` and `kept` as one field (the kept file's two keys are already on machines); the menu's HTML escaper shared (a private one-liner of a
+  neighbour's file); the break reaching the list and the page lines (both are fixed inputs: a break there would be by fiat). NOT DONE: a
+  lesson's frame does not teach or lock it (the frame's key locks do not know Tab's card); nobody tracks what a man himself has left (the pool is the squad's), so a man's counts stay
+  what he started with; a run's end line still says to press Enter while the card holds the game (Tab or Esc first). Never seen on a GPU. NOBODY HAS PLAYED IT.

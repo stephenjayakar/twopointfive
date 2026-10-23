@@ -9,7 +9,7 @@ import { kitWords, kitIndex, kitOf } from '../game/kit';
 import { keyText } from '../host/keymap';
 import type { Game } from '../game/game';
 
-export interface TabMan { name: string; doing: string; kit: string; down: boolean; tone?: string }
+export interface TabMan { name: string; doing: string; kit: string; down: boolean }
 export interface TabCard {
   /** the objective line's own word ('objective', 'training 2/7'; '' at a run's end) · what stands in front of it (a par, a clock) */
   label: string; note: string;
@@ -34,12 +34,15 @@ export function tabCard(objective: string, men: TabMan[], carry: string[], who =
   const O = objectiveParts(objective), L = O?.label === 'objective' ? objectiveList(O.text) : { goal: O?.text ?? '', items: [] };
   return { label: O?.label ?? '', note: O?.note ?? '', goal: L.goal, items: L.items, men, who, carry };
 }
-/** the card of a game as it stands: the squad in its order, each man's line as the block words it and the card he was staged with in a line (kit.ts
+/** the card of a game as it stands: the squad in its order, each man's line as the block words it (what he is doing and what he covers) and the card he was staged with in a line (kit.ts
  *  kitOf: a mission that issues its own kit stages its own cards); the block's title and its plain notes (orders.ts hud: a line a man, then the notes,
  *  then the keys' lines — no notes where a lesson's frame keeps them back). Every key named is named as the page has it (keymap.ts keyText). */
+/** a kit line with its counted things said as what he set out with: the squad's throwables and charges are one pool once the run is on (doortools.ts),
+ *  and its count is the note under the men, so a man's own count is what his card gave him, not what he has left */
+export const staged = (kit: string): string => kit.split(' · ').map(p => (/^\d+ stun\b/.test(p) ? `started with ${p}` : p)).join(' · ');
 export function tabCardOf(game: Game): TabCard {
   const O = game.orders, S = O.active ? O.squad() : [], block = O.hud().status[0];
-  const men = S.map(gd => { const i = kitIndex(gd), m = kitOf(gd); return { name: gd.callsign, doing: keyText(O.statusOf(gd)), kit: i && m ? kitWords(i, m) : '', down: gd.state === 'dead' }; });
+  const men = S.map(gd => { const i = kitIndex(gd), m = kitOf(gd); return { name: gd.callsign, doing: keyText(O.statusOf(gd) + game.cover.tail(gd)), kit: i && m ? staged(kitWords(i, m)) : '', down: gd.state === 'dead' }; });
   return tabCard(keyText(game.objectiveText()), men, block ? block.opts.slice(S.length).filter(o => !o.key).map(o => keyText(o.text)) : [], block ? block.label.replace(/^squad(\s*·\s*)?/, '') : '');
 }
 const esc = (s: string): string => s.replace(/[&<>"]/g, c => (c === '&' ? '&amp;' : c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&quot;'));
@@ -48,6 +51,6 @@ const esc = (s: string): string => s.replace(/[&<>"]/g, c => (c === '&' ? '&amp;
 export function tabCardHtml(C: TabCard): string {
   const sec = (head: string, note: string, body: string) => `<section>${head || note ? `<h4>${esc(head)}${note ? `<em>${esc(note)}</em>` : ''}</h4>` : ''}${body}</section>`;
   const obj = C.goal ? sec(C.label, C.note, `<p>${esc(C.goal)}</p>${C.items.length ? `<ul>${C.items.map(i => `<li class="${i.done ? 'done' : i.now ? 'now' : ''}">${esc(i.text)}</li>`).join('')}</ul>` : ''}`) : '';
-  const squad = C.men.length ? sec('squad', C.who, C.men.map(m => `<div class="man${m.down ? ' down' : ''}${m.tone ? ` t-${esc(m.tone)}` : ''}"><b>${esc(m.name)}</b><span>${esc(m.doing)}</span>${m.kit ? `<i>${esc(m.kit)}</i>` : ''}</div>`).join('') + C.carry.map(c => `<p class="carry">${esc(c)}</p>`).join('')) : '';
+  const squad = C.men.length ? sec('squad', C.who, C.men.map(m => `<div class="man${m.down ? ' down' : ''}"><b>${esc(m.name)}</b><span>${esc(m.doing)}</span>${m.kit ? `<i>${esc(m.kit)}</i>` : ''}</div>`).join('') + C.carry.map(c => `<p class="carry">${esc(c)}</p>`).join('')) : '';
   return `${obj}${squad}<footer>Press <kbd>Tab</kbd> to go back to the game.</footer>`;
 }
