@@ -286,6 +286,10 @@ export const ORDERS = {
    *  and they were never together) · `sameApartM`: two ways further apart than this at some point are two ways · `sameLong`: the mate's way is taken only
    *  where it is at most this many times his own + SAME_PLUS_M */
   sameWay: false, sameNearM: 5, sameApartM: 6, sameLong: 1.5,
+  /** A FOLLOWER GOES BY THE DOORS SAM TOOK (trailWay below; the page: on — `?traildoors=0` — false here and on the frozen harness stand,
+   *  `TPS_TRAILDOORS=1`; a FROZEN_HOLDS row; false = his own short way to his place, as it was). `trailReachM`: he is on the trail while a crumb of it
+   *  is within this of him with a straight walk to it. `trailLong`: the walk is taken only where it is at most this many times his own + SAME_PLUS_M */
+  trailDoors: false, trailReachM: 3, trailLong: 1.5,
 };
 const WHEEL_STEP = 60;   // px of wheel travel a row (interact.ts)
 /** the highest digit a row is ever put on: the number row as far as the left hand reaches off W A S D (the head comment) */
@@ -1261,7 +1265,7 @@ export class SquadOrders {
       if (A.post === null) {   // fall in: his place back along the trail; a fresh leg whenever it has moved half a metre
         const p = gd.char.pos, toSam = flat(p, sam.pos), stopped = this.samStopped;
         const backM = this.backOf(A.follow) + (stopped ? this.clearBack(A.follow) : 0);
-        let slot = this.slot(backM);
+        let slot = this.slot(backM); const onTrail = slot;
         const onWall = sneaking(g, gd) || roomKept(g, gd) ? null : unseenWallSlot(g, gd, backM, followers); if (onWall) slot = onWall;   // (unseen.ts: Sam on a wall and nobody has found the squad — his place is along that face behind Sam, not back down the trail; null with its switch off)
         const off = stopped || DOORMANNERS.laneMove ? doorwayOffLane(g, slot, p, A.follow, this.ahead(gd, A)) : null; if (off) { slot = off; if (onWall) unseenWallLost(gd); }   // (doorway.ts STAND, the lane: no place in the file is where a man beyond a door standing open shoots straight down — through the frame on Sam's trail, then off it)
         let spread = false; if (K.fileSpread && stopped && !off && !onWall) { const q = this.apartSlot(gd, A, slot); spread = q !== slot; slot = q; }   // (two places on one spot: his is dealt again, a body's room from the men ahead of him)
@@ -1277,16 +1281,17 @@ export class SquadOrders {
           ? pictureStep(g, gd, A, nearP() ? p : slot, q => !(this.inFrame(q) || doorwayInWay(g, q) || !!doorwayLane(g, q)), g.fight.busy(gd, 0.5)) : null;
         const st = ps?.at ?? st0;
         const near = !st && nearP();
-        if (st) { if (flat(st, A.goal) > 0.05) A.goal = [st[0], 0, st[2]]; }
-        else if (near) { if (flat(p, A.goal) > 0.4) A.goal = [p[0], 0, p[2]]; }
+        if (st) { if (flat(st, A.goal) > 0.05) A.goal = [st[0], 0, st[2]]; if (K.trailDoors && A.via.length) A.via.length = 0; }   // (ORDERS.trailDoors: where he stands is his place — a corner of a way he was on is dropped, or restClear below, which leaves a man on a way alone, would leave him in a leaf's swing for as long as Sam stands)
+        else if (near) { if (flat(p, A.goal) > 0.4) A.goal = [p[0], 0, p[2]]; if (K.trailDoors && A.via.length) A.via.length = 0; }
         else { let want = aside ?? slot;
           // (ORDERS.cleared: a follower a walk away from his place does not cut through a room nobody has been in — round it, a corner at a time, until his place has moved on)
-          if (K.cleared && !aside) {
+          if ((K.cleared || K.trailDoors) && !aside) {
             // (asked when he is a walk from his place — or a wall is between them — and again when his place has moved on from the one the corners were for, or
             // every few seconds while he walks them: never more than twice a second a man)
             const since = g.time - (A.viaT ?? -1e9), had = A.via.length > 0;
             if (had ? !A.viaFor || (flat(A.viaFor, slot) > 2.5 && since > 0.5) || since > 3 : since > 0.75 && (flat(p, slot) > 3 || !g.col.nav.walkable(p, slot))) {
-              A.viaT = g.time; A.via = this.roundRooms(gd, slot); A.viaFor = [slot[0], 0, slot[2]]; if (A.via.length && !had) g.cleared.stats.round++; }
+              A.viaT = g.time; A.via = this.roundRooms(gd, slot); A.viaFor = [slot[0], 0, slot[2]]; if (A.via.length && !had) g.cleared.stats.round++;
+              if (!A.via.length && K.trailDoors && !onWall) A.via = this.trailWay(gd, slot, onTrail, this.slotCrumb(backM)); }   // (no room to go round: the doors Sam took, where his own short way would take others)
             if (A.via.length && flat(p, A.via[0]) < 0.9) A.via.shift();
             if (A.via.length) want = A.via[0];
           } else if (A.via.length) A.via.length = 0;
@@ -2249,6 +2254,45 @@ export class SquadOrders {
       if (len(path) > len(plain) * ORDERS.roundCap + ROUND_PLUS_M) return []; }   // (ORDERS.roundCap: nor a way round far longer than the short way — the short way, as with no way round)
     return path.slice(0, -1).map(q => [q[0], 0, q[2]] as Vec3);
   }
+  /** the crumb of the trail that a place `back` metres behind the player (slot above, the same walk) lies just past, going the player's way: the index
+   *  of the older end of the stretch it is on. -1 off the trail's end. By the walk, not by what is near: where the player turned about and came back
+   *  over his own steps two passes of the trail lie on one line */
+  private slotCrumb(back: number): number {
+    const sam = this.g.player.char, T = this.trail; let prev: Vec3 = [sam.pos[0], 0, sam.pos[2]], left = back;
+    for (let i = T.length - 1; i >= 0; i--) { const seg = flat(prev, T[i]); if (seg < 1e-4) continue; if (seg >= left) return i; left -= seg; prev = T[i]; }
+    return -1;
+  }
+  /** ORDERS.trailDoors — A FOLLOWER GOES BY THE DOORS SAM TOOK. A follower's goal is his place on Sam's trail and his walk to it is the short one, which is
+   *  the trail while he keeps up. A man who lost his turn at a door (he gave way to its leaf, or to the men behind him) finds Sam a room on, and where that
+   *  room has two ways in his short way is the other one: he walks round a room the file went through, apart from his partner. So, asked with the way
+   *  round an uncleared room (the same times, never more than twice a second a man): where his place is on the trail (as the trail has it, before a lane
+   *  moved it a step) and out of a straight walk, a crumb of it short of his place is within `trailReachM` of him with a straight walk to it, and his own
+   *  short way to his place ends through other doors than the trail does from there on (a door gone through and back is no door; an opening with no door
+   *  in it is not counted), he walks the trail: its corners, handed out as a way round is (`via`). Not through a lock he is kept out of, and not a walk
+   *  more than `trailLong` times his own + SAME_PLUS_M. With the trail run out behind Sam (`trailM`), or his place off it (a wall), his own way as ever.
+   *  One search a call (his own way); the trail is measured as Sam walked it. `j`: the crumb his place lies just past (slotCrumb), `onTrail` his place
+   *  as the trail has it, before a lane or a spread moved it a step. */
+  private trailWay(gd: Guard, slot: Vec3, onTrail: Vec3, j: number): Vec3[] {
+    if (TRAILDOORS_BREAK) return [];
+    const g = this.g, nav = g.col.nav, K = ORDERS, T = this.trail, at = gd.char.pos; if (T.length < 4) return [];
+    const from: Vec3 = nav.isBlocked(at[0], at[2]) ? this.freeSpot(at) ?? at : at; if (nav.walkable(from, slot)) return [];   // (his place is a straight walk off: that is his way)
+    let k = -1; for (let i = j - 1; i >= 0; i--) if (flat(from, T[i]) < K.trailReachM && nav.walkable(from, T[i])) { k = i; break; }   // (the newest crumb he can step straight onto)
+    if (j < 0 || k < 0 || j - k < 3) return [];
+    const own = nav.findPath(from, slot); if (!own) return [];
+    const way: Vec3[] = [from, ...T.slice(k, j + 1), onTrail, slot], mine: Vec3[] = [from, ...own, slot];   // (a path ends on a cell's centre, which by a leaf can be the far side of a frame from the place itself)
+    const len = (w: Vec3[]) => { let m = 0; for (let i = 1; i < w.length; i++) m += flat(w[i - 1], w[i]); return m; };
+    // the doors a walk ends on the far side of (through one and back is no door). A corner of a walk that lies ON a door's line is stepped over: the two
+    // legs that meet there each miss the door (crossesDoor wants a point either side), and a path's corners are cell centres, which some levels' frames lie on
+    const doorsOn = (w: Vec3[]) => { const D = new Set<Door>();
+      for (const d of g.doors.list) { const h = d.def.hinge, nx = -Math.sin(d.def.closedDir), nz = Math.cos(d.def.closedDir), off = (q: Vec3) => (q[0] - h[0]) * nx + (q[2] - h[1]) * nz;
+        let a: Vec3 | null = null; for (const b of w) { if (Math.abs(off(b)) < 1e-6) continue; if (a && crossesDoor(a, b, d)) { if (!D.delete(d)) D.add(d); } a = b; } }
+      return D; };
+    const A = doorsOn(mine), B = doorsOn(way); if (A.size === B.size && [...A].every(d => B.has(d))) return [];   // (the same doors: his own way is the trail's)
+    if (len(way) > len(mine) * K.trailLong + SAME_PLUS_M) return [];
+    const ring = this.ring(); for (let i = 1; i < way.length; i++) for (const d of g.doors.list) if (d.locked && d.latched && crossesDoor(way[i - 1], way[i], d) && g.doors.lockedOut(d, way[i - 1], ring)) return [];
+    const mid: Vec3[] = []; { let a = from; for (let i = k; i < j - 1; i++) if (!nav.walkable(a, T[i + 1]) || flat(a, T[i + 1]) > 3) { mid.push([T[i][0], 0, T[i][2]]); a = T[i]; } }   // (the trail's corners: a crumb is kept where the next cannot be walked to straight, and every few metres)
+    return mid;
+  }
   reach(gd: Guard, to: Vec3): string | null { return this.asked(gd, to).why; }
   /** ORDERS.walkTries: the door his walk to `to` would be refused for, where nobody of the team has tried it on the face he comes to it by (doortools.ts
    *  untried: only where DOORTOOLS.testDoor is on) — null: the key is off, the walk is not refused for a lock, or the team knows that door. Sam's squad only. */
@@ -2420,6 +2464,7 @@ const OFF_M = 0.3, ROUND_ITER = 30000, MOUTH_M = 0.8;
 /** ORDERS.sameWay: the metres a mate's way may cost over `sameLong` times his own */
 const SAME_PLUS_M = 2;
 const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SAMEWAY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
+const TRAILDOORS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TRAILDOORS_BREAK === '1';   // (QA: ORDERS.trailDoors' own check must fail with this set)
 /** ORDERS.sameWay: how far way `a` gets from way `b` (each a walk's corners, in order), asked every half metre of `a`, and where on `a` that is */
 function farOff(a: Vec3[], b: Vec3[]): { d: number; at: Vec3 } {
   const off = (x: number, z: number) => { let m = Infinity;
