@@ -384,7 +384,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CLOSE.reachUp = !q.has('noreachup');   // crouched behind a standing man the grab's reach goes UP for his neck and the trunk comes up with it (game/close.ts, character.ts READY_UP): ON in the page; ?noreachup = the hand at the small of his back, as it was
   STALK.only = q.get('stalkonly') !== '0';   // …and it is the only way to a staff man: his 'grab him' row is gone (?stalkonly=0 puts the row back beside the stalk)
   STALK.corner = q.get('stalkcorner') !== '0';   // …and with his back on a wall the held button lies in wait: the man who comes past the corner is grabbed (?stalkcorner=0 = the button on a wall does nothing, as it was)
-  stalkPolish(q.get('stalkpolish') !== '0');   // …and the stalk's fourth to sixth passes of polish, up in the page; ?stalkpolish=0 puts them down together for a look at the move without them (the way in at a part weight, no spring before the lunge, the turn in the step's first frames, no sway and no room between the heads in the hold, the wall stance alone at a corner, no duck when the man turns) — the numbers journal.ts gives a recording from before them, by the same function
+  stalkPolish(q.get('stalkpolish') !== '0');   // …and the stalk's fourth to sixth passes of polish, up in the page and down on the frozen stand (TPS_STALKPOLISH=1 raises them there); ?stalkpolish=0 puts them down together for a look at the move without them (the way in at a part weight, no spring before the lunge, the turn in the step's first frames, no sway and no room between the heads in the hold, the wall stance alone at a corner, no duck when the man turns) — the numbers journal.ts gives a recording from before them, by the same function
   STALK.on = q.get('stalk') !== '0';   // the stalk (game/stalk.ts): the left button held on a man he is close behind walks Sam in to the grab. ON in the page; ?stalk=0 = the last metres are his own keys, as they were
   TWOGEARS.on = q.get('twogears') !== '0';   // two gears, not a dial (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch-walk is the sneak, at its own quicker pace. ON in the page; ?twogears=0 = the wheel's six notches and the tune's crouch-walk, as it was
   FOOTFALL.once = q.get('footfallonce') !== '0';   // one footfall a step (game/player.ts FOOTFALL): a footfall is filed only once the walk cycle has come a quarter of a turn since the last one filed, so a cycle rocking over one edge (backpedal flipping frame by frame: forwards and backwards keys by turns, or a man walked in the arm) is one footfall and not one a frame. ON in the page; ?footfallonce=0 = every crossing files one, as it always did
@@ -590,6 +590,18 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FOOTFALL.owed': 'TPS_FOOTOWED=1 (acts only under FOOTFALL.once: with TPS_FOOTFALL=1)',
   'TWOGEARS.on': 'TPS_TWOGEARS=1',
   'STALK.on': 'TPS_STALK=1',
+  'STALK.turnIn': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'STALK.cornerShow': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'STALK.catchLong': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'STALK.jolt': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'HOLD.wayShape': 'TPS_STALKPOLISH=1 (acts only with bare hands, wherever the reach shows: with TPS_NOKNIFE=1)',
+  'HOLD.lunge.dip': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'HOLD.lunge.back': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'HOLD.sway.m': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.sway.twist': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.apart.side': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.apart.tip': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.yank.arch': 'TPS_STALKPOLISH=1 (acts only with bare hands on a stalk: with TPS_STALK=1 and TPS_NOKNIFE=1)',
   'GUARD_EYE.far': 'TPS_FARSIGHT=1',
   'GUARD_EYE.farCalm': 'TPS_FARCALM=1',
   'KITANIM.on': 'TPS_KITANIM=1',
