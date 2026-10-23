@@ -109,6 +109,15 @@ did not.
   with 40mm"; "weird that it doesn't let me use a wall charge here". **check** `bun run tools/qa/wallfurn-check.ts`,
   `probes.ts blasthole`.
 
+- **No door has an always-safe spot to command it from.** Plan mode's view stays with the player (6.5 m to either
+  side of him, 4.5 m up the screen and 6 m down; `?plannear=0` is the view as it was), so he orders an entry from
+  beside the room, and the level decides whether that spot is safe. For each door a stack forms on, look at the ground
+  inside that box that sees the door. If one pocket of it is out of every defender's line and off every roamer's
+  path on every deal, every entry will be commanded from there. Give the pocket a second line into it (a window, a far
+  door, a roamer's turn) or take its view of the door away. Situational, not a ban: some doors may keep one. **seen**
+  the maintainer asked that there is not always a safe place to hide and command from. **By eye** per door; no check
+  yet (it wants the defenders' lines on each deal). Never played.
+
 ## 4. Rooms that are lived in
 
 The maintainer: "the office level is awesome and it has a lot of personality per room, we should makes sure all levels are
@@ -160,6 +169,19 @@ like that."
   and is left dark by its defenders. **seen** "we should have light switches for rooms!"; two rooms of 176 keep a
   circuit no plate was found for. **check** `bun run tools/qa/probes.ts lightswitch` (every level file: each plate on
   plain wall with floor in a hand's reach). Never seen on a GPU.
+- **`leak` · A lamp close behind the wall of a dark room shows on what stands against that wall.** The picture keeps
+  bounced light in probes a metre apart and reads it a metre off the face a ray lands on, blended between the probes
+  round that point. A wall is a hand thick, so a shelf, a rack or a stack stood against one is read among the probes of
+  the room behind it, and can glow with that room's lamp. It is the renderer's to mend, not a level's: nearly every
+  furnished wall has it. A level shows it worst where three things meet: a room shipped dark, tall or glossy furniture
+  on the shared wall, and a bright lamp within a few metres on the far side. Where all three meet in your level, look
+  at it before you ship, and say in the level's notes that you did. Moving the lamp off that wall or the furniture to another
+  one is a way round, never a rule. **seen** "some weird light leakage on bookshelf?": the manager's shelves against the
+  lit store, the same wall as two months before; and on a man by the tea room's wall on the pass. **check** `leak` (how many things stand so, by a lamp and by the sky, and a NOTE with the rooms and lamps where the
+  far lamp outweighs the room's own light on that face; 39 of 42 levels today, so where to look and never a pass
+  mark), then **by eye** in a real browser with the near room dark: the debugger's
+  indirect light and specular views (the cache irradiance view blends through every wall and proves nothing). Never
+  seen on a GPU here.
 - **Starts are dark and unseen**: nobody sees the team on its start marks, through a pane either; the first stack is in no
   roamer's line. **seen** a start on the road in front of the glass, in six marks' sight.
 - **The headless light meter has no moon and no bounce.** A mark "dark" headless can be 57 % lit on the page. Hide marks
