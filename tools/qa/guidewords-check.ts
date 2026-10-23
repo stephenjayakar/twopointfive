@@ -75,7 +75,7 @@ const PAIRS: [tag: string, was: string, now: string, swap: boolean][] = [
   ['needs', 'Legs have seized. Quick lap of the lobby.', 'My legs are stiff. Quick lap around the lobby.', false],
   ['whistle', "right — who's messing about?", "all right — who's messing around?", false],
   ['cues', 'squadWaits/3/{sq}: hold — let them come in. wait for my word!', 'squadWaits/3/{sq}: hold — let them come in. wait for my call!', true],
-  ['intel rollcall/hard/none', 'Radio check {checkEta}. Silence gets a man sent. Do the sums.', 'Radio check {checkEta}. Silence gets somebody sent. Do the math.', true],
+  ['intel rollcall/hard/none', 'Radio check {checkEta}. Silence gets a man sent. Do the sums.', 'Radio check {checkEta}. No answer, they send somebody. Do the math.', true],
   ['intel drive/hard/none', 'Your rack went dark on the board. A man is on his way to it.', "Your rack went dark on the board. Somebody's on his way to it.", true],
   ['sam pool Sqd2', 'That keyed door on your round. How does it open?', 'That keyed door on your route. How does it open?', true],
   ['sam con-s3:1 sam', "Fire drill assessment. Don't turn round.", "Fire drill assessment. Don't turn around.", true],
@@ -99,16 +99,16 @@ function pairs() {
 
 /** the pass's wordings the guide rewrote: each must stand in the source as the page had it, beside the guide's */
 const IN_PLACE: [file: string, was: string, now: string][] = [
-  ['dialogue.ts', `hard: "It's been missed. A man is on his way to look."`, `hard: "It's been missed. Somebody's on his way to look."`],
+  ['dialogue.ts', `hard: "It's been missed. A man is on his way to look."`, `hard: "They know it's gone. Somebody's on his way to look."`],
   ['dialogue.ts', "armoury_radio: 'the armoury side door'", "armoury_radio: 'the armory side door'"],
   ['dialogue.ts', "roundW: 'the west round'", "roundW: 'the west loop'"],
   ['breach.ts', "clear1: 'right side — clear. i have the door.'", `clear1: "right side — clear. i've got the door."`],
-  ['weather.ts', "THUNDER_OUT = 'no let-up, is there.'", `THUNDER_OUT_GUIDE = "it's not letting up, is it."`],
+  ['weather.ts', "THUNDER_OUT = 'no let-up, is there.'", `THUNDER_OUT_GUIDE = "it's not letting up, huh."`],
   ['cues.ts', 'wait for my word!', 'wait for my call!'],
   ['pressure.ts', "'that was outside — they\\'re coming. stand to!'", "'that was outside — they\\'re coming. get ready!'"],
   ['rescueflush.ts', "'going round — I\\'ll take the other door!'", "'going around — I\\'ll take the other door!'"],
-  ['guards.ts', `"someone's about"`, `"someone's around"`],
-  ['tactics.ts', "wg('around', 'round')} — coming at", "wg('around', 'round')} — coming in from"],
+  ['guards.ts', `"someone's about"`, `"someone's here"`],
+  ['tactics.ts', "wg('going around', 'moving round')} — coming at", "wg('going around', 'moving round')} — coming in from"],
 ];
 function inPlace() {
   console.log("\n=== in place: the pass's own wordings stand in the source beside the guide's ===");
