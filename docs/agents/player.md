@@ -1296,7 +1296,11 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   to the charge set, both wrists within 0.3 m of the charge, back after, the click on the frame it is set fires nothing, the trigger his once it is
   up), hands empty, a step and the trigger breaking it off; a teammate (hung and locked every frame, the wrists, the two clocks, the net), blinded
   half way, a man put in his view; a wall charge by hand, begun from a wall hold, and on order; off (by hand, on order, with the hands off, the digest
-  of a run with no charge, an old recording, the registry). `WORKSTOW_BREAK=1` fails 15 on both stands. STILLS: `node tools/qa/workstow-look.cjs <dir>
+  of a run with no charge, an old recording, the registry). `WORKSTOW_BREAK=1` fails 15 on both stands. RUN WITH IT ON, the shipped stand, green:
+  the families owncharge, ownblow, wallcharge, outerwall, handwork, hands, kitanim, wand, gunslots, roomclear, and the scripted runs of tut-solo,
+  tut-squad, tut-sky and tut-plan (the same verdict with it held off; the solo run is 0.6 s longer). `door-grenade`'s charge line now times the plant
+  from the setter's own return to the lock (`Run.lockT`): the charge's later clock moves that probe's grenade, all four run, and 'the men are back' is
+  said when the LAST is, with the charge already going on. STILLS: `node tools/qa/workstow-look.cjs <dir>
   [noworkstow]` (the page on the software adapter). NOT HERE, other owners' two-handed jobs: a timed charge on its bench and its defusing, the drive
   out of the rack, the optical wand, a lock being picked, a thing a teammate works (`workthings.ts`); the big slot's hammer already puts the gun away;
   a keypad and the breaker's lever are one hand. NOT DONE: no tour, no soak, no fight tallies with it on; never seen on a GPU; nobody has played it.
