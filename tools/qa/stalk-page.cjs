@@ -70,6 +70,18 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
       await page.mouse.down(); const c = await frames(360, true); await page.mouse.up(); await frames(5);
       say(!a.held && a.gap < 2.5 && !b.held && b.speed < 0.02 && c.held, `let go after two thirds of a second (${a.gap.toFixed(2)} m off, closing): at rest ${b.speed.toFixed(2)} m/s with nobody in his arm; pressed again: in his arm ${c.held}`);
     }
+    { // (close.ts CLOSE.rmbHold: the right button kept down behind him is the choke, let go it is a hold; a tap is the knockout)
+      const rmb = await page.evaluate(() => !!window.__knobs.registry().CLOSE.rmbHold), phase = () => page.evaluate(() => window.__game.player.holding?.phase ?? 'nobody');
+      if (rmb) {
+        await behind(0.85); let [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); const rows = await frames(0);
+        await page.mouse.down({ button: 'right' }); await frames(75); const p1 = await phase(); await page.mouse.up({ button: 'right' }); await frames(40); const p2 = await phase();
+        say(/RMB {2}hold to choke him/.test(rows.list) && p1 === 'choke' && p2 === 'held', `0.85 m behind him the row says the held right button chokes (${/RMB {2}hold to choke him/.test(rows.list)}); the right button kept down for a second and a quarter: ${p1}; let go: ${p2}`);
+        await behind(0.85); [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down({ button: 'right' }); await frames(3); await page.mouse.up({ button: 'right' }); const t = await frames(60);
+        const down = await page.evaluate(() => window.__game.guards[0].state === 'dead');
+        say(!t.held && down, `a quick right click from the same spot: in his arm ${t.held}, the man down a second later ${down}`);
+        await page.evaluate(async () => { window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); });
+      }
+    }
     const s = await page.evaluate(() => { const S = window.__knobs.registry().STALK, was = S.pace, el = [...document.querySelectorAll('#panel .row')].find(r => /top speed/.test(r.textContent))?.querySelector('input[type=range]'); if (!el) return { was, now: was, found: false };
       el.value = '1.2'; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); const now = S.pace; S.pace = was; return { was, now, found: true }; });
     say(s.found && Math.abs(s.now - 1.2) < 1e-6, `the lab's 'top speed' slider moved to 1.2 writes the stalk's top speed (${s.was} → ${s.now})`);

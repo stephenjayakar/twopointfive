@@ -1237,6 +1237,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shipped stand. NOT DONE: the wait at a corner has no key (its timing is the press); a guard who turns while Sam keeps station is
   the old break-off; the low creep's arms are plain crouch arms, where the game it follows spreads them wide and low. LOOKED AT on
   stills of the worn meshes only. Nobody has played this pass or seen it on a GPU.
+- **The right button, tapped or held (10-23; `CLOSE.rmbHold`, `?rmbhold=0`, `TPS_RMBHOLD=1`).** The maintainer: "make it possible to
+  just right click to knock him out quickly but it's a bit louder, or holding right click does a choke. we already have this when you
+  can pistol whip him if the gun is out". ON in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row, carried by
+  the journal (a recording from before the key replays with it down). With empty hands (`game.ts`, where the click's blow was read;
+  `closeRmb` keeps the press's clock in close.ts's state), behind a man the grab is offered on: a press let go inside `rmbTapSecs`
+  (0.2 s) is the knockout, begun as the button comes up, the blow as it was and heard `rmbLoud` (0.15) further up the hearing scale
+  (0.45 where it was 0.30: about a metre further in open air), its hit played louder to the player too. A press kept down past that
+  is the grab (the stalk's own where the key's would be: `stalkKeyCan`) with `Hold.rmbChoke`: `updateHold` closes the arm the frame
+  the hold has him (no row, no commit beat, and the "press Space to make him talk" line is not put up over it) and keeps it closed
+  while the button is down. Let go, `easeOffHold`: he breathes and is held. In the arm the button is the same: pressed and kept down
+  it chokes, let go he breathes, and a TAP there is the whole choke as the arm hold's click always was (the arm closing at once, where
+  the click waited the commit beat). Stopped by anything else (a step, a tap, Esc), the button still down does not start it again.
+  Where the choke is not his to be given (his side, his front, a civilian, a lesson that does not offer the grab) there is nothing to
+  choose between: the press is the knockout on its own frame, as loud as it was. A press made just out of reach waits `rmbWaitSecs`
+  (1.2 s) for him to walk into it; a button the page takes away (a blur, the pause card) is no tap. The man's row says "RMB  knock
+  him out  ·  RMB  hold to choke him" where the hold is the choke. The lab has the toggle and both numbers; the debugger has the
+  toggle beside "no knife". Off = the press itself is the knockout everywhere. THE CHECK is `rmbhold-check.ts` (`probes.ts rmbhold`,
+  in the stealth and takedown families; `RMBHOLD_BREAK=1` reds eight of its eleven lines), both stands: a four-frame tap begins the
+  blow 0.08 s after the press and he is down at 0.37 s, heard at 0.45; kept down he is in the arm at 0.22 s, the arm closing at
+  0.70 s, down choked at 3.32 s, the loudest of it 0.30; let go mid-choke he is held three seconds on; eased off with the button down
+  it does not start again; in the arm the button chokes while held and a one-frame click is the whole choke; a press from 1.7 m takes
+  him once in reach, and not after the wait; a blur is no tap; from the front the press is the knockout on its frame at 0.50; the
+  row's words; with the stalk as the page has it the held button's grab is the stalk's own, counted once; with the click the only way
+  and with the knife back the row says it and both halves work; off; the harness line. One seed: these are timings of a fixed beat.
+  `stalk-page.cjs` drives both on the real page. The probes that read the build before it (the `close-` family, `heldclicks`, the
+  grab's and the knife's: `KNIFE_AS_IT_WAS` in probes.ts) hold the key down as they hold the knife. WHAT IT COSTS: behind a man, a tap's knockout waits for the button to come up (a frame or five later than the
+  press). NOT DONE: the choke out of a held button has no pose of its own (it is the grab, then the hold's choke); no sound of its
+  own. Nobody has played it or seen it on a GPU.
 - **A lesson line names the move, not its key (`lesson.ts` `TOKENS`, `LESSON_TOKENS`, `lessonToken`; 10-23).** `{grab him}`,
   `{grab him from behind}`, `{knock him out}`, `{take him out}` in a lesson's text are written out by `lessonLine` in the build's own
   words: the held click with the stalk up (`STALK.on` and `.only`), the grab's key without, the knockout with bare hands, the knife
