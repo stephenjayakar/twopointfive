@@ -88,18 +88,34 @@ function shootAt(B: Bot, at: number[], stop: () => boolean, max = 12) {
 }
 /** an empty rifle is reloaded (R) before the next press */
 function reload(B: Bot) { const r = B.g.player.rifle; if (r && r.mag === 0 && !r.reloading) { B.press('KeyR', 4); B.until(() => !r.reloading && r.mag > 0, 5); } }
+/** where on a man the cursor goes: his chest, wherever his pose has put it (a man a frag has left hurt and on a knee behind his bags has his head
+ *  under a standing man's chest: a cursor a chest high went over him) */
+const chest = (ch: { pos: number[]; bones?: { chest?: number[] } }): number[] => ch.bones?.chest ?? [ch.pos[0], 1.25, ch.pos[2]];
 /** the rifle at whoever of a room's men still stands, a press at a time, until the room is clear or the seconds are up (he aims at the man: where he is
  *  is read off the room's own list, as eyes would) */
 function shootMen(B: Bot, room: string, secs: number) {
-  const R = rooms(B).find(r => r.def.id === room) as unknown as { defenders: { state: string; char: { pos: number[] } }[] } | undefined, t0 = B.t();
+  const R = rooms(B).find(r => r.def.id === room) as unknown as { defenders: { state: string; char: { pos: number[]; bones?: { chest?: number[] } } }[] } | undefined, t0 = B.t();
   // (the nearest of them: a hand shoots the man in front of it, not the first on the roster, who may be two walls off)
   const near = () => { const me = B.pos(); return R?.defenders.filter(x => x.state !== 'dead').sort((a, b) => Math.hypot(a.char.pos[0] - me[0], a.char.pos[2] - me[2]) - Math.hypot(b.char.pos[0] - me[0], b.char.pos[2] - me[2]))[0]; };
-  while (!cleared(B, room) && B.t() - t0 < secs) { const m = near(); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, [m.char.pos[0], 1.25, m.char.pos[2]]); B.wait(0.2); }
+  while (!cleared(B, room) && B.t() - t0 < secs) { const m = near(); if (!m) { B.wait(0.3); continue; } reload(B); B.click(1, chest(m.char)); B.wait(0.2); }
 }
 /** how many of the nest's two are down by a round that was not the player's own (character id 1: consts.ts PLAYER_ID) */
 const nestTaken = (B: Bot) => (rooms(B).find(r => r.def.id === 'nest') as unknown as { defenders: { state: string; killerId: number }[] } | undefined)?.defenders.filter(x => x.state === 'dead' && x.killerId !== 1).length ?? 0;
-const STORE_IN = [10.6, 0, 18.8], ALLEY = [23.6, 0, 8.6], END = [22.5, 0, 17.5], BLOCKS = [26.6, 0, 16.1], NEST = [32.0, 1.0, 13.8];
-const SHOP_VIEW = [18.3, 0, 12.3], HALL_SIDE = [34.3, 0, 19.75], WINDOW = [30.9, 0, 16.2], BAGS = [30.2, 0, 13.8], MOUTH = [25.0, 0, 11.6];
+/** WHOSE ROUNDS TOOK THE HALL'S TWO, said once a run, and a failure when a teammate took one from north of the nest's back wall. The window's step is
+ *  the player's: the wall of bags behind the nest hides the window from the street and from inside the nest, and a teammate can have a line through
+ *  it only from the strip in front of the glass (he may: a man who walks past a window with two rifles behind it shoots). TUT_SQUAD_HALL=any: not held */
+function hallBy(B: Bot) {
+  const G = B.g as unknown as { __hallBy?: boolean; guards: { char: { id: number; pos: number[] }; callsign: string }[] }; if (G.__hallBy || !cleared(B, 'hall')) return; G.__hallBy = true;
+  const men = (rooms(B).find(r => r.def.id === 'hall') as unknown as { defenders: { state: string; killerId: number; callsign: string }[] } | undefined)?.defenders.filter(x => x.state === 'dead') ?? [];
+  const who = men.map(m => { const k = m.killerId === 1 ? null : G.guards.find(x => x.char.id === m.killerId); return { m: m.callsign, mine: m.killerId === 1, k: k?.callsign ?? '?', z: k?.char.pos[2] ?? NaN, x: k?.char.pos[0] ?? NaN }; });
+  B.say(`  the hall's men: ${who.map(w => `${w.m} to ${w.mine ? 'the player' : `${w.k} at (${w.x.toFixed(1)}, ${w.z.toFixed(1)})`}`).join(' · ') || 'nobody down'}`);
+  const far = who.filter(w => !w.mine && w.z < STRIP_Z);
+  if (far.length && process.env.TUT_SQUAD_HALL !== 'any') B.fail(`${far.map(w => w.m).join(' and ')} of the hall shot by a teammate from north of the nest's back wall (${far.map(w => `${w.k} at z ${w.z.toFixed(1)}`).join(', ')}): the window is seen from there`);
+}
+/** the north edge of the strip between the nest's back wall and the hall (the bags' south face) */
+const STRIP_Z = 15.4;
+const STORE_IN = [10.6, 0, 18.8], ALLEY = [23.6, 0, 8.6], END = [22.5, 0, 17.5], BLOCKS = [26.6, 0, 16.1], NEST = [32.0, 1.0, 13.8], NEST_SPOTS: [number[], number][] = [[[33.6, 0, 16.2], 6], [[33.7, 0, 14.1], 20]];
+const SHOP_VIEW = [18.3, 0, 12.3], HALL_SIDE = [34.3, 0, 19.75], WINDOW = [31.775, 0, 16.05], BAGS = [30.2, 0, 13.8], MOUTH = [25.0, 0, 11.6];
 
 /** seconds the player stands at the blocks before he throws (TUT_SQUAD_FRAG_WAIT: a hand that reads the card, finds the key and aims; 0 = at once) */
 const FRAG_WAIT = Number(process.env.TUT_SQUAD_FRAG_WAIT ?? 0) || 0;
@@ -146,13 +162,17 @@ const RAW: Record<string, (B: Bot) => void> = {
     B.press('Digit5', 10); B.click(1, NEST); B.wait(3.5); B.press('Digit2', 10);
   },
   // (a man left behind the bags cannot be hit from the blocks: round the nest's open side, as a player would walk)
-  nest: B => { shootMen(B, 'nest', 8); if (!cleared(B, 'nest')) { B.go([33.6, 0, 16.2], 30, { stop: () => cleared(B, 'nest') }); shootMen(B, 'nest', 25); } if (!B.until(() => cleared(B, 'nest'), 30)) B.fail('the nest was not taken'); },
+  // (from where he stands; then from the far end of the strip behind the nest; then from its open side, in between the arms of the bags: the frag can
+  //  leave its last man hurt and on a knee, under the bags from everywhere outside them. Nobody's rifle found him there for seventy seconds on one die)
+  nest: B => { shootMen(B, 'nest', 8);
+    for (const [at, secs] of NEST_SPOTS) { if (cleared(B, 'nest')) break; B.go(at, 30, { stop: () => cleared(B, 'nest') }); shootMen(B, 'nest', secs); }
+    if (!B.until(() => cleared(B, 'nest'), 30)) B.fail('the nest was not taken'); },
   // the hall: its men shot through a street window from outside
   window: B => {
     if (SKY) B.say(`  the sky on every meter: ${skyReads(B)} readings so far`); B.wait(1.5);
-    if (!B.go(WINDOW, 60, { stop: () => cleared(B, 'hall') })) B.say(`  did not reach the window: at ${B.pos().map(v => v.toFixed(1))}`); shootMen(B, 'hall', 40); if (!B.until(() => cleared(B, 'hall'), 60)) B.fail('the hall was not cleared'); },
+    if (!B.go(WINDOW, 60, { stop: () => cleared(B, 'hall') })) B.say(`  did not reach the window: at ${B.pos().map(v => v.toFixed(1))}`); shootMen(B, 'hall', 40); if (!B.until(() => cleared(B, 'hall'), 60)) B.fail('the hall was not cleared'); hallBy(B); },
   // the hall's door: round to the passage, square on to the leaf, and the boot (a frame that held it is kicked again)
-  door: B => { B.go(HALL_SIDE, 60, { noDoors: true }); },
+  door: B => { hallBy(B); B.go(HALL_SIDE, 60, { noDoors: true }); },
   lock: B => {
     const d = B.door('hall'); let n = 0;
     for (; n < 4 && d.isClosed() && !d.lockBroken; n++) { B.openDoor('hall', 'kick'); B.wait(1.5); }
