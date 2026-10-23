@@ -59,8 +59,10 @@ async function one(browser, name) {
   }, { n, pin, at: boot.fire.pos, stand: boot.stand });
   for (let k = 0; k < WARM; k += 4) { const t0 = Date.now(), r = await step(Math.min(4, WARM - k), k === 0 ? PINS[VIEWS[0]] : null); log(`${name}: warm ${k + 4} of ${WARM}`, `${((Date.now() - t0) / 4000).toFixed(1)} s a frame`, JSON.stringify(r)); }
   if (FWD > 0) { const t0 = Date.now(); const r = await page.evaluate(async ({ n, at }) => { const yieldM = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
-      for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 30, [], 'none'); window.__smoke.stepAlone(1 / 30, [at[0], 0, at[2]]); if (i % 8 === 7) { await window.__engine.device.queue.onSubmittedWorkDone(); await yieldM(); } }
-      const st = window.__smoke.stats; return { t: +window.__game.time.toFixed(2), pool: st.pool }; }, { n: Math.round(FWD * 30), at: boot.fire.pos });
+      const pools = [];
+      for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 30, [], 'none'); window.__smoke.stepAlone(1 / 30, [at[0], 0, at[2]]); if (i % 8 === 7) { await window.__engine.device.queue.onSubmittedWorkDone(); await yieldM(); }
+        if (i % 150 === 149) pools.push(window.__smoke.stats.pool); }   // (the solver's bricks every five seconds: what the smoke costs is by the brick)
+      const st = window.__smoke.stats; return { t: +window.__game.time.toFixed(2), pool: st.pool, pools }; }, { n: Math.round(FWD * 30), at: boot.fire.pos });
     log(`${name}: ${FWD} s gone by with nothing drawn (the game stepped, the solver stepped alone)`, `${((Date.now() - t0) / 1000).toFixed(0)} s`, JSON.stringify(r)); await step(3, null); }
   const rows = [];
   for (const v of VIEWS) { const pin = PINS[v]; if (!pin) continue;
