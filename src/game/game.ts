@@ -27,6 +27,7 @@ import { statureTick, statureOf, drawnJoints, drawnCapsules, drawnFit, drawnBoxe
 import { Decals } from '../render/decals';
 import { buildWearMap } from '../render/wear';
 import { buildSnowField, snowCfgRows, type SnowField } from '../render/snowField';
+import { groundRayConfig, packGroundField } from '../scene/groundField';
 import { makeSnowTracks, updateSnowTracks, clearSnowTracks, formSnowTracks, TRACK_RES, type SnowTracks } from './snowTracks';
 import { updateSnowMarks, clearSnowMarks } from './snowMarks';
 import { snowBogAt } from './snowBog';
@@ -768,14 +769,15 @@ export class Game {
     if (on) attachSnowBlast(this);   // (a blast over lying snow marks it: snowBlast.ts hears the destruction engine's feed — once an engine, asked each frame)
     const key = (on ? 1 : 0) | (tracks ? 2 : 0); if (key === this.snowLookWas) return;
     this.snowLookWas = key;
-    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind })) : null;
+    this.snowField = on ? (this.snowField ?? buildSnowField(this.level, { wind: WEATHER_PRESETS.snow.wind, roll: groundRayConfig.on ? groundRayConfig.roll : 0 })) : null;
     this.snowTracks = tracks && this.snowField ? (this.snowTracks ?? makeSnowTracks()) : null;
     this.engine.gbuffer?.setSnowField?.(this.snowField, snowCfgRows(this.snowField, this.snowTracks ? TRACK_RES : 0));
+    if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField));   // (ground that rays can see, a trial: scene/groundField.ts — the look's page only)
     this.engine.gbuffer?.setSnowTracks?.(this.snowTracks);
   }
   /** once a frame, after everybody is posed: this frame's footfalls pressed into the snow, and what changed handed to the g-buffer */
   private stepSnowTracks(dt: number) {
-    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug);   // (a blast dug a hill out: snowBlast.ts)
+    const dug = this.snowField ? stepSnowDigs(this, dt) : null; if (dug) { this.engine.gbuffer?.setSnowFieldRect?.(this.snowField!, dug); if (groundRayConfig.on) this.engine.world.setGroundField(packGroundField(this.snowField)); }   // (a blast dug a hill out: snowBlast.ts)
     const T = this.snowTracks; if (!T || !this.snowField) return;
     updateSnowTracks(this, T, this.snowField, dt);
     if (SNOW_LOOK.marks) updateSnowMarks(this, T, this.snowField, dt);   // … and every thing that moved over the snow marks it (snowMarks.ts)

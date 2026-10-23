@@ -49,11 +49,13 @@ fn lookClass(a: vec3f) -> u32 { return 0u; }
 struct LookSnow { albedo: vec3f, n: vec3f, rough: f32, amt: f32, bank: bool };
 struct LookGround { n: vec3f, rough: f32 };
 fn lookGround(wp: vec3f, nIn: vec3f, roughIn: f32, fp: f32) -> LookGround { return LookGround(nIn, roughIn); }
+struct LookMan { albedo: vec3f, n: vec3f, rough: f32, gain: f32 };
+fn lookMan(code: u32, mp: vec3f, dmx: vec3f, dmy: vec3f, dwx: vec3f, dwy: vec3f, nIn: vec3f, albedoIn: vec3f, roughIn: f32, gainIn: f32, cavity: f32, dust: vec4f, owner: u32, fp: f32) -> LookMan { return LookMan(albedoIn, nIn, roughIn, gainIn); }
 fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint: vec3f, albedoIn: vec3f, roughIn: f32, fp: f32) -> LookSnow { return LookSnow(albedoIn, gn, roughIn, 0.0, false); }
 `;
 }
 /** the look page's panel numbers, as look.wgsl's LookCfg takes them (a, b: the eight amounts; the layers' base roughness follows, and `snow` after it) */
-export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1 };   // (`air` is not the shader's: × settings.hazeDensity, ui/lookpanel.ts)
+export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1 };   // (`air` is not the shader's: × settings.hazeDensity, ui/lookpanel.ts)
 export const lookAmounts = { ...LOOK_DEFAULTS };
 
 export interface SkinnedDrawable {
@@ -163,7 +165,7 @@ export class GBuffer {
   setLook() {
     if (!this.lookCfg) return;
     const k = lookAmounts;
-    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief, k.shine, k.weather, k.untile, k.edges, k.cavity, k.size, ...LOOK_ROUGH, k.snow, k.ground, k.crust, 0, 0]));
+    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief, k.shine, k.weather, k.untile, k.edges, k.cavity, k.size, ...LOOK_ROUGH, k.snow, k.ground, k.crust, k.men, 0]));
   }
   // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
   private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;

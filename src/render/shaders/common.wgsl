@@ -767,6 +767,7 @@ fn traceClosest(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     if (code > 6.5) { hit.inside = true; hit.n = -rd; }
     else { hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx)); }
   } else { hit.idx = -1; hit.t = tmaxIn; }
+  if (GROUND_RAYS) { let tg = ghHit(ro, rd, hit.t); if (tg >= 0.0) { hit.t = tg; hit.idx = i32(boxMat[GH_BASE].z); hit.inside = false; hit.n = ghNormal((ro + rd * tg).xz); } }   // (the trial: a snow hill nearer than the box — the ground slab's hit, the hill's slope)
   // the character proxies (few, sphere-culled per character): the round cones' closest hit and normal
   if (scene.numCapsules > 0u) {
     let ch = traceCapsules(ro, rd, hit.t, skipOwner);
@@ -839,6 +840,7 @@ fn traceClosestMesh(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     if (code > 6.5) { hit.inside = true; hit.n = -rd; }
     else { hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx)); }
   } else { hit.idx = -1; hit.t = tmaxIn; }
+  if (GROUND_RAYS) { let tg = ghHit(ro, rd, hit.t); if (tg >= 0.0) { hit.t = tg; hit.idx = i32(boxMat[GH_BASE].z); hit.inside = false; hit.n = ghNormal((ro + rd * tg).xz); } }   // (the trial, as traceClosest)
   if (scene.numCapsules > 0u) {
     if ((frame.p5Cfg.z & 1u) != 0u && (frame.flags & FLAG_MESH_SHADOWS) != 0u) {   // the men as their MESH: nearest triangle over every character nearer than the box hit
       let mh = meshClosest(ro, rd, hit.t, skipOwner);
@@ -856,6 +858,50 @@ fn traceClosestMesh(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     }
   }
   return hit;
+}
+
+// ---- GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts; the prelude's GROUND_RAYS, false on every page but the look's) ----
+// The snow hills' height as their mesh draws it, in boxMat's last rows: ghHit marches the stretch of a ray that runs between the ground and the highest hill
+// and answers the last place it stood ABOVE the surface before it ran under (−1 = it never does). A plan cell with no hill in it costs a step one row. A ray
+// that starts under the surface meets nothing (the hills are a skin, seen from above: a probe or a hit left inside one is not walled in).
+const GH_STEP: f32 = 0.1;      // m a step, while GH_STEPS of them cover the stretch (a longer stretch is walked in longer steps)
+const GH_STEPS: i32 = 40;
+const GH_BIAS: f32 = 0.008;    // m a ray may run under the surface: the mesh's triangles and this read's blend of four texels differ by less
+const GH_FLOOR: f32 = -0.015;  // m: under this nothing is the hills' (a texel with nothing on it stands at −0.012, as the mesh's corners do; bare ground at this depth is not 'under' by the bias)
+fn ghAt(c: vec2i) -> f32 { let k = u32(clamp(c.y, 0, GH_H - 1) * GH_W + clamp(c.x, 0, GH_W - 1)); return boxMat[GH_BASE + GH_HEAD + (k >> 2u)][k & 3u]; }
+fn ghHeight(xz: vec2f) -> f32 {
+  let u = (xz - WORLD_MIN.xz) * GH_RES - 0.5; let i = vec2i(floor(u)); let f = u - floor(u);
+  return mix(mix(ghAt(i), ghAt(i + vec2i(1, 0)), f.x), mix(ghAt(i + vec2i(0, 1)), ghAt(i + vec2i(1, 1)), f.x), f.y);
+}
+fn ghCellTop(xz: vec2f) -> f32 {
+  let c = clamp(vec2i(floor((xz - WORLD_MIN.xz) / GRID_CELL)), vec2i(0), vec2i(GRID_W - 1, GRID_H - 1)); let k = u32(c.y * GRID_W + c.x);
+  return boxMat[GH_BASE + 1u + (k >> 2u)][k & 3u];
+}
+fn ghUnder(p: vec3f) -> bool { return p.y < ghCellTop(p.xz) && p.y < ghHeight(p.xz) - GH_BIAS; }
+fn ghNormal(xz: vec2f) -> vec3f { let e = 0.5 / GH_RES; return normalize(vec3f(ghHeight(xz - vec2f(e, 0.0)) - ghHeight(xz + vec2f(e, 0.0)), 2.0 * e, ghHeight(xz - vec2f(0.0, e)) - ghHeight(xz + vec2f(0.0, e)))); }
+fn ghHit(ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
+  let top = boxMat[GH_BASE].x;
+  if (top <= 0.0) { return -1.0; }
+  let tw = isectBounds(ro, safeInv(rd), WORLD_MIN, WORLD_MAX);
+  var t0 = max(tw.x, 0.0); var t1 = min(tmax, tw.y);
+  if (rd.y > 1e-5) { t0 = max(t0, (GH_FLOOR - ro.y) / rd.y); t1 = min(t1, (top - ro.y) / rd.y); }
+  else if (rd.y < -1e-5) { t0 = max(t0, (top - ro.y) / rd.y); t1 = min(t1, (GH_FLOOR - ro.y) / rd.y); }
+  else if (ro.y > top || ro.y < GH_FLOOR) { return -1.0; }
+  if (t1 <= t0) { return -1.0; }
+  if (ghUnder(ro + rd * t0)) { return -1.0; }
+  let n = clamp(i32(ceil(max(length(rd.xz), abs(rd.y)) * (t1 - t0) / GH_STEP)), 1, GH_STEPS);
+  let dt = (t1 - t0) / f32(n);
+  var ta = t0;
+  for (var i = 1; i <= n; i++) {
+    let t = t0 + f32(i) * dt;
+    if (ghUnder(ro + rd * t)) {
+      var tb = t;
+      for (var k = 0; k < 4; k++) { let tm = 0.5 * (ta + tb); if (ghUnder(ro + rd * tm)) { tb = tm; } else { ta = tm; } }
+      return ta;
+    }
+    ta = t;
+  }
+  return -1.0;
 }
 
 // Any-hit visibility query. Returns true if something blocks [0, tmax].
@@ -904,6 +950,7 @@ fn occluded(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> bool {
     else { tCell = tNext.y; tNext.y += tDelta.y; cell.y += stp.y; tBack = tDelta.y * slack; }
     if (tCell > tmax || cell.x < 0 || cell.y < 0 || cell.x >= GRID_W || cell.y >= GRID_H) { break; }
   }
+  if (GROUND_RAYS && ghHit(ro, rd, tmax) >= 0.0) { return true; }   // (the trial: a snow hill stands in the way — asked only of a ray the boxes leave clear)
   if (scene.numCapsules > 0u) {
     if ((frame.flags & FLAG_MESH_SHADOWS) != 0u) { return meshShadowT(ro, rd, tmax, skipOwner) >= 0.0; }   // characters as their skinned mesh (ultra); else their round-cone proxies
     return occludedCapsules(ro, rd, tmax, skipOwner);
@@ -919,6 +966,7 @@ fn occludedT(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> f32 {
     if ((frame.flags & FLAG_MESH_SHADOWS) != 0u) { tCap = meshShadowT(ro, rd, tmaxIn, skipOwner); }   // ultra: the skinned mesh — the FIRST blocking triangle found, so the penumbra hint's blocker distance can be off by up to a body's thickness (boxes below are near-first, not nearest, likewise)
     else { let c = traceCapsules(ro, rd, tmaxIn, skipOwner); if (c.y >= 0.0) { tCap = c.x; } }
   }
+  if (GROUND_RAYS) { let tg = ghHit(ro, rd, select(tmaxIn, tCap, tCap >= 0.0)); if (tg >= 0.0) { tCap = tg; } }   // (the trial: a snow hill nearer than the cap is the cap — a nearer box still wins in the walk)
   return occludedTBoxes(ro, rd, tmaxIn, skipOwner, tCap);
 }
 // occludedT's box walk on its own (its statements, unchanged): the nearest of a box blocker nearer than tCap and tCap itself (−1 = clear). The SDF rig's soft-shadow

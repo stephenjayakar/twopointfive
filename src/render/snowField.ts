@@ -100,7 +100,10 @@ function toHalf(v: number): number {
 }
 
 /** `breakIt`: the check's break word — the hills are left a finger UNDER their boxes (the boxes then stand out of the surface, as rectangles) */
-export function buildSnowField(level: Level, opts: { wind?: readonly [number, number]; breakIt?: boolean } = {}): SnowField | null {
+/** `roll` (m; GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts, the look's page only): the open ground's lying snow is not flat — a slow swell this
+ *  deep at most stands under the open sky, thinner where the snow is trodden or old and none on cleared ground, under a roof or in a wall. Picture and rays
+ *  only: nothing in the update reads the field. */
+export function buildSnowField(level: Level, opts: { wind?: readonly [number, number]; breakIt?: boolean; roll?: number } = {}): SnowField | null {
   const boxes = level.boxes;
   const w = Math.round(WORLD.gridW * WORLD.gridCell * SNOW_RES), h = Math.round(WORLD.gridH * WORLD.gridCell * SNOW_RES);
   const ox = WORLD.min[0], oz = WORLD.min[2]; const N = w * h;
@@ -212,6 +215,14 @@ export function buildSnowField(level: Level, opts: { wind?: readonly [number, nu
     if (mound[i] < 0.004) mound[i] = 0;
     const up = sstep(0, 0.03, mound[i]);   // standing snow is fresh snow, whatever it stands on
     cover[i] = Math.max(cover[i], up); packed[i] *= 1 - up; old[i] *= 1 - up;
+    if (mound[i] > stats.maxMound) stats.maxMound = mound[i];
+  }
+  if (opts.roll && opts.roll > 0) for (let z = 0; z < h; z++) for (let x = 0; x < w; x++) {
+    const i = z * w + x; if (wall[i]) continue;
+    const k = cover[i] * (1 - sstep(0.15, 0.6, roof[i])) * (1 - 0.85 * Math.max(packed[i], old[i])); if (k <= 0.02) continue;
+    const wx = ox + (x + 0.5) / SNOW_RES, wz = oz + (z + 0.5) / SNOW_RES, sw = wander(wx + 11.3, wz + 4.1, 3.6);
+    const r = opts.roll * k * Math.max(0, 0.12 + 0.88 * sw * sw * (3 - 2 * sw) + 0.22 * (wander(wx, wz, 1.2) - 0.5));
+    mound[i] += r * (1 - sstep(0, 0.3, mound[i]));   // (a bank keeps its own height: the swell is the open ground's)
     if (mound[i] > stats.maxMound) stats.maxMound = mound[i];
   }
   // ---- the mesh: every lattice quad with snow standing at a corner

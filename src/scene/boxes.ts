@@ -5,6 +5,7 @@ import { WORLD } from './world';
 import { makeBuffer, writeWordsIfChanged } from '../gpu/device';
 import { CutPlane, CutGlass, cutConfig, cutClip, CUT_CLIP, packCut, CUT_STRIDE, BOX_CUT_BIT, MAX_CUT_PLANES } from './cut';
 import { AIR_ROWS } from './airGrid';
+import { groundRayConfig, GH_ROWS } from './groundField';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, MARK_TABLE_ROWS, MARK_SLOT_SHIFT, MARK_SLOT_MAX, markStats, markRecordRows, packMarking, secondaryAlbedo, AREA_LIT_MARKS } from './markings';
 
 export const BoxFlag = {
@@ -195,6 +196,12 @@ export class BoxWorld {
   setAirGrid(cells: Float32Array) {
     this.device.queue.writeBuffer(this.matBuf, this.maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16, cells.buffer, cells.byteOffset, Math.min(cells.byteLength, AIR_ROWS * 16));
   }
+  /** GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts): the hills' rows, in matBuf's LAST region (after the cut table). Nothing without the switch. */
+  setGroundField(rows: Float32Array) {
+    if (!this.groundOn) return;
+    this.device.queue.writeBuffer(this.matBuf, this.maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? this.maxBoxes * CUT_STRIDE * 16 : 0), rows.buffer, rows.byteOffset, Math.min(rows.byteLength, GH_ROWS * 16));
+  }
+  private groundOn = false;
   /** how many statics' geo + mat rows the last WHOLE write of the two buffers covered (−1 = none yet): upload() writes only the dynamics' tail while they still stand */
   private rowsStatN = -1;
   /** the visible list as last uploaded, word for word */
@@ -322,8 +329,9 @@ export class BoxWorld {
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     this.geoBuf = makeBuffer(device, maxBoxes * GEO_STRIDE * 4, S | GPUBufferUsage.COPY_SRC, 'boxGeo');   // (COPY_SRC: the g-buffer snapshots both into its 'previous frame' buffer for the motion vectors — render/gbuffer.ts snapshotPrev)
     this.cutOn = cutConfig.on;
+    this.groundOn = groundRayConfig.on;
     if (this.cutOn) this.cutData = new Float32Array(maxBoxes * CUT_STRIDE * 4);
-    this.matBuf = makeBuffer(device, maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? maxBoxes * CUT_STRIDE * 16 : 0), S | GPUBufferUsage.COPY_SRC, 'boxMat');   // + the marking table in its tail (+ the glass-breaking cell table after it: GB_ROWS, zero unless a pane has come apart)
+    this.matBuf = makeBuffer(device, maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16 + AIR_ROWS * 16 + (this.cutOn ? maxBoxes * CUT_STRIDE * 16 : 0) + (this.groundOn ? GH_ROWS * 16 : 0), S | GPUBufferUsage.COPY_SRC, 'boxMat');   // + the marking table in its tail (+ the glass-breaking cell table after it: GB_ROWS, zero unless a pane has come apart)
     if (WORLD.gridW + WORLD.gridH > 96) throw new Error('trace grid: the DDA in common.wgsl caps a ray at 96 cell visits; W + H must stay ≤ 96 for that cap to be unreachable');
     if (maxBoxes > 65536 || maxBoxes * WORLD.gridW * WORLD.gridH >= 1 << 24) throw new Error('trace grid: packed items keep the box index in 16 bits and cell starts in 24');
     this.cellStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1 + 2 * WORLD.gridW * WORLD.gridH);

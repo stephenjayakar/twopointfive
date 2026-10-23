@@ -542,6 +542,7 @@ fn giBounceAt(xs: vec3f, ns: vec3f, alb: vec3f) -> vec3f {
 /** is world point p on / inside box bi (5 cm proud)? — a stored sample's box index still names the box it was found on (dynamic boxes are re-listed every frame) */
 fn giPointOnBox(bi: u32, p: vec3f) -> bool {
   if (bi >= scene.numBoxes) { return false; }
+  if (GROUND_RAYS && bi == u32(boxMat[GH_BASE].z) && p.y > 0.0 && p.y <= boxMat[GH_BASE].x) { return true; }   // (ground that rays can see, a trial: a hit on a snow hill is the ground slab's, and stands over it)
   let b = boxGeo[bi]; let d = p - b.c;
   var lo: vec3f;
   if ((b.flags & BOX_ROT) != 0u) { let q = boxRot(bi); lo = quatRotate(vec4f(-q.xyz, q.w), d); }

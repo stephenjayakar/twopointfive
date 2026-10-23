@@ -563,3 +563,67 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   tyre stack are still the kit's squares; a blast next to a round cannot cut it further (its record is full), and a wall charge on a piece of the bite
   rebuilds it with a square top (`wallcharge.ts` does not read `cut`); the lumps cast no shadow. The trial changes what a ray and a body meet with no
   knob and no journal key: only the level's fingerprint tells a save or a recording made with it from one made without (each is refused on the other).
+- **GROUND THAT RAYS CAN SEE, A TRIAL** (`src/scene/groundField.ts`; asked 10-23 after the geometry trial: "do both that and rays on the ground"). On
+  THE LOOK PROTOTYPE's page only (`?hills=0`, or the look panel's Ground button, puts it off; the page loads again). The snow hills were PICTURE ONLY: a ray
+  met the level's snow boxes under them, never the hill. Here the hills' height, as their mesh draws it (`snowField.ts` `mound`, 10 texels a metre, a texel
+  with nothing on it a finger under the ground as the mesh's corners are), rides in `boxMat`'s LAST rows (after the cut table: no new binding, 452 KB),
+  with a head row and the highest hill of each 1 m plan cell in front. `common.wgsl ghHit` marches the stretch of a ray that runs between the ground and
+  the highest hill, 0.1 m a step and 40 steps at most (a longer stretch in longer steps), one row a step over a cell with no hill, and answers the last
+  place the ray stood above the surface (four halvings), so what is shaded or traced on from a hit starts outside the hill. A ray that STARTS under the
+  surface meets nothing: the hills are a skin seen from above. It is asked by `occluded` (after the boxes leave the ray clear), `occludedT` and the
+  direct light's soft-character path (the hill is the cap a nearer box still beats) and both closest-hit walks (the hit is the ground slab's, its normal
+  the hill's slope; `fgather.wgsl giPointOnBox` lets such a sample keep its history). `occludedTBoxes` itself is untouched, so the fog of war's sight
+  and the walled cache read are as they were. Every pass that traces light takes it: the direct light's shadows, the gather, the cascades, reflections,
+  the volumes, the particles AND THE LIGHT METER (`probe.wgsl`): on that page a man behind a bank is darker to the meter than the headless stand-in
+  says. The game hands the rows over where it hands the field to the g-buffer (`game.ts syncSnowLook`), and whole again after a blast digs a hill
+  (`stepSnowTracks`).
+  Switch: the prelude's `const GROUND_RAYS` from `groundRayConfig.on`, raised by `main.ts` at boot; off = the reads are dead code and the buffer no longer
+  (the prelude gains one line of text on every page, the same on each). Not a rule of the game: no knob table, no journal key, no check of its own.
+  THE OPEN GROUND ROLLS (`?roll=<m>`, 0 to 0.25, off unless asked; `buildSnowField`'s `roll`): the lying snow under the open sky is baked with a slow
+  swell that deep at most, thinner where it is trodden or old (a path reads as a trench through it), none on cleared ground, under a roof or in a wall.
+  The mesh then covers the whole yard (88 k quads on the pass at 0.14, 40 k without) and the rays meet it. Nothing in the update reads it: a man's feet
+  stand on the level's flat ground, up to the swell's depth under the picture's snow.
+  Not in it: the hills' fine relief (the swell, the wind's ridges) and the boot prints, which stay a matter of the shading normal; a hill's own pixels
+  start their rays a finger and a half off the mesh and `GH_BIAS` (8 mm) is all that keeps the mesh's triangles and the march's four-texel blend apart.
+- **THE LOOK PANEL'S SUN AND MOON ROWS** (`src/ui/lookpanel.ts`; the maintainer, 10-23: "do we model a sun at all for dawn/midday? i think that's a big
+  reason why it looks flat. and perhaps we should also model a moon on night levels (and can configure it)"). Both were there: every hour but night
+  puts in a sun (`game/hours.ts`, a kind-2 light with traced shadows where the level's moon stood), and every level is authored with a moon. What made
+  his picture flat: the pass is a snow level, and the snow's cloud (0.9) leaves the sun 9 % of the hour's own (`cloudLight`); the pass's moon is 0.06,
+  where the level kit's own is 0.9, so his night shadows were the gate lamp's. The rows set both for the VISIT: Sun = `__hour.sun(k)` (the share of the
+  hour's own sun; it then stands against the cloud, the sky still follows it), Moon / Moon height / Moon bearing = `window.__moon.set({ k, elev,
+  bearing })` (`main.ts weatherHourHooks`: the level's steady directional light; `?moon=k,elev,bearing` sets it at boot). A row is greyed while its light
+  is not up. THE MOON AND PLAY: the sun's strength is carried by a checkpoint and the journal (the hour's record) and the meter's CPU stand-in reads it
+  (`hourLight`); the moon's is NOT carried, and `guards.ts lightEstimateAt` skips every directional light but the hour's sun, so a raised moon moves the
+  picture and the GPU's meter and not the headless stand-in or the team's light rules. A moon worth playing under needs that stand-in to count it (the
+  sun's one segment test is the model) and a level's own number: a rule of the game, for a switch of its own.
+- **A HOUSE FRONT DRESSED BY HAND, A TRIAL** (`src/scene/frontTry.ts dressFront`; the look page only; the maintainer, 10-23, of the pass's tea house seen
+  from over its yard: "this looks a bit too "regular" -- especially the face of the building we're looking at", and a minute before "the art style just
+  needs a lot of iteration. right now it does look a bit procedural"). The answer tried is AUTHORING, not another layer of noise: one wall gone over
+  piece by piece after the level loads (as the geometry trial does; `levels/pass.json` is not touched), every number placed by hand. The three windows
+  differ (boards, shutters, a blanket nailed over), the two red panels differ (one worn, one plastered over), mends of other mud, a spout with its
+  streak and ice, beam ends under the roof line, split wood under a window, a ladder leaned over the level's own planks, a plank bench with a can and
+  a pot, a few mud bricks at the wall's end. Made of what the engine has: plain and tilted boxes (`Box.rot`), twelve-sided prisms for round timber
+  (`cutRound` about z, a thin picture-only disc for the end grain) and thin cut boxes for flat shapes with an uneven outline. ONE MODEL: what closes a
+  window is a REAL box (sight, a round and the room's lamp stop at a board, a shutter, the blanket and pass between the boards), as is what stands on
+  the ground (none within a stride of a door; the swung shutter stands out at head height beside the planks) and the beam ends over every head; only
+  what lies flat on the wall is picture only, as the level's own panels are. COLOURS are the level palette's rows darkened in one piece (`of(row, k)`,
+  0.55 < k < 0.99), so `lookClass` gives each piece its map: a hand-picked colour between two rows gets none. Traps met: the wall past x = 28 at that
+  z is a partition INSIDE the bunk room, and the yard wall there has a door between its two panels; the level already stacks planks at x 21.4 to 22.85.
+  KNOWN: a tilted box takes no map and no clinging snow from the look (`lookSurface` leaves `BOX_ROT` alone) and a cut piece takes snow only about y;
+  a wall charge there leaves the pieces above a hand's height hanging (`scene/lookTidy.ts` takes a decal with its wall only from the foot). It knows
+  the house by three of its file's boxes (the two red panels, the second window's pane) and does nothing on any other level. Switch: `?front=0` or the
+  look panel's 'Dressed by hand' button (kept on the machine as `twopointsix.fronttry`; the page loads again); needs cut boxes on, and holds the cut
+  programs in from boot as the geometry trial does. Not a rule of the game: no knob, no journal key; the men's routes and sight along that wall change
+  on that page. If the look goes to the build this belongs in the level's file or its kit, not in code. Checked: 98 pieces placed, none malformed,
+  none in the level's own solids or by a door (a script over the loaded level); drawn on the software adapter only.
+- **THE MEN ON THE LOOK PAGE, A FIRST ROUND** (`shaders/look.wgsl lookMan`, called from `gbuffer.wgsl fsSkin`; the maintainer, 10-23: "we need to spend a
+  LOT of time using these layers to make the characters look awesome. I think that's the next big frontier"). A man was one flat colour a material
+  slot with the mesh's creases; here each slot is drawn as the stuff it is, in his BIND pose (nothing swims as he moves), by his side and a number of
+  his own: cloth (thread from the cloth map round each limb, folds that ring the limb and gather at knee, hip, ankle and elbow as a relief the lamps
+  light, an operator's print cut from his own colour, dust on the knees, age), webbing (rows of tape, rubbed edges), helmet (cover, chips), metal
+  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth), and on a snow level snow on shoulders, arms and helmet and
+  caked on the boots. Carried by one float: `vsSkin` packs slot + 16 x side into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
+  main.ts with the look), where the build keeps 1. Amount: the panel's Men row (`look=men:0` = the men as the build draws them; `window.__look.set({
+  men })` for a scripted picture). KNOWN GAPS: the tilted normal is stored as a man's normal always was (alpha 1), so the working-size passes read
+  the folds too: on a GPU look for crawl on cloth under the denoiser; the print and folds are noise, which is the "procedural" he named, so authored
+  maps for the men are the next round; nothing here has been seen on a GPU.

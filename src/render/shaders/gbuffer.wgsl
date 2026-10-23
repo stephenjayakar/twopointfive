@@ -278,7 +278,9 @@ fn slotAlbedo(slot: u32, tint: vec3f, tint2: vec3f) -> vec3f {
   if (H0.x > 0.5) {   // this man is shaded per material slot
     let sr = mb + 2u + 2u * min(u32(slotGeo.x + 0.5), 10u);
     let A = charMats[sr]; let B = charMats[sr + 1u]; let H1 = charMats[mb + 1u];
-    o.albedo = A.xyz; o.fin = vec4f(A.w, B.x, B.y, 1.0); o.mvar = vec4f(B.z, B.w, H0.w, H1.w); o.grime = vec4f(H1.xyz, H0.y); o.geo = vec2f(slotGeo.y, H0.z);
+    o.albedo = A.xyz; o.fin = vec4f(A.w, B.x, B.y, 1.0);
+    if (LOOK) { o.fin.w = 1.0 + f32(min(u32(slotGeo.x + 0.5), 10u) + 16u * min(u32(H0.x - 0.5), 4u)); }   // THE LOOK PROTOTYPE (look.wgsl lookMan): which slot this is and whose side he is on, for the fragment
+    o.mvar = vec4f(B.z, B.w, H0.w, H1.w); o.grime = vec4f(H1.xyz, H0.y); o.geo = vec2f(slotGeo.y, H0.z);
   }
   o.id = 0xFFFFFu | (ch.owner << 20u) | (1u << 28u);
   o.mp = position; o.wp = wp.xyz;
@@ -403,7 +405,8 @@ fn packWet(rough: f32, gain: f32, tilt: vec2f) -> u32 {
 @fragment fn fsSkin(v: SkinVOut) -> GOut {
   var o: GOut;
   var albedo = v.albedo; var id = v.id;
-  let n = normalize(v.normal);
+  var n = normalize(v.normal);
+  let lmx = dpdx(v.mp); let lmy = dpdy(v.mp); let lwx = dpdx(v.wp); let lwy = dpdy(v.wp);   // THE LOOK PROTOTYPE (look.wgsl lookMan): the steps its relief stands on, taken here in uniform flow
   // how fast the normal turns across this pixel (uniform control flow: derivatives of the interpolated normal, two subtractions a pixel) — the wet coat's
   // specular anti-aliasing below: a limb 5 cm in radius turns several degrees within one pixel from up here, and a lobe narrower than that would light one
   // pixel in three along it and crawl as he moves (Tokuyoshi & Kaplanyan's kernel: alpha² += ½·Var(n), capped)
@@ -421,6 +424,10 @@ fn packWet(rough: f32, gain: f32, tilt: vec2f) -> u32 {
     albedo = mix(albedo, v.grime.xyz, clamp(dust, 0.0, 1.0) * 0.6);
     dRough = mix(v.fin.x, 0.65, clamp(dust + 0.5 * crease - 0.25 * ridge, 0.0, 1.0));           // dust and creases dull it, a rubbed ridge is a touch shinier
     dGain = v.fin.y * (1.0 - 0.7 * clamp(dust, 0.0, 1.0)) * (1.0 - 0.5 * crease);
+    if (LOOK) {   // THE LOOK PROTOTYPE (look.wgsl lookMan; dead code on every other page): the slot drawn as the stuff it is
+      let lm = lookMan(u32(v.fin.w - 0.5), v.mp, lmx, lmy, lwx, lwy, n, albedo, dRough, dGain, v.geo.x, vec4f(v.grime.xyz, clamp(dust, 0.0, 1.0)), (v.id >> 20u) & 0xFFu, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+      albedo = lm.albedo; n = lm.n; dRough = lm.rough; dGain = lm.gain;
+    }
     let aaRough = pow(clamp(pow(dRough, 4.0) + nKr2, 0.0, 1.0), 0.25);                            // the wet coat's specular anti-aliasing (below), for the same reason
     id = (v.id & 0xFFF00000u) | packWet(aaRough, dGain, vec2f(0.0)) | (1u << 30u);
   }

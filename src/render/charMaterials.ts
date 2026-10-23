@@ -462,13 +462,16 @@ export function slotAlbedo(side: CharSide, slot: CharSlot, tint: Vec3, tint2: Ve
   return [Math.min(1, Math.max(0, c[0])), Math.min(1, Math.max(0, c[1])), Math.min(1, Math.max(0, c[2]))];
 }
 
+/** THE LOOK PROTOTYPE (shaders/look.wgsl lookMan; main.ts raises it on that page only): H0.x, the per-man switch, also says whose side he is on (1 + this) */
+export const charLookSides = { on: false };
+const LOOK_SIDE: Record<CharSide, number> = { operator: 0, defender: 1, responder: 2, civilian: 3 };
 /** Write a man's CHAR_MAT_ROWS rows at float offset `o` of `out` (anim/characters.ts setMaterials): H0 = (1 = on, grime height, grime band, crease
  *  darkening) · H1 = (grime rgb × its strength folded into the slots' own, ridge lightening) · per slot A = (albedo, lobe roughness), B = (lobe gain, soak,
  *  grime, wear). `standIn` = the mesh is the mannequin split by joint (CharSlotData.authored false): the side's `standIn` remap applies. `suit` = an operator in
  *  the sneaking suit (charMatsOf). */
 export function writeCharPalette(out: Float32Array, o: number, side: CharSide, tint: Vec3, tint2: Vec3, id: number, standIn = false, suit = false) {
   const T = charMatsOf(side, suit);
-  out[o] = 1; out[o + 1] = T.grime.height; out[o + 2] = Math.max(T.grime.band, 0.01); out[o + 3] = T.cavity;
+  out[o] = 1 + (charLookSides.on ? (suit ? 4 : LOOK_SIDE[side]) : 0); out[o + 1] = T.grime.height; out[o + 2] = Math.max(T.grime.band, 0.01); out[o + 3] = T.cavity;
   out[o + 4] = T.grime.color[0]; out[o + 5] = T.grime.color[1]; out[o + 6] = T.grime.color[2]; out[o + 7] = T.ridge;
   for (let s = 0; s < CHAR_SLOT_COUNT; s++) {
     const name = CHAR_SLOTS[s]; const { m } = resolveSlot(T, name, standIn);

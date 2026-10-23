@@ -49,6 +49,9 @@ import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
 import { geoTryLevel } from './scene/geoTry';
+import { dressFront } from './scene/frontTry';
+import { charLookSides } from './render/charMaterials';
+import { groundRayConfig } from './scene/groundField';
 import { cutSwap } from './render/cutSwap';
 import { makeBox, BoxFlag, MKEY } from './scene/boxes';
 import { GLASSBREAK, GB_STATS, glassBreakPersisted, glassBreakLive, saveGlassBreak } from './game/glassbreak';
@@ -226,6 +229,7 @@ async function main() {
   if (q.has('surf')) surfTryConfig.on = true;   // ?surf: SURFACES, A TRY — a paint drawn as the stuff it stands for (render/frame.ts surfTryConfig; shaders/surface.wgsl). Off on every other page
   { const lv = q.getAll('look').filter(v => v !== 'plain' && v !== '0' && v !== 'off');   // (those three words are the GWOT dress's, scene/look.ts lookOfQuery: not this page)
     if (lv.length || document.querySelector('meta[name="tps-look"]')) lookConfig.on = true;   // ?look (the page /look; a one-file build of the prototype carries the meta instead, where the address takes no flags): THE LOOK PROTOTYPE — material maps, lit relief, weather, rounded edges (render/frame.ts lookConfig; shaders/look.wgsl; its panel: ui/lookpanel.ts). Off on every other page
+    charLookSides.on = lookConfig.on;   // (THE LOOK PROTOTYPE's men, shaders/look.wgsl lookMan: a man's material rows also say whose side he is on)
     if (lookConfig.on) for (const kv of lv.join(',').split(',')) { const [k, v] = kv.split(':'); if (Object.hasOwn(lookAmounts, k) && v !== undefined && v !== '' && isFinite(+v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, +v)); } }   // (?look=relief:1.4,air:2 opens it with those amounts: a still without the panel)
   if (q.has('nobouncewalls')) bounceWallsConfig.on = false;   // ?nobouncewalls: the radiance cache read a probe spacing along a man's normal whatever stands there — a man by a lit room's outer wall takes the room's bounce and mirrors its lamps, as it was (render/frame.ts bounceWallsConfig)
   if (q.has('noreflwalls')) reflWallsConfig.on = false;   // ?noreflwalls: a metal's reflection rays read the cache a probe spacing along the hit's normal whatever stands there, as it was (render/frame.ts reflWallsConfig; the picture from before both rules is ?nobouncewalls&noreflwalls: with this one on, a man mirrored in steel takes the walled read whatever the other word says)
@@ -398,7 +402,9 @@ async function main() {
   input.keyVeto = e => (overlay.cardUp && !menu.isOpen && overlay.cardKey(e)) || panel.onKey(e);   // (a tutorial step's card first: the Enter or Space that closes it is no game key — ui/railcard.ts)
     // ← / → and [ / ] over the open panel walk its systems, a typed letter opens its search — before the game reads the key
   (window as any).__panel = panel;
-  if (lookConfig.on) { lookConfig.air = lookAmounts.air; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); buildLookPanel(engine, () => fpsSm, cutConfig.on && !gq.has('geo') ? { on: gOn, flip: () => { try { localStorage.setItem(GEO_KEY, gOn ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined); }
+  // the look's amounts for a scripted picture (the panel's sliders are the player's way; they do not follow this)
+  if (lookConfig.on) (window as any).__look = { get: () => ({ ...lookAmounts }), set: (o: Partial<typeof lookAmounts>) => { for (const [k, v] of Object.entries(o)) if (Object.hasOwn(lookAmounts, k) && typeof v === 'number' && isFinite(v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, v)); engine.gbuffer.setLook(); lookConfig.air = lookAmounts.air; } };
+  if (lookConfig.on) { lookConfig.air = lookAmounts.air; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); buildLookPanel(engine, () => fpsSm, cutConfig.on && !gq.has('geo') ? { on: gOn, flip: () => { try { localStorage.setItem(GEO_KEY, gOn ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined, gq.has('hills') ? undefined : { on: groundRayConfig.on, flip: () => { try { localStorage.setItem(HILLS_KEY, groundRayConfig.on ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } }, cutConfig.on && !gq.has('front') ? { on: frontTryOn(gq), flip: () => { try { localStorage.setItem(FRONT_KEY, frontTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined); }
   const hud = document.getElementById('hud')!;
   const tourVeil = document.getElementById('veil')!;   // black fade the tour raises around its cuts
   // start card now, pause menu on Esc (settings + controls); the simulation freezes while it is open, the frame keeps rendering
@@ -886,6 +892,11 @@ async function main() {
 /** the URL flags the Engine reads while it builds its pipelines — set before `new Engine` */
 /** A GEOMETRY TRIAL (scene/geoTry.ts): on the look page (?look) with cut boxes on, unless ?geo=0 or the look panel's Shapes button put it off. Off on every other page. */
 const GEO_KEY = 'twopointsix.geotry';
+const HILLS_KEY = 'twopointsix.hillrays';
+const FRONT_KEY = 'twopointsix.fronttry';
+/** A HOUSE FRONT DRESSED BY HAND, A TRIAL (scene/frontTry.ts): on the look page with cut boxes on, unless ?front=0 or the look panel's button put it off. Off on every other page. */
+const frontTryOn = (q: URLSearchParams) => { if (!lookConfig.on || !cutConfig.on) return false; if (q.has('front')) return q.get('front') !== '0'; try { return localStorage.getItem(FRONT_KEY) !== '0'; } catch { return true; } };
+const hillRaysOn = (q: URLSearchParams) => { if (!lookConfig.on) return false; if (q.has('hills')) return q.get('hills') !== '0'; try { return localStorage.getItem(HILLS_KEY) !== '0'; } catch { return true; } };   // (GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts: ?hills= wins; else what the look panel's button last kept on this machine)
 const geoTryOn = (q: URLSearchParams) => { if (!lookConfig.on || !cutConfig.on) return false; if (q.has('geo')) return q.get('geo') !== '0'; try { return localStorage.getItem(GEO_KEY) !== '0'; } catch { return true; } };   // (?geo= wins; else what the look panel's button last kept on this machine)
 function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.get('blastpace') === 'old') BLAST_PACE.on = false;   // ?blastpace=old: everything a wall going sets off is done on the frame it goes, as before (game/destructionSwitch.ts BLAST_PACE; same play, same masks and drip lines — one longer frame)
@@ -893,7 +904,8 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.has('reachUniform')) reachBinding.storage = false;   // A/B only: force the reach rows' uniform binding (the adapter fallback itself is the Engine's decision — render/frame.ts, engine.ts)
   { const tv = Number(q.get('trace')); if (q.has('trace') && Number.isFinite(tv) && tv >= 0) traceConfig.variant = tv | 0; }
   if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
-  initCutSwitch(); if (geoTryOn(q)) cutConfig.swap = false;   // (A GEOMETRY TRIAL, scene/geoTry.ts: its cut boxes stand from the first frame to the last, so the one set of ray programs with the cut rule is compiled at boot)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
+  groundRayConfig.on = hillRaysOn(q); if (groundRayConfig.on && q.has('roll')) { const r = Number(q.get('roll')); if (Number.isFinite(r)) groundRayConfig.roll = Math.max(0, Math.min(0.25, r)); }   // (?roll=<m>: the open ground's snow swells this deep — the trial's second half, off unless asked)
+  initCutSwitch(); if (geoTryOn(q) || frontTryOn(q)) cutConfig.swap = false;   // (A GEOMETRY TRIAL, scene/geoTry.ts: its cut boxes stand from the first frame to the last, so the one set of ray programs with the cut rule is compiled at boot)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
   { const ds = Number(q.get('decalStress')); if (ds > 1) decalDebug.repeat = Math.min(64, ds | 0); }   // measurement only (?decalStress=N): the decal lookup N× per g-buffer fragment (render/decals.ts decalDebug), so its cost can be read above the timer's noise; must be set before the Engine builds the g-buffer shader
 }
 
@@ -944,6 +956,7 @@ async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise
   if (!level && kitViewOn && OFFICE_SCENARIOS.kitView && q.get('level') === null) { try { const data0: LevelData = { ...OFFICE_DATA, scenarios: OFFICE_SCENARIOS }, kvWay = kitViewWayOfLink(q, data0), data = kitViewSetLevel(data0, kvWay); if (data !== data0) { level = loadLevel(data); kitSetUp = true; } else { const more = kitViewAddLevel(data0, kvWay); if (more !== data0) level = withOfficeScript(loadLevel({ ...OFFICE_DATA, boxes: more.boxes, lights: more.lights })); /* (the office's own way with its `add`: the office as buildLevel loads it, the pieces after its boxes — its scenarios are the script's, so THIS Level's block carries no `laid` word: the child never lays, kitView.ts planFor) */ } } catch (e) { console.error('?kitview: the office\'s set did not load — the office itself —', e); } }
   if (!level) level = buildLevel();
   if (geoTryOn(q)) { const gt = geoTryLevel(level); console.info(`geometry trial: ${gt.rounds} round things, ${gt.walls} broken wall tops (?geo=0 = the level as its file has it)`); }   // A GEOMETRY TRIAL (scene/geoTry.ts; the look page only): the level's octagons as round prisms, a bite out of each yard wall's top — cut boxes, before the boxes go to the world
+  if (frontTryOn(q)) { const n = dressFront(level); if (n) console.info(`house front: ${n} pieces placed by hand (?front=0 = the wall as its file has it)`); }   // A HOUSE FRONT DRESSED BY HAND, A TRIAL (scene/frontTry.ts; the look page only, and only the pass's tea house)
   if (level.markTexel) engine.settings.markingTexel = level.markTexel;   // the base texel the level's marking bitmaps were generated for (absent = 2.5 cm)
   populateHost(engine, level);   // the level's boxes into the world, its lights into the set (src/host/standup.ts — the same two loops the harness runs)
   engine.settings.skyZenith = level.sky.zenith; engine.settings.skyHorizon = level.sky.horizon;
@@ -959,6 +972,22 @@ function weatherHourHooks(game: Game, smoke: SmokeSystem) {
   HOUR.live = () => hourOf(game);   // (the mission sheet's no-load shortcut asks which hour the page is standing at: a checkpoint or the panel may have moved it off the visit's)
   (window as any).__hour = { ids: HOUR_IDS, table: HOURS, visit: HOUR, get id() { return hourOf(game); }, set: (id: string) => { applyHour(game, HOUR_IDS.includes(id as any) ? id as any : 'night'); return hourOf(game); },
     sun: (k?: number) => { if (k !== undefined) setSunStrength(game, k); return sunStrength(game); }, cloud: () => { sunToCloud(game); return sunStrength(game); }, light: () => hourSun(game), at: (p: [number, number, number]) => hourLightAt(game, p), est: (p: [number, number, number], skip = 0) => lightEstimateAt(game, p, skip ? (o: number) => o === skip : undefined), changed: () => hourWorldChanged(game), summary: () => hourSummary(game) };
+  // the night's moon (the level's own steady directional light: hours.ts puts it out by day). __moon.set({ k, elev, bearing }) = its strength, how high it stands and
+  // where (degrees; bearing 0 = north = −z, 90 = east, the sun's convention) for the VISIT — the look panel's rows. Not carried by a save or a recording, and the
+  // light meter's CPU stand-in (guards.ts lightEstimateAt) reads no directional light but the hour's sun: a raised moon moves the picture and the GPU's meter only.
+  const moonOf = () => { const sun = hourSun(game); return game.engine.lights.lights.find(l => l.kind === 2 && l.ttl < 0 && !l.transient && l !== sun) ?? null; };
+  const DEG = Math.PI / 180;
+  (window as any).__moon = {
+    get: () => { const m = moonOf(); if (!m) return null; return { k: m.peakIntensity, elev: Math.asin(Math.max(-1, Math.min(1, -m.dir[1]))) / DEG, bearing: (Math.atan2(-m.dir[0], m.dir[2]) / DEG + 360) % 360, up: m.enabled }; },
+    set: (o: { k?: number; elev?: number; bearing?: number }) => {
+      const m = moonOf(), now = (window as any).__moon.get(); if (!m || !now) return null;
+      if (o.k !== undefined && Number.isFinite(o.k)) m.intensity = m.peakIntensity = Math.max(0, o.k);
+      const e = (Number.isFinite(o.elev) ? Math.max(3, Math.min(88, o.elev!)) : now.elev) * DEG, b = (Number.isFinite(o.bearing) ? o.bearing! : now.bearing) * DEG;
+      m.dir = [-Math.sin(b) * Math.cos(e), -Math.sin(e), Math.cos(b) * Math.cos(e)];
+      return (window as any).__moon.get();
+    },
+  };
+  { const mq = new URLSearchParams(location.search).get('moon'); if (mq) { const [k, elev, bearing] = mq.split(',').map(Number); (window as any).__moon.set({ k, elev, bearing }); } }   // ?moon=k,elev,bearing: the moon for the visit, from the first frame
   window.__smoke = smoke;
 }
 

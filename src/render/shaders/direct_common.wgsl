@@ -99,7 +99,8 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
     // SDF rig, use (iii): the CHARACTERS' part of this light's visibility is the soft-shadow query toward the emitter's centre with its angular radius as the cone (analytic,
     // deterministic per pixel per light — sdfrig.wgsl charSoftVis), the boxes' part this sample's ray as ever (occludedTBoxes: the box walk alone). A box blocker still hands its
     // PCSS width on; a man's penumbra needs no blur hint (it is drawn, not sampled), so a ray only he darkens reports the segment clear of boxes.
-    let tBox = occludedTBoxes(Po, dir, tmax, skip, -1.0);
+    var tHill = -1.0; if (GROUND_RAYS) { tHill = ghHit(Po, dir, tmax); }   // (ground that rays can see, a trial — common.wgsl ghHit: a snow hill is a blocker the box walk's cap carries)
+    let tBox = occludedTBoxes(Po, dir, tmax, skip, tHill);
     if (tBox >= 0.0) {
       let dOcc = max(tBox, 0.02);
       let pw = select(li.radius * dOcc / max(lightDist - dOcc, 0.05), li.radius * dOcc, kind == 2u);

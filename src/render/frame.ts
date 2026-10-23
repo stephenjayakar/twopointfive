@@ -9,6 +9,7 @@ import { REACH_VEC4S } from './lights';
 import { MESH_MAX_CHARS } from './meshbvh';
 import { MARK_TABLE_ROWS } from '../scene/markings';
 import { cutConfig, CUT_ROWS, CUT_STRIDE } from '../scene/cut';
+import { groundRayConfig, GH_HEAD_ROWS, GH_W, GH_H, GH_RES } from '../scene/groundField';
 import { GB_ROWS } from '../scene/boxes';
 import { smokeGrid, smokeReadConsts } from '../smoke/smokeGrid';
 import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
@@ -321,6 +322,12 @@ export const reflWallsConfig = { on: true };
 function weatherVolWgsl(): string {
   return `const WX_VOL: bool = ${weatherVolConfig.on ? 'true' : 'false'}; const WXD_BASE: u32 = MAX_BOXES * 4u + ${MARK_TABLE_ROWS + GB_ROWS}u; const WXD_W: i32 = ${AIR_W}; const WXD_H: i32 = ${AIR_H}; const WXD_CELL: f32 = ${AIR_CELL};   // the weather's air as a volume (render/frame.ts weatherVolConfig; scene/airGrid.ts)\n`;
 }
+/** GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts): the prelude's consts for it — the switch and where the hills' rows sit in boxMat's tail (after the
+ *  cut table where there is one). Off, the line is the same text on every page and common.wgsl ghHit's reads are dead code. */
+function groundRayWgsl(): string {
+  const on = groundRayConfig.on;
+  return `const GROUND_RAYS: bool = ${on ? 'true' : 'false'}; const GH_BASE: u32 = ${on ? `MAX_BOXES * ${4 + (cutConfig.on ? CUT_STRIDE : 0)}u + ${MARK_TABLE_ROWS + GB_ROWS + AIR_ROWS}u` : '0u'}; const GH_HEAD: u32 = ${GH_HEAD_ROWS}u; const GH_W: i32 = ${GH_W}; const GH_H: i32 = ${GH_H}; const GH_RES: f32 = ${GH_RES}.0;   // ground that rays can see, a trial (scene/groundField.ts groundRayConfig)\n`;
+}
 /** the common.wgsl text the prelude is built from right now (the lab reads it to derive which variants exist) */
 export function commonSource(): string { return traceConfig.common ?? commonSrc; }
 /** `cut`: compile the CUT BOXES rule in (scene/cut.ts). The default is what a module compiled at BOOT gets: the rule only when the switch is on AND the programs are not
@@ -333,7 +340,7 @@ export function scenePrelude(cut: boolean = cutConfig.on && !cutConfig.swap): st
   const mesh = meshBinding.enabled
     ? '@group(0) @binding(13) var<storage, read> meshData: array<vec4u>;   // mesh-shadow trees + skinned corners (render/meshShadows.ts layout; walked by meshShadowT under FLAG_MESH_SHADOWS)\nfn meshLoad(i: u32) -> vec4u { return meshData[i]; }\n'
     : 'fn meshLoad(i: u32) -> vec4u { return vec4u(0u); }   // no mesh-shadow binding on this adapter (frame.ts meshBinding): a zero header = an empty tree, and the engine never raises the flag\n';
-  return wgslWorldConsts() + weatherVolWgsl() + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
+  return wgslWorldConsts() + weatherVolWgsl() + groundRayWgsl() + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
     + sdfRigWgslConsts() + sdfRigSrc + '\n';   // the SDF character rig (render/sdfrig.ts's per-slot table as consts + the generated charSdf fold, then shaders/sdfrig.wgsl): the round-cone primitive common.wgsl's proxy loops call, plus the smooth-union / soft-query extras — compiled only into the modules that name them, and not taken while frame.rigCfg.x is 0
 }
 
