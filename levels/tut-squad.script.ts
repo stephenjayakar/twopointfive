@@ -48,7 +48,7 @@ const script: LevelScriptFn = D => {
   const storeDoor = D.door('store'), shopDoor = D.door('workshop'), sideDoor = D.door('workshop_side'), hallDoor = D.door('hall'), roadGate = D.door('gate_e'), backGate = D.door('gate_n'), trackGate = D.door('gate_w');
   // the workshop's man: his mark at the far end of the room, on the line through the middle of the open lane doorway · where that line ends, on the guard
   // hut's wall across the lane (tools/levels/tut-squad.ts SHOP_FIRE / SHOP_AIM: the level's volumes are laid along the same line)
-  const SHOP_FIRE = D.mark('shop.fire', [19.3, 0, 8.52]), SHOP_AIM: Vec3 = [13.0, 1.0, 8.9], IN_STORE: Vec3 = [10.75, 1.1, 17.0], IN_HALL: Vec3 = [31.4, 1.1, 19.75], HALL_WINDOW: Vec3 = [31.1, 1.4, 17.0];   // (… and the hall's doorway from inside, which its two men watch, and its street window)
+  const SHOP_FIRE = D.mark('shop.fire', [19.3, 0, 8.52]), SHOP_AIM: Vec3 = [13.0, 1.0, 8.9], IN_STORE: Vec3 = [10.75, 1.1, 17.0], IN_HALL: Vec3 = [31.4, 1.1, 19.75], HALL_WINDOW: Vec3 = [31.775, 1.4, 17.0];   // (… and the hall's doorway from inside, which its two men watch, and its street window: the generator's WIN)
   const shopLane = D.volume('shop_lane'), shopLine = D.volume('shop_line'), shopIn = D.volume('shop_in');
   const LANE = D.mark('nest.lane', [23.7, 0, 13.0]);                                               // the wall's own face, mid street: the first burst lands on concrete, well up the street from whoever is about to step round its end
   const CAMP = [D.mark('picket.camp0', [38.4, 0, 11.6]), D.mark('picket.camp1', [38.8, 0, 9.8]), D.mark('picket.camp2', [38.4, 0, 8.0])];
@@ -203,9 +203,12 @@ const script: LevelScriptFn = D => {
       const men = HALL_MEN.map(n => c.unit(n)).filter((u): u is UnitRef => alive(c, u));
       const up = () => men.filter(u => c.query.alive(u));
       const ends = (k: number) => c.any(open(c, hallDoor), c.until(q => q.room('sam') === 'hall', 'the player is in the hall'), c.until(q => men.filter(u => q.alive(u)).length < k, 'one of the hall is down'));
-      // (the one by the street window kneels: standing, he was shot through it from the alley, twelve metres off, before the player had come near. The other stands, out of
-      //  that line: kneeling in the far corner he could not be hit from the window on the frozen stand)
-      const hold = (u: UnitRef, aimAt: Vec3) => c.order(u, { goal: null, aimAt, upper: 'aim', crouch: u.callsign === HALL_MEN[0] });
+      // (both STAND. The one by the window knelt while that window could be looked through from the street: standing, he was shot through it from the
+      //  alley, twelve metres off, before the player had come near. On a knee under a sill a metre high he showed the window a head and no more, and
+      //  it was the squad's rifles up the street that took him, not the player the line asks. The window is at the corner now, behind the nest's
+      //  back wall of bags (tools/levels/tut-squad.ts WIN), and is seen through from the strip in front of it alone: he stands, a chest over the sill
+      //  for the player who walks up to the glass)
+      const hold = (u: UnitRef, aimAt: Vec3) => c.order(u, { goal: null, aimAt, upper: 'aim', crouch: false });
       for (const u of men) hold(u, IN_HALL);
       while (up().length && (yield ends(up().length)).index === 2) for (const u of up()) hold(u, HALL_WINDOW);
       for (const u of up()) c.release(u, 'alert');

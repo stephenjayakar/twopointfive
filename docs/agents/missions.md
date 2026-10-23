@@ -480,7 +480,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     ends, whoever ended it, and when the program stops), and the fog empties its set with its own reset. `c.stimulus.cease(unit)`: rounds of his a burst has not put yet are not
     put. `q.inside(volume, 'team')` = the player or any living teammate. NO SWITCH AND NO BREAK WORD: the row is new this week and its level, script and scripted player change
     together; the verbs do nothing until a script calls them (no other script does). The level file's fingerprint moved (a door, a table, three volumes): checkpoints and recordings
-    of the row from before are refused. THE HALL'S TWO MEN are the script's from the first tick (beat `hall`: KNEELING on their marks, rifles on their doorway; standing, the one by the street window was shot through it from the alley, twelve metres off, in both of two slow
+    of the row from before are refused. THE HALL'S TWO MEN are the script's from the first tick (beat `hall`: KNEELING on their marks until 10-23, when both stand: 'The hall's window is seen from one strip of ground' below, rifles on their doorway; standing, the one by the street window was shot through it from the alley, twelve metres off, in both of two slow
     readers' runs, before the player had come near) until their door gives or
     the player is in the room; one of them hit, the other turns his rifle to the window and stays on his mark, still the script's (let go, he went to the far corner out of the
     window's sight and the window's line had nobody to shoot: a slow reader's run, twice, the first man shot through the glass from far off): they were the game's own from the first shot of the first room, one stands a step from the
@@ -557,6 +557,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
       `BASE_REVS`). Not run: `map-check`'s 48 runs, `missions-gate`, the tour and the soak.
     - NOT DONE / NOBODY HAS SEEN: none of it on a GPU (the pane's fracture, the decals, the gun staying down, the two held in the store); notes 2, 5 and 6 were never reproduced headless,
       so whether his page now plays as written is his next play to say; the page run reaches the workshop only.
+  - **The hall's window is seen from one strip of ground** (2026-10-23; level data, its script and its scripted player: no switch, no rule of the game's. The level file's
+    fingerprint moved: a window, a wall of bags, a can: checkpoints and recordings of the row from before are refused). WHY: `showwhy.ts` (in the build that week) has a teammate
+    whose round the fire gate holds for the player wave him aside and say "you're in my line.". Read off `showWhyLog` at the end of 16 unprotected runs on the page's stand
+    (`lesson-run --plain`: dice 1 to 6, dice 3 to 5 reading each line for 6 s, hard 1 to 3, hard 1 to 3 with 30 s at the blocks, hard 1 at 6 s), it showed on 9: on 8 as the step
+    'window' came up, from a teammate up the street with his rifle on the hall's corner man THROUGH the window, the player on his way to the glass as the line asks; on 1 on 'nest'
+    (hard, the frag's survivor on his feet and the player walking in on him). The frame's owner would not hush a true line on a taught spot: the staging is mended. The same log
+    said what the lesson had been: the squad shot both men through that window from the street before the player had fired (his magazine was full at their deaths). WHAT CHANGED:
+    (1) the WINDOW (`WIN` in the generator: the hole and the step's ring read it) is 0.75 m wide at x 31.4, on the line both corner men stand on, a metre nearer the door end's
+    corner; (2) the nest's BACK WALL of bags, between the gun and the hall, is nine courses (over a man's head) and 3.05 m long, where it was six and 1.8: by `game.col`, the ground
+    from which a standing eye has a line to either man is 2.2 m2, all of it the strip between those bags and the hall's wall in front of the glass; it was 54 m2 (the street from
+    the blocks to the bags, the whole nest, the alley by the back gate). Eight courses were looked through: a wall of bags longer than 1.6 m has a seam in its top course. The can
+    and its oil moved inside the nest; (3) BOTH HALL MEN STAND (the one by the window knelt against the shot from the alley, which no longer exists; on a knee under a sill a
+    metre high he showed the glass a head and no more, and the scripted player at the old mark, his gun held low by the wall, never fired at him); (4) the scripted player stands
+    0.8 m off the glass (nearer, `gunwall` holds his rifle down), puts the cursor on a man's chest BONE (a man the frag has left hurt and on a knee has his head under a standing
+    man's chest), takes the nest from a list of spots that ends in its open side, says whose rounds took the hall's two, and FAILS when a teammate took one from north of the back
+    wall (`TUT_SQUAD_HALL=any` lifts it). MEASURED, the same 16 runs on this tree: all finish; nothing shown at the window or on 'nest' on any; both hall men are the player's on
+    14; on die 2 (plain and hard: the frag leaves the gunner hurt and on a knee, the player walks the strip to the nest's open side) the teammate behind him stops in front of
+    the glass and takes them, and on the plain one the last man gives up and opens his own locked door, so 'window', 'door' and 'lock' go by with the fight. STILL SHOWN, AND NOT
+    MENDED: on 3 of the 4 slow readers' runs "you're in my line." comes once on 'gun', as the player steps out past the wall's end to shoot back with a teammate on the corner
+    behind him (it was on none of the 4 before: the runs part company long before the nest, so this is the dice, not the window). It is true there too; tucking the mark at the
+    wall's end farther behind the wall would take the corner man's eyes off the gun, and nobody has asked. FOUND ON THE WAY: the frag's survivor, hurt, stays on a knee under the
+    bags and no rifle outside them finds him (71 s on one die before the scripted player learnt the open side); the level's script still holds him 40 s as a man on his feet.
+    NOT RUN: map-check's 48 runs, tour, soak. NOBODY HAS SEEN any of it: not the line or the wave on a page, not the tall bags from the game's camera (the strip is behind them
+    and in front of a wall), not the glass breaking at 0.8 m. Never on a GPU.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
     not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.
