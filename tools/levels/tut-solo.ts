@@ -308,7 +308,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- light: the moon the hour swaps for its sun, a lamp over the gate and one over the shop's door ----
   grp('lights');
-  lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.62, -0.5, -0.6]), color: [0.55, 0.7, 1.0], intensity: 0.22, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
+  // (the moon stands behind the shop, low over the back lots: the shop's own front, the door he blows and the wall he waits against, is in its shadow, so
+  //  the lamp over the door is the one light on him there and shooting it out leaves him in the dark. From the road's side it lit that wall, and the line
+  //  'hide in the dark' was said of a man standing in the moon)
+  lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([-0.62, -0.5, -0.6]), color: [0.55, 0.7, 1.0], intensity: 0.22, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
   const lamp = (x: number, z: number, name: string, h = 3.4, outerDeg = 52, side = -1) => {
     add({ c: [x, (h + 0.11) / 2, z + side * 0.6], h: [0.04, (h + 0.11) / 2, 0.04], ...M.galv });
     add({ c: [x, h + 0.085, z + side * 0.3], h: [0.025, 0.025, 0.26], ...M.galv });
