@@ -18,7 +18,7 @@ export const SCENARIOS: ScenarioEntry[] = [
   // the office versions of what the levels below were made for, kept beside them
   { id: 'night-breach', title: 'Night breach', kind: 'nightbreach', squad: 2, group: 'raids',
     place: 'The office · the break room', lean: 'either', defenders: 3,
-    blurb: 'Three enemies hold a break room with four doors. Stack your pair up on one door and send them in while you come through another.' },
+    blurb: 'Enemies hold a break room with four doors. Stack your pair up on one door and send them in while you come through another.' },
   { id: 'room-clear-pair', title: 'Room clear', kind: 'roomclear', squad: 2,
     place: 'The office · the east wing, room by room', lean: 'loud', defenders: 5,
     blurb: 'Clear four held rooms in the office one at a time with the order menu and the door tools. This is the careful way to play.' },
@@ -39,17 +39,17 @@ export const SCENARIOS: ScenarioEntry[] = [
     place: 'Four rooms off one hall, a turn in each', lean: 'loud', defenders: 8, squads: true,
     blurb: 'Every held room turns a corner, so the enemies wait in the dark past a lit doorway. Each has a second door from the small room beside it.' },
   { id: 'block-squads', title: 'The block, three squads', kind: 'roomclear', squad: 4, level: 'block-squads.json', ways: ['the loading hall, on the main hall', 'the loading hall, on the tool crib'], untuned: true, offList: true, group: 'strongholds',
-    place: 'The block again, held by three squads', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'It\'s five against eleven. Three squads hold the block, each in its own rooms. Hit one squad and listen to what the others do.' },
+    place: 'The block again, held by squads', lean: 'loud', defenders: 11, squads: true,
+    blurb: 'The enemies hold the block in squads, and each squad has its own rooms. Hit one squad and listen to what the others do.' },
   { id: 'warehouse-four', title: 'The warehouse', kind: 'roomclear', squad: 4, level: 'warehouse.json', ways: ['the south-west corner', 'the south-east corner'], untuned: true, group: 'strongholds',
     place: 'A racked hall, a loading dock, a ring of small rooms', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Eleven enemies hold a building laid out as a ring, so whichever door you fight at, someone can walk around behind you.' },
+    blurb: 'The building is laid out as a ring, so whichever door you fight at, someone can walk around behind you.' },
   { id: 'compound-four', title: 'The compound', kind: 'roomclear', squad: 4, level: 'compound.json', ways: ['the side yard gate', 'the back gate'], untuned: true, group: 'strongholds',
     place: 'A walled yard, a house of eight rooms, three outbuildings', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Eleven enemies are behind a wall. Two of its three gates are dark, two windows are open, and the breaker is in a pantry nobody\'s guarding.' },
+    blurb: 'The enemies are behind a wall. Two of its three gates are dark, two windows are open, and the breaker is in a pantry nobody\'s guarding.' },
   { id: 'barracks-four', title: 'The barracks', kind: 'roomclear', squad: 4, level: 'barracks.json', ways: ['the south-east corner', 'the galley back door'], untuned: true, group: 'strongholds',
     place: 'Two wings and a mess hall round an open yard', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Eleven enemies hold two galleries that look across an open yard at each other. Six rooms are empty, and the breaker is in the duty office.' },
+    blurb: 'Enemies hold two galleries that look across an open yard at each other. Six rooms are empty, and the breaker is in the duty office.' },
   { id: 'rescue-registry', title: 'The registry', kind: 'rescue', squad: 2, level: 'registry.json', untuned: true,
     place: 'A lit gallery to the hostage room, a dark way round', lean: 'loud', defenders: 3,
     blurb: 'You\'re on a clock. A lit gallery passes two rooms on the way to the hostages, and a gunman waits in one of them. Check the glass.' },
@@ -72,7 +72,7 @@ export const SCENARIOS: ScenarioEntry[] = [
     blurb: 'The yard is floodlit, with guns in two open windows. The breaker is in a shed outside the wall, and the enemies don\'t have night vision.' },
   { id: 'killhouse-four', title: 'The kill house', kind: 'roomclear', squad: 4, level: 'killhouse.json', ways: ['the ready line, on the front door', 'the dark side, on the back door'], untuned: true, group: 'clock',
     place: 'A five-room shoot house on a range', lean: 'loud', defenders: 6,
-    blurb: 'Six enemies, and the clock starts on your first move. Gold is 1:05, silver 1:30 and bronze 2:00. Every teammate you lose adds 25 seconds.' },
+    blurb: 'The clock starts on your first move. Gold is 1:05, silver 1:30 and bronze 2:00. Every teammate you lose adds 25 seconds.' },
   // new ideas (group 'ideas': small missions, each built on one idea). Mousehole = the walls are the way in: the level's own room clear issues the squad wall
   // charges for the run (scenarios.roomClear.wallCharges → game/issue.ts), and every room's door opens on one lit corridor a duty-room gun looks down
   { id: 'mousehole-four', title: 'Mousehole', kind: 'roomclear', squad: 4, level: 'mousehole.json', ways: ['the dark yard, on the blank wall', 'the dark side, on the fire exit'], untuned: true, group: 'strongholds',
@@ -105,7 +105,7 @@ export const SCENARIOS: ScenarioEntry[] = [
 export const QUIET_MISSIONS: ScenarioEntry[] = [
   { id: 'bazaar-quiet', title: 'The bazaar row', kind: 'quiet', squad: 0, level: 'bazaar.json', untuned: true,
     place: 'A shuttered bazaar under curfew: two blocks, one passage', lean: 'quiet', defenders: 5,
-    blurb: 'A patrol circles each block, and both use the one passage. Move behind their flashlights or cut through the shops. Take the sat phone and leave through any gate.' },
+    blurb: 'Two patrols circle the blocks and share one passage. Move behind their flashlights or cut through the shops. Take the sat phone and leave through any gate.' },
   { id: 'police-post-quiet', title: 'The police post', kind: 'quiet', squad: 0, level: 'police-post.json', untuned: true,
     place: 'A walled district police post', lean: 'quiet', defenders: 5,
     blurb: 'The desk sergeant carries the keys, and the guards know the armory code. Grab one and ask, or pick a lock. Take the case file and leave through a side gate.' },
@@ -119,7 +119,7 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
     blurb: 'The manifest is across a lit road, past two sentries who watch each other. Put your partner behind one and grab the other, and he\'ll go when you do.' },
   { id: 'quiet-relay-two', title: 'The relay station, as two', kind: 'quiet', squad: 1, level: 'quiet-relay.json', untuned: true,
     place: 'A hilltop radio relay: mast, comms hut, ops room', lean: 'quiet', defenders: 6,
-    blurb: 'The crypto drive is in the comms hut. Its door is floodlit, locked and on camera, and a guard watches it from the dark behind the mast. Send your partner behind him.' },
+    blurb: 'The crypto drive is in the comms hut. Its door is lit, locked and on camera, and a guard watches it from the dark behind the mast. Send your partner behind him.' },
   // (tools/levels/lights-out.ts: a quiet level built for two — the breaker and the door it darkens are a courtyard apart, and the dark lasts as long as one man's walk to the panel;
   //  the man at the hall's window is the one the game sends to the panel; tools/qa/lights-out-run.ts plays it as a pair, alone, with the partner left behind and
   //  with the panel shot dead (low, at a sprint, and with the sentry choked out first), probe `lights-out`)
@@ -184,12 +184,14 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'You\'re on your own. Get past a sentry, a machine gun and a locked door, clear a room, and get back out.',
     scene: 'The people who hit the convoy keep their code book at a fuel stop down the valley. You\'re going in alone to get it, and nobody expects it to stay quiet.',
     teaches: ['Move, sprint and stay low', 'Take cover on a wall and lean out', 'Use your rifle, its launcher and your pistol', 'Throw smoke, a frag and a stun grenade', 'Blow a locked door with a charge'] },
-  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial',
+  // (packs: the one lesson whose kit is the player's to plan — its Team & kit step walks him through reading this street and packing for it, ui/kitPlan.ts;
+  //  one frag is his whatever he packs: the men behind the sandbags are held down until his lands)
+  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial', packs: { frags: 1 },
     // (its own hour and sky: the post was lit for the night — the street the player stands in is dark, the gates the picket comes through are under lamps
     //  the photocell puts out by day — and measured dry and still)
     hour: 'night', weather: 'clear',
     place: 'The post: one street, a gun at its end', lean: 'loud', defenders: 11, squads: true,
-    blurb: 'Take your squad down one street. There are two easy rooms, then a doorway an enemy is watching, a gunner, a locked hall, and more enemies at two gates.',
+    blurb: 'Take your squad down one street. There are two easy rooms, then a watched doorway, a gunner, a locked hall, and more enemies at two gates.',
     scene: 'The code book points to an outpost that\'s one street long. This time you\'re walking in with your squad, and the enemies there know how to hold a street.',
     teaches: ['Go through doors with the squad behind you', 'Go around a doorway an enemy is watching', 'Make a gunner duck, then move', 'Clear a room through its window', 'Send part of the squad to cover your back'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',

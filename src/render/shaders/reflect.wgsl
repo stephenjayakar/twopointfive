@@ -75,7 +75,7 @@ fn emitTraceK(rough: f32) -> f32 { return 1.0 - smoothstep(0.2, 0.3, rough); }
  *  ones × kEmit, see emitTraceK — the diffuse paths take those through their analytic light entirely, a mirror shows the panel itself); albedo/π ×
  *  (direct + bounce) otherwise; through any glass pane on the segment: tinted, plus what the pane itself mirrors (the sky / the cache) × its Fresnel.
  *  Bounded per ray by matCfg.z (luminance). */
-fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32) -> vec3f {
+fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> vec3f {
   var L = vec3f(0.0);
   var segT = RT_TMAX;
   if (hit.idx < 0) {
@@ -95,7 +95,7 @@ fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32) -> vec3f {
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS && bounceHitMan(hit)) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
     L += albedo * Eh * (1.0 / PI);
   } else { segT = 0.0; }
   if (glassCount() > 0u) {                                                // panes on the reflected segment: tint what lies beyond, add what the nearest mirrors
@@ -291,6 +291,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let rays = min(u32(frame.rtCfg.y), 4u);
   let lamV = smithLambda(Ve, ax, ay);
   let kEmit = emitTraceK(rough);                                            // area-lit fixtures: traced on a polish, analytic (rtGlints) on a rough finish, one panel either way
+  // REFL WALLS (the scene prelude's REFL_WALLS, render/frame.ts reflWallsConfig; lighting_common.wgsl diceWalledPoint): a METAL mirrors the bounce at its hit at full strength
+  // (F0 = its paint, where a dielectric shows a few per cent of it), and a hit on a board or the floor within half a cell of a partition blended the lit room behind it in.
+  // So a metal's rays take the walled read at every hit; everything else keeps the read it had. The word: 0 = the read as it was, else bit 8 and the reflecting
+  // pixel's owner (a steel thing a man carries: his own kit must not hide the air from the read, as the gather's skip word names him).
+  let reflWalls = select(0u, 0x100u | owner, REFL_WALLS && metalness > 0.25);
   var Lsum = vec3f(0.0); var hitT0 = RT_TMAX;
   for (var k = 0u; k < rays; k++) {
     // R2 sequence stepped by (frame, ray) off the pixel's own offsets: consecutive frames stratify the lobe, so the history's running mean settles instead of wandering
@@ -302,7 +307,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     let dir = normalize(T * Ls.x + B * Ls.y + N * Ls.z);
     let hit = traceClosest(Po, dir, RT_TMAX, owner);
     if (k == 0u) { hitT0 = select(RT_TMAX, hit.t, hit.idx >= 0); }
-    let Li = shadeReflHit(hit, Po, dir, kEmit);
+    let Li = shadeReflHit(hit, Po, dir, kEmit, reflWalls);
     let Fr = F0 + (vec3f(1.0) - F0) * pow5(1.0 - clamp(dot(Ve, H), 0.0, 1.0));
     let wG = (1.0 + lamV) / (1.0 + lamV + smithLambda(Ls, ax, ay));      // G2 / G1(v), height-correlated: the VNDF estimator's remaining weight
     Lsum += Li * min(Fr * wetF, vec3f(1.0)) * wG;

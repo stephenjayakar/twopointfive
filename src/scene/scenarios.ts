@@ -271,8 +271,9 @@ export interface LessonStep {
   /** an ARROW on the ground in place of the ring: from the step's `at` it points at this place ('walk into the wall': which way) */
   toward?: Vec3;
   /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no
-   *  longer kept in the picture), and `nv: false` puts the night vision up for the walk out */
-  onWay?: { nv?: boolean };
+   *  longer kept in the picture), `nv: false` puts the night vision up for the walk out, and `run: true` has the men run the leg (the job is done: they
+   *  go back at a sprint — teampace.ts teamTold, RAILS.wayRun) */
+  onWay?: { nv?: boolean; run?: boolean };
   /** (rails) THE LINE ONCE THE ORDER IS GIVEN: while the men carry out what the step asks for, the line says what they are doing and never asks again
    *  (`line`, for RAILS.afterSecs after an order — one of `on`, or any but the word — went out on this step; `word`: the line once the word has been given) */
   after?: { line?: string; on?: string[]; word?: string };
@@ -546,6 +547,10 @@ export interface ScenarioEntry {
   /** this row deploys at ITS OWN SIZE and no other, as a Training row does: the line every other size shows greyed on the loadout screen (game/loadout.ts
    *  squadChoices). A design call, not an inability: the level still stages any size from a URL or a harness tool (loadout-probes.ts knows the difference) */
   only?: string;
+  /** a lesson THE PLAYER PACKS FOR (kit.ts ISSUE.picked): its Team & kit step shows the cards and its page stages what this machine keeps, not the plain issue
+   *  every other lesson is played with. A row that carries it has a plan written for it (ui/kitPlan.ts). `frags` = the least of them he carries there whatever
+   *  he packs (kit.ts kitLessonPage: a step of that mission asks for one of his own) */
+  packs?: { frags?: number };
   /** a file under levels/ (absent = the bundled office) */
   level?: string;
   /** THE ROW'S OWN HOUR AND WEATHER (game/rowset.ts, ROWSET.on): what a visit to this row is always started in — a tutorial mission's level is built for one

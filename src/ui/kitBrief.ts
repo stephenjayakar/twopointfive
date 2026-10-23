@@ -13,16 +13,21 @@
 //     band is no taller than the name alone was — the map a small mark, the name, the facts under it — and the job's sentence, for which
 //     there is no room without cutting it, is read there.
 //   · THE ELEMENTS ARE THE LIST'S: .mmap, .mcsum, .mfacts and .mblurb are shown on the kit step by the rules below and are otherwise untouched; the
-//     facts of this file's own are cells of the same .mfacts row, drawn on this step only. One of them is the list's Defenders cell AGAIN, a count past
-//     five written as a word ('eleven'): the list's own cell, which writes the digits, is not shown on this step.
+//     facts of this file's own are cells of the same .mfacts row, drawn on this step only. One of them WAS the list's Defenders cell again, a count past
+//     five written as a word ('eleven'). How many are inside is now a mystery (ui/missions.ts MYSTERY): neither cell is drawn unless `?mystery=0`.
+//   · A CLICK OFF THE LARGE MAP PUTS IT BACK (the maintainer, 10-23: "clicking outside the map should close it"): large, the sheet reads as a card laid
+//     over the step, and a card is left by a click beside it. That click does nothing else: the kit under the sheet does not take it. KITBRIEF.outside,
+//     `?mapout=0` = as it was (a click on the map, M, Esc, Enter or Space).
 //   · THE COUNTS ARE THE MISSION'S AS STAGED, not the file's alone: a rescue finds its side door unlocked (game/rescue.ts), so it is not counted there.
 //   · THE SWITCH: KITBRIEF.on — on in the page, `?kitbrief=0` = the step as it was (the name alone). UI only: nothing under src/game reads it, no
 //     recording carries it, and it is mounted only by the one starting page (ui/startpage.ts), which no headless stand opens.
 // Plain DOM and one style block, injected once. Nothing at module level uses another module's exports.
-import { placeNeeds, type Mission, type PlaceNeeds } from './missions';
+import { placeNeeds, sheetSpots, defendersShown, type Mission, type PlaceNeeds } from './missions';
 
-export const KITBRIEF = { on: true };
-try { if (new URLSearchParams(location.search).get('kitbrief') === '0') KITBRIEF.on = false; } catch { /* no page (the harness) */ }
+export const KITBRIEF = { on: true,
+  /** a click anywhere off the large map puts it back, and does nothing else (`?mapout=0` = only the map itself, M and the keys that leave a card did) */
+  outside: true };
+try { const q = new URLSearchParams(location.search); if (q.get('kitbrief') === '0') KITBRIEF.on = false; if (q.get('mapout') === '0') KITBRIEF.outside = false; } catch { /* no page (the harness) */ }
 
 const WORDS = ['none', '1', '2', '3', '4', '5', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 /** a count as the menus write one: a digit up to five, a word past it */
@@ -38,6 +43,8 @@ export function needCells(n: PlaceNeeds | null, rescue: boolean): [string, strin
   return out;
 }
 
+/** what a pointer does beside the large map: the click puts it back, the press before it goes nowhere */
+const OUT = ['pointerdown', 'mousedown', 'click'];
 const K = '#missions.one.kb.pane-loadout';
 const CSS = `
 /* THE KIT STEP'S BRIEF (ui/kitBrief.ts; root class 'kb'): the map sheet at the left of a band across the step's top, the mission's own words beside it */
@@ -55,12 +62,20 @@ ${K} .mcsum { display: block; }
 ${K} .mfacts { flex: 0 0 100%; display: flex; margin-top: 9px; }
 ${K} .mfact.kb { display: flex; }
 ${K} .mfact[data-fact="defenders"]:not(.kb) { display: none; }
+${K} .mfacts.nodef:not(:has(.mfact.kb)) { display: none; }
 ${K} .mblurb { flex: 0 0 100%; display: block; max-width: 74ch; margin-top: 9px; font-size: 13px; line-height: 1.45; }
 #missions .mfact.kb { display: none; }
 /* …large: the sheet over the step, on the menus' ground; the band keeps its place under it */
 ${K}.kb-big .msheet > .mmap { position: absolute; z-index: 6; left: var(--pg); top: 20px; width: min(820px, calc(100% - 2 * var(--pg))); min-height: 0; margin: 0; cursor: zoom-out; background-color: rgb(var(--m-panel-rgb)); box-shadow: 0 0 0 1px rgba(var(--m-edge),0.4), 0 24px 80px rgba(0,0,0,0.7); animation: kbbig .16s ease-out; }
 ${K}.kb-big .msheet > .mmap .mplan { position: static; height: auto; aspect-ratio: 40 / 28; padding: 12px; }
 #missions .kb-cap { display: none; }
+/* a plan's words on the large map (a tutorial mission's own: ui/kitPlan.ts): a tag over its spot, a stem down to it — never the page's accent, which on the sheet is the way in alone */
+#missions .kb-pins { display: none; }
+${K}.kb-big .msheet > .mmap .kb-pins { display: block; position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+#missions .kb-pin { position: absolute; width: 0; height: 0; font-style: normal; }
+#missions .kb-pin::after { content: ''; position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--m-bright); box-shadow: 0 0 0 2px rgba(0,0,0,0.55); }
+#missions .kb-pin::before { content: ''; position: absolute; left: -0.5px; top: -15px; width: 1px; height: 13px; background: var(--m-bright); opacity: 0.8; }
+#missions .kb-pin b { position: absolute; left: 0; bottom: 15px; transform: translateX(-50%); padding: 4px 8px 3px; white-space: nowrap; font: 700 11px/1 var(--m-head); letter-spacing: 0.14em; text-transform: uppercase; color: var(--m-bright); background: rgba(12,12,11,0.86); box-shadow: 0 0 0 1px rgba(var(--m-edge),0.45); }
 ${K}.kb-big .msheet > .mmap .kb-cap { display: block; padding: 2px 18px 14px; font: 14px/1.5 var(--m-font); color: var(--m-text); }
 ${K}.kb-big .msheet > .mmap .kb-cap b { display: block; margin-bottom: 3px; font: 700 17px/1.2 var(--m-head); letter-spacing: 0.05em; text-transform: uppercase; color: var(--m-bright); }
 @keyframes kbbig { from { opacity: 0; transform: scale(0.96); transform-origin: 0 0; } }
@@ -75,9 +90,12 @@ ${K}.kb-big .msheet > .mmap .kb-cap b { display: block; margin-bottom: 3px; font
 `;
 function styles() { if (document.getElementById?.('kitbrief-css')) return; const s = document.createElement('style'); s.id = 'kitbrief-css'; s.textContent = CSS; (document.head ?? document.body)?.appendChild?.(s); }
 
+/** what a mission's own plan puts on the large map: words pinned on spots of the floor (x, z), and the line under it */
+export interface BriefPlan { read: string; marks: readonly { label: string; at: [number, number] }[] }
 export interface KitBrief {
-  /** the mission on the page (again when another is highlighted): its needs are read and drawn */
-  show(m: Mission): void;
+  /** the mission on the page (again when another is highlighted): its needs are read and drawn. `plan` = a mission with a kit plan of its own
+   *  (ui/kitPlan.ts): the large map names its rooms and says what to look for */
+  show(m: Mission, plan?: BriefPlan | null): void;
   /** what the place asks, as last read for the mission shown (null: not come yet, or no file) */
   readonly needs: PlaceNeeds | null;
   /** there is a map on the step to open (not: the plan did not come, or a window too narrow for it) */
@@ -99,27 +117,46 @@ export function mountKitBrief(root: HTMLElement, sheet: HTMLElement): KitBrief |
   let shown = '', needs: PlaceNeeds | null = null, big = false, shut = false; const cells: HTMLElement[] = [], hadTitle = map?.title ?? '';
   const onStep = () => !!root.classList?.contains('pane-loadout'), mapOn = () => !!map && onStep() && (map as unknown as { offsetParent?: unknown }).offsetParent !== null;
   const cap = document.createElement('div'); cap.className = 'kb-cap'; map?.appendChild?.(cap);   // the name and the job under the map, drawn while it is large
+  const pins = document.createElement('div'); pins.className = 'kb-pins'; map?.appendChild?.(pins);   // a plan's words on the large map
+  let plan: BriefPlan | null = null;
+  /** the plan's words put where their spots fall on the sheet as it is drawn large (the canvas's picture is fitted inside its box: object-fit contain) */
+  const pin = () => { pins.textContent = ''; const cv = map?.querySelector?.('canvas.mplan') as HTMLCanvasElement | null, marks = plan?.marks; if (!big || !cv || !marks?.length) return;
+    const forId = shown;
+    void sheetSpots(cv, marks.map(k => k.at)).then(at => { if (shut || !big || shown !== forId || !at || !cv.width || !cv.height) return;
+      let pad = 0; try { pad = parseFloat(getComputedStyle(cv).paddingLeft) || 0; } catch { /* no styles */ }
+      const w = cv.offsetWidth - 2 * pad, h = cv.offsetHeight - 2 * pad, k = Math.min(w / cv.width, h / cv.height), x0 = cv.offsetLeft + pad + (w - cv.width * k) / 2, y0 = cv.offsetTop + pad + (h - cv.height * k) / 2;
+      pins.textContent = '';
+      marks.forEach((mk, i) => { const e = document.createElement('i'), b = document.createElement('b'); e.className = 'kb-pin'; e.setAttribute('data-pin', mk.label); b.textContent = mk.label; e.appendChild(b);
+        e.style.left = `${Math.round(x0 + at[i][0] * cv.width * k)}px`; e.style.top = `${Math.round(y0 + at[i][1] * cv.height * k)}px`; pins.appendChild(e); }); }); };
+  const onSize = () => { if (!shut && big && plan) pin(); };
+  try { globalThis.addEventListener?.('resize', onSize); } catch { /* no window */ }
   const draw = (m: Mission) => { for (const c of cells) c.remove?.(); cells.length = 0; if (!facts) return;
     const cell = (label: string, value: string, why: string, before: Element | null) => { const c = document.createElement('div'), l = document.createElement('i'), v = document.createElement('b');
       c.className = 'mfact kb'; c.setAttribute('data-fact', label.toLowerCase().replace(/\s+/g, '-')); if (why) c.title = why; l.textContent = label; v.textContent = value; c.append(l, v); facts.insertBefore(c, before); cells.push(c); };
-    if (m.defenders && m.defenders !== '—') cell('Defenders', wordsOf(m.defenders), '', facts.querySelector?.('.mfact[data-fact="defenders"]') ?? null);   // (the list's own cell writes the digits: on this step it is this one that shows)
+    const held = defendersShown(m); if (held && held !== '—') cell('Defenders', wordsOf(held), '', facts.querySelector?.('.mfact[data-fact="defenders"]') ?? null);   // (the list's own cell writes the digits: on this step it is this one that shows)
     for (const [label, value, why] of needCells(needs, m.scenario?.kind === 'rescue')) cell(label, value, why, null); };
   const told = () => { try { api.onChange?.(); } catch (e) { console.error('the kit brief: onChange threw', e); } };
   const onMap = (e: Event) => { if (shut || !root.classList.contains('pane-loadout')) return; e.stopPropagation(); api.setBig(!big); };
   map?.addEventListener?.('click', onMap);
+  // (in the capture phase, on the document: before any button of the step under the sheet hears it;
+  //  the press that begins the click is caught the same way, or a kit card under the pointer would take the keys and a figure would start to turn)
+  const off = (e: Event) => !shut && big && KITBRIEF.outside && !map?.contains?.(e.target as Node | null);
+  const onOut = (e: Event) => { if (!off(e)) return; if (!mapOn()) { api.setBig(false); return; }   // (the window was narrowed under it and the sheet is not drawn: nothing to leave, the click is the step's)
+    e.stopPropagation(); e.preventDefault(); if (e.type === 'click') api.setBig(false); };
+  for (const t of OUT) document.addEventListener?.(t, onOut, true);
   const api: KitBrief = {
-    show(m) { if (shut || m.id === shown) return; shown = m.id; needs = null; api.setBig(false); draw(m);
-      { cap.textContent = ''; const t = document.createElement('b'); t.textContent = m.title; cap.append(t, m.blurb || m.place || ''); }
+    show(m, with_ = null) { if (shut || (m.id === shown && with_ === plan)) return; shown = m.id; plan = with_; needs = null; api.setBig(false); draw(m);
+      { cap.textContent = ''; const t = document.createElement('b'); t.textContent = m.title; cap.append(t, plan?.read || m.blurb || m.place || ''); }   // (a mission with a plan: what to look for on it)
       void placeNeeds(m).then(n => { if (shut || shown !== m.id) return; needs = n; draw(m); told(); }); },
     get needs() { return needs; }, get big() { return big; },
     get map() { return mapOn(); },
-    setBig(on) { const to = on && mapOn(), moved = to !== big; big = to; root.classList.toggle('kb-big', big); if (moved) told(); if (map) map.title = !onStep() ? hadTitle : big ? 'press M or click to go back' : 'press M or click for the large map'; },   // (the sheet is the Mission step's too: there it says what it said)
+    setBig(on) { const to = on && mapOn(), moved = to !== big; big = to; root.classList.toggle('kb-big', big); if (moved) { pin(); told(); } if (map) map.title = !onStep() ? hadTitle : big ? (KITBRIEF.outside ? 'press M or click anywhere to go back' : 'press M or click to go back') : 'press M or click for the large map'; },   // (the sheet is the Mission step's too: there it says what it said)
     key(code, repeat) { if (shut || !(big || mapOn())) return false;
       if (code === 'KeyM') { if (!repeat) api.setBig(!big); return true; }
       if (big && (code === 'Escape' || code === 'Enter' || code === 'NumpadEnter' || code === 'Space')) { if (!repeat) api.setBig(false); return true; }   // (large, it is a sheet laid over the step: the keys that leave a card leave it)
       return false; },
     onChange: null,
-    close() { shut = true; api.setBig(false); root.classList.remove('kb', 'kb-big'); map?.removeEventListener?.('click', onMap); if (map) map.title = hadTitle; cap.remove?.(); for (const c of cells) c.remove?.(); cells.length = 0; },
+    close() { shut = true; api.setBig(false); root.classList.remove('kb', 'kb-big'); map?.removeEventListener?.('click', onMap); for (const t of OUT) document.removeEventListener?.(t, onOut, true); if (map) map.title = hadTitle; cap.remove?.(); pins.remove?.(); try { globalThis.removeEventListener?.('resize', onSize); } catch { /* no window */ } for (const c of cells) c.remove?.(); cells.length = 0; },
   };
   api.setBig(false);
   return api;

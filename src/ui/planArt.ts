@@ -183,18 +183,19 @@ function hullOf(P: number[][]): number[][] {
   lo.pop(); up.pop(); return lo.concat(up);
 }
 
+/** the sheet's own view of the place on a canvas W by H (drawSheet below draws through it; a caller that pins a word on a drawn sheet asks for the same one) */
+export function sheetView(A: PlanArt, W: number, H: number, ext: number[], all: number[][], small = false): ArtView {
+  const pad = small ? 1.6 : 2.2, r = small ? 2.6 : 1.4, want = [ext[0] - pad, ext[1] - pad, ext[2] + pad, ext[3] + pad];
+  for (const [x, z] of all) { want[0] = Math.min(want[0], x - r); want[1] = Math.min(want[1], z - r); want[2] = Math.max(want[2], x + r); want[3] = Math.max(want[3], z + r); }
+  return artView(A, W, H, want, small ? 0 : 11 * (W / 480));
+}
 /** THE SHEET: the model fitted to the canvas round what stands (`ext` = the walls' own extent on the plan, min then max) and every place a team may start
  *  from, a 10 m scale at its foot (true along x), and the way in — the page's accent, its only use on the sheet: a dot where the team stands, `dealt` = a ring
  *  at each. `u` = the canvas's px per px of a 480 px sheet. */
 export function drawSheet(g: CanvasRenderingContext2D, W: number, H: number, A: PlanArt, ext: number[], all: number[][], pts: number[][], dealt: boolean, small = false) {
-  if (small) {   // a card's picture: the model alone, no scale, the way in drawn for a picture a third the size
-    const u = W / 210, pad = 1.6, want = [ext[0] - pad, ext[1] - pad, ext[2] + pad, ext[3] + pad];
-    for (const [x, z] of all) { want[0] = Math.min(want[0], x - 2.6); want[1] = Math.min(want[1], z - 2.6); want[2] = Math.max(want[2], x + 2.6); want[3] = Math.max(want[3], z + 2.6); }
-    const V = artView(A, W, H, want, 0); drawArt(g, A, V); startMarks(g, V, pts, dealt, u); return;
-  }
-  const u = W / 480, pad = 2.2, want = [ext[0] - pad, ext[1] - pad, ext[2] + pad, ext[3] + pad];
-  for (const [x, z] of all) { want[0] = Math.min(want[0], x - 1.4); want[1] = Math.min(want[1], z - 1.4); want[2] = Math.max(want[2], x + 1.4); want[3] = Math.max(want[3], z + 1.4); }
-  const V = artView(A, W, H, want, 11 * u), k = V.k, line = Math.max(1, Math.round(u * 0.5));
+  const V = sheetView(A, W, H, ext, all, small);
+  if (small) { drawArt(g, A, V); startMarks(g, V, pts, dealt, W / 210); return; }   // a card's picture: the model alone, no scale, the way in drawn for a picture a third the size
+  const u = W / 480, k = V.k, line = Math.max(1, Math.round(u * 0.5));
   drawArt(g, A, V);
   const len = 10 * k, x1 = W - 2 * u, y = H - 3 * u, tick = 3 * u;
   g.fillStyle = 'rgba(214,200,170,0.6)'; g.fillRect(x1 - len, y, len, line * 2); g.fillRect(x1 - len, y - tick, line * 2, tick); g.fillRect(x1 - line * 2, y - tick, line * 2, tick);

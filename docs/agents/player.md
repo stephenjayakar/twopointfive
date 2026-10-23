@@ -1218,7 +1218,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   between edges, so it files what it always did. Rocking kept up files at most twice a plain walk's footfalls (the legs are moving), never two nearer
   than a quarter of the cycle. A FIRST CUT ("the same edge crossed twice files nothing") was thrown out in review: it swallowed real steps without bound
   (a pacing man walked silent) and the first footfall of a start past the half. Do not go back to it; a longer travel (0.45) halves a pacing man's
-  footfalls too. Both places a footfall is filed go through `stepTravelled` / `sameFootfall` / `footfallFiled`. Switch: ON in the page
+  footfalls too. Both places a footfall is filed ask `footfallDue` (the next bullet put the test in one place). Switch: ON in the page
   (`?footfallonce=0` off; Tab ▸ Closer than ever ▸ 'one footfall a step'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'FOOTFALL.once':
   `TPS_FOOTFALL=1`; `TPS_FOOTFALL=0` holds it off on the shipped stand), registered in knobs.ts and `JOURNAL_KNOBS`, a recording from before it replays
   with it off, and a checkpoint names `stepTravel` only when it is not 1. Key off writes nothing (the travel stays 1). CHECK:
@@ -1230,8 +1230,83 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   random keys and cursor (8 seeds of a minute a pattern) lost 7 to 18 % of the key-off footfalls with frames running counted once. The quiet lesson's
   scripted run passes with the key on and off (different digests). NOT THIS RULE'S: a walk with the cursor shaken across him about three times a
   second files NO footfall with either key (the phase never reaches an edge); the key makes the milder shakes cheaper too (8 to 21 footfalls in ten
-  seconds down to 3 to 9). A footfall owed to travel alone would mend both and is not built. NOT DONE: no tour, no soak; never heard in a page; the
+  seconds down to 3 to 9). A footfall owed to travel alone mends both: the next bullet, 'A footfall the legs owe'. NOT DONE: no tour, no soak; never heard in a page; the
   lesson's "seven frames running" was not met on that lesson's pushed head (two frames running on the build before it), only staged.
+- **A footfall the legs owe** (`FOOTFALL.owed`, a key UNDER `FOOTFALL.once`, src/game/player.ts `footfallDue`; 2026-10-23, the flaw 'One footfall a
+  step' names as not its own). THE FLAW: a cycle turned about again and again rocks between its two edges and reaches neither, or crosses one with too
+  little travel behind it for the first key to count. Staged on the lobby's floor for ten seconds, the forward key held and the cursor put in front of
+  him and behind him every 10, 12 and 15 frames (the 10 on three seeds), over the same 10.9 m crouched and 13.3 m standing as a plain walk (18 and 22
+  footfalls): the first key alone files 7 to 13 crouched and 9 to 18 standing; with both keys down the 12-frame rows file 14 to 31. So most of the
+  loss at these rates is the first key's; what was there before it is the cycle that never reaches an edge. THE RULE: with both keys up the cycle's
+  travel is also added up since the last EDGE PASSED, filed or not, or footfall filed (`Player.stepOwed`), on the frames he moves at a footfall's speed
+  (over 0.4 m/s); when it comes to `FOOTFALL.owe` (half a turn: one step's worth of leg) a footfall is filed where the legs are, at an edge's level.
+  A steady walk comes to its edge first every step and files what it always did. The count starts over at every edge passed (so after a footfall owed
+  mid-stride the next ones are back on the frames a foot comes down), when he slows under a footfall's speed (nothing is owed while he stands, and a
+  nudge after a stop pays no old debt), and on the first frame the test is asked after frames it was not (`Player.stepAt`, the game clock it was last
+  asked at: a takedown, a keypad plant and a kick root or walk him without it, and a debt from before the beat is not paid after it). A checkpoint
+  does not carry the debt: a load is a standing start. With the first key down the second does nothing and nothing is kept; unticked, `stepOwed` goes
+  to 0 on the next frame. Both places a footfall is filed ask the one test. Switch: ON in the page (`?footfallowed=0` off; Tab ▸ Closer than ever ▸
+  'a footfall the legs owe'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'FOOTFALL.owed': `TPS_FOOTOWED=1`, which acts only with
+  `TPS_FOOTFALL=1` beside it; `TPS_FOOTOWED=0` holds it off on the shipped stand), in the registered FOOTFALL table, and a recording from before it
+  (with the first key or from before both) replays with it off. CHECK: the same card, `bun run tools/qa/footfall-check.ts` (19 lines, both stands,
+  about three minutes); `FOOTOWED_BREAK=1` must fail shake's 'both keys up' line; the first key's arms run with both up, as the page has them, but
+  its plain `walk`. Lines: shake (both up: 17 to 22 footfalls crouched against 18, 22 to 25 standing against 22, never two nearer than 14 frames;
+  first key down: the second changes no frame), walk 2 (crouched, standing, sprinting, the sprint put on and off, the crouch taken and left under way,
+  and two walks with stops in them, six seconds each on three seeds: the same frames and levels as with the key down, digests equal), feet (one
+  about-turn begun at nine places in the cycle on two seeds: from two seconds after it every footfall is on the key-down run's frame, 18 of 18),
+  nudge (let go at eleven places in the cycle, four seconds stood, the key for a fifth of a second: nothing more filed, 11 of 11; and a takedown's
+  beat begun with 0.42 of a turn on the legs, the key held through it: the same footfalls after it), held 2, harness 2. WHAT IT COSTS AN ORDINARY
+  WALK: one with the cycle turned about in it at speed can file a footfall more. Over nine six-second walks on three seeds (a square, the cursor
+  swept once round him, a walk begun backwards): 2 more in all on each stand, none on frames
+  running. PACING is louder, and is meant to be: forwards and back by legs of 40 frames, standing,
+  files 15 footfalls in ten seconds with the first key alone and 22 with both (a plain walk's count: the legs move as much), so stepping out and back
+  beside a man is as loud as walking past him (the card's `turns` arm prints it and holds only a floor). WET PRINTS: a footfall owed lays none (no
+  foot is down under it), and the plant right after it, which the first key swallows, lays none either: a gap of one print at such a turn; never
+  seen on a GPU. A FIRST CUT, thrown out in review: the count ran from the last footfall FILED and was kept through a stop. After one about-turn
+  every later footfall of a steady walk was filed a fifth of a turn before the foot came down (the first key swallowed each plant and the count
+  never met the feet again), and a debt from before a stop was paid a few frames into the next nudge. Do not go back to it. A SAVE does not
+  carry the count or its stamp (`Player.stepOwed`, `stepAt`: `savestate.ts` sets them 0 and -1 on a load, and the card's stand line holds that a
+  checkpoint does not name them), so a load and the game continued are not the same in those two fields. It costs no footfall: a load is a standing
+  start whatever these fields are (staged once, not a card: both keys raised on the frozen stand, one seed, 80 saves made mid-walk, plain and with
+  the cursor across him every 10, 12 and 15 frames: 1.55 m/s at the save and 0 after the load, so the loaded game never filed the continued one's
+  footfalls with or without the debt), and with the debt put back by hand after the load the three seconds after it filed the same footfalls on
+  the same frames in 80 of 80, because he is under 0.4 m/s on the first frame, which clears the count. Should a save ever carry his speed, these
+  two fields go with it. The rollback snapshot walks every field of the player (`rollback.ts`), by reading. NOT DONE: never heard in a page;
+  nobody has played it; what a shaking hand on a mouse does to the cycle was staged with the cursor put square ahead and square behind, not
+  recorded from a hand; the keypad plant and the kick are covered by the takedown's line by reading (the same early return), not staged. IN A
+  PAGE (headless Chromium, the software adapter, the solo night): the key reads on, and off with `?footfallowed=0`; 31 frames of a shaken walk
+  drawn with no page or console error; stepped with no picture, three seconds from the same spot and foot filed 6 footfalls on a plain walk
+  with the key on or off (the same frames), and with the cursor across him every 10, 12 and 15 frames 6, 7 and 6 with it on against 3, 4 and 3.
+- **Two gears, not a dial (`TWOGEARS`, player.ts; the maintainer: "let's start by just removing the pace wheel entirely with the faster crouch sneak").** With the
+  key up the mouse wheel does nothing to his pace (`wheelPace` returns; a notch a checkpoint or an older visit left on him is put back to 1 at the top of
+  `updatePlayer`), and the crouch-walk goes at `TWOGEARS.crouch` 1.45 m/s where the tune's `playerCrouch` is 1.3 (walk 1.55, sprint 4.7, a patrol's walk 1.15).
+  WHY: the dial bought nothing a player could find. A footfall's level is stance times floor and nothing else (crouched 0.125 of a sprint's, the wheel never
+  moved it), and behind a walking man the old crouch closed at 0.15 m/s. Two speeds are left to learn: on his feet, and crouched and quiet. The wall sidle and
+  a hauled body keep the tune's 1.3; the teammates' pace is untouched (the partner's sneak cap `UNSEEN.lowPace` 1.45 is now Sam's own crouch pace). The Controls
+  list says "move · Shift sprint · C crouch (slower and quiet)", and the options page drops its Wheel row and the pace ticks while the key is up. Switch: ON in
+  the page (`?twogears=0` off; Tab ▸ Detection & movement ▸ 'two gears, not a dial', with a slider for the sneak's m/s), OFF in the module and on the frozen
+  stand (`FROZEN_HOLDS` 'TWOGEARS.on': `TPS_TWOGEARS=1`; `TPS_TWOGEARS=0` holds it off on the shipped stand), its own table in knobs.ts and `JOURNAL_KNOBS`, and a
+  recording from before the table replays with it off. CHECK: `bun run tools/qa/twogears-check.ts` (probe `twogears`, families twogears / player), both
+  stands; `TWOGEARS_BREAK=1` must fail wheel, saved, paces and tail. Lines: wheel (ten notches leave the pace at 1), saved (a saved 0.48 is 1 on the first
+  frame), paces (three seeds: crouched 1.300 → 1.450, walk 1.550 and sprint 4.700 as they were), tail (crouched 2 m behind a patrol walking away, three seeds:
+  in reach in 3.90 s, 7.35 s with the key down), ears (a crouched footfall files at 0.138 either way), off (key down, the run's digest is the build's),
+  harness. `tools/qa/twogears-page.cjs` drives the real page on the software adapter, plain and with both flags off (it reads the hand of
+  `CLOSE.handsLow` too). WHAT WENT WITH THE WHEEL: the squad's upright "slow and quiet" (unseen.ts `samSneaks` reads `pl.pace <= UNSEEN.paceAt`, which is
+  never true now): they sneak when Sam crouches or takes a wall, and no other way. Training's "Moving unseen" has a step that asks for the wheel
+  (`{is:'pace'}`): with the key up that test is true at once and the line goes by (lesson.ts, as `setup` does where a gun has none); lesson-run lets such a
+  step go by. FOLLOWERS: a low follower's cap (`UNSEEN.lowPace`, `SNEAK.lowPace`, 1.45 before the kit's load) is now Sam's own pace, so a file that has
+  dropped back cannot gain on a Sam who keeps crouch-walking (unseen-probes on the page's stand: fastest 1.18 to 1.42 m/s; "they keep up" still passes over
+  its four seconds; not measured on a long walk). HELD BY OTHER CHECKS: selector-input's "the wheel is his pace", handring's wheel under a standing ring and
+  unseen-probes' "slow on the wheel, upright" hold the key down after their stand-ups (the wheel's own rule); close-dark's exhibit asks for 25 frames at rest
+  with the key up and the 30 it always asked with it down (he coasts two frames longer from 1.45 m/s: 28 frames, and nobody noticed him, as before; the
+  staging's own slow pace is nobody's with the key up); ai-probes' motion table and floor-probes read `crouchPace(g)`; snowtracks' "slow crouch" line runs at
+  the sneak's full pace with the key up and passes. THE TRAINING LESSON'S SCRIPTED RUN: with the key up Sam reached the dividing wall 2.6 s sooner, found
+  the man still at the gate from his last round, went at once, and was shot at the last step (the man came to the trunk from the gate's side, with a line
+  to the hide behind the hut). The script now waits for his next visit to the gate and passes on both stands; a player who goes on that earlier round can
+  be caught there with the wheel too, which is the lesson's own, and not mended. NOT DONE: no stealth mission was tallied at the quicker crouch (a man who
+  turns has 10 % less time to catch him crossing, and Sam has 10 % less time behind a man who stops), no tour, no soak, no tutorial mission's scripted run;
+  the walk at 1.55 is now 7 % quicker than the sneak and four times as loud, which may leave the walk little to do; nobody has played it and it has never
+  been seen on a GPU.
 - **Four ring notes: one row is a pill, no line under his ring, his ring stands on its thing, a switch's row turns him** (2026-10-23; four fields of
   `HANDRING`, handring.ts, each with its own page word and all four off under `?handring=0` too; all four off in the module and on the frozen stand and raised there by the hands ring's own
   word, `TPS_HANDRING=1` (no new stand word), each a `FROZEN_HOLDS` row, each off for a recording from before its key). CHECK: `handring`, both
@@ -1321,3 +1396,41 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   after its change, a set door charge or a threshold hold on the page or in a check with the squad of four armed on it, a running verb on the
   page. DECLINED from review, with why: `hudNotes` returning keyed notes under the rule (it would change what the block holds on the shipped
   stand, which that stand's checks read as strings); `objectiveText` returning its parts (every mission module words that line). Never seen on a GPU. NOBODY HAS PLAYED IT.
+
+- **The gun is put away for a charge, and brought back after** (`src/game/workstow.ts WORKSTOW.on`, 10-23; the maintainer: "characters should fully
+  unequip their weapon when planting door charges, etc. -- they can reequip after they're done"). A charge went on with the gun still in the man's
+  hands: the player set one with his left while the pistol stayed in his right, and a teammate pressed his on one-handed with the carbine in the
+  other, free to fire all two seconds. With it on, BY THE PLAYER'S HANDS (a door charge and a wall charge, `doortools.ts` / `wallcharge.ts samTick`):
+  what he holds is put away first (`player.ts setHolstered`, carried by kit handling's own errand where that is on; `samStowing` holds the job's clock
+  until his hands are free of it, `downMax` 1.6 s at most), BOTH hands go on the charge (`character.ts workLayer`), and it is brought back when the
+  charge is set or he lets go of it; no round leaves it until it is up (`Player.equipT`: kit handling's draw, the rifle's own beat, `samUp` 0.3 s at
+  least). Hands empty at the start stay empty. A job begun pressed to a wall takes over what the hold owed back to his hand (`WallHold.drawn`); a job
+  that ended under a state that wants his hands empty (down, a man in his arm, a body, a lock, the wand) leaves it away. A save waits for the gun
+  (`savestate.ts playerBusy`). BY A TEAMMATE ON ORDER (the 'place' stage of both tools): his gun hangs from the frame he is on the job (`Guard.workStow`;
+  `combat.ts guardKit`'s `hang`: the long gun down his front on its sling, a sidearm on his thigh, as for the hammer), both hands go on the charge
+  `mateDown` 0.3 s later, and it is his again `mateUp` 0.45 s after the job ends. NO ROUND LEAVES IT meanwhile: `gunslots.ts sideLocked`, the one lock
+  every trigger a teammate has asks (roomfight.ts, coverfire.ts, the fight AI's fire site), answers for it, his fire clock is held, and `fireWeapon`
+  puts a hung gun back in his hands should a round leave it by any other road. A TEAMMATE THE FIGHT HAS DROPS THE JOB (`stowFight`: his order yielded
+  to it, he is blind or doubled over, or the room fight has brought his gun onto a man): the charge is not set, nothing is spent, the gun comes up,
+  and he starts over when it lets him go, or after `fightCap` 8 s of it at a stretch with it still on him (door tools' own cap for a lock under fire).
+  Enemies set no charges. Needs the hands that do the work (`HANDWORK.on`): with those off nothing is put away. WHAT IT COSTS, measured headless on
+  the office, one seed each: the player's door charge with kit handling on, as the page ships, is 2.57 s from the row with the pistol up (hands free
+  0.57 s in; it was 2.0) and 3.07 s with the rifle up (1.08 s in), and a round may leave the gun 0.43 s (pistol) or 0.72 s (rifle) after the charge is
+  set; with kit handling off 2.05 s, and 0.32 / 0.47 s. A teammate's charge is set 2.30 s after he comes onto it (it was 2.0) and his gun is his
+  again 0.50 s after; with a man 3 m off in his view half way through he drops it, shoots him with the gun back up and has the charge set 4.05 s
+  after he first came onto it (2.0 s with the switch off, the round fired with a hand on the charge). ON in the page (`?noworkstow`), OFF in the
+  module and on the frozen stand (`FROZEN_HOLDS`, `TPS_WORKSTOW=1`, pinned in `host/standup.ts`; `TPS_WORKSTOW=0` holds it off on the shipped stand);
+  in the knob registry and `JOURNAL_KNOBS` (a recording from before the table replays with it off); a box, two sliders and a tally in the debugger's
+  'Hands at work' section. Off, nothing in the module is called. CHECK `bun run tools/qa/probes.ts workstow` (`workstow-check.ts [sam|mate|wall|off]`,
+  27 lines, both stands; it raises the switch itself): by the player's hands with kit handling off and on, the pistol and the rifle (away from the row
+  to the charge set, both wrists within 0.3 m of the charge, back after, the click on the frame it is set fires nothing, the trigger his once it is
+  up), hands empty, a step and the trigger breaking it off; a teammate (hung and locked every frame, the wrists, the two clocks, the net), blinded
+  half way, a man put in his view; a wall charge by hand, begun from a wall hold, and on order; off (by hand, on order, with the hands off, the digest
+  of a run with no charge, an old recording, the registry). `WORKSTOW_BREAK=1` fails 15 on both stands. RUN WITH IT ON, the shipped stand, green:
+  the families owncharge, ownblow, wallcharge, outerwall, handwork, hands, kitanim, wand, gunslots, roomclear, and the scripted runs of tut-solo,
+  tut-squad, tut-sky and tut-plan (the same verdict with it held off; the solo run is 0.6 s longer). `door-grenade`'s charge line now times the plant
+  from the setter's own return to the lock (`Run.lockT`): the charge's later clock moves that probe's grenade, all four run, and 'the men are back' is
+  said when the LAST is, with the charge already going on. STILLS: `node tools/qa/workstow-look.cjs <dir>
+  [noworkstow]` (the page on the software adapter). NOT HERE, other owners' two-handed jobs: a timed charge on its bench and its defusing, the drive
+  out of the rack, the optical wand, a lock being picked, a thing a teammate works (`workthings.ts`); the big slot's hammer already puts the gun away;
+  a keypad and the breaker's lever are one hand. NOT DONE: no tour, no soak, no fight tallies with it on; never seen on a GPU; nobody has played it.

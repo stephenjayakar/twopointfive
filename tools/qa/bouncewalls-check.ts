@@ -1,6 +1,7 @@
 // THE BOUNCE IS NEVER READ THROUGH A WALL OFF A MAN — the check behind the scene prelude's BOUNCE_WALLS (src/render/frame.ts bounceWallsConfig; on,
 // ?nobouncewalls at boot = as it was; no game table, nothing for a recording to carry).
 //   bun run tools/qa/probes.ts bouncewalls        (family `render`)        BOUNCEWALLS_BREAK=1 = the rule off and the same lines asked: must FAIL
+// Its last three lines are REFL WALLS (a metal's reflection rays take the same read: section (5) below; REFLWALLS_BREAK=1 = that rule off: must FAIL).
 // the maintainer, 10-20, the pass at night, the squad in the snow against a lit room's outer wall: "i think there's some leak on direct and specular and indirect
 // with the wall here". The radiance cache (a 1 m lattice) is read a probe spacing along a face's normal — sound for a wall, and for a man standing by a wall the
 // room behind it: his side that faces the wall took the room's bounce, threw it on the snow, and a wet coat's sheen mirrored the room's lamps on his rims. And a
@@ -61,7 +62,8 @@ export async function bounceWallsCheck(): Promise<boolean> {
     const left = /if \(BOUNCE_WALLS && \(bounceHitMan\(hit\) \|\| bounceLeftNoWall\(N0?, owner, hit\.t\)\)\) \{ E[hb] \+?= diceIrradianceWalled\(Ph, hit\.n, bounceHitOwner\(hit\) \| \(owner << 8u\)\); \}/g;
     const isMan = /fn bounceHitMan\(hit: Hit\) -> bool \{ if \(hit\.idx == CAPSULE_HIT\) \{ return true; \} return hit\.idx >= 0 && boxOwner\(boxGeo\[u32\(hit\.idx\)\]\) != 0u; \}/.test(lc) && /fn diceIrradianceWalled\(Ph: vec3f, n: vec3f, skip: u32\) -> vec3f \{ let q = diceWalledPoint\(Ph, n, skip\); if \(q\.w == 0\.0\) \{ return vec3f\(0\.0\); \} return diceIrradiance\(q\.xyz, n\); \}/.test(lc);
     const noWall = /fn bounceLeftNoWall\(N0: vec3f, owner: u32, t: f32\) -> bool \{ return owner != 0u \|\| \(t < 2\.0 && max\(abs\(N0\.x\), max\(abs\(N0\.y\), abs\(N0\.z\)\)\) < 0\.98\); \}/.test(lc);
-    const sites = { cache: n(lc, man), gloss: n(fg, man), gather: n(fg, left), refl: n(rf, man), refl5: n(r5, man), coat: n(comp, /if \(BOUNCE_WALLS\) \{ let q = diceWalledPoint\(P, N, \(id >> 20u\) & 0xffu\); if \(q\.w > 0\.0\) \{ env = diceIrradiance\(q\.xyz, R\); \} \}/g) };
+    const manRefl = /if \(\(BOUNCE_WALLS && bounceHitMan\(hit\)\) \|\| walls != 0u\) \{ (?:h\.)?Eh \+= diceIrradianceWalled\(Ph, hit\.n, bounceHitOwner\(hit\) \| \(\(walls & 0xffu\) << 8u\)\); \}/g;   // (the reflections' sites also take a metal's rays: REFL WALLS, (5) below)
+    const sites = { cache: n(lc, man), gloss: n(fg, man), gather: n(fg, left), refl: n(rf, manRefl), refl5: n(r5, manRefl), coat: n(comp, /if \(BOUNCE_WALLS\) \{ let q = diceWalledPoint\(P, N, \(id >> 20u\) & 0xffu\); if \(q\.w > 0\.0\) \{ env = diceIrradiance\(q\.xyz, R\); \} \}/g) };
     const kept = n(fg, /\{ Eh \+= diceIrradiance\(Ph \+ hit\.n \* c0Spacing\(\), hit\.n\); \}   \/\/ \(no walled read here/g), walks = (body.match(/occludedTBoxes\(/g) ?? []).length;   // (the software adapter's room: the walk written once, and the gather's program asks the read in three places — its two gloss / pane reads keep the old one)
     const bare = n(fg, /diceIrradianceFrom\(/g) + n(fg + rf + r5, /\{ (?:h\.)?Eh \+= diceIrradiance\(Ph \+ hit\.n \* c0Spacing\(\), hit\.n\); \}/g);   // every one of the old reads must now sit in the else of a site above
     const pre = /const BOUNCE_WALLS: bool = \$\{bounceWallsConfig\.on \? 'true' : 'false'\};/.test(readFileSync(resolve(ROOT, 'src/render/frame.ts'), 'utf8'));
@@ -178,6 +180,61 @@ export async function bounceWallsCheck(): Promise<boolean> {
     for (let k = 0; k < 24; k++) { const a = (k + 0.5) / 24 * Math.PI * 2, nn = [Math.cos(a) * 0.9, Math.sqrt(1 - 0.81) * (k % 2 ? 1 : -1), Math.sin(a) * 0.9]; n++;
       const p = plain(Ph, nn), w = walled(near, Ph, nn); if (w && p.every((v, i) => Math.abs(v - w[i]) < 1e-9)) same++; }
     verdict(same === n && tall === 0 && near.length > 0, 'in the open (the pass\'s yard, only the ground within reach) the read point is the old one, a spacing along the normal', `${same} of ${n} normals at (${Ph[0].toFixed(2)}, ${Ph[2].toFixed(2)}) · ${near.length} boxes within reach, ${tall} of them above the ground`); }
+  // (5) REFL WALLS (the prelude's REFL_WALLS, render/frame.ts reflWallsConfig; ?noreflwalls at boot = the rule off; REFLWALLS_BREAK=1 = the rule off here: must FAIL).
+  // The maintainer, 10-23, the solo night's manager's office: "some weird light leakage on bookshelf? seems like irradiance cache leak through wall? and showing
+  // up in specular?". A reflection ray's hit on a face whose normal runs ALONG a partition (a shelf board, the floor at the wall's foot, the ceiling over it) read
+  // the cache a spacing along that normal, where the four plan cells straddle the partition. A metal's rays now take the walled read there. Weighed as above: the
+  // share of the read's plan footprint beyond a ceiling-high wall, the old read and the new, for faces that look up or down within half a cell of a wall. The
+  // boxes turned a quarter (the steel shelving itself: levelOf above leaves every turned box out) are put back, so a board over the hit stops the walk up as it
+  // does in the shader. A read that sees no cell is no read (dark): counted, and held to a few in a hundred, so a walk that answered "nothing seen" everywhere
+  // could not pass as a mend.
+  { const RB = process.env.REFLWALLS_BREAK === '1', RULE5 = !RB, n = (t: string, re: RegExp) => (t.match(re) ?? []).length;
+    const frameTs = readFileSync(resolve(ROOT, 'src/render/frame.ts'), 'utf8'), mainTs = readFileSync(resolve(ROOT, 'src/main.ts'), 'utf8');
+    const metal = /let reflWalls = select\(0u, 0x100u \| owner, REFL_WALLS && metalness > 0\.25\);/g, calls = /(?:shadeReflHit|reflHitParts)\(hit, Po, dir, kEmit, reflWalls\)/g, any = /(?:shadeReflHit|reflHitParts)\(hit, Po, dir, kEmit[,)]/g;
+    const pre = /const REFL_WALLS: bool = \$\{reflWallsConfig\.on \? 'true' : 'false'\};/.test(frameTs), on = /export const reflWallsConfig = \{ on: true \};/.test(frameTs), flag = /if \(q\.has\('noreflwalls'\)\) reflWallsConfig\.on = false;/.test(mainTs);
+    verdict(n(rf, metal) === 1 && n(r5, metal) === 1 && n(rf, calls) === 1 && n(r5, calls) === 2 && n(rf, any) === 1 && n(r5, any) === 2 && pre && on && flag,
+      'a metal\'s reflection rays ask the walled read at every hit, in both reflection passes, and the prelude and the page\'s flag carry the switch',
+      `the metal test (with the pixel's owner in the skip word) ${n(rf, metal)}/1 + ${n(r5, metal)}/1 · hits shaded with it ${n(rf, calls)}/1 + ${n(r5, calls)}/2 (hits shaded in all: ${n(rf, any)} + ${n(r5, any)}; the read's sites are line 1's) · prelude const ${pre} · on in the page ${on} · ?noreflwalls ${flag}`);
+    type Lv = { solid: Bx[]; walls: Bx[] };
+    const kept = new Map<string, Lv | null>();
+    /** levelOf with the boxes turned a quarter put back, their plan extents swapped (kept per file: both lines below ask every level) */
+    const levelQ = (file: string): Lv | null => { if (kept.has(file)) return kept.get(file)!; let L: Lv | null = null;
+      try { const raw: Bx[] = loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8'))).boxes;
+        const all = raw.map(b => !b.rot && Math.abs(Math.cos(b.yaw ?? 0)) < 1e-6 ? { ...b, h: [b.h[2], b.h[1], b.h[0]], yaw: 0 } : b);
+        const solid = all.filter(b => !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) && !b.rot && Math.abs(Math.sin(b.yaw ?? 0)) < 1e-6);
+        L = { solid, walls: solid.filter(b => !(b.flags & BoxFlag.Dynamic) && b.c[1] - b.h[1] <= 0.45 && b.c[1] + b.h[1] >= CY - 0.1 && Math.max(b.h[0], b.h[2]) > 0.3 && Math.min(b.h[0], b.h[2]) < 0.2) }; } catch { L = null; }
+      kept.set(file, L); return L; };
+    const reach = (q: Bx, P: V) => Math.abs(q.c[0] - P[0]) <= q.h[0] + 2.6 && Math.abs(q.c[2] - P[2]) <= q.h[2] + 2.6;
+    /** faces 6 to 40 cm off every ceiling-high wall of a level (or the ones `only` picks) that look up at each height of `ups`, and the ceiling over them that
+     *  looks down: the old read's leak and the new one's */
+    const weighFaces = (L: Lv, ups: number[], only?: (b: Bx) => boolean) => { const o = { pts: 0, oldSum: 0, newSum: 0, oldBad: 0, newBad: 0, dark: 0, worst: 0 };
+      const faces: [number, V][] = [...ups.map(y => [y, [0, 1, 0]] as [number, V]), [CY, [0, -1, 0]]];
+      for (const b of L.walls) { if (only && !only(b)) continue; const ax = b.h[0] < b.h[2] ? 0 : 2, al = 2 - ax;
+        for (const s of [-1, 1]) for (const D of [0.06, 0.15, 0.25, 0.4]) for (const [y, nn] of faces) for (let u = -b.h[al] + 0.25; u <= b.h[al] - 0.25; u += 0.5) {
+          const Ph = [0, y, 0]; Ph[ax] = b.c[ax] + s * (b.h[ax] + D); Ph[al] = b.c[al] + u;
+          if (Ph[0] < 1 || Ph[2] < 1 || Ph[0] > WORLD.max[0] - 1 || Ph[2] > WORLD.max[2] - 1) continue;
+          const near = L.solid.filter(q => reach(q, Ph)), air = y + nn[1] * 0.02;
+          if (near.some(q => q.c[1] + q.h[1] > air && q.c[1] - q.h[1] < air && Math.abs(q.c[0] - Ph[0]) < q.h[0] + 0.02 && Math.abs(q.c[2] - Ph[2]) < q.h[2] + 0.02)) continue;   // the air this face looks into is inside a box: no face here
+          const W = L.walls.filter(q => reach(q, Ph)), Qn = RULE5 ? walled(near, Ph, nn) : plain(Ph, nn);
+          const lo = leak(W, Ph, plain(Ph, nn)), ln = leak(W, Ph, Qn);
+          o.pts++; o.oldSum += lo; o.newSum += ln; if (lo > 0.05) o.oldBad++; if (ln > 0.05) o.newBad++; if (!Qn) o.dark++; o.worst = Math.max(o.worst, ln); } }
+      return o; };
+    // where he saw it: the manager's office (solo night), the partition to the lit storage room (x = 30, z 4.1 to 9.9): the floor at its foot, the unit's four board tops, the ceiling
+    { const L = levelQ('office.json'), o = L ? weighFaces(L, [0, 0.165, 0.64, 1.115, 1.59], b => Math.abs(b.c[0] - 30) < 0.01 && b.c[2] > 4 && b.c[2] < 10 && b.h[2] > 2) : null;
+      verdict(!!o && o.pts >= 100 && o.oldBad > 0.6 * o.pts && o.newBad === 0 && o.dark < 0.1 * o.pts,
+        'the solo night, the partition between the manager\'s office and the storage room: a hit that looks up at the wall\'s foot or at a shelf board\'s height by it, or down from the ceiling over it, blends no cell beyond the wall',
+        o ? `${o.pts} points 6 to 40 cm off both faces (the floor, four board heights, the ceiling; the steel unit's own boards stand in the way as they do in the page): a cell beyond the wall at ${o.newBad} (as it was: ${o.oldBad}, ${pc(o.oldBad, o.pts)}; mean share ${(o.oldSum / Math.max(o.pts, 1)).toFixed(3)} → ${(o.newSum / Math.max(o.pts, 1)).toFixed(3)}) · no cell seen, so no read: ${o.dark} (${pc(o.dark, o.pts)})` : 'office.json did not load'); }
+    // every level
+    { const T = { pts: 0, oldSum: 0, newSum: 0, oldBad: 0, newBad: 0, dark: 0 }; let levels = 0; const bad: string[] = [];
+      for (const file of readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).sort()) {
+        const L = levelQ(file); if (!L || !L.walls.length) continue; levels++;
+        const o = weighFaces(L, [0, 0.64]); for (const k of Object.keys(T) as (keyof typeof T)[]) T[k] += o[k];
+        if (o.newBad > 0) bad.push(`${file.replace('.json', '')} ${o.newBad} (worst share ${o.worst.toFixed(2)})`); }
+      const newShare = T.newBad / Math.max(T.pts, 1), oldShare = T.oldBad / Math.max(T.pts, 1);
+      verdict(levels >= 30 && T.pts > 5000 && oldShare > 0.3 && newShare < 0.004 && newShare < oldShare / 20 && T.dark < 0.03 * T.pts,
+        'every level: a hit that looks up or down within half a cell of any ceiling-high wall — the reads that blend a cell beyond the wall are all but gone, and few go dark',
+        `${levels} levels, ${T.pts} points (the floor, a board's height, the ceiling): reads with a cell beyond a wall ${T.newBad} = ${pc(T.newBad, T.pts)} (as it was: ${T.oldBad} = ${pc(T.oldBad, T.pts)}; mean share ${(T.oldSum / Math.max(T.pts, 1)).toFixed(4)} → ${(T.newSum / Math.max(T.pts, 1)).toFixed(4)}) · no cell seen, so no read: ${T.dark} (${pc(T.dark, T.pts)})${bad.length ? ' · left: ' + bad.slice(0, 8).join(', ') + (bad.length > 8 ? ` and ${bad.length - 8} more` : '') : ''}`); }
+  }
   return all;
 }
 if (import.meta.main) process.exit((await bounceWallsCheck()) ? 0 : 1);

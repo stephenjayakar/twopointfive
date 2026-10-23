@@ -67,7 +67,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in), not for F. With the old line (F at the held door) the pair stepped in dry on that awake man and BOTH died on 10 of 16 shipped dice (seeds 1 to 8,
   read at six seconds a line and at the script's pace), which was lesson-gate's shipped red (seen on every build looked at, back some hundred steps); with `TPS_WORDNOCAN=0` the
   same sixteen passed with nobody lost, and so do the sixteen on the new line (one can each). F still ends the step. The scripted player gives the can
-  where the hold is the one order (`outsidePlain`) and F where it is the old page (the frozen stand). Headless only: never seen on a GPU, never played
+  where the hold is the one order (`outsidePlain`) and F where it is the old page (the frozen stand), and opens every menu the page's way where the ring
+  stays (`CMDRING.stay`: the squad's key kept down, then the digits), so the ring is driven on a door the pair already holds. The line says "X on it",
+  never "Press X": `keymap.ts keyText` draws the orders key as "hold Q" and folds the word only after "hold" or "with" ("Press hold Q" was printed). Headless only: never seen on a GPU, never played
   by a person. Re-run eight shipped dice (four
   `--hard`) and count `Blue …: → dead` / `Red …: → dead` lines after ANY change to the door tools or these marks: the lesson passes with a man lost. Where the pairs go straight in
   on the word with no can (train-pairs' white house), no defender sees OUT of a door: a man in a far corner with his gun down the room shot the first of each
@@ -946,6 +948,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   FOR THE SOLO MISSION'S OWNER: its step `load` ("[2] again: load the grenade") is already true when it comes up under this rule and goes by unread, and
   its scripted walk never wears the page's kit (`lesson-run.ts` stages no card on a man alone), so `tut-solo-check` plays the sponge rounds either way.
   NOBODY HAS played the mission with it, on a GPU or off; no page was opened for it.
+- **A lesson the player packs for** (`src/game/kit.ts ISSUE.picked`, `kitPacks`, `kitLessonPage`, 2026-10-23; the maintainer, of the kit step's
+  walkthrough: "we should attach it to a tutorial mission (and make it bespoke and explain how to plan)"). A tutorial row that carries `packs`
+  (`scene/scenarios.ts ScenarioEntry`; today the squad mission, `tut-squad`, alone) is NOT played with the kit as issued: `game/loadout.ts kitAsIssued`
+  is false of it, so its Team & kit step shows the cards (where `ui/kitPlan.ts` teaches planning its kit, `docs/agents/menus.md`) and its page stages
+  what this machine keeps, as any mission's does. `packs.frags` is THE LEAST HE CARRIES THERE: the street's 'frag over the bags' step holds the two men
+  behind the sandbags down until his frag lands, so a card packed with none would leave a line asking for what he cannot do — on that mission's page
+  (`main.ts` names the lesson's row with `kitLessonPage(row)`, and the rule is read at each staging, so a recording's own knobs decide it;
+  `tools/qa/rerun.ts` names the row again for a page's recording) `kitPlayer` writes his frags up to that floor, never down, and his card on the kit
+  step shows the handed frag as the mission's. Every other lesson is as it was, and that page's difficulty levers stay off like every lesson's. WHAT MOVES ON
+  THAT PAGE: with the kept cards as issued he carries the pouches rule's one of each (1 smoke, 1 stun, 1 frag) where the issued page left him what a
+  Player is built with (4 / 2 / 2), and the four carry their kept cards. His smoke and stun are no use there today: the mission's frame allows his
+  rifle, his pistol, and the frag at its one step. SWITCH: on in the page, `?kitpack=0` off; off in the module and on the frozen stand
+  (`FROZEN_HOLDS['ISSUE.picked']`, `TPS_KITPACK=1` raises it); the table is the journal's `ISSUE`, and a recording from before the key replays with it
+  off. No headless lesson run raises the issued page, so no frozen or shipped digest or tally moves: the rule is the page's and a recording's. Off =
+  the build before (that row as issued, no card on its step). CHECK: `probes.ts kitpack` (`tools/qa/kitpack-check.ts`, family `kit`), both stands, and
+  `KITPACK_BREAK=1` FAILS on both (4 lines): the row and its plan, the rule on and off, the journal, the loadout screen with and without cards, the
+  staging as its page stages it under four kits (Stun heavy: he and the four carry it, and the one frag is on him though his card has none; a pistol
+  and empty pouches: still the frag), the plan's map marks inside the level's rooms of those names, what its cards say of the kits (as issued the squad
+  carries three stun grenades for the three rooms the lesson's door lines send it into; Stun heavy six, and takes your frag); and ON THE PAGE'S STAND THE MISSION PLAYED THROUGH by its scripted
+  player under five kits side by side (as issued · Stun heavy · Stun heavy with a smoke traded for a frag · Frag heavy, no door charge on anybody · a
+  pistol and empty pouches): 23 of 23 steps each, seed 1, god mode as that script always runs (`KITPACK_PLAY=0` leaves the plays out). MEASURED: those
+  five runs, one seed; nothing else was measured (no tour, no soak: no rule of a fight changed). NOT SEEN: the mission played by a person on any kit
+  but the issue; anything on a GPU; whether the squad, carrying a door charge under Stun heavy, blows the locked hall on B twice before the window step
+  on the real page (the scripted player's run under it passes).
 - **A strongroom reached past cameras and beams** (`levels/vault.json` ← `tools/levels/vault.ts`, built on the look's kit, no second look file; row `vault-quiet`
   'The counting house' in `QUIET_MISSIONS`, group 'quiet-alone', `untuned`; `?levelFile=vault.json&quiet`, alone; level data only, no game code): a walled money house at
   night, the ledger in a safe. Two gates, each lit and under a lens (`cam_yard`, `cam_east`, mains); each dark way crosses a beam (`beam_strip` chest high, battery,
@@ -1665,3 +1691,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A level file's fingerprint moves with its words, so a checkpoint saved on an older build of a tutorial mission is refused. `tools/qa/writing-check.ts`
   (`probes.ts writing`) holds every lesson's text and every mission row to the guide's patterns; `WRITING_BREAK=1` must fail. Read on the page by nobody
   yet; never seen on a GPU.
+- **Mission 1, three play notes (2026-10-23)** (`levels/tut-sky.json`, `rails.ts`, `teampace.ts`, `planmode.ts`). (1) THE SKY SEAT IS DRAWN AS PLAN MODE IS
+  ("first tutorial level should have the plan mode overlay"): `RAILS.skyPlan` (a knob of the frame's table, on with the frame; `?skyplan=0`; picture
+  only; off for a recording from before the key) → `Rails.planDrawn` → `planmode.ts planView` gives its picture with `frame` true and `up` false (the
+  mode itself is down): the frame round the view with its word, each man's ring in his pair's colour, the men the next order goes to drawn full; no
+  mark for the parked player, no pick box, nothing of plan mode taught (that is mission 2's). Needs plan mode on in the page (`?qplan=0` takes it away
+  with the rest). THE READING TAKEN: plan mode's own picture, not the floor plan's ways shown all the time (those still come with an order and with
+  the menu, as in plan mode). (2) THE BREAKER BOX LINE says "A buddy team is going for the breaker box": the order always sent a pair (`workthings.ts`: the
+  nearest man works it, the other of his pair covers from behind him — when a cover mark can be reached); the line said one. The scripted player fails the step if the worker has no partner covering. (3) THE SQUAD RUNS
+  BACK TO THE TRUCKS ("the guys should sprint back to exfil when they're done"): a step's `onWay: { run: true }` (held by lived-check: tut-sky's row
+  moved) → once the step's order is out (`Rails.running`, said once a tick: a man of the squad is under an order to the step's mark) `Rails.runs(gd)`
+  is true of EVERY man of the squad an order has sent somewhere, whichever mark the order dealt him → `teampace.ts teamTold`, one more reason to run
+  (`'told'`, counted in `TEAMPACE_STATS.told`) under the same leave as the others: a hurt man and a quiet one still walk, A MAN WITH SOMEBODY IN HIS
+  SIGHTS DOES NOT RUN (`fight.engaged`, as a run to cover: a runner's gun is low and fires nothing), the last `ORDERS.briskIn` metres are walked in as
+  on any leg, and with `TEAMPACE` off nothing changes. `RAILS.wayRun` (on with the frame; `?wayrun=0`; `journal.ts applyKnobs` puts it off for a
+  recording from before the key). The line after the order is as it was ("They're falling back to the trucks": true with the switch off too). MEASURED
+  headless, seed 1, the page's stand: the leg takes 6.4 s, top 4.7 m/s, 5 runs told. CHECK: `rails-check` lines 'the sky seat is drawn as plan mode
+  is' and 'the job done, the squad runs back' (27 lines green on both stands, `RAILS_BREAK=1` fails 19 on both), `lesson-run tut-sky` (the two asserts
+  above). NOT DONE: no fight or stealth tally was run for the new reason (it is reached only from a tutorial step). The picture was looked at on the
+  software adapter only (the first step: frame, word and four rings, the word clear of the big line): never seen on a GPU, never played by a person.
