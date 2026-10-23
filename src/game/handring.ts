@@ -71,6 +71,14 @@ export const HANDRING = {
   turn: false,
   /** s more than the hand's own time that a turn may add (a half turn at the plant's 10 rad/s is 0.31 s, the step in the rest) */
   turnMax: 0.45,
+  /** THE CORNER PANEL IS THREE THINGS (the maintainer, 10-23, of the panel at the top left: "i think we can make this more compact and it should always
+   *  just show the thing that will happen if you quick press E" · "squad one should just be the same for Q (and you can have both sections)" · "i
+   *  think we can remove the per man status tbh, doesn't add much to gameplay" · "we'd also remove the title "squad loud ..." entirely from top left
+   *  menu, it'd just be Q and E stuff when appropriate" · "objectives should move to a section in the top left menu panel"). With it the panel is:
+   *  the objective as a section (the line at the top middle of the screen is gone), then one line a key — what his own key does now, with no
+   *  heading over it; what the squad's key does now — and nothing else: no line per man, no counts of what the squad carries, no title. The
+   *  reduction is ui/corner.ts; the picture only (the rows, the squad's block and the objective's words are made as they were). */
+  corner: false,
 };
 /** the word an empty tap files, how long before it is filed again (s), and how long the corner shows it (s) */
 export const EMPTY_WORD = 'nothing in reach', EMPTY_AGAIN_SECS = 3, EMPTY_SHOW_SECS = 1.6;
