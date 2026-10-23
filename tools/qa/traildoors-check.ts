@@ -11,12 +11,14 @@
 //   (2) rule off, held and let go: he goes round — never in the copy room — and ends with Sam;
 //   (3) rule on, the same: the trail way is handed to him, he walks through the copy room, and ends with Sam;
 //   (4) rule on, the whole walk with nobody held: every man enters every space Sam does and ends with him, and the trail way is a rare thing;
-//   (5) off, nothing reads its number;
-//   (6) a recording from before the key replays with it off; one that carries it keeps it; ?traildoors=0 puts it off.
+//   (5) rule on, the trail made too long a way round to be worth it (trailLong 0): it is not handed out, and he goes round as with the rule off;
+//   (6) off, nothing reads its numbers;
+//   (7) a recording from before the key replays with it off; one that carries it keeps it; ?traildoors=0 puts it off.
 //
 //   bun run tools/qa/traildoors-check.ts          (both stands: it raises the switch itself; also `probes.ts trail-doors`, family registry)
 //   TRAILDOORS_BREAK=1 …                          (the rule's own body left out, the same lines asked: must fail)
-// What it cannot say: one level, one seed, the script's Sam at a walk. Never seen on a GPU, nobody has played it.
+// What it cannot say: one level, one seed, the script's Sam at a walk. Not staged: a locked door on the trail (the walk unlocks every door), and an
+// opening with no door in it, which the rule does not count as a way of its own. Never seen on a GPU, nobody has played it.
 import { ROOT } from './headless.ts';
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { walk } = (await import('./registry-probes.ts')) as any;
@@ -64,10 +66,12 @@ export const trailDoorsCheck = guarded(async () => {
       const w = await walk(4, (g: any) => { if (!G) { G = g; ORDERS.trailDoors = true; const O = g.orders, tw = O.trailWay.bind(O); O.trailWay = (gd: any, a: number[], b: number[]) => { asks++; const r = tw(gd, a, b); if (r.length) took++; return r; }; } });
       console.log = log;
       const spaces = Object.keys(REGISTRY_ROOMS), miss = w.theirs.map((t: Set<string>) => spaces.filter(s => w.sam.has(s) && !t.has(s)).join('+') || '—');
-      F.verdict(w.alive && !w.short && miss.every((k: string) => k === '—') && w.end.every((d: number) => d < 5.5) && w.doorway.length === 0 && took <= 6, 'rule on, the whole walk with nobody held: every man enters every space Sam does and ends with him; the trail way is a rare thing',
+      F.verdict(w.alive && !w.short && miss.every((k: string) => k === '—') && w.end.every((d: number) => d < 5.5) && w.doorway.length === 0 && asks > 0 && took <= 3, 'rule on, the whole walk with nobody held: every man enters every space Sam does and ends with him; the trail way is asked for and is a rare thing',
         `spaces a man never entered: ${miss.join(' / ')} · at the end ${w.end.map((d: number) => d.toFixed(2)).join(' / ')} m from Sam · asked ${asks} times in ${w.secs.toFixed(0)} s, handed out ${took}${w.short ? ` · ${w.short.slice(0, 120)}` : ''}`); }
-    { const moved = await held(false, { trailReachM: 9 });
-      F.verdict(moved.inCopy === off.inCopy && moved.took === 0 && flat(moved.at, off.at) < 1e-6, 'off, nothing reads it: the same held run with its number moved', `${say(moved)} · his last place ${flat(moved.at, off.at).toFixed(6)} m from the first run's`); }
+    { const far = await held(true, { trailLong: 0 });
+      F.verdict(far.heldS > 1 && far.inCopy === 0 && far.took === 0 && far.gap < 5.5, 'rule on, the trail too long a way round to be worth it (trailLong 0): it is not handed to him, and he goes round the room as with the rule off', say(far)); }
+    { const moved = await held(false, { trailReachM: 9, trailLong: 9 });
+      F.verdict(moved.inCopy === off.inCopy && moved.took === 0 && flat(moved.at, off.at) < 1e-6, 'off, nothing reads them: the same held run with its numbers moved', `${say(moved)} · his last place ${flat(moved.at, off.at).toFixed(6)} m from the first run's`); }
     { const g = on.g, snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
       ORDERS.trailDoors = true; const old = snap(); delete old.tables.ORDERS.trailDoors; JOURNAL.applyKnobs(g, old); const without = ORDERS.trailDoors;
       ORDERS.trailDoors = true; const own = snap(); ORDERS.trailDoors = false; JOURNAL.applyKnobs(g, own); const withIt = ORDERS.trailDoors;
