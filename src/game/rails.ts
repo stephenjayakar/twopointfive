@@ -485,8 +485,9 @@ export class Rails {
     const T = S.L.steps[i], M = S.i < of ? this.g.orders?.menu : null, on = !!M && (!T.at || Math.hypot(M.target.at[0] - T.at[0], M.target.at[2] - T.at[2]) < MENU_M);
     const ring = on ? (M!.page === null ? T.menuLine : T.pageLine ?? T.menuLine) : undefined;
     // (RAILS.cardBeat · the step's deed is done and it settles before the next step's card: what its men are doing, or nothing — never the ask again,
-    //  whatever is open, and never a line that asks for a key: a step may be done by more than the press its `after` line goes on to ask for)
-    if (S.i < of && this.g.lesson.settling) { const w = T.done?.is === 'cue' ? stepLine(T) : T.after && this.gaveStep === S.i && this.gave ? lessonLine(said(T.after, this.gave) ?? '') : ''; return { line: /\[[^\]]+\]/.test(w) ? '' : w, n: i + 1, of, watch: true }; }
+    //  whatever is open, and never a line that asks for a key: a step may be done by more than the press its `after` line goes on to ask for. A step
+    //  that waits out its own `settle` with no card after it keeps its line as it was: that wait is the level's, and its line is the level's to judge)
+    if (S.i < of && RAILS.cardBeat && !!S.L.steps[S.i + 1]?.explain && this.g.lesson.settling) { const w = T.done?.is === 'cue' ? stepLine(T) : T.after && this.gaveStep === S.i && this.gave ? lessonLine(said(T.after, this.gave) ?? '') : ''; return { line: /\[[^\]]+\]/.test(w) ? '' : w, n: i + 1, of, watch: true }; }
     const d = this.g.time - this.tapT, note = S.i < of && T.noTap && !M && d >= 0 && d < NOTE_SECS ? lessonLine(T.noTap) : undefined;
     // (the order the step asks for has gone out: the line is what the men are doing — never the ask again while they do it; `afterSecs` on, the step asks again)
     const since = this.g.time - this.gaveT, A = S.i < of && !BREAK && this.gaveStep === S.i && this.gave && RAILS.afterSecs > 0 && since >= 0 && since < RAILS.afterSecs && this.g.time - this.gave0 < RAILS.afterMax ? T.after : undefined;

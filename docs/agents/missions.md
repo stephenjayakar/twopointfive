@@ -248,6 +248,46 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   to the side) and the line ends 'and get behind the wall'. The scripted player throws and steps aside and fails if his own can blinds him;
   `tut-solo-check` plays a ninth way, `flash` (thrown from nearer, the line not left: the can must blind him where SAMSTUN is on, and every step
   still goes by). The level's own base row did not move (prose). Nobody has thrown it by hand since.
+- **`tut-solo`: the inner door, lines that settle, and the 40 mm alone (2026-10-23; level data, its script and scripted player, two data-only additions
+  to `lesson.ts`; no switch).** The maintainer, having played it: "weird to reload after a single shot in tutorial 3. maybe we can have a moment where
+  we teach (1) switching to full auto, (2) mag dumping on a door to break it, and then (3) teaching a reload" · "also weird that the next modal shows
+  up before the reload completes" · "same goes for shooting the guard through the door, should only move through the tutorial after it \"settles\"" ·
+  "we can also not teach swapping secondaries at this point and only have 40mm. we can introduce sponge rounds + swapping secondaries later when we
+  have a stealth tutorial". (1) THE INNER DOOR. A wall north from the barrier's end (`INNER_X` 12.5, z 5 to 12.2) with one wooden door in it, locked
+  (`inner`, 'inner door', its middle at z 9.25), and a second barrier from the first one's other end to the arch: the way to the blue gate is through
+  that door and nothing else. The gun beats now run sentry, setup card, Tab, full auto, 'Go through the gate to the wooden door', 'Hold the left mouse
+  button to shoot the wooden door until it breaks', 'Press [R] to reload', then through the doorway to the gate. The leaf goes on the twelfth rifle
+  round (`doorblast.ts DOORSHOT`; a round through it stops in the arch's wall). Where that rule is off (`?doorshot=0`, `?nodestruction`, the frozen
+  stand) or his rounds find the jambs, his twentieth shot since the line came up (`did event:shot`, single shots or one long burst alike) ends
+  the line and the script throws the door open as the reload's line comes up (cue `way`), so the way on never hangs on a switch. The door opens
+  TOWARD him (`swing`): a sprint into a locked door is a kick, and a frame holds a boot from the face the leaf opens toward (`DOORWAY.frameHolds`),
+  so the run a new player tries first stops on the leaf and the trigger is the way through (with `?frameholds=0` the run kicks it in and the line
+  goes by on the open door: a lesson skipped, never a dead end). The reload's line waits on a new test `{ is: 'loaded' }`: a reload has begun and
+  ended since the line came up, or no reload would help the gun in his hands (no spare magazine, or a round chambered and as many in the gun as
+  his fullest spare holds: the same question `Firearm.startReload` asks before it refuses). A gun he ran dry has started its own reload
+  (`autoreload.ts`) and the line goes by when that ends. The
+  checkpoint 'the gate' moved from the old reload line to the line after the new one (`arch`): put back, the door is out and the rifle full and on
+  auto, so a down at the sandbags does not cost the door again. (2) SETTLE. A new step key `settle` (seconds, `scene/scenarios.ts LessonStep`,
+  validated in `levelData.ts`, held in `lived-check`'s `LESSON_HELD` like `hold`): once a step's test has counted, the moment is latched
+  (`StepSeen.doneT`; the test is not asked again) and the next line comes up that many seconds later (`Lesson.settling` is true meanwhile). A step
+  whose test was already true the tick it came up skips its settle: nothing played out. What he does during a settle is not credited to the NEXT
+  step's deed counts (they start when it comes up): on this mission no step after a settled one counts a deed he could have done early. A step
+  without the key runs as it did, and no other lesson's run moves. On this mission: 1.5 s after each man down (`fire`, `frag`, `shop`, `store`,
+  `last`) and after the launcher's grenade (`launch`), 1 s after the door, 0.8 after the reload, the lamp and the rifle's draw, 0.6 after the
+  charge, 0.4 after the stun grenade. The frame's own rule for when a CARD comes up (`RAILS.cardBeat`, the tutorial frame's) is beside this, not
+  instead, and is to ride the same latch. NO SWITCH: `settle`, `loaded` and the door are level data read by the lesson; a level that does not
+  name the key or the test is unchanged by them, and the mission's own file is new at this length for every stand. (3) THE 40 MM ALONE. `rings` is off the mission's card, the step `load` and its `allow` are gone, the launcher's
+  card says the grenade and nothing to swap; `rails.ts ACTS.load` stays for the stealth mission that will teach the swap. On a stand where the card
+  is not the whole kit (the frozen one) sponge rounds are still lent and the scripted player swaps by the rifle's key before he fires: no page deals
+  that. 33 steps. CHECKS: `tut-solo-check` still plays nine ways a seed; the way `sponge` is gone and `jamb` is new (a run at the door, which must
+  hold where the frame rule is live, then twenty rounds into the wall beside it: the line goes by and the door is opened for him); the scripted
+  player's file raises `TPS_DOORSHOT` and `PT_DESTR` on the frozen stand, waits every settle out as a player does, and fails if a line comes up
+  inside a settle or over the reload. MEASURED (2026-10-23, after the last change): `tut-solo-check` all pass on both stands (seeds 1 and 2, nine ways each, the shop's lamp, the page's kit) and red by one with `TUT_SOLO_BREAK=1` on both; the
+  door out after 12 rounds (frozen) and 13 (shipped) square on; with `TPS_DOORSHOT=0` in front the twentieth shot ends the line on both stands; the
+  run at the door holds on the shipped stand and kicks it in with the door hung the other way (tried once, to see the test bite); `lesson-gate`,
+  `lesson-check`, `rails-check`, `lived-check`, `level-needs --run`, `map-check`, `door-size`, `second-way-check` green; the other four tutorial
+  missions' scripted runs unchanged on the shipped stand. On the page (software adapter) the door, the reload and the checkpoint were played. Nobody has played it by hand; the splintering
+  leaf has never been seen on a GPU.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
