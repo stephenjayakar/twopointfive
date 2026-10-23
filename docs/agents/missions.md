@@ -766,7 +766,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     tests were tried turned and zoomed by a reviewer and held, but a player zoomed far in has to zoom out or walk nearer, and no line says so. (3) With `?tabback=0` the
     back key is Esc and the walk lines still say Tab (as the solo mission's does); Shift with the command key closes the mode too. (4) He can walk into a room nobody
     has taken and be shot there: he has no trigger, and nothing but the lines keeps him on his spots. (5) A ring is 0.9 m either way and its mark fades inside 1.6 m, as
-    other lessons' rings do. Nobody has played it, and nothing of it has been seen on a GPU.
+    other lessons' rings do. (6) His three spots are safe on purpose (no trigger); the level skill now asks that a door not always have a safe spot to
+    command it from, which a mission with a trigger should heed and this one does not. ON THE JOIN with the build head after it (the two gears, mission 1's
+    changes to `rails.ts` and `planmode.ts`): seeds 1 to 4, hard and the wrong plan on seed 1, `tutplan-check` on both stands and both breaks, `lesson-gate`,
+    `level-needs --run` and `rails-check` on both stands, `lived-check`, `writing-check`, `picker-list`, `rowset-check`, `lesson-check`, both typechecks, and the real
+    page again (51 lines): the same numbers. Nobody has played it, and nothing of it has been seen on a GPU.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
