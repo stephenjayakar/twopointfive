@@ -8,10 +8,12 @@
 //   pop = the last four cracks of the wood: seconds since (under 0 = none) · how hard 0‥1 · its own seed 0‥1
 struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f, pop: array<vec4f, 4> };
 
-const FIRE_STEPS = 18.0;        // samples of the flame along a pixel's ray
-const FIRE_SIGMA = 8.0;         // 1/m: how soon a flame hides what is behind it. A flame is THIN: a hand's width of it keeps half of what is behind, so a long path
-                                // through the heart is bright, the edges are dim and deep in colour, and the coals show through from above
-const FIRE_GAIN = 2.0;          // scene radiance of full flame at its hottest (the drum's coals are authored at 11)
+const FIRE_STEPS = 24.0;        // samples of the flame along a pixel's ray (18 with a flame this dense was a stipple: a step hid two thirds of what was behind it, so the
+                                // first one inside decided the pixel; at 24 and this density a step hides half)
+const FIRE_SIGMA = 14.0;        // 1/m: how soon a flame hides what is behind it. A real flame is thinner than this, and on a GPU a thin one was a pale smear:
+                                // the ground its own light falls on is as bright as it is, so light ADDED to that ground only washed it out. Three fingers of
+                                // this flame hide what is behind, so its colour is its own; the ragged edge and the open feet are still seen through
+const FIRE_GAIN = 1.0;          // × fireColor = the flame's scene radiance (fireColor is written in the picture's own units: see it)
 const FIRE_EMBER_GAIN = 2.5;   // … of an ember just thrown (a point far smaller than a pixel: what reaches the picture is this × its share of the pixel)
 const FIRE_EMBER_R = 0.004;     // m: an ember's own radius
 const FIRE_POP_EMBERS = 6u;     // embers a crack throws
@@ -52,16 +54,20 @@ fn fireFlame(F: FireRec, P: vec3f) -> vec2f {
   // torn by what rises through it: whole at the coals, ragged up its sides, loose islands at the top
   let n = 0.62 * fireN(vec3f(q.x * 9.0, q.y * 6.0 - up * 2.2, q.z * 9.0) + s) + 0.38 * fireN(vec3f(q.x * 21.0, q.y * 13.0 - up * 4.4, q.z * 21.0) - s);
   let edge = 1.0 - yy;
-  var f = smoothstep(0.0, 0.13, edge + (n - 0.5) * (0.35 + 0.8 * min(yy, 1.3))) * smoothstep(0.0, 0.22, rim + (n - 0.5) * 0.3 * smoothstep(0.0, 0.1, rim));   // (no flame beyond the rim: the noise alone must not light one there)
+  var f = smoothstep(0.0, 0.07, edge + (n - 0.5) * (0.35 + 0.8 * min(yy, 1.3))) * smoothstep(0.0, 0.14, rim + (n - 0.5) * 0.3 * smoothstep(0.0, 0.1, rim));   // (no flame beyond the rim: the noise alone must not light one there)
   f *= smoothstep(-0.01, 0.16, q.y) * (1.0 - smoothstep(1.4, 1.7, y));   // open at its feet, so the coals are seen between its roots; and gone before the volume's own top
-  let hot = clamp(f * clamp(0.2 + 1.1 * edge, 0.0, 1.0) * (0.5 + 0.5 * rim), 0.0, 1.0);
+  // how hot is WHERE it is, not how much of it there is: a tongue is yellow at its root, orange up its length and red only at its tip and out at the rim, and
+  // what rises through it carries cooler and hotter streaks up with it
+  let hot = clamp(1.25 * edge * sqrt(max(edge, 0.0)) - 0.12 + 0.12 * rim + (n - 0.5) * 0.55, 0.0, 1.0) * smoothstep(0.0, 0.6, f);
   return vec2f(f, hot);
 }
-/** the light of a flame that hot: deep red at the cool end, orange, a yellow heart */
+/** the light of a flame that hot, as scene radiance: deep red at the cool end, orange, a yellow heart. The numbers are set against the picture's tone curve at the
+ *  game's exposure (post.wgsl, AgX at 2): that curve turns any bright colour to cream, a red above about 1 and a yellow above about 2.5, so the flame's range is
+ *  kept UNDER its shoulder — brighter only read as paler (the first cut's heart was 5 and came out white on a GPU). */
 fn fireColor(hot: f32) -> vec3f {
-  var c = mix(vec3f(0.85, 0.09, 0.004), vec3f(1.0, 0.28, 0.02), smoothstep(0.0, 0.3, hot));
-  c = mix(c, vec3f(1.0, 0.60, 0.14), smoothstep(0.3, 0.85, hot));
-  return c * (0.22 + 2.5 * hot * hot * hot);   // (a wide range: the rim stays under the tone curve's shoulder and keeps its red, the heart goes yellow)
+  var c = mix(vec3f(0.40, 0.026, 0.0), vec3f(1.05, 0.17, 0.006), smoothstep(0.0, 0.4, hot));
+  c = mix(c, vec3f(1.6, 0.52, 0.03), smoothstep(0.35, 0.72, hot));
+  return mix(c, vec3f(2.1, 1.12, 0.14), smoothstep(0.7, 1.0, hot));   // (the march makes it up to a tenth brighter when the light kicks: fireAir's `glow`)
 }
 /** where the vertical cylinder of radius R about `c` between heights y0 and y1 cuts the ray: (near, far), near > far = it does not */
 fn fireCyl(ro: vec3f, rd: vec3f, c: vec3f, R: f32, y0: f32, y1: f32) -> vec2f {
@@ -156,8 +162,8 @@ fn fireCoals(F: FireRec, q: vec2f) -> vec3f {
   let gap = smoothstep(0.42, 0.7, lump + 0.25 * (fine - 0.5));                                     // 0 on a lump's back, 1 down between two
   let heat = F.b.y * (0.55 + 0.45 * breath) * (0.6 + 0.4 * F.c.z);
   let glow = gap * gap * heat;
-  let char = vec3f(0.035, 0.012, 0.006) * (0.4 + fine) * 2.0;   // a lump's back: black
-  return char + fireColor(0.1 + 0.4 * glow) * (3.0 * glow);     // … and the gaps deep orange and red, under the flame's own light
+  let char = vec3f(0.02, 0.006, 0.002) * (0.4 + fine);          // a lump's back: black, a little warm
+  return char + fireColor(0.12 + 0.42 * glow) * (1.15 * glow);  // … and the gaps deep orange and red (kept under the tone curve's shoulder, like the flame)
 }
 fn fireAir(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, jit: f32) -> vec4f {
   let heat = F.b.y;

@@ -50,10 +50,11 @@ export function meterAt(g: any, P: Vec3, o: MeterOpts): number {
       for (let k = 0; k < 6; k++) { const N = AXES[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += E * cs; }
       continue;
     }
-    const dx = l.pos[0] - P[0], dy = l.pos[1] - P[1], dz = l.pos[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
+    const sp = o.steady ? l.steady : undefined, lp = sp ? sp.pos : l.pos, lr = sp ? sp.radius : l.radius;   // (a fixture somebody flickers, an open fire: its authored self to who asks for the steady light — guards.ts)
+    const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
     if (dist > l.range || dist < 1e-3) continue;
     const Lx = dx / dist, Ly = dy / dist, Lz = dz / dist;
-    let att = lightWindow(dist, l.range) / Math.max(dist2, l.radius * l.radius);
+    let att = lightWindow(dist, l.range) / Math.max(dist2, lr * lr);
     if (l.kind === 1) {
       const cd = -(Lx * l.dir[0] + Ly * l.dir[1] + Lz * l.dir[2]); const cosOuter = Math.cos(l.outerDeg * DEG), cosInner = Math.cos(Math.min(l.innerDeg, l.outerDeg - 0.5) * DEG);
       if (cd < cosOuter) continue;
@@ -64,10 +65,10 @@ export function meterAt(g: any, P: Vec3, o: MeterOpts): number {
       att *= ce;
     }
     if (att <= 0) continue;
-    const c = l.color, I = l.intensity;
+    const c = l.color, I = sp ? sp.intensity : l.intensity;
     if (Math.max(c[0], c[1], c[2]) * I * att < 0.002) continue;
     const L = lum(c) * I * att;
-    const tmax = dist - l.radius - 0.02;
+    const tmax = dist - lr - 0.02;
     if (tmax > 0.05 && g.col.segmentBlocked(P, [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax])) continue;
     for (let k = 0; k < 6; k++) { const N = AXES[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += L * cs; }
   }

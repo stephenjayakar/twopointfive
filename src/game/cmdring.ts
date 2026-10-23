@@ -188,6 +188,11 @@ export const CMDRING = {
    *  hintView `glyph`; a picture only). false: the glyph, as built. Off here and on the frozen stand (`TPS_PLAINHINT=1`); the page raises it
    *  (`?plainhint=0` off) */
   plainHint: false,
+  /** … AND NO OUTLINE EITHER (the maintainer, 10-23, at a wall with the ring up: "the line and circle are weird, don't need them"): the squad's
+   *  cursor mark is not drawn at all — no line along a wall or a door, no circle on a spot or a man, before the key, with it down or under an open
+   *  ring (orders.ts hintView answers null; a picture only). What a tap would order, and on what, is the corner's line on the key. false: the
+   *  outline, as built. Off here and on the frozen stand (`TPS_BAREHINT=1`); the page raises it (`?barehint=0` off) */
+  bareHint: false,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has

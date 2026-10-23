@@ -26,6 +26,9 @@
 //             burning, the same number every frame as with the switch off
 //   meter     what the CPU's light estimate reads a long stride from the drum, three metres and five metres off, switch on against off: the mean within a tenth, and
 //             how far it swings (printed: the figure the area file quotes)
+//   size      while it burns the lamp is as big as the flame (FIRE.size × the mouth) and the steady readers still take it for the size the level gave it, a hand
+//             from the lamp where the two sizes differ most; the level's size back the frame the switch goes off; `size` 0 (the page's ?firesize=0) = the level's
+//             size burning; a recording from before the key replays with it 0
 //   off       switch off: the lamp steady at the authored strength where the level hung it, nothing handed to the renderer, the solver or the mixer
 //   old       a recording from before the key replays with it off (journal.ts applyKnobs)
 import { standUp, ROOT } from './headless.ts';
@@ -181,6 +184,28 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
       const ok = on.length === 3 && off.length === 3 && on.every((r, i) => off[i].mean > 0 && Math.abs(r.mean / off[i].mean - 1) < 0.1 && (i === 2 || r.hi > r.lo * 1.1)) && off.every(r => r.hi - r.lo < 1e-6 * Math.max(1, r.hi));   // (five metres off is another lamp's ground on the pass: read, not judged for a swing)
       verdict(ok, 'meter — the CPU\'s light estimate beside the drum: the mean within a tenth of the steady lamp\'s, and it swings',
         on.length === 3 && off.length === 3 ? ['1.25 m', '3 m', '5 m'].map((d, i) => `${d}: steady ${off[i].mean.toFixed(3)}, burning ${on[i].lo.toFixed(3)} to ${on[i].hi.toFixed(3)} (mean ${on[i].mean.toFixed(3)}, ${((on[i].mean / off[i].mean - 1) * 100).toFixed(1)} %)`).join(' · ') : 'no fire to read');
+    }
+    // ---- size
+    {
+      const size0 = FIRE.size;
+      try {
+        const B = await rig(false, false), authored = B.t ? B.t.light.radius : NaN, near = B.t ? [B.t.pos[0] + 0.15, B.t.pos[1], B.t.pos[2]] : [0, 0, 0];
+        let offNear = NaN; if (B.t) B.step(30, () => { offNear = lightEstimateAt(B.g, near as any, undefined, true); });
+        const A = await rig(true, false), t = A.t;
+        if (!t) verdict(false, 'size — the pass has a fire', 'none found');
+        else {
+          let big = -Infinity, small = Infinity, told = NaN, nearLo = Infinity, nearHi = -Infinity;
+          A.step(60, () => { big = Math.max(big, t.light.radius); small = Math.min(small, t.light.radius); told = t.light.steady ? t.light.steady.radius : NaN; const v = lightEstimateAt(A.g, near as any, undefined, true); nearLo = Math.min(nearLo, v); nearHi = Math.max(nearHi, v); });
+          FIRE.size = 0; let pin = NaN; A.step(2, () => { pin = t.light.radius; }); FIRE.size = size0;
+          let back = NaN; A.step(2, () => { back = t.light.radius; });
+          FIRE.on = false; A.W.step(DT); A.W.step(DT); const off = t.light.radius, kept = t.light.steady !== undefined; FIRE.on = A.sw;   // (the rig's own step raises the switch each frame)
+          const k = (J as any).knobsSnapshot(A.g); FIRE.size = 0.5; (J as any).applyKnobs(A.g, k); const own = FIRE.size;
+          const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.size; FIRE.size = 0.5; (J as any).applyKnobs(A.g, k2); const old = FIRE.size;
+          verdict(authored > 0 && big === small && big > authored * 2 && told === authored && nearLo === nearHi && nearLo === offNear && pin === authored && back === big && off === authored && !kept && own === size0 && old === 0,
+            'size — burning, the lamp is as big as the flame and the steady readers take it for the level\'s size; the level\'s size back with the switch off, with `size` 0, and in a recording from before the key',
+            `the level made it ${authored} m · burning ${small.toFixed(3)} to ${big.toFixed(3)} m, the steady readers told ${told} · a hand from the lamp the steady reader reads ${nearLo.toFixed(3)} to ${nearHi.toFixed(3)} burning, ${offNear.toFixed(3)} off · size 0: ${pin} m, put back: ${back.toFixed(3)} · switch off: ${off} m, the steady record ${kept ? 'kept' : 'dropped'} · its own snapshot put back: size ${own} · one without the key: ${old}`);
+        }
+      } finally { FIRE.size = size0; }
     }
     // ---- off
     {
