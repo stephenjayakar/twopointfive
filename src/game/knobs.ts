@@ -140,6 +140,9 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'HANDRING',
   // a can in the wind-up goes back on the belt when another beat begins (throwback.ts THROWBACK): a recording made with it on replays those cans kept, one from before as thrown late
   'THROWBACK',
+  // the camera frames things itself once its key is tapped twice (host/autocam.ts AUTOCAM): the seat's view rides every record, so a recording replays the view it was made with
+  // either way — the name is here so that a file from before the key puts the switch off for the hand that takes over when it ends
+  'AUTOCAM',
   // his own charge goes off from his own actions, not the squad's key (ownblow.ts OWNBLOW): a recording made with it on replays its interaction-key row as the blast, one from before the squad's key as it was
   'OWNBLOW',
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
@@ -188,6 +191,7 @@ import { QUIETFOG } from './quietfog';
 import { TORCH } from './calmtorch';
 import { BACKKEY } from './backkey';
 import { FIXEDSTEP } from '../host/loop';
+import { AUTOCAM } from '../host/autocam';
 import { TWEEN } from '../host/tween';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
@@ -353,6 +357,8 @@ export function knobRegistry(): Record<string, object> {
     // the frame loop's two (host/loop.ts, host/tween.ts — not game rules, and no recording's to set: not in JOURNAL_KNOBS, and VISIT_OWN above keeps a tape's player off them): the game in
     // whole 1/60 s ticks, and a frame between two ticks drawn at the blend of them. Here so that the two stands' difference and a probe's put-back cover them
     FIXEDSTEP, TWEEN,
+    // the camera running itself (host/autocam.ts): the switch, what it frames and by how much, when it may turn
+    AUTOCAM,
     // shaken (morale.ts): what a blast does to the men it does not hurt — who ducks, who breaks, the rounds a broken man puts into the dust — reads these
     MORALE,
     // a man's condition (condition.ts): whether a blast that leaves a man standing leaves him hurt, the pace and the spread that costs him, how long
