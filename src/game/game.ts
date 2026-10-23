@@ -247,7 +247,10 @@ export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'obj
   close?: CloseKind;
   /** a door's row that is listed PAST the list's cap, under the rows Space had before it (the big slot's tool on an unlocked door — bigkit.ts; a charge by hand
    *  is the other such row, known by its verb) */
-  past?: boolean; }
+  past?: boolean;
+  /** a MARKER whose every row the mission's frame kept back this frame (rails.ts `rows`; player.ts buildInteractables): the key does nothing on the
+   *  thing though it has rows — an empty tap in reach of it says so (interact.ts emptyWord) */
+  framed?: boolean; }
 /** Every verb a row can be (player.ts buildInteractables words them; game.ts updateDoors / player.ts updateHold / mission.ts act on Game.act): a shut door's
  *  push / ease (silent, sustained), an open one's pull, a lock's pick (sustained) / kick / rattle (the handle tried, crouched), a keyed lock's unlock; the grab
  *  of a man from behind; the held man's question / choke (sustained) / pistol-whip (sustained); a body's drag / drop; the rack's drive (sustained); the mains
@@ -378,6 +381,8 @@ export class Player {
    *  moved = the highlight was scrolled during this press (a press that scrolls is a choice, never a tap); wheelAcc = wheel travel toward the next row; runKey / moveLatch: which sustained verb was running
    *  last frame and the movement keys already down when it began (a step cancels a running verb — a key held into it does not until it has come up once). */
   sel = { downT: -1, open: false, moved: false, wheelAcc: 0, runKey: '', moveLatch: 0,
+    /** handring.ts `empty`: what the last tap that found no row said and when (the corner shows it for a moment), and when a line of it last went to the log */
+    word: '', wordT: -1e9, fileT: -1e9,
     /** the list up as a ring at the cursor (cmdring.ts CMDRING.hands — null: the list as it was): where, and whether the cursor may light a wedge yet; `key`: the rows it was last read over (Player.nearKey) */
     ring: null as (RingState & { key: string; /** handring.ts: the press that opened it has come up and it stands by itself */ free?: boolean; /** …the lit wedge is the whistle's, which is no row (interact.ts) */ whistle?: boolean }) | null };
   /** the selector open AS A LIST (feet still, a cancel row at its foot, the panel in its open look) — not up as a ring */
