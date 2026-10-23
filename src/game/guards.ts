@@ -31,6 +31,7 @@ import { pairSmoke, fightLive, lampGlare, closeLane, ROOMFIGHT } from './roomfig
 import { roomName, updateAmbient, isOffice, temperamentOf } from './dialogue';
 import { WORDS, w, wg } from './words';
 import { CUES } from './cues';
+import { SQUADNET } from './squadnet';
 import { SUPPRESSION, headDown, endDisplace, holdingCover, guardFireMods, flinching } from './suppression';
 import { trackGuard, aimReady, feetSettled, guardRound, handsCone, aimBrake, noteBore, boreFouled, AIM_DEBUG } from './aim';
 import { isHostile, teamOfId, hostileTo, foeChar, foeDown, foeCrouched, HOSTILE, spokenName, defenderWords } from './teams';
@@ -2826,6 +2827,7 @@ export function say(g: Game, gd: Guard, text: string, radio = false, force = fal
   if (radio && gd.unit) g.cues.heard(gd, text);   // a room fight's defenders' net reaches the strip (cues.ts: ranked, rate-limited; nothing here reads it back)
   if (radio) chronRadio(g, gd, text);   // the debrief's row: what went over their net (the routine radio check is dropped there)
   if (row && (radio || g.fogOfWar.hidden(gd) || !onScreen(g, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0])))) g.msg((net ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
+  if (SQUADNET.on && g.orders?.mine(gd) && !onScreen(g, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0]))) g.squadNet?.line(gd);   // (squadnet.ts: a teammate's line said off your screen clicks in your ear, and the page draws it near you; nothing asked with its switch off)
 }
 
 /** Fresh guards at the start of their routes (keeps their flashlight lights and tints). Spawned units (teams: the showcase's operatives and hostiles) are not the

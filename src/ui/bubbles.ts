@@ -6,6 +6,7 @@ import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { hudExpireBubbles } from '../game/journal';
+import { SQUADNET } from '../game/squadnet';
 import type { BubblesLike } from '../host/hud';
 import { HEADMARK_QA } from './headmark';
 import { rectZoom, textZoom } from './textsize';
@@ -37,6 +38,7 @@ export class Bubbles implements BubblesLike {
   private blockEls: (HTMLElement | null)[] | null = null;
   constructor(private root: HTMLElement) {}
 
+  private netEls: HTMLElement[] | undefined;
   private make(): HTMLElement { const el = document.createElement('div'); el.className = 'bubble'; el.style.display = 'none'; this.root.appendChild(el); return el; }
 
   /** the rects to dodge this frame: re-measured when a card's class / content or the view's size changed (a cheap string key off the DOM, no layout read), or every BLOCKER_RECHECK_MS */
@@ -81,14 +83,40 @@ export class Bubbles implements BubblesLike {
       el.style.display = 'block'; el.style.left = `${Math.round(x)}px`; el.style.top = `${Math.round(y - (1 - aIn) * 6)}px`; el.style.opacity = a.toFixed(2);
       return true;
     };
+    // A TEAMMATE'S LINE FROM OFF THE SCREEN (game/squadnet.ts): drawn near you on the side he is on, under his name, with an arrow his way. `slot`: the
+    // lines drawn this way so far this frame (each a row higher). False = he stands where you do (no side to draw it on).
+    let nearN = 0;
+    const near = (el: HTMLElement, b: Bubble, line: string, at: Vec3, tone: string): boolean => {
+      const pl = game.player.char.pos, { fwd, right } = cam.planarBasis(), dx = at[0] - pl[0], dz = at[2] - pl[2];
+      const sx = dx * right[0] + dz * right[2], sy = -(dx * fwd[0] + dz * fwd[2]), L = Math.hypot(sx, sy); if (!(L > 1e-3)) return false;
+      const [px, py] = cam.project([pl[0], pl[1] + 1.1, pl[2]], w, h, Infinity), R = SQUADNET.near * Math.min(w, h), age = game.time - b.t;
+      const text = `${'→↘↓↙←↖↑↗'[((Math.round(Math.atan2(sy, sx) / (Math.PI / 4)) % 8) + 8) % 8]} ${line}`, bw = Math.min(260, 12 + text.length * 5.6);
+      const x = Math.max(bw / 2 + 6, Math.min(w - bw / 2 - 6, px + (sx / L) * R)), y = Math.max(40, Math.min(h - 12, py + (sy / L) * R)) - 26 * nearN++;
+      const aIn = Math.min(1, age / 0.12), aOut = Math.min(1, (b.dur - age) / Math.max(0.05, Math.min(0.35, 0.25 * b.dur))), a = Math.max(0, Math.min(aIn, aOut));
+      if (el.textContent !== text) el.textContent = text;
+      const cls = 'bubble net ' + tone; if (el.className !== cls) el.className = cls;
+      el.style.display = 'block'; el.style.left = `${Math.round(x)}px`; el.style.top = `${Math.round(y)}px`; el.style.opacity = a.toFixed(2);
+      return true;
+    };
     hudExpireBubbles(game);   // the HUD's one write to the game — an expired bubble nulled on its speaker — made through game/journal.ts so a replay of a recording makes it too (the per-element expiry lines below then never fire)
     const speakers = game.civilians.length ? [...game.guards, ...game.civilians] : game.guards;   // (the cleaner / the late worker talk too — civilians.ts: their record's bubble, in the calm tone until they are frightened)
     while (this.els.length < speakers.length) this.els.push(this.make());
     for (let i = 0; i < this.els.length; i++) {
       const el = this.els[i]; const g = speakers[i]; const b = g ? game.cues.bubbleOf(g) : null;   // (his line, or a cue's — cues.ts)
-      if (!g || !b || (g.state === 'dead' && !g.wound) || (g.civ && g.civ.state === 'gone') || game.fogOfWar.hidden(g)) { el.style.display = 'none'; continue; }   // (fog of war: no bubble over a man nobody on the team sees — his line is still heard; never true while it is off)
+      const mate = !!g && SQUADNET.on && game.orders.mine(g);   // (game/squadnet.ts: a teammate's line is drawn near you when his head is not on the screen)
+      if (!g || !b || (g.state === 'dead' && !g.wound) || (g.civ && g.civ.state === 'gone') || (!mate && game.fogOfWar.hidden(g))) { el.style.display = 'none'; continue; }   // (fog of war: no bubble over a man nobody on the team sees — his line is still heard; never true while it is off)
       if (game.time - b.t > b.dur) { g.bubble = null; el.style.display = 'none'; continue; }
-      if (!place(el, b, g.char.bones.head ?? g.char.pos, bubbleTone(g))) el.style.display = 'none';
+      const head = g.char.bones.head ?? g.char.pos;
+      if (mate && (game.fogOfWar.hidden(g) || !cam.project(head, w, h, 0.9)[2])) { if (!near(el, b, `${g.callsign}: ${b.text}`, g.char.pos, bubbleTone(g))) el.style.display = 'none'; continue; }
+      if (!place(el, b, head, bubbleTone(g))) el.style.display = 'none';
+    }
+    { // a teammate down (game/squadnet.ts rows): over where he fell while that is on the screen, near you on his side when it is not
+      const rows = SQUADNET.on ? game.squadNet.rows : []; this.netEls ??= [];
+      while (this.netEls.length < rows.length) this.netEls.push(this.make());
+      for (let i = 0; i < this.netEls.length; i++) { const el = this.netEls[i], r = rows[i];
+        if (!r || game.time - r.t > r.dur || game.time < r.t) { el.style.display = 'none'; continue; }
+        const b = { text: r.text, t: r.t, dur: r.dur, radio: false }, at: Vec3 = [r.at[0], r.at[1] + 0.9, r.at[2]];
+        if (cam.project(at, w, h, 0.9)[2] ? !place(el, b, at, 'alert') : !near(el, b, r.text, r.at, 'alert')) el.style.display = 'none'; }
     }
     { // Sam's line to the man in his arm, over HIS head (the pair stand half a metre apart, so his and the man's take turns on much the same spot — player.ts never has both up)
       const el = (this.samEl ??= this.make()); const pl = game.player; const b = pl.bubble;

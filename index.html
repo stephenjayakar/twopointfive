@@ -692,6 +692,8 @@
     /* Sam's own line to the man in his arm (player.ts askHeld → Player.bubble): the same caption in the bright ink with a brighter frame, a shade darker behind it */
     .bubble.sam { color: var(--h-hi); background: rgba(var(--h-plate),0.86); border-color: rgba(var(--h-edge),0.7); } .bubble.sam::after { background: rgba(var(--h-plate),0.86); border-color: rgba(var(--h-edge),0.7); }
     .bubble.radio { font-style: italic; }
+    /* a teammate's line from off the screen, drawn near you on his side (game/squadnet.ts): no tail, since the man is not under it, and the bright ink */
+    .bubble.net { max-width: 260px; color: var(--h-hi); background: rgba(var(--h-plate),0.86); border-color: rgba(var(--h-edge),0.7); } .bubble.net::after { display: none; }
     .bubble.below { transform: translate(-50%, 0); }   /* hung under his head when the spot above it is under the caption card / the interaction panel */
     .bubble.below::after { bottom: auto; top: -5px; transform: translateX(-50%) rotate(225deg); }
     #bubbles, .bubble { z-index: 9; }   /* above the tour's caption card and letterbox (z 8-ish) — a line being said is the thing to read */

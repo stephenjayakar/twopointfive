@@ -98,7 +98,7 @@ import { propGap } from './roomclear';   // (used inside workedMarks only: nothi
 import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewOpen, STACKROOM, STACKROOM_STATS } from './stackroom';
 import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { silentOnMan } from './silent';   // (called inside tick only)
-import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint, autoPick } from './autopilot';   // (read inside input(), hud() and show() only)
+import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint, autoPick, autoWhy } from './autopilot';   // (read inside input(), hud() and show() only)
 import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringPin, ringHoldSecs, ringLatch, ringSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { loneKey } from './ringlone';
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
@@ -321,7 +321,7 @@ export type TargetKind = OrderTarget['kind'];
 export type Who = 'all' | PairId | number;
 /** how an order is given. `onWord`: the men get ready for it and WAIT — a door tool stacks and holds on the door until the word (doortools.ts go(), the 'go'
  *  order); an order with nothing to wait for takes no notice */
-export interface GiveOpts { onWord?: boolean; /** the men it goes to, exactly (autopilot.ts: the men standing on the door — not the standing choice, which may hold a man left elsewhere) */ men?: Guard[] }
+export interface GiveOpts { /** the line the man who answers says in place of the row's own (squadnet.ts: the quick key's reason) */ ack?: string; onWord?: boolean; /** the men it goes to, exactly (autopilot.ts: the men standing on the door — not the standing choice, which may hold a man left elsewhere) */ men?: Guard[] }
 /** a stack mark (stackPosts): where, facing, which shoulder the wall is on, whether he is the man ON the jamb — and, for three men or more, which file he is in
  *  (0 = the latch jamb's, 1 = the hinge jamb's, 2 = the second rank): pair() keeps a pair in one file where it can */
 export interface StackPost { pos: Vec3; face: number; stackSide: -1 | 1; lead: boolean; group?: number }
@@ -813,7 +813,7 @@ export class SquadOrders {
     // (Sam's own words, not the menu row's: he does not read out the stock count, the mark is HIS, and a door with no name of its own is not named)
     const said = WORDS.on ? label.replace(/ · (\d+ left|uses .+)$/, '').replace('on your mark', 'on my mark') : label;
     g.msg(`you: ${this.whoWords(men)} — ${said}${t.kind === 'door' && !(WORDS.on && doorWords(t.door) === 'door') ? ` · ${doorWords(t.door)}` : ''}`);
-    if (def.ack?.length) { const k = this.acks++, A = wg(def.ackNow ?? def.ack, def.ack); g.say(men[k % men.length], A[Math.floor(k / men.length) % A.length]); }   // (the men take turns answering, each through the lines in turn)
+    if (def.ack?.length) { const k = this.acks++, A = opts?.ack ? [opts.ack] : wg(def.ackNow ?? def.ack, def.ack); g.say(men[k % men.length], A[Math.floor(k / men.length) % A.length]); }   // (the men take turns answering, each through the lines in turn)
     this.posture?.given(def);
     holdFireOrder(g, def.id, { waits: !!opts?.onWord && this.big, silent: wasSilent });   // (holdfire.ts: an order that means fire starts the fight for a squad nobody has found — a return on its first line with the switch off)
     return null;
@@ -2449,7 +2449,8 @@ export class SquadOrders {
     const next = onMan ? this.whoAfterT(hov) : null;   // (what T would do with the cursor on a teammate: him — or, already him, back to everyone)
     const posture = this.posture?.word() ?? null;   // (silent.ts: which of the two the squad is in, at a glance)
     const words = hov ? this.quickWords(hov) : null;   // (autopilot.ts: the squad's first choice on a door it waits on)
-    const quick = hov && words ? `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}` : null;   // (what the quick key would give on what the cursor is on)
+    const why = hov && words && AUTOPILOT.on ? autoWhy(this.g, hov) : null;   // (squadnet.ts: why the squad's pick is not a plain open; null with its switch off)
+    const quick = hov && words ? `${words}${hov.kind === 'none' && !hov.man ? '' : ` · ${this.hoverWords(hov)}`}${why ? ` · ${why}` : ''}` : null;   // (what the quick key would give on what the cursor is on)
     const lk = (act: string) => !!this.g.rails?.locks(act);   // (rails.ts, a tutorial mission: a key the mission has not taught yet is not named on the panel either)
     return { menu: null, status: [{ kind: 'objective', label: lk('who') ? 'squad' : `squad · ${posture ? `${posture} · ` : ''}orders to ${this.whoTag().tag}`, inReach: true, off: false, tone,
       opts: [...S.map(gd => ({ key: '', text: `${some ? (men.includes(gd) ? '▸ ' : '· ') : ''}${gd.callsign} · ${this.statusOf(gd)}${this.g.cover.tail(gd)}`, tone: this.paired ? this.pairOf(gd) ?? undefined : undefined, gone: gd.state === 'dead' && lostShown(), lost: gd.state === 'dead' ? lostOf(this.g, gd.char.id) ?? undefined : undefined })), ...(lk('menu') ? [] : [...this.notes.flatMap(f => f()).map(x => typeof x === 'string' ? { key: '', text: x } : x), ...layNote(this.g, keyName(layKey()))]),   // (planlay.ts: the key's line while a plan waits on it)

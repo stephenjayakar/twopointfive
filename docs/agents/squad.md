@@ -996,3 +996,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   hung off the object, so `asMemo` does not take it out of the state) the first time it lists a floor's rows, so a game whose whole HUD is
   read still differs there from one never read until a menu is first opened. The store is outside the rollback snapshot (scratch and a list a
   second old). Never seen in a page.
+- **The squad reaches you, and the quick key says why** (`src/game/squadnet.ts`, table `SQUADNET`, one `SquadNet` on the Game as `game.squadNet`;
+  drawn by `src/ui/bubbles.ts`; Tab ▸ 'Squad net'). The maintainer picked it from the AI legibility doc: "The squad reaches you, and Q says why.
+  Off-screen teammate lines arrive near you with a radio click, a man down has its own sound, the Q row says 'Bang and clear. Nobody's been in
+  there.', and 'clear' means clear." Three rules, a switch each, all ON in the page and OFF in the module and on the frozen stand.
+  FAR LINES (`SQUADNET.on`, `?squadnet=0`, `TPS_SQUADNET=1`): a bubble was drawn only over a head on the screen, so a teammate's line said two
+  rooms off was said to nobody. With the rule his bubble is drawn NEAR YOU (`SQUADNET.near` × the view's shorter side from you, on the side he is
+  on) as `↙ Red One: stacked up.`, class `bubble net`, each further line a row higher, and `say()` asks `squadNet.line()` for a click (`'radio'`
+  at `SQUADNET.click`, once a frame). A teammate whose state turns `dead` is a row of its own on `squadNet.rows` (`Red Two is down.`, 5 s, drawn
+  over where he fell while that is on the screen and near you otherwise) with the same click louder and at rate 0.55: there is no voice of its
+  own for it in `audio/sfx.ts` yet, that is the sound thread's to make. Nothing writes a `Guard.bubble`: the run with it on is the run with it
+  off by digest (the check holds it). A man already down when a run starts or a checkpoint loads is not called.
+  WHY (`SQUADNET.why`, `?qwhy=0`, `TPS_QWHY=1`): `autopilot.ts autoWhy()` / `squadnet.ts whyWords()` add the reason when the autopilot's pick on
+  a door the men wait on is not a plain open, at the end of the quick key's row (`orders.ts hud()`) and in the answer of the man who takes the
+  order (`GiveOpts.ack`, in place of the row's own): `nobody's been in there` / `banging it. nobody's been in there.` · `they see one inside` /
+  `banging it. i see one in there.` · `saving the last bang` / `going in. i'm saving the last bang.` (`AutoPick.kept`: an unknown room opened
+  plain because `AUTOPILOT.keepBangs` holds the last stun) · `they can't open it` / `we can't open it. setting a charge.` (the press only: the
+  HUD's line asks no lock). A plain open, a silent squad and a stack say nothing more; no press waits. The answer changes a bubble's length, so a
+  run with it on is not the run with it off by digest once such a line is said.
+  CLEAR (`SQUADNET.clear`, `?honestclear=0`, `TPS_HONESTCLEAR=1`): the lead's call at an entry's end (`doortools.ts`, a room of the room clear's
+  own) goes through `roomCall()`: `<room> clear.` only with nobody standing in it AND no floor the search never saw (`RoomSearch.left` 0);
+  `<room>'s quiet. we didn't see all of it.` with floor unseen and no enemy of the room in the team's sight; nothing with one in sight, or one
+  standing on floor they saw (as before: nothing was said there).
+  CHECK `bun run tools/qa/squadnet-check.ts` (also `probes.ts squadnet`: why · clear · net · off; `SQUADNET_BREAK=1` fails all four), both
+  stands, the room clear on the office with four, seeds 5, 7 and 11. MEASURED, one run: 60 entries into the room clear's named rooms on the
+  office (four doors a seed, seeds 1–8, both stands, all three on): 35 called clear, 1 called quiet (1 cell of 268 unseen), 24 called nothing
+  because a defender still stood in the room. So the honest call changes about one entry in sixty there, and two entries in five end with no
+  call at all, which is the larger hole and is not mended here. ON THE PAGE (`PORT=<port> node tools/qa/squadnet-look.cjs <dir>`, software
+  adapter): the far lines and the down row are read off the HUD's own elements with where they lie against you and against the man. Never seen
+  on a GPU, never played, never heard: the click's level and the pitched-down click for a man down are guesses. The words are lower case like
+  the rows and answers beside them. OPEN: the quick key's row is being redrawn by the commanding work (its flat wheel and plain hint): where the
+  reason sits on that row is theirs to settle; the reason for a charge is not on the HUD's line (the hint does not ask the lock, so it shows
+  the open it will not do).

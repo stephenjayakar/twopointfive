@@ -98,6 +98,7 @@ import { FloorSeen } from './floorseen';
 import { DOORMANNERS, DOORMANNERS_STATS, doorwayInWay, doorwayClearNear, doorwayLane } from './doorway';
 import { GLASSPEN } from './glasspen';   // (DOORWAY.kickGlass: read in bootSpot, at order time only)
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
+import { roomCall } from './squadnet';   // (called inside the entry's end only)
 import { STACKROOM, stackRoomFix, stackRoomHas, stackRoomKeeps, stackViewReach, stackViewOpen } from './stackroom';
 import { SAMSTUN, dazzlePlayer } from './samstun';
 import { rearHolds, rearLast, rearWatcher } from './rearwatch';
@@ -2338,7 +2339,9 @@ export class DoorTools {
               const yaw = yawTo(p, w), far = flat(p, w) + K.lastOutM; R.A.watch = [p[0] + Math.sin(yaw) * far, 1.2, p[2] + Math.cos(yaw) * far]; R.A.face = yaw; R.face = yaw; R.out = true;
               this.beat(op, `door · ${m.callsign}`); break; } } }
         const RC = g.roomClear, room = RC?.active ? RC.rooms.find(r => r.def.id === RC.roomAt((WORDS.on ? lead : op.men[0]).char.pos)) : null;   // (the room the man who calls it stands in)
-        if (room && !g.guards.some(x => x.state !== 'dead' && x.team === 'hostile' && RC.roomAt(x.char.pos) === room.def.id)) g.say(lead, `${room.def.name} clear.`);
+        if (room) { const ins = g.guards.filter(x => x.state !== 'dead' && x.team === 'hostile' && RC!.roomAt(x.char.pos) === room.def.id);
+          // (squadnet.ts: with its switch on 'clear' is said only of a room whose floor the search saw all of — off, the call as it was)
+          const call = roomCall(g, room.def.name, SR ? SR.left : 0, ins.length > 0, ins.some(x => (g.fogOfWar.active ? g.fogOfWar.seen(x) : !!g.fight?.teamSees(x)))); if (call) g.say(lead, call); }
         // (the room is theirs: from here each man's eyes are spare for its other ways in — cover.ts deals them; his sector stands where it deals nothing)
         if (op.thr && K.otherDoorM > 0) this.otherDoors(op, true, true, K.thrDoors);   // (a threshold entry: what a man can take where he stands is dealt before anybody is walked to a door)
         if (op.thr && K.thrDoors) this.holdDoors(op);

@@ -134,6 +134,7 @@ import { KIT, THROW_BY } from '../game/character';
 import { HANDS, handsSummary } from '../game/hands';
 import { HANDWORK, HANDWORK_STATS } from '../game/handwork';
 import { WORKSTOW, WORKSTOW_STATS } from '../game/workstow';
+import { SQUADNET } from '../game/squadnet';
 import { TAKEDOWN, TAKEDOWN_STATS } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { WAND, wandSummary } from '../game/wand';
@@ -1897,6 +1898,16 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.slider(hw, 'teammate: gun down (s)', 0, 0.8, 0.05, () => WORKSTOW.mateDown, v => { WORKSTOW.mateDown = v; }, 'from his gun let go of to both hands on the charge');
     panel.slider(hw, 'teammate: gun back up (s)', 0.1, 1.2, 0.05, () => WORKSTOW.mateUp, v => { WORKSTOW.mateUp = v; }, 'from the job\'s end to his gun up again: no round leaves it sooner');
     panel.text(hw, () => `guns put away: yours ${WORKSTOW_STATS.samDown} (back ${WORKSTOW_STATS.samUp}, kept away ${WORKSTOW_STATS.samKept}) · teammates ${WORKSTOW_STATS.mateDown} (back ${WORKSTOW_STATS.mateUp})`);
+  }
+  // (game/squadnet.ts: the squad's lines where you cannot see the man, a teammate down, the quick key's reason, the honest room call)
+  { const sn = panel.section('Squad net (far lines, man down, why, clear)', { open: false, summary: () => [SQUADNET.on ? 'lines' : '', SQUADNET.why ? 'why' : '', SQUADNET.clear ? 'clear' : ''].filter(Boolean).join(' · ') || 'off' });
+    panel.toggleBox(sn, 'far lines reach you', () => SQUADNET.on, v => { SQUADNET.on = v; }, 'also ?squadnet=0 on the address. On: a teammate\'s line said off your screen is drawn near you on his side with his name and an arrow, the net clicks, and a teammate going down is called with a lower click. Off: a line over a head off the screen is not drawn');
+    panel.toggleBox(sn, 'the quick key says why', () => SQUADNET.why, v => { SQUADNET.why = v; }, 'also ?qwhy=0. On: when the squad\'s pick on a door is not a plain open, the quick key\'s row ends on the reason and the man who answers says it');
+    panel.toggleBox(sn, '\'clear\' means clear', () => SQUADNET.clear, v => { SQUADNET.clear = v; }, 'also ?honestclear=0. On: a room is called clear only when its search left no floor unseen; otherwise the lead calls it quiet and says they did not see all of it');
+    panel.slider(sn, 'far line: distance from you', 0.1, 0.4, 0.01, () => SQUADNET.near, v => { SQUADNET.near = v; }, 'a share of the view\'s shorter side');
+    panel.slider(sn, 'click (gain)', 0, 1, 0.05, () => SQUADNET.click, v => { SQUADNET.click = v; }, 'the click a far line arrives with; 0 = silent');
+    panel.slider(sn, 'man down (gain)', 0, 1, 0.05, () => SQUADNET.downGain, v => { SQUADNET.downGain = v; }, 'the lower click a teammate going down is called with; 0 = silent');
+    panel.text(sn, () => { const S = game.squadNet.stats; return `far lines ${S.lines} · men down ${S.downs} · reasons given ${S.whys} · rooms clear ${S.clears} · quiet ${S.quiets}`; });
   }
   // (game/takedown.ts: close-up takedowns as moves — the chop, the palm heel, the hand over the mouth, the slash; the partner's blow and the man it lands on; the fall by the blow; a man out cold breathes; on in the page, ?notakedown)
   { const tk = panel.section('Takedowns (the blow, the fall, out cold)', { open: false, summary: () => TAKEDOWN.on ? 'on' : 'off' });
