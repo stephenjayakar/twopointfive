@@ -80,6 +80,7 @@ const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasi
     await page.evaluate(() => { const K = window.__knobs.registry().AUTOCAM; K.fightM = 22; K.turn = true; });
     // kept: the row, a reload, Reset
     e = await page.evaluate(OPEN); if (e) throw new Error(e); e = await page.evaluate(FLIP, 'Auto camera'); if (e) throw new Error(e);
+    if ((await page.evaluate(ROWS))['Auto camera'] !== 'On') { e = await page.evaluate(FLIP, 'Auto camera'); if (e) throw new Error(e); }   // (the walk above left the mode on: the first click put it off)
     const r1 = await page.evaluate(ROWS), k1 = await page.evaluate(k => localStorage.getItem(k), LS);
     log('reloading'); await boot(true); e = await page.evaluate(OPEN); if (e) throw new Error(e);
     const r2 = await page.evaluate(ROWS), k2 = await page.evaluate(k => localStorage.getItem(k), LS);
