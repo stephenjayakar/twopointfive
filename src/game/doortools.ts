@@ -105,6 +105,7 @@ import { gunFirst, gunTurn, gunBefore } from './gunroles';   // (called inside f
 import { OWNCHARGE } from './owncharge';   // (a leaf: the player's own charges' one switch)
 import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { PICTURE, PICTURE_STATS, anyIdea, safestSets } from './picture';
+import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 
 /** `WORDCUTS_BREAK=1` (a check's own word): the rule's body left out, everything else as it is */
 const WORDCUTS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WORDCUTS_BREAK === '1';
@@ -2338,7 +2339,7 @@ export class DoorTools {
               const yaw = yawTo(p, w), far = flat(p, w) + K.lastOutM; R.A.watch = [p[0] + Math.sin(yaw) * far, 1.2, p[2] + Math.cos(yaw) * far]; R.A.face = yaw; R.face = yaw; R.out = true;
               this.beat(op, `door · ${m.callsign}`); break; } } }
         const RC = g.roomClear, room = RC?.active ? RC.rooms.find(r => r.def.id === RC.roomAt((WORDS.on ? lead : op.men[0]).char.pos)) : null;   // (the room the man who calls it stands in)
-        if (room && !g.guards.some(x => x.state !== 'dead' && x.team === 'hostile' && RC.roomAt(x.char.pos) === room.def.id)) g.say(lead, `${room.def.name} clear.`);
+        if (room && !g.guards.some(x => x.state !== 'dead' && x.team === 'hostile' && !runnerNobody(x) && RC.roomAt(x.char.pos) === room.def.id)) g.say(lead, `${room.def.name} clear.`);   // (runner.ts nobody: a man who has dropped his gun, low in its corner, holds no room)
         // (the room is theirs: from here each man's eyes are spare for its other ways in — cover.ts deals them; his sector stands where it deals nothing)
         if (op.thr && K.otherDoorM > 0) this.otherDoors(op, true, true, K.thrDoors);   // (a threshold entry: what a man can take where he stands is dealt before anybody is walked to a door)
         if (op.thr && K.thrDoors) this.holdDoors(op);

@@ -437,6 +437,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.STARTLE) STARTLE.on = false;   // (a file from before a calm man started at the first sight of you: its men went for their guns the frame they knew, and none ran from it)
   if (!k.tables.FLINCH) FLINCH.on = false;   // (a file from before a man ducked at every close round: nobody ducked but on the suppression model's edge, and no green man broke under fire)
   if ((k.tables.RUNNER as Partial<typeof RUNNER> | undefined)?.anyway === undefined) RUNNER.anyway = false;   // (…and one from before he ran for it no matter what: one idea of an enemy on the only door out sent him to the corner, and a rifleman kept his sidearm)
+  if ((k.tables.RUNNER as Partial<typeof RUNNER> | undefined)?.nobody === undefined) RUNNER.nobody = false;   // (…and one from before a man who had run was nobody's enemy on the books: teammates called contact on him and he was his mates' company)
   if (!k.tables.RUNNER) RUNNER.on = false;   // (a file from before a broken man dropped it and ran: its men changed their magazines where they stood, and every one of them was there to be counted)
   if (!k.tables.DARKDOOR) DARKDOOR.on = false;   // (a file from before a green man stopped at the doorway of a dark room: every man walked in as he came to it)
   if (!k.tables.DOZE) DOZE.on = false;   // (a file from before a man dozed a long dark wait out in a chair: its men stood their waits awake)

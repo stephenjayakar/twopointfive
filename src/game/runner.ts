@@ -41,6 +41,9 @@
 //     still minded in the pick of the outside floor, and nobody stepping into his way a reason to think again. Only a floor that gives him no way out at
 //     all — a locked door — leaves him the corner, and he never settles there: every `retrySecs` he looks again, with no `retries` to run out of. And BOTH guns go: a rifleman's sidearm is put on the floor beside his rifle (`Run.bare`; combat.ts
 //     guardKit draws his thigh empty, alive or shot later).
+//   · NOBODY'S ENEMY ON THE BOOKS (`nobody`; off = as it was): the readers outside this file that walk the roster ask `runnerNobody` (from the drop: he
+//     counts for nothing — fogofwar.ts's 'contact' and 'steps' calls, doortools.ts's 'room clear', morale.ts and
+//     darkdoor.ts's company) or `runnerMute` (from the shout: he speaks for nobody — cues.ts, suppression.ts's barks).
 //   · GONE: out, and no enemy with a line to him for `goneSecs`, a spawned unit is taken out of the world (guards.ts despawnUnit). A man of the level's own
 //     roster is never removed (a checkpoint is poured over that roster): he stays low where he got to. With no way out he goes to the reachable corner
 //     farthest from every enemy and stays low there, his face to the wall, silent, still fled — and looks again for a way out every `retrySecs`, until
@@ -79,7 +82,7 @@ import { PICTURE, PICTURE_STATS, ideasOf, pictureTell, type Who } from './pictur
  *  module, raised by the page; ?runanyway=0): with no way out round the enemies he knows of he runs for the outside regardless, and a rifleman's sidearm
  *  is dropped with his rifle. UNTUNED by eye (nobody
  *  has seen it on a GPU, nobody has played it). */
-export const RUNNER = { on: false, closeM: 5, outSecs: 0.8, beatSecs: 0.6, tellM: 4, toldM: 8, tellBeat: 0.8, tellAware: 0.6, shyM: 2, mateM: 20, mateSecs: 10, clearM: 1.5, edgeM: 2, cornerM: 25, goneSecs: 2, stallSecs: 3, retrySecs: 2, retries: 3, replanSecs: 0.5, aheadM: 3, askCells: 60, askWide: 240, anyway: false };
+export const RUNNER = { on: false, closeM: 5, outSecs: 0.8, beatSecs: 0.6, tellM: 4, toldM: 8, tellBeat: 0.8, tellAware: 0.6, shyM: 2, mateM: 20, mateSecs: 10, clearM: 1.5, edgeM: 2, cornerM: 25, goneSecs: 2, stallSecs: 3, retrySecs: 2, retries: 3, replanSecs: 0.5, aheadM: 3, askCells: 60, askWide: 240, anyway: false, nobody: false };
 export const RUNNER_STATS = { said: 0, dropped: 0, toMates: 0, told: 0, out: 0, gone: 0, low: 0, bold: 0 };
 
 /** where a man's run stands: the shout's beat (gun still in his hand) · to a mate · out of the building · low (the corner, or a roster man who got out) · gone */
@@ -395,6 +398,13 @@ export function runnerOwns(gd: Guard): boolean { return RUNNER.on && stateOf.has
 export function runnerFled(gd: Guard): boolean { return RUNNER.on && !!stateOf.get(gd)?.fled; }
 /** …AND HIS SIDEARM WITH IT (`anyway`): a rifleman who put the pistol on his thigh down beside his rifle — combat.ts guardKit draws the thigh empty */
 export function runnerBare(gd: Guard): boolean { return RUNNER.on && !!stateOf.get(gd)?.bare; }
+/** A MAN WHO HAS RUN IS NOBODY'S ENEMY ON THE BOOKS (`nobody`; off = as it was, false here). His own script runs and nothing else of his does, but every
+ *  module that walks the roster from outside still met a calm, living man in state 'patrol': a teammate called 'contact' on him, a room was not called clear
+ *  with him in it, a mate beside him was 'not alone', his own side's cues picked him to speak. Two questions for those readers —
+ *  COUNTS FOR NOTHING, from the drop: nobody's contact, nobody's company, no reason a floor is not clear */
+export function runnerNobody(gd: Guard): boolean { return RUNNER.nobody && runnerFled(gd); }
+/** …and SPEAKS FOR NOBODY, from the shout: no cue of his side's, no bark under fire (his own lines are this file's) */
+export function runnerMute(gd: Guard): boolean { return RUNNER.nobody && runnerOwns(gd); }
 /** QA: what the rule has of a man (null = never taken) */
 export function runnerOf(gd: Guard): Readonly<Omit<Run, 'script'>> | null { return stateOf.get(gd) ?? null; }
 /** 'runner ▸ Tango 2 out (told 2) · Tango 5 say' — every man it has on the floor; '' with the switch off */
