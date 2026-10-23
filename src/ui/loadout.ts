@@ -34,9 +34,9 @@ import type { ScenarioEntry } from '../scene/scenarios';
 import { lessonGroup } from '../scene/scenarios';
 import { pickSearch, levelWords, SCENARIO_KEYS } from '../scene/scenarioList';
 import { MISSIONS, SOLO_NIGHT, SOLO_KEY, unplayed, missionList, missionHref, openMissions, closeMissions, issuedWalls, issuedKit, type IssuedKit, type Mission } from './missions';
-import { difficultyHref, leversHref, leversMixed, leversLine, structureOfLevel } from '../game/difficulty';
+import { difficultyHref, leversHref, leversMixed, leversLine, structureOfLevel, fogOffNow } from '../game/difficulty';
 import { leverRows, leversOpenOn, type LeverRowsUi } from './levers';
-import { fogOfQuery, quietCamsOfLink, sameFog } from '../game/scenarioRun';
+import { fogOfQuery, fogOfLink, quietCamsOfLink, sameFog } from '../game/scenarioRun';
 import { QUIETFOG, quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
 import { STICKY } from '../game/stickycam';   // (read inside the screen only: what a quiet mission hands you — lentNow)
 import { WAND } from '../game/wand';         // (likewise)
@@ -167,7 +167,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // (ui/kitCard.ts `lent`), where it read 'none' beside a thing you were about to be handed, and so does the kit you are drawn in (worn()). Asked live: the
   // fog lever and the Cameras row are on this screen — read once for a link and a gun, not once a tile.
   let lentKey = '', lentIs = { fog: false, n: 0, cams: 0, wand: 0 };
-  const lentOf = () => { const href = quietFogHref(base, quietRow), gun = KIT.members[0]?.weapon, key = `${href}|${gun}|${STICKY.on}|${WAND.on}|${QUIETFOG.wand}`;
+  const lentOf = () => { const href = quietFogHref(base, quietRow), gun = KIT.members[0]?.weapon, key = `${href}|${gun}|${STICKY.on}|${WAND.on}|${QUIETFOG.wand}|${fogOffNow()}`;
     if (key !== lentKey) { lentKey = key; const q = new URLSearchParams(href.replace(/^[^?]*\?/, '')), fog = fogOfQuery(q), n = fog && STICKY.on ? quietCamsOfLink(q) : 0;
       lentIs = { fog, n, cams: gun === 'rifle' ? n : 0, wand: n > 0 && WAND.on && QUIETFOG.wand ? 1 : 0 }; }
     return lentIs; };
@@ -180,7 +180,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   const lentNow = (f: string): number => (f === 'frags' ? (member === 0 ? packFrags : 0) : member !== 0 || (kitStealthOn() && cardsOn()) || kitIssueWhole(missionKit) /* (a mission's own card for you: nothing is handed over it — kit.ts ISSUE.whole) */ ? 0 : f === 'rings' ? kitRingsLent(stealthKind, KIT.members[0]) : !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
   const lookSig = () => `${noFog()}|${lentNow('cams')}|${lentNow('wand')}|${lentNow('rings')}|${stealthKind && kitStealthOn() ? `${lentOf().n}|${lentOf().wand}` : ''}`;
   let fogWas = '';   // (set where the first card is mounted: `member` is not there yet)
-  const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' ? quietRow || fogOfQuery(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : entry.kind !== 'quiet' && entry.kind !== 'solo'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)
+  const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' ? quietRow || fogOfLink(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : key === 'told' ? !noFog() : entry.kind !== 'quiet' && entry.kind !== 'solo'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)
     leverNote.textContent = entry.kind === 'quiet' || entry.kind === 'solo' ? '' : quietFogAside(() => leversMixed() ? `Your own mix, kept on this machine: ${leversLine()}.` : ''); };   // (the kept mix is the squad levers': none of it acts on a quiet mission or the solo night, and its fog word would read against the quiet fog's row just above)
   if ((entry.kind !== 'solo' || quietRow) && !lessonGroup(entry.group) && !opts.embedded) {   // (mounted inside the one starting page — ui/startpage.ts — the sheet over it carries the rows: ui/missions.ts; the solo night under the fog has the fog's lever, its other two stay greyed: the shift is the level's own)
     leversBack = leversOpenOn(base);

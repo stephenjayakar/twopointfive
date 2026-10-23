@@ -87,6 +87,7 @@ import { START } from '../game/startfile';
 import { SAMESTART } from '../game/samestart';
 import { TAKE } from '../game/takecheck';
 import { QUIETFOG } from '../game/quietfog';
+import { TOLD } from '../game/told';
 import { TORCH } from '../game/calmtorch';
 import { BACKKEY } from '../game/backkey';
 import { FIXEDSTEP } from './loop';
@@ -323,6 +324,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_QUIETFOG')) QUIETFOG.on = String((globalThis as any).process?.env?.TPS_QUIETFOG ?? '') === '1';   // quiet missions under the fog of war (src/game/quietfog.ts): off, so a quiet mission's query reads no rung of the fog lever, as every frozen run was made
     if (pinned('TPS_QUIETDEF')) QUIETFOG.def = String((globalThis as any).process?.env?.TPS_QUIETDEF ?? '') === 'team' ? 'team' : 'off';   // where a quiet mission starts (src/game/quietfog.ts): 'off', every guard shown, as every frozen quiet digest and tally was played — the page starts one under the fog
     if (pinned('TPS_QUIETWAND')) QUIETFOG.wand = String((globalThis as any).process?.env?.TPS_QUIETWAND ?? '') === '1';   // the mission's own wand (src/game/quietfog.ts quietWand): off, so a quiet mission hands out no wand
+    if (pinned('TPS_TOLD')) TOLD.on = String((globalThis as any).process?.env?.TPS_TOLD ?? '') === '1';   // the fourth difficulty lever, how much you're told (src/game/told.ts): off, so there are three levers and a last-seen mark only where FOG.lastSeen asks for one
+    if (pinned('TPS_FOGOFF')) TOLD.fogOff = String((globalThis as any).process?.env?.TPS_FOGOFF ?? '') === '1';   // the squad fog lever's bottom rung, off (src/game/told.ts): not offered, so a squad mission's link is read for its fog as it always was
     if (pinned('TPS_SOLOFOG')) QUIETFOG.solo = String((globalThis as any).process?.env?.TPS_SOLOFOG ?? '') === '1';   // the solo night under the fog of war (src/game/quietfog.ts soloFogLink): off, so a `solo` link raises no fog and hands out nothing
     if (pinned('TPS_TAKECHECK')) TAKE.wired = String((globalThis as any).process?.env?.TPS_TAKECHECK ?? '') === '1';   // only a wired holder sends a man when it is emptied (src/game/takecheck.ts): off, so every quiet mission sends its man seven seconds after the take, as every frozen run was made; `TPS_TAKECHECK=1` turns it on (the shipped default)
     if (pinned('TPS_SAMESTART')) SAMESTART.on = String((globalThis as any).process?.env?.TPS_SAMESTART ?? '') === '1';   // every mission starts the same way on every try (src/game/samestart.ts): off, so a room clear re-deals on a restart, a rescue draws its roamers and clock and an unpinned quiet mission its deal, as every frozen probe, digest and tally was recorded
