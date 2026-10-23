@@ -1157,7 +1157,7 @@ export class SquadOrders {
    *  is drawn (ringZoom) and the thing's own outline on the floor: a doorway's line, a stretch of wall, a ring at a man's feet or on the spot; the squad's own
    *  menu (the cursor on nothing an order goes to) is a glyph alone. ui/cmdring.ts draws it; the simulation never reads it. */
   hintView(kept?: HoverKept): { kind: RingHint; x: number; y: number; zoom: number; held: boolean; press: boolean; tone: Tone | undefined; seg: [Vec3, Vec3] | null; ring: { at: Vec3; r: number } | null; /** the kind's glyph is drawn (cmdring.ts plainHint: false — the outline alone) */ glyph: boolean } | null {
-    const v = this.view; if ((!CMDRING.on && !CMDRING.hint) || !this.active || !v.input || !v.cam || !v.canvas) return null;   // (`hint` is a setting of its own: the mark is drawn with the ring off too)
+    const v = this.view; if (CMDRING.bareHint || (!CMDRING.on && !CMDRING.hint) || !this.active || !v.input || !v.cam || !v.canvas) return null;   // (`hint` is a setting of its own: the mark is drawn with the ring off too)
     if (!CMDRING.hint && !this.cmdRing && !this.cmdPress) return null;   // (before the key it is drawn only when asked for — `hint`; with the key down it is the press seen to land, and the ring's own middle)
     const R = this.cmdRing && this.menu ? this.cmdRing : null, M = this.menu;
     if (!R && !this.cmdPress && !this.ringFree(v.input)) return null;
