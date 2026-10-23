@@ -95,6 +95,9 @@ export interface Item {
   onBounce?: (speed: number, p: Vec3, g: Game, it: Item) => void;
   /** onBounce's own count, where it keeps one (combat.ts dropFromHand: the first two clatters are heard) */
   clatters?: number;
+  /** in a hand (disarm.ts: the gun Sam has taken out of a man's, until he lets it go): it is placed by whoever carries it, every frame — no gravity, no bounce,
+   *  drawn where it is put (yaw, and tumble = how far its muzzle is down); it ages like any item. Unset = an item like any other */
+  carried?: boolean;
 }
 
 export interface ThrowSolution { v0: Vec3; T: number; points: Vec3[]; land: Vec3; }
@@ -171,6 +174,7 @@ export class Throwables {
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.age += dt; it.life -= dt;
       if (it.life <= 0) { this.items.splice(i, 1); continue; }
+      if (it.carried) continue;   // (disarm.ts: in Sam's hand — it goes where the hand goes)
       if (it.settled) { it.tumbleRate = 0; const flatA = Math.round(it.tumble / Math.PI) * Math.PI; it.tumble += (flatA - it.tumble) * Math.min(1, dt * 12);   // comes to rest lying along its axis (0 or half a turn)
         // resting on a chair seat / carton: stays put while that prop is still underneath (re-checked whenever its pose changes — shoved, or snapped home
         // by a reset), drops once it has moved out from under it

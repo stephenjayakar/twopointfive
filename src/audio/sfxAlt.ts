@@ -7,8 +7,10 @@
 // Each tells another physical story than the voice it stands beside, and leans on what the toys lacked: contacts as short bands of noise, bodies as many
 // close modes that die at once, air and cloth — not a few notes left ringing. Each is set to the level of the voice it could replace (sfx.ts HEARD, or the two
 // measured rows below), so a pick changes the sound and not how loud it is. They were made and measured where nothing can be listened to.
+// THE GRAB'S THREE BEATS (grabCatch, gunStrip, gunDown: new voices, never heard by anybody) have two other takes each as well — not a note answered but another
+// idea of the same beat to choose from: more cloth or a harder slap, a rattle or one snap and a click, set down soft or knocked down hard.
 import type { SfxBuffer, SfxContext } from './backend';
-import { HEARD, clack, cluster, knock, tuned, voiced, type SfxName } from './sfx';
+import { HEARD, SLIDE, clack, cluster, knock, thud, tuned, vary, voiced, type SfxName } from './sfx';
 import { biquad, peakTo, type Mode, type Tune, type Voice } from './synth';
 
 interface Take { say: string; dur: number; seed: number; fn: (v: Voice) => void; picked?: true }
@@ -287,6 +289,50 @@ const TAKES: Partial<Record<SfxName, readonly Take[]>> = {
     { say: 'falls flat: one slap and a skid', dur: 0.35, seed: 9331, fn: v => {
       v.hiss(0, 120, 600, 0.0008, 0.016, 1.0); knock(v, 0, 500, 2400, 0.005, 0.6); v.ring(0, cluster(v, 300, 1300, 6, 0.018), 0.0012, 0.3);
       knock(v, 0.028, 400, 2000, 0.004, 0.3); v.hiss(0.04, 700, 2600, 0.02, 0.05, 0.14);
+    } },
+  ],
+  // the grab's three beats: two other ideas of each
+  grabCatch: [
+    { say: 'more sleeve than thump: the arm slides round, a soft bump', dur: 0.32, seed: 9401, fn: v => {
+      v.hiss(0, 900, 5500, 0.05, 0.008, 0.6); v.hiss(0.004, 350, 1400, 0.05, 0.01, 0.4);                  // the whole forearm dragged over his shoulder and collar
+      thud(v, 0.055, 130, 0.07, 0.45, 420); v.hiss(0.055, 250, 800, 0.002, 0.012, 0.3);                   // Sam closing up behind him: felt more than struck
+      v.hiss(0.075, 1200, 5000, 0.012, 0.03, 0.3);                                                        // the jacket bunching under the arm
+      v.hiss(0.1, 1500, 4200, 0.035, 0.005, 0.22);                                                        // his breath in through the nose, pinched off
+      v.hiss(0.17, 700, 3000, 0.02, 0.014, 0.08);
+    } },
+    { say: 'a hard slap: forearm on his chest rig, a grunt knocked out of him', dur: 0.3, seed: 9402, fn: v => {
+      knock(v, 0, 300, 1400, 0.007, 1.1); knock(v, 0, 1400, 4200, 0.0025, 0.5);                           // no cloth first: the arm is there at once, on nylon and plates
+      thud(v, 0, 120, 0.11, 0.9, 480);
+      for (let k = 0; k < 2; k++) knock(v, 0.012 + 0.014 * k + 0.004 * v.u(), 2200, 6000, 0.0012, 0.16);  // what hangs on the rig, jumping
+      const b = v.layer();
+      v.throat(0.03, 0.07, t => 150 - 600 * t, t => Math.pow(Math.sin(Math.PI * Math.min(1, t / 0.07)), 0.6), () => [[520, 110, 1], [1150, 160, 0.35], [2400, 220, 0.08]], { open: 0.32, breath: 0.25, jitter: 0.05, shimmer: 0.2 }, b);
+      biquad(b, v.sr, 'lp', 1800); v.add(peakTo(b), 0.45);                                                // 'hk': pressed, shut by the arm
+      v.hiss(0.11, 600, 2600, 0.015, 0.02, 0.07);
+    } },
+  ],
+  gunStrip: [
+    { say: 'a rattle: the gun shaken out of his fingers, no clean snap', dur: 0.27, seed: 9411, fn: v => {
+      v.hiss(0, 700, 2800, 0.012, 0.02, 0.3);                                                             // a glove closing over the slide
+      let at = 0.012; for (let k = 0; k < 7; k++) { const a = 0.75 * Math.pow(0.82, k); knock(v, at, 1900, 6500, 0.0014, a); v.ring(at, vary(v, SLIDE, 4, 0.06), 0.0004, a * 0.3); if (k % 2 === 0) knock(v, at + 0.003, 600, 1900, 0.003, a * 0.5); at += 0.015 + 0.004 * k + 0.004 * v.u(); }   // steel in its rails and polymer on a knuckle, slowing
+      v.ring(0.06, [[3600, 0.012, 1], [5300, 0.008, 0.6], [7400, 0.005, 0.3]], 0.0003, 0.12, 0.3);        // a sling swivel, or the lanyard loop
+      knock(v, at + 0.02, 1500, 5000, 0.002, 0.3);                                                        // into Sam's palm
+    } },
+    { say: 'one snap and one click, nothing between them', dur: 0.2, seed: 9412, fn: v => {
+      knock(v, 0, 1200, 8000, 0.0035, 1.0); v.hiss(0, 300, 1100, 0.0005, 0.008, 0.9); v.ring(0, cluster(v, 700, 3600, 7, 0.01), 0.0006, 0.3);   // wrenched out against his thumb: a snap with a knuckle in it
+      clack(v, 0.13, 1800, 7000, 0.008, 0.45); v.ring(0.13, [[3100, 0.005, 1], [5000, 0.004, 0.6]], 0.0003, 0.16);   // turned over, the grip in Sam's hand
+    } },
+  ],
+  gunDown: [
+    { say: 'set down soft, as onto carpet: a pat and the hand leaving it', dur: 0.3, seed: 9421, fn: v => {
+      v.hiss(0, 90, 420, 0.004, 0.026, 1.0); v.hiss(0, 300, 1100, 0.003, 0.012, 0.5);                     // the weight, taken by something that gives
+      knock(v, 0.004, 900, 2400, 0.004, 0.14);                                                            // the magazine's floor plate through the pile
+      v.hiss(0.02, 600, 2600, 0.03, 0.03, 0.16);                                                          // pile and sleeve
+      knock(v, 0.1, 1200, 3200, 0.002, 0.05);                                                             // a finger off the trigger guard
+    } },
+    { say: 'a harder knock on a hard floor, and it rocks flat for longer', dur: 0.42, seed: 9422, fn: v => {
+      v.hiss(0, 120, 600, 0.0008, 0.014, 0.9); knock(v, 0, 500, 2600, 0.005, 0.9); v.ring(0, cluster(v, 320, 1500, 7, 0.02), 0.0012, 0.35);
+      knock(v, 0.002, 2000, 5500, 0.0015, 0.22);                                                          // the slide's steel on the floor
+      let at = 0.06; for (let k = 0; k < 5; k++) { const a = 0.22 * Math.pow(0.68, k); knock(v, at, 700, 2600, 0.003, a); if (k < 2) knock(v, at + 0.002, 2200, 5000, 0.0012, a * 0.4); at += 0.07 * Math.pow(0.78, k) + 0.008 * v.u(); }   // heel and muzzle in turn, quicker and smaller each time
     } },
   ],
 };

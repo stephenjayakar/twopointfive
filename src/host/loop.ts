@@ -211,6 +211,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       const aim = shot || game.spectate >= 0 || (game.orders.plan.up && game.orders.plan.look) ? null : game.aimPoint;   // (plan mode, planmode.ts: the view is the hand's — it leans toward nothing)
       // THE CAMERA RUNNING ITSELF (host/autocam.ts): with the mode on and the view Sam's own — no show, no pin, no spectated man, not plan mode's point or the sky
       // seat's — the look-at is the frame's (his feet, shifted toward what the game knows he is about), nothing leans on the cursor, and a turn of its own may begin
+      const hs = cam.hostShift;   // (a page with a panel over one side of the view — host/sneaklab.ts: the look-at moves over, whoever chose it)
       const mine = !!auto && AUTOVIEW.on && !frozen && !shot && viewFree() && follow === game.player.char.pos && autoFree(game);
       if (mine) {
         if (!(auto!.base > 0)) autoBegin(auto!, cam);   // (kept on from an earlier visit: the zoom as the page opened is the hand's own)
@@ -219,11 +220,13 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         if (yaw != null && ctx.behind == null && !auto!.sway && !auto!.swayV) { ctx.behind = yaw; ctx.behindAuto = true; auto!.turnT = 0; AUTOCAM_STATS.turns++; carryOn(); }   // (his aim goes round with the view, as the double tap's does; never begun across a lean of the sway's: that comes home first)
         // …and the sway (AUTOCAM.sway): a slow lean of the yaw round the hand's own, toward the fight and the way he moves — not while a turn of another kind is under way
         if (ctx.behind != null) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
-        if (tick) cam.step(cdt, look, null); else cam.update(cdt, look, null);
+        const at: Vec3 = hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look;
+        if (tick) cam.step(cdt, at, null); else cam.update(cdt, at, null);
         return shot;
       }
       if (auto && !frozen) { autoRest(auto); if (auto.swayV) { const t = AUTOVIEW.on ? swayCoast(auto, cdt) : 0; if (t) cam.rotate(t); } }   // (a card up is not somebody else's view: the frame is where it was when the card lifts; a lean under way as the view goes to somebody else dies away, and is where it was when the view is his again)
-      if (tick) cam.step(cdt, shot ?? follow, aim); else cam.update(cdt, shot ?? follow, aim);
+      const at: Vec3 = shot ?? (hs ? [follow[0] + hs[0], follow[1], follow[2] + hs[2]] : follow);
+      if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
     };
     if (!fixed) {
