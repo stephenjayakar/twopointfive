@@ -223,6 +223,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/wandorder.ts WANDORDER_STATS': 'TALLY · counted in wandorder.ts; no read in src/game, src/scene or src/anim',
   'src/game/whistle.ts WHISTLE_STATS': 'TALLY · counted in whistle.ts; no read in src/game, src/scene or src/anim',
   'src/game/wind.ts WIND_STATS': 'TALLY · counted in wind.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
+  'src/game/workstow.ts WORKSTOW_STATS': 'TALLY · counted in workstow.ts; no read in src/game, src/scene or src/anim; shown by ui/bindings.ts',
   'src/game/workthings.ts WORK_STATS': 'TALLY · counted in workthings.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/workthings.ts:327)',
   'src/math/dice.ts cur': 'SCRATCH · which Game\'s die simRandom draws: set by useDice as the first statement of Game.update / step / restartEncounter (game.ts:1433/1470/1489) before any draw; the die\'s own word lives on the Game (g.dice)',
   'src/math/side.ts STATE': 'CACHE · (math/side.ts\'s own bookkeeping: the named tables but the memos, rebuilt when a name or a memo mark was added)',

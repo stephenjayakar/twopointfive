@@ -421,11 +421,25 @@ function selftest(): boolean {
     check(pick(false) === 'low ×0.50' && pick(ON) === 'verylow ×0.50' && hop(false) > hop(ON) + 0.1,
       `the ladder prices the grid that runs: a 4.5 × machine boots at ${pick(false)} with the switch off (as it was) and ${pick(ON)} with it on; low → medium priced ×${hop(false).toFixed(2)} off, ×${hop(ON).toFixed(2)} on`);
   }
+  console.log('\nOne smoke pressure solve at every preset (settings.oneSmokeSolve: a sight line reads the solver\'s density, so its pairs are part of what smoke hides):');
+  {
+    const ON = process.env.ONESOLVE_BREAK !== '1';   // ONESOLVE_BREAK=1: the walk runs with the switch off and the first line must FAIL
+    const walk = (on: boolean | undefined) => {
+      store.clear(); const E = mkEngine(w, on === undefined ? {} : { oneSmokeSolve: on }); const sm = { params: { rbIters: 0 } }; if (on === undefined) delete E.settings.oneSmokeSolve;
+      const q: any = new Quality(E as never, sm as never); const seen: Record<string, number> = {};
+      for (const n of [...QUALITY_NAMES, ...[...QUALITY_NAMES].reverse()]) { q.apply(n); seen[n] = sm.params.rbIters; }
+      return seen;
+    };
+    const on = walk(ON), off = walk(false), bare = walk(undefined), H = PRESETS.high.rbIters;
+    check(QUALITY_NAMES.every(n => on[n] === H), `every preset solves with high's ${H} pairs: ${QUALITY_NAMES.map(n => `${n} ${on[n]}`).join(' · ')}`);
+    check(QUALITY_NAMES.every(n => off[n] === PRESETS[n].rbIters) && off.ultra !== off.medium, `the switch off = the rows as they were: ${QUALITY_NAMES.map(n => `${n} ${off[n]}`).join(' · ')}`);
+    check(QUALITY_NAMES.every(n => bare[n] === H), 'a settings object with no such key (a tool\'s mock) solves as the page does');
+  }
   console.log('\nThe smoke keeps high\'s look down the ladder (settings.smokeKeep: under high the march stays at half size with high\'s lights; the rung sheds everything else):');
   {
     const BREAK = process.env.SMOKEKEEP_BREAK === '1';   // SMOKEKEEP_BREAK=1: the 'on' walks run with the switch at 0 and the first two lines must FAIL
     const SMOKE = ['volQuarter', 'volLightCap', 'volShadowEvery', 'volStepVoxels', 'smokeMarchLights', 'volSteps', 'froxelVol'];
-    const put = (name: QualityName, keep: number) => { store.clear(); const E = mkEngine(w, { smokeKeep: keep }); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never); q.auto = false; q.apply(name); return { S: { ...E.settings } as Record<string, any>, rb: q.smoke.params.rbIters as number, q, E }; };
+    const put = (name: QualityName, keep: number) => { store.clear(); const E = mkEngine(w, { smokeKeep: keep, oneSmokeSolve: false }); const q: any = new Quality(E as never, { params: { rbIters: 4 } } as never); q.auto = false; q.apply(name); return { S: { ...E.settings } as Record<string, any>, rb: q.smoke.params.rbIters as number, q, E }; };
     const diff = (a: Record<string, any>, b: Record<string, any>) => Object.keys({ ...a, ...b }).filter(k => k !== 'smokeKeep' && JSON.stringify(a[k]) !== JSON.stringify(b[k])).sort();
     const H = put('high', 0).S, under: QualityName[] = ['medium', 'low'];
     const on = (n: QualityName) => put(n, BREAK ? 0 : 1).S;

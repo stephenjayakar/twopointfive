@@ -6,7 +6,7 @@
 // Before this a page whose address names a mission booted behind the OLD start card's look-alike (ui/menu.ts bootCard: a grey Start, the notes, the whole
 // controls list and the shader count) and the mission began under it the moment the boot was done: a list of keys up for as long as the machine took, gone
 // before it could be read. Now that page shows THE MISSION: its own words off the mission list (scene/scenarioList.ts: the heading it sits under, its title,
-// the place, the job in one line, the team as deployed, the defenders, the approach) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
+// the place, the job in one line, the team as deployed, the approach; the defenders' count only under `?mystery=0`) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
 // drawMissionMap: the place as a model, a 10 m scale, the way in marked; the maintainer on the first cut, which had the mission's picture there: "let's show
 // the map vs. the (kinda low res) level art"), and ONE block, START, which fills as the boot goes and is live when the level can start. Nothing here is a new sentence: every word is the list's.
 //   · IT STAYS UNTIL IT IS STARTED: a click on the block, Enter or Space. The world is stood up and held still behind it (main.ts: one term of the loop's
@@ -22,7 +22,7 @@
 import { ALL_MISSIONS, specOfQuery, quitSearch } from '../scene/scenarioList';
 import { MISSION_GROUPS } from '../scene/scenarios';
 import { PICKS_UI, pickOfQuery, pickQuitSearch } from '../scene/picks';
-import { SOLO_NIGHT, missionOf, missionOfQuery, drawMissionMap, teamWordsOf, leanWords, reopenMissionsAfterLoad, type Mission } from './missions';
+import { SOLO_NIGHT, missionOf, missionOfQuery, drawMissionMap, teamWordsOf, leanWords, defendersShown, reopenMissionsAfterLoad, type Mission } from './missions';
 import { openOptions, closeOptions, optionsOpen } from './options';
 import { START_PAGE } from './startpage';
 import { menuTheme } from './theme';
@@ -145,7 +145,7 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
   else { if (m.blurb) col.appendChild(el('div', 'bjob', m.blurb));
     const facts = el('div', 'bfacts');
     const fact = (label: string, value: string) => { if (!value || value === '—') return; const f = el('div', 'bf'); f.appendChild(el('b', undefined, label)); f.appendChild(el('span', undefined, value)); facts.appendChild(f); };
-    fact('Team', W.team); fact('Defenders', m.defenders); fact('Approach', leanWords(m.lean));   // (the mission sheet's own three cells and their names: ui/missions.ts)
+    fact('Team', W.team); fact('Defenders', defendersShown(m)); fact('Approach', leanWords(m.lean));   // (the mission sheet's own three cells and their names: ui/missions.ts)
     col.appendChild(facts); }
   const go = el('button', 'bgo') as HTMLButtonElement, fill = el('i'), words = el('div', 'bstatus', 'starting the GPU…');
   go.type = 'button'; go.setAttribute('aria-busy', 'true'); go.appendChild(fill); go.appendChild(el('span', undefined, 'Start')); go.appendChild(el('kbd', undefined, 'Enter'));

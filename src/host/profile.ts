@@ -62,7 +62,7 @@ import { HARD } from '../game/difficulty';
 import { GUNHOLD } from '../game/gunhold';
 import { HOLD, THROW_BY, HARDBREATH } from '../game/character';
 import { CLOSE } from '../game/close';
-import { FOOTFALL } from '../game/player';
+import { FOOTFALL, TWOGEARS } from '../game/player';
 import { PLAN } from '../game/floorplan';
 import { KITANIM } from '../game/kitanim';
 import { HANDS } from '../game/hands';
@@ -142,6 +142,7 @@ import { CLEANRESTART } from '../game/cleanrestart';
 import { FIRELINE } from '../game/fireline';
 import { SAVETIMELINE } from '../game/savestate';
 import { HANDWORK } from '../game/handwork';
+import { WORKSTOW } from '../game/workstow';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { GEAR, gearFromQuery } from '../game/gear';
@@ -221,6 +222,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORTOOLS.thrPieOne = q.get('thrpieone') !== '0';   // … ONE man cuts: the lead walks the cuts square while the far jamb's man holds his diagonal, then leans once from his last cut; nobody kneels (the maintainer, 10-19, of the two of them cutting and kneeling in step). ON in the page; ?thrpieone=0 = both men cut, leaned on every cut, a knee on the cuts down the door's line, as it was
   DOORTOOLS.outsidePlain = q.get('outsideplain') !== '0';   // 'clear from outside' is ONE order on the door tools' row 4 — hold the door from outside — and going in is a second order (rows 1 / 2), one can at most: ON in the page; ?outsideplain=0 = the threshold's pages as they were
   DOORTOOLS.wordNoCan = q.get('wordnocan') !== '0';   // the word (F) at a door held from outside steps the men in with NO can; a can goes in only when asked ('bang and clear' given to the holding men): ON in the page; ?wordnocan=0 = the word bangs the blind pockets first, as it was (acts with the one-order outside clear)
+  DOORTOOLS.wordCuts = q.get('wordcuts') !== '0';   // the word that spends no can waits for the jamb men to finish slicing the doorway (doortools.ts cutsOwe): ON in the page; ?wordcuts=0 = the word steps them in there and then, as it was
   DOORTOOLS.wordSmall = q.get('wordsmall') !== '0';   // the word (F) sends one or two teammates in from a plain stack, as it does the four: ON in the page; ?wordsmall=0 = with a small squad the key does nothing for a stack, as it was
   SEENWALK.on = q.get('seenwalk') !== '0';   // the walk an order gives a man keeps off lit floor that a room nobody has cleared has a sight line to, through glass as through anything an eye sees through (game/seenwalk.ts): ON in the page; ?seenwalk=0 = the walks as they were
   DOORTOOLS.bangInto = q.get('banginto') !== '0';   // a bang and clear's can leaves the thrower's own hand and is thrown deep into the room (the deepest point its burst lights nearly all the floor from), going off as it gets there (game/doortools.ts bangSpot): ON in the page; ?banginto=0 = it appears in the door frame and goes off 1.6 m inside, as it was
@@ -267,6 +269,8 @@ export function pageSwitches(q: URLSearchParams): void {
   RELOAD.lastMag = !q.has('nolastmag');   // the last magazine, seated and not racked, can still be reloaded (game/autoreload.ts): ON in the page; ?nolastmag = that gun never fires again, as it was
   HANDSLOT.on = q.get('handslot') !== '0';   // empty hands are a slot (game/handslot.ts): its key puts away whatever is up and is never the way back, a digit draws; on the page's board it is backtick, the debugger is on backslash and E is spare (host/keymap.ts SLOT) — ON in the page; ?handslot=0 = E puts away and draws, as it was
   HANDRING.near = HANDRING.empty = HANDRING.early = q.get('handring') !== '0';   // …and a digit pressed inside the hold is the ring's wedge at once, never the weapon slot (handring.ts `early`)
+  HANDRING.lone = HANDRING.near && q.get('lonepill') !== '0';   // a ring with one row is a pill, on both rings, and the cursor on the pill is on the row (game/ringlone.ts) — these four go with ?handring=0 too, as the rest of his ring does
+  HANDRING.onThing = HANDRING.near && q.get('ringonthing') !== '0'; HANDRING.bare = HANDRING.near && q.get('ringbare') !== '0'; HANDRING.turn = HANDRING.near && q.get('ringturn') !== '0';   // his ring stands on the thing its first row is about (or on him), and has no line of words under it
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
@@ -361,7 +365,9 @@ export function pageSwitches(q: URLSearchParams): void {
   PLAN.thrTold = q.get('thrtold') !== '0';   // …and on a door held from outside the cap lights only once the men have called 'holding · on your word': pressed before that the key cuts their slice short (picture only, on on both stands; `?thrtold=0` = lit with their feet on the jambs, as it was)
   CLOSE.on = !q.has('noclose');   // closer than ever (game/close.ts): the windows round a man drawn on the floor, the ready pose, the ways in from his sides, his front and over a chair — ON in the page; ?noclose = one way in, from behind, in words, as it was
   CLOSE.heldClicks = !q.has('noheldclicks');   // with a man in his arm the two buttons (game/close.ts, player.ts updateHold): left click the knife — he is dead — right click the choke; the arm hold only — ON in the page; ?noheldclicks = neither click does anything there, as it was
+  CLOSE.handsLow = q.get('handslow') !== '0';   // crouched in reach behind a standing man his hands stay low until the move: the tell is the hand on the knife, not an open hand held up over his own head (game/close.ts closeReady). ON in the page; ?handslow=0 = the grab's tell reaches from the crouch, as it was
   CLOSE.reachUp = !q.has('noreachup');   // crouched behind a standing man the grab's reach goes UP for his neck and the trunk comes up with it (game/close.ts, character.ts READY_UP): ON in the page; ?noreachup = the hand at the small of his back, as it was
+  TWOGEARS.on = q.get('twogears') !== '0';   // two gears, not a dial (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch-walk is the sneak, at its own quicker pace. ON in the page; ?twogears=0 = the wheel's six notches and the tune's crouch-walk, as it was
   FOOTFALL.once = q.get('footfallonce') !== '0';   // one footfall a step (game/player.ts FOOTFALL): a footfall is filed only once the walk cycle has come a quarter of a turn since the last one filed, so a cycle rocking over one edge (backpedal flipping frame by frame: forwards and backwards keys by turns, or a man walked in the arm) is one footfall and not one a frame. ON in the page; ?footfallonce=0 = every crossing files one, as it always did
   FOOTFALL.owed = q.get('footfallowed') !== '0';   // …and under it, a footfall the legs owe (FOOTFALL.owed): a cycle turned about again and again (the cursor shaken across him) rocks between its edges or crosses one with too little travel to count, and with the first key alone that walk files a third to two thirds of a plain walk's footfalls; on = a step's worth of the cycle walked since the last edge passed files one. ON in the page; ?footfallowed=0 = only an edge files a footfall
   KITANIM.on = !q.has('nokitanim');   // kit animations (game/kitanim.ts): Sam's hands put kit away and bring it out, magazine changes by the gun's state (empty / tactical), the close-in mode's knife hand by distance — ON in the page; ?nokitanim = the kit changing hands on the key's frame, one reload, as it was
@@ -370,6 +376,7 @@ export function pageSwitches(q: URLSearchParams): void {
   TAKEDOWN.haul = !q.has('nohaul');   // …and the choke hauls him up and back off his feet (character.ts HOLD.haul): ON in the page; `?nohaul` = the choke as it was
   STEALTHPOSE.on = !q.has('nostealthpose');   // stealth poses (game/stealthpose.ts): the crouch's hanging arms and sway, the crouch walk's arms, the back unrolling as he stands, the creep's leading hand, the squat at a door with the wand; ?nostealthpose = as it was
   HANDWORK.on = !q.has('nohandwork');   // hands that do the work (game/handwork.ts): a finger on the keypad, hands on a charge, the breaker's lever and the drive; a hand to the radio; a guard's torch ↔ sidearm swap as a move — ON in the page; ?nohandwork = all three on the frame, as they were
+  WORKSTOW.on = !q.has('noworkstow');   // the gun is put away for a two-handed job (game/workstow.ts): a charge going on a door or a wall has both of the man's hands — yours, what you held put away first and brought back after; a teammate's gun hung on its sling, no round until it is back up, the job dropped while the fight has him. `?noworkstow` = a charge set with the gun still in the hand, as it was
   HANDS.on = !q.has('nohands');   // hands on the world (game/hands.ts): a body is taken up from the end he is at with both hands and laid down again, a door comes round under his hand with him stepped clear of it — ON in the page; ?nohands = bodies snap to the ankle drag and doors are flung, as they were
   OWNCHARGE.on = !q.has('noowncharge');   // the player's own charges (game/owncharge.ts): charge rows on YOUR kit card, 'set a charge' on a shut door, a man alone carries his card's charges only. ?noowncharge = as it was
   GUNSLOTS.on = !q.has('nogunslots');   // a primary and a secondary for every man (game/gunslots.ts): the card's one gun row is two — Primary and Secondary — and a teammate carries both, going to his sidearm when the primary runs dry on a man close in front of him. ?nogunslots = one gun row, and nobody but you has a second gun
@@ -521,6 +528,10 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HANDRING.early': 'TPS_HANDRING=1',
   'HANDRING.empty': 'TPS_HANDRING=1',
   'HANDRING.near': 'TPS_HANDRING=1',
+  'HANDRING.lone': 'TPS_HANDRING=1',
+  'HANDRING.onThing': 'TPS_HANDRING=1',
+  'HANDRING.bare': 'TPS_HANDRING=1',
+  'HANDRING.turn': 'TPS_HANDRING=1',
   'THROWBACK.on': 'TPS_THROWBACK=1',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
   'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
@@ -544,8 +555,10 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CLOSE.on': 'TPS_CLOSE=1',
   'CLOSE.heldClicks': 'TPS_HELDCLICKS=1',
   'CLOSE.reachUp': 'TPS_REACHUP=1',
+  'CLOSE.handsLow': 'TPS_HANDSLOW=1',
   'FOOTFALL.once': 'TPS_FOOTFALL=1',
   'FOOTFALL.owed': 'TPS_FOOTOWED=1 (acts only under FOOTFALL.once: with TPS_FOOTFALL=1)',
+  'TWOGEARS.on': 'TPS_TWOGEARS=1',
   'GUARD_EYE.far': 'TPS_FARSIGHT=1',
   'GUARD_EYE.farCalm': 'TPS_FARCALM=1',
   'KITANIM.on': 'TPS_KITANIM=1',
@@ -645,6 +658,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.thrPieOne': 'TPS_THRPIEONE=1',
   'DOORTOOLS.outsidePlain': 'TPS_OUTSIDEPLAIN=1',
   'DOORTOOLS.wordNoCan': 'TPS_WORDNOCAN=1',
+  'DOORTOOLS.wordCuts': 'TPS_WORDCUTS=1',
   'DOORTOOLS.wordSmall': 'TPS_WORDSMALL=1',
   'CMDRING.on': 'TPS_QRING=1',
   'CMDRING.tapNow': 'TPS_QRING=1 (with the ring)',
@@ -732,6 +746,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STACKROOM.on': 'TPS_STACKROOM=1',
   'HANDLE.toolNear': 'TPS_TOOLNEAR=1',
   'HANDWORK.on': 'TPS_HANDWORK=1',
+  'WORKSTOW.on': 'TPS_WORKSTOW=1',
   'TAKEDOWN.on': 'TPS_TAKEDOWN=1',
   'TAKEDOWN.haul': 'TPS_HAUL=1',
   'STEALTHPOSE.on': 'TPS_STEALTHPOSE=1',
