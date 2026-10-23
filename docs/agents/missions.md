@@ -1663,7 +1663,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `STEPS`, `SETTLE`): it boots the row, checks the frame is up and the untaught keys do nothing, then does every step with real keys and the mouse, a
   picture where asked. Two things it had to learn: a hand walks by the game's own path finder, not in straight lines (a real-size door leaves a hand's
   width either side of a man); and stepped frames are never drawn there, so THE PAGE'S LIGHT METER DOES NOT MOVE unless a frame is drawn: it draws a few
-  before each order (`settle`), or the partner reads the light of wherever the last picture was taken. CHECKS: `lesson-gate tut-pair` (the file is its
+  before each order (`settle`), or the partner reads the light of wherever the last picture was taken. THE GRAB there is whatever the line asks for: the key on
+  its cap, or, where the line names no key (the held click is the only way to a man, `stalk.ts`), the left button pressed on him and kept down. CHECKS: `lesson-gate tut-pair` (the file is its
   generator's, `level-lint`, `lesson-check`, the scripted player on the frozen stand with the frame raised, and on the shipped stand on four dice, two of
   them reading every line for 6 s), `quiet-check`, `carlamps-check` (its row), `level-needs tut-pair --run`, `rails-check` (the frame's own), both
   typechecks, the page play. MEASURED, headless: the scripted player finishes all 18 steps on the shipped stand on seeds 1 to 4; "set" comes 5 to 12 s

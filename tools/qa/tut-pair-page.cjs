@@ -3,7 +3,7 @@
 // What the headless lesson run (tools/qa/lessons/tut-pair.ts) cannot see: that the bundle boots the level and its script on the frame (game/rails.ts), that the
 // one big line is up with the player's own key on a key cap, that what a step has not taught yet is locked against a real key, that each explain card comes
 // up and closes, and that a hand at the keyboard and the mouse gets through all of it: the walk keys, the squad's key on a man and on the fuse box, the word,
-// the grab, the right button, the pad, the trunk and the far gate.
+// the grab (the key on the line's cap, or the left button held on the man where the line names no key), the right button, the pad, the trunk and the far gate.
 //   PORT=5247 node tools/qa/tut-pair-page.cjs        (a dev server on that port: PORT=5247 bun run tools/serve.ts)
 //   env: QUALITY (default verylow) · OUT (a folder for the pictures; default a temp folder) · SHOTS=0 (no pictures: each is about a minute here) ·
 //        PICS=boot,mark,lamps (pictures at these steps only) · STEPS (stop after this many steps)
@@ -86,6 +86,12 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
   /** the place a stride behind a man, off the way he faces now */
   const backOf = (name, off = 0.85) => page.evaluate(([name, off]) => { const g = window.__game, h = g.guards.find(x => !x.unit && g.level.routes[x.routeI]?.name === name), c = h.char; return [c.pos[0] - Math.sin(c.bodyYaw) * off, 0, c.pos[2] - Math.cos(c.bodyYaw) * off]; }, [name, off]);
   const chest = p => [p[0], 1.2, p[2]];
+  /** the grab on the man of route `name` (posted at `w`): the key on the line's cap while the line has one. With the held click the only way to a man
+   *  (src/game/stalk.ts STALK.only) the line names no key, and the grab is the left button pressed ON him and kept down until he is in Sam's arm */
+  const grab = async (name, w) => { const k = await lineKey(); if (k) { await point(chest(w)); return tap(k); }
+    const at = await page.evaluate(name => { const g = window.__game, h = g.guards.find(x => !x.unit && g.level.routes[x.routeI]?.name === name); return h ? [h.char.pos[0], 0, h.char.pos[2]] : null; }, name);
+    await point(chest(at || w)); await page.mouse.down(); let held = false; for (let n = 0; n < 36 && !(held = (await read()).holding); n++) await run(10); await page.mouse.up(); await run(3);
+    log(`  no key on the line: the left button held on '${name}' ${held ? 'has him' : 'never took him'}`); };
   const ground = async () => { const s = await read(); return [s.at[0] + 1.3, 0, s.at[1] + 0.7]; };
 
   const url = `http://localhost:${PORT}/?levelFile=tut-pair.json&quiet&squad=1&paused&quality=${QUALITY}&mute&nocutboxes`;
@@ -115,10 +121,10 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
     gap: async () => { await low(); await go(GAP, 40); await settle(); },
     far: async () => { await settle(); await point(chest(C)); await tap(await lineKey()); },
     near: async () => { await go(BEHIND, 30, 0.3); await until('near', 70); },
-    hands: async () => { await walk(await backOf('near'), 10, 0.2); await point(chest(B)); await tap(await lineKey()); await until('hands', 15); },
+    hands: async () => { await walk(await backOf('near'), 10, 0.2); await grab('near', B); await until('hands', 15); },
     sleep: async () => { await right(); await until('sleep', 15); },
     past: async () => { await low(); await go(PAST, 60, 0.35); await settle(); await until('past', 30); },
-    hold: async () => { await go(await backOf('gate', 1.6), 30, 0.3); await walk(await backOf('gate'), 10, 0.2); await point(chest(D)); await tap(await lineKey()); await until('hold', 10); },
+    hold: async () => { await go(await backOf('gate', 1.6), 30, 0.3); await walk(await backOf('gate'), 10, 0.2); await grab('gate', D); await until('hold', 10); },
     ask: async () => { for (let n = 0; n < 4 && (await read()).id === 'ask'; n++) { await tap(await lineKey()); await until('ask', 6); } },
     box: async () => { await settle(2); await point(BOX); await tap(await lineKey()); await run(20); await watched('box'); await until('box', 60); },
     drop: async () => { await right(); await until('drop', 15); },
