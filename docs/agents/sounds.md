@@ -281,3 +281,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   at its start) and `sound-takes-check.ts` (the six other takes). `tools/qa/grab-sounds-render.ts <dir>` writes every take and the whole grab, old and new, as
   WAVs with their numbers. Written blind: nobody has heard one on a speaker, the rate 0.8 was never judged as a carbine, and nothing was played through the real
   mixer's room. Which take of each is the game's is the maintainer's pick.
+- **A fire's two voices (2026-10-23)** (`src/audio/sfx.ts` rows `fireBed`, `fireCrack`; played by `game/fire.ts`, the whole rule in `docs/agents/render.md`, "An
+  open fire burns"). `fireBed` is 7.6 s of low, slowly swelling noise with sparse ticks, looped between `FIRE_LOOP`'s marks 0.12 and 7.12 s (`rollLoop` takes a
+  span now; `audio.ts FOLLOW_LOOPS` has the row) and held as a follow voice at the drum: the fire asks for one on its first frame, again when it is lit again, and
+  hands on to a fresh one every `FIRE.bedSecs` 12 s (a followed voice is let go after its own time, and one the mixer never took is asked for again then); its
+  level and pitch follow the fire's heat (the follow voice's `k`, ⅔ at full heat). `fireCrack` 0.3 s plays with each pop of the wood, the same pop that throws embers and kicks the light, at
+  `FIRE.crack` 0.55 × how hard, its rate 0.8 to 1.3. Levelled by hand under a footstep on a hard floor (`HEARD` 0.03 and 0.075). The mixer's alone: no sound
+  event is filed, nobody in the game hears a fire. Both on the listening page under 'things'. Off with `?fire=0`. Written blind: nobody has heard them.

@@ -141,6 +141,7 @@ import * as doorBlastMod from './game/doorblast';
 import * as wetMod from './game/wet';
 import * as rainMod from './game/rainFx';
 import * as snowMod from './game/snowFx';
+import * as fireMod from './game/fire';
 import * as snowBlastMod from './game/snowBlast';
 import { SNOWMARKS } from './game/snowMarks';
 import { SNOWBOG } from './game/snowBog';
@@ -1381,6 +1382,8 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
     get stats() { return rainMod.rainStats(game); }, get ring() { return engine.particles?.rainStats ?? null; }, get fx() { return rainMod.RAIN_FX; },
     drips: () => rainMod.rainDripPoints(game), seed: (n = 1) => rainMod.seedRain(game, n), summary: () => rainMod.rainSummary(game),
   };
+  // __fire: the open fires (game/fire.ts) — the numbers live, the counts, what the renderer was handed this frame, a line
+  (window as any).__fire = { get knobs() { return fireMod.FIRE; }, get stats() { return fireMod.fireStats(game); }, get drawn() { return engine.fires; }, get targets() { return game.targets.filter(fireMod.isFire); }, summary: () => fireMod.fireSummary(game) };
   // __snow: a snow level's flakes (game/snowFx.ts) — the numbers live, the recycler's count, the ring's, a reseed
   (window as any).__snow = { get fx() { return snowMod.SNOWFX; }, get stats() { return snowMod.snowStats(game); }, get wisps() { return snowMod.SNOWWISPS; }, get wispStats() { return snowMod.wispStats(game); }, get ring() { return engine.particles?.rainStats ?? null; }, seed: (n = 1) => snowMod.seedSnow(game, n), summary: () => snowMod.snowSummary(game),
     // … and its lying snow's look (render/snowField.ts SNOW_SURF): change a number, then relook()
