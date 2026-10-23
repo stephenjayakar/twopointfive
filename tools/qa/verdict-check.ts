@@ -184,12 +184,12 @@ export async function verdictCheck(): Promise<boolean> {
       P.removeChild ??= function (this: any, c: any) { this.children = this.children.filter((x: any) => x !== c); return c; };
       P.replaceChild ??= function (this: any, n: any, o: any) { this.children = this.children.map((x: any) => x === o ? n : x); n.parentElement = this; return o; };
       await withDom('', async () => { const root: any = new El('DIV'), rows: Record<string, any> = {};
-        for (const id of ['killhouse-four', 'solo-night', 'train-move', 'bazaar-quiet']) { const a = new El('A'); a.className = 'mrow'; a.setAttribute('data-mission', id); const t = new El('SPAN'); t.className = 'mtitle'; a.appendChild(t); root.appendChild(a); rows[id] = a; }
+        for (const id of ['killhouse-four', 'solo-night', 'tut-quiet', 'bazaar-quiet']) { const a = new El('A'); a.className = 'mrow'; a.setAttribute('data-mission', id); const t = new El('SPAN'); t.className = 'mtitle'; a.appendChild(t); root.appendChild(a); rows[id] = a; }
         root.querySelectorAll = () => root.all((e: any) => e.cls.has('mrow'));
         const kept: Record<string, any> = { 'killhouse-four': { doors: { first: false, clean: true }, quiet: { first: true, clean: false } } }, ways = (id: string) => kept[id] ?? {};
         const pipsOf = (id: string) => rows[id].children.filter((c: any) => c.cls.has('vpips'));
         const n1 = dressMissionRows(root, ways), k = pipsOf('killhouse-four')[0], first = k;
-        line(n1 === 3 && pipsOf('train-move').length === 0 && !rowEarns('train-move') && rowEarns('solo-night') && pipsOf('solo-night').length === 1 && pipsOf('bazaar-quiet').length === 1, 'every mission\'s card gets its four pips; a training lesson gets none');
+        line(n1 === 3 && pipsOf('tut-quiet').length === 0 && !rowEarns('tut-quiet') && rowEarns('solo-night') && pipsOf('solo-night').length === 1 && pipsOf('bazaar-quiet').length === 1, 'every mission\'s card gets its four pips; a tutorial mission gets none');
         line(!!k && k.cls.has('gold') && k.all((e: any) => e.cls.has('vpip')).length === 4 && k.all((e: any) => e.cls.has('won')).length === 2 && k.all((e: any) => e.cls.has('v1') && e.cls.has('on')).length === 1 && k.all((e: any) => e.cls.has('vall') && e.cls.has('on')).length === 1 && k.all((e: any) => e.cls.has('now')).length === 0
           && pipsOf('solo-night')[0].cls.has('none') && pipsOf('solo-night')[0].all((e: any) => e.cls.has('won')).length === 0, 'two ways won: both lit in the gold frame, first try and nobody lost marked each on its own way; nothing won: four dim marks');
         dressMissionRows(root, ways);

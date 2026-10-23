@@ -29,7 +29,6 @@ export async function freshStartCheck(levelFile = 'compound.json'): Promise<bool
   const { standUp, ROOT } = await import('./headless.ts');
   const { ROOMCLEAR, placeDefenders, freshSeedOf, freshWayOf } = await import(`${ROOT}/src/game/roomclear.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-  const { TRAINING_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
   const P = await import(`${ROOT}/src/host/profile.ts`);
   const { SAMESTART } = await import(`${ROOT}/src/game/samestart.ts`);
@@ -70,8 +69,6 @@ export async function freshStartCheck(levelFile = 'compound.json'): Promise<bool
     const E = await deal(7, true, 3), F = await deal(7, true, 0);
     line(E.seed === 3 && E.marks === of(3, 1), 'on: a start that names seed 3 deals seed 3');
     line(F.seed === 0 && F.marks === authored, 'on: a start that names seed 0 deals the authored placement');
-    { const rows = (TRAINING_MISSIONS as { id: string; kind: string; seed?: number }[]).filter(r => r.kind === 'roomclear');
-      line(rows.length > 0 && rows.every(r => r.seed !== undefined), `every Training room clear names its seed (${rows.map(r => `${r.id}=${r.seed}`).join(', ')}): a lesson's men stand where its steps expect them`); }
 
     // the same fresh game (B2, die 7) through what a visit can do to it — the knob put back to 0 first (E's start wrote 3)
     ROOMCLEAR.seed = 0; ROOMCLEAR.fresh = !brk;

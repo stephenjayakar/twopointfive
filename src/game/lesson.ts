@@ -1,4 +1,4 @@
-// A LESSON: the Training group's levels (scene/scenarioList.ts rows with `group: 'training'`). A level file carries a `scenarios.lesson` block
+// A LESSON: the tutorial's missions (scene/scenarioList.ts LESSON_MISSIONS; first built for the seven Training levels, taken out 2026-10-23). A level file carries a `scenarios.lesson` block
 // (scene/scenarios.ts LessonData): STEPS, each a line for the HUD's objective row naming the key, and a DONE-TEST read off the game's own state. The step's line
 // moves on when the player has DONE the thing — never on a clock.
 //

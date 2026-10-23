@@ -148,6 +148,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   'OWNBLOW',
   // the gun is put away for a two-handed job (workstow.ts WORKSTOW): a recording made with it on replays a charge's longer clock and the draw after it, one from before the gun in the hand as it was
   'WORKSTOW',
+  // the squad reaches you and the quick key says why (squadnet.ts SQUADNET): a recording made with it on replays the reason a man answers with and the honest room call, one from before the lines as they were
+  'SQUADNET',
   // teammates are slower than the player and run only for a reason (teampace.ts TEAMPACE): a recording made with it on replays its team at those paces, one from before under the old cap
   'TEAMPACE',
   // teammates falling in never shove the player (noshove.ts NOSHOVE): a recording made with it on replays its file going round him, one from before shouldering him aside
@@ -246,6 +248,7 @@ import { SLOTSETUP } from './slotsetup';
 import { AIMCOST } from './aimcost';
 import { HANDWORK } from './handwork';
 import { WORKSTOW } from './workstow';
+import { SQUADNET } from './squadnet';
 import { TAKEDOWN } from './takedown';
 import { STEALTHPOSE } from './stealthpose';
 import { GEAR } from './gear';
@@ -415,6 +418,8 @@ export function knobRegistry(): Record<string, object> {
     HANDWORK,
     // the gun is put away for a two-handed job (workstow.ts): the switch, a teammate's beats down and up
     WORKSTOW,
+    // the squad reaches you and the quick key says why (squadnet.ts): the three switches, where a far line is drawn, its click and a man down's
+    SQUADNET,
     TAKEDOWN,
     STEALTHPOSE,
     // the default look (scene/look.ts): which FILE a level with a second file is loaded from, and the men's kit — look only (no run differs by it), here so a stand's dump and the page's __knobs say which look it was

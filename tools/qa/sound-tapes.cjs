@@ -1,5 +1,5 @@
-// The replays that cover the game's sounds: recorded ON THE REAL PAGE by a scripted player (tools/qa/tapes/page-bot.ts — the Training lessons' own
-// scripts, input only, plus two scripts for what no lesson reaches), saved where the page serves them (public/assets/replays/), and played back in the
+// The replays that cover the game's sounds: recorded ON THE REAL PAGE by a scripted player (tools/qa/tapes/page-bot.ts — scripts of
+// their own, input only; the seven Training lessons' replays went with the lessons, 2026-10-23), saved where the page serves them (public/assets/replays/), and played back in the
 // engine player to see that each still plays as recorded.
 //
 //   PORT=<dev server> node tools/qa/sound-tapes.cjs [name …]            record (all, or the named ones) and write the files + index.json
@@ -15,7 +15,7 @@ const ROOT = path.resolve(__dirname, '../..'), DIR = path.join(ROOT, 'public/ass
 const PORT = process.env.PORT || '5173', QUALITY = process.env.QUALITY || 'verylow';
 const args = process.argv.slice(2), CHECK = args.includes('--check'), COVER = args.includes('--cover'), DRY = args.includes('--dry'), names = args.filter(a => !a.startsWith('--'));
 const SEEDS = (process.env.SEEDS || '1,2,3').split(',').map(Number);
-const TITLES = { 'train-move': 'Moving unseen', 'train-hands': 'Hands', 'train-lights': 'Lights, locks and devices', 'train-kit': 'Guns and the kit', 'train-orders': 'Orders and door tools', 'train-pairs': 'Two pairs, two doors', 'train-silent': 'Quiet, as two' };
+const TITLES = {};   // (a lesson replay's title by level name: none today, the seven Training lessons' replays went with the lessons, 2026-10-23)
 
 /** a sound the mixer plays INSIDE another's own call (audio.ts hiss: the pop that starts a smoke can's hiss), which a page with no sound running (these are muted) never gets as far as asking for: it is filed with the sound that carries it */
 const WITH = { smokeHiss: ['smokePop'] };
