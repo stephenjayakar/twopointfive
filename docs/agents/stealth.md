@@ -1283,16 +1283,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off a wall, the nearest man not onto him inside `slipFrom` 2.6 m at any bearing, whole by `slipBy` 1.2 m: the trunk tips 9° away
   with the head brought level, the pelvis 3.5 cm lower and 3 cm off his side over feet left where they were, and the arm on his side
   out low with an open hand (at 0.7 of the arm; a hand with something in it is left alone). It lets go behind a man's back
-  (`backCos`), where the creep's own body has him. NOT ONLY LOOKS: his head and chest joints move a few centimetres with both, and
+  (`backCos`), where the creep's own body has him. BETWEEN TWO MEN (`slipNow`: every man's pull on him summed) he tips into neither:
+  the lean, the step aside and the arm go by what is left of the pull, and he sinks `squeeze` 0.6 of the drop further (5.6 cm
+  against 3.5). NOT ONLY LOOKS: his head and chest joints move a few centimetres with both, and
   those are what the eyes that look for him read, so a run with them on is not the same run to the digit. THE CHECK is
-  `samlook-check.ts` (`probes.ts samlook`, the stealth family; `SAMLOOK_BREAK=1` reds five of its eight lines), both stands: a man
+  `samlook-check.ts` (`probes.ts samlook`, the stealth family; `SAMLOOK_BREAK=1` reds six of its nine lines), both stands: a man
   40° off his aim at 3 m has his head inside a second and a half (28° at 0.67 s, 40° at 1.67 s) with his aim unmoved; of two men the
   nearer is his until the further one notices him, and again when that one has lost him; two men at one distance do not trade him
   (0.4 m nearer does not, 1.3 m does); nobody behind him, past the range, in the fog, or over an aimed gun; the stalked man; the
   slip (chest 4.9 cm further from the man and 3.5 cm lower, the near hand out and under the chest, either side; none standing, for a
-  man onto him, from 3 m, or behind a back); off; the harness line. One seed: fixed stagings. The sneak lab has both toggles and
-  sliders for the range, the notice bonus, the head's turn, the slip's range and its lean, and a "lights out" box that puts every
-  lamp on the floor off; the debugger has both toggles under the close-in rows. `close-stills.ts` has scenes `pass` and
+  man onto him, from 3 m, or behind a back); between (a man 1.2 m off each side: his chest to neither side, 5.6 cm lower); off; the harness line. One seed: fixed stagings. The sneak lab has both toggles and
+  sliders for the range, the notice bonus, the head's turn, the slip's range and its lean, a "lights out" box that puts every
+  lamp on the floor off, and a button that stands two of the walkers a gap of 2.4 m apart to slip between; the debugger has both toggles under the close-in rows. `close-stills.ts` has scenes `pass` and
   `pass-back`. NOT DONE: nothing in the look reads the dark; the camera's soft lock (another thread's) picks its own man. Nobody has
   played either or seen them on a GPU: the stills show the low arm clearly and the lean and the head only faintly.
 - **A lesson line names the move, not its key (`lesson.ts` `TOKENS`, `LESSON_TOKENS`, `lessonToken`; 10-23).** `{grab him}`,

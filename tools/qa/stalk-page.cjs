@@ -6,7 +6,8 @@
 //   let     the same, let go after two thirds of a second: nobody stalked, Sam at rest; pressed again: in his arm.
 //   slider  the lab's first slider moved by its own input event writes the stalk's top speed.
 //   dash    crouched, Shift and a move key held (the keyboard's own events): he stays down and goes at the fast crouch walk's pace, no sprint.
-//   look    2.2 m behind the man with the cursor elsewhere his head has the man; a metre off the man's side he leans away with the low arm out.
+//   look    2.2 m behind the man with the cursor elsewhere his head has the man; a metre off the man's side he leans away with the low arm out; the lab's button
+//           stands two walkers a gap apart, and dead between them he is small and leans into neither.
 //   (with the key the finish, stalk.ts `key`, as a plain address has it: `key` is that E takes him from in reach, and `hold` / `let` that the held button
 //    brings him to a stop in reach with nobody grabbed, and E then takes him.)
 // ONLY=nokey: the lab under ?stalkkey=0&stalklow=0 — the four scenes as written above.
@@ -107,6 +108,15 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
           await page.evaluate(async () => { const g = window.__game, B = g.guards[0], y = B.char.bodyYaw; g.player.holstered = true; g.teleportPlayer([B.char.pos[0] + Math.cos(y) * 1.0, 0, B.char.pos[2] - Math.sin(y) * 1.0]); g.player.crouch = true; await window.__runFrames(60, 1 / 60, [], 'none'); });
           const P = await page.evaluate(() => { const an = window.__game.player.char.anim; return { slip: an.watchShown.slip, at: !!an.slipAt }; });
           say(P.at && P.slip > 0.5, `a metre off the man's side, crouched with empty hands: he gives the man room (${P.at}, the lean ${P.slip.toFixed(2)} of whole)`);
+        }
+        if (K.slip) {   // (the lab's own button: two walkers stood a gap apart, and Sam dead between them)
+          const G = await page.evaluate(async () => { const b = [...document.querySelectorAll('#panel button')].find(x => /stand two men a gap apart/.test(x.textContent)); if (!b) return { found: false };
+            window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); b.click(); await window.__runFrames(150, 1 / 60, [], 'none');
+            const g = window.__game, [A, B] = g.guards.filter(x => x.state !== 'dead' && !x.civ).slice(1, 3), a = A.char, c = B.char, apart = Math.hypot(a.pos[0] - c.pos[0], a.pos[2] - c.pos[2]), still = Math.hypot(a.vel[0], a.vel[2]) + Math.hypot(c.vel[0], c.vel[2]);
+            const turn = Math.abs(Math.atan2(Math.sin(a.bodyYaw - c.bodyYaw), Math.cos(a.bodyYaw - c.bodyYaw)));
+            g.player.holstered = true; g.teleportPlayer([(a.pos[0] + c.pos[0]) / 2, 0, (a.pos[2] + c.pos[2]) / 2]); g.player.crouch = true; await window.__runFrames(80, 1 / 60, [], 'none');
+            const an = g.player.char.anim; return { found: true, apart, still, turn, slip: an.watchShown.slip, lean: an.watchShown.lean }; });
+          say(G.found && Math.abs(G.apart - 2.4) < 0.3 && G.still < 0.05 && G.turn < 0.5 && G.slip > 0.8 && G.lean < 0.35, G.found ? `the lab's 'stand two men a gap apart': two walkers stand ${G.apart.toFixed(2)} m apart, at rest (${G.still.toFixed(2)} m/s), facing within ${(G.turn * 57.3).toFixed(0)}° of each other; Sam dead between them is small (${G.slip.toFixed(2)}) with ${G.lean.toFixed(2)} of the lean left` : `the lab has no 'stand two men a gap apart' button`);
         }
         await page.evaluate(async () => { window.__game.restart(); await window.__runFrames(90, 1 / 60, [], 'none'); });
       }

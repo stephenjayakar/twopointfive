@@ -1013,10 +1013,11 @@ export const SNEAK = {
  *  THE SLIP: crouched beside a man, by how near he is (`slipK`): the trunk tips `lean`° away from him with the head brought level back out of it, the pelvis
  *  comes `drop` m lower and `away` m off his side over feet left where they were, and the arm on his side goes out low toward him, the hand open (`armOut` m
  *  out from the shoulder, `armDown` m under it, at `armW` of the arm; none of it for a man dead ahead or dead behind — `armSide`, his bearing's sideways
- *  share where it begins and is whole). A hand with something in it is left alone. Eased at `slipRate`. */
+ *  share where it begins and is whole). A hand with something in it is left alone. Eased at `slipRate`. BETWEEN TWO MEN (`slipLean` under 1: they pull on
+ *  him from both sides) the lean, the step aside and the arm go by that share, and he sinks `squeeze` of the drop further: he gets small, and tips into nobody. */
 export const WATCH = {
   yaw: 72, down: 28, up: 22, share: [0.14, 0.34, 0.52] as [number, number, number], rate: 6, wRate: 5,
-  lean: 9, drop: 0.035, away: 0.03, armOut: 0.32, armDown: 0.42, armW: 0.7, armSide: [0.2, 0.55] as [number, number], slipRate: 5,
+  lean: 9, drop: 0.035, away: 0.03, armOut: 0.32, armDown: 0.42, armW: 0.7, armSide: [0.2, 0.55] as [number, number], slipRate: 5, squeeze: 0.6,
 };
 /** THE FAST CROUCH WALK'S LOOK (CharacterAnimator.dash; the rule and its pace are player.ts CROUCHRUN): at 2.5 m/s the crouch cycle as it stands takes 3.5 steps
  *  a second on a 1.44 m stride — a wound-up toy. By `dash` the stride is this much longer and the cadence that much lower (the planted foot keeps the ground's
@@ -1454,9 +1455,9 @@ export class CharacterAnimator {
    *  comes up (sneakLayer). */
   deliberate = 0;
   /** the world point his head goes to, at this strength 0…1 (WATCH; null = none) · the man he gives room to, and by how much 0…1 */
-  watchAt: Vec3 | null = null; watchK = 0; slipAt: Vec3 | null = null; slipK = 0;
+  watchAt: Vec3 | null = null; watchK = 0; slipAt: Vec3 | null = null; slipK = 0; slipLean = 1;
   /** read back by the checks: the look's weight and yaw (rad) as shown, the slip's weight */
-  watchShown = { w: 0, yaw: 0, slip: 0 };
+  watchShown = { w: 0, yaw: 0, slip: 0, lean: 1 };
   /** 0 / 1: Shift held in a crouch (player.ts CROUCHRUN) — the crouch walk's long, low stride (DASH). Not only a look: the cadence is the cycle's, and a footfall is filed off the cycle. */
   dash = 0;
   /** Player: he has a man from behind (player.ts updateHold) — the phase of it and the seconds into that phase; null = not. The layer (holdLayer) eases itself in
@@ -1721,7 +1722,7 @@ export class CharacterAnimator {
    *  travel — the stride is warped about it — and the phase the linger centres on (just after a foot is set down; the other plant is half a cycle on) */
   private dlb = new Spring(); private gait = { mid: -0.15, linger: 0.08 };
   private dashW = 0;   // `dash` eased (DASH.rate)
-  private wt = { w: 0, yaw: 0, pitch: 0, sw: 0, sx: 0, sz: 1, side: 0 as 0 | 1 };   // watchLayer: the look's weight and angles, the slip's weight, the man's bearing (model, level) and the arm that has him
+  private wt = { w: 0, yaw: 0, pitch: 0, sw: 0, sx: 0, sz: 1, side: 0 as 0 | 1, sl: 1 };   // watchLayer: the look's weight and angles, the slip's weight, the man's bearing (model, level) and the arm that has him
   private jogHipsY = new Float32Array(64); private jogHipsMean = 0.9; private jogMid = -0.1;   // (constructor: the run clip's pelvis height by phase, and where its ankles' fore-aft travel is centred — the stride warp scales about it)
   private runK = 1;                                                       // this frame's run stride warp (1 = none)
   private sprintMid = -0.1; private sprintFloorY = 0.09;                  // (constructor, off Sprint_Loop: the fore-aft middle of its ankles' travel, and their lowest height — sprintShape warps about the one and eases heights about the other)
@@ -2446,7 +2447,7 @@ export class CharacterAnimator {
       const busy = wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || wHl > 0.003 || kt >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.mvBusy || this.bw || this.tk;
       const gunW = clamp(this.upperW.relaxed + this.upperW.aim + this.upperW.torch + wCarry, 0, 1);
       this.watchLayer(dt, busy ? 0 : 1 - clamp(this.upperW.aim, 0, 1), 1 - Math.max(clamp(this.upperW.aim, 0, 1), wCarry), 1 - gunW, y, -p * 0.35);
-    } else { this.watchShown.w = 0; this.watchShown.yaw = 0; this.watchShown.slip = 0; }
+    } else { this.watchShown.w = 0; this.watchShown.yaw = 0; this.watchShown.slip = 0; this.watchShown.lean = 1; }
     if (this.stealth || this.sp) this.stealthLayer(dt, wHd > 0.003 || wHe > 0.003 || wLp > 0.003 || wHl > 0.003 || kt >= 0 || this.throwT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.hitT >= 0 || this.strikeT >= 0 || this.bw !== null || this.tk !== null || this.clutch > 0 || this.bound !== 0 || this.mvBusy || this.mvs.tsT >= 0 || this.mvs.armL > 0 || wSt * wl > 0.003 || wWallArms > 0.003 || this.longGun || wLg > 0.003 || this.kit !== null || !!this.nv?.hand || !!this.act || !!this.wound || !!this.dazzle || this.wk.fed || this.wk.shown > 0.003 || this.dp.wL.x > 0.003 || this.dp.wR.x > 0.003 || this.rx.w.x > 0.003 || this.upperW.relaxed + this.upperW.aim + this.upperW.torch + wCarry > 0.003, crouchPose, crouchPose > 0.001 ? this.crWalk / crouchPose : 0, y, -p * 0.35);   // STEALTH POSES (stealthpose.ts): Sam's hands-empty crouch — over the crouch and the close-in carriage, under the ready tell; out, eased, for anything else that has his arms
     if (this.bw) this.blowLegs(this.bw);   // (a takedown's own move stands him into the man: the lunge's rear foot drawn in, the knees near straight)
     if (this.ready || this.readyW > 0 || this.rcT > 0) {   // the ready pose (Sam in an open hands-on window): over the carries and the aim clip — 'grabGun' takes the support hand OFF a pistol that is up, so the aim does not veto it — under the one-shots below; stood down, eased, by whatever has the arms: a hold either way, lock work, the kick, a throw, the strike itself, a flinch, a reload, a signal, a tell, a MOVES reaction or toss
@@ -4094,18 +4095,19 @@ export class CharacterAnimator {
     // ---- the slip: pelvis, trunk, the arm on his side
     const sWant = this.slipAt ? clamp(this.slipK, 0, 1) * free * clamp(this.crouch, 0, 1) : 0;
     T.sw = Math.abs(sWant - T.sw) < 0.003 ? sWant : damp(T.sw, sWant, W.slipRate, dt);
-    if (this.slipAt) { const m = un(this.toModelP(this.slipAt)), L = hyp2(m[0], m[2]); if (L > 1e-4) { T.sx = m[0] / L; T.sz = m[2] / L; } if (T.side === 0 ? T.sx < -0.2 : T.sx > 0.2) T.side = T.sx > 0 ? 0 : 1; }
+    if (this.slipAt) { const m = un(this.toModelP(this.slipAt)), L = hyp2(m[0], m[2]); if (L > 1e-4) { T.sx = m[0] / L; T.sz = m[2] / L; } if (T.side === 0 ? T.sx < -0.2 : T.sx > 0.2) T.side = T.sx > 0 ? 0 : 1;
+      const lw = clamp(this.slipLean, 0, 1); T.sl = Math.abs(lw - T.sl) < 0.003 ? lw : damp(T.sl, lw, W.slipRate, dt); }   // (between two men the lean goes and he only gets smaller: `squeeze`)
     if (T.sw > 0.003) {
-      const k = T.sw * T.sw * (3 - 2 * T.sw);
+      const k = T.sw * T.sw * (3 - 2 * T.sw), kl = k * T.sl, kd = k * (1 + W.squeeze * (1 - T.sl));
       { this.fkPart(pA, this.fkLegs);
         const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-        this.shift(pA, nd.hips, [-T.sx * W.away * k, -W.drop * k, 0]);
+        this.shift(pA, nd.hips, [-T.sx * W.away * kl, -W.drop * kd, 0]);
         this.fkPart(pA, this.fkLegs);
         twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true); }
-      const roll = T.sx * W.lean * DEGR * k;   // (about his forward line: + tips the trunk to his right, away from a man on his left)
+      const roll = T.sx * W.lean * DEGR * kl;   // (about his forward line: + tips the trunk to his right, away from a man on his left)
       this.turn(pA, nd.spine1, qRoll(roll * 0.4)); this.turn(pA, nd.spine2, qRoll(roll * 0.35)); this.turn(pA, nd.spine3, qRoll(roll * 0.25));
       this.turn(pA, nd.neck, qRoll(-roll * 0.4)); this.turn(pA, nd.head, qRoll(-roll * 0.6));
-      const side = T.side, sgn = side === 0 ? 1 : -1, wArm = (side === 0 ? wL : wR) * k * W.armW * smoothstep(W.armSide[0], W.armSide[1], sgn * T.sx);
+      const side = T.side, sgn = side === 0 ? 1 : -1, wArm = (side === 0 ? wL : wR) * kl * W.armW * smoothstep(W.armSide[0], W.armSide[1], sgn * T.sx);
       if (wArm > 0.003) {
         pB.copy(pA); fk.run(pB);
         const sh = fk.pos[side === 0 ? nd.upperArmL : nd.upperArmR], at: Vec3 = [sh[0] + T.sx * W.armOut, sh[1] - W.armDown, sh[2] + T.sz * W.armOut];
@@ -4133,7 +4135,7 @@ export class CharacterAnimator {
       this.turn(pA, nd.spine3, qYaw(yw * S[0]));
       this.turn(pA, nd.neck, quat.mul(qYaw(yw * S[1]), qPitch(pw * S[1] / rest))); this.turn(pA, nd.head, quat.mul(qYaw(yw * S[2]), qPitch(pw * S[2] / rest)));
     }
-    this.watchShown.w = T.w; this.watchShown.yaw = T.yaw * T.w; this.watchShown.slip = T.sw;
+    this.watchShown.w = T.w; this.watchShown.yaw = T.yaw * T.w; this.watchShown.slip = T.sw; this.watchShown.lean = T.sl;
   }
   private creepLayer(w: number, wL: number, wR: number, twY: number, twP: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, C = CREEP, cr = clamp(this.crouch, 0, 1);

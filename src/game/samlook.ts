@@ -65,26 +65,40 @@ function pick(g: Game): Guard | null {
 }
 /** the man his head is on (null: nobody) — as of this frame's samLookStep */
 export function samLookMan(g: Game): Guard | null { return SAMLOOK.on ? STATE.get(g)?.on ?? null : null; }
-/** the man he gives room to (null: nobody), and how near 0…1 */
+/** how much room one man asks of him: 0 past `slipFrom`, for a man who is onto him, and behind a man's back */
+function slipOf(g: Game, gd: Guard): number {
+  const K = SAMLOOK; if (gd.state === 'alert') return 0;
+  const d = reach(g, gd, K.slipFrom, 180); if (!(d < K.slipFrom)) return 0;
+  const p = g.player.char.pos, q = gd.char.pos, nose = Math.cos(wrap(Math.atan2(p[0] - q[0], p[2] - q[2]) - gd.char.bodyYaw));   // (1 = Sam dead ahead of him, −1 = dead behind)
+  return (1 - smooth(K.slipBy, K.slipFrom, d)) * smooth(K.backCos[0], K.backCos[1], nose);
+}
+const slips = (g: Game): boolean => SAMLOOK.slip && free(g) && g.player.crouch && g.player.holstered;
+/** THE SLIP's man: crouched with empty hands, the man who asks the most room of him (the nearest off a man's back), and how much (0‥1) */
 export function samSlipMan(g: Game): { gd: Guard; k: number } | null {
-  const K = SAMLOOK, pl = g.player;
-  if (!K.slip || !free(g) || !pl.crouch || !pl.holstered) return null;
-  let best: Guard | null = null, bd = K.slipFrom;
-  for (const gd of g.guards) { if (gd.state === 'alert') continue; const d = reach(g, gd, K.slipFrom, 180); if (d < bd) { bd = d; best = gd; } }
-  if (!best) return null;
-  const p = pl.char.pos, q = best.char.pos, nose = Math.cos(wrap(Math.atan2(p[0] - q[0], p[2] - q[2]) - best.char.bodyYaw));   // (1 = Sam dead ahead of him, −1 = dead behind)
-  const k = (1 - smooth(K.slipBy, K.slipFrom, bd)) * smooth(K.backCos[0], K.backCos[1], nose);
-  return k > 0 ? { gd: best, k } : null;
+  if (!slips(g)) return null;
+  let best: Guard | null = null, bk = 0;
+  for (const gd of g.guards) { const k = slipOf(g, gd); if (k > bk) { bk = k; best = gd; } }
+  return best ? { gd: best, k: bk } : null;
+}
+/** THE SLIP as the animator is handed it: `k` the most any man asks, `away` the way they pull on him summed (a unit step from Sam toward the men, null when
+ *  they cancel), `lean` how much of the lean is left of it — 1 beside one man, 0 dead between two (he does not tip into the other man: he only gets small) */
+function slipNow(g: Game): { k: number; lean: number; at: Vec3 } | null {
+  if (!slips(g)) return null;
+  const p = g.player.char.pos; let vx = 0, vz = 0, top = 0;
+  for (const gd of g.guards) { const k = slipOf(g, gd); if (k <= 0) continue; const dx = gd.char.pos[0] - p[0], dz = gd.char.pos[2] - p[2], L = Math.hypot(dx, dz) || 1; vx += k * dx / L; vz += k * dz / L; if (k > top) top = k; }
+  if (top <= 0) return null;
+  const L = Math.hypot(vx, vz), u = L > 1e-3 ? 1 / L : 0;
+  return { k: top, lean: Math.min(1, L / top), at: [p[0] + vx * u, p[1] + 1.1, p[2] + vz * u] };
 }
 const headOf = (gd: Guard, up: number): Vec3 => [gd.char.pos[0], gd.char.pos[1] + up, gd.char.pos[2]];
 /** ONCE A STEP, after the player's own update: what his animator is handed for the next frame's pose */
 export function samLookStep(g: Game) {
-  const an = g.player.char.anim; an.watchAt = null; an.watchK = 0; an.slipAt = null; an.slipK = 0;
+  const an = g.player.char.anim; an.watchAt = null; an.watchK = 0; an.slipAt = null; an.slipK = 0; an.slipLean = 1;
   if (!SAMLOOK.on && !SAMLOOK.slip) return;
   if (SAMLOOK.on) {
     const gd = pick(g);
     if (gd) { const p = g.player.char.pos, d = Math.hypot(gd.char.pos[0] - p[0], gd.char.pos[2] - p[2]); const h = gd.char.bones.head; an.watchAt = h ? [h[0], h[1], h[2]] : headOf(gd, 1.6);   // (his head as posed: a man sat down, crouched or on the floor is looked at where he is)
       an.watchK = STALK.on && stalkOn(g) === gd ? 1 : 1 - smooth(Math.min(SAMLOOK.fullM, SAMLOOK.nearM * 0.7), SAMLOOK.nearM, d); }   // (whole inside `fullM` — or 0.7 of a range brought in under it)
   }
-  const sl = samSlipMan(g); if (sl) { an.slipAt = headOf(sl.gd, 1.1); an.slipK = sl.k; }
+  const sl = slipNow(g); if (sl) { an.slipAt = sl.at; an.slipK = sl.k; an.slipLean = sl.lean; }
 }

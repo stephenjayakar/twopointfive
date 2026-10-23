@@ -75,6 +75,7 @@ const NUMS = (): Num[] => [
   { t: WATCH, name: 'WATCH', key: 'yaw', label: 'how far his head turns °', min: 30, max: 90, step: 1, tip: 'off the line of his chest, to either side' },
   { t: SAMLOOK, name: 'SAMLOOK', key: 'slipFrom', label: 'he gives a man room inside m', min: 1.4, max: 5, step: 0.1, tip: 'the lean away, the sink and the low arm begin here and are whole at arm\'s length' },
   { t: WATCH, name: 'WATCH', key: 'lean', label: 'how far he tips away °', min: 0, max: 20, step: 0.5, tip: 'the trunk, away from the man he passes' },
+  { t: WATCH, name: 'WATCH', key: 'squeeze', label: 'how much lower he gets between two men', min: 0, max: 1.5, step: 0.05, tip: 'between two men he leans into neither and sinks this much more, as a share of the sink beside one man' },
 ];
 /** the two arcs are kept as cosines; the lab shows them as degrees off his nose */
 const ARCS: { key: 'beginCos' | 'outCos'; label: string; tip: string }[] = [
@@ -88,6 +89,21 @@ export const sneakLabAsked = (q: URLSearchParams): boolean => q.has('sneaklab');
 const nearest = (g: Game): Guard | null => { const p = g.player.char.pos; let best: Guard | null = null, bd = 1e9; for (const x of g.guards) { if (x.state === 'dead' || x.civ) continue; const d = Math.hypot(x.char.pos[0] - p[0], x.char.pos[2] - p[2]); if (d < bd) { best = x; bd = d; } } return best; };
 /** the man who stands (the first route of the lab's level), for the chair */
 const stander = (g: Game): Guard | null => g.guards.find(x => x.state !== 'dead' && !x.civ) ?? null;
+
+/** two of the walkers (the second and third beats) stood side by side `GAP` apart on the yard's open floor, their backs to the yard as the stander's is: a place to slip
+ *  between two men. Each is given a two-point beat of his own, half a metre long with a long wait at its end, so he walks the last step and stands facing it. */
+const GAP = 2.4;
+function gap(g: Game) {
+  const men = g.guards.filter(x => x.state !== 'dead' && !x.civ).slice(1, 3); if (men.length < 2) return;
+  const open = (x: number, z: number) => !g.col.nav.isBlocked(x, z);
+  const fits = (x: number, z: number) => { for (let dz = -1.5; dz <= 1.5; dz += 0.5) for (const dx of [-GAP / 2, 0, GAP / 2]) if (!open(x + dx, z + dz)) return false; return true; };
+  let at: [number, number] | null = null;   // (the open yard south of the long straight, under the west flood, clear of the man who stands)
+  for (let z = 18.5; z <= 19.5 && !at; z += 0.5) for (let x = 15; x >= 13.5 && !at; x -= 0.5) if (fits(x, z)) at = [x, z];
+  if (!at) return;
+  men.forEach((gd, i) => { const x = at![0] + (i === 0 ? -1 : 1) * GAP / 2;
+    gd.route = { name: 'gap', points: [[x, 0, at![1] - 0.5], [x, 0, at![1]]], wait: [0, 900] }; gd.wp = 1; gd.wait = 0; gd.path = []; gd.pathGoal = null;
+    gd.char.pos = [x, 0, at![1] - 0.5]; gd.char.vel = [0, 0, 0]; gd.char.bodyYaw = gd.char.aimYaw = 0; });
+}
 
 /** ONCE, after the panel is built: the lab's system, its rows, the panel open on it */
 export function sneakLabBoot(game: Game, panel: Panel) {
@@ -105,6 +121,7 @@ export function sneakLabBoot(game: Game, panel: Panel) {
   panel.buttons(now, 'the men', [
     { text: 'put everyone back', run: () => { dark.clear(); game.restart(); hands(game); }, title: 'every man back on his beat, you back at the gate with empty hands (also Shift+Enter)' },
     { text: 'sit one down / stand him up', run: () => { const gd = stander(game); if (!gd) return; if (closeSeated(game, gd)) closeUnseat(game, gd, true); else closeSeat(game, gd); }, title: 'the man who stands by the wall sits where he is, to try the creep on a seated man' },
+    { text: 'stand two men a gap apart', run: () => gap(game), title: 'two of the walkers stop side by side, a little over two metres apart and facing the same way, so you can slip between them ("put everyone back" sends them walking again)' },
   ]);
   panel.toggleBox(now, 'they can\'t notice you', () => SNEAKLAB.unseen, v => { SNEAKLAB.unseen = v; }, 'on: nobody sees or hears you, so you can work on the motion. Off: the real guards, and the creep ends when one is onto you');
   panel.toggleBox(now, 'nothing hurts you', () => SNEAKLAB.safe, v => { SNEAKLAB.safe = v; }, 'god mode while the lab is open');

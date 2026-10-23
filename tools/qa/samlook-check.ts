@@ -11,10 +11,11 @@
 //   stalk     the man a held click is creeping up on is the man he watches.
 //   slip      crouched, hands empty, a man a little over a metre off his side: his chest is further from the man and lower than with the key down, and the
 //             hand on that side is out toward him — on either side; none of it on his feet, for a man who is onto him, or from three metres.
+//   between   a man 1.2 m off each side: his chest goes to neither side and he is lower than beside one man alone.
 //   off       both keys down: nobody is his, and the animator is handed nothing.
 //   harness   the two keys are rows of the two stands' list with their words, off on the frozen stand and on in the page (`?samlook=0`, `?slip=0`), ride a
 //             recording's tables, and a recording from before the table replays with both off.
-// SAMLOOK_BREAK=1 = the keys left down where look, noticed, sticky, stalk and slip ask for them up: each must FAIL.   exit 0 = all hold · 1 = one does not
+// SAMLOOK_BREAK=1 = the keys left down where look, noticed, sticky, stalk, slip and between ask for them up: each must FAIL.   exit 0 = all hold · 1 = one does not
 // THE HARNESS HAS NO GPU: nothing here says how the turned head, the lean or the low arm LOOK.
 import { standUp, ROOT } from './headless.ts';
 
@@ -109,6 +110,15 @@ async function stalkAndSlip() {
   verdict(ok && stand === 0 && alert < 0.02 && farS === 0 && backS === 0 && WATCH.lean > 0,
     'crouched with empty hands and a man 1.2 m off his side, against the same moment with the key down: his chest is further from the man and lower, and the hand on that side is out from his chest toward the man and under it, on either side; on his feet, beside a man who is onto him, from three metres, and behind a man\'s back there is none of it',
     `${rows.join(' · ')} · on his feet ${f2(stand)} · the man onto him ${f2(alert)} · from 3 m ${f2(farS)} · behind a man's back ${f2(backS)}`);
+
+  console.log('\n=== between: dead between two men he tips into neither, and gets smaller ===');
+  { const two: [number, number][] = [[1.2, 0], [-1.2, 0]], face = (X: any) => { X.M.forEach((m: any, i: number) => { m.char.bodyYaw = m.char.aimYaw = (i === 0 ? -1 : 1) * Math.PI / 2; }); };
+    const P = await world(false, false, two); face(P); P.step(60); const Q = await world(false, up(), two); face(Q); Q.step(60);
+    const O = await world(false, up(), [[1.2, 0]]); face(O); O.step(60); const O0 = await world(false, false, [[1.2, 0]]); face(O0); O0.step(60);
+    const side = Math.abs(Q.c.bones.chest[0] - P.c.bones.chest[0]), down = P.c.bones.chest[1] - Q.c.bones.chest[1], down1 = O0.c.bones.chest[1] - O.c.bones.chest[1], sh = Q.c.anim.watchShown;
+    verdict(sh.slip > 0.9 && sh.lean < 0.1 && side < 0.01 && down > down1 + 0.008 && down1 > 0.015 && WATCH.squeeze > 0,
+      'with a man 1.2 m off each side, against the same moment with the key down: his chest has gone to neither side, and it is lower than beside one man alone',
+      `the pose's share ${f2(sh.slip)} with ${f2(sh.lean)} of the lean left · his chest ${cm(side)} cm to a side and ${cm(down)} cm lower (beside one man ${cm(down1)} cm lower)`); }
 }
 async function off() {
   console.log('\n=== off: both keys down, nobody is his ===');
