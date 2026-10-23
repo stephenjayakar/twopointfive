@@ -91,7 +91,7 @@ export const SNOWTRACKS = {
   puffMost: 48,       // the most one mark throws
   puffRecs: 3,        // kicks filed a frame, the hardest first (snowFx.ts markKicks: each is a particle record, and a frame has twelve for everything)
   puffWait: 12,       // … and this many may wait for the next frame
-  puffKeep: 0.25,     // s: a kick still not filed after this is dropped (formSnowTracks)
+  puffKeep: 0.25,     // s: a kick leaves the list after this, filed or not (formSnowTracks): one still not filed by then never is
 };
 
 export interface SnowTracks {
@@ -109,8 +109,12 @@ export interface SnowTracks {
   marks: number;
   /** the marks still forming (SNOW_LOOK.marks; `formSnowTracks` brings them on) */
   forming: Forming[];
-  /** snow kicked up since the particles last took it (snowFx.ts files and empties it; nobody else reads it; capped, the oldest dropped) */
+  /** snow kicked up in the last `puffKeep` s (snowFx.ts files each once, telling the new ones by their number `n`; nobody else reads it). The list is the GAME's:
+   *  only time empties it (formSnowTracks), a restart, and the cap (the oldest dropped) — nothing a particle pool does reaches it, so a host with a pool and a
+   *  host without keep the same list. What the pool has taken and what waits on it is the host's book (snowFx.ts SnowShown kickSeen / kickQ) */
   kicks: SnowKick[];
+  /** kicks queued so far, never wound back by a restart: a kick's own number */
+  kicked: number;
 }
 /** what a stamp is pressed into: the map itself, or a blank sheet of its size (`stampMark`) */
 export type Stamp = Pick<SnowTracks, 'data' | 'w' | 'h' | 'dirty'>;
@@ -118,7 +122,7 @@ export type Stamp = Pick<SnowTracks, 'data' | 'w' | 'h' | 'dirty'>;
  *  `sink`), else the mark's own floor and bank (the floor sinks over `sink`) */
 interface Forming { x0: number; z0: number; w: number; h: number; goal: Uint8Array; age: number; delay: number; sink: number; thrown: boolean }
 /** loose snow thrown up at (x, z): along the unit (dx, dz) if it has one (0, 0 = straight up), by a mark of `force`, over a disc `wide` m across */
-export interface SnowKick { x: number; z: number; dx: number; dz: number; force: number; wide: number; serial: number; t: number }   // (t: s since it was queued — formSnowTracks ages it)
+export interface SnowKick { x: number; z: number; dx: number; dz: number; force: number; wide: number; serial: number; t: number; n: number }   // (t: s since it was queued — formSnowTracks ages it; n: its number among all this map has queued, SnowTracks.kicked)
 /** where the map carries `SNOWTRACKS.mess` (× 100) for the shader: the first texel of the middle row past the plan */
 export const messAt = (T: SnowTracks) => (T.h - 2) * T.w;
 /** the rows of the map that are plan */
@@ -140,7 +144,7 @@ rollbackVar('snowTracks.feetOf', () => feetOf, v => { feetOf = v; });
 
 export function makeSnowTracks(): SnowTracks {
   const w = Math.round(WORLD.gridW * WORLD.gridCell * TRACK_RES), h = Math.round(WORLD.gridH * WORLD.gridCell * TRACK_RES) + TRACK_PAD;
-  const T: SnowTracks = { data: new Uint8Array(w * h), w, h, dirty: null, prints: 0, hollows: 0, craters: 0, marks: 0, forming: [], kicks: [], rects: [] };
+  const T: SnowTracks = { data: new Uint8Array(w * h), w, h, dirty: null, prints: 0, hollows: 0, craters: 0, marks: 0, forming: [], kicks: [], kicked: 0, rects: [] };
   tellMess(T); T.dirty = null; T.rects.length = 0;   // (a new map is handed over whole)
   return T;
 }
@@ -174,7 +178,7 @@ export function stampMark(T: SnowTracks, force: number, fn: (body: Stamp, thrown
     }
   }
   if (kick && SNOW_LOOK.marks && K.puff > 0) {
-    T.kicks.push({ x: kick.x, z: kick.z, dx: kick.dx ?? 0, dz: kick.dz ?? 0, force: f, wide: kick.wide ?? 0.12, serial: T.prints + T.hollows + T.craters + T.marks, t: 0 });
+    T.kicks.push({ x: kick.x, z: kick.z, dx: kick.dx ?? 0, dz: kick.dz ?? 0, force: f, wide: kick.wide ?? 0.12, serial: T.prints + T.hollows + T.craters + T.marks, t: 0, n: ++T.kicked });
     if (T.kicks.length > 64) T.kicks.splice(0, T.kicks.length - 64);
   }
 }

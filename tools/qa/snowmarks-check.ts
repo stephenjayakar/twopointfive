@@ -34,7 +34,7 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`);
-  const { updateSnowFx, seedSnow, marksKicked } = await import(`${ROOT}/src/game/snowFx.ts`);
+  const { updateSnowFx, seedSnow, marksKicked, kicksOwed } = await import(`${ROOT}/src/game/snowFx.ts`);
   const ST = await import(`${ROOT}/src/game/snowTracks.ts`);
   const { TRACK_RES, SNOWTRACKS } = ST;
   const SM = await import(`${ROOT}/src/game/snowMarks.ts`);
@@ -212,17 +212,17 @@ export async function snowMarksCheck(o: { verbose?: boolean } = {}): Promise<boo
       const n0 = pool.recs.filter(isKick).length;
       ST.stampMark(T, 0.45, (b: any) => ST.pressGroove(b, YARD[0], YARD[1], YARD[0], YARD[1], 0.06, 0.06, 1, 0), { x: YARD[0], z: YARD[1], dx: 1, dz: 0, wide: 0.1 });
       ST.stampMark(T, 1.2, (b: any) => ST.pressGroove(b, YARD[0] + 2, YARD[1], YARD[0] + 2, YARD[1], 0.06, 0.06, 1, 0), { x: YARD[0] + 2, z: YARD[1], dx: 1, dz: 0, wide: 0.1 });
-      const queued = T.kicks.length; draw(A, pool); const k = pool.recs.filter(isKick).slice(n0);
+      const queued = T.kicks.length, owed0 = kicksOwed(A.g); draw(A, pool); const k = pool.recs.filter(isKick).slice(n0), owed1 = kicksOwed(A.g), listed = T.kicks.length;   // (the game's list is only read: the pool's taking is the host's book, snowFx.ts kicksOwed — the list is time's to empty)
       const walk = k.find((r: any) => Math.abs(r.pos[0] - YARD[0]) < 0.01), run = k.find((r: any) => Math.abs(r.pos[0] - YARD[0] - 2) < 0.01);
       const B = await rig(false); seedSnow(B.g, 1); const poolB = mk(); B.step(2); for (let i = 0; i < 60; i++) draw(B, poolB); B.set();
       ST.stampMark(B.g.snowTracks, 1.2, (b: any) => ST.pressGroove(b, YARD[0], YARD[1], YARD[0], YARD[1], 0.06, 0.06, 1, 0), { x: YARD[0], z: YARD[1], dx: 1, dz: 0, wide: 0.1 }); const qB = B.g.snowTracks.kicks.length; draw(B, poolB);
       // a kick nobody files goes stale: queued with the flakes not drawing, half a second on it is gone and is never filed
       A.set();
       ST.stampMark(T, 1.2, (b: any) => ST.pressGroove(b, YARD[0] + 1, YARD[1] + 1, YARD[0] + 1, YARD[1] + 1, 0.06, 0.06, 1, 0), { x: YARD[0] + 1, z: YARD[1] + 1, dx: 1, dz: 0, wide: 0.1 });
-      const waiting = T.kicks.length; for (let i = 0; i < 30; i++) ST.formSnowTracks(T, DT); const stale = T.kicks.length; const nk = pool.recs.filter(isKick).length; draw(A, pool); const late = pool.recs.filter(isKick).length - nk;
-      verdict(n0 === 0 && queued === 2 && waiting === 1 && stale === 0 && late === 0 && !!walk && !!run && walk.count >= 2 && run.count > walk.count * 2 && run.opts.speed > walk.opts.speed && run.dir[0] > 0.2 && T.kicks.length === 0 && qB === 0 && poolB.recs.filter(isKick).length === 0 && marksKicked() > 0,
+      const waiting = kicksOwed(A.g); for (let i = 0; i < 30; i++) ST.formSnowTracks(T, DT); const stale = T.kicks.length; const nk = pool.recs.filter(isKick).length; draw(A, pool); const late = pool.recs.filter(isKick).length - nk;
+      verdict(n0 === 0 && queued === 2 && owed0 === 2 && owed1 === 0 && listed === 2 && waiting === 1 && stale === 0 && late === 0 && !!walk && !!run && walk.count >= 2 && run.count > walk.count * 2 && run.opts.speed > walk.opts.speed && run.dir[0] > 0.2 && T.kicks.length === 0 && qB === 0 && poolB.recs.filter(isKick).length === 0 && marksKicked() > 0,
         'kick — a mark kicks loose snow up: flakes born at it, more and faster the harder it was made; none with the switch off',
-        `two marks queued ${queued} kicks · a walker's boot: ${walk ? `${walk.count} flakes going up at ${walk.opts.speed.toFixed(1)} m/s` : 'NONE'} · a sprinter's: ${run ? `${run.count} at ${run.opts.speed.toFixed(1)} m/s, leaning the way he runs` : 'NONE'} · the queue after the frame: 0 · one left unfiled for half a second: ${waiting} queued → ${stale}, filed late: ${late} · the switch off: ${qB} queued, ${poolB.recs.filter(isKick).length} filed`); }
+        `two marks queued ${queued} kicks · a walker's boot: ${walk ? `${walk.count} flakes going up at ${walk.opts.speed.toFixed(1)} m/s` : 'NONE'} · a sprinter's: ${run ? `${run.count} at ${run.opts.speed.toFixed(1)} m/s, leaning the way he runs` : 'NONE'} · after the frame: ${owed1} still owed of ${owed0}, the game's own list untouched at ${listed} · one left unfiled for half a second: ${waiting} queued → ${stale}, filed late: ${late} · the switch off: ${qB} queued, ${poolB.recs.filter(isKick).length} filed`); }
 
     // ---- off, digest
     { const run = async (on: boolean) => { const R = await rig(on); const p = chairOut(R); R.step(2); const h0 = hash(R.g); const T = R.g.snowTracks;

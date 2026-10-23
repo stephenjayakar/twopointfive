@@ -31,7 +31,6 @@
 //             simulation of the wind over the level's floor with the walls and door leaves as its obstacles (render/airField.ts; game/airSim.ts feeds it), so
 //             the snow runs round a wall's end, jets through a gap and curls behind a door's edge. With them on, the wisps stand back from the view's middle
 //             and ride the same air. Off: nothing is filed, no field is built, the wisps as they were. tools/qa/snowgrains-check.ts.
-import { SideMap } from '../math/side';
 import { Vec3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { FollowCamera } from './camera';
@@ -42,6 +41,7 @@ import { RAIN_MAX_BIRTHS, RAIN_CAP } from '../render/particles';
 import { gpuFx } from './particleFx';
 import { WORLD } from '../scene/world';
 import { SNOWTRACKS } from './snowTracks';
+import type { SnowKick } from './snowTracks';
 import { SNOW_LOOK, WX_OWN } from './weatherKinds';
 import { windOf } from './wind';
 import { airSimStats, airLive, airWant } from './airSim';
@@ -134,15 +134,23 @@ interface SnowState { seed: number; serial: number; birthAcc: number; pop: numbe
   /** GRAINS: their own record serial, the steady refiling's carry, and what is still owed of the first set (−1 = not yet reckoned: the ring holds none of them) */
   gSerial: number; gAcc: number; gFill: number; gHold: number; gSeen: boolean; grains: GrainStats;
   /** ONE SNOW IN ONE AIR was in force last frame (oneAirCfg) */
-  oneAir: boolean; }
-const states = new SideMap<Game, SnowState>('snowFx.states');
-function stateOf(g: Game): SnowState {
-  let s = states.get(g);
-  if (!s) { s = { seed: 0x5a0f1a4e, serial: 1, birthAcc: 0, pop: 0, lastEmitted: -1, fillAt: -1, wasActive: false, bandOff: [0, 0], stats: { active: false, why: 'never run', radius: 0, centre: [0, 0], areaOut: 0, target: 0, capped: false, pop: 0, births: 0, totalBirths: 0, frames: 0 },
+  oneAir: boolean;
+  /** THE KICKS (markKicks): the number of the last kick of the game's list this book has seen (snowTracks.ts SnowTracks.kicked), and those seen and still waiting for a frame with births to spare */
+  kickSeen: number; kickQ: SnowKick[]; }
+/** WHOSE THIS TABLE IS: the picture's, so the HOST's (`engine.hostBooks.snow`, host/api.ts HostBooks; `Game.engine` is in no snapshot or state hash). Every field
+ *  follows the particle pool (what the ring took, how many live, whether there is one), the view the update is handed (the disc's middle and radius) and the
+ *  render settings (particleRain, particleRainDensity, particleRainCount): two games that differ only in their picture are the same game, and the same game on a
+ *  host with no pool (a server, the harness) keeps none of it. It was a table in the game's state until 10-23 (`snowFx.states`): a twin with a pool and a twin
+ *  without then parted at every row of it. NO RULE READS IT: its readers are this module, the page's panel and `__snow` hook, and the checks.
+ *  A SAVE IN MEMORY PUT BACK (host/putback.ts) drops every host book and empties the ring in the same call, so the next frame that moves the clock begins a
+ *  fresh book over an empty ring: the air is filled through the slab's whole height at once, as on a level's first frame (the make-up below), the curtains'
+ *  drift starts from nothing and the record seeds from their first — the flakes that were in the air are gone, not wound back (nothing on the GPU is). A seed
+ *  set by seedSnow is the book's and goes with it. A restart or a file's load leaves the book be, as it left the table. */
+export type SnowShown = SnowState;
+const freshBook = (): SnowState => ({ seed: 0x5a0f1a4e, serial: 1, birthAcc: 0, pop: 0, lastEmitted: -1, fillAt: -1, wasActive: false, bandOff: [0, 0], stats: { active: false, why: 'never run', radius: 0, centre: [0, 0], areaOut: 0, target: 0, capped: false, pop: 0, births: 0, totalBirths: 0, frames: 0 },
     wSerial: 1, wAcc: 0, flakeFiled: 0, wisps: { active: false, why: 'never run', target: 0, blow: 0, births: 0, totalBirths: 0, records: 0 },
-    oneAir: false, gSerial: 1, gAcc: 0, gFill: -1, gHold: 0, gSeen: false, grains: { active: false, why: 'never run', target: 0, pop: 0, births: 0, totalBirths: 0, records: 0, radius: 0, air: false, u0: 0, wind: [0, 0] } }; states.set(g, s); }
-  return s;
-}
+    oneAir: false, kickSeen: 0, kickQ: [], gSerial: 1, gAcc: 0, gFill: -1, gHold: 0, gSeen: false, grains: { active: false, why: 'never run', target: 0, pop: 0, births: 0, totalBirths: 0, records: 0, radius: 0, air: false, u0: 0, wind: [0, 0] } });
+function stateOf(g: Game): SnowState { const B = (g.engine.hostBooks ??= {}); return B.snow ??= freshBook(); }
 function nextSeed(s: SnowState): number { let x = (s.serial++ * 2654435761) >>> 0; x = (x ^ 61) ^ (x >>> 16); x = (x + (x << 3)) >>> 0; x ^= x >>> 4; x = Math.imul(x, 0x27d4eb2d) >>> 0; x ^= x >>> 15; return (x ^ s.seed) >>> 0; }
 /** reseed the recycler (probes / captures: same seed → the same flakes) */
 export function seedSnow(g: Game, n: number) { const s = stateOf(g); s.seed = n >>> 0; s.serial = 1; s.birthAcc = 0; s.pop = 0; s.lastEmitted = -1; s.fillAt = -1; s.bandOff[0] = 0; s.bandOff[1] = 0; s.wSerial = 1; s.wAcc = 0; s.flakeFiled = 0; s.gSerial = 1; s.gAcc = 0; s.gFill = -1; s.gSeen = false; }
@@ -304,7 +312,7 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
   let left = go ? RAIN_MAX_BIRTHS - births : 0;   // (the wisps' and the grains' slots are held back from the flakes' cap above: the ring has room for them by that sum)
   if (wOn && SNOW_LOOK.blast && dt > 0) left -= snowBlastPuffs(g, Pp, Math.max(0, Math.min(left, Math.floor(RAIN_CAP * 0.985 - Pp.rainStats.live))));   // (a blast's puff of powder goes first, and may dip into the ring's last slack: it is of the moment)
   if (oa && SNOW_LOOK.blast && dt > 0) left -= snowBlastThrow(g, Pp, Math.max(0, Math.min(left, Math.floor(RAIN_CAP * 0.985 - Pp.rainStats.live))), F.size, F.sizeJit);   // (ONE AIR: what a blast throws up is the same snow that is falling)
-  if (SNOW_LOOK.marks && dt > 0) left -= markKicks(g, Pp, Math.max(0, Math.min(left, Math.floor(RAIN_CAP * 0.985 - Pp.rainStats.live))), F.size, F.sizeJit, cx, cz, R);   // (the loose snow a boot, a chair, a landing can kicks up: snowTracks.ts stampMark — of the moment too)
+  if (SNOW_LOOK.marks && dt > 0) left -= markKicks(g, st, Pp, Math.max(0, Math.min(left, Math.floor(RAIN_CAP * 0.985 - Pp.rainStats.live))), F.size, F.sizeJit, cx, cz, R);   // (the loose snow a boot, a chair, a landing can kicks up: snowTracks.ts stampMark — of the moment too)
   if (wOn) { updateWisps(g, st, Pp, dt, cx, cz, R, oa ? inside : onField ? blown : inside, left, wispMax, oa); left -= st.wisps.births; }   // (a wisp is lifted off lying snow: the ground inside the rim)
   else if (st.wisps.active) { const Ws = st.wisps; Ws.active = false; Ws.why = 'the switch is off'; Ws.births = 0; Ws.target = 0; st.wAcc = 0; }
   if (gOn) updateGrains(g, st, Pp, dt, cx, cz, left, life);
@@ -315,10 +323,18 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
 /** THE KICK (SNOW_LOOK.marks): the loose snow each mark made since the last frame threw up, filed as FLAKE records — the falling snow's own kind, a little finer,
  *  born a hand over the mark and going up and on the way the thing was going — as far as the frame's births allow. The strongest `puffRecs` of them a frame (each
  *  is a record of its own, and a frame has few: the wisps and the grains keep theirs); the rest wait a frame, the weakest dropped past `puffWait`. One outside the
- *  middle of the view's disc is dropped: a flake born past the disc is wrapped back into it, and its puff would rise from bare floor. Returns how many it filed. */
-function markKicks(g: Game, Pp: Particles, room: number, size: number, sizeJit: number, cx: number, cz: number, R: number): number {
-  const T = g.snowTracks; if (!T || !T.kicks.length) return 0;
-  const K = SNOWTRACKS, Q = T.kicks, near = R * 0.7; let filed = 0, recs = 0;
+ *  middle of the view's disc is dropped: a flake born past the disc is wrapped back into it, and its puff would rise from bare floor. Returns how many it filed.
+ *  THE GAME'S LIST IS ONLY READ (snowTracks.ts SnowTracks.kicks: time empties it, never this): which kicks were taken and which wait is the host's book — the new
+ *  ones are those numbered past `kickSeen`, and one that waits goes on waiting only while the game still lists it (`puffKeep`). It was sorted and cut HERE until
+ *  10-23, so a game drawn over a pool and the same game on a host with none parted at that list on every frame a boot met snow. A fresh book (the first frame, a
+ *  save put back: the ring was emptied with it) takes every kick the game still lists as new. */
+function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: number, sizeJit: number, cx: number, cz: number, R: number): number {
+  const T = g.snowTracks; if (!T) return 0;
+  if (T.kicked < st.kickSeen) st.kickSeen = 0;   // (the game's count went back under the book: a snapshot put back by a road that does not tell the host — the harness's)
+  const Q = st.kickQ.filter(k => T.kicks.includes(k)); for (const k of T.kicks) if (k.n > st.kickSeen) Q.push(k);
+  st.kickQ = Q; st.kickSeen = T.kicked;
+  if (!Q.length) return 0;
+  const K = SNOWTRACKS, near = R * 0.7; let filed = 0, recs = 0;
   Q.sort((a, b) => b.force - a.force || a.serial - b.serial);
   let keep = 0;
   for (const k of Q) {
@@ -334,6 +350,8 @@ function markKicks(g: Game, Pp: Particles, room: number, size: number, sizeJit: 
   return filed;
 }
 let markKicked = 0;
+/** the kicks the game lists that no pool has taken or dropped yet: the new ones and the ones waiting (a check; with no book yet, all of them) */
+export function kicksOwed(g: Game): number { const T = g.snowTracks, B = g.engine.hostBooks?.snow; if (!T) return 0; if (!B || T.kicked < B.kickSeen) return T.kicks.length; return B.kickQ.filter(k => T.kicks.includes(k)).length + T.kicks.filter(k => k.n > B.kickSeen).length; }
 /** flakes kicked up off marks so far (the page's `__snow.markStats`, a check) */
 export const marksKicked = () => markKicked;
 /** how a wisp filed now is drawn, in the colour word's fourth byte (particles_draw.wgsl wispVertex): SNOWWISPS.motes × 16 + SNOWWISPS.sparkle, in sixteenths */
