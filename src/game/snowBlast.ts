@@ -72,14 +72,43 @@ export const SNOWBLAST = {
   flakeLife: 3,       // s
 };
 
-interface Live { x: number; z: number; size: number; hk: number; t: number; puffLeft: number; flakeLeft: number; serial: number }
-export interface SnowBlastStats { blasts: number; marked: number; craters: number; puffs: number; thrown: number; throwFrames: number; live: number; why: string; last: { x: number; z: number; size: number; hk: number } | null; dug: number }
+/** a blast of the last half second (LIVE_S, or its throw's time where that is tuned longer): where, how big, how low, how old. What it still owes the particle pool is the host's (SnowBlastShown) */
+interface Live { x: number; z: number; size: number; hk: number; t: number; serial: number }
+const LIVE_S = 0.5;
+/** the read-out: the game's own tallies, and beside them the host's (`puffs`, `thrown`, `throwFrames`: records its pool took) as they stood when asked */
+export interface SnowBlastStats extends Tally { puffs: number; thrown: number; throwFrames: number; live: number }
+interface Tally { blasts: number; marked: number; craters: number; why: string; last: { x: number; z: number; size: number; hk: number } | null; dug: number }
 interface Dig { x: number; z: number; r: number; serial: number; t: number }
-interface State { live: Live[]; digs: Dig[]; restore: boolean; serial: number; turn: number; stats: SnowBlastStats }
+interface State { live: Live[]; digs: Dig[]; restore: boolean; serial: number; stats: Tally }
 const states = new SideMap<Game, State>('snowBlast.states');
 const hooked = new SideSet<object>('snowBlast.hooked');
-const stateOf = (g: Game): State => { let s = states.get(g); if (!s) { s = { live: [], digs: [], restore: false, serial: 0, turn: 0, stats: { blasts: 0, marked: 0, craters: 0, puffs: 0, thrown: 0, throwFrames: 0, live: 0, why: 'no blast yet', last: null, dug: 0 } }; states.set(g, s); } return s; };
-export const snowBlastStats = (g: Game): SnowBlastStats => { const s = stateOf(g); s.stats.live = s.live.length; return s.stats; };
+const stateOf = (g: Game): State => { let s = states.get(g); if (!s) { s = { live: [], digs: [], restore: false, serial: 0, stats: { blasts: 0, marked: 0, craters: 0, why: 'no blast yet', last: null, dug: 0 } }; states.set(g, s); } return s; };
+/** WHAT A BLAST STILL OWES THE POOL IS THE HOST'S (host/api.ts `HostBooks.snowBlast`), not the game's: how much of its puff and of its thrown flakes the pool
+ *  has yet to take, whose turn the grains' throw is, and the records filed all follow the particle pool (a host with none files nothing), and no rule of the
+ *  game reads them. The game keeps only the blast itself for LIVE_S, on any host alike. A row here is a live blast's, by its serial; `seen` is the highest
+ *  serial the book has met. A live blast past `seen` is new to the book and owed whole: so is every live blast under a FRESH book, which is what the host leaves
+ *  when it puts the game back, the pool's ring emptied in the same call. A live blast at or under `seen` with no row is the game put back under a host that
+ *  was not told (a check's own restore, a tick played again): the ring still holds what was filed, so it is owed nothing, as the kicks are (snowFx.ts kicksDue). */
+interface Owed { serial: number; puffLeft: number; flakeLeft: number }
+export interface SnowBlastShown { owed: Owed[]; seen: number; turn: number; puffs: number; thrown: number; throwFrames: number }
+const shownOf = (g: Game): SnowBlastShown => (g.engine.hostBooks ??= {}).snowBlast ??= { owed: [], seen: 0, turn: 0, puffs: 0, thrown: 0, throwFrames: 0 };
+/** the book's rows for the live blasts, in their order (a blast that is gone has its row dropped) */
+function owedOf(B: SnowBlastShown, live: Live[]): Owed[] {
+  const K = SNOWBLAST, was = B.owed, seen = B.seen;
+  B.owed = live.map((b) => was.find((o) => o.serial === b.serial)
+    ?? { serial: b.serial, puffLeft: b.serial > seen ? Math.max(0, Math.round(K.puff * b.hk)) : 0, flakeLeft: b.serial > seen ? Math.max(0, Math.round(K.flakes * b.hk)) : 0 });
+  for (const b of live) if (b.serial > B.seen) B.seen = b.serial;
+  return B.owed;
+}
+/** the read-out. It makes no row of the game's: a game whose blasts were only ever asked after holds what one never asked holds */
+export const snowBlastStats = (g: Game): SnowBlastStats => { const s = states.get(g), B = g.engine.hostBooks?.snowBlast;
+  return { blasts: 0, marked: 0, craters: 0, why: 'no blast yet', last: null, dug: 0, ...s?.stats, live: s?.live.length ?? 0, puffs: B?.puffs ?? 0, thrown: B?.thrown ?? 0, throwFrames: B?.throwFrames ?? 0 }; };
+/** the live blasts beside their rows in the host's book, or null with none live (the rows of blasts that are over go then) or the switch off */
+function owing(g: Game): { live: Live[]; B: SnowBlastShown; owed: Owed[] } | null {
+  const s = states.get(g); if (!s || !SNOW_LOOK.blast) return null;
+  if (!s.live.length) { const B = g.engine.hostBooks?.snowBlast; if (B) B.owed.length = 0; return null; }
+  const B = shownOf(g); return { live: s.live, B, owed: owedOf(B, s.live) };
+}
 
 /** hear the level's blasts (once per destruction engine: a new level's engine is heard afresh). Called every frame; costs a set lookup. */
 export function attachSnowBlast(g: Game) {
@@ -90,7 +119,7 @@ export function attachSnowBlast(g: Game) {
   d.onBlast((b) => { snowBlastAt(g, b.at, b.radius ?? 2.5); });
 }
 /** a restart: nothing is left in the air (the prints' map is cleared by its own owner) */
-export function clearSnowBlast(g: Game) { const s = states.get(g); if (s) { s.live.length = 0; s.turn = 0; s.digs.length = 0; s.restore = true; } }
+export function clearSnowBlast(g: Game) { const s = states.get(g); if (s) { s.live.length = 0; s.digs.length = 0; s.restore = true; } }
 /** Once a frame, late (game.ts, beside the prints): the hills a blast dug out. Returns the field's texels that changed, for the g-buffer, or null. A dig is asked
  *  again each frame for SNOWBLAST.digS: the snow box that stood solid under the hill when the blast went off may be taken a frame or more later. Asked again with
  *  the same boxes standing it could not lower a texel, so the field's texels are walked only on a dig's first frame and when what stands in its reach changed
@@ -129,18 +158,18 @@ export function snowBlastAt(g: Game, at: ArrayLike<number>, radius: number): boo
   const serial = ++s.serial;
   if (g.snowTracks) { pressCrater(g.snowTracks, x, z, size, serial, K); S.craters++; }
   if (K.dig > 0) { s.digs.push({ x, z, r: size * K.dig, serial, t: 0 }); if (s.digs.length > 16) s.digs.shift(); }
-  s.live.push({ x, z, size, hk, t: 0, puffLeft: Math.max(0, Math.round(K.puff * hk)), flakeLeft: Math.max(0, Math.round(K.flakes * hk)), serial });
+  s.live.push({ x, z, size, hk, t: 0, serial });
   if (s.live.length > 8) s.live.shift();
   airPuff(g, x, z, K.air * hk, size * K.airR, K.airS);
   S.marked++; S.why = 'marked'; S.last = { x, z, size, hk };
   return true;
 }
-/** once a frame (snowFx.ts, before anything is filed): the live blasts age; one that has thrown its grains and filed its puff is done */
+/** once a frame (snowFx.ts, before anything is filed): the live blasts age; one is done at LIVE_S, whatever a pool took of it (the same on a host with none) */
 export function stepSnowBlast(g: Game, dt: number) {
   const s = states.get(g); if (!s || !s.live.length) return;
   if (!SNOW_LOOK.blast) { s.live.length = 0; return; }
   for (const b of s.live) b.t += Math.max(0, dt);
-  s.live = s.live.filter((b) => b.t < SNOWBLAST.throwS + 1e-6 || ((b.puffLeft > 0 || b.flakeLeft > 0) && b.t < 0.5));
+  s.live = s.live.filter((b) => b.t < Math.max(LIVE_S, SNOWBLAST.throwS + 1e-6));   // (a throw tuned longer than LIVE_S is seen out)
 }
 /** THE THROW: this frame's blast for the grains' step (render/particles.ts grainCfg floats 8‥15 = particles.wgsl grain.c / .d). One blast a frame — with two
  *  alive they take turns. No blast throwing: the rate is 0 and the step's test costs one compare. */
@@ -150,38 +179,38 @@ export function snowBlastFeed(g: Game, c: Float32Array) {
   const s = states.get(g); if (!s || !SNOW_LOOK.blast) return;
   const K = SNOWBLAST; const on = s.live.filter((b) => b.t <= K.throwS);
   if (!on.length) return;
-  const b = on[s.turn++ % on.length];
+  const B = shownOf(g); const b = on[B.turn++ % on.length];
   c[8] = b.x; c[9] = b.z; c[10] = b.size * K.throwR;
   c[11] = -Math.log(1 - clamp(K.throwShare, 0, 0.98)) / Math.max(0.02, K.throwS) * b.hk * on.length;
   c[12] = K.out * (0.5 + 0.5 * b.hk); c[13] = K.up * (0.5 + 0.5 * b.hk);
-  s.stats.throwFrames++;
+  B.throwFrames++;
 }
 /** THE PUFF: what each live blast still owes of its powder, filed as wisp records as far as the frame's births allow. Returns how many it filed. */
 export function snowBlastPuffs(g: Game, Pp: Particles, room: number): number {
-  const s = states.get(g); if (!s || !s.live.length || !SNOW_LOOK.blast) return 0;
-  const K = SNOWBLAST; let filed = 0;
-  for (const b of s.live) {
-    const n = Math.min(b.puffLeft, Math.max(0, room - filed)); if (n <= 0) continue;
+  const O = owing(g); if (!O) return 0;
+  const K = SNOWBLAST; let filed = 0; const { live, B, owed } = O;
+  for (let i = 0; i < owed.length; i++) { const b = live[i], o = owed[i];
+    const n = Math.min(o.puffLeft, Math.max(0, room - filed)); if (n <= 0) continue;
     const got = Pp.emit('rain', [b.x, 0.5, b.z], [0, -1, 0], n, { shape: 'rainDisc', radius: Math.max(0.2, b.size * K.puffR), speed: K.puffOut, speedJit: 0.5, life: K.puffLife, lifeJit: 0.35,
-      size: K.puffSize, sizeJit: 0.4, lift: 0.45, aspect: 2, color: [0.04, 0.15, 0], top: wispLookByte(), seed: (0x5b1a57 + b.serial * 7919 + b.puffLeft) >>> 0 });
-    b.puffLeft -= Math.max(got, 0) || n;   // (a pool that takes none this frame is not asked again: the puff is of the moment)
+      size: K.puffSize, sizeJit: 0.4, lift: 0.45, aspect: 2, color: [0.04, 0.15, 0], top: wispLookByte(), seed: (0x5b1a57 + b.serial * 7919 + o.puffLeft) >>> 0 });
+    o.puffLeft -= Math.max(got, 0) || n;   // (a pool that takes none this frame is not asked again: the puff is of the moment)
     filed += Math.max(got, 0);
   }
-  s.stats.puffs += filed;
+  B.puffs += filed;
   return filed;
 }
 /** THE THROW, ONE SNOW IN ONE AIR (snowFx.ts, when there are no grains of their own): what each live blast still owes of its loose snow, filed as FLAKE records
  *  — the flakes' own shape and size, born low over the blast's disc and going up — as far as the frame's births allow. Returns how many it filed. */
 export function snowBlastThrow(g: Game, Pp: Particles, room: number, size: number, sizeJit: number): number {
-  const s = states.get(g); if (!s || !s.live.length || !SNOW_LOOK.blast) return 0;
-  const K = SNOWBLAST; let filed = 0;
-  for (const b of s.live) {
-    const n = Math.min(b.flakeLeft, Math.max(0, room - filed)); if (n <= 0) continue;
+  const O = owing(g); if (!O) return 0;
+  const K = SNOWBLAST; let filed = 0; const { live, B, owed } = O;
+  for (let i = 0; i < owed.length; i++) { const b = live[i], o = owed[i];
+    const n = Math.min(o.flakeLeft, Math.max(0, room - filed)); if (n <= 0) continue;
     const got = Pp.emit('rain', [b.x, 0.45, b.z], [0, 1, 0], n, { shape: 'rainDisc', radius: Math.max(0.2, b.size * K.throwR), speed: K.flakeUp * (0.5 + 0.5 * b.hk), speedJit: 0.7, life: K.flakeLife, lifeJit: 0.3,
-      size, sizeJit, lift: 0.4, seed: (0x7f1a4e + b.serial * 104729 + b.flakeLeft) >>> 0 });
-    b.flakeLeft -= Math.max(got, 0) || n;   // (a pool that takes none this frame is not asked again: the throw is of the moment)
+      size, sizeJit, lift: 0.4, seed: (0x7f1a4e + b.serial * 104729 + o.flakeLeft) >>> 0 });
+    o.flakeLeft -= Math.max(got, 0) || n;   // (a pool that takes none this frame is not asked again: the throw is of the moment)
     filed += Math.max(got, 0);
   }
-  s.stats.thrown += filed;
+  B.thrown += filed;
   return filed;
 }
