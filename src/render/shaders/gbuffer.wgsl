@@ -177,6 +177,7 @@ fn cubeNormal(vi: u32) -> vec3f {
       let sb = snowBox(v.wp, select(n, gn, lookTilt), bi, v.lc, v.hf, snowGround, snowPaint, snowIsLay(v.albedo), albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
       if (sb.gone) { discard; }
       if (!lookTilt || sb.amt > 0.0) { albedo = sb.albedo; n = sb.n; rough = sb.rough; metal = metal * (1.0 - sb.amt); lookTilt = false; }   // (THE LOOK PROTOTYPE: where no snow lies the relief stays; where it does, the pixel is the snow's, normal and alpha)
+      if (LOOK && snowGround && sb.amt > 0.5) { let lg = lookGround(v.wp, n, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y); n = lg.n; rough = lg.rough; }   // THE LOOK PROTOTYPE (look.wgsl lookGround): lying snow's relief × the panel's number, and its crust
       if (SNOW_GLOW || SNOW_SPARKLE) { o.normal.a = sb.amt * 0.6667; }   // SNOW GLOW, SNOW SPARKLE (composite.wgsl snowGlow): how much of this pixel is snow, held in `o` (zero until here) for the output line below
     }
   }

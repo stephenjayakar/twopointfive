@@ -19,7 +19,7 @@
 @group(1) @binding(11) var lookA: texture_2d_array<f32>;
 @group(1) @binding(12) var lookB: texture_2d_array<f32>;
 @group(1) @binding(13) var lookSamp: sampler;
-struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f };   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c, d, e.xyz = the eleven layers' base roughness · e.w = the snow that clings
+struct LookCfg { a: vec4f, b: vec4f, c: vec4f, d: vec4f, e: vec4f, f: vec4f };   // a = paint, relief, shine, weather · b = untile, edges, cavity, map size × · c, d, e.xyz = the eleven layers' base roughness · e.w = the snow that clings · f.x = × the lying snow's relief, f.y = its crust
 @group(1) @binding(14) var<uniform> lookCfg: LookCfg;
 
 const LOOK_TILE: f32 = 2.0;        // metres a map covers (render/lookTex.ts LOOK_TILE)
@@ -207,14 +207,15 @@ fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint
     let wd = snowCfg.p[5].xy; let windward = 0.5 - 0.5 * dot(gn.xz, wd);   // 1 = the face looks into the wind
     let T = normalize(vec3f(-gn.z, 0.0, gn.x)); let ux = dot(wp, T);
     let rag = 0.55 * detailNoise(vec2f(ux * 0.9, 3.3)) + 0.3 * detailNoise(vec2f(ux * 4.7, 9.1)) + 0.15 * detailNoise(vec2f(ux * 17.0, wp.y * 9.0));
-    let line = f.x + open * (0.04 + (0.1 + 0.22 * windward) * rag) * ks;
+    let drift = 0.35 + 1.5 * smoothstep(0.3, 0.75, detailNoise(vec2f(ux * 0.31, 6.6)));   // (no even ribbon: a stretch where it barely stands, a stretch where the wind piled it)
+    let line = f.x + open * (0.03 + (0.1 + 0.22 * windward) * rag * drift) * ks;
     // (the bank's own edge is ragged at a finger's width; smooth noise, never a grid: a per-cell step here drew a staircase)
     amt = 1.0 - smoothstep(line * 0.6, line * 1.1 + 0.02, wp.y + (detailNoise(vec2f(ux, wp.y) * 13.0) - 0.5) * 0.05);
     bank = amt > 0.5;
     // above the line: what the wind has stuck to the face. A thin rime that fades a stride up, and in it round clots no finer than a
     // pixel and a half (in octaves, as the field's own grains), each with its own place and size in its cell
     let high = max(wp.y - line, 0.0);
-    let patchy = 0.3 + 0.7 * smoothstep(0.35, 0.7, 0.6 * detailNoise(vec2f(ux, wp.y) * 1.9 + vec2f(4.1, 1.7)) + 0.4 * detailNoise(vec2f(ux, wp.y) * 5.3 + vec2f(7.7, 2.2)));
+    let patchy = 0.08 + 0.92 * smoothstep(0.42, 0.68, 0.6 * detailNoise(vec2f(ux, wp.y) * 1.9 + vec2f(4.1, 1.7)) + 0.4 * detailNoise(vec2f(ux, wp.y) * 5.3 + vec2f(7.7, 2.2)));   // (in clumps with bare wall between: an even scatter reads as confetti)
     let dens = open * min(ks, 1.5) * (0.06 + 0.4 * windward) * patchy * (1.0 - smoothstep(0.0, 0.45 + 0.9 * rag, high));
     if (!bank) {
       let clot = lookClots(vec2f(ux, wp.y), fp, dens * 1.5, 5u);
@@ -228,5 +229,24 @@ fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint
   let s = snowShade(at, vec4f(0.0, 1.0, 0.0, 0.0), up, fp, false);
   o.albedo = mix(albedoIn, s.albedo, amt); o.rough = mix(roughIn, s.rough, amt); o.amt = amt; o.bank = bank;
   if (bank) { o.n = normalize(mix(gn, s.n, amt)); }
+  return o;
+}
+
+struct LookGround { n: vec3f, rough: f32 };
+/** LYING SNOW on the look page (fsBox's snow ground and the hills, after snow.wgsl snowShade has shaded them): its whole relief (the drifts' slopes, the wind's
+ *  ridges, the prints and their rims) × the panel's 'Snow relief' (1 = as the build draws it), and a CRUST: where the wind has glazed fresh snow, in streaks drawn
+ *  out along it, the surface is smooth enough to hold a lamp's sheen. Trodden snow (rough 1) and a glinting grain keep what they had. */
+fn lookGround(wp: vec3f, nIn: vec3f, roughIn: f32, fp: f32) -> LookGround {
+  var o: LookGround; o.n = nIn; o.rough = roughIn;
+  let g = lookCfg.f.x;
+  if (roughIn < snowCfg.p[6].w + 0.05) { return o; }   // (a glinting grain: its lean is its own, kept small on purpose — snow.wgsl)
+  if (g != 1.0 && nIn.y > 0.2) { o.n = normalize(vec3f(nIn.x * g, nIn.y, nIn.z * g)); }
+  let kc = min(lookCfg.f.y, 1.5);
+  if (kc > 0.0 && roughIn < 0.97) {
+    let f = snowField(wp.xz); let fresh = (1.0 - f.z) * (1.0 - f.w);
+    let wd = snowCfg.p[5].xy; let u = dot(wp.xz, wd); let v = dot(wp.xz, vec2f(-wd.y, wd.x));
+    let c = smoothstep(0.52, 0.7, 0.6 * detailNoise(vec2f(u * (1.0 / 2.6), v * (1.0 / 0.42)) + vec2f(3.1, 7.7)) + 0.4 * detailNoise(vec2f(u * (1.0 / 0.9), v * (1.0 / 0.15)) + vec2f(9.2, 1.3)));
+    o.rough = mix(roughIn, 0.56, c * fresh * min(kc, 1.0) * clamp(0.25 / max(fp, 1e-4), 0.0, 1.0));   // (0.56: over every preset's rt.maxRough, so no glaze asks for a reflection ray; a streak finer than the pixel settles to the plain finish)
+  }
   return o;
 }

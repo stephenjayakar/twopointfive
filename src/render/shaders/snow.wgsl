@@ -186,6 +186,7 @@ struct SnowVOut { @builtin(position) pos: vec4f, @location(0) wp: vec3f };
   o.id = u32(snowCfg.p[0].w + 0.5);   // the snow lies on the ground: its pixels are the ground slab's to every pass that asks whose they are
   o.vel = vec2f(0.0);
   o.mat = vec2f(s.rough, 0.0);
+  if (LOOK) { let lg = lookGround(v.wp, s.n, s.rough, fp); o.normal = vec4f(lg.n * 0.5 + 0.5, o.normal.a); o.mat = vec2f(lg.rough, 0.0); }   // THE LOOK PROTOTYPE (look.wgsl lookGround): the hills' relief × the panel's number, and the crust
   o.edge = EDGE_NONE;
   return o;
 }

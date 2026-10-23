@@ -346,7 +346,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   eleven tiling materials (the try's eight classes and three more for what stood untouched beside them: cloth, bare metal and painted metal; the class is
   `lookClass`, the try's table with those rows added, `gbuffer.ts LOOK_OF`) made on the CPU at boot, 512 × 512 over 2 m, as two mipped `rgba8unorm` texture
   arrays (A = paint multiplier ÷ 2 + height, B = tangent normal + roughness + cavity; no image file ships). They sit at the g-buffer object group's bindings
-  11 to 14 with a repeating, anisotropic sampler and an 80-byte uniform block, ALL FOUR ONLY ON THAT PAGE: without the word the g-buffer modules get a stub of a few lines and the bind group is the page's as it was. What stays on every page: the prelude's `LOOK` / `LOOK_BOUNCE` consts, `lookGeoN` in `common.wgsl`, and one
+  11 to 14 with a repeating, anisotropic sampler and a 96-byte uniform block, ALL FOUR ONLY ON THAT PAGE: without the word the g-buffer modules get a stub of a few lines and the bind group is the page's as it was. What stays on every page: the prelude's `LOOK` / `LOOK_BOUNCE` consts, `lookGeoN` in `common.wgsl`, and one
   flat `u32` varying on the box vertex output (zero). FOUR LAYERS, each a slider on the panel (`gbuffer.ts lookAmounts`, 0 = that layer off, all 0 = the boxes
   as the game draws them, by an early return: none of the reads run): the maps (paint, relief, finish, cavity); the repeat broken for the four materials without courses (a second read, turned and
   shifted, cross-faded by a slow noise and by height); weather that follows the BUILDING (a wall's foot damp to a ragged line with its tide mark, its head
@@ -372,7 +372,11 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   ground's own snow with a ragged, domed edge. A FACE that stands on open ground takes a bank against its foot, higher on the side the wind blows at,
   with the snow's normal and mark; above the bank a thin rime and round clots that fade a stride up, which are paint and finish only. Never on bare metal
   (stoves, flues and braziers are warm), on a lit, turned or glass box, or on a box painted as snow or as a path (a marking on a face is covered like the face). BARE EARTH AND GRAVEL within 0.3 m of lying snow are
-  frozen: frost grains, and dark ice in the low places, smooth enough to show a lamp. AIR (the panel's row, `lookConfig.air`; 1 = the level's own haze, 0 = none) is × `settings.hazeDensity`
+  frozen: frost grains, and dark ice in the low places, smooth enough to show a lamp. LYING SNOW (`look.wgsl lookGround`, one tagged line in `fsBox` and one in `snow.wgsl fsSnow`, after `snowShade`): its whole relief (the drifts' slopes,
+  the wind's ridges, the prints and their rims) × the panel's 'Snow relief' (1 = as the build draws it; the page opens at 1.5), and 'Snow crust': fresh snow
+  the wind has glazed, in streaks drawn out along it, takes roughness 0.56, which is over every preset's `rt.maxRough` so no glaze asks for a reflection ray.
+  The steeper normals are the snow's own, marked as snow: the working-size passes read them as they read the build's (the tilt is not handed back as a
+  face), so more relief is also more for the filters to hold still. AIR (the panel's row, `lookConfig.air`; 1 = the level's own haze, 0 = none) is × `settings.hazeDensity`
   in the frame block and in the beams' air line. Known wrong here: a cut piece (`gbuffer_cut.wgsl`) takes no clinging snow, so a wall loses its bank where
   a blast cut it; the frost reads the field, which knows no roof, so an earth floor inside an outer wall takes a hand's width of it along the wall; the
   bank and the caps are paint: no ray, bounce or meter knows them, as with the snow's own hills.

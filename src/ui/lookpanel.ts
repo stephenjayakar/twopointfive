@@ -13,6 +13,8 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['untile', 'Break the repeat', 'two turned copies cross-faded', 1],
   ['edges', 'Edges', 'small boxes: rounded, rubbed corners', 1.5],
   ['snow', 'Snow that clings', 'a snow level: blown against wall feet, lying on what was left out', 1.5],
+  ['ground', 'Snow relief', '× the depth of lying snow\'s drifts, wind ridges and prints (1 = as the game draws it)', 3],
+  ['crust', 'Snow crust', 'wind-glazed streaks of snow that hold a lamp\'s sheen', 1.5],
   ['air', 'Air', '× the haze that shows a lamp in the air', 4],
   ['size', 'Map size', '× the 2 m a map covers', 2],
 ];
@@ -39,7 +41,7 @@ export function buildLookPanel(engine: Engine, fps: () => number): void {
   const line = (label: string) => { const d = document.createElement('div'); d.style.marginTop = '8px'; const l = document.createElement('div'); l.textContent = label; l.style.color = '#8fa39a'; d.append(l); el.append(d); return d; };
   // plain while held; a click on the box leaves it plain
   const plain = (on: boolean) => {
-    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (k !== 'size') lookAmounts[k] = k === 'air' ? 1 : 0; }
+    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (k !== 'size') lookAmounts[k] = k === 'air' || k === 'ground' ? 1 : 0; }
     else if (!on && kept) { Object.assign(lookAmounts, kept); kept = null; }
     send();
   };
