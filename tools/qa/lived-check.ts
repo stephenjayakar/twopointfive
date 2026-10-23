@@ -68,8 +68,8 @@ const LEVEL_BASE: Record<string, string> = {
   // the plan mission's hall has no lookout on the word's own step (a step's `eye` gone)
   'tut-plan.json': '6cdeafa97',
 
-  // the ledger's own level, rebuilt whole (its words and rows since are free: LESSON_FREE)
-  'tut-quiet.json': 'cb936797b',
+  // the ledger's whistled man looks from the lane's gap and turns away to smoke by a chair (three volumes, a chair, a gas bottle, a tin)
+  'tut-quiet.json': '87c7cebef',
 
   // the tunnel station, played with no fog of war (its lesson's rails.fog)
   'tut-sky.json': 'f3ef62b01',
