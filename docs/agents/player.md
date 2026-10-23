@@ -1218,7 +1218,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   between edges, so it files what it always did. Rocking kept up files at most twice a plain walk's footfalls (the legs are moving), never two nearer
   than a quarter of the cycle. A FIRST CUT ("the same edge crossed twice files nothing") was thrown out in review: it swallowed real steps without bound
   (a pacing man walked silent) and the first footfall of a start past the half. Do not go back to it; a longer travel (0.45) halves a pacing man's
-  footfalls too. Both places a footfall is filed go through `stepTravelled` / `sameFootfall` / `footfallFiled`. Switch: ON in the page
+  footfalls too. Both places a footfall is filed ask `footfallDue` (the next bullet put the test in one place). Switch: ON in the page
   (`?footfallonce=0` off; Tab ▸ Closer than ever ▸ 'one footfall a step'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'FOOTFALL.once':
   `TPS_FOOTFALL=1`; `TPS_FOOTFALL=0` holds it off on the shipped stand), registered in knobs.ts and `JOURNAL_KNOBS`, a recording from before it replays
   with it off, and a checkpoint names `stepTravel` only when it is not 1. Key off writes nothing (the travel stays 1). CHECK:
@@ -1230,5 +1230,70 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   random keys and cursor (8 seeds of a minute a pattern) lost 7 to 18 % of the key-off footfalls with frames running counted once. The quiet lesson's
   scripted run passes with the key on and off (different digests). NOT THIS RULE'S: a walk with the cursor shaken across him about three times a
   second files NO footfall with either key (the phase never reaches an edge); the key makes the milder shakes cheaper too (8 to 21 footfalls in ten
-  seconds down to 3 to 9). A footfall owed to travel alone would mend both and is not built. NOT DONE: no tour, no soak; never heard in a page; the
+  seconds down to 3 to 9). A footfall owed to travel alone mends both: the next bullet, 'A footfall the legs owe'. NOT DONE: no tour, no soak; never heard in a page; the
   lesson's "seven frames running" was not met on that lesson's pushed head (two frames running on the build before it), only staged.
+- **A footfall the legs owe** (`FOOTFALL.owed`, a key UNDER `FOOTFALL.once`, src/game/player.ts `footfallDue`; 2026-10-23, the flaw 'One footfall a
+  step' names as not its own). THE FLAW: a cycle turned about again and again rocks between its two edges and reaches neither, or crosses one with too
+  little travel behind it for the first key to count. Staged on the lobby's floor for ten seconds, the forward key held and the cursor put in front of
+  him and behind him every 10, 12 and 15 frames (the 10 on three seeds), over the same 10.9 m crouched and 13.3 m standing as a plain walk (18 and 22
+  footfalls): the first key alone files 7 to 13 crouched and 9 to 18 standing; with both keys down the 12-frame rows file 14 to 31. So most of the
+  loss at these rates is the first key's; what was there before it is the cycle that never reaches an edge. THE RULE: with both keys up the cycle's
+  travel is also added up since the last EDGE PASSED, filed or not, or footfall filed (`Player.stepOwed`), on the frames he moves at a footfall's speed
+  (over 0.4 m/s); when it comes to `FOOTFALL.owe` (half a turn: one step's worth of leg) a footfall is filed where the legs are, at an edge's level.
+  A steady walk comes to its edge first every step and files what it always did. The count starts over at every edge passed (so after a footfall owed
+  mid-stride the next ones are back on the frames a foot comes down), when he slows under a footfall's speed (nothing is owed while he stands, and a
+  nudge after a stop pays no old debt), and on the first frame the test is asked after frames it was not (`Player.stepAt`, the game clock it was last
+  asked at: a takedown, a keypad plant and a kick root or walk him without it, and a debt from before the beat is not paid after it). A checkpoint
+  does not carry the debt: a load is a standing start. With the first key down the second does nothing and nothing is kept; unticked, `stepOwed` goes
+  to 0 on the next frame. Both places a footfall is filed ask the one test. Switch: ON in the page (`?footfallowed=0` off; Tab ▸ Closer than ever ▸
+  'a footfall the legs owe'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` 'FOOTFALL.owed': `TPS_FOOTOWED=1`, which acts only with
+  `TPS_FOOTFALL=1` beside it; `TPS_FOOTOWED=0` holds it off on the shipped stand), in the registered FOOTFALL table, and a recording from before it
+  (with the first key or from before both) replays with it off. CHECK: the same card, `bun run tools/qa/footfall-check.ts` (19 lines, both stands,
+  about three minutes); `FOOTOWED_BREAK=1` must fail shake's 'both keys up' line; the first key's arms run with both up, as the page has them, but
+  its plain `walk`. Lines: shake (both up: 17 to 22 footfalls crouched against 18, 22 to 25 standing against 22, never two nearer than 14 frames;
+  first key down: the second changes no frame), walk 2 (crouched, standing, sprinting, the sprint put on and off, the crouch taken and left under way,
+  and two walks with stops in them, six seconds each on three seeds: the same frames and levels as with the key down, digests equal), feet (one
+  about-turn begun at nine places in the cycle on two seeds: from two seconds after it every footfall is on the key-down run's frame, 18 of 18),
+  nudge (let go at eleven places in the cycle, four seconds stood, the key for a fifth of a second: nothing more filed, 11 of 11; and a takedown's
+  beat begun with 0.42 of a turn on the legs, the key held through it: the same footfalls after it), held 2, harness 2. WHAT IT COSTS AN ORDINARY
+  WALK: one with the cycle turned about in it at speed can file a footfall more. Over nine six-second walks on three seeds (a square, the cursor
+  swept once round him, a walk begun backwards): 2 more in all on each stand, none on frames
+  running. PACING is louder, and is meant to be: forwards and back by legs of 40 frames, standing,
+  files 15 footfalls in ten seconds with the first key alone and 22 with both (a plain walk's count: the legs move as much), so stepping out and back
+  beside a man is as loud as walking past him (the card's `turns` arm prints it and holds only a floor). WET PRINTS: a footfall owed lays none (no
+  foot is down under it), and the plant right after it, which the first key swallows, lays none either: a gap of one print at such a turn; never
+  seen on a GPU. A FIRST CUT, thrown out in review: the count ran from the last footfall FILED and was kept through a stop. After one about-turn
+  every later footfall of a steady walk was filed a fifth of a turn before the foot came down (the first key swallowed each plant and the count
+  never met the feet again), and a debt from before a stop was paid a few frames into the next nudge. Do not go back to it. NOT DONE: never heard in
+  a page; nobody has played it; what a shaking hand on a mouse does to the cycle was staged with the cursor put square ahead and square behind, not
+  recorded from a hand; the keypad plant and the kick are covered by the takedown's line by reading (the same early return), not staged.
+- **Two gears, not a dial (`TWOGEARS`, player.ts; the maintainer: "let's start by just removing the pace wheel entirely with the faster crouch sneak").** With the
+  key up the mouse wheel does nothing to his pace (`wheelPace` returns; a notch a checkpoint or an older visit left on him is put back to 1 at the top of
+  `updatePlayer`), and the crouch-walk goes at `TWOGEARS.crouch` 1.45 m/s where the tune's `playerCrouch` is 1.3 (walk 1.55, sprint 4.7, a patrol's walk 1.15).
+  WHY: the dial bought nothing a player could find. A footfall's level is stance times floor and nothing else (crouched 0.125 of a sprint's, the wheel never
+  moved it), and behind a walking man the old crouch closed at 0.15 m/s. Two speeds are left to learn: on his feet, and crouched and quiet. The wall sidle and
+  a hauled body keep the tune's 1.3; the teammates' pace is untouched (the partner's sneak cap `UNSEEN.lowPace` 1.45 is now Sam's own crouch pace). The Controls
+  list says "move · Shift sprint · C crouch (slower and quiet)", and the options page drops its Wheel row and the pace ticks while the key is up. Switch: ON in
+  the page (`?twogears=0` off; Tab ▸ Detection & movement ▸ 'two gears, not a dial', with a slider for the sneak's m/s), OFF in the module and on the frozen
+  stand (`FROZEN_HOLDS` 'TWOGEARS.on': `TPS_TWOGEARS=1`; `TPS_TWOGEARS=0` holds it off on the shipped stand), its own table in knobs.ts and `JOURNAL_KNOBS`, and a
+  recording from before the table replays with it off. CHECK: `bun run tools/qa/twogears-check.ts` (probe `twogears`, families twogears / player), both
+  stands; `TWOGEARS_BREAK=1` must fail wheel, saved, paces and tail. Lines: wheel (ten notches leave the pace at 1), saved (a saved 0.48 is 1 on the first
+  frame), paces (three seeds: crouched 1.300 → 1.450, walk 1.550 and sprint 4.700 as they were), tail (crouched 2 m behind a patrol walking away, three seeds:
+  in reach in 3.90 s, 7.35 s with the key down), ears (a crouched footfall files at 0.138 either way), off (key down, the run's digest is the build's),
+  harness. `tools/qa/twogears-page.cjs` drives the real page on the software adapter, plain and with both flags off (it reads the hand of
+  `CLOSE.handsLow` too). WHAT WENT WITH THE WHEEL: the squad's upright "slow and quiet" (unseen.ts `samSneaks` reads `pl.pace <= UNSEEN.paceAt`, which is
+  never true now): they sneak when Sam crouches or takes a wall, and no other way. Training's "Moving unseen" has a step that asks for the wheel
+  (`{is:'pace'}`): with the key up that test is true at once and the line goes by (lesson.ts, as `setup` does where a gun has none); lesson-run lets such a
+  step go by. FOLLOWERS: a low follower's cap (`UNSEEN.lowPace`, `SNEAK.lowPace`, 1.45 before the kit's load) is now Sam's own pace, so a file that has
+  dropped back cannot gain on a Sam who keeps crouch-walking (unseen-probes on the page's stand: fastest 1.18 to 1.42 m/s; "they keep up" still passes over
+  its four seconds; not measured on a long walk). HELD BY OTHER CHECKS: selector-input's "the wheel is his pace", handring's wheel under a standing ring and
+  unseen-probes' "slow on the wheel, upright" hold the key down after their stand-ups (the wheel's own rule); close-dark's exhibit asks for 25 frames at rest
+  with the key up and the 30 it always asked with it down (he coasts two frames longer from 1.45 m/s: 28 frames, and nobody noticed him, as before; the
+  staging's own slow pace is nobody's with the key up); ai-probes' motion table and floor-probes read `crouchPace(g)`; snowtracks' "slow crouch" line runs at
+  the sneak's full pace with the key up and passes. THE TRAINING LESSON'S SCRIPTED RUN: with the key up Sam reached the dividing wall 2.6 s sooner, found
+  the man still at the gate from his last round, went at once, and was shot at the last step (the man came to the trunk from the gate's side, with a line
+  to the hide behind the hut). The script now waits for his next visit to the gate and passes on both stands; a player who goes on that earlier round can
+  be caught there with the wheel too, which is the lesson's own, and not mended. NOT DONE: no stealth mission was tallied at the quicker crouch (a man who
+  turns has 10 % less time to catch him crossing, and Sam has 10 % less time behind a man who stops), no tour, no soak, no tutorial mission's scripted run;
+  the walk at 1.55 is now 7 % quicker than the sneak and four times as loud, which may leave the walk little to do; nobody has played it and it has never
+  been seen on a GPU.

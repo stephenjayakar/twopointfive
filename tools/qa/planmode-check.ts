@@ -21,12 +21,16 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 export const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const BREAK = process.env.PLANMODE_BREAK === '1';
 
-export async function rig(seed: number, plan = !BREAK) {
+/** the stand's own word for CMDRING.planNear, as the first stand-up of this process left it (the rig then holds it as asked) */
+export const STOOD: { near: boolean | null } = { near: null };
+/** `near`: CMDRING.planNear for this rig — off for every line of this file (they ask the view's reach as it was first built; the bound has its own check,
+ *  plannear-check.ts) */
+export async function rig(seed: number, plan = !BREAK, near = false) {
   const squad0 = NIGHTBREACH.squad; let W: any, why: any;
   try {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
-    W = await standUp();
+    W = await standUp(); STOOD.near ??= !!CMDRING.planNear; CMDRING.planNear = near && plan;
     CMDRING.on = true; CMDRING.hint = true; CMDRING.hands = true; CMDRING.plan = plan; CMDRING.planRts = plan; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.only = false; AUTOPILOT.on = true;   // (the ring that goes with its key and Shift always the mode's, as these lines were written: `probes.ts qring` has the page's)
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
@@ -81,7 +85,7 @@ export function floorSpot(R: any, skip: number[][] = []): number[] | null {
 export async function planmodeCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
-  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, rts: CMDRING.planRts, run: CMDRING.planRun, stay: CMDRING.stay, tapNow: CMDRING.tapNow, ap: AUTOPILOT.on, rnd: Math.random };
+  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, rts: CMDRING.planRts, run: CMDRING.planRun, stay: CMDRING.stay, tapNow: CMDRING.tapNow, near: CMDRING.planNear, ap: AUTOPILOT.on, rnd: Math.random };
   console.log(`plan mode (src/game/planmode.ts)${BREAK ? ' — PLANMODE_BREAK=1: the switch left off, the lines below must fail' : ''}`);
   try {
     // 1. the switch off (the ring's own on): Shift and the key are nobody's, the mouse is Sam's, the file has no plan in it
@@ -263,7 +267,7 @@ export async function planmodeCheck(): Promise<boolean> {
         CMDRING.planRts = !BREAK; R.toggle();
         line(!BREAK && walked > 0.5 && onHim && !!spot && atOnce === 1 && !ring, 'that word off: he walks with the mode up, the view is on him, and a right click orders as it goes down', `he walked ${walked.toFixed(2)} m · the view ${onHim ? 'on him' : 'not on him'} · the button down: ${atOnce} order at once, ${ring ? 'a ring' : 'no ring'} after half a second`); }
     }
-  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; CMDRING.planRts = keep.rts; CMDRING.planRun = keep.run; CMDRING.stay = keep.stay; CMDRING.tapNow = keep.tapNow; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
+  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; CMDRING.planRts = keep.rts; CMDRING.planRun = keep.run; CMDRING.stay = keep.stay; CMDRING.tapNow = keep.tapNow; CMDRING.planNear = keep.near; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
   console.log(fails ? `planmode-check: ${fails} FAIL` : 'planmode-check: ALL PASS');
   return fails === 0;
 }

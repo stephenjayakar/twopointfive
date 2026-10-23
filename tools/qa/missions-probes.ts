@@ -109,9 +109,11 @@ export async function missionsScreen(): Promise<boolean> {
       // ---- the sheet follows the highlight
       { const bad: string[] = [];
         for (let i = 0; i < L.length; i++) { S.select(i); const sh = sheetOf(mroot), m = L[i];
-          const ok = sh.title === m.title && sh.place === m.place && sh.blurb === m.blurb && sh.untuned === (m.untuned && !onShortList(m.id)) && sh.team === M.teamWordsOf(m) && sh.defenders === m.defenders && sh.approach === M.leanWords(m.lean)
+          const ok = sh.title === m.title && sh.place === m.place && sh.blurb === m.blurb && sh.untuned === (m.untuned && !onShortList(m.id)) && sh.team === M.teamWordsOf(m) && sh.defenders === M.defendersShown(m) && sh.approach === M.leanWords(m.lean)
             && sh.level === (m.scenario?.level ? m.scenario.level.replace(/\.json$/, '') : 'office') && sh.go === M.missionHref(m, SEARCH) && sh.goId === m.id && missionRowsOf(mroot).findIndex(r => r.sel) === i;
           if (!ok) bad.push(m.id); }
+        // (how many are inside is a mystery — ui/missions.ts MYSTERY: the cell reads '—' and is not drawn; with the switch off it is the row's own words)
+        { const was = M.MYSTERY.on; try { for (const on of [true, false]) { M.MYSTERY.on = on; for (const i of [0, 1, L.length - 1]) { S.select(i === 0 ? 1 : 0); S.select(i); const got = sheetOf(mroot).defenders, want = on ? '—' : L[i].defenders; if (got !== want) bad.push(`${L[i].id} (mystery ${on ? 'on' : 'off'}: "${got}", not "${want}")`); } } } finally { M.MYSTERY.on = was; } }
         S.select(L.length - 1); const last = sheetOf(mroot);
         F.verdict(bad.length === 0, "each row highlighted in turn: the sheet shows that mission's title, place, line, team, defenders, approach and level, 'untuned' exactly where set (and never on a mission the short list names), and its button links that mission's URL",
           `last: ${last.title} — ${last.place} — team ${last.team} · defenders ${last.defenders} · ${last.approach} · level ${last.level}${last.untuned ? ' · untuned' : ''} · [${last.goText}] ${last.go}` + (bad.length ? ` — NOT: ${bad.join(', ')}` : '')); }

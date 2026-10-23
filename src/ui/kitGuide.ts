@@ -58,7 +58,7 @@ export interface BeatAsk { own: number; squad: number; needs: PlaceNeeds | null;
 export function beatWords(b: BeatId, { own, squad, needs, rescue }: BeatAsk): BeatWords {
   const dot = !!needs?.marked;
   switch (b) {
-    case 'job': return { title: 'The job', text: `Read this before you pick. It shows who holds the floor, and the map${dot ? ', with a dot where you go in' : ''}.\nPress [M] or click to open the map, and again to close it.` };
+    case 'job': return { title: 'The job', text: `Look at the map before you pick${dot ? '. The dot is where you go in' : ''}.\nPress [M] or click to open it and read the job, and again to close it.` };
     case 'team': return { title: 'Who comes', text: `Press [A] or [D], or click, to set how many come with you.\nThis mission is built for ${sizeWords(own)}.` };
     case 'kit': { const asks: string[] = [];
       if (rescue) asks.push('There are hostages inside, and a frag on their floor will hit them too.');

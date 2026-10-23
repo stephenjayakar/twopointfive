@@ -1245,7 +1245,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A KIT, counted off the level's file by the plan's own fetch AS THE MISSION IS STAGED (`ui/missions.ts placeNeeds`, `Plan.needs`): the doors found
   locked, those of them that are steel, a rescue's hostages — a rescue's side door (`scenarios.rescue.side.door`) is unlocked by its staging and is not
   counted; the bundled office's rescue is read from `levels/office.scenarios.ts`. The cells are `.mfact.kb`, drawn on this step only; a count is a digit
-  to five and a word past it (`countWords`), and the list's Defenders cell is drawn AGAIN by this file with its count in words ('eleven'), the list's
+  to five and a word past it (`countWords`), and the list's Defenders cell was drawn AGAIN by this file with its count in words ('eleven'; since 10-23 only under `?mystery=0`), the list's
   own cell hidden on this step. IN A SHORT WINDOW (800 px tall and under: the maintainer's own is about 1000 x 673) THE BAND IS NOT A PIXEL TALLER THAN
   THE NAME ALONE WAS: the map a small mark, the name, the facts under it, and no job sentence (no text is cut to fit: `textsize-page` holds that) — the
   job is read on the large sheet. `kitdense-page`'s bars (a gun's pop-up ends over the foot at 1317 x 775, nothing scrolls at 1200 x 675) are why.
@@ -1273,7 +1273,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   step as it was: FAILS (25 lines at one size). The kit step's other page checks were run beside the build head's own: `kitdense-page`, `kitline-page`
   and `quietgear-page` red on the same old lines as the head, `kitpaste-page`, `kittree-page` and `textsize-page` clean. NOT SEEN: on a GPU (so never
   with the team's picture in the left column behind it), by a first-time player, and Deploy pressed under a card (it calls `deployed()`; no check
-  loads a mission for it). OPEN, for the menus' owners: the Mission step's own facts row still writes 'Defenders 11' as digits; a named kit a mission
+  loads a mission for it). (The Mission step's facts row wrote 'Defenders 11' as digits: since 10-23 no screen draws that cell, `MYSTERY`.) OPEN, for the menus' owners: a named kit a mission
   recommends (a field on its row, a mark on the Kit row's button) is not built — only what the place asks is said.
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
@@ -1663,3 +1663,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one keeps the other row, whose note reads the mission's own for the hidden one. Its LINK is any row's link: the visitor's Hour and Weather picks stay
   on it and on every later link, and the row's own win when the page boots. The debugger's 'weather kind' buttons say so and do nothing on a row with
   its own weather. No row names one yet.
+- **How many are inside is a mystery, and the large map is left by a click beside it** (10-23; `src/ui/missions.ts` `MYSTERY`, `src/ui/kitBrief.ts`
+  `KITBRIEF.outside`). The maintainer, off the Team & kit step with its map opened large: "clicking outside the map should close it. we should also
+  remove all defender counts from the menus, etc., it should be a mystery!" **THE COUNT** (`?mystery=0` = the cells as they were): no screen draws a
+  Defenders cell: the Mission step's sheet, the same cell on the Team & kit step (`kitBrief.ts`) and the fact on a mission's load page
+  (`loadbrief.ts`) all ask `defendersShown(m)`, which is '—' ("no cell") while the switch is on, and the pause card's intel cell says how many were
+  questioned without "of N". The facts row loses the cell and not a gap (`.mfacts.nodef`: three columns on the old sheet, no row at all on the one
+  starting page's Mission step, where Defenders was its only cell, nor on a kit band with nothing to say of locks or hostages). A row's `defenders`
+  number is untouched: the stand-up, the picks probe and the levers still count on it. THE WORDS
+  are changed in the data and have no switch (a wording change, like the writing guide's): the rows that said a head count say the place instead
+  (`scene/scenarioList.ts`: the pair's break room, the block's squads, the warehouse, the compound, the barracks, the kill house; `scene/picks.ts`
+  the warehouse's line), Hard's sentence names no number of guards (`game/difficulty.ts`), and the kit lesson's first card no longer says the band "shows who holds the
+  floor": it sends the player to the map, where the job is read (`ui/kitGuide.ts`; true in a short window too, where the band has no room for the job). KEPT ON PURPOSE: a smaller number that is the puzzle's premise ("two sentries who watch each
+  other", "a gunman waits in one of them"), every Training and tutorial row (the number is the exercise; the lessons' own steps are their
+  owners'), and the end-of-run card's "N of M down" (after the fact). NOT TOUCHED, and claimed to their owners: what the enemy SAYS during a
+  mission (the last-stand call "{n} of us left", the staff radio check's roll of callsigns, a questioned guard's "{N} of us tonight", the response
+  team's "{n} of us", the numbered Tango callsigns on the radio strip). **THE MAP** (`?mapout=0` = as it was: a click on the map, M, Esc, Enter or
+  Space): large, the sheet reads as a card laid over the step, so a click anywhere off it puts it back. The click, and the press that begins it, are caught on the document before
+  the step hears them and do nothing else: a teammate's slot under the pointer is not picked, a kit card does not take the keys, the figure does not
+  start to turn. Small, a click on the step is the step's own; so is a click made after the window was narrowed until the sheet is no longer drawn. Both
+  switches are UI only: nothing under `src/game` reads them, no recording carries them, no frozen row. CHECKS: `bun run tools/qa/mystery-check.ts`
+  (also `probes.ts mystery`, families ui and words: no mission has a cell, no row, pick line or Hard sentence says a head count, no file under
+  `src/ui` but `missions.ts` reads a row's `defenders`; `--list` prints the lessons' numbers it does not judge; `MYSTERY_BREAK=1` must fail), the
+  missions-screen probe (the sheet's cell with the switch on and off) and `PORT=<dev server> node tools/qa/mystery-page.cjs [outDir]` (the real
+  page in headless Chromium, real keys and clicks at 1440 x 900 and 1000 x 673: no cell and no count word on the kit step, the large map's
+  caption, the Mission step and three load pages; the click beside the large map on a teammate's slot; each switch off; `MYSTERY_BREAK=1` must
+  fail). SEEN: those two runs and stills of the three screens, on the software adapter. NOBODY has seen it on a GPU or played it, and the pause
+  card's intel tooltip was read in the code only.

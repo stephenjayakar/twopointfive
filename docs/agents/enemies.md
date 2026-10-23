@@ -1393,3 +1393,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   team's way and one careful run the other; not shown to be more than noise at this size, but the direction to expect is the team's, because an untrained body's duck is bigger and longer than a drilled one's.
   NOT DONE / NOT SEEN: never seen on a GPU and never played; the duck is the animator's older one, not re-posed; every number is a first number. Left out: civilians, a friend's round, anything for a green man who
   has a mate, any cost to a trained man beyond the dip itself.
+- **A man who has run leads no radio check** (10-23, from a kept run on the block: the last three defenders, one of them broke, dropped his gun and
+  went low in a corner; four seconds on HE called "radio check — who's still up? sound off!" and nine seconds after that counted himself among the
+  three). laststand.ts counted the few with `runnerFled` (line 572, the 10-13 join) but its own `alive` and `fitGd` asked only for a man not dead, so
+  the runner was still a man of the stand: he could call the check, answer it, be asked for by name and be sent to regroup. Both now ask
+  `runnerOwns` (off the net from the shout on, as netquiet.ts and enemysquads.ts have it); the two places that mean a BODY (the fallback fix "a man of
+  theirs lies here", the mover's "down on the way" tally) ask `state === 'dead'` as before. NO SWITCH: `runnerOwns` is false with `RUNNER.on` off, so
+  the frozen stand cannot move; ON THE PAGE'S STAND IT CHANGES any run where a man has fled — who leads the check and the count that is spoken.
+  CHECK: `probes.ts laststand-fled` (family laststand; the block, seed 2, three left, one made to run by `runnerBreak`, forty seconds): the check is
+  called by one of the two who fight, `up0` 2, the runner says nothing and is not named, no count above 2 — green on both stands (the frozen one with
+  `RUNNER` / `MORALE` raised by hand after the stand is up), and RED before the mend on the page's stand ("Tango 6: radio check …", his lines 2,
+  count 3). There is no `_BREAK` word: there is no switch to put off. STILL OPEN, read from the code only, none exercised — the same miss elsewhere,
+  each its owner's: cues.ts `squadVoice` / `fit` (he can be his squad's mouth); guards.ts `offNet`, `radioCaller`, `spokesman`, `assignLockdown`,
+  `planClears` (the night staff's net: a fled staff man is the calmest man on it) and the "he's down — clear." line's `left`; pressure.ts `alive`
+  (Hard: he can be sent on a press, lead "we go and look", or be the mate that keeps the true last man from being last); suppression.ts `reacts`
+  (barks "taking fire"); fogofwar.ts `tellCalls` (a teammate calls contact on a man no gun will engage); doortools.ts's "<room> clear." line (held
+  back while he cowers in it though the count says clear); morale.ts `hasMate` and darkdoor.ts `mateBy` (he is company, so the man left with him is
+  never alone); needs.ts `partnerFor`; qrf.ts `staffVoice` / `silentNet`; buddy.ts `alive`; digin.ts keeps his record. In the same kept run the
+  runner took the corner with a clear way out because the run is planned from his picture, which had an enemy guessed into the doorway (a 'fix' on a
+  sound) and a dead man told of at the other door: the runner's rule, its owner's. NOT SEEN, NOT PLAYED: nothing on a GPU or in the page; the
+  laststand family is the only tally run.
