@@ -47,6 +47,7 @@ import { AttentionViz } from './attentionviz';
 import { PictureViz } from './pictureviz';
 import { menuTheme } from './theme';
 import { textZoom } from './textsize';
+import { hoverKept } from './hoverkept';
 
 const EDGE = 1.1;   // markers / dots / the throw arc stay drawn until they are 10 % of the view past its edge (FollowCamera.project margin)
 /** The way off a lost man to where the round came from, as it lies on the screen: the turn, in degrees, of one right-pointing arrow ('' = the squad does not
@@ -486,7 +487,7 @@ export class Overlay implements HudLike {
    *  cancel row at the foot while the selector is open) in their stable priority order, the highlighted one (Game.hover) marked primary; rows of the same thing
    *  under its first are continuations (no second header). Light fixtures are never rows (they are ranged: the pistol's business). */
   private deriveInteractions(game: Game): { rows: InteractRow[]; primary: number; more: number; open: boolean; hint?: string; cancel?: string } {
-    const sq = game.orders.hud(); if (sq.menu) return sq.menu;   // the squad's command menu, while it is open, IS the panel (orders.ts)
+    const sq = game.orders.hud(hoverKept); if (sq.menu) return sq.menu;   // the squad's command menu, while it is open, IS the panel (orders.ts)
     const hv = game.hover, p = game.player.char.pos;
     const dist = (it: Interactable) => thingDist(it, p);   // doors: leaf or doorway centre, as the reach test measures it
     // (handring.ts: the corner shows ONE line, what the key would do now — the highlighted row, or a running verb's own; none while the ring's lit wedge
