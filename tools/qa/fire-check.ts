@@ -15,7 +15,8 @@
 //   same      … the swing is a closed form of the game's clock: a second game stood the same way has the same strength every frame, and the lamp is what
 //             fireFlicker says for that time
 //   sound     one bed voice held at a time (handed on every FIRE.bedSecs), and a crack for each pop of the wood, about as often as the table says
-//   smoke     with a solver drawing: a source a second over the flames, every one LOOK ONLY, on the coarse lattice, none thicker than the table says; with
+//   smoke     with a solver drawing: a source a second, as wide as the drum, its foot over the flames and over a standing man's head, every one LOOK ONLY, on the
+//             coarse lattice, none thicker than the table says; with
 //             none drawing: no source at all
 //   out       the lamp put out (as a round or the jammer would): the frame after, no fire is handed to the renderer, no source, no crack, and the lamp is
 //             back where the level hung it; lit again, it burns again
@@ -109,9 +110,9 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
     {
       const A = await rig(true, true), K = FIRE; A.step(12 * 60);
       const S = mine(A), F = (A.g.engine.fires ?? [])[0], want = 12 / K.smoke.every;
-      const ok = !!F && S.length >= want - 2 && S.length <= want + 2 && S.every((e: any) => e.lattice === 'coarse' && e.density <= K.smoke.density + 1e-9 && e.ttl <= K.smoke.every + 1e-9 && Math.hypot(e.pos[0] - F.pos[0], e.pos[2] - F.pos[2]) < 0.01 && e.pos[1] > F.pos[1] + 0.2 && e.pos[1] < F.pos[1] + 1.2);
-      verdict(ok, 'smoke — with a solver drawing: a short source a second over the flames, every one look-only, on the coarse lattice, none thicker than the table says',
-        `${S.length} sources in twelve seconds (${A.sources.length} filed in all by the game) · coarse lattice: ${S.every((e: any) => e.lattice === 'coarse')} · thickest ${Math.max(0, ...S.map((e: any) => e.density))} against the table's ${K.smoke.density}${S[0] && F ? ` · ${(S[0].pos[1] - F.pos[1]).toFixed(2)} m over the coals` : ''}`);
+      const ok = !!F && S.length >= want - 2 && S.length <= want + 2 && S.every((e: any) => e.lattice === 'coarse' && e.density <= K.smoke.density + 1e-9 && e.ttl <= K.smoke.every + 1e-9 && Math.hypot(e.pos[0] - F.pos[0], e.pos[2] - F.pos[2]) < 0.01 && e.pos[1] - e.radius > F.pos[1] + K.height && e.pos[1] - e.radius > 1.9 && e.pos[1] < F.pos[1] + 2.5 && e.radius >= 0.2);
+      verdict(ok, 'smoke — with a solver drawing: a short source a second, as wide as the drum, its foot over the flames and over a standing man\'s head (1.9 m), every one look-only, on the coarse lattice, none thicker than the table says',
+        `${S.length} sources in twelve seconds (${A.sources.length} filed in all by the game) · coarse lattice: ${S.every((e: any) => e.lattice === 'coarse')} · thickest ${Math.max(0, ...S.map((e: any) => e.density))} against the table's ${K.smoke.density}${S[0] && F ? ` · ${(S[0].pos[1] - F.pos[1]).toFixed(2)} m over the coals, its foot ${(S[0].pos[1] - S[0].radius).toFixed(2)} m over the floor, ${S[0].radius} m in radius` : ''}`);
       const B = await rig(true, false); B.step(6 * 60);
       verdict(B.sw && mine(B).length === 0, 'smoke — … and with no solver drawing, no source at all', `${mine(B).length} sources`);
     }

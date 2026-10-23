@@ -9,11 +9,13 @@
 //             Its glow reaches the bounce like any glowing box's, so what the GPU's meter reads of the lid is that much less; the CPU's estimate never read it.
 //   THE FLAME a small volume of light the composite draws over the drum's mouth, and THE EMBERS, bright points climbing on its heat — both closed forms of the
 //             game's clock (render/shaders/fire.wgsl; this file hands the renderer a record a fire, the four nearest the view). Picture only.
-//   THE SMOKE real gas in the smoke solver: a thin hot source over the flames, on the lattice the cans' smoke lives on, so it leans in the wind, pools under a roof
-//             and is lit by its own fire. A LOOK source (smoke/types.ts `look`): the game's own smoke, the one sight lines are cut by on the headless stand, never
-//             hears of it; in the page the men's sight lines are read off the solver, and the source is kept thin enough to stay clear of where a line starts to
-//             count smoke (0.8 of its light). Only for a fire near the view (FIRE.smoke.viewR), only while the solver draws: while
-//             one is, the solver is awake (docs/agents/render.md has what that costs).
+//   THE SMOKE real gas in the smoke solver: a hot source as wide as the drum, filed over the flames, on the lattice the cans' smoke lives on, so it climbs, leans in
+//             the wind, pools under a roof and is lit by its own fire. A LOOK source (smoke/types.ts `look`): the game's own smoke, the one sight lines are cut
+//             by on the headless stand, never hears of it; in the page the men's sight lines are read off the solver, so the source's FOOT is over a standing
+//             man's head and the gas only climbs from there: a line at 1.9 m or under keeps its light (a line starts to count smoke under 0.8 of it; measured
+//             in the page, docs/agents/render.md). Two things learnt setting it: a source two cells wide does not climb in the solver whatever its heat (it
+//             hung where it was filed, a haze at head height that cut a line along the wind to a quarter), one five cells wide does. Only for a fire near the
+//             view (FIRE.smoke.viewR), only while the solver draws: while one is, the solver is awake (the same file has what that costs).
 //   THE SOUND a low bed that follows the fire's heat, and a crack with each pop of the wood — the same pop that throws embers and kicks the light. The mixer's
 //             alone: no event is filed, nobody in the game hears a fire.
 //   WHEN OUT  the lamp's own target says (shot out, the pistol's jammer, a level that starts it cold): no light, so no flame, smoke or sound either.
@@ -41,19 +43,19 @@ export const FIRE = {
   /** … and THE BED OF COALS the picture lays over that box (render/shaders/fire.wgsl fireCoals): its radius as a share of the box's half-width (0.27 m on a
    *  0.29 m drum: all of its lid but the rim — the lid is lit white by its own lamp, and the bed is what hides that) */
   bedR: 1.42,
-  /** THE LIGHT: how far its strength swings either side of the authored one (0.22 = between about 0.8 and 1.2 of it), the four rates it swings at (Hz; firelight on a yard is slower than
+  /** THE LIGHT: how far its strength swings either side of the authored one (the noise's weight: at 0.3 about a seventh of it most of the time, a third now and then, never past `least` and `most`), the rates it swings at (Hz; firelight on a yard is slower than
    *  the flames that make it: their flutter is the picture's own, render/shaders/fire.wgsl), how far its place wanders (m, across and up) about a point `lift` m over where the level hung it
    *  (a level hangs the lamp a hand over the lid; the light of a fire comes from the body of its flame, and from there the drum's own shadow on the ground is
    *  half as wide), and what a crack adds for `kickSecs` */
-  depth: 0.22, rates: [1.3, 2.7, 4.9, 8.3] as number[], weights: [0.9, 0.7, 0.45, 0.2] as number[], wander: 0.06, wanderUp: 0.04, lift: 0.2, kick: 0.25, kickSecs: 0.12,
+  depth: 0.3, rates: [0.43, 1.3, 2.7, 4.9, 8.3] as number[], weights: [0.8, 0.9, 0.7, 0.45, 0.2] as number[], least: 0.6, most: 1.6, wander: 0.06, wanderUp: 0.04, lift: 0.2, kick: 0.25, kickSecs: 0.12,
   /** THE WOOD CRACKS: on average this often (a second), each of the clock's `popSlot`-second slots asked once */
   popRate: 0.55, popSlot: 0.2,
   /** THE EMBERS in the air at once that the fire lets go of by itself (a crack throws its own; render/shaders/fire.wgsl) */
   embers: 10,
-  /** THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals it starts as a share of the flame's
-   *  height, the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
+  /** THE SMOKE (the solver's units: 6 /m of extinction a unit of density, +1.6 m/s² a unit of heat): how high over the coals the source's middle is as a share of the
+   *  flame's height (its foot, a radius lower, stays over a standing man's head on a drum: tools/qa/fire-check.ts holds it), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
    *  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at */
-  smoke: { up: 0.85, radius: 0.12, cells: 2, density: 0.9, temp: 2.6, speed: 1.0, push: 6, jitter: 0.5, every: 1, viewR: 18, lean: 0.12 },
+  smoke: { up: 1.9, radius: 0.26, cells: 4, density: 3, temp: 30, speed: 1.5, push: 6, jitter: 0.5, every: 1, viewR: 18, lean: 0.12 },
   /** THE SOUND: the bed's level at the fire and each crack's (× how hard the crack is), and how long one bed voice is held before the next takes over (the
    *  mixer lets a followed voice go after its own time, and one it never took — the mixer off, a page in the background — is asked for again then) */
   bed: 0.5, crack: 0.55, bedSecs: 12,
@@ -99,10 +101,13 @@ export function firePops(seed: number, time: number, back: number): { at: number
 /** THE LIGHT'S FLICKER at `time`: what the authored strength is multiplied by (its mean over time is 1, but for the cracks' kicks) */
 export function fireFlicker(seed: number, time: number): number {
   const K = FIRE; let s = 0, w = 0;
-  for (let i = 0; i < K.rates.length; i++) { s += K.weights[i] * Math.sin(TAU * (K.rates[i] * time + h01(Math.floor(seed * 65535) + i * 71))); w += K.weights[i]; }
-  let f = 1 + K.depth * s / Math.max(w, 1e-6);
+  // smooth noise at each rate, not a sine: four sines come round again and read as breathing. Weighed by the root of the weights' squares, so the swing the table names is kept
+  const si = Math.floor(seed * 65535);
+  for (let i = 0; i < K.rates.length; i++) { const x = K.rates[i] * time + h01(si + i * 71), k = Math.floor(x), u = x - k, e = u * u * (3 - 2 * u), c = si + i * 7919;
+    s += K.weights[i] * (2 * (h01(c + k * 131) * (1 - e) + h01(c + (k + 1) * 131) * e) - 1); w += K.weights[i] * K.weights[i]; }
+  let f = 1 + K.depth * s / Math.max(Math.sqrt(w), 1e-6);
   for (const p of firePops(seed, time, K.kickSecs * 4)) f += K.kick * p.hard * Math.exp(-(time - p.at) / K.kickSecs);
-  return f;
+  return Math.max(K.least, Math.min(K.most, f));
 }
 
 /** where the fire's mouth is and how wide: the glowing box the level hung on the lamp, or failing one a hand under the lamp */

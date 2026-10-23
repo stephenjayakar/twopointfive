@@ -9,9 +9,10 @@
 struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f, pop: array<vec4f, 4> };
 
 const FIRE_STEPS = 18.0;        // samples of the flame along a pixel's ray
-const FIRE_SIGMA = 16.0;        // 1/m: how soon a flame hides what is behind it (a hand's width of full flame keeps a fifth)
-const FIRE_GAIN = 1.5;         // scene radiance of full flame at its hottest (the drum's coals are authored at 11)
-const FIRE_EMBER_GAIN = 6.0;   // … of an ember just thrown (a point far smaller than a pixel: what reaches the picture is this × its share of the pixel)
+const FIRE_SIGMA = 6.0;         // 1/m: how soon a flame hides what is behind it. A flame is THIN: a hand's width of it keeps half of what is behind, so a long path
+                                // through the heart is bright, the edges are dim and deep in colour, and the coals show through from above
+const FIRE_GAIN = 2.0;          // scene radiance of full flame at its hottest (the drum's coals are authored at 11)
+const FIRE_EMBER_GAIN = 2.5;   // … of an ember just thrown (a point far smaller than a pixel: what reaches the picture is this × its share of the pixel)
 const FIRE_EMBER_R = 0.004;     // m: an ember's own radius
 const FIRE_POP_EMBERS = 6u;     // embers a crack throws
 
@@ -49,16 +50,16 @@ fn fireFlame(F: FireRec, P: vec3f) -> vec2f {
   // torn by what rises through it: whole at the coals, ragged up its sides, loose islands at the top
   let n = 0.62 * fireN(vec3f(q.x * 9.0, q.y * 6.0 - up * 2.2, q.z * 9.0) + s) + 0.38 * fireN(vec3f(q.x * 21.0, q.y * 13.0 - up * 4.4, q.z * 21.0) - s);
   let edge = 1.0 - yy;
-  var f = smoothstep(0.0, 0.3, edge + (n - 0.5) * (0.25 + 0.6 * min(yy, 1.3))) * smoothstep(0.0, 0.22, rim + (n - 0.5) * 0.3);
-  f *= smoothstep(-0.04, 0.03, q.y);
+  var f = smoothstep(0.0, 0.13, edge + (n - 0.5) * (0.35 + 0.8 * min(yy, 1.3))) * smoothstep(0.0, 0.22, rim + (n - 0.5) * 0.3 * smoothstep(0.0, 0.1, rim));   // (no flame beyond the rim: the noise alone must not light one there)
+  f *= smoothstep(-0.01, 0.16, q.y) * (1.0 - smoothstep(1.4, 1.7, y));   // open at its feet, so the coals are seen between its roots; and gone before the volume's own top
   let hot = clamp(f * clamp(0.2 + 1.1 * edge, 0.0, 1.0) * (0.5 + 0.5 * rim), 0.0, 1.0);
   return vec2f(f, hot);
 }
 /** the light of a flame that hot: deep red at the cool end, orange, a yellow heart */
 fn fireColor(hot: f32) -> vec3f {
   var c = mix(vec3f(0.85, 0.09, 0.004), vec3f(1.0, 0.28, 0.02), smoothstep(0.0, 0.3, hot));
-  c = mix(c, vec3f(1.0, 0.46, 0.06), smoothstep(0.3, 0.85, hot));
-  return c * (0.3 + 1.8 * hot * hot);
+  c = mix(c, vec3f(1.0, 0.60, 0.14), smoothstep(0.3, 0.85, hot));
+  return c * (0.10 + 2.6 * hot * hot * hot);   // (a wide range: the rim stays under the tone curve's shoulder and keeps its red, the heart goes yellow)
 }
 /** where the vertical cylinder of radius R about `c` between heights y0 and y1 cuts the ray: (near, far), near > far = it does not */
 fn fireCyl(ro: vec3f, rd: vec3f, c: vec3f, R: f32, y0: f32, y1: f32) -> vec2f {
@@ -76,11 +77,11 @@ fn fireSpot(ro: vec3f, rd: vec3f, tMax: f32, P: vec3f, cpix: f32) -> f32 {
   if (t <= 0.0 || t > tMax) { return 0.0; }
   let d2 = dot(w, w) - t * t;
   let sg = max(FIRE_EMBER_R, 0.55 * cpix * t);
-  if (d2 > 9.0 * sg * sg) { return 0.0; }
+  if (d2 > 16.0 * sg * sg) { return 0.0; }
   return min(1.0, (FIRE_EMBER_R * FIRE_EMBER_R) / (sg * sg)) * exp(-0.5 * d2 / (sg * sg));
 }
 /** an ember's colour as it cools over its life (x = 0 thrown, 1 out) */
-fn fireEmberColor(x: f32) -> vec3f { return mix(vec3f(1.0, 0.5, 0.1), vec3f(0.9, 0.1, 0.01), smoothstep(0.0, 0.8, x)) * pow(1.0 - x, 1.4); }
+fn fireEmberColor(x: f32) -> vec3f { return mix(vec3f(1.0, 0.36, 0.04), vec3f(0.9, 0.1, 0.01), smoothstep(0.0, 0.8, x)) * pow(1.0 - x, 1.4); }
 
 /** THE EMBERS along the ray → light added. Those the fire lets go of all the while climb on its hot air and are carried off by the wind; those a crack throws
  *  leave fast and fall back. Every path is a closed form of the fire's clock: nothing is kept between frames. */
@@ -91,12 +92,13 @@ fn fireBound(F: FireRec, ro: vec3f, rd: vec3f) -> vec2f {
   let half = F.c.xy * (FIRE_DRIFT * 1.5);
   return fireCyl(ro, rd, F.a.xyz + vec3f(half.x, 0.0, half.y), 1.3 + length(half), -0.9, 3.4);
 }
-fn fireEmbers(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32) -> vec3f {
+struct FireEmb { near: vec3f, far: vec3f };   // the embers this side of the flame's middle, and those beyond it
+fn fireEmbers(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, tMid: f32) -> FireEmb {
   let R = F.a.w; let H = F.b.x; let heat = F.b.y; let t = F.b.w; let base = F.a.xyz;
   let sd = u32(F.b.z * 65535.0);
   let cb = fireBound(F, ro, rd);
-  if (cb.x > cb.y || cb.y < 0.0 || cb.x > tMax) { return vec3f(0.0); }
-  var L = vec3f(0.0);
+  if (cb.x > cb.y || cb.y < 0.0 || cb.x > tMax) { return FireEmb(vec3f(0.0), vec3f(0.0)); }
+  var Ln = vec3f(0.0); var Lf = vec3f(0.0);
   let n = u32(clamp(F.c.w, 0.0, 16.0));
   for (var i = 0u; i < n; i++) {
     let k = sd * 31u + i * 977u;
@@ -113,8 +115,9 @@ fn fireEmbers(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32) -> vec3f {
     P.y += rise;
     let drift = out * (0.1 + 0.2 * fireHu(kc + 10u)) * age + vec2f(sin(age * 5.1 + ph), cos(age * 4.3 + ph * 1.7)) * (0.05 * age) + F.c.xy * (FIRE_DRIFT * age * smoothstep(0.0, 0.5, age));
     P.x += drift.x; P.z += drift.y;
-    let tw = 0.65 + 0.35 * sin(age * 31.0 + ph * 3.0);
-    L += fireEmberColor(x) * (tw * fireSpot(ro, rd, tMax, P, cpix));
+    let tw = (0.65 + 0.35 * sin(age * 31.0 + ph * 3.0)) * (0.4 + 1.2 * fireHu(kc + 11u));   // (no two alike)
+    let e = fireEmberColor(x) * (tw * fireSpot(ro, rd, tMax, P, cpix));
+    if (dot(P - ro, rd) < tMid) { Ln += e; } else { Lf += e; }
   }
   for (var j = 0u; j < 4u; j++) {
     let pp = F.pop[j]; let age = pp.x;
@@ -131,10 +134,12 @@ fn fireEmbers(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32) -> vec3f {
       P.y -= 1.6 * age * age;
       P.x += F.c.x * FIRE_DRIFT * age * age; P.z += F.c.y * FIRE_DRIFT * age * age;
       if (P.y < base.y - 0.86) { continue; }   // (gone out on the ground beside the drum)
-      L += fireEmberColor(age / life) * (1.3 * fireSpot(ro, rd, tMax, P, cpix));
+      let li = fireEmberColor(age / life) * ((0.7 + 1.2 * fireHu(k + 5u)) * fireSpot(ro, rd, tMax, P, cpix));
+      if (dot(P - ro, rd) < tMid) { Ln += li; } else { Lf += li; }
     }
   }
-  return L * (FIRE_EMBER_GAIN * heat);
+  let g = FIRE_EMBER_GAIN * heat;
+  return FireEmb(Ln * g, Lf * g);
 }
 
 /** ONE FIRE along the ray ro + t·rd, 0 < t < tMax (the surface the pixel shows) → rgb = its light toward the eye, a = how much of what is behind it is kept.
@@ -143,24 +148,25 @@ fn fireEmbers(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32) -> vec3f {
  *  whole breathing slowly and with the light — the level's glowing lid alone is one flat bright plate. */
 fn fireCoals(F: FireRec, q: vec2f) -> vec3f {
   let t = F.b.w; let s = F.b.z * 37.0;
-  let lump = fireN(vec3f(q.x * 34.0 + s, q.y * 34.0 - s, 0.5));                                   // a lump is a hand's width
+  let lump = fireN(vec3f(q.x * 20.0 + s, q.y * 20.0 - s, 0.5));                                   // a lump is a hand's width
   let fine = fireN(vec3f(q.x * 90.0 - s, q.y * 90.0 + s, t * 0.9));
   let breath = 0.5 + 0.5 * sin(t * 1.3 + 6.2831853 * fireN(vec3f(q.x * 11.0, q.y * 11.0, s)));     // each patch of it brightens and dims in its own time
   let gap = smoothstep(0.42, 0.7, lump + 0.25 * (fine - 0.5));                                     // 0 on a lump's back, 1 down between two
   let heat = F.b.y * (0.55 + 0.45 * breath) * (0.6 + 0.4 * F.c.z);
   let glow = gap * gap * heat;
-  let char = vec3f(0.035, 0.012, 0.006) * (0.4 + fine) * (1.0 + 6.0 * heat * smoothstep(0.2, 0.45, lump));   // a lump's back: black, its edges catching red
-  return char + fireColor(0.25 + 0.6 * glow) * (2.4 * glow);
+  let char = vec3f(0.035, 0.012, 0.006) * (0.4 + fine) * 2.0;   // a lump's back: black
+  return char + fireColor(0.1 + 0.4 * glow) * (3.0 * glow);     // … and the gaps deep orange and red, under the flame's own light
 }
 fn fireAir(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, jit: f32) -> vec4f {
   let heat = F.b.y;
   if (heat <= 0.0) { return vec4f(0.0, 0.0, 0.0, 1.0); }
   let R = F.a.w; let H = F.b.x;
-  var acc = fireEmbers(F, ro, rd, tMax, cpix);
   var T = 1.0;
   let lean = 0.125 * length(F.c.xy) + 0.08;   // (fireFlame's bend at the flame's top, 0.055 × 1.7^1.5 a m/s, and its own sway and wobble)
-  let cb = fireCyl(ro, rd, F.a.xyz, R * 1.75 + lean, -0.04, H * 1.7);
+  let cb = fireCyl(ro, rd, F.a.xyz, R * 1.9 + lean, -0.04, H * 1.7);
   let t0 = max(cb.x, 0.0); let t1 = min(cb.y, tMax);
+  let em = fireEmbers(F, ro, rd, tMax, cpix, select(1e30, 0.5 * (t0 + t1), cb.x <= cb.y && t1 > t0));
+  var acc = em.far;
   if (cb.x <= cb.y && t1 > t0) {
     let ds = (t1 - t0) / FIRE_STEPS;
     let glow = FIRE_GAIN * heat * (0.75 + 0.25 * F.c.z);
@@ -173,8 +179,9 @@ fn fireAir(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, jit: f32) -> 
       T *= 1.0 - a;
       if (T < 0.02) { break; }
     }
-    acc = acc * T + emb;   // (an ember behind the flame is seen through it; the few in front lose nothing by this that the eye can find)
+    acc = acc * T + emb;   // (an ember beyond the flame's middle is seen through the flame)
   }
+  acc += em.near;
   // the bed of coals, seen from above through whatever flame stands on it: it hides the lid it lies on
   let Rb = F.d.x;
   if (Rb > 0.0 && rd.y < -1e-4 && ro.y > F.a.y) {
