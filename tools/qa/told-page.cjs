@@ -2,9 +2,10 @@
 //   PORT=5241 node tools/qa/told-page.cjs [outDir]      (a dev server on that port: PORT=5241 bun run tools/serve.ts)
 // The start page first (plain DOM; no GPU is asked for, the boot stops at 'No WebGPU adapter' behind it): a squad mission's Setup rail has a fourth lever,
 // You're told, on Standard; a click steps it (bare, guided), its line is read out at the rail's foot and Difficulty turns to a mix of your own; the Fog of
-// war row steps down to 'off' and its line says it shows more than the team can see; Hard puts the fourth lever on Bare; under &told=0&fogoff=0 there is no
+// war row steps down to 'off' and its line says the team knows every enemy too; Hard puts the fourth lever on Bare; under &told=0&fogoff=0 there is no
 // fourth row and the fog has its three rungs. Then the runs behind the links, on the software adapter (a second browser; GAME=0 skips): a room clear on
-// Guided leaves a '(?)' on the HUD where a defender was last seen and none on Bare; `fog=off` starts it with no fog of war and nobody hidden.
+// Guided leaves a '(?)' on the HUD where a defender was last seen, and none with the lever put on Bare in that same page (a boot there is minutes: two
+// loads, not three); `fog=off` starts it with no fog of war and nobody hidden.
 // TOLD_BREAK=1 puts both switches off on every page: must FAIL. PASS / FAIL lines, stills, exit 1 on a FAIL. The rules' half: tools/qa/told-check.ts.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
@@ -55,7 +56,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
 
   if (process.env.GAME !== '0') {
     const gb = await chromium.launch({ headless: true, channel: 'chromium', args: ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'] });
-    const load = async (q, shot) => { const pg = await (await gb.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage(), errs = []; pg.setDefaultTimeout(900000);
+    const load = async (q, shot) => { const pg = await (await gb.newContext({ viewport: { width: 800, height: 450 }, deviceScaleFactor: 1 })).newPage(), errs = []; pg.setDefaultTimeout(900000);
       pg.on('pageerror', e => errs.push(`page error: ${String(e).slice(0, 300)}`));
       pg.on('console', m => { if (m.type() === 'error' && !/^Failed to load resource/.test(m.text())) errs.push(`console error: ${m.text().slice(0, 300)}`); });
       pg.on('response', r => { if (r.status() >= 400 && !/\/favicon\.ico$/.test(new URL(r.url()).pathname)) errs.push(`${r.status()} ${r.url()}`); });
@@ -71,19 +72,22 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
           if (h) { for (const m of g.guards) if (m.team !== 'hostile') m.dazzledUntil = 1e9;
             const start = [...g.player.char.pos], hp = [...h.char.pos]; let near = null;
             for (const [dx, dz] of [[1.2, 0], [-1.2, 0], [0, 1.2], [0, -1.2], [0.9, 0.9], [-0.9, -0.9], [0.9, -0.9], [-0.9, 0.9]]) { const p = [hp[0] + dx, 0, hp[2] + dz]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.5, p[2]], [hp[0], 1.5, hp[2]])) { near = p; break; } }
-            if (near) { g.teleportPlayer(near); window.__runFrames(20, 1 / 60, [], false); out.seen = g.fogOfWar.seen(h); g.teleportPlayer(start); g.spectate = g.guards.indexOf(h); window.__runFrames(60, 1 / 60, [], false); out.lost = g.fogOfWar.hidden(h);
-              out.marks = g.fogOfWar.lastSeen().length; const els = [...document.querySelectorAll('.marker.lastseen')].filter(e => e.style.display !== 'none'); out.dom = els.length; out.text = els[0]?.textContent ?? ''; out.opacity = els[0]?.style.opacity ?? ''; } }
+            const sight = () => { const o = { seen: false, lost: false, marks: 0, dom: 0, text: '', opacity: '' }; g.teleportPlayer(near); window.__runFrames(20, 1 / 60, [], false); o.seen = g.fogOfWar.seen(h); g.teleportPlayer(start); g.spectate = g.guards.indexOf(h); window.__runFrames(60, 1 / 60, [], false); o.lost = g.fogOfWar.hidden(h);
+              o.marks = g.fogOfWar.lastSeen().length; const els = [...document.querySelectorAll('.marker.lastseen')].filter(e => e.style.display !== 'none'); o.dom = els.length; o.text = els[0]?.textContent ?? ''; o.opacity = els[0]?.style.opacity ?? ''; return o; };
+            if (near) { Object.assign(out, sight());
+              // …and the same sighting with the lever put on Bare in the page (a boot on the software adapter is minutes: one load serves both rungs)
+              if (K && K.TOLD && K.TOLD.on) { const was = K.TOLD.rung; K.TOLD.rung = 'bare'; out.bare = sight(); K.TOLD.rung = was; } } }
           out.time = +g.time.toFixed(2); return out; });
         if (shot) await pg.screenshot({ path: path.join(outDir, shot) });
       } catch (e) { why = String(e).slice(0, 300); }
       await pg.close(); return { v, why, errs }; };
     const base = `roomclear&squad4&paused&quality=verylow&mute${OFF}`;
-    const x = await load(`${base}&told=guided`, '4-guided-mark.png'), y = await load(`${base}&told=bare`, ''), z = await load(`${base}&fog=off`, '5-fog-off.png'), say = o => o.v ? JSON.stringify(o.v) : `the page did not come ready — ${o.why}`;
+    const x = await load(`${base}&told=guided`, '4-guided-mark.png'), y = { v: x.v && x.v.bare ? { fog: x.v.fog, ...x.v.bare } : null, why: x.why || 'the lever is not up in the page', errs: [] }, z = await load(`${base}&fog=off`, '5-fog-off.png'), say = o => o.v ? JSON.stringify(o.v) : `the page did not come ready — ${o.why}`;
     check(!!x.v && x.v.told === 'true/guided/true' && x.v.fog && x.v.seen && x.v.lost && x.v.marks >= 1 && x.v.dom >= 1 && x.v.text === '(?)' && Number(x.v.opacity) > 0.5, 'a room clear on Guided, in play: a defender seen and then lost leaves a \'(?)\' on the HUD where he stood, still strong a second later', say(x));
-    check(!!y.v && y.v.fog && y.v.seen && y.v.lost && y.v.marks === 0 && y.v.dom === 0, 'the same on Bare: the same sighting and loss leave no mark', say(y));
+    check(!!y.v && y.v.fog && y.v.seen && y.v.lost && y.v.marks === 0 && y.v.dom === 0, 'the same page with the lever put on Bare: the same sighting and loss leave no mark', say(y));
     check(!!z.v && z.v.fog === false && z.v.guards > 0 && z.v.hidden === 0 && z.v.time > 0, 'fog=off: the room clear starts with no fog of war and no defender is hidden', say(z));
     const all = [...x.errs.map(e => `guided: ${e}`), ...y.errs.map(e => `bare: ${e}`), ...z.errs.map(e => `fog off: ${e}`)];
-    check(all.length === 0, 'no console error, page error or failed resource on the three loads', all.length ? `${all.length}, the first: ${all[0]}` : '0 + 0 + 0');
+    check(all.length === 0, 'no console error, page error or failed resource on the two loads', all.length ? `${all.length}, the first: ${all[0]}` : '0 + 0');
     await gb.close();
   }
   console.log(failed ? '=== told-page: FAILED ===' : '=== told-page: ALL PASS ==='); process.exit(failed ? 1 : 0);
