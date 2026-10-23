@@ -583,6 +583,47 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     stood at the scripted spot with the step up): the window is drawn, the man by it stands with the cursor on him, the far man shows; and in BOTH the player himself cannot be
     made out, in the black between the bags and the hall's wall (his light meter reads 0 there): the taller bags did not make that, and nobody has said whether it is wanted.
     NOT RUN: map-check's 48 runs, tour, soak. NOBODY HAS SEEN the line or the wave on a page, the shot through the glass from 0.8 m, or any of it moving. Never on a GPU.
+    HOW LIT HE IS AT THE GLASS, AND WHY NO LAMP WAS HUNG THERE (asked after the still; hard die 1, the page's stand, read each quarter second while he stands on the scripted
+    spot): direct light on him 0.00 (`lightEstimateAt`: the hall's own shadow from the moon, no lamp in reach), his meter 0.15; the far man has eye contact with him through the
+    glass (5.3 m, in his cone, both alert and script-held) and `sightGain` on him is 0.12 a second, where 0.25 is the licence to shoot (roomfight, morale, runner): the spot is
+    safe because it is dark. By the same formula the licence comes at a meter of about 0.25. A lamp over the window tried in a scratch copy (a point light of intensity 1 at
+    2.2 m on the hall's wall: direct 0.43, his meter 0.62) put the far man's gain at 1.2 to 1.4. So no light that changes the picture there leaves the far man without his
+    shot: one model for the picture and the AI. What lights him in a run today is his own squad: a following teammate's weapon light crossing the strip read 2.9 on him for a
+    quarter second. Whether he should read at the glass (a lamp and the far man held a beat past his mate's fall; a rim on the player that is not light; or dark as it is) is
+    the maintainer's call, not made. The page's own meter (software adapter, the lowest preset, six drawn frames) read 0.00 on him at the spot, and the still after them
+    is the same black. That still is no judge of a real card: seven drawn frames carry none of the bounce a played minute gathers.
+  - **Plan mode, opened and closed, is taught at the workshop** (2026-10-23; the maintainer: "i think having the 2nd tutorial is fine, but we should remove the player
+    character" · "and then 4th tutorial teaches entering and exiting plan mode". Lesson data, its scripted player and its page check: no switch, no rule of the game's; the
+    frame's own `plan` action, `planLine`, `noTap` and `planWalk` do it. The level's boxes are as they were, its steps are 24 where they were 23. The plan mission's own
+    'mode' and 'up1' teach the same two keys until its player character is taken out of it, which is that mission's work, not this bullet's). WHERE AND WHY THERE: the
+    first place of the mission where a plan is what the moment asks for: a man on one doorway, another door behind him, both on the screen from the street the line 'out'
+    walks him to. THE STEPS, in place of 'side' (the squad's key on the side door): 'mode' "He's watching that doorway. Hold [Shift] and tap [B] to open plan mode" (the
+    doorway's card, with a third sentence: plan mode works down here too and shows both doors; `allow: ['plan']`, his from here to the end; no ring, the step is a key
+    pressed where he stands) · 'side' "Right-click the side door to send your squad to it" · 'round' "Press [Tab] to close plan mode, then go around with them" under the
+    card 'Plan from where you stand' (the view stays close to you; to plan further on, close the mode and walk there first: `planNear`'s rule in his words). 'shop' is as
+    it was: the squad's key on the door again. A TAP OF THE SQUAD'S KEY GIVES NOTHING on 'mode' and 'side' (`noTap`; its words on 'mode' "Hold [Shift] first, then tap
+    [B]", on 'side' "Right-click the door in plan mode", which is true with the mode up or down): the three rooms before taught that tap, and it would send the four
+    round with the mode never met. HIS SPRINT IS LOCKED on 'mode' and 'side' and his again on 'round': Shift is the pair's first key, and with a sprint to be had the pair
+    pressed with a walk key down is a sprinting tap (`planRun`), which `noTap` then swallows; with the sprint locked `planWalk` makes it the mode. 'mode' and 'side' still
+    pass on the room taken or on a man stacked on that door however he was sent. 'ROUND' WAITS FOR THE MODE TO BE DOWN (`flag plan, value false`, with the alley or the
+    room taken): a second right click on the stacked door takes the room from inside the mode, and passed with the mode up the next lines would ask him to walk while his
+    walk keys move the view. With the mode put away by hand on 'side' the line is "Hold [Shift] and tap [B] to open plan mode again"; with it down on 'round' the line is
+    "Go around with them". WITH PLAN MODE OFF IN THE PAGE (`?qplan=0`) the lines of 'mode' and 'side' cannot be done as written, as the whole plan mission cannot: the
+    pair is then the key's own order, a tap, and the tap is swallowed (the room taken by his own rifle still passes them). The frame would have to stand `noTap` down
+    where the page has no mode: said to its owner, not mended here. TIED:
+    `kitpack-check` counts the doors the lesson sends the squad to (`SQUAD_ROOMS`, three) and now reads them from the steps' `done` tests (`stackOn`, `stacks`), not
+    from the words of a line.
+    MEASURED: `lesson-gate tut-squad` ALL PASS (its frozen arm with the two words the scripted player raises, `TPS_TABBACK` and `TPS_PLANNEAR`: the back key that
+    closes the mode and the near view are the page's and not among the gate's plan words); `lesson-check` and `rails-check` ALL PASS on both stands; both typechecks;
+    `probes.ts kitpack`. The 16 unprotected runs on the shipped stand (six dice, three at a reader's pace, three on hard, three on hard with the frag held back, one on
+    hard at a reader's pace): 24 of 24 steps on all 16, the mode put up once and put away once on each, both hall men to the player on all 16. The scripted player
+    presses the squad's key alone first (no order may go out) and then the pair WITH A WALK KEY DOWN: with the sprint lock taken out of a scratch copy that run fails
+    ("Shift + the command key with a walk key held did not put plan mode up"), so the lock earns its place. `TUT_SQUAD_INSIDE=1` takes the room from inside the mode
+    (two runs, standard and hard): the room falls, the line is still the one that names [Tab], and the back key passes it. THE REAL PAGE (`tools/qa/tut-squad-page.cjs`,
+    software adapter, real keys): 41 lines pass, no console error: the tap alone gives no order and shows the note; Shift and the key with a walk key down put the mode
+    up; the side door's ring is on the screen in the mode (about 50 px from the top edge in the one still); the right button sends four; the card; [Tab] puts the mode
+    away and the line reads "Go around with them". NOT RUN: `all-quick`, a tour, a soak. NOBODY HAS PLAYED IT, and it has never been seen on a GPU: whether the pair
+    reads as natural here, whether the ring so near the top edge is found, and how the card lands a beat after the right click are his to judge.
   - **The harsh places, re-staged** (2026-10-22: the script, one Director verb, two Director reads, and one line in the defenders' squads; no hit point, no number of the fight's, one hit
     still downs the player). A player who does what a line says is not put down for it; a wrong move still costs the checkpoint. THE DEVICE, three times: a man the script holds does
     not fight, so he is kept in its hand until the player has done what the line asks, and brought where the squad's rifles or the player's have him first.
