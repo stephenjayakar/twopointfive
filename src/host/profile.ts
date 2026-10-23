@@ -389,6 +389,8 @@ export function pageSwitches(q: URLSearchParams): void {
   STALK.corner = q.get('stalkcorner') !== '0';   // …and with his back on a wall the held button lies in wait: the man who comes past the corner is grabbed (?stalkcorner=0 = the button on a wall does nothing, as it was)
   stalkPolish(q.get('stalkpolish') !== '0');   // …and the stalk's fourth to sixth passes of polish, up in the page and down on the frozen stand (TPS_STALKPOLISH=1 raises them there); ?stalkpolish=0 puts them down together for a look at the move without them (the way in at a part weight, no spring before the lunge, the turn in the step's first frames, no sway and no room between the heads in the hold, the wall stance alone at a corner, no duck when the man turns) — the numbers journal.ts gives a recording from before them, by the same function
   STALK.on = q.get('stalk') !== '0';   // the stalk (game/stalk.ts): the left button held on a man he is close behind walks Sam in to the grab. ON in the page; ?stalk=0 = the last metres are his own keys, as they were
+  STALK.key = q.get('stalkkey') !== '0';   // …and the row's key finishes it (the interaction's: E): the held click walks him in and waits in reach, nothing grabs by itself. ON in the page; ?stalkkey=0 = the hold becomes the grab, as it was
+  STALK.low = q.get('stalklow') !== '0';   // …and he goes LOWER as he closes, hands down, slower: no arm comes up and he does not rise until the grab. ON in the page; ?stalklow=0 = the arm up and the rise, as it was
   TWOGEARS.on = q.get('twogears') !== '0';   // two gears, not a dial (game/player.ts TWOGEARS): the wheel is nobody's pace and the crouch-walk is the sneak, at its own quicker pace. ON in the page; ?twogears=0 = the wheel's six notches and the tune's crouch-walk, as it was
   FOOTFALL.once = q.get('footfallonce') !== '0';   // one footfall a step (game/player.ts FOOTFALL): a footfall is filed only once the walk cycle has come a quarter of a turn since the last one filed, so a cycle rocking over one edge (backpedal flipping frame by frame: forwards and backwards keys by turns, or a man walked in the arm) is one footfall and not one a frame. ON in the page; ?footfallonce=0 = every crossing files one, as it always did
   FOOTFALL.owed = q.get('footfallowed') !== '0';   // …and under it, a footfall the legs owe (FOOTFALL.owed): a cycle turned about again and again (the cursor shaken across him) rocks between its edges or crosses one with too little travel to count, and with the first key alone that walk files a third to two thirds of a plain walk's footfalls; on = a step's worth of the cycle walked since the last edge passed files one. ON in the page; ?footfallowed=0 = only an edge files a footfall
@@ -602,6 +604,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FOOTFALL.owed': 'TPS_FOOTOWED=1 (acts only under FOOTFALL.once: with TPS_FOOTFALL=1)',
   'TWOGEARS.on': 'TPS_TWOGEARS=1',
   'STALK.on': 'TPS_STALK=1',
+  'STALK.key': 'TPS_STALKKEY=1 (acts only under STALK.on: with TPS_STALK=1)',
+  'STALK.low': 'TPS_STALKLOW=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.turnIn': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.cornerShow': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'STALK.catchLong': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
@@ -609,6 +613,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STALK.yankWith': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'HOLD.wayShape': 'TPS_STALKPOLISH=1 (acts only with bare hands, wherever the reach shows: with TPS_NOKNIFE=1)',
   'HOLD.catchShape': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.hitShape': 'TPS_STALKPOLISH=1 (acts only in the grab a stalk ends in, bare-handed: with TPS_STALK=1 TPS_NOKNIFE=1)',
+  'HOLD.layAhead': 'TPS_STALKPOLISH=1 (acts only at a choke\'s end, in the takedown\'s own fall: with TPS_TAKEDOWN=1)',
   'HOLD.lunge.dip': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'HOLD.lunge.back': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'HOLD.sway.m': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
