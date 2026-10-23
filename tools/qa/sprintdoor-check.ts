@@ -36,6 +36,7 @@ export async function sprintdoorCheck(): Promise<boolean> {
   const was = { door: { ...DOORWAY }, sd: { ...SPRINTDOOR }, blast: DOORBLAST.on, random: Math.random };
   try {
     DOORWAY.oneWay = true; DOORWAY.frameHolds = true; DOORBLAST.on = true;
+    DOORWAY.solid = false;   // (the run's own rule, measured alone: with DOORWAY.solid a leaf hauled toward him moves him aside instead of passing him — that pair is doorsolid-check's 'keys' lines)
     Math.random = seeded(7); const W: any = await quiet(() => standUp({ uploadEvery: 4 })); const g = W.game, pl = g.player, c = pl.char;
     g.godMode = true; g.playerInvisible = true; g.tune.civilians = false; g.guards.length = 0;
     const SPR = g.tune.playerSprint as number;

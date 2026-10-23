@@ -2786,6 +2786,7 @@ if (on('wallpen', 'all')) await run('wallpen', async () => (await import('./wall
 if (on('slotsetup', 'kit', 'all')) await run('slotsetup', async () => (await import('./slotsetup-check.ts')).slotSetupCheck());   // the slot in hand pressed again opens its setup: 1 semi / auto, 2 the launcher's load, 3 the light; the board gives Z and L nothing (slotsetup.ts SLOTSETUP / ?slotsetup=0 / TPS_SLOTSETUP=1; SLOTSETUP_BREAK=1 must fail)
 if (on('doorforce', 'doors', 'all')) await run('doorforce', async () => (await import('./doorforce-check.ts')).doorforceCheck());   // an alerted man does not wait at a shut door: rounds through a wooden leaf, then the boot (doorforce.ts DOORFORCE; DOORFORCE_BREAK=1 must fail)
 if (on('doorshot', 'off-hinges', 'doors', 'all')) await run('doorshot', async () => (await import('./doorshot-check.ts')).doorshotCheck());   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall times its toll, 2, at any destruction scale (doorblast.ts DOORSHOT; DOORSHOT_BREAK=1 and DOORCOST_BREAK=1 must fail)
+if (on('doorsolid', 'doors', 'all')) await run('doorsolid', async () => (await import('./doorsolid-check.ts')).doorsolidCheck());   // a leaf pulled open is solid to the player: it moves him, or stops on him (doors.ts DOORWAY.solid; DOORSOLID_BREAK=1 must fail)
 if (on('doorthrow', 'doors', 'all')) await run('doorthrow', async () => (await import('./doorthrow-check.ts')).doorthrowCheck());   // a door opened into a man moves and startles him, one slammed or booted into him throws him (doors.ts DOORTHROW, doorthrow.ts; DOORTHROW_BREAK=1 must fail)
 if (on('smokebreak', 'missions', 'all')) await run('smokebreak', async () => (await import('./smokebreak-check.ts')).smokeBreakCheck());   // a man a level's script told to have a smoke (src/game/smokebreak.ts SMOKEBREAK; SMOKEBREAK_BREAK=1 fails it): the flame and the lit end, the left hand to his mouth and back, a thread and a breath of look-only smoke, who, the switch, an old recording
 if (on('rowset', 'missions', 'all')) await run('rowset', async () => (await import('./rowset-check.ts')).rowsetCheck());   // a mission row's own hour and weather (src/game/rowset.ts ROWSET; ROWSET_BREAK=1 fails it): the rule, the rows as shipped, a start and its quit, the sheet, the switch
@@ -3077,6 +3078,7 @@ if (on('pair-steady', 'pair', 'all')) await run('pair-steady', async () => (awai
 if (on('pair-watch', 'pair', 'all')) await run('pair-watch', async () => (await import('./pair-probes.ts')).pairWatch());
 if (on('pair-identity', 'pair', 'all')) await run('pair-identity', async () => (await import('./pair-probes.ts')).pairIdentity());
 // ---------------------------------------------------------------- the partner sneaks: one teammate following while the squad is silent and unnoticed (sneak-probes.ts; game/sneak.ts)
+if (on('by-eye', 'sneak', 'all')) await run('by-eye', async () => (await import('./byeye-probes.ts')).byEye());   // a lit step with a line is seen only where that defender's eye would gain on a man there (SNEAK.byEye; BYEYE_BREAK=1 must fail)
 if (on('sneak-low', 'sneak', 'all')) await run('sneak-low', async () => (await import('./sneak-probes.ts')).sneakLow());
 if (on('sneak-steps', 'sneak', 'all')) await run('sneak-steps', async () => (await import('./sneak-probes.ts')).sneakSteps());
 if (on('sneak-waits', 'sneak', 'all')) await run('sneak-waits', async () => (await import('./sneak-probes.ts')).sneakWaits());
@@ -3261,6 +3263,8 @@ if (on('qonly', 'squadorders', 'all')) await run('qonly', async () => (await imp
 // plan mode, a prototype beside the ring: Shift + the key, men picked with the left button, orders chained with the right, the word's key at a chain's pauses (planmode-check.ts; CMDRING.plan)
 if (on('planmode', 'squadorders', 'all')) await run('planmode', async () => (await import('./planmode-check.ts')).planmodeCheck());
 if (on('planplus', 'squadorders', 'all')) await run('planplus', async () => (await import('./planplus-check.ts')).planplusCheck());
+// one word, two doors of a plan on one signal (CMDRING.planOne); no squad can into a room teammates already hold (DOORTOOLS.tossMate) — onesignal-check.ts
+if (on('onesignal', 'squadorders', 'all')) await run('onesignal', async () => (await import('./onesignal-check.ts')).onesignalCheck());
 // X is where the plan is laid: an order picked with 'wait for my word' on is laid — nobody moves — F sends the plan, a restart puts it back (planlay-check.ts; PLANLAY.on)
 if (on('planlay', 'squadorders', 'all')) await run('planlay', async () => (await import('./planlay-check.ts')).planlayCheck());
 // ---------------------------------------------------------------- the BREACHING SHOTGUN (shotgun-probes.ts; game/shotgun.ts, weapons.ts row 'm870', doortools.ts toGun / gunStep, kit.ts 'shotgun'): 'shotgun' = the family
