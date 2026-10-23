@@ -22,14 +22,15 @@ const PORT = process.env.PORT || 5199, OUT = process.env.OUT || fs.mkdtempSync(p
 const LEVEL = process.env.LEVEL || 'pass.json', QUALITY = process.env.QUALITY || 'low', STILLS = +(process.env.STILLS ?? 6), GAP = Math.max(1, +(process.env.GAP ?? 4)), WARM = +(process.env.WARM ?? 60), METER = +(process.env.METER ?? 45), FWD = +(process.env.FWD || 0);
 const W = +(process.env.W || 960), H = +(process.env.H || 540), VIEWS = (process.env.VIEWS || 'close,play').split(','), TABLE = process.env.FIRE ? JSON.parse(process.env.FIRE) : null;
 const QUERY = process.env.QUERY || 'roomclear&squad4&nofow';
+const DPR = +(process.env.DPR || 1);   // (2 = a laptop's screen: the picture is made at half the device's pixels and scaled up, as a player sees it)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 const want = process.argv.slice(2).filter(a => a === 'fire' || a === 'off'); const jobs = want.length ? want : ['fire'];
 fs.mkdirSync(OUT, { recursive: true });
-const PINS = { close: { pitch: 28, dist: 3.2, up: 0.35 }, play: { pitch: 55, dist: 13, up: 0 }, low: { pitch: 12, dist: 5, up: 0.5 }, far: { pitch: 55, dist: 21, up: 0 } };
+const PINS = { close: { pitch: 28, dist: 3.2, up: 0.35 }, play: { pitch: 55, dist: 13, up: 0 }, low: { pitch: 12, dist: 5, up: 0.5 }, far: { pitch: 55, dist: 21, up: 0 }, shot: { pitch: 50, dist: 7, up: -0.2 } };
 
 async function one(browser, name) {
-  const page = await (await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 })).newPage();
+  const page = await (await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: DPR })).newPage();
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if ((m.type() === 'error' && !/Failed to load resource/.test(m.text())) || /error:|Invalid/.test(m.text())) errs.push(m.text().slice(0, 300)); });
   const url = `http://localhost:${PORT}/?levelFile=${LEVEL}&${QUERY}&paused&quality=${QUALITY}&mute${name === 'off' ? '&fire=0' : ''}`;
   log(`${name}: ${url}`); await page.goto(url);

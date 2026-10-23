@@ -379,7 +379,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   open door), one off only for now stays greyed; the posture row is the last of every second ring and gives up its place first when rows
   overflow. No key sets loud or quiet, before or now. A TUTORIAL MISSION (rails live) KEEPS THE PAGED TREE: its lines name the old digits
   ("[X], then press [3]", "Press [5], then [3]"), the tutorial's own to move. THE CURSOR (`plainHint`): the outline on the floor of what the
-  key orders on, no glyph beside the cursor or in the ring's middle. THE SQUAD'S CORNER cut down to its key lines (his same notes) is NOT here:
+  key orders on, no glyph beside the cursor or in the ring's middle. AND NO OUTLINE (`CMDRING.bareHint`, later the same day, his play note at
+  a wall with the ring up: "the line and circle are weird, don't need them"): `hintView` answers null, so nothing of the squad's cursor mark is
+  drawn, at rest, with the key down or under a ring; ON in the page, `?barehint=0`; off in the module and on the frozen stand, `TPS_BAREHINT=1`;
+  a tick; the journal; ringflat lines 9 and 9b; `cmdring-check` holds it off in its rig; the Options row "Order mark at the cursor" is not
+  listed while it is on. What a tap orders, and on what, is then only the corner's line on the key. THE SQUAD'S CORNER cut down to its key lines (his same notes) is NOT here:
   it is the page's own layer's, which reads `orders.hud()` whole, so the order book's lines are as they were. CHECK `probes.ts ringflat`
   (family squadorders; 12 lines, both stands, one deal seed 3: the rules have no die in them; `RINGFLAT_BREAK=1` fails lines 1 to 6 and 9 on
   both). `qonly-check` holds `flat` off in its rig (its lines ask the ring by the menu's pages). Neighbours' files touched for it:
