@@ -655,13 +655,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     3.4 s, 0.6 s apart — and the second can still dazzles the first pair, two teammates on every run, until the squad's rule is in the build.
     WHAT THE SCRIPTED PLAYER NOW SAYS AND ASKS (`tools/qa/lessons/tut-plan.ts`): after each word, when the first man of each stack was inside the room, how far apart, and the
     teammates the team's own can dazzled ("the word at guardroom: …"); after each facing order, where each man of the pair stands and whether he took it ("the barrier: …") — on the
-    mark a man who did not FAILS the run. `TUTPLAN_STRICT=1` fails the run on stacks more than a second apart or any teammate dazzled: red on every seed as the build stands, green
-    with the tried gate (seeds 1 to 3) — the word is held off until the squad's rule lands, then it is the run's own.
+    mark a man who did not FAILS the run. Stacks more than a second apart, or any teammate dazzled, were first asked only under a word of the run's (red on every seed until the
+    squad's rule was in the build, green with the tried gate on seeds 1 to 3); the bar is the run's own now: the bullet after the next.
     MEASURED (the page's stand, midday): 19/19 on seeds 1 to 8 (114.3 to 115.1 s) and on hard, seeds 1 to 4; six seconds a line on seeds 3 and 5 (221.3, 222.2 s); the wrong plan on
     seeds 1 to 4 ends in 102.6 to 118.5 s with 4, 3, 6 and 3 teammates on a knee at the hall. On the join with the build head: `tutplan-check`, `level-needs --run` and
     `rails-check` green on both stands, `lesson-gate`, `rowset-check` and `lived-check` green, and the real page with real keys to its end card (38 lines, the software adapter,
     no picture taken). Nobody has played the changed post; nothing of it has been seen on a GPU.
-  - **The hall's word step carries no lookout** (2026-10-22, found by the merge run's reading of the scripted player's own line, "hall nobody in"). The hall's steps put a
+  - **The hall's word step went without its lookout for a few builds** (PUT BACK since: the next bullet. 2026-10-22, found by the merge run's reading of the scripted player's own line, "hall nobody in"). The hall's steps put a
     lookout eye inside the room so the player sees the gun. Until `RAILS.eyeFirst` a step's eye was the one the fog had no place for with four men up, so nobody saw through it; with
     it the fog shows the gunner, and the squad's entry pick reads the fog (`autopilot.ts contactBehind`): at the word the stack asked first took the last can — a bang and clear with
     its three seconds of re-forming beside an open and clear — the back pair went in alone at 0.2 s and the front stack was still outside when the room fell. A LOOKOUT IS THE
@@ -670,6 +670,37 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     (seeds 1 to 4, hard on one, a reader's pace on one), and he sees the gun through his men as the doors give. The lesson block alone changed: the level's fingerprint is the same.
     THE SCRIPTED PLAYER: a stack that never goes in has no time, so nothing is said of how far apart they were ("not together: a stack never went in") and the PLAIN run fails on
     it, no strict word asked; on a join, read the "word at" line of EVERY room.
+  - **Its words, its yard's ground, the lookout back, and the bar on two doors** (2026-10-23). No new switch: text, level data and the scripted player.
+    THE TEXT: every line, card, after line and the menu row (`blurb`, `scene`, `teaches`, `place`) is written to `docs/agents/writing.md`, and a second reader who did not
+    write it read every string aloud against the guide, as its Review asks; the notes taken: the first card says "each teammate" (pairs are met a card later); the pick card
+    is "Hit two doors at once" and says what the set-up is for; the hall's card ends on what to do about the gunner; the gates' card speaks of enemies who WILL come; and
+    step `all` has a NEW card, "Pick everyone again" (the go sends only the teammates who are picked — the one thing here a player would carry wrong into a real mission).
+    That card names no key: the word is locked until the next step, and a card that said "press [F]" on a step where [F] is dead was a review's find. KNOWN: `faceA` is 14
+    words and `faceB` 14 (the guide: about twelve), each two deeds in one line (pick two, drag an order); cutting each into two steps wants a lesson test that does not
+    exist (two picked and neither on an order: `picked`'s `free` asks about stacks only), the frame's to add. A click is written "right click" as the other missions' lines
+    are; the guide's own pairs write "right-click": one or the other is the word sweep's.
+    THE LOOKOUT is back on `word2` (`HALL_EYE`, one const for the hall's five steps): a frame's eye is the picture's alone since `RAILS.eyeView`, so the squad picks its
+    entry by what its own men saw. IT LEANS ON THAT RULE: with `?eyeview=0` the gunner is seen through the eye, the squad takes a can and the first men are in at 5.9 and
+    6.1 s, not 1.2 (a review's run, two seeds); no check plays the mission with it off. With four men up the step's eye is the picture's fifth and last place.
+    THE GROUND (the `ground` need of `level-needs`: was a NOTE, 159 m² and 53 m² of bare dirt; now PASS, the largest bare piece 13 m²): the track runs on through its gate
+    to the worn middle; a walked way of gravel from the road gate (the post has since laid its bags across it) and another down from the back gate meet at the guardroom's
+    corner and run into the middle; the dish and the generator stand on a poured pad; oil on the pad, the motorbike's stain in the dirt (the dark of damp: `oil`'s paint
+    is no darker than `dirt`), water thrown out of the hall's back door and off the cooking corner, drips under the washing, a burn pit behind the hall, and five scatters
+    of field stones along the yard wall's foot, clear of its face. 49 boxes more (434), all decals, thin finishes or stones under 0.19 m. THE LEVEL'S FINGERPRINT MOVED:
+    checkpoints and recordings of this level from before are refused. `lived-check`'s own row for the level (`LEVEL_BASE`) is at the commit that carries it.
+    THE BAR: two stacks on one word more than a second apart, or a teammate dazzled as they went in, FAIL the scripted run wherever both of the squad's rules are on
+    (`CMDRING.planOne`, `DOORTOOLS.tossMate`: the page; a frozen run without `TPS_PLANONE=1 TPS_TOSSMATE=1` only says the line, as does `TUTPLAN_LOOSE=1` anywhere). A room
+    that fell before the word fails too (a stack that did not wait: nothing could be measured). With `TPS_PLANONE=0` on the page's stand the line reads as his tape did:
+    2.8 and 3.4 s, two teammates dazzled.
+    MEASURED on the join with the build head (the page's stand, midday, the sky's light on every meter): 19/19 on seeds 1 to 8 (114.4 to 114.7 s) and on hard, seeds 1 to
+    4, every one with the guardroom's first men in at 3.8 and 3.7 s and the hall's at 1.2 and 1.2 s, nobody dazzled; six seconds a line on seeds 3 and 5 (222.6, 222.5 s);
+    the wrong plan on seeds 1 to 4 ends in 102.7 to 102.8 s. `tutplan-check`, `level-needs --run` and `rails-check` green on both stands (`TUTPLAN_BREAK=1` red, as it
+    must be), `lesson-gate`, `lesson-check`, `rowset-check`, `lived-check`, `door-size`, `second-way-check`, `floor-order-check`, `wallfurn-check`, `level-names-check`,
+    `level-lint`, `export --check`, both typechecks.
+    THE REAL PAGE with real keys and a real mouse (`tools/qa/tut-plan-page.cjs`, the software adapter, no picture taken): 38 lines pass, to its end card, no page or
+    console error.
+    Nobody has played the reworded mission. Whether the ground reads is by eye and nobody has seen it on a GPU: the paints' values are held to STYLE.md's rule by
+    arithmetic only, and the oil on the pad is 0.34 of its ground, a hair over the third the rule allows.
   - **NOT taught, on purpose** (a first prototype): waits on the word added to and taken off a stop (no place where they earn their keep was found), Shift + right click to chain stops,
     the ring by the right button kept down. **Nobody has played it and nothing of it has been seen on a GPU**: the software adapter draws the level and the mode's marks; how the night
     reads, how the plan's lines look over it, and whether nineteen lines feel like a mission or a list are a person's to say.
@@ -1581,7 +1612,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   civilian's) by the SAME SUM as the player's: the estimate where he is, plus the moon where nothing solid is up its direction (an hour's own sun is
   never added again: at midday that lit a man twice). `--floor N` (the pair mission's, `mode.floor`) is the same hook's lower bound: the bounce neither
   has; with `--nosky` it is the floor alone. Two models of one floor would let a man be lit to the squad and dark to himself. This is also what every
-  caller of `runLesson` gets (`tut-solo-check`'s arms). STILL NOT THE PAGE'S: no bounce but that floor,
+  caller of `runLesson` gets (`tut-solo-check`'s arms). AND THE NIGHT SKY'S OWN LIGHT (10-23, `glowAt`; `--noglow` = the moon alone): the page's meter
+  has it through the bounce cache, so open moon shadow reads LIGHT 8 to 16 at the presets a player uses (measured by the stealth sight work on the pair's
+  level, software adapter, preset high) and read 0 here. By the sky's own numbers (`skyRadiance`: the zenith's colour, read live): pi times its luminance
+  times how much sky the point has, five rays (the zenith's cap a quarter, four at 60 degrees three sixteenths each). On the pair's level, against the
+  page at high: the lane's gap 0.034 here and 0.036 to 0.050 there; its east end 0.048 and 0.040 to 0.053; the low wall's mark LIGHT 50 and 47. Nothing
+  by day (an authored hour's sky is in the estimate). The pair's two start points on the road agree too (moonlit, LIGHT 45 to 50 here and 46 to 47 on the page with the men's own bodies skipped: a first
+  page reading there, 2 to 8, was taken inside the men standing on those spots and is struck). MEASURED with it (lesson-gate, build 897's head): mission 1, the plan, the
+  squad, the ledger and the pair pass on both arms; THE SOLO MISSION DOES NOT: its `back` beat ("the dark is cover too", beside the shop's door with the
+  lamp shot out) reads 31 over its own bar of 25 (the moon alone: 23). Its script holds the sky's light off (`mode.glow: false`, a HELD BAR with the
+  reason over it) until its owner moves the spot or the claim. STILL NOT THE PAGE'S: the moon's bounce into a shadow beside lit
+  ground (the page's low wall at knee height, 0.1: `--floor`), THE PRESET (the page's own meter reads tight shadow two to three times darker at low and
+  lowest, a coarser cache grid, and every page lane in the cloud runs lowest: a lane that reads the meter, or a man who sees by it, wants
+  `QUALITY=high`), no bounce but that floor,
   no bodies' shadows, no smoke between a light and a man, no flicker. (2) `lesson-gate`'s frozen arm of a tutorial mission was given the frame's word and
   not the row's own hour and weather (`TPS_ROWSET=1`): a mission laid by day was played there at night. It is given both now. (3) `lesson-check` with no
   name walked Training's seven levels: every "ALL PASS (73)" had covered no tutorial level, and a rows note (`rowsWithheld`) never printed. It walks

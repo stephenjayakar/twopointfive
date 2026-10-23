@@ -57,7 +57,7 @@
 //     materials: materials-arealight materials-finish materials-frame materials-presets materials-vndf materials-wear
 //     needs: needs-determinism needs-frozen-up needs-identity needs-interrupts needs-one-away needs-telegraph
 //     particles: particles-determinism particles-off particles-queue particles-sites
-//     perf: perf-cards perf-flags perf-texpool
+//     perf: ladder perf-cards perf-flags perf-texpool
 //     qrf: qrf-element qrf-gating qrf-limits qrf-perimeter qrf-reset qrf-timeline qrf-trigger qrf-wave qrfsquad response
 //     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
@@ -2551,6 +2551,7 @@ if (on('heldclicks', 'close', 'all')) await run('heldclicks', async () => (await
 if (on('takedown-kill', 'takedown', 'all')) await run('takedown-kill', async () => (await import('./takedown-check.ts')).takedownKill());                // the kill from the hold: the fist across his throat and out wide, his head back before the cut, his pelvis down by the clock's end, nothing pops into the fall; the half off = the hold's pose and the old fall
 if (on('takedown-beats', 'takedown', 'all')) await run('takedown-beats', async () => (await import('./takedown-check.ts')).takedownBeats());             // the choke's beats: both hands on the forearm at once, off it before he is lowered, the head to the side first; out on the same frame; eased off, nothing pops
 if (on('haul', 'takedown', 'close', 'all')) await run('haul', async () => (await import('./haul-check.ts')).haulCheck());   // the choke hauls him up and back (TAKEDOWN.haul; the check writes the key itself for each arm): his feet off the floor, Sam leaning back, set down by the time he is lowered, out on the same frame, no joint jumping
+if (on('footfall', 'player', 'all')) await run('footfall', async () => (await import('./footfall-check.ts')).footfallCheck());   // one footfall a step (player.ts FOOTFALL.once; the check writes the key itself for each arm): a walk cycle rocking over one edge files one, a plain walk what it always did, a man a stride in front does not hear twenty
 // STEALTH POSES (src/game/stealthpose.ts; tools/qa/stealthpose-check.ts writes the switch itself for each arm, so it asks the same on either stand; STEALTHPOSE_BREAK=1 must fail). One process shares the staged runs
 if (on('stealthpose-harness', 'stealthpose', 'all')) await run('stealthpose-harness', async () => (await import('./stealthpose-check.ts')).stealthposeHarness());       // the frozen stand's row and word, the page's switch, the knob registry, a recording's tables
 if (on('stealthpose-off', 'stealthpose', 'all')) await run('stealthpose-off', async () => (await import('./stealthpose-check.ts')).stealthposeOff());                   // off: nothing fed, the layer never made; on with every half off = the same poses and digest
@@ -3386,6 +3387,7 @@ async function runScript(file: string, args: string[] = []): Promise<boolean> {
   return code === 0;
 }
 if (on('quality-plan', 'perf', 'all')) await run('quality-plan', () => runScript('quality-plan.ts'));   // auto quality on paper (quality-plan.ts): plan()'s picks for the synthetic machines + the 39 state checks of the Quality controller (calibration, the ladder, the climb) — two-space '  PASS — …' lines
+if (on('ladder', 'perf', 'all')) await run('ladder', () => runScript('ladder-replay.ts', ['--selftest']));   // the quality ladder on synthetic machines (ladder-replay.ts --selftest: the aims, the paced checks) and ONE CACHE GRID's lines (ONEGRID_BREAK=1 fails four) — under a second, two-space '  PASS — …' lines
 if (on('frame-layout', 'perf', 'all')) await run('frame-layout', async () => !(await import('./frame-layout.ts')).frameLayoutFailures());   // the static tables four lanes append to: struct Frame's byte layout vs writeFrame + FRAME_BYTES, one feature per frame-flag bit on both sides, BoxFlag ⇄ BOX_*
 { let ran = false;   // the renderer perf pass's CPU-held parts (perf-probes.ts): the bounce card's geometry / energy / nomination, the flags table
   if (on('perf-cards', 'perf', 'all')) { ran = true; await run('perf-cards', async () => (await import('./perf-probes.ts')).perfCards()); }
