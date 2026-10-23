@@ -265,7 +265,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`?disarm=0`), off in the module and on the frozen stand (`TPS_DISARM=1` with `TPS_HOLDDROP=1`); off, the grab says what it said (`grabScuffle`, the knocked-out
   gun's borrowed `magDrop`). WHO PLAYS WHAT: `player.ts startGrab` (through `disarm.ts disarmCatch`, one condition for all three) plays `grabCatch` at his throat on the grab's frame (gain 0.5, rate pinned to 1 so the beat does
   not wander); `game/disarm.ts take()` plays `gunStrip` at the gun on the frame it leaves his hand (0.45; 0.22 s after the catch as the move stands; with `HOLD.stripFirst`, on in the page, the strip is at 0.17 s and the catch is played by `disarmTick` at 0.27 s, as the arm lands: `docs/agents/stealth.md`, the disarm leads); the item's
-  first landing plays `gunDown` ONCE at the floor (0.4, less for a slow landing; 0.82 s after the catch for a pistol, 0.58 s when Sam's own pistol raps it out).
+  first landing plays `gunDown` ONCE at the floor (0.4, less for a slow landing; 0.82 s after the catch for a pistol, 0.58 s when Sam's own pistol raps it out; with `HOLD.stripFirst` up, 0.70 s from the grab's start, 0.53 after the strip: the listening page has both orders as rows of `gunStrip`).
   Gains: `disarm.ts DISARM_GAIN`. A carbine is the same strip and knock at rate 0.8; the rapped strip is at 1.12. `heldProtest` still comes in as the hold locks.
   THE VOICES: `grabCatch` 0.31 s, a whip of sleeve, one thump 0.03 s in (99 % of its energy under 2 kHz), a breath cut off; `gunStrip` 0.20 s, a dry snap, four
   ticks of slide rattle, one click, nothing ringing past 25 ms (57 % above 2 kHz: the bright beat between two dull ones); `gunDown` 0.30 s, one knock and three

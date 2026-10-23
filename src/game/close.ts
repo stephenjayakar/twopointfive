@@ -282,7 +282,7 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
   offer(it, verbs);
 }
 /** the line that says what the held click does (STALK.key: the hold walks him in, the row's key grabs) */
-const sneakHint = (): string => STALK.key ? 'LMB  hold to sneak up on him' : 'LMB  hold to sneak up and grab him';
+const sneakHint = (): string => STALK.drag ? 'LMB  press and drag to sneak up on him' : STALK.key ? 'LMB  hold to sneak up on him' : 'LMB  hold to sneak up and grab him';   // (STALK.drag: the mouse is the stick)
 /** this frame's best offer: the nearest man Sam could do something to (what the ready pose is taken from) */
 function noteBest(g: Game, o: CloseOffer) { const S = stateOf(g); if (S.t !== g.time) { S.t = g.time; S.best = null; } if (!S.best || o.dist < S.best.dist) S.best = o; }
 /** A civilian's gate with the windows on (player.ts keeps her rows and their wording): is Sam in her window, and near enough */

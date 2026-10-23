@@ -57,6 +57,17 @@ const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage te
         return { names, shut, rows: rows.length, cut, bare, tries, headTips: heads.filter(h => (h.title || '').length > 10).length }; });
       say(P.names.length >= 10 && P.shut >= 5 && P.rows >= 60 && P.cut.length === 0 && P.bare.length === 0 && P.headTips >= 10 && P.tries >= P.rows * 0.6,
         `the lab's knobs are in ${P.names.length} groups (${P.shut} of them shut to begin with, ${P.headTips} with a hover of their own); of ${P.rows} rows, ${P.cut.length} have a name cut short${P.cut.length ? ' (' + P.cut.slice(0, 4).join(' · ') + ')' : ''}, ${P.bare.length} have no hover${P.bare.length ? ' (' + P.bare.slice(0, 4).join(' · ') + ')' : ''}, and ${P.tries} hovers say what to look for or what the ends mean`); }
+    { // (stalk.ts STALK.drag, the lab's prototype: the press on him is the stick's middle; the real mouse is dragged toward him, then the lines below are run with it down)
+      const dragUp = await page.evaluate(() => !!window.__knobs.registry().STALK.drag);
+      if (dragUp && !NOKEY) {
+        await behind(3.0); const [x, y] = await chest(); await page.mouse.move(x, y); await frames(2); await page.mouse.down(); const s0 = await frames(60);
+        const [sx, sy] = await page.evaluate(() => { const g = window.__game, v = document.getElementById('view'), r = v.getBoundingClientRect(), [a, b] = window.__cam.project([g.player.char.pos[0], 0.6, g.player.char.pos[2]], r.width, r.height); return [r.left + a, r.top + b]; });
+        const L = Math.hypot(x - sx, y - sy) || 1, full = await page.evaluate(() => window.__knobs.registry().STALK.dragFull);
+        await page.mouse.move(x + (x - sx) / L * full, y + (y - sy) / L * full, { steps: 6 }); const s1 = await frames(45); await page.mouse.move(x, y, { steps: 6 }); const s2 = await frames(40); await page.mouse.up(); await frames(5);
+        say(Math.abs(s0.gap - 3.0) < 0.1 && s0.speed < 0.05 && s1.gap < s0.gap - 0.5 && s1.speed > 1 && s2.speed < 0.1, `the lab has drag to steer up: pressed on him 3 m behind, he holds still (${s0.gap.toFixed(2)} m, ${s0.speed.toFixed(2)} m/s); the mouse dragged toward him, he closes (${s1.gap.toFixed(2)} m, ${s1.speed.toFixed(2)} m/s); back to the press, he stops (${s2.speed.toFixed(2)} m/s)`);
+        await page.evaluate(() => { window.__knobs.registry().STALK.drag = false; });   // (the lines below are the hold's own)
+      } else { say(NOKEY && dragUp, `?stalkkey=0&stalklow=0: the lab still has drag to steer up (${dragUp}); it is put down for the lines below`); await page.evaluate(() => { window.__knobs.registry().STALK.drag = false; }); }
+    }
     { const v = await page.evaluate(() => { const R = window.__knobs.registry(), S = R.STALK, H = R.HOLD; return { jolt: S.jolt, turnIn: S.turnIn, show: S.cornerShow, way: H.wayShape, dip: H.lunge.dip, apart: H.apart.side }; }), up = v.jolt > 0 && v.turnIn && v.show && v.way && v.dip > 0 && v.apart > 0, down = v.jolt === 0 && !v.turnIn && !v.show && !v.way && v.dip === 0 && v.apart === 0;
       say(POLISH ? down : up, `${POLISH ? '?stalkpolish=0: the polish is down' : 'a plain address: the polish is up'} (the duck ${v.jolt}, the turn through the step ${v.turnIn}, the wait's pose ${v.show}, the shaped way in ${v.way}, the dip ${v.dip}, the heads apart ${v.apart})`); }
     say(boot.key === !NOKEY && boot.low === !NOKEY, `${NOKEY ? '?stalkkey=0&stalklow=0: both are down' : 'a plain address: the key finishes the grab and he goes lower'} (the key ${boot.key}, lower ${boot.low})`);

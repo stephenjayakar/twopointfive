@@ -381,6 +381,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else { const T = k.tables.STALK as Partial<typeof STALK>;
     if (T.key === undefined) STALK.key = false;   // (a file from before the row's key finished a stalk: the hold became the grab by itself)
     if (T.low === undefined) STALK.low = false;   // (…and from before he went lower with his hands down: the arm came up and he rose)
+    if (T.drag === undefined) STALK.drag = false;   // (…and from before the mouse could steer the creep: the hold walks him in)
     if (T.wide === undefined) STALK.wide = false;   // (…and from before his arms went out wide as he crept: his hands by his knees)
     if (T.jolt === undefined) STALK.jolt = 0;   // (a file from before he shrank back off the man who turned round on him: the stalk ended and he sank back into the crouch)
     if (T.joltAtOnce === undefined) STALK.joltAtOnce = T.joltFace === undefined;   // (…and one from before the duck waited for him to face Sam — the fifth pass, a jolt and no joltFace: any turn that ended the stalk gave it, on that frame and with no test. A file of the sixth pass has joltFace and not this key: the wait, as it was)

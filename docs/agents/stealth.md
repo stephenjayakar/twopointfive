@@ -1364,6 +1364,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   crouch's half a second after the man is taken away), upright, grab (held on frame 29 either way), harness. Judged on CPU stills
   (`close-stills.ts` scene `stalk-rifle`, the page's stand): it reads as a prowl from the game's camera, and it is wide. One seed: a
   fixed staging. Nobody has seen it on a GPU.
+- **Drag to steer the creep, a prototype (10-23; `STALK.drag`, `dragDead` 14 px, `dragFull` 140 px; `stalk.ts dragged`; lab only:
+  `?sneaklab` raises it, `?stalkdrag=1` anywhere, `?stalkdrag=0` in the lab; `TPS_STALKDRAG=1`).** The maintainer: "you click on the guy
+  and then you can drag towards him to move in that direction. like a joystick centered on the guy. that would make things feel more
+  controlled than right now which feels automatic." THE RULE: the press on a man still begins the creep (the same arc, range and
+  cursor test) and the screen point it was made at is the stick's middle. While the button is down the mouse's way from there is the
+  way Sam creeps (screen up = the camera's forward, as the move keys have it, so the camera following him does not feed the stick) and
+  its length from `dragDead` to `dragFull` is the share of `pace`. Left at the press he holds still in the pose. He faces the man
+  throughout; the way into the man is taken off the stick over the last 20 cm before `keyM`, so he stops there and can still go round.
+  Everything else is the creep's (the arc ends it, a wall ends it, the key grabs). NOT the switch rule on purpose: it changes how the
+  hold plays everywhere (the tutorials teach "hold left click"), so it is down in the plain page and on both stands until the
+  maintainer has tried it; there is no `FROZEN_HOLDS` row because the stands agree. The line over the man reads "press and drag to
+  sneak up on him" while it is up. THE CHECK is `stalkdrag-check.ts` (`probes.ts stalkdrag`; `STALKDRAG_BREAK=1` reds three of six),
+  both stands: still (2 s, 0 cm moved), toward (the whole drag 1.6 m/s, half of it 0.8), side (across, 2° off the man), stops (0.79 m
+  behind him, the key takes him), off, harness. The page drive drags the real mouse in the lab. No hand has held it and nobody has
+  seen it on a GPU.
+- **The sneak lab's knobs in groups (10-23; `src/host/sneaklab.ts` GROUPS, NUMS, TOGS).** The maintainer, of the panel on his GPU:
+  "it's hard to tweak the knobs in the debug panel, illegible. maybe more grouping, shorter names, alt text would help? and some
+  explanation of what to look for / test in the alt text?" The one long "The creep" list is ten sections that fold (Start and stop,
+  Pace, Pose, The grab, Right click, Passing guards, Fast crouch walk, Corner wait, When he turns, Old pose), the first three of the
+  game's own feel open; each has its own '↺', a header hover saying what to watch, and a live "N moved" summary; every switch sits in
+  its group; every slider has a revert dot. Names are short enough for the 372 px column; each hover says what the number is, what
+  to look for and what to try. The page drive reads it: 12 sections, 79 rows, none cut short, none without a hover. Panel code
+  (`src/ui/panel.ts`) is unchanged. A new STALK number still needs its row here (`sneaklab-check` words).
 - **The grab's disarm, second pass (`HOLD.strip`, `HOLD.bareGrip`; `disarm.ts`, `character.ts`).** The move itself is `HOLD.disarm` (`?disarm=0`,
   `TPS_DISARM=1` with `TPS_HOLDDROP=1`): Sam's right hand takes the gun out of the man's hand 0.2 s into the grab and lets it go at 0.5 s; its voices are
   `docs/agents/sounds.md`'s. Judged on stills, the first pass set the gun down at his thigh (it slid down his leg and lay under his foot) and the held man's
