@@ -123,12 +123,12 @@ export const LEVERS: LeverDef[] = [
  *  how much you're told, from the easiest up. Not a row of LEVERS: it is a lever only while its switch is on (TOLD.on) — `leversNow()` is the list the
  *  screens, the links and the store go by */
 export const TOLD_LEVER: LeverDef = { key: 'told', param: 'told', label: "You're told", rungs: [
-  { id: 'guided', label: 'guided', words: "a mark stays for a while where your team last saw an enemy, so you'll know where he went out of sight" },
-  { id: 'standard', label: 'standard', words: 'a mark stays for a few seconds where your team last saw an enemy' },
-  { id: 'bare', label: 'bare', words: "an enemy who goes out of your team's sight leaves no mark" } ] };
+  { id: 'guided', label: 'guided', words: 'a mark shows where your team last saw an enemy, and it stays for a while' },
+  { id: 'standard', label: 'standard', words: 'a mark shows for a few seconds where your team last saw an enemy' },
+  { id: 'bare', label: 'bare', words: "you don't get a mark when your team loses sight of an enemy" } ] };
 /** the fog lever's bottom rung on a squad mission (TOLD.fogOff): no fog is no fog for the team too — with it down the squad's own code knows every enemy (fogofwar.ts
  *  sighting / hidden answer for all of them), and the words say so */
-export const FOG_OFF_RUNG: { id: FogOff; label: string; words: string } = { id: 'off', label: 'off', words: "there's no fog of war, so you and your team know where every enemy on the floor is, even the ones nobody can see" };
+export const FOG_OFF_RUNG: { id: FogOff; label: string; words: string } = { id: 'off', label: 'off', words: "there's no fog, so you and your team always know where every enemy is" };
 /** THE LEVERS AS THE BUILD HAS THEM NOW: LEVERS, the fog's with its bottom rung where that is offered, and the fourth while it is on. With both switches off it IS `LEVERS` */
 export function leversNow(): LeverDef[] {
   if (!TOLD.on && !TOLD.fogOff) return LEVERS;
@@ -252,7 +252,7 @@ export function setLever<K extends LeverKey>(key: K, rung: Levers[K] | null, kee
   if (rung !== null && !isRung(key, rung)) return;
   if (keep && HELD) { for (const L of leversNow()) if (HELD[L.key] !== undefined && SET[L.key] === undefined) (SET as Record<string, string>)[L.key] = HELD[L.key]!; write(HELD.ai === undefined && HELD.kit === undefined); HELD = null; }
   const stood = adopt();
-  if (rung === null || (structure !== undefined && rung === presetLevers(BASE, structure)[key])) delete SET[key]; else SET[key] = rung as Levers[K];
+  if (rung === null || (structure !== undefined && rung === (key === 'told' ? toldOfLevel(levelOfThree()) : presetLevers(BASE, structure)[key]))) delete SET[key]; else SET[key] = rung as Levers[K];   // (the fourth lever's own rung is the one it follows the other three to — levelOfThree — not the base's)
   if (keep) { if (!own(key)) { resetPressure(); resetDigIn(); } storeLevers(); if (stood || !own(key)) storeName(BASE); }   // (the level's name with them: what the screen showed under the lever is what the next plain page load starts from)
   write(own(key));
 }

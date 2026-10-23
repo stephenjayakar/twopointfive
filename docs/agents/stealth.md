@@ -162,7 +162,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   AI hard set by hand over standard is still Hard, with this row on Bare, so a machine that kept that mix reads as it did. The row moved by hand off
   its level's rung is a mix (`custom`: records and pars are filed there, `main.ts`). WHAT A RUNG DOES TODAY, one thing: an enemy who goes out of the team's sight keeps his mark for `TOLD.standard` 4 s on Standard, `TOLD.guided`
   10 s on Guided, none on Bare (the debugger's `FOG.lastSeen` row is 0 as shipped; turned up it is the seconds on every rung). The mark is drawn
-  only under a fog, so the row is greyed where the mission would start with none (the fog's lever on off, a quiet mission on off). The mark is the HUD's alone: no game code reads it, so a run
+  only under a fog; the row stays live with the fog's own, its off rung included, because the lever is for more signs than this one. The mark is the HUD's alone: no game code reads it, so a run
   digests the same on every rung and with the lever off. A LATER SIGN ASKS THE LEVER, never the difficulty: `toldAtLeast('standard')` (shown on Standard
   and Guided) or `toldAtLeast('guided')` (Guided alone); with the switch off both answer as Bare. A sign that would show a defender COUNT stays off
   Guided without the maintainer's word (menus.md, the mystery rule). THE FOG OFF (`TOLD.fogOff`): a squad mission's fog lever has the quiet missions'

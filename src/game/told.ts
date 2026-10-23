@@ -7,8 +7,8 @@
 // WHAT A RUNG DOES TODAY: one thing, the last-seen mark (fogofwar.ts lastSeen, the '(?)' ui/overlay.ts already draws for FOG.lastSeen and for the wand).
 // An enemy who goes out of the team's sight keeps a fading mark on the spot he was last seen at for `TOLD.standard` seconds on Standard, `TOLD.guided` on
 // Guided, and none on Bare (FOG.lastSeen, the debugger's row, is 0 as shipped: turned up it is the seconds on every rung). The mark is the HUD's alone:
-// nothing in the game reads it, so a run is the same run on every rung, digest for digest. It is drawn only under a fog: the screens grey the lever's row
-// where the mission would start with none.
+// nothing in the game reads it, so a run is the same run on every rung, digest for digest. It is drawn only under a fog; the lever's row stays live with the
+// fog's own (its off rung included), because the lever is for more signs than this one.
 //
 // A LATER RULE ASKS THE LEVER, never the difficulty: `toldNow()` is the rung in force and `toldAtLeast('standard')` / `toldAtLeast('guided')` is 'this sign
 // is shown here'. With the switch off both answer as Bare: the build as it was, nothing more told than it ever told.
