@@ -96,11 +96,11 @@ interface BreathCount { active: boolean; /** why not, while not active ('' while
  *  only in their picture are the same game, and a save put back finds no stale book of a solver that was emptied — it is dropped by host/putback.ts, by a reseed, and
  *  here whenever the game's own frame count is not the one after the book's last (a snapshot put back by a road that does not tell the host). A restart or a
  *  file's load keeps the count running and builds the men anew under their old ids: a row is bound to the Character it was written for (`who`), so a fresh man
- *  starts a fresh row. (A solver emptied under the same men costs at worst the rest of one breath in the air; the next is whole.)
+ *  starts a fresh row, and a row whose man was not asked about this frame is struck, so the book holds no man who is gone. (A solver emptied under the same men costs at worst the rest of one breath in the air; the next is whole.)
  *  `how` = what the breath is shown as now; `men` = by Character.id, the man the row was written for, the breath (`n`) it speaks of, whether that breath is steam
  *  through the solver, and the breath whose source rides his mouth now (−1 = none). The counts run from the book's opening, so behind a drop they start again
  *  while the game's own (`breaths`) go on. No rule reads any of it back. */
-export interface BreathShown { tick: number; how: string; steam: number; steaming: number; records: number; births: number; by: Record<number, number>; men: Map<number, { who: Character; n: number; steam: boolean; src: number }>; }
+export interface BreathShown { tick: number; how: string; steam: number; steaming: number; records: number; births: number; by: Record<number, number>; men: Map<number, { who: Character; /** the frame he was last asked on: a row nobody asked about this frame is struck */ at: number; n: number; steam: boolean; src: number }>; }
 interface Man { ph: number; pace: number; effort: number; n: number; left: number; /** records this breath is filed as */ of: number; gap: number; step: number; shows: boolean; /** the frame he was last asked on (a source's track lets go of a man nobody asks about any more) */ at: number; }
 interface BreathState { seed: number; men: WeakMap<Character, Man>; stats: BreathCount; /** frames run, never reset */ tick: number; }
 const states = new SideMap<Game, BreathState>('snowBreath.states');
@@ -118,11 +118,9 @@ const h01 = (seed: number, a: number, b: number): number => mix((Math.imul(a + 1
 function recSeed(s: BreathState, id: number, breath: number, k: number): number { return mix((Math.imul(id + 1, 3266489917) ^ Math.imul(breath * 16 + k + 1, 668265263) ^ s.seed ^ 0xb4ea7) >>> 0); }
 /** the counts a probe or the panel reads: the game's and the host's in one row (a copy: read it again after a frame) */
 export function breathStats(g: Game): BreathStats {
-  const S = stateOf(g).stats, P = g.engine.breathShown;
+  const S = states.get(g)?.stats ?? fresh(), P = g.engine.breathShown;   // (a read makes no row: a game nobody has breathed in keeps none in its snapshot)
   return { active: S.active, why: S.active ? P?.how ?? 'breathing' : S.why, men: S.men, shown: S.shown, breaths: S.breaths, frames: S.frames, records: P?.records ?? 0, births: P?.births ?? 0, by: { ...P?.by }, steam: P?.steam ?? 0, steaming: P?.steaming ?? 0 };
 }
-/** the host's side of it alone (undefined before the first frame a man breathes in, and behind a load) */
-export function breathShown(g: Game): Readonly<BreathShown> | undefined { return g.engine.breathShown; }
 /** reseed (probes / captures: same seed → the same breaths), every man's rhythm dealt again */
 export function seedBreath(g: Game, n: number) { const s = stateOf(g); s.seed = n >>> 0; s.men = new SideMap(); s.stats = fresh(); g.engine.breathShown = undefined; }
 /** does breath steam here (the switch, on a level built for snow — it asks nothing of the lying snow's surface)? */
@@ -169,6 +167,7 @@ export function updateSnowBreath(g: Game, dt: number) {
   const focus = steam && B.reach > 0 ? (g.engine as { viewFocus?: Vec3 }).viewFocus : undefined;   // (picture only: which men are worth the solver's bricks)
   const one = (c: Character, seen: boolean) => {
     const m = manOf(st, c); men++; m.at = st.tick;
+    const h0 = H.men.get(c.id); if (h0) { if (h0.who === c) h0.at = st.tick; else H.men.delete(c.id); }   // (the book holds no man who is gone: a fresh man under an old id strikes the old row here, the rest are struck below)
     // his wind: up while he runs, back slowly once he stops
     const sp = Math.hypot(c.vel[0], c.vel[2]);
     const want = clamp((sp - K.runLo) / Math.max(0.01, K.runHi - K.runLo), 0, 1);
@@ -185,7 +184,7 @@ export function updateSnowBreath(g: Game, dt: number) {
     m.gap += m.step; m.left--;
     if (!m.shows) return;
     // is THIS breath steam through the solver: said when its first record falls due (the frame it begins, as a rule) and kept for the breath — the host's word, on the host's book
-    let h = H.men.get(c.id); if (!h || h.who !== c) { h = { who: c, n: -1, steam: false, src: -1 }; H.men.set(c.id, h); }   // (a restart's fresh man under an old id: a fresh row)
+    let h = H.men.get(c.id); if (!h) { h = { who: c, at: st.tick, n: -1, steam: false, src: -1 }; H.men.set(c.id, h); }   // (a restart's fresh man under an old id has a fresh row: the old one was struck above)
     if (h.n !== m.n) { h.n = m.n; h.steam = inReach; h.src = -1; }
     const hm = h;
     const hard = 1 + ((HB ? HB.size : K.hardK) - 1) * m.effort, carry = HB ? K.carry + (HB.carry - K.carry) * m.effort : K.carry, jet = 1 + (HB ? HB.jet - 1 : 0.3) * m.effort;
@@ -216,6 +215,7 @@ export function updateSnowBreath(g: Game, dt: number) {
   for (const gd of g.guards as Guard[]) if (gd.state !== 'dead') one(gd.char, !g.fogOfWar.hidden(gd));
   for (const cv of civiliansShown(g)) if (cv.state !== 'dead') one(cv.char, !g.fogOfWar.hidden(cv));
   S.men = men; S.shown = shown; H.steaming = steaming;
+  for (const [id, h] of H.men) if (h.at !== st.tick) H.men.delete(id);   // (dead, despawned, or the men of a game before a restart: the picture's book keeps nobody alive)
 }
 /** one line for the panel / the probes */
 export function breathSummary(g: Game): string {

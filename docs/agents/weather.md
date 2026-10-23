@@ -943,7 +943,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   roads: a snapshot of the filing frame put back at once with the host's real hook run files the breath's source again (red with the hook's line
   taken out), a snapshot from before the breath put back with no hook plays the breath again WITH its source (red with the frame-count test taken
   out), and a real restart a third of a second after a man's first source leaves 3 sources for the 3 breaths of the next ten seconds (2 with the
-  row's binding taken out). The line also found the check's own old red on the shipped stand (the `digest` line, red there since the open fire
+  row's binding taken out), and the book keeps no row for a man who is gone: a row whose man was not asked about this frame is struck, so the men of
+  the game before a restart are let go on its first frame (1 row held there before this was added). `breathStats` read on a game nobody has
+  breathed in makes no state row (it did; by reading, no check). The put-back road runs through `tools/qa/putback-host.ts`. The line also found the check's own old red on the shipped stand (the `digest` line, red there since the open fire
   landed): its solver stand-in counted the fire's plume, one source a second, as breaths; it counts `kind: 'breath'` alone now. No rule read any of
   this and no digest moved: nothing a player sees changes but a breath refiled behind a put back. IN THE PAGE on the software adapter after the move
   (`breathsteam-page.cjs`, 16 steps): 119 of 119 pipelines, no console error, five breaths all steam, no puff record, the panel's row read as before.
