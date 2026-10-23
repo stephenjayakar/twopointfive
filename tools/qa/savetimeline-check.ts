@@ -19,7 +19,6 @@ import { yardRow } from './yards.ts';
 import { digestRun } from './checkpoint-probes.ts';
 const SS = await import(`${ROOT}/src/game/savestate.ts`);
 const { SAVETIMELINE, CKPT, canSave } = SS;
-const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -59,7 +58,7 @@ async function night(seed: number, on: boolean): Promise<any> {
 }
 /** a stage yard as a row would start it (the yards were Training 5 and 1: no row and no lesson of their own since 2026-10-23; their rows are tools/qa/yards.ts) */
 async function lesson(id: string, seed: number, on: boolean): Promise<any> {
-  const E = yardRow(id) ?? (ALL_MISSIONS as any[]).find(e => e.id === id); if (!E) throw new Error(`no scenario '${id}'`);
+  const E = yardRow(id); if (!E) throw new Error(`no yard '${id}'`);
   Math.random = seeded(seed);
   const W: any = await hushed(() => standUp({ level: levelOfFile(E.level) })); const g = W.game;
   SAVETIMELINE.on = on;

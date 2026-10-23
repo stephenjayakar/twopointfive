@@ -21,9 +21,9 @@ const JOBS = {
   down: { query: KILLHOUSE, end: 'down', seed: true },
   solo: { query: 'solo', end: 'out', seed: false },
   off: { query: KILLHOUSE + '&noverdict', end: 'win', seed: true },
-  // a tutorial mission's room clear: it ends on the card too, with nothing graded and the next mission leading (until 2026-10-23 this was Training 6; the
-  // swap to the tutorial's row has not been run on a page)
-  lesson: { query: 'levelFile=tut-squad.json&roomclear=1&squad4&difficulty=hard', end: 'win', seed: false },
+  // a tutorial mission's room clear: it ends on the card too, with nothing graded and the next mission leading. Its frame is put off (`rails=0`): with a
+  // step up the frame holds the end (game/rails.ts holdsEnd), and this job ends the run by hand, not by the lesson
+  lesson: { query: 'levelFile=tut-squad.json&roomclear=1&squad4&difficulty=hard&rails=0', end: 'win', seed: false },
 };
 const report = { checks: [], errors: [] };
 const check = (ok, label, detail) => { report.checks.push({ ok: !!ok, label, detail }); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };

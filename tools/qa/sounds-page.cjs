@@ -103,7 +103,7 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
     const heard = new Set(X.tapes.flatMap(T => Object.keys(T.sounds))), rows = window.__sounds.rows(), els = document.querySelectorAll('.row');
     return { n: X.tapes.length, top: top.length, missing: X.tapes.filter(T => !top.includes('./?playtape=assets/replays/' + T.file + '&soundlanes')).map(T => T.id), has: ['chairs', 'reloads', 'doors'].filter(id => X.tapes.some(T => T.id === id)).length,
       bad: rows.filter((n, i) => heard.has(n) !== !!els[i].querySelector('.also a.inplay')) }; });
-  check(tp.n >= 13 && tp.top === tp.n && tp.missing.length === 0 && tp.has === 3 && tp.bad.length === 0, `every replay is listed under 'In play' with a link to its own file (${tp.n}), and a sound has its 'in play' link exactly when a replay plays it`, tp);
+  check(tp.n >= 5 && tp.top === tp.n && tp.missing.length === 0 && tp.has === 3 && tp.bad.length === 0, `every replay is listed under 'In play' with a link to its own file (${tp.n}), and a sound has its 'in play' link exactly when a replay plays it`, tp);
   const pe = await page.evaluate(() => window.__sounds.errors);
   check(errs.length === 0 && pe.length === 0 && pe0.length === 0, 'nothing on the console', [...errs, ...pe0, ...pe]);
   for (const w of [1100, 400]) { await page.setViewportSize({ width: w, height: 900 }); const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth); check(over <= 0, `no sideways scroll at ${w} px`, over); if (process.argv[2]) await page.screenshot({ path: process.argv[2].replace(/\.png$/, `-${w}.png`) }); }

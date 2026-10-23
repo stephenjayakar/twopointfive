@@ -2,7 +2,8 @@
 // one `Game.verdict` names — a result, won, with the end card due (the stealth mission's own card for a quiet lesson, `takeDue()` for a room clear).
 //   bun run tools/qa/verdict-lessons.ts [name …]      (default: the six tutorial missions)        exit 0 = every lesson ends on a verdict · 1 = one does not
 //   VERDICT_BREAK=1 must fail (the switch off: no run is named).
-// Both stands: plain = FROZEN, `TPS_PROFILE=shipped` in front = the page's. The card itself is the page's to raise: `verdict-look.cjs <dir> lesson` sees it there.
+// The page's stand only (`TPS_PROFILE=shipped` in front): a tutorial mission is the page's, and its scripted player is not run on the frozen stand
+// (lesson-run.ts). Without the word this exits 2 and plays nothing. The card itself is the page's to raise: `verdict-look.cjs <dir> lesson` sees one there.
 import { resolve } from 'node:path';
 import { runLesson } from './lesson-run';
 
@@ -16,6 +17,7 @@ let G: any = null;
 const step0 = Game.prototype.step;
 Game.prototype.step = function (this: unknown, ...a: unknown[]) { G = this; return step0.apply(this, a); };
 
+if (process.env.TPS_PROFILE !== 'shipped') { console.log('verdict-lessons: a tutorial mission is the page\'s — run this under TPS_PROFILE=shipped'); process.exit(2); }
 if (process.env.VERDICT_BREAK === '1') VERDICT.on = false;   // the break: no verdict at a run's end — every line must fail
 const names = process.argv.slice(2).length ? process.argv.slice(2) : (LESSON_MISSIONS as { id: string }[]).map(m => m.id);
 let bad = 0;

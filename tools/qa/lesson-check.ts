@@ -9,7 +9,6 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { standUp } from './headless';
-import { yardRow } from './yards';
 const ROOT = resolve(import.meta.dir, '../..');
 const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -94,20 +93,20 @@ if (!names.length || names.includes('tut-solo')) { console.log('\n=== lesson-che
   try {
     await withDom('', async () => {
       K.kitLoad(st, ''); const set = K.kitSet(0, 'weapon', 'pistol') && K.kitSet(1, 'light', false); const st0 = m.get(K.KIT_LS);   // (this machine keeps a card with no rifle — the card that left a lesson's 'press 2' unpassable — and a teammate with no weapon light)
-      // (staged on two bare yards, not on a tutorial mission: every tutorial level issues a kit of its own, so the kept card never shows on one. The yards were
-      // Training 1 and 5; they carry no lesson and no row now, and stand here for 'a level whose page plays the kit as issued')
-      const alone: any = yardRow('train-move'), pair: any = yardRow('train-orders');
+      // (staged on two tutorial missions whose levels issue no kit of their own — tut-solo and tut-pair do, scenarios.issue, and the kept card never shows on those:
+      // one played alone, one with the team)
+      const alone: any = rowOf('tut-quiet'), pair: any = rowOf('tut-plan');
       // the plant is real: off a lesson's page that start wears the kept card
       const P = await standRow(alone); const plainRifle = P.g.player.hasRifle;
       K.kitIssuedPage(true);   // (main.ts on a lesson level's load)
       const A = await standRow(alone), tableA = K.KIT.members[0].weapon;
       verdict(set && !P.why && !A.why && plainRifle === false && A.g.player.hasRifle === true && tableA === 'pistol' && m.get(K.KIT_LS) === st0, `'${alone.title}' on its page is staged with the issue kit whatever this machine keeps, and the table and the store are left as the machine keeps them`,
         `kept: no rifle, member 1 no light (set ${set}) · the same start off a lesson's page has the rifle: ${plainRifle} · on its page: ${A.g.player.hasRifle} · the table after staging '${tableA}' · the store ${m.get(K.KIT_LS) === st0 ? 'unchanged' : 'CHANGED'}`);
-      // … and your four counts in a lesson are what a Player is built with, not the one of each the pouches rule issues (kit.ts kitIssuedPage: train-kit has
-      // you throw a smoke can, then G another can, then a stun can); off a lesson's page the same start carries the kept card's
-      { const held = (g: any) => `${g.player.canisters}/${g.player.flashbangs}/${g.player.frags}/${g.player.rifle.shells}`, kitRow: any = null, Kt: any = null;
-        verdict(K.SLOTS.on && held(A.g) === '4/2/2/3' && held(P.g) === '1/1/1/0' && (!Kt || (!Kt.why && held(Kt.g) === '4/2/2/3')), 'under the pouches rule a lesson\'s player carries what a Player is built with (4 smoke, 2 stun, 2 frags, 3 rounds of 40 mm: the kit lesson throws more than one can), while the same start off a lesson\'s page carries the kept card\'s counts',
-          `smoke/stun/frag/40 mm — on its page ${held(A.g)}${Kt ? ` · '${kitRow.title}' ${held(Kt.g)}` : ''} · off a lesson's page (the kept card: no rifle, one of each) ${held(P.g)}`); }
+      // … and your four counts in a lesson are what a Player is built with, not the one of each the pouches rule issues (kit.ts kitIssuedPage: a lesson may have
+      // you throw more than one can); off a lesson's page the same start carries the kept card's
+      { const held = (g: any) => `${g.player.canisters}/${g.player.flashbangs}/${g.player.frags}/${g.player.rifle.shells}`;
+        verdict(K.SLOTS.on && held(A.g) === '4/2/2/3' && held(P.g) === '1/1/1/0', 'under the pouches rule a lesson\'s player carries what a Player is built with (4 smoke, 2 stun, 2 frags, 3 rounds of 40 mm: the kit lesson throws more than one can), while the same start off a lesson\'s page carries the kept card\'s counts',
+          `smoke/stun/frag/40 mm — on its page ${held(A.g)} · off a lesson's page (the kept card: no rifle, one of each) ${held(P.g)}`); }
       // another mission's loadout over the lesson: the kept cards, a change kept — and the lesson restarted under it is still the issue kit
       const S = UI.openLoadout(other, { host: new El('BODY') as any, deploy: () => { } });
       const shown = K.KIT.members[0].weapon, cards = !!S.card, stepped = K.kitTry(0, 'suit', 1).ok, suit = K.KIT.members[0].suit, written = kept().weapon === 'pistol' && kept().suit === suit && suit !== 'issued';

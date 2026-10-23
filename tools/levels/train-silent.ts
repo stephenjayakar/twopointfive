@@ -1,6 +1,7 @@
 // A CHECK'S STAGE, NOT A MISSION: this yard was a Training lesson's level. The seven Training lessons were taken out 2026-10-23 (the tutorial's six missions
 // replaced them); the lesson's steps, its row on the mission list and its scripted player are gone. The yard stays because checks owned elsewhere are
-// staged on its floor (tools/qa: teamtally-check, takecheck-check, torch-leak-stills). Nothing on a menu loads it. What follows describes the floor as it was built for the lesson.
+// staged on its floor (tools/qa: teamtally-check, takecheck-check, carlamps-check, torch-leak-stills; their row for it is tools/qa/yards.ts). Nothing on a menu
+// loads it. What follows describes the floor as it was built for the lesson.
 //
 // TRAIN-SILENT — Training 7, "Quiet, as two": a quiet mission WITH ONE PARTNER (game/quiet.ts squad 1: the pair rules and the silent posture held on for the
 // run). THE WELL COURT AND THE BACK GATE, the darkest corner of the compound: the moon, one lamp over the pump, one lantern on the watch's tea table.
@@ -21,7 +22,7 @@
 //   bun run tools/levels/export.ts train-silent [--check]      → levels/train-silent.json
 //   bun run tools/qa/quiet-check.ts train-silent.json          the quiet block against the built floor
 //   page: ?levelFile=train-silent.json&quiet&squad=1
-import type { KitViewData, QuietData, Rect } from '../../src/scene/scenarios';
+import type { KitViewData, QuietData } from '../../src/scene/scenarios';
 import { trainGround, TRAIN_MATERIALS, EXIT_W, EXIT_E, HALF } from './train-ground';
 import { yardGateShell } from './train-ground-kitview';
 import { livedTrain } from './lived-train';
@@ -30,12 +31,6 @@ export const NAME = 'train-silent';
 export const NOTES = 'A stage for checks (once Training 7): the well court and the back gate. A walled yard in three parts (a garden, the well with its pump, the watch house by the back gate), three guards on posts with their backs to the dark, the last two in one lantern\'s light. One partner under the pair rules. Regenerate: bun run tools/levels/export.ts train-silent';
 export const MATERIALS = TRAIN_MATERIALS;
 
-/** the first yard, inside the west gate: nobody looks into it */
-const YARD_A: Rect = { x0: 8.6, x1: 14.6, z0: 6.6, z1: 21.6 };
-/** the dark south of the middle yard, behind the first guard */
-const DARK_B: Rect = { x0: 16.2, x1: 23.0, z0: 15.0, z1: 21.6 };
-/** …and the strip of it round the first wall's south end */
-const ROUND_B: Rect = { x0: 15.4, x1: 23.0, z0: 18.2, z1: 21.6 };
 
 /** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): a bespoke set on the yard's west gate
  *  (train-ground-kitview.ts). From the gate as it stands the picture's column holds the garden's bean row and no more. So the well court is brought up to it:

@@ -1,7 +1,7 @@
 // THE LOAD BRIEF ON THE REAL PAGE (src/ui/loadbrief.ts): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's recipe), a mission's own
 // address loaded as a visitor loads it — no ?paused, no ?mute — once for each kind of mission, each started another way.
 //   PORT=5199 node tools/qa/loadbrief-page.cjs [outDir]      (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=a,b = only those jobs)
-//   night breach · room clear · rescue · quiet · training · solo night
+//   night breach · room clear · rescue · quiet · tutorial · solo night
 //            from the first tick the page shows that mission's brief (its id, its title, a place and a job in words, the map of its level) and no controls list; when
 //            the boot is done the block is live and the world behind it holds still (the game's clock does not move over drawn frames); then it is started —
 //            Enter · a click · a click made WHILE IT BOOTS (kept: the run starts by itself the moment it can) · Space · Controls opened and shut first (the
@@ -28,7 +28,7 @@ const JOBS = [
   { name: 'room clear', query: 'levelFile=depot.json&roomclear&squad4', id: 'depot-four', title: 'The depot', map: 'depot.json', how: 'click' },
   { name: 'rescue', query: 'levelFile=registry.json&rescue', id: 'rescue-registry', title: 'The registry', how: 'early' },
   { name: 'quiet', query: 'levelFile=vault.json&quiet', id: 'vault-quiet', title: 'The counting house', map: 'vault.json', how: 'space' },
-  { name: 'tutorial', query: 'levelFile=tut-quiet.json&quiet', id: 'tut-quiet', title: 'The ledger', map: 'tut-quiet.json', how: 'controls' },   // (until 2026-10-23 a Training lesson's row; not run on a page since the swap)
+  { name: 'tutorial', query: 'levelFile=tut-quiet.json&quiet', id: 'tut-quiet', title: 'The ledger', map: 'tut-quiet.json', how: 'controls', scene: true },   // (a tutorial row draws its scene and what it teaches where another mission has the job's line and the three cells: ui/loadbrief.ts)
   { name: 'solo night', query: 'solo', id: 'solo-night', title: 'Solo night', map: 'office.json', how: 'script' },
   { name: 'off', query: 'loadbrief=0&levelFile=depot.json&roomclear&squad4', off: true },
   { name: 'paused', query: 'paused&mute&nightbreach', paused: true },
@@ -37,7 +37,7 @@ if (!JOBS.length) { console.log(`- FAIL — no job is named ${ONLY.join(', ')}`)
 
 // in the page: what is on the screen
 const SEEN = () => { const b = document.getElementById('brief'), t = (s) => (b && b.querySelector(s) ? b.querySelector(s).textContent : '') || '';
-  return { brief: !!b && b.classList.contains('on'), cls: b ? b.className : '', id: b ? b.getAttribute('data-mission') : null, title: t('.bt'), place: t('.bplace'), job: t('.bjob'), facts: b ? [...b.querySelectorAll('.bf')].map(f => f.textContent) : [],
+  return { brief: !!b && b.classList.contains('on'), cls: b ? b.className : '', id: b ? b.getAttribute('data-mission') : null, title: t('.bt'), place: t('.bplace'), job: t('.bjob'), scene: t('.bscene'), teach: b ? b.querySelectorAll('.bteach li').length : 0, facts: b ? [...b.querySelectorAll('.bf')].map(f => f.textContent) : [],
     picture: (() => { const c = b && b.querySelector('.bpic canvas'); if (!c || c.style.display === 'none' || b.querySelector('.bpic img')) return false;   // (the map: a canvas with the level drawn on it, as many pixels wide as the screen shows it — or the 480 floor — and the sheet's shape)
       const cr = c.getBoundingClientRect(), want = Math.max(480, Math.round(cr.width * devicePixelRatio)); if (Math.abs(c.width - want) > 2 || Math.abs(cr.height / cr.width - 0.7) > 0.01 || cr.bottom > innerHeight + 1) return false;
       try { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 3; i < d.length; i += 4 * 101) if (d[i] > 40) n++; return n > 200; } catch (e) { return false; } })(),
@@ -91,7 +91,7 @@ const runs = async (page, from, secs = 300) => { for (const end = Date.now() + s
     else if (job.off) { ok = !r.boot.brief && r.boot.controlsList > 5 && !r.ready.brief && !!r.clock && !r.after.brief && !r.after.menu; why = JSON.stringify({ boot: r.boot.brief, rows: r.boot.controlsList, ran: !!r.clock, menu: r.after.menu }); }
     else if (job.paused) { ok = !r.boot.brief && !r.ready.brief && Math.abs(r.ran - 5 / 60) < 1e-6 && !r.after.brief; why = JSON.stringify({ boot: r.boot.brief, ready: r.ready.brief, ran: r.ran }); }
     else {
-      const words = r.boot.brief && r.boot.id === job.id && r.boot.title === job.title && r.boot.place.length > 8 && r.boot.job.length > 20 && r.boot.facts.length >= 2 && r.boot.start === 'Start' && !r.boot.menu && r.boot.controlsList === 0;
+      const words = r.boot.brief && r.boot.id === job.id && r.boot.title === job.title && r.boot.place.length > 8 && (job.scene ? r.boot.scene.length > 20 && r.boot.teach >= 1 && !r.boot.job : r.boot.job.length > 20 && r.boot.facts.length >= 2) && r.boot.start === 'Start' && !r.boot.menu && r.boot.controlsList === 0;
       const gone = !r.after.brief && !r.after.menu && !!r.clock && r.clock.held.length === 0;
       let mid = true;
       if (job.how === 'early') mid = /live/.test(r.early.was) || (/armed/.test(r.early.cls) && r.early.brief);   // (pressed while it boots: kept, and nothing more is asked of the player; on a machine that booted before the press could be made, the press was an ordinary start)

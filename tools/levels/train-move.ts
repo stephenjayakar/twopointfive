@@ -1,6 +1,7 @@
 // A CHECK'S STAGE, NOT A MISSION: this yard was a Training lesson's level. The seven Training lessons were taken out 2026-10-23 (the tutorial's six missions
 // replaced them); the lesson's steps, its row on the mission list and its scripted player are gone. The yard stays because checks owned elsewhere are
-// staged on its floor (tools/qa: the hands probes, hands-strip, hands-look, solofog-check, savetimeline-check, sticky-check). Nothing on a menu loads it. What follows describes the floor as it was built for the lesson.
+// staged on its floor (tools/qa: the hands probes, hands-strip, hands-look, cast-probes, carlamps-check, keybinds-check, savetimeline-check, lesson-check's
+// kit lines; their row for it is tools/qa/yards.ts). Nothing on a menu loads it. What follows describes the floor as it was built for the lesson.
 //
 // TRAIN-MOVE — Training 1, "Moving unseen": THE MOTOR POOL. Walking, the action key, sprinting (loud, and under a lamp: both meters up), then crouching, the
 // wheel and the dark bring both down; back to the wall, the lean, night vision — then past one guard to the dispatcher's hut, the vehicle log out of a trunk,
@@ -19,7 +20,7 @@
 //
 //   bun run tools/levels/export.ts train-move [--check]      → levels/train-move.json
 //   page: ?levelFile=train-move.json&quiet  
-import type { KitViewData, QuietData, Rect } from '../../src/scene/scenarios';
+import type { KitViewData, QuietData } from '../../src/scene/scenarios';
 import type { Paint } from '../../src/scene/gwotKit';
 import { trainGround, TRAIN_MATERIALS, EXIT_E, HALF } from './train-ground';
 import { yardGateShell } from './train-ground-kitview';
@@ -29,15 +30,6 @@ export const NAME = 'train-move';
 export const NOTES = 'A stage for checks (once Training 1): the motor pool. A lit pool to get out of, a container and a dark lane, one guard between his tea and the lit east gate, the dispatcher\'s hut with the vehicle log. Regenerate: bun run tools/levels/export.ts train-move';
 export const MATERIALS = TRAIN_MATERIALS;
 
-/** the lamp's pool inside the west gate: where the sprint is asked for (loud AND lit) */
-const POOL: Rect = { x0: 8.6, x1: 14.5, z0: 11.6, z1: 17 };
-/** the dark lane's far end, south of the container: where 'into the dark' is judged */
-const LANE_END: Rect = { x0: 16.6, x1: 18.9, z0: 20.4, z1: 21.8 };
-/** the strip along the container's south face: Q there takes the container, not the yard wall a stride behind him */
-const FACE: Rect = { x0: 13.2, x1: 19.7, z0: 20.2, z1: 21.0 };
-/** behind the hut: the ground under its east wall, south of the back door. The hut stands between it and every step of the man who comes to look (his way in
- *  and out is the west door), and no lamp reaches it: the east gate's pool starts a stride south of it */
-const BEHIND: Rect = { x0: 28.3, x1: 29.2, z0: 9.4, z1: 10.6 };
 /** the trunk's paint. G.trunk's type (`Paint`) names the kit's four trunk paints and none is grey; the piece itself only looks the name up in the palette,
  *  where 'blanketGrey' is a plain flat grey — hence the cast (adding a grey to `Paint` is a shared-file change this lesson may not make) */
 const GREY = 'blanketGrey' as Paint;

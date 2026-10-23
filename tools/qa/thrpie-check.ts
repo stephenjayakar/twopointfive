@@ -17,7 +17,6 @@ import { ROOT } from './headless.ts';
 import { yardRow } from './yards.ts';
 import { stage, quiet, guarded, family } from './thresholdmenu-probes.ts';
 const { DOORTOOLS, doorPt, alongOf, offOf } = await import(`${ROOT}/src/game/doortools.ts`);
-const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`) as any;
 
 const BREAK = !!process.env.THRPIE_BREAK, BREAK1 = !!process.env.THRPIEONE_BREAK;
@@ -30,7 +29,7 @@ interface Out { why: string | null; told: number; unseen: number; cells: number;
 
 /** the tape's door, the order given, run until the lead says the door is held (or `secs`) and a second more */
 async function held(K: { pie: boolean; lean: boolean; one?: boolean; blind?: boolean; word?: boolean; /** the word is given while a man is out on his lean */ wordLean?: boolean }, secs = 40): Promise<Out> {
-  const E = yardRow(LEVEL) ?? ALL_MISSIONS.find((s: any) => s.id === LEVEL); if (!E) throw new Error(`no scenario ${LEVEL}`);
+  const E = yardRow(LEVEL); if (!E) throw new Error(`no yard ${LEVEL}`);
   const R = await stage(E, 1), g = R.g, d = g.doors.byName(DOOR); if (!d) throw new Error(`no door ${DOOR}`);
   DOORTOOLS.thrPie = K.pie && !BREAK; DOORTOOLS.thrLean = K.lean && !BREAK; DOORTOOLS.thrPieOne = !!K.one && !BREAK1;   // (after the stand-up: the frozen stand pins them off, the shipped one raises them)
   const on = await quiet(() => R.place(SAM, d)); if (!on) throw new Error(`X does not open on ${DOOR} from the spot`);
@@ -72,7 +71,7 @@ async function held(K: { pie: boolean; lean: boolean; one?: boolean; blind?: boo
 /** a teammate stood in the open with his gun in his shoulder, leaned each way through an order's own field: where his head, his muzzle, the middle of his
  *  trunk and his hips are, to his right of where his hips were */
 async function pose() {
-  const E = yardRow(LEVEL) ?? ALL_MISSIONS.find((s: any) => s.id === LEVEL), R = await stage(E, 1), g = R.g, m = R.team[0], c = m.char, p = [c.pos[0], 0, c.pos[2]];
+  const E = yardRow(LEVEL), R = await stage(E, 1), g = R.g, m = R.team[0], c = m.char, p = [c.pos[0], 0, c.pos[2]];
   let yaw = 0; const hold = (lean: number) => g.orders.assign(m, { order: 'move', post: p, face: yaw, watch: [p[0] + Math.sin(yaw) * 6, 1.2, p[2] + Math.cos(yaw) * 6], stance: 'none', upper: 'aim', going: 'x', there: 'x', ...(lean ? { lean } : {}) });
   for (const y of [0, 1.57, 3.14, -1.57, 0.8, -0.8, 2.4, -2.4]) { yaw = y; await quiet(() => { hold(0); R.step(60); }); if (!m.muzzleDown) break; }   // (a way to face with nobody and nothing in front of the gun)
   const h0 = [...(c.bones.hips ?? c.pos)], right = [-Math.cos(yaw), Math.sin(yaw)], lat = (q: number[] | undefined) => q ? (q[0] - h0[0]) * right[0] + (q[2] - h0[2]) * right[1] : NaN;

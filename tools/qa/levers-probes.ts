@@ -191,7 +191,7 @@ export async function leversScreens(): Promise<boolean> {
       G.location.pathname = '/'; G.location.hash = ''; const loads: string[] = []; G.location.assign = (u: string) => { loads.push(u); }; G.location.reload = () => { loads.push('(reload)'); };
       const M = await import(`${ROOT}/src/ui/missions.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`), { SCENARIOS, LESSON_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
       fresh(); M.MISSIONS.onPick = null;
-      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), solo = M.SOLO_NIGHT, quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'tutorial')   /* (a tutorial mission's fog is its frame's, game/rails.ts: its lever is greyed, as a lesson's) */, lessonM = list.find(m => m.scenario?.group === 'training');
+      const host = new El('DIV') as any, list: any[] = M.missionList(), four = list.find(m => m.id === 'room-clear-four'), solo = M.SOLO_NIGHT, quietM = list.find(m => m.scenario?.kind === 'quiet' && m.scenario.group !== 'tutorial')   /* (a tutorial mission's fog is its frame's, game/rails.ts: its lever is greyed, as a lesson's) */, lessonM = list.find(m => m.scenario?.group === 'tutorial');
       // ---- the mission sheet
       const S = M.openMissions({ root: host, select: four.id, search: SEARCH, onPick: () => {} }), root = S.root as unknown as El;
       const rows0 = leverRowsOf(root), href0 = S.hrefOf(four);
