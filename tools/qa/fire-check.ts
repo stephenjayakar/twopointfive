@@ -14,12 +14,15 @@
 //             it) and its place wanders by no more than the table says, and the renderer is handed one fire at the drum's mouth
 //   same      … the swing is a closed form of the game's clock: a second game stood the same way has the same strength every frame, and the lamp is what
 //             fireFlicker says for that time
-//   sound     one bed voice that follows the fire, and a crack for each pop of the wood, about as often as the table says
+//   sound     one bed voice held at a time (handed on every FIRE.bedSecs), and a crack for each pop of the wood, about as often as the table says
 //   smoke     with a solver drawing: a source a second over the flames, every one LOOK ONLY, on the coarse lattice, none thicker than the table says; with
 //             none drawing: no source at all
 //   out       the lamp put out (as a round or the jammer would): the frame after, no fire is handed to the renderer, no source, no crack, and the lamp is
 //             back where the level hung it; lit again, it burns again
-//   meter     what the CPU's light estimate reads a long stride from the drum and three metres off, switch on against off: the mean within a tenth, and
+//   load      a checkpoint put back: the lamp, its place and the coals are that moment's on the frame it loads
+//   steady    a rule that asks for the PLACE's steady light (lightEstimateAt, steadyOnly) reads the authored lamp where the level hung it: with the fire
+//             burning, the same number every frame as with the switch off
+//   meter     what the CPU's light estimate reads a long stride from the drum, three metres and five metres off, switch on against off: the mean within a tenth, and
 //             how far it swings (printed: the figure the area file quotes)
 //   off       switch off: the lamp steady at the authored strength where the level hung it, nothing handed to the renderer, the solver or the mixer
 //   old       a recording from before the key replays with it off (journal.ts applyKnobs)
@@ -58,7 +61,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
     const step = (n = 1, each?: () => void) => { for (let i = 0; i < n; i++) { FIRE.on = sw; W.step(DT); each?.(); } };
     return { W, g, t, step, stood, sw, sources };
   }
-  const mine = (A: any) => A.sources.filter((e: any) => e.kind === 'cloud' && e.look === true && e.tint);
+  const mine = (A: any) => A.sources.filter((e: any) => e.kind === 'cloud' && e.look === true && e.lattice === 'coarse');
 
   try {
     // ---- burns, same, sound
@@ -80,17 +83,26 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         verdict(A.sw && seqB.length === seq.length && diff === 0 && off < 1e-9, 'same — the swing is a closed form of the clock: a second game has the same lamp every frame',
           `${seq.length} frames, ${diff} differ · the lamp against fireFlicker at its own time: at most ${off.toExponential(1)} apart`);
         const log = A.W.audioLog as any[], beds = log.filter(c => c.name === 'fireBed'), cracks = log.filter(c => c.name === 'fireCrack'), want = K.popRate * 20;
-        verdict(beds.length === 1 && typeof beds[0].opts?.follow === 'function' && !!beds[0].opts.follow() && cracks.length === T.cracks && cracks.length >= want * 0.35 && cracks.length <= want * 2.2 && cracks.every(c => c.gain > 0 && c.gain <= K.crack),
-          'sound — one bed voice that follows the fire and a crack for each pop of the wood',
-          `${beds.length} bed${beds[0] ? ` (followed: ${typeof beds[0].opts?.follow === 'function'})` : ''}, ${cracks.length} cracks in twenty seconds (the table's rate makes ${want.toFixed(0)}; the fire counted ${T.cracks})${cracks.length ? `, level ${Math.min(...cracks.map(c => c.gain)).toFixed(2)} to ${Math.max(...cracks.map(c => c.gain)).toFixed(2)}` : ''}`);
+        const wantBeds = 1 + Math.floor(20 / K.bedSecs), heldNow = beds.filter(c => !!c.opts?.follow?.()).length;
+        verdict(beds.length === wantBeds && heldNow === 1 && !!beds[beds.length - 1]?.opts?.follow?.() && cracks.length === T.cracks && cracks.length >= want * 0.35 && cracks.length <= want * 2.2 && cracks.every(c => c.gain > 0 && c.gain <= K.crack),
+          'sound — one bed voice held at a time, handed on as the table says, and a crack for each pop of the wood',
+          `${beds.length} bed voices asked for in twenty seconds (one at the start and one every ${K.bedSecs} s makes ${wantBeds}), ${heldNow} held now, ${cracks.length} cracks in twenty seconds (the table's rate makes ${want.toFixed(0)}; the fire counted ${T.cracks})${cracks.length ? `, level ${Math.min(...cracks.map(c => c.gain)).toFixed(2)} to ${Math.max(...cracks.map(c => c.gain)).toFixed(2)}` : ''}`);
         // ---- out
         const none0 = mine(A).length;
         t.on = false; t.broken = true; A.step(3); const n0 = (A.W.audioLog as any[]).length;
         A.step(6 * 60); const gone = (A.g.engine.fires ?? []).length, back = Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]), quietN = (A.W.audioLog as any[]).slice(n0).filter(c => c.name === 'fireCrack').length, bedLet = beds[0]?.opts?.follow?.() ?? null;
-        t.on = true; t.broken = false; A.step(4 * 60); const again = (A.g.engine.fires ?? []).length;
-        verdict(A.sw && t.factor > 0.5 && gone === 0 && back < 1e-9 && quietN === 0 && bedLet === null && again === 1 && none0 === 0,
-          'out — the lamp put out: nothing handed to the renderer, no crack, the bed let go, the lamp back where the level hung it; lit again, it burns again',
-          `out for six seconds: ${gone} handed on, ${quietN} cracks, the bed ${bedLet === null ? 'let go' : 'still held'}, the lamp ${back.toFixed(4)} m from its place · lit again: ${again} handed on · (no solver drawing in this game: ${none0} sources)`);
+        const n1 = (A.W.audioLog as any[]).length; t.on = true; t.broken = false; A.step(90); const again = (A.g.engine.fires ?? []).length;
+        const bed2 = (A.W.audioLog as any[]).slice(n1).filter(c => c.name === 'fireBed'), held2 = bed2.some(c => !!c.opts?.follow?.());
+        verdict(A.sw && t.factor > 0.5 && gone === 0 && back < 1e-9 && quietN === 0 && bedLet === null && again === 1 && none0 === 0 && bed2.length >= 1 && held2,
+          'out — the lamp put out: nothing handed to the renderer, no crack, the bed let go, the lamp back where the level hung it; lit again, it burns again and its bed is asked for again',
+          `out for six seconds: ${gone} handed on, ${quietN} cracks, the bed ${bedLet === null ? 'let go' : 'still held'}, the lamp ${back.toFixed(4)} m from its place · lit again: ${again} handed on, ${bed2.length} bed asked for in the next second and a half (${held2 ? 'held' : 'not held'}) · (no solver drawing in this game: ${none0} sources)`);
+        // ---- load
+        A.step(137); const at = { I: l.intensity, p: [...l.pos], e: box ? [...box.emissive] : [], time: A.g.time }; const save = A.W.snapshot('fire', true);
+        A.step(91); A.W.restore(save);
+        const dI = Math.abs(l.intensity - at.I), dp = Math.hypot(l.pos[0] - at.p[0], l.pos[1] - at.p[1], l.pos[2] - at.p[2]), de = box ? Math.max(...at.e.map((v, i) => Math.abs(v - box.emissive[i]))) : 0;
+        verdict(A.sw && dI < 1e-9 && dp < 1e-9 && de < 1e-9 && Math.abs(A.g.time - at.time) < 1e-9 && at.I !== base,
+          'load — a checkpoint put back: the lamp, its place and the coals are that moment\'s the frame it loads, not the steady lamp',
+          `saved with the lamp at ${at.I.toFixed(3)} (authored ${base}); 91 frames later, loaded: the lamp ${l.intensity.toFixed(3)} (${dI.toExponential(1)} off), its place ${dp.toExponential(1)} m off, the coals ${de.toExponential(1)} off`);
       }
     }
     // ---- smoke through a solver
@@ -105,14 +117,17 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
     }
     // ---- meter
     {
-      const read = async (on: boolean) => { const A = await rig(on, false), t = A.t, out: { lo: number; hi: number; mean: number }[] = []; if (!t) return out;
-        const spots = [[t.pos[0] - 1.25, 1.0, t.pos[2]], [t.pos[0] - 3, 1.0, t.pos[2]]], acc = spots.map(() => ({ lo: Infinity, hi: -Infinity, sum: 0, n: 0 }));
-        A.step(20 * 60, () => spots.forEach((p, i) => { const v = lightEstimateAt(A.g, p as any), a = acc[i]; a.lo = Math.min(a.lo, v); a.hi = Math.max(a.hi, v); a.sum += v; a.n++; }));
-        return acc.map(a => ({ lo: a.lo, hi: a.hi, mean: a.sum / a.n })); };
+      const read = async (on: boolean) => { const A = await rig(on, false), t = A.t, out: { lo: number; hi: number; mean: number; slo: number; shi: number }[] = []; if (!t) return out;
+        const spots = [[t.pos[0] - 1.25, 1.0, t.pos[2]], [t.pos[0] - 3, 1.0, t.pos[2]], [t.pos[0] - 5, 1.0, t.pos[2]]], acc = spots.map(() => ({ lo: Infinity, hi: -Infinity, sum: 0, n: 0, slo: Infinity, shi: -Infinity }));
+        A.step(20 * 60, () => spots.forEach((p, i) => { const v = lightEstimateAt(A.g, p as any), sv = lightEstimateAt(A.g, p as any, undefined, true), a = acc[i]; a.lo = Math.min(a.lo, v); a.hi = Math.max(a.hi, v); a.sum += v; a.n++; a.slo = Math.min(a.slo, sv); a.shi = Math.max(a.shi, sv); }));
+        return acc.map(a => ({ lo: a.lo, hi: a.hi, mean: a.sum / a.n, slo: a.slo, shi: a.shi })); };
       const on = await read(true), off = await read(false);
-      const ok = on.length === 2 && off.length === 2 && on.every((r, i) => off[i].mean > 0 && Math.abs(r.mean / off[i].mean - 1) < 0.1 && r.hi > r.lo * 1.1) && off.every(r => r.hi - r.lo < 1e-6 * Math.max(1, r.hi));
+      verdict(on.length === 3 && off.length === 3 && on.every((r, i) => r.slo === r.shi && r.slo === off[i].slo && off[i].slo === off[i].shi && r.hi > r.lo),
+        'steady — who asks for the place\'s steady light reads the authored lamp: the same number every frame as with the switch off, while the lamp swings',
+        on.length === 3 && off.length === 3 ? ['1.25 m', '3 m', '5 m'].map((d, i) => `${d}: steady reader ${on[i].slo.toFixed(4)} to ${on[i].shi.toFixed(4)} burning, ${off[i].slo.toFixed(4)} off`).join(' · ') : 'no fire to read');
+      const ok = on.length === 3 && off.length === 3 && on.every((r, i) => off[i].mean > 0 && Math.abs(r.mean / off[i].mean - 1) < 0.1 && (i === 2 || r.hi > r.lo * 1.1)) && off.every(r => r.hi - r.lo < 1e-6 * Math.max(1, r.hi));   // (five metres off is another lamp's ground on the pass: read, not judged for a swing)
       verdict(ok, 'meter — the CPU\'s light estimate beside the drum: the mean within a tenth of the steady lamp\'s, and it swings',
-        on.length === 2 && off.length === 2 ? ['1.25 m', '3 m'].map((d, i) => `${d}: steady ${off[i].mean.toFixed(3)}, burning ${on[i].lo.toFixed(3)} to ${on[i].hi.toFixed(3)} (mean ${on[i].mean.toFixed(3)}, ${((on[i].mean / off[i].mean - 1) * 100).toFixed(1)} %)`).join(' · ') : 'no fire to read');
+        on.length === 3 && off.length === 3 ? ['1.25 m', '3 m', '5 m'].map((d, i) => `${d}: steady ${off[i].mean.toFixed(3)}, burning ${on[i].lo.toFixed(3)} to ${on[i].hi.toFixed(3)} (mean ${on[i].mean.toFixed(3)}, ${((on[i].mean / off[i].mean - 1) * 100).toFixed(1)} %)`).join(' · ') : 'no fire to read');
     }
     // ---- off
     {

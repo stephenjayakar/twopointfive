@@ -10,7 +10,7 @@ struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f, pop: array<vec4f, 4> };
 
 const FIRE_STEPS = 18.0;        // samples of the flame along a pixel's ray
 const FIRE_SIGMA = 16.0;        // 1/m: how soon a flame hides what is behind it (a hand's width of full flame keeps a fifth)
-const FIRE_GAIN = 2.7;         // scene radiance of full flame at its hottest (the drum's coals are authored at 11)
+const FIRE_GAIN = 1.5;         // scene radiance of full flame at its hottest (the drum's coals are authored at 11)
 const FIRE_EMBER_GAIN = 6.0;   // … of an ember just thrown (a point far smaller than a pixel: what reaches the picture is this × its share of the pixel)
 const FIRE_EMBER_R = 0.004;     // m: an ember's own radius
 const FIRE_POP_EMBERS = 6u;     // embers a crack throws
@@ -56,8 +56,8 @@ fn fireFlame(F: FireRec, P: vec3f) -> vec2f {
 }
 /** the light of a flame that hot: deep red at the cool end, orange, a yellow heart */
 fn fireColor(hot: f32) -> vec3f {
-  var c = mix(vec3f(0.8, 0.1, 0.006), vec3f(1.0, 0.34, 0.035), smoothstep(0.0, 0.3, hot));
-  c = mix(c, vec3f(1.0, 0.6, 0.15), smoothstep(0.3, 0.85, hot));
+  var c = mix(vec3f(0.85, 0.09, 0.004), vec3f(1.0, 0.28, 0.02), smoothstep(0.0, 0.3, hot));
+  c = mix(c, vec3f(1.0, 0.46, 0.06), smoothstep(0.3, 0.85, hot));
   return c * (0.3 + 1.8 * hot * hot);
 }
 /** where the vertical cylinder of radius R about `c` between heights y0 and y1 cuts the ray: (near, far), near > far = it does not */
@@ -84,10 +84,17 @@ fn fireEmberColor(x: f32) -> vec3f { return mix(vec3f(1.0, 0.5, 0.1), vec3f(0.9,
 
 /** THE EMBERS along the ray → light added. Those the fire lets go of all the while climb on its hot air and are carried off by the wind; those a crack throws
  *  leave fast and fall back. Every path is a closed form of the fire's clock: nothing is kept between frames. */
+/** the cylinder nothing of this fire leaves — its embers' reach, which is the widest thing it has: in wind they only go downwind (0.3 m a second of age for each
+ *  m/s, three seconds at most: FIRE_DRIFT), so the cylinder stands half that way downwind and is that much wider. x = where the ray enters it, y = leaves. */
+const FIRE_DRIFT = 0.3;
+fn fireBound(F: FireRec, ro: vec3f, rd: vec3f) -> vec2f {
+  let half = F.c.xy * (FIRE_DRIFT * 1.5);
+  return fireCyl(ro, rd, F.a.xyz + vec3f(half.x, 0.0, half.y), 1.3 + length(half), -0.9, 3.4);
+}
 fn fireEmbers(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32) -> vec3f {
   let R = F.a.w; let H = F.b.x; let heat = F.b.y; let t = F.b.w; let base = F.a.xyz;
   let sd = u32(F.b.z * 65535.0);
-  let cb = fireCyl(ro, rd, base, 1.3 + 0.35 * length(F.c.xy), -0.9, 3.4);
+  let cb = fireBound(F, ro, rd);
   if (cb.x > cb.y || cb.y < 0.0 || cb.x > tMax) { return vec3f(0.0); }
   var L = vec3f(0.0);
   let n = u32(clamp(F.c.w, 0.0, 16.0));
@@ -104,7 +111,7 @@ fn fireEmbers(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32) -> vec3f {
     let ph = 6.2831853 * fireHu(kc + 8u);
     var P = base + vec3f(out.x * r0, H * (0.25 + 0.5 * fireHu(kc + 9u)), out.y * r0);
     P.y += rise;
-    let drift = out * (0.1 + 0.2 * fireHu(kc + 10u)) * age + vec2f(sin(age * 5.1 + ph), cos(age * 4.3 + ph * 1.7)) * (0.05 * age) + F.c.xy * (0.5 * age * smoothstep(0.0, 0.5, age));
+    let drift = out * (0.1 + 0.2 * fireHu(kc + 10u)) * age + vec2f(sin(age * 5.1 + ph), cos(age * 4.3 + ph * 1.7)) * (0.05 * age) + F.c.xy * (FIRE_DRIFT * age * smoothstep(0.0, 0.5, age));
     P.x += drift.x; P.z += drift.y;
     let tw = 0.65 + 0.35 * sin(age * 31.0 + ph * 3.0);
     L += fireEmberColor(x) * (tw * fireSpot(ro, rd, tMax, P, cpix));
@@ -122,7 +129,7 @@ fn fireEmbers(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32) -> vec3f {
       let e = (1.0 - exp(-1.5 * age)) / 1.5;   // a light thing in air: it sheds its speed
       var P = base + vec3f(out.x * R * 0.4, H * 0.3, out.y * R * 0.4) + v * e;
       P.y -= 1.6 * age * age;
-      P.x += F.c.x * 0.4 * age * age; P.z += F.c.y * 0.4 * age * age;
+      P.x += F.c.x * FIRE_DRIFT * age * age; P.z += F.c.y * FIRE_DRIFT * age * age;
       if (P.y < base.y - 0.86) { continue; }   // (gone out on the ground beside the drum)
       L += fireEmberColor(age / life) * (1.3 * fireSpot(ro, rd, tMax, P, cpix));
     }
@@ -138,7 +145,7 @@ fn fireAir(F: FireRec, ro: vec3f, rd: vec3f, tMax: f32, cpix: f32, jit: f32) -> 
   let R = F.a.w; let H = F.b.x;
   var acc = fireEmbers(F, ro, rd, tMax, cpix);
   var T = 1.0;
-  let lean = 0.06 * length(F.c.xy) + 0.05;
+  let lean = 0.125 * length(F.c.xy) + 0.08;   // (fireFlame's bend at the flame's top, 0.055 × 1.7^1.5 a m/s, and its own sway and wobble)
   let cb = fireCyl(ro, rd, F.a.xyz, R * 1.75 + lean, -0.04, H * 1.7);
   let t0 = max(cb.x, 0.0); let t1 = min(cb.y, tMax);
   if (cb.x <= cb.y && t1 > t0) {

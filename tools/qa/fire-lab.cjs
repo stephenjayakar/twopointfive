@@ -6,12 +6,13 @@
 //   env: OUT (folder, default a temp one) · DIST (m, default 5) · PITCH (degrees, default 55) · WIND (x,z m/s, default 0,0) · T0 (s, default 3) · N (frames a
 //        row, default 8) · DT (s between frames, default 1/15) · W / H (a frame's size, default 320 × 360) · HEAT (default 1) · POP (age of a crack at the
 //        first frame, s; default 0.05)
-// Headless Chromium on the software adapter. Exit 0 = the shader compiled and every frame drew something of a flame; 1 otherwise.
+// Headless Chromium on the software adapter. Exit 0 = the shader compiled, the pipeline was made and every frame was written with no error on the page (what is IN a
+// frame is for the eye); 1 otherwise.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), os = require('os'), path = require('path');
 const OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'fire-lab-'));
-const DIST = +(process.env.DIST || 5), PITCH = +(process.env.PITCH || 55), T0 = +(process.env.T0 || 3), N = +(process.env.N || 8), DT = +(process.env.DT || 1 / 15);
-const W = +(process.env.W || 320), H = +(process.env.H || 360), HEAT = +(process.env.HEAT || 1), POP = +(process.env.POP || 0.05);
+const DIST = +(process.env.DIST || 5), PITCH = +(process.env.PITCH ?? 55), T0 = +(process.env.T0 ?? 3), N = +(process.env.N || 8), DT = +(process.env.DT ?? 1 / 15);
+const W = +(process.env.W || 320), H = +(process.env.H || 360), HEAT = +(process.env.HEAT ?? 1), POP = +(process.env.POP ?? 0.05);
 const WIND = (process.env.WIND || '0,0').split(',').map(Number);
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const fire = fs.readFileSync(path.join(__dirname, '../../src/render/shaders/fire.wgsl'), 'utf8');
@@ -42,7 +43,7 @@ fn agx(cin: vec3f) -> vec3f {
     col = vec3f(0.5, 0.48, 0.46) * (Li * (lit * max(d.y, 0.0) / (d2 * sqrt(d2))) + vec3f(0.004, 0.005, 0.008)) / 3.14159; }
   let dc = fireCyl(ro, rd, base - vec3f(0.0, base.y, 0.0), 0.29, 0.0, base.y);
   if (dc.x <= dc.y && dc.x > 0.0 && dc.x < tS) { tS = dc.x; let P = ro + rd * dc.x;
-    if (P.y > base.y - 0.002) { let r = length(P.xz - base.xz); col = select(vec3f(0.05, 0.02, 0.01), vec3f(11.0, 3.8, 0.9) * (0.75 + 0.25 * flick) * F.b.y, r < F.a.w); }
+    if (P.y > base.y - 0.002) { let r = length(P.xz - base.xz); col = select(vec3f(0.05, 0.02, 0.01), vec3f(11.0, 3.8, 0.9) * (0.42 * (0.4 + 0.6 * flick)) * F.b.y, r < F.a.w); }
     else { col = vec3f(0.07, 0.035, 0.02) + vec3f(0.3, 0.1, 0.03) * smoothstep(0.5, 0.9, P.y / base.y) * 0.05; } }
   let cpix = 2.0 * th / lab.res.y;
   let jit = fract(52.9829189 * fract(0.06711056 * fp.x + 0.00583715 * fp.y) + lab.res.w * 0.61803399);
@@ -75,17 +76,17 @@ const html = `<!doctype html><body style="margin:0;background:#000"><canvas id="
   }, { code: fire + stage });
   if (ok !== 'ok') { console.log('FAIL', ok, errs.join('\n')); await browser.close(); process.exit(1); }
   // the light's flicker and the cracks, as game/fire.ts makes them (kept in step with it by hand: this page is for looking)
-  const flick = t => 1 + 0.22 * (0.9 * Math.sin(6.283 * 1.7 * t + 1) + 0.6 * Math.sin(6.283 * 3.9 * t + 2) + 0.45 * Math.sin(6.283 * 9.1 * t + 3) + 0.3 * Math.sin(6.283 * 13.7 * t + 4)) / 2.25;
-  const rec = (t, popAge) => [0, 0.89, 0, 0.165, 0.6, HEAT, 0.37, t, WIND[0], WIND[1], flick(t) + 0.25 * Math.exp(-Math.max(popAge, 0) / 0.12) * (popAge >= 0 ? 1 : 0), 10, 0, 0, 0, 0, popAge, 0.9, 0.3, 0, -1, 0, 0, 0, -1, 0, 0, 0, -1, 0, 0, 0];
+  const flick = t => 1 + 0.22 * (0.9 * Math.sin(6.283 * 1.3 * t + 1) + 0.7 * Math.sin(6.283 * 2.7 * t + 2) + 0.45 * Math.sin(6.283 * 4.9 * t + 3) + 0.2 * Math.sin(6.283 * 8.3 * t + 4)) / 2.25;
+  const rec = (t, popAge) => [0, 0.89, 0, 0.165, 0.75, HEAT, 0.37, t, WIND[0], WIND[1], flick(t) + 0.25 * Math.exp(-Math.max(popAge, 0) / 0.12) * (popAge >= 0 ? 1 : 0), 10, 0, 0, 0, 0, popAge, 0.9, 0.3, 0, -1, 0, 0, 0, -1, 0, 0, 0, -1, 0, 0, 0];
   const cam = (dist, pitch, look, frame) => { const p = pitch * Math.PI / 180, yaw = 0.5; const f = [-Math.sin(yaw) * Math.cos(p), -Math.sin(p), -Math.cos(yaw) * Math.cos(p)];
     const eye = [look[0] - f[0] * dist, look[1] - f[1] * dist, look[2] - f[2] * dist]; const r = [Math.cos(yaw), 0, -Math.sin(yaw)]; const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
     return [...eye, 0, ...f, 0, ...r, 0, ...u, 0, W, H, Math.tan(14 * Math.PI / 180), frame]; };
   const rows = [{ name: 'play', dist: DIST, pitch: PITCH, look: [0, 0.9, 0] }, { name: 'close', dist: 2.2, pitch: 30, look: [0, 1.15, 0] }, { name: 'far', dist: 16, pitch: PITCH, look: [0, 0.9, 0] }];
-  let fail = 0; const files = [];
+  const files = [];
   for (const row of rows) for (let k = 0; k < N; k++) {
     const t = T0 + k * DT; await page.evaluate(u => window.__draw(u), [...cam(row.dist, row.pitch, row.look, k), ...rec(t, POP + k * DT)]);
     const file = path.join(OUT, `lab_${row.name}_${String(k).padStart(2, '0')}.png`); await page.screenshot({ path: file }); files.push(file);
   }
   console.log(JSON.stringify({ out: OUT, frames: files.length, errs }));
-  await browser.close(); process.exit(fail || errs.length ? 1 : 0);
+  await browser.close(); process.exit(errs.length ? 1 : 0);
 })();

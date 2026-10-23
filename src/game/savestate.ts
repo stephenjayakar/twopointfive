@@ -108,6 +108,7 @@ import { attachFlashlight, rollcallState, escalationOf, forgetGuardClocks } from
 import { forgetSuppressionClocks } from './suppression';
 import { glassState } from './glass';
 import { isDaylight, setDaylight, updateTargets } from './lighting';
+import { updateFire } from './fire';
 import { lampGlass } from './carlamps';
 import { needsSnapshot, needsRestore } from './needs';
 import { gunWallSnapshot, gunWallRestore } from './gunwall';
@@ -797,6 +798,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   const A = g.saves; if (A) A.adopt(s.autosave, g);
   g.hover = null; g.interactables = []; g.nearby = []; g.act = null; g.useDoor = null; g.aimGuard = null; g.aimTarget = null; g.aimSnap = null;
   updateTargets(g, 0);   // (every target's factor / light / emissive off the restored switches and blackout NOW: a checkpoint written in the dark loads dark on its first frame, not its second)
+  updateFire(g, 0);      // (… and an open fire's lamp, its place and its coals as this clock has them: fire.ts)
   if (s.dice && g.dice) { g.dice.s = s.dice.s | 0; g.dice.n = fin(s.dice.n); g.dice.seed = fin(s.dice.seed) >>> 0; }   // the game's own die back where the file left it — LAST, after every construction draw the clean slate above made
   if (s.kind !== 'harness') { chronCheckpoint(g, 'load', opts.label ?? s.label); g.messages.push({ text: `checkpoint loaded${s.label ? ` — ${s.label}` : ''}`, t: g.time }); if (g.messages.length > 5) g.messages.shift(); }   // (a harness restore is staging, not a checkpoint the player loaded: no row, no line, no load on the card)
 }

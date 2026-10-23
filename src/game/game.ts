@@ -1552,7 +1552,7 @@ export class Game {
     this.nightBreach?.onEncounterRestart(); // the night breach playtest, while it is up, stages itself again on the fresh encounter (nightbreach.ts)
     this.rescue?.onEncounterRestart();      // …and so does the hostage rescue (rescue.ts)
     this.quiet?.onEncounterRestart();       // …and the quiet mission faces Sam as its start has him and stages the partner (quiet.ts)
-    if (clean) updateTargets(this, 0);   // the lights painted as they now stand: what the next tick reads before its own paint — the reticle's rows, the men's eyes — is the fresh level, not the last try's last frame
+    if (clean) { updateTargets(this, 0); updateFire(this, 0); }   // the lights painted as they now stand: what the next tick reads before its own paint — the reticle's rows, the men's eyes — is the fresh level, not the last try's last frame
     if (!clean) this.note('encounter restarted');   // (clean: a level just opened says nothing of how it came to be — nor of its guards, above)
   }
 

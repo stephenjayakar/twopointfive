@@ -8,7 +8,7 @@ import { Vec3, v3 } from '../math/vec';
 import { StaticCollision } from '../scene/collision';
 import { GameAudioLike } from '../game/audio_iface';
 import { FLOOR, FloorMat, floorAt } from '../game/floor';
-import { buildSfx, buildSfxLater, ROLL_LOOP, SfxName } from './sfx';
+import { buildSfx, buildSfxLater, ROLL_LOOP, FIRE_LOOP, SfxName } from './sfx';
 import { buildSfxWas, wasInGame, wasOnly, WAS_IN_GAME } from './sfxWas';
 import { Music, WebAudioMusicBackend } from './music';
 import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die, never the simulation's seeded one under a session recording (math/dice.ts)
@@ -25,7 +25,7 @@ interface Voice { v: BackendVoice; positional: boolean; /** made by `again()`: t
 export type FollowSrc = () => { pos: Vec3; k: number; t: number } | null;
 interface Follow { src: FollowSrc; name: string; gain: number; rate: number; occ: number; lastT: number; /** the mixer's clock when the game's last moved */ seen: number; }
 /** the stretch of a followed voice's buffer that repeats while it is held (seconds; a take shorter than the stretch loops whole) */
-const FOLLOW_LOOPS: Record<string, { start: number; end: number }> = { chairRoll: ROLL_LOOP, fireBed: ROLL_LOOP };
+const FOLLOW_LOOPS: Record<string, { start: number; end: number }> = { chairRoll: ROLL_LOOP, fireBed: FIRE_LOOP };
 const MAX_FOLLOW = 4, FOLLOW_SECS = 45, FOLLOW_FADE_MS = 140;   // followed voices at once · the longest one is held · its fade when the thing stops
 
 

@@ -653,16 +653,26 @@ fn beamAir(ro: vec3f, D: vec3f, tMax: f32, cpix: f32) -> vec3f {
   }
   return L;
 }
-/** THE OPEN FIRES over what the pixel shows (game/fire.ts; fire.wgsl fireAir): each fire's flame and embers along the pixel's ray as far as its surface, nearest
- *  drawn last. Not over ground the fog of war hides (the fog's own rule for what is live: smoke, flakes). `c` in, `c` with the fires out. */
+/** THE OPEN FIRES over what the pixel shows (game/fire.ts; fire.wgsl fireAir): each fire's flame and embers along the pixel's ray as far as its surface, the
+ *  one this ray meets last drawn first (by where the ray enters each one's bound: right for this pixel, whatever order the list came in). Not over ground
+ *  the fog of war hides (the fog's own rule for what is live: smoke, flakes). `c` in, `c` with the fires out. */
 fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   var col = c;
   let n = min(beams.fireN.x, 4u);
-  let jit = fract(ign(pixf) + f32(frame.frameIdx & 63u) * 0.61803399);
+  var at = array<f32, 4>(-1.0, -1.0, -1.0, -1.0); var any = false;
   for (var i = 0u; i < n; i++) {
-    let F = beams.fire[n - 1u - i];
-    let cb = fireCyl(frame.camPos, rd, F.a.xyz, 1.3 + 0.35 * length(F.c.xy), -0.9, 3.4);   // (the embers' reach: nothing of this fire is on a ray that misses it)
+    let cb = fireBound(beams.fire[i], frame.camPos, rd);   // (nothing of this fire is on a ray that misses it)
     if (cb.x > cb.y || cb.y < 0.0 || cb.x > tMax) { continue; }
+    at[i] = max(cb.x, 0.0); any = true;
+  }
+  if (!any) { return col; }
+  let jit = fract(ign(pixf) + f32(frame.frameIdx & 63u) * 0.61803399);
+  for (var k = 0u; k < n; k++) {
+    var far = -1.0; var pick = 4u;
+    for (var i = 0u; i < n; i++) { if (at[i] > far) { far = at[i]; pick = i; } }
+    if (pick > 3u) { break; }
+    at[pick] = -1.0;
+    let F = beams.fire[pick];
     if (fogSeenAt(F.a.xyz, vec3f(0.0)) < 0.5) { continue; }
     let fa = fireAir(F, frame.camPos, rd, tMax, beamPix(), jit);
     col = col * fa.a + fa.rgb;
