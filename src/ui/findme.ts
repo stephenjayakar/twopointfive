@@ -15,7 +15,7 @@ import type { Vec3 } from '../math/vec';
 import { PLAN } from '../game/floorplan';
 import { camCap } from '../host/keymap';
 import { FINDME, FINDME_WIDTH, FINDME_MATES, AUTOVIEW, setAutoView, setFindMe, resetFindMe, outlineWant, outlineInk, OUTLINE_LOOK } from '../host/findme';
-import { AUTOCAM } from '../host/autocam';
+import { AUTOCAM, AUTOTUNE, AUTO_MODES, AUTO_RANGE, setAutoMode, setAutoTune, autoTuneOwn, resetAutoTune, type AutoKey, type AutoMode } from '../host/autocam';
 import { makeOutlineMan, type OutlineFrame, type OutlineMan } from '../render/outline';
 
 /** where the ring would be drawn for the seat's own man (its centre on the floor), null = none: the row off, or he is down */
@@ -87,9 +87,48 @@ export interface RowKit {
   seg<T extends string>(parent: HTMLElement, label: string, opts: { v: T; label: string; line?: string }[], get: () => T, set: (v: T) => void, describe: () => string): void;
   range(parent: HTMLElement, label: string, min: number, max: number, step: number, get: () => number, set: (v: number) => void, fmt: (v: number) => string, describe: string): void;
 }
+/** THE AUTO CAMERA'S OWN ROWS (host/autocam.ts AUTOCAM.tune): a mode, then every number of it the hand may want — how much the view turns by itself
+ *  and how fast, how far the frame leans, how far the zoom travels. Each row reads the table as it stands and writes through setAutoTune, so a mode
+ *  chosen moves the rows under it and a row moved is kept over the mode (which stays lit: its line says some of the numbers are the player's own). */
+const MODES: { v: AutoMode; label: string; line: string }[] = [
+  { v: 'never', label: 'Never', line: 'The camera never turns by itself. It still moves and zooms to frame things.' },
+  { v: 'rest', label: 'When you stop', line: 'The camera only turns when you stand still and a wall is hiding you.' },
+  { v: 'gentle', label: 'Gentle', line: 'The camera turns when a wall is hiding you, and it leans a little toward a fight. Every turn is slow.' },
+  { v: 'free', label: 'Free', line: 'The camera turns as much and as fast as it did when it first shipped.' },
+];
+const PER_RAD = 180 / Math.PI;
+function autoRows(K: RowKit, body: HTMLElement) {
+  /** a number's row: the slider's range is the table's own (AUTO_RANGE) in the row's unit, and a notch is the value nearest it — so the notch the
+   *  mode's own number shows as puts back the mode's own number, not the notch's */
+  const num = (label: string, key: keyof typeof AUTO_RANGE, step: number, unit: number, fmt: (v: number) => string, describe: string, quick = false) => {
+    const lo = Math.round(AUTO_RANGE[key][0] * unit / step) * step, top = Math.round(AUTO_RANGE[key][1] * unit / step) * step, hi = quick ? top + step : top;   // (quick: one notch past the fastest is the turn as built, the table's 0)
+    const notch = (t: number) => (quick && !(t > 0) ? hi : Math.max(lo, Math.min(top, Math.round(t * unit / step) * step)));
+    K.range(body, label, lo, hi, step, () => notch(AUTOCAM[key]), v => { const own = AUTO_MODES[AUTOTUNE.mode][key]; setAutoTune(key, Math.abs(notch(own) - v) < step / 2 ? own : quick && v > top + step / 2 ? 0 : v / unit); }, v => (quick && v > top + step / 2 ? 'Quick' : fmt(v)), describe);
+  };
+  const flag = (label: string, key: 'rest' | 'restAhead' | 'swing', describe: string) => K.flip(body, label, () => AUTOCAM[key], v => setAutoTune(key, v), describe, ['On', 'Off']);
+  const none = (word: (v: number) => string) => (v: number) => (v ? word(v) : 'None'), pct = (v: number) => `${v.toFixed(0)} %`, degs = (v: number) => `${v.toFixed(0)}°`, secs = (v: number) => `${v.toFixed(1)} s`, rate = (v: number) => `${v.toFixed(0)}° a second`;
+  const of = (key: 'lean' | 'zoomRate') => (v: number) => `${Math.round(v / AUTO_MODES.free[key] * 100)} %`;
+  K.sec(body, 'Auto camera · trying out');
+  K.seg(body, 'Camera turning', MODES, () => AUTOTUNE.mode, v => setAutoMode(v), () => { const M = MODES.find(m => m.v === AUTOTUNE.mode)!; return autoTuneOwn() ? `You've changed some of the settings below. Pick a mode to go back to its settings.` : M.line; });
+  flag('Turn when a wall hides you', 'rest', 'When you stop behind a wall, the camera turns until it can see you again.');
+  flag('Turn to face the door ahead', 'restAhead', 'When you stop at a door on the camera\'s side of you, the camera turns to look through it.');
+  num('Turn speed', 'turnCap', 10, PER_RAD, rate, 'How fast the camera turns when it turns by itself. Quick is the snap it first shipped with.', true);
+  num('Wait before it turns', 'still', 0.5, 1, secs, 'How long you have to stand still before the camera turns.');
+  num('Time between turns', 'gap', 0.5, 1, secs, 'How long the camera waits after one turn ends before it starts another.');
+  num('Turn in a fight', 'swayFightMax', 1, PER_RAD, none(degs), 'How far the camera may lean toward the enemies you can see. It comes back when the fight is over.');
+  num('Lean when you move sideways', 'swayMove', 2, PER_RAD, none(degs), 'How far the camera leans toward the side you walk to.');
+  num('Lean speed', 'swayRate', 1, PER_RAD, rate, 'How fast those two leans move.');
+  flag('Swing when you double tap', 'swing', `When you tap ${camCap()} twice to turn the auto camera on, the view swings around to look where you look.`);
+  num('Swing speed', 'swingCap', 30, PER_RAD, rate, `How fast the view swings around when you tap ${camCap()} twice. Quick is the snap it first shipped with.`, true);
+  num('Framing', 'leanK', 10, 100, none(pct), 'How far the view moves toward the door, squad or fight it\'s framing. At none, it stays on you.');
+  num('Framing speed', 'lean', 0.5, 1, of('lean'), 'How fast the view moves to what it\'s framing.');
+  num('Zoom', 'zoomAmt', 10, 100, none(pct), 'How much the camera zooms in and out by itself. At none, the zoom stays where you set it.');
+  num('Zoom speed', 'zoomRate', 0.4, 1, of('zoomRate'), 'How fast the camera zooms.');
+  num('Stay on the squad', 'beatSecs', 0.5, 1, secs, 'How long the view stays on a door your squad is working after you give the order.');
+}
 const TURNS: { v: 'as' | 'rev'; label: string }[] = [{ v: 'as', label: 'Normal' }, { v: 'rev', label: 'Reversed' }];
 const FADES: { v: 'pic' | 'meter'; label: string }[] = [{ v: 'pic', label: 'Picture' }, { v: 'meter', label: 'Light meter' }];
-/** the twelve rows under two headings; returns what Reset does for them */
+/** the rows under their headings (the auto camera's own section last, where it is on); returns what Reset does for them */
 export function findMeRows(K: RowKit, body: HTMLElement): () => void {
   /** a row that is a share shown in per cent, from none (`zero`: 0 reads 'None') to `max` */
   const pct = (label: string, key: 'pan' | 'width' | 'opacity' | 'mates' | 'colour' | (() => 'lit' | 'dark' | 'picLit' | 'picDark'), max: number, step: number, zero: boolean, describe: string) => {
@@ -110,5 +149,6 @@ export function findMeRows(K: RowKit, body: HTMLElement): () => void {
   K.seg(body, 'Turn direction', TURNS, () => FINDME.turn < 0 ? 'rev' : 'as', v => setFindMe('turn', v === 'rev' ? -1 : 1), () => `Which way the view turns when you hold ${camCap()} and move the mouse.`);
   if (AUTOCAM.on) K.flip(body, 'Auto camera', () => AUTOVIEW.on, v => setAutoView(v), `Tap ${camCap()} twice and the camera frames things for you. Hold ${camCap()} and move the mouse to take it back.`, ['On', 'Off']);   // (host/autocam.ts: the double tap is the mode's, and it turns the view as the row below did)
   else K.flip(body, `Double tap ${camCap()}`, () => FINDME.behind, v => setFindMe('behind', v), `Tap ${camCap()} twice and the view turns to put what you are facing ahead of you.`, ['On', 'Off']);   // (the camera's key as the board has it: host/keymap.ts camCap)
-  return () => { resetFindMe(); if (AUTOCAM.on) setAutoView(false); };   // (the row above is not one of FINDME's: its start is Off)
+  if (AUTOCAM.on && AUTOCAM.tune) autoRows(K, body);
+  return () => { resetFindMe(); if (AUTOCAM.on) setAutoView(false); if (AUTOCAM.on && AUTOCAM.tune) resetAutoTune(); };   // (the row above is not one of FINDME's: its start is Off)
 }
