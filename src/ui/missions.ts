@@ -72,7 +72,7 @@ const LS = 'twopointsix.mission';   // the row last started on this machine: the
  *  but `?solo`, which only keeps the start card shut. The shift is three guards and two civilians (tools/qa missions probe counts them on a plain boot). */
 export const SOLO_KEY = 'solo';
 export const SOLO_NIGHT: Mission = { id: 'solo-night', title: 'Solo night', scenario: null, squad: 0, group: 'quiet-alone', place: 'The office, after dark', lean: 'quiet', untuned: false, defenders: '3, and 2 civilians',
-  blurb: 'You\'re alone on the office floor. Reach the server room, pull the drive from the marked rack and leave through the fire exit. Watch out for lights, noise and cameras.' };
+  blurb: 'You\'re alone on the office floor. Reach the server room, pull the drive and leave through the fire exit. Watch out for lights, noise and cameras.' };
 
 const LEAN_OF_KIND: Record<ScenarioEntry['kind'], Lean> = { nightbreach: 'either', roomclear: 'loud', rescue: 'loud', quiet: 'quiet' };
 /** THE GROUP A ROW IS LISTED UNDER: its own (`group`), else by what it is — a quiet mission alone or as two, a rescue on the clock, and any other squad's
