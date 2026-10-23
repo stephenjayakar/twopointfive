@@ -31,6 +31,8 @@ import { CASTOR } from '../game/props';
 import { DOORTOOLS } from '../game/doortools';
 import { SEENWALK } from '../game/seenwalk';
 import { ORDERS, ROUND_CAP } from '../game/orders';
+import { PAIR } from '../game/pairorders';
+import { ROOMFIGHT } from '../game/roomfight';
 import { HANDLE } from '../game/handleside';
 import { COVER } from '../game/cover';
 import { SNEAK } from '../game/sneak';
@@ -95,6 +97,7 @@ import { moraleFromQuery } from '../game/morale';
 import { RUNNER } from '../game/runner';
 import { STARTLE } from '../game/startle';
 import { ROWSET } from '../game/rowset';
+import { SMOKEBREAK } from '../game/smokebreak';
 import { FLINCH } from '../game/flinch';
 import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
@@ -202,9 +205,13 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.walkTries = q.get('walktries') !== '0';   // a 'move there' whose way runs at a door locked against the team that nobody has tried is not refused with the door's name: the men walk up to it, the man on the jamb tries the handle, and the order ends there as a door order ends 'found shut' — the same line, the men left stacked on it; the team knows from then on (game/orders.ts walkStacks, game/doortools.ts walkTried; only where DOORTOOLS.testDoor is on); ?walktries=0 = refused at once, '<door> is locked.', as it was
   ORDERS.roundCap = q.get('roundcap') === '0' ? 0 : ROUND_CAP;   // the way round an uncleared room is taken only when it is worth it (game/orders.ts route / roundRooms: a way round that still crosses floor nobody has been on, or is longer than this many times the short way + 3 m, is refused — the short way, as with no way round); ?roundcap=0 = any way round with less unknown floor on it, however long, as it was
   ORDERS.roundOwn = q.get('roundown') !== '0';   // …and the cap never refuses a pair a way round that keeps it off the door it is to stack on (game/orders.ts route): ?roundown=0 = the cap as it was first made, a pair behind the ordered door walks through it
+  ORDERS.sameWay = q.get('sameway') !== '0';   // a pair handed one order on one door from one spot goes round a building by one side (game/orders.ts sameWays): ?sameway=0 = each man his own short way, as it was
+  ROOMFIGHT.coverKeep = q.get('coverkeep') !== '0';   // a man told to cover keeps his angle: an enemy off the way he was given whom a mate is already shooting at is not his (src/game/roomfight.ts)
+  PAIR.steady = q.get('pairsteady') !== '0';   // a partner on his way to a man's back does not turn about: never back to a corner he has passed, and a short wait on a watched way does not square him to the man (game/pairorders.ts takeTick): ?pairsteady=0 = as it was
   COVER.rearRead = q.get('rearread') !== '0';   // a rear man on a mark with no door (a wall charge's stand-off, the mate covering a man at work) watches what the ground round him offers — a way in, a long run of floor — not the spot he stood on when the order came (game/cover.ts readRear over roomfit.ts watchablesAt): ON in the page; ?rearread=0 = 'the way he came', as it was
   COVER.backTurn = q.get('backturn') !== '0';   // a man walking backwards whose opening the deal lets go of comes out of it on his feet: the path kept, his body turning to the way he goes (game/cover.ts turnOut): ?backturn=0 = he walks forward along a body still turned to the rear, a quarter of a metre the wrong way, as he did
   UNDERFOOT.on = q.get('underfoot') !== '0';   // what the walk grid calls floor, feet cross (scene/collision.ts): a walker is stopped by what the grid's bake calls blocked and by nothing lower — the bottom layer of a pile of sacks a wall charge left in its own hole no longer holds the men ordered through it: ?underfoot=0 = a thing 0.2 m high stops feet the grid routes across
+  SNEAK.byEye = q.get('byeye') !== '0'; { const n = Number(q.get('seenrate')); if (q.has('seenrate') && Number.isFinite(n) && n > 0) SNEAK.seenRate = Math.min(1, n); }   // a lit step with a line is SEEN only where that defender's eye would gain on a man there (src/game/sneak.ts; `?seenrate=<n>`: the rate that counts, the guards' own floor 0.05 by default)
   SNEAK.stalkAmbient = q.get('stalkambient') !== '0';   // the partner's way to a man's back is read by the light his OWN meter shows on him over the CPU's estimate (the moon, the bounce), as Sam's crumbs carry Sam's (game/sneak.ts sneakWalk): ON in the page; ?stalkambient=0 = the estimate alone, as it was — a moonlit yard read as dark
   SNEAK.noiseWalk = q.get('noisewalk') !== '0';   // a follower is not left standing on the walk of a man who comes to a sound (game/sneak.ts sneakComing; the breaker man's manners, workthings.ts workComing, for any suspicious man on his way to a place he heard something): ON in the page; ?noisewalk=0 = the breaker man alone, as it was
   DOORTOOLS.testDoor = q.get('doortest') !== '0';   // an entry order HALTS at a door that turns out locked or wedged, the lead says so, and the same row again boots it; a plain 'stack up' tries the handle (game/doortools.ts haltAt / testStacks): ON in the page; ?doortest=0 = straight to the boot as it was
@@ -217,6 +224,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SEENWALK.on = q.get('seenwalk') !== '0';   // the walk an order gives a man keeps off lit floor that a room nobody has cleared has a sight line to, through glass as through anything an eye sees through (game/seenwalk.ts): ON in the page; ?seenwalk=0 = the walks as they were
   DOORTOOLS.bangInto = q.get('banginto') !== '0';   // a bang and clear's can leaves the thrower's own hand and is thrown deep into the room (the deepest point its burst lights nearly all the floor from), going off as it gets there (game/doortools.ts bangSpot): ON in the page; ?banginto=0 = it appears in the door frame and goes off 1.6 m inside, as it was
   DOORTOOLS.haltBack = q.get('haltback') !== '0';   // a pair halted 'found shut' on a door the OTHER pair is charging steps back to rear security, out of the backblast, as a pair stacked there before the charge was ordered does (game/doortools.ts haltBack: the same stepBacks / makeRoom; it was asked only as the charge order was given, and the halted pair stood inside the blast): ON in the page; ?haltback=0 = it stays stacked where it halted, as it was
+  DOORTOOLS.tossMate = q.get('tossmate') !== '0';   // a bang and clear asks about teammates again as the can is about to leave the hand: one of ours beyond the door, in its reach, and the can stays in the kit and they go in (game/doortools.ts mateBehind): ON in the page; ?tossmate=0 = asked when the row is given and never again, as it was
   DOORTOOLS.behindSam = q.get('behindsam') !== '0';   // Sam beyond a door is one of ours to the squad's own stun can: the word at a held door steps them in with the can kept, and a bang row on it is refused in words (game/doortools.ts samBehind): ON in the page; ?behindsam=0 = only teammates counted, as it was
   DOORTOOLS.podFrames = q.get('podframes') !== '0';   // no point of an entry is dealt in ANOTHER door's frame, or beyond one (game/doortools.ts inFrame; the barracks' n_end entry had a man on n4b's threshold): ON in the page; ?podframes=0 = the points as they were
   DOORTOOLS.thrHand = q.get('thrhand') !== '0';   // a threshold's can is thrown only by a man within reach of the frame, and waits for one (game/doortools.ts thrHand: a frag had run the stack off the door and the can left a doorway nobody stood at): ON in the page; ?thrhand=0 = the thrower wherever he stands
@@ -226,6 +234,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORTOOLS.thrFragHold = DOORTOOLS.fragHold && q.get('thrfraghold') !== '0';   // … and a threshold waits the same way before a can or the step in (game/doortools.ts thrFragHold): ON in the page; ?thrfraghold=0 = that half alone off
   DOORWAY.sideKick = q.get('sidekick') !== '0';   // a boot from beside the latch jamb (game/doors.ts kickSpotSide): ON in the page; ?sidekick=0 = every kick square in front of the leaf
   DOORWAY.kickGlass = q.get('kickglass') !== '0';   // … never from in front of a pane a round reaches him through: the lead boots from the front there (game/doortools.ts bootSpot): ON in the page; ?kickglass=0 = the side spot wherever there is floor
+  DOORWAY.solid = q.get('doorsolid') !== '0';   // a leaf pulled open toward the player is solid to him: it moves him back and aside, or stops on him (game/doors.ts DOORWAY.solid): ON in the page; ?doorsolid=0 = the swing passes him, as it did
   WX_OWN.roofs = q.get('ownroofs') !== '0';   // a level's own night storm rains by that level's own roofs (game/weather.ts syncRoofs: the records office's car park lay inside the OFFICE's no-rain rectangle): ON in the page; ?ownroofs=0 = the office's two rectangles on every level, as it was
   WX_OWN.wind = q.get('wxwind') !== '0';   // … and its storm BLOWS roof by roof: open ground between a level's three or four roofs has the storm's wind — flakes, wisps and smoke on one field (game/wind.ts syncField; it was the roofs' bounding box, so a yard was still): ON in the page; ?wxwind=0 = the bounding box, as it was
   SNOW.on = q.get('snow') !== '0';   // a level built for snow (game/weatherKinds.ts SNOW_LEVELS: the pass) is born in snow — flakes in its open air (game/snowFx.ts), play as under Overcast: ON in the page; ?snow=0 = that level under the weather any level has
@@ -256,7 +265,7 @@ export function pageSwitches(q: URLSearchParams): void {
   WALLSNAP.slow = q.get('wallslow') !== '0';   // …and unhurried (wallsnap.ts `slow`): the take runs twice its seconds and the pose comes on and lets go at half its rate; ?wallslow=0 = the take as it was
   RELOAD.lastMag = !q.has('nolastmag');   // the last magazine, seated and not racked, can still be reloaded (game/autoreload.ts): ON in the page; ?nolastmag = that gun never fires again, as it was
   HANDSLOT.on = q.get('handslot') !== '0';   // empty hands are a slot (game/handslot.ts): its key puts away whatever is up and is never the way back, a digit draws; on the page's board it is backtick, the debugger is on backslash and E is spare (host/keymap.ts SLOT) — ON in the page; ?handslot=0 = E puts away and draws, as it was
-  HANDRING.empty = HANDRING.early = q.get('handring') !== '0';   // …and a digit pressed inside the hold is the ring's wedge at once, never the weapon slot (handring.ts `early`)
+  HANDRING.near = HANDRING.empty = HANDRING.early = q.get('handring') !== '0';   // …and a digit pressed inside the hold is the ring's wedge at once, never the weapon slot (handring.ts `early`)
   HANDRING.on = q.get('handring') !== '0';   // his own actions are a ring that stays (game/handring.ts): a tap of the interaction key does the default action, the key kept down a moment puts his rows up as a ring at the cursor that stays with no key held (a digit, a click or the key again does a wedge; a right click or Tab puts it away), the whistle is its last wedge and has no key, the corner shows the default action alone; on the page's board the key is E while empty hands are a slot (host/keymap.ts HAND) — ON in the page; ?handring=0 = the list on a held Space, the corner list and V for the whistle, as it was
   THROWBACK.restMark = !q.has('norestmark');   // the throw preview's ring is where the can comes to REST (game/throwback.ts `restMark`, player.ts throwRest; the overlay's): ?norestmark = the ring on its first touch, as it was
   THROWBACK.on = q.get('throwback') !== '0';   // a can in the wind-up goes back on the belt when a kick, a pick, the wand, hands at work, the keypad or a takedown begins (game/throwback.ts); `?throwback=0` = it freezes in his fist and leaves when the beat ends, as it did
@@ -266,8 +275,10 @@ export function pageSwitches(q: URLSearchParams): void {
   GLASSREAL.drop = q.get('glassdrop') !== '0'; GLASSREAL.place = q.get('glassplace') !== '0';   // glass as buildings have it (game/glassbreak.ts GLASSREAL): a toughened sheet goes white and drops at once, no wave across it; and a pane is toughened where it reaches the floor or is a door's panel, float where it starts at a sill — ON in the page; ?glassdrop=0 = the wave, ?glassplace=0 = outside toughened and inside float, as they were
   SLOTSETUP.on = q.get('slotsetup') !== '0';   // the slot in hand pressed again opens its setup (game/slotsetup.ts): 1 or 2 pressed with that gun in the hands lights its rows — 1 semi / auto, 2 the launcher's load, 3 the light — and the Z and L keys give nothing (host/keymap.ts setFree, the same word) — ON in the page; ?slotsetup=0 = 2 again steps the load, Z is the selector and L the light, as they were
   SLOTSETUP.pop = q.get('setuppop') !== '0';   // …and the setup is a mode that pops up above the kit column, with no clock on it (slotsetup.ts `pop`) — ON in the page; ?setuppop=0 = its rows on the box's second line and shut by itself after a second and a half, as the first build had it
+  SLOTSETUP.draw = q.get('setupdraw') !== '0';   // …and a gun's digit pressed again while it is still coming to his hands opens the setup at once (slotsetup.ts `draw`): 2 2 off the pistol is the rifle and its setup — ON in the page; ?setupdraw=0 = a double-tapped digit is the draw and no more
   DOORFORCE.on = q.get('doorforce') !== '0';   // an alerted man does not wait at a shut door (game/doorforce.ts): a defender who is sure an enemy is at its far face fires through a wooden leaf and, free to move, ends by booting it in — ON in the page; ?doorforce=0 = he rests his gun on it or goes to its handle, as he did
   RAILS.on = q.get('rails') !== '0';   // a tutorial mission's frame (game/rails.ts): on a level whose lesson carries a rails record, only what the step that is up has unlocked works, the level's script is cued by the steps, the checkpoints are the authored ones and a teammate is never lost — ON in the page; ?rails=0 = such a level plays as a plain lesson
+  RAILS.eyeView = q.get('eyeview') !== '0'; RAILS.eyeFirst = q.get('eyefirst') !== '0'; RAILS.lineClear = q.get('lineclear') !== '0';   // three rules of that frame, each with its own word off (rails.ts RAILS): ?eyeview=0 = a mission's lookout is one more of the team's eyes, as it was (the squad then knows what only the lookout has); ?eyefirst=0 = a step's lookout takes the last free place among the picture's eyes, not the first; ?lineclear=0 = the big line lies where it lies, over your own men too. On the frozen stand the frame itself is off (TPS_RAILS=1 raises it, these three with it)
   NOSHOVE.on = q.get('noshove') !== '0';   // teammates falling in never shove the player (game/noshove.ts): a follower whose way lies through him goes round or stops short, and a shove from anybody is not read as his walking — ON in the page; ?noshove=0 = shouldered aside by his own file, as it was
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
   AIMWEIGHT.on = !q.has('noaimweight');   // the player's aim has weight (game/aimweight.ts): his gun turns at a limited rate and the aiming circle trails the cursor, shots going where the circle is — ON in the page; ?noaimweight = the gun eased onto the cursor as it was
@@ -313,6 +324,7 @@ export function pageSwitches(q: URLSearchParams): void {
   PLAN.menuOnly = !q.has('planalways');   // the plan's ways, marks and fans only while the order menu is up (picture only, on on both stands); `?planalways` = for as long as the orders stand
   moraleFromQuery(q);   // shaken (game/morale.ts): a blast makes the men near it duck, and breaks a man alone in the dark — down, back off the hole, a burst into the dust, a call nobody answers: ON in the page; ?nomorale = every man as steady as he was. With it who is green and how brittle they all are: ?training=green|mixed|trained (absent: by the squad's own key and the difficulty), ?nerve=brittle|steady — and a choice made by hand in the debugger's Enemy nerve section, kept for the visit
   VERDICT.loudCard = q.get('loudcard') !== '0';   // a mission that leans loud is not graded as a sneak (game/verdict.ts loudRow): its end card shows no rating word, no score, no badges, and the sneak's numbers stand untoned — ON in the page; ?loudcard=0 = the stealth game's rating on every card it stands on, as it was
+  SMOKEBREAK.on = q.get('smokebreak') !== '0';   // a man a level's script told to have a smoke lights one (game/smokebreak.ts: his left hand to his mouth, the lit end, real smoke) — ON in the page; ?smokebreak=0 = he stands there with his hands as they were (one level's one man today: the ledger's)
   ROWSET.on = q.get('rowset') !== '0';   // a mission row's own hour and weather (game/rowset.ts): a row that names one is always started in it, over the link's — ON in the page; ?rowset=0 = the link's hour and weather as ever (no row names one: nothing to see either way)
   STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
   FLINCH.on = q.get('flinch') !== '0'; FLINCH.run = q.get('flinchrun') !== '0';   // a man flinches when fire comes close (game/flinch.ts): every close round of the other side ducks a man, the player's own included, by how near it was and how drilled he is; a green man alone kept under it drops his gun and runs: ON in the page; ?flinch=0 = nobody ducks but on the suppression model's own edge, as it was; ?flinchrun=0 = the duck alone, nobody runs from fire
@@ -376,6 +388,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.planLook = CMDRING.plan && CMDRING.planRts && q.get('planlook') !== '0';   // …a right press dragged is an order with a way to look: on the floor they go there and face it, on a man he covers it from where he stands (`?planlook=0` = a right press is a click or the ring)
   CMDRING.planWaits = CMDRING.plan && q.get('planwaits') !== '0';   // …the word's waits are the plan's own: a left click on a stop steps them on, and the word frees only the chains stood waiting (`?planwaits=0` = the build's own pauses and the early press)
   CMDRING.planKnee = CMDRING.plan && CMDRING.planRts && q.get('planknee') !== '0';   // …he takes a knee at the radio while the mode is up, and the view eases back to him when it comes down (`?planknee=0` = he stands, the view's point jumps)
+  CMDRING.planOne = CMDRING.plan && q.get('planone') !== '0';   // …one word that frees two or more doors of a plan puts their entries on one signal: the doors open together and two cans wait each other's burst (`?planone=0` = each chain's entry on its own clock, as it was)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
@@ -407,6 +420,7 @@ export function pageSwitches(q: URLSearchParams): void {
   IRLIGHT.on = !q.has('noirlight');   // an infrared light on the goggles (game/irlight.ts): a room with no light of its own shows through night vision, to you and to a goggled teammate and to nobody else — ON in the page; ?noirlight = a tube amplifies only the light that is there, as it was
   IRLIGHT.auto = !q.has('noirauto');   // …and it burns only where the goggles alone show too little (irlight.ts fanDark: the place's own light through the tube, under NVG.blackAt) — ON in the page; ?noirauto = it burns whenever the goggles are down, as it did
   IRLIGHT.meter = !q.has('noirmeter');   // …and what the CPU's direct-light estimate calls too dark is put to the renderer's light meter, which has the bounce (irlight.ts burn): a room with its own bulb off but lit round its door frame is not dark to the tube — ON in the page; ?noirmeter = the CPU's estimate alone, as it was
+  IRLIGHT.near = q.get('irnear') !== '0';   // …and it turns itself down for what stands close in front of it, so a wall a pace off reads as one five metres off and not white (irlight.ts nearK): ?irnear=0 = full strength whatever is in front of it, as it was; ?irnear=<metres> and ?irpower=<n> set its two numbers for a visit (irlight.ts irFlags)
   LIGHTWALL.on = !q.has('nolightwall');   // a weapon light stops at the wall its carrier is pressed to (game/lighting.ts lensClear): ON in the page; ?nolightwall = the light at its lens wherever that is, as it was
   AIRDUST.on = !q.has('flatfog');   // a picked weather's dust stands in the rooms where the openings let it (game/airDust.ts): the men's eyes read that field — ON in the page; ?flatfog = the leak under every roof and the picture's flat veil, as it was (main.ts lowers render/frame.ts weatherVolConfig by the same word)
   gearFromQuery(q);   // the 2010s issue kit (game/gear.ts): Sam's rifle and pistol named a Mk 18 and a Glock 19 (the rifle drawn as an M4-pattern carbine), two-tube goggles that do not glow, the ring worded and drawn a 40 mm sponge round — ON in the page; ?oldgear = the Splinter Cell kit, as it was. Words and boxes, and one number: the Glock's magazines hold fifteen
@@ -489,6 +503,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'IRLIGHT.on': 'TPS_IRLIGHT=1',
   'IRLIGHT.auto': 'TPS_IRAUTO=1',
   'IRLIGHT.meter': 'TPS_IRMETER=1',
+  'IRLIGHT.near': 'TPS_IRNEAR=1',
   'AIRDUST.on': 'TPS_AIRDUST=1',
   'WALLSNAP.on': 'TPS_WALLSNAP=1',
   'WALLSNAP.press': 'TPS_WALLPRESS=1',
@@ -499,6 +514,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HANDRING.on': 'TPS_HANDRING=1',
   'HANDRING.early': 'TPS_HANDRING=1',
   'HANDRING.empty': 'TPS_HANDRING=1',
+  'HANDRING.near': 'TPS_HANDRING=1',
   'THROWBACK.on': 'TPS_THROWBACK=1',
   'OWNBLOW.on': 'TPS_OWNBLOW=1',
   'THROWBACK.restMark': 'none: the overlay reads it, nothing headless does',
@@ -540,6 +556,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'RUNNER.on': 'TPS_RUNNER=1',
   'STARTLE.on': 'TPS_STARTLE=1',
   'ROWSET.on': 'TPS_ROWSET=1',
+  'SMOKEBREAK.on': 'TPS_SMOKEBREAK=1',
   'FLINCH.on': 'TPS_FLINCH=1',
   'FLINCH.run': 'TPS_FLINCHRUN=1',
   'VERDICT.loudCard': 'TPS_LOUDCARD=1',
@@ -572,6 +589,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORFORCE.on': 'TPS_DOORFORCE=1',
   'SLOTSETUP.on': 'TPS_SLOTSETUP=1',
   'SLOTSETUP.pop': 'TPS_SLOTSETUP=1',
+  'SLOTSETUP.draw': 'TPS_SETUPDRAW=1 (acts only with the rule up: TPS_SLOTSETUP=1)',
   'GLASSREAL.drop': 'TPS_GLASSDROP=1 (acts only with the glass up: GLASSFX=on)',
   'GLASSREAL.place': 'TPS_GLASSPLACE=1 (acts only with the glass up: GLASSFX=on)',
   'AIMCOST.lamp': 'TPS_LAMPHIT=1',
@@ -604,10 +622,14 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.retakeGoal': 'TPS_RETAKEGOAL=1',
   'ORDERS.walkTries': 'TPS_WALKTRIES=1',
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
+  'ORDERS.sameWay': 'TPS_SAMEWAY=1',
+  'PAIR.steady': 'TPS_PAIRSTEADY=1',
+  'ROOMFIGHT.coverKeep': 'TPS_COVERKEEP=1',
   'COVER.rearRead': 'TPS_REARREAD=1',
   'COVER.backTurn': 'TPS_BACKTURN=1',
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
   'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
+  'SNEAK.byEye': 'TPS_BYEYE=1',
   'SNEAK.noiseWalk': 'TPS_NOISEWALK=1',
   'DOORTOOLS.testDoor': 'TPS_DOORTEST=1',
   'DOORTOOLS.thrPie': 'TPS_THRPIE=1',
@@ -627,11 +649,13 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planLook': 'TPS_PLANLOOK=1 (needs TPS_QPLAN=1)',
   'CMDRING.planWaits': 'TPS_PLANWAITS=1 (needs TPS_QPLAN=1)',
   'CMDRING.planKnee': 'TPS_PLANKNEE=1 (needs TPS_QPLAN=1)',
+  'CMDRING.planOne': 'TPS_PLANONE=1 (needs TPS_QPLAN=1)',
   'CMDRING.only': 'TPS_QONLY=1 (needs TPS_QRING=1)',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
   'SEENWALK.on': 'TPS_SEENWALK=1',
   'DOORTOOLS.haltBack': 'TPS_HALTBACK=1',
   'DOORTOOLS.behindSam': 'TPS_BEHINDSAM=1',
+  'DOORTOOLS.tossMate': 'TPS_TOSSMATE=1',
   'DOORTOOLS.podFrames': 'TPS_PODFRAMES=1',
   'DOORTOOLS.thrHand': 'TPS_THRHAND=1',
   'DOORTOOLS.thrNoCan': 'TPS_THRNOCAN=1 (acts only with the can\'s wait for a hand up as well: TPS_THRHAND=1)',
@@ -640,6 +664,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.fragHold': 'TPS_FRAGHOLD=1 (this rule alone: the threshold\'s half has its own word above)',
   'DOORWAY.sideKick': 'TPS_SIDEKICK=1',
   'DOORWAY.kickGlass': 'TPS_KICKGLASS=1 (acts only with the side kick and rounds through glass up as well: TPS_SIDEKICK=1 GLASSFX=on)',
+  'DOORWAY.solid': 'TPS_DOORSOLID=1',
   'FURN.mouth.on': 'TPS_HOLECLEAR=1',
   'FURN.mouth.snow': 'TPS_HOLESNOW=1 (acts only with a blown hole cleared: TPS_HOLECLEAR=1)',
   'FURN.mouth.base': 'TPS_HOLEBASE=1 (acts only with a blown hole cleared: TPS_HOLECLEAR=1)',

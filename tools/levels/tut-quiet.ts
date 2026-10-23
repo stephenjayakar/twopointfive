@@ -79,7 +79,15 @@ export const TQ = {
   his: [22.0, 0, 17.8] as P3,             // where the man who comes to the whistle ends his walk, his back to the long wall's end. He looks at where the sound
                                           // was: with the mark on his own line that is straight ahead, down the lane (0.3 m to one side of his line, as it
                                           // first stood, it was beside him when he stopped: he stood with his light on the shop's wall a step away)
-  hide: [23.9, 0, 19.05] as P3,           // behind the long wall, on the lane's side of it: he walks past on the other side
+  hide: [23.9, 0, 19.05] as P3,           // behind the long wall, on the lane's side of it: the man who comes stops on the other side of the cross wall
+  // THE MAN WHO COMES TO THE WHISTLE DOES NOT WALK TO IT (the level's script stages him: levels/tut-quiet.script.ts). He stops in the back strip a stride
+  // short of the cross wall's gap and puts his light through it, down the walk and over the place the sound came from, five metres off: far enough that
+  // the prints in the snow there are nothing he could read. Then he turns round, walks back up the strip past the back door to his chair at its far end
+  // and has a smoke there, his back to the way he came: against the neighbour's wall beyond him, which the court's lamp lights through the long wall's
+  // end, he is a dark shape at the end of a dark strip.
+  look: [26.4, 0, 17.75] as P3,           // where he looks from: in line with the gap and the whistle's mark, so his beam goes through the one and over the other
+  smoke: [30.3, 0, 17.7] as P3,           // where he smokes, his back to the gap: by his chair, the tin for the ends at its foot. (Two and a half metres past
+                                          // the back door's lock: a man put down nearer lies in reach of a hand at the lock, and a body's row comes before a door's)
   backDoor: [27.9, 0, 17.2] as P3,        // the court side of the back door
   nook: [26.1, 0, 14.15] as P3,           // the store's dark corner beside the lit doorway to the hall
   under: [23.2, 0, 12.4] as P3,            // past the chest beam
@@ -383,8 +391,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // long wall, a chair, the generator and its fuel, the snow the broom took heaped by the alley wall
   G.drum(28.2, 19.25, 'rust'); glow('fire_court', 'exterior', { c: [28.2, 0.884, 19.25], h: [0.19, 0.006, 0.19] }, [28.2, 1.05, 19.25], 9, 6.5);
   G.woodPile(26.5, 19.08, 0, 1.1); G.plasticChair(29.1, 19.2, -HALF);
-  G.generator(31.0, 21.1, HALF); capOn(31.0, 21.1, HALF, -0.1, 0, 1.0, 0.56, 1.0, 0.04); G.gasBottle(30.9, 17.3); G.plasticChair(30.2, 17.2, Math.PI); G.jerryCan(30.3, 21.6, 0.2);
+  G.generator(31.0, 21.1, HALF); capOn(31.0, 21.1, HALF, -0.1, 0, 1.0, 0.56, 1.0, 0.04); G.gasBottle(31.35, 17.0); G.plasticChair(30.6, 17.02, Math.PI); G.jerryCan(30.3, 21.6, 0.2);
   bank(27.95, 21.5, 1.3, 0.72, Math.PI);   // (nothing at the long wall's far end: the way round it is the night man's only way to the walk)
+  // where the night man smokes: by the chair at the strip's far end, a tin for the ends at its foot (the level's script stands him there: TQ.smoke)
+  thing(30.15, 16.92, 0, 0.11, 0.11, 0.06, M.tin, 0.3);
 
   // ================================================================ THE TOWN ROUND IT (nobody goes there: it is what the night is made of) ====
   /** a neighbour's building, seen as its back: a mass `top` high with snow on its flat roof. (Every one stands over 3.5 m: a slab between 2.75 and 3.45 m
@@ -496,9 +506,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       //  off the whistle's own line; he could not tell when "stops" is or what the key would do. So the frame's card says the whole beat the moment the
       //  whistle has gone, with the world held while it is read — he looks for about four seconds, which is no time to read in; the line names the deed;
       //  and the mark rides on the man, so where he is and that he has stopped can be seen from behind the wall)
-      { id: 'grab', line: 'When he stops, sneak up behind him and press [Space] to grab him', explain: { title: 'A whistle brings one man', text: 'He heard that, and he\'s coming to look. Stay behind the wall, out of his light.\nHe\'ll check out the sound and then stop, with his back to you. Go around the wall, come up behind him, and press [Space] to grab him.' },
+      // (the second play of it on a GPU: the man walked to the whistle's own mark and stood over the player's prints in the snow. "guard seems kinda dumb
+      //  that he doesn't notice the footprints. maybe we should make him stop a bit further away and then turn around for a cigarette break"; "he can stop
+      //  further off so long as he's covered the spot with his flashlight". So he looks from the far side of the cross wall and then smokes with his back to
+      //  its gap: the level's script, TQ.look and TQ.smoke. The `held` cue tells that script the man is the player's now)
+      { id: 'grab', line: 'When he lights a smoke, sneak up behind him and press [Space] to grab him', explain: { title: 'A whistle brings one man', text: 'He heard that, and he\'s coming to look. Stay behind the wall, out of his light.\nHe\'ll check out the sound and then stop for a smoke, with his back to you. Come around the wall, go up behind him, and press [Space] to grab him.' },
         done: any(...held, down(1)), atMan: 'court' },
-      { id: 'ask', line: 'Press [Space] to ask him for the code', done: any(did('chron:codeLearned'), down(1)) },
+      { id: 'ask', line: 'Press [Space] to ask him for the code', cue: 'held', done: any(did('chron:codeLearned'), down(1)) },
       { id: 'drop', line: 'Right click to knock him out, or left click to use the knife', allow: ['fire', 'alt'], done: down(1) },
       // ---- the back door: a lock ----
       // (the same play, at one line — "[Space] at the lock. Then keep still": "'E at the lock' isn't sufficient. we need to introduce the lock picking system
@@ -506,7 +520,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       //  'keep still' -- we should just have a modal explaining interactions and cancelling them when we first introduce them". So: the walk to the door is
       //  its own line; AT the door — the first work that takes time — the frame's card says this lock is his to pick, that such work takes seconds and
       //  what stops it; and no line says 'keep still' again)
-      { id: 'door', line: 'Go to the back door', checkpoint: 'the back court', done: any(near(TQ.backDoor, 1.3), { is: 'flag', flag: 'picking' }, PICKED), at: mark(TQ.backDoor) },
+      { id: 'door', line: 'Go to the back door', checkpoint: 'the back court', done: any(near(TQ.backDoor, 0.8), { is: 'flag', flag: 'picking' }, PICKED), at: mark(TQ.backDoor) },   // (0.8: the man is taken three strides short of this door)
       { id: 'pick', line: 'Press [Space] at the lock to pick it', explain: { title: 'Picking a lock', text: 'This door is locked. Stand at the lock and press [Space] to pick it.\nPicking a lock, entering a code or opening a safe takes a few seconds. If you move or press [Space] again, you stop.\nThe lock clicks while you work on it, and a guard close by can hear it.' },
         done: PICKED, at: mark(TQ.backDoor) },
       // ---- the store: a man in the light, the player in the dark ----
@@ -531,6 +545,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     breaker: breaker!, beacons: [{ pos: [20.3, 2.05, 6.3], box: dome }],
     playerSpawn: TQ.start, routes, chokepoints: [], clearPlans: [],
     sky: { zenith: [0.012, 0.02, 0.042], horizon: [0.04, 0.05, 0.075] },
+    // (the script's eyes: a man a script walks is run by the script and sees nothing, and a play program may ask of the player only whether he stands in a
+    // volume. `tq_walk` = the walk and the back strip, the ground in front of the man as he comes and looks; `tq_beam` = what his light reaches of the lane
+    // through the gap, everything but the pocket behind the long wall; `tq_past` = the strip beyond where he smokes, the way he faces)
+    volumes: [
+      { name: 'tq_walk', kind: 'trigger', c: [27.55, 1, 17.55], h: [4.3, 1, 0.93] },
+      { name: 'tq_beam', kind: 'trigger', c: [20.05, 1, 18.4], h: [3.05, 1, 1.78] },
+      { name: 'tq_past', kind: 'trigger', c: [31.4, 1, 17.55], h: [0.45, 1, 0.93] },
+    ],
     mission: { serverRoom: { ...STRONG }, entryDoor: 'strong', rack: { index: 0, front, halfW: 0.35 }, exfilDoor: 'gate_w', exfilX: EXIT_W.x, exfilZ: EXIT_W.z, exfilOut: EXIT_W.out },
   };
   // WHAT IS UNDERFOOT (game/floor.ts; the six it has; first match wins): the rooms are 'stone'; the court, the street, the alley and the trodden paths are

@@ -1,5 +1,6 @@
 // LESSON-CHECK: a Training level's `scenarios.lesson` block (game/lesson.ts) against its file, its built floor and the missions list.
-//   bun run tools/qa/lesson-check.ts <name>[.json] …        (no name: every row of scene/scenarioList.ts TRAINING_MISSIONS)
+//   bun run tools/qa/lesson-check.ts <name>[.json] …        (no name: every row of scene/scenarioList.ts LESSON_MISSIONS — the tutorial's missions, then
+//                                                             Training's. Until 10-22 it was Training's alone, and a tutorial level was checked only when named)
 // PASS / FAIL lines: the file validates · the block against the floor (game/lesson.ts checkLesson: every test's kind and fields, its doors, lights and areas) ·
 // a row of TRAINING_MISSIONS names the level under the Training group · that row's own query starts its mission with the lesson live on step 1 · with the
 // switch off the same start has no lesson and the scenario's own objective · a checkpoint carries the step that is up (a quiet run alone) · a restart puts the
@@ -18,7 +19,7 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { LESSON, checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
 const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
 const names = process.argv.slice(2).filter(a => !a.startsWith('--')).map(a => a.replace(/\.json$/, ''));
-const list: string[] = names.length ? names : [...new Set((TRAINING_MISSIONS as any[]).map(e => String(e.level).replace(/\.json$/, '')))];
+const list: string[] = names.length ? names : [...new Set((LESSON_MISSIONS as any[]).map(e => String(e.level).replace(/\.json$/, '')))];
 let fails = 0, checks = 0;
 const verdict = (ok: boolean, what: string, detail = '') => { checks++; if (!ok) fails++; console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what}${detail ? ` — ${detail}` : ''}`); };
 const log = console.log, warn = console.warn, err = console.error;

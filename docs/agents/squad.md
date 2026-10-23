@@ -246,6 +246,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shifts a little as the cursor goes out to a wedge; a ring put up right after a fast sweep of the cursor ends some px off it as the view
   finishes easing (25 px after the check's instant jump; a cursor at rest lights nothing); and it can slide under the weapon panel as he walks. Driven on the real page (headless
   Chromium, the software adapter): he walked with the ring up and it moved 45 px with the floor, a digit then gave its wedge; never seen on a GPU.
+  THE QUIET PAIR'S MARK FOLLOWS THE SAME RULE (10-22; the maintainer in the pair's tutorial mission, the order just given: "what is F here"): the key
+  a step ahead of a man who waits on the word was lit from the order on (`ready: true`), and its bar ran through the cap, so it read as a key struck
+  out, at a step where the lesson had not taught the word. Now its `ready` is the man's own 'set' (or held for a watcher: the press sends him anyway),
+  so the cap is DARK while he works round and LIT when he is set; `ui/planfloor.ts` draws no bar for `why: 'pair'` (there is no doorway under it); and
+  a lesson that still holds the word shut (`rails.locks('word')`) lists no pair mark at all. No switch of its own: it rides on `PLAN.keyLit` and
+  `RAILS.on`; picture only, no digest moves. `plan-check` line 16 has a second line for it (dark just ordered, lit when set, none under a lesson's
+  lock; both stands), and the pair mission's scripted player fails if the mark is up before its `word` step or not ready at it. Never seen on a GPU.
   THE KEY'S CAP (`PLAN.keyLit`, `floorplan.ts capOf`, `PlanDoor.ready`, `ui/planfloor.ts`, `.plan .lit` in index.html; "need some indicator on the
   F on the door when it's queued vs live. maybe black background to lighting up to yellow background"): a stack waits on the word from the moment
   it is ordered, so the cap was on the door at once and looked the same walking or stood. Now every door that waits on the key carries its cap:
@@ -315,6 +322,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   for the next and the line says so. KNOWN COSTS: a click on a stop no longer picks the man stood on it (click beside it); a door with its wait off still stops if the entry is
   refused; the cover a look gives stands until the next order, as any cover does; the knee makes him a smaller target for as long as the mode is up.
   NOT measured: no tally, one seed; whether men on a path cover an obvious way by themselves was not judged; nobody has played it; never seen on a GPU.
+- **An order's line starts on the leg he is on** (`floorplan.ts wayOf`; picture only, no switch). A way kept from a stride ago starts behind the
+  man, so its line began "from the corner nearest him" of its first six: on a way that doubles back that skipped the corners between and the line cut
+  the wall. Now from the end of the leg he is nearest on, looked for over the way's first two metres (`Leg.from` is where it was asked), the same way
+  `attention.ts attentionWay` draws a guard's thread. Checked by `probes.ts plan` on both stands; the doubling-back case itself has no line of its own
+  here (the attention thread's check plays it for its copy). STILL OPEN: `floorplan.legs` is a side table of the game and its search runs on the
+  grid's own tables, so a game drawn and one not drawn differ in the full state hash (`NavGrid.findPathAside` and a store on the picture's side are
+  the mend, not taken yet). Never seen on a GPU.
+- **One word is one signal** (`CMDRING.planOne`: ON in the page with the mode, `?planone=0`; off in the module and on the frozen stand,
+  `TPS_PLANONE=1` beside `TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan mode ▸ one word,
+  one signal'). The maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't really work. and
+  the second team threw a flashbang when our guys were already on the inside". WAS: `planmode.ts word()` gave every waiting chain its own entry, each its
+  own order with its own clock — the pair that had to re-form for its throw was seconds behind the other, whose men were inside when the can came.
+  NOW: the entries one press starts (open and clear, bang and clear; two or more) are put on ONE word of the door tools (`doortools.ts oneWord`: the
+  four's own `Word`, run by `wordTick`): nobody makes a sound until every stack on it is formed (`wordStack` at most), the cans go first, a door with no
+  can keeps its leaf shut for the men behind the can beside it, and they all step in together (`wordIn` at most after the first sound). A press that
+  frees ONE door is the entry it always was; a charge the autopilot picks for a door known shut is not on the word; a door that halts at its stack
+  (found locked) drops off it and the other goes on. CHECK: `probes.ts onesignal` (tools/qa/onesignal-check.ts, family squadorders; the plan mission's
+  own level with its frame off, the guardroom, a pair laid on each door through `planOrder`, the word's own key, played with a can a door and with one
+  can to spend), both stands; `PLANONE_BREAK=1` fails line 1. MEASURED (headless, two seeds that play the same, each stand): off, the first men through
+  the two doors are 1.2 to 2.8 s apart (2.8 where one door has no can: its pair is inside 2.5 s before the other's can); on, under 0.2 s apart, nobody
+  through before the last burst, nobody of ours dazzled. KNOWN COSTS: the press now waits for the slower stack — on the guardroom's front door the pair
+  re-forms from a split stack to a file for the throw, about 3 s, and the first man is through 5.7 to 6.6 s after the press on the page's stand (it was
+  1.8 to 3.4 s for the quicker door); the two leaves are shoved up to 0.7 s apart on the page's stand (each lead steps to his own handle). NOT
+  measured: three stacks on one word, a charge beside it, a locked door on it, a squad of two, any tally or digest; nobody has played it; never seen
+  on a GPU.
 - **Plan mode, a prototype** (`src/game/planmode.ts`, `CMDRING.plan`; the maintainer's words: an RTS's way with a squad, "for advanced players that
   requires explicitly leaving"; the design: `rebuild/commanding/command-mode.md`). OFF in the module and on BOTH stands (no `FROZEN_HOLDS` row: it is
   not a shipped-on rule); the page raises it only when asked beside the ring (`?cmd&cmdplan`, or the debugger's tick 'Tab ▸ the ring ▸ plan mode on

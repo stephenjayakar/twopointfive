@@ -159,12 +159,13 @@ export class PlanFloor {
         poly(E.land, ring(T.land, PLAN.ringM));
         poly(E.reach, T.reach > 0 ? ring(T.land, T.reach, RING_N * 2) : null);
       }
-      // waiting on the key: a bar across the doorway, the key on the one the key would send now
+      // waiting on the key: a bar across the doorway, the key on the one the key would send now (a quiet pair's man waits on open ground: under PLAN.keyLit
+      // the key alone, a step ahead of him — a bar there crossed the cap and read as a key struck out)
       for (const dr of P.doors) {
         const a = px(dr.a[0], dr.a[2]), b = px(dr.b[0], dr.b[2]); if (!a || !b) continue;
         const E = this.doorEls(nd++), c = capOf(dr); this.show(E.g, true);
         this.put(E.g, 'class', `pdoor w-${dr.why}${dr.tone ? ` t-${dr.tone}` : ''}${dr.now ? ' now' : ''}${c === 'lit' ? ' lit live' : c === 'dark' ? ' lit' : ''}`);
-        this.show(E.bar, true); this.put(E.bar, 'x1', f1(a[0])); this.put(E.bar, 'y1', f1(a[1])); this.put(E.bar, 'x2', f1(b[0])); this.put(E.bar, 'y2', f1(b[1]));
+        this.show(E.bar, dr.why !== 'pair' || !PLAN.keyLit); this.put(E.bar, 'x1', f1(a[0])); this.put(E.bar, 'y1', f1(a[1])); this.put(E.bar, 'x2', f1(b[0])); this.put(E.bar, 'y2', f1(b[1]));
         const cap = c !== 'none', mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
         this.show(E.cap, cap); this.show(E.key, cap);
         if (cap) { this.put(E.cap, 'x', f1(mx - 7.5)); this.put(E.cap, 'y', f1(my - 7.5)); this.put(E.key, 'x', f1(mx)); this.put(E.key, 'y', f1(my)); this.put(E.key, 'text', dr.key!); }

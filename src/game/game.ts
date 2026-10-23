@@ -71,6 +71,7 @@ import { charLookFrame, charSides } from './charLook';
 import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
+import { updateSmokeBreak } from './smokebreak';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
@@ -111,7 +112,7 @@ import type { StickyCam } from './stickycam';
 import { updateStickies, stickyBoxes, takeCam } from './stickycam';
 import { lightSwitchTick, lightSwitchReset, switchAct, switchBoxes } from './lightswitch';
 import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
-import { throwCount, toggleDrag, teleportPlayer, startPicking, startWand, startKick, settlePlayer, startGrab, freeHeld, settleHeld, takeKey, pickHover, EASE_RATE, EASE_MAX } from './player';
+import { throwCount, toggleDrag, teleportPlayer, startPicking, startWand, startKick, settlePlayer, settleSpot, startGrab, freeHeld, settleHeld, takeKey, pickHover, EASE_RATE, EASE_MAX } from './player';
 import type { WallHold, Hold } from './player';
 import { updateInteract, escapeInteract, backableInteract } from './interact';
 import { ownBlowAct } from './ownblow';
@@ -127,7 +128,7 @@ import { wallReactTick, wallReactReset } from './wallreact';
 import { BLAST_PACE } from './destructionSwitch';
 import { loadTeamFeel } from './teamfeel';
 import { nvgTick } from './nvg';
-import { irLightTick } from './irlight';
+import { irLightTick, irFlags } from './irlight';
 import { silentTick, silentEase } from './silent';
 import { holdFireReset } from './holdfire';
 import { spottedTick } from './spotted';
@@ -246,7 +247,10 @@ export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'obj
   close?: CloseKind;
   /** a door's row that is listed PAST the list's cap, under the rows Space had before it (the big slot's tool on an unlocked door — bigkit.ts; a charge by hand
    *  is the other such row, known by its verb) */
-  past?: boolean; }
+  past?: boolean;
+  /** a MARKER whose every row the mission's frame kept back this frame (rails.ts `rows`; player.ts buildInteractables): the key does nothing on the
+   *  thing though it has rows — an empty tap in reach of it says so (interact.ts emptyWord) */
+  framed?: boolean; }
 /** Every verb a row can be (player.ts buildInteractables words them; game.ts updateDoors / player.ts updateHold / mission.ts act on Game.act): a shut door's
  *  push / ease (silent, sustained), an open one's pull, a lock's pick (sustained) / kick / rattle (the handle tried, crouched), a keyed lock's unlock; the grab
  *  of a man from behind; the held man's question / choke (sustained) / pistol-whip (sustained); a body's drag / drop; the rack's drive (sustained); the mains
@@ -335,8 +339,11 @@ export class Player {
   /** slotsetup.ts: the setup of the gun in his hands is up (its digit pressed again) — which gun, the game time it opened or was last used, and the last
    *  update that saw it; null = not up. Never saved: a load is a fresh Player with nothing up */
   setup: { gun: 'pistol' | 'rifle'; t: number; seen: number } | null = null;
-  /** slotsetup.ts: the gun its hook last found in his hands (null: none) and the game time it first did — a gun just drawn does not open its setup */
-  setupHand: { gun: 'pistol' | 'rifle' | null; t: number } | null = null;
+  /** slotsetup.ts: the gun its hook last found in his hands (null: none) and the game time it first did — a gun just drawn does not open its setup,
+   *  unless his own press of its digit is what drew it (`own`: the game time that draw is over; SLOTSETUP.draw) */
+  setupHand: { gun: 'pistol' | 'rifle' | null; t: number; own?: number } | null = null;
+  /** slotsetup.ts: the last press of a gun's digit that the setup did not take (the press that draws that gun), and when */
+  setupKey: { gun: 'pistol' | 'rifle'; t: number } | null = null;
   /** the rifle left his hands when he went down (combat.ts hitPlayer dropped it as an item): nothing to draw slung on the body */
   rifleGone = false;
   /** KIT ANIMATIONS (kitanim.ts): what was in his right hand last frame by the game's rules (undefined = not watched yet: a fresh Player — a restart, a loaded
@@ -374,6 +381,8 @@ export class Player {
    *  moved = the highlight was scrolled during this press (a press that scrolls is a choice, never a tap); wheelAcc = wheel travel toward the next row; runKey / moveLatch: which sustained verb was running
    *  last frame and the movement keys already down when it began (a step cancels a running verb — a key held into it does not until it has come up once). */
   sel = { downT: -1, open: false, moved: false, wheelAcc: 0, runKey: '', moveLatch: 0,
+    /** handring.ts `empty`: what the last tap that found no row said and when (the corner shows it for a moment), and when a line of it last went to the log */
+    word: '', wordT: -1e9, fileT: -1e9,
     /** the list up as a ring at the cursor (cmdring.ts CMDRING.hands — null: the list as it was): where, and whether the cursor may light a wedge yet; `key`: the rows it was last read over (Player.nearKey) */
     ring: null as (RingState & { key: string; /** handring.ts: the press that opened it has come up and it stands by itself */ free?: boolean; /** …the lit wedge is the whistle's, which is no row (interact.ts) */ whistle?: boolean }) | null };
   /** the selector open AS A LIST (feet still, a cancel row at its foot, the panel in its open look) — not up as a ring */
@@ -463,6 +472,9 @@ export interface GuardScript { goal: Vec3 | null; speed?: number; face?: number 
   /** his walk to `goal` is the script's own way: the short one, not priced by the lanes his side knows are covered (lanes.ts lanePenalty). A staged advance
    *  down a road the other side has guns on: without it he goes round, as a man left to himself would (director.ts OrderPatch). */
   direct?: boolean;
+  /** he is having a smoke where he stands (smokebreak.ts: the left hand to his mouth and back, the lit end, real smoke — a level script's order, director.ts
+   *  OrderPatch.smoke; nothing with that file's switch off) */
+  smoke?: boolean;
   /** his muzzle taken off the order by his own read of the fight (roomfight.ts): while set the runner aims at `aimAt` with the gun up — whatever aimAt / upper /
    *  stance the order holds, which are left exactly as ordered and take over again the frame this is cleared — and, `face` given, squares him up to it where he stands */
   over?: { aimAt: Vec3; face: number | null; walk?: boolean } | null; }
@@ -1109,7 +1121,7 @@ export class Game {
     try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
     loadQrfTune(this);   // …and so are the response team's knobs (qrf.ts: on/off, ETA, size, the perimeter tier's)
     loadTactics(this.tune);   // the pursuit tactics' four knobs, kept per machine like the aim rows (tactics.ts)
-    leversFog(loadTeamFeel); fogFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
+    leversFog(loadTeamFeel); fogFlags(); irFlags();           // …and the room fight's feel rules a player has changed in the panel (teamfeel.ts: before the squad's systems read them)
     loadNeeds(this.tune);     // …and the needs' switch + fairness knobs (needs.ts)
     loadChaos(this.tune);     // …and the destruction lane's chaos knob (destruction.ts)
     loadWind(this.tune);      // …and the wind's master + rows (wind.ts; the moths' switch rides with it)
@@ -1234,6 +1246,7 @@ export class Game {
     this.col.dynamicBoxes = this.doors.leafBoxes();
     this.doors.man = who => doorMan(this, who);   // (doorthrow.ts: whose man, folded, braced, calm)
     this.doors.standable = (x, z, r) => { const q: Vec3 = [x, 0, z]; this.col.collideCircle(q, Math.min(r, 0.3), 0.2, 1.5, 1); return Math.hypot(q[0] - x, q[2] - z) < 0.02 && !this.col.clampToWorld(q, 0.3); };   // (doors.ts DOORTHROW: floor for a body a leaf would carry there — the walkers' own radius against the statics)
+    this.doors.settle = p => settleSpot(this, p);   // (doors.ts DOORWAY.solid: where the statics let a man a pulled leaf moved stand)
     this.doors.blaster = (at, tearM, who) => doorBlast(this, at, tearM, who);   // the doors' side of a blast (doorblast.ts): a leaf inside its reach comes off its hinges
     // …and where the build carries the destruction goal's change feed, a torn leaf is a row in it (kind 'door': ONE feed of what the level no longer is)
     this.doors.onTorn((d, who, cause) => {
@@ -1688,6 +1701,7 @@ export class Game {
     this.smokeWake(all);
     this.drawCharacters(all, statured);
     updateSnowBreath(this, dt);         // BREATH (snowBreath.ts): on a snow level the men's breath steams — picture only (here, after the fog of war has said who is hidden this frame), a return with SNOW_LOOK.breath off or on any other level
+    updateSmokeBreak(this, dt);         // A SMOKE (smokebreak.ts): a man a level's script told to have one — his hand, the lit end, the smoke; nothing where nobody was told, or with its switch off
     this.stepSnowTracks(dt);   // boots press the snow (snowTracks.ts): everybody is posed — picture only
     this.lightMeter(dt);
     this.player.hitFlash = Math.max(0, this.player.hitFlash - dt * 3);
@@ -1935,7 +1949,7 @@ export class Game {
 
   private updateDoors(dt: number, input: Input) {
     const pl = this.player; const pc = pl.char;
-    const own: DoorContact | null = pl.down ? null : { pos: pc.pos, radius: 0.34, bash: pl.sprinting, who: PLAYER_ID, quiet: pl.crouch, keys: pl.keys, run: sprintDoorRun(this, pl) };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
+    const own: DoorContact | null = pl.down ? null : { pos: pc.pos, radius: 0.34, bash: pl.sprinting, who: PLAYER_ID, quiet: pl.crouch, keys: pl.keys, run: sprintDoorRun(this, pl), solid: DOORWAY.solid && DOORWAY.oneWay && !this.puppet && !this.touring, vel: pc.vel };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
     const contacts: DoorContact[] = own ? [own] : [];
     for (const g of this.guards) if (g.state !== 'dead') contacts.push({ pos: g.char.pos, radius: 0.34, bash: g.state === 'alert' && loadGait(this, g, g.speed) > 2.2, who: g.char.id, quiet: silentEase(this, g), key: true, hand: handPress(this, g), round: g.speed > ROUND_PACE && roundsLeaves(g) });   // staff carry keys: locked doors open to them and lock again behind them (closer + latch) — every man, whatever Sam has had off his belt (Guard.keys is what he can hand over, not what the leaves ask)
     const woundedAt: { g: Guard; at: Vec3; x: number; z: number }[] = [];   // (a copy of where his BODY is — the hips of a man on his back lie a stride behind his feet — so what a leaf does to it can be put through the walls before it is his: below, after doors.update)
