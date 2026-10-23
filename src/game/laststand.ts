@@ -50,7 +50,7 @@ import { run, boots, pressOwns } from './pressure';
 import { squadDefers, squadStaysIn, squadBusy, squadHolds } from './enemysquads';
 import { CUES } from './cues';
 import { placeIn } from './dialogue';
-import { WORDS } from './words';
+import { WORDS, wg } from './words';
 import { digInOrder, digInPhase, digInEntered, digInWedged, digInRelease } from './digin';
 import { runnerFled, runnerOwns } from './runner';   // (both false with its switch off)
 import { NETQUIET, netQuietClosed } from './netquiet';
@@ -104,13 +104,13 @@ type LineKind = 'check1' | 'checkN' | 'checkStand' | 'checkLoneAt' | 'ansAt' | '
   | 'order' | 'orderFrom' | 'orderStay' | 'orderShut' | 'orderOut' | 'go' | 'cant' | 'in' | 'short' | 'set' | 'setOpen' | 'setLone' | 'setLoneOpen';
 /** THE LINES, each to their own side on their net: {n} = how many answered (the one who asked among them), {the} = 'the office' / 'outside the office',
  *  {at} = 'in the office' / 'outside the office'. cls = its row of the strip's ranking (cues.ts: 1 men coming · 3 holding on purpose · 4 the net knows) */
-const LINES: Record<LineKind, { cls: number; say: string[]; /** the same lines, place for place, as the dialogue pass has them (words.ts; read in net()) */ now?: string[] }> = {
+const LINES: Record<LineKind, { cls: number; say: string[]; /** the same lines, place for place, as the dialogue pass has them (words.ts; read in net()) */ now?: string[]; /** (WORDS.guide) …and as the writing guide has them, place for place */ guide?: string[] }> = {
   check1: { cls: 4, say: ['radio check — who\'s still up? sound off!', 'all posts, radio check — who\'s left? sound off!'] },
   checkN: { cls: 4, say: ['radio check — sound off, who\'s still up?', 'count off — who\'s still with us?'] },
   checkStand: { cls: 4, say: ['anyone else out there? we\'re holed up in {the} — get to us!', 'any post still up — we\'re in {the}. sound off!'] },
   checkLoneAt: { cls: 4, say: ['anybody? anybody still up? I\'m still {at}.', 'if anyone\'s left — I\'m still {at}. sound off!'] },
   ansAt: { cls: 3, say: ['still up — {at}.', 'here — holding {the}.', 'still here — {at}.'] },
-  ansFreeAt: { cls: 3, say: ['still up — after them, {at}.', 'here — on them, {at}.'] },
+  ansFreeAt: { cls: 3, say: ['still up — after them, {at}.', 'here — on them, {at}.'], guide: ['still up — going after them, {at}.', 'here — I\'m after them, {at}.'] },
   fewAt: { cls: 3, say: ['that\'s only {n} of us — I\'m {at}. stay on your doors!', '{n} of us left — I\'m {at}. nobody opens a door!'],
     now: ['that\'s only {n} of us — I\'m {at}.', '{n} of us left — I\'m {at}.'] },   // (the count and where he is, no order with it: the men who answered may be out after the team, or on a post with no door)
   lastAt: { cls: 3, say: ['nobody\'s answering — if anyone can hear me, I\'m {at}!', 'no answer… it\'s just me. if anyone\'s left, I\'m {at}!'] },
@@ -217,7 +217,7 @@ function voice(g: Game, F: RoomFight, st: State, gd: Guard, kind: LineKind, text
 const fill = (tpl: string, vars: Record<string, string>) => tpl.replace(/\{(\w+)\}/g, (_m, k: string) => vars[k] ?? '');
 function net(g: Game, F: RoomFight, st: State, gd: Guard, kind: LineKind, vars: Record<string, string> = {}, then?: () => void, redo?: Later['redo']) {
   const L = LINES[kind], i = st.rot.get(kind) ?? Math.floor(roll(st.die) * L.say.length) % L.say.length; st.rot.set(kind, (i + 1) % L.say.length);
-  const tpl = (WORDS.on && L.now || L.say)[i], text = fill(tpl, vars);
+  const tpl = (WORDS.on && (wg(L.guide, undefined) ?? L.now) || L.say)[i], text = fill(tpl, vars);
   const at = Math.max(g.time + (g.cues?.netWait(L.cls) ?? 0), st.clsAt[L.cls] ?? 0); st.clsAt[L.cls] = at + (CUES.gaps[L.cls] ?? 0) + 0.1;
   if (at > g.time) st.later.push({ at, t0: g.time, gd, kind, text, cls: L.cls, then, tpl, redo }); else { voice(g, F, st, gd, kind, text, L.cls); then?.(); }
 }

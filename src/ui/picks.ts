@@ -146,7 +146,7 @@ export function picksBlock(search: string = typeof location !== 'undefined' ? lo
   shownAt = typeof performance !== 'undefined' ? performance.now() : 0;
   // (no heading and no how-to line over the list: the maintainer, 10-11, "we should generally show, not tell. e.g. no \"play this first\", wordy explanations of different options, etc.")
   // (the difficulty levers moved by hand stand over every row's standard / hard — game/difficulty.ts LEVERS; said here so a row's 'hard' is not read as all of it)
-  { const line = quietFogAside(() => leversLine()); if (line) { const lv = el('div', 'plevers'); lv.textContent = `Your difficulty levers, on every row: ${line}. A row's loadout changes them.`; root.appendChild(lv); } }
+  { const line = quietFogAside(() => leversLine()); if (line) { const lv = el('div', 'plevers'); lv.textContent = `Your difficulty levers apply to every row: ${line}. Change them in a row's loadout.`; root.appendChild(lv); } }
   const next = list.find(x => !played.includes(x.p.id)) ?? null;
   for (const { p, i, href } of list) {
     const was = played.includes(p.id);
@@ -158,7 +158,7 @@ export function picksBlock(search: string = typeof location !== 'undefined' ? lo
     a.onclick = (e?: Event) => { e?.preventDefault?.(); if (via) { pickLoadout(p, href); return; } go.textContent = 'loading…'; startPick(p, href); };
     const wrap = el('div', 'pwrap'); wrap.appendChild(a); rows.push(a); root.appendChild(wrap);
     // STRAIGHT IN (only while the row itself opens the loadout): the row's own URL in one press, with the kit this machine keeps
-    if (via) { const g = el('a', 'palt go') as HTMLAnchorElement; g.setAttribute('href', href); g.setAttribute('data-go', p.id); g.textContent = 'go ›'; g.title = 'Straight in, with the team and kit kept on this machine.';
+    if (via) { const g = el('a', 'palt go') as HTMLAnchorElement; g.setAttribute('href', href); g.setAttribute('data-go', p.id); g.textContent = 'go ›'; g.title = 'Go straight in with the team and kit saved on this machine.';
       g.onclick = (e?: Event) => { e?.preventDefault?.(); g.textContent = 'loading…'; startPick(p, href); }; gos.push(g); wrap.appendChild(g); }
     // THE ONE CHOICE: the same mission against the other defenders (a scenario row; the solo night has no such switch)
     const other = pickOtherDifficulty(p), altHref = other ? pickHref(p, search, undefined, undefined, other) : null;   // (none on a row with one difficulty: hard is its standard)

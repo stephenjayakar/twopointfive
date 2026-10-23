@@ -258,7 +258,7 @@ export async function dialogueIntel() {
       if (item?.known) fails.push(`A, held since ${A.talk.heldSince.toFixed(0)} s (order at ${B.task.t0.toFixed(0)} s), KNOWS the errand`);
       if (heldGive?.kind === 'checkOn') fails.push(`held A would give the errand: "${heldGive.text}"`);
       const selfCtx = D.gather(game, B); const selfGive = D.intelFor(selfCtx, B.talk);
-      if (selfGive?.kind !== 'checkOn' || !/I was sent round/.test(selfGive.text) || !selfGive.text.includes(C.callsign)) fails.push(`the checker's own useful thing: ${JSON.stringify(selfGive)} (want checkOn in his own words naming ${C.callsign})`);
+      if (selfGive?.kind !== 'checkOn' || !/I was sent (round|to walk)/.test(selfGive.text) || !selfGive.text.includes(C.callsign)) fails.push(`the checker's own useful thing: ${JSON.stringify(selfGive)} (want checkOn in his own words naming ${C.callsign})`);
       A.talk.heldSince = -1;   // let go and grabbed afresh after the order went out: now he heard it
       const freeCtx = D.gather(game, A); const freeGive = D.intelFor(freeCtx, A.talk);
       if (freeGive?.kind !== 'checkOn' || !freeGive.text.includes(B.callsign) || !freeGive.text.includes(C.callsign)) fails.push(`A grabbed after the order: ${JSON.stringify(freeGive)} (want checkOn naming ${B.callsign} and ${C.callsign})`);
@@ -630,7 +630,7 @@ export async function dialogueExchange() {
       if (k && a3) { const endT = a3.t + a3.dur; if (k.t < endT - 1e-6 || k.t > endT + DT + 1e-6) fails.push(`the key remark went up ${(k.t - endT).toFixed(3)} s after the answer ended (want that frame)`); if (Math.abs(k.dur - samBeat(k.text.length)) > 1e-6) fails.push(`key remark held ${k.dur.toFixed(2)} s (samBeat ${samBeat(k.text.length).toFixed(2)})`); }
       if (!game.player.keys.has('floor') || A.keys.size) fails.push(`after the door was given: Player.keys [${[...game.player.keys].join(',')}], his belt [${[...A.keys].join(',')}] (want floor / empty)`);
       if (game.mission.stats.keys !== 1) fails.push(`mission stats.keys ${game.mission.stats.keys} (want 1)`);
-      if (!msgs.some(m => /^took Kowalski's key/.test(m.text))) fails.push(`no 'took Kowalski's key' line in the log`);
+      if (!msgs.some(m => /^you took Kowalski's key/.test(m.text))) fails.push(`no 'took Kowalski's key' line in the log`);
     }
     const sams = exch.filter(e => e.who === 'sam'), answers = exch.filter(e => e.who === 'guard');
     const cats = sams.map(e => catOfSam(e.id));

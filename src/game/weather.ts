@@ -32,7 +32,7 @@ import { WORLD } from '../scene/world';
 import { hourWeatherChanged } from './hours';   // (called inside setKind only)
 import { WEATHER_BOOT, WX_OWN, WEATHER_PRESETS, isAnyKind, snowLevel, packFog, unpackFog, fogGlowWord, fogTau, packRect, unpackRect, inRect } from './weatherKinds';
 import type { WeatherKind, Rect, FogSpec } from './weatherKinds';
-import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { levelNameOf } from '../scene/levelLoad';   // (asked inside levelKind only)
 
 // ---- WEATHER KINDS (weatherKinds.ts; `?weather=<kind>`, the mission list's Weather row). `Weather.kind` null = everything in this file exactly as it was: the night
@@ -108,7 +108,7 @@ const SKY_FLASH_K = 0.045;
 const FLASH_MEAN_GAP = 11;
 const THUNDER_LINES = ['lovely night for it.', 'that one was close.', "glad I'm not out in that.", "it's really coming down.", 'storm\'s right on top of us.'];
 /** in place of "glad I'm not out in that." from a man who IS out in it (words.ts) */
-const THUNDER_OUT = 'no let-up, is there.';
+const THUNDER_OUT = 'no let-up, is there.', THUNDER_OUT_GUIDE = "it's not letting up, huh.";
 const BARK_COOLDOWN = 45;        // seconds between any two weather remarks on the floor
 const BARK_CHANCE = 0.35;        // per thunder loud enough to remark on
 
@@ -395,7 +395,7 @@ export class Weather {
       if (cands.length) {
         const gd = cands[Math.floor(rWho * cands.length) % cands.length];
         let line = THUNDER_LINES[(this.stats.barks + Math.floor(rLine * 2)) % THUNDER_LINES.length];
-        if (WORDS.on && /not out in that/.test(line)) { const p = gd.char.pos; if (!g.col.solidBlocked([p[0], 1.9, p[2]], [p[0], 10.9, p[2]])) line = THUNDER_OUT; }   // (nothing solid over his head: he is out in it — one ray off the level's own roofs, no die)
+        if (WORDS.on && /not out in that/.test(line)) { const p = gd.char.pos; if (!g.col.solidBlocked([p[0], 1.9, p[2]], [p[0], 10.9, p[2]])) line = wg(THUNDER_OUT_GUIDE, THUNDER_OUT); }   // (nothing solid over his head: he is out in it — one ray off the level's own roofs, no die)
         g.say(gd, line);
         this.stats.barks++; this.lastBarkT = g.time;
       }

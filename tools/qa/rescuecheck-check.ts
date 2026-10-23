@@ -20,7 +20,7 @@
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 const RESCUES = ['hostage-rescue', 'rescue-registry', 'rescue-consulate'], LEAD_S = 1.5;
-const CHECK = /\(radio\): radio check — sound off/, ASK = /\(radio\): (.+?), sound off … \1\?/, GOES = /^\S+ (.+?) \(radio\): nothing from (.+?) — one moving there!/;
+const CHECK = /\(radio\): radio check — sound off/, ASK = /\(radio\): (.+?), sound off … \1\?/, GOES = /^\S+ (.+?) \(radio\): nothing from (.+?) — (?:one moving there|I'm heading over)!/;
 const FOUND = /\(radio\): man down, (.+?) — they're inside!/, TO_NOISE = /\(radio\): heard that — moving to cover it!/, TO_DOOR = /\(radio\): on my way — moving to the hostage door!/;
 
 const f1 = (x: number | undefined) => typeof x === 'number' && Number.isFinite(x) ? x.toFixed(1) : '—';

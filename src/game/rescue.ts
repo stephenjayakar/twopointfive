@@ -426,10 +426,10 @@ export class Rescue {
     kitStage(g, this.ops);   // each member's kit and uniform (kit.ts): nothing written on a teammate while every card is as issued (your own four counts are, under the pouches rule: kitPlayer)
     this.note('staged'); if (capSet) this.note(`set:${this.hostiles[0].callsign}`);
     const who = `${NUMBER[S.hostages.length] ?? S.hostages.length} hostage${S.hostages.length === 1 ? '' : 's'} in the ${this.place()}`;
-    const n = this.ops.length, fall = n > 2 ? ', and the squad fall in' : n === 2 ? ', and the pair fall in' : n ? ', and your man falls in' : '';   // (the loadout's size — two: the line as it always read)
+    const n = this.ops.length, fall = n > 2 ? ', and the squad falls in' : n === 2 ? ', and the pair falls in' : n ? ', and your teammate falls in' : '';   // (the loadout's size — two: the line as it always read)
     g.msg(K.start === 'hot'
-      ? `hostage rescue — shots heard inside. ${who}. the clock starts when you move${fall}. ${n ? 'F: bang and clear · X: orders (door tools on any door)' : 'You are alone'}`
-      : `hostage rescue — ${who}. nobody knows you are here yet. ${n ? 'F: stack up, F: go · X: orders' : 'You are alone'}`);
+      ? `hostage rescue. you hear shots inside. ${who}. the clock starts when you move${fall}. ${n ? 'Press F to bang and clear, or X for orders (door tools on any door)' : "You're alone"}`
+      : `hostage rescue. ${who}. nobody knows you're here yet. ${n ? 'Press F to stack up and F again to go, or X for orders' : "You're alone"}`);
   }
   /** the hostage room in words: its name and where it is ("manager's office, far end of the corridor") */
   private place(): string { const R = this.data?.room; return R ? `${R.name}${R.where ? `, ${R.where}` : ''}` : 'hostage room'; }
@@ -464,9 +464,9 @@ export class Rescue {
     const S = this.data; if (!S) return null;
     const fd = g.doors.byName(S.room.door), sd = (S.side ? g.doors.byName(S.side.door) : null) ?? null; if (!fd) return null;
     const on = DT.ops.filter(o => o.door === fd || o.door === sd), ch = on.find(o => o.kind === 'charge');   // the menu already has men at work on one of the room's doors: F does not take them off it
-    if (ch && (DT.chargeOn(ch.door) || ch.phase === 'place')) { g.msg(DT.chargeOn(ch.door) ? 'the charge is set — F blows it' : 'the charge is not set yet'); return null; }   // (a charge already blown: its men are going in — the next line's answer)
+    if (ch && (DT.chargeOn(ch.door) || ch.phase === 'place')) { g.msg(DT.chargeOn(ch.door) ? 'the charge is set. press F to blow it' : 'the charge is not set yet'); return null; }   // (a charge already blown: its men are going in — the next line's answer)
     if (on.some(o => o.kind !== 'outside')) { g.msg('they are on that door already'); return null; }
-    const who = this.pick(); if (!who) { g.msg(!this.ops.length ? 'you are alone — the hostage room is yours to take' : 'nobody free for the hostage room — whoever is up is covering where you put him (X: fall in)'); return null; }
+    const who = this.pick(); if (!who) { g.msg(!this.ops.length ? "you're alone, so you'll have to take the hostage room yourself" : "nobody's free for the hostage room. everyone still up is covering where you put them (X, then fall in)"); return null; }
     const dyn = this.dynamic || hot;   // (a hot start's first order starts the clock itself)
     const two = this.launch(fd, sd, who.front, who.side, dyn); if (two === null) return null;
     const did: 'stack' | 'bang' = dyn ? 'bang' : 'stack';
@@ -513,7 +513,7 @@ export class Rescue {
     if (why.length || !ops.length) g.msg(`the hostage room: ${why.join(' · ') || 'nobody to take it'}`);
     if (!ops.length) return null;
     const cans = ops.filter(e => e.op.kind === 'bangClear').length;
-    if (RESCUE.stun && cans < ops.length) g.msg(cans ? `one bang left — it goes in by the ${ops.find(e => e.op.kind === 'bangClear')!.side ? 'side' : isOffice(g.level) ? 'corridor' : 'main'} door, the other door goes in behind it` : 'no bangs left — they go in without one');
+    if (RESCUE.stun && cans < ops.length) g.msg(cans ? `one flashbang left, so it'll go in through the ${ops.find(e => e.op.kind === 'bangClear')!.side ? 'side' : isOffice(g.level) ? 'corridor' : 'main'} door and the teammates at the other door will go in after it` : "no flashbangs left, so they'll go in without one");
     const taken = ops.flatMap(e => e.op.men), split = !!this.bounds && RESCUE.twoDoor && (ops.some(e => e.side) || taken.length === 1);
     this.entry = { ops, gate, men: taken, split, setT: NaN, goT: NaN, inT: NaN }; this.said.delete('set');
     if (split) this.note(`split:${ops.map(e => `${e.side ? 'side' : 'front'}=${e.op.men.map(m => m.callsign).join('+')}`).join(',')}`);
@@ -804,7 +804,7 @@ export class Rescue {
     }
     if (isNaN(E.goT) && !isNaN(E.gate.openT)) { E.goT = E.gate.openT; if (E.split) put(E.goT, 'split:go', 2); }
     out.sort((a, b) => a.t - b.t || a.k - b.k); for (const o of out) this.log.push({ t: o.t, what: o.what });
-    if (!isNaN(E.setT) && !E.gate.go) this.once('set', 'stacked and set. F: go');
+    if (!isNaN(E.setT) && !E.gate.go) this.once('set', 'stacked and set. press F to send them in');
     if (live.length) return;
     // every order has ended: called off / never got there — or they went in, and the room is theirs or it is not
     const up = E.men.filter(o => o.state !== 'dead');
@@ -972,10 +972,10 @@ export class Rescue {
     if (RESCUEEND.on) { const how = this.ending.won(); if (how) { this.end('rescued', how === 'out' ? `${alive} of ${this.hostages.length} hostages out` : `${alive} of ${this.hostages.length} hostages alive · building cleared`); return; } }   // (rescueend.ts: the two ways it is won — the hold below ends nothing)
     const kept = RESCUEEND.on && !isNaN(this.securedAt) && (!theirs || !this.hostages.some(h => h.state !== 'dead' && inBounds(h.char.pos, B)));   // (the rule on: a room taken stays taken while nobody of theirs is back in it with the hostages — the team may walk out of it with them, and leave them anywhere)
     if ((!theirs && ours) || kept) {
-      if (isNaN(this.securedAt)) { this.securedAt = g.time; this.note('secured'); g.msg(RESCUEEND.on ? 'hostage room secured — bring them out, or clear the building' : `hostage room secured — hold it (${Math.round(K.holdSecs)} s)`);
+      if (isNaN(this.securedAt)) { this.securedAt = g.time; this.note('secured'); g.msg(RESCUEEND.on ? 'hostage room secured. now bring them out or clear the building' : `hostage room secured. hold it for ${Math.round(K.holdSecs)} seconds`);
         if (WORDS.on && !this.said.has('h:secured')) { this.said.add('h:secured'); const h = this.hostages.find(x => x.state !== 'dead'); if (h && hostageSay(g, h, 'secured')) this.ackAt = g.time + 2.4; } }
       else if (!RESCUEEND.on && g.time - this.securedAt >= K.holdSecs) this.end('rescued', `${alive} of ${this.hostages.length} hostages alive`);
-    } else if (!isNaN(this.securedAt)) { this.securedAt = NaN; this.note('unsecured'); g.msg(theirs ? 'contact in the hostage room — it is not yours yet' : 'nobody is holding the hostage room'); }
+    } else if (!isNaN(this.securedAt)) { this.securedAt = NaN; this.note('unsecured'); g.msg(theirs ? "contact in the hostage room, so it isn't yours yet" : 'nobody is holding the hostage room'); }
   }
   /** THE HOSTAGES' VOICES (the dialogue pass — words.ts; the words are dialogue.ts HOSTAGE_LINES, the saying civilians.ts hostageSay). One low line at a time
    *  across the room, in turn, while a man of theirs stands over them — pleading with him, and with his shouting once he is counting; calling out once
@@ -1018,8 +1018,8 @@ export class Rescue {
     this.endAct();
     this.note(`${state}${state === 'lost' ? `:${why}` : ''}`);
     g.msg(state === 'rescued'
-      ? `${grade === 'clean' ? 'CLEAN' : 'COSTLY'} — ${why} · team ${team}/${1 + this.ops.length} up · ${timed}. Shift+Enter stages it again`
-      : `FAILED — ${why}. Shift+Enter stages it again`);
+      ? `${grade === 'clean' ? 'CLEAN' : 'COSTLY'} — ${why} · team ${team}/${1 + this.ops.length} up · ${timed}. press Shift+Enter to restart`
+      : `FAILED — ${why}. press Shift+Enter to restart`);
   }
 
   /** where it stands, in one word */
@@ -1034,7 +1034,7 @@ export class Rescue {
     if (!this.active) return null;
     const B = this.bounds, pos: Vec3 | null = B ? [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2] : null;
     const R = this.result;
-    if (R) return { text: R.state === 'rescued' ? `${R.grade === 'clean' ? 'clean' : 'costly'} — ${R.why} · shift+enter stages it again` : `failed — ${R.why} · ${this.g.player.down ? 'enter' : 'shift+enter'} stages it again`, pos: null };
+    if (R) return { text: R.state === 'rescued' ? `${R.grade === 'clean' ? 'clean' : 'costly'} — ${R.why} · press shift+enter to restart` : `failed — ${R.why} · press ${this.g.player.down ? 'enter' : 'shift+enter'} to restart`, pos: null };
     const alive = this.hostages.filter(h => h.state !== 'dead').length;
     if (RESCUEEND.on && (!isNaN(this.securedAt) || this.ending.lead)) {   // (rescueend.ts: where to take them — and the clock, when a man of theirs has one of them again)
       const o = this.ending.objective(); return { text: RESCUE.clock && !isNaN(this.t0) && this.step !== 'stopped' ? `${o.text} · the captor is ${this.step}` : o.text, pos: o.pos }; }
