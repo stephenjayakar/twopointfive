@@ -69,9 +69,11 @@ export const FIRE = {
 export type FireDraw = FireRecord;
 export interface FireStats { fires: number; lit: number; drawn: number; frames: number; smokes: number; cracks: number; beds: number; /** the light's swing this run: least and most of the authored strength, and their sum and count */ lo: number; hi: number; sum: number; n: number }
 /** `lit`: a bit a fire (its place among the level's), up while it burned last frame — a fire that comes back from being out asks for its bed again */
-const states = new SideMap<Game, { stats: FireStats; lit: number }>('fire.states');
+/** lit, smoked = a bit a fire: it burned, and its smoke was being filed, the frame before (so one lit again asks for its bed at once, and one that comes within
+ *  the view's reach starts to smoke at once, not at the next second's mark) */
+const states = new SideMap<Game, { stats: FireStats; lit: number; smoked: number }>('fire.states');
 const fresh = (): FireStats => ({ fires: 0, lit: 0, drawn: 0, frames: 0, smokes: 0, cracks: 0, beds: 0, lo: Infinity, hi: -Infinity, sum: 0, n: 0 });
-function stateOf(g: Game) { let s = states.get(g); if (!s) { s = { stats: fresh(), lit: 0 }; states.set(g, s); } return s; }
+function stateOf(g: Game) { let s = states.get(g); if (!s) { s = { stats: fresh(), lit: 0, smoked: 0 }; states.set(g, s); } return s; }
 export function fireStats(g: Game): FireStats { return stateOf(g).stats; }
 
 /** integer hash → [0, 1) */
@@ -132,7 +134,7 @@ export function updateFire(g: Game, dt: number) {
   if (!any) { if (E.fires?.length) E.fires = []; return; }   // (nothing of this file runs on a floor with no fire)
   const S = stateOf(g), T = S.stats, K = FIRE, time = g.time, was = time - Math.max(dt, 0);
   const focus = g.engine.viewFocus ?? g.player.char.pos, drawing = g.smoke.drawing?.() === true;
-  const list: (FireDraw & { d: number })[] = []; let fires = 0, lit = 0, mask = 0;
+  const list: (FireDraw & { d: number })[] = []; let fires = 0, lit = 0, mask = 0, smoked = 0;
   if (dt > 0) T.frames++;
   for (const t of g.targets) {
     if (!isFire(t)) continue;
@@ -162,14 +164,14 @@ export function updateFire(g: Game, dt: number) {
       if (slot !== Math.floor(was / K.bedSecs) || was <= 0 || !(S.lit & bit)) { T.beds++; const end = (slot + 1) * K.bedSecs + 0.35, me = t, at = M.pos;
         g.audio.play('fireBed', at, K.bed, { follow: () => FIRE.on && g.time < end && g.time >= end - K.bedSecs - 0.4 && me.factor > 0.001 ? { pos: at, k: BED_K * Math.min(1, me.factor), t: g.time } : null }); } }
     // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
-    if (dt > 0 && drawing && d < K.smoke.viewR) { const B = K.smoke, slot = Math.floor(time / B.every);
-      if (slot !== Math.floor(was / B.every) || was <= 0) { T.smokes++;
+    if (dt > 0 && drawing && d < K.smoke.viewR) { const B = K.smoke, slot = Math.floor(time / B.every); smoked |= bit;
+      if (slot !== Math.floor(was / B.every) || !(S.smoked & bit)) { T.smokes++;
         const sk = wl > 8 ? 8 / wl : 1, dir: Vec3 = [wv[0] * sk * B.lean, 1, wv[2] * sk * B.lean];
         g.smoke.emit({ pos: [M.pos[0], M.pos[1] + K.height * B.up, M.pos[2]], dir, speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density * heat, temperature: B.temp * heat, ttl: B.every, age: 0, kind: 'cloud',
           push: B.push, jitter: B.jitter, lattice: 'coarse', look: true }); } }
     if (d < K.drawR) list.push({ pos: M.pos, r: M.r, h: K.height, heat, seed, time: time % 4096, wind, flick: fl, embers: K.embers, pops: rec, bed: M.lid * K.bedR, d });
   }
-  T.fires = fires; T.lit = lit; if (dt > 0) S.lit = mask;
+  T.fires = fires; T.lit = lit; if (dt > 0) { S.lit = mask; S.smoked = smoked; }
   const cap = Math.max(0, Math.min(4, Math.floor(K.max)));
   if (list.length > cap) { list.sort((a, b) => a.d - b.d); list.length = cap; }   // (which ones, not in what order: the composite orders them ray by ray)
   T.drawn = list.length; E.fires = list;
