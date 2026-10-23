@@ -290,6 +290,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.slider(lk, 'emissive scale', 0, 4, 0.05, () => S.emissiveScale, v => { S.emissiveScale = v; }, 'brightness of emissive fixtures AND of the area lights derived from them');
   panel.slider(lk, 'night vision tube gain', 5, 1200, 5, () => S.nvGain, v => { S.nvGain = v; }, 'log gain of the intensifier: signal = log(1+L·g)/log(1+g)');
   panel.slider(lk, 'night vision phosphor', 0, 1, 0.01, () => engine.passes.nvPhosphor, v => { engine.passes.nvPhosphor = v; }, '0 = white phosphor (P45, modern), 1 = classic green (P43); default 0.09 = white with a touch of green');
+  panel.slider(lk, 'night vision eyepiece edge', 0, 1, 0.05, () => engine.passes.nvOval, v => { engine.passes.nvOval = v; }, 'the dark oval round the goggles\' picture: 0 = none (default), 1 = the oval as it was (?nvoval=1)');
   panel.slider(lk, 'film grain', 0, 0.1, 0.002, () => engine.passes.grain, v => { engine.passes.grain = v; }, 'display-space grain, faded out of highlights');
   const c = panel.section('Camera', { open: false, advanced: true, summary: () => `pitch ${(cam.pitch / DEG).toFixed(0)}° · yaw ${(cam.yaw / DEG).toFixed(0)}° · ${cam.desiredDistance.toFixed(1)} m · fov ${(cam.fov / DEG).toFixed(0)}°` });
   panel.slider(c, 'pitch °', 25, 85, 1, () => cam.pitch / DEG, v => { cam.pitch = v * DEG; });
