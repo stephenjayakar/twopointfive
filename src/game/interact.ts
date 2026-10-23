@@ -18,6 +18,7 @@ import { ownBlowHeld } from './ownblow';
 import { samStaggered } from './samstun';
 import { CMDRING, ringOpen, ringPin, ringWant, type RingState, type RingView } from './cmdring';
 import type { FollowCamera } from './camera';
+import { switchLetGo } from './lightswitch';
 import { loneKey } from './ringlone';
 import { HANDRING, EMPTY_WORD, EMPTY_AGAIN_SECS, EMPTY_NEAR_M, EMPTY_SHY_M, EMPTY_WHY } from './handring';
 import { v3 } from '../math/vec';
@@ -130,6 +131,7 @@ const wedgeDigit = (input: Input) => { for (let d = 1; d <= CMDRING.wedges; d++)
 /** a row done by the key, a digit or a click: what updateInteract hands on as Game.act */
 function give(g: Game, r: Interactable | null) {
   if (!r || r.kind === 'cancel' || !r.inReach || !r.verb || r.running || samStaggered(g)) return;   // (samstun.ts: folded by a blast, his hands do nothing)
+  switchLetGo(g);   // (handring.ts `turn`: stood at a wall switch for his hand's move, a row given is the next thing he does — it is not refused for that stand, nor done squared to the plate)
   g.act = r;
 }
 /** What Sam's own ring shows this frame (null: none — cmdring.ts CMDRING.hands): where it is, how much larger than its px (ringZoom), the lit wedge (0: the

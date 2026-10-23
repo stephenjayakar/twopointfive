@@ -223,8 +223,9 @@ function turnSecs(by: Character, sw: WallSwitch): number {
  *  has been moved off the plate. The lights went on the press and stay as they are; only his stand at the plate ends. */
 const plantBroken = (g: Game, h: Hand): boolean => { const pl = g.player; return !HANDRING.turn || !!pl.down || !!pl.holding || !!pl.takedown || !!pl.dragging || !!pl.wall || samStaggered(g) || v3.distXZ(h.sw.pos, pl.char.pos) > 1.6; };
 /** (handring.ts `turn`) the plate Sam is planted at, while he is: stood at it and squared to it (handwork.ts samWork → player.ts updateWorkPlant). It is
- *  a short follow-through of a flip already made, not a verb: nothing waits on it, a click lets go of it (switchLetGo: the lights are out, the trigger
- *  is his), no fresh row is on offer under it (player.ts buildInteractables `busy`, as under any plant), and a save inside it does not keep it. */
+ *  a short follow-through of a flip already made, not a verb: nothing waits on it, a click lets go of it and so does any row given (switchLetGo: the
+ *  lights are out, the trigger and his hands are his — the plate's own row is on offer under it, a second tap flips the room back as it always
+ *  could), and a save inside it does not keep it. */
 export function switchLetGo(g: Game): void { for (const h of states.get(g)?.hands ?? []) if (h.c === g.player.char) h.plant = false; }
 export function switchHand(g: Game): { p: Vec3; n: Vec3 } | null {
   const h = states.get(g)?.hands.find(x => x.plant && x.c === g.player.char);

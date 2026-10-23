@@ -1274,9 +1274,9 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
      to arm's length, the trigger does not let go of it), and the hand's move is given the turn's time on top of its own (at most `turnMax`,
      0.45 s; the plant's own turn rate, `handwork.ts WORK_TURN`). The hand that goes to the plate is the free one (his left with the pistol or
      the rifle up: `samHand`, as at the mains). COST: his feet are not his for 0.3 s facing it, up to 0.75 s from a half turn away (0.60 s
-     measured from 180° off, W held throughout). It is a FOLLOW-THROUGH, NOT A VERB: nothing waits on it, A CLICK LETS GO OF IT (the lights are
-     out and the trigger is his: `switchLetGo`), no fresh row is on offer under it (`buildInteractables`' `busy`, so the room cannot be
-     flipped back for that 0.3 to 0.75 s, where a second tap used to flip it at once), a save inside it does not keep it, and it breaks off
+     measured from 180° off, W held throughout). It is a FOLLOW-THROUGH, NOT A VERB: nothing waits on it, A CLICK LETS GO OF IT and so does any row given (the
+     lights are out, the trigger and his hands are his: `switchLetGo`, from `player.ts` and `interact.ts give`; the plate's own row is on
+     offer under it and a second tap flips the room back, as it always could), a save inside it does not keep it, and it breaks off
      as the mains lever's does (down, a man or a body in hand, folded by a blast, moved off the plate). NOT FROM A WALL HOLD: pressed to
      the wall beside the plate he reaches it from where he is, as he did (a plant would take him off the wall). Nothing without hands at work
      (`HANDWORK.on`). A tap's row and a ring's row alike. THE OTHER ROWS already turned him, by

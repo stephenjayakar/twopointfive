@@ -2177,7 +2177,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       list.push({ kind: 'door', pos: d.pos, line1: `door · ${lockedOut ? 'locked' : d.isClosed() ? 'shut' : 'open'}`, line2: lockedOut ? 'walk him into it — his key turns the lock' : d.isClosed() ? 'walk him into it — it pushes open' : 'open', inReach: false, off: false, door: d });
     }
   } else if (!pl.down) {
-    const busy = !!(pl.takedown || pl.kick || pl.picking || pl.wanding || pl.easing || pl.coding || pl.breakerMove || pl.doorMove || pl.charging || g.mission.driveT >= 0 || samWork(g)?.kind === 'switch');   // hands or feet spoken for: no fresh verbs this frame (the running verb's row, or a status, stands alone below)
+    const busy = !!(pl.takedown || pl.kick || pl.picking || pl.wanding || pl.easing || pl.coding || pl.breakerMove || pl.doorMove || pl.charging || g.mission.driveT >= 0);   // hands or feet spoken for: no fresh verbs this frame (the running verb's row, or a status, stands alone below)
     for (const d of g.doors.list) {
       if (d.off) continue;   // off its hinges (doorblast.ts): a doorway, with no row to its name
       const dp = d.pos; const near = Math.min(v3.distXZ(dp, p), v3.distXZ(d.frameCentre, p)) < Doors.USE_REACH; const reach = near && !pl.sprinting;
