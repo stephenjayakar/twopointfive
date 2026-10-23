@@ -65,6 +65,7 @@ import { EXACT } from '../math/exact';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { carLampsTape } from '../game/carlamps';
+import { roundTape } from '../scene/round';
 import { rowsetTape } from '../game/rowset';
 import { memoryStore } from '../game/savestate';
 import { resetCivilians } from '../game/civilians';
@@ -213,6 +214,7 @@ export class TapePlay {
     if (!plain(src.SENSE)) SENSE.cpu = false;  // (… and one from before these keys was played on the renderer's senses, its records believed as they came)
     if (!plain(src.CMDCHECK)) CMDCHECK.on = false;
     rowsetTape(src);   // (… and one from before a row had an hour and weather of its own: main.ts lays them on its query before the game exists — game/rowset.ts)
+    roundTape(src);   // (… and one from before round things were round: the level's boxes are read as it is stood up — scene/round.ts)
     carLampsTape(src);   // (… and one from before a vehicle's lamps were light targets: the Game reads that switch as it is built — game/carlamps.ts)
     this.kitOf(rc.kit);
   }

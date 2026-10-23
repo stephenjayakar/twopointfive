@@ -85,6 +85,7 @@ const BOX_EMISSIVE: u32 = 16u;
 const BOX_AREALIT: u32 = 32u;     // emission carried by an analytic area light instead (see Light kind 3)
 const BOX_ROT: u32 = 64u;         // fully rotated box: orientation is the quaternion boxRot(i), not the packed yaw (hand props, sparks, tumbling canisters)
 const BOX_GLOSS: u32 = 128u;      // polished floor finish: its on-screen top face gets a traced reflection ray under FLAG_GLOSS (boxes.ts BoxFlag.Gloss)
+const GEO_ROUND: u32 = 8u;        // ROUND THINGS (scene/round.ts; only ever raised in a build compiled with ROUND_BOXES): the box is the cylinder about its own y, radius h.x (boxes.ts BOX_ROUND_BIT — the CPU's Dynamic bit, which is not sent then)
 const GEO_CUT: u32 = 65536u;      // CUT BOXES (scene/cut.ts; only ever raised in a build compiled with CUT_BOXES): the box is clipped by the planes in its rows of the cut table (boxMat from CUT_BASE)
 const BOX_GLASS: u32 = 131072u;   // a glass pane (boxes.ts BoxFlag.Glass, bit 17 — the flag word widened past its byte): never in the trace grid nor the raster; here only so a debug view can tell one
 const MAX_GLASS: u32 = 32u;       // panes SceneInfo.glass can hold (boxes.ts MAX_GLASS)
@@ -346,6 +347,34 @@ fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi:
   else if (tN == tmn.y) { code = 2.0 + select(0.0, 1.0, ld.y > 0.0); }
   return vec2f(tN, code);
 }
+// ---- ROUND THINGS (scene/round.ts; called only inside `if (ROUND_BOXES)` blocks — the scene prelude's const, false = this is dead code and the module is as it was): a
+// box flagged GEO_ROUND is the cylinder about its own y, radius h.x (= h.z), between its two y faces. The ray's stay inside is ONE interval: its stay between the
+// ends (the y slab) cut down to its stay inside the circle. The circle's quadratic is solved from where the ray enters the box round it (tBox), so a ray from far
+// off loses no bits to the distance. Codes: an end keeps isectBox's 2 / 3, 7 = origin inside, and the SIDE answers ROUND_SIDE (negative, under the cut planes'
+// −1‥−8: every caller's `code > 6.5` inside test and its t tests read it as an ordinary face). The side's normal needs the hit point: roundNormalAt, asked by the
+// closest-hit walks after boxNormalFromCode. boxes.ts rayBoxRound is this on the CPU (rayBox, and collision.ts lineBox).
+const ROUND_SIDE: f32 = -9.0;
+fn isectRound(lo: vec3f, ld: vec3f, R: f32, tNy: f32, tFy: f32, tBox: f32, tmax: f32) -> vec2f {
+  var tN = tNy; var tF = tFy; var code = 2.0 + select(0.0, 1.0, ld.y > 0.0);
+  let p = lo.xz + ld.xz * tBox;
+  let a = dot(ld.xz, ld.xz); let hb = dot(p, ld.xz); let c = dot(p, p) - R * R;
+  if (a < 1e-12) { if (c > 0.0) { return vec2f(-1.0, 0.0); } }   // along the axis: inside the circle for every t, or never
+  else {
+    let disc = hb * hb - a * c; if (disc < 0.0) { return vec2f(-1.0, 0.0); }
+    let s = sqrt(disc); let ta = tBox + (-hb - s) / a;
+    if (ta >= tN) { tN = ta; code = ROUND_SIDE; }
+    tF = min(tF, tBox + (-hb + s) / a);
+  }
+  if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
+  if (tN < 0.0) { return vec2f(0.0, 7.0); }
+  return vec2f(tN, code);
+}
+/** the normal of a round box's SIDE at world point wp on it: straight out from its axis (a yaw about that axis changes nothing; a tilted one goes through its own frame) */
+fn roundNormalAt(b: BoxGeo, bi: u32, wp: vec3f) -> vec3f {
+  let p = wp - b.c;
+  if ((b.flags & BOX_ROT) != 0u) { let q = boxRot(bi); let l = quatRotate(vec4f(-q.xyz, q.w), p); return quatRotate(q, normalize(vec3f(l.x, 0.0, l.z) + vec3f(1e-9, 0.0, 0.0))); }
+  return normalize(vec3f(p.x, 0.0, p.z) + vec3f(1e-9, 0.0, 0.0));
+}
 fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, axisFast: bool) -> vec2f {
   let p = ro - b.c;
   var lo: vec3f; var ld: vec3f; var inv: vec3f;
@@ -357,6 +386,7 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, a
   let tN = max(max(tmn.x, tmn.y), tmn.z);
   let tF = min(min(tmx.x, tmx.y), tmx.z);
   if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
+  if (ROUND_BOXES) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(lo, ld, b.h.x, tmn.y, tmx.y, tN, tmax); } }   // ROUND THINGS: the cylinder inside the box (above); dead code without the switch
   if (CUT_BOXES) { if ((b.flags & GEO_CUT) != 0u) { return isectCut(lo, ld, tmn, tN, tF, tmax, bi); } }   // CUT BOXES: the slab interval cut down by the box's planes (below); dead code without the switch
   if (tN < 0.0) { return vec2f(0.0, 7.0); }
   var code = 4.0 + select(0.0, 1.0, ld.z > 0.0);
@@ -366,7 +396,7 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, a
 }
 
 fn boxNormalFromCode(b: BoxGeo, code: f32, bi: u32) -> vec3f {
-  if (CUT_BOXES) { if (code < 0.0) { return quatRotate(boxRot(bi), cutPlaneRow(bi, u32(-code - 0.5)).xyz); } }   // CUT BOXES: a cut face — plane k's own normal, out of the box's frame (boxRot = the yaw for an ordinary box)
+  if (CUT_BOXES) { if (code < 0.0 && code > ROUND_SIDE + 0.5) { return quatRotate(boxRot(bi), cutPlaneRow(bi, u32(-code - 0.5)).xyz); } }   // CUT BOXES: a cut face — plane k's own normal, out of the box's frame (boxRot = the yaw for an ordinary box)
   let c = u32(code);
   let sgn = select(1.0, -1.0, (c & 1u) == 1u);
   let axis = c >> 1u;
@@ -754,7 +784,10 @@ fn traceClosest(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
   }
   if (found) {
     if (code > 6.5) { hit.inside = true; hit.n = -rd; }
-    else { hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx)); }
+    else {
+      hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx));
+      if (ROUND_BOXES) { if (code < ROUND_SIDE + 0.5) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
+    }
   } else { hit.idx = -1; hit.t = tmaxIn; }
   // the character proxies (few, sphere-culled per character): the round cones' closest hit and normal
   if (scene.numCapsules > 0u) {
@@ -826,7 +859,10 @@ fn traceClosestMesh(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
   }
   if (found) {
     if (code > 6.5) { hit.inside = true; hit.n = -rd; }
-    else { hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx)); }
+    else {
+      hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx));
+      if (ROUND_BOXES) { if (code < ROUND_SIDE + 0.5) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
+    }
   } else { hit.idx = -1; hit.t = tmaxIn; }
   if (scene.numCapsules > 0u) {
     if ((frame.p5Cfg.z & 1u) != 0u && (frame.flags & FLAG_MESH_SHADOWS) != 0u) {   // the men as their MESH: nearest triangle over every character nearer than the box hit

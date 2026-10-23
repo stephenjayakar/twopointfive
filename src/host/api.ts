@@ -23,6 +23,8 @@ import type { BreathShown } from '../game/snowBreath';
 import type { Vec3 } from '../math/vec';
 import type { FireRecord } from '../render/passes';
 import type { FireShown } from '../game/fire';
+import type { RainShown } from '../game/rainFx';
+import type { SnowBlastShown } from '../game/snowBlast';
 import type { SnowShown } from '../game/snowFx';
 import type { SmokeShown } from '../game/smokebreak';
 
@@ -30,8 +32,11 @@ import type { SmokeShown } from '../game/smokebreak';
  *  `smokeBreak` = game/smokebreak.ts SmokeShown, a smoke break's thread filed with the solver and puffs owed to the pool (dropped too when its switch goes off;
  *  a thread the solver let go is filed afresh whoever dropped it) · `breath` = game/snowBreath.ts BreathShown, what a breath was shown as (steam through the
  *  solver or puffs, whose source rides whose mouth, the records filed) · `snow` = game/snowFx.ts SnowShown, the falling snow's whole recycler (what the ring
- *  took of flakes, wisps and grains, the record seeds, the kicks taken, the read-outs) */
-export interface HostBooks { fire?: FireShown; smokeBreak?: SmokeShown; breath?: BreathShown; snow?: SnowShown }
+ *  took of flakes, wisps and grains, the record seeds, the kicks taken, the read-outs) · `snowBlast` = game/snowBlast.ts SnowBlastShown, what each blast in the
+ *  snow still owes the pool of its puff and its thrown flakes, whose turn the grains' throw is, the records filed · `rain` = game/rainFx.ts RainShown, the
+ *  particle rain's whole recycler (the births and their dice, the drops in the air under the disc, the drip lines and the walk that finds them, the lattice's
+ *  lean, the read-outs) */
+export interface HostBooks { fire?: FireShown; smokeBreak?: SmokeShown; breath?: BreathShown; snow?: SnowShown; snowBlast?: SnowBlastShown; rain?: RainShown }
 export interface HostApi {
   // ---- per frame
   /** the CPU box world: statics, dynamics, raycasts, upload (scene/boxes.ts) — host-neutral */
