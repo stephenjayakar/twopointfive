@@ -13,7 +13,7 @@
 //   · THE FOLLOWER (the office's corridor, the pair squadded up and silent as sneak-probes.ts has them; one defender stood at its far end looking down it,
 //     every meter never under 0.16, Sam walked low to 8.7 m from him): with the switch off the partner hangs back out of the eye's reach, metres behind
 //     Sam; with it on he comes up to his place behind Sam, and the defender's awareness is no higher for it
-//   · the pair lesson itself (tut-pair, its scripted player, hard), Sam's meter never under 0.2 as the lesson runner's --floor has it, plays to its end
+//   · the pair lesson itself (tut-pair, its scripted player, hard), Sam's meter never under 0.27 as the lesson runner's --floor has it, plays to its end
 //     with the switch on (when this rule was written the lesson's level had lines on the partner's way and the run did not end with it off; the level
 //     was rebuilt since so that no way of his has a line, and the two arms end alike there: the corridor above is the differential now)
 //   · off, nothing reads its number · the stand's own word · a recording carries the key
@@ -83,15 +83,16 @@ export async function byEye(): Promise<boolean> {
     const say = (o: Awaited<ReturnType<typeof follow>>) => `${o.behind.toFixed(1)} m behind Sam, ${o.eye.toFixed(1)} m from the eye, held ${o.held.toFixed(0)} of the 20 s Sam stood (${o.word}); the defender's awareness peaked ${o.peak.toFixed(2)}`;
     F.verdict(fOff.there && fOn.there && fOff.behind >= 4 && fOff.held >= 10 && fOn.behind <= 3 && fOn.held < 2 && fOn.peak <= fOff.peak + 0.01 && !fOn.noticed, 'the follower, down a corridor a defender looks along, every meter never under 0.16: off he hangs back out of the eye\'s reach; on he comes up behind Sam, and the defender is no wiser',
       `Sam low, ${fOn.sam.toFixed(1)} m from the defender · off: ${say(fOff)} · on: ${say(fOn)}`);
-    // … and the pair lesson played by its script with Sam's meter never under 0.2, the switch held on each frame
+    // … and the pair lesson played by its script with Sam's meter never under 0.27 (the page's reading of a low wall's shadow at night on the high
+    // graphics preset is about 0.25; the lowest preset and the headless estimate read far under it), the switch held on each frame
     const lesson = async () => { const { runLesson } = await import('./lesson-run.ts'); const upd = GM.Game.prototype.update;
       GM.Game.prototype.update = function (this: any, ...a: any[]) { SNEAK.byEye = true; return upd.apply(this, a); };
       const railsWas = process.env.TPS_RAILS; if (process.env.TPS_PROFILE !== 'shipped') process.env.TPS_RAILS = '1';   // (a tutorial mission is the page's: on the frozen stand its frame is raised for the run)
       const log = console.log; console.log = () => { };
-      try { const out = await runLesson('tut-pair', { hard: true, floor: 0.2 }); return { code: out.code as number, steps: out.steps.length as number, secs: out.secs as number }; }
+      try { const out = await runLesson('tut-pair', { hard: true, floor: 0.27 }); return { code: out.code as number, steps: out.steps.length as number, secs: out.secs as number }; }
       finally { console.log = log; GM.Game.prototype.update = upd; if (railsWas === undefined) delete process.env.TPS_RAILS; else process.env.TPS_RAILS = railsWas; back(); } };
     const lOn = await lesson();
-    F.verdict(lOn.code === 0, 'the pair lesson with Sam\'s meter never under 0.2 plays to its end with it on', `${lOn.code === 0 ? 'played to its end' : 'did NOT end'} (${lOn.steps} steps, ${lOn.secs.toFixed(0)} s)`);
+    F.verdict(lOn.code === 0, 'the pair lesson with Sam\'s meter never under 0.27 plays to its end with it on', `${lOn.code === 0 ? 'played to its end' : 'did NOT end'} (${lOn.steps} steps, ${lOn.secs.toFixed(0)} s)`);
     { SNEAK.seenRate = 0.9; const moved = strip(false, 0.27); back();
       F.verdict(moved.n === dim[0].n && Math.abs(moved.end - dim[0].end) < 1e-9, 'off, nothing reads it: the same strip with its number moved', `${txt(moved)} · a walk at 14 m ${moved.end.toFixed(3)}`); }
     { const J: any = await import(`${ROOT}/src/game/journal.ts`), PR: any = await import(`${ROOT}/src/host/profile.ts`), SE: any = await import(`${ROOT}/src/host/standEnv.ts`);
