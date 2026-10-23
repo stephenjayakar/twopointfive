@@ -9,11 +9,12 @@ export const ended = (g: any) => g.lesson.finished;
 /** `TUTPLAN_ALONE=1`: the wrong plan, played on purpose — all four on the hall's front door and the word. The steps still end (the room taken is every
  *  step's other way), and the line printed says what it cost: the men the gun put on a knee. It takes the hall on the step before the one that asks for the word */
 const ALONE = process.env.TUTPLAN_ALONE === '1';
-/** `TUTPLAN_STRICT=1`: what a player's tape showed of two stacks on one word (10-22: one pair was in and done before the other opened its door, and the late
- *  pair's can went off on the first) FAILS the run — the first men of two stacks more than a second apart into the room, or a teammate dazzled by the team's own can. Without it the line is
- *  only said: both are the squad's own entry rules, and the word is for the build that has them.
+/** TWO STACKS ON ONE WORD GO IN TOGETHER, and the run FAILS when they do not: the first men of two stacks more than a second apart into the room, or a
+ *  teammate dazzled by the team's own can — what a player's tape showed of this mission (10-22: one pair was in and done before the other opened its door,
+ *  and the late pair's can went off on the first). Both are the squad's own entry rules (cmdring.ts `planOne`, doortools.ts `tossMate`), and the bar became
+ *  the run's own with the build that has them. `TUTPLAN_LOOSE=1`: the line is only said (a run with either rule put off).
  *  `TUTPLAN_POSTB=x,z`: the barrier's order is clicked there instead of on its mark (a hand does not land on the mark: where it may land is swept with this) */
-const STRICT = process.env.TUTPLAN_STRICT === '1', POSTB = process.env.TUTPLAN_POSTB ? ((a: number[]) => [a[0], 0, a[1]])(process.env.TUTPLAN_POSTB.split(',').map(Number)) : null;
+const STRICT = process.env.TUTPLAN_LOOSE !== '1', POSTB = process.env.TUTPLAN_POSTB ? ((a: number[]) => [a[0], 0, a[1]])(process.env.TUTPLAN_POSTB.split(',').map(Number)) : null;
 export const idleOk = ALONE ? ['all2', 'word2'] : [];
 
 const WALL = [13.9, 0, 9.25], POST_A = [29.25, 0, 10.25], POST_B = [24.0, 0, 10.3], GATE_E = [35.0, 0, 10.0], GATE_N = [22.0, 0, 5.0];

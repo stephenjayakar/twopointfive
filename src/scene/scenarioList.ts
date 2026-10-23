@@ -173,10 +173,10 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): he stays at the gate with the handset, and every stop is a thing one order to all
   // four cannot do and a plan can
   { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', hour: 'midday', weather: 'clear',   // (a plan is laid by day: every yard and door in plain sight from above)
-    place: 'A walled relay post, led from its gate', lean: 'loud', defenders: 8, squads: true,
-    blurb: 'You stay at the gate with the handset. Lay a plan for the four: two doors on one word, a gun, two gates.',
-    scene: 'The men who hit the convoy talk through a relay post in the hills. You take the four to its gate and stay there on the handset: this one is won by the plan.',
-    teaches: ['Plan mode: you on the radio, the view free', 'Pick two men, give them a door', 'One word sends every stack', 'A gun turned to the wrong door', 'Which way a pair faces'] },
+    place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
+    blurb: "You'll stay at the gate with the radio and plan what your squad will do. Hit two doors at once, beat a gunner, and cover two gates.",
+    scene: "The enemies who hit the convoy use a relay post in the hills to talk to each other. You'll take your squad to the gate, then stay there and lead them over the radio.",
+    teaches: ['Plan mode', 'Give each pair its own door', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Choose which way a pair faces'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
   { id: 'tut-solo', title: 'The fuel halt, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial',
