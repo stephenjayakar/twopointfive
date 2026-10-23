@@ -24,10 +24,10 @@ export function verdictHead(game: Game, V: RunVerdict, kept: KeptNote | null): H
   const box = el('div', `vd ${V.won ? 'won' : 'lost'}${V.void ? ' void' : ''}`);
   const top = el('div', 'vd-top'); box.appendChild(top);
   const word = el('b', 'vd-word'); word.textContent = V.word; top.appendChild(word);
-  const time = el('span', 'vd-time'); time.textContent = clock(V.secs); time.title = 'from the first order, stride or round'; top.appendChild(time);
+  const time = el('span', 'vd-time'); time.textContent = clock(V.secs); time.title = 'timed from your first order, step or shot'; top.appendChild(time);
   const P = game.par?.result?.();
   if (P && V.won && P.medal !== 'none') { const m = el('span', `vd-medal m-${P.medal}`); m.textContent = P.medal; m.title = game.par.shown ?? P.line; top.appendChild(m); }
-  if (V.void) { const v = el('span', 'vd-void'); v.textContent = 'cheats'; v.title = 'a cheat was on during this try: nothing is kept of it'; top.appendChild(v); }
+  if (V.void) { const v = el('span', 'vd-void'); v.textContent = 'cheats'; v.title = 'a cheat was on during this try, so it doesn\'t count'; top.appendChild(v); }
   top.appendChild(el('span', 'vd-gap'));
   if (kept?.lesson) box.classList.add('lesson');   // a Training lesson: the word and the clock, nothing graded (no ways, no tries: main.ts keeps none)
   else top.appendChild(pipsEl(kept?.ways ?? {}, V.void ? null : V.approach));
@@ -48,10 +48,10 @@ export function verdictMen(game: Game, V: RunVerdict): HTMLElement {
     const row = el('div', `vd-man t-${m.tone ?? 'mate'} s-${m.state}`);
     const name = el('span', 'nm'); name.textContent = m.name; row.appendChild(name);
     const bar = el('span', 'bar'), fill = el('i', 'fill'); fill.style.width = m.state === 'up' ? '100%' : pct(m.downAt); bar.appendChild(fill);
-    for (const t of m.drops) { const d = el('i', 'drop'); d.style.left = pct(t); d.title = `${clock(t)} · dropped a defender`; bar.appendChild(d); }
+    for (const t of m.drops) { const d = el('i', 'drop'); d.style.left = pct(t); d.title = `${clock(t)} · took down a defender`; bar.appendChild(d); }
     if (m.state !== 'up') { const x = el('i', 'fell'); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.style.left = pct(m.downAt); x.title = fellWords(m); bar.appendChild(x); }
     row.appendChild(bar);
-    const n = el('b', `n${m.drops.length ? '' : ' none'}`); n.textContent = String(m.drops.length); n.title = 'defenders he dropped'; row.appendChild(n);
+    const n = el('b', `n${m.drops.length ? '' : ' none'}`); n.textContent = String(m.drops.length); n.title = 'defenders he took down'; row.appendChild(n);
     box.appendChild(row);
   }
   if (V.foes.of) box.appendChild(squares('foes', 'defenders', V.foes.down, V.foes.of, `${V.foes.down} of ${V.foes.of} down`));

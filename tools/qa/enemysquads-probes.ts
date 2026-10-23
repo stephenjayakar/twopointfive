@@ -160,7 +160,7 @@ export async function enemysquadsContact(): Promise<boolean> {
       // (the team's four are on the floor and fight for themselves: as shipped they have the mess cleared before Charlie's word). The line said must be the one
       // Alpha's state at that word calls for
       const cT = R.choices('Charlie')[0]?.t ?? NaN, aDown = ev('Alpha').find((e: any) => e.what === 'down'), gone = !!aDown && aDown.t <= cT, want = gone ? /^Charlie: Alpha's not answering — lock the doors/ : /^Charlie: holding — lock the doors/, other = gone ? /^Charlie: holding/ : /^Charlie: Alpha's not answering/;
-      F.verdict(R.said.some(t => /^Bravo: (moving to Alpha|two going round)/.test(t)) && R.said.some(t => want.test(t)) && !R.said.some(t => other.test(t)), `both said it on the net (Charlie: ${gone ? `"Alpha's not answering", Alpha down @${aDown.t} before its word @${cT}` : `"holding", Alpha still up at its word @${cT}`})`, R.said.filter(t => /^(Bravo|Charlie)/.test(t)).join(' | '));
+      F.verdict(R.said.some(t => /^Bravo: (moving to Alpha|two going a?round)/.test(t)) && R.said.some(t => want.test(t)) && !R.said.some(t => other.test(t)), `both said it on the net (Charlie: ${gone ? `"Alpha's not answering", Alpha down @${aDown.t} before its word @${cT}` : `"holding", Alpha still up at its word @${cT}`})`, R.said.filter(t => /^(Bravo|Charlie)/.test(t)).join(' | '));
     } finally { WALLPEN.on = thin0; R.done(); }
   }
   return F.done();

@@ -160,7 +160,7 @@ const script: LevelScriptFn = D => {
     // The fight at the gate is the game's own; whoever is still on his feet after it is walked in again, further each time
     P.beat('push', function* (c) {
       yield c.any(c.wait(PUSH_LATEST), c.until(q => { const men = squad(c); return men.filter(u => inYard(q, u)).length >= Math.min(3, men.length); }));
-      { const u = c.unit('Red One') ?? squad(c)[0]; if (u) c.say(u, 'They are coming for the gate. We have it.', { radio: true }); }
+      { const u = c.unit('Red One') ?? squad(c)[0]; if (u) c.say(u, 'They\'re coming for the gate. We\'ve got it.', { radio: true }); }
       for (let k = 0; block(c, false).length; k++) {
         const left = block(c, false);
         for (const [i, u] of left.entries()) {
@@ -186,12 +186,12 @@ const script: LevelScriptFn = D => {
     P.beat('wall', function* (c) {
       c.flag.broke = true;
       yield c.wait(0.8);
-      const u = c.unit('Blue One') ?? squad(c)[0]; if (u) c.say(u, 'Store is locked. Charge on the wall.', { radio: true });
+      const u = c.unit('Blue One') ?? squad(c)[0]; if (u) c.say(u, 'Store\'s locked. We need a charge on the wall.', { radio: true });
     });
     P.beat('dark', function* (c) {
       c.flag.broke = true;
       yield c.wait(0.6);
-      const u = c.unit('Red One') ?? squad(c)[0]; if (u) c.say(u, 'Mains box, on the yard wall. We can kill the lights.', { radio: true });
+      const u = c.unit('Red One') ?? squad(c)[0]; if (u) c.say(u, 'There\'s a breaker box on the yard wall. We can kill the lights.', { radio: true });
     });
     P.beat('nv', function* (c) {
       c.flag.broke = true;
@@ -208,7 +208,7 @@ const script: LevelScriptFn = D => {
       c.flag.broke = true;
       const men = torchMen(c).filter(u => inBunk(c.query, u));
       if (men.length && !squad(c).some(u => atBunk(c.query, u) || inBunk(c.query, u))) {
-        c.say(men[0], men.length > 1 ? 'Power is out! Two of us to the mains box!' : 'Power is out! Going to the mains box!', { radio: true });
+        c.say(men[0], men.length > 1 ? 'Power\'s out! Two of us are going to the breaker box!' : 'Power\'s out! I\'m going to the breaker box!', { radio: true });
         for (const u of men) c.order(u, { goal: null, aimAt: BUNK_DOOR, upper: 'aim', light: true, hot: false });
         yield c.wait(1.3);
         c.doors.open(bunkDoor, undefined, { hold: true });

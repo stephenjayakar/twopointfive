@@ -91,7 +91,7 @@ import { handleHeld } from './handleside';
 import { clearLineFeet, clearLineLive } from './clearline';
 import { fireLineFeet, fireLineLive, fireLineTick } from './fireline';
 import { fitSpots, fitGroups, fitTick, type Fit } from './roomfit';   // (used inside the 'move' order only: nothing of roomfit.ts is touched at load)
-import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { watchedPlace } from './dialogue';   // (read inside an order's issue only: a cover's row names the place watched)
 import { doorSaidName } from './doornames';   // (a leaf: a shorthand door id's said name)
 import { propGap } from './roomclear';   // (used inside workedMarks only: nothing of roomclear.ts is touched at load)
@@ -362,6 +362,8 @@ export interface OrderDef {
   tick?: (S: SquadOrders, gd: Guard, A: Assignment) => void;
   /** what the man who takes it says (one of, in turn) */
   ack?: string[];
+  /** (WORDS) the same lines as they are said now, place for place (read where a man answers) */
+  ackNow?: string[];
   /** it can be given ON THE WORD (GiveOpts.onWord means something to its issue): with the menu's 'wait for my word' row on, its row says so and gives it that way */
   onWord?: boolean;
   /** it moves nobody (the squad's posture: silent.ts): no drill that owns a man is asked to let go of him for it, and it is not logged as an order (a
@@ -581,7 +583,7 @@ export class SquadOrders {
       release: gd => { const NB = g.nightBreach; return NB?.active && NB.drillOps.includes(gd) ? NB.callOff() : null; },   // (the drill is the pair's: letting go of one man ends it for both — the other is handed to the fight AI, nightbreach.ts)
       status: gd => { const NB = g.nightBreach; if (!NB?.active || !NB.ops.includes(gd)) return null;
         if (!NB.drillOps.includes(gd)) return NB.state === 'off' ? null : 'standing by';
-        switch (NB.state) { case 'staged': return 'waiting'; case 'stacking': return 'stacking · the breach'; case 'set': return 'set · F sends them in'; case 'going': case 'inside': return 'breaching';
+        switch (NB.state) { case 'staged': return 'waiting'; case 'stacking': return 'stacking · the breach'; case 'set': return 'set · press F to send them in'; case 'going': case 'inside': return 'breaching';
           case 'clear': return 'holding the room'; default: return 'holding'; } },
     });
   }
@@ -810,7 +812,7 @@ export class SquadOrders {
     // (Sam's own words, not the menu row's: he does not read out the stock count, the mark is HIS, and a door with no name of its own is not named)
     const said = WORDS.on ? label.replace(/ · (\d+ left|uses .+)$/, '').replace('on your mark', 'on my mark') : label;
     g.msg(`you: ${this.whoWords(men)} — ${said}${t.kind === 'door' && !(WORDS.on && doorWords(t.door) === 'door') ? ` · ${doorWords(t.door)}` : ''}`);
-    if (def.ack?.length) { const k = this.acks++; g.say(men[k % men.length], def.ack[Math.floor(k / men.length) % def.ack.length]); }   // (the men take turns answering, each through the lines in turn)
+    if (def.ack?.length) { const k = this.acks++, A = wg(def.ackNow ?? def.ack, def.ack); g.say(men[k % men.length], A[Math.floor(k / men.length) % A.length]); }   // (the men take turns answering, each through the lines in turn)
     this.posture?.given(def);
     holdFireOrder(g, def.id, { waits: !!opts?.onWord && this.big, silent: wasSilent });   // (holdfire.ts: an order that means fire starts the fight for a squad nobody has found — a return on its first line with the switch off)
     return null;

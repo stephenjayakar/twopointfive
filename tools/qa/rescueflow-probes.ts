@@ -298,7 +298,7 @@ export const flowTwoDoor = staged(['DARKFOE.on', 'RESCUEEND.on'], async () => {
     walk(T, [8.2, 0, 11.2]); T.secs(1.5);
     const w = g.orders.give('cover', { kind: 'floor', at: [20, 0, 11.2] }, 'all'); T.secs(0.3);
     const did = R.orderDoor();
-    F.verdict(w === null && did === null && R.mode === 'free' && g.doorTools.bangs === 3 && /nobody free/.test(g.messages[g.messages.length - 1]?.text ?? ''), 'both men on covers of Sam\'s: F is refused, and says why (no can spent)', `did ${did} · '${g.messages[g.messages.length - 1]?.text}'`);
+    F.verdict(w === null && did === null && R.mode === 'free' && g.doorTools.bangs === 3 && /nobody's free/.test(g.messages[g.messages.length - 1]?.text ?? ''), 'both men on covers of Sam\'s: F is refused, and says why (no can spent)', `did ${did} · '${g.messages[g.messages.length - 1]?.text}'`);
   }
   { // the menu calls it off — on the walk, and with the boots going in (the door tools' men are theirs only while they stand on the order)
     const { T, R, g } = await sideRig(11, { clock: false }); const DTL = g.doorTools;

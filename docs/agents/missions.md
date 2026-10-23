@@ -232,6 +232,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `mode.glow: false` in the script); the page on the software adapter, lamp out, 24 as he arrives and 14 settled, against 28 settled with the moon turned back on the same page. Every shadow in the yard falls the
   other way; no line, mark or fight moved, and `tut-solo-check` is green on both stands, two seeds, all eight ways. The menu picture is its own
   light and did not change. Never seen on a GPU: how the yard reads with the shadows turned is by eye there.
+  HIS OWN STUN GRENADE (10-23, a lesson's prose and its scripted player; no rule changed). The maintainer: "do flashbangs take line of sight into
+  account? i flashed myself in the solo loud tutorial level even though it went into the other room". THE RULE, as `combat.ts detonateStun` has it
+  in the night game (this mission is one): a head within `bang.dazzleRadius` (8 m) of the burst with a clear line from it (`col.segmentBlocked`, from
+  0.3 m over the burst) is blinded, 6 s close in to 2 s at the edge; walls and shut leaves block, an open doorway does not; facing counts for
+  nothing, nothing goes round a corner, and the player gets it by `samstun.ts` (on in the page) as a guard does. A room fight adds the bang with no
+  line (the same air within `FLASH.concussM`, half) and spares the thrower's side unless on top of it. HERE the store's doorway has no leaf and
+  stands in line with the shop's door, so a man who throws from inside the shop looks down that line: traced with the scripted player, thrown from
+  x 28.5 on the axis the can rolls to x 35.6 and blinds him 2.4 s (7.2 m), from 29.8 3.0 s; the scripted player stood at 26.8, 8.8 m off, and
+  never caught it. THE MEND is the lesson's: a card on the step `stun` ('Throwing a stun grenade': who it blinds, what blocks it, throw and move
+  to the side) and the line ends 'and get behind the wall'. The scripted player throws and steps aside and fails if his own can blinds him;
+  `tut-solo-check` plays a ninth way, `flash` (thrown from nearer, the line not left: the can must blind him where SAMSTUN is on, and every step
+  still goes by). The level's own base row did not move (prose). Nobody has thrown it by hand since.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
@@ -1644,3 +1656,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   name walked Training's seven levels: every "ALL PASS (73)" had covered no tutorial level, and a rows note (`rowsWithheld`) never printed. It walks
   `LESSON_MISSIONS` now: 13 levels, 129 checks, green on both stands. `lesson-gate` with no name is still Training's (a tutorial mission is gated by name). Also: a
   `PT_DESTR=1` set by hand in front of `lesson-run` is honoured as the script's own `raises` is (it was read only when the script had raised it).
+
+<!-- added 2026-10-22 -->
+- **The tutorial's words were rewritten on 2026-10-22** (the writing guide: `docs/agents/writing.md`). A line, a card or a list row quoted in a bullet above
+  is the text as it was when that bullet was written; the level files and `scenarioList.ts` hold today's. Only words moved: no step id, deed, mark, key,
+  `allow` / `deny` or order of steps. Tools that matched the old words were moved with them: `rails-check` (the stack's after line, the gate's line),
+  `tut-sky-check` (the light card says flashlights), `tut-squad-page.cjs` (the after lines and the side door card's heading, now "An enemy watching a doorway").
+  A level file's fingerprint moves with its words, so a checkpoint saved on an older build of a tutorial mission is refused. `tools/qa/writing-check.ts`
+  (`probes.ts writing`) holds every lesson's text and every mission row to the guide's patterns; `WRITING_BREAK=1` must fail. Read on the page by nobody
+  yet; never seen on a GPU.

@@ -81,11 +81,11 @@ export function updateMission(g: Game, dt: number, input: Input) {
     if (p[0] > R.x0 && p[0] < R.x1 && p[2] > R.z0 && p[2] < R.z1) {
       const W = quietWords(g);   // (a quiet mission: the level's own words — quiet.ts; null on the plain night)
       if (W) { chronObjective(g, `reached ${W.place}`); m.stage = 'drive'; g.msg(`${W.place} — ${W.thing} is in ${W.holder}`); }
-      else { chronObjective(g, 'reached the server room'); m.stage = 'drive'; g.msg(`server room — the drive is in rack ${M.rack.index + 1}, the marked one in the east bank`); handlerBeat(g, 'server', 1.2); } }   // (and a word from the handler a beat behind the objective line — dialogue.ts HANDLER_LINES; she waits out a fight or a man in his arm)
+      else { chronObjective(g, 'reached the server room'); m.stage = 'drive'; g.msg(`you've reached the server room. the drive is in rack ${M.rack.index + 1}, the marked one`); handlerBeat(g, 'server', 1.2); } }   // (and a word from the handler a beat behind the objective line — dialogue.ts HANDLER_LINES; she waits out a fight or a man in his arm)
   } else if (m.stage === 'drive') {
     const rf = M.rack.front; const inReach = rackDist(g, p) < DRIVE_REACH;
     if (m.driveT < 0) {   // the rack's 'pull the drive' row (buildInteractables decides reach; interact.ts → Game.act): start pulling — it runs on its own from here, you just have to stay on it (a step, Space or Esc lets go: interact.ts cancelSustained → cancelDrive)
-      if (g.act?.kind === 'objective' && g.act.verb === 'drive') { m.driveT = 0; g.audio.play('click', rf, 0.8); g.audio.play('magOut', rf, 0.4, { rate: 0.55 }); const W = quietWords(g); g.msg(W ? `taking ${W.thing} — stay on it` : 'pulling the drive — stay on it'); if (!m.handsOn) { m.handsOn = true; chronObjective(g, W ? `hands on ${W.thing}` : 'hands on the drive', rf); } }
+      if (g.act?.kind === 'objective' && g.act.verb === 'drive') { m.driveT = 0; g.audio.play('click', rf, 0.8); g.audio.play('magOut', rf, 0.4, { rate: 0.55 }); const W = quietWords(g); g.msg(W ? `you're taking ${W.thing}. stay on it` : "you're pulling the drive. stay on it"); if (!m.handsOn) { m.handsOn = true; chronObjective(g, W ? `hands on ${W.thing}` : 'hands on the drive', rf); } }
     } else if (!inReach || pl.dragging || pl.takedown || pl.holding || pl.sprinting) cancelDrive(g);
     else { m.driveT += dt; if (m.driveT >= DRIVE_SECS) drivePulled(g); else driveHands(g, DRIVE_SECS, false); }   // (handwork.ts: both hands in the rack while it comes out)
   } else if (m.stage === 'exfil') {
@@ -113,8 +113,8 @@ export function drivePulled(g: Game) {
   for (const t of g.rackTargets) t.on = false;
   g.audio.play('rack', rf, 0.5, { rate: 0.7 }); g.audio.play('lightOff', rf, 0.7);
   g.events.push({ kind: 'prop', pos: [rf[0], 0, rf[2]], time: g.time, loud: false, level: 0.35, who: PLAYER_ID }); g.player.noise = Math.max(g.player.noise, 0.35);   // heard like a knocked chair: a look if he is close, no alarm
-  if (W) { g.msg(`${W.bare} out. leave by ${W.outs}`); return; }
-  g.msg(`drive out — rack ${M.rack.index + 1} is dark. leave by the fire exit`);
+  if (W) { g.msg(`${W.bare} out. leave through ${W.outs}`); return; }
+  g.msg(`the drive is out and rack ${M.rack.index + 1} is dark. leave through the fire exit`);
   handlerBeat(g, 'drive', 1.5);   // 'drive shows dark on my board' — his knees answer
 }
 
@@ -161,12 +161,12 @@ export function objectiveText(g: Game): string {
   const m = g.mission; const s = m.stage; const n = g.level.mission.rack.index + 1;
   const W = quietWords(g);
   if (W && s === 'infiltrate') return `objective ▸ reach ${W.place}`;
-  if (W && s === 'drive') return m.driveT >= 0 ? `objective ▸ taking ${W.thing}… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ take ${W.thing} from ${W.holder} (Space at its face, then stay on it)`;
-  if (W && s === 'exfil') return `objective ▸ get out by ${W.outs}`;
+  if (W && s === 'drive') return m.driveT >= 0 ? `objective ▸ taking ${W.thing}… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ take ${W.thing} from ${W.holder} (press Space in front of it, then stay on it)`;
+  if (W && s === 'exfil') return `objective ▸ get out through ${W.outs}`;
   if (s === 'infiltrate') return 'objective ▸ reach the server room';
-  if (s === 'drive') return m.driveT >= 0 ? `objective ▸ pulling the drive… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ pull the drive from rack ${n} (Space at its face, then stay on it)`;
+  if (s === 'drive') return m.driveT >= 0 ? `objective ▸ pulling the drive… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ pull the drive from rack ${n} (press Space in front of it, then stay on it)`;
   if (s === 'exfil') return 'objective ▸ get out through the fire exit';
   if (s === 'done') { let t = doneLine.get(m); if (!t) { const D = debriefOf(g); t = ['mission complete — ' + fmtClock(m.stats.elapsed), D.grade].filter(Boolean).join(' · '); doneLine.set(m, t); } return t; }   // (worked out once per finished run, not sixty times a second: nothing on it can change any more)
-  return 'mission failed — enter restarts it';
+  return 'mission failed — press enter to restart';
 }
 const doneLine = new SideMap<object, string>('mission.doneLine');

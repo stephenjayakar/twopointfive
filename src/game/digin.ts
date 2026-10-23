@@ -44,7 +44,7 @@ import { pressWants, pressKeeps } from './pressure';
 import { squadsLive, squadDefers, squadMayWedge } from './enemysquads';
 import { lastStandMan } from './laststand';
 import { hearPath } from './weather';
-import { w, WORDS } from './words';
+import { w, wg, WORDS } from './words';
 import { doorWords } from './orders';   // (call-time only: what a door is called — one name on one HUD)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import { gunKeepsPost } from './gunroles';   // (call-time only)
@@ -555,7 +555,7 @@ function begin(F: Fight, st: St, D: Def, M: Man) {
   const e = room.entries[M.entry];
   log(F, gd, `digs in: room ${room.id}, expects ${room.entries[R.expected].door.def.name}${R.second >= 0 ? ' (or ' + room.entries[R.second].door.def.name + ')' : ''}, takes ${e.door.def.name}`);
   if (first && !M.ordered && !shout(F, st, gd, oneOf(['they\'re coming this way. get ready!', 'they\'re working through the rooms. watch that door!', 'that\'s next door. get set, get set!']), R) && DIGIN.radio) {
-    g.say(gd, oneOf(['we hear it. getting ready for them here.', 'copy. we\'re digging in.', 'heard. they\'ll find this room ready.']), true); DIGIN_STATS.radio++; cue(F, R, 'radio');   // out of the team's earshot: the room says it on its side's net instead (their net is on the HUD's log)
+    g.say(gd, oneOf(['we hear it. getting ready for them here.', 'copy. we\'re digging in.', wg('copy. we\'ll be ready for them.', 'heard. they\'ll find this room ready.')]), true); DIGIN_STATS.radio++; cue(F, R, 'radio');   // out of the team's earshot: the room says it on its side's net instead (their net is on the HUD's log)
   }
   // furniture against the door they will come by: one man of the room, if there is time and something to haul
   if (!R.bracer && M.entry === R.expected) {
@@ -686,7 +686,7 @@ export function digInTick(rf: unknown, def: unknown, _dt: number) {
   // … and the first man to have heard a stun canister go off (and still have his wits) says what they are using
   if (DIGIN.learn && DIGIN.radio && isNaN(st.bangCall) && !dazzled && gd.witness.heard.bang > 0 && g.time - gd.lastSeenT > 1.5 && gd.reactT <= 0) {
     st.bangCall = g.time; DIGIN_STATS.bangCalls++;
-    g.say(gd, oneOf(['flashbangs! keep off the doors!', 'they\'re throwing stun grenades. stay off the doors!']), true); log(F, gd, 'calls the flashbangs on the net');
+    g.say(gd, oneOf([wg('flashbangs! stay off the doors!', 'flashbangs! keep off the doors!'), 'they\'re throwing stun grenades. stay off the doors!']), true); log(F, gd, 'calls the flashbangs on the net');
     for (const X of st.rooms.values()) cue(F, X, 'radio');
   }
   if (dazzled) return;
