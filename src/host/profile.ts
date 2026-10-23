@@ -222,6 +222,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORTOOLS.thrPieOne = q.get('thrpieone') !== '0';   // … ONE man cuts: the lead walks the cuts square while the far jamb's man holds his diagonal, then leans once from his last cut; nobody kneels (the maintainer, 10-19, of the two of them cutting and kneeling in step). ON in the page; ?thrpieone=0 = both men cut, leaned on every cut, a knee on the cuts down the door's line, as it was
   DOORTOOLS.outsidePlain = q.get('outsideplain') !== '0';   // 'clear from outside' is ONE order on the door tools' row 4 — hold the door from outside — and going in is a second order (rows 1 / 2), one can at most: ON in the page; ?outsideplain=0 = the threshold's pages as they were
   DOORTOOLS.wordNoCan = q.get('wordnocan') !== '0';   // the word (F) at a door held from outside steps the men in with NO can; a can goes in only when asked ('bang and clear' given to the holding men): ON in the page; ?wordnocan=0 = the word bangs the blind pockets first, as it was (acts with the one-order outside clear)
+  DOORTOOLS.wordCuts = q.get('wordcuts') !== '0';   // the word that spends no can waits for the jamb men to finish slicing the doorway (doortools.ts cutsOwe): ON in the page; ?wordcuts=0 = the word steps them in there and then, as it was
   DOORTOOLS.wordSmall = q.get('wordsmall') !== '0';   // the word (F) sends one or two teammates in from a plain stack, as it does the four: ON in the page; ?wordsmall=0 = with a small squad the key does nothing for a stack, as it was
   SEENWALK.on = q.get('seenwalk') !== '0';   // the walk an order gives a man keeps off lit floor that a room nobody has cleared has a sight line to, through glass as through anything an eye sees through (game/seenwalk.ts): ON in the page; ?seenwalk=0 = the walks as they were
   DOORTOOLS.bangInto = q.get('banginto') !== '0';   // a bang and clear's can leaves the thrower's own hand and is thrown deep into the room (the deepest point its burst lights nearly all the floor from), going off as it gets there (game/doortools.ts bangSpot): ON in the page; ?banginto=0 = it appears in the door frame and goes off 1.6 m inside, as it was
@@ -654,6 +655,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.thrPieOne': 'TPS_THRPIEONE=1',
   'DOORTOOLS.outsidePlain': 'TPS_OUTSIDEPLAIN=1',
   'DOORTOOLS.wordNoCan': 'TPS_WORDNOCAN=1',
+  'DOORTOOLS.wordCuts': 'TPS_WORDCUTS=1',
   'DOORTOOLS.wordSmall': 'TPS_WORDSMALL=1',
   'CMDRING.on': 'TPS_QRING=1',
   'CMDRING.tapNow': 'TPS_QRING=1 (with the ring)',
