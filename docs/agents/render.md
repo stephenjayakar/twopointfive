@@ -305,5 +305,13 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   level data. Capped faces, glowing boxes, turned boxes and paints of no class are as they were. THE RELIEF IS HELD UNDER `SURF_TILT` 0.18 so the shading normal stays
   inside `bounceLeftNoWall`'s 0.98 (a normal further off an axis asks the walled bounce read); detail finer than the pixel's footprint is faded out. WHAT SEES IT:
   the g-buffer's readers only (direct, the filters' edge stops, composite). Rays, the light cache, reflection hits, the cards and the LIGHT METER read the box's
-  flat paint as ever, so nothing a man senses moves. Without the word the const is false and the branch is dead code (the prelude's text gains the one const
-  line on every page). Known gaps: cut pieces and wet ground stay plain; the class is a guess from the paint, not authored. Checked: `tsc`, `shadertrim-check`.
+  flat paint as ever, so nothing a man senses moves. Without the word the const is false and the branch is dead code, but it is still TEXT: the prelude gains the one const
+  line and the two g-buffer modules carry `surface.wgsl` and the generated `surfClass` (about 16 KB each) on every page. `surf` rides a replay page's address
+  (`ui/replaykey.ts VISIT_FLAGS`). KNOWN WRONG, left so because it is a try: THE CLASS IS A GUESS FROM THE COLOUR, so a paint outside the GWOT palette that is
+  a darker shade of a classed one takes its class (on the office: lino, stone and concrete draw as block, cartons as mud wall; try it on the GWOT levels), and
+  rain-darkened earth keeps or changes class while wet gravel and slab go plain; the pattern is laid in WORLD space for six of the eight classes, so it stays
+  put while a pushed prop slides under it; the footprint is the across-the-ray pixel size, too fine on a wall seen at a low angle (expect crawl there); relief past
+  `SURF_TILT` is clipped to a facet (the ribs of sheet metal most of all); a box yawed a few degrees can still lean past 0.98. A cut box's own faces keep the
+  pattern, its cut faces are bare. No check holds any of this. SEEN: on the software adapter only (the compound, squad of four, very low, 800×500, one seed,
+  night and midday, 118 of 118 pipelines, no GPU or console error, the same two views with and without the word). Never seen on a GPU: the look at the play
+  resolution, motion, shimmer under the temporal blend, the noise it adds to bounce light, and the cost (it is raster work, which no trusted timer covers).

@@ -145,6 +145,10 @@ fn cutEdgeTake(s0: f32, g: vec2f, best: ptr<function, f32>, d: ptr<function, vec
     let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w);
     albedo = dt.albedo; rough = dt.rough; metal = dt.metal;
   }
+  if (SURF_TRY && !cap && own < 0) {                         // SURFACES, A TRY (surface.wgsl; as fsBox): the box's own faces keep the pattern they had before the cut; a cut face shows the bare material
+    let sf = surfaceTry(v.wp, n, bi, v.lc, v.hf, v.albedo, albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+    albedo = sf.albedo; n = sf.n; rough = sf.rough;
+  }
   if (v.mark != 0u && !cap) {
     let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough);
     albedo = mk.albedo; rough = mk.rough;
