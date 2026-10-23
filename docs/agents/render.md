@@ -421,6 +421,24 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (`?levelFile=pass.json&roomclear&squad4&nofow&firelab`, `src/host/firelab.ts`, on the sneak lab's pattern): you beside the brazier, nobody able to notice or
   hurt you, every number of the look, the embers, the light and the drifting smoke as a live slider, the build's back by a button, the lot copied out as one line.
   NEVER SEEN ON A GPU: the look was set on the software adapter's stills (`tools/qa/fire-lab.cjs`, which now emulates the bloom and the tone curve: `LOOK='k=v,…'`).
+  THE FLAME AS GAS (`FIRE.gas`, OFF in the page until it has been seen: `?firegas=1`, and a row in the fire lab; 2026-10-23, the maintainer on a card asking
+  how much of the flame should be real fluid sim: "Drive it from our 3D smoke solver", then "i'm curious how far we can push our existing smoke solver.
+  curious if we can make the finer cells work well with our existing brick stuff"). No solver change: a fire within `viewR` 12 m of the view files a second
+  look-only source every half second, on the FINE lattice (2.2 cm cells, the breath's and the gun gas's; `lattice: 'fine'`), at the coals; the solver lifts it
+  by its heat, curls it, leans it in the wind and forgets it (`sparse.fineDecay` 3 /s: that is what gives the flame a height). The picture draws the flame
+  from that gas (`fire.wgsl fireFlameG`, through `composite.wgsl fireGas` = `spgFine`): as hot as the gas is dense against `ref`, no flame under `lo` of it,
+  the noise only tearing the skin finer than a cell; a fire's record carries how far it has eased to its gas (`FireRecord.gas`, the host's book), so a fire
+  far from the view, on a preset that sheds fire smoke or with no solver is the flame of noise. While it is gas the drawn smoke is off: the gas above the
+  flame IS the smoke, drawn by the smoke pass like any. WHAT IT CHANGES FOR THE GAME, in the page only: the gas is the solver's own density, so a sight line
+  through the flame's heart loses light as through any smoke (one model: the picture hides a man behind a flame, and now the men's lines know it); the
+  headless stands have no solver and are untouched. Any fine gas inside a fire's cylinder glows (a breath over the drum). MEASURED in the page (software adapter,
+  the pass, its storm blowing; lines asked of the game's sensors across the flame): the published gas runs about a fifth of the source's `density` at the
+  heart; the fine lattice fades gas under `sparse.thinBelow` 0.25 and its heat at up to 3 /s, so the flame's length hangs on `density` (0.8 a second: a
+  half-metre lick; 1.6: a metre and a half, the default) and thinned gas loses its lift and goes with the wind (about 45° of lean in the yard's 0.7 m/s);
+  the pool read 787 to 896 bricks three seconds in with the fire's two sources. WANTS FROM THE SOLVER'S OWNER,
+  asked, not built: heat published for fine bricks (the flame's colour is read off density, a stand-in), a decay a source can set, and what the fine
+  share of the pool can spare. CHECK: the fire check's `gas` line (sources as the table says, the record's share, none without a solver or put off, an old
+  recording off).
   UNDER THE FOG OF WAR A FIRE IS DRAWN AS THE TEAM LAST SAW IT (`FIRE.fog`, on; `?firefog=0`; a recording from before the key replays with it
   off; 2026-10-23, the maintainer, playing the pass in plan mode on hard: "weird that fire doesn't show up in fog of war … I think we should at least show
   everything in the environment visible at the start of the level all the time?"). The first cut hid the flame over ground the fog hides, by the fog's rule for
@@ -465,7 +483,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   ms for being awake at all on a level where nothing else smokes) 0.5 ms on the pass and about 0.95 ms where the fire is the only smoke. The plume was still
   growing slowly at twenty seconds. `?firesmoke=0` is the same fire without it, to weigh that on a GPU. BY PRESET, and the
   one rung that draws the fire without its smoke: FIRE SMOKE SHED, the next bullet.
-  CHECK: `bun run tools/qa/probes.ts fire` (`tools/qa/fire-check.ts`, families `render`, `all`; twenty lines, both stands; `FIRE_BREAK=1` fails eighteen): the lamp's swing
+  CHECK: `bun run tools/qa/probes.ts fire` (`tools/qa/fire-check.ts`, families `render`, `all`; twenty-one lines, both stands; `FIRE_BREAK=1` fails nineteen): the lamp's swing
   and place, a second game the same frame for frame, the bed and the cracks, out and lit again, a checkpoint load (and the bed asked for again behind it; kept through frames that move no clock; asked for again behind a restart), the smoke's sources (look-only, coarse, foot over
   heads; none without a solver, on a preset that sheds it, or with the smoke put off; the game that smoked for twelve seconds and the one nothing drew differ in
   nothing of the fire's state), the steady readers, the lamp's size (0.24 m burning, the steady readers told the level's 0.06 and reading the same to the bit a hand from the lamp; the level's

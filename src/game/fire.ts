@@ -92,8 +92,12 @@ export const FIRE = {
    *  flame's height over the coals, `radius` m wide and `cells` at least, `density` and `temp` a second, leaving at `speed` m/s; filed afresh every `every` s;
    *  a fire eases to it and back over 1 / `ease` s. While it burns so the DRAWN smoke is off (the gas is the smoke) and the gas is the game's own smoke in the
    *  page: a sight line through the flame's heart loses light as through any smoke. `on` false = the flame of noise: the page's default until the gas has been
-   *  seen (`?firegas=1`; a row in the fire lab). NEVER SEEN ON A GPU. */
-  gas: { on: false, up: 0.1, radius: 0.17, cells: 6, density: 1.6, temp: 14, speed: 1.1, push: 8, jitter: 0.6, every: 0.5, viewR: 12, ref: 0.3, lo: 0.2, ease: 1.5 },
+   *  seen (`?firegas=1`; a row in the fire lab). NEVER SEEN ON A GPU. MEASURED in the page on the software adapter (the pass, its storm blowing): the gas
+   *  runs about a fifth of `density` at the heart (0.3 at 1.6), and the fine lattice cools and forgets gas thinner than a quarter (smoke.ts sparse.thinBelow,
+   *  fineDecay: up to 3 /s), so the flame's length hangs on `density` (0.8 a second was a half-metre lick, 1.6 a metre and a half) and thin gas loses its
+   *  lift and goes with the wind: at these numbers the flame leans about 45° in the yard's 0.7 m/s. Heat of its own on that lattice, published, is what would
+   *  stand it up (asked of the solver's owner). */
+  gas: { on: false, up: 0.1, radius: 0.17, cells: 6, density: 1.6, temp: 14, speed: 1.1, push: 8, jitter: 0.6, every: 0.5, viewR: 12, ref: 0.45, lo: 0.15, ease: 1.5 },
   /** THE SOUND: the bed's level at the fire and each crack's (× how hard the crack is), and how long one bed voice is held before the next takes over (the
    *  mixer lets a followed voice go after its own time, and one it never took — the mixer off, a page in the background — is asked for again then) */
   bed: 0.5, crack: 0.55, bedSecs: 12,
