@@ -2110,4 +2110,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stand (`TPS_RAILFLAT=1`, which acts only with `TPS_RAILS=1 TPS_QRING=1 TPS_QONLY=1 TPS_RINGFLAT=1`), off for a recording from before the key.
   CHECK `tools/qa/rails-check.ts`, the first play's notes line, both stands (the frozen one raises the tree itself): the ring is flat, nothing is
   behind a 'more', the digit `flatLine` names is the wedge 'wallCharge' is on, that digit gives the charge, and with the switch off the pages and
-  their two lines are back. `RAILS_BREAK=1` fails it on both. The scripted player presses what the ring up asks for.
+  their two lines are back. `RAILS_BREAK=1` fails it on both. The scripted player presses the digit the step's `flatLine` names.
+  WITH THE ORDER OUT the line over a flat ring is what the men are doing, never the digit again: the wedge that set the charge is the one that
+  blows it. After `afterSecs` with nothing done the ask is back, as on the pages. `railsFaults` asks that a flat mission's `menuLine` has a
+  `flatLine` beside it and that no other mission carries one; `ringflat-check`'s control has the third case (a level that takes the ring).
+  MEASURED on the page's stand: the scripted mission ends on seeds 1, 2 and 3 with the one ring and on seed 1 with `TPS_RAILFLAT=0` (the pages);
+  `rails-check` 29 of 29 on shipped, on frozen, and on frozen raised by its own words (no destruction there, so no charge row: the ring and its
+  line are what is asked); `ringflat-check` 14 on both; mission 1 played to the breaker step on the real page with real keys on the software
+  adapter: one ring, one key cap in the line, [2] gives the charge and no second ring comes up.
+  NOT DONE: the digit in a `flatLine` is hand-written, and only tut-sky's is held by a check. Never seen on a GPU; nobody has played it.

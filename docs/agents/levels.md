@@ -367,7 +367,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   names a place and none is a rule; no check holds the wording, on purpose (the loader takes their shape, `lesson-check` reads the first line on the
   objective row). HELD (`LESSON_HELD`): the steps' number and order, a step's `id`, its `done` test and `hold`, every place (`at`, `atMan`, `toward`,
   `eye`, the frame's `sky`), `cue`, `checkpoint`, `fog`, `onWay`, `respawn`, `lasers`, AND THE LISTS OF WHAT THE FRAME OFFERS (a step's `allow` / `deny`;
-  the frame's `allow`, `orders`, `rows`): they are rules, and a word too many in an `allow` opens a key a step early with nothing else red (a scripted
+  the frame's `allow`, `orders`, `rows`, and `flatRing`, which ring the mission has): they are rules, and a word too many in an `allow` opens a key a step early with nothing else red (a scripted
   player only shows a key that is missing). They were free for one step (897) and are held again; a list changed on purpose is its level's one row move.
   A lesson's key in NEITHER table is a red line: whoever adds a key says which (with no file named this is asked of every level with a lesson,
   furniture or none). GONE: the rule that a lesson with another number of steps was read

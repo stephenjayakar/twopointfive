@@ -188,6 +188,9 @@ export function railsFaults(L: LessonData): string[] {
     //  player reads — lesson.ts lessonTokenFaults — and a card's TITLE is shown as written, so a brace in it would be shown too)
     if (T.explain) { out.push(...lessonTokenFaults(`${w}.explain.text`, T.explain.text, CARD_CHARS)); if (/[{}]/.test(T.explain.title ?? '')) out.push(`${w}.explain.title has a brace: a card's title is shown as written, a move's token goes in its text`); }
     for (const [k, l] of [['noTap', T.noTap], ['menuLine', T.menuLine], ['pageLine', T.pageLine], ['flatLine', T.flatLine], ['planLine', T.planLine], ['after.line', T.after?.line], ['after.word', T.after?.word]] as const) if (typeof l === 'string') out.push(...lessonTokenFaults(`${w}.${k}`, l, 96));
+    // (a mission on the flat ring: a line that names the pages' digits has its one-ring line beside it, and a one-ring line is for such a mission only)
+    if (R.flatRing && T.menuLine !== undefined && T.flatLine === undefined) out.push(`${w}.menuLine names the menu's pages and rails.flatRing gives this mission one ring: the step wants a flatLine too`);
+    if (!R.flatRing && T.flatLine !== undefined) out.push(`${w}.flatLine: the lesson's rails.flatRing is not set, so no ring here is flat`);
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
   if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.length > 0 && R.rows.every(v => typeof v === 'string' && !!v))) out.push('rails.rows: a list of verbs, at least one (absent: every row)');
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
@@ -239,9 +242,9 @@ export class Rails {
   get skyOn(): boolean { return !!this.data?.sky; }
   /** the sky seat is drawn as plan mode is, the mode itself down (RAILS.skyPlan; planmode.ts planView asks) */
   get planDrawn(): boolean { return !BREAK && RAILS.skyPlan && this.skyOn; }
-  /** the sky seat holds plan mode up (`rails.sky.plan`, RAILS.skyUp; planmode.ts asks: no key takes the mode down, its view starts on the squad) */
   /** this mission's ring is the flat tree's (`rails.flatRing`, RAILS.flatRing; orders.ts flatRing asks, with the tree's own switches) */
   get flatRing(): boolean { return !BREAK && RAILS.flatRing && !!this.data?.flatRing; }
+  /** the sky seat holds plan mode up (`rails.sky.plan`, RAILS.skyUp; planmode.ts asks: no key takes the mode down, its view starts on the squad) */
   get planSeat(): boolean { return !BREAK && RAILS.skyUp && !!this.data?.sky?.plan; }
   /** …and the mode's own view is the picture's: the mode is up with a point of its own (CMDRING.planRts; without one the seat's view and its pan stand) */
   private get seatView(): boolean { const P = this.g.orders?.plan; return this.planSeat && !!P?.up && !!P.look; }
@@ -503,10 +506,13 @@ export class Rails {
     const aft = A ? said(A, this.gave) : undefined;
     // (a step done in plan mode, and the mode is down — a checkpoint put back, the mode put away by hand: the line is what puts it up again, its `planLine`)
     const plan = S.i < of && T.planLine && !this.g.orders?.plan.up ? T.planLine : undefined;
-    const line = ring ? lessonLine(ring) : plan ? lessonLine(plan) : aft ? lessonLine(aft) : stepLine(T);
+    // (…and over a FLAT ring it is the line whatever is open: that ring's line names ONE digit, and with the order out the row on it may be the order's
+    //  next half — a charge on the wall, and the wedge that set it now blows it. The pages' two lines stay as they were built)
+    const flatAft = !!aft && !!M?.flat;
+    const line = ring && !flatAft ? lessonLine(ring) : plan ? lessonLine(plan) : aft ? lessonLine(aft) : stepLine(T);
     // (a line that asks for nothing — what the men are doing, or a step that only waits for the level's script — is drawn as something to watch, with no
     //  ring on its place. Never a step's own line that merely names no key: 'Get out of the light' is an ask, and its mark is where to go)
-    const watch = !ring && !plan && (!!aft || (S.i < of && T.done?.is === 'cue')) && !/\[[^\]]+\]/.test(line);
+    const watch = (!ring || flatAft) && !plan && (!!aft || (S.i < of && T.done?.is === 'cue')) && !/\[[^\]]+\]/.test(line);
     return { line, n: i + 1, of, ...(note ? { note } : null), ...(watch ? { watch: true } : null) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 

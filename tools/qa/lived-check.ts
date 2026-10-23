@@ -84,8 +84,8 @@ const LEVEL_BASE: Record<string, string> = {
   'tut-quiet.json': '87c7cebef',
 
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
-  // brazier's melt patch laid round (eight turned slabs where two square ones were)
-  'tut-sky.json': '26fa53ede',
+  // brazier's melt patch laid round (eight turned slabs where two square ones were); the mission takes the flat ring (its lesson's rails.flatRing)
+  'tut-sky.json': '30f2f52a2',
 
   // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, the moon behind the shop; then the inner wall and its wooden
   // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round
@@ -106,7 +106,7 @@ const LEVEL_BASE: Record<string, string> = {
 const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'flatLine', 'planLine', 'noTap', 'explain', 'after'], rails: [] as string[] };
 /** HELD, each a one-line move of the level's own row: the steps themselves (their number and order), a step's `id`, its `done` test and `hold`, every PLACE
  *  (`at`, `atMan`, `toward`, `eye`, the frame's `sky`), what the frame does (`cue`, `checkpoint`, `fog`, `onWay`, `respawn`, `lasers`) and WHAT IT OFFERS —
- *  a step's `allow` / `deny`, the frame's `allow`, `orders` and `rows`. Those lists are rules, not wording: one more word in an `allow` opens a key a step
+ *  a step's `allow` / `deny`, the frame's `allow`, `orders`, `rows` and `flatRing` (which ring the mission has). Those lists are rules, not wording: one more word in an `allow` opens a key a step
  *  early and nothing else is red (a scripted player only shows a key that is MISSING), so they were free for one step (10-22) and are held again: with a
  *  row a level, a list changed on purpose is its owner's one line. A mark moved to make room for a desk is the damage this check is for. A key of a
  *  lesson that is in NEITHER table is a red line until it is put in one: the choice is made in the open, by whoever adds the key. */

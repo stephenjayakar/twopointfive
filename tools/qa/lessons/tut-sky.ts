@@ -45,11 +45,11 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.until(() => B.g.lesson.step?.id !== 'stack', 30); B.wait(0.5); },   // (set = every man on his mark: the last of four can be a while squaring up)
   go: B => { B.press('KeyF', 2); if (!B.until(() => taken(B, 'tea'), 30)) breach(B, TEA_DOOR, 'tea'); B.wait(2); },
   kitchen: B => { breach(B, KITCHEN_DOOR, 'kitchen'); },
-  // the orders' menu on the wall: ONE ring with the charge on its second wedge (the level's `rails.flatRing`, rails.ts RAILS.flatRing) — or, with that
+  // the orders' menu on the wall: ONE ring with the charge on the wedge the step's `flatLine` names (the level's `rails.flatRing`, rails.ts RAILS.flatRing) — or, with that
   // off, the menu's pages: its fifth row is the wall's page, the third row there the charge. Then the word, once a man has set it
   // (the squad's menu is a ring on the command key held; a charge already on the wall is left to the word, never asked for again — that row would blow it)
   charge: B => { const set = () => (B.g.wallCharge?.set.length ?? 0) > 0, clear = () => set() && !B.g.wallCharge.tooClose(B.g.wallCharge.set[0]).length;
-    for (let k = 0; k < 3 && !set() && !taken(B, 'store'); k++) { B.aim(WALL); B.step(2); B.aim(WALL); B.I.pressed.add('KeyB'); B.hold(['KeyB'], 0.45); B.step(2); if (B.g.orders.menu?.flat) B.press('Digit2', 3); else { B.press('Digit5', 3); B.press('Digit3', 3); }  B.until(set, 20); }
+    for (let k = 0; k < 3 && !set() && !taken(B, 'store'); k++) { B.aim(WALL); B.step(2); B.aim(WALL); B.I.pressed.add('KeyB'); B.hold(['KeyB'], 0.45); B.step(2); if (B.g.orders.menu?.flat) B.press('Digit' + (/\[(\d)\]/.exec(B.g.lesson.step?.flatLine ?? '')?.[1] ?? '2'), 3); else { B.press('Digit5', 3); B.press('Digit3', 3); }  B.until(set, 20); }
     B.until(clear, 20); B.wait(0.6); },
   blow: B => { B.wait(1); B.press('KeyF', 2); if (!B.until(() => taken(B, 'store'), 40)) breach(B, [22.2, 1.0, 7.25], 'store'); B.wait(2); },
   // (the line says a buddy team goes: one man works the box and the other of his pair covers him from behind — asked of the order book on every try, once
