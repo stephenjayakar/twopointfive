@@ -196,12 +196,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that list, in the order a level is made (before you touch anything · the idea · the file · rooms, doors, walls · lived-in rooms · light, hour, weather ·
   the mission in the file · the team and its kit · what the player reads · measure it, then say it), every need with what was SEEN when it was learnt and
   the command that checks it; what no tool can ask is marked by eye or by play. `bun run tools/qa/level-needs.ts [name …] [--run] [--jobs 4] [--skip need,…]
-  [--quiet] [--md f] [--json f]` asks the eighteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
-  kit picture · look · lived · floor · ground · leak · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
+  [--quiet] [--md f] [--json f]` asks the nineteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
+  kit picture · look · lived · floor · ground · leak · key · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
   The floor itself stays `tools/qa/map-check.ts`'s (structure, size, nav, the scripted runs): `--run` runs that with `--no-runs` and the level's other own
   checks as they stand (export `--check`, level-lint, door-size, second-way-check, lived-check, kitview-plan, level-names-check, floor-order-check,
   quiet-check, lesson-check), four at a time: about 13 s for one level, 90 to 120 s for all. Exit 1 on a FAIL; a NOTE never fails. `NEEDS_BREAK=1` plants
-  gaps in sixteen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
+  gaps in seventeen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
   (exit 1; a MISSED one exits 0). THREE NEEDS ARE NEW CHECKS: `doorway` (a wall decal across a door's opening: the dado rule had no check), `roof` (a drawn
   slab in `weather.ts roofsOf`'s band: the floodlit shed's), `kit` (as issued, through the game's own cards and pouches, at every size the row offers, who
   comes with nothing but a gun; the team's size is set before a card is read, so an issue shared out over the men who come is read as shared). AS THE 36
@@ -478,3 +478,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT MEASURED, NOT SEEN: no tour, soak or mission tally was run with the switch up (the office, which those run on, has no round thing; the
   check's ten seconds of the pass meet none); nobody has played it; NEVER SEEN ON A GPU — the stills are the software adapter's at the lowest
   preset, so motion, a round's edge against bright ground, the marks' seams round a drum and what the round branch costs a frame are unknown.
+- **The level skill carries lighting guidelines, and the level command names two lights that face each other (`key`, the nineteenth need, 10-23).**
+  The maintainer, of the plan tutorial's yard: "this tutorial level just looks really *flat*", then "seems like we should generally (even independent of
+  this thread) have some lighting guidlines that we put in our level skill". The graphics work read the cause from the level file and a still drawn on
+  the software renderer. Opened by a link with no hour the level is its file's own night: two of the kit's floodlights (`gwotKit floodLight`: 210
+  over 20 m, a 70 degree cone) at the yard's two gates look at each other, and pale walls go to white. The mission's own row plays at midday, where
+  the photocell has both floods out and the sun stands at 56 degrees, a flat angle for a camera that looks down. Walls, blast walls and ground are
+  close in value either way. THE SKILL (section 5, "How the light should look", eight rules, each saying what it rests on; guidelines, not misses,
+  and said so there): one key light a court from one side; the key comes in low (a shadow is the wall's height over the tangent: 2.5 heights at 22
+  degrees, 1.7 at 30, 0.67 at 56); lamps make pools, never a wash; every outside frame keeps a dark part and nothing big goes white; warm against
+  cool; ground, walls and things a value step apart; a light changed for the look changes the play; look from the play camera before shipping. The
+  wording is the graphics work's draft, cut down; a dark third and 0.4 for a pale wall (by luminance) are judgement. THE NEED (`facingLights`): two
+  spot lights that burn as authored, neither a quarter of the other's strength or less (by the colour's luminance), each heading within 60 degrees
+  of the line to the other and the two headings more than 120 apart, each one's pool reaching the middle of the ground between (the pool: its range
+  and its cone's far edge from its height), and nothing ceiling-high (the leak's cut, hoisted to `planWalls`) on the line between them: a NOTE with
+  the pair, which says when every row of the level plays at an hour that puts both out (`hours.ts`, group `exterior`). On the build of that evening,
+  both stands the same: `tut-plan` alone of 39 levels (`flood_gate` and `flood_road`, 28 m; out at its midday). The yard lamps of `barracks` and
+  `warehouse` face each other with a building between; `quiet-relay`'s `flood_w` and `lamp_west` face each other and the lamp's pool stops 6.5 m
+  out of 18. `NEEDS_BREAK=1` plants a facing pair and asks 18 things of made rooms; each of the rule's six tests was taken out in turn and the red
+  path went green each time. TRIED AND PUT DOWN: a measure of the ground the two share (squares both light from opposite sides at like strength,
+  and squares in one's wall shadow that the other lights). On `tut-plan` the huts stand between the floods: 119 m² in all, 22 shared and 97 of shadow filled;
+  but `barracks` (91), `sneak-lab` (77), `office` (67) and `block` (63) come near it by the same sum, mostly round a building, which is two courts
+  with a key each and not a flaw. So one line stands for the ground between: a stub of wall on it hides a pair, a wall beside it does not part one. NOT IN IT: lights that
+  are not spots, the moon's or sun's height, a spot's falloff, how pale the walls are, the picture's exposure; those are the skill's by eye. A
+  review found 9 things; mended: the hour, the pool, the colour, the red path's hold on each test, a wrong pointer and the pale wall's measure in the
+  skill; said and left: the one-line wall test, the plan and lamp list built again per need. On that build the `leak` need notes 29 of 39 levels
+  (four training levels have left the tree). Nothing here was seen on a GPU.

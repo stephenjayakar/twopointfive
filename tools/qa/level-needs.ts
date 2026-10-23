@@ -36,6 +36,9 @@
 //               of a face that close to a wall reads the light cache through the wall, and bare metal shows it whole (leakReads below; the rooms and
 //               lamps that have most of them). Every other finish is counted and passes. Where to look in a real browser: not a statement that the
 //               picture shows it, and not a number a renderer's mend can move (it reads the file, not the shaders)
+//   key         a NOTE for each pair of spot lights of like strength that face each other, each reaching the middle of the ground between, with
+//               nothing ceiling-high on the line from one to the other: each fills the other's shadows and that ground reads as one wash
+//               (facingLights below). It says when the photocell has both out at the hour the level's rows play. A pair, not a judgement
 //   lamps       a NOTE for each lamp under open sky that is not in the light group `exterior` (the photocell puts those out at midday: any other burns
 //               through the day, which is right only for a lamp the mission switches itself)
 //   moon        one directional light, in `exterior` (the hour's sun goes in at its place)
@@ -65,26 +68,27 @@ const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { defaultRcConfig } = await import(`${ROOT}/src/render/rc.ts`);
 const { PRESETS } = await import(`${ROOT}/src/ui/quality.ts`);
 const { ROUGH_DEFAULT } = await import(`${ROOT}/src/scene/boxes.ts`);
+const HOURS: Record<string, { lamps: boolean } | undefined> = (await import(`${ROOT}/src/game/hours.ts`)).HOURS;
 const { OFFICE_SCENARIOS } = await import(`${ROOT}/levels/office.scenarios.ts`) as { OFFICE_SCENARIOS: { response?: unknown } };
 const { harnessProfile, pageSwitches } = await import(`${ROOT}/src/host/profile.ts`);
 
 interface Paint { albedo: number[]; rough?: number; metal?: boolean }
 interface Box { id: string; group?: string; c: number[]; h: number[]; yaw?: number; flags?: string[]; material?: string; albedo?: number[]; rough?: number; metal?: boolean | null; markings?: unknown[]; emissive?: unknown; rot?: unknown }
-interface Light { id: string; kind: string; pos: number[]; group?: string; range?: number; intensity?: number; enabled?: boolean; dir?: number[]; outerDeg?: number }
+interface Light { id: string; kind: string; pos: number[]; color?: number[]; group?: string; range?: number; intensity?: number; enabled?: boolean; dir?: number[]; outerDeg?: number }
 interface Door { id: string; hinge: number[]; closedDir: number; width: number; angle?: number; locked?: boolean; steel?: boolean }
 interface Bounds { x0: number; x1: number; z0: number; z1: number }
 type Card = Record<string, unknown>;
 interface LevelFile { meta?: { generator?: string }; materials?: Record<string, Paint>; boxes: Box[]; props?: { id: string; x: number; z: number; yaw?: number; half?: number[]; parts?: { off: [number, number, number]; h: [number, number, number]; yaw?: number }[] }[]; lights: Light[]; switchables?: { id: string; group?: string; boxes?: string[]; on?: boolean; baseEmissive?: number[] }[]; doors: Door[]; surfaces?: unknown;
   scenarios?: { roomClear?: { starts?: unknown[]; squads?: unknown[]; wallCharges?: number; rooms?: { name: string; bounds?: Bounds }[] }; rescue?: { room?: { name: string; bounds?: Bounds } };
     quiet?: { starts?: unknown[]; spots?: { place: string; area?: Bounds }[] }; places?: { areas?: { name: string; bounds: Bounds }[] }; lesson?: unknown; snatch?: unknown; kitView?: unknown; response?: { why?: unknown; team?: unknown; raid?: unknown }; issue?: { members: Record<string, Card> } } }
-interface Row { id: string; title: string; kind: 'nightbreach' | 'roomclear' | 'rescue' | 'quiet'; squad: number; level?: string; group?: string; only?: string; place?: string; blurb?: string;
+interface Row { id: string; hour?: string; title: string; kind: 'nightbreach' | 'roomclear' | 'rescue' | 'quiet'; squad: number; level?: string; group?: string; only?: string; place?: string; blurb?: string;
   untuned?: boolean; offList?: boolean; defenders?: number; ways?: readonly string[]; squads?: boolean }
 /** the tables a level is registered in, as the tree has them (the red path hands a level its own, with every row taken out) */
 interface Tables { music(level: string, kind: string): boolean; still(id: string): boolean; picture(id: string): boolean; docs: string; /** the five cards as n teammates wear them: the issue with a level's own cards (`block`, by place on the roster) written over it, then dealt over the men who come where the game deals them (game/kit.ts kitWorn, as a staging and ui/loadout.ts read them) */ cards(n: number, block: Record<string, Card>): Card[] }
 
 type Mark = 'PASS' | 'FAIL' | 'NOTE';
 interface Line { need: string; mark: Mark; text: string }
-export const NEEDS = ['generator', 'mission', 'row', 'music', 'picture', 'kit picture', 'look', 'lived', 'floor', 'ground', 'leak', 'lamps', 'moon', 'doorway', 'roof', 'kit', 'response', 'said'] as const;
+export const NEEDS = ['generator', 'mission', 'row', 'music', 'picture', 'kit picture', 'look', 'lived', 'floor', 'ground', 'leak', 'key', 'lamps', 'moon', 'doorway', 'roof', 'kit', 'response', 'said'] as const;
 
 /** the cap on the men who hold a floor (the balance rule: eleven) */
 const DEFENDERS_MAX = 11;
@@ -246,10 +250,9 @@ export function bareGround(L: LevelFile, starts: number[][] = []): Stretch[] {
 const LEAK = { foot: 0.45, long: 0.3, thin: 0.2, end: 0.1, tall: 0.3, step: 0.5, share: 0.25, glow: 0.5, off: 0.02, up: 1, list: 4 };
 /** the roughest finish any preset traces a reflection for (ultra's) */
 const mirrorCut = (): number => Math.max(...Object.values(PRESETS as Record<string, { rt: { on: boolean; maxRough: number } }>).filter(p => p.rt.on).map(p => p.rt.maxRough));
-export interface LeakRead { id: string; group: string; x: number; z: number; share: number; by: string; /** the share times the lamp's strength over its distance squared: for putting the worst first, no unit */ glow: number; /** what the lamps that reach that face directly give it, on the same scale */ own: number; strong: boolean; /** bare metal, smooth enough that a preset traces its reflection */ mirror: boolean }
-export function leakReads(L: LevelFile): LeakRead[] {
-  const K = LEAK, sx = WORLD.rcSize[0] / defaultRcConfig.nx, sz = WORLD.rcSize[2] / defaultRcConfig.nz, X0 = WORLD.rcMin[0], Z0 = WORLD.rcMin[2], nx = defaultRcConfig.nx as number, nz = defaultRcConfig.nz as number;
-  type Plan = { x: number; z: number; hx: number; hz: number; cs: number; sn: number; r: number };
+type Plan = { x: number; z: number; hx: number; hz: number; cs: number; sn: number; r: number };
+/** a level's walls in plan, as the leak's measure cuts them (above), and the tests on them */
+function planWalls(L: LevelFile) { const K = LEAK;
   const plan = (b: Box, trim = 0): Plan => { const hx = b.h[0] - (b.h[0] > b.h[2] ? trim : 0), hz = b.h[2] - (b.h[0] > b.h[2] ? 0 : trim); return { x: b.c[0], z: b.c[2], hx, hz, cs: Math.cos(b.yaw ?? 0), sn: Math.sin(b.yaw ?? 0), r: Math.hypot(hx, hz) }; };
   const isWall = (b: Box) => !b.rot && !has(b, 'Glass') && !has(b, 'NoShadow') && b.c[1] - b.h[1] <= K.foot && b.c[1] + b.h[1] >= WORLD.ceilingY - 0.1 && Math.max(b.h[0], b.h[2]) > K.long && Math.min(b.h[0], b.h[2]) < K.thin;
   const whole: Plan[] = L.boxes.filter(isWall).map(b => plan(b)), walls: Plan[] = L.boxes.filter(isWall).map(b => plan(b, K.end));
@@ -267,6 +270,11 @@ export function leakReads(L: LevelFile): LeakRead[] {
       const a = (-h - p) / d, b = (h - p) / d; t0 = Math.max(t0, Math.min(a, b)); t1 = Math.min(t1, Math.max(a, b)); if (t0 > t1) return false; }
     return true; };
   const parted = (ax: number, az: number, bx: number, bz: number, near: Plan[] = walls) => near.some(w => crosses(w, ax, az, bx, bz));
+  return { plan, isWall, whole, walls, solid, roofs, within, parted }; }
+export interface LeakRead { id: string; group: string; x: number; z: number; share: number; by: string; /** the share times the lamp's strength over its distance squared: for putting the worst first, no unit */ glow: number; /** what the lamps that reach that face directly give it, on the same scale */ own: number; strong: boolean; /** bare metal, smooth enough that a preset traces its reflection */ mirror: boolean }
+export function leakReads(L: LevelFile): LeakRead[] {
+  const K = LEAK, sx = WORLD.rcSize[0] / defaultRcConfig.nx, sz = WORLD.rcSize[2] / defaultRcConfig.nz, X0 = WORLD.rcMin[0], Z0 = WORLD.rcMin[2], nx = defaultRcConfig.nx as number, nz = defaultRcConfig.nz as number;
+  const { plan, isWall, whole, walls, solid, roofs, within, parted } = planWalls(L);
   // (the lamps: the file's lights that burn as authored, and the fixtures that glow as authored)
   type Lamp = { id: string; pos: number[]; range: number; power: number; dir?: number[]; cos: number };
   const lum = (a: number[]) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2], byId = new Map(L.boxes.map(b => [b.id, b]));
@@ -315,6 +323,26 @@ export function leakLine(F: LevelFile): { note: boolean; text: string } { const 
   const all = `${reads.length} thing${reads.length === 1 ? ' stands' : 's stand'} within a probe of a wall with light behind it (${reads.length - sky.length} by a lamp, ${sky.length} by the sky${skyMirrors ? `, ${skyMirrors} of those mirror metal: look by day` : ''}), ${strong.length} of them where the far lamp outweighs the room's own light on that face`;
   return { note: mirrors.length > 0, text: mirrors.length ? `${mirrors.length} thing${mirrors.length === 1 ? '' : 's'} of mirror metal where the lamp behind the wall outweighs the room's own light, so a reflection can show the light cache read through the wall: ${top.slice(0, LEAK.list).map(([k, p]) => `${p.n} in ${k}, as ${p.at.id} at [${p.at.x.toFixed(1)}, ${p.at.z.toFixed(1)}]`).join('; ')}${top.length > LEAK.list ? ` and ${top.length - LEAK.list} more rooms` : ''}; ${all}`
     : `${all}, none of those mirror metal` }; }
+/** KEY: two lights that face each other across the same ground. From above the ground is most of the picture, and what models it is the shadow a thing
+ *  throws on it; two spots of like strength looking at each other each light what the other shadows, and the ground between them is one wash (the plan
+ *  tutorial's yard as its file opens at night: two of the kit's floodlights at its two gates). THE MEASURE, in plan, from the file alone: two spot
+ *  lights that burn as authored, neither `fill` of the other's strength or less (strength by the colour's luminance), each heading within 60 degrees
+ *  of the line to the other and the two headings more than 120 apart (`face`), each one's pool reaching the middle of the ground between them (the
+ *  pool: as far along the floor as its range and its cone's far edge go from its height), and nothing ceiling-high (the leak's cut of a wall) on the
+ *  line from one to the other. A pair, not a judgement: a road lit from both ends may be meant. One line stands for the ground between, so a stub of
+ *  wall on it hides a pair and a wall beside it does not part one; lights that are not spots, the sun and moon, a spot's falloff inside its cone,
+ *  how pale the walls are and what the picture's exposure makes of it are not in it. A measure of the ground the two share was tried and put down:
+ *  on that yard the huts stand between the floods and each one lights the other's shadow of them, which any two lamps round a building also do. */
+const KEY = { fill: 0.25, face: 0.5, flat: 0.3 };
+export interface KeyPair { a: string; b: string; apart: number; /** both are in group `exterior`, which the photocell puts out by day */ photocell: boolean }
+export function facingLights(L: LevelFile): KeyPair[] { const K = KEY, { parted, whole } = planWalls(L), out: KeyPair[] = [], lum = (a: number[]) => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  const spots = L.lights.filter(l => l.kind === 'spot' && l.enabled !== false && l.dir && Math.hypot(l.dir[0], l.dir[2]) > K.flat * Math.hypot(...l.dir)).map(l => { const d = l.dir!, n = Math.hypot(...d), flat = Math.hypot(d[0], d[2]), range = l.range ?? 8, y = Math.max(0, l.pos[1]);
+    const edge = Math.asin(Math.min(1, Math.max(-1, -d[1] / n))) - (l.outerDeg ?? 90) * Math.PI / 180;   // (how far under the level the far edge of the cone looks)
+    return { id: l.id, x: l.pos[0], z: l.pos[2], hx: d[0] / flat, hz: d[2] / flat, pool: Math.min(Math.sqrt(Math.max(0, range * range - y * y)), edge > 1e-6 ? y / Math.tan(edge) : Infinity), power: (l.intensity ?? 1) * (l.color ? lum(l.color) : 1), group: l.group }; });
+  for (let i = 0; i < spots.length; i++) for (let j = i + 1; j < spots.length; j++) { const p = spots[i], q = spots[j], dx = q.x - p.x, dz = q.z - p.z, d = Math.hypot(dx, dz);
+    if (d < 1e-6 || Math.min(p.pool, q.pool) < d / 2 || Math.min(p.power, q.power) <= K.fill * Math.max(p.power, q.power)) continue;
+    if (p.hx * q.hx + p.hz * q.hz < -K.face && (p.hx * dx + p.hz * dz) / d > K.face && -(q.hx * dx + q.hz * dz) / d > K.face && !parted(p.x, p.z, q.x, q.z, whole)) out.push({ a: p.id, b: q.id, apart: d, photocell: p.group === 'exterior' && q.group === 'exterior' }); }
+  return out; }
 /** every start mark the player has in a file (`sam`, the solo night's `playerSpawn`: x, y, z), as x, z */
 const startsOf = (o: unknown): number[][] => !o || typeof o !== 'object' ? [] : Object.entries(o as Record<string, unknown>).flatMap(([k, v]) =>
   (k === 'sam' || k === 'playerSpawn') && Array.isArray(v) && v.length === 3 && v.every(n => typeof n === 'number') ? [[v[0] as number, v[2] as number]] : startsOf(v));
@@ -409,6 +437,11 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
   // ---- light read through a wall: the count, and the mirror metal where the far lamp outweighs the room's own
   { const own = leakLine(L), other = twin ? leakLine(twin) : null;
     say('leak', own.note ? 'note' : true, own.text); if (other && other.text !== own.text) say('leak', other.note ? 'note' : true, 'look twin: ' + other.text); }
+  // ---- two lights that face each other across the same ground
+  { const day = rows.length > 0 && rows.every(e => e.hour && e.hour !== 'night' && !HOURS[e.hour]?.lamps), hours = [...new Set(rows.map(e => e.hour))].join(' and ');
+    const line = (F: LevelFile) => { const pairs = facingLights(F); return { note: pairs.length > 0, text: pairs.length ? `${pairs.length} pair${pairs.length === 1 ? '' : 's'} of spot lights of like strength face each other across the same ground, so each fills the other's shadows: ${pairs.map(p => `${p.a} and ${p.b} (${p.apart.toFixed(0)} m apart${p.photocell && day ? `; both on the photocell, so out at ${hours}, the hour ${rows.map(e => e.id).join(', ')} plays at: this is the file's own night, as a link with no hour opens it` : ''})`).join('; ')}` : 'no two spot lights of like strength face each other across the same ground' }; };
+    const own = line(L), other = twin ? line(twin) : null;
+    say('key', own.note ? 'note' : true, own.text); if (other && other.text !== own.text) say('key', other.note ? 'note' : true, 'look twin: ' + other.text); }
   // ---- lamps and the moon
   for (const [who, F] of [['', L], ['look twin: ', twin]] as const) { if (!F) continue;
     const lamps = lampsOutside(F); if (who && !lamps.length) continue;
@@ -513,6 +546,7 @@ if (import.meta.main) {
     L.boxes.push({ id: 'planted_ground', group: 'planted', c: [20, 0.05, 14], h: [20, 0.005, 14], material: 'planted' });   // (one sheet over every finish the level has)
     L.boxes.push({ id: 'planted_wall', group: 'planted', c: [3, 1.5, 3], h: [0.06, 1.5, 1.5] }, { id: 'planted_shelf', group: 'planted', c: [2.7, 1, 3], h: [0.15, 1, 0.4], metal: true, rough: 0.3 });   // (a steel shelf against a wall, a bulb behind it)
     L.lights.push({ id: 'planted_bulb', kind: 'point', pos: [4.5, 2, 3], group: 'planted', range: 5, intensity: 20 });
+    L.lights.push({ id: 'planted_flood_a', kind: 'spot', pos: [30, 3.6, 2], dir: [0.8, -0.6, 0], group: 'planted', range: 5, intensity: 5, outerDeg: 70 }, { id: 'planted_flood_b', kind: 'spot', pos: [33, 3.6, 2], dir: [-0.8, -0.6, 0], group: 'planted', range: 5, intensity: 5, outerDeg: 70 });   // (two spots that face each other, far from the shelf so that they light nothing of it)
     L.lights.push({ id: 'planted_lamp', kind: 'spot', pos: [1, 3, 1], group: 'yard' }, { id: 'planted_sun', kind: 'dir', pos: [0, 0, 0], group: 'exterior' });
     const row: Row = { ...e, id: 'planted-row', place: undefined, blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: undefined };
     const bareCard = { bangs: 0, charges: 0, smoke: 0, frags: 0, walls: 0, shells: 0, big: 'none' };   // (the kit's gap is PLANTED, whatever the issue table gives: every man's card emptied)
@@ -569,7 +603,7 @@ if (import.meta.main) {
     const WANT: Record<string, { mark: Mark; says: string[] }> = {
       generator: { mark: 'FAIL', says: ['not in the tree'] }, row: { mark: 'FAIL', says: ['no `place`', '`blurb` is 5 characters', '12 defenders', 'names 3 ways in', 'squads'] }, music: { mark: 'FAIL', says: ['no row'] },
       picture: { mark: 'FAIL', says: ['planted-row.jpg'] }, 'kit picture': { mark: 'FAIL', says: ['no scenarios.kitView'] }, lived: { mark: 'FAIL', says: ['is bare'] }, floor: { mark: 'NOTE', says: ['no `surfaces`'] },
-      leak: { mark: 'NOTE', says: ['1 thing of mirror metal', '1 in planted by planted_bulb, as planted_shelf'] }, lamps: { mark: 'NOTE', says: ['planted_lamp'] }, moon: { mark: 'FAIL', says: ['2 directional'] }, doorway: { mark: 'FAIL', says: ['planted_dado'] }, roof: { mark: 'FAIL', says: ['drawn slab'] },
+      key: { mark: 'NOTE', says: ['planted_flood_a and planted_flood_b'] }, leak: { mark: 'NOTE', says: ['1 thing of mirror metal', '1 in planted by planted_bulb, as planted_shelf'] }, lamps: { mark: 'NOTE', says: ['planted_lamp'] }, moon: { mark: 'FAIL', says: ['2 directional'] }, doorway: { mark: 'FAIL', says: ['planted_dado'] }, roof: { mark: 'FAIL', says: ['drawn slab'] },
       kit: { mark: 'FAIL', says: ['you + 1: ', 'you + 4: '] }, ground: { mark: 'NOTE', says: ['of planted at'] }, response: { mark: 'NOTE', says: ['is not in NOBODY_COMES'] }, said: { mark: 'FAIL', says: ['names neither'] } };
     const missed = Object.entries(WANT).flatMap(([need, w]) => { const text = lines.filter(l => l.need === need && l.mark === w.mark).map(l => l.text).join('\n'); return w.says.filter(s => !text.includes(s)).map(s => `${need} ('${s}')`); });
     for (const m of groundMissed) missed.push(`ground (${m})`);
@@ -579,6 +613,20 @@ if (import.meta.main) {
       leakLine(room({ bulb: [22, 14] })).note && 'a strong shelf that is not metal raised the note', !leakLine(room({ bulb: [22, 14], finish: { metal: true, rough: 0.3 } })).note && 'a strong steel shelf did not raise the note', leakLine(room({ bulb: [22, 14], also: [18, 14], finish: { metal: true, rough: 0.3 } })).note && 'a steel shelf with its own room\'s bulb nearer raised the note', mirror({ metal: true }) && 'a metal shelf with no roughness (matte) was a mirror', mirror({ rough: 0.1 }) && 'a smooth shelf that is not metal was a mirror',
       !mirror({ material: 'steel' }) && 'a shelf in a metal paint was not a mirror', mirror({ material: 'steel', metal: false }) && 'a shelf that overrides its metal paint was a mirror'].filter(Boolean) as string[]);
     for (const m of leakMissed) missed.push(`leak (${m})`);
+    // (the key's measure, on the same made room: floods north of the wall's end along z = 2, or either side of the wall at z = 14)
+    const flood = (x: number, hx: number, o: Partial<Light> = {}): Light => ({ id: `f${x}`, kind: 'spot', pos: [x, 3.6, 2], dir: [hx * 0.8, -0.6, 0], range: 20, intensity: 210, outerDeg: 70, ...o });
+    const faces = (a: Light, b: Light, wallTo = 24) => facingLights({ ...room({ wallTo }), lights: [a, b] }).length > 0, turned = (deg: number) => ({ dir: [0.8 * Math.cos(deg * Math.PI / 180), -0.6, 0.8 * Math.sin(deg * Math.PI / 180)] });
+    for (const m of [!faces(flood(5, 1), flood(15, -1)) && 'two floods that face each other were not named', faces(flood(5, 1), flood(15, 1)) && 'two floods that look the same way were named',
+      faces(flood(5, -1), flood(15, 1)) && 'two floods back to back were named', faces(flood(5, 1), flood(15, -1, { intensity: 50 })) && 'a flood and a fill at under a quarter of it were named',
+      !faces(flood(5, 1), flood(15, -1, { intensity: 60 })) && 'a flood and a second at over a quarter of it were not named', faces(flood(5, 1), flood(15, -1, { enabled: false })) && 'a flood facing one authored off was named',
+      faces(flood(5, 1), flood(15, -1, { color: [0.1, 0.02, 0] })) && 'a flood facing one whose colour leaves it a twentieth as bright was named',
+      faces(flood(1, 1, { range: 5 }), flood(15, -1, { range: 5 })) && 'two floods whose reaches do not meet were named', faces(flood(5, 1), flood(15, -1, { range: 5 })) && 'a flood facing one whose pool stops short of the middle was named',
+      faces(flood(5, 1), flood(15, -1, { dir: [-0.5, -0.86, 0], outerDeg: 20 })) && 'a flood facing a narrow spot whose cone lands short of the middle was named',
+      faces({ ...flood(15, 1), pos: [15, 3.6, 14] }, { ...flood(25, -1), pos: [25, 3.6, 14] }) && 'two floods with a wall between them were named', !faces({ ...flood(15, 1), pos: [15, 3.6, 14] }, { ...flood(25, -1), pos: [25, 3.6, 14] }, 10) && 'two floods past a wall\'s end were not named',
+      faces(flood(5, 1, turned(50)), flood(15, -1, turned(130))) && 'two floods both swung the same way off the line between them were named',
+      faces(flood(5, 1, turned(-30)), flood(15, -1, turned(110))) && 'a flood that looks 70 degrees off the line to the one facing it was named', faces(flood(5, 1, turned(70)), flood(15, -1, turned(210))) && 'a flood facing one that looks 70 degrees off the line to it was named',
+      !faces(flood(5, 1, turned(20)), flood(15, -1, turned(170))) && 'two floods a little off the line between them were not named',
+      faces(flood(5, 1), flood(15, -1, { kind: 'point' })) && 'a flood facing a bulb was named', faces(flood(5, 1), { ...flood(15, -1), dir: [-0.1, -1, 0] }) && 'a flood facing a light that looks straight down was named'].filter(Boolean) as string[]) missed.push(`key (${m})`);
     for (const says of ['is not a sentence', 'is not the plain file', 'one of the two is stale', 'a squad\'s room clear and no row', 'a quiet night gone loud and no row']) if (!blockLines.some(l => l.text.includes(says))) missed.push(`response ('${says}')`);
     for (const l of [...lines, ...blockLines]) if (l.mark !== 'PASS') console.log(`- ${l.mark} — ${name} (planted) · ${l.need}: ${l.text}`);
     for (const m of missed) console.log(`- MISSED — a planted gap was not found: ${m}`);

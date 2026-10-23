@@ -26,7 +26,8 @@
 // the view looks, the bed's voice in the mixer) is kept on the host (`engine.hostBooks.fire`): no snapshot or state hash carries it. Its dice are its own hash (never Math.random, never the game's die).
 // THE SWITCH: FIRE.on — ON in the page (`?fire=0` puts it off), OFF in the module and on the frozen stand (FROZEN_HOLDS; TPS_FIRE=1 raises it there). Off = the
 // glowing lid and the steady lamp, the build as it was. tools/qa/fire-check.ts (FIRE_BREAK=1 fails it). The look was set on the software adapter's stills
-// (tools/qa/fire-lab.cjs, fire-page.cjs): NEVER SEEN ON A GPU.
+// (tools/qa/fire-lab.cjs, fire-page.cjs). SEEN ON A GPU ONCE, the first cut, in one still: docs/agents/render.md says what it showed and what was changed for it;
+// the second cut has not been seen on one.
 import { SideMap } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game, LightTarget } from './game';
@@ -49,7 +50,13 @@ export const FIRE = {
    *  the flames that make it: their flutter is the picture's own, render/shaders/fire.wgsl), how far its place wanders (m, across and up) about a point `lift` m over where the level hung it
    *  (a level hangs the lamp a hand over the lid; the light of a fire comes from the body of its flame, and from there the drum's own shadow on the ground is
    *  half as wide), and what a crack adds for `kickSecs` */
-  depth: 0.3, rates: [0.43, 1.3, 2.7, 4.9, 8.3] as number[], weights: [0.8, 0.9, 0.7, 0.45, 0.2] as number[], least: 0.6, most: 1.6, wander: 0.06, wanderUp: 0.04, lift: 0.2, kick: 0.25, kickSecs: 0.12,
+  depth: 0.3, rates: [0.43, 1.3, 2.7, 4.9, 8.3] as number[], weights: [0.8, 0.9, 0.7, 0.45, 0.2] as number[], least: 0.6, most: 1.6, wander: 0.06, wanderUp: 0.04, lift: 0.25, kick: 0.25, kickSecs: 0.12,
+  /** THE LAMP IS AS BIG AS WHAT BURNS (the emitter's radius while the fire burns, as a share of the mouth's, which is the flame's own reach: 0.24 m on the pass's drum; 0 = the size the level
+   *  gave it, a pinpoint, which is `?firesize=0` in the page): a flame is a hand and a half
+   *  wide and lights the ground from all of itself, so the drum's own shadow in the snow is a soft ramp. With the level's 6 cm it was a black disc with a
+   *  drawn edge a metre round the drum — the first thing seen on a GPU (the maintainer's first look: "fire looks a bit jank tbh"). `lift` was 0.2 then: 0.25
+   *  puts the lamp nearer the flame's middle and the shadow's foot nearer the drum (0.3 took more than a tenth off the light meter a stride from the drum) */
+  size: 1.1,
   /** THE WOOD CRACKS: on average this often (a second), each of the clock's `popSlot`-second slots asked once */
   popRate: 0.55, popSlot: 0.2,
   /** THE EMBERS in the air at once that the fire lets go of by itself (a crack throws its own; render/shaders/fire.wgsl) */
@@ -137,7 +144,7 @@ function mouthOf(g: Game, t: LightTarget): { pos: Vec3; r: number; lid: number }
 }
 
 /** the lamp back as the level hung it: where, and nothing said to the steady readers (its strength is updateTargets' own again the frame it paints) */
-function plain(t: LightTarget) { const l = t.light!; l.pos[0] = t.pos[0]; l.pos[1] = t.pos[1]; l.pos[2] = t.pos[2]; if (l.steady !== undefined) l.steady = undefined; }
+function plain(t: LightTarget) { const l = t.light!; l.pos[0] = t.pos[0]; l.pos[1] = t.pos[1]; l.pos[2] = t.pos[2]; if (l.steady !== undefined) { l.radius = l.steady.radius; l.steady = undefined; } }
 
 /** Once a frame, straight behind every paint of the lamps (game.ts behind updateTargets; with `dt` 0 behind a checkpoint's load and a clean restart, which paint
  *  them too: the lamp, its place and the coals as this clock has them, and nothing filed) and with the wind this frame's. */
@@ -163,7 +170,8 @@ export function updateFire(g: Game, dt: number) {
     lit++;
     const seed = fireSeed(t), fl = fireFlicker(seed, time), M = mouthOf(g, t), si = Math.floor(seed * 65535);
     // the light: the authored lamp × the flicker, its place wandering with the flames; what a reader of the place's STEADY light takes it for is the authored lamp
-    if (!l.steady) l.steady = { intensity: 0, pos: [t.pos[0], t.pos[1], t.pos[2]] };
+    if (!l.steady) l.steady = { intensity: 0, pos: [t.pos[0], t.pos[1], t.pos[2]], radius: l.radius };
+    l.radius = Math.max(l.steady.radius, K.size * M.r);   // (as big as what burns, and never smaller than the level made it)
     l.steady.intensity = t.baseIntensity * t.factor;
     l.intensity = l.steady.intensity * fl;
     l.pos[0] = t.pos[0] + K.wander * Math.sin(TAU * (0.83 * time + h01(si + 5))) * Math.sin(TAU * (2.9 * time + h01(si + 6)));
