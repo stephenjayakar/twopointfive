@@ -180,7 +180,7 @@ const GUN_KEYS_AS_THEY_WERE = /^(rifle-reload|kit-slots|he40|sticky|weapons-iden
 // off for these on EVERY stand, as the frozen stand holds them — unless whoever runs the tool set the word himself.
 // (grab-talk, grab-choke, grab-auto, hold-draw, selector-input, selector-noise and the gunhold-* probes take their man by the row, several of them with the
 //  pistol already out — a way in the page no longer has: the click needs empty hands, and the pistol comes out in the hold. kitanim-close reads the hand on the hilt.)
-const GRAB_ROW_AS_IT_WAS = /^(handslow|heldclicks|reachup|hold-draw|kitanim-close|grab-talk|grab-choke|grab-auto|selector-input|selector-noise)$|^close-|^gunhold-/;
+const GRAB_ROW_AS_IT_WAS = /^(handslow|heldclicks|reachup|hold-draw|kitanim-close|grab-talk|grab-choke|grab-auto|selector-input|selector-noise|stealthpose-creep)$|^close-|^gunhold-/;   // (stealthpose-creep: it reads the free hand carried low BEHIND a man and out of reach — with the stalk that stretch is the way in's own, the arm coming up by the distance)
 const KNIFE_AS_IT_WAS = new RegExp(`${GRAB_ROW_AS_IT_WAS.source}|^takedown-beats$`);   // (the row's list, and takedown-beats: it reads the held man's right hand coming ONTO the arm as the choke begins — with no knife it is there from the start, HOLD.bareGrip)
 // THE GRAB THAT DISARMS. takedown-beats grabs the same man twice and holds his wrists, frame for frame, to the first grab's: the first time the gun is taken out
 // of his hand (character.ts HOLD.disarm, on in the page), the second he has none. Held at the build before the move, as the frozen stand holds it; the move's

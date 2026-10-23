@@ -24,6 +24,8 @@ import { SideMap } from '../math/side';
 import { Vec3, wrapAngle, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import { CLOSE, closeAt, closeLive, closeSubject, closeClear } from './close';
+import { samStaggered } from './samstun';
+import { canStand } from './player';
 
 export const STALK = {
   on: false,
@@ -69,18 +71,20 @@ export const STALK = {
 export const STALK_STATS = { begun: 0, grabs: 0, corner: 0, out: { let: 0, far: 0, turned: 0, wall: 0, him: 0, hands: 0, keys: 0 }, last: '' };
 type Why = keyof typeof STALK_STATS.out;
 
-interface St { on: Guard | null; grab: Guard | null; t: number }
+interface St { on: Guard | null; grab: Guard | null; t: number; /** the button went down and has not come up or taken a man since: a stalk may begin */ armed?: boolean }
 const STATE = new SideMap<Game, St>('stalk.STATE');
 function stateOf(g: Game): St { let s = STATE.get(g); if (!s) { s = { on: null, grab: null, t: -1 }; STATE.set(g, s); } return s; }
-function end(S: St, why: Why) { if (S.on) { S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } }
+function end(S: St, why: Why) { S.armed = false; if (S.on) { S.on = null; STALK_STATS.out[why]++; STALK_STATS.last = why; } }
 
 /** his bearing to a point, off his facing (0 = dead ahead of him) */
 const bearingOf = (gd: Guard, p: ArrayLike<number>): number => wrapAngle(Math.atan2(p[0] - gd.char.pos[0], p[2] - gd.char.pos[2]) - gd.char.bodyYaw);
 /** are Sam's hands free for it at all (empty, and nothing else has him) */
 function free(g: Game): boolean {
   const pl = g.player;
-  return STALK.on && closeLive(g) && !g.puppet && pl.holstered && !pl.down && !pl.holding && !pl.takedown && !pl.dragging && !pl.kick && !pl.picking && !pl.wanding && !pl.wall && !pl.listOpen;
+  return STALK.on && closeLive(g) && !g.puppet && pl.holstered && !pl.down && !pl.holding && !pl.takedown && !pl.dragging && !pl.kick && !pl.picking && !pl.wanding && !pl.wall && !pl.listOpen && able(g);
 }
+/** the gate game.ts puts on a grab, so nothing is handed over that it would refuse: not folded by a blast, no hand on a breaker's lever */
+const able = (g: Game): boolean => !samStaggered(g) && !g.player.breakerMove;
 /** why this man cannot be stalked from `p` right now, or null when he can (`begin`: the stricter test a press must pass — the rear arc itself) */
 function outOf(g: Game, gd: Guard, p: ArrayLike<number>, begin: boolean): Why | null {
   if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') return 'him';
@@ -104,7 +108,7 @@ function pressed(g: Game): Guard | null {
 /** STALK.corner: the man the wait at a corner takes this frame — the nearest who has come past him — or null (not on a wall with empty hands; nobody past) */
 function cornerMan(g: Game): Guard | null {
   const pl = g.player, w = pl.wall;
-  if (!STALK.on || !STALK.corner || !w || w.kind === 'stack' || w.drawn || !closeLive(g) || g.puppet || !pl.holstered || pl.down || pl.holding || pl.takedown || pl.dragging || pl.kick || pl.picking || pl.wanding || pl.listOpen) return null;
+  if (!STALK.on || !STALK.corner || !w || w.kind === 'stack' || w.drawn || !closeLive(g) || g.puppet || !pl.holstered || pl.down || pl.holding || pl.takedown || pl.dragging || pl.kick || pl.picking || pl.wanding || pl.listOpen || !able(g) || (pl.crouch && !canStand(g))) return null;   // (the last: startGrab would refuse it, with its line, every frame the button stayed down)
   const p = pl.char.pos, cos = Math.cos(STALK.cornerDeg * Math.PI / 180); let best: Guard | null = null, bd = STALK.cornerM;
   for (const gd of g.guards) {
     if (gd.civ || !closeSubject(g, gd) || gd.state === 'alert') continue;
@@ -113,9 +117,6 @@ function cornerMan(g: Game): Guard | null {
   }
   return best;
 }
-/** is he lying in wait at a corner (the wall hold, hands empty, the switch up) — the page's hint and the lab ask */
-export function stalkCorner(g: Game): boolean { const pl = g.player; return STALK.on && STALK.corner && !!pl.wall && pl.wall.kind !== 'stack' && !pl.wall.drawn && pl.holstered && !pl.holding && closeLive(g); }
-
 /** what the stalk asks of his feet this frame: the unit direction, the speed, and the point he faces (the man's chest) */
 export interface StalkMove { mx: number; mz: number; pace: number; at: Vec3 }
 /** ONCE A FRAME from updatePlayer, before his keys become a step: the left button held / pressed this frame, and whether a move key of his own is down.
@@ -123,7 +124,9 @@ export interface StalkMove { mx: number; mz: number; pace: number; at: Vec3 }
 export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boolean): StalkMove | null {
   const S = stateOf(g); S.t = g.time; S.grab = null;
   if (!free(g)) { end(S, 'hands'); if (lmb || lmbHit) { const gd = cornerMan(g); if (gd) { S.grab = gd; STALK_STATS.grabs++; STALK_STATS.corner++; STALK_STATS.last = 'corner'; } } return null; }
-  if (!S.on && lmbHit && !ownKeys) { const gd = pressed(g); if (gd) { S.on = gd; STALK_STATS.begun++; } }
+  if (lmbHit) S.armed = true; else if (!lmb) S.armed = false;
+  // (a press made with a move key still down waits for the key: the button held on him begins it the frame his own feet stop — once a press)
+  if (!S.on && S.armed && !ownKeys) { const gd = pressed(g); if (gd) { S.on = gd; S.armed = false; STALK_STATS.begun++; } }
   const gd = S.on; if (!gd) return null;
   if (!lmb && !lmbHit) { end(S, 'let'); return null; }
   if (ownKeys) { end(S, 'keys'); return null; }
@@ -132,16 +135,17 @@ export function stalkStep(g: Game, lmb: boolean, lmbHit: boolean, ownKeys: boole
   if (dist < STALK.grabM) {
     const o = closeAt(g, gd, p);
     if (o.can && o.grab) { S.on = null; S.grab = gd; STALK_STATS.grabs++; STALK_STATS.last = 'grab'; }   // (game.ts takes it this frame, where it takes the row's)
-    return { mx: 0, mz: 0, pace: 0, at };   // …or he waits in reach: no room to stand up behind him here (the row says so)
+    if ((o.can && o.grab) || o.win?.grab) return { mx: 0, mz: 0, pace: 0, at };   // …or he waits in reach: no room to stand up behind him here (the row says so)
+    // …or he is in reach on the man's flank, outside the grab's own arc (the man turned a little): he is walked on round to the point behind his back, below
   }
   // toward the point behind his back: from his rear it is a straight line in; from a rear quarter it swings Sam in behind him as he closes
   const yaw = gd.char.bodyYaw, bx = gp[0] - Math.sin(yaw) * STALK.stationM - p[0], bz = gp[2] - Math.cos(yaw) * STALK.stationM - p[2], bl = Math.hypot(bx, bz) || 1;
   const pace = Math.min(STALK.pace, Math.hypot(gd.char.vel[0], gd.char.vel[2]) + STALK.closeMin + clamp(dist - STALK.grabM, 0, 4) * STALK.closeK);
   return { mx: bx / bl, mz: bz / bl, pace, at };
 }
-/** THE TELL BY DISTANCE (close.ts closeTick, once a frame after stalkStep): the man Sam's body speaks of — the one stalked, else the nearest he could begin on —
+/** THE TELL BY DISTANCE (close.ts closeTick, once a frame): the man Sam's body speaks of — the one stalked, else the nearest he could begin on —
  *  the point the arm goes for (his neck), and how much of the reach and of the rise the distance asks for. null = none of it (the tell as close.ts has it). */
-export function stalkTell(g: Game): { at: Vec3; reach: number; rise: number } | null {
+export function stalkTell(g: Game): { gd: Guard; at: Vec3; reach: number; rise: number } | null {
   if (!STALK.tell || !free(g)) return null;
   const p = g.player.char.pos; let gd = STATE.get(g)?.on ?? null, bd = Infinity;
   if (!gd) for (const x of g.guards) { const d = Math.hypot(p[0] - x.char.pos[0], p[2] - x.char.pos[2]); if (d < bd && d < CLOSE.modeM && outOf(g, x, p, true) === null) { gd = x; bd = d; } }
@@ -149,7 +153,7 @@ export function stalkTell(g: Game): { at: Vec3; reach: number; rise: number } | 
   const gp = gd.char.pos, d = Math.hypot(p[0] - gp[0], p[2] - gp[2]), neck = gd.char.bones.neck ?? gd.char.bones.head, at: Vec3 = neck ? [neck[0], neck[1], neck[2]] : [gp[0], gp[1] + 1.45, gp[2]];
   // (straight by the distance, not an S: an S did all of its work between 1.8 and 1.5 m and nothing either side — the animator's own easing rounds the ends)
   const by = (from: number, to: number) => clamp((from - d) / Math.max(0.05, from - to), 0, 1);
-  return { at, reach: STALK.reach * by(STALK.reachFrom, STALK.grabM), rise: at[1] - gp[1] > 1.2 ? STALK.rise * by(STALK.riseFrom, Math.max(STALK.grabM, STALK.riseBy)) : 0 };   // (a man sat or bent low: nothing to come up for)
+  return { gd, at, reach: STALK.reach * by(STALK.reachFrom, STALK.grabM), rise: at[1] - gp[1] > 1.2 ? STALK.rise * by(STALK.riseFrom, Math.max(STALK.grabM, STALK.riseBy)) : 0 };   // (a man sat or bent low: nothing to come up for)
 }
 /** a man is being stalked, or the stalk has just become a grab: this frame's left click is the stalk's, no blow */
 export function stalkHas(g: Game): boolean { const S = STATE.get(g); return !!S && S.t === g.time && (!!S.on || !!S.grab); }

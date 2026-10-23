@@ -201,7 +201,7 @@ export class Rails {
   // ---------------------------------------------------------------- the page's two looks at the step (nothing under src/game reads them)
   /** THE CARD of the step that is up (its `explain`) — the step's own data and nothing else: which cards have been read is the page's to keep
    *  (ui/railcard.ts, which draws it; main.ts holds the world still under it), so nothing here is in a snapshot or a recording */
-  card(): { title?: string; text: string } | null { const S = this.lesson(), T = S?.L.steps[S.i]; return BREAK || !T?.explain || this.g.lesson.over() ? null : T.explain; }
+  card(): { title?: string; text: string } | null { const S = this.lesson(), T = S?.L.steps[S.i]; return BREAK || !T?.explain || this.g.lesson.over() ? null : { title: T.explain.title, text: lessonLine(T.explain.text) }; }   // (lessonLine: the card says the key the build has, as the step's line does)
   /** THE ARROW the step's mark is drawn as (its `toward`): where it points — null: the ring */
   arrow(): Vec3 | null { const S = this.lesson(), T = S?.L.steps[S.i]; return BREAK || !T?.at || !T.toward || this.g.lesson.over() ? null : T.toward; }
 
@@ -253,7 +253,7 @@ export class Rails {
     const shift = input.keys.has('ShiftLeft') || input.keys.has('ShiftRight');
     const enter = input.keys.has('Enter') || input.pressed.has('Enter') || input.keys.has('NumpadEnter') || input.pressed.has('NumpadEnter');   // (Shift+Enter stages the mission again: Shift rides with it)
     const handUp = A.has('use') && !!g.player.sel?.open;   // (the player's own ring or list, up: its digits and its clicks are its own)
-    if (STALK.on && g.player.holstered && this.offers('grab')) buttons |= 1;   // (stalk.ts: the held click is how a man is grabbed — where the mission teaches the grab and his hands are empty, the left button is that and nothing else)
+    if (STALK.on && g.player.holstered && A.has('use') && this.offers('grab')) buttons |= 1;   // (stalk.ts: the held click is how a man is grabbed — where the mission teaches the grab and his hands are empty, the left button is that and nothing else)
     if (menuUp || handUp) buttons |= 1; if (handUp) buttons |= 4;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
     // PLAN MODE IS ITS OWN ACTION (`plan`; planmode.ts): the command key with Shift opens it whether or not the key's own order has been taught, and while it
     // is up its hands are its own — Shift (a stop added, a man added), the walk keys (they move the view: he is on a knee) and both buttons (the left

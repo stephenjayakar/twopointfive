@@ -86,8 +86,9 @@ export const TQ = {
   // and has a smoke there, his back to the way he came: against the neighbour's wall beyond him, which the court's lamp lights through the long wall's
   // end, he is a dark shape at the end of a dark strip.
   look: [26.4, 0, 17.75] as P3,           // where he looks from: in line with the gap and the whistle's mark, so his beam goes through the one and over the other
-  smoke: [30.3, 0, 17.7] as P3,           // where he smokes, his back to the gap: by his chair, the tin for the ends at its foot. (Two and a half metres past
-                                          // the back door's lock: a man put down nearer lies in reach of a hand at the lock, and a body's row comes before a door's)
+  smoke: [30.6, 0, 17.7] as P3,           // where he smokes, his back to the gap: by his chair, the tin for the ends at its foot. (Two and a half metres past
+                                          // the back door's lock: a man put down nearer lies in reach of a hand at the lock, and a body's row comes before a door's.
+                                          // 30.6, not 30.3: a man grabbed from the creep is hauled a step back onto the arm — stalk.ts STALK.yank — toward that door)
   backDoor: [27.9, 0, 17.2] as P3,        // the court side of the back door
   nook: [26.1, 0, 14.15] as P3,           // the store's dark corner beside the lit doorway to the hall
   under: [23.2, 0, 12.4] as P3,            // past the chest beam
