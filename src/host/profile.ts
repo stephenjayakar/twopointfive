@@ -597,6 +597,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STALK.yankWith': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'HOLD.wayShape': 'TPS_STALKPOLISH=1 (acts only with bare hands, wherever the reach shows: with TPS_NOKNIFE=1)',
   'HOLD.catchShape': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',
+  'HOLD.hitShape': 'TPS_STALKPOLISH=1 (acts only in the grab a stalk ends in, bare-handed: with TPS_STALK=1 TPS_NOKNIFE=1)',
+  'HOLD.layAhead': 'TPS_STALKPOLISH=1 (acts only at a choke\'s end, in the takedown\'s own fall: with TPS_TAKEDOWN=1)',
   'HOLD.lunge.dip': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'HOLD.lunge.back': 'TPS_STALKPOLISH=1 (acts only under STALK.on: with TPS_STALK=1)',
   'HOLD.sway.m': 'TPS_STALKPOLISH=1 (acts only in a bare-handed hold: with TPS_NOKNIFE=1)',

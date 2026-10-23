@@ -4,6 +4,7 @@
 // crouched 2.6 m dead astern of a standing man, the left button held until he is in the arm, then four seconds of the hold — every named bone of both men,
 // every frame, on the page's stand:
 //   bun run tools/qa/stalk-pose.ts --out a.json [--knife] [--down]      --knife = the knife in his hand (CLOSE.noKnife off) · --down = stalkPolish(false)
+//        [--set '{"HOLD":{"hitShape":false}}']                       keys written after the polish, key by key (character.ts and stalk.ts tables; an unknown key is refused): one pass off, the rest up
 //   bun run tools/qa/stalk-pose.ts --diff a.json b.json                 exit 0 = no bone more than 0.1 mm apart on any frame, 1 = the worst of them listed
 // Exit 2 = asked wrongly. It reads the tree it is RUN FROM (the working directory), so one copy of this file writes an older tree's poses too:
 //   git archive <commit> | tar -x -C /some/dir ; (cd /some/dir && bun run /path/to/this/stalk-pose.ts --out old.json)
@@ -43,6 +44,9 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 const DT = 1 / 60, EAST = Math.PI / 2, GAP = 2.6, AT = [6.2 + GAP, 0, 19.5];
 Math.random = seeded(4411); const log = console.log; console.log = () => {}; const W: any = await standUp({ seed: 4411 } as any); console.log = log;
 const g = W.game; CLOSE.on = true; SK.STALK.on = true; CLOSE.noKnife = bare; const put = down && typeof SK.stalkPolish === 'function'; if (put) SK.stalkPolish(false);
+{ if (argv.includes('--set') && !arg('--set')) { console.error('stalk-pose: --set wants a JSON object after it'); process.exit(2); }
+  const raw = arg('--set'); if (raw) { let asked: Record<string, unknown>; try { asked = JSON.parse(raw); } catch { console.error(`stalk-pose: --set: not JSON: ${raw}`); process.exit(2); } const T: Record<string, any> = { ...(await import(resolve(ROOT, 'src/game/character.ts'))), ...SK }; const merge = (to: any, from: any, at: string) => { for (const [k, v] of Object.entries(from)) { if (!(k in to)) { console.error(`stalk-pose: --set: no key ${at}.${k}`); process.exit(2); } const sub = (x: unknown) => !!x && typeof x === 'object' && !Array.isArray(x); if (sub(to[k]) !== sub(v) || Array.isArray(to[k]) !== Array.isArray(v)) { console.error(`stalk-pose: --set: ${at}.${k} is ${sub(to[k]) ? 'a table' : Array.isArray(to[k]) ? 'a list' : 'a value'} and was given ${sub(v) ? 'a table' : Array.isArray(v) ? 'a list' : 'a value'}`); process.exit(2); } if (sub(v)) merge(to[k], v, `${at}.${k}`); else to[k] = v; } };   // (key by key into the table as it stands: a misspelt key is refused, a nested one changes only itself)
+    for (const [name, row] of Object.entries(asked!)) { if (!T[name] || typeof T[name] !== 'object') { console.error(`stalk-pose: --set: no table ${name}`); process.exit(2); } merge(T[name], row, name); } } }
 g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
 const [A, ...rest] = g.guards; for (const [i, gd] of rest.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
 A.char.pos = [...AT]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [0, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
@@ -59,5 +63,5 @@ W.input.buttons |= 1; W.input.clicked |= 1; let n = 0; while (!g.player.holding 
 const grabbed = !!g.player.holding;
 W.input.buttons &= ~1; for (let i = 0; i < 240; i++) step();
 writeFileSync(resolve(out), JSON.stringify(frames));
-log(`stalk-pose: ${frames.length} frames, ${Object.keys(frames[0]).length - 1} bones, ${bare ? 'bare hands' : 'the knife'}${put ? ', the polish down' : down ? ', --down asked and THIS TREE HAS NO stalkPolish: nothing was put down' : ''} · ${grabbed ? `in the arm at frame ${n + 20}` : 'NEVER GRABBED'} → ${out}`);
+log(`stalk-pose: ${frames.length} frames, ${Object.keys(frames[0]).length - 1} bones, ${bare ? 'bare hands' : 'the knife'}${arg('--set') ? `, --set ${arg('--set')}` : ''}${put ? ', the polish down' : down ? ', --down asked and THIS TREE HAS NO stalkPolish: nothing was put down' : ''} · ${grabbed ? `in the arm at frame ${n + 20}` : 'NEVER GRABBED'} → ${out}`);
 process.exit(grabbed ? 0 : 1);

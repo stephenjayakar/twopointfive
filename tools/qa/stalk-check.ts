@@ -18,6 +18,7 @@
 //   off       the key down: the same press and hold moves nobody and grabs nobody.
 //   legs      with the polish down (stalkPolish(false): the frozen stand, ?stalkpolish=0, an old recording) the spring's clock and the sway's reach no leg, and
 //             HOLD.wayShape off draws the bare hands as they first stood; with it up the sway never lets go of his legs (no knee twitch at the sine's zero).
+//   lands     the ninth pass (HOLD.hitShape, HOLD.layAhead): the landing drives the man's hips ahead and back, and the choked man is laid down ahead of Sam's boots
 //   catch     the eighth pass (STALK.yankWith, HOLD.catchShape): he goes back with the man in the haul, the lead hand goes over the shoulder and round the
 //             throat, the man's hands fly out as he is hit, and in the hold he sits back onto Sam with his heels out — again after a walk.
 //   harness   the key is a row of the two stands' list with its word, off on the frozen stand and on in the page (`?stalk=0` puts it off), rides a recording's
@@ -28,6 +29,7 @@ import { standUp, ROOT } from './headless.ts';
 
 const { STALK, STALK_STATS, stalkOn, stalkPolish } = await import(`${ROOT}/src/game/stalk.ts`);
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+const { TAKEDOWN, LAY_REACH, LAY_HALF } = await import(`${ROOT}/src/game/takedown.ts`);
 const { HOLD, MOVES, READY_BARE_WAS } = await import(`${ROOT}/src/game/character.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
 const PR = await import(`${ROOT}/src/host/profile.ts`);
@@ -46,11 +48,11 @@ const up = () => !BREAK;
 interface Ctx { W: any; g: any; A: any; walk: number; f: number; top: number; jerk: number; step(): void; press(): void; lift(): void; held(): boolean; gap(): number; astern(): number }
 /** the lobby with the floor's men parked far off, one man `gap` m east of Sam facing east (walking away at `walk` m/s, moved by the check: the AI is off), Sam
  *  crouched with empty hands `bearing` degrees off the man's facing (180 = dead astern) */
-async function world(on: boolean, seed: number, gap: number, walk: number, bearing = 180): Promise<Ctx> {
+async function world(on: boolean, seed: number, gap: number, walk: number, bearing = 180, shift: [number, number] = [0, 0]): Promise<Ctx> {
   Math.random = seeded(seed); const W: any = await quiet(() => standUp({ seed } as any)), g = W.game; CLOSE.on = true; STALK.on = on; stalkPolish(true);   // (the frozen stand's pins write all three at every stand-up: the polish is down there, and this check is of the stalk with it)
   g.godMode = true; g.aiEnabled = false; g.playerInvisible = true; g.player.slot = 'pistol'; g.player.holstered = true;
   const [A, ...rest] = g.guards; for (const [i, gd] of rest.entries()) { gd.char.pos = [37.5, 0, 4.5 + i * 1.5]; gd.path = []; gd.pathGoal = null; gd.hold = true; gd.heardUpTo = 1e12; }
-  const a = EAST + bearing * Math.PI / 180, at: P3 = [SAM[0] + gap, 0, SAM[2]];
+  const a = EAST + bearing * Math.PI / 180, at: P3 = [SAM[0] + shift[0] + gap, 0, SAM[2] + shift[1]];   // (shift: the whole scene moved that far [x, z] across the lobby)
   A.char.pos = [...at]; A.char.bodyYaw = A.char.aimYaw = EAST; A.char.vel = [walk, 0, 0]; A.path = []; A.pathGoal = null; A.hold = true; A.pinned = true; A.awareness = 0; A.heardUpTo = 1e12;
   W.cam.yaw = 0; W.cam.rebuild?.(); g.teleportPlayer([at[0] + Math.sin(a) * gap, 0, at[2] + Math.cos(a) * gap]); g.player.crouch = true;
   const pl = g.player.char; let v0 = 0;
@@ -335,16 +337,111 @@ async function catchShape() {
     'in the settled hold the man\'s two feet are 12 cm or more further ahead of where he stands than with the keys down, and his hips 8 cm or more further ahead of his head: he sits back onto Sam, heels out, and no shin of Sam\'s moves half a centimetre in one frame of that second — he sits so again once Sam has walked a second and stopped, and a swap to the gun from there moves no hip, head or foot of either man 5 cm in one frame',
     `his feet ${cm(A.heels)} cm ahead of him (keys down ${cm(B.heels)}) · his hips ahead of his head ${cm(A.sit)} cm (keys down ${cm(B.sit)}) · Sam's shins at most ${(A.still * 1000).toFixed(2)} mm a frame · walked ${f2(A.walked)} m, then: feet ${cm(A.again.heels)} (${cm(B.again.heels)}), hips ${cm(A.again.sit)} (${cm(B.again.sit)}) · the gun swapped in ${A.gun}: at most ${cm(A.pop)} cm a frame (keys down ${cm(B.pop)})`);
 }
+/** THE BODY LANDS, AND HE IS LAID DOWN AHEAD (the ninth pass: HOLD.hitShape and HOLD.layAhead, both under the polish). The same stalk into the same grab,
+ *  bare hands, with HOLD.hitShape up and down: up, the man's hips are driven ahead of his neck as Sam's body lands and come back to the seat, his neck stays
+ *  under the forearm and the two heads come no nearer; and the same hold choked to its end with HOLD.layAhead up and at 0: up, he lies ahead of Sam's boots,
+ *  where at 0 a boot stood on his shin — and a metre short of a wall he is laid down where he knelt, as at 0.
+ *  (the break: both keys down in the runs that are asked to have them up) */
+async function lands() {
+  console.log('\n=== lands: the body lands with a beat of its own, and the choked man is laid down ahead of Sam\'s boots ===');
+  const seg = (p: number[], a: number[], b: number[], flat = false) => { const k = flat ? [0, 2] : [0, 1, 2], ab = k.map(i => b[i] - a[i]), ap = k.map(i => p[i] - a[i]), t = Math.max(0, Math.min(1, ab.reduce((n, x, i) => n + x * ap[i], 0) / Math.max(1e-9, ab.reduce((n, x) => n + x * x, 0)))); return Math.hypot(...k.map((i, j) => p[i] - a[i] - ab[j] * t)); };
+  const hit = async (on: boolean) => {
+    try {
+      const C = await world(true, SEEDS[0], 2.4, 0), pl = C.g.player.char, A = C.A.char; CLOSE.noKnife = true; HOLD.hitShape = on;
+      if (!isFinite(holdToGrab(C, 6))) return null; C.lift();
+      const fwd = (p: number[], o: number[]) => (p[0] - o[0]) * Math.sin(A.bodyYaw) + (p[2] - o[2]) * Math.cos(A.bodyYaw);
+      let landed = -1; const rows: { sit: number; heads: number; neck: number; sam: number }[] = [];
+      for (let i = 0; i < 80 && rows.length < 36; i++) { C.step(); const H = C.g.player.holding; if (!H) break; if (landed < 0 && H.hitAt !== undefined) landed = i;
+        if (landed >= 0) rows.push({ sit: fwd(A.bones.hips, A.pos) - fwd(A.bones.neck, A.pos), heads: Math.hypot(pl.bones.head[0] - A.bones.head[0], pl.bones.head[1] - A.bones.head[1], pl.bones.head[2] - A.bones.head[2]), neck: seg(A.bones.neck, pl.bones.forearmL, pl.bones.handL), sam: pl.bones.hips[1] }); }
+      return { landed, rows, held: C.held() };
+    } finally { stalkPolish(true); }
+  };
+  const A = await hit(up()), B = await hit(false);
+  // (…and a change to the gun on the hold's first frame, inside the beat: the beat leaves with the arm's share of the hold, never in one frame)
+  const swap = async (on: boolean) => {
+    try {
+      const C = await world(true, SEEDS[0], 2.4, 0), M = C.A.char; CLOSE.noKnife = true; HOLD.hitShape = on;
+      if (!isFinite(holdToGrab(C, 6))) return null; C.lift(); let n = 0; while (C.g.player.holding?.phase === 'grab' && n++ < 120) C.step();
+      const rel = () => { const q = M.bones.hips, dx = q[0] - M.pos[0], dz = q[2] - M.pos[2], sn = Math.sin(M.bodyYaw), cs = Math.cos(M.bodyYaw); return [dx * cs - dz * sn, q[1], dx * sn + dz * cs]; };
+      let r0 = rel(), pop = 0; C.W.input.pressed.add('KeyE');
+      for (let i = 0; i < 20; i++) { C.step(); const r = rel(); pop = Math.max(pop, Math.hypot(r[0] - r0[0], r[1] - r0[1], r[2] - r0[2])); r0 = r; }
+      return { pop, gun: C.g.player.holding?.variant === 'gun' };
+    } finally { stalkPolish(true); }
+  };
+  const SA = await swap(up()), SB = await swap(false);
+  // (…and the hold ENDED three frames after the landing, at the beat's top: it leaves with the layer's weight)
+  const drop = async (on: boolean) => {
+    try {
+      const C = await world(true, SEEDS[0], 2.4, 0), M = C.A.char; CLOSE.noKnife = true; HOLD.hitShape = on;
+      if (!isFinite(holdToGrab(C, 6))) return null; C.lift(); let n = 0; while (C.g.player.holding && C.g.player.holding.hitAt === undefined && n++ < 120) C.step(); for (let i = 0; i < 3; i++) C.step();
+      const rel = () => { const q = M.bones.hips, dx = q[0] - M.pos[0], dz = q[2] - M.pos[2], sn = Math.sin(M.bodyYaw), cs = Math.cos(M.bodyYaw); return [dx * cs - dz * sn, q[1], dx * sn + dz * cs]; };
+      let r0 = rel(), pop = 0; C.g.freeHeld('cancel');
+      for (let i = 0; i < 20; i++) { C.step(); const r = rel(); pop = Math.max(pop, Math.hypot(r[0] - r0[0], r[1] - r0[1], r[2] - r0[2])); r0 = r; }
+      return { pop, free: !C.g.player.holding };
+    } finally { stalkPolish(true); }
+  };
+  const DA = await drop(up()), DB = await drop(false);
+  if (!A || !B || !SA || !SB || !DA || !DB || A.rows.length < 36 || B.rows.length < 36) { verdict(false, 'the stalk ends in the grab', 'never grabbed, or the hold did not last: the check could not stand its scene'); return; }
+  const cm = (n: number) => (n * 100).toFixed(1), d = A.rows.map((r, i) => r.sit - B.rows[i].sit), peak = Math.max(...d.slice(0, 10)), late = Math.max(...d.slice(24).map(Math.abs));
+  const heads = Math.min(...A.rows.map(r => r.heads)), heads0 = Math.min(...B.rows.map(r => r.heads)), nearer = Math.max(...A.rows.map((r, i) => B.rows[i].heads - r.heads)), neck = Math.max(...A.rows.map((r, i) => r.neck - B.rows[i].neck)), dip = Math.min(...A.rows.map((r, i) => r.sam - B.rows[i].sam));
+  verdict(A.held && A.landed === B.landed && peak > 0.08 && late < 0.01 && nearer < 0.01 && neck < 0.03 && dip < -0.02 && SA.gun && SB.gun && SA.pop < SB.pop + 0.02 && DA.free && DB.free && DA.pop < DB.pop + 0.02,
+    'in the sixth of a second after his step lands the man\'s hips are 8 cm or more further ahead of his neck than with the key down, and from 0.4 s on within a centimetre of it: driven ahead as the body lands, then back in the seat — and through it frame for frame the two heads are never a centimetre nearer than with the key down, his neck is never 3 cm further from Sam\'s forearm, and Sam\'s hips go 2 cm or more lower: he heaves — and with the gun drawn on the hold\'s first frame, inside the beat, or the hold ended three frames after the landing, his hips never move 2 cm more in a frame than with the key down',
+    `landed at frame ${A.landed + 1} of the grab · his hips at most ${cm(peak)} cm further ahead of his neck in the first ten frames, ${cm(late)} cm from frame 25 on · the heads at the nearest ${cm(heads)} cm (key down ${cm(heads0)}), at most ${cm(nearer)} cm nearer on any one frame · his neck at most ${cm(neck)} cm further from the forearm · Sam's hips at the lowest ${cm(dip)} cm against the key down · the gun drawn on the hold's first frame (${SA.gun && SB.gun}): his hips at most ${cm(SA.pop)} cm in a frame (key down ${cm(SB.pop)}) · the hold ended three frames after the landing (${DA.free && DB.free}): ${cm(DA.pop)} cm (key down ${cm(DB.pop)})`);
+  // ---- laid down ahead: the hold choked to its end, two and a half seconds for the body to come to rest
+  type Thing = { fwd: number; side: number; y: number; h: [number, number, number] };   // (a box stood ahead of him: its middle `fwd` m along his facing and `side` m off it, at height y, half extents h)
+  type End = { at: number[]; e: P3 };                                                     // (where he stands and faces as the choke ends, from the same seed's open run)
+  const lay = async (m: number, seed = SEEDS[0], things: Thing[] = [], end: End | null = null) => {
+    const td = TAKEDOWN.on;
+    try {
+      const C = await world(true, seed, 2.4, 0), g = C.g, pl = g.player.char, A = C.A.char; CLOSE.noKnife = true; HOLD.layAhead = m; TAKEDOWN.on = true;   // (the lay is of the takedown's own fall: off on the frozen stand, and every stand-up writes it again)
+      if (!isFinite(holdToGrab(C, 6))) return null; C.lift(); for (let i = 0; i < 80; i++) C.step();
+      if (end) for (const t of things) g.col.addStatic({ ...g.col.boxes[0], flags: 0, c: [end.at[0] + end.e[0] * t.fwd + end.e[2] * t.side, t.y, end.at[2] + end.e[2] * t.fwd - end.e[0] * t.side], h: t.h, yaw: Math.atan2(end.e[0], end.e[2]) });
+      g.selectVerb('held', 'choke'); C.W.input.pressed.add('Space'); let n = 0; while (g.player.holding && n++ < 600) C.step();
+      // (measured in his own frame as the choke ends: through the choke the pair has gone on turning to the cursor, by half a turn on the frozen stand)
+      const e: P3 = [Math.sin(A.bodyYaw), 0, Math.cos(A.bodyYaw)], atE = [...A.pos], along = (q: number[]) => (q[0] - atE[0]) * e[0] + (q[2] - atE[2]) * e[2];
+      const lane = Math.min(...[-LAY_HALF, 0, LAY_HALF].flatMap(o => [0.15, 0.45, 1.1].map(y => g.col.raycast([atE[0] + e[2] * o, y, atE[2] - e[0] * o], e, 30)?.t ?? 30)));   // (the nearest thing nine rays find in the strip of floor ahead of him — a measure of its own, not the fall's: that one asks the volume)
+      const p0 = [...A.bones.hips]; let fast = 0, last = [...p0]; for (let i = 0; i < 150; i++) { C.step(); const h = A.bones.hips; fast = Math.max(fast, Math.hypot(h[0] - last[0], h[1] - last[1], h[2] - last[2]) * 60); last = [...h]; }
+      const legs = [0, 1].flatMap(k => { const L = k ? 'R' : 'L'; return [[A.bones['thigh' + L], A.bones['shin' + L]], [A.bones['shin' + L], A.bones['foot' + L]], [A.bones['foot' + L], A.bones['toe' + L] ?? A.bones['foot' + L]]]; });
+      const boot = Math.min(...[pl.bones.footL, pl.bones.footR].flatMap(b => legs.map(([a, c]) => seg(b, a, c, true))));
+      const far = Math.max(...Object.values(A.bones as Record<string, number[]>).filter(q => q && typeof q[0] === 'number').map(along));
+      return { out: C.A.state === 'dead' && C.A.downKind === 'choked', boot, went: along(A.bones.hips) - along(p0), lane, far, fast, end: { at: atE, e } as End, drift: end ? Math.hypot(atE[0] - end.at[0], atE[2] - end.at[2]) + 1 - (e[0] * end.e[0] + e[2] * end.e[2]) : 0 };
+    } finally { stalkPolish(true); TAKEDOWN.on = td; }
+  };
+  type Lay = NonNullable<Awaited<ReturnType<typeof lay>>>;
+  const M = HOLD.layAhead, open: { L1: Lay; L0: Lay }[] = [];
+  for (const sd of SEEDS) { const L1 = await lay(up() ? M : 0, sd), L0 = await lay(0, sd); if (!L1 || !L0) { verdict(false, 'the stalk ends in the grab', `never grabbed (seed ${sd}): the check could not stand its scene`); return; } open.push({ L1, L0 }); }
+  const mn = (a: number[]) => Math.min(...a), mx = (a: number[]) => Math.max(...a), fast0 = mx(open.map(o => o.L0.fast)), went0 = mx(open.map(o => o.L0.went));
+  // (walls and furniture, stood in the strip of floor ahead of where the same seed's open run ENDED its choke — the pair has turned by then, by half a
+  // turn on the frozen stand — a few seconds before the choke ends. The walls: from a metre, where the fall itself has no room, across both of the lay's
+  // own edges (half the way, the whole way: LAY_REACH and the sweep's 5 cm past each) to open floor, each asked which of the three it gets. The furniture:
+  // the things a line down his middle, or nine, passed between. These runs keep the key up under the break: the rule they hold is the room's, not the key's)
+  const eH = M / 2 + LAY_REACH + 0.05, eF = M + LAY_REACH + 0.05, wall = (at: number): Thing[] => [{ fwd: at + 0.1, side: 0, y: 1, h: [1.5, 1, 0.1] }];
+  const WALLS = [0.95, 1.2, eH - 0.1, eH + 0.1, (eH + eF) / 2, eF - 0.1, eF + 0.1, eF + 0.4];
+  const THINGS: [string, number, Thing[]][] = [   // [what, its nearest face along his facing, the boxes]
+    ['a table\'s top 0.7 m ahead', 0.7, [{ fwd: 1.075, side: 0, y: 0.73, h: [0.8, 0.02, 0.375] }]], ['a table\'s top 1.1 m ahead', 1.1, [{ fwd: 1.475, side: 0, y: 0.73, h: [0.8, 0.02, 0.375] }]],
+    ['a low table 0.9 m ahead', 0.9, [{ fwd: 1.2, side: 0, y: 0.28, h: [0.5, 0.02, 0.3] }, { fwd: 1.2, side: 0.42, y: 0.13, h: [0.03, 0.13, 0.26] }, { fwd: 1.2, side: -0.42, y: 0.13, h: [0.03, 0.13, 0.26] }]],
+    ['a post a hand to one side', 0.94, [{ fwd: 1, side: 0.15, y: 1, h: [0.06, 1, 0.06] }]], ['a post a hand to the other', 0.94, [{ fwd: 1, side: -0.15, y: 1, h: [0.06, 1, 0.06] }]],
+    ['a crate 1.2 m ahead', 1.2, [{ fwd: 1.5, side: 0, y: 0.15, h: [0.3, 0.15, 0.3] }]], ['a crate 1.6 m ahead', 1.6, [{ fwd: 1.9, side: 0, y: 0.15, h: [0.3, 0.15, 0.3] }]], ['a crate 1.6 m ahead, a foot to one side', 1.6, [{ fwd: 1.9, side: 0.45, y: 0.15, h: [0.3, 0.15, 0.3] }]]];
+  const things: { what: string; near: number; wall: boolean; X: Lay }[] = [];
+  for (const k of [0, 1]) for (const [what, near, boxes, isWall] of [...(k === 0 ? WALLS : [eH - 0.1, eH + 0.1, eF - 0.1, eF + 0.1]).map(w => [`a wall ${f2(w)} m ahead`, w, wall(w), true] as const), ...THINGS.map(t => [...t, false] as const)]) {
+    const X = await lay(M, SEEDS[k], boxes, open[k].L0.end); if (!X) { verdict(false, 'the stalk ends in the grab', `never grabbed (seed ${SEEDS[k]}, ${what}): the check could not stand its scene`); return; } things.push({ what, near, wall: isWall, X }); }
+  const kind = (went: number) => went < went0 + 0.08 ? 'kept' : Math.abs(went - M / 2) < 0.12 ? 'half' : went > M - 0.1 ? 'whole' : '?', owed = (near: number) => near < eH ? 'kept' : near < eF ? 'half' : 'whole';
+  const ok = (t: { near: number; wall: boolean; X: Lay }) => t.X.out && t.X.drift < 0.05 && t.X.went > -0.1 && t.X.fast < fast0 + 1 && (t.wall ? kind(t.X.went) === owed(t.near) && t.near - t.X.far > 0.03 : t.X.went < Math.max(0, t.near - LAY_REACH) + went0 + 0.08);
+  const W = things.filter(t => t.wall), T = things.filter(t => !t.wall), bad = things.filter(t => !ok(t)), count = (k: string) => W.filter(t => kind(t.X.went) === k).length;
+  verdict(M > 0.3 && open.every(o => o.L1.out && o.L0.out && o.L1.boot > 0.15 && o.L1.boot > o.L0.boot + 0.1 && o.L1.went > o.L0.went + 0.5 && o.L1.fast < fast0 + 1) && !bad.length && count('kept') > 0 && count('half') > 0 && count('whole') > 0,
+    'choked out and two and a half seconds on, on every seed, no part of the man\'s legs lies within 15 cm of either of Sam\'s boots (seen from above) and they lie 10 cm or more further from one than with the lay at 0: his hips have gone half a metre or more further along his facing since the choke ended, and never a metre a second faster than the fastest fall at 0 — and with a wall stood from a metre ahead of him to past the lay\'s own reach he is kept where he knelt, laid half the way or the whole way by which side of the lay\'s two edges it stands (a tenth of a metre either side of each), no bone of his within 3 cm of it; and with a table\'s top, a low table, a post a hand off his middle or a low crate stood in the strip of floor ahead of him he is laid no further than the floor is clear less a body\'s length; never thrown back, his hips never that fast',
+    `the lay ${f2(M)} m, ${SEEDS.length} seeds · his legs at the nearest ${cm(mn(open.map(o => o.L1.boot)))} cm from a boot (at 0: ${cm(mx(open.map(o => o.L0.boot)))} at the furthest) · his hips went ${f2(mn(open.map(o => o.L1.went)))} m or more along his facing (at 0: ${f2(went0)}) at ${f2(mx(open.map(o => o.L1.fast)))} m/s at the fastest (at 0: ${f2(fast0)}) · ${W.length} walls, how far ahead [how far he went]: ${W.map(t => `${f2(t.near)}[${f2(t.X.went)}]`).join(' ')} m, the edges ${f2(eH)} and ${f2(eF)} · kept where he knelt ${count('kept')}, half the lay ${count('half')}, the whole of it ${count('whole')} · the nearest bone ${cm(mn(W.map(t => t.near - t.X.far)))} cm short of a wall · ${T.length} runs with furniture, he went ${T.map(t => f2(t.X.went)).join(' ')} m · the fastest of them all ${f2(mx(things.map(t => t.X.fast)))} m/s${bad.length ? ` · OUT OF BOUNDS: ${bad.map(t => `${t.what} (went ${f2(t.X.went)} m at ${f2(t.X.fast)} m/s, ${cm(t.near - t.X.far)} cm short, the scene ${f2(t.X.drift)} off)`).join(', ')}` : ''} · choked ${open.every(o => o.L1.out && o.L0.out) && things.every(t => t.X.out)}`);
+}
 async function off() {
   console.log('\n=== off: the key down ===');
   const C = await world(false, SEEDS[0], 2.6, 0), pl = C.g.player.char, p0 = [...pl.pos], b0 = STALK_STATS.begun; C.press(); for (let i = 0; i < 240; i++) C.step();
   const moved = Math.hypot(pl.pos[0] - p0[0], pl.pos[2] - p0[2]);
   verdict(moved < 0.02 && !C.held() && STALK_STATS.begun === b0, 'with the key down the same press and four seconds of hold move nobody and grab nobody', `moved ${f2(moved)} m · in his arm ${C.held()} · stalks begun ${STALK_STATS.begun - b0}`);
 }
-const polVals = () => ({ jolt: STALK.jolt, turnIn: STALK.turnIn, show: STALK.cornerShow, long: STALK.catchLong, way: HOLD.wayShape, dip: HOLD.lunge.dip, back: HOLD.lunge.back, m: HOLD.sway.m, twist: HOLD.sway.twist, side: HOLD.apart.side, tip: HOLD.apart.tip, arch: HOLD.yank.arch, with: STALK.yankWith, shape: HOLD.catchShape });
-const POL_DOWN = { jolt: 0, turnIn: false, show: false, long: 1, way: false, dip: 0, back: 0, m: 0, twist: 0, side: 0, tip: 0, arch: -11, with: false, shape: false };   // (what a recording from before them replays with: journal.ts)
-const polUp = (v: ReturnType<typeof polVals>) => v.jolt > 0 && v.turnIn === true && v.show === true && v.long > 1 && v.way === true && v.dip > 0 && v.back > 0 && v.m > 0 && v.twist > 0 && v.side > 0 && v.tip > 0 && v.arch > -11 && v.with === true && v.shape === true;
-const POL_ROWS = ['STALK.jolt', 'STALK.turnIn', 'STALK.cornerShow', 'STALK.catchLong', 'HOLD.wayShape', 'HOLD.lunge.dip', 'HOLD.lunge.back', 'HOLD.sway.m', 'HOLD.sway.twist', 'HOLD.apart.side', 'HOLD.apart.tip', 'HOLD.yank.arch', 'STALK.yankWith', 'HOLD.catchShape'];
+const polVals = () => ({ jolt: STALK.jolt, turnIn: STALK.turnIn, show: STALK.cornerShow, long: STALK.catchLong, way: HOLD.wayShape, dip: HOLD.lunge.dip, back: HOLD.lunge.back, m: HOLD.sway.m, twist: HOLD.sway.twist, side: HOLD.apart.side, tip: HOLD.apart.tip, arch: HOLD.yank.arch, with: STALK.yankWith, shape: HOLD.catchShape, hit: HOLD.hitShape, lay: HOLD.layAhead });
+const POL_DOWN = { jolt: 0, turnIn: false, show: false, long: 1, way: false, dip: 0, back: 0, m: 0, twist: 0, side: 0, tip: 0, arch: -11, with: false, shape: false, hit: false, lay: 0 };   // (what a recording from before them replays with: journal.ts)
+const polUp = (v: ReturnType<typeof polVals>) => v.jolt > 0 && v.turnIn === true && v.show === true && v.long > 1 && v.way === true && v.dip > 0 && v.back > 0 && v.m > 0 && v.twist > 0 && v.side > 0 && v.tip > 0 && v.arch > -11 && v.with === true && v.shape === true && v.hit === true && v.lay > 0;
+const POL_ROWS = ['STALK.jolt', 'STALK.turnIn', 'STALK.cornerShow', 'STALK.catchLong', 'HOLD.wayShape', 'HOLD.lunge.dip', 'HOLD.lunge.back', 'HOLD.sway.m', 'HOLD.sway.twist', 'HOLD.apart.side', 'HOLD.apart.tip', 'HOLD.yank.arch', 'STALK.yankWith', 'HOLD.catchShape', 'HOLD.hitShape', 'HOLD.layAhead'];
 async function harness() {
   console.log('\n=== harness: off on the frozen stand, on in the page, and in a recording ===');
   const shipped = process.env.TPS_PROFILE === 'shipped', word = process.env.TPS_STALK, want = word !== undefined ? word === '1' : shipped;
@@ -355,11 +452,12 @@ async function harness() {
   const polStood = polVals(), polBoot = BREAK || !shipped || polWord !== undefined || polUp(polFound!); stalkPolish(true);   // (the stand's own answer as this stand-up left it: a pin writes it, and an unpinned shipped stand-up must leave it up. polBoot: the page's stand has it from the page's boot — read when the check began, before anything here raised it. Then up, for the recordings below)
   const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))), had = !!snap.tables.STALK && 'on' in snap.tables.STALK;
   STALK.on = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); STALK.on = false; JR.applyKnobs(W.game, snapUp); const kept = STALK.on;
-  const before = JSON.parse(JSON.stringify(snapUp)); if (!BREAK) { for (const k of ['jolt', 'joltFace', 'turnIn', 'cornerShow', 'catchLong', 'yankWith']) delete before.tables.STALK[k]; delete before.tables.HOLD.wayShape; delete before.tables.HOLD.catchShape; }   // (the break: the keys left in, so nothing is put down)
+  const before = JSON.parse(JSON.stringify(snapUp)); if (!BREAK) { for (const k of ['jolt', 'joltFace', 'turnIn', 'cornerShow', 'catchLong', 'yankWith']) delete before.tables.STALK[k]; delete before.tables.HOLD.wayShape; delete before.tables.HOLD.catchShape; delete before.tables.HOLD.hitShape; delete before.tables.HOLD.layAhead; }   // (the break: the keys left in, so nothing is put down)
   JR.applyKnobs(W.game, before); const pass = polVals(), face = STALK.joltFace; JR.applyKnobs(W.game, snapUp);
   const mid = JSON.parse(JSON.stringify(snapUp)); if (!BREAK) { delete mid.tables.STALK.joltFace; delete mid.tables.STALK.joltAtOnce; } JR.applyKnobs(W.game, mid); const face5 = STALK.joltFace, jolt5 = STALK.jolt, once5 = STALK.joltAtOnce;
   const six = JSON.parse(JSON.stringify(snapUp)); delete six.tables.STALK.joltAtOnce; STALK.joltAtOnce = true; JR.applyKnobs(W.game, six); const once6 = STALK.joltAtOnce; JR.applyKnobs(W.game, snapUp);
-  const seven = JSON.parse(JSON.stringify(snapUp)); if (!BREAK) { delete seven.tables.STALK.yankWith; delete seven.tables.HOLD.catchShape; } JR.applyKnobs(W.game, seven); const p7 = polVals(); JR.applyKnobs(W.game, snapUp);   // (…and one of the seventh: all the polish but the catch's shape — neither of its two keys)   // (…and one of the sixth: joltFace, and no joltAtOnce — the wait)   // (a recording of the fifth pass: the duck, at any turn)
+  const seven = JSON.parse(JSON.stringify(snapUp)); if (!BREAK) { delete seven.tables.STALK.yankWith; delete seven.tables.HOLD.catchShape; delete seven.tables.HOLD.hitShape; delete seven.tables.HOLD.layAhead; } JR.applyKnobs(W.game, seven); const p7 = polVals(); JR.applyKnobs(W.game, snapUp);
+  const eight = JSON.parse(JSON.stringify(snapUp)); if (!BREAK) { delete eight.tables.HOLD.hitShape; delete eight.tables.HOLD.layAhead; } JR.applyKnobs(W.game, eight); const p8 = polVals(); JR.applyKnobs(W.game, snapUp);   // (…and one of the eighth: the catch's shape, and neither of the ninth's two keys)   // (…and one of the seventh: all the polish but the catch's shape — neither of its two keys)   // (…and one of the sixth: joltFace, and no joltAtOnce — the wait)   // (a recording of the fifth pass: the duck, at any turn)
   PR.pageSwitches(new URLSearchParams(BREAK ? '' : 'stalkpolish=0')); const pol = polVals(); PR.pageSwitches(new URLSearchParams('')); const plain = polVals(); JR.applyKnobs(W.game, snapUp);   // (the word, then a plain address after it: by the same function, both ways)
   const back = STALK.jolt > 0 && STALK.joltFace < 180 && STALK.turnIn === true && HOLD.wayShape === true && HOLD.lunge.dip > 0;
   delete snap.tables.STALK; STALK.on = true; JR.applyKnobs(W.game, snap); const old = STALK.on;
@@ -367,19 +465,19 @@ async function harness() {
   verdict((STAND_ENV as string[]).includes('TPS_STALK') && PR.FROZEN_HOLDS['STALK.on'] === 'TPS_STALK=1' && stood === want && foundOk && had && kept === true && old === false && plainQ === true && offQ === false,
     'the key is a row of the two stands\' list with its word, stands up on the shipped stand and down on the frozen one, rides a recording\'s tables, a recording from before it replays with it down, and the page\'s boot writes it on for a plain address and off for ?stalk=0',
     `STAND_ENV ${(STAND_ENV as string[]).includes('TPS_STALK')} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['STALK.on']} · found ${found}, stood up ${stood}, wanted ${want} · in the tables ${had} · recorded up ${kept} · an old recording ${old} · plain ${plainQ} · ?stalk=0 ${offQ}`);
-  verdict(face5 === 180 && once5 === true && once6 === false && STALK.joltAtOnce === false && jolt5 > 0 && face === 180 && p7.with === false && p7.shape === false && p7.turnIn === true && p7.way === true && p7.jolt > 0 && plain.with === true && plain.shape === true && JSON.stringify(pol) === JSON.stringify(pass) && pass.jolt === 0 && pass.turnIn === false && pass.show === false && pass.long === 1 && pass.way === false && pass.dip === 0 && pass.side === 0 && pass.arch === -11
+  verdict(face5 === 180 && once5 === true && once6 === false && STALK.joltAtOnce === false && jolt5 > 0 && face === 180 && p7.with === false && p7.shape === false && p7.hit === false && p7.lay === 0 && p8.with === true && p8.shape === true && p8.hit === false && p8.lay === 0 && plain.hit === true && plain.lay > 0 && p7.turnIn === true && p7.way === true && p7.jolt > 0 && plain.with === true && plain.shape === true && JSON.stringify(pol) === JSON.stringify(pass) && pass.jolt === 0 && pass.turnIn === false && pass.show === false && pass.long === 1 && pass.way === false && pass.dip === 0 && pass.side === 0 && pass.arch === -11
     && plain.jolt > 0 && plain.turnIn === true && plain.way === true && plain.dip > 0 && plain.side > 0 && back,
-    'a recording from before the fourth and fifth passes (no jolt, turnIn, cornerShow or catchLong in its stalk table, no wayShape in the hold\'s) replays with every one of them down, one of the fifth (the duck, no joltFace) replays with the duck at any turn and at once (joltAtOnce), one of the sixth (joltFace, no joltAtOnce) with the wait, one of the seventh (no yankWith, no catchShape) with those two down and the rest up, one made with them all replays with them up, the page\'s ?stalkpolish=0 puts the same fourteen numbers down as the first, and a plain address after it puts them up again',
-    `from before: ${JSON.stringify(pass)}, joltFace ${face} · of the fifth: jolt ${jolt5}, joltFace ${face5}, at once ${once5} · of the sixth: at once ${once6} · of the seventh: yankWith ${p7.with}, catchShape ${p7.shape}, turnIn ${p7.turnIn} · from after: all up ${back} · ?stalkpolish=0: ${JSON.stringify(pol) === JSON.stringify(pass) ? 'the same fourteen' : JSON.stringify(pol)} · a plain address after it: jolt ${plain.jolt}, turnIn ${plain.turnIn}, wayShape ${plain.way}, the dip ${plain.dip}`);
+    'a recording from before the fourth and fifth passes (no jolt, turnIn, cornerShow or catchLong in its stalk table, no wayShape in the hold\'s) replays with every one of them down, one of the fifth (the duck, no joltFace) replays with the duck at any turn and at once (joltAtOnce), one of the sixth (joltFace, no joltAtOnce) with the wait, one of the seventh (no yankWith, no catchShape) with those two down and the rest up, one of the eighth (no hitShape, no layAhead in the hold\'s table) with those two down and the catch\'s shape up, one made with them all replays with them up, the page\'s ?stalkpolish=0 puts the same sixteen numbers down as the first, and a plain address after it puts them up again',
+    `from before: ${JSON.stringify(pass)}, joltFace ${face} · of the fifth: jolt ${jolt5}, joltFace ${face5}, at once ${once5} · of the sixth: at once ${once6} · of the seventh: yankWith ${p7.with}, catchShape ${p7.shape}, turnIn ${p7.turnIn} · of the eighth: catchShape ${p8.shape}, hitShape ${p8.hit}, layAhead ${p8.lay} · from after: all up ${back} · ?stalkpolish=0: ${JSON.stringify(pol) === JSON.stringify(pass) ? 'the same sixteen' : JSON.stringify(pol)} · a plain address after it: jolt ${plain.jolt}, turnIn ${plain.turnIn}, wayShape ${plain.way}, the dip ${plain.dip}`);
   verdict((STAND_ENV as string[]).includes('TPS_STALKPOLISH') && polRows && polBoot && (polWant ? polUp(polStood) : JSON.stringify(polStood) === JSON.stringify(POL_DOWN)),
-    'the polish is a hold of its own: its fourteen numbers are rows of the two stands\' list with one word, they stand up on the shipped stand and down on the frozen one (the numbers a recording from before them replays with), and TPS_STALKPOLISH has the say on either',
-    `STAND_ENV ${(STAND_ENV as string[]).includes('TPS_STALKPOLISH')} · the fourteen rows ${polRows} · wanted ${polWant ? 'up' : 'down'} · stood ${JSON.stringify(polStood)} · up from the page's boot, where that is asked ${polBoot}`);
+    'the polish is a hold of its own: its sixteen numbers are rows of the two stands\' list with one word, they stand up on the shipped stand and down on the frozen one (the numbers a recording from before them replays with), and TPS_STALKPOLISH has the say on either',
+    `STAND_ENV ${(STAND_ENV as string[]).includes('TPS_STALKPOLISH')} · the sixteen rows ${polRows} · wanted ${polWant ? 'up' : 'down'} · stood ${JSON.stringify(polStood)} · up from the page's boot, where that is asked ${polBoot}`);
 }
 
 /** the whole card (probes.ts 'stalk'): true = every check passed. The switches are put back as they were found. */
 export async function stalkCheck(): Promise<boolean> {
   const was = { ...STALK }, close = JSON.parse(JSON.stringify(CLOSE)), rnd = Math.random; allPass = true; found = STALK.on; polFound = polVals(); const hold = knobsCopy(['HOLD']);
-  try { await grab(); await still(); await steer(); await letGo(); await walkPress(); await out(); await tell(); await stepIn(); await shape(); await legs(); await catchShape(); await corner(); await off(); Object.assign(STALK, was); await harness(); }
+  try { await grab(); await still(); await steer(); await letGo(); await walkPress(); await out(); await tell(); await stepIn(); await shape(); await legs(); await catchShape(); await lands(); await corner(); await off(); Object.assign(STALK, was); await harness(); }
   finally { Object.assign(STALK, was); Object.assign(CLOSE, close); Math.random = rnd; knobsBack(hold); }   // (the hold's table too, as it was found: world() raises its share of the polish)
   console.log(`\n=== stalk: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`); return allPass;
 }

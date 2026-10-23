@@ -1143,6 +1143,52 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rifle hangs for a tenth of a second while the support hand is out, then swings through both bodies on its way to Sam's hand (the
   disarm's own timing, not touched); nothing moves in the settled hold but the sway; the chest-and-head jolt is too small to see from
   the game's camera. Nobody has seen or played this pass; nothing of the stalk has been seen on a GPU.
+- **The stalk's ninth pass: the body lands, and he is laid down ahead of Sam (10-23; `HOLD.hitShape` with its numbers `HOLD.hit`, and
+  `HOLD.layAhead`).** A visual reviewer's read of the game-camera stills before it: "Sam covers a metre, but the guard's feet, hips and chest stay
+  nailed down. Only his arms fling. He then bends smoothly", and at the choke's end "Sam standing on his thighs". (1) THE LANDING. From the
+  frame the step lands (the yank's own clock, `HoldPose` / `HeldPose` `.yank`) the man's hips are driven `hit.hips` (15 cm) further ahead of
+  his neck than the seat has them, in by 0.04 s, held to 0.07, back in the seat by 0.22; his knees give 3 cm; his head is given back the
+  whole of that extra recline (left to ride his trunk it went 4 cm into Sam's). Sam heaves: hips 5 cm in under the man and 6 cm down,
+  chest 12° back. The beat leaves with the arm's share of the hold (`1 - gv`) and with the layer's weight, so the gun drawn inside it, or
+  the hold ended inside it, does not pop (gated on the variant and on the live pose it dropped 11 and 14 cm in a frame). (2) THE LAY. The
+  choke ends in the 'sink' fall (`fallGuide`): his pelvis stayed where it knelt and his legs were drawn out behind it, under Sam's boots.
+  With `layAhead` (0.9 m) the pelvis is led that much further along his facing, two fifths of it as he goes to his knees and the rest as
+  he is laid flat (0.5 and 0.7 m left a shin within 5 cm of a boot on the seeds whose die tips him the other way). `takedown.ts setFall`
+  asks the level for the room first: no static anywhere in a strip as wide as his shoulders (`LAY_HALF` 0.3 m each side), from his shins
+  to 1.2 m up, as long as the lay and the whole of him past it (`LAY_REACH` 0.95 m) — the VOLUME, by `circleTouches` every 0.2 m — and
+  nothing else solid on three lines down its middle (a leaf, a chair); half the lay where only that much is clear; none otherwise, and
+  none in a fall that is already `tight`. This one MOVES WHERE A BODY LIES (a guard who finds it, a carry that starts from it): a change
+  to the game, not only to the picture. SWITCH: both are rows of the polish, up by `stalkPolish(true)` at the page's boot and down with
+  `?stalkpolish=0` (sixteen rows now); `hitShape` acts only in the grab a stalk ends in, `layAhead` only at a choke's end with the
+  takedown's own fall (`TAKEDOWN.on`, `?notakedown` puts it off). FROZEN: both down, two more `FROZEN_HOLDS` rows with
+  `TPS_STALKPOLISH=1`. SHIPPED: up. A recording from before this pass (no `hitShape` in its hold table) replays with both down
+  (`journal.ts`). No new module state (`Character.fallAhead` is per man, beside `fallTight`). CHECK: stalk-check `lands`, two lines,
+  `STALK_BREAK=1` fails both, both stands (29 of 29 on each and on the frozen stand with the three words; 23 FAIL under the break).
+  Line one, one seed, against the same grab with `hitShape` down: his hips at most 14.7 cm further ahead of his neck in the first ten
+  frames after the landing and 0.0 from frame 25; frame for frame the heads never nearer (16.9 cm at the nearest, 15.4 with the key
+  down); Sam's hips 5.9 cm lower; with the gun drawn on the hold's first frame his hips move 2.4 cm in a frame at most (1.5 with the key
+  down), with the hold ended three frames after the landing 2.1 (1.0). Line two, three seeds on open floor: his legs at the nearest
+  23.0 cm from a boot seen from above (at 0: 6.6), his hips 0.93 m along his facing (at 0: 0.04), never faster than the fall at 0
+  (1.98 m/s); then, two seeds, twelve walls stood from 0.95 to 2.3 m ahead of him, each asked which it gets by which side of the lay's
+  two edges it stands, a tenth of a metre either side of each (kept where he knelt 4, half the lay 5, the whole 3; the nearest bone
+  5.4 cm short of a wall), and sixteen runs with furniture in the strip (a table's top at 0.73 m, a low table, a post a hand off his
+  middle on either side, a low crate at three places): never laid further than the floor is clear less `LAY_REACH`, never thrown
+  back, never faster. The walls and the furniture are boxes stood ahead of where the same seed's open run ENDED its choke: through a
+  choke the pair goes on turning to the cursor, by half a turn on the frozen stand, and a scene measured by his facing at the grab
+  measured nothing there. What the room test was before two reviews of it, each measured: one line down his middle let a crate a hand
+  off it through (thrown 1.2 m back at 5.7 m/s); 1.2 m asked for a body that reaches 1.36 m let a wall at 1.25 m through; nine lines
+  let a table's top, a low table and a 12 cm post between them (13 m/s). OFF IS AS IT WAS: stalk-pose with the two keys down against
+  the build before it, bare hands and the knife, THE SAME over 411 frames and 44 bones (by hand, shipped stand, one scene). NOT
+  MENDED, the same short margin in the fall that was already there: the old 0.7 m test for a body that reaches 0.86 m, on two lines
+  that pass over anything lower than 0.45 m (a 0.3 m crate 0.8 m ahead knocks the body 0.17 m back with the lay at 0 as well).
+  LOOKED AT: close-stills `stalk-hit` (new: nine moments from 0.2 to 0.7 s of the grab) and `hold`, two rounds with a visual
+  reviewer; its read of the landing after the first: "slightly better, close to the same at game size", "a deeper bend, not a hit"
+  (the beat was shortened and the heave raised after it, and nobody has looked since); of the lay at 0.5 m, "clearly better" with
+  "Sam's boots still overlap the guard's ankles" (hence 0.9). STILL WRONG, known, from the same review: the disarm parks Sam's arm
+  straight out with the carbine gripped by its end; the choke has one visible beat; the settled hold reads as still from the camera;
+  the choked man's arms lie in a T; the shirt's wedge; Sam's launch stance. Where the room is only good for half the lay his shins lie
+  under Sam's boots as before. `tools/qa/stalk-pose.ts --set '<json>'` writes table keys after the polish, key by key (an unknown key,
+  or a value given for a table, is refused). Nobody has seen or played this pass; nothing of the stalk has been seen on a GPU.
 - **A lesson line names the move, not its key (`lesson.ts` `TOKENS`, `LESSON_TOKENS`, `lessonToken`; 10-23).** `{grab him}`,
   `{grab him from behind}`, `{knock him out}`, `{take him out}` in a lesson's text are written out by `lessonLine` in the build's own
   words: the held click with the stalk up (`STALK.on` and `.only`), the grab's key without, the knockout with bare hands, the knife
@@ -1154,6 +1200,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   text, a `noTap`, a plan, menu or after line is held the same way by `rails.ts railsFaults` since the same day, and a brace in a card's title
   refused (`missions.md`, "A lesson's words are checked as the page says them"). `tut-quiet` uses tokens; `tut-pair`'s lines are owed by its thread. CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
   stands, its break by `NOKNIFE_BREAK=1`. Read on the page on `tut-quiet` (the software adapter), the stalk and the knife each way; never on a GPU.
+  A click is written with its hyphen since the ninth pass (10-23, the tutorial thread's ask, by the guide's own table): "right-click to knock him
+  out", ", or left-click to use the knife", "left-click to knife him", in `TOKENS` and in `bareLine`; the grab keeps "hold left click on him".
+  `lessonTokenFaults(w, line, cap, row, always)`: `row` names the caller's own row in the over-cap message (it said "the objective row" of a
+  card), and `always` reports a line that is over the cap written out even when it is over as written too; without them it answers as before.
 - **The knife's own probe puts the knife back (`tools/qa/hold-pose-probes.ts` `holdKnife`, probe `hold-knife`; 10-23).** It was red on the shipped
   stand from the day the no-knife rule went on there (three lines: no knife in the arm hold, twice no knife boxes), because the probe wants the thing the
   rule takes away. It is the check of `?noknife=0`'s build, so while it runs every stage writes `CLOSE.noKnife` down and gives it back after; its third
