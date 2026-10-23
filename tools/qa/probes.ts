@@ -32,7 +32,7 @@
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     workstow: workstow-sam workstow-mate workstow-wall workstow-off
-//     squadnet: squadnet-why squadnet-clear squadnet-net squadnet-off
+//     squadnet: squadnet-why squadnet-clear squadnet-end squadnet-net squadnet-off
 //     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
 //     kittree: kittree-rows kittree-guns kittree-sponge kittree-off kittree-mate40
 //     gunlook: gunlook-own gunlook-hands gunlook-bare gunlook-off (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
@@ -2506,9 +2506,10 @@ if (on('workstow-sam', 'workstow', 'all')) await run('workstow-sam', async () =>
 if (on('workstow-mate', 'workstow', 'doortools', 'all')) await run('workstow-mate', async () => (await import('./workstow-check.ts')).workstowMate());   // a teammate's charge on order: his gun hangs, no round from it, back up after; a man the fight has drops the job with nothing spent
 if (on('workstow-wall', 'workstow', 'wallcharge', 'all')) await run('workstow-wall', async () => (await import('./workstow-check.ts')).workstowWall());  // the same for a wall charge, by your hands and on order
 if (on('workstow-off', 'workstow', 'all')) await run('workstow-off', async () => (await import('./workstow-check.ts')).workstowOff());            // off = the plant as it was; the switch's wiring (the knob snapshot, an old recording, the frozen hold)
-// THE SQUAD REACHES YOU, AND THE QUICK KEY SAYS WHY (src/game/squadnet.ts; tools/qa/squadnet-check.ts raises the three switches itself, so it asks the same on either stand; SQUADNET_BREAK=1 must fail)
+// THE SQUAD REACHES YOU, AND THE QUICK KEY SAYS WHY (src/game/squadnet.ts; tools/qa/squadnet-check.ts raises the four switches itself, so it asks the same on either stand; SQUADNET_BREAK=1 must fail)
 if (on('squadnet-why', 'squadnet', 'squadorders', 'all')) await run('squadnet-why', async () => (await import('./squadnet-check.ts')).squadnetWhy());     // the quick key's row ends on the reason, the man who answers says it, and the entry's end is called as its search found it
 if (on('squadnet-clear', 'squadnet', 'all')) await run('squadnet-clear', async () => (await import('./squadnet-check.ts')).squadnetClear());   // 'clear' only of a room whose floor was all seen; 'quiet' of floor unseen; nothing with an enemy in sight
+if (on('squadnet-end', 'squadnet', 'all')) await run('squadnet-end', async () => (await import('./squadnet-check.ts')).squadnetEnd());       // an entry into a room the mission has no name for ends with the lead's call; off, with nothing said
 if (on('squadnet-net', 'squadnet', 'all')) await run('squadnet-net', async () => (await import('./squadnet-check.ts')).squadnetNet());       // a teammate's line from off the screen clicks, a teammate down is called once; the page's alone, by digest
 if (on('squadnet-off', 'squadnet', 'all')) await run('squadnet-off', async () => (await import('./squadnet-check.ts')).squadnetOff());       // off = the lines as they were; the switches' wiring (the knob snapshot, an old recording, the frozen holds, the stand)
 // EACH GUN ITS OWN LOOK, SOUND AND FLAME (src/game/gunlook.ts; tools/qa/gunlook-check.ts raises the switch itself, so it asks the same on either stand; GUNLOOK_BREAK=1 must fail)

@@ -98,7 +98,7 @@ import { FloorSeen } from './floorseen';
 import { DOORMANNERS, DOORMANNERS_STATS, doorwayInWay, doorwayClearNear, doorwayLane } from './doorway';
 import { GLASSPEN } from './glasspen';   // (DOORWAY.kickGlass: read in bootSpot, at order time only)
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { roomCall } from './squadnet';   // (called inside the entry's end only)
+import { SQUADNET, plainCall, roomCall } from './squadnet';   // (called inside the entry's end only)
 import { inSight } from './autopilot';
 import { STACKROOM, stackRoomFix, stackRoomHas, stackRoomKeeps, stackViewReach, stackViewOpen } from './stackroom';
 import { SAMSTUN, dazzlePlayer } from './samstun';
@@ -2345,6 +2345,9 @@ export class DoorTools {
         if (room) { const ins = g.guards.filter(x => x.state !== 'dead' && x.team === 'hostile' && RC!.roomAt(x.char.pos) === room.def.id);
           // (squadnet.ts: with its switch on 'clear' is said only of a room whose search was not cut short — off, the call as it was)
           const call = roomCall(g, room.def.name, SR && SR.left >= K.deadCells ? SR.left : 0, ins.length > 0, ins.some(x => inSight(g, x))); if (call) g.say(lead, call); }   // (floor unseen under the search's own bar is floor no man could see: the search ended, it was not cut short)
+        else if (SQUADNET.endCall) { const R = this.roomIn(op);   // (squadnet.ts: a room the mission has no name for is called too, of the room fight's own flood — off, nothing is said of it, as it was)
+          if (R) { const ins = g.guards.filter(x => x.state !== 'dead' && x.team === 'hostile' && g.fight?.roomAt(x.char.pos) === R);
+            const call = plainCall(g, openFloor(g, R), SR && SR.left >= K.deadCells ? SR.left : 0, ins.length > 0, ins.some(x => inSight(g, x))); if (call) g.say(lead, call); } }
         // (the room is theirs: from here each man's eyes are spare for its other ways in — cover.ts deals them; his sector stands where it deals nothing)
         if (op.thr && K.otherDoorM > 0) this.otherDoors(op, true, true, K.thrDoors);   // (a threshold entry: what a man can take where he stands is dealt before anybody is walked to a door)
         if (op.thr && K.thrDoors) this.holdDoors(op);

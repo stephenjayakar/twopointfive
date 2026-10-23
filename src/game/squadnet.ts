@@ -1,4 +1,4 @@
-// THE SQUAD REACHES YOU, AND THE QUICK KEY SAYS WHY. Three rules, a switch each, all on in the page and off here and on the frozen stand:
+// THE SQUAD REACHES YOU, AND THE QUICK KEY SAYS WHY. Four rules, a switch each, all on in the page and off here and on the frozen stand:
 //   SQUADNET.on     A TEAMMATE'S LINE SAID WHERE YOU CANNOT SEE IT STILL REACHES YOU. A bubble was drawn only over a head on the screen: with the squad two
 //                   rooms off, 'stacked up.', 'can't get there.' and a room called clear were said to nobody. With the rule the line is drawn NEAR YOU, on
 //                   the side he is on, with his name and an arrow his way (ui/bubbles.ts), and the net clicks in your ear as it arrives. A TEAMMATE GOING DOWN
@@ -12,10 +12,15 @@
 //                   only when the search ended by its own bar (DOORTOOLS.deadCells: less floor unseen than sends a man on); with a search cut short and
 //                   nobody in sight there, the lead says the room is quiet and that they did not see all of it. An entry onto open floor has no search
 //                   and is called as it was.
+//   SQUADNET.endCall  EVERY ENTRY ENDS WITH A CALL. The lead called only a room the mission has a name for (the room clear's own rooms): an entry into any
+//                   other room (the office's conference room, a hall, every room of a mission with no room list) ended with nobody saying anything. With
+//                   the rule the lead calls those too, by the same rule and of the room fight's own flood: 'room clear.', 'room's quiet. we didn't see
+//                   all of it.', and of open floor, which nobody searches, 'clear so far.' while no enemy on it is in the team's sight.
 // WHAT IT COSTS: the first is the page's alone (where a line is drawn, a click): no man's state, no die, no digest. The second and third change WORDS a man
-// says, so the length of his bubble, which bark clocks read: a run with either on is not the run with it off by digest once such a line is said.
-// SWITCHES: ?squadnet=0 · ?qwhy=0 · ?honestclear=0 on the address; the frozen stand holds all three off (TPS_SQUADNET=1 · TPS_QWHY=1 · TPS_HONESTCLEAR=1 raise
-// them). A recording from before the keys replays with them off (journal.ts applyKnobs).
+// says, so the length of his bubble, which bark clocks read: a run with either on is not the run with it off by digest once such a line is said. The
+// fourth adds a line where there was none: the same.
+// SWITCHES: ?squadnet=0 · ?qwhy=0 · ?honestclear=0 · ?endcall=0 on the address; the frozen stand holds all four off (TPS_SQUADNET=1 · TPS_QWHY=1 ·
+// TPS_HONESTCLEAR=1 · TPS_ENDCALL=1 raise them). A recording from before a key replays with it off (journal.ts applyKnobs).
 // STATE: one SquadNet on the Game (rows, the men already called down, what is owed the ear this frame): in the rollback snapshot with everything else the
 // Game reaches. THIS FILE ONLY READS THE GAME, as cues.ts does.
 // CHECK: bun run tools/qa/squadnet-check.ts (probes.ts squadnet), both stands; SQUADNET_BREAK=1 must fail.
@@ -30,6 +35,8 @@ export const SQUADNET = {
   why: false,
   /** a room is called clear only when its search was not cut short */
   clear: false,
+  /** an entry into a room the mission has no name for ends with the lead's call too */
+  endCall: false,
   /** how far from you a line from off the screen is drawn, as a share of the view's shorter side */
   near: 0.24,
   /** the click a line from off the screen arrives with (gain; 0 = silent), pitched up off the defenders' net's own squelch (cues.ts plays the same voice at rate 1) */
@@ -42,7 +49,7 @@ export const SQUADNET = {
 
 /** a row of the squad's net that no living man's bubble carries (a man down): where it came from, and until when */
 export interface NetRow { text: string; at: Vec3; t: number; dur: number }
-const newStats = () => ({ lines: 0, downs: 0, whys: 0, quiets: 0, clears: 0 });
+const newStats = () => ({ lines: 0, downs: 0, whys: 0, quiets: 0, clears: 0, ends: 0 });
 
 export class SquadNet {
   rows: NetRow[] = [];
@@ -94,4 +101,13 @@ export function roomCall(g: Game, name: string, left: number, inside: boolean, s
   if (!inside && left <= 0) { S.clears++; return `${name} clear.`; }
   if (left > 0 && !seen) { S.quiets++; return `${name}${/[^s]s$/.test(name) ? ' are' : "'s"} quiet. we didn't see all of it.`; }   // ('bunks are quiet', 'server room's quiet')
   return null;
+}
+
+/** the call at the end of an entry into a room the mission has no name for (doortools.ts): `open` = open floor (a hall, a yard: nobody searches it), the
+ *  rest as roomCall's, counted of the room fight's own flood. Null: nothing is said — and with the switch off nothing ever is, as it was. */
+export function plainCall(g: Game, open: boolean, left: number, inside: boolean, seen: boolean): string | null {
+  if (!SQUADNET.endCall) return null;
+  const call = open ? (seen ? null : 'clear so far.') : roomCall(g, 'room', left, inside, seen);   // (open floor: what they can see of it, and they say so)
+  if (call) g.squadNet.stats.ends++;
+  return call;
 }
