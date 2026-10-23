@@ -26,7 +26,7 @@ interface Tally { code: number; steps: number; secs: number; onMan: number; abou
 async function play(on: boolean | null): Promise<Tally> {
   const { runLesson } = await import('./lesson-run.ts');
   const T: Tally = { code: -1, steps: 0, secs: 0, onMan: 0, about: 0, flinch: 0, back: 0, waits: 0, longWaits: 0, longFaced: 0, lateSet: 0, lateNull: 0, stoodOn: null, g: null, when: [] };
-  const hist: { t: number; yaw: number; x: number; z: number }[] = []; let aboutUntil = -1, began = -1, waitT = -1, waitYaw = 0, flinched = false, faced = false, backUntil = -1;
+  const hist: { t: number; yaw: number; x: number; z: number; f: boolean }[] = []; let faceT = -9, aboutUntil = -1, began = -1, waitT = -1, waitYaw = 0, flinched = false, faced = false, backUntil = -1;
   const upd = GM.Game.prototype.update;
   GM.Game.prototype.update = function (this: any, ...a: any[]) {
     if (T.stoodOn === null) T.stoodOn = !!PAIR.steady; if (on !== null) PAIR.steady = on;
@@ -34,10 +34,12 @@ async function play(on: boolean | null): Promise<Tally> {
     const m = g.guards.find((x: any) => x.team === 'operative' && x.unit && x.state !== 'dead'), A = m ? g.orders.of(m) : null, go = String(A?.going ?? '');
     const waiting = go.startsWith('waiting'), onMan = waiting || go.startsWith('moving up on') || go.startsWith('on ') || go.startsWith('set on');
     if (!m || !onMan) { hist.length = 0; waitT = -1; began = -1; return r; }
-    T.onMan++; const c = m.char, t = g.time, yaw = c.bodyYaw; if (began < 0) began = t; hist.push({ t, yaw, x: c.pos[0], z: c.pos[2] }); while (hist.length && t - hist[0].t > 1.5) hist.shift();
-    // an about-turn: the swing since any sample of the last second and a half, his feet near where it began
+    T.onMan++; const c = m.char, t = g.time, yaw = c.bodyYaw; if (began < 0) began = t; if (A.face != null) faceT = t; hist.push({ t, yaw, x: c.pos[0], z: c.pos[2], f: t - faceT < 0.5 }); while (hist.length && t - hist[0].t > 1.5) hist.shift();
+    // an about-turn: the swing since any sample of the last second and a half, his feet near where it began. Not from a sample taken while a wait that
+    // lasted had him squared to his man (the order's own `face`, or the half second after it lets go): turning back onto his way from that is the wait
+    // ending, not a corner he has passed (the pair lesson's rebuilt level has one such wait, 121 degrees off his way)
     if (t > aboutUntil && t - began > 2) for (const h of hist)   // (not the turn he sets off with: the job's first two seconds)
-       if (Math.abs(wrap(yaw - h.yaw)) > 120 * Math.PI / 180 && Math.hypot(c.pos[0] - h.x, c.pos[2] - h.z) < 1.5) { T.about++; T.when.push(`${t.toFixed(1)}s ${go.slice(0, 22)} ${(h.yaw * 57.3).toFixed(0)}→${(yaw * 57.3).toFixed(0)}`); aboutUntil = t + 1.5; break; }
+       if (!h.f && Math.abs(wrap(yaw - h.yaw)) > 120 * Math.PI / 180 && Math.hypot(c.pos[0] - h.x, c.pos[2] - h.z) < 1.5) { T.about++; T.when.push(`${t.toFixed(1)}s ${go.slice(0, 22)} ${(h.yaw * 57.3).toFixed(0)}→${(yaw * 57.3).toFixed(0)}`); aboutUntil = t + 1.5; break; }
     // a flinch: parked on a watched way, his chest swung inside the wait's first second
     if (waiting) { if (waitT < 0) { waitT = t; waitYaw = hist.length > 1 ? hist[hist.length - 2].yaw : yaw; flinched = false; faced = false; T.waits++; }
       const sw = Math.abs(wrap(yaw - waitYaw)); if (!flinched && t - waitT < 1.0 && sw > 45 * Math.PI / 180) { flinched = true; T.flinch++; }
