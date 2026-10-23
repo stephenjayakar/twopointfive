@@ -125,6 +125,7 @@ import { PAIRUP, PAIRUP_DEFAULTS, savePairUp, pairUpApply, pairUpSummary } from 
 import { SPOTTED, SPOTTED_DEFAULTS, saveSpotted, spottedSummary } from '../game/spotted';
 import { PLAN } from '../game/floorplan';
 import { CLOSE, closeSummary, closeSeat, closeUnseat, closeSeated } from '../game/close';
+import { FOOTFALL } from '../game/player';
 import { KITANIM, kitSummary } from '../game/kitanim';
 import { INHAND } from '../game/inhand';
 import { GUNHAND } from '../game/gunhand';
@@ -1839,6 +1840,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.toggleBox(cl, 'melee ▸ LMB knife, RMB knockout', () => CLOSE.lethal, v => { CLOSE.lethal = v; }, 'hands empty in reach of a man: the left click is the knife (he is dead, a kill on the card), the right click the knockout (out cold, breathing); off = the left click is the knockout and the right click nothing, as it was', true);
     panel.toggleBox(cl, 'in a hold ▸ LMB knife, RMB choke', () => CLOSE.heldClicks, v => { CLOSE.heldClicks = v; }, 'a man in your arm, the knife at his throat: the left click uses it (he is dead, a kill on the card; once begun nothing stops it), the right click starts the choke as its Space row does (out cold, breathing). Not with the pistol at his head, not on a civilian. Its own switch (also ?noheldclicks on the address): it does not need the close-in mode. Off = neither click does anything in the arm hold, as it was.', true);
     panel.toggleBox(cl, 'crouched ▸ the reach goes up for his neck', () => CLOSE.reachUp, v => { CLOSE.reachUp = v; }, 'crouched in reach behind a standing man: the free hand goes up for his neck and the trunk comes up with it; off = the hand at the small of his back, as it was. Its own switch (also ?noreachup on the address).', true);
+    panel.toggleBox(cl, 'one footfall a step', () => FOOTFALL.once, v => { FOOTFALL.once = v; }, 'a step is heard once: when the legs flip between forwards and backwards frame by frame (a man walked in the arm, or the two keys by turns) the walk cycle rocks over one edge; on = a footfall needs a quarter of the cycle walked since the last one; off = every frame of the rocking files a footfall, as it always did (also ?footfallonce=0)');
     panel.toggleBox(cl, 'a strike lands on an alert man', () => CLOSE.alertStrike, v => { CLOSE.alertStrike = v; }, 'a man who is onto you cannot be grabbed, as ever; on = a click with the hands empty still strikes him from any side in reach', true);
     panel.slider(cl, 'mode within (m)', 1.5, 6, 0.1, () => CLOSE.modeM, v => { CLOSE.modeM = v; CLOSE.modeOutM = v + 0.6; });   // (out again 0.6 m further off, as shipped: the band follows the slider both ways)
     panel.slider(cl, 'dark ▸ unseen under', 0, 0.5, 0.01, () => CLOSE.darkAt, v => { CLOSE.darkAt = v; CLOSE.litAt = Math.max(CLOSE.litAt, v + 0.02); }, 'the light on you (your light meter, 0‥1) under which a man does not see you just for being inside 1.8 m of him: what he sees then is what the light, his cone and your movement give him');

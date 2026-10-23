@@ -65,6 +65,7 @@ import { FRAG } from './frag';
 import { GUNWALL } from './gunwall';
 import { REARWATCH } from './rearwatch';
 import { CLOSE } from './close';
+import { FOOTFALL } from './player';
 import { KITANIM } from './kitanim';
 import { WORK } from './workthings';
 import { WAND } from './wand';
@@ -357,6 +358,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.chokeBeats === undefined) TAKEDOWN.chokeBeats = false;   // (…from before the choke's beats: his hands came onto the arm over most of a second and fell as he was lowered)
     if (T.haul === undefined) TAKEDOWN.haul = false;   // (…from before the choke hauled him up and back: both men stood where the hold had them)
     if (T.kill === undefined) TAKEDOWN.kill = false; }   // (…and from before the kill from the hold was a move: the phase was drawn as the hold, and he fell as the knife from behind dropped him)
+  if (!k.tables.FOOTFALL) FOOTFALL.once = false;   // (a file from before one footfall a step: every crossing of the walk cycle's half filed one, a rocking cycle one a frame)
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
   else if ((k.tables.STEALTHPOSE as Partial<typeof STEALTHPOSE>).nod === undefined) STEALTHPOSE.nod = false;   // (…and one from before a goggle nod showed in the look under a door: the look took the nod back out of his head)
   if (!k.tables.PEEKSIGHT) PEEKSIGHT.on = false;   // (a file from before a peek round the end of a wall lifted the fog: his eye stayed over his feet)
