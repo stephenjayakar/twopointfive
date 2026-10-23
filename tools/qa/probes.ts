@@ -3287,6 +3287,8 @@ if (on('registry-level', 'registry', 'all')) await run('registry-level', async (
 if (on('registry-stage', 'registry', 'all')) await run('registry-stage', async () => (await import('./registry-probes.ts')).registryStage());
 if (on('registry-doors', 'registry', 'all')) await run('registry-doors', async () => (await import('./registry-probes.ts')).registryDoors());
 if (on('registry-walk', 'registry', 'all')) await run('registry-walk', async () => (await import('./registry-probes.ts')).registryWalk());
+// a follower goes by the doors Sam took where his own short way to his place would take others (orders.ts ORDERS.trailDoors; traildoors-check.ts; TRAILDOORS_BREAK=1 must fail)
+if (on('trail-doors', 'registry', 'all')) await run('trail-doors', async () => (await import('./traildoors-check.ts')).trailDoorsCheck());
 if (on('registry-run', 'registry', 'all')) await run('registry-run', async () => (await import('./registry-probes.ts')).registryRun());
 // 'consulate' = the four's hostage rescue on its own level (levels/consulate.json ← tools/levels/consulate.ts; consulate-probes.ts): the file, the staging with
 // four (three roamers drawn onto five marks), and the scripted commander by the main door and by both doors — the side door a pair's
