@@ -62,10 +62,10 @@ const mud: Mat = (u, v, t) => {
   const sweep = vn(wu, wv, 7, 46, 15) * vn(u, v, 9, 9, 16);                       // strokes that come and go
   t.h = 0.02 * (lump - 0.5) + 0.005 * (mid - 0.5) + 0.003 * (sweep - 0.25);
   tint(t, 1 + 0.2 * (lump - 0.5) + 0.1 * (mid - 0.5));
-  const region = smooth(0.5, 0.68, fbm(u, v, 3, 3, 17));                           // cracks keep to the patches that dried hard
+  const region = smooth(0.6, 0.74, fbm(u, v, 3, 3, 17));                           // cracks keep to the patches that dried hard
   const c = cells(u + 0.02 * (mid - 0.5), v + 0.02 * (lump - 0.5), 6, 18);
-  const crack = smooth(0.07, 0.015, c.f2 - c.f1) * region;
-  t.h -= 0.007 * crack; tint(t, 1 - 0.45 * crack); t.rough = 0.95 + 0.03 * crack;
+  const crack = smooth(0.045, 0.01, c.f2 - c.f1) * region * (0.35 + 0.65 * vn(u, v, 11, 11, 21));   // (fewer, finer, and no two of one weight)
+  t.h -= 0.007 * crack; tint(t, 1 - 0.4 * crack); t.rough = 0.95 + 0.03 * crack;
   const s = cells(u, v, 44, 19, 1);                                               // straw: a short pale fibre in about a third of the cells, each at its own angle
   if (s.id < 0.2) {
     const a = s.id * 97, ca = Math.cos(a), sa = Math.sin(a), along = s.dx * ca + s.dy * sa, across = Math.abs(-s.dx * sa + s.dy * ca);

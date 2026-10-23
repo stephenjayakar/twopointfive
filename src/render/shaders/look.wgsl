@@ -110,8 +110,8 @@ fn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, alb
       if (b.h.y > 0.6 && top < CEIL_Y + 0.6) {                                  // its head: bleached and worn back, and the dark runs the rain leaves under it
         let dTop = top - wp.y;
         let bleach = (1.0 - smoothstep(0.05, 0.3 + 0.35 * detailNoise(vec2f(uv.x * 1.3, 6.6)), dTop)) * k.w;
-        let run = pow(detailNoise(vec2f(uv.x * 7.0, 1.7)), 3.0) * (1.0 - smoothstep(0.2, 1.3 + 1.2 * detailNoise(vec2f(uv.x * 2.1, 4.4)), dTop)) * smoothstep(0.02, 0.12, dTop) * k.w;
-        alb *= 1.0 + 0.22 * bleach; alb *= 1.0 - 0.28 * run;
+        let run = pow(detailNoise(vec2f(uv.x * 7.0, 1.7)), 3.0) * smoothstep(0.45, 0.7, detailNoise(vec2f(uv.x * 0.55, 12.3))) * (1.0 - smoothstep(0.2, 1.3 + 1.2 * detailNoise(vec2f(uv.x * 2.1, 4.4)), dTop)) * smoothstep(0.02, 0.12, dTop) * k.w;
+        alb *= 1.0 + 0.22 * bleach; alb *= 1.0 - 0.3 * run;   // (runs come in stretches, under where the head sheds, never as a fence of stripes)
       }
     }
   }
