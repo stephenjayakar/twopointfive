@@ -55,7 +55,8 @@ async function one(browser, name) {
     for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 30); if (i % 4 === 3 || i === n - 1) { await window.__engine.device.queue.onSubmittedWorkDone(); await yieldM(); } }
     await yieldM(); const st = window.__smoke.stats; return { t: +window.__game.time.toFixed(2), pool: st.pool, coarse: st.coarseAll ?? st.coarse, emitters: st.emitters, drawn: window.__fire.drawn.length, light: +window.__fire.targets[0].light.intensity.toFixed(2) };
   }, { n, pin, at: boot.fire.pos, stand: boot.stand });
-  await step(WARM, PINS[VIEWS[0]]); const rows = [];
+  for (let k = 0; k < WARM; k += 4) { const t0 = Date.now(), r = await step(Math.min(4, WARM - k), k === 0 ? PINS[VIEWS[0]] : null); log(`${name}: warm ${k + 4} of ${WARM}`, `${((Date.now() - t0) / 4000).toFixed(1)} s a frame`, JSON.stringify(r)); }
+  const rows = [];
   for (const v of VIEWS) { const pin = PINS[v]; if (!pin) continue;
     for (let k = 0; k < STILLS; k++) { const r = await step(k === 0 ? 2 : GAP, k === 0 ? pin : null);
       const file = path.join(OUT, `fire_${name}_${v}_${String(k).padStart(2, '0')}.png`); await page.screenshot({ path: file, timeout: 300000 }); rows.push(r); log(`${name}: ${v} ${k}`, JSON.stringify(r), '→', file); } }
