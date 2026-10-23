@@ -92,7 +92,7 @@ class RingDraw {
       e.g.style.display = w ? '' : 'none'; if (!w) return;
       e.g.setAttribute('class', `${V.lit === w.key ? 'lit' : ''}${w.off ? ' off' : ''}${one ? ' lone' : ''}`.trim());
       const words = wedgeWords(w);
-      if (one) { const as = `pill${HANDRING.loneWrap ? ' wrap' : ''} ${words}`; if (e.as !== as) this.place(e, lonePill(w, this.els.length), as, words); }   // (the pill is worked out only when its words change)
+      if (one) { const as = `pill|${HANDRING.loneWrap ? 2 : 1}|${words}`; if (e.as !== as) this.place(e, lonePill(w, this.els.length), as, words); }   // (the pill is worked out only when its words change)
       else { e.text.textContent = words; this.place(e, e.home, 'wheel'); } });
   }
 }

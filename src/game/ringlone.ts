@@ -36,7 +36,9 @@ export const RING_RIM = 44;
 /** px: how far each way from its middle a ring's wedges and words may lie (ui/cmdring.ts `clear` keeps the HUD from under it) */
 export const RING_BOX = { x: 190, y: 80 };
 /** px: how far out the pill's digit sits · the pill's height · the room after its words · a letter's width (10 px mono, spaced) · the most letters a pill is
- *  drawn for (the place the game reads is a pill of that many: pillBox) · how far apart a two-line pill's lines sit, which is how much taller it is (loneWrap) */
+ *  drawn for (the place the game reads is a pill of that many: pillBox) · how far apart a two-line pill's lines sit, which is how much taller it is (loneWrap).
+ *  THE GAME READS THESE (pillBox, through `r`, `h`, `pad`, `char`, `max` and `lead`) and no recording carries them: one changed moves the place a
+ *  recorded cursor is read on */
 export const LONE = { r: 34, h: 22, pad: 10, char: 6.6, max: 20, lead: 12 };
 type Wedge = { key: number; text: string; opens?: boolean };
 /** the way wedge `key` of `n` points (rad; 1 is up, clockwise) */
