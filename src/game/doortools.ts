@@ -107,6 +107,7 @@ import { gunFirst, gunTurn, gunBefore } from './gunroles';   // (called inside f
 import { OWNCHARGE } from './owncharge';   // (a leaf: the player's own charges' one switch)
 import { OWNBLOW, SAM_BY, blowKeyWord, blowTail } from './ownblow';   // (called inside rows, notes and the key's press only: his own charge is his own actions' to set off — ownblow.ts)
 import { PICTURE, PICTURE_STATS, anyIdea, safestSets } from './picture';
+import { runnerNobody } from './runner';   // (asked inside a tick only: false with its switch off)
 
 /** `WORDCUTS_BREAK=1` (a check's own word): the rule's body left out, everything else as it is */
 const WORDCUTS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.WORDCUTS_BREAK === '1';
@@ -2342,7 +2343,7 @@ export class DoorTools {
               const yaw = yawTo(p, w), far = flat(p, w) + K.lastOutM; R.A.watch = [p[0] + Math.sin(yaw) * far, 1.2, p[2] + Math.cos(yaw) * far]; R.A.face = yaw; R.face = yaw; R.out = true;
               this.beat(op, `door · ${m.callsign}`); break; } } }
         const RC = g.roomClear, room = RC?.active ? RC.rooms.find(r => r.def.id === RC.roomAt((WORDS.on ? lead : op.men[0]).char.pos)) : null;   // (the room the man who calls it stands in)
-        if (room) { const ins = g.guards.filter(x => x.state !== 'dead' && x.team === 'hostile' && RC!.roomAt(x.char.pos) === room.def.id);
+        if (room) { const ins = g.guards.filter(x => x.state !== 'dead' && x.team === 'hostile' && !runnerNobody(x) && RC!.roomAt(x.char.pos) === room.def.id);
           // (squadnet.ts: with its switch on 'clear' is said only of a room whose search was not cut short — off, the call as it was)
           const call = roomCall(g, room.def.name, SR && SR.left >= K.deadCells ? SR.left : 0, ins.length > 0, ins.some(x => inSight(g, x))); if (call) g.say(lead, call); }   // (floor unseen under the search's own bar is floor no man could see: the search ended, it was not cut short)
         else if (SQUADNET.endCall) { const R = this.roomIn(op);   // (squadnet.ts: a room the mission has no name for is called too, of the room fight's own flood — off, nothing is said of it, as it was)

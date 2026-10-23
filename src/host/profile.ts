@@ -337,6 +337,7 @@ export function pageSwitches(q: URLSearchParams): void {
   STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
   FLINCH.on = q.get('flinch') !== '0'; FLINCH.run = q.get('flinchrun') !== '0';   // a man flinches when fire comes close (game/flinch.ts): every close round of the other side ducks a man, the player's own included, by how near it was and how drilled he is; a green man alone kept under it drops his gun and runs: ON in the page; ?flinch=0 = nobody ducks but on the suppression model's own edge, as it was; ?flinchrun=0 = the duck alone, nobody runs from fire
   RUNNER.anyway = q.get('runanyway') !== '0';   // …and he runs for it no matter what: with no way out round the enemies he knows of he runs for the outside regardless, and a rifleman drops his sidearm too (runner.ts anyway)
+  RUNNER.nobody = q.get('runnobody') !== '0';   // …and from then on he is nobody's enemy on the books: no teammate calls 'contact' on him, no room waits on him to be called clear, he is no mate's company and nobody's voice (runner.ts nobody)
   RUNNER.on = !q.has('norunner');   // drops it and runs (game/runner.ts): a broken man alone, his magazine run dry, with an enemy in his eyes at arm's length shouts that he is done, lets the weapon fall and runs — to his mates, then out of the building: ON in the page; ?norunner = he stays and changes his magazine, as he did
   DARKDOOR.on = !q.has('nodarkdoor');   // not in there alone (game/darkdoor.ts): a green man, alarmed and alone, stops at the doorway of a dark room, says so, sweeps the opening and waits for a mate — then they go in together, or nobody comes and he gives it up: ON in the page (it acts only with morale on); ?nodarkdoor = every man walks into the dark as he did
   DOZE.on = !q.has('nodoze');   // dozing in the dark (game/doze.ts): a calm staff man with a long wait in an unlit place sits in the chair there and nods off, and can be woken — ON in the page; ?nodoze = every man stands his wait awake, as it was
@@ -586,6 +587,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'MORALE.on': 'TPS_MORALE=1',
   'RUNNER.on': 'TPS_RUNNER=1',
   'RUNNER.anyway': 'TPS_RUNANYWAY=1',
+  'RUNNER.nobody': 'TPS_RUNNOBODY=1',
   'STARTLE.on': 'TPS_STARTLE=1',
   'ROWSET.on': 'TPS_ROWSET=1',
   'SMOKEBREAK.on': 'TPS_SMOKEBREAK=1',

@@ -1403,7 +1403,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECK: `probes.ts laststand-fled` (family laststand; the block, seed 2, three left, one made to run by `runnerBreak`, forty seconds): the check is
   called by one of the two who fight, `up0` 2, the runner says nothing and is not named, no count above 2 — green on both stands (the frozen one with
   `RUNNER` / `MORALE` raised by hand after the stand is up), and RED before the mend on the page's stand ("Tango 6: radio check …", his lines 2,
-  count 3). There is no `_BREAK` word: there is no switch to put off. STILL OPEN, read from the code only, none exercised — the same miss elsewhere,
+  count 3). There is no `_BREAK` word: there is no switch to put off. STILL OPEN (10-23: cues, suppression's barks, fogofwar, doortools, `hasMate` and
+  `mateBy` are since mended under `RUNNER.nobody`, the last bullet of this file; the others stand), read from the code only, none exercised — the same miss elsewhere,
   each its owner's: cues.ts `squadVoice` / `fit` (he can be his squad's mouth); guards.ts `offNet`, `radioCaller`, `spokesman`, `assignLockdown`,
   `planClears` (the night staff's net: a fled staff man is the calmest man on it) and the "he's down — clear." line's `left`; pressure.ts `alive`
   (Hard: he can be sent on a press, lead "we go and look", or be the mate that keeps the true last man from being last); suppression.ts `reacts`
@@ -1443,7 +1444,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   taken / wiped / stalled 10 / 16 / 4, careful 28 / 1 / 1 — because one man in the 60 dropped his gun at all (careful, seed 4) and he had a careful way out;
   the second look was never taken. So this is a rule for the cornered man of a recorded game, and the room-fight tally says nothing about how often a player
   meets it. GATES on the tree before the join: runner, morale, picture, laststand, flinch, startle, enemysquads, netquiet, roomfight — all nine green on the
-  frozen stand; on the page's stand eight green and `runner` red on its two old (2) lines (mates in another room), the same two with `TPS_RUNANYWAY=0`.
+  frozen stand; on the page's stand eight green and `runner` red on its two old (2) lines (mates in another room), the same two with `TPS_RUNANYWAY=0`. (Those two lines are traced and
+  mended in the next bullet.)
   `lesson-run tut-squad` and `tut-plan` on the page's stand: all steps, the same length of play with the key on and off (seed 1; neither run routed a last
   man).
   NOT DONE / NOT SEEN: never seen on a GPU and never played. The sidearm leaves his thigh as an item with the same small toss a dropped gun has; nothing is
@@ -1452,3 +1454,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   there is not decided. The tutorials' scripted last man (`c.rout` in tut-squad and tut-plan) is this same run: he now drops both guns and, cornered by the
   team, runs past it for the nearest outside; no lesson run here routed one, so that is unplayed and unmeasured. Other modules that still take a man who has
   run for a calm living one (who speaks on the net, who counts as company) are not touched here: more men running through a level will meet them more often.
+- **A man who has run is nobody's enemy on the books** (`src/game/runner.ts`, `RUNNER.nobody`; 10-23, the first of the STILL OPEN list two bullets up, taken
+  now that every man who gives up crosses the level instead of settling in a corner). SWITCH: ON in the page (`?runnobody=0` = as it was), OFF in the module
+  and on the frozen stand (`TPS_RUNNOBODY=1` raises it, and it acts only with `TPS_MORALE=1 TPS_RUNNER=1` beside it; on the page's stand `TPS_RUNNOBODY=0`
+  holds it off). Row in `FROZEN_HOLDS`, the table is the registered `RUNNER`, `journal.ts applyKnobs` puts it off for a recording from before the key;
+  debugger, Enemy nerve: '… and nobody counts him after'. TWO QUESTIONS, both false with the key or `RUNNER.on` off: `runnerNobody(gd)` (from the DROP: he
+  counts for nothing) and `runnerMute(gd)` (from the SHOUT: he speaks for nobody). WHO ASKS: fogofwar.ts `tellCalls` (no teammate calls 'contact' on him,
+  and his footfall is no 'heard' call); doortools.ts's "<room> clear." (he holds no room: the lead calls it clear with him low in its corner); morale.ts
+  `hasMate` and darkdoor.ts `mateBy` (he is no mate's company, so the man left with him is alone); suppression.ts (`supBark`: he says nothing about the
+  fire; and he is neither the speaker nor the OTHER man of "they've got us pinned!"); cues.ts `cue` / `fit` (he is not his side's voice, and `squadVoice`
+  passes him over).
+  CHECK: `bun run tools/qa/probes.ts runnobody` (families runner, ai; 8 lines on BOTH stands; `RUNNOBODY_BREAK=1` = 6 FAIL on both): the block, one
+  rifleman broken through `runnerBreak` — a teammate with a line to him calls contact with the key off and nothing with it on; the team's real 'open and
+  clear' through the door of the room he is low in ends in no call with it off and "comms room clear." with it on; a mate three metres off is not alone /
+  alone; twelve rounds past his chest, his bark / nothing; the same rounds past him and a mate, the mate's "got us pinned" / the mate's own line; his
+  side's cue said / refused; the journal; the page flag and the stand's word. Contact, company and voice each also carry a man who has NOT broken with the
+  key on (the old answer). NO LINE for darkdoor.ts `mateBy` (the same clause as `hasMate`, asked only inside the dark room's own move) nor for the 'heard'
+  call (five seconds of his run past a teammate with his back turned put no footfall of his in that teammate's ear in the staging, key on or off: the call
+  may not be reachable for a runner at all).
+  THE OLDER CHECK'S TWO RED LINES ON THE PAGE'S STAND (`runner-check` case (2), "living mates in another room" and "the mates are told, and it MOVES
+  them"; red from the day the gun deal came in, 10-18, not on any expected-red list because that list is the frozen stand's): found by holding each of the
+  page's rules off in turn — `TPS_GUNROLES=0` alone turns them green. Under the deal the two mates left on their posts are on the move by the time he
+  runs and he is still 14 m short of them when `mateSecs` is up: the rule as written, not the case the lines stage. The check now holds the deal off for
+  that one staging (`gunDeal`) and puts it back for the next; runner-check is 34 lines green on both stands. What a runner should do about mates who walk
+  away from him is NOT decided and not checked.
+  MEASURED (headless, 10-23): no tally (the key changes who speaks and who is alone, not a gun; a room-fight tally was not run, so nothing here says how often a
+  player meets it). GATES on the tree before the join, fourteen families — runner, morale, picture, laststand, flinch, startle, enemysquads, netquiet,
+  roomfight, fog, doortools, cues, suppression, darkdoor: all fourteen green on the frozen stand; on the page's stand thirteen green and `suppression` red
+  on one line, `sup-sam` (2) (the player's own scatter under fire), red with the same numbers under `TPS_RUNNOBODY=0`: not this key's, its owner's. On the
+  join with the build head: the runner family (runner-check, runanyway-check, runnobody-check) 51 lines green on both stands; knobs, dice, rollback
+  static, shipped-check and both type checks clean.
+  NOT MENDED, each its owner's, read from the code only (line numbers as of this commit's tree): guards.ts acquireFoe's `left` for "he's down — clear."
+  (a mend was written and taken out: no staging here reached that line for a teammate in a room fight); guards.ts `offNet` / `radioCaller` / `spokesman`
+  / `assignLockdown` / `planClears` (the night staff's net); pressure.ts `alive` and what reads it (`lastAlone`, the look pair's `free`, the press
+  counts); frag.ts's first caller of "grenade!"; roomfight.ts `cue()` (a teammate still turns his muzzle to a fled man's footfalls, `stepBy`); needs.ts
+  `partnerFor` / `partnerReply`; qrf.ts `staffVoice` / `silentNet`; buddy.ts `alive`; cues.ts `note()`'s callsign and the 'calm' cue; and the suspected
+  ones nobody has read to the end (digin.ts, roomfight.ts `lost`, morale.ts's feed, civilians.ts, spotted.ts, sneak.ts, squad40.ts, verdict.ts). THREE
+  SPELLINGS STAND SIDE BY SIDE and were left so: flinch.ts `mateBy`, enemysquads.ts `fit` and laststand.ts `fitGd` ask `runnerOwns` with no key (from
+  the shout, always), the readers above ask under this key; for the 0.6 s between his shout and his drop a mate is company to morale and not to flinch.
+  NOT SEEN: never seen on a GPU and never played. The page was only booted on the software adapter (`PORT=<port> node tools/qa/runanyway-page.cjs`: its key-on run, which opens the page as it ships and so with this key on, passes
+  with no page error; its second load was cut by the time cap on a loaded machine and proves nothing).

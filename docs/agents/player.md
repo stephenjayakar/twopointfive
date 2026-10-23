@@ -1381,8 +1381,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   what each living man of the squad is doing, loud or quiet, who the orders go to, the squad's charges, bangs and frags, the plain notes of the
   block ('ready on your word', 'word given · waiting for'), a row's alternative ('or sprint into it'), a thing's name and state over its row
   (a set charge's warning on the door's own heading is in `cornerNotes`). With a card up over the game the top line says the objective
-  again; under a ring whose words cross the panel the objective fades with the rest of it. The maintainer's idea for those is a
-  card on Tab (objectives in full and the squad's kit), not built. The picture only: the rows, the squad's block and the objective's words are
+  again; under a ring whose words cross the panel the objective fades with the rest of it. Their home is the card on Tab (`ui/tabcard.ts`, `docs/agents/menus.md`: the objective in full and the squad with its kit). The picture only: the rows, the squad's block and the objective's words are
   made as they were, so a lesson's frame that keeps a row back still keeps it back, and a key's line of `cornerNotes` is kept back where the frame
   keeps the squad's notes back. CHECK: `handring`, its 'corner panel' line, both stands; `HANDRING_BREAK=1` red, and `HANDRING_BREAK=corner` (this rule
   off, the rest on; likewise `lone`, `bare`, `onThing`, `turn`) red on that line alone. The line asks the reduction with rows shaped as the page
