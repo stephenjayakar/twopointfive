@@ -101,7 +101,7 @@ import { STARTLE } from '../game/startle';
 import { ROWSET } from '../game/rowset';
 import { SMOKEBREAK } from '../game/smokebreak';
 import { SHOWWHY } from '../game/showwhy';
-import { FIRE, FIRE_SIZE } from '../game/fire';
+import { FIRE, FIRE_SIZE, FIRE_SHIMMER, FIRE_PLUME, FIRE_EMBERS } from '../game/fire';
 import { FLINCH } from '../game/flinch';
 import { VERDICT } from '../game/verdict';
 import { DARKDOOR } from '../game/darkdoor';
@@ -345,6 +345,8 @@ export function pageSwitches(q: URLSearchParams): void {
   FIRE.on = q.get('fire') !== '0';   // an open fire burns (game/fire.ts: a level's brazier gets a flame, embers, smoke off the solver, a crackle, and its lamp flickers — in the light meter too) — ON in the page; ?fire=0 = the glowing lid and the steady lamp as they were
   FIRE.fog = q.get('firefog') !== '0';   // … drawn under the fog of war as the team last saw it (the picture only): ?firefog=0 = no flame over ground the fog hides, as it was
   FIRE.size = q.get('firesize') === '0' ? 0 : FIRE_SIZE;   // … its lamp the pinpoint the level made it, not the flame's size: the drum's shadow on the ground with a drawn edge, as it was (to compare on a GPU)
+  FIRE.look.shimmer = q.get('fireheat') === '0' ? 0 : FIRE_SHIMMER; FIRE.look.plume = q.get('fireplume') === '0' ? 0 : FIRE_PLUME;   // … the shimmer of the hot air over it, and the smoke drawn off its tips (both the picture only): ?fireheat=0, ?fireplume=0 = without
+  FIRE.embers = q.get('fireembers') === '0' ? 0 : FIRE_EMBERS;   // … and its embers, which are GPU particles: ?fireembers=0 = none
   FIRE.smoke.on = q.get('firesmoke') !== '0';   // … and its smoke, which keeps the smoke solver awake near a fire (picture only): ?firesmoke=0 = the fire with no smoke, to weigh what the smoke costs
   ROWSET.on = q.get('rowset') !== '0';   // a mission row's own hour and weather (game/rowset.ts): a row that names one is always started in it, over the link's — ON in the page; ?rowset=0 = the link's hour and weather as ever (no row names one: nothing to see either way)
   STARTLE.on = q.get('startle') !== '0';   // enemies startle when they first see you (game/startle.ts): a calm man whose own eyes have just told him it is a man jolts, his gun down for a beat, and only then draws — or, green and alone with you close, runs for it: ON in the page; ?startle=0 = he goes for his gun at once, as he did
