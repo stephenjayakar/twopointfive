@@ -1150,10 +1150,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   four is left as written. No switch: a line with no token reads as before, and the old exact-sentence patterns still turn the old
   lines. `checkLesson` refuses, in a step's `line`, `setupLine`, `blowLine` and `ringLine`: a name in braces that is no token (a
   digit, a doubled or trailing space, a `from` left in the man's words), a brace left open, and a line that fits the row's 96
-  characters as written and not once written out the longest of the four ways (`lessonTokenFaults`). NOT checked: a token in a card's
-  text, a `noTap`, a plan or menu line, which `lessonLine` writes out all the same. No level uses a token yet (the tutorial's lines
-  are its owner's to move). CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
-  stands, its break by `NOKNIFE_BREAK=1`. Nobody has read a token's line on the page.
+  characters as written and not once written out the longest of the four ways (`lessonTokenFaults`). A token in a card's
+  text, a `noTap`, a plan, menu or after line is held the same way by `rails.ts railsFaults` since the same day, and a brace in a card's title
+  refused (`missions.md`, "A lesson's words are checked as the page says them"). `tut-quiet` and `tut-pair` use tokens, and `lesson-check` holds every tutorial level to them. CHECK: noknife-check, one line, the four ways the two keys stand and seven bad and three good lines, both
+  stands, its break by `NOKNIFE_BREAK=1`. Read on the page on `tut-quiet` (the software adapter), the stalk and the knife each way; never on a GPU.
+- **The knife's own probe puts the knife back (`tools/qa/hold-pose-probes.ts` `holdKnife`, probe `hold-knife`; 10-23).** It was red on the shipped
+  stand from the day the no-knife rule went on there (three lines: no knife in the arm hold, twice no knife boxes), because the probe wants the thing the
+  rule takes away. It is the check of `?noknife=0`'s build, so while it runs every stage writes `CLOSE.noKnife` down and gives it back after; its third
+  line now wants the drawn man's fist EMPTY a second and a half in when the grab disarms him (`HOLD.disarm` under `HOLD.dropGun`, both on in the page)
+  and full when it does not. `HOLDKNIFE_BREAK=1` writes the rule up (with `CLOSE.on`, which it needs) and three lines fail on either stand. Measured:
+  4 of 4 on both stands, the `hold-pose` family 7 of 7 on both, the break 3 FAIL on both. A check's change only: no game file, no switch.
 - **The wait at a corner (`STALK.corner`, `stalk.ts cornerMan`).** The maintainer, 10-23: "curious if we can make this language work for working corners.
   like when you're at a corner you can either grab or CQC with the right timing". With his back on a wall (the wall hold, not the stack), hands empty, the
   left button HELD lies in wait: the moment a man who is not onto him is inside `cornerM` (1.35 m) with Sam at least `cornerDeg` (110) degrees round from
