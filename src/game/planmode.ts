@@ -6,7 +6,7 @@
 //     While it is up the mouse is the squad's, not Sam's — he does not fire or aim — and Shift, its modifier, is not his sprint.
 //   · SAM STANDS WHERE HE IS AND THE VIEW IS THE HAND'S (the maintainer, 10-20: "your player character is stuck, wasd moves the camera around … it should
 //     feel like you're switching into an RTS mode temporarily"): the walk keys move the view's own point (`look`, which the follow camera is given in
-//     place of him — Game.followPos; no further than `planPanReachM` from him and the men), he goes on facing what he faced when the mode went up
+//     place of him — Game.followPos; no further than where he is still on the screen, CMDRING.planNear, or as first built `planPanReachM` from him and the men), he goes on facing what he faced when the mode went up
 //     (`aim`), and the view comes back to him when the mode is put down. Every other key is still his.
 //     This, and the right button's hold below, is `CMDRING.planRts` (raised by the page with the mode; `?nocmdrts`, and a recording from before the
 //     key, have the mode as it was first built: he walks with it up, the view is on him, a right click orders as the button goes down).
@@ -329,18 +329,32 @@ function up(S: SquadOrders): void {
 export function planEscape(S: SquadOrders): boolean { if (!S.planBack()) return false; PLAN_STATS.toggled++; down(S, S.g.seat.input); return true; }
 /** Sam put somewhere else with the mode up (a restart, a fresh cast): the view starts on him again, and he faces what he faces there */
 export function planHome(S: SquadOrders): void { const P = S.plan, g = S.g, p = g.player.char.pos; if (P.up && P.look) { P.look = [p[0], 0, p[2]]; P.aim = v3c(g.aimPoint); P.rmbT = -1; } }
-/** the walk keys move the view's point, the way they would have walked him (the camera's own basis), `planPanMps` — kept within `planPanReachM` of the
- *  box he and the men stand in, so the view is never lost */
+/** the walk keys move the view's point, the way they would have walked him (the camera's own basis), `planPanMps` — kept inside the box where he is still on the screen
+ *  (planNear) or, as first built, within `planPanReachM` of the box he and the men stand in, so the view is never lost */
 function pan(S: SquadOrders, input: Input, cam: FollowCamera, dt: number): void {
   const P = S.plan, K = CMDRING, L = P.look; if (!L) return;
   const { fwd, right } = cam.planarBasis(); let mx = 0, mz = 0;
   if (input.down(WALK[0])) { mx += fwd[0]; mz += fwd[2]; } if (input.down(WALK[1])) { mx -= fwd[0]; mz -= fwd[2]; }
   if (input.down(WALK[2])) { mx += right[0]; mz += right[2]; } if (input.down(WALK[3])) { mx -= right[0]; mz -= right[2]; }
   const l = Math.hypot(mx, mz); if (l > 1e-6) { L[0] += mx / l * K.planPanMps * dt; L[2] += mz / l * K.planPanMps * dt; }
-  const p = S.g.player.char.pos; let x0 = p[0], x1 = p[0], z0 = p[2], z1 = p[2];
+  const p = S.g.player.char.pos;
+  // (planNear: inside the box where HE is still on the screen — a room's worth, not the level's. The box is the camera's: `right` and `fwd` are the
+  // screen's across and up, and it shrinks as the camera comes in. A point outside it by more than a stride of the pan is walked in, not jumped)
+  if (planNear(S)) {
+    const k = Math.min(1, cam.distance / 21), dx = L[0] - p[0], dz = L[2] - p[2], r = dx * right[0] + dz * right[2], f = dx * fwd[0] + dz * fwd[2];
+    const r1 = Math.max(-K.planNearSideM * k, Math.min(K.planNearSideM * k, r)), f1 = Math.max(-Math.max(0, (K.planNearBackM + BODY_M) * k - BODY_M), Math.min(K.planNearAwayM * k, f));
+    const cx = p[0] + right[0] * r1 + fwd[0] * f1, cz = p[2] + right[2] * r1 + fwd[2] * f1, out = Math.hypot(L[0] - cx, L[2] - cz), step = 2 * K.planPanMps * dt;
+    if (out <= step || !(dt > 0)) { L[0] = cx; L[2] = cz; } else { L[0] += (cx - L[0]) / out * step; L[2] += (cz - L[2]) / out * step; }
+    return;
+  }
+  let x0 = p[0], x1 = p[0], z0 = p[2], z1 = p[2];
   for (const m of S.men('all')) { const q = m.char.pos; x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]); z0 = Math.min(z0, q[2]); z1 = Math.max(z1, q[2]); }
   L[0] = Math.max(x0 - K.planPanReachM, Math.min(x1 + K.planPanReachM, L[0])); L[2] = Math.max(z0 - K.planPanReachM, Math.min(z1 + K.planPanReachM, L[2]));
 }
+/** the floor his body covers up the screen at the camera's tilt, m: it does not shrink as the camera comes in, so the top edge's room is kept in metres */
+const BODY_M = 1.4;
+/** the view is held near him (CMDRING.planNear) — not where a tutorial frame has taken his feet: he could not walk nearer */
+export function planNear(S: SquadOrders): boolean { return CMDRING.planNear && !S.g.rails?.locks('move'); }
 /** what the follow camera follows in Sam's place (Game.followPos; null: him) */
 export function planLook(S: SquadOrders): Vec3 | null {
   const P = S.plan; if (P.up) return P.look;

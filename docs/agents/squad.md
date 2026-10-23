@@ -336,6 +336,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the other time line). STILL OPEN, not this module's: with the THROW PAGE up `floorPlan` reads `squadthrow.ts squadThrowPlans`, whose `view`
   question keeps its answer in that module's own table and searches on the game's, so a game drawn and one not drawn still differ in the whole
   state there (digest equal); line 9 does not play the throw page. Never seen on a GPU.
+- **Plan mode reaches one room, not the level** (`CMDRING.planNear`, `planNearSideM` 6.5 / `planNearAwayM` 4.5 / `planNearBackM` 6;
+  `planmode.ts pan / planNear`; ON in the page with the mode and its RTS view, `?plannear=0`; off in the module and on the frozen stand,
+  `TPS_PLANNEAR=1` beside `TPS_QRING=1 TPS_QPLAN=1`; the journal carries it, a recording without the key replays with it off; debugger: 'Tab ▸ plan
+  mode ▸ the view stays near you'). The maintainer, 2026-10-23: "balancing plan mode: it's too easy to just play this like an RTS. we should instead
+  make it so you can only move a bounded amount from the player. like maybe the player has to roughly be on screen but can be in a corner. the mental
+  model is that it should be good for clearing one room but not the whole level. and we should design things so there's not always a safe place for
+  the player to hide and command, it's really a situational thing."
+  WAS: the view's point went `planPanReachM` (25 m) outside the box Sam AND the men stand in, so it followed the men down the level. NOW: it stays
+  where SAM IS STILL ON THE SCREEN: a box round him in the camera's own basis, at the camera's own distance 6.5 m to either side, 4.5 m with the view
+  pushed up the screen (he is at the bottom) and 6 m with it pulled down (he is at the top). He is parked while the mode is up, so the box does not
+  move; at an edge the view stops going out and slides along it, and in a corner of the box he is in a corner of the screen (the harness's 1600 x
+  1000 view: his feet 92 px in and 99 px up at the bottom corners, 97 px down at the top). ZOOMED IN the box shrinks with the camera's distance
+  (less 1.4 m kept for his own height at the top edge), so he stays on the screen; ZOOMED OUT it does not grow. A view found outside the box (a
+  file from before, a frame's lock let go) is walked in at twice the pan's speed, never jumped. No mark is drawn for the edge. To plan further
+  on he puts the mode down and walks. NOT HELD where a tutorial frame has taken his feet (rails `move` locked: he cannot walk nearer), so the plan
+  mission (`tut-plan`, led from the gate with no feet) plays as it did: 19 of 19 steps by its scripted player on the page's stand with the rule
+  on. That mission's hall and two gates are 19 m from where he is parked and its guardroom view asks for 5.5 m, so to hold the bound it would
+  have to walk him or move him between its parts, and until it does the lesson teaches a reach the game no longer has (its thread's, and the
+  maintainer's call). NOT BOUNDED: where an order may be given (anything on the screen takes a right click: from an edge about 15 m from him at
+  the camera's own distance, about 22 m zoomed all the way out), chains already laid (they walk on and the word still frees them wherever they
+  wait) and a mark of the plan outside the view (it is off the screen). CHECK `probes.ts plannear` (9 lines, both stands, one deal: the rule has
+  no die in it; `PLANNEAR_BREAK=1` fails lines 1, 2, 3, 4 and 6 on both): a walk key for five seconds and a second key to the corner; all eight
+  ways out with his feet and head on the screen; the camera at 12 and at 40; the men put 30 m off; the frame's lock and the walk back in; a view
+  filed further out; a right click from a corner and the ease back; the journal; the stands. `planmode-check`'s rig holds the rule off (its lines
+  19 and 21 ask the reach as first built), so `planmode` and `planplus` do not play it. THE LEVEL HALF of his note (no place that is always safe
+  to command from) is not built here: it is level design, for the level skill and the missions. Nobody has played it; never seen on a GPU.
 - **What the cursor is on is kept by whoever reads the HUD** (2026-10-23; `orders.ts hover / hud / hintView`, `HoverKept`, `ui/hoverkept.ts`; picture
   only, no switch). `hover()`'s answer, kept a tenth of a second while the cursor rests, and the camera it was asked under were fields of the order
   book (`orders.hov`, `orders.hovCam`): a game whose HUD was read each frame differed in the whole state from one never read. Now `hud(kept)` and
