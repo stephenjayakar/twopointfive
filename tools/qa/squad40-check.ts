@@ -161,7 +161,7 @@ export async function squad40Check(): Promise<boolean> {
       const in4 = by(4);
       if (!in4) { verdict(false, 'floor four metres from the spot with a line to it', `none round ${p2(spot)}`); return; }
       R.sam(in4); const wSam = why(R, spot), gSam = give(spot); R.sam(sam0);
-      verdict(wSam === 'you are in it.' && gSam === 'you are in it.', 'the player four metres from where it would burst, with a line: refused "you are in it." — the round is no gentler on him, so it is not sent', `row: ${wSam} · given: ${gSam}`);
+      verdict(/^you(?: are|'re) in it\.$/.test(String(wSam)) && gSam === wSam, 'the player four metres from where it would burst, with a line: refused "you are in it." — the round is no gentler on him, so it is not sent', `row: ${wSam} · given: ${gSam}`);
       const mate = R.team.find((x: any) => !men.includes(x)), mate0 = [...mate.char.pos]; place(mate, in4); R.step(2);
       const wMate = why(R, spot); place(mate, mate0); R.step(2);
       verdict(wMate === `${mate.callsign} is in it.`, 'a teammate four metres from it: refused by his name — nobody is counted on to duck a round that bursts as it lands', `row: ${wMate}`);
@@ -178,7 +178,7 @@ export async function squad40Check(): Promise<boolean> {
       } else console.log('- NOTE — no live spot on the office far enough to stand the player in the line and clear of the burst: that line is not asked here');
       // the men addressed carry none (another man does)
       const wNone = why(R, spot, [mate]);
-      verdict(wNone === 'none with them.', 'the order put to a man who carries none while another does: "none with them." — the round is the man\'s whose card brought it', `row for ${mate.callsign}: ${wNone} · the squad has ${S40.squad40Left(game)}`);
+      verdict((wNone === 'none with them.' || wNone === "nobody's carrying one."), 'the order put to a man who carries none while another does: "none with them." — the round is the man\'s whose card brought it', `row for ${mate.callsign}: ${wNone} · the squad has ${S40.squad40Left(game)}`);
       // his sidearm in his hands: no launcher under it
       const one = men.find((x: any) => why(R, spot, [x]) === null);
       if (one) { const gun = one.weapon; one.weapon = new Firearm(WEAPONS.fiveseven); const wGun = why(R, spot, [one]); one.weapon = gun;
@@ -202,7 +202,7 @@ export async function squad40Check(): Promise<boolean> {
       const other = armed(R).find((x: any) => x !== who), ux = (spot[0] - p[0]) / d, uz = (spot[2] - p[2]) / d, sam0 = [...game.player.char.pos]; let asked = false; const tries: string[] = [];
       if (other) for (const side of [1.5, -1.5, 2.5, -2.5, 3.5, -3.5]) { const q = [at[0] - ux * 6.5 - uz * side, 0, at[2] - uz * 6.5 + ux * side], t = O.targetAt(q); if (asked || t.kind !== 'floor' || dist(t.at, q) > 0.3) continue;
         R.sam(q); const w1 = why(R, spot, [who]), w3 = why(R, spot, [other]), w2 = why(R, spot, [who, other]); R.sam(sam0); tries.push(`${p2(q)}: ${w1} / ${w3}`);
-        if (w1 === 'you are in it.' && w3 === null) { asked = true; verdict(w2 === null, 'the nearer man\'s round would go off on a hostile with the player in it, the next man\'s is clean: the row is live and the next man is the one asked', `Sam at ${p2(q)} · ${who.callsign} alone: ${w1} · ${other.callsign} alone: ${w3} · both: ${w2}`); } }
+        if (/^you(?: are|'re) in it\.$/.test(String(w1)) && w3 === null) { asked = true; verdict(w2 === null, 'the nearer man\'s round would go off on a hostile with the player in it, the next man\'s is clean: the row is live and the next man is the one asked', `Sam at ${p2(q)} · ${who.callsign} alone: ${w1} · ${other.callsign} alone: ${w3} · both: ${w2}`); } }
       if (!asked) console.log('- NOTE — no place on the office to stand the player in one man\'s burst and out of the next man\'s: the pass-over is not asked here (' + (other ? tries.join(' · ') || 'no floor beside the line' : 'one man armed') + ')');
       R.step(20);
       const w = why(R, spot, [who]), he0 = HE40_LOG.length, log0 = SQUAD40_LOG.length;

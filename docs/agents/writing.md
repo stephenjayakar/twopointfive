@@ -37,9 +37,9 @@ participle, and don't tack a verbless phrase on the end. A plain "when", "if" or
 | Before | After |
 | --- | --- |
 | Where the sound was he stops, his back to you. | He'll check out the sound and then stop, with his back to you. |
-| Stacked on a door, they wait for your word. | Once they're stacked on a door, they'll wait until you tell them to go. |
+| Stacked on a door, they wait for your word. | Once they're stacked on a door, they'll wait until you say go. |
 | Kept down, the same key opens a ring with the rest of them. | Hold the same key down to open a ring with the rest of the orders. |
-| There they wait for your word. | They'll wait there until you tell them to go. |
+| There they wait for your word. | They'll wait there until you say go. |
 
 **2. Talk to "you", and you press the key.** The player is the one doing things. A key never does anything by itself, and a key
 followed by a colon is not a sentence. (The pairs show a key as the player sees it; in a level file it is the key's code,
@@ -63,7 +63,8 @@ Say what to do as an order. Don't write sayings in the timeless present: they re
 | A whistle brings one man (a card's title) | Whistle to lure a guard |
 
 **4. Join ideas with words.** Use and, then, so, because, with, to. A colon, a dash or a bare comma between two ideas makes the
-reader work out how they connect.
+reader work out how they connect. Pick the joining word for what the two ideas have to do with each other: "so" and "because" are for a
+real reason, and two things that are simply both true are two sentences.
 
 | Before | After |
 | --- | --- |
@@ -81,11 +82,16 @@ reader work out how they connect.
 | mains box, fuse box | breaker box |
 | round, towards, whilst | around, toward, while |
 | a man, men, a man of theirs | an enemy, a guard, enemies |
-| your word, the word | "tell them to go", "your go" |
+| your word, the word | "say go", "until you say go" |
 | out cold (as a verb) | knock him out |
-| the store, the lamp | the storeroom, the light |
+| the lamp, the right button | the light, right-click |
+| covered, held (a doorway) | an enemy is watching it |
 
-Call a thing what the rest of the screen calls it. If the menu row says "bang", the line that teaches it says "bang". The end card's
+One word for one thing, every time. The squad "stacks up on" a door and goes when you "say go". You "pick" a pair or a row. It is
+"your squad", an enemy is "watching" a doorway, and the enemy at a machine gun is "the gunner". A line that stands alone on the screen
+names who it is about ("the gunner", "your partner"), because a bare "him" has nothing to point at.
+
+Call a thing what the rest of the screen calls it. If the menu row says "Fall in", the line that teaches it says "fall in". The end card's
 verdict words and its "defenders" and "hostages" rows are settled (dialogue.md) and are not changed by this guide.
 
 **6. Short is good, clipped is not.** Cut ideas, never the small words (the, a, to, you, press). "Show, not tell" means fewer
@@ -121,8 +127,59 @@ No compass words on the HUD or in a door's name. No digit above 5 on a menu. A k
 the page draws the player's own key. A character cap is there for layout: when a natural sentence doesn't fit one, say less, or
 raise the cap in the open and say that you did. Never squeeze the sentence.
 
+## The check
+
+`bun run tools/qa/writing-check.ts` (`probes.ts writing`, in the quick set; `--list` prints every fault). It reads what is data: every level's lesson
+block (the big line and its other lines, the after lines, the cards) and every mission row (blurb, opening scene, the "You will learn" rows). It is red on
+a key cap followed by a colon, a sentence that opens on a key cap, a colon in a lesson's line or card, a line that opens on a bare "In." / "To the …" /
+"Out by …" / "Where …" or on a participle, a verbless phrase after a comma, the British and stiff words of rule 5, "a man" / "men" for an enemy in a
+lesson, and a pronoun with its verb left uncontracted. The seven Training lessons (`train-*`) are counted apart (`HELD`, `HELD_MAX`): they were swept
+on 10-22 and one line is left, train-orders' "The armoury is locked", which says the room's own name (a room's name is in a frozen run digest, so it
+cannot move bare); the count may only fall. They write a key as a bare letter, which the page rewrites in running text (`host/keymap.ts keyText`), so
+the two key rules cannot see their keys and their lines rest on the other rules and on the review. It also reads the sentences this guide was written from and must catch every one of them and pass
+their rewrites; `WRITING_BREAK=1` reads the old sentences as a level's and must fail. It cannot read text built in code (menus, HUD rows, spoken lines):
+those rest on the review below.
+
 ## Review
 
 Whoever writes or changes player text reads every changed line aloud, and a second reader who did not write it does the same
 before the change is called final. A pattern check can catch a colon after a key or a missing contraction; only a reader catches
 a sentence nobody would say.
+
+## The Training lessons' sweep (10-22)
+
+- **The seven Training lessons' lines are rewritten by this guide** (`tools/levels/train-*.ts` and their level files; 91 steps of 115). NO SWITCH: a
+  lesson's line is in no run digest (the lesson on and off give the same word on all seven, and the frozen words did not move). THE KEYS stay bare
+  letters, because the objective row draws a lesson's line through `keyText` and a code in brackets is stripped to the same bare letter first
+  (`lesson.ts`, the row's text): what has to read well is the DRAWN line, so each was read as the page draws it (the orders key X as "hold Q", B as Q,
+  Space as E, E as backtick). X opens a sentence or follows a comma, never "Press X". THREE STEPS CARRY A `ringLine` now (train-hands `whistle` and
+  `lure`, train-lights `kick`): their old words were swapped in code by a pattern (`lesson.ts WHISTLE_LINE`, `WHEEL_LINE`: "V whistles", "Hold Space,
+  wheel to kick, let go"), which the new words no longer match, so the page's way is written out in the level ("Hold Space and press 5 to whistle
+  …", "Hold Space and press 2 to kick it"). Those two patterns now match no level. LEFT AS IT WAS: "armoury" (the room's name in train-orders is in
+  the frozen digest: changing it moved the word 7a34000a, so the room, its door's name and the line keep it; `writing-check` counts that one line),
+  "grain store" (the room's name on the row), the lesson title "Two pairs, two doors, one word". STALE ON THE PAGE, as before the sweep: the three
+  train-pairs steps that name T (`red`, `blue`, `gold`): the who row has no key there (squad.md, the squad's only keys), and no line of this level says
+  the ring's way of picking who. CHECKS: `lesson-check` on the seven, both stands; `writing-check` and its break word; `lesson-gate` (train-orders'
+  shipped run fails "the kitchen was not cleared after the word" on dice 1, 3 and 4, before this change as after). Nobody has played a lesson with
+  these lines; never seen on a GPU, and not read off the real page (the drawn lines come from `keyText` under the page's key map, staged in a script).
+
+## The second reader's pass (10-23)
+
+- **A second reader read every reworded line aloud and 117 were changed again** (the Training lessons, the menus, the HUD's toasts and rows, the
+  spoken lines). What it was for: a line that stands alone names who it is about ("the cook", "the guard", "your partner", "the pistol", never a
+  bare "he" or "it"); "stay still", "through" a door or a gate (not "by" it), gray, colors, readout, keyhole, "pick" and "switch" for the one act
+  each; a key never acts by itself ("press Esc to keep the old one"); two things that are both true are two sentences, not one with a "so" or a
+  "because" bolted on ("it's locked. pick it (quiet, slow) or kick it in (loud)"); one wording for "press Enter to restart". THREE MEANINGS PUT
+  BACK: train-move's crouch says "slower" again; the rim in the dark is around whoever of the team stands in the dark; the rescue's one flashbang
+  goes in through one door "and the teammates at the other door will go in after it". THE FLASHBANG: a sentence a player reads says "flashbang"
+  (the lessons, the rescue's and the night breach's toasts, "flashbang went off", "a flashbang blinded you", "no flashbangs left", hard's words).
+  NOT RENAMED, the maintainer's call: the kit rows ("Stun canisters", "stun"), the HUD's item name ("stun canister ×2 — goes off …"), the kit
+  page's tooltips and notes, the order rows and their refusals ("bang and clear", "no bangs left."), the defenders' "stun charge". So key 4 still
+  reads "stun canister ×2" with some in the pouch and "no flashbangs left" with none. SWITCHES: none for the lessons, menus and HUD (no line of
+  them is in a run digest); the spoken lines sit behind their own key (`WORDS.guide`, words.ts `wg(now, was)`; `?noguide` off in the page, off on the frozen stand,
+  `TPS_GUIDEWORDS=1` raises it; `guidewords-check`, `GUIDEWORDS_BREAK=1`), so with the key off every line is the line it was and a recording from
+  before the key replays with it off. `cues.ts` classes the lockdown reply by its new words ("locked down. box him in", row 1, as "get around him" was). ALSO LEFT: the
+  door notes' "… on your word" (several checks read it), "boot" in the frame rule's spoken lines, the objective row's "player down — press enter
+  to restart" (the verdict's word), train-orders' "armoury" (as above). CHECKS: `writing-check`, `lesson-check` on the seven, `export --check`
+  on the five regenerated levels and `words-lint`, both stands, green; the probes that name a changed string were moved with it and not run
+  here (the full queue is run on the commit). Nobody has played with these lines; never seen on a GPU or in a browser.

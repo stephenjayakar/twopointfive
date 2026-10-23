@@ -186,21 +186,21 @@ export function build() {
     steps: [
       // done only INSIDE THE REACH OF THE LEAF (1.35 m of its centre, player.ts): the next line says 'what the prompt shows', so the prompt must be up when it
       // is read. (His tape: the old area ended the step two metres short and north of the gate; no prompt showed, and he searched the wall for 18 s)
-      { id: 'walk', line: 'W A S D walks. Follow the track to the gate', done: { is: 'in', area: { x0: 7.0, x1: 8, z0: 13.3, z1: 14.7 } }, at: [7.2, 1, 14] },
+      { id: 'walk', line: 'Walk with W A S D and follow the track to the gate', done: { is: 'in', area: { x0: 7.0, x1: 8, z0: 13.3, z1: 14.7 } }, at: [7.2, 1, 14] },
       // a DEED, so Space is taught; the `in` arm is the gate opened some other way (a shoulder, a sprint) and walked through
-      { id: 'gate', line: 'Space does what the prompt shows. Open the gate', done: { is: 'any', of: [{ is: 'did', what: 'act:push' }, { is: 'did', what: 'act:ease' }, { is: 'did', what: 'act:pull' }, { is: 'in', area: { ...POOL } }] }, at: [8, 1, 14] },
-      { id: 'sprint', line: 'Hold Shift: sprint to the lamp. Loud: watch the sound meter', done: { is: 'all', of: [{ is: 'flag', flag: 'sprint' }, { is: 'meter', which: 'noise', above: 0.6 }, { is: 'in', area: { ...POOL } }] }, at: [11.2, 1, 14.6] },
-      { id: 'crouch', line: 'Lit and loud. C crouches: slower, quieter, harder to see', done: { is: 'flag', flag: 'crouch' } },
-      { id: 'pace', line: 'Roll the mouse wheel down: you creep. Up: faster', done: { is: 'pace', below: 0.9 } },
+      { id: 'gate', line: 'Press Space to do what the prompt shows. Open the gate', done: { is: 'any', of: [{ is: 'did', what: 'act:push' }, { is: 'did', what: 'act:ease' }, { is: 'did', what: 'act:pull' }, { is: 'in', area: { ...POOL } }] }, at: [8, 1, 14] },
+      { id: 'sprint', line: 'Hold Shift to sprint to the light. Sprinting is loud, so watch the sound meter', done: { is: 'all', of: [{ is: 'flag', flag: 'sprint' }, { is: 'meter', which: 'noise', above: 0.6 }, { is: 'in', area: { ...POOL } }] }, at: [11.2, 1, 14.6] },
+      { id: 'crouch', line: 'You\'re lit up and loud. Press C to crouch. You\'ll be slower, but quieter and harder to see', done: { is: 'flag', flag: 'crouch' } },
+      { id: 'pace', line: 'Roll the mouse wheel down to creep, or up to walk faster', done: { is: 'pace', below: 0.9 } },
       { id: 'dark', line: 'Follow the mark into the dark. Watch the light meter', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: { ...LANE_END } }, { is: 'meter', which: 'light', below: 0.3 }] }, { is: 'near', at: [17.8, 0, 21.1], r: 0.8 }] }, hold: 0.4, at: [17.8, 1, 21.1] },   // (the `near` arm: the page's meter has bounce in it and may never read under 0.3 — standing on the mark is enough)
-      { id: 'wall', line: 'Walk into the container and keep walking: your back goes to it', done: { is: 'all', of: [{ is: 'flag', flag: 'wall' }, { is: 'in', area: { ...FACE } }] }, at: [18.4, 1, 20.3] },
-      { id: 'peek', line: 'Slide to the marked corner, keep pushing: you lean out', done: { is: 'flag', flag: 'peek' }, at: [19.1, 1, 20.3] },
-      { id: 'nv', line: 'N is night vision. Find the guard through the broken wall', done: { is: 'flag', flag: 'nv' } },
+      { id: 'wall', line: 'Walk into the container and keep walking to put your back to it', done: { is: 'all', of: [{ is: 'flag', flag: 'wall' }, { is: 'in', area: { ...FACE } }] }, at: [18.4, 1, 20.3] },
+      { id: 'peek', line: 'Slide to the marked corner and keep pushing to lean out', done: { is: 'flag', flag: 'peek' }, at: [19.1, 1, 20.3] },
+      { id: 'nv', line: 'Press N to turn on night vision, then find the guard through the broken wall', done: { is: 'flag', flag: 'nv' } },
       { id: 'reach', line: 'When the guard walks away, go to the hut\'s door', done: { is: 'stage', stage: 'drive' }, at: [23, 1, 9.6] },
-      { id: 'take', line: 'Tap Space at the grey trunk, then keep still', done: { is: 'stage', stage: 'exfil' }, at: front },
+      { id: 'take', line: 'Tap Space at the gray trunk, then stay still', done: { is: 'stage', stage: 'exfil' }, at: front },
       // the closer: the only moment the two meters pull against each other. (The `door` arms: he went straight for the gate — the lesson does not hold him)
-      { id: 'wait', line: 'He will come to look. Out by the back door, into the dark', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: { ...BEHIND } }, { is: 'meter', which: 'light', below: 0.3 }] }, { is: 'door', door: 'gate_e', state: 'open' }] }, hold: 0.4, at: [28.7, 1, 10.0] },
-      { id: 'go', line: 'When he is not looking, cross the light. Walk: he hears a sprint', done: { is: 'door', door: 'gate_e', state: 'open' }, at: [32, 1, 14] },
+      { id: 'wait', line: 'The guard will come take a look. Go out the back door and into the dark', done: { is: 'any', of: [{ is: 'all', of: [{ is: 'in', area: { ...BEHIND } }, { is: 'meter', which: 'light', below: 0.3 }] }, { is: 'door', door: 'gate_e', state: 'open' }] }, hold: 0.4, at: [28.7, 1, 10.0] },
+      { id: 'go', line: 'When the guard isn\'t looking, cross the light. Walk, because he\'ll hear you sprint', done: { is: 'door', door: 'gate_e', state: 'open' }, at: [32, 1, 14] },
     ],
   };
   const out = T.finish({

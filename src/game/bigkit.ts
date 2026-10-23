@@ -244,7 +244,7 @@ export function samBigTick(g: Game, dt: number): boolean {
     if (!BREAK) fireWeapon(g, c, lockPoint(d, T.side), true, { weapon: WEAPONS.m870, steady: true, spread: 0 });   // (shotgun.ts fireShell: the lock is its rule's — and its message and the debrief's row)
     // (a leaf merely SHUT is nothing to a pattern that strays onto it — shotgun.ts; this shell was put into its latch on purpose, and takes it as the boot does)
     const gave = lock ? !d.locked : !BREAK && g.doors.kickIn(d, c.pos, PLAYER_ID, true);
-    if (gave && !lock) { g.msg('shot it open — the whole floor heard that'); chronDoor(g, 'doorKicked', d); }
+    if (gave && !lock) { g.msg('you shot it open, and the whole floor heard that'); chronDoor(g, 'doorKicked', d); }
     if (gave) { BIG_STATS.samShot++; T.gave = true; over(TAIL, true); }
     else if (T.n >= BIGSLOT.shells) { g.msg(lock ? 'the lock held' : 'it held'); over(TAIL, true); }
     else { T.next = T.t + WEAPONS.m870.cd; M?.blows.push(T.next); }
@@ -254,7 +254,7 @@ export function samBigTick(g: Game, dt: number): boolean {
   BIG_STATS.samBlows++;
   if (T.n < T.need) { d.rattleT = 0.6; d.lastWho = PLAYER_ID; g.doors.sound(d, 'thud', d.pos, PLAYER_ID, 1.0); T.next = T.t + bigSwing(); M?.blows.push(T.next); return false; }
   const gave = !BREAK && g.doors.kickIn(d, c.pos, PLAYER_ID, true); kickScuff(g, d, c.pos);
-  if (gave) { BIG_STATS.samHammered++; T.gave = true; g.msg('hammered it open — the whole floor heard that'); chronDoor(g, 'doorKicked', d); }
+  if (gave) { BIG_STATS.samHammered++; T.gave = true; g.msg('you hammered it open, and the whole floor heard that'); chronDoor(g, 'doorKicked', d); }
   over(TAIL, true);
   return false;
 }
