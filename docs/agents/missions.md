@@ -948,6 +948,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   FOR THE SOLO MISSION'S OWNER: its step `load` ("[2] again: load the grenade") is already true when it comes up under this rule and goes by unread, and
   its scripted walk never wears the page's kit (`lesson-run.ts` stages no card on a man alone), so `tut-solo-check` plays the sponge rounds either way.
   NOBODY HAS played the mission with it, on a GPU or off; no page was opened for it.
+- **A lesson the player packs for** (`src/game/kit.ts ISSUE.picked`, `kitPacks`, `kitLessonPage`, 2026-10-23; the maintainer, of the kit step's
+  walkthrough: "we should attach it to a tutorial mission (and make it bespoke and explain how to plan)"). A tutorial row that carries `packs`
+  (`scene/scenarios.ts ScenarioEntry`; today the squad mission, `tut-squad`, alone) is NOT played with the kit as issued: `game/loadout.ts kitAsIssued`
+  is false of it, so its Team & kit step shows the cards (where `ui/kitPlan.ts` teaches planning its kit, `docs/agents/menus.md`) and its page stages
+  what this machine keeps, as any mission's does. `packs.frags` is THE LEAST HE CARRIES THERE: the street's 'frag over the bags' step holds the two men
+  behind the sandbags down until his frag lands, so a card packed with none would leave a line asking for what he cannot do — on that mission's page
+  (`main.ts` names the lesson's row with `kitLessonPage(row)`, and the rule is read at each staging, so a recording's own knobs decide it;
+  `tools/qa/rerun.ts` names the row again for a page's recording) `kitPlayer` writes his frags up to that floor, never down, and his card on the kit
+  step shows the handed frag as the mission's. Every other lesson is as it was, and that page's difficulty levers stay off like every lesson's. WHAT MOVES ON
+  THAT PAGE: with the kept cards as issued he carries the pouches rule's one of each (1 smoke, 1 stun, 1 frag) where the issued page left him what a
+  Player is built with (4 / 2 / 2), and the four carry their kept cards. His smoke and stun are no use there today: the mission's frame allows his
+  rifle, his pistol, and the frag at its one step. SWITCH: on in the page, `?kitpack=0` off; off in the module and on the frozen stand
+  (`FROZEN_HOLDS['ISSUE.picked']`, `TPS_KITPACK=1` raises it); the table is the journal's `ISSUE`, and a recording from before the key replays with it
+  off. No headless lesson run raises the issued page, so no frozen or shipped digest or tally moves: the rule is the page's and a recording's. Off =
+  the build before (that row as issued, no card on its step). CHECK: `probes.ts kitpack` (`tools/qa/kitpack-check.ts`, family `kit`), both stands, and
+  `KITPACK_BREAK=1` FAILS on both (4 lines): the row and its plan, the rule on and off, the journal, the loadout screen with and without cards, the
+  staging as its page stages it under four kits (Stun heavy: he and the four carry it, and the one frag is on him though his card has none; a pistol
+  and empty pouches: still the frag), the plan's map marks inside the level's rooms of those names, what its cards say of the kits (as issued the squad
+  carries three stun grenades for the three rooms the lesson's door lines send it into; Stun heavy six, and takes your frag); and ON THE PAGE'S STAND THE MISSION PLAYED THROUGH by its scripted
+  player under five kits side by side (as issued · Stun heavy · Stun heavy with a smoke traded for a frag · Frag heavy, no door charge on anybody · a
+  pistol and empty pouches): 23 of 23 steps each, seed 1, god mode as that script always runs (`KITPACK_PLAY=0` leaves the plays out). MEASURED: those
+  five runs, one seed; nothing else was measured (no tour, no soak: no rule of a fight changed). NOT SEEN: the mission played by a person on any kit
+  but the issue; anything on a GPU; whether the squad, carrying a door charge under Stun heavy, blows the locked hall on B twice before the window step
+  on the real page (the scripted player's run under it passes).
 - **A strongroom reached past cameras and beams** (`levels/vault.json` ← `tools/levels/vault.ts`, built on the look's kit, no second look file; row `vault-quiet`
   'The counting house' in `QUIET_MISSIONS`, group 'quiet-alone', `untuned`; `?levelFile=vault.json&quiet`, alone; level data only, no game code): a walled money house at
   night, the ledger in a safe. Two gates, each lit and under a lens (`cam_yard`, `cam_east`, mains); each dark way crosses a beam (`beam_strip` chest high, battery,

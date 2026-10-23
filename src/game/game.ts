@@ -106,6 +106,7 @@ import type { Haul, DoorMove } from './hands';
 import type { Wanding } from './wand';
 import { samBigStart } from './bigkit';
 import { sideTick } from './gunslots';   // (called inside the update only)
+import { mateStowTick } from './workstow';   // (the same)
 import { gunLookOf, gunLookOn } from './gunlook';   // (called inside the update only)
 import { feedDeal } from './gunreload';   // (the same)
 import type { StickyCam } from './stickycam';
@@ -417,6 +418,9 @@ export class Player {
   /** a door charge going on by his own hands (doortools.ts samTick; owncharge.ts): the door, the face he is on, when it began, where he stood. Not saved:
    *  savestate.ts playerBusy refuses a plain save while it runs */
   charging: { door: Door; side: 1 | -1; t0: number; at: Vec3 } | null = null;
+  /** what was in his hand is put away for a charge going on by his own hands (workstow.ts samStowTick): `drew` = something was, and comes back when the job is
+   *  over; `t` when the job began; `down` = his hands are free of it (the job's clock runs). null = no such job. Not saved: no save is written inside one. */
+  workStow: { drew: boolean; t: number; down: boolean } | null = null;
   /** back to the wall (player.ts, Q): the static face he is pressed against and slides along — null when free. For the HUD / camera: n (unit normal out of the
    *  wall into the room), along (unit tangent: his right when his back is flat to it), atEdge (parked at an OPEN end of the face — an outside corner, a door jamb —
    *  −1 / +1 = which end along `along`, 0 = not at one or the way on is walled), peek (0‥1, eased in while he keeps pushing into that open end), crouched. The
@@ -674,6 +678,9 @@ export class Guard {
   /** BIGSLOT.moves (bigkit.ts hammerOut): the hammer off a teammate's back and in his hands for a door — the game time his hands left his gun for it, when each
    *  blow lands and when he began putting it back, both on that clock (end −1: not yet), and the point struck. null = on his back. Not saved: a load finds it there. */
   bigOut: { t0: number; blows: number[]; end: number; at: Vec3 } | null = null;
+  /** a teammate's gun let go of for a two-handed job (workstow.ts mateStow / mateStowTick): the game time his hands left it, the time it is back up (−1: the job
+   *  still runs) and whether the job fed it this frame. null = it is in his hands. Not saved: a load finds it there. */
+  workStow: { upT: number; fed: boolean } | null = null;
   /** was his light burning the moment it left his hand (killed / grabbed)? a dark weapon light must not sputter ON as it tumbles (review 08-10 #7: the breach hostiles' unlit lights swept the sunlit room the frame each died) */
   lightLitAtLoss = true;
   dazzledAt: Vec3 | null = null;   // where the charge that blinded him went off (the motion pass turns him away from it — character.ts MOVES; not saved)
@@ -1615,7 +1622,7 @@ export class Game {
     this.doorTools.bigKey(input);   // (the big slot's 'hammer and clear' / 'shotgun and clear' row is on H with a door's menu up — doortools.ts; a flag read and a return unless a man of the squad carries one)
     if (squadThrowKey(this, input)) this.player.throwEaten = true;   // (the squad's 'throw' page is on G with a floor menu up — squadthrow.ts: frag there / bang there; a map read and a return with the switch never on)   // (the squad's 'smoke there' row is on H with a floor menu up — squadsmoke.ts: a map read and a return unless this staging's cards brought smoke)
     squad40Tick(this);   // (a teammate's 40 mm on order — squad40.ts: its row on the throws' page kept in step, a man turning to his shot; a map read and a return unless a teammate's card brought a round)
-    updateInteract(this, dt, input, canvas);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
+    updateInteract(this, dt, input, canvas, cam);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
     trackPlayer(this, dt);   // the aim-settle model, Sam's half (aim.ts): what the reticle is on is known now; his feet are last frame's, a frame is nothing to a 0.8 s settle — the fire sites in updatePlayer / updateHold read it below
     this.threatTick();
     updateSuppression(this, dt);   // everybody's suppression decays, and the guards' flinch / pinned edges fire, ahead of the player and the guards who read it (the rounds they fire below add to it for next frame)
@@ -1752,6 +1759,7 @@ export class Game {
         if (!gd.unit) gd.carbine = deal === 'all' || (deal === 'reyes' && gd.callsign === 'Reyes');
         const want: WeaponId = gd.carbine ? 'aks74u' : (gd.route.weapon ?? 'guard9mm');
         if (gd.state !== 'dead' && gd.weapon.def.id !== want) { gd.weapon = new Firearm(WEAPONS[want]); gd.reloadT = -1; }
+        if (gd.workStow) mateStowTick(this, gd);   // (workstow.ts: a gun let go of for a two-handed job comes back up once the job stops)
         if (gd.second) sideTick(this, gd, dt);   // (gunslots.ts: a teammate's sidearm goes back once nobody is in front of him)
         const long = longRigOf(gd), cb = long !== null; const an = gd.char.anim; const def = gd.weapon.def;   // (long: WHICH long gun — the FN2000 in an operative's hands has its own grip point and muzzle, guards.ts longRigOf)
         if (an.longGun !== cb) { an.longGun = cb; an.longSteady = long === 'sc20k' ? 1 : 0; gd.char.muzzleAhead = long === 'sc20k' ? sc20kMuzzleAhead() : cb && def.rig !== 'carbine' ? carbineMuzzleAhead() : def.muzzleAhead; }   // (longSteady: a man handed Sam's bullpup — the breach's operatives — carries it as player.ts armRifle has Sam carry it, the gun riding his shoulders' mean line at a run instead of pumping with the run clip's arms (character.ts LONG_STEADY); the carbine men keep theirs as the poses pass left them, 0 — carbine-probes (4) places the trigger hand by the unsteadied carriage)

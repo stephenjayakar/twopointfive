@@ -44,6 +44,8 @@ import { KIT_CLIP } from './kitCard';
 import { LOOK, placeOfQuery } from '../scene/look';
 import { mountKitBrief, type KitBrief } from './kitBrief';
 import { mountKitGuide, type KitGuide } from './kitGuide';
+import { KIT_PLANS } from './kitPlan';
+import { kitPacks } from '../game/kit';
 
 export const START_PAGE = { on: typeof window !== 'undefined' && typeof window.addEventListener === 'function' };
 try { if (new URLSearchParams(location.search).has('cards')) START_PAGE.on = false; } catch { /* no page (the harness) */ }
@@ -505,7 +507,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
     lastId = m.id; lastHour = M.hourNow;
     tip.textContent = p ? p.line : '';
     if (fresh) rest('', '');
-    kbrief?.show(m);
+    kbrief?.show(m, kguide && kitPacks(m.scenario) ? KIT_PLANS[m.id] ?? null : null);   // (a tutorial mission with a kit plan of its own: its map names the rooms — ui/kitPlan.ts)
     paintVals(fresh);
     mount();
   };

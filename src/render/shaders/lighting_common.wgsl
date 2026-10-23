@@ -64,7 +64,8 @@ fn diceIrradianceFrom(Ph: vec3f, n: vec3f, P0: vec3f, N0: vec3f) -> vec3f {
 // it to the centre of each of its four plan cells, and the read keeps all four, else the one column or row, else the one cell, whose centres it sees (a centre
 // inside a wall is not seen: a probe there is dark). .w = 0: it sees none of them (the point is inside a box — a proxy through a wall, a door leaf): no read,
 // which is dark, never the room. Five to eight short box rays; asked only where a man is the face read for or the surface the ray left is no wall (bounceHitMan,
-// bounceLeftNoWall below) and for a wet coat's sheen — never for a ray from a wall or a floor to a wall or a floor.
+// bounceLeftNoWall below), for a wet coat's sheen and for a METAL's reflection rays (REFL WALLS, reflect.wgsl) — never for any other ray from a wall or a floor to
+// a wall or a floor.
 fn diceWalledPoint(Ph: vec3f, n: vec3f, skip: u32) -> vec4f {
   let sp = c0Spacing();
   let off = n * sp; let len = max(length(off), 1e-3); let d = off / len;

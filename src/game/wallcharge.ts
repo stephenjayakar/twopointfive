@@ -69,6 +69,7 @@ import { PACE } from './guards';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
 import { SAMSTUN, dazzlePlayer } from './samstun';
 import { chargeHands } from './handwork';
+import { samStowing, mateStow, mateStowLead, stowFight } from './workstow';   // (called inside samTick and the 'place' stage only)
 import { moraleBlast } from './morale';
 import { messWall } from './floormess';
 import { gunLast } from './gunroles';   // (called inside enter only)
@@ -257,6 +258,8 @@ export interface WallOp {
   wall: WallSpot; men: Guard[]; lead: Guard; phase: Phase; t0: number;
   /** where the setter stands · when he began setting it (NaN: not yet) */
   spot: Vec3; setT: number;
+  /** (workstow.ts stowFight) since when the fight has had the setter off his charge, this stretch of it */
+  stowOffT?: number;
   /** WALLKILL: the setter's 'charge set.' is owed — said once he is `nearM` off the charge he set, not with his hands still on it (absent: said, or the rule off) */
   owes?: boolean;
   /** the assignments this order handed out (a man whose assignment is no longer this one has been re-ordered: he is not ours) · each man's stand-off mark */
@@ -296,6 +299,7 @@ export function wallChargeOn(g: Game): boolean { return WALLCHARGE.on && wallBre
 /** how high the open-sky test looks (m) · the samples it takes off each face: metres out, and along the wall as a share of its half length */
 const SKY_TOP = 12, SKY_OFF = [0.5, 1.0, 1.6], SKY_ALONG = [-0.5, 0, 0.5];
 const skyMemo = new SideMap<object, Map<number, number>>('wallcharge.skyMemo');
+const standIns = new SideMap<OrderDef, OrderDef>('wallcharge.standIns'); standIns.asMemo();   // (a pure function of the row, and a row is one game's own; the HUD's row list asks it before any menu is opened, so it is no part of the state)
 /** THE FACES OF A WALL THE OPEN SKY IS OVER: 0 = neither (a wall inside), 1 = one (a building's outer wall), 2 = both (a yard wall). Asked of the level's own
  *  geometry as the glass asks it of a pane (glassbreak.ts skySide): upward solid rays from chest height at nine places off each face — a canopy or a lamp head
  *  over part of one side does not flip the majority. Kept per static (the authored statics do not move; a hole in the wall changes nothing over it). */
@@ -430,8 +434,7 @@ export class WallCharge {
     return live;
   }
   /** a row the wall's fifth has taken the digit of: itself, digitless (one stand-in a row, so the menu's highlight rides it by identity) */
-  private standIns = new SideMap<OrderDef, OrderDef>();
-  undigit(d: OrderDef): OrderDef { let x = this.standIns.get(d); if (!x) this.standIns.set(d, x = Object.create(d, { key: { value: undefined, writable: true, enumerable: true } }) as OrderDef); return x; }
+  undigit(d: OrderDef): OrderDef { let x = standIns.get(d); if (!x) standIns.set(d, x = Object.create(d, { key: { value: undefined, writable: true, enumerable: true } }) as OrderDef); return x; }
   private seat() {
     const S = this.g.orders; S.unregister(WALL_PAGE); S.unregister(WALL_ORDER); this.seated = false; if (!this.mode) return;
     const page = this.mode === 'page';
@@ -931,9 +934,11 @@ export class WallCharge {
     switch (op.phase) {
       case 'place': {   // he is at the wall for setSecs, then it is on the wall and he walks off to the stand-off
         const A = op.mine.get(lead)!, near = flat(lead.char.pos, op.spot) < K.setNear;
-        if (isNaN(op.setT)) { if (A.arrived && near) op.setT = t; else if (!this.waiting(op, el)) { g.say(lead, "can't get on that wall."); this.end(op, 'never made the wall'); } break; }
+        if (stowFight(g, lead, A, op)) { op.setT = NaN; op.t0 = t; break; }   // (workstow.ts: the fight has him — his hands are not on a charge; not set, nothing spent, and he starts over when it lets him go, `fightCap` at most at a stretch)
+        if (isNaN(op.setT)) { if (A.arrived && near) op.setT = t + mateStowLead(); else if (!this.waiting(op, el)) { g.say(lead, "can't get on that wall."); this.end(op, 'never made the wall'); } break; }
         if (!near) { op.setT = NaN; break; }   // (walked off it: not set)
-        chargeHands(g, lead.char, wallPt(W, 0, 0, K.height), wallN(W), t - op.setT, DOORTOOLS.setSecs);   // (handwork.ts: his hands on it while it goes on)
+        mateStow(g, lead);   // (workstow.ts: his gun is out of his hands for it — the charge's clock began `mateDown` after he came onto it)
+        if (t >= op.setT) chargeHands(g, lead.char, wallPt(W, 0, 0, K.height), wallN(W), t - op.setT, DOORTOOLS.setSecs);   // (handwork.ts: his hands on it while it goes on)
         if (t - op.setT < DOORTOOLS.setSecs) break;
         if (this.openAt(W)) { g.say(lead, "it's open."); this.end(op, 'the wall opened'); break; }
         if (!this.chargeOn(W)) {
@@ -1198,6 +1203,7 @@ export class WallCharge {
     if (mine && !this.sam && this.offered) { this.sam = { wall: this.offered, t0: g.time, at: [p[0], 0, p[2]] }; this.note(`the player sets one on wall ${this.offered.index}`); return; }
     const s = this.sam; if (!s) return;
     if (pl.down || pl.sprinting || !!pl.dragging || !!pl.holding || !!pl.takedown || flat(p, s.at) > K.samShift || (act && !mine)) { this.cancel(); return; }
+    if (samStowing(g)) { s.t0 = g.time; return; }   // (workstow.ts: what was in his hand is still on its way to where it lives — the charge's clock starts with his hands free)
     chargeHands(g, pl.char, wallPt(s.wall, 0, 0, K.height), wallN(s.wall), g.time - s.t0, DOORTOOLS.setSecs, pl.pistolUp ? 0 : undefined);   // (handwork.ts: his hands on it while it goes on)
     if (g.time - s.t0 < DOORTOOLS.setSecs) return;
     this.sam = null;
